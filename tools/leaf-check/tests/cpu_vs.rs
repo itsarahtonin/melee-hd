@@ -1,0 +1,453 @@
+//! A VS match's computer players' frame (`ftCo_800B3900` with computer kind 4,
+//! `game::ft::cpu_vs`, `cpu_attack`, `cpu_move`) against the original's machine code, from
+//! real states: every saved call is imported and run on both sides, and the whole state
+//! compared afterwards. The reference runs the original's machine code throughout
+//! ([`leaf_check::run_as_machine_code`]), as `nana`'s does.
+//!
+//! The captures are game memory, kept out of the repository in `CPU_VS_CALLS` (default below),
+//! one directory per run. ssbm-rs's runner made them on the level 1 CPU games split out of three
+//! ranked replays (`local/replays/hf-cpu/`, docs/oracle.md): five of Link against a CPU Ness,
+//! one on each tournament stage but Dream Land (every frame), a CPU Mewtwo against Falco on
+//! Battlefield (every fifth) and a CPU Ness against Marth on Battlefield (every ninth), each
+//! with the frames that ran code no check had verified before:
+//!
+//! ```text
+//! C=local/calls/cpu-vs
+//! SLIPPI_PLAYER_NAMES=0 CAPTURE=$C/hf-ness-marth-bf-69664b46-g1 CAPTURE_FROM=0 CAPTURE_EVERY=9 \
+//!   CAPTURE_FUNCS=ftCo_800B3900 LOCKSTEP_DONE=local/calls/ics/done-noncpu.txt \
+//!   ssbm-run-rf "$SSBM_DISC" --replay local/replays/hf-cpu/hf-ness-marth-bf-69664b46-g1.slp \
+//!   --fields 3900 --port all --lockstep
+//! ```
+//!
+//! Each is packed (`pack-calls`).
+//!
+//! Five more sets come from the level 9 oracle matches (`local/bench/oracle-m4`, docs/oracle.md's
+//! oracle sets, `--fp hardware`): `oracle-cpu-puff-fod` (every seventh frame of the first 3000
+//! fields: shields, rolls and dodges), `oracle-cpu-luigi-bf` (the same: Luigi's rules and
+//! recovery), `oracle-cpu-sweep-dk-bf` (every twentieth of three Donkey Kongs at levels 1, 4 and
+//! 7: his carry and the standings between CPUs), `oracle-cpu-mewtwo-dl` (every frame from field
+//! 2300 to 2700: Shadow Ball charged and let go) and `oracle-cpu-zelda-bf` (every frame from 1250
+//! to 1700: Din's Fire steered).
+//!
+//! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
+//! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
+//! the stage, the CPU off camera, its target off the stage, the enemy moves it dodges, and its
+//! DI with no knockback, which reads the registers its frame leaves.
+
+use std::collections::BTreeSet;
+use std::sync::Mutex;
+
+use leaf_check::calls::{
+    Prepare, Report, Ret, Variant, check_variants, gobj_arg, peek_u32, poke_f32, poke_u32,
+    saved_calls,
+};
+
+fn peek_f32(call: &Call, addr: u32) -> f32 {
+    f32::from_bits(peek_u32(call, addr))
+}
+use ssbm_rt::capture::Call;
+
+const CALLS: &str = "calls/cpu-vs";
+
+fn base() -> String {
+    std::env::var("CPU_VS_CALLS").unwrap_or_else(|_| melee_local_data::ssbm_rs_local(CALLS))
+}
+
+/// The capture sets, one per run.
+fn dirs() -> Vec<String> {
+    let Ok(entries) = std::fs::read_dir(base()) else {
+        return Vec::new();
+    };
+    let mut v: Vec<String> = entries
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().is_dir())
+        .map(|e| e.path().to_string_lossy().replace('\\', "/"))
+        .collect();
+    v.sort();
+    v
+}
+
+/// `Fighter` offsets.
+const KIND: u32 = 0x4;
+const PLAYER: u32 = 0xC;
+const MOTION: u32 = 0x10;
+const POS: u32 = 0xB0;
+const GROUND_OR_AIR: u32 = 0xE0;
+/// The byte holding `x221D_b6` (entering, as a respawn), and that bit in its word at `x221C`.
+const X221C: u32 = 0x221C;
+const ENTERING: u32 = 0x0002_0000;
+/// Knockback's speed; the byte holding `x221A_b3` (in hitstun) and that bit in its word.
+const KB_VEL: u32 = 0x8C;
+const X221A: u32 = 0x221A;
+const HITSTUN: u32 = 0x1000_0000;
+/// `CpuFighter` (`Fighter::x1A88`) offsets.
+const CPU: u32 = 0x1A88;
+const CPU_KIND: u32 = CPU + 0xC;
+const LEVEL: u32 = CPU + 0x10;
+const BEHAVIOR: u32 = CPU + 0x18;
+const RANGED_DELAY: u32 = CPU + 0x34;
+const FRAMES: u32 = CPU + 0x7C;
+const SCRIPT: u32 = CPU + 0x44C;
+const SCRIPT_WAIT: u32 = CPU + 0x450;
+/// `CpuFighter::x44`, the target.
+const TARGET: u32 = CPU + 0x44;
+/// `GA_Air`; the VS computer kind; the recovery, attack, ranged and DI behaviors.
+const AIR: u32 = 1;
+const VS: u32 = 4;
+const RECOVER: u32 = 4;
+const ATTACK: u32 = 2;
+const RANGED: u32 = 3;
+const DI: u32 = 18;
+/// The moves `ftCo_800BB768` dodges: Bowser's Bowser Bomb (`ftKp_MS_SpecialLw`) and up
+/// smash (`ftCo_MS_AttackHi4`), Yoshi's Yoshi Bomb (`ftYs_MS_SpecialAirLw`), Samus's Screw
+/// Attack (`ftSs_MS_SpecialHi`).
+const KP_BOMB: u32 = 361;
+const ATTACK_HI4: u32 = 63;
+const YS_BOMB: u32 = 368;
+const SS_SCREW: u32 = 353;
+/// `Ft_Kind_*`.
+const MARIO: u32 = 0;
+const FOX: u32 = 1;
+const DONKEY: u32 = 3;
+const KOOPA: u32 = 5;
+const NESS: u32 = 8;
+const PIKACHU: u32 = 12;
+const SAMUS: u32 = 13;
+const YOSHI: u32 = 14;
+const MEWTWO: u32 = 16;
+const LUIGI: u32 = 17;
+const ZELDA: u32 = 19;
+const FALCO: u32 = 22;
+const PICHU: u32 = 23;
+/// The charging states: `ftDk_MS_SpecialNLoop`, `ftSs_MS_SpecialNHold`,
+/// `ftMt_MS_SpecialNLoopFull`; Ness's PK Flash (`ftNs_MS_SpecialNStart`) and PK Thunder
+/// (`ftNs_MS_SpecialHiStart`); Yoshi's egg roll (`ftYs_MS_SpecialAirSStart_0`).
+const DK_CHARGE: u32 = 370;
+const SS_CHARGE: u32 = 344;
+const MT_CHARGE: u32 = 343;
+const NS_PK_FLASH: u32 = 348;
+const NS_PK_THUNDER: u32 = 358;
+const YS_EGG_ROLL: u32 = 0x164;
+
+/// The VS computer player's `Fighter` in a saved frame, if it is one.
+fn vs_cpu(call: &Call) -> Option<u32> {
+    let fp = peek_u32(call, call.regs.gpr[3] + 0x2C);
+    (peek_u32(call, fp + CPU_KIND) == VS).then_some(fp)
+}
+
+/// The fighters of other players.
+fn enemies(call: &Call, me: u32) -> Vec<u32> {
+    let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+    let mut g = peek_u32(call, heads + 8 * 4);
+    let slot = peek_u32(call, me + PLAYER) >> 24;
+    let mut v = Vec::new();
+    while g != 0 {
+        let fp = peek_u32(call, g + 0x2C);
+        if peek_u32(call, fp + PLAYER) >> 24 != slot {
+            v.push(fp);
+        }
+        g = peek_u32(call, g + 0x8);
+    }
+    v
+}
+
+/// Ends the CPU's script, so the frame writes a new one for its behavior.
+fn end_script(call: &mut Call, fp: u32) {
+    poke_u32(call, fp + SCRIPT, 0);
+    poke_u32(call, fp + SCRIPT_WAIT, 0);
+}
+
+/// How the frame is changed.
+#[derive(Clone, Copy, Debug)]
+enum Change {
+    /// At level 9 with its frame count a multiple of 60, its script ended: the levels' own
+    /// branches (the jump at the target's checks, the shield's, Ness's PK Thunder recovery).
+    Level9,
+    /// Recovering in the air (behavior 4) as another character at level 9, its script
+    /// ended: that character's recovery (`ftCo_800A96B8`).
+    RecoverAs(u32),
+    /// As another character with its ranged attack's delay over and its script ended: the
+    /// ranged attack's check and the character's own (`ftCo_800B9CBC`).
+    RangedAs(u32),
+    /// As another character in a charging state (`ftCo_800ADC28`), in the attack behavior
+    /// (its follow-up, `ftCo_800B658C`) or the ranged one (`ftCo_800B9020`), script ended.
+    StateAs(u32, u32, u32),
+    /// Its enemies entering the stage: the target closed in on (`ftCo_800A20A0`,
+    /// `ftCo_800A80E4`).
+    EnemyEntering,
+    /// Moved off camera, in the air: heading back (`ftCo_800AE7AC`).
+    OffCamera,
+    /// Its enemies in the air off the stage: the island end beside them (`ftCo_800A4768`).
+    TargetOffStage,
+    /// At level 9 with its script ended, its enemies (as `kind`) in `motion` at `(dx, dy)`
+    /// from it: the moves it dodges (`ftCo_800BB768`).
+    EnemyMove(u32, u32, f32, f32),
+    /// In hitstun with no knockback, at level 9, its script ended: the DI pushes the stick
+    /// by the registers the frame leaves (the stale-register rule). `Seed`: already in the
+    /// DI with the frame count a multiple of 400, so the behavior's coin flip leaves the seed
+    /// pointer; `Switch`: switching to the DI, whose coin flip leaves it too; `Entering`: in
+    /// the DI with its enemies entering, so the behavior's standing query compiles the
+    /// results and leaves its `MatchEnd + 0x30`.
+    DiZeroKnockback(Di),
+}
+
+/// [`Change::DiZeroKnockback`]'s cases.
+#[derive(Clone, Copy, Debug)]
+enum Di {
+    Seed,
+    Switch,
+    Entering,
+}
+
+/// Changes a saved frame as `change` says: whether it did.
+fn change_frame(call: &mut Call, change: Change) -> bool {
+    let Some(fp) = vs_cpu(call) else {
+        return false;
+    };
+    let air = peek_u32(call, fp + GROUND_OR_AIR) == AIR;
+    match change {
+        Change::Level9 => {
+            poke_u32(call, fp + LEVEL, 9);
+            let n = peek_u32(call, fp + FRAMES);
+            poke_u32(call, fp + FRAMES, n - n % 60);
+            end_script(call, fp);
+        }
+        Change::RecoverAs(kind) => {
+            if !air || peek_u32(call, fp + BEHAVIOR) != RECOVER {
+                return false;
+            }
+            poke_u32(call, fp + KIND, kind);
+            poke_u32(call, fp + LEVEL, 9);
+            end_script(call, fp);
+        }
+        Change::RangedAs(kind) => {
+            if peek_u32(call, fp + TARGET) == 0 {
+                return false;
+            }
+            poke_u32(call, fp + KIND, kind);
+            poke_u32(call, fp + RANGED_DELAY, 0);
+            end_script(call, fp);
+        }
+        Change::StateAs(kind, motion, behavior) => {
+            if peek_u32(call, fp + TARGET) == 0 {
+                return false;
+            }
+            poke_u32(call, fp + KIND, kind);
+            poke_u32(call, fp + MOTION, motion);
+            poke_u32(call, fp + BEHAVIOR, behavior);
+            end_script(call, fp);
+        }
+        Change::EnemyEntering => {
+            for e in enemies(call, fp) {
+                let w = peek_u32(call, e + X221C);
+                poke_u32(call, e + X221C, w | ENTERING);
+            }
+            end_script(call, fp);
+        }
+        Change::OffCamera => {
+            poke_f32(call, fp + POS, 300.0);
+            poke_f32(call, fp + POS + 4, 150.0);
+            poke_u32(call, fp + GROUND_OR_AIR, AIR);
+            end_script(call, fp);
+        }
+        Change::EnemyMove(kind, motion, dx, dy) => {
+            poke_u32(call, fp + LEVEL, 9);
+            end_script(call, fp);
+            let (x, y) = (peek_f32(call, fp + POS), peek_f32(call, fp + POS + 4));
+            for e in enemies(call, fp) {
+                poke_u32(call, e + KIND, kind);
+                poke_u32(call, e + MOTION, motion);
+                poke_f32(call, e + POS, x + dx);
+                poke_f32(call, e + POS + 4, y + dy);
+            }
+        }
+        Change::DiZeroKnockback(di) => {
+            if peek_u32(call, fp + X221A) & HITSTUN == 0 {
+                return false;
+            }
+            let in_di = peek_u32(call, fp + BEHAVIOR) == DI;
+            if in_di == matches!(di, Di::Switch) {
+                return false;
+            }
+            poke_f32(call, fp + KB_VEL, 0.0);
+            poke_f32(call, fp + KB_VEL + 4, 0.0);
+            poke_u32(call, fp + LEVEL, 9);
+            end_script(call, fp);
+            // 400 % 120 and 60 % 120 are past 120 - 12 * 9: the level's chance pushes.
+            poke_u32(
+                call,
+                fp + FRAMES,
+                if matches!(di, Di::Seed) { 400 } else { 60 },
+            );
+            if matches!(di, Di::Entering) {
+                for e in enemies(call, fp) {
+                    let w = peek_u32(call, e + X221C);
+                    poke_u32(call, e + X221C, w | ENTERING);
+                }
+            }
+        }
+        Change::TargetOffStage => {
+            for e in enemies(call, fp) {
+                poke_f32(call, e + POS, -120.0);
+                poke_f32(call, e + POS + 4, -20.0);
+                poke_u32(call, e + GROUND_OR_AIR, AIR);
+            }
+            end_script(call, fp);
+        }
+    }
+    true
+}
+
+fn run_frame(
+    r: &mut melee_sim::game::state::Running,
+    maps: &melee_capture::import::Maps,
+    call: &Call,
+) -> Ret {
+    r.cpu_frame(gobj_arg(maps, call));
+    Ret::Nothing
+}
+
+/// The clean comparisons among `reports` of the calls at `changed` (indices into `paths`), or
+/// of every call with `changed` empty.
+fn compared(reports: &[Report], paths: &[std::path::PathBuf], changed: &BTreeSet<usize>) -> usize {
+    reports
+        .iter()
+        .flat_map(|r| &r.clean)
+        .filter(|(p, _)| {
+            changed.is_empty()
+                || paths
+                    .iter()
+                    .position(|q| q == p)
+                    .is_some_and(|i| changed.contains(&i))
+        })
+        .count()
+}
+
+/// Every saved frame compares clean as saved.
+#[test]
+fn cpu_vs_frame() {
+    leaf_check::run_as_machine_code();
+    let dirs = dirs();
+    let none = |_: &mut Call, _: usize| {};
+    let variants = [Variant {
+        prepare: &none,
+        ours: &run_frame,
+        stubs: &[],
+    }];
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| {
+            let paths = saved_calls(dir, "ftCo_800B3900");
+            let reports = check_variants(dir, "ftCo_800B3900", &variants);
+            compared(&reports[0], &paths, &BTreeSet::new())
+        },
+    );
+    let total: usize = per_dir.iter().sum();
+    eprintln!("compared clean as saved: {total}");
+    if dirs.is_empty() || leaf_check::reference().is_none() {
+        return;
+    }
+    assert!(total > 0, "no saved frame compared");
+}
+
+/// The changes [`cpu_vs_changed`] makes, each of which must compare clean somewhere.
+fn changes() -> Vec<Change> {
+    let mut v = vec![Change::Level9];
+    for kind in [
+        MARIO, FOX, FALCO, PIKACHU, PICHU, YOSHI, NESS, LUIGI, ZELDA, SAMUS,
+    ] {
+        v.push(Change::RecoverAs(kind));
+    }
+    for kind in [NESS, YOSHI, SAMUS, MEWTWO] {
+        v.push(Change::RangedAs(kind));
+    }
+    v.extend([
+        Change::StateAs(DONKEY, DK_CHARGE, ATTACK),
+        Change::StateAs(SAMUS, SS_CHARGE, ATTACK),
+        Change::StateAs(MEWTWO, MT_CHARGE, ATTACK),
+        Change::StateAs(NESS, NS_PK_FLASH, ATTACK),
+        Change::StateAs(NESS, NS_PK_THUNDER, RANGED),
+        Change::StateAs(YOSHI, YS_EGG_ROLL, RANGED),
+        Change::EnemyEntering,
+        Change::OffCamera,
+        Change::TargetOffStage,
+        Change::EnemyMove(KOOPA, KP_BOMB, 0.0, 20.0),
+        Change::EnemyMove(KOOPA, ATTACK_HI4, 0.0, -10.0),
+        Change::EnemyMove(YOSHI, YS_BOMB, 0.0, 20.0),
+        Change::EnemyMove(SAMUS, SS_SCREW, 0.0, -10.0),
+        Change::DiZeroKnockback(Di::Seed),
+        Change::DiZeroKnockback(Di::Switch),
+        Change::DiZeroKnockback(Di::Entering),
+    ]);
+    v
+}
+
+/// The saved frames changed to reach what the replays don't: each changed frame compares
+/// clean, and each change compares clean in some frame.
+#[test]
+fn cpu_vs_changed() {
+    leaf_check::run_as_machine_code();
+    let changes = changes();
+    let dirs = dirs();
+    let per_dir = leaf_check::each_set(
+        &dirs,
+        |dir| saved_calls(dir, "ftCo_800B3900").len(),
+        |dir| {
+            let changed: Vec<Mutex<BTreeSet<usize>>> =
+                changes.iter().map(|_| Mutex::default()).collect();
+            let prepares: Vec<Box<Prepare>> = (0..changes.len())
+                .map(|v| {
+                    let changed = &changed;
+                    let change = changes[v];
+                    Box::new(move |c: &mut Call, i: usize| {
+                        if change_frame(c, change) {
+                            changed[v].lock().unwrap().insert(i);
+                        }
+                    }) as Box<Prepare>
+                })
+                .collect();
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|p| Variant {
+                    prepare: p.as_ref(),
+                    ours: &run_frame,
+                    stubs: &[],
+                })
+                .collect();
+            let paths = saved_calls(dir, "ftCo_800B3900");
+            let reports = check_variants(dir, "ftCo_800B3900", &variants);
+            reports
+                .iter()
+                .enumerate()
+                .map(|(v, r)| {
+                    let c = changed[v].lock().unwrap();
+                    if c.is_empty() {
+                        0
+                    } else {
+                        compared(r, &paths, &c)
+                    }
+                })
+                .collect::<Vec<usize>>()
+        },
+    );
+    let mut totals = vec![0; changes.len()];
+    for t in &per_dir {
+        for (total, n) in totals.iter_mut().zip(t) {
+            *total += n;
+        }
+    }
+    for (c, t) in changes.iter().zip(&totals) {
+        eprintln!("compared clean, {c:?}: {t}");
+    }
+    if dirs.is_empty() || leaf_check::reference().is_none() {
+        return;
+    }
+    let never: Vec<_> = changes
+        .iter()
+        .zip(&totals)
+        .filter(|(_, t)| **t == 0)
+        .map(|(c, _)| c)
+        .collect();
+    assert!(never.is_empty(), "changes that never compared: {never:?}");
+}

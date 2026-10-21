@@ -437,7 +437,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CpuRetapR`.
-    fn cpu_retap_r(&mut self, f: FighterId) {
+    pub(super) fn cpu_retap_r(&mut self, f: FighterId) {
         self.cpu_cmd(f, cmd::RELEASE_R);
         self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
         self.cpu_cmd(f, cmd::PRESS_R);

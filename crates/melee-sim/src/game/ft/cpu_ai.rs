@@ -21,8 +21,12 @@ pub(super) const P_LINK_FIGHTER: u8 = 8;
 /// `CpuKind_Nana`.
 const CPU_KIND_NANA: i32 = 6;
 
-/// `Ft_Kind_Nana`.
+/// `Ft_Kind_Nana`, `_Donkey`, `_Kirby`, `_Samus`, `_Mewtwo`.
 const KIND_NANA: i32 = 11;
+const KIND_DONKEY: i32 = 3;
+const KIND_KIRBY: i32 = 4;
+const KIND_SAMUS: i32 = 13;
+const KIND_MEWTWO: i32 = 16;
 
 /// `ftPp_MS_SpecialLw`, `ftPp_MS_SpecialAirLw`, and the Ice Climbers' up special's states
 /// (`ftPp_MS_SpecialHi_0` to `_5`).
@@ -301,13 +305,23 @@ impl Running<'_> {
         });
     }
 
-    /// The fighter's decision by its computer kind, `ftCo_800B2AFC`: only Nana's is ported.
-    /// It returns the r5 the decision leaves, which `ftCo_800B2AFC` passes on unchanged.
-    // Ports `ftCo_800B2AFC`; aliased once a check reaches it.
+    /// The fighter's decision by its computer kind, `ftCo_800B2AFC`: Nana's, the VS kind's
+    /// ([`Running::cpu_decide_vs`]) and kind 15's are ported. It returns the r5 the decision
+    /// leaves, which `ftCo_800B2AFC` passes on unchanged.
+    #[doc(alias = "ftCo_800B2AFC")]
     fn cpu_decide(&mut self, f: FighterId) -> Leftover {
         match self.game.fighters[f.0].cpu.kind {
             CPU_KIND_NANA => self.nana_decide(f),
-            k => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
+            // The VS kind, two others and every kind the switch doesn't list.
+            4 | 11 | 12 => self.cpu_decide_vs(f),
+            15 => {
+                self.game.fighters[f.0].cpu.x18 = 0;
+                Leftover::Unknown("ftCo_800B2AFC")
+            }
+            k @ (0..=3 | 7..=10 | 13 | 14 | 17..=29) => {
+                unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
+            }
+            _ => self.cpu_decide_vs(f),
         }
     }
 
@@ -616,7 +630,7 @@ impl Running<'_> {
 
     /// A new script once the last is done, `ftCo_800B2790`, by what the fighter is doing
     /// (`x18`). `r5` is what its caller left in that register, which the DI reads
-    /// ([`Leftover`]); nothing before the DI's call writes it for the characters ported.
+    /// ([`Leftover`]); before the DI's call only a charge's release writes it.
     // Ports `ftCo_800B2790`; aliased once a check reaches it.
     fn cpu_behave(&mut self, f: FighterId, r5: Leftover) {
         let c = &self.game.fighters[f.0].cpu;
@@ -627,7 +641,7 @@ impl Running<'_> {
         c.x80 = c.x80.wrapping_add(1);
         c.xF8_b7 = false;
         self.cpu_script_reset(f);
-        self.cpu_charge_release(f);
+        let r5 = self.cpu_charge_release(f).unwrap_or(r5);
         use super::cpu_script::cmd;
         match self.game.fighters[f.0].cpu.x18 {
             0 => {
@@ -636,11 +650,11 @@ impl Running<'_> {
             }
             1 => self.cpu_walk(f),
             2 => self.cpu_attack_behavior(f),
-            3 => unported_call("ftCo_800B9020"),
+            3 => self.cpu_ranged(f),
             4 => self.cpu_recover_behavior(f),
             5 => self.cpu_get_up(f),
             6 => self.cpu_ledge_behavior(f),
-            7 => unported_call("ftCo_800BA9A0"),
+            7 => self.cpu_shield(f),
             8 => self.cpu_jump_at_target(f),
             9 => self.cpu_hold(f),
             10 => self.cpu_stand(f),
@@ -689,18 +703,49 @@ impl Running<'_> {
     }
 
     /// Lets go of a charging special when it's charged, `ftCo_800ADC28`: Donkey Kong's Giant
-    /// Punch, Samus's Charge Shot, Mewtwo's Shadow Ball and Kirby's copies of them; not while
-    /// it's taking a hit (`x18` 10). Releasing one leaves r5 1 (its last command's argument);
-    /// for the characters ported it writes nothing.
-    // Ports `ftCo_800ADC28`; aliased once a check reaches it.
-    fn cpu_charge_release(&mut self, f: FighterId) {
+    /// Punch (a tap of R), Samus's Charge Shot, Mewtwo's Shadow Ball and Kirby's copies of
+    /// them (a tap of R and a frame's wait); not while it's taking a hit (`x18` 10).
+    /// A release leaves r5 1, its last argument (`ftCo_CpuTapR`'s wait; the command writers
+    /// leave r5 alone), which a DI with no knockback in the same frame reads: a charging state
+    /// can still carry the hitstun flag. The r5 it leaves, if it released.
+    #[doc(alias = "ftCo_800ADC28")]
+    fn cpu_charge_release(&mut self, f: FighterId) -> Option<Leftover> {
+        use super::cpu_script::cmd;
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.x18 == 10 {
-            return;
+            return None;
         }
-        // Ft_Kind_Donkey, Ft_Kind_Kirby, Ft_Kind_Samus, Ft_Kind_Mewtwo.
-        if matches!(fpp.kind, 3 | 4 | 13 | 16) {
-            unported_call("ftCo_800ADC28 for a character with a charging special");
+        let ms = fpp.motion_id;
+        let tap_and_wait = match fpp.kind {
+            KIND_DONKEY => {
+                if ms == super::donkey::ms::SPECIAL_N_LOOP {
+                    self.cpu_tap_r(f);
+                    return Some(Leftover::Word(1));
+                }
+                return None;
+            }
+            KIND_SAMUS => ms == super::samus::ms::SPECIAL_N_HOLD,
+            KIND_MEWTWO => {
+                ms == super::mewtwo::ms::SPECIAL_N_LOOP
+                    || ms == super::mewtwo::ms::SPECIAL_N_LOOP_FULL
+            }
+            KIND_KIRBY => {
+                use super::kirby::ms as kb;
+                match fpp.u_i32(super::kirby::u::HAT_KIND) {
+                    KIND_DONKEY => ms == kb::DK_SPECIAL_N_LOOP,
+                    KIND_SAMUS => ms == kb::SS_SPECIAL_N_HOLD,
+                    KIND_MEWTWO => ms == kb::MT_SPECIAL_N_LOOP || ms == kb::MT_SPECIAL_N_LOOP_FULL,
+                    _ => false,
+                }
+            }
+            _ => false,
+        };
+        if !tap_and_wait {
+            return None;
         }
+        // `ftCo_CpuTapRAndWait`.
+        self.cpu_tap_r(f);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        Some(Leftover::Word(1))
     }
 }

@@ -10250,3 +10250,47 @@ ftCo_DamageScrew_Phys	leaf-check items_leftovers: items_leftovers_functions runs
 ftCo_DamageScrew_Coll	leaf-check items_leftovers: items_leftovers_functions runs its saved calls and runs it from the leftovers oracle matches' fighters (local/calls/items-leftovers), its landing flag set and not, and compares the whole state; melee-oracle diff: the items-leftovers-fd oracle match (v5-mixed, --fp hardware --heap, clean through its 11032 ticks), the flag set for 22 frames
 ftCo_800D41C4	leaf-check items_leftovers: items_leftovers_functions runs it from the star and screen KOs' entries and the leftovers oracle matches' other fighter states (local/calls/items-leftovers) and compares the whole state (no match KOs a frozen fighter upward)
 ftCo_800D47B8	leaf-check items_leftovers: items_leftovers_functions runs it from the star and screen KOs' entries and the leftovers oracle matches' other fighter states (local/calls/items-leftovers) and compares the whole state (no match KOs a frozen fighter upward)
+
+# A VS match's computer players (computer kind 4): tools/leaf-check/tests/cpu_vs.rs runs ftCo_800B3900 from saved calls of the level 1 CPU games split out of three ranked replays and of five level 9 oracle matches (local/calls/cpu-vs) against the machine code, as saved and changed (cpu_vs_changed: level 9, other characters, charges, follow-ups, entering enemies, off camera, off-stage targets, enemy moves, DI with no knockback), and compares the whole state; melee-oracle diff runs the seven level 1 games and the level 9 oracle matches (docs/oracle.md).
+ftCo_800B2AFC	leaf-check cpu_vs: every saved frame decides by computer kind 4; melee-oracle diff, the seven level 1 CPU games (hf-cpu) to their ends
+ftCo_800B24B8	leaf-check cpu_vs: every saved frame; melee-oracle diff, the level 1 games and five level 9 oracle matches to their ends (the fear flag xF9_b3 left clear fails cpu-puff-fod in tick 1)
+ftCo_800A229C	leaf-check cpu_vs: every saved frame, and cpu_vs_changed OffCamera; melee-oracle diff (a 20-unit camera margin fails hf-ness-marth-bf-69664b46-g1 and hf-mewtwo-falco-bf-3e1a8c1d-g1)
+ftCo_800AE7AC	leaf-check cpu_vs: cpu_vs_changed OffCamera (in the air, the stage's own cases being unported)
+ftCo_800A20A0	leaf-check cpu_vs: cpu_vs_changed EnemyEntering (the near-target flag by twice the character's distance threshold)
+ftCo_800A80E4	leaf-check cpu_vs: cpu_vs_changed EnemyEntering (the island end beside an entering target within 50)
+ftCo_800A53DC	leaf-check cpu_vs: every saved frame with no entering target; melee-oracle diff, cpu-sweep-dk-bf (three CPUs and a human; the standing comparison reversed fails it)
+ftCo_800A75DC	leaf-check cpu_vs: every saved frame with no entering target; melee-oracle diff (the reach made the difference fails hf-link-ness-fd-25eaa574-g1 in tick 65 and hf-ness-marth-bf-69664b46-g1 in tick 70)
+ftCo_800A4768	leaf-check cpu_vs: cpu_vs_changed TargetOffStage (the target in the air with no floor below)
+ftCo_800B732C	leaf-check cpu_vs: every saved frame and cpu_vs_changed Level9; melee-oracle diff, cpu-puff-fod and cpu-luigi-bf (the level floor raised to 10 fails both)
+ftCo_800B9CBC	leaf-check cpu_vs: every saved frame (Mewtwo's and Ness's ranged attacks) and cpu_vs_changed RangedAs (Ness, Yoshi, Samus, Mewtwo)
+ftCo_800A1BA8	leaf-check cpu_vs: ftCo_800B9CBC asks it each time the ranged attack's delay runs out, in the saved frames and cpu_vs_changed RangedAs
+ftCo_800A2170	leaf-check cpu_vs: cpu_vs_changed RangedAs(Yoshi), the egg roll at a target on his island (its air test dropped changes nothing in the frames checked: the targets level with him stand)
+ftCo_800B9790	leaf-check cpu_vs: the CPU Ness's saved frames and cpu_vs_changed RangedAs(Ness)
+ftCo_800B98C8	leaf-check cpu_vs: cpu_vs_changed RangedAs(Yoshi)
+ftCo_800B6208	leaf-check cpu_vs: the CPU Mewtwo's saved frames and cpu_vs_changed RangedAs (each character's ranged table)
+ftCo_800B9020	leaf-check cpu_vs: the CPU Mewtwo's saved frames (behavior 3) and cpu_vs_changed StateAs (Ness's PK Thunder, Yoshi's egg roll); melee-oracle diff, hf-mewtwo-falco-bf-3e1a8c1d-g1 from tick 751 (its count, x90, isn't shown to fail: no frame checked picks a command afresh there)
+ftCo_800B658C	leaf-check cpu_vs: every saved frame attacking and cpu_vs_changed StateAs (charge releases, PK Flash); melee-oracle diff, hf-ness-marth-bf-69664b46-g1 from tick 300
+ftCo_800B920C	leaf-check cpu_vs: the CPU Ness's saved frames and cpu_vs_changed StateAs(Ness, PK Flash)
+ftCo_800B92D4	leaf-check cpu_vs: cpu_vs_changed StateAs(Ness, PK Thunder)
+ftCo_800B9340	leaf-check cpu_vs: cpu_vs_changed StateAs(Yoshi, egg roll)
+ftCo_800B9504	leaf-check cpu_vs: oracle-cpu-zelda-bf's saved frames, Din's Fire steered; melee-oracle diff, cpu-zelda-bf from tick 1301 (the point 25 above its target fails it)
+ftCo_800A4E8C	leaf-check cpu_vs: ftCo_800B9504 finds Din's Fire's nearest enemy with it, in oracle-cpu-zelda-bf's saved frames
+ftCo_800A96B8	leaf-check cpu_vs: the CPU Ness's saved frames and cpu_vs_changed RecoverAs (Mario, Fox, Falco, Pikachu, Pichu, Yoshi, Ness, Luigi, Zelda, Samus); melee-oracle diff, hf-ness-marth-bf-69664b46-g1 in tick 2627
+ftCo_800A8EB0	leaf-check cpu_vs: cpu_vs_changed RecoverAs(Ness) at level 9, below the destination
+ftCo_800A92CC	leaf-check cpu_vs: cpu_vs_changed RecoverAs(Pikachu) and RecoverAs(Pichu), the near case (no recovering frame checked is over 60 across)
+ftCo_800A949C	leaf-check cpu_vs: cpu_vs_changed RecoverAs(Zelda)
+ftCo_800A963C	leaf-check cpu_vs: cpu_vs_changed RecoverAs(Samus) (its commands are the default's)
+ftCo_800ADC28	leaf-check cpu_vs: the CPU Mewtwo's saved frames and cpu_vs_changed StateAs (Donkey Kong's, Samus's and Mewtwo's charges)
+ftCo_800ACD5C	leaf-check cpu_vs: every saved frame standing; oracle-cpu-mewtwo-dl's saved frames (Shadow Ball charged and let go); melee-oracle diff, cpu-mewtwo-dl to its end (the start of a charge with one stored fails it)
+ftCo_800BB9B4	leaf-check cpu_vs: oracle-cpu-puff-fod's and oracle-cpu-luigi-bf's saved frames and cpu_vs_changed Level9; melee-oracle diff, cpu-puff-fod, cpu-luigi-bf, cpu-mario-ps and cpu-mewtwo-dl to their ends (its middle's radius scaled by 0.6 fails cpu-puff-fod)
+ftCo_800BB104	leaf-check cpu_vs: as ftCo_800BB9B4, enemies' hitboxes about to reach the CPU
+ftCo_800BB768	leaf-check cpu_vs: cpu_vs_changed EnemyMove (Bowser's Bowser Bomb and up smash, Yoshi's Yoshi Bomb, Samus's Screw Attack)
+ftCo_800BB220	leaf-check cpu_vs: as ftCo_800BB9B4, Fox's lasers coming at the CPU in the level 9 matches
+ftCo_800BA9A0	leaf-check cpu_vs: oracle-cpu-puff-fod's and oracle-cpu-luigi-bf's saved frames; melee-oracle diff, cpu-puff-fod and cpu-luigi-bf (the roll's side swapped fails them in ticks 1067 and 636)
+ftCo_800B9F90	leaf-check cpu_vs: as ftCo_800BA9A0, the shield held by level
+ftCo_800BA160	leaf-check cpu_vs: as ftCo_800BA9A0, a roll right
+ftCo_800BA224	leaf-check cpu_vs: as ftCo_800BA9A0, a roll left
+ftCo_800B77E8	leaf-check cpu_vs: oracle-cpu-luigi-bf's saved frames (Luigi's side special) and every frame of the others; melee-oracle diff, cpu-mario-ps to its end (Mario's reach 40 fails it in tick 2106)
+ftCo_800B630C	leaf-check cpu_vs: every saved frame attacking, oracle-cpu-sweep-dk-bf's for Donkey Kong; melee-oracle diff, cpu-sweep-dk-bf to its end (Donkey Kong's carry and throws aren't shown reached: lowering his bound changes nothing there)
+ftCo_800A5A90	leaf-check cpu_vs: ftCo_800B630C asks it in every saved frame attacking
+ftCo_IsGrabbing	leaf-check cpu_vs: every saved frame, oracle-cpu-sweep-dk-bf's for Donkey Kong; melee-oracle diff, cpu-sweep-dk-bf to its end (no frame checked has Donkey Kong carrying, Bowser's klaw or Kirby's inhale)

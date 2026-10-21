@@ -198,7 +198,7 @@ impl Running<'_> {
     /// The computer player's first attack delay, by its level and a random draw,
     /// `ftCo_800B9704`.
     #[doc(alias = "ftCo_800B9704")]
-    fn cpu_attack_timer(&mut self, f: FighterId) {
+    pub(super) fn cpu_attack_timer(&mut self, f: FighterId) {
         let rand = self.game.objs.rng.draw_f32();
         let c = &mut self.game.fighters[f.0].cpu;
         let level = fp::frsp(f64::from(10i32.wrapping_sub(c.level)));

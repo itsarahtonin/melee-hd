@@ -10,7 +10,7 @@ use super::super::gr::stage;
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
-use super::cpu_ai::P_LINK_FIGHTER;
+use super::cpu_ai::{Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
 use crate::math;
 
@@ -18,13 +18,19 @@ use crate::math;
 const P_LINK_ITEM: u8 = 9;
 
 /// `It_Kind_L_Gun_Ray`: the first item kind past the common items.
-const IT_KIND_L_GUN_RAY: i32 = 0x23;
+pub(super) const IT_KIND_L_GUN_RAY: i32 = 0x23;
 
 /// What each common item is worth to a computer player, `ftCo_803C5A68`.
 const ITEM_WORTH: [i32; IT_KIND_L_GUN_RAY as usize] = [
     1, 0, 0, 1, 0, 0, 0, 1, 7, 6, 5, 4, 4, 3, 1, 1, 2, 1, 5, 2, 2, 2, 3, 3, 3, 4, 0, 0, 8, 4, 1, 4,
     4, 5, 5,
 ];
+
+/// What `HSD_Randf` leaves in r5: `HSD_RandSeedPtr`, the address of its seed (`seed`).
+const SEED_PTR: u32 = 0x804D_5F90;
+
+/// What `gm_80166378` leaves in r5: its `MatchEnd` (`controller + 0x24C`, gmvs.c) plus 0x30.
+const MATCH_END_X30: u32 = 0x8046_B6A0 + 0x24C + 0x30;
 
 /// Behaviors (`CpuFighter::x18`) the decision switches to.
 pub mod behavior {
@@ -75,7 +81,7 @@ impl Running<'_> {
     /// cloaking item's color animation (`ft_80087A18`), always or, flickering, half the time
     /// by its own frame count.
     // Ports `ftCo_800A0F00`; aliased once a check reaches it.
-    fn cpu_cloaked(&self, f: FighterId) -> bool {
+    pub(super) fn cpu_cloaked(&self, f: FighterId) -> bool {
         // `ft_80087A18`: only with a powered-up color animation (`x2226_b4`).
         if self.game.fighters[f.0].x2226_b4 {
             unported_call("ft_80087A18 with a power-up's color animation");
@@ -192,7 +198,7 @@ impl Running<'_> {
 
     /// Whether an item heals, `ftCo_800A5908`: a heart, a tomato or food.
     // Ports `ftCo_800A5908`; aliased once a check reaches it.
-    fn cpu_item_heals(&self, item: ItemId) -> bool {
+    pub(super) fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
         matches!(self.game.items[item.0].kind, 8 | 9 | 0x12)
     }
@@ -201,7 +207,7 @@ impl Running<'_> {
     /// `ftCo_800A5F4C`: grabbable, in reach and worth at least its threshold (`x2C`), the
     /// nearest of the most worth (`ftCo_803C5A68`); the first found keeps a tie.
     #[doc(alias = "ftCo_800A5F4C")]
-    fn cpu_common_item_target(&mut self, f: FighterId, kind: i32) -> Option<ItemId> {
+    pub(super) fn cpu_common_item_target(&mut self, f: FighterId, kind: i32) -> Option<ItemId> {
         let mut closest: Option<(ItemId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
@@ -251,7 +257,7 @@ impl Running<'_> {
     /// stage enemies in reach. No VS stage without items has any, so a candidate stops the
     /// port.
     // Ports `ftCo_800A648C`; aliased once a check reaches it.
-    fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
+    pub(super) fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
@@ -287,21 +293,7 @@ impl Running<'_> {
         c.xF9_b1 = false;
         let target = self.cpu_find_target(f);
         self.game.fighters[f.0].cpu.x44 = target;
-        // `ftCo_CpuUpdateCommonItemTarget`.
-        let fpp = &self.game.fighters[f.0];
-        let holds_other = fpp.item_gobj.is_some_and(|g| {
-            let it = super::super::it::item_of(self.game, g);
-            !self.cpu_item_heals(it)
-        });
-        let item = if holds_other || fpp.x2168 != 0 {
-            None
-        } else {
-            self.cpu_common_item_target(f, IT_KIND_L_GUN_RAY)
-        };
-        self.game.fighters[f.0].cpu.x4C = item;
-        // `ftCo_CpuUpdateSpecialItemTarget`.
-        let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.x50 = x50;
+        self.cpu_item_targets(f);
         // `inlineI3`.
         if self.cpu_should_act(f) {
             if self.game.fighters[f.0].cpu.xFB_b0 {
@@ -327,6 +319,21 @@ impl Running<'_> {
     /// what r31 held in its caller; `di_switch` is that register's truth.
     // Ports `ftCo_800ADE48`; aliased once a check reaches it.
     pub(super) fn cpu_choose_behavior(&mut self, f: FighterId, di_switch: bool) -> bool {
+        self.cpu_choose_behavior_r5(f, di_switch).0
+    }
+
+    /// [`Running::cpu_choose_behavior`] with the r5 it leaves when it keeps or starts the DI
+    /// (the stale-register rule, docs/engine.md), the only behavior that reads it: the seed
+    /// pointer `HSD_Randf` loads (`&seed`) when a coin flip was its last call, else
+    /// `MatchEnd + 0x30` when the standing's query compiled the results this tick (the last
+    /// team `fn_801661E0` ranks leaves it there, and every match has one). With neither, what
+    /// the destination's floor checks left isn't followed.
+    pub(super) fn cpu_choose_behavior_r5(
+        &mut self,
+        f: FighterId,
+        di_switch: bool,
+    ) -> (bool, Leftover) {
+        let mut r5 = Leftover::Unknown("ftCo_800ADE48's destination checks");
         // The destination: kept if over ground in reach, else reset.
         let c = &self.game.fighters[f.0].cpu;
         let (dx, dy) = (c.x54.x, c.x54.y);
@@ -360,6 +367,9 @@ impl Running<'_> {
             c.x88 -= 1;
         }
         // `gm_8016C75C`: the player's standing.
+        if self.game.vs.state.x24C.x0 != self.game.scene_ticks() {
+            r5 = Leftover::Word(MATCH_END_X30);
+        }
         let standing = self.cpu_standing(slot);
         if self.game.fighters[f.0].cpu.x8C != standing as i32 {
             self.game.fighters[f.0].cpu.x88 = 0x12C;
@@ -369,6 +379,7 @@ impl Running<'_> {
         let c = &self.game.fighters[f.0].cpu;
         let period = if c.kind == 0xE { 120 } else { 400 };
         if c.x7C % period == 0 {
+            r5 = Leftover::Word(SEED_PTR);
             let r = reg(self.game.objs.rng.draw_f32());
             self.game.fighters[f.0].cpu.xF8_b5 = r > 0.5;
         }
@@ -378,13 +389,14 @@ impl Running<'_> {
         }
         // DI in hitstun.
         if fpp.cpu.x18 == behavior::DI {
-            return true;
+            return (true, r5);
         }
         let switch =
             if fpp.kind == 0x1F || fpp.cpu.kind == 0xF || fpp.cpu.kind == 0 || !fpp.x221A_b3 {
                 false
             } else {
                 fpp.cpu.xF9_b0 = false;
+                r5 = Leftover::Word(SEED_PTR);
                 let r = reg(self.game.objs.rng.draw_f32());
                 let c = &mut self.game.fighters[f.0].cpu;
                 let level = fp::fsubs(f64::from(c.level), 0.0);
@@ -392,10 +404,12 @@ impl Running<'_> {
                 di_switch
             };
         if switch {
+            // `ftCo_800B4A78` leaves r5 alone.
             self.cpu_script_clear(f);
             self.game.fighters[f.0].cpu.x18 = behavior::DI;
-            return true;
+            return (true, r5);
         }
+        let r5 = Leftover::Unknown("ftCo_800ADE48");
         let x18 = self.game.fighters[f.0].cpu.x18;
         let ms = self.game.fighters[f.0].motion_id;
         // Each check: the behavior, whether the fighter is in it already, and whether it
@@ -404,46 +418,46 @@ impl Running<'_> {
             ($b:expr) => {{
                 self.cpu_script_clear(f);
                 self.game.fighters[f.0].cpu.x18 = $b;
-                return true;
+                return (true, r5);
             }};
         }
         // Leaving a barrel (`ftCo_MS_BarrelWait`, `ftCo_MS_Barrel`).
         if x18 == 0x11 {
-            return true;
+            return (true, r5);
         }
         if ms == 0x125 || ms == 0x154 {
             switch_to!(0x11);
         }
         // Riding a Warp Star.
         if x18 == 0x13 {
-            return true;
+            return (true, r5);
         }
         if ms == 0x131 || ms == 0x132 {
             switch_to!(0x13);
         }
         // Lying down.
         if x18 == 5 {
-            return true;
+            return (true, r5);
         }
         if matches!(ms, 0xB7 | 0xB8 | 0xBF | 0xC0) {
             switch_to!(5);
         }
         // On a ledge.
         if x18 == 6 {
-            return true;
+            return (true, r5);
         }
         if matches!(ms, 0xFC | 0xFD) {
             switch_to!(6);
         }
         // Holding a fighter.
         if x18 == 9 {
-            return true;
+            return (true, r5);
         }
         if self.cpu_is_grabbing(f) {
             switch_to!(9);
         }
         if self.game.fighters[f.0].cpu.x18 == behavior::WAIT_OUT {
-            return true;
+            return (true, r5);
         }
         if self.cpu_falling_away(f) {
             switch_to!(behavior::WAIT_OUT);
@@ -452,72 +466,73 @@ impl Running<'_> {
         let fpp = &self.game.fighters[f.0];
         // Tumbling (`ftCo_MS_DamageFall`) at level 5 and up.
         if x18 == 0xF {
-            return true;
+            return (true, r5);
         }
         if fpp.cpu.level >= 5 && fpp.motion_id == 0x26 {
             switch_to!(0xF);
         }
         // Held.
         if x18 == 0x10 {
-            return true;
+            return (true, r5);
         }
         let ms = fpp.motion_id;
         if ms == 0xE0 || ms == 0xE3 || (0x10A..=0x10E).contains(&ms) {
             switch_to!(0x10);
         }
-        // Shielding.
-        if x18 == 7 {
-            unported_call("ftCo_800BB9B4");
+        // Shielding or dodging.
+        if self.game.fighters[f.0].cpu.x18 == 7 {
+            self.cpu_shield_threat(f);
+            return (true, r5);
         }
-        if self.cpu_shield_chance(f) {
-            unported_call("ftCo_800BB9B4");
+        if self.cpu_shield_chance(f) && self.cpu_shield_threat(f) != 0 {
+            switch_to!(7);
         }
         if self.game.fighters[f.0].cpu.x18 == 3 {
-            return true;
+            return (true, r5);
         }
         if self.cpu_ranged_attack(f) {
             switch_to!(3);
         }
         if self.game.fighters[f.0].cpu.x18 == 2 {
-            return true;
+            return (true, r5);
         }
         if self.cpu_attack(f) {
             switch_to!(2);
         }
         if self.game.fighters[f.0].cpu.x18 == 8 {
-            return true;
+            return (true, r5);
         }
         let jump = self.cpu_jump_attack(f);
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF8_b34 = (jump & 3) as u8;
         if c.xF8_b34 != 0 {
             c.x18 = 8;
-            return true;
+            return (true, r5);
         }
         if self.game.fighters[f.0].cpu.x18 == 0xD {
-            return true;
+            return (true, r5);
         }
         if self.cpu_item_pickup(f) {
             self.game.fighters[f.0].cpu.x18 = 0xD;
-            return true;
+            return (true, r5);
         }
         if self.game.fighters[f.0].cpu.x18 == 0xE {
-            return true;
+            return (true, r5);
         }
         if self.cpu_throws_held_item(f) {
             self.game.fighters[f.0].cpu.x18 = 0xE;
-            return true;
+            return (true, r5);
         }
         let c = &self.game.fighters[f.0].cpu;
         if c.x18 == 0xA {
-            return true;
+            return (true, r5);
         }
         if c.x20 != 0 && self.cpu_at_destination(f, 0.0) {
             let c = &mut self.game.fighters[f.0].cpu;
             c.x18 = c.x20;
-            return true;
+            return (true, r5);
         }
-        false
+        (false, r5)
     }
 
     /// Whether the fighter gets rid of the item it holds (behavior 14, in
@@ -730,16 +745,23 @@ impl Running<'_> {
     }
 
     /// Whether the fighter holds someone, `ftCo_IsGrabbing`: its catch wait, Donkey Kong's
-    /// carry, Bowser's Koopa Klaw hold, Kirby's inhale.
-    // Ports `ftCo_IsGrabbing`; aliased once a check reaches it.
+    /// carry, Bowser's Koopa Klaw hold, Kirby's inhale and swallow.
+    #[doc(alias = "ftCo_IsGrabbing")]
     pub(super) fn cpu_is_grabbing(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
         // `ftCo_MS_CatchWait`.
         if fp.motion_id == 216 {
             return true;
         }
+        let ms = fp.motion_id;
         match fp.kind {
-            3 | 4 | 5 | 31 => unported_call("ftCo_IsGrabbing for Donkey Kong, Kirby or Bowser"),
+            // Ft_Kind_Donkey: `ftDk_MS_ThrowFWait0` to `_ThrowFKneebend`, carrying a fighter.
+            3 => (350..=355).contains(&ms),
+            // Ft_Kind_Koopa, Ft_Kind_GKoops: `ftKp_MS_SpecialSHit0_1`.
+            5 | 31 => ms == super::koopa::ms::SPECIAL_S_HIT0_1,
+            // Ft_Kind_Kirby: `ftKb_MS_SpecialNCapture0` to `_EatTurnAir`.
+            4 => (super::kirby::ms::SPECIAL_N_CAPTURE0..=super::kirby::ms::EAT_TURN_AIR)
+                .contains(&ms),
             _ => false,
         }
     }

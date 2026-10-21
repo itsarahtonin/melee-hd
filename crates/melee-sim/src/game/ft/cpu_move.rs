@@ -20,6 +20,12 @@ const CPU_DATA: u32 = 0x58;
 const GR_KIND_SHRINE: i32 = 7;
 const GR_KIND_ICEMT: i32 = 0x16;
 
+/// `Ft_Kind_Donkey`, `_Kirby`, `_Samus`, `_Mewtwo`.
+const KIND_DONKEY: i32 = 3;
+const KIND_KIRBY: i32 = 4;
+const KIND_SAMUS: i32 = 13;
+const KIND_MEWTWO: i32 = 16;
+
 /// `LINE_FLAG_PLATFORM`: a floor a fighter can drop through.
 const LINE_FLAG_PLATFORM: u32 = 1 << 8;
 
@@ -54,7 +60,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CpuTapR`.
-    fn cpu_tap_r(&mut self, f: FighterId) {
+    pub(super) fn cpu_tap_r(&mut self, f: FighterId) {
         self.cpu_cmd(f, cmd::PRESS_R);
         self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
         self.cpu_cmd(f, cmd::RELEASE_R);
@@ -120,7 +126,7 @@ impl Running<'_> {
     /// The nearest enemy just entering (respawning or riding in, `x221D_b6` or `x2168` with
     /// no ride) and in reach, `ftCo_800A5CE0`; none for a fighter that can't target.
     // Ports `ftCo_800A5CE0`; aliased once a check reaches it.
-    fn cpu_entering_enemy(&self, f: FighterId) -> Option<FighterId> {
+    pub(super) fn cpu_entering_enemy(&self, f: FighterId) -> Option<FighterId> {
         if self.cpu_untargetable(f) {
             return None;
         }
@@ -280,14 +286,49 @@ impl Running<'_> {
         dest_y > feet
     }
 
-    /// A recovery toward the destination by character, `ftCo_800A96B8`; the default (and
-    /// Nana's) is up and toward it, then the up special.
-    // Ports `ftCo_800A96B8`; aliased once a check reaches it.
+    /// A recovery toward the destination by character, `ftCo_800A96B8`: by default (and for
+    /// Mario and Nana) the up special up and toward it with full drift in; Fox's and Falco's
+    /// diagonally, Luigi's side special, nothing for Yoshi, Ness's PK Thunder once below the
+    /// destination, and Pikachu's, Pichu's, Zelda's and Samus's own.
+    #[doc(alias = "ftCo_800A96B8")]
+    #[doc(alias = "ftCo_800A963C")]
     pub(super) fn cpu_recover(&mut self, f: FighterId) {
-        match self.game.fighters[f.0].kind {
-            12 | 23 | 1 | 22 | 14 | 8 | 17 | 19 | 13 => {
-                unported_call("ftCo_800A96B8 for a character with its own recovery")
+        let fpp = &self.game.fighters[f.0];
+        match fpp.kind {
+            // Ft_Kind_Pikachu, Ft_Kind_Pichu.
+            12 | 23 => self.cpu_recover_pikachu(f),
+            // Ft_Kind_Fox, Ft_Kind_Falco.
+            1 | 22 => {
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
+                self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 88);
+                self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
+                self.cpu_cmd(f, cmd::RELEASE_B);
+                self.cpu_cmd1(f, cmd::WAIT_FOR, 40);
+                self.cpu_cmd(f, cmd::DONE);
             }
+            // Ft_Kind_Yoshi.
+            14 => self.cpu_cmd(f, cmd::DONE),
+            // Ft_Kind_Ness.
+            8 => {
+                let above = fp::fsub(reg(fpp.cpu.x54.y), 10.0);
+                if reg(fpp.cur_pos.y) > above {
+                    self.cpu_cmd(f, cmd::DONE);
+                } else {
+                    self.cpu_recover_ness(f);
+                }
+            }
+            // Ft_Kind_Luigi.
+            17 => {
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+                self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 127);
+                self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
+                self.cpu_cmd(f, cmd::RELEASE_B);
+                self.cpu_cmd1(f, cmd::WAIT_FOR, 40);
+                self.cpu_cmd(f, cmd::DONE);
+            }
+            // Ft_Kind_Zelda.
+            19 => self.cpu_recover_zelda(f),
+            // Ft_Kind_Samus, `ftCo_800A963C`, then the default's own commands.
             _ => {
                 // `ftCo_CpuRecoverDiagonally`.
                 self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
@@ -298,6 +339,92 @@ impl Running<'_> {
                 self.cpu_cmd(f, cmd::DONE);
             }
         }
+    }
+
+    /// `ftCo_CpuStartUpSpecial`.
+    fn cpu_start_up_special(&mut self, f: FighterId) {
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0x7F);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+        self.cpu_cmd1(f, cmd::PRESS_B_FOR, 1);
+        self.cpu_cmd(f, cmd::RELEASE_B);
+    }
+
+    /// Ness's recovery, `ftCo_800A8EB0`: at level 9 only, PK Thunder steered around and back
+    /// into him from below (away, down, toward, up, each held 20 frames but the 35 down).
+    #[doc(alias = "ftCo_800A8EB0")]
+    fn cpu_recover_ness(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        if fpp.cpu.level < 9 {
+            self.cpu_cmd(f, cmd::DONE);
+            return;
+        }
+        let toward = fp::fsubs(reg(fpp.cpu.x54.x), reg(fpp.cur_pos.x)) > 0.0;
+        self.cpu_start_up_special(f);
+        let pi = mem(fp::frsp(std::f64::consts::PI));
+        let half = mem(fp::frsp(fp::fdiv(std::f64::consts::PI, 2.0)));
+        let down = mem(fp::frsp(fp::fneg(fp::fdiv(std::f64::consts::PI, 2.0))));
+        let (first, third) = if toward { (pi, 0.0) } else { (0.0, pi) };
+        for (angle, frames) in [(first, 20), (down, 35), (third, 20), (half, 20)] {
+            // `ftCo_CpuAimPkThunder`.
+            let x = fp::fctiwz(fp::fmuls(127.0, reg(math::cos(angle))));
+            let y = fp::fctiwz(fp::fmuls(127.0, reg(math::sin(angle))));
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, x as u8);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, y as u8);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, frames);
+        }
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Pikachu's and Pichu's recovery, `ftCo_800A92CC`: far out (60), Quick Attack up and
+    /// toward the destination, then across; else straight up, then across or diagonally by a
+    /// coin flip.
+    #[doc(alias = "ftCo_800A92CC")]
+    fn cpu_recover_pikachu(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let far = abs(fp::fsubs(reg(fpp.cur_pos.x), reg(fpp.cpu.x54.x))) > 60.0;
+        self.cpu_start_up_special(f);
+        if far {
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
+            self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 88);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 15);
+            self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 127);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+        } else {
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 15);
+            if reg(self.game.objs.rng.draw_f32()) > 0.5 {
+                self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 88);
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 88);
+            } else {
+                self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 127);
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+            }
+        }
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 15);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// Zelda's recovery, `ftCo_800A949C`: Farore's Wind held 40 frames, toward the
+    /// destination when it's over 30 across, else straight up.
+    #[doc(alias = "ftCo_800A949C")]
+    fn cpu_recover_zelda(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let far = abs(fp::fsubs(reg(fpp.cpu.x54.x), reg(fpp.cur_pos.x))) > 30.0;
+        self.cpu_neutral_stick(f);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0x7F);
+        if far {
+            self.cpu_cmd1(f, cmd::LSTICK_X_TOWARD_DESTINATION, 0x7F);
+            self.cpu_cmd1(f, cmd::PRESS_B_FOR, 40);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+        } else {
+            self.cpu_cmd1(f, cmd::SET_LSTICK_X, 0);
+            self.cpu_cmd1(f, cmd::PRESS_B_FOR, 40);
+            self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+        }
+        self.cpu_cmd(f, cmd::RELEASE_B);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::DONE);
     }
 
     /// Moving in the air, `ftCo_800A9CB4`: falling short, it jumps while it has jumps, air-
@@ -439,7 +566,7 @@ impl Running<'_> {
 
     /// Whether the fighter stands within `5 * scale` of the edge it faces, `ftCo_800A28D0`.
     #[doc(alias = "ftCo_800A28D0")]
-    fn cpu_near_edge(&self, f: FighterId, scale: f64) -> bool {
+    pub(super) fn cpu_near_edge(&self, f: FighterId, scale: f64) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.ground_or_air == GA_AIR {
             return false;
@@ -459,7 +586,7 @@ impl Running<'_> {
 
     /// Whether the fighter faces its destination, `ftCo_800A2BD4`.
     // Ports `ftCo_800A2BD4`; aliased once a check reaches it.
-    fn cpu_facing_destination(&self, f: FighterId) -> bool {
+    pub(super) fn cpu_facing_destination(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         fp::fmuls(
             reg(fpp.facing_dir),
@@ -1011,7 +1138,12 @@ impl Running<'_> {
     /// ([`Running::cpu_island_unsafe`]), where a floor they count is within 5 and inside the
     /// blast zones.
     #[doc(alias = "ftCo_800A6700")]
-    fn cpu_far_island_end(&mut self, f: FighterId, x: f32, y: f32) -> Option<(f32, f32)> {
+    pub(super) fn cpu_far_island_end(
+        &mut self,
+        f: FighterId,
+        x: f32,
+        y: f32,
+    ) -> Option<(f32, f32)> {
         let mut best = reg(-1.0);
         let mut found = None;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -1060,7 +1192,7 @@ impl Running<'_> {
     /// may close in on its target; a new standing in the results is taunted with a tap up
     /// (outside training); kinds that wait do; off its destination, it goes back to walking;
     /// it turns to face its target, and above level 5 the charging characters charge.
-    // Ports `ftCo_800ACD5C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800ACD5C")]
     pub(super) fn cpu_stand(&mut self, f: FighterId) {
         let c = &self.game.fighters[f.0].cpu;
         if c.xF9_b1 && c.x44.is_some() && c.xF8_b6 {
@@ -1104,11 +1236,101 @@ impl Running<'_> {
             self.cpu_finish_neutral(f);
             return;
         }
-        // Ft_Kind_Donkey, Ft_Kind_Samus, Ft_Kind_Mewtwo, Ft_Kind_Kirby.
-        if matches!(fpp.kind, 3 | 13 | 16 | 4) {
-            unported_call("ftCo_800ACD5C for a character that charges");
+        if self.cpu_charge(f) {
+            return;
         }
         self.cpu_finish_neutral(f);
+    }
+
+    /// The charging characters' part of [`Running::cpu_stand`]: Donkey Kong, Samus, Mewtwo and
+    /// Kirby's copies of them start charging with nothing stored; Mewtwo (and Kirby's copy)
+    /// let a fully charged ball go. True when it wrote a script.
+    fn cpu_charge(&mut self, f: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        let ms = fpp.motion_id;
+        match fpp.kind {
+            KIND_DONKEY => {
+                if ms != super::donkey::ms::SPECIAL_N_LOOP
+                    && fpp.u_i32(super::donkey::U_SWINGS) == 0
+                {
+                    self.cpu_start_charging(f);
+                    return true;
+                }
+                false
+            }
+            KIND_SAMUS => {
+                if ms != super::samus::ms::SPECIAL_N_HOLD && fpp.u_i32(super::samus::u::CHARGE) == 0
+                {
+                    self.cpu_start_charging(f);
+                    return true;
+                }
+                false
+            }
+            KIND_MEWTWO => {
+                use super::mewtwo::ms as mt;
+                let charge = fpp.u_i32(super::mewtwo::u::CHARGE);
+                let full = self.mt_attr_f32(f, super::mewtwo::attr::N_CHARGE_CYCLES);
+                if mem(fp::frsp(f64::from(charge))) == full {
+                    if ms == mt::SPECIAL_N_LOOP || ms == mt::SPECIAL_N_LOOP_FULL {
+                        self.cpu_tap_r(f);
+                        self.cpu_cmd(f, cmd::DONE);
+                        return true;
+                    }
+                    false
+                } else if ms != mt::SPECIAL_N_LOOP && charge == 0 {
+                    self.cpu_start_charging(f);
+                    true
+                } else {
+                    false
+                }
+            }
+            KIND_KIRBY => {
+                use super::kirby::{ms as kb, u};
+                match fpp.u_i32(u::HAT_KIND) {
+                    KIND_DONKEY => {
+                        if ms != kb::DK_SPECIAL_N_LOOP && fpp.u_i32(u::DK_SWINGS) == 0 {
+                            self.cpu_start_charging(f);
+                            return true;
+                        }
+                        false
+                    }
+                    KIND_SAMUS => {
+                        if ms != kb::SS_SPECIAL_N_HOLD && fpp.u_i32(u::SS_CHARGE) == 0 {
+                            self.cpu_start_charging(f);
+                            return true;
+                        }
+                        false
+                    }
+                    KIND_MEWTWO => {
+                        let charge = fpp.u_i32(u::MT_CHARGE);
+                        let full = self.kb_attr_f32(f, super::kirby::attr::MT_CHARGE_TIME);
+                        if mem(fp::frsp(f64::from(charge))) == full {
+                            if ms == kb::MT_SPECIAL_N_LOOP || ms == kb::MT_SPECIAL_N_LOOP_FULL {
+                                self.cpu_tap_r(f);
+                                return true;
+                            }
+                            false
+                        } else if ms != kb::MT_SPECIAL_N_LOOP && charge == 0 {
+                            self.cpu_start_charging(f);
+                            true
+                        } else {
+                            false
+                        }
+                    }
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+
+    /// `ftCo_CpuStartCharging`: a tap of B with the stick neutral.
+    fn cpu_start_charging(&mut self, f: FighterId) {
+        self.cpu_neutral_stick(f);
+        self.cpu_cmd(f, cmd::PRESS_B);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::RELEASE_B);
+        self.cpu_cmd(f, cmd::DONE);
     }
 
     /// DI in hitstun, `ftCo_800AC5A0` (behavior 18): out of hitstun it goes back to its usual
