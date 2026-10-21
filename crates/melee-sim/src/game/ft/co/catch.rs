@@ -41,7 +41,7 @@ impl Running<'_> {
 
     /// A grab that caught an item, `fn_800D8BFC`: the item taken into the hand, the target
     /// forgotten, and lifted overhead (the heavy pickup, run to its script's flag).
-    // Ports `fn_800D8BFC`; aliased once a check reaches it.
+    #[doc(alias = "fn_800D8BFC")]
     pub fn catch_item(&mut self, gobj: GObjId) {
         let it = self
             .game

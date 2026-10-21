@@ -44,7 +44,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/itgroundcoll",
     "melee/it/ithitbox",
     "melee/it/itmaterial",
-    "melee/it/itzako",
     "melee/it/kinds/it_2ADA",
     "melee/it/kinds/it_2E5A",
     "melee/it/kinds/it_2F28",
@@ -115,8 +114,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/kinds/itnesspkthundertrail",
     "melee/it/kinds/itnessyoyo",
     "melee/it/kinds/itnokonoko",
-    "melee/it/kinds/itoctarock",
-    "melee/it/kinds/itoldkuri",
     "melee/it/kinds/itparasol",
     "melee/it/kinds/itpatapata",
     "melee/it/kinds/itpikachuthunder",
@@ -615,7 +612,6 @@ pub const UNCHECKED: &[&str] = &[
     "it_8026FE68",
     "melee/it/item",
     "it_80275870",
-    "it_802758D4",
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
@@ -628,27 +624,6 @@ pub const UNCHECKED: &[&str] = &[
 
 /// What an items-on match reaches that isn't ported, task by task.
 pub const MISSING: &[ItemGap] = &[
-    ItemGap {
-        what: "a fighter's grab catching a container's monster, lifting it overhead to throw or drop it",
-        covers: &[
-            "fn_800D8BFC",
-            "it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)",
-            "it_8026C220",
-            "it_8027CB3C",
-            "it_8027CBA4",
-            "it_2725_Logic0_Dropped",
-            "it_2725_Logic0_Thrown",
-            "itLeadead_Logic1_Dropped",
-            "itLeadead_Logic1_Thrown",
-            "itOctarock_Logic2_Dropped",
-            "itOctarock_Logic2_Thrown",
-            "it_802E32B4",
-            "it_802E3314",
-        ],
-        kinds: &[1, 2, 4],
-        with: &[],
-        stages: &[],
-    },
     ItemGap {
         what: "a ReDead hit while the line it last stood on has turned into a wall (a dynamic line tilted past 30 degrees): it_802EA804's walk adds to a register its caller left (docs/melee-bugs.md)",
         covers: &["it_802EA804 (a walk starting on a wall reads f27 its caller left)"],
@@ -812,11 +787,11 @@ mod tests {
                 .any(|g| g.what.starts_with("Zelda"))
         );
         assert!(!balls.iter().any(|g| g.what.starts_with("Zelda")));
-        let catch = |kinds: &[i32]| {
+        let redead = |kinds: &[i32]| {
             missing_with(kinds, &[2], 31)
                 .iter()
-                .any(|g| g.what.starts_with("a fighter's grab"))
+                .any(|g| g.what.starts_with("a ReDead"))
         };
-        assert!(catch(&[1]) && !catch(&[0x12]));
+        assert!(redead(&[1]) && !redead(&[0x12]));
     }
 }

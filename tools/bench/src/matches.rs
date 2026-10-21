@@ -38,7 +38,7 @@ pub enum Control {
     /// hits the containers that land near it.
     Opener,
     /// A human player whose controller follows [`catcher_pad`]'s script with `button` (B for
-    /// Kirby's inhale or Yoshi's tongue), played by `BENCH_PADS`: the opener's
+    /// Kirby's inhale or Yoshi's tongue, Z for a grab), played by `BENCH_PADS`: the opener's
     /// runs with A tapped, and the button held as it stands, so it catches a monster that comes
     /// near; down held before every other round's second press, so Kirby swallows what he holds
     /// rather than spitting it out.
@@ -213,15 +213,31 @@ pub fn opener_pad(frame: i32, port: usize) -> (u16, i8) {
     (if a { 0x0100 } else { 0 }, stick)
 }
 
-/// The B button, a catcher's.
+/// The B button and the Z button, a catcher's.
 pub const BUTTON_B: u16 = 0x0200;
+pub const BUTTON_Z: u16 = 0x0010;
 
 /// A catcher's buttons and main stick's x and y on match frame `frame` (from "GO"), for the
 /// player in `port`: the opener's round of 160 frames, offset by 40 a port, with A tapped every
 /// 12 frames only while it runs, and B held for 12 frames from its stands' frames 30, 70 and
-/// 110; on odd rounds the stick is held down for 6 frames from frame 60.
+/// 110; on odd rounds the stick is held down for 6 frames from frame 60. A grabber (`button`
+/// Z) runs only 20 frames each way, from frames 0 and 80, and presses Z for 3 frames of every 16
+/// it stands, since a monster has to walk into a grab's short reach.
 pub fn catcher_pad(frame: i32, port: usize, button: u16) -> (u16, i8, i8) {
     let t = frame + 40 * port as i32;
+    if button == BUTTON_Z {
+        let at = t % 160;
+        let running = matches!(at, 0..20 | 80..100);
+        let stick_x = match at {
+            0..20 => 80,
+            80..100 => -80,
+            _ => 0,
+        };
+        let a = running && frame % 12 == 3 * port as i32 % 12;
+        let z = !running && at % 16 < 3;
+        let buttons = if a { 0x0100 } else { 0 } | if z { BUTTON_Z } else { 0 };
+        return (buttons, stick_x, 0);
+    }
     let (round, at) = (t / 160, t % 160);
     let running = matches!(at, 0..30 | 80..110);
     let stick_x = match at {
@@ -939,16 +955,16 @@ pub fn monsters_set() -> Vec<Match> {
 
 /// The catch set: the containers alone at item frequency very high, a catcher
 /// ([`catcher_pad`]) against an opener, on seeds a search found to have the catcher catch a
-/// container's monster: Kirby's inhale and Yoshi's tongue (B), which take a monster in. Only
-/// a monster is catchable (`it_80275270`), so no other match has a catch box touch an item.
-/// Two-minute time matches.
+/// container's monster: Kirby's inhale and Yoshi's tongue (B), which take a monster in, and a
+/// grab (Z), which lifts one to be thrown or dropped. Only a monster is catchable
+/// (`it_80275270`), so no other match has a catch box touch an item. Two-minute time matches.
 pub fn catch_set() -> Vec<Match> {
     /// A match's name, stage, catcher, its button, opener and seed.
     type Catch = (&'static str, u16, u8, u16, u8, u32);
     const FD: u16 = FINAL_DESTINATION;
-    // The seeds `seed-search` found (`--watch caught`, with the spit star, kind 53, or Yoshi's
-    // egg, kind 87), the first catch coming at the frame noted.
-    let matches: [Catch; 3] = [
+    // The seeds `seed-search` found (`--watch caught`, the spit star 53, Yoshi's egg 87, or each
+    // monster in its held state), the first catch coming at the frame noted.
+    let matches: [Catch; 7] = [
         // Spat out at 3365.
         ("catch-kirby-fd", FD, KIRBY, BUTTON_B, MARIO, 0x1F0F_128E),
         // Swallowed from 3126.
@@ -962,6 +978,39 @@ pub fn catch_set() -> Vec<Match> {
         ),
         // An egg at 2354.
         ("catch-yoshi-fd", FD, YOSHI, BUTTON_B, LINK, 0x1F0F_140A),
+        // Held at 1334, 4214, 694 and 1814.
+        (
+            "catch-grab-goomba-fd",
+            FD,
+            FOX,
+            BUTTON_Z,
+            MARIO,
+            0x1F0F_1683,
+        ),
+        (
+            "catch-grab-redead-fd",
+            FD,
+            FOX,
+            BUTTON_Z,
+            MARIO,
+            0x1F0F_1618,
+        ),
+        (
+            "catch-grab-octorok-fd",
+            FD,
+            FOX,
+            BUTTON_Z,
+            MARIO,
+            0x1F0F_19BB,
+        ),
+        (
+            "catch-grab-ottosea-fd",
+            FD,
+            FOX,
+            BUTTON_Z,
+            MARIO,
+            0x1F0F_16FE,
+        ),
     ];
     matches
         .iter()
@@ -1716,7 +1765,8 @@ mod tests {
     }
 
     /// A catcher's round: B held from its stands' frames 30, 70 and 110, the stick down before
-    /// the second on odd rounds, A only while it runs.
+    /// the second on odd rounds, A only while it runs; a grabber's Z for 3 of every 16 frames it
+    /// stands, its runs 20 frames each way.
     #[test]
     fn catchers_hold_their_button_as_they_stand() {
         assert_eq!(catcher_pad(30, 0, BUTTON_B), (BUTTON_B, 0, 0));
@@ -1727,6 +1777,14 @@ mod tests {
         assert_eq!(catcher_pad(60, 0, BUTTON_B), (0, 0, 0));
         assert_eq!(catcher_pad(160 + 60, 0, BUTTON_B), (0, 0, -80));
         assert_eq!(catcher_pad(110, 0, BUTTON_B).0, BUTTON_B);
+        assert_eq!(catcher_pad(32, 0, BUTTON_Z), (BUTTON_Z, 0, 0));
+        assert_eq!(catcher_pad(35, 0, BUTTON_Z), (0, 0, 0));
+        assert_eq!(catcher_pad(10, 0, BUTTON_Z), (0, 80, 0));
+        assert_eq!(catcher_pad(12, 0, BUTTON_Z), (0x0100, 80, 0));
+        let right = (0..160)
+            .filter(|&f| catcher_pad(f, 0, BUTTON_Z).1 > 0)
+            .count();
+        assert_eq!(right, 20);
     }
 
     /// An opener's round: as long running right as left, A every 12 frames by port.

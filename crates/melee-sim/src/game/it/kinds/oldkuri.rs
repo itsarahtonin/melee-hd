@@ -406,8 +406,7 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped, `it_2725_Logic0_Dropped`: the enemies' drop, then falling its way.
-// Ports `it_2725_Logic0_Dropped`; aliased once a check reaches it (no oracle match has a fighter
-// pick up a monster).
+#[doc(alias = "it_2725_Logic0_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     zako::dropped(r, gobj);
     fall(r, gobj);
@@ -415,8 +414,7 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 
 /// Thrown, `it_2725_Logic0_Thrown`: the enemies' throw, no stomping, no timer, state 6, upright
 /// facing nowhere.
-// Ports `it_2725_Logic0_Thrown`; aliased once a check reaches it (no oracle match has a fighter
-// pick up a monster).
+#[doc(alias = "it_2725_Logic0_Thrown")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     zako::thrown(r, gobj);
     lib2725::clear_stomp(r.game, gobj);

@@ -605,8 +605,7 @@ pub fn settle(r: &mut Running, gobj: GObjId) {
 
 /// Thrown by its holder, `it_8027CB3C`: the holder's player as its source, the holder's
 /// facing, its own items' hits allowed, the hit records cleared, in the air, no pickup.
-// Ports `it_8027CB3C`; aliased once a check reaches it (no oracle match has a fighter pick
-// up a monster).
+#[doc(alias = "it_8027CB3C")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj)
         .owner
@@ -621,8 +620,7 @@ pub fn thrown(r: &mut Running, gobj: GObjId) {
 
 /// Dropped by its holder, `it_8027CBA4`: the holder's facing, in the air, its hit records
 /// marked, no pickup.
-// Ports `it_8027CBA4`; aliased once a check reaches it (no oracle match has a fighter pick
-// up a monster).
+#[doc(alias = "it_8027CBA4")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     let owner = item(r.game, gobj)
         .owner
@@ -668,8 +666,7 @@ pub fn clear_dd0_b4(game: &mut Game, gobj: GObjId) {
 }
 
 /// The item's source player becomes `fighter`'s, `it_8026C220`.
-// Ports `it_8026C220`; aliased once a check reaches it (no oracle match has a fighter pick
-// up a monster).
+#[doc(alias = "it_8026C220")]
 pub fn set_source_player(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     let p = i32::from(game.fighter(fighter).player_idx);
     item_mut(game, gobj).xCB0_source_ply = p;

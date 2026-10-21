@@ -10,7 +10,6 @@ use gekko_fp as fp;
 use super::item::{apply_scale, attr_of, release_from, stop_sfx2};
 use super::{hitbox, item, item_mut, jobj_of, lib26b1, lib279c, lib2725, maplib};
 use crate::fpu::{mem, reg};
-use crate::game::code::unported_call;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -179,7 +178,10 @@ pub fn thrown(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
     let pos = item(r.game, gobj).pos;
     jobj::set_translate(&mut r.game.objs.jobjs, root, pos);
     if super::coll::is_enemy(r.game, gobj) {
-        unported_call("it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)");
+        let t = thrower.expect("a thrown enemy without its thrower");
+        super::coll::enemy_hit_by_fighter(r, t, gobj);
+        let dmg = super::hitbox::max_damage(r.game, gobj);
+        super::coll::enemy_hit_stats(r, t, gobj, reg(dmg));
     }
 }
 

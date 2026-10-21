@@ -543,16 +543,14 @@ pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped, `itOctarock_Logic2_Dropped`: the enemies' drop, then falling.
-// Ports `itOctarock_Logic2_Dropped`; aliased once a check reaches it (no oracle match has a
-// fighter pick up a monster).
+#[doc(alias = "itOctarock_Logic2_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     zako::dropped(r, gobj);
     fall(r, gobj);
 }
 
 /// Thrown, `itOctarock_Logic2_Thrown`: the enemies' throw, its timer cleared, state 6.
-// Ports `itOctarock_Logic2_Thrown`; aliased once a check reaches it (no oracle match has a
-// fighter pick up a monster).
+#[doc(alias = "itOctarock_Logic2_Thrown")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     zako::thrown(r, gobj);
     set_timer(r, gobj, 0);

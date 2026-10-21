@@ -876,16 +876,14 @@ pub fn anim13(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped, `itLeadead_Logic1_Dropped`: the enemies' drop, then falling.
-// Ports `itLeadead_Logic1_Dropped`; aliased once a check reaches it (no oracle match has a fighter pick
-// up a monster).
+#[doc(alias = "itLeadead_Logic1_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     zako::dropped(r, gobj);
     fall(r, gobj);
 }
 
 /// Thrown, `itLeadead_Logic1_Thrown`: the enemies' throw, its timer cleared, state 14.
-// Ports `itLeadead_Logic1_Thrown`; aliased once a check reaches it (no oracle match has a fighter pick
-// up a monster).
+#[doc(alias = "itLeadead_Logic1_Thrown")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     zako::thrown(r, gobj);
     set(r, gobj, off::TIMER, 0);

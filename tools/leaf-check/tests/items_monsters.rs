@@ -24,7 +24,12 @@
 //!
 //! The Topi matches' runs (`monsters-ottosea-*`) use `items-monsters-funcs-topi.txt` and
 //! `done-nonmonsters-topi.txt` instead, which add Topi's part of `itwhitebea.c` and the
-//! Freezie's code a Topi reaches. The sets are packed (`pack-calls`).
+//! Freezie's code a Topi reaches. A fighter's grab catching a monster, lifting it and throwing
+//! or dropping it comes from the `catch` set's grab matches (`catch-grab-KIND-fd`, in
+//! `$SSBM_RS_LOCAL/bench/oracle-m4-catch`), whose runs list `items-monsters-funcs-catch.txt`
+//! (the grab's catch, the lift, the throw's statistics and each monster's throw and drop) with
+//! the Topi list's functions, and every other function as done. The sets are packed
+//! (`pack-calls`).
 
 use std::collections::BTreeMap;
 
@@ -331,6 +336,30 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         let j = g.ft_part_jobj(gobj, r(4) as i32);
         return Ret::Int(addr_of(&maps.jobjs, j));
     }
+    // A fighter's grab catching a monster: the grab boxes against items, the catch, the
+    // grab's callback lifting it, and the catch and a throw in the player's statistics.
+    match name.as_str() {
+        "Fighter_procGrabColl"
+        | "ftColl_8007BC90"
+        | "fn_800D8BFC"
+        | "ftpickupitem_800948A8"
+        | "ftpickupitem_80094694"
+        | "it_8027B4A4"
+        | "it_8027B378" => {
+            fighter_check(g, gobj, a);
+            match name.as_str() {
+                "Fighter_procGrabColl" => melee_sim::game::ft::fighter::proc_grab_coll(g, gobj),
+                "ftColl_8007BC90" => g.grab_items(gobj),
+                "ftpickupitem_800948A8" => g.take_item(gobj, other(4)),
+                "ftpickupitem_80094694" => g.enter_item_get(gobj, r(4) as i32, r(5) != 0),
+                "it_8027B4A4" => it::coll::enemy_hit_by_fighter(g, gobj, other(4)),
+                "it_8027B378" => it::coll::enemy_hit_stats(g, gobj, other(4), f(1)),
+                _ => run_fighter_cb(g, gobj, CodeRef(a)),
+            }
+            return Ret::Nothing;
+        }
+        _ => {}
+    }
     item_check(g, gobj, a);
     kind_check(g, gobj, a);
     match name.as_str() {
@@ -392,6 +421,12 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_80275070" => it::lib2725::unbind_bone(g, gobj, r(4) as i32),
         "it_802759DC" => it::maplib::place_by(g, gobj, other(4)),
         "it_8026C220" => zako::set_source_player(g.game, gobj, other(4)),
+        "it_80273408" => it::lib2725::stop_all(g.game, gobj),
+        "it_802758D4" => return Ret::Float(f64::from(it::hitbox::max_damage(g.game, gobj))),
+        "it_80273F34" => {
+            let thrower = (r(4) != 0).then(|| other(4));
+            it::release::thrown(g, gobj, thrower);
+        }
         "it_802EA478" => leadead::set_box(g, gobj, r(4) as i32, r(5) as i32),
         "it_802EA804" => return b(leadead::ground_ahead(g, gobj, f(1) as f32)),
         "it_802EA988" => {
@@ -585,6 +620,14 @@ const OWN_CALLS_ONLY: &[&str] = &[
     "it_80271590",
 ];
 
+/// Functions also run from another function's saved calls, whose states are theirs: the Goomba's
+/// drop from its throw's (both a held Goomba; no match drops one), and the item engine's stop from
+/// a throw's (only Kirby's inhale and Yoshi's tongue call it).
+const ALSO_FROM: &[(&str, &str)] = &[
+    ("it_2725_Logic0_Dropped", "it_2725_Logic0_Thrown"),
+    ("it_80273408", "it_80273F34"),
+];
+
 /// Every saved call of each function, run as it was saved.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
@@ -611,6 +654,32 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                 stubs: &no,
             }];
             check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
+    }
+    let mut sets = Vec::new();
+    for &(target, src) in ALSO_FROM {
+        for dir in dirs() {
+            let n = saved_calls(&dir, src).len();
+            if n > 0 && wanted(src) {
+                sets.push((target, src, dir, n));
+            }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.3,
+        |&(target, src, ref dir, _)| {
+            let addr = leaf_check::sym(target);
+            let prepare = move |call: &mut Call, _: usize| call.addr = addr;
+            let variants = [Variant {
+                prepare: &prepare,
+                ours: &run,
+                stubs: &no,
+            }];
+            check_variants(dir, src, &variants)
         },
     );
     for reports in results.iter().flatten() {
@@ -694,22 +763,7 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
 
 /// Functions no saved state reaches, with why. One that compares clean fails the check until
 /// it's taken off.
-const BLOCKED: &[(&str, &str)] = &[
-    ("itLeadead_Logic1_Dropped", NOT_HELD),
-    ("itLeadead_Logic1_Thrown", NOT_HELD),
-    ("it_8027CB3C", NOT_HELD),
-    ("it_8027CBA4", NOT_HELD),
-    ("it_8026C220", NOT_HELD),
-    ("it_2725_Logic0_Dropped", NOT_HELD),
-    ("it_2725_Logic0_Thrown", NOT_HELD),
-    ("itOctarock_Logic2_Dropped", NOT_HELD),
-    ("itOctarock_Logic2_Thrown", NOT_HELD),
-    ("it_802E32B4", NOT_HELD),
-    ("it_802E3314", NOT_HELD),
-];
-
-/// Why a held monster's functions are blocked.
-const NOT_HELD: &str = "no oracle match has a fighter pick up a monster to drop or throw";
+const BLOCKED: &[(&str, &str)] = &[];
 
 /// Every ported function compares clean from some real state: its own saved calls or its
 /// unit's neighbours'.

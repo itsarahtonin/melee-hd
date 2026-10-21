@@ -640,16 +640,14 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped, `it_802E32B4`: the enemies' drop, its timer cleared, slowed by `x4`, falling.
-// Ports `it_802E32B4`; aliased once a check reaches it (no oracle match has a fighter pick up a
-// monster).
+#[doc(alias = "it_802E32B4")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     zako::dropped(r, gobj);
     fall(r, gobj);
 }
 
 /// Thrown, `it_802E3314`: the enemies' throw, its timer cleared, state 9.
-// Ports `it_802E3314`; aliased once a check reaches it (no oracle match has a fighter pick up a
-// monster).
+#[doc(alias = "it_802E3314")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     zako::thrown(r, gobj);
     set(r, gobj, off::TIMER, 0);
