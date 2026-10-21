@@ -300,7 +300,21 @@ impl Comparer<'_> {
             e.compare(&mem, at, &format!("hud announcement {i}"), self);
         }
         h.ko_marks.compare(&mem, KO_MARKS, "hud KO marks", self);
-        h.time.compare(&mem, TIME, "hud time", self);
+        // With the timer's GObj freed (`ifTime_UpdateTimers` at five seconds left,
+        // `ifTime_FreeTimers`), its digits point to its freed joints on both sides, and the
+        // original's blocks may already hold new objects. Nothing reads them: only
+        // `ifTime_SetTime` does, from the timer's own process and from `ifTime_ShowTimers` while
+        // the timer is there, and `ifTime_CreateTimers` writes them before it sets the timer
+        // again (docs/engine.md). So they aren't compared then.
+        if h.time.match_timer.is_none() {
+            let mut skip = SkipHandles {
+                cmp: self,
+                under: "hud time.digits",
+            };
+            h.time.compare(&mem, TIME, "hud time", &mut skip);
+        } else {
+            h.time.compare(&mem, TIME, "hud time", self);
+        }
         for (o, ours) in [
             (0, h.timer_models.joint),
             (4, h.timer_models.anims),
@@ -555,5 +569,45 @@ pub(crate) fn compare_user_data(cmp: &mut Comparer, path: &str, ud: UserData, t:
             );
         }
         other => cmp.diff(path, "user data", other, format!("{theirs:#x}")),
+    }
+}
+
+/// The comparison of a mirrored struct but for the handles under a path, which the caller has
+/// shown nothing reads.
+struct SkipHandles<'c, 'a> {
+    cmp: &'c mut Comparer<'a>,
+    under: &'static str,
+}
+
+impl Cx for SkipHandles<'_, '_> {
+    fn import_handle(&mut self, _: &'static str, _: u32) -> Option<u32> {
+        unreachable!("the comparer only compares")
+    }
+
+    fn import_data(&mut self, _: u32) -> Option<melee_data::archive::DataRef> {
+        unreachable!("the comparer only compares")
+    }
+
+    fn compare_handle(&mut self, path: &str, kind: &'static str, ours: Option<u32>, theirs: u32) {
+        if !path.starts_with(self.under) {
+            self.cmp.compare_handle(path, kind, ours, theirs);
+        }
+    }
+
+    fn compare_data(
+        &mut self,
+        path: &str,
+        ours: Option<melee_data::archive::DataRef>,
+        theirs: u32,
+    ) {
+        self.cmp.compare_data(path, ours, theirs);
+    }
+
+    fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
+        self.cmp.mismatch(path, ours, theirs);
+    }
+
+    fn stale_read(&mut self, path: &str) {
+        self.cmp.stale_read(path);
     }
 }
