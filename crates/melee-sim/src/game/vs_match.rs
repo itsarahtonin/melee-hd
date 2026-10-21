@@ -97,6 +97,12 @@ pub struct ReplayStart {
 const CKIND_ICE_CLIMBERS: u8 = 14;
 const CKIND_MARTH: i8 = 9;
 
+/// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
+/// kind in the switch's mask, which the spawner, the containers and the Party Ball all follow.
+fn scope_on(rules: &super::structs::StartMeleeRules) -> bool {
+    rules.item_freq != -1 && rules.x20 >> super::it::kinds::S_SCOPE & 1 != 0
+}
+
 /// A player in [`Settings::vs`].
 #[derive(Clone, Copy, Debug, melee_derive::StateEq)]
 pub struct Player {
@@ -142,7 +148,9 @@ impl Settings {
     /// With an Ice Climber among the players the allocator model is on, laid out as a
     /// console's VS match from the menus lays out the heap (`Layout::vanilla_vs`): Nana's
     /// computer DI reads her `Fighter*`'s address, which the model gives (docs/engine.md,
-    /// docs/player.md). Without one it stays off, which costs nothing.
+    /// docs/player.md). So it is when the item switch can spawn a Super Scope: its one-shot
+    /// charge takes the scope's GObj address for a level (docs/melee-bugs.md). Otherwise it
+    /// stays off, which costs nothing.
     pub fn vs_with(
         stage: u16,
         players: &[Player],
@@ -161,6 +169,8 @@ impl Settings {
             d.cpu_level = p.cpu_level;
         }
         let start = vs_mode::enter_vs(&mut vs, rules, prefs);
+        let heap =
+            players.iter().any(|p| p.character == CKIND_ICE_CLIMBERS) || scope_on(&start.rules);
         Settings {
             start,
             seed: 0,
@@ -173,10 +183,7 @@ impl Settings {
             ucf: ucf::Pads::default(),
             playback: false,
             fighter_addresses: Vec::new(),
-            heap: players
-                .iter()
-                .any(|p| p.character == CKIND_ICE_CLIMBERS)
-                .then(crate::hsd::heap::Layout::vanilla_vs),
+            heap: heap.then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
@@ -913,5 +920,24 @@ mod tests {
             Settings::vs(32, &[fox, ics], 4, 8).heap,
             Some(crate::hsd::heap::Layout::vanilla_vs())
         );
+    }
+
+    #[test]
+    fn a_super_scope_turns_on_the_allocator_model() {
+        use super::vs_mode::{GamePrefs, GameRules};
+        let players = [player(2, 0), player(9, 1)];
+        let heap = |item_freq, item_mask| {
+            let prefs = GamePrefs {
+                item_freq,
+                item_mask,
+                ..Default::default()
+            };
+            Settings::vs_with(32, &players, &GameRules::default(), &prefs).heap
+        };
+        // The item switch's entry 24 is the Super Scope.
+        let scope = 1 << 24;
+        assert_eq!(heap(2, scope), Some(crate::hsd::heap::Layout::vanilla_vs()));
+        assert_eq!(heap(2, !scope), None);
+        assert_eq!(heap(0xFF, u64::MAX), None);
     }
 }

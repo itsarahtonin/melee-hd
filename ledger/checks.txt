@@ -7321,7 +7321,7 @@ ft_800D76B8	leaf-check items_on: items_on_functions runs it from real states of 
 ft_800D7770	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D7830	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D78B0	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-fn_800D7938	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
+fn_800D7938	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
 ftCo_ItemScopeStart_Anim	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 ftCo_ItemScopeAirStart_Anim	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D79B4	leaf-check items_on: items_on_functions runs it inside ftCo_ItemScopeStart_IASA and ftCo_ItemScopeAirStart_IASA and compares the whole state
@@ -7344,7 +7344,7 @@ ftCo_ItemScopeAirRapid_Phys	leaf-check items_on: items_on_functions runs it from
 ftCo_ItemScopeRapid_Coll	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 ftCo_ItemScopeAirRapid_Coll	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D80F4	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-fn_800D8140	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
+fn_800D8140	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
 fn_800D81D0	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D8268	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D82EC	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
@@ -7357,7 +7357,7 @@ ftCo_ItemScopeFire_Phys	leaf-check items_on: items_on_functions runs it from rea
 ftCo_ItemScopeAirFire_Phys	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 ftCo_ItemScopeFire_Coll	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 ftCo_ItemScopeAirFire_Coll	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-fn_800D84D4	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
+fn_800D84D4	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
 fn_800D86B8	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D86E0	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 fn_800D874C	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
@@ -7502,9 +7502,9 @@ itFreeze_UnkMotion5_Coll	leaf-check items_on: items_on_functions runs it from re
 itSScope_Logic21_Spawned	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 it_80291CCC	leaf-check items_on: items_on_functions runs it inside fn_800D84D4, which fires from the point it gives, and compares the whole state
 it_80291CF4	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-it_80291D38	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-it_80291DAC	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
-it_80291F14	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
+it_80291D38	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
+it_80291DAC	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
+it_80291F14	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state, and scope_one_shot_charge with one shot left and a charge past level 0 (the GObj address taken for a level); the sscope oracle matches
 it_80291FA8	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 it_80292030	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state
 itSscope_UnkMotion0_Anim	leaf-check items_on: items_on_functions runs it from real states of the three items-on replays, its own saved calls and its kind's, and compares the whole state

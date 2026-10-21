@@ -615,28 +615,19 @@ pub const UNCHECKED: &[&str] = &[
 ];
 
 /// What an items-on match reaches that isn't ported, task by task.
-pub const MISSING: &[ItemGap] = &[
-    ItemGap {
-        what: "the Super Scope charged past level 0 with one shot left: it_80291DAC falls off its end and returns the scope's GObj address, so firing takes the empty click but the fighter's state keeps the address, and a hit while charging spends a cost read from where the address points",
-        covers: &["it_80291DAC with no level affordable"],
-        kinds: &[0x15],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, a swung item held",
-        covers: &[
-            "it_8026B924",
-            "ft_80087A18 with a power-up's color animation",
-            "ftCo_800A648C with a candidate item",
-            "ftCo_800A3710 with an item to pick up",
-            "ftCo_800B8A9C with a swung item",
-        ],
-        kinds: &[],
-        with: &[14],
-        stages: &[],
-    },
-];
+pub const MISSING: &[ItemGap] = &[ItemGap {
+    what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, a swung item held",
+    covers: &[
+        "it_8026B924",
+        "ft_80087A18 with a power-up's color animation",
+        "ftCo_800A648C with a candidate item",
+        "ftCo_800A3710 with an item to pick up",
+        "ftCo_800B8A9C with a swung item",
+    ],
+    kinds: &[],
+    with: &[14],
+    stages: &[],
+}];
 
 #[cfg(test)]
 mod tests {

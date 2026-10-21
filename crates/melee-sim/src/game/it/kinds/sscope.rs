@@ -8,7 +8,6 @@ use super::super::ground::{air, fall, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state};
 use super::super::{item, item_mut, lib26b1, lib2725};
 use super::{falling_phys, sscopebeam};
-use crate::game::code;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -104,23 +103,37 @@ pub fn charge_level(r: &Running, gobj: GObjId, charge: i32) -> i32 {
     }
 }
 
-/// What a shot of `level` costs, `it_80291D38`: its float, truncated.
+/// What a shot of `level` costs, `it_80291D38`: its float, truncated. Its switch has no
+/// case for another level, and the machine code then returns its first argument untouched:
+/// the scope's GObj address.
 #[doc(alias = "it_80291D38")]
 pub fn cost(r: &Running, gobj: GObjId, level: i32) -> i32 {
-    assert!(
-        (0..=9).contains(&level),
-        "it_80291D38 returns a register it never set for level {level}"
-    );
+    if !(0..=9).contains(&level) {
+        return gobj_address(r, gobj);
+    }
     fp::fctiwz(f64::from(
         r.data.f32(attrs(r, gobj).at(0xC + 4 * level as u32)),
     ))
 }
 
+/// The scope's GObj address, which `it_80291DAC` and `it_80291D38` return where they set no
+/// level: the allocator model's ([`crate::hsd::heap`]). A match that can spawn a Super Scope
+/// runs with the model (`vs_match::Settings`), so the address is the original's.
+fn gobj_address(r: &Running, gobj: GObjId) -> i32 {
+    let addr = r.game.world.gobjs.addr(gobj.0);
+    assert!(
+        addr != 0,
+        "a Super Scope's GObj address reached gameplay in a match without the allocator model"
+    );
+    addr as i32
+}
+
 /// The level a shot of `charge` ticks fires with what's left, `it_80291DAC`: none (-1) when
 /// empty; the charge's level when it can afford it; else, going down from that level, the
 /// first level it can afford exactly, or the one above the first it can afford with some
-/// left. When even level 1 is too dear, the original returns its GObj's address, which
-/// stops here.
+/// left. When even level 1 is too dear (or the charge's level is 0 and too dear), the
+/// original falls off its end and returns its first argument, the scope's GObj address,
+/// which its callers take as a level: the infinite-ammunition glitch (`docs/melee-bugs.md`).
 #[doc(alias = "it_80291DAC")]
 pub fn affordable(r: &Running, gobj: GObjId, charge: i32) -> i32 {
     let ammo = item(r.game, gobj).xD4C;
@@ -141,13 +154,20 @@ pub fn affordable(r: &Running, gobj: GObjId, charge: i32) -> i32 {
         }
         level -= 1;
     }
-    code::unported_call("it_80291DAC with no level affordable (it returns its GObj)")
+    gobj_address(r, gobj)
 }
 
-/// Spends a shot of `level`, to no less than none, `it_80291F14`.
+/// Spends a shot of `level`, to no less than none, `it_80291F14`. Its inline copy of
+/// `it_80291D38` keeps the cost in the level's register, so a level no case covers (the GObj
+/// address `affordable` returns) costs itself, which leaves the scope more than two billion
+/// shots.
 #[doc(alias = "it_80291F14")]
 pub fn spend(r: &mut Running, gobj: GObjId, level: i32) {
-    let c = cost(r, gobj, level);
+    let c = if (0..=9).contains(&level) {
+        cost(r, gobj, level)
+    } else {
+        level
+    };
     let ip = item_mut(r.game, gobj);
     ip.xD4C = ip.xD4C.wrapping_sub(c);
     if ip.xD4C < 0 {

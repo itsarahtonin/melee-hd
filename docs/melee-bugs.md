@@ -502,15 +502,15 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/it/spawn.rs:99`.
 
-### The Super Scope's affordable level returns its GObj
+### The Super Scope's affordable level returns its GObj: infinite ammunition
 
-- **Where:** `it_80291DAC` (the level a charge fires with the ammunition left), `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`).
-- **Defect:** when the charge's level costs more than the ammunition left, it walks down the levels to 1 for one it can afford; when none is (or the charge's level is already 0), it ends without a return and the machine code returns its first argument, the scope's GObj. Its callers take that as a level: a burst's shot (`fn_800D84D4`) only clicks, but a hit while charging (`fn_800D7938`) spends it through `it_80291D38`, whose switch has no case for it and returns a register it never set.
-- **Effect:** not recorded: it needs a scope with some ammunition left but less than the lowest level it walks to costs.
-- **melee-hd:** stops (`affordable` reports it as unported).
+- **Where:** `it_80291DAC` (the level a charge fires with the ammunition left) and `it_80291F14` (spending a shot), `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`, `spend`), with the fighter's scope states in `crates/melee-sim/src/game/ft/co/item_scope.rs`.
+- **Defect:** when the charge's level costs more than the ammunition left, `it_80291DAC` walks down the levels to 1 for one it can afford; when none is (or the charge's level is already 0), it ends without a return and the machine code returns its first argument, the scope's GObj address. Its callers take that as a level. A charged shot keeps it in the fighter's state (`fn_800D8140` and `fn_800D81D0`, `mv.co.common.x0`) and fires it (`fn_800D84D4`), which no level case matches, so it only clicks. A hit while charging (`fn_800D7938`) spends it: `it_80291F14`'s inline copy of `it_80291D38` has no case for it and leaves the cost in the level's register, so it subtracts the address itself, and a few shots minus an address in main memory (0x80000000 and up, a negative word) is a positive count over two billion. (`it_80291D38` called on its own returns its first argument, the GObj address, for such a level; nothing in the game calls it so.)
+- **Effect:** the well-known Super Scope glitch that gives it effectively infinite ammunition: with less ammunition left than a level 1 shot costs (one shot), charge past level 0 and be hit while charging, and the scope has over two billion shots for the rest of its life. Charged without a hit, the shot only clicks, and the fighter's state word holds the scope's address, which Slippi records as the post-frame "hitstun" word.
+- **melee-hd:** modeled: `affordable` returns the scope's GObj address and `spend` subtracts a level outside the cases as it is. The address is the allocator model's (`hsd::heap`), which every replay runs with and which `Settings::vs_with` turns on for a match whose item switch can spawn a Super Scope, laid out as a console's VS match from the menus; without the model the address is unknown, and reaching it panics.
 - **Fix:** return no level (-1) when none is affordable.
-- **Fix impact:** changes the shot or the spending in that case; replays where it happens would desync.
-- **Source:** `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`); ssbm-rs transliterates the function from its machine code for this.
+- **Fix impact:** removes the glitch, which players know and use: a hit while charging with one shot left no longer refills the scope, and a charge then fires no click. Replays where it happens would desync.
+- **Source:** `crates/melee-sim/src/game/it/kinds/sscope.rs` (`affordable`, `spend`); ssbm-rs transliterates `it_80291D38`, `it_80291DAC` and `it_80291F14` from their machine code for this.
 
 ### A Cloaking Device taken while one flashes counts refraction twice
 

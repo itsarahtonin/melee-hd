@@ -214,6 +214,8 @@ impl Running<'_> {
     }
 
     /// Hit while charging, `fn_800D7938`: the charge so far is spent, the item back in hand.
+    /// With one shot left and a charge past level 0, the level is the scope's GObj address,
+    /// whose spending leaves it more than two billion shots (`sscope::spend`).
     #[doc(alias = "fn_800D7938")]
     pub fn scope_start_hit(&mut self, gobj: GObjId) {
         let Some(it) = self.game.fighter(gobj).item_gobj else {
@@ -496,8 +498,8 @@ impl Running<'_> {
     }
 
     /// A shot of `level` from the muzzle when the script's throw flag 0 says, `fn_800D84D4`:
-    /// levels 0 to 9 fire a beam with their flash and sound; anything else (none left) only
-    /// clicks.
+    /// levels 0 to 9 fire a beam with their flash and sound; anything else (none left, or the
+    /// scope's GObj address that `affordable` returns) only clicks.
     #[doc(alias = "fn_800D84D4")]
     pub fn scope_shot(&mut self, gobj: GObjId, level: i32) {
         let Some(it) = self.game.fighter(gobj).item_gobj else {

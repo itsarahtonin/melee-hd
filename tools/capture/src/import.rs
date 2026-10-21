@@ -384,6 +384,9 @@ impl<'a> Importer<'a> {
             let mut g = self.u32(heads + 4 * link);
             while g != 0 {
                 let id = GObjId(self.game.world.gobjs.alloc(blank_gobj()));
+                // Its address, as the allocator model would keep it: a Super Scope's reaches
+                // gameplay (`sscope::affordable`).
+                self.game.world.gobjs.set_addr(id.0, g);
                 self.maps.gobjs.insert(g, id);
                 order.push(g);
                 let ud = self.u32(g + 0x2C);

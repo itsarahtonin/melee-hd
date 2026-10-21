@@ -161,8 +161,11 @@ const TAKES_MORE: &[&str] = &[
 const LEVEL_R4: &[&str] = &["fn_800D8140", "fn_800D81D0", "fn_800D84D4"];
 
 /// Item functions taking a number in r4 or f1, run from their kind's captures with one: a
-/// level (the scope's spending), a state (the parasol's lengths) or a speed (its steps).
+/// level (the scope's cost and spending, some outside 0 to 9) or a charge (its affordable
+/// level), a state (the parasol's lengths) or a speed (its steps).
 const ITEM_ARGS: &[&str] = &[
+    "it_80291D38",
+    "it_80291DAC",
     "it_80291F14",
     "it_8028B08C",
     "it_8028B618",
@@ -326,8 +329,9 @@ fn run_callback(g: &mut Running, gobj: GObjId, a: u32) -> Ret {
 
 /// The fighter's controls, script flags and state variables changed so the scope's branches
 /// run: A held, pressed or neither, the script's throw flag 0, the charge's ticks around the
-/// level boundaries and the charge that fires on its own, whether A was let go, and a burst's
-/// shots left.
+/// level boundaries and the charge that fires on its own, whether A was let go (and the held
+/// scope's ammunition: as captured, one shot left, so a charge past level 0 takes the scope's
+/// GObj address for its level, or three), and a burst's shots left.
 fn vary(call: &mut Call, i: usize) {
     let in_mem = |a: u32| (0x8000_0000..0x817F_0000).contains(&a);
     if !in_mem(call.regs.gpr[3]) || !in_mem(user_data_arg(call)) {
@@ -347,6 +351,11 @@ fn vary(call: &mut Call, i: usize) {
             let ticks = [0.0, 3.0, 7.0, 8.0, 15.0, 40.0, 59.0, 60.0, 100.0][k % 9];
             poke_f32(call, mv, ticks);
             poke_u32(call, mv + 4, (k as u32 / 9) & 1);
+            let item = peek_u32(call, fp + 0x1974);
+            let ammo = [None, Some(1), Some(3)][(k / 18) % 3];
+            if let Some(ammo) = ammo.filter(|_| in_mem(item)) {
+                poke_u32(call, peek_u32(call, item + 0x2C) + 0xD4C, ammo);
+            }
         }
         // Bursting: the shots left.
         159 | 163 | 167 | 171 => poke_u32(call, mv, [1u32, 2, 5][k % 3]),
@@ -374,6 +383,10 @@ fn vary_item(call: &mut Call, i: usize) {
     }
     if peek_u32(call, ip + 0x10) == 25 {
         poke_u32(call, ip + 0x24, (i % 8) as u32);
+    }
+    // A Super Scope's ammunition: as captured, none, one shot, two or five.
+    if peek_u32(call, ip + 0x10) == 21 && !i.is_multiple_of(5) {
+        poke_u32(call, ip + 0xD4C, [0u32, 1, 2, 5][i % 5 - 1]);
     }
 }
 
@@ -498,12 +511,17 @@ fn from_neighbours(counts: &mut BTreeMap<u32, usize>) {
                                 vary_item(call, shift / total * 7 + i);
                                 if ITEM_ARGS.contains(&n.as_str()) {
                                     let k = shift + i;
-                                    // A level, or one of the held parasol's states (4
-                                    // to 10, the ones with an animation).
-                                    call.regs.gpr[4] = if n == "it_80291F14" {
-                                        (k % 10) as u32
-                                    } else {
-                                        4 + (k % 7) as u32
+                                    // A level (10 and the scope's GObj address, as
+                                    // `it_80291DAC` returns it, outside the switch's
+                                    // cases), a charge, or one of the held parasol's
+                                    // states (4 to 10, the ones with an animation).
+                                    let gobj = call.regs.gpr[3];
+                                    call.regs.gpr[4] = match n.as_str() {
+                                        "it_80291F14" | "it_80291D38" => {
+                                            [k as u32 % 10, 10, gobj][(k / 10) % 3]
+                                        }
+                                        "it_80291DAC" => [0u32, 4, 7, 8, 15, 23, 40, 100][k % 8],
+                                        _ => 4 + (k % 7) as u32,
                                     };
                                     let speed = [1.0f32, 0.5, 2.0, 0.75][k % 4];
                                     call.regs.fpr[1].ps0 = f64::from(speed);
@@ -634,6 +652,127 @@ fn stomp_lands() {
     assert!(
         !any || stomps.load(Ordering::Relaxed) > 0,
         "no saved call stomped"
+    );
+}
+
+/// The Super Scope's one-shot charge, the infinite-ammunition glitch (docs/melee-bugs.md),
+/// from real states, which no replay reaches: every saved call of the scope's charging
+/// interrupt runs with the held scope down to one shot and a charge of 15 ticks (level 1, which
+/// it can't afford), A held or let go, its timer also past the charge that fires on its own, as
+/// the hit while charging (`fn_800D7938`), and as the charged shot's entry (`fn_800D8140`) and
+/// its shot (`fn_800D84D4`) with the level `it_80291DAC` then returns, the scope's GObj address
+/// (no saved charge reaches its animation's end, where the interrupt fires; its comparisons
+/// cover the address taken each tick); every saved call of `it_80291DAC` with one shot
+/// and a charge past level 0, and of `it_80291F14` and `it_80291D38` with a level outside their
+/// cases (the scope's GObj address, as `it_80291DAC` returns it, and 10). The whole state
+/// compares each time, and some calls must take the GObj address for a level: a hit spending
+/// it, a charge keeping it, and `it_80291DAC` returning it.
+#[test]
+fn scope_one_shot_charge() {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    let in_mem = |a: u32| (0x8000_0000..0x817F_0000).contains(&a);
+    let (refilled, kept, returned) = (
+        AtomicUsize::new(0),
+        AtomicUsize::new(0),
+        AtomicUsize::new(0),
+    );
+    let no = stubs();
+    // The fighter's side: the held scope's ammunition, the charge's ticks and A.
+    let charging = |ticks: f32, released: u32, held: u32, then: Option<&'static str>| {
+        move |call: &mut Call, _: usize| {
+            let fp = user_data_arg(call);
+            let item = peek_u32(call, fp + 0x1974);
+            if !in_mem(item) {
+                return;
+            }
+            poke_u32(call, peek_u32(call, item + 0x2C) + 0xD4C, 1);
+            poke_f32(call, fp + 0x2340, ticks);
+            poke_u32(call, fp + 0x2344, released);
+            poke_u32(call, fp + 0x65C, held);
+            if let Some(name) = then {
+                call.addr = leaf_check::sym(name);
+                call.regs.gpr[4] = item;
+                poke_bit(call, fp + 0x2210, 0, true);
+            }
+        }
+    };
+    let ours_ft = |g: &mut Running, maps: &Maps, call: &Call| {
+        let ret = run(g, maps, call);
+        let fp = g.game.fighter(gobj_arg(maps, call));
+        if let Some(scope) = fp.item_gobj {
+            let addr = g.game.world.gobjs.addr(scope.0) as i32;
+            if item(g.game, scope).xD4C > 1_000_000 {
+                refilled.fetch_add(1, Ordering::Relaxed);
+            }
+            if fp.mv_i32(0) == addr {
+                kept.fetch_add(1, Ordering::Relaxed);
+            }
+        }
+        ret
+    };
+    let (a, b, c, d, e, f) = (
+        charging(15.0, 0, 0x100, None),
+        charging(15.0, 1, 0, None),
+        charging(100.0, 1, 0, None),
+        charging(15.0, 0, 0x100, Some("fn_800D7938")),
+        charging(15.0, 1, 0, Some("fn_800D8140")),
+        charging(15.0, 1, 0, Some("fn_800D84D4")),
+    );
+    let fighter: Vec<Variant> = [&a as &Prepare, &b, &c, &d, &e, &f]
+        .into_iter()
+        .map(|prepare| Variant {
+            prepare,
+            ours: &ours_ft,
+            stubs: &no,
+        })
+        .collect();
+    // The item's side: one shot left and a charge, or a level outside the cases.
+    let item_call = |name: &'static str, r4: fn(u32) -> u32| {
+        move |call: &mut Call, _: usize| {
+            poke_u32(call, user_data_arg(call) + 0xD4C, 1);
+            call.addr = leaf_check::sym(name);
+            call.regs.gpr[4] = r4(call.regs.gpr[3]);
+        }
+    };
+    let ours_it = |g: &mut Running, maps: &Maps, call: &Call| {
+        let ret = run(g, maps, call);
+        if matches!(ret, Ret::Int(v) if v == g.game.world.gobjs.addr(gobj_arg(maps, call).0)) {
+            returned.fetch_add(1, Ordering::Relaxed);
+        }
+        ret
+    };
+    let (g, h, i, j, k) = (
+        item_call("it_80291DAC", |_| 15),
+        item_call("it_80291DAC", |_| 40),
+        item_call("it_80291F14", |gobj| gobj),
+        item_call("it_80291D38", |gobj| gobj),
+        item_call("it_80291D38", |_| 10),
+    );
+    let items: Vec<Variant> = [&g as &Prepare, &h, &i, &j, &k]
+        .into_iter()
+        .map(|prepare| Variant {
+            prepare,
+            ours: &ours_it,
+            stubs: &no,
+        })
+        .collect();
+    let mut any = false;
+    for dir in dirs() {
+        for src in ["ftCo_ItemScopeStart_IASA", "ftCo_ItemScopeAirStart_IASA"] {
+            if !saved_calls(&dir, src).is_empty() {
+                any = true;
+                check_variants(&dir, src, &fighter);
+            }
+        }
+        if !saved_calls(&dir, "it_80291DAC").is_empty() {
+            check_variants(&dir, "it_80291DAC", &items);
+        }
+    }
+    let counts = [&refilled, &kept, &returned].map(|n| n.load(Ordering::Relaxed));
+    eprintln!("scope_one_shot_charge: refilled, kept, returned: {counts:?}");
+    assert!(
+        !any || counts.iter().all(|&n| n > 0),
+        "no saved call took the scope's GObj address for a level: {counts:?}"
     );
 }
 
