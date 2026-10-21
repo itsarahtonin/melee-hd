@@ -28,6 +28,12 @@
 //!   CAPTURE_FUNCS=@$D/ys-funcs.txt LOCKSTEP_DONE=$D/done-nonys.txt \
 //!   ssbm-run "$SSBM_DISC" --replay NAME.slp --fields 100000 --port all --lockstep
 //! ```
+//!
+//! The tongue catching an item (a container's monster, the only catchable item), the item on it
+//! (`ityoshitongue.c`) and the egg it becomes (`ityoshiegglay.c`) come from the `catch` set's
+//! Yoshi match (`local/bench/oracle-m4-catch/catch-yoshi-fd.slp`, docs/oracle.md), with
+//! `ys-items.txt` and `done-items.txt`: `CAPTURE=$D/oracle-catch-yoshi-fd
+//! CAPTURE_FUNCS=@$D/ys-items.txt LOCKSTEP_DONE=$D/done-items.txt ... --fp hardware --fields 7440`.
 
 use std::collections::BTreeMap;
 
@@ -39,14 +45,14 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
-use melee_sim::game::it::kinds::{yoshieggthrow, yoshistar};
+use melee_sim::game::it::kinds::{yoshiegglay, yoshieggthrow, yoshistar};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
 use ssbm_rt::capture::Call;
 
 const ENV: &str = "YOSHI";
 const CALLS: &str = "calls/yoshi";
-const FUNCS: &str = "ys-funcs.txt";
+const FUNCS: [&str; 2] = ["ys-funcs.txt", "ys-items.txt"];
 
 fn var(what: &str) -> Option<String> {
     std::env::var(format!("{ENV}_{what}")).ok()
@@ -82,18 +88,23 @@ fn stubs() -> Vec<Stub> {
     v
 }
 
-/// The functions by address and name, from the list in the capture directory.
+/// The functions by address and name, from the lists in the capture directory.
 fn functions() -> Vec<(u32, String)> {
-    let Ok(text) = std::fs::read_to_string(format!("{}/{FUNCS}", base())) else {
-        return Vec::new();
-    };
-    text.lines()
-        .filter_map(|l| {
+    let mut v = Vec::new();
+    for list in FUNCS {
+        let Ok(text) = std::fs::read_to_string(format!("{}/{list}", base())) else {
+            continue;
+        };
+        v.extend(text.lines().filter_map(|l| {
             let mut w = l.split_whitespace();
             let a = u32::from_str_radix(w.next()?, 16).ok()?;
             Some((a, w.next()?.to_owned()))
-        })
-        .collect()
+        }));
+    }
+    // The lists overlap (the items' list names the egg lay's states the first names too).
+    let mut seen = std::collections::BTreeSet::new();
+    v.retain(|(a, _)| seen.insert(*a));
+    v
 }
 
 /// The groups whose functions run from each other's captures, by their first function's
@@ -115,6 +126,10 @@ const STARTS: [u32; 13] = [
     0x802B_2FC8, // ityoshistar
     0x802F_2BFC, // ityoshitongue, ityoshiegglay
 ];
+
+/// The tongue's item's and the egg lay's group, and where the egg lay's functions start.
+const ITEM_GROUP: usize = 12;
+const EGG_START: u32 = 0x802F_2F34;
 
 /// Which group a function is in, by its address.
 fn group_of(addr: u32) -> usize {
@@ -148,6 +163,9 @@ const HELPERS: &[&str] = &[
     "it_802B2C38",
     "it_802B2FC8",
     "it_802B322C",
+    "it_802F2BFC",
+    "it_802F2CE0",
+    "it_802F2F34",
 ];
 
 /// Functions not run here: creation's (the oracle checks them); the common spot dodge and roll
@@ -173,13 +191,8 @@ fn skipped(name: &str) -> bool {
             | "ftYs_Init_OnItemInvisible"
             | "ftYs_Init_OnItemVisible"
             | "ftYs_Init_OnItemDrop"
-            | "fn_8012CEE0"
-            | "fn_8012D004"
-    ) || name.starts_with("it_802F2")
-        || name.starts_with("it_802F3")
-        || name.starts_with("it_27CF")
-        || name.starts_with("it_2F2B")
-        || HELPERS.contains(&name)
+            | "it_27CF_Logic114_EvtUnk"
+    ) || HELPERS.contains(&name)
 }
 
 fn name_of(addr: u32) -> String {
@@ -258,6 +271,20 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
     if !fighter_group(group) && !is_item {
         panic!("{SKIP}{name} takes an item");
     }
+    // The tongue's functions take an item on Yoshi's tongue (in its state table), the egg
+    // lay's an egg an item became.
+    if group == ITEM_GROUP {
+        use melee_sim::game::it::{self, kinds};
+        let ip = it::item(g.game, gobj);
+        let ok = if a < EGG_START {
+            ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9480)
+        } else {
+            matches!(ip.kind, kinds::YOSHI_EGG_LAY | kinds::KIRBY_YOSHI_EGG_LAY)
+        };
+        if !ok {
+            panic!("{SKIP}{name} takes an item on his tongue or its egg");
+        }
+    }
     let other = || {
         if r4 == 0 {
             None
@@ -317,6 +344,7 @@ fn run_yoshi(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802B2890" => yoshieggthrow::remove(g, gobj),
         "it_802B2FA8" => yoshieggthrow::evt_unk(g, gobj, other()),
         "it_802B3348" => yoshistar::evt_unk(g, gobj, other()),
+        "it_802F3290" => yoshiegglay::crack(g, gobj),
         _ => return run_callback(g, gobj, a),
     }
     Ret::Nothing
@@ -405,6 +433,10 @@ fn wanted(name: &str) -> bool {
     var("SRC").is_none_or(|o| o == name)
 }
 
+/// Functions also run from another function's saved calls, whose states are theirs: the tongue
+/// catching an item in the air from its catch on the ground (no match catches one in the air).
+const ALSO_FROM: &[(&str, &str)] = &[("fn_8012D004", "fn_8012CEE0")];
+
 /// Every saved call of each function, run as it was saved.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
@@ -433,6 +465,32 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                 stubs: &no,
             }];
             check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
+    }
+    let mut sets = Vec::new();
+    for &(target, src) in ALSO_FROM {
+        for dir in dirs() {
+            let n = saved_calls(&dir, src).len();
+            if n > 0 && wanted(src) {
+                sets.push((target, src, dir, n));
+            }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.3,
+        |&(target, src, ref dir, _)| {
+            let addr = leaf_check::sym(target);
+            let prepare = move |call: &mut Call, _: usize| call.addr = addr;
+            let variants = [Variant {
+                prepare: &prepare,
+                ours: &run_yoshi,
+                stubs: &no,
+            }];
+            check_variants(dir, src, &variants)
         },
     );
     for reports in results.iter().flatten() {

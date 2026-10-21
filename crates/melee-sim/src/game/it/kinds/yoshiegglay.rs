@@ -60,7 +60,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         SIT_TO_FALL => fall(r, gobj),
         FALL_PHYS => fall_phys(r, gobj),
         LAND => land(r, gobj),
-        SIT_PHYS => {}
+        SIT_PHYS => sit_phys(),
         _ => return false,
     }
     true
@@ -72,7 +72,7 @@ fn vars(game: &mut Game, gobj: GObjId) -> &mut itYoshiEggLay_ItemVars {
 
 /// Lays the egg, `it_802F2F34` (its first argument, Yoshi, unused): at `pos` (on the plane),
 /// its speed, facing, damage factor, behavior and lifetime, falling.
-// Ports `it_802F2F34`; aliased once a check reaches it.
+#[doc(alias = "it_802F2F34")]
 pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind: laid.kind,
@@ -98,7 +98,7 @@ pub fn spawn(r: &mut Running, laid: &Laid) -> Option<GObjId> {
 }
 
 /// Falling, `it_802F3020`: no pickup, its falling state, `xDCE` bit 7 clear.
-// Ports `it_802F3020`; aliased once a check reaches it.
+#[doc(alias = "it_802F3020")]
 fn fall(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -120,13 +120,13 @@ fn tick(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `it_27CF_UnkMotion1_Anim`.
-// Ports `it_27CF_UnkMotion1_Anim`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion1_Anim")]
 fn fall_anim(r: &mut Running, gobj: GObjId) -> bool {
     tick(r, gobj)
 }
 
 /// `it_27CF_UnkMotion1_Phys`: gravity.
-// Ports `it_27CF_UnkMotion1_Phys`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion1_Phys")]
 fn fall_phys(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
     let accel = a.f32(r.data, data::attr::FALL_SPEED);
@@ -135,35 +135,39 @@ fn fall_phys(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_27CF_UnkMotion1_Coll`: sitting once it lands.
-// Ports `it_27CF_UnkMotion1_Coll`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion1_Coll")]
 fn fall_coll(r: &mut Running, gobj: GObjId) -> bool {
     ground::fall(r, gobj, land);
     false
 }
 
 /// Landed, `it_802F317C`: still, sitting.
-// Ports `it_802F317C`; aliased once a check reaches it.
+#[doc(alias = "it_802F317C")]
 fn land(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// `it_27CF_UnkMotion0_Anim`.
-// Ports `it_27CF_UnkMotion0_Anim`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion0_Anim")]
 fn sit_anim(r: &mut Running, gobj: GObjId) -> bool {
     tick(r, gobj)
 }
 
+/// `it_27CF_UnkMotion0_Phys`: nothing.
+#[doc(alias = "it_27CF_UnkMotion0_Phys")]
+fn sit_phys() {}
+
 /// `it_27CF_UnkMotion0_Coll`: falling again once off the ground.
-// Ports `it_27CF_UnkMotion0_Coll`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion0_Coll")]
 fn sit_coll(r: &mut Running, gobj: GObjId) -> bool {
     ground::ground_or_fall(r, gobj, fall);
     false
 }
 
 /// Broken, `it_802F3290`: still, 40 frames left, hidden, blinking, its broken state.
-// Ports `it_802F3290`; aliased once a check reaches it.
-fn crack(r: &mut Running, gobj: GObjId) {
+#[doc(alias = "it_802F3290")]
+pub fn crack(r: &mut Running, gobj: GObjId) {
     let j = jobj_of(r.game, gobj);
     let ip = item_mut(r.game, gobj);
     ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
@@ -174,7 +178,7 @@ fn crack(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_27CF_UnkMotion2_Anim`: gone once its last frames are up.
-// Ports `it_27CF_UnkMotion2_Anim`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_UnkMotion2_Anim")]
 fn break_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
@@ -182,7 +186,7 @@ fn break_anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// A hit shortens its life by the damage times its factor, `it_27CF_Logic114_DmgReceived`.
-// Ports `it_27CF_Logic114_DmgReceived`; aliased once a check reaches it.
+#[doc(alias = "it_27CF_Logic114_DmgReceived")]
 fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let mul = vars(r.game, gobj).x0.get();
     let ip = item_mut(r.game, gobj);

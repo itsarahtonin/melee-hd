@@ -48,7 +48,7 @@ pub fn run_event(_r: &mut Running, _gobj: GObjId, addr: u32) -> bool {
 
 /// Caught by `owner`'s tongue, `it_802F2BFC`: its victim the catcher, its source the
 /// catcher's player, the tongue's state on the tongue's tip, in the air, blinking, still.
-// Ports `it_802F2BFC`; aliased once a check reaches it.
+#[doc(alias = "it_802F2BFC")]
 pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
     catch_in(r, gobj, owner, STATES);
 }
@@ -83,17 +83,17 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
 }
 
 /// `it_2F2B_UnkMotion0_Anim` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Anim`).
-// Ports `it_2F2B_UnkMotion0_Anim`; aliased once a check reaches it.
+#[doc(alias = "it_2F2B_UnkMotion0_Anim")]
 fn anim() -> bool {
     false
 }
 
 /// `it_2F2B_UnkMotion0_Phys`.
-// Ports `it_2F2B_UnkMotion0_Phys`; aliased once a check reaches it.
+#[doc(alias = "it_2F2B_UnkMotion0_Phys")]
 fn phys() {}
 
 /// `it_2F2B_UnkMotion0_Coll`.
-// Ports `it_2F2B_UnkMotion0_Coll`; aliased once a check reaches it.
+#[doc(alias = "it_2F2B_UnkMotion0_Coll")]
 fn coll() -> bool {
     false
 }
@@ -102,7 +102,8 @@ fn coll() -> bool {
 /// as the catcher's hit on an enemy, its destruction kind cleared when `clear`, its victims
 /// forgotten, knocked out as an enemy is and gone. Kirby's copy's item lets go the same way
 /// (`it_802F2E7C`).
-// Ports `it_802F2CE0` and `it_802F2E7C`; aliased once a check reaches them.
+#[doc(alias = "it_802F2CE0")]
+// Ports `it_802F2E7C`; aliased once a check reaches it.
 pub fn release(r: &mut Running, gobj: GObjId, clear: bool) {
     let bone = article(super::super::item(r.game, gobj))
         .model(r.data)

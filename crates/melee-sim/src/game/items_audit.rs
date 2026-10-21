@@ -142,7 +142,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/kinds/ityoshiegglay",
     "melee/it/kinds/ityoshieggthrow",
     "melee/it/kinds/ityoshistar",
-    "melee/it/kinds/ityoshitongue",
     "melee/it/kinds/itzeldadinfire",
     "melee/it/kinds/itzeldadinfireexplode",
     "melee/it/kinds/itzgshell",
@@ -623,8 +622,6 @@ pub const UNCHECKED: &[&str] = &[
     "itStar_UnkMotion0_Phys",
     "it_80284E10",
     "melee/it/kinds/ittarucann",
-    "melee/it/kinds/ityoshiegglay",
-    "melee/it/kinds/ityoshitongue",
     "melee/ft/kinds/ftCommon/ftCo_Barrel",
     "melee/ft/kinds/ftCommon/ftCo_WarpStar",
 ];

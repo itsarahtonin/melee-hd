@@ -151,7 +151,7 @@ impl Running<'_> {
     }
 
     /// The tongue caught an item on the ground, `fn_8012CEE0`.
-    // Ports `fn_8012CEE0`; aliased once a check reaches it.
+    #[doc(alias = "fn_8012CEE0")]
     pub fn ys_n_grab_item(&mut self, gobj: GObjId) {
         let item = self
             .game
@@ -169,7 +169,7 @@ impl Running<'_> {
     }
 
     /// The tongue caught an item in the air, `fn_8012D004`.
-    // Ports `fn_8012D004`; aliased once a check reaches it.
+    #[doc(alias = "fn_8012D004")]
     pub fn ys_air_n_grab_item(&mut self, gobj: GObjId) {
         let item = self
             .game

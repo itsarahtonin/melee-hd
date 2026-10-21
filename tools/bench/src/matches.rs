@@ -939,16 +939,16 @@ pub fn monsters_set() -> Vec<Match> {
 
 /// The catch set: the containers alone at item frequency very high, a catcher
 /// ([`catcher_pad`]) against an opener, on seeds a search found to have the catcher catch a
-/// container's monster: Kirby's inhale (B), which takes a monster in. Only a monster is
-/// catchable (`it_80275270`), so no other match has a catch box touch an item. Two-minute time
-/// matches.
+/// container's monster: Kirby's inhale and Yoshi's tongue (B), which take a monster in. Only
+/// a monster is catchable (`it_80275270`), so no other match has a catch box touch an item.
+/// Two-minute time matches.
 pub fn catch_set() -> Vec<Match> {
     /// A match's name, stage, catcher, its button, opener and seed.
     type Catch = (&'static str, u16, u8, u16, u8, u32);
     const FD: u16 = FINAL_DESTINATION;
-    // The seeds `seed-search` found (`--watch caught`, and the spit star, kind 53), the first
-    // catch coming at the frame noted.
-    let matches: [Catch; 2] = [
+    // The seeds `seed-search` found (`--watch caught`, with the spit star, kind 53, or Yoshi's
+    // egg, kind 87), the first catch coming at the frame noted.
+    let matches: [Catch; 3] = [
         // Spat out at 3365.
         ("catch-kirby-fd", FD, KIRBY, BUTTON_B, MARIO, 0x1F0F_128E),
         // Swallowed from 3126.
@@ -960,6 +960,8 @@ pub fn catch_set() -> Vec<Match> {
             MARIO,
             0x1F0F_1240,
         ),
+        // An egg at 2354.
+        ("catch-yoshi-fd", FD, YOSHI, BUTTON_B, LINK, 0x1F0F_140A),
     ];
     matches
         .iter()
