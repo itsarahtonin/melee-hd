@@ -1,6 +1,6 @@
 //! The launcher: started with no match on its command line, the player's window shows a small
-//! form (a character or none for each port, a stage, stocks and minutes, the aspect ratio and
-//! fullscreen) drawn with egui on the
+//! form (a character or none for each port, a stage, stocks and minutes, the items, the aspect
+//! ratio and fullscreen) drawn with egui on the
 //! player's own GPU device and window, and Start plays that match in the same window. Escape in
 //! the match comes back here; Escape here quits. It opens with the choices last started from it,
 //! which the settings folder keeps (`settings`), except those the command line gives. A tool for
@@ -11,6 +11,7 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster::{self, CHARACTERS};
 
+use crate::items;
 use crate::jit::Timing;
 use crate::pacing::Mode;
 use crate::present::{Aspect, Gpu, Present, Shown};
@@ -24,11 +25,24 @@ pub struct Choice {
     pub stage: u16,
     pub stocks: u8,
     pub minutes: u8,
+    /// The item frequency and switch, of which the match gets the kinds offered for its stage
+    /// and characters (`items`).
+    pub items: items::Switch,
 }
 
 impl Choice {
     pub fn player_count(&self) -> usize {
         self.players.iter().flatten().count()
+    }
+
+    /// The players' `CharacterKind`s.
+    pub fn characters(&self) -> Vec<u8> {
+        self.players.iter().flatten().copied().collect()
+    }
+
+    /// What the match gets of the item setting.
+    pub fn items(&self) -> items::ForMatch {
+        self.items.for_match(&self.characters(), self.stage)
     }
 
     /// Why the match can't start: fewer than two players, or a stage that isn't offered or
@@ -37,7 +51,7 @@ impl Choice {
         if self.player_count() < 2 {
             return Some("Pick at least two players.".into());
         }
-        let characters: Vec<u8> = self.players.iter().flatten().copied().collect();
+        let characters = self.characters();
         match roster::stage_by_kind(self.stage) {
             Some(s) => s.refusal(&characters),
             None => Some("Pick a stage.".into()),
@@ -124,6 +138,7 @@ impl Form {
                 stage: roster::stage("fd").map_or(32, |s| s.kind),
                 stocks,
                 minutes,
+                items: items::Switch::default(),
             },
             message: None,
             fullscreen,
@@ -183,6 +198,7 @@ impl Form {
             if self.record { "on" } else { "off" },
             self.replays
         );
+        text += &c.items.save();
         text
     }
 
@@ -272,13 +288,21 @@ impl Form {
                     _ => {}
                 },
                 "replays" if !given.replays => self.replays = v.to_owned(),
-                _ => {}
+                k => {
+                    c.items.restore(k, v);
+                }
             }
         }
     }
 
     /// Lays the form out; true when Start is pressed (or Enter with nothing focused).
     pub fn show(&mut self, ui: &mut egui::Ui) -> bool {
+        let mut start = false;
+        egui::ScrollArea::vertical().show(ui, |ui| start = self.show_form(ui));
+        start
+    }
+
+    fn show_form(&mut self, ui: &mut egui::Ui) -> bool {
         let mut start = false;
         ui.vertical_centered(|ui| {
             ui.add_space(32.0);
@@ -325,6 +349,20 @@ impl Form {
                             ui.end_row();
                             ui.label("Minutes");
                             ui.add(egui::DragValue::new(&mut c.minutes).range(0..=99));
+                            ui.end_row();
+                            ui.label("Items");
+                            let freq = &mut c.items.freq;
+                            let name = (items::FREQUENCIES.iter())
+                                .find(|f| f.0 == *freq)
+                                .map_or("?", |f| f.1);
+                            egui::ComboBox::from_id_salt("items")
+                                .selected_text(name)
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    for (f, name, _) in items::FREQUENCIES {
+                                        ui.selectable_value(freq, f, name);
+                                    }
+                                });
                             ui.end_row();
                             ui.label("Aspect");
                             let aspect = &mut self.aspect;
@@ -428,6 +466,11 @@ impl Form {
                             );
                             ui.end_row();
                         });
+                    let characters = c.characters();
+                    ui.add_space(8.0);
+                    egui::CollapsingHeader::new("Item switch")
+                        .id_salt("item-switch")
+                        .show(ui, |ui| c.items.show_switch(ui, &characters, c.stage));
                 });
             });
             ui.add_space(16.0);
@@ -445,11 +488,15 @@ impl Form {
             if let Some(why) = &refusal {
                 ui.label(why);
             }
+            if let Some(note) = c.items.note(&c.characters(), c.stage) {
+                ui.label(note);
+            }
             if let Some(m) = &self.message {
                 ui.colored_label(ui.visuals().error_fg_color, m);
             }
             ui.add_space(16.0);
             ui.weak("0 stocks: a timed match. 0 minutes: no time limit.");
+            ui.weak("Items: the switch offers only items ported for the stage and characters.");
             ui.weak("Enter starts. Escape in a match comes back here; Escape here quits.");
             ui.weak("F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
             ui.weak("Added delay holds the controllers back on purpose, for a CRT's feel.");
@@ -781,6 +828,7 @@ mod tests {
             stage: 32,
             stocks: 4,
             minutes: 8,
+            items: items::Switch::default(),
         };
         assert_eq!(c.player_count(), 3);
         assert_eq!(c.ports(), vec![(fox, 0), (0xFF, 0), (marth, 0), (fox, 1)]);
@@ -804,6 +852,9 @@ mod tests {
         form.msaa = true;
         form.record = false;
         form.replays = "D:/Slippi/melee-hd".to_owned();
+        form.choice.items.freq = 3;
+        form.choice.items.set(0x06, false);
+        form.choice.items.set(0x1C, false);
         form
     }
 
@@ -882,7 +933,7 @@ mod tests {
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\nitems = lots\nitem-switch-off = everything\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }

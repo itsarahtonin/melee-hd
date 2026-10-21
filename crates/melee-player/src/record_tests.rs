@@ -5,6 +5,7 @@
 //! again, frame for frame. Skips without `SSBM_DISC`.
 
 use melee_data::disc::Disc;
+use melee_sim::game::gm::vs_mode::GamePrefs;
 use melee_sim::game::record::{self, Setup};
 use melee_sim::game::roster;
 use melee_sim::game::vs_match::{Player, Settings};
@@ -214,4 +215,67 @@ fn a_recording_plays_back() {
     assert_eq!(a.len(), b.len(), "the recordings have different lengths");
     let frames_seen = original.frames.len();
     assert!(frames_seen > 2000, "{frames_seen} frames");
+}
+
+/// An items-on match's recording carries its item settings where Slippi's game start has them
+/// (the game info block's item frequency and item kinds, which Slippi's spec and parsers read
+/// at 0x10 and 0x28 of the event: `itemSpawnBehavior` and `enabledItems`), as the VS menus set
+/// them; an items-off match's says off (-1).
+#[test]
+fn a_recording_carries_the_item_settings() {
+    let Some(disc) = disc() else { return };
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    let base = settings();
+    let stage = base.start.rules.stkind;
+    let players = [base.start.players[0].ckind, base.start.players[1].ckind];
+    let players: Vec<Player> = (players.iter().enumerate())
+        .map(|(i, &c)| Player {
+            character: c as u8,
+            costume: 0,
+            port: i as u8,
+            kind: 0,
+            cpu_level: 0,
+            team: i as u8,
+        })
+        .collect();
+    for prefs in [
+        GamePrefs::items(3, |k| k == 0x06 || k == 0x22),
+        GamePrefs::items_off(),
+    ] {
+        let s = Settings {
+            seed: base.seed,
+            record: Some(Setup::vanilla()),
+            ..Settings::vs_items(stage, &players, 0, 1, &prefs)
+        };
+        let mut session = start(&disc, &s, None);
+        for tick in 0..30 {
+            let f = session.tick(pads(tick, false));
+            session.m.recycle(f);
+        }
+        let r = session.m.game.recorder.as_ref().expect("the recorder");
+        let file = melee_slippi::write::recording(r, std::time::UNIX_EPOCH);
+        let replay = Replay::parse(&file).expect("the recording parses");
+        let info = melee_slippi::start(&replay).info;
+        let rules = &s.start.rules;
+        assert_eq!(info[0xB] as i8, rules.item_freq);
+        assert_eq!(info[0x20..0x28], rules.x20.to_be_bytes());
+        let payload = &(replay.events.iter())
+            .find(|e| e.command == event::GAME_START)
+            .expect("a game start")
+            .payload;
+        // The payload follows the command byte.
+        let behavior = payload[0x10 - 1] as i8;
+        let enabled =
+            (payload[0x28 - 1..0x2D - 1].iter()).fold(0u64, |m, &b| m << 8 | u64::from(b));
+        assert_eq!(behavior, if prefs.item_freq == 0xFF { -1 } else { 3 });
+        assert_eq!(enabled, rules.x20 & ((1 << 40) - 1));
+        if prefs.item_freq != 0xFF {
+            let kinds: Vec<u32> = (0..35).filter(|k| enabled >> k & 1 != 0).collect();
+            assert_eq!(
+                kinds,
+                [0, 1, 2, 3, 6, 0x22],
+                "the containers and the switch's kinds"
+            );
+        }
+    }
 }

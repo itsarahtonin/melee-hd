@@ -685,4 +685,85 @@ mod tests {
         }
         failures
     }
+
+    /// The player's launcher starts an items-on match as the VS menus do (`Settings::vs_items`
+    /// with `GamePrefs::items`, the item switch's entries), and the oracle's generator writes
+    /// an items match's start data with `Items::only`. The generator's equivalent match, the
+    /// switch's kinds with the capsule, box, barrel and egg the menus can't turn off, starts with
+    /// the same item state: frequency, kinds, the spawner's tables and its first countdown.
+    #[test]
+    fn player_items_start_as_the_generators() {
+        use crate::matches::{self, Control, Items, Rules};
+        use melee_sim::game::gm::vs_mode::{GamePrefs, ITEM_SWITCH_KINDS, NO_ITEM_KIND};
+        use melee_sim::game::vs_match::Player;
+        if std::env::var("SSBM_DISC").is_err() {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        }
+        on_sim_thread(|| {
+            let mut files = files();
+            let every: Vec<u8> = (ITEM_SWITCH_KINDS.iter().copied())
+                .filter(|&k| k != NO_ITEM_KIND)
+                .collect();
+            let cases: [(i8, Vec<u8>); 4] = [
+                (matches::FREQ_HIGH, vec![0x06, 0x22]),
+                (0, every),
+                (matches::FREQ_VERY_HIGH, vec![0x15]),
+                (2, vec![0x08, 0x09, 0x12]),
+            ];
+            for (n, (freq, kinds)) in cases.into_iter().enumerate() {
+                let seed = 0x1234_0000 + n as u32;
+                let stage = [matches::FINAL_DESTINATION, matches::POKEMON_STADIUM][n % 2];
+                let mut with_containers = vec![0, 1, 2, 3];
+                with_containers.extend(&kinds);
+                let generated = matches::Match {
+                    name: "items-equivalent".into(),
+                    stage,
+                    players: vec![
+                        matches::Player {
+                            character: matches::FOX,
+                            costume: 0,
+                            control: Control::Human,
+                        },
+                        matches::Player {
+                            character: matches::MARTH,
+                            costume: 0,
+                            control: Control::Human,
+                        },
+                    ]
+                    .into(),
+                    seed,
+                    rules: Rules::Stock {
+                        stocks: 4,
+                        time_limit: 480,
+                    },
+                    items: Items::only(freq, &with_containers),
+                };
+                let theirs = Settings::from_game_info(&generated.start_data(), seed);
+                let players: Vec<Player> = [matches::FOX, matches::MARTH]
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &c)| Player {
+                        character: c,
+                        costume: 0,
+                        port: i as u8,
+                        kind: 0,
+                        cpu_level: 0,
+                        team: i as u8,
+                    })
+                    .collect();
+                let prefs = GamePrefs::items(freq as u8, |k| kinds.contains(&k));
+                let mut ours = Settings::vs_items(stage, &players, 4, 8, &prefs);
+                ours.seed = seed;
+                let (a, b) = (&ours.start.rules, &theirs.start.rules);
+                assert_eq!(a.item_freq, b.item_freq, "case {n}: the frequency");
+                assert_eq!(a.x20, b.x20, "case {n}: the kinds");
+                let ours = Match::start(&ours, &mut |name| files.load(name));
+                let theirs = Match::start(&theirs, &mut |name| files.load(name));
+                let (a, b) = (&ours.game.it.spawn, &theirs.game.it.spawn);
+                assert_eq!(a, b, "case {n}: the spawner");
+                assert!(a.spawner.timer > 0 && a.spawner.table.total > 0, "case {n}");
+            }
+        });
+    }
 }

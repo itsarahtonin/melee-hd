@@ -62,6 +62,7 @@ mod console;
 #[cfg(test)]
 mod cosmetic_tests;
 mod flicker;
+mod items;
 mod jit;
 mod latency;
 mod launcher;
@@ -94,6 +95,7 @@ use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_render::predict::{Cost, Predictor};
 use melee_sim::audio::clock::DiscSpeed;
+use melee_sim::game::gm::vs_mode::GamePrefs;
 use melee_sim::game::roster;
 use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
 use melee_slippi::Replay;
@@ -180,6 +182,9 @@ struct Args {
     record: bool,
     /// Where the replays go: the replays folder beside the executable unless given.
     replays: Option<String>,
+    /// The item frequency and switch the match starts with, as the VS menus keep them: the
+    /// launcher's offered items (`items`), else items off.
+    items: GamePrefs,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -242,6 +247,7 @@ fn parse_args() -> Result<Args, String> {
         unfinished_stages: false,
         record: true,
         replays: None,
+        items: GamePrefs::items_off(),
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -450,7 +456,7 @@ impl Session {
                         team: i as u8,
                     })
                     .collect();
-                let mut s = Settings::vs(a.stage, &players, a.stocks, a.minutes);
+                let mut s = Settings::vs_items(a.stage, &players, a.stocks, a.minutes, &a.items);
                 // A seed from the clock unless given: presentation-side, set once before the
                 // match.
                 s.seed = a.seed.unwrap_or_else(|| {
@@ -1370,6 +1376,8 @@ impl App {
         args.minutes = c.minutes;
         args.record = l.form.record;
         args.replays = Some(l.form.replays.clone()).filter(|d| !d.is_empty());
+        let items = c.items();
+        args.items = items.prefs.clone();
         let names: Vec<&str> = c
             .players
             .iter()
@@ -1378,6 +1386,16 @@ impl App {
             .collect();
         let stage = roster::stage_by_kind(c.stage).map_or("?", |s| s.name);
         eprintln!("the launcher starts {} on {stage}", names.join(" vs "));
+        if c.items.freq != items::OFF {
+            let on: Vec<&str> = items.kinds.iter().map(|&k| items::name(k)).collect();
+            match on.is_empty() {
+                true => eprintln!("items off: none of the items switched on is offered"),
+                false => eprintln!("items: {}", on.join(", ")),
+            }
+            for (k, why) in &items.dropped {
+                eprintln!("  {} off: {}", items::name(*k), why.short());
+            }
+        }
         match Session::start(&args) {
             Ok(session) => {
                 l.form.message = None;

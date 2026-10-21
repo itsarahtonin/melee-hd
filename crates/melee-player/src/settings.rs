@@ -154,7 +154,7 @@ fn file_name(path: &Path) -> String {
     )
 }
 
-fn capitalized(s: &str) -> String {
+pub fn capitalized(s: &str) -> String {
     let mut c = s.chars();
     c.next()
         .map_or_else(String::new, |f| f.to_uppercase().chain(c).collect())
