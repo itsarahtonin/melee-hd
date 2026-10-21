@@ -34,6 +34,11 @@ use crate::diff::panic_text;
 
 /// The replay frame the match's playback last counted.
 fn frame(m: &Match) -> i32 {
+    // Before the scene's first tick no frame is counted yet (the index holds its default, 0,
+    // which a replay ending at frame 0 would take for its end).
+    if m.game.scene.unk_0 == 0 {
+        return FIRST_FRAME - 1;
+    }
     m.game
         .playback
         .as_ref()
