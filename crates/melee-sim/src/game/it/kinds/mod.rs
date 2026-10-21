@@ -77,6 +77,7 @@ pub mod marumine;
 pub mod matadogas;
 pub mod mball;
 pub mod metalb;
+pub mod mew;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
 pub mod msbomb;
@@ -298,6 +299,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || houou::run_event(r, gobj, addr)
         || pippi::run_event(r, gobj, addr)
         || porygon2::run_event(r, gobj, addr)
+        || mew::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
 
@@ -436,6 +438,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| houou::run_pred(r, gobj, addr))
         .or_else(|| pippi::run_pred(r, gobj, addr))
         .or_else(|| porygon2::run_pred(r, gobj, addr))
+        .or_else(|| mew::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }
 
