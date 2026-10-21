@@ -143,6 +143,8 @@ Fifteen tasks in four waves. Sizes count functions to port or check: S under 100
 
 The critical path is 1, 3, then the longest item family, then 15; stages run alongside items from wave 2 on. Tasks within a wave share no files beyond the dispatch chains (`it::kinds::run_event`, `code::run_proc`, the roster), where merges stay mechanical. Each task takes its own worktree and leaves one commit per stage or item family.
 
+**The items toggle's tasks** ([the player](player.md#items-toggle-whats-left)): the items audit's tasks 1 to 3 are **done** (2026-10-20, `feat/items-leftovers`): the engine's stops, the ported code left unwired and the kinds' leftovers, checked on the `leftovers` oracle set ([the oracle](oracle.md#the-items-toggles-leftovers)) and leaf-check's `items_leftovers`. Left from them: the Super Scope charged with one shot left (address-dependent, a stop) and a fighter's catch of an item, which only the crate monsters (task 5, `feat/monsters`) make possible.
+
 ### Not in this sequence
 
 - **Kirby and his copies** are on `feat/kirby` and `feat/kirby-copies`. His copies' items (kinds 130 to 157) and the 89 Kirby replays come with that work; the milestone's "every local replay whose content is ported" counts them once it lands.
