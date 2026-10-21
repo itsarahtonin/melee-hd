@@ -129,9 +129,9 @@ impl Running<'_> {
 
     /// A hit drops what the fighter holds, `Fighter_8006CDA4`: a light item (and a second one)
     /// by chance against the hit's damage (`ftCommonData` x418), or a used-up shooter one time
-    /// in x41C; a held fighter (not ported) by the same chance.
+    /// in x41C; a worn Bunny Hood (`x197C`) by the same chance, taken off.
     #[doc(alias = "Fighter_8006CDA4")]
-    fn drop_items_on_hit(&mut self, f: FighterId) {
+    pub fn drop_items_on_hit(&mut self, f: FighterId) {
         let fp = &self.game.fighters[f.0];
         let dmg = fp::fctiwz(reg(fp.dmg.x1838_percentTemp));
         let hold = fp
@@ -164,8 +164,17 @@ impl Running<'_> {
                     crate::game::it::release::drop(self, item, zero, 1.0);
                 }
             }
-            if self.game.fighters[f.0].x197C.is_some() {
-                unported_call("Fighter_8006CDA4 (a held fighter dropped by a hit)");
+            if let Some(hood) = self.game.fighters[f.0].x197C {
+                let x418 = self.common().i32(0x418);
+                if self.game.objs.rng.below(x418) < dmg {
+                    let gobj = self.game.fighters[f.0]
+                        .gobj
+                        .expect("a fighter without a GObj");
+                    let zero = crate::vec::Vec3::new(0.0, 0.0, 0.0);
+                    self.worn_item_off(gobj);
+                    crate::game::it::release::drop(self, hood, zero, 1.0);
+                    self.take_off_hood(gobj);
+                }
             }
         }
     }
@@ -1055,15 +1064,68 @@ impl Running<'_> {
     /// The screw attack's hit, `ftCo_800D2FA4`, except from the attacks `x2071_b0_3`
     /// names 11 and 12.
     #[doc(alias = "ftCo_800D2FA4")]
-    fn screw_check(&mut self, gobj: GObjId) -> bool {
+    pub fn screw_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
         if fp.dmg.x1860_element == ELEMENT_SCBALL {
             if matches!(fp.x2070[1] >> 4, 11 | 12) {
                 return false;
             }
-            unported_call("ftCo_800D3004 (the screw attack's hit)");
+            self.enter_damage_screw(gobj);
+            return true;
         }
         false
+    }
+
+    /// Spun up by the Screw Attack, `ftCo_800D3004`: what it holds and who it holds let go,
+    /// into the air (`DamageScrew` from the ground, `DamageScrewAir` in the air) at its
+    /// attributes' launch speed straight up.
+    #[doc(alias = "ftCo_800D3004")]
+    pub fn enter_damage_screw(&mut self, gobj: GObjId) {
+        // `ftCo_ReleaseItemAndVictim`.
+        self.damage_hooks(gobj);
+        self.drop_heavy_item(gobj);
+        self.release_victim(gobj);
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].cmd_vars[0] = 0;
+        if self.game.fighters[f.0].ground_or_air == GA_GROUND {
+            self.go_airborne(f);
+            self.change_motion_state(gobj, ms::DAMAGE_SCREW, 0, 0.0, 1.0, 0.0, None);
+        } else {
+            self.change_motion_state(gobj, ms::DAMAGE_SCREW_AIR, 0, 0.0, 1.0, 0.0, None);
+        }
+        let fp = &mut self.game.fighters[f.0];
+        fp.self_vel.x = 0.0;
+        fp.self_vel.y = fp.co_attrs.screw_attack_launch_velocity;
+        fp.self_vel.z = 0.0;
+    }
+
+    /// `ftCo_DamageScrew_Anim`: a helpless fall once the spin ends.
+    #[doc(alias = "ftCo_DamageScrew_Anim")]
+    pub fn co_damage_screw_anim(&mut self, gobj: GObjId) {
+        if !self.anim_frames_remaining(gobj) {
+            self.enter_fall_special_basic(gobj);
+        }
+    }
+
+    /// `ftCo_DamageScrew_IASA`: nothing.
+    #[doc(alias = "ftCo_DamageScrew_IASA")]
+    pub fn co_damage_screw_iasa(&mut self, _gobj: GObjId) {}
+
+    /// `ftCo_DamageScrew_Phys`: a plain fall with drift.
+    #[doc(alias = "ftCo_DamageScrew_Phys")]
+    pub fn co_damage_screw_phys(&mut self, gobj: GObjId) {
+        self.air_physics(gobj);
+    }
+
+    /// `ftCo_DamageScrew_Coll`: landing once the script allows it (`cmd_vars[0]`), else
+    /// staying in the air.
+    #[doc(alias = "ftCo_DamageScrew_Coll")]
+    pub fn co_damage_screw_coll(&mut self, gobj: GObjId) {
+        if self.game.fighter(gobj).cmd_vars[0] != 0 {
+            self.co_air_catch_hit_coll(gobj);
+            return;
+        }
+        self.air_coll_stay(gobj);
     }
 
     /// Buried by a hit on the ground, `ftCo_800C0CB8`.

@@ -13,7 +13,6 @@ use gekko_fp as fp;
 use super::super::item::{article, attr_of, change, change_state};
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::handles::CodeRef;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::game::state::{Game, Running};
@@ -250,10 +249,15 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     ip.xD5C = 0;
     ip.xDCC_flag.b3 = false;
-    if super::super::spawn::kind_on(r.game, super::FOODS) {
-        code::unported_call("it_8028FAF4 (a Shy Guy's food)");
+    let pos = ip.pos;
+    let food = super::foods::spawn(r, None, pos);
+    vars(r.game, gobj).x54.set(food);
+    if let Some(food) = food {
+        super::foods::carried(r, food);
+        let pos = item(r.game, gobj).pos;
+        super::foods::place(r, food, pos, 1.0);
+        super::foods::picked_up(r, food);
     }
-    vars(r.game, gobj).x54.set(None);
     let v = vars(r.game, gobj);
     v.x2c.set(0);
     v.x22.set(0);
@@ -473,8 +477,10 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 /// spinning away (and counted as an enemy KO), else knocked back for 12 ticks.
 #[doc(alias = "it_802D8EC8")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
-    if vars(r.game, gobj).x54.get().is_some() {
-        code::unported_call("it_8028F8E4 (a Shy Guy dropping its food)");
+    if let Some(food) = vars(r.game, gobj).x54.get() {
+        super::foods::let_fall(r, food);
+        super::foods::fell(r, food);
+        vars(r.game, gobj).x54.set(None);
     }
     item_mut(r.game, gobj).xDCC_flag.b3 = true;
     let a = article(item(r.game, gobj))
@@ -580,8 +586,11 @@ pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
 /// Carries the food along, `it_802D96B0`.
 #[doc(alias = "it_802D96B0")]
 pub fn carry(r: &mut Running, gobj: GObjId) {
-    if vars(r.game, gobj).x54.get().is_some() {
-        code::unported_call("it_8028F9D8 (a Shy Guy carrying its food)");
+    if let Some(food) = vars(r.game, gobj).x54.get() {
+        let ip = item(r.game, gobj);
+        let (mut pos, dir) = (ip.pos, ip.facing_dir);
+        pos.z = mem(fp::fmuls(-2.0, reg(dir)));
+        super::foods::place(r, food, pos, reg(dir));
     }
 }
 
@@ -607,8 +616,9 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
     };
     if leave {
         item_mut(r.game, gobj).xDCC_flag.b3 = true;
-        if vars(r.game, gobj).x54.get().is_some() {
-            code::unported_call("it_8028F9B8 (a Shy Guy letting its food go)");
+        if let Some(food) = vars(r.game, gobj).x54.get() {
+            super::foods::gone(r, food);
+            vars(r.game, gobj).x54.set(None);
         }
     }
 }

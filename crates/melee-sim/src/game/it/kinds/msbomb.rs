@@ -57,7 +57,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         DMG_RECEIVED => hit(r, gobj),
         COLL7 => coll7(r, gobj),
         CLANKED => clanked(r, gobj),
-        REFLECTED => lib2725::reflected_back(r.game, gobj),
+        REFLECTED => reflected(r, gobj),
         SHIELD_BOUNCED => shield_bounced(r, gobj),
         TOUCHED => touched(r, gobj),
         _ => return None,
@@ -349,6 +349,12 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 pub fn coll7(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, landed, fell);
     false
+}
+
+/// Reflected, it flies back the way it came, `itMSBomb_Logic19_Reflected`.
+#[doc(alias = "itMSBomb_Logic19_Reflected")]
+pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::reflected_back(r.game, gobj)
 }
 
 /// Bounces off a shield while thrown, `itMSBomb_Logic19_ShieldBounced`.

@@ -61,7 +61,7 @@ impl Running<'_> {
     }
 
     /// The joint of the fighter's X rotation part.
-    fn x_rot_joint(&self, f: FighterId) -> Option<JObjId> {
+    pub(super) fn x_rot_joint(&self, f: FighterId) -> Option<JObjId> {
         let fp = &self.game.fighters[f.0];
         let idx = self.bone_index(fp, XROT_N);
         self.bone(f, idx).joint

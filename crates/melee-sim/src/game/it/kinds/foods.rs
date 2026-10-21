@@ -67,6 +67,34 @@ fn attrs(r: &Running, gobj: GObjId) -> DataRef {
         .expect("a food without attributes")
 }
 
+/// A Shy Guy's food let fall where it is, `it_8028F8E4` (filed in `itfreeze.c`): marked to
+/// go (`xDCC_flag.b3`, which the food's own states don't read), to be picked up, and placed
+/// in the air at its position.
+#[doc(alias = "it_8028F8E4")]
+pub fn let_fall(r: &mut Running, gobj: GObjId) {
+    item_mut(r.game, gobj).xDCC_flag.b3 = true;
+    lib26b1::enable_pickup(r.game, gobj);
+    let ip = item_mut(r.game, gobj);
+    ip.x378_itemColl.cur_pos = ip.pos;
+    let pos = ip.pos;
+    super::super::maplib::place_air(r, gobj, pos);
+}
+
+/// A food a Shy Guy carries, `it_8028F968` (filed in `itfreeze.c`): still, kept, and not to
+/// be picked up.
+#[doc(alias = "it_8028F968")]
+pub fn carried(r: &mut Running, gobj: GObjId) {
+    lib2725::clear_velocity(r.game, gobj);
+    item_mut(r.game, gobj).xDCC_flag.b3 = false;
+    lib26b1::disable_pickup(r.game, gobj);
+}
+
+/// A Shy Guy's food gone with it, `it_8028F9B8` (filed in `itfreeze.c`).
+#[doc(alias = "it_8028F9B8")]
+pub fn gone(r: &mut Running, gobj: GObjId) {
+    super::super::item::destroy(r, gobj);
+}
+
 /// A food at `pos` from `parent`, if foods are on, `it_8028FAF4`: falling from the parent's
 /// center (`it_8026BB68`) or `pos`, facing left.
 #[doc(alias = "it_8028FAF4")]
@@ -97,7 +125,7 @@ pub fn spawn(r: &mut Running, parent: Option<GObjId>, pos: Vec3) -> Option<GObjI
 
 /// Places the food at `pos` plus its dish's offset (the attributes read as `Vec4`s: the
 /// dish's `w` times `dir` across, the next one's `x` up), `it_8028F9D8`.
-// Ports `it_8028F9D8`; aliased once a check reaches it.
+#[doc(alias = "it_8028F9D8")]
 pub fn place(r: &mut Running, gobj: GObjId, pos: Vec3, dir: f64) {
     let a = attrs(r, gobj);
     let dish = item_mut(r.game, gobj).xDD4_itemVar.foods().x0.get();

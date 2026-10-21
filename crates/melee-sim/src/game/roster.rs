@@ -470,13 +470,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grstory", "melee/it/kinds/itheiho"],
             modules: &["gr/story", "it/kinds/heiho"],
-            unreached: &[
-                ("it_802D9A0C", EVT_UNK),
-                ("it_8028FAF4", SHY_GUY_FOOD),
-                ("it_8028F8E4", SHY_GUY_FOOD),
-                ("it_8028F9D8", SHY_GUY_FOOD),
-                ("it_8028F9B8", SHY_GUY_FOOD),
-            ],
+            unreached: &[("it_802D9A0C", EVT_UNK)],
             missing: &[],
         }),
     },
@@ -489,7 +483,6 @@ const ICE_CLIMBERS: u8 = 14;
 /// it, from the fighter's unload when the match's scene ends.
 const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload at the scene's end runs";
 const EVT_UNK_TINGLE: (&str, &str) = ("it_802EC850", EVT_UNK);
-const SHY_GUY_FOOD: &str = "a Shy Guy's food, only with food on in the item switch";
 const YAKU_UNANCHORED: (&str, &str) = (
     "it_2E6A_UnkMotion19_Phys",
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)",

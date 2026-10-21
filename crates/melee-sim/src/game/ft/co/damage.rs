@@ -3,7 +3,6 @@
 use crate::game::ucf::Ucf;
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
@@ -281,7 +280,8 @@ impl Running<'_> {
             self.go_airborne(f);
         }
         if self.parasol_status(gobj) != -1 {
-            unported_call("ftCo_800CF4DC (tumbling under a parasol)");
+            self.enter_parasol_damage_fall(gobj);
+            return;
         }
         self.change_motion_state(gobj, ms::DAMAGE_FALL, 0x18001, 0.0, 1.0, 0.0, None);
         self.clamp_air_drift(f);

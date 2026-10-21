@@ -68,6 +68,10 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_F2BC => g.co_item_parasol_fall_iasa(gobj),
         0x800C_F428 => g.co_item_parasol_fall_special_iasa(gobj),
         0x800C_F4B4 => g.co_item_parasol_fall_special_coll(gobj),
+        0x800C_F528 => g.co_item_parasol_damage_fall_anim(gobj),
+        0x800C_F52C => g.co_item_parasol_damage_fall_iasa(gobj),
+        0x800C_F54C => g.co_item_parasol_damage_fall_phys(gobj),
+        0x800C_F56C => g.co_item_parasol_damage_fall_coll(gobj),
         // The frozen state's: ftCo_DamageIce_Anim, _IASA, _Phys, _Coll, its damage hooks
         // (ftCo_DamageIce_OnHit2, ftCo_DamageIce_OnHit), and the jump out's.
         0x8009_12A8 => g.co_damage_ice_anim(gobj),
@@ -261,6 +265,11 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x8008_1644 => {
             g.co_cliff_cam(gobj);
         }
+        // The Screw Attack's spin: ftCo_DamageScrew_Anim, _IASA, _Phys, _Coll.
+        0x800D_30C0 => g.co_damage_screw_anim(gobj),
+        0x800D_30FC => g.co_damage_screw_iasa(gobj),
+        0x800D_3100 => g.co_damage_screw_phys(gobj),
+        0x800D_3120 => g.co_damage_screw_coll(gobj),
         // ftCo_DeadDown_Anim, ftCo_DeadLeft_Anim, ftCo_DeadRight_Anim, ftCo_DeadUp_Anim
         0x800D_3E00 | 0x800D_3910 | 0x800D_3B88 | 0x800D_4078 => {
             g.co_dead_anim(gobj);

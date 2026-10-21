@@ -88,8 +88,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         COLL5 => spinning_coll(r, gobj),
         DMG_DEALT => dmg_dealt(r, gobj),
         CLANKED | HIT_SHIELD => bounce_or_spin(r, gobj),
-        REFLECTED => lib2725::reflected_back(r.game, gobj),
-        SHIELD_BOUNCED => lib2725::bounce_off_shield(r.game, gobj),
+        REFLECTED => reflected(r, gobj),
+        SHIELD_BOUNCED => shield_bounced(r, gobj),
         DMG_RECEIVED => dmg_received(r, gobj),
         COLL4 => airborne_coll(r, gobj),
         _ => return None,
@@ -649,6 +649,18 @@ pub fn dmg_dealt(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "itFlipper_HitShield")]
 pub fn bounce_or_spin(r: &mut Running, gobj: GObjId) -> bool {
     dmg_dealt(r, gobj)
+}
+
+/// Reflected, it flies back the way it came, `itFlipper_Reflected`.
+#[doc(alias = "itFlipper_Reflected")]
+pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::reflected_back(r.game, gobj)
+}
+
+/// Bounced off a shield, `itFlipper_ShieldBounced`.
+#[doc(alias = "itFlipper_ShieldBounced")]
+pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
+    lib2725::bounce_off_shield(r.game, gobj)
 }
 
 /// Hit, armed, it spins from its attacker and is pushed from what hit it (`xCB4`, `xCE0`),

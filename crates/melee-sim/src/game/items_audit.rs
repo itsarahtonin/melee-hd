@@ -161,8 +161,6 @@ pub const UNITS: &[&str] = &[
     "melee/ft/ftCo_800C78B0",
     "melee/ft/ftCo_800C7590",
     "melee/ft/ftCo_800C7434",
-    "melee/ft/kinds/ftCommon/ftCo_ItemParasolDamageFall",
-    "melee/ft/kinds/ftCommon/ftCo_DamageScrew",
     "melee/ft/ft_0BEC",
     "melee/ft/ft_0BF0",
     "melee/ft/kinds/ftDonkey/ftdonkeyheavyfall",
@@ -362,6 +360,7 @@ const YAKU: &str =
 const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
+const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
 
 /// Functions, units (for every function of one not named on its own) and stops no items-on
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
@@ -539,6 +538,11 @@ pub const UNREACHED: &[(&str, &str)] = &[
         "a thrown fighter's hitbox word that isn't a thrower",
         THROWER,
     ),
+    (
+        "it_802701BC with an item owner that isn't a fighter",
+        GRABBERS,
+    ),
+    ("(a grabbed fighter's callback)", GRABBERS),
 ];
 
 /// Fighter-owned item code an items-off match reaches as well: the characters' work, not the
@@ -653,49 +657,11 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "the motion-sensor bomb reflected (itMSBomb_Logic19_Reflected)",
-        covers: &["itMSBomb_Logic19_Reflected"],
-        kinds: &[0x13],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "the Flipper reflected or bounced off a shield",
-        covers: &["melee/it/kinds/itflipper"],
-        kinds: &[0x14],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "unsure: an item grabbing a fighter with an item owner, or with a callback other than the barrel cannon's",
-        covers: &[
-            "it_802701BC with an item owner that isn't a fighter",
-            "(a grabbed fighter's callback)",
-        ],
-        kinds: &[5],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "unsure: the Super Scope firing with no level it can afford (it_80291DAC)",
+        what: "the Super Scope charged past level 0 with one shot left: it_80291DAC falls off its end and returns the scope's GObj address, so firing takes the empty click but the fighter's state keeps the address, and a hit while charging spends a cost read from where the address points",
         covers: &["it_80291DAC with no level affordable"],
         kinds: &[0x15],
         with: &[],
         stages: &[],
-    },
-    ItemGap {
-        what: "a Shy Guy's food (with food on)",
-        covers: &[
-            "it_8028F9D8",
-            "it_8028F8E4",
-            "it_8028F968",
-            "it_8028F9B8",
-            "it_8028FAF4 (a Shy Guy's food)",
-            "it_8028F9D8 (a Shy Guy carrying its food)",
-        ],
-        kinds: &[0x12],
-        with: &[],
-        stages: &[8],
     },
     ItemGap {
         what: "Kirby inhaling, swallowing and spitting out an item",
@@ -801,46 +767,6 @@ pub const MISSING: &[ItemGap] = &[
         ],
         kinds: &[1, 2, 4, 5],
         with: &[1],
-        stages: &[],
-    },
-    ItemGap {
-        what: "tumbling under the parasol, and the common parasol's own open (ftCommon_8007E83C)",
-        covers: &[
-            "melee/ft/kinds/ftCommon/ftCo_ItemParasolDamageFall",
-            "ftCo_800CF4DC (tumbling under a parasol)",
-            "ftCommon_8007E83C with the common parasol",
-        ],
-        kinds: &[0xD],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "a fighter hit by the Screw Attack's spin",
-        covers: &[
-            "melee/ft/kinds/ftCommon/ftCo_DamageScrew",
-            "ftCo_800D3004 (the screw attack's hit)",
-        ],
-        kinds: &[0x1E],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "a frozen fighter's KOs (the Freezie)",
-        covers: &[
-            "ftCo_800D47B8",
-            "ftCo_800D41C4",
-            "ftCo_DeadUpStar_Anim frozen",
-            "ftCo_DeadUpFall_Anim frozen (its spin)",
-        ],
-        kinds: &[0x11],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "hit while holding the hammer or riding a shell (Fighter_8006CDA4 with x197C)",
-        covers: &["Fighter_8006CDA4 (a held fighter dropped by a hit)"],
-        kinds: &[0xE, 0xF, 0x1C],
-        with: &[],
         stages: &[],
     },
     ItemGap {
@@ -960,11 +886,11 @@ mod tests {
                 .iter()
                 .any(|g| g.what.starts_with("Kirby"))
         );
-        let food = |stage| {
-            missing_with(&[0x12], &[2], stage)
+        let catch = |kinds: &[i32]| {
+            missing_with(kinds, &[2], 31)
                 .iter()
-                .any(|g| g.what.starts_with("a Shy Guy"))
+                .any(|g| g.what.starts_with("a catch box"))
         };
-        assert!(food(8) && !food(31));
+        assert!(catch(&[1]) && !catch(&[0x12]));
     }
 }

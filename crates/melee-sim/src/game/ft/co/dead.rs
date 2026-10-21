@@ -195,13 +195,34 @@ impl Running<'_> {
     /// with its scream.
     #[doc(alias = "ftCo_800D40B8")]
     pub fn enter_dead_up_star(&mut self, gobj: GObjId) {
+        self.dead_up_star(gobj, ms::DEAD_UP_STAR);
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].set_mv_i32(DEAD_FROZEN, 0);
+    }
+
+    /// A frozen fighter's star KO, `ftCo_800D41C4`: held in the ice (`x2227_b6`), the star
+    /// KO's start in its frozen state, the block's effect again and a rumble; the block spins
+    /// as it flies.
+    #[doc(alias = "ftCo_800D41C4")]
+    pub fn enter_dead_up_star_ice(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].x2227_b6 = true;
+        self.dead_up_star(gobj, ms::DEAD_UP_STAR_ICE);
+        self.ice_effect_again(gobj);
+        self.start_rumble(f, 1, 0);
+        self.game.fighters[f.0].set_mv_i32(DEAD_FROZEN, 1);
+    }
+
+    /// What the star KOs share: out of play, the wait (`ftCommonData` x504), the state, the
+    /// scream and the KO's attacker.
+    fn dead_up_star(&mut self, gobj: GObjId, msid: i32) {
         let f = self.game.fighter_id(gobj);
         let frames = self.common().i32(0x504);
         self.leave_play(gobj);
         let fp = &mut self.game.fighters[f.0];
         fp.set_mv_i32(DEAD_FRAMES, frames);
         fp.set_mv_i32(DEAD_PHASE, 0);
-        self.change_motion_state(gobj, ms::DEAD_UP_STAR, 0, 0.0, 1.0, 0.0, None);
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.set_dead_flags(gobj);
         self.stop_fighter_sounds(gobj);
         // `ftCommon_8007EFC0`.
@@ -211,17 +232,18 @@ impl Running<'_> {
         let fp = &self.game.fighters[f.0];
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
         self.record_ko_attacker(slot, sub);
-        self.game.fighters[f.0].set_mv_i32(DEAD_FROZEN, 0);
     }
 
     /// `ftCo_DeadUpStar_Anim`: the star KO's phases. Its wait over, the fighter flies toward
-    /// the background's top; there it twinkles and is out of the match; then it sleeps.
+    /// the background's top (a frozen one's block spinning by `ftCommonData` x51C); there it
+    /// twinkles and is out of the match; then it sleeps.
     #[doc(alias = "ftCo_DeadUpStar_Anim")]
     pub fn co_dead_up_star_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         if fp.mv_i32(DEAD_PHASE) == 1 && fp.mv_i32(DEAD_FROZEN) != 0 {
-            unported_call("ftCo_DeadUpStar_Anim frozen");
+            let by = self.common().f32(0x51C);
+            self.spin_ice(f, by);
         }
         let fp = &mut self.game.fighters[f.0];
         if fp.mv_i32(DEAD_FRAMES) != 0 {
@@ -596,6 +618,27 @@ impl Running<'_> {
         self.game.fighter_mut(gobj).set_mv_i32(DEAD_FROZEN, 0);
     }
 
+    /// A frozen fighter's screen KO, `ftCo_800D47B8`: held in the ice (`x2227_b6`), the screen
+    /// KO in its frozen state, the block's effect again and a rumble; the block spins as it
+    /// comes.
+    #[doc(alias = "ftCo_800D47B8")]
+    pub fn enter_dead_up_fall_ice(&mut self, gobj: GObjId) {
+        self.game.fighter_mut(gobj).x2227_b6 = true;
+        self.enter_dead_up_screen(gobj, ms::DEAD_UP_FALL_ICE);
+        self.ice_effect_again(gobj);
+        let f = self.game.fighter_id(gobj);
+        self.start_rumble(f, 1, 0);
+        self.game.fighter_mut(gobj).set_mv_i32(DEAD_FROZEN, 1);
+    }
+
+    /// A frozen KO's block turned about its X rotation part (`HSD_JObjAddRotationX`).
+    fn spin_ice(&mut self, f: super::super::super::handles::FighterId, by: f32) {
+        let j = self.x_rot_joint(f).expect("jobj");
+        crate::hsd::jobj::set_srt(&mut self.game.objs.jobjs, j, |o| {
+            o.rotate.x = mem(fp::fadds(reg(o.rotate.x), reg(by)));
+        });
+    }
+
     /// A vector of the death states' variables, `off` bytes into `mv`.
     fn dead_vec(&self, gobj: GObjId, off: usize) -> crate::vec::Vec3 {
         let fp = self.game.fighter(gobj);
@@ -705,7 +748,8 @@ impl Running<'_> {
             let along = fp::fadds(reg(fp.mv_f32(DEAD_ALONG)), reg(fp.mv_f32(DEAD_STEP)));
             fp.set_mv_f32(DEAD_ALONG, along);
             if fp.mv_i32(DEAD_FROZEN) != 0 {
-                unported_call("ftCo_DeadUpFall_Anim frozen (its spin)");
+                let by = self.common().f32(0x560);
+                self.spin_ice(f, by);
             }
         }
         let fp = &mut self.game.fighters[f.0];
@@ -728,15 +772,17 @@ impl Running<'_> {
             }
             1 => {
                 if fp.mv_i32(DEAD_FROZEN) != 0 {
+                    self.dead_up_hit_camera(gobj, ms::DEAD_UP_FALL_HIT_CAMERA_ICE);
                     self.ice_effect_again(gobj);
-                }
-                let fp = &self.game.fighters[f.0];
-                let msid = if fp.x34_scale.z != 1.0 {
-                    ms::DEAD_UP_FALL_HIT_CAMERA_FLAT
                 } else {
-                    ms::DEAD_UP_FALL_HIT_CAMERA
-                };
-                self.dead_up_hit_camera(gobj, msid);
+                    let fp = &self.game.fighters[f.0];
+                    let msid = if fp.x34_scale.z != 1.0 {
+                        ms::DEAD_UP_FALL_HIT_CAMERA_FLAT
+                    } else {
+                        ms::DEAD_UP_FALL_HIT_CAMERA
+                    };
+                    self.dead_up_hit_camera(gobj, msid);
+                }
                 let frames = c.i32(0x52C);
                 let fp = &mut self.game.fighters[f.0];
                 fp.set_mv_i32(DEAD_FRAMES, frames);
@@ -872,11 +918,5 @@ impl Running<'_> {
         }
         let j = self.root_jobj(gobj);
         crate::hsd::jobj::set_translate(&mut self.game.objs.jobjs, j, pos);
-    }
-    pub fn enter_dead_up_fall_ice(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D47B8");
-    }
-    pub fn enter_dead_up_star_ice(&mut self, _gobj: GObjId) {
-        unported_call("ftCo_800D41C4");
     }
 }

@@ -1,11 +1,11 @@
 //! A held parasol's common states (`ftCo_ItemParasolOpen.c`, `ftCo_ItemParasolFall.c`,
 //! `ftCo_ItemParasolFallSpecial.c`) and the parasol's opening and closing
 //! (`ftCommon_8007E83C`, `ftGetParasolStatus`): Peach's own parasol takes her states and the
-//! same item code; the common parasol's item code is ported (`it::kinds::parasol`), but not its opening and closing in hand (`ftCommon_8007E83C` with it).
+//! same item code; the common parasol's item code is `it::kinds::parasol`.
 
 use gekko_fp as fp;
 
-use super::super::super::it::kinds::peachparasol;
+use super::super::super::it::kinds::{parasol, peachparasol};
 use super::super::super::it::{item, lib26b1};
 use super::super::super::state::Running;
 use super::super::motion::flags::*;
@@ -67,8 +67,9 @@ impl Running<'_> {
     }
 
     /// The held parasol opened or closed to step `step`, its animation `div` frames long (0:
-    /// at the fighter's speed), `ftCommon_8007E83C`: Peach's parasol opens (step 4) or holds
-    /// open (6) at the fighter's speed times its animation's length over `div`.
+    /// at the fighter's speed), `ftCommon_8007E83C`: the common parasol goes to the state of
+    /// the step, Peach's opens (step 4) or holds open (6), at the fighter's speed times the
+    /// state's animation's length over `div`.
     #[doc(alias = "ftCommon_8007E83C")]
     pub fn parasol_step(&mut self, gobj: GObjId, step: i32, div: f32) {
         assert!(
@@ -79,7 +80,17 @@ impl Running<'_> {
         let it = fp.item_gobj.expect("a parasol");
         let speed = reg(fp.frame_speed_mul);
         if lib26b1::kind(self.game, it) == PARASOL {
-            crate::game::code::unported_call("ftCommon_8007E83C with the common parasol");
+            // `parasol_table_2`: the common parasol's state for each step, and
+            // `parasol_table_1`'s functions, which go to it (`it_8028B718` to `it_8028B618`).
+            let state = [7, 8, 9, 10, 5, 6, 4][step as usize];
+            let val = if reg(div) == 0.0 {
+                speed
+            } else {
+                let frames = parasol::anim_frames(state);
+                fp::fmuls(speed, fp::fdivs(fp::frsp(f64::from(frames)), reg(div)))
+            };
+            parasol::open_step(self, it, mem(val), state);
+            return;
         }
         let val = if reg(div) == 0.0 {
             speed
@@ -281,6 +292,44 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ItemParasolFallSpecial_Coll")]
     pub fn co_item_parasol_fall_special_coll(&mut self, gobj: GObjId) {
         self.air_coll_ledges_then(gobj, |r, g| r.enter_landing_fall_special_basic(g));
+    }
+
+    /// Tumbling under the held parasol, `ftCo_800CF4DC`: its own state, the fast fall kept.
+    #[doc(alias = "ftCo_800CF4DC")]
+    pub fn enter_parasol_damage_fall(&mut self, gobj: GObjId) {
+        self.change_motion_state(
+            gobj,
+            ms::ITEM_PARASOL_DAMAGE_FALL,
+            KEEP_FAST_FALL,
+            0.0,
+            1.0,
+            0.0,
+            None,
+        );
+        let f = self.game.fighter_id(gobj);
+        self.clamp_air_drift(f);
+    }
+
+    /// `ftCo_ItemParasolDamageFall_Anim`: nothing.
+    #[doc(alias = "ftCo_ItemParasolDamageFall_Anim")]
+    pub fn co_item_parasol_damage_fall_anim(&mut self, _gobj: GObjId) {}
+
+    /// `ftCo_ItemParasolDamageFall_IASA`: a tumble's.
+    #[doc(alias = "ftCo_ItemParasolDamageFall_IASA")]
+    pub fn co_item_parasol_damage_fall_iasa(&mut self, gobj: GObjId) {
+        self.co_damage_fall_iasa(gobj);
+    }
+
+    /// `ftCo_ItemParasolDamageFall_Phys`: a plain fall with drift.
+    #[doc(alias = "ftCo_ItemParasolDamageFall_Phys")]
+    pub fn co_item_parasol_damage_fall_phys(&mut self, gobj: GObjId) {
+        self.air_physics(gobj);
+    }
+
+    /// `ftCo_ItemParasolDamageFall_Coll`: a tumble's landing, a wall jump or a ledge.
+    #[doc(alias = "ftCo_ItemParasolDamageFall_Coll")]
+    pub fn co_item_parasol_damage_fall_coll(&mut self, gobj: GObjId) {
+        self.air_coll_ledges_then(gobj, |r, g| r.tumble_land(g));
     }
 
     /// Opening the held parasol, `ftCo_800CEE70`: not after its window, with the stick up
