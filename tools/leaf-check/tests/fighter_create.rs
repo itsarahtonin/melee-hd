@@ -220,10 +220,16 @@ fn run_capture(ctx: &Ctx, path: &std::path::Path, mode: FpMode, first_init: bool
         loaded: find_archives_in(index, &cap.call.mem1, &mut archives),
     };
     // A later match's state the importer can't take (the last match's freed objects that
-    // pointers outlived) is skipped and counted.
+    // pointers outlived) is skipped and counted. The importer takes some of them, the stale
+    // links dangling (the pause screen's joints), but the last match's files left in freed
+    // memory still scan as loaded: the new costume file finds an old copy listed, and a stale
+    // copy's leftovers hide a figatree loaded over them.
     let Ok((mut game, maps)) = catch_unwind(AssertUnwindSafe(|| import(&cap, &data))) else {
         return Outcome::Skipped;
     };
+    if !maps.dangling_jobjs.is_empty() || !maps.dangling_gobjs.is_empty() {
+        return Outcome::Skipped;
+    }
     let before: HashSet<String> = compare(&cap.call.mem1, &data, &game, maps.clone())
         .into_iter()
         .collect();
