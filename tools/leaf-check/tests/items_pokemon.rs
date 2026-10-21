@@ -25,9 +25,10 @@ use std::collections::BTreeMap;
 
 use leaf_check::calls::{
     Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
-    saved_calls,
+    poke_u32, saved_calls,
 };
 use melee_capture::import::Maps;
+use melee_sim::game::gm::Unlocks;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, fushigibana, hassam, hinoarashi, houou, kabigon, kamex, kireihana,
     lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans, thunder, togepy,
@@ -36,8 +37,10 @@ use melee_sim::game::it::kinds::{
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
+use melee_sim::rng::Rng;
 use melee_sim::vec::Vec3;
 use ssbm_rt::capture::Call;
+use ssbm_types::fns;
 
 const CALLS: &str = "calls/items-pokemon";
 
@@ -70,8 +73,7 @@ fn stubs() -> Vec<Stub> {
 }
 
 /// The functions by address and name, from the list in the capture directory: those of the
-/// units ported (`UNITS`); the Pokémon no oracle match releases (Articuno, Raikou, Suicune,
-/// Ditto, Mew, Celebi and Staryu) aren't.
+/// units ported (`UNITS`); Articuno, Raikou, Suicune, Mew, Staryu, Ditto and Celebi aren't.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/items-pokemon-funcs.txt", base())) else {
         return Vec::new();
@@ -742,4 +744,198 @@ fn items_pokemon_functions() {
         one || unblocked.is_empty(),
         "compare clean now, take them off BLOCKED: {unblocked:?}"
     );
+}
+
+/// `gmMainLib_804D3EE0`, the card data's pointer, and where its words are: the characters' and
+/// stages' masks, and the records' first word.
+const CARD_DATA: u32 = 0x804D_3EE0;
+const CARD_MASKS: u32 = 0x1868;
+const CARD_RECORDS: u32 = 0x1B4C;
+
+/// A word Slippi's codes patch: where, Slippi's and the original's. The records' test cut
+/// short (`blr`), its answer (`li r3, 1` for `and r3, r4, r0`), and `gm_80164ABC`'s answer
+/// (`li r3, 1` for `li r3, 0`).
+type Patch = (u32, u32, u32);
+const RECORDS_TEST: Patch = (0x8015_D94C, 0x4E80_0020, 0x808D_8840);
+const RECORDS_ANSWER: Patch = (0x8015_D968, 0x3860_0001, 0x7C83_0038);
+const ALL_CHARACTERS: Patch = (0x8016_4B14, 0x3860_0001, 0x3860_0000);
+
+/// Every Pokémon trophy `gm_80165084` asks for (records 0 to 0x1B but Celebi's 0x1A).
+const TROPHIES: u32 = 0x0BFF_FFFF;
+
+/// A saved draw (`it_8027A4D4`) made to take a rare branch, by `mode`: its seed moved on to
+/// the first where Celebi's draw (`mode` even) or Mew's (odd) comes up; the card's codes
+/// Slippi's (the records' test cut short) or the original's, with every trophy recorded, all
+/// but one (Mew's own, for Mew's draw, which then records it), or every record; every character
+/// unlocked by the code, by the save or not at all. Every fifth has a rare Pokémon out already.
+fn rare(call: &mut Call, mode: usize, i: usize) {
+    let seed_at = peek_u32(call, leaf_check::sym("HSD_RandSeedPtr"));
+    let mut seed = peek_u32(call, seed_at);
+    loop {
+        let mut r = Rng::new(seed);
+        let (celebi, mew) = (r.below(251), r.below(251));
+        let mew_draw = !mode.is_multiple_of(2);
+        if (!mew_draw && celebi == 0) || (mew_draw && celebi != 0 && mew == 0) {
+            break;
+        }
+        seed = seed.wrapping_add(1);
+    }
+    poke_u32(call, seed_at, seed);
+    let out = u32::from(i % 5 == 4);
+    poke_u32(call, leaf_check::sym("Item_804A0E24") + 8, out);
+    let card = peek_u32(call, CARD_DATA);
+    let patch = |call: &mut Call, (at, on, off): Patch, set: bool| {
+        poke_u32(call, at, if set { on } else { off });
+    };
+    // ssbm-rs's ports model the records' two codes together or neither (`register_patched`).
+    let slippi = (mode / 2).is_multiple_of(4);
+    patch(call, RECORDS_TEST, slippi);
+    patch(call, RECORDS_ANSWER, slippi);
+    // With all but one trophy, Mew's draw finds its record missing and writes it.
+    let mew = !mode.is_multiple_of(2);
+    let missing = if mew { 0x19 } else { [0u32, 5, 0x1B][i % 3] };
+    let records = match mode / 2 % 4 {
+        0 | 1 => TROPHIES,
+        2 => TROPHIES & !(1 << missing),
+        _ => u32::MAX,
+    };
+    poke_u32(call, card + CARD_RECORDS, records);
+    let stages = peek_u32(call, card + CARD_MASKS) & 0xFFFF;
+    let unlocks = [(true, 0), (false, 0x7FF), (false, 0x7FB)];
+    let (by_code, characters) = if mew && mode / 2 % 4 == 2 {
+        unlocks[i % 2]
+    } else {
+        unlocks[i % 3]
+    };
+    patch(call, ALL_CHARACTERS, by_code);
+    poke_u32(call, card + CARD_MASKS, characters << 16 | stages);
+}
+
+/// The rare draws' modes ([`rare`]).
+const RARE_MODES: usize = 8;
+
+/// The Poké Ball's rare draws (`it_8027A4D4`'s first two, the card's records and its codes:
+/// `gm_80165084`, `gm_80164ABC`, `gm_80172BC4`, `gm_80172C04`): every saved draw run again in
+/// each of [`rare`]'s modes, so both rare branches and every answer the card gives them run.
+#[test]
+fn items_pokemon_rare_draws() {
+    let name = "it_8027A4D4";
+    let sets: Vec<(String, usize)> = dirs()
+        .into_iter()
+        .map(|d| {
+            let n = saved_calls(&d, name).len();
+            (d, n)
+        })
+        .filter(|s| s.1 > 0)
+        .collect();
+    let prepares: Vec<Box<Prepare>> = (0..RARE_MODES)
+        .map(|mode| -> Box<Prepare> {
+            Box::new(move |call: &mut Call, i: usize| rare(call, mode, i))
+        })
+        .collect();
+    let no = stubs();
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.1 * RARE_MODES,
+        |(dir, _)| {
+            let variants: Vec<Variant> = prepares
+                .iter()
+                .map(|prepare| Variant {
+                    prepare: &**prepare,
+                    ours: &run,
+                    stubs: &no,
+                })
+                .collect();
+            check_variants(dir, name, &variants)
+        },
+    );
+    let mut counts = BTreeMap::new();
+    for reports in results.iter().flatten() {
+        tally(reports, &mut counts);
+    }
+    let clean = counts.get(&leaf_check::sym(name)).copied().unwrap_or(0);
+    eprintln!("{clean} rare draws compared clean");
+    assert!(
+        sets.is_empty() || clean >= RARE_MODES * 4,
+        "{clean} rare draws compared clean"
+    );
+}
+
+/// The card's records (`gmMainLib_8015D94C`, `gmMainLib_8015D818`, `gm_80165084`,
+/// `gm_80172BC4`, `gm_80172C04`, and `gm_80164ABC` beside them) against the original's machine
+/// code, which reads Slippi's codes where they sit (ssbm-rs's ports model the two records codes
+/// together only): every combination of the codes over random records and the ones the draws
+/// ask about, each answer and each record written compared.
+#[test]
+fn card_records() {
+    let Some(ctx) = leaf_check::reference() else {
+        return;
+    };
+    ctx.set_backend(Box::new(ssbm_ppc::Interpreter::default()));
+    for f in [
+        "gmMainLib_8015D94C",
+        "gmMainLib_8015D818",
+        "gmMainLib_8015D888",
+        "gmMainLib_8015D8FC",
+        "gm_80165084",
+        "gm_80172BC4",
+        "gm_80172C04",
+        "gm_80164ABC",
+    ] {
+        ctx.set_mode(leaf_check::sym(f), ssbm_rt::Mode::Original);
+    }
+    let card = leaf_check::SCRATCH;
+    ctx.write_u32(CARD_DATA, card);
+    let mut rand = leaf_check::Rand(0x0C4D_5EED);
+    let set = |(at, on, off): Patch, v: bool| ctx.write_u32(at, if v { on } else { off });
+    for case in 0..2048u32 {
+        set(RECORDS_TEST, case & 1 != 0);
+        set(RECORDS_ANSWER, case & 2 != 0);
+        let records = match case >> 2 & 3 {
+            0 => TROPHIES,
+            1 => TROPHIES & !(1 << rand.below(0x1C)),
+            2 => rand.bits() as u32,
+            _ => 0,
+        };
+        ctx.write_u32(card + CARD_RECORDS, records);
+        let some = rand.bits() as u32 & 0x7FF;
+        let (by_code, characters) =
+            [(true, 0), (false, 0x7FF), (false, some)][(case >> 4) as usize % 3];
+        set(ALL_CHARACTERS, by_code);
+        ctx.write_u32(card + CARD_MASKS, characters << 16);
+        let ours = || Unlocks::from_memory(&|a| ctx.read_u32(a));
+        for i in 0..32 {
+            let theirs = fns::gmMainLib_8015D94C(&ctx, i) as u32;
+            assert_eq!(theirs, ours().record(i), "case {case}: record {i:#x}");
+        }
+        assert_eq!(
+            fns::gm_80165084(&ctx) != 0,
+            ours().pokemon_trophies(),
+            "case {case}: the trophies"
+        );
+        assert_eq!(
+            fns::gm_80164ABC(&ctx) != 0,
+            ours().all_characters(),
+            "case {case}: the characters"
+        );
+        for i in [0x19, 0x1A] {
+            let mut u = ours();
+            let new = u.record_rare(i);
+            let theirs = if i == 0x19 {
+                fns::gm_80172BC4(&ctx)
+            } else {
+                fns::gm_80172C04(&ctx)
+            };
+            assert_eq!(theirs != 0, new, "case {case}: record {i:#x}'s answer");
+            let now = ctx.read_u32(card + CARD_RECORDS);
+            assert_eq!(now, u.records, "case {case}: record {i:#x}");
+        }
+        let i = rand.below(32) as u32;
+        let mut u = ours();
+        let new = u.mark(i);
+        let theirs = fns::gmMainLib_8015D818(&ctx, i);
+        assert_eq!(theirs != 0, new, "case {case}: marking {i:#x}");
+        let now = ctx.read_u32(card + CARD_RECORDS);
+        assert_eq!(now, u.records, "case {case}: marked {i:#x}");
+    }
 }

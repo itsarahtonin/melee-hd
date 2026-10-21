@@ -103,10 +103,10 @@ pub fn is_training(game: &Game) -> bool {
     game.game_mode == 0x1C
 }
 
-/// What the memory card's save data has unlocked, and the codes that report everything
-/// unlocked whatever it says (Slippi Dolphin's unlock-all codes, which patch `gm_80164ABC`'s
-/// and `gm_80164600`'s answers to 1): an input to a match, which reads it but never writes it
-/// (see engine.md).
+/// What the memory card's save data has unlocked and recorded, and the codes that report
+/// everything unlocked whatever it says (Slippi Dolphin's unlock-all codes, which patch
+/// `gm_80164ABC`'s and `gm_80164600`'s answers to 1) or cut the records' test short: an input
+/// to a match, which reads it and writes only a rare Pokémon's record (see engine.md).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Unlocks {
     /// The unlockable characters, a bit each by unlock index (`save_data.unlocked_characters`,
@@ -121,6 +121,15 @@ pub struct Unlocks {
     /// The game preferences' saved language (`GamePrefs::saved_language`, at the card data's
     /// `0x1CC6`): [`LANG_JP`] or [`LANG_US`], which picks the strings some screens show.
     pub language: u8,
+    /// The card's records, a bit each (`save_data.x1B4C`'s first word, at the card data's
+    /// `0x1B4C`): the Pokémon trophies Celebi waits for (0 to 0x1B), Mew's (0x19) and
+    /// Celebi's own (0x1A).
+    pub records: u32,
+    /// The records' test cut short (`blr` at `0x8015D94C`, Slippi's Disable Special Messages):
+    /// `gmMainLib_8015D94C` answers with the index it was asked about.
+    pub records_index_code: bool,
+    /// The records' test patched to answer 1 (`li r3, 1` at `0x8015D968`, an unlock-all code).
+    pub records_all_code: bool,
 }
 
 /// `LANG_JP` and `LANG_US`.
@@ -130,6 +139,13 @@ pub const LANG_US: u8 = 1;
 /// `gmMainLib_804D3EE0`, the memory card's data, and `li r3, 1`.
 const CARD_DATA: u32 = 0x804D_3EE0;
 const LI_R3_1: u32 = 0x3860_0001;
+/// `blr`.
+const BLR: u32 = 0x4E80_0020;
+
+/// The records `gm_80165084` asks for (all to 0x1B but Celebi's), Mew's and Celebi's.
+const POKEMON_TROPHIES: u32 = 0x1B;
+pub const RECORD_MEW: u32 = 0x19;
+pub const RECORD_CEREBI: u32 = 0x1A;
 
 /// `NUM_UNLOCKABLE_CHARACTERS` and `NUM_UNLOCKABLE_STAGES`.
 const UNLOCKABLE: u32 = 11;
@@ -160,6 +176,9 @@ impl Unlocks {
             all_characters_code: true,
             all_stages_code: true,
             language: LANG_US,
+            records: 0,
+            records_index_code: true,
+            records_all_code: true,
         }
     }
 
@@ -174,7 +193,61 @@ impl Unlocks {
             all_characters_code: word(0x8016_4B14) == LI_R3_1,
             all_stages_code: word(0x8016_4658) == LI_R3_1,
             language: (word(card + 0x1CC4) >> 8) as u8,
+            records: word(card + 0x1B4C),
+            records_index_code: word(0x8015_D94C) == BLR,
+            records_all_code: word(0x8015_D968) == LI_R3_1,
         }
+    }
+
+    /// Whether record `i` is set, `gmMainLib_8015D94C`: its bit, or `i` itself with the test
+    /// cut short, or 1 with it patched to answer 1. Only the first word of the records is kept,
+    /// all that a match asks about.
+    #[doc(alias = "gmMainLib_8015D94C")]
+    pub fn record(&self, i: u32) -> u32 {
+        assert!(
+            i < 32,
+            "record {i:#x}: only the first word of the records is kept"
+        );
+        if self.records_index_code {
+            i
+        } else if self.records_all_code {
+            1
+        } else {
+            self.records & 1 << i
+        }
+    }
+
+    /// Records `i` if it isn't, `gmMainLib_8015D818`: its bit set (`gmMainLib_8015D8FC`).
+    /// The time it took and the record's other bit (`x1B80[i]`, from the console's clock, and
+    /// `x1B40`) aren't kept: nothing in a match reads them.
+    #[doc(alias = "gmMainLib_8015D818")]
+    #[doc(alias = "gmMainLib_8015D8FC")]
+    pub fn mark(&mut self, i: u32) -> bool {
+        if self.record(i) != 0 {
+            return false;
+        }
+        self.records |= 1 << i;
+        true
+    }
+
+    /// Whether every Pokémon trophy is recorded, Celebi's own record aside, `gm_80165084`: what
+    /// lets Celebi out of a Poké Ball. With Slippi's codes the test of record 0 answers 0, so
+    /// never.
+    #[doc(alias = "gm_80165084")]
+    pub fn pokemon_trophies(&self) -> bool {
+        (0..=POKEMON_TROPHIES).all(|i| i == RECORD_CEREBI || self.record(i) != 0)
+    }
+
+    /// Records a rare Pokémon's appearance if it isn't, `gm_80172BC4` (Mew, [`RECORD_MEW`]) and
+    /// `gm_80172C04` (Celebi, [`RECORD_CEREBI`]): whether it was new.
+    #[doc(alias = "gm_80172BC4")]
+    #[doc(alias = "gm_80172C04")]
+    pub fn record_rare(&mut self, i: u32) -> bool {
+        if self.record(i) != 0 {
+            return false;
+        }
+        self.mark(i);
+        true
     }
     /// Whether every unlockable character is unlocked, `gm_80164ABC`.
     #[doc(alias = "gm_80164ABC")]

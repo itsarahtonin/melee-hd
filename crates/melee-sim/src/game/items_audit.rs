@@ -344,6 +344,7 @@ const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DEBUG: &str = "the debug menu's item spawn and the items' debug drawings";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
+const CEREBI: &str = "Celebi, whose draw (it_8027A4D4) asks gm_80165084 whether the card records every Pokemon trophy; with Slippi's codes, the player's unlocks (Unlocks::slippi), the records' test answers with the index it is asked about (blr at 0x8015D94C), so record 0 reads as missing and Celebi never comes out";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
 const DROP_BY_KIND: &str = "a spawn by kind for the bob-omb rain and single-player stages (it_8026BE84): sudden death, which the player doesn't play, Home-Run, the All-Star rest area and Big Blue";
 const EVENT: &str =
@@ -523,6 +524,7 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800BF228", DEMO),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
     ("ftLib_CountFighters (Ditto's check)", DITTO),
+    ("melee/it/kinds/itcerebi", CEREBI),
     ("grZakoGenerator_801CAC14 (a coin)", COINS),
     ("grZakoGenerator_801CACB8 (a coin)", COINS),
     (
@@ -720,22 +722,8 @@ pub const MISSING: &[ItemGap] = &[
         stages: &[],
     },
     ItemGap {
-        what: "Mew, a 1 in 251 draw with every character unlocked, and its card record (gm_80172BC4)",
-        covers: &[
-            "melee/it/kinds/itmew",
-            "gm_80172BC4 (the card's Mew record)",
-        ],
-        kinds: &[0x22],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "unsure: Celebi, a 1 in 251 draw if the card's trophy bits (gm_80165084) say so, which the player's unlocks don't model, and its record (gm_80172C04)",
-        covers: &[
-            "melee/it/kinds/itcerebi",
-            "gm_80165084 (the card's Pokémon trophies, for Celebi)",
-            "gm_80172C04 (the card's Celebi record)",
-        ],
+        what: "Mew, a 1 in 251 draw with every character unlocked",
+        covers: &["melee/it/kinds/itmew"],
         kinds: &[0x22],
         with: &[],
         stages: &[],
@@ -879,7 +867,10 @@ mod tests {
     fn items_gaps_follow_the_match() {
         assert!(missing_with(&[], &[2, 9], 31).is_empty());
         let balls = missing_with(&[0x22], &[2, 9], 31);
-        assert!(balls.iter().any(|g| g.what == "Articuno"));
+        assert!(
+            (balls.iter()).all(|g| g.kinds.is_empty() || g.kinds.contains(&0x22)),
+            "a Poké Ball match reaches only its own gaps and every match's"
+        );
         assert!(!balls.iter().any(|g| g.what.starts_with("Kirby")));
         assert!(
             missing_with(&[0], &[4], 31)

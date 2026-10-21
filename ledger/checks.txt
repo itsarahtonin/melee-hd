@@ -9351,6 +9351,7 @@ it_802D2D04	leaf-check items_pokemon: items_pokemon_functions runs it from real 
 it_802D2D2C	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state
 it_2725_Logic42_Spawned	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state
 it_802D2ED0	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state
+gmMainLib_8015D8FC	leaf-check items_pokemon: card_records runs it inside gmMainLib_8015D818, gm_80172BC4 and gm_80172C04 as machine code and compares the records word it sets
 it_802D2EF0	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state
 it_802D2F3C	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state
 it_802D2F70	leaf-check items_pokemon: items_pokemon_functions runs it from real states of the six Poké Ball matches, its own saved calls and its unit's on items of its kind, and compares the whole state

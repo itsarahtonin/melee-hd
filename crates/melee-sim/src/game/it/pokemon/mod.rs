@@ -18,6 +18,7 @@ use melee_data::archive::DataRef;
 use crate::fpu::{mem, reg};
 use crate::game::code;
 use crate::game::ef::Arg;
+use crate::game::gm::{RECORD_CEREBI, RECORD_MEW};
 use crate::game::handles::CodeRef;
 use crate::game::state::{Game, Running};
 use crate::game::structs::SpawnItem;
@@ -98,19 +99,25 @@ fn weight_off(kind: i32) -> u32 {
     0x3C + 4 * (kind - PKIND_START) as u32
 }
 
-/// A rare Pokémon, if the draws say so: Celebi (23) when every Pokémon trophy is seen, then Mew
-/// (22) when every character is unlocked, each marked on the card (`gm_80165084`,
-/// `gm_80172C04`, `gm_80172BC4`). The card's Pokémon records aren't modeled: a draw that
-/// would read them stops.
+/// A rare Pokémon, if the draws say so, once a match: Celebi (23) when the card records every
+/// Pokémon trophy, then Mew (22) when every character is unlocked, each recorded on the card
+/// (`gm_80165084`, `gm_80172C04`, `gm_80164ABC`, `gm_80172BC4`).
 fn rare(r: &mut Running) -> Option<i32> {
-    if r.game.objs.rng.below(251) == 0 && r.game.it.pokemon.rare_spawned == 0 {
-        code::unported_call("gm_80165084 (the card's Pokémon trophies, for Celebi)");
+    if r.game.objs.rng.below(251) == 0
+        && r.game.it.pokemon.rare_spawned == 0
+        && r.game.gm.unlocks.pokemon_trophies()
+    {
+        r.game.it.pokemon.rare_spawned = 1;
+        r.game.gm.unlocks.record_rare(RECORD_CEREBI);
+        return Some(PKIND_CEREBI - PKIND_START);
     }
     if r.game.objs.rng.below(251) == 0
         && r.game.it.pokemon.rare_spawned == 0
         && r.game.gm.unlocks.all_characters()
     {
-        code::unported_call("gm_80172BC4 (the card's Mew record)");
+        r.game.it.pokemon.rare_spawned = 1;
+        r.game.gm.unlocks.record_rare(RECORD_MEW);
+        return Some(PKIND_MEW - PKIND_START);
     }
     None
 }
@@ -200,10 +207,10 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
     };
     spawn.x44_flag[0] |= 0x80;
     if spawn.kind == PKIND_CEREBI {
-        code::unported_call("gm_80172C04 (the card's Celebi record)");
+        r.game.gm.unlocks.record_rare(RECORD_CEREBI);
     }
     if spawn.kind == PKIND_MEW {
-        code::unported_call("gm_80172BC4 (the card's Mew record)");
+        r.game.gm.unlocks.record_rare(RECORD_MEW);
     }
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return false;
