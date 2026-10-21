@@ -118,6 +118,7 @@ pub mod sscopebeam;
 pub mod star;
 pub mod starrod;
 pub mod starrodstar;
+pub mod suikun;
 pub mod sword;
 pub mod taru;
 pub mod tarucann;
@@ -292,6 +293,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || lizardon::run_event(r, gobj, addr)
         || entei::run_event(r, gobj, addr)
         || raikou::run_event(r, gobj, addr)
+        || suikun::run_event(r, gobj, addr)
         || lugia::run_event(r, gobj, addr)
         || houou::run_event(r, gobj, addr)
         || pippi::run_event(r, gobj, addr)
@@ -429,6 +431,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| lizardon::run_pred(r, gobj, addr))
         .or_else(|| entei::run_pred(r, gobj, addr))
         .or_else(|| raikou::run_pred(r, gobj, addr))
+        .or_else(|| suikun::run_pred(r, gobj, addr))
         .or_else(|| lugia::run_pred(r, gobj, addr))
         .or_else(|| houou::run_pred(r, gobj, addr))
         .or_else(|| pippi::run_pred(r, gobj, addr))
