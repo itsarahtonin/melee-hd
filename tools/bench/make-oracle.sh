@@ -13,6 +13,11 @@
 #
 #   SSBM_RUN=.../ssbm-run.exe SSBM_DISC=... bash tools/bench/make-oracle.sh DIR TRACES [SET|NAME...]
 #
+# RECORDER=melee-hd records a scripted match (every player a walker or an opener) with melee-hd
+# (`melee-bench record-match`) instead of ssbm-rs's recording run, whose boot draws the item
+# spawner's first countdown before its codes set the seed (docs/oracle.md, "Seed searches"); the
+# replay check and the trace are ssbm-rs's playback of that recording, as for any other.
+#
 # SSBM_RUN is ssbm-rs's runner with BENCH_CODES (ssbm-rs main 3f9ac3a and later; the oracle's
 # traces come from its ssbm-run-rf build, d61135b). JOBS (default 1) runs that many matches at
 # once, each on one core at low priority. TRACE=0 skips the traces. RUN_TRACE=FIELDS also traces
@@ -38,8 +43,18 @@ make() {
     [ "$ai" != - ] && controllers=("BENCH_AI=$ai")
     [ "$script" = script ] && controllers+=("BENCH_PADS=$out.script.slp")
     local t=$SECONDS times=""
-    env BENCH_CODES="$out.ini" "${controllers[@]}" BENCH_SLP="$out.slp" \
-        nice -n 10 "$run" --fields "$fields" > "$out.make.log" 2>&1
+    if [ "${RECORDER:-ssbm-rs}" = melee-hd ]; then
+        # melee-hd records the scripted match as playback plays it; the recording run's
+        # controllers check doesn't apply.
+        if ! nice -n 10 "$bench" record-match "$name" "$out.slp" > "$out.make.log" 2>&1; then
+            echo "$name: $(tail -1 "$out.make.log")"
+            return
+        fi
+        pads=-
+    else
+        env BENCH_CODES="$out.ini" "${controllers[@]}" BENCH_SLP="$out.slp" \
+            nice -n 10 "$run" --fields "$fields" > "$out.make.log" 2>&1
+    fi
     times+="make $((SECONDS - t)) s"
     t=$SECONDS
     nice -n 10 "$run" --replay "$out.slp" --fp hardware --fields "$fields" > "$out.check.log" 2>&1

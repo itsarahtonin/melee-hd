@@ -1008,6 +1008,10 @@ impl Importer<'_> {
         if matches!(f.kind, 12 | 23) && (359..=366).contains(&f.motion_id) {
             f.mv.import_gobj(0x0, &mem, mv, self);
         }
+        // The ReDead holding the fighter (`ft::co::capture_leadead`).
+        if f.motion_id == 0x14D {
+            f.mv.import_gobj(0x0, &mem, mv, self);
+        }
         if f.x21EC == Some(melee_sim::game::handles::CodeRef(0x800D_E798)) {
             f.mv.import_gobj(0xC, &mem, mv, self);
         }

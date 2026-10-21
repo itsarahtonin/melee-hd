@@ -1139,7 +1139,7 @@ impl Running<'_> {
         false
     }
 
-    /// Caught by the lead pipe's hit, `ftCo_800C74F4`.
+    /// Caught by a ReDead's grab (its hit's element), unless it holds someone already, `ftCo_800C74F4`.
     #[doc(alias = "ftCo_800C74F4")]
     fn leadead_check(&mut self, gobj: GObjId) -> bool {
         let fp = self.game.fighter(gobj);
@@ -1147,7 +1147,14 @@ impl Running<'_> {
             && fp.capture_timer == 0
             && fp.motion_id != ms::CAPTURE_LEADEAD
         {
-            unported_call("it_802EAF28 (the lead pipe's capture)");
+            let source = fp
+                .dmg
+                .x1868_source
+                .expect("a ReDead's hit without its source");
+            if crate::game::it::kinds::leadead::held(self, source).is_none() {
+                self.enter_capture_leadead(gobj);
+                return true;
+            }
         }
         false
     }

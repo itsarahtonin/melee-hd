@@ -83,7 +83,7 @@ impl Importer<'_> {
         self.stale = true;
         let mut item = Item::import(&m, a, self);
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
-        if let ItemVars::Pokemon(v) = &mut item.xDD4_itemVar {
+        if let ItemVars::Pokemon(v) | ItemVars::Zako(v) = &mut item.xDD4_itemVar {
             v.import_handles(item.kind, &m, a + VARS, self);
         }
         self.stale = false;

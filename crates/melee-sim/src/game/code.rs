@@ -239,6 +239,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::damage_bind::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_koopa::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_kirby::run(g, gobj, addr) => {}
+        addr if super::ft::co::capture_leadead::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
         addr if super::ft::co::lift::run(g, gobj, addr) => {}
         addr if super::ft::co::barrel::run(g, gobj, addr) => {}

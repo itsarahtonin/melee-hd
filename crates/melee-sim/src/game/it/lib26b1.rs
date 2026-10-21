@@ -422,3 +422,15 @@ pub fn nearest_target_item(game: &Game, pos: Vec3, facing_dir: f32) -> Option<GO
     }
     result
 }
+
+/// Sets `xDCC_flag.b3`, `it_8026BD3C`.
+#[doc(alias = "it_8026BD3C")]
+pub fn set_dcc_b3(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCC_flag.b3 = true;
+}
+
+/// Clears `xDCC_flag.b3`, `it_8026BD54`.
+#[doc(alias = "it_8026BD54")]
+pub fn clear_dcc_b3(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDCC_flag.b3 = false;
+}

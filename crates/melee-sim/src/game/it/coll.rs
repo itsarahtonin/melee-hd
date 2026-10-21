@@ -1259,3 +1259,16 @@ pub fn take_stomper(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
     ip.x20_team_id = team;
     owner
 }
+
+/// Hurtbox `index`'s capsule (its offsets and scale), or a point at the origin for a kind
+/// without hurtbox bones, `it_80271590`.
+#[doc(alias = "it_80271590")]
+pub fn hurt_capsule(game: &Game, data: &Archives, gobj: GObjId, index: usize) -> (Vec3, Vec3, f32) {
+    let ip = item(game, gobj);
+    if article(ip).hurtbones(data).is_some() {
+        let h = &ip.xACC_itemHurtbox[index];
+        return (h.a_offset, h.b_offset, h.scale);
+    }
+    let zero = Vec3::new(0.0, 0.0, 0.0);
+    (zero, zero, 0.0)
+}

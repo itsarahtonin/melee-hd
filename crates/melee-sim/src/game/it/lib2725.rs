@@ -705,7 +705,7 @@ pub fn blast_effect(r: &mut Running, gobj: GObjId) {
 /// Starts a fighter's item rumble (id 1) of kind `kind` for `frames` if its controller rumbles
 /// and it's awake and alive (`ftLib_StartItemRumble`).
 #[doc(alias = "ftLib_StartItemRumble")]
-fn fighter_item_rumble(r: &mut Running, fighter: GObjId, kind: i32, frames: i32) {
+pub fn fighter_item_rumble(r: &mut Running, fighter: GObjId, kind: i32, frames: i32) {
     let f = super::owner::fighter_of(r.game, fighter);
     let fp = &r.game.fighters[f.0];
     if !r
@@ -802,4 +802,28 @@ pub fn play_random_sfx(r: &mut Running, gobj: GObjId, n: i32, base: i32) {
 pub fn play_random_sfx2(r: &mut Running, gobj: GObjId, n: i32, base: i32) {
     let sfx = base.wrapping_add(r.game.objs.rng.below(n));
     super::item::play_sfx2(r, gobj, sfx, 127, 64);
+}
+
+/// Binds the item's bone `bone` to `fighter`'s part `part` (a position constraint,
+/// `lb_8000C1C0`), `it_80274FDC`.
+#[doc(alias = "it_80274FDC")]
+pub fn bind_bone(r: &mut Running, gobj: GObjId, bone_id: i32, fighter: GObjId, part: i32) {
+    let j = bone(r.game, r.data, gobj, bone_id).expect("an item without the bone to bind");
+    let target = r
+        .ft_part_jobj(fighter, part)
+        .expect("a fighter without the part");
+    crate::game::ef::constrain(&mut r.game.objs, j, target, 0x9000_0001);
+}
+
+/// Unbinds the item's bone `bone` (`lb_8000C390`), `it_80275070`.
+#[doc(alias = "it_80275070")]
+pub fn unbind_bone(r: &mut Running, gobj: GObjId, bone_id: i32) {
+    let j = bone(r.game, r.data, gobj, bone_id).expect("an item without the bone to unbind");
+    crate::game::ft::co::throw::unconstrain(&mut r.game.objs, j);
+}
+
+/// Whether the item's script flags (`xDC0`) share a bit with `mask`, `it_802750E8`.
+// Ports `it_802750E8`; aliased once a check reaches it (the Goomba and Topi use it).
+pub fn xdc0_has(game: &Game, gobj: GObjId, mask: u32) -> bool {
+    item(game, gobj).xDC0 & mask != 0
 }

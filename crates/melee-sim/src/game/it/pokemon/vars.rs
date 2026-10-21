@@ -13,6 +13,10 @@
 //! A word that holds a pointer to a GObj, joint or loaded data holds a handle once code stores
 //! one there (or the importer types it, [`handle_words`]) and compares as a handle; reading it
 //! as bytes, or bytes as a handle, stops.
+//!
+//! The containers' monsters (`It_Kind_Kuriboh` to `It_Kind_Octarock_Stone`, `it::zako`) keep
+//! their variables the same way: the enemies' common words (`itZako_ItemVars`) overlap each
+//! kind's own (the ReDead's `xDEC` is the common `x14.y`).
 
 use melee_data::archive::DataRef;
 
@@ -321,9 +325,13 @@ impl PokemonVars {
 /// The words a Pokémon of `kind` keeps handles in, with their handle type (`"GObjId"`,
 /// `"JObjId"`, or `"Data"`), for the importer.
 pub fn handle_words(kind: i32) -> &'static [(usize, &'static str)] {
-    use crate::game::it::kinds::hitodeman;
+    use crate::game::it::kinds::{self, hitodeman};
     match kind {
         hitodeman::KIND => hitodeman::HANDLES,
+        // The enemies' common joint, the fighter a ReDead holds, and Topi's Freezie.
+        kinds::LEADEAD => &[(0, "JObjId"), (0x38, "GObjId")],
+        kinds::OTTOSEA => &[(0, "JObjId"), (0x20, "GObjId")],
+        kinds::KURIBOH..=kinds::OCTAROCK_STONE => &[(0, "JObjId")],
         _ => &[],
     }
 }

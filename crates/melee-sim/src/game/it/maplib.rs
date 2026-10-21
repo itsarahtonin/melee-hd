@@ -10,6 +10,7 @@ use super::item::{attr_of, common_data};
 use super::kinds::*;
 use super::{item, item_mut};
 use crate::fpu::{mem, reg};
+use crate::game::code;
 use crate::game::ft::coll::ObjCollHooks;
 use crate::game::gr::StageColl;
 use crate::game::state::{Game, Running};
@@ -722,4 +723,87 @@ pub fn bounce_effect(r: &mut Running, gobj: GObjId, touched: i32) {
         let zero = Vec3::new(0.0, 0.0, 0.0);
         super::effect::spawn(r, gobj, 0x405, 0, at, zero, false);
     }
+}
+
+/// The collision data of a fighter or an item, `it_8026C100`; none for another GObj.
+#[doc(alias = "it_8026C100")]
+pub fn coll_data_of(game: &Game, gobj: GObjId) -> Option<CollData> {
+    if super::item::is_fighter(game, Some(gobj)) {
+        Some(game.fighter(gobj).coll_data.clone())
+    } else if super::is_item(game, Some(gobj)) {
+        Some(item(game, gobj).x378_itemColl.clone())
+    } else {
+        None
+    }
+}
+
+/// A fighter's position, or the origin for anything else, `it_8026BC90`.
+#[doc(alias = "it_8026BC90")]
+pub fn fighter_pos_or_origin(game: &Game, gobj: Option<GObjId>) -> Vec3 {
+    match gobj {
+        Some(g) if super::item::is_fighter(game, Some(g)) => game.ft_pos(g),
+        _ => Vec3::new(0.0, 0.0, 0.0),
+    }
+}
+
+/// Sets the item down where it is beside `other` (a fighter or an item), `it_802759DC`: on a
+/// floor below it that joins the other's floor, if the item is at least the common data's
+/// `xF0` above it; else by an airborne pass from the other's middle to where it is, grounded if
+/// that lands it.
+#[doc(alias = "it_802759DC")]
+pub fn place_by(r: &mut Running, gobj: GObjId, other: GObjId) {
+    let at = item(r.game, gobj).pos;
+    let Some(coll2) = coll_data_of(r.game, other) else {
+        return;
+    };
+    let mut placed = false;
+    let g = r.game.geometry.as_mut().expect("no collision geometry");
+    if g.line_live(coll2.floor.index) {
+        let below = g.floor_below(at, -1, -1);
+        if below != -1 && g.lines_connected(below, coll2.floor.index) {
+            item_mut(r.game, gobj).x378_itemColl.floor.index = below;
+            let g = r.game.geometry.as_ref().expect("no collision geometry");
+            let Some(probe) = g.probe_floor(below, at) else {
+                code::unported_call("it_802759DC (a height the floor probe left unwritten)");
+            };
+            let min = common_data(r.game).f32(r.data, common::XF0);
+            if reg(probe.offset) >= reg(min) {
+                let ip = item_mut(r.game, gobj);
+                ip.pos.x = at.x;
+                ip.pos.y = mem(fp::fadds(reg(at.y), reg(probe.offset)));
+                ip.pos.z = at.z;
+                let pos = ip.pos;
+                ip.x378_itemColl.set_position(pos);
+                placed = true;
+                enter_ground(ip);
+            }
+        }
+    }
+    if placed {
+        return;
+    }
+    let mid = fp::fmuls(
+        0.5,
+        fp::fadds(reg(coll2.ecb.top.y), reg(coll2.ecb.bottom.y)),
+    );
+    let o = fighter_pos_or_origin(r.game, Some(other));
+    let last = Vec3::new(
+        mem(fp::fadds(reg(o.x), 0.0)),
+        mem(fp::fadds(reg(o.y), mid)),
+        mem(fp::fadds(reg(o.z), 0.0)),
+    );
+    let mut cd = item(r.game, gobj).x378_itemColl.clone();
+    cd.last_pos = last;
+    cd.request_clear();
+    cd.cur_pos = at;
+    let landed = with_stage_coll(r.game, r.data, |c| c.air_frame(&mut cd, 6, 0));
+    let ip = item_mut(r.game, gobj);
+    ip.x378_itemColl = cd;
+    if landed {
+        enter_ground(ip);
+        ip.pos = ip.x378_itemColl.cur_pos;
+        return;
+    }
+    enter_air(ip);
+    ip.pos = at;
 }

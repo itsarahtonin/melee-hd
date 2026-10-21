@@ -15,6 +15,7 @@ pub mod barrel_wait;
 pub mod bury;
 pub mod capture_kirby;
 pub mod capture_koopa;
+pub mod capture_leadead;
 pub mod capture_mewtwo;
 pub mod cargo;
 pub mod catch;

@@ -57,6 +57,7 @@ pub mod kireihana;
 pub mod klap;
 pub mod koopaflame;
 pub mod kusudama;
+pub mod leadead;
 pub mod lgun;
 pub mod lgunbeam;
 pub mod lgunray;
@@ -232,6 +233,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || heiho::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
         || klap::run_event(r, gobj, addr)
+        || leadead::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
         || gamewatchmanhole::run_event(r, gobj, addr)
@@ -374,6 +376,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| heiho::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| klap::run_pred(r, gobj, addr))
+        .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
         .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
@@ -502,6 +505,11 @@ pub const S_SCOPE_BEAM: i32 = 38;
 pub const F_FLOWER_FLAME: i32 = 41;
 /// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
 pub const KURIBOH: i32 = 43;
+/// `It_Kind_Leadead`, `It_Kind_Octarock` and `It_Kind_Ottosea`: the ReDead, Octorok and
+/// Ottosea, the containers' monsters besides the Goomba.
+pub const LEADEAD: i32 = 44;
+pub const OCTAROCK: i32 = 45;
+pub const OTTOSEA: i32 = 46;
 /// `It_Kind_Octarock_Stone`.
 pub const OCTAROCK_STONE: i32 = 47;
 /// `It_Kind_Mario_Fire`: the first character item.

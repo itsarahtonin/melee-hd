@@ -256,6 +256,12 @@ impl Game {
 }
 
 impl Running<'_> {
+    /// The joint of the fighter's part `part` (`fp->parts[part].joint`), `ftLib_GetPartJObj`.
+    #[doc(alias = "ftLib_GetPartJObj")]
+    pub fn ft_part_jobj(&self, gobj: GObjId, part: i32) -> Option<crate::hsd::jobj::JObjId> {
+        self.bone_joint(gobj, part)
+    }
+
     /// Sets the computer player's level, its state started afresh, `ft_80087BEC`.
     #[doc(alias = "ft_80087BEC")]
     pub fn ft_set_cpu_level(&mut self, gobj: GObjId, level: i32) {

@@ -15,7 +15,7 @@
 
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -119,7 +119,7 @@ fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
 }
 
 /// Plays `m` to its end or its first stop.
-fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&PathBuf>) -> Outcome {
+fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&Path>) -> Outcome {
     let base = melee_slippi::start(codes);
     let start = ReplayStart {
         info: m.start_data(),
@@ -175,16 +175,98 @@ fn play(m: &Match, codes: &Replay, files: &mut Files, record: Option<&PathBuf>) 
             }
         }
     }
-    if let (Some(dir), Some(rec)) = (record, sim.game.recorder.as_ref()) {
-        let path = dir.join(format!("{:08x}.slp", m.seed));
+    if let (Some(path), Some(rec)) = (record, sim.game.recorder.as_ref()) {
         let file = melee_slippi::write::recording(rec, started_at);
-        std::fs::write(&path, file).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        std::fs::write(path, file).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
     }
     Outcome {
         seed: m.seed,
         frame: frame(&sim),
         stopped,
     }
+}
+
+/// `melee-bench record-match MATCH OUT.slp [--codes REPLAY.slp]`: records an oracle set's
+/// scripted match with its own seed, as [`main`] plays it, to `OUT.slp`; it fails if the match
+/// stops short of its end. ssbm-rs's playback of the recording is then the oracle
+/// (`make-oracle.sh` with `RECORDER=melee-hd`).
+pub fn record(args: &[String]) -> ExitCode {
+    let mut codes = None;
+    let mut pos = Vec::new();
+    let mut it = args.iter();
+    while let Some(a) = it.next() {
+        match a.as_str() {
+            "--codes" => codes = it.next().map(PathBuf::from),
+            _ => pos.push(a.clone()),
+        }
+    }
+    let [name, out] = &pos[..] else {
+        eprintln!("usage: melee-bench record-match MATCH OUT.slp [--codes REPLAY.slp]");
+        return ExitCode::from(2);
+    };
+    let m = match scripted(name) {
+        Ok(m) => m,
+        Err(code) => return code,
+    };
+    let codes = load_codes(codes);
+    let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
+    let out = PathBuf::from(out);
+    std::panic::set_hook(Box::new(|_| {}));
+    let o = std::thread::scope(|s| {
+        std::thread::Builder::new()
+            .stack_size(STACK)
+            .spawn_scoped(s, || {
+                set_fp_mode(FpMode::Hardware);
+                let mut files = Files {
+                    disc: Disc::open(&disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}")),
+                    cache: HashMap::new(),
+                };
+                play(&m, &codes, &mut files, Some(&out))
+            })
+            .unwrap()
+            .join()
+            .unwrap()
+    });
+    match o.stopped {
+        None => {
+            println!("{name}: recorded to frame {} in {}", o.frame, out.display());
+            ExitCode::SUCCESS
+        }
+        Some(why) => {
+            println!("{name}: stopped at frame {}: {why}", o.frame);
+            ExitCode::FAILURE
+        }
+    }
+}
+
+/// The oracle set's match `name`, if every player follows a script.
+fn scripted(name: &str) -> Result<Match, ExitCode> {
+    let m = match matches::select(&[name.to_owned()]) {
+        Ok(mut list) if list.len() == 1 => list.remove(0),
+        Ok(_) => {
+            eprintln!("{name}: name one match, not a set");
+            return Err(ExitCode::from(2));
+        }
+        Err(e) => {
+            eprintln!("{e}");
+            return Err(ExitCode::from(2));
+        }
+    };
+    if (0..m.players.len()).any(|i| m.scripted_pad(i, 0).is_none()) {
+        eprintln!("{name}: a player no script plays (the CPU AI isn't ported)");
+        return Err(ExitCode::from(2));
+    }
+    Ok(m)
+}
+
+/// The recording whose code list the matches run with: `--codes`, or the `items-held-ps`
+/// oracle match's.
+fn load_codes(codes: Option<PathBuf>) -> Replay {
+    let codes = codes.unwrap_or_else(|| {
+        melee_local_data::ssbm_rs_local("bench/oracle-m4/items-held-ps.slp").into()
+    });
+    let bytes = std::fs::read(&codes).unwrap_or_else(|e| panic!("{}: {e}", codes.display()));
+    Replay::parse(&bytes).unwrap_or_else(|e| panic!("{e}"))
 }
 
 fn parse_seed(s: &str) -> Option<u32> {
@@ -218,26 +300,11 @@ pub fn main(args: &[String]) -> ExitCode {
         );
         return ExitCode::from(2);
     };
-    let template = match matches::select(std::slice::from_ref(name)) {
-        Ok(mut list) if list.len() == 1 => list.remove(0),
-        Ok(_) => {
-            eprintln!("{name}: name one match, not a set");
-            return ExitCode::from(2);
-        }
-        Err(e) => {
-            eprintln!("{e}");
-            return ExitCode::from(2);
-        }
+    let template = match scripted(name) {
+        Ok(m) => m,
+        Err(code) => return code,
     };
-    if (0..template.players.len()).any(|i| template.scripted_pad(i, 0).is_none()) {
-        eprintln!("{name}: a player no script plays (the CPU AI isn't ported)");
-        return ExitCode::from(2);
-    }
-    let codes = codes.unwrap_or_else(|| {
-        melee_local_data::ssbm_rs_local("bench/oracle-m4/items-held-ps.slp").into()
-    });
-    let bytes = std::fs::read(&codes).unwrap_or_else(|e| panic!("{}: {e}", codes.display()));
-    let codes = Replay::parse(&bytes).unwrap_or_else(|e| panic!("{e}"));
+    let codes = load_codes(codes);
     if let Some(dir) = &record {
         std::fs::create_dir_all(dir).unwrap_or_else(|e| panic!("{}: {e}", dir.display()));
     }
@@ -269,7 +336,10 @@ pub fn main(args: &[String]) -> ExitCode {
                             players: template.players.clone(),
                             ..*template
                         };
-                        let o = play(&m, codes, &mut files, record.as_ref());
+                        let path = record
+                            .as_ref()
+                            .map(|d| d.join(format!("{:08x}.slp", m.seed)));
+                        let o = play(&m, codes, &mut files, path.as_deref());
                         println!(
                             "{:#010x}\t{}\t{}",
                             o.seed,
