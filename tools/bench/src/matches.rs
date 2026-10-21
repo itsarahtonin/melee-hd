@@ -638,6 +638,54 @@ pub fn held_extra_set() -> Vec<Match> {
         .collect()
 }
 
+/// Item frequency very high, the rarer Pokémon's matches'.
+pub const FREQ_VERY_HIGH: i8 = 4;
+
+/// The pairs the rarer Pokémon's matches rotate over: characters with no item gap of their own
+/// (the items audit: no Donkey Kong, Kirby, Yoshi, Zelda, Sheik or Ice Climbers).
+const POKEMON_PAIRS: [(u8, u8); 6] = [
+    (FOX, MARTH),
+    (CAPTAIN, PEACH),
+    (SAMUS, LUIGI),
+    (MARIO, PIKACHU),
+    (LINK, JIGGLYPUFF),
+    (DR_MARIO, GANONDORF),
+];
+
+/// The rarer Pokémon's matches, each a candidate of the search that found them (candidate `i`
+/// plays seed `0x1F0F_0801 + i`, the pairs and the first three tournament stages in turn), and
+/// what it releases that no earlier match does.
+const POKEMON_SEEDS: [(u32, &str); 3] = [
+    (0, "Articuno, and Mew in the playback"),
+    (3, "Raikou and Staryu"),
+    (6, "Suicune"),
+];
+
+/// The rarer Pokémon (the items audit's task 6): the Poké Ball alone at frequency very high,
+/// two-minute matches, two humans, on the seeds a search found releasing the Pokémon the
+/// `items` set's six never do (docs/oracle.md, "Pokémon"). They go on from its numbering.
+pub fn pokemon_set() -> Vec<Match> {
+    (POKEMON_SEEDS.iter().enumerate())
+        .map(|(n, &(i, _))| {
+            let (a, b) = POKEMON_PAIRS[i as usize % POKEMON_PAIRS.len()];
+            let (stage, key) = TOURNAMENT[i as usize % 3];
+            Match {
+                name: Cow::Owned(format!(
+                    "items-pokeball{}-{key}",
+                    n as u32 + POKE_BALL_SEEDS + 1
+                )),
+                stage,
+                players: Cow::Owned(vec![p(a, 0), p(b, 0)]),
+                seed: 0x1F0F_0801 + i,
+                rules: Rules::Time {
+                    time_limit: ITEMS_TIME,
+                },
+                items: Items::only(FREQ_VERY_HIGH, &[POKE_BALL]),
+            }
+        })
+        .collect()
+}
+
 /// The barrel set (task 7's barrel cannon ride on the stages): Kongo Jungle N64 and Kongo Jungle,
 /// two walkers each ([`walker_pad`]), one off each side, so the stages' barrels catch them and
 /// shoot them out; four-minute time matches, items off. The level 9 AI recovers too well to fall
@@ -843,6 +891,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
     ("leftovers", leftovers_set),
+    ("pokemon", pokemon_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -1385,6 +1434,11 @@ mod tests {
             assert_eq!(m.items.freq, FREQ_HIGH);
             assert!(m.humans_only(), "{}", m.name);
             assert!(!m.players.iter().any(|p| p.character == ICE_CLIMBERS));
+        }
+        for m in pokemon_set() {
+            assert_eq!(m.items.freq, FREQ_VERY_HIGH);
+            assert_eq!(m.items.kinds(), vec![POKE_BALL], "{}", m.name);
+            assert!(m.humans_only(), "{}", m.name);
         }
         // Every roster character (all but Kirby) plays as a level 9 CPU.
         let cpus: BTreeSet<u8> = cpu_set()
