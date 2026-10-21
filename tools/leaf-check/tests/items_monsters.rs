@@ -32,7 +32,7 @@ use leaf_check::calls::{
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{self, leadead, oldkuri};
+use melee_sim::game::it::kinds::{self, leadead, octarock, octarockstone, oldkuri};
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -121,28 +121,23 @@ const ELSEWHERE: &[&str] = &[
 /// The monsters not ported yet, by their functions' name prefixes; each comes off as its unit
 /// lands.
 const PENDING: &[&str] = &[
-    "itOctarock",
-    "it_802E4",
-    "it_802E5",
     "itOldottosea",
     "it_802E2",
     "it_802E3",
     "it_2725_Logic8",
     "it_2725_Logic3",
-    "it_802E87",
-    "it_802E88",
-    "it_802E89",
-    "it_802E8A",
 ];
 
 /// The units whose functions run from each other's captures, by their address ranges, and
 /// whether they take a fighter: the enemies' common code, the ReDead, its hold (with
-/// `ftCo_800C7434.c`'s damage callbacks beside it) and the Goomba.
+/// `ftCo_800C7434.c`'s damage callbacks beside it), the Goomba, the Octorok and its stone.
 const UNITS: &[(u32, u32, bool)] = &[
     (0x8027_B5B0, 0x8027_CE64, false),
     (0x802E_8BCC, 0x802E_AF4C, false),
     (0x800C_74CC, 0x800C_78B0, true),
     (0x802D_73D0, 0x802D_84F8, false),
+    (0x802E_4A44, 0x802E_5AC4, false),
+    (0x802E_878C, 0x802E_8BCC, false),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -185,6 +180,10 @@ fn kind_check(g: &Running, gobj: GObjId, a: u32) {
         Some(0) => (kinds::KURIBOH..=kinds::OCTAROCK_STONE).contains(&kind),
         Some(1) => kind == kinds::LEADEAD,
         Some(3) => kind == kinds::KURIBOH,
+        Some(4) => kind == kinds::OCTAROCK,
+        // The stone's spawn takes the Octorok that spits it.
+        Some(5) if name_of(a) == "it_802E8ADC" => kind == kinds::OCTAROCK,
+        Some(5) => kind == kinds::OCTAROCK_STONE,
         _ => true,
     };
     if !ok {
@@ -262,6 +261,20 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             let gobj = g.game.items[id.0].entity.expect("an item without its GObj");
             kind_check(g, gobj, a);
             zako::hurt_sound(g, gobj);
+            return Ret::Nothing;
+        }
+        "it_802E595C" => {
+            let j = *maps
+                .jobjs
+                .get(&r(3))
+                .unwrap_or_else(|| panic!("{SKIP}{name} takes a joint not imported"));
+            let id = *maps
+                .items
+                .get(&r(4))
+                .unwrap_or_else(|| panic!("{SKIP}{name} takes an item not imported"));
+            let gobj = g.game.items[id.0].entity.expect("an item without its GObj");
+            kind_check(g, gobj, leaf_check::sym("it_802E5944"));
+            octarock::follow_bone(g, Some(j), gobj);
             return Ret::Nothing;
         }
         _ => {}
@@ -391,6 +404,32 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802D82C4" => oldkuri::fling(g, gobj),
         "it_802D839C" => oldkuri::fling_to_screen(g, gobj),
         "it_802D848C" => oldkuri::enter(g, gobj, r(4) as i32, r(5)),
+        "it_802E4C08" => octarock::stand(g, gobj),
+        "it_802E4DB4" => octarock::fall(g, gobj),
+        "it_802E4E6C" => octarock::knocked_back(g, gobj),
+        "it_802E503C" => octarock::shoot(g, gobj),
+        "it_802E52E0" => return Ret::Int(octarock::sees(g, gobj) as u32),
+        "it_802E53C8" => octarock::turn(g, gobj),
+        "it_802E57D4" => octarock::fling(g, gobj),
+        "it_802E58A0" => octarock::fling_to_screen(g, gobj),
+        "it_802E5944" => octarock::forget_bone(g, gobj),
+        "it_802E5AA4" => octarock::forget(g, gobj, Some(other(4))),
+        "itOctarockstone_802E883C" => octarockstone::fly(g, gobj),
+        "it_802E89D0" => octarockstone::aim(g, gobj, f(1) as f32, f(2) as f32, f(3) as f32),
+        "it_802E8ADC" => {
+            let pos = vec_at(r(4));
+            octarockstone::spawn(
+                g,
+                gobj,
+                pos,
+                r(5) as i32,
+                f(1) as f32,
+                f(2) as f32,
+                f(3) as f32,
+            );
+        }
+        "itOctarockstone_802E890C" => octarockstone::drop_away(g, gobj),
+        "itOctarockstone_802E89B0" => octarockstone::forget(g, gobj, Some(other(4))),
         "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => oldkuri::forget(g, gobj, Some(other(4))),
         "it_802D8098" => {
             if it::item(g.game, gobj).xCFC.is_none() {
@@ -444,7 +483,7 @@ fn args(call: &mut Call, target: &str, k: usize) {
             poke_u32(call, ip + 0xCFC, fighter);
         }
         // The GObj going away: the first fighter.
-        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => {
+        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" | "it_802E5AA4" | "itOctarockstone_802E89B0" => {
             let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
             call.regs.gpr[4] = peek_u32(call, heads + 4 * 8);
         }
@@ -486,6 +525,9 @@ fn skipped(name: &str) -> bool {
 /// Neighbours' calls can't be made ready for these: they take pointers or GObjs only their own
 /// callers give.
 const OWN_CALLS_ONLY: &[&str] = &[
+    "it_802E595C",
+    "it_802E89D0",
+    "it_802E8ADC",
     "it_8027BA54",
     "it_8027C8D0",
     "it_8027C9D8",
@@ -610,6 +652,8 @@ const BLOCKED: &[(&str, &str)] = &[
     ("it_8026C220", NOT_HELD),
     ("it_2725_Logic0_Dropped", NOT_HELD),
     ("it_2725_Logic0_Thrown", NOT_HELD),
+    ("itOctarock_Logic2_Dropped", NOT_HELD),
+    ("itOctarock_Logic2_Thrown", NOT_HELD),
 ];
 
 /// Why a held monster's functions are blocked.

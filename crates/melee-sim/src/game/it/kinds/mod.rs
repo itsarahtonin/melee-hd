@@ -91,6 +91,8 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod octarock;
+pub mod octarockstone;
 pub mod oldkuri;
 pub mod parasol;
 pub mod peachexplode;
@@ -236,6 +238,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || klap::run_event(r, gobj, addr)
         || oldkuri::run_event(r, gobj, addr)
         || leadead::run_event(r, gobj, addr)
+        || octarock::run_event(r, gobj, addr)
+        || octarockstone::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
         || gamewatchmanhole::run_event(r, gobj, addr)
@@ -380,6 +384,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| klap::run_pred(r, gobj, addr))
         .or_else(|| oldkuri::run_pred(r, gobj, addr))
         .or_else(|| leadead::run_pred(r, gobj, addr))
+        .or_else(|| octarock::run_pred(r, gobj, addr))
+        .or_else(|| octarockstone::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
         .or_else(|| gamewatchmanhole::run_pred(r, gobj, addr))
