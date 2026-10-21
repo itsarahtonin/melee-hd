@@ -31,7 +31,7 @@ use melee_capture::import::Maps;
 use melee_sim::game::gm::Unlocks;
 use melee_sim::game::it::kinds::{
     chicorita, entei, fire, freezer, fushigibana, hassam, hinoarashi, houou, kabigon, kamex,
-    kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, sonans,
+    kireihana, lizardon, lucky, lugia, maril, marumine, matadogas, pippi, porygon2, raikou, sonans,
     thunder, togepy, tosakinto, unknown,
 };
 use melee_sim::game::it::{self, CLASS_ITEM, pokemon};
@@ -73,7 +73,7 @@ fn stubs() -> Vec<Stub> {
 }
 
 /// The functions by address and name, from the list in the capture directory: those of the
-/// units ported (`UNITS`); Raikou, Suicune, Mew, Staryu, Ditto and Celebi aren't.
+/// units ported (`UNITS`); Suicune, Mew, Staryu, Ditto and Celebi aren't.
 fn functions() -> Vec<(u32, String)> {
     let Ok(text) = std::fs::read_to_string(format!("{}/items-pokemon-funcs.txt", base())) else {
         return Vec::new();
@@ -127,6 +127,7 @@ const UNITS: &[(u32, u32)] = &[
     (0x802D_1438, 0x802D_251C),
     (0x802D_251C, 0x802D_3008),
     (0x802C_CF9C, 0x802C_D44C),
+    (0x802C_F814, 0x802C_FC48),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -208,6 +209,7 @@ const EVT_UNK: &[&str] = &[
     "it_802D25BC",
     "it_802D2ED0",
     "itFreezer_802CD000",
+    "it_802CF884",
 ];
 
 /// Helpers that take what the check can't give: they run inside the callers that call them,
@@ -304,6 +306,8 @@ const ITEM_EVENTS: &[(&str, Event)] = &[
     ("it_802D2EF0", houou::burn),
     ("itFreezer_802CD12C", freezer::fly_up),
     ("itFreezer_802CD2EC", freezer::enter_air),
+    ("it_802CF908", raikou::roar),
+    ("it_802CFB78", raikou::enter_air),
     ("it_80279C48", pokemon::face_nearest_opponent),
     ("it_80279E24", pokemon::pulse),
     ("it_80279FF8", pokemon::grow),
@@ -524,6 +528,7 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "itLugia_Logic17_EvtUnk" | "it_802D23D4" => lugia::evt_unk(g, gobj, maybe(4)),
         "it_802D25BC" | "it_802D2ED0" => houou::evt_unk(g, gobj, maybe(4)),
         "itFreezer_802CD000" => freezer::evt_unk(g, gobj, maybe(4)),
+        "it_802CF884" => raikou::evt_unk(g, gobj, maybe(4)),
         "it_802D1E8C" => {
             lugia::shoot(g, gobj, r(4) as i32, f(1));
         }

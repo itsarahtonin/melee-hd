@@ -100,6 +100,7 @@ pub mod pikachutjoltground;
 pub mod pippi;
 pub mod porygon2;
 pub mod rabbitc;
+pub mod raikou;
 pub mod rshell;
 pub mod samusbomb;
 pub mod samuschargeshot;
@@ -290,6 +291,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kabigon::run_event(r, gobj, addr)
         || lizardon::run_event(r, gobj, addr)
         || entei::run_event(r, gobj, addr)
+        || raikou::run_event(r, gobj, addr)
         || lugia::run_event(r, gobj, addr)
         || houou::run_event(r, gobj, addr)
         || pippi::run_event(r, gobj, addr)
@@ -426,6 +428,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| kabigon::run_pred(r, gobj, addr))
         .or_else(|| lizardon::run_pred(r, gobj, addr))
         .or_else(|| entei::run_pred(r, gobj, addr))
+        .or_else(|| raikou::run_pred(r, gobj, addr))
         .or_else(|| lugia::run_pred(r, gobj, addr))
         .or_else(|| houou::run_pred(r, gobj, addr))
         .or_else(|| pippi::run_pred(r, gobj, addr))
