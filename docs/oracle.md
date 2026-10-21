@@ -557,6 +557,46 @@ One stops at unported code: `hf-roy-samus-fd-56052455` reaches Samus's unported 
 
 What it turned up: fields marked `#[clone_from(if_changed)]` (rarely changing containers, among them the text system's blocks, texts, canvases and buffers) were restored only when they compared unequal with `PartialEq`, which takes 0.0 and -0.0 for equal, so a restore could leave a text's position or size holding the other zero's sign. They now compare bit for bit (`StateEq`), and a unit test restores 0.0 over -0.0. No replay had reached it. Nothing else differed: the state holds everything a tick reads.
 
+## Golden hashes
+
+A whole-replay diff spends almost all its time on the reference, not on melee-hd: on Rainbow Cruise's stage match (`stage-rainbow-cruise --heap`, 28,991 ticks, `--times`), finding the archives in the trace's memory each tick (`Files::refresh`) took 48% of the run, the comparison 40% (the allocator model's 1.3% of it), reading and decompressing the trace 3%, and the simulation 6% (`--times` prints the split). The archive scan runs over all of memory every tick; rescanning only the pages a tick changed could take about half off the full diff, which isn't done yet. Once a replay's diff has passed, a golden keeps what that run proved, so later runs only simulate and hash.
+
+**Writing.** `melee-oracle diff TRACE REPLAY.slp ... --write-golden` runs the full diff and, if it passes clean (to the trace's end, the match's end or `--ticks`, with no difference and no stop), writes the run's golden: after each compared tick, a 64-bit hash of melee-hd's state. A run with stale reads still writes one, keeping its stale-read report. The file goes to `$SSBM_RS_LOCAL/golden/TRACE.FP[.heap].golden` (the trace's file name without its extension, the float mode, `.heap` with `--heap`: one file per verify job), or where `--golden FILE` says; it is written whole and renamed over the old one, so an interrupted run leaves the old golden.
+
+**Checking.** `... --golden-check` reads the trace only up to the match's first tick, for the boot state the match starts from (the first tick or two), plays the match, and compares each tick's hash with the golden's; nothing is compared with memory, and the disc's archive index isn't built. It exits 0 when every tick matches, printing `N ticks match the golden` and the stale reads the golden was written with; 1 at the first tick whose hash differs (with the tick and its replay frame), or where the match stops at unported code, or ends at another tick than it did; 3 when there is no golden or it is stale, saying why. On anything but 0, run the full diff, which names the field (and rewrites the golden with `--write-golden` when it passes).
+
+**What a hash covers.** `StateEq::state_hash`, which `#[derive(StateEq)]` generates beside the sync test's comparison: every value the sync test compares, in its order, floats by bit pattern, a map's entries in any order, spare storage (`#[clone_from(keep)]`) left out. That is the whole `Game`, but for the allocator model (`hsd::heap`) without `--heap`, as the comparer takes it in only then, and the archives the match's start loaded by name. A value unknown until written hashes as the unknown it is in melee-hd's state (an item variable not yet written, `it::Var`; a word held as `None` until written), so the golden masks what the comparer masks. The hash is a superset of what the comparer reads: it also takes freed pool slots and bookkeeping the original keeps nowhere. So a golden can miss on a change the full diff would pass (the full diff then runs and refreshes it), but can't pass a state the full diff would fail: equal hashes mean the state the comparer compared is, field for field, the clean run's. The hash feeds each word through `(h.rotl(5) ^ w) * K`, one-to-one in each word, so any one changed word changes it; two changes cancelling each other is a 64-bit chance.
+
+**Stale goldens.** The header names what the golden was written for, and a check refuses a golden when any of it differs:
+
+| Line | What |
+| --- | --- |
+| `melee-oracle golden 1` | the format's version |
+| `trace-size`, `trace-hash` | the trace's size and a hash of all its bytes (it also holds the boot state) |
+| `replay-size`, `replay-hash` | the replay's |
+| `options` | what changes what runs or what's compared: `--fp`, `--disc-speed`, `--heap`, `--boot-audio`, `--ticks`, `--stand-in`, `--ignore` (`--from` and `--against` can't write or check a golden) |
+| `coverage` | a hash of the comparer's sources, which `tools/oracle/build.rs` takes at build time: `melee-capture`, the mirrored structs' comparisons (`game/mirror.rs`, `mirror_gen.rs`), `diff.rs`, `golden.rs`, `state_eq.rs` and the derive |
+| `disc` | the disc files the match's start loaded: names, entry numbers and bytes |
+| `first-tick` | the trace tick that ran the match's first tick |
+
+The trace and replay paths are kept for people and not compared; `end` (trace, match or limit) and the `stale` lines say how the clean run ended and what it read stale.
+
+**What a golden doesn't prove.** It proves the state is the one a full diff passed with the comparer of its coverage. A field the comparer starts checking later isn't covered until a full run: any change to the comparer's sources makes every golden stale, so the next verify runs every full diff. A change to melee-hd's state that the comparer can't see (a freed slot's bytes, a new field of bookkeeping) makes a golden miss and the full diff run, though it would pass. The check's stale reads are the golden's: the counters (`Objects::stale_reads`, `CollStatics::stale_reads`) and the items' and Pokémon's stale-read marks are in the hashed state, so equal hashes mean the same stale reads; their text is the one the full diff printed. A periodic full verify (the diffs with `--write-golden`) stays the backstop, and refreshes every golden.
+
+**Results (2026-10-20).** Goldens written and checked on three replays of different kinds, two runs at a time on a machine other agents were also using (an earlier, busier round took 865, 127 and 540 s for the full diffs and 76, 10 and 20 s for the checks):
+
+| Replay | Ticks | Full diff with `--write-golden` | `--golden-check` (simulation, hash) | Speed-up |
+| --- | --- | --- | --- | --- |
+| `stage-rainbow-cruise`, `--fp hardware --heap` | 28,991 | 418 s | 28 s (13 s, 12 s) | 15x |
+| `items-ported-fd`, `--fp hardware --heap` | 7,427 | 121 s | 6 s (2.4 s, 2.7 s) | 20x |
+| `Game_20260129T214824` (Slippi, Pokémon Stadium), `--fp slippi` | 14,212 | 213 s | 11 s (4.4 s, 5.6 s) | 19x |
+
+Two one-value bugs, each a local edit built and reverted: a heart's heal one more (`itHeart_Logic8_Spawned`) fails the items match's check at tick 1744 (replay frame 1620) after 8 s, where the full diff stops at the same tick on `item.xDD4_itemVar.heart.xDD4_heal: ours 101, theirs 100`; Rainbow Cruise's planks falling one ULP faster fails its check at tick 11500 (frame 11376) after 41 s, where the full diff stops at the same tick on the plank's speed in `ground.u.rcruise.entries[7]` (`bcf5c290` against `bcf5c28f`). A check refuses (exit 3) a trace with one bit flipped (same size, its hash differs), the run without `--heap`, with `--fp slippi` or `--ticks 100`, another replay, an oracle built from other comparer sources, and a missing golden. `tools/oracle/tests/diff.rs` writes and checks a 300-tick golden of the Fox vs Sheik replay and sees other options make it stale.
+
+**Hashing's cost.** About 0.4 ms a tick, as much as the simulation's own: the HSD objects' pools are most of it (the materials 0.13 ms), every slot hashed, freed ones too.
+
+**The sync test.** On Rainbow Cruise's match with `--rollback 7` (28,918 ticks checked, 113 s), playing the seven ticks again took 70% of the run, the straight run 12%, the snapshots and restores 9% and the state comparison 9%: hashes would replace a pass over two states with a pass over each, the same work, so the sync test compares as before. `sync-test` prints the split (`times:`).
+
 ## Recordings
 
 `melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--known FILE]` plays a replay in melee-hd with the recorder on ([the player](player.md#recording)), writes its recording, and compares it with the replay: the frames' events through `ssbm_slippi::compare` (pre-frame, post-frame, item, frame start, bookend and game end, keyed by frame, port and spawn ID), the game start field by field, and the code list. With `--known` it takes ssbm-rs's original-code baseline for the replay (`local/replays/known-names0/NAME.txt`: melee-hd's heap is laid out as a names-off run's), and the recording must diverge from the replay in exactly those lines, no more and no fewer.
@@ -611,6 +651,9 @@ done
 target/release/melee-oracle diff "$SSBM_RS_LOCAL/traces/v5-mixed/Game_20260129T170722.trc" \
   "$SLIPPI_REPLAYS/2026-01/Game_20260129T170722.slp" --fp slippi   # and the other Slippi replays above
 target/release/melee-oracle sync-test data/bench/fox-marth-ps.slp --fp hardware --rollback 7   # for changes that touch the state's shape
+# A replay whose golden is current: simulate and hash only, the full diff on a miss (Golden hashes, below)
+target/release/melee-oracle diff TRACE REPLAY.slp --fp hardware --heap --golden-check ||
+  target/release/melee-oracle diff TRACE REPLAY.slp --fp hardware --heap --write-golden
 cargo test --release -p melee-sim -p melee-oracle -p melee-render -p melee-gpu -p melee-audio -p melee-input -p melee-player
 cargo test --release -p leaf-check
 cargo test --release -p melee-render-check -p melee-audio-check -- --ignored
