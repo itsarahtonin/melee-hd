@@ -823,7 +823,7 @@ pub fn unbind_bone(r: &mut Running, gobj: GObjId, bone_id: i32) {
 }
 
 /// Whether the item's script flags (`xDC0`) share a bit with `mask`, `it_802750E8`.
-// Ports `it_802750E8`; aliased once a check reaches it (the Goomba and Topi use it).
+#[doc(alias = "it_802750E8")]
 pub fn xdc0_has(game: &Game, gobj: GObjId, mask: u32) -> bool {
     item(game, gobj).xDC0 & mask != 0
 }

@@ -27,12 +27,12 @@ use std::collections::BTreeMap;
 
 use leaf_check::calls::{
     Prepare, Report, Ret, SKIP, Stub, StubRet, Variant, check_variants, gobj_arg, peek_u32,
-    saved_calls,
+    poke_u32, saved_calls,
 };
 use melee_capture::import::Maps;
 use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
-use melee_sim::game::it::kinds::{self, leadead};
+use melee_sim::game::it::kinds::{self, leadead, oldkuri};
 use melee_sim::game::it::{self, CLASS_ITEM, zako};
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -121,11 +121,6 @@ const ELSEWHERE: &[&str] = &[
 /// The monsters not ported yet, by their functions' name prefixes; each comes off as its unit
 /// lands.
 const PENDING: &[&str] = &[
-    "itOldkuri",
-    "itOldKuri",
-    "it_802D7",
-    "it_802D8",
-    "it_2725_Logic0",
     "itOctarock",
     "it_802E4",
     "it_802E5",
@@ -141,12 +136,13 @@ const PENDING: &[&str] = &[
 ];
 
 /// The units whose functions run from each other's captures, by their address ranges, and
-/// whether they take a fighter: the enemies' common code, the ReDead, and its hold (with
-/// `ftCo_800C7434.c`'s damage callbacks beside it).
+/// whether they take a fighter: the enemies' common code, the ReDead, its hold (with
+/// `ftCo_800C7434.c`'s damage callbacks beside it) and the Goomba.
 const UNITS: &[(u32, u32, bool)] = &[
     (0x8027_B5B0, 0x8027_CE64, false),
     (0x802E_8BCC, 0x802E_AF4C, false),
     (0x800C_74CC, 0x800C_78B0, true),
+    (0x802D_73D0, 0x802D_84F8, false),
 ];
 
 /// Which unit a function is in, if any (the others run from their own saved calls only).
@@ -188,6 +184,7 @@ fn kind_check(g: &Running, gobj: GObjId, a: u32) {
     let ok = match unit(a) {
         Some(0) => (kinds::KURIBOH..=kinds::OCTAROCK_STONE).contains(&kind),
         Some(1) => kind == kinds::LEADEAD,
+        Some(3) => kind == kinds::KURIBOH,
         _ => true,
     };
     if !ok {
@@ -387,6 +384,20 @@ fn run(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
         "it_802EAC8C" => leadead::let_go(g, gobj),
         "it_802EADD8" => leadead::victim_hit(g, gobj),
         "it_802EAE80" => leadead::victim_free(g, gobj),
+        "it_802D758C" => oldkuri::walk_left(g, gobj),
+        "it_802D775C" => oldkuri::walk_right(g, gobj),
+        "it_802D813C" => oldkuri::flatten(g, gobj),
+        "it_802D81FC" => oldkuri::knock_down(g, gobj),
+        "it_802D82C4" => oldkuri::fling(g, gobj),
+        "it_802D839C" => oldkuri::fling_to_screen(g, gobj),
+        "it_802D848C" => oldkuri::enter(g, gobj, r(4) as i32, r(5)),
+        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => oldkuri::forget(g, gobj, Some(other(4))),
+        "it_802D8098" => {
+            if it::item(g.game, gobj).xCFC.is_none() {
+                panic!("{SKIP}{name} takes a Goomba a fighter landed on");
+            }
+            return b(oldkuri::stomped(g, gobj));
+        }
         _ => return run_item(g, gobj, a, &name),
     }
     Ret::Nothing
@@ -424,6 +435,24 @@ fn args(call: &mut Call, target: &str, k: usize) {
         }
         "it_8027C56C" => call.regs.fpr[1].ps0 = [1.0f64, -1.0, 0.0][k % 3],
         "it_802EA804" => call.regs.fpr[1].ps0 = 15.0,
+        // The fighter that landed on the Goomba (`xCFC`, which `Item_80269B60` sets before it
+        // calls back): the first.
+        "it_802D8098" => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            let fighter = peek_u32(call, heads + 4 * 8);
+            let ip = peek_u32(call, call.regs.gpr[3] + 0x2C);
+            poke_u32(call, ip + 0xCFC, fighter);
+        }
+        // The GObj going away: the first fighter.
+        "it_802D84D8" | "itOldKuri_Logic29_EvtUnk" => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            call.regs.gpr[4] = peek_u32(call, heads + 4 * 8);
+        }
+        // A Goomba's state (0 to 11), with its hits kept or not.
+        "it_802D848C" => {
+            g[4] = (k % 12) as u32;
+            g[5] = [2u32, 18][k % 2];
+        }
         // The fighter it asks about: the first.
         "it_8027CA7C" => {
             let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
@@ -579,6 +608,8 @@ const BLOCKED: &[(&str, &str)] = &[
     ("it_8027CB3C", NOT_HELD),
     ("it_8027CBA4", NOT_HELD),
     ("it_8026C220", NOT_HELD),
+    ("it_2725_Logic0_Dropped", NOT_HELD),
+    ("it_2725_Logic0_Thrown", NOT_HELD),
 ];
 
 /// Why a held monster's functions are blocked.

@@ -1866,9 +1866,18 @@ impl Importer<'_> {
     }
 
     fn is_jobj(&self, a: u32) -> bool {
-        (HEAP..MEM1 + 0x0180_0000).contains(&a)
-            && a & 3 == 0
-            && (0x8030_0000..0x8050_0000).contains(&self.u32(a))
+        use melee_sim::hsd::heap::Class;
+        if !(HEAP..MEM1 + 0x0180_0000).contains(&a) || a & 3 != 0 {
+            return false;
+        }
+        let class = self.u32(a);
+        // A block another class's object took over names that class's info (a texture object
+        // in a joint's old block, that a HUD element's stale link still names).
+        let other = Class::ALL.iter().any(|&c| {
+            !matches!(c, Class::JObj | Class::FtJObj | Class::FtIntpJObj)
+                && crate::heap::class_info(c) == class
+        });
+        (0x8030_0000..0x8050_0000).contains(&class) && !other
     }
 
     /// A slot for a dangling pointer (see [`Maps::dangling_gobjs`]).
