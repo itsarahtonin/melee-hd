@@ -1850,6 +1850,17 @@ impl Importer<'_> {
     /// Whether a joint lives at `a`: a joint lives in the heap and starts with its class, in
     /// the executable's data; a freed one with the allocator's free-list link. A stale word can
     /// also point into the executable's own data, where a code address passes for a class.
+    /// Whether the object at `a` has a joint's class (`hsdJObj`, or a fighter's `ftJObj` or
+    /// `ftIntpJObj`).
+    fn has_jobj_class(&self, a: u32) -> bool {
+        use crate::heap::class_info;
+        use melee_sim::hsd::heap::Class;
+        let info = self.u32(a);
+        [Class::JObj, Class::FtJObj, Class::FtIntpJObj]
+            .iter()
+            .any(|&c| class_info(c) == info)
+    }
+
     fn is_jobj(&self, a: u32) -> bool {
         (HEAP..MEM1 + 0x0180_0000).contains(&a)
             && a & 3 == 0
@@ -2005,7 +2016,13 @@ impl Cx for Importer<'_> {
             self.maps.unfollowed.insert((kind, addr));
             return None;
         }
-        if kind == "JObjId" && !self.maps.jobjs.contains_key(&addr) && !self.is_jobj(addr) {
+        // A stale word's block may since hold another object whose first word passes for a
+        // class: only a joint class's makes it a joint (an item's box kept a freed joint's
+        // address that a display object took over, `items-pokeball7-fd`).
+        if kind == "JObjId"
+            && !self.maps.jobjs.contains_key(&addr)
+            && (!self.is_jobj(addr) || self.stale && !self.has_jobj_class(addr))
+        {
             return Some(self.dangling(kind, addr));
         }
         Some(match kind {
