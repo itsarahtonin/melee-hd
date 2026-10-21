@@ -43,6 +43,10 @@ pub enum Control {
     /// near; down held before every other round's second press, so Kirby swallows what he holds
     /// rather than spitting it out.
     Catcher { button: u16 },
+    /// A human player whose controller follows [`gunner_pad`]'s script, played by `BENCH_PADS`:
+    /// an opener's runs with A tapped and held, so it picks up a Super Scope and fires both its
+    /// bursts and its charged shots.
+    Gunner,
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -250,6 +254,26 @@ pub fn catcher_pad(frame: i32, port: usize, button: u16) -> (u16, i8, i8) {
     let down = round % 2 == 1 && matches!(at, 60..66);
     let buttons = if a { 0x0100 } else { 0 } | if held { button } else { 0 };
     (buttons, stick_x, if down { -80 } else { 0 })
+}
+
+/// How long a gunner holds A to charge: 24 frames, a level 3 shot.
+const GUNNER_CHARGE: i32 = 24;
+
+/// A gunner's buttons and main stick's x on match frame `frame` (from "GO"), for the player in
+/// `port`: an opener's runs ([`opener_pad`]), with A in the round's two stands (the round offset
+/// by 40 a port): tapped three times 12 frames apart from the first stand's third frame, which
+/// picks up an item in reach or fires a held Super Scope's burst, and held for
+/// [`GUNNER_CHARGE`] frames from the second stand's third, which charges the scope's shot. Every
+/// fourth round A also goes with the first run's first frame, a smash of the stick, for a
+/// smash throw of what's held (a scope run dry) when the game reads one.
+pub fn gunner_pad(frame: i32, port: usize) -> (u16, i8) {
+    let (_, stick) = opener_pad(frame, port);
+    let at = frame + 40 * port as i32;
+    let t = at % 160;
+    let a = matches!(t, 32 | 44 | 56)
+        || (112..112 + GUNNER_CHARGE).contains(&t)
+        || (t == 0 && at / 160 % 4 == 3);
+    (if a { 0x0100 } else { 0 }, stick)
 }
 
 const fn p(character: u8, costume: u8) -> Player {
@@ -1131,11 +1155,45 @@ pub fn fighters_set() -> Vec<Match> {
         .collect()
 }
 
+/// The Super Scope's one-shot charge (docs/player.md, "Items toggle: what's left"): the scope
+/// alone at item frequency very high on Final Destination, Fox against Marth, two gunners
+/// ([`gunner_pad`]), two-minute time matches, each on a seed a search found (candidate `i`
+/// plays seed `0x1F0F_1001 + i`).
+pub fn sscope_set() -> Vec<Match> {
+    // Seed 0x1F0F_1153 (candidate 338 of 400): a gunner is hit while charging with one shot left
+    // at frame 3010; 0x1F0F_1007 (candidate 6): a charge with one shot left clicks at 4760.
+    let matches: [(&'static str, u32); 2] =
+        [("sscope-fd", 0x1F0F_1153), ("sscope-click-fd", 0x1F0F_1007)];
+    matches
+        .iter()
+        .map(|&(name, seed)| {
+            let g = |character| Player {
+                character,
+                costume: 0,
+                control: Control::Gunner,
+            };
+            Match {
+                name: Cow::Borrowed(name),
+                stage: FINAL_DESTINATION,
+                players: Cow::Owned(vec![g(FOX), g(MARTH)]),
+                seed,
+                rules: Rules::Time {
+                    time_limit: ITEMS_TIME,
+                },
+                items: Items::only(FREQ_VERY_HIGH, &[S_SCOPE]),
+            }
+        })
+        .collect()
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
 /// The Topi-with-a-Freezie match's seed.
 const FREEZIE_SEED: u32 = 0x1F0F_10D7;
+
+/// The Super Scope's item kind (`It_Kind_S_Scope`).
+const S_SCOPE: u8 = 21;
 
 /// The VS stages besides the tournament stages, with match names; the moving stages are marked.
 const OTHER_STAGES: [(u16, &str, bool); 23] = [
@@ -1251,6 +1309,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("monsters", monsters_set),
     ("catch", catch_set),
     ("fighters", fighters_set),
+    ("sscope", sscope_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -1314,7 +1373,8 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
                 Control::Human
                 | Control::Walker { .. }
                 | Control::Opener
-                | Control::Catcher { .. } => (0x00, 0xC0, CPU_VS, 9),
+                | Control::Catcher { .. }
+                | Control::Gunner => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -1466,6 +1526,7 @@ impl Match {
             Control::Walker { side } => Some(xy(walker_pad(frame, side))),
             Control::Opener => Some(xy(opener_pad(frame, port))),
             Control::Catcher { button } => Some(catcher_pad(frame, port, button)),
+            Control::Gunner => Some(xy(gunner_pad(frame, port))),
             Control::Human | Control::Cpu { .. } => None,
         }
     }
