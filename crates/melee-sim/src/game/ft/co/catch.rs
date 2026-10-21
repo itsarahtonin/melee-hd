@@ -39,6 +39,22 @@ impl Running<'_> {
         fp.x2194 = Some(CodeRef(ON_GRAB_ITEM));
     }
 
+    /// A grab that caught an item, `fn_800D8BFC`: the item taken into the hand, the target
+    /// forgotten, and lifted overhead (the heavy pickup, run to its script's flag).
+    // Ports `fn_800D8BFC`; aliased once a check reaches it.
+    pub fn catch_item(&mut self, gobj: GObjId) {
+        let it = self
+            .game
+            .fighter(gobj)
+            .target_item_gobj
+            .expect("a grab's catch without an item");
+        self.take_item(gobj, it);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x1A64 = None;
+        fp.target_item_gobj = None;
+        self.enter_item_get(gobj, super::item_get::MS_HEAVY_GET, true);
+    }
+
     /// Link's hookshot (`fn_800D8EC8`, `fn_800D9228`) and Samus's grapple beam
     /// (`fn_800D9558`, `fn_800D9930`) on their grab and dash grab: whether it ended the grab.
     fn catch_tether(&mut self, gobj: GObjId, dash: bool) -> bool {
@@ -233,8 +249,30 @@ impl Running<'_> {
         }
     }
 
-    /// The fighter's grab boxes against items, `ftColl_8007BC90`: a box touching a catchable
-    /// item's hurtbox stops at the seam (`updateItemGrabTarget`).
+    /// The item becomes the grab's target if it's the nearest yet (`updateItemGrabTarget`); the
+    /// box's group remembers it either way (`ftColl_80076808`).
+    fn set_item_grab_target(&mut self, me: FighterId, i: usize, it: GObjId) {
+        use super::super::super::it;
+        let ii = it::item_of(self.game, it);
+        self.hit_group(me, i, 0, crate::lb::hitcapsule::Victim::Item(ii), false);
+        let (ix, mx) = (
+            reg(it::item(self.game, it).pos.x),
+            reg(self.game.fighters[me.0].cur_pos.x),
+        );
+        let d = fp::fsubs(ix, mx);
+        let d = if d < 0.0 { fp::fneg(d) } else { d };
+        let fp = &mut self.game.fighters[me.0];
+        if d < reg(fp.unk_grab_val) {
+            fp.x1A64 = Some(it);
+            fp.target_item_gobj = Some(it);
+            fp.x221B.x221B_b6 = true;
+            fp.unk_grab_val = mem(d);
+        }
+    }
+
+    /// The fighter's grab boxes against items, `ftColl_8007BC90`: the first box touching a
+    /// catchable item's hurtbox makes it the target if it's the nearest
+    /// ([`Self::set_item_grab_target`]), and the next item is tried.
     #[doc(alias = "ftColl_8007BC90")]
     pub fn grab_items(&mut self, gobj: GObjId) {
         use super::super::super::it::{self, P_LINK_ITEM};
@@ -251,7 +289,7 @@ impl Running<'_> {
                 continue;
             }
             let ii = it::item_of(self.game, g);
-            for i in 0..4 {
+            'boxes: for i in 0..4 {
                 let ip = it::item(self.game, g);
                 let h = &self.game.fighters[me.0].x914[i];
                 if h.state == hitcapsule::DISABLED || h.element != ELEMENT_CATCH {
@@ -285,7 +323,8 @@ impl Running<'_> {
                     h.hurt_coll_pos = hit.hurt_coll_pos;
                     h.coll_distance = hit.coll_distance;
                     if touch {
-                        unported_call("updateItemGrabTarget (a grab box on an item)");
+                        self.set_item_grab_target(me, i, g);
+                        break 'boxes;
                     }
                 }
             }

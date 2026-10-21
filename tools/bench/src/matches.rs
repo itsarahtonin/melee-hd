@@ -37,6 +37,12 @@ pub enum Control {
     /// short runs each way across the stage's middle and A tapped, so it picks up, throws and
     /// hits the containers that land near it.
     Opener,
+    /// A human player whose controller follows [`catcher_pad`]'s script with `button` (B for
+    /// Kirby's inhale or Yoshi's tongue), played by `BENCH_PADS`: the opener's
+    /// runs with A tapped, and the button held as it stands, so it catches a monster that comes
+    /// near; down held before every other round's second press, so Kirby swallows what he holds
+    /// rather than spitting it out.
+    Catcher { button: u16 },
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -205,6 +211,29 @@ pub fn opener_pad(frame: i32, port: usize) -> (u16, i8) {
     };
     let a = frame % 12 == 3 * port % 12;
     (if a { 0x0100 } else { 0 }, stick)
+}
+
+/// The B button, a catcher's.
+pub const BUTTON_B: u16 = 0x0200;
+
+/// A catcher's buttons and main stick's x and y on match frame `frame` (from "GO"), for the
+/// player in `port`: the opener's round of 160 frames, offset by 40 a port, with A tapped every
+/// 12 frames only while it runs, and B held for 12 frames from its stands' frames 30, 70 and
+/// 110; on odd rounds the stick is held down for 6 frames from frame 60.
+pub fn catcher_pad(frame: i32, port: usize, button: u16) -> (u16, i8, i8) {
+    let t = frame + 40 * port as i32;
+    let (round, at) = (t / 160, t % 160);
+    let running = matches!(at, 0..30 | 80..110);
+    let stick_x = match at {
+        0..30 => 80,
+        80..110 => -80,
+        _ => 0,
+    };
+    let a = running && frame % 12 == 3 * port as i32 % 12;
+    let held = matches!(at, 30..42 | 70..82 | 110..122);
+    let down = round % 2 == 1 && matches!(at, 60..66);
+    let buttons = if a { 0x0100 } else { 0 } | if held { button } else { 0 };
+    (buttons, stick_x, if down { -80 } else { 0 })
 }
 
 const fn p(character: u8, costume: u8) -> Player {
@@ -908,6 +937,56 @@ pub fn monsters_set() -> Vec<Match> {
         .collect()
 }
 
+/// The catch set: the containers alone at item frequency very high, a catcher
+/// ([`catcher_pad`]) against an opener, on seeds a search found to have the catcher catch a
+/// container's monster: Kirby's inhale (B), which takes a monster in. Only a monster is
+/// catchable (`it_80275270`), so no other match has a catch box touch an item. Two-minute time
+/// matches.
+pub fn catch_set() -> Vec<Match> {
+    /// A match's name, stage, catcher, its button, opener and seed.
+    type Catch = (&'static str, u16, u8, u16, u8, u32);
+    const FD: u16 = FINAL_DESTINATION;
+    // The seeds `seed-search` found (`--watch caught`, and the spit star, kind 53), the first
+    // catch coming at the frame noted.
+    let matches: [Catch; 2] = [
+        // Spat out at 3365.
+        ("catch-kirby-fd", FD, KIRBY, BUTTON_B, MARIO, 0x1F0F_128E),
+        // Swallowed from 3126.
+        (
+            "catch-kirby-swallow-fd",
+            FD,
+            KIRBY,
+            BUTTON_B,
+            MARIO,
+            0x1F0F_1240,
+        ),
+    ];
+    matches
+        .iter()
+        .map(|&(name, stage, catcher, button, opener, seed)| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![
+                Player {
+                    character: catcher,
+                    costume: 0,
+                    control: Control::Catcher { button },
+                },
+                Player {
+                    character: opener,
+                    costume: 0,
+                    control: Control::Opener,
+                },
+            ]),
+            seed,
+            rules: Rules::Time {
+                time_limit: ITEMS_TIME,
+            },
+            items: Items::only(FREQ_VERY_HIGH, &CONTAINERS),
+        })
+        .collect()
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
@@ -1026,6 +1105,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("leftovers", leftovers_set),
     ("pokemon", pokemon_set),
     ("monsters", monsters_set),
+    ("catch", catch_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -1086,9 +1166,10 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
         Some(pl) => {
             // Slot type, flags (rumble for a human, as Slippi records them), CPU kind and level.
             let (slot_type, flags, kind, level) = match pl.control {
-                Control::Human | Control::Walker { .. } | Control::Opener => {
-                    (0x00, 0xC0, CPU_VS, 9)
-                }
+                Control::Human
+                | Control::Walker { .. }
+                | Control::Opener
+                | Control::Catcher { .. } => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -1217,12 +1298,13 @@ impl Match {
         let mut out = vec![0x35, 4, PRE_FRAME, 0, SIZE as u8];
         for frame in 0..self.fields() as i32 {
             for &port in &scripted {
-                let (button, stick_x) = self.scripted_pad(port, frame).expect("a script");
+                let (button, stick_x, stick_y) = self.scripted_pad(port, frame).expect("a script");
                 let mut e = [0u8; SIZE];
                 e[0..4].copy_from_slice(&frame.to_be_bytes());
                 e[4] = port as u8;
                 e[0x30..0x32].copy_from_slice(&button.to_be_bytes());
                 e[0x3A] = stick_x as u8;
+                e[0x3F] = stick_y as u8;
                 out.push(PRE_FRAME);
                 out.extend_from_slice(&e);
             }
@@ -1230,12 +1312,15 @@ impl Match {
         Some(out)
     }
 
-    /// The buttons and main stick's x a scripted player's controller (a walker's or an
-    /// opener's) has on match frame `frame` (from "GO"); none for a player no script plays.
-    pub fn scripted_pad(&self, port: usize, frame: i32) -> Option<(u16, i8)> {
+    /// The buttons and main stick's x and y a scripted player's controller (a walker's, an
+    /// opener's or a catcher's) has on match frame `frame` (from "GO"); none for a player no
+    /// script plays.
+    pub fn scripted_pad(&self, port: usize, frame: i32) -> Option<(u16, i8, i8)> {
+        let xy = |(b, x): (u16, i8)| (b, x, 0);
         match self.players[port].control {
-            Control::Walker { side } => Some(walker_pad(frame, side)),
-            Control::Opener => Some(opener_pad(frame, port)),
+            Control::Walker { side } => Some(xy(walker_pad(frame, side))),
+            Control::Opener => Some(xy(opener_pad(frame, port))),
+            Control::Catcher { button } => Some(catcher_pad(frame, port, button)),
             Control::Human | Control::Cpu { .. } => None,
         }
     }
@@ -1626,6 +1711,20 @@ mod tests {
                 assert_eq!(m.items.kinds(), CONTAINERS);
             }
         }
+    }
+
+    /// A catcher's round: B held from its stands' frames 30, 70 and 110, the stick down before
+    /// the second on odd rounds, A only while it runs.
+    #[test]
+    fn catchers_hold_their_button_as_they_stand() {
+        assert_eq!(catcher_pad(30, 0, BUTTON_B), (BUTTON_B, 0, 0));
+        assert_eq!(catcher_pad(41, 0, BUTTON_B), (BUTTON_B, 0, 0));
+        assert_eq!(catcher_pad(42, 0, BUTTON_B), (0, 0, 0));
+        assert_eq!(catcher_pad(0, 0, BUTTON_B), (0x0100, 80, 0));
+        assert_eq!(catcher_pad(84, 0, BUTTON_B), (0x0100, -80, 0));
+        assert_eq!(catcher_pad(60, 0, BUTTON_B), (0, 0, 0));
+        assert_eq!(catcher_pad(160 + 60, 0, BUTTON_B), (0, 0, -80));
+        assert_eq!(catcher_pad(110, 0, BUTTON_B).0, BUTTON_B);
     }
 
     /// An opener's round: as long running right as left, A every 12 frames by port.

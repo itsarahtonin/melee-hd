@@ -21,9 +21,10 @@ GROUPS = [
     ("STAGE", 208, "it_803F4CA8", "it_803F4D20"),
 ]
 
-# State tables code sets itself rather than through a logic table: Yoshi's tongue holding an item
-# (`it_802F2BFC`).
-EXTRA_STATES = ["it_803F9480"]
+# State tables code sets itself rather than through a logic table: an item Kirby's inhale holds
+# (`it_802F23EC`), and one Yoshi's tongue or Kirby's copy of it holds (`it_802F2BFC`,
+# `it_802F2D98`).
+EXTRA_STATES = ["it_803F9450", "it_803F9480", "it_803F9490"]
 
 CALLBACKS = [
     "spawned", "destroyed", "picked_up", "dropped", "thrown", "dmg_dealt", "dmg_received",

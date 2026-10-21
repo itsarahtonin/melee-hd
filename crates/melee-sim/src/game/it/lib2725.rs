@@ -442,6 +442,17 @@ pub fn set_model(r: &mut Running, gobj: GObjId, joint: Option<melee_data::archiv
     super::item::set_translate(r.game, j, pos);
 }
 
+/// Stops all the item's motion, `it_80273408`: its velocity, the floor's motion, `x58`, its
+/// nudge and its knockback.
+// Ports `it_80273408`; aliased once a check reaches it.
+pub fn stop_all(game: &mut Game, gobj: GObjId) {
+    clear_velocity(game, gobj);
+    clear_x64(game, gobj);
+    clear_x58(game, gobj);
+    clear_nudge(game, gobj);
+    clear_knockback(game, gobj);
+}
+
 /// Stops the item, `it_80273454` (`itResetVelocity`).
 #[doc(alias = "it_80273454")]
 pub fn clear_velocity(game: &mut Game, gobj: GObjId) {

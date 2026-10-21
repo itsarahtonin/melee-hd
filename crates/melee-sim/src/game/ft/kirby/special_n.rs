@@ -7,9 +7,9 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::ef::{Arg, SpawnKind};
 use super::super::super::handles::CodeRef;
+use super::super::super::it::kinds::{kirbyinhale, kirbyspitstar};
 use super::super::super::state::Running;
 use super::super::data::figatree_frames;
 use super::{addr, attr, ms, u};
@@ -264,10 +264,24 @@ impl Running<'_> {
         v
     }
 
-    /// An item pulled in close enough becomes his, `ftKb_SpecialN_800F5DE8`.
-    // Not ported: `ftKb_SpecialN_800F5DE8` (no replay at hand has items).
-    pub fn kb_pull_item(&mut self, _gobj: GObjId) {
-        unported_call("ftKb_SpecialN_800F5DE8 (an item inhaled)");
+    /// An item pulled in close enough is swallowed into his mouth, `ftKb_SpecialN_800F5DE8`:
+    /// its held state, and his.
+    #[doc(alias = "ftKb_SpecialN_800F5DE8")]
+    pub fn kb_pull_item(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let v = reg(self.kb_attr_f32(f, attr::N_INHALE_VEL));
+        let mouth = self.kb_mouth(gobj);
+        let it = self.game.fighters[f.0]
+            .target_item_gobj
+            .expect("pulling no item");
+        if kirbyinhale::distance2(self, it, mouth) < fp::fmuls(v, v) {
+            kirbyinhale::hold(self, it);
+            if self.game.fighters[f.0].ground_or_air == 1 {
+                self.kb_n_eat_air(gobj);
+            } else {
+                self.kb_n_eat(gobj);
+            }
+        }
     }
 
     /// A fighter pulled in close enough is swallowed into his mouth, `ftKb_SpecialN_800F5EA8`:
@@ -333,10 +347,24 @@ impl Running<'_> {
         );
     }
 
-    /// An item caught on the ground, `fn_800F6178`.
-    // Not ported: `fn_800F6178`.
-    pub fn kb_n_catch_item(&mut self, _gobj: GObjId) {
-        unported_call("fn_800F6178 (an item caught by the inhale)");
+    /// An item caught on the ground, `fn_800F6178`: it's his, pulled in.
+    #[doc(alias = "fn_800F6178")]
+    pub fn kb_n_catch_item(&mut self, gobj: GObjId) {
+        self.kb_n_catch_item_into(gobj, ms::SPECIAL_N_CAPTURE1);
+    }
+
+    /// The item caught taken in (`it_802F23EC`, facing away from him), and his pull of it.
+    fn kb_n_catch_item_into(&mut self, gobj: GObjId, msid: i32) {
+        let fp = self.game.fighter(gobj);
+        let it = fp.target_item_gobj.expect("no item caught");
+        let facing = mem(fp::fneg(reg(fp.facing_dir)));
+        kirbyinhale::catch(self, it, gobj, facing);
+        self.change_motion_state(gobj, msid, 0x212, 0.0, 1.0, 0.0, None);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2222_b2 = true;
+        fp.u[u::N_XF4] |= 0x80;
+        self.kb_set_death_cbs(gobj);
+        self.kb_set_x1a6a(gobj, 0x1FF);
     }
 
     /// A fighter caught on the ground, `fn_800F6210`: pulling it in.
@@ -350,9 +378,9 @@ impl Running<'_> {
     }
 
     /// An item caught in the air, `fn_800F6280`.
-    // Not ported: `fn_800F6280`.
-    pub fn kb_n_air_catch_item(&mut self, _gobj: GObjId) {
-        unported_call("fn_800F6280 (an item caught by the inhale)");
+    #[doc(alias = "fn_800F6280")]
+    pub fn kb_n_air_catch_item(&mut self, gobj: GObjId) {
+        self.kb_n_catch_item_into(gobj, ms::SPECIAL_AIR_N_CAPTURE1);
     }
 
     /// A fighter caught in the air, `fn_800F6318`.
@@ -723,8 +751,8 @@ impl Running<'_> {
     }
 
     /// The item pull's animation (`ftKb_SpecialNCapture0_Anim`, `ftKb_SpecialNCapture1_Anim`).
-    // Not ported: `ftKb_SpecialNCapture0_Anim`, `ftKb_SpecialNCapture1_Anim` (an item
-    // pulled in).
+    #[doc(alias = "ftKb_SpecialNCapture0_Anim")]
+    #[doc(alias = "ftKb_SpecialNCapture1_Anim")]
     pub fn kb_n_capture_item_anim(&mut self, gobj: GObjId) {
         self.kb_pull_item(gobj);
     }
@@ -763,8 +791,26 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialNSpit1_Anim")]
     pub fn kb_n_spit_item_anim(&mut self, gobj: GObjId, air: bool) {
         let fp = self.game.fighter(gobj);
-        if fp.cmd_vars[0] != 0 && fp.target_item_gobj.is_some() {
-            unported_call("it_802F28C8 (an inhaled item spat out)");
+        if fp.cmd_vars[0] != 0
+            && let Some(it) = fp.target_item_gobj
+        {
+            self.kb_set_x1a6a(gobj, 0);
+            let fp = self.game.fighter(gobj);
+            let part = self.bone_index(fp, crate::game::ft::parts::TRANS_N2);
+            let joint = self.bone_joint(gobj, part);
+            let pos = crate::lb::joint::world_position(&mut self.game.objs, self.data, joint, None);
+            let f = self.game.fighter_id(gobj);
+            let facing = reg(self.game.fighters[f.0].facing_dir);
+            let speed = reg(self.kb_attr_f32(f, attr::N_SPIT_VEL));
+            let vel = Vec3::new(mem(fp::fmuls(facing, speed)), 0.0, 0.0);
+            let decel = self.kb_attr_f32(f, attr::N_SPIT_DECEL);
+            let life = self.kb_attr_f32(f, attr::N_STAR_TIME);
+            let damage = kirbyspitstar::spawn(self, gobj, pos, vel, life, decel);
+            kirbyspitstar::release(self, it, false, damage);
+            let fp = self.game.fighter_mut(gobj);
+            fp.x1A64 = None;
+            fp.target_item_gobj = None;
+            fp.cmd_vars[0] = 0;
         }
         self.kb_n_end_or_fall(gobj, air);
     }
@@ -805,8 +851,17 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialNDrink1_Anim")]
     pub fn kb_n_drink_item_anim(&mut self, gobj: GObjId, air: bool) {
         let fp = self.game.fighter(gobj);
-        if fp.cmd_vars[0] != 0 && fp.target_item_gobj.is_some() {
-            unported_call("it_802F28C8 (an inhaled item swallowed)");
+        if fp.cmd_vars[0] != 0
+            && let Some(it) = fp.target_item_gobj
+        {
+            self.kb_set_x1a6a(gobj, 0);
+            let f = self.game.fighter_id(gobj);
+            self.fighter_play_sfx(f, 0x222F6, 0x7F, 0x40);
+            kirbyspitstar::release(self, it, false, 0.0);
+            let fp = self.game.fighter_mut(gobj);
+            fp.x1A64 = None;
+            fp.target_item_gobj = None;
+            fp.cmd_vars[0] = 0;
         }
         self.kb_n_end_or_fall(gobj, air);
     }

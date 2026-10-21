@@ -10962,6 +10962,24 @@ pub static STATES_IT_803F93C8: [ItemState; 6] = [
     },
 ];
 
+/// `it_803F9450`.
+pub static STATES_IT_803F9450: [ItemState; 2] = [
+    // 0: itKirby_2F23_UnkMotion0_Anim, itKirby_2F23_UnkMotion0_Phys, itKirby_2F23_UnkMotion0_Coll
+    ItemState {
+        anim_id: -1,
+        animated: Some(CodeRef(0x802f2578)),
+        physics_updated: Some(CodeRef(0x802f2580)),
+        collided: Some(CodeRef(0x802f2584)),
+    },
+    // 1: itKirby_2F23_UnkMotion1_Anim, itKirby_2F23_UnkMotion1_Phys, itKirby_2F23_UnkMotion1_Coll
+    ItemState {
+        anim_id: -1,
+        animated: Some(CodeRef(0x802f2888)),
+        physics_updated: Some(CodeRef(0x802f2890)),
+        collided: Some(CodeRef(0x802f2894)),
+    },
+];
+
 /// `it_803F9470`.
 pub static STATES_IT_803F9470: [ItemState; 1] = [
     // 0: it_2F28_UnkMotion0_Anim, it_2F28_UnkMotion0_Phys, it_2F28_UnkMotion0_Coll
@@ -10981,6 +10999,17 @@ pub static STATES_IT_803F9480: [ItemState; 1] = [
         animated: Some(CodeRef(0x802f2ccc)),
         physics_updated: Some(CodeRef(0x802f2cd4)),
         collided: Some(CodeRef(0x802f2cd8)),
+    },
+];
+
+/// `it_803F9490`.
+pub static STATES_IT_803F9490: [ItemState; 1] = [
+    // 0: itKirbyyoshispecialn_UnkMotion0_Anim, itKirbyyoshispecialn_UnkMotion0_Phys, itKirbyyoshispecialn_UnkMotion0_Coll
+    ItemState {
+        anim_id: -1,
+        animated: Some(CodeRef(0x802f2e68)),
+        physics_updated: Some(CodeRef(0x802f2e70)),
+        collided: Some(CodeRef(0x802f2e74)),
     },
 ];
 
@@ -11010,7 +11039,7 @@ pub static STATES_IT_803F94A0: [ItemState; 3] = [
 ];
 
 /// Every state table, by its address.
-pub static STATE_TABLES: [(u32, &[ItemState]); 174] = [
+pub static STATE_TABLES: [(u32, &[ItemState]); 176] = [
     (0x803f5468, &STATES_IT_803F5468),
     (0x803f54d8, &STATES_IT_803F54D8),
     (0x803f55d0, &STATES_IT_803F55D0),
@@ -11182,7 +11211,9 @@ pub static STATE_TABLES: [(u32, &[ItemState]); 174] = [
     (0x803f9388, &STATES_IT_803F9388),
     (0x803f93a8, &STATES_IT_803F93A8),
     (0x803f93c8, &STATES_IT_803F93C8),
+    (0x803f9450, &STATES_IT_803F9450),
     (0x803f9470, &STATES_IT_803F9470),
     (0x803f9480, &STATES_IT_803F9480),
+    (0x803f9490, &STATES_IT_803F9490),
     (0x803f94a0, &STATES_IT_803F94A0),
 ];

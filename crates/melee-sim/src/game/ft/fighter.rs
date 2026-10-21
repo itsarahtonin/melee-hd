@@ -719,8 +719,16 @@ pub fn proc_grab_coll(g: &mut Running, gobj: GObjId) {
         return;
     }
     g.grab_items(gobj);
-    if g.game.fighter(gobj).target_item_gobj.is_some() {
-        unported_call("it_8027B4A4 (a fighter catching an item)");
+    if let Some(it) = g.game.fighter(gobj).target_item_gobj {
+        let f = g.game.fighter_id(gobj);
+        if !g.game.fighters[f.0].x2225_b1 {
+            let sfx = g.ft_data_sfx(f, 0x30);
+            g.fighter_play_sfx(f, sfx, 0x7F, 0x40);
+        }
+        super::super::it::coll::enemy_hit_by_fighter(g, gobj, it);
+        if let Some(cb) = g.game.fighter(gobj).x2194 {
+            run_fighter_cb(g, gobj, cb);
+        }
     }
 }
 

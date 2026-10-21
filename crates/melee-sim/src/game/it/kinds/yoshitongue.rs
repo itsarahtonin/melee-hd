@@ -79,12 +79,7 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
     lib2725::clear_stomp(r.game, gobj);
     // `it_8026BD54`.
     item_mut(r.game, gobj).xDCC_flag.b3 = false;
-    // `it_80273408`.
-    lib2725::clear_velocity(r.game, gobj);
-    lib2725::clear_x64(r.game, gobj);
-    lib2725::clear_x58(r.game, gobj);
-    lib2725::clear_nudge(r.game, gobj);
-    lib2725::clear_knockback(r.game, gobj);
+    lib2725::stop_all(r.game, gobj);
 }
 
 /// `it_2F2B_UnkMotion0_Anim` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Anim`).

@@ -188,6 +188,8 @@ FIELD_POINTERS = {
     "Fighter.x588": "Option<LObjId>",
     # The shadow `lbShadow_8000ED54` allocates.
     "LbShadow.shadow": "Option<ShadowId>",
+    # The item a grab box last caught (`updateItemGrabTarget`), beside `target_item_gobj`.
+    "Fighter.x1A64": "Option<GObjId>",
 }
 
 # Arrays of words that hold pointers the C types as integers, by `Struct.field`: each word

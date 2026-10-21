@@ -61,6 +61,13 @@
 //! from Sheik's crouch in `hf-kirby-sheik-bf-e928c79a` (`CAPTURE=$D/hf-kirby-sheik-bf-e928c79a-squat`,
 //! `CAPTURE_FROM=10150 CAPTURE_EVERY=1 CAPTURE_FUNCS=ftCo_SquatWait_IASA,ftCo_SquatRv_CheckInput,ftCo_Dash_CheckInput,ftCo_80099F9C,ftCo_Jump_CheckInput`,
 //! `--fields 10500 --lockstep-from 10100`).
+//!
+//! His inhale of an item (a container's monster, the only catchable item), the item his mouth
+//! holds (`itkirby_2F23.c`) and the star he spits it out as (`it_2F28.c`) come from the `catch`
+//! set's two Kirby matches (`local/bench/oracle-m4-catch/catch-kirby-fd.slp`,
+//! `catch-kirby-swallow-fd.slp`, docs/oracle.md), with `kb-items.txt` and `done-items.txt`:
+//! `CAPTURE=$D/oracle-NAME CAPTURE_FUNCS=@$D/kb-items.txt LOCKSTEP_DONE=$D/done-items.txt ...
+//! --replay NAME.slp --fp hardware --fields 7440`.
 
 use std::collections::BTreeMap;
 
@@ -73,7 +80,8 @@ use melee_sim::game::code::run_fighter_cb;
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::CLASS_ITEM;
 use melee_sim::game::it::kinds::{
-    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, peachtoad, seakneedleheld,
+    kirbycutterbeam, kirbygamewatchchefpan, kirbyhammer, kirbyinhale, kirbyspitstar, peachtoad,
+    seakneedleheld,
 };
 use melee_sim::game::state::Running;
 use melee_sim::hsd::gobj::GObjId;
@@ -82,13 +90,14 @@ use ssbm_rt::capture::Call;
 
 const ENV: &str = "KIRBY";
 const CALLS: &str = "calls/kirby";
-const FUNCS: [&str; 6] = [
+const FUNCS: [&str; 7] = [
     "kb-funcs.txt",
     "kb-throws.txt",
     "kb-copies.txt",
     "kb-copies2.txt",
     "kb-copies3.txt",
     "kb-copies4.txt",
+    "kb-items.txt",
 ];
 
 fn var(what: &str) -> Option<String> {
@@ -152,8 +161,8 @@ fn functions() -> Vec<(u32, String)> {
 /// Yoshi's copy's victims' states), the cutter's wave, the arrows', the PK Flash's, the
 /// flames' and the bows' checks of their owner, the copy star, the hammer, the held needles',
 /// Toad's, the ice's and the Shadow Ball's checks, the pan, and between them what isn't
-/// ported.
-const STARTS: [u32; 44] = [
+/// ported, and the item his inhale holds with the star he spits it out as.
+const STARTS: [u32; 46] = [
     0x800B_D19C, // ftCo_800BD19C (the victims' states)
     0x800D_65D8, // ftCo_SquatRv_CheckInput .. the throws
     0x800E_E528, // ftkirby
@@ -198,7 +207,13 @@ const STARTS: [u32; 44] = [
     0x802B_18B0, // itseakneedleheld, itpeachtoad, itclimbersice, itmewtwoshadowball (their checks)
     0x802C_74D8, // itkirbygamewatchchefpan
     0x802C_7774, // the copies' other items (not ported)
+    0x802F_23AC, // itkirby_2F23 and it_2F28 (the inhaled item and its star)
+    0x802F_2BFC, // past them (Yoshi's tongue's item, its own test's)
 ];
+
+/// The inhaled item's and its star's unit, and where the star's functions start.
+const INHALED_UNIT: usize = 44;
+const STAR_START: u32 = 0x802F_28C8;
 
 /// The copy star's unit.
 const STAR_UNIT: usize = 36;
@@ -207,7 +222,7 @@ const STAR_UNIT: usize = 36;
 const YOSHI_VICTIM_UNIT: usize = 23;
 
 /// The units not ported yet.
-const UNPORTED_UNITS: [usize; 8] = [27, 29, 31, 33, 35, 38, 40, 43];
+const UNPORTED_UNITS: [usize; 9] = [27, 29, 31, 33, 35, 38, 40, 43, 45];
 
 /// Which unit a function is in, by its address.
 fn unit(addr: u32) -> usize {
@@ -219,9 +234,9 @@ fn fighter_unit(u: usize) -> bool {
     STARTS[u] < 0x8020_0000
 }
 
-/// Functions of the ported units that aren't ported: the item hooks (with items off he never
-/// holds one), the demo's and the scenes' callbacks, inhaling an item and a swallowed Kirby's
-/// copy; and the throws' landing before the freeze (`fn_800DD5EC`), the held walk's animation
+/// Functions of the ported units that aren't ported: the item hooks (his matches' items are
+/// monsters, which he only inhales), the demo's and the scenes' callbacks and a swallowed
+/// Kirby's copy; and the throws' landing before the freeze (`fn_800DD5EC`), the held walk's animation
 /// (`ftKb_EatWalk_Anim`), the pan's `evt_unk` (nothing dispatches the items' `evt_unk` yet) and
 /// Yoshi's copy's tongue catching an item (`fn_801095DC`, `fn_80109714`; items are off), ported
 /// but unaliased, which no capture reaches.
@@ -235,13 +250,7 @@ const UNPORTED: &[&str] = &[
     "ftKb_SpecialN_800EEC34",
     "ftKb_Init_UnkMotionStates5",
     "ftKb_Init_UnkMotionStates6",
-    "ftKb_SpecialN_800F5800",
     "ftCo_800BDA50",
-    "ftKb_SpecialN_800F5DE8",
-    "fn_800F6178",
-    "fn_800F6280",
-    "ftKb_SpecialNCapture0_Anim",
-    "ftKb_SpecialNCapture1_Anim",
     "fn_800DD5EC",
     "ftKb_EatWalk_Anim",
     "it_802ADBE4",
@@ -260,6 +269,12 @@ fn unported(name: &str, addr: u32) -> bool {
 /// position, a model, a new item): they run inside the callers that call them, whose
 /// comparisons cover them.
 const HELPERS: &[&str] = &[
+    "it_802F23AC",
+    "it_802F23EC",
+    "it_802F28C8",
+    "it_802F295C",
+    "it_802F2A58",
+    "ftKb_SpecialN_800F5800",
     "ftKb_SpecialNGw_8010D660",
     "ftKb_SpecialNGw_8010D6D0",
     "ftKb_Init_800EEB00",
@@ -419,9 +434,24 @@ fn run_kb(g: &mut Running, maps: &Maps, call: &Call) -> Ret {
             panic!("{SKIP}{name} takes one of Kirby's victims");
         }
     }
+    // The inhaled item's functions take an item his inhale holds (in its state table), the
+    // star's a star.
+    if u == INHALED_UNIT {
+        let ip = melee_sim::game::it::item(g.game, gobj);
+        let ok = if a < STAR_START {
+            ip.xBC_itemStateContainer.map(|s| s.0) == Some(0x803F_9450)
+        } else {
+            ip.kind == kirbyspitstar::KIND
+        };
+        if !ok {
+            panic!("{SKIP}{name} takes an item his inhale holds or its star");
+        }
+    }
     let b = |v: bool| Ret::Int(u32::from(v));
     let float = |v: f32| Ret::Float(f64::from(v));
     match name.as_str() {
+        "ftKb_SpecialN_800F5DE8" => g.kb_pull_item(gobj),
+        "it_802F2810" => kirbyinhale::hold(g, gobj),
         "ftCo_800BD1DC" => g.enter_capture_kirby(gobj, gobj_reg(maps, call, 4, &name)),
         "ftCo_800BD9E0" => {
             return Ret::Int(g.copy_kind_of(gobj, gobj_reg(maps, call, 4, &name)) as u32);
@@ -752,6 +782,13 @@ fn wanted(name: &str) -> bool {
     var("SRC").is_none_or(|o| o == name)
 }
 
+/// Functions also run from another function's saved calls, whose states are theirs: the item pull's
+/// test from the pull's animation, which calls it (the import knows no call of it its own).
+const ALSO_FROM: &[(&str, &str)] = &[
+    ("ftKb_SpecialN_800F5DE8", "ftKb_SpecialNCapture0_Anim"),
+    ("ftKb_SpecialN_800F5DE8", "ftKb_SpecialNCapture1_Anim"),
+];
+
 /// Every saved call of each function, run as it was saved.
 fn as_saved(counts: &mut BTreeMap<u32, usize>) {
     let no = stubs();
@@ -780,6 +817,32 @@ fn as_saved(counts: &mut BTreeMap<u32, usize>) {
                 stubs: &no,
             }];
             check_variants(dir, name, &variants)
+        },
+    );
+    for reports in results.iter().flatten() {
+        tally(reports, counts);
+    }
+    let mut sets = Vec::new();
+    for &(target, src) in ALSO_FROM {
+        for dir in dirs() {
+            let n = saved_calls(&dir, src).len();
+            if n > 0 && wanted(src) {
+                sets.push((target, src, dir, n));
+            }
+        }
+    }
+    let results = leaf_check::each_set(
+        &sets,
+        |s| s.3,
+        |&(target, src, ref dir, _)| {
+            let addr = leaf_check::sym(target);
+            let prepare = move |call: &mut Call, _: usize| call.addr = addr;
+            let variants = [Variant {
+                prepare: &prepare,
+                ours: &run_kb,
+                stubs: &no,
+            }];
+            check_variants(dir, src, &variants)
         },
     );
     for reports in results.iter().flatten() {

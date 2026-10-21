@@ -236,15 +236,18 @@ impl Running<'_> {
     #[doc(alias = "ftKb_SpecialN_800F9090")]
     pub fn kb_release_item(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
-        if fp.target_item_gobj.is_some()
+        if let Some(it) = fp.target_item_gobj
             && fp.kind == KIND_KIRBY
             && fp.u_i32(u::HAT_KIND) == KIND_KIRBY
         {
-            let _capturing = matches!(
+            let capturing = matches!(
                 fp.motion_id,
                 ms::SPECIAL_N_CAPTURE1 | ms::SPECIAL_AIR_N_CAPTURE1
             );
-            unported_call("it_802F28C8 (an inhaled item let go)");
+            crate::game::it::kinds::kirbyspitstar::release(self, it, capturing, 0.0);
+            let fp = self.game.fighter_mut(gobj);
+            fp.x1A64 = None;
+            fp.target_item_gobj = None;
         }
     }
 

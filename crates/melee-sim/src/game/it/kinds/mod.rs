@@ -53,6 +53,8 @@ pub mod kirbycopystar;
 pub mod kirbycutterbeam;
 pub mod kirbygamewatchchefpan;
 pub mod kirbyhammer;
+pub mod kirbyinhale;
+pub mod kirbyspitstar;
 pub mod kireihana;
 pub mod klap;
 pub mod koopaflame;
@@ -172,6 +174,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kirbycutterbeam::run_event(r, gobj, addr)
         || kirbyhammer::run_event(r, gobj, addr)
         || kirbycopystar::run_event(r, gobj, addr)
+        || kirbyinhale::run_event(r, gobj, addr)
+        || kirbyspitstar::run_event(r, gobj, addr)
         || kirbygamewatchchefpan::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
@@ -320,6 +324,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     foxlaser::run_pred(r, gobj, addr)
         .or_else(|| kirbycutterbeam::run_pred(r, gobj, addr))
         .or_else(|| kirbycopystar::run_pred(r, gobj, addr))
+        .or_else(|| kirbyinhale::run_pred(r, gobj, addr))
+        .or_else(|| kirbyspitstar::run_pred(r, gobj, addr))
         .or_else(|| kirbygamewatchchefpan::run_pred(r, gobj, addr))
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))

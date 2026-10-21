@@ -301,6 +301,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         0x800D_E798 => g.thrown_on_change(gobj),
         // The grab's: fn_800D9CE8, the holds' hooks.
         0x800D_9CE8 => g.catch_landed(gobj),
+        0x800D_8BFC => g.catch_item(gobj),
         0x800D_A190 | 0x800D_A4A0 | 0x800D_A678 => g.catch_follow(gobj),
         0x800D_A490 | 0x800D_A668 => g.catch_on_damage(gobj),
         // ftCo_CatchPull_Anim, ftCo_CatchWait_Anim, ftCo_CatchAttack_Anim, ftCo_CatchCut_Anim

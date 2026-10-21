@@ -64,6 +64,23 @@ pub fn clear_dcd_b7(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDCD_flag.x0.b7 = false;
 }
 
+/// The most damage of the item's enabled hitboxes, 0 with none, `it_802758D4`.
+// Ports `it_802758D4`; aliased once a check reaches it.
+pub fn max_damage(game: &Game, gobj: GObjId) -> f32 {
+    let ip = super::item(game, gobj);
+    let on = |k: usize| ip.x5D4_hitboxes[k].hit.state != crate::lb::hitcapsule::DISABLED;
+    let mut damage = 0.0;
+    if (0..4).any(on) {
+        for k in (0..4).filter(|&k| on(k)) {
+            let d = ip.x5D4_hitboxes[k].hit.damage;
+            if damage <= d {
+                damage = d;
+            }
+        }
+    }
+    damage
+}
+
 /// Marks the item blinking, `it_802756D0`.
 #[doc(alias = "it_802756D0")]
 pub fn start_blink(game: &mut Game, gobj: GObjId) {

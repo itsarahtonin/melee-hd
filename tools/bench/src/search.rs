@@ -1,11 +1,12 @@
 //! `melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR]
-//! [--watch KIND[:STATE]]...`: plays an oracle set's scripted match (every player a walker or an
+//! [--watch KIND[:STATE]|caught]...`: plays an oracle set's scripted match (every player a walker or an
 //! opener, so no CPU AI plays) with the seeds `FROM` to `FROM + COUNT - 1`, headless, and prints
 //! how far each got: to the match's end, or the unported code it stopped at. It finds the seeds
 //! whose matches reach something rare, such as a container's monster, which ssbm-rs then records
 //! and traces as the oracle (`docs/oracle.md`, "Oracle sets"). Once the rare thing is ported,
-//! `--watch` names it instead: an item of kind `KIND` (in state `STATE`, if given), each match
-//! printing the frame each watched item first appears and stopping once all have.
+//! `--watch` names it instead: an item of kind `KIND` (in state `STATE`, if given), or with
+//! `caught` a container's monster a catch box took (Kirby's inhale or Yoshi's tongue holding it),
+//! each match printing the frame each watched item first appears and stopping once all have.
 //!
 //! Each match is played as Slippi's playback plays its recording would be: the match's
 //! `StartMeleeData` and seed as the generator's codes set them, the code list of a recording
@@ -41,19 +42,24 @@ struct Script<'a> {
     last: i32,
 }
 
-/// The processed inputs the game makes of a scripted pad (buttons and the main stick's x, which
-/// the scripts hold at 0 or past ±80, where the stick reads ±1 and sets its direction's button).
-pub fn processed(button: u16, stick_x: i8) -> CharacterFrame {
-    let (x, dir) = match stick_x {
+/// The processed inputs the game makes of a scripted pad (buttons and the main stick, which the
+/// scripts hold at 0 or past ±80 on each axis, where it reads ±1 and sets its direction's
+/// button).
+pub fn processed(button: u16, stick_x: i8, stick_y: i8) -> CharacterFrame {
+    let axis = |v: i8, plus: u32, minus: u32| match v {
         0 => (0.0, 0),
-        80..=127 => (1.0, 0x8_0000),
-        -128..=-80 => (-1.0, 0x4_0000),
-        _ => panic!("a script's stick at {stick_x}, neither neutral nor past 80"),
+        80..=127 => (1.0, plus),
+        -128..=-80 => (-1.0, minus),
+        _ => panic!("a script's stick at {v}, neither neutral nor past 80"),
     };
+    let (x, right_left) = axis(stick_x, 0x8_0000, 0x4_0000);
+    let (y, up_down) = axis(stick_y, 0x1_0000, 0x2_0000);
     CharacterFrame {
         stick_x: x,
-        buttons: u32::from(button) | dir,
+        stick_y: y,
+        buttons: u32::from(button) | right_left | up_down,
         raw_stick_x: stick_x as u8,
+        raw_stick_y: stick_y as u8,
         ..CharacterFrame::default()
     }
 }
@@ -67,12 +73,12 @@ impl Source for Script<'_> {
             if port >= self.m.players.len() {
                 return [None, None];
             }
-            let (button, stick_x) = if index < 0 {
-                (0, 0)
+            let (button, stick_x, stick_y) = if index < 0 {
+                (0, 0, 0)
             } else {
                 self.m.scripted_pad(port, index).expect("a scripted player")
             };
-            [Some(processed(button, stick_x)), None]
+            [Some(processed(button, stick_x, stick_y)), None]
         });
         Frame::new(None, chars)
     }
@@ -91,10 +97,17 @@ struct Outcome {
     seen: Vec<Option<i32>>,
 }
 
-/// An item to watch for: its kind, and its state if one is named.
+/// An item to watch for: its kind, and its state if one is named; kind [`CAUGHT`] for a caught
+/// monster.
 type Watch = (i32, Option<i32>);
 
+/// The watch for a container's monster a catch box took.
+const CAUGHT: i32 = -1;
+
 fn parse_watch(s: &str) -> Option<Watch> {
+    if s == "caught" {
+        return Some((CAUGHT, None));
+    }
     match s.split_once(':') {
         Some((k, st)) => Some((k.parse().ok()?, Some(st.parse().ok()?))),
         None => Some((s.parse().ok()?, None)),
@@ -192,8 +205,11 @@ fn play(
                     if at.is_none()
                         && sim.game.items.iter().any(|(_, ip)| {
                             ip.entity.is_some()
-                                && ip.kind == w.0
-                                && w.1.is_none_or(|st| ip.msid == st)
+                                && if w.0 == CAUGHT {
+                                    (43..=46).contains(&ip.kind) && ip.grab_victim.is_some()
+                                } else {
+                                    ip.kind == w.0 && w.1.is_none_or(|st| ip.msid == st)
+                                }
                         })
                     {
                         *at = Some(f);
@@ -338,7 +354,7 @@ pub fn main(args: &[String]) -> ExitCode {
         pos.get(2).and_then(|s| s.parse::<u32>().ok()),
     ) else {
         eprintln!(
-            "usage: melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR] [--watch KIND[:STATE]]..."
+            "usage: melee-bench seed-search MATCH FROM COUNT [--jobs N] [--codes REPLAY.slp] [--record DIR] [--watch KIND[:STATE]|caught]..."
         );
         return ExitCode::from(2);
     };

@@ -2423,7 +2423,7 @@ pub struct Fighter {
     /// +0x1a60
     pub target_item_gobj: Option<GObjId>,
     /// +0x1a64
-    pub x1A64: RawPtr,
+    pub x1A64: Option<GObjId>,
     /// +0x1a68
     pub x1A68: u16,
     /// +0x1a6a
@@ -3103,7 +3103,7 @@ impl Default for Fighter {
             victim_gobj: None,
             x1A5C: None,
             target_item_gobj: None,
-            x1A64: Default::default(),
+            x1A64: None,
             x1A68: 0,
             x1A6A: 0,
             x1A6C: 0.0,

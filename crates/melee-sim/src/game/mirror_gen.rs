@@ -4600,7 +4600,7 @@ impl Mirror for Fighter {
             victim_gobj: cx.import_handle("GObjId", m.u32(at + 0x1a58)).map(GObjId),
             x1A5C: cx.import_handle("GObjId", m.u32(at + 0x1a5c)).map(GObjId),
             target_item_gobj: cx.import_handle("GObjId", m.u32(at + 0x1a60)).map(GObjId),
-            x1A64: RawPtr(m.u32(at + 0x1a64)),
+            x1A64: cx.import_handle("GObjId", m.u32(at + 0x1a64)).map(GObjId),
             x1A68: m.u16(at + 0x1a68),
             x1A6A: m.u16(at + 0x1a6a),
             x1A6C: f32::from_bits(m.u32(at + 0x1a6c)),
@@ -5837,13 +5837,12 @@ impl Mirror for Fighter {
             self.target_item_gobj.map(|h| h.0),
             m.u32(at + 0x1a60),
         );
-        if self.x1A64.0 != m.u32(at + 0x1a64) {
-            cx.mismatch(
-                &format!("{path}.x1A64"),
-                format!("{:#x}", self.x1A64.0),
-                format!("{:#x}", m.u32(at + 0x1a64)),
-            );
-        }
+        cx.compare_handle(
+            &format!("{path}.x1A64"),
+            "GObjId",
+            self.x1A64.map(|h| h.0),
+            m.u32(at + 0x1a64),
+        );
         if self.x1A68 != m.u16(at + 0x1a68) {
             cx.mismatch(
                 &format!("{path}.x1A68"),

@@ -43,7 +43,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/item",
     "melee/it/itgroundcoll",
     "melee/it/ithitbox",
-    "melee/it/itmaplib",
     "melee/it/itmaterial",
     "melee/it/itzako",
     "melee/it/kinds/it_2ADA",
@@ -83,7 +82,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/kinds/itharisen",
     "melee/it/kinds/itheart",
     "melee/it/kinds/itheiho",
-    "melee/it/kinds/itkirby_2F23",
     "melee/it/kinds/itkirbycutterbeam",
     "melee/it/kinds/itkirbygamewatchchefpan",
     "melee/it/kinds/itkirbyhammer",
@@ -118,9 +116,7 @@ pub const UNITS: &[&str] = &[
     "melee/it/kinds/itnessyoyo",
     "melee/it/kinds/itnokonoko",
     "melee/it/kinds/itoctarock",
-    "melee/it/kinds/itoctarockstone",
     "melee/it/kinds/itoldkuri",
-    "melee/it/kinds/itoldottosea",
     "melee/it/kinds/itparasol",
     "melee/it/kinds/itpatapata",
     "melee/it/kinds/itpikachuthunder",
@@ -232,10 +228,13 @@ pub const MODULES: &[&str] = &[
     "it/kinds/kirbycutterbeam",
     "it/kinds/kirbygamewatchchefpan",
     "it/kinds/kirbyhammer",
+    "it/kinds/kirbyinhale",
+    "it/kinds/kirbyspitstar",
     "it/kinds/kireihana",
     "it/kinds/klap",
     "it/kinds/koopaflame",
     "it/kinds/kusudama",
+    "it/kinds/leadead",
     "it/kinds/lgun",
     "it/kinds/lgunbeam",
     "it/kinds/lgunray",
@@ -270,6 +269,10 @@ pub const MODULES: &[&str] = &[
     "it/kinds/nesspkthunder",
     "it/kinds/nesspkthundertrail",
     "it/kinds/nessyoyo",
+    "it/kinds/octarock",
+    "it/kinds/octarockstone",
+    "it/kinds/oldkuri",
+    "it/kinds/oldottosea",
     "it/kinds/parasol",
     "it/kinds/peachexplode",
     "it/kinds/peachparasol",
@@ -362,6 +365,14 @@ const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster s
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
+const GIGA_BOWSER: &str =
+    "Giga Bowser's motion table's callback (ftgkoopa.c), a fighter no VS roster has";
+const LIKE_LIKE: &str = "the Like Like's held fighter's death callback, which only its capture (ftCo_800C78B0) sets: an adventure enemy";
+const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor found under the item, one whose span holds the item's x, which mpLib_8004DD90_Floor then finds at that x and writes the height of";
+const ONE_PLAYER_TROPHY: &str = "a beaten enemy's trophy, which it_8027CC88 rolls only when gm_IsCurrently1PMode says a single-player mode is on";
+const ENEMY_KINDS: &str = "an enemy of another kind: in a VS match only a container (the monsters' table, it_8026CF04: Goomba, ReDead, Octorok, Topi) and the offered stages' own enemies (Shy Guys, Tingle, Klap Traps) spawn one; the rest come from the stage enemy spawner or adventure stages";
+const ENEMY_BONUS: &str = "a bonus other than an enemy's KO: gm_8016F2F8's only caller in melee-hd is pl_8004049C, whose bonuses for the enemies a VS match spawns are all transcribed";
+const WALK_ENDS: &str = "it_802EA804's walks start on the floor the ReDead stood on (the stop before them refuses any other line), so the walk of 0 ends on that floor with its normal, and a walk that reaches its end ends on a floor: with no wall allowed (mpLib_80056C54's limit 0) any wall or ceiling line of positive length stops it short (mpJointUpdateDynamics refuses a dynamic line without length)";
 
 /// Functions, units (for every function of one not named on its own) and stops no items-on
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
@@ -429,10 +440,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802AC41C", EVT_UNK),
     ("it_2725_Logic59_EvtUnk", EVT_UNK),
     ("it_802DD7D0", EVT_UNK),
-    ("it_802E5AA4", EVT_UNK),
-    ("itOctarockstone_802E89B0", EVT_UNK),
-    ("itOldKuri_Logic29_EvtUnk", EVT_UNK),
-    ("it_802D84D8", EVT_UNK),
     ("itParasol_Logic13_EvtUnk", EVT_UNK),
     ("it_802E16D8", EVT_UNK),
     ("itPikachuThunder_Logic39_EvtUnk", EVT_UNK),
@@ -450,16 +457,13 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802EC850", EVT_UNK),
     ("itTomato_Logic9_EvtUnk", EVT_UNK),
     ("it_802EFA24", EVT_UNK),
-    ("it_802E3784", EVT_UNK),
     ("it_802E4A24", EVT_UNK),
     ("itWStar_Logic30_EvtUnk", EVT_UNK),
     ("it_27CF_Logic114_EvtUnk", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
     ("it_802E0468", EVT_UNK),
     ("it_80275210", ADVENTURE),
-    ("it_80275258", ADVENTURE),
     ("it_80271534", ADVENTURE),
-    ("it_8027C0CC", ADVENTURE),
     ("melee/it/kinds/itlikelike", ADVENTURE),
     ("melee/it/kinds/itmato", ADVENTURE),
     ("melee/it/kinds/itnokonoko", ADVENTURE),
@@ -539,6 +543,31 @@ pub const UNREACHED: &[(&str, &str)] = &[
         GRABBERS,
     ),
     ("(a grabbed fighter's callback)", GRABBERS),
+    (
+        "it_8027CC88 (a 1P mode's trophy from an enemy)",
+        ONE_PLAYER_TROPHY,
+    ),
+    ("ftCo_800C7434", DEMO),
+    ("ftCo_800C74AC", GIGA_BOWSER),
+    ("fn_800C7890", LIKE_LIKE),
+    (
+        "it_802759DC (a height the floor probe left unwritten)",
+        PROBE_BELOW,
+    ),
+    ("it_8027B5B0 (an enemy of kind", ENEMY_KINDS),
+    ("pl_8004049C (an enemy of kind", ENEMY_KINDS),
+    (
+        "gm_8016F2F8 (a bonus besides the enemies' KOs)",
+        ENEMY_BONUS,
+    ),
+    (
+        "it_802EA804 (a floor normal the first walk left unwritten)",
+        WALK_ENDS,
+    ),
+    (
+        "it_802EA804 (a floor normal the walk left unwritten)",
+        WALK_ENDS,
+    ),
 ];
 
 /// Fighter-owned item code an items-off match reaches as well: the characters' work, not the
@@ -603,51 +632,29 @@ pub const UNCHECKED: &[&str] = &[
 /// What an items-on match reaches that isn't ported, task by task.
 pub const MISSING: &[ItemGap] = &[
     ItemGap {
-        what: "the crate monsters: Goomba, ReDead, Octorok and Topi with Octorok's rock and Topi's Freezies, and a ReDead's grab (in progress on feat/monsters)",
+        what: "a fighter's grab catching a container's monster, lifting it overhead to throw or drop it",
         covers: &[
-            "it_8026BC90",
-            "it_8026BD3C",
-            "it_8026C100",
+            "fn_800D8BFC",
+            "it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)",
             "it_8026C220",
-            "it_80274FDC",
-            "it_802750E8",
-            "it_80275270",
-            "it_80271590",
-            "it_802759DC",
-            "melee/it/itzako",
-            "melee/it/kinds/itfreeze",
-            "melee/it/kinds/itleadead",
-            "melee/it/kinds/itoctarock",
-            "melee/it/kinds/itoctarockstone",
-            "melee/it/kinds/itoldkuri",
-            "melee/it/kinds/itoldottosea",
-            "it_802E31F8",
-            "itOldottosea_UnkMotion8_Anim",
-            "itOldottosea_UnkMotion8_Phys",
+            "it_8027CB3C",
+            "it_8027CBA4",
+            "it_2725_Logic0_Dropped",
+            "it_2725_Logic0_Thrown",
+            "itLeadead_Logic1_Dropped",
+            "itLeadead_Logic1_Thrown",
+            "itOctarock_Logic2_Dropped",
+            "itOctarock_Logic2_Thrown",
             "it_802E32B4",
             "it_802E3314",
-            "itOldottosea_UnkMotion9_Anim",
-            "itOldottosea_UnkMotion9_Phys",
-            "itOldottosea_UnkMotion9_Coll",
-            "it_802E3400",
-            "itOldottosea_UnkMotion10_Anim",
-            "itOldottosea_UnkMotion10_Phys",
-            "itOldottosea_UnkMotion10_Coll",
-            "it_2725_Logic3_Destroyed",
-            "it_802E3528",
-            "itOldottosea_UnkMotion11_Anim",
-            "itOldottosea_UnkMotion11_Phys",
-            "itOldottosea_UnkMotion11_Coll",
-            "it_802E35CC",
-            "it_802E37A4",
-            "melee/ft/ftCo_800C7590",
-            "melee/ft/ftCo_800C7434",
-            "it_802EAF28 (the lead pipe's capture)",
-            "it_8027B5B0 (an enemy of kind",
-            "pl_8004049C (an enemy other than a Shy Guy)",
-            "gm_8016F2F8 (a bonus besides the enemies' KOs)",
-            "it_8027B4A4 and it_8027B378 (a stage item's throw in its thrower's stats)",
         ],
+        kinds: &[1, 2, 4],
+        with: &[],
+        stages: &[],
+    },
+    ItemGap {
+        what: "a ReDead hit while the line it last stood on has turned into a wall (a dynamic line tilted past 30 degrees): it_802EA804's walk adds to a register its caller left (docs/melee-bugs.md)",
+        covers: &["it_802EA804 (a walk starting on a wall reads f27 its caller left)"],
         kinds: &[1, 2, 4],
         with: &[],
         stages: &[],
@@ -656,34 +663,6 @@ pub const MISSING: &[ItemGap] = &[
         what: "the Super Scope charged past level 0 with one shot left: it_80291DAC falls off its end and returns the scope's GObj address, so firing takes the empty click but the fighter's state keeps the address, and a hit while charging spends a cost read from where the address points",
         covers: &["it_80291DAC with no level affordable"],
         kinds: &[0x15],
-        with: &[],
-        stages: &[],
-    },
-    ItemGap {
-        what: "Kirby inhaling, swallowing and spitting out an item",
-        covers: &[
-            "melee/it/kinds/it_2F28",
-            "melee/it/kinds/itkirby_2F23",
-            "ftKb_SpecialN_800F5DE8",
-            "fn_800F6178",
-            "fn_800F6280",
-            "ftKb_SpecialNCapture0_Anim",
-            "ftKb_SpecialNCapture1_Anim",
-            "it_802F28C8 (an inhaled item",
-            "(an item caught by the inhale)",
-            "ftKb_SpecialN_800F5DE8 (an item inhaled)",
-        ],
-        kinds: &[],
-        with: &[4],
-        stages: &[],
-    },
-    ItemGap {
-        what: "a catch box (a grab, Kirby's inhale, Yoshi's tongue) touching an item, and the catch counted (updateItemGrabTarget, it_8027B4A4): only an item it_80275270 makes catchable (xDD0 bit 4), a crate monster",
-        covers: &[
-            "updateItemGrabTarget (a grab box on an item)",
-            "it_8027B4A4 (a fighter catching an item)",
-        ],
-        kinds: &[1, 2, 4],
         with: &[],
         stages: &[],
     },
@@ -830,16 +809,16 @@ mod tests {
             (balls.iter()).all(|g| g.kinds.is_empty() || g.kinds.contains(&0x22)),
             "a Poké Ball match reaches only its own gaps and every match's"
         );
-        assert!(!balls.iter().any(|g| g.what.starts_with("Kirby")));
         assert!(
-            missing_with(&[0], &[4], 31)
+            missing_with(&[0], &[18], 31)
                 .iter()
-                .any(|g| g.what.starts_with("Kirby"))
+                .any(|g| g.what.starts_with("Zelda"))
         );
+        assert!(!balls.iter().any(|g| g.what.starts_with("Zelda")));
         let catch = |kinds: &[i32]| {
             missing_with(kinds, &[2], 31)
                 .iter()
-                .any(|g| g.what.starts_with("a catch box"))
+                .any(|g| g.what.starts_with("a fighter's grab"))
         };
         assert!(catch(&[1]) && !catch(&[0x12]));
     }
