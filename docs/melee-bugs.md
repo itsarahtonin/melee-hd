@@ -410,12 +410,12 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ## Ice Climbers and the computer player
 
-### Nana's DI with no knockback reads two registers it never set
+### A computer player's DI with no knockback reads two registers it never set
 
 - **Where:** `ftCo_800AC5A0` (the computer player's DI in hitstun, behavior 18, marked `@bug` in the decompilation), from `ftCo_800B2790`, `crates/melee-sim/src/game/ft/cpu_move.rs` (`cpu_di`) and `crates/melee-sim/src/game/ft/cpu_ai.rs` (`Leftover`).
-- **Defect:** with no knockback it pushes the stick by r5 for x and r30 for y, neither of which it or its caller sets for that path: r5 holds what the computer player's frame (`ftCo_800B3900`) left (for Nana on her way back to Popo, Popo's state or her held item's address), r30 its caller's `Fighter*`, so the stick's y is the low byte of Nana's address.
+- **Defect:** with no knockback it pushes the stick by r5 for x and r30 for y, neither of which it or its caller sets for that path: r5 holds what the computer player's frame (`ftCo_800B3900`) left (for Nana on her way back to Popo, Popo's state or her held item's address; for a VS CPU often a stack address or a flag the behavior pick's floor check left, `mpCheckFloor`), r30 its caller's `Fighter*`, so the stick's y is the low byte of the fighter's address.
 - **Effect:** Ice Climbers matches go different ways when the heap is laid out differently: a match started from a console's menus and the same match under Slippi's playback give Nana different addresses, so a replay of an Ice Climbers match leaves its recording at the first such DI (Peach back-throwing Nana at frame 10,137 in the performance notes' case).
-- **melee-hd:** modeled: the allocator model gives each fighter the original's address, and each function on the way returns the r5 it leaves (`cpu_ai::Leftover`); a leftover not followed stops. Slippi's NanaDeterminism code clears r30 (and r5 in 3.19's), which the Slippi ruleset follows.
+- **melee-hd:** modeled: the allocator model gives each fighter the original's address, and each function on the way returns the r5 it leaves (`cpu_ai::Leftover`), the floor search included (`Geometry::check_floor_r5`); a leftover not followed stops. Slippi's NanaDeterminism code clears r30 (and r5 in 3.19's), which the Slippi ruleset follows.
 - **Fix:** push the stick neutral, or along a defined direction, with no knockback.
 - **Fix impact:** changes Nana's DI in those cases; breaks vanilla replay compatibility for Ice Climbers matches (Slippi's code already fixes it online, differently in 3.16 and 3.19).
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (lines 93 and 95); [performance](performance.md) (line 186); [the oracle](oracle.md) (line 140).
