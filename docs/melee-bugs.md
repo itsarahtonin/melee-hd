@@ -649,8 +649,8 @@ When porting shows that the original game does something wrong, keep the behavio
 
 - **Where:** `mpLib_80056C54` (walking a distance along the floor), `crates/melee-sim/src/mp/probe.rs` (`walk_floor`).
 - **Defect:** it keeps the running wall length in `f27`, which it never sets before the first line, so a walk whose first line is a wall adds to whatever its caller left.
-- **Effect:** not recorded (the limit on walls walked starts off by the caller's value).
-- **melee-hd:** modeled: the value is an explicit parameter (`stale_f27`) that Donkey Kong's and `itleadead`'s ports must supply.
+- **Effect:** for the ReDead (`it_802EA804`, deciding whether the floor ahead is level enough to dodge a hit), none in play: under the item's reaction process f27 holds the boot's 0.0 (`hsd::gobj::PROC_F27`), so a walk starting on a wall (the line it last stood on tilted into one, a dynamic line on Brinstar Depths, Great Bay or Poké Floats) stops on that wall as a reset length would. Other callers not recorded.
+- **melee-hd:** modeled: the value is an explicit parameter (`stale_f27`); the ReDead's damage callback passes `PROC_F27` (`it::kinds::leadead::ground_ahead`), and Donkey Kong's port must supply its own.
 - **Fix:** reset the length before the first line.
 - **Fix impact:** not recorded.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 55); `crates/melee-sim/src/mp/probe.rs:97`.
