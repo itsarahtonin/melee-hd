@@ -139,7 +139,7 @@ Fifteen tasks in four waves. Sizes count functions to port or check: S under 100
 
 **Wave 4**
 
-15. **CPU AI with items and on every stage.** Picking items and using them, the routes and stage searches (Brinstar, Onett's cars, Hyrule Temple, the scrolling stages), on real-CPU items-on matches and one real-CPU match per stage. Size: M. Depends on tasks 5, 6 and 7 to 14.
+15. **CPU AI with items and on every stage.** Picking items and using them, the routes and stage searches (Brinstar, Onett's cars, Hyrule Temple, the scrolling stages), on real-CPU items-on matches and one real-CPU match per stage. Size: M. Depends on tasks 5, 6 and 7 to 14. The CPU audit ([the player](player.md#cpu-players-whats-left), 2026-10-21) lists what a match with CPU players still reaches, task by task: the allocator model and the off-camera return before any stage, then Peach's pulled sword, the barrels, the five stages' own code and the items.
 
 The critical path is 1, 3, then the longest item family, then 15; stages run alongside items from wave 2 on. Tasks within a wave share no files beyond the dispatch chains (`it::kinds::run_event`, `code::run_proc`, the roster), where merges stay mechanical. Each task takes its own worktree and leaves one commit per stage or item family.
 

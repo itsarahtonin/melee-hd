@@ -7,6 +7,7 @@
 pub mod boot;
 pub mod camera;
 pub mod code;
+pub mod cpu_audit;
 pub mod ef;
 pub mod ft;
 pub mod gm;
