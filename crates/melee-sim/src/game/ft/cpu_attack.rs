@@ -1494,9 +1494,9 @@ impl Running<'_> {
             }
         } else if threat == 2 {
             let item = fpp.cpu.xF4.expect("an item threat without its item");
-            // `It_Kind_Flipper`, `_TaruCann`, `_DKinoko`.
+            use super::super::it::kinds as k;
             match self.game.items[item.0].kind {
-                0x1F | 5 | 0x16 => {
+                k::FLIPPER | k::TARU_CANN | k::DKINOKO => {
                     unported_call("ftCo_800BA9A0 for a flipper, barrel cannon or mushroom")
                 }
                 _ => {

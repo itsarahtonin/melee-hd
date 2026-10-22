@@ -279,9 +279,9 @@ impl Running<'_> {
         reg(math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy)))))
     }
 
-    /// The enemy item the fighter goes for, `ftCo_800A648C`: Goombas, Redeads and the other
-    /// stage enemies in reach. No VS stage without items has any, so a candidate stops the
-    /// port.
+    /// The enemy item the fighter goes for, `ftCo_800A648C`: the containers' monsters and the
+    /// adventure's Koopas, Like Likes and Topis in reach. Only an items-on match spawns one,
+    /// so a candidate stops the port.
     // Ports `ftCo_800A648C`; aliased once a check reaches it.
     pub(super) fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
@@ -289,13 +289,13 @@ impl Running<'_> {
             cur = self.game.world.gobjs[g.0].next;
             let it = super::super::it::item_of(self.game, g);
             let ip = &self.game.items[it.0];
-            // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone`,
-            // `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
+            // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
+            // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
             let k = ip.kind;
-            let enemy = (0xA0..0xAE).contains(&k)
-                || k == 0xB2
-                || (k.wrapping_sub(0xB4) as u32) <= 1
-                || k == 0xB8;
+            let enemy = (0x2B..0x2F).contains(&k)
+                || k == 0xD3
+                || (k.wrapping_sub(0xD4) as u32) <= 1
+                || k == 0xD9;
             if enemy && !self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
                 unported_call("ftCo_800A648C with a candidate item");
             }
