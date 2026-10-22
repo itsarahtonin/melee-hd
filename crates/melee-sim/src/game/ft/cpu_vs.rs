@@ -12,6 +12,7 @@ use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
+use super::cpu_move::LINE_FLAG_PLATFORM;
 use crate::fpu::{mem, reg};
 use crate::hsd;
 use crate::math;
@@ -26,7 +27,7 @@ const DISTANCES: u32 = 0x20;
 const GR_KIND_CASTLE: i32 = 2;
 const GR_KIND_ZEBES: i32 = 8;
 
-/// `Gr_Kind_BigBlue`, `Gr_Kind_Icemt`: stages not on the roster.
+/// `Gr_Kind_BigBlue` (not on the roster), `Gr_Kind_Icemt`.
 const GR_KIND_BIGBLUE: i32 = 0x13;
 const GR_KIND_ICEMT: i32 = 0x16;
 
@@ -103,8 +104,9 @@ impl Running<'_> {
     /// Whether the fighter is somewhere the stage or camera sends it back from, and where it
     /// is, `ftCo_800A229C`: 2 by Great Bay's turtle; 1 at Peach's Castle's hazard, or on
     /// Brinstar while the acid is above the blast zones' bottom (always), at the bottom's
-    /// middle; 2 on Rainbow Cruise near the edges ([`Running::cpu_near_moving_edge`]); -1 off
-    /// camera; else none (0).
+    /// middle; 2 on Rainbow Cruise near the edges ([`Running::cpu_near_moving_edge`]) and on
+    /// Icicle Mountain near the edge the climb's wind blows toward
+    /// ([`Running::cpu_near_climb_edge`]); -1 off camera; else none (0).
     #[doc(alias = "ftCo_800A229C")]
     fn cpu_off_screen(&mut self, f: FighterId) -> Option<(i32, Vec3)> {
         let pos = self.game.fighters[f.0].cur_pos;
@@ -130,10 +132,13 @@ impl Running<'_> {
                     return Some((2, pos));
                 }
             }
-            // `grLib_801C9E60` stops on both first.
-            GR_KIND_BIGBLUE | GR_KIND_ICEMT => {
-                unported_call("ftCo_800A229C on Big Blue or Icicle Mountain")
+            GR_KIND_ICEMT => {
+                if self.cpu_near_climb_edge(pos) {
+                    return Some((2, pos));
+                }
             }
+            // `grLib_801C9E60` stops there first.
+            GR_KIND_BIGBLUE => unported_call("ftCo_800A229C on Big Blue"),
             _ => {}
         }
         if !super::super::camera::in_bounds_by(&self.game.stage_info, pos, 0.0) {
@@ -176,6 +181,29 @@ impl Running<'_> {
             || x > fp::fsubs(right, dx)
             || y > fp::fsubs(top, dy)
             || y < fp::fadds(dy, bottom)
+    }
+
+    /// `ftCo_800A229C`'s Icicle Mountain case: whether `pos` lies in the part of the blast
+    /// zones' height the climb's wind blows toward, 40% of it and 40% more by the wind's
+    /// strength: the bottom while the wind blows down, else the top.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_near_climb_edge(&self, pos: Vec3) -> bool {
+        let bottom = reg(stage::blast_bottom(self.game));
+        let h = fp::fsubs(reg(stage::blast_top(self.game)), bottom);
+        let mut wind = Vec3::new(0.0, 0.0, 0.0);
+        grlib::item_wind(self.game, &mut wind);
+        // The machine code tests `bge` both times, so a NaN takes the downward branches.
+        let wy = reg(wind.y);
+        let down = !(wy >= 0.0);
+        let strength = if down { fp::fneg(wy) } else { wy };
+        // 0.4, a double.
+        let part = fp::frsp(fp::fmadd(0.4, strength, 0.4));
+        let y = reg(pos.y);
+        if down {
+            y < fp::fmadds(h, part, reg(stage::blast_bottom(self.game)))
+        } else {
+            y > fp::fnmsubs(h, part, reg(stage::blast_top(self.game)))
+        }
     }
 
     /// Heading back from off camera or the stage's edge, `ftCo_800AE7AC`: the fighter targets
@@ -232,9 +260,12 @@ impl Running<'_> {
     }
 
     /// Heading for safe ground from the stage's cases, `ftCo_800A8210`, on the ground only:
-    /// on Rainbow Cruise (and Big Blue) the nearest island toward the blast zones' middle, or
-    /// failing that against the wind ([`Running::cpu_island_toward`]); elsewhere (Brinstar's
-    /// acid, Great Bay's turtle) the island end farthest from `from`
+    /// on Icicle Mountain the nearest platform above while the climb's wind blows down
+    /// ([`Running::cpu_platform_above`]), else the nearest island below
+    /// ([`Running::cpu_island_below`]); on Rainbow Cruise (and Big Blue) the nearest island
+    /// toward the blast zones' middle, or failing that against the wind
+    /// ([`Running::cpu_island_toward`]); elsewhere (Brinstar's acid, Great Bay's turtle) the
+    /// island end farthest from `from`
     /// ([`Running::cpu_far_island_end`]). It sets the destination as `ftCo_800A1F3C` does
     /// (`ftCo_800A8210_inline0`), within 5.
     #[doc(alias = "ftCo_800A8210")]
@@ -243,7 +274,17 @@ impl Running<'_> {
             return;
         }
         let found = match self.game.stage_info.grkind {
-            GR_KIND_ICEMT => unported_call("ftCo_800A8210 on Icicle Mountain"),
+            GR_KIND_ICEMT => {
+                let mut wind = Vec3::new(0.0, 0.0, 0.0);
+                grlib::item_wind(self.game, &mut wind);
+                // `bge` to the search below: a NaN searches above.
+                #[allow(clippy::neg_cmp_op_on_partial_ord)]
+                if !(reg(wind.y) >= 0.0) {
+                    self.cpu_platform_above(f)
+                } else {
+                    self.cpu_island_below(f)
+                }
+            }
             GR_KIND_RCRUISE | GR_KIND_BIGBLUE => {
                 let left = reg(stage::blast_left(self.game));
                 let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
@@ -344,6 +385,101 @@ impl Running<'_> {
             }
         }
         if best >= 0.0 { found } else { None }
+    }
+
+    /// The nearest platform at least `x568` above the fighter's feet, inside the blast zones by
+    /// its half size, `ftCo_800A6A98`: each island's middle that computer players count as
+    /// ground ([`Running::cpu_climb_floor`]), on an island the stage leaves safe.
+    #[doc(alias = "ftCo_800A6A98")]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_platform_above(&mut self, f: FighterId) -> Option<(f32, f32)> {
+        let mut best = reg(-1.0);
+        let mut found = None;
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let mut island = geo.islands.floors;
+        while let Some(id) = island {
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            let isl = *geo.islands.get(id);
+            island = isl.next;
+            if self.cpu_island_unsafe(Some(id)) {
+                continue;
+            }
+            let Some((line, x, y)) = self.cpu_climb_floor(isl.left, isl.right) else {
+                continue;
+            };
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            if line == -1 || geo.line_surface(line) & LINE_FLAG_PLATFORM == 0 {
+                continue;
+            }
+            let fpp = &self.game.fighters[f.0];
+            if reg(y) < fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x568))
+                || self.cpu_out_of_bounds(f, x, y)
+            {
+                continue;
+            }
+            let d = self.cpu_distance_sq(f, x, y);
+            if best < 0.0 || !(d >= best) {
+                best = d;
+                found = Some((x, y));
+            }
+        }
+        if best >= 0.0 { found } else { None }
+    }
+
+    /// The nearest floor more than `x558` (its jump's height) below the fighter's feet on
+    /// another island, inside the blast zones by its half size, `ftCo_800A6D2C`: each island's
+    /// middle that computer players count as ground ([`Running::cpu_climb_floor`]), on an
+    /// island the stage leaves safe. One random number is drawn for each such island but the
+    /// fighter's own.
+    #[doc(alias = "ftCo_800A6D2C")]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_island_below(&mut self, f: FighterId) -> Option<(f32, f32)> {
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let own = geo.island_of_line(self.game.fighters[f.0].coll_data.floor.index);
+        let mut best = reg(-1.0);
+        let mut found = None;
+        let mut island = geo.islands.floors;
+        while let Some(id) = island {
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            let isl = *geo.islands.get(id);
+            island = isl.next;
+            if self.cpu_island_unsafe(Some(id)) || own == Some(id) {
+                continue;
+            }
+            let _ = self.game.objs.rng.draw_f32();
+            let Some((_, x, y)) = self.cpu_climb_floor(isl.left, isl.right) else {
+                continue;
+            };
+            let fpp = &self.game.fighters[f.0];
+            if reg(y) >= fp::fsubs(reg(fpp.cur_pos.y), reg(fpp.cpu.x558))
+                || self.cpu_out_of_bounds(f, x, y)
+            {
+                continue;
+            }
+            let d = self.cpu_distance_sq(f, x, y);
+            if best < 0.0 || !(d >= best) {
+                best = d;
+                found = Some((x, y));
+            }
+        }
+        if best >= 0.0 { found } else { None }
+    }
+
+    /// The floor under an island's middle, from 5 above to 20 below, that computer players
+    /// count as ground, as [`Running::cpu_platform_above`] and [`Running::cpu_island_below`]
+    /// probe it (`ftCo_800A6D2C_inline0`): its line and where.
+    fn cpu_climb_floor(&mut self, a: Vec3, b: Vec3) -> Option<(i32, f32, f32)> {
+        let mx = mem(fp::fmuls(0.5, fp::fadds(reg(b.x), reg(a.x))));
+        let my = fp::fmuls(0.5, fp::fadds(reg(b.y), reg(a.y)));
+        let above = mem(fp::fadds(5.0, my));
+        let below = mem(fp::fsubs(my, 20.0));
+        let hit = self
+            .game
+            .geometry
+            .as_mut()
+            .expect("no collision geometry")
+            .check_floor(mx, above, mx, below, 0.0, -1, -1, -1, None)?;
+        (!self.excluded_floor(hit.line)).then_some((hit.line, hit.pos.x, hit.pos.y))
     }
 
     /// Whether `(x, y)` lies within 45 degrees of the unit vector `dir` from the fighter, as
