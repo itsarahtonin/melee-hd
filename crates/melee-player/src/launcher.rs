@@ -9,7 +9,7 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use melee_sim::game::roster::{self, CHARACTERS};
+use melee_sim::game::roster;
 
 use crate::items;
 use crate::jit::Timing;
@@ -45,13 +45,17 @@ impl Choice {
         self.items.for_match(&self.characters(), self.stage)
     }
 
-    /// Why the match can't start: fewer than two players, or a stage that isn't offered or
-    /// could stop with these characters (`Stage::refusal`).
+    /// Why the match can't start: fewer than two players, a character whose own items could
+    /// stop the match (`roster::characters_refusal`), or a stage that isn't offered or could
+    /// stop with these characters (`Stage::refusal`).
     pub fn refusal(&self) -> Option<String> {
         if self.player_count() < 2 {
             return Some("Pick at least two players.".into());
         }
         let characters = self.characters();
+        if let Some(why) = roster::characters_refusal(&characters) {
+            return Some(why);
+        }
         match roster::stage_by_kind(self.stage) {
             Some(s) => s.refusal(&characters),
             None => Some("Pick a stage.".into()),
@@ -327,7 +331,7 @@ impl Form {
                                     .width(200.0)
                                     .show_ui(ui, |ui| {
                                         ui.selectable_value(p, None, "None");
-                                        for ch in CHARACTERS {
+                                        for ch in roster::offered_characters() {
                                             ui.selectable_value(p, Some(ch.kind), ch.name);
                                         }
                                     });
@@ -817,6 +821,25 @@ mod tests {
             form.choice.stage = s.kind;
             assert!(form.choice.refusal().is_some(), "{}", s.name);
         }
+    }
+
+    /// The port lists offer only characters whose own items the fighter audit finds complete,
+    /// and a match refuses a character it doesn't (`roster::characters_refusal`). Every roster
+    /// character is offered now, so each starts a match on Final Destination against Marth.
+    #[test]
+    fn only_complete_characters_start() {
+        let mut form = Form::new(4, 8, false, Aspect::GAME);
+        form.choice.stage = roster::stage("fd").unwrap().kind;
+        let marth = roster::character("marth").unwrap().kind;
+        for c in roster::CHARACTERS {
+            assert!(c.offered(), "{}", c.name);
+            form.choice.players = [Some(c.kind), Some(marth), None, None];
+            assert_eq!(form.choice.refusal(), None, "{}", c.name);
+        }
+        assert_eq!(
+            roster::offered_characters().count(),
+            roster::CHARACTERS.len()
+        );
     }
 
     #[test]

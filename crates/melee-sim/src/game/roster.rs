@@ -542,6 +542,41 @@ pub fn offered_stages() -> impl Iterator<Item = &'static Stage> {
     STAGES.iter().filter(|s| s.offered())
 }
 
+impl Character {
+    /// Whether the launcher and the command line offer the character: nothing a match can reach
+    /// in its own items stops the match (the fighter audit, [`super::fighter_audit`]).
+    pub fn offered(&self) -> bool {
+        super::fighter_audit::missing_with(&[self.kind]).is_empty()
+    }
+}
+
+/// The characters the launcher and the command line offer ([`Character::offered`]).
+pub fn offered_characters() -> impl Iterator<Item = &'static Character> {
+    CHARACTERS.iter().filter(|c| c.offered())
+}
+
+/// Why a match with these characters (`CharacterKind`s) isn't offered, if it isn't: the gaps
+/// the fighter audit finds in their own items.
+pub fn characters_refusal(characters: &[u8]) -> Option<String> {
+    gaps_refusal(&super::fighter_audit::missing_with(characters))
+}
+
+/// The refusal for these gaps of the fighter audit, each with its character.
+fn gaps_refusal(gaps: &[(u8, &super::fighter_audit::Gap)]) -> Option<String> {
+    let names: Vec<String> = (gaps.iter())
+        .map(|(k, g)| match character_by_kind(*k) {
+            Some(c) => format!("{} ({})", g.what, c.name),
+            None => g.what.to_owned(),
+        })
+        .collect();
+    (!names.is_empty()).then(|| {
+        format!(
+            "A character can stop the match: not ported yet: {}",
+            names.join("; ")
+        )
+    })
+}
+
 #[cfg(test)]
 pub(crate) mod tests {
     use super::*;
@@ -804,6 +839,27 @@ pub(crate) mod tests {
         for ((n, why), used) in SHARED_UNREACHED.iter().zip(used) {
             assert!(used, "{n} ({why}) no longer stops");
         }
+    }
+
+    /// A character is offered only while the fighter audit finds no gap in its own items, and
+    /// a match with one that has a gap is refused, naming it. Every roster character is offered
+    /// since Samus's grapple swing was modeled (2026-10-21).
+    #[test]
+    fn offered_characters_are_complete() {
+        for c in CHARACTERS {
+            let gaps = super::super::fighter_audit::missing_with(&[c.kind]);
+            assert_eq!(c.offered(), gaps.is_empty(), "{}", c.name);
+            assert_eq!(characters_refusal(&[c.kind]).is_none(), gaps.is_empty());
+        }
+        assert_eq!(offered_characters().count(), CHARACTERS.len());
+        let gap = super::super::fighter_audit::Gap {
+            what: "a move",
+            covers: &[],
+            path: "",
+        };
+        let why = gaps_refusal(&[(16, &gap)]).expect("a gap refuses the match");
+        assert!(why.contains("a move (Samus)"), "{why}");
+        assert!(gaps_refusal(&[]).is_none());
     }
 
     /// Only audited stages with nothing missing for every character are offered, and a gap
