@@ -30,7 +30,11 @@ mod table {
     pub const AIR: u32 = 0x8;
     pub const RANGED: u32 = 0xC;
     pub const SHIELD: u32 = 0x10;
+    pub const ENEMY_ITEM: u32 = 0x14;
+    pub const WEAPON: u32 = 0x18;
     pub const EDGE_GUARD: u32 = 0x1C;
+    /// Not a table of tables: the swung items' reaches.
+    pub const REACH: u32 = 0x24;
 }
 
 /// `ftCo_AttackEntry`'s size, and its weight's offset.
@@ -588,7 +592,7 @@ impl Running<'_> {
     /// or bigger, the down smash), from the air, against a target lying down or on a ledge,
     /// with a weapon, a smash, an edge guard, a ground attack or a special on an enemy item.
     /// The chosen command goes in `xA4`.
-    // Ports `ftCo_800B8A9C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B8A9C")]
     pub(super) fn cpu_attack(&mut self, f: FighterId) -> bool {
         if !self.game.fighters[f.0].cpu.xF9_b2 {
             return false;
@@ -643,12 +647,33 @@ impl Running<'_> {
                 let r = self.cpu_pick_attack(f, target, self.cpu_table(table::GROUND, kind));
                 break 'done r;
             }
-            // A swung item's attacks (`ftCo_800B52AC` with the item's reach); the fighters'
-            // own items aren't swung.
+            // A swung item's attacks with the item's reach; the fighters' own items aren't
+            // swung.
             if let Some(g) = self.game.fighters[f.0].item_gobj
                 && self.cpu_item_swung(super::super::it::item_of(self.game, g))
             {
-                unported_call("ftCo_800B8A9C with a swung item (ftCo_800B52AC)");
+                use super::super::it::kinds as k;
+                let slot = match self.game.items[super::super::it::item_of(self.game, g).0].kind {
+                    k::HARISEN => Some(0),
+                    k::LIPSTICK => Some(1),
+                    k::STARROD => Some(2),
+                    k::SWORD => Some(3),
+                    k::BAT => Some(4),
+                    k::PARASOL => Some(5),
+                    _ => None,
+                };
+                let reach = slot.map_or(0.0, |i| {
+                    let reaches = self
+                        .data
+                        .ptr(self.common_ptr(CPU_DATA).at(table::REACH))
+                        .expect("the computer players' weapon reaches");
+                    self.data.f32(reaches.at(4 * i))
+                });
+                let list = self.cpu_table(table::WEAPON, kind);
+                let r = self.cpu_pick_swung_attack(f, target, list, reach);
+                if r != 0 {
+                    break 'done r;
+                }
             }
             if self.game.fighters[f.0].cpu.level > 5 && self.cpu_shielding(target) {
                 let r = self.cpu_pick_attack(f, target, self.cpu_table(table::SHIELD, kind));
@@ -678,8 +703,12 @@ impl Running<'_> {
             if r != 0 {
                 break 'done r;
             }
-            if self.game.fighters[f.0].cpu.x50.is_some() {
-                unported_call("ftCo_800B5AB0");
+            if let Some(item) = self.game.fighters[f.0].cpu.x50 {
+                let list = self.cpu_table(table::ENEMY_ITEM, kind);
+                let r = self.cpu_pick_enemy_item_attack(f, item, list);
+                if r != 0 {
+                    break 'done r;
+                }
             }
             0
         };
@@ -693,8 +722,33 @@ impl Running<'_> {
     /// entry's frames (falling under gravity to terminal speed in the air, the target's hurt
     /// box around it), joins the candidates when its period comes up (or it's one the
     /// decision restricts to); one is drawn by weight. Its reach goes in `x6C` and `x74`.
-    // Ports `ftCo_800B4AB0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B4AB0")]
     fn cpu_pick_attack(&mut self, f: FighterId, target: FighterId, list: Option<DataRef>) -> i32 {
+        self.cpu_pick_attack_reach(f, target, list, None)
+    }
+
+    /// Picks a swung item's attack from a table, `ftCo_800B52AC`: as
+    /// [`Running::cpu_pick_attack`], with the item's `reach` added to each entry's far side
+    /// and top.
+    #[doc(alias = "ftCo_800B52AC")]
+    fn cpu_pick_swung_attack(
+        &mut self,
+        f: FighterId,
+        target: FighterId,
+        list: Option<DataRef>,
+        reach: f32,
+    ) -> i32 {
+        self.cpu_pick_attack_reach(f, target, list, Some(reg(reach)))
+    }
+
+    /// [`Running::cpu_pick_attack`], or with `reach` [`Running::cpu_pick_swung_attack`].
+    fn cpu_pick_attack_reach(
+        &mut self,
+        f: FighterId,
+        target: FighterId,
+        list: Option<DataRef>,
+        reach: Option<f64>,
+    ) -> i32 {
         let c = &mut self.game.fighters[f.0].cpu;
         c.x74.y = 0.0;
         c.x74.x = 0.0;
@@ -799,18 +853,26 @@ impl Running<'_> {
                 reg(self.data.f32(entry.at(8))),
                 reg(self.data.f32(entry.at(0xC))),
             );
-            let (mut dirx, mut diry) = if facing_right {
-                (fp::fmuls(x08, scale), fp::fmuls(x0c, scale))
-            } else {
-                (
+            let (mut dirx, mut diry) = match (facing_right, reach) {
+                (true, None) => (fp::fmuls(x08, scale), fp::fmuls(x0c, scale)),
+                (false, None) => (
                     fp::fmuls(fp::fneg(x0c), scale),
                     fp::fmuls(fp::fneg(x08), scale),
-                )
+                ),
+                (true, Some(r)) => (fp::fmuls(x08, scale), fp::fmadds(x0c, scale, r)),
+                (false, Some(r)) => (
+                    fp::fmsubs(fp::fneg(x0c), scale, r),
+                    fp::fmuls(fp::fneg(x08), scale),
+                ),
             };
             dirx = fp::fmuls(dirx, half_range);
             diry = fp::fmuls(diry, half_range);
+            let x14 = reg(self.data.f32(entry.at(0x14)));
             let upper = fp::fmuls(
-                fp::fmuls(reg(self.data.f32(entry.at(0x14))), scale),
+                match reach {
+                    None => fp::fmuls(x14, scale),
+                    Some(r) => fp::fmadds(x14, scale, r),
+                },
                 half_range,
             );
             let lower = fp::fmuls(
@@ -866,7 +928,172 @@ impl Running<'_> {
                 return self.data.u32(e) as i32;
             }
         }
-        panic!("the original's assertion failed: ftcpuattack.c:250");
+        let line = if reach.is_some() { 453 } else { 250 };
+        panic!("the original's assertion failed: ftcpuattack.c:{line}");
+    }
+
+    /// Picks an attack on an enemy item (`x50`) from a table, `ftCo_800B5AB0`: as
+    /// [`Running::cpu_pick_attack`] with the item in the target's place (its own fall, its
+    /// collision box for the target's hurt box), the entries' reach unscaled by the recovery
+    /// scale; the pick leaves `x6C` and `x74` alone.
+    #[doc(alias = "ftCo_800B5AB0")]
+    fn cpu_pick_enemy_item_attack(
+        &mut self,
+        f: FighterId,
+        item: ItemId,
+        list: Option<DataRef>,
+    ) -> i32 {
+        let Some(mut list) = list else { return 0 };
+        let me = &self.game.fighters[f.0];
+        let ip = &self.game.items[item.0];
+        let attr = super::super::it::item::attr_of(ip);
+        use super::super::it::data::attr as a;
+        let fp_term_neg = fp::fneg(reg(me.co_attrs.terminal_velocity));
+        let fp_y = reg(me.cur_pos.y);
+        let it_vy = reg(ip.x40_vel.y);
+        let it_term_neg = fp::fneg(reg(attr.f32(self.data, a::FALL_SPEED_MAX)));
+        let size_half = fp::frsp(fp::fmul(
+            0.5,
+            fp::fadds(reg(ip.xC1C.right), reg(ip.xC1C.left)),
+        ));
+        let fp_x = reg(me.cur_pos.x);
+        let y_bound = fp::fadds(reg(ip.xC1C.top), reg(ip.xC1C.bottom));
+        let (fp_vx, fp_vy) = (reg(me.pos_delta.x), reg(me.pos_delta.y));
+        let fp_grav = reg(me.co_attrs.gravity);
+        let (it_x, it_y) = (reg(ip.pos.x), reg(ip.pos.y));
+        let it_vx = reg(ip.x40_vel.x);
+        let it_grav = reg(attr.f32(self.data, a::FALL_SPEED));
+        let item_air = ip.ground_or_air == GA_AIR;
+        let tiny = reg(1e-5);
+        let mut picks: [Option<DataRef>; 32] = [None; 32];
+        let mut count = 0usize;
+        loop {
+            let entry = list;
+            let ecmd = self.data.u32(entry) as i32;
+            if ecmd == 0 {
+                break;
+            }
+            list = list.at(ENTRY_SIZE);
+            let c = &self.game.fighters[f.0].cpu;
+            if (self.data.u32(entry.at(0x20)) as i32) > c.level {
+                continue;
+            }
+            if c.xCC_array[..usize::from(c.xEC)].contains(&ecmd) {
+                continue;
+            }
+            let t = fp::frsp(f64::from(self.data.u32(entry.at(4)) as i32));
+            let relx = fp::fsubs(fp::fmadds(it_vx, t, it_x), fp::fmadds(fp_vx, t, fp_x));
+            // The fighter's own fall is predicted only when the item is airborne.
+            let fp_pred_y = if item_air {
+                let v = if fp_grav < tiny && fp_grav > fp::fneg(tiny) {
+                    1000.0
+                } else {
+                    fp::fdivs(fp::fneg(fp::fsubs(fp_term_neg, fp_y)), fp_grav)
+                };
+                if v <= 0.0 {
+                    fp::fmadds(fp_vy, t, fp_y)
+                } else if t < v {
+                    let sq = math::sqrt_reg(t);
+                    fp::frsp(fp::fadd(
+                        fp_y,
+                        fp::fnmsub(0.5, fp::fmuls(fp_grav, sq), fp::fmuls(fp_vy, t)),
+                    ))
+                } else {
+                    let sq = math::sqrt_reg(v);
+                    fp::frsp(fp::fadd(
+                        fp_y,
+                        fp::fadd(
+                            fp::fmuls(fp_term_neg, fp::fsubs(t, v)),
+                            fp::fnmsub(0.5, fp::fmuls(fp_grav, sq), fp::fmuls(fp_vy, t)),
+                        ),
+                    ))
+                }
+            } else {
+                fp::fmadds(fp_vy, t, fp_y)
+            };
+            let rel_pred_y = if item_air {
+                let v = if it_grav < tiny && it_grav > fp::fneg(tiny) {
+                    1000.0
+                } else {
+                    fp::fdivs(fp::fneg(fp::fsubs(it_term_neg, it_vy)), it_grav)
+                };
+                if v <= 0.0 {
+                    fp::fsubs(fp::fmadds(it_vy, t, it_y), fp_pred_y)
+                } else if t < v {
+                    let sq = math::sqrt_reg(t);
+                    fp::frsp(fp::fsub(
+                        fp::fnmsub(0.5, fp::fmuls(it_grav, sq), fp::fmadds(it_vy, t, it_y)),
+                        fp_pred_y,
+                    ))
+                } else {
+                    let sq = math::sqrt_reg(v);
+                    fp::frsp(fp::fsub(
+                        fp::fadd(
+                            fp::fmuls(it_term_neg, fp::fsubs(t, v)),
+                            fp::fnmsub(0.5, fp::fmuls(it_grav, sq), fp::fmadds(it_vy, t, it_y)),
+                        ),
+                        fp_pred_y,
+                    ))
+                }
+            } else {
+                fp::fsubs(fp::fmadds(it_vy, t, it_y), fp_pred_y)
+            };
+            let me = &self.game.fighters[f.0];
+            let scale = reg(me.x34_scale.y);
+            let (x08, x0c) = (
+                reg(self.data.f32(entry.at(8))),
+                reg(self.data.f32(entry.at(0xC))),
+            );
+            let (dirx, diry) = if f64::from(me.facing_dir) > 0.0 {
+                (fp::fmuls(x08, scale), fp::fmuls(x0c, scale))
+            } else {
+                (
+                    fp::fmuls(fp::fneg(x0c), scale),
+                    fp::fmuls(fp::fneg(x08), scale),
+                )
+            };
+            let upper = fp::fmuls(reg(self.data.f32(entry.at(0x14))), scale);
+            let lower = fp::fmuls(reg(self.data.f32(entry.at(0x10))), scale);
+            if upper > rel_pred_y
+                && lower < fp::fadds(rel_pred_y, y_bound)
+                && dirx < fp::fadds(relx, size_half)
+                && diry > fp::fsubs(relx, size_half)
+            {
+                let c = &self.game.fighters[f.0].cpu;
+                if c.xC8 != 0 {
+                    for j in 0..usize::from(c.xC8) {
+                        if c.xA8_array[j] == ecmd {
+                            picks[count] = Some(entry);
+                            count += 1;
+                        }
+                    }
+                } else if c.x80 % (self.data.u32(entry.at(0x1C)) as i32) == 0 {
+                    picks[count] = Some(entry);
+                    count += 1;
+                }
+            }
+        }
+        if count == 0 {
+            return 0;
+        }
+        let r = reg(self.game.objs.rng.draw_f32());
+        let weight = |e: Option<DataRef>| reg(self.data.f32(e.unwrap().at(ENTRY_WEIGHT)));
+        let mut sum = 0.0;
+        for &p in &picks[..count] {
+            sum = fp::fadds(sum, weight(p));
+        }
+        if sum < tiny && sum > fp::fneg(tiny) {
+            return 0;
+        }
+        let inv = fp::frsp(fp::fdiv(1.0, sum));
+        let mut acc = 0.0;
+        for &p in &picks[..count] {
+            acc = fp::fadds(acc, weight(p));
+            if fp::fmuls(acc, inv) >= r {
+                return self.data.u32(p.unwrap()) as i32;
+            }
+        }
+        panic!("the original's assertion failed: ftcpuattack.c:618");
     }
 
     /// Whether the fighter is swinging or shooting an item, `ftCo_800A5A90`:
@@ -1495,9 +1722,26 @@ impl Running<'_> {
         } else if threat == 2 {
             let item = fpp.cpu.xF4.expect("an item threat without its item");
             use super::super::it::kinds as k;
-            match self.game.items[item.0].kind {
-                k::FLIPPER | k::TARU_CANN | k::DKINOKO => {
-                    unported_call("ftCo_800BA9A0 for a flipper, barrel cannon or mushroom")
+            let ip = &self.game.items[item.0];
+            let side = fp::fsubs(reg(fpp.cur_pos.x), reg(ip.pos.x)) > 0.0;
+            match ip.kind {
+                // `inline0`: shield by an island's end, else roll away from it.
+                k::FLIPPER | k::TARU_CANN => {
+                    if self.cpu_near_island_end(f, 1.0) {
+                        self.cpu_hold_shield(f);
+                    } else if side {
+                        self.cpu_roll_right(f);
+                    } else {
+                        self.cpu_roll_left(f);
+                    }
+                }
+                // `inline1`: roll through a Poison Mushroom.
+                k::DKINOKO => {
+                    if side {
+                        self.cpu_roll_left(f);
+                    } else {
+                        self.cpu_roll_right(f);
+                    }
                 }
                 _ => {
                     if blaster && reg(self.game.objs.rng.draw_f32()) > 0.5 {
@@ -1524,6 +1768,30 @@ impl Running<'_> {
                     }
                 }
             }
+        }
+    }
+
+    /// Whether the fighter stands within `margin` times 5 of its island's nearer end,
+    /// `ftCo_800A2998`.
+    #[doc(alias = "ftCo_800A2998")]
+    fn cpu_near_island_end(&self, f: FighterId, margin: f32) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR {
+            return false;
+        }
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
+            return false;
+        };
+        let isl = geo.islands.get(island);
+        let x = reg(fpp.cur_pos.x);
+        let right = abs(fp::fsubs(reg(isl.right.x), x));
+        let left = abs(fp::fsubs(reg(isl.left.x), x));
+        let reach = fp::fmul(5.0, reg(margin));
+        if right < left {
+            right < reach
+        } else {
+            left < reach
         }
     }
 

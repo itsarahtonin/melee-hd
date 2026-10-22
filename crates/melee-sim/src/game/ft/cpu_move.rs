@@ -140,11 +140,12 @@ impl Running<'_> {
             }
             let o = self.game.fighter_id(g);
             let other = &self.game.fighters[o.0];
-            if other.is_sleeping || other.stamina_dead || self.game.ft_is_dead(g) {
+            if other.is_sleeping
+                || other.stamina_dead
+                || self.cpu_cloaked(o)
+                || self.game.ft_is_dead(g)
+            {
                 continue;
-            }
-            if other.x2226_b4 {
-                unported_call("ft_80087A18 with a power-up's color animation");
             }
             let entering = other.x221D_b6 || (other.x2168 != 0 && other.x2338.x == 0);
             if !entering || self.cpu_is_ally(f, o) {

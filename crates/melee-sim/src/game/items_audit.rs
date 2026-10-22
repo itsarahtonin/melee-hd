@@ -640,14 +640,8 @@ pub const UNCHECKED: &[&str] = &[
 
 /// What an items-on match reaches that isn't ported, task by task.
 pub const MISSING: &[ItemGap] = &[ItemGap {
-    what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, a swung item held",
-    covers: &[
-        "it_8026B924",
-        "ft_80087A18 with a power-up's color animation",
-        "ftCo_800A648C with a candidate item",
-        "ftCo_800A3710 with an item to pick up",
-        "ftCo_800B8A9C with a swung item",
-    ],
+    what: "Nana's computer player with items: a shooting item held",
+    covers: &["it_8026B924"],
     kinds: &[],
     with: &[14],
     stages: &[],
