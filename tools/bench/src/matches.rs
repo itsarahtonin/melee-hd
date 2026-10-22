@@ -3021,14 +3021,22 @@ mod tests {
     fn oracle_sets() {
         let all = select(&[]).unwrap();
         let mut names = BTreeSet::new();
-        let mut seeds = BTreeSet::new();
+        let mut plays = BTreeSet::new();
         for m in all.iter().chain(MATCHES).chain(ORACLE_MATCHES) {
             m.check().unwrap();
             assert!(names.insert(m.name.to_string()), "{} twice", m.name);
-            // The own-items set's scripted matches share one seed, recorded with it.
-            if !m.name.starts_with("own-") {
-                assert!(seeds.insert(m.seed), "{}'s seed twice", m.name);
-            }
+            // No two definitions play the same match: the codes (the settings and the seed) and
+            // who plays each port. Everything made from a match is keyed by its name, nothing by
+            // its seed alone, so matches with other settings may share a seed (docs/oracle.md,
+            // "Oracle sets").
+            let mut codes = m.start_data();
+            codes.extend_from_slice(&m.seed.to_be_bytes());
+            let controls: Vec<Control> = m.players.iter().map(|p| p.control).collect();
+            assert!(
+                plays.insert((codes, format!("{controls:?}"))),
+                "{} plays another match again",
+                m.name
+            );
         }
         let stages: BTreeSet<u16> = stages_set().iter().map(|m| m.stage).collect();
         let tournament: BTreeSet<u16> = TOURNAMENT.iter().map(|&(s, _)| s).collect();
