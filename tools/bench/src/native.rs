@@ -723,11 +723,13 @@ mod tests {
                         matches::Player {
                             character: matches::FOX,
                             costume: 0,
+                            team: None,
                             control: Control::Human,
                         },
                         matches::Player {
                             character: matches::MARTH,
                             costume: 0,
+                            team: None,
                             control: Control::Human,
                         },
                     ]
