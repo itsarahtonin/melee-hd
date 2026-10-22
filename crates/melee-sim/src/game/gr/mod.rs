@@ -11,6 +11,7 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod fourside;
+pub mod fzerocar;
 pub mod garden;
 pub mod greatbay;
 pub mod greens;
@@ -21,6 +22,7 @@ pub mod kongo;
 pub mod kraid;
 pub mod last;
 pub mod material;
+pub mod mutecity;
 pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
@@ -89,6 +91,8 @@ pub const GR_KIND_OLDPUPUPU: i32 = 28;
 pub const GR_KIND_OLDYOSHI: i32 = 29;
 /// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
 pub const GR_KIND_OLDKONGO: i32 = 30;
+/// `Gr_Kind_MuteCity`, Mute City.
+pub const GR_KIND_MUTECITY: i32 = 18;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -247,6 +251,10 @@ pub struct Globals {
     pub pura_vtx_jobjs: Vec<Option<JObjId>>,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
+    /// Mute City's `yakumono_param` (`grMc_YakumonoParam`).
+    pub mutecity_yakumono: Option<DataRef>,
+    /// Mute City's statics besides it.
+    pub mutecity: mutecity::Globals,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
     pub game_mode: u8,
     /// The players' start points as `grLib_801C9A10` last measured them (`grLib_8049EF58`).
@@ -372,6 +380,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
         (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
         (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
+        (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
+        (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
+        (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         _ => VarsKind::Bytes,
     }
 }
@@ -382,6 +393,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
+        mutecity::CAR_DEALT => mutecity::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -403,6 +415,10 @@ pub fn yaku_received(
         zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
+        cb if mutecity::hit_car(cb).is_some() => {
+            let car = mutecity::hit_car(cb).expect("a car");
+            mutecity::car_hit(r.game, car, damage);
+        }
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

@@ -6449,3 +6449,554 @@ fn onett_unreached_callbacks() {
     let demo = retarget(leaf_check::sym("grOnett_801E3734"));
     check_hazard(&d, from, 1, &demo, &by_demo);
 }
+
+// Mute City (`grmutecity.c`) and the F-Zero cars (`grfzerocar.c`).
+
+const MC: &str = "oracle-stage-mute-city";
+
+/// grmutecity.c's `yakumono_param`, whether its track hurts, its race order and its cars.
+const MC_PARAM: u32 = 0x804D_69D0;
+const MC_TRACK_LIVE: u32 = 0x804D_69D4;
+const MC_ORDER: u32 = 0x8049_F440;
+const MC_CARS: u32 = 0x8049_F4B8;
+
+/// Mute City's parameters' float at `off`.
+fn mc_param(c: &Call, off: u32) -> f32 {
+    f32_at(c, peek_u32(c, MC_PARAM) + off)
+}
+
+/// Car `i`'s entry.
+fn mc_car(i: u32) -> u32 {
+    MC_CARS + 0x2C * i
+}
+
+/// A car's race state set: its place, speed, lane, damage, flags and state byte.
+#[allow(clippy::too_many_arguments)]
+fn mc_set_car(c: &mut Call, i: u32, place: f32, speed: f32, lane: f32, damage: f32, flags: u16) {
+    let a = mc_car(i);
+    poke_u32(c, a + 4, place.to_bits());
+    poke_u32(c, a + 8, speed.to_bits());
+    poke_u32(c, a + 0xC, lane.to_bits());
+    poke_u32(c, a + 0x10, damage.to_bits());
+    poke_u16(c, a + 0x20, flags);
+}
+
+/// A car's state byte (`x22_flags`: 0x80 wrecked, 0x40 shook the screen).
+fn mc_set_state(c: &mut Call, i: u32, state: u8) {
+    poke_u8(c, mc_car(i) + 0x22, state);
+}
+
+#[test]
+fn mutecity_setup() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    for f in [
+        "grMuteCity_801EFC6C",
+        "grMuteCity_801EFCDC",
+        "grMuteCity_801EFCE0",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = mutecity::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801EFD0C", 1, &as_saved, &create);
+    for map in [0u32, 2, 29, 30, 36, 37] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grMuteCity_801EFD0C", 1, &set, &create);
+    }
+    for f in [
+        "grMuteCity_801EFDF8",
+        "grMuteCity_801F01B4",
+        "grMuteCity_801F044C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let build = |r: &mut Running, maps: &Maps, call: &Call| {
+        let maps_at = call.regs.gpr[4];
+        let car_maps: [i16; 30] = std::array::from_fn(|i| {
+            let a = maps_at + 2 * i as u32;
+            (peek_u32(call, a & !3) >> if a & 2 == 0 { 16 } else { 0 }) as i16
+        });
+        melee_sim::game::gr::fzerocar::build(
+            r,
+            gobj_arg(maps, call),
+            &car_maps,
+            call.regs.gpr[5] as i32,
+            call.regs.gpr[6] != 0,
+        );
+        Ret::Nothing
+    };
+    // As saved and with the models set apart.
+    check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &as_saved, &build);
+    let apart = |c: &mut Call, _: usize| c.regs.gpr[6] = 1;
+    check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &apart, &build);
+    let place = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::place_cars(r.game);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F0F4C", 1, &as_saved, &place);
+    // The tree walk, its answer by the joint's address.
+    let walk = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied().expect("a joint");
+        let n = melee_sim::game::gr::ground::next_in_tree(&r.game.objs.jobjs, j);
+        let addr = n.map_or(0, |n| {
+            *maps
+                .jobjs
+                .iter()
+                .find(|(_, v)| **v == n)
+                .expect("the joint's address")
+                .0
+        });
+        Ret::Int(addr)
+    };
+    check_calls_with(&d, "Ground_801C4100", 1, &as_saved, &walk);
+}
+
+/// The course's script from each saved call, as saved, waiting, and from the commands that
+/// reach each kind of command (each camera limit both ways, the background and the platform's
+/// sway either way, the track's live and shaped states, the wrap at the script's end).
+#[test]
+fn mutecity_script() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F04B8";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::mutecity::run_script(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for wait in [1u16, 2, 0x8000] {
+        let set = move |c: &mut Call, _: usize| poke_u16(c, vars(c) + 2, wait);
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    let at: [u16; 40] = [
+        0, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 27, 30, 34, 35, 38, 39, 53, 54, 55,
+        56, 57, 58, 61, 62, 65, 66, 87, 95, 103, 109, 115, 116, 117, 129, 130, 131,
+    ];
+    for k in at {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u16(c, vars(c), k);
+            poke_u16(c, vars(c) + 2, 0);
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+}
+
+/// The track's ends and lines: each end's search from the saved places and others, and the
+/// lines in each of the ends' shapes.
+#[test]
+fn mutecity_track() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let find = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let (t, _) = mutecity::find_track_end(r, j, call.regs.fpr[1].ps0 as f32);
+        Ret::Float(gekko_fp::lfs(t.to_bits()))
+    };
+    check_calls_with(&d, "grMuteCity_801F094C", 1, &as_saved, &find);
+    for t in [
+        0.0f32, 0.0002, 0.005, 0.01, 0.3, 0.5, 0.86, 0.93, 0.95, 0.9998, 1.0,
+    ] {
+        let set = move |c: &mut Call, _: usize| c.regs.fpr[1].ps0 = leaf_check::arg(t);
+        check_calls_with(&d, "grMuteCity_801F094C", 1, &set, &find);
+    }
+    let f = "grMuteCity_801F0D20";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        mutecity::follow_track(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for ends in 0..4u8 {
+        let set = move |c: &mut Call, _: usize| {
+            let a = vars(c) + 0xC;
+            let b = (peek_u32(c, a) >> 24) as u8 & !0x30 | ends << 4;
+            poke_u8(c, a, b);
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+}
+
+/// The race: the order's sort (the word before it too) and the flags, and each car's speed
+/// and lane in every state of the flags, wrecked or racing, in and out of the pit lane, from
+/// several seeds.
+#[test]
+fn mutecity_race() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let race = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::steer_cars(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F1328", 1, &as_saved, &race);
+    let prepares: [&Prepare; 6] = [
+        // A car past the first in distance, with the word before the order 0 and another car.
+        &|c, _| poke_u32(c, mc_car(7), 5.0f32.to_bits()),
+        &|c, _| {
+            poke_u32(c, mc_car(7), 5.0f32.to_bits());
+            poke_u32(c, MC_ORDER - 4, 3);
+        },
+        // Cars bunched up close and beside each other, either faster.
+        &|c, _| {
+            for i in 0..6 {
+                mc_set_car(c, i, 0.5 - 0.0005 * i as f32, 0.001, 0.2 * i as f32, 0.0, 0);
+                poke_u32(c, mc_car(i) + 0x14, (10.0 * i as f32).to_bits());
+            }
+        },
+        // Wrecked cars in the bunch.
+        &|c, _| {
+            for i in 0..6 {
+                mc_set_car(c, i, 0.5 - 0.0005 * i as f32, 0.001, 0.5, 0.0, 0);
+                mc_set_state(c, i, if i % 2 == 0 { 0x80 } else { 0 });
+            }
+        },
+        // A wrap round the track's end.
+        &|c, _| {
+            mc_set_car(c, 0, 0.0005, 0.001, 0.3, 0.0, 0);
+            mc_set_car(c, 1, 0.9995, 0.001, 0.6, 0.0, 0);
+        },
+        &|c, k| set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1)),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grMuteCity_801F1328", 1, p, &race);
+    }
+    let steer = |r: &mut Running, _: &Maps, call: &Call| {
+        mutecity::steer_car(r.game, r.data, call.regs.gpr[3] as usize);
+        Ret::Nothing
+    };
+    let f = "grMuteCity_801F106C";
+    check_calls_with(&d, f, 1, &as_saved, &steer);
+    for flags in [0u16, 1, 3, 5, 9, 0xD, 0xB, 8, 0xC, 0x10, 0x20, 0x11, 0x25] {
+        for lane in [0.05f32, 0.2, 0.5, 0.85, 0.95] {
+            let set = move |c: &mut Call, k: usize| {
+                let i = c.regs.gpr[3];
+                mc_set_car(c, i, 0.5, 0.01, lane, 0.0, flags);
+                set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &steer);
+        }
+    }
+    // Speeds over each pack's top and below zero.
+    for (flags, speed) in [(0u16, 1.0f32), (0x10, 1.0), (0x20, 1.0), (9, -1.0)] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[3];
+            mc_set_car(c, i, 0.5, speed, 0.5, 0.0, flags);
+        };
+        check_calls_with(&d, f, 1, &set, &steer);
+    }
+    // Wrecked, in the pit lane and out of it, crawling and stopped.
+    for (place, speed) in [
+        (0.85f32, 0.0f32),
+        (0.85, 0.01),
+        (0.5, 0.01),
+        (0.5, 0.000001),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[3];
+            mc_set_car(c, i, place, speed, 0.5, 0.0, 0);
+            mc_set_state(c, i, 0x80);
+        };
+        check_calls_with(&d, f, 1, &set, &steer);
+    }
+}
+
+/// The cars' moves from each saved call, as saved and with cars damaged past smoking and past
+/// wrecking, wrecked in view and out of it, passing the stage (shaking it, loud and not, and
+/// with an item) and leaving it, honking beside a faster car, in the pit lane, from several
+/// seeds.
+#[test]
+fn mutecity_cars() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F1A34";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        let cars = *maps.gobjs.get(&call.regs.gpr[3]).expect("the cars");
+        let course = *maps.gobjs.get(&call.regs.gpr[4]).expect("the course");
+        melee_sim::game::gr::mutecity::move_cars(r, cars, course);
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let smoke = |c: &Call| mc_param(c, 0x2C);
+    let wreck = |c: &Call| mc_param(c, 0x30);
+    let prepares: [&Prepare; 9] = [
+        &move |c, _| {
+            let s = smoke(c);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 0x10, (s + 1.0).to_bits());
+            }
+        },
+        &move |c, k| {
+            let w = wreck(c);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 0x10, (w + 1.0).to_bits());
+            }
+            set_seed(c, 0x5555_1234u32.wrapping_mul(k as u32 + 1));
+        },
+        &|c, _| {
+            for i in 0..30 {
+                mc_set_state(c, i, 0x80);
+            }
+        },
+        &|c, _| {
+            let param = peek_u32(c, STAGE_INFO + 0x6B0);
+            for i in 0..30 {
+                mc_set_state(c, i, 0x80);
+                poke_u32(c, mc_car(i) + 0x28, param);
+            }
+        },
+        // Every car at the track's middle, shaking or having shaken.
+        &|c, _| {
+            let v = map_vars(c, 30);
+            let mid = f32_at(c, v + 0x10);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (mid - 0.0001 * i as f32).to_bits());
+                mc_set_state(c, i, if i % 3 == 0 { 0x40 } else { 0 });
+            }
+        },
+        &|c, _| {
+            let v = map_vars(c, 30);
+            let w = peek_u32(c, v + 0xC);
+            poke_u32(c, v + 0xC, w ^ 0x4000_0000);
+            let mid = f32_at(c, v + 0x10);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (mid - 0.0002 * i as f32).to_bits());
+            }
+        },
+        // Honking: close beside a faster car with the horns' wait over.
+        &|c, k| {
+            for i in 0..30 {
+                poke_u16(c, mc_car(i) + 0x20, 0xA);
+            }
+            poke_u16(c, map_vars(c, 2), 0);
+            set_seed(c, 0x0BAD_F00Du32.wrapping_mul(k as u32 + 1));
+        },
+        // Cars in the pit lane, and at the track's end.
+        &|c, _| {
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (0.83 + 0.002 * i as f32).to_bits());
+            }
+        },
+        &|c, _| {
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, 0.9999f32.to_bits());
+                poke_u32(c, mc_car(i) + 8, 0.0005f32.to_bits());
+            }
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+}
+
+/// The platform's sway toward its target from each side, near and far, and its lights while
+/// its overlay runs and after, holding their colors and not.
+#[test]
+fn mutecity_platform() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F0290";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for (target, cur) in [
+        (1.0f32, 0.0f32),
+        (1.0, 0.9995),
+        (1.0, 0.9985),
+        (0.0, 1.0),
+        (0.0, 0.0005),
+        (0.0, 0.0015),
+        (0.5, 0.5),
+        (-0.0, 0.0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u32(c, vars(c) + 8, target.to_bits());
+            poke_u32(c, vars(c) + 0xC, cur.to_bits());
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    let lights = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::mutecity::platform_lights(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let g = "grMuteCity_801F290C";
+    check_calls_with(&d, g, 1, &as_saved, &lights);
+    for (done, held) in [(false, false), (false, true), (true, false), (true, true)] {
+        let set = move |c: &mut Call, _: usize| {
+            let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            let w = peek_u32(c, gp + 0x10);
+            let w = if done {
+                w | 0x0800_0000
+            } else {
+                w & !0x0800_0000
+            };
+            poke_u32(c, gp + 0x10, w);
+            poke_u8(c, gp + 0xC4, if held { 0x80 } else { 0 });
+        };
+        check_calls_with(&d, g, 1, &set, &lights);
+    }
+}
+
+/// The collision data a joint callback's call hands it (r5), to write.
+fn mc_coll_mut<'a>(
+    r: &'a mut Running,
+    maps: &Maps,
+    call: &Call,
+) -> &'a mut melee_sim::game::structs::CollData {
+    let a = call.regs.gpr[5];
+    if let Some((_, &f)) = maps.fighters.iter().find(|(fp, _)| a == **fp + 0x6F0) {
+        return &mut r.game.fighters[f.0].coll_data;
+    }
+    if let Some((_, &i)) = maps.items.iter().find(|(ip, _)| a == **ip + 0x378) {
+        return &mut r.game.items[i.0].x378_itemColl;
+    }
+    panic!("r5 {a:#x} is neither a fighter's nor an item's collision data");
+}
+
+/// The track's callback, line hazards and shadow check, a car's hits dealt and taken, the
+/// track's line damage on the fighters and the music's send, each from their saved calls and
+/// from states set to each branch.
+#[test]
+fn mutecity_callbacks() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let live = r.game.gr.mutecity.track_live;
+        let kind = call.regs.gpr[7] as i32;
+        let owner = mc_coll_mut(r, maps, call).x0_gobj;
+        let item = owner.is_some_and(|o| r.game.world.gobjs[o.0].p_link == 9);
+        mutecity::track_touched(live, mc_coll_mut(r, maps, call), kind, item);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "fn_801F2B58", 1, &as_saved, &touched);
+    for live in [0u32, 1, 2] {
+        for coll in 0..7u32 {
+            for kind in 0..3u32 {
+                let set = move |c: &mut Call, _: usize| {
+                    poke_u32(c, MC_TRACK_LIVE, live);
+                    set_coll_kind(c, coll);
+                    c.regs.gpr[7] = kind;
+                };
+                check_calls_with(&d, "fn_801F2B58", 1, &set, &touched);
+                // The same on an item's collision: the collision's owner made the first
+                // item (a car's hurtbox item, on the item link).
+                let on_item = move |c: &mut Call, k: usize| {
+                    set(c, k);
+                    let heads = peek_u32(c, leaf_check::sym("HSD_GObjPLinkHead"));
+                    let item = peek_u32(c, heads + 4 * 9);
+                    if item != 0 {
+                        poke_u32(c, c.regs.gpr[5], item);
+                    } else {
+                        // No item: the owner read as one (its GObj's P-link, byte 2).
+                        let owner = peek_u32(c, c.regs.gpr[5]);
+                        poke_u8(c, owner + 2, 9);
+                    }
+                };
+                check_calls_with(&d, "fn_801F2B58", 1, &on_item, &touched);
+            }
+        }
+    }
+    let hazard = |r: &mut Running, _: &Maps, call: &Call| {
+        let desc = mutecity::line_hazard(r.game, r.data, call.regs.gpr[3] as i32);
+        // Its address from the parameters' (both in the stage's archive).
+        let p = r.game.gr.mutecity_yakumono.expect("the parameters");
+        let base = peek_u32(call, MC_PARAM);
+        Ret::Int(desc.map_or(0, |d| base.wrapping_add(d.offset.wrapping_sub(p.offset))))
+    };
+    check_calls_with(&d, "grMuteCity_801F2BBC", 1, &as_saved, &hazard);
+    for live in [0u32, 1, 2] {
+        for line in 0x2Fu32..0x37 {
+            let set = move |c: &mut Call, _: usize| {
+                poke_u32(c, MC_TRACK_LIVE, live);
+                c.regs.gpr[3] = line;
+            };
+            check_calls_with(&d, "grMuteCity_801F2BBC", 1, &set, &hazard);
+        }
+    }
+    let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (pos, j) = shadow_args(maps, call);
+        Ret::Int(u32::from(mutecity::check_shadow_render(r.game, pos, j)))
+    };
+    check_calls_with(&d, "grMuteCity_801F2C10", 1, &as_saved, &shadow);
+    // On each joint the track can cover, inside and outside its ends, above and below it.
+    for k in 0..5u32 {
+        for (dx, dy) in [
+            (-1000.0f32, 0.0f32),
+            (0.0, 10.0),
+            (0.0, -10.0),
+            (0.0, -2.9),
+            (1000.0, 0.0),
+        ] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = map_vars(c, 30);
+                c.regs.gpr[5] = peek_u32(c, v + 0x38 + 4 * k);
+                let (x0, y0) = (f32_at(c, v + 0x20), f32_at(c, v + 0x24));
+                let (x1, y1) = (f32_at(c, v + 0x2C), f32_at(c, v + 0x30));
+                let p = c.regs.gpr[3];
+                poke_u32(c, p, (0.5 * (x0 + x1) + dx).to_bits());
+                poke_u32(c, p + 4, (0.5 * (y0 + y1) + dy).to_bits());
+            };
+            check_calls_with(&d, "grMuteCity_801F2C10", 1, &set, &shadow);
+        }
+    }
+    let dealt = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::car_dealt(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F1A0C", 1, &as_saved, &dealt);
+    // Each car's hit taken, from the hits dealt's calls.
+    for car in 0..30u32 {
+        let target = mutecity::CAR_HIT + 0x18 * car;
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = target;
+            c.regs.fpr[1].ps0 = leaf_check::arg(7.5);
+        };
+        let hit = move |r: &mut Running, _: &Maps, call: &Call| {
+            mutecity::car_hit(r.game, car as usize, call.regs.fpr[1].ps0 as f32);
+            Ret::Nothing
+        };
+        check_calls_with(&d, "grMuteCity_801F1A0C", 1, &set, &hit);
+    }
+    let lines = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.touch_lines(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "ftCo_800C0B20", 1, &as_saved, &lines);
+    // With the track live and not, and the fighter's line timer running.
+    for (live, timer) in [(0u32, 0u32), (1, 0), (1, 5)] {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u32(c, MC_TRACK_LIVE, live);
+            let fp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            poke_u32(c, fp + 0x2328, timer);
+        };
+        check_calls_with(&d, "ftCo_800C0B20", 1, &set, &lines);
+    }
+    let send = |r: &mut Running, _: &Maps, call: &Call| {
+        melee_sim::lb::audio::set_stage_send(r.game, call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    for col in [0u32, 1, 2] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = col;
+        check_calls_with(&d, "lbAudioAx_80024D78", 1, &set, &send);
+    }
+}
+
+/// The callbacks no capture reached, from the cars' empty process's calls: the other empty
+/// processes and destroy callbacks, the scenery's setup, the load and demo hooks.
+#[test]
+fn mutecity_unreached_callbacks() {
+    let d = dir(MC);
+    let from = "grMuteCity_801F04B0";
+    for name in [
+        "grMuteCity_801F01B0",
+        "grMuteCity_801F040C",
+        "grMuteCity_801F0444",
+        "grMuteCity_801F0448",
+        "grMuteCity_801F04B4",
+        "grMuteCity_801F0948",
+        "stageGObj36_37_OnInit",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let demo_hook = retarget(leaf_check::sym("grMuteCity_801EFC68"));
+    check_calls_with(&d, from, 1, &demo_hook, &demo);
+}

@@ -111,6 +111,11 @@ impl<'a> StageMaps<'a> {
         }
     }
 
+    /// A GObj's P-link (`p_link`).
+    pub fn p_link(&self, g: GObjId) -> u8 {
+        self.world.gobjs[g.0].p_link
+    }
+
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
     pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
         let g = self.info.map_gobjs[map_id as usize]?;
@@ -262,6 +267,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     let kind = coll.x34_flags.b1234.into();
                     super::super::gr::rcruise::plank_touched(self.grounds, g, joint_id, kind);
                 }
+            }
+            super::super::gr::mutecity::TRACK_TOUCHED => {
+                let live = self.stage_maps.gr.mutecity.track_live;
+                let item = coll
+                    .x0_gobj
+                    .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
+                super::super::gr::mutecity::track_touched(live, coll, kind, item);
             }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }

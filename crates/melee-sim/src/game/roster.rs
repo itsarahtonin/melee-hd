@@ -395,6 +395,21 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 10,
+        name: "Mute City",
+        keys: &["mc", "mute-city"],
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grmutecity",
+                "melee/gr/grfzerocar",
+                "melee/it/kinds/ityaku",
+            ],
+            modules: &["gr/mutecity", "gr/fzerocar", "it/kinds/yaku"],
+            unreached: &[YAKU_UNANCHORED],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 9,
         name: "Onett",
         keys: &["on", "onett"],

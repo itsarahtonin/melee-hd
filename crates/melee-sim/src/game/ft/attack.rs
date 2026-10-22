@@ -2004,11 +2004,11 @@ impl Running<'_> {
             if let Some(desc) = desc
                 && max == 0
             {
-                self.device_hit(gobj, ground, desc, kind);
+                self.device_hit(gobj, Some(ground), desc, kind);
             }
         }
         if max == 0 {
-            self.touch_lines(me);
+            self.touch_lines(gobj);
         }
     }
 
@@ -2025,7 +2025,7 @@ impl Running<'_> {
     fn device_hit(
         &mut self,
         gobj: GObjId,
-        ground: GObjId,
+        ground: Option<GObjId>,
         desc: melee_data::archive::DataRef,
         kind: u32,
     ) {
@@ -2054,7 +2054,7 @@ impl Running<'_> {
             let damage = logs.stale_damage[slot];
             logs.hits.push(LogEntry {
                 kind: kind as i32,
-                gobj: Some(ground),
+                gobj: ground,
                 hit: LoggedHit::Device { desc },
                 hurt: 0,
                 pos,
@@ -2075,9 +2075,11 @@ impl Running<'_> {
 
     /// Damage from the stage lines the fighter touches, `ftCo_800C0B20`: the floor, ceiling
     /// and walls it touches, each asking the stage (`Ground_801C5700`) for a hazard; the
-    /// last one asked wins. Neither ported stage has hazard lines.
+    /// last one asked wins, and hits as a burying device's would with no object
+    /// ([`Self::device_hit`] of kind 1).
     #[doc(alias = "ftCo_800C0B20")]
-    fn touch_lines(&mut self, me: FighterId) {
+    pub fn touch_lines(&mut self, gobj: GObjId) {
+        let me = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[me.0];
         if fp.bury_timer_1 != 0 {
             return;
@@ -2090,19 +2092,19 @@ impl Running<'_> {
             (flags & 0xFC0 != 0, coll.right_facing_wall.index),
             (flags & 0x3F != 0, coll.left_facing_wall.index),
         ];
-        let mut hazard = false;
+        let mut hazard = None;
         for (touching, line) in touched {
             if touching {
-                hazard = self.line_hazard(line);
+                hazard = self.line_hazard_desc(line);
             }
         }
-        if hazard {
-            unported_call("ftCo_800C0B20 (a stage line's damage)");
+        if let Some(desc) = hazard {
+            self.device_hit(gobj, None, desc, 1);
         }
     }
 
     /// Whether the stage gives the line a hazard (`Ground_801C5700`, through the stage's
-    /// `on_touch_line`): none of the ported stages' does.
+    /// `on_touch_line`): only Mute City's track does, while it hurts.
     #[doc(alias = "Ground_801C5700")]
     #[doc(alias = "grLast_OnTouchLine")]
     #[doc(alias = "grBattle_OnTouchLine")]
@@ -2124,9 +2126,17 @@ impl Running<'_> {
     #[doc(alias = "grOnett_801E5760")]
     #[doc(alias = "grPura_802130C0")]
     #[doc(alias = "grRCruise_80201C50")]
-    pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
+    pub(crate) fn line_hazard(&mut self, line: i32) -> bool {
+        self.line_hazard_desc(line).is_some()
+    }
+
+    /// The hit the stage gives a line ([`Self::line_hazard`]'s `DynamicsDesc`).
+    pub(crate) fn line_hazard_desc(&mut self, line: i32) -> Option<melee_data::archive::DataRef> {
         match self.game.stage_info.on_touch_line {
-            None => false,
+            None => None,
+            Some(f) if f.0 == 0x801F_2BBC => {
+                super::super::gr::mutecity::line_hazard(self.game, self.data, line)
+            }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
             Some(f)
@@ -2151,7 +2161,7 @@ impl Running<'_> {
                     || f.0 == 0x8021_30C0
                     || f.0 == 0x8020_1C50 =>
             {
-                false
+                None
             }
             Some(f) => unported_call(&format!("a stage's on_touch_line {:#x}", f.0)),
         }

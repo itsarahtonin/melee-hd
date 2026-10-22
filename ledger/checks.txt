@@ -1190,7 +1190,7 @@ ftColl_8007861C	leaf-check fighter_procs: every logged hit's attacker
 ftColl_8007BBCC	leaf-check fighter_procs: every call
 ftColl_8007925C	leaf-check fighter_procs: every call; items' boxes that could reach the fighter stop at the seam; melee-oracle diff, Dr. Mario vs Ness on Yoshi's Story hf-doc-ness-ys-ecdc4d64 (docs/oracle.md), all 12,234 ticks in Slippi float mode with no stand-ins: Ness absorbs an item in tick 10895
 ftColl_8007BAC0	leaf-check fighter_procs: every call
-ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines
+ftCo_800C0B20	leaf-check fighter_procs: every call, Final Destination's lines; leaf-check stages: mutecity_callbacks runs its saved calls on Mute City, as saved and with the track live and not and the line timer running, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) (37 hits by the track)
 Ground_801C5700	leaf-check fighter_procs: every call that touches a line
 ft_8007C4BC	leaf-check fighter_procs: the thrown case's boxes
 ft_8007C2E0	leaf-check fighter_procs: the thrown case's boxes, in the air and not
@@ -10229,6 +10229,71 @@ grRCruise_80201B60	leaf-check stages: rcruise_ship runs its saved calls, showing
 fn_80201BE0	leaf-check stages: rcruise_course runs its saved calls in the pass saved and another and compares the whole state; melee-oracle diff: the stage-rainbow-cruise oracle match (v5-mixed, --fp hardware --heap, clean through its 28991 ticks) draws the course every display pass
 grRCruise_80201C58	leaf-check stages: rcruise_unreached_callbacks runs it from the course's saved calls and compares the answer
 grRCruise_80201C50	melee-oracle diff: the stage-rainbow-cruise oracle match (v5-mixed, --fp hardware --heap, clean through its 28991 ticks) touches lines every tick (Ground_801C5700 asks it); it answers no hazard
+grMuteCity_801EFC6C	leaf-check stages: mutecity_setup runs its saved call (the match's setup) and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it in the match's setup
+grMuteCity_801EFCE0	leaf-check stages: mutecity_setup runs its saved call (the match's start) and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it at the match's start
+grMuteCity_801EFCDC	leaf-check stages: mutecity_setup runs its saved call (the load hook) and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801EFC68	leaf-check stages: mutecity_unreached_callbacks runs it (the demo's setup) from the cars' process's saved calls and compares the whole state
+grMuteCity_801EFD0C	leaf-check stages: mutecity_setup runs its saved calls and creates each of maps 0, 2, 29, 30, 36 and 37 from them and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801EFDF8	leaf-check stages: mutecity_setup runs its saved call and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F01B4	leaf-check stages: mutecity_setup runs its saved call and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F044C	leaf-check stages: mutecity_setup runs its saved call and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F28A8	leaf-check stages: mutecity_setup runs grMuteCity_801EFC6C, which calls it, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F0F4C	leaf-check stages: mutecity_setup runs its saved call and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grFZeroCar_801CAFBC	leaf-check stages: mutecity_setup runs its saved call, as saved and with the models set apart, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+Ground_801C4100	leaf-check stages: mutecity_setup runs its saved calls and compares the joint it answers
+grMuteCity_801F0120	melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick; leaf-check stages: its parts' tests (mutecity_script, _track, _race, _cars) run each from its saved calls
+grMuteCity_801F04B8	leaf-check stages: mutecity_script runs its saved calls, as saved, waiting and from each kind of command (each camera limit both ways, the background and the sway either way, the track's states, the wrap) and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+grMuteCity_801F094C	leaf-check stages: mutecity_track runs its saved calls, as saved and from eleven places on the spline, and compares the place it answers; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F0D20	leaf-check stages: mutecity_track runs its saved calls, as saved and with the ends in each shape, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) (the track's ends in all three shapes)
+grMuteCity_801F1328	leaf-check stages: mutecity_race runs its saved calls, as saved and with the order's first passed (the word before it 0 and a car), cars bunched close and beside, wrecked in the bunch, round the track's end, from several seeds, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+grMuteCity_801F106C	leaf-check stages: mutecity_race runs its saved calls, as saved and with each flag set in five lanes from several seeds, over each pack's top speed and below zero, and wrecked in and out of the pit lane, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F1A34	leaf-check stages: mutecity_cars runs its saved calls, as saved and with cars past smoking and past wrecking, wrecked in view and out of it, at the track's middle shaking the screen loud and not, honking beside faster cars, in the pit lane and at the track's end, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+grMuteCity_801F2AB0	leaf-check stages: mutecity_cars runs grMuteCity_801F1A34 with cars past smoking and wrecked in view, which calls it, and compares the whole state (the word it leaves in each car)
+grMuteCity_801F0290	leaf-check stages: mutecity_platform runs its saved calls, as saved and with the sway near and far from its target either way and at it, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+grMuteCity_801F290C	leaf-check stages: mutecity_platform runs its saved calls, as saved and with the overlay running and ended, the lights' colors held and not, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+fn_801F2B58	leaf-check stages: mutecity_callbacks runs its saved calls, as saved and with the track live and not, each collision kind and ground kind, and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks)
+grMuteCity_801F2BBC	leaf-check stages: mutecity_callbacks runs its saved calls, as saved and for lines 0x2F to 0x36 with the track live and not, and compares the hit it answers; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) (37 hits on fighters)
+grMuteCity_801F2C10	leaf-check stages: mutecity_callbacks runs its saved calls, as saved and on each joint the track covers inside and outside its ends, above and below it, and compares the answer; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every display pass
+grMuteCity_801F1A0C	leaf-check stages: mutecity_callbacks runs its saved calls and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) (23 hits by cars)
+grMuteCity_801F01B0	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state
+grMuteCity_801F040C	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state
+grMuteCity_801F0444	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state
+grMuteCity_801F0448	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state
+grMuteCity_801F04B4	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state
+grMuteCity_801F0948	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+grMuteCity_801F04B0	leaf-check stages: mutecity_unreached_callbacks runs its saved calls; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) runs it every tick
+stageGObj36_37_OnInit	leaf-check stages: mutecity_unreached_callbacks runs it from the cars' process's saved calls (on the cars' object) and compares the whole state
+lbAudioAx_80024D78	leaf-check stages: mutecity_callbacks runs its saved call with each of the table's three columns and compares the whole state; melee-oracle diff: the stage-mute-city oracle match (v5-mixed, --fp hardware --heap, clean through its 28990 ticks) (the platform's tunnels)
+grMuteCity_801F173C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1754	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F176C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1784	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F179C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F17B4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F17CC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F17E4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F17FC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1814	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F182C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1844	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F185C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1874	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F188C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F18A4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F18BC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F18D4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F18EC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1904	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F191C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1934	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F194C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1964	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F197C	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F1994	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F19AC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F19C4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F19DC	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
+grMuteCity_801F19F4	leaf-check stages: mutecity_callbacks runs it with a hit of 7.5 from the hits dealt's saved calls and compares the whole state
 Ground_801C32AC	leaf-check stages: rcruise_setup runs its saved call, and for other maps, and compares the whole state; melee-oracle diff: the stage-rainbow-cruise oracle match (v5-mixed, --fp hardware --heap, clean through its 28991 ticks)
 it_8028FE90	leaf-check items_leftovers: items_leftovers_functions runs it from the motion-sensor bombs of the leftovers and items-shoot oracle matches (local/calls/items-leftovers, items-shoot), stuck and not, and compares the whole state (only Mute City's cars crush a bomb, so no match calls it)
 it_8028F8E4	leaf-check items_leftovers: items_leftovers_functions runs its saved calls (local/calls/items-leftovers) and runs it from the leftovers matches' and items-shoot's foods, and compares the whole state; melee-oracle diff: the items-foods-yoshis-story oracle match (v5-mixed, --fp hardware --heap, clean through its 7430 ticks), four Shy Guys dropping their food

@@ -5,9 +5,9 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
-    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -866,6 +866,47 @@ pub const RCRUISE: StageData = StageData {
     joints: &RCRUISE_JOINTS,
 };
 
+/// `grMc_StageCallbacks`. Map 30 is the course, which makes map 29 (the platform) and map 2
+/// (the cars); maps 36 and 37 are scenery, map 0 the background.
+pub const MUTECITY_CALLBACKS: [StageCallbacks; 39] = {
+    let mut t = [cb(0, 0, 0, 0, 0); 39];
+    t[2] = cb(0x801F_044C, 0x801F_04A8, 0x801F_04B0, 0x801F_04B4, 0);
+    t[29] = cb(0x801F_01B4, 0x801F_0288, 0x801F_0290, 0x801F_040C, 0);
+    t[30] = cb(
+        0x801E_FDF8,
+        0x801F_0118,
+        0x801F_0120,
+        0x801F_01B0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    );
+    t[36] = cb(0x801F_0410, 0x801F_043C, 0x801F_0444, 0x801F_0448, 0);
+    t[37] = cb(0x801F_0410, 0x801F_043C, 0x801F_0444, 0x801F_0448, 0);
+    t
+};
+
+/// `grMc_803E30B0`: the platform's collision joints the stage binds to its parts itself.
+pub const MUTECITY_JOINTS: [GrJoint; 3] = [
+    GrJoint { x: 6, y: 29, z: 6 },
+    GrJoint { x: 7, y: 29, z: 8 },
+    GrJoint { x: 8, y: 29, z: 9 },
+];
+
+/// `grMc_StageData`.
+pub const MUTECITY: StageData = StageData {
+    grkind: GR_KIND_MUTECITY,
+    callbacks: &MUTECITY_CALLBACKS,
+    file: Some("/GrMc.dat"),
+    on_init: 0x801E_FC6C,
+    on_demo_init: 0x801E_FC68,
+    on_load: 0x801E_FCDC,
+    on_start: 0x801E_FCE0,
+    callback4: 0x801E_FD04,
+    on_touch_line: 0x801F_2BBC,
+    on_check_shadow_render: 0x801F_2C10,
+    flags2: 1,
+    joints: &MUTECITY_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -889,6 +930,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_ONETT => &ONETT,
         GR_KIND_PURA => &PURA,
         GR_KIND_RCRUISE => &RCRUISE,
+        GR_KIND_MUTECITY => &MUTECITY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

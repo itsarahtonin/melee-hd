@@ -77,6 +77,9 @@ pub enum VarsKind {
     RCruiseBlocks,
     RCruiseFlag,
     Scroll,
+    MuteCity,
+    MuteCity2,
+    MuteCityCars,
 }
 
 /// `union GroundVars`.
@@ -152,6 +155,12 @@ pub enum GroundVars {
     RCruiseFlag(RCruiseFlagVars),
     /// `ScrollVars`: Rainbow Cruise's course, which moves the stage under the camera (map 3).
     Scroll(ScrollVars),
+    /// `grMuteCity_GroundVars`: Mute City's course (map 30), its script and its track's ends.
+    MuteCity(MuteCityVars),
+    /// `grMuteCity_GroundVars2`: the platform the fighters stand on (map 29).
+    MuteCity2(MuteCity2Vars),
+    /// `grMuteCity_GroundVars::xC4` alone: the cars (map 2), their horns' wait.
+    MuteCityCars(MuteCityCarsVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1028,6 +1037,81 @@ pub struct ScrollVars {
     pub ctr_jobj: Option<crate::hsd::jobj::JObjId>,
     pub x38: [Option<crate::hsd::jobj::JObjId>; 3],
     pub x44: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grMuteCity_GroundVars` of the course (map 30): the script's cursor and wait (`xC4`,
+/// `xC6`), the platform's and the cars' objects (`xC8`, `xCC`), the flags (`xD0`: bit 0x80
+/// the track's lines follow the cars, 0x40 the louder engines, bits 0x30 the track ends'
+/// shape), the track's ends' places on the cars' two splines (`xD4` left, `xD8` right), the
+/// splines' joints (`xDC`, `xE0`), the track's ends (`xE4`, `xF0`), the five joints whose
+/// shadows the track cuts (`xFC` to `x10C`), the point light (`x110`) and the camera limits'
+/// and blast zones' offsets from the camera's center (`x114` to `x130`). `xD1` and `xD2`:
+/// `xD2` is cleared, `xD1` nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct MuteCityVars {
+    pub xC4: i16,
+    pub xC6: i16,
+    pub xC8: Option<GObjId>,
+    pub xCC: Option<GObjId>,
+    pub xD0: u8,
+    pub xD2: i16,
+    pub xD4: f32,
+    pub xD8: f32,
+    pub xDC: Option<crate::hsd::jobj::JObjId>,
+    pub xE0: Option<crate::hsd::jobj::JObjId>,
+    pub xE4: crate::vec::Vec3,
+    pub xF0: crate::vec::Vec3,
+    pub shadow_jobjs: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub x110: Option<crate::hsd::lobj::LObjId>,
+    pub bounds: [f32; 8],
+}
+
+impl MuteCityVars {
+    /// `xD0_flags.b0`: the track's lines follow the cars.
+    pub fn track_on(&self) -> bool {
+        self.xD0 & 0x80 != 0
+    }
+
+    pub fn set_track_on(&mut self, on: bool) {
+        self.xD0 = self.xD0 & !0x80 | u8::from(on) << 7;
+    }
+
+    /// `xD0_flags.b1`: the cars' rumble picks the louder sounds.
+    pub fn loud(&self) -> bool {
+        self.xD0 & 0x40 != 0
+    }
+
+    pub fn set_loud(&mut self, on: bool) {
+        self.xD0 = self.xD0 & !0x40 | u8::from(on) << 6;
+    }
+
+    /// `xD0_flags.b23`: the track ends' shape.
+    pub fn ends(&self) -> u8 {
+        self.xD0 >> 4 & 3
+    }
+
+    pub fn set_ends(&mut self, v: u8) {
+        self.xD0 = self.xD0 & !0x30 | (v & 3) << 4;
+    }
+}
+
+/// `grMuteCity_GroundVars2` of the platform (map 29): whether its lights hold the overlay's
+/// color (`xC4`, bit 0x80), its swaying joint (`xC8`), the sway's target and current scale
+/// (`xCC`, `xD0`), and the lights' colors saved while the overlay holds them.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct MuteCity2Vars {
+    pub xC4: u8,
+    pub xC8: Option<crate::hsd::jobj::JObjId>,
+    pub xCC: f32,
+    pub xD0: f32,
+    pub saved_colors: [[u8; 4]; 4],
+}
+
+/// `grMuteCity_GroundVars::xC4` of the cars (map 2): the wait before a car's horn can sound
+/// again; the rest of the member the cars' object never uses.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct MuteCityCarsVars {
+    pub xC4: i16,
 }
 
 /// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
@@ -2032,6 +2116,46 @@ impl GroundVars {
                     x44: j(cx, at + 0x44),
                 })
             }
+            VarsKind::MuteCity => {
+                let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+                let j = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::MuteCity(MuteCityVars {
+                    xC4: m.u16(at) as i16,
+                    xC6: m.u16(at + 2) as i16,
+                    xC8: gobj(cx, at + 4),
+                    xCC: gobj(cx, at + 8),
+                    xD0: m.u8(at + 0xC),
+                    xD2: m.u16(at + 0xE) as i16,
+                    xD4: f(at + 0x10),
+                    xD8: f(at + 0x14),
+                    xDC: j(cx, at + 0x18),
+                    xE0: j(cx, at + 0x1C),
+                    xE4: v3(at + 0x20),
+                    xF0: v3(at + 0x2C),
+                    shadow_jobjs: std::array::from_fn(|i| j(cx, at + 0x38 + 4 * i as u32)),
+                    x110: cx
+                        .import_handle("LObjId", m.u32(at + 0x4C))
+                        .map(crate::hsd::lobj::LObjId),
+                    bounds: std::array::from_fn(|i| f(at + 0x50 + 4 * i as u32)),
+                })
+            }
+            VarsKind::MuteCity2 => GroundVars::MuteCity2(MuteCity2Vars {
+                xC4: m.u8(at),
+                xC8: cx
+                    .import_handle("JObjId", m.u32(at + 4))
+                    .map(crate::hsd::jobj::JObjId),
+                xCC: f(at + 8),
+                xD0: f(at + 0xC),
+                saved_colors: std::array::from_fn(|i| {
+                    m.u32(at + 0x10 + 4 * i as u32).to_be_bytes()
+                }),
+            }),
+            VarsKind::MuteCityCars => GroundVars::MuteCityCars(MuteCityCarsVars {
+                xC4: m.u16(at) as i16,
+            }),
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
                 blocks: std::array::from_fn(|i| {
@@ -3149,6 +3273,71 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Mute City's course's (`grMuteCity_GroundVars`), likewise: a block
+    /// holding pointers converts only if they are null.
+    pub fn mute_city(&mut self) -> &mut MuteCityVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [4, 8, 0x18, 0x1C, 0x38, 0x3C, 0x40, 0x44, 0x48, 0x4C] {
+                b.null(at);
+            }
+            let w0 = b.u32(0);
+            let wc = b.u32(0xC);
+            let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            *self = GroundVars::MuteCity(MuteCityVars {
+                xC4: (w0 >> 16) as i16,
+                xC6: w0 as i16,
+                xD0: (wc >> 24) as u8,
+                xD2: wc as i16,
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+                xE4: v3(0x20),
+                xF0: v3(0x2C),
+                bounds: std::array::from_fn(|i| b.f32(0x50 + 4 * i)),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::MuteCity(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grMuteCity_GroundVars"),
+        }
+    }
+
+    /// The variables as Mute City's platform's (`grMuteCity_GroundVars2`), likewise.
+    pub fn mute_city2(&mut self) -> &mut MuteCity2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            *self = GroundVars::MuteCity2(MuteCity2Vars {
+                xC4: b.0[0],
+                xC8: None,
+                xCC: b.f32(8),
+                xD0: b.f32(0xC),
+                saved_colors: std::array::from_fn(|i| b.u32(0x10 + 4 * i).to_be_bytes()),
+            });
+        }
+        match self {
+            GroundVars::MuteCity2(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grMuteCity_GroundVars2")
+            }
+        }
+    }
+
+    /// The variables as Mute City's cars' (`grMuteCity_GroundVars::xC4`), likewise.
+    pub fn mute_city_cars(&mut self) -> &mut MuteCityCarsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::MuteCityCars(MuteCityCarsVars {
+                xC4: (b.u32(0) >> 16) as i16,
+            });
+        }
+        match self {
+            GroundVars::MuteCityCars(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Mute City's cars'"),
+        }
+    }
+
     /// The variables as `grNBa_BG_Vars`, likewise.
     pub fn battle_bg(&mut self) -> &mut BattleBgVars {
         if let GroundVars::Bytes(b) = self {
@@ -3937,6 +4126,72 @@ impl Mirror for GroundVars {
                         "JObjId",
                         j.map(|j| j.0),
                         m.u32(at + off),
+                    );
+                }
+            }
+            GroundVars::MuteCity(v) => {
+                let v3 = |x: &crate::vec::Vec3| [x.x, x.y, x.z].map(f32::to_bits);
+                let ours = (
+                    [v.xC4, v.xC6, v.xD2],
+                    v.xD0,
+                    [v.xD4, v.xD8].map(f32::to_bits),
+                    [v3(&v.xE4), v3(&v.xF0)],
+                    v.bounds.map(f32::to_bits),
+                );
+                let t3 = |a: u32| [m.u32(at + a), m.u32(at + a + 4), m.u32(at + a + 8)];
+                let theirs = (
+                    [0, 2, 0xE].map(|o| m.u16(at + o) as i16),
+                    m.u8(at + 0xC),
+                    [m.u32(at + 0x10), m.u32(at + 0x14)],
+                    [t3(0x20), t3(0x2C)],
+                    std::array::from_fn(|i| m.u32(at + 0x50 + 4 * i as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.mutecity"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (name, g, off) in [("xC8", v.xC8, 4), ("xCC", v.xCC, 8)] {
+                    let p = format!("{path}.mutecity.{name}");
+                    cx.compare_handle(&p, "GObjId", g.map(|g| g.0), m.u32(at + off));
+                }
+                let mut joints = vec![("xDC", v.xDC, 0x18), ("xE0", v.xE0, 0x1C)];
+                for (k, j) in v.shadow_jobjs.iter().enumerate() {
+                    joints.push(("shadow_jobjs", *j, 0x38 + 4 * k as u32));
+                }
+                for (name, j, off) in joints {
+                    let p = format!("{path}.mutecity.{name}+{off:#x}");
+                    cx.compare_handle(&p, "JObjId", j.map(|j| j.0), m.u32(at + off));
+                }
+                let p = format!("{path}.mutecity.x110");
+                cx.compare_handle(&p, "LObjId", v.x110.map(|l| l.0), m.u32(at + 0x4C));
+            }
+            GroundVars::MuteCity2(v) => {
+                let ours = (v.xC4, [v.xCC, v.xD0].map(f32::to_bits), v.saved_colors);
+                let theirs = (
+                    m.u8(at),
+                    [m.u32(at + 8), m.u32(at + 0xC)],
+                    std::array::from_fn(|i| m.u32(at + 0x10 + 4 * i as u32).to_be_bytes()),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.mutecity2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                let p = format!("{path}.mutecity2.xC8");
+                cx.compare_handle(&p, "JObjId", v.xC8.map(|j| j.0), m.u32(at + 4));
+            }
+            GroundVars::MuteCityCars(v) => {
+                let theirs = m.u16(at) as i16;
+                if v.xC4 != theirs {
+                    cx.mismatch(
+                        &format!("{path}.mutecity.xC4"),
+                        format!("{}", v.xC4),
+                        format!("{theirs}"),
                     );
                 }
             }

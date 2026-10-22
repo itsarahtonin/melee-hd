@@ -675,6 +675,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Green Greens' block collision where it happens; breaks replay compatibility there.
 - **Source:** `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`, `status_at`).
 
+### Mute City's race order reaches the word before it
+
+- **Where:** `grMuteCity_801F1328` (the race), `crates/melee-sim/src/game/gr/mutecity.rs` (`steer_cars`).
+- **Defect:** the insertion sort of the cars' order runs its inner loop down to `j == 0` and compares `arr[j]` with `arr[j - 1]`, so it reads and swaps `grMc_8049F440[-1]`, the last word of Brinstar's bubbles (`grZe_8049F170[19].x20`, a GObj pointer on Brinstar, zero from boot otherwise).
+- **Effect:** once a car other than car 0 leads the order and has gone further than the car that word names (car 0 for the zero word), the two swap: the word takes the leader's index and the order holds car 0 twice, so the leader drops out of the race's closeness and pack flags until the word comes back. On a console that played Brinstar earlier in the session the word is a pointer and the sort reads a car far past the table.
+- **melee-hd:** modeled: the word is `mutecity::Globals::order_before`, zero at a match's start as after boot; the comparer checks it against the trace on Mute City.
+- **Fix:** stop the inner loop at `j >= 1`.
+- **Fix impact:** changes the cars' flags, speeds and lanes, so their positions and their hits on fighters; breaks Mute City replays.
+- **Source:** the port's `steer_cars` and `Globals::order_before`; ssbm-rs's port (`Handle::add(arr, j - 1)` at `j == 0`).
+
+### Mute City's car generator returns a stale register
+
+- **Where:** `grMuteCity_801F2AB0` (a car's smoke), stored by `grMuteCity_801F1A34`, `crates/melee-sim/src/game/gr/mutecity.rs` (`car_generator`, `Car::generator`).
+- **Defect:** the function never returns its generator: r3 holds what its last call left, `Ground_801C0498`'s load of `stage_info.x6B0`, the stage parameters' address (0 when the generator can't be made).
+- **Effect:** none observable: the car's `gen` word is only compared with null and cleared, and the parameters always exist, so it is non-null exactly when a generator was made.
+- **melee-hd:** modeled: `Car::generator` says whether the word holds the parameters' address, which the comparer checks.
+- **Fix:** return the generator.
+- **Fix impact:** none.
+- **Source:** the port's `car_generator`; the decompilation's remark on `grMuteCity_801F2AB0` ("Retail never sets the return value").
+
 ## Camera
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
