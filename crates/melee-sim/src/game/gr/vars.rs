@@ -88,6 +88,9 @@ pub enum VarsKind {
     Inishie2Log,
     Inishie2Birdo,
     Inishie2Pidgit,
+    IceMtScroll,
+    IceMtField(u8),
+    IceMtBg,
 }
 
 /// `union GroundVars`.
@@ -176,6 +179,13 @@ pub enum GroundVars {
     Inishie2Birdo(Inishie2BirdoVars),
     /// Pidgit's carpet (map 1).
     Inishie2Pidgit(Inishie2PidgitVars),
+    /// `grIceMt_GObj9_GroundVars`: Icicle Mountain's climb in VS mode (map 9).
+    IceMtScroll(IceMtScrollVars),
+    /// `grIceMt_GObj1_GroundVars` with `grIceMt_GroundVars`' animation slots: one of Icicle
+    /// Mountain's six fields (maps 1 to 6).
+    IceMtField(IceMtFieldVars),
+    /// `grIceMt_BG_GroundVars`: Icicle Mountain's background (map 8).
+    IceMtBg(IceMtBgVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1249,6 +1259,68 @@ pub struct Inishie2PidgitVars {
     pub xCA: i16,
     pub xCC: crate::vec::Vec3,
     pub xD8: crate::vec::Vec3,
+}
+
+/// `grIceMt_GObj9_GroundVars`: the two fields shown, below and above (`x0.ids`, map ids or
+/// -1), the climb's speed (`x0.state`, `grIceMt_FA364_State`), whether the climb waits for the
+/// match's start (`x14`), `x16`, each speed's rest count (`x18`) and each field's (`x30`, ten
+/// words cleared, six used).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct IceMtScrollVars {
+    pub under: i16,
+    pub upper: i16,
+    pub phase: i16,
+    pub delay: i16,
+    pub lerp_count: i16,
+    pub burst_count: i16,
+    pub idx: i16,
+    pub cur: f32,
+    pub x14: i16,
+    pub x16: i16,
+    pub x18: [i16; 12],
+    pub x30: [i16; 10],
+}
+
+/// A field's falling ice (`grIceMt_801F91EC`'s seven words): whether it runs, its tick, the
+/// part and the second part (-1 for none) it animates, its collision joint, and the ticks at
+/// which the joint leaves the search and comes back.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct IceMtSlot(pub [i16; 7]);
+
+/// `grIceMt_GObj1_GroundVars`: its flags (`x0_b0`, the field the climb stands on, and
+/// `x0_b1`, its points of interest due), its parts (`x4` to `x30`, the first four the points
+/// of interest), its blocks' items (`x34`) and, on maps 2 and 4, the falling ice
+/// (`grIceMt_GroundVars::x100` and `x108`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct IceMtFieldVars {
+    pub map: u8,
+    pub flags: u8,
+    pub parts: [Option<crate::hsd::jobj::JObjId>; 12],
+    pub items: [Option<GObjId>; 5],
+    pub slots: [IceMtSlot; 2],
+}
+
+impl IceMtFieldVars {
+    pub const B0: u8 = 0x80;
+    pub const B1: u8 = 0x40;
+}
+
+/// A field's number of blocks and its falling ice's offsets in the union, by map id.
+pub fn icemt_field_layout(map: u8) -> (usize, &'static [u32]) {
+    match map {
+        1 => (2, &[]),
+        2 => (2, &[0x3C, 0x4A]),
+        3 | 6 => (4, &[]),
+        4 => (4, &[0x44]),
+        5 => (5, &[]),
+        _ => panic!("gricemt.c: map {map} isn't a field"),
+    }
+}
+
+/// `grIceMt_BG_GroundVars`: the climb's speed this tick.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct IceMtBgVars {
+    pub x0: f32,
 }
 
 /// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
@@ -2340,6 +2412,44 @@ impl GroundVars {
                     xD8: v3(at + 0x14),
                 })
             }
+            VarsKind::IceMtScroll => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                GroundVars::IceMtScroll(IceMtScrollVars {
+                    under: h(0),
+                    upper: h(2),
+                    phase: h(4),
+                    delay: h(6),
+                    lerp_count: h(8),
+                    burst_count: h(0xA),
+                    idx: h(0xC),
+                    cur: f(at + 0x10),
+                    x14: h(0x14),
+                    x16: h(0x16),
+                    x18: std::array::from_fn(|k| h(0x18 + 2 * k as u32)),
+                    x30: std::array::from_fn(|k| h(0x30 + 2 * k as u32)),
+                })
+            }
+            VarsKind::IceMtField(map) => {
+                let (n, slots) = icemt_field_layout(map);
+                let mut v = IceMtFieldVars {
+                    map,
+                    flags: m.u8(at),
+                    ..Default::default()
+                };
+                for (k, p) in v.parts.iter_mut().enumerate() {
+                    *p = cx
+                        .import_handle("JObjId", m.u32(at + 4 + 4 * k as u32))
+                        .map(crate::hsd::jobj::JObjId);
+                }
+                for (k, it) in v.items.iter_mut().take(n).enumerate() {
+                    *it = gobj(cx, at + 0x34 + 4 * k as u32);
+                }
+                for (s, &off) in v.slots.iter_mut().zip(slots) {
+                    s.0 = std::array::from_fn(|k| m.u16(at + off + 2 * k as u32) as i16);
+                }
+                GroundVars::IceMtField(v)
+            }
+            VarsKind::IceMtBg => GroundVars::IceMtBg(IceMtBgVars { x0: f(at) }),
             VarsKind::Scroll => {
                 let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
                 let j = |cx: &mut dyn Cx, a: u32| {
@@ -3660,6 +3770,79 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Icicle Mountain's climb's (`grIceMt_GObj9_GroundVars`), likewise.
+    pub fn icemt_scroll(&mut self) -> &mut IceMtScrollVars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |a: usize| u16::from_be_bytes([b[a], b[a + 1]]) as i16;
+            let v = IceMtScrollVars {
+                under: h(0),
+                upper: h(2),
+                phase: h(4),
+                delay: h(6),
+                lerp_count: h(8),
+                burst_count: h(0xA),
+                idx: h(0xC),
+                cur: Bytes(b).f32(0x10),
+                x14: h(0x14),
+                x16: h(0x16),
+                x18: std::array::from_fn(|k| h(0x18 + 2 * k)),
+                x30: std::array::from_fn(|k| h(0x30 + 2 * k)),
+            };
+            *self = GroundVars::IceMtScroll(v);
+        }
+        match self {
+            GroundVars::IceMtScroll(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grIceMt_GObj9_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as one of Icicle Mountain's fields' (map `map`), likewise: its pointers
+    /// carry over only if null.
+    pub fn icemt_field(&mut self, map: u8) -> &mut IceMtFieldVars {
+        if let GroundVars::Bytes(b) = self {
+            let (n, slots) = icemt_field_layout(map);
+            let by = Bytes(b);
+            for k in 0..12 {
+                by.null(4 + 4 * k);
+            }
+            for k in 0..n {
+                by.null(0x34 + 4 * k);
+            }
+            let mut v = IceMtFieldVars {
+                map,
+                flags: b[0],
+                ..Default::default()
+            };
+            for (s, &off) in v.slots.iter_mut().zip(slots) {
+                let off = off as usize;
+                s.0 = std::array::from_fn(|k| {
+                    u16::from_be_bytes([b[off + 2 * k], b[off + 2 * k + 1]]) as i16
+                });
+            }
+            *self = GroundVars::IceMtField(v);
+        }
+        match self {
+            GroundVars::IceMtField(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grIceMt_GObj1_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as Icicle Mountain's background's (`grIceMt_BG_GroundVars`), likewise.
+    pub fn icemt_bg(&mut self) -> &mut IceMtBgVars {
+        if let GroundVars::Bytes(b) = self {
+            let x0 = Bytes(b).f32(0);
+            *self = GroundVars::IceMtBg(IceMtBgVars { x0 });
+        }
+        match self {
+            GroundVars::IceMtBg(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grIceMt_BG_GroundVars"),
+        }
+    }
+
     /// The variables as `ScrollVars`, likewise.
     pub fn scroll(&mut self) -> &mut ScrollVars {
         if let GroundVars::Bytes(b) = self {
@@ -4600,6 +4783,84 @@ impl Mirror for GroundVars {
                     v.xC4.map(|g| g.0),
                     m.u32(at),
                 );
+            }
+            GroundVars::IceMtScroll(v) => {
+                let ours = (
+                    [
+                        v.under,
+                        v.upper,
+                        v.phase,
+                        v.delay,
+                        v.lerp_count,
+                        v.burst_count,
+                        v.idx,
+                    ],
+                    v.cur.to_bits(),
+                    [v.x14, v.x16],
+                    v.x18,
+                    v.x30,
+                );
+                let h = |a: u32| m.u16(at + a) as i16;
+                let theirs = (
+                    [h(0), h(2), h(4), h(6), h(8), h(0xA), h(0xC)],
+                    m.u32(at + 0x10),
+                    [h(0x14), h(0x16)],
+                    std::array::from_fn(|k| h(0x18 + 2 * k as u32)),
+                    std::array::from_fn(|k| h(0x30 + 2 * k as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.icemt9"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::IceMtField(v) => {
+                let (n, slots) = icemt_field_layout(v.map);
+                let ours: (u8, Vec<[i16; 7]>) = (
+                    v.flags & 0xC0,
+                    v.slots[..slots.len()].iter().map(|s| s.0).collect(),
+                );
+                let theirs: (u8, Vec<[i16; 7]>) = (
+                    m.u8(at) & 0xC0,
+                    slots
+                        .iter()
+                        .map(|&off| std::array::from_fn(|k| m.u16(at + off + 2 * k as u32) as i16))
+                        .collect(),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.icemt1"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (k, j) in v.parts.iter().enumerate() {
+                    cx.compare_handle(
+                        &format!("{path}.icemt1.parts[{k}]"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + 4 + 4 * k as u32),
+                    );
+                }
+                for (k, it) in v.items.iter().take(n).enumerate() {
+                    cx.compare_handle(
+                        &format!("{path}.icemt1.x34[{k}]"),
+                        "GObjId",
+                        it.map(|g| g.0),
+                        m.u32(at + 0x34 + 4 * k as u32),
+                    );
+                }
+            }
+            GroundVars::IceMtBg(v) => {
+                if v.x0.to_bits() != m.u32(at) {
+                    cx.mismatch(
+                        &format!("{path}.icemt_bg.x0"),
+                        format!("{:?}", v.x0),
+                        format!("{:?}", f32::from_bits(m.u32(at))),
+                    );
+                }
             }
             GroundVars::Scroll(v) => {
                 let v3 = |x: &crate::vec::Vec3| [x.x, x.y, x.z].map(f32::to_bits);

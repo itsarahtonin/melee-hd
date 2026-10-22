@@ -82,6 +82,10 @@ pub const GRFLATZONE_YAKUMONO: u32 = 0x804D_6AB0;
 pub const GRINISHIE1_YAKUMONO: u32 = 0x804D_69F8;
 /// grinishie2.c's (`ssbm_types::tu::melee__gr__grinishie2::yakumono_param`).
 pub const GRINISHIE2_YAKUMONO: u32 = 0x804D_6A00;
+/// gricemt.c's (`ssbm_types::tu::melee__gr__gricemt::yakumono_param`) and the adventure's
+/// first three fields (`grIm_804D69E8`, `grIm_804D69EC`, `grIm_804D69F0`).
+pub const GRICEMT_YAKUMONO: u32 = 0x804D_69F4;
+pub const GRICEMT_FIELDS: u32 = 0x804D_69E8;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -378,6 +382,12 @@ impl Importer<'_> {
         self.game.gr.inishie1_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRINISHIE2_YAKUMONO);
         self.game.gr.inishie2_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRICEMT_YAKUMONO);
+        self.game.gr.icemt_yakumono = self.data_or_unhandled(yaku);
+        for i in 0..3 {
+            let g = cap.u32(GRICEMT_FIELDS + 4 * i);
+            self.game.gr.icemt_fields[i as usize] = self.import_handle_gobj(g);
+        }
         let n = gr::pura::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
         self.game.gr.pura_vtx_jobjs.clear();
@@ -1047,6 +1057,11 @@ impl Comparer<'_> {
                 GRINISHIE2_YAKUMONO,
                 game.gr.inishie2_yakumono,
             ),
+            (
+                "grIceMt yakumono_param",
+                GRICEMT_YAKUMONO,
+                game.gr.icemt_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1057,6 +1072,16 @@ impl Comparer<'_> {
             );
         }
         self.compare_zebes();
+        for (i, g) in game.gr.icemt_fields.iter().enumerate() {
+            use melee_sim::game::mirror::Cx;
+            let theirs = self.u32(GRICEMT_FIELDS + 4 * i as u32);
+            self.compare_handle(
+                &format!("grIm_804D69E8[{i}]"),
+                "GObjId",
+                g.map(|g| g.0),
+                theirs,
+            );
+        }
         self.check(
             "grOt_804D69C4",
             "onett x69c4",

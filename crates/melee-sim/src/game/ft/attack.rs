@@ -2127,6 +2127,7 @@ impl Running<'_> {
     #[doc(alias = "grFlatzone_802182B4")]
     #[doc(alias = "grInishie1_801FCBB0")]
     #[doc(alias = "grInishie2_801FDFE8")]
+    #[doc(alias = "grIceMt_801FA8F8")]
     pub(crate) fn line_hazard(&mut self, _line: i32) -> bool {
         match self.game.stage_info.on_touch_line {
             None => false,
@@ -2155,7 +2156,8 @@ impl Running<'_> {
                     || f.0 == 0x8020_1C50
                     || f.0 == 0x8021_82B4
                     || f.0 == 0x801F_CBB0
-                    || f.0 == 0x801F_DFE8 =>
+                    || f.0 == 0x801F_DFE8
+                    || f.0 == 0x801F_A8F8 =>
             {
                 false
             }

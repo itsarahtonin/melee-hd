@@ -71,6 +71,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::flatzone::run(game, gobj, addr) => {}
         addr if super::gr::inishie1::run(game, gobj, addr) => {}
         addr if super::gr::inishie2::run(game, gobj, addr) => {}
+        addr if super::gr::icemt::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),
@@ -143,6 +144,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::flatzone::run_event(game, f) => {}
         f if super::gr::inishie1::run_event(game, f) => {}
         f if super::gr::inishie2::run_event(game, f) => {}
+        f if super::gr::icemt::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
@@ -181,6 +183,7 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8021_6E74 => flatzone::on_demo_init(game),
         0x801F_A908 => inishie1::on_demo_init(game),
         0x801F_CBC0 => inishie2::on_demo_init(game),
+        0x801F_6868 => super::gr::icemt::on_demo_init(game),
         other => unported("demo setup", other),
     }
 }

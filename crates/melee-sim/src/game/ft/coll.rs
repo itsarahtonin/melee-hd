@@ -113,6 +113,11 @@ impl<'a> StageMaps<'a> {
         }
     }
 
+    /// The GObj of map `map_id`, `Ground_GetMapGObj`.
+    pub fn gobj(&self, map_id: i32) -> Option<GObjId> {
+        self.info.map_gobjs[map_id as usize]
+    }
+
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
     pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
         let g = self.info.map_gobjs[map_id as usize]?;
@@ -277,6 +282,31 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         joint_id,
                         x50,
                         kind,
+                    );
+                }
+            }
+            super::super::gr::icemt::ICE_A_TOUCHED
+            | super::super::gr::icemt::ICE_B_TOUCHED
+            | super::super::gr::icemt::ICE_C_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let map = if callback.0 == super::super::gr::icemt::ICE_C_TOUCHED {
+                        4
+                    } else {
+                        2
+                    };
+                    let root = self
+                        .stage_maps
+                        .gobj(map)
+                        .and_then(|go| self.stage_maps.jobj(go));
+                    let climb = self.stage_maps.ground(10);
+                    super::super::gr::icemt::ice_touched(
+                        self.objs,
+                        self.grounds,
+                        root,
+                        g,
+                        callback.0,
+                        coll,
+                        climb,
                     );
                 }
             }

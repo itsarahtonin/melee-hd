@@ -482,7 +482,8 @@ impl Running<'_> {
                 self.cpu_finish_neutral_y(f);
                 return;
             }
-            // `ftCo_800A9CB4_inline1`: Gr_Kind_Icemt, Gr_Kind_RCruise.
+            // `ftCo_800A9CB4_inline1`: Gr_Kind_Icemt (while the climb moves down, its wind's
+            // y below 0), Gr_Kind_RCruise.
             let fpp = &self.game.fighters[f.0];
             let recover = if fpp.cpu.xFA_b6 {
                 false
@@ -490,7 +491,11 @@ impl Running<'_> {
                 true
             } else {
                 match self.game.stage_info.grkind {
-                    22 => unported_call("ftCo_800A9CB4 on Icicle Mountain (grLib_801C9E60)"),
+                    22 => {
+                        let mut wind = crate::vec::Vec3::ZERO;
+                        crate::game::gr::grlib::item_wind(self.game, &mut wind);
+                        wind.y < 0.0
+                    }
                     3 => true,
                     _ => false,
                 }
