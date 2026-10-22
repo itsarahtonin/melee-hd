@@ -377,7 +377,7 @@ pub const STAGES: &[Stage] = &[
             ],
             modules: &["gr/kongo", "it/kinds/klap"],
             unreached: &[],
-            missing: &[NANA_BARREL],
+            missing: &[],
         }),
     },
     Stage {
@@ -391,7 +391,7 @@ pub const STAGES: &[Stage] = &[
             ],
             modules: &["gr/oldkongo"],
             unreached: &[],
-            missing: &[NANA_BARREL],
+            missing: &[],
         }),
     },
     Stage {
@@ -514,14 +514,6 @@ const NANA_SHRINE: Gap = Gap {
 const NANA_ISLANDS: Gap = Gap {
     what: "Nana's computer player judging whether an island is safe on Brinstar and Onett (ftCo_800A2718)",
     covers: &["ftCo_800A2718 on Zebes or Onett"],
-    with: Some(ICE_CLIMBERS),
-};
-
-/// And, in one of the stage's barrels away from Popo, picks the barrel's behavior (17), whose
-/// shot (`ftCo_800AC434`) isn't ported (docs/player.md, "CPU players: what's left").
-const NANA_BARREL: Gap = Gap {
-    what: "Nana's computer player in a barrel (ftCo_800AC434)",
-    covers: &["ftCo_800AC434"],
     with: Some(ICE_CLIMBERS),
 };
 

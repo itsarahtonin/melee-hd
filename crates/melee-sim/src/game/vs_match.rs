@@ -95,6 +95,8 @@ pub struct ReplayStart {
 
 /// The Ice Climbers' `CharacterKind`.
 const CKIND_ICE_CLIMBERS: u8 = 14;
+/// `Gm_PKind`'s computer player.
+const PKIND_CPU: u8 = 1;
 const CKIND_MARTH: i8 = 9;
 
 /// Whether the rules' item switch can spawn a Super Scope: items on (`it_8026D018`) with its
@@ -149,12 +151,12 @@ impl Settings {
     /// `prefs`: the VS mode's start data with what the character select screen sets for each
     /// player (character, kind, costume, team and CPU level) and the stage select's stage.
     ///
-    /// With an Ice Climber among the players the allocator model is on, laid out as a
-    /// console's VS match from the menus lays out the heap (`Layout::vanilla_vs`): Nana's
-    /// computer DI reads her `Fighter*`'s address, which the model gives (docs/engine.md,
-    /// docs/player.md). So it is when the item switch can spawn a Super Scope: its one-shot
-    /// charge takes the scope's GObj address for a level (docs/melee-bugs.md). Otherwise it
-    /// stays off, which costs nothing.
+    /// With a computer player or an Ice Climber among the players the allocator model is on,
+    /// laid out as a console's VS match from the menus lays out the heap
+    /// (`Layout::vanilla_vs`): a computer player's DI with no knockback, Nana's too, reads its
+    /// `Fighter*`'s address, which the model gives (docs/engine.md, docs/player.md). So it is
+    /// when the item switch can spawn a Super Scope: its one-shot charge takes the scope's GObj
+    /// address for a level (docs/melee-bugs.md). Otherwise it stays off, which costs nothing.
     pub fn vs_with(
         stage: u16,
         players: &[Player],
@@ -173,8 +175,10 @@ impl Settings {
             d.cpu_level = p.cpu_level;
         }
         let start = vs_mode::enter_vs(&mut vs, rules, prefs);
-        let heap =
-            players.iter().any(|p| p.character == CKIND_ICE_CLIMBERS) || scope_on(&start.rules);
+        let heap = players
+            .iter()
+            .any(|p| p.kind == PKIND_CPU || p.character == CKIND_ICE_CLIMBERS)
+            || scope_on(&start.rules);
         Settings {
             start,
             seed: 0,

@@ -7,6 +7,10 @@
 //! through the title screen and the main menu into VS mode's Melee, Ice Climbers on port 1 and
 //! Fox on port 2, Fountain of Dreams, every controller at rest from there (`docs/engine.md`
 //! has the run). The tests skip without `SSBM_DISC`, and the trace's without the trace.
+//!
+//! `TRACE_CPU` is the same run with the item switch at none, Fox on both ports and port 2's
+//! Fox switched to a computer player (level 1, the select's default) on the character select
+//! screen: a match with a computer player lays out the heap the same way.
 
 use std::process::Command;
 
@@ -19,6 +23,10 @@ const TRACE: &str = "traces/vanilla/menus-ics-fox-fod.trc";
 /// The same run with the item switch set to none first (VS mode, Custom Rules, Item Switch),
 /// as the player's own matches have it (`Settings::vs`).
 const TRACE_NO_ITEMS: &str = "traces/vanilla/menus-ics-fox-fod-noitems.trc";
+/// Fox against a computer Fox, the item switch at none (`traces/vanilla/menus-cpu-fox-fox-fod`,
+/// whose `.holds.txt` has the menus' inputs; every field is held, so the runner's random input
+/// never plays).
+const TRACE_CPU: &str = "traces/vanilla/menus-cpu-fox-fox-fod.trc";
 
 /// Fountain of Dreams' and Pokémon Stadium's `StKind`s.
 const FOUNTAIN: u16 = 2;
@@ -82,18 +90,22 @@ fn fighters_get_the_consoles_addresses() {
     );
 }
 
-/// `melee-oracle vs-heap` on the trace: its exit status and output, or none when the trace or
-/// the disc isn't here.
+/// `melee-oracle vs-heap` on the trace with the Ice Climbers and Fox: its exit status and
+/// output, or none when the trace or the disc isn't here.
 fn vs_heap(trace: &str, args: &[&str]) -> Option<(bool, String)> {
+    vs_heap_with(trace, &["--player", "0:14", "--player", "1:2"], args)
+}
+
+/// [`vs_heap`] with these players.
+fn vs_heap_with(trace: &str, players: &[&str], args: &[&str]) -> Option<(bool, String)> {
     let trace = ssbm_rs_local(trace);
     if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
         eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
         return None;
     }
     let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
-        .args([
-            "vs-heap", &trace, "--stage", "2", "--player", "0:14", "--player", "1:2",
-        ])
+        .args(["vs-heap", &trace, "--stage", "2"])
+        .args(players)
         .args(["--ticks", "400"])
         .args(args)
         .output()
@@ -150,4 +162,34 @@ fn allocator_model_follows_the_trace_without_items() {
     let (ok, out) = vs_heap(TRACE_NO_ITEMS, &[]).unwrap();
     assert!(!ok, "{out}");
     assert!(out.contains("the fighters' addresses differ"), "{out}");
+}
+
+/// With a computer player (port 2's Fox at level 1) the model lays the heap out the same way:
+/// the fighters' addresses and the model after each of the trace's 343 ticks, the computer
+/// player playing; settings with a human there instead are refused.
+#[test]
+fn allocator_model_follows_a_match_with_a_computer_player() {
+    let cpu = [
+        "--player",
+        "0:2",
+        "--player",
+        "1:2:1",
+        "--item-freq",
+        "none",
+    ];
+    let Some((ok, out)) = vs_heap_with(TRACE_CPU, &cpu, &[]) else {
+        return;
+    };
+    assert!(ok, "{out}");
+    assert!(
+        out.contains("the allocator model's and the trace's: [80c7dc20, 80cc2c00]"),
+        "{out}"
+    );
+    assert!(
+        out.contains("343 ticks compared, to the trace's end"),
+        "{out}"
+    );
+    let human = ["--player", "0:2", "--player", "1:2", "--item-freq", "none"];
+    let (ok, out) = vs_heap_with(TRACE_CPU, &human, &[]).unwrap();
+    assert!(!ok, "{out}");
 }

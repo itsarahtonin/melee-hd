@@ -1382,6 +1382,65 @@ pub fn cpu_set() -> Vec<Match> {
     out
 }
 
+/// The CPU stages set: real CPUs on stages beyond the tournament six where the CPU AI runs code
+/// of its own: off camera on the ground (`ftCo_800A6FC4`, Poké Floats and Yoshi's Island) and
+/// in the barrels (`ftCo_800AC434`, both Kongo Jungles; the Ice Climbers bring Nana). A human
+/// (`BENCH_AI`) against three CPUs at mixed levels, 4 stocks, 3 minutes, items off.
+pub fn cpu_stages_set() -> Vec<Match> {
+    let matches: [(u16, &str, [Player; 4]); 4] = [
+        (
+            POKE_FLOATS,
+            "poke-floats",
+            [
+                p(MARTH, 0),
+                cpu(KIRBY, 0, 9),
+                cpu(PIKACHU, 0, 5),
+                cpu(LUIGI, 0, 2),
+            ],
+        ),
+        (
+            YOSHIS_ISLAND,
+            "yoshis-island",
+            [
+                p(FOX, 0),
+                cpu(JIGGLYPUFF, 0, 8),
+                cpu(LINK, 0, 3),
+                cpu(GANONDORF, 0, 6),
+            ],
+        ),
+        (
+            KONGO_JUNGLE_64,
+            "kongo-jungle-64",
+            [
+                p(FOX, 0),
+                cpu(ICE_CLIMBERS, 0, 8),
+                cpu(DONKEY_KONG, 0, 5),
+                cpu(ZELDA, 0, 2),
+            ],
+        ),
+        (
+            KONGO_JUNGLE,
+            "kongo-jungle",
+            [
+                p(FALCO, 0),
+                cpu(YOSHI, 0, 9),
+                cpu(NESS, 0, 4),
+                cpu(MEWTWO, 0, 7),
+            ],
+        ),
+    ];
+    (matches.into_iter().enumerate())
+        .map(|(i, (stage, key, players))| Match {
+            name: Cow::Owned(format!("cpu-stage-{key}")),
+            stage,
+            players: Cow::Owned(players.to_vec()),
+            seed: 0x1F0F_2101 + i as u32,
+            rules: CPU_RULES,
+            items: Items::OFF,
+        })
+        .collect()
+}
+
 /// A set's matches.
 pub type Set = fn() -> Vec<Match>;
 
@@ -1391,6 +1450,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("coins", coins_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
+    ("cpu-stages", cpu_stages_set),
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
     ("leftovers", leftovers_set),
