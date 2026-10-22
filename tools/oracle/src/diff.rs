@@ -39,7 +39,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
 use std::time::{Duration, Instant};
 
-use melee_capture::compare::Comparer;
+use melee_capture::compare::{Comparer, PastAddrs};
 use melee_capture::import::{Importer, Maps, sym};
 use melee_capture::{
     Capture, DataMap, DiscIndex, Loaded, Rescan, find_archives_after, find_archives_in,
@@ -153,10 +153,17 @@ impl Files<'_> {
 
 /// The whole state compared with memory, as the capture checks compare it: the differences,
 /// and the fields code read while they were stale.
-fn compare(mem: &[u8], data: &DataMap, m: &Match, maps: Maps) -> (Vec<String>, Vec<String>) {
+fn compare(
+    mem: &[u8],
+    data: &DataMap,
+    m: &Match,
+    maps: Maps,
+    past: &PastAddrs,
+) -> (Vec<String>, Vec<String>) {
     let t0 = Instant::now();
     let mut cmp = Comparer::new(mem, data, &m.game, maps);
     cmp.archives = Some(&m.data);
+    cmp.past = Some(past);
     cmp.world();
     cmp.stage();
     cmp.ids();
@@ -719,7 +726,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
             let m = Match::resume(game, data);
             // The import compared back with the memory it came from: what the comparison can
             // tell apart before anything runs.
-            let (back, _) = compare(&image.mem1, &map, &m, Maps::default());
+            let (back, _) = compare(
+                &image.mem1,
+                &map,
+                &m,
+                Maps::default(),
+                &PastAddrs::default(),
+            );
             println!(
                 "trace tick {n} imported and compared back: {} differences",
                 back.len()
@@ -743,7 +756,13 @@ pub fn diff(args: &[&str]) -> ExitCode {
                         &loaded,
                     ),
                 };
-                let (d, _) = compare(&image.mem1, &data, &m, Maps::default());
+                let (d, _) = compare(
+                    &image.mem1,
+                    &data,
+                    &m,
+                    Maps::default(),
+                    &PastAddrs::default(),
+                );
                 println!(
                     "trace tick {n} imported, compared with tick {t}: {} differences",
                     d.len()
@@ -794,6 +813,9 @@ pub fn diff(args: &[&str]) -> ExitCode {
     }
     let mut device = Device(&replay);
     let mut compared = 0;
+    // The addresses pool slots' objects had, for pointers kept past their objects' frees.
+    let mut past = PastAddrs::default();
+    past.note(&m.game);
     let mut stale = StaleReads {
         counts: (m.game.objs.stale_reads, m.game.coll.stale_reads),
         ..Default::default()
@@ -847,7 +869,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
         }
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
         // The import's dangling slots compare by address throughout.
-        let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone());
+        past.note(&m.game);
+        let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone(), &past);
         stale.note(tick, &m, reads);
         diffs.retain(|d| !ignore.iter().any(|p| d.contains(p.as_str())));
         compared += 1;

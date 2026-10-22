@@ -270,6 +270,12 @@ impl Running<'_> {
             bone
         };
         let j = self.bone_joint(gobj, bone);
+        // A part whose joint was freed: Samus's beam tip entry (part 139, which her grabs'
+        // and the swing's boxes name) keeps a beam's tip after the beam goes, and the
+        // original's block may hold another object by now (docs/engine.md).
+        if j.is_some_and(|j| self.game.objs.jobjs.pool.is_free(j.0)) {
+            self.game.objs.stale_reads += 1;
+        }
         self.game.fighters[f.0].x914[id].jobj.set(j);
         self.hitbox_damage(f, id, false, bits(w[0], 22, 10));
         let fixed = |v: f64| mem(fp::fmuls(reg(FIXED), v));
