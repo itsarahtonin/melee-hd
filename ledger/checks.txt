@@ -10272,6 +10272,19 @@ ftCo_800A2170	leaf-check cpu_vs: cpu_vs_changed RangedAs(Yoshi), the egg roll at
 ftCo_800B9790	leaf-check cpu_vs: the CPU Ness's saved frames and cpu_vs_changed RangedAs(Ness)
 ftCo_800B98C8	leaf-check cpu_vs: cpu_vs_changed RangedAs(Yoshi)
 ftCo_800B6208	leaf-check cpu_vs: the CPU Mewtwo's saved frames and cpu_vs_changed RangedAs (each character's ranged table)
+# A VS match's computer players with items (milestone 4's task 15): the cpu-items oracle matches (local/calls/cpu-vs/oracle-cpu-items-*, items on with every switch kind) as saved and changed by cpu_vs_changed's items-on changes (Swung, EnemyItem, Cloaked, MirroredX, ItemsAs), and melee-oracle diff of the four cpu-items matches to their ends (docs/oracle.md, "The CPU AI").
+ftCo_800B8A9C	leaf-check cpu_vs: every saved frame decides its attack through it, and cpu_vs_changed Swung (each swung item held); melee-oracle diff, the 28 cpu matches and the four cpu-items matches to their ends
+ftCo_800B4AB0	leaf-check cpu_vs: every saved frame with an attack to pick; melee-oracle diff, the cpu and cpu-items matches to their ends
+ftCo_800B52AC	leaf-check cpu_vs: the cpu-items sets' saved frames with a fan, Beam Sword, bat or parasol held, and cpu_vs_changed Swung (all six swung kinds, so each reach slot); melee-oracle diff, cpu-items-captain-ys, cpu-items-mario-bf and cpu-items-samus-ps
+ftCo_800A3710	leaf-check cpu_vs: the cpu-items sets' saved frames (an item to pick up on the fighter's island, in reach or not); melee-oracle diff, the four cpu-items matches
+ftpickupitem_80094150	leaf-check cpu_vs: ftCo_800A3710 asks it in the cpu-items sets' saved frames; melee-oracle diff, the four cpu-items matches
+ftCo_800A866C	leaf-check cpu_vs: the cpu-items sets' saved frames (the floor under the item, an island's left end) and cpu_vs_changed MirroredX (its right end); melee-oracle diff, the four cpu-items matches
+ftCo_800A648C	leaf-check cpu_vs: every saved frame with items out, and cpu_vs_changed EnemyItem (an item made a Goomba or a Topi in front of the fighter)
+ftCo_800B5AB0	leaf-check cpu_vs: cpu_vs_changed EnemyItem (an enemy item in front of the fighter with no other attack picked)
+ftCo_800A0F00	leaf-check cpu_vs: every saved frame's target searches, and cpu_vs_changed Cloaked (enemies under a power-up's colors, the cloak holding and flickering)
+ft_80087A18	leaf-check cpu_vs: ftCo_800A0F00 asks it in every saved frame, and cpu_vs_changed Cloaked
+ftCo_800C06B4	leaf-check cpu_vs: ft_80087A18 reads it under cpu_vs_changed Cloaked
+ftCo_800A2998	leaf-check cpu_vs: cpu_vs_changed ItemsAs (a Flipper or barrel cannon coming at the fighter on the ground)
 ftCo_800B9020	leaf-check cpu_vs: the CPU Mewtwo's saved frames (behavior 3) and cpu_vs_changed StateAs (Ness's PK Thunder, Yoshi's egg roll); melee-oracle diff, hf-mewtwo-falco-bf-3e1a8c1d-g1 from tick 751 (its count, x90, isn't shown to fail: no frame checked picks a command afresh there)
 ftCo_800B658C	leaf-check cpu_vs: every saved frame attacking and cpu_vs_changed StateAs (charge releases, PK Flash); melee-oracle diff, hf-ness-marth-bf-69664b46-g1 from tick 300
 ftCo_800B920C	leaf-check cpu_vs: the CPU Ness's saved frames and cpu_vs_changed StateAs(Ness, PK Flash)

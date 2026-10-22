@@ -95,13 +95,30 @@ impl Running<'_> {
     /// Whether a fighter is invisible to computer players for now, `ftCo_800A0F00`: under a
     /// cloaking item's color animation (`ft_80087A18`), always or, flickering, half the time
     /// by its own frame count.
-    // Ports `ftCo_800A0F00`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A0F00")]
     pub(super) fn cpu_cloaked(&self, f: FighterId) -> bool {
-        // `ft_80087A18`: only with a powered-up color animation (`x2226_b4`).
-        if self.game.fighters[f.0].x2226_b4 {
-            unported_call("ft_80087A18 with a power-up's color animation");
+        let fp = &self.game.fighters[f.0];
+        if !self.cloaking_colors(f) {
+            return false;
         }
-        false
+        // `ft_80087A80`: the cloak's vibrate frame, 2 while it holds and 1 as it flickers.
+        match fp.smash_attrs.x2134_vibrateFrame {
+            2 => true,
+            1 => fp.cpu.x7C % 240 > 120,
+            _ => false,
+        }
+    }
+
+    /// Whether a fighter shows a power-up's colors that hide it, `ft_80087A18`: with a
+    /// power-up's color animation (`x2226_b4`) and its refraction (`x2226_b5`), the color
+    /// animation's word none or 5 (`ftCo_800C06B4` returns its address plus 0x7B, which the
+    /// original compares with 0x7B and 0x80).
+    #[doc(alias = "ft_80087A18")]
+    #[doc(alias = "ftCo_800C06B4")]
+    fn cloaking_colors(&self, f: FighterId) -> bool {
+        let fp = &self.game.fighters[f.0];
+        let at = (i32::from_be_bytes(fp.x508.x28_colanim)).wrapping_add(0x7B);
+        fp.x2226_b4 && (at == 0x7B || at == 0x80) && fp.x2226_b5
     }
 
     /// The distance between two fighters, `ftCo_800A1AB4`.
@@ -279,11 +296,12 @@ impl Running<'_> {
         reg(math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy)))))
     }
 
-    /// The enemy item the fighter goes for, `ftCo_800A648C`: the containers' monsters and the
-    /// adventure's Koopas, Like Likes and Topis in reach. Only an items-on match spawns one,
-    /// so a candidate stops the port.
-    // Ports `ftCo_800A648C`; aliased once a check reaches it.
+    /// The enemy item the fighter goes for, `ftCo_800A648C`: the nearest of the containers'
+    /// monsters and the adventure's Koopas, Like Likes and Topis in reach of the blast zones.
+    #[doc(alias = "ftCo_800A648C")]
     pub(super) fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
+        use super::super::it::kinds as k;
+        let mut closest: Option<(ItemId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
@@ -291,16 +309,22 @@ impl Running<'_> {
             let ip = &self.game.items[it.0];
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
-            let k = ip.kind;
-            let enemy = (0x2B..0x2F).contains(&k)
-                || k == 0xD3
-                || (k.wrapping_sub(0xD4) as u32) <= 1
-                || k == 0xD9;
-            if enemy && !self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
-                unported_call("ftCo_800A648C with a candidate item");
+            let kind = ip.kind;
+            let enemy = (k::KURIBOH..k::OCTAROCK_STONE).contains(&kind)
+                || kind == 0xD3
+                || (kind.wrapping_sub(0xD4) as u32) <= 1
+                || kind == 0xD9;
+            if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
+                continue;
+            }
+            let d = self.cpu_item_distance(f, it);
+            match closest {
+                None => closest = Some((it, d)),
+                Some((_, best)) if best > d => closest = Some((it, d)),
+                _ => {}
             }
         }
-        None
+        closest.map(|(it, _)| it)
     }
 
     /// Nana making her way back to Popo, `ftCo_800B0760`: she targets the nearest enemy and
@@ -930,14 +954,37 @@ impl Running<'_> {
     /// Whether the fighter picks up the item it goes for, `ftCo_800A3710`: if it may
     /// (`xF9_b7`), the item is still grabbable (else it forgets it), and both stand on the
     /// same ground with the fighter's hands free.
-    // Ports `ftCo_800A3710`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A3710")]
     fn cpu_item_pickup(&mut self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         if !c.xF9_b7 {
             return false;
         }
-        let Some(_item) = c.x4C else { return false };
-        unported_call("ftCo_800A3710 with an item to pick up");
+        let Some(item) = c.x4C else { return false };
+        let ig = self.game.items[item.0]
+            .entity
+            .expect("the item the fighter goes for has its GObj");
+        if !super::super::it::item::is_grabbable(self.game, ig) {
+            self.game.fighters[f.0].cpu.x4C = None;
+            return false;
+        }
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR || fpp.item_gobj.is_some() {
+            return false;
+        }
+        // `ftCo_800A2170_it`: both on the same island.
+        if self.game.items[item.0].ground_or_air == GA_AIR {
+            return false;
+        }
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
+            return false;
+        };
+        if geo.island_of_line(self.game.items[item.0].x378_itemColl.floor.index) != Some(island) {
+            return false;
+        }
+        let g = fpp.gobj.expect("the fighter's GObj");
+        self.item_pickup_in_reach(g, ig)
     }
 
     /// Whether the fighter has reached its destination, `ftCo_800A3554`: on the ground on

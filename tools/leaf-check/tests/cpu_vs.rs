@@ -97,6 +97,31 @@ const ITEM_KIND: u32 = 0x10;
 const IT_CAPSULE: u32 = 0;
 const IT_BOX: u32 = 1;
 const IT_M_BALL: u32 = 34;
+/// The swung items: `It_Kind_Harisen`, `_LipStick`, `_StarRod`, `_Sword`, `_Bat`, `_Parasol`.
+const IT_HARISEN: u32 = 24;
+const IT_LIPSTICK: u32 = 23;
+const IT_STARROD: u32 = 22;
+const IT_SWORD: u32 = 12;
+const IT_BAT: u32 = 11;
+const IT_PARASOL: u32 = 13;
+/// The enemy items the CPU goes for (`ftCo_800A648C`): `It_Kind_Kuriboh` (a Goomba) and
+/// `_Whitebea`.
+const IT_KURIBOH: u32 = 43;
+const IT_WHITEBEA: u32 = 0xD9;
+/// The items the shield behavior rolls away from or through: `It_Kind_Flipper`,
+/// `_TaruCann` (the barrel cannon), `_DKinoko` (the Poison Mushroom).
+const IT_FLIPPER: u32 = 31;
+const IT_TARU_CANN: u32 = 5;
+const IT_DKINOKO: u32 = 22;
+/// `Item::pos`.
+const ITEM_POS: u32 = 0x4C;
+/// The word holding `x2226_b4` (a power-up's color animation) and `x2226_b5` (its
+/// refraction), and those bits; the color animation's word (`x508.x28_colanim`); the word
+/// whose top byte is the cloak's vibrate frame (`x2134`).
+const X2224: u32 = 0x2224;
+const POWER_UP_COLORS: u32 = 0x0800 | 0x0400;
+const COLANIM: u32 = 0x530;
+const VIBRATE: u32 = 0x2134;
 /// `CpuFighter` (`Fighter::x1A88`) offsets.
 const CPU: u32 = 0x1A88;
 const CPU_KIND: u32 = CPU + 0xC;
@@ -225,6 +250,23 @@ enum Change {
     /// Holding an item, its ranged attack's delay over and its script ended: the held item
     /// from range (`ftCo_800B9A04`), as the item's kind or as `kind`.
     Held(Option<u32>),
+    /// Holding an item made the swung `kind`, on the ground with a target, its script ended:
+    /// the swung item's attacks with its reach (`ftCo_800B52AC`).
+    Swung(u32),
+    /// The last item in the items' list made the enemy item `kind`, `dx` in front of the
+    /// fighter at its height, its script ended: the enemy item it goes for
+    /// (`ftCo_800A648C`) and its attacks on it (`ftCo_800B5AB0`).
+    EnemyItem(u32, f32),
+    /// Its enemies under a power-up's colors with the cloak's vibrate frame `frame` (2 hides
+    /// them, 1 every other 120 frames, by their own frame count, set to 200), its script
+    /// ended: the cloak's check (`ftCo_800A0F00`, `ft_80087A18`).
+    Cloaked(u32),
+    /// On the ground left of the middle, moved as far right: an item it goes for on an
+    /// island to its left ends at that island's right end (`ftCo_800A866C`).
+    MirroredX,
+    /// Every item made `kind`, its script ended: where an item's hitbox comes at it on the
+    /// ground, the shield behavior's rolls by the item (`ftCo_800BA9A0`, `ftCo_800A2998`).
+    ItemsAs(u32),
     /// At level 9 with its script ended, its enemies (as `kind`) in `motion` at `(dx, dy)`
     /// from it: the moves it dodges (`ftCo_800BB768`).
     EnemyMove(u32, u32, f32, f32),
@@ -257,6 +299,20 @@ enum Di {
     FloorAwayGround,
     FloorOffCamera,
     FloorOffCameraAway,
+}
+
+impl Change {
+    /// Whether the change is for the items-on sets' frames alone.
+    fn items_on_only(self) -> bool {
+        matches!(
+            self,
+            Change::Swung(_)
+                | Change::EnemyItem(..)
+                | Change::Cloaked(_)
+                | Change::MirroredX
+                | Change::ItemsAs(_)
+        )
+    }
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -397,6 +453,65 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             end_script(call, fp);
         }
+        Change::Swung(kind) => {
+            let item = peek_u32(call, fp + ITEM_GOBJ);
+            if item == 0 || air || peek_u32(call, fp + TARGET) == 0 {
+                return false;
+            }
+            let ip = peek_u32(call, item + 0x2C);
+            poke_u32(call, ip + ITEM_KIND, kind);
+            end_script(call, fp);
+        }
+        Change::EnemyItem(kind, dx) => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            let mut g = peek_u32(call, heads + 9 * 4);
+            let mut last = 0;
+            while g != 0 {
+                last = g;
+                g = peek_u32(call, g + 0x8);
+            }
+            if last == 0 {
+                return false;
+            }
+            let ip = peek_u32(call, last + 0x2C);
+            let facing = peek_f32(call, fp + 0x2C);
+            poke_u32(call, ip + ITEM_KIND, kind);
+            poke_f32(call, ip + ITEM_POS, peek_f32(call, fp + POS) + facing * dx);
+            poke_f32(call, ip + ITEM_POS + 4, peek_f32(call, fp + POS + 4));
+            end_script(call, fp);
+        }
+        Change::Cloaked(frame) => {
+            for e in enemies(call, fp) {
+                let w = peek_u32(call, e + X2224);
+                poke_u32(call, e + X2224, w | POWER_UP_COLORS);
+                poke_u32(call, e + COLANIM, 0);
+                let v = peek_u32(call, e + VIBRATE);
+                poke_u32(call, e + VIBRATE, (v & 0x00FF_FFFF) | frame << 24);
+                poke_u32(call, e + FRAMES, 200);
+            }
+            end_script(call, fp);
+        }
+        Change::ItemsAs(kind) => {
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            let mut g = peek_u32(call, heads + 9 * 4);
+            if g == 0 {
+                return false;
+            }
+            while g != 0 {
+                let ip = peek_u32(call, g + 0x2C);
+                poke_u32(call, ip + ITEM_KIND, kind);
+                g = peek_u32(call, g + 0x8);
+            }
+            end_script(call, fp);
+        }
+        Change::MirroredX => {
+            let x = peek_f32(call, fp + POS);
+            if air || x > -10.0 {
+                return false;
+            }
+            poke_f32(call, fp + POS, -x);
+            end_script(call, fp);
+        }
         Change::Held(kind) => {
             let item = peek_u32(call, fp + ITEM_GOBJ);
             if item == 0 || peek_u32(call, fp + TARGET) == 0 {
@@ -494,6 +609,20 @@ fn changes() -> Vec<Change> {
         Change::Held(Some(IT_CAPSULE)),
         Change::Held(Some(IT_BOX)),
         Change::Held(Some(IT_M_BALL)),
+        Change::Swung(IT_HARISEN),
+        Change::Swung(IT_LIPSTICK),
+        Change::Swung(IT_STARROD),
+        Change::Swung(IT_SWORD),
+        Change::Swung(IT_BAT),
+        Change::Swung(IT_PARASOL),
+        Change::EnemyItem(IT_KURIBOH, 10.0),
+        Change::EnemyItem(IT_WHITEBEA, 20.0),
+        Change::Cloaked(2),
+        Change::Cloaked(1),
+        Change::MirroredX,
+        Change::ItemsAs(IT_FLIPPER),
+        Change::ItemsAs(IT_TARU_CANN),
+        Change::ItemsAs(IT_DKINOKO),
         Change::EnemyMove(KOOPA, KP_BOMB, 0.0, 20.0),
         Change::EnemyMove(KOOPA, ATTACK_HI4, 0.0, -10.0),
         Change::EnemyMove(YOSHI, YS_BOMB, 0.0, 20.0),
@@ -529,10 +658,20 @@ fn cpu_vs_changed() {
         &dirs,
         |dir| saved_calls(dir, "ftCo_800B3900").len(),
         |dir| {
+            // A change runs every frame of a set, changed or not: the items-on changes run
+            // only on the items-on sets, whose frames they are for.
+            let items_on = dir.contains("oracle-cpu-items-");
+            let active: Vec<usize> = (0..changes.len())
+                .filter(|&v| items_on || !changes[v].items_on_only())
+                .collect();
+            if active.is_empty() {
+                return vec![0; changes.len()];
+            }
             let changed: Vec<Mutex<BTreeSet<usize>>> =
                 changes.iter().map(|_| Mutex::default()).collect();
-            let prepares: Vec<Box<Prepare>> = (0..changes.len())
-                .map(|v| {
+            let prepares: Vec<Box<Prepare>> = active
+                .iter()
+                .map(|&v| {
                     let changed = &changed;
                     let change = changes[v];
                     Box::new(move |c: &mut Call, i: usize| {
@@ -552,18 +691,14 @@ fn cpu_vs_changed() {
                 .collect();
             let paths = saved_calls(dir, "ftCo_800B3900");
             let reports = check_variants(dir, "ftCo_800B3900", &variants);
-            reports
-                .iter()
-                .enumerate()
-                .map(|(v, r)| {
-                    let c = changed[v].lock().unwrap();
-                    if c.is_empty() {
-                        0
-                    } else {
-                        compared(r, &paths, &c)
-                    }
-                })
-                .collect::<Vec<usize>>()
+            let mut out = vec![0; changes.len()];
+            for (&v, r) in active.iter().zip(&reports) {
+                let c = changed[v].lock().unwrap();
+                if !c.is_empty() {
+                    out[v] = compared(r, &paths, &c);
+                }
+            }
+            out
         },
     );
     let mut totals = vec![0; changes.len()];

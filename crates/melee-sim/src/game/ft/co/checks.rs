@@ -481,6 +481,50 @@ impl Running<'_> {
         found
     }
 
+    /// Whether the fighter can pick up this item now, `ftpickupitem_80094150`: one it may
+    /// take (as [`Running::item_in_reach`], light or heavy alike) whose pickup point lies
+    /// within its grab range of the fighter's reach box.
+    #[doc(alias = "ftpickupitem_80094150")]
+    pub fn item_pickup_in_reach(&mut self, gobj: GObjId, item: GObjId) -> bool {
+        use crate::game::it::{self, kinds, lib26b1};
+        const COIN: i32 = 159;
+        const LUCKY_EGG: i32 = 205;
+        const WHISPY_HEAL_APPLE: i32 = 226;
+        if !it::item::is_grabbable(self.game, item) {
+            return false;
+        }
+        if self.game.fighter(gobj).x2222_b4 && lib26b1::heal_amount(self.game, item) != 0 {
+            return false;
+        }
+        let k = it::item(self.game, item).kind;
+        let takes_held = [kinds::HEART, kinds::TOMATO, kinds::FOODS, COIN, LUCKY_EGG].contains(&k)
+            || k == WHISPY_HEAL_APPLE;
+        if self.game.fighter(gobj).item_gobj.is_some() && !takes_held {
+            return false;
+        }
+        let fp = self.game.fighter(gobj);
+        let p = &fp.x294_itPickup;
+        let light = if fp.ground_or_air == super::super::common::GA_GROUND {
+            &p.gr_light_offset
+        } else {
+            &p.air_light_offset
+        };
+        let heavy = lib26b1::is_heavy(self.game, self.data, item);
+        let at = lib26b1::grab_pos(self.game, item);
+        let (xr, yr) = lib26b1::grab_range(self.game, item);
+        let (xr, yr) = (reg(xr), reg(yr));
+        let v = if heavy { &p.gr_heavy_offset } else { light };
+        let x1 = reg(v.z);
+        let x0 = fp::fmadds(reg(fp.facing_dir), reg(v.x), reg(fp.cur_pos.x));
+        let y0 = fp::fadds(reg(fp.cur_pos.y), reg(v.y));
+        let y1 = reg(v.w);
+        let (ix, iy) = (reg(at.x), reg(at.y));
+        fp::fsubs(fp::fsubs(x0, x1), xr) < ix
+            && fp::fadds(xr, fp::fadds(x0, x1)) > ix
+            && fp::fsubs(fp::fsubs(y0, y1), yr) < iy
+            && fp::fadds(yr, fp::fadds(y0, y1)) > iy
+    }
+
     /// Whether the held item is the hammer, `ftCo_800C5240`.
     #[doc(alias = "ftCo_800C5240")]
     pub fn holding_hammer(&mut self, gobj: GObjId) -> bool {
