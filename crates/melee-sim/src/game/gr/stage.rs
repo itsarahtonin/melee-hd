@@ -417,9 +417,7 @@ impl super::super::state::Running<'_> {
                     .expect("Pokémon Stadium's display");
                 super::stadium::text_names_or_count(self, g);
             }
-            GR_KIND_CORNERIA | GR_KIND_VENOM => {
-                super::super::code::unported_call("grCorneria_801E2A6C")
-            }
+            GR_KIND_CORNERIA | GR_KIND_VENOM => super::corneria::match_end(self),
             _ => {}
         }
     }

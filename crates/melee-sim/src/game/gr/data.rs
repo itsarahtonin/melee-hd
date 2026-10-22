@@ -4,10 +4,10 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
-    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_CORNERIA, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY,
+    GR_KIND_GREENS, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -866,6 +866,82 @@ pub const RCRUISE: StageData = StageData {
     joints: &RCRUISE_JOINTS,
 };
 
+/// An Arwing's collision object's callbacks (`grCorneria_Arwing_801DE4C0` and its process).
+const CORNERIA_ARWING: StageCallbacks = cb(0x801D_E4C0, 0x801D_E560, 0x801D_E568, 0x801D_E8E0, 0);
+
+/// `grCn_StageCallbacks`. Map 3 is the Great Fox the fighters stand on, map 0 its copy, maps 4,
+/// 8 and 9 the scrolling city, map 7 the sky, map 1 an Arwing's flight path, maps 2 and 10 the
+/// Arwings flying it, maps 13 to 18 their collision, map 12 the Star Fox team's talk and map 5
+/// its window; maps 6 and 11 hold the rest.
+pub const CORNERIA_CALLBACKS: [StageCallbacks; 19] = [
+    cb(0x801D_D620, 0x801D_D64C, 0x801D_D654, 0x801D_D658, 0),
+    cb(0x801D_DAC4, 0x801D_DCE8, 0x801D_E024, 0x801D_E4BC, 0),
+    cb(0x801D_E8E4, 0x801D_EC00, 0x801D_ED50, 0x801D_F8CC, 0),
+    cb(
+        0x801D_D674,
+        0x801D_D9A0,
+        0x801D_D9A8,
+        0x801D_DAC0,
+        StageCallbacks::LIGHTS,
+    ),
+    cb(0x801E_0140, 0x801E_01A0, 0x801E_01A8, 0x801E_03C4, 0),
+    cb(
+        0x801E_0DE4,
+        0x801E_0E0C,
+        0x801E_0E14,
+        0x801E_0E3C,
+        StageCallbacks::CAMERA,
+    ),
+    cb(0x801D_FBF0, 0x801D_FC1C, 0x801D_FC24, 0x801D_FC28, 0),
+    cb(
+        0x801E_0C3C,
+        0x801E_0D28,
+        0x801E_0D30,
+        0x801E_0DE0,
+        StageCallbacks::FOG,
+    ),
+    cb(0x801D_FC2C, 0x801D_FC90, 0x801D_FC98, 0x801D_FEB4, 0),
+    cb(0x801D_FEB8, 0x801D_FF18, 0x801D_FF20, 0x801E_013C, 0),
+    cb(0x801D_F8D0, 0x801D_FBC4, 0x801D_FBCC, 0x801D_FBEC, 0),
+    cb(0x801E_1054, 0x801E_1058, 0x801E_1060, 0x801E_12CC, 0),
+    cb(0x801E_0F30, 0x801E_0F64, 0x801E_0F6C, 0x801E_1030, 0),
+    CORNERIA_ARWING,
+    CORNERIA_ARWING,
+    CORNERIA_ARWING,
+    CORNERIA_ARWING,
+    CORNERIA_ARWING,
+    CORNERIA_ARWING,
+];
+
+/// `grCn_803E1D38`: the Great Fox's and the Arwings' collision joints the stage binds itself.
+pub const CORNERIA_JOINTS: [GrJoint; 8] = [
+    GrJoint { x: 3, y: 3, z: 0 },
+    GrJoint { x: 4, y: 3, z: 0 },
+    GrJoint { x: 0, y: 13, z: 0 },
+    GrJoint { x: 1, y: 14, z: 0 },
+    GrJoint { x: 2, y: 15, z: 0 },
+    GrJoint { x: 5, y: 16, z: 0 },
+    GrJoint { x: 6, y: 17, z: 0 },
+    GrJoint { x: 7, y: 18, z: 0 },
+];
+
+/// `grCn_StageData`.
+pub const CORNERIA: StageData = StageData {
+    grkind: GR_KIND_CORNERIA,
+    callbacks: &CORNERIA_CALLBACKS,
+    // The table's `/GrCn`, which `lbFileGetFullName` completes with the language's extension.
+    file: Some("/GrCn.usd"),
+    on_init: 0x801D_D350,
+    on_demo_init: 0x801D_D2C0,
+    on_load: 0x801D_D478,
+    on_start: 0x801D_D508,
+    callback4: 0x801D_D52C,
+    on_touch_line: 0x801E_2EE4,
+    on_check_shadow_render: 0x801E_2EEC,
+    flags2: 1,
+    joints: &CORNERIA_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -889,6 +965,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_ONETT => &ONETT,
         GR_KIND_PURA => &PURA,
         GR_KIND_RCRUISE => &RCRUISE,
+        GR_KIND_CORNERIA => &CORNERIA,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

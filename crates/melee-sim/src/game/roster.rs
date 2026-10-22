@@ -271,6 +271,61 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 7,
+        name: "Corneria",
+        keys: &["cn", "corneria"],
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grcorneria",
+                "melee/it/kinds/itarwinglaser",
+                "melee/it/kinds/itgreatfoxlaser",
+                "melee/it/kinds/ityaku",
+            ],
+            modules: &[
+                "gr/corneria",
+                "it/kinds/arwinglaser",
+                "it/kinds/greatfoxlaser",
+                "it/kinds/yaku",
+            ],
+            unreached: &[
+                YAKU_UNANCHORED,
+                (
+                    "grCorneria_801DD2C0",
+                    "the demo's setup, which only the title screen's demo runs",
+                ),
+                (
+                    "gm_8017E7E0",
+                    "the demo's scene code, which only the title screen's demo runs",
+                ),
+                (
+                    "grCorneria_801E1060",
+                    "map 11's process: the stage's load hook destroys map 11 before its first tick",
+                ),
+                (
+                    "gm_801883C0",
+                    "map 11's process: the stage's load hook destroys map 11 before its first tick",
+                ),
+                (
+                    "grCorneria_801E1BF0",
+                    "the opening movie's Arwing (vi0601.c)",
+                ),
+                (
+                    "grCorneria_801E2E50",
+                    "the computer players' floor check, which the CPU audit holds (cpu_audit)",
+                ),
+                (
+                    "it_802EB5A8",
+                    "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload at the scene's end",
+                ),
+                (
+                    "grVenom_",
+                    "Venom's side of the talk and the match's end, which Corneria never runs",
+                ),
+            ],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 28,
         name: "Dream Land",
         keys: &["dl", "dream-land"],
@@ -608,10 +663,6 @@ pub(crate) mod tests {
             "on_check_shadow_render",
             "each roster stage's shadow check is wired (every_roster_stage_plays)",
         ),
-        (
-            "Ground_801C2C8C",
-            "stage objects with a camera of their own: Corneria and Venom",
-        ),
         ("grBigBlue_801EF7D8", "Big Blue's wind"),
         ("grIceMt_801FA728", "Icicle Mountain's wind"),
         (
@@ -631,14 +682,9 @@ pub(crate) mod tests {
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
         (
-            "lb_80013B14",
-            "stage objects with a camera of their own: Corneria and Venom",
-        ),
-        (
             "Ground_803E06C8",
             "the default lights, which no VS stage uses",
         ),
-        ("a stage object's camera GObj", "Corneria and Venom"),
         (
             "grDatFiles_803E0848",
             "stages without an archive, none of them VS stages",
@@ -651,7 +697,6 @@ pub(crate) mod tests {
             "lbAudioAx_8002305C",
             "random music, which no roster stage's music entry asks",
         ),
-        ("grCorneria_801E2A6C", "Corneria's and Venom's match end"),
         ("the spawner's trophies", "trophy stages"),
         (
             "the spawner's enemies",

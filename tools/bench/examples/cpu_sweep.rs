@@ -2,7 +2,9 @@
 //! matches on every offered stage, the roster's characters and levels 1 to 9 in rotation, and
 //! prints each match's first stop with the fighters' states. `SSBM_DISC=... cargo run --release
 //! -p melee-bench --example cpu_sweep -- [off|on] [heap|noheap] [MATCHES_PER_STAGE] [MINUTES]
-//! [teams]`: items off or on at very high with the whole switch, the allocator model on or off.
+//! [teams|ffa] [STAGE,...]`: items off or on at very high with the whole switch, the allocator
+//! model on or off; the stages named by their command-line names, any roster stage (offered or
+//! not), instead of the offered ones.
 
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -49,7 +51,13 @@ fn main() {
     let teams = args.get(4).is_some_and(|a| a == "teams");
     let disc_path = std::env::var_os("SSBM_DISC").expect("SSBM_DISC");
     std::panic::set_hook(Box::new(|_| {}));
-    let stages: Vec<_> = roster::offered_stages().collect();
+    let stages: Vec<_> = match args.get(5) {
+        Some(keys) => keys
+            .split(',')
+            .map(|k| roster::stage(k).unwrap_or_else(|| panic!("no stage {k}")))
+            .collect(),
+        None => roster::offered_stages().collect(),
+    };
     let chars = roster::CHARACTERS;
     let levels = [1u8, 9, 5, 3, 7, 2, 8, 4, 6];
     let mut jobs = Vec::new();

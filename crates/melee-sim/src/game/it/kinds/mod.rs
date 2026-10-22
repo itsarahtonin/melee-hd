@@ -1,5 +1,6 @@
 //! Item kinds (`ItemKind`) and the kinds' own code.
 
+pub mod arwinglaser;
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
@@ -36,6 +37,7 @@ pub mod gamewatchpanic;
 pub mod gamewatchparachute;
 pub mod gamewatchrescue;
 pub mod gamewatchturtle;
+pub mod greatfoxlaser;
 pub mod gshell;
 pub mod hammer;
 pub mod hammerhead;
@@ -241,6 +243,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || heiho::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
         || klap::run_event(r, gobj, addr)
+        || arwinglaser::run_event(r, gobj, addr)
+        || greatfoxlaser::run_event(r, gobj, addr)
         || oldkuri::run_event(r, gobj, addr)
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
@@ -390,6 +394,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| heiho::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| klap::run_pred(r, gobj, addr))
+        .or_else(|| arwinglaser::run_pred(r, gobj, addr))
+        .or_else(|| greatfoxlaser::run_pred(r, gobj, addr))
         .or_else(|| oldkuri::run_pred(r, gobj, addr))
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
@@ -688,3 +694,5 @@ pub const WHISPY_APPLE: i32 = 225;
 pub const WHISPY_HEAL_APPLE: i32 = 226;
 /// `It_Kind_Arwing_Laser`.
 pub const ARWING_LASER: i32 = 234;
+/// `It_Kind_GreatFox_Laser`.
+pub const GREATFOX_LASER: i32 = 235;

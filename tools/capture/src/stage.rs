@@ -76,6 +76,17 @@ pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
 pub const GRPURA_VTX: u32 = 0x803E_6C0C;
 /// grrcruise.c's (`ssbm_types::tu::melee__gr__grrcruise::yakumono_param`).
 pub const GRRCRUISE_YAKUMONO: u32 = 0x804D_6A10;
+/// grcorneria.c's (`ssbm_types::tu::melee__gr__grcorneria::yakumono_param`), its Arwing slots
+/// (`arwing_gobjs`, `arwing_types`, `arwing_groups`), the slot being made, the wait, the
+/// Arwings' hold and the demo flag (`grCn_804D69A4` to `grCn_804D69B0`), the Great Fox's points
+/// (`grCn_803E1FAC`) and the debugging talk (`grCn_804D466C`).
+pub const GRCORNERIA_YAKUMONO: u32 = 0x804D_69A0;
+pub const GRCORNERIA_ARWINGS: u32 = 0x803E_1D68;
+pub const GRCORNERIA_TYPES: u32 = 0x803E_1D74;
+pub const GRCORNERIA_GROUPS: u32 = 0x803E_1D80;
+pub const GRCORNERIA_SLOT: u32 = 0x804D_69A4;
+pub const GRCORNERIA_POINTS: u32 = 0x803E_1FAC;
+pub const GRCORNERIA_TALK: u32 = 0x804D_466C;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -347,6 +358,9 @@ impl Importer<'_> {
         let yaku = cap.u32(GRONETT_YAKUMONO);
         self.game.gr.onett_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.onett_x69c4 = cap.u32(GRONETT_X69C4) as i32;
+        let yaku = cap.u32(GRCORNERIA_YAKUMONO);
+        self.game.gr.corneria_yakumono = self.data_or_unhandled(yaku);
+        self.import_corneria();
         self.import_zebes();
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
@@ -1019,6 +1033,11 @@ impl Comparer<'_> {
                 GRPURA_YAKUMONO,
                 game.gr.pura_yakumono,
             ),
+            (
+                "grCorneria yakumono_param",
+                GRCORNERIA_YAKUMONO,
+                game.gr.corneria_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1029,6 +1048,7 @@ impl Comparer<'_> {
             );
         }
         self.compare_zebes();
+        self.compare_corneria();
         self.check(
             "grOt_804D69C4",
             "onett x69c4",
@@ -1627,11 +1647,14 @@ fn vec3_at(mem: &dyn Fn(u32) -> u32, a: u32) -> Vec3 {
 /// The spawn configurations' addresses the stage objects' variables hold: Brinstar's stage's
 /// (map 6, `xFC`) and island's (map 7, `xEC`).
 fn config_addrs(grkind: i32, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
-    if grkind != melee_sim::game::gr::GR_KIND_ZEBES {
-        return Vec::new();
-    }
+    let maps: &[(u32, u32)] = match grkind {
+        melee_sim::game::gr::GR_KIND_ZEBES => &[(6, 0x38), (7, 0x28)],
+        // The Great Fox's two (`grCorneria_GroundVars::xC8`, `xCC`).
+        melee_sim::game::gr::GR_KIND_CORNERIA => &[(3, 4), (3, 8)],
+        _ => return Vec::new(),
+    };
     let mut out = Vec::new();
-    for (map, off) in [(6u32, 0x38u32), (7, 0x28)] {
+    for &(map, off) in maps {
         let g = u32_at(MAP_GOBJS + 4 * map);
         if g != 0 {
             let a = u32_at(u32_at(g + 0x2C) + 0xC4 + off);
@@ -1644,6 +1667,29 @@ fn config_addrs(grkind: i32, u32_at: &dyn Fn(u32) -> u32) -> Vec<u32> {
 }
 
 impl Importer<'_> {
+    /// Corneria's statics.
+    fn import_corneria(&mut self) {
+        let cap = self.cap;
+        let mut c = melee_sim::game::gr::corneria::Globals::default();
+        for i in 0..3u32 {
+            let g = cap.u32(GRCORNERIA_ARWINGS + 4 * i);
+            c.arwings[i as usize] = self.import_handle_gobj(g);
+            c.types[i as usize] = cap.u32(GRCORNERIA_TYPES + 4 * i) as i32;
+            c.groups[i as usize] = cap.u32(GRCORNERIA_GROUPS + 4 * i) as i32;
+        }
+        c.slot = cap.u32(GRCORNERIA_SLOT);
+        c.wait = cap.u32(GRCORNERIA_SLOT + 4) as i32;
+        c.frozen = cap.u32(GRCORNERIA_SLOT + 8) != 0;
+        c.demo = cap.u32(GRCORNERIA_SLOT + 0xC) as i32;
+        for i in 0..5u32 {
+            let at = GRCORNERIA_POINTS + 0xC * i;
+            c.points[i as usize] =
+                Vec3::new(self.f32_at(at), self.f32_at(at + 4), self.f32_at(at + 8));
+        }
+        c.talk = cap.u32(GRCORNERIA_TALK) as i32;
+        self.game.gr.corneria = c;
+    }
+
     /// Brinstar's statics and spawn configurations.
     fn import_zebes(&mut self) {
         let w = |s: &Self, a: u32| s.cap.u32(a);
@@ -1727,6 +1773,52 @@ impl Importer<'_> {
 }
 
 impl Comparer<'_> {
+    /// Corneria's statics against memory.
+    fn compare_corneria(&mut self) {
+        let game = self.game;
+        let c = &game.gr.corneria;
+        let gobj_pair = |s: &Self, a: u32| {
+            let p = s.u32(a);
+            (p != 0).then(|| s.maps.gobjs.get(&p).copied())
+        };
+        self.check(
+            "arwing_gobjs",
+            "corneria arwings",
+            c.arwings.map(|g| g.map(Some)),
+            std::array::from_fn(|i| gobj_pair(self, GRCORNERIA_ARWINGS + 4 * i as u32)),
+        );
+        self.check(
+            "arwing_types",
+            "corneria types and groups",
+            (c.types, c.groups),
+            (
+                std::array::from_fn(|i| self.u32(GRCORNERIA_TYPES + 4 * i as u32) as i32),
+                std::array::from_fn(|i| self.u32(GRCORNERIA_GROUPS + 4 * i as u32) as i32),
+            ),
+        );
+        self.check(
+            "grCn_804D69A4",
+            "corneria statics",
+            (c.slot, c.wait, u32::from(c.frozen), c.demo, c.talk),
+            (
+                self.u32(GRCORNERIA_SLOT),
+                self.u32(GRCORNERIA_SLOT + 4) as i32,
+                self.u32(GRCORNERIA_SLOT + 8),
+                self.u32(GRCORNERIA_SLOT + 0xC) as i32,
+                self.u32(GRCORNERIA_TALK) as i32,
+            ),
+        );
+        for (i, p) in c.points.iter().enumerate() {
+            let at = GRCORNERIA_POINTS + 0xC * i as u32;
+            self.check(
+                &format!("grCn_803E1FAC[{i}]"),
+                "corneria point",
+                [p.x, p.y, p.z].map(f32::to_bits),
+                [self.u32(at), self.u32(at + 4), self.u32(at + 8)],
+            );
+        }
+    }
+
     /// Brinstar's statics and spawn configurations against memory.
     fn compare_zebes(&mut self) {
         let game = self.game;

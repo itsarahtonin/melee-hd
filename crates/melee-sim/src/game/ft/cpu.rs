@@ -244,6 +244,23 @@ impl Running<'_> {
             GR_BIG_BLUE | GR_INISHIE1 | GR_CORNERIA | GR_VENOM
         )
     }
+
+    /// The r5 [`Running::excluded_floor`] leaves for a floor found (`line` not -1) on a stage
+    /// it asks: Corneria's check (`grCorneria_801E2D90`) ends with r5 its chain of tests' third
+    /// flag, whether the floor's joint is 0, 1, 2 or 5; the other stages' are followed with
+    /// their ports.
+    pub(super) fn excluded_floor_r5(&self, line: i32) -> super::cpu_ai::Leftover {
+        if self.game.stage_info.grkind == GR_CORNERIA {
+            let joint = self
+                .game
+                .geometry
+                .as_ref()
+                .expect("no collision geometry")
+                .joint_from_line(line);
+            return super::cpu_ai::Leftover::Word(u32::from(matches!(joint, 0 | 1 | 2 | 5)));
+        }
+        super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)")
+    }
 }
 
 const KIND_NANA: i32 = 11;

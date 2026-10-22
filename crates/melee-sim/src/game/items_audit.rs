@@ -187,6 +187,7 @@ pub const MODULES: &[&str] = &[
     "it/ground",
     "it/hitbox",
     "it/item",
+    "it/kinds/arwinglaser",
     "it/kinds/bat",
     "it/kinds/bombhei",
     "it/kinds/capsule",
@@ -223,6 +224,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/gamewatchparachute",
     "it/kinds/gamewatchrescue",
     "it/kinds/gamewatchturtle",
+    "it/kinds/greatfoxlaser",
     "it/kinds/gshell",
     "it/kinds/hammer",
     "it/kinds/hammerhead",
@@ -367,7 +369,7 @@ const EVENT: &str =
 const EVT_UNK: &str =
     "an item's evt_unk, which only a fighter's unload at the scene's end runs (it_8026B7F8)";
 const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
-const OTHER_STAGES: &str = "a stage item of a stage the player doesn't offer (Mushroom Kingdom II's Birdo, Flat Zone's tools, Corneria's and Venom's lasers)";
+const OTHER_STAGES: &str = "a stage item of a stage the player doesn't offer (Mushroom Kingdom II's Birdo, Flat Zone's tools)";
 const POKEMON_MODES: &str =
     "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
 const SCENES: &str = "other scenes' item setup (intros, cutscenes, the trophy fall)";
@@ -447,8 +449,7 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itzgshell", ADVENTURE),
     ("melee/it/kinds/itzrshell", ADVENTURE),
     ("it_8026EA9C", OTHER_STAGES),
-    ("melee/it/kinds/itarwinglaser", OTHER_STAGES),
-    ("melee/it/kinds/itgreatfoxlaser", OTHER_STAGES),
+    ("it_802EB5A8", EVT_UNK),
     ("melee/it/kinds/itkyasarin", OTHER_STAGES),
     ("melee/it/kinds/itkyasarinegg", OTHER_STAGES),
     ("melee/it/kinds/ittools", OTHER_STAGES),

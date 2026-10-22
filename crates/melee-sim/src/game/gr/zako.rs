@@ -240,6 +240,9 @@ pub fn run_config(
     let (descs, count) = (c.descs, c.count);
     let lines = match c.callback.0 {
         super::zebes::STAGE_BUBBLES | super::zebes::ISLAND_BUBBLES => super::zebes::lines(descs),
+        super::corneria::SPLASH_FRONT | super::corneria::SPLASH_BACK => {
+            super::corneria::lines(descs)
+        }
         other => panic!("a spawn configuration with callback {other:#010x}"),
     };
     for i in 0..count as usize {
@@ -275,7 +278,12 @@ pub fn run_config(
                 if x10 < 0.0 {
                     unimplemented!("a spawn configuration that keeps its generator");
                 }
-                super::zebes::lava_bubble(r, cb.0, pos, i);
+                match cb.0 {
+                    super::corneria::SPLASH_FRONT | super::corneria::SPLASH_BACK => {
+                        super::corneria::splash(r, cb.0, pos)
+                    }
+                    _ => super::zebes::lava_bubble(r, cb.0, pos, i),
+                }
                 spawned += 1;
             }
         } else if x10 < 0.0 {

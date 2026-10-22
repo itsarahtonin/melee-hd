@@ -6449,3 +6449,1028 @@ fn onett_unreached_callbacks() {
     let demo = retarget(leaf_check::sym("grOnett_801E3734"));
     check_hazard(&d, from, 1, &demo, &by_demo);
 }
+
+// Corneria (`grcorneria.c`), its Arwings' lasers (`itarwinglaser.c`) and the Great Fox's
+// (`itgreatfoxlaser.c`): the stage's oracle match, and the taunt set's Corneria matches for the
+// Star Fox team's talk (`oracle-taunt-fox-corneria`, which plays a talk through, and
+// `oracle-taunt-falco-corneria`, whose match ends during one), captured as the stage is with
+// `cn-taunt-funcs.txt` (the stage's functions and Fox's and Falco's side taunt's) and
+// `done-cn-taunt.txt` (`capture-cn-taunt.sh`).
+
+const CN: &str = "oracle-stage-corneria";
+const CN_TALK: &str = "oracle-taunt-fox-corneria";
+const CN_TALK_END: &str = "oracle-taunt-falco-corneria";
+
+/// grcorneria.c's `yakumono_param`.
+const CN_PARAM: u32 = 0x804D_69A0;
+/// `arwing_gobjs`, `arwing_types` and `arwing_groups`.
+const CN_ARWINGS: u32 = 0x803E_1D68;
+const CN_TYPES: u32 = 0x803E_1D74;
+const CN_GROUPS: u32 = 0x803E_1D80;
+/// The wait before the next Arwing, whether the Arwings are held and whether the demo plays
+/// (`grCn_804D69A8` to `grCn_804D69B0`).
+const CN_WAIT: u32 = 0x804D_69A8;
+const CN_FROZEN: u32 = 0x804D_69AC;
+const CN_DEMO: u32 = 0x804D_69B0;
+
+/// Corneria's parameters' word at `off`.
+fn cn_param(c: &Call, off: u32) -> u32 {
+    peek_u32(c, peek_u32(c, CN_PARAM) + off)
+}
+
+/// A stage object's process or callback taking its object, by name.
+fn of_ground(
+    f: fn(&mut Running, melee_sim::hsd::gobj::GObjId),
+) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, maps: &Maps, call: &Call| {
+        f(r, gobj_arg(maps, call));
+        Ret::Nothing
+    }
+}
+
+/// A hook taking nothing.
+fn of_running(f: fn(&mut Running)) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, _: &Maps, _: &Call| {
+        f(r);
+        Ret::Nothing
+    }
+}
+
+/// The vector a call's register `reg` points to.
+fn vec_arg(call: &Call, reg: usize) -> Vec3 {
+    vec_at(call, call.regs.gpr[reg])
+}
+
+fn seeded(k: usize, mul: u32) -> impl Fn(&mut Call, usize) + Sync {
+    move |c: &mut Call, i: usize| set_seed(c, mul.wrapping_mul((k + i) as u32 + 1))
+}
+
+#[test]
+fn corneria_setup() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    for f in [
+        "grCorneria_801DD350",
+        "grCorneria_801DD478",
+        "grCorneria_801DD508",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = corneria::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCorneria_801DD534", 1, &as_saved, &create);
+    for f in [
+        "grCorneria_801DD620",
+        "grCorneria_801DD65C",
+        "grCorneria_801DD674",
+        "grCorneria_801DDAC4",
+        "grCorneria_Arwing_801DE4C0",
+        "grCorneria_801DE8E4",
+        "grCorneria_801DF8D0",
+        "grCorneria_801DFC2C",
+        "grCorneria_801DFEB8",
+        "grCorneria_801E0140",
+        "grCorneria_801E0C3C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    // The first Arwing's wait, from several seeds, in a match and as the demo's stages.
+    let reset = of_running(corneria::reset_arwings);
+    check_calls_with(&d, "grCorneria_801DCCFC", 1, &as_saved, &reset);
+    check_calls_with(
+        &d,
+        "grCorneria_801DCCFC",
+        1,
+        &seeded(0, 0x2468_ACE1),
+        &reset,
+    );
+    for kind in [0xE9u16, 0x47, 0x46] {
+        let demo = move |c: &mut Call, _: usize| {
+            poke_u32(c, leaf_check::sym("selected_stage"), u32::from(kind));
+        };
+        check_calls_with(&d, "grCorneria_801DCCFC", 1, &demo, &reset);
+    }
+}
+
+/// The Great Fox's variables' guns fields set: state, wait, shot wait, shots, kind and side.
+fn cn_guns(c: &mut Call, state: u32, wait: i32, shot_wait: i32, shots: u8, kind: u8, side: u8) {
+    let v = vars(c);
+    poke_u32(c, v + 0x44, state);
+    poke_u32(c, v + 0x48, wait as u32);
+    poke_u32(c, v + 0x4C, shot_wait as u32);
+    poke_u8(c, v + 0x54, shots);
+    poke_u8(c, v + 0x55, kind);
+    poke_u8(c, v + 0x56, side);
+}
+
+#[test]
+fn corneria_ship() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    // The Great Fox's process, as saved and waiting for the match's start.
+    check_calls_with(&d, "grCorneria_801DD9A8", 1, &as_saved, &by_address);
+    let waiting = |c: &mut Call, _: usize| {
+        let v = vars(c);
+        poke_u8(c, v, 0x80);
+    };
+    check_calls_with(&d, "grCorneria_801DD9A8", 1, &waiting, &by_address);
+    let move_copy = of_ground(corneria::move_copy);
+    for set in [CN, CN_TALK] {
+        check_calls_with(&dir(set), "grCorneria_801DD9A8", 1, &as_saved, &by_address);
+        check_calls_with(&dir(set), "grCorneria_801E1878", 1, &as_saved, &move_copy);
+    }
+    check_calls_with(
+        &d,
+        "grCorneria_801E2110",
+        1,
+        &as_saved,
+        &of_running(corneria::city_colors),
+    );
+    check_calls_with(
+        &d,
+        "grCorneria_801E0E40",
+        1,
+        &as_saved,
+        &of_running(corneria::debug_talk),
+    );
+    // The drift: turning (its wait run out, from several seeds) or not, its speeds past their
+    // caps either way, and past the box's edges either way.
+    let drift = of_ground(corneria::drift);
+    check_calls_with(&d, "grCorneria_801E1970", 1, &as_saved, &drift);
+    for (turn, vel, off) in [
+        (0i32, 0.0f32, 0.0f32),
+        (-1, 0.0, 0.0),
+        (1, 100.0, 0.0),
+        (1, -100.0, 0.0),
+        (1, 0.0, 1000.0),
+        (1, 0.0, -1000.0),
+        (0, 100.0, -1000.0),
+    ] {
+        let p = move |c: &mut Call, k: usize| {
+            let v = vars(c);
+            poke_u32(c, v + 0x40, turn as u32);
+            for at in [0x28, 0x2C] {
+                poke_u32(c, v + at, vel.to_bits());
+            }
+            for at in [0x18, 0x1C] {
+                poke_u32(c, v + at, off.to_bits());
+            }
+            set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, "grCorneria_801E1970", 1, &p, &drift);
+    }
+    // The sinking: not sinking over each part, with its chance had or not, from several seeds;
+    // sinking down (fast, slow, near its limit) and back up, at the turn's tick and either side.
+    let sink = of_ground(corneria::sink);
+    check_calls_with(&d, "grCorneria_801E2228", 1, &as_saved, &sink);
+    for drawn in [false, true] {
+        let p = move |c: &mut Call, k: usize| {
+            let v = vars(c);
+            poke_u8(c, v, if drawn { 0x20 } else { 0 });
+            set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, "grCorneria_801E2228", 1, &p, &sink);
+    }
+    for t in [0i32, 0x383, 0x384, 0x385] {
+        for (depth, speed) in [
+            (0.0f32, 0.0f32),
+            (-10.0, 3.0),
+            (-120.0, 0.5),
+            (-199.0, 2.0),
+            (-400.0, 0.005),
+            (-1.0, 1.0),
+        ] {
+            let p = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u8(c, v, 0x40);
+                poke_u32(c, v + 0xC, depth.to_bits());
+                poke_u32(c, v + 0x38, speed.to_bits());
+                poke_u32(c, v + 0x3C, t as u32);
+            };
+            check_calls_with(&d, "grCorneria_801E2228", 1, &p, &sink);
+        }
+    }
+}
+
+#[test]
+fn corneria_guns() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    let guns = of_ground(corneria::guns);
+    check_calls_with(&d, "grCorneria_801E1348", 1, &as_saved, &guns);
+    // Each state at its waits' ends and short of them: resting into a big shot or a volley
+    // (several seeds), charging, aiming, firing from each side and kind and resting after,
+    // broken, and done.
+    type Case = (u32, i32, i32, u8, u8, u8);
+    let mut cases: Vec<Case> = vec![(0, 0, 1, 0, 0, 0), (0, 0, 0, 0, 0, 0)];
+    for wait in [0, 1] {
+        cases.push((1, wait, 0, 0, 0, 0));
+        cases.push((2, wait, 0, 0, 0, 0));
+    }
+    for (shots, shot_wait) in [(0u8, 0i32), (3, 1), (3, 0), (1, 0)] {
+        for (kind, side) in [(0u8, 0u8), (1, 1), (1, 0), (0, 1)] {
+            cases.push((3, 0, shot_wait, shots, kind, side));
+        }
+    }
+    cases.push((4, 0, 0, 0, 0, 0));
+    cases.push((5, 0, 0, 0, 0, 0));
+    for (state, wait, shot_wait, shots, kind, side) in cases {
+        let p = move |c: &mut Call, k: usize| {
+            cn_guns(c, state, wait, shot_wait, shots, kind, side);
+            set_seed(c, 0x0F0F_1357u32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, "grCorneria_801E1348", 1, &p, &guns);
+    }
+}
+
+/// The guns' hurtbox items' hit callback, from the guns' calls: a hit adding up short of the
+/// guns' damage, exactly to it and past it.
+#[test]
+fn corneria_gun_hit() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gid = *maps.grounds.get(&call.regs.gpr[4]).expect("the Great Fox");
+        corneria::gun_hit(r, gid, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    let at = leaf_check::sym("fn_801E12D4");
+    for (taken, damage) in [(0.0f32, 1.0f64), (10.0, 0.0), (0.0, 1000.0), (5.0, -1.0)] {
+        let p = move |c: &mut Call, _: usize| {
+            let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            let v = gp + 0xC4;
+            let hp = f32::from_bits(cn_param(c, 0x38));
+            poke_u32(c, v + 0x50, taken.to_bits());
+            c.addr = at;
+            c.regs.gpr[3] = peek_u32(c, v + 0x5C);
+            c.regs.gpr[4] = gp;
+            // -1: exactly what the guns can take.
+            c.regs.fpr[1].ps0 = if damage < 0.0 {
+                f64::from(hp - taken)
+            } else {
+                damage
+            };
+        };
+        check_hazard(&d, "grCorneria_801E1348", 1, &p, &hit);
+    }
+    // And the hit they deal, which does nothing.
+    let dealt = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gid = *maps.grounds.get(&call.regs.gpr[4]).expect("the Great Fox");
+        corneria::gun_dealt(r, gobj_arg(maps, call), gid);
+        Ret::Nothing
+    };
+    let at = leaf_check::sym("fn_801E12D0");
+    let p = move |c: &mut Call, _: usize| {
+        let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        c.addr = at;
+        c.regs.gpr[3] = peek_u32(c, gp + 0xC4 + 0x5C);
+        c.regs.gpr[4] = gp;
+    };
+    check_calls_with(&d, "grCorneria_801E1348", 1, &p, &dealt);
+}
+
+/// An Arwing slot's path, type and group set.
+fn cn_slot(c: &mut Call, slot: u32, path: u32, ty: i32, group: i32) {
+    poke_u32(c, CN_ARWINGS + 4 * slot, path);
+    poke_u32(c, CN_TYPES + 4 * slot, ty as u32);
+    poke_u32(c, CN_GROUPS + 4 * slot, group as u32);
+}
+
+#[test]
+fn corneria_spawns() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    let spawn = of_running(corneria::spawn_arwings);
+    check_calls_with(&d, "grCorneria_801DCE1C", 1, &as_saved, &spawn);
+    // In a match: the wait running out after each type and group (near and far, several
+    // seeds), not yet, and an Arwing out (a new wait).
+    for wait in [1i32, 2, 0] {
+        for (ty, group) in [(0i32, 0i32), (3, 1), (9, 1), (12, 4), (5, 4)] {
+            let p = move |c: &mut Call, k: usize| {
+                poke_u32(c, CN_DEMO, 0);
+                poke_u32(c, CN_WAIT, wait as u32);
+                cn_slot(c, 0, 0, ty, group);
+                set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, "grCorneria_801DCE1C", 1, &p, &spawn);
+        }
+    }
+    let out = |c: &mut Call, k: usize| {
+        poke_u32(c, CN_DEMO, 0);
+        let f = first_fighter(c);
+        cn_slot(c, 0, f, 3, 1);
+        set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+    };
+    check_calls_with(&d, "grCorneria_801DCE1C", 1, &out, &spawn);
+    // The demo: all three out, one free after near and far ones, the wait running out or not.
+    for (free, wait) in [(3u32, 1i32), (0, 1), (0, 2), (1, 1), (2, 1), (2, 5)] {
+        for near in [false, true] {
+            let p = move |c: &mut Call, k: usize| {
+                poke_u32(c, CN_DEMO, 1);
+                poke_u32(c, CN_WAIT, wait as u32);
+                let f = first_fighter(c);
+                for slot in 0..3u32 {
+                    let (path, ty) = if slot == free {
+                        (0, 0)
+                    } else if near {
+                        (f, slot as i32 + 2)
+                    } else {
+                        (f, slot as i32 + 10)
+                    };
+                    cn_slot(c, slot, path, ty, slot as i32 + 1);
+                }
+                set_seed(c, 0x0F0F_1357u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, "grCorneria_801DCE1C", 1, &p, &spawn);
+        }
+    }
+    // Held still on the stage's other kind (0x46).
+    let other = |c: &mut Call, _: usize| poke_u32(c, leaf_check::sym("selected_stage"), 0x46);
+    check_calls_with(&d, "grCorneria_801DCE1C", 1, &other, &spawn);
+}
+
+/// The Arwing slot a flight path or an Arwing in r3 holds.
+fn cn_slot_of(c: &Call) -> u32 {
+    peek_u32(c, vars(c) + 4)
+}
+
+#[test]
+fn corneria_paths() {
+    use melee_sim::game::gr::corneria;
+    for set in [CN, CN_TALK_END] {
+        let d = dir(set);
+        check_calls_with(&d, "grCorneria_801DE024", 1, &as_saved, &by_address);
+        // Its first tick, each sound state, each type, and its slot taken by another.
+        let first = |c: &mut Call, _: usize| poke_u32(c, vars(c) + 0x10, 1);
+        check_calls_with(&d, "grCorneria_801DE024", 1, &first, &by_address);
+        for sound in 0..4u32 {
+            for ty in [2i32, 7, 10, 13] {
+                let p = move |c: &mut Call, _: usize| {
+                    let v = vars(c);
+                    poke_u32(c, v + 0x10, 0);
+                    poke_u32(c, v + 0x14, sound);
+                    let slot = cn_slot_of(c);
+                    poke_u32(c, CN_TYPES + 4 * slot, ty as u32);
+                };
+                check_calls_with(&d, "grCorneria_801DE024", 1, &p, &by_address);
+            }
+        }
+        let taken = |c: &mut Call, _: usize| {
+            let slot = cn_slot_of(c);
+            poke_u32(c, CN_ARWINGS + 4 * slot, 0);
+        };
+        check_calls_with(&d, "grCorneria_801DE024", 1, &taken, &by_address);
+        let near = of_ground(corneria::path_sound_near);
+        for sound in [None, Some(0u32), Some(1), Some(2), Some(3)] {
+            let p = move |c: &mut Call, _: usize| {
+                if let Some(s) = sound {
+                    poke_u32(c, vars(c) + 0x14, s);
+                }
+            };
+            check_calls_with(&d, "grCorneria_801DDE88", 1, &p, &near);
+        }
+        let pos = |r: &mut Running, maps: &Maps, call: &Call| {
+            let _ = corneria::path_pos(r, maps.gobjs.get(&call.regs.gpr[3]).copied());
+            Ret::Nothing
+        };
+        check_calls_with(&d, "grCorneria_801DDDA8", 1, &as_saved, &pos);
+        let step = |r: &mut Running, _: &Maps, _: &Call| {
+            let _ = corneria::ship_step(r.game);
+            Ret::Nothing
+        };
+        check_calls_with(&dir(CN_TALK), "grCorneria_801DDCF0", 1, &as_saved, &step);
+        let at = |r: &mut Running, _: &Maps, _: &Call| {
+            let _ = corneria::ship_pos(r.game);
+            Ret::Nothing
+        };
+        check_calls_with(&d, "grCorneria_801DDD4C", 1, &as_saved, &at);
+    }
+}
+
+#[test]
+fn corneria_arwings() {
+    let d = dir(CN);
+    for f in ["grCorneria_801DED50", "grCorneria_801DFBCC"] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+        // Held, its path gone, each roll state (rolling or not, from several seeds), firing
+        // (every tick of the period, from several seeds).
+        let held = |c: &mut Call, _: usize| poke_u32(c, CN_FROZEN, 1);
+        check_calls_with(&d, f, 1, &held, &by_address);
+        let gone = |c: &mut Call, _: usize| {
+            let slot = cn_slot_of(c);
+            poke_u32(c, CN_ARWINGS + 4 * slot, 0);
+        };
+        check_calls_with(&d, f, 1, &gone, &by_address);
+        for (roll, wait) in [(0u32, 0i32), (0, 1), (1, 0), (3, 0), (4, 0), (5, 0)] {
+            let p = move |c: &mut Call, k: usize| {
+                let v = vars(c);
+                poke_u32(c, v + 0x30, roll);
+                poke_u32(c, v + 0x34, wait as u32);
+                set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &p, &by_address);
+        }
+        let fire = |c: &mut Call, k: usize| {
+            let period = cn_param(c, 0x74);
+            poke_u32(c, vars(c) + 0x2C, period.wrapping_mul(3));
+            set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, f, 1, &fire, &by_address);
+        let demo = |c: &mut Call, k: usize| {
+            poke_u32(c, CN_DEMO, 1);
+            let period = cn_param(c, 0x7C);
+            poke_u32(c, vars(c) + 0x2C, period.wrapping_mul(2));
+            set_seed(c, 0x0F0F_1357u32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, f, 1, &demo, &by_address);
+    }
+    // An Arwing's collision: as saved, its path gone, rolled and off the plane.
+    let f = "grCorneria_801DE568";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let gone = |c: &mut Call, _: usize| {
+        let slot = cn_slot_of(c);
+        poke_u32(c, CN_ARWINGS + 4 * slot, 0);
+    };
+    check_calls_with(&d, f, 1, &gone, &by_address);
+    for (roll, z) in [
+        (0.0f32, 0.0f32),
+        (1.0, 0.0),
+        (1.1, 0.0),
+        (1.06, 0.0),
+        (-1.06, 0.0),
+        (-4.0, 0.0),
+        (7.0, 9.9),
+        (0.5, 10.0),
+        (0.0, -12.0),
+    ] {
+        let p = move |c: &mut Call, _: usize| {
+            let v = vars(c);
+            poke_u32(c, v + 0x18, roll.to_bits());
+            poke_u32(c, v + 0x1C + 8, z.to_bits());
+        };
+        check_calls_with(&d, f, 1, &p, &by_address);
+    }
+    // The blast zones' checks, as saved and moved about the zones and the plane.
+    let outside = |r: &mut Running, _: &Maps, call: &Call| {
+        let pos = vec_arg(call, 3);
+        Ret::Int(u32::from(
+            melee_sim::game::gr::corneria::outside_blast_zones(r.game, pos),
+        ))
+    };
+    let near = |r: &mut Running, _: &Maps, call: &Call| {
+        let pos = vec_arg(call, 3);
+        Ret::Int(melee_sim::game::gr::corneria::near_blast_zones(r.game, pos) as u32)
+    };
+    for p in [
+        (0.0f32, 50.0f32, 0.0f32),
+        (1e4, 0.0, 0.0),
+        (-1e4, 0.0, 0.0),
+        (0.0, 1e4, 0.0),
+        (0.0, -1e4, 0.0),
+        (0.0, 50.0, -40.0),
+        (1e4, 0.0, -40.0),
+    ] {
+        let put = move |c: &mut Call, _: usize| {
+            let a = c.regs.gpr[3];
+            poke_u32(c, a, p.0.to_bits());
+            poke_u32(c, a + 4, p.1.to_bits());
+            poke_u32(c, a + 8, p.2.to_bits());
+        };
+        for set in [CN, CN_TALK_END] {
+            check_calls_with(&dir(set), "grCorneria_801DEC08", 1, &put, &outside);
+            check_calls_with(&dir(set), "grCorneria_801DEC94", 1, &put, &near);
+        }
+    }
+    for set in [CN, CN_TALK_END] {
+        check_calls_with(&dir(set), "grCorneria_801DEC08", 1, &as_saved, &outside);
+        check_calls_with(&dir(set), "grCorneria_801DEC94", 1, &as_saved, &near);
+    }
+}
+
+#[test]
+fn corneria_city() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    // Each part's process: as saved, waiting, still, and each state far behind and past its
+    // edges, and stepping to just short of, onto and just past them.
+    for (f, still_at, still_bit, width) in [
+        ("grCorneria_801E01A8", 2u32, 0x80u8, 4800.0f32),
+        ("grCorneria_801DFF20", 2, 0x80, 3200.0),
+        ("grCorneria_801DFC98", 0x1C, 0x80, 3200.0),
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+        let waiting = |c: &mut Call, _: usize| poke_u8(c, vars(c), 1);
+        check_calls_with(&d, f, 1, &waiting, &by_address);
+        let still = move |c: &mut Call, _: usize| {
+            let a = vars(c) + still_at;
+            let w = peek_u32(c, a & !3);
+            let shift = 24 - 8 * (a & 3);
+            poke_u32(c, a & !3, w | u32::from(still_bit) << shift);
+        };
+        check_calls_with(&d, f, 1, &still, &by_address);
+        for state in [0u8, 1, 2] {
+            for x in [-1e5f32, 1e5] {
+                let p = move |c: &mut Call, _: usize| {
+                    poke_u8(c, vars(c) + 1, state);
+                    let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+                    poke_u32(c, j + 0x38, x.to_bits());
+                };
+                check_calls_with(&d, f, 1, &p, &by_address);
+            }
+        }
+        for (state, add) in [(0u8, -1400.0f32), (1, 1400.0)] {
+            for d_x in [-0.5f32, 0.0, 0.5] {
+                let p = move |c: &mut Call, _: usize| {
+                    poke_u8(c, vars(c) + 1, state);
+                    let scale = f32_at(c, peek_u32(c, STAGE_INFO + 0x6B0));
+                    let speed = f32::from_bits(cn_param(c, 0x88));
+                    let x = width * scale * 0.5 + add - speed + d_x;
+                    let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+                    poke_u32(c, j + 0x38, x.to_bits());
+                };
+                check_calls_with(&d, f, 1, &p, &by_address);
+            }
+        }
+    }
+    let next = |r: &mut Running, maps: &Maps, call: &Call| {
+        corneria::next_city_part(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCorneria_801E03C8", 1, &as_saved, &next);
+    let under =
+        |r: &mut Running, _: &Maps, _: &Call| Ret::Int(corneria::city_under_camera(r.game) as u32);
+    check_calls_with(&d, "grCorneria_801E08CC", 1, &as_saved, &under);
+    let at = |r: &mut Running, _: &Maps, call: &Call| {
+        let x = f32_at(call, call.regs.gpr[3]);
+        Ret::Int(corneria::city_at(r.game, x) as u32)
+    };
+    check_calls_with(&d, "grCorneria_801E0A74", 1, &as_saved, &at);
+    check_calls_with(&d, "grCorneria_801E0D30", 1, &as_saved, &by_address);
+}
+
+#[test]
+fn corneria_hooks() {
+    use melee_sim::game::gr::corneria;
+    for set in [CN, CN_TALK, CN_TALK_END] {
+        let d = dir(set);
+        check_calls_with(
+            &d,
+            "grCorneria_801E2A6C",
+            1,
+            &as_saved,
+            &of_running(corneria::match_end),
+        );
+        let depth = |r: &mut Running, _: &Maps, _: &Call| {
+            Ret::Float(f64::from(corneria::sink_depth(r.game)))
+        };
+        check_calls_with(&d, "grCorneria_801E2EA0", 1, &as_saved, &depth);
+        let hazard = |_: &mut Running, _: &Maps, _: &Call| {
+            assert!(corneria::line_hazard().is_none());
+            Ret::Int(0)
+        };
+        check_calls_with(&d, "grCorneria_801E2EE4", 1, &as_saved, &hazard);
+        let floor =
+            |r: &mut Running, _: &Maps, _: &Call| Ret::Float(corneria::camera_floor(r.game));
+        check_calls_with(&d, "grCorneria_801E2FCC", 1, &as_saved, &floor);
+        fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+            let (pos, j) = shadow_args(maps, call);
+            corneria::check_shadow_render(r.game, r.data, pos, j)
+        }
+        check_shadow(&d, "grCorneria_801E2EEC", ours, 0.0);
+    }
+    let taunt_stage =
+        |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(r.corneria_taunt_stage()));
+    check_calls_with(
+        &dir(CN_TALK),
+        "grCorneria_801E2CE8",
+        1,
+        &as_saved,
+        &taunt_stage,
+    );
+}
+
+/// The talk object's variables set: talk, next line and wait.
+fn cn_talk(c: &mut Call, talk: u32, line: i32, wait: i32) {
+    let v = vars(c);
+    poke_u32(c, v, talk);
+    poke_u32(c, v + 4, line as u32);
+    poke_u32(c, v + 8, wait as u32);
+}
+
+#[test]
+fn corneria_talk() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN_TALK);
+    let set = |r: &mut Running, maps: &Maps, call: &Call| {
+        corneria::set_talk(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    for val in [
+        None,
+        Some(-1i32),
+        Some(0),
+        Some(5),
+        Some(19),
+        Some(20),
+        Some(100),
+    ] {
+        let p = move |c: &mut Call, _: usize| {
+            if let Some(v) = val {
+                c.regs.gpr[4] = v as u32;
+            }
+        };
+        check_calls_with(&d, "grCorneria_801E0F34", 1, &p, &set);
+    }
+    // The talk's process: as saved, and each talk at its lines' ends and past them, with the
+    // wait running out or not.
+    check_calls_with(&d, "grCorneria_801E0F6C", 1, &as_saved, &by_address);
+    for talk in [0u32, 8, 12, 13, 19] {
+        for line in [0i32, 1, 2, 3, 4] {
+            for wait in [-1i32, 0, 4] {
+                let p = move |c: &mut Call, _: usize| cn_talk(c, talk, line, wait);
+                check_calls_with(&d, "grCorneria_801E0F6C", 1, &p, &by_address);
+            }
+        }
+    }
+    for f in [
+        "grCorneria_801E1030",
+        "grCorneria_801E0DE4",
+        "grCorneria_801E0E14",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let has = |_: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(u32::from(corneria::talk_has_line(
+            call.regs.gpr[3],
+            call.regs.gpr[4],
+        )))
+    };
+    for talk in [0u32, 7, 19] {
+        for line in [0u32, 2, 4] {
+            let p = move |c: &mut Call, _: usize| {
+                c.regs.gpr[3] = talk;
+                c.regs.gpr[4] = line;
+            };
+            check_calls_with(&d, "grCorneria_801E2598", 1, &p, &has);
+        }
+    }
+    let start = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        corneria::start_line(
+            r,
+            gobj_arg(maps, call),
+            g[5] as i32,
+            g[6] as i32,
+            g[7] as i32,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCorneria_801E25C4", 1, &as_saved, &start);
+    for speaker in 0..5u32 {
+        let p = move |c: &mut Call, _: usize| c.regs.gpr[5] = speaker;
+        check_calls_with(&d, "grCorneria_801E25C4", 1, &p, &start);
+    }
+    let start_talk = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        corneria::start_talk_line(r, gobj_arg(maps, call), g[5], g[6]);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCorneria_801E2738", 1, &as_saved, &start_talk);
+    let setup = |r: &mut Running, maps: &Maps, call: &Call| {
+        corneria::window_setup(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "smashTaunt_801E2550", 1, &as_saved, &setup);
+    // A line's process: as saved, and each state with its timer at its edges.
+    let line = of_ground(corneria::proc_line);
+    check_calls_with(&d, "grCorneria_801E277C", 1, &as_saved, &line);
+    for state in [0i16, 1, 2, 3] {
+        for timer in [-1i16, 0, 1] {
+            let p = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u16(c, v, state as u16);
+                poke_u16(c, v + 2, timer as u16);
+            };
+            check_calls_with(&d, "grCorneria_801E277C", 1, &p, &line);
+        }
+    }
+    let talk = |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(corneria::fox_talk(r)));
+    check_calls_with(&d, "grCorneria_801E2B80", 1, &as_saved, &talk);
+    check_calls_with(&d, "grCorneria_801E2B80", 1, &seeded(0, 0x2468_ACE1), &talk);
+    let falco = leaf_check::sym("grCorneria_801E2C34");
+    let as_falco = move |c: &mut Call, k: usize| {
+        c.addr = falco;
+        set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+    };
+    let falco_talk =
+        |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(corneria::falco_talk(r)));
+    check_calls_with(&d, "grCorneria_801E2B80", 1, &as_falco, &falco_talk);
+    let interrupted = of_running(corneria::taunt_interrupted);
+    check_calls_with(&d, "grCorneria_801E2AF4", 1, &as_saved, &interrupted);
+    let talking =
+        |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(corneria::talking(r.game)));
+    let t = leaf_check::sym("grCorneria_801E2D14");
+    check_calls_with(&d, "grCorneria_801E0F6C", 1, &retarget(t), &talking);
+    check_calls_with(&dir(CN), "grCorneria_801DD9A8", 1, &retarget(t), &talking);
+    // The window's render callback, in the pass saved and another.
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        corneria::window_render(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let gx = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    // Paused for debugging (the window and its text hidden).
+    let paused = |c: &mut Call, _: usize| poke_u8(c, leaf_check::sym("gm_80479D58") + 0x10, 2);
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| c.regs.gpr[4] ^= 3,
+        &paused,
+    ] {
+        leaf_check::calls::check_calls_in(&d, "smashTaunt_801E24AC", 1, p, &gx, &render);
+    }
+    // The window's camera's render callback, on the camera of the window the saved calls draw.
+    let cam_render = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.render_stage_camera(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let at = leaf_check::sym("grDisplay_801C5F60");
+    let on_camera = move |c: &mut Call, _: usize| {
+        c.addr = at;
+        let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+        c.regs.gpr[3] = peek_u32(c, gp + 0x18);
+    };
+    leaf_check::calls::check_calls_in(&d, "smashTaunt_801E24AC", 1, &on_camera, &gx, &cam_render);
+    // The text system's font closing.
+    let free = |r: &mut Running, _: &Maps, call: &Call| {
+        r.free_font_texts(call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "HSD_SisLib_803A5DA0", 1, &as_saved, &free);
+    let close = |r: &mut Running, _: &Maps, call: &Call| {
+        r.close_font(call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "HSD_SisLib_803A5F50", 1, &as_saved, &close);
+}
+
+/// The talk at the match's end, from the Falco match: the match's end stopping it.
+#[test]
+fn corneria_talk_end() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN_TALK_END);
+    check_calls_with(
+        &d,
+        "grCorneria_801E2A6C",
+        1,
+        &as_saved,
+        &of_running(corneria::match_end),
+    );
+    let line = of_ground(corneria::proc_line);
+    check_calls_with(&d, "grCorneria_801E277C", 1, &as_saved, &line);
+    check_calls_with(&d, "grCorneria_801E0F6C", 1, &as_saved, &by_address);
+    let talk = |r: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(corneria::falco_talk(r)));
+    check_calls_with(&d, "grCorneria_801E2C34", 1, &as_saved, &talk);
+}
+
+/// Fox's and Falco's side taunt on Corneria (`ftfoxappeals.c`), the taunt counts it keeps
+/// (`pl_800386D8`, `pl_80040120`) and its end (`ft_8008A324`).
+#[test]
+fn corneria_side_taunt() {
+    for set in [CN_TALK, CN_TALK_END] {
+        let d = dir(set);
+        for f in [
+            "ftFx_AppealS_Enter",
+            "ftFx_AppealS_Anim",
+            "ftFx_AppealS_Coll",
+            "ftFx_AppealS_OnTakeDamage",
+        ] {
+            // Falco's match ends during his taunt, before it ends or is cut short.
+            if set == CN_TALK || !leaf_check::calls::saved_calls(&d, f).is_empty() {
+                check_calls_with(&d, f, 1, &as_saved, &by_fighter_cb);
+            }
+        }
+        let wait = |r: &mut Running, maps: &Maps, call: &Call| {
+            r.enter_wait_neutral(gobj_arg(maps, call));
+            Ret::Nothing
+        };
+        if set == CN_TALK {
+            check_calls_with(&d, "ft_8008A324", 1, &as_saved, &wait);
+        }
+        let check = |r: &mut Running, maps: &Maps, call: &Call| {
+            Ret::Int(u32::from(r.fox_appeal_s_check_input(gobj_arg(maps, call))))
+        };
+        check_calls_with(&d, "ftFx_AppealS_CheckInput", 1, &as_saved, &check);
+        // The talk's cue at each part.
+        let cue = |c: &mut Call, k: usize| {
+            let fp = fighter_of(c);
+            let at = fp + 0x2210;
+            let w = peek_u32(c, at);
+            poke_u32(c, at, w | 0x1000_0000);
+            poke_u32(c, fp + 0x2344, (k % 3) as u32);
+        };
+        check_calls_with(&d, "ftFx_AppealS_Anim", 1, &cue, &by_fighter_cb);
+        let stats = |r: &mut Running, _: &Maps, call: &Call| {
+            r.taunt_stats(call.regs.gpr[3] as i32, call.regs.gpr[4] != 0);
+            Ret::Nothing
+        };
+        check_calls_with(&d, "pl_80040120", 1, &as_saved, &stats);
+    }
+    // The count, by the player whose stats r3 points into.
+    let by_hi = |r: &mut Running, _: &Maps, call: &Call| {
+        use melee_sim::game::mirror::Mirror;
+        use melee_sim::game::structs::_StaticPlayer;
+        let off = call.regs.gpr[3] - leaf_check::sym("player_slots");
+        let slot = (off / _StaticPlayer::SIZE) as i32;
+        let stats = r.game.player_action_stats(slot);
+        let n = melee_sim::game::ft::fox::appeal::by_attack_hi(stats, call.regs.gpr[4] as i32);
+        Ret::Int(n)
+    };
+    for set in [CN, CN_TALK] {
+        check_calls_with(&dir(set), "pl_800386D8", 1, &as_saved, &by_hi);
+    }
+}
+
+#[test]
+fn corneria_unreached_callbacks() {
+    use melee_sim::game::gr::corneria;
+    let d = dir(CN);
+    let from = "grCorneria_801DD9A8";
+    // The demo's city, laid out from the match's.
+    let demo_city = retarget(leaf_check::sym("grCorneria_801E0678"));
+    check_calls_with(&d, from, 1, &demo_city, &of_running(corneria::demo_city));
+    for name in [
+        "grCorneria_801DD654",
+        "grCorneria_801DD658",
+        "grCorneria_801DDAC0",
+        "grCorneria_801DE4BC",
+        "grCorneria_801DE8E0",
+        "grCorneria_801DF8CC",
+        "grCorneria_801DFBEC",
+        "grCorneria_801DFC24",
+        "grCorneria_801DFC28",
+        "grCorneria_801DFEB4",
+        "grCorneria_801E013C",
+        "grCorneria_801E03C4",
+        "grCorneria_801E0DE0",
+        "grCorneria_801E0E3C",
+        "grCorneria_801E0F30",
+        "grCorneria_801E1054",
+        "grCorneria_801E12CC",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    // Map 6's setup (no match makes map 6), on the sky's object (map 7).
+    let map6 = |c: &mut Call, _: usize| {
+        c.addr = leaf_check::sym("stageGObj6_OnInit");
+        c.regs.gpr[3] = peek_u32(c, STAGE_INFO + 0x180 + 4 * 7);
+    };
+    check_calls_with(&d, "Ground_801C0C2C", 1, &map6, &by_address);
+}
+
+/// An Arwing's laser and the Great Fox's: their spawns and every callback a match reached, as
+/// saved and changed, and the callbacks none did from others' calls.
+#[test]
+fn starfox_lasers() {
+    use melee_sim::game::it::kinds::{arwinglaser, greatfoxlaser};
+    let straight = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let gun = maps.jobjs.get(&g[4]).copied();
+        let f = |i: usize| call.regs.fpr[i].ps0 as f32;
+        let _ = arwinglaser::spawn_straight(r, gobj_arg(maps, call), gun, g[5] as i32, f(1), f(2));
+        Ret::Nothing
+    };
+    let aimed = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let gun = maps.jobjs.get(&g[4]).copied();
+        let target = vec_arg(call, 5);
+        let scale = call.regs.fpr[1].ps0 as f32;
+        arwinglaser::spawn_aimed(
+            r,
+            gobj_arg(maps, call),
+            gun,
+            target,
+            g[6] as i32,
+            g[7] as i32,
+            scale,
+        );
+        Ret::Nothing
+    };
+    let great = |r: &mut Running, maps: &Maps, call: &Call| {
+        let off = vec_arg(call, 4);
+        let _ = greatfoxlaser::spawn(r, gobj_arg(maps, call), off, call.regs.gpr[5] as i32);
+        Ret::Nothing
+    };
+    for set in [CN, CN_TALK, CN_TALK_END] {
+        let d = dir(set);
+        for ty in [None, Some(0u32), Some(2)] {
+            let p = move |c: &mut Call, _: usize| {
+                if let Some(t) = ty {
+                    c.regs.gpr[5] = t;
+                }
+            };
+            check_calls_with(&d, "it_802E72E0", 1, &p, &straight);
+        }
+        for ty in [None, Some(1u32), Some(3)] {
+            let p = move |c: &mut Call, _: usize| {
+                if let Some(t) = ty {
+                    c.regs.gpr[6] = t;
+                }
+            };
+            check_calls_with(&d, "it_802E7654", 1, &p, &aimed);
+        }
+        for ty in [None, Some(0u32), Some(1)] {
+            let p = move |c: &mut Call, _: usize| {
+                if let Some(t) = ty {
+                    c.regs.gpr[5] = t;
+                }
+            };
+            check_calls_with(&d, "it_802EAF34", 1, &p, &great);
+        }
+        for f in [
+            "it_802E79C8",
+            "it_802E838C",
+            "itArwinglaser_UnkMotion2_Anim",
+            "itArwinglaser_UnkMotion2_Phys",
+            "itArwinglaser_UnkMotion2_Coll",
+            "itArwinglaser_UnkMotion3_Anim",
+            "itArwinglaser_UnkMotion3_Phys",
+            "itArwinglaser_UnkMotion3_Coll",
+            "itArwinglaser_UnkMotion5_Coll",
+            "it_802EB1EC",
+            "itGreatfoxlaser_UnkMotion1_Anim",
+            "itGreatfoxlaser_UnkMotion1_Phys",
+        ] {
+            check_calls_with(&d, f, 1, &as_saved, &item_cb);
+        }
+        let meets = |r: &mut Running, maps: &Maps, call: &Call| {
+            Ret::Int(u32::from(arwinglaser::meets_stage(r, gobj_arg(maps, call))))
+        };
+        check_calls_with(&d, "it_802E70BC", 1, &as_saved, &meets);
+        let enter = |r: &mut Running, maps: &Maps, call: &Call| {
+            arwinglaser::enter(r, gobj_arg(maps, call));
+            Ret::Nothing
+        };
+        check_calls_with(&d, "it_802E7A4C", 1, &as_saved, &enter);
+        let great_enter = |r: &mut Running, maps: &Maps, call: &Call| {
+            greatfoxlaser::enter(r, gobj_arg(maps, call));
+            Ret::Nothing
+        };
+        check_calls_with(&d, "it_802EB268", 1, &as_saved, &great_enter);
+    }
+    // The lasers' lifetimes running out, from their animation callbacks.
+    let d = dir(CN);
+    for f in [
+        "itArwinglaser_UnkMotion2_Anim",
+        "itArwinglaser_UnkMotion3_Anim",
+        "itGreatfoxlaser_UnkMotion1_Anim",
+    ] {
+        let ends = |c: &mut Call, k: usize| {
+            let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            poke_u32(c, ip + 0xD44, [1.0f32, 0.0, 2.0][k % 3].to_bits());
+        };
+        check_calls_with(&d, f, 1, &ends, &item_cb);
+    }
+    // The hit events no match reached, from the lasers' animation callbacks.
+    for (from, name) in [
+        ("itArwinglaser_UnkMotion3_Anim", "it_802E8418"),
+        ("itArwinglaser_UnkMotion3_Anim", "it_802E8420"),
+        ("itArwinglaser_UnkMotion3_Anim", "it_802E85F4"),
+        ("itArwinglaser_UnkMotion3_Anim", "it_802E8784"),
+        ("itArwinglaser_UnkMotion2_Anim", "it_802E8420"),
+        (
+            "itGreatfoxlaser_UnkMotion1_Anim",
+            "itGreatFoxLaser_Logic27_DmgDealt",
+        ),
+        (
+            "itGreatfoxlaser_UnkMotion1_Anim",
+            "itGreatFoxLaser_Logic27_Clanked",
+        ),
+        (
+            "itGreatfoxlaser_UnkMotion1_Anim",
+            "itGreatFoxLaser_Logic27_Absorbed",
+        ),
+        (
+            "itGreatfoxlaser_UnkMotion1_Anim",
+            "it_2725_Logic27_Reflected",
+        ),
+    ] {
+        // A reflection turns the laser back at its owner or its reflector: a fighter.
+        let at = leaf_check::sym(name);
+        let p = move |c: &mut Call, _: usize| {
+            c.addr = at;
+            let ip = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            let f = first_fighter(c);
+            poke_u32(c, ip + 0x518, f);
+            poke_u32(c, ip + 0xC64, f);
+        };
+        check_calls_with(&d, from, 1, &p, &item_cb);
+    }
+}

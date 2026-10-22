@@ -6,6 +6,7 @@
 
 pub mod anime;
 pub mod battle;
+pub mod corneria;
 pub mod data;
 pub mod datfiles;
 pub mod display;
@@ -89,6 +90,10 @@ pub const GR_KIND_OLDPUPUPU: i32 = 28;
 pub const GR_KIND_OLDYOSHI: i32 = 29;
 /// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
 pub const GR_KIND_OLDKONGO: i32 = 30;
+/// `Gr_Kind_Corneria`, Corneria.
+pub const GR_KIND_CORNERIA: i32 = 14;
+/// `Gr_Kind_Venom`, Venom.
+pub const GR_KIND_VENOM: i32 = 15;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -245,6 +250,10 @@ pub struct Globals {
     /// into the executable's table at the stage's setup): empty, all null, until a Poké Floats
     /// setup first writes it, then [`pura::VTX_COUNT`] entries.
     pub pura_vtx_jobjs: Vec<Option<JObjId>>,
+    /// Corneria's `yakumono_param` (`grCorneria_YakumonoParam`).
+    pub corneria_yakumono: Option<DataRef>,
+    /// Corneria's statics besides it.
+    pub corneria: corneria::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -372,6 +381,14 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
         (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
         (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
+        (GR_KIND_CORNERIA, 3) => VarsKind::Corneria,
+        (GR_KIND_CORNERIA, 4 | 9) => VarsKind::CorneriaCity,
+        (GR_KIND_CORNERIA, 8) => VarsKind::CorneriaCity8,
+        (GR_KIND_CORNERIA, 1) => VarsKind::ArwingPath,
+        (GR_KIND_CORNERIA, 2 | 10) => VarsKind::Arwing,
+        (GR_KIND_CORNERIA, 13..=18) => VarsKind::ArwingColl,
+        (GR_KIND_CORNERIA, 12) => VarsKind::StarFoxTalk,
+        (GR_KIND_CORNERIA, 5) => VarsKind::SmashTaunt,
         _ => VarsKind::Bytes,
     }
 }
@@ -382,6 +399,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
+        corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -403,6 +421,7 @@ pub fn yaku_received(
         zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
+        corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

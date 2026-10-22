@@ -221,6 +221,64 @@ impl Running<'_> {
         count
     }
 
+    /// Frees font `font`'s texts (through their GObjs where they have them) and its canvases
+    /// with their cameras, `HSD_SisLib_803A5DA0`.
+    #[doc(alias = "HSD_SisLib_803A5DA0")]
+    pub fn free_font_texts(&mut self, font: i32) {
+        let mut cur = self.game.sis.first_text;
+        while let Some(c) = cur {
+            let t = self.game.sis.text(c);
+            let next = t.next;
+            if i32::from(t.font) == font {
+                self.free_text_or_gobj(c);
+            }
+            cur = next;
+        }
+        let mut last: Option<(CanvasId, bool)> = None;
+        let mut cur = self.game.sis.first_canvas;
+        while let Some(c) = cur {
+            let e = *self.game.sis.canvas(c);
+            let next = e.next;
+            let freed = i32::from(e.font) == font;
+            if freed {
+                if let Some(o) = e.gobj {
+                    gobj::free(self, o);
+                }
+                match last {
+                    Some((l, false)) => {
+                        self.game.sis.canvases.get_mut(&l.0).expect("a canvas").next = next
+                    }
+                    // The original writes the next canvas into the one it just freed, as it
+                    // keeps that as the last; no two canvases of a font in a row are ported.
+                    Some((_, true)) => unimplemented!("two canvases of font {font} in a row"),
+                    None => self.game.sis.first_canvas = next,
+                }
+                self.game.sis.free(c.0);
+            }
+            last = Some((c, freed));
+            cur = next;
+        }
+    }
+
+    /// Frees font `font`'s texts and canvases, and its archive with its table if it has one,
+    /// `HSD_SisLib_803A5F50`; the archive's own release is outside the simulation.
+    #[doc(alias = "HSD_SisLib_803A5F50")]
+    pub fn close_font(&mut self, font: i32) {
+        self.free_font_texts(font);
+        let s = &mut self.game.sis;
+        if s.font_archives[font as usize].is_some() {
+            s.font_archives[font as usize] = None;
+            s.font_tables[font as usize] = None;
+        }
+    }
+
+    /// Points font `font`'s table at `archive`'s symbol `symbol` (`HSD_SisLib_804D1124[font] =
+    /// HSD_ArchiveGetPublicAddress(...)`), the archive itself left unset.
+    pub fn set_font_table(&mut self, font: i32, archive: ArchiveId, symbol: &str) {
+        let at = self.data.get(archive).public(symbol);
+        self.game.sis.font_tables[font as usize] = at.map(|offset| DataRef { archive, offset });
+    }
+
     /// Takes font `font`'s strings from `archive`'s table `symbol`, `HSD_SisLib_803A62A0`;
     /// the archive is loaded by name (`HSD_SisLib_803A945C`) outside the simulation.
     #[doc(alias = "HSD_SisLib_803A62A0")]

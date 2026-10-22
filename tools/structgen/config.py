@@ -265,6 +265,14 @@ SPLICE = {
     "BoneDynamicsDesc": ("bone_id", 0, 4, "BoneSlot"),
     # Peach's turnip's flag byte, of which only the top bit is the turnip's.
     "itPeachTurnip_ItemVars": ("xDD4", 0, 1, "TurnipFlag"),
+    # A collision's flag bytes: `x34`'s `b5`, which only its own move reads after clearing it,
+    # and `x35`, of which code uses only the top bit.
+    "CollData": [
+        ("x34_flags", 0x34, 0x35, "X34Flags"),
+        ("x35_flags", 0x35, 0x36, "X35Flags"),
+    ],
+    # The stage objects' own cameras, by CObj.
+    "StageInfo": ("x694", 0x694, 0x6A4, "StageCameras"),
     # A heart's flag byte, of which the heart uses only the top bit (an event's heart).
     "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
@@ -310,6 +318,7 @@ SPLICE = {
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
+    "use crate::game::gr::setup::StageCameras;",
     "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
@@ -378,6 +387,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::SecondTree;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
+use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::handles::*;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
@@ -391,6 +401,6 @@ use crate::hsd::shadow::ShadowId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::EcbSource;
+use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;"""

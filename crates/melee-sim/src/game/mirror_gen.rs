@@ -18,6 +18,7 @@ use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::SecondTree;
 use crate::game::ft::vars::{FighterVars, MotionVars};
+use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::Var;
 use crate::game::it::link::LinkX20;
@@ -31,7 +32,7 @@ use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::EcbSource;
+use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -1300,60 +1301,6 @@ impl Mirror for FtInputTimers {
     }
 }
 
-impl Mirror for _ECBFlagStruct {
-    const SIZE: u32 = 0x1;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        _ECBFlagStruct {
-            b0: m.bits(at, 0, 1) != 0,
-            b1234: m.bits(at, 1, 4) as u8,
-            b5: m.bits(at, 5, 1) != 0,
-            b6: m.bits(at, 6, 1) != 0,
-            b7: m.bits(at, 7, 1) != 0,
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if (self.b0 as u32) != m.bits(at, 0, 1) {
-            cx.mismatch(
-                &format!("{path}.b0"),
-                format!("{:?}", self.b0),
-                format!("{:?}", m.bits(at, 0, 1)),
-            );
-        }
-        if (self.b1234 as u32) != m.bits(at, 1, 4) {
-            cx.mismatch(
-                &format!("{path}.b1234"),
-                format!("{:?}", self.b1234),
-                format!("{:?}", m.bits(at, 1, 4)),
-            );
-        }
-        if (self.b5 as u32) != m.bits(at, 5, 1) {
-            cx.mismatch(
-                &format!("{path}.b5"),
-                format!("{:?}", self.b5),
-                format!("{:?}", m.bits(at, 5, 1)),
-            );
-        }
-        if (self.b6 as u32) != m.bits(at, 6, 1) {
-            cx.mismatch(
-                &format!("{path}.b6"),
-                format!("{:?}", self.b6),
-                format!("{:?}", m.bits(at, 6, 1)),
-            );
-        }
-        if (self.b7 as u32) != m.bits(at, 7, 1) {
-            cx.mismatch(
-                &format!("{path}.b7"),
-                format!("{:?}", self.b7),
-                format!("{:?}", m.bits(at, 7, 1)),
-            );
-        }
-    }
-}
-
 impl Mirror for _ftECB {
     const SIZE: u32 = 0x20;
 
@@ -1422,8 +1369,8 @@ impl Mirror for CollData {
             prev_pos: Vec3::import(m, at + 0x10, cx),
             last_pos: Vec3::import(m, at + 0x1c, cx),
             x28_vec: Vec3::import(m, at + 0x28, cx),
-            x34_flags: _ECBFlagStruct::import(m, at + 0x34, cx),
-            x35_flags: _ECBFlagStruct::import(m, at + 0x35, cx),
+            x34_flags: X34Flags::import(m, at + 0x34, cx),
+            x35_flags: X35Flags::import(m, at + 0x35, cx),
             facing_dir: m.u16(at + 0x36) as i16,
             x38: m.u32(at + 0x38) as i32,
             floor_skip: m.u32(at + 0x3c) as i32,
@@ -9922,7 +9869,7 @@ impl Mirror for StageInfo {
                 cx.import_handle("JObjId", m.u32(at + 0x280 + i0 as u32 * 0x4))
                     .map(JObjId)
             }),
-            x694: core::array::from_fn(|i0| RawPtr(m.u32(at + 0x694 + i0 as u32 * 0x4))),
+            x694: StageCameras::import(m, at + 0x694, cx),
             x6A4: cx
                 .import_handle("StartHookId", m.u32(at + 0x6a4))
                 .map(StartHookId),
@@ -10077,15 +10024,8 @@ impl Mirror for StageInfo {
                 m.u32(at + 0x280 + i0 as u32 * 0x4),
             );
         }
-        for i0 in 0..4 {
-            if self.x694[i0].0 != m.u32(at + 0x694 + i0 as u32 * 0x4) {
-                cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.x694"), i0),
-                    format!("{:#x}", self.x694[i0].0),
-                    format!("{:#x}", m.u32(at + 0x694 + i0 as u32 * 0x4)),
-                );
-            }
-        }
+        self.x694
+            .compare(m, at + 0x694, &format!("{path}.x694"), cx);
         cx.compare_handle(
             &format!("{path}.x6A4"),
             "StartHookId",
