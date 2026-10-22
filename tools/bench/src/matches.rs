@@ -1333,6 +1333,31 @@ pub fn ics_set() -> Vec<Match> {
         .collect()
 }
 
+/// The CPU items set (milestone 4's task 15): a real level 9 CPU against a human with every
+/// switch kind on at frequency high, so the CPU AI goes for items, picks them up, swings,
+/// throws and uses them; three-minute time matches on the tournament stages, seeds `1F0F20xx`.
+pub fn cpu_items_set() -> Vec<Match> {
+    let all: Vec<u8> = (0..RANDOM_KINDS).collect();
+    let matches: [(u8, u8, u16, &str); 4] = [
+        (MARTH, FOX, FINAL_DESTINATION, "fd"),
+        (MARIO, FALCO, BATTLEFIELD, "bf"),
+        (SAMUS, SHEIK, POKEMON_STADIUM, "ps"),
+        (CAPTAIN, LUIGI, YOSHIS_STORY, "ys"),
+    ];
+    matches
+        .iter()
+        .enumerate()
+        .map(|(i, &(c, human, stage, key))| Match {
+            name: Cow::Owned(format!("cpu-items-{}-{key}", character_key(c))),
+            stage,
+            players: Cow::Owned(vec![p(human, 0), cpu(c, 0, 9)]),
+            seed: 0x1F0F_2001 + i as u32,
+            rules: Rules::Time { time_limit: 180 },
+            items: Items::only(FREQ_HIGH, &all),
+        })
+        .collect()
+}
+
 /// A set's matches.
 pub type Set = fn() -> Vec<Match>;
 
@@ -1342,6 +1367,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("coins", coins_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
+    ("cpu-items", cpu_items_set),
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
     ("leftovers", leftovers_set),

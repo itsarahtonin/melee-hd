@@ -20,7 +20,9 @@
 #
 # SSBM_RUN is ssbm-rs's runner with BENCH_CODES (ssbm-rs main 3f9ac3a and later; the oracle's
 # traces come from its ssbm-run-rf build, d61135b). JOBS (default 1) runs that many matches at
-# once, each on one core at low priority. TRACE=0 skips the traces. RUN_TRACE=FIELDS also traces
+# once, each on one core at low priority. TRACE=0 skips the traces. TRACE_PORT (default all) is
+# the trace's --port: sysdolphin/baselib/perf runs the original code but for the trace's hook,
+# which an old runner's ports need where they lose a saved return address. RUN_TRACE=FIELDS also traces
 # the recording run itself for its first FIELDS fields (DIR/NAME.run.trc, with memory; the
 # interpreter as in the recording, but for the port the trace hooks: BENCH_AI hooks the middle
 # of Fighter_procCpu, which a port would skip), whose heap layout `melee-oracle trace-heap`
@@ -78,7 +80,7 @@ make() {
     if [ "${TRACE:-1}" != 0 ]; then
         t=$SECONDS
         SLIPPI_PLAYER_NAMES=0 STATE_TRACE="$trc.trc" STATE_TRACE_MEMORY=1 \
-            nice -n 10 "$run" --replay "$out.slp" --fp hardware --fields "$fields" --port all \
+            nice -n 10 "$run" --replay "$out.slp" --fp hardware --fields "$fields" --port "${TRACE_PORT:-all}" \
             > "$trc.log" 2>&1
         times+=", trace $((SECONDS - t)) s, $(du -m "$trc.trc" | cut -f1) MB"
     fi
