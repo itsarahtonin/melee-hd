@@ -48,7 +48,8 @@ pub fn start_point(game: &Game, i: i32) -> crate::vec::Vec3 {
 }
 
 /// The wind a scrolling stage blows on an airborne item, `grLib_801C9E60`: whether the stage
-/// has one (Rainbow Cruise, Big Blue, Icicle Mountain, not ported), else none.
+/// has one (Rainbow Cruise; Big Blue and Icicle Mountain not ported), else none. Computer
+/// players carry their destination on it too.
 #[doc(alias = "grLib_801C9E60")]
 pub fn item_wind(game: &Game, v: &mut crate::vec::Vec3) -> bool {
     match game.stage_info.grkind {

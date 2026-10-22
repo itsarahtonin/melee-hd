@@ -265,25 +265,27 @@ The rule is kept by melee-sim's `roster` tests: `audited_stages_reach_nothing_un
 | Stage | Offered | Missing (stops a match) | Unported, not reached (why) |
 | --- | --- | --- | --- |
 | Battlefield | yes | | |
-| Brinstar | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player judging whether an island is safe (`ftCo_800A2718`), which asks Brinstar and Onett about their own hazards | the stage item on neither a joint nor a point, as on Jungle Japes |
+| Brinstar | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Brinstar Depths | yes | | |
 | Dream Land | yes | | |
 | Final Destination | yes | | the boss stages' cycle (`gm_8016ECE8`): single-player boss stages only |
 | Fountain of Dreams | yes | | |
 | Fourside | yes | | |
-| Great Bay | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player following the stage's routes (`ftCo_800A1CC4`), which she does whenever she picks a destination | Tingle's `evt_unk` (`it_802EC850`): the items' `evt_unk` runs only from `it_8026B7F8`, at a fighter's unload when the scene ends |
+| Great Bay | yes | | Tingle's `evt_unk` (`it_802EC850`): the items' `evt_unk` runs only from `it_8026B7F8`, at a fighter's unload when the scene ends |
 | Green Greens | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
-| Hyrule Temple | yes, not with the Ice Climbers | with the Ice Climbers: Nana's routes (`ftCo_800A1CC4`) and her search for an opening in the temple's ceiling (`ftCo_800AAF48`) | |
+| Hyrule Temple | yes | | |
 | Jungle Japes | yes | | a stage item on neither a joint nor a point (`it_2E6A_UnkMotion19_Phys`): no stage makes one, and the original hangs |
 | Kongo Jungle | yes | | a box riding the river (`it_80286088`): only with boxes on in the item switch |
 | Kongo Jungle N64 | yes | | |
-| Onett | yes, not with the Ice Climbers | with the Ice Climbers: Nana's island check (`ftCo_800A2718`), as on Brinstar | the stage item on neither a joint nor a point, as on Jungle Japes |
+| Onett | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Poké Floats | yes | | |
 | Pokémon Stadium | yes | | the screen's count (`grStadium_801D384C`): single-player modes only |
-| Rainbow Cruise | yes, not with the Ice Climbers | with the Ice Climbers: Nana's computer player reading the stage's wind (`grLib_801C9E60`), her own copy of which stops on the moving stages | |
+| Rainbow Cruise | yes | | |
 | Yoshi's Island | yes | | the stage item on neither a joint nor a point, as on Jungle Japes |
 | Yoshi's Island N64 | yes | | |
 | Yoshi's Story | yes | | the Shy Guys' food (`it_8028FAF4`, `it_8028F8E4`, `it_8028F9D8`, `it_8028F9B8`): only with food on in the item switch; their `evt_unk` (`it_802D9A0C`), as Tingle's |
+
+**The Ice Climbers' gaps, ported (2026-10-22, `feat/nana-items`).** The table's first audit refused the Ice Climbers on five stages, for what Nana's computer player asks the stage: whether an island is safe on Brinstar (the acid's height and its rise, `ftCo_800A1F98`) and Onett (a car coming while an island's end is at the street's height) in `ftCo_800A2718`, Rainbow Cruise's wind carrying her destination over no floor (her copy of `grLib_801C9E60` is now the stage's own), and Great Bay's and Hyrule Temple's routes (`ftCo_800A1CC4` with its table `ftCo_803C6594`) and Hyrule Temple's search for an island's end above her (`ftCo_800AAF48`). The oracle's Ice Climbers matches on each ([the oracle](oracle.md#the-ice-climbers-on-the-stages)) compare every tick, so those stages are offered with them; Kongo Jungle's two stages wait for Nana's barrel shot (`feat/cpu-audit`).
 
 Nothing else the launcher offers stops mid-match in a way the audit could gate: its characters are the roster's, each played over whole matches by the oracle (what a character's port still lacks, Nana's computer player's other paths among it, is that character's task, not a stage's), its rules are VS rules with only the items the items audit clears ([Items the player offers](#items-the-player-offers)), and a match's end returns to the form. What the audit can't see is a path no stage code names, a character's move that meets a stage's object no match has put together, say; those are found by playing, and the gap goes on the stage's audit.
 

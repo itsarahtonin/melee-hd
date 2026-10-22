@@ -1293,6 +1293,46 @@ pub fn cpu_set() -> Vec<Match> {
     out
 }
 
+/// The stages where Nana's computer player asks the stage something: whether an island is
+/// safe (Brinstar, Onett), the wind (Rainbow Cruise), its routes (Great Bay, Hyrule Temple) and
+/// the temple's ceiling openings, with the Ice Climbers' opponent.
+const ICS_STAGES: [(u16, &str, u8); 5] = [
+    (BRINSTAR, "br", FOX),
+    (ONETT, "on", MARTH),
+    (RAINBOW_CRUISE, "rc", SHEIK),
+    (GREAT_BAY, "gb", FALCO),
+    (HYRULE_TEMPLE, "ht", PEACH),
+];
+
+/// The Ice Climbers set: the Ice Climbers against another human on each stage whose hooks
+/// Nana's computer player reaches (`ics-STAGE`), both players `BENCH_AI`, Nana the game's own
+/// AI. Stock matches, 4 stocks, 3 minutes, items off.
+pub fn ics_set() -> Vec<Match> {
+    ICS_STAGES
+        .iter()
+        .enumerate()
+        .map(|(i, &(stage, key, other))| Match {
+            name: Cow::Owned(format!("ics-{key}")),
+            stage,
+            players: Cow::Owned(vec![p(ICE_CLIMBERS, 0), p(other, 0)]),
+            seed: 0x1F0F_1201 + i as u32,
+            rules: CPU_RULES,
+            items: Items::OFF,
+        })
+        .chain(std::iter::once(Match {
+            name: Cow::Borrowed("ics-items-bf"),
+            stage: BATTLEFIELD,
+            players: Cow::Owned(vec![p(ICE_CLIMBERS, 0), p(FOX, 0)]),
+            seed: 0x1F0F_1206,
+            rules: CPU_RULES,
+            items: Items {
+                freq: FREQ_HIGH,
+                mask: u64::MAX,
+            },
+        }))
+        .collect()
+}
+
 /// A set's matches.
 pub type Set = fn() -> Vec<Match>;
 
@@ -1310,6 +1350,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("catch", catch_set),
     ("fighters", fighters_set),
     ("sscope", sscope_set),
+    ("ics", ics_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every

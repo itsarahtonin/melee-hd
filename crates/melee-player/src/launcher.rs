@@ -802,12 +802,27 @@ mod tests {
         form.choice.stage = roster::stage("ht").unwrap().kind;
         assert!(form.choice.refusal().is_none());
         form.choice.players[1] = Some(ics);
-        let why = form
-            .choice
-            .refusal()
-            .expect("Hyrule Temple with the Ice Climbers");
-        assert!(why.contains("Ice Climbers"), "{why}");
-        assert!(!frame(&ctx, &mut form, enter()), "refused");
+        assert!(
+            form.choice.refusal().is_none(),
+            "Hyrule Temple with the Ice Climbers"
+        );
+        // A stage with a gap only one character reaches refuses the match with them.
+        let gap = (roster::offered_stages()).find_map(|s| {
+            s.audit
+                .as_ref()?
+                .missing
+                .first()
+                .map(|g| (s, g.with.unwrap()))
+        });
+        if let Some((s, who)) = gap {
+            form.choice.stage = s.kind;
+            form.choice.players[1] = Some(who);
+            let why = form.choice.refusal().expect("a gap that character reaches");
+            let name = roster::character_by_kind(who).unwrap().name;
+            assert!(why.contains(name), "{why}");
+            assert!(!frame(&ctx, &mut form, enter()), "refused");
+            form.choice.stage = roster::stage("ht").unwrap().kind;
+        }
         // A stage the list doesn't offer, kept from an older settings file, isn't taken back.
         let unoffered = roster::STAGES.iter().find(|s| !s.offered());
         if let Some(s) = unoffered {

@@ -256,7 +256,7 @@ pub const STAGES: &[Stage] = &[
             units: &["melee/gr/grzebes", "melee/it/kinds/ityaku"],
             modules: &["gr/zebes", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
-            missing: &[NANA_ISLANDS],
+            missing: &[],
         }),
     },
     Stage {
@@ -325,7 +325,7 @@ pub const STAGES: &[Stage] = &[
             units: &["melee/gr/grgreatbay", "melee/it/kinds/ittincle"],
             modules: &["gr/greatbay", "it/kinds/tincle"],
             unreached: &[EVT_UNK_TINGLE],
-            missing: &[NANA_ROUTES],
+            missing: &[],
         }),
     },
     Stage {
@@ -351,7 +351,7 @@ pub const STAGES: &[Stage] = &[
             units: &["melee/gr/grshrine"],
             modules: &["gr/shrine"],
             unreached: &[],
-            missing: &[NANA_ROUTES, NANA_SHRINE],
+            missing: &[],
         }),
     },
     Stage {
@@ -402,7 +402,7 @@ pub const STAGES: &[Stage] = &[
             units: &["melee/gr/gronett", "melee/it/kinds/ityaku"],
             modules: &["gr/onett", "it/kinds/yaku"],
             unreached: &[YAKU_UNANCHORED],
-            missing: &[NANA_ISLANDS],
+            missing: &[],
         }),
     },
     Stage {
@@ -438,7 +438,7 @@ pub const STAGES: &[Stage] = &[
             units: &["melee/gr/grrcruise"],
             modules: &["gr/rcruise"],
             unreached: &[],
-            missing: &[NANA_WIND],
+            missing: &[],
         }),
     },
     Stage {
@@ -476,9 +476,6 @@ pub const STAGES: &[Stage] = &[
     },
 ];
 
-/// `CharacterKind` of the Ice Climbers, whose Nana runs the CPU AI.
-const ICE_CLIMBERS: u8 = 14;
-
 /// Why the items' `evt_unk` (`it_8026B894`'s wrappers) is unreached: only `it_8026B7F8` calls
 /// it, from the fighter's unload when the match's scene ends.
 const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload at the scene's end runs";
@@ -487,35 +484,6 @@ const YAKU_UNANCHORED: (&str, &str) = (
     "it_2E6A_UnkMotion19_Phys",
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)",
 );
-
-/// Nana's computer player follows a stage's routes on Great Bay and Hyrule Temple.
-const NANA_ROUTES: Gap = Gap {
-    what: "Nana's computer player following the stage's routes (ftCo_800A1CC4)",
-    covers: &["ftCo_800A1CC4"],
-    with: Some(ICE_CLIMBERS),
-};
-
-/// Nana's computer player reads the moving stages' wind (Rainbow Cruise, Big Blue, Icicle
-/// Mountain), which her port doesn't yet.
-const NANA_WIND: Gap = Gap {
-    what: "Nana's computer player reading the stage's wind (grLib_801C9E60)",
-    covers: &["grLib_801C9E60 on a moving stage"],
-    with: Some(ICE_CLIMBERS),
-};
-
-/// And looks for a way up through Hyrule Temple's ceilings.
-const NANA_SHRINE: Gap = Gap {
-    what: "Nana's computer player heading for an opening in the temple's ceiling (ftCo_800AAF48)",
-    covers: &["ftCo_800AAF48"],
-    with: Some(ICE_CLIMBERS),
-};
-
-/// And judges whether an island is safe to stand on, which on Brinstar and Onett asks the stage.
-const NANA_ISLANDS: Gap = Gap {
-    what: "Nana's computer player judging whether an island is safe on Brinstar and Onett (ftCo_800A2718)",
-    covers: &["ftCo_800A2718 on Zebes or Onett"],
-    with: Some(ICE_CLIMBERS),
-};
 
 /// A ported character by one of its command-line names.
 pub fn character(key: &str) -> Option<&'static Character> {
@@ -822,6 +790,24 @@ pub(crate) mod tests {
         assert!(!unaudited.offered() && !unaudited.missing_with(&[]).is_empty());
         let ht = stage("ht").unwrap();
         assert!(ht.offered() && ht.missing_with(&[2, 9]).is_empty());
-        assert_eq!(ht.missing_with(&[2, ICE_CLIMBERS]).len(), 2);
+        // The Ice Climbers (14) play every offered stage.
+        assert!(ht.missing_with(&[2, 14]).is_empty());
+        let one = Stage {
+            kind: 0,
+            name: "",
+            keys: &[],
+            audit: Some(Audit {
+                units: &[],
+                modules: &[],
+                unreached: &[],
+                missing: &[Gap {
+                    what: "a gap",
+                    covers: &[],
+                    with: Some(14),
+                }],
+            }),
+        };
+        assert!(one.offered() && one.missing_with(&[2, 9]).is_empty());
+        assert_eq!(one.missing_with(&[2, 14]), ["a gap (with Ice Climbers)"]);
     }
 }

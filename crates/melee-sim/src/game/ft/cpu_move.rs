@@ -809,15 +809,68 @@ impl Running<'_> {
         self.cpu_walk_forward_cmds(f);
     }
 
-    /// Whether a computer player under a ceiling on Hyrule Temple heads for an opening above,
-    /// `ftCo_800AAF48`: never while its destination's timer runs (`x60`) or on another stage.
-    /// Hyrule Temple's search isn't ported.
-    // Ports `ftCo_800AAF48`; aliased once a check reaches it.
+    /// Whether a computer player on Hyrule Temple heads for an island's end above it and ahead,
+    /// `ftCo_800AAF48`: the first, in the islands' order, with no ceiling or wall between them
+    /// and near enough (less than twice its jump's height plus its height above, five times its
+    /// half width ahead), for 300 frames; never while its destination's timer runs (`x60`) or
+    /// on another stage.
+    #[doc(alias = "ftCo_800AAF48")]
     fn cpu_shrine_opening(&mut self, f: FighterId) -> bool {
         if self.game.fighters[f.0].cpu.x60 != 0 || self.game.stage_info.grkind != GR_KIND_SHRINE {
             return false;
         }
-        unported_call("ftCo_800AAF48 on Hyrule Temple");
+        let geo = self.game.geometry.as_mut().expect("no collision geometry");
+        let islands: Vec<_> = geo.islands.iter(geo.islands.floors).collect();
+        for island in islands {
+            let fpp = &self.game.fighters[f.0];
+            let (pos, right) = (fpp.cur_pos, fpp.facing_dir > 0.0);
+            let geo = self.game.geometry.as_mut().expect("no collision geometry");
+            let isl = *geo.islands.get(island);
+            // Facing right, an island's left end ahead; facing left, its right end.
+            let (end, dx, dy) = if right {
+                let e = isl.left;
+                (
+                    e,
+                    fp::fsubs(reg(e.x), reg(pos.x)),
+                    fp::fsubs(reg(e.y), reg(pos.y)),
+                )
+            } else {
+                let e = isl.right;
+                (
+                    e,
+                    fp::fsubs(reg(pos.x), reg(e.x)),
+                    fp::fsubs(reg(pos.y), reg(e.y)),
+                )
+            };
+            if dx < 0.0 || dy < 0.0 {
+                continue;
+            }
+            if geo
+                .check_ceiling(pos.x, pos.y, end.x, end.y, -1, -1)
+                .is_some()
+            {
+                continue;
+            }
+            let wall = if right {
+                geo.check_right_wall(pos.x, pos.y, end.x, end.y, -1, -1)
+            } else {
+                geo.check_left_wall(pos.x, pos.y, end.x, end.y, -1, -1)
+            };
+            if wall.is_some() {
+                continue;
+            }
+            let c = &mut self.game.fighters[f.0].cpu;
+            if dy < fp::fmadds(2.0, reg(c.x558), reg(c.x568)) && dx < fp::fmuls(5.0, reg(c.x564)) {
+                c.x60 = 300;
+                c.x64.x = c.x54.x;
+                c.x64.y = c.x54.y;
+                c.x54.x = end.x;
+                c.x54.y = end.y;
+                c.x38 = 5.0;
+                return true;
+            }
+        }
+        false
     }
 
     /// Walks or runs to a destination on the fighter's island, `ftCo_800AA42C`: off a teeter
