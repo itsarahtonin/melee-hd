@@ -177,6 +177,12 @@ pub struct Gx {
     /// While a display list is built: the FIFO's bytes and, with `dlSaveContext`, the state
     /// to restore (`__savedGXdata`).
     display_list: Option<display_list::Saved>,
+    /// The components of the TEV color registers (PREV, C0, C1, C2) and konst registers last
+    /// written from a value the original never set (`HSD_TExpSetReg`'s uninitialized
+    /// registers, docs/engine.md): none may decide a pixel.
+    pub unset: melee_gx::tev::Usage,
+    /// Draws whose active stages read an [`Gx::unset`] component.
+    pub unset_reads: u32,
 }
 
 impl Default for Gx {
@@ -195,6 +201,8 @@ impl Gx {
             tv_format: VI_NTSC,
             bus_clock: BUS_CLOCK,
             display_list: None,
+            unset: Default::default(),
+            unset_reads: 0,
         }
     }
 

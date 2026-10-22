@@ -140,6 +140,7 @@ impl Gx {
         self.write_ras_reg(bg);
         self.write_ras_reg(bg);
         self.data.bp_sent = 0;
+        self.unset.color[(id & 3) as usize] = 0;
     }
 
     /// `GXSetTevColorS10`: like [`Gx::set_tev_color`], with 11-bit signed components.
@@ -158,6 +159,7 @@ impl Gx {
         self.write_ras_reg(bg);
         self.write_ras_reg(bg);
         self.data.bp_sent = 0;
+        self.unset.color[(id & 3) as usize] = 0;
     }
 
     #[doc(alias = "GXSetTevKColor")]
@@ -175,6 +177,33 @@ impl Gx {
         self.write_ras_reg(ra);
         self.write_ras_reg(bg);
         self.data.bp_sent = 0;
+        self.unset.konst[(id & 3) as usize] = 0;
+    }
+
+    /// Marks components of the color register `id` (`GX_TEVPREV`, `GX_TEVREG0`..) just
+    /// written as holding what the original left unset.
+    pub fn mark_unset_color(&mut self, id: u32, comps: u8) {
+        self.unset.color[(id & 3) as usize] = comps;
+    }
+
+    /// Marks components of the konst register `id` (`GX_KCOLOR0`..) just written as holding
+    /// what the original left unset.
+    pub fn mark_unset_konst(&mut self, id: u32, comps: u8) {
+        self.unset.konst[(id & 3) as usize] = comps;
+    }
+
+    /// Counts a draw whose active stages read a component marked unset.
+    #[inline]
+    pub(crate) fn check_unset(&mut self) {
+        if self.unset.is_empty() {
+            return;
+        }
+        let d = &self.data;
+        let used =
+            melee_gx::tev::usage_of(d.gen_mode, |s| (d.tevc[s], d.teva[s]), |i| d.tev_ksel[i]);
+        if used.meets(&self.unset) {
+            self.unset_reads += 1;
+        }
     }
 
     #[doc(alias = "GXSetTevKColorSel")]

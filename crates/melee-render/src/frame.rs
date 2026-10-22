@@ -13,6 +13,10 @@ use crate::hsd::Hsd;
 use crate::hsd::draw::Ctx;
 use crate::mem::Space;
 
+/// The note for draws whose stages read a TEV register component the original left unset
+/// ([`Gx::unset`]), counted a draw each.
+pub const UNSET_READ: &str = "a draw read a TEV register component HSD_TExpSetReg left unset";
+
 /// The XFB the frame is copied to. Its address is the presentation's.
 pub const XFB_ADDR: u32 = 0x00F0_0000;
 
@@ -133,6 +137,10 @@ impl Frames {
             i += ctx.draw(draws, i);
         }
         ctx.copy_xfb();
+        if self.gx.unset_reads != 0 {
+            *self.hsd.notes.entry(UNSET_READ.to_owned()).or_default() += self.gx.unset_reads;
+            self.gx.unset_reads = 0;
+        }
         self.gx.take_fifo()
     }
 }

@@ -931,6 +931,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded.
 - **Source:** `crates/melee-sim/src/hsd/texp/dag.rs:363`.
 
+### TEV constants go out with components from the stack
+
+- **Where:** `HSD_TExpSetReg` (texp.c), under every material's setup (`HSD_TExpSetupTev`) and the fighters', items' and stage objects' overlay stages (`ftMaterial_800BF534`, `ftMaterial_800BF6BC`, `it_80277F90`, `it_80278108`, `fn_801C8EF8`), so under every render callback that draws a model, Poké Floats' `fn_802130D0` and Peach's Castle's `fn_801D0924` among them; `crates/melee-render/src/hsd/texp.rs` (`set_reg`, `set_reg_values`).
+- **Defect:** its eight registers are an uninitialized stack array (`reg[8]` at `r1 + 0x18`); it writes only the components its constants name, then sends each register it touched whole (`0x803853A8` to `GXSetTevKColor`, `0x803853F8` to `GXSetTevColor`), and an RGB `HSD_TE_U8` constant keeps the slot's alpha (`0x80384FE0`). The rest is what earlier calls left: on Poké Floats, C0's color is `&hsdTObj` (`0x80405570`), `GXLoadTexObj`'s save of its caller's `r30`.
+- **Effect:** none observable: every stage reads only the components its constants set. The one path that would read one, a stage object's color overlay in K0 together with its alpha (`x10_flags.b6`), needs command 21 of a stage color script, which no ported stage's match nor Peach's Castle's oracle match reaches.
+- **melee-hd:** stale: it sends 0 there (`texp::Regs::set`), marks those components unset in GX (`Gx::unset`), and notes a draw that reads one (`frame::UNSET_READ`), which fails the render checks; command 21 stops (`gr::material::run_overlay`).
+- **Fix:** start the registers at zero, or send only the components set.
+- **Fix impact:** none, as long as no stage reads an unset component; the overlay-and-alpha path would draw differently.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 105); `crates/melee-render/src/hsd/texp.rs:102`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

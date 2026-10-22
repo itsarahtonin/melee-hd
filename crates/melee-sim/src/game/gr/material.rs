@@ -17,7 +17,9 @@ const NOT_DOBJS: u32 = jobj::SPLINE | jobj::PTCL;
 pub use crate::lb::colanim::clear as clear_overlay;
 
 /// Runs a stage object's color overlay for a tick (`lb_80014258`, [`colanim::step`]): its
-/// own commands would go to `grMaterial_804D456C`.
+/// own commands would go to `grMaterial_804D456C`. Its one command, 21, turns on the object's
+/// alpha (`grMaterial_801C9490`), whose material stage can draw a color `HSD_TExpSetReg` left
+/// unset (docs/engine.md), so a port of it must model that leftover.
 pub fn run_overlay(data: &Archives, co: &mut ColorOverlay) -> bool {
     colanim::step(data, co, &mut |_, opcode| {
         unimplemented!("color script command {opcode} (grMaterial_804D456C)")

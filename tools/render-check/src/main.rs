@@ -190,6 +190,15 @@ fn run(args: &[String]) -> ExitCode {
             );
             ExitCode::SUCCESS
         }
+        Some("notes") if args.len() >= 3 => {
+            let to = args.get(3).map_or(u32::MAX, |n| n.parse().expect("TO"));
+            let notes = native::notes(&args[1], &args[2], to);
+            for (what, (n, first)) in &notes {
+                println!("{n:>8}  from frame {first}: {what}");
+            }
+            println!("{} kinds of note", notes.len());
+            ExitCode::SUCCESS
+        }
         Some("compare") if args.len() >= 6 => compare(args),
         Some("scaled") if args.len() >= 4 => scaled(args),
         Some("snap") if args.len() >= 5 => {
@@ -253,7 +262,7 @@ fn run(args: &[String]) -> ExitCode {
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
                  scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT [--aspect W:H] FRAME... | \
-                 dashboard RESULTS OUT_DIR"
+                 notes DISC REPLAY [TO] | dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)
         }

@@ -63,20 +63,33 @@ fn channel(x: i32) -> u8 {
 /// `HSD_TExpSetReg`.
 #[doc(alias = "HSD_TExpSetReg")]
 pub fn set_reg(gx: &mut Gx, state: &mut TevState, objs: &Objects, cnsts: &[CnstReg]) {
-    let (reg, changed) = reg_values(objs, cnsts);
-    send_reg(gx, state, &reg, changed);
+    let regs = reg_values(objs, cnsts);
+    send_reg(gx, state, &regs);
 }
 
 /// `HSD_TExpSetReg` of a list of constants whose values are given (a material class's own
 /// constants, which point at values in its object or on the stack): `(value, comp, reg, idx)`.
 pub fn set_reg_values(gx: &mut Gx, state: &mut TevState, cnsts: &[(CnstValue, u8, u8, u8)]) {
-    let (reg, changed) = values_to_regs(cnsts.iter().copied());
-    send_reg(gx, state, &reg, changed);
+    let regs = values_to_regs(cnsts.iter().copied());
+    send_reg(gx, state, &regs);
+}
+
+/// `HSD_TExpSetReg`'s registers: their values, which of them it sends, and which components
+/// of each its constants set.
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
+pub struct Regs {
+    pub reg: [Color; 8],
+    /// The registers sent, a bit each.
+    pub changed: u32,
+    /// The components each register's constants set (`melee_gx::tev::R` and the rest). The
+    /// others are the original's uninitialized stack, which melee-hd sends as 0: nothing
+    /// reads them (docs/engine.md, `HSD_TExpSetReg`'s registers).
+    pub set: [u8; 8],
 }
 
 /// The registers' values a description's constants give, and which registers they set:
 /// `HSD_TExpSetReg`'s reads.
-pub fn reg_values(objs: &Objects, cnsts: &[CnstReg]) -> ([Color; 8], u32) {
+pub fn reg_values(objs: &Objects, cnsts: &[CnstReg]) -> Regs {
     values_to_regs(
         cnsts
             .iter()
@@ -86,9 +99,12 @@ pub fn reg_values(objs: &Objects, cnsts: &[CnstReg]) -> ([Color; 8], u32) {
 }
 
 /// `HSD_TExpSetReg`'s register values from its constants' values.
-fn values_to_regs(cnsts: impl Iterator<Item = (CnstValue, u8, u8, u8)>) -> ([Color; 8], u32) {
-    // The original's registers are uninitialized stack; a channel no constant sets is unused.
+fn values_to_regs(cnsts: impl Iterator<Item = (CnstValue, u8, u8, u8)>) -> Regs {
+    use melee_gx::tev::{A, B, G, R, RGB};
+    // The original's registers are uninitialized stack: a component no constant sets holds
+    // what an earlier call left there, which no stage reads (`Regs::set`).
     let mut reg = [Color::default(); 8];
+    let mut set = [0u8; 8];
     let mut changed = 0u32;
     for (value, comp, creg, idx) in cnsts {
         if creg >= 8 {
@@ -102,6 +118,7 @@ fn values_to_regs(cnsts: impl Iterator<Item = (CnstValue, u8, u8, u8)>) -> ([Col
                 v => panic!("an RGB constant {v:?} that isn't a color"),
             };
             reg[r] = Color { a: reg[r].a, ..col };
+            set[r] |= RGB;
         } else {
             let val = match value {
                 CnstValue::U8(x) => x,
@@ -111,37 +128,44 @@ fn values_to_regs(cnsts: impl Iterator<Item = (CnstValue, u8, u8, u8)>) -> ([Col
             };
             if r < 4 {
                 match idx {
-                    0 => reg[r].r = val,
-                    1 => reg[r].g = val,
-                    2 => reg[r].b = val,
-                    _ => reg[r].a = val,
+                    0 => (reg[r].r, set[r]) = (val, set[r] | R),
+                    1 => (reg[r].g, set[r]) = (val, set[r] | G),
+                    2 => (reg[r].b, set[r]) = (val, set[r] | B),
+                    _ => (reg[r].a, set[r]) = (val, set[r] | A),
                 }
             } else if idx == 3 {
                 reg[r].a = val;
+                set[r] |= A;
             } else {
                 reg[r].r = val;
                 reg[r].g = val;
                 reg[r].b = val;
+                set[r] |= RGB;
             }
         }
     }
-    (reg, changed)
+    Regs { reg, changed, set }
 }
 
-/// `HSD_TExpSetReg`'s writes: the changed registers, between pixel-mode syncs.
-fn send_reg(gx: &mut Gx, state: &mut TevState, reg: &[Color; 8], changed: u32) {
-    if changed != 0 {
+/// `HSD_TExpSetReg`'s writes: the changed registers, between pixel-mode syncs. A component
+/// no constant set is marked unset in GX ([`Gx::unset`]).
+fn send_reg(gx: &mut Gx, state: &mut TevState, regs: &Regs) {
+    let Regs { reg, changed, set } = regs;
+    let all = melee_gx::tev::RGB | melee_gx::tev::A;
+    if *changed != 0 {
         const KCOLOR: [u32; 4] = [GX_KCOLOR0, GX_KCOLOR1, GX_KCOLOR2, GX_KCOLOR3];
         const TEVREG: [u32; 3] = [GX_TEVREG0, GX_TEVREG1, GX_TEVREG2];
         gx.pix_mode_sync();
         for (i, &id) in KCOLOR.iter().enumerate() {
             if changed & (1 << i) != 0 {
                 gx.set_tev_k_color(id, reg[i]);
+                gx.mark_unset_konst(id, all & !set[i]);
             }
         }
         for (i, &id) in TEVREG.iter().enumerate() {
             if changed & (1 << (i + 4)) != 0 {
                 gx.set_tev_color(id, reg[i + 4]);
+                gx.mark_unset_color(id, all & !set[i + 4]);
             }
         }
         state.invalidate(STATE_TEV_REGISTER);

@@ -118,6 +118,31 @@ fn drive(
     }
 }
 
+/// What melee-render noted it didn't draw exactly over the replay's match, up to its rendered
+/// frame `to`, building each frame's stream without drawing it: each note with how often it
+/// came and the first frame it came in.
+pub fn notes(
+    disc_path: &str,
+    replay_path: &str,
+    to: u32,
+) -> std::collections::BTreeMap<String, (u32, u32)> {
+    let mut frames = Frames::new();
+    let mut loaded = false;
+    let mut out = std::collections::BTreeMap::new();
+    drive(disc_path, replay_path, to, Cosmetic::default(), |t| {
+        if !loaded {
+            frames.space.load_dol(t.dol);
+            loaded = true;
+        }
+        frames.frame(t.game, t.data, t.draws);
+        for (what, n) in std::mem::take(&mut frames.hsd.notes) {
+            out.entry(what).or_insert((0, t.n)).0 += n;
+        }
+        true
+    });
+    out
+}
+
 /// A frame's stream and its drawing: melee-render's frames and a GPU for them.
 struct Drawer {
     frames: Frames,
