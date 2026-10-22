@@ -221,6 +221,42 @@ pub fn set_rate_below(
     });
 }
 
+/// [`req_anim`] on the part found below `root`, likewise.
+pub fn req_anim_below(
+    objs: &mut Objects,
+    root: Option<JObjId>,
+    part: i32,
+    parts: u32,
+    frame: f32,
+    recurse: bool,
+) {
+    let Some(j) = root.and_then(|r| super::ground::nth_joint_below(&objs.jobjs, r, part)) else {
+        return;
+    };
+    let f = req_flags(parts);
+    if recurse {
+        jobj::req_anim_all_by_flags(objs, Some(j), f, frame);
+    } else {
+        jobj::req_anim_by_flags(objs, Some(j), f, frame);
+    }
+}
+
+/// [`clear_loop`] on the part found below `root`, likewise.
+pub fn clear_loop_below(
+    objs: &mut Objects,
+    root: Option<JObjId>,
+    part: i32,
+    parts: u32,
+    recurse: bool,
+) {
+    let Some(j) = root.and_then(|r| super::ground::nth_joint_below(&objs.jobjs, r, part)) else {
+        return;
+    };
+    each_joint_anim(objs, j, part_mask(parts), recurse, &mut |a, x| {
+        aobj::clear_flags(a, Some(x), aobj::LOOP)
+    });
+}
+
 /// The `HSD_JObjReqAnim*ByFlags` flags for granime's part bits.
 fn req_flags(parts: u32) -> u32 {
     let mut f = 0;

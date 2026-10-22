@@ -27,7 +27,9 @@ use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
-use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster};
+use melee_sim::game::gr::{
+    garden, icemt, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster,
+};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
@@ -6448,4 +6450,460 @@ fn onett_unreached_callbacks() {
     check_hazard(&d, from, 1, &load, &by_event);
     let demo = retarget(leaf_check::sym("grOnett_801E3734"));
     check_hazard(&d, from, 1, &demo, &by_demo);
+}
+
+// Icicle Mountain (`gricemt.c`).
+
+const IM: &str = "oracle-stage-icicle-mountain";
+
+/// Writes an `s16` at `a`.
+fn poke_h(c: &mut Call, a: u32, v: i16) {
+    let w = peek_u32(c, a & !3);
+    let w = if a & 2 == 0 {
+        (w & 0xFFFF) | (v as u16 as u32) << 16
+    } else {
+        (w & 0xFFFF_0000) | v as u16 as u32
+    };
+    poke_u32(c, a & !3, w);
+}
+
+fn peek_h(c: &Call, a: u32) -> i16 {
+    let w = peek_u32(c, a & !3);
+    (if a & 2 == 0 { w >> 16 } else { w }) as u16 as i16
+}
+
+/// A field's model's translation y (the map's GObj's joint), set.
+fn im_field_y(c: &mut Call, map: u32, y: f32) {
+    let gobj = peek_u32(c, STAGE_INFO + 0x180 + 4 * map);
+    if gobj == 0 {
+        return;
+    }
+    let j = peek_u32(c, gobj + 0x28);
+    poke_u32(c, j + 0x3C, y.to_bits());
+}
+
+/// The climb's speed state set: phase, delay, the change's ticks, a burst's and the speed.
+fn im_state(c: &mut Call, v: u32, phase: i16, delay: i16, lerp: i16, burst: i16, cur: f32) {
+    poke_h(c, v + 4, phase);
+    poke_h(c, v + 6, delay);
+    poke_h(c, v + 8, lerp);
+    poke_h(c, v + 0xA, burst);
+    poke_u32(c, v + 0x10, cur.to_bits());
+}
+
+#[test]
+fn icemt_setup() {
+    let d = dir(IM);
+    for f in ["grIceMt_801F686C", "grIceMt_801F7080", "grIceMt_801F71DC"] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "stageGObj9_OnInit",
+        "stageGObj8_OnInit",
+        "fn_801F75EC",
+        "stageGObj1_OnInit",
+        "stageGObj2_OnInit",
+        "stageGObj3_OnInit",
+        "stageGObj4_OnInit",
+        "stageGObj5_OnInit",
+        "stageGObj6_OnInit",
+    ] {
+        check_calls_with(&d, f, 0, &as_saved, &by_address);
+    }
+    // setupStageCallbacks for each map from its saved calls. The climb's process calls it
+    // right after destroying a field, whose `Ground` block the new object's takes; the
+    // importer brings that freed block in as a live object (the ice's collision callbacks
+    // still point at it), so it's freed on our side first, as the original's heap had it.
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let stale: Vec<u32> = (r.game.grounds.iter())
+            .filter(|(i, g)| {
+                g.gobj.is_none_or(|go| {
+                    r.game.world.gobjs.is_free(go.0)
+                        || r.game.world.gobjs[go.0].user_data
+                            != Some(melee_sim::game::state::UserData::Ground(
+                                melee_sim::game::handles::GroundId(*i),
+                            ))
+                })
+            })
+            .map(|(i, _)| i)
+            .collect();
+        for i in stale {
+            r.game.grounds.free(i);
+        }
+        // The setup's call, or the climb's process's (whose r1 is lower).
+        let frame = if call.regs.gpr[1] < 0x804E_E9A0 {
+            icemt::CLIMB_PROC_FRAME
+        } else {
+            icemt::SETUP_FRAME
+        };
+        icemt::create(r, call.regs.gpr[3] as i32, frame);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "setupStageCallbacks", 1, &as_saved, &create);
+    for map in [0u32, 8] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "setupStageCallbacks", 1, &set, &create);
+    }
+    // The climb's first two fields, as saved and as each other pair.
+    let place = |r: &mut Running, maps: &Maps, call: &Call| {
+        icemt::place_fields(r, rc_ground(maps, call.regs.gpr[3]));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801FA0BC", 1, &as_saved, &place);
+    for (under, upper) in [(5i16, 6i16), (6, 1), (3, 4)] {
+        let set = move |c: &mut Call, _: usize| {
+            let v = c.regs.gpr[3];
+            poke_h(c, v, under);
+            poke_h(c, v + 2, upper);
+        };
+        check_calls_with(&d, "grIceMt_801FA0BC", 1, &set, &place);
+    }
+    // A field's blocks, the falling ice's setup, a part's index and the scenery's points.
+    let blocks = |r: &mut Running, maps: &Maps, call: &Call| {
+        let parts: Vec<i32> = (0..call.regs.gpr[5])
+            .map(|i| i32::from(peek_h(call, call.regs.gpr[4] + 2 * i)))
+            .collect();
+        icemt::make_blocks(r, gobj_arg(maps, call), &parts);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801F8CDC", 1, &as_saved, &blocks);
+    let slot = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gobj = gobj_arg(maps, call);
+        let at = call.regs.gpr[4] - vars(call);
+        let s = usize::from(at == 0x4A);
+        let g = call.regs.gpr.map(|v| v as i32);
+        icemt::ice_slot(r, gobj, s, g[5], g[6], g[7], g[8], g[9], call.regs.gpr[10]);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801F91EC", 1, &as_saved, &slot);
+    let index = |r: &mut Running, maps: &Maps, call: &Call| {
+        let part = maps.jobjs.get(&call.regs.gpr[4]).copied();
+        Ret::Int(icemt::part_index(r.game, gobj_arg(maps, call), part) as u32)
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.gpr[4] = 0x8000_0000
+    }] {
+        check_calls_with(&d, "grIceMt_801FA500", 1, p, &index);
+    }
+    let scenery = |r: &mut Running, _: &Maps, _: &Call| {
+        icemt::scenery_points(r.game);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801FA854", 1, &as_saved, &scenery);
+}
+
+/// The climb's process, its speed, the draws and the field changes, as saved and from states
+/// set to each branch.
+#[test]
+fn icemt_climb() {
+    let d = dir(IM);
+    let prepares: [&Prepare; 9] = [
+        &as_saved,
+        // Held until the match starts.
+        &|c, _| poke_h(c, vars(c) + 0x14, 1),
+        // At rest with the wait over, changing with ticks left and on the last, a burst.
+        &|c, _| im_state(c, vars(c), 0, -1, 0, 0, 0.5),
+        &|c, _| im_state(c, vars(c), 1, 30, 5, 0, -0.25),
+        &|c, _| im_state(c, vars(c), 1, 30, 1, 0, 0.75),
+        &|c, _| im_state(c, vars(c), 0, 10, 0, 3, 0.0),
+        // The upper field just past its place, either way, and near it.
+        &|c, k| {
+            let up = peek_h(c, vars(c) + 2) as u32;
+            im_field_y(c, up, if k % 2 == 0 { 0.5 } else { 3.0 });
+        },
+        &|c, _| {
+            let up = peek_h(c, vars(c) + 2) as u32;
+            im_field_y(c, up, -900.0);
+        },
+        &|c, _| {
+            let up = peek_h(c, vars(c) + 2) as u32;
+            im_field_y(c, up, -8.0);
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, "stageGObj9_GObjProc", 1, p, &by_address);
+    }
+    let speed = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (_, ret) = icemt::speed_step(r, rc_ground(maps, call.regs.gpr[3] - 4));
+        Ret::Int(u32::from(ret))
+    };
+    let st: [&Prepare; 6] = [
+        &as_saved,
+        &|c, _| im_state(c, c.regs.gpr[3] - 4, 0, -1, 0, 0, 0.5),
+        &|c, _| im_state(c, c.regs.gpr[3] - 4, 0, 0, 0, 0, 0.5),
+        &|c, _| im_state(c, c.regs.gpr[3] - 4, 1, 3, 4, 0, -1.5),
+        &|c, _| im_state(c, c.regs.gpr[3] - 4, 1, 3, 1, 2, -1.5),
+        &|c, _| im_state(c, c.regs.gpr[3] - 4, 2, 3, 1, 1, 2.0),
+    ];
+    for p in st {
+        check_calls_with(&d, "grIceMt_801FA364", 1, p, &speed);
+    }
+    // The next speed: as saved, and with rest counts left on some.
+    let draw = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = rc_ground(maps, vars(call));
+        Ret::Int(icemt::draw_speed(r, g).0 as u32)
+    };
+    let rests: [&Prepare; 3] = [
+        &as_saved,
+        &|c, _| {
+            for i in 0..11 {
+                poke_h(c, vars(c) + 0x18 + 2 * i, (i % 3) as i16);
+            }
+        },
+        &|c, k| {
+            for i in 0..12 {
+                let v = if i == (k as u32 % 12) { 0 } else { 2 };
+                poke_h(c, vars(c) + 0x18 + 2 * i, v);
+            }
+        },
+    ];
+    for p in rests {
+        check_calls_with(&d, "fn_801F8E58", 1, p, &draw);
+    }
+    let next = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = rc_ground(maps, vars(call));
+        Ret::Int(icemt::next_field(r, g) as u32)
+    };
+    // One field not shown left with no rest count, the others resting (the draw loops until
+    // it finds one, as the original does).
+    let rests: [&Prepare; 2] = [&as_saved, &|c, k| {
+        let v = vars(c);
+        let shown = [peek_h(c, v), peek_h(c, v + 2)];
+        let free = (0..6u32)
+            .map(|i| (i + k as u32) % 6)
+            .find(|&i| !shown.contains(&(i as i16 + 1)))
+            .unwrap();
+        for i in 0..6 {
+            poke_h(c, v + 0x30 + 2 * i, i16::from(i != free));
+        }
+    }];
+    // The two fields shown apart, the upper one and one other free: only the other may come.
+    let apart = |c: &mut Call, k: usize| {
+        let v = vars(c);
+        let (under, upper) = (1 + (k as u32 % 6), 1 + ((k as u32 + 2) % 6));
+        poke_h(c, v, under as i16);
+        poke_h(c, v + 2, upper as i16);
+        let other = 1 + ((k as u32 + 4) % 6);
+        for i in 0..6 {
+            let id = i + 1;
+            poke_h(c, v + 0x30 + 2 * i, i16::from(id != upper && id != other));
+        }
+    };
+    let rests: [&Prepare; 3] = [rests[0], rests[1], &apart];
+    for p in rests {
+        check_calls_with(&d, "fn_801F9038", 1, p, &next);
+    }
+    // The field change, as saved and with the upper field moved to each side.
+    let change = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(u32::from(icemt::change_field(
+            r,
+            rc_ground(maps, call.regs.gpr[3]),
+        )))
+    };
+    let ys: [f32; 9] = [
+        0.25, 9.0, 11.0, -9.0, -11.0, -200.0, -380.0, -420.0, -1000.0,
+    ];
+    check_calls_with(&d, "grIceMt_801F9ACC", 1, &as_saved, &change);
+    for y in ys {
+        let set = move |c: &mut Call, _: usize| {
+            let up = peek_h(c, c.regs.gpr[3] + 2) as u32;
+            im_field_y(c, up, y);
+        };
+        check_calls_with(&d, "grIceMt_801F9ACC", 1, &set, &change);
+    }
+    let set_none = |c: &mut Call, _: usize| poke_h(c, c.regs.gpr[3], -1);
+    check_calls_with(&d, "grIceMt_801F9ACC", 1, &set_none, &change);
+    let moved = |r: &mut Running, _: &Maps, call: &Call| {
+        let ids = call.regs.gpr[3];
+        let (under, upper) = (peek_h(call, ids), peek_h(call, ids + 2));
+        icemt::move_fields(r, under, upper, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801F96E0", 1, &as_saved, &moved);
+    let bg = |r: &mut Running, _: &Maps, call: &Call| {
+        icemt::tell_bg(r.game, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801F9668", 1, &as_saved, &bg);
+    let gap = |r: &mut Running, _: &Maps, call: &Call| {
+        let (a, b) = (call.regs.gpr[3] as i32, call.regs.gpr[4] as i32);
+        Ret::Float(f64::from(icemt::field_gap(r.game, r.data, a, b)))
+    };
+    check_calls_with(&d, "grIceMt_801F993C", 1, &as_saved, &gap);
+    for (a, b) in [(1u32, 2u32), (2, 3), (3, 4), (4, 5), (5, 6), (6, 1), (2, 1)] {
+        let set = move |c: &mut Call, _: usize| {
+            c.regs.gpr[3] = a;
+            c.regs.gpr[4] = b;
+        };
+        check_calls_with(&d, "grIceMt_801F993C", 1, &set, &gap);
+    }
+}
+
+/// The fields' processes, their points of interest and falling ice, their destroy callbacks,
+/// and the background's process.
+#[test]
+fn icemt_fields() {
+    let d = dir(IM);
+    for f in [
+        "stageGObj1_GObjProc",
+        "stageGObj2_GObjProc",
+        "stageGObj3_GObjProc",
+        "stageGObj4_GObjProc",
+        "stageGObj5_GObjProc",
+        "stageGObj6_GObjProc",
+    ] {
+        let due = |c: &mut Call, _: usize| {
+            let v = vars(c);
+            let w = peek_u32(c, v);
+            poke_u32(c, v, w ^ 0x4000_0000);
+        };
+        for p in [&as_saved as &Prepare, &due] {
+            check_calls_with(&d, f, 0, p, &by_address);
+        }
+    }
+    // The falling ice for a tick: still, running, at the ticks its joint leaves and comes
+    // back, and past them.
+    let ice = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gobj = gobj_arg(maps, call);
+        let s = usize::from(call.regs.gpr[4] - vars(call) == 0x4A);
+        icemt::run_ice(r, gobj, s);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grIceMt_801F929C", 1, &as_saved, &ice);
+    for (on, tick) in [(1i16, 0i16), (1, 264), (1, 637), (1, 700), (0, 264)] {
+        let set = move |c: &mut Call, _: usize| {
+            let s = c.regs.gpr[4];
+            poke_h(c, s, on);
+            poke_h(c, s + 2, tick);
+        };
+        check_calls_with(&d, "grIceMt_801F929C", 1, &set, &ice);
+    }
+    let points = |r: &mut Running, maps: &Maps, call: &Call| {
+        icemt::update_points(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let due = |c: &mut Call, _: usize| {
+        let v = vars(c);
+        let w = peek_u32(c, v);
+        poke_u32(c, v, w | 0x4000_0000);
+    };
+    for p in [&as_saved as &Prepare, &due] {
+        check_calls_with(&d, "grIceMt_801F98A8", 1, p, &points);
+    }
+    for f in [
+        "stageGObj1_Callback3",
+        "stageGObj2_Callback3",
+        "stageGObj3_Callback3",
+        "stageGObj4_Callback3",
+        "stageGObj5_Callback3",
+        "stageGObj6_Callback3",
+    ] {
+        check_calls_with(&d, f, 0, &as_saved, &by_address);
+    }
+    // The background: as saved, at rest, and scrolled past either end of its wrap.
+    let prepares: [&Prepare; 4] = [
+        &as_saved,
+        &|c, _| poke_u32(c, vars(c), 0f32.to_bits()),
+        &|c, _| {
+            poke_u32(c, vars(c), (-30.0f32).to_bits());
+            let j = nth_jobj(c, c.regs.gpr[3], 8);
+            poke_u32(c, j + 0x3C, 100_000.0f32.to_bits());
+        },
+        &|c, _| {
+            poke_u32(c, vars(c), 30.0f32.to_bits());
+            let j = nth_jobj(c, c.regs.gpr[3], 8);
+            poke_u32(c, j + 0x3C, (-100_000.0f32).to_bits());
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, "stageGObj8_GObjProc", 1, p, &by_address);
+    }
+}
+
+/// The falling ice landed on and the blocks hit: as saved, by each collision kind, with the ice
+/// running, and the adventure's touch.
+#[test]
+fn icemt_touches() {
+    let d = dir(IM);
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = rc_ground(maps, call.regs.gpr[3] + 0xC4);
+        let cb = call.addr;
+        let map = if cb == icemt::ICE_C_TOUCHED { 4 } else { 2 };
+        let root = melee_sim::game::gr::ground::map_gobj(r.game, map)
+            .and_then(|go| melee_sim::game::gr::ground::jobj_of(r.game, go));
+        let cd = coll_arg(r, maps, call);
+        let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
+        icemt::ice_touched(objs, grounds, root, g, cb, &cd, None);
+        Ret::Nothing
+    };
+    for f in ["fn_801F9338", "fn_801F9448", "fn_801F9558"] {
+        let prepares: [&Prepare; 4] = [
+            &as_saved,
+            &|c, k| rc_kind(c, (k % 4) as u32),
+            &|c, _| rc_kind(c, 1),
+            &|c, _| {
+                rc_kind(c, 1);
+                let off = match c.addr {
+                    0x801F_9448 => 0x4A,
+                    0x801F_9558 => 0x44,
+                    _ => 0x3C,
+                };
+                let s = c.regs.gpr[3] + 0xC4 + off;
+                poke_h(c, s, 1);
+            },
+        ];
+        for p in prepares {
+            check_calls_with(&d, f, 0, p, &touched);
+        }
+    }
+    let adventure = |_: &mut Running, _: &Maps, _: &Call| {
+        icemt::adventure_touch(None);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "onJointCollision", 1, &as_saved, &adventure);
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let item = gobj_arg(maps, call);
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[4])
+            .expect("the block's field");
+        icemt::block_hit(r, item, g);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "fn_801F8C64", 0, &as_saved, &hit);
+}
+
+/// The callbacks no capture reaches, from the background's captures: the empty processes and
+/// destroy callbacks, the shadow check, the touch-line callback, the demo hook and the wind.
+#[test]
+fn icemt_unreached_callbacks() {
+    let d = dir(IM);
+    let from = "stageGObj8_GObjProc";
+    for addr in [0x801F_75E4u32, 0x801F_75E8, 0x801F_77AC, 0x801F_8C60] {
+        check_calls_with(&d, from, 1, &retarget(addr), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(icemt::check_shadow_render()));
+    check_calls_with(&d, from, 1, &retarget(0x801F_A900), &shadow);
+    check_calls_with(&d, from, 1, &retarget(0x801F_6868), &demo);
+    // The wind, into the climb's first six rest counts (from its process's calls, r3 its
+    // object).
+    let into = move |c: &mut Call, _: usize| {
+        let to = vars(c) + 0x18;
+        c.addr = 0x801F_A728;
+        c.regs.gpr[3] = to;
+    };
+    let wind = |r: &mut Running, maps: &Maps, call: &Call| {
+        let w = icemt::wind(r.game);
+        let g = rc_ground(maps, call.regs.gpr[3] - 0x18);
+        let v = r.game.grounds[g.0].u.icemt_scroll();
+        for (k, c) in [w.x, w.y, w.z].into_iter().enumerate() {
+            let b = c.to_bits();
+            v.x18[2 * k] = (b >> 16) as u16 as i16;
+            v.x18[2 * k + 1] = b as u16 as i16;
+        }
+        Ret::Nothing
+    };
+    check_calls_with(&d, "stageGObj9_GObjProc", 1, &into, &wind);
 }

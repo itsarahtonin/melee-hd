@@ -355,6 +355,43 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 25,
+        name: "Icicle Mountain",
+        keys: &["im", "icicle-mountain"],
+        audit: Some(Audit {
+            units: &["melee/gr/gricemt", "melee/it/kinds/ityaku"],
+            modules: &["gr/icemt", "it/kinds/yaku"],
+            unreached: &[
+                YAKU_UNANCHORED,
+                (
+                    "stageGObj10_",
+                    "the adventure's climb (map 10), which only the adventure's Icicle Mountain (stage kind 76) sets up",
+                ),
+                (
+                    "fn_801F9150",
+                    "the adventure's climb's speed (map 10's process)",
+                ),
+                (
+                    "fn_801F91A8",
+                    "the adventure's climb's next field (map 10's process)",
+                ),
+                (
+                    "fn_801FA4CC",
+                    "the adventure's climb's end (map 10's process)",
+                ),
+                (
+                    "grIceMt_801FA6D8",
+                    "the Polar Bear's landing (it_802E4558), an adventure enemy no VS match spawns",
+                ),
+                (
+                    "the adventure's",
+                    "the adventure's fields, spawner and climb, which only the stage kind 76 sets up",
+                ),
+            ],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 12,
         name: "Jungle Japes",
         keys: &["jj", "jungle-japes"],
@@ -613,7 +650,6 @@ pub(crate) mod tests {
             "stage objects with a camera of their own: Corneria and Venom",
         ),
         ("grBigBlue_801EF7D8", "Big Blue's wind"),
-        ("grIceMt_801FA728", "Icicle Mountain's wind"),
         (
             "Ground_801C0C2C",
             "the point search, which single-player modes ask for",
