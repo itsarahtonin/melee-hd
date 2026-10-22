@@ -45,6 +45,15 @@ const JOBJ_PBILLBOARD: u32 = 1 << 13;
 /// `FLT_EPSILON` as pobj.c compares envelope weights with.
 const FLT_EPSILON: f32 = 1.192_092_9e-7;
 
+/// The matrix normals take from position matrix `src`, `HSD_MtxInverseTranspose`; with the
+/// fighters' depth scale `z` first (`ftPartsSetupZScaleMtx`).
+fn normal_mtx(src: &Mtx34, z: Option<&Mtx34>) -> Mtx34 {
+    match z {
+        Some(z) => z.concat(src).hsd_inverse_transpose(),
+        None => src.hsd_inverse_transpose(),
+    }
+}
+
 fn mtx(m: &Mtx34) -> [[f32; 4]; 3] {
     m.m
 }
@@ -601,7 +610,9 @@ impl Ctx<'_> {
         desc
     }
 
-    /// `HSD_PObjDisp`: culling, the shape's matrices, then its display list.
+    /// `HSD_PObjDisp`: culling, the shape's matrices (a fighter's shape's by the fighters'
+    /// class, `ftParts_PObjSetupMtx`), then its display list.
+    #[doc(alias = "ftParts_PObjSetupMtx")]
     fn pobj_disp(&mut self, j: JObjId, p: PObjId, vmtx: &Mtx34, pmtx: &Mtx34, rendermode: u32) {
         let objs = &self.game.objs;
         let po = &objs.pobjs[p];
@@ -612,13 +623,18 @@ impl Ctx<'_> {
             _ => return,
         };
         self.hsd.state.set_cull_mode(self.gx, cull);
+        // A fighter's shape (`ftParts_PObjSetupMtx`) takes the fighters' setups while the last
+        // fighter joint drawn left a depth scale (Flat Zone's flat fighters), HAL's otherwise.
+        let z = (po.class == melee_sim::hsd::heap::Class::FtPObj
+            && self.hsd.ft_jobj_scale.has_z_scale)
+            .then_some(self.hsd.ft_jobj_scale.mtx);
         match po.ty() {
             pobj::SKIN => match po.u {
-                Binding::Skin(Some(s)) => self.setup_shared_vtx_mtx(j, s, vmtx, pmtx),
-                _ => self.setup_rigid_mtx(j, pmtx, rendermode),
+                Binding::Skin(Some(s)) => self.setup_shared_vtx_mtx(j, s, vmtx, pmtx, z.as_ref()),
+                _ => self.setup_rigid_mtx(j, pmtx, rendermode, z.as_ref()),
             },
-            pobj::SHAPEANIM => self.setup_rigid_mtx(j, pmtx, rendermode),
-            pobj::ENVELOPE => self.setup_envelope_mtx(j, p, vmtx, rendermode),
+            pobj::SHAPEANIM => self.setup_rigid_mtx(j, pmtx, rendermode, z.as_ref()),
+            pobj::ENVELOPE => self.setup_envelope_mtx(j, p, vmtx, rendermode, z.as_ref()),
             _ => {}
         }
         let objs = &self.game.objs;
@@ -672,13 +688,14 @@ impl Ctx<'_> {
     }
 
     /// `SetupRigidModelMtx` (its matrix mark never matches: `HSD_PObjSetMtxMark` stores
-    /// nothing).
-    fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32) {
+    /// nothing), or with the fighters' depth scale `z`, `ftPartsSetupRigidMtx`.
+    #[doc(alias = "ftPartsSetupRigidMtx")]
+    fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32, z: Option<&Mtx34>) {
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
         let (normal, proj) = self.setup_flags(j, rendermode);
         if normal {
-            let n = pmtx.hsd_inverse_transpose();
+            let n = normal_mtx(pmtx, z);
             if self.objs().jobjs[j].flags & jobj::LIGHTING != 0 {
                 self.gx.load_nrm_mtx_imm(&mtx(&n), GX_PNMTX0);
             }
@@ -691,27 +708,48 @@ impl Ctx<'_> {
     /// `SetupSharedVtxModelMtx`. Both joints always set up (the matrix marks never match),
     /// and their flags (`SETUP_JOINT0`, `SETUP_JOINT1`) share their values with
     /// `SETUP_NORMAL` and `SETUP_REFLECTION`, so the setup always makes the normal matrices
-    /// and loads them as texture matrices, whatever `GetSetupFlags` adds.
-    fn setup_shared_vtx_mtx(&mut self, j: JObjId, s: JObjId, vmtx: &Mtx34, pmtx: &Mtx34) {
+    /// and loads them as texture matrices, whatever `GetSetupFlags` adds. With the fighters'
+    /// depth scale `z`, `ftPartsSetupSharedVtxMtx`, whose marks never match either.
+    // Ports `ftPartsSetupSharedVtxMtx`; aliased once a check reaches it (no flat fighter's
+    // shape drawn in the Flat Zone frames is a shared-vertex one).
+    fn setup_shared_vtx_mtx(
+        &mut self,
+        j: JObjId,
+        s: JObjId,
+        vmtx: &Mtx34,
+        pmtx: &Mtx34,
+        z: Option<&Mtx34>,
+    ) {
         let lighting = self.objs().jobjs[j].flags & jobj::LIGHTING != 0;
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
-        let n0 = pmtx.hsd_inverse_transpose();
+        let n0 = normal_mtx(pmtx, z);
         if lighting {
             self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
         }
         self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
         let m = vmtx.concat(&self.jmtx(s));
         self.gx.load_pos_mtx_imm(&mtx(&m), GX_PNMTX1);
-        let n1 = m.hsd_inverse_transpose();
+        let n1 = normal_mtx(&m, z);
         if lighting {
             self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
         }
         self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
     }
 
-    /// `SetupEnvelopeModelMtx`.
-    fn setup_envelope_mtx(&mut self, j: JObjId, p: PObjId, vmtx: &Mtx34, rendermode: u32) {
+    /// `SetupEnvelopeModelMtx`, or with the fighters' depth scale `z`,
+    /// `ftPartsSetupEnvelopeMtx`, which takes a weight of 1 for whole (HAL's, 1 less
+    /// `FLT_EPSILON`).
+    #[doc(alias = "ftPartsSetupEnvelopeMtx")]
+    fn setup_envelope_mtx(
+        &mut self,
+        j: JObjId,
+        p: PObjId,
+        vmtx: &Mtx34,
+        rendermode: u32,
+        z: Option<&Mtx34>,
+    ) {
+        let whole = if z.is_some() { 1.0 } else { 1.0 - FLT_EPSILON };
         let (normal, proj) = self.setup_flags(j, rendermode);
         let objs = &self.game.objs;
         let jo = &objs.jobjs[j];
@@ -744,7 +782,7 @@ impl Ctx<'_> {
         let mut loads = Vec::with_capacity(envs.len().min(10));
         for (i, env) in envs.iter().take(10).enumerate() {
             let first = env.first().expect("an empty envelope");
-            let m = if first.weight >= 1.0 - FLT_EPSILON {
+            let m = if first.weight >= whole {
                 let ej = first.jobj.expect("an envelope without its joint");
                 let e = &objs.jobjs[ej];
                 match right {
@@ -775,7 +813,7 @@ impl Ctx<'_> {
             let id = i * 3;
             self.gx.load_pos_mtx_imm(&mtx(&tmp), id);
             if normal {
-                let n = tmp.hsd_inverse_transpose();
+                let n = normal_mtx(&tmp, z);
                 if lighting {
                     self.gx.load_nrm_mtx_imm(&mtx(&n), id);
                 }
@@ -841,6 +879,40 @@ impl Ctx<'_> {
         self.gx.clear_vtx_desc();
         self.hsd.prev_array = None;
         self.hsd.prev_vtxdesc = None;
+    }
+
+    /// A fighter's model's root joint drawing ([`Draw::FighterJoint`]): its position matrix
+    /// in the view `vmtx` (the current camera's by default) as the fighters' joint class
+    /// makes it, `ftParts_JObjMakePositionMtx`. A fighter drawn with a depth scale (Flat
+    /// Zone's flat fighters) leaves the matrix that undoes the joint's own scale in view
+    /// space, which the fighters' shapes then put before their normals' matrices
+    /// (`ft_jobj_scale`); any other fighter clears it.
+    #[doc(alias = "ftParts_JObjMakePositionMtx")]
+    pub fn fighter_joint(&mut self, j: JObjId, vmtx: Option<&Mtx34>) {
+        use gekko_fp as fp;
+        let Some(f) = self.hsd.fighter() else {
+            self.hsd
+                .note_once("a fighter joint drawn by something not a fighter");
+            return;
+        };
+        let vmtx = vmtx.copied().unwrap_or_else(|| self.hsd.view_mtx());
+        self.hsd.motion.joints = self
+            .blend
+            .is_some_and(|b| self.hsd.motion.camera_blends && b.has_joint(self.objs(), j));
+        let pmtx = self.joint_position_mtx(j, &vmtx);
+        self.hsd.motion.joints = false;
+        if self.game.fighters[f.0].x34_scale.z != 1.0 {
+            let s = self.game.objs.jobjs[j].scale;
+            let inv = |v: f32| crate::gx::mem(fp::fdivs(1.0, crate::gx::reg(v)));
+            let unscale = Mtx34::scale(inv(s.x), inv(s.y), inv(s.z));
+            let m = pmtx.concat(&unscale).concat(&pmtx.hsd_inverse());
+            self.hsd.ft_jobj_scale = super::FtJObjScale {
+                mtx: m,
+                has_z_scale: true,
+            };
+        } else {
+            self.hsd.ft_jobj_scale.has_z_scale = false;
+        }
     }
 
     /// `HSD_JObjDispSub`'s `HSD_LObjSetupSpecularInit` for a specular joint

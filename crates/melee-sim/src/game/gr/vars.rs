@@ -41,6 +41,11 @@ pub enum VarsKind {
     OldYoshiGuest,
     Kraid,
     Kraid2,
+    Flatzone,
+    FlatzoneOil,
+    FlatzonePlatforms,
+    FlatzoneEvent,
+    FlatzoneTools,
     Fourside,
     FoursideCrane,
     FoursideUfo,
@@ -156,6 +161,16 @@ pub enum GroundVars {
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
     Kraid2(Kraid2Vars),
+    /// `GroundVars_flatzone`: Flat Zone's controller (map 2).
+    Flatzone(FlatzoneVars),
+    /// `GroundVars_flatzone2`: the oil panic (map 3).
+    FlatzoneOil(FlatzoneOilVars),
+    /// `GroundVars_flatzone3`: the platforms (map 5).
+    FlatzonePlatforms(FlatzonePlatformsVars),
+    /// `GroundVars_flatzone::xC4`: the events nothing starts (maps 4 and 6).
+    FlatzoneEvent(FlatzoneEventVars),
+    /// `GroundVars_flatzone3::xC4` and a word: the falling tools (map 8).
+    FlatzoneTools(FlatzoneToolsVars),
     /// `grFourside_GroundVars`: Fourside's city's three skyline layers (map 6).
     Fourside(FoursideVars),
     /// `grFourside_CraneVars`: the crane (map 1).
@@ -618,6 +633,61 @@ pub struct GreatBay4Vars {
     pub xE0: f32,
     pub xE4: crate::vec::Vec3,
     pub xF0: Option<GObjId>,
+}
+
+/// `GroundVars_flatzone` of Flat Zone's controller (map 2): whether it waits for the match's
+/// start or an event's end (`xC4`), the event it ran last and before (`xC5`, `xC6`), whether
+/// it may start another (`xC7`) and its countdown (`xC8`). The words past `xC8` aren't used.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FlatzoneVars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub xC6: u8,
+    pub xC7: u8,
+    pub xC8: i16,
+}
+
+/// `GroundVars_flatzone2` of Flat Zone's oil panic (map 3), with `GroundVars_flatzone::xC4`:
+/// whether the controller started it (`xC4`, a byte), its side (`xC8`, 1 or -1), the oil's
+/// dynamic attribute area (`xCC`, by index), its state (`xD0`) and countdown (`timer`). The
+/// three bytes after `xC4` aren't written.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FlatzoneOilVars {
+    pub xC4: u8,
+    pub xC8: f32,
+    pub xCC: Option<u8>,
+    pub xD0: i32,
+    pub timer: i32,
+}
+
+/// `GroundVars_flatzone3` of Flat Zone's platforms (map 5), with `GroundVars_flatzone::xCC`:
+/// whether it waits for the match's start (`xC4`), its animation and the last one it took
+/// (`xC5`, `xC6`), its set and the set before (`xC7`, `xC8`; 8 hidden), its row and the row
+/// before (`xC9`, `xCA`) and its countdown (`xCC`). The byte after `xCA` isn't written.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FlatzonePlatformsVars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub xC6: u8,
+    pub xC7: u8,
+    pub xC8: u8,
+    pub xC9: u8,
+    pub xCA: u8,
+    pub xCC: i16,
+}
+
+/// `GroundVars_flatzone::xC4` alone: Flat Zone's two events nothing starts (maps 4 and 6).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FlatzoneEventVars {
+    pub xC4: u8,
+}
+
+/// `GroundVars_flatzone3::xC4` and `GroundVars_unk::xC8`: Flat Zone's falling tools (map 8),
+/// whether the controller started them (`xC4`) and their countdown (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FlatzoneToolsVars {
+    pub xC4: u8,
+    pub xC8: i32,
 }
 
 /// `grFourside_GroundVars`: the joints the city's render callback turns.
@@ -1754,6 +1824,37 @@ impl GroundVars {
                     x14: jobj(cx, at + 0x14),
                 })
             }
+            VarsKind::Flatzone => GroundVars::Flatzone(FlatzoneVars {
+                xC4: m.u8(at),
+                xC5: m.u8(at + 1),
+                xC6: m.u8(at + 2),
+                xC7: m.u8(at + 3),
+                xC8: m.u16(at + 4) as i16,
+            }),
+            VarsKind::FlatzoneOil => GroundVars::FlatzoneOil(FlatzoneOilVars {
+                xC4: m.u8(at),
+                xC8: f(at + 4),
+                xCC: super::flatzone::area_index(m.u32(at + 8)),
+                xD0: m.u32(at + 0xC) as i32,
+                timer: m.u32(at + 0x10) as i32,
+            }),
+            VarsKind::FlatzonePlatforms => GroundVars::FlatzonePlatforms(FlatzonePlatformsVars {
+                xC4: m.u8(at),
+                xC5: m.u8(at + 1),
+                xC6: m.u8(at + 2),
+                xC7: m.u8(at + 3),
+                xC8: m.u8(at + 4),
+                xC9: m.u8(at + 5),
+                xCA: m.u8(at + 6),
+                xCC: m.u16(at + 8) as i16,
+            }),
+            VarsKind::FlatzoneEvent => {
+                GroundVars::FlatzoneEvent(FlatzoneEventVars { xC4: m.u8(at) })
+            }
+            VarsKind::FlatzoneTools => GroundVars::FlatzoneTools(FlatzoneToolsVars {
+                xC4: m.u8(at),
+                xC8: m.u32(at + 4) as i32,
+            }),
             VarsKind::Fourside => {
                 let jobj = |cx: &mut dyn Cx, a: u32| {
                     cx.import_handle("JObjId", m.u32(a))
@@ -2630,6 +2731,93 @@ impl GroundVars {
         match self {
             GroundVars::Kraid2(v) => v,
             other => panic!("a stage object's variables are {other:?}, not grKraid_GroundVars2"),
+        }
+    }
+
+    /// The variables as Flat Zone's controller's (`GroundVars_flatzone`), likewise.
+    pub fn flatzone(&mut self) -> &mut FlatzoneVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Flatzone(FlatzoneVars {
+                xC4: b.0[0],
+                xC5: b.0[1],
+                xC6: b.0[2],
+                xC7: b.0[3],
+                xC8: i16::from_be_bytes([b.0[4], b.0[5]]),
+            });
+        }
+        match self {
+            GroundVars::Flatzone(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_flatzone"),
+        }
+    }
+
+    /// The variables as Flat Zone's oil panic's (`GroundVars_flatzone2`), likewise: a block
+    /// holding the area's pointer converts only if it is null.
+    pub fn flatzone_oil(&mut self) -> &mut FlatzoneOilVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(8);
+            *self = GroundVars::FlatzoneOil(FlatzoneOilVars {
+                xC4: b.0[0],
+                xC8: b.f32(4),
+                xCC: None,
+                xD0: b.u32(0xC) as i32,
+                timer: b.u32(0x10) as i32,
+            });
+        }
+        match self {
+            GroundVars::FlatzoneOil(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_flatzone2"),
+        }
+    }
+
+    /// The variables as Flat Zone's platforms' (`GroundVars_flatzone3`), likewise.
+    pub fn flatzone_platforms(&mut self) -> &mut FlatzonePlatformsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::FlatzonePlatforms(FlatzonePlatformsVars {
+                xC4: b.0[0],
+                xC5: b.0[1],
+                xC6: b.0[2],
+                xC7: b.0[3],
+                xC8: b.0[4],
+                xC9: b.0[5],
+                xCA: b.0[6],
+                xCC: i16::from_be_bytes([b.0[8], b.0[9]]),
+            });
+        }
+        match self {
+            GroundVars::FlatzonePlatforms(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_flatzone3"),
+        }
+    }
+
+    /// The variables as one of Flat Zone's unused events' (`GroundVars_flatzone::xC4`),
+    /// likewise.
+    pub fn flatzone_event(&mut self) -> &mut FlatzoneEventVars {
+        if let GroundVars::Bytes(b) = self {
+            *self = GroundVars::FlatzoneEvent(FlatzoneEventVars { xC4: b[0] });
+        }
+        match self {
+            GroundVars::FlatzoneEvent(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_flatzone"),
+        }
+    }
+
+    /// The variables as Flat Zone's falling tools' (`GroundVars_flatzone3::xC4` and
+    /// `GroundVars_unk::xC8`), likewise.
+    pub fn flatzone_tools(&mut self) -> &mut FlatzoneToolsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::FlatzoneTools(FlatzoneToolsVars {
+                xC4: b.0[0],
+                xC8: b.u32(4) as i32,
+            });
+        }
+        match self {
+            GroundVars::FlatzoneTools(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not GroundVars_flatzone3"),
         }
     }
 
@@ -4273,6 +4461,77 @@ impl Mirror for GroundVars {
                         "JObjId",
                         j.map(|j| j.0),
                         m.u32(a),
+                    );
+                }
+            }
+            GroundVars::Flatzone(v) => {
+                let ours = ([v.xC4, v.xC5, v.xC6, v.xC7], v.xC8);
+                let theirs = (
+                    std::array::from_fn(|k| m.u8(at + k as u32)),
+                    m.u16(at + 4) as i16,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.flatzone"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::FlatzoneOil(v) => {
+                let ours = (
+                    v.xC4,
+                    v.xC8.to_bits(),
+                    super::flatzone::area_addr(v.xCC),
+                    v.xD0,
+                    v.timer,
+                );
+                let theirs = (
+                    m.u8(at),
+                    m.u32(at + 4),
+                    m.u32(at + 8),
+                    m.u32(at + 0xC) as i32,
+                    m.u32(at + 0x10) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.flatzone2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::FlatzonePlatforms(v) => {
+                let ours = ([v.xC4, v.xC5, v.xC6, v.xC7, v.xC8, v.xC9, v.xCA], v.xCC);
+                let theirs = (
+                    std::array::from_fn(|k| m.u8(at + k as u32)),
+                    m.u16(at + 8) as i16,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.flatzone3"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::FlatzoneEvent(v) => {
+                if v.xC4 != m.u8(at) {
+                    cx.mismatch(
+                        &format!("{path}.flatzone.xC4"),
+                        format!("{:x?}", v.xC4),
+                        format!("{:x?}", m.u8(at)),
+                    );
+                }
+            }
+            GroundVars::FlatzoneTools(v) => {
+                let ours = (v.xC4, v.xC8);
+                let theirs = (m.u8(at), m.u32(at + 4) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.flatzone_tools"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
                     );
                 }
             }

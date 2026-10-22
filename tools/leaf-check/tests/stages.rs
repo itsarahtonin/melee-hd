@@ -6449,3 +6449,497 @@ fn onett_unreached_callbacks() {
     let demo = retarget(leaf_check::sym("grOnett_801E3734"));
     check_hazard(&d, from, 1, &demo, &by_demo);
 }
+
+// Flat Zone (`grflatzone.c`) and its falling tools (`ittools.c`).
+
+const FZ: &str = "oracle-stage-flat-zone";
+
+/// grflatzone.c's `yakumono_param`.
+const FZ_PARAM: u32 = 0x804D_6AB0;
+
+/// Flat Zone's parameters' word at `off`.
+fn fz_param(c: &Call, off: u32) -> i32 {
+    peek_u32(c, peek_u32(c, FZ_PARAM) + off) as i32
+}
+
+/// One of several seeds for each call.
+fn fz_seeds(c: &mut Call, k: usize) {
+    set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+}
+
+#[test]
+fn flatzone_setup() {
+    use melee_sim::game::gr::flatzone;
+    let d = dir(FZ);
+    check_calls_with(&d, "grFlatzone_80216E78", 1, &as_saved, &event);
+    check_calls_with(&d, "grFlatzone_80216E78", 1, &fz_seeds, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = flatzone::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grFlatzone_80216F48", 1, &as_saved, &create);
+    for map in [0u32, 1, 2, 3, 4, 5, 6, 8] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grFlatzone_80216F48", 1, &set, &create);
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grFlatzone_802173D4",
+        "grFlatzone_8021707C",
+        "grFlatzone_80217648",
+        "grFlatzone_80217CD4",
+        "grFlatzone_80217450",
+        "grFlatzone_80217DA8",
+        "grFlatzone_80217E90",
+        "fn_8021706C",
+        "fn_80217440",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    check_calls_with(&d, "grFlatzone_8021707C", 1, &fz_seeds, &by_address);
+    // The platforms' next set: the setup's and drawn, as saved and from several seeds, with
+    // the hidden set before or another.
+    let next = |r: &mut Running, _: &Maps, call: &Call| {
+        flatzone::next_platforms(r, call.regs.gpr[3] != 0);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grFlatzone_80218060", 1, &as_saved, &next);
+    for first in [0u32, 1] {
+        for before in [8u8, 0, 2, 3] {
+            let set = move |c: &mut Call, k: usize| {
+                c.regs.gpr[3] = first;
+                poke_u8(c, map_vars(c, 5) + 4, before);
+                fz_seeds(c, k);
+            };
+            check_calls_with(&d, "grFlatzone_80218060", 1, &set, &next);
+        }
+    }
+    // The pose for an event and the hidden set, from the next set's calls.
+    let pose = |r: &mut Running, _: &Maps, _: &Call| {
+        flatzone::pose_platforms(r);
+        Ret::Nothing
+    };
+    let to_pose = leaf_check::sym("grFlatzone_802181B4");
+    for before in [8u8, 1, 5] {
+        let set = move |c: &mut Call, k: usize| {
+            c.addr = to_pose;
+            poke_u8(c, map_vars(c, 5) + 4, before);
+            fz_seeds(c, k);
+        };
+        check_calls_with(&d, "grFlatzone_80218060", 1, &set, &pose);
+    }
+    let hide = |r: &mut Running, _: &Maps, _: &Call| {
+        flatzone::hide_platforms(r.game);
+        Ret::Nothing
+    };
+    let to_hide = retarget(leaf_check::sym("grFlatzone_80218260"));
+    check_calls_with(&d, "grFlatzone_80218060", 1, &to_hide, &hide);
+}
+
+/// The controller's variables set: waiting, the last event and the one before, whether it
+/// may start one, and its count.
+fn fz_controller(c: &mut Call, wait: u8, last: u8, before: u8, may: u8, count: i16) {
+    let v = vars(c);
+    poke_u32(
+        c,
+        v,
+        u32::from(wait) << 24 | u32::from(last) << 16 | u32::from(before) << 8 | u32::from(may),
+    );
+    poke_u16(c, v + 4, count as u16);
+}
+
+/// The controller's process, as saved and with its variables set to each branch: waiting,
+/// an event running, counting, the count running out after each event (from several seeds),
+/// and the count already out.
+#[test]
+fn flatzone_controller() {
+    let d = dir(FZ);
+    let f = "grFlatzone_802171D4";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let prepares: [&Prepare; 9] = [
+        &|c, _| fz_controller(c, 1, 3, 4, 1, 1),
+        &|c, _| fz_controller(c, 0, 3, 4, 0, 1),
+        &|c, _| fz_controller(c, 0, 3, 4, 1, 50),
+        &|c, _| fz_controller(c, 0, 3, 4, 1, -1),
+        &|c, k| {
+            fz_controller(c, 0, 3, 4, 1, 1);
+            fz_seeds(c, k);
+        },
+        &|c, k| {
+            fz_controller(c, 0, 4, 3, 1, 1);
+            fz_seeds(c, k);
+        },
+        &|c, k| {
+            fz_controller(c, 0, 0, 0, 1, 1);
+            fz_seeds(c, k);
+        },
+        &|c, k| {
+            fz_controller(c, 0, 3, 4, 1, 0);
+            fz_seeds(c, k);
+        },
+        &|c, k| {
+            fz_controller(c, 0, 4, 3, 1, 0);
+            fz_seeds(c, k + 7);
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+}
+
+/// The platforms' variables set: waiting, the animation and the last, the set (the set
+/// before hidden), the row and the row before, and the count.
+#[allow(clippy::too_many_arguments)]
+fn fz_platforms(
+    c: &mut Call,
+    wait: u8,
+    anim: u8,
+    last: u8,
+    set: u8,
+    row: u8,
+    before: u8,
+    count: i16,
+) {
+    let v = vars(c);
+    poke_u32(
+        c,
+        v,
+        u32::from(wait) << 24 | u32::from(anim) << 16 | u32::from(last) << 8 | u32::from(set),
+    );
+    poke_u8(c, v + 4, 8);
+    poke_u8(c, v + 5, row);
+    poke_u8(c, v + 6, before);
+    poke_u16(c, v + 8, count as u16);
+}
+
+/// The platforms' process, as saved and with its variables set to each branch: waiting,
+/// hidden, posed for an event, counting, and the count running out in each set with each of
+/// its rows (from several seeds), with the animation changed and not.
+#[test]
+fn flatzone_platforms() {
+    let d = dir(FZ);
+    let f = "grFlatzone_802174EC";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let fixed: [&Prepare; 5] = [
+        &|c, _| fz_platforms(c, 1, 3, 3, 1, 1, 0, -1),
+        &|c, _| fz_platforms(c, 0, 3, 3, 8, 1, 0, -1),
+        &|c, _| fz_platforms(c, 0, 3, 4, 1, 0, 0, -1),
+        &|c, _| fz_platforms(c, 0, 3, 3, 1, 2, 0, 0),
+        &|c, _| fz_platforms(c, 0, 3, 3, 1, 2, 0, 30),
+    ];
+    for p in fixed {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+    // Set 0 has rows 1 and 2 only; a set past 3 has no row a draw can reach.
+    for set in 0..4u8 {
+        for row in 1..=4u8 {
+            if row > 2 && set == 0 {
+                continue;
+            }
+            let p = move |c: &mut Call, k: usize| {
+                fz_platforms(c, 0, 0, (k % 2) as u8, set, row, 0, -1 - (k % 3) as i16);
+                fz_seeds(c, k + usize::from(set) * 5 + usize::from(row));
+            };
+            check_calls_with(&d, f, 1, &p, &by_address);
+        }
+    }
+}
+
+/// The oil panic's variables set: started, side, state and count (its area as saved).
+fn fz_oil(c: &mut Call, start: u8, side: f32, state: i32, timer: i32) {
+    let v = vars(c);
+    poke_u8(c, v, start);
+    poke_u32(c, v + 4, side.to_bits());
+    poke_u32(c, v + 0xC, state as u32);
+    poke_u32(c, v + 0x10, timer as u32);
+}
+
+/// The oil panic's process, as saved and with its variables set to each branch: started
+/// from each state (from several seeds, for both sides), waiting at its half and its end,
+/// walking on and off a step and at its end, pouring (also off the stage, where no floor is
+/// below, and with no area free), the oil lasting and ending, and hiding.
+#[test]
+fn flatzone_oil() {
+    let d = dir(FZ);
+    let f = "grFlatzone_802176BC";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for state in [-1, 0, 3, 4] {
+        let p = move |c: &mut Call, k: usize| {
+            fz_oil(c, 1, 1.0, state, 5);
+            fz_seeds(c, k + (state + 1) as usize);
+        };
+        check_calls_with(&d, f, 1, &p, &by_address);
+    }
+    // Started while the oil lasts, with an area (which the bug keeps) and none.
+    let area = leaf_check::sym("grDynamicAttr_8049EFA0");
+    for a in [0, area] {
+        let p = move |c: &mut Call, k: usize| {
+            fz_oil(c, 1, -1.0, 3, 5);
+            poke_u32(c, vars(c) + 8, a);
+            fz_seeds(c, k);
+        };
+        check_calls_with(&d, f, 1, &p, &by_address);
+    }
+    for side in [1.0f32, -1.0] {
+        let half = move |c: &mut Call, _: usize| {
+            let t = fz_param(c, 0x20) / 2;
+            fz_oil(c, 0, side, 0, t);
+        };
+        let ends = move |c: &mut Call, k: usize| {
+            fz_oil(c, 0, side, 0, 1);
+            fz_seeds(c, k);
+        };
+        let step = move |c: &mut Call, k: usize| {
+            let ticks = fz_param(c, 0x2C);
+            fz_oil(
+                c,
+                0,
+                side,
+                1,
+                ticks * (k as i32 % 3 + 1) + 1 - (k as i32 % 2),
+            );
+        };
+        let walked = move |c: &mut Call, _: usize| fz_oil(c, 0, side, 1, 1);
+        let pour = move |c: &mut Call, _: usize| fz_oil(c, 0, side, 2, 0);
+        let lasts = move |c: &mut Call, k: usize| fz_oil(c, 0, side, 3, 2 + k as i32 % 2);
+        let hides = move |c: &mut Call, _: usize| fz_oil(c, 0, side, 4, 0);
+        let prepares: [&Prepare; 7] = [&half, &ends, &step, &walked, &pour, &lasts, &hides];
+        for p in prepares {
+            check_calls_with(&d, f, 1, p, &by_address);
+        }
+    }
+    let off = |c: &mut Call, _: usize| {
+        fz_oil(c, 0, 1.0, 2, 0);
+        let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+        poke_u32(c, j + 0x38, 900.0f32.to_bits());
+    };
+    let full = |c: &mut Call, _: usize| {
+        fz_oil(c, 0, -1.0, 2, 0);
+        poke_u32(c, leaf_check::sym("grDynamicAttr_804D6964"), 0);
+    };
+    for p in [&off as &Prepare, &full] {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+}
+
+/// The events nothing starts and the tools' process, as saved and started; the tools also
+/// counting on and off a drop (from several seeds), ending, and with no count.
+#[test]
+fn flatzone_events() {
+    let d = dir(FZ);
+    for f in ["grFlatzone_80217D30", "grFlatzone_80217E04"] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+        check_calls_with(&d, f, 1, &|c, _| poke_u8(c, vars(c), 1), &by_address);
+    }
+    let f = "grFlatzone_80217EF0";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let tools = |c: &mut Call, start: u8, count: i32| {
+        let v = vars(c);
+        poke_u8(c, v, start);
+        poke_u32(c, v + 4, count as u32);
+    };
+    let prepares: [&Prepare; 6] = [
+        &|c, _| tools(c, 1, 0),
+        &|c, k| {
+            let period = fz_param(c, 0x14);
+            tools(c, 0, period * (k as i32 % 4 + 1));
+            fz_seeds(c, k);
+        },
+        &|c, _| {
+            let period = fz_param(c, 0x14);
+            tools(c, 0, period + 1);
+        },
+        &|c, _| tools(c, 0, 1),
+        &|c, _| tools(c, 0, 0),
+        &|c, _| tools(c, 0, -3),
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+}
+
+/// A tool's item in a call made with it in r3.
+fn tool_item(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[3] + 0x2C)
+}
+
+/// A tool's knock (`it_802EF548`).
+fn tool_knock(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
+    melee_sim::game::it::kinds::tools::knock(r, gobj_arg(maps, call));
+    Ret::Nothing
+}
+
+#[test]
+fn flatzone_tools() {
+    use melee_sim::game::it::kinds::tools;
+    let d = dir(FZ);
+    let spawn = |r: &mut Running, _: &Maps, call: &Call| {
+        let g = &call.regs.gpr;
+        let pos = Vec3::new(
+            f32_at(call, g[3]),
+            f32_at(call, g[3] + 4),
+            f32_at(call, g[3] + 8),
+        );
+        let _ = tools::spawn(r, pos, g[4] as i32, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "it_802EEFA8", 1, &as_saved, &spawn);
+    for which in 0..5u32 {
+        for facing in [1.0f64, -1.0] {
+            let p = move |c: &mut Call, _: usize| {
+                c.regs.gpr[4] = which;
+                c.regs.fpr[1].ps0 = facing;
+            };
+            check_calls_with(&d, "it_802EEFA8", 1, &p, &spawn);
+        }
+    }
+    let start = |r: &mut Running, maps: &Maps, call: &Call| {
+        tools::start(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "it_802EF098", 1, &as_saved, &start);
+    let lie = |r: &mut Running, maps: &Maps, call: &Call| {
+        tools::lie(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "it_802EF320", 1, &as_saved, &lie);
+    for f in [
+        "itTools_UnkMotion4_Anim",
+        "itTools_UnkMotion4_Phys",
+        "itTools_UnkMotion4_Coll",
+        "itTools_UnkMotion9_Anim",
+        "itTools_UnkMotion9_Coll",
+        "itTools_Logic22_DmgDealt",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &item_cb);
+    }
+    // Falling at its life's end, and still; lying moving, at the blink's turns and its end.
+    let life = |c: &mut Call, v: f32| poke_u32(c, tool_item(c) + 0xD44, v.to_bits());
+    let still = |c: &mut Call, _: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0x40, 0);
+        poke_u32(c, ip + 0x44, 0);
+    };
+    check_calls_with(
+        &d,
+        "itTools_UnkMotion4_Anim",
+        1,
+        &|c, _| life(c, 1.0),
+        &item_cb,
+    );
+    check_calls_with(
+        &d,
+        "itTools_UnkMotion4_Anim",
+        1,
+        &|c, _| life(c, 0.5),
+        &item_cb,
+    );
+    check_calls_with(&d, "itTools_UnkMotion4_Coll", 1, &still, &item_cb);
+    check_calls_with(&d, "itTools_UnkMotion9_Coll", 1, &still, &item_cb);
+    let moving = |c: &mut Call, k: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0x40, [0.0f32, 1.5][k % 2].to_bits());
+        poke_u32(c, ip + 0x44, (-2.0f32).to_bits());
+    };
+    check_calls_with(&d, "itTools_UnkMotion9_Coll", 1, &moving, &item_cb);
+    for v in [1.0f32, 2.0, 3.0, 4.0, 5.0, 6.5] {
+        let p = move |c: &mut Call, _: usize| life(c, v);
+        check_calls_with(&d, "itTools_UnkMotion9_Anim", 1, &p, &item_cb);
+    }
+    // Knocked: as saved, from a fighter on either side, without one (the hit's direction
+    // either way), by something not a fighter, flying too fast, and with its damage capped.
+    check_calls_with(&d, "it_802EF548", 1, &as_saved, &tool_knock);
+    let from_fighter = |c: &mut Call, k: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0xCEC, first_fighter(c));
+        poke_u32(c, ip + 0x4C, [-80.0f32, 80.0][k % 2].to_bits());
+    };
+    let no_fighter = |c: &mut Call, k: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0xCEC, 0);
+        poke_u32(c, ip + 0xCCC, [1.0f32, -1.0][k % 2].to_bits());
+    };
+    let not_fighter = |c: &mut Call, _: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0xCEC, c.regs.gpr[3]);
+    };
+    let fast = |c: &mut Call, k: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0x40, [9.0f32, -9.0, 0.1][k % 3].to_bits());
+    };
+    let capped = |c: &mut Call, _: usize| {
+        let ip = tool_item(c);
+        poke_u32(c, ip + 0xCA0, 500);
+    };
+    let prepares: [&Prepare; 5] = [&from_fighter, &no_fighter, &not_fighter, &fast, &capped];
+    for p in prepares {
+        check_calls_with(&d, "it_802EF548", 1, p, &tool_knock);
+    }
+    // The reactions and the state no capture reached, from a falling tool's calls.
+    for name in [
+        "itTools_Logic22_DmgReceived",
+        "it_2725_Logic22_Clanked",
+        "it_2725_Logic22_HitShield",
+        "it_2725_Logic22_Absorbed",
+        "itTools_Logic22_ShieldBounced",
+        "itTools_Logic22_Reflected",
+        "itTools_UnkMotion9_Phys",
+    ] {
+        let from = "itTools_UnkMotion4_Anim";
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &item_cb);
+    }
+    let forget = |r: &mut Running, maps: &Maps, call: &Call| {
+        let other = maps.gobjs.get(&call.regs.gpr[4]).copied();
+        tools::forget(r, gobj_arg(maps, call), other);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("it_802EFA24");
+    let with_fighter = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[4] = first_fighter(c);
+    };
+    check_calls_with(&d, "itTools_UnkMotion4_Anim", 1, &with_fighter, &forget);
+}
+
+/// The stage's callbacks no capture reaches, from the controller's captures: the empty
+/// processes, setups and destroy callbacks, the shadow check, and the load, start and demo
+/// hooks.
+#[test]
+fn flatzone_unreached_callbacks() {
+    use melee_sim::game::gr::flatzone;
+    let d = dir(FZ);
+    let from = "grFlatzone_802171D4";
+    for name in [
+        "grFlatzone_80217064",
+        "grFlatzone_80217068",
+        "grFlatzone_802173D0",
+        "grFlatzone_80217438",
+        "grFlatzone_8021743C",
+        "grFlatzone_80217644",
+        "grFlatzone_80217CD0",
+        "grFlatzone_80217DA4",
+        "grFlatzone_80217E78",
+        "grFlatzone_80217E7C",
+        "grFlatzone_80217E88",
+        "grFlatzone_80217E8C",
+        "grFlatzone_8021805C",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(flatzone::check_shadow_render()));
+    let t = leaf_check::sym("grFlatzone_802182BC");
+    check_calls_with(&d, from, 1, &retarget(t), &shadow);
+    for name in [
+        "grFlatzone_UnkStage0_OnLoad",
+        "grFlatzone_UnkStage0_OnStart",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &event);
+    }
+    let t = leaf_check::sym("grFlatzone_80216E74");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
+}

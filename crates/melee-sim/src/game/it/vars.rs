@@ -14,6 +14,7 @@ use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
 use super::kinds::klap::KlapVars;
 use super::kinds::tincle::TincleVars;
+use super::kinds::tools::ToolsVars;
 use super::kinds::whispyapple::WhispyAppleVars;
 use super::kinds::yaku::YakuVars;
 use super::pokemon::PokemonVars;
@@ -179,6 +180,7 @@ members! {
     Heiho, heiho, HeihoVars, [HEIHO];
     Tincle, tincle, TincleVars, [TINCLE];
     WhispyApple, whispy_apple, WhispyAppleVars, [WHISPY_APPLE, WHISPY_HEAL_APPLE];
+    Tools, tools, ToolsVars, [TOOLS];
     Klap, klap, KlapVars, [KLAP];
     Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE];
     KirbySpitStar, kirby_spit_star, PokemonVars, [KIRBY_UNK2];

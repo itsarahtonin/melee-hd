@@ -157,7 +157,6 @@ pub const UNITS: &[&str] = &[
     "melee/it/kinds/ittarucann",
     "melee/it/kinds/ittincle",
     "melee/it/kinds/ittomato",
-    "melee/it/kinds/ittools",
     "melee/it/kinds/itwhitebea",
     "melee/it/kinds/itwstar",
     "melee/it/kinds/ityoshiegglay",
@@ -323,6 +322,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/tincle",
     "it/kinds/togepy",
     "it/kinds/tomato",
+    "it/kinds/tools",
     "it/kinds/tosakinto",
     "it/kinds/unknown",
     "it/kinds/whispyapple",
@@ -367,7 +367,7 @@ const EVENT: &str =
 const EVT_UNK: &str =
     "an item's evt_unk, which only a fighter's unload at the scene's end runs (it_8026B7F8)";
 const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
-const OTHER_STAGES: &str = "a stage item of a stage the player doesn't offer (Mushroom Kingdom II's Birdo, Flat Zone's tools, Corneria's and Venom's lasers)";
+const OTHER_STAGES: &str = "a stage item of a stage the player doesn't offer (Mushroom Kingdom II's Birdo, Corneria's and Venom's lasers)";
 const POKEMON_MODES: &str =
     "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
 const SCENES: &str = "other scenes' item setup (intros, cutscenes, the trophy fall)";
@@ -432,7 +432,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("itTaruCann_Logic5_EvtUnk", EVT_UNK),
     ("it_802EC850", EVT_UNK),
     ("itTomato_Logic9_EvtUnk", EVT_UNK),
-    ("it_802EFA24", EVT_UNK),
     ("it_802E4A24", EVT_UNK),
     ("itWStar_Logic30_EvtUnk", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
@@ -451,7 +450,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itgreatfoxlaser", OTHER_STAGES),
     ("melee/it/kinds/itkyasarin", OTHER_STAGES),
     ("melee/it/kinds/itkyasarinegg", OTHER_STAGES),
-    ("melee/it/kinds/ittools", OTHER_STAGES),
     ("melee/it/kinds/itevyoshiegg", EVENT),
     ("it_8026C3FC", BOSSES),
     ("it_8026C42C", BOSSES),

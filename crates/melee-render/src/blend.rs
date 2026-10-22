@@ -196,7 +196,9 @@ impl Capture {
                         _ => {}
                     }
                 }
-                Draw::SpecularInit { jobj, .. } => self.joint(objs, *jobj),
+                Draw::SpecularInit { jobj, .. } | Draw::FighterJoint { jobj, .. } => {
+                    self.joint(objs, *jobj)
+                }
                 Draw::AppSrt { srt, view, scale } => {
                     self.app_srts
                         .push((*srt, objs.app_srts[*srt].idnum, *view, *scale));

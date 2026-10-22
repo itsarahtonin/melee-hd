@@ -97,6 +97,11 @@ pub enum Draw {
     /// the joint in, whether or not any of its shapes draw in that pass: the last joint's
     /// vectors stay in the lights for what follows. `vmtx` as for [`Draw::Shape`].
     SpecularInit { jobj: JObjId, vmtx: Option<Mtx34> },
+    /// A fighter's model's root joint draws its display objects (`HSD_JObjDispDObj` on a joint
+    /// of the fighters' class, `ftJObj`, whose position matrix sets the fighters' depth scale
+    /// for the shapes after, `ftParts_JObjMakePositionMtx`), whether or not any of them draws.
+    /// `vmtx` as for [`Draw::Shape`].
+    FighterJoint { jobj: JObjId, vmtx: Option<Mtx34> },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
     /// The magnifier camera's viewport erased, color and depth, for player `n`'s bubble
@@ -441,6 +446,11 @@ pub fn jobj_disp_dobj(
         BILLBOARDS.contains(&(flags & BILLBOARD_FIELD)),
         "unkown type of billboard."
     );
+    if objs.jobjs[j].class == super::heap::Class::FtJObj {
+        objs.display
+            .draws
+            .push(Draw::FighterJoint { jobj: j, vmtx });
+    }
     for pass in [TRSP_OPA, TRSP_TEXEDGE, TRSP_XLU] {
         if bits & (pass << JOBJ_TRSP_SHIFT) != 0 {
             jobj_disp_sub(objs, data, j, vmtx, pass, rendermode);

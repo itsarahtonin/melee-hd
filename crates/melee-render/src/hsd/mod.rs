@@ -61,6 +61,9 @@ pub struct Hsd {
     /// The GObj being drawn (`HSD_GObj_804D7814`) and its fighter, if it's one.
     pub rendering: Option<GObjId>,
     pub rendering_fighter: Option<FighterId>,
+    /// The fighters' depth scale for their shapes' normals (`ft_jobj_scale`), as the last
+    /// fighter joint drawn left it ([`Draw::FighterJoint`](melee_sim::hsd::display::Draw)).
+    pub ft_jobj_scale: FtJObjScale,
     /// What wasn't drawn exactly, counted.
     pub notes: BTreeMap<String, u32>,
     /// Print each draw command and display list called (for debugging).
@@ -70,6 +73,14 @@ pub struct Hsd {
     pub widescreen: Option<f32>,
     /// What a frame between two ticks keeps track of as it draws (`crate::blend`).
     pub motion: Motion,
+}
+
+/// `ft_jobj_scale`: the matrix that undoes a flat fighter's joint scale in view space, and
+/// whether the last fighter joint drawn had a depth scale.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct FtJObjScale {
+    pub mtx: Mtx34,
+    pub has_z_scale: bool,
 }
 
 /// A frame's blending state as it draws (`crate::blend`): unused, and left as it is, for a

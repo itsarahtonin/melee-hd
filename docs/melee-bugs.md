@@ -675,6 +675,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Green Greens' block collision where it happens; breaks replay compatibility there.
 - **Source:** `crates/melee-sim/src/game/gr/greens.rs` (`link_corners`, `status_at`).
 
+### Flat Zone's oil panic frees its slick only when it has none
+
+- **Where:** `grFlatzone_802176BC`, `crates/melee-sim/src/game/gr/flatzone.rs` (`proc_oil`).
+- **Defect:** when the controller starts the oil panic again while the last slick still lasts (state 3), the man's process hides him and means to free the slick's dynamic attribute area, but tests `xCC == NULL` instead of `!= NULL`: it calls `grDynamicAttr_801CA1C0` only with a null area, which returns at once, and otherwise keeps the pointer, which the new pour overwrites.
+- **Effect:** the old slick stays slippery until its own timer runs out instead of going when the man comes back. No oracle match restarts the oil panic during its slick.
+- **melee-hd:** modeled.
+- **Fix:** test `xCC != NULL`.
+- **Fix impact:** changes gameplay (the old slick's floor terrain) and breaks replay and Slippi compatibility.
+- **Source:** the decompilation's `grflatzone.c` (`grFlatzone_802176BC`); `crates/melee-sim/src/game/gr/flatzone.rs`, the comment in `proc_oil`.
+
 ## Camera
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`

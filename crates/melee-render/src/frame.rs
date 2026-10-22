@@ -249,6 +249,10 @@ impl Ctx<'_> {
                 self.specular_init(*jobj, vmtx.as_ref());
                 1
             }
+            Draw::FighterJoint { jobj, vmtx } => {
+                self.fighter_joint(*jobj, vmtx.as_ref());
+                1
+            }
             Draw::Invalidate(mask) => {
                 self.invalidate(*mask);
                 1

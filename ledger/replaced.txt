@@ -199,3 +199,6 @@ Ground_801C06B8	Asks the preload cache to load a stage's archive and the buffers
 grIzumi_801CD2D4	Asks the preload cache for Fountain of Dreams' reflection buffer (preload entry 2001); see Ground_801C06B8.
 grStadium_801D511C	Asks the preload cache for Pokémon Stadium's screens and transformation buffer (entries 0x7D2 to 0x7D5); see Ground_801C06B8.
 Stage_802251B4	Ground_801C06B8 for a stage kind's ground kind: the preload request, replaced likewise.
+ftParts_JObjInfoInit	Registers the fighters' joint class (ftJObj) with HAL's class system; melee-sim marks a fighter's root joint's class (heap::Class::FtJObj) and the presentation takes its position matrix (Draw::FighterJoint) (docs/engine.md).
+ftParts_PObjInfoInit	Registers the fighters' shape class (ftPObj) with HAL's class system; melee-sim's PObj class (PObjClass::Fighter, heap::Class::FtPObj) replaces it, its loader and matrix setup dispatched on it (docs/engine.md).
+ftParts_IntpJObjInfoInit	Registers the fighters' interpolated joint class (ftIntpJObj) with HAL's class system; melee-sim's JObjClass::FighterIntp replaces it (docs/engine.md).

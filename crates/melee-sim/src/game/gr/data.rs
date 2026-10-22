@@ -4,10 +4,10 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
-    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY,
+    GR_KIND_GREENS, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -866,6 +866,43 @@ pub const RCRUISE: StageData = StageData {
     joints: &RCRUISE_JOINTS,
 };
 
+/// `grFz_StageCallbacks`. Map 2 is the controller that starts the events, map 3 the oil
+/// panic, map 5 the platforms, map 8 the falling tools, maps 4 and 6 two events nothing starts,
+/// map 1 the background and map 0 the stage's animation; map 7 isn't made.
+pub const FLATZONE_CALLBACKS: [StageCallbacks; 9] = [
+    cb(0x8021_7030, 0x8021_705C, 0x8021_7064, 0x8021_7068, 0),
+    cb(0x8021_73D4, 0x8021_7430, 0x8021_7438, 0x8021_743C, 0),
+    cb(
+        0x8021_707C,
+        0x8021_71CC,
+        0x8021_71D4,
+        0x8021_73D0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8021_7648, 0x8021_76B4, 0x8021_76BC, 0x8021_7CD0, 0),
+    cb(0x8021_7CD4, 0x8021_7D28, 0x8021_7D30, 0x8021_7DA4, 0),
+    cb(0x8021_7450, 0x8021_74E4, 0x8021_74EC, 0x8021_7644, 0),
+    cb(0x8021_7DA8, 0x8021_7DFC, 0x8021_7E04, 0x8021_7E78, 0),
+    cb(0x8021_7E7C, 0x8021_7E80, 0x8021_7E88, 0x8021_7E8C, 0),
+    cb(0x8021_7E90, 0x8021_7EE8, 0x8021_7EF0, 0x8021_805C, 0),
+];
+
+/// `grFz_StageData`.
+pub const FLATZONE: StageData = StageData {
+    grkind: GR_KIND_FLATZONE,
+    callbacks: &FLATZONE_CALLBACKS,
+    file: Some("/GrFz.dat"),
+    on_init: 0x8021_6E78,
+    on_demo_init: 0x8021_6E74,
+    on_load: 0x8021_6F38,
+    on_start: 0x8021_6F3C,
+    callback4: 0x8021_6F40,
+    on_touch_line: 0x8021_82B4,
+    on_check_shadow_render: 0x8021_82BC,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -889,6 +926,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_ONETT => &ONETT,
         GR_KIND_PURA => &PURA,
         GR_KIND_RCRUISE => &RCRUISE,
+        GR_KIND_FLATZONE => &FLATZONE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

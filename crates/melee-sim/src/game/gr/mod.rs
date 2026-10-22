@@ -10,6 +10,7 @@ pub mod data;
 pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
+pub mod flatzone;
 pub mod fourside;
 pub mod garden;
 pub mod greatbay;
@@ -61,6 +62,8 @@ pub const GR_KIND_KRAID: i32 = 9;
 pub const GR_KIND_RCRUISE: i32 = 3;
 /// `Gr_Kind_Pura`, Poké Floats.
 pub const GR_KIND_PURA: i32 = 17;
+/// `Gr_Kind_Flatzone`, Flat Zone.
+pub const GR_KIND_FLATZONE: i32 = 27;
 /// `Gr_Kind_Fourside`, Fourside.
 pub const GR_KIND_FOURSIDE: i32 = 21;
 /// `Gr_Kind_GreatBay`, Great Bay.
@@ -207,6 +210,8 @@ pub struct Globals {
     pub kraid_yakumono: Option<DataRef>,
     /// Which animation Kraid's copy last took from the debugging button (`grKr_804D6A0C`).
     pub kraid_anim: i32,
+    /// Flat Zone's `yakumono_param` (`grFlatzone_YakumonoParam`).
+    pub flatzone_yakumono: Option<DataRef>,
     /// Fourside's `yakumono_param` (`grFourside_YakumonoParam`).
     pub fourside_yakumono: Option<DataRef>,
     /// Great Bay's `yakumono_param` (`grGb_804D69E0.x0`, `grGb_StageAttr`).
@@ -336,6 +341,11 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_OLDYOSHI, 3) => VarsKind::OldYoshiGuest,
         (GR_KIND_KRAID, 1 | 3) => VarsKind::Kraid,
         (GR_KIND_KRAID, 4) => VarsKind::Kraid2,
+        (GR_KIND_FLATZONE, 2) => VarsKind::Flatzone,
+        (GR_KIND_FLATZONE, 3) => VarsKind::FlatzoneOil,
+        (GR_KIND_FLATZONE, 4 | 6) => VarsKind::FlatzoneEvent,
+        (GR_KIND_FLATZONE, 5) => VarsKind::FlatzonePlatforms,
+        (GR_KIND_FLATZONE, 8) => VarsKind::FlatzoneTools,
         (GR_KIND_FOURSIDE, 1) => VarsKind::FoursideCrane,
         (GR_KIND_FOURSIDE, 3) => VarsKind::Fourside2,
         (GR_KIND_FOURSIDE, 5) => VarsKind::FoursideUfo,
