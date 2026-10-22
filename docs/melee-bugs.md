@@ -144,6 +144,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the match's statistics (end-of-match records); not recorded whether anything in play reads them.
 - **Source:** [the oracle](oracle.md) (line 208).
 
+### A stage device's hit keeps an earlier hit's damage word
+
+- **Where:** `ftColl_80076764` (a stage device's entry in the hit log, Brinstar's lava) with `ftColl_8007A06C` (the strongest logged hit), `crates/melee-sim/src/game/ft/attack.rs` (`HitLogs::stale_damage`).
+- **Defect:** the device's entry writes no damage word (`x20`), so it keeps what the log's slot last held, and `ftColl_8007A06C` copies that word into the fighter's damage result (`dmg.x186c`) when the device's hit is the strongest.
+- **Effect:** none observable: nothing reads the word there.
+- **melee-hd:** modeled: each slot of the log (a static array) keeps its last damage word.
+- **Fix:** write the device's damage into its entry.
+- **Fix impact:** none in play.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (the stage device's paragraph).
+
 ## Match setup
 
 ### Facing players toward opponents uses a caller's register
@@ -422,13 +432,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The computer player heads for a stack vector when no island end is in reach
 
-- **Where:** `ftCo_800A4768` (the island end beside a fighter) with its caller `ftCo_800A75DC` (heading for a fighter), `crates/melee-sim/src/game/ft/cpu_vs.rs` (`cpu_island_end_beside`, `cpu_toward`) and `cpu_decide.rs` (`cpu_find_target_lr`).
-- **Defect:** `ftCo_800A4768` writes its out vector only when some island end beside the fighter is in reach, and returns 0 either way; with none (an airborne target with no floor below, between every island's ends, as under Final Destination), `ftCo_800A75DC` sets the destination from its stack vector unwritten.
-- **Effect:** the computer player heads for what the stack held: under the VS decision, the back chain and saved return address the target search's frame left there, two tiny negative floats, about the stage's middle at floor height. `cpu-ics-fd` reads it 25 times (first in tick 3260) and `cpu-sweep-samus-fd` from tick 5721.
-- **melee-hd:** modeled (the target search returns the return address it leaves, and the VS decision hands the vector to the call); a caller that doesn't give it stops.
+- **Where:** `ftCo_800A4768` (the island end beside a fighter) with its caller `ftCo_800A75DC` (heading for a fighter), from the VS decision and from `ftCo_800AE7AC` (heading back from off camera, after `ftCo_800A6FC4` finds no island toward the blast zones' middle), `crates/melee-sim/src/game/ft/cpu_vs.rs` (`cpu_island_end_beside`, `cpu_toward`, `cpu_back_on_screen`, `cpu_island_toward`) and `cpu_decide.rs` (`cpu_find_target_lr`).
+- **Defect:** `ftCo_800A4768` writes its out vector only when some island end beside the fighter is in reach, and returns 0 either way; with none (an airborne target with no floor below, between every island's ends, as under Final Destination), `ftCo_800A75DC` sets the destination from its stack vector unwritten. Off camera on the ground, that vector's slot lies in the frame `ftCo_800A6FC4` has just left, where its prologue saved f20 (`stfd f20, 0xA8(r1)`), and nothing writes it between.
+- **Effect:** the computer player heads for what the stack held: under the VS decision, the back chain and saved return address the target search's frame left there, two tiny negative floats, about the stage's middle at floor height. `cpu-ics-fd` reads it 25 times (first in tick 3260) and `cpu-sweep-samus-fd` from tick 5721. Off camera the destination takes f20's two words, which hold the boot's 0.0 (nothing from `main` down to the computer player's frame writes f20), so the computer player heads for (0, 0); no oracle match reaches that case (on `cpu-stage-poke-floats` every airborne target had an island end in reach), leaf-check's `cpu_vs` `OffCameraGround { target_under }` does.
+- **melee-hd:** modeled (the target search returns the return address it leaves, and the VS decision hands the vector to the call; off camera the vector is f20's words, `hsd::gobj::PROC_F20`); a caller that doesn't give it stops.
 - **Fix:** leave the destination as it was, or head for the target, when no end is in reach.
 - **Fix impact:** changes where a computer player heads while its target is under the stage; a replay's recorded inputs keep its fighters' motion, but the CPU's state, and a free-running CPU, differ.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 106).
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (the island end's paragraph and the off-camera one); `crates/melee-sim/src/game/ft/cpu_vs.rs` (`cpu_back_on_screen`).
 
 ### The Ice Climbers' freeze glitch
 
@@ -592,6 +602,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play (the item's last position and ECB motion only, which nothing reads); the state differs from vanilla in those words.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); [the oracle](oracle.md#stages) (Corneria and Venom); found with ssbm-rs's `WATCH_ADDR` on `taunt-fox-venom` (tick 696).
 
+### The Octorok's stone spins by a stack word's sign
+
+- **Where:** `it_802E8ADC` (the Octorok's stone's spawn), `crates/melee-sim/src/game/it/kinds/octarockstone.rs` (`spawn`).
+- **Defect:** it never sets its `SpawnItem`'s velocity, a stack vector; the spawn copies it into the stone and reads its x's sign for the spin's way (`it_80274658`) before `it_802E89D0` sets all three.
+- **Effect:** the spin's way follows what the stack held: in both Octorok oracle matches a heap address the joint lookup before it left, a negative float, for every stone (a zero there makes the spin -0.0 where the original's is 0.0).
+- **melee-hd:** a stand-in negative x; all 28 stones of the two matches compare clean.
+- **Fix:** set the velocity before the spawn.
+- **Fix impact:** not recorded beyond the spin's sign.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (the Octorok's stone's paragraph).
+
+### A coin scatter with no coin to make returns its caller's register
+
+- **Where:** `it_802E609C` (making a scatter's coins), `crates/melee-sim/src/game/it/kinds/coin.rs` (`drop_all`).
+- **Defect:** with no coin to make it returns a register it never set, and when a coin can't be made it tries again forever.
+- **Effect:** none observable: its only caller that uses the result (`it_802E5F8C`) holds the count it passed in that register, so it gets its own count back; no match at hand fails a coin's spawn.
+- **melee-hd:** modeled (it returns the count); a coin that can't be made stops instead of looping.
+- **Fix:** return the count, and give up when the spawn fails.
+- **Fix impact:** none in play.
+- **Source:** [the oracle](oracle.md) (the coin matches); `crates/melee-sim/src/game/it/kinds/coin.rs` (`drop_all`).
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -623,6 +653,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** pass the archive.
 - **Fix impact:** not recorded.
 - **Source:** [engine notes, loaded data the game writes into](engine.md#loaded-data-the-game-writes-into) (line 286).
+
+### Final Destination's swaying piece follows its generator after the generator dies
+
+- **Where:** `grLast_8021ADD0` (the swaying piece's process), `crates/melee-sim/src/game/gr/last.rs` (`proc_sway`).
+- **Defect:** the piece keeps its generator (`xE0`) after the generator's life ends, and each tick reads the generator's app-SRT through the freed block.
+- **Effect:** none observable in the matches checked: the generator's removal cleared its app-SRT pointer, so the process stops there; had the block gone to a new generator first, the piece would move that generator's particles.
+- **melee-hd:** modeled: the freed generator's slot is read as the original reads the block (slots are reused as the original reuses addresses), and a captured state imports the pointer as a freed slot.
+- **Fix:** clear `xE0` when the generator's life ends.
+- **Fix impact:** none in play.
+- **Source:** [engine notes, effects](engine.md#effects); `crates/melee-sim/src/game/gr/last.rs` (`proc_sway`).
 
 ### A random pick between two entries draws below one
 
@@ -995,6 +1035,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A sticking item's slope with no surface touched | `it_8027649C`, `game/it/maplib.rs` | Takes its angle from a stack vector it never set when the item touches no surface (`it_80276408` writes nothing then); the motion-sensor bomb sticks only after touching one | `crates/melee-sim/src/game/it/maplib.rs:291` |
 | The Flipper's spin past π | `itFlipper_UpdateSpin`, `game/it/kinds/flipper.rs` | Brings the spin's speed, not the paddle's angle, back within ±π by a whole turn; the attributes cap the speed at 0.873 radians a frame | `crates/melee-sim/src/game/it/kinds/flipper.rs:175` |
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
+| A grab box after a failed grapple beam spawn | `it_802B7C18` and Samus's `Catch`, `CatchDash` and `AirCatch` scripts, `game/ft/samus/tether.rs` | The parts table's last entry (part 139) keeps the freed tip joint after the beam goes, and her grab boxes on that bone would read it if the beam's spawn made no item before them; the spawn sets the entry anew every time it makes the beam | [engine notes](engine.md#uninitialized-values) (Samus's grapple beam's paragraph); `fighter_hitbox_from` |
 | A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
 | Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
 
