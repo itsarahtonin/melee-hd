@@ -632,7 +632,7 @@ pub fn on_start(r: &mut Running) {
 
 /// Where a stage object's process runs (`HSD_GObj_RunProcs`' frame): the stack addresses below
 /// it key the scale joints the processes' objects make in the ID table.
-const PROC_LOOP: u32 = 0x804E_EA38;
+pub const PROC_LOOP: u32 = 0x804E_EA38;
 
 /// The stack address of the scale joint's descriptor for a flight path (map 1): below the
 /// process loop by the Great Fox's process's frame (0x30), the Arwings' (0x60) and the create
@@ -1340,7 +1340,7 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
                 let k = param(r.game).f(r.data, p::ARWING_SCALE);
                 if group_offset(r.game, gid) == 1 {
                     let b = nth_joint(r.game, gobj, 7);
-                    arwinglaser::spawn_aimed(r, gobj, b, pos, 3, 3, k);
+                    arwinglaser::spawn_aimed(r, gobj, b, pos, 3, 3, k, 0x55734);
                 } else {
                     let gun = r.game.grounds[gid.0]
                         .u
@@ -1348,7 +1348,7 @@ pub fn proc_arwing(r: &mut Running, gobj: GObjId) {
                         .x100
                         .expect("grcorneria.c: an Arwing's gun read before its setup wrote it");
                     let b = nth_joint(r.game, gobj, if gun != 0 { 5 } else { 6 });
-                    arwinglaser::spawn_aimed(r, gobj, b, pos, 1, 3, k);
+                    arwinglaser::spawn_aimed(r, gobj, b, pos, 1, 3, k, 0x55734);
                     r.game.grounds[gid.0].u.arwing().x100 = Some(gun.wrapping_add(1) & 1);
                 }
                 let script = r.data.ptr(param(r.game).0.at(p::FIRE_SCRIPT));
@@ -1526,6 +1526,11 @@ pub const CITY_FRAME: u32 = PROC_LOOP - 0x40 - 0x48 - 0x20;
 /// The stack address of a talk window's scale joint's descriptor: below the process loop by the
 /// talk's process's frame (0x20) and the create function's.
 pub const WINDOW_FRAME: u32 = PROC_LOOP - 0x20 - 0x20;
+
+/// The key of the talk's scale joint, which a fighter's taunt makes (`grCorneria_801E2B80`'s frame):
+/// distinct from every live one by the time it is made, which the setup's, its objects gone with
+/// the load hook, stands in for.
+pub const TALK_FRAME: u32 = setup::SETUP_FRAME;
 
 /// Lays the city out for the demo, `grCorneria_801E0678`: map 11 goes, and the three parts
 /// stand still side by side.
@@ -1714,7 +1719,7 @@ pub fn update_sequence(r: &mut Running, gobj: GObjId, window: i32, stage: Stage)
         if wait < 0 {
             let w = match stage {
                 Stage::Corneria => create(r, window, WINDOW_FRAME),
-                Stage::Venom => super::super::code::unported_call("grVenom_80203EAC"),
+                Stage::Venom => super::venom::create(r, window, WINDOW_FRAME),
             }
             .expect("a talk's window");
             start_talk_line(r, w, talk, line);
@@ -2344,7 +2349,7 @@ pub fn match_end(r: &mut Running) {
             }
             r.close_font(1);
         }
-        GR_KIND_VENOM => super::super::code::unported_call("grVenom_80206CB0"),
+        GR_KIND_VENOM => super::venom::stop_talk(r, false),
         _ => {}
     }
 }
@@ -2366,7 +2371,7 @@ pub fn taunt_interrupted(r: &mut Running) {
             }
             r.close_font(1);
         }
-        GR_KIND_VENOM => super::super::code::unported_call("grVenom_80206CB0"),
+        GR_KIND_VENOM => super::venom::stop_talk(r, true),
         _ => {}
     }
 }
@@ -2380,14 +2385,11 @@ fn start_talk(r: &mut Running, talk: i32, venom_talk: i32) -> bool {
                 return false;
             }
             let n = r.game.objs.rng.below(5).wrapping_add(talk);
-            let w = create(r, 12, setup::SETUP_FRAME).expect("grcorneria.c: the talk");
+            let w = create(r, 12, TALK_FRAME).expect("grcorneria.c: the talk");
             set_talk(r, w, n);
             true
         }
-        GR_KIND_VENOM => {
-            let _ = venom_talk;
-            super::super::code::unported_call("grVenom_80206BF0")
-        }
+        GR_KIND_VENOM => super::venom::start_talk(r, venom_talk),
         _ => true,
     }
 }

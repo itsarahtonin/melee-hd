@@ -379,9 +379,11 @@ pub fn spawn_straight(
 ///
 /// The original never sets the spawn's own position (`SpawnItem::pos`), so the item's collision
 /// takes a stale stack vector as its last position (and its ECB's motion, `xB54`, which only a
-/// stomp on a stompable item reads). The words ssbm-rs's port leaves there, 0, 7 and 0xEDE as
-/// bits, stand in for it; the shot's own collision probes from its tip and never reads it.
+/// stomp on a stompable item reads). Both callers play the shot's sound (`sfx`) just before,
+/// and its start (`HSD_AudioSFXStartParam`) leaves there the registers its prologue saved and
+/// set: the track (0), the channel (7) and the sound's sample, as bits.
 #[doc(alias = "it_802E7654")]
+#[allow(clippy::too_many_arguments)]
 pub fn spawn_aimed(
     r: &mut Running,
     owner: GObjId,
@@ -390,11 +392,13 @@ pub fn spawn_aimed(
     ty: i32,
     joint: i32,
     scale: f32,
+    sfx: i32,
 ) {
     let at = world_position(&mut r.game.objs, r.data, gun, None);
+    let sample = r.game.audio.sfx_sample(r.data, sfx) as u32;
     let mut spawn = SpawnItem {
         kind: KIND,
-        pos: Vec3::new(0.0, f32::from_bits(7), f32::from_bits(0xEDE)),
+        pos: Vec3::new(0.0, f32::from_bits(7), f32::from_bits(sample)),
         prev_pos: at,
         facing_dir: 0.0,
         x3C_damage: 0,

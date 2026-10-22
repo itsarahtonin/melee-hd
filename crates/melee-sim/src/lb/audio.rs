@@ -1145,6 +1145,14 @@ const GROUND_SEND: [u8; 111] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
 ];
 
+/// The rows' third bytes: a second send, which `lbAudioAx_80024D78` can choose instead.
+const GROUND_SEND_2: [u8; 111] = [
+    1, 1, 1, 1, 1, 1, 1, 24, 64, 128, 1, 1, 1, 1, 1, 136, 1, 1, 64, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 72, 136, 1, 1, 56, 56, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+    1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
+];
+
 /// `stage_id_map`'s ground kinds, by stage kind (`Stage_8022519C`).
 const STAGE_GROUND: [u8; 286] = [
     0, 1, 12, 16, 2, 4, 8, 14, 10, 20, 18, 3, 5, 6, 7, 9, 11, 13, 21, 24, 25, 26, 15, 17, 19, 22,
@@ -1411,6 +1419,21 @@ impl crate::game::state::Running<'_> {
         a.lb.want_banks(2, 0x20);
         a.lb_start_bank_loads(self.data);
         a.lb_wait_for_banks(self.data);
+    }
+
+    /// The music channels' aux B send from column `column` of the ground kind's row of
+    /// `s32_arr_803BB6B0` (its bank, its send, its second send), `lbAudioAx_80024D78`: Venom
+    /// turns it to its second under its lower deck's tunnel and back.
+    #[doc(alias = "lbAudioAx_80024D78")]
+    pub fn set_ground_send(&mut self, column: i32) {
+        let g = ground_kind(crate::game::gr::stage::stkind(self.game));
+        let send = match column {
+            0 => GROUND_BANK[g],
+            1 => GROUND_SEND[g],
+            2 => GROUND_SEND_2[g],
+            _ => unimplemented!("lbAudioAx_80024D78 past the row's three bytes ({column})"),
+        };
+        self.game.audio.lb.send = i32::from(send);
     }
 
     /// [`lb_load_match_banks`](Self::lb_load_match_banks)'s choice: the stage's send, and the

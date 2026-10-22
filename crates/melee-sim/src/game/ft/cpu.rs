@@ -247,8 +247,9 @@ impl Running<'_> {
 
     /// The r5 [`Running::excluded_floor`] leaves for a floor found (`line` not -1) on a stage
     /// it asks: Corneria's check (`grCorneria_801E2D90`) ends with r5 its chain of tests' third
-    /// flag, whether the floor's joint is 0, 1, 2 or 5; the other stages' are followed with
-    /// their ports.
+    /// flag, whether the floor's joint is 0, 1, 2 or 5; Venom's (`grVenom_80206D10`) with what
+    /// `mpJointFromLine` left there, the joints' array's address (the allocator model's); the
+    /// other stages' are followed with their ports.
     pub(super) fn excluded_floor_r5(&self, line: i32) -> super::cpu_ai::Leftover {
         if self.game.stage_info.grkind == GR_CORNERIA {
             let joint = self
@@ -258,6 +259,15 @@ impl Running<'_> {
                 .expect("no collision geometry")
                 .joint_from_line(line);
             return super::cpu_ai::Leftover::Word(u32::from(matches!(joint, 0 | 1 | 2 | 5)));
+        }
+        if self.game.stage_info.grkind == GR_VENOM {
+            let g = self.game.geometry.as_ref().expect("no collision geometry");
+            if g.joints_addr != 0 {
+                return super::cpu_ai::Leftover::Word(g.joints_addr);
+            }
+            return super::cpu_ai::Leftover::Unknown(
+                "grVenom_80206D10 (the joints' array's address, without the allocator model)",
+            );
         }
         super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)")
     }

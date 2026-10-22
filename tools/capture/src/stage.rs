@@ -87,6 +87,14 @@ pub const GRCORNERIA_GROUPS: u32 = 0x803E_1D80;
 pub const GRCORNERIA_SLOT: u32 = 0x804D_69A4;
 pub const GRCORNERIA_POINTS: u32 = 0x803E_1FAC;
 pub const GRCORNERIA_TALK: u32 = 0x804D_466C;
+/// grvenom.c's (`ssbm_types::tu::melee__gr__grvenom::yakumono_param`), its Arwing slots
+/// (`grVe_803E5348.arwing`, `grVe_803E5380`) and the slot being made, the wait, the Arwings' hold
+/// (never written) and the demo flag (`grVe_804D6A34` to `grVe_804D6A40`).
+pub const GRVENOM_YAKUMONO: u32 = 0x804D_6A30;
+pub const GRVENOM_ARWINGS: u32 = 0x803E_5368;
+pub const GRVENOM_TYPES: u32 = 0x803E_5374;
+pub const GRVENOM_GROUPS: u32 = 0x803E_5380;
+pub const GRVENOM_SLOT: u32 = 0x804D_6A34;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -361,6 +369,9 @@ impl Importer<'_> {
         let yaku = cap.u32(GRCORNERIA_YAKUMONO);
         self.game.gr.corneria_yakumono = self.data_or_unhandled(yaku);
         self.import_corneria();
+        let yaku = cap.u32(GRVENOM_YAKUMONO);
+        self.game.gr.venom_yakumono = self.data_or_unhandled(yaku);
+        self.import_venom();
         self.import_zebes();
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
@@ -639,6 +650,7 @@ impl Importer<'_> {
             bounds,
             generation: r32(sym("mpColl_804D64AC")) as i32,
             islands,
+            joints_addr: r32(sym("groundCollJoint")),
         })
     }
 
@@ -1038,6 +1050,11 @@ impl Comparer<'_> {
                 GRCORNERIA_YAKUMONO,
                 game.gr.corneria_yakumono,
             ),
+            (
+                "grVenom yakumono_param",
+                GRVENOM_YAKUMONO,
+                game.gr.venom_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1049,6 +1066,7 @@ impl Comparer<'_> {
         }
         self.compare_zebes();
         self.compare_corneria();
+        self.compare_venom();
         self.check(
             "grOt_804D69C4",
             "onett x69c4",
@@ -1690,6 +1708,22 @@ impl Importer<'_> {
         self.game.gr.corneria = c;
     }
 
+    /// Venom's statics.
+    fn import_venom(&mut self) {
+        let cap = self.cap;
+        let mut v = melee_sim::game::gr::venom::Globals::default();
+        for i in 0..3u32 {
+            let g = cap.u32(GRVENOM_ARWINGS + 4 * i);
+            v.arwings[i as usize] = self.import_handle_gobj(g);
+            v.types[i as usize] = cap.u32(GRVENOM_TYPES + 4 * i) as i32;
+            v.groups[i as usize] = cap.u32(GRVENOM_GROUPS + 4 * i) as i32;
+        }
+        v.slot = cap.u32(GRVENOM_SLOT);
+        v.wait = cap.u32(GRVENOM_SLOT + 4) as i32;
+        v.demo = cap.u32(GRVENOM_SLOT + 0xC) as i32;
+        self.game.gr.venom = v;
+    }
+
     /// Brinstar's statics and spawn configurations.
     fn import_zebes(&mut self) {
         let w = |s: &Self, a: u32| s.cap.u32(a);
@@ -1773,6 +1807,42 @@ impl Importer<'_> {
 }
 
 impl Comparer<'_> {
+    /// Venom's statics against memory; the Arwings' hold, which nothing writes, stays 0.
+    fn compare_venom(&mut self) {
+        let game = self.game;
+        let v = &game.gr.venom;
+        let gobj_pair = |s: &Self, a: u32| {
+            let p = s.u32(a);
+            (p != 0).then(|| s.maps.gobjs.get(&p).copied())
+        };
+        self.check(
+            "grVe_803E5348.arwing",
+            "venom arwings",
+            v.arwings.map(|g| g.map(Some)),
+            std::array::from_fn(|i| gobj_pair(self, GRVENOM_ARWINGS + 4 * i as u32)),
+        );
+        self.check(
+            "grVe_803E5380",
+            "venom types and groups",
+            (v.types, v.groups),
+            (
+                std::array::from_fn(|i| self.u32(GRVENOM_TYPES + 4 * i as u32) as i32),
+                std::array::from_fn(|i| self.u32(GRVENOM_GROUPS + 4 * i as u32) as i32),
+            ),
+        );
+        self.check(
+            "grVe_804D6A34",
+            "venom statics",
+            (v.slot, v.wait, 0u32, v.demo),
+            (
+                self.u32(GRVENOM_SLOT),
+                self.u32(GRVENOM_SLOT + 4) as i32,
+                self.u32(GRVENOM_SLOT + 8),
+                self.u32(GRVENOM_SLOT + 0xC) as i32,
+            ),
+        );
+    }
+
     /// Corneria's statics against memory.
     fn compare_corneria(&mut self) {
         let game = self.game;

@@ -7,7 +7,7 @@ use super::{
     GR_KIND_BATTLE, GR_KIND_CORNERIA, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY,
     GR_KIND_GREENS, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO,
     GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
-    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -942,6 +942,71 @@ pub const CORNERIA: StageData = StageData {
     joints: &CORNERIA_JOINTS,
 };
 
+/// A wing's callbacks (maps 10 to 15, `grVenom_802056B0` and its process).
+const VENOM_WING: StageCallbacks = cb(0x8020_56B0, 0x8020_5750, 0x8020_5758, 0x8020_5AD0, 0);
+
+/// `grVe_StageCallbacks`. Map 7 is the Great Fox, whose animation flies the stage; map 5 the
+/// platforms the fighters stand on and map 0 their copy; map 4 the background and map 9 the
+/// second collision; map 2 an Arwing's flight path, maps 3 and 6 the Arwings flying it and maps 10
+/// to 15 their wings; map 8 the Star Fox team's talk and map 1 its window.
+pub const VENOM_CALLBACKS: [StageCallbacks; 16] = [
+    cb(0x8020_3F98, 0x8020_3FC4, 0x8020_3FCC, 0x8020_3FD0, 0),
+    cb(
+        0x8020_6B94,
+        0x8020_6BBC,
+        0x8020_6BC4,
+        0x8020_6BEC,
+        StageCallbacks::CAMERA,
+    ),
+    cb(0x8020_4F20, 0x8020_52D8, 0x8020_53B0, 0x8020_56AC, 0),
+    cb(0x8020_5AD4, 0x8020_5DF0, 0x8020_5F30, 0x8020_6870, 0),
+    cb(0x8020_3FD4, 0x8020_40A4, 0x8020_40AC, 0x8020_40B0, 0),
+    cb(
+        0x8020_40F0,
+        0x8020_427C,
+        0x8020_4284,
+        0x8020_4424,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_6874, 0x8020_6B68, 0x8020_6B70, 0x8020_6B90, 0),
+    cb(0x8020_4428, 0x8020_4544, 0x8020_454C, 0x8020_4B84, 0),
+    cb(0x8020_4CE0, 0x8020_4CE4, 0x8020_4CEC, 0x8020_4DB0, 0),
+    cb(0x8020_4DD4, 0x8020_4EF4, 0x8020_4EFC, 0x8020_4F1C, 0),
+    VENOM_WING,
+    VENOM_WING,
+    VENOM_WING,
+    VENOM_WING,
+    VENOM_WING,
+    VENOM_WING,
+];
+
+/// `grVe_803E5348.joints`: the platforms' and the Arwings' collision joints the stage binds
+/// itself.
+pub const VENOM_JOINTS: [GrJoint; 5] = [
+    GrJoint { x: 0, y: 5, z: 0 },
+    GrJoint { x: 1, y: 5, z: 0 },
+    GrJoint { x: 2, y: 9, z: 0 },
+    GrJoint { x: 4, y: 10, z: 0 },
+    GrJoint { x: 3, y: 13, z: 0 },
+];
+
+/// `grVe_StageData`.
+pub const VENOM: StageData = StageData {
+    grkind: GR_KIND_VENOM,
+    callbacks: &VENOM_CALLBACKS,
+    // The table's `/GrVe`, which `lbFileGetFullName` completes with the language's extension.
+    file: Some("/GrVe.usd"),
+    on_init: 0x8020_3B18,
+    on_demo_init: 0x8020_3B14,
+    on_load: 0x8020_3DD0,
+    on_start: 0x8020_3E80,
+    callback4: 0x8020_3EA4,
+    on_touch_line: 0x8020_6D74,
+    on_check_shadow_render: 0x8020_6D7C,
+    flags2: 1,
+    joints: &VENOM_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -966,6 +1031,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_PURA => &PURA,
         GR_KIND_RCRUISE => &RCRUISE,
         GR_KIND_CORNERIA => &CORNERIA,
+        GR_KIND_VENOM => &VENOM,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

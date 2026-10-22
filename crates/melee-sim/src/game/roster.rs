@@ -317,10 +317,6 @@ pub const STAGES: &[Stage] = &[
                     "it_802EB5A8",
                     "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload at the scene's end",
                 ),
-                (
-                    "grVenom_",
-                    "Venom's side of the talk and the match's end, which Corneria never runs",
-                ),
             ],
             missing: &[],
         }),
@@ -492,6 +488,17 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grrcruise"],
             modules: &["gr/rcruise"],
+            unreached: &[],
+            missing: &[],
+        }),
+    },
+    Stage {
+        kind: 22,
+        name: "Venom",
+        keys: &["ve", "venom"],
+        audit: Some(Audit {
+            units: &["melee/gr/grvenom", "melee/it/kinds/itarwinglaser"],
+            modules: &["gr/venom", "it/kinds/arwinglaser"],
             unreached: &[],
             missing: &[],
         }),

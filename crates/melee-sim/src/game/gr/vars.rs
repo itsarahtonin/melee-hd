@@ -85,6 +85,8 @@ pub enum VarsKind {
     ArwingColl,
     StarFoxTalk,
     SmashTaunt,
+    VenomPlatform,
+    VenomShip,
 }
 
 /// `union GroundVars`.
@@ -218,6 +220,10 @@ pub enum GroundVars {
     StarFoxTalk(StarFoxTalkVars),
     /// `grSmashTaunt_GroundVars`: a line of the talk in its window (Corneria's map 5).
     SmashTaunt(SmashTauntVars),
+    /// `grVenom_Platform_GroundVars`: Venom's platforms (map 5).
+    VenomPlatform(VenomPlatformVars),
+    /// `grVenom_GroundVars2`: Venom's Great Fox (map 7).
+    VenomShip(VenomShipVars),
 }
 
 /// One of Onett's awnings (`grOnett_AwningData`, 0x1C bytes): its joint, its rest height, this
@@ -1499,6 +1505,48 @@ pub struct SmashTauntVars {
     pub text: Option<crate::hsd::sis::TextId>,
 }
 
+/// `grVenom_Platform_GroundVars` of Venom's platforms (map 5): the copy it moves (map 0,
+/// `target_gobj`), the event's line's ticks (`smash_taunt_timer`, -1 for none) and the upper and
+/// lower platforms' joints.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct VenomPlatformVars {
+    pub target: Option<GObjId>,
+    pub timer: i32,
+    pub upper: Option<crate::hsd::jobj::JObjId>,
+    pub lower: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grVenom_GroundVars2` of Venom's Great Fox (map 7): the seven joints whose visibility it keeps
+/// (`xC4` to `xDC`), its flags and the colors' state (the halfword `xE0`: flags 0 to 6 its top
+/// seven bits, the state the two below), and its animation's last frame (`x20.xE4`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct VenomShipVars {
+    pub jobjs: [Option<crate::hsd::jobj::JObjId>; 7],
+    pub xE0: u16,
+    pub frame: f32,
+}
+
+impl VenomShipVars {
+    /// Flag `i` (`xE0_state.x0.b{i}`, 0 to 6).
+    pub fn flag(&self, i: u32) -> bool {
+        self.xE0 >> (15 - i) & 1 != 0
+    }
+
+    pub fn set_flag(&mut self, i: u32, on: bool) {
+        let bit = 1 << (15 - i);
+        self.xE0 = if on { self.xE0 | bit } else { self.xE0 & !bit };
+    }
+
+    /// The colors' state (`xE0_state_pad.state`).
+    pub fn state(&self) -> u16 {
+        self.xE0 >> 7 & 3
+    }
+
+    pub fn set_state(&mut self, v: u16) {
+        self.xE0 = self.xE0 & !(3 << 7) | (v & 3) << 7;
+    }
+}
+
 /// The bytes of the union as big-endian memory.
 struct Bytes<'a>(&'a [u8; SIZE]);
 
@@ -2290,6 +2338,29 @@ impl GroundVars {
                     text: cx
                         .import_handle("TextId", m.u32(at + 0x20))
                         .map(crate::hsd::sis::TextId),
+                })
+            }
+            VarsKind::VenomPlatform => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::VenomPlatform(VenomPlatformVars {
+                    target: gobj(cx, at),
+                    timer: m.u32(at + 4) as i32,
+                    upper: jobj(cx, at + 8),
+                    lower: jobj(cx, at + 0xC),
+                })
+            }
+            VarsKind::VenomShip => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::VenomShip(VenomShipVars {
+                    jobjs: std::array::from_fn(|i| jobj(cx, at + 4 * i as u32)),
+                    xE0: m.u16(at + 0x1C),
+                    frame: f(at + 0x20),
                 })
             }
             VarsKind::RCruiseFlag => GroundVars::RCruiseFlag(RCruiseFlagVars {
@@ -3554,6 +3625,41 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Venom's platforms' (`grVenom_Platform_GroundVars`), which their setup
+    /// writes before anything reads them; Venom's setup sets the copy first.
+    pub fn venom_platform(&mut self) -> &mut VenomPlatformVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::VenomPlatform(VenomPlatformVars {
+                target: b.null(0),
+                timer: b.u32(4) as i32,
+                upper: b.null_of(8),
+                lower: b.null_of(0xC),
+            });
+        }
+        match self {
+            GroundVars::VenomPlatform(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Venom's platforms'"),
+        }
+    }
+
+    /// The variables as Venom's Great Fox's (`grVenom_GroundVars2`), likewise: its colors' state
+    /// as the fresh block held it.
+    pub fn venom_ship(&mut self) -> &mut VenomShipVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::VenomShip(VenomShipVars {
+                jobjs: std::array::from_fn(|i| b.null_of(4 * i)),
+                xE0: (b.u32(0x1C) >> 16) as u16,
+                frame: b.f32(0x20),
+            });
+        }
+        match self {
+            GroundVars::VenomShip(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Venom's Great Fox's"),
+        }
+    }
+
     /// The variables as a talk line's (`grSmashTaunt_GroundVars`), which its setup writes before
     /// anything reads them: the block's bytes don't carry over.
     pub fn smash_taunt(&mut self) -> &mut SmashTauntVars {
@@ -4537,6 +4643,46 @@ impl Mirror for GroundVars {
                     v.text.map(|t| t.0),
                     m.u32(at + 0x20),
                 );
+            }
+            GroundVars::VenomPlatform(v) => {
+                let p = format!("{path}.venom_platform");
+                if v.timer != m.u32(at + 4) as i32 {
+                    cx.mismatch(
+                        &format!("{p}.timer"),
+                        format!("{}", v.timer),
+                        format!("{}", m.u32(at + 4) as i32),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{p}.target"),
+                    "GObjId",
+                    v.target.map(|g| g.0),
+                    m.u32(at),
+                );
+                cx.compare_handle(
+                    &format!("{p}.upper"),
+                    "JObjId",
+                    v.upper.map(|j| j.0),
+                    m.u32(at + 8),
+                );
+                cx.compare_handle(
+                    &format!("{p}.lower"),
+                    "JObjId",
+                    v.lower.map(|j| j.0),
+                    m.u32(at + 0xC),
+                );
+            }
+            GroundVars::VenomShip(v) => {
+                let p = format!("{path}.venom_ship");
+                let ours = (v.xE0, v.frame.to_bits());
+                let theirs = (m.u16(at + 0x1C), m.u32(at + 0x20));
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                for (k, j) in v.jobjs.iter().enumerate() {
+                    let q = format!("{p}.jobjs[{k}]");
+                    cx.compare_handle(&q, "JObjId", j.map(|j| j.0), m.u32(at + 4 * k as u32));
+                }
             }
             GroundVars::RCruiseFlag(v) => {
                 let d = &v.xC4;

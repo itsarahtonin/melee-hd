@@ -7352,6 +7352,12 @@ fn starfox_lasers() {
         let gun = maps.jobjs.get(&g[4]).copied();
         let target = vec_arg(call, 5);
         let scale = call.regs.fpr[1].ps0 as f32;
+        // The shot's sound, which its caller played just before (Corneria's or Venom's).
+        let sfx = if r.game.stage_info.grkind == melee_sim::game::gr::GR_KIND_VENOM {
+            0x6B6C9
+        } else {
+            0x55734
+        };
         arwinglaser::spawn_aimed(
             r,
             gobj_arg(maps, call),
@@ -7360,6 +7366,7 @@ fn starfox_lasers() {
             g[6] as i32,
             g[7] as i32,
             scale,
+            sfx,
         );
         Ret::Nothing
     };
@@ -7473,4 +7480,427 @@ fn starfox_lasers() {
         };
         check_calls_with(&d, from, 1, &p, &item_cb);
     }
+}
+
+// Venom (`grvenom.c`): the stage's oracle match and the starfox set's Venom taunt matches, captured
+// as Corneria's are with `ve-funcs.txt` and `done-ve.txt` (`capture-ve.sh`).
+
+const VE: &str = "oracle-stage-venom";
+const VE_TALK: &str = "oracle-taunt-fox-venom";
+const VE_TALK_END: &str = "oracle-taunt-falco-venom";
+
+/// grvenom.c's `yakumono_param`.
+const VE_PARAM: u32 = 0x804D_6A30;
+/// The Arwing slots (`grVe_803E5348.arwing`, `grVe_803E5380`).
+const VE_ARWINGS: u32 = 0x803E_5368;
+const VE_TYPES: u32 = 0x803E_5374;
+const VE_GROUPS: u32 = 0x803E_5380;
+/// The wait and the demo flag (`grVe_804D6A38`, `grVe_804D6A40`).
+const VE_WAIT: u32 = 0x804D_6A38;
+const VE_DEMO: u32 = 0x804D_6A40;
+
+/// Venom's parameters' word at `off`.
+fn ve_param(c: &Call, off: u32) -> u32 {
+    peek_u32(c, peek_u32(c, VE_PARAM) + off)
+}
+
+/// An Arwing slot's path, type and group set.
+fn ve_slot(c: &mut Call, slot: u32, path: u32, ty: i32, group: i32) {
+    poke_u32(c, VE_ARWINGS + 4 * slot, path);
+    poke_u32(c, VE_TYPES + 4 * slot, ty as u32);
+    poke_u32(c, VE_GROUPS + 4 * slot, group as u32);
+}
+
+/// The Great Fox's flags and colors' state (`xE0`, a halfword) and its animation's last frame.
+fn ve_ship(c: &mut Call, xe0: u16, frame: f32) {
+    let v = map_vars(c, 7);
+    poke_u16(c, v + 0x1C, xe0);
+    poke_u32(c, v + 0x20, frame.to_bits());
+}
+
+#[test]
+fn venom_setup() {
+    use melee_sim::game::gr::venom;
+    let d = dir(VE);
+    for f in ["grVenom_80203B18", "grVenom_80203DD0", "grVenom_80203E80"] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = venom::create(r, call.regs.gpr[3] as i32, venom::INIT_FRAME);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grVenom_80203EAC", 1, &as_saved, &create);
+    for f in [
+        "stageGObj0_OnInit",
+        "grVenom_80203FD4",
+        "grVenom_802040F0",
+        "grVenom_80204428",
+        "grVenom_80204DD4",
+        "grVenom_80204F20",
+        "grVenom_80205AD4",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let dt = dir(VE_TALK_END);
+    for f in ["grVenom_802056B0", "grVenom_80206874"] {
+        check_calls_with(&dt, f, 1, &as_saved, &by_address);
+    }
+    // The platforms' start hook, on the event stage and not.
+    let start = of_ground(venom::platform_start);
+    check_calls_with(&d, "fn_802040B4", 1, &as_saved, &start);
+    let event_stage = |c: &mut Call, _: usize| poke_u32(c, leaf_check::sym("selected_stage"), 0xE4);
+    check_calls_with(&d, "fn_802040B4", 1, &event_stage, &start);
+}
+
+#[test]
+fn venom_ship() {
+    use melee_sim::game::gr::venom;
+    let d = dir(VE);
+    check_calls_with(&d, "grVenom_8020454C", 1, &as_saved, &by_address);
+    // Each cue crossed (the last frame far behind, or each just below), the animation
+    // rewinding (the last frame past it), and each flag and colors' state.
+    let mut lasts = vec![0.0f32, -1.0, 1e9];
+    for at in [
+        1033.0f32, 1063.0, 2460.0, 3800.0, 4070.0, 4200.0, 4400.0, 6100.0, 6810.0, 7210.0, 7410.0,
+        9200.0,
+    ] {
+        lasts.push(at - 0.5);
+    }
+    for last in lasts {
+        for xe0 in [0u16, 0x2000, 0x0200, 0xFE00, 0x0080, 0x0100] {
+            let p = move |c: &mut Call, _: usize| ve_ship(c, xe0, last);
+            check_calls_with(&d, "grVenom_8020454C", 1, &p, &by_address);
+        }
+    }
+    let colors = of_ground(venom::ship_colors);
+    check_calls_with(&d, "grVenom_80204B88", 1, &as_saved, &colors);
+    for xe0 in [
+        0u16, 0x0080, 0x0100, 0x0180, 0x2000, 0x2080, 0x0200, 0x0280, 0x2200,
+    ] {
+        let p = move |c: &mut Call, _: usize| ve_ship(c, xe0, 0.0);
+        check_calls_with(&d, "grVenom_80204B88", 1, &p, &colors);
+    }
+    let send = |r: &mut Running, _: &Maps, call: &Call| {
+        r.set_ground_send(call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    for col in [None, Some(1u32), Some(2)] {
+        let p = move |c: &mut Call, _: usize| {
+            if let Some(v) = col {
+                c.regs.gpr[3] = v;
+            }
+        };
+        check_calls_with(&d, "lbAudioAx_80024D78", 1, &p, &send);
+    }
+}
+
+#[test]
+fn venom_platform() {
+    let d = dir(VE);
+    check_calls_with(&d, "grVenom_80204284", 1, &as_saved, &by_address);
+    // The event's line: about to start, its window opening, waiting for it to go (gone or not).
+    for timer in [-1i32, 1, 0x3A, 0x3B, 0x3C, 0x3D] {
+        let p = move |c: &mut Call, _: usize| poke_u32(c, vars(c) + 4, timer as u32);
+        check_calls_with(&d, "grVenom_80204284", 1, &p, &by_address);
+    }
+    check_calls_with(&d, "stageGObj9_GObjProc", 1, &as_saved, &by_address);
+}
+
+#[test]
+fn venom_spawns() {
+    use melee_sim::game::gr::venom;
+    let d = dir(VE);
+    let spawn = of_running(venom::spawn_arwings);
+    check_calls_with(&d, "grVenom_8020362C", 1, &as_saved, &spawn);
+    // In a match: the wait running out with no group held, the far group held, the close one,
+    // after each group (several seeds); not yet; an Arwing out.
+    for wait in [1i32, 2] {
+        for xe0 in [0u16, 0x1000, 0x0800, 0x0400, 0x8000, 0x4000, 0x2000, 0x9000] {
+            for (ty, group) in [(0i32, 0i32), (3, 1), (9, 4)] {
+                let p = move |c: &mut Call, k: usize| {
+                    poke_u32(c, VE_DEMO, 0);
+                    poke_u32(c, VE_WAIT, wait as u32);
+                    ve_slot(c, 0, 0, ty, group);
+                    let v = map_vars(c, 7);
+                    poke_u16(c, v + 0x1C, xe0);
+                    set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+                };
+                check_calls_with(&d, "grVenom_8020362C", 1, &p, &spawn);
+            }
+        }
+    }
+    let out = |c: &mut Call, k: usize| {
+        poke_u32(c, VE_DEMO, 0);
+        let f = first_fighter(c);
+        ve_slot(c, 0, f, 3, 1);
+        set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+    };
+    check_calls_with(&d, "grVenom_8020362C", 1, &out, &spawn);
+    // The demo: all three out, one free after close and far ones, the wait running out or not,
+    // with groups held or not.
+    for (free, wait) in [(3u32, 1i32), (0, 1), (1, 1), (2, 1), (2, 5)] {
+        for near in [false, true] {
+            for xe0 in [0u16, 0x8000] {
+                let p = move |c: &mut Call, k: usize| {
+                    poke_u32(c, VE_DEMO, 1);
+                    poke_u32(c, VE_WAIT, wait as u32);
+                    let f = first_fighter(c);
+                    for slot in 0..3u32 {
+                        let (path, ty) = if slot == free {
+                            (0, 0)
+                        } else if near {
+                            (f, slot as i32 + 2)
+                        } else {
+                            (f, slot as i32 + 8)
+                        };
+                        ve_slot(c, slot, path, ty, slot as i32 + 1);
+                    }
+                    let v = map_vars(c, 7);
+                    poke_u16(c, v + 0x1C, xe0);
+                    set_seed(c, 0x0F0F_1357u32.wrapping_mul(k as u32 + 1));
+                };
+                check_calls_with(&d, "grVenom_8020362C", 1, &p, &spawn);
+            }
+        }
+    }
+}
+
+#[test]
+fn venom_paths() {
+    use melee_sim::game::gr::venom;
+    for set in [VE, VE_TALK] {
+        let d = dir(set);
+        check_calls_with(&d, "grVenom_802053B0", 1, &as_saved, &by_address);
+        let first = |c: &mut Call, _: usize| poke_u32(c, vars(c) + 0x10, 1);
+        check_calls_with(&d, "grVenom_802053B0", 1, &first, &by_address);
+        for sound in 0..4u32 {
+            for ty in [2i32, 7, 8, 11, 0] {
+                let p = move |c: &mut Call, _: usize| {
+                    let v = vars(c);
+                    poke_u32(c, v + 0x10, 0);
+                    poke_u32(c, v + 0x14, sound);
+                    let slot = cn_slot_of(c);
+                    poke_u32(c, VE_TYPES + 4 * slot, ty as u32);
+                };
+                check_calls_with(&d, "grVenom_802053B0", 1, &p, &by_address);
+            }
+        }
+        let taken = |c: &mut Call, _: usize| {
+            let slot = cn_slot_of(c);
+            poke_u32(c, VE_ARWINGS + 4 * slot, 0);
+        };
+        check_calls_with(&d, "grVenom_802053B0", 1, &taken, &by_address);
+        let pos = |r: &mut Running, maps: &Maps, call: &Call| {
+            let _ = venom::path_pos(r, maps.gobjs.get(&call.regs.gpr[3]).copied());
+            Ret::Nothing
+        };
+        check_calls_with(&d, "grVenom_802052E0", 1, &as_saved, &pos);
+        let outside = |r: &mut Running, _: &Maps, call: &Call| {
+            Ret::Int(u32::from(venom::outside_blast_zones(
+                r.game,
+                vec_arg(call, 3),
+            )))
+        };
+        let near = |r: &mut Running, _: &Maps, call: &Call| {
+            Ret::Int(u32::from(venom::near_blast_zones(r.game, vec_arg(call, 3))))
+        };
+        for p in [
+            (0.0f32, 50.0f32),
+            (1e4, 0.0),
+            (-1e4, 0.0),
+            (0.0, 1e4),
+            (0.0, -1e4),
+        ] {
+            let put = move |c: &mut Call, _: usize| {
+                let a = c.regs.gpr[3];
+                poke_u32(c, a, p.0.to_bits());
+                poke_u32(c, a + 4, p.1.to_bits());
+            };
+            check_calls_with(&d, "grVenom_80205DF8", 1, &put, &outside);
+            check_calls_with(&d, "grVenom_80205E84", 1, &put, &near);
+        }
+        check_calls_with(&d, "grVenom_80205DF8", 1, &as_saved, &outside);
+        check_calls_with(&d, "grVenom_80205E84", 1, &as_saved, &near);
+    }
+}
+
+#[test]
+fn venom_arwings() {
+    let d = dir(VE);
+    let dt = dir(VE_TALK_END);
+    for (d, f) in [(&d, "grVenom_80205F30"), (&dt, "grVenom_80206B70")] {
+        check_calls_with(d, f, 1, &as_saved, &by_address);
+        let gone = |c: &mut Call, _: usize| {
+            let slot = cn_slot_of(c);
+            poke_u32(c, VE_ARWINGS + 4 * slot, 0);
+        };
+        check_calls_with(d, f, 1, &gone, &by_address);
+        // Each roll state, rolling or not (several seeds).
+        for (roll, wait) in [(0u32, 0i32), (0, 1), (1, 0), (4, 0), (5, 0)] {
+            let p = move |c: &mut Call, k: usize| {
+                let v = vars(c);
+                poke_u32(c, v + 0x30, roll);
+                poke_u32(c, v + 0x34, wait as u32);
+                set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(d, f, 1, &p, &by_address);
+        }
+        // A far Arwing in each type's window, at its edges and outside (several seeds).
+        for ty in [8i32, 9, 10, 11] {
+            for flown in [
+                0x30u32, 0x38, 0x40, 0x48, 0x60, 0x80, 0xE0, 0xE8, 0xF0, 0x100, 0x108,
+            ] {
+                let p = move |c: &mut Call, k: usize| {
+                    let slot = cn_slot_of(c);
+                    let t = peek_u32(c, VE_TYPES + 4 * slot) as i32;
+                    if (8..=11).contains(&t) {
+                        poke_u32(c, VE_TYPES + 4 * slot, ty as u32);
+                    }
+                    poke_u32(c, vars(c) + 0x2C, flown);
+                    set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+                };
+                check_calls_with(d, f, 1, &p, &by_address);
+            }
+        }
+    }
+    // A wing: as saved, its path gone, rolled and off the plane either side of its limits.
+    let f = "grVenom_80205758";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let gone = |c: &mut Call, _: usize| {
+        let slot = cn_slot_of(c);
+        poke_u32(c, VE_ARWINGS + 4 * slot, 0);
+    };
+    check_calls_with(&d, f, 1, &gone, &by_address);
+    for (roll, z) in [
+        (0.0f32, 0.0f32),
+        (1.04, 0.0),
+        (1.06, 0.0),
+        (-4.0, 0.0),
+        (0.5, 49.9),
+        (0.5, 50.0),
+        (0.0, -51.0),
+    ] {
+        let p = move |c: &mut Call, _: usize| {
+            let v = vars(c);
+            poke_u32(c, v + 0x18, roll.to_bits());
+            poke_u32(c, v + 0x1C + 8, z.to_bits());
+        };
+        check_calls_with(&d, f, 1, &p, &by_address);
+    }
+    let _ = ve_param;
+}
+
+#[test]
+fn venom_talk() {
+    use melee_sim::game::gr::venom;
+    for set in [VE_TALK, VE_TALK_END] {
+        let d = dir(set);
+        check_calls_with(&d, "grVenom_80204CEC", 1, &as_saved, &by_address);
+        for (line, wait) in [(0i32, -1i32), (1, 0), (3, -1), (4, -1)] {
+            let p = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u32(c, v + 4, line as u32);
+                poke_u32(c, v + 8, wait as u32);
+            };
+            check_calls_with(&d, "grVenom_80204CEC", 1, &p, &by_address);
+        }
+        for f in ["grVenom_80206B94", "grVenom_80206BC4"] {
+            check_calls_with(&d, f, 1, &as_saved, &by_address);
+        }
+        let start = |r: &mut Running, _: &Maps, call: &Call| {
+            Ret::Int(u32::from(venom::start_talk(r, call.regs.gpr[3] as i32)))
+        };
+        for which in [None, Some(2u32), Some(20), Some(5)] {
+            let p = move |c: &mut Call, k: usize| {
+                if let Some(w) = which {
+                    c.regs.gpr[3] = w;
+                }
+                set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, "grVenom_80206BF0", 1, &p, &start);
+        }
+        let stop = |r: &mut Running, _: &Maps, call: &Call| {
+            venom::stop_talk(r, call.regs.gpr[3] != 0);
+            Ret::Nothing
+        };
+        for destroy in [None, Some(0u32), Some(1)] {
+            let p = move |c: &mut Call, _: usize| {
+                if let Some(v) = destroy {
+                    c.regs.gpr[3] = v;
+                }
+            };
+            check_calls_with(&d, "grVenom_80206CB0", 1, &p, &stop);
+        }
+    }
+    check_calls_with(&dir(VE_TALK), "grVenom_80204DB0", 1, &as_saved, &by_address);
+    // Corneria's talk code on Venom: the taunts' calls, the match's end and the cut short taunt.
+    let d = dir(VE_TALK);
+    let fox = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(melee_sim::game::gr::corneria::fox_talk(r)))
+    };
+    check_calls_with(&d, "grCorneria_801E2B80", 1, &as_saved, &fox);
+    let falco = |r: &mut Running, _: &Maps, _: &Call| {
+        Ret::Int(u32::from(melee_sim::game::gr::corneria::falco_talk(r)))
+    };
+    check_calls_with(
+        &dir(VE_TALK_END),
+        "grCorneria_801E2C34",
+        1,
+        &as_saved,
+        &falco,
+    );
+    let end = of_running(melee_sim::game::gr::corneria::match_end);
+    for set in [VE, VE_TALK, VE_TALK_END] {
+        check_calls_with(&dir(set), "grCorneria_801E2A6C", 1, &as_saved, &end);
+    }
+    let cut = of_running(melee_sim::game::gr::corneria::taunt_interrupted);
+    check_calls_with(&d, "grCorneria_801E2AF4", 1, &as_saved, &cut);
+}
+
+#[test]
+fn venom_hooks() {
+    use melee_sim::game::gr::venom;
+    for set in [VE, VE_TALK] {
+        let d = dir(set);
+        let hazard = |_: &mut Running, _: &Maps, _: &Call| {
+            assert!(venom::line_hazard().is_none());
+            Ret::Int(0)
+        };
+        check_calls_with(&d, "grVenom_80206D74", 1, &as_saved, &hazard);
+        fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+            let (pos, j) = shadow_args(maps, call);
+            venom::check_shadow_render(r.game, r.data, pos, j)
+        }
+        check_shadow(&d, "grVenom_80206D7C", ours, 0.0);
+    }
+}
+
+#[test]
+fn venom_unreached_callbacks() {
+    let d = dir(VE);
+    let from = "grVenom_8020454C";
+    for name in [
+        "grVenom_80203FCC",
+        "grVenom_80203FD0",
+        "grVenom_802040AC",
+        "grVenom_802040B0",
+        "grVenom_80204424",
+        "grVenom_80204B84",
+        "grVenom_80204CE0",
+        "grVenom_80204F1C",
+        "grVenom_802056AC",
+        "grVenom_80205AD0",
+        "grVenom_80206870",
+        "grVenom_80206B90",
+        "grVenom_80206BEC",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    check_calls_with(
+        &d,
+        from,
+        1,
+        &retarget(leaf_check::sym("grVenom_80203B14")),
+        &demo,
+    );
 }

@@ -34,6 +34,7 @@ pub mod stadium;
 pub mod stage;
 pub mod story;
 pub mod vars;
+pub mod venom;
 pub mod yorster;
 pub mod zako;
 pub mod zebes;
@@ -254,6 +255,10 @@ pub struct Globals {
     pub corneria_yakumono: Option<DataRef>,
     /// Corneria's statics besides it.
     pub corneria: corneria::Globals,
+    /// Venom's `yakumono_param` (`grVenom_YakumonoParam`).
+    pub venom_yakumono: Option<DataRef>,
+    /// Venom's statics besides it.
+    pub venom: venom::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -389,6 +394,13 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_CORNERIA, 13..=18) => VarsKind::ArwingColl,
         (GR_KIND_CORNERIA, 12) => VarsKind::StarFoxTalk,
         (GR_KIND_CORNERIA, 5) => VarsKind::SmashTaunt,
+        (GR_KIND_VENOM, 1) => VarsKind::SmashTaunt,
+        (GR_KIND_VENOM, 2) => VarsKind::ArwingPath,
+        (GR_KIND_VENOM, 3 | 6) => VarsKind::Arwing,
+        (GR_KIND_VENOM, 5) => VarsKind::VenomPlatform,
+        (GR_KIND_VENOM, 7) => VarsKind::VenomShip,
+        (GR_KIND_VENOM, 8) => VarsKind::StarFoxTalk,
+        (GR_KIND_VENOM, 10..=15) => VarsKind::ArwingColl,
         _ => VarsKind::Bytes,
     }
 }
