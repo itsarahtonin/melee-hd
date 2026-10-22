@@ -4,11 +4,11 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_CORNERIA, GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN,
-    GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2,
-    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_CASTLE, GR_KIND_CORNERIA, GR_KIND_FLATZONE, GR_KIND_FOURSIDE,
+    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1,
+    GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1386,6 +1386,50 @@ pub const VENOM: StageData = StageData {
     joints: &VENOM_JOINTS,
 };
 
+/// `grCs_StageCallbacks`: map 0 has none; maps 5, 7 and 17 (the blocks), 8 to 16 (the Bullet
+/// Bills) and 18 to 20 (the switches) share theirs.
+pub const CASTLE_CALLBACKS: [StageCallbacks; 21] = {
+    const NONE: StageCallbacks = cb(0, 0, 0, 0, 0);
+    const BLAST: StageCallbacks = cb(0x801C_E8E8, 0x801C_E9E0, 0x801C_E9E8, 0x801C_EAC8, 0);
+    const BLASTER: StageCallbacks = cb(0x801C_E7E8, 0x801C_E858, 0x801C_E860, 0x801C_E8E4, 0);
+    const STAGE: StageCallbacks = cb(
+        0x801C_D658,
+        0x801C_D8A0,
+        0x801C_D8A8,
+        0x801C_D960,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    );
+    const BACK: StageCallbacks = cb(0x801C_D5BC, 0x801C_D600, 0x801C_D608, 0x801C_D60C, 0);
+    const BLOCKS: StageCallbacks = cb(0x801C_EACC, 0x801C_EEFC, 0x801C_EF04, 0x801C_F0F0, 0);
+    const LIFTS: StageCallbacks = cb(0x801C_DA0C, 0x801C_DC3C, 0x801C_DC44, 0x801C_DF50, 0);
+    const BILL: StageCallbacks = cb(0x801C_E260, 0x801C_E3A4, 0x801C_E578, 0x801C_E7E4, 0);
+    const SWITCH: StageCallbacks = cb(0x801C_F0F4, 0x801C_F300, 0x801C_F308, 0x801C_F74C, 0);
+    [
+        NONE, BLAST, BLASTER, STAGE, BACK, BLOCKS, LIFTS, BLOCKS, BILL, BILL, BILL, BILL, BILL,
+        BILL, BILL, BILL, BILL, BLOCKS, SWITCH, SWITCH, SWITCH,
+    ]
+};
+
+/// `grCs_803E0FE8`: the lifts' collision joints, which the stage binds to their parts itself.
+pub const CASTLE_JOINTS: [GrJoint; 2] =
+    [GrJoint { x: 4, y: 6, z: 1 }, GrJoint { x: 5, y: 6, z: 4 }];
+
+/// `grCs_StageData`.
+pub const CASTLE: StageData = StageData {
+    grkind: GR_KIND_CASTLE,
+    callbacks: &CASTLE_CALLBACKS,
+    file: Some("/GrCs.dat"),
+    on_init: 0x801C_D37C,
+    on_demo_init: 0x801C_D338,
+    on_load: 0x801C_D4A0,
+    on_start: 0x801C_D4A4,
+    callback4: 0x801C_D4C8,
+    on_touch_line: 0x801D_0B04,
+    on_check_shadow_render: 0x801D_0B0C,
+    flags2: 1,
+    joints: &CASTLE_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1415,6 +1459,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_ICEMT => &ICEMT,
         GR_KIND_CORNERIA => &CORNERIA,
         GR_KIND_VENOM => &VENOM,
+        GR_KIND_CASTLE => &CASTLE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

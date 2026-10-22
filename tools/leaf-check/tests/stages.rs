@@ -28,7 +28,8 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
 use melee_sim::game::gr::{
-    garden, icemt, inishie1, inishie2, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster,
+    castle, garden, icemt, inishie1, inishie2, kongo, oldkongo, oldyoshi, pura, rcruise, shrine,
+    yorster,
 };
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::it::kinds::{kyasarin, kyasarinegg};
@@ -9729,4 +9730,818 @@ fn venom_unreached_callbacks() {
         &retarget(leaf_check::sym("grVenom_80203B14")),
         &demo,
     );
+}
+
+// Princess Peach's Castle (`grcastle.c`).
+
+const CS: &str = "oracle-stage-peachs-castle";
+/// The walkers' match (`castle-walkers`), which falls past the moat and rides the lifts.
+const CSW: &str = "oracle-castle-walkers";
+
+/// grcastle.c's `yakumono_param`.
+const CS_PARAM: u32 = 0x804D_6970;
+
+/// The stage's scale (`Ground_801C0498`: the stage parameters' first float).
+fn cs_scale(call: &Call) -> f32 {
+    f32_at(call, peek_u32(call, STAGE_INFO + 0x6B0))
+}
+
+/// The stack address of the scale joint's descriptor a stage object's creation in this call
+/// puts in the ID table: `setup::SETUP_FRAME` when the setup's create runs with its stack
+/// pointer at `CS_SETUP_SP`, as deep below as the call's is.
+const CS_SETUP_SP: u32 = 0x804E_EA80;
+
+fn cs_frame(call: &Call) -> u32 {
+    melee_sim::game::gr::setup::SETUP_FRAME
+        .wrapping_add(call.regs.gpr[1])
+        .wrapping_sub(CS_SETUP_SP)
+}
+
+/// The start hooks' list left out (`stage_info.x6A4`): the castle's start hook runs from
+/// `Ground_801C0FB8`'s loop, which frees each node after its call and clears the list's head
+/// only after the loop, so the objects the hook makes take the lifts' freed node, which nothing
+/// reads, and a call made in it finds a list ending in another object's memory. Without the
+/// head neither side keeps the nodes, and a node added (the setup's) starts a list of its own
+/// on both.
+fn cs_saved(c: &mut Call, _: usize) {
+    poke_u32(c, STAGE_INFO + 0x6A4, 0);
+}
+
+/// A function taking its stage object, as a check's port.
+fn cs_of(
+    f: fn(&mut Running, melee_sim::hsd::gobj::GObjId),
+) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, maps: &Maps, call: &Call| {
+        f(r, gobj_arg(maps, call));
+        Ret::Nothing
+    }
+}
+
+/// A flag's chain from its address in the castle's variables: the castle's `Ground` and which.
+fn cs_flag(maps: &Maps, a: u32) -> (melee_sim::game::handles::GroundId, usize) {
+    for (&gp, &g) in &maps.grounds {
+        let first = gp + 0xC4 + 0x1C;
+        if a >= first && a < first + 12 * 0x14 && (a - first).is_multiple_of(0x14) {
+            return (g, ((a - first) / 0x14) as usize);
+        }
+    }
+    panic!("{a:#x} isn't a flag's chain")
+}
+
+#[test]
+fn castle_setup() {
+    let d = dir(CS);
+    // Every check runs, and the test fails naming each that differed.
+    let mut failed: Vec<&str> = Vec::new();
+    let mut each = |name: &'static str, check: &dyn Fn()| {
+        if std::panic::catch_unwind(std::panic::AssertUnwindSafe(check)).is_err() {
+            failed.push(name);
+        }
+    };
+    for f in ["grCastle_801CD37C", "grCastle_801CD4A4"] {
+        each(f, &|| check_calls_with(&d, f, 1, &cs_saved, &event));
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        castle::create(r, call.regs.gpr[3] as i32, cs_frame(call));
+        Ret::Nothing
+    };
+    each("grCastle_801CD4D0", &|| {
+        check_calls_with(&d, "grCastle_801CD4D0", 1, &cs_saved, &create)
+    });
+    for f in [
+        "grCastle_801CD5BC",
+        "grCastle_801CD610",
+        "grCastle_801CD658",
+        "grCastle_801CD9B4",
+        "grCastle_801CDA0C",
+        "grCastle_801CE260",
+        "grCastle_801CE7E8",
+        "grCastle_801CE8E8",
+        "grCastle_801CEACC",
+        "grCastle_801CF0F4",
+    ] {
+        each(f, &|| check_calls_with(&d, f, 1, &cs_saved, &by_address));
+    }
+    each("grCastle_801CF7B0", &|| {
+        check_calls_with(
+            &d,
+            "grCastle_801CF7B0",
+            1,
+            &cs_saved,
+            &cs_of(castle::init_switches),
+        )
+    });
+    each("grCastle_801CDFD8", &|| {
+        check_calls_with(
+            &d,
+            "grCastle_801CDFD8",
+            1,
+            &cs_saved,
+            &cs_of(castle::reset_bill_wait),
+        )
+    });
+    // The flags' chains from the archive's description, their swing and their release.
+    let chain = |r: &mut Running, maps: &Maps, call: &Call| {
+        let root = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let archive = melee_sim::game::gr::datfiles::main_archive(r.game).archive;
+        let offset = (r.data.get(archive))
+            .public("dynamicsdata_flag6")
+            .expect("the flags' dynamics");
+        let src = melee_data::archive::DataRef { archive, offset };
+        let (g, i) = cs_flag(maps, call.regs.gpr[5]);
+        castle::chain(r, root, src, g, i);
+        Ret::Nothing
+    };
+    each("grLib_801C9B20", &|| {
+        check_calls_with(&d, "grLib_801C9B20", 1, &cs_saved, &chain)
+    });
+    let swing = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (g, i) = cs_flag(maps, call.regs.gpr[3]);
+        castle::swing(r, g, i);
+        Ret::Nothing
+    };
+    each("grLib_801C9B8C", &|| {
+        check_calls_with(&d, "grLib_801C9B8C", 1, &cs_saved, &swing)
+    });
+    let free = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (g, i) = cs_flag(maps, call.regs.gpr[3]);
+        let mut desc = r.game.grounds[g.0].u.castle().dynamics[i].clone();
+        melee_sim::game::gr::grlib::free_chain(r.game, &mut desc);
+        r.game.grounds[g.0].u.castle().dynamics[i] = desc;
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grLib_801C9B6C");
+    each("grLib_801C9B6C", &|| {
+        check_calls_with(&d, "grLib_801C9B8C", 1, &retarget(t), &free)
+    });
+    assert!(failed.is_empty(), "these differ: {failed:?}");
+}
+
+/// The castle's process and its parts: the switches' and Bullet Bills' timers, a path's draw,
+/// the wind's steering and strength and the flags' turn, each also from states set to its
+/// branches.
+#[test]
+fn castle_stage() {
+    let d = dir(CS);
+    check_calls_with(&d, "grCastle_801CD8A8", 1, &cs_saved, &by_address);
+    // The switches' timer: none out and one out at rest or not, the wait running out, the
+    // last switch's weight divided.
+    let timer = cs_of(castle::switch_timer);
+    check_calls_with(&d, "grCastle_801CF868", 1, &cs_saved, &timer);
+    for (slot, wait, state) in [
+        (-1i32, 0u32, 0u32),
+        (0, 0, 0),
+        (1, 0, 0),
+        (2, 0, 0),
+        (1, 0, 3),
+        (2, 5, 0),
+        (-1, 1, 0),
+        (-1, 0x8000, 0),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let v = vars(c);
+            poke_u16(c, v + 0xC, slot as u16);
+            poke_u16(c, v + 0xE, wait as u16);
+            let s = if slot >= 0 {
+                peek_u32(c, v + 4 * slot as u32)
+            } else {
+                0
+            };
+            if s != 0 {
+                let sv = peek_u32(c, s + 0x2C) + 0xC4;
+                poke_u16(c, sv, state as u16);
+            }
+            // A draw's other outcomes: the seed moved on by the call's index.
+            let seed = leaf_check::sym("seed");
+            let w = peek_u32(c, seed);
+            poke_u32(c, seed, w.wrapping_add(k as u32 * 0x9E37_79B9));
+        };
+        check_calls_with(&d, "grCastle_801CF868", 1, &set, &timer);
+    }
+    // The Bullet Bills' timer, due and not, as the wait runs out.
+    let bills = cs_of(castle::bill_timer);
+    check_calls_with(&d, "grCastle_801CE19C", 1, &cs_saved, &bills);
+    for (due, wait) in [(true, 0u16), (true, 0xFFFF), (false, 0xFFFF), (true, 7)] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let v = vars(c);
+            poke_u8(c, v + 0x1A, if due { 0x80 } else { 0 });
+            poke_u16(c, v + 0x10, wait);
+        };
+        check_calls_with(&d, "grCastle_801CE19C", 1, &set, &bills);
+    }
+    // A path's draw with the last three paths each way, none flown and the ring's turn at
+    // each place.
+    let pick = |r: &mut Running, maps: &Maps, call: &Call| {
+        Ret::Int(castle::pick_path(r, gobj_arg(maps, call)) as u32)
+    };
+    let t = leaf_check::sym("grCastle_801CE054");
+    for (recent, at) in [
+        ([-1i16, -1, -1], 0u16),
+        ([0, 1, 2], 1),
+        ([6, 7, 8], 2),
+        ([3, 3, 3], 0),
+        ([8, 0, 4], 2),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.addr = t;
+            let v = vars(c);
+            for (i, p) in recent.iter().enumerate() {
+                poke_u16(c, v + 0x14 + 2 * i as u32, *p as u16);
+            }
+            poke_u16(c, v + 0x12, at);
+        };
+        check_calls_with(&d, "grCastle_801CE19C", 1, &set, &pick);
+    }
+    // The wind's steering: on and past its turns and gusts, with gusts on and off, near its
+    // limits.
+    let steer = |r: &mut Running, _: &Maps, _: &Call| {
+        castle::steer_wind(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCastle_801D0BBC", 1, &cs_saved, &steer);
+    for (age, gust, x, step) in [
+        (0u32, 0u8, 1.0f32, 0.017_453_292f32),
+        (30, 1, 0.5, -0.017_453_292),
+        (300, 1, 0.51, 0.017_453_292),
+        (600, 0, 0.49, 0.017_453_292),
+        (31, 0, -1.0, -0.017_453_292),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let w = peek_u32(c, leaf_check::sym("grCs_804D6974"));
+            poke_u32(c, w + 0x30, age);
+            poke_u32(c, w + 4, x.to_bits());
+            poke_u32(c, w + 0xC, (1.0f32 - x * x).max(0.0).sqrt().to_bits());
+            poke_u8(c, leaf_check::sym("grCs_804D45E4"), gust);
+            poke_u32(c, leaf_check::sym("grCs_804D45E0"), step.to_bits());
+        };
+        check_calls_with(&d, "grCastle_801D0BBC", 1, &set, &steer);
+    }
+    let rescale = |r: &mut Running, _: &Maps, _: &Call| {
+        castle::rescale_wind(r);
+        Ret::Nothing
+    };
+    for gust in [None, Some(0u8), Some(1)] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            if let Some(g) = gust {
+                poke_u8(c, leaf_check::sym("grCs_804D45E4"), g);
+            }
+        };
+        check_calls_with(&d, "grCastle_801D0D24", 1, &set, &rescale);
+    }
+    // A flag's turn into the wind, as saved and from poles turned every way, a half turn and
+    // past it.
+    let turn = |r: &mut Running, maps: &Maps, call: &Call| {
+        castle::turn_to_wind(r, maps.jobjs.get(&call.regs.gpr[3]).copied());
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grCastle_801D0D84", 1, &cs_saved, &turn);
+    for y in [0.0f32, 1.5, -1.5, 3.13, -3.13, 3.2, -3.2, 6.0] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let j = c.regs.gpr[3];
+            poke_u32(c, j + 0x1C + 4, y.to_bits());
+        };
+        check_calls_with(&d, "grCastle_801D0D84", 1, &set, &turn);
+    }
+}
+
+/// The lifts' process, every lift in each state stood on and not, at and past its waits, near
+/// the top and the bottom, and a lift's joint touched by each kind of collision.
+#[test]
+fn castle_lifts() {
+    for d in [dir(CS), dir(CSW)] {
+        check_calls_with(&d, "grCastle_801CDC44", 1, &cs_saved, &by_address);
+        for state in 0..5u16 {
+            for (wind, timer, at) in [
+                (0.0f32, 0u16, 0.5f32),
+                (1.0, 0, 0.5),
+                (2.0, 5000, 0.999),
+                (0.0, 5000, 0.001),
+                (0.5, 0x7FFF, 0.0),
+                // Between the sink's wait (x3C, 20) and the rise's (x38, 30).
+                (1.0, 25, 0.5),
+                (0.0, 25, 0.5),
+                (0.0, 0x8000, 1.0),
+            ] {
+                let set = move |c: &mut Call, k: usize| {
+                    cs_saved(c, k);
+                    let v = vars(c);
+                    let p = peek_u32(c, CS_PARAM);
+                    let (top, bottom) = (f32_at(c, p + 0x10), f32_at(c, p + 0x14));
+                    for i in 0..2 {
+                        let l = v + 0x10 * i;
+                        poke_u16(c, l + 8, state);
+                        poke_u16(c, l + 0xA, timer);
+                        poke_u32(c, l + 0xC, wind.to_bits());
+                        poke_u32(c, l + 4, (bottom + (top - bottom) * at).to_bits());
+                    }
+                };
+                check_calls_with(&d, "grCastle_801CDC44", 1, &set, &by_address);
+            }
+        }
+        let touch = |r: &mut Running, maps: &Maps, call: &Call| {
+            let g = *maps
+                .grounds
+                .get(&call.regs.gpr[3])
+                .expect("the lifts' Ground");
+            let kind = peek_u32(call, call.regs.gpr[5] + 0x34) >> 27 & 0xF;
+            let (joint, x50) = (call.regs.gpr[4] as i32, call.regs.gpr[6] as i32);
+            castle::lift_touched(&mut r.game.grounds[g.0], joint, kind, x50);
+            Ret::Nothing
+        };
+        let prepares: [&Prepare; 4] = [
+            &cs_saved,
+            &|c, k| rc_kind(c, (k % 5) as u32),
+            &|c, _| c.regs.gpr[4] ^= 1,
+            &|c, _| c.regs.gpr[6] = 2500,
+        ];
+        for p in prepares {
+            check_calls_with(&d, "grCastle_801CF750", 1, p, &touch);
+        }
+    }
+}
+
+/// The Bullet Bills, their blasters and blasts: each process as saved and from its branches
+/// (the blaster's wait run out, the flight ended, the lingering run out), the blaster's place,
+/// and where the first Bullet Bill is.
+#[test]
+fn castle_bills() {
+    let d = dir(CS);
+    check_calls_with(&d, "grCastle_801CE578", 1, &cs_saved, &by_address);
+    // In flight (its blaster's wait run out, with none yet, or not), and lingering (run out or
+    // not). A Bullet Bill whose flight has ended keeps pointing at its freed blaster, so the
+    // flight's changes leave those as saved.
+    for (delay, linger, done) in [
+        (0xFFFFu16, 3u16, false),
+        (4, 3, false),
+        (0xFFFF, 0xFFFF, true),
+        (4, 0, true),
+        (4, 4, true),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let v = vars(c);
+            let ended = peek_u32(c, v) & 0x8000_0000 != 0;
+            if done {
+                poke_u8(c, v, 0x80);
+                poke_u16(c, v + 4, linger);
+            } else if !ended {
+                poke_u16(c, v + 6, delay);
+                if delay == 0xFFFF {
+                    poke_u32(c, v + 8, 0);
+                }
+            }
+        };
+        check_calls_with(&d, "grCastle_801CE578", 1, &set, &by_address);
+    }
+    check_calls_with(
+        &d,
+        "grCastle_801CE3AC",
+        1,
+        &cs_saved,
+        &cs_of(castle::place_blaster),
+    );
+    check_calls_with(&d, "grCastle_801CE860", 1, &cs_saved, &by_address);
+    for anim in 0..5u32 {
+        for timer in [0xFFFFu16, 3] {
+            let set = move |c: &mut Call, k: usize| {
+                cs_saved(c, k);
+                let v = vars(c);
+                poke_u32(c, v, anim.min(3));
+                poke_u16(c, v + 4, timer);
+            };
+            check_calls_with(&d, "grCastle_801CE860", 1, &set, &by_address);
+        }
+    }
+    check_calls_with(&d, "grCastle_801CE9E8", 1, &cs_saved, &by_address);
+    let at = |r: &mut Running, _: &Maps, _: &Call| {
+        let found = castle::bill_position(r.game, r.data);
+        if let Some(v) = found {
+            r.game.stage_info.x730 = v;
+        }
+        Ret::Int(u32::from(found.is_some()))
+    };
+    // The place goes where the prepare points it: the stage's barrel place, compared state
+    // nothing on Peach's Castle uses.
+    let into = |c: &mut Call, _: usize| c.regs.gpr[3] = leaf_check::sym("stage_info") + 0x730;
+    check_calls_with(&d, "grCastle_801CDF54", 1, &into, &at);
+}
+
+/// The blocks' process in each state with its timer at and past its ends, their growing and
+/// shrinking with items on and off, bumped blocks at every step and state, and their render
+/// callback.
+#[test]
+fn castle_blocks() {
+    let d = dir(CS);
+    check_calls_with(&d, "grCastle_801CEF04", 1, &cs_saved, &by_address);
+    for state in 0..6u16 {
+        // 60 and 61: the flicker's limit (x44) and past it.
+        for timer in [0u32, 0xFFFF_FFFF, 5, 60, 61, 0x7FFF_FFFF] {
+            let set = move |c: &mut Call, k: usize| {
+                cs_saved(c, k);
+                let v = vars(c);
+                poke_u16(c, v, state);
+                poke_u32(c, v + 8, timer);
+            };
+            check_calls_with(&d, "grCastle_801CEF04", 1, &set, &by_address);
+        }
+    }
+    let grow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let done = castle::grow(r, gobj_arg(maps, call), call.regs.gpr[4] != 0);
+        Ret::Int(u32::from(done))
+    };
+    // Items on (frequency 1) and off, with the bob-omb rain on and off.
+    let items = |c: &mut Call, freq: u8, rain: u8| {
+        // `controller.start` (`gm_GetStartMeleeRules`): `item_freq` and `x6`.
+        let start = leaf_check::sym("controller") + 0x24C8;
+        poke_u8(c, start + 0xB, freq);
+        poke_u8(c, start + 6, rain);
+    };
+    for p in [
+        &cs_saved as &Prepare,
+        &|c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.regs.gpr[4] ^= 1;
+        },
+        &move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.regs.gpr[4] = 1;
+            items(c, 1, 0);
+        },
+        &move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.regs.gpr[4] = 1;
+            items(c, 1, 1);
+        },
+    ] {
+        check_calls_with(&d, "grCastle_801CFBD4", 1, p, &grow);
+    }
+    let bump = cs_of(castle::bump);
+    check_calls_with(&d, "grCastle_801D02B8", 1, &cs_saved, &bump);
+    for state in 0..5u16 {
+        for step in 0..6u8 {
+            let set = move |c: &mut Call, k: usize| {
+                cs_saved(c, k);
+                let v = vars(c);
+                poke_u16(c, v, state);
+                for i in 0..5 {
+                    poke_u8(
+                        c,
+                        v + 0x70 + i,
+                        u8::from(!(i as usize + k).is_multiple_of(3)),
+                    );
+                    poke_u8(c, v + 0x75 + i, step);
+                }
+            };
+            check_calls_with(&d, "grCastle_801D02B8", 1, &set, &bump);
+        }
+    }
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        castle::render_blocks(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let setup = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    for p in [
+        &cs_saved as &Prepare,
+        &|c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.regs.gpr[4] ^= 3;
+        },
+        &|c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let v = vars(c);
+            poke_u16(c, v + 4, 1);
+        },
+        // The blocks shown (out in the match, they draw), flickered on and off.
+        &|c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let v = vars(c);
+            for i in 0..5 {
+                let j = peek_u32(c, v + 0xC + 4 * i);
+                if j != 0 {
+                    let fl = peek_u32(c, j + 0x14);
+                    poke_u32(c, j + 0x14, fl & !0x10);
+                }
+            }
+            poke_u16(c, v + 4, (k % 2) as u16);
+        },
+    ] {
+        for d in [&d, &dir(CSW)] {
+            leaf_check::calls::check_calls_in(d, "grCastle_801D0520", 1, p, &setup, &render);
+        }
+    }
+}
+
+/// A block's item hit and touched (`grCastle_801D0550` to `801D08AC`): hit, and touched by a
+/// fighter and by a stage item (its own, which does nothing). With items off the blocks never
+/// hold items (only a shown ? block takes one), and no capture holds them out with items, so
+/// the calls come from a Bullet Bill's process: the bill's hitbox item made a block's of the
+/// first switch's blocks (map 17), with the item in r3 and the blocks' `Ground` in r4 (the
+/// callbacks only destroy it). A call whose Bullet Bill has no item left runs the blocks'
+/// empty destroy callback instead.
+#[test]
+fn castle_block_hits() {
+    let d = dir(CS);
+    let from = "grCastle_801CE578";
+    let empty = leaf_check::sym("grCastle_801CF0F0");
+    let names = [
+        ("grCastle_801D0550", "grCastle_801D06CC"),
+        ("grCastle_801D059C", "grCastle_801D0744"),
+        ("grCastle_801D05E8", "grCastle_801D07BC"),
+        ("grCastle_801D0634", "grCastle_801D0834"),
+        ("grCastle_801D0680", "grCastle_801D08AC"),
+    ];
+    // The bill's item made block `i`'s, the call retargeted to `t` with the item in r3, the
+    // blocks' `Ground` in r4 and the toucher in r5.
+    let to = move |c: &mut Call, i: usize, t: u32, fighter: bool| {
+        cs_saved(c, 0);
+        let item = peek_u32(c, vars(c) + 0xC);
+        let blocks = peek_u32(c, STAGE_INFO + 0x180 + 4 * 17);
+        if item == 0 || blocks == 0 {
+            c.addr = empty;
+            return;
+        }
+        let gp = peek_u32(c, blocks + 0x2C);
+        poke_u32(c, gp + 0xC4 + 0x48 + 4 * i as u32, item);
+        let toucher = if fighter {
+            let heads = peek_u32(c, leaf_check::sym("HSD_GObjPLinkHead"));
+            peek_u32(c, heads + 4 * 8)
+        } else {
+            item
+        };
+        c.addr = t;
+        c.regs.gpr[3] = item;
+        c.regs.gpr[4] = gp;
+        c.regs.gpr[5] = toucher;
+    };
+    for (i, (hit, touched)) in names.into_iter().enumerate() {
+        let ht = leaf_check::sym(hit);
+        let hit_port = move |r: &mut Running, maps: &Maps, call: &Call| {
+            if call.addr == empty {
+                return by_address(r, maps, call);
+            }
+            let g = *maps
+                .grounds
+                .get(&call.regs.gpr[4])
+                .expect("the blocks' Ground");
+            castle::block_hit(r, g, i);
+            Ret::Nothing
+        };
+        check_calls_with(&d, from, 1, &move |c, _| to(c, i, ht, false), &hit_port);
+        let tt = leaf_check::sym(touched);
+        let touch_port = move |r: &mut Running, maps: &Maps, call: &Call| {
+            if call.addr == empty {
+                return by_address(r, maps, call);
+            }
+            let g = *maps
+                .grounds
+                .get(&call.regs.gpr[4])
+                .expect("the blocks' Ground");
+            let by = maps.gobjs.get(&call.regs.gpr[5]).copied();
+            castle::block_touched(r, g, by, i);
+            Ret::Nothing
+        };
+        for fighter in [true, false] {
+            check_calls_with(&d, from, 1, &move |c, _| to(c, i, tt, fighter), &touch_port);
+        }
+    }
+}
+
+/// The switches' process in each state with its waits at and past their ends, and the
+/// switches pressed by a hit and a touch.
+#[test]
+fn castle_switches() {
+    let d = dir(CS);
+    check_calls_with(&d, "grCastle_801CF308", 1, &cs_saved, &by_address);
+    for state in 0..7u16 {
+        for (blink, delay, count) in [
+            (0u16, 0u16, 0u16),
+            (36, 0, 0xFFFF),
+            (5, 3, 2),
+            (0xFFFF, 0, 0),
+        ] {
+            let set = move |c: &mut Call, k: usize| {
+                cs_saved(c, k);
+                let v = vars(c);
+                // A switch's spot: its own when it has one, else the castle's part 16.
+                if peek_u32(c, v + 0x10) == 0 {
+                    let castle = peek_u32(c, STAGE_INFO + 0x180 + 4 * 3);
+                    poke_u32(c, v + 0x10, nth_jobj(c, castle, 16));
+                }
+                poke_u16(c, v, state);
+                poke_u16(c, v + 4, blink);
+                poke_u16(c, v + 6, delay);
+                poke_u16(c, v + 8, count);
+            };
+            check_calls_with(&d, "grCastle_801CF308", 1, &set, &by_address);
+        }
+    }
+    // Sent out (state 1) with its model's scale off its rest: the part reset puts it back.
+    let resized = |c: &mut Call, k: usize| {
+        cs_saved(c, k);
+        let v = vars(c);
+        if peek_u32(c, v + 0x10) == 0 {
+            let castle = peek_u32(c, STAGE_INFO + 0x180 + 4 * 3);
+            poke_u32(c, v + 0x10, nth_jobj(c, castle, 16));
+        }
+        poke_u16(c, v, 1);
+        let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+        poke_u32(c, j + 0x2C + 4, 2.0f32.to_bits());
+    };
+    check_calls_with(&d, "grCastle_801CF308", 1, &resized, &by_address);
+    let hit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[4])
+            .expect("the switch's Ground");
+        let item = *maps
+            .gobjs
+            .get(&call.regs.gpr[3])
+            .expect("the switch's item");
+        let by = maps.gobjs.get(&call.regs.gpr[6]).copied();
+        castle::switch_hit(r, item, g, Vec3::ZERO, by);
+        Ret::Nothing
+    };
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[4])
+            .expect("the switch's Ground");
+        let item = *maps
+            .gobjs
+            .get(&call.regs.gpr[3])
+            .expect("the switch's item");
+        let by = maps.gobjs.get(&call.regs.gpr[5]).copied();
+        castle::switch_touched(r, item, g, by);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "fn_801CFAFC", 0, &cs_saved, &hit);
+    check_calls_with(&d, "fn_801CFB68", 0, &cs_saved, &touched);
+    // From a hit's captures: no fighter, and the touch with the hit's fighter.
+    check_calls_with(&d, "fn_801CFAFC", 1, &|c, _| c.regs.gpr[6] = 0, &hit);
+    let t = leaf_check::sym("fn_801CFB68");
+    let as_touch = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[5] = c.regs.gpr[6];
+    };
+    check_calls_with(&d, "fn_801CFAFC", 1, &as_touch, &touched);
+}
+
+/// The moat's wind device on a fighter above the surface, below it, falling fast and slowly,
+/// and just falling in (with the splash).
+#[test]
+fn castle_moat() {
+    for d in [dir(CS), dir(CSW)] {
+        // The push goes where the prepares point the callback's vector: the stage's barrel
+        // place, compared state that nothing on Peach's Castle uses.
+        let moat = |r: &mut Running, maps: &Maps, call: &Call| {
+            let ground = gobj_arg(maps, call);
+            let fighter = *maps
+                .gobjs
+                .get(&call.regs.gpr[4])
+                .expect("the fighter's GObj");
+            let push = castle::moat(r, ground, fighter);
+            if let Some(v) = push {
+                r.game.stage_info.x730 = v;
+            }
+            Ret::Int(u32::from(push.is_some()))
+        };
+        let water = |c: &mut Call| c.regs.gpr[5] = leaf_check::sym("stage_info") + 0x730;
+        let place = move |c: &mut Call, now: f32, before: f32, dy: f32| {
+            water(c);
+            let surface = 14.0 * cs_scale(c);
+            let fp = peek_u32(c, c.regs.gpr[4] + 0x2C);
+            poke_u32(c, fp + 0xB0 + 4, (surface + now).to_bits());
+            poke_u32(c, fp + 0xBC + 4, (surface + before).to_bits());
+            poke_u32(c, fp + 0xC8 + 4, dy.to_bits());
+        };
+        let prepares: [&Prepare; 6] = [
+            &move |c, _| water(c),
+            &move |c, _| place(c, 5.0, 5.0, 0.0),
+            &move |c, _| place(c, -5.0, -3.0, -2.0),
+            &move |c, _| place(c, -5.0, -3.0, -0.5),
+            &move |c, _| place(c, -2.0, 1.0, -3.0),
+            &move |c, _| place(c, -0.0, 0.0, 0.0),
+        ];
+        for p in prepares {
+            check_calls_with(&d, "grCastle_801D09B8", 1, p, &moat);
+        }
+    }
+    // The splashes the walkers make.
+    let splash = |r: &mut Running, _: &Maps, call: &Call| {
+        let at = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
+        castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    check_calls_with(&dir(CSW), "grCastle_801D0A9C", 1, &cs_saved, &splash);
+}
+
+#[test]
+fn castle_shadow() {
+    let d = dir(CS);
+    fn ours(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+        let (pos, j) = shadow_args(maps, call);
+        castle::check_shadow_render(r.game, r.data, pos, j)
+    }
+    check_shadow(&d, "grCastle_801D0B0C", ours, -1.0);
+    // Right of 192 below 137 (in the stage's scale), and on either edge.
+    let shadow =
+        |r: &mut Running, maps: &Maps, call: &Call| Ret::Int(u32::from(ours(r, maps, call)));
+    for (x, y) in [
+        (200.0f32, 100.0f32),
+        (192.0, 100.0),
+        (200.0, 137.0),
+        (100.0, 100.0),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            let s = cs_scale(c);
+            let p = c.regs.gpr[3];
+            poke_u32(c, p, (x * s).to_bits());
+            poke_u32(c, p + 4, (y * s).to_bits());
+        };
+        check_calls_with(&d, "grCastle_801D0B0C", 1, &set, &shadow);
+    }
+}
+
+/// The callbacks no capture reaches, from the castle's process's captures: the empty
+/// processes and destroy callbacks, the load and demo hooks, the Bullet Bills' and blasts'
+/// item callbacks, the castle's destroy callback and render callback, the splash and the
+/// camera's floor.
+#[test]
+fn castle_unreached_callbacks() {
+    let d = dir(CS);
+    let from = "grCastle_801CD8A8";
+    for name in [
+        "grCastle_801CD608",
+        "grCastle_801CD60C",
+        "grCastle_801CDF50",
+        "grCastle_801CE7E4",
+        "grCastle_801CE8E4",
+        "grCastle_801CEAC8",
+        "grCastle_801CF0F0",
+        "grCastle_801CF74C",
+        "grCastle_801CD960",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let t = leaf_check::sym("grCastle_801CD4A0");
+    check_calls_with(&d, from, 1, &retarget(t), &event);
+    let t = leaf_check::sym("grCastle_801CD338");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
+    let nothing = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = melee_sim::game::gr::ground::ground_of(r.game, gobj_arg(maps, call));
+        castle::item_nothing(r, gobj_arg(maps, call), g);
+        Ret::Nothing
+    };
+    for name in ["fn_801CE3A0", "fn_801CE9DC"] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &nothing);
+    }
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        castle::render_stage(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let setup = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    let t = leaf_check::sym("fn_801D0924");
+    for pass in [0u32, 1, 2] {
+        let set = move |c: &mut Call, k: usize| {
+            cs_saved(c, k);
+            c.addr = t;
+            c.regs.gpr[4] = pass;
+        };
+        leaf_check::calls::check_calls_in(&d, from, 1, &set, &setup, &render);
+    }
+    let splash = |r: &mut Running, _: &Maps, call: &Call| {
+        let at = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, at), f32_at(call, at + 4), f32_at(call, at + 8));
+        castle::splash(r, pos, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grCastle_801D0A9C");
+    let prep = move |c: &mut Call, k: usize| {
+        c.addr = t;
+        c.regs.fpr[1].ps0 = [0.5, 1.0, 2.0][k % 3];
+        let at = leaf_check::sym("stage_info") + 0x730;
+        poke_u32(c, at, (-40.0f32).to_bits());
+        poke_u32(c, at + 4, 7.0f32.to_bits());
+        poke_u32(c, at + 8, 0);
+        c.regs.gpr[3] = at;
+    };
+    check_calls_with(&d, from, 1, &prep, &splash);
+    let floor =
+        |r: &mut Running, _: &Maps, _: &Call| Ret::Float(f64::from(castle::camera_floor(r.game)));
+    let t = leaf_check::sym("grCastle_801D0FF0");
+    check_calls_with(&d, from, 1, &retarget(t), &floor);
 }

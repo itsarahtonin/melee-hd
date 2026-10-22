@@ -260,7 +260,7 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 fn eye_floor(game: &Game) -> f64 {
     let s = &game.stage_info;
     match s.grkind {
-        2 => unported("grCastle_801D0FF0"),
+        2 => reg(super::gr::castle::camera_floor(game)),
         14 => super::gr::corneria::camera_floor(game),
         8 => reg(super::gr::zebes::camera_floor(s)),
         5 => reg(super::gr::garden::camera_floor()),

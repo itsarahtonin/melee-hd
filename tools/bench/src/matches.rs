@@ -950,6 +950,26 @@ pub fn barrel_set() -> Vec<Match> {
     ]
 }
 
+/// The castle set: Princess Peach's Castle with two walkers ([`walker_pad`]), one off each
+/// side, four minutes, items off, so fighters ride its lifts and fall past its moat, which the
+/// level 9 AI's stage match never did (it recovers too well).
+pub fn castle_set() -> Vec<Match> {
+    let w = |character, side| Player {
+        character,
+        costume: 0,
+        control: Control::Walker { side },
+        team: None,
+    };
+    vec![Match {
+        name: Cow::Borrowed("castle-walkers"),
+        stage: PEACHS_CASTLE,
+        players: Cow::Owned(vec![w(FOX, -1), w(MARTH, 1)]),
+        seed: 0x1F0F_0703,
+        rules: Rules::Time { time_limit: 240 },
+        items: Items::OFF,
+    }]
+}
+
 /// The items toggle's leftovers (docs/player.md, "Items toggle: what's left", tasks 1 to 3):
 /// paths the families' matches never took. Two mixed matches at item frequency very high (4),
 /// three minutes each, of the kinds whose fighter paths were left (a Bob-omb lit in the hand,
@@ -2373,6 +2393,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("cpu-approach", cpu_approach_set),
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
+    ("castle", castle_set),
     ("leftovers", leftovers_set),
     ("pokemon", pokemon_set),
     ("monsters", monsters_set),

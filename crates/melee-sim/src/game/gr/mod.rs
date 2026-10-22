@@ -6,6 +6,7 @@
 
 pub mod anime;
 pub mod battle;
+pub mod castle;
 pub mod corneria;
 pub mod data;
 pub mod datfiles;
@@ -63,6 +64,8 @@ use crate::hsd::pool::Pool;
 pub const GR_KIND_PSTADIUM: i32 = 16;
 /// `Gr_Kind_Kraid`, Brinstar Depths.
 pub const GR_KIND_KRAID: i32 = 9;
+/// `Gr_Kind_Castle`, Princess Peach's Castle.
+pub const GR_KIND_CASTLE: i32 = 2;
 /// `Gr_Kind_RCruise`, Rainbow Cruise.
 pub const GR_KIND_RCRUISE: i32 = 3;
 /// `Gr_Kind_Pura`, Poké Floats.
@@ -265,6 +268,10 @@ pub struct Globals {
     pub inishie2_yakumono: Option<DataRef>,
     /// Poké Floats' `yakumono_param`, which nothing reads.
     pub pura_yakumono: Option<DataRef>,
+    /// Princess Peach's Castle's `yakumono_param` (`grCastle_YakumonoParam`).
+    pub castle_yakumono: Option<DataRef>,
+    /// Princess Peach's Castle's statics besides it.
+    pub castle: castle::Globals,
     /// The joints Poké Floats' collision vertices follow (`grPu_803E6C0C[i].jobj`, written
     /// into the executable's table at the stage's setup): empty, all null, until a Poké Floats
     /// setup first writes it, then [`pura::VTX_COUNT`] entries.
@@ -438,6 +445,13 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_VENOM, 7) => VarsKind::VenomShip,
         (GR_KIND_VENOM, 8) => VarsKind::StarFoxTalk,
         (GR_KIND_VENOM, 10..=15) => VarsKind::ArwingColl,
+        (GR_KIND_CASTLE, 1) => VarsKind::CastleBlast,
+        (GR_KIND_CASTLE, 2) => VarsKind::CastleBlaster,
+        (GR_KIND_CASTLE, 3) => VarsKind::Castle,
+        (GR_KIND_CASTLE, 5 | 7 | 17) => VarsKind::CastleBlocks,
+        (GR_KIND_CASTLE, 6) => VarsKind::CastleLifts,
+        (GR_KIND_CASTLE, 8..=16) => VarsKind::CastleBill,
+        (GR_KIND_CASTLE, 18..=20) => VarsKind::CastleSwitch,
         _ => VarsKind::Bytes,
     }
 }
@@ -449,6 +463,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
         corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
+        castle::BILL_DEALT | castle::BLAST_DEALT => castle::item_nothing(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -473,6 +488,10 @@ pub fn yaku_received(
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
         corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
+        castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),
+        a if castle::block_hit_index(a).is_some() => {
+            castle::block_hit(r, g, castle::block_hit_index(a).expect("a block"))
+        }
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }
@@ -485,10 +504,17 @@ pub fn yaku_touched(
     cb: CodeRef,
     item: GObjId,
     g: GroundId,
-    _toucher: Option<GObjId>,
+    toucher: Option<GObjId>,
 ) {
     match cb.0 {
         greens::BLOCK_TOUCHED => greens::block_item_nothing(r, item, g),
+        castle::SWITCH_TOUCHED => castle::switch_touched(r, item, g, toucher),
+        a if castle::block_touched_index(a).is_some() => castle::block_touched(
+            r,
+            g,
+            toucher,
+            castle::block_touched_index(a).expect("a block"),
+        ),
         other => {
             super::code::unported_call(&format!("a stage item's touch callback {other:#010x}"))
         }

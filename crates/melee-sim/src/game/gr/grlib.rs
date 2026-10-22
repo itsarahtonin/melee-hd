@@ -68,6 +68,12 @@ pub fn item_wind(game: &Game, v: &mut crate::vec::Vec3) -> bool {
     false
 }
 
+/// Frees a stage object's dynamics chain, `grLib_801C9B6C` (`lb_8000FD18`).
+#[doc(alias = "grLib_801C9B6C")]
+pub fn free_chain(game: &mut Game, desc: &mut crate::game::structs::DynamicsDesc) {
+    game.free_dynamics_chain(desc);
+}
+
 /// Whether a stage object's color overlay has ended (`x10_flags.b4`), `grLib_801C96E8`.
 #[doc(alias = "grLib_801C96E8")]
 pub fn overlay_done(game: &Game, gobj: GObjId) -> bool {

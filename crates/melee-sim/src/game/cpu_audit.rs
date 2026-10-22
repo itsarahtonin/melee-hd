@@ -144,7 +144,7 @@ const BEHAVIORS_11_12: &str = "behaviors 11 and 12 are only computer kinds 1, 3 
 const KIND_16: &str = "computer kind 16's jump rule; VS uses kind 4";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
-const NOT_ON_ROSTER: &str = "a stage that isn't on the roster (Big Blue, Peach's Castle)";
+const NOT_ON_ROSTER: &str = "a stage that isn't on the roster (Big Blue)";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
 const NANA_FOLLOWING: &str = "on the frame Nana stops following Popo her behavior is her fallback (x1C, walking), not the DI";
 const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a behavior other than the DI, which alone reads it";
@@ -186,7 +186,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800BA080", NESS_SPAN),
     ("ftCo_800AA320 at a level past 9", LEVELS),
-    ("ftCo_800A229C at Peach's Castle", NOT_ON_ROSTER),
     ("ftCo_800A229C on Big Blue", NOT_ON_ROSTER),
     ("ftCo_800A4768 with no island end", ISLAND_END),
     ("a register left by ftCo_800A7AAC", NANA_FOLLOWING),

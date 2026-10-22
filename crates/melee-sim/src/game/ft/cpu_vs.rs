@@ -114,7 +114,11 @@ impl Running<'_> {
             return Some((2, pos));
         }
         match self.game.stage_info.grkind {
-            GR_KIND_CASTLE => unported_call("ftCo_800A229C at Peach's Castle (grCastle_801CDF54)"),
+            GR_KIND_CASTLE => {
+                if let Some(at) = super::super::gr::castle::bill_position(self.game, self.data) {
+                    return Some((1, at));
+                }
+            }
             GR_KIND_ZEBES => {
                 let (acid, _) = ground::x724_and_step(self.game);
                 let bottom = reg(stage::blast_bottom(self.game));

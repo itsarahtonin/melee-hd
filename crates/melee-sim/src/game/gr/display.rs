@@ -66,6 +66,10 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::venom::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x801D_0B0C => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::castle::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x801D_50C0 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))

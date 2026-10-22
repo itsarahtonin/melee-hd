@@ -745,6 +745,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** would change what Venom draws in the distance; no gameplay.
 - **Source:** `crates/melee-sim/src/game/gr/venom.rs` (`proc_ship`).
 
+### Princess Peach's Castle: a Bullet Bill keeps pointing at its freed blaster
+
+- **Where:** `grCastle_801CE578` (a Bullet Bill's process), `crates/melee-sim/src/game/gr/castle.rs` (`proc_bill`).
+- **Defect:** when the Bullet Bill's flight ends it destroys its blaster (`Ground_801C4A08(gp->u.castle11.xCC)`) but leaves `xCC` holding the freed GObj's address, and every later tick reads it, comparing it with null to decide whether a blaster is still due.
+- **Effect:** none observable: the dangling pointer is only compared with null, never followed, and being non-null it keeps the blaster from coming back, as a cleared field with a done flag would; the Bullet Bill goes once it has lingered.
+- **melee-hd:** modeled: the Bullet Bill keeps the freed blaster's handle, and the comparer pairs it by the freed slot.
+- **Fix:** clear `xCC` after destroying the blaster (the flight's done flag already keeps it from being made again).
+- **Fix impact:** none in play.
+- **Source:** `crates/melee-sim/src/game/gr/castle.rs` (`proc_bill`, "The blaster goes, but the Bullet Bill keeps pointing at it").
+
 ## Camera
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
@@ -961,6 +971,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Stadium's screen without its texture | `grStadium_801D1290`, `game/gr/stadium.rs` | Leaves its stack slot as it was when no texture is found; one always is | `crates/melee-sim/src/game/gr/stadium.rs:309` |
 | Stadium's monitor weights leaving no mode | `grStadium_801D2A60`, `game/gr/stadium.rs` | Draws until the mode differs from the current and last ones, forever if the weights leave none that can | `crates/melee-sim/src/game/gr/stadium.rs:1004`; [engine notes](engine.md#players-codes) (line 273) |
 | A damage display that isn't one | `ifStatus_802F4EDC`, `game/hud/status.rs` | Reads a null display | `crates/melee-sim/src/game/hud/status.rs:342` |
+| Peach's Castle's path draw with no path left | `grCastle_801CE054`, `game/gr/castle.rs` | Takes the first entry of a stack array it never filled when all nine Bullet Bill paths are among the last three flown; only three are ever recorded | `crates/melee-sim/src/game/gr/castle.rs` (`pick_path`) |
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
 | Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |

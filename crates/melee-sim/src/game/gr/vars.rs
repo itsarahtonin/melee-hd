@@ -101,6 +101,13 @@ pub enum VarsKind {
     SmashTaunt,
     VenomPlatform,
     VenomShip,
+    Castle,
+    CastleLifts,
+    CastleBlaster,
+    CastleBlast,
+    CastleBill,
+    CastleBlocks,
+    CastleSwitch,
 }
 
 /// `union GroundVars`.
@@ -174,6 +181,14 @@ pub enum GroundVars {
     RCruiseBlocks(RCruiseBlocksVars),
     /// `grRCruise_GroundVars2::xC4`: the ship's flag's dynamics chain (map 6).
     RCruiseFlag(RCruiseFlagVars),
+    /// Princess Peach's Castle's members ([`CastleVars`] and the others).
+    Castle(CastleVars),
+    CastleLifts(CastleLiftsVars),
+    CastleBlaster(CastleBlasterVars),
+    CastleBlast(CastleBlastVars),
+    CastleBill(CastleBillVars),
+    CastleBlocks(CastleBlocksVars),
+    CastleSwitch(CastleSwitchVars),
     /// `ScrollVars`: Rainbow Cruise's course, which moves the stage under the camera (map 3).
     Scroll(ScrollVars),
     /// `grInishie1_GroundVars`: Mushroom Kingdom's stage (map 3), its brick blocks and its
@@ -2687,6 +2702,13 @@ impl GroundVars {
                     frame: f(at + 0x20),
                 })
             }
+            VarsKind::Castle
+            | VarsKind::CastleLifts
+            | VarsKind::CastleBlaster
+            | VarsKind::CastleBlast
+            | VarsKind::CastleBill
+            | VarsKind::CastleBlocks
+            | VarsKind::CastleSwitch => import_castle(kind, m, at, cx),
             VarsKind::RCruiseFlag => GroundVars::RCruiseFlag(RCruiseFlagVars {
                 xC4: crate::game::structs::DynamicsDesc {
                     data: cx
@@ -5400,6 +5422,15 @@ impl Mirror for GroundVars {
                     cx.compare_handle(&q, "JObjId", j.map(|j| j.0), m.u32(at + 4 * k as u32));
                 }
             }
+            v @ (GroundVars::Castle(_)
+            | GroundVars::CastleLifts(_)
+            | GroundVars::CastleBlaster(_)
+            | GroundVars::CastleBlast(_)
+            | GroundVars::CastleBill(_)
+            | GroundVars::CastleBlocks(_)
+            | GroundVars::CastleSwitch(_)) => {
+                compare_castle(v, m, at, path, cx);
+            }
             GroundVars::RCruiseFlag(v) => {
                 let d = &v.xC4;
                 let ours = (d.count, [d.pos.x, d.pos.y, d.pos.z].map(f32::to_bits));
@@ -6270,4 +6301,532 @@ impl Mirror for GroundVars {
             }
         }
     }
+}
+
+// Princess Peach's Castle's members (`grcastle.c`). Its code reads one object's bytes through
+// several of the union's members; each struct here gathers what one kind of object uses.
+
+/// `grCastle_GroundVars3`: the stage (map 3): the three switches (`xC4`), the switch out
+/// (`xD0`, -1 for none) and the wait before the next (`xD2`), the wait before the next Bullet
+/// Bill (`xD4`) while one is due (`xDE`'s top bit), the last three Bullet Bills' paths (`xD8`
+/// to `xDC`, written in turn at `xD6`), and the flags' dynamics chains (`xE0`, the first four
+/// used).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleVars {
+    pub switches: [Option<GObjId>; 3],
+    pub switch_slot: i16,
+    pub switch_wait: i16,
+    pub bill_wait: i16,
+    pub recent_at: i16,
+    pub recent: [i16; 3],
+    pub xDE: u8,
+    pub dynamics: [crate::game::structs::DynamicsDesc; 12],
+}
+
+impl CastleVars {
+    /// `xDE_b0`: a Bullet Bill is due once the wait runs out.
+    pub fn bill_due(&self) -> bool {
+        self.xDE & 0x80 != 0
+    }
+
+    pub fn set_bill_due(&mut self, on: bool) {
+        self.xDE = (self.xDE & !0x80) | if on { 0x80 } else { 0 };
+    }
+}
+
+/// `grCastle_Platform`: one of the lifts (its joint, height, state and timer, and the
+/// weight on it this tick).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleLift {
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+    pub pos: f32,
+    pub state: i16,
+    pub timer: i16,
+    pub wind: f32,
+}
+
+/// `grCastle_GroundVars8`: the two lifts (map 6).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleLiftsVars {
+    pub plat: [CastleLift; 2],
+}
+
+/// `grCastle_GroundVars`: a Bullet Bill's blaster (map 2): its animation (`xC4`) and the
+/// ticks before the next (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleBlasterVars {
+    pub anim: u32,
+    pub timer: i16,
+}
+
+/// `grArwing_GroundVars`' first two words, as a Bullet Bill's blast (map 1) uses them: its
+/// hitbox item (`xC4`) and camera subject (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleBlastVars {
+    pub item: Option<GObjId>,
+    pub subject: Option<crate::game::handles::CameraBoxId>,
+}
+
+/// `grCastle_GroundVars11` (and `castle5`'s `xC6`): a Bullet Bill (maps 8 to 16): whether its
+/// flight ended (`xC4`'s top bit), its path (`xC6`), the ticks it lingers after (`xC8`) and
+/// before its blaster comes (`xCA`), its blaster (`xCC`), its hitbox item (`xD0`), the stage
+/// object that sent it (`xD4`) and its camera subject (`xD8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleBillVars {
+    pub xC4: u8,
+    pub path: i16,
+    pub linger: i16,
+    pub delay: i16,
+    pub blaster: Option<GObjId>,
+    pub item: Option<GObjId>,
+    pub stage: Option<GObjId>,
+    pub subject: Option<crate::game::handles::CameraBoxId>,
+}
+
+impl CastleBillVars {
+    /// `xC4.b0`: its flight's animation ended.
+    pub fn done(&self) -> bool {
+        self.xC4 & 0x80 != 0
+    }
+
+    pub fn set_done(&mut self, on: bool) {
+        self.xC4 = (self.xC4 & !0x80) | if on { 0x80 } else { 0 };
+    }
+}
+
+/// `grCastle_GroundVars10` (and `castle6`): a switch's blocks (maps 5, 7 and 17): their state
+/// (`xC4`), the flicker as they go (`xC8`) and its timer (`xCC`), each block's joint, its ?
+/// and empty models (`effect_a`, `effect_b`), its hitbox item (`x10C`), collision joint
+/// (`x120`), whether it's bumped (`state`) and how far (`idx`), and its resting height
+/// (`baseY`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleBlocksVars {
+    pub state: i16,
+    pub flicker: i16,
+    pub timer: i32,
+    pub jobjs: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub effect_a: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub effect_b: [Option<crate::hsd::jobj::JObjId>; 5],
+    pub items: [Option<GObjId>; 5],
+    pub joints: [i32; 5],
+    pub bump: [u8; 5],
+    pub step: [u8; 5],
+    pub base_y: [f32; 5],
+}
+
+/// A switch (maps 18 to 20), through `castle7`, `castle5`, `castle`, `castle11` and
+/// `castle8`: its state (`xC4`), its blink's step (`xC8`) and wait (`xCA`), the ticks it shows
+/// once pressed (`xCC`), its blocks (`xD0`), the joint it sits on (`xD4`) and its hitbox item
+/// (`xD8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CastleSwitchVars {
+    pub state: i16,
+    pub blink: i16,
+    pub delay: i16,
+    pub count: i16,
+    pub blocks: Option<GObjId>,
+    pub anchor: Option<crate::hsd::jobj::JObjId>,
+    pub item: Option<GObjId>,
+}
+
+fn castle_dynamics(m: &Mem, a: u32, cx: &mut dyn Cx) -> crate::game::structs::DynamicsDesc {
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    crate::game::structs::DynamicsDesc {
+        data: cx
+            .import_handle("DynamicsId", m.u32(a))
+            .map(crate::game::handles::DynamicsId),
+        count: m.u32(a + 4),
+        pos: crate::vec::Vec3::new(f(a + 8), f(a + 0xC), f(a + 0x10)),
+    }
+}
+
+/// Reads one of Peach's Castle's members from memory at `at`.
+fn import_castle(kind: VarsKind, m: &Mem, at: u32, cx: &mut dyn Cx) -> GroundVars {
+    let gobj = |cx: &mut dyn Cx, a: u32| cx.import_handle("GObjId", m.u32(a)).map(GObjId);
+    let jobj = |cx: &mut dyn Cx, a: u32| {
+        cx.import_handle("JObjId", m.u32(a))
+            .map(crate::hsd::jobj::JObjId)
+    };
+    let subject = |cx: &mut dyn Cx, a: u32| {
+        cx.import_handle("CameraBoxId", m.u32(a))
+            .map(crate::game::handles::CameraBoxId)
+    };
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    let h = |a: u32| m.u16(a) as i16;
+    match kind {
+        VarsKind::Castle => GroundVars::Castle(CastleVars {
+            switches: std::array::from_fn(|i| gobj(cx, at + 4 * i as u32)),
+            switch_slot: h(at + 0xC),
+            switch_wait: h(at + 0xE),
+            bill_wait: h(at + 0x10),
+            recent_at: h(at + 0x12),
+            recent: std::array::from_fn(|i| h(at + 0x14 + 2 * i as u32)),
+            xDE: m.u8(at + 0x1A),
+            dynamics: std::array::from_fn(|i| castle_dynamics(m, at + 0x1C + 0x14 * i as u32, cx)),
+        }),
+        VarsKind::CastleLifts => GroundVars::CastleLifts(CastleLiftsVars {
+            plat: std::array::from_fn(|i| {
+                let a = at + 0x10 * i as u32;
+                CastleLift {
+                    jobj: jobj(cx, a),
+                    pos: f(a + 4),
+                    state: h(a + 8),
+                    timer: h(a + 0xA),
+                    wind: f(a + 0xC),
+                }
+            }),
+        }),
+        VarsKind::CastleBlaster => GroundVars::CastleBlaster(CastleBlasterVars {
+            anim: m.u32(at),
+            timer: h(at + 4),
+        }),
+        VarsKind::CastleBlast => GroundVars::CastleBlast(CastleBlastVars {
+            item: gobj(cx, at),
+            subject: subject(cx, at + 4),
+        }),
+        VarsKind::CastleBill => GroundVars::CastleBill(CastleBillVars {
+            xC4: m.u8(at),
+            path: h(at + 2),
+            linger: h(at + 4),
+            delay: h(at + 6),
+            blaster: gobj(cx, at + 8),
+            item: gobj(cx, at + 0xC),
+            stage: gobj(cx, at + 0x10),
+            subject: subject(cx, at + 0x14),
+        }),
+        VarsKind::CastleBlocks => GroundVars::CastleBlocks(CastleBlocksVars {
+            state: h(at),
+            flicker: h(at + 4),
+            timer: m.u32(at + 8) as i32,
+            jobjs: std::array::from_fn(|i| jobj(cx, at + 0xC + 4 * i as u32)),
+            effect_a: std::array::from_fn(|i| jobj(cx, at + 0x20 + 4 * i as u32)),
+            effect_b: std::array::from_fn(|i| jobj(cx, at + 0x34 + 4 * i as u32)),
+            items: std::array::from_fn(|i| gobj(cx, at + 0x48 + 4 * i as u32)),
+            joints: std::array::from_fn(|i| m.u32(at + 0x5C + 4 * i as u32) as i32),
+            bump: std::array::from_fn(|i| m.u8(at + 0x70 + i as u32)),
+            step: std::array::from_fn(|i| m.u8(at + 0x75 + i as u32)),
+            base_y: std::array::from_fn(|i| f(at + 0x7C + 4 * i as u32)),
+        }),
+        VarsKind::CastleSwitch => GroundVars::CastleSwitch(CastleSwitchVars {
+            state: h(at),
+            blink: h(at + 4),
+            delay: h(at + 6),
+            count: h(at + 8),
+            blocks: gobj(cx, at + 0xC),
+            anchor: jobj(cx, at + 0x10),
+            item: gobj(cx, at + 0x14),
+        }),
+        other => unreachable!("{other:?} isn't one of Peach's Castle's members"),
+    }
+}
+
+impl GroundVars {
+    /// The variables as `grCastle_GroundVars3`, which the stage's code is about to write.
+    pub fn castle(&mut self) -> &mut CastleVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |a: usize| u16::from_be_bytes([b.0[a], b.0[a + 1]]) as i16;
+            *self = GroundVars::Castle(CastleVars {
+                switches: std::array::from_fn(|i| b.null(4 * i)),
+                switch_slot: h(0xC),
+                switch_wait: h(0xE),
+                bill_wait: h(0x10),
+                recent_at: h(0x12),
+                recent: std::array::from_fn(|i| h(0x14 + 2 * i)),
+                xDE: b.0[0x1A],
+                dynamics: std::array::from_fn(|i| {
+                    let a = 0x1C + 0x14 * i;
+                    crate::game::structs::DynamicsDesc {
+                        data: b.null_of(a),
+                        count: b.u32(a + 4),
+                        pos: crate::vec::Vec3::new(b.f32(a + 8), b.f32(a + 0xC), b.f32(a + 0x10)),
+                    }
+                }),
+            });
+        }
+        match self {
+            GroundVars::Castle(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars3"),
+        }
+    }
+
+    /// The variables as `grCastle_GroundVars8`, likewise.
+    pub fn castle_lifts(&mut self) -> &mut CastleLiftsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |a: usize| u16::from_be_bytes([b.0[a], b.0[a + 1]]) as i16;
+            *self = GroundVars::CastleLifts(CastleLiftsVars {
+                plat: std::array::from_fn(|i| {
+                    let a = 0x10 * i;
+                    CastleLift {
+                        jobj: b.null_of(a),
+                        pos: b.f32(a + 4),
+                        state: h(a + 8),
+                        timer: h(a + 0xA),
+                        wind: b.f32(a + 0xC),
+                    }
+                }),
+            });
+        }
+        match self {
+            GroundVars::CastleLifts(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars8"),
+        }
+    }
+
+    /// The variables as a Bullet Bill's blaster's (`grCastle_GroundVars`), likewise.
+    pub fn castle_blaster(&mut self) -> &mut CastleBlasterVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::CastleBlaster(CastleBlasterVars {
+                anim: b.u32(0),
+                timer: (b.u32(4) >> 16) as i16,
+            });
+        }
+        match self {
+            GroundVars::CastleBlaster(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars"),
+        }
+    }
+
+    /// The variables as a Bullet Bill's blast's, likewise.
+    pub fn castle_blast(&mut self) -> &mut CastleBlastVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::CastleBlast(CastleBlastVars {
+                item: b.null(0),
+                subject: b.null_of(4),
+            });
+        }
+        match self {
+            GroundVars::CastleBlast(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not a blast's"),
+        }
+    }
+
+    /// The variables as a Bullet Bill's (`grCastle_GroundVars11`), likewise.
+    pub fn castle_bill(&mut self) -> &mut CastleBillVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |a: usize| u16::from_be_bytes([b.0[a], b.0[a + 1]]) as i16;
+            *self = GroundVars::CastleBill(CastleBillVars {
+                xC4: b.0[0],
+                path: h(2),
+                linger: h(4),
+                delay: h(6),
+                blaster: b.null(8),
+                item: b.null(0xC),
+                stage: b.null(0x10),
+                subject: b.null_of(0x14),
+            });
+        }
+        match self {
+            GroundVars::CastleBill(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars11"),
+        }
+    }
+
+    /// The variables as a switch's blocks' (`grCastle_GroundVars10`), likewise.
+    pub fn castle_blocks(&mut self) -> &mut CastleBlocksVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |a: usize| u16::from_be_bytes([b.0[a], b.0[a + 1]]) as i16;
+            *self = GroundVars::CastleBlocks(CastleBlocksVars {
+                state: h(0),
+                flicker: h(4),
+                timer: b.u32(8) as i32,
+                jobjs: std::array::from_fn(|i| b.null_of(0xC + 4 * i)),
+                effect_a: std::array::from_fn(|i| b.null_of(0x20 + 4 * i)),
+                effect_b: std::array::from_fn(|i| b.null_of(0x34 + 4 * i)),
+                items: std::array::from_fn(|i| b.null(0x48 + 4 * i)),
+                joints: std::array::from_fn(|i| b.u32(0x5C + 4 * i) as i32),
+                bump: std::array::from_fn(|i| b.0[0x70 + i]),
+                step: std::array::from_fn(|i| b.0[0x75 + i]),
+                base_y: std::array::from_fn(|i| b.f32(0x7C + 4 * i)),
+            });
+        }
+        match self {
+            GroundVars::CastleBlocks(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars10"),
+        }
+    }
+
+    /// The variables as a switch's, likewise.
+    pub fn castle_switch(&mut self) -> &mut CastleSwitchVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let h = |a: usize| u16::from_be_bytes([b.0[a], b.0[a + 1]]) as i16;
+            *self = GroundVars::CastleSwitch(CastleSwitchVars {
+                state: h(0),
+                blink: h(4),
+                delay: h(6),
+                count: h(8),
+                blocks: b.null(0xC),
+                anchor: b.null_of(0x10),
+                item: b.null(0x14),
+            });
+        }
+        match self {
+            GroundVars::CastleSwitch(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCastle_GroundVars7"),
+        }
+    }
+}
+
+/// Compares one of Peach's Castle's members with memory at `at`; false for another member.
+fn compare_castle(v: &GroundVars, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) -> bool {
+    let h = |a: u32| m.u16(a) as i16;
+    let handle = |cx: &mut dyn Cx, p: String, kind: &'static str, ours: Option<u32>, a: u32| {
+        cx.compare_handle(&p, kind, ours, m.u32(a));
+    };
+    let check = |cx: &mut dyn Cx, p: String, ours: String, theirs: String| {
+        if ours != theirs {
+            cx.mismatch(&p, ours, theirs);
+        }
+    };
+    match v {
+        GroundVars::Castle(v) => {
+            let path = format!("{path}.castle3");
+            let ours = (
+                [v.switch_slot, v.switch_wait, v.bill_wait, v.recent_at],
+                v.recent,
+                v.xDE,
+            );
+            let theirs = (
+                [h(at + 0xC), h(at + 0xE), h(at + 0x10), h(at + 0x12)],
+                [h(at + 0x14), h(at + 0x16), h(at + 0x18)],
+                m.u8(at + 0x1A),
+            );
+            check(cx, path.clone(), format!("{ours:?}"), format!("{theirs:?}"));
+            for (i, g) in v.switches.iter().enumerate() {
+                let p = format!("{path}.xC4[{i}]");
+                handle(cx, p, "GObjId", g.map(|g| g.0), at + 4 * i as u32);
+            }
+            for (i, d) in v.dynamics.iter().enumerate() {
+                let a = at + 0x1C + 0x14 * i as u32;
+                let ours = (d.count, [d.pos.x, d.pos.y, d.pos.z].map(f32::to_bits));
+                let theirs = (m.u32(a + 4), [8, 0xC, 0x10].map(|o| m.u32(a + o)));
+                let p = format!("{path}.dynamics[{i}]");
+                check(cx, p.clone(), format!("{ours:x?}"), format!("{theirs:x?}"));
+                handle(
+                    cx,
+                    format!("{p}.data"),
+                    "DynamicsId",
+                    d.data.map(|x| x.0),
+                    a,
+                );
+            }
+        }
+        GroundVars::CastleLifts(v) => {
+            for (i, l) in v.plat.iter().enumerate() {
+                let a = at + 0x10 * i as u32;
+                let p = format!("{path}.castle8.plat[{i}]");
+                let ours = (l.state, l.timer, [l.pos, l.wind].map(f32::to_bits));
+                let theirs = (h(a + 8), h(a + 0xA), [m.u32(a + 4), m.u32(a + 0xC)]);
+                check(cx, p.clone(), format!("{ours:x?}"), format!("{theirs:x?}"));
+                handle(cx, format!("{p}.jobj"), "JObjId", l.jobj.map(|j| j.0), a);
+            }
+        }
+        GroundVars::CastleBlaster(v) => {
+            let ours = (v.anim, v.timer);
+            let theirs = (m.u32(at), h(at + 4));
+            let p = format!("{path}.castle");
+            check(cx, p, format!("{ours:?}"), format!("{theirs:?}"));
+        }
+        GroundVars::CastleBlast(v) => {
+            let p = format!("{path}.castle_blast");
+            handle(cx, format!("{p}.xC4"), "GObjId", v.item.map(|g| g.0), at);
+            let s = v.subject.map(|b| b.0);
+            handle(cx, format!("{p}.xC8"), "CameraBoxId", s, at + 4);
+        }
+        GroundVars::CastleBill(v) => {
+            let p = format!("{path}.castle11");
+            let ours = (v.xC4, [v.path, v.linger, v.delay]);
+            let theirs = (m.u8(at), [h(at + 2), h(at + 4), h(at + 6)]);
+            check(cx, p.clone(), format!("{ours:?}"), format!("{theirs:?}"));
+            handle(
+                cx,
+                format!("{p}.xCC"),
+                "GObjId",
+                v.blaster.map(|g| g.0),
+                at + 8,
+            );
+            handle(
+                cx,
+                format!("{p}.xD0"),
+                "GObjId",
+                v.item.map(|g| g.0),
+                at + 0xC,
+            );
+            handle(
+                cx,
+                format!("{p}.xD4"),
+                "GObjId",
+                v.stage.map(|g| g.0),
+                at + 0x10,
+            );
+            let s = v.subject.map(|b| b.0);
+            handle(cx, format!("{p}.xD8"), "CameraBoxId", s, at + 0x14);
+        }
+        GroundVars::CastleBlocks(v) => {
+            let p = format!("{path}.castle10");
+            let ours = (
+                [v.state, v.flicker],
+                v.timer,
+                v.joints,
+                v.bump,
+                v.step,
+                v.base_y.map(f32::to_bits),
+            );
+            let theirs = (
+                [h(at), h(at + 4)],
+                m.u32(at + 8) as i32,
+                std::array::from_fn::<i32, 5, _>(|i| m.u32(at + 0x5C + 4 * i as u32) as i32),
+                std::array::from_fn::<u8, 5, _>(|i| m.u8(at + 0x70 + i as u32)),
+                std::array::from_fn::<u8, 5, _>(|i| m.u8(at + 0x75 + i as u32)),
+                std::array::from_fn::<u32, 5, _>(|i| m.u32(at + 0x7C + 4 * i as u32)),
+            );
+            check(cx, p.clone(), format!("{ours:x?}"), format!("{theirs:x?}"));
+            for i in 0..5 {
+                let o = 4 * i as u32;
+                let j = |x: Option<crate::hsd::jobj::JObjId>| x.map(|j| j.0);
+                handle(
+                    cx,
+                    format!("{p}.jobjs[{i}]"),
+                    "JObjId",
+                    j(v.jobjs[i]),
+                    at + 0xC + o,
+                );
+                let (a, b) = (j(v.effect_a[i]), j(v.effect_b[i]));
+                handle(cx, format!("{p}.effect_a[{i}]"), "JObjId", a, at + 0x20 + o);
+                handle(cx, format!("{p}.effect_b[{i}]"), "JObjId", b, at + 0x34 + o);
+                let g = v.items[i].map(|g| g.0);
+                handle(cx, format!("{p}.x10C[{i}]"), "GObjId", g, at + 0x48 + o);
+            }
+        }
+        GroundVars::CastleSwitch(v) => {
+            let p = format!("{path}.castle7");
+            let ours = [v.state, v.blink, v.delay, v.count];
+            let theirs = [h(at), h(at + 4), h(at + 6), h(at + 8)];
+            check(cx, p.clone(), format!("{ours:?}"), format!("{theirs:?}"));
+            handle(
+                cx,
+                format!("{p}.xD0"),
+                "GObjId",
+                v.blocks.map(|g| g.0),
+                at + 0xC,
+            );
+            let a = v.anchor.map(|j| j.0);
+            handle(cx, format!("{p}.xD4"), "JObjId", a, at + 0x10);
+            handle(
+                cx,
+                format!("{p}.xD8"),
+                "GObjId",
+                v.item.map(|g| g.0),
+                at + 0x14,
+            );
+        }
+        _ => return false,
+    }
+    true
 }
