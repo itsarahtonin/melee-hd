@@ -208,6 +208,29 @@ pub fn nth_joint_below(jobjs: &jobj::JObjs, root: JObjId, depth: i32) -> Option<
     Some(j)
 }
 
+/// The joint after `j` in depth-first order, not entering an instance's children, or none
+/// past the tree's end, `Ground_801C4100`.
+#[doc(alias = "Ground_801C4100")]
+pub fn next_in_tree(jobjs: &jobj::JObjs, j: JObjId) -> Option<JObjId> {
+    let o = &jobjs[j];
+    if o.flags & jobj::INSTANCE == 0
+        && let Some(c) = o.child
+    {
+        return Some(c);
+    }
+    if let Some(n) = o.next {
+        return Some(n);
+    }
+    let mut up = j;
+    loop {
+        let p = jobjs[up].parent?;
+        if let Some(n) = jobjs[p].next {
+            return Some(n);
+        }
+        up = p;
+    }
+}
+
 /// A point of interest's position (`Ground_801C2D24`): a stage joint `stage_info.x280`
 /// lists, with fallbacks between related points; none if the stage has no such point.
 #[doc(alias = "Ground_801C2D24")]

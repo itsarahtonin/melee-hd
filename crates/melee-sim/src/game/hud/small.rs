@@ -238,6 +238,12 @@ impl Running<'_> {
         self.create_hazard(desc, 0);
     }
 
+    /// Mute City's and Big Blue's car sign, unmoved, `un_802FD8C4`.
+    #[doc(alias = "un_802FD8C4")]
+    pub fn create_fzero_hazard(&mut self, desc: DataRef) {
+        self.create_hazard(desc, 1);
+    }
+
     /// The coin counter's process, `fn_802FED14`: hidden when not running; otherwise it
     /// counts a coin every few frames with a sound (another every tenth), placed and posed
     /// on its count.

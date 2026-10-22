@@ -1151,6 +1151,15 @@ const GROUND_SEND: [u8; 111] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
 ];
 
+/// `s32_arr_803BB6B0`'s third column: the music channels' aux B send a stage switches to
+/// (`lbAudioAx_80024D78` with 2); only Big Blue's and Mute City's differ from the second.
+const GROUND_SEND_ALT: [u8; 111] = {
+    let mut t = GROUND_SEND;
+    t[15] = 0x88;
+    t[18] = 0x40;
+    t
+};
+
 /// `stage_id_map`'s ground kinds, by stage kind (`Stage_8022519C`).
 const STAGE_GROUND: [u8; 286] = [
     0, 1, 12, 16, 2, 4, 8, 14, 10, 20, 18, 3, 5, 6, 7, 9, 11, 13, 21, 24, 25, 26, 15, 17, 19, 22,
@@ -1201,6 +1210,15 @@ pub fn character_slot(ckind: usize) -> usize {
 /// A ground kind's bank slot, 55 for none (`s32_arr_803BB6B0[gkind][0]`).
 pub fn ground_slot(gkind: usize) -> usize {
     usize::from(GROUND_BANK[gkind])
+}
+
+/// Sets the music channels' aux B send to the match's ground kind's in `column` of
+/// `s32_arr_803BB6B0` (1 the stage's own, 2 its other), `lbAudioAx_80024D78`.
+#[doc(alias = "lbAudioAx_80024D78")]
+pub fn set_stage_send(game: &mut crate::game::state::Game, column: i32) {
+    let g = ground_kind(crate::game::gr::stage::stkind(game));
+    let row = [GROUND_BANK[g], GROUND_SEND[g], GROUND_SEND_ALT[g]];
+    game.audio.lb.send = i32::from(row[column as usize]);
 }
 
 /// `lbAudioAx_80026E84`: a character's banks.

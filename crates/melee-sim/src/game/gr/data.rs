@@ -4,11 +4,11 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY,
-    GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI,
-    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN,
+    GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2,
+    GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1245,6 +1245,224 @@ pub const ICEMT: StageData = StageData {
     joints: &ICEMT_JOINTS,
 };
 
+/// `grMc_StageCallbacks`. Map 30 is the course, which makes map 29 (the platform) and map 2
+/// (the cars); maps 36 and 37 are scenery, map 0 the background.
+pub const MUTECITY_CALLBACKS: [StageCallbacks; 39] = {
+    let mut t = [cb(0, 0, 0, 0, 0); 39];
+    t[2] = cb(0x801F_044C, 0x801F_04A8, 0x801F_04B0, 0x801F_04B4, 0);
+    t[29] = cb(0x801F_01B4, 0x801F_0288, 0x801F_0290, 0x801F_040C, 0);
+    t[30] = cb(
+        0x801E_FDF8,
+        0x801F_0118,
+        0x801F_0120,
+        0x801F_01B0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    );
+    t[36] = cb(0x801F_0410, 0x801F_043C, 0x801F_0444, 0x801F_0448, 0);
+    t[37] = cb(0x801F_0410, 0x801F_043C, 0x801F_0444, 0x801F_0448, 0);
+    t
+};
+
+/// `grMc_803E30B0`: the platform's collision joints the stage binds to its parts itself.
+pub const MUTECITY_JOINTS: [GrJoint; 3] = [
+    GrJoint { x: 6, y: 29, z: 6 },
+    GrJoint { x: 7, y: 29, z: 8 },
+    GrJoint { x: 8, y: 29, z: 9 },
+];
+
+/// `grMc_StageData`.
+pub const MUTECITY: StageData = StageData {
+    grkind: GR_KIND_MUTECITY,
+    callbacks: &MUTECITY_CALLBACKS,
+    file: Some("/GrMc.dat"),
+    on_init: 0x801E_FC6C,
+    on_demo_init: 0x801E_FC68,
+    on_load: 0x801E_FCDC,
+    on_start: 0x801E_FCE0,
+    callback4: 0x801E_FD04,
+    on_touch_line: 0x801F_2BBC,
+    on_check_shadow_render: 0x801F_2C10,
+    flags2: 1,
+    joints: &MUTECITY_JOINTS,
+};
+
+/// `grBb_StageCallbacks`. Map 34 is the road, map 33 the big cars (which make map 4, their
+/// models), map 32 the flying platforms, map 35 the Falcon Flyer, map 36 the relay platform,
+/// map 31 the background, maps 0, 1 and 2 the scenery.
+pub const BIGBLUE_CALLBACKS: [StageCallbacks; 41] = {
+    let mut t = [cb(0, 0, 0, 0, 0); 41];
+    t[0] = cb(0x801E_5AE4, 0x801E_5B10, 0x801E_5B18, 0x801E_5B1C, 0);
+    t[1] = cb(
+        0x801E_6298,
+        0x801E_6354,
+        0x801E_635C,
+        0x801E_6360,
+        StageCallbacks::FOG,
+    );
+    t[2] = cb(0x801E_6200, 0x801E_6288, 0x801E_6290, 0x801E_6294, 0);
+    t[31] = cb(0x801E_5B20, 0x801E_6114, 0x801E_611C, 0x801E_6120, 0);
+    t[32] = cb(0x801E_6904, 0x801E_6C58, 0x801E_6C60, 0x801E_855C, 0);
+    t[33] = cb(0x801E_6364, 0x801E_687C, 0x801E_6884, 0x801E_68B8, 0);
+    t[34] = cb(0x801E_613C, 0x801E_61BC, 0x801E_61C4, 0x801E_61FC, 0);
+    t[35] = cb(
+        0x801E_8D64,
+        0x801E_93D0,
+        0x801E_93D8,
+        0x801E_9F38,
+        StageCallbacks::LIGHTS,
+    );
+    t[36] = cb(0x801E_9F3C, 0x801E_A054, 0x801E_A05C, 0x801E_AB4C, 0);
+    t
+};
+
+/// `grBb_803E2938`: the road's collision joints the stage binds to its pieces itself.
+pub const BIGBLUE_JOINTS: [GrJoint; 28] = [
+    GrJoint {
+        x: 36,
+        y: 34,
+        z: 10,
+    },
+    GrJoint {
+        x: 37,
+        y: 34,
+        z: 10,
+    },
+    GrJoint { x: 38, y: 34, z: 7 },
+    GrJoint { x: 39, y: 34, z: 7 },
+    GrJoint { x: 40, y: 34, z: 7 },
+    GrJoint {
+        x: 41,
+        y: 34,
+        z: 14,
+    },
+    GrJoint {
+        x: 42,
+        y: 34,
+        z: 14,
+    },
+    GrJoint {
+        x: 43,
+        y: 34,
+        z: 14,
+    },
+    GrJoint {
+        x: 44,
+        y: 34,
+        z: 15,
+    },
+    GrJoint {
+        x: 45,
+        y: 34,
+        z: 15,
+    },
+    GrJoint {
+        x: 46,
+        y: 34,
+        z: 15,
+    },
+    GrJoint {
+        x: 47,
+        y: 34,
+        z: 16,
+    },
+    GrJoint {
+        x: 48,
+        y: 34,
+        z: 16,
+    },
+    GrJoint {
+        x: 49,
+        y: 34,
+        z: 16,
+    },
+    GrJoint {
+        x: 52,
+        y: 34,
+        z: 32,
+    },
+    GrJoint {
+        x: 53,
+        y: 34,
+        z: 32,
+    },
+    GrJoint {
+        x: 54,
+        y: 34,
+        z: 32,
+    },
+    GrJoint {
+        x: 55,
+        y: 34,
+        z: 35,
+    },
+    GrJoint {
+        x: 56,
+        y: 34,
+        z: 35,
+    },
+    GrJoint {
+        x: 57,
+        y: 34,
+        z: 35,
+    },
+    GrJoint {
+        x: 58,
+        y: 34,
+        z: 38,
+    },
+    GrJoint {
+        x: 59,
+        y: 34,
+        z: 38,
+    },
+    GrJoint {
+        x: 60,
+        y: 34,
+        z: 38,
+    },
+    GrJoint {
+        x: 61,
+        y: 34,
+        z: 41,
+    },
+    GrJoint {
+        x: 62,
+        y: 34,
+        z: 41,
+    },
+    GrJoint {
+        x: 63,
+        y: 34,
+        z: 41,
+    },
+    GrJoint {
+        x: 64,
+        y: 34,
+        z: 44,
+    },
+    GrJoint {
+        x: 65,
+        y: 34,
+        z: 44,
+    },
+];
+
+/// `grBb_StageData`.
+pub const BIGBLUE: StageData = StageData {
+    grkind: GR_KIND_BIGBLUE,
+    callbacks: &BIGBLUE_CALLBACKS,
+    file: Some("/GrBb.dat"),
+    on_init: 0x801E_57C0,
+    on_demo_init: 0x801E_57BC,
+    on_load: 0x801E_59C8,
+    on_start: 0x801E_59CC,
+    callback4: 0x801E_59F0,
+    on_touch_line: 0x801E_FC0C,
+    on_check_shadow_render: 0x801E_FC14,
+    flags2: 1,
+    joints: &BIGBLUE_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1272,6 +1490,8 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_INISHIE1 => &INISHIE1,
         GR_KIND_INISHIE2 => &INISHIE2,
         GR_KIND_ICEMT => &ICEMT,
+        GR_KIND_MUTECITY => &MUTECITY,
+        GR_KIND_BIGBLUE => &BIGBLUE,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

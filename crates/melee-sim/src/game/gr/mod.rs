@@ -6,12 +6,14 @@
 
 pub mod anime;
 pub mod battle;
+pub mod bigblue;
 pub mod data;
 pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod flatzone;
 pub mod fourside;
+pub mod fzerocar;
 pub mod garden;
 pub mod greatbay;
 pub mod greens;
@@ -25,6 +27,7 @@ pub mod kongo;
 pub mod kraid;
 pub mod last;
 pub mod material;
+pub mod mutecity;
 pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
@@ -99,6 +102,10 @@ pub const GR_KIND_OLDKONGO: i32 = 30;
 pub const GR_KIND_INISHIE1: i32 = 24;
 /// `Gr_Kind_Inishie2`, Mushroom Kingdom II.
 pub const GR_KIND_INISHIE2: i32 = 25;
+/// `Gr_Kind_MuteCity`, Mute City.
+pub const GR_KIND_MUTECITY: i32 = 18;
+/// `Gr_Kind_BigBlue`, Big Blue.
+pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -270,6 +277,14 @@ pub struct Globals {
     pub icemt_fields: [Option<GObjId>; 3],
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
+    /// Mute City's `yakumono_param` (`grMc_YakumonoParam`).
+    pub mutecity_yakumono: Option<DataRef>,
+    /// Mute City's statics besides it.
+    pub mutecity: mutecity::Globals,
+    /// Big Blue's `yakumono_param` (`grBb_YakumonoParam`).
+    pub bigblue_yakumono: Option<DataRef>,
+    /// Big Blue's statics besides it.
+    pub bigblue: bigblue::Globals,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
     pub game_mode: u8,
     /// The players' start points as `grLib_801C9A10` last measured them (`grLib_8049EF58`).
@@ -409,6 +424,14 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
         (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
         (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
+        (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
+        (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
+        (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
+        (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
+        (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
+        (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
+        (GR_KIND_BIGBLUE, 35) => VarsKind::BigBlueFlyer,
+        (GR_KIND_BIGBLUE, 36) => VarsKind::BigBlueRelay,
         _ => VarsKind::Bytes,
     }
 }
@@ -419,6 +442,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
+        mutecity::CAR_DEALT => mutecity::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -442,6 +466,10 @@ pub fn yaku_received(
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
+        cb if mutecity::hit_car(cb).is_some() => {
+            let car = mutecity::hit_car(cb).expect("a car");
+            mutecity::car_hit(r.game, car, damage);
+        }
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

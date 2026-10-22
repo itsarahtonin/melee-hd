@@ -118,6 +118,11 @@ impl<'a> StageMaps<'a> {
         self.info.map_gobjs[map_id as usize]
     }
 
+    /// A GObj's P-link (`p_link`).
+    pub fn p_link(&self, g: GObjId) -> u8 {
+        self.world.gobjs[g.0].p_link
+    }
+
     /// The stage object of map `map_id`, `Ground_GetMapGObj(map_id)->user_data`.
     pub fn ground(&self, map_id: i32) -> Option<super::super::handles::GroundId> {
         let g = self.info.map_gobjs[map_id as usize]?;
@@ -285,6 +290,30 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::bigblue::PLATFORM_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::bigblue::platform_touched(
+                        self.objs,
+                        &mut self.grounds[g.0],
+                        joint_id,
+                        coll,
+                        x50,
+                    );
+                }
+            }
+            super::super::gr::bigblue::CAR_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let param = self.stage_maps.gr.bigblue_yakumono;
+                    super::super::gr::bigblue::car_touched(
+                        &mut self.grounds[g.0],
+                        param,
+                        self.data,
+                        joint_id,
+                        coll,
+                        kind,
+                    );
+                }
+            }
             super::super::gr::icemt::ICE_A_TOUCHED
             | super::super::gr::icemt::ICE_B_TOUCHED
             | super::super::gr::icemt::ICE_C_TOUCHED => {
@@ -309,6 +338,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         climb,
                     );
                 }
+            }
+            super::super::gr::mutecity::TRACK_TOUCHED => {
+                let live = self.stage_maps.gr.mutecity.track_live;
+                let item = coll
+                    .x0_gobj
+                    .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
+                super::super::gr::mutecity::track_touched(live, coll, kind, item);
             }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
