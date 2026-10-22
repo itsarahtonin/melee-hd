@@ -194,4 +194,4 @@ impl Running<'_> {
 }
 
 /// `FtColAnim_SpycloakStart`: Sheik's Spycloak animations, numbered from here on `x508`.
-const SPYCLOAK_START: i32 = 123;
+pub(super) const SPYCLOAK_START: i32 = 123;

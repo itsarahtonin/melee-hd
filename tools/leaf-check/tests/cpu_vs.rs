@@ -53,6 +53,12 @@
 //! reach (the destination then takes the stack words `ftCo_800A4BEC`'s frame left), the enemy
 //! moves it dodges, its DI with no knockback, which reads the registers its frame leaves, and
 //! the item it holds used from range (`ftCo_800B9A04`).
+//!
+//! Four more, items on, from the `cpu-items` oracle matches (`oracle-cpu-items-marth-fd`,
+//! `-mario-bf`, `-samus-ps` and `-captain-ys`: every 54th frame, `CAPTURE_EVERY=54`): the CPU
+//! going for items, picking them up and swinging them. Their own changes run on them alone: a
+//! swung item's reach, enemy items, a cloaked enemy and an island's right end; an item's hitbox
+//! coming at the CPU (`ItemThreat`) runs on every set, the items-off sets' lasers included.
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
@@ -122,11 +128,15 @@ const IT_KURIBOH: u32 = 43;
 const IT_WHITEBEA: u32 = 0xD9;
 /// The items the shield behavior rolls away from or through: `It_Kind_Flipper`,
 /// `_TaruCann` (the barrel cannon), `_DKinoko` (the Poison Mushroom).
-const IT_FLIPPER: u32 = 31;
+const IT_FLIPPER: u32 = 20;
 const IT_TARU_CANN: u32 = 5;
-const IT_DKINOKO: u32 = 22;
-/// `Item::pos`.
+const IT_DKINOKO: u32 = 27;
+/// `Item::pos`; its first hitbox (`x5D4`, its state first) and a hitbox's position (`x4C`).
 const ITEM_POS: u32 = 0x4C;
+const ITEM_HITBOX: u32 = 0x5D4;
+const HIT_POS: u32 = 0x4C;
+/// `CpuFighter::x568`, the fighter's height, whose middle the item threat tests.
+const HEIGHT: u32 = CPU + 0x568;
 /// The word holding `x2226_b4` (a power-up's color animation) and `x2226_b5` (its
 /// refraction), and those bits; the color animation's word (`x508.x28_colanim`); the word
 /// whose top byte is the cloak's vibrate frame (`x2134`).
@@ -280,20 +290,26 @@ enum Change {
     /// Holding an item made the swung `kind`, on the ground with a target, its script ended:
     /// the swung item's attacks with its reach (`ftCo_800B52AC`).
     Swung(u32),
-    /// The last item in the items' list made the enemy item `kind`, `dx` in front of the
-    /// fighter at its height, its script ended: the enemy item it goes for
-    /// (`ftCo_800A648C`) and its attacks on it (`ftCo_800B5AB0`).
+    /// As [`Change::Swung`] with a swung kind and its enemies moved in front of it and above,
+    /// each by the frame's index: the reach's edges, its far side and top.
+    SwungAround,
+    /// Every item made the enemy item `kind`, the first `dx` in front of the fighter at its
+    /// height and each next `dx` farther, its script ended: the nearest enemy item it goes
+    /// for (`ftCo_800A648C`) and its attacks on it (`ftCo_800B5AB0`).
     EnemyItem(u32, f32),
     /// Its enemies under a power-up's colors with the cloak's vibrate frame `frame` (2 hides
-    /// them, 1 every other 120 frames, by their own frame count, set to 200), its script
-    /// ended: the cloak's check (`ftCo_800A0F00`, `ft_80087A18`).
-    Cloaked(u32),
+    /// them, 1 every other 120 frames, by their own frame count, set to 200), with its
+    /// refraction (`x2226_b5`) or without, its script ended: the cloak's check
+    /// (`ftCo_800A0F00`, `ft_80087A18`).
+    Cloaked(u32, bool),
     /// On the ground left of the middle, moved as far right: an item it goes for on an
     /// island to its left ends at that island's right end (`ftCo_800A866C`).
     MirroredX,
-    /// Every item made `kind`, its script ended: where an item's hitbox comes at it on the
-    /// ground, the shield behavior's rolls by the item (`ftCo_800BA9A0`, `ftCo_800A2998`).
-    ItemsAs(u32),
+    /// On the ground at level 9, moved so its middle is at the first live item hitbox (Fox's
+    /// lasers in the items-off sets), every item made `kind`, its script ended: the hitbox
+    /// comes at it, and the shield behavior rolls by the item (`ftCo_800BA9A0`,
+    /// `ftCo_800A2998`).
+    ItemThreat(u32),
     /// At level 9 with its script ended, its enemies (as `kind`) in `motion` at `(dx, dy)`
     /// from it: the moves it dodges (`ftCo_800BB768`).
     EnemyMove(u32, u32, f32, f32),
@@ -347,16 +363,17 @@ impl Change {
         matches!(
             self,
             Change::Swung(_)
+                | Change::SwungAround
                 | Change::EnemyItem(..)
-                | Change::Cloaked(_)
+                | Change::Cloaked(..)
                 | Change::MirroredX
-                | Change::ItemsAs(_)
         )
     }
 }
 
-/// Changes a saved frame as `change` says: whether it did.
-fn change_frame(call: &mut Call, change: Change) -> bool {
+/// Changes a saved frame as `change` says (some vary by `index`, the frame's among its set): whether
+/// it did.
+fn change_frame(call: &mut Call, change: Change, index: usize) -> bool {
     let Some(fp) = vs_cpu(call) else {
         return false;
     };
@@ -526,37 +543,61 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             end_script(call, fp);
         }
-        Change::Swung(kind) => {
+        Change::Swung(_) | Change::SwungAround => {
             let item = peek_u32(call, fp + ITEM_GOBJ);
             if item == 0 || air || peek_u32(call, fp + TARGET) == 0 {
                 return false;
             }
+            let swung = [
+                IT_HARISEN,
+                IT_LIPSTICK,
+                IT_STARROD,
+                IT_SWORD,
+                IT_BAT,
+                IT_PARASOL,
+            ];
+            let kind = match change {
+                Change::Swung(kind) => kind,
+                _ => swung[index % 6],
+            };
             let ip = peek_u32(call, item + 0x2C);
             poke_u32(call, ip + ITEM_KIND, kind);
+            if matches!(change, Change::SwungAround) {
+                let facing = peek_f32(call, fp + 0x2C);
+                let (x, y) = (peek_f32(call, fp + POS), peek_f32(call, fp + POS + 4));
+                let dx = 4.0 + 5.0 * (index / 6 % 5) as f32;
+                let dy = 2.0 * (index / 30 % 13) as f32;
+                for e in enemies(call, fp) {
+                    poke_f32(call, e + POS, x + facing * dx);
+                    poke_f32(call, e + POS + 4, y + dy);
+                }
+            }
             end_script(call, fp);
         }
         Change::EnemyItem(kind, dx) => {
             let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
             let mut g = peek_u32(call, heads + 9 * 4);
-            let mut last = 0;
-            while g != 0 {
-                last = g;
-                g = peek_u32(call, g + 0x8);
-            }
-            if last == 0 {
+            if g == 0 {
                 return false;
             }
-            let ip = peek_u32(call, last + 0x2C);
             let facing = peek_f32(call, fp + 0x2C);
-            poke_u32(call, ip + ITEM_KIND, kind);
-            poke_f32(call, ip + ITEM_POS, peek_f32(call, fp + POS) + facing * dx);
-            poke_f32(call, ip + ITEM_POS + 4, peek_f32(call, fp + POS + 4));
+            let (x, y) = (peek_f32(call, fp + POS), peek_f32(call, fp + POS + 4));
+            let mut n = 1.0;
+            while g != 0 {
+                let ip = peek_u32(call, g + 0x2C);
+                poke_u32(call, ip + ITEM_KIND, kind);
+                poke_f32(call, ip + ITEM_POS, x + facing * dx * n);
+                poke_f32(call, ip + ITEM_POS + 4, y);
+                n += 1.0;
+                g = peek_u32(call, g + 0x8);
+            }
             end_script(call, fp);
         }
-        Change::Cloaked(frame) => {
+        Change::Cloaked(frame, refract) => {
             for e in enemies(call, fp) {
-                let w = peek_u32(call, e + X2224);
-                poke_u32(call, e + X2224, w | POWER_UP_COLORS);
+                let w = peek_u32(call, e + X2224) & !POWER_UP_COLORS;
+                let colors = if refract { POWER_UP_COLORS } else { 0x0800 };
+                poke_u32(call, e + X2224, w | colors);
                 poke_u32(call, e + COLANIM, 0);
                 let v = peek_u32(call, e + VIBRATE);
                 poke_u32(call, e + VIBRATE, (v & 0x00FF_FFFF) | frame << 24);
@@ -564,17 +605,31 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             }
             end_script(call, fp);
         }
-        Change::ItemsAs(kind) => {
-            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
-            let mut g = peek_u32(call, heads + 9 * 4);
-            if g == 0 {
+        Change::ItemThreat(kind) => {
+            if air {
                 return false;
             }
+            let heads = peek_u32(call, leaf_check::sym("HSD_GObjPLinkHead"));
+            let mut g = peek_u32(call, heads + 9 * 4);
+            let mut hit = None;
             while g != 0 {
                 let ip = peek_u32(call, g + 0x2C);
+                if hit.is_none() && peek_u32(call, ip + ITEM_HITBOX) != 0 {
+                    hit = Some((
+                        peek_f32(call, ip + ITEM_HITBOX + HIT_POS),
+                        peek_f32(call, ip + ITEM_HITBOX + HIT_POS + 4),
+                    ));
+                }
                 poke_u32(call, ip + ITEM_KIND, kind);
                 g = peek_u32(call, g + 0x8);
             }
+            let Some((x, y)) = hit else {
+                return false;
+            };
+            let half = 0.5 * peek_f32(call, fp + HEIGHT);
+            poke_f32(call, fp + POS, x);
+            poke_f32(call, fp + POS + 4, y - half);
+            poke_u32(call, fp + LEVEL, 9);
             end_script(call, fp);
         }
         Change::MirroredX => {
@@ -700,14 +755,16 @@ fn changes() -> Vec<Change> {
         Change::Swung(IT_SWORD),
         Change::Swung(IT_BAT),
         Change::Swung(IT_PARASOL),
+        Change::SwungAround,
         Change::EnemyItem(IT_KURIBOH, 10.0),
         Change::EnemyItem(IT_WHITEBEA, 20.0),
-        Change::Cloaked(2),
-        Change::Cloaked(1),
+        Change::Cloaked(2, true),
+        Change::Cloaked(1, true),
+        Change::Cloaked(2, false),
         Change::MirroredX,
-        Change::ItemsAs(IT_FLIPPER),
-        Change::ItemsAs(IT_TARU_CANN),
-        Change::ItemsAs(IT_DKINOKO),
+        Change::ItemThreat(IT_FLIPPER),
+        Change::ItemThreat(IT_TARU_CANN),
+        Change::ItemThreat(IT_DKINOKO),
         Change::EnemyMove(KOOPA, KP_BOMB, 0.0, 20.0),
         Change::EnemyMove(KOOPA, ATTACK_HI4, 0.0, -10.0),
         Change::EnemyMove(YOSHI, YS_BOMB, 0.0, 20.0),
@@ -760,7 +817,7 @@ fn cpu_vs_changed() {
                     let changed = &changed;
                     let change = changes[v];
                     Box::new(move |c: &mut Call, i: usize| {
-                        if change_frame(c, change) {
+                        if change_frame(c, change, i) {
                             changed[v].lock().unwrap().insert(i);
                         }
                     }) as Box<Prepare>
