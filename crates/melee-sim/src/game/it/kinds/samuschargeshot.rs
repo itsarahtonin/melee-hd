@@ -48,6 +48,7 @@ pub const SPARKLE: u32 = 0x802B_5EDC;
 pub const DMG_DEALT: u32 = 0x802B_5FD8;
 #[doc(alias = "itSamusChargeshot_Logic108_Clanked")]
 pub const CLANKED: u32 = 0x802B_5FE0;
+#[doc(alias = "itSamusChargeshot_Logic108_Absorbed")]
 pub const ABSORBED: u32 = 0x802B_5FE8;
 pub const REFLECTED: u32 = 0x802B_5FF0;
 #[doc(alias = "itSamusChargeshot_Logic108_HitShield")]

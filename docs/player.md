@@ -389,28 +389,28 @@ This audit (2026-10-21, from `main` at `015e36da`) says what a plain items-off V
 
 | Character | Item kinds | Units | Ported, awaiting a check | Unreached | Unsure | Gaps |
 | --- | --- | --- | --- | --- | --- | --- |
-| Fox | 3 | 3 | 7 | 2 | 0 | 0 |
-| Falco | 3 | 3 | 7 | 2 | 0 | 0 |
+| Fox | 3 | 3 | 0 | 8 | 0 | 0 |
+| Falco | 3 | 3 | 0 | 8 | 0 | 0 |
 | Mr. Game & Watch | 10 | 10 | 0 | 10 | 0 | 0 |
-| Kirby | 31 | 25 | 31 | 18 | 0 | 0 |
+| Kirby | 31 | 25 | 0 | 31 | 0 | 0 |
 | Bowser | 1 | 1 | 0 | 0 | 0 | 0 |
 | Link | 5 | 5 | 0 | 0 | 0 | 0 |
 | Young Link | 6 | 6 | 0 | 0 | 0 | 0 |
-| Luigi | 1 | 1 | 2 | 1 | 0 | 0 |
-| Mario | 2 | 2 | 1 | 2 | 0 | 0 |
-| Dr. Mario | 2 | 2 | 5 | 4 | 0 | 0 |
+| Luigi | 1 | 1 | 0 | 1 | 0 | 0 |
+| Mario | 2 | 2 | 0 | 2 | 0 | 0 |
+| Dr. Mario | 2 | 2 | 0 | 8 | 0 | 0 |
 | Mewtwo | 2 | 2 | 0 | 0 | 0 | 0 |
-| Ness | 11 | 8 | 13 | 11 | 0 | 0 |
+| Ness | 11 | 8 | 0 | 15 | 0 | 0 |
 | Peach | 5 | 5 | 0 | 0 | 0 | 0 |
-| Pikachu | 3 | 3 | 7 | 3 | 0 | 0 |
-| Pichu | 3 | 3 | 7 | 3 | 0 | 0 |
-| Ice Climbers | 3 | 3 | 6 | 3 | 0 | 0 |
-| Samus | 4 | 4 | 5 | 4 | 0 | 0 |
-| Yoshi | 3 | 3 | 3 | 1 | 0 | 0 |
-| Zelda | 2 | 2 | 5 | 0 | 0 | 0 |
+| Pikachu | 3 | 3 | 0 | 4 | 0 | 0 |
+| Pichu | 3 | 3 | 0 | 4 | 0 | 0 |
+| Ice Climbers | 3 | 3 | 0 | 4 | 0 | 0 |
+| Samus | 4 | 4 | 0 | 4 | 0 | 0 |
+| Yoshi | 3 | 3 | 0 | 1 | 0 | 0 |
+| Zelda | 2 | 2 | 0 | 3 | 0 | 0 |
 | Sheik | 4 | 4 | 0 | 0 | 0 | 0 |
 
-Captain Falcon, Donkey Kong, Ganondorf, Jigglypuff, Marth and Roy make no items of their own. The 98 distinct rows left are ported and don't stop a match; no replay of the verify list runs them. Most are callbacks of rare meetings: projectiles absorbed (14: Mario's, Luigi's and Dr. Mario's fireballs and pills, PK Fire, PK Flash, Pikachu's and Pichu's thunder and Jolts, the Charge Shot, the ice and Blizzard, Din's Fire), clanking or bouncing off shields (14), and the rest of PK Flash's burst, PK Thunder's ball, the blaster's throws, Dr. Mario's thrown and picked-up pill, Yoshi's star, Samus's bomb in the air and the Blizzard's spawn (23). `fighter_items_tally` (ignored; `-- --ignored --nocapture`) prints the table.
+Captain Falcon, Donkey Kong, Ganondorf, Jigglypuff, Marth and Roy make no items of their own. The audit left 54 ported functions in their units that no replay of the verify list ran, awaiting a check (an earlier figure of 98 distinct rows also counted the units' unreached rows and `evt_unk`s): 35 are checked now, 34 by the `own-items` oracle set's nine matches and the blaster's removal by `kirby fox-fd`, and 19 are settled unreachable, each named in the audit with its reason (the blaster's states 9 and 10, Dr. Mario's held pill, absorbing or clanking with PK Flash and Din's Fire, which open no hitbox, and clanks of items whose boxes never have the clank bit). The set's matches meet the projectiles with PSI Magnet, Marth's Counter and shield and Fox's Reflector: among them Mario's fireball and Dr. Mario's pill absorbed, Thunder absorbed and hitting a shield, the thrown Thunder Jolt absorbed, reflected and bouncing off a Counter and the running one absorbed, PK Flash landing, the Charge Shot absorbed, Samus's bomb settling on a slope and sliding, her grapple beam frozen in a hit (`it_802BA760`), and Yoshi's star clanking, hitting a shield and absorbed ([the oracle](oracle.md#the-characters-own-items)). None is left awaiting a check; the 63 distinct rows left are unreached rows and `evt_unk`s. `fighter_items_tally` (ignored; `-- --ignored --nocapture`) prints the table.
 
 **The test.** `fighter_items_reach_nothing_unaccounted` reads `docs/port-ledger.csv`, the item tables and melee-sim's sources and fails when a roster character has no entry or an entry names no roster character, when a fighter item kind is neither some character's nor listed as not one (`NOT_FIGHTERS`), when an unaccounted function of an entry's units is neither ported awaiting a check, an `evt_unk`, nor named, when a callback of its kinds is neither dispatched nor named, when a stop in its modules isn't named, and when a name no longer names anything unported or stopping. `items_audit_reaches_nothing_unaccounted` skips the fighter audit's units and modules. `fighter_gaps_follow_the_characters` checks `missing_with`. The launcher reads it (below).
 

@@ -236,7 +236,7 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 /// `_ShieldBounced`): it ends.
 #[doc(alias = "it_2725_Logic107_DmgDealt")]
 #[doc(alias = "it_2725_Logic107_Clanked")]
-// Ports `it_2725_Logic107_Absorbed`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic107_Absorbed")]
 #[doc(alias = "it_2725_Logic107_HitShield")]
 #[doc(alias = "it_2725_Logic107_ShieldBounced")]
 fn end(r: &mut Running, gobj: GObjId) -> bool {

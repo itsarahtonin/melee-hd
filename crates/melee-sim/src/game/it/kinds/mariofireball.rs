@@ -27,6 +27,7 @@ pub const REFLECTED: u32 = 0x8029_BA40;
 pub const CLANKED: u32 = 0x8029_BA60;
 #[doc(alias = "itMarioFireball_Logic87_HitShield")]
 pub const HIT_SHIELD: u32 = 0x8029_BA68;
+#[doc(alias = "itMarioFireball_Logic87_Absorbed")]
 pub const ABSORBED: u32 = 0x8029_BA70;
 #[doc(alias = "itMarioFireball_Logic87_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x8029_BA78;

@@ -45,7 +45,8 @@ struct Script<'a> {
 /// The processed inputs the game makes of a scripted pad (buttons and the main stick, which the
 /// scripts hold at 0 or past ±80 on each axis, where it reads ±1 and sets its direction's
 /// button). Z is also A and a shoulder pressed at the common data's light press (0.35), as
-/// `Fighter_procInput` makes it before playback records the inputs.
+/// `Fighter_procInput` makes it before playback records the inputs. R is a shoulder pressed all the
+/// way (the trigger at 1.0, which a digital press means).
 pub fn processed(button: u16, stick_x: i8, stick_y: i8) -> CharacterFrame {
     let axis = |v: i8, plus: u32, minus: u32| match v {
         0 => (0.0, 0),
@@ -55,7 +56,9 @@ pub fn processed(button: u16, stick_x: i8, stick_y: i8) -> CharacterFrame {
     };
     let (x, right_left) = axis(stick_x, 0x8_0000, 0x4_0000);
     let (y, up_down) = axis(stick_y, 0x1_0000, 0x2_0000);
-    let (z, trigger) = if button & 0x10 != 0 {
+    let (z, trigger) = if button & 0x20 != 0 {
+        (0x8000_0000, 1.0)
+    } else if button & 0x10 != 0 {
         (0x8000_0100, 0.35)
     } else {
         (0, 0.0)

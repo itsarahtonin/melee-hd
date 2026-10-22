@@ -13,8 +13,11 @@ use crate::vec::Vec3;
 
 #[doc(alias = "it_802B309C")]
 pub const DMG_DEALT: u32 = 0x802B_309C;
+#[doc(alias = "it_802B30C0")]
 pub const CLANKED: u32 = 0x802B_30C0;
+#[doc(alias = "it_802B30E4")]
 pub const HIT_SHIELD: u32 = 0x802B_30E4;
+#[doc(alias = "it_802B3108")]
 pub const ABSORBED: u32 = 0x802B_3108;
 pub const SHIELD_BOUNCED: u32 = 0x802B_312C;
 pub const REFLECTED: u32 = 0x802B_314C;

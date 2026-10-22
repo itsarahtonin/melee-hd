@@ -1636,7 +1636,7 @@ pub fn hold_on(r: &mut Running, hand: ItemLinkId, tip: ItemLinkId, pos: &mut Vec
 /// The beam before it attaches, `it_802BA760`: true until her state's attach frame (her
 /// attributes' `xA0`, `xB0` or `xC0`); after it, the links out follow toward the hand's point
 /// and the next leaves once it's a link length on; all out, they chase the hand.
-// Ports `it_802BA760`; aliased once a check reaches it.
+#[doc(alias = "it_802BA760")]
 pub fn before_attach(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) -> bool {
     let fid = r.game.fighter_id(f);
     let frame = reg(r.game.fighters[fid.0].mv_f32(0));
