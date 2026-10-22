@@ -61,6 +61,7 @@ mod capture;
 mod console;
 #[cfg(test)]
 mod cosmetic_tests;
+mod cpu;
 mod flicker;
 mod items;
 mod jit;
@@ -97,7 +98,7 @@ use melee_render::predict::{Cost, Predictor};
 use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::gm::vs_mode::GamePrefs;
 use melee_sim::game::roster;
-use melee_sim::game::vs_match::{DiscFile, Match, Player, Settings};
+use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
@@ -113,6 +114,9 @@ const TICK_RATE: f64 = 60.0;
 struct Args {
     disc: String,
     players: Vec<(u8, u8)>,
+    /// Each port's CPU level, or none for a human: the launcher's (the command line has only
+    /// humans).
+    cpus: [Option<u8>; 4],
     stage: u16,
     stocks: u8,
     minutes: u8,
@@ -211,6 +215,7 @@ fn parse_args() -> Result<Args, String> {
     let mut a = Args {
         disc: std::env::var("SSBM_DISC").unwrap_or_default(),
         players: vec![(2, 0), (2, 1)],
+        cpus: [None; 4],
         stage: 32,
         stocks: 4,
         minutes: 8,
@@ -397,7 +402,15 @@ fn parse_args() -> Result<Args, String> {
     a.launch = !chosen && a.bench.is_none();
     if a.replay.is_none() && !a.launch && !a.unfinished_stages {
         let characters: Vec<u8> = a.players.iter().map(|p| p.0).collect();
-        if let Some(why) = roster::stage_by_kind(a.stage).and_then(|s| s.refusal(&characters)) {
+        // Nana's computer player with the Ice Climbers, items off.
+        let ports: Vec<Option<u8>> = characters
+            .iter()
+            .map(|&c| Some(c).filter(|&c| c != 0xFF))
+            .collect();
+        let why = roster::stage_by_kind(a.stage)
+            .and_then(|s| s.refusal(&characters))
+            .or_else(|| cpu::refusal(&ports, &a.cpus, a.stage, &[]));
+        if let Some(why) = why {
             return Err(format!("{why} (--unfinished-stages plays it anyway)"));
         }
     }
@@ -442,20 +455,7 @@ impl Session {
                 (s, Some(replay))
             }
             None => {
-                let players: Vec<Player> = a
-                    .players
-                    .iter()
-                    .enumerate()
-                    .filter(|(_, p)| p.0 != 0xFF)
-                    .map(|(i, &(c, costume))| Player {
-                        character: c,
-                        costume,
-                        port: i as u8,
-                        kind: 0,
-                        cpu_level: 0,
-                        team: i as u8,
-                    })
-                    .collect();
+                let players = cpu::players(&a.players, &a.cpus);
                 let mut s = Settings::vs_items(a.stage, &players, a.stocks, a.minutes, &a.items);
                 // A seed from the clock unless given: presentation-side, set once before the
                 // match.
@@ -1367,10 +1367,16 @@ impl App {
         self.msaa = if l.form.msaa { 4 } else { 1 };
         self.scale = scale_for(self.args.scale, self.window_size, aspect);
         settings::write(settings::LAST_MATCH, &l.form.save());
+        // The form starts only a match its gate allows; this keeps it so whatever calls here.
+        if let Some(why) = l.form.choice.refusal() {
+            l.form.message = Some(why);
+            return;
+        }
         let c = &l.form.choice;
         let mut args = self.args.clone();
         args.aspect = aspect;
         args.players = c.ports();
+        args.cpus = c.cpus;
         args.stage = c.stage;
         args.stocks = c.stocks;
         args.minutes = c.minutes;
@@ -1378,11 +1384,14 @@ impl App {
         args.replays = Some(l.form.replays.clone()).filter(|d| !d.is_empty());
         let items = c.items();
         args.items = items.prefs.clone();
-        let names: Vec<&str> = c
-            .players
-            .iter()
-            .flatten()
-            .filter_map(|&k| roster::character_by_kind(k).map(|c| c.name))
+        let names: Vec<String> = (c.players.iter().zip(&c.cpus))
+            .filter_map(|(&k, l)| {
+                let name = roster::character_by_kind(k?)?.name;
+                Some(match l {
+                    Some(l) => format!("{name} (CPU {l})"),
+                    None => name.to_owned(),
+                })
+            })
             .collect();
         let stage = roster::stage_by_kind(c.stage).map_or("?", |s| s.name);
         eprintln!("the launcher starts {} on {stage}", names.join(" vs "));
