@@ -31,6 +31,7 @@ impl Gx {
         if self.data.dirty_state != 0 {
             self.set_dirty_state();
         }
+        self.check_unset();
         // *(u32*) &gx->unk == 0: both unk and bpSent.
         if self.data.unk == 0 && self.data.bp_sent == 0 {
             self.send_flush_prim();

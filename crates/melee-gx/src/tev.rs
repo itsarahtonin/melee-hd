@@ -27,6 +27,17 @@ pub struct Usage {
     pub konst: [u8; 4],
 }
 
+impl Usage {
+    /// Whether any component is in both.
+    pub fn meets(&self, other: &Usage) -> bool {
+        (0..4).any(|i| self.color[i] & other.color[i] != 0 || self.konst[i] & other.konst[i] != 0)
+    }
+
+    pub fn is_empty(&self) -> bool {
+        *self == Usage::default()
+    }
+}
+
 /// The konst register and components a konst selection reads (none for the fixed fractions).
 fn konst_sel(sel: u32, alpha: bool) -> Option<(usize, u8)> {
     let reg = (sel & 3) as usize;
@@ -42,16 +53,29 @@ fn konst_sel(sel: u32, alpha: bool) -> Option<(usize, u8)> {
 
 /// What the active stages read, from GENMODE's stage count and their combiner settings.
 pub fn usage(bp: &[u32; 256]) -> Usage {
-    let stages = bits(bp[0x00], 10, 4) as usize + 1;
+    usage_of(
+        bp[0x00],
+        |s| (bp[COLOR_ENV + 2 * s], bp[ALPHA_ENV + 2 * s]),
+        |i| bp[KSEL + i],
+    )
+}
+
+/// [`usage`] from GENMODE, each stage's color and alpha combiner registers and the konst
+/// selection registers, as the SDK's shadows of them hold them.
+pub fn usage_of(
+    gen_mode: u32,
+    combiners: impl Fn(usize) -> (u32, u32),
+    ksel_reg: impl Fn(usize) -> u32,
+) -> Usage {
+    let stages = bits(gen_mode, 10, 4) as usize + 1;
     let mut written = [0u8; 4];
     let mut out = Usage::default();
     let read = |out: &mut Usage, written: &[u8; 4], reg: usize, comps: u8| {
         out.color[reg] |= comps & !written[reg];
     };
     for s in 0..stages {
-        let cc = bp[COLOR_ENV + 2 * s];
-        let ac = bp[ALPHA_ENV + 2 * s];
-        let ksel = bp[KSEL + s / 2];
+        let (cc, ac) = combiners(s);
+        let ksel = ksel_reg(s / 2);
         let (kcsel, kasel) = if s % 2 == 0 {
             (bits(ksel, 4, 5), bits(ksel, 9, 5))
         } else {

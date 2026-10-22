@@ -6,7 +6,7 @@ use melee_sim::hsd::mobj::{self, MObjId, Material, RENDER_TOON};
 use melee_sim::hsd::tobj::{self, COORD_TOON, Color as SimColor, TObjId, TObjTev};
 
 use super::tev::{HsdTevDesc, TevConf};
-use super::texp::{Cnst, CnstReg, TE_RGB, TE_X, TevDesc, reg_values};
+use super::texp::{Cnst, CnstReg, Regs, TE_RGB, TE_X, TevDesc, reg_values};
 use super::texp_make::*;
 use crate::gx::Color;
 use crate::gx::enums::*;
@@ -132,7 +132,7 @@ fn diffuse_without_textures() {
         ]
     );
 
-    let (reg, changed) = reg_values(&objs, &d.cnsts);
+    let Regs { reg, changed, .. } = reg_values(&objs, &d.cnsts);
     assert_eq!(changed, 0b1_0001);
     assert_eq!(reg[0], Color::new(10, 20, 30, 0));
     // (int) (255 * 0.5).
@@ -168,7 +168,7 @@ fn diffuse_and_specular() {
             cnst(Cnst::MatDiffuse(m), TE_RGB, 1, 0),
         ]
     );
-    let (reg, changed) = reg_values(&objs, &d.cnsts);
+    let Regs { reg, changed, .. } = reg_values(&objs, &d.cnsts);
     assert_eq!(changed, 0b1_0011);
     assert_eq!(reg[0], Color::new(50, 60, 70, 0));
     assert_eq!(reg[1], Color::new(10, 20, 30, 0));
@@ -240,7 +240,7 @@ fn blended_diffuse_map() {
             cnst(Cnst::MatDiffuse(m), TE_RGB, 0, 0),
         ]
     );
-    let (reg, _) = reg_values(&objs, &d.cnsts);
+    let Regs { reg, .. } = reg_values(&objs, &d.cnsts);
     // (int) (255 * 0.25).
     assert_eq!(reg[1].a, 63);
 }
@@ -274,7 +274,7 @@ fn replaced_by_texture() {
             cnst(Cnst::MatDiffuse(m), TE_RGB, 0xFF, 0xFF),
         ]
     );
-    assert_eq!(reg_values(&objs, &d.cnsts).1, 0);
+    assert_eq!(reg_values(&objs, &d.cnsts).changed, 0);
 }
 
 #[test]
@@ -336,7 +336,7 @@ fn texture_tev_konst() {
             cnst(Cnst::MatAlpha(m), TE_X, 4, 3),
         ]
     );
-    let (reg, _) = reg_values(&objs, &d.cnsts);
+    let Regs { reg, .. } = reg_values(&objs, &d.cnsts);
     assert_eq!((reg[0].r, reg[0].g, reg[0].b), (1, 2, 3));
 }
 
@@ -385,4 +385,44 @@ fn setup_with_volatile_stages() {
     };
     assert_eq!([coord(0), coord(2), coord(3), coord(4)], [2, 4, 5, 3]);
     assert!(!gx.fifo.is_empty());
+}
+
+/// `HSD_TExpSetReg` sends the components no constant sets as its uninitialized stack held them
+/// (melee-hd sends 0): GX marks them unset until a whole color is written, and counts a draw
+/// whose stages read one, which the frame notes (docs/engine.md, `HSD_TExpSetReg`'s
+/// registers).
+#[test]
+fn set_reg_marks_the_components_its_constants_leave_unset() {
+    use super::tev::TevState;
+    use super::texp::{CnstValue, TE_A, set_reg_values};
+    use crate::gx::Gx;
+    let mut gx = Gx::new();
+    gx.init();
+    let mut state = TevState::new();
+    let draw = |gx: &mut Gx, c: u32, a: u32| {
+        gx.set_num_tev_stages(1);
+        gx.set_tev_color_in(GX_TEVSTAGE0, GX_CC_ZERO, GX_CC_ZERO, GX_CC_ZERO, c);
+        gx.set_tev_alpha_in(GX_TEVSTAGE0, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, a);
+        gx.begin(GX_TRIANGLES, GX_VTXFMT0, 3);
+        std::mem::take(&mut gx.unset_reads)
+    };
+    // A material's alpha in TEVREG0 (the compile's register 4, component 3): C0's color is
+    // unset, A0 isn't.
+    set_reg_values(&mut gx, &mut state, &[(CnstValue::U8(0x7F), TE_A, 4, 3)]);
+    assert_eq!(draw(&mut gx, GX_CC_RASC, GX_CA_A0), 0);
+    assert_eq!(draw(&mut gx, GX_CC_C0, GX_CA_ZERO), 1);
+    // A color in K0 leaves its alpha unset; the color selection reads only the color.
+    set_reg_values(
+        &mut gx,
+        &mut state,
+        &[(CnstValue::Color(Color::new(1, 2, 3, 4)), TE_RGB, 0, 0)],
+    );
+    gx.set_tev_k_color_sel(GX_TEVSTAGE0, GX_TEV_KCSEL_K0);
+    gx.set_tev_k_alpha_sel(GX_TEVSTAGE0, GX_TEV_KASEL_K0_A);
+    assert_eq!(draw(&mut gx, GX_CC_KONST, GX_CA_ZERO), 0);
+    assert_eq!(draw(&mut gx, GX_CC_ZERO, GX_CA_KONST), 1);
+    // A whole color written clears the marks.
+    gx.set_tev_color(GX_TEVREG0, Color::default());
+    gx.set_tev_k_color(GX_KCOLOR0, Color::default());
+    assert_eq!(draw(&mut gx, GX_CC_C0, GX_CA_KONST), 0);
 }
