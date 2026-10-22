@@ -51,6 +51,12 @@ pub fn kind(game: &Game, gobj: GObjId) -> i32 {
     item(game, gobj).kind
 }
 
+/// The item's position, `it_8026B294`.
+#[doc(alias = "it_8026B294")]
+pub fn position(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
+    item(game, gobj).pos
+}
+
 /// The Lucky's egg and Whispy's apple, the healing items besides the heart, tomato and food.
 pub const LUCKY_EGG: i32 = 205;
 pub const WHISPY_HEAL_APPLE: i32 = 226;

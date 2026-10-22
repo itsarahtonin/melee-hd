@@ -221,6 +221,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::SfxQueueRoom => b.load_count < 6,
             clock::Wait::SfxLoadsDone => b.load_count == 0,
             clock::Wait::BankRead => !self.audio.driver.reading_bank,
+            clock::Wait::StreamIdle => self.audio.synth.stream.busy == 0,
             clock::Wait::Preloaded(n) => self.audio.devcom.preloaded >= n,
         }
     }

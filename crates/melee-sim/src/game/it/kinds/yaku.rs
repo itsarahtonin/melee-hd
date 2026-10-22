@@ -181,7 +181,7 @@ impl Mirror for YakuVars {
     }
 }
 
-fn vars(game: &mut Game, gobj: GObjId) -> &mut YakuVars {
+pub(crate) fn vars(game: &mut Game, gobj: GObjId) -> &mut YakuVars {
     item_mut(game, gobj).xDD4_itemVar.yaku()
 }
 

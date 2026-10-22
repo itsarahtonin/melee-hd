@@ -16,6 +16,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod inishie1;
 pub mod izumi;
 pub mod kongo;
 pub mod kraid;
@@ -89,6 +90,8 @@ pub const GR_KIND_OLDPUPUPU: i32 = 28;
 pub const GR_KIND_OLDYOSHI: i32 = 29;
 /// `Gr_Kind_OldKongo`, Kongo Jungle (N64).
 pub const GR_KIND_OLDKONGO: i32 = 30;
+/// `Gr_Kind_Inishie1`, Mushroom Kingdom.
+pub const GR_KIND_INISHIE1: i32 = 24;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -239,6 +242,8 @@ pub struct Globals {
     pub spawn_configs: Vec<zako::SpawnConfig>,
     /// Rainbow Cruise's `yakumono_param` (`grRCruise_YakumonoParam`).
     pub rcruise_yakumono: Option<DataRef>,
+    /// Mushroom Kingdom's `yakumono_param` (`grInishie1_YakumonoParam`).
+    pub inishie1_yakumono: Option<DataRef>,
     /// Poké Floats' `yakumono_param`, which nothing reads.
     pub pura_yakumono: Option<DataRef>,
     /// The joints Poké Floats' collision vertices follow (`grPu_803E6C0C[i].jobj`, written
@@ -372,6 +377,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
         (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
         (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
+        (GR_KIND_INISHIE1, 2) => VarsKind::Inishie1Hatena,
+        (GR_KIND_INISHIE1, 3) => VarsKind::Inishie1,
         _ => VarsKind::Bytes,
     }
 }
@@ -403,6 +410,7 @@ pub fn yaku_received(
         zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
+        inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

@@ -27,7 +27,9 @@ use leaf_check::calls::{Prepare, Ret, check_calls_with, gobj_arg, peek_u32, poke
 use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
-use melee_sim::game::gr::{garden, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster};
+use melee_sim::game::gr::{
+    garden, inishie1, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster,
+};
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
@@ -6448,4 +6450,411 @@ fn onett_unreached_callbacks() {
     check_hazard(&d, from, 1, &load, &by_event);
     let demo = retarget(leaf_check::sym("grOnett_801E3734"));
     check_hazard(&d, from, 1, &demo, &by_demo);
+}
+
+// Mushroom Kingdom (`grinishie1.c`).
+
+const MK: &str = "oracle-stage-mushroom-kingdom";
+
+/// Mushroom Kingdom's stage object's variables (map 3's `Ground::u`).
+fn mk_vars(c: &Call) -> u32 {
+    map_vars(c, 3)
+}
+
+/// Brick block `i` (`grInishie1_Block`) in the stage's block.
+fn mk_block(c: &Call, i: u32) -> u32 {
+    peek_u32(c, mk_vars(c) + 0x18) + 0x24 * i
+}
+
+/// Items on for the match: a frequency (`StartMeleeRules::item_freq`) and the switch's every
+/// kind (the spawner's mask, `it_804A0E30` +0x18).
+fn mk_items_on(c: &mut Call) {
+    poke_u8(c, 0x8046_DB73, 2);
+    let sp = leaf_check::sym("it_804A0E30");
+    poke_u32(c, sp + 0x18, !0);
+    poke_u32(c, sp + 0x1C, !0);
+}
+
+/// Every block's state (`x2`), what it holds, and its counts.
+fn mk_blocks(c: &mut Call, x2: u16, status: u16, x4: u16, x20: u16, x22: u16) {
+    for i in 0..19 {
+        let b = mk_block(c, i);
+        poke_u16(c, b, status);
+        poke_u16(c, b + 2, x2);
+        poke_u16(c, b + 4, x4);
+        poke_u16(c, b + 0x20, x20);
+        poke_u16(c, b + 0x22, x22 + (i as u16 & 1));
+    }
+}
+
+/// A function of a stage object, run on the object in r3.
+fn mk_of(
+    f: fn(&mut Running, melee_sim::hsd::gobj::GObjId),
+) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, maps: &Maps, call: &Call| {
+        f(r, gobj_arg(maps, call));
+        Ret::Nothing
+    }
+}
+
+#[test]
+fn inishie1_setup() {
+    let d = dir(MK);
+    check_calls_with(&d, "grInishie1_801FA90C", 1, &as_saved, &event);
+    check_calls_with(&d, "grInishie1_801FA988", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        inishie1::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in 0..4u32 {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "setupStageCallbacks", 1, &set, &create);
+    }
+    for f in ["stageGObj0_OnInit", "grInishie1_801FAADC"] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    // The blocks, with items off as saved, and on: two blocks under ? blocks.
+    let blocks = mk_of(inishie1::init_blocks);
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        mk_items_on(c)
+    }] {
+        check_calls_with(&d, "grInishie1_801FAD84", 1, p, &blocks);
+    }
+    let lifts = mk_of(inishie1::init_lifts);
+    check_calls_with(&d, "grInishie1_801FC018", 1, &as_saved, &lifts);
+}
+
+/// The stage's process and the blocks': as saved, every block in each state with its counts
+/// run out and not, a bump rising and falling from each height, the ? blocks' waits running
+/// out (the first's, the second's), every block's item at once (the blocks broken, blinking
+/// in or at rest under their new ? blocks), and the wait after it.
+#[test]
+fn inishie1_blocks() {
+    let d = dir(MK);
+    check_calls_with(&d, "grInishie1_801FAB68", 1, &as_saved, &by_address);
+    let update = mk_of(inishie1::update_blocks);
+    check_calls_with(&d, "grInishie1_801FB3F0", 1, &as_saved, &update);
+    for x2 in 0..6u16 {
+        for (x4, x20, x22) in [(0u16, 0u16, 0u16), (3, 1, 2), (0, 0, 5)] {
+            let set = move |c: &mut Call, _: usize| mk_blocks(c, x2, 0, x4, x20, x22);
+            check_calls_with(&d, "grInishie1_801FB3F0", 1, &set, &update);
+        }
+    }
+    for y in [0.5f32, 4.5, 5.5, -0.5] {
+        let set = move |c: &mut Call, _: usize| {
+            mk_blocks(c, 4, 0, 0, 0, 0);
+            for i in 0..19 {
+                let b = mk_block(c, i);
+                poke_u32(c, b + 0xC, y.to_bits());
+                let speed = if i % 2 == 0 { 1.2f32 } else { -1.2 };
+                poke_u32(c, b + 0x10, speed.to_bits());
+            }
+        };
+        check_calls_with(&d, "grInishie1_801FB3F0", 1, &set, &update);
+    }
+    for (c6, c8, d8, x2) in [
+        (1u16, 0u16, 0u32, 2u16),
+        (0, 1, 0, 2),
+        (1, 1, 0, 2),
+        (1, 2, 0, 0),
+        (2, 1, 0, 1),
+        (1, 2, 0, 1),
+        (1, 2, 5, 2),
+        (300, 0, 0, 2),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            mk_blocks(c, x2, 0, 0, 1, 3);
+            let v = mk_vars(c);
+            poke_u16(c, v + 2, c6);
+            poke_u16(c, v + 4, c8);
+            poke_u32(c, v + 0x14, d8);
+        };
+        check_calls_with(&d, "grInishie1_801FB3F0", 1, &set, &update);
+    }
+}
+
+/// A block bumped from below (the ceiling's callback, then what it gave once the pass was
+/// over) and hit (its item's damage callback), each holding nothing and an item, and a
+/// block's giving up and breaking on their own.
+#[test]
+fn inishie1_breaks() {
+    let d = dir(MK);
+    let bumped = |r: &mut Running, _: &Maps, call: &Call| {
+        let mut b = inishie1::Bumps::default();
+        b.bumped(call.regs.gpr[4] as i32, call.regs.fpr[1].ps0 as f32);
+        b.apply(r);
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 6] = [
+        &as_saved,
+        &|c, _| c.regs.fpr[1].ps0 = 0.5,
+        &|c, _| c.regs.fpr[1].ps0 = -0.75,
+        &|c, _| c.regs.fpr[1].ps0 = f64::from(0.700_000_1f32),
+        &|c, _| mk_blocks(c, 2, 1, 0, 0, 0),
+        &|c, _| mk_blocks(c, 2, 3, 0, 0, 0),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "fn_801FBEB8", 1, p, &bumped);
+    }
+    let ground = |maps: &Maps, a: u32| *maps.grounds.get(&a).expect("the stage's object");
+    let hit = move |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie1::block_hit(r, gobj_arg(maps, call), ground(maps, call.regs.gpr[4]));
+        Ret::Nothing
+    };
+    for status in [None, Some(1u16), Some(2), Some(3)] {
+        let set = move |c: &mut Call, _: usize| {
+            if let Some(s) = status {
+                mk_blocks(c, 2, s, 0, 0, 0);
+            }
+        };
+        check_calls_with(&d, "fn_801FBF6C", 1, &set, &hit);
+    }
+    let give_up = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie1::give_up(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        Ret::Nothing
+    };
+    let brk = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie1::break_block(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        Ret::Nothing
+    };
+    for status in [None, Some(0u16), Some(1), Some(2), Some(3)] {
+        let set = move |c: &mut Call, _: usize| {
+            if let Some(s) = status {
+                mk_blocks(c, 2, s, 0, 0, 0);
+                // Another block holding every block's item too, or nothing.
+                let other = mk_block(c, (c.regs.gpr[4] + 1) % 19);
+                poke_u16(c, other, if s == 3 { 3 } else { 0 });
+            }
+        };
+        check_calls_with(&d, "grInishie1_801FB0AC", 1, &set, &give_up);
+        check_calls_with(&d, "grInishie1_801FBCEC", 1, &set, &brk);
+    }
+}
+
+/// The ? blocks, from the blocks' process's calls: one put over a block broken, blinking in
+/// and at rest, one taken off, an item popped out with items off and on, and a ? block's setup
+/// and process on a stage object stood in for one.
+#[test]
+fn inishie1_hatena() {
+    let d = dir(MK);
+    let from = "grInishie1_801FB3F0";
+    let add = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gobj = gobj_arg(maps, call);
+        let ix = call.regs.gpr[4] as usize;
+        inishie1::add_hatena(r, gobj, ix, inishie1::PROC_HATENA_FRAME);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grInishie1_801FBAA0");
+    for (ix, x2) in [(0u32, 0u16), (7, 1), (18, 2)] {
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = t;
+            c.regs.gpr[4] = ix;
+            mk_blocks(c, x2, 0, 0, 0, 0);
+        };
+        check_calls_with(&d, from, 1, &set, &add);
+    }
+    let remove = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie1::remove_hatena(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grInishie1_801FBC4C");
+    let set = move |c: &mut Call, _: usize| {
+        c.addr = t;
+        c.regs.gpr[4] = 4;
+    };
+    check_calls_with(&d, from, 1, &set, &remove);
+    let pop = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie1::pop_item(r, maps.jobjs.get(&call.regs.gpr[4]).copied());
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grInishie1_801FBA34");
+    for items in [false, true] {
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = t;
+            c.regs.gpr[4] = peek_u32(c, mk_block(c, 3) + 0x14);
+            if items {
+                mk_items_on(c);
+            }
+        };
+        check_calls_with(&d, from, 1, &set, &pop);
+    }
+    // A ? block's setup and its process (blinking in at a count odd and even and at its last,
+    // done, hidden for good; following block 3), on map 0's object stood in for one: its
+    // variables taken as the ? block's from memory, as the importer would type them.
+    let t = leaf_check::sym("grInishie1_801FAC04");
+    check_calls_with(&d, "stageGObj0_OnInit", 1, &retarget(t), &by_address);
+    let proc = |r: &mut Running, maps: &Maps, call: &Call| {
+        let gobj = gobj_arg(maps, call);
+        let g = melee_sim::game::gr::ground::ground_of(r.game, gobj);
+        let v = vars(call);
+        r.game.grounds[g.0].u = melee_sim::game::gr::GroundVars::Inishie1Hatena(
+            melee_sim::game::gr::vars::Inishie1HatenaVars {
+                xC4: maps.jobjs.get(&peek_u32(call, v)).copied(),
+                xC8: peek_u32(call, v + 4) as i32,
+                xCC: peek_u32(call, v + 8) as i32,
+            },
+        );
+        inishie1::proc_hatena(r, gobj);
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grInishie1_801FAC58");
+    for (count, hidden, on_block) in [
+        (3u32, 0u32, true),
+        (4, 0, true),
+        (1, 0, true),
+        (0, 0, false),
+        (3, 1, true),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = t;
+            // The object's own model stands in for a block's joint (the stage's isn't made
+            // yet at this call).
+            let joint = if on_block {
+                peek_u32(c, c.regs.gpr[3] + 0x28)
+            } else {
+                0
+            };
+            let v = vars(c);
+            poke_u32(c, v, joint);
+            poke_u32(c, v + 4, count);
+            poke_u32(c, v + 8, hidden);
+        };
+        check_calls_with(&d, "stageGObj0_OnInit", 1, &set, &proc);
+    }
+}
+
+/// The lifts: as saved; balancing with no weight (drifting back from either side), weight on
+/// one side and both, more than the cap, past the most they part (falling); falling, below
+/// the blast zone and not; gone with the wait running out and not; coming back from either
+/// side; and their collision joints touched by each kind.
+#[test]
+fn inishie1_lifts() {
+    let d = dir(MK);
+    let lifts = mk_of(inishie1::update_lifts);
+    check_calls_with(&d, "grInishie1_801FC664", 1, &as_saved, &lifts);
+    let set_lifts = |c: &mut Call, ee: u16, e0: f32, e4: f32, f0: f32, f4: f32, ec: u16| {
+        let v = mk_vars(c);
+        poke_u32(c, v + 0x1C, e0.to_bits());
+        poke_u32(c, v + 0x20, e4.to_bits());
+        poke_u16(c, v + 0x28, ec);
+        poke_u16(c, v + 0x2A, ee);
+        poke_u32(c, v + 0x2C, f0.to_bits());
+        poke_u32(c, v + 0x30, f4.to_bits());
+    };
+    let cases: [(u16, f32, f32, f32, f32, u16); 16] = [
+        (0, 0.0, 0.0, 3.0, 0.0, 0),
+        (0, 0.0, 0.0, -3.0, 0.0, 0),
+        (0, 0.0, 0.0, 0.0, 0.0, 0),
+        (0, 150.0, 0.0, 0.0, 0.0, 0),
+        (0, 0.0, 150.0, 0.0, 0.5, 0),
+        (0, 120.0, 90.0, 1.0, -0.5, 0),
+        (0, 200_000.0, 0.0, 0.0, 0.0, 0),
+        (0, 0.0, 400.0, 0.0, 40.0, 0),
+        (0, 400.0, 0.0, -500.0, -40.0, 0),
+        (0, 0.0, 400.0, 500.0, 40.0, 0),
+        (1, 0.0, 0.0, 30.0, 0.5, 0),
+        (1, 0.0, 0.0, -30.0, 500.0, 0),
+        (2, 0.0, 0.0, 30.0, 0.0, 1),
+        (2, 0.0, 0.0, 30.0, 0.0, 5),
+        (3, 0.0, 0.0, 0.1, 0.0, 0),
+        (3, 0.0, 0.0, -50.0, 0.0, 0),
+    ];
+    for (ee, e0, e4, f0, f4, ec) in cases {
+        let set = move |c: &mut Call, _: usize| set_lifts(c, ee, e0, e4, f0, f4, ec);
+        check_calls_with(&d, "grInishie1_801FC664", 1, &set, &lifts);
+    }
+    // Falling with both platforms already far below (their joints' translation y).
+    let below = move |c: &mut Call, _: usize| {
+        set_lifts(c, 1, 0.0, 0.0, 30.0, 2.0, 0);
+        let v = mk_vars(c);
+        for at in [0x3C, 0x40] {
+            let j = peek_u32(c, v + at);
+            poke_u32(c, j + 0x3C, (-100_000.0f32).to_bits());
+        }
+    };
+    check_calls_with(&d, "grInishie1_801FC664", 1, &below, &lifts);
+    let balance = mk_of(inishie1::balance);
+    check_calls_with(&d, "grInishie1_801FC110", 1, &as_saved, &balance);
+    for (_, e0, e4, f0, f4, _) in cases.iter().copied().filter(|c| c.0 == 0) {
+        let set = move |c: &mut Call, _: usize| set_lifts(c, 0, e0, e4, f0, f4, 0);
+        check_calls_with(&d, "grInishie1_801FC110", 1, &set, &balance);
+    }
+    let level = mk_of(inishie1::level_out);
+    let t = leaf_check::sym("grInishie1_801FC4A0");
+    for f0 in [0.0f32, 0.1, -0.1, 50.0, -50.0] {
+        let set = move |c: &mut Call, _: usize| {
+            set_lifts(c, 3, 0.0, 0.0, f0, 0.0, 0);
+            c.addr = t;
+        };
+        check_calls_with(&d, "grInishie1_801FC664", 1, &set, &level);
+    }
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .expect("the stage's object");
+        let param = r.game.gr.inishie1_yakumono;
+        let a = &call.regs.gpr;
+        let (joint, x50, kind) = (a[4] as i32, a[6] as i32, a[7] as i32);
+        inishie1::lift_touched(&mut r.game.grounds, param, r.data, g, joint, x50, kind);
+        Ret::Nothing
+    };
+    let prepares: [&Prepare; 5] = [
+        &as_saved,
+        &|c, _| c.regs.gpr[4] ^= 1,
+        &|c, _| c.regs.gpr[4] = 3,
+        &|c, _| c.regs.gpr[7] = 1,
+        &|c, _| c.regs.gpr[7] = 2,
+    ];
+    for p in prepares {
+        check_calls_with(&d, "fn_801FC9AC", 1, p, &touched);
+    }
+}
+
+/// The music's speed-up (as saved, and already sped up), and the callbacks no capture
+/// reaches, from the stage's process's calls: the empty processes and destroy callbacks, map
+/// 1's setup, the shadow check, and the load and demo hooks.
+#[test]
+fn inishie1_unreached_callbacks() {
+    let d = dir(MK);
+    // The song's change itself (`lbAudioAx_80023F28`) is stood in for on the reference's side:
+    // a captured state's audio has no timeline to start a stream on, so ours tells the
+    // frontend instead. The oracle's match plays the change (its fast song from tick 13,326).
+    let music = mk_of(inishie1::music);
+    let stubs = [(leaf_check::sym("lbAudioAx_80023F28"), None)];
+    let setup = leaf_check::calls::Setup {
+        stubs: &stubs,
+        ..Default::default()
+    };
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| poke_u8(c, mk_vars(c), 0x80),
+        &|c: &mut Call, _: usize| poke_u8(c, mk_vars(c), 0x7F),
+    ] {
+        leaf_check::calls::check_calls_in(&d, "grInishie1_801FCB10", 1, p, &setup, &music);
+    }
+    let from = "grInishie1_801FAB68";
+    for name in [
+        "grInishie1_801FAAD4",
+        "grInishie1_801FAAD8",
+        "grInishie1_801FABB0",
+        "grInishie1_801FABFC",
+        "grInishie1_801FAC00",
+        "grInishie1_801FAD80",
+        "grInishie1_801FABB4",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(inishie1::check_shadow_render()));
+    let t = leaf_check::sym("grInishie1_801FCBB8");
+    check_calls_with(&d, from, 1, &retarget(t), &shadow);
+    let t = leaf_check::sym("grInishie1_801FA984");
+    check_calls_with(&d, from, 1, &retarget(t), &event);
+    let t = leaf_check::sym("grInishie1_801FA908");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
 }

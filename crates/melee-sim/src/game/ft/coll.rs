@@ -61,6 +61,8 @@ pub struct ObjCollHooks<'a> {
     pub landing: crate::game::gr::yorster::Landing,
     /// The planks Kongo Jungle's bridge's landings kicked.
     pub kicks: crate::game::gr::kongo::Kicks,
+    /// The brick blocks Mushroom Kingdom's ceilings' touches broke.
+    pub bumps: crate::game::gr::inishie1::Bumps,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -263,6 +265,21 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::rcruise::plank_touched(self.grounds, g, joint_id, kind);
                 }
             }
+            super::super::gr::inishie1::BLOCK_BUMPED => self.bumps.bumped(joint_id, dy),
+            super::super::gr::inishie1::LIFT_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let param = self.stage_maps.gr.inishie1_yakumono;
+                    super::super::gr::inishie1::lift_touched(
+                        self.grounds,
+                        param,
+                        self.data,
+                        g,
+                        joint_id,
+                        x50,
+                        kind,
+                    );
+                }
+            }
             _ => unported_call(&format!("stage joint callback {:#010x}", callback.0)),
         }
     }
@@ -396,6 +413,7 @@ impl Running<'_> {
             data: self.data,
             landing,
             kicks: Default::default(),
+            bumps: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter,
@@ -414,9 +432,14 @@ impl Running<'_> {
         fp.cur_pos = fp.coll_data.cur_pos;
         let landing = hooks.landing;
         let kicks = std::mem::take(&mut hooks.kicks);
+        let bumps = std::mem::take(&mut hooks.bumps);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
+        bumps.apply(&mut Running {
+            game,
+            data: self.data,
+        });
         hit
     }
 

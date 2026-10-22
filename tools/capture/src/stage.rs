@@ -76,6 +76,8 @@ pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
 pub const GRPURA_VTX: u32 = 0x803E_6C0C;
 /// grrcruise.c's (`ssbm_types::tu::melee__gr__grrcruise::yakumono_param`).
 pub const GRRCRUISE_YAKUMONO: u32 = 0x804D_6A10;
+/// grinishie1.c's (`ssbm_types::tu::melee__gr__grinishie1::yakumono_param`).
+pub const GRINISHIE1_YAKUMONO: u32 = 0x804D_69F8;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -366,6 +368,8 @@ impl Importer<'_> {
         self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
         self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRINISHIE1_YAKUMONO);
+        self.game.gr.inishie1_yakumono = self.data_or_unhandled(yaku);
         let n = gr::pura::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
         self.game.gr.pura_vtx_jobjs.clear();
@@ -625,6 +629,7 @@ impl Importer<'_> {
             bounds,
             generation: r32(sym("mpColl_804D64AC")) as i32,
             islands,
+            joints_addr: joints,
         })
     }
 
@@ -1018,6 +1023,11 @@ impl Comparer<'_> {
                 "grPura yakumono_param",
                 GRPURA_YAKUMONO,
                 game.gr.pura_yakumono,
+            ),
+            (
+                "grInishie1 yakumono_param",
+                GRINISHIE1_YAKUMONO,
+                game.gr.inishie1_yakumono,
             ),
         ] {
             let yaku = self.u32(at);

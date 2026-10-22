@@ -77,6 +77,8 @@ pub enum VarsKind {
     RCruiseBlocks,
     RCruiseFlag,
     Scroll,
+    Inishie1,
+    Inishie1Hatena,
 }
 
 /// `union GroundVars`.
@@ -152,6 +154,11 @@ pub enum GroundVars {
     RCruiseFlag(RCruiseFlagVars),
     /// `ScrollVars`: Rainbow Cruise's course, which moves the stage under the camera (map 3).
     Scroll(ScrollVars),
+    /// `grInishie1_GroundVars`: Mushroom Kingdom's stage (map 3), its brick blocks and its
+    /// two lifts.
+    Inishie1(Inishie1Vars),
+    /// `grInishie1_GroundVars3`: a ? block over a brick block (map 2).
+    Inishie1Hatena(Inishie1HatenaVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1028,6 +1035,94 @@ pub struct ScrollVars {
     pub ctr_jobj: Option<crate::hsd::jobj::JObjId>,
     pub x38: [Option<crate::hsd::jobj::JObjId>; 3],
     pub x44: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// A brick block of Mushroom Kingdom's (`grInishie1_Block`, in the stage's block from the
+/// heap): what it holds (`status`: 0 nothing, 1 and 2 an item, 3 every block's), its state
+/// (`x2`), a count (`x4`), a halfword nothing writes (`x6`), its height at rest (`x8`), its bump
+/// and the bump's speed (`xC`, `x10`), its joint, its ? block, its hurtbox item, the ticks until
+/// it comes back (`x20`) and the ticks it blinks in (`x22`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie1Block {
+    pub status: i16,
+    pub x2: i16,
+    pub x4: i16,
+    pub x6: i16,
+    pub x8: f32,
+    pub xC: f32,
+    pub x10: f32,
+    pub jobj2: Option<crate::hsd::jobj::JObjId>,
+    pub hatena_gobj: Option<GObjId>,
+    pub item_gobj: Option<GObjId>,
+    pub x20: i16,
+    pub x22: i16,
+}
+
+/// `grInishie1_GroundVars`, Mushroom Kingdom's stage (map 3): its first halfword (bit 0x8000:
+/// the music sped up), the ticks until the next ? blocks (`xC6`, `xC8`) and where the last were
+/// (`xCA`, `xCC`), two words nothing writes (`xD0`, `xD4`), the ticks until ? blocks may come
+/// again after every block's (`xD8`), the blocks with their address in the heap, and the lifts:
+/// the weights on them this tick (`xE0`, `xE4`), the touches (`xE8`, `xEA`), the wait before
+/// they come back (`xEC`), their state (`xEE`), their offset and its speed (`xF0`, `xF4`), a
+/// word nothing writes (`xF8`), their height at rest (`xFC`), and their platforms' and their
+/// arms' joints (`x100` to `x10C`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie1Vars {
+    pub xC4: u16,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCA: i16,
+    pub xCC: i16,
+    pub xD0: i32,
+    pub xD4: i32,
+    pub xD8: i32,
+    pub blocks: Vec<Inishie1Block>,
+    pub blocks_addr: u32,
+    pub xE0: f32,
+    pub xE4: f32,
+    pub xE8: i16,
+    pub xEA: i16,
+    pub xEC: i16,
+    pub xEE: i16,
+    pub xF0: f32,
+    pub xF4: f32,
+    pub xF8: f32,
+    pub xFC: f32,
+    pub x100: Option<crate::hsd::jobj::JObjId>,
+    pub x104: Option<crate::hsd::jobj::JObjId>,
+    pub x108: Option<crate::hsd::jobj::JObjId>,
+    pub x10C: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grInishie1_GroundVars3`, a ? block (map 2): the brick block's joint it sits on (`xC4`), the
+/// ticks it blinks in (`xC8`) and whether it stays hidden (`xCC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie1HatenaVars {
+    pub xC4: Option<crate::hsd::jobj::JObjId>,
+    pub xC8: i32,
+    pub xCC: i32,
+}
+
+/// A Mushroom Kingdom brick block read from memory at `b`.
+fn inishie1_block(m: &Mem, b: u32, cx: &mut dyn Cx) -> Inishie1Block {
+    let h = |a: u32| m.u16(a) as i16;
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    Inishie1Block {
+        status: h(b),
+        x2: h(b + 2),
+        x4: h(b + 4),
+        x6: h(b + 6),
+        x8: f(b + 8),
+        xC: f(b + 0xC),
+        x10: f(b + 0x10),
+        jobj2: cx
+            .import_handle("JObjId", m.u32(b + 0x14))
+            .map(crate::hsd::jobj::JObjId),
+        hatena_gobj: cx.import_handle("GObjId", m.u32(b + 0x18)).map(GObjId),
+        item_gobj: cx.import_handle("GObjId", m.u32(b + 0x1C)).map(GObjId),
+        x20: h(b + 0x20),
+        x22: h(b + 0x22),
+    }
 }
 
 /// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
@@ -2012,6 +2107,54 @@ impl GroundVars {
                     count: m.u32(at + 4),
                     pos: crate::vec::Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10)),
                 },
+            }),
+            VarsKind::Inishie1 => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let j = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(at + a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                let blocks_addr = m.u32(at + 0x18);
+                let blocks = if blocks_addr == 0 {
+                    Vec::new()
+                } else {
+                    (0..19u32)
+                        .map(|i| inishie1_block(m, blocks_addr + 0x24 * i, cx))
+                        .collect()
+                };
+                GroundVars::Inishie1(Inishie1Vars {
+                    xC4: m.u16(at),
+                    xC6: h(2),
+                    xC8: h(4),
+                    xCA: h(6),
+                    xCC: h(8),
+                    xD0: m.u32(at + 0xC) as i32,
+                    xD4: m.u32(at + 0x10) as i32,
+                    xD8: m.u32(at + 0x14) as i32,
+                    blocks,
+                    blocks_addr,
+                    xE0: f(at + 0x1C),
+                    xE4: f(at + 0x20),
+                    xE8: h(0x24),
+                    xEA: h(0x26),
+                    xEC: h(0x28),
+                    xEE: h(0x2A),
+                    xF0: f(at + 0x2C),
+                    xF4: f(at + 0x30),
+                    xF8: f(at + 0x34),
+                    xFC: f(at + 0x38),
+                    x100: j(cx, 0x3C),
+                    x104: j(cx, 0x40),
+                    x108: j(cx, 0x44),
+                    x10C: j(cx, 0x48),
+                })
+            }
+            VarsKind::Inishie1Hatena => GroundVars::Inishie1Hatena(Inishie1HatenaVars {
+                xC4: cx
+                    .import_handle("JObjId", m.u32(at))
+                    .map(crate::hsd::jobj::JObjId),
+                xC8: m.u32(at + 4) as i32,
+                xCC: m.u32(at + 8) as i32,
             }),
             VarsKind::Scroll => {
                 let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
@@ -3127,6 +3270,57 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Mushroom Kingdom's stage's (`grInishie1_GroundVars`), likewise: its
+    /// pointers convert only if they are null.
+    pub fn inishie1(&mut self) -> &mut Inishie1Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [0x18, 0x3C, 0x40, 0x44, 0x48] {
+                b.null(at);
+            }
+            let h = |at: usize| u16::from_be_bytes([b.0[at], b.0[at + 1]]) as i16;
+            *self = GroundVars::Inishie1(Inishie1Vars {
+                xC4: h(0) as u16,
+                xC6: h(2),
+                xC8: h(4),
+                xCA: h(6),
+                xCC: h(8),
+                xD0: b.u32(0xC) as i32,
+                xD4: b.u32(0x10) as i32,
+                xD8: b.u32(0x14) as i32,
+                xE0: b.f32(0x1C),
+                xE4: b.f32(0x20),
+                xE8: h(0x24),
+                xEA: h(0x26),
+                xEC: h(0x28),
+                xEE: h(0x2A),
+                xF0: b.f32(0x2C),
+                xF4: b.f32(0x30),
+                xF8: b.f32(0x34),
+                xFC: b.f32(0x38),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::Inishie1(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grInishie1_GroundVars"),
+        }
+    }
+
+    /// The variables as a ? block's (`grInishie1_GroundVars3`), likewise: its setup writes
+    /// every field before anything reads one, so a reused block's bytes don't carry over.
+    pub fn inishie1_hatena(&mut self) -> &mut Inishie1HatenaVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::Inishie1Hatena(Inishie1HatenaVars::default());
+        }
+        match self {
+            GroundVars::Inishie1Hatena(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grInishie1_GroundVars3")
+            }
+        }
+    }
+
     /// The variables as `ScrollVars`, likewise.
     pub fn scroll(&mut self) -> &mut ScrollVars {
         if let GroundVars::Bytes(b) = self {
@@ -3901,6 +4095,111 @@ impl Mirror for GroundVars {
                     &format!("{path}.rcruise2.xC4.data"),
                     "DynamicsId",
                     d.data.map(|x| x.0),
+                    m.u32(at),
+                );
+            }
+            GroundVars::Inishie1(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (
+                    v.xC4,
+                    [v.xC6, v.xC8, v.xCA, v.xCC, v.xE8, v.xEA, v.xEC, v.xEE],
+                    [v.xD0, v.xD4, v.xD8],
+                    [v.xE0, v.xE4, v.xF0, v.xF4, v.xF8, v.xFC].map(f32::to_bits),
+                );
+                let theirs = (
+                    m.u16(at),
+                    [2, 4, 6, 8, 0x24, 0x26, 0x28, 0x2A].map(h),
+                    [0xC, 0x10, 0x14].map(|a| m.u32(at + a) as i32),
+                    [0x1C, 0x20, 0x2C, 0x30, 0x34, 0x38].map(|a| m.u32(at + a)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.inishie1"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (name, j, off) in [
+                    ("x100", v.x100, 0x3C),
+                    ("x104", v.x104, 0x40),
+                    ("x108", v.x108, 0x44),
+                    ("x10C", v.x10C, 0x48),
+                ] {
+                    cx.compare_handle(
+                        &format!("{path}.inishie1.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + off),
+                    );
+                }
+                // The block's address is 0 where no allocator model runs (a leaf check): its
+                // contents compare at the original's.
+                let tb = m.u32(at + 0x18);
+                if v.blocks_addr != 0 && v.blocks_addr != tb {
+                    cx.mismatch(
+                        &format!("{path}.inishie1.block"),
+                        format!("{:#x}", v.blocks_addr),
+                        format!("{tb:#x}"),
+                    );
+                    return;
+                }
+                if v.blocks.is_empty() != (tb == 0) {
+                    cx.mismatch(
+                        &format!("{path}.inishie1.block"),
+                        format!("{}", v.blocks.len()),
+                        format!("{tb:#x}"),
+                    );
+                    return;
+                }
+                for (i, e) in v.blocks.iter().enumerate() {
+                    let b = tb + 0x24 * i as u32;
+                    let path = format!("{path}.inishie1.block[{i}]");
+                    let hb = |a: u32| m.u16(b + a) as i16;
+                    let ours = (
+                        [e.status, e.x2, e.x4, e.x6, e.x20, e.x22],
+                        [e.x8, e.xC, e.x10].map(f32::to_bits),
+                    );
+                    let theirs = (
+                        [0, 2, 4, 6, 0x20, 0x22].map(hb),
+                        [8, 0xC, 0x10].map(|a| m.u32(b + a)),
+                    );
+                    if ours != theirs {
+                        cx.mismatch(&path, format!("{ours:x?}"), format!("{theirs:x?}"));
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.jobj2"),
+                        "JObjId",
+                        e.jobj2.map(|j| j.0),
+                        m.u32(b + 0x14),
+                    );
+                    cx.compare_handle(
+                        &format!("{path}.hatena_gobj"),
+                        "GObjId",
+                        e.hatena_gobj.map(|g| g.0),
+                        m.u32(b + 0x18),
+                    );
+                    cx.compare_handle(
+                        &format!("{path}.item_gobj"),
+                        "GObjId",
+                        e.item_gobj.map(|g| g.0),
+                        m.u32(b + 0x1C),
+                    );
+                }
+            }
+            GroundVars::Inishie1Hatena(v) => {
+                let ours = (v.xC8, v.xCC);
+                let theirs = (m.u32(at + 4) as i32, m.u32(at + 8) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.inishie13"),
+                        format!("{ours:?}"),
+                        format!("{theirs:?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.inishie13.xC4"),
+                    "JObjId",
+                    v.xC4.map(|j| j.0),
                     m.u32(at),
                 );
             }

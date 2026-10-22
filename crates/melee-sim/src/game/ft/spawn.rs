@@ -519,6 +519,7 @@ impl Running<'_> {
             data: self.data,
             landing,
             kicks: Default::default(),
+            bumps: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
@@ -565,6 +566,7 @@ impl Running<'_> {
             data: self.data,
             landing,
             kicks: Default::default(),
+            bumps: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter: None,
@@ -585,7 +587,12 @@ impl Running<'_> {
             fp.cur_pos = fp.coll_data.cur_pos;
         }
         let kicks = std::mem::take(&mut hooks.kicks);
+        let bumps = std::mem::take(&mut hooks.bumps);
         kicks.apply(game, self.data);
+        bumps.apply(&mut Running {
+            game,
+            data: self.data,
+        });
         landed
     }
 

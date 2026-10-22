@@ -199,6 +199,9 @@ pub struct Geometry<K: Kinds> {
     /// (`mpColl_804D64AC`, which `mpcoll.c` defines and the stage code also bumps).
     pub generation: i32,
     pub islands: Islands,
+    /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
+    /// model (0 without), which `mpJointFromLine` leaves in r5.
+    pub joints_addr: u32,
 }
 
 /// The geometry a stage without collision data gets (`mpLib_803BF760`): one floor below the
@@ -333,11 +336,12 @@ impl<K: Kinds> Geometry<K> {
     /// attribute areas first (`grDynamicAttr_801CA0B4`), as the original does here.
     pub fn load(data: &Archives, coll_data: Option<DataRef>, scale: f32, grkind: i32) -> Self {
         // The vertices', lines' and joints' arrays, for 2048, 1536 and 256 of them.
-        crate::hsd::heap::with(|h| {
+        let joints_addr = crate::hsd::heap::with(|h| {
             h.mem_alloc(2048 * 0x18);
             h.mem_alloc(1536 * 8);
-            h.mem_alloc(256 * 0x34);
-        });
+            h.mem_alloc(256 * 0x34)
+        })
+        .unwrap_or(0);
         let (verts, mut lines, ranges, descs) = match coll_data {
             Some(c) => read_data(data, c),
             None => default_data(),
@@ -427,6 +431,7 @@ impl<K: Kinds> Geometry<K> {
             bounds,
             generation: 0,
             islands: Islands::default(),
+            joints_addr,
         };
         g.build_islands();
         g.uncheck_bounding();
