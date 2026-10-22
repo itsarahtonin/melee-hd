@@ -1384,11 +1384,13 @@ pub fn cpu_set() -> Vec<Match> {
 }
 
 /// The CPU stages set: real CPUs on stages beyond the tournament six where the CPU AI runs code
-/// of its own: off camera on the ground (`ftCo_800A6FC4`, Poké Floats and Yoshi's Island) and
-/// in the barrels (`ftCo_800AC434`, both Kongo Jungles; the Ice Climbers bring Nana). A human
-/// (`BENCH_AI`) against three CPUs at mixed levels, 4 stocks, 3 minutes, items off.
+/// of its own: off camera on the ground (`ftCo_800A6FC4`, Poké Floats and Yoshi's Island), in
+/// the barrels (`ftCo_800AC434`, both Kongo Jungles; the Ice Climbers bring Nana), and heading
+/// for safe ground from Brinstar's acid, Rainbow Cruise's edges and Great Bay's turtle
+/// (`ftCo_800A229C`, `ftCo_800A8210`). A human (`BENCH_AI`) against three CPUs at mixed levels,
+/// 4 stocks, 3 minutes, items off.
 pub fn cpu_stages_set() -> Vec<Match> {
-    let matches: [(u16, &str, [Player; 4]); 4] = [
+    let matches: [(u16, &str, [Player; 4]); 7] = [
         (
             POKE_FLOATS,
             "poke-floats",
@@ -1427,6 +1429,36 @@ pub fn cpu_stages_set() -> Vec<Match> {
                 cpu(YOSHI, 0, 9),
                 cpu(NESS, 0, 4),
                 cpu(MEWTWO, 0, 7),
+            ],
+        ),
+        (
+            BRINSTAR,
+            "brinstar",
+            [
+                p(SHEIK, 0),
+                cpu(BOWSER, 0, 3),
+                cpu(ROY, 0, 6),
+                cpu(DR_MARIO, 0, 8),
+            ],
+        ),
+        (
+            RAINBOW_CRUISE,
+            "rainbow-cruise",
+            [
+                p(FOX, 0),
+                cpu(PEACH, 0, 8),
+                cpu(GAME_WATCH, 0, 3),
+                cpu(CAPTAIN, 0, 6),
+            ],
+        ),
+        (
+            GREAT_BAY,
+            "great-bay",
+            [
+                p(MARTH, 0),
+                cpu(SAMUS, 0, 6),
+                cpu(YOUNG_LINK, 0, 8),
+                cpu(PICHU, 0, 3),
             ],
         ),
     ];

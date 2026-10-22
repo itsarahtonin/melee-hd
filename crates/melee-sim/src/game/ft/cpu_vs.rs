@@ -7,7 +7,7 @@
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
-use super::super::gr::{greatbay, stage};
+use super::super::gr::{GR_KIND_RCRUISE, greatbay, grlib, ground, stage};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
@@ -25,6 +25,10 @@ const DISTANCES: u32 = 0x20;
 /// `Gr_Kind_Castle`, `Gr_Kind_Zebes`.
 const GR_KIND_CASTLE: i32 = 2;
 const GR_KIND_ZEBES: i32 = 8;
+
+/// `Gr_Kind_BigBlue`, `Gr_Kind_Icemt`: stages not on the roster.
+const GR_KIND_BIGBLUE: i32 = 0x13;
+const GR_KIND_ICEMT: i32 = 0x16;
 
 /// The stack pointer in `ftCo_800B24B8` under the computer player's frame and the decision
 /// by kind, and `ftCo_800AE7AC`'s frame size: where the behavior pick's frame lies, whose
@@ -97,8 +101,10 @@ impl Running<'_> {
     }
 
     /// Whether the fighter is somewhere the stage or camera sends it back from, and where it
-    /// is, `ftCo_800A229C`: 2 by Great Bay's turtle; 1 at Peach's Castle's or Zebes' hazard;
-    /// 2 near a moving stage's edge; -1 off camera; else none (0).
+    /// is, `ftCo_800A229C`: 2 by Great Bay's turtle; 1 at Peach's Castle's hazard, or on
+    /// Brinstar while the acid is above the blast zones' bottom (always), at the bottom's
+    /// middle; 2 on Rainbow Cruise near the edges ([`Running::cpu_near_moving_edge`]); -1 off
+    /// camera; else none (0).
     #[doc(alias = "ftCo_800A229C")]
     fn cpu_off_screen(&mut self, f: FighterId) -> Option<(i32, Vec3)> {
         let pos = self.game.fighters[f.0].cur_pos;
@@ -107,15 +113,69 @@ impl Running<'_> {
         }
         match self.game.stage_info.grkind {
             GR_KIND_CASTLE => unported_call("ftCo_800A229C at Peach's Castle (grCastle_801CDF54)"),
-            GR_KIND_ZEBES => unported_call("ftCo_800A229C on Zebes"),
-            // `grLib_801C9E60` and the moving stages' edges.
-            3 | 19 | 22 => unported_call("ftCo_800A229C on a moving stage"),
+            GR_KIND_ZEBES => {
+                let (acid, _) = ground::x724_and_step(self.game);
+                let bottom = reg(stage::blast_bottom(self.game));
+                if reg(acid) > bottom {
+                    let right = reg(stage::blast_right(self.game));
+                    let left = reg(stage::blast_left(self.game));
+                    let x = mem(fp::fmuls(0.5, fp::fadds(left, right)));
+                    return Some((1, Vec3::new(x, mem(bottom), 0.0)));
+                }
+            }
+            GR_KIND_RCRUISE => {
+                let mut wind = Vec3::new(0.0, 0.0, 0.0);
+                grlib::item_wind(self.game, &mut wind);
+                if self.cpu_near_moving_edge(pos, wind) {
+                    return Some((2, pos));
+                }
+            }
+            // `grLib_801C9E60` stops on both first.
+            GR_KIND_BIGBLUE | GR_KIND_ICEMT => {
+                unported_call("ftCo_800A229C on Big Blue or Icicle Mountain")
+            }
             _ => {}
         }
         if !super::super::camera::in_bounds_by(&self.game.stage_info, pos, 0.0) {
             return Some((-1, pos));
         }
         None
+    }
+
+    /// `ftCo_800A229C`'s Rainbow Cruise case: whether `pos` lies in the 40% of the blast
+    /// zones' width the wind blows toward, or the 40% of their height it blows toward, or
+    /// within 20% of any side.
+    fn cpu_near_moving_edge(&self, pos: Vec3, wind: Vec3) -> bool {
+        // 0.4f and 0.2f.
+        const TWO_FIFTHS: f64 = 0.400_000_005_960_464_5;
+        const FIFTH: f64 = 0.200_000_002_980_232_24;
+        let (x, y) = (reg(pos.x), reg(pos.y));
+        let left = reg(stage::blast_left(self.game));
+        let right = reg(stage::blast_right(self.game));
+        let w = fp::fsubs(right, left);
+        if reg(wind.x) < 0.0 {
+            if x < fp::fmadds(TWO_FIFTHS, w, left) {
+                return true;
+            }
+        } else if x > fp::fnmsubs(TWO_FIFTHS, w, right) {
+            return true;
+        }
+        let bottom = reg(stage::blast_bottom(self.game));
+        let top = reg(stage::blast_top(self.game));
+        let h = fp::fsubs(top, bottom);
+        if reg(wind.y) > 0.0 {
+            if y > fp::fnmsubs(TWO_FIFTHS, h, top) {
+                return true;
+            }
+        } else if y < fp::fmadds(TWO_FIFTHS, h, bottom) {
+            return true;
+        }
+        let dx = fp::fmuls(FIFTH, w);
+        let dy = fp::fmuls(FIFTH, h);
+        x < fp::fadds(dx, left)
+            || x > fp::fsubs(right, dx)
+            || y > fp::fsubs(top, dy)
+            || y < fp::fadds(dy, bottom)
     }
 
     /// Heading back from off camera or the stage's edge, `ftCo_800AE7AC`: the fighter targets
@@ -125,7 +185,6 @@ impl Running<'_> {
     /// as the DI switch.
     #[doc(alias = "ftCo_800AE7AC")]
     fn cpu_back_on_screen(&mut self, f: FighterId, at: Vec3, cmd: i32) -> Leftover {
-        let _ = at;
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF8_b0 = true;
         c.xF9_b3 = false;
@@ -141,7 +200,7 @@ impl Running<'_> {
         self.cpu_item_targets(f);
         if self.cpu_should_act(f) {
             if cmd >= 0 {
-                unported_call("ftCo_800A8210");
+                self.cpu_toward_safe_ground(f, at);
             } else if self.game.fighters[f.0].ground_or_air != GA_AIR {
                 let left = reg(stage::blast_left(self.game));
                 let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
@@ -170,6 +229,51 @@ impl Running<'_> {
         }
         self.cpu_choose_behavior_r5(f, cmd != 0, Some(VS_SP - BACK_ON_SCREEN_FRAME))
             .1
+    }
+
+    /// Heading for safe ground from the stage's cases, `ftCo_800A8210`, on the ground only:
+    /// on Rainbow Cruise (and Big Blue) the nearest island toward the blast zones' middle, or
+    /// failing that against the wind ([`Running::cpu_island_toward`]); elsewhere (Brinstar's
+    /// acid, Great Bay's turtle) the island end farthest from `from`
+    /// ([`Running::cpu_far_island_end`]). It sets the destination as `ftCo_800A1F3C` does
+    /// (`ftCo_800A8210_inline0`), within 5.
+    #[doc(alias = "ftCo_800A8210")]
+    fn cpu_toward_safe_ground(&mut self, f: FighterId, from: Vec3) {
+        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            return;
+        }
+        let found = match self.game.stage_info.grkind {
+            GR_KIND_ICEMT => unported_call("ftCo_800A8210 on Icicle Mountain"),
+            GR_KIND_RCRUISE | GR_KIND_BIGBLUE => {
+                let left = reg(stage::blast_left(self.game));
+                let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
+                let bottom = reg(stage::blast_bottom(self.game));
+                let cy = fp::fmuls(0.5, fp::fadds(reg(stage::blast_top(self.game)), bottom));
+                let pos = self.game.fighters[f.0].cur_pos;
+                let toward = Vec3::new(
+                    mem(fp::fsubs(cx, reg(pos.x))),
+                    mem(fp::fsubs(cy, reg(pos.y))),
+                    0.0,
+                );
+                match self.cpu_island_toward(f, toward) {
+                    Some(at) => Some(at),
+                    None => {
+                        let mut wind = Vec3::new(0.0, 0.0, 0.0);
+                        grlib::item_wind(self.game, &mut wind);
+                        let against = Vec3::new(
+                            mem(fp::fneg(reg(wind.x))),
+                            mem(fp::fneg(reg(wind.y))),
+                            wind.z,
+                        );
+                        self.cpu_island_toward(f, against)
+                    }
+                }
+            }
+            _ => self.cpu_far_island_end(f, from.x, from.y),
+        };
+        if let Some((x, y)) = found {
+            self.cpu_set_destination(f, x, y, 5.0);
+        }
     }
 
     /// The nearest place on another island in the direction `dir` (within 45 degrees) that

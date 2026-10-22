@@ -61,11 +61,6 @@ pub struct Computer {
 const ICE_CLIMBERS: u8 = 14;
 const YOSHI: u8 = 17;
 
-/// `StKind`s the gaps name.
-const BRINSTAR: u16 = 6;
-const RAINBOW_CRUISE: u16 = 11;
-const GREAT_BAY: u16 = 13;
-
 /// The gaps a match reaches with these VS computer players, these characters among all its
 /// players (humans and computers; the Ice Climbers bring Nana), on `stage`, with these item
 /// switch kinds on (none: items off).
@@ -151,7 +146,9 @@ const KIND_16: &str = "computer kind 16's jump rule; VS uses kind 4";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
 const CORNERIA: &str = "the turn under Corneria's ceiling (xFA_b6, set only on grCorneria_801E2E50's floor) and behavior 12: Corneria isn't on the roster, and behavior 12 isn't reached";
-const NOT_ON_ROSTER: &str = "a stage that isn't on the roster (Icicle Mountain, Peach's Castle)";
+const NOT_ON_ROSTER: &str =
+    "a stage that isn't on the roster (Big Blue, Icicle Mountain, Peach's Castle)";
+const ICICLE_MOUNTAIN: &str = "only ftCo_800A8210's Icicle Mountain case calls it (by the wind's direction), and Icicle Mountain isn't on the roster";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
 const NANA_FOLLOWING: &str = "on the frame Nana stops following Popo her behavior is her fallback (x1C, walking), not the DI";
 const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a behavior other than the DI, which alone reads it";
@@ -196,6 +193,13 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800A0384", CORNERIA),
     ("ftCo_800A9CB4 on Icicle Mountain", NOT_ON_ROSTER),
     ("ftCo_800A229C at Peach's Castle", NOT_ON_ROSTER),
+    (
+        "ftCo_800A229C on Big Blue or Icicle Mountain",
+        NOT_ON_ROSTER,
+    ),
+    ("ftCo_800A8210 on Icicle Mountain", NOT_ON_ROSTER),
+    ("ftCo_800A6A98", ICICLE_MOUNTAIN),
+    ("ftCo_800A6D2C", ICICLE_MOUNTAIN),
     ("ftCo_800A4768 with no island end", ISLAND_END),
     ("a register left by ftCo_800A7AAC", NANA_FOLLOWING),
     ("a register left by ftCo_800ADE48", PICK_LEFTOVER),
@@ -271,46 +275,6 @@ const STAR_OR_HAMMER: &[i32] = &[10, 28];
 /// What a match with computer players reaches that isn't ported, task by task
 /// (docs/player.md, "CPU players: what's left").
 pub const MISSING: &[CpuGap] = &[
-    CpuGap {
-        what: "a computer player near Brinstar's lava (ftCo_800A229C, ftCo_800A8210)",
-        covers: &[
-            "ftCo_800A229C on Zebes",
-            "ftCo_800A8210",
-            "ftCo_800A6A98",
-            "ftCo_800A6D2C",
-        ],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[BRINSTAR],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player near a moving stage's edge (ftCo_800A229C, ftCo_800A8210)",
-        covers: &[
-            "ftCo_800A229C on a moving stage",
-            "ftCo_800A8210",
-            "ftCo_800A6A98",
-            "ftCo_800A6D2C",
-        ],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[RAINBOW_CRUISE],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player beside Great Bay's surfaced turtle (ftCo_800A8210)",
-        covers: &["ftCo_800A8210", "ftCo_800A6A98", "ftCo_800A6D2C"],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[GREAT_BAY],
-        items: Items::Off,
-    },
     CpuGap {
         what: "a computer player closing in on an enemy with a Starman or a hammer (ftCo_800AB224, ftCo_800BA674, ftCo_800BA2E8)",
         covers: &[
@@ -476,15 +440,11 @@ mod tests {
             }
             assert!(!on(31).contains(&g), "{}", g.what);
         }
-        // Nana reaches only her own gaps with human players, not a VS computer player's
-        // (Brinstar's lava).
-        let nana = missing_with(&[], &[14, 2], BRINSTAR, &[]);
-        assert!(nana.iter().all(|g| g.who != Who::Vs));
-        let vs = missing_with(&[fox(9)], &[14, 2], BRINSTAR, &[]);
-        assert!(
-            vs.iter()
-                .any(|g| g.covers.contains(&"ftCo_800A229C on Zebes"))
-        );
+        // Brinstar's acid, Rainbow Cruise's edges and Great Bay's turtle are ported: no stage
+        // brings a gap of its own with items off, for a VS computer player or Nana.
+        for stage in [6, 11, 13] {
+            assert!(missing_with(&[fox(9)], &[14, 2], stage, &[]).is_empty());
+        }
         // Peach's pulled sword is ported (`ftCo_800B52AC`): Peach brings no gap of her own.
         let peach = missing_with(&[fox(5)], &[2, 12], 31, &[]);
         assert_eq!(peach, missing_with(&[fox(5)], &[2, 9], 31, &[]));
