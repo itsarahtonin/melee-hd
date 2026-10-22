@@ -26,6 +26,7 @@ pub const REFLECTED: u32 = 0x802C_242C;
 pub const CLANKED: u32 = 0x802C_244C;
 #[doc(alias = "itClimbersBlizzard_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_2454;
+#[doc(alias = "itClimbersBlizzard_Absorbed")]
 pub const ABSORBED: u32 = 0x802C_245C;
 #[doc(alias = "itClimbersBlizzard_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_2464;
@@ -118,7 +119,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
 /// Sends the puff off, `itClimbersBlizzard_802C2248`: at a random angle in its spread
 /// (mirrored facing left), measured from straight down, at its speed, with its lifetime;
 /// then its state (`itClimbersBlizzard_802C2358`).
-// Ports `itClimbersBlizzard_802C2248`; aliased once a check reaches it.
+#[doc(alias = "itClimbersBlizzard_802C2248")]
 #[doc(alias = "itClimbersBlizzard_802C2358")]
 fn launch(r: &mut Running, gobj: GObjId) {
     let rand = reg(r.game.objs.rng.draw_f32());

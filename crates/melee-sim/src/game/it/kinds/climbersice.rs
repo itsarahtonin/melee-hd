@@ -49,7 +49,9 @@ pub const REFLECTED: u32 = 0x802C_1FD0;
 #[doc(alias = "itClimbersIce_Logic90_Clanked")]
 pub const CLANKED: u32 = 0x802C_1FF0;
 pub const HIT_SHIELD: u32 = 0x802C_1FF8;
+#[doc(alias = "itClimbersIce_Logic90_Absorbed")]
 pub const ABSORBED: u32 = 0x802C_20E4;
+#[doc(alias = "itClimbersIce_Logic90_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_20EC;
 pub const EVT_UNK: u32 = 0x802C_210C;
 
@@ -206,7 +208,7 @@ pub fn spawn(
     };
     let j = child(r, gobj);
     super::super::effect::queue(r, gobj, SpawnKind::Attach, id, j, &[]);
-    change_state(r, gobj, 1, change::ANIM_UPDATE);
+    drop(r, gobj);
     debug_owner_bubbles(r.game, gobj, Some(parent));
     lib26b1::disable_pickup(r.game, gobj);
     super::super::lib2725::first_frame(r, gobj);
@@ -306,7 +308,7 @@ fn shrink(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Lets go of the ice before its throw, `it_802C1A58`: it falls (state 1).
-// Ports `it_802C1A58`; aliased once a check reaches it.
+#[doc(alias = "it_802C1A58")]
 fn drop(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }

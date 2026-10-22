@@ -416,7 +416,7 @@ pub fn spawn(
 }
 
 /// Destroys a blaster its owner lets go of, `it_802AEAB4`.
-// Ports `it_802AEAB4`; aliased once a check reaches it.
+#[doc(alias = "it_802AEAB4")]
 pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);

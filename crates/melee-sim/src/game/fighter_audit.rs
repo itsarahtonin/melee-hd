@@ -64,6 +64,30 @@ const BLASTER_DEMO: (&str, &str) = (
     "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them; a match's blaster takes the fighter's state (ftFx_SpecialN_GetBlasterAction: 0 to 9)",
 );
 const BLASTER_SPAWN: (&str, &str) = ("it_802AE994", DEMO);
+const BLASTER_DEMO_STATE: &str = "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them";
+const BLASTER_STATE_9: &str = "the blaster's state 9, which its pickup (itFoxBlaster_Logic96_PickedUp) enters for its owner's actions 1, 2, 4, 5 and 9 (it_803F6E68); the pickup runs only from Item_8026AB54 in the blaster's spawns, and a match's spawn (it_802AE8A8) follows the owner's entry into the neutral special's start on the ground or in the air (ftFx_SpecialN_Enter, ftFx_SpecialAirN_Enter, Kirby's ftKb_SpecialNFx_800FE100 and ftKb_SpecialNFx_800FE240: actions 0 and 3) or comes in ThrowB, ThrowHi or ThrowLw (ftFx_Throw_Anim: 6, 7 and 8); a blaster let go is destroyed, never lies free to be picked up again";
+const BLASTER_STATES: [(&str, &str); 6] = [
+    ("itFoxblaster_UnkMotion9_Anim", BLASTER_STATE_9),
+    ("itFoxblaster_UnkMotion9_Phys", BLASTER_STATE_9),
+    ("itFoxblaster_UnkMotion9_Coll", BLASTER_STATE_9),
+    ("itFoxblaster_UnkMotion10_Anim", BLASTER_DEMO_STATE),
+    ("itFoxblaster_UnkMotion10_Phys", BLASTER_DEMO_STATE),
+    ("itFoxblaster_UnkMotion10_Coll", BLASTER_DEMO_STATE),
+];
+const PILL_HELD: &str = "the pill's held states (3 to 6): its spawns for the demo fighters (itDrMarioPill_802C09C4, itDrMarioPill_802C1180: msid + 4) and its pickup (state 6) enter them, and the pickup runs only from Item_8026AB54 in itDrMarioPill_802C09C4 (msid 2), the demo fighters' spawn; every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up";
+const PILL_HELD_STATES: [(&str, &str); 4] = [
+    ("itDrMarioPill_PickedUp", PILL_HELD),
+    ("itDrMarioPill_Motion6_Anim", PILL_HELD),
+    ("itDrMarioPill_Motion6_Phys", PILL_HELD),
+    ("itDrMarioPill_Motion6_Coll", PILL_HELD),
+];
+const NO_HITBOX: &str = "every state's script of the kind opens no hitbox, and no code opens one (only the Flipper's, the red shell's and the hammer's own code turn item hitboxes on outside a script), so nothing absorbs it or clanks with it: the absorb test (ftColl_8007925C) and the clanks (ftColl_80077970, it_8026FE68) meet only live hitboxes";
+const NO_CLANK: &str = "every hitbox the kind's state scripts open has its clank bit (x40_b0) clear, and an item's box clanks with a fighter's (ftColl_8007925C, then ftColl_80077970) or another item's (it_802706D0, then it_8026FE68) only when both boxes have it; its element is never the inert one, whose touches take the other branch";
+const PK_FLASH_HITS: [(&str, &str); 3] = [
+    ("itNesspkflash_Logic102_Absorbed", NO_HITBOX),
+    ("itNesspkflash_Logic102_Clanked", NO_HITBOX),
+    ("itNessPKFlashExplode_Logic103_Clanked", NO_CLANK),
+];
 const PILL_DEMO: [(&str, &str); 2] = [
     ("itDrMarioPill_802C09C4", DEMO),
     ("itDrMarioPill_802C1180", DEMO),
@@ -105,7 +129,16 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 2,
         items: &[54, 56, 74],
-        unreached: &[BLASTER_DEMO, BLASTER_SPAWN],
+        unreached: &[
+            BLASTER_DEMO,
+            BLASTER_SPAWN,
+            BLASTER_STATES[0],
+            BLASTER_STATES[1],
+            BLASTER_STATES[2],
+            BLASTER_STATES[3],
+            BLASTER_STATES[4],
+            BLASTER_STATES[5],
+        ],
         unsure: &[],
         missing: &[],
     },
@@ -133,6 +166,19 @@ pub const CHARACTERS: &[Character] = &[
             PILL_DEMO[0],
             PILL_DEMO[1],
             ARROW_OWNER,
+            BLASTER_STATES[0],
+            BLASTER_STATES[1],
+            BLASTER_STATES[2],
+            BLASTER_STATES[3],
+            BLASTER_STATES[4],
+            BLASTER_STATES[5],
+            PILL_HELD_STATES[0],
+            PILL_HELD_STATES[1],
+            PILL_HELD_STATES[2],
+            PILL_HELD_STATES[3],
+            PK_FLASH_HITS[0],
+            PK_FLASH_HITS[1],
+            PK_FLASH_HITS[2],
         ],
         unsure: &[],
         missing: &[],
@@ -195,6 +241,10 @@ pub const CHARACTERS: &[Character] = &[
             ("itNessbat_UnkMotion1_Anim", DEMO),
             ("itNessbat_UnkMotion1_Phys", DEMO),
             ("itNessbat_UnkMotion1_Coll", DEMO),
+            PK_FLASH_HITS[0],
+            PK_FLASH_HITS[1],
+            PK_FLASH_HITS[2],
+            ("it_802AC074", NO_CLANK),
         ],
         unsure: &[],
         missing: &[],
@@ -211,7 +261,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 13,
         items: &[81, 89, 90],
-        unreached: &[],
+        unreached: &[("itPikachuThunder_Logic39_Clanked", NO_CLANK)],
         unsure: &[],
         missing: &[],
     },
@@ -219,7 +269,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 14,
         items: &[106, 107, 113],
-        unreached: &[],
+        unreached: &[("itClimbersBlizzard_Clanked", NO_CLANK)],
         unsure: &[],
         missing: &[],
     },
@@ -250,7 +300,11 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 18,
         items: &[108, 109],
-        unreached: &[],
+        unreached: &[
+            ("itZeldaDinFire_Logic65_Absorbed", NO_HITBOX),
+            ("itZeldaDinFire_Logic65_Clanked", NO_HITBOX),
+            ("itZeldaDinFireExplode_Logic66_Clanked", NO_CLANK),
+        ],
         unsure: &[],
         missing: &[],
     },
@@ -266,7 +320,16 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 20,
         items: &[55, 57, 75],
-        unreached: &[BLASTER_DEMO, BLASTER_SPAWN],
+        unreached: &[
+            BLASTER_DEMO,
+            BLASTER_SPAWN,
+            BLASTER_STATES[0],
+            BLASTER_STATES[1],
+            BLASTER_STATES[2],
+            BLASTER_STATES[3],
+            BLASTER_STATES[4],
+            BLASTER_STATES[5],
+        ],
         unsure: &[],
         missing: &[],
     },
@@ -282,7 +345,14 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 22,
         items: &[49, 84],
-        unreached: &[PILL_DEMO[0], PILL_DEMO[1]],
+        unreached: &[
+            PILL_DEMO[0],
+            PILL_DEMO[1],
+            PILL_HELD_STATES[0],
+            PILL_HELD_STATES[1],
+            PILL_HELD_STATES[2],
+            PILL_HELD_STATES[3],
+        ],
         unsure: &[],
         missing: &[],
     },
@@ -297,7 +367,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 24,
         items: &[82, 91, 92],
-        unreached: &[],
+        unreached: &[("itPikachuThunder_Logic39_Clanked", NO_CLANK)],
         unsure: &[],
         missing: &[],
     },

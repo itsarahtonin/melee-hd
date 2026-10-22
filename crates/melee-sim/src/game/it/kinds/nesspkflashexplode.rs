@@ -23,8 +23,11 @@ pub const PHYS: u32 = 0x802A_FD2C;
 #[doc(alias = "itNessPKFlashExplode_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802A_FD44;
 pub const CLANKED: u32 = 0x802A_FD4C;
+#[doc(alias = "itNessPKFlashExplode_Logic103_Absorbed")]
 pub const ABSORBED: u32 = 0x802A_FD54;
+#[doc(alias = "itNessPKFlashExplode_Logic103_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802A_FD5C;
+#[doc(alias = "itNessPKFlashExplode_Logic103_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802A_FD64;
 pub const EVT_UNK: u32 = 0x802A_FD6C;
 

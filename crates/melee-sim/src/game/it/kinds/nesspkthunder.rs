@@ -35,8 +35,10 @@ pub const COLL: u32 = 0x802A_C000;
 pub const DMG_DEALT: u32 = 0x802A_C050;
 pub const CLANKED: u32 = 0x802A_C074;
 pub const REFLECTED: u32 = 0x802A_C098;
+#[doc(alias = "it_802AC338")]
 pub const ABSORBED: u32 = 0x802A_C338;
 pub const SHIELD_BOUNCED: u32 = 0x802A_C35C;
+#[doc(alias = "it_802AC3F8")]
 pub const HIT_SHIELD: u32 = 0x802A_C3F8;
 pub const EVT_UNK: u32 = 0x802A_C41C;
 

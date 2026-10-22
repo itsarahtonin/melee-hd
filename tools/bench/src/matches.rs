@@ -50,6 +50,34 @@ pub enum Control {
     /// A human player whose controller follows [`grappler_pad`]'s script, played by `BENCH_PADS`:
     /// Samus swinging her grapple beam from a platform, and an idle foe below.
     Grappler,
+    /// A human player whose controller follows a [`Program`] ([`program_pad`]), played by
+    /// `BENCH_PADS`: its parts in order from "GO".
+    Program(&'static Program),
+}
+
+/// A step of a [`Program`]: `buttons` and the main stick (`x`, `y`: 0 or past ±80) held for
+/// `frames` frames.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Step {
+    pub frames: u16,
+    pub buttons: u16,
+    pub x: i8,
+    pub y: i8,
+}
+
+/// A scripted controller: its parts in order, then nothing pressed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Program {
+    pub parts: &'static [Part],
+}
+
+/// A part of a [`Program`]: its steps `times` times over (forever for 0), the stick's x
+/// mirrored when `mirror` is set (the same moves facing the other way).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Part {
+    pub steps: &'static [Step],
+    pub times: u16,
+    pub mirror: bool,
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -340,6 +368,32 @@ pub fn grappler_pad(frame: i32, port: usize) -> (u16, i8, i8) {
         let b = if homes { BUTTON_L } else { 0 } | if frame == swing { BUTTON_A } else { 0 };
         if b != 0 && held(grab, grab + 93) {
             return (b, 0, 0);
+        }
+    }
+    (0, 0, 0)
+}
+
+/// A program's buttons and main stick on match frame `frame` (from "GO"): the step of the part
+/// that frame falls in.
+pub fn program_pad(program: &Program, frame: i32) -> (u16, i8, i8) {
+    let mut t = frame;
+    for part in program.parts {
+        let len: i32 = part.steps.iter().map(|s| i32::from(s.frames)).sum();
+        if len == 0 {
+            continue;
+        }
+        let all = len * i32::from(part.times);
+        if part.times != 0 && t >= all {
+            t -= all;
+            continue;
+        }
+        let mut at = t % len;
+        for s in part.steps {
+            if at < i32::from(s.frames) {
+                let x = if part.mirror { -s.x } else { s.x };
+                return (s.buttons, x, s.y);
+            }
+            at -= i32::from(s.frames);
         }
     }
     (0, 0, 0)
@@ -1275,6 +1329,508 @@ pub fn grapple_set() -> Vec<Match> {
     }]
 }
 
+/// A program step: `buttons` and the stick held for `frames` frames.
+const fn s(frames: u16, buttons: u16, x: i8, y: i8) -> Step {
+    Step {
+        frames,
+        buttons,
+        x,
+        y,
+    }
+}
+
+/// A program part: `steps` `times` times over (forever for 0), mirrored or not.
+const fn part(steps: &'static [Step], times: u16, mirror: bool) -> Part {
+    Part {
+        steps,
+        times,
+        mirror,
+    }
+}
+
+/// The R button, a target's shield (a full press: the scripts' processed inputs give it the
+/// trigger's whole travel).
+const BUTTON_R: u16 = 0x0020;
+
+/// Ness's PSI Magnet held 260 frames of 300 (its end lasts about 30, and a press during it is
+/// lost).
+const MAGNET_MODE: [Step; 3] = [
+    s(1, BUTTON_B, 0, -80),
+    s(259, BUTTON_B, 0, 0),
+    s(40, 0, 0, 0),
+];
+
+/// Marth's Counter pressed every 30 frames: one every 60 takes, its bubble up 25 of them.
+const COUNTER_MODE: [Step; 2] = [s(1, BUTTON_B, 0, -80), s(29, 0, 0, 0)];
+
+/// The shield held 70 frames of every 100 (with breaks to let it grow back).
+const SHIELD_MODE: [Step; 2] = [s(70, BUTTON_R, 0, 0), s(30, 0, 0, 0)];
+
+/// The shield held 40 frames of every 200, so it's whole each time.
+const SHIELD_SLOW: [Step; 2] = [s(40, BUTTON_R, 0, 0), s(160, 0, 0, 0)];
+
+/// A jab every 10 frames.
+const JAB_MODE: [Step; 2] = [s(1, BUTTON_A, 0, 0), s(9, 0, 0, 0)];
+
+/// A turn toward the right: the stick tapped, then a wait.
+const TURN: [Step; 2] = [s(1, 0, 80, 0), s(19, 0, 0, 0)];
+
+/// Nothing pressed.
+const IDLE: Program = Program { parts: &[] };
+
+/// Ness holding PSI Magnet the whole match.
+const MAGNET: Program = Program {
+    parts: &[part(&MAGNET_MODE, 0, false)],
+};
+
+/// Marth turning toward the shooter on his left, then countering the whole match.
+const COUNTER: Program = Program {
+    parts: &[part(&TURN, 1, true), part(&COUNTER_MODE, 0, false)],
+};
+
+/// Marth turning toward his shooter, countering 300 frames, then shielding ([`SHIELD_SLOW`]).
+const COUNTER_THEN_SHIELD: Program = Program {
+    parts: &[
+        part(&TURN, 1, true),
+        part(&COUNTER_MODE, 10, false),
+        part(&SHIELD_SLOW, 0, false),
+    ],
+};
+
+/// Ness turning toward the shooter on his left, then taking turns of 300 frames: PSI Magnet,
+/// his shield, jabs.
+const MAGNET_SHIELD_JAB: Program = Program {
+    parts: &[
+        part(&TURN, 1, true),
+        part(&MAGNET_MODE, 1, false),
+        part(&SHIELD_MODE, 3, false),
+        part(&JAB_MODE, 30, false),
+        part(&MAGNET_MODE, 1, false),
+        part(&SHIELD_MODE, 3, false),
+        part(&JAB_MODE, 30, false),
+    ],
+};
+
+/// Ness at 60: PSI Magnet 300 frames, then a jump every 60 frames from frame 350, up into
+/// Samus's grapple beam.
+const MAGNET_THEN_JUMPS: Program = Program {
+    parts: &[
+        part(&MAGNET_MODE, 1, false),
+        part(&[s(50, 0, 0, 0)], 1, false),
+        part(&[s(1, BUTTON_X, 0, 0), s(59, 0, 0, 0)], 0, false),
+    ],
+};
+
+/// A shooter that turns right first (or not), steps `approach` once, then fires `volley`
+/// `times` times (forever for 0).
+const fn shooter(
+    turn: bool,
+    approach: &'static [Step],
+    volley: &'static [Step],
+    times: u16,
+) -> [Part; 3] {
+    let turn: &'static [Step] = if turn { &TURN } else { &[] };
+    [
+        part(turn, 1, false),
+        part(approach, 1, false),
+        part(volley, times, false),
+    ]
+}
+
+/// The neutral special every 60 frames (fireballs, pills).
+const FIREBALLS: [Step; 2] = [s(1, BUTTON_B, 0, 0), s(59, 0, 0, 0)];
+
+/// The Ice Climbers' volley: two Ice Shots on the ground, two from a jump, two Blizzards.
+const CLIMBER_VOLLEY: [Step; 16] = [
+    s(1, BUTTON_B, 0, 0),
+    s(39, 0, 0, 0),
+    s(1, BUTTON_B, 0, 0),
+    s(39, 0, 0, 0),
+    s(1, BUTTON_X, 0, 0),
+    s(9, 0, 0, 0),
+    s(1, BUTTON_B, 0, 0),
+    s(49, 0, 0, 0),
+    s(1, BUTTON_X, 0, 0),
+    s(9, 0, 0, 0),
+    s(1, BUTTON_B, 0, 0),
+    s(49, 0, 0, 0),
+    s(1, BUTTON_B, 0, -80),
+    s(49, 0, 0, 0),
+    s(1, BUTTON_B, 0, -80),
+    s(49, 0, 0, 0),
+];
+const CLIMBER_APPROACH: [Step; 2] = [s(6, 0, 80, 0), s(30, 0, 0, 0)];
+
+/// Zelda's volley: Din's Fire, held 30 frames.
+const DIN_VOLLEY: [Step; 3] = [s(1, BUTTON_B, 80, 0), s(30, BUTTON_B, 0, 0), s(69, 0, 0, 0)];
+const ZELDA_APPROACH: [Step; 2] = [s(10, 0, 80, 0), s(30, 0, 0, 0)];
+
+/// Ness's PK Flash from 40 away, steered 45 frames and held until it bursts on its own (230
+/// frames).
+const PK_FLASH: [Step; 4] = [
+    s(1, BUTTON_B, 0, 0),
+    s(45, BUTTON_B, 80, 0),
+    s(115, BUTTON_B, 0, 0),
+    s(69, 0, 0, 0),
+];
+
+/// PK Flash held without steering until it bursts or lands.
+const PK_FLASH_HELD: [Step; 3] = [s(1, BUTTON_B, 0, 0), s(160, BUTTON_B, 0, 0), s(69, 0, 0, 0)];
+
+/// Ness's PK Thunder from 40 away, its ball curved down onto the target (130 frames, as long
+/// as his PK Thunder lasts).
+const PK_THUNDER: [Step; 5] = [
+    s(1, BUTTON_B, 0, 80),
+    s(18, 0, 0, 0),
+    s(14, 0, 80, 0),
+    s(30, 0, 0, -80),
+    s(67, 0, 0, 0),
+];
+
+/// PK Fire (50 frames).
+const PK_FIRE: [Step; 2] = [s(1, BUTTON_B, 80, 0), s(49, 0, 0, 0)];
+
+/// Ness's volley at Ness's PSI Magnet, 600 frames: PK Thunder, PK Flash and PK Fire twice,
+/// timed so each meets the magnet while it's up (from 10 frames into each 300 to 260).
+const PK_VOLLEY: [Step; 16] = [
+    PK_THUNDER[0],
+    PK_THUNDER[1],
+    PK_THUNDER[2],
+    PK_THUNDER[3],
+    PK_THUNDER[4],
+    s(40, 0, 0, 0),
+    PK_FLASH[0],
+    PK_FLASH[1],
+    PK_FLASH[2],
+    PK_FLASH[3],
+    s(10, 0, 0, 0),
+    PK_FIRE[0],
+    PK_FIRE[1],
+    PK_FIRE[0],
+    PK_FIRE[1],
+    s(90, 0, 0, 0),
+];
+
+/// Ness's first volley at Marth, 332 frames: PK Flash, timed so its burst lands in the
+/// Counter's window (25 frames of every 60, from match frame 24).
+const PK_FLASH_COUNTER: [Step; 6] = [
+    s(61, 0, 0, 0),
+    PK_FLASH[0],
+    PK_FLASH[1],
+    PK_FLASH[2],
+    PK_FLASH[3],
+    s(41, 0, 0, 0),
+];
+
+/// Ness's volley at Marth's shield, once, from frame 332: PK Fire, PK Thunder and PK Flash,
+/// each meeting a shield [`SHIELD_SLOW`] has just raised (from frames 520, 720 and 1120).
+const PK_SHIELD_VOLLEY: [Step; 13] = [
+    s(168, 0, 0, 0),
+    PK_FIRE[0],
+    s(187, 0, 0, 0),
+    PK_THUNDER[0],
+    PK_THUNDER[1],
+    PK_THUNDER[2],
+    PK_THUNDER[3],
+    PK_THUNDER[4],
+    s(158, 0, 0, 0),
+    PK_FLASH[0],
+    PK_FLASH[1],
+    PK_FLASH[2],
+    PK_FLASH[3],
+];
+
+/// Yoshi's volley: a hop and a ground pound every 90 frames three times, 300 frames.
+const YOSHI_VOLLEY: [Step; 13] = [
+    s(1, BUTTON_X, 0, 0),
+    s(5, 0, 0, 0),
+    s(1, BUTTON_B, 0, -80),
+    s(83, 0, 0, 0),
+    s(1, BUTTON_X, 0, 0),
+    s(5, 0, 0, 0),
+    s(1, BUTTON_B, 0, -80),
+    s(83, 0, 0, 0),
+    s(1, BUTTON_X, 0, 0),
+    s(5, 0, 0, 0),
+    s(1, BUTTON_B, 0, -80),
+    s(83, 0, 0, 0),
+    s(30, 0, 0, 0),
+];
+const YOSHI_APPROACH: [Step; 2] = [s(5, 0, 80, 0), s(30, 0, 0, 0)];
+
+/// Samus's Charge Shot, fired 20 frames into its charge (60 frames).
+const CHARGE_SHOT: [Step; 4] = [
+    s(1, BUTTON_B, 0, 0),
+    s(19, 0, 0, 0),
+    s(1, BUTTON_B, 0, 0),
+    s(39, 0, 0, 0),
+];
+
+/// Samus's short hop and grapple beam (Z in the air), then a short run on (100 frames).
+const ZAIR: [Step; 6] = [
+    s(1, BUTTON_X, 0, 0),
+    s(2, 0, 0, 0),
+    s(1, BUTTON_Z, 0, 0),
+    s(56, 0, 0, 0),
+    s(4, 0, 80, 0),
+    s(36, 0, 0, 0),
+];
+
+/// Pikachu's Thunder every 120 frames, and Pichu's (and Pikachu's) Thunder Jolt every 40.
+const THUNDER: [Step; 2] = [s(1, BUTTON_B, 0, -80), s(119, 0, 0, 0)];
+const JOLT: [Step; 2] = [s(1, BUTTON_B, 0, 0), s(39, 0, 0, 0)];
+
+/// From Battlefield's middle, a run under the left platform; and from the top platform's
+/// middle, a run to its edge.
+const UNDER_LEFT_PLATFORM: [Step; 2] = [s(12, 0, -80, 0), s(30, 0, 0, 0)];
+const TO_TOP_EDGE: [Step; 2] = [s(2, 0, 80, 0), s(42, 0, 0, 0)];
+
+const LUIGI_TO_MARTH: Program = Program {
+    parts: &shooter(false, &[], &FIREBALLS, 0),
+};
+const LUIGI_TO_NESS: Program = Program {
+    parts: &shooter(true, &[], &FIREBALLS, 0),
+};
+const MARIO_TO_NESS: Program = Program {
+    parts: &shooter(true, &[], &FIREBALLS, 0),
+};
+const DR_MARIO_TO_NESS: Program = Program {
+    parts: &shooter(false, &[], &FIREBALLS, 0),
+};
+const CLIMBERS_TO_MARTH: Program = Program {
+    parts: &shooter(false, &[], &CLIMBER_VOLLEY, 0),
+};
+const CLIMBERS_TO_NESS: Program = Program {
+    parts: &shooter(true, &CLIMBER_APPROACH, &CLIMBER_VOLLEY, 0),
+};
+const ZELDA_TO_MARTH: Program = Program {
+    parts: &shooter(false, &ZELDA_APPROACH, &DIN_VOLLEY, 0),
+};
+const ZELDA_TO_NESS: Program = Program {
+    parts: &shooter(true, &ZELDA_APPROACH, &DIN_VOLLEY, 0),
+};
+const YOSHI_TO_NESS: Program = Program {
+    parts: &shooter(false, &YOSHI_APPROACH, &YOSHI_VOLLEY, 0),
+};
+const NESS_TO_NESS: Program = Program {
+    parts: &shooter(true, &[], &PK_VOLLEY, 0),
+};
+
+/// Ness at Marth: [`PK_FLASH_COUNTER`], then [`PK_SHIELD_VOLLEY`].
+const NESS_TO_MARTH: Program = Program {
+    parts: &[
+        part(&PK_FLASH_COUNTER, 1, false),
+        part(&PK_SHIELD_VOLLEY, 1, false),
+    ],
+};
+
+/// Samus at Ness: the Charge Shot five times (his PSI Magnet), then a run up to him and Z-air
+/// grapples as he jumps, each hit freezing her with the beam out (`it_802BACC4`).
+const SAMUS_TO_NESS: Program = Program {
+    parts: &[
+        part(&TURN, 1, false),
+        part(&CHARGE_SHOT, 5, false),
+        part(&[s(4, 0, 80, 0), s(36, 0, 0, 0)], 1, false),
+        part(&ZAIR, 6, false),
+    ],
+};
+
+/// Pikachu under Battlefield's left platform, Thundering through Ness standing on it.
+const PIKACHU_THUNDER: Program = Program {
+    parts: &[
+        part(&UNDER_LEFT_PLATFORM, 1, false),
+        part(&THUNDER, 3, false),
+    ],
+};
+
+/// Pichu at the top platform's right edge, jolting Marth's Counter on the right platform.
+const PICHU_TO_MARTH: Program = Program {
+    parts: &[part(&TO_TOP_EDGE, 1, false), part(&JOLT, 0, false)],
+};
+
+/// Pichu at the top platform's left edge, jolting Fox on the left platform.
+const PICHU_TO_FOX: Program = Program {
+    parts: &[part(&TO_TOP_EDGE, 1, true), part(&JOLT, 0, false)],
+};
+
+/// Pikachu from the right platform's inner edge, jolting Ness below.
+const PIKACHU_TO_NESS: Program = Program {
+    parts: &[
+        part(&[s(3, 0, -80, 0), s(40, 0, 0, 0)], 1, false),
+        part(&JOLT, 0, false),
+    ],
+};
+
+/// Fox holding his Reflector (the down special) the whole match.
+const SHINE: Program = Program {
+    parts: &[part(
+        &[s(1, BUTTON_B, 0, -80), s(5999, BUTTON_B, 0, 0)],
+        0,
+        false,
+    )],
+};
+
+/// Marth countering on Battlefield's right platform.
+const COUNTER_BF: Program = Program {
+    parts: &[part(&COUNTER_MODE, 0, false)],
+};
+
+/// Ness on Battlefield's left platform: PSI Magnet 300 frames, his shield 70, then a drop to
+/// the floor below it and PK Flash held, rising through the platform and landing on it.
+const NESS_BF: Program = Program {
+    parts: &[
+        part(&MAGNET_MODE, 1, false),
+        part(&[s(70, BUTTON_R, 0, 0), s(130, 0, 0, 0)], 1, false),
+        part(&[s(700, 0, 0, 0)], 1, false),
+        part(
+            &[s(1, 0, 0, -80), s(5, 0, 0, -80), s(40, 0, 0, 0)],
+            1,
+            false,
+        ),
+        part(&PK_FLASH_HELD, 0, false),
+    ],
+};
+
+/// Samus on Great Bay's sloped platform: she drops to the floor below, jumps and drops a bomb
+/// that rises through the platform and settles on its slope, down which it slides.
+const SAMUS_BOMB_SLOPE: Program = Program {
+    parts: &[part(
+        &[
+            s(1, 0, 0, -80),
+            s(5, 0, 0, -80),
+            s(80, 0, 0, 0),
+            s(10, BUTTON_X, 0, 0),
+            s(4, 0, 0, 0),
+            s(1, BUTTON_B, 0, -80),
+        ],
+        1,
+        false,
+    )],
+};
+
+/// The characters' own items' rare meetings (docs/oracle.md, "The characters' own items"):
+/// scripted players ([`Program`]), items off, 30-second time matches. On Final Destination
+/// the players stand at -60, 60, -20 and 20 by port: the shooter at -60 (port 0) fires at the
+/// target at -20 (port 2), the one at 20 (port 3) at the target at 60 (port 1). On
+/// Battlefield they stand in the middle, on the top platform, on the left and on the right
+/// one. No random draw decides anything a script does, so the seed is any.
+pub fn fighter_items_set() -> Vec<Match> {
+    type Cast = [(u8, &'static Program); 4];
+    let m = |name, stage, cast: Cast| Match {
+        name: Cow::Borrowed(name),
+        stage,
+        players: Cow::Owned(
+            cast.iter()
+                .map(|&(character, program)| Player {
+                    character,
+                    costume: 0,
+                    control: Control::Program(program),
+                })
+                .collect(),
+        ),
+        seed: 0x1F0F_3001,
+        rules: Rules::Time { time_limit: 30 },
+        items: Items::OFF,
+    };
+    let mut v = vec![
+        m(
+            "own-luigi-fd",
+            FINAL_DESTINATION,
+            [
+                (LUIGI, &LUIGI_TO_MARTH),
+                (NESS, &MAGNET),
+                (MARTH, &COUNTER),
+                (LUIGI, &LUIGI_TO_NESS),
+            ],
+        ),
+        m(
+            "own-climbers-fd",
+            FINAL_DESTINATION,
+            [
+                (ICE_CLIMBERS, &CLIMBERS_TO_MARTH),
+                (NESS, &MAGNET),
+                (MARTH, &COUNTER),
+                (ICE_CLIMBERS, &CLIMBERS_TO_NESS),
+            ],
+        ),
+        m(
+            "own-zelda-fd",
+            FINAL_DESTINATION,
+            [
+                (ZELDA, &ZELDA_TO_MARTH),
+                (NESS, &MAGNET),
+                (MARTH, &COUNTER),
+                (ZELDA, &ZELDA_TO_NESS),
+            ],
+        ),
+        m(
+            "own-ness-fd",
+            FINAL_DESTINATION,
+            [
+                (NESS, &NESS_TO_MARTH),
+                (NESS, &MAGNET),
+                (MARTH, &COUNTER_THEN_SHIELD),
+                (NESS, &NESS_TO_NESS),
+            ],
+        ),
+        m(
+            "own-thunder-bf",
+            BATTLEFIELD,
+            [
+                (PIKACHU, &PIKACHU_THUNDER),
+                (PICHU, &PICHU_TO_MARTH),
+                (NESS, &NESS_BF),
+                (MARTH, &COUNTER_BF),
+            ],
+        ),
+        m(
+            "own-jolt-bf",
+            BATTLEFIELD,
+            [
+                (NESS, &MAGNET),
+                (PICHU, &PICHU_TO_FOX),
+                (FOX, &SHINE),
+                (PIKACHU, &PIKACHU_TO_NESS),
+            ],
+        ),
+        m(
+            "own-samus-fd",
+            FINAL_DESTINATION,
+            [
+                (DR_MARIO, &DR_MARIO_TO_NESS),
+                (NESS, &MAGNET_THEN_JUMPS),
+                (NESS, &MAGNET),
+                (SAMUS, &SAMUS_TO_NESS),
+            ],
+        ),
+        m(
+            "own-yoshi-fd",
+            FINAL_DESTINATION,
+            [
+                (YOSHI, &YOSHI_TO_NESS),
+                (NESS, &MAGNET),
+                (NESS, &MAGNET_SHIELD_JAB),
+                (MARIO, &MARIO_TO_NESS),
+            ],
+        ),
+    ];
+    // Samus alone with an idle Marth, on the sloped platform she spawns on (port 1).
+    let mut bomb = m(
+        "own-bomb-gb",
+        GREAT_BAY,
+        [
+            (MARTH, &IDLE),
+            (SAMUS, &SAMUS_BOMB_SLOPE),
+            (MARTH, &IDLE),
+            (MARTH, &IDLE),
+        ],
+    );
+    bomb.players.to_mut().truncate(2);
+    bomb.rules = Rules::Time { time_limit: 10 };
+    v.push(bomb);
+    v
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
@@ -1400,6 +1956,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("fighters", fighters_set),
     ("sscope", sscope_set),
     ("grapple", grapple_set),
+    ("own-items", fighter_items_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -1465,7 +2022,8 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
                 | Control::Opener
                 | Control::Catcher { .. }
                 | Control::Gunner
-                | Control::Grappler => (0x00, 0xC0, CPU_VS, 9),
+                | Control::Grappler
+                | Control::Program(_) => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -1619,6 +2177,7 @@ impl Match {
             Control::Catcher { button } => Some(catcher_pad(frame, port, button)),
             Control::Gunner => Some(xy(gunner_pad(frame, port))),
             Control::Grappler => Some(grappler_pad(frame, port)),
+            Control::Program(p) => Some(program_pad(p, frame)),
             Control::Human | Control::Cpu { .. } => None,
         }
     }
@@ -1941,7 +2500,10 @@ mod tests {
         for m in all.iter().chain(MATCHES).chain(ORACLE_MATCHES) {
             m.check().unwrap();
             assert!(names.insert(m.name.to_string()), "{} twice", m.name);
-            assert!(seeds.insert(m.seed), "{}'s seed twice", m.name);
+            // The own-items set's scripted matches share one seed, recorded with it.
+            if !m.name.starts_with("own-") {
+                assert!(seeds.insert(m.seed), "{}'s seed twice", m.name);
+            }
         }
         let stages: BTreeSet<u16> = stages_set().iter().map(|m| m.stage).collect();
         let tournament: BTreeSet<u16> = TOURNAMENT.iter().map(|&(s, _)| s).collect();
@@ -2020,6 +2582,39 @@ mod tests {
             assert!((grab + 17..=grab + 74).contains(&swing), "{grab}");
             assert_eq!(grappler_pad(swing, 0).0 & BUTTON_A, BUTTON_A);
         }
+        // The own-items set's programs likewise, items off, every stick at 0 or past ±80.
+        for m in fighter_items_set() {
+            assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
+            assert!(m.script().is_some());
+            assert_eq!(m.items, Items::OFF);
+            for port in 0..m.players.len() {
+                for f in 0..m.fields() as i32 {
+                    let (_, x, y) = m.scripted_pad(port, f).unwrap();
+                    assert!([x, y].iter().all(|&v| v == 0 || v.unsigned_abs() >= 80));
+                }
+            }
+        }
+    }
+
+    /// A program plays its parts in order, each its count of times (forever for 0), mirrored
+    /// where the part says, then nothing.
+    #[test]
+    fn programs_play_their_parts_in_order() {
+        const P: Program = Program {
+            parts: &[
+                part(&[s(2, BUTTON_B, 80, 0)], 1, true),
+                part(&[s(1, BUTTON_A, 0, 0), s(2, 0, 0, -80)], 2, false),
+            ],
+        };
+        let pads: Vec<_> = (0..9).map(|f| program_pad(&P, f)).collect();
+        assert_eq!(pads[0], (BUTTON_B, -80, 0));
+        assert_eq!(pads[1], (BUTTON_B, -80, 0));
+        assert_eq!(pads[2], (BUTTON_A, 0, 0));
+        assert_eq!(pads[4], (0, 0, -80));
+        assert_eq!(pads[5], (BUTTON_A, 0, 0));
+        assert_eq!(pads[7], (0, 0, -80));
+        assert_eq!(pads[8], (0, 0, 0));
+        assert_eq!(program_pad(&IDLE, 100), (0, 0, 0));
     }
 
     /// A catcher's round: B held from its stands' frames 30, 70 and 110, the stick down before
