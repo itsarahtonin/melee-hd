@@ -7,12 +7,13 @@
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
-use super::super::gr::greatbay;
+use super::super::gr::{greatbay, stage};
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
 use super::cpu_ai::{CPU_FRAME, CPU_FRAME_SP, DECIDE_FRAME, Leftover, P_LINK_FIGHTER};
 use crate::fpu::{mem, reg};
+use crate::hsd;
 use crate::math;
 use crate::vec::Vec3;
 
@@ -141,11 +142,126 @@ impl Running<'_> {
             if cmd >= 0 {
                 unported_call("ftCo_800A8210");
             } else if self.game.fighters[f.0].ground_or_air != GA_AIR {
-                unported_call("ftCo_800A6FC4");
+                let left = reg(stage::blast_left(self.game));
+                let cx = fp::fmuls(0.5, fp::fadds(reg(stage::blast_right(self.game)), left));
+                let bottom = reg(stage::blast_bottom(self.game));
+                let cy = fp::fmuls(0.5, fp::fadds(reg(stage::blast_top(self.game)), bottom));
+                let pos = self.game.fighters[f.0].cur_pos;
+                let toward = Vec3::new(
+                    mem(fp::fsubs(cx, reg(pos.x))),
+                    mem(fp::fsubs(cy, reg(pos.y))),
+                    0.0,
+                );
+                if let Some((x, y)) = self.cpu_island_toward(f, toward) {
+                    self.cpu_set_destination(f, x, y, 5.0);
+                } else {
+                    // `ftCo_800A75DC`'s vector at `r1 + 0x18` lies here where
+                    // `ftCo_800A6FC4`'s frame, just gone, saved f20: its high and low words.
+                    let f20 = hsd::gobj::PROC_F20.to_bits();
+                    let unset = (
+                        f32::from_bits((f20 >> 32) as u32),
+                        f32::from_bits(f20 as u32),
+                    );
+                    let target = self.game.fighters[f.0].cpu.x44;
+                    self.cpu_toward(f, target, Some(unset));
+                }
             }
         }
         self.cpu_choose_behavior_r5(f, cmd != 0, Some(VS_SP - BACK_ON_SCREEN_FRAME))
             .1
+    }
+
+    /// The nearest place on another island in the direction `dir` (within 45 degrees) that
+    /// computer players count as ground, inside the blast zones by the fighter's half size,
+    /// `ftCo_800A6FC4`: each island's middle, then 5 inside its left and right ends, found
+    /// within 10 above or below. An island whose middle has no such floor, is one of Rainbow
+    /// Cruise's planks or lies off the direction is passed over whole; the ends count only
+    /// once some middle has. One random number is drawn for each island but the fighter's own.
+    #[doc(alias = "ftCo_800A6FC4")]
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_island_toward(&mut self, f: FighterId, mut dir: Vec3) -> Option<(f32, f32)> {
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let own = geo.island_of_line(self.game.fighters[f.0].coll_data.floor.index);
+        dir.normalize();
+        let mut best = reg(-1.0);
+        let mut found = None;
+        let mut island = geo.islands.floors;
+        while let Some(id) = island {
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            let isl = *geo.islands.get(id);
+            island = isl.next;
+            if own == Some(id) {
+                continue;
+            }
+            let (a, b) = (isl.left, isl.right);
+            let _ = self.game.objs.rng.draw_f32();
+            let mx = mem(fp::fmuls(0.5, fp::fadds(reg(a.x), reg(b.x))));
+            let my = fp::fmuls(0.5, fp::fadds(reg(a.y), reg(b.y)));
+            let above = mem(fp::frsp(fp::fadd(10.0, my)));
+            let below = mem(fp::frsp(fp::fsub(my, 10.0)));
+            let hit = self
+                .game
+                .geometry
+                .as_mut()
+                .expect("no collision geometry")
+                .check_floor(mx, above, mx, below, 0.0, -1, -1, -1, None);
+            let Some(hit) = hit.filter(|h| !self.excluded_floor(h.line)) else {
+                continue;
+            };
+            if super::super::gr::rcruise::plank_line(self.game, hit.line) {
+                continue;
+            }
+            let (x, y) = (hit.pos.x, hit.pos.y);
+            if !self.cpu_within_45(f, dir, x, y) {
+                continue;
+            }
+            let d = self.cpu_distance_sq(f, x, y);
+            if !self.cpu_out_of_bounds(f, x, y) && (best < 0.0 || !(d >= best)) {
+                best = d;
+                found = Some((x, y));
+            }
+            let left = mem(fp::frsp(fp::fadd(5.0, reg(a.x))));
+            let right = mem(fp::frsp(fp::fsub(reg(b.x), 5.0)));
+            for (x, end) in [(left, a), (right, b)] {
+                let above = mem(fp::frsp(fp::fadd(10.0, reg(end.y))));
+                let below = mem(fp::frsp(fp::fsub(reg(end.y), 10.0)));
+                let Some(p) = self.cpu_floor(x, above, x, below) else {
+                    break;
+                };
+                if !self.cpu_within_45(f, dir, p.x, p.y) {
+                    break;
+                }
+                let d = self.cpu_distance_sq(f, p.x, p.y);
+                if !self.cpu_out_of_bounds(f, p.x, p.y) && !(d >= best) {
+                    best = d;
+                    found = Some((p.x, p.y));
+                }
+            }
+        }
+        if best >= 0.0 { found } else { None }
+    }
+
+    /// Whether `(x, y)` lies within 45 degrees of the unit vector `dir` from the fighter, as
+    /// [`Running::cpu_island_toward`] tests it.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_within_45(&self, f: FighterId, dir: Vec3, x: f32, y: f32) -> bool {
+        let pos = self.game.fighters[f.0].cur_pos;
+        let mut to = Vec3::new(
+            mem(fp::fsubs(reg(x), reg(pos.x))),
+            mem(fp::fsubs(reg(y), reg(pos.y))),
+            0.0,
+        );
+        to.normalize();
+        // The original's 0.7853982 is this f32.
+        !(reg(dir.angle(to)) > reg(std::f32::consts::FRAC_PI_4))
+    }
+
+    /// The squared distance from the fighter to `(x, y)`, the squares not fused.
+    fn cpu_distance_sq(&self, f: FighterId, x: f32, y: f32) -> f64 {
+        let pos = self.game.fighters[f.0].cur_pos;
+        let dx = fp::fsubs(reg(x), reg(pos.x));
+        let dy = fp::fsubs(reg(y), reg(pos.y));
+        fp::fadds(fp::fmuls(dx, dx), fp::fmuls(dy, dy))
     }
 
     /// The items the fighter goes for: a common one in reach unless it holds an item that

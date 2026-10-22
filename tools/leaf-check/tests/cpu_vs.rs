@@ -35,6 +35,12 @@
 //! `oracle-cpu-sweep-samus-fd` (every frame of the stretch where a CPU's target falls under
 //! Final Destination, out of reach of both its ends).
 //!
+//! Two more, for the stages' own CPU code: `oracle-cpu-stage-poke-floats` (every call from field
+//! 1410, CPUs off camera on the ground heading for another island or their target,
+//! `ftCo_800A6FC4`) and `oracle-cpu-stage-kongo-jungle-64` (every call from field 7090, Nana in
+//! the barrel until it shoots her, `ftCo_800AC434`), the oracle's `cpu-stages` matches captured
+//! as above with `--fp hardware` and `CAPTURE_EVERY=1`.
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
 //! the stage, the CPU off camera, its target off the stage or under it with no island end in
@@ -119,6 +125,12 @@ const RECOVER: u32 = 4;
 const ATTACK: u32 = 2;
 const RANGED: u32 = 3;
 const DI: u32 = 18;
+/// The barrel behavior (17); `ftCo_MS_BarrelWait` and `ftCo_MS_Barrel`; the barrel's angle in
+/// `StageInfo` (`x73C`).
+const BARREL: u32 = 17;
+const BARREL_WAIT: u32 = 0x125;
+const BARREL_CANNON: u32 = 0x154;
+const BARREL_ANGLE: u32 = 0x73C;
 /// The moves `ftCo_800BB768` dodges: Bowser's Bowser Bomb (`ftKp_MS_SpecialLw`) and up
 /// smash (`ftCo_MS_AttackHi4`), Yoshi's Yoshi Bomb (`ftYs_MS_SpecialAirLw`), Samus's Screw
 /// Attack (`ftSs_MS_SpecialHi`).
@@ -213,6 +225,15 @@ enum Change {
     EnemyEntering,
     /// Moved off camera, in the air: heading back (`ftCo_800AE7AC`).
     OffCamera,
+    /// Moved off camera to the stage's right on the ground: heading for another island toward
+    /// the blast zones' middle (`ftCo_800A6FC4`) or, with none in that direction, toward its
+    /// target (`ftCo_800A75DC`). `target_under` also puts its enemies in the air under the
+    /// middle of the stage: on Final Destination, whose one island is the fighter's own, it
+    /// heads for them, no island end is in reach beside them, and the destination takes what
+    /// `ftCo_800A6FC4`'s frame left in `ftCo_800A75DC`'s vector, its save of f20.
+    OffCameraGround { target_under: bool },
+    /// In a barrel (behavior 17, `ftCo_800AC434`) with its script ended.
+    Barrel(Barrel),
     /// Its enemies in the air off the stage: the island end beside them (`ftCo_800A4768`).
     TargetOffStage,
     /// Its enemies in the air under the middle of the stage: on Final Destination no island
@@ -244,6 +265,19 @@ enum Change {
     /// line, the second, for the floor below, does) and `FloorOffCameraAway` far to the side
     /// (neither check tests a line).
     DiZeroKnockback(Di),
+}
+
+/// [`Change::Barrel`]'s cases.
+#[derive(Clone, Copy, Debug)]
+enum Barrel {
+    /// In the stage's barrel (`ftCo_MS_BarrelWait`) pointing at this angle
+    /// (`Ground_801C4DA0`'s, `stage_info` 0x73C): A is tapped from 15 degrees right of up to up.
+    Wait(f32),
+    /// In a barrel cannon (`ftCo_MS_Barrel`) at level 9, the frame count as given: the coin
+    /// flip for a tap comes on multiples of 5 (400 and 405; 401 is none).
+    Cannon(u32),
+    /// The state as saved (out of a barrel): back to the usual behavior.
+    Out,
 }
 
 /// [`Change::DiZeroKnockback`]'s cases.
@@ -308,6 +342,39 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             poke_f32(call, fp + POS, 300.0);
             poke_f32(call, fp + POS + 4, 150.0);
             poke_u32(call, fp + GROUND_OR_AIR, AIR);
+            end_script(call, fp);
+        }
+        Change::OffCameraGround { target_under } => {
+            poke_f32(call, fp + POS, 400.0);
+            poke_u32(call, fp + GROUND_OR_AIR, GROUND);
+            if target_under {
+                for e in enemies(call, fp) {
+                    poke_f32(call, e + POS, 0.0);
+                    poke_f32(call, e + POS + 4, -100.0);
+                    poke_u32(call, e + GROUND_OR_AIR, AIR);
+                }
+            }
+            end_script(call, fp);
+        }
+        Change::Barrel(barrel) => {
+            match barrel {
+                Barrel::Wait(angle) => {
+                    poke_u32(call, fp + MOTION, BARREL_WAIT);
+                    poke_f32(call, leaf_check::sym("stage_info") + BARREL_ANGLE, angle);
+                }
+                Barrel::Cannon(frames) => {
+                    poke_u32(call, fp + MOTION, BARREL_CANNON);
+                    poke_u32(call, fp + LEVEL, 9);
+                    poke_u32(call, fp + FRAMES, frames);
+                }
+                Barrel::Out => {
+                    let ms = peek_u32(call, fp + MOTION);
+                    if ms == BARREL_WAIT || ms == BARREL_CANNON {
+                        return false;
+                    }
+                }
+            }
+            poke_u32(call, fp + BEHAVIOR, BARREL);
             end_script(call, fp);
         }
         Change::EnemyMove(kind, motion, dx, dy) => {
@@ -487,6 +554,18 @@ fn changes() -> Vec<Change> {
         Change::StateAs(YOSHI, YS_EGG_ROLL, RANGED),
         Change::EnemyEntering,
         Change::OffCamera,
+        Change::OffCameraGround {
+            target_under: false,
+        },
+        Change::OffCameraGround { target_under: true },
+        Change::Barrel(Barrel::Wait(0.0)),
+        Change::Barrel(Barrel::Wait(-0.2)),
+        Change::Barrel(Barrel::Wait(-0.3)),
+        Change::Barrel(Barrel::Wait(0.1)),
+        Change::Barrel(Barrel::Cannon(400)),
+        Change::Barrel(Barrel::Cannon(401)),
+        Change::Barrel(Barrel::Cannon(405)),
+        Change::Barrel(Barrel::Out),
         Change::TargetOffStage,
         Change::TargetUnderStage { last_hidden: false },
         Change::TargetUnderStage { last_hidden: true },

@@ -63,13 +63,11 @@ const PEACH: u8 = 12;
 const YOSHI: u8 = 17;
 
 /// `StKind`s the gaps name.
-const KONGO_JUNGLE: u16 = 5;
 const BRINSTAR: u16 = 6;
 const ONETT: u16 = 9;
 const RAINBOW_CRUISE: u16 = 11;
 const GREAT_BAY: u16 = 13;
 const HYRULE_TEMPLE: u16 = 14;
-const KONGO_JUNGLE_64: u16 = 30;
 
 /// The gaps a match reaches with these VS computer players, these characters among all its
 /// players (humans and computers; the Ice Climbers bring Nana), on `stage`, with these item
@@ -163,6 +161,8 @@ const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a 
 const NANA_REGROUP: &str = "only Nana's way back runs the behavior pick without its frame followed, and her decision replaces the register it leaves";
 const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue, Mushroom Kingdom, Corneria and Venom, none of them on the roster";
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
+const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
+const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
 const DEBUG_DRAW: &str = "the computer player's debug drawing (ftDrawCommon_800805C8 with x21FC_flag.b3), which only the debug menu turns on";
 
 /// Functions and stops no match with computer players from the player reaches (VS mode, the
@@ -205,6 +205,8 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("a register left by mpCheckFloor", NANA_REGROUP),
     ("a register left by ftCo_800A1B38", EXCLUDED_FLOORS),
     ("a register left by ftCo_800B0CA8", NANA_ITEM),
+    ("a register left by ftCo_800B2790", FIGHTER_ADDRESS),
+    ("ftCo_800AC434 at level 10", BARREL_LEVEL),
     ("ftCo_800B395C", DEBUG_DRAW),
 ];
 
@@ -283,46 +285,6 @@ const STAR_OR_HAMMER: &[i32] = &[10, 28];
 /// What a match with computer players reaches that isn't ported, task by task
 /// (docs/player.md, "CPU players: what's left").
 pub const MISSING: &[CpuGap] = &[
-    CpuGap {
-        what: "a computer player's DI with no knockback reads its fighter's address, which only the allocator model gives (Settings::vs_with turns it on only for the Ice Climbers and the Super Scope)",
-        covers: &["a register left by ftCo_800B2790"],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player standing off camera heads back (ftCo_800A6FC4)",
-        covers: &["ftCo_800A6FC4"],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player in one of the stage's barrels (ftCo_800AC434)",
-        covers: &["ftCo_800AC434"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[KONGO_JUNGLE, KONGO_JUNGLE_64],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player in a barrel cannon (ftCo_800AC434)",
-        covers: &["ftCo_800AC434"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(&[5]),
-    },
     CpuGap {
         what: "a computer player near Brinstar's lava (ftCo_800A229C, ftCo_800A8210)",
         covers: &[
@@ -629,9 +591,9 @@ mod tests {
             assert!(!on(31).contains(&g), "{}", g.what);
         }
         // Nana reaches only her own gaps with human players.
-        let nana = missing_with(&[], &[14, 2], 5, &[]);
+        let nana = missing_with(&[], &[14, 2], BRINSTAR, &[]);
         assert!(nana.iter().all(|g| g.who != Who::Vs));
-        assert!(nana.iter().any(|g| g.covers.contains(&"ftCo_800AC434")));
+        assert!(nana.iter().any(|g| g.covers.contains(&"ftCo_800A2718")));
         // Peach's pulled sword: with Peach in the match, items off too.
         let sword = |chars: &[u8]| {
             missing_with(&[fox(5)], chars, 31, &[])

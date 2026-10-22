@@ -29,6 +29,12 @@ pub const PROC_PRIORITIES: usize = 25;
 /// single-precision use left, which `lfd` doesn't restore), as ssbm-rs's apploader boot leaves
 /// it. A process that reads f27 before writing it (`it_802EA804` under the ReDead's) reads this.
 pub const PROC_F27: f64 = 0.0;
+/// What a process finds in f20, as in f27 ([`PROC_F27`]): the boot's 0.0, since nothing from
+/// `main` down the scene loop to `HSD_GObj_RunProcs`, and from there through the fighters'
+/// computer player frame (`Fighter_procCpu`, `ftCo_800B3900`, `ftCo_800B2AFC`,
+/// `ftCo_800B24B8`, `ftCo_800AE7AC`), writes it. A function that saves f20 in its frame
+/// (`ftCo_800A6FC4`) saves this.
+pub const PROC_F20: f64 = 0.0;
 
 /// What `gx_link` holds when a GObj has no render link.
 pub const GX_LINK_NONE: u8 = 0xFF;

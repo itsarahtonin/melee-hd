@@ -692,7 +692,7 @@ impl Running<'_> {
             14 => self.cpu_throw_item(f),
             15 => self.cpu_tumble(f),
             16 => self.cpu_mash(f),
-            17 => unported_call("ftCo_800AC434"),
+            17 => self.cpu_barrel(f),
             18 => self.cpu_di(f, r5),
             19 => {
                 let ms = self.game.fighters[f.0].motion_id;
@@ -710,6 +710,42 @@ impl Running<'_> {
             _ => self.cpu_cmd(f, cmd::DONE),
         }
         self.cpu_script_start(f);
+    }
+
+    /// In a barrel (behavior 17), `ftCo_800AC434`: out of it, back to the usual behavior; in
+    /// one of Kongo Jungle's barrels (`ftCo_MS_BarrelWait`), a tap of A to be shot while the
+    /// barrel points up to 15 degrees right of straight up (its angle, `Ground_801C4DA0`); in
+    /// a barrel cannon (`ftCo_MS_Barrel`), a coin flip every (10 - level) * 5 frames for one.
+    #[doc(alias = "ftCo_800AC434")]
+    fn cpu_barrel(&mut self, f: FighterId) {
+        use super::co::ids::ms;
+        use super::cpu_script::cmd;
+        let fpp = &self.game.fighters[f.0];
+        let tap = match fpp.motion_id {
+            ms::BARREL_WAIT => {
+                let angle = reg(super::super::gr::ground::barrel(self.game).1);
+                angle >= fp::fneg(0.261_799_385_771_155_36) && angle <= 0.0
+            }
+            ms::BARREL => {
+                let c = &fpp.cpu;
+                let period = 10i32.wrapping_sub(c.level).wrapping_mul(5);
+                if period == 0 {
+                    unported_call("ftCo_800AC434 at level 10");
+                }
+                c.x7C.wrapping_rem(period) == 0 && reg(self.game.objs.rng.draw_f32()) < 0.5
+            }
+            _ => {
+                self.cpu_back_to_usual(f);
+                return;
+            }
+        };
+        if tap {
+            // `ftCo_CpuTapA`.
+            self.cpu_cmd(f, cmd::PRESS_A);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::RELEASE_A);
+        }
+        self.cpu_cmd(f, cmd::DONE);
     }
 
     /// Lets go of a charging special when it's charged, `ftCo_800ADC28`: Donkey Kong's Giant
