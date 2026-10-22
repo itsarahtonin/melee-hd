@@ -65,6 +65,7 @@ const YOSHI: u8 = 17;
 const BRINSTAR: u16 = 6;
 const RAINBOW_CRUISE: u16 = 11;
 const GREAT_BAY: u16 = 13;
+const ICICLE_MOUNTAIN: u16 = 25;
 
 /// The gaps a match reaches with these VS computer players, these characters among all its
 /// players (humans and computers; the Ice Climbers bring Nana), on `stage`, with these item
@@ -151,7 +152,7 @@ const KIND_16: &str = "computer kind 16's jump rule; VS uses kind 4";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
 const CORNERIA: &str = "the turn under Corneria's ceiling (xFA_b6, set only on grCorneria_801E2E50's floor) and behavior 12: Corneria isn't on the roster, and behavior 12 isn't reached";
-const NOT_ON_ROSTER: &str = "a stage that isn't on the roster (Icicle Mountain, Peach's Castle)";
+const NOT_ON_ROSTER: &str = "a stage that isn't on the roster (Peach's Castle)";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
 const NANA_FOLLOWING: &str = "on the frame Nana stops following Popo her behavior is her fallback (x1C, walking), not the DI";
 const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a behavior other than the DI, which alone reads it";
@@ -194,7 +195,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800BA080", NESS_SPAN),
     ("ftCo_800AA320 at a level past 9", LEVELS),
     ("ftCo_800A0384", CORNERIA),
-    ("ftCo_800A9CB4 on Icicle Mountain", NOT_ON_ROSTER),
     ("ftCo_800A229C at Peach's Castle", NOT_ON_ROSTER),
     ("ftCo_800A4768 with no island end", ISLAND_END),
     ("a register left by ftCo_800A7AAC", NANA_FOLLOWING),
@@ -298,7 +298,7 @@ pub const MISSING: &[CpuGap] = &[
         levels: &[],
         cpu: &[],
         with: &[],
-        stages: &[RAINBOW_CRUISE],
+        stages: &[RAINBOW_CRUISE, ICICLE_MOUNTAIN],
         items: Items::Off,
     },
     CpuGap {

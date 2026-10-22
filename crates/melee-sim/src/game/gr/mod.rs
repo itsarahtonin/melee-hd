@@ -16,6 +16,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod icemt;
 pub mod izumi;
 pub mod kongo;
 pub mod kraid;
@@ -91,6 +92,8 @@ pub const GR_KIND_OLDYOSHI: i32 = 29;
 pub const GR_KIND_OLDKONGO: i32 = 30;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
+/// `Gr_Kind_Icemt`, Icicle Mountain.
+pub const GR_KIND_ICEMT: i32 = 22;
 /// `Gr_Kind_Last`, Final Destination.
 pub const GR_KIND_LAST: i32 = 37;
 
@@ -245,6 +248,11 @@ pub struct Globals {
     /// into the executable's table at the stage's setup): empty, all null, until a Poké Floats
     /// setup first writes it, then [`pura::VTX_COUNT`] entries.
     pub pura_vtx_jobjs: Vec<Option<JObjId>>,
+    /// Icicle Mountain's `yakumono_param` (`grIceMt_YakumonoParam`).
+    pub icemt_yakumono: Option<DataRef>,
+    /// The three fields the adventure's climb sets up first (`grIm_804D69E8`, `EC` and `F0`):
+    /// none in VS mode.
+    pub icemt_fields: [Option<GObjId>; 3],
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -372,6 +380,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_RCRUISE, 3) => VarsKind::Scroll,
         (GR_KIND_RCRUISE, 4) => VarsKind::RCruiseBlocks,
         (GR_KIND_RCRUISE, 6) => VarsKind::RCruiseFlag,
+        (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
+        (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
+        (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
         _ => VarsKind::Bytes,
     }
 }
@@ -403,6 +414,7 @@ pub fn yaku_received(
         zebes::PILLAR_HIT => zebes::pillar_hit(r, g, dir, damage),
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
+        icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }
