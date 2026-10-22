@@ -730,8 +730,9 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
     let f = owner_of(r, gobj);
     let t = tip(r, gobj);
+    let slot = rebuilt_slot(r, t, "fn_802B8384 with the links' joint not rebuilt");
     let mut pos = joint_pos(r, t);
-    match fall_back(r, t, &mut pos, a, f) {
+    match fall_back(r, t, &mut pos, a, f, slot) {
         1 => {
             let bounce = a.f(r, attr::BOUNCE);
             let k = link_mut(r.game, t);
@@ -761,8 +762,9 @@ pub fn falling(r: &mut Running, gobj: GObjId) {
     let a = Attrs::of(r, gobj);
     let f = owner_of(r, gobj);
     let h = hand(r, gobj);
+    let slot = rebuilt_slot(r, h, "fn_802B8524 with the links' joint not rebuilt");
     let mut pos = joint_pos(r, h);
-    hang_links(r, h, &mut pos, a, f);
+    hang_links(r, h, &mut pos, a, f, slot);
     let scale = r.game.fighter(f).x34_scale.y;
     line_up(r, gobj, pos, scale);
     animate(r, gobj);
@@ -1052,8 +1054,31 @@ pub enum SwingSlot {
     /// `PSMTXConcat`): `PSMTXConcat`'s save of `f14` lands on the slot, and the game's code
     /// never leaves `f14` live at that depth, so the word is 0.0's.
     SavedF14,
+    /// `it_802B99A0`'s and `it_802B9CE8`'s, when their callers (`fn_802B8384`,
+    /// `fn_802B8524`) have just rebuilt the links' joint's matrix: the slot is the top word of
+    /// `HSD_JObjMakeMatrix`'s frame under `HSD_JObjSetupMatrixSub`'s, its save of `r31`, which
+    /// holds the joint's address. The joint is her `ThrowN` bone, so the bit is that address's
+    /// bit 19.
+    SavedR31(u32),
     /// Not followed, named by the frame: reading it stops.
     Unknown(&'static str),
+}
+
+/// The slot `fn_802B8384` and `fn_802B8524` leave for their swing, from the links' joint `l`
+/// holds as `samus_grapple_setup_pos` is about to rebuild its matrix: a dirty joint with no
+/// IK role and no constraints runs `HSD_JObjSetupMatrixSub`, whose last call at that depth
+/// is the matrix's (`HSD_JObjMakeMatrix`).
+fn rebuilt_slot(r: &Running, l: ItemLinkId, frame: &'static str) -> SwingSlot {
+    match lk(r.game, l).jobj {
+        Some(j)
+            if r.game.objs.jobjs[j].mtx_is_dirty()
+                && r.game.objs.jobjs[j].flags & jobj::JOINT_MASK == 0
+                && r.game.objs.jobjs[j].robj.is_none() =>
+        {
+            SwingSlot::SavedR31(r.game.objs.jobjs.pool.addr(j.0))
+        }
+        _ => SwingSlot::Unknown(frame),
+    }
 }
 
 /// The ground beam's hitbox (the button sequence's, `x16` 1): with A on the ground she
@@ -1083,6 +1108,8 @@ fn ground_swing(r: &mut Running, f: GObjId, slot: SwingSlot) {
         let sixth = match slot {
             // 0.0's high word: no bit set.
             SwingSlot::SavedF14 => 0,
+            // The address's bytes: `x134_4` is its bit 19.
+            SwingSlot::SavedR31(addr) => addr,
             SwingSlot::Unknown(frame) => unported_call(&format!(
                 "it_802B7160: the swing's grabbed-victim-only bit, a stack byte {frame} leaves"
             )),
@@ -1216,8 +1243,15 @@ pub fn lead(
 /// links follow as in [`lead`], `it_802B99A0`: 1 a wall, 2 a floor; all out (3), the links
 /// chase the hand.
 #[doc(alias = "it_802B99A0")]
-pub fn fall_back(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) -> i32 {
-    ground_swing(r, f, SwingSlot::Unknown("it_802B99A0"));
+pub fn fall_back(
+    r: &mut Running,
+    l: ItemLinkId,
+    pos: &mut Vec3,
+    a: Attrs,
+    f: GObjId,
+    slot: SwingSlot,
+) -> i32 {
+    ground_swing(r, f, slot);
     let next = lk(r.game, l).next;
     let vy = lk(r.game, l).vel.y;
     let s = swing(r, vy, fp::frsp(0.6));
@@ -1281,8 +1315,15 @@ fn slide(v: f64, drag: f64) -> f64 {
 /// out, each falls with a random swing, held within a link length of the hand's point or the
 /// one before (and no closer than the shortest), the last sliding to a stop.
 #[doc(alias = "it_802B9CE8")]
-pub fn hang_links(r: &mut Running, l: ItemLinkId, pos: &mut Vec3, a: Attrs, f: GObjId) {
-    ground_swing(r, f, SwingSlot::Unknown("it_802B9CE8"));
+pub fn hang_links(
+    r: &mut Running,
+    l: ItemLinkId,
+    pos: &mut Vec3,
+    a: Attrs,
+    f: GObjId,
+    slot: SwingSlot,
+) {
+    ground_swing(r, f, slot);
     let mut cur = l;
     let mut prev = lk(r.game, cur).prev;
     while let Some(p) = prev {

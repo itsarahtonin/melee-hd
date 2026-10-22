@@ -47,6 +47,9 @@ pub enum Control {
     /// an opener's runs with A tapped and held, so it picks up a Super Scope and fires both its
     /// bursts and its charged shots.
     Gunner,
+    /// A human player whose controller follows [`grappler_pad`]'s script, played by `BENCH_PADS`:
+    /// Samus swinging her grapple beam from a platform, and an idle foe below.
+    Grappler,
 }
 
 /// A player: external character ID (`CharacterKind`), costume and who plays it.
@@ -274,6 +277,72 @@ pub fn gunner_pad(frame: i32, port: usize) -> (u16, i8) {
         || (112..112 + GUNNER_CHARGE).contains(&t)
         || (t == 0 && at / 160 % 4 == 3);
     (if a { 0x0100 } else { 0 }, stick)
+}
+
+/// The D-pad's up and down, and the L button, a grappler's.
+const DPAD_UP: u16 = 0x0008;
+const DPAD_DOWN: u16 = 0x0004;
+const BUTTON_L: u16 = 0x0040;
+const BUTTON_A: u16 = 0x0100;
+const BUTTON_X: u16 = 0x0400;
+
+/// A grappler's grab: the frame Z grabs, whether L homes the beam on the foe below (so its tip
+/// hits the platform she stands on and bounces back), and the frame A swings it.
+const GRAPPLES: [(i32, bool, i32); 10] = [
+    // Bounced (state 2, `fn_802B8384` and `it_802B99A0`): its seventh frame.
+    (300, true, 330),
+    // Hanging (state 3, `fn_802B8524` and `it_802B9CE8`): its eighth frame.
+    (450, false, 515),
+    // Shot (state 1, `fn_802B805C` and `it_802B9328`): its first frame, its 24th.
+    (600, false, 617),
+    (750, false, 790),
+    // Bounced: its last frame.
+    (900, true, 974),
+    // Hanging: its first frame.
+    (1050, false, 1108),
+    // Shot: its last frame, and its fourth homing on the foe.
+    (1200, false, 1257),
+    (1350, true, 1370),
+    // Bounced: its first frame.
+    (1500, true, 1524),
+    // Hanging: its last frame.
+    (1650, false, 1724),
+];
+
+/// A grappler's buttons and main stick on match frame `frame` (from "GO"), for the player in
+/// `port`: Samus (port 0) runs left under Battlefield's left platform, turns, jumps onto it and
+/// faces right; grabs once with the grapple beam's button sequence (D-pad up, down, up, then A
+/// while the beam is out: `u.ss.x2240` 4), so each later grab from the ground makes the beam
+/// whose hitbox stage A swings (`x16` 1); then grabs every 150 frames, A swinging the beam in
+/// each of the states that can ([`GRAPPLES`]). The foe (port 1) drops through the top platform
+/// to the stage below and stands.
+pub fn grappler_pad(frame: i32, port: usize) -> (u16, i8, i8) {
+    if port != 0 {
+        return (0, 0, if (5..=6).contains(&frame) { -80 } else { 0 });
+    }
+    let held = |from: i32, to: i32| (from..=to).contains(&frame);
+    match frame {
+        0..=22 => return (0, -80, 0),
+        150 => return (0, 80, 0),
+        60..=69 => return (BUTTON_X, 0, 0),
+        170..=172 => return (BUTTON_Z, 0, 0),
+        180 | 182 => return (DPAD_UP, 0, 0),
+        181 => return (DPAD_DOWN, 0, 0),
+        183 => return (BUTTON_A, 0, 0),
+        _ => {}
+    }
+    for (grab, homing, swing) in GRAPPLES {
+        if held(grab, grab + 2) {
+            return (BUTTON_Z, 0, 0);
+        }
+        // L held from the grab through the tip's bounce off the platform, or through the swing.
+        let homes = homing && held(grab + 3, (grab + 26).max(swing).min(grab + 56));
+        let b = if homes { BUTTON_L } else { 0 } | if frame == swing { BUTTON_A } else { 0 };
+        if b != 0 && held(grab, grab + 93) {
+            return (b, 0, 0);
+        }
+    }
+    (0, 0, 0)
 }
 
 const fn p(character: u8, costume: u8) -> Player {
@@ -1186,6 +1255,26 @@ pub fn sscope_set() -> Vec<Match> {
         .collect()
 }
 
+/// Samus's grapple beam swung (docs/oracle.md, "The characters' own items"): Samus, a grappler
+/// ([`grappler_pad`]), against an idle Fox on Battlefield, swinging the button sequence's beam
+/// on the ground as it's shot, as it bounces back and as it hangs; items off, a 30-second time
+/// match. No random draw decides anything a script does, so the seed is any.
+pub fn grapple_set() -> Vec<Match> {
+    let g = |character| Player {
+        character,
+        costume: 0,
+        control: Control::Grappler,
+    };
+    vec![Match {
+        name: Cow::Borrowed("grapple-samus-bf"),
+        stage: BATTLEFIELD,
+        players: Cow::Owned(vec![g(SAMUS), g(FOX)]),
+        seed: 0x1F0F_2001,
+        rules: Rules::Time { time_limit: 30 },
+        items: Items::OFF,
+    }]
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
@@ -1310,6 +1399,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("catch", catch_set),
     ("fighters", fighters_set),
     ("sscope", sscope_set),
+    ("grapple", grapple_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -1374,7 +1464,8 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
                 | Control::Walker { .. }
                 | Control::Opener
                 | Control::Catcher { .. }
-                | Control::Gunner => (0x00, 0xC0, CPU_VS, 9),
+                | Control::Gunner
+                | Control::Grappler => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -1527,6 +1618,7 @@ impl Match {
             Control::Opener => Some(xy(opener_pad(frame, port))),
             Control::Catcher { button } => Some(catcher_pad(frame, port, button)),
             Control::Gunner => Some(xy(gunner_pad(frame, port))),
+            Control::Grappler => Some(grappler_pad(frame, port)),
             Control::Human | Control::Cpu { .. } => None,
         }
     }
@@ -1916,6 +2008,17 @@ mod tests {
             } else {
                 assert_eq!(m.items.kinds(), CONTAINERS);
             }
+        }
+        // The grapple set's grapplers likewise, items off, and each grab's swing within its
+        // beam's life.
+        for m in grapple_set() {
+            assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
+            assert!(m.script().is_some());
+            assert_eq!(m.items, Items::OFF);
+        }
+        for (grab, _, swing) in GRAPPLES {
+            assert!((grab + 17..=grab + 74).contains(&swing), "{grab}");
+            assert_eq!(grappler_pad(swing, 0).0 & BUTTON_A, BUTTON_A);
         }
     }
 

@@ -74,7 +74,11 @@ const PK_FLASH_KIND: (&str, &str) = (
 );
 const ARROW_OWNER: (&str, &str) = (
     "itLinkArrow_802A850C loosing an arrow not its owner's",
-    "the bow looses an arrow whose owner is no longer the archer: an item's owner changes when a reflector turns it (Item_80269F14, which needs its hitbox), when another fighter picks it up (it's held), when a hit takes it (it_8027236C, which no arrow callback calls) or when it's destroyed (which ends the bow's hold); whether a nocked arrow's hitbox can be live for a reflector isn't settled",
+    "the bow looses only the arrow it nocked (the fighter's arrow, ftlinkspecialn.c's doEndColl, or Kirby's copy's, ftkirbyspeciallink.c), held in its state 0 from its spawn (it_802A83E0) to the loosing, and nothing in an items-off match changes a nocked arrow's owner: a reflector or absorber turns only an item whose hitbox is live, and state 0 has no animation script (anim_id -1) to turn one on, nor does anything else (only the Flipper's, the red shell's and the hammer's own code turn item hitboxes on outside a script); the pickup that holds it (it_802742F4) clears its pickup flag (it_8026B3A8), so no fighter picks it up; the other owner writes are the shells', barrel's and Metal Box's callbacks (it_8027236C, it_802723FC), a drop or throw of the fighter's held item (the arrow is u.lk.arrow_gobj, not item_gobj), a destroy (which ends the hold: the arrow's Destroyed callback clears the archer's pointer) and the evt_unk walk at a fighter's unload (it_8026B7F8); and the arrow's xE0 is cleared only as its state 0 destroys it once the archer is out of the bow's states, which a nocked arrow's archer leaves only by loosing it or through ftCommon_8007DB58 (a hit, a capture, the barrel) or a KO, whose callbacks (ftLk_800EAF58; Kirby's ftKb_Init_800EE7B8 and ftKb_Init_800EE74C) destroy the arrow and clear the archer's pointer first",
+);
+const GRAPPLE_SWING_UNREBUILT: (&str, &str) = (
+    "it_802B7160: the swing's grabbed-victim-only bit",
+    "the swing copies its hitbox's grabbed-victim-only bit from a byte of its caller's frame that nothing sets; the port models it whenever the frame has just rebuilt the links' joint's matrix (samusgrapple::SwingSlot: PSMTXConcat's save of f14 under the shot, fn_802B805C; HSD_JObjMakeMatrix's save of r31, the joint's address, under the bounced and the hanging beam, fn_802B8384 and fn_802B8524), and stops only where it isn't rebuilt. It always is: the joint is Samus's ThrowN bone, with a parent, no IK role, no constraint and no bound object (a fighter's bones animate from figatrees), and the beam's frame runs in her accessory process (priority 8, Fighter_procAccessory), after Fighter_procMap (priority 6) has set her root joint's translation and so dirtied her whole skeleton; only Fighter_procIK (priority 7) sets matrices up in between, her legs'. The grapple-samus-bf oracle match swings in all three frames",
 );
 const HOOKSHOT_LINKS: (&str, &str) = (
     "it_802A2568 with one link",
@@ -128,8 +132,9 @@ pub const CHARACTERS: &[Character] = &[
             PK_FLASH_KIND,
             PILL_DEMO[0],
             PILL_DEMO[1],
+            ARROW_OWNER,
         ],
-        unsure: &[ARROW_OWNER],
+        unsure: &[],
         missing: &[],
     },
     // Bowser: the flame.
@@ -144,8 +149,8 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 6,
         items: &[58, 60, 62, 64, 76],
-        unreached: &[HOOKSHOT_LINKS],
-        unsure: &[ARROW_OWNER],
+        unreached: &[HOOKSHOT_LINKS, ARROW_OWNER],
+        unsure: &[],
         missing: &[],
     },
     // Luigi: the fireball.
@@ -229,13 +234,9 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 16,
         items: &[93, 94, 95, 96],
-        unreached: &[],
+        unreached: &[GRAPPLE_SWING_UNREBUILT],
         unsure: &[],
-        missing: &[Gap {
-            what: "Samus's grapple beam swung on the ground while its links fall back or hang (the swing's grabbed-victim-only bit)",
-            covers: &["it_802B7160: the swing's grabbed-victim-only bit"],
-            path: "A pressed on the ground while the beam's hitbox stage is on (x16 1): the swing copies a byte of its caller's frame that nothing sets; the port models the frame of the beam's shot (fn_802B805C rebuilding the tip's matrix, PSMTXConcat's save of f14), and stops on the beam falling back (it_802B99A0), hanging (it_802B9CE8) or a shot without the tip's matrix rebuilt. The beam swings only after the input sequence that sets x16 (u.ss.x2240 at 4 or more when it's shot from the ground), so it is uncommon in play; the one replay known to swing it (hf-roy-samus-fd-56052455) does so from the shot. In the other two frames the byte lies just below HSD_JObjSetupMatrixSub's frame (the caller's stack less 0xE4 falling back, 0xDC hanging), the top of whichever callee ran there last, a saved register's low half: it needs a trace of each case",
-        }],
+        missing: &[],
     },
     // Yoshi: the thrown egg, the egg he lays a fighter in, the star.
     Character {
@@ -273,8 +274,8 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 21,
         items: &[59, 61, 63, 65, 77, 123],
-        unreached: &[HOOKSHOT_LINKS],
-        unsure: &[ARROW_OWNER],
+        unreached: &[HOOKSHOT_LINKS, ARROW_OWNER],
+        unsure: &[],
         missing: &[],
     },
     // Dr. Mario: the pill and the sheet.
