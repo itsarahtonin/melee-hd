@@ -59,15 +59,12 @@ pub struct Computer {
 
 /// `CharacterKind`s the gaps name.
 const ICE_CLIMBERS: u8 = 14;
-const PEACH: u8 = 12;
 const YOSHI: u8 = 17;
 
 /// `StKind`s the gaps name.
 const BRINSTAR: u16 = 6;
-const ONETT: u16 = 9;
 const RAINBOW_CRUISE: u16 = 11;
 const GREAT_BAY: u16 = 13;
-const HYRULE_TEMPLE: u16 = 14;
 
 /// The gaps a match reaches with these VS computer players, these characters among all its
 /// players (humans and computers; the Ice Climbers bring Nana), on `stage`, with these item
@@ -215,7 +212,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
 pub const UNCHECKED: &[&str] = &[
     "ftCo_800A0C8C",
     "ftCo_800A0CB0",
-    "ftCo_800A0F00",
     "ftCo_800A0FB0",
     "ftCo_GetCpuLStickX",
     "ftCo_GetCpuLStickY",
@@ -227,7 +223,6 @@ pub const UNCHECKED: &[&str] = &[
     "ftCo_800A1AB4",
     "ftCo_800A1C44",
     "ftCo_800A1F3C",
-    "ftCo_800A21FC",
     "ftCo_800A2BD4",
     "ftCo_800A2C08",
     "ftCo_800A2C80",
@@ -263,21 +258,12 @@ pub const UNCHECKED: &[&str] = &[
     "ftCo_800B101C",
     "ftCo_800B2790",
     "ftCo_800B33B0",
-    "ftCo_800B4AB0",
     "ftCo_800B63D8",
     "ftCo_800B683C",
     "ftCo_800B885C",
     "ftCo_800B89CC",
-    "ftCo_800B8A9C",
 ];
 
-/// The kinds a computer player goes for when it sees one lying around (`ftCo_803C5A68` at
-/// least 5, kind 4's `x2C`): the heart, tomato, Starman, food, hammer, cloaking device and
-/// Poké Ball.
-const WORTH_GOING_FOR: &[i32] = &[8, 9, 10, 18, 28, 33, 34];
-/// The swung items (`ftCo_800A59E4`): the bat, Beam Sword, parasol, Star Rod, Lip's Stick and
-/// fan.
-const SWUNG: &[i32] = &[11, 12, 13, 22, 23, 24];
 /// What makes a computer player's enemy a target to close in on (`ftCo_800A5CE0`): a Starman
 /// (`x221D_b6`) or a hammer (its music, `x2168`).
 const STAR_OR_HAMMER: &[i32] = &[10, 28];
@@ -301,16 +287,6 @@ pub const MISSING: &[CpuGap] = &[
         items: Items::Off,
     },
     CpuGap {
-        what: "a computer player judging whether an island is safe on Brinstar and Onett (ftCo_800A2718)",
-        covers: &["ftCo_800A2718", "ftCo_800A1F98"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[BRINSTAR, ONETT],
-        items: Items::Off,
-    },
-    CpuGap {
         what: "a computer player near a moving stage's edge (ftCo_800A229C, ftCo_800A8210)",
         covers: &[
             "ftCo_800A229C on a moving stage",
@@ -326,26 +302,6 @@ pub const MISSING: &[CpuGap] = &[
         items: Items::Off,
     },
     CpuGap {
-        what: "a computer player reading the stage's wind (grLib_801C9E60)",
-        covers: &["grLib_801C9E60 on a moving stage"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[RAINBOW_CRUISE],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player following the stage's routes (ftCo_800A1CC4)",
-        covers: &["ftCo_800A1CC4"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[GREAT_BAY, HYRULE_TEMPLE],
-        items: Items::Off,
-    },
-    CpuGap {
         what: "a computer player beside Great Bay's surfaced turtle (ftCo_800A8210)",
         covers: &["ftCo_800A8210", "ftCo_800A6A98", "ftCo_800A6D2C"],
         who: Who::Vs,
@@ -354,66 +310,6 @@ pub const MISSING: &[CpuGap] = &[
         with: &[],
         stages: &[GREAT_BAY],
         items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player heading for an opening in the temple's ceiling (ftCo_800AAF48)",
-        covers: &["ftCo_800AAF48"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[HYRULE_TEMPLE],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player attacking with a Beam Sword Peach pulled (ftCo_800B52AC)",
-        covers: &["ftCo_800B8A9C with a swung item", "ftCo_800B52AC"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[PEACH],
-        stages: &[],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player attacking with a swung item (ftCo_800B52AC)",
-        covers: &["ftCo_800B8A9C with a swung item", "ftCo_800B52AC"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(SWUNG),
-    },
-    CpuGap {
-        what: "a computer player going for an item and picking it up (ftCo_800A866C, ftCo_800A3710)",
-        covers: &["ftCo_800A866C", "ftCo_800A3710"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(WORTH_GOING_FOR),
-    },
-    CpuGap {
-        what: "a computer player going for a container's monster (ftCo_800A648C, ftCo_800B5AB0)",
-        covers: &["ftCo_800A648C", "ftCo_800B5AB0"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(&[1, 2, 4]),
-    },
-    CpuGap {
-        what: "a computer player's target under the cloaking device (ft_80087A18)",
-        covers: &["ft_80087A18 with a power-up's color animation"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(&[33]),
     },
     CpuGap {
         what: "a computer player closing in on an enemy with a Starman or a hammer (ftCo_800AB224, ftCo_800BA674, ftCo_800BA2E8)",
@@ -429,16 +325,6 @@ pub const MISSING: &[CpuGap] = &[
         with: &[],
         stages: &[],
         items: Items::On(STAR_OR_HAMMER),
-    },
-    CpuGap {
-        what: "a computer player shielding from a Flipper, barrel cannon or Poison Mushroom (ftCo_800BA9A0)",
-        covers: &["ftCo_800BA9A0 for a flipper", "ftCo_800A2998"],
-        who: Who::Any,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(&[5, 20, 27]),
     },
     CpuGap {
         what: "a shrunk computer Yoshi jumping back (ftCo_800A0508)",
@@ -590,25 +476,23 @@ mod tests {
             }
             assert!(!on(31).contains(&g), "{}", g.what);
         }
-        // Nana reaches only her own gaps with human players.
+        // Nana reaches only her own gaps with human players, not a VS computer player's
+        // (Brinstar's lava).
         let nana = missing_with(&[], &[14, 2], BRINSTAR, &[]);
         assert!(nana.iter().all(|g| g.who != Who::Vs));
-        assert!(nana.iter().any(|g| g.covers.contains(&"ftCo_800A2718")));
-        // Peach's pulled sword: with Peach in the match, items off too.
-        let sword = |chars: &[u8]| {
-            missing_with(&[fox(5)], chars, 31, &[])
-                .iter()
-                .any(|g| g.covers.contains(&"ftCo_800B52AC"))
-        };
-        assert!(sword(&[2, 12]) && !sword(&[2, 9]));
-        // Items gaps follow the kinds; the switch brings its containers, and so their
-        // monsters.
-        let monsters = |kinds: &[i32]| {
-            missing_with_switch(&[fox(9)], &[2, 9], 31, kinds)
-                .iter()
-                .any(|g| g.covers.contains(&"ftCo_800B5AB0"))
-        };
-        assert!(monsters(&[0x0B]) && !monsters(&[]));
+        let vs = missing_with(&[fox(9)], &[14, 2], BRINSTAR, &[]);
+        assert!(vs.iter().any(|g| g.covers.contains(&"ftCo_800A229C on Zebes")));
+        // Peach's pulled sword is ported (`ftCo_800B52AC`): Peach brings no gap of her own.
+        let peach = missing_with(&[fox(5)], &[2, 12], 31, &[]);
+        assert_eq!(peach, missing_with(&[fox(5)], &[2, 9], 31, &[]));
+        // Items gaps follow the kinds; the switch's containers bring none of their own, their
+        // monsters being ported.
+        let bat = missing_with_switch(&[fox(9)], &[2, 9], 31, &[0x0B]);
+        assert_eq!(bat, missing_with(&[fox(9)], &[2, 9], 31, &[0x0B]));
+        assert_eq!(
+            missing_with_switch(&[fox(9)], &[2, 9], 31, &[]),
+            missing_with(&[fox(9)], &[2, 9], 31, &[])
+        );
         for g in MISSING {
             let Items::On(kinds) = g.items else { continue };
             let Some(&k) = kinds.first() else { continue };
@@ -628,7 +512,8 @@ mod tests {
     }
 
     /// Nana's stage gaps here are on the roster's stage audits too, which gate the Ice
-    /// Climbers on those stages today.
+    /// Climbers on those stages. None is left: her stage hooks are ported, and the roster
+    /// refuses the Ice Climbers nowhere.
     #[test]
     fn nana_stage_gaps_are_on_the_stage_audits() {
         for g in MISSING {

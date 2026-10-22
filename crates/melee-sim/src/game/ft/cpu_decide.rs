@@ -5,8 +5,9 @@
 
 use gekko_fp as fp;
 
-use super::super::code::unported_call;
-use super::super::gr::stage;
+use super::super::gr::{
+    GR_KIND_GREATBAY, GR_KIND_ONETT, GR_KIND_SHRINE, GR_KIND_ZEBES, ground, stage,
+};
 use super::super::handles::{FighterId, ItemId};
 use super::super::state::Running;
 use super::common::{GA_AIR, GA_GROUND};
@@ -30,6 +31,143 @@ const FIND_TARGET_CLOAKED_RET: u32 = 0x800A_4D48;
 const ITEM_WORTH: [i32; IT_KIND_L_GUN_RAY as usize] = [
     1, 0, 0, 1, 0, 0, 0, 1, 7, 6, 5, 4, 4, 3, 1, 1, 2, 1, 5, 2, 2, 2, 3, 3, 3, 4, 0, 0, 8, 4, 1, 4,
     4, 5, 5,
+];
+
+/// A computer player's route on a stage, `ftCo_803C6594_t`: from a point's island (and
+/// between two x's, if given), the point it heads for when its destination lies above
+/// (`up_angle` or more), below (`down_angle` or less), or else ahead to the right or the left;
+/// a point whose third number is negative isn't taken.
+struct Route {
+    from: (f32, f32),
+    up: (f32, f32, f32),
+    down: (f32, f32, f32),
+    right: (f32, f32, f32),
+    left: (f32, f32, f32),
+    up_angle: f32,
+    down_angle: f32,
+    span: Option<(f32, f32)>,
+}
+
+const QUARTER_PI: f32 = std::f32::consts::FRAC_PI_4;
+const TWELFTH_PI: f32 = 0.261_799_4;
+const NO_POINT: (f32, f32, f32) = (0.0, 0.0, -1.0);
+
+/// Hyrule Temple's routes (`list0_0` to `list0_4`).
+const SHRINE_ROUTES: [Route; 5] = [
+    Route {
+        from: (37.0, -143.5),
+        up: (5.5, -111.0, 0.0),
+        down: (5.5, -111.0, 0.0),
+        right: NO_POINT,
+        left: (5.5, -111.0, 0.0),
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: None,
+    },
+    Route {
+        from: (30.0, -16.0),
+        up: (-3.5, 24.0, 0.0),
+        down: (-60.0, -86.0, 0.0),
+        right: NO_POINT,
+        left: (-3.5, 24.0, 0.0),
+        up_angle: QUARTER_PI,
+        down_angle: -TWELFTH_PI,
+        span: None,
+    },
+    Route {
+        from: (-60.0, -86.0),
+        up: (-131.0, -26.8, 0.0),
+        down: NO_POINT,
+        right: NO_POINT,
+        left: NO_POINT,
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-1000.0, -95.0)),
+    },
+    Route {
+        from: (-60.0, -86.0),
+        up: (-16.0, -46.0, 0.0),
+        down: NO_POINT,
+        right: NO_POINT,
+        left: NO_POINT,
+        up_angle: TWELFTH_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-95.0, -25.0)),
+    },
+    Route {
+        from: (-60.0, -86.0),
+        up: (-60.0, -86.0, 0.0),
+        down: NO_POINT,
+        right: NO_POINT,
+        left: (-60.0, -86.0, 0.0),
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-25.0, 1000.0)),
+    },
+];
+
+/// Great Bay's routes (`list1_0` to `list1_5`).
+const GREAT_BAY_ROUTES: [Route; 6] = [
+    Route {
+        from: (-130.0, 6.0),
+        up: (-130.0, 6.0, 0.0),
+        down: NO_POINT,
+        right: (-130.0, 6.0, 0.0),
+        left: NO_POINT,
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-120.0, 1000.0)),
+    },
+    Route {
+        from: (-130.0, 6.0),
+        up: (-100.0, 34.0, 0.0),
+        down: NO_POINT,
+        right: (-100.0, 34.0, 0.0),
+        left: NO_POINT,
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: None,
+    },
+    Route {
+        from: (-10.0, 6.0),
+        up: (-10.0, 6.0, 0.0),
+        down: NO_POINT,
+        right: NO_POINT,
+        left: (-10.0, 6.0, 0.0),
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-1000.0, -20.0)),
+    },
+    Route {
+        from: (-10.0, 6.0),
+        up: (-30.0, 34.0, 0.0),
+        down: NO_POINT,
+        right: NO_POINT,
+        left: (-30.0, 34.0, 0.0),
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: None,
+    },
+    Route {
+        from: (-100.0, 34.0),
+        up: NO_POINT,
+        down: (-10.0, 6.0, 0.0),
+        right: NO_POINT,
+        left: NO_POINT,
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-50.0, 0.0)),
+    },
+    Route {
+        from: (-100.0, 34.0),
+        up: NO_POINT,
+        down: (-130.0, 6.0, 0.0),
+        right: NO_POINT,
+        left: NO_POINT,
+        up_angle: QUARTER_PI,
+        down_angle: -QUARTER_PI,
+        span: Some((-200.0, -80.0)),
+    },
 ];
 
 /// What `HSD_Randf` leaves in r5: `HSD_RandSeedPtr`, the address of its seed (`seed`).
@@ -95,13 +233,30 @@ impl Running<'_> {
     /// Whether a fighter is invisible to computer players for now, `ftCo_800A0F00`: under a
     /// cloaking item's color animation (`ft_80087A18`), always or, flickering, half the time
     /// by its own frame count.
-    // Ports `ftCo_800A0F00`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A0F00")]
     pub(super) fn cpu_cloaked(&self, f: FighterId) -> bool {
-        // `ft_80087A18`: only with a powered-up color animation (`x2226_b4`).
-        if self.game.fighters[f.0].x2226_b4 {
-            unported_call("ft_80087A18 with a power-up's color animation");
+        let fp = &self.game.fighters[f.0];
+        if !self.cloaking_colors(f) {
+            return false;
         }
-        false
+        // `ft_80087A80`: the cloak's vibrate frame, 2 while it holds and 1 as it flickers.
+        match fp.smash_attrs.x2134_vibrateFrame {
+            2 => true,
+            1 => fp.cpu.x7C % 240 > 120,
+            _ => false,
+        }
+    }
+
+    /// Whether a fighter shows a power-up's colors that hide it, `ft_80087A18`: with a
+    /// power-up's color animation (`x2226_b4`) and its refraction (`x2226_b5`), the color
+    /// animation's word none or 5 (`ftCo_800C06B4` returns its address plus 0x7B, which the
+    /// original compares with 0x7B and 0x80).
+    #[doc(alias = "ft_80087A18")]
+    #[doc(alias = "ftCo_800C06B4")]
+    fn cloaking_colors(&self, f: FighterId) -> bool {
+        let fp = &self.game.fighters[f.0];
+        let at = (i32::from_be_bytes(fp.x508.x28_colanim)).wrapping_add(0x7B);
+        fp.x2226_b4 && (at == 0x7B || at == 0x80) && fp.x2226_b5
     }
 
     /// The distance between two fighters, `ftCo_800A1AB4`.
@@ -279,11 +434,12 @@ impl Running<'_> {
         reg(math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy)))))
     }
 
-    /// The enemy item the fighter goes for, `ftCo_800A648C`: the containers' monsters and the
-    /// adventure's Koopas, Like Likes and Topis in reach. Only an items-on match spawns one,
-    /// so a candidate stops the port.
-    // Ports `ftCo_800A648C`; aliased once a check reaches it.
+    /// The enemy item the fighter goes for, `ftCo_800A648C`: the nearest of the containers'
+    /// monsters and the adventure's Koopas, Like Likes and Topis in reach of the blast zones.
+    #[doc(alias = "ftCo_800A648C")]
     pub(super) fn cpu_enemy_item_target(&mut self, f: FighterId) -> Option<ItemId> {
+        use super::super::it::kinds as k;
+        let mut closest: Option<(ItemId, f64)> = None;
         let mut cur = self.game.world.first_in(P_LINK_ITEM);
         while let Some(g) = cur {
             cur = self.game.world.gobjs[g.0].next;
@@ -291,16 +447,22 @@ impl Running<'_> {
             let ip = &self.game.items[it.0];
             // `ftCo_800A648C_inline1`: `It_Kind_Kuriboh` up to `_Octarock_Stone` (the
             // containers' monsters), `_Nokonoko`, `_Patapata` and the next, `_Whitebea`.
-            let k = ip.kind;
-            let enemy = (0x2B..0x2F).contains(&k)
-                || k == 0xD3
-                || (k.wrapping_sub(0xD4) as u32) <= 1
-                || k == 0xD9;
-            if enemy && !self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
-                unported_call("ftCo_800A648C with a candidate item");
+            let kind = ip.kind;
+            let enemy = (k::KURIBOH..k::OCTAROCK_STONE).contains(&kind)
+                || kind == 0xD3
+                || (kind.wrapping_sub(0xD4) as u32) <= 1
+                || kind == 0xD9;
+            if !enemy || self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) {
+                continue;
+            }
+            let d = self.cpu_item_distance(f, it);
+            match closest {
+                None => closest = Some((it, d)),
+                Some((_, best)) if best > d => closest = Some((it, d)),
+                _ => {}
             }
         }
-        None
+        closest.map(|(it, _)| it)
     }
 
     /// Nana making her way back to Popo, `ftCo_800B0760`: she targets the nearest enemy and
@@ -602,21 +764,95 @@ impl Running<'_> {
         }
     }
 
-    /// The stage's routes for computer players (`ftCo_800A1CC4` with `ftCo_803C6594`, by
-    /// stage kind): only Great Bay and the Temple have any.
-    // Ports `ftCo_800A1CC4`; aliased once a check reaches it.
+    /// The stage's routes for computer players, `ftCo_800A1CC4` (with `ftCo_803C6594`, by
+    /// stage kind; only Great Bay and the Temple have any): on the ground, apart from its
+    /// destination's island, a computer player at a route's start (on its island, within its
+    /// span) heads for the route's next point by the destination's angle from it (above,
+    /// below, or ahead by its facing), for 300 frames.
+    #[doc(alias = "ftCo_800A1CC4")]
     fn cpu_stage_route(&mut self, f: FighterId) {
-        // Gr_Kind_GreatBay, Gr_Kind_Shrine.
-        if matches!(self.game.stage_info.grkind, 6 | 7) {
-            let _ = f;
-            unported_call("ftCo_800A1CC4 on a stage with routes");
+        let routes: &[Route] = match self.game.stage_info.grkind {
+            GR_KIND_GREATBAY => &GREAT_BAY_ROUTES,
+            GR_KIND_SHRINE => &SHRINE_ROUTES,
+            _ => return,
+        };
+        let fpp = &self.game.fighters[f.0];
+        let c = &fpp.cpu;
+        if c.x60 != 0 || c.kind == 0 || fpp.ground_or_air == GA_AIR || self.cpu_destination_here(f)
+        {
+            return;
+        }
+        let fpp = &self.game.fighters[f.0];
+        let c = &fpp.cpu;
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
+            return;
+        };
+        let dy = fp::fsubs(reg(c.x54.y), reg(fpp.cur_pos.y));
+        let dx = fp::fsubs(reg(c.x54.x), reg(fpp.cur_pos.x));
+        let dx = if dx < 0.0 { fp::fneg(dx) } else { dx };
+        let angle = super::co::guard::stick_angle(dy, dx);
+        for r in routes {
+            // `ftCo_800A1CC4_inline0`.
+            let from = crate::vec::Vec3::new(r.from.0, r.from.1, 0.0);
+            let geo = self.game.geometry.as_mut().expect("no collision geometry");
+            if geo.island_below(from, -10.0) != Some(island) {
+                continue;
+            }
+            let fpp = &self.game.fighters[f.0];
+            if let Some((lo, hi)) = r.span
+                && !(fpp.cur_pos.x > lo && fpp.cur_pos.x < hi)
+            {
+                continue;
+            }
+            let to = if angle > reg(r.up_angle) {
+                r.up
+            } else if angle < reg(r.down_angle) {
+                r.down
+            } else if fpp.facing_dir > 0.0 {
+                r.right
+            } else {
+                r.left
+            };
+            if to.2 >= 0.0 {
+                // `ftCo_800A1CC4_inline1`.
+                let c = &mut self.game.fighters[f.0].cpu;
+                c.x60 = 300;
+                c.x64.x = c.x54.x;
+                c.x64.y = c.x54.y;
+                c.x54.x = to.0;
+                c.x54.y = to.1;
+                c.x38 = 5.0;
+                return;
+            }
         }
     }
 
+    /// Whether the fighter stands on its destination's island (the island under 5 above the
+    /// destination), `ftCo_800A21FC`.
+    #[doc(alias = "ftCo_800A21FC")]
+    fn cpu_destination_here(&mut self, f: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR {
+            return false;
+        }
+        let line = fpp.coll_data.floor.index;
+        let dest = crate::vec::Vec3::new(
+            fpp.cpu.x54.x,
+            mem(fp::frsp(fp::fadd(5.0, reg(fpp.cpu.x54.y)))),
+            0.0,
+        );
+        let geo = self.game.geometry.as_mut().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(line) else {
+            return false;
+        };
+        geo.island_below(dest, -10.0) == Some(island)
+    }
+
     /// Whether an island is unsafe to stand on, `ftCo_800A2718`: a live bob-omb or shell on
-    /// it, or the stage's own hazard (Mushroom Kingdom's moving islands; Zebes' and Onett's
-    /// checks aren't ported).
-    // Ports `ftCo_800A2718`; aliased once a check reaches it.
+    /// it, or the stage's own hazard: Yoshi's Story's moving cloud, Brinstar's acid, Onett's
+    /// cars.
+    #[doc(alias = "ftCo_800A2718")]
     pub(super) fn cpu_island_unsafe(&self, island: Option<crate::mp::IslandId>) -> bool {
         let Some(island) = island else { return false };
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -635,13 +871,34 @@ impl Running<'_> {
                 return true;
             }
         }
+        let isl = *geo.islands.get(island);
         match self.game.stage_info.grkind {
             // Gr_Kind_Story.
             10 => geo.island_moving(island),
-            // Gr_Kind_Zebes, Gr_Kind_Onett.
-            8 | 20 => unported_call("ftCo_800A2718 on Zebes or Onett"),
+            // `checkZebesIsland`: either end under the acid, or under where it rises to in 90
+            // frames at its last step.
+            GR_KIND_ZEBES => {
+                self.cpu_under_acid(90, isl.right.y) || self.cpu_under_acid(90, isl.left.y)
+            }
+            // `checkOnettY`: either end at the street's height while a car is coming.
+            GR_KIND_ONETT => {
+                let car = |y: f32| reg(y) <= 5.0 && ground::x740(self.game) != 0;
+                car(isl.right.y) || car(isl.left.y)
+            }
             _ => false,
         }
+    }
+
+    /// Whether a height is under Brinstar's acid now or will be in `frames` frames at its last
+    /// step, `ftCo_800A1F98`; never on another stage.
+    #[doc(alias = "ftCo_800A1F98")]
+    fn cpu_under_acid(&self, frames: i32, y: f32) -> bool {
+        if self.game.stage_info.grkind != GR_KIND_ZEBES {
+            return false;
+        }
+        let (level, step) = ground::x724_and_step(self.game);
+        let y = reg(y);
+        y < reg(level) || y < fp::fmadds(reg(step), fp::frsp(f64::from(frames)), reg(level))
     }
 
     /// The fighter heads for its partner (Nana for Popo), `ftCo_800A7AAC`: below him on the
@@ -930,14 +1187,37 @@ impl Running<'_> {
     /// Whether the fighter picks up the item it goes for, `ftCo_800A3710`: if it may
     /// (`xF9_b7`), the item is still grabbable (else it forgets it), and both stand on the
     /// same ground with the fighter's hands free.
-    // Ports `ftCo_800A3710`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A3710")]
     fn cpu_item_pickup(&mut self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         if !c.xF9_b7 {
             return false;
         }
-        let Some(_item) = c.x4C else { return false };
-        unported_call("ftCo_800A3710 with an item to pick up");
+        let Some(item) = c.x4C else { return false };
+        let ig = self.game.items[item.0]
+            .entity
+            .expect("the item the fighter goes for has its GObj");
+        if !super::super::it::item::is_grabbable(self.game, ig) {
+            self.game.fighters[f.0].cpu.x4C = None;
+            return false;
+        }
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR || fpp.item_gobj.is_some() {
+            return false;
+        }
+        // `ftCo_800A2170_it`: both on the same island.
+        if self.game.items[item.0].ground_or_air == GA_AIR {
+            return false;
+        }
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
+            return false;
+        };
+        if geo.island_of_line(self.game.items[item.0].x378_itemColl.floor.index) != Some(island) {
+            return false;
+        }
+        let g = fpp.gobj.expect("the fighter's GObj");
+        self.item_pickup_in_reach(g, ig)
     }
 
     /// Whether the fighter has reached its destination, `ftCo_800A3554`: on the ground on
@@ -973,7 +1253,8 @@ impl Running<'_> {
                 c.x60 = 0;
                 c.x54.x = c.x64.x;
                 c.x54.y = c.x64.y;
-                unported_call("ftCo_800A1CC4");
+                self.cpu_stage_route(f);
+                return false;
             }
             return true;
         }

@@ -390,6 +390,10 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
+    (
+        "it_8026B924",
+        "a computer player's shooting item used from range (ftCo_800B9A04), which takes a computer player allowed ranged attacks (xF9_b5): Nana, the player's only one, never is (ftCo_800B0760 clears it each frame she makes her way back, and following Popo she runs no behavior)",
+    ),
     ("it_8026B7F8", EVT_UNK),
     ("it_2E5A_Logic115_EvtUnk", EVT_UNK),
     ("it_802F2BDC", EVT_UNK),
@@ -560,20 +564,8 @@ pub const UNCHECKED: &[&str] = &[
     "melee/ft/kinds/ftCommon/ftCo_WarpStar",
 ];
 
-/// What an items-on match reaches that isn't ported, task by task.
-pub const MISSING: &[ItemGap] = &[ItemGap {
-    what: "Nana's computer player with items: a power-up's color, an item to go for or pick up, a swung item held",
-    covers: &[
-        "it_8026B924",
-        "ft_80087A18 with a power-up's color animation",
-        "ftCo_800A648C with a candidate item",
-        "ftCo_800A3710 with an item to pick up",
-        "ftCo_800B8A9C with a swung item",
-    ],
-    kinds: &[],
-    with: &[14],
-    stages: &[],
-}];
+/// What an items-on match reaches that isn't ported, task by task: nothing left.
+pub const MISSING: &[ItemGap] = &[];
 
 #[cfg(test)]
 mod tests {
@@ -679,12 +671,8 @@ mod tests {
             (balls.iter()).all(|g| g.kinds.is_empty() || g.kinds.contains(&0x22)),
             "a Poké Ball match reaches only its own gaps and every match's"
         );
-        assert!(
-            missing_with(&[0], &[14], 31)
-                .iter()
-                .any(|g| g.what.starts_with("Nana"))
-        );
-        assert!(!balls.iter().any(|g| g.what.starts_with("Nana")));
+        // The Ice Climbers' Nana reaches nothing unported with items.
+        assert!(missing_with(&[0], &[14], 31).is_empty());
         // A gap with item kinds follows them: a match with one of its kinds (and its characters
         // and stage) reaches it, one with another kind doesn't.
         for g in MISSING.iter().filter(|g| !g.kinds.is_empty()) {

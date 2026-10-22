@@ -232,7 +232,10 @@ impl Running<'_> {
                     .line_speed(h.line, h.pos)
                     .expect("a floor mpCheckFloor found that isn't live"),
             ),
-            None => self.stage_wind(),
+            None => {
+                let mut wind = crate::vec::Vec3::new(0.0, 0.0, 0.0);
+                super::super::gr::grlib::item_wind(self.game, &mut wind).then_some(wind)
+            }
         };
         if let Some(v) = vel {
             let c = &mut self.game.fighters[f.0].cpu;
@@ -267,17 +270,6 @@ impl Running<'_> {
             && self.corneria_ceiling_floor(fpp.coll_data.floor.index)
         {
             self.game.fighters[f.0].cpu.xFA_b6 = true;
-        }
-    }
-
-    /// The stage's wind on a point, `grLib_801C9E60`: Rainbow Cruise's, Big Blue's and Icicle
-    /// Mountain's stages move it; elsewhere none.
-    // Ports `grLib_801C9E60`; aliased once a check reaches it.
-    fn stage_wind(&self) -> Option<crate::vec::Vec3> {
-        match self.game.stage_info.grkind {
-            // Gr_Kind_RCruise, Gr_Kind_BigBlue, Gr_Kind_Icemt.
-            3 | 19 | 22 => unported_call("grLib_801C9E60 on a moving stage"),
-            _ => None,
         }
     }
 

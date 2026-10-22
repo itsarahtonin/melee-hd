@@ -79,7 +79,8 @@ impl Running<'_> {
         // `ftCo_CpuActOnNoTarget`.
         if self.cpu_should_act(f) {
             if self.game.fighters[f.0].cpu.x4C.is_some() {
-                unported_call("ftCo_800A866C");
+                self.cpu_toward_item(f);
+                return self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1;
             }
             let target = self
                 .cpu_best_human_enemy(f)
@@ -496,6 +497,61 @@ impl Running<'_> {
         } else if me.cur_pos.x > isl.right.x {
             let x = mem(fp::frsp(fp::fsub(reg(isl.right.x), 5.0)));
             self.cpu_set_destination(f, x, isl.right.y, reach);
+        }
+    }
+
+    /// Heads for the item it goes for (`x4C`), `ftCo_800A866C`: with both on the ground and
+    /// the item's island safe, for the floor under the item, then onto that island's near end
+    /// from below when the fighter stands elsewhere.
+    #[doc(alias = "ftCo_800A866C")]
+    fn cpu_toward_item(&mut self, f: FighterId) {
+        let Some(item) = self.game.fighters[f.0].cpu.x4C else {
+            return;
+        };
+        let ip = &self.game.items[item.0];
+        if self.game.fighters[f.0].ground_or_air == GA_AIR || ip.ground_or_air == GA_AIR {
+            return;
+        }
+        let (ix, iy, item_line) = (ip.pos.x, ip.pos.y, ip.x378_itemColl.floor.index);
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let island = geo.island_of_line(item_line);
+        if self.cpu_island_unsafe(island) {
+            return;
+        }
+        let bottom = mem(fp::fsubs(reg(iy), 50.0));
+        let top = mem(fp::fadds(1.0, reg(iy)));
+        let hit = self
+            .game
+            .geometry
+            .as_mut()
+            .expect("no collision geometry")
+            .check_floor(ix, top, ix, bottom, 0.0, -1, -1, -1, None);
+        if let Some(hit) = hit.filter(|h| !self.excluded_floor(h.line)) {
+            self.cpu_set_destination(f, hit.pos.x, hit.pos.y, 1.0);
+        }
+        let me = &self.game.fighters[f.0];
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        // The item is still on the ground: nothing since has moved it.
+        let same_island = me.ground_or_air != GA_AIR
+            && geo
+                .island_of_line(me.coll_data.floor.index)
+                .is_some_and(|i| geo.island_of_line(item_line) == Some(i));
+        let Some(island) = island else { return };
+        // Not above, NaN included.
+        #[allow(clippy::neg_cmp_op_on_partial_ord)]
+        let below = !(fp::fsubs(reg(me.cpu.x54.y), reg(me.cur_pos.y)) > 0.0);
+        if same_island || below {
+            return;
+        }
+        let isl = *geo.islands.get(island);
+        if fp::fsubs(reg(me.cpu.x54.x), reg(me.cur_pos.x)) > 0.0 {
+            if me.cur_pos.x < isl.left.x {
+                let x = mem(fp::frsp(fp::fadd(5.0, reg(isl.left.x))));
+                self.cpu_set_destination(f, x, isl.left.y, 1.0);
+            }
+        } else if me.cur_pos.x > isl.right.x {
+            let x = mem(fp::frsp(fp::fsub(reg(isl.right.x), 5.0)));
+            self.cpu_set_destination(f, x, isl.right.y, 1.0);
         }
     }
 

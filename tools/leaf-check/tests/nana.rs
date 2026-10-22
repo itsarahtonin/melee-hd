@@ -42,10 +42,23 @@
 //! `bf-9852011d-turnips` from 3900 (`ics-dd-a5/diamond-diamond-9852011d011ebe10c9080f94.slp`,
 //! two turnips lying about, for the item search's choice). Each is packed (`pack-calls`).
 //!
+//! Seven more come from the `ics` oracle set's matches on the stages Nana's computer player
+//! asks about themselves (docs/oracle.md, "The Ice Climbers on the stages"), each from the
+//! recording in `local/bench/oracle-ics/` with `--fp hardware`: `br-acid` (`ics-br`, 250 fields
+//! from 2509, Brinstar's acid making islands unsafe), `on-car` (`ics-on`, 200 from 790, Onett's
+//! cars), `rc-wind` (`ics-rc`, 150 from 2080) and `rc-wind2` (60 from 1985, the wind carrying her
+//! destination), `gb-route` (`ics-gb`, 180 from 1170, Great Bay's routes), `ht-route` (`ics-ht`,
+//! 120 from 7100) and `ht-route2` (40 from 7020, Hyrule Temple's). Two more come from the set's
+//! `ics-items-open-fd`, which melee-hd recorded: `fd-items-bat` (250 from 6560, a Home-Run Bat
+//! held apart from Popo and swung) and `fd-items-gun` (100 from 1190, a Ray Gun held apart from
+//! him).
+//!
 //! `nana_tumble_and_shields` changes the saved frames to reach the tumble's branches
 //! (`ftCo_800ABBA8`), the shield check's (`ftCo_800B9F6C`), the item search's choice among
 //! several items (`ftCo_800A5F4C`), the held item's throw (`ftCo_800ADE48`, `ftCo_800AD7FC`)
-//! and the short hop at the target (`ftCo_800A0798`), which no replay at hand does.
+//! and the short hop at the target (`ftCo_800A0798`), which no replay at hand does, and
+//! Hyrule Temple's search for an island's end above her (`ftCo_800AAF48`) and Rainbow Cruise's
+//! wind keeping its push on her destination, which no match shows.
 
 use std::collections::BTreeSet;
 use std::sync::Mutex;
@@ -125,6 +138,28 @@ const TUMBLE: u32 = 15;
 const DAMAGE_FALL: u32 = 38;
 const ATTACK_HI3: u32 = 56;
 const GUARD: u32 = 179;
+/// `Fighter::ground_or_air` (1 in the air); `stage_info.grkind` and Hyrule Temple's
+/// (`Gr_Kind_Shrine`); the walk's behavior.
+const GROUND_OR_AIR: u32 = 0xE0;
+const GRKIND: u32 = 0x88;
+const GR_KIND_SHRINE: u32 = 7;
+/// `Gr_Kind_RCruise`, whose wind carries a destination over no floor.
+const GR_KIND_RCRUISE: u32 = 3;
+const WALK: u32 = 1;
+/// Hyrule Temple's floor in the temple, its roof above (two of its computer players' route
+/// points, `ftCo_803C6594`), and places on the floor under the roof.
+const SHRINE_FLOOR: (f32, f32) = (30.0, -16.0);
+const SHRINE_ROOF: (f32, f32) = (-3.5, 24.0);
+const SHRINE_UNDER_ROOF: [(f32, f32); 6] = [
+    (-25.0, -16.0),
+    (-15.0, -16.0),
+    (-3.5, -16.0),
+    (-135.0, -26.784),
+    (-130.0, -26.784),
+    (-127.0, -26.784),
+];
+/// `Fighter::coll_data.cur_pos`.
+const COLL_POS: u32 = 0x6F4;
 
 /// The other fighter of Nana's player, Popo: the first of the fighters' GObjs
 /// (`HSD_GObjPLinkHead[8]`) with her player that isn't her.
@@ -205,6 +240,16 @@ enum Change {
     /// With a target, her script ended and her behavior a short hop at it (behavior 8,
     /// `xF8_b34` 2): `ftCo_800B7180` hops (`ftCo_800A0798`).
     Hop,
+    /// On Hyrule Temple, standing apart from Popo (who is high in the air past the stage's
+    /// side, so she keeps her destination) and walking to a floor point steeply above her:
+    /// under a ceiling she looks for an island's end above and ahead to jump to
+    /// (`ftCo_800AAF48`).
+    ShrineAbove,
+    /// On Rainbow Cruise, standing apart from Popo (high in the air past the stage's side) with
+    /// her destination 3.5 above where she stands: no floor is within 2 of it, so the stage's
+    /// wind carries it (`ftCo_800B33B0` with `grLib_801C9E60`), and her floor within 5 keeps
+    /// it.
+    WindDrift,
 }
 
 /// Changes a saved frame as `change` says: whether it did.
@@ -281,6 +326,55 @@ fn change_frame(call: &mut Call, change: Change) -> bool {
             poke_u32(call, nana + SCRIPT, 0);
             poke_u32(call, nana + SCRIPT_WAIT, 0);
         }
+        Change::ShrineAbove => {
+            let stage = leaf_check::sym("stage_info");
+            if peek_u32(call, stage + GRKIND) != GR_KIND_SHRINE
+                || peek_u32(call, nana + GROUND_OR_AIR) != 0
+            {
+                return false;
+            }
+            // On the temple's floor (its route point at y -16), moved under its roof (the
+            // route point at y 24) and walking up to it.
+            let y = f32::from_bits(peek_u32(call, nana + POS + 4));
+            if (y - SHRINE_FLOOR.1).abs() > 3.0 {
+                return false;
+            }
+            let (x, y) =
+                SHRINE_UNDER_ROOF[peek_u32(call, nana + FRAMES) as usize % SHRINE_UNDER_ROOF.len()];
+            poke_f32(call, nana + POS, x);
+            poke_f32(call, nana + POS + 4, y);
+            poke_f32(call, nana + COLL_POS, x);
+            poke_f32(call, nana + COLL_POS + 4, y);
+            let (dx, dy) = SHRINE_ROOF;
+            new_script_at(call, nana, popo, 0.0);
+            poke_u32(call, nana + BEHAVIOR, WALK);
+            poke_u32(call, nana + DEST_TIMER, 0);
+            poke_f32(call, nana + DEST, dx);
+            poke_f32(call, nana + DEST + 4, dy);
+            let flags = peek_u32(call, nana + CPU_FLAGS);
+            poke_u32(call, nana + CPU_FLAGS, flags & !FOLLOWING);
+            poke_u32(call, popo + GROUND_OR_AIR, 1);
+            poke_f32(call, popo + POS, 1000.0);
+            poke_f32(call, popo + POS + 4, 300.0);
+        }
+        Change::WindDrift => {
+            let stage = leaf_check::sym("stage_info");
+            if peek_u32(call, stage + GRKIND) != GR_KIND_RCRUISE
+                || peek_u32(call, nana + GROUND_OR_AIR) != 0
+            {
+                return false;
+            }
+            let x = peek_u32(call, nana + POS);
+            let y = f32::from_bits(peek_u32(call, nana + POS + 4));
+            poke_u32(call, nana + DEST, x);
+            poke_f32(call, nana + DEST + 4, y + 3.5);
+            poke_u32(call, nana + DEST_TIMER, 0);
+            let flags = peek_u32(call, nana + CPU_FLAGS);
+            poke_u32(call, nana + CPU_FLAGS, flags & !FOLLOWING);
+            poke_u32(call, popo + GROUND_OR_AIR, 1);
+            poke_f32(call, popo + POS, 1000.0);
+            poke_f32(call, popo + POS + 4, 300.0);
+        }
         Change::ThrowBobomb | Change::ThrowEgg => {
             let held = peek_u32(call, nana + HELD_ITEM);
             if held == 0 {
@@ -317,6 +411,8 @@ fn nana_tumble_and_shields() {
         Change::ThrowBobomb,
         Change::ThrowEgg,
         Change::Hop,
+        Change::ShrineAbove,
+        Change::WindDrift,
     ];
     // Each change is a unit of the binary's shards ([`leaf_check::shard`]): its assertion
     // needs only its own frames.

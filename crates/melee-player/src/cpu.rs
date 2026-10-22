@@ -325,18 +325,31 @@ mod tests {
         );
     }
 
-    /// No computer player and no Ice Climbers: the audit has nothing to say. Peach's pulled
-    /// Beam Sword with the Ice Climbers, items off: Nana reaches it, human Popo too.
+    /// No computer player and no Ice Climbers: the audit has nothing to say. With the Ice
+    /// Climbers and human Popo, the match is refused exactly when the audit names a gap Nana
+    /// reaches, on every roster stage, with Peach (whose pulled Beam Sword Nana can pick up,
+    /// ported now) or Fox, items off and on.
     #[test]
     fn nana_is_asked_in_every_ice_climbers_match() {
         let fd = roster::stage("fd").unwrap().kind;
         let (fox, marth, peach, ics) = (2, 9, 12, 14);
         let none = [None; 4];
         assert!(gaps(&[Some(fox), Some(marth), None, None], &none, fd, &[]).is_empty());
-        let why = refusal(&[Some(ics), Some(peach), None, None], &none, fd, &[])
-            .expect("Nana and Peach's sword");
-        assert!(why.contains("Nana") && why.contains("Beam Sword"), "{why}");
-        assert!(refusal(&[Some(ics), Some(fox), None, None], &none, fd, &[]).is_none());
+        for s in roster::STAGES {
+            for other in [peach, fox] {
+                for kinds in [&[][..], &[0x0B, 0x1B]] {
+                    let players = [Some(ics), Some(other), None, None];
+                    let wide: Vec<i32> = kinds.iter().map(|&k| i32::from(k)).collect();
+                    let nana = cpu_audit::missing_with_switch(&[], &[ics, other], s.kind, &wide);
+                    let why = refusal(&players, &none, s.kind, kinds);
+                    assert_eq!(why.is_some(), !nana.is_empty(), "{}: {why:?}", s.name);
+                    if let Some(why) = why {
+                        assert!(why.contains("Nana"), "{why}");
+                    }
+                }
+            }
+        }
+        assert!(refusal(&[Some(ics), Some(peach), None, None], &none, fd, &[]).is_none());
     }
 
     /// A choice is turned off with the gaps it brings, named in a few words; Human always
