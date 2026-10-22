@@ -14,10 +14,80 @@ use melee_sim::hsd::aobj::AObjId;
 use melee_sim::hsd::gobj::{GObjId, P_LINKS};
 use melee_sim::hsd::jobj::{Contents, JObjId};
 use melee_sim::hsd::pobj::Binding;
+use melee_sim::hsd::pool::Pool;
 use melee_sim::hsd::robj::{self, RObjId, Ref};
 
 use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index};
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
+
+/// The addresses the allocator model has given each pool slot's objects, noted after every
+/// tick: a handle kept past its object's free (a dangling pointer) names the address of the
+/// object it was set to, which the slot no longer holds once it's reused. Joints, display
+/// objects, materials and textures come from the class allocator, whose blocks are reused in
+/// another order than the pools' slots, so a slot's objects can sit at several addresses.
+#[derive(Clone, Default)]
+pub struct PastAddrs {
+    addrs: HashMap<(&'static str, u32), Vec<u32>>,
+}
+
+impl PastAddrs {
+    /// Notes each slot's address, where it's new.
+    pub fn note(&mut self, game: &Game) {
+        fn pool<T, const K: u8>(
+            addrs: &mut HashMap<(&'static str, u32), Vec<u32>>,
+            kind: &'static str,
+            p: &Pool<T, K>,
+        ) {
+            for slot in 0..p.slots().len() as u32 {
+                let a = p.addr(slot);
+                if a == 0 {
+                    continue;
+                }
+                let v = addrs.entry((kind, slot)).or_default();
+                if v.last() != Some(&a) {
+                    v.push(a);
+                }
+            }
+        }
+        let a = &mut self.addrs;
+        let o = &game.objs;
+        pool(a, "JObjId", &o.jobjs.pool);
+        pool(a, "DObjId", &o.dobjs.pool);
+        pool(a, "MObjId", &o.mobjs.pool);
+        pool(a, "TObjId", &o.tobjs.pool);
+        pool(a, "GeneratorId", &o.generators.pool);
+        pool(a, "GObjId", &game.world.gobjs);
+        pool(a, "FighterId", &game.fighters);
+        pool(a, "ItemId", &game.items);
+        pool(a, "EffectId", &game.ef.effects);
+        pool(a, "QueuedId", &game.ef.queued);
+    }
+
+    /// Whether slot `o` of `kind`'s pool has held an object at `addr`.
+    fn had(&self, kind: &'static str, o: u32, addr: u32) -> bool {
+        self.addrs
+            .get(&(kind, o))
+            .is_some_and(|v| v.contains(&addr))
+    }
+}
+
+/// The pool a handle kind names objects of, for the kinds whose slots carry the allocator
+/// model's addresses.
+fn pool_kind(kind: &str) -> Option<&'static str> {
+    Some(match kind {
+        "JObjId" => "JObjId",
+        "DObjId" => "DObjId",
+        "MObjId" => "MObjId",
+        "TObjId" => "TObjId",
+        "GeneratorId" => "GeneratorId",
+        "GObjId" => "GObjId",
+        "FighterId" | "VictimFighter" => "FighterId",
+        "ItemId" | "VictimItem" => "ItemId",
+        "EffectId" => "EffectId",
+        "QueuedId" => "QueuedId",
+        _ => return None,
+    })
+}
 
 pub struct Comparer<'a> {
     pub mem: &'a [u8],
@@ -38,6 +108,8 @@ pub struct Comparer<'a> {
     /// The archives, where the caller has them: fighters' animation buffers then compare
     /// byte for byte where we know what they hold.
     pub archives: Option<&'a Archives>,
+    /// The addresses pool slots' earlier objects had, where the caller has followed them.
+    pub past: Option<&'a PastAddrs>,
 }
 
 impl<'a> Comparer<'a> {
@@ -97,6 +169,7 @@ impl<'a> Comparer<'a> {
             diffs: Vec::new(),
             stale_reads: Vec::new(),
             archives: None,
+            past: None,
         }
     }
 
@@ -1476,6 +1549,31 @@ impl<'a> Comparer<'a> {
 }
 
 impl Comparer<'_> {
+    /// For a handle of a kind whose pool carries the allocator model's addresses: the pool,
+    /// whether slot `o` is free, and the address the original gave its object (the last one
+    /// there, 0 where the model doesn't know it).
+    fn slot_of(&self, kind: &str, o: u32) -> Option<(&'static str, bool, u32)> {
+        fn slot<T, const K: u8>(p: &Pool<T, K>, o: u32) -> (bool, u32) {
+            (p.is_free(o), p.addr(o))
+        }
+        let g = self.game;
+        let pool = pool_kind(kind)?;
+        let (free, addr) = match pool {
+            "JObjId" => slot(&g.objs.jobjs.pool, o),
+            "DObjId" => slot(&g.objs.dobjs.pool, o),
+            "MObjId" => slot(&g.objs.mobjs.pool, o),
+            "TObjId" => slot(&g.objs.tobjs.pool, o),
+            "GeneratorId" => slot(&g.objs.generators.pool, o),
+            "GObjId" => slot(&g.world.gobjs, o),
+            "FighterId" => slot(&g.fighters, o),
+            "ItemId" => slot(&g.items, o),
+            "EffectId" => slot(&g.ef.effects, o),
+            "QueuedId" => slot(&g.ef.queued, o),
+            _ => unreachable!(),
+        };
+        Some((pool, free, addr))
+    }
+
     /// A fighter's animation buffer, ours `slot` and theirs at `addr`: every byte we know.
     fn anim_buf(&mut self, path: &str, slot: u32, addr: u32) {
         let Some(archives) = self.archives else {
@@ -1545,6 +1643,31 @@ impl Cx for Comparer<'_> {
             }
             return;
         }
+        // A pointer to an object we have freed dangles, and so must the original's: its
+        // pairing ended with the free, since the original's heap may have handed the block to
+        // a new object by now. So it pairs nothing, and compares by the address the allocator
+        // model gave the object, whatever lives there since (docs/oracle.md, "Dangling
+        // pointers"). Our slot may have been reused since, even freed again, at another
+        // address: the field then names the slot's earlier object, whose address the original
+        // holds.
+        let slot = ours.and_then(|o| self.slot_of(kind, o).map(|s| (o, s)));
+        let freed = slot.and_then(|(_, (_, free, addr))| free.then_some(addr));
+        if let Some((o, (pool, free, addr))) = slot
+            && addr != 0
+        {
+            let earlier = theirs != addr && self.past.is_some_and(|p| p.had(pool, o, theirs));
+            if earlier {
+                return;
+            }
+            if free {
+                if addr != theirs {
+                    self.diffs.push(format!(
+                        "{path}: {kind} ours dangling (freed at {addr:#x}), theirs {theirs:#x}"
+                    ));
+                }
+                return;
+            }
+        }
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
             "GObjId" => self.maps.gobjs.get(&theirs).map(|g| g.0),
@@ -1590,12 +1713,23 @@ impl Cx for Comparer<'_> {
         // freed, theirs to the freed block (no class there).
         if kind == "JObjId"
             && theirs != 0
-            && ours.is_none_or(|o| self.game.objs.jobjs.pool.is_free(o))
+            && (ours.is_none() || freed.is_some())
             && known.is_none()
             && theirs & 3 == 0
             && (MEM1..MEM1 + self.mem.len() as u32 - 4).contains(&theirs)
             && !(0x8030_0000..0x8050_0000).contains(&self.u32(theirs))
         {
+            return;
+        }
+        // A freed object whose address the model doesn't know (one made outside a step):
+        // the field still pairs nothing, and differs only where the original's address is
+        // paired with another of our objects.
+        if let (Some(o), Some(_)) = (ours, freed) {
+            if theirs == 0 || known.is_some_and(|k| k != o) {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours dangling {o}, theirs {theirs:#x} (paired with {known:?})"
+                ));
+            }
             return;
         }
         match (ours, theirs, known) {
