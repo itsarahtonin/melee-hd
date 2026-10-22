@@ -59,6 +59,8 @@ pub mod kireihana;
 pub mod klap;
 pub mod koopaflame;
 pub mod kusudama;
+pub mod kyasarin;
+pub mod kyasarinegg;
 pub mod leadead;
 pub mod lgun;
 pub mod lgunbeam;
@@ -241,6 +243,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || heiho::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
         || klap::run_event(r, gobj, addr)
+        || kyasarin::run_event(r, gobj, addr)
+        || kyasarinegg::run_event(r, gobj, addr)
         || oldkuri::run_event(r, gobj, addr)
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
@@ -390,6 +394,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| heiho::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| klap::run_pred(r, gobj, addr))
+        .or_else(|| kyasarin::run_pred(r, gobj, addr))
+        .or_else(|| kyasarinegg::run_pred(r, gobj, addr))
         .or_else(|| oldkuri::run_pred(r, gobj, addr))
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
@@ -686,5 +692,8 @@ pub const TINCLE: i32 = 221;
 /// `It_Kind_WhispyApple` and `It_Kind_WhispyHealApple`, Green Greens' apples.
 pub const WHISPY_APPLE: i32 = 225;
 pub const WHISPY_HEAL_APPLE: i32 = 226;
+/// `It_Kind_Kyasarin` and `It_Kind_Kyasarin_Egg`, Mushroom Kingdom II's Birdo and her eggs.
+pub const KYASARIN: i32 = 233;
+pub const KYASARIN_EGG: i32 = 236;
 /// `It_Kind_Arwing_Laser`.
 pub const ARWING_LASER: i32 = 234;

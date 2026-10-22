@@ -28,9 +28,10 @@ use melee_capture::import::Maps;
 use melee_sim::game::code::{run_demo_init, run_event, run_fighter_cb, run_proc};
 use melee_sim::game::ft::co::barrel_wait;
 use melee_sim::game::gr::{
-    garden, inishie1, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster,
+    garden, inishie1, inishie2, kongo, oldkongo, oldyoshi, pura, rcruise, shrine, yorster,
 };
 use melee_sim::game::handles::CodeRef;
+use melee_sim::game::it::kinds::{kyasarin, kyasarinegg};
 use melee_sim::game::state::Running;
 use melee_sim::game::structs::HitCapsule;
 use melee_sim::vec::Vec3;
@@ -6857,4 +6858,470 @@ fn inishie1_unreached_callbacks() {
     check_calls_with(&d, from, 1, &retarget(t), &event);
     let t = leaf_check::sym("grInishie1_801FA908");
     check_calls_with(&d, from, 1, &retarget(t), &demo);
+}
+
+// Mushroom Kingdom II (`grinishie2.c`), Birdo (`itkyasarin.c`) and her eggs
+// (`itkyasarinegg.c`).
+
+const MK2: &str = "oracle-stage-mushroom-kingdom-2";
+
+/// The item in r3's user data (`Item*`).
+fn mk2_item(c: &Call) -> u32 {
+    peek_u32(c, c.regs.gpr[3] + 0x2C)
+}
+
+/// The stage's flags (map 2's `xC4_flags`) and one of its waits (`xC6` + 2·k).
+fn mk2_stage(c: &mut Call, flags: u8, wait: Option<(u32, u16)>) {
+    let v = map_vars(c, 2);
+    poke_u8(c, v, flags);
+    if let Some((k, w)) = wait {
+        poke_u16(c, v + 2 + 2 * k, w);
+    }
+}
+
+/// A predicate of an item, run on the item in r3.
+fn mk2_pred(
+    f: fn(&mut Running, melee_sim::hsd::gobj::GObjId) -> bool,
+) -> impl Fn(&mut Running, &Maps, &Call) -> Ret + Sync {
+    move |r: &mut Running, maps: &Maps, call: &Call| Ret::Int(u32::from(f(r, gobj_arg(maps, call))))
+}
+
+#[test]
+fn inishie2_setup() {
+    let d = dir(MK2);
+    check_calls_with(&d, "grInishie2_801FCBC4", 1, &as_saved, &event);
+    check_calls_with(&d, "grInishie2_801FCCB0", 1, &as_saved, &event);
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        inishie2::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    for map in [0u32, 1, 2, 3, 4, 15] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grInishie2_801FCCDC", 1, &set, &create);
+    }
+    for f in [
+        "stageGObj0_OnInit",
+        "grInishie2_801FCE04",
+        "grInishie2_801FD198",
+        "grInishie2_801FD4F0",
+        "grInishie2_801FDE8C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    for (f, port) in [
+        (
+            "grInishie2_801FD018",
+            inishie2::init_logs as fn(&mut Running, _),
+        ),
+        ("grInishie2_801FD368", inishie2::init_birdo_wait),
+        ("grInishie2_801FD744", inishie2::init_pidgit_wait),
+        ("grInishie2_801FD824", inishie2::pidgit_in),
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &mk_of(port));
+    }
+}
+
+/// The stage's process and its sending: as saved, and each wait running out, at zero and
+/// running, with its flag on and off; and the music (its change stood in for, as Mushroom
+/// Kingdom's).
+#[test]
+fn inishie2_stage() {
+    let d = dir(MK2);
+    check_calls_with(&d, "grInishie2_801FCFCC", 1, &as_saved, &by_address);
+    for (f, port, k, flag) in [
+        (
+            "grInishie2_801FD0B4",
+            inishie2::send_logs as fn(&mut Running, _),
+            0u32,
+            0x40u8,
+        ),
+        ("grInishie2_801FD0B4", inishie2::send_logs, 1, 0x20),
+        ("grInishie2_801FD3CC", inishie2::send_birdo, 2, 0x10),
+        ("grInishie2_801FD7A8", inishie2::send_pidgit, 3, 0x08),
+    ] {
+        let ours = mk_of(port);
+        check_calls_with(&d, f, 1, &as_saved, &ours);
+        for (flags, w) in [
+            (flag, 0xFFFFu16),
+            (flag, 0),
+            (flag, 30),
+            (0, 0xFFFF),
+            (0xF8, 0xFFFF),
+        ] {
+            let set = move |c: &mut Call, _: usize| mk2_stage(c, flags, Some((k, w)));
+            check_calls_with(&d, f, 1, &set, &ours);
+        }
+    }
+    let music = mk_of(inishie2::music);
+    let stubs = [(leaf_check::sym("lbAudioAx_80023F28"), None)];
+    let setup = leaf_check::calls::Setup {
+        stubs: &stubs,
+        ..Default::default()
+    };
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| mk2_stage(c, 0x80, None),
+        &|c: &mut Call, _: usize| mk2_stage(c, 0x7F, None),
+    ] {
+        leaf_check::calls::check_calls_in(&d, "grInishie2_801FCF2C", 1, p, &setup, &music);
+    }
+}
+
+/// The logs' process: as saved, its collision back already and not, its wait running out,
+/// for either log.
+#[test]
+fn inishie2_logs() {
+    let d = dir(MK2);
+    check_calls_with(&d, "grInishie2_801FD224", 1, &as_saved, &by_address);
+    for (flags, w, which) in [
+        (0u8, 0xFFFFu16, 0u16),
+        (0, 0xFFFF, 1),
+        (0, 0, 0),
+        (0, 7, 1),
+        (0x80, 0xFFFF, 0),
+        (0x7F, 0xFFFF, 1),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let v = vars(c);
+            poke_u8(c, v, flags);
+            poke_u16(c, v + 2, w);
+            poke_u16(c, v + 4, which);
+        };
+        check_calls_with(&d, "grInishie2_801FD224", 1, &set, &by_address);
+    }
+}
+
+/// Birdo's platform: its process as saved and with her gone, her being gone (the stage's wait
+/// again, the platform destroyed), and her knocked off (its collision out).
+#[test]
+fn inishie2_birdo_platform() {
+    let d = dir(MK2);
+    check_calls_with(&d, "grInishie2_801FD654", 1, &as_saved, &by_address);
+    let gone = |c: &mut Call, _: usize| poke_u32(c, vars(c), 0);
+    check_calls_with(&d, "grInishie2_801FD654", 1, &gone, &by_address);
+    let birdo_gone = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie2::birdo_gone(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grInishie2_801FD448", 1, &as_saved, &birdo_gone);
+    let down = |r: &mut Running, maps: &Maps, call: &Call| {
+        inishie2::birdo_down(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let t = leaf_check::sym("grInishie2_801FD4CC");
+    check_calls_with(&d, "grInishie2_801FD448", 1, &retarget(t), &down);
+}
+
+/// Pidgit's carpet: its process and flight as saved and with its flags and turns set to each
+/// branch (coming in, on its way out, its first turns, later turns, leaving), and the draw.
+#[test]
+fn inishie2_pidgit() {
+    let d = dir(MK2);
+    for f in ["grInishie2_801FDED8", "grInishie2_801FD9EC"] {
+        let ours = if f == "grInishie2_801FDED8" {
+            mk_of(inishie2::proc_pidgit)
+        } else {
+            mk_of(inishie2::pidgit_fly)
+        };
+        check_calls_with(&d, f, 1, &as_saved, &ours);
+        for (flags, turns) in [
+            (0x40u8, 0u16),
+            (0x00, 0),
+            (0x10, 1),
+            (0x00, 2),
+            (0x10, 5),
+            (0x20, 3),
+            (0x80, 3),
+            (0xA0, 3),
+            (0x0F, 4),
+        ] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u8(c, v + 4, flags);
+                poke_u16(c, v + 6, turns);
+            };
+            check_calls_with(&d, f, 1, &set, &ours);
+        }
+    }
+    let draw = |r: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(inishie2::random_below(r, call.regs.gpr[3] as i32) as u32)
+    };
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| c.regs.gpr[3] = 0,
+        &|c: &mut Call, _: usize| c.regs.gpr[3] = 7,
+    ] {
+        check_calls_with(&d, "grInishie2_801FDFB4", 1, p, &draw);
+    }
+}
+
+/// The callbacks no capture reaches or a fixed answer, from the stage's process's calls: the
+/// empty processes and destroy callbacks, the line hook and the shadow check, the load and demo
+/// hooks.
+#[test]
+fn inishie2_unreached_callbacks() {
+    let d = dir(MK2);
+    let from = "grInishie2_801FCFCC";
+    for name in [
+        "grInishie2_801FCDFC",
+        "grInishie2_801FCE00",
+        "grInishie2_801FD014",
+        "grInishie2_801FD364",
+        "grInishie2_801FD740",
+        "grInishie2_801FDFE4",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let shadow =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(u32::from(inishie2::check_shadow_render()));
+    let t = leaf_check::sym("grInishie2_801FDFF0");
+    check_calls_with(&d, from, 1, &retarget(t), &shadow);
+    let none = |_: &mut Running, _: &Maps, _: &Call| Ret::Int(0);
+    check_calls_with(&d, "grInishie2_801FDFE8", 1, &as_saved, &none);
+    let t = leaf_check::sym("grInishie2_801FCCAC");
+    check_calls_with(&d, from, 1, &retarget(t), &event);
+    let t = leaf_check::sym("grInishie2_801FCBC0");
+    check_calls_with(&d, from, 1, &retarget(t), &demo);
+}
+
+/// Birdo's spawn (facing either way), destroy, and every state's callbacks, each as saved and
+/// with her variables set to its branches; her hits (a flinch, a turn away, knocked off).
+#[test]
+fn kyasarin_states() {
+    let d = dir(MK2);
+    for f in [
+        "it_802ECE90",
+        "it_802ECEB0",
+        "it_802ECFE0",
+        "it_802ED0D0",
+        "it_802ED25C",
+        "it_802ED4F8",
+        "it_802ED774",
+        "it_802ED8BC",
+        "itKyasarin_Logic25_Destroyed",
+    ] {
+        let port: fn(&mut Running, melee_sim::hsd::gobj::GObjId) = match f {
+            "it_802ECE90" => kyasarin::spawned,
+            "it_802ECEB0" => kyasarin::walk_in,
+            "it_802ECFE0" => kyasarin::wait_in,
+            "it_802ED0D0" => kyasarin::back_off,
+            "it_802ED25C" => kyasarin::walk_in_again,
+            "it_802ED4F8" => kyasarin::stand,
+            "it_802ED774" => kyasarin::spit,
+            "it_802ED8BC" => kyasarin::turn,
+            _ => kyasarin::destroyed,
+        };
+        check_calls_with(&d, f, 1, &as_saved, &mk_of(port));
+    }
+    // The states' callbacks: each from its own calls, with her place and facing set either
+    // side of her marks, her waits at and past zero, her stand's and egg's waits, her eggs
+    // left, the state a flinch goes back to.
+    let set_birdo =
+        |c: &mut Call, facing: f32, x: f32, x24: f32, x28: f32, x2c: f32, x34: u32, x3c: u32| {
+            let ip = mk2_item(c);
+            poke_u32(c, ip + 0x2C, facing.to_bits());
+            poke_u32(c, ip + 0x4C, x.to_bits());
+            let v = ip + 0xDD4;
+            poke_u32(c, v + 0x24, x24.to_bits());
+            poke_u32(c, v + 0x28, x28.to_bits());
+            poke_u32(c, v + 0x2C, x2c.to_bits());
+            poke_u32(c, v + 0x34, x34);
+            poke_u32(c, v + 0x3C, x3c);
+        };
+    let cases: [(f32, f32, f32, f32, f32, u32); 8] = [
+        (1.0, 200.0, 0.5, 5.0, 5.0, 2),
+        (1.0, -200.0, -0.5, -0.5, 5.0, 1),
+        (-1.0, 200.0, 0.0, 5.0, -0.5, 0),
+        (-1.0, -200.0, 10.0, -0.5, -0.5, 3),
+        (1.0, 0.0, 0.9, 0.9, 0.9, 1),
+        (-1.0, 0.0, 1.5, 1.5, 1.5, 4),
+        (1.0, 40.0, 0.0, 0.0, 0.0, 0),
+        (-1.0, -40.0, 0.0, 0.0, 0.0, 2),
+    ];
+    for (f, port) in [
+        (
+            "itKyasarin_UnkMotion0_Anim",
+            kyasarin::anim0 as fn(&mut Running, _) -> bool,
+        ),
+        ("itKyasarin_UnkMotion0_Coll", kyasarin::coll0),
+        ("itKyasarin_UnkMotion1_Anim", kyasarin::anim1),
+        ("itKyasarin_UnkMotion2_Anim", kyasarin::anim2),
+        ("itKyasarin_UnkMotion2_Coll", kyasarin::coll2),
+        ("itKyasarin_UnkMotion3_Anim", kyasarin::anim3),
+        ("itKyasarin_UnkMotion4_Anim", kyasarin::anim4),
+        ("itKyasarin_UnkMotion4_Coll", kyasarin::coll4),
+        ("itKyasarin_UnkMotion5_Anim", kyasarin::anim5),
+        ("itKyasarin_UnkMotion6_Anim", kyasarin::anim6),
+        ("itKyasarin_UnkMotion7_Anim", kyasarin::anim7),
+        ("itKyasarin_UnkMotion8_Anim", kyasarin::anim8),
+    ] {
+        let ours = mk2_pred(port);
+        check_calls_with(&d, f, 1, &as_saved, &ours);
+        for (facing, x, x24, x28, x2c, x34) in cases {
+            for x3c in [x34, x34 + 5] {
+                let set =
+                    move |c: &mut Call, _: usize| set_birdo(c, facing, x, x24, x28, x2c, x34, x3c);
+                check_calls_with(&d, f, 1, &set, &ours);
+            }
+        }
+    }
+    // The other states' callbacks, from the standing animation's calls: falling toward the
+    // screen and bouncing away.
+    for (name, port) in [
+        (
+            "itKyasarin_UnkMotion9_Anim",
+            kyasarin::anim9 as fn(&mut Running, _) -> bool,
+        ),
+        ("itKyasarin_UnkMotion10_Anim", kyasarin::anim10),
+        ("itKyasarin_UnkMotion9_Coll", kyasarin::coll9),
+        ("itKyasarin_UnkMotion10_Coll", kyasarin::coll10),
+    ] {
+        let t = leaf_check::sym(name);
+        check_calls_with(
+            &d,
+            "itKyasarin_UnkMotion6_Anim",
+            1,
+            &retarget(t),
+            &mk2_pred(port),
+        );
+    }
+    for (name, port) in [
+        (
+            "itKyasarin_UnkMotion9_Phys",
+            kyasarin::phys9 as fn(&mut Running, _),
+        ),
+        ("itKyasarin_UnkMotion10_Phys", kyasarin::phys10),
+    ] {
+        let t = leaf_check::sym(name);
+        check_calls_with(
+            &d,
+            "itKyasarin_UnkMotion6_Anim",
+            1,
+            &retarget(t),
+            &mk_of(port),
+        );
+    }
+    // Her hits: the damage she has taken and the hit's set for a flinch, a turn away and a
+    // fall (toward the screen or bouncing, by the seed).
+    let damaged = mk2_pred(kyasarin::damaged);
+    check_calls_with(&d, "it_802EDDC0", 1, &as_saved, &damaged);
+    for (taken, hit, seed) in [
+        (0u32, 1u32, 1u32),
+        (20, 10, 1),
+        (30, 40, 1),
+        (60, 30, 7),
+        (60, 30, 0x1234_5678),
+        (90, 90, 0x9ABC_DEF0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let ip = mk2_item(c);
+            poke_u32(c, ip + 0xDD4 + 0x38, taken);
+            poke_u32(c, ip + 0xCA0, hit);
+            set_seed(c, seed);
+        };
+        check_calls_with(&d, "it_802EDDC0", 1, &set, &damaged);
+    }
+}
+
+/// Birdo's spawn on her platform, as saved and facing the other way.
+#[test]
+fn kyasarin_spawn() {
+    let d = dir(MK2);
+    let spawn = |r: &mut Running, maps: &Maps, call: &Call| {
+        let platform = gobj_arg(maps, call);
+        let p = call.regs.gpr[4];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        kyasarin::spawn(r, platform, pos, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.fpr[1].ps0 = -c.regs.fpr[1].ps0
+    }] {
+        check_calls_with(&d, "it_802ECD3C", 1, p, &spawn);
+    }
+}
+
+/// Birdo's eggs: an egg spat (from her spit's calls, either way), its roll's collision as saved
+/// and from each state; its bounce, its throw's and drop's states, the falls' physics and
+/// collisions, its break (rolling or bouncing, thrown: empty or dropping items, by the
+/// seed), its fade, and a shield bounce, from the roll's calls.
+#[test]
+fn kyasarin_eggs() {
+    let d = dir(MK2);
+    let spit = |r: &mut Running, maps: &Maps, call: &Call| {
+        let parent = maps.gobjs.get(&call.regs.gpr[3]).copied();
+        let p = call.regs.gpr[4];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        kyasarinegg::spawn(r, parent, pos, call.regs.fpr[1].ps0 as f32);
+        Ret::Nothing
+    };
+    for p in [
+        &as_saved as &Prepare,
+        &|c: &mut Call, _: usize| c.regs.fpr[1].ps0 = -c.regs.fpr[1].ps0,
+        &|c: &mut Call, _: usize| c.regs.gpr[3] = 0,
+    ] {
+        check_calls_with(&d, "it_802EFA44", 1, p, &spit);
+    }
+    check_calls_with(&d, "it_802EFB0C", 1, &as_saved, &mk_of(kyasarinegg::roll));
+    let from = "itKyasarinegg_UnkMotion0_Coll";
+    check_calls_with(&d, from, 1, &as_saved, &mk2_pred(kyasarinegg::coll0));
+    // The egg in each state (its msid), broken already or not, with the seed set.
+    let state = |msid: u32, broken: u32, seed: u32| {
+        move |c: &mut Call, _: usize| {
+            let ip = mk2_item(c);
+            poke_u32(c, ip + 0x24, msid);
+            poke_u32(c, ip + 0xDD4 + 0x20, broken);
+            set_seed(c, seed);
+        }
+    };
+    for (name, port) in [
+        (
+            "itKyasarinegg_UnkMotion0_Coll",
+            kyasarinegg::coll0 as fn(&mut Running, _) -> bool,
+        ),
+        ("itKyasarinegg_UnkMotion1_Coll", kyasarinegg::coll1),
+        ("itKyasarinegg_UnkMotion3_Coll", kyasarinegg::coll3),
+        ("itKyasarinegg_UnkMotion4_Anim", kyasarinegg::anim4),
+        ("it_2725_Logic28_DmgDealt", kyasarinegg::broken),
+        ("it_2725_Logic28_Clanked", kyasarinegg::broken),
+        ("it_2725_Logic28_HitShield", kyasarinegg::broken),
+        ("it_2725_Logic28_Reflected", kyasarinegg::broken),
+        ("it_802F022C", kyasarinegg::broken),
+        (
+            "itKyasarinEgg_Logic28_ShieldBounced",
+            kyasarinegg::shield_bounced,
+        ),
+    ] {
+        let t = leaf_check::sym(name);
+        for (msid, broken, seed) in [
+            (0u32, 0u32, 1u32),
+            (1, 0, 5),
+            (3, 0, 1),
+            (3, 0, 0x5555_1234),
+            (3, 1, 9),
+        ] {
+            let prep = state(msid, broken, seed);
+            let set = move |c: &mut Call, k: usize| {
+                prep(c, k);
+                c.addr = t;
+            };
+            check_calls_with(&d, from, 1, &set, &mk2_pred(port));
+        }
+    }
+    for (name, port) in [
+        ("it_802EFCC0", kyasarinegg::bounce as fn(&mut Running, _)),
+        ("it_802EFD84", kyasarinegg::break_empty),
+        ("itKyasarinEgg_Logic28_PickedUp", kyasarinegg::picked_up),
+        ("itKyasarinEgg_Logic28_Dropped", kyasarinegg::thrown),
+        ("itKyasarinEgg_Logic28_Thrown", kyasarinegg::thrown),
+        ("itKyasarinegg_UnkMotion1_Phys", kyasarinegg::falling),
+        ("itKyasarinegg_UnkMotion3_Phys", kyasarinegg::falling),
+    ] {
+        let t = leaf_check::sym(name);
+        check_calls_with(&d, from, 1, &retarget(t), &mk_of(port));
+    }
 }

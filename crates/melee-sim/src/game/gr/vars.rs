@@ -79,6 +79,10 @@ pub enum VarsKind {
     Scroll,
     Inishie1,
     Inishie1Hatena,
+    Inishie2,
+    Inishie2Log,
+    Inishie2Birdo,
+    Inishie2Pidgit,
 }
 
 /// `union GroundVars`.
@@ -159,6 +163,14 @@ pub enum GroundVars {
     Inishie1(Inishie1Vars),
     /// `grInishie1_GroundVars3`: a ? block over a brick block (map 2).
     Inishie1Hatena(Inishie1HatenaVars),
+    /// `grInishie2_GroundVars`: Mushroom Kingdom II's stage (map 2).
+    Inishie2(Inishie2Vars),
+    /// A falling log (maps 3 and 4).
+    Inishie2Log(Inishie2LogVars),
+    /// `grInishie2_GroundVars2`: Birdo's platform (map 15).
+    Inishie2Birdo(Inishie2BirdoVars),
+    /// Pidgit's carpet (map 1).
+    Inishie2Pidgit(Inishie2PidgitVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1123,6 +1135,50 @@ fn inishie1_block(m: &Mem, b: u32, cx: &mut dyn Cx) -> Inishie1Block {
         x20: h(b + 0x20),
         x22: h(b + 0x22),
     }
+}
+
+/// `grInishie2_GroundVars`, Mushroom Kingdom II's stage (map 2): its flags (`xC4`, bit 0x80
+/// the music sped up, 0x40 and 0x20 the two logs' waits running, 0x10 Birdo's, 0x08 Pidgit's;
+/// the others nothing writes) and those waits (`xC6`, `xC8`, `xCA`, `xCC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie2Vars {
+    pub xC4: u8,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCA: i16,
+    pub xCC: i16,
+}
+
+/// `grInishie2_GroundVars` with `grInishie2_GroundVars2::xCC`, a falling log (maps 3 and 4):
+/// its flags (`xC4`, bit 0x80 its collision back), its wait (`xC6`), which log it is (`xC8`)
+/// and the stage object that sent it (`xCC`, at +8).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie2LogVars {
+    pub xC4: u8,
+    pub xC6: i16,
+    pub xC8: i16,
+    pub xCC: Option<GObjId>,
+}
+
+/// `grInishie2_GroundVars2`, Birdo's platform (map 15): Birdo (`xC4`) and the stage object
+/// that sent her (`xC8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie2BirdoVars {
+    pub xC4: Option<GObjId>,
+    pub xC8: Option<GObjId>,
+}
+
+/// `grInishie2_GroundVars3` with `grInishie2_GroundVars2::xC4`, Pidgit's carpet (map 1): the
+/// stage object that sent it (`xC4`), its flags (`xC8`, bit 0x80 leaving, 0x40 coming in,
+/// 0x20 on its way out, 0x10 the side it heads for; the others nothing writes), its turns
+/// (`xCA`), its animation's step (`xCC`) and its place (`xD8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct Inishie2PidgitVars {
+    pub xC4: Option<GObjId>,
+    pub xC8: u8,
+    pub xCA: i16,
+    pub xCC: crate::vec::Vec3,
+    pub xD8: crate::vec::Vec3,
 }
 
 /// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
@@ -2156,6 +2212,33 @@ impl GroundVars {
                 xC8: m.u32(at + 4) as i32,
                 xCC: m.u32(at + 8) as i32,
             }),
+            VarsKind::Inishie2 => GroundVars::Inishie2(Inishie2Vars {
+                xC4: m.u8(at),
+                xC6: m.u16(at + 2) as i16,
+                xC8: m.u16(at + 4) as i16,
+                xCA: m.u16(at + 6) as i16,
+                xCC: m.u16(at + 8) as i16,
+            }),
+            VarsKind::Inishie2Log => GroundVars::Inishie2Log(Inishie2LogVars {
+                xC4: m.u8(at),
+                xC6: m.u16(at + 2) as i16,
+                xC8: m.u16(at + 4) as i16,
+                xCC: gobj(cx, at + 8),
+            }),
+            VarsKind::Inishie2Birdo => GroundVars::Inishie2Birdo(Inishie2BirdoVars {
+                xC4: gobj(cx, at),
+                xC8: gobj(cx, at + 4),
+            }),
+            VarsKind::Inishie2Pidgit => {
+                let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+                GroundVars::Inishie2Pidgit(Inishie2PidgitVars {
+                    xC4: gobj(cx, at),
+                    xC8: m.u8(at + 4),
+                    xCA: m.u16(at + 6) as i16,
+                    xCC: v3(at + 8),
+                    xD8: v3(at + 0x14),
+                })
+            }
             VarsKind::Scroll => {
                 let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
                 let j = |cx: &mut dyn Cx, a: u32| {
@@ -3321,6 +3404,74 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Mushroom Kingdom II's stage's (`grInishie2_GroundVars`), likewise.
+    pub fn inishie2(&mut self) -> &mut Inishie2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            *self = GroundVars::Inishie2(Inishie2Vars {
+                xC4: b[0],
+                xC6: h(2),
+                xC8: h(4),
+                xCA: h(6),
+                xCC: h(8),
+            });
+        }
+        match self {
+            GroundVars::Inishie2(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grInishie2_GroundVars"),
+        }
+    }
+
+    /// The variables as a falling log's, likewise: the stage object that sent it is written
+    /// as it's made, before anything reads it, so a reused block's pointer doesn't carry over.
+    pub fn inishie2_log(&mut self) -> &mut Inishie2LogVars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            *self = GroundVars::Inishie2Log(Inishie2LogVars {
+                xC4: b[0],
+                xC6: h(2),
+                xC8: h(4),
+                xCC: None,
+            });
+        }
+        match self {
+            GroundVars::Inishie2Log(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not a falling log's"),
+        }
+    }
+
+    /// The variables as Birdo's platform's (`grInishie2_GroundVars2`), likewise: its setup and
+    /// its maker write both before anything reads them.
+    pub fn inishie2_birdo(&mut self) -> &mut Inishie2BirdoVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::Inishie2Birdo(Inishie2BirdoVars::default());
+        }
+        match self {
+            GroundVars::Inishie2Birdo(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Birdo's platform's"),
+        }
+    }
+
+    /// The variables as Pidgit's carpet's, likewise: the stage object that sent it is written
+    /// as it's made, before anything reads it; the rest keep the block's bytes.
+    pub fn inishie2_pidgit(&mut self) -> &mut Inishie2PidgitVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            *self = GroundVars::Inishie2Pidgit(Inishie2PidgitVars {
+                xC4: None,
+                xC8: b.0[4],
+                xCA: u16::from_be_bytes([b.0[6], b.0[7]]) as i16,
+                xCC: v3(8),
+                xD8: v3(0x14),
+            });
+        }
+        match self {
+            GroundVars::Inishie2Pidgit(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Pidgit's carpet's"),
+        }
+    }
+
     /// The variables as `ScrollVars`, likewise.
     pub fn scroll(&mut self) -> &mut ScrollVars {
         if let GroundVars::Bytes(b) = self {
@@ -4200,6 +4351,65 @@ impl Mirror for GroundVars {
                     &format!("{path}.inishie13.xC4"),
                     "JObjId",
                     v.xC4.map(|j| j.0),
+                    m.u32(at),
+                );
+            }
+            GroundVars::Inishie2(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (v.xC4, [v.xC6, v.xC8, v.xCA, v.xCC]);
+                let theirs = (m.u8(at), [2, 4, 6, 8].map(h));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.inishie2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::Inishie2Log(v) => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (v.xC4, [v.xC6, v.xC8]);
+                let theirs = (m.u8(at), [2, 4].map(h));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.inishie2"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.inishie22.xCC"),
+                    "GObjId",
+                    v.xCC.map(|g| g.0),
+                    m.u32(at + 8),
+                );
+            }
+            GroundVars::Inishie2Birdo(v) => {
+                for (name, g, off) in [("xC4", v.xC4, 0), ("xC8", v.xC8, 4)] {
+                    cx.compare_handle(
+                        &format!("{path}.inishie22.{name}"),
+                        "GObjId",
+                        g.map(|g| g.0),
+                        m.u32(at + off),
+                    );
+                }
+            }
+            GroundVars::Inishie2Pidgit(v) => {
+                let v3 = |x: &crate::vec::Vec3| [x.x, x.y, x.z].map(f32::to_bits);
+                let t3 = |a: u32| [m.u32(at + a), m.u32(at + a + 4), m.u32(at + a + 8)];
+                let ours = (v.xC8, v.xCA, v3(&v.xCC), v3(&v.xD8));
+                let theirs = (m.u8(at + 4), m.u16(at + 6) as i16, t3(8), t3(0x14));
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.inishie23"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{path}.inishie22.xC4"),
+                    "GObjId",
+                    v.xC4.map(|g| g.0),
                     m.u32(at),
                 );
             }

@@ -416,6 +416,21 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 20,
+        name: "Mushroom Kingdom II",
+        keys: &["mk2", "mushroom-kingdom-2"],
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grinishie2",
+                "melee/it/kinds/itkyasarin",
+                "melee/it/kinds/itkyasarinegg",
+            ],
+            modules: &["gr/inishie2", "it/kinds/kyasarin", "it/kinds/kyasarinegg"],
+            unreached: &[("it_802EE1E0", EVT_UNK), ("it_802F0320", EVT_UNK)],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 9,
         name: "Onett",
         keys: &["on", "onett"],
