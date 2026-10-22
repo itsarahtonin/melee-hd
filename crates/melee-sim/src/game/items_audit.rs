@@ -390,10 +390,6 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
-    (
-        "it_8026B924",
-        "a computer player's shooting item used from range (ftCo_800B9A04), which takes a computer player allowed ranged attacks (xF9_b5): Nana, the player's only one, never is (ftCo_800B0760 clears it each frame she makes her way back, and following Popo she runs no behavior)",
-    ),
     ("it_8026B7F8", EVT_UNK),
     ("it_2E5A_Logic115_EvtUnk", EVT_UNK),
     ("it_802F2BDC", EVT_UNK),

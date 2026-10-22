@@ -481,7 +481,10 @@ mod tests {
         let nana = missing_with(&[], &[14, 2], BRINSTAR, &[]);
         assert!(nana.iter().all(|g| g.who != Who::Vs));
         let vs = missing_with(&[fox(9)], &[14, 2], BRINSTAR, &[]);
-        assert!(vs.iter().any(|g| g.covers.contains(&"ftCo_800A229C on Zebes")));
+        assert!(
+            vs.iter()
+                .any(|g| g.covers.contains(&"ftCo_800A229C on Zebes"))
+        );
         // Peach's pulled sword is ported (`ftCo_800B52AC`): Peach brings no gap of her own.
         let peach = missing_with(&[fox(5)], &[2, 12], 31, &[]);
         assert_eq!(peach, missing_with(&[fox(5)], &[2, 9], 31, &[]));

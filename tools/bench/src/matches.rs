@@ -1258,7 +1258,8 @@ pub fn sscope_set() -> Vec<Match> {
 /// Samus's grapple beam swung (docs/oracle.md, "The characters' own items"): Samus, a grappler
 /// ([`grappler_pad`]), against an idle Fox on Battlefield, swinging the button sequence's beam
 /// on the ground as it's shot, as it bounces back and as it hangs; items off, a 30-second time
-/// match. No random draw decides anything a script does, so the seed is any.
+/// match. No random draw decides anything a script does, so the seed is any: `1F0F2201`, since
+/// the `cpu-items` set took `1F0F2001`, which the recording in `oracle-m4-grapple` was made with.
 pub fn grapple_set() -> Vec<Match> {
     let g = |character| Player {
         character,
@@ -1269,7 +1270,7 @@ pub fn grapple_set() -> Vec<Match> {
         name: Cow::Borrowed("grapple-samus-bf"),
         stage: BATTLEFIELD,
         players: Cow::Owned(vec![g(SAMUS), g(FOX)]),
-        seed: 0x1F0F_2001,
+        seed: 0x1F0F_2201,
         rules: Rules::Time { time_limit: 30 },
         items: Items::OFF,
     }]
