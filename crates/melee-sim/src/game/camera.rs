@@ -257,9 +257,10 @@ fn fighter_dead(game: &Game, gobj: GObjId) -> bool {
 }
 
 /// The stage's floor for the eye in the stages that have one (`get_stage_floor_height`).
-fn eye_floor(s: &StageInfo) -> f64 {
+fn eye_floor(game: &Game) -> f64 {
+    let s = &game.stage_info;
     match s.grkind {
-        2 => unported("grCastle_801D0FF0"),
+        2 => reg(super::gr::castle::camera_floor(game)),
         14 => unported("grCorneria_801E2FCC"),
         8 => reg(super::gr::zebes::camera_floor(s)),
         5 => reg(super::gr::garden::camera_floor()),
@@ -1295,11 +1296,11 @@ pub fn aim(game: &mut Game, c: Option<CObjId>, which: Which) {
     cobj::set_fov(&mut objs.cobjs, c, fov);
     let c = c.expect("the camera's CObj");
     cobj::set_interest(objs, c, interest);
-    let floor = eye_floor(&game.stage_info);
+    let floor = eye_floor(game);
     if reg(eye.y) < floor {
         eye.y = mem(floor);
     }
-    cobj::set_eye_position(objs, c, eye);
+    cobj::set_eye_position(&mut game.objs, c, eye);
 }
 
 /// Sets the camera's CObj up from its mode's transform before it draws, `Camera_8002A4AC`.
@@ -1325,8 +1326,8 @@ pub fn update_cobj(game: &mut Game, gobj: GObjId) {
         }
         PAUSE => {
             let mut eye = t.position;
-            if reg(eye.y) < eye_floor(&game.stage_info) {
-                eye.y = mem(eye_floor(&game.stage_info));
+            if reg(eye.y) < eye_floor(game) {
+                eye.y = mem(eye_floor(game));
             }
             set_view(game, c, t.fov, t.interest, eye);
         }

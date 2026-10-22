@@ -76,6 +76,12 @@ pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
 pub const GRPURA_VTX: u32 = 0x803E_6C0C;
 /// grrcruise.c's (`ssbm_types::tu::melee__gr__grrcruise::yakumono_param`).
 pub const GRRCRUISE_YAKUMONO: u32 = 0x804D_6A10;
+/// grcastle.c's (`ssbm_types::tu::melee__gr__grcastle::yakumono_param`), its wind source
+/// (`grCs_804D6974`), the wind's turn (`grCs_804D45E0`) and whether it gusts (`grCs_804D45E4`).
+pub const GRCASTLE_YAKUMONO: u32 = 0x804D_6970;
+pub const GRCASTLE_WIND: u32 = 0x804D_6974;
+pub const GRCASTLE_STEP: u32 = 0x804D_45E0;
+pub const GRCASTLE_GUSTS: u32 = 0x804D_45E4;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -366,6 +372,14 @@ impl Importer<'_> {
         self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
         self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRCASTLE_YAKUMONO);
+        self.game.gr.castle_yakumono = self.data_or_unhandled(yaku);
+        let (pool, w) = (cap.u32(gr::vars::WIND_POOL), cap.u32(GRCASTLE_WIND));
+        self.game.gr.castle = gr::castle::Globals {
+            wind: (w != 0).then(|| (w.wrapping_sub(pool) / gr::vars::WIND_SIZE) as u8),
+            step: self.f32_at(GRCASTLE_STEP),
+            gusts: self.u8_at(GRCASTLE_GUSTS),
+        };
         let n = gr::pura::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
         self.game.gr.pura_vtx_jobjs.clear();
@@ -1019,6 +1033,11 @@ impl Comparer<'_> {
                 GRPURA_YAKUMONO,
                 game.gr.pura_yakumono,
             ),
+            (
+                "grCastle yakumono_param",
+                GRCASTLE_YAKUMONO,
+                game.gr.castle_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1029,6 +1048,21 @@ impl Comparer<'_> {
             );
         }
         self.compare_zebes();
+        let castle = &game.gr.castle;
+        let pool = self.u32(gr::vars::WIND_POOL);
+        let w = castle
+            .wind
+            .map_or(0, |i| pool + gr::vars::WIND_SIZE * u32::from(i));
+        self.check(
+            "grCs_804D6974",
+            "castle statics",
+            (w, castle.step.to_bits(), castle.gusts),
+            (
+                self.u32(GRCASTLE_WIND),
+                self.u32(GRCASTLE_STEP),
+                self.u8(GRCASTLE_GUSTS),
+            ),
+        );
         self.check(
             "grOt_804D69C4",
             "onett x69c4",

@@ -431,6 +431,23 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 4,
+        name: "Princess Peach's Castle",
+        keys: &["pc", "peachs-castle"],
+        audit: Some(Audit {
+            units: &["melee/gr/grcastle", "melee/it/kinds/ityaku"],
+            modules: &["gr/castle", "it/kinds/yaku"],
+            unreached: &[
+                YAKU_UNANCHORED,
+                (
+                    "lb_800117F4",
+                    "the flags' chains drawn as lines, which only the debug camera's flag on a stage object turns on (dbcamera.c)",
+                ),
+            ],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 11,
         name: "Rainbow Cruise",
         keys: &["rc", "rainbow-cruise"],

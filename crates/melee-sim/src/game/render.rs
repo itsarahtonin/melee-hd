@@ -385,6 +385,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         c if super::gr::fourside::run_render(r, gobj, c, pass) => {}
         c if super::gr::pura::run_render(r, gobj, c, pass) => {}
         c if super::gr::rcruise::run_render(r, gobj, c, pass) => {}
+        c if super::gr::castle::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),

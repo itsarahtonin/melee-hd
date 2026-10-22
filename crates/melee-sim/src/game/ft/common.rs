@@ -573,6 +573,9 @@ impl Running<'_> {
                 Some(crate::game::gr::garden::RIVER) => {
                     crate::game::gr::garden::river(self, ground, gobj)
                 }
+                Some(crate::game::gr::castle::MOAT) => {
+                    crate::game::gr::castle::moat(self, ground, gobj)
+                }
                 Some(other) => unported_call(&format!("a wind device's callback {other:#010x}")),
                 None => panic!("a wind device without a callback"),
             };

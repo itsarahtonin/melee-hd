@@ -106,7 +106,11 @@ impl Running<'_> {
             return Some((2, pos));
         }
         match self.game.stage_info.grkind {
-            GR_KIND_CASTLE => unported_call("ftCo_800A229C at Peach's Castle (grCastle_801CDF54)"),
+            GR_KIND_CASTLE => {
+                if let Some(at) = super::super::gr::castle::bill_position(self.game, self.data) {
+                    return Some((1, at));
+                }
+            }
             GR_KIND_ZEBES => unported_call("ftCo_800A229C on Zebes"),
             // `grLib_801C9E60` and the moving stages' edges.
             3 | 19 | 22 => unported_call("ftCo_800A229C on a moving stage"),
