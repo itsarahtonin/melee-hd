@@ -15,10 +15,13 @@ use crate::vec::Vec3;
 pub const ANIM: u32 = 0x8029_C6F4;
 pub const PHYS: u32 = 0x8029_C9CC;
 pub const COLL: u32 = 0x8029_C9EC;
+#[doc(alias = "itFoxLaser_Logic94_Clanked")]
 pub const CLANKED: u32 = 0x8029_CA78;
 pub const REFLECTED: u32 = 0x8029_CA80;
+#[doc(alias = "itFoxLaser_Logic94_Absorbed")]
 pub const ABSORBED: u32 = 0x8029_CC4C;
 pub const SHIELD_BOUNCED: u32 = 0x8029_CC54;
+#[doc(alias = "itFoxLaser_Logic94_HitShield")]
 pub const HIT_SHIELD: u32 = 0x8029_CCF0;
 pub const EVT_UNK: u32 = 0x8029_CCF8;
 

@@ -13,14 +13,21 @@ use crate::hsd::gobj::GObjId;
 use crate::math;
 use crate::vec::Vec3;
 
+#[doc(alias = "itClimbersBlizzard_UnkMotion0_Anim")]
 pub const ANIM: u32 = 0x802C_2380;
+#[doc(alias = "itClimbersBlizzard_UnkMotion0_Phys")]
 pub const PHYS: u32 = 0x802C_23B4;
+#[doc(alias = "itClimbersBlizzard_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802C_23D4;
+#[doc(alias = "itClimbersBlizzard_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802C_2424;
+#[doc(alias = "itClimbersBlizzard_Reflected")]
 pub const REFLECTED: u32 = 0x802C_242C;
 pub const CLANKED: u32 = 0x802C_244C;
+#[doc(alias = "itClimbersBlizzard_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_2454;
 pub const ABSORBED: u32 = 0x802C_245C;
+#[doc(alias = "itClimbersBlizzard_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_2464;
 pub const EVT_UNK: u32 = 0x802C_246C;
 
@@ -80,7 +87,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Blows a puff from `parent` at `pos`, `itClimbersBlizzard_Spawn`: at its full size, sent
 /// off (`itClimbersBlizzard_802C2248`), not to be picked up.
-// Ports `itClimbersBlizzard_Spawn`; aliased once a check reaches it.
+#[doc(alias = "itClimbersBlizzard_Spawn")]
 pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Option<GObjId> {
     let mut spawn = SpawnItem {
         kind: super::ICE_CLIMBER_BLIZZARD,
@@ -112,7 +119,7 @@ pub fn spawn(r: &mut Running, parent: GObjId, pos: Vec3, facing_dir: f32) -> Opt
 /// (mirrored facing left), measured from straight down, at its speed, with its lifetime;
 /// then its state (`itClimbersBlizzard_802C2358`).
 // Ports `itClimbersBlizzard_802C2248`; aliased once a check reaches it.
-// Ports `itClimbersBlizzard_802C2358`; aliased once a check reaches it.
+#[doc(alias = "itClimbersBlizzard_802C2358")]
 fn launch(r: &mut Running, gobj: GObjId) {
     let rand = reg(r.game.objs.rng.draw_f32());
     let (min, max) = (

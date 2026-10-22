@@ -19,6 +19,7 @@ pub const FLY_ANIM: u32 = 0x802B_2B5C;
 pub const FLY_PHYS: u32 = 0x802B_2BA8;
 pub const FLY_COLL: u32 = 0x802B_2BD8;
 pub const DMG_DEALT: u32 = 0x802B_2C04;
+#[doc(alias = "itYoshieggthrow_UnkMotion2_Anim")]
 pub const BREAK_ANIM: u32 = 0x802B_2D30;
 pub const CLANKED: u32 = 0x802B_2D50;
 pub const REFLECTED: u32 = 0x802B_2E5C;

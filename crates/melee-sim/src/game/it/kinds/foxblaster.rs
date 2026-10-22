@@ -15,7 +15,9 @@ use crate::vec::Vec3;
 use gekko_fp as fp;
 
 pub const MOTION8_ANIM: u32 = 0x802A_EBCC;
+#[doc(alias = "itFoxblaster_UnkMotion8_Phys")]
 pub const MOTION8_PHYS: u32 = 0x802A_EED4;
+#[doc(alias = "itFoxblaster_UnkMotion8_Coll")]
 pub const MOTION8_COLL: u32 = 0x802A_EF08;
 pub const MOTION9_ANIM: u32 = 0x802A_EF10;
 pub const MOTION9_PHYS: u32 = 0x802A_EFB8;
@@ -414,6 +416,7 @@ pub fn spawn(
 }
 
 /// Destroys a blaster its owner lets go of, `it_802AEAB4`.
+// Ports `it_802AEAB4`; aliased once a check reaches it.
 pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
     let Some(gobj) = gobj else { return };
     let ip = item_mut(r.game, gobj);

@@ -20,6 +20,7 @@ pub const ORPHAN: u32 = 0x802A_C5D8;
 pub const START: u32 = 0x802A_C604;
 pub const ANIM: u32 = 0x802A_C62C;
 pub const PHYS: u32 = 0x802A_C6B0;
+#[doc(alias = "itNesspkthundertrail_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802A_C8A0;
 
 /// `it_803F6C18`: each trail's kind.

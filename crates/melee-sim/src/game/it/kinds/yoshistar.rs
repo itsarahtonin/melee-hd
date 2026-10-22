@@ -11,6 +11,7 @@ use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
+#[doc(alias = "it_802B309C")]
 pub const DMG_DEALT: u32 = 0x802B_309C;
 pub const CLANKED: u32 = 0x802B_30C0;
 pub const HIT_SHIELD: u32 = 0x802B_30E4;

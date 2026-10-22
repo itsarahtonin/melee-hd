@@ -16,11 +16,13 @@ use crate::vec::Vec3;
 pub const SPAWN: u32 = 0x802A_A054;
 pub const START: u32 = 0x802A_A1D8;
 pub const ANIM: u32 = 0x802A_A22C;
+#[doc(alias = "itNesspkfire_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802A_A264;
 pub const DMG_DEALT: u32 = 0x802A_A284;
 pub const CLANKED: u32 = 0x802A_A2E8;
 pub const ABSORBED: u32 = 0x802A_A34C;
 pub const HIT_SHIELD: u32 = 0x802A_A354;
+#[doc(alias = "itNessPKFire_Logic23_Reflected")]
 pub const REFLECTED: u32 = 0x802A_A35C;
 pub const SHIELD_BOUNCED: u32 = 0x802A_A37C;
 pub const EVT_UNK: u32 = 0x802A_A474;

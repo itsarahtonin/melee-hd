@@ -23,6 +23,7 @@ pub const ANIM1: u32 = 0x802B_21A8;
 pub const COLL1: u32 = 0x802B_21E0;
 pub const ANIM2: u32 = 0x802B_2340;
 pub const DESTROYED: u32 = 0x802B_202C;
+#[doc(alias = "itPikachuThunder_Logic39_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802B_2508;
 pub const HIT_SHIELD: u32 = 0x802B_2510;
 pub const CLANKED: u32 = 0x802B_2518;
@@ -66,7 +67,7 @@ fn attr_f32(r: &Running, gobj: GObjId, off: u32) -> f32 {
 }
 
 /// Whether the bolt has stopped (`it_802B1DEC`, `x4`).
-// Ports `it_802B1DEC`; aliased once a check reaches it.
+#[doc(alias = "it_802B1DEC")]
 pub fn has_hit(r: &mut Running, gobj: GObjId) -> bool {
     item_mut(r.game, gobj)
         .xDD4_itemVar
@@ -78,7 +79,7 @@ pub fn has_hit(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Drops a bolt of `count` links from `pos` for `owner`, `it_802B1DF8`: link `i` waits
 /// `i * delay` frames and falls at `vel`; all share one attack. The first link comes back.
-// Ports `it_802B1DF8`; aliased once a check reaches it.
+#[doc(alias = "it_802B1DF8")]
 pub fn spawn(
     r: &mut Running,
     owner: GObjId,
@@ -151,13 +152,13 @@ pub fn spawn(
 }
 
 /// Stops the bolt (`it_802B1FC8`).
-// Ports `it_802B1FC8`; aliased once a check reaches it.
+#[doc(alias = "it_802B1FC8")]
 pub fn hit(r: &mut Running, gobj: GObjId) {
     stop(r, gobj);
 }
 
 /// Where the bolt's tip is, `it_802B1FE8`: `attr::TIP` below it, scaled with its length.
-// Ports `it_802B1FE8`; aliased once a check reaches it.
+#[doc(alias = "it_802B1FE8")]
 pub fn tip(r: &mut Running, gobj: GObjId) -> Vec3 {
     let below = attr_f32(r, gobj, attr::TIP);
     let ip = item_mut(r.game, gobj);
@@ -170,7 +171,7 @@ pub fn tip(r: &mut Running, gobj: GObjId) -> Vec3 {
 
 /// `it_2725_Logic39_Destroyed`: the first link gone, Pikachu's Thunder knows (unless he's
 /// in a state that ignores it).
-// Ports `it_2725_Logic39_Destroyed`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic39_Destroyed")]
 fn destroyed(r: &mut Running, gobj: GObjId) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
     let (i, owner) = (v.x0.get(), v.x38.get());
@@ -183,7 +184,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 }
 
 /// A link's start, `it_802B2080`: waiting, hidden.
-// Ports `it_802B2080`; aliased once a check reaches it.
+#[doc(alias = "it_802B2080")]
 fn start(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 0, change::ANIM_UPDATE);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
@@ -192,7 +193,7 @@ fn start(r: &mut Running, gobj: GObjId) {
 }
 
 /// `itPikachuthunder_UnkMotion0_Anim`: the link waits its frames, then falls.
-// Ports `itPikachuthunder_UnkMotion0_Anim`; aliased once a check reaches it.
+#[doc(alias = "itPikachuthunder_UnkMotion0_Anim")]
 fn anim0(r: &mut Running, gobj: GObjId) -> bool {
     let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
     let wait = v.x8.get();
@@ -205,7 +206,7 @@ fn anim0(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// The link falls, shown, `it_802B211C`.
-// Ports `it_802B211C`; aliased once a check reaches it.
+#[doc(alias = "it_802B211C")]
 fn fall(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
@@ -224,7 +225,7 @@ fn tick(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itPikachuthunder_UnkMotion1_Anim`.
-// Ports `itPikachuthunder_UnkMotion1_Anim`; aliased once a check reaches it.
+#[doc(alias = "itPikachuthunder_UnkMotion1_Anim")]
 fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     tick(r, gobj)
 }
@@ -232,7 +233,7 @@ fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// `itPikachuthunder_UnkMotion1_Coll`: the first link stops at the ground, with its dust,
 /// and Pikachu's quake (unless he's in a state that ignores it); each later link stops
 /// where the one before it did.
-// Ports `itPikachuthunder_UnkMotion1_Coll`; aliased once a check reaches it.
+#[doc(alias = "itPikachuthunder_UnkMotion1_Coll")]
 fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
     if v.x0.get() == 0 {
@@ -264,7 +265,7 @@ fn coll1(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// The link stops, `it_802B22B8`: stretching for its frames, and the next link learns where.
-// Ports `it_802B22B8`; aliased once a check reaches it.
+#[doc(alias = "it_802B22B8")]
 fn stop(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, 0x1 | change::HIT_PRESERVE);
     let ip = item_mut(r.game, gobj);
@@ -283,7 +284,7 @@ fn stop(r: &mut Running, gobj: GObjId) {
 
 /// `itPikachuthunder_UnkMotion2_Anim`: the stopped link's lifetime, and it stretches
 /// (`x10`, its length plus a frame's fall) to scale its model and hitbox.
-// Ports `itPikachuthunder_UnkMotion2_Anim`; aliased once a check reaches it.
+#[doc(alias = "itPikachuthunder_UnkMotion2_Anim")]
 fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     if tick(r, gobj) {
         return true;

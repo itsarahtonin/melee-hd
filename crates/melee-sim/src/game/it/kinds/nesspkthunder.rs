@@ -31,6 +31,7 @@ pub const START: u32 = 0x802A_BA4C;
 pub const ANIM: u32 = 0x802A_BBB0;
 pub const PHYS: u32 = 0x802A_BCDC;
 pub const COLL: u32 = 0x802A_C000;
+#[doc(alias = "itNessPKThunderball_Logic26_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802A_C050;
 pub const CLANKED: u32 = 0x802A_C074;
 pub const REFLECTED: u32 = 0x802A_C098;

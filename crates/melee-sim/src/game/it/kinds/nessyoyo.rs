@@ -47,6 +47,7 @@ pub const DRAG: u32 = 0x802B_F4A0;
 pub const REEL: u32 = 0x802B_F800;
 pub const HANG: u32 = 0x802B_F900;
 pub const LINE_UP: u32 = 0x802B_FAFC;
+#[doc(alias = "itNessYoyo_Logic59_PickedUp")]
 pub const PICKED_UP: u32 = 0x802B_FE34;
 pub const RELEASE: u32 = 0x802B_FE5C;
 pub const NUDGE: u32 = 0x802B_FEC4;

@@ -391,43 +391,24 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026B7F8", EVT_UNK),
-    ("it_802ADBE4", EVT_UNK),
     ("it_2E5A_Logic115_EvtUnk", EVT_UNK),
     ("it_802F2BDC", EVT_UNK),
     ("itBat_Logic11_EvtUnk", EVT_UNK),
     ("itCapsule_Logic0_EvtUnk", EVT_UNK),
     ("it_802D3F4C", EVT_UNK),
-    ("itClimbersBlizzard_EvtUnk", EVT_UNK),
-    ("itClimbersIce_Logic90_EvtUnk", EVT_UNK),
-    ("it_2725_Logic70_EvtUnk", EVT_UNK),
     ("itCoin_Logic116_EvtUnk", EVT_UNK),
     ("itCrazyHandBomb_Logic86_EvtUnk", EVT_UNK),
-    ("itDrMarioPill_EvtUnk", EVT_UNK),
     ("itEgg_Logic3_EvtUnk", EVT_UNK),
     ("itEvYoshiEgg_Logic42_EvtUnk", EVT_UNK),
     ("itFFlower_Logic25_EvtUnk", EVT_UNK),
     ("itFFlowerFlame_Logic41_EvtUnk", EVT_UNK),
     ("itFlipper_EvtUnk", EVT_UNK),
     ("itFoods_Logic18_EvtUnk", EVT_UNK),
-    ("it_8029D948", EVT_UNK),
     ("itFreeze_Logic17_EvtUnk", EVT_UNK),
-    ("itGameWatchBreath_Logic76_EvtUnk", EVT_UNK),
-    ("itGameWatchChef_Logic112_EvtUnk", EVT_UNK),
-    ("itGamewatchFire_EvtUnk", EVT_UNK),
-    ("itGamewatchGreenhouse_EvtUnk", EVT_UNK),
-    ("itGameWatchJudge_Logic77_EvtUnk", EVT_UNK),
-    ("itGameWatchManhole_Logic72_EvtUnk", EVT_UNK),
-    ("itGameWatchPanic_Logic78_EvtUnk", EVT_UNK),
-    ("itGameWatchParachute_Logic74_EvtUnk", EVT_UNK),
-    ("itGameWatchRescue_Logic81_EvtUnk", EVT_UNK),
-    ("itGameWatchTurtle_Logic75_EvtUnk", EVT_UNK),
     ("it_802EB5A8", EVT_UNK),
     ("itHarisen_Logic24_EvtUnk", EVT_UNK),
     ("itHeart_Logic8_EvtUnk", EVT_UNK),
     ("it_802D9A0C", EVT_UNK),
-    ("it_8029C4B4", EVT_UNK),
-    ("itKirbyGameWatchChefPan_Logic113_EvtUnk", EVT_UNK),
-    ("it_802ADDB0", EVT_UNK),
     ("it_802EE1E0", EVT_UNK),
     ("it_802F0320", EVT_UNK),
     ("itLGun_Logic16_EvtUnk", EVT_UNK),
@@ -436,31 +417,14 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("itLipstick_Logic23_EvtUnk", EVT_UNK),
     ("itLipstickSpore_Logic37_EvtUnk", EVT_UNK),
     ("itLucky_Logic44_EvtUnk", EVT_UNK),
-    ("itLuigiFireball_Logic89_EvtUnk", EVT_UNK),
-    ("it_802B2870", EVT_UNK),
-    ("itMarioFireball_Logic87_EvtUnk", EVT_UNK),
     ("itMasterHandBullet_Logic85_EvtUnk", EVT_UNK),
     ("itMasterHandLaser_Logic84_EvtUnk", EVT_UNK),
     ("itMball_EvtUnk", EVT_UNK),
     ("itMetamon_Logic19_EvtUnk", EVT_UNK),
     ("itMSBomb_Logic19_EvtUnk", EVT_UNK),
-    ("itNessBat_Logic58_EvtUnk", EVT_UNK),
-    ("it_802AA474", EVT_UNK),
-    ("itNesspkfirepillar_Logic24_EvtUnk", EVT_UNK),
-    ("itNesspkflash_Logic102_EvtUnk", EVT_UNK),
-    ("itNessPKFlashExplode_Logic103_EvtUnk", EVT_UNK),
-    ("it_802AC41C", EVT_UNK),
-    ("it_2725_Logic59_EvtUnk", EVT_UNK),
     ("it_802DD7D0", EVT_UNK),
     ("itParasol_Logic13_EvtUnk", EVT_UNK),
     ("it_802E16D8", EVT_UNK),
-    ("itPikachuThunder_Logic39_EvtUnk", EVT_UNK),
-    ("itPikachuTJoltAir_Logic107_EvtUnk", EVT_UNK),
-    ("itPikachuTJoltGround_Logic106_EvtUnk", EVT_UNK),
-    ("itSamusBomb_Logic50_EvtUnk", EVT_UNK),
-    ("itSamusChargeshot_Logic108_EvtUnk", EVT_UNK),
-    ("itSamusGrapple_Logic53_EvtUnk", EVT_UNK),
-    ("it_2725_Logic52_EvtUnk", EVT_UNK),
     ("itSScope_Logic21_EvtUnk", EVT_UNK),
     ("itSScopeBeam_Logic38_EvtUnk", EVT_UNK),
     ("itStarRod_Logic22_EvtUnk", EVT_UNK),
@@ -471,7 +435,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802EFA24", EVT_UNK),
     ("it_802E4A24", EVT_UNK),
     ("itWStar_Logic30_EvtUnk", EVT_UNK),
-    ("it_27CF_Logic114_EvtUnk", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
     ("it_802E0468", EVT_UNK),
     ("it_80275210", ADVENTURE),
@@ -511,10 +474,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026ECE0", DEBUG),
     ("Item_80266F3C", DEBUG),
     ("Item_80266FA8", SCENES),
-    ("itDrMarioPill_802C09C4", DEMO),
-    ("itDrMarioPill_802C1180", DEMO),
-    ("it_802AE994", DEMO),
-    ("it_802AD590", DEMO),
     ("it_8026C1E8", ZAKO),
     ("it_802EA9FC", ZAKO),
     ("it_802DC4BC", ZAKO),
@@ -582,43 +541,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ),
 ];
 
-/// Fighter-owned item code an items-off match reaches as well: the characters' work, not the
-/// toggle's.
-pub const FIGHTERS: &[&str] = &[
-    "it_8026BD84",
-    "it_80272AC4",
-    "melee/it/kinds/itclimbersblizzard",
-    "melee/it/kinds/itclimbersice",
-    "melee/it/kinds/itdrmariopill",
-    "melee/it/kinds/itfoxblaster",
-    "melee/it/kinds/itfoxillusion",
-    "melee/it/kinds/itfoxlaser",
-    "melee/it/kinds/itluigifireball",
-    "melee/it/kinds/itmariofireball",
-    "melee/it/kinds/itnessbat",
-    "melee/it/kinds/itnesspkfire",
-    "melee/it/kinds/itnesspkflash",
-    "melee/it/kinds/itnesspkflashexplode",
-    "melee/it/kinds/itnesspkthunderball",
-    "itNesspkthundertrail_UnkMotion0_Coll",
-    "itNessYoyo_Logic59_PickedUp",
-    "melee/it/kinds/itpikachuthunder",
-    "melee/it/kinds/itpikachutjoltair",
-    "melee/it/kinds/itpikachutjoltground",
-    "melee/it/kinds/itsamusbomb",
-    "melee/it/kinds/itsamuschargeshot",
-    "melee/it/kinds/itsamusgrapple",
-    "melee/it/kinds/itsamusmissile",
-    "itYoshieggthrow_UnkMotion2_Anim",
-    "melee/it/kinds/ityoshistar",
-    "melee/it/kinds/itzeldadinfire",
-    "melee/it/kinds/itzeldadinfireexplode",
-    "itLinkArrow_802A850C",
-    "it_802A2568 with one link",
-    "itNesspkflash_UnkMotion0_Anim on another kind",
-    "it_802B7160: the swing's grabbed-victim-only bit",
-];
-
 /// Ported code an items-on match reaches whose ledger alias waits for a check (a `// Ports`
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
@@ -656,6 +578,7 @@ pub const MISSING: &[ItemGap] = &[ItemGap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::game::fighter_audit::tests::held;
     use crate::game::roster::tests::{game_modules, ledger, stops};
 
     /// The items-on audit is held to the ledger and the code as the stages' audits are: every
@@ -670,14 +593,15 @@ mod tests {
         let every_stop: Vec<String> = game_modules().iter().flat_map(|m| stops(m)).collect();
         let mut keys: Vec<(&str, &str)> = Vec::new();
         keys.extend(UNREACHED.iter().map(|(k, _)| (*k, "UNREACHED")));
-        keys.extend(FIGHTERS.iter().map(|k| (*k, "FIGHTERS")));
         keys.extend(UNCHECKED.iter().map(|k| (*k, "UNCHECKED")));
         for g in MISSING {
             keys.extend(g.covers.iter().map(|k| (*k, "MISSING")));
         }
         let mut used = vec![false; keys.len()];
+        // The characters' own items are the fighter audit's (`fighter_audit`).
+        let (fighter_units, fighter_modules) = held();
         for (name, unit, status) in &ledger {
-            if status != "unaccounted" {
+            if status != "unaccounted" || fighter_units.contains(unit) {
                 continue;
             }
             let held = UNITS.contains(&unit.as_str());
@@ -703,7 +627,7 @@ mod tests {
                 used[i] = true;
             }
         }
-        for m in MODULES {
+        for m in MODULES.iter().filter(|m| !fighter_modules.contains(**m)) {
             for stop in stops(m) {
                 let hits: Vec<usize> = (0..keys.len())
                     .filter(|&i| keys[i].1 != "UNCHECKED" && stop.contains(keys[i].0))
@@ -717,17 +641,20 @@ mod tests {
                 }
             }
         }
+        let mut unused = Vec::new();
         for (i, &(key, list)) in keys.iter().enumerate() {
             // A gap may also name a stop outside the item modules, or a fighter's function.
             let elsewhere = list == "MISSING"
                 && (every_stop.iter().any(|t| t.contains(key))
                     || (ledger.iter())
                         .any(|(n, u, st)| st == "unaccounted" && (n == key || u == key)));
-            assert!(
-                used[i] || elsewhere,
-                "the items audit's {list} names {key}, which no longer stops or is unported"
-            );
+            if !used[i] && !elsewhere {
+                unused.push(format!(
+                    "the items audit's {list} names {key}, which no longer stops or is unported"
+                ));
+            }
         }
+        assert!(unused.is_empty(), "{}", unused.join("\n"));
         let modules = game_modules();
         for m in modules.iter().filter(|m| m.starts_with("it/")) {
             assert!(

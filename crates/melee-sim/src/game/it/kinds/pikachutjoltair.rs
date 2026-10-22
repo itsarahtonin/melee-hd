@@ -20,7 +20,9 @@ use crate::math;
 use crate::vec::Vec3;
 
 pub const ANIM: u32 = 0x802B_4450;
+#[doc(alias = "itPikachutjoltair_UnkMotion0_Phys")]
 pub const PHYS: u32 = 0x802B_45D0;
+#[doc(alias = "itPikachutjoltair_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802B_45E8;
 pub const DMG_DEALT: u32 = 0x802B_45F0;
 pub const CLANKED: u32 = 0x802B_4638;
@@ -232,11 +234,11 @@ fn anim(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `it_2725_Logic107_DmgDealt` (and `_Clanked`, `_Absorbed`, `_HitShield`,
 /// `_ShieldBounced`): it ends.
-// Ports `it_2725_Logic107_DmgDealt`; aliased once a check reaches it.
-// Ports `it_2725_Logic107_Clanked`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic107_DmgDealt")]
+#[doc(alias = "it_2725_Logic107_Clanked")]
 // Ports `it_2725_Logic107_Absorbed`; aliased once a check reaches it.
-// Ports `it_2725_Logic107_HitShield`; aliased once a check reaches it.
-// Ports `it_2725_Logic107_ShieldBounced`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic107_HitShield")]
+#[doc(alias = "it_2725_Logic107_ShieldBounced")]
 fn end(r: &mut Running, gobj: GObjId) -> bool {
     release(r, gobj);
     true
@@ -244,7 +246,7 @@ fn end(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `it_2725_Logic107_Reflected`: turned around at its tip, heading back along the way it
 /// came.
-// Ports `it_2725_Logic107_Reflected`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic107_Reflected")]
 fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let j = jobj_of(r.game, gobj).expect("a jolt without a model");
     let t = bone(r, gobj, TIP_BONE);

@@ -12,13 +12,17 @@ use crate::vec::Vec3;
 
 pub const MOTION0_ANIM: u32 = 0x8029_D094;
 pub const MOTION0_PHYS: u32 = 0x8029_D24C;
+#[doc(alias = "itFoxillusion_UnkMotion0_Coll")]
 pub const MOTION0_COLL: u32 = 0x8029_D488;
 pub const MOTION1_ANIM: u32 = 0x8029_D490;
 pub const MOTION1_PHYS: u32 = 0x8029_D554;
+#[doc(alias = "itFoxillusion_UnkMotion1_Coll")]
 pub const MOTION1_COLL: u32 = 0x8029_D790;
 pub const MOTION2_ANIM: u32 = 0x8029_D7EC;
 pub const MOTION2_PHYS: u32 = 0x8029_D870;
+#[doc(alias = "itFoxillusion_UnkMotion2_Coll")]
 pub const MOTION2_COLL: u32 = 0x8029_D940;
+#[doc(alias = "itFoxIllusion_Logic14_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x8029_CF8C;
 pub const DESTROYED: u32 = 0x8029_CFA0;
 pub const EVT_UNK: u32 = 0x8029_D948;
@@ -149,7 +153,7 @@ fn make_ghost(r: &mut Running, gobj: GObjId) -> Option<JObjId> {
 /// the dash's script says (`cmd_vars[2]` 2); gone when the dash is over; fading when its
 /// lifetime runs out.
 #[doc(alias = "itFoxillusion_UnkMotion0_Anim")]
-// Ports `itFoxillusion_UnkMotion1_Anim`; aliased once a check reaches it.
+#[doc(alias = "itFoxillusion_UnkMotion1_Anim")]
 fn follow(r: &mut Running, gobj: GObjId) -> bool {
     let owner = item(r.game, gobj).owner;
     if let Some(o) = owner
@@ -178,7 +182,7 @@ fn follow(r: &mut Running, gobj: GObjId) -> bool {
 /// The afterimage and its ghost along the dash's trail, `itFoxillusion_UnkMotion0_Phys` (and
 /// `UnkMotion1`): the trail's second and fourth points and turns.
 #[doc(alias = "itFoxillusion_UnkMotion0_Phys")]
-// Ports `itFoxillusion_UnkMotion1_Phys`; aliased once a check reaches it.
+#[doc(alias = "itFoxillusion_UnkMotion1_Phys")]
 fn follow_trail(r: &mut Running, gobj: GObjId) {
     let Some(owner) = item(r.game, gobj).owner else {
         return;

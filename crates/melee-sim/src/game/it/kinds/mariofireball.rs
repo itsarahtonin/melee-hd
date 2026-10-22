@@ -15,14 +15,20 @@ use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
+#[doc(alias = "itMariofireball_UnkMotion0_Anim")]
 pub const ANIM: u32 = 0x8029_B868;
 pub const PHYS: u32 = 0x8029_B8A0;
 pub const COLL: u32 = 0x8029_B8EC;
+#[doc(alias = "itMarioFireball_Logic87_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x8029_BA38;
+#[doc(alias = "itMarioFireball_Logic87_Reflected")]
 pub const REFLECTED: u32 = 0x8029_BA40;
+#[doc(alias = "itMarioFireball_Logic87_Clanked")]
 pub const CLANKED: u32 = 0x8029_BA60;
+#[doc(alias = "itMarioFireball_Logic87_HitShield")]
 pub const HIT_SHIELD: u32 = 0x8029_BA68;
 pub const ABSORBED: u32 = 0x8029_BA70;
+#[doc(alias = "itMarioFireball_Logic87_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x8029_BA78;
 pub const EVT_UNK: u32 = 0x8029_BA98;
 

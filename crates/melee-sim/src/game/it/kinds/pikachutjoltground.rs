@@ -390,10 +390,10 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_2725_Logic106_DmgDealt` (and `_Clanked`, `_Absorbed`, `_HitShield`): it ends.
-// Ports `it_2725_Logic106_DmgDealt`; aliased once a check reaches it.
-// Ports `it_2725_Logic106_Clanked`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic106_DmgDealt")]
+#[doc(alias = "it_2725_Logic106_Clanked")]
 // Ports `it_2725_Logic106_Absorbed`; aliased once a check reaches it.
-// Ports `it_2725_Logic106_HitShield`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic106_HitShield")]
 fn end(r: &mut Running, gobj: GObjId) -> bool {
     release(r, gobj);
     true

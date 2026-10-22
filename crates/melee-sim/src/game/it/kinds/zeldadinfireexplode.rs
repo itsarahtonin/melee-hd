@@ -18,10 +18,12 @@ use crate::vec::Vec3;
 pub const DESTROYED: u32 = 0x802C_4670;
 pub const ANIM: u32 = 0x802C_4820;
 pub const PHYS: u32 = 0x802C_4980;
+#[doc(alias = "itZeldadinfireexplode_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802C_4998;
 pub const CLANKED: u32 = 0x802C_49A0;
 pub const ABSORBED: u32 = 0x802C_49A8;
 pub const SHIELD_BOUNCED: u32 = 0x802C_49B0;
+#[doc(alias = "itZeldaDinFireExplode_Logic66_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_49B8;
 pub const EVT_UNK: u32 = 0x802C_49C0;
 

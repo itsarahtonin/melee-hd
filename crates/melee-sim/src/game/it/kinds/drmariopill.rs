@@ -27,11 +27,16 @@ pub const PICKED_UP: u32 = 0x802C_11E0;
 pub const MOTION6_ANIM: u32 = 0x802C_1234;
 pub const MOTION6_PHYS: u32 = 0x802C_1340;
 pub const MOTION6_COLL: u32 = 0x802C_1360;
+#[doc(alias = "itDrMarioPill_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802C_1384;
+#[doc(alias = "itDrMarioPill_Reflected")]
 pub const REFLECTED: u32 = 0x802C_13CC;
+#[doc(alias = "itDrMarioPill_Clanked")]
 pub const CLANKED: u32 = 0x802C_1400;
+#[doc(alias = "itDrMarioPill_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_145C;
 pub const ABSORBED: u32 = 0x802C_14B8;
+#[doc(alias = "itDrMarioPill_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_1514;
 pub const EVT_UNK: u32 = 0x802C_1570;
 
@@ -181,7 +186,7 @@ fn setup(r: &mut Running, gobj: GObjId) {
 
 /// The taunt's pill on its owner, `itDrMarioPill_802C061C` (its accessory callback): at the
 /// owner's position, turned to its facing.
-// Ports `itDrMarioPill_802C061C`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_802C061C")]
 fn follow_owner(r: &mut Running, gobj: GObjId) {
     let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
     if let Some(o) = owner {
@@ -202,7 +207,7 @@ fn follow_owner(r: &mut Running, gobj: GObjId) {
 
 /// The taunt's pill for `parent` at `pos`, `itDrMarioPill_Appeal_Spawn`: it sits on its owner
 /// (`itDrMarioPill_802C061C`), blinking, until the taunt lets go of it.
-// Ports `itDrMarioPill_Appeal_Spawn`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_Appeal_Spawn")]
 pub fn appeal_spawn(
     r: &mut Running,
     parent: GObjId,
@@ -279,7 +284,7 @@ fn motion0_coll(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Takes the taunt's pill away, `itDrMarioPill_802C0DBC`.
-// Ports `itDrMarioPill_802C0DBC`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_802C0DBC")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj)
         .xDD4_itemVar
@@ -290,7 +295,7 @@ pub fn remove(r: &mut Running, gobj: GObjId) {
 }
 
 /// The taunt's pill's start, `itDrMarioPill_802C0DF8`: its lifetime and the pose state.
-// Ports `itDrMarioPill_802C0DF8`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_802C0DF8")]
 fn appeal_setup(r: &mut Running, gobj: GObjId) {
     lib2725::set_lifetime(r.game, r.data, gobj, APPEAL_LIFETIME);
     change_state(r, gobj, 1, change::ANIM_UPDATE);
@@ -318,7 +323,7 @@ fn release(r: &mut Running, gobj: GObjId) -> bool {
 
 /// `itDrMarioPill_Motion2_Anim`: blinking; shown while the taunt's script says; it ends
 /// when its owner leaves the taunt (or loses it), else follows the owner's model scale.
-// Ports `itDrMarioPill_Motion2_Anim`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_Motion2_Anim")]
 fn motion2_anim(r: &mut Running, gobj: GObjId) -> bool {
     super::super::hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);
@@ -349,8 +354,8 @@ fn motion2_anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itDrMarioPill_Motion2_Phys` (and `itDrMariopill_Motion2_Coll`): blinking.
-// Ports `itDrMarioPill_Motion2_Phys`; aliased once a check reaches it.
-// Ports `itDrMariopill_Motion2_Coll`; aliased once a check reaches it.
+#[doc(alias = "itDrMarioPill_Motion2_Phys")]
+#[doc(alias = "itDrMariopill_Motion2_Coll")]
 fn motion2_phys(r: &mut Running, gobj: GObjId) {
     super::super::hitbox::start_blink(r.game, gobj);
     lib26b1::disable_pickup(r.game, gobj);

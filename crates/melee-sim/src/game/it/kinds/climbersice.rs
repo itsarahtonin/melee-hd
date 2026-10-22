@@ -20,19 +20,33 @@ use crate::vec::Vec3;
 
 pub const DESTROYED: u32 = 0x802C_17FC;
 pub const ANIM_0: u32 = 0x802C_198C;
+#[doc(alias = "itClimbersice_UnkMotion0_Phys")]
 pub const PHYS_0: u32 = 0x802C_1A14;
+#[doc(alias = "itClimbersice_UnkMotion0_Coll")]
 pub const COLL_0: u32 = 0x802C_1A18;
+#[doc(alias = "itClimbersice_UnkMotion1_Anim")]
 pub const ANIM_1: u32 = 0x802C_1A80;
+#[doc(alias = "itClimbersice_UnkMotion1_Phys")]
 pub const PHYS_1: u32 = 0x802C_1A88;
+#[doc(alias = "itClimbersice_UnkMotion1_Coll")]
 pub const COLL_1: u32 = 0x802C_1AB8;
+#[doc(alias = "itClimbersice_UnkMotion2_Anim")]
 pub const ANIM_2: u32 = 0x802C_1B80;
+#[doc(alias = "itClimbersice_UnkMotion2_Phys")]
 pub const PHYS_2: u32 = 0x802C_1BB4;
+#[doc(alias = "itClimbersice_UnkMotion2_Coll")]
 pub const COLL_2: u32 = 0x802C_1C7C;
+#[doc(alias = "itClimbersice_UnkMotion3_Anim")]
 pub const ANIM_3: u32 = 0x802C_1D80;
+#[doc(alias = "itClimbersice_UnkMotion3_Phys")]
 pub const PHYS_3: u32 = 0x802C_1DB4;
+#[doc(alias = "itClimbersice_UnkMotion3_Coll")]
 pub const COLL_3: u32 = 0x802C_1E94;
+#[doc(alias = "itClimbersIce_Logic90_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802C_1FC8;
+#[doc(alias = "itClimbersIce_Logic90_Reflected")]
 pub const REFLECTED: u32 = 0x802C_1FD0;
+#[doc(alias = "itClimbersIce_Logic90_Clanked")]
 pub const CLANKED: u32 = 0x802C_1FF0;
 pub const HIT_SHIELD: u32 = 0x802C_1FF8;
 pub const ABSORBED: u32 = 0x802C_20E4;
@@ -153,7 +167,7 @@ fn child(r: &Running, gobj: GObjId) -> Option<crate::hsd::jobj::JObjId> {
 
 /// Makes the ice at `pos` by its parent, `it_802C1590`: forming (state 0) at its full size,
 /// its owner kept, with the forming effect, not to be picked up.
-// Ports `it_802C1590`; aliased once a check reaches it.
+#[doc(alias = "it_802C1590")]
 pub fn spawn(
     r: &mut Running,
     parent: GObjId,
@@ -201,7 +215,7 @@ pub fn spawn(
 
 /// Throws the ice, `it_802C16F8`: forward at its speed, its lifetime set, its model turned
 /// along its motion, with the throw's effect, sliding (state 2).
-// Ports `it_802C16F8`; aliased once a check reaches it.
+#[doc(alias = "it_802C16F8")]
 pub fn throw(r: &mut Running, gobj: GObjId) {
     let speed = attr_f32(r, gobj, attr::SPEED);
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
@@ -222,14 +236,14 @@ pub fn throw(r: &mut Running, gobj: GObjId) {
 }
 
 /// Takes the ice away, `it_802C17DC` (`Item_8026A8EC`).
-// Ports `it_802C17DC`; aliased once a check reaches it.
+#[doc(alias = "it_802C17DC")]
 pub fn remove(r: &mut Running, gobj: GObjId) {
     super::super::item::destroy(r, gobj);
 }
 
 /// The ice's end, `it_2725_Logic90_Destroyed`: its owner forgets it (`ftPp_Init_8011F16C`, or
 /// Kirby's copy's `ftKb_SpecialNIc_80108CE8`).
-// Ports `it_2725_Logic90_Destroyed`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic90_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     let kind = ip.kind;
@@ -269,13 +283,13 @@ fn effect(r: &mut Running, gobj: GObjId, ice: i32, kirby: i32) {
 }
 
 /// The sliding effect, then state 2, `it_802C1AE4`.
-// Ports `it_802C1AE4`; aliased once a check reaches it.
+#[doc(alias = "it_802C1AE4")]
 fn slide_effect(r: &mut Running, gobj: GObjId) {
     effect(r, gobj, 0x4EB, 0x4B0);
 }
 
 /// Shrinks the ice once thrown away, `itClimbersice_UnkMotion0_Anim`: done once small.
-// Ports `itClimbersice_UnkMotion0_Anim`; aliased once a check reaches it.
+#[doc(alias = "itClimbersice_UnkMotion0_Anim")]
 fn shrink(r: &mut Running, gobj: GObjId) -> bool {
     let shrink = attr_f32(r, gobj, attr::SHRINK);
     let j = child(r, gobj);
@@ -298,14 +312,14 @@ fn drop(r: &mut Running, gobj: GObjId) {
 }
 
 /// Stops the ice, `it_802C1950`: no velocity, state 0.
-// Ports `it_802C1950`; aliased once a check reaches it.
+#[doc(alias = "it_802C1950")]
 fn stop(r: &mut Running, gobj: GObjId) {
     item_mut(r.game, gobj).x40_vel = Vec3::new(0.0, 0.0, 0.0);
     change_state(r, gobj, 0, change::ANIM_UPDATE);
 }
 
 /// The slide falling off a floor, `fn_802C1D44`: state 3, its effects gone.
-// Ports `fn_802C1D44`; aliased once a check reaches it.
+#[doc(alias = "fn_802C1D44")]
 fn slide_fall(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
     crate::game::ef::eflib::destroy_all(r, gobj);
@@ -324,7 +338,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 /// The slide on a floor, `it_802C1854`: the floor's slope speeds it down and slows it up;
 /// slow enough, it stops (pickup back on, `xDCD_b3`, state 0, its effects gone). True once
 /// it stops.
-// Ports `it_802C1854`; aliased once a check reaches it.
+#[doc(alias = "it_802C1854")]
 fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let slope = reg(attr_f32(r, gobj, attr::SLOPE));
     let down = reg(attr_f32(r, gobj, attr::SLOPE_DOWN));
@@ -394,7 +408,7 @@ fn wall_bounce(r: &mut Running, gobj: GObjId) -> bool {
 
 /// A shield hit, `it_2725_Logic90_HitShield`: slow enough, it bounces back slowed at a cost
 /// to its lifetime, breaking once too little is left; faster, it breaks.
-// Ports `it_2725_Logic90_HitShield`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic90_HitShield")]
 fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     let max = reg(attr_f32(r, gobj, attr::BOUNCE_SPEED));
     let min_life = reg(attr_f32(r, gobj, attr::BOUNCE_MIN_LIFE));

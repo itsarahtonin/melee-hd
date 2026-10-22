@@ -13,7 +13,9 @@ pub const SPAWN: u32 = 0x802A_D478;
 pub const REMOVE: u32 = 0x802A_D6B8;
 pub const PICKED_UP: u32 = 0x802A_D6F0;
 pub const ANIM_0: u32 = 0x802A_D768;
+#[doc(alias = "itNessbat_UnkMotion0_Phys")]
 pub const PHYS_0: u32 = 0x802A_D8D0;
+#[doc(alias = "itNessbat_UnkMotion0_Coll")]
 pub const COLL_0: u32 = 0x802A_D8D4;
 pub const EVT_UNK: u32 = 0x802A_D9FC;
 

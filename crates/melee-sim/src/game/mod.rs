@@ -8,6 +8,7 @@ pub mod boot;
 pub mod camera;
 pub mod code;
 pub mod ef;
+pub mod fighter_audit;
 pub mod ft;
 pub mod gm;
 pub mod gr;

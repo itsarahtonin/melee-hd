@@ -13,12 +13,17 @@ use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
+#[doc(alias = "itLuigifireball_UnkMotion0_Anim")]
 pub const ANIM: u32 = 0x802C_02E4;
 pub const PHYS: u32 = 0x802C_031C;
 pub const COLL: u32 = 0x802C_0368;
+#[doc(alias = "itLuigiFireball_Logic89_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802C_0490;
+#[doc(alias = "itLuigiFireball_Logic89_Reflected")]
 pub const REFLECTED: u32 = 0x802C_0498;
+#[doc(alias = "itLuigiFireball_Logic89_Clanked")]
 pub const CLANKED: u32 = 0x802C_04B8;
+#[doc(alias = "itLuigiFireball_Logic89_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_04C0;
 pub const ABSORBED: u32 = 0x802C_04C8;
 pub const SHIELD_BOUNCED: u32 = 0x802C_04D0;
