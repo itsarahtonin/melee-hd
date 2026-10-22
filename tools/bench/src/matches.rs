@@ -1320,6 +1320,30 @@ pub fn ics_set() -> Vec<Match> {
             items: Items::OFF,
         })
         .chain(std::iter::once(Match {
+            name: Cow::Borrowed("ics-items-open-fd"),
+            stage: FINAL_DESTINATION,
+            players: Cow::Owned(vec![
+                Player {
+                    character: ICE_CLIMBERS,
+                    costume: 0,
+                    control: Control::Opener,
+                },
+                Player {
+                    character: FOX,
+                    costume: 0,
+                    control: Control::Opener,
+                },
+            ]),
+            seed: 0x1F0F_1207,
+            rules: Rules::Time {
+                time_limit: ITEMS_TIME,
+            },
+            items: Items {
+                freq: FREQ_VERY_HIGH,
+                mask: u64::MAX,
+            },
+        }))
+        .chain(std::iter::once(Match {
             name: Cow::Borrowed("ics-items-bf"),
             stage: BATTLEFIELD,
             players: Cow::Owned(vec![p(ICE_CLIMBERS, 0), p(FOX, 0)]),

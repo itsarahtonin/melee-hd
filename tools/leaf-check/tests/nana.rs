@@ -48,7 +48,10 @@
 //! from 2509, Brinstar's acid making islands unsafe), `on-car` (`ics-on`, 200 from 790, Onett's
 //! cars), `rc-wind` (`ics-rc`, 150 from 2080) and `rc-wind2` (60 from 1985, the wind carrying her
 //! destination), `gb-route` (`ics-gb`, 180 from 1170, Great Bay's routes), `ht-route` (`ics-ht`,
-//! 120 from 7100) and `ht-route2` (40 from 7020, Hyrule Temple's).
+//! 120 from 7100) and `ht-route2` (40 from 7020, Hyrule Temple's). Two more come from the set's
+//! `ics-items-open-fd`, which melee-hd recorded: `fd-items-bat` (250 from 6560, a Home-Run Bat
+//! held apart from Popo and swung) and `fd-items-gun` (100 from 1190, a Ray Gun held apart from
+//! him).
 //!
 //! `nana_tumble_and_shields` changes the saved frames to reach the tumble's branches
 //! (`ftCo_800ABBA8`), the shield check's (`ftCo_800B9F6C`), the item search's choice among

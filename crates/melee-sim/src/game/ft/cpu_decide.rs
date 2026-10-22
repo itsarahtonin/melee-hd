@@ -5,7 +5,6 @@
 
 use gekko_fp as fp;
 
-use super::super::code::unported_call;
 use super::super::gr::{
     GR_KIND_GREATBAY, GR_KIND_ONETT, GR_KIND_SHRINE, GR_KIND_ZEBES, ground, stage,
 };
