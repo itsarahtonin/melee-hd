@@ -470,6 +470,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded.
 - **Source:** `crates/melee-sim/src/game/ft/cpu_decide.rs:326`.
 
+### The computer player's attack rolls on a stale flag from a Starman or hammer
+
+- **Where:** `ftCo_800B658C` (attacking, behavior 2) reading `CpuFighter::xF8_b6`, which under the VS decision (`ftCo_800B24B8`) only `ftCo_800A20A0` writes, on frames whose target is an enemy with a Starman or a hammer (`ftCo_800A5CE0`); `crates/melee-sim/src/game/ft/cpu_attack.rs` (`cpu_attack_behavior`).
+- **Defect:** the VS decision neither refreshes nor clears the flag on other frames (the other computer kinds' decisions refresh it every frame, `ftCo_CpuUpdateTargetDistance`), so it keeps the answer of the last frame an enemy had a Starman or a hammer until a roll clears it. The approach (`ftCo_800AB224`) and standing (`ftCo_800ACD5C`) read it only while that enemy is the target (`xF9_b1`), but the attack reads it without that test, stale.
+- **Effect:** a computer player attacking on the ground may, at its level's chance (5% a level), roll away from an ordinary target long after the Starman or hammer has gone (`ftCo_800BA2E8`): in `cpu-approach-yoshi-bf` at tick 4,967 (no enemy with either) and `cpu-approach-captain-dl` at tick 4,803 (its target has the hammer's music, but with `x2338` set, which `ftCo_800A5CE0` doesn't take).
+- **melee-hd:** modeled: the flag persists as in the original.
+- **Fix:** refresh the flag on every decision, or test `xF9_b1` in the attack as the other two readers do.
+- **Fix impact:** changes computer players' rolls in items-on matches; a replay's recorded inputs keep its fighters' motion, but the CPU's state, and a free-running CPU, differ.
+- **Source:** `crates/melee-sim/src/game/ft/cpu_attack.rs:1169`; [the oracle](oracle.md#the-cpu-ai).
+
+### A shrunk Yoshi's jump writes its script's end twice
+
+- **Where:** `ftCo_800A0508` (a shrunk computer Yoshi jumping toward a destination near it), `crates/melee-sim/src/game/ft/cpu_move.rs` (`cpu_small_yoshi_jump`).
+- **Defect:** `ftCo_CpuFinishWithNeutralY` already ends the script with `CpuCmd_Done`, and the function writes another `Done` after it.
+- **Effect:** none observable: the script stops at the first `Done`, and the second is a byte in the script buffer past it that nothing plays.
+- **melee-hd:** modeled: both are written, so the buffer compares with the original's.
+- **Fix:** drop the second `Done`.
+- **Fix impact:** none in play; the CPU's script buffer would differ from the original's by that byte.
+- **Source:** `crates/melee-sim/src/game/ft/cpu_move.rs:349`.
+
 ## Items
 
 ### Item creation clears one coordinate three times
@@ -889,6 +909,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
+| The approach's roll with no target | `ftCo_800AB224` calling `ftCo_800BA2E8`, `game/ft/cpu_move.rs` | Passes the target on unchecked after its own null test, so with no target and `xF8_b6` set the roll reads a fighter at address 0; the VS decision sets the target on every frame it sets `xF9_b1`, which the approach needs, and nothing before the walk clears it | `crates/melee-sim/src/game/ft/cpu_move.rs:664` |
 | Unown's swarm from an edge past the four | `it_802CED54`, `game/it/kinds/unknown.rs` | Spawns the swarm from an uninitialized stack vector when the edge index (`+0x84`) is outside 0 to 3; `it_802CE8D0` always sets it | `crates/melee-sim/src/game/it/kinds/unknown.rs:305` |
 | Judgement's roll past its sums | `ftGw_SpecialS_GetRandomInt`, `game/ft/gamewatch/special_s.rs` | Returns a register it never set when the roll isn't below any running sum; a roll below their total always is | [engine notes](engine.md#uninitialized-values) (line 90) |
 | Falcon Kick's flame in another state | `ftCa_SpecialHi_800E3EAC`, `game/ft/captain/special_lw.rs` | Reads a register and a stack word it never set outside the kick's two states; only those states call it | `crates/melee-sim/src/game/ft/captain/special_lw.rs:24` |

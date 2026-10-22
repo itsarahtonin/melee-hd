@@ -112,6 +112,8 @@ Off camera on the ground (`ftCo_800AE7AC`, a frame below the VS decision), the d
 
 The stages' own cases (`feat/cpu-stages3`) read nothing unwritten. `ftCo_800A229C` fills the vector it's handed before every return but 0 (Brinstar's case with the blast zones' bottom middle, the others with the fighter's position), so `ftCo_800AE7AC` hands `ftCo_800A8210` a written vector; `ftCo_800A8210`'s generic case calls `ftCo_800A6700` without setting r4, which still holds that vector, its own second argument; and it reads its result vector only after a search (`ftCo_800A6FC4`, `ftCo_800A6700`) reports filling it. The behavior pick after it starts with its own floor check, so the DI's leftovers don't depend on which case ran.
 
+The approach to an enemy with a Starman or a hammer and the shrunk Yoshi's jump (`feat/cpu-items-last`) read nothing unwritten either. `ftCo_800AB224` hands `ftCo_800BA2E8` its target without testing it after its own null test, but the VS decision sets the target on every frame it allows the approach (`xF9_b1`), and nothing before the walk clears it, so the roll always has one (the port expects it; [Melee's bugs](melee-bugs.md#latent-defects)). The attack's `xF8_b6` is written only on those frames and read stale on others, but it is state the CPU keeps, cleared when its computer player is set up (`ftCo_800A101C`), so the port keeps it as plain data ([Melee's bugs](melee-bugs.md)). All of them are behaviors other than the DI, which runs alone in its frame, so the registers the DI reads (above) are unchanged.
+
 
 ## The allocators
 

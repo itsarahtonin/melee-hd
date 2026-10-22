@@ -47,9 +47,16 @@
 //! 4110, near the edges, searching against the wind) and `oracle-cpu-stage-great-bay` (from 4720,
 //! by the surfaced turtle).
 //!
+//! Three more, for a target with a Starman or a hammer and a shrunk Yoshi, from the oracle's
+//! `cpu-approach` matches, captured the same way with every call: `oracle-cpu-approach-yoshi-bf`
+//! (from field 1740: the shrunk Yoshi's jump, `ftCo_800A0508`), `oracle-cpu-approach-yoshi-bf-2`
+//! (from 3870) and `oracle-cpu-approach-captain-dl` (from 1060), where the CPU jumps at its
+//! target and rolls away from it (`ftCo_800AB224`, `ftCo_800BA2E8`).
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
-//! the stage, the CPU off camera, its target off the stage or under it with no island end in
+//! the stage, one beside it with a Starman (the approach and its rolls, standing's roll
+//! among them), the CPU off camera, its target off the stage or under it with no island end in
 //! reach (the destination then takes the stack words `ftCo_800A4BEC`'s frame left), the enemy
 //! moves it dodges, its DI with no knockback, which reads the registers its frame leaves, and
 //! the item it holds used from range (`ftCo_800B9A04`).
@@ -99,6 +106,9 @@ const PLAYER: u32 = 0xC;
 const MOTION: u32 = 0x10;
 const POS: u32 = 0xB0;
 const GROUND_OR_AIR: u32 = 0xE0;
+/// `facing_dir`; the floor line's index (`coll_data.floor.index`).
+const FACING: u32 = 0x2C;
+const FLOOR: u32 = 0x83C;
 /// The byte holding `x221D_b6` (entering, as a respawn), and that bit in its word at `x221C`.
 const X221C: u32 = 0x221C;
 const ENTERING: u32 = 0x0002_0000;
@@ -159,9 +169,12 @@ const TARGET: u32 = CPU + 0x44;
 const DESTINATION: u32 = CPU + 0x54;
 /// `GA_Ground`.
 const GROUND: u32 = 0;
-/// `GA_Air`; the VS computer kind; the recovery, attack, ranged and DI behaviors.
+/// `GA_Air`; the VS computer kind; the walk, standing, recovery, attack, ranged and DI
+/// behaviors.
 const AIR: u32 = 1;
 const VS: u32 = 4;
+const WALK: u32 = 1;
+const STAND: u32 = 10;
 const RECOVER: u32 = 4;
 const ATTACK: u32 = 2;
 const RANGED: u32 = 3;
@@ -264,6 +277,12 @@ enum Change {
     /// Its enemies entering the stage: the target closed in on (`ftCo_800A20A0`,
     /// `ftCo_800A80E4`).
     EnemyEntering,
+    /// On the ground at level 9 in `behavior` with its script ended, its enemies entering (as
+    /// under a Starman) on its floor `dx` ahead of it: the approach (behavior 1,
+    /// `ftCo_800AB224`: a jump at a target ahead within 37.5, else by chance a roll away from
+    /// it, `ftCo_800BA2E8`, by `ftCo_800A2A70`'s room to each end), standing's roll (behavior
+    /// 10, `ftCo_800BA674`) and the attack's (behavior 2).
+    Approach { behavior: u32, dx: f32 },
     /// Moved off camera, in the air: heading back (`ftCo_800AE7AC`).
     OffCamera,
     /// Moved off camera to the stage's right on the ground: heading for another island toward
@@ -415,6 +434,25 @@ fn change_frame(call: &mut Call, change: Change, index: usize) -> bool {
                 let w = peek_u32(call, e + X221C);
                 poke_u32(call, e + X221C, w | ENTERING);
             }
+            end_script(call, fp);
+        }
+        Change::Approach { behavior, dx } => {
+            if air {
+                return false;
+            }
+            let (x, y) = (peek_f32(call, fp + POS), peek_f32(call, fp + POS + 4));
+            let facing = peek_f32(call, fp + FACING);
+            let floor = peek_u32(call, fp + FLOOR);
+            for e in enemies(call, fp) {
+                let w = peek_u32(call, e + X221C);
+                poke_u32(call, e + X221C, w | ENTERING);
+                poke_f32(call, e + POS, x + facing * dx);
+                poke_f32(call, e + POS + 4, y);
+                poke_u32(call, e + GROUND_OR_AIR, GROUND);
+                poke_u32(call, e + FLOOR, floor);
+            }
+            poke_u32(call, fp + LEVEL, 9);
+            poke_u32(call, fp + BEHAVIOR, behavior);
             end_script(call, fp);
         }
         Change::OffCamera => {
@@ -729,6 +767,30 @@ fn changes() -> Vec<Change> {
         Change::StateAs(NESS, NS_PK_THUNDER, RANGED),
         Change::StateAs(YOSHI, YS_EGG_ROLL, RANGED),
         Change::EnemyEntering,
+        Change::Approach {
+            behavior: WALK,
+            dx: 10.0,
+        },
+        Change::Approach {
+            behavior: WALK,
+            dx: -10.0,
+        },
+        Change::Approach {
+            behavior: WALK,
+            dx: 33.0,
+        },
+        Change::Approach {
+            behavior: STAND,
+            dx: 10.0,
+        },
+        Change::Approach {
+            behavior: STAND,
+            dx: -10.0,
+        },
+        Change::Approach {
+            behavior: ATTACK,
+            dx: -10.0,
+        },
         Change::OffCamera,
         Change::OffCameraGround {
             target_under: false,

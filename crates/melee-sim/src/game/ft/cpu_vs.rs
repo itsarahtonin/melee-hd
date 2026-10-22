@@ -1,8 +1,8 @@
 //! A VS match's computer players' decision (`ftCo_0A01.c`, computer kind 4 and the kinds
 //! that share it, `ftCo_800B24B8`): off camera it heads back on (`ftCo_800AE7AC`); an enemy
-//! entering the stage is its target to close in on; else it targets the nearest enemy, goes
-//! for an item in reach or heads for the human enemy standing best, and picks its behavior
-//! ([`Running::cpu_choose_behavior`]).
+//! with a Starman or a hammer is its target to close in on; else it targets the nearest
+//! enemy, goes for an item in reach or heads for the human enemy standing best, and picks its
+//! behavior ([`Running::cpu_choose_behavior`]).
 
 use gekko_fp as fp;
 
@@ -389,7 +389,7 @@ impl Running<'_> {
     }
 
     /// The character's distance threshold (`Fighter_804D64FC->x20[kind]`).
-    fn cpu_distance_threshold(&self, kind: i32) -> f32 {
+    pub(super) fn cpu_distance_threshold(&self, kind: i32) -> f32 {
         let data = self.common_ptr(CPU_DATA);
         let table = self
             .data

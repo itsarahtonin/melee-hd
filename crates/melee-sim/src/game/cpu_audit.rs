@@ -59,7 +59,6 @@ pub struct Computer {
 
 /// `CharacterKind`s the gaps name.
 const ICE_CLIMBERS: u8 = 14;
-const YOSHI: u8 = 17;
 
 /// `StKind`s the gaps name.
 const ICICLE_MOUNTAIN: u16 = 25;
@@ -244,7 +243,6 @@ pub const UNCHECKED: &[&str] = &[
     "ftCo_800AA320",
     "ftCo_800AA42C",
     "ftCo_800AABC8",
-    "ftCo_800AB224",
     "ftCo_800ABA34",
     "ftCo_800AC7D4",
     "ftCo_800ADE48",
@@ -260,10 +258,6 @@ pub const UNCHECKED: &[&str] = &[
     "ftCo_800B885C",
     "ftCo_800B89CC",
 ];
-
-/// What makes a computer player's enemy a target to close in on (`ftCo_800A5CE0`): a Starman
-/// (`x221D_b6`) or a hammer (its music, `x2168`).
-const STAR_OR_HAMMER: &[i32] = &[10, 28];
 
 /// What a match with computer players reaches that isn't ported, task by task
 /// (docs/player.md, "CPU players: what's left").
@@ -282,31 +276,6 @@ pub const MISSING: &[CpuGap] = &[
         with: &[],
         stages: &[ICICLE_MOUNTAIN],
         items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player closing in on an enemy with a Starman or a hammer (ftCo_800AB224, ftCo_800BA674, ftCo_800BA2E8)",
-        covers: &[
-            "ftCo_800AB224 with an approach",
-            "ftCo_800BA674",
-            "ftCo_800BA2E8",
-            "ftCo_800A2A70",
-        ],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[],
-        items: Items::On(STAR_OR_HAMMER),
-    },
-    CpuGap {
-        what: "a shrunk computer Yoshi jumping back (ftCo_800A0508)",
-        covers: &["ftCo_800A0508"],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[YOSHI],
-        with: &[],
-        stages: &[],
-        items: Items::On(&[27]),
     },
 ];
 

@@ -2209,6 +2209,35 @@ pub fn cpu_items_set() -> Vec<Match> {
         .collect()
 }
 
+/// The CPU approach set: as the `cpu-items` set, a real level 9 CPU against a human, but with
+/// only the Starman, the Poison Mushroom and the hammer on at frequency high, so its enemy
+/// often has a Starman or a hammer, which makes it the CPU's target to close in on
+/// (`ftCo_800A5CE0`: the jump and rolls of `ftCo_800AB224`, `ftCo_800BA2E8`, `ftCo_800BA674`),
+/// and a CPU Yoshi is often shrunk (`ftCo_800A0508`); three-minute time matches, seeds
+/// `1F0F23xx`.
+pub fn cpu_approach_set() -> Vec<Match> {
+    // `It_Kind_Star`, `_DKinoko`, `_Hammer`.
+    const KINDS: [u8; 3] = [0x0A, 0x1B, 0x1C];
+    let matches: [(u8, u8, u16, &str); 4] = [
+        (YOSHI, FOX, BATTLEFIELD, "bf"),
+        (YOSHI, MARTH, FOUNTAIN_OF_DREAMS, "fod"),
+        (CAPTAIN, SHEIK, DREAM_LAND, "dl"),
+        (NESS, LUIGI, FINAL_DESTINATION, "fd"),
+    ];
+    matches
+        .iter()
+        .enumerate()
+        .map(|(i, &(c, human, stage, key))| Match {
+            name: Cow::Owned(format!("cpu-approach-{}-{key}", character_key(c))),
+            stage,
+            players: Cow::Owned(vec![p(human, 0), cpu(c, 0, 9)]),
+            seed: 0x1F0F_2301 + i as u32,
+            rules: Rules::Time { time_limit: 180 },
+            items: Items::only(FREQ_HIGH, &KINDS),
+        })
+        .collect()
+}
+
 /// A set's matches.
 pub type Set = fn() -> Vec<Match>;
 
@@ -2221,6 +2250,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("cpu-levels", cpu_levels_set),
     ("cpu-stages", cpu_stages_set),
     ("cpu-items", cpu_items_set),
+    ("cpu-approach", cpu_approach_set),
     ("held-extra", held_extra_set),
     ("barrel", barrel_set),
     ("leftovers", leftovers_set),
