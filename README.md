@@ -4,7 +4,7 @@ melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 r
 
 It's a personal project, and the next stage of [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs). ssbm-rs is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the reference it is checked against. No ssbm-rs code runs in the player.
 
-melee-hd is early: VS matches between a handful of characters on the six tournament stages and a few others, on Windows, from your own disc.
+melee-hd is early: VS matches with the whole cast on 27 of the 29 VS stages, items and computer players included, on Windows, from your own disc.
 
 ## How it differs
 
@@ -26,13 +26,13 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 | | |
 | --- | --- |
 | Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Peach, Link and Young Link, Pikachu and Pichu, Yoshi, Donkey Kong, Bowser, the Ice Climbers, Mewtwo, Mr. Game & Watch, Kirby (with every copy ability), each checked over whole matches |
-| Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams, Yoshi's Island N64, Brinstar, Brinstar Depths, Fourside, Great Bay, Green Greens, Kongo Jungle N64 (its barrel included), Hyrule Temple, Yoshi's Island, Jungle Japes, Kongo Jungle, Onett, Poké Floats, Princess Peach's Castle, Rainbow Cruise, Flat Zone, Mushroom Kingdom, Mushroom Kingdom II with Birdo, Icicle Mountain, Corneria, Venom (Brinstar, Great Bay, Hyrule Temple, Onett and Rainbow Cruise not with the Ice Climbers yet: the player offers only what nothing a match can reach stops, [the audit](docs/player.md#stages-the-player-offers)) |
+| Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams, Yoshi's Island N64, Brinstar, Brinstar Depths, Fourside, Great Bay, Green Greens, Kongo Jungle N64 (its barrel included), Hyrule Temple, Yoshi's Island, Jungle Japes, Kongo Jungle, Onett, Poké Floats, Princess Peach's Castle, Rainbow Cruise, Flat Zone, Mushroom Kingdom, Mushroom Kingdom II with Birdo, Icicle Mountain, Corneria, Venom (27 of the 29 VS stages, each offered with every character and with computer players: the player offers only what nothing a match can reach stops, [the audit](docs/player.md#stages-the-player-offers)) |
 | Whole matches compared | 97 matches, 1,273,534 ticks, every checked field equal after every tick, the original allocator's heap included: thirty-three CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus; twenty-two for Kirby's copies) and sixty-four real Slippi replays (Slippi 3.19's, and ranked 3.14, 3.16 and 3.17 replays) |
 | Player | A VS match in a window, with a launcher for picking characters, stage, stocks, time and items (an item kind offered only once nothing it reaches is unported: [the items it offers](docs/player.md#items-the-player-offers)), each match saved as a Slippi replay (`.slp`) that melee-hd plays back to the same match. Frames are identical to ssbm-rs's on every checked frame except Slippi's replay name plates, which melee-hd's VS doesn't draw; the audio mix is sample-exact with ssbm-rs's on the matches checked |
-| Functions | 10,839 of the 19,827 in ssbm-rs's symbol table ported and checked, 201 replaced by native subsystems, 131 dead ([port ledger](docs/port-ledger.md)) |
+| Functions | 12,467 of the 19,827 in ssbm-rs's symbol table ported and checked, 204 replaced by native subsystems, 233 dead ([port ledger](docs/port-ledger.md)) |
 | Speed | The simulation runs a match about 16.7 times as fast as headless Dolphin on one core; a snapshot is about 1.2 MB, cloned in about 0.15 ms and restored in about 0.03 ms ([performance](docs/performance.md)) |
 
-Not yet: the other characters and stages, menus and every mode other than VS, items spawning during a match beyond the kinds the oracle's three items-on replays reach (the launcher offers every kind, but not with the Ice Climbers, whose Nana doesn't handle items yet), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
+Not yet: Big Blue and Mute City, Celebi (its draw reads the memory card's trophy records, which waits for native saves), menus and every mode other than VS, testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
 
 ## Build and play
 
