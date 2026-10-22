@@ -31,16 +31,22 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--stage" => stage = it.next().and_then(|s| s.parse::<u16>().ok()),
-            // PORT:CKIND, the port from 0, a human player in the costume and team defaults.
+            // PORT:CKIND[:LEVEL], the port from 0, in the costume and team defaults: a human
+            // player, or a computer player at LEVEL as the character select screen sets it.
             "--player" => {
-                let spec = it.next().expect("--player PORT:CKIND");
-                let (port, ckind) = spec.split_once(':').expect("--player PORT:CKIND");
+                let spec = it.next().expect("--player PORT:CKIND[:LEVEL]");
+                let mut parts = spec.split(':');
+                let port = parts.next().expect("--player PORT:CKIND[:LEVEL]");
+                let ckind = parts.next().expect("--player PORT:CKIND[:LEVEL]");
+                let level = parts
+                    .next()
+                    .map(|l| l.parse().expect("--player's CPU level"));
                 players.push(Player {
                     character: ckind.parse().expect("--player's CharacterKind"),
                     costume: 0,
                     port: port.parse().expect("--player's port"),
-                    kind: 0,
-                    cpu_level: 1,
+                    kind: u8::from(level.is_some()),
+                    cpu_level: level.unwrap_or(1),
                     team: 0,
                 });
             }
@@ -66,16 +72,10 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
     }
     let (&[trace_path], Some(stage)) = (&pos[..], stage) else {
         eprintln!(
-            "usage: melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND... [--item-freq F] [--ticks N]"
+            "usage: melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"
         );
         return ExitCode::from(2);
     };
-    let mut settings = Settings::vs_with(stage, &players, &GameRules::default(), &prefs);
-    let Some(layout) = settings.heap.as_mut() else {
-        eprintln!("the match runs without the allocator model (no Ice Climber)");
-        return ExitCode::FAILURE;
-    };
-    layout.lo += shift;
     // ssbm-run computes a run without a replay in the hardware's floats.
     melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     let disc_path = std::env::var("SSBM_DISC").expect("SSBM_DISC names the disc");
@@ -97,6 +97,20 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
         eprintln!("{trace_path}: no tick runs a match's first, or no memory in the trace");
         return ExitCode::FAILURE;
     };
+    // Each player's costume as the menus left it in its player block (`StaticPlayer` 0x44): the
+    // character select screen gives a second player of a character another one.
+    for p in &mut players {
+        let at = sym("player_slots") + 0xE90 * u32::from(p.port) + 0x44;
+        p.costume = (image.u32(at & !3) >> (8 * (3 - (at & 3)))) as u8;
+    }
+    let mut settings = Settings::vs_with(stage, &players, &GameRules::default(), &prefs);
+    let Some(layout) = settings.heap.as_mut() else {
+        eprintln!(
+            "the match runs without the allocator model (no Ice Climber, computer player or Super Scope)"
+        );
+        return ExitCode::FAILURE;
+    };
+    layout.lo += shift;
     settings.seed = seed;
     // The save data's unlocks, which the stage's music choice reads (on some stages it decides
     // whether that draws from the seed): the trace's console runs no unlock codes.
@@ -131,6 +145,31 @@ pub fn vs_heap(args: &[&str]) -> ExitCode {
         return ExitCode::FAILURE;
     }
     println!("the fighters' addresses, the allocator model's and the trace's: {modelled:x?}");
+    // Each player's character and kind in its player block (`StaticPlayer` 0x4 and 0x8), and
+    // each computer player's level (its fighter's `x1A88` `level`), which the menus chose: the
+    // settings must name the same.
+    let slot = |port: u8| sym("player_slots") + 0xE90 * u32::from(port);
+    for p in &players {
+        let (ckind, pkind) = (image.u32(slot(p.port) + 4), image.u32(slot(p.port) + 8));
+        if (ckind, pkind) != (u32::from(p.character), u32::from(p.kind)) {
+            println!(
+                "port {}: the trace's player is character {ckind}, kind {pkind}; the settings' {}, {}",
+                p.port, p.character, p.kind
+            );
+            return ExitCode::FAILURE;
+        }
+        if p.kind == 1 {
+            let fp = image.u32(image.u32(slot(p.port) + 0xB0) + 0x2C);
+            let level = image.u32(fp + 0x1A98);
+            if level != u32::from(p.cpu_level) {
+                println!(
+                    "port {}: the trace's computer player is level {level}; the settings' {}",
+                    p.port, p.cpu_level
+                );
+                return ExitCode::FAILURE;
+            }
+        }
+    }
     // Every controller connected and at rest, as the trace's run held them.
     let pads = [PadStatus {
         err: ERR_NONE,
