@@ -35,6 +35,7 @@ pub const REFLECTED: u32 = 0x802C_13CC;
 pub const CLANKED: u32 = 0x802C_1400;
 #[doc(alias = "itDrMarioPill_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_145C;
+#[doc(alias = "itDrMarioPill_Absorbed")]
 pub const ABSORBED: u32 = 0x802C_14B8;
 #[doc(alias = "itDrMarioPill_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802C_1514;

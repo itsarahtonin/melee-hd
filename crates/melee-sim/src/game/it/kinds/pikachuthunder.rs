@@ -25,8 +25,10 @@ pub const ANIM2: u32 = 0x802B_2340;
 pub const DESTROYED: u32 = 0x802B_202C;
 #[doc(alias = "itPikachuThunder_Logic39_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802B_2508;
+#[doc(alias = "itPikachuThunder_Logic39_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802B_2510;
 pub const CLANKED: u32 = 0x802B_2518;
+#[doc(alias = "itPikachuThunder_Logic39_Absorbed")]
 pub const ABSORBED: u32 = 0x802B_2520;
 pub const EVT_UNK: u32 = 0x802B_2528;
 

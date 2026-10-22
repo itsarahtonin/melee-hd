@@ -392,7 +392,7 @@ fn destroyed(r: &mut Running, gobj: GObjId) {
 /// `it_2725_Logic106_DmgDealt` (and `_Clanked`, `_Absorbed`, `_HitShield`): it ends.
 #[doc(alias = "it_2725_Logic106_DmgDealt")]
 #[doc(alias = "it_2725_Logic106_Clanked")]
-// Ports `it_2725_Logic106_Absorbed`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic106_Absorbed")]
 #[doc(alias = "it_2725_Logic106_HitShield")]
 fn end(r: &mut Running, gobj: GObjId) -> bool {
     release(r, gobj);
@@ -400,7 +400,7 @@ fn end(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `it_2725_Logic106_Reflected`: turned around.
-// Ports `it_2725_Logic106_Reflected`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic106_Reflected")]
 fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.facing_dir = mem(fp::fneg(reg(ip.facing_dir)));
@@ -412,7 +412,7 @@ fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `it_2725_Logic106_ShieldBounced`: mirrored off the shield.
-// Ports `it_2725_Logic106_ShieldBounced`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic106_ShieldBounced")]
 fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     let n = ip.xC58;
