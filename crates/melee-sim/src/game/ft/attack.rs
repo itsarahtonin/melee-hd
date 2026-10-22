@@ -2126,6 +2126,7 @@ impl Running<'_> {
     #[doc(alias = "grOnett_801E5760")]
     #[doc(alias = "grPura_802130C0")]
     #[doc(alias = "grRCruise_80201C50")]
+    #[doc(alias = "grBigBlue_801EFC0C")]
     pub(crate) fn line_hazard(&mut self, line: i32) -> bool {
         self.line_hazard_desc(line).is_some()
     }
@@ -2159,7 +2160,8 @@ impl Running<'_> {
                     || f.0 == 0x801D_CCB8
                     || f.0 == 0x801E_5760
                     || f.0 == 0x8021_30C0
-                    || f.0 == 0x8020_1C50 =>
+                    || f.0 == 0x8020_1C50
+                    || f.0 == 0x801E_FC0C =>
             {
                 None
             }

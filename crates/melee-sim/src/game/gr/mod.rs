@@ -6,6 +6,7 @@
 
 pub mod anime;
 pub mod battle;
+pub mod bigblue;
 pub mod data;
 pub mod datfiles;
 pub mod display;
@@ -93,6 +94,8 @@ pub const GR_KIND_OLDYOSHI: i32 = 29;
 pub const GR_KIND_OLDKONGO: i32 = 30;
 /// `Gr_Kind_MuteCity`, Mute City.
 pub const GR_KIND_MUTECITY: i32 = 18;
+/// `Gr_Kind_BigBlue`, Big Blue.
+pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Last`, Final Destination.
@@ -255,6 +258,10 @@ pub struct Globals {
     pub mutecity_yakumono: Option<DataRef>,
     /// Mute City's statics besides it.
     pub mutecity: mutecity::Globals,
+    /// Big Blue's `yakumono_param` (`grBb_YakumonoParam`).
+    pub bigblue_yakumono: Option<DataRef>,
+    /// Big Blue's statics besides it.
+    pub bigblue: bigblue::Globals,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
     pub game_mode: u8,
     /// The players' start points as `grLib_801C9A10` last measured them (`grLib_8049EF58`).
@@ -383,6 +390,11 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
         (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
+        (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
+        (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
+        (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
+        (GR_KIND_BIGBLUE, 35) => VarsKind::BigBlueFlyer,
+        (GR_KIND_BIGBLUE, 36) => VarsKind::BigBlueRelay,
         _ => VarsKind::Bytes,
     }
 }

@@ -65,6 +65,7 @@ const YOSHI: u8 = 17;
 const BRINSTAR: u16 = 6;
 const RAINBOW_CRUISE: u16 = 11;
 const GREAT_BAY: u16 = 13;
+const BIG_BLUE: u16 = 24;
 
 /// The gaps a match reaches with these VS computer players, these characters among all its
 /// players (humans and computers; the Ice Climbers bring Nana), on `stage`, with these item
@@ -156,7 +157,7 @@ const ISLAND_END: &str = "the VS decision hands its target search's leftover (th
 const NANA_FOLLOWING: &str = "on the frame Nana stops following Popo her behavior is her fallback (x1C, walking), not the DI";
 const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a behavior other than the DI, which alone reads it";
 const NANA_REGROUP: &str = "only Nana's way back runs the behavior pick without its frame followed, and her decision replaces the register it leaves";
-const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue, Mushroom Kingdom, Corneria and Venom, none of them on the roster";
+const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue (its gap), Mushroom Kingdom, Corneria and Venom, the last three not on the roster";
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
 const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
 const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
@@ -299,6 +300,22 @@ pub const MISSING: &[CpuGap] = &[
         cpu: &[],
         with: &[],
         stages: &[RAINBOW_CRUISE],
+        items: Items::Off,
+    },
+    CpuGap {
+        what: "a computer player on Big Blue: its moving edges (ftCo_800A229C, ftCo_800A8210) and the cars' floors' leftover (ftCo_800A1B38)",
+        covers: &[
+            "ftCo_800A229C on a moving stage",
+            "ftCo_800A8210",
+            "ftCo_800A6A98",
+            "ftCo_800A6D2C",
+            "a register left by ftCo_800A1B38",
+        ],
+        who: Who::Vs,
+        levels: &[],
+        cpu: &[],
+        with: &[],
+        stages: &[BIG_BLUE],
         items: Items::Off,
     },
     CpuGap {

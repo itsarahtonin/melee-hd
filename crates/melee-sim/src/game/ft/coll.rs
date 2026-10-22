@@ -268,6 +268,30 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     super::super::gr::rcruise::plank_touched(self.grounds, g, joint_id, kind);
                 }
             }
+            super::super::gr::bigblue::PLATFORM_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::bigblue::platform_touched(
+                        self.objs,
+                        &mut self.grounds[g.0],
+                        joint_id,
+                        coll,
+                        x50,
+                    );
+                }
+            }
+            super::super::gr::bigblue::CAR_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let param = self.stage_maps.gr.bigblue_yakumono;
+                    super::super::gr::bigblue::car_touched(
+                        &mut self.grounds[g.0],
+                        param,
+                        self.data,
+                        joint_id,
+                        coll,
+                        kind,
+                    );
+                }
+            }
             super::super::gr::mutecity::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll

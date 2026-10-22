@@ -80,6 +80,11 @@ pub enum VarsKind {
     MuteCity,
     MuteCity2,
     MuteCityCars,
+    BigBlueManager,
+    BigBlueCars,
+    BigBlueRoad,
+    BigBlueFlyer,
+    BigBlueRelay,
 }
 
 /// `union GroundVars`.
@@ -161,6 +166,16 @@ pub enum GroundVars {
     MuteCity2(MuteCity2Vars),
     /// `grMuteCity_GroundVars::xC4` alone: the cars (map 2), their horns' wait.
     MuteCityCars(MuteCityCarsVars),
+    /// `grBigBlue_ManagerVars`: Big Blue's three flying platforms (map 32).
+    BigBlueManager(BigBlueManagerVars),
+    /// `grBigBlue_CarVars`: the four big cars driving on the road (map 33).
+    BigBlueCars(BigBlueCarsVars),
+    /// `grBigBlue_RoadVars`: the road racing under the stage (map 34).
+    BigBlueRoad(BigBlueRoadVars),
+    /// The Falcon Flyer (map 35).
+    BigBlueFlyer(BigBlueFlyerVars),
+    /// `grBigBlue_PlatformVars`: the relay platform (map 36).
+    BigBlueRelay(BigBlueRelayVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1112,6 +1127,314 @@ pub struct MuteCity2Vars {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct MuteCityCarsVars {
     pub xC4: i16,
+}
+
+/// One of Big Blue's flying platforms (`grBigBlue_GroundData`, 0x54 bytes): which of the
+/// manager's joints it moves (`index`), its state (`x1`: 0 waiting, 1 counting down, 2 placing,
+/// 3 flying), its direction (`x2`, 1 right or -1 left), a countdown (`x4`), its height over
+/// the road (`x8`), its target turn, its last height and its target height (`xC`), its swing
+/// (`x18`: unused, the push's direction and its turn speed), the fighters' pushes on its two
+/// sides this tick (`x24`, `x28`), the landings this tick and last (`x2C`, `x30`), its dip's
+/// stage (`x34`), its place (`x38`), its speed (`x44`) and the item it carries (`x50`, an
+/// `Item_GObj*` stored as an integer). `x3` nothing writes.
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBluePlatform {
+    pub index: u8,
+    pub x1: u8,
+    pub x2: i8,
+    pub x3: u8,
+    pub x4: i32,
+    pub x8: f32,
+    pub xC: crate::vec::Vec3,
+    pub x18: crate::vec::Vec3,
+    pub x24: f32,
+    pub x28: f32,
+    pub x2C: i32,
+    pub x30: i32,
+    pub x34: i32,
+    pub x38: crate::vec::Vec3,
+    pub x44: crate::vec::Vec3,
+    pub x50: Option<GObjId>,
+}
+
+/// `grBigBlue_ManagerVars` of the flying platforms (map 32): the platforms placed since the
+/// last relay platform (`flags`), the events other objects post (`event`: 0 the Falcon Flyer has
+/// passed, 1 it is about to come, 2 the relay platform may come), the platforms' joints, the
+/// joint the last event named (`event_extra`) and the three platforms.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueManagerVars {
+    pub flags: u32,
+    pub event: [u32; 3],
+    pub jobjs: [Option<crate::hsd::jobj::JObjId>; 3],
+    pub event_extra: Option<crate::hsd::jobj::JObjId>,
+    pub data: [BigBluePlatform; 3],
+}
+
+/// One of Big Blue's big cars (`grBigBlue_CarLane`, 0x40 bytes): its status word (`x0`: the
+/// state in bits 15 to 10, whether it rides airborne in bit 9, its collision slot in bits 8 to
+/// 4), its target and offset along the road and its place (`target`, `delta`, `pos`), its
+/// engine's volume (`alpha`), a countdown (`threshold`), its fall's speed and depth (`gravity`,
+/// `height`), its speed and acceleration, its bob's phase and amplitude (`rotation`,
+/// `amplitude`), its vertical speed in the air (`angular_velocity`). `x2`, `x3` and `x110`
+/// nothing writes.
+#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueCar {
+    pub x0: u16,
+    pub x2: i8,
+    pub x3: u8,
+    pub target: f32,
+    pub delta: f32,
+    pub pos: crate::vec::Vec3,
+    pub alpha: f32,
+    pub threshold: i32,
+    pub gravity: f32,
+    pub height: f32,
+    pub velocity: f32,
+    pub accel: f32,
+    pub rotation: f32,
+    pub amplitude: f32,
+    pub angular_velocity: f32,
+    pub x110: f32,
+}
+
+impl BigBlueCar {
+    /// Its state (`x0.x0.state`).
+    pub fn state(&self) -> u32 {
+        u32::from(self.x0 >> 10) & 0x3F
+    }
+
+    pub fn set_state(&mut self, v: u32) {
+        self.x0 = self.x0 & !(0x3F << 10) | ((v as u16) & 0x3F) << 10;
+    }
+
+    /// Whether it rides in the air off the road (`x0` bit 9, `grBb_ByteBits::b6`).
+    pub fn airborne(&self) -> bool {
+        self.x0 >> 9 & 1 != 0
+    }
+
+    pub fn set_airborne(&mut self, on: bool) {
+        self.x0 = self.x0 & !(1 << 9) | u16::from(on) << 9;
+    }
+
+    /// Its collision slot (`x0.x0_1.collision_slot`).
+    pub fn slot(&self) -> usize {
+        usize::from(self.x0 >> 4 & 0x1F)
+    }
+
+    pub fn set_slot(&mut self, v: u32) {
+        self.x0 = self.x0 & !(0x1F << 4) | ((v as u16) & 0x1F) << 4;
+    }
+}
+
+/// `grBigBlue_CarVars` of the big cars (map 33): the blocks its setup allocates from the heap,
+/// with their addresses (`collision_jobjs`, the thirty cars' collision joints, and `ranks`,
+/// each slot's use: 0 free on the right, 2 free on the left, 1 driving), the wait before the
+/// next car (`spawn_timer`) and the four cars. `flags` nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueCarsVars {
+    pub flags: u32,
+    pub collision_jobjs: Vec<Option<crate::hsd::jobj::JObjId>>,
+    pub collision_jobjs_addr: u32,
+    pub ranks: Vec<u8>,
+    pub ranks_addr: u32,
+    pub spawn_timer: i16,
+    pub cars: [BigBlueCar; 4],
+}
+
+/// `grBigBlue_RoadVars` of the road (map 34): its bit fields (`flags`: bit 31 waiting for the
+/// match's start, 30 the road has fallen away, 29 the loop's turn, the previous, current and next
+/// pieces in bits 28 to 22, 21 to 15 and 14 to 8, the loop's stage in bits 7 to 4), its place
+/// this tick and last, its drift, its fall's speed, its climb or dive (`direction`) and its turn.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRoadVars {
+    pub flags: u32,
+    pub position: crate::vec::Vec3,
+    pub previous_position: crate::vec::Vec3,
+    pub drift: crate::vec::Vec3,
+    pub lateral_drift: f32,
+    pub direction: i16,
+    pub rotation: f32,
+}
+
+impl BigBlueRoadVars {
+    fn bit(&self, n: u32) -> bool {
+        self.flags >> n & 1 != 0
+    }
+
+    fn set_bit(&mut self, n: u32, on: bool) {
+        self.flags = self.flags & !(1 << n) | u32::from(on) << n;
+    }
+
+    /// `x0_2.b0` (the start hook's `x0_1.x0_b1`): waiting for the match's start.
+    pub fn waiting(&self) -> bool {
+        self.bit(31)
+    }
+
+    pub fn set_waiting(&mut self, on: bool) {
+        self.set_bit(31, on);
+    }
+
+    /// `x0_2.b1`: the road found no ground and drifts down.
+    pub fn falling(&self) -> bool {
+        self.bit(30)
+    }
+
+    pub fn set_falling(&mut self, on: bool) {
+        self.set_bit(30, on);
+    }
+
+    /// `x0_2.b2`: on the loop, turning with the ground.
+    pub fn looping(&self) -> bool {
+        self.bit(29)
+    }
+
+    pub fn set_looping(&mut self, on: bool) {
+        self.set_bit(29, on);
+    }
+
+    fn field(&self, shift: u32, bits: u32) -> u32 {
+        self.flags >> shift & ((1 << bits) - 1)
+    }
+
+    fn set_field(&mut self, shift: u32, bits: u32, v: u32) {
+        let mask = ((1 << bits) - 1) << shift;
+        self.flags = self.flags & !mask | (v << shift) & mask;
+    }
+
+    pub fn prev_lane(&self) -> u32 {
+        self.field(22, 7)
+    }
+
+    pub fn set_prev_lane(&mut self, v: u32) {
+        self.set_field(22, 7, v);
+    }
+
+    pub fn cur_lane(&self) -> u32 {
+        self.field(15, 7)
+    }
+
+    pub fn set_cur_lane(&mut self, v: u32) {
+        self.set_field(15, 7, v);
+    }
+
+    pub fn next_lane(&self) -> u32 {
+        self.field(8, 7)
+    }
+
+    pub fn set_next_lane(&mut self, v: u32) {
+        self.set_field(8, 7, v);
+    }
+
+    /// `nibble_hi`: the loop's stage.
+    pub fn loop_stage(&self) -> u32 {
+        self.field(4, 4)
+    }
+
+    pub fn set_loop_stage(&mut self, v: u32) {
+        self.set_field(4, 4, v);
+    }
+}
+
+/// The Falcon Flyer (map 35): its state (`xC4`, a byte: 0 waiting, 1 coming, 2 waiting over the
+/// stage, 3 leaving), a countdown (`xC8`), its target turn and height (`xCC`, `xD0`) and its
+/// speed (`xD8`). `xD4` nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueFlyerVars {
+    pub xC4: u8,
+    pub xC8: i32,
+    pub xCC: f32,
+    pub xD0: f32,
+    pub xD4: f32,
+    pub xD8: f32,
+}
+
+/// `grBigBlue_PlatformVars` of the relay platform (map 36): its state and direction (`xC4`'s
+/// first two bytes), its countdowns (`xC8_timer` before it comes, `xCC_timer` and `xD0_timer`
+/// before its next speeds), its height over the road (`height_offset`), its target height, its
+/// speeds (`velocity.y` sideways, `velocity.z` up) and `xEC`. `xD8` and `velocity.x` nothing
+/// writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRelayVars {
+    pub xC4: u32,
+    pub xC8_timer: i32,
+    pub xCC_timer: i32,
+    pub xD0_timer: i32,
+    pub height_offset: f32,
+    pub xD8: f32,
+    pub target_y: f32,
+    pub velocity: crate::vec::Vec3,
+    pub xEC: f32,
+}
+
+impl BigBlueRelayVars {
+    /// Its state (`x0_s.x0`).
+    pub fn state(&self) -> i8 {
+        (self.xC4 >> 24) as i8
+    }
+
+    pub fn set_state(&mut self, v: i8) {
+        self.xC4 = self.xC4 & 0x00FF_FFFF | u32::from(v as u8) << 24;
+    }
+
+    /// Its direction (`x0_s.x1`).
+    pub fn dir(&self) -> i8 {
+        (self.xC4 >> 16) as i8
+    }
+
+    pub fn set_dir(&mut self, v: i8) {
+        self.xC4 = self.xC4 & 0xFF00_FFFF | u32::from(v as u8) << 16;
+    }
+}
+
+/// A Big Blue platform read from memory at `b`.
+fn bigblue_platform(m: &Mem, b: u32, cx: &mut dyn Cx) -> BigBluePlatform {
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+    BigBluePlatform {
+        index: m.u8(b),
+        x1: m.u8(b + 1),
+        x2: m.u8(b + 2) as i8,
+        x3: m.u8(b + 3),
+        x4: m.u32(b + 4) as i32,
+        x8: f(b + 8),
+        xC: v3(b + 0xC),
+        x18: v3(b + 0x18),
+        x24: f(b + 0x24),
+        x28: f(b + 0x28),
+        x2C: m.u32(b + 0x2C) as i32,
+        x30: m.u32(b + 0x30) as i32,
+        x34: m.u32(b + 0x34) as i32,
+        x38: v3(b + 0x38),
+        x44: v3(b + 0x44),
+        x50: cx.import_handle("GObjId", m.u32(b + 0x50)).map(GObjId),
+    }
+}
+
+/// A Big Blue car read from memory at `b`.
+fn bigblue_car(m: &Mem, b: u32) -> BigBlueCar {
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    BigBlueCar {
+        x0: m.u16(b),
+        x2: m.u8(b + 2) as i8,
+        x3: m.u8(b + 3),
+        target: f(b + 4),
+        delta: f(b + 8),
+        pos: crate::vec::Vec3::new(f(b + 0xC), f(b + 0x10), f(b + 0x14)),
+        alpha: f(b + 0x18),
+        threshold: m.u32(b + 0x1C) as i32,
+        gravity: f(b + 0x20),
+        height: f(b + 0x24),
+        velocity: f(b + 0x28),
+        accel: f(b + 0x2C),
+        rotation: f(b + 0x30),
+        amplitude: f(b + 0x34),
+        angular_velocity: f(b + 0x38),
+        x110: f(b + 0x3C),
+    }
+}
+
+fn v3_bits(v: &crate::vec::Vec3) -> [u32; 3] {
+    [v.x, v.y, v.z].map(f32::to_bits)
 }
 
 /// Where the wind sources' pool's address is kept (`lb_804D63A8`), and a source's size.
@@ -2155,6 +2478,81 @@ impl GroundVars {
             }),
             VarsKind::MuteCityCars => GroundVars::MuteCityCars(MuteCityCarsVars {
                 xC4: m.u16(at) as i16,
+            }),
+            VarsKind::BigBlueManager => {
+                let j = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::BigBlueManager(BigBlueManagerVars {
+                    flags: m.u32(at),
+                    event: [m.u32(at + 4), m.u32(at + 8), m.u32(at + 0xC)],
+                    jobjs: [j(cx, at + 0x10), j(cx, at + 0x14), j(cx, at + 0x18)],
+                    event_extra: j(cx, at + 0x1C),
+                    data: [
+                        bigblue_platform(m, at + 0x20, cx),
+                        bigblue_platform(m, at + 0x74, cx),
+                        bigblue_platform(m, at + 0xC8, cx),
+                    ],
+                })
+            }
+            VarsKind::BigBlueCars => {
+                let (ja, ra) = (m.u32(at + 4), m.u32(at + 8));
+                let collision_jobjs = if ja == 0 {
+                    Vec::new()
+                } else {
+                    (0..30u32)
+                        .map(|i| {
+                            cx.import_handle("JObjId", m.u32(ja + 4 * i))
+                                .map(crate::hsd::jobj::JObjId)
+                        })
+                        .collect()
+                };
+                let ranks = if ra == 0 {
+                    Vec::new()
+                } else {
+                    (0..30u32).map(|i| m.u8(ra + i)).collect()
+                };
+                GroundVars::BigBlueCars(BigBlueCarsVars {
+                    flags: m.u32(at),
+                    collision_jobjs,
+                    collision_jobjs_addr: ja,
+                    ranks,
+                    ranks_addr: ra,
+                    spawn_timer: m.u16(at + 0xC) as i16,
+                    cars: std::array::from_fn(|i| bigblue_car(m, at + 0x10 + 0x40 * i as u32)),
+                })
+            }
+            VarsKind::BigBlueRoad => {
+                let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+                GroundVars::BigBlueRoad(BigBlueRoadVars {
+                    flags: m.u32(at),
+                    position: v3(at + 4),
+                    previous_position: v3(at + 0x10),
+                    drift: v3(at + 0x1C),
+                    lateral_drift: f(at + 0x28),
+                    direction: m.u16(at + 0x2C) as i16,
+                    rotation: f(at + 0x34),
+                })
+            }
+            VarsKind::BigBlueFlyer => GroundVars::BigBlueFlyer(BigBlueFlyerVars {
+                xC4: m.u8(at),
+                xC8: m.u32(at + 4) as i32,
+                xCC: f(at + 8),
+                xD0: f(at + 0xC),
+                xD4: f(at + 0x10),
+                xD8: f(at + 0x14),
+            }),
+            VarsKind::BigBlueRelay => GroundVars::BigBlueRelay(BigBlueRelayVars {
+                xC4: m.u32(at),
+                xC8_timer: m.u32(at + 4) as i32,
+                xCC_timer: m.u32(at + 8) as i32,
+                xD0_timer: m.u32(at + 0xC) as i32,
+                height_offset: f(at + 0x10),
+                xD8: f(at + 0x14),
+                target_y: f(at + 0x18),
+                velocity: crate::vec::Vec3::new(f(at + 0x1C), f(at + 0x20), f(at + 0x24)),
+                xEC: f(at + 0x28),
             }),
             VarsKind::Yorster => GroundVars::Yorster(YorsterVars {
                 xC4: m.u32(at) as i32,
@@ -3338,6 +3736,152 @@ impl GroundVars {
         }
     }
 
+    /// The variables as Big Blue's flying platforms' (`grBigBlue_ManagerVars`), likewise: a
+    /// block holding pointers converts only if they are null.
+    pub fn bigblue_manager(&mut self) -> &mut BigBlueManagerVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            for at in [0x10, 0x14, 0x18, 0x1C, 0x70, 0xC4, 0x118] {
+                b.null(at);
+            }
+            let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            let plat = |a: usize| {
+                let w = b.u32(a);
+                BigBluePlatform {
+                    index: (w >> 24) as u8,
+                    x1: (w >> 16) as u8,
+                    x2: (w >> 8) as i8,
+                    x3: w as u8,
+                    x4: b.u32(a + 4) as i32,
+                    x8: b.f32(a + 8),
+                    xC: v3(a + 0xC),
+                    x18: v3(a + 0x18),
+                    x24: b.f32(a + 0x24),
+                    x28: b.f32(a + 0x28),
+                    x2C: b.u32(a + 0x2C) as i32,
+                    x30: b.u32(a + 0x30) as i32,
+                    x34: b.u32(a + 0x34) as i32,
+                    x38: v3(a + 0x38),
+                    x44: v3(a + 0x44),
+                    x50: None,
+                }
+            };
+            *self = GroundVars::BigBlueManager(BigBlueManagerVars {
+                flags: b.u32(0),
+                event: [b.u32(4), b.u32(8), b.u32(0xC)],
+                jobjs: [None; 3],
+                event_extra: None,
+                data: [plat(0x20), plat(0x74), plat(0xC8)],
+            });
+        }
+        match self {
+            GroundVars::BigBlueManager(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grBigBlue_ManagerVars"),
+        }
+    }
+
+    /// The variables as Big Blue's big cars' (`grBigBlue_CarVars`), likewise.
+    pub fn bigblue_cars(&mut self) -> &mut BigBlueCarsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            b.null(4);
+            b.null(8);
+            let car = |a: usize| {
+                let w = b.u32(a);
+                BigBlueCar {
+                    x0: (w >> 16) as u16,
+                    x2: (w >> 8) as i8,
+                    x3: w as u8,
+                    target: b.f32(a + 4),
+                    delta: b.f32(a + 8),
+                    pos: crate::vec::Vec3::new(b.f32(a + 0xC), b.f32(a + 0x10), b.f32(a + 0x14)),
+                    alpha: b.f32(a + 0x18),
+                    threshold: b.u32(a + 0x1C) as i32,
+                    gravity: b.f32(a + 0x20),
+                    height: b.f32(a + 0x24),
+                    velocity: b.f32(a + 0x28),
+                    accel: b.f32(a + 0x2C),
+                    rotation: b.f32(a + 0x30),
+                    amplitude: b.f32(a + 0x34),
+                    angular_velocity: b.f32(a + 0x38),
+                    x110: b.f32(a + 0x3C),
+                }
+            };
+            *self = GroundVars::BigBlueCars(BigBlueCarsVars {
+                flags: b.u32(0),
+                spawn_timer: (b.u32(0xC) >> 16) as i16,
+                cars: std::array::from_fn(|i| car(0x10 + 0x40 * i)),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::BigBlueCars(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grBigBlue_CarVars"),
+        }
+    }
+
+    /// The variables as Big Blue's road's (`grBigBlue_RoadVars`), likewise.
+    pub fn bigblue_road(&mut self) -> &mut BigBlueRoadVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            *self = GroundVars::BigBlueRoad(BigBlueRoadVars {
+                flags: b.u32(0),
+                position: v3(4),
+                previous_position: v3(0x10),
+                drift: v3(0x1C),
+                lateral_drift: b.f32(0x28),
+                direction: (b.u32(0x2C) >> 16) as i16,
+                rotation: b.f32(0x34),
+            });
+        }
+        match self {
+            GroundVars::BigBlueRoad(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grBigBlue_RoadVars"),
+        }
+    }
+
+    /// The variables as the Falcon Flyer's, likewise.
+    pub fn bigblue_flyer(&mut self) -> &mut BigBlueFlyerVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::BigBlueFlyer(BigBlueFlyerVars {
+                xC4: b.0[0],
+                xC8: b.u32(4) as i32,
+                xCC: b.f32(8),
+                xD0: b.f32(0xC),
+                xD4: b.f32(0x10),
+                xD8: b.f32(0x14),
+            });
+        }
+        match self {
+            GroundVars::BigBlueFlyer(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not the Falcon Flyer's"),
+        }
+    }
+
+    /// The variables as Big Blue's relay platform's (`grBigBlue_PlatformVars`), likewise.
+    pub fn bigblue_relay(&mut self) -> &mut BigBlueRelayVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::BigBlueRelay(BigBlueRelayVars {
+                xC4: b.u32(0),
+                xC8_timer: b.u32(4) as i32,
+                xCC_timer: b.u32(8) as i32,
+                xD0_timer: b.u32(0xC) as i32,
+                height_offset: b.f32(0x10),
+                xD8: b.f32(0x14),
+                target_y: b.f32(0x18),
+                velocity: crate::vec::Vec3::new(b.f32(0x1C), b.f32(0x20), b.f32(0x24)),
+                xEC: b.f32(0x28),
+            });
+        }
+        match self {
+            GroundVars::BigBlueRelay(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grBigBlue_PlatformVars"),
+        }
+    }
+
     /// The variables as `grNBa_BG_Vars`, likewise.
     pub fn battle_bg(&mut self) -> &mut BattleBgVars {
         if let GroundVars::Bytes(b) = self {
@@ -4192,6 +4736,203 @@ impl Mirror for GroundVars {
                         &format!("{path}.mutecity.xC4"),
                         format!("{}", v.xC4),
                         format!("{theirs}"),
+                    );
+                }
+            }
+            GroundVars::BigBlueManager(v) => {
+                let ours = (v.flags, v.event);
+                let theirs = (m.u32(at), [m.u32(at + 4), m.u32(at + 8), m.u32(at + 0xC)]);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.manager"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (k, j) in v.jobjs.iter().enumerate() {
+                    let p = format!("{path}.bigblue.manager.jobjs[{k}]");
+                    cx.compare_handle(
+                        &p,
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + 0x10 + 4 * k as u32),
+                    );
+                }
+                let p = format!("{path}.bigblue.manager.event_extra");
+                cx.compare_handle(&p, "JObjId", v.event_extra.map(|j| j.0), m.u32(at + 0x1C));
+                for (k, d) in v.data.iter().enumerate() {
+                    let b = at + 0x20 + 0x54 * k as u32;
+                    let ours = (
+                        [d.index, d.x1, d.x2 as u8, d.x3],
+                        [d.x4, d.x2C, d.x30, d.x34],
+                        [d.x8, d.x24, d.x28].map(f32::to_bits),
+                        [
+                            v3_bits(&d.xC),
+                            v3_bits(&d.x18),
+                            v3_bits(&d.x38),
+                            v3_bits(&d.x44),
+                        ],
+                    );
+                    let t3 = |a: u32| [m.u32(a), m.u32(a + 4), m.u32(a + 8)];
+                    let theirs = (
+                        [m.u8(b), m.u8(b + 1), m.u8(b + 2), m.u8(b + 3)],
+                        [4, 0x2C, 0x30, 0x34].map(|o| m.u32(b + o) as i32),
+                        [8, 0x24, 0x28].map(|o| m.u32(b + o)),
+                        [t3(b + 0xC), t3(b + 0x18), t3(b + 0x38), t3(b + 0x44)],
+                    );
+                    if ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.bigblue.data[{k}]"),
+                            format!("{ours:x?}"),
+                            format!("{theirs:x?}"),
+                        );
+                    }
+                    let p = format!("{path}.bigblue.data[{k}].x50");
+                    cx.compare_handle(&p, "GObjId", d.x50.map(|g| g.0), m.u32(b + 0x50));
+                }
+            }
+            GroundVars::BigBlueCars(v) => {
+                let theirs = (m.u32(at), m.u16(at + 0xC) as i16);
+                if (v.flags, v.spawn_timer) != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.car"),
+                        format!("{:x?}", (v.flags, v.spawn_timer)),
+                        format!("{theirs:x?}"),
+                    );
+                }
+                for (k, c) in v.cars.iter().enumerate() {
+                    let b = at + 0x10 + 0x40 * k as u32;
+                    let t = bigblue_car(m, b);
+                    let bits = |c: &BigBlueCar| {
+                        (
+                            [
+                                u32::from(c.x0),
+                                c.x2 as u8 as u32,
+                                u32::from(c.x3),
+                                c.threshold as u32,
+                            ],
+                            [
+                                c.target,
+                                c.delta,
+                                c.pos.x,
+                                c.pos.y,
+                                c.pos.z,
+                                c.alpha,
+                                c.gravity,
+                                c.height,
+                                c.velocity,
+                                c.accel,
+                                c.rotation,
+                                c.amplitude,
+                                c.angular_velocity,
+                                c.x110,
+                            ]
+                            .map(f32::to_bits),
+                        )
+                    };
+                    if bits(c) != bits(&t) {
+                        cx.mismatch(
+                            &format!("{path}.bigblue.car.lanes[{k}]"),
+                            format!("{:x?}", bits(c)),
+                            format!("{:x?}", bits(&t)),
+                        );
+                    }
+                }
+                // A block's address is 0 where no allocator model runs (a leaf check): its
+                // contents compare at the original's.
+                let (ja, ra) = (m.u32(at + 4), m.u32(at + 8));
+                for (name, ours, theirs) in [
+                    ("collision_jobjs", v.collision_jobjs_addr, ja),
+                    ("ranks", v.ranks_addr, ra),
+                ] {
+                    if ours != 0 && ours != theirs {
+                        cx.mismatch(
+                            &format!("{path}.bigblue.car.{name}"),
+                            format!("{ours:#x}"),
+                            format!("{theirs:#x}"),
+                        );
+                    }
+                }
+                if v.collision_jobjs.is_empty() != (ja == 0) || v.ranks.is_empty() != (ra == 0) {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.car blocks"),
+                        format!("{} {}", v.collision_jobjs.len(), v.ranks.len()),
+                        format!("{ja:#x} {ra:#x}"),
+                    );
+                    return;
+                }
+                for (k, j) in v.collision_jobjs.iter().enumerate() {
+                    let p = format!("{path}.bigblue.car.collision_jobjs[{k}]");
+                    cx.compare_handle(&p, "JObjId", j.map(|j| j.0), m.u32(ja + 4 * k as u32));
+                }
+                let theirs: Vec<u8> = (0..v.ranks.len() as u32).map(|k| m.u8(ra + k)).collect();
+                if v.ranks != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.car.ranks"),
+                        format!("{:?}", v.ranks),
+                        format!("{theirs:?}"),
+                    );
+                }
+            }
+            GroundVars::BigBlueRoad(v) => {
+                let ours = (
+                    v.flags,
+                    [
+                        v3_bits(&v.position),
+                        v3_bits(&v.previous_position),
+                        v3_bits(&v.drift),
+                    ],
+                    [v.lateral_drift, v.rotation].map(f32::to_bits),
+                    v.direction,
+                );
+                let t3 = |a: u32| [m.u32(a), m.u32(a + 4), m.u32(a + 8)];
+                let theirs = (
+                    m.u32(at),
+                    [t3(at + 4), t3(at + 0x10), t3(at + 0x1C)],
+                    [m.u32(at + 0x28), m.u32(at + 0x34)],
+                    m.u16(at + 0x2C) as i16,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.road"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::BigBlueFlyer(v) => {
+                let ours = (v.xC4, v.xC8, [v.xCC, v.xD0, v.xD4, v.xD8].map(f32::to_bits));
+                let theirs = (
+                    m.u8(at),
+                    m.u32(at + 4) as i32,
+                    [8, 0xC, 0x10, 0x14].map(|o| m.u32(at + o)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.flyer"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::BigBlueRelay(v) => {
+                let ours = (
+                    v.xC4,
+                    [v.xC8_timer, v.xCC_timer, v.xD0_timer],
+                    [v.height_offset, v.xD8, v.target_y, v.xEC].map(f32::to_bits),
+                    v3_bits(&v.velocity),
+                );
+                let theirs = (
+                    m.u32(at),
+                    [4, 8, 0xC].map(|o| m.u32(at + o) as i32),
+                    [0x10, 0x14, 0x18, 0x28].map(|o| m.u32(at + o)),
+                    [m.u32(at + 0x1C), m.u32(at + 0x20), m.u32(at + 0x24)],
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.bigblue.platform"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
                     );
                 }
             }

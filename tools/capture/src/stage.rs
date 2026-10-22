@@ -86,6 +86,10 @@ pub const GRMUTECITY_ORDER: u32 = 0x8049_F440;
 pub const GRMUTECITY_CARS: u32 = 0x8049_F4B8;
 /// `stage_info.x6B0`, the stage parameters' address, which a Mute City car's `gen` holds.
 const STAGE_PARAM_PTR: u32 = 0x8049_E6C8 + 0x6B0;
+/// grbigblue.c's (`ssbm_types::tu::melee__gr__grbigblue::yakumono_param`) and its road
+/// pieces (`grBb_TrackEntries`, 0x14 bytes each, the measured length at +8).
+pub const GRBIGBLUE_YAKUMONO: u32 = 0x804D_69C8;
+pub const GRBIGBLUE_TRACK: u32 = 0x803E_2ED8;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -375,6 +379,16 @@ impl Importer<'_> {
         }
         let yaku = cap.u32(GRRCRUISE_YAKUMONO);
         self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRBIGBLUE_YAKUMONO);
+        self.game.gr.bigblue_yakumono = self.data_or_unhandled(yaku);
+        for i in 0..12u32 {
+            let at = GRBIGBLUE_TRACK + 0x14 * i + 8;
+            self.game.gr.bigblue.track_deltas[i as usize] = Vec3::new(
+                f32::from_bits(cap.u32(at)),
+                f32::from_bits(cap.u32(at + 4)),
+                f32::from_bits(cap.u32(at + 8)),
+            );
+        }
         let yaku = cap.u32(GRMUTECITY_YAKUMONO);
         self.game.gr.mutecity_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
@@ -1037,6 +1051,11 @@ impl Comparer<'_> {
                 GRMUTECITY_YAKUMONO,
                 game.gr.mutecity_yakumono,
             ),
+            (
+                "grBigBlue yakumono_param",
+                GRBIGBLUE_YAKUMONO,
+                game.gr.bigblue_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1048,6 +1067,15 @@ impl Comparer<'_> {
         }
         self.compare_zebes();
         self.compare_mutecity();
+        for (i, d) in game.gr.bigblue.track_deltas.iter().enumerate() {
+            let at = GRBIGBLUE_TRACK + 0x14 * i as u32 + 8;
+            self.check(
+                &format!("grBb_TrackEntries[{i}]"),
+                "delta",
+                [d.x, d.y, d.z].map(f32::to_bits),
+                [self.u32(at), self.u32(at + 4), self.u32(at + 8)],
+            );
+        }
         self.check(
             "grOt_804D69C4",
             "onett x69c4",

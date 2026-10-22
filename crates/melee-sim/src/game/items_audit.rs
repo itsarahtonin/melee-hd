@@ -361,7 +361,7 @@ const DEBUG: &str = "the debug menu's item spawn and the items' debug drawings";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const CEREBI: &str = "Celebi, whose draw (it_8027A4D4) asks gm_80165084 whether the card records every Pokemon trophy; with Slippi's codes, the player's unlocks (Unlocks::slippi), the records' test answers with the index it is asked about (blr at 0x8015D94C), so record 0 reads as missing and Celebi never comes out";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
-const DROP_BY_KIND: &str = "a spawn by kind for the bob-omb rain and single-player stages (it_8026BE84): sudden death, which the player doesn't play, Home-Run, the All-Star rest area and Big Blue";
+const DROP_BY_KIND: &str = "a spawn by kind for the bob-omb rain and single-player stages (it_8026BE84): sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms' items are a gap)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const EVT_UNK: &str =
@@ -561,7 +561,13 @@ pub const UNCHECKED: &[&str] = &[
 ];
 
 /// What an items-on match reaches that isn't ported, task by task: nothing left.
-pub const MISSING: &[ItemGap] = &[];
+pub const MISSING: &[ItemGap] = &[ItemGap {
+    what: "Big Blue's flying platforms' items (a Beam Sword, Super Scope, Bunny Hood, Fire Flower or Party Ball, made by kind)",
+    covers: &["Big Blue's platform item"],
+    kinds: &[4, 12, 21, 25, 31],
+    with: &[],
+    stages: &[24],
+}];
 
 #[cfg(test)]
 mod tests {
