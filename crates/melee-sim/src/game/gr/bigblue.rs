@@ -1338,16 +1338,46 @@ pub fn platform_touched(
     }
 }
 
-/// Where the Falcon Flyer's setup looks for the road: its `pos` (`r1 + 0x34` in its frame),
-/// which it never sets, so the words the stage's setup left there. The setup makes the same
-/// calls every match, which leave three static addresses (0x8038FD88, 0x804EEA58, 0x803DDA78,
-/// read from the match's saved call): as floats, tiny negatives, so the search runs at x -0.
-fn flyer_stale_pos(_game: &Game) -> Vec3 {
-    Vec3::new(
-        f32::from_bits(0x8038_FD88),
-        f32::from_bits(0x804E_EA58),
-        f32::from_bits(0x803D_DA78),
-    )
+/// Where the Falcon Flyer's setup looks for the road: its `pos` (`r1 + 0x3C` in its frame),
+/// which it never sets, so the words the stage's setup left there (Melee's bug,
+/// docs/melee-bugs.md). The last call to write them is the setup's hiding of the flying
+/// platforms (`HSD_JObjSetFlagsAll` on map 32's tree, just before map 35 is made), which
+/// walks two levels a call: each call it makes on a joint four levels below the root saves
+/// there its caller's r29 and r30, the joint walked and the child called on, so after the
+/// walk the last such joint's parent (x) and the joint (y); `Ground_GetStageGObj`'s `stmw`
+/// then puts 0 over the third word (z). The allocator model gives the two joints' addresses
+/// (docs/engine.md, "Uninitialized values"). Without it they are still words of the arena
+/// (`0x804E_EC00` to `0x817F_8AC0`), floats within 2^-124 of zero, which put the search's
+/// segment from exactly 500 above to 500 below on the level road piece that spans the origin
+/// at the match's start, 0.00005 high, whichever they are; so the stand-in is the console's own
+/// words under Slippi's playback.
+fn flyer_stale_pos(game: &Game) -> Vec3 {
+    let root = super::ground::map_gobj(game, 0x20).and_then(|g| jobj_of(game, g));
+    let jobjs = &game.objs.jobjs;
+    let own_children = |j: JObjId| {
+        let first = if jobjs[j].flags & jobj::INSTANCE != 0 {
+            None
+        } else {
+            jobjs[j].child
+        };
+        std::iter::successors(first, |&c| jobjs[c].next)
+    };
+    let mut last = None;
+    for d1 in root.into_iter().flat_map(own_children) {
+        for d2 in own_children(d1) {
+            for d3 in own_children(d2) {
+                for d4 in own_children(d3) {
+                    last = Some((d3, d4));
+                }
+            }
+        }
+    }
+    let (walked, called) = last.expect("grbigblue.c: map 32's joints four levels down");
+    let (x, y) = match (jobjs.pool.addr(walked.0), jobjs.pool.addr(called.0)) {
+        (0, _) | (_, 0) => (0x80EF_6860, 0x80EF_6900),
+        words => words,
+    };
+    Vec3::new(f32::from_bits(x), f32::from_bits(y), 0.0)
 }
 
 /// The Falcon Flyer's setup (map 35), `grBigBlue_801E8D64`: its collision, at the stage's
