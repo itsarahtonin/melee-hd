@@ -110,15 +110,16 @@ impl Running<'_> {
     }
 
     /// Whether a fighter shows a power-up's colors that hide it, `ft_80087A18`: with a
-    /// power-up's color animation (`x2226_b4`) and its refraction (`x2226_b5`), the color
-    /// animation's word none or 5 (`ftCo_800C06B4` returns its address plus 0x7B, which the
-    /// original compares with 0x7B and 0x80).
+    /// power-up's color animation (`x2226_b4`) and its refraction (`x2226_b5`), the Spycloak
+    /// animation playing (`ftCo_800C06B4`: `x508`'s, 0x7B past the common ones) 0x7B or 0x80,
+    /// the cloak's.
     #[doc(alias = "ft_80087A18")]
     #[doc(alias = "ftCo_800C06B4")]
     fn cloaking_colors(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
-        let at = (i32::from_be_bytes(fp.x508.x28_colanim)).wrapping_add(0x7B);
-        fp.x2226_b4 && (at == 0x7B || at == 0x80) && fp.x2226_b5
+        let id =
+            i32::from_be_bytes(fp.x508.x28_colanim).wrapping_add(super::colanim::SPYCLOAK_START);
+        fp.x2226_b4 && (id == 0x7B || id == 0x80) && fp.x2226_b5
     }
 
     /// The distance between two fighters, `ftCo_800A1AB4`.
