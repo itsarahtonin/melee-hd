@@ -109,6 +109,8 @@ The same rule covers a stack word the computer player's code reads unwritten. He
 
 Off camera on the ground (`ftCo_800AE7AC`, a frame below the VS decision), the decision looks for another island toward the blast zones' middle (`ftCo_800A6FC4`) and, with none, heads for its target the same way (`ftCo_800A75DC`). There the vector's slot (`0x804EE8B8`) lies inside the frame `ftCo_800A6FC4` has just left, where its prologue saved f20 (`stfd f20, 0xA8(r1)`, a double), and nothing writes it between: the destination takes f20's high and low words. Nothing from `main` down the scene loop to `HSD_GObj_RunProcs`, nor `Fighter_procCpu` and the computer player's frame down to `ftCo_800AE7AC`, writes f20, so it holds the boot's 0.0, as f27 does under the ReDead's walk (`hsd::gobj::PROC_F20`), and the destination becomes (0, 0). ssbm-rs's ports don't save registers in their frames, so its `--port all` traces hold an older word there.
 
+The stages' own cases (`feat/cpu-stages3`) read nothing unwritten. `ftCo_800A229C` fills the vector it's handed before every return but 0 (Brinstar's case with the blast zones' bottom middle, the others with the fighter's position), so `ftCo_800AE7AC` hands `ftCo_800A8210` a written vector; `ftCo_800A8210`'s generic case calls `ftCo_800A6700` without setting r4, which still holds that vector, its own second argument; and it reads its result vector only after a search (`ftCo_800A6FC4`, `ftCo_800A6700`) reports filling it. The behavior pick after it starts with its own floor check, so the DI's leftovers don't depend on which case ran.
+
 
 ## The allocators
 

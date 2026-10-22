@@ -41,6 +41,12 @@
 //! the barrel until it shoots her, `ftCo_800AC434`), the oracle's `cpu-stages` matches captured
 //! as above with `--fp hardware` and `CAPTURE_EVERY=1`.
 //!
+//! Three more, for the safe-ground search (`ftCo_800A229C`'s stage cases into `ftCo_800A8210`),
+//! captured the same way, 400 calls each: `oracle-cpu-stage-brinstar` (from field 2090, the
+//! acid's case, every island under the acid at times), `oracle-cpu-stage-rainbow-cruise` (from
+//! 4110, near the edges, searching against the wind) and `oracle-cpu-stage-great-bay` (from 4720,
+//! by the surfaced turtle).
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
 //! the stage, the CPU off camera, its target off the stage or under it with no island end in
