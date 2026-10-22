@@ -123,8 +123,8 @@ impl Running<'_> {
         self.cpu_cmd(f, self.data.u8(at));
     }
 
-    /// The nearest enemy just entering (respawning or riding in, `x221D_b6` or `x2168` with
-    /// no ride) and in reach, `ftCo_800A5CE0`; none for a fighter that can't target.
+    /// The nearest enemy with a Starman (`x221D_b6`) or a hammer (its music, `x2168`, out of
+    /// a ride) in reach, `ftCo_800A5CE0`; none for a fighter that can't target.
     // Ports `ftCo_800A5CE0`; aliased once a check reaches it.
     pub(super) fn cpu_entering_enemy(&self, f: FighterId) -> Option<FighterId> {
         if self.cpu_untargetable(f) {
@@ -342,6 +342,23 @@ impl Running<'_> {
         }
     }
 
+    /// A shrunk Yoshi's jump near its destination, `ftCo_800A0508`: a jump, then 30 frames on
+    /// an air dodge up and forward, and a second `Done` after the first, as the original
+    /// writes.
+    #[doc(alias = "ftCo_800A0508")]
+    fn cpu_small_yoshi_jump(&mut self, f: FighterId) {
+        self.cpu_neutral_stick(f);
+        self.cpu_cmd(f, cmd::PRESS_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::RELEASE_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 30);
+        self.cpu_cmd1(f, cmd::LSTICK_X_FORWARD, 0x50);
+        self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0x7F);
+        self.cpu_tap_r(f);
+        self.cpu_finish_neutral_y(f);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
     /// `ftCo_CpuStartUpSpecial`.
     fn cpu_start_up_special(&mut self, f: FighterId) {
         self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0x7F);
@@ -454,7 +471,7 @@ impl Running<'_> {
                     && fpp.x34_scale.y < 1.0
                     && abs(fp::fsubs(reg(c.x54.x), reg(fpp.cur_pos.x))) < 20.0
                 {
-                    unported_call("ftCo_800A0508");
+                    self.cpu_small_yoshi_jump(f);
                 } else {
                     self.cpu_cmd1(f, cmd::LSTICK_TOWARD_DESTINATION, 127);
                     self.cpu_cmd(f, cmd::PRESS_Y);
@@ -585,6 +602,25 @@ impl Running<'_> {
         abs(fp::fsubs(reg(edge), reg(fpp.cur_pos.x))) < fp::fmul(5.0, scale)
     }
 
+    /// How far the fighter stands from its island's left end (`left`) or right end,
+    /// `ftCo_800A2A70`; -1 in the air or off any island.
+    #[doc(alias = "ftCo_800A2A70")]
+    pub(super) fn cpu_island_end_distance(&self, f: FighterId, left: bool) -> f64 {
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR {
+            return fp::fneg(1.0);
+        }
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let Some(island) = geo.island_of_line(fpp.coll_data.floor.index) else {
+            return fp::fneg(1.0);
+        };
+        let isl = geo.islands.get(island);
+        let end = if left { isl.left } else { isl.right };
+        let x = fp::fsubs(reg(end.x), reg(fpp.cur_pos.x));
+        let y = fp::fsubs(reg(end.y), reg(fpp.cur_pos.y));
+        math::sqrt_reg(fp::fmadds(x, x, fp::fmuls(y, y)))
+    }
+
     /// Whether the fighter faces its destination, `ftCo_800A2BD4`.
     // Ports `ftCo_800A2BD4`; aliased once a check reaches it.
     pub(super) fn cpu_facing_destination(&self, f: FighterId) -> bool {
@@ -595,11 +631,48 @@ impl Running<'_> {
         ) >= 0.0
     }
 
+    /// `ftCo_800AB224`'s approach (`xF9_b1`, set while its target is an enemy with a Starman
+    /// or a hammer, [`Running::cpu_entering_enemy`]): facing that target on its island within
+    /// 37.5 it jumps ([`Running::cpu_jump_off_piece`]); near it on the ground (`xF8_b6`), with a
+    /// chance by level, it rolls away from it when there's room ([`Running::cpu_roll_away`]).
+    /// True when it wrote a script.
+    fn cpu_approach(&mut self, f: FighterId) -> bool {
+        let target = self.game.fighters[f.0].cpu.x44;
+        if let Some(t) = target
+            && self.cpu_target_ahead(f)
+            && self.cpu_same_island(f, t)
+        {
+            let dx = fp::fsubs(
+                reg(self.game.fighters[t.0].cur_pos.x),
+                reg(self.game.fighters[f.0].cur_pos.x),
+            );
+            if abs(dx) < 37.5 {
+                self.cpu_jump_off_piece(f);
+                return true;
+            }
+        }
+        let fpp = &self.game.fighters[f.0];
+        if !fpp.cpu.xF8_b6 || fpp.ground_or_air != GA_GROUND {
+            return false;
+        }
+        let r = reg(self.game.objs.rng.draw_f32());
+        let level = fp::frsp(f64::from(self.game.fighters[f.0].cpu.level));
+        if r < fp::fmuls(0.050_000_000_745_058_06, level) {
+            self.game.fighters[f.0].cpu.xF8_b6 = false;
+            // The VS decision sets the target the same frame as `xF9_b1`, and nothing between
+            // clears it.
+            let t = target.expect("an approach with no target");
+            return self.cpu_roll_away(f, t);
+        }
+        false
+    }
+
     /// Moving on the ground, `ftCo_800AB224`: under Corneria's ceiling it turns or heads for
-    /// the edge; with an approach allowed (`xF9_b1`) it may close in on its target; then, if
-    /// its destination is on its island, it walks or runs there; else it heads off toward it
-    /// (jumping, dropping or turning by the angle and what's in between).
-    // Ports `ftCo_800AB224`; aliased once a check reaches it.
+    /// the edge; with an approach allowed (`xF9_b1`) it may close in on its target
+    /// ([`Running::cpu_approach`]); then, if its destination is on its island, it walks or
+    /// runs there; else it heads off toward it (jumping, dropping or turning by the angle and
+    /// what's in between).
+    #[doc(alias = "ftCo_800AB224")]
     fn cpu_ground_move(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.xFA_b6 {
@@ -615,8 +688,8 @@ impl Running<'_> {
             }
             return;
         }
-        if fpp.cpu.xF9_b1 {
-            unported_call("ftCo_800AB224 with an approach (xF9_b1)");
+        if fpp.cpu.xF9_b1 && self.cpu_approach(f) {
+            return;
         }
         // `ftCo_800A21FC`: the destination on the fighter's island.
         let fpp = &self.game.fighters[f.0];
@@ -1242,16 +1315,22 @@ impl Running<'_> {
         self.cpu_cmd(f, cmd::DONE);
     }
 
-    /// Standing at the destination, `ftCo_800ACD5C` (behavior 10): an approach allowed, it
-    /// may close in on its target; a new standing in the results is taunted with a tap up
+    /// Standing at the destination, `ftCo_800ACD5C` (behavior 10): an approach allowed and
+    /// near its target, it rolls away from it ([`Running::cpu_roll_from`]); a new standing in the results is taunted with a tap up
     /// (outside training); kinds that wait do; off its destination, it goes back to walking;
     /// it turns to face its target, and above level 5 the charging characters charge.
     #[doc(alias = "ftCo_800ACD5C")]
     pub(super) fn cpu_stand(&mut self, f: FighterId) {
         let c = &self.game.fighters[f.0].cpu;
-        if c.xF9_b1 && c.x44.is_some() && c.xF8_b6 {
-            unported_call("ftCo_800BA674");
+        if c.xF9_b1
+            && let Some(t) = c.x44
+            && c.xF8_b6
+        {
+            self.game.fighters[f.0].cpu.xF8_b6 = false;
+            self.cpu_roll_from(f, t);
+            return;
         }
+        let c = &self.game.fighters[f.0].cpu;
         // `GM_TRAINING`.
         if c.x88 > 0 && self.game.gr.game_mode != 28 {
             self.cpu_neutral_stick(f);

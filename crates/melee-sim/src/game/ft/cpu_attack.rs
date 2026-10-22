@@ -1171,8 +1171,9 @@ impl Running<'_> {
             let level = fp::frsp(f64::from(self.game.fighters[f.0].cpu.level));
             if r < fp::fmuls(0.050_000_000_745_058_06, level) {
                 self.game.fighters[f.0].cpu.xF8_b6 = false;
-                let _ = target;
-                unported_call("ftCo_800BA2E8");
+                if self.cpu_roll_away(f, target) {
+                    return;
+                }
             }
         }
         if self.cpu_follow_up(f, false) {
@@ -1824,6 +1825,49 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800BA224")]
     fn cpu_roll_left(&mut self, f: FighterId) {
         self.cpu_roll(f, 0x81);
+    }
+
+    /// Rolls away from `enemy` when its island leaves room that way, `ftCo_800BA2E8`: farther
+    /// than its character's distance threshold from the end on the side away from the enemy,
+    /// else toward the other end if that's farther; true when it rolled.
+    #[doc(alias = "ftCo_800BA2E8")]
+    pub(super) fn cpu_roll_away(&mut self, f: FighterId, enemy: FighterId) -> bool {
+        let fpp = &self.game.fighters[f.0];
+        let limit = reg(self.cpu_distance_threshold(fpp.kind));
+        let right_of = fp::fsubs(
+            reg(fpp.cur_pos.x),
+            reg(self.game.fighters[enemy.0].cur_pos.x),
+        ) > 0.0;
+        // Away from the enemy first: its right end when right of it, else its left.
+        for left in [!right_of, right_of] {
+            if self.cpu_island_end_distance(f, left) > limit {
+                if left {
+                    self.cpu_roll_left(f);
+                } else {
+                    self.cpu_roll_right(f);
+                }
+                return true;
+            }
+        }
+        false
+    }
+
+    /// Rolls away from `enemy`, `ftCo_800BA674`: away from it while the island's end on that
+    /// side is farther than twice its character's distance threshold, else toward it.
+    #[doc(alias = "ftCo_800BA674")]
+    pub(super) fn cpu_roll_from(&mut self, f: FighterId, enemy: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let limit = fp::fmul(2.0, reg(self.cpu_distance_threshold(fpp.kind)));
+        let right_of = fp::fsubs(
+            reg(fpp.cur_pos.x),
+            reg(self.game.fighters[enemy.0].cur_pos.x),
+        ) > 0.0;
+        let room = self.cpu_island_end_distance(f, !right_of) > limit;
+        if right_of == room {
+            self.cpu_roll_right(f);
+        } else {
+            self.cpu_roll_left(f);
+        }
     }
 
     /// A shield's roll with the stick at `x`: R let go, then pressed for 2 frames with the
