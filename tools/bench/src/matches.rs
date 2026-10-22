@@ -2115,7 +2115,30 @@ pub fn cpu_stages_set() -> Vec<Match> {
             rules: CPU_RULES,
             items: Items::OFF,
         })
+        .chain([cpu_stage_big_blue()])
         .collect()
+}
+
+/// The CPU stages set's match on Big Blue (`cpu-stage-big-blue`): heading for safe ground
+/// from within 20% of the blast zones' sides (`ftCo_800A229C`, `ftCo_800A8210`) and the
+/// floors computer players don't count, the cars' (`ftCo_800A1B38`), whose check leaves r5
+/// for the DI. Luigi (`BENCH_AI`) against Falco 9, Ness 5 and Donkey Kong 2, items off, a time
+/// match of eight minutes, as the stages set's moving stages have, so the road comes round
+/// and nobody's last stock ends it. Its own seed, so the set's order doesn't change it.
+fn cpu_stage_big_blue() -> Match {
+    Match {
+        name: Cow::Borrowed("cpu-stage-big-blue"),
+        stage: BIG_BLUE,
+        players: Cow::Owned(vec![
+            p(LUIGI, 0),
+            cpu(FALCO, 0, 9),
+            cpu(NESS, 0, 5),
+            cpu(DONKEY_KONG, 0, 2),
+        ]),
+        seed: 0x1F0F_2110,
+        rules: Rules::Time { time_limit: 480 },
+        items: Items::OFF,
+    }
 }
 
 /// The stages where Nana's computer player asks the stage something: whether an island is

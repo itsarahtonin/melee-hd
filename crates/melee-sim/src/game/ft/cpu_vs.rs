@@ -26,7 +26,7 @@ const DISTANCES: u32 = 0x20;
 const GR_KIND_CASTLE: i32 = 2;
 const GR_KIND_ZEBES: i32 = 8;
 
-/// `Gr_Kind_BigBlue`, `Gr_Kind_Icemt`: stages not on the roster.
+/// `Gr_Kind_BigBlue`, `Gr_Kind_Icemt`.
 const GR_KIND_BIGBLUE: i32 = 0x13;
 const GR_KIND_ICEMT: i32 = 0x16;
 
@@ -103,8 +103,9 @@ impl Running<'_> {
     /// Whether the fighter is somewhere the stage or camera sends it back from, and where it
     /// is, `ftCo_800A229C`: 2 by Great Bay's turtle; 1 at Peach's Castle's hazard, or on
     /// Brinstar while the acid is above the blast zones' bottom (always), at the bottom's
-    /// middle; 2 on Rainbow Cruise near the edges ([`Running::cpu_near_moving_edge`]); -1 off
-    /// camera; else none (0).
+    /// middle; 2 on Rainbow Cruise near the edges ([`Running::cpu_near_moving_edge`]) and on
+    /// Big Blue within 20% of a side ([`Running::cpu_near_blast_side`]); -1 off camera; else
+    /// none (0).
     #[doc(alias = "ftCo_800A229C")]
     fn cpu_off_screen(&mut self, f: FighterId) -> Option<(i32, Vec3)> {
         let pos = self.game.fighters[f.0].cur_pos;
@@ -130,10 +131,13 @@ impl Running<'_> {
                     return Some((2, pos));
                 }
             }
-            // `grLib_801C9E60` stops on both first.
-            GR_KIND_BIGBLUE | GR_KIND_ICEMT => {
-                unported_call("ftCo_800A229C on Big Blue or Icicle Mountain")
+            // The wind it asks for first (`grLib_801C9E60`) goes unused here.
+            GR_KIND_BIGBLUE => {
+                if self.cpu_near_blast_side(pos) {
+                    return Some((2, pos));
+                }
             }
+            GR_KIND_ICEMT => unported_call("ftCo_800A229C on Icicle Mountain"),
             _ => {}
         }
         if !super::super::camera::in_bounds_by(&self.game.stage_info, pos, 0.0) {
@@ -176,6 +180,26 @@ impl Running<'_> {
             || x > fp::fsubs(right, dx)
             || y > fp::fsubs(top, dy)
             || y < fp::fadds(dy, bottom)
+    }
+
+    /// `ftCo_800A229C`'s Big Blue case: whether `pos` lies within 20% of the blast zones'
+    /// width of their left or right side, or 20% of their height of their top or bottom. A
+    /// NaN height counts as near the bottom, as the machine code's last test (`bge`) has it.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    fn cpu_near_blast_side(&self, pos: Vec3) -> bool {
+        // 0.2f.
+        const FIFTH: f64 = 0.200_000_002_980_232_24;
+        let (x, y) = (reg(pos.x), reg(pos.y));
+        let left = reg(stage::blast_left(self.game));
+        let w = fp::fsubs(reg(stage::blast_right(self.game)), left);
+        let bottom = reg(stage::blast_bottom(self.game));
+        let h = fp::fsubs(reg(stage::blast_top(self.game)), bottom);
+        let dx = fp::fmuls(FIFTH, w);
+        let dy = fp::fmuls(FIFTH, h);
+        x < fp::fadds(dx, reg(stage::blast_left(self.game)))
+            || x > fp::fsubs(reg(stage::blast_right(self.game)), dx)
+            || y > fp::fsubs(reg(stage::blast_top(self.game)), dy)
+            || !(y >= fp::fadds(dy, reg(stage::blast_bottom(self.game))))
     }
 
     /// Heading back from off camera or the stage's edge, `ftCo_800AE7AC`: the fighter targets

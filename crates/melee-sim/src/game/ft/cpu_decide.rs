@@ -1025,7 +1025,7 @@ impl Running<'_> {
     /// leaves ([`FloorR5`]): `sp` is the pick's stack pointer, which the stack addresses
     /// left there are relative to (unfollowed without it). A floor found is checked against
     /// the stage's excluded floors (`ftCo_800A1B38`), which on the four stages that have them
-    /// is a call that leaves r5 its own way, not followed.
+    /// is a call that leaves r5 its own way ([`Running::excluded_floor_r5`]).
     pub(super) fn cpu_floor_r5(
         &mut self,
         ax: f32,
@@ -1052,7 +1052,7 @@ impl Running<'_> {
             return (None, r5);
         };
         if self.excluded_floor_asks_stage() {
-            let r5 = self.excluded_floor_r5();
+            let r5 = self.excluded_floor_r5(hit.line);
             return ((!self.excluded_floor(hit.line)).then_some(hit.pos), r5);
         }
         (Some(hit.pos), r5)

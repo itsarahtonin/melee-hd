@@ -62,7 +62,6 @@ const ICE_CLIMBERS: u8 = 14;
 const YOSHI: u8 = 17;
 
 /// `StKind`s the gaps name.
-const BIG_BLUE: u16 = 24;
 const ICICLE_MOUNTAIN: u16 = 25;
 
 /// The gaps a match reaches with these VS computer players, these characters among all its
@@ -155,7 +154,7 @@ const ISLAND_END: &str = "the VS decision hands its target search's leftover (th
 const NANA_FOLLOWING: &str = "on the frame Nana stops following Popo her behavior is her fallback (x1C, walking), not the DI";
 const PICK_LEFTOVER: &str = "the behavior pick leaves this only when it picks a behavior other than the DI, which alone reads it";
 const NANA_REGROUP: &str = "only Nana's way back runs the behavior pick without its frame followed, and her decision replaces the register it leaves";
-const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue (its gap), Mushroom Kingdom, Corneria and Venom; Mushroom Kingdom's check leaves the joints' array's address, which the allocator model gives (on in every match with a computer player), and the other two aren't on the roster";
+const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue, Mushroom Kingdom, Corneria and Venom; Big Blue's check leaves 1 or 0 by the floor's joint, Mushroom Kingdom's the joints' array's address, which the allocator model gives (on in every match with a computer player), and the other two aren't on the roster";
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
 const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
 const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
@@ -272,7 +271,7 @@ pub const MISSING: &[CpuGap] = &[
     CpuGap {
         what: "a computer player near Icicle Mountain's edges as the climb moves (ftCo_800A229C, ftCo_800A8210)",
         covers: &[
-            "ftCo_800A229C on Big Blue or Icicle Mountain",
+            "ftCo_800A229C on Icicle Mountain",
             "ftCo_800A8210 on Icicle Mountain",
             "ftCo_800A6A98",
             "ftCo_800A6D2C",
@@ -282,19 +281,6 @@ pub const MISSING: &[CpuGap] = &[
         cpu: &[],
         with: &[],
         stages: &[ICICLE_MOUNTAIN],
-        items: Items::Off,
-    },
-    CpuGap {
-        what: "a computer player on Big Blue: its moving edges (ftCo_800A229C) and the cars' floors' leftover (ftCo_800A1B38)",
-        covers: &[
-            "ftCo_800A229C on Big Blue or Icicle Mountain",
-            "a register left by ftCo_800A1B38",
-        ],
-        who: Who::Vs,
-        levels: &[],
-        cpu: &[],
-        with: &[],
-        stages: &[BIG_BLUE],
         items: Items::Off,
     },
     CpuGap {
@@ -462,9 +448,10 @@ mod tests {
             }
             assert!(!on(31).contains(&g), "{}", g.what);
         }
-        // Brinstar's acid, Rainbow Cruise's edges and Great Bay's turtle are ported: no stage
-        // brings a gap of its own with items off, for a VS computer player or Nana.
-        for stage in [6, 11, 13] {
+        // Brinstar's acid, Rainbow Cruise's edges, Great Bay's turtle and Big Blue's sides are
+        // ported: no stage brings a gap of its own with items off, for a VS computer player or
+        // Nana.
+        for stage in [6, 11, 13, 24] {
             assert!(missing_with(&[fox(9)], &[14, 2], stage, &[]).is_empty());
         }
         // Peach's pulled sword is ported (`ftCo_800B52AC`): Peach brings no gap of her own.
