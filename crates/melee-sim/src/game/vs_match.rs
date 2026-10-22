@@ -570,6 +570,29 @@ impl Match {
                 m.game.audio.devcom.files.push((file.entrynum, id));
             }
         }
+        // Mushroom Kingdom's or Mushroom Kingdom II's fast song, which its last 20 seconds
+        // start.
+        if m.game.audio.clock.is_some()
+            && matches!(
+                m.game.stage_info.grkind,
+                super::gr::GR_KIND_INISHIE1 | super::gr::GR_KIND_INISHIE2
+            )
+            && let Some(fast) = super::gr::inishie1::fast_song(m.game.stage_info.x98)
+        {
+            let name = crate::lb::audio::HPS_NAMES[fast as usize];
+            let file = load(&format!("audio/{name}"));
+            if !m
+                .game
+                .audio
+                .devcom
+                .files
+                .iter()
+                .any(|f| f.0 == file.entrynum)
+            {
+                let id = m.data.add(Archive::raw(&file.bytes));
+                m.game.audio.devcom.files.push((file.entrynum, id));
+            }
+        }
         m
     }
 

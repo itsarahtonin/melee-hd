@@ -196,6 +196,8 @@ pub enum Wait {
     SfxLoadsDone,
     /// The boot's read of the sound bank (`AXDriver_8038DA70`'s spin).
     BankRead,
+    /// No music box read in flight (`HSD_SynthPStreamStart`'s spin).
+    StreamIdle,
     /// This many of the first scene's preloaded files are in (their callbacks have run).
     Preloaded(u32),
 }

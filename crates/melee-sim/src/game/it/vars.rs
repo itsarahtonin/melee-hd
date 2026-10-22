@@ -13,6 +13,8 @@
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::heiho::HeihoVars;
 use super::kinds::klap::KlapVars;
+use super::kinds::kyasarin::KyasarinVars;
+use super::kinds::kyasarinegg::KyasarinEggVars;
 use super::kinds::tincle::TincleVars;
 use super::kinds::tools::ToolsVars;
 use super::kinds::whispyapple::WhispyAppleVars;
@@ -182,6 +184,8 @@ members! {
     WhispyApple, whispy_apple, WhispyAppleVars, [WHISPY_APPLE, WHISPY_HEAL_APPLE];
     Tools, tools, ToolsVars, [TOOLS];
     Klap, klap, KlapVars, [KLAP];
+    Kyasarin, kyasarin, KyasarinVars, [KYASARIN];
+    KyasarinEgg, kyasarin_egg, KyasarinEggVars, [KYASARIN_EGG];
     Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE];
     KirbySpitStar, kirby_spit_star, PokemonVars, [KIRBY_UNK2];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];

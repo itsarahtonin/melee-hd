@@ -5,9 +5,10 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY,
-    GR_KIND_GREENS, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO,
-    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
-    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_GREENS, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KONGO,
+    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
+    GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY,
+    GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -903,6 +904,110 @@ pub const FLATZONE: StageData = StageData {
     joints: &[],
 };
 
+/// `grI1_StageCallbacks`. Map 3 is the stage with the brick blocks and the lifts, map 2 a ?
+/// block, map 0 the scenery; nothing makes map 1.
+pub const INISHIE1_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0x801F_AAA0, 0x801F_AACC, 0x801F_AAD4, 0x801F_AAD8, 0),
+    cb(0x801F_ABB4, 0x801F_ABF4, 0x801F_ABFC, 0x801F_AC00, 0),
+    cb(0x801F_AC04, 0x801F_AC50, 0x801F_AC58, 0x801F_AD80, 0),
+    cb(
+        0x801F_AADC,
+        0x801F_AB60,
+        0x801F_AB68,
+        0x801F_ABB0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grI1_803E48C8`: the top row's brick blocks' collision joints, which the stage binds to its
+/// parts itself.
+pub const INISHIE1_JOINTS: [GrJoint; 7] = [
+    GrJoint { x: 13, y: 3, z: 3 },
+    GrJoint { x: 14, y: 3, z: 14 },
+    GrJoint { x: 15, y: 3, z: 15 },
+    GrJoint { x: 16, y: 3, z: 16 },
+    GrJoint { x: 17, y: 3, z: 17 },
+    GrJoint { x: 18, y: 3, z: 18 },
+    GrJoint { x: 19, y: 3, z: 19 },
+];
+
+/// `grI1_StageData`.
+pub const INISHIE1: StageData = StageData {
+    grkind: GR_KIND_INISHIE1,
+    callbacks: &INISHIE1_CALLBACKS,
+    file: Some("/GrI1.dat"),
+    on_init: 0x801F_A90C,
+    on_demo_init: 0x801F_A908,
+    on_load: 0x801F_A984,
+    on_start: 0x801F_A988,
+    callback4: 0x801F_A9AC,
+    on_touch_line: 0x801F_CBB0,
+    on_check_shadow_render: 0x801F_CBB8,
+    flags2: 1,
+    joints: &INISHIE1_JOINTS,
+};
+
+/// `grI2_StageCallbacks`. Map 2 is the stage, maps 3 and 4 the logs, map 15 Birdo's platform,
+/// map 1 Pidgit's carpet, map 0 the scenery; maps 5 to 14 have none.
+pub const INISHIE2_CALLBACKS: [StageCallbacks; 16] = [
+    cb(0x801F_CDC8, 0x801F_CDF4, 0x801F_CDFC, 0x801F_CE00, 0),
+    cb(0x801F_DE8C, 0x801F_DED0, 0x801F_DED8, 0x801F_DFE4, 0),
+    cb(
+        0x801F_CE04,
+        0x801F_CF24,
+        0x801F_CFCC,
+        0x801F_D014,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x801F_D198, 0x801F_D21C, 0x801F_D224, 0x801F_D364, 0),
+    cb(0x801F_D198, 0x801F_D21C, 0x801F_D224, 0x801F_D364, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0, 0, 0, 0, 0),
+    cb(0x801F_D4F0, 0x801F_D64C, 0x801F_D654, 0x801F_D740, 0),
+];
+
+/// `grI2_803E4A60`: the collision joints the stage binds to its parts itself.
+pub const INISHIE2_JOINTS: [GrJoint; 14] = [
+    GrJoint { x: 0, y: 1, z: 1 },
+    GrJoint { x: 12, y: 3, z: 1 },
+    GrJoint { x: 13, y: 4, z: 1 },
+    GrJoint { x: 14, y: 15, z: 0 },
+    GrJoint { x: 3, y: 5, z: 0 },
+    GrJoint { x: 4, y: 6, z: 0 },
+    GrJoint { x: 5, y: 7, z: 0 },
+    GrJoint { x: 6, y: 8, z: 0 },
+    GrJoint { x: 7, y: 9, z: 0 },
+    GrJoint { x: 8, y: 10, z: 0 },
+    GrJoint { x: 9, y: 11, z: 0 },
+    GrJoint { x: 10, y: 12, z: 0 },
+    GrJoint { x: 11, y: 13, z: 0 },
+    GrJoint { x: 2, y: 14, z: 0 },
+];
+
+/// `grI2_StageData`.
+pub const INISHIE2: StageData = StageData {
+    grkind: GR_KIND_INISHIE2,
+    callbacks: &INISHIE2_CALLBACKS,
+    file: Some("/GrI2.dat"),
+    on_init: 0x801F_CBC4,
+    on_demo_init: 0x801F_CBC0,
+    on_load: 0x801F_CCAC,
+    on_start: 0x801F_CCB0,
+    callback4: 0x801F_CCD4,
+    on_touch_line: 0x801F_DFE8,
+    on_check_shadow_render: 0x801F_DFF0,
+    flags2: 1,
+    joints: &INISHIE2_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -927,6 +1032,8 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_PURA => &PURA,
         GR_KIND_RCRUISE => &RCRUISE,
         GR_KIND_FLATZONE => &FLATZONE,
+        GR_KIND_INISHIE1 => &INISHIE1,
+        GR_KIND_INISHIE2 => &INISHIE2,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

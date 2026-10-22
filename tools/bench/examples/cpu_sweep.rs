@@ -3,7 +3,8 @@
 //! prints each match's first stop with the fighters' states. `SSBM_DISC=... cargo run --release
 //! -p melee-bench --example cpu_sweep -- [off|on] [heap|noheap] [MATCHES_PER_STAGE] [MINUTES]
 //! [teams]`: items off or on at very high with the whole switch, the allocator model on or off.
-//! `CPU_SWEEP_STAGES` (the roster's keys, comma-separated) plays only those stages.
+//! `CPU_SWEEP_STAGES` or `SWEEP_STAGES` (the roster's keys, comma-separated) plays only those
+//! stages.
 
 use std::collections::HashMap;
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -50,8 +51,10 @@ fn main() {
     let teams = args.get(4).is_some_and(|a| a == "teams");
     let disc_path = std::env::var_os("SSBM_DISC").expect("SSBM_DISC");
     std::panic::set_hook(Box::new(|_| {}));
-    // `CPU_SWEEP_STAGES=br,rc,gb`: only these stages (the roster's keys).
-    let only = std::env::var("CPU_SWEEP_STAGES").ok();
+    // `CPU_SWEEP_STAGES=br,rc,gb` (or `SWEEP_STAGES`): only these stages (the roster's keys).
+    let only = std::env::var("CPU_SWEEP_STAGES")
+        .or_else(|_| std::env::var("SWEEP_STAGES"))
+        .ok();
     let stages: Vec<_> = roster::offered_stages()
         .filter(|s| {
             only.as_ref()

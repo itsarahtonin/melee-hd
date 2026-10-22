@@ -406,6 +406,42 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 19,
+        name: "Mushroom Kingdom",
+        keys: &["mk", "mushroom-kingdom"],
+        audit: Some(Audit {
+            units: &["melee/gr/grinishie1", "melee/it/kinds/ityaku"],
+            modules: &["gr/inishie1", "it/kinds/yaku"],
+            unreached: &[
+                YAKU_UNANCHORED,
+                (
+                    "grinishie1.c:496",
+                    "a block's ceiling callback on a joint not among the blocks': only the blocks' collision joints get it (the original hangs)",
+                ),
+                (
+                    "grinishie1.c:541",
+                    "a block whose joint the stage's model lacks: the stage's archive has every one (the original hangs)",
+                ),
+            ],
+            missing: &[],
+        }),
+    },
+    Stage {
+        kind: 20,
+        name: "Mushroom Kingdom II",
+        keys: &["mk2", "mushroom-kingdom-2"],
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grinishie2",
+                "melee/it/kinds/itkyasarin",
+                "melee/it/kinds/itkyasarinegg",
+            ],
+            modules: &["gr/inishie2", "it/kinds/kyasarin", "it/kinds/kyasarinegg"],
+            unreached: &[("it_802EE1E0", EVT_UNK), ("it_802F0320", EVT_UNK)],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 9,
         name: "Onett",
         keys: &["on", "onett"],

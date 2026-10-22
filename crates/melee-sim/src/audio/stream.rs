@@ -49,8 +49,10 @@ impl Audio {
         (id > 0 && self.synth.nodes[i].id == id).then_some(i)
     }
 
-    /// `HSD_SynthPStreamStart`: keys the last stream off, takes a voice for the new one at
-    /// the top priority and reads the file's header. Returns the stream's node id.
+    /// `HSD_SynthPStreamStart`: waits for a box read in flight to come in (the game spins on
+    /// it while the disc's interrupts run, as ssbm-rs's hook on the function waits a quarter
+    /// millisecond at a time), keys the last stream off, takes a voice for the new one at the
+    /// top priority and reads the file's header. Returns the stream's node id.
     #[doc(alias = "HSD_SynthPStreamStart")]
     pub fn stream_start(
         &mut self,
@@ -60,10 +62,13 @@ impl Audio {
         vol2: u8,
         channel: i32,
     ) -> i32 {
-        assert_eq!(
-            self.synth.stream.busy, 0,
-            "a stream start waiting for the last one's reads isn't ported"
-        );
+        if self.synth.stream.busy != 0 {
+            assert!(
+                self.clock.is_some(),
+                "a stream start waiting for the last one's reads without the timeline isn't ported"
+            );
+            self.with_clock(data, |c, f| c.wait_until(f, super::clock::Wait::StreamIdle));
+        }
         self.synth.stream.busy = 1;
         if let Some(n) = self.stream_node() {
             let node = self.synth.nodes[n];

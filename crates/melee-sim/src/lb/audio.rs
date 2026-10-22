@@ -583,6 +583,12 @@ impl Running<'_> {
     /// up) the frontend is told instead.
     #[doc(alias = "lbAudioAx_80023F28")]
     pub fn lb_play_music(&mut self, bgm: i32) -> bool {
+        #[cfg(feature = "stubs")]
+        if let Some(v) =
+            crate::game::code::stubbed(0x8002_3F28, &[crate::game::code::Val::Int(bgm)])
+        {
+            return matches!(v, crate::game::code::Val::Int(k) if k != 0);
+        }
         if !(0..0x62).contains(&bgm) {
             return true;
         }

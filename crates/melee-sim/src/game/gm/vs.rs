@@ -128,6 +128,23 @@ impl Game {
         self.vs.state.timer_seconds
     }
 
+    /// The match's time, `GetMatchTimer`: with the timer on, the seconds left (gone, for a
+    /// timer that counts up, from the limit), else none.
+    #[doc(alias = "GetMatchTimer")]
+    pub fn vs_match_timer(&self) -> Option<u32> {
+        if !self.vs.start.timer_enabled {
+            return None;
+        }
+        Some(if self.vs_timer_counts_up() {
+            self.vs
+                .start
+                .time_limit
+                .wrapping_sub(self.vs.state.timer_seconds)
+        } else {
+            self.vs.state.timer_seconds
+        })
+    }
+
     #[doc(alias = "gm_GetStKind")]
     pub fn vs_stkind(&self) -> u16 {
         self.vs.start.stkind
