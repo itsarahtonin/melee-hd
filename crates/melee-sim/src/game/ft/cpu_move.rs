@@ -27,7 +27,7 @@ const KIND_SAMUS: i32 = 13;
 const KIND_MEWTWO: i32 = 16;
 
 /// `LINE_FLAG_PLATFORM`: a floor a fighter can drop through.
-const LINE_FLAG_PLATFORM: u32 = 1 << 8;
+pub(super) const LINE_FLAG_PLATFORM: u32 = 1 << 8;
 
 /// C's `ABS` on a single difference.
 fn abs(x: f64) -> f64 {

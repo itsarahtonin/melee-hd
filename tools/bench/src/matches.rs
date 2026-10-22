@@ -2030,11 +2030,12 @@ pub fn cpu_levels_set() -> Vec<Match> {
 /// The CPU stages set: real CPUs on stages beyond the tournament six where the CPU AI runs code
 /// of its own: off camera on the ground (`ftCo_800A6FC4`, Poké Floats and Yoshi's Island), in
 /// the barrels (`ftCo_800AC434`, both Kongo Jungles; the Ice Climbers bring Nana), and heading
-/// for safe ground from Brinstar's acid, Rainbow Cruise's edges and Great Bay's turtle
-/// (`ftCo_800A229C`, `ftCo_800A8210`). A human (`BENCH_AI`) against three CPUs at mixed levels,
-/// 4 stocks, 3 minutes, items off.
+/// for safe ground from Brinstar's acid, Rainbow Cruise's and Icicle Mountain's edges and Great
+/// Bay's turtle (`ftCo_800A229C`, `ftCo_800A8210`). A human (`BENCH_AI`) against three CPUs at
+/// mixed levels, 4 stocks, 3 minutes, items off; on Icicle Mountain a time match of eight
+/// minutes, so the climb runs (`ICICLE_MOUNTAIN_RULES`).
 pub fn cpu_stages_set() -> Vec<Match> {
-    let matches: [(u16, &str, [Player; 4]); 7] = [
+    let matches: [(u16, &str, [Player; 4]); 8] = [
         (
             POKE_FLOATS,
             "poke-floats",
@@ -2105,6 +2106,16 @@ pub fn cpu_stages_set() -> Vec<Match> {
                 cpu(PICHU, 0, 3),
             ],
         ),
+        (
+            ICICLE_MOUNTAIN,
+            "icicle-mountain",
+            [
+                p(FALCO, 0),
+                cpu(MARIO, 0, 8),
+                cpu(ICE_CLIMBERS, 0, 5),
+                cpu(LINK, 0, 2),
+            ],
+        ),
     ];
     (matches.into_iter().enumerate())
         .map(|(i, (stage, key, players))| Match {
@@ -2112,11 +2123,19 @@ pub fn cpu_stages_set() -> Vec<Match> {
             stage,
             players: Cow::Owned(players.to_vec()),
             seed: 0x1F0F_2101 + i as u32,
-            rules: CPU_RULES,
+            rules: if stage == ICICLE_MOUNTAIN {
+                ICICLE_MOUNTAIN_RULES
+            } else {
+                CPU_RULES
+            },
             items: Items::OFF,
         })
         .collect()
 }
+
+/// The CPU match on Icicle Mountain: a time match of eight minutes, as the stages set's moving
+/// stages have, so the climb comes round and nobody's last stock ends it.
+const ICICLE_MOUNTAIN_RULES: Rules = Rules::Time { time_limit: 480 };
 
 /// The stages where Nana's computer player asks the stage something: whether an island is
 /// safe (Brinstar, Onett), the wind (Rainbow Cruise), its routes (Great Bay, Hyrule Temple) and
