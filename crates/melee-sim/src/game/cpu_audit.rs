@@ -1,9 +1,9 @@
 //! The CPU players' audit (docs/player.md, "CPU players: what's left"): what a VS match with
 //! computer players can reach that isn't ported, held to the port ledger and the computer
 //! player's modules as the stages' and items' audits are ([`super::roster`],
-//! [`super::items_audit`]). A future launcher toggle offers a CPU player only where no gap is
-//! left for its character, level, the stage and the item switch ([`missing_with`],
-//! [`missing_with_switch`]). Presentation data only: nothing in the simulation reads it.
+//! [`super::items_audit`]). The player's launcher offers a CPU player only where no gap is left
+//! for its character, level, the stage and the item switch, and asks about Nana in every match
+//! with the Ice Climbers ([`missing_with`], [`missing_with_switch`]). Presentation data only: nothing in the simulation reads it.
 //!
 //! A VS match's computer players are computer kind 4 (`gm_SetupPlayerDefaults`; the character
 //! select screen sets only the level, 1 to 9), and in any match with the Ice Climbers Nana is

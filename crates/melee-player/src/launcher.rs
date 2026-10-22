@@ -1,5 +1,5 @@
 //! The launcher: started with no match on its command line, the player's window shows a small
-//! form (a character or none for each port, a stage, stocks and minutes, the items, the aspect
+//! form (a character or none for each port, each human or a CPU at a level, a stage, stocks and minutes, the items, the aspect
 //! ratio and fullscreen) drawn with egui on the
 //! player's own GPU device and window, and Start plays that match in the same window. Escape in
 //! the match comes back here; Escape here quits. It opens with the choices last started from it,
@@ -11,16 +11,18 @@ use std::time::{Duration, Instant};
 
 use melee_sim::game::roster;
 
-use crate::items;
 use crate::jit::Timing;
 use crate::pacing::Mode;
 use crate::present::{Aspect, Gpu, Present, Shown};
+use crate::{cpu, items};
 
 /// A match the launcher picked.
 #[derive(Clone, Debug, PartialEq)]
 pub struct Choice {
     /// Each port's `CharacterKind`, or none.
     pub players: [Option<u8>; 4],
+    /// Each port's CPU level (1 to 9), or none for a human player.
+    pub cpus: [Option<u8>; 4],
     /// `StKind`.
     pub stage: u16,
     pub stocks: u8,
@@ -46,8 +48,9 @@ impl Choice {
     }
 
     /// Why the match can't start: fewer than two players, a character whose own items could
-    /// stop the match (`roster::characters_refusal`), or a stage that isn't offered or could
-    /// stop with these characters (`Stage::refusal`).
+    /// stop the match (`roster::characters_refusal`), a stage that isn't offered or could
+    /// stop with these characters (`Stage::refusal`), or computer players, Nana among them,
+    /// that could stop it (`cpu::refusal`).
     pub fn refusal(&self) -> Option<String> {
         if self.player_count() < 2 {
             return Some("Pick at least two players.".into());
@@ -56,10 +59,16 @@ impl Choice {
         if let Some(why) = roster::characters_refusal(&characters) {
             return Some(why);
         }
-        match roster::stage_by_kind(self.stage) {
+        let stage = match roster::stage_by_kind(self.stage) {
             Some(s) => s.refusal(&characters),
             None => Some("Pick a stage.".into()),
-        }
+        };
+        stage.or_else(|| self.cpu_refusal(&self.items().kinds))
+    }
+
+    /// Why the CPU audit refuses the match with the item kinds it gets.
+    pub fn cpu_refusal(&self, kinds: &[u8]) -> Option<String> {
+        cpu::refusal(&self.players, &self.cpus, self.stage, kinds)
     }
 
     /// Each port's character and costume as the command line keeps them (0xFF: none). A
@@ -139,6 +148,7 @@ impl Form {
         Form {
             choice: Choice {
                 players: [fox, fox, None, None],
+                cpus: [None; 4],
                 stage: roster::stage("fd").map_or(32, |s| s.kind),
                 stocks,
                 minutes,
@@ -168,6 +178,9 @@ impl Form {
                 .and_then(roster::character_by_kind)
                 .map_or("none", |c| c.keys[0]);
             text += &format!("p{} = {name}\n", i + 1);
+        }
+        for (i, l) in c.cpus.iter().enumerate() {
+            text += &format!("p{}-cpu = {}\n", i + 1, cpu::save(*l));
         }
         if let Some(s) = roster::stage_by_kind(c.stage) {
             text += &format!("stage = {}\n", s.keys[0]);
@@ -222,6 +235,11 @@ impl Form {
                         c.players[port] = None;
                     } else if let Some(ch) = roster::character(v) {
                         c.players[port] = Some(ch.kind);
+                    }
+                }
+                k @ ("p1-cpu" | "p2-cpu" | "p3-cpu" | "p4-cpu") => {
+                    if let Some(l) = cpu::restore(v) {
+                        c.cpus[usize::from(k.as_bytes()[1] - b'1')] = l;
                     }
                 }
                 "stage" => {
@@ -313,38 +331,55 @@ impl Form {
             ui.heading("melee-hd");
             ui.add_space(16.0);
             let c = &mut self.choice;
+            // The item kinds the match gets, which the CPU audit's gate asks with.
+            let kinds = c.items().kinds;
             // The grid, centered: its width is about the labels' and the boxes'.
             ui.horizontal(|ui| {
-                ui.add_space(((ui.available_width() - 290.0) / 2.0).max(0.0));
+                ui.add_space(((ui.available_width() - 390.0) / 2.0).max(0.0));
                 ui.vertical(|ui| {
                     egui::Grid::new("match")
                         .num_columns(2)
                         .spacing([16.0, 8.0])
                         .show(ui, |ui| {
-                            for (i, p) in c.players.iter_mut().enumerate() {
+                            for i in 0..4 {
                                 ui.label(format!("Port {}", i + 1));
-                                let name = p
-                                    .and_then(roster::character_by_kind)
-                                    .map_or("None", |c| c.name);
-                                egui::ComboBox::from_id_salt(("port", i))
-                                    .selected_text(name)
-                                    .width(200.0)
-                                    .show_ui(ui, |ui| {
-                                        ui.selectable_value(p, None, "None");
-                                        for ch in roster::offered_characters() {
-                                            ui.selectable_value(p, Some(ch.kind), ch.name);
-                                        }
-                                    });
+                                ui.horizontal(|ui| {
+                                    let p = &mut c.players[i];
+                                    let name = p
+                                        .and_then(roster::character_by_kind)
+                                        .map_or("None", |c| c.name);
+                                    egui::ComboBox::from_id_salt(("port", i))
+                                        .selected_text(name)
+                                        .width(200.0)
+                                        .show_ui(ui, |ui| {
+                                            ui.selectable_value(p, None, "None");
+                                            for ch in roster::offered_characters() {
+                                                ui.selectable_value(p, Some(ch.kind), ch.name);
+                                            }
+                                        });
+                                    show_control(ui, c, &kinds, i);
+                                });
                                 ui.end_row();
                             }
                             ui.label("Stage");
                             let name = roster::stage_by_kind(c.stage).map_or("?", |s| s.name);
+                            let with_cpus = c
+                                .players
+                                .iter()
+                                .zip(&c.cpus)
+                                .any(|(p, l)| p.is_some() && l.is_some());
                             egui::ComboBox::from_id_salt("stage")
                                 .selected_text(name)
                                 .width(200.0)
                                 .show_ui(ui, |ui| {
                                     for s in roster::offered_stages() {
-                                        ui.selectable_value(&mut c.stage, s.kind, s.name);
+                                        let status = match with_cpus {
+                                            true => cpu::stage_status(
+                                                &c.players, &c.cpus, s.kind, &kinds,
+                                            ),
+                                            false => cpu::Status::Offered,
+                                        };
+                                        offer(ui, &mut c.stage, s.kind, s.name, &status);
                                     }
                                 });
                             ui.end_row();
@@ -501,12 +536,43 @@ impl Form {
             ui.add_space(16.0);
             ui.weak("0 stocks: a timed match. 0 minutes: no time limit.");
             ui.weak("Items: the switch offers only items ported for the stage and characters.");
+            ui.weak("CPU players: a level is offered only where nothing it reaches is unported.");
             ui.weak("Enter starts. Escape in a match comes back here; Escape here quits.");
             ui.weak("F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
             ui.weak("Added delay holds the controllers back on purpose, for a CRT's feel.");
         });
         start
     }
+}
+
+/// A drop-down's entry: selectable when offered, else shown disabled with the reason in a few
+/// words and what isn't ported on hover, as the item switch shows a kind.
+fn offer<T: PartialEq>(ui: &mut egui::Ui, value: &mut T, it: T, name: &str, status: &cpu::Status) {
+    if *status == cpu::Status::Offered {
+        ui.selectable_value(value, it, name);
+    } else {
+        let label = format!("{name}: {}", status.short());
+        ui.add_enabled(false, egui::Button::selectable(*value == it, label))
+            .on_disabled_hover_text(status.detail());
+    }
+}
+
+/// Port `port`'s control: Human, or a CPU at a level, each level offered by the CPU audit
+/// (`cpu::control_status`). Off with the port.
+fn show_control(ui: &mut egui::Ui, c: &mut Choice, kinds: &[u8], port: usize) {
+    let (players, cpus, stage) = (c.players, c.cpus, c.stage);
+    ui.add_enabled_ui(players[port].is_some(), |ui| {
+        egui::ComboBox::from_id_salt(("control", port))
+            .selected_text(cpu::control_name(cpus[port]))
+            .width(90.0)
+            .show_ui(ui, |ui| {
+                for level in std::iter::once(None).chain(cpu::LEVELS.map(Some)) {
+                    let status = cpu::control_status(&players, &cpus, stage, kinds, port, level);
+                    let name = cpu::control_name(level);
+                    offer(ui, &mut c.cpus[port], level, &name, &status);
+                }
+            });
+    });
 }
 
 /// How much larger than egui's own sizes the form is drawn.
@@ -821,6 +887,117 @@ mod tests {
             form.choice.stage = s.kind;
             assert!(form.choice.refusal().is_some(), "{}", s.name);
         }
+        // The CPU audit's Nana: the Ice Climbers with Peach, whose pulled Beam Sword Nana can
+        // pick up, items off and Popo human.
+        form.choice.stage = roster::stage("fd").unwrap().kind;
+        form.choice.players = [
+            Some(ics),
+            roster::character("peach").map(|c| c.kind),
+            None,
+            None,
+        ];
+        let why = form.choice.refusal().expect("Nana and Peach's sword");
+        assert!(why.contains("Nana"), "{why}");
+        assert!(!frame(&ctx, &mut form, enter()), "refused");
+    }
+
+    /// The launcher's gate, held to the audits as the item switch's is
+    /// (`items::offered_items_reach_nothing_unported`): every match the form would start, built
+    /// as the player builds it (`cpu::players`, `Settings::vs_items`), reaches nothing the stage,
+    /// items or CPU audits name, read back from its start data (the computer players' slots and
+    /// levels, the characters, the stage, the item kinds on). Every offered stage, every pair of
+    /// characters (a gap is reached through one computer player and one other character at
+    /// most, so larger sets reach only what their pairs do), human or CPU at every level, items
+    /// off and on.
+    #[test]
+    fn the_launcher_starts_nothing_the_audits_reject() {
+        use melee_sim::game::cpu_audit::{self, Computer};
+        use melee_sim::game::items_audit::{self, RANDOM_KINDS};
+        use melee_sim::game::vs_match::Settings;
+        let off = items::Switch::default();
+        let on = items::Switch {
+            freq: 3,
+            ..items::Switch::default()
+        };
+        let mut controls: Vec<[Option<u8>; 2]> = vec![[None, None]];
+        for l in cpu::LEVELS {
+            controls.extend([[None, Some(l)], [Some(l), None], [Some(l), Some(10 - l)]]);
+        }
+        let few = [
+            [None, None],
+            [None, Some(1)],
+            [Some(9), None],
+            [Some(5), Some(5)],
+        ];
+        // The port lists hold only the offered characters (`only_complete_characters_start`).
+        let offered: Vec<_> = roster::offered_characters().collect();
+        let (mut started, mut with_cpus, mut refused) = (0usize, 0usize, 0usize);
+        for (items, controls) in [(off, &controls[..]), (on, &few[..])] {
+            for s in roster::offered_stages() {
+                for a in &offered {
+                    for b in &offered {
+                        let base = Choice {
+                            players: [Some(a.kind), Some(b.kind), None, None],
+                            cpus: [None; 4],
+                            stage: s.kind,
+                            stocks: 4,
+                            minutes: 8,
+                            items,
+                        };
+                        let m = base.items();
+                        let stage_refusal = s.refusal(&base.characters());
+                        for ctl in controls {
+                            let c = Choice {
+                                cpus: [ctl[0], ctl[1], None, None],
+                                ..base.clone()
+                            };
+                            let why = stage_refusal.clone().or_else(|| c.cpu_refusal(&m.kinds));
+                            if items == off || ctl == &few[1] {
+                                assert_eq!(why, c.refusal(), "{c:?}");
+                            }
+                            if why.is_some() {
+                                refused += 1;
+                                continue;
+                            }
+                            let players = cpu::players(&c.ports(), &c.cpus);
+                            let settings =
+                                Settings::vs_items(c.stage, &players, 4, 8, &m.prefs).start;
+                            let slots = &settings.players[..4];
+                            let cpus: Vec<Computer> = (slots.iter())
+                                .filter(|p| p.slot_type == cpu::COMPUTER)
+                                .map(|p| Computer {
+                                    character: p.ckind as u8,
+                                    level: p.cpu_level,
+                                })
+                                .collect();
+                            let chars: Vec<u8> = (slots.iter())
+                                .filter(|p| p.slot_type != 3)
+                                .map(|p| p.ckind as u8)
+                                .collect();
+                            let r = &settings.rules;
+                            let kinds: Vec<i32> = match r.item_freq {
+                                -1 => Vec::new(),
+                                _ => (0..RANDOM_KINDS).filter(|k| r.x20 >> k & 1 != 0).collect(),
+                            };
+                            let stage = r.stkind;
+                            assert_eq!(cpus.len(), ctl.iter().flatten().count(), "{c:?}");
+                            let gaps = cpu_audit::missing_with(&cpus, &chars, stage, &kinds);
+                            assert!(gaps.is_empty(), "{c:?} reaches {gaps:?}");
+                            assert!(items_audit::missing_with(&kinds, &chars, stage).is_empty());
+                            let st = roster::stage_by_kind(stage).unwrap();
+                            assert!(st.offered() && st.missing_with(&chars).is_empty());
+                            started += 1;
+                            with_cpus += usize::from(!cpus.is_empty());
+                        }
+                    }
+                }
+            }
+        }
+        eprintln!(
+            "the launcher starts {started} of {} choices, {with_cpus} with CPU players",
+            started + refused
+        );
+        assert!(started > 0);
     }
 
     /// The port lists offer only characters whose own items the fighter audit finds complete,
@@ -848,6 +1025,7 @@ mod tests {
         let marth = roster::character("marth").unwrap().kind;
         let c = Choice {
             players: [Some(fox), None, Some(marth), Some(fox)],
+            cpus: [None; 4],
             stage: 32,
             stocks: 4,
             minutes: 8,
@@ -878,6 +1056,7 @@ mod tests {
         form.choice.items.freq = 3;
         form.choice.items.set(0x06, false);
         form.choice.items.set(0x1C, false);
+        form.choice.cpus = [Some(9), Some(7), None, Some(1)];
         form
     }
 
@@ -956,7 +1135,7 @@ mod tests {
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\nitems = lots\nitem-switch-off = everything\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\nitems = lots\nitem-switch-off = everything\np2-cpu = 10\np3-cpu = human\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
     }
