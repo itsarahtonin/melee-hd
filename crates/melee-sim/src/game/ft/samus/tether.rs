@@ -193,12 +193,14 @@ impl Running<'_> {
         false
     }
 
-    /// Her grab ended off the ground, `fn_800D9C64`: the beam put away.
-    // Ports `fn_800D9C64`; aliased once a check reaches it.
+    /// Her grab ended off the ground, `fn_800D9C64`: the beam put away. A grab that leaves the
+    /// ground before the beam comes out passes none, which `it_802B7B84` ignores.
+    #[doc(alias = "fn_800D9C64")]
     pub fn samus_catch_off_ground(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).kind == KIND_SAMUS {
-            let beam = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE);
-            samusgrapple::put_away(self, beam.expect("the grapple beam"));
+        if self.game.fighter(gobj).kind == KIND_SAMUS
+            && let Some(beam) = self.game.fighter(gobj).u.gobj_at(u::GRAPPLE)
+        {
+            samusgrapple::put_away(self, beam);
         }
     }
 

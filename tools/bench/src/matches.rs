@@ -1354,6 +1354,8 @@ pub fn sscope_set() -> Vec<Match> {
 /// on the ground as it's shot, as it bounces back and as it hangs; items off, a 30-second time
 /// match. No random draw decides anything a script does, so the seed is any: `1F0F2201`, since
 /// the `cpu-items` set took `1F0F2001`, which the recording in `oracle-m4-grapple` was made with.
+/// Then Samus's ground grab ending off the ground with and without the beam out
+/// ([`GRAB_ON_CLOUD`]), against an idle Fox on Yoshi's Island N64.
 pub fn grapple_set() -> Vec<Match> {
     let g = |character| Player {
         character,
@@ -1361,15 +1363,61 @@ pub fn grapple_set() -> Vec<Match> {
         team: None,
         control: Control::Grappler,
     };
-    vec![Match {
-        name: Cow::Borrowed("grapple-samus-bf"),
-        stage: BATTLEFIELD,
-        players: Cow::Owned(vec![g(SAMUS), g(FOX)]),
-        seed: 0x1F0F_2201,
-        rules: Rules::Time { time_limit: 30 },
-        items: Items::OFF,
-    }]
+    let program = |character, program| Player {
+        character,
+        costume: 0,
+        team: None,
+        control: Control::Program(program),
+    };
+    vec![
+        Match {
+            name: Cow::Borrowed("grapple-samus-bf"),
+            stage: BATTLEFIELD,
+            players: Cow::Owned(vec![g(SAMUS), g(FOX)]),
+            seed: 0x1F0F_2201,
+            rules: Rules::Time { time_limit: 30 },
+            items: Items::OFF,
+        },
+        Match {
+            name: Cow::Borrowed("grapple-cloud-yi64"),
+            stage: YOSHIS_ISLAND_64,
+            players: Cow::Owned(vec![program(SAMUS, &GRAB_ON_CLOUD), program(FOX, &IDLE)]),
+            seed: 0x1F0F_2202,
+            rules: Rules::Time { time_limit: 30 },
+            items: Items::OFF,
+        },
+    ]
 }
+
+/// Samus's grabs on Yoshi's Island N64's left cloud as it puffs away (docs/oracle.md, "The
+/// characters' own items"): a cloud stood on for about 150 frames drops its collision, no random
+/// draw. From her spawn she jumps left onto it and grabs so that it goes on her grab's third
+/// frame, before the beam comes out (`fn_800D9C64` with no beam), and falls. Reborn, she drops
+/// left off the top platform, jumps back onto the cloud once it's back, and grabs so that it
+/// goes on the grab's 15th frame, the beam out.
+const GRAB_ON_CLOUD: Program = Program {
+    parts: &[part(
+        &[
+            s(10, 0, -80, 0),
+            s(10, BUTTON_X, -80, 0),
+            s(25, 0, -80, 0),
+            s(3, BUTTON_X, -80, 0),
+            s(40, 0, -80, 0),
+            s(159, 0, 0, 0),
+            s(1, BUTTON_Z, 0, 0),
+            s(250, 0, 0, 0),
+            s(45, 0, -80, 0),
+            s(10, BUTTON_X, -80, 0),
+            s(25, 0, -80, 0),
+            s(3, BUTTON_X, -80, 0),
+            s(75, 0, -80, 0),
+            s(138, 0, 0, 0),
+            s(1, BUTTON_Z, 0, 0),
+        ],
+        1,
+        false,
+    )],
+};
 
 /// A program step: `buttons` and the stick held for `frames` frames.
 const fn s(frames: u16, buttons: u16, x: i8, y: i8) -> Step {

@@ -107,7 +107,7 @@ impl Running<'_> {
 
     /// `fn_800D8E30`: Link's hookshot and Samus's grapple put away (`fn_800D949C`,
     /// `fn_800D9C64`), then falling.
-    // Ports `fn_800D8E30`; aliased once a check reaches it.
+    #[doc(alias = "fn_800D8E30")]
     fn catch_off_ground(&mut self, gobj: GObjId) {
         self.link_catch_off_ground(gobj);
         self.samus_catch_off_ground(gobj);
