@@ -76,6 +76,8 @@ pub const GRPURA_YAKUMONO: u32 = 0x804D_6AA0;
 pub const GRPURA_VTX: u32 = 0x803E_6C0C;
 /// grrcruise.c's (`ssbm_types::tu::melee__gr__grrcruise::yakumono_param`).
 pub const GRRCRUISE_YAKUMONO: u32 = 0x804D_6A10;
+/// grflatzone.c's (`ssbm_types::tu::melee__gr__grflatzone::yakumono_param`).
+pub const GRFLATZONE_YAKUMONO: u32 = 0x804D_6AB0;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -366,6 +368,8 @@ impl Importer<'_> {
         self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
         self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRFLATZONE_YAKUMONO);
+        self.game.gr.flatzone_yakumono = self.data_or_unhandled(yaku);
         let n = gr::pura::VTX_COUNT as u32;
         let vtx: Vec<u32> = (0..n).map(|i| cap.u32(GRPURA_VTX + 0xC * i + 8)).collect();
         self.game.gr.pura_vtx_jobjs.clear();
@@ -1018,6 +1022,11 @@ impl Comparer<'_> {
                 "grPura yakumono_param",
                 GRPURA_YAKUMONO,
                 game.gr.pura_yakumono,
+            ),
+            (
+                "grFlatzone yakumono_param",
+                GRFLATZONE_YAKUMONO,
+                game.gr.flatzone_yakumono,
             ),
         ] {
             let yaku = self.u32(at);

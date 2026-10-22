@@ -296,6 +296,17 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 27,
+        name: "Flat Zone",
+        keys: &["fz", "flat-zone"],
+        audit: Some(Audit {
+            units: &["melee/gr/grflatzone", "melee/it/kinds/ittools"],
+            modules: &["gr/flatzone", "it/kinds/tools"],
+            unreached: &[],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 2,
         name: "Fountain of Dreams",
         keys: &["fod", "fountain-of-dreams"],

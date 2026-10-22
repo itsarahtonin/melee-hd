@@ -33,12 +33,16 @@ pub enum Replay {
     /// A Slippi replay in `$SLIPPI_REPLAYS`, played in Slippi Dolphin's float mode; the
     /// variable named overrides the path.
     Slippi(&'static str, Option<&'static str>),
+    /// One of milestone 4's oracle matches, `$SSBM_RS_LOCAL/bench/oracle-m4/NAME.slp`, played
+    /// in the console's float mode.
+    Oracle(&'static str),
 }
 
 impl Replay {
     fn path(self) -> PathBuf {
         match self {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
+            Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Slippi(rel, var) => var
                 .and_then(std::env::var_os)
                 .map_or_else(|| slippi_replays(rel).into(), PathBuf::from),
@@ -425,6 +429,15 @@ pub const FOX_MARTH_PS: Game = Game {
     name: "fox-marth-ps",
     players: "Fox vs Marth (benchmark)",
     replay: Replay::Bench("fox-marth-ps"),
+};
+
+/// Flat Zone's oracle match: its flat fighters' normals take the fighters' joint class's
+/// depth scale (`ftParts_JObjMakePositionMtx`).
+pub const FLAT_ZONE: Game = Game {
+    stage: "Flat Zone",
+    name: "stage-flat-zone",
+    players: "Young Link vs Jigglypuff (oracle match)",
+    replay: Replay::Oracle("stage-flat-zone"),
 };
 
 pub const SHEIK_FOX_FOD: Game = Game {

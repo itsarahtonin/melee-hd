@@ -15,8 +15,9 @@
 mod common;
 
 use common::{
-    Capture, Expect, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
-    FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, compare_in, scaled,
+    Capture, Expect, FLAT_ZONE, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
+    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, SHEIK_FOX_FOD, compare, compare_in,
+    scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -55,6 +56,14 @@ frames!(FOX_MARTH_BF;
 frames!(FOX_MARTH_FD;
     fox_marth_fd_600 600,
     fox_marth_fd_6000 6000,
+);
+frames!(FLAT_ZONE;
+    flat_zone_600 600,
+    flat_zone_2800 2800,
+    flat_zone_6000 6000,
+    flat_zone_6900 6900,
+    flat_zone_9000 9000,
+    flat_zone_9300 9300,
 );
 
 /// Slippi's name plates, which its playback draws and melee-sim doesn't (docs/player.md's
