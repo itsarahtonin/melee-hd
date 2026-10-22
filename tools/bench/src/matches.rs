@@ -52,12 +52,14 @@ pub enum Control {
     Grappler,
 }
 
-/// A player: external character ID (`CharacterKind`), costume and who plays it.
+/// A player: external character ID (`CharacterKind`), costume, who plays it, and its team in
+/// a team match (0 red, 1 blue, 2 green; a match is a team match when any player has one).
 #[derive(Clone, Copy, Debug)]
 pub struct Player {
     pub character: u8,
     pub costume: u8,
     pub control: Control,
+    pub team: Option<u8>,
 }
 
 /// The match's rules.
@@ -349,6 +351,7 @@ const fn p(character: u8, costume: u8) -> Player {
     Player {
         character,
         costume,
+        team: None,
         control: Control::Human,
     }
 }
@@ -357,6 +360,7 @@ const fn cpu(character: u8, costume: u8, level: u8) -> Player {
     Player {
         character,
         costume,
+        team: None,
         control: Control::Cpu {
             kind: CPU_VS,
             level,
@@ -852,6 +856,7 @@ pub fn barrel_set() -> Vec<Match> {
         let w = |character, side| Player {
             character,
             costume: 0,
+            team: None,
             control: Control::Walker { side },
         };
         Cow::Owned(vec![w(a, -1), w(b, 1)])
@@ -1030,6 +1035,7 @@ pub fn monsters_set() -> Vec<Match> {
             let o = |character| Player {
                 character,
                 costume: 0,
+                team: None,
                 control: Control::Opener,
             };
             Match {
@@ -1114,11 +1120,13 @@ pub fn catch_set() -> Vec<Match> {
                 Player {
                     character: catcher,
                     costume: 0,
+                    team: None,
                     control: Control::Catcher { button },
                 },
                 Player {
                     character: opener,
                     costume: 0,
+                    team: None,
                     control: Control::Opener,
                 },
             ]),
@@ -1239,6 +1247,7 @@ pub fn sscope_set() -> Vec<Match> {
             let g = |character| Player {
                 character,
                 costume: 0,
+                team: None,
                 control: Control::Gunner,
             };
             Match {
@@ -1264,6 +1273,7 @@ pub fn grapple_set() -> Vec<Match> {
     let g = |character| Player {
         character,
         costume: 0,
+        team: None,
         control: Control::Grappler,
     };
     vec![Match {
@@ -1348,7 +1358,8 @@ const SWEEP: [(u8, u16, &str); 3] = [
 ];
 
 /// The CPU set: every roster character as a real level 9 CPU against a human, rotating over the
-/// tournament stages (the first, `cpu-fox-fd`, and the Battlefield pilot `cpu-marth-bf`), then
+/// tournament stages (the first, `cpu-fox-fd`, the Battlefield pilot `cpu-marth-bf`, and Kirby
+/// last, `cpu-kirby-bf`), then
 /// a level sweep: three four-player matches of one character as CPUs at levels 1, 4 and 7
 /// against a human Fox. Stock matches, 4 stocks, 3 minutes, items off.
 pub fn cpu_set() -> Vec<Match> {
@@ -1359,6 +1370,8 @@ pub fn cpu_set() -> Vec<Match> {
         versus.push((b, a));
     }
     versus.push((ICE_CLIMBERS, FOX));
+    // Kirby joined the roster after the set was made.
+    versus.push((KIRBY, MARTH));
     for (i, &(c, human)) in versus.iter().enumerate() {
         let (stage, key) = TOURNAMENT[i % TOURNAMENT.len()];
         out.push(Match {
@@ -1380,6 +1393,80 @@ pub fn cpu_set() -> Vec<Match> {
             items: Items::OFF,
         });
     }
+    out
+}
+
+/// The levels set: every roster character as a CPU at level 1 or 5, two CPUs of a pair a match
+/// (one at each level, the pair's first at level 1 in even matches) against a human Fox (Falco
+/// when Fox is one of the CPUs), rotating over the tournament stages; then two matches of four
+/// CPUs and no human, at levels 2, 3, 6 and 8 on Dream Land and 4, 5, 7 and 9 on Battlefield,
+/// and a 2v2 team match of four CPUs on Final Destination. The CPU set's rules, items off.
+pub fn cpu_levels_set() -> Vec<Match> {
+    let mut pairs = PAIRS.to_vec();
+    pairs.push((ICE_CLIMBERS, KIRBY));
+    let mut out = Vec::new();
+    for (i, &(a, b)) in pairs.iter().enumerate() {
+        let (stage, key) = TOURNAMENT[i % TOURNAMENT.len()];
+        let (low, mid) = if i % 2 == 0 { (a, b) } else { (b, a) };
+        let human = if a == FOX || b == FOX { FALCO } else { FOX };
+        out.push(Match {
+            name: Cow::Owned(format!(
+                "cpu-l1-{}-l5-{}-{key}",
+                character_key(low),
+                character_key(mid)
+            )),
+            stage,
+            players: Cow::Owned(vec![p(human, 0), cpu(low, 0, 1), cpu(mid, 0, 5)]),
+            seed: 0x1F0F_0441 + i as u32,
+            rules: CPU_RULES,
+            items: Items::OFF,
+        });
+    }
+    let four = |name: &'static str, stage, players: Vec<Player>, seed| Match {
+        name: Cow::Borrowed(name),
+        stage,
+        players: Cow::Owned(players),
+        seed,
+        rules: CPU_RULES,
+        items: Items::OFF,
+    };
+    out.push(four(
+        "cpu-four-l2368-dl",
+        DREAM_LAND,
+        vec![
+            cpu(PIKACHU, 0, 2),
+            cpu(GANONDORF, 0, 3),
+            cpu(ICE_CLIMBERS, 0, 6),
+            cpu(KIRBY, 0, 8),
+        ],
+        0x1F0F_0491,
+    ));
+    out.push(four(
+        "cpu-four-l4579-bf",
+        BATTLEFIELD,
+        vec![
+            cpu(LUIGI, 0, 4),
+            cpu(JIGGLYPUFF, 0, 5),
+            cpu(LINK, 0, 7),
+            cpu(GAME_WATCH, 0, 9),
+        ],
+        0x1F0F_0492,
+    ));
+    let team = |pl: Player, team| Player {
+        team: Some(team),
+        ..pl
+    };
+    out.push(four(
+        "cpu-teams-fd",
+        FINAL_DESTINATION,
+        vec![
+            team(cpu(MARTH, 0, 9), 0),
+            team(cpu(SAMUS, 0, 6), 0),
+            team(cpu(FOX, 0, 9), 1),
+            team(cpu(NESS, 0, 4), 1),
+        ],
+        0x1F0F_0493,
+    ));
     out
 }
 
@@ -1507,11 +1594,13 @@ pub fn ics_set() -> Vec<Match> {
                 Player {
                     character: ICE_CLIMBERS,
                     costume: 0,
+                    team: None,
                     control: Control::Opener,
                 },
                 Player {
                     character: FOX,
                     costume: 0,
+                    team: None,
                     control: Control::Opener,
                 },
             ]),
@@ -1572,6 +1661,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("coins", coins_set),
     ("stages", stages_set),
     ("cpu", cpu_set),
+    ("cpu-levels", cpu_levels_set),
     ("cpu-stages", cpu_stages_set),
     ("cpu-items", cpu_items_set),
     ("held-extra", held_extra_set),
@@ -1633,6 +1723,11 @@ const MATCH_KIND_COIN: u8 = 0x40;
 const TIMER_ENABLED: u8 = 0x02;
 /// The third byte's `is_stock`.
 const IS_STOCK: u8 = 0x80;
+/// The second byte's `friendly_fire`, on in the recorded settings ([`RULES`]); a team match
+/// from the menus has it off by default.
+const FRIENDLY_FIRE: u8 = 0x01;
+/// `StartMeleeRules::is_teams`.
+const IS_TEAMS: usize = 0x8;
 
 /// One player's block (`PlayerInitData`): a human or computer player with `stocks`, VS CPU kind 4
 /// at level 9 for a human (what the CPU AI that plays its controller takes), handicap 9, no name
@@ -1662,7 +1757,7 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
                 0x00,
                 0x00,
                 0x09,
-                u8::from(slot == 0),
+                pl.team.unwrap_or(u8::from(slot == 0)),
                 0x78,
                 0x00,
                 flags,
@@ -1709,6 +1804,10 @@ impl Match {
         }
         d[0x10..0x14].copy_from_slice(&time_limit.to_be_bytes());
         d[0xB] = self.items.freq as u8;
+        if self.players.iter().any(|p| p.team.is_some()) {
+            d[IS_TEAMS] = 1;
+            d[1] &= !FRIENDLY_FIRE;
+        }
         d[0x20..0x28].copy_from_slice(&self.items.mask.to_be_bytes());
         for slot in 0..6u8 {
             let player = self.players.get(usize::from(slot)).copied();
@@ -2082,6 +2181,73 @@ mod tests {
     }
 
     #[test]
+    fn cpu_levels_cover_the_roster() {
+        use melee_sim::game::cpu_audit::{self, Computer};
+        let set = cpu_levels_set();
+        assert_eq!(set.len(), 16);
+        let at = |level: u8| -> BTreeSet<u8> {
+            set[..13]
+                .iter()
+                .flat_map(|m| m.players.to_vec())
+                .filter(|p| matches!(p.control, Control::Cpu { level: l, .. } if l == level))
+                .map(|p| p.character)
+                .collect()
+        };
+        let (low, mid) = (at(1), at(5));
+        assert_eq!((low.len(), mid.len()), (13, 13));
+        assert_eq!(low.union(&mid).count(), 26, "every roster character once");
+        let mut levels: Vec<u8> = (set[13..15].iter())
+            .flat_map(|m| m.players.to_vec())
+            .map(|p| match p.control {
+                Control::Cpu { level, .. } => level,
+                _ => panic!("a four-CPU match has a human"),
+            })
+            .collect();
+        levels.sort_unstable();
+        assert_eq!(levels, vec![2, 3, 4, 5, 6, 7, 8, 9]);
+        // The team match: is_teams on, friendly fire off, teams in the player blocks.
+        let teams = &set[15];
+        let d = teams.start_data();
+        assert_eq!((d[IS_TEAMS], d[1] & FRIENDLY_FIRE), (1, 0));
+        let team = |slot: usize| d[0x60 + 0x24 * slot + 9];
+        assert_eq!([team(0), team(1), team(2), team(3)], [0, 0, 1, 1]);
+        assert_eq!(set[0].start_data()[IS_TEAMS], 0);
+        // The audit's gaps for each setup: only those every match with a VS CPU reaches (the
+        // allocator model and off camera on the ground, which feat/cpu-ship is porting), and the
+        // Beam Sword Peach can pull.
+        let every = cpu_audit::missing_with(
+            &[Computer {
+                character: FOX,
+                level: 9,
+            }],
+            &[FOX],
+            FINAL_DESTINATION,
+            &[],
+        );
+        let kirby = select(&["cpu-kirby-bf".into()]).unwrap();
+        for m in set.iter().chain(&kirby) {
+            let cpus: Vec<Computer> = (m.players.iter())
+                .filter_map(|p| match p.control {
+                    Control::Cpu { level, .. } => Some(Computer {
+                        character: p.character,
+                        level,
+                    }),
+                    _ => None,
+                })
+                .collect();
+            let chars: Vec<u8> = m.players.iter().map(|p| p.character).collect();
+            for g in cpu_audit::missing_with(&cpus, &chars, m.stage, &[]) {
+                assert!(
+                    every.contains(&g) || (chars.contains(&PEACH) && g.what.contains("Beam Sword")),
+                    "{}: {}",
+                    m.name,
+                    g.what
+                );
+            }
+        }
+    }
+
+    #[test]
     fn checks_refuse_bad_matches() {
         let ok = || Match {
             name: "x".into(),
@@ -2150,7 +2316,7 @@ mod tests {
             assert_eq!(m.items.kinds(), vec![POKE_BALL], "{}", m.name);
             assert!(m.humans_only(), "{}", m.name);
         }
-        // Every roster character (all but Kirby) plays as a level 9 CPU.
+        // Every roster character plays as a level 9 CPU.
         let cpus: BTreeSet<u8> = cpu_set()
             .iter()
             .flat_map(|m| m.players.to_vec())
@@ -2163,8 +2329,8 @@ mod tests {
             })
             .map(|p| p.character)
             .collect();
-        assert_eq!(cpus.len(), 25);
-        assert!(!cpus.contains(&0x04));
+        assert_eq!(cpus.len(), 26);
+        assert!(cpus.contains(&KIRBY));
         // The pilots.
         let items = select(&["items-ported-fd".into()]).unwrap();
         assert_eq!(items[0].stage, FINAL_DESTINATION);
