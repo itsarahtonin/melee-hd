@@ -5,6 +5,8 @@ use super::super::super::code::Val;
 use super::super::super::handles::CodeRef;
 use super::super::super::state::Running;
 use super::{KIND_FALCO, KIND_FOX, PAD_DPAD_DOWN, addr, ext, ms, mv};
+use crate::game::gr::corneria::{falco_talk, fox_talk, talking, taunt_interrupted};
+use crate::game::structs::plActionStats;
 use crate::hsd::gobj::GObjId;
 
 /// The attack id the taunt counts under (`FTFOX_APPEALS_ATTACKID`).
@@ -16,13 +18,37 @@ const STATES: [[i32; 3]; 2] = [
     [ms::APPEAL_S_START_L, ms::APPEAL_S_L, ms::APPEAL_S_END_L],
 ];
 
+/// A count of attacks by id from 100 on, `pl_800386D8` (`x358.x0.by_attack_hi[id]`), which the
+/// id indexes from the array's start (0x3E8 into the stats): the taunt's (0x72) and the other
+/// ids the game asks for lie past the array, in the words after it.
+#[doc(alias = "pl_800386D8")]
+pub fn by_attack_hi(s: &plActionStats, id: i32) -> u32 {
+    match id {
+        107 => s.x594,
+        108..=115 => s.x598[(id - 108) as usize],
+        _ => unimplemented!("pl_800386D8 for attack {id:#x}"),
+    }
+}
+
 impl Running<'_> {
+    /// A call into code another part of the port owns, which a check stands in for (feature
+    /// `stubs`); else `run`.
+    fn appeal_seam(&mut self, _f: u32, args: &[Val], run: impl FnOnce(&mut Self) -> Val) -> Val {
+        #[cfg(feature = "stubs")]
+        if let Some(v) = super::super::super::code::stubbed(_f, args) {
+            return v;
+        }
+        let _ = args;
+        run(self)
+    }
+
     /// How often a player used the taunt (`pl_800386D8` on their action stats). The stats
     /// are the player block's, which a stand-in's log can't name.
     fn fox_appeal_count(&mut self, slot: i32) -> i32 {
-        let _ = self.game.player_action_stats(slot);
-        self.ext(ext::PL_800386D8, &[Val::None, Val::Int(ATTACK_ID)])
-            .int()
+        self.appeal_seam(ext::PL_800386D8, &[Val::None, Val::Int(ATTACK_ID)], |r| {
+            Val::Int(by_attack_hi(r.game.player_action_stats(slot), ATTACK_ID) as i32)
+        })
+        .int()
     }
 
     /// Whether the fighter's player used the taunt and Corneria lets it count,
@@ -30,7 +56,13 @@ impl Running<'_> {
     #[doc(alias = "ftFx_AppealS_CheckIfUsed")]
     pub fn fox_appeal_s_used(&mut self, f: super::super::super::handles::FighterId) -> bool {
         let slot = i32::from(self.game.fighters[f.0].player_idx);
-        self.fox_appeal_count(slot) != 0 && self.ext(ext::GRCORNERIA_801E2D14, &[]).int() != 0
+        self.fox_appeal_count(slot) != 0
+            && self
+                .appeal_seam(ext::GRCORNERIA_801E2D14, &[], |r| {
+                    Val::Int(i32::from(talking(r.game)))
+                })
+                .int()
+                != 0
     }
 
     /// The taunt on Corneria, `ftFx_AppealS_CheckInput`: Fox or Falco, the side taunt, and
@@ -55,8 +87,15 @@ impl Running<'_> {
         }
         self.fox_appeal_s_enter(gobj);
         let fp = self.game.fighter(gobj);
-        let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
-        self.ext(ext::PL_80040120, &[Val::Int(slot), Val::Int(sub)]);
+        let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        self.appeal_seam(
+            ext::PL_80040120,
+            &[Val::Int(slot), Val::Int(i32::from(sub))],
+            |r| {
+                r.taunt_stats(slot, sub);
+                Val::None
+            },
+        );
         true
     }
 
@@ -84,7 +123,17 @@ impl Running<'_> {
                 _ => None,
             };
             if let Some(c) = check
-                && self.ext(c, &[]).int() != 0
+                && self
+                    .appeal_seam(c, &[], |r| {
+                        let talks = if c == ext::GRCORNERIA_801E2B80 {
+                            fox_talk(r)
+                        } else {
+                            falco_talk(r)
+                        };
+                        Val::Int(i32::from(talks))
+                    })
+                    .int()
+                    != 0
             {
                 self.game.fighter_mut(gobj).death1_cb =
                     Some(CodeRef(addr::APPEAL_S_ON_TAKE_DAMAGE));
@@ -95,7 +144,10 @@ impl Running<'_> {
             let n = fp.mv_i32(mv::APPEAL_COUNT).wrapping_add(1);
             fp.set_mv_i32(mv::APPEAL_COUNT, n);
             if n >= 3 {
-                self.ext_gobj(ext::FT_8008A324, gobj);
+                self.appeal_seam(ext::FT_8008A324, &[Val::GObj(Some(gobj))], |r| {
+                    r.enter_wait_neutral(gobj);
+                    Val::None
+                });
                 return;
             }
             let facing = fp.mv_i32(mv::APPEAL_FACING);
@@ -113,7 +165,10 @@ impl Running<'_> {
     /// Hit during the call, `ftFx_AppealS_OnTakeDamage` (`death1_cb`): the call is cut off.
     #[doc(alias = "ftFx_AppealS_OnTakeDamage")]
     pub fn fox_appeal_s_on_take_damage(&mut self, gobj: GObjId) {
-        self.ext(ext::GRCORNERIA_801E2AF4, &[]);
+        self.appeal_seam(ext::GRCORNERIA_801E2AF4, &[], |r| {
+            taunt_interrupted(r);
+            Val::None
+        });
         self.game.fighter_mut(gobj).death1_cb = None;
     }
 }

@@ -89,6 +89,70 @@ pub enum EcbShape {
     },
 }
 
+/// `CollData::x34_flags`. Its `b5` (a substep met something that ends the move) is read only by
+/// `mpColl_80043754`'s substep loop, which clears it first, so the bit it holds between moves
+/// never reaches gameplay; a collision's setup (`mpColl_80041EE4`) leaves it as the block held
+/// it (a link of Sheik's chain new from the heap held it set on Corneria), and the comparer
+/// leaves it out (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct X34Flags {
+    pub b0: bool,
+    pub b1234: u8,
+    pub b5: bool,
+    pub b6: bool,
+    pub b7: bool,
+}
+
+impl Mirror for X34Flags {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        let b = m.bytes::<1>(at)[0];
+        X34Flags {
+            b0: b & 0x80 != 0,
+            b1234: b >> 3 & 0xF,
+            b5: b & 4 != 0,
+            b6: b & 2 != 0,
+            b7: b & 1 != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let b = m.bytes::<1>(at)[0];
+        let theirs = (b & 0x80 != 0, b >> 3 & 0xF, b & 2 != 0, b & 1 != 0);
+        let ours = (self.b0, self.b1234, self.b6, self.b7);
+        if ours != theirs {
+            cx.mismatch(path, format!("{ours:?}"), format!("{theirs:?}"));
+        }
+    }
+}
+
+/// `CollData::x35_flags`, of whose byte code writes and reads only the top bit (`b0`:
+/// `mpColl_80041EE4` sets it, `mpLib`'s floor checks read it). The other seven bits keep what
+/// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone: a
+/// link of Sheik's chain new from the heap held 0x7F there on Corneria (docs/engine.md).
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct X35Flags {
+    pub b0: bool,
+}
+
+impl Mirror for X35Flags {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        X35Flags {
+            b0: m.bytes::<1>(at)[0] & 0x80 != 0,
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.bytes::<1>(at)[0] & 0x80 != 0;
+        if self.b0 != theirs {
+            cx.mismatch(path, format!("{}", self.b0), format!("{theirs}"));
+        }
+    }
+}
+
 /// `ECBSource`, mirrored by hand: its union holds joint handles or floats as `kind` says.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct EcbSource {
@@ -362,7 +426,7 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
     for x in [src.x124, src.x128, src.x12C] {
         f(x);
     }
-    let flags = |e: &crate::game::structs::_ECBFlagStruct| {
+    let flags = |e: &X34Flags| {
         u32::from(e.b0) << 7
             | u32::from(e.b1234) << 3
             | u32::from(e.b5) << 2
@@ -372,7 +436,7 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
     v.extend([
         cd.x0_gobj.map_or(u32::MAX, |g| g.0),
         flags(&cd.x34_flags),
-        flags(&cd.x35_flags),
+        u32::from(cd.x35_flags.b0) << 7,
         cd.facing_dir as u32,
         cd.x38 as u32,
         cd.floor_skip as u32,

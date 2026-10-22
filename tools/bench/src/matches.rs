@@ -53,6 +53,10 @@ pub enum Control {
     /// A human player whose controller follows a [`Program`] ([`program_pad`]), played by
     /// `BENCH_PADS`: its parts in order from "GO".
     Program(&'static Program),
+    /// A human player whose controller follows [`taunter_pad`]'s script, played by `BENCH_PADS`:
+    /// it stands, and taps the D-pad down on match frame `at` (none if negative), Fox's and
+    /// Falco's side taunt, which calls the Star Fox team on Corneria and Venom.
+    Taunter { at: i32 },
 }
 
 /// A step of a [`Program`]: `buttons` and the main stick (`x`, `y`: 0 or past ±80) held for
@@ -399,6 +403,13 @@ pub fn program_pad(program: &Program, frame: i32) -> (u16, i8, i8) {
         }
     }
     (0, 0, 0)
+}
+
+/// A taunter's buttons on match frame `frame` (from "GO"): the D-pad down for the one frame
+/// `at`, so the taunt's check (`ftFx_AppealS_CheckInput`: pressed a frame before, not held)
+/// passes on the next.
+pub fn taunter_pad(frame: i32, at: i32) -> (u16, i8) {
+    (if frame == at { DPAD_DOWN } else { 0 }, 0)
 }
 
 const fn p(character: u8, costume: u8) -> Player {
@@ -1843,6 +1854,96 @@ pub fn fighter_items_set() -> Vec<Match> {
     v
 }
 
+/// The Star Fox stages' own matches (docs/oracle.md, "Stages"). The team's talk: Fox's or
+/// Falco's side taunt on Corneria and Venom, a taunter ([`taunter_pad`]) against an idle foe,
+/// items off. Fox taunts a second after "GO" and the talk plays out within the 30 seconds;
+/// Falco taunts eight seconds before time runs out in 20 (the taunt cues the talk five seconds
+/// in), so the talk still plays at the match's end. Seeds `1F0F23xx`. Then eight minutes on
+/// each for the long cycles, and real CPUs on each.
+pub fn starfox_set() -> Vec<Match> {
+    let t = |character, at| Player {
+        character,
+        costume: 0,
+        control: Control::Taunter { at },
+        team: None,
+    };
+    let mut out = Vec::new();
+    for (i, (stage, key)) in [(CORNERIA, "corneria"), (VENOM, "venom")]
+        .into_iter()
+        .enumerate()
+    {
+        out.push(Match {
+            name: Cow::Owned(format!("taunt-fox-{key}")),
+            stage,
+            players: Cow::Owned(vec![t(FOX, 60), t(MARTH, -1)]),
+            seed: 0x1F0F_2301 + 2 * i as u32,
+            rules: Rules::Time { time_limit: 30 },
+            items: Items::OFF,
+        });
+        out.push(Match {
+            name: Cow::Owned(format!("taunt-falco-{key}")),
+            stage,
+            players: Cow::Owned(vec![t(FALCO, 720), t(MARTH, -1)]),
+            seed: 0x1F0F_2302 + 2 * i as u32,
+            rules: Rules::Time { time_limit: 20 },
+            items: Items::OFF,
+        });
+    }
+    // Eight minutes on each with two idle players, for the stages' long cycles (the Great Fox
+    // sinking over the city's first part), on seeds a search found reaching them.
+    for (stage, key, seed) in [
+        (CORNERIA, "corneria", 0x1F0F_2401),
+        (VENOM, "venom", 0x1F0F_2501),
+    ] {
+        out.push(Match {
+            name: Cow::Owned(format!("long-{key}")),
+            stage,
+            players: Cow::Owned(vec![t(FOX, -1), t(MARTH, -1)]),
+            seed,
+            rules: Rules::Time { time_limit: 480 },
+            items: Items::OFF,
+        });
+    }
+    // Real CPUs at mixed levels against a `BENCH_AI` human on each, as the cpu-stages set's: the
+    // computer players' Corneria and Venom code (the excluded floors, the turn under the Great
+    // Fox's ceiling).
+    let cpus = [
+        (
+            CORNERIA,
+            "corneria",
+            0x1F0F_2402,
+            [
+                p(PEACH, 0),
+                cpu(FALCO, 0, 9),
+                cpu(SAMUS, 0, 5),
+                cpu(ROY, 0, 2),
+            ],
+        ),
+        (
+            VENOM,
+            "venom",
+            0x1F0F_2502,
+            [
+                p(SHEIK, 0),
+                cpu(MARIO, 0, 8),
+                cpu(PIKACHU, 0, 3),
+                cpu(BOWSER, 0, 6),
+            ],
+        ),
+    ];
+    for (stage, key, seed, players) in cpus {
+        out.push(Match {
+            name: Cow::Owned(format!("cpu-{key}")),
+            stage,
+            players: Cow::Owned(players.to_vec()),
+            seed,
+            rules: CPU_RULES,
+            items: Items::OFF,
+        });
+    }
+    out
+}
+
 /// The containers and the Freezie (kind 17), which a Topi pushes when Freezies are on.
 const CONTAINERS_AND_FREEZIE: [u8; 4] = [1, 2, 4, 17];
 
@@ -2279,6 +2380,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("fighters", fighters_set),
     ("sscope", sscope_set),
     ("grapple", grapple_set),
+    ("starfox", starfox_set),
     ("ics", ics_set),
     ("own-items", fighter_items_set),
 ];
@@ -2352,7 +2454,8 @@ fn player_block(player: Option<Player>, slot: u8, stocks: u8) -> [u8; 0x24] {
                 | Control::Catcher { .. }
                 | Control::Gunner
                 | Control::Grappler
-                | Control::Program(_) => (0x00, 0xC0, CPU_VS, 9),
+                | Control::Program(_)
+                | Control::Taunter { .. } => (0x00, 0xC0, CPU_VS, 9),
                 Control::Cpu { kind, level } => (0x01, 0x40, kind, level),
             };
             b[..0x10].copy_from_slice(&[
@@ -2511,6 +2614,7 @@ impl Match {
             Control::Gunner => Some(xy(gunner_pad(frame, port))),
             Control::Grappler => Some(grappler_pad(frame, port)),
             Control::Program(p) => Some(program_pad(p, frame)),
+            Control::Taunter { at } => Some(xy(taunter_pad(frame, at))),
             Control::Human | Control::Cpu { .. } => None,
         }
     }
@@ -2977,6 +3081,17 @@ mod tests {
             assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
             assert!(m.script().is_some());
             assert_eq!(m.items, Items::OFF);
+        }
+        // The starfox set's taunters likewise, items off, one D-pad press each at most; its CPU
+        // matches with one `BENCH_AI` human.
+        for m in starfox_set() {
+            assert_eq!(m.items, Items::OFF);
+            if m.name.starts_with("cpu-") {
+                assert_eq!(m.human_ports(), vec![0], "{}", m.name);
+                continue;
+            }
+            assert!(m.human_ports().is_empty() && m.humans_only(), "{}", m.name);
+            assert!(m.script().is_some());
         }
         for (grab, _, swing) in GRAPPLES {
             assert!((grab + 17..=grab + 74).contains(&swing), "{grab}");

@@ -11,6 +11,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::SecondTree;
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
+use crate::game::gr::setup::StageCameras;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::it::link::LinkX20;
@@ -24,7 +25,7 @@ use crate::hsd::sis::TextId;
 use crate::hsd::tobj::TObjId;
 use crate::lb::command::Script;
 use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};
-use crate::mp::coll::EcbSource;
+use crate::mp::coll::{EcbSource, X34Flags, X35Flags};
 use crate::quat::Quat;
 use crate::vec::Vec3;
 
@@ -607,33 +608,6 @@ impl Default for FtInputTimers {
     }
 }
 
-/// `_ECBFlagStruct`, 0x1 bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct _ECBFlagStruct {
-    /// +0x0 (bits 0..+1)
-    pub b0: bool,
-    /// +0x0 (bits 1..+4)
-    pub b1234: u8,
-    /// +0x0 (bits 5..+1)
-    pub b5: bool,
-    /// +0x0 (bits 6..+1)
-    pub b6: bool,
-    /// +0x0 (bits 7..+1)
-    pub b7: bool,
-}
-
-impl Default for _ECBFlagStruct {
-    fn default() -> Self {
-        _ECBFlagStruct {
-            b0: false,
-            b1234: 0,
-            b5: false,
-            b6: false,
-            b7: false,
-        }
-    }
-}
-
 /// `_ftECB`, 0x20 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct _ftECB {
@@ -693,9 +667,9 @@ pub struct CollData {
     /// +0x28
     pub x28_vec: Vec3,
     /// +0x34
-    pub x34_flags: _ECBFlagStruct,
+    pub x34_flags: X34Flags,
     /// +0x35
-    pub x35_flags: _ECBFlagStruct,
+    pub x35_flags: X35Flags,
     /// +0x36
     pub facing_dir: i16,
     /// +0x38
@@ -4507,7 +4481,7 @@ pub struct StageInfo {
     /// +0x280
     pub x280: [Option<JObjId>; 261],
     /// +0x694
-    pub x694: [RawPtr; 4],
+    pub x694: StageCameras,
     /// +0x6a4
     pub x6A4: Option<StartHookId>,
     /// +0x6a8
@@ -4605,7 +4579,7 @@ impl Default for StageInfo {
             on_check_shadow_render: None,
             map_gobjs: [None; 64],
             x280: [None; 261],
-            x694: core::array::from_fn(|_| Default::default()),
+            x694: Default::default(),
             x6A4: None,
             itemdata: None,
             coll_data: None,

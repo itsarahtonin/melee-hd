@@ -1052,7 +1052,7 @@ impl Running<'_> {
             return (None, r5);
         };
         if self.excluded_floor_asks_stage() {
-            let r5 = self.excluded_floor_r5();
+            let r5 = self.excluded_floor_r5(hit.line);
             return ((!self.excluded_floor(hit.line)).then_some(hit.pos), r5);
         }
         (Some(hit.pos), r5)

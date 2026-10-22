@@ -413,9 +413,9 @@ When porting shows that the original game does something wrong, keep the behavio
 ### A computer player's DI with no knockback reads two registers it never set
 
 - **Where:** `ftCo_800AC5A0` (the computer player's DI in hitstun, behavior 18, marked `@bug` in the decompilation), from `ftCo_800B2790`, `crates/melee-sim/src/game/ft/cpu_move.rs` (`cpu_di`) and `crates/melee-sim/src/game/ft/cpu_ai.rs` (`Leftover`).
-- **Defect:** with no knockback it pushes the stick by r5 for x and r30 for y, neither of which it or its caller sets for that path: r5 holds what the computer player's frame (`ftCo_800B3900`) left (for Nana on her way back to Popo, Popo's state or her held item's address; for a VS CPU often a stack address or a flag the behavior pick's floor check left, `mpCheckFloor`), r30 its caller's `Fighter*`, so the stick's y is the low byte of the fighter's address.
+- **Defect:** with no knockback it pushes the stick by r5 for x and r30 for y, neither of which it or its caller sets for that path: r5 holds what the computer player's frame (`ftCo_800B3900`) left (for Nana on her way back to Popo, Popo's state or her held item's address; for a VS CPU often a stack address or a flag the behavior pick's floor check left, `mpCheckFloor`, or, on the four stages whose floors it may exclude, what that check's stage call left, `ftCo_800A1B38`: on Corneria the third flag of `grCorneria_801E2D90`'s chain of joint tests, 1 when the floor's collision joint is 0, 1, 2 or 5 and else 0, and on Venom the address of the collision joints' array that `mpJointFromLine` leaves in r5), r30 its caller's `Fighter*`, so the stick's y is the low byte of the fighter's address.
 - **Effect:** Ice Climbers matches go different ways when the heap is laid out differently: a match started from a console's menus and the same match under Slippi's playback give Nana different addresses, so a replay of an Ice Climbers match leaves its recording at the first such DI (Peach back-throwing Nana at frame 10,137 in the performance notes' case).
-- **melee-hd:** modeled: the allocator model gives each fighter the original's address, and each function on the way returns the r5 it leaves (`cpu_ai::Leftover`), the floor search included (`Geometry::check_floor_r5`); a leftover not followed stops. Slippi's NanaDeterminism code clears r30 (and r5 in 3.19's), which the Slippi ruleset follows.
+- **melee-hd:** modeled: the allocator model gives each fighter the original's address, and each function on the way returns the r5 it leaves (`cpu_ai::Leftover`), the floor search included (`Geometry::check_floor_r5`) and Mushroom Kingdom's, Corneria's and Venom's excluded floors (`Running::excluded_floor_r5`, `crates/melee-sim/src/game/ft/cpu.rs`; Mushroom Kingdom's and Venom's from the allocator model's address of the joints' array, `Geometry::joints_addr`); a leftover not followed stops, as Big Blue's excluded floors do. Slippi's NanaDeterminism code clears r30 (and r5 in 3.19's), which the Slippi ruleset follows.
 - **Fix:** push the stick neutral, or along a defined direction, with no knockback.
 - **Fix impact:** changes Nana's DI in those cases; breaks vanilla replay compatibility for Ice Climbers matches (Slippi's code already fixes it online, differently in 3.16 and 3.19).
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (lines 93 and 95); [performance](performance.md) (line 186); [the oracle](oracle.md) (line 140).
@@ -582,6 +582,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the flames' paths, so replays and Slippi peers would desync.
 - **Source:** not recorded beyond the port (`crates/melee-sim/src/game/it/kinds/hinoarashi.rs:296`).
 
+### A far Arwing's laser takes its spawn position from the stack the sound left
+
+- **Where:** `it_802E7654` (a far Arwing's aimed laser on Corneria and Venom, from `grCorneria_801DED50` and `grVenom_80205F30`), `crates/melee-sim/src/game/it/kinds/arwinglaser.rs` (`spawn_aimed`) and `crates/melee-sim/src/audio/driver.rs` (`sfx_sample`).
+- **Defect:** the spawn's `SpawnItem` never gets its own position (`pos`), so `Item_80268B18` copies three stack words into the item's collision as its last position and into its ECB's motion (`xB54`). Both callers play the shot's sound just before (`lbAudioAx_800237A8`), and its start (`HSD_AudioSFXStartParam`) leaves in those words the registers its prologue saved and then set: the track (0), the channel (7) and the sound's sample index (0xEDE for Corneria's 0x55734, 0xF47 for Venom's 0x6B6C9), as float bits.
+- **Effect:** none observable: the laser's own collision probes from its tip, and only a stomp on a stompable item reads `xB54`; the words are tiny denormals either way.
+- **melee-hd:** modeled: the caller passes the sound it played and the spawn computes its sample from the sound bank's table.
+- **Fix:** set `pos` to the gun's place, as `prev_pos` is.
+- **Fix impact:** none in play (the item's last position and ECB motion only, which nothing reads); the state differs from vanilla in those words.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); [the oracle](oracle.md#stages) (Corneria and Venom); found with ssbm-rs's `WATCH_ADDR` on `taunt-fox-venom` (tick 696).
+
 ## Stages and collision
 
 ### Final Destination's background compares green twice
@@ -704,6 +714,36 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** test `xCC != NULL`.
 - **Fix impact:** changes gameplay (the old slick's floor terrain) and breaks replay and Slippi compatibility.
 - **Source:** the decompilation's `grflatzone.c` (`grFlatzone_802176BC`); `crates/melee-sim/src/game/gr/flatzone.rs`, the comment in `proc_oil`.
+
+### A collision's setup leaves two flag bytes' bits as the heap held them
+
+- **Where:** `mpColl_80041EE4` (a collision's setup), `crates/melee-sim/src/mp/coll/mod.rs` (`X34Flags`, `X35Flags`).
+- **Defect:** it clears `x34`'s other bits but leaves `b5` (a substep met something that ends the move) and `x35`'s low seven bits as the block held them.
+- **Effect:** none observable: only `mpColl_80043754`'s substep loop reads `b5`, after clearing it, and no code reads `x35`'s low bits (it uses only the top one). On Corneria's oracle match a link of Sheik's chain new from the heap held `b5` set and 0x7F in `x35` (tick 11950).
+- **melee-hd:** stale: `b5` is kept but not compared, and `x35` is modeled as its top bit alone, both spliced in by `tools/structgen`.
+- **Fix:** clear both bytes.
+- **Fix impact:** none in play.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values).
+
+### The Star Fox team's window writes into its freed text
+
+- **Where:** `smashTaunt_801E24AC` (the talk window's render callback, Corneria and Venom), `crates/melee-sim/src/game/gr/corneria.rs` (`window_render`).
+- **Defect:** once a line closes its font (`HSD_SisLib_803A5F50`), which frees the line's text, the window keeps its pointer and writes the text's `hidden` byte into the freed block every display pass until the window goes.
+- **Effect:** none observable: the next text made in that block (the next line's) writes the byte before anything reads it.
+- **melee-hd:** the write to a freed text is skipped.
+- **Fix:** clear the window's text pointer when the font closes.
+- **Fix impact:** none in play.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values).
+
+### Venom's Great Fox can't hide its joints
+
+- **Where:** `grVenom_8020454C` (the Great Fox's process), `crates/melee-sim/src/game/gr/venom.rs` (`proc_ship`).
+- **Defect:** each of its seven joints is to show while its depth lies between -60,000 and 1,000, but the test hides it only when its depth is neither below 1,000 nor above -60,000, which no number is: the two bounds are joined the wrong way.
+- **Effect:** the joints always show (a NaN depth alone would hide one).
+- **melee-hd:** modeled, NaN included.
+- **Fix:** hide a joint past either bound.
+- **Fix impact:** would change what Venom draws in the distance; no gameplay.
+- **Source:** `crates/melee-sim/src/game/gr/venom.rs` (`proc_ship`).
 
 ## Camera
 
@@ -914,6 +954,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Judgement's roll past its sums | `ftGw_SpecialS_GetRandomInt`, `game/ft/gamewatch/special_s.rs` | Returns a register it never set when the roll isn't below any running sum; a roll below their total always is | [engine notes](engine.md#uninitialized-values) (line 90) |
 | Falcon Kick's flame in another state | `ftCa_SpecialHi_800E3EAC`, `game/ft/captain/special_lw.rs` | Reads a register and a stack word it never set outside the kick's two states; only those states call it | `crates/melee-sim/src/game/ft/captain/special_lw.rs:24` |
 | A walk's animation outside the walk | `ftWalkCommon_800DFDDC`, `game/ft/co/ground.rs` | Leaves the rate in `f31` from its caller for a state that isn't one of the walk's three | `crates/melee-sim/src/game/ft/co/ground.rs:243` |
+| A Corneria talk of five lines | `grCorneria_801E2598`, `game/gr/corneria.rs` | Reads the next talk's first line past a talk's five; no talk in the table has five lines | `crates/melee-sim/src/game/gr/corneria.rs` (`talk_has_line`) |
+| Venom's Arwings held still | `grVenom_80205F30`, `game/gr/venom.rs` | Tests a flag (`grVe_804D6A3C`) nothing writes, so the Arwings never hold; Corneria's counterpart holds them before the start | `crates/melee-sim/src/game/gr/venom.rs` (`FROZEN`) |
 | Dancing Blade's switch from another state | Marth's side special switches, `game/ft/mars/special_s.rs` | Leaves the state it changes to unset | `crates/melee-sim/src/game/ft/mars/special_s.rs:219` |
 | No surface touched | `it_80276CEC`, `game/it/maplib.rs` | Stores an unset register as the surface | `crates/melee-sim/src/game/it/maplib.rs:365` |
 | Stadium's screen without its texture | `grStadium_801D1290`, `game/gr/stadium.rs` | Leaves its stack slot as it was when no texture is found; one always is | `crates/melee-sim/src/game/gr/stadium.rs:309` |

@@ -91,6 +91,16 @@ pub enum VarsKind {
     IceMtScroll,
     IceMtField(u8),
     IceMtBg,
+    Corneria,
+    CorneriaCity,
+    CorneriaCity8,
+    ArwingPath,
+    Arwing,
+    ArwingColl,
+    StarFoxTalk,
+    SmashTaunt,
+    VenomPlatform,
+    VenomShip,
 }
 
 /// `union GroundVars`.
@@ -238,6 +248,26 @@ pub enum GroundVars {
     OnettBuilding(OnettBuildingVars),
     /// `grOnett_Car_GroundVars`: the cars (map 3).
     OnettCar(OnettCarVars),
+    /// `grCorneria_GroundVars`: Corneria's Great Fox (map 3).
+    Corneria(CorneriaVars),
+    /// `grCorneria_GroundVars`'s first bytes: the city's first and last parts (maps 4 and 9).
+    CorneriaCity(CorneriaCityVars),
+    /// `grCorneria_GroundVars`'s first bytes: the city's middle part (map 8).
+    CorneriaCity8(CorneriaCity8Vars),
+    /// `grArwing_GroundVars`: an Arwing's flight path (map 1).
+    ArwingPath(ArwingPathVars),
+    /// `grCorneria_GroundVars2` (`grStarFox_GroundVars`): an Arwing flying it (maps 2 and 10).
+    Arwing(ArwingVars),
+    /// `grArwing_GroundVars`: an Arwing's collision (maps 13 to 18).
+    ArwingColl(ArwingCollVars),
+    /// `grStarFox_GroundVars`: the Star Fox team's talk (Corneria's map 12).
+    StarFoxTalk(StarFoxTalkVars),
+    /// `grSmashTaunt_GroundVars`: a line of the talk in its window (Corneria's map 5).
+    SmashTaunt(SmashTauntVars),
+    /// `grVenom_Platform_GroundVars`: Venom's platforms (map 5).
+    VenomPlatform(VenomPlatformVars),
+    /// `grVenom_GroundVars2`: Venom's Great Fox (map 7).
+    VenomShip(VenomShipVars),
 }
 
 /// One of Onett's awnings (`grOnett_AwningData`, 0x1C bytes): its joint, its rest height, this
@@ -1606,6 +1636,210 @@ pub struct LastVars {
     pub xE0: Option<crate::hsd::generator::GeneratorId>,
 }
 
+/// `grCorneria_GroundVars` of the Great Fox (map 3): whether it waits for the match's start
+/// (`xC4` bit 0x80), whether it sinks (0x40) and whether the city's last part has had its draw
+/// (0x20); the spawn configurations of its splashes (`xC8`, `xCC`, by address); its sinking
+/// depth (`xD0`) and speed (`xFC`) with their tick count (`x100`); its place (`base_x`,
+/// `base_y`) and drift (`offset_x`, `offset_y`), last tick's drift (`xE4`'s x and y), its drift's
+/// speeds (`xE4.z`, `xF0`) and accelerations (`xF4`, `xF8`) and their ticks left (`x104`); its
+/// guns' state (`x108`), wait (`x10C`) and shot wait (`x110`), the damage they took (`x114`), the
+/// shots left (`x118`), their kind (`x119`) and side (`x11A`); the guns' hurtbox items, its copy
+/// (map 0) and the deck's joint (`x12C`). The bytes nothing writes (`xC5` to `xC7`, `x11B`,
+/// `x11C`) stay as the fresh block held them.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CorneriaVars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub xC6: u8,
+    pub xC7: u8,
+    pub xC8: u32,
+    pub xCC: u32,
+    pub xD0: f32,
+    pub base_x: f32,
+    pub base_y: f32,
+    pub offset_x: f32,
+    pub offset_y: f32,
+    pub xE4: crate::vec::Vec3,
+    pub xF0: f32,
+    pub xF4: f32,
+    pub xF8: f32,
+    pub xFC: f32,
+    pub x100: i32,
+    pub x104: i32,
+    pub x108: u32,
+    pub x10C: i32,
+    pub x110: i32,
+    pub x114: f32,
+    pub x118: i8,
+    pub x119: u8,
+    pub x11A: u8,
+    pub x11B: u8,
+    pub x11C: u32,
+    pub left_cannon: Option<GObjId>,
+    pub right_cannon: Option<GObjId>,
+    pub x128: Option<GObjId>,
+    pub x12C: Option<crate::hsd::jobj::JObjId>,
+}
+
+impl CorneriaVars {
+    /// Whether it waits for the match's start (`xC4.flags.b0`).
+    pub fn waiting(&self) -> bool {
+        self.xC4 & 0x80 != 0
+    }
+
+    pub fn set_waiting(&mut self, on: bool) {
+        self.xC4 = self.xC4 & !0x80 | u8::from(on) << 7;
+    }
+
+    /// Whether it sinks into the sea (`xC4.flags.b1`).
+    pub fn sinking(&self) -> bool {
+        self.xC4 & 0x40 != 0
+    }
+
+    pub fn set_sinking(&mut self, on: bool) {
+        self.xC4 = self.xC4 & !0x40 | u8::from(on) << 6;
+    }
+
+    /// Whether the city's last part has had its chance to start a sinking (`xC4.flags.b2`).
+    pub fn drawn(&self) -> bool {
+        self.xC4 & 0x20 != 0
+    }
+
+    pub fn set_drawn(&mut self, on: bool) {
+        self.xC4 = self.xC4 & !0x20 | u8::from(on) << 5;
+    }
+}
+
+/// `grCorneria_GroundVars`' first bytes as the city's first and last parts use them (maps 4
+/// and 9): whether it waits (`xC4`), whether it has made the next part (`xC5`) and whether it
+/// stands still (`xC6`'s bit 0x80, the rest of the byte as the block held it).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CorneriaCityVars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub still: bool,
+}
+
+/// `grCorneria_GroundVars`' first bytes as the city's middle part uses them (map 8): whether it
+/// waits (`xC4`), whether it has made the next part (`xC5`), `xC6`, whether it stands still
+/// (`offset_y`'s bit 0x80 of its first byte) and the words its setup clears (`xC8` to `xDC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CorneriaCity8Vars {
+    pub xC4: u8,
+    pub xC5: u8,
+    pub xC6: u8,
+    pub still: bool,
+    pub xC8: [u32; 6],
+}
+
+/// `grArwing_GroundVars` as an Arwing's flight path uses it (map 1): its slot (`xC8`), whether
+/// its animation is still to start (`xD4`) and its sound's state (`xD8`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ArwingPathVars {
+    pub xC8: u32,
+    pub xD4: i32,
+    pub xD8: i32,
+}
+
+/// `grCorneria_GroundVars2` (`grStarFox_GroundVars`) of an Arwing flying a path (maps 2 and
+/// 10): `xC4`'s bit 0x80, its slot (`xC8`), `xD4`, its collision object (`xDC`), its articles
+/// (`xE0` to `xEC`, none), its ticks flown (`xF0`), its roll's state (`xF4`) and wait (`xF8`),
+/// whether it fires (`xFC`) and which gun fires next (`x100`, which map 10's setup leaves as the
+/// block held it: unknown until written).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ArwingVars {
+    pub b0: bool,
+    pub xC8: i32,
+    pub xD4: i32,
+    pub xDC: Option<GObjId>,
+    pub xE0: [Option<GObjId>; 4],
+    pub xF0: i32,
+    pub xF4: i32,
+    pub xF8: i32,
+    pub xFC: i32,
+    pub x100: Option<i32>,
+}
+
+/// `grArwing_GroundVars` as an Arwing's collision uses it (maps 13 to 18): its slot (`xC8`),
+/// `xD0`, its roll (`xDC`) and its place (`xE0`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ArwingCollVars {
+    pub xC8: u32,
+    pub xD0: u32,
+    pub xDC: f32,
+    pub xE0: crate::vec::Vec3,
+}
+
+/// `grStarFox_GroundVars` of the Star Fox team's talk (map 12): which talk (`xC4`), its next
+/// line (`xC8`) and the wait before it (`xCC`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct StarFoxTalkVars {
+    pub xC4: u32,
+    pub xC8: i32,
+    pub xCC: i32,
+}
+
+/// `grSmashTaunt_GroundVars`: a line of the talk (map 5): its state and timer, which speaker
+/// (`line`), its text's entry and its voice, the speaker's two joints and the window's with
+/// their indices, and its text.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct SmashTauntVars {
+    pub state: i16,
+    pub timer: i16,
+    pub line: i16,
+    pub sis_data_idx: i16,
+    pub sound_id: i32,
+    pub jobj0: Option<crate::hsd::jobj::JObjId>,
+    pub jobj1: Option<crate::hsd::jobj::JObjId>,
+    pub jobj2: Option<crate::hsd::jobj::JObjId>,
+    pub joint_idx0: i16,
+    pub joint_idx1: i16,
+    pub joint_idx2: i16,
+    pub text: Option<crate::hsd::sis::TextId>,
+}
+
+/// `grVenom_Platform_GroundVars` of Venom's platforms (map 5): the copy it moves (map 0,
+/// `target_gobj`), the event's line's ticks (`smash_taunt_timer`, -1 for none) and the upper and
+/// lower platforms' joints.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct VenomPlatformVars {
+    pub target: Option<GObjId>,
+    pub timer: i32,
+    pub upper: Option<crate::hsd::jobj::JObjId>,
+    pub lower: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grVenom_GroundVars2` of Venom's Great Fox (map 7): the seven joints whose visibility it keeps
+/// (`xC4` to `xDC`), its flags and the colors' state (the halfword `xE0`: flags 0 to 6 its top
+/// seven bits, the state the two below), and its animation's last frame (`x20.xE4`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct VenomShipVars {
+    pub jobjs: [Option<crate::hsd::jobj::JObjId>; 7],
+    pub xE0: u16,
+    pub frame: f32,
+}
+
+impl VenomShipVars {
+    /// Flag `i` (`xE0_state.x0.b{i}`, 0 to 6).
+    pub fn flag(&self, i: u32) -> bool {
+        self.xE0 >> (15 - i) & 1 != 0
+    }
+
+    pub fn set_flag(&mut self, i: u32, on: bool) {
+        let bit = 1 << (15 - i);
+        self.xE0 = if on { self.xE0 | bit } else { self.xE0 & !bit };
+    }
+
+    /// The colors' state (`xE0_state_pad.state`).
+    pub fn state(&self) -> u16 {
+        self.xE0 >> 7 & 3
+    }
+
+    pub fn set_state(&mut self, v: u16) {
+        self.xE0 = self.xE0 & !(3 << 7) | (v & 3) << 7;
+    }
+}
+
 /// The bytes of the union as big-endian memory.
 struct Bytes<'a>(&'a [u8; SIZE]);
 
@@ -2328,6 +2562,131 @@ impl GroundVars {
                     }
                 }),
             }),
+            VarsKind::Corneria => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::Corneria(CorneriaVars {
+                    xC4: m.u8(at),
+                    xC5: m.u8(at + 1),
+                    xC6: m.u8(at + 2),
+                    xC7: m.u8(at + 3),
+                    xC8: m.u32(at + 4),
+                    xCC: m.u32(at + 8),
+                    xD0: f(at + 0xC),
+                    base_x: f(at + 0x10),
+                    base_y: f(at + 0x14),
+                    offset_x: f(at + 0x18),
+                    offset_y: f(at + 0x1C),
+                    xE4: crate::vec::Vec3::new(f(at + 0x20), f(at + 0x24), f(at + 0x28)),
+                    xF0: f(at + 0x2C),
+                    xF4: f(at + 0x30),
+                    xF8: f(at + 0x34),
+                    xFC: f(at + 0x38),
+                    x100: m.u32(at + 0x3C) as i32,
+                    x104: m.u32(at + 0x40) as i32,
+                    x108: m.u32(at + 0x44),
+                    x10C: m.u32(at + 0x48) as i32,
+                    x110: m.u32(at + 0x4C) as i32,
+                    x114: f(at + 0x50),
+                    x118: m.u8(at + 0x54) as i8,
+                    x119: m.u8(at + 0x55),
+                    x11A: m.u8(at + 0x56),
+                    x11B: m.u8(at + 0x57),
+                    x11C: m.u32(at + 0x58),
+                    left_cannon: gobj(cx, at + 0x5C),
+                    right_cannon: gobj(cx, at + 0x60),
+                    x128: gobj(cx, at + 0x64),
+                    x12C: jobj(cx, at + 0x68),
+                })
+            }
+            VarsKind::CorneriaCity => GroundVars::CorneriaCity(CorneriaCityVars {
+                xC4: m.u8(at),
+                xC5: m.u8(at + 1),
+                still: m.u8(at + 2) & 0x80 != 0,
+            }),
+            VarsKind::CorneriaCity8 => GroundVars::CorneriaCity8(CorneriaCity8Vars {
+                xC4: m.u8(at),
+                xC5: m.u8(at + 1),
+                xC6: m.u8(at + 2),
+                still: m.u8(at + 0x1C) & 0x80 != 0,
+                xC8: std::array::from_fn(|i| m.u32(at + 4 + 4 * i as u32)),
+            }),
+            VarsKind::ArwingPath => GroundVars::ArwingPath(ArwingPathVars {
+                xC8: m.u32(at + 4),
+                xD4: m.u32(at + 0x10) as i32,
+                xD8: m.u32(at + 0x14) as i32,
+            }),
+            VarsKind::Arwing => GroundVars::Arwing(ArwingVars {
+                b0: m.u8(at) & 0x80 != 0,
+                xC8: m.u32(at + 4) as i32,
+                xD4: m.u32(at + 0x10) as i32,
+                xDC: gobj(cx, at + 0x18),
+                xE0: std::array::from_fn(|i| gobj(cx, at + 0x1C + 4 * i as u32)),
+                xF0: m.u32(at + 0x2C) as i32,
+                xF4: m.u32(at + 0x30) as i32,
+                xF8: m.u32(at + 0x34) as i32,
+                xFC: m.u32(at + 0x38) as i32,
+                x100: Some(m.u32(at + 0x3C) as i32),
+            }),
+            VarsKind::ArwingColl => GroundVars::ArwingColl(ArwingCollVars {
+                xC8: m.u32(at + 4),
+                xD0: m.u32(at + 0xC),
+                xDC: f(at + 0x18),
+                xE0: crate::vec::Vec3::new(f(at + 0x1C), f(at + 0x20), f(at + 0x24)),
+            }),
+            VarsKind::StarFoxTalk => GroundVars::StarFoxTalk(StarFoxTalkVars {
+                xC4: m.u32(at),
+                xC8: m.u32(at + 4) as i32,
+                xCC: m.u32(at + 8) as i32,
+            }),
+            VarsKind::SmashTaunt => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                let h = |a: u32| m.u16(a) as i16;
+                GroundVars::SmashTaunt(SmashTauntVars {
+                    state: h(at),
+                    timer: h(at + 2),
+                    line: h(at + 4),
+                    sis_data_idx: h(at + 6),
+                    sound_id: m.u32(at + 8) as i32,
+                    jobj0: jobj(cx, at + 0xC),
+                    jobj1: jobj(cx, at + 0x10),
+                    jobj2: jobj(cx, at + 0x14),
+                    joint_idx0: h(at + 0x18),
+                    joint_idx1: h(at + 0x1A),
+                    joint_idx2: h(at + 0x1C),
+                    text: cx
+                        .import_handle("TextId", m.u32(at + 0x20))
+                        .map(crate::hsd::sis::TextId),
+                })
+            }
+            VarsKind::VenomPlatform => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::VenomPlatform(VenomPlatformVars {
+                    target: gobj(cx, at),
+                    timer: m.u32(at + 4) as i32,
+                    upper: jobj(cx, at + 8),
+                    lower: jobj(cx, at + 0xC),
+                })
+            }
+            VarsKind::VenomShip => {
+                let jobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("JObjId", m.u32(a))
+                        .map(crate::hsd::jobj::JObjId)
+                };
+                GroundVars::VenomShip(VenomShipVars {
+                    jobjs: std::array::from_fn(|i| jobj(cx, at + 4 * i as u32)),
+                    xE0: m.u16(at + 0x1C),
+                    frame: f(at + 0x20),
+                })
+            }
             VarsKind::RCruiseFlag => GroundVars::RCruiseFlag(RCruiseFlagVars {
                 xC4: crate::game::structs::DynamicsDesc {
                     data: cx
@@ -3633,6 +3992,212 @@ impl GroundVars {
         }
     }
 
+    /// The variables as the Great Fox's (`grCorneria_GroundVars`), likewise: a block holding
+    /// pointers converts only if they are null.
+    pub fn corneria(&mut self) -> &mut CorneriaVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w0 = b.u32(0);
+            let w54 = b.u32(0x54);
+            *self = GroundVars::Corneria(CorneriaVars {
+                xC4: (w0 >> 24) as u8,
+                xC5: (w0 >> 16) as u8,
+                xC6: (w0 >> 8) as u8,
+                xC7: w0 as u8,
+                xC8: b.u32(4),
+                xCC: b.u32(8),
+                xD0: b.f32(0xC),
+                base_x: b.f32(0x10),
+                base_y: b.f32(0x14),
+                offset_x: b.f32(0x18),
+                offset_y: b.f32(0x1C),
+                xE4: crate::vec::Vec3::new(b.f32(0x20), b.f32(0x24), b.f32(0x28)),
+                xF0: b.f32(0x2C),
+                xF4: b.f32(0x30),
+                xF8: b.f32(0x34),
+                xFC: b.f32(0x38),
+                x100: b.u32(0x3C) as i32,
+                x104: b.u32(0x40) as i32,
+                x108: b.u32(0x44),
+                x10C: b.u32(0x48) as i32,
+                x110: b.u32(0x4C) as i32,
+                x114: b.f32(0x50),
+                x118: (w54 >> 24) as i8,
+                x119: (w54 >> 16) as u8,
+                x11A: (w54 >> 8) as u8,
+                x11B: w54 as u8,
+                x11C: b.u32(0x58),
+                left_cannon: b.null(0x5C),
+                right_cannon: b.null(0x60),
+                x128: b.null(0x64),
+                x12C: b.null_of(0x68),
+            });
+        }
+        match self {
+            GroundVars::Corneria(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grCorneria_GroundVars"),
+        }
+    }
+
+    /// The variables as the city's first or last part's, likewise.
+    pub fn corneria_city(&mut self) -> &mut CorneriaCityVars {
+        if let GroundVars::Bytes(b) = self {
+            let w0 = Bytes(b).u32(0);
+            *self = GroundVars::CorneriaCity(CorneriaCityVars {
+                xC4: (w0 >> 24) as u8,
+                xC5: (w0 >> 16) as u8,
+                still: w0 & 0x8000 != 0,
+            });
+        }
+        match self {
+            GroundVars::CorneriaCity(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not the city's"),
+        }
+    }
+
+    /// The variables as the city's middle part's, likewise.
+    pub fn corneria_city8(&mut self) -> &mut CorneriaCity8Vars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            let w0 = b.u32(0);
+            *self = GroundVars::CorneriaCity8(CorneriaCity8Vars {
+                xC4: (w0 >> 24) as u8,
+                xC5: (w0 >> 16) as u8,
+                xC6: (w0 >> 8) as u8,
+                still: b.u32(0x1C) >> 31 != 0,
+                xC8: std::array::from_fn(|i| b.u32(4 + 4 * i)),
+            });
+        }
+        match self {
+            GroundVars::CorneriaCity8(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not the city's middle"),
+        }
+    }
+
+    /// The variables as an Arwing's flight path's (`grArwing_GroundVars`), likewise.
+    pub fn arwing_path(&mut self) -> &mut ArwingPathVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::ArwingPath(ArwingPathVars {
+                xC8: b.u32(4),
+                xD4: b.u32(0x10) as i32,
+                xD8: b.u32(0x14) as i32,
+            });
+        }
+        match self {
+            GroundVars::ArwingPath(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not an Arwing's path's"),
+        }
+    }
+
+    /// The variables as an Arwing's (`grCorneria_GroundVars2`), likewise: its gun is unknown
+    /// until written.
+    pub fn arwing(&mut self) -> &mut ArwingVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::Arwing(ArwingVars {
+                b0: b.u32(0) >> 31 != 0,
+                xC8: b.u32(4) as i32,
+                xD4: b.u32(0x10) as i32,
+                xDC: b.null(0x18),
+                xE0: std::array::from_fn(|i| b.null(0x1C + 4 * i)),
+                xF0: b.u32(0x2C) as i32,
+                xF4: b.u32(0x30) as i32,
+                xF8: b.u32(0x34) as i32,
+                xFC: b.u32(0x38) as i32,
+                x100: None,
+            });
+        }
+        match self {
+            GroundVars::Arwing(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not an Arwing's"),
+        }
+    }
+
+    /// The variables as an Arwing's collision's (`grArwing_GroundVars`), likewise.
+    pub fn arwing_coll(&mut self) -> &mut ArwingCollVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::ArwingColl(ArwingCollVars {
+                xC8: b.u32(4),
+                xD0: b.u32(0xC),
+                xDC: b.f32(0x18),
+                xE0: crate::vec::Vec3::new(b.f32(0x1C), b.f32(0x20), b.f32(0x24)),
+            });
+        }
+        match self {
+            GroundVars::ArwingColl(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not an Arwing's collision's")
+            }
+        }
+    }
+
+    /// The variables as the talk's (`grStarFox_GroundVars`), likewise.
+    pub fn starfox_talk(&mut self) -> &mut StarFoxTalkVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::StarFoxTalk(StarFoxTalkVars {
+                xC4: b.u32(0),
+                xC8: b.u32(4) as i32,
+                xCC: b.u32(8) as i32,
+            });
+        }
+        match self {
+            GroundVars::StarFoxTalk(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not the talk's"),
+        }
+    }
+
+    /// The variables as Venom's platforms' (`grVenom_Platform_GroundVars`), which their setup
+    /// writes before anything reads them; Venom's setup sets the copy first.
+    pub fn venom_platform(&mut self) -> &mut VenomPlatformVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::VenomPlatform(VenomPlatformVars {
+                target: b.null(0),
+                timer: b.u32(4) as i32,
+                upper: b.null_of(8),
+                lower: b.null_of(0xC),
+            });
+        }
+        match self {
+            GroundVars::VenomPlatform(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Venom's platforms'"),
+        }
+    }
+
+    /// The variables as Venom's Great Fox's (`grVenom_GroundVars2`), likewise: its colors' state
+    /// as the fresh block held it.
+    pub fn venom_ship(&mut self) -> &mut VenomShipVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::VenomShip(VenomShipVars {
+                jobjs: std::array::from_fn(|i| b.null_of(4 * i)),
+                xE0: (b.u32(0x1C) >> 16) as u16,
+                frame: b.f32(0x20),
+            });
+        }
+        match self {
+            GroundVars::VenomShip(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not Venom's Great Fox's"),
+        }
+    }
+
+    /// The variables as a talk line's (`grSmashTaunt_GroundVars`), which its setup writes before
+    /// anything reads them: the block's bytes don't carry over.
+    pub fn smash_taunt(&mut self) -> &mut SmashTauntVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::SmashTaunt(SmashTauntVars::default());
+        }
+        match self {
+            GroundVars::SmashTaunt(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grSmashTaunt_GroundVars")
+            }
+        }
+    }
+
     /// The variables as the flag's (`grRCruise_GroundVars2`), likewise.
     pub fn rcruise_flag(&mut self) -> &mut RCruiseFlagVars {
         if let GroundVars::Bytes(b) = self {
@@ -4600,6 +5165,239 @@ impl Mirror for GroundVars {
                         e.xC.map(|j| j.0),
                         m.u32(b + 0xC),
                     );
+                }
+            }
+            GroundVars::Corneria(v) => {
+                let p = format!("{path}.corneria");
+                // A spawn configuration's address is 0 where no allocator model runs (a leaf
+                // check): it then pairs with the original's.
+                let config = |ours: u32, at: u32| if ours == 0 { m.u32(at) } else { ours };
+                let ours = (
+                    [v.xC4, v.xC5, v.xC6, v.xC7],
+                    [config(v.xC8, at + 4), config(v.xCC, at + 8)],
+                    [v.xD0, v.base_x, v.base_y, v.offset_x, v.offset_y].map(f32::to_bits),
+                    [v.xE4.x, v.xE4.y, v.xE4.z, v.xF0, v.xF4, v.xF8, v.xFC].map(f32::to_bits),
+                    [v.x100, v.x104, v.x108 as i32, v.x10C, v.x110],
+                    v.x114.to_bits(),
+                    [v.x118 as u8, v.x119, v.x11A, v.x11B],
+                    v.x11C,
+                );
+                let theirs = (
+                    [m.u8(at), m.u8(at + 1), m.u8(at + 2), m.u8(at + 3)],
+                    [m.u32(at + 4), m.u32(at + 8)],
+                    std::array::from_fn(|k| m.u32(at + 0xC + 4 * k as u32)),
+                    std::array::from_fn(|k| m.u32(at + 0x20 + 4 * k as u32)),
+                    std::array::from_fn(|k| m.u32(at + 0x3C + 4 * k as u32) as i32),
+                    m.u32(at + 0x50),
+                    [
+                        m.u8(at + 0x54),
+                        m.u8(at + 0x55),
+                        m.u8(at + 0x56),
+                        m.u8(at + 0x57),
+                    ],
+                    m.u32(at + 0x58),
+                );
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                for (name, g, o) in [
+                    ("left_cannon", v.left_cannon, 0x5C),
+                    ("right_cannon", v.right_cannon, 0x60),
+                    ("x128", v.x128, 0x64),
+                ] {
+                    cx.compare_handle(
+                        &format!("{p}.{name}"),
+                        "GObjId",
+                        g.map(|g| g.0),
+                        m.u32(at + o),
+                    );
+                }
+                let q = format!("{p}.x12C");
+                cx.compare_handle(&q, "JObjId", v.x12C.map(|j| j.0), m.u32(at + 0x68));
+            }
+            GroundVars::CorneriaCity(v) => {
+                let ours = (v.xC4, v.xC5, v.still);
+                let theirs = (m.u8(at), m.u8(at + 1), m.u8(at + 2) & 0x80 != 0);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.corneria_city"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::CorneriaCity8(v) => {
+                let ours = (v.xC4, v.xC5, v.xC6, v.still, v.xC8);
+                let theirs = (
+                    m.u8(at),
+                    m.u8(at + 1),
+                    m.u8(at + 2),
+                    m.u8(at + 0x1C) & 0x80 != 0,
+                    std::array::from_fn(|i| m.u32(at + 4 + 4 * i as u32)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.corneria_city8"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::ArwingPath(v) => {
+                let ours = (v.xC8, v.xD4, v.xD8);
+                let theirs = (
+                    m.u32(at + 4),
+                    m.u32(at + 0x10) as i32,
+                    m.u32(at + 0x14) as i32,
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.arwing_path"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::Arwing(v) => {
+                let p = format!("{path}.arwing");
+                let ours = (v.b0, v.xC8, v.xD4, [v.xF0, v.xF4, v.xF8, v.xFC]);
+                let theirs = (
+                    m.u8(at) & 0x80 != 0,
+                    m.u32(at + 4) as i32,
+                    m.u32(at + 0x10) as i32,
+                    std::array::from_fn(|k| m.u32(at + 0x2C + 4 * k as u32) as i32),
+                );
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                if let Some(x100) = v.x100
+                    && x100 != m.u32(at + 0x3C) as i32
+                {
+                    cx.mismatch(
+                        &format!("{p}.x100"),
+                        format!("{x100}"),
+                        format!("{}", m.u32(at + 0x3C) as i32),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{p}.xDC"),
+                    "GObjId",
+                    v.xDC.map(|g| g.0),
+                    m.u32(at + 0x18),
+                );
+                for (k, g) in v.xE0.iter().enumerate() {
+                    let q = format!("{p}.xE0[{k}]");
+                    cx.compare_handle(
+                        &q,
+                        "GObjId",
+                        g.map(|g| g.0),
+                        m.u32(at + 0x1C + 4 * k as u32),
+                    );
+                }
+            }
+            GroundVars::ArwingColl(v) => {
+                let ours = (
+                    v.xC8,
+                    v.xD0,
+                    [v.xDC, v.xE0.x, v.xE0.y, v.xE0.z].map(f32::to_bits),
+                );
+                let theirs = (
+                    m.u32(at + 4),
+                    m.u32(at + 0xC),
+                    [0x18, 0x1C, 0x20, 0x24].map(|o| m.u32(at + o)),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.arwing_coll"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::StarFoxTalk(v) => {
+                let ours = (v.xC4, v.xC8, v.xCC);
+                let theirs = (m.u32(at), m.u32(at + 4) as i32, m.u32(at + 8) as i32);
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.starfox_talk"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::SmashTaunt(v) => {
+                let p = format!("{path}.smash_taunt");
+                let h = |a: u32| m.u16(at + a) as i16;
+                let ours = (
+                    [v.state, v.timer, v.line, v.sis_data_idx],
+                    v.sound_id,
+                    [v.joint_idx0, v.joint_idx1, v.joint_idx2],
+                );
+                let theirs = (
+                    [h(0), h(2), h(4), h(6)],
+                    m.u32(at + 8) as i32,
+                    [h(0x18), h(0x1A), h(0x1C)],
+                );
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                for (name, j, o) in [
+                    ("jobj0", v.jobj0, 0xC),
+                    ("jobj1", v.jobj1, 0x10),
+                    ("jobj2", v.jobj2, 0x14),
+                ] {
+                    cx.compare_handle(
+                        &format!("{p}.{name}"),
+                        "JObjId",
+                        j.map(|j| j.0),
+                        m.u32(at + o),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{p}.text"),
+                    "TextId",
+                    v.text.map(|t| t.0),
+                    m.u32(at + 0x20),
+                );
+            }
+            GroundVars::VenomPlatform(v) => {
+                let p = format!("{path}.venom_platform");
+                if v.timer != m.u32(at + 4) as i32 {
+                    cx.mismatch(
+                        &format!("{p}.timer"),
+                        format!("{}", v.timer),
+                        format!("{}", m.u32(at + 4) as i32),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{p}.target"),
+                    "GObjId",
+                    v.target.map(|g| g.0),
+                    m.u32(at),
+                );
+                cx.compare_handle(
+                    &format!("{p}.upper"),
+                    "JObjId",
+                    v.upper.map(|j| j.0),
+                    m.u32(at + 8),
+                );
+                cx.compare_handle(
+                    &format!("{p}.lower"),
+                    "JObjId",
+                    v.lower.map(|j| j.0),
+                    m.u32(at + 0xC),
+                );
+            }
+            GroundVars::VenomShip(v) => {
+                let p = format!("{path}.venom_ship");
+                let ours = (v.xE0, v.frame.to_bits());
+                let theirs = (m.u16(at + 0x1C), m.u32(at + 0x20));
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                for (k, j) in v.jobjs.iter().enumerate() {
+                    let q = format!("{p}.jobjs[{k}]");
+                    cx.compare_handle(&q, "JObjId", j.map(|j| j.0), m.u32(at + 4 * k as u32));
                 }
             }
             GroundVars::RCruiseFlag(v) => {

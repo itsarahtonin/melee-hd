@@ -72,6 +72,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::inishie1::run(game, gobj, addr) => {}
         addr if super::gr::inishie2::run(game, gobj, addr) => {}
         addr if super::gr::icemt::run(game, gobj, addr) => {}
+        addr if super::gr::corneria::run(game, gobj, addr) => {}
+        addr if super::gr::venom::run(game, gobj, addr) => {}
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),
@@ -145,6 +147,8 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::inishie1::run_event(game, f) => {}
         f if super::gr::inishie2::run_event(game, f) => {}
         f if super::gr::icemt::run_event(game, f) => {}
+        f if super::gr::corneria::run_event(game, f) => {}
+        f if super::gr::venom::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
@@ -155,9 +159,9 @@ pub fn run_event(game: &mut Running, f: u32) {
 /// Runs a stage's demo setup (`StageData::on_demo_init`), which takes the demo's number.
 pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
     use super::gr::{
-        battle, flatzone, fourside, garden, greatbay, greens, inishie1, inishie2, izumi, kongo,
-        kraid, last, oldkongo, oldpupupu, oldyoshi, onett, pura, rcruise, shrine, stadium, story,
-        yorster, zebes,
+        battle, corneria, flatzone, fourside, garden, greatbay, greens, inishie1, inishie2, izumi,
+        kongo, kraid, last, oldkongo, oldpupupu, oldyoshi, onett, pura, rcruise, shrine, stadium,
+        story, venom, yorster, zebes,
     };
     match f {
         0x8021_A620 => last::on_demo_init(game, arg),
@@ -184,6 +188,8 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x801F_A908 => inishie1::on_demo_init(game),
         0x801F_CBC0 => inishie2::on_demo_init(game),
         0x801F_6868 => super::gr::icemt::on_demo_init(game),
+        0x801D_D2C0 => corneria::on_demo_init(game),
+        0x8020_3B14 => venom::on_demo_init(game),
         other => unported("demo setup", other),
     }
 }

@@ -10,7 +10,9 @@
 //! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
 //! union aren't compared.
 
+use super::kinds::arwinglaser::ArwingLaserVars;
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
+use super::kinds::greatfoxlaser::GreatFoxLaserVars;
 use super::kinds::heiho::HeihoVars;
 use super::kinds::klap::KlapVars;
 use super::kinds::kyasarin::KyasarinVars;
@@ -183,6 +185,8 @@ members! {
     Tincle, tincle, TincleVars, [TINCLE];
     WhispyApple, whispy_apple, WhispyAppleVars, [WHISPY_APPLE, WHISPY_HEAL_APPLE];
     Tools, tools, ToolsVars, [TOOLS];
+    ArwingLaser, arwing_laser, ArwingLaserVars, [ARWING_LASER];
+    GreatFoxLaser, greatfox_laser, GreatFoxLaserVars, [GREATFOX_LASER];
     Klap, klap, KlapVars, [KLAP];
     Kyasarin, kyasarin, KyasarinVars, [KYASARIN];
     KyasarinEgg, kyasarin_egg, KyasarinEggVars, [KYASARIN_EGG];

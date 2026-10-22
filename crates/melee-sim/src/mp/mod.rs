@@ -200,7 +200,7 @@ pub struct Geometry<K: Kinds> {
     pub generation: i32,
     pub islands: Islands,
     /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
-    /// model (0 without), which `mpJointFromLine` leaves in r5.
+    /// model (0 without), which `mpJointFromLine` leaves in r5 for the computer player's DI.
     pub joints_addr: u32,
 }
 

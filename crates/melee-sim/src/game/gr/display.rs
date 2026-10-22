@@ -18,6 +18,9 @@ const P_LINK_FIGHTER: u8 = 8;
 const TRSP_SHIFT: u32 = 18;
 const ROOT_SHIFT: u32 = 28;
 
+/// `grDisplay_801C5F60`, a stage object's camera's render callback.
+pub const STAGE_CAMERA_RENDER: u32 = 0x801C_5F60;
+
 impl Running<'_> {
     /// The first fighter GObj; the next are each one's `next` (walks over them change no
     /// links).
@@ -55,6 +58,14 @@ impl Running<'_> {
             Some(f) if f.0 == 0x801F_CBB8 => super::inishie1::check_shadow_render(),
             Some(f) if f.0 == 0x801F_DFF0 => super::inishie2::check_shadow_render(),
             Some(f) if f.0 == 0x801F_A900 => super::icemt::check_shadow_render(),
+            Some(f) if f.0 == 0x801E_2EEC => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::corneria::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_6D7C => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::venom::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x801D_50C0 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))
@@ -177,6 +188,21 @@ impl Running<'_> {
         }
     }
 
+    /// A stage object's camera's render callback, `grDisplay_801C5F60`: through its camera,
+    /// render layer 0, every pass of render link 3.
+    #[doc(alias = "grDisplay_801C5F60")]
+    pub fn render_stage_camera(&mut self, gobj: GObjId) {
+        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
+            panic!("a stage object's camera GObj holds no CObj");
+        };
+        if display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
+            self.game.world.gobj_mut(gobj).gxlink_prios = 8;
+            camera::set_layer(&mut self.game.camera.cam, 0);
+            self.render_links(gobj, 7);
+            display::camera_end(&mut self.game.objs);
+        }
+    }
+
     /// A stage object's render callback, `grDisplay_801C5DB0`: in its own camera layer, and
     /// through the camera it names (or, for an object that follows the game camera, only
     /// while that camera draws); the stage's fog off unless it keeps it, HAL's state caches
@@ -214,8 +240,10 @@ impl Running<'_> {
                 }
             }
             None => {
-                if self.game.stage_info.x694.iter().any(|p| p.0 != 0) {
-                    code::unported_call("Ground_801C2C8C");
+                if let Some(Obj::CObj(c)) = rendering_obj
+                    && super::setup::is_stage_camera(self.game, c)
+                {
+                    return;
                 }
             }
         }

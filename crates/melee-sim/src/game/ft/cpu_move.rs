@@ -689,7 +689,7 @@ impl Running<'_> {
                 self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
                 self.cpu_cmd(f, cmd::DONE);
             } else {
-                unported_call("ftCo_800A0384");
+                self.cpu_jump_forward(f);
             }
             return;
         }
@@ -1673,6 +1673,34 @@ impl Running<'_> {
             self.cpu_cmd(f, cmd::RELEASE_Y);
             self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
             self.cpu_cmd1(f, cmd::LSTICK_TOWARD_FIGHTER, 0x7F);
+        }
+        self.cpu_cmd(f, cmd::PRESS_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+        self.cpu_cmd(f, cmd::RELEASE_Y);
+        self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        self.cpu_cmd(f, cmd::DONE);
+    }
+
+    /// A jump forward out from under Corneria's ceiling, `ftCo_800A0384`: as
+    /// [`Running::cpu_jump_toward_target`], the stick forward instead of toward the target.
+    // Ports `ftCo_800A0384`; aliased once a check reaches it.
+    fn cpu_jump_forward(&mut self, f: FighterId) {
+        let fpp = &self.game.fighters[f.0];
+        let top = reg(super::super::gr::stage::blast_top(self.game));
+        if fp::fadds(reg(fpp.cur_pos.y), reg(fpp.cpu.x558)) > top {
+            self.cpu_finish_neutral(f);
+            return;
+        }
+        if self.game.fighters[f.0].x2168 != 0 {
+            self.cpu_neutral_stick(f);
+            // `ftCo_CpuDoubleJumpAfterDelay`.
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 10);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+        } else {
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd1(f, cmd::LSTICK_X_FORWARD, 0x7F);
         }
         self.cpu_cmd(f, cmd::PRESS_Y);
         self.cpu_cmd1(f, cmd::WAIT_FOR, 10);

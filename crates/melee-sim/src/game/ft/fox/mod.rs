@@ -233,11 +233,6 @@ impl Running<'_> {
         code::call(self, f, args)
     }
 
-    /// One taking the fighter's GObj and returning nothing.
-    pub(crate) fn ext_gobj(&mut self, f: u32, gobj: GObjId) {
-        self.ext(f, &[Val::GObj(Some(gobj))]);
-    }
-
     /// `ft_CheckGroundAndLedge(gobj, dir)`.
     pub(crate) fn check_ground_and_ledge(&mut self, gobj: GObjId, dir: i32) -> bool {
         self.air_coll_ground_and_ledge(gobj, dir)

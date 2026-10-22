@@ -236,19 +236,6 @@ impl Running<'_> {
         }
     }
 
-    /// The r5 [`Running::excluded_floor`] leaves for a floor found (a line, not -1): on
-    /// Mushroom Kingdom the joints' array's address, which `grInishie1_801FCAAC`'s
-    /// `mpJointFromLine` loads into r5 (Big Blue's check before it leaves r5 alone there, and
-    /// Corneria's and Venom's after it too); unfollowed on the other three stages, or without
-    /// the allocator model.
-    pub(super) fn excluded_floor_r5(&self) -> super::cpu_ai::Leftover {
-        let geo = self.game.geometry.as_ref().expect("no collision geometry");
-        match self.game.stage_info.grkind {
-            GR_INISHIE1 if geo.joints_addr != 0 => super::cpu_ai::Leftover::Word(geo.joints_addr),
-            _ => super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)"),
-        }
-    }
-
     /// Whether [`Running::excluded_floor`] calls the stage's own check, on the four stages
     /// that have one.
     pub(super) fn excluded_floor_asks_stage(&self) -> bool {
@@ -256,6 +243,26 @@ impl Running<'_> {
             self.game.stage_info.grkind,
             GR_BIG_BLUE | GR_INISHIE1 | GR_CORNERIA | GR_VENOM
         )
+    }
+
+    /// The r5 [`Running::excluded_floor`] leaves for a floor found (`line` not -1) on a stage
+    /// it asks: Mushroom Kingdom's check (`grInishie1_801FCAAC`) and Venom's
+    /// (`grVenom_80206D10`) end with what `mpJointFromLine` left there, the joints' array's
+    /// address (the allocator model's); Corneria's (`grCorneria_801E2D90`) with its chain of
+    /// tests' third flag, whether the floor's joint is 0, 1, 2 or 5; Big Blue's leaves r5 as its
+    /// caller had it, unfollowed, as is the address without the allocator model.
+    pub(super) fn excluded_floor_r5(&self, line: i32) -> super::cpu_ai::Leftover {
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        match self.game.stage_info.grkind {
+            GR_CORNERIA => super::cpu_ai::Leftover::Word(u32::from(matches!(
+                geo.joint_from_line(line),
+                0 | 1 | 2 | 5
+            ))),
+            GR_INISHIE1 | GR_VENOM if geo.joints_addr != 0 => {
+                super::cpu_ai::Leftover::Word(geo.joints_addr)
+            }
+            _ => super::cpu_ai::Leftover::Unknown("ftCo_800A1B38 (a stage's excluded floors)"),
+        }
     }
 }
 

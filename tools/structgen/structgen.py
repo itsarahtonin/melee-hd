@@ -524,7 +524,7 @@ def main():
         "use crate::hsd::gobj::GObjId;",
         "use crate::hsd::jobj::JObjId;",
         "use crate::hsd::tobj::TObjId;",
-        "use crate::mp::coll::EcbSource;",
+        "use crate::mp::coll::{EcbSource, X34Flags, X35Flags};",
         *config.EXTRA_USES,
         "use crate::quat::Quat;",
         "use crate::vec::Vec3;",

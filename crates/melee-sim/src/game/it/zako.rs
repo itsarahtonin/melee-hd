@@ -187,6 +187,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         kinds::KLAP => of!(vars.klap()),
         kinds::KYASARIN => of!(vars.kyasarin()),
         kinds::KYASARIN_EGG => of!(vars.kyasarin_egg()),
+        kinds::GREATFOX_LASER => of!(vars.greatfox_laser()),
         kinds::KURIBOH..=kinds::OCTAROCK_STONE => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
     }

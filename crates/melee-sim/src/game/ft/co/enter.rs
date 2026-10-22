@@ -64,6 +64,12 @@ impl Running<'_> {
         }
     }
 
+    /// Back to waiting with the default blend, `ft_8008A324` (`ft_8008A348` with -1).
+    #[doc(alias = "ft_8008A324")]
+    pub fn enter_wait_neutral(&mut self, gobj: GObjId) {
+        self.enter_wait_blend(gobj, -1.0);
+    }
+
     /// Waiting, blending into it over `blend` frames, `ft_8008A348`: a stamina loss lies
     /// down instead (holding the hammer isn't ported); Peach puts her parasol away, and an
     /// item in one hand plays the character's waiting-with-an-item animation.

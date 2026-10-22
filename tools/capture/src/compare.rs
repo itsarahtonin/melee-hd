@@ -158,6 +158,13 @@ impl<'a> Comparer<'a> {
             maps.robjs.iter().map(|(&t, d)| (t, d.0)).collect(),
             &|i| o.robjs.pool.was_freed(i),
         );
+        // A stage object destroyed and another made in one call (Corneria's load hook remakes
+        // its city).
+        add(
+            "ground",
+            maps.grounds.iter().map(|(&t, g)| (t, g.0)).collect(),
+            &|i| game.grounds.was_freed(i),
+        );
         Comparer {
             mem,
             data,
@@ -1694,6 +1701,7 @@ impl Cx for Comparer<'_> {
             "LObjId" => self.maps.lobjs.get(&theirs).map(|l| l.0),
             "ShadowId" => self.maps.shadows.get(&theirs).map(|s| s.0),
             "DObjId" => self.maps.dobjs.get(&theirs).map(|d| d.0),
+            "CObjId" => self.maps.cobjs.get(&theirs).map(|c| c.0),
             "GroundId" => self.maps.grounds.get(&theirs).map(|g| g.0),
             "StartHookId" => self.maps.start_hooks.get(&theirs).map(|h| h.0),
             // A stale item's pointer may be into nothing: it pairs with nothing.

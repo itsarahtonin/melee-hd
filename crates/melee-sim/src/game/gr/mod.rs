@@ -6,6 +6,7 @@
 
 pub mod anime;
 pub mod battle;
+pub mod corneria;
 pub mod data;
 pub mod datfiles;
 pub mod display;
@@ -37,6 +38,7 @@ pub mod stadium;
 pub mod stage;
 pub mod story;
 pub mod vars;
+pub mod venom;
 pub mod yorster;
 pub mod zako;
 pub mod zebes;
@@ -99,6 +101,10 @@ pub const GR_KIND_OLDKONGO: i32 = 30;
 pub const GR_KIND_INISHIE1: i32 = 24;
 /// `Gr_Kind_Inishie2`, Mushroom Kingdom II.
 pub const GR_KIND_INISHIE2: i32 = 25;
+/// `Gr_Kind_Corneria`, Corneria.
+pub const GR_KIND_CORNERIA: i32 = 14;
+/// `Gr_Kind_Venom`, Venom.
+pub const GR_KIND_VENOM: i32 = 15;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -268,6 +274,14 @@ pub struct Globals {
     /// The three fields the adventure's climb sets up first (`grIm_804D69E8`, `EC` and `F0`):
     /// none in VS mode.
     pub icemt_fields: [Option<GObjId>; 3],
+    /// Corneria's `yakumono_param` (`grCorneria_YakumonoParam`).
+    pub corneria_yakumono: Option<DataRef>,
+    /// Corneria's statics besides it.
+    pub corneria: corneria::Globals,
+    /// Venom's `yakumono_param` (`grVenom_YakumonoParam`).
+    pub venom_yakumono: Option<DataRef>,
+    /// Venom's statics besides it.
+    pub venom: venom::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
@@ -409,6 +423,21 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
         (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
         (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
+        (GR_KIND_CORNERIA, 3) => VarsKind::Corneria,
+        (GR_KIND_CORNERIA, 4 | 9) => VarsKind::CorneriaCity,
+        (GR_KIND_CORNERIA, 8) => VarsKind::CorneriaCity8,
+        (GR_KIND_CORNERIA, 1) => VarsKind::ArwingPath,
+        (GR_KIND_CORNERIA, 2 | 10) => VarsKind::Arwing,
+        (GR_KIND_CORNERIA, 13..=18) => VarsKind::ArwingColl,
+        (GR_KIND_CORNERIA, 12) => VarsKind::StarFoxTalk,
+        (GR_KIND_CORNERIA, 5) => VarsKind::SmashTaunt,
+        (GR_KIND_VENOM, 1) => VarsKind::SmashTaunt,
+        (GR_KIND_VENOM, 2) => VarsKind::ArwingPath,
+        (GR_KIND_VENOM, 3 | 6) => VarsKind::Arwing,
+        (GR_KIND_VENOM, 5) => VarsKind::VenomPlatform,
+        (GR_KIND_VENOM, 7) => VarsKind::VenomShip,
+        (GR_KIND_VENOM, 8) => VarsKind::StarFoxTalk,
+        (GR_KIND_VENOM, 10..=15) => VarsKind::ArwingColl,
         _ => VarsKind::Bytes,
     }
 }
@@ -419,6 +448,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         garden::KLAPTRAP_BIT => garden::klaptrap_bit(r, item, g),
         greens::BLOCK_DEALT => greens::block_item_nothing(r, item, g),
         onett::CAR_HIT => onett::car_hit(r, item, g),
+        corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -442,6 +472,7 @@ pub fn yaku_received(
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
+        corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))
         }

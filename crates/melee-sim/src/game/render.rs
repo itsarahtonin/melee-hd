@@ -380,11 +380,13 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
         0x8003_01D0 => r.render_game_camera(gobj),
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
+        super::gr::display::STAGE_CAMERA_RENDER => r.render_stage_camera(gobj),
         c if super::gr::stadium::run_render(r, gobj, c, pass) => {}
         c if super::gr::izumi::run_render(r, gobj, c, pass) => {}
         c if super::gr::fourside::run_render(r, gobj, c, pass) => {}
         c if super::gr::pura::run_render(r, gobj, c, pass) => {}
         c if super::gr::rcruise::run_render(r, gobj, c, pass) => {}
+        super::gr::corneria::WINDOW_RENDER => super::gr::corneria::window_render(r, gobj, pass),
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),

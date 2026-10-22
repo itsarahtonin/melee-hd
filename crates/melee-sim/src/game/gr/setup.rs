@@ -7,6 +7,7 @@ use melee_data::archive::{Archives, DataRef};
 
 use super::super::code::unported_call;
 use super::super::handles::{CodeRef, GroundId, StartHookId};
+use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{
     Game, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, USER_DATA_GROUND, UserData,
 };
@@ -16,6 +17,7 @@ use super::datfiles::{self, GrJoint, MapHead};
 use super::ground::{self, ground_of, jobj_of, nth_joint, scale};
 use super::{StartHook, dynamic_attr, material};
 use crate::fpu::{copy, mem, reg};
+use crate::hsd::cobj::CObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::{aobj, fog, lobj};
@@ -636,8 +638,26 @@ pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
         let sj = scale_joint(game, scale(game), frame);
         jobj::add_next(&mut game.objs.jobjs, model, Some(sj));
         let cb = &stage_data(game.stage_info.grkind).callbacks[map_id as usize];
-        if cb.flags & StageCallbacks::CAMERA != 0 && entry.camera(data).is_some() {
-            unimplemented!("stage objects with a camera of their own (lb_80013B14)");
+        if cb.flags & StageCallbacks::CAMERA != 0
+            && let Some(desc) = entry.camera(data)
+        {
+            let cg = game.world.create(17, 19, 0);
+            let c = crate::lb::cobj::load_cobj(
+                &mut game.objs,
+                data,
+                crate::lb::cobj::CObjDesc::Data(desc),
+            );
+            game.world
+                .set_obj(cg, super::super::state::OBJ_CAMERA, Obj::CObj(c));
+            game.world.setup_gx_link_max(
+                cg,
+                CodeRef(super::display::STAGE_CAMERA_RENDER),
+                5,
+                false,
+            );
+            game.world.gobj_mut(cg).gxlink_prios = 8;
+            game.grounds[g.0].x18 = Some(cg);
+            add_camera(game, c);
         }
         game.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(sj));
         let (list, n) = entry.set_apart(data);
@@ -662,6 +682,47 @@ pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     game.world.setup_proc(gobj, CodeRef(0x801C_1D38), 4);
     game.stage_info.map_gobjs[map_id as usize] = Some(gobj);
     Some(gobj)
+}
+
+/// `stage_info.x694`: the stage objects' own cameras (by their CObjs), which the stage objects
+/// that follow the game's camera don't draw through.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct StageCameras(pub [Option<CObjId>; 4]);
+
+impl Mirror for StageCameras {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        StageCameras(std::array::from_fn(|i| {
+            cx.import_handle("CObjId", m.u32(at + 4 * i as u32))
+                .map(CObjId)
+        }))
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        for (i, c) in self.0.iter().enumerate() {
+            let theirs = m.u32(at + 4 * i as u32);
+            cx.compare_handle(&format!("{path}[{i}]"), "CObjId", c.map(|c| c.0), theirs);
+        }
+    }
+}
+
+/// Adds a stage object's camera to the stage's cameras (`stage_info.x694`), once,
+/// `Ground_801C2BD4`; the original asserts there's room.
+#[doc(alias = "Ground_801C2BD4")]
+pub fn add_camera(game: &mut Game, c: CObjId) {
+    let cams = &mut game.stage_info.x694.0;
+    if cams.contains(&Some(c)) {
+        return;
+    }
+    let slot = cams.iter_mut().find(|p| p.is_none());
+    *slot.expect("ground.c: 2381: i!=Gr_CObj_Max") = Some(c);
+}
+
+/// Whether a CObj is one of the stage objects' cameras, `Ground_801C2C8C`.
+#[doc(alias = "Ground_801C2C8C")]
+pub fn is_stage_camera(game: &Game, c: CObjId) -> bool {
+    game.stage_info.x694.0.contains(&Some(c))
 }
 
 /// Creates a stage object from a joint descriptor, `Ground_801C1A20`: as
@@ -1149,8 +1210,14 @@ pub fn destroy(r: &mut Running, gobj: Option<GObjId>) {
         r.game.stage_info.map_gobjs[map_id as usize] = None;
     }
     r.stop_object_sounds(Some(g));
-    if r.game.grounds[g.0].x18.is_some() {
-        unimplemented!("a stage object's camera GObj");
+    if let Some(cg) = r.game.grounds[g.0].x18 {
+        // `removeStageGObj`: the camera leaves the stage's cameras.
+        if let Some(Obj::CObj(c)) = r.game.world.gobj(cg).obj
+            && let Some(p) = r.game.stage_info.x694.0.iter_mut().find(|p| **p == Some(c))
+        {
+            *p = None;
+        }
+        crate::hsd::gobj::free(r, cg);
     }
     if jobj.is_some() && r.game.gr.coll_off.as_ref().expect("Ground_804D6950")[map_id as usize] == 0
     {

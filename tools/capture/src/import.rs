@@ -2046,6 +2046,7 @@ impl Cx for Importer<'_> {
             // joint, as the yo-yo holds its tip link's) is that joint, met first here.
             "JObjId" if !self.stale || self.is_jobj(addr) => self.jobj(addr).0,
             "DObjId" => self.dobj(addr).0,
+            "CObjId" => self.cobj(addr).0,
             "TObjId" => self.tobj(addr).0,
             "MObjId" => self.mobj(addr).0,
             "FighterId" if self.live_fighters.contains(&addr) => self.fighter(addr).0,

@@ -256,11 +256,10 @@ impl Running<'_> {
     }
 
     /// A taunt, `ftCo_800DEA28`: the character's own (Young Link's, Dr. Mario's) or the side
-    /// taunt, and the stats' taunt records (`pl_80040120`). Ganondorf's
+    /// taunt, and the stats' taunt records ([`Self::taunt_stats`]). Ganondorf's
     /// blows a wind from his top joint, then enters the side taunt twice: his case falls
     /// through to the default's.
     #[doc(alias = "ftCo_800DEA28")]
-    #[doc(alias = "pl_80040120")]
     fn enter_appeal(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_CLINK => self.clink_appeal_enter(gobj),
@@ -283,6 +282,13 @@ impl Running<'_> {
         }
         let fp = self.game.fighter(gobj);
         let (slot, sub) = (i32::from(fp.player_idx), fp.is_sub_fighter);
+        self.taunt_stats(slot, sub);
+    }
+
+    /// A player's taunt in the stats, `pl_80040120`: its bonuses counted, and the taunt's
+    /// windows opened for the player and the others; nothing for a second fighter.
+    #[doc(alias = "pl_80040120")]
+    pub fn taunt_stats(&mut self, slot: i32, sub: bool) {
         if sub {
             return;
         }
