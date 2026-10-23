@@ -266,8 +266,9 @@ mod tests {
         let b = m.alloc(h, 0x100);
         let c = m.alloc(h, 0x200);
         m.free(h, m.entries[usize::from(b)].addr);
-        // The gap between a and c fits 0x100 exactly: it wins over the end.
-        let d = m.alloc(h, 0xE0);
+        // 0xF0 bytes take 0x100, which the gap between a and c fits exactly: it wins over
+        // the end, and the heap has no gap left.
+        let d = m.alloc(h, 0xF0);
         assert_eq!(m.entries[usize::from(d)].addr, 0x100);
         assert!(!m.needs_compaction(h));
         let _ = (a, c);

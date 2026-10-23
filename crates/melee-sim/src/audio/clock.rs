@@ -63,7 +63,7 @@ pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 /// Where the audio interrupt's handler runs the user callback, where the disc interrupt's
 /// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
 const AI_CALLBACK: u64 = 64;
-const DI_CALLBACK: u64 = 48;
+const DI_CALLBACK: u64 = 32;
 /// From the disc interrupt's handler's end to an event that came due while it ran (an audio
 /// DMA block's end, measured at a drive's pace, where the boot's bank loads' interrupts meet
 /// one).
@@ -171,6 +171,8 @@ pub struct Clock {
     /// When the pad alarm fired since the game last looked, for its card probes (a
     /// session's; none elsewhere).
     pub alarm_times: Option<Vec<u64>>,
+    /// A disc read's interrupt was taken since the game's code last waited.
+    pub disc_woke: bool,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
     pub dsp_ready: bool,
     /// Audio frames are placed ([`Clock::place_audio_frames`]) rather than scheduled; the last
@@ -233,30 +235,44 @@ pub struct HwLog {
     pub read: Option<u64>,
     pub transfer: u64,
     pub aram: u32,
+    /// The log is an interrupt handler's.
+    pub handler: bool,
 }
 
-/// A disc read's command, and an ARAM transfer's request.
+/// A disc read's command from the game's code, and from an interrupt handler's callback (the
+/// device command queue's next read), and an ARAM transfer's request.
 const DISC_ISSUE: u64 = 8;
-/// After a disc read's command: the driver notes the time (`Read`'s `LastReadIssued`).
-const DISC_ISSUED: u64 = 16;
+const DISC_ISSUE_HANDLER: u64 = 24;
+/// After a read's command from a handler's callback, the rest of the handler's work.
+const DISC_ISSUED_HANDLER: u64 = 16;
+/// The game's code going on from a wait a disc read's interrupt ended.
+const DISC_WAKE: u64 = 16;
 /// A hardware register's read (ssbm-rs's read step).
 const REG_READ: u64 = 8;
 const ARQ_POST: u64 = 56;
 
 impl HwLog {
+    /// An interrupt handler's log, its callback `base` into it.
     pub fn at(base: u64) -> HwLog {
         HwLog {
             spent: base,
+            handler: true,
             ..HwLog::default()
         }
     }
 
     /// A disc read's command goes out, for `len` bytes at `speed`.
     pub fn disc_read(&mut self, len: u32, speed: DiscSpeed) {
-        self.spent += DISC_ISSUE;
+        self.spent += if self.handler {
+            DISC_ISSUE_HANDLER
+        } else {
+            DISC_ISSUE
+        };
         assert!(self.read.is_none(), "two disc reads in flight");
         self.read = Some(self.spent);
-        self.spent += DISC_ISSUED;
+        if self.handler {
+            self.spent += DISC_ISSUED_HANDLER;
+        }
         self.transfer = speed.transfer(len);
     }
 
@@ -428,6 +444,7 @@ impl Clock {
 
     /// The disc interrupt's handler: the read's timeout cancelled, then its callback.
     fn disc_interrupt(&mut self, f: &mut dyn Frames) {
+        self.disc_woke = true;
         if let Some(seq) = self.disc_timeout.take() {
             self.cancel(seq);
         }
@@ -621,20 +638,36 @@ impl Clock {
     /// spin (`lb_800195D0`), until the load's callback.
     pub fn wait_for_load(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
+        self.disc_woke = false;
         loop {
             self.wait(WAIT_STEP, f);
             if f.done(Wait::FileLoaded) {
                 break;
             }
         }
+        self.after_disc_wait(f);
+    }
+
+    /// A wait a disc read's interrupt ended: the game's code takes `DISC_WAKE` to go on.
+    fn after_disc_wait(&mut self, f: &mut dyn Frames) {
+        if std::mem::take(&mut self.disc_woke) {
+            self.read(DISC_WAKE, f);
+        }
     }
 
     /// The game waiting for `w` in a loop that checks before each wait point.
     pub fn wait_until(&mut self, f: &mut dyn Frames, w: Wait) {
         self.game_code(f);
+        self.disc_woke = false;
+        let mut waited = false;
         while !f.done(w) {
             self.wait(WAIT_STEP, f);
+            waited = true;
         }
+        if waited {
+            self.after_disc_wait(f);
+        }
+        self.disc_woke = false;
     }
 
     /// `VIWaitForRetrace`: time passes, its interrupts taken, until the next retrace's handler

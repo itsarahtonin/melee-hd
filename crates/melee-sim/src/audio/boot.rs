@@ -58,7 +58,7 @@ impl BootTimes {
     pub const AUX: u64 = 1_360_790;
     /// `lbAudioAx_80028690`'s start, after the rest of `main`'s setup up to the save data's
     /// reset.
-    pub const RESET: u64 = 1_360_830;
+    pub const RESET: u64 = 1_360_814;
     /// The first scene's preparation (`preloadState`) starts its preload as the boot's bank
     /// loads end, and the scene waits for its first file: its loop's first engine tick starts
     /// this long after that read's interrupt is handled. At Slippi's fast disc speed the
@@ -72,7 +72,7 @@ impl BootTimes {
     /// makes its audio calls this long after the last read's interrupt, if it waited for it
     /// (at a drive's pace; at the fast disc speed the files are in by the retrace, and the
     /// calls come just after it, 6,081,107 into the boot).
-    pub const PLAYBACK_AFTER_PRELOADS: u64 = 24;
+    pub const PLAYBACK_AFTER_PRELOADS: u64 = 40;
     /// `main`'s `OSGetTick` for the random seed, after HSD's setup and before the audio
     /// setup (a console's boot: the seed is the time base's low word then).
     pub const SEED: u64 = Self::INIT - 9_288;
@@ -86,15 +86,11 @@ impl BootTimes {
 /// boot time moves with it.
 pub const CONSOLE_BOOT_DELAY: u64 = 17 * super::clock::FIELD;
 
-/// How much longer than Slippi's playback boot a console's own boot (with a card in slot A)
+/// How much longer than Slippi's playback boot a console's own boot with a card in slot A
 /// takes from the audio setup to the save data's audio reset: measured from the recorded
-/// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's).
-pub const CONSOLE_RESET_EXTRA: u64 = 40;
-
-/// How much sooner than Slippi's playback boot a console's own boot with no card reaches the
-/// save data's audio reset: measured from the no-card session's disc reads, each 16 ticks
-/// earlier than the playback boot's timing has them.
-pub const CONSOLE_RESET_NO_CARD: u64 = 16;
+/// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's). One
+/// with no card takes as long as the playback boot (the no-card session's reads).
+pub const CONSOLE_RESET_EXTRA: u64 = 56;
 
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
 pub struct Aram {

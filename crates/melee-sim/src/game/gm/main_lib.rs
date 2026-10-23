@@ -181,7 +181,7 @@ impl Running<'_> {
                 + self.game.audio.boot_delay
                 + crate::audio::boot::CONSOLE_RESET_EXTRA
         } else {
-            crate::audio::boot::BootTimes::RESET - crate::audio::boot::CONSOLE_RESET_NO_CARD
+            crate::audio::boot::BootTimes::RESET
         };
         self.game.audio.clock_catch_up(self.data, at);
         self.game.sync_unlocks();
