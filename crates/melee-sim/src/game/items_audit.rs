@@ -361,7 +361,7 @@ const BONUS: &str =
 const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fighters spawn";
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
-const DEBUG: &str = "the items' debug drawings";
+const DEBUG: &str = "the debug menu's item spawn and the items' debug drawings";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const CEREBI: &str = "Celebi, whose draw (it_8027A4D4) asks gm_80165084 whether the card records every Pokemon trophy; with Slippi's codes, the player's unlocks (Unlocks::slippi), the records' test answers with the index it is asked about (blr at 0x8015D94C), so record 0 reads as missing and Celebi never comes out";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
@@ -466,6 +466,7 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_80283AE4", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026ECE0", DEBUG),
+    ("Item_80266F3C", DEBUG),
     ("Item_80266FA8", SCENES),
     ("it_8026C1E8", ZAKO),
     ("it_802EA9FC", ZAKO),
