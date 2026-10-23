@@ -187,6 +187,12 @@ pub struct Clock {
     /// A new tick length the next round's pad check takes up, setting the pad alarm again
     /// at that period (`lb_80019628`).
     pub new_alarm_period: Option<u64>,
+    /// What the code's reads of the time base add to [`Clock::now`]: the console's clock at
+    /// power-on, in time base ticks from 2000-01-01 (`session::Setup::power_on`, ssbm-rs's
+    /// `Regs::tb_power_on`); 0 for a replay's console. The timeline itself counts from
+    /// power-on, as the hardware does; only what the code computes from `OSGetTime` (the
+    /// alarms' grid, the clock's seconds) sees it.
+    pub tb_power_on: u64,
 }
 
 /// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
@@ -339,6 +345,22 @@ impl Clock {
     /// stops for it.
     pub fn cancel(&mut self, seq: u64) {
         self.events.retain(|e| e.seq != seq);
+    }
+
+    /// The time base as the code reads it now (`OSGetTime`).
+    pub fn code_time(&self) -> u64 {
+        self.now.wrapping_add(self.tb_power_on)
+    }
+
+    /// When a periodic alarm whose start is `period` (as the pad alarm's, `lb_80019AAC` and
+    /// `lb_80019894`) set at `at` first fires: `InsertAlarm`'s next multiple of the period on
+    /// the code's time base, back on the timeline's. ssbm-rs's system time offset (its boot's
+    /// `0x800030D8`) is a whole number of seconds, so it leaves the grid where it is.
+    pub fn next_period(&self, at: u64, period: u64) -> u64 {
+        let code = at.wrapping_add(self.tb_power_on);
+        (code / period + 1)
+            .wrapping_mul(period)
+            .wrapping_sub(self.tb_power_on)
     }
 
     /// Sets the pad alarm to fire at `first` and every `period` after (`OSSetPeriodicAlarm`),
@@ -576,7 +598,7 @@ impl Clock {
             // cancelled and set again to fire every period (`OSSetPeriodicAlarm` with the
             // period as its start), at the time base's next multiple of it (`InsertAlarm`).
             if let Some(p) = self.new_alarm_period.take() {
-                self.set_pad_alarm((self.now / p + 1) * p, p);
+                self.set_pad_alarm(self.next_period(self.now, p), p);
             }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {

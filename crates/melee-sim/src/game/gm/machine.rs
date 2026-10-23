@@ -150,19 +150,19 @@ impl Running<'_> {
     /// The modes' loop's setup, `gm_801A4510` up to its loop: the machine cleared, every
     /// mode's `on_init`, and the first mode: progressive scan's prompt when the video
     /// interface can show it and B is held at power-on (or the console is set to it),
-    /// else the boot. `dtv` is the VI's DTV status (`VIGetDTVStatus`), an input of the
-    /// console's.
+    /// else the boot. `dtv` is the VI's DTV status (`VIGetDTVStatus`) and `progressive` the
+    /// SRAM's progressive scan setting (`OSGetProgressiveMode`), inputs of the console's
+    /// (`session::Setup`).
     #[doc(alias = "gm_801A4510")]
     #[doc(alias = "gm_GetAllGameModes")]
-    pub fn start_modes(&mut self, dtv: bool) {
+    pub fn start_modes(&mut self, dtv: bool, progressive: bool) {
         self.game.machine = super::machine::Machine::default();
         self.modes_on_init();
         // `VIGetDTVStatus` reads the video interface's register.
         self.game
             .audio
             .clock_read(self.data, super::super::session::REG_READ);
-        // `OSGetProgressiveMode`: the console's SRAM setting, off on ssbm-rs's console.
-        let progressive = false;
+        // `OSGetProgressiveMode` reads the SRAM's flags, in memory.
         let m = &mut self.game.machine;
         m.routing.curr_mode = if dtv
             && (self.game.gm.launch_buttons & crate::input::pad::BUTTON_B != 0 || progressive)

@@ -21,13 +21,20 @@ use crate::diff::{Files, StaleReads, Stop, compare, import_tick, panic_text};
 use crate::trace::{Image, Reader};
 
 const MAGIC: &[u8; 8] = b"SSBMINP1";
-const VERSION: u32 = 1;
 const SOUND: u8 = 1;
 const CARD: u8 = 2;
 const PAD_BYTES: usize = 11;
 
 /// A session ssbm-rs recorded (`tools/run/src/inputs.rs` there): the settings its course depends
 /// on, and the controllers of every `PADRead`, in order.
+///
+/// The file is `SSBMINP1`, a version (u32), the disc rate in bytes a second (u64, 0 for none)
+/// and flags (u8: 1 sound mixed, 2 a card beside it), all little-endian. Version 2 adds the
+/// console's settings the boot reads: the clock at power-on (u64, time base ticks from
+/// 2000-01-01), the VI's DTV status (u8, 1 a component cable) and the SRAM's language and
+/// flags (u8 each); a version 1 file has ssbm-rs's defaults (0, 0, 0 and 0x2C). Then a byte per
+/// read: 0 for the controllers of the read before, or 1 and the four controllers, 11 bytes
+/// each.
 pub struct Recording {
     /// The disc's read rate in bytes a second, none for Slippi's fast disc speed.
     pub disc_rate: Option<u64>,
@@ -35,6 +42,16 @@ pub struct Recording {
     pub sound: bool,
     /// The memory card the session started with (beside the recording, as `FILE.card`).
     pub card: Option<PathBuf>,
+    /// The file's version, 1 or 2.
+    pub version: u32,
+    /// The console's clock at power-on, in time base ticks from 2000-01-01.
+    pub power_on: u64,
+    /// Whether the VI reports a component cable (`VIGetDTVStatus`).
+    pub dtv: bool,
+    /// The SRAM's language, which Melee never reads (its language is the save's).
+    pub sram_language: u8,
+    /// The SRAM's flags (0x04 stereo, 0x80 progressive scan).
+    pub sram_flags: u8,
     pub reads: Vec<PadData>,
 }
 
@@ -49,14 +66,29 @@ impl Recording {
             return Err(format!("{}: not a controller recording", path.display()));
         }
         let version = u32::from_le_bytes(data[8..12].try_into().unwrap());
-        if version != VERSION {
-            return Err(format!("{}: recording version {version}", path.display()));
+        let header = match version {
+            1 => 21,
+            2 => 32,
+            _ => return Err(format!("{}: recording version {version}", path.display())),
+        };
+        if data.len() < header {
+            return Err(format!("{}: a cut-off header", path.display()));
         }
         let rate = u64::from_le_bytes(data[12..20].try_into().unwrap());
         let flags = data[20];
+        let (power_on, dtv, sram_language, sram_flags) = if version >= 2 {
+            (
+                u64::from_le_bytes(data[21..29].try_into().unwrap()),
+                data[29] != 0,
+                data[30],
+                data[31],
+            )
+        } else {
+            (0, false, 0, melee_sim::game::session::SRAM_FLAGS_DEFAULT)
+        };
         let mut reads = Vec::new();
         let mut last = [PadStatus::error(ERR_NO_CONTROLLER); 4];
-        let mut at = 21;
+        let mut at = header;
         while at < data.len() {
             match data[at] {
                 0 => at += 1,
@@ -81,6 +113,11 @@ impl Recording {
             disc_rate: (rate > 0).then_some(rate),
             sound: flags & SOUND != 0,
             card: (flags & CARD != 0).then(|| path.with_extension("card")),
+            version,
+            power_on,
+            dtv,
+            sram_language,
+            sram_flags,
             reads,
         })
     }
@@ -127,9 +164,6 @@ fn decode(b: &[u8]) -> PadStatus {
 
 /// The OS's offset from the time base to system time, which the pad alarm's times are in.
 const SYSTEM_TIME_OFFSET: u32 = 0x8000_30D8;
-/// The real-time clock ssbm-rs's console powers on with, in seconds since 2000-01-01: the
-/// epoch itself. A recording doesn't keep it (`SSBMINP1` version 1).
-const SSBM_RS_CLOCK: u64 = 0;
 /// `db_gameLaunchButtonState`.
 const LAUNCH_BUTTONS: u32 = 0x804D_6B30;
 const PAD_STATUS_BYTES: u32 = 12;
@@ -172,8 +206,10 @@ fn newest_poll(image: &Image) -> PadData {
     queued(image, image.u32(lib + 8) + newest * 4 * PAD_STATUS_BYTES)
 }
 
-/// When the pad alarm (`lb_804329F0`'s) fires next, on the time base.
-fn next_alarm(image: &Image, tick: u32) -> Result<u64, String> {
+/// When the pad alarm (`lb_804329F0`'s) fires next, on the time base from power-on (the
+/// trace's): its system time less the OS's offset and the console's clock at power-on, which
+/// the code's time base adds.
+fn next_alarm(image: &Image, tick: u32, power_on: u64) -> Result<u64, String> {
     let alarm = sym("lb_804329F0") + 0x50;
     let period = u64_at(image, alarm + 0x18);
     if period != PERIOD {
@@ -181,7 +217,9 @@ fn next_alarm(image: &Image, tick: u32) -> Result<u64, String> {
             "trace tick {tick}: the pad alarm's period is {period}, not {PERIOD}: the alignment follows only the 60 Hz alarm"
         ));
     }
-    Ok(u64_at(image, alarm + 8).wrapping_sub(u64_at(image, SYSTEM_TIME_OFFSET)))
+    Ok(u64_at(image, alarm + 8)
+        .wrapping_sub(u64_at(image, SYSTEM_TIME_OFFSET))
+        .wrapping_sub(power_on))
 }
 
 /// The scene the trace's memory is in: the game mode (`state_machine`'s current mode), its
@@ -313,7 +351,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         {
             scenes.push((t.number, mode, state, on_frame));
         }
-        let alarm = next_alarm(&image, t.number)?;
+        let alarm = next_alarm(&image, t.number, rec.power_on)?;
         let newest = newest_poll(&image);
         // Past the recording's end ssbm-rs's playback reports its last read, for a second.
         let matching = |r: u64| rec.reads[r.min(n - 1) as usize] == newest;
@@ -438,10 +476,16 @@ enum Mutation {
     Seed,
     /// A read handed to melee-hd with A toggled on its first controller.
     Read(usize),
+    /// melee-hd's console powered on at 2000-01-01 whatever the recording's clock: the
+    /// code's time base without its offset.
+    PowerOn,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
-/// writes, so the first tick's memory still holds what the boot left there.
+/// writes, so the first tick's memory still holds what the boot left there, and, once the
+/// modes' loop has started, the game mode it started with (the progressive scan prompt's or
+/// the boot's: `VIGetDTVStatus`, the launch buttons' B and `OSGetProgressiveMode`), which the
+/// first scene runs in.
 fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
     let theirs = u16::from_be_bytes([
         u8_at(image, LAUNCH_BUTTONS),
@@ -463,6 +507,14 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
         format!("{theirs:#06x}"),
     );
     check("DbLevel", game.gm.db_level.to_string(), level.to_string());
+    if game.machine.phase != melee_sim::game::gm::machine::Phase::Boot {
+        let (first, _, _) = scene_of(image);
+        check(
+            "the first game mode",
+            format!("{:#04x}", game.machine.routing.curr_mode),
+            format!("{first:#04x}"),
+        );
+    }
     (compared, diffs)
 }
 
@@ -516,10 +568,11 @@ pub fn session(args: &[&str]) -> ExitCode {
                 mutation = Some(match it.next().copied() {
                     Some("scene-ticks") => Mutation::SceneTicks,
                     Some("seed") => Mutation::Seed,
+                    Some("power-on") => Mutation::PowerOn,
                     Some(m) if m.starts_with("read=") => {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
-                    _ => panic!("--mutate scene-ticks|seed|read=N"),
+                    _ => panic!("--mutate scene-ticks|seed|power-on|read=N"),
                 })
             }
             _ => pos.push(a),
@@ -530,7 +583,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
-            "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
+            "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
         );
         return ExitCode::from(2);
     };
@@ -556,15 +609,17 @@ pub fn session(args: &[&str]) -> ExitCode {
         },
         None => None,
     };
-    let setup = match rec.disc() {
+    let mut setup = match rec.disc() {
         Ok(disc) => Setup {
             disc,
             dsp: rec.dsp(),
             card,
-            // `SSBMINP1` keeps no clock: ssbm-rs's console powers on at 2000-01-01 00:00:00.
-            clock: SSBM_RS_CLOCK,
-            // ssbm-rs's video interface reads a DTV status of 0.
-            dtv: false,
+            // The console's settings the boot reads, from the recording (version 1's are
+            // ssbm-rs's defaults: 2000-01-01, no component cable, stereo). The SRAM's
+            // language isn't one: Melee's language is the save's.
+            power_on: rec.power_on,
+            dtv: rec.dtv,
+            sram_flags: rec.sram_flags,
             card_pull,
         },
         Err(e) => {
@@ -572,12 +627,18 @@ pub fn session(args: &[&str]) -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    let ticks = melee_sim::audio::clock::TB_HZ;
     println!(
-        "the session: {} reads, disc {:?}, DSP {:?}, clock {} s past 2000-01-01 at power-on, {}",
+        "the session: version {}, {} reads, disc {:?}, DSP {:?}, clock {}.{:08} s past 2000-01-01 at power-on, DTV {}, SRAM flags {:#04x} (language {}), {}",
+        rec.version,
         rec.reads.len(),
         setup.disc,
         setup.dsp,
-        setup.clock,
+        setup.power_on / ticks,
+        (setup.power_on % ticks) * 100_000_000 / ticks,
+        u8::from(setup.dtv),
+        setup.sram_flags,
+        rec.sram_language,
         setup
             .card
             .as_ref()
@@ -586,6 +647,9 @@ pub fn session(args: &[&str]) -> ExitCode {
                 c.len()
             ))
     );
+    if mutation == Some(Mutation::PowerOn) {
+        setup.power_on = 0;
+    }
     let plan = match align(trace_path, &rec) {
         Ok(p) => p,
         Err(e) => {
@@ -720,7 +784,14 @@ impl Run<'_> {
                     );
                     return ExitCode::FAILURE;
                 };
-                let imported = match import_tick(&image, &index, &disc, setup.dsp, setup.disc) {
+                let imported = match import_tick(
+                    &image,
+                    &index,
+                    &disc,
+                    setup.dsp,
+                    setup.disc,
+                    self.rec.power_on,
+                ) {
                     Ok(v) => v,
                     Err(e) => {
                         println!("importing trace tick {n}: {e}");
@@ -873,5 +944,75 @@ impl Run<'_> {
                 ExitCode::FAILURE
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn header(version: u32) -> Vec<u8> {
+        let mut d = MAGIC.to_vec();
+        d.extend_from_slice(&version.to_le_bytes());
+        d.extend_from_slice(&3_000_000u64.to_le_bytes());
+        d.push(SOUND | CARD);
+        d
+    }
+
+    /// Three reads: the four controllers, then the same twice.
+    fn reads() -> Vec<u8> {
+        let mut d = vec![1];
+        for i in 0..4u8 {
+            d.extend_from_slice(&[1, 0x01, 0x00, i, 0, 0, 0, 0, 0, 0, 0]);
+        }
+        d.extend_from_slice(&[0, 0]);
+        d
+    }
+
+    #[test]
+    fn version_1_has_ssbm_rs_s_console() {
+        let mut data = header(1);
+        data.extend(reads());
+        let rec = Recording::parse(&data, Path::new("v1.inputs")).unwrap();
+        assert_eq!(rec.version, 1);
+        assert_eq!(rec.disc_rate, Some(3_000_000));
+        assert!(rec.sound);
+        assert_eq!(rec.card.as_deref(), Some(Path::new("v1.card")));
+        assert_eq!(
+            (rec.power_on, rec.dtv, rec.sram_language, rec.sram_flags),
+            (0, false, 0, 0x2C)
+        );
+        assert_eq!(rec.reads.len(), 3);
+        assert_eq!(rec.reads[2][3].stick_x, 3);
+    }
+
+    #[test]
+    fn version_2_keeps_the_console_s_settings() {
+        let mut data = header(2);
+        data.extend_from_slice(&0x1234_5678_9ABCu64.to_le_bytes());
+        data.extend_from_slice(&[1, 1, 0xA4]);
+        data.extend(reads());
+        let rec = Recording::parse(&data, Path::new("v2.inputs")).unwrap();
+        assert_eq!(rec.version, 2);
+        assert_eq!(
+            (rec.power_on, rec.dtv, rec.sram_language, rec.sram_flags),
+            (0x1234_5678_9ABC, true, 1, 0xA4)
+        );
+        assert_eq!(rec.reads.len(), 3);
+        assert_eq!(rec.reads[0][1].button, 0x0100);
+    }
+
+    #[test]
+    fn other_versions_and_cut_headers_are_refused() {
+        let mut data = header(3);
+        data.extend(reads());
+        let e = Recording::parse(&data, Path::new("v3.inputs"))
+            .err()
+            .unwrap();
+        assert!(e.contains("recording version 3"), "{e}");
+        let e = Recording::parse(&header(2), Path::new("v2.inputs"))
+            .err()
+            .unwrap();
+        assert!(e.contains("a cut-off header"), "{e}");
     }
 }

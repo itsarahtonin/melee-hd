@@ -26,9 +26,6 @@ pub struct MainLib {
     pub progressive: bool,
     pub xc: bool,
     pub x10: u32,
-    /// The real-time clock at power-on, in seconds since 2000-01-01: an input of the
-    /// console's (`session::Setup::clock`), which the time base runs on from (`OSGetTime`).
-    pub power_on_clock: u64,
 }
 
 impl MainLib {
@@ -284,12 +281,17 @@ impl Running<'_> {
         self.setup_audio_video(None);
     }
 
-    /// The real-time clock's seconds now (`lbTime_GetTimeInSeconds`): the power-on clock and
-    /// the time base since.
+    /// The real-time clock's seconds now (`lbTime_GetTimeInSeconds`): the code's time base
+    /// (the clock at power-on and the time since, `Clock::code_time`) in seconds.
     #[doc(alias = "lbTime_GetTimeInSeconds")]
     pub fn session_seconds(&self) -> u32 {
-        let tb = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
-        let s = self.game.main_lib.power_on_clock + tb / crate::audio::clock::TB_HZ;
+        let tb = self
+            .game
+            .audio
+            .clock
+            .as_ref()
+            .map_or(0, crate::audio::clock::Clock::code_time);
+        let s = tb / crate::audio::clock::TB_HZ;
         s.min(u64::from(u32::MAX)) as u32
     }
 
