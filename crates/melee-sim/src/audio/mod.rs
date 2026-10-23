@@ -273,6 +273,10 @@ impl clock::Frames for Running<'_> {
         std::mem::take(&mut self.audio.hw)
     }
 
+    fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
+        crate::lb::save::alarm_card_probes(now)
+    }
+
     fn done(&mut self, w: clock::Wait) -> bool {
         let b = &self.audio.synth.banks;
         match w {

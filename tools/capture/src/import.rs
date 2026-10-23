@@ -176,6 +176,10 @@ pub use melee_sim::hsd::pool::UNKNOWN;
 const HEAP: u32 = 0x804E_EC00;
 /// `MAX_FT_PARTS`: the entries a fighter's parts table has room for.
 const MAX_PARTS: u32 = 140;
+/// The fighters whose items put a model past their bones (`FighterKind`).
+const KIND_LINK: u32 = 6;
+const KIND_SAMUS: u32 = 13;
+const KIND_YOUNG_LINK: u32 = 20;
 
 pub struct Importer<'a> {
     pub cap: &'a Capture,
@@ -1037,12 +1041,18 @@ impl Importer<'_> {
         let mut bones: Vec<FighterBone> = (0..self.parts_len)
             .map(|i| FighterBone::import(&mem, a + i * FighterBone::SIZE, self))
             .collect();
-        // Samus's grapple beam puts its tip's model in the table's last entry, past her bones
-        // (`it_802B7C18`); the entries between hold whatever the block held.
+        // Samus's grapple beam and Link's and Young Link's hookshots put their tip's model in
+        // the table's last entry, past the bones (`it_802B7C18`, `it_802A2BA4`), and write
+        // nothing else of it; the entries between hold whatever the block held. Before the
+        // first beam or hookshot the last entry holds the block's bytes too (after the menus,
+        // an earlier scene's), which the spawn keeps but for the model.
         let last = a + (MAX_PARTS - 1) * FighterBone::SIZE;
-        if self.parts_kind == 13 && self.is_jobj(self.u32(last)) {
+        if matches!(self.parts_kind, KIND_LINK | KIND_SAMUS | KIND_YOUNG_LINK) {
             bones.resize(MAX_PARTS as usize - 1, FighterBone::default());
+            let stale = !self.is_jobj(self.u32(last));
+            self.freed = stale;
             bones.push(FighterBone::import(&mem, last, self));
+            self.freed = false;
         }
         self.game.fighter_parts[id.0] = bones;
         id

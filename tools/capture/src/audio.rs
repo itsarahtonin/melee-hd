@@ -26,6 +26,16 @@ const VPB_PB: u32 = 0x138;
 const SM_SIZE: u32 = 0x34;
 const NODE_SIZE: u32 = 0x50;
 const SYSTEM_TIME_OFFSET: u32 = 0x8000_30D8;
+/// `HSD_VIInfo`: its frame buffers (`xfb`, three of `XFB`, each its buffer and then its
+/// status) and how many it uses (`nb_xfb`); the statuses a copied frame and a shown one have.
+const VI_XFB: u32 = 0x58;
+const VI_XFB_SIZE: u32 = 0x60;
+const VI_XFB_MAX: u32 = 3;
+const VI_NB_XFB: u32 = 0x1D4;
+const XFB_WAITDONE: u32 = 4;
+const XFB_DRAWDONE: u32 = 5;
+const XFB_NEXT: u32 = 6;
+const XFB_DISPLAY: u32 = 7;
 
 /// Big-endian reads of main memory.
 struct Mem<'a>(&'a [u8]);
@@ -944,6 +954,20 @@ pub fn import_clock_at(mem1: &[u8], tb: u64, disc: DiscSpeed) -> Clock {
     let next_alarm = m.u64(alarm + 8).wrapping_sub(offset);
     let period = m.u64(alarm + 0x18);
     let mut c = Clock::new(tb, last_frame + AUDIO_FRAME, next_alarm, period);
+    // HSD's frame buffers (`HSD_VIData.xfb`, `HSD_VIXFBDrawDispStatus`): copied frames waiting
+    // to show, and the one showing. A tick's end comes before its round's copy, so a buffer
+    // can be free.
+    let vi = sym("HSD_VIData");
+    let (mut pending, mut shown) = (0, false);
+    for i in 0..m.u32(vi + VI_NB_XFB).min(VI_XFB_MAX) {
+        match m.u32(vi + VI_XFB + VI_XFB_SIZE * i + 4) {
+            XFB_WAITDONE | XFB_DRAWDONE | XFB_NEXT => pending += 1,
+            XFB_DISPLAY => shown = true,
+            _ => {}
+        }
+    }
+    c.xfb_pending = pending;
+    c.xfb_shown = shown;
     c.dsp_ready = m.u32(sym("__AXOutDspReady")) == 1;
     if !c.dsp_ready {
         c.schedule(

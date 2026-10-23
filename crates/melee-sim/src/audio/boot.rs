@@ -88,9 +88,13 @@ pub const CONSOLE_BOOT_DELAY: u64 = 17 * super::clock::FIELD;
 
 /// How much longer than Slippi's playback boot a console's own boot with a card in slot A
 /// takes from the audio setup to the save data's audio reset: measured from the recorded
-/// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's). One
-/// with no card takes as long as the playback boot (the no-card session's reads).
-pub const CONSOLE_RESET_EXTRA: u64 = 56;
+/// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's). It is
+/// the boot's own probes of the card slots, `lbCardGame_Init`'s `CARDProbe(0)` and
+/// `lbSnap_8001E290`'s of slots A and B, as the pad alarm's handler makes them with the card
+/// in and settled (`lb::save::alarm_card_probes`). One with no card takes as long as the
+/// playback boot (the no-card session's reads): ssbm-rs stands in for the CARD library there.
+pub const CONSOLE_RESET_EXTRA: u64 =
+    2 * (crate::lb::save::EXI_READ + crate::lb::save::TIME_READ) + crate::lb::save::EXI_READ;
 
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
 pub struct Aram {

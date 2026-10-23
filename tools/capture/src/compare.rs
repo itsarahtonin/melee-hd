@@ -706,7 +706,8 @@ impl<'a> Comparer<'a> {
         if let Some(p) = fighter.parts
             && tp != 0
         {
-            // Past the character's bones only Samus's beam tip's last entry is written.
+            // Past the character's bones only the last entry is written, by Samus's grapple
+            // beam or Link's and Young Link's hookshots, for their tip.
             let table = self.u32(self.u32(sym("ftPartsTable")) + 4 * fighter.kind as u32);
             let n = self.u32(table + 8) as usize;
             for (i, bone) in self.game.fighter_parts[p.0].iter().enumerate() {

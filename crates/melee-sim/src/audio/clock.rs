@@ -36,7 +36,9 @@ const WAIT_STEP: u64 = 10_125;
 const DSP_FRAME: u64 = 20_250;
 /// Time the retrace interrupt's handler takes.
 const VI_HANDLER: u64 = 32;
-/// Time the pad alarm's handler takes.
+/// Time the pad alarm's handler takes besides its memory card probes ([`Frames::pad_alarm`]):
+/// all of it on ssbm-rs's console without a card at power-on (a replay's, Slippi's playback
+/// boot's), whose CARD library is stood in for.
 const ALARM_HANDLER: u64 = 24;
 /// From the audio interrupt to its DSP mail, and to the end of its handler.
 const AI_MAIL: u64 = 16;
@@ -174,9 +176,9 @@ pub struct Clock {
     /// free. A copy needs a free one. At power-on neither has been drawn.
     pub xfb_pending: u8,
     pub xfb_shown: bool,
-    /// When the pad alarm fired since the game last looked, for its card probes (a
-    /// session's; none elsewhere).
-    pub alarm_times: Option<Vec<u64>>,
+    /// The pad alarm's firings since the game last looked, with what their card probes found
+    /// (a session's; none elsewhere).
+    pub alarm_times: Option<Vec<AlarmProbe>>,
     /// A disc read's interrupt was taken since the game's code last waited.
     pub disc_woke: bool,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
@@ -192,6 +194,14 @@ pub struct Clock {
     pub movie_period: u64,
     /// The round's display pass has run after the render's wait ([`Clock::render_start`]).
     pub render_started: bool,
+}
+
+/// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
+/// that answers (`CARDProbe(0)`, [`Frames::pad_alarm`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct AlarmProbe {
+    pub at: u64,
+    pub card: bool,
 }
 
 /// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
@@ -211,6 +221,14 @@ pub trait Frames {
     fn handler_at(&mut self, _now: Option<u64>) {}
     /// What the game's code between handlers did to the hardware.
     fn take_log(&mut self) -> HwLog;
+    /// The pad alarm's handler (`fn_800195FC`) probing the memory card slots at `now`, after
+    /// its controllers' poll: the time its probes take, and whether slot A's card answered.
+    /// On ssbm-rs's console without a card at power-on the CARD library is stood in for, and
+    /// they take none.
+    fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
+        let _ = now;
+        (0, false)
+    }
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
 }
@@ -382,11 +400,16 @@ impl Clock {
     /// before the retrace), until nothing is.
     fn service(&mut self, f: &mut dyn Frames) {
         // An event that came due while the disc or retrace interrupt's handler ran happens
-        // `DI_TAIL` after the handler.
+        // `DI_TAIL` after the handler. That holds for an audio DMA block that ends by the
+        // handler's end on ssbm-rs's clock, whose frame starts `DI_TAIL` past its event here.
         let mut after_disc = false;
         loop {
             let tail = std::mem::take(&mut after_disc);
-            if let Some(i) = self.next_event().filter(|&i| self.events[i].at <= self.now) {
+            let due = |e: &Event| {
+                e.at <= self.now
+                    || (tail && e.kind == EventKind::AudioDma && e.at <= self.now + DI_TAIL)
+            };
+            if let Some(i) = self.next_event().filter(|&i| due(&self.events[i])) {
                 let e = self.events.swap_remove(i);
                 if tail {
                     self.now += DI_TAIL;
@@ -397,10 +420,12 @@ impl Clock {
                         self.schedule(e.at + FIELD, EventKind::Field);
                     }
                     EventKind::PadAlarm => {
-                        if let Some(t) = &mut self.alarm_times {
-                            t.push(e.at);
-                        }
                         self.now += ALARM_HANDLER;
+                        let (probes, card) = f.pad_alarm(self.now);
+                        self.now += probes;
+                        if let Some(t) = &mut self.alarm_times {
+                            t.push(AlarmProbe { at: e.at, card });
+                        }
                         self.pads += 1;
                         self.schedule(e.at + self.alarm_period, EventKind::PadAlarm);
                     }
@@ -883,6 +908,63 @@ mod tests {
             let end = if ran { 136 + AI_HANDLER } else { 128 };
             assert_eq!(c.now, end, "due at {due}");
         }
+    }
+
+    #[test]
+    fn a_frame_due_as_the_retrace_handler_ends_runs_then() {
+        // The retrace's handler ends at FIELD + 32. A frame due by DI_TAIL after that (its
+        // event due by the handler's end on ssbm-rs's clock) starts then; one due later waits.
+        for (due, ran) in [
+            (FIELD + VI_HANDLER + DI_TAIL, true),
+            (FIELD + VI_HANDLER + DI_TAIL + 1, false),
+        ] {
+            let mut c = Clock::new(FIELD - 1, due, 10 * FIELD, 675_000);
+            c.wait(WAIT_STEP, &mut Stub::new(false));
+            assert_eq!(
+                kinds(&c).contains(&EventKind::DspResume),
+                ran,
+                "due at {due}"
+            );
+        }
+    }
+
+    /// Handlers that take no time, and a pad alarm whose card probes take 56 ticks.
+    struct Probing;
+
+    impl Frames for Probing {
+        fn audio_frame(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn disc_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn aram_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn take_log(&mut self) -> HwLog {
+            HwLog::default()
+        }
+        fn done(&mut self, _: Wait) -> bool {
+            true
+        }
+        fn pad_alarm(&mut self, _: u64) -> (u64, bool) {
+            (56, true)
+        }
+    }
+
+    #[test]
+    fn the_alarm_handler_takes_its_card_probes() {
+        let mut c = Clock::new(0, 10 * AUDIO_FRAME, 1_000, 675_000);
+        c.alarm_times = Some(Vec::new());
+        c.wait(WAIT_STEP, &mut Probing);
+        assert_eq!(c.now, 1_000 + ALARM_HANDLER + 56);
+        assert_eq!(
+            c.alarm_times,
+            Some(vec![AlarmProbe {
+                at: 1_000,
+                card: true
+            }])
+        );
     }
 
     #[test]
