@@ -51,24 +51,24 @@ melee-hd's side is task 1, being built on `feat/session-oracle`: `melee-oracle` 
 
 Thirteen recordings are in `$SSBM_RS_LOCAL/lockstep/recordings`, all `SSBMINP1` version 1 at the drive's 3 MB/s with sound mixed and a card. Each card holds Melee's save (`SuperSmashBros0110290334`, 11 blocks); from `17-13-21` on they also hold a Camera Mode snapshot, a 32-block file named `47` (lbsnap names a snapshot by the clock's seconds, `lbSnap_8001D4A4`), so `17-11-18` probably took it. ssbm-rs's lockstep campaigns ran every one against the original code with no function mismatching (`campaign-rec*.log`).
 
-| Recording | Reads | Minutes | Ports connected | Ports played | What it reaches (from the lockstep runs' samples) |
+| Recording | Reads | Minutes | Ports connected | Ports played | What it reaches (its trace's scenes, in order; trace ticks and size) |
 | --- | --- | --- | --- | --- | --- |
-| `2026-10-06_12-04-48` | 59,825 | 16.6 | 1, 3, 4 | 3 | trophy code, an unlock decision (`gm_16F1`), a match on Brinstar |
-| `2026-10-06_12-42-06` | 17,749 | 4.9 | 1, 3, 4 | 1, 3 | a match |
-| `2026-10-06_16-32-11` | 26,751 | 7.4 | 1 to 4 | 1 to 4 | the tournament (`gmtoulib`), matches |
-| `2026-10-06_16-58-24` | 38,946 | 10.8 | 1, 2, 4 | 1 | trophy code, matches |
-| `2026-10-06_17-11-18` | 7,097 | 2.0 | 1, 2, 4 | 1, 4 | a match; probably Camera Mode |
-| `2026-10-06_17-13-21` | 3,017 | 0.8 | 1, 2, 4 | 1, 4 | menus only |
-| `2026-10-06_17-25-31` | 6,627 | 1.8 | 1, 2, 4 | 1, 4 | the tournament (`gmtou_0`) |
-| `2026-10-06_17-29-05` | 13,968 | 3.9 | 1 to 4 | 1, 3 | a match |
-| `2026-10-06_17-37-52` | 7,087 | 2.0 | 1 to 4 | 1 to 4 | a match |
-| `2026-10-06_17-44-10` | 4,410 | 1.2 | 1, 2, 3 | 1, 2 | traced (above) |
-| `2026-10-07_23-52-34` | 10,673 | 3.0 | 1, 2, 3 | 2 | |
-| `2026-10-10_12-54-40` | 30,931 | 8.6 | 1, 2, 3 | 2 | |
-| `2026-10-10_13-05-00` | 19,501 | 5.4 | 1, 2, 3 | 2 | |
+| `2026-10-06_12-04-48` | 59,825 | 16.6 | 1, 3, 4 | 3 | Adventure mode whole (`gm_Scene_IntroNormal` and its matches, the `vi*` cutscenes, the trophy fall, staff roll, ending movie and congratulations), a challenger approach and its match, then the main menu and the title; 55,022 ticks, 2.3 GB |
+| `2026-10-06_12-42-06` | 17,749 | 4.9 | 1, 3, 4 | 1, 3 | Tournament: setup, bracket, a match and its results, the bracket; 17,478 ticks, 441 MB |
+| `2026-10-06_16-32-11` | 26,751 | 7.4 | 1 to 4 | 1 to 4 | Tournament: setup, bracket, two matches with results, back to the main menu; 26,392 ticks, 908 MB |
+| `2026-10-06_16-58-24` | 38,946 | 10.8 | 1, 2, 4 | 1 | Event mode (2B): eleven event matches, two challenger approaches; 35,868 ticks, 1.7 GB |
+| `2026-10-06_17-11-18` | 7,097 | 2.0 | 1, 2, 4 | 1, 4 | Camera Mode (mode A): character and stage select, a match; 6,749 ticks, 167 MB |
+| `2026-10-06_17-13-21` | 3,017 | 0.8 | 1, 2, 4 | 1, 4 | the main menu, back to the title; 2,891 ticks, 104 MB |
+| `2026-10-06_17-25-31` | 6,627 | 1.8 | 1, 2, 4 | 1, 4 | Tournament: setup and bracket; 6,438 ticks, 151 MB |
+| `2026-10-06_17-29-05` | 13,968 | 3.9 | 1 to 4 | 1, 3 | Tournament: setup, bracket, a match; 13,767 ticks, 403 MB |
+| `2026-10-06_17-37-52` | 7,087 | 2.0 | 1 to 4 | 1 to 4 | Tournament: setup, the other bracket scene (`gm_Scene_TouAlt`), a match; 6,745 ticks, 182 MB |
+| `2026-10-06_17-44-10` | 4,410 | 1.2 | 1, 2, 3 | 1, 2 | the character select and back, Tournament: setup and `gm_Scene_TouAlt` twice, a match; 4,000 ticks, 132 MB |
+| `2026-10-07_23-52-34` | 10,673 | 3.0 | 1, 2, 3 | 2 | VS: three rounds of character select, stage select, match and results; 10,013 ticks, 506 MB |
+| `2026-10-10_12-54-40` | 30,931 | 8.6 | 1, 2, 3 | 2 | VS: four rounds of character select, stage select, match and results, back to the main menu; 29,971 ticks, 1.6 GB |
+| `2026-10-10_13-05-00` | 19,501 | 5.4 | 1, 2, 3 | 2 | VS: five rounds of character select, stage select, match and results, then the main menu and the title; 18,315 ticks, 593 MB |
 | **All** | 246,582 | 68.5 | | | |
 
-The last column is thin: it comes from the lockstep logs' periodic samples (one every 17 M instructions), which land mostly in HSD code. Task 1 logs each session's modes with `MODES=1` as it traces them, and this table should be filled in from that.
+Every session starts with the memory card scene, the opening movie and the title, then the main menu. The last column comes from each trace (`melee-oracle session TRACE INPUTS --scenes`, the scenes by game mode, state and frame function; ssbm-rs's `MODES=1` logs beside each trace agree on the modes). A VS match's results scene has no frame function. Traced on 2026-10-23 into `$SSBM_RS_LOCAL/traces/session/` (8.6 GB), one at a time; every trace aligns with its recording ([the oracle](oracle.md#sessions)).
 
 ### Scripted runs, cards and the menus' traces
 

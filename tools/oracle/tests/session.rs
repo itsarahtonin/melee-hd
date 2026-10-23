@@ -56,7 +56,7 @@ fn ticks_align_with_reads() {
         return;
     };
     assert!(
-        out.contains("each tick's reads are known exactly from tick 2 on"),
+        out.contains("the read each tick ended on is known but in ticks 0 to 1"),
         "{out}"
     );
     assert!(

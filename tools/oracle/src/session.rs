@@ -231,10 +231,44 @@ impl Plan {
         }
     }
 
-    /// The first tick from which every tick's read is known.
-    pub fn exact_from(&self) -> Option<u32> {
-        let n = self.ends.iter().rev().take_while(|e| e.len() == 1).count();
-        (n > 0).then(|| (self.ends.len() - n) as u32)
+    /// The stretches of ticks whose reads the alignment leaves open, first and last tick.
+    pub fn open(&self) -> Vec<(u32, u32)> {
+        let mut out: Vec<(u32, u32)> = Vec::new();
+        for (t, e) in self.ends.iter().enumerate() {
+            let t = t as u32;
+            if e.len() > 1 {
+                match out.last_mut() {
+                    Some(last) if last.1 + 1 == t => last.1 = t,
+                    _ => out.push((t, t)),
+                }
+            }
+        }
+        out
+    }
+
+    /// Where the alignment leaves ticks' reads open, for a report.
+    fn describe_open(&self) -> String {
+        let open = self.open();
+        if open.is_empty() {
+            return "at every tick".into();
+        }
+        let shown: Vec<String> = open
+            .iter()
+            .take(4)
+            .map(|&(a, b)| {
+                if a == b {
+                    format!("tick {a}")
+                } else {
+                    format!("ticks {a} to {b}")
+                }
+            })
+            .collect();
+        let more = if open.len() > 4 {
+            format!(" and {} stretches more", open.len() - 4)
+        } else {
+            String::new()
+        };
+        format!("but in {}{more}", shown.join(", "))
     }
 
     /// The reads tick `t` can have ended on, for a report.
@@ -534,10 +568,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     };
     let last = plan.ends.last().map_or(0, |e| *e.last().unwrap());
     println!(
-        "the trace's {} ticks take the recording's reads up to read {last}, each tick's newest poll a read it can have taken; each tick's reads are known exactly {}",
+        "the trace's {} ticks take the recording's reads up to read {last}, each tick's newest poll a read it can have taken; the read each tick ended on is known {}",
         plan.ends.len(),
-        plan.exact_from()
-            .map_or("at no tick".to_owned(), |t| format!("from tick {t} on"))
+        plan.describe_open()
     );
     if scenes {
         for &(t, mode, state, f) in &plan.scenes {
@@ -648,13 +681,9 @@ impl Run<'_> {
                 }
                 let Some(end) = self.plan.exact(n) else {
                     println!(
-                        "refused: trace tick {n} can have ended on {}, so the reads its next ticks take aren't known; {}",
+                        "refused: trace tick {n} can have ended on {}, so the reads its next ticks take aren't known; the read each tick ended on is known {}",
                         self.plan.describe(n),
-                        self.plan
-                            .exact_from()
-                            .map_or("no tick's are".to_owned(), |t| format!(
-                                "from tick {t} on they are"
-                            ))
+                        self.plan.describe_open()
                     );
                     return ExitCode::FAILURE;
                 };
