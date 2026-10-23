@@ -89,6 +89,9 @@ pub struct SObj {
     pub image: Image,
     pub tex: Tex,
     pub image2: Option<DataRef>,
+    /// The texture object has been loaded to texture map 0 (`GXLoadTexObj`, which writes the
+    /// map's register IDs into the object's top bytes), as the sprite's first draw does.
+    pub loaded: bool,
 }
 
 /// The sprites' pool.

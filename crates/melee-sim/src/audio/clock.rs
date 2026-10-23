@@ -66,20 +66,23 @@ pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 /// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
 const AI_CALLBACK: u64 = 64;
 const DI_CALLBACK: u64 = 32;
-/// From the disc interrupt's handler's end to an event that came due while it ran (an audio
-/// DMA block's end, measured at a drive's pace, where the boot's bank loads' interrupts meet
-/// one).
-const DI_TAIL: u64 = 8;
 const ARAM_CALLBACK: u64 = 8;
-/// How long before the audio interrupt's handler returns the OS's dispatcher takes a disc
-/// interrupt raised meanwhile (measured from a console's boot, where a bank read's interrupt
-/// falls in an audio frame's handler).
-const AI_CHAIN: u64 = 16;
+/// How long before an audio frame starts on this timeline ssbm-rs runs the audio DMA event
+/// that raises it: its frames start (and their handler's times count) from 8 ticks after the
+/// event, so an [`EventKind::AudioDma`] here is due `AI_LEAD` before its time. ssbm-rs runs
+/// each event due at a wait point or an interrupt check, then delivers one interrupt, then
+/// looks again; an event that falls due while a handler runs (interrupts off) runs when the
+/// handler returns, with everything else due by then, in time order. So a block's end due
+/// before another event by its time on ssbm-rs's clock goes first even when its frame here
+/// starts after that event (2026-10-10_12-54-40's tick 705: the frame due at 562,837,254
+/// here, its event at 246, holds off a disc read's end at 248 until the audio handler's
+/// return at 374); and one due by a handler's return starts `AI_LEAD` after it.
+const AI_LEAD: u64 = 8;
 /// Where the movie player's alarm's handler runs (`fn_8001F2A4`), and the decrementer
-/// exception's time after it (56 in all: measured from the sessions' traces, whose ticks
-/// end that much later while the movie's alarm runs beside the pad alarm).
-const MOVIE_ALARM_CALLBACK: u64 = 16;
-const MOVIE_ALARM_TAIL: u64 = 40;
+/// exception's time after it: none, as the sessions' traces have it (the handler reads no
+/// register, and the OS takes it in the pad alarm's exception).
+const MOVIE_ALARM_CALLBACK: u64 = 0;
+const MOVIE_ALARM_TAIL: u64 = 0;
 /// How fast the disc reads: a match setting, since when reads finish decides when the music
 /// stream's commands reach the DSP and so which voices are free (see `docs/engine.md`).
 ///
@@ -277,12 +280,12 @@ pub struct HwLog {
 
 /// A disc read's command from the game's code, and from an interrupt handler's callback (the
 /// device command queue's next read), and an ARAM transfer's request.
-const DISC_ISSUE: u64 = 8;
+const DISC_ISSUE: u64 = 24;
 const DISC_ISSUE_HANDLER: u64 = 24;
 /// After a read's command from a handler's callback, the rest of the handler's work.
-const DISC_ISSUED_HANDLER: u64 = 16;
+const DISC_ISSUED_HANDLER: u64 = 0;
 /// The game's code going on from a wait a disc read's interrupt ended.
-const DISC_WAKE: u64 = 16;
+const DISC_WAKE: u64 = 0;
 /// A hardware register's read (ssbm-rs's read step).
 const REG_READ: u64 = 8;
 const ARQ_POST: u64 = 56;
@@ -387,33 +390,35 @@ impl Clock {
         self.events.retain(|e| e.kind != EventKind::AudioDma);
     }
 
-    /// The next event, by time then scheduling order.
+    /// When an event runs on ssbm-rs's clock: its time, but for an audio DMA block's end,
+    /// [`AI_LEAD`] before.
+    fn due_at(e: &Event) -> u64 {
+        match e.kind {
+            EventKind::AudioDma => e.at.saturating_sub(AI_LEAD),
+            _ => e.at,
+        }
+    }
+
+    /// The next event, by when it runs then scheduling order.
     fn next_event(&self) -> Option<usize> {
-        (0..self.events.len()).min_by_key(|&i| (self.events[i].at, self.events[i].seq))
+        (0..self.events.len()).min_by_key(|&i| (Self::due_at(&self.events[i]), self.events[i].seq))
     }
 
     fn next_at(&self) -> u64 {
-        self.events[self.next_event().expect("the timeline runs dry")].at
+        Self::due_at(&self.events[self.next_event().expect("the timeline runs dry")])
     }
 
-    /// Runs what is due now: events, then the interrupts they raised (the audio interrupt
-    /// before the retrace), until nothing is.
+    /// Runs what is due now: each event due, then the interrupts they raised (the audio
+    /// interrupt before the retrace), one at a time, looking again after each, until nothing
+    /// is. An event that fell due while a handler ran runs as it returns ([`AI_LEAD`]).
     fn service(&mut self, f: &mut dyn Frames) {
-        // An event that came due while the disc or retrace interrupt's handler ran happens
-        // `DI_TAIL` after the handler. That holds for an audio DMA block that ends by the
-        // handler's end on ssbm-rs's clock, whose frame starts `DI_TAIL` past its event here.
-        let mut after_disc = false;
         loop {
-            let tail = std::mem::take(&mut after_disc);
-            let due = |e: &Event| {
-                e.at <= self.now
-                    || (tail && e.kind == EventKind::AudioDma && e.at <= self.now + DI_TAIL)
-            };
-            if let Some(i) = self.next_event().filter(|&i| due(&self.events[i])) {
+            let now = self.now;
+            if let Some(i) = self
+                .next_event()
+                .filter(|&i| Self::due_at(&self.events[i]) <= now)
+            {
                 let e = self.events.swap_remove(i);
-                if tail {
-                    self.now += DI_TAIL;
-                }
                 match e.kind {
                     EventKind::Field => {
                         self.vi_pending = true;
@@ -430,11 +435,13 @@ impl Clock {
                         self.schedule(e.at + self.alarm_period, EventKind::PadAlarm);
                     }
                     EventKind::AudioDma => {
+                        // Its frame starts `AI_LEAD` after the event runs.
+                        let start = self.now + AI_LEAD;
                         self.ai_pending = true;
                         if self.placed_frames {
-                            self.last_frame = Some(self.now);
+                            self.last_frame = Some(start);
                         } else {
-                            self.schedule(self.now + AUDIO_FRAME, EventKind::AudioDma);
+                            self.schedule(start + AUDIO_FRAME, EventKind::AudioDma);
                         }
                     }
                     EventKind::DspResume => self.dsp_ready = true,
@@ -456,7 +463,7 @@ impl Clock {
                     self.dsp_ready,
                     "an audio frame before the DSP finished the last one"
                 );
-                let start = self.now;
+                let start = self.now + AI_LEAD;
                 self.dsp_ready = false;
                 self.schedule(start + AI_MAIL + DSP_FRAME, EventKind::DspResume);
                 f.handler_at(Some(start));
@@ -464,25 +471,8 @@ impl Clock {
                 f.handler_at(None);
                 let end = start + AI_HANDLER + (log.spent - AI_CALLBACK);
                 self.apply(start, &log);
-                // A disc read that finished while the handler ran: the OS's dispatcher takes
-                // its interrupt before the handler's return (`AI_CHAIN` before its end), and
-                // the return's time after.
-                let chained = self
-                    .events
-                    .iter()
-                    .filter(|e| e.kind == EventKind::DiscDone && e.at + AI_CHAIN <= end)
-                    .min_by_key(|e| (e.at, e.seq))
-                    .map(|e| e.seq);
-                match chained {
-                    Some(seq) => {
-                        self.cancel(seq);
-                        self.now = end - AI_CHAIN;
-                        self.disc_interrupt(f);
-                        self.now += AI_CHAIN;
-                        after_disc = true;
-                    }
-                    None => self.now = end,
-                }
+                // What fell due meanwhile (a disc read's end) runs as the handler returns.
+                self.now = end;
             } else if self.aram_pending != 0 {
                 self.aram_pending -= 1;
                 let start = self.now;
@@ -494,12 +484,10 @@ impl Clock {
             } else if self.di_pending {
                 self.di_pending = false;
                 self.disc_interrupt(f);
-                after_disc = true;
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
                 self.woken = true;
-                after_disc = true;
                 // `HSD_VIPostRetraceCB`: the next copied frame shows, freeing the one shown.
                 if self.xfb_pending > 0 {
                     self.xfb_pending -= 1;
@@ -699,23 +687,14 @@ impl Clock {
     /// its chunks. In ssbm-rs the load's request and each chunk's ARAM interrupt handler run
     /// with interrupts off, and an event that came due meanwhile runs when a handler returns:
     /// the request takes 56 ticks, each chunk's handler 64 and the last one's 8, so on this
-    /// timeline (whose audio frames start 8 ticks after ssbm-rs runs their events) the
+    /// timeline (whose audio frames start [`AI_LEAD`] after ssbm-rs runs their events) the
     /// chunks end every `ARAM_CHUNK` from the load's start. The last handler returns as the
-    /// load ends, and an audio DMA event due by then runs there too, its frame starting after
-    /// the audio handler's register read: here a frame due up to `REG_READ` past the load's
-    /// end starts there, before the game's code goes on.
+    /// load ends, and an audio DMA event due by then runs there too, before the game's code
+    /// goes on: its frame starts `AI_LEAD` after the load's end.
     pub fn aram_load(&mut self, len: u32, f: &mut dyn Frames) {
         self.game_code(f);
         for _ in 0..len.div_ceil(0x1000) {
             self.read(ARAM_CHUNK, f);
-        }
-        let end = self.now + REG_READ;
-        if self
-            .events
-            .iter()
-            .any(|e| e.kind == EventKind::AudioDma && e.at <= end)
-        {
-            self.read(REG_READ, f);
         }
     }
 
@@ -751,6 +730,16 @@ impl Clock {
         }
         if waited {
             self.after_disc_wait(f);
+        }
+        self.disc_woke = false;
+    }
+
+    /// A spin ssbm-rs's SDK hooks (`install`'s `spins`): a wait point each spin until `w`, with
+    /// no game code between, so none to go on after a disc read's interrupt ended it.
+    pub fn spin_until(&mut self, f: &mut dyn Frames, w: Wait) {
+        self.game_code(f);
+        while !f.done(w) {
+            self.wait(WAIT_STEP, f);
         }
         self.disc_woke = false;
     }
@@ -912,11 +901,11 @@ mod tests {
 
     #[test]
     fn a_frame_due_as_the_retrace_handler_ends_runs_then() {
-        // The retrace's handler ends at FIELD + 32. A frame due by DI_TAIL after that (its
+        // The retrace's handler ends at FIELD + 32. A frame due by AI_LEAD after that (its
         // event due by the handler's end on ssbm-rs's clock) starts then; one due later waits.
         for (due, ran) in [
-            (FIELD + VI_HANDLER + DI_TAIL, true),
-            (FIELD + VI_HANDLER + DI_TAIL + 1, false),
+            (FIELD + VI_HANDLER + AI_LEAD, true),
+            (FIELD + VI_HANDLER + AI_LEAD + 1, false),
         ] {
             let mut c = Clock::new(FIELD - 1, due, 10 * FIELD, 675_000);
             c.wait(WAIT_STEP, &mut Stub::new(false));

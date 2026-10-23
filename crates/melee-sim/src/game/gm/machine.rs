@@ -203,6 +203,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_BOOT | GM_MEMCARD | GM_TITLE => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
         GM_PROGRESSIVE_SCAN => (false, None, None),
+        GM_MENU => unported_call("the main menu's mode (gmmenumode.c)"),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }

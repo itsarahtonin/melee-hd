@@ -86,6 +86,12 @@ pub trait Console {
     /// A disc file's bytes and entry number, for the frontend's loads before the session
     /// runs.
     fn file(&mut self, path: &str) -> DiscFile;
+    /// A disc file's entry number and size (`DVDFastOpen`'s), for the preload cache's reads of
+    /// files the simulation only times.
+    fn file_info(&mut self, path: &str) -> (i32, u32) {
+        let f = self.file(path);
+        (f.entrynum, f.bytes.len() as u32)
+    }
 }
 
 /// A running session: the game's state, the archives it has loaded, the console's setup and
@@ -195,8 +201,19 @@ impl Session {
             files.archives.push((name.to_owned(), id));
             sizes.push((file.entrynum, len));
         }
+        // The files a game cache can preload, by entry and size: the preload cache only times
+        // their reads.
+        let mut names = Vec::new();
+        for name in crate::lb::dvd::game_cache_files() {
+            let (entrynum, len) = console.file_info(&name);
+            if !sizes.iter().any(|s| s.0 == entrynum) {
+                sizes.push((entrynum, len));
+            }
+            names.push((name, entrynum));
+        }
         self.game.audio.dvd = Some(crate::lb::dvd::Dvd {
             sizes,
+            names,
             ..Default::default()
         });
         // The songs the ported scenes play, which the music stream reads.
@@ -294,6 +311,8 @@ impl Session {
 
     /// The frame's display pass after [`Session::step_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
+        // The pass's wait can take the pad alarm, whose handler probes the card.
+        let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         self.game.audio.render_start(&self.data);
         scene::render_screen(&mut Running {
@@ -301,6 +320,7 @@ impl Session {
             data: &self.data,
         });
         lent.give_back(&mut self.game.objs.heap);
+        card.give_back(&mut self.card);
         std::mem::take(&mut self.game.objs.display.draws)
     }
 }

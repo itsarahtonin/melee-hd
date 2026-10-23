@@ -414,6 +414,13 @@ impl melee_sim::game::session::Console for Console<'_> {
         self.disc.entrynum(path.trim_start_matches('/')).ok()
     }
 
+    fn file_info(&mut self, path: &str) -> (i32, u32) {
+        let path = path.trim_start_matches('/');
+        self.disc
+            .file_info(path)
+            .unwrap_or_else(|e| panic!("{path}: {e}"))
+    }
+
     fn file(&mut self, path: &str) -> melee_sim::game::vs_match::DiscFile {
         let path = path.trim_start_matches('/');
         melee_sim::game::vs_match::DiscFile {

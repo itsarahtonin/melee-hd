@@ -68,15 +68,18 @@ impl Comparer<'_> {
                 o.callback.map_or(0, |c| c.0),
                 self.u32(at + 0x4C),
             );
-            // The texture object's size and format (`GXInitTexObj`'s `image0`), and its
-            // image's address in 32-byte units (none for the movie's).
+            // The texture object's size and format (`GXInitTexObj`'s `image0`, with texture
+            // map 0's register ID once loaded), and its image's address in 32-byte units (none
+            // for the movie's).
             let tx = o.tex;
-            let image0 =
-                u32::from(tx.width - 1) | u32::from(tx.height - 1) << 10 | (tx.format & 0xF) << 20;
+            let image0 = u32::from(tx.width - 1)
+                | u32::from(tx.height - 1) << 10
+                | (tx.format & 0xF) << 20
+                | if o.loaded { 0x88 << 24 } else { 0 };
             self.check(&p, "texture size and format", image0, self.u32(at + 0x58));
             match o.image {
                 Image::Data(d) => {
-                    let theirs = self.u32(at + 0x5C) << 5 | 0x8000_0000;
+                    let theirs = (self.u32(at + 0x5C) & 0x00FF_FFFF) << 5 | 0x8000_0000;
                     self.compare_data(&format!("{p} image"), Some(d_image(self, d)), theirs);
                 }
                 Image::Movie { .. } => self.check(&p, "image", 0, self.u32(at + 0x5C)),

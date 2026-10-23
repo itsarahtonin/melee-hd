@@ -27,8 +27,6 @@ pub const ALARM_HANDLER: u32 = 0x8001_F2A4;
 pub const ALARM_PERIOD: u64 = 675_000;
 /// `lbMthp_8001F67C`, the movie sprite's render callback.
 pub const RENDER: u32 = 0x8001_F67C;
-/// From the disc interrupt's handler's callback to the read's callback's time read.
-const READ_CALLBACK: u64 = 16;
 
 /// An `.mth` file's header (`THPDecComp`'s first 0x40 bytes), as read.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
@@ -504,9 +502,8 @@ impl Audio {
     #[doc(alias = "fn_8001E910")]
     pub fn mthp_read_done(&mut self, data: &Archives, cancelled: bool) {
         assert!(!cancelled, "the original's assertion failed: lbmthp.c:328");
-        // The device command queue's memory callback reaches this one 16 into its handler's
-        // call (measured: the read's time `unk_134` in the sessions' traces).
-        self.hw.spent += READ_CALLBACK;
+        // The time base as the device command queue's memory callback enters (ssbm-rs's
+        // DVD_TIMELINE: `OSGetTick` returns the callback's entry time).
         let t = self.os_get_tick();
         let m = &mut self.movie;
         let diff = t.wrapping_sub(m.requested_at) as i32;
@@ -567,7 +564,7 @@ impl Audio {
         // `fn_8001F294`'s spin: a wait point each spin until the read's callback has run.
         if self.movie.in_flight != 0 {
             self.with_clock(data, |c, f| {
-                c.wait_until(f, crate::audio::clock::Wait::MovieIdle)
+                c.spin_until(f, crate::audio::clock::Wait::MovieIdle)
             });
         }
         self.movie_alarm_cancel();

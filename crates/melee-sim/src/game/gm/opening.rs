@@ -302,6 +302,12 @@ impl Running<'_> {
     pub fn render_movie(&mut self, gobj: GObjId) {
         self.game.audio.mthp_decode(self.data);
         if self.game.audio.movie.draw != 0 {
+            let planes = self.game.audio.movie.planes_draw();
+            self.game
+                .objs
+                .display
+                .draws
+                .push(crate::hsd::display::Draw::MoviePlanes(planes));
             self.render_sobjs(gobj);
         }
     }
@@ -313,18 +319,18 @@ impl Running<'_> {
             return;
         };
         while let Some(s) = cur {
-            let o = &self.game.objs.sobjs[s.0];
+            let o = &mut self.game.objs.sobjs[s.0];
             assert!(o.callback.is_none(), "a sprite's callback isn't ported");
-            let movie = if o.flags & 0x10 != 0 {
-                self.game.audio.movie.planes_draw()
-            } else {
-                None
-            };
+            // `HSD_SObjLib_803A4A68` loads a shown sprite's own texture, but the movie's.
+            if o.flags & 0x11 == 0 {
+                o.loaded = true;
+            }
+            assert!(o.flags & 4 == 0, "a sprite's depth texture isn't ported");
             self.game
                 .objs
                 .display
                 .draws
-                .push(crate::hsd::display::Draw::SObj(s, movie));
+                .push(crate::hsd::display::Draw::SObj(s));
             cur = self.game.objs.sobjs[s.0].next;
         }
     }
@@ -348,7 +354,7 @@ impl Running<'_> {
             .objs
             .display
             .draws
-            .push(crate::hsd::display::Draw::Invalidate(u32::MAX));
+            .push(crate::hsd::display::Draw::SpriteEnd);
     }
 
     /// `gm_SetupTitleDemo`: the attract match's four characters, drawn from the unlocked

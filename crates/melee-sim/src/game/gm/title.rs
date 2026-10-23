@@ -507,7 +507,6 @@ impl Running<'_> {
         self.dvd_mut().keep_class();
         self.game.audio.preload_refresh(self.data);
         self.wait_preload_stale_released(crate::lb::heap::ALL_M as i32);
-        self.game.audio.preload_refresh(self.data);
     }
 
     /// `onExit` (`gmtitlemode.c`): Start goes to the main menu (or a challenger first), else

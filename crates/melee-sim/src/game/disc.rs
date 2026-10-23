@@ -49,6 +49,11 @@ impl Running<'_> {
         o.cobjs.current = None;
         o.jobj.current = None;
         o.lobjs.current = None;
+        // The lights the last scene made are gone with its heap; the active table keeps
+        // naming its slots, which the next scene's lights take as the original's take the
+        // same memory (the table is written again before anything reads it).
+        o.lobjs.pool = Default::default();
+        o.lobjs.nodes = Default::default();
         o.mobjs.toon = None;
         o.mobjs.shadows = None;
         o.ids = Default::default();
