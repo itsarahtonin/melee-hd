@@ -1483,7 +1483,10 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
                     let unlocked = game.gm.unlocks.ckind_unlocked(CKIND_CLINK);
                     Some(roll(game, unlocked))
                 }
-                5 => unported_call("Toy_803048C0(0x11A)"),
+                5 => {
+                    let owned = game.gm.unlocks.trophy_count(0x11A) != 0;
+                    Some(roll(game, owned))
+                }
                 6 => {
                     let all = game.gm.unlocks.all_characters();
                     Some(roll(game, all))

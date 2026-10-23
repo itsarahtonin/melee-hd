@@ -1151,7 +1151,8 @@ const GROUND_SEND: [u8; 111] = [
     1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0,
 ];
 
-/// The rows' third bytes: a second send, which `lbAudioAx_80024D78` can choose instead.
+/// The rows' third bytes: a second send, which `lbAudioAx_80024D78` can choose instead; only
+/// Mute City's and Big Blue's differ from the first.
 const GROUND_SEND_2: [u8; 111] = [
     1, 1, 1, 1, 1, 1, 1, 24, 64, 128, 1, 1, 1, 1, 1, 136, 1, 1, 64, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
     1, 1, 1, 72, 136, 1, 1, 56, 56, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
@@ -1429,7 +1430,7 @@ impl crate::game::state::Running<'_> {
 
     /// The music channels' aux B send from column `column` of the ground kind's row of
     /// `s32_arr_803BB6B0` (its bank, its send, its second send), `lbAudioAx_80024D78`: Venom
-    /// turns it to its second under its lower deck's tunnel and back.
+    /// turns it to its second under its lower deck's tunnel and back, Mute City by its event.
     #[doc(alias = "lbAudioAx_80024D78")]
     pub fn set_ground_send(&mut self, column: i32) {
         let g = ground_kind(crate::game::gr::stage::stkind(self.game));

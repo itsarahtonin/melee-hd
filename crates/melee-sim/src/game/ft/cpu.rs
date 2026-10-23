@@ -246,14 +246,19 @@ impl Running<'_> {
     }
 
     /// The r5 [`Running::excluded_floor`] leaves for a floor found (`line` not -1) on a stage
-    /// it asks: Mushroom Kingdom's check (`grInishie1_801FCAAC`) and Venom's
-    /// (`grVenom_80206D10`) end with what `mpJointFromLine` left there, the joints' array's
-    /// address (the allocator model's); Corneria's (`grCorneria_801E2D90`) with its chain of
-    /// tests' third flag, whether the floor's joint is 0, 1, 2 or 5; Big Blue's leaves r5 as its
-    /// caller had it, unfollowed, as is the address without the allocator model.
+    /// it asks: Big Blue's check (`grBigBlue_801EF844`) ends with the last of its chain of
+    /// flags, 1 for joints 33 and 35 to 41, else 0 (Melee's bug, docs/melee-bugs.md);
+    /// Mushroom Kingdom's (`grInishie1_801FCAAC`) and Venom's (`grVenom_80206D10`) with what
+    /// `mpJointFromLine` left there, the joints' array's address (the allocator model's);
+    /// Corneria's (`grCorneria_801E2D90`) with its chain of tests' third flag, whether the
+    /// floor's joint is 0, 1, 2 or 5. The address is unfollowed without the allocator model.
     pub(super) fn excluded_floor_r5(&self, line: i32) -> super::cpu_ai::Leftover {
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
         match self.game.stage_info.grkind {
+            GR_BIG_BLUE => {
+                let joint = geo.joint_from_line(line);
+                super::cpu_ai::Leftover::Word(u32::from(joint == 33 || (35..=41).contains(&joint)))
+            }
             GR_CORNERIA => super::cpu_ai::Leftover::Word(u32::from(matches!(
                 geo.joint_from_line(line),
                 0 | 1 | 2 | 5

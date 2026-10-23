@@ -70,6 +70,14 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::castle::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x801E_FC14 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::bigblue::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x801F_2C10 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::mutecity::check_shadow_render(self.game, pos, Some(j))
+            }
             Some(f) if f.0 == 0x801D_50C0 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::stadium::check_shadow_render(self.game, self.data, pos, Some(j))

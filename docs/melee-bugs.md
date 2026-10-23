@@ -754,6 +754,75 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** test `xCC != NULL`.
 - **Fix impact:** changes gameplay (the old slick's floor terrain) and breaks replay and Slippi compatibility.
 - **Source:** the decompilation's `grflatzone.c` (`grFlatzone_802176BC`); `crates/melee-sim/src/game/gr/flatzone.rs`, the comment in `proc_oil`.
+### Mute City's race order reaches the word before it
+
+- **Where:** `grMuteCity_801F1328` (the race), `crates/melee-sim/src/game/gr/mutecity.rs` (`steer_cars`).
+- **Defect:** the insertion sort of the cars' order runs its inner loop down to `j == 0` and compares `arr[j]` with `arr[j - 1]`, so it reads and swaps `grMc_8049F440[-1]`, the last word of Brinstar's bubbles (`grZe_8049F170[19].x20`, a GObj pointer on Brinstar, zero from boot otherwise).
+- **Effect:** once a car other than car 0 leads the order and has gone further than the car that word names (car 0 for the zero word), the two swap: the word takes the leader's index and the order holds car 0 twice, so the leader drops out of the race's closeness and pack flags until the word comes back. On a console that played Brinstar earlier in the session the word is a pointer and the sort reads a car far past the table.
+- **melee-hd:** modeled: the word is `mutecity::Globals::order_before`, zero at a match's start as after boot; the comparer checks it against the trace on Mute City.
+- **Fix:** stop the inner loop at `j >= 1`.
+- **Fix impact:** changes the cars' flags, speeds and lanes, so their positions and their hits on fighters; breaks Mute City replays.
+- **Source:** the port's `steer_cars` and `Globals::order_before`; ssbm-rs's port (`Handle::add(arr, j - 1)` at `j == 0`).
+
+### Mute City's car generator returns a stale register
+
+- **Where:** `grMuteCity_801F2AB0` (a car's smoke), stored by `grMuteCity_801F1A34`, `crates/melee-sim/src/game/gr/mutecity.rs` (`car_generator`, `Car::generator`).
+- **Defect:** the function never returns its generator: r3 holds what its last call left, `Ground_801C0498`'s load of `stage_info.x6B0`, the stage parameters' address (0 when the generator can't be made).
+- **Effect:** none observable: the car's `gen` word is only compared with null and cleared, and the parameters always exist, so it is non-null exactly when a generator was made.
+- **melee-hd:** modeled: `Car::generator` says whether the word holds the parameters' address, which the comparer checks.
+- **Fix:** return the generator.
+- **Fix impact:** none.
+- **Source:** the port's `car_generator`; the decompilation's remark on `grMuteCity_801F2AB0` ("Retail never sets the return value").
+
+### Big Blue's Falcon Flyer looks for the road from a stack vector it never set
+
+- **Where:** `grBigBlue_801E8D64` (the Falcon Flyer's setup), `crates/melee-sim/src/game/gr/bigblue.rs` (`init_flyer`, `flyer_stale_pos`).
+- **Defect:** it searches for the road's height below `pos` (`grBigBlue_801EC58C`) before anything writes `pos`, a vector in its frame (`r1 + 0x3C`), so the search runs from the words the stage's setup left there.
+- **Effect:** the Falcon Flyer's starting height, and with it the players' start points, follow those words: where they put the search within 500 above or below the road, the Flyer starts at the road's height there plus its parameter's height; elsewhere at the parameter's height alone. On the console (ssbm-rs's interpreter, probed with `WATCH_ADDR`) the setup's hiding of the flying platforms (`HSD_JObjSetFlagsAll` on map 32's tree, just before map 35 is made) leaves two of its joints' addresses in x and y (the registers its calls four levels down save) and `Ground_GetStageGObj` leaves 0 in z: `0x80EF6860`, `0x80EF6900`, 0 under Slippi's playback of `stage-big-blue`. As floats the addresses are tiny negatives, so the search runs at the origin, where the road lies 0.00005 high, and finds it. ssbm-rs's port mode leaves other words there (its ports save no registers), tiny negatives too, so the Flyer starts at the same height in every run.
+- **melee-hd:** modeled: `flyer_stale_pos` gives the two joints' addresses from the allocator model, and without it the playback's, which the search can't tell from any other arena word.
+- **Fix:** search from the Flyer's own place.
+- **Fix impact:** none where the search lands at the origin, as it always does; a fix that searched elsewhere would change the start's heights, which breaks Big Blue replays.
+- **Source:** the port's `flyer_stale_pos`; [engine notes, uninitialized values](engine.md#uninitialized-values); the decompilation's `grBigBlue_801E8D64` (`grBigBlue_801EC58C(&pos, NULL, 500.0f)` with `pos` unset) and `HSD_JObjSetFlagsAll`'s machine code.
+
+### Big Blue's relay platform check reads the flying platforms' object
+
+- **Where:** `grBigBlue_801EAB50` (whether the relay platform is near a point), `crates/melee-sim/src/game/gr/bigblue.rs` (`near_relay`).
+- **Defect:** it takes map 32's object (the flying platforms) where the relay platform is map 36, and tests the first byte of its variables for the relay platform's flying state (2): that byte is the top byte of the flying platforms' count of placed platforms, which the Falcon Flyer resets.
+- **Effect:** the check never finds the relay platform, so the flying platforms and the Falcon Flyer come in, and the Falcon Flyer keeps its speed, without regard to it (the platforms' height still avoids it through `grBigBlue_801EACE8`, which reads map 36).
+- **melee-hd:** modeled: `near_relay` reads the flying platforms' count, as the original does.
+- **Fix:** take map 36's object.
+- **Fix impact:** changes where platforms and the Falcon Flyer come in and when they stop; breaks Big Blue replays.
+- **Source:** the port's `near_relay`; the decompilation's `grBigBlue_801EAB50` (`Ground_GetMapGObj(32)`).
+
+### Big Blue's cars start their engines in their collision slot's sound slot
+
+- **Where:** `grBigBlue_801EE398` cases 5 and 6 (a car brought in from a side), `crates/melee-sim/src/game/gr/bigblue.rs` (`bring_car`).
+- **Defect:** the engine sound starts in the stage object's sound slot numbered by the car's collision slot (0 to 29), while the volume and every later volume change go to the slot numbered by the car (0 to 3). The stage object has eight sound slots, so a car in a slot past 7 starts no sound.
+- **Effect:** a car brought in may drive silently, or its engine plays in another car's slot while the volume changes go to its own; the first cars, placed by `grBigBlue_801EC6C0`, use their car's slot.
+- **melee-hd:** modeled: `bring_car` starts the sound in the collision slot.
+- **Fix:** start the sound in the car's slot.
+- **Fix impact:** changes the cars' engine sounds only.
+- **Source:** the port's `bring_car`; the decompilation's `grBigBlue_801EE398`.
+
+### Big Blue's road marks its previous piece 0xFFFF in a seven-bit field
+
+- **Where:** `grBigBlue_801EB004` (the road's layout), `crates/melee-sim/src/game/gr/bigblue.rs` (`lay_road`).
+- **Defect:** it stores 0xFFFF, meaning no piece, into the road's previous piece, a seven-bit field, which keeps 127.
+- **Effect:** none observable: nothing reads the previous piece.
+- **melee-hd:** modeled: the field holds 127, which the comparer checks.
+- **Fix:** a field wide enough, or a value that fits.
+- **Fix impact:** none.
+- **Source:** the port's `lay_road`; the decompilation's `grBigBlue_801EB004` (`prev_lane = 0xFFFF`).
+
+### Big Blue's platforms, Falcon Flyer and relay platform turn a point behind them and drop it
+
+- **Where:** `grBigBlue_801E6C60` (the flying platforms), `grBigBlue_801E93D8` (the Falcon Flyer), `grBigBlue_801EA05C` (the relay platform), `crates/melee-sim/src/game/gr/bigblue.rs` (`fly_platform`, `proc_flyer`, `proc_relay`).
+- **Defect:** each turns a point ahead and a point behind by the road's slope (`lbVector_ApplyEulerRotation`) and adds its place to both, then uses only the point ahead.
+- **Effect:** none observable: the point behind is computed and dropped.
+- **melee-hd:** modeled (computed and dropped).
+- **Fix:** leave it out.
+- **Fix impact:** none.
+- **Source:** the port's `fly_platform`, `proc_flyer` and `proc_relay`.
 
 ### A collision's setup leaves two flag bytes' bits as the heap held them
 
@@ -1032,6 +1101,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Particle commands past their tables | `hsd_8039930C` and the bank lookups, `hsd/particle.rs` | A texture group past the bank's table takes an unrelocated word for an address; a point joint past the table reads the particle links as joints; a callback index faults on the null `psCallback` | `crates/melee-sim/src/hsd/particle.rs:236`, `:850`, `:1602` |
 | A tornado particle without a generator | `calcTornadoLastPos`, `melee-render/src/hsd/psdisp.rs` | Reads a null generator's position | `crates/melee-render/src/hsd/psdisp.rs:181` |
 | Shape weights out of range | `PObjUpdateFunc`, `hsd/pobj.rs` | Writes past the weights for a channel out of their range | `crates/melee-sim/src/hsd/pobj.rs:582` |
+| A Big Blue platform callback on another joint | `fn_801E8560`, `game/gr/bigblue.rs` | Reads the joint's index, which it never set, for a joint other than 0 to 2, and pushes the platform past the three when none has that index; only joints 0 to 2 take the callback, and the platforms' indices are 0 to 2 | `crates/melee-sim/src/game/gr/bigblue.rs:1308` |
+| A Big Blue road piece without its joints | `grBigBlue_801EB004`, `game/gr/bigblue.rs` | Its asserts read the start and end joints it hasn't looked up when an earlier joint is missing; every piece's joints exist | `crates/melee-sim/src/game/gr/bigblue.rs:1827` |
 | A texture's LOD bias animated | `TObjUpdateFunc`, `hsd/tobj.rs` | Writes the bias into the loaded LOD descriptor every TObj from it shares; no animation has the channel | `crates/melee-sim/src/hsd/tobj.rs:538` |
 | Cameras without their parts | `makeProjectionMtx`, `HSD_CObjSetupViewingMtx`, `HSD_CObjSetRoll`, `hsd/cobj.rs` | Another projection type returns the caller's `r31`; a dirty view without an eye or interest builds from uninitialized stack and writes through a null WObj; a roll without an eye vector sets the up vector from uninitialized stack | `crates/melee-sim/src/hsd/cobj.rs:337`, `:358`, `:613` |
 | A light id that isn't one | `HSD_LightID2Index`, `hsd/lobj.rs` | Asserts and returns an uninitialized index | `crates/melee-sim/src/hsd/lobj.rs:257` |

@@ -130,6 +130,12 @@ pub struct Unlocks {
     pub records_index_code: bool,
     /// The records' test patched to answer 1 (`li r3, 1` at `0x8015D968`, an unlock-all code).
     pub records_all_code: bool,
+    /// How many of trophy 0x11A the card holds (`save_data.trophy_flags[0x11A]`'s low byte, at
+    /// the card data's `0x1F08`), which Big Blue's alternate song waits for.
+    pub trophy_11a: u8,
+    /// The trophy count patched to answer 99 (`li r3, 0x63` at `0x8030490C`, an unlock-all
+    /// code).
+    pub trophies_all_code: bool,
 }
 
 /// `LANG_JP` and `LANG_US`.
@@ -139,6 +145,7 @@ pub const LANG_US: u8 = 1;
 /// `gmMainLib_804D3EE0`, the memory card's data, and `li r3, 1`.
 const CARD_DATA: u32 = 0x804D_3EE0;
 const LI_R3_1: u32 = 0x3860_0001;
+const LI_R3_0X63: u32 = 0x3860_0063;
 /// `blr`.
 const BLR: u32 = 0x4E80_0020;
 
@@ -179,6 +186,8 @@ impl Unlocks {
             records: 0,
             records_index_code: true,
             records_all_code: true,
+            trophy_11a: 0,
+            trophies_all_code: true,
         }
     }
 
@@ -196,6 +205,8 @@ impl Unlocks {
             records: word(card + 0x1B4C),
             records_index_code: word(0x8015_D94C) == BLR,
             records_all_code: word(0x8015_D968) == LI_R3_1,
+            trophy_11a: (word(card + 0x1F08) >> 16) as u8,
+            trophies_all_code: word(0x8030_490C) == LI_R3_0X63,
         }
     }
 
@@ -249,6 +260,22 @@ impl Unlocks {
         self.mark(i);
         true
     }
+    /// How many of a trophy the card holds, `Toy_803048C0` (in VS mode, the card's count; 99
+    /// with the unlock-all code): only trophy 0x11A, the one a VS stage's music asks about, is
+    /// kept.
+    #[doc(alias = "Toy_803048C0")]
+    pub fn trophy_count(&self, trophy: u32) -> u32 {
+        assert!(
+            trophy == 0x11A,
+            "trophy {trophy:#x}: only trophy 0x11A is kept"
+        );
+        if self.trophies_all_code {
+            0x63
+        } else {
+            u32::from(self.trophy_11a)
+        }
+    }
+
     /// Whether every unlockable character is unlocked, `gm_80164ABC`.
     #[doc(alias = "gm_80164ABC")]
     pub fn all_characters(&self) -> bool {

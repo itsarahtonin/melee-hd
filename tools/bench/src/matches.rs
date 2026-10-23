@@ -2199,10 +2199,11 @@ pub fn cpu_levels_set() -> Vec<Match> {
 /// The CPU stages set: real CPUs on stages beyond the tournament six where the CPU AI runs code
 /// of its own: off camera on the ground (`ftCo_800A6FC4`, Poké Floats and Yoshi's Island), in
 /// the barrels (`ftCo_800AC434`, both Kongo Jungles; the Ice Climbers bring Nana), and heading
-/// for safe ground from Brinstar's acid, Rainbow Cruise's and Icicle Mountain's edges and Great
-/// Bay's turtle (`ftCo_800A229C`, `ftCo_800A8210`). A human (`BENCH_AI`) against three CPUs at
-/// mixed levels, 4 stocks, 3 minutes, items off; on Icicle Mountain a time match of eight
-/// minutes, so the climb runs (`ICICLE_MOUNTAIN_RULES`).
+/// for safe ground from Brinstar's acid, Rainbow Cruise's and Icicle Mountain's edges, Great
+/// Bay's turtle and Big Blue's sides (`ftCo_800A229C`, `ftCo_800A8210`). A human (`BENCH_AI`)
+/// against three CPUs at mixed levels, 4 stocks, 3 minutes, items off; on Icicle Mountain a time
+/// match of eight minutes, so the climb runs (`ICICLE_MOUNTAIN_RULES`); Big Blue's match is
+/// [`cpu_stage_big_blue`].
 pub fn cpu_stages_set() -> Vec<Match> {
     let matches: [(u16, &str, [Player; 4]); 8] = [
         (
@@ -2299,12 +2300,35 @@ pub fn cpu_stages_set() -> Vec<Match> {
             },
             items: Items::OFF,
         })
+        .chain([cpu_stage_big_blue()])
         .collect()
 }
 
 /// The CPU match on Icicle Mountain: a time match of eight minutes, as the stages set's moving
 /// stages have, so the climb comes round and nobody's last stock ends it.
 const ICICLE_MOUNTAIN_RULES: Rules = Rules::Time { time_limit: 480 };
+
+/// The CPU stages set's match on Big Blue (`cpu-stage-big-blue`): heading for safe ground
+/// from within 20% of the blast zones' sides (`ftCo_800A229C`, `ftCo_800A8210`) and the
+/// floors computer players don't count, the cars' (`ftCo_800A1B38`), whose check leaves r5
+/// for the DI. Luigi (`BENCH_AI`) against Falco 9, Ness 5 and Donkey Kong 2, items off, a time
+/// match of eight minutes, as the stages set's moving stages have, so the road comes round
+/// and nobody's last stock ends it. Its own seed, so the set's order doesn't change it.
+fn cpu_stage_big_blue() -> Match {
+    Match {
+        name: Cow::Borrowed("cpu-stage-big-blue"),
+        stage: BIG_BLUE,
+        players: Cow::Owned(vec![
+            p(LUIGI, 0),
+            cpu(FALCO, 0, 9),
+            cpu(NESS, 0, 5),
+            cpu(DONKEY_KONG, 0, 2),
+        ]),
+        seed: 0x1F0F_2110,
+        rules: Rules::Time { time_limit: 480 },
+        items: Items::OFF,
+    }
+}
 
 /// The stages where Nana's computer player asks the stage something: whether an island is
 /// safe (Brinstar, Onett), the wind (Rainbow Cruise), its routes (Great Bay, Hyrule Temple) and

@@ -388,6 +388,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         c if super::gr::rcruise::run_render(r, gobj, c, pass) => {}
         super::gr::corneria::WINDOW_RENDER => super::gr::corneria::window_render(r, gobj, pass),
         c if super::gr::castle::run_render(r, gobj, c, pass) => {}
+        c if super::gr::bigblue::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),

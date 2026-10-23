@@ -6,6 +6,7 @@
 
 pub mod anime;
 pub mod battle;
+pub mod bigblue;
 pub mod castle;
 pub mod corneria;
 pub mod data;
@@ -14,6 +15,7 @@ pub mod display;
 pub mod dynamic_attr;
 pub mod flatzone;
 pub mod fourside;
+pub mod fzerocar;
 pub mod garden;
 pub mod greatbay;
 pub mod greens;
@@ -27,6 +29,7 @@ pub mod kongo;
 pub mod kraid;
 pub mod last;
 pub mod material;
+pub mod mutecity;
 pub mod oldkongo;
 pub mod oldpupupu;
 pub mod oldyoshi;
@@ -108,6 +111,10 @@ pub const GR_KIND_INISHIE2: i32 = 25;
 pub const GR_KIND_CORNERIA: i32 = 14;
 /// `Gr_Kind_Venom`, Venom.
 pub const GR_KIND_VENOM: i32 = 15;
+/// `Gr_Kind_MuteCity`, Mute City.
+pub const GR_KIND_MUTECITY: i32 = 18;
+/// `Gr_Kind_BigBlue`, Big Blue.
+pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -291,6 +298,14 @@ pub struct Globals {
     pub venom: venom::Globals,
     /// Whether Battlefield runs a demo fight (`isDemoFight`).
     pub battle_demo: bool,
+    /// Mute City's `yakumono_param` (`grMc_YakumonoParam`).
+    pub mutecity_yakumono: Option<DataRef>,
+    /// Mute City's statics besides it.
+    pub mutecity: mutecity::Globals,
+    /// Big Blue's `yakumono_param` (`grBb_YakumonoParam`).
+    pub bigblue_yakumono: Option<DataRef>,
+    /// Big Blue's statics besides it.
+    pub bigblue: bigblue::Globals,
     /// The game mode (`gm_GetCurrentGameMode`), which the match setup decides.
     pub game_mode: u8,
     /// The players' start points as `grLib_801C9A10` last measured them (`grLib_8049EF58`).
@@ -452,6 +467,14 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_CASTLE, 6) => VarsKind::CastleLifts,
         (GR_KIND_CASTLE, 8..=16) => VarsKind::CastleBill,
         (GR_KIND_CASTLE, 18..=20) => VarsKind::CastleSwitch,
+        (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
+        (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
+        (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
+        (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
+        (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
+        (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
+        (GR_KIND_BIGBLUE, 35) => VarsKind::BigBlueFlyer,
+        (GR_KIND_BIGBLUE, 36) => VarsKind::BigBlueRelay,
         _ => VarsKind::Bytes,
     }
 }
@@ -464,6 +487,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         onett::CAR_HIT => onett::car_hit(r, item, g),
         corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
         castle::BILL_DEALT | castle::BLAST_DEALT => castle::item_nothing(r, item, g),
+        mutecity::CAR_DEALT => mutecity::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -491,6 +515,10 @@ pub fn yaku_received(
         castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),
         a if castle::block_hit_index(a).is_some() => {
             castle::block_hit(r, g, castle::block_hit_index(a).expect("a block"))
+        }
+        cb if mutecity::hit_car(cb).is_some() => {
+            let car = mutecity::hit_car(cb).expect("a car");
+            mutecity::car_hit(r.game, car, damage);
         }
         other => {
             super::code::unported_call(&format!("a stage item's damage callback {other:#010x}"))

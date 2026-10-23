@@ -249,6 +249,20 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 24,
+        name: "Big Blue",
+        keys: &["bb", "big-blue"],
+        audit: Some(Audit {
+            units: &["melee/gr/grbigblue", "melee/gr/grfzerocar"],
+            modules: &["gr/bigblue", "gr/fzerocar"],
+            unreached: &[(
+                "Big Blue's platform item",
+                "the items the flying platforms drop, which only a match with items on makes",
+            )],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 6,
         name: "Brinstar",
         keys: &["br", "brinstar"],
@@ -530,6 +544,21 @@ pub const STAGES: &[Stage] = &[
         }),
     },
     Stage {
+        kind: 10,
+        name: "Mute City",
+        keys: &["mc", "mute-city"],
+        audit: Some(Audit {
+            units: &[
+                "melee/gr/grmutecity",
+                "melee/gr/grfzerocar",
+                "melee/it/kinds/ityaku",
+            ],
+            modules: &["gr/mutecity", "gr/fzerocar", "it/kinds/yaku"],
+            unreached: &[YAKU_UNANCHORED],
+            missing: &[],
+        }),
+    },
+    Stage {
         kind: 9,
         name: "Onett",
         keys: &["on", "onett"],
@@ -771,7 +800,6 @@ pub(crate) mod tests {
             "on_check_shadow_render",
             "each roster stage's shadow check is wired (every_roster_stage_plays)",
         ),
-        ("grBigBlue_801EF7D8", "Big Blue's wind"),
         (
             "Ground_801C0C2C",
             "the point search, which single-player modes ask for",
@@ -795,10 +823,6 @@ pub(crate) mod tests {
         (
             "grDatFiles_803E0848",
             "stages without an archive, none of them VS stages",
-        ),
-        (
-            "Toy_803048C0",
-            "music chosen by a trophy, which no roster stage's music entry asks",
         ),
         (
             "lbAudioAx_8002305C",

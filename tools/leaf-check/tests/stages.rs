@@ -10545,3 +10545,1534 @@ fn castle_unreached_callbacks() {
     let t = leaf_check::sym("grCastle_801D0FF0");
     check_calls_with(&d, from, 1, &retarget(t), &floor);
 }
+
+// Mute City (`grmutecity.c`) and the F-Zero cars (`grfzerocar.c`).
+
+const MC: &str = "oracle-stage-mute-city";
+
+/// grmutecity.c's `yakumono_param`, whether its track hurts, its race order and its cars.
+const MC_PARAM: u32 = 0x804D_69D0;
+const MC_TRACK_LIVE: u32 = 0x804D_69D4;
+const MC_ORDER: u32 = 0x8049_F440;
+const MC_CARS: u32 = 0x8049_F4B8;
+
+/// Mute City's parameters' float at `off`.
+fn mc_param(c: &Call, off: u32) -> f32 {
+    f32_at(c, peek_u32(c, MC_PARAM) + off)
+}
+
+/// Car `i`'s entry.
+fn mc_car(i: u32) -> u32 {
+    MC_CARS + 0x2C * i
+}
+
+/// A car's race state set: its place, speed, lane, damage, flags and state byte.
+#[allow(clippy::too_many_arguments)]
+fn mc_set_car(c: &mut Call, i: u32, place: f32, speed: f32, lane: f32, damage: f32, flags: u16) {
+    let a = mc_car(i);
+    poke_u32(c, a + 4, place.to_bits());
+    poke_u32(c, a + 8, speed.to_bits());
+    poke_u32(c, a + 0xC, lane.to_bits());
+    poke_u32(c, a + 0x10, damage.to_bits());
+    poke_u16(c, a + 0x20, flags);
+}
+
+/// A car's state byte (`x22_flags`: 0x80 wrecked, 0x40 shook the screen).
+fn mc_set_state(c: &mut Call, i: u32, state: u8) {
+    poke_u8(c, mc_car(i) + 0x22, state);
+}
+
+#[test]
+fn mutecity_setup() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    for f in [
+        "grMuteCity_801EFC6C",
+        "grMuteCity_801EFCDC",
+        "grMuteCity_801EFCE0",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = mutecity::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801EFD0C", 1, &as_saved, &create);
+    for map in [0u32, 2, 29, 30, 36, 37] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grMuteCity_801EFD0C", 1, &set, &create);
+    }
+    for f in [
+        "grMuteCity_801EFDF8",
+        "grMuteCity_801F01B4",
+        "grMuteCity_801F044C",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let build = |r: &mut Running, maps: &Maps, call: &Call| {
+        let maps_at = call.regs.gpr[4];
+        let car_maps: [i16; 30] = std::array::from_fn(|i| {
+            let a = maps_at + 2 * i as u32;
+            (peek_u32(call, a & !3) >> if a & 2 == 0 { 16 } else { 0 }) as i16
+        });
+        melee_sim::game::gr::fzerocar::build(
+            r,
+            gobj_arg(maps, call),
+            &car_maps,
+            call.regs.gpr[5] as i32,
+            call.regs.gpr[6] != 0,
+        );
+        Ret::Nothing
+    };
+    // As saved and with the models set apart.
+    check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &as_saved, &build);
+    let apart = |c: &mut Call, _: usize| c.regs.gpr[6] = 1;
+    check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &apart, &build);
+    let place = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::place_cars(r.game);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F0F4C", 1, &as_saved, &place);
+    // The tree walk, its answer by the joint's address.
+    let walk = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied().expect("a joint");
+        let n = melee_sim::game::gr::ground::next_in_tree(&r.game.objs.jobjs, j);
+        let addr = n.map_or(0, |n| {
+            *maps
+                .jobjs
+                .iter()
+                .find(|(_, v)| **v == n)
+                .expect("the joint's address")
+                .0
+        });
+        Ret::Int(addr)
+    };
+    check_calls_with(&d, "Ground_801C4100", 1, &as_saved, &walk);
+}
+
+/// The course's script from each saved call, as saved, waiting, and from the commands that
+/// reach each kind of command (each camera limit both ways, the background and the platform's
+/// sway either way, the track's live and shaped states, the wrap at the script's end).
+#[test]
+fn mutecity_script() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F04B8";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::mutecity::run_script(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for wait in [1u16, 2, 0x8000] {
+        let set = move |c: &mut Call, _: usize| poke_u16(c, vars(c) + 2, wait);
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    let at: [u16; 40] = [
+        0, 5, 12, 13, 14, 15, 16, 17, 18, 19, 20, 22, 23, 24, 27, 30, 34, 35, 38, 39, 53, 54, 55,
+        56, 57, 58, 61, 62, 65, 66, 87, 95, 103, 109, 115, 116, 117, 129, 130, 131,
+    ];
+    for k in at {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u16(c, vars(c), k);
+            poke_u16(c, vars(c) + 2, 0);
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+}
+
+/// The track's ends and lines: each end's search from the saved places and others, and the
+/// lines in each of the ends' shapes.
+#[test]
+fn mutecity_track() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let find = |r: &mut Running, maps: &Maps, call: &Call| {
+        let j = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let (t, _) = mutecity::find_track_end(r, j, call.regs.fpr[1].ps0 as f32);
+        Ret::Float(gekko_fp::lfs(t.to_bits()))
+    };
+    check_calls_with(&d, "grMuteCity_801F094C", 1, &as_saved, &find);
+    for t in [
+        0.0f32, 0.0002, 0.005, 0.01, 0.3, 0.5, 0.86, 0.93, 0.95, 0.9998, 1.0,
+    ] {
+        let set = move |c: &mut Call, _: usize| c.regs.fpr[1].ps0 = leaf_check::arg(t);
+        check_calls_with(&d, "grMuteCity_801F094C", 1, &set, &find);
+    }
+    let f = "grMuteCity_801F0D20";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        mutecity::follow_track(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for ends in 0..4u8 {
+        let set = move |c: &mut Call, _: usize| {
+            let a = vars(c) + 0xC;
+            let b = (peek_u32(c, a) >> 24) as u8 & !0x30 | ends << 4;
+            poke_u8(c, a, b);
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+}
+
+/// The race: the order's sort (the word before it too) and the flags, and each car's speed
+/// and lane in every state of the flags, wrecked or racing, in and out of the pit lane, from
+/// several seeds.
+#[test]
+fn mutecity_race() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let race = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::steer_cars(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F1328", 1, &as_saved, &race);
+    let prepares: [&Prepare; 6] = [
+        // A car past the first in distance, with the word before the order 0 and another car.
+        &|c, _| poke_u32(c, mc_car(7), 5.0f32.to_bits()),
+        &|c, _| {
+            poke_u32(c, mc_car(7), 5.0f32.to_bits());
+            poke_u32(c, MC_ORDER - 4, 3);
+        },
+        // Cars bunched up close and beside each other, either faster.
+        &|c, _| {
+            for i in 0..6 {
+                mc_set_car(c, i, 0.5 - 0.0005 * i as f32, 0.001, 0.2 * i as f32, 0.0, 0);
+                poke_u32(c, mc_car(i) + 0x14, (10.0 * i as f32).to_bits());
+            }
+        },
+        // Wrecked cars in the bunch.
+        &|c, _| {
+            for i in 0..6 {
+                mc_set_car(c, i, 0.5 - 0.0005 * i as f32, 0.001, 0.5, 0.0, 0);
+                mc_set_state(c, i, if i % 2 == 0 { 0x80 } else { 0 });
+            }
+        },
+        // A wrap round the track's end.
+        &|c, _| {
+            mc_set_car(c, 0, 0.0005, 0.001, 0.3, 0.0, 0);
+            mc_set_car(c, 1, 0.9995, 0.001, 0.6, 0.0, 0);
+        },
+        &|c, k| set_seed(c, 0x2468_ACE1u32.wrapping_mul(k as u32 + 1)),
+    ];
+    for p in prepares {
+        check_calls_with(&d, "grMuteCity_801F1328", 1, p, &race);
+    }
+    let steer = |r: &mut Running, _: &Maps, call: &Call| {
+        mutecity::steer_car(r.game, r.data, call.regs.gpr[3] as usize);
+        Ret::Nothing
+    };
+    let f = "grMuteCity_801F106C";
+    check_calls_with(&d, f, 1, &as_saved, &steer);
+    for flags in [0u16, 1, 3, 5, 9, 0xD, 0xB, 8, 0xC, 0x10, 0x20, 0x11, 0x25] {
+        for lane in [0.05f32, 0.2, 0.5, 0.85, 0.95] {
+            let set = move |c: &mut Call, k: usize| {
+                let i = c.regs.gpr[3];
+                mc_set_car(c, i, 0.5, 0.01, lane, 0.0, flags);
+                set_seed(c, 0x1357_9BDFu32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &steer);
+        }
+    }
+    // Speeds over each pack's top and below zero.
+    for (flags, speed) in [(0u16, 1.0f32), (0x10, 1.0), (0x20, 1.0), (9, -1.0)] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[3];
+            mc_set_car(c, i, 0.5, speed, 0.5, 0.0, flags);
+        };
+        check_calls_with(&d, f, 1, &set, &steer);
+    }
+    // Wrecked, in the pit lane and out of it, crawling and stopped.
+    for (place, speed) in [
+        (0.85f32, 0.0f32),
+        (0.85, 0.01),
+        (0.5, 0.01),
+        (0.5, 0.000001),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[3];
+            mc_set_car(c, i, place, speed, 0.5, 0.0, 0);
+            mc_set_state(c, i, 0x80);
+        };
+        check_calls_with(&d, f, 1, &set, &steer);
+    }
+}
+
+/// The cars' moves from each saved call, as saved and with cars damaged past smoking and past
+/// wrecking, wrecked in view and out of it, passing the stage (shaking it, loud and not, and
+/// with an item) and leaving it, honking beside a faster car, in the pit lane, from several
+/// seeds.
+#[test]
+fn mutecity_cars() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F1A34";
+    let by_address = |r: &mut Running, maps: &Maps, call: &Call| {
+        let cars = *maps.gobjs.get(&call.regs.gpr[3]).expect("the cars");
+        let course = *maps.gobjs.get(&call.regs.gpr[4]).expect("the course");
+        melee_sim::game::gr::mutecity::move_cars(r, cars, course);
+        Ret::Nothing
+    };
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    let smoke = |c: &Call| mc_param(c, 0x2C);
+    let wreck = |c: &Call| mc_param(c, 0x30);
+    let prepares: [&Prepare; 9] = [
+        &move |c, _| {
+            let s = smoke(c);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 0x10, (s + 1.0).to_bits());
+            }
+        },
+        &move |c, k| {
+            let w = wreck(c);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 0x10, (w + 1.0).to_bits());
+            }
+            set_seed(c, 0x5555_1234u32.wrapping_mul(k as u32 + 1));
+        },
+        &|c, _| {
+            for i in 0..30 {
+                mc_set_state(c, i, 0x80);
+            }
+        },
+        &|c, _| {
+            let param = peek_u32(c, STAGE_INFO + 0x6B0);
+            for i in 0..30 {
+                mc_set_state(c, i, 0x80);
+                poke_u32(c, mc_car(i) + 0x28, param);
+            }
+        },
+        // Every car at the track's middle, shaking or having shaken.
+        &|c, _| {
+            let v = map_vars(c, 30);
+            let mid = f32_at(c, v + 0x10);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (mid - 0.0001 * i as f32).to_bits());
+                mc_set_state(c, i, if i % 3 == 0 { 0x40 } else { 0 });
+            }
+        },
+        &|c, _| {
+            let v = map_vars(c, 30);
+            let w = peek_u32(c, v + 0xC);
+            poke_u32(c, v + 0xC, w ^ 0x4000_0000);
+            let mid = f32_at(c, v + 0x10);
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (mid - 0.0002 * i as f32).to_bits());
+            }
+        },
+        // Honking: close beside a faster car with the horns' wait over.
+        &|c, k| {
+            for i in 0..30 {
+                poke_u16(c, mc_car(i) + 0x20, 0xA);
+            }
+            poke_u16(c, map_vars(c, 2), 0);
+            set_seed(c, 0x0BAD_F00Du32.wrapping_mul(k as u32 + 1));
+        },
+        // Cars in the pit lane, and at the track's end.
+        &|c, _| {
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, (0.83 + 0.002 * i as f32).to_bits());
+            }
+        },
+        &|c, _| {
+            for i in 0..30 {
+                poke_u32(c, mc_car(i) + 4, 0.9999f32.to_bits());
+                poke_u32(c, mc_car(i) + 8, 0.0005f32.to_bits());
+            }
+        },
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &by_address);
+    }
+}
+
+/// The platform's sway toward its target from each side, near and far, and its lights while
+/// its overlay runs and after, holding their colors and not.
+#[test]
+fn mutecity_platform() {
+    let d = dir(MC);
+    let f = "grMuteCity_801F0290";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for (target, cur) in [
+        (1.0f32, 0.0f32),
+        (1.0, 0.9995),
+        (1.0, 0.9985),
+        (0.0, 1.0),
+        (0.0, 0.0005),
+        (0.0, 0.0015),
+        (0.5, 0.5),
+        (-0.0, 0.0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u32(c, vars(c) + 8, target.to_bits());
+            poke_u32(c, vars(c) + 0xC, cur.to_bits());
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    let lights = |r: &mut Running, maps: &Maps, call: &Call| {
+        melee_sim::game::gr::mutecity::platform_lights(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let g = "grMuteCity_801F290C";
+    check_calls_with(&d, g, 1, &as_saved, &lights);
+    for (done, held) in [(false, false), (false, true), (true, false), (true, true)] {
+        let set = move |c: &mut Call, _: usize| {
+            let gp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            let w = peek_u32(c, gp + 0x10);
+            let w = if done {
+                w | 0x0800_0000
+            } else {
+                w & !0x0800_0000
+            };
+            poke_u32(c, gp + 0x10, w);
+            poke_u8(c, gp + 0xC4, if held { 0x80 } else { 0 });
+        };
+        check_calls_with(&d, g, 1, &set, &lights);
+    }
+}
+
+/// The collision data a joint callback's call hands it (r5), to write.
+fn mc_coll_mut<'a>(
+    r: &'a mut Running,
+    maps: &Maps,
+    call: &Call,
+) -> &'a mut melee_sim::game::structs::CollData {
+    let a = call.regs.gpr[5];
+    if let Some((_, &f)) = maps.fighters.iter().find(|(fp, _)| a == **fp + 0x6F0) {
+        return &mut r.game.fighters[f.0].coll_data;
+    }
+    if let Some((_, &i)) = maps.items.iter().find(|(ip, _)| a == **ip + 0x378) {
+        return &mut r.game.items[i.0].x378_itemColl;
+    }
+    panic!("r5 {a:#x} is neither a fighter's nor an item's collision data");
+}
+
+/// The track's callback, line hazards and shadow check, a car's hits dealt and taken, the
+/// track's line damage on the fighters and the music's send, each from their saved calls and
+/// from states set to each branch.
+#[test]
+fn mutecity_callbacks() {
+    use melee_sim::game::gr::mutecity;
+    let d = dir(MC);
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let live = r.game.gr.mutecity.track_live;
+        let kind = call.regs.gpr[7] as i32;
+        let owner = mc_coll_mut(r, maps, call).x0_gobj;
+        let item = owner.is_some_and(|o| r.game.world.gobjs[o.0].p_link == 9);
+        mutecity::track_touched(live, mc_coll_mut(r, maps, call), kind, item);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "fn_801F2B58", 1, &as_saved, &touched);
+    for live in [0u32, 1, 2] {
+        for coll in 0..7u32 {
+            for kind in 0..3u32 {
+                let set = move |c: &mut Call, _: usize| {
+                    poke_u32(c, MC_TRACK_LIVE, live);
+                    set_coll_kind(c, coll);
+                    c.regs.gpr[7] = kind;
+                };
+                check_calls_with(&d, "fn_801F2B58", 1, &set, &touched);
+                // The same on an item's collision: the collision's owner made the first
+                // item (a car's hurtbox item, on the item link).
+                let on_item = move |c: &mut Call, k: usize| {
+                    set(c, k);
+                    let heads = peek_u32(c, leaf_check::sym("HSD_GObjPLinkHead"));
+                    let item = peek_u32(c, heads + 4 * 9);
+                    if item != 0 {
+                        poke_u32(c, c.regs.gpr[5], item);
+                    } else {
+                        // No item: the owner read as one (its GObj's P-link, byte 2).
+                        let owner = peek_u32(c, c.regs.gpr[5]);
+                        poke_u8(c, owner + 2, 9);
+                    }
+                };
+                check_calls_with(&d, "fn_801F2B58", 1, &on_item, &touched);
+            }
+        }
+    }
+    let hazard = |r: &mut Running, _: &Maps, call: &Call| {
+        let desc = mutecity::line_hazard(r.game, r.data, call.regs.gpr[3] as i32);
+        // Its address from the parameters' (both in the stage's archive).
+        let p = r.game.gr.mutecity_yakumono.expect("the parameters");
+        let base = peek_u32(call, MC_PARAM);
+        Ret::Int(desc.map_or(0, |d| base.wrapping_add(d.offset.wrapping_sub(p.offset))))
+    };
+    check_calls_with(&d, "grMuteCity_801F2BBC", 1, &as_saved, &hazard);
+    for live in [0u32, 1, 2] {
+        for line in 0x2Fu32..0x37 {
+            let set = move |c: &mut Call, _: usize| {
+                poke_u32(c, MC_TRACK_LIVE, live);
+                c.regs.gpr[3] = line;
+            };
+            check_calls_with(&d, "grMuteCity_801F2BBC", 1, &set, &hazard);
+        }
+    }
+    let shadow = |r: &mut Running, maps: &Maps, call: &Call| {
+        let (pos, j) = shadow_args(maps, call);
+        Ret::Int(u32::from(mutecity::check_shadow_render(r.game, pos, j)))
+    };
+    check_calls_with(&d, "grMuteCity_801F2C10", 1, &as_saved, &shadow);
+    // On each joint the track can cover, inside and outside its ends, above and below it.
+    for k in 0..5u32 {
+        for (dx, dy) in [
+            (-1000.0f32, 0.0f32),
+            (0.0, 10.0),
+            (0.0, -10.0),
+            (0.0, -2.9),
+            (1000.0, 0.0),
+        ] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = map_vars(c, 30);
+                c.regs.gpr[5] = peek_u32(c, v + 0x38 + 4 * k);
+                let (x0, y0) = (f32_at(c, v + 0x20), f32_at(c, v + 0x24));
+                let (x1, y1) = (f32_at(c, v + 0x2C), f32_at(c, v + 0x30));
+                let p = c.regs.gpr[3];
+                poke_u32(c, p, (0.5 * (x0 + x1) + dx).to_bits());
+                poke_u32(c, p + 4, (0.5 * (y0 + y1) + dy).to_bits());
+            };
+            check_calls_with(&d, "grMuteCity_801F2C10", 1, &set, &shadow);
+        }
+    }
+    let dealt = |r: &mut Running, _: &Maps, _: &Call| {
+        mutecity::car_dealt(r);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grMuteCity_801F1A0C", 1, &as_saved, &dealt);
+    // Each car's hit taken, from the hits dealt's calls.
+    for car in 0..30u32 {
+        let target = mutecity::CAR_HIT + 0x18 * car;
+        let set = move |c: &mut Call, _: usize| {
+            c.addr = target;
+            c.regs.fpr[1].ps0 = leaf_check::arg(7.5);
+        };
+        let hit = move |r: &mut Running, _: &Maps, call: &Call| {
+            mutecity::car_hit(r.game, car as usize, call.regs.fpr[1].ps0 as f32);
+            Ret::Nothing
+        };
+        check_calls_with(&d, "grMuteCity_801F1A0C", 1, &set, &hit);
+    }
+    let lines = |r: &mut Running, maps: &Maps, call: &Call| {
+        r.touch_lines(gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "ftCo_800C0B20", 1, &as_saved, &lines);
+    // With the track live and not, and the fighter's line timer running.
+    for (live, timer) in [(0u32, 0u32), (1, 0), (1, 5)] {
+        let set = move |c: &mut Call, _: usize| {
+            poke_u32(c, MC_TRACK_LIVE, live);
+            let fp = peek_u32(c, c.regs.gpr[3] + 0x2C);
+            poke_u32(c, fp + 0x2328, timer);
+        };
+        check_calls_with(&d, "ftCo_800C0B20", 1, &set, &lines);
+    }
+    let send = |r: &mut Running, _: &Maps, call: &Call| {
+        r.set_ground_send(call.regs.gpr[3] as i32);
+        Ret::Nothing
+    };
+    for col in [0u32, 1, 2] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = col;
+        check_calls_with(&d, "lbAudioAx_80024D78", 1, &set, &send);
+    }
+}
+
+/// The callbacks no capture reached, from the cars' empty process's calls: the other empty
+/// processes and destroy callbacks, the scenery's setup, the load and demo hooks.
+#[test]
+fn mutecity_unreached_callbacks() {
+    let d = dir(MC);
+    let from = "grMuteCity_801F04B0";
+    for name in [
+        "grMuteCity_801F01B0",
+        "grMuteCity_801F040C",
+        "grMuteCity_801F0444",
+        "grMuteCity_801F0448",
+        "grMuteCity_801F04B4",
+        "grMuteCity_801F0948",
+        "stageGObj36_37_OnInit",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    let demo_hook = retarget(leaf_check::sym("grMuteCity_801EFC68"));
+    check_calls_with(&d, from, 1, &demo_hook, &demo);
+}
+
+// Big Blue (`grbigblue.c`).
+
+const BB: &str = "oracle-stage-big-blue";
+
+/// Flying platform `i`'s entry in the flying platforms' variables (map 32).
+fn bb_platform(c: &Call, i: u32) -> u32 {
+    map_vars(c, 32) + 0x20 + 0x54 * i
+}
+
+/// Big car `i`'s entry in the big cars' variables (map 33).
+fn bb_car(c: &Call, i: u32) -> u32 {
+    map_vars(c, 33) + 0x10 + 0x40 * i
+}
+
+/// A big car's state, whether it rides in the air and its place across.
+fn bb_set_car(c: &mut Call, i: u32, state: u32, airborne: bool, x: f32) {
+    let a = bb_car(c, i);
+    let x0 = (peek_u32(c, a) >> 16) as u16;
+    let x0 = x0 & !(0x3F << 10 | 1 << 9) | (state as u16) << 10 | u16::from(airborne) << 9;
+    poke_u16(c, a, x0);
+    poke_u32(c, a + 0xC, x.to_bits());
+}
+
+/// A big car's float field at `off` (`target` 4, `delta` 8, `pos` 0xC, `alpha` 0x18,
+/// `gravity` 0x20, `height` 0x24, `velocity` 0x28, `angular_velocity` 0x38).
+fn bb_car_f(c: &mut Call, i: u32, off: u32, v: f32) {
+    let a = bb_car(c, i) + off;
+    poke_u32(c, a, v.to_bits());
+}
+
+/// The big cars' slots' use (30 bytes on the heap).
+fn bb_ranks(c: &Call) -> u32 {
+    peek_u32(c, map_vars(c, 33) + 8)
+}
+
+/// The cars' object in a call made with a car's index in r4 (the cars' process's calls).
+fn bb_cars_ground(maps: &Maps, call: &Call) -> melee_sim::game::handles::GroundId {
+    *maps
+        .grounds
+        .get(&call.regs.gpr[3])
+        .expect("the cars' Ground")
+}
+
+#[test]
+fn bigblue_setup() {
+    use melee_sim::game::gr::bigblue;
+    let d = dir(BB);
+    for f in [
+        "grBigBlue_801E57C0",
+        "grBigBlue_801E59C8",
+        "grBigBlue_801E59CC",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &event);
+    }
+    let create = |r: &mut Running, _: &Maps, call: &Call| {
+        let _ = bigblue::create(
+            r,
+            call.regs.gpr[3] as i32,
+            melee_sim::game::gr::setup::SETUP_FRAME,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grBigBlue_801E59F8", 1, &as_saved, &create);
+    for map in [0u32, 1, 2, 31, 34] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = map;
+        check_calls_with(&d, "grBigBlue_801E59F8", 1, &set, &create);
+    }
+    for f in [
+        "grBigBlue_801E5AE4",
+        "grBigBlue_801E5B20",
+        "grBigBlue_801E613C",
+        "grBigBlue_801E6200",
+        "grBigBlue_801E6298",
+        "grBigBlue_801E6364",
+        "grBigBlue_801E6904",
+        "grBigBlue_801E8D64",
+        "grBigBlue_801E9F3C",
+        "fn_801E6124",
+    ] {
+        check_calls_with(&d, f, 1, &as_saved, &by_address);
+    }
+    let build = |r: &mut Running, maps: &Maps, call: &Call| {
+        let maps_at = call.regs.gpr[4];
+        let car_maps: [i16; 30] = std::array::from_fn(|i| {
+            let a = maps_at + 2 * i as u32;
+            (peek_u32(call, a & !3) >> if a & 2 == 0 { 16 } else { 0 }) as i16
+        });
+        melee_sim::game::gr::fzerocar::build(
+            r,
+            gobj_arg(maps, call),
+            &car_maps,
+            call.regs.gpr[5] as i32,
+            call.regs.gpr[6] != 0,
+        );
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grFZeroCar_801CAFBC", 1, &as_saved, &build);
+    let trophy = |r: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(r.game.gm.unlocks.trophy_count(call.regs.gpr[3]))
+    };
+    check_calls_with(&d, "Toy_803048C0", 1, &as_saved, &trophy);
+}
+
+/// The road: its layout, its next piece drawn in each climb or dive state at heights around
+/// its limits, waiting and not, and its move in each turn (level, climbing, past a half turn
+/// either way), on the loop in each of its stages, falling away and not.
+#[test]
+fn bigblue_road() {
+    use melee_sim::game::gr::bigblue;
+    let d = dir(BB);
+    let of = |f: fn(&mut Running, melee_sim::hsd::gobj::GObjId)| {
+        move |r: &mut Running, maps: &Maps, call: &Call| {
+            f(r, gobj_arg(maps, call));
+            Ret::Nothing
+        }
+    };
+    check_calls_with(
+        &d,
+        "grBigBlue_801EB004",
+        1,
+        &as_saved,
+        &of(bigblue::lay_road),
+    );
+    check_calls_with(&d, "grBigBlue_801E61C4", 1, &as_saved, &by_address);
+    let next = of(bigblue::next_piece);
+    let f = "grBigBlue_801EB4AC";
+    check_calls_with(&d, f, 1, &as_saved, &next);
+    for dir in [0u16, 1, 0xFFFF] {
+        for y in [
+            -1500.0f32, -800.0, -650.0, -200.0, -20.0, 0.0, 20.0, 200.0, 800.0,
+        ] {
+            for waiting in [false, true] {
+                let set = move |c: &mut Call, k: usize| {
+                    let v = vars(c);
+                    poke_u16(c, v + 0x2C, dir);
+                    poke_u32(c, v + 8, y.to_bits());
+                    let w = peek_u32(c, v);
+                    poke_u32(c, v, w & !(1 << 31) | u32::from(waiting) << 31);
+                    set_seed(c, 0x3C6E_F35Fu32.wrapping_mul(k as u32 + 7));
+                };
+                check_calls_with(&d, f, 1, &set, &next);
+            }
+        }
+    }
+    let road = of(bigblue::move_road);
+    let f = "grBigBlue_801EBAF8";
+    check_calls_with(&d, f, 1, &as_saved, &road);
+    for rot in [
+        0.0f32, 0.1, -0.1, -0.3, -0.6, -2.0, -2.9, 3.1, -3.1, 3.2, -3.2,
+    ] {
+        for falling in [false, true] {
+            let set = move |c: &mut Call, _: usize| {
+                let v = vars(c);
+                poke_u32(c, v + 0x34, rot.to_bits());
+                let w = peek_u32(c, v);
+                poke_u32(c, v, w & !(1 << 30) | u32::from(falling) << 30);
+            };
+            check_calls_with(&d, f, 1, &set, &road);
+        }
+    }
+    // On the loop (piece 11), in each of its stages and turns, looping and not.
+    for stage in 0..5u32 {
+        for rot in [0.0f32, -0.3, -0.6, -2.9] {
+            for looping in [false, true] {
+                let set = move |c: &mut Call, _: usize| {
+                    let v = vars(c);
+                    let w = peek_u32(c, v) & !(0x7F << 15 | 0xF << 4 | 1 << 29);
+                    let w = w | 11 << 15 | stage << 4 | u32::from(looping) << 29;
+                    poke_u32(c, v, w);
+                    poke_u32(c, v + 0x34, rot.to_bits());
+                };
+                check_calls_with(&d, f, 1, &set, &road);
+            }
+        }
+    }
+    // The road's height from its saved calls and across the stage.
+    let height = |r: &mut Running, _: &Maps, call: &Call| {
+        let p = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let (y, _) = bigblue::road_height(r.game, pos, call.regs.fpr[1].ps0 as f32);
+        Ret::Float(gekko_fp::lfs(y.to_bits()))
+    };
+    let f = "grBigBlue_801EC58C";
+    check_calls_with(&d, f, 1, &as_saved, &height);
+    for x in [-300.0f32, -100.0, 0.0, 50.0, 250.0, 1000.0] {
+        let set = move |c: &mut Call, _: usize| {
+            let p = c.regs.gpr[3];
+            poke_u32(c, p, x.to_bits());
+        };
+        check_calls_with(&d, f, 1, &set, &height);
+    }
+}
+
+/// The big cars: the first cars, the upkeep with the slots used up either side, the wait
+/// running out with cars driving out either way, pulling in; each car's decision, change,
+/// acceleration and drive in each state, in the air and on the road; the cars pushed apart.
+#[test]
+fn bigblue_cars() {
+    use melee_sim::game::gr::bigblue;
+    let d = dir(BB);
+    check_calls_with(&d, "grBigBlue_801E6884", 1, &as_saved, &by_address);
+    let first = |r: &mut Running, maps: &Maps, call: &Call| {
+        bigblue::first_cars(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grBigBlue_801EC6C0", 1, &as_saved, &first);
+    let seeded = |c: &mut Call, k: usize| set_seed(c, 0x7F4A_7C15u32.wrapping_mul(k as u32 + 3));
+    check_calls_with(&d, "grBigBlue_801EC6C0", 1, &seeded, &first);
+    let manage = |r: &mut Running, maps: &Maps, call: &Call| {
+        bigblue::manage_cars(r, gobj_arg(maps, call));
+        Ret::Nothing
+    };
+    let f = "grBigBlue_801ECB50";
+    check_calls_with(&d, f, 1, &as_saved, &manage);
+    let prepares: [&Prepare; 9] = [
+        // No slot free on the right, then none on the left.
+        &|c, k| {
+            let r = bb_ranks(c);
+            for s in 0..30 {
+                poke_u8(c, r + s, if s % 5 == 0 { 2 } else { 1 });
+            }
+            set_seed(c, 0x1234_5679u32.wrapping_mul(k as u32 + 1));
+        },
+        &|c, _| {
+            let r = bb_ranks(c);
+            for s in 0..30 {
+                poke_u8(c, r + s, if s % 4 == 0 { 0 } else { 1 });
+            }
+        },
+        // The wait run out with an off car, the others racing, driving out right or left.
+        &|c, k| {
+            poke_u16(c, map_vars(c, 33) + 0xC, 0xFFFF);
+            bb_set_car(c, 0, 1, false, 0.0);
+            set_seed(c, 0x0F0F_1234u32.wrapping_mul(k as u32 + 1));
+        },
+        &|c, _| {
+            poke_u16(c, map_vars(c, 33) + 0xC, 0xFFFF);
+            bb_set_car(c, 0, 1, false, 0.0);
+            bb_set_car(c, 1, 7, false, 100.0);
+        },
+        &|c, _| {
+            poke_u16(c, map_vars(c, 33) + 0xC, 0xFFFF);
+            bb_set_car(c, 0, 1, false, 0.0);
+            bb_set_car(c, 1, 8, false, -100.0);
+        },
+        // One car racing, far out: it pulls in, the cars driving out its way turned back.
+        &|c, _| {
+            bb_set_car(c, 0, 4, false, 150.0);
+            bb_set_car(c, 1, 7, false, 50.0);
+            bb_set_car(c, 2, 8, false, 200.0);
+            bb_set_car(c, 3, 1, false, 0.0);
+        },
+        &|c, _| {
+            bb_set_car(c, 0, 4, false, -150.0);
+            bb_set_car(c, 1, 4, false, 90.0);
+            bb_set_car(c, 2, 7, false, -200.0);
+            bb_set_car(c, 3, 8, false, 0.0);
+        },
+        // One already pulling in, one near the middle.
+        &|c, _| bb_set_car(c, 2, 10, false, 150.0),
+        &|c, _| bb_set_car(c, 1, 4, false, 20.0),
+    ];
+    for p in prepares {
+        check_calls_with(&d, f, 1, p, &manage);
+    }
+    // Each car's decision, in each state and with its wait run out, from several seeds.
+    let decide = |r: &mut Running, maps: &Maps, call: &Call| {
+        let n = bigblue::decide_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        Ret::Int(n)
+    };
+    let f = "grBigBlue_801EDF44";
+    check_calls_with(&d, f, 1, &as_saved, &decide);
+    for state in [2u32, 3, 4, 5, 6, 7, 8, 9, 10] {
+        for (x, alpha, wait) in [
+            (0.0f32, 0.0f32, -1i32),
+            (0.0, 1.0, 5),
+            (5000.0, 1.0, -1),
+            (-5000.0, 0.0, -1),
+            (-5000.0, 1.0, 3),
+        ] {
+            let set = move |c: &mut Call, k: usize| {
+                let i = c.regs.gpr[4];
+                bb_set_car(c, i, state, false, x);
+                bb_car_f(c, i, 0x18, alpha);
+                poke_u32(c, bb_car(c, i) + 0x1C, wait as u32);
+                set_seed(c, 0x2545_F491u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &decide);
+        }
+    }
+    // Racing with its wait run out among cars on either side, pulling in or driving out.
+    for others in [
+        [(4u32, 50.0f32), (4, -50.0), (1, 0.0)],
+        [(10, 50.0), (4, -50.0), (4, 60.0)],
+        [(4, 50.0), (10, -50.0), (4, -60.0)],
+        [(10, 50.0), (10, -50.0), (4, 60.0)],
+        [(4, 50.0), (4, 60.0), (1, 0.0)],
+        [(4, -50.0), (4, -60.0), (1, 0.0)],
+        [(7, -50.0), (8, 50.0), (1, 0.0)],
+        [(1, 0.0), (1, 0.0), (1, 0.0)],
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            let i = c.regs.gpr[4];
+            bb_set_car(c, i, 4, false, 0.0);
+            poke_u32(c, bb_car(c, i) + 0x1C, u32::MAX);
+            let mut n = 0;
+            for j in 0..4 {
+                if j != i {
+                    let (s, x) = others[n];
+                    bb_set_car(c, j, s, false, x);
+                    n += 1;
+                }
+            }
+            set_seed(c, 0x6C07_8965u32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, f, 1, &set, &decide);
+    }
+    let fallen = |c: &mut Call, _: usize| {
+        let i = c.regs.gpr[4];
+        bb_set_car(c, i, 4, false, 0.0);
+        bb_car_f(c, i, 0x10, -2500.0);
+    };
+    check_calls_with(&d, f, 1, &fallen, &decide);
+    // Each state change, the car on either side.
+    let change = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        let (car, state) = (call.regs.gpr[4] as usize, call.regs.gpr[5]);
+        Ret::Int(u32::from(bigblue::change_car(r, g, car, state)))
+    };
+    let f = "grBigBlue_801EE398";
+    check_calls_with(&d, f, 1, &as_saved, &change);
+    for state in 0..12u32 {
+        for x in [-50.0f32, 50.0] {
+            let set = move |c: &mut Call, k: usize| {
+                let i = c.regs.gpr[4];
+                bb_car_f(c, i, 0xC, x);
+                c.regs.gpr[5] = state;
+                set_seed(c, 0x5851_F42Du32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &change);
+        }
+    }
+    // No slot free on the right for a car coming in.
+    let full = |c: &mut Call, _: usize| {
+        let r = bb_ranks(c);
+        for s in 0..30 {
+            poke_u8(c, r + s, 1);
+        }
+        c.regs.gpr[5] = 5;
+    };
+    check_calls_with(&d, f, 1, &full, &change);
+    // Each state's acceleration, at speeds and waits either side of its braking point.
+    let accel = |r: &mut Running, maps: &Maps, call: &Call| {
+        let g = gobj_arg(maps, call);
+        Ret::Int(u32::from(bigblue::accelerate_car(
+            r,
+            g,
+            call.regs.gpr[4] as usize,
+        )))
+    };
+    let f = "grBigBlue_801EEF00";
+    check_calls_with(&d, f, 1, &as_saved, &accel);
+    for state in 1..11u32 {
+        for (x, target, vel, wait, alpha) in [
+            (0.0f32, 10.0f32, 0.5f32, 1000i32, 0.5f32),
+            (0.0, 10.0, -0.5, 1, 0.99),
+            (20.0, 10.0, 0.5, 0, 0.01),
+            (20.0, 10.0, -0.5, 1000, 1.0),
+            (-100.0, -150.0, 2.0, 30, 0.0),
+            (5000.0, 0.0, -2.0, 30, 0.5),
+            (-5000.0, 0.0, 2.0, 30, 0.5),
+            (8.0, 10.0, 0.4, 30, 0.5),
+            (12.0, 10.0, -0.4, 30, 0.5),
+        ] {
+            let set = move |c: &mut Call, _: usize| {
+                let i = c.regs.gpr[4];
+                bb_set_car(c, i, state, false, x);
+                bb_car_f(c, i, 4, target);
+                bb_car_f(c, i, 0x28, vel);
+                bb_car_f(c, i, 0x18, alpha);
+                poke_u32(c, bb_car(c, i) + 0x1C, wait as u32);
+            };
+            check_calls_with(&d, f, 1, &set, &accel);
+        }
+    }
+    // Each car's drive: on the road and in the air, rising and falling, fast either way,
+    // driving out, with its fall and bob in each state.
+    let drive = |r: &mut Running, maps: &Maps, call: &Call| {
+        bigblue::drive_car(r, gobj_arg(maps, call), call.regs.gpr[4] as usize);
+        Ret::Nothing
+    };
+    let f = "grBigBlue_801ED694";
+    check_calls_with(&d, f, 1, &as_saved, &drive);
+    for (state, airborne, vel, height, rise) in [
+        (4u32, false, 100.0f32, 0.0f32, 0.0f32),
+        (4, false, -100.0, -5.0, 0.0),
+        (4, false, 0.0, -500.0, 0.0),
+        (4, false, 0.5, 5.0, 0.0),
+        (4, true, 0.5, 0.0, -3.0),
+        (4, true, 0.5, 0.0, 3.0),
+        (7, false, 1.0, 0.0, 0.0),
+        (8, true, -1.0, 0.0, -1.0),
+        (10, false, -0.5, 0.0, 0.0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[4];
+            let x = f32_at(c, bb_car(c, i) + 0xC);
+            bb_set_car(c, i, state, airborne, x);
+            bb_car_f(c, i, 0x28, vel);
+            bb_car_f(c, i, 0x24, height);
+            bb_car_f(c, i, 0x38, rise);
+            poke_u32(c, bb_car(c, i) + 0x1C, 100);
+        };
+        check_calls_with(&d, f, 1, &set, &drive);
+    }
+    // Alone on the road (its place by rank 0), its target easing toward it from either side,
+    // within and past the step.
+    for target in [0.45f32, 0.55, -0.45, -0.55, 0.3] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[4];
+            for j in 0..4 {
+                if j != i {
+                    bb_set_car(c, j, 7, false, 3000.0);
+                }
+            }
+            bb_set_car(c, i, 4, false, 0.0);
+            bb_car_f(c, i, 4, target);
+            poke_u32(c, bb_car(c, i) + 0x1C, 100);
+        };
+        check_calls_with(&d, f, 1, &set, &drive);
+    }
+    // Off the road's end: no ground below, launched; in the air above the ground, landing.
+    for (x, y, airborne) in [
+        (3000.0f32, 0.0f32, false),
+        (3000.0, -100.0, true),
+        (0.0, -60.0, true),
+        (0.0, 300.0, true),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let i = c.regs.gpr[4];
+            bb_set_car(c, i, 4, airborne, x);
+            bb_car_f(c, i, 4, x);
+            bb_car_f(c, i, 8, 0.0);
+            bb_car_f(c, i, 0x10, y);
+            bb_car_f(c, i, 0x38, -1.0);
+        };
+        check_calls_with(&d, f, 1, &set, &drive);
+    }
+    // All the cars, bunched closer than their gap.
+    let f = "grBigBlue_801EF424";
+    check_calls_with(&d, f, 1, &as_saved, &by_address_cars);
+    let bunched = |c: &mut Call, _: usize| {
+        for i in 0..4 {
+            bb_set_car(c, i, 4, false, 2.0 * i as f32);
+            bb_car_f(c, i, 4, 2.0 * i as f32);
+            bb_car_f(c, i, 8, 0.0);
+        }
+    };
+    check_calls_with(&d, f, 1, &bunched, &by_address_cars);
+    let one_off = |c: &mut Call, _: usize| {
+        for i in 0..4 {
+            bb_set_car(c, i, if i == 1 { 1 } else { 4 }, false, -3.0 * i as f32);
+        }
+    };
+    check_calls_with(&d, f, 1, &one_off, &by_address_cars);
+}
+
+/// [`melee_sim::game::gr::bigblue::drive_cars`] on the cars' object in r3.
+fn by_address_cars(r: &mut Running, maps: &Maps, call: &Call) -> Ret {
+    melee_sim::game::gr::bigblue::drive_cars(r, gobj_arg(maps, call));
+    Ret::Nothing
+}
+
+/// The cars' heights and the platforms' searches: the highest car in boxes round the cars,
+/// the platforms and the relay platform near points, the obstacle in boxes, the events.
+#[test]
+fn bigblue_searches() {
+    use melee_sim::game::gr::bigblue;
+    let d = dir(BB);
+    let height = |r: &mut Running, _: &Maps, call: &Call| {
+        let f = |k: usize| call.regs.fpr[k].ps0 as f32;
+        let y = bigblue::car_height(r.game, f(1), f(2), f(3), f(4));
+        Ret::Float(gekko_fp::lfs(y.to_bits()))
+    };
+    let f = "grBigBlue_801E8B84";
+    check_calls_with(&d, f, 1, &as_saved, &height);
+    for (top, bottom, left, right) in [
+        (1000.0f32, -1000.0f32, -1000.0f32, 1000.0f32),
+        (0.0, -1000.0, -1000.0, 1000.0),
+        (1000.0, -1000.0, 0.0, 1000.0),
+        (1000.0, -1000.0, -1000.0, 0.0),
+        (1000.0, 0.0, -1000.0, 1000.0),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            for (k, v) in [(1, top), (2, bottom), (3, left), (4, right)] {
+                c.regs.fpr[k].ps0 = leaf_check::arg(v);
+            }
+        };
+        check_calls_with(&d, f, 1, &set, &height);
+    }
+    let in_view = |r: &mut Running, _: &Maps, _: &Call| {
+        let y = bigblue::car_height_in_view(r.game);
+        Ret::Float(gekko_fp::lfs(y.to_bits()))
+    };
+    check_calls_with(&d, "grBigBlue_801E8D04", 1, &as_saved, &in_view);
+    let off = |c: &mut Call, _: usize| {
+        for i in 0..4 {
+            bb_set_car(c, i, if i == 2 { 1 } else { 4 }, false, 0.0);
+        }
+    };
+    check_calls_with(&d, "grBigBlue_801E8D04", 1, &off, &in_view);
+    // Near a flying platform: from the saved calls, with the platforms flying either way.
+    let near = |r: &mut Running, maps: &Maps, call: &Call| {
+        let p = call.regs.gpr[4];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let exclude = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let hit = bigblue::near_platform(
+            r.game,
+            exclude,
+            pos,
+            call.regs.gpr[5] != 0,
+            call.regs.fpr[1].ps0,
+            call.regs.fpr[2].ps0,
+        );
+        Ret::Int(u32::from(hit))
+    };
+    let f = "grBigBlue_801E8794";
+    check_calls_with(&d, f, 1, &as_saved, &near);
+    for (state, dir, left) in [
+        (3u8, 1u8, false),
+        (3, 0xFF, true),
+        (3, 1, true),
+        (2, 0xFF, true),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let p = c.regs.gpr[4];
+            let (x, y) = (f32_at(c, p), f32_at(c, p + 4));
+            for i in 0..3 {
+                let a = bb_platform(c, i);
+                poke_u8(c, a + 1, state);
+                poke_u8(c, a + 2, dir);
+                let j = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * i);
+                poke_u32(c, j + 0x38, (x + 20.0 * i as f32).to_bits());
+                poke_u32(c, j + 0x3C, (y - 10.0 * i as f32).to_bits());
+            }
+            c.regs.gpr[5] = u32::from(left);
+        };
+        check_calls_with(&d, f, 1, &set, &near);
+    }
+    let relay = |r: &mut Running, _: &Maps, call: &Call| {
+        let p = call.regs.gpr[3];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let hit = bigblue::near_relay(
+            r.game,
+            pos,
+            call.regs.gpr[4] != 0,
+            call.regs.fpr[1].ps0,
+            call.regs.fpr[2].ps0,
+        );
+        Ret::Int(u32::from(hit))
+    };
+    let f = "grBigBlue_801EAB50";
+    check_calls_with(&d, f, 1, &as_saved, &relay);
+    // The word it reads (the platforms' count's top byte) at 2, with the relay platform near.
+    for (count, dir, left) in [
+        (0x0200_0000u32, 1u8, false),
+        (0x02FF_0000, 0xFF, true),
+        (0x0201_0000, 1, true),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            let v = map_vars(c, 32);
+            poke_u32(c, v, count | u32::from(dir) << 16);
+            let p = c.regs.gpr[3];
+            let (x, y) = (f32_at(c, p), f32_at(c, p + 4));
+            let rj = peek_u32(c, peek_u32(c, STAGE_INFO + 0x180 + 4 * 36) + 0x28);
+            poke_u32(c, rj + 0x38, x.to_bits());
+            poke_u32(c, rj + 0x3C, y.to_bits());
+            c.regs.gpr[4] = u32::from(left);
+        };
+        check_calls_with(&d, f, 1, &set, &relay);
+    }
+    let obstacle = |r: &mut Running, maps: &Maps, call: &Call| {
+        let p = call.regs.gpr[4];
+        let pos = Vec3::new(f32_at(call, p), f32_at(call, p + 4), f32_at(call, p + 8));
+        let exclude = maps.jobjs.get(&call.regs.gpr[3]).copied();
+        let (n, y) = bigblue::obstacle(
+            r.game,
+            exclude,
+            pos,
+            call.regs.fpr[1].ps0,
+            call.regs.fpr[2].ps0,
+        );
+        let _ = y;
+        Ret::Int(n as u32)
+    };
+    let f = "grBigBlue_801EACE8";
+    check_calls_with(&d, f, 1, &as_saved, &obstacle);
+    // The relay platform flying beside the box, its left side in it or past it.
+    for k in [5.0f32, 18.0, 19.0, 25.0, 33.0, 36.0, 39.0, 45.0] {
+        let set = move |c: &mut Call, _: usize| {
+            let p = c.regs.gpr[4];
+            let (x, y) = (f32_at(c, p), f32_at(c, p + 4));
+            let half = c.regs.fpr[1].ps0 as f32;
+            for i in 0..3 {
+                poke_u8(c, bb_platform(c, i) + 1, 0);
+            }
+            let rv = map_vars(c, 36);
+            let w = peek_u32(c, rv);
+            poke_u32(c, rv, w & 0x00FF_FFFF | 2 << 24);
+            let rj = peek_u32(c, peek_u32(c, STAGE_INFO + 0x180 + 4 * 36) + 0x28);
+            poke_u32(c, rj + 0x38, (x + half + k).to_bits());
+            poke_u32(c, rj + 0x3C, y.to_bits());
+        };
+        check_calls_with(&d, f, 1, &set, &obstacle);
+    }
+    for (dy, state) in [(0.0f32, 3u8), (-5.0, 3), (30.0, 3), (-200.0, 3), (0.0, 2)] {
+        let set = move |c: &mut Call, _: usize| {
+            let p = c.regs.gpr[4];
+            let (x, y) = (f32_at(c, p), f32_at(c, p + 4));
+            for i in 0..3 {
+                let a = bb_platform(c, i);
+                poke_u8(c, a + 1, state);
+                let j = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * i);
+                if j != c.regs.gpr[3] {
+                    poke_u32(c, j + 0x38, (x + 15.0 * i as f32).to_bits());
+                    poke_u32(c, j + 0x3C, (y + dy - 3.0 * i as f32).to_bits());
+                }
+            }
+            let rv = map_vars(c, 36);
+            let w = peek_u32(c, rv);
+            poke_u32(c, rv, w & 0x00FF_FFFF | 2 << 24);
+        };
+        check_calls_with(&d, f, 1, &set, &obstacle);
+    }
+    let post = |r: &mut Running, maps: &Maps, call: &Call| {
+        let extra = maps.jobjs.get(&call.regs.gpr[5]).copied();
+        bigblue::post_event(r.game, call.regs.gpr[3] as usize, call.regs.gpr[4], extra);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grBigBlue_801E8978", 1, &as_saved, &post);
+    let event = |r: &mut Running, _: &Maps, call: &Call| {
+        Ret::Int(bigblue::event(r.game, call.regs.gpr[3] as usize))
+    };
+    for i in [0u32, 1, 2] {
+        let set = move |c: &mut Call, _: usize| c.regs.gpr[3] = i;
+        check_calls_with(&d, "grBigBlue_801E89DC", 1, &set, &event);
+    }
+    let item = |r: &mut Running, _: &Maps, call: &Call| {
+        bigblue::platform_item(r, call.regs.gpr[3] as usize);
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grBigBlue_801E8A1C", 1, &as_saved, &item);
+}
+
+/// The flying platforms' process: each platform waiting, counting down, placed (from either
+/// side, with the Falcon Flyer due and the relay platform's count reached) and flying (dipping,
+/// pushed, rising, tilted past its limits, leaving), from several seeds.
+#[test]
+fn bigblue_platforms() {
+    let d = dir(BB);
+    let f = "grBigBlue_801E6C60";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    // Waiting and counting down, with the Falcon Flyer passed and not, the others out.
+    for (state, wait, event0) in [
+        (0u8, 0i32, 1u32),
+        (0, 0, 0),
+        (1, 5, 0),
+        (1, 5, 1),
+        (2, 5, 1),
+        (1, 0, 1),
+    ] {
+        for others in [0u8, 1, 3] {
+            let set = move |c: &mut Call, k: usize| {
+                let v = map_vars(c, 32);
+                poke_u32(c, v + 4, event0);
+                for i in 0..3 {
+                    let a = bb_platform(c, i);
+                    poke_u8(c, a + 1, if i == 0 { state } else { others });
+                    poke_u32(c, a + 4, if i == 0 { wait as u32 } else { 0 });
+                    poke_u8(c, a + 2, if i == 1 { 0xFF } else { 1 });
+                }
+                set_seed(c, 0x9E37_79B9u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &by_address);
+        }
+    }
+    // Placed: the counts at and past the relay platform's and the Falcon Flyer's, either event
+    // pending, from several seeds.
+    for (count, event1, event2) in [
+        (0u32, 0u32, 0u32),
+        (3, 0, 0),
+        (6, 0, 0),
+        (9, 0, 0),
+        (20, 0, 0),
+        (6, 1, 0),
+        (6, 0, 1),
+        (20, 1, 1),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            let v = map_vars(c, 32);
+            poke_u32(c, v, count);
+            poke_u32(c, v + 8, event1);
+            poke_u32(c, v + 0xC, event2);
+            let a = bb_platform(c, 0);
+            poke_u8(c, a + 1, 2);
+            poke_u32(c, a + 4, 0);
+            set_seed(c, 0xB5AD_4ECEu32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    // Flying: landed on this tick and last, pushed either side, dipping in each stage with its
+    // count, tilted past its limits.
+    for (landed, last, stage, wait, push_l, push_r, rot) in [
+        (1i32, 0i32, 0i32, 5i32, 1.0f32, 0.0f32, 0.0f32),
+        (1, 1, 1, 5, 0.0, 1.0, 0.0),
+        (1, 1, 1, 0, 1.0, 0.0, 0.0),
+        (0, 1, 2, 5, 0.0, 0.0, 0.0),
+        (0, 0, 3, 5, 0.0, 0.0, 0.0),
+        (1, 1, 3, 5, 50.0, 0.0, 0.6),
+        (1, 1, 1, 5, 0.0, 50.0, -0.6),
+        (1, 1, 1, 5, 500.0, 0.0, 1.2),
+        (1, 1, 1, 5, 0.0, 0.0, 1.14),
+        (1, 1, 1, 5, 0.0, 0.0, -1.14),
+        (1, 1, 1, 5, 0.0, 500.0, -1.2),
+    ] {
+        let set = move |c: &mut Call, _: usize| {
+            for i in 0..3 {
+                let a = bb_platform(c, i);
+                if peek_u32(c, a) >> 16 & 0xFF != 3 {
+                    continue;
+                }
+                poke_u32(c, a + 4, wait as u32);
+                poke_u32(c, a + 0x24, push_l.to_bits());
+                poke_u32(c, a + 0x28, push_r.to_bits());
+                poke_u32(c, a + 0x2C, landed as u32);
+                poke_u32(c, a + 0x30, last as u32);
+                poke_u32(c, a + 0x34, stage as u32);
+                let j = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * i);
+                poke_u32(c, j + 0x24, rot.to_bits());
+            }
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    // Every platform flying, leaving either side.
+    for x in [-1000.0f32, 1000.0] {
+        let set = move |c: &mut Call, _: usize| {
+            for i in 0..3 {
+                let a = bb_platform(c, i);
+                poke_u8(c, a + 1, 3);
+                poke_u8(c, a + 2, if x > 0.0 { 1 } else { 0xFF });
+                poke_u32(c, a + 0x44, (x / 100.0).to_bits());
+                let j = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * i);
+                poke_u32(c, j + 0x38, x.to_bits());
+            }
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    // The platforms' collision callback: each collision kind, joint and side, heavy and not.
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let coll = coll_arg(r, maps, call);
+        let g = *maps
+            .grounds
+            .get(&call.regs.gpr[3])
+            .expect("the platforms' Ground");
+        melee_sim::game::gr::bigblue::platform_touched(
+            &r.game.objs,
+            &mut r.game.grounds[g.0],
+            call.regs.gpr[4] as i32,
+            &coll,
+            call.regs.gpr[6] as i32,
+        );
+        Ret::Nothing
+    };
+    let f = "fn_801E8560";
+    check_calls_with(&d, f, 1, &as_saved, &touched);
+    for kind in 0..5u32 {
+        for joint in 0..3u32 {
+            for (dx, weight) in [(-30.0f32, 100u32), (30.0, 2000), (1.0, 100)] {
+                let set = move |c: &mut Call, _: usize| {
+                    set_coll_kind(c, kind);
+                    c.regs.gpr[4] = joint;
+                    c.regs.gpr[6] = weight;
+                    let j = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * joint);
+                    let x = f32_at(c, j + 0x38);
+                    // The collision's place (`cur_pos`).
+                    poke_u32(c, c.regs.gpr[5] + 4, (x + dx).to_bits());
+                };
+                check_calls_with(&d, f, 1, &set, &touched);
+            }
+        }
+    }
+}
+
+/// The Falcon Flyer's and the relay platform's processes in each state: waiting with and
+/// without their events, coming with platforms in the way, waiting out their counts, leaving.
+#[test]
+fn bigblue_flyer_and_relay() {
+    let d = dir(BB);
+    let f = "grBigBlue_801E93D8";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for (state, wait, x, coming, out) in [
+        (0u8, 0i32, 0.0f32, 1u32, 0u8),
+        (0, 0, 0.0, 1, 3),
+        (0, 0, 0.0, 0, 0),
+        (1, 0, -200.0, 1, 0),
+        (1, 0, -200.0, 1, 3),
+        (1, 0, 10.0, 1, 0),
+        (2, 5, 0.0, 0, 0),
+        (2, 0, 0.0, 0, 0),
+        (2, 0, 0.0, 0, 1),
+        (3, 0, 100.0, 0, 0),
+        (3, 0, 5000.0, 0, 0),
+    ] {
+        let set = move |c: &mut Call, k: usize| {
+            let v = vars(c);
+            poke_u8(c, v, state);
+            poke_u32(c, v + 4, wait as u32);
+            let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+            poke_u32(c, j + 0x38, x.to_bits());
+            poke_u32(c, map_vars(c, 32) + 8, coming);
+            for i in 0..3 {
+                let a = bb_platform(c, i);
+                poke_u8(c, a + 1, out);
+                let pj = peek_u32(c, map_vars(c, 32) + 0x10 + 4 * i);
+                poke_u32(c, pj + 0x38, (x + 10.0 * i as f32).to_bits());
+            }
+            set_seed(c, 0xACE1_ACE1u32.wrapping_mul(k as u32 + 1));
+        };
+        check_calls_with(&d, f, 1, &set, &by_address);
+    }
+    let f = "grBigBlue_801EA05C";
+    check_calls_with(&d, f, 1, &as_saved, &by_address);
+    for (state, dir, wait, x, called) in [
+        (0u8, 1u8, 0i32, 0.0f32, 1u32),
+        (0, 1, 0, 0.0, 0),
+        (1, 1, 5, 0.0, 1),
+        (1, 1, 0, 0.0, 1),
+        (2, 1, 0, 0.0, 1),
+        (2, 0xFF, 5, 0.0, 1),
+        (2, 1, 0, 5000.0, 1),
+        (2, 0xFF, 0, -5000.0, 1),
+    ] {
+        for others in [0u8, 3] {
+            let set = move |c: &mut Call, k: usize| {
+                let v = vars(c);
+                let w = peek_u32(c, v) & 0xFFFF;
+                poke_u32(c, v, w | u32::from(state) << 24 | u32::from(dir) << 16);
+                for o in [4, 8, 0xC] {
+                    poke_u32(c, v + o, wait as u32);
+                }
+                let j = peek_u32(c, c.regs.gpr[3] + 0x28);
+                poke_u32(c, j + 0x38, x.to_bits());
+                poke_u32(c, map_vars(c, 32) + 0xC, called);
+                for i in 0..3 {
+                    poke_u8(c, bb_platform(c, i) + 1, others);
+                }
+                set_seed(c, 0x1F12_3BB5u32.wrapping_mul(k as u32 + 1));
+            };
+            check_calls_with(&d, f, 1, &set, &by_address);
+        }
+    }
+}
+
+/// The cars' collision callback, the shadow check, the line hazards, the background's render
+/// callback, the wind, and the callbacks no capture reached (the empty processes and destroy
+/// callbacks, the cars' destroy callback, the demo hook).
+#[test]
+fn bigblue_callbacks() {
+    use melee_sim::game::gr::bigblue;
+    let d = dir(BB);
+    let touched = |r: &mut Running, maps: &Maps, call: &Call| {
+        let coll = coll_arg(r, maps, call);
+        let g = bb_cars_ground(maps, call);
+        let param = r.game.gr.bigblue_yakumono;
+        bigblue::car_touched(
+            &mut r.game.grounds[g.0],
+            param,
+            r.data,
+            call.regs.gpr[4] as i32,
+            &coll,
+            call.regs.gpr[7] as i32,
+        );
+        Ret::Nothing
+    };
+    let f = "fn_801EF60C";
+    check_calls_with(&d, f, 1, &as_saved, &touched);
+    for kind in 0..4u32 {
+        for ground in 0..3u32 {
+            let set = move |c: &mut Call, _: usize| {
+                set_coll_kind(c, kind);
+                c.regs.gpr[7] = ground;
+            };
+            check_calls_with(&d, f, 1, &set, &touched);
+        }
+    }
+    // Each car's joint, with the cars in their slots.
+    for joint in [3u32, 4, 10, 32] {
+        let set = move |c: &mut Call, _: usize| {
+            set_coll_kind(c, 1);
+            c.regs.gpr[7] = 1;
+            c.regs.gpr[4] = joint;
+            for i in 0..4 {
+                let a = bb_car(c, i);
+                let x0 = (peek_u32(c, a) >> 16) as u16;
+                poke_u16(
+                    c,
+                    a,
+                    x0 & !(0x1F << 4) | ((joint - 3 + i) as u16 & 0x1F) << 4,
+                );
+            }
+        };
+        check_calls_with(&d, f, 1, &set, &touched);
+    }
+    fn shadow(r: &mut Running, maps: &Maps, call: &Call) -> bool {
+        let (pos, j) = shadow_args(maps, call);
+        bigblue::check_shadow_render(r.game, r.data, pos, j)
+    }
+    check_shadow(&d, "grBigBlue_801EFC14", shadow, 0.0);
+    let hazard =
+        |_: &mut Running, _: &Maps, _: &Call| Ret::Int(bigblue::line_hazard().map_or(0, |_| 1));
+    check_calls_with(&d, "grBigBlue_801EFC0C", 1, &as_saved, &hazard);
+    let render = |r: &mut Running, maps: &Maps, call: &Call| {
+        bigblue::render_background(r, gobj_arg(maps, call), call.regs.gpr[4] as i32);
+        Ret::Nothing
+    };
+    let setup = leaf_check::calls::Setup {
+        gx: true,
+        ..Default::default()
+    };
+    for p in [&as_saved as &Prepare, &|c: &mut Call, _: usize| {
+        c.regs.gpr[4] ^= 3
+    }] {
+        leaf_check::calls::check_calls_in(&d, "fn_801EFB9C", 1, p, &setup, &render);
+    }
+    // The wind, into the road's place (`position`, its variables' 4) of the road in r3, with
+    // the road there.
+    let t = leaf_check::sym("grBigBlue_801EF7D8");
+    let into = move |c: &mut Call, _: usize| {
+        let to = vars(c) + 4;
+        c.addr = t;
+        c.regs.gpr[3] = to;
+    };
+    let wind = |r: &mut Running, maps: &Maps, call: &Call| {
+        let w = bigblue::wind(r.game);
+        let g = *maps
+            .grounds
+            .get(&(call.regs.gpr[3] - 4 - 0xC4))
+            .expect("the road's Ground");
+        r.game.grounds[g.0].u.bigblue_road().position = w;
+        Ret::Nothing
+    };
+    check_calls_with(&d, "grBigBlue_801E61C4", 1, &into, &wind);
+    // The callbacks no capture reached.
+    let from = "grBigBlue_801E5B18";
+    for name in [
+        "grBigBlue_801E5B1C",
+        "grBigBlue_801E6120",
+        "grBigBlue_801E61FC",
+        "grBigBlue_801E6294",
+        "grBigBlue_801E6360",
+        "grBigBlue_801E855C",
+        "grBigBlue_801E9F38",
+        "grBigBlue_801EAB4C",
+    ] {
+        check_calls_with(&d, from, 1, &retarget(leaf_check::sym(name)), &by_address);
+    }
+    for name in [
+        "grBigBlue_801E5B18",
+        "grBigBlue_801E611C",
+        "grBigBlue_801E6290",
+        "grBigBlue_801E635C",
+    ] {
+        check_calls_with(&d, name, 1, &as_saved, &by_address);
+    }
+    let free = retarget(leaf_check::sym("grBigBlue_801E68B8"));
+    check_calls_with(&d, "grBigBlue_801E6884", 1, &free, &by_address);
+    let demo_hook = retarget(leaf_check::sym("grBigBlue_801E57BC"));
+    check_calls_with(&d, from, 1, &demo_hook, &demo);
+}

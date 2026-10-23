@@ -111,6 +111,20 @@ pub const GRCASTLE_YAKUMONO: u32 = 0x804D_6970;
 pub const GRCASTLE_WIND: u32 = 0x804D_6974;
 pub const GRCASTLE_STEP: u32 = 0x804D_45E0;
 pub const GRCASTLE_GUSTS: u32 = 0x804D_45E4;
+/// grmutecity.c's (`ssbm_types::tu::melee__gr__grmutecity::yakumono_param`), whether its
+/// track hurts (`grMc_804D69D4`), its race order (`grMc_8049F440`, and the word before it,
+/// Brinstar's last bubble's object, which the order's sort reaches) and its cars
+/// (`grMc_8049F4B8`, 0x2C bytes each).
+pub const GRMUTECITY_YAKUMONO: u32 = 0x804D_69D0;
+pub const GRMUTECITY_TRACK_LIVE: u32 = 0x804D_69D4;
+pub const GRMUTECITY_ORDER: u32 = 0x8049_F440;
+pub const GRMUTECITY_CARS: u32 = 0x8049_F4B8;
+/// `stage_info.x6B0`, the stage parameters' address, which a Mute City car's `gen` holds.
+const STAGE_PARAM_PTR: u32 = 0x8049_E6C8 + 0x6B0;
+/// grbigblue.c's (`ssbm_types::tu::melee__gr__grbigblue::yakumono_param`) and its road
+/// pieces (`grBb_TrackEntries`, 0x14 bytes each, the measured length at +8).
+pub const GRBIGBLUE_YAKUMONO: u32 = 0x804D_69C8;
+pub const GRBIGBLUE_TRACK: u32 = 0x803E_2ED8;
 /// grbattle.c's static `yakumono_param` (`ssbm_types::tu::melee__gr__grbattle::yakumono_param`).
 pub const GRBATTLE_YAKUMONO: u32 = 0x804D_6ACC;
 
@@ -389,6 +403,7 @@ impl Importer<'_> {
         self.game.gr.venom_yakumono = self.data_or_unhandled(yaku);
         self.import_venom();
         self.import_zebes();
+        self.import_mutecity();
         for i in 0..15u32 {
             let at = GRKONGO_PLANKS + 0x18 * i;
             let j = cap.u32(at + 4);
@@ -405,6 +420,18 @@ impl Importer<'_> {
         }
         let yaku = cap.u32(GRRCRUISE_YAKUMONO);
         self.game.gr.rcruise_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRBIGBLUE_YAKUMONO);
+        self.game.gr.bigblue_yakumono = self.data_or_unhandled(yaku);
+        for i in 0..12u32 {
+            let at = GRBIGBLUE_TRACK + 0x14 * i + 8;
+            self.game.gr.bigblue.track_deltas[i as usize] = Vec3::new(
+                f32::from_bits(cap.u32(at)),
+                f32::from_bits(cap.u32(at + 4)),
+                f32::from_bits(cap.u32(at + 8)),
+            );
+        }
+        let yaku = cap.u32(GRMUTECITY_YAKUMONO);
+        self.game.gr.mutecity_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPURA_YAKUMONO);
         self.game.gr.pura_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRFLATZONE_YAKUMONO);
@@ -1116,6 +1143,16 @@ impl Comparer<'_> {
                 GRCASTLE_YAKUMONO,
                 game.gr.castle_yakumono,
             ),
+            (
+                "grMuteCity yakumono_param",
+                GRMUTECITY_YAKUMONO,
+                game.gr.mutecity_yakumono,
+            ),
+            (
+                "grBigBlue yakumono_param",
+                GRBIGBLUE_YAKUMONO,
+                game.gr.bigblue_yakumono,
+            ),
         ] {
             let yaku = self.u32(at);
             self.check(
@@ -1153,6 +1190,16 @@ impl Comparer<'_> {
                 self.u8(GRCASTLE_GUSTS),
             ),
         );
+        self.compare_mutecity();
+        for (i, d) in game.gr.bigblue.track_deltas.iter().enumerate() {
+            let at = GRBIGBLUE_TRACK + 0x14 * i as u32 + 8;
+            self.check(
+                &format!("grBb_TrackEntries[{i}]"),
+                "delta",
+                [d.x, d.y, d.z].map(f32::to_bits),
+                [self.u32(at), self.u32(at + 4), self.u32(at + 8)],
+            );
+        }
         self.check(
             "grOt_804D69C4",
             "onett x69c4",
@@ -1857,6 +1904,10 @@ impl Importer<'_> {
             e.x04 = pop;
             e.x04_left = left;
             let g = self.cap.u32(b + 0x20);
+            if i == 19 && self.cap.u32(sym("stage_info") + 0x88) as i32 == gr::GR_KIND_MUTECITY {
+                // Mute City's race order reaches this word (`Globals::order_before`).
+                continue;
+            }
             self.game.gr.zebes.bubbles[i as usize].x20 = self.import_handle_gobj(g);
         }
         let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
@@ -2012,6 +2063,10 @@ impl Comparer<'_> {
             if !e.x04_left {
                 self.check(&format!("grZe_8049F170[{i}]"), "pop", e.x04.map(Some), jp);
             }
+            if i == 19 && game.stage_info.grkind == gr::GR_KIND_MUTECITY {
+                // Mute City's race order reaches this word, compared with its statics.
+                continue;
+            }
             let go = self.u32(b + 0x20);
             let gp = (go != 0).then(|| self.maps.gobjs.get(&go).copied());
             self.check(
@@ -2060,6 +2115,83 @@ impl Comparer<'_> {
                     theirs,
                 );
             }
+        }
+    }
+}
+
+impl Importer<'_> {
+    /// Mute City's race: the cars, the order with the word before it, and the track's state.
+    fn import_mutecity(&mut self) {
+        let mem = |a: u32| self.cap.u32(a);
+        let m = &mut self.game.gr.mutecity;
+        m.track_live = mem(GRMUTECITY_TRACK_LIVE) as i32;
+        m.order_before = mem(GRMUTECITY_ORDER - 4) as i32;
+        for i in 0..gr::mutecity::CARS as u32 {
+            m.order[i as usize] = mem(GRMUTECITY_ORDER + 4 * i) as i32;
+        }
+        for i in 0..gr::mutecity::CARS as u32 {
+            let b = GRMUTECITY_CARS + 0x2C * i;
+            let f = |o: u32| f32::from_bits(self.cap.u32(b + o));
+            let c = gr::mutecity::Car {
+                x0: f(0),
+                x4: f(4),
+                x8: f(8),
+                xC: f(0xC),
+                x10: f(0x10),
+                pos: Vec3::new(f(0x14), f(0x18), f(0x1C)),
+                x20: (self.cap.u32(b + 0x20) >> 16) as u16,
+                x22: (self.cap.u32(b + 0x20) >> 8) as u8,
+                item: None,
+                generator: self.cap.u32(b + 0x28) != 0,
+            };
+            let item = self.cap.u32(b + 0x24);
+            let item = self.import_handle_gobj(item);
+            self.game.gr.mutecity.cars[i as usize] = gr::mutecity::Car { item, ..c };
+        }
+    }
+}
+
+impl Comparer<'_> {
+    /// Mute City's race against memory.
+    fn compare_mutecity(&mut self) {
+        let game = self.game;
+        let m = &game.gr.mutecity;
+        self.check(
+            "grMc_804D69D4",
+            "track live",
+            m.track_live,
+            self.u32(GRMUTECITY_TRACK_LIVE) as i32,
+        );
+        let theirs: [i32; 30] =
+            std::array::from_fn(|i| self.u32(GRMUTECITY_ORDER + 4 * i as u32) as i32);
+        self.check("grMc_8049F440", "order", m.order, theirs);
+        if game.stage_info.grkind == gr::GR_KIND_MUTECITY {
+            self.check(
+                "grMc_8049F440[-1]",
+                "the word before the order",
+                m.order_before,
+                self.u32(GRMUTECITY_ORDER - 4) as i32,
+            );
+        }
+        let param = self.u32(STAGE_PARAM_PTR);
+        for (i, c) in m.cars.iter().enumerate() {
+            let b = GRMUTECITY_CARS + 0x2C * i as u32;
+            let ours = (
+                [c.x0, c.x4, c.x8, c.xC, c.x10, c.pos.x, c.pos.y, c.pos.z].map(f32::to_bits),
+                c.x20,
+                c.x22 & 0xC0,
+                if c.generator { param } else { 0 },
+            );
+            let theirs = (
+                std::array::from_fn(|k| self.u32(b + 4 * k as u32)),
+                (self.u32(b + 0x20) >> 16) as u16,
+                (self.u32(b + 0x20) >> 8) as u8 & 0xC0,
+                self.u32(b + 0x28),
+            );
+            self.check(&format!("grMc_8049F4B8[{i}]"), "car", ours, theirs);
+            let io = self.u32(b + 0x24);
+            let ip = (io != 0).then(|| self.maps.gobjs.get(&io).copied());
+            self.check(&format!("grMc_8049F4B8[{i}]"), "item", c.item.map(Some), ip);
         }
     }
 }
