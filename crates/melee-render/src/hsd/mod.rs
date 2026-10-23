@@ -50,6 +50,8 @@ pub struct Hsd {
     /// The light vector highlight textures take, as the last `Draw::Hilight` named it (none
     /// without an infinite light).
     pub hilight: Option<melee_sim::vec::Vec3>,
+    /// The toon texture's image (`tobj_toon->imagedesc`), as the last `Draw::Toon` named it.
+    pub toon: Option<tobj::ImageRef>,
     /// The current camera and the matrices it gives.
     pub camera: Option<CameraView>,
     pub inv_view: Option<Mtx34>,

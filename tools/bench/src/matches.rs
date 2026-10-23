@@ -148,6 +148,127 @@ impl Items {
     }
 }
 
+/// The fighters' size, as Tiny and Giant Melee set every player block (`fn_801B8E50`,
+/// `fn_801B9060`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Size {
+    Normal,
+    Tiny,
+    Giant,
+}
+
+/// The game's speed, as Slo-Mo and Lightning Melee set the rules' `game_speed`
+/// (`fn_801BA5B4`, `fn_801BA7AC`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Speed {
+    Normal,
+    SlowMo,
+    Lightning,
+}
+
+/// The Special Melee modes' start data (`gmtiny.c` and the others' VS entries): what each
+/// mode's callbacks change in the VS mode's `StartMeleeData` before the match starts. Every
+/// player block takes a mode's player changes, the empty ones too, as `gmVsMelee_EnterVs`
+/// applies them.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Special {
+    pub size: Size,
+    pub speed: Speed,
+    /// Stamina Mode (`gm_801B931C`): a stock match of one stock and 150 HP, no timer, and
+    /// its own match start (`fn_801B9850`), which Slippi's playback clears.
+    pub stamina: bool,
+    /// With `stamina`, not the mode's own setup but a check of its knockout: 30 HP and the
+    /// rules' timer kept, so a fighter runs out of HP before a blast zone takes its one stock,
+    /// and the match ends at its time limit.
+    pub stamina_short: bool,
+    /// Super Sudden Death (`fn_801B8C5C`): everyone starts and comes back at 300%.
+    pub sudden_death: bool,
+    /// Invisible Melee (`initVsPlayer`): `vs_invisible` on.
+    pub invisible: bool,
+    /// Single-Button Melee (`fn_801BA1B4`).
+    pub single_button: bool,
+    /// Fixed-Camera Mode (`fn_801B9FB8`): the unpause hook `gm_80165290`, which the match's
+    /// start also calls, fixes the camera.
+    pub fixed_camera: bool,
+}
+
+impl Special {
+    /// A plain VS match.
+    pub const NONE: Special = Special {
+        size: Size::Normal,
+        speed: Speed::Normal,
+        stamina: false,
+        stamina_short: false,
+        sudden_death: false,
+        invisible: false,
+        single_button: false,
+        fixed_camera: false,
+    };
+
+    /// Makes `d`, a VS match's `StartMeleeData`, the modes': the rules' changes, then each
+    /// player block's (the first four for Stamina Mode, which sets only those).
+    fn apply(&self, d: &mut [u8]) {
+        const SINGLE_BUTTON: u8 = 0x10;
+        const X2_5: u8 = 0x04;
+        const X3_0: u8 = 0x80;
+        const IS_VS: u8 = 0x40;
+        const GAME_SPEED: usize = 0x34;
+        const ON_UNPAUSE: usize = 0x38;
+        const ON_MATCH_START: usize = 0x44;
+        if self.single_button {
+            d[2] |= SINGLE_BUTTON;
+        }
+        let speed: f32 = match self.speed {
+            Speed::Normal => 1.0,
+            Speed::SlowMo => 0.5,
+            Speed::Lightning => 1.25,
+        };
+        d[GAME_SPEED..GAME_SPEED + 4].copy_from_slice(&speed.to_be_bytes());
+        if self.fixed_camera {
+            d[ON_UNPAUSE..ON_UNPAUSE + 4].copy_from_slice(&0x8016_5290u32.to_be_bytes());
+        }
+        if self.stamina {
+            // `gm_801B931C` takes the VS mode's rules as they are, not `gmVsMelee_EnterVs`'s
+            // (no `is_stock`, no `is_vs`), and changes these.
+            let timer = if self.stamina_short {
+                d[0] & TIMER_ENABLED
+            } else {
+                0
+            };
+            d[0] = d[0] & !MATCH_KIND_MASK & !TIMER_ENABLED | MATCH_KIND_STOCK | timer;
+            d[2] &= !(IS_STOCK | X2_5);
+            d[3] &= !X3_0;
+            d[4] &= !IS_VS;
+            d[ON_MATCH_START..ON_MATCH_START + 4].copy_from_slice(&0x801B_9850u32.to_be_bytes());
+        }
+        for slot in 0..6 {
+            let b = &mut d[0x60 + 0x24 * slot..][..0x24];
+            let (scale, defense, attack, xb): (f32, f32, f32, u8) = match self.size {
+                Size::Normal => (1.0, 1.0, 1.0, b[0xB]),
+                Size::Tiny => (0.35, 0.5, 1.0, 1),
+                Size::Giant => (1.8, 1.0, 1.5, 2),
+            };
+            b[0xB] = xb;
+            b[0x18..0x1C].copy_from_slice(&attack.to_be_bytes());
+            b[0x1C..0x20].copy_from_slice(&defense.to_be_bytes());
+            b[0x20..0x24].copy_from_slice(&scale.to_be_bytes());
+            if self.sudden_death {
+                b[0x12..0x14].copy_from_slice(&300u16.to_be_bytes());
+            }
+            if self.invisible {
+                b[0xC] |= 0x08;
+            }
+            if self.stamina && slot < 4 {
+                // `xC_b7`, one stock, 150 HP.
+                let hp: u16 = if self.stamina_short { 30 } else { 150 };
+                b[0xC] |= 0x01;
+                b[2] = 1;
+                b[0x14..0x16].copy_from_slice(&hp.to_be_bytes());
+            }
+        }
+    }
+}
+
 pub struct Match {
     pub name: Cow<'static, str>,
     /// VS stage ID (`stkind`).
@@ -156,6 +277,8 @@ pub struct Match {
     pub seed: u32,
     pub rules: Rules,
     pub items: Items,
+    /// The Special Melee modes' changes to the start data.
+    pub special: Special,
 }
 
 pub const CAPTAIN: u8 = 0x00;
@@ -449,6 +572,7 @@ impl Match {
             seed,
             rules: BENCH_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         }
     }
 }
@@ -792,6 +916,7 @@ pub fn items_set() -> Vec<Match> {
                 time_limit: ITEMS_TIME,
             },
             items: Items::only(FREQ_HIGH, kinds),
+            special: Special::NONE,
         });
     };
     for f in FAMILIES {
@@ -824,6 +949,7 @@ pub fn coins_set() -> Vec<Match> {
             time_limit: ITEMS_TIME,
         },
         items,
+        special: Special::NONE,
     };
     vec![
         coin("coins-fd", 0x1F0F_0601, Items::OFF),
@@ -860,6 +986,7 @@ pub fn held_extra_set() -> Vec<Match> {
                 time_limit: ITEMS_TIME,
             },
             items: Items::only(FREQ_HIGH, kinds),
+            special: Special::NONE,
         })
         .collect()
 }
@@ -907,6 +1034,7 @@ pub fn pokemon_set() -> Vec<Match> {
                     time_limit: ITEMS_TIME,
                 },
                 items: Items::only(FREQ_VERY_HIGH, &[POKE_BALL]),
+                special: Special::NONE,
             }
         })
         .collect()
@@ -933,6 +1061,7 @@ pub fn barrel_set() -> Vec<Match> {
         seed,
         rules: Rules::Time { time_limit: 240 },
         items: Items::OFF,
+        special: Special::NONE,
     };
     vec![
         barrel(
@@ -967,6 +1096,7 @@ pub fn castle_set() -> Vec<Match> {
         seed: 0x1F0F_0703,
         rules: Rules::Time { time_limit: 240 },
         items: Items::OFF,
+        special: Special::NONE,
     }]
 }
 
@@ -1024,6 +1154,7 @@ pub fn leftovers_set() -> Vec<Match> {
             seed: 0x1F0F_0E01 + i as u32,
             rules: Rules::Time { time_limit: time },
             items: Items::only(freq, kinds),
+            special: Special::NONE,
         })
         .collect()
 }
@@ -1132,6 +1263,7 @@ pub fn monsters_set() -> Vec<Match> {
                     time_limit: ITEMS_TIME,
                 },
                 items: Items::only(FREQ_VERY_HIGH, kinds),
+                special: Special::NONE,
             }
         })
         .collect()
@@ -1220,6 +1352,7 @@ pub fn catch_set() -> Vec<Match> {
                 time_limit: ITEMS_TIME,
             },
             items: Items::only(FREQ_VERY_HIGH, &CONTAINERS),
+            special: Special::NONE,
         })
         .collect()
 }
@@ -1313,6 +1446,7 @@ pub fn fighters_set() -> Vec<Match> {
                 time_limit: ITEMS_TIME,
             },
             items: Items::only(FREQ_VERY_HIGH, kinds),
+            special: Special::NONE,
         })
         .collect()
 }
@@ -1344,6 +1478,7 @@ pub fn sscope_set() -> Vec<Match> {
                     time_limit: ITEMS_TIME,
                 },
                 items: Items::only(FREQ_VERY_HIGH, &[S_SCOPE]),
+                special: Special::NONE,
             }
         })
         .collect()
@@ -1377,6 +1512,7 @@ pub fn grapple_set() -> Vec<Match> {
             seed: 0x1F0F_2201,
             rules: Rules::Time { time_limit: 30 },
             items: Items::OFF,
+            special: Special::NONE,
         },
         Match {
             name: Cow::Borrowed("grapple-cloud-yi64"),
@@ -1385,6 +1521,7 @@ pub fn grapple_set() -> Vec<Match> {
             seed: 0x1F0F_2202,
             rules: Rules::Time { time_limit: 30 },
             items: Items::OFF,
+            special: Special::NONE,
         },
     ]
 }
@@ -1822,6 +1959,7 @@ pub fn fighter_items_set() -> Vec<Match> {
         seed: 0x1F0F_3001,
         rules: Rules::Time { time_limit: 30 },
         items: Items::OFF,
+        special: Special::NONE,
     };
     let mut v = vec![
         m(
@@ -1947,6 +2085,7 @@ pub fn starfox_set() -> Vec<Match> {
             seed: 0x1F0F_2301 + 2 * i as u32,
             rules: Rules::Time { time_limit: 30 },
             items: Items::OFF,
+            special: Special::NONE,
         });
         out.push(Match {
             name: Cow::Owned(format!("taunt-falco-{key}")),
@@ -1955,6 +2094,7 @@ pub fn starfox_set() -> Vec<Match> {
             seed: 0x1F0F_2302 + 2 * i as u32,
             rules: Rules::Time { time_limit: 20 },
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     // Eight minutes on each with two idle players, for the stages' long cycles (the Great Fox
@@ -1970,6 +2110,7 @@ pub fn starfox_set() -> Vec<Match> {
             seed,
             rules: Rules::Time { time_limit: 480 },
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     // Real CPUs at mixed levels against a `BENCH_AI` human on each, as the cpu-stages set's: the
@@ -2007,6 +2148,7 @@ pub fn starfox_set() -> Vec<Match> {
             seed,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     out
@@ -2065,6 +2207,7 @@ pub fn stages_set() -> Vec<Match> {
                     time_limit: if moving { 480 } else { 240 },
                 },
                 items: Items::OFF,
+                special: Special::NONE,
             }
         })
         .collect()
@@ -2107,6 +2250,7 @@ pub fn cpu_set() -> Vec<Match> {
             seed: 0x1F0F_0401 + i as u32,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     for (i, &(c, stage, key)) in SWEEP.iter().enumerate() {
@@ -2117,6 +2261,7 @@ pub fn cpu_set() -> Vec<Match> {
             seed: 0x1F0F_0481 + i as u32,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     out
@@ -2146,6 +2291,7 @@ pub fn cpu_levels_set() -> Vec<Match> {
             seed: 0x1F0F_0441 + i as u32,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         });
     }
     let four = |name: &'static str, stage, players: Vec<Player>, seed| Match {
@@ -2155,6 +2301,7 @@ pub fn cpu_levels_set() -> Vec<Match> {
         seed,
         rules: CPU_RULES,
         items: Items::OFF,
+        special: Special::NONE,
     };
     out.push(four(
         "cpu-four-l2368-dl",
@@ -2299,6 +2446,7 @@ pub fn cpu_stages_set() -> Vec<Match> {
                 CPU_RULES
             },
             items: Items::OFF,
+            special: Special::NONE,
         })
         .chain([cpu_stage_big_blue()])
         .collect()
@@ -2327,6 +2475,7 @@ fn cpu_stage_big_blue() -> Match {
         seed: 0x1F0F_2110,
         rules: Rules::Time { time_limit: 480 },
         items: Items::OFF,
+        special: Special::NONE,
     }
 }
 
@@ -2355,6 +2504,7 @@ pub fn ics_set() -> Vec<Match> {
             seed: 0x1F0F_1201 + i as u32,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         })
         .chain(std::iter::once(Match {
             name: Cow::Borrowed("ics-items-open-fd"),
@@ -2381,6 +2531,7 @@ pub fn ics_set() -> Vec<Match> {
                 freq: FREQ_VERY_HIGH,
                 mask: u64::MAX,
             },
+            special: Special::NONE,
         }))
         .chain(std::iter::once(Match {
             name: Cow::Borrowed("ics-items-bf"),
@@ -2392,6 +2543,7 @@ pub fn ics_set() -> Vec<Match> {
                 freq: FREQ_HIGH,
                 mask: u64::MAX,
             },
+            special: Special::NONE,
         }))
         .collect()
 }
@@ -2417,6 +2569,7 @@ pub fn cpu_items_set() -> Vec<Match> {
             seed: 0x1F0F_2001 + i as u32,
             rules: Rules::Time { time_limit: 180 },
             items: Items::only(FREQ_HIGH, &all),
+            special: Special::NONE,
         })
         .collect()
 }
@@ -2446,6 +2599,177 @@ pub fn cpu_approach_set() -> Vec<Match> {
             seed: 0x1F0F_2301 + i as u32,
             rules: Rules::Time { time_limit: 180 },
             items: Items::only(FREQ_HIGH, &KINDS),
+            special: Special::NONE,
+        })
+        .collect()
+}
+
+/// The Big Blue items set: the flying platforms' items (`grBigBlue_801E8A1C`, made by kind
+/// with `it_8026BE84`), with only the five kinds they carry on (the Party Ball, Beam Sword,
+/// Super Scope, Fire Flower and Bunny Hood) at frequency low, so the platforms' items are many
+/// of the match's: two humans (`items-platforms-big-blue`), and a human against a level 9 CPU,
+/// which goes for them (`items-platforms-cpu-big-blue`). Eight-minute time matches, as the
+/// stages set's moving stages have, seeds `1F0F26xx`.
+pub fn bigblue_items_set() -> Vec<Match> {
+    const KINDS: [u8; 5] = [4, 12, 21, 25, 31];
+    const FREQ_LOW: i8 = 1;
+    let players = [
+        ("items-platforms-big-blue", vec![p(MARIO, 0), p(SHEIK, 0)]),
+        (
+            "items-platforms-cpu-big-blue",
+            vec![p(MARTH, 0), cpu(CAPTAIN, 0, 9)],
+        ),
+    ];
+    players
+        .into_iter()
+        .enumerate()
+        .map(|(i, (name, players))| Match {
+            name: Cow::Borrowed(name),
+            stage: BIG_BLUE,
+            players: Cow::Owned(players),
+            seed: 0x1F0F_2601 + i as u32,
+            rules: Rules::Time { time_limit: 480 },
+            items: Items::only(FREQ_LOW, &KINDS),
+            special: Special::NONE,
+        })
+        .collect()
+}
+
+/// The Special Melee set: one match per mode the VS start data carries (`special-MODE`), and
+/// one mixing several (`special-mix-bf`), each two `BENCH_AI` humans, items off, a
+/// two-minute time match as the VS rules' default (Super Sudden Death's too); Stamina Mode a
+/// stock match of one stock and no timer, as its mode makes it. Seeds `1F0F27xx`.
+pub fn special_set() -> Vec<Match> {
+    let none = Special::NONE;
+    let modes = [
+        (
+            "special-tiny-bf",
+            BATTLEFIELD,
+            [PEACH, SAMUS],
+            Special {
+                size: Size::Tiny,
+                ..none
+            },
+        ),
+        (
+            "special-giant-fd",
+            FINAL_DESTINATION,
+            [CAPTAIN, PIKACHU],
+            Special {
+                size: Size::Giant,
+                ..none
+            },
+        ),
+        (
+            "special-stamina-ps",
+            POKEMON_STADIUM,
+            [FOX, MARTH],
+            Special {
+                stamina: true,
+                ..none
+            },
+        ),
+        (
+            "special-ssd-dl",
+            DREAM_LAND,
+            [SHEIK, FALCO],
+            Special {
+                sudden_death: true,
+                ..none
+            },
+        ),
+        (
+            "special-invisible-ys",
+            YOSHIS_STORY,
+            [MARIO, LUIGI],
+            Special {
+                invisible: true,
+                ..none
+            },
+        ),
+        (
+            "special-single-button-fod",
+            FOUNTAIN_OF_DREAMS,
+            [LINK, NESS],
+            Special {
+                single_button: true,
+                ..none
+            },
+        ),
+        (
+            "special-fixed-camera-bf",
+            BATTLEFIELD,
+            [JIGGLYPUFF, GANONDORF],
+            Special {
+                fixed_camera: true,
+                ..none
+            },
+        ),
+        (
+            "special-slomo-fd",
+            FINAL_DESTINATION,
+            [YOSHI, DONKEY_KONG],
+            Special {
+                speed: Speed::SlowMo,
+                ..none
+            },
+        ),
+        (
+            "special-lightning-ps",
+            POKEMON_STADIUM,
+            [ZELDA, BOWSER],
+            Special {
+                speed: Speed::Lightning,
+                ..none
+            },
+        ),
+        (
+            "special-mix-bf",
+            BATTLEFIELD,
+            [MEWTWO, YOUNG_LINK],
+            Special {
+                size: Size::Giant,
+                speed: Speed::Lightning,
+                invisible: true,
+                single_button: true,
+                fixed_camera: true,
+                ..none
+            },
+        ),
+        (
+            "special-stamina-ko-fd",
+            FINAL_DESTINATION,
+            [MARTH, CAPTAIN],
+            Special {
+                stamina: true,
+                stamina_short: true,
+                ..none
+            },
+        ),
+    ];
+    modes
+        .into_iter()
+        .enumerate()
+        .map(|(i, (name, stage, [a, b], special))| Match {
+            name: Cow::Borrowed(name),
+            stage,
+            players: Cow::Owned(vec![p(a, 0), p(b, 0)]),
+            seed: 0x1F0F_2701 + i as u32,
+            rules: if special.stamina_short {
+                Rules::Stock {
+                    stocks: 1,
+                    time_limit: 120,
+                }
+            } else if special.stamina {
+                Rules::Stock {
+                    stocks: 1,
+                    time_limit: 0,
+                }
+            } else {
+                Rules::Time { time_limit: 120 }
+            },
+            items: Items::OFF,
+            special,
         })
         .collect()
 }
@@ -2476,6 +2800,8 @@ pub const SETS: &[(&str, Set)] = &[
     ("starfox", starfox_set),
     ("ics", ics_set),
     ("own-items", fighter_items_set),
+    ("bigblue-items", bigblue_items_set),
+    ("special", special_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
@@ -2617,6 +2943,7 @@ impl Match {
             let player = self.players.get(usize::from(slot)).copied();
             d.extend_from_slice(&player_block(player, slot, stocks));
         }
+        self.special.apply(&mut d);
         d
     }
 
@@ -2723,7 +3050,13 @@ impl Match {
         if limit == 0 {
             31_000
         } else {
-            60 * limit + 1500
+            // A slowed game runs its frames on every other field.
+            let per_frame = if self.special.speed == Speed::SlowMo {
+                2
+            } else {
+                1
+            };
+            60 * limit * per_frame + 1500
         }
     }
 
@@ -2895,6 +3228,7 @@ mod tests {
             seed: 1,
             rules: Rules::Time { time_limit: 120 },
             items: Items::OFF,
+            special: Special::NONE,
         };
         let d = m.start_data();
         // match_kind 0 (time), the unknown field 4, the timer on; not a stock match.
@@ -2941,6 +3275,7 @@ mod tests {
             seed: 1,
             rules: Rules::Time { time_limit: 120 },
             items,
+            special: Special::NONE,
         };
         let d = m.start_data();
         assert_eq!(d[0xB], 3);
@@ -2964,6 +3299,7 @@ mod tests {
             seed: 1,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         };
         m.check().unwrap();
         assert_eq!(m.human_ports(), vec![0]);
@@ -3062,6 +3398,7 @@ mod tests {
             seed: 1,
             rules: CPU_RULES,
             items: Items::OFF,
+            special: Special::NONE,
         };
         assert!(ok().check().is_ok());
         let one = Match {
@@ -3291,6 +3628,78 @@ mod tests {
         assert_eq!(walker_pad(120, -1), (0, 100));
         assert_eq!(walker_pad(333, 1), (0x0100, 80));
         assert_eq!(walker_pad(37, 1), (0, 80));
+    }
+
+    /// The Special Melee set's start data: each mode's fields as its VS entry sets them, the
+    /// rest a plain VS match's.
+    #[test]
+    fn special_modes_set_their_start_data() {
+        let set = special_set();
+        assert_eq!(set.len(), 11);
+        let get = |name: &str| set.iter().find(|m| m.name == name).unwrap().start_data();
+        let f32_at = |d: &[u8], at: usize| f32::from_be_bytes(d[at..at + 4].try_into().unwrap());
+        let block = |d: &[u8], slot: usize| d[0x60 + 0x24 * slot..][..0x24].to_vec();
+        let plain = Match {
+            special: Special::NONE,
+            ..special_set().swap_remove(0)
+        }
+        .start_data();
+        assert_eq!(f32_at(&plain, 0x34), 1.0);
+        // The knockout check: 30 HP, the timer kept, two minutes.
+        let ko = get("special-stamina-ko-fd");
+        assert_eq!(
+            ko[0] & (MATCH_KIND_MASK | TIMER_ENABLED),
+            MATCH_KIND_STOCK | TIMER_ENABLED
+        );
+        assert_eq!(ko[0x10..0x14], 120u32.to_be_bytes());
+        assert!((0..4).all(|s| block(&ko, s)[0x14..0x16] == [0, 30]));
+        let tiny = get("special-tiny-bf");
+        for slot in 0..6 {
+            let b = block(&tiny, slot);
+            assert_eq!(b[0xB], 1);
+            assert_eq!(
+                [f32_at(&b, 0x18), f32_at(&b, 0x1C), f32_at(&b, 0x20)],
+                [1.0, 0.5, 0.35]
+            );
+        }
+        let giant = block(&get("special-giant-fd"), 5);
+        assert_eq!(giant[0xB], 2);
+        assert_eq!(
+            [
+                f32_at(&giant, 0x18),
+                f32_at(&giant, 0x1C),
+                f32_at(&giant, 0x20)
+            ],
+            [1.5, 1.0, 1.8]
+        );
+        let ssd = get("special-ssd-dl");
+        assert!((0..6).all(|s| block(&ssd, s)[0x12..0x14] == [0x01, 0x2C]));
+        assert!((0..6).all(|s| block(&get("special-invisible-ys"), s)[0xC] & 0x08 != 0));
+        assert_eq!(get("special-single-button-fod")[2] & 0x10, 0x10);
+        assert_eq!(plain[2] & 0x10, 0);
+        assert_eq!(
+            get("special-fixed-camera-bf")[0x38..0x3C],
+            [0x80, 0x16, 0x52, 0x90]
+        );
+        assert_eq!(f32_at(&get("special-slomo-fd"), 0x34), 0.5);
+        assert_eq!(f32_at(&get("special-lightning-ps"), 0x34), 1.25);
+        let stamina = get("special-stamina-ps");
+        assert_eq!(
+            stamina[0] & (MATCH_KIND_MASK | TIMER_ENABLED),
+            MATCH_KIND_STOCK
+        );
+        assert_eq!(stamina[2] & (IS_STOCK | 0x04), 0);
+        assert_eq!(stamina[4] & 0x40, 0);
+        assert_eq!(stamina[0x44..0x48], [0x80, 0x1B, 0x98, 0x50]);
+        for slot in 0..6 {
+            let b = block(&stamina, slot);
+            let on = slot < 4;
+            assert_eq!(b[0xC] & 1 != 0, on);
+            assert_eq!(b[0x14..0x16] == [0, 150], on);
+        }
+        // Slo-mo runs its two minutes on twice the fields.
+        let slomo = set.iter().find(|m| m.name == "special-slomo-fd").unwrap();
+        assert_eq!(slomo.fields(), 60 * 120 * 2 + 1500);
     }
 
     #[test]

@@ -208,11 +208,12 @@ impl Audio {
             now,
             alarm_period: PAD_ALARM_PERIOD,
             dsp_ready: true,
+            tb_power_on: self.power_on,
             ..Clock::default()
         };
         clock.schedule((now / FIELD + 1) * FIELD, EventKind::Field);
         clock.schedule(
-            (now / PAD_ALARM_PERIOD + 1) * PAD_ALARM_PERIOD,
+            clock.next_period(now, PAD_ALARM_PERIOD),
             EventKind::PadAlarm,
         );
         self.clock = Some(clock);
@@ -257,8 +258,8 @@ impl Audio {
         let banks = &mut self.synth.banks;
         banks.aram_end = banks.head[0] as u32 + bank_size;
         self.synth.stream.base = aram.alloc(0x3_0000);
-        // `OSGetSoundMode`: the console's setting, stereo in ssbm-rs's.
-        self.synth.sound_mode = 1;
+        // `OSGetSoundMode`: the SRAM's setting, stereo on ssbm-rs's console.
+        self.synth.sound_mode = u32::from(!self.mono);
     }
 
     /// `AXDriverSetupAux`'s simulated part: the aux effect type the driver records for the

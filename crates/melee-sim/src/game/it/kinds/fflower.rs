@@ -152,7 +152,7 @@ pub fn fire(r: &mut Running, gobj: GObjId, pos: crate::vec::Vec3, dir: f32) {
 }
 
 /// A Fire Flower standing at `pos`, `it_80292D48`.
-// Ports `it_80292D48`; aliased once a check reaches it.
+#[doc(alias = "it_80292D48")]
 pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
     let mut spawn = crate::game::structs::SpawnItem {
         kind: super::F_FLOWER,

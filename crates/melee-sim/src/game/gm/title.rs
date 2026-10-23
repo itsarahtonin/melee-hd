@@ -291,8 +291,7 @@ impl Running<'_> {
         // `gm_801692E8(lbTime_GetTimeInSeconds())`'s second: the clock's seconds past the
         // minute.
         let tb = self.game.audio.tb_read();
-        let secs = self.game.main_lib.power_on_clock + tb / crate::audio::clock::TB_HZ;
-        let secs = secs.min(u64::from(u32::MAX));
+        let secs = (tb / crate::audio::clock::TB_HZ).min(u64::from(u32::MAX));
         for _ in 0..secs % 60 {
             self.game.objs.rng.draw();
         }

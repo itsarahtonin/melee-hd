@@ -434,7 +434,8 @@ impl Audio {
     pub fn tb_read(&mut self) -> u64 {
         let now = self.hw_now();
         self.hw.spent += crate::game::session::TB_READ;
-        now
+        // The code's time base counts from the clock at power-on (`Clock::code_time`).
+        now.wrapping_add(self.clock.as_ref().map_or(0, |c| c.tb_power_on))
     }
 
     /// `OSGetTick`: the time base's low word.
@@ -578,12 +579,13 @@ impl Audio {
     /// The alarm set on the timeline's grid (`OSSetPeriodicAlarm` from 1/60 s, every 1/60 s).
     fn movie_alarm_start(&mut self) {
         // `__OSGetSystemTime` in `InsertAlarm` reads the time base.
-        let now = self.tb_read();
-        let first = (now / ALARM_PERIOD + 1) * ALARM_PERIOD;
+        let now = self.hw_now();
+        self.hw.spent += crate::game::session::TB_READ;
         let c = self
             .clock
             .as_mut()
             .expect("the movie's alarm without the timeline");
+        let first = c.next_period(now, ALARM_PERIOD);
         c.set_movie_alarm(first, ALARM_PERIOD);
         self.movie.alarm = true;
     }

@@ -101,6 +101,15 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     fell(r, gobj);
 }
 
+/// A Bunny Hood resting at `pos`, `it_80294DC0`.
+#[doc(alias = "it_80294DC0")]
+pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
+    let mut spawn = super::super::item::drop_spawn(super::RABBITC, pos, false);
+    let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
+    landed(r, gobj);
+    Some(gobj)
+}
+
 /// Stops and rests, `it_80295138`.
 #[doc(alias = "it_80295138")]
 pub fn landed(r: &mut Running, gobj: GObjId) {

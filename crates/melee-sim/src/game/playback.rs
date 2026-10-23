@@ -238,6 +238,130 @@ pub struct Playback {
     pub answers: Option<Answers>,
     /// What the codes allocate for the replay's code list, for the allocator model.
     pub code_list_heap: Option<CodeListHeap>,
+    /// The sounds each recent frame played (`Playback/Core/Sounds`).
+    pub sounds: SoundLog,
+}
+
+/// The sounds playback's codes log (`Playback/Core/Sounds`, in the codes' state block at
+/// `lbl_804D6660`'s first buffer + 0x1C): for each of the last seven frames, the sounds
+/// played while it was the frame counted and those logged for it before, so a rollback that
+/// plays a frame again neither plays its sounds twice nor keeps one it no longer plays. A
+/// replay played forward plays each frame once, but a slowed game (Slo-Mo Melee) runs ticks
+/// whose game clock isn't due: at the end of one the frame counted hasn't moved on, so the
+/// codes take it for the frame played again with no sound, and stop every sound the frame
+/// before played (`HandleFrameSoundLog`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SoundLog {
+    /// The current frame's slot (`x1C`).
+    pub ring: u8,
+    /// The last frame logged (`x72B`, an unaligned word).
+    pub last: i32,
+    pub slots: [SoundSlot; SOUND_SLOTS],
+    /// The frame whose tick ended with the log still to close: the codes close it after
+    /// the point a state trace samples, so the next tick's start does.
+    pub closing: Option<i32>,
+}
+
+/// The frames the sound log keeps.
+pub const SOUND_SLOTS: usize = 7;
+
+/// A frame's sounds: played this time, and logged before (0x102 bytes from `x1D`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SoundSlot {
+    pub played: SoundList,
+    pub logged: SoundList,
+}
+
+/// A count and up to 16 sounds (0x81 bytes).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SoundList {
+    pub count: u8,
+    pub entries: [SoundEntry; 16],
+}
+
+/// A sound's id and the handle it played with (0 for none yet).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SoundEntry {
+    pub sfx: i32,
+    pub handle: i32,
+}
+
+impl SoundLog {
+    /// The slot of the frame counted `frame`: the current one for a frame past the last
+    /// logged, else as many back from it as the frame is behind the last.
+    fn slot(&self, frame: i32) -> usize {
+        if frame > self.last {
+            return usize::from(self.ring);
+        }
+        let back = self.last.wrapping_sub(frame).wrapping_add(1);
+        let mut s = i32::from(self.ring).wrapping_sub(back);
+        if s < 0 {
+            s += SOUND_SLOTS as i32;
+        }
+        s as usize
+    }
+
+    /// A sound about to start (`PreventDuplicateSounds`, at `HSD_AudioSFXStartParam+0xBC`):
+    /// its handle if the frame logged it before (it isn't played again), and it's added to
+    /// the frame's played sounds while there's room.
+    pub fn starting(&mut self, frame: i32, sfx: i32) -> Option<i32> {
+        let slot = &mut self.slots[self.slot(frame)];
+        let found = if frame > self.last {
+            None
+        } else {
+            let l = &slot.logged;
+            l.entries[..usize::from(l.count)]
+                .iter()
+                .find(|e| e.sfx == sfx)
+                .map(|e| e.handle)
+        };
+        let p = &mut slot.played;
+        if p.count < 0x10 {
+            p.entries[usize::from(p.count)] = SoundEntry {
+                sfx,
+                handle: found.unwrap_or(0),
+            };
+            p.count += 1;
+        }
+        found
+    }
+
+    /// The handle a started sound got (`AssignSoundInstanceId`, at
+    /// `HSD_AudioSFXStartParam+0x230`), on the frame's last played sound.
+    pub fn started(&mut self, frame: i32, handle: i32) {
+        let p = &mut self.slots[self.slot(frame)].played;
+        let i = usize::from(p.count).wrapping_sub(1);
+        p.entries[i].handle = handle;
+    }
+
+    /// A tick's end (`HandleFrameSoundLog`, at `gm_801A4D34+0x2E0`), `frame` the frame the
+    /// tick counted last: for a frame logged before, the sounds it logged and didn't play
+    /// this time, to stop; then its played sounds become its logged ones, and a new frame
+    /// becomes the last.
+    pub fn tick_end(&mut self, frame: i32) -> Vec<i32> {
+        let s = self.slot(frame);
+        let mut stop = Vec::new();
+        if frame <= self.last {
+            let slot = &self.slots[s];
+            let played = &slot.played.entries[..usize::from(slot.played.count)];
+            for e in &slot.logged.entries[..usize::from(slot.logged.count)] {
+                if !played.iter().any(|p| p.sfx == e.sfx) {
+                    stop.push(e.handle);
+                }
+            }
+        }
+        let slot = &mut self.slots[s];
+        slot.logged = slot.played;
+        slot.played = SoundList::default();
+        if frame > self.last {
+            self.last = frame;
+            self.ring += 1;
+            if self.ring >= SOUND_SLOTS as u8 {
+                self.ring -= SOUND_SLOTS as u8;
+            }
+        }
+        stop
+    }
 }
 
 impl Playback {
@@ -427,6 +551,10 @@ impl Running<'_> {
             }
         });
         g.objs.rng.seed = seed;
+        // The recording code at `0x8016E74C` (+0x7C) counts the frame before the first, which
+        // the first count takes up (`playback_count_frame`): a slowed game's first tick runs no
+        // game logic, so the count stays there for it.
+        g.playback_mut().frame_index = FIRST_FRAME - 1;
         for (i, (proc, priority)) in [
             (SEED_PROC, 0),
             (RECORD_FRAME_START_PROC, 0),

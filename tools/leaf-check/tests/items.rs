@@ -1205,9 +1205,9 @@ fn init_spin() {
 }
 
 #[test]
-fn clear_attack_id() {
+fn stop_holding_still() {
     leaf_check::shard_test!();
-    check_game("it_80274EF8", lib2725::clear_attack_id);
+    check_game("it_80274EF8", lib2725::stop_holding_still);
 }
 
 #[test]
@@ -3329,6 +3329,86 @@ fn sword() {
         check_on(src, "it_80285314", &|c| item_kind(c) == 12, &|r, a| {
             Ret::JObj(s::trail_joint(r.game, r.data, a.gobj(0)))
         });
+    }
+}
+
+/// The drops by kind (`it_8026BE84`, Big Blue's flying platforms' items) and the five spawns
+/// at a point they make, from the swords' states: each kind with its flags held and not, a
+/// kind it makes none of, the Party Ball with the switch's bit off, and a sudden death.
+#[test]
+fn drops_by_kind() {
+    leaf_check::shard_test!();
+    use melee_sim::game::it::kinds::{fflower, kusudama, rabbitc, sscope};
+    use melee_sim::game::it::lib26b1;
+    let src = "itSword_UnkMotion0_Anim";
+    // `StartMeleeRules`: `x6` (sudden death) and `item_freq`; the spawner's mask.
+    const RULES: u32 = 0x8046_DB68;
+    let mask = leaf_check::sym("it_804A0E30") + 0x18;
+    for (k, at) in [[10.0f32, 30.0, 0.0], [-42.5, 7.25, 3.0]]
+        .into_iter()
+        .enumerate()
+    {
+        let off = 0x3000 + 0x100 * k as u32;
+        let point = move |c: &mut Call| {
+            vec_arg(c, 3, off, at);
+            true
+        };
+        check_on(src, "it_80291BE0", &point, &|r, a| {
+            Ret::GObj(sscope::spawn_at(r, a.vec(0)))
+        });
+        check_on(src, "it_80294DC0", &point, &|r, a| {
+            Ret::GObj(rabbitc::spawn_at(r, a.vec(0)))
+        });
+        check_on(src, "it_802896CC", &point, &|r, a| {
+            Ret::GObj(kusudama::spawn_at(r, a.vec(0)))
+        });
+        check_on(src, "it_80292D48", &point, &|r, a| {
+            Ret::GObj(fflower::spawn_at(r, a.vec(0)))
+        });
+        // `BobOmbRain`: x0, x4 null, the point at x8, the kind at x14, x18 0, x1C.b0 held.
+        for (kind, hold, sudden, ball) in [
+            (4, true, false, true),
+            (4, false, false, true),
+            (4, true, false, false),
+            (12, true, false, true),
+            (12, false, false, true),
+            (21, true, false, true),
+            (21, false, false, true),
+            (25, true, false, true),
+            (25, false, false, true),
+            (31, true, false, true),
+            (31, false, false, true),
+            (0, true, false, true),
+            (7, true, false, true),
+            (12, true, true, true),
+        ] {
+            let prep = move |c: &mut Call| {
+                let p = c.regs.gpr[1] - off;
+                for (i, w) in [0, 0, at[0].to_bits(), at[1].to_bits(), at[2].to_bits()]
+                    .into_iter()
+                    .enumerate()
+                {
+                    set32(c, p + 4 * i as u32, w);
+                }
+                set32(c, p + 0x14, kind);
+                set32(c, p + 0x18, 0);
+                set32(c, p + 0x1C, if hold { 0x8000_0000 } else { 0 });
+                c.regs.gpr[3] = p;
+                let w = w32(c, RULES + 4);
+                set32(c, RULES + 4, w & !0xFF00 | u32::from(sudden) << 8);
+                let w = w32(c, RULES + 8);
+                set32(c, RULES + 8, w & !0xFF | 2);
+                set32(c, mask, !0);
+                set32(c, mask + 4, if ball { !0 } else { !0x10 });
+                true
+            };
+            check_on(src, "it_8026BE84", &prep, &move |r, a| {
+                let p = a.int(0);
+                let f = |o: u32| f32::from_bits(a.cap.u32(p + o));
+                let pos = Vec3::new(f(8), f(0xC), f(0x10));
+                Ret::GObj(lib26b1::drop_by_kind(r, kind as i32, pos, hold))
+            });
+        }
     }
 }
 

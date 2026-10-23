@@ -75,8 +75,7 @@ impl Running<'_> {
     /// The real-time clock's seconds as `lbTime_GetTimeInSeconds` reads them now.
     fn clock_seconds(&mut self) -> u32 {
         let tb = self.game.audio.tb_read();
-        let s = self.game.main_lib.power_on_clock + tb / crate::audio::clock::TB_HZ;
-        s.min(u64::from(u32::MAX)) as u32
+        (tb / crate::audio::clock::TB_HZ).min(u64::from(u32::MAX)) as u32
     }
 
     /// `gmMainLib_8015D818`: special message `n`, if the save hasn't announced it, timed and

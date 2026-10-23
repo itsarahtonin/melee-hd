@@ -158,6 +158,10 @@ pub enum Draw {
     /// `HSD_LObjGetLightVector`) as a material with one sets up (`TObjSetupMtx`). Render
     /// callbacks change the current lights between draws, so the frame's last list isn't it.
     Hilight(Option<crate::vec::Vec3>),
+    /// The toon texture's image for what follows (`tobj_toon->imagedesc`), as a toon material
+    /// sets up (`HSD_MObjSetup`): Poké Floats' render callback sets it around each float's
+    /// draw and clears it after (`fn_802130D0`), so the frame's end holds none.
+    Toon(Option<tobj::ImageRef>),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
@@ -240,6 +244,8 @@ pub struct Display {
     pub shadows_named: Option<(u16, u8)>,
     /// The highlight light vector last named this frame ([`Draw::Hilight`]).
     pub hilight_named: Option<Option<crate::vec::Vec3>>,
+    /// The toon texture's image last named this frame ([`Draw::Toon`]).
+    pub toon_named: Option<Option<tobj::ImageRef>>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -293,6 +299,18 @@ pub fn start_frame(objs: &mut Objects) {
     objs.display.shadow_tobjs.clear();
     objs.display.shadows_named = None;
     objs.display.hilight_named = None;
+    objs.display.toon_named = None;
+}
+
+/// Names the toon texture's image a toon material is about to take ([`Draw::Toon`]), when it
+/// differs from the last named this frame.
+fn name_toon(objs: &mut Objects) {
+    let image = objs.mobjs.toon.and_then(|t| objs.tobjs[t].imagedesc);
+    let d = &mut objs.display;
+    if d.toon_named != Some(image) {
+        d.toon_named = Some(image);
+        d.draws.push(Draw::Toon(image));
+    }
 }
 
 /// Names the shadow textures a shadowed material is about to take ([`Draw::Shadows`]), when
@@ -536,6 +554,9 @@ pub fn dobj_disp(
 fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
     if objs.mobjs[m].rendermode & mobj::RENDER_SHADOW != 0 {
         name_shadows(objs);
+    }
+    if objs.mobjs[m].rendermode & mobj::RENDER_TOON != 0 {
+        name_toon(objs);
     }
     match objs.mobjs[m].class {
         // The stages' (`fn_801C8EF8`) and items' (`fn_80277D8C`) setups differ from HAL's

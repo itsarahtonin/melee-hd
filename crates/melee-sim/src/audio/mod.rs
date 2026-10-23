@@ -65,6 +65,14 @@ pub struct Audio {
     /// When the interrupt handler running now started, while one runs: its log's times
     /// count from there (none in the game's own code, whose times count from the timeline's).
     pub hw_base: Option<u64>,
+    /// The console's clock at power-on, in time base ticks from 2000-01-01, which the
+    /// timeline the boot's audio setup starts takes ([`clock::Clock::tb_power_on`]): a
+    /// session's (`session::Setup::power_on`), 0 for a replay's console.
+    pub power_on: u64,
+    /// Whether the console's SRAM sets mono sound (`OSGetSoundMode` 0, its flags without
+    /// the stereo bit: `session::Setup::sram_flags`); ssbm-rs's console, a replay's
+    /// included, is in stereo.
+    pub mono: bool,
     /// Presentation output, not state: when the presentation turns it on, each frame's mix
     /// and each ARAM write is recorded here for it to mix (`mix::MixLog`). A clone starts
     /// without it and a restore leaves it alone.

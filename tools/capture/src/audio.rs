@@ -947,13 +947,22 @@ pub fn import_clock(mem1: &[u8], tb: u64) -> Clock {
 /// [`import_clock`] for a run whose disc read at `disc`: a read in flight also takes its
 /// bytes' transfer time, the device command's chunk of them.
 pub fn import_clock_at(mem1: &[u8], tb: u64, disc: DiscSpeed) -> Clock {
+    import_clock_on(mem1, tb, disc, 0)
+}
+
+/// [`import_clock_at`] for a console whose clock was `power_on` time base ticks past
+/// 2000-01-01 at power-on (`session::Setup::power_on`): the times memory holds (the alarms',
+/// the disc driver's) are on the code's time base, which adds it to the trace's.
+pub fn import_clock_on(mem1: &[u8], tb: u64, disc: DiscSpeed, power_on: u64) -> Clock {
     let m = Mem(mem1);
-    let offset = m.u64(SYSTEM_TIME_OFFSET);
-    let last_frame = m.u64(sym("__AXLocalProfile"));
+    let offset = m.u64(SYSTEM_TIME_OFFSET).wrapping_add(power_on);
+    // `axFrameStart`, from `OSGetTime`.
+    let last_frame = m.u64(sym("__AXLocalProfile")).wrapping_sub(power_on);
     let alarm = sym("lb_804329F0") + 0x50;
     let next_alarm = m.u64(alarm + 8).wrapping_sub(offset);
     let period = m.u64(alarm + 0x18);
     let mut c = Clock::new(tb, last_frame + AUDIO_FRAME, next_alarm, period);
+    c.tb_power_on = power_on;
     // HSD's frame buffers (`HSD_VIData.xfb`, `HSD_VIXFBDrawDispStatus`): copied frames waiting
     // to show, and the one showing. A tick's end comes before its round's copy, so a buffer
     // can be free.

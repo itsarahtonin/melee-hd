@@ -440,6 +440,15 @@ pub const FLAT_ZONE: Game = Game {
     replay: Replay::Oracle("stage-flat-zone"),
 };
 
+/// Poké Floats' oracle match: the floats draw with the toon texture their render callback
+/// sets around their draw (`fn_802130D0`), an image in the executable (`grPu_803E7620`).
+pub const POKE_FLOATS: Game = Game {
+    stage: "Poké Floats",
+    name: "stage-poke-floats",
+    players: "Ness vs Yoshi (oracle match)",
+    replay: Replay::Oracle("stage-poke-floats"),
+};
+
 pub const SHEIK_FOX_FOD: Game = Game {
     stage: "Fountain of Dreams",
     name: "sheik-fox-fod",

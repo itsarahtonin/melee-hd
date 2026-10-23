@@ -207,14 +207,16 @@ pub(crate) struct Imported {
 }
 
 /// Imports the state memory holds at the end of a trace tick (`image`), with the audio
-/// timeline at the tick's time base. Memory doesn't say which DSP model ran or how fast the
-/// disc read: `dsp` and `disc_speed` do.
+/// timeline at the tick's time base. Memory doesn't say which DSP model ran, how fast the
+/// disc read or what the console's clock was at power-on: `dsp`, `disc_speed` and
+/// `power_on` (0 but in a session that sets it) do.
 pub(crate) fn import_tick(
     image: &Image,
     index: &DiscIndex,
     disc: &Disc,
     dsp: melee_sim::audio::dsp::DspModel,
     disc_speed: DiscSpeed,
+    power_on: u64,
 ) -> Result<Imported, String> {
     let mut data = Archives::default();
     let loaded = find_archives_in(index, &image.mem1, &mut data);
@@ -244,10 +246,11 @@ pub(crate) fn import_tick(
         imp.match_state();
         imp.display();
         if let Some(tb) = image.tb {
-            imp.game.audio.clock = Some(melee_capture::audio::import_clock_at(
+            imp.game.audio.clock = Some(melee_capture::audio::import_clock_on(
                 &image.mem1,
                 tb,
                 disc_speed,
+                power_on,
             ));
         }
         (imp.game, imp.maps, imp.unhandled)
@@ -406,9 +409,13 @@ fn stadium_buffer(image: &Image) -> u32 {
 }
 
 /// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
-/// one tick with the playback's frame count at the replay's first frame.
+/// one tick with the playback's frame count at the replay's first frame, or still a frame
+/// before it when the game clock didn't come due (a slowed game's first tick runs no logic).
 fn is_first_tick(image: &Image) -> bool {
-    image.u32(sym("gm_80479D58")) == 1 && image.u32(0x804D_6CF4) as i32 == FIRST_FRAME
+    let scene = sym("gm_80479D58");
+    let frame = image.u32(0x804D_6CF4) as i32;
+    image.u32(scene) == 1
+        && (frame == FIRST_FRAME || (frame == FIRST_FRAME - 1 && image.u32(scene + 8) == 0))
 }
 
 pub fn diff(args: &[&str]) -> ExitCode {
@@ -766,6 +773,7 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 &disc,
                 settings.dsp,
                 settings.disc,
+                0,
             ) {
                 Ok(v) => v,
                 Err(e) => {

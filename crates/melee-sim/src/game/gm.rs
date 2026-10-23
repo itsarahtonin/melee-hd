@@ -13,6 +13,7 @@ pub mod pause;
 pub mod progressive;
 pub mod results;
 pub mod scene;
+pub mod stamina;
 pub mod title;
 pub mod trophies;
 pub mod unlocks;
@@ -33,6 +34,7 @@ pub const GM_DEBUG_VS: u8 = 14;
 pub const GM_TARGET_TEST: u8 = 15;
 pub const GM_SUPER_SUDDEN_DEATH_VS: u8 = 16;
 pub const GM_CHALLENGER_APPROACH: u8 = 20;
+pub const GM_STAMINA_VS: u8 = 31;
 pub const GM_10MAN_VS: u8 = 33;
 pub const GM_CRUEL_VS: u8 = 38;
 pub const GM_EVENT: u8 = 43;
@@ -61,6 +63,8 @@ pub struct Globals {
     pub pause: pause::PauseScreen,
     /// What the save data has unlocked, which the stage's music choice reads.
     pub unlocks: Unlocks,
+    /// Stamina Mode's statics (`gmstamina.c`).
+    pub stamina: stamina::Stamina,
     /// Whether the trophies' data archive is loaded (`_Toy_sbss_804D6ED0` isn't null): the
     /// first stage load of a session loads it.
     pub trophy_data: bool,
@@ -345,4 +349,29 @@ pub const fn language_setting_is_us() -> bool {
 #[doc(alias = "gm_8016B3A0")]
 pub fn is_super_sudden_death(game: &Game) -> bool {
     game.game_mode == GM_SUPER_SUDDEN_DEATH_VS
+}
+
+/// The fixed camera, `gm_80165290`: Fixed-Camera Mode's unpause hook
+/// (`StartMeleeRules::on_unpause_override`), which the match's start also calls.
+pub const FIXED_CAMERA: u32 = 0x8016_5290;
+
+/// The game modes' functions the match calls by address: the rules' hooks.
+pub fn call(
+    r: &mut super::state::Running,
+    f: u32,
+    args: &[super::code::Val],
+) -> Option<super::code::Val> {
+    match f {
+        FIXED_CAMERA => {
+            fixed_camera(r);
+            Some(super::code::Val::None)
+        }
+        _ => stamina::call(r, f, args),
+    }
+}
+
+/// `gm_80165290`: the camera fixed (`Camera_SetModeToFixed`), whoever unpaused.
+#[doc(alias = "gm_80165290")]
+pub fn fixed_camera(r: &mut super::state::Running) {
+    super::camera::set_fixed(&mut r.game.camera.cam);
 }

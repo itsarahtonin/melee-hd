@@ -9,7 +9,8 @@
 use std::path::Path;
 use std::time::{Duration, Instant};
 
-use melee_sim::game::roster;
+use melee_sim::game::gm::vs_mode::Special;
+use melee_sim::game::{roster, special_audit};
 
 use crate::jit::Timing;
 use crate::pacing::Mode;
@@ -30,6 +31,9 @@ pub struct Choice {
     /// The item frequency and switch, of which the match gets the kinds offered for its stage
     /// and characters (`items`).
     pub items: items::Switch,
+    /// The Special Melee mode whose rules the match plays by, of those offered
+    /// ([`special_refusal`]); none, VS mode's.
+    pub special: Option<Special>,
 }
 
 impl Choice {
@@ -63,7 +67,9 @@ impl Choice {
             Some(s) => s.refusal(&characters),
             None => Some("Pick a stage.".into()),
         };
-        stage.or_else(|| self.cpu_refusal(&self.items().kinds))
+        stage
+            .or_else(|| self.cpu_refusal(&self.items().kinds))
+            .or_else(|| self.special.and_then(special_refusal))
     }
 
     /// Why the CPU audit refuses the match with the item kinds it gets.
@@ -83,6 +89,21 @@ impl Choice {
             })
             .collect()
     }
+}
+
+/// Why a Special Melee mode isn't offered: what its audit finds a match with its rules reaches
+/// unported (`special_audit::missing`).
+pub fn special_refusal(mode: Special) -> Option<String> {
+    let gaps = special_audit::missing(mode);
+    if gaps.is_empty() {
+        return None;
+    }
+    let whats: Vec<&str> = gaps.iter().map(|g| g.what).collect();
+    Some(format!(
+        "{} isn't ported yet: {}.",
+        mode.name(),
+        whats.join("; ")
+    ))
 }
 
 /// The widest margin the launcher and the command line take, in milliseconds.
@@ -153,6 +174,7 @@ impl Form {
                 stocks,
                 minutes,
                 items: items::Switch::default(),
+                special: None,
             },
             message: None,
             fullscreen,
@@ -216,6 +238,7 @@ impl Form {
             self.replays
         );
         text += &c.items.save();
+        text += &format!("special = {}\n", c.special.map_or("none", Special::key));
         text
     }
 
@@ -310,6 +333,9 @@ impl Form {
                     _ => {}
                 },
                 "replays" if !given.replays => self.replays = v.to_owned(),
+                "special" => {
+                    c.special = Special::from_key(v).filter(|&m| special_audit::offered(m));
+                }
                 k => {
                     c.items.restore(k, v);
                 }
@@ -388,6 +414,34 @@ impl Form {
                             ui.end_row();
                             ui.label("Minutes");
                             ui.add(egui::DragValue::new(&mut c.minutes).range(0..=99));
+                            ui.end_row();
+                            ui.label("Special Melee");
+                            egui::ComboBox::from_id_salt("special")
+                                .selected_text(c.special.map_or("Off", Special::name))
+                                .width(200.0)
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(&mut c.special, None, "Off");
+                                    for m in Special::ALL {
+                                        match special_refusal(m) {
+                                            None => {
+                                                ui.selectable_value(
+                                                    &mut c.special,
+                                                    Some(m),
+                                                    m.name(),
+                                                );
+                                            }
+                                            Some(why) => {
+                                                let label = format!("{}: not ported yet", m.name());
+                                                let b = egui::Button::selectable(
+                                                    c.special == Some(m),
+                                                    label,
+                                                );
+                                                ui.add_enabled(false, b)
+                                                    .on_disabled_hover_text(why);
+                                            }
+                                        }
+                                    }
+                                });
                             ui.end_row();
                             ui.label("Items");
                             let freq = &mut c.items.freq;
@@ -958,6 +1012,7 @@ mod tests {
                             stocks: 4,
                             minutes: 8,
                             items,
+                            special: None,
                         };
                         let m = base.items();
                         let stage_refusal = s.refusal(&base.characters());
@@ -1045,6 +1100,7 @@ mod tests {
             stocks: 4,
             minutes: 8,
             items: items::Switch::default(),
+            special: None,
         };
         assert_eq!(c.player_count(), 3);
         assert_eq!(c.ports(), vec![(fox, 0), (0xFF, 0), (marth, 0), (fox, 1)]);
@@ -1072,6 +1128,10 @@ mod tests {
         form.choice.items.set(0x06, false);
         form.choice.items.set(0x1C, false);
         form.choice.cpus = [Some(9), Some(7), None, Some(1)];
+        form.choice.special = Special::ALL
+            .into_iter()
+            .rev()
+            .find(|&m| special_audit::offered(m));
         form
     }
 
@@ -1150,8 +1210,27 @@ mod tests {
     #[test]
     fn an_unreadable_last_match_changes_nothing() {
         let mut form = Form::new(4, 8, false, Aspect::GAME);
-        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\nitems = lots\nitem-switch-off = everything\np2-cpu = 10\np3-cpu = human\n";
+        let text = "p1 = nobody\nstage = nowhere\nstocks = 300\naspect = 1:2\n\u{0}garbage\nfullscreen = maybe\npresent\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nscale = 9\nmsaa = 2\nitems = lots\nitem-switch-off = everything\np2-cpu = 10\np3-cpu = human\nspecial = sideways\n";
         form.restore(text, &Given::default());
         assert!(same(&form, &Form::new(4, 8, false, Aspect::GAME)));
+    }
+
+    /// Each Special Melee mode the audit offers comes back with the last match and starts;
+    /// one it doesn't is refused, and comes back as none.
+    #[test]
+    fn special_melee_is_offered_by_its_audit() {
+        for m in Special::ALL {
+            let mut was = picked();
+            was.choice.special = Some(m);
+            let mut form = Form::new(4, 8, false, Aspect::GAME);
+            form.restore(&was.save(), &Given::default());
+            let offered = special_audit::offered(m);
+            assert_eq!(form.choice.special, offered.then_some(m), "{}", m.name());
+            let mut c = picked().choice;
+            c.cpus = [None; 4];
+            c.special = Some(m);
+            assert_eq!(c.refusal().is_none(), offered, "{}", m.name());
+            assert_eq!(special_refusal(m).is_none(), offered, "{}", m.name());
+        }
     }
 }

@@ -8,12 +8,11 @@ use gekko_fp as fp;
 use super::super::code::unported_call;
 use super::super::state::Game;
 use super::super::structs::MatchEnd;
+use super::GM_STAMINA_VS;
 use crate::fpu::reg;
 
 /// `Gm_PKind_NA`: no player in the slot.
 const PKIND_NA: u8 = 3;
-/// `GM_STAMINA_VS`.
-const GM_STAMINA_VS: u8 = 31;
 /// `OUTCOME_TIMEOUT`, `OUTCOME_1P_GAME_OVER`.
 const OUTCOME_TIMEOUT: u8 = 1;
 const OUTCOME_1P_GAME_OVER: u8 = 4;

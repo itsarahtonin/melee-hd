@@ -40,6 +40,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::playback::RECORD_FRAME_START_PROC => super::record::frame_start_proc(game.game),
         super::playback::RECORD_ITEMS_PROC => super::record::items_proc(game.game),
         super::gm::vs::PROC => game.vs_proc(),
+        super::gm::stamina::PROC => game.game.stamina_proc(),
         crate::lb::bgflash::PROC => game.game.bgflash.proc(),
         crate::lb::sound_obj::PROC => game.sound_object_proc(gobj),
         crate::lb::bgflash::OVERLAY_PROC => game.bg_flash_proc(),
@@ -466,6 +467,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ef::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::gm::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::fox::call(r, f, args) {

@@ -824,6 +824,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** the port's `fly_platform`, `proc_flyer` and `proc_relay`.
 
+### Big Blue's flying platforms keep their items' GObjs, which nothing reads or clears
+
+- **Where:** `grBigBlue_801E8A1C` (a flying platform's item), `grBigBlue_801E6C60` (its placing), `crates/melee-sim/src/game/gr/bigblue.rs` (`platform_item`, `place_platform`).
+- **Defect:** the platform stores the item `it_8026BE84` made in its `x50` (an `Item_GObj*` as an integer), which no code reads; it's cleared only when the platform is placed again, so once the item is picked up, used up or gone it holds a freed GObj's address, which a later object may take.
+- **Effect:** none observable: nothing reads `x50`.
+- **melee-hd:** modeled: `x50` holds the item's handle, which the comparer pairs with the original's address.
+- **Fix:** leave the field out, or clear it when the item goes.
+- **Fix impact:** none.
+- **Source:** the port's `platform_item`; the decompilation's `grBigBlue_801E8A1C` (`data[idx].x50 = (s32) it_8026BE84(&spawn)`) and `grBigBlue_801E6C60` (`data[i].x50 = 0`), the only other writes, and no read.
+
 ### A collision's setup leaves two flag bytes' bits as the heap held them
 
 - **Where:** `mpColl_80041EE4` (a collision's setup), `crates/melee-sim/src/mp/coll/mod.rs` (`X34Flags`, `X35Flags`).

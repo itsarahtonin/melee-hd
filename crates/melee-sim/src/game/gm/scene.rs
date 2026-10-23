@@ -157,6 +157,7 @@ pub fn tick(r: &mut Running) -> bool {
 
 /// [`tick`] with the pad alarm's polls read from `polls`, each the controllers' next read.
 pub fn tick_polls(r: &mut Running, polls: &mut dyn FnMut() -> PadData) -> bool {
+    close_sound_log(r);
     r.game.audio.tick_start(r.data);
     crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 1, polls);
@@ -166,6 +167,28 @@ pub fn tick_polls(r: &mut Running, polls: &mut dyn FnMut() -> PadData) -> bool {
     crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 0, polls);
     ended
+}
+
+/// The end of the last tick that playback's codes run in a replay (`HandleFrameSoundLog`, at
+/// `gm_801A4D34`'s loop end when the scene goes on): the frame's sound log closed, stopping
+/// what a frame they take for played again no longer plays (`playback::SoundLog`).
+fn close_sound_log(r: &mut Running) {
+    let Some(frame) = r
+        .game
+        .playback
+        .as_mut()
+        .and_then(|p| p.sounds.closing.take())
+    else {
+        return;
+    };
+    let stops = r
+        .game
+        .playback
+        .as_mut()
+        .map_or_else(Vec::new, |p| p.sounds.tick_end(frame));
+    for h in stops {
+        r.sfx_stop(h);
+    }
 }
 
 /// Controllers at rest, as a replay run's report.
@@ -269,7 +292,16 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     if sc.unk_10.unk_38_0 && g.pacing.due(0) && sc.unk_8 != u32::MAX - 1 {
         sc.unk_8 = sc.unk_8.wrapping_add(1);
     }
-    sc.unk_C != 0
+    if sc.unk_C != 0 {
+        return true;
+    }
+    // In a replay, playback's codes close the tick's sound log next (`HandleFrameSoundLog`),
+    // after the point ssbm-rs's traces sample: the next tick's start takes it up.
+    let frame = (sc.unk_8 as i32).wrapping_sub(1);
+    if let Some(p) = g.playback.as_mut() {
+        p.sounds.closing = Some(frame);
+    }
+    false
 }
 
 /// Runs a frame of the scene loop with one controller poll: the pad library queues the poll
@@ -326,7 +358,20 @@ fn step_tick_polls(
     } else {
         Requests::default()
     };
-    r.game.pacing.update();
+    // The round's pad check (`lb_80019894`) takes up a new game speed: once a round, before
+    // its first tick.
+    let round_start = r
+        .game
+        .audio
+        .clock
+        .as_ref()
+        .is_none_or(|c| c.ticks_left == 0);
+    if round_start
+        && let Some(tick) = r.game.pacing.update()
+        && let Some(c) = r.game.audio.clock.as_mut()
+    {
+        c.new_alarm_period = Some(tick as u64);
+    }
     if r.game.pads.reset_switch() {
         return (Tick { pads, ended: true }, false);
     }

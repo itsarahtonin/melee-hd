@@ -216,11 +216,8 @@ impl Running<'_> {
             }
             self.game.player_mut(slot).set_ext_u32(0xD10, 0);
         }
-        // `ftCo_800C8C84`.
-        let fp = &self.game.fighters[f.0];
-        if !fp.stamina_dead && fp.x2225_b7 && fp.dmg.x18F0 == 0 {
-            unported_call("ftCo_800C8C84 (a stamina fighter's knockout)");
-        }
+        let gobj = self.game.fighters[f.0].gobj.expect("a fighter's GObj");
+        self.stamina_check(gobj);
     }
 
     /// A grounded fighter forgets who last hit it, `ftCommon_800804FC`.

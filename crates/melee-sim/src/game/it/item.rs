@@ -419,7 +419,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xD84 = a.i32(data, attr::X80);
     super::hitbox::clear_hit_ids(r.game, gobj);
     super::hitbox::clear_hit_ids2(r.game, gobj);
-    lib2725::clear_attack_id(r.game, gobj);
+    lib2725::stop_holding_still(r.game, gobj);
     let parent = spawn.x0_parent_gobj;
     let parent_is_fighter = is_fighter(r.game, parent);
     let ip = item_mut(r.game, gobj);
@@ -812,6 +812,29 @@ pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     create(r, spawn)
 }
 
+/// A drop by kind's spawn of `kind` at `pos`: no parent, facing left, still, with a first
+/// collision (the inline `Item_InitSpawnPosition` and `Item_InitSpawnCommonFields` of the
+/// items' spawns by position), its depth put on the plane when `on_plane`.
+pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
+    let mut spawn = SpawnItem {
+        kind,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    if on_plane {
+        spawn.prev_pos.z = 0.0;
+    }
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = -1.0;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = None;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    spawn
+}
+
 /// Makes an item on the ground with `x18` set, `Item_80268B9C`.
 #[doc(alias = "Item_80268B9C")]
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {
@@ -949,6 +972,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     lib26b1::flush_effects(r, gobj);
     if super::item(r.game, gobj).xDC8_word.flags.x2 {
         lib26b1::hold_flags_off(r.game, gobj);
+        lib2725::stop_holding_still(r.game, gobj);
     }
     if flags & MODEL_UPDATE != 0 {
         lib2725::stop_spin(r.game, data, gobj);

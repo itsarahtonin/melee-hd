@@ -58,6 +58,7 @@ pub mod rebirth;
 pub mod shield_break;
 pub mod song;
 pub mod squat;
+pub mod stamina;
 pub mod swing;
 pub mod throw;
 pub mod warpstar;
