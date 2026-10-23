@@ -130,7 +130,34 @@ fn a_pulled_card_comes_back() {
     assert!(out.contains("872 ticks compared, no difference"), "{out}");
 }
 
-/// The same with the card left in: the scene doesn't see it go.
+/// A card another game's file leaves too little room on, and a broken one: A goes on without
+/// saving; to the traces' end. From tick 896 the ticks start right after the pad alarm, whose
+/// handler's probes of the card slots take 56 ticks with the card in.
+#[test]
+fn full_and_broken_cards_go_on_without_saving() {
+    for name in ["full", "broken"] {
+        let Some(out) = card_session(name, &["--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains("1173 ticks compared, no difference"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// No card: the scene says so, and A goes on without saving; to the trace's end. Tick 444's
+/// retrace handler ends just as an audio DMA block does, whose frame runs before the wake's
+/// reads.
+#[test]
+fn no_card_goes_on_without_saving() {
+    let Some(out) = card_session("nocard", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1190 ticks compared, no difference"), "{out}");
+}
+
+/// The pulled card's session with the card left in: the scene doesn't see it go.
 #[test]
 fn a_pulled_card_must_be_pulled() {
     let Some(out) = card_session("removed", &[]) else {
@@ -201,33 +228,37 @@ fn another_recording_is_refused() {
 
 #[test]
 fn taken_up_match_plays_on_with_the_reads() {
-    let Some(out) = session(&["--from", MATCH_TICK, "--ignore", "timeline"]) else {
+    let Some(out) = session(&["--from", MATCH_TICK]) else {
         return;
     };
     assert!(
         out.contains("trace tick 3300 imported and compared back: 0 differences"),
         "{out}"
     );
-    // 234 ticks of the match with the players' reads compare clean; tick 3535's audio frame
-    // is the open difference docs/oracle.md ("Sessions") describes.
+    // 463 ticks of the match with the players' reads compare clean, each tick's end on the
+    // time base included (every one 56 ticks past where a replay's would end, the pad alarm's
+    // card probes); tick 3764's new hookshot links hold the menus' heap bytes, the open
+    // difference docs/oracle.md ("Sessions") describes.
     assert!(
-        out.contains(
-            "235 ticks compared; tick 3535 differs in 8 places, first: audio: AX voice 56"
-        ),
+        out.contains("464 ticks compared; tick 3764 differs"),
         "{out}"
     );
 }
 
+/// Taken up from tick 3530: a tick's end comes before its round's copy, so a frame buffer is
+/// free there, and tick 3531 starts after the pad alarm without waiting for the retrace that
+/// comes after it.
+#[test]
+fn taken_up_match_finds_a_free_frame_buffer() {
+    let Some(out) = session(&["--from", "3530", "--ticks", "10"]) else {
+        return;
+    };
+    assert!(out.contains("10 ticks compared, no difference"), "{out}");
+}
+
 #[test]
 fn taken_up_match_catches_a_changed_tick_count() {
-    let Some(out) = session(&[
-        "--from",
-        MATCH_TICK,
-        "--mutate",
-        "scene-ticks",
-        "--ignore",
-        "timeline",
-    ]) else {
+    let Some(out) = session(&["--from", MATCH_TICK, "--mutate", "scene-ticks"]) else {
         return;
     };
     assert!(
@@ -238,9 +269,7 @@ fn taken_up_match_catches_a_changed_tick_count() {
 
 #[test]
 fn taken_up_match_catches_a_changed_seed() {
-    let Some(out) = session(&[
-        "--from", MATCH_TICK, "--mutate", "seed", "--ignore", "timeline",
-    ]) else {
+    let Some(out) = session(&["--from", MATCH_TICK, "--mutate", "seed"]) else {
         return;
     };
     assert!(
@@ -253,14 +282,7 @@ fn taken_up_match_catches_a_changed_seed() {
 /// ended on read 3770, and each tick of the match takes one.
 #[test]
 fn taken_up_match_catches_a_changed_read() {
-    let Some(out) = session(&[
-        "--from",
-        MATCH_TICK,
-        "--mutate",
-        "read=3780",
-        "--ignore",
-        "timeline",
-    ]) else {
+    let Some(out) = session(&["--from", MATCH_TICK, "--mutate", "read=3780"]) else {
         return;
     };
     assert!(
