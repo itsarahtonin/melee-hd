@@ -2450,6 +2450,36 @@ pub fn cpu_approach_set() -> Vec<Match> {
         .collect()
 }
 
+/// The Big Blue items set: the flying platforms' items (`grBigBlue_801E8A1C`, made by kind
+/// with `it_8026BE84`), with only the five kinds they carry on (the Party Ball, Beam Sword,
+/// Super Scope, Fire Flower and Bunny Hood) at frequency low, so the platforms' items are many
+/// of the match's: two humans (`items-platforms-big-blue`), and a human against a level 9 CPU,
+/// which goes for them (`items-platforms-cpu-big-blue`). Eight-minute time matches, as the
+/// stages set's moving stages have, seeds `1F0F26xx`.
+pub fn bigblue_items_set() -> Vec<Match> {
+    const KINDS: [u8; 5] = [4, 12, 21, 25, 31];
+    const FREQ_LOW: i8 = 1;
+    let players = [
+        ("items-platforms-big-blue", vec![p(MARIO, 0), p(SHEIK, 0)]),
+        (
+            "items-platforms-cpu-big-blue",
+            vec![p(MARTH, 0), cpu(CAPTAIN, 0, 9)],
+        ),
+    ];
+    players
+        .into_iter()
+        .enumerate()
+        .map(|(i, (name, players))| Match {
+            name: Cow::Borrowed(name),
+            stage: BIG_BLUE,
+            players: Cow::Owned(players),
+            seed: 0x1F0F_2601 + i as u32,
+            rules: Rules::Time { time_limit: 480 },
+            items: Items::only(FREQ_LOW, &KINDS),
+        })
+        .collect()
+}
+
 /// A set's matches.
 pub type Set = fn() -> Vec<Match>;
 
@@ -2476,6 +2506,7 @@ pub const SETS: &[(&str, Set)] = &[
     ("starfox", starfox_set),
     ("ics", ics_set),
     ("own-items", fighter_items_set),
+    ("bigblue-items", bigblue_items_set),
 ];
 
 /// The matches `names` pick from the oracle sets: whole sets by name, or single matches; every
