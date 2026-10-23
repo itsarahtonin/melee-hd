@@ -23,8 +23,10 @@ pub struct Slot {
     pub timer: i16,
     /// What it spawned, while that lives.
     pub item: Option<GObjId>,
-    /// The trophy a coin slot holds (`x8`).
-    pub x8: i32,
+    /// The trophy a coin slot holds (`x8`): unknown until written. The slots' setup
+    /// (`grZakoGenerator_801CA67C`) leaves it as the heap block held it, and it's read only
+    /// for a trophy point's slot, which `grZakoGenerator_801CAEB0` writes first (engine.md).
+    pub x8: Option<i32>,
 }
 
 /// The spawner's globals (`lbl_8049F030`).
@@ -118,7 +120,10 @@ pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
                 if left < x && x < right && bottom < y && y < top && (anywhere || off_camera) {
                     let slot = &game.gr.zako.slots.as_ref().unwrap()[idx as usize];
                     if (0xDC..=0xFB).contains(&slot.point) {
-                        if slot.x8 != -1 {
+                        let trophy = slot
+                            .x8
+                            .expect("stale read: a spawner slot's trophy (x8) before it's written");
+                        if trophy != -1 {
                             unimplemented!("the spawner's trophies need the items");
                         }
                     } else if game.gr.zako.spawns.is_some() {
@@ -157,7 +162,7 @@ pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
     for slot in &mut slots[80..] {
         if slot.point == -1 {
             slot.point = point as i16;
-            slot.x8 = trophy;
+            slot.x8 = Some(trophy);
             slot.item = None;
         }
     }

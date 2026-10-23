@@ -11470,3 +11470,5 @@ grBigBlue_801E6360	leaf-check stages: bigblue_callbacks runs it from an empty pr
 grBigBlue_801E855C	leaf-check stages: bigblue_callbacks runs it from an empty process's saved calls and compares the whole state
 grBigBlue_801E9F38	leaf-check stages: bigblue_callbacks runs it from an empty process's saved calls and compares the whole state
 grBigBlue_801EAB4C	leaf-check stages: bigblue_callbacks runs it from an empty process's saved calls and compares the whole state
+db_GetGameLaunchButtonState	melee-oracle session: power-on takes the session's read 0 into db_gameLaunchButtonState, compared with the trace's first tick; --mutate read=0 differs there (tools/oracle/tests/session.rs)
+gmMain_8015FDA4	melee-oracle session: power-on sets DbLevel from the disc's files, compared with the trace's first tick (tools/oracle/tests/session.rs)

@@ -155,7 +155,7 @@ The critical path is 1, 3, then the longest item family, then 15; stages run alo
 ### Not in this sequence
 
 - **Kirby and his copies** came from `feat/kirby` and `feat/kirby-copies`, merged, with his copies' items (kinds 130 to 157); the milestone's "every local replay whose content is ported" counts the 89 Kirby replays.
-- **Modes, menus and the single-player stages.** The milestone's check also asks for clean diffs of every non-VS mode and menu. That is its own sequence of comparable size (885 single-player stage functions, 1,509 in `gm`, 429 in `mn`, the adventure enemies and the hands among the 855 stage and enemy item functions), and it starts with two tasks this plan doesn't take: the session-input diff harness (melee-hd boots and takes an `SSBMINP1` recording's reads, compared every tick with ssbm-rs's trace of the `--inputs` run), then the boot and the title screen through it. The single-player CPU kinds (allies, event behaviors) belong there too.
+- **Modes, menus and the single-player stages.** The milestone's check also asks for clean diffs of every non-VS mode and menu. That is its own sequence of comparable size (885 single-player stage functions, 1,509 in `gm`, 429 in `mn`, the adventure enemies and the hands among the 855 stage and enemy item functions), and it starts with two tasks this plan doesn't take ([milestone 5](milestone-5.md) takes them): the session-input diff harness (melee-hd boots and takes an `SSBMINP1` recording's reads, compared every tick with ssbm-rs's trace of the `--inputs` run), then the boot and the title screen through it. The single-player CPU kinds (allies, event behaviors) belong there too.
 
 ## Before the tasks start
 

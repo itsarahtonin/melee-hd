@@ -525,7 +525,7 @@ impl Importer<'_> {
                             point: self.u16_at(e) as i16,
                             timer: self.u16_at(e + 2) as i16,
                             item: self.import_handle_gobj(item),
-                            x8: cap.u32(e + 8) as i32,
+                            x8: Some(cap.u32(e + 8) as i32),
                         }
                     })
                     .collect()
@@ -1362,13 +1362,13 @@ impl Comparer<'_> {
                     self.check(
                         &format!("zako slot {i}"),
                         "fields",
-                        (o.point, o.timer, o.x8),
-                        (
-                            self.u16(e) as i16,
-                            self.u16(e + 2) as i16,
-                            self.u32(e + 8) as i32,
-                        ),
+                        (o.point, o.timer),
+                        (self.u16(e) as i16, self.u16(e + 2) as i16),
                     );
+                    // The trophy word is unknown until written (`Slot::x8`).
+                    if let Some(x8) = o.x8 {
+                        self.check(&format!("zako slot {i}"), "x8", x8, self.u32(e + 8) as i32);
+                    }
                     // A slot's GObj can be one freed since (a dangling pointer, compared by
                     // address).
                     use melee_sim::game::mirror::Cx;
@@ -1388,7 +1388,10 @@ impl Comparer<'_> {
             u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
         };
         let theirs = winds(word);
-        self.check("lb_804D63A8", "wind sources", &game.gr.winds, &theirs);
+        // By bit pattern: a free source keeps what its block held, NaNs among it.
+        if wind_bits(&game.gr.winds) != wind_bits(&theirs) {
+            self.diff("lb_804D63A8", "wind sources", &game.gr.winds, &theirs);
+        }
         self.check(
             "lb_804D63B4",
             "wind level",
@@ -1785,6 +1788,31 @@ fn winds(word: impl Fn(u32) -> u32) -> melee_sim::lb::wind::Winds {
     w.free = index(word(sym("lb_804D63AC")));
     w.active = index(word(sym("lb_804D63B0")));
     w
+}
+
+/// The wind sources' pool as words, floats as their bits, with its lists.
+fn wind_bits(w: &melee_sim::lb::wind::Winds) -> Vec<u32> {
+    let mut out = Vec::new();
+    for (e, next) in w.entries.iter().zip(&w.next) {
+        out.extend([
+            u32::from_be_bytes([e.kind, e.priority, e.x2 as u8, e.x3 as u8]),
+            e.pos.x.to_bits(),
+            e.pos.y.to_bits(),
+            e.pos.z.to_bits(),
+            e.x10.to_bits(),
+            e.x14.to_bits(),
+            e.x18.to_bits(),
+            e.x1c.to_bits(),
+            e.scale.to_bits(),
+            e.decay.to_bits(),
+            e.frames as u32,
+            e.angle_step.to_bits(),
+            e.age as u32,
+            next.map_or(u32::MAX, u32::from),
+        ]);
+    }
+    out.extend([w.free, w.active].map(|i| i.map_or(u32::MAX, u32::from)));
+    out
 }
 
 fn vec3_at(mem: &dyn Fn(u32) -> u32, a: u32) -> Vec3 {

@@ -50,6 +50,7 @@ use melee_data::disc::Disc;
 use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::code::{Val, stubs};
 use melee_sim::game::playback::FIRST_FRAME;
+use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::{Match, Settings};
 use melee_slippi::Device;
 use melee_slippi::Replay;
@@ -58,7 +59,7 @@ use crate::golden::{self, End, Golden, Identity};
 use crate::trace::{Image, Reader};
 
 /// What a run stopped on.
-enum Stop {
+pub(crate) enum Stop {
     /// The match reached a function no port covers, or another check of the simulation's.
     Seam(String),
     /// The states differ.
@@ -104,7 +105,7 @@ fn name_addresses(text: &str) -> String {
 }
 
 /// The archives loaded in the trace's memory, kept up to date as the match loads more.
-struct Files<'a> {
+pub(crate) struct Files<'a> {
     /// None in a golden check, which compares nothing.
     index: Option<&'a DiscIndex>,
     loaded: Vec<Loaded>,
@@ -113,11 +114,11 @@ struct Files<'a> {
     named: Vec<(String, ArchiveId)>,
     /// The scan's work from the tick before: only the pages the ticks since changed are
     /// scanned again, which finds what a scan of all of memory would.
-    rescan: Rescan,
+    pub(crate) rescan: Rescan,
 }
 
 impl Files<'_> {
-    fn new<'a>(
+    pub(crate) fn new<'a>(
         index: Option<&'a DiscIndex>,
         loaded: Vec<Loaded>,
         named: Vec<(String, ArchiveId)>,
@@ -132,7 +133,12 @@ impl Files<'_> {
 
     /// The archives in memory as the image holds it now, with `check` also scanned whole and
     /// compared (`--check-rescan`).
-    fn refresh(&mut self, image: &mut Image, archives: &mut Archives, check: bool) -> DataMap {
+    pub(crate) fn refresh(
+        &mut self,
+        image: &mut Image,
+        archives: &mut Archives,
+        check: bool,
+    ) -> DataMap {
         let index = self.index.expect("the disc's index");
         let changed = image.take_changed();
         self.rescan.check = check;
@@ -153,16 +159,17 @@ impl Files<'_> {
 
 /// The whole state compared with memory, as the capture checks compare it: the differences,
 /// and the fields code read while they were stale.
-fn compare(
+pub(crate) fn compare(
     mem: &[u8],
     data: &DataMap,
-    m: &Match,
+    game: &Game,
+    archives: &Archives,
     maps: Maps,
     past: &PastAddrs,
 ) -> (Vec<String>, Vec<String>) {
     let t0 = Instant::now();
-    let mut cmp = Comparer::new(mem, data, &m.game, maps);
-    cmp.archives = Some(&m.data);
+    let mut cmp = Comparer::new(mem, data, game, maps);
+    cmp.archives = Some(archives);
     cmp.past = Some(past);
     cmp.world();
     cmp.stage();
@@ -180,6 +187,98 @@ fn compare(
         t.add(&t.heap, t1.elapsed());
     });
     (cmp.diffs, cmp.stale_reads)
+}
+
+/// A trace tick's state taken up through `melee-capture`'s importer, as `--from` takes it.
+pub(crate) struct Imported {
+    pub(crate) game: Game,
+    pub(crate) data: Archives,
+    /// The archives in memory, as the import found them.
+    pub(crate) map: DataMap,
+    pub(crate) loaded: Vec<Loaded>,
+    /// The import's dangling slots (`Maps::dangling_gobjs` and the rest), which every tick
+    /// compares by the original's address.
+    pub(crate) dangling: Maps,
+    /// How many pointers the importer doesn't model.
+    pub(crate) unhandled: usize,
+}
+
+/// Imports the state memory holds at the end of a trace tick (`image`), with the audio
+/// timeline at the tick's time base. Memory doesn't say which DSP model ran or how fast the
+/// disc read: `dsp` and `disc_speed` do.
+pub(crate) fn import_tick(
+    image: &Image,
+    index: &DiscIndex,
+    disc: &Disc,
+    dsp: melee_sim::audio::dsp::DspModel,
+    disc_speed: DiscSpeed,
+) -> Result<Imported, String> {
+    let mut data = Archives::default();
+    let loaded = find_archives_in(index, &image.mem1, &mut data);
+    let bank = melee_capture::audio::find_bank(&image.mem1, &mut data);
+    let map = DataMap {
+        loaded: loaded.clone(),
+    };
+    let cap = Capture {
+        call: ssbm_rt::capture::Call {
+            addr: 0,
+            mutated: false,
+            stub: None,
+            regs: ssbm_rt::Regs::default().snapshot(),
+            mem1: image.mem1.clone(),
+            locked: Vec::new(),
+        },
+    };
+    let imported = catch_unwind(AssertUnwindSafe(|| {
+        let mut imp = Importer::new(&cap, &map).with_archives(&data);
+        imp.world();
+        imp.stage();
+        imp.ids();
+        imp.items();
+        imp.audio(bank);
+        imp.game.audio.dsp = dsp;
+        imp.game.audio.disc = disc_speed;
+        imp.match_state();
+        imp.display();
+        if let Some(tb) = image.tb {
+            imp.game.audio.clock = Some(melee_capture::audio::import_clock_at(
+                &image.mem1,
+                tb,
+                disc_speed,
+            ));
+        }
+        (imp.game, imp.maps, imp.unhandled)
+    }));
+    let (mut game, maps, unhandled) = imported.map_err(|p| panic_text(&p))?;
+    // The disc files the audio driver's device commands read: the music stream's and the
+    // sound banks, as a started match has them.
+    if game.audio.clock.is_some() {
+        melee_capture::audio::load_stream(&mut game.audio, disc, &mut data);
+        for name in melee_sim::lb::audio::SSM_NAMES {
+            let path = format!("audio/us/{name}");
+            let e = disc
+                .entrynum(&path)
+                .unwrap_or_else(|e| panic!("{path}: {e}"));
+            melee_capture::audio::load_disc_file(&mut game.audio, disc, &mut data, e);
+        }
+    }
+    Ok(Imported {
+        game,
+        data,
+        map,
+        loaded,
+        dangling: Maps {
+            dangling_gobjs: maps.dangling_gobjs,
+            dangling_jobjs: maps.dangling_jobjs,
+            dangling_fighters: maps.dangling_fighters,
+            dangling_items: maps.dangling_items,
+            dangling_boxes: maps.dangling_boxes,
+            dangling_bone_tables: maps.dangling_bone_tables,
+            dangling_queued: maps.dangling_queued,
+            ..Maps::default()
+        },
+        unhandled: unhandled.len(),
+    })
 }
 
 /// Where a run's time went, for `--times`.
@@ -233,15 +332,15 @@ thread_local! {
 
 /// The stale reads a run met: the first tick of each, in order.
 #[derive(Default)]
-struct StaleReads {
-    seen: Vec<(u32, String)>,
-    counts: (u32, u32),
+pub(crate) struct StaleReads {
+    pub(crate) seen: Vec<(u32, String)>,
+    pub(crate) counts: (u32, u32),
 }
 
 impl StaleReads {
     /// Notes the stale reads the state shows after tick `at`.
-    fn note(&mut self, at: u32, m: &Match, fields: Vec<String>) {
-        let counts = (m.game.objs.stale_reads, m.game.coll.stale_reads);
+    pub(crate) fn note(&mut self, at: u32, game: &Game, fields: Vec<String>) {
+        let counts = (game.objs.stale_reads, game.coll.stale_reads);
         if counts.0 > self.counts.0 {
             self.seen
                 .push((at, "HSD's objects (`Objects::stale_reads`)".into()));
@@ -259,7 +358,7 @@ impl StaleReads {
     }
 
     /// Prints them, each tick named by `tick`, and returns them as a golden keeps them.
-    fn report(&self, tick: &dyn Fn(u32) -> String) -> Vec<String> {
+    pub(crate) fn report(&self, tick: &dyn Fn(u32) -> String) -> Vec<String> {
         if self.seen.is_empty() {
             println!("no stale reads");
         }
@@ -648,88 +747,43 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 eprintln!("{trace_path}: no tick {n} with memory");
                 return ExitCode::FAILURE;
             }
-            let mut data = Archives::default();
-            let loaded = find_archives_in(index.as_ref().unwrap(), &image.mem1, &mut data);
-            let bank = melee_capture::audio::find_bank(&image.mem1, &mut data);
-            let map = DataMap {
-                loaded: loaded.clone(),
-            };
-            let cap = Capture {
-                call: ssbm_rt::capture::Call {
-                    addr: 0,
-                    mutated: false,
-                    stub: None,
-                    regs: ssbm_rt::Regs::default().snapshot(),
-                    mem1: image.mem1.clone(),
-                    locked: Vec::new(),
-                },
-            };
-            let imported = catch_unwind(AssertUnwindSafe(|| {
-                let mut imp = Importer::new(&cap, &map).with_archives(&data);
-                imp.world();
-                imp.stage();
-                imp.ids();
-                imp.items();
-                imp.audio(bank);
-                // Memory doesn't say which DSP model ran: the replay's settings do.
-                imp.game.audio.dsp = settings.dsp;
-                imp.game.audio.disc = settings.disc;
-                imp.match_state();
-                imp.display();
-                if let Some(tb) = image.tb {
-                    imp.game.audio.clock = Some(melee_capture::audio::import_clock_at(
-                        &image.mem1,
-                        tb,
-                        settings.disc,
-                    ));
-                }
-                (imp.game, imp.maps, imp.unhandled)
-            }));
-            let (mut game, maps, unhandled) = match imported {
+            let Imported {
+                game,
+                data,
+                map,
+                loaded,
+                dangling: kept,
+                unhandled,
+            } = match import_tick(
+                &image,
+                index.as_ref().unwrap(),
+                &disc,
+                settings.dsp,
+                settings.disc,
+            ) {
                 Ok(v) => v,
-                Err(p) => {
-                    println!("importing trace tick {n}: {}", panic_text(&p));
+                Err(e) => {
+                    println!("importing trace tick {n}: {e}");
                     return ExitCode::FAILURE;
                 }
             };
-            // The disc files the audio driver's device commands read: the music stream's
-            // and the sound banks, as a started match has them.
-            if game.audio.clock.is_some() {
-                melee_capture::audio::load_stream(&mut game.audio, &disc, &mut data);
-                for name in melee_sim::lb::audio::SSM_NAMES {
-                    let path = format!("audio/us/{name}");
-                    let e = disc
-                        .entrynum(&path)
-                        .unwrap_or_else(|e| panic!("{path}: {e}"));
-                    melee_capture::audio::load_disc_file(&mut game.audio, &disc, &mut data, e);
-                }
-            }
             if game.playback.is_none() {
                 eprintln!("{trace_path}: tick {n} isn't in a replay's match");
                 return ExitCode::FAILURE;
             }
             println!(
-                "took up trace tick {n}: {} GObjs, {} pointers the importer doesn't model",
+                "took up trace tick {n}: {} GObjs, {unhandled} pointers the importer doesn't model",
                 game.world.gobjs.used(),
-                unhandled.len()
             );
-            dangling = Maps {
-                dangling_gobjs: maps.dangling_gobjs,
-                dangling_jobjs: maps.dangling_jobjs,
-                dangling_fighters: maps.dangling_fighters,
-                dangling_items: maps.dangling_items,
-                dangling_boxes: maps.dangling_boxes,
-                dangling_bone_tables: maps.dangling_bone_tables,
-                dangling_queued: maps.dangling_queued,
-                ..Maps::default()
-            };
+            dangling = kept;
             let m = Match::resume(game, data);
             // The import compared back with the memory it came from: what the comparison can
             // tell apart before anything runs.
             let (back, _) = compare(
                 &image.mem1,
                 &map,
-                &m,
+                &m.game,
+                &m.data,
                 Maps::default(),
                 &PastAddrs::default(),
             );
@@ -759,7 +813,8 @@ pub fn diff(args: &[&str]) -> ExitCode {
                 let (d, _) = compare(
                     &image.mem1,
                     &data,
-                    &m,
+                    &m.game,
+                    &m.data,
                     Maps::default(),
                     &PastAddrs::default(),
                 );
@@ -870,8 +925,15 @@ pub fn diff(args: &[&str]) -> ExitCode {
         // Objects pair afresh each tick, by where they're reached from: the heap reuses blocks.
         // The import's dangling slots compare by address throughout.
         past.note(&m.game);
-        let (mut diffs, reads) = compare(&image.mem1, &data, &m, dangling.clone(), &past);
-        stale.note(tick, &m, reads);
+        let (mut diffs, reads) = compare(
+            &image.mem1,
+            &data,
+            &m.game,
+            &m.data,
+            dangling.clone(),
+            &past,
+        );
+        stale.note(tick, &m.game, reads);
         diffs.retain(|d| !ignore.iter().any(|p| d.contains(p.as_str())));
         compared += 1;
         if !diffs.is_empty() {
