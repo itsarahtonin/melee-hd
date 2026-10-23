@@ -1,0 +1,228 @@
+# Milestone 5: menus and saves
+
+A survey of what milestone 5 needs and a plan for splitting it into small agent tasks, each checkable on its own. Surveyed on 2026-10-22 from `integrate/m4-final` at `f8cf7b78`; the counts are that day's.
+
+The milestone is done when:
+
+- melee-hd boots from power-on as a console does: the memory card check, the opening movie, the title screen with its attract demo and How to Play, the main menu, and every menu under it but the single-player modes': VS mode with Special Melee, Tournament and the rules, Options, Data and Trophies.
+- Every session the oracle has ([Sessions](#sessions)) compares clean tick by tick from power-on with ssbm-rs's trace of the same session, no stale read, `--heap` included, as far as it stays out of the single-player modes.
+- A native save replaces the memory card: melee-hd reads and writes the game's save as its own subsystem, imports `.gci` files and raw card images, exports `.gci`, and has an unlock-all that doesn't perturb the random seed ([Saves](#saves)).
+- Celebi comes out of the Poké Ball when the save says it can, as on a console.
+- The player offers the real menus as [the player's front door](#the-player-and-the-menus) decides, and offers only what can't stop.
+- Every function of the milestone's units is ported with a check, replaced (the card stack, most of the SDK the boot reaches) or proven dead, in the port ledger.
+
+## Scope
+
+The game's modes (`GameModeKind`, `src/melee/gm/forward.h`) and scenes (`GameSceneKind`, the table in `gmscdata.c`) split between this milestone and the next by what reaches them: a power-on, the main menu and VS mode belong here; what only the single-player modes reach is milestone 6's.
+
+| Milestone | Modes (hex) | Scenes |
+| --- | --- | --- |
+| 5 | boot (28), memory card (29), opening movie (18), progressive scan (27), title (0), menu (1), VS (2), the Special Melee modes (super sudden death 10, invisible 11, slow-mo 12, lightning 13, tiny 1D, giant 1E, stamina 1F, single button 2C, camera 2A), Tournament (1B), challenger approach (14), the trophy gallery, lottery and collection (B, C, D), camera mode (A) | title, menu, VS, sudden death, results, character select, stage select, the three trophy scenes, the opening movie, How to Play, the Special Movie, the tournament's three, the prize interface (special messages), progressive scan, challenger approach, memory card, camera VS |
+| 6 | Classic (3), Adventure (4), All-Star (5) and their game overs (15 to 17), Target Test (F), Training (1C), Home-Run Contest (20), the six Multi-Man modes (21 to 26), Event (2B) | training, the three 1P intros, the trophy fall and congratulations, the twelve cutscenes (`vi*`), the ending movie, game over, coming soon, staff roll |
+| Debug only | debug (6), sound test debug (7), the two Hanyu selects (8, 9), debug cutscene (19), debug game over (1A) | debug menu |
+
+Debug VS (E) is no debug leftover: Slippi's playback runs every replay's match there (scene 14.1), so it stays ported. The other debug modes are reachable only at a debug level other than retail's (`DbLevel` 0 on the disc), and task 3 proves them dead.
+
+The challenger approach belongs here because VS matches unlock characters (`gm_16F1.c`'s decisions after a match): the fight itself is a VS match against a CPU. The 1P modes reach the same scene later, with milestone 6.
+
+**Movies.** Four `.mth` movies play through `lbMthp` and the SDK's THP decoder: the opening (`MvOpen.mth`, at power-on and from the title's attract loop), How to Play (`MvHowto.mth`, the attract loop and the Data menu), the Special Movie (`gmomake15`) and the 25 endings (`MvEnd*.mth`, `gmmovieend.c`). The first three are this milestone's; the endings come with milestone 6's scene. A movie's frames are presentation, so the decoder (`__THPHuffDecodeDCTComp*`, `__THPDecompressiMCURow*`, paired-single IDCT) is ported exactly and its frames checked against ssbm-rs's. It is state too: it decodes into a heap buffer that later scenes take back uncleared (the opening movie's first frame is the `0x10101010` fill [the oracle](oracle.md)'s "Debug VS heaps" describes), and its frame pacing runs on an `OSAlarm` (`fn_8001F2A4`) and disc reads, both on the clock melee-sim already models.
+
+**Songs.** The music stream already runs as the original's ([the engine notes](engine.md#audio)); a song is a disc file. This milestone adds what picks songs outside a match: the title's, the menus', the results' fanfares, the tournament's and the trophy screens', and the sound test, which plays every song and every sound, so every song is reachable by the milestone's end. Songs that only single-player modes start play there with milestone 6.
+
+## Inherited from milestone 4
+
+- **Big Blue's flying platforms' items**, the items audit's last gap: being ported on `feat/bigblue-items` (no commits yet at the survey), with the README's stale "Not yet: Big Blue and Mute City". If it lands before this plan starts, nothing is inherited.
+- **Celebi** (`itcerebi.c`, 15 functions). Its rare draw (`it_8027A4D4`, 1 in 251) asks whether the save records every Pokémon (`gm_80165084`: records 0 to 0x1B but Celebi's 0x1A, in `save_data.x1B4C`). `gm::Unlocks` already models the test, the records and Slippi's codes on them ([the player](player.md#items-toggle-whats-left), "The Pokémon"). Slippi's Disable Special Messages makes the test answer with the index it was asked, so Celebi never comes out under Slippi's codes: no replay and no oracle-set match (all traced from Slippi's playback) can release it. Its oracle is a session from the menus with a card whose records hold every Pokémon, and no Slippi code: task 16.
+- **Ditto** (`itmetamon.c`, 15) comes out only from an event's list, training's draw or the debug menu: milestone 6.
+- **The trophies' save flags** that the stage load's trophy data load reads (`tyDisplay_8031C2CC`) aren't modeled ([the engine notes](engine.md#rulesets-in-the-state)): the load only times its disc read. With saves they become the save's, in task 15.
+- **The player's unlocks.** The player's matches take Slippi's unlock-all (`Unlocks::slippi`) "until melee-hd has its own saves" ([the player](player.md#the-player)); this milestone replaces that decision ([design calls](#design-calls)).
+
+## What the oracle can use
+
+`melee-oracle diff` needs a replay, and a replay starts at a match. The boot and the menus have none, so their oracle is a session: every controller read from power-on, and the card the session started with.
+
+### The session harness
+
+ssbm-rs's runner records a session (`--record FILE`) and plays it back headless (`--inputs FILE`, `tools/run/src/inputs.rs` in ssbm-rs). The file is `SSBMINP1`: a version, the disc rate (bytes a second, 0 for none), flags (1 sound mixed, 2 a card beside it), then one byte per `PADRead`, 0 for the controllers of the read before or 1 and the four controllers (11 bytes each). The card is `FILE.card` beside it, the raw 512 KiB image of a 59-block card as the session found it; playback runs on a copy. A read comes once per field, so a recording's reads are about its ticks. With `STATE_TRACE` the playback is traced like any run; `MODES=1` logs each mode entered.
+
+melee-hd's side is task 1, being built on `feat/session-oracle`: `melee-oracle` boots melee-hd from power-on with the recording's reads, the disc rate and the card, and compares every tick with ssbm-rs's trace of the `--inputs` run, stopping at the first difference or unported function. Its first output is the list of stops from power-on to the title screen, which tasks 4 and 5 work through. One session is already traced: `local/traces/session/2026-10-06_17-44-10.trc` (132 MB for 4,485 fields, about 1.8 MB per second of play).
+
+### Sessions
+
+Thirteen recordings are in `$SSBM_RS_LOCAL/lockstep/recordings`, all `SSBMINP1` version 1 at the drive's 3 MB/s with sound mixed and a card. Each card holds Melee's save (`SuperSmashBros0110290334`, 11 blocks); from `17-13-21` on they also hold a Camera Mode snapshot, a 32-block file named `47` (lbsnap names a snapshot by the clock's seconds, `lbSnap_8001D4A4`), so `17-11-18` probably took it. ssbm-rs's lockstep campaigns ran every one against the original code with no function mismatching (`campaign-rec*.log`).
+
+| Recording | Reads | Minutes | Ports connected | Ports played | What it reaches (from the lockstep runs' samples) |
+| --- | --- | --- | --- | --- | --- |
+| `2026-10-06_12-04-48` | 59,825 | 16.6 | 1, 3, 4 | 3 | trophy code, an unlock decision (`gm_16F1`), a match on Brinstar |
+| `2026-10-06_12-42-06` | 17,749 | 4.9 | 1, 3, 4 | 1, 3 | a match |
+| `2026-10-06_16-32-11` | 26,751 | 7.4 | 1 to 4 | 1 to 4 | the tournament (`gmtoulib`), matches |
+| `2026-10-06_16-58-24` | 38,946 | 10.8 | 1, 2, 4 | 1 | trophy code, matches |
+| `2026-10-06_17-11-18` | 7,097 | 2.0 | 1, 2, 4 | 1, 4 | a match; probably Camera Mode |
+| `2026-10-06_17-13-21` | 3,017 | 0.8 | 1, 2, 4 | 1, 4 | menus only |
+| `2026-10-06_17-25-31` | 6,627 | 1.8 | 1, 2, 4 | 1, 4 | the tournament (`gmtou_0`) |
+| `2026-10-06_17-29-05` | 13,968 | 3.9 | 1 to 4 | 1, 3 | a match |
+| `2026-10-06_17-37-52` | 7,087 | 2.0 | 1 to 4 | 1 to 4 | a match |
+| `2026-10-06_17-44-10` | 4,410 | 1.2 | 1, 2, 3 | 1, 2 | traced (above) |
+| `2026-10-07_23-52-34` | 10,673 | 3.0 | 1, 2, 3 | 2 | |
+| `2026-10-10_12-54-40` | 30,931 | 8.6 | 1, 2, 3 | 2 | |
+| `2026-10-10_13-05-00` | 19,501 | 5.4 | 1, 2, 3 | 2 | |
+| **All** | 246,582 | 68.5 | | | |
+
+The last column is thin: it comes from the lockstep logs' periodic samples (one every 17 M instructions), which land mostly in HSD code. Task 1 logs each session's modes with `MODES=1` as it traces them, and this table should be filled in from that.
+
+### Scripted runs, cards and the menus' traces
+
+- **Recipes.** ssbm-rs's lockstep campaign drove the menus from scripts: `MONKEY_HOLD` input spans with save setups (`UNLOCK_ALL=1`, `NAMES=N`, `RECORDS=SEED`, `RECORDS_1P`, `SAVE_POKE`, `MENU=KIND,SELECTION`, `GAME_LANGUAGE=jp`), listed in `local/lockstep/jobs-recipes-menus.txt` (99), `jobs-recipes-matches.txt` (74), `jobs-recipes-more.txt` (51) and `jobs-scripted*.txt` (42), with the reasoning in `local/lockstep/recipes.md`: name entry, records and rankings, the item and stage switches, the sound test, rumble, the tournament at 6 to 48 entrants, results with cancelled matches and ties, the trophy lottery, the challenger approach, Camera Mode snapshots. A recipe run again with `--record` and a `--card` is a session. The save setups write memory once the main menu is up, which a recording's reads don't carry, so a recipe that uses one is first run to let the game save, and its session recorded from the card that run leaves.
+- **Cards.** `local/lockstep/cards` holds 1,132 card images the campaign's runs left: 1,115 with Melee's save (5 with snapshots too), 13 empty, and the fault cases (garbage directories, orphaned blocks, Shift-JIS names, a removed card, `GZZE` another game's file). With the 13 beside the recordings and the 4 in `local/cards`, they are the corpus for import and export (task 2), 1,149 images. None holds a Pikmin save (`GPIE`).
+- **Menus to a match.** `local/traces/vanilla/` has three `MONKEY_HOLD` runs from a new save through the title, the main menu and VS mode's Melee to a match on Fountain of Dreams (`menus-ics-fox-fod`, `-noitems`, `menus-cpu-fox-fox-fod`), which `melee-oracle vs-heap` checks today ([the oracle](oracle.md), "A match from the menus"). Their holds files are input scripts too: the harness can take them, or they can be run again with `--record`. They press Start at field 100, through most of the movie: a session that idles at the title, for the whole movie and the attract loop, is still to record.
+
+ssbm-rs is trustworthy here: its round rf (2026-10-14) verified 95.1% of menu blocks and 93.5% of game mode blocks by lockstep against the original. A difference melee-hd finds in the rest may be ssbm-rs's; the porting guide says to stop and ask.
+
+### Oracle per area
+
+- **Boot, movie, title.** Every session starts at power-on, so all thirteen pass through the boot, the memory card check, the opening movie (skipped with Start) and the title. Frames of the movie and the title are compared with `melee-render-check` against ssbm-rs's renderer.
+- **Menus.** Sessions, and recipes recorded as sessions. Each menu task adds its unit's statics to the comparer (as mirrored structs, like the stages' globals) and records the sessions its menu needs.
+- **VS from the menus.** Every session with a match; the three vanilla traces. Once the selects are ported a session's match starts as the console's does, and `Settings::vs_with` with `Layout::from_menus` become a shortcut checked against it.
+- **Special Melee's gameplay.** What the start data carries (scales, stamina, speeds, flags) plays from the oracle generator's matches (`tools/bench/src/matches.rs`, traced from Slippi's playback as milestone 4's are); what a mode's own callbacks do (`gmsupersudden`'s and the others' `OnLoad` and `OnInit`) needs sessions through the menus.
+- **Saves.** The card corpus for import and export, byte for byte; sessions for what the game sees of the card (the memory card scene's prompts, a save after a match), with card removals (`CARD_REMOVE`, `CARD_REMOVE_STEP`) as inputs.
+- **Celebi.** A session from a card whose records hold every Pokémon (made with `SAVE_POKE` on `x1B4C` or by melee-hd's exporter, task 2), Poké Ball alone at very high frequency; at about 20 releases a two-minute match and 1 in 251 each, one match in twelve or so releases it.
+
+A session's trace is about 1.8 MB per second of play: the thirteen sessions come to about 7.5 GB, and the new scripted ones (a few minutes each, about 40 of them) to about 13 GB more.
+
+## Saves
+
+### How the game uses the card
+
+The game keeps its save in memory, in `gmMainLib_8045A6C0`'s card data (`gmMainLib_GetCardData`): `GmSaveData` (unlocks, VS records, trophies and their times, the Pokémon records, the options, each character's statistics) and the name tags' seven banks (`NameTagDataBank`, 19 names each, 120 used). The card holds them as one file, `SuperSmashBros0110290334`, in slot A only.
+
+Four layers move it:
+
+| Layer | Unit | Functions | What it does |
+| --- | --- | --- | --- |
+| Game | `lbcardgame.c` | 20 | The file's manifest (save data, then the seven banks), the comment (`lb_8001C658`: the title and the date from `OSGetTime`), the icon by unlock state, the card's status, `lbCardGame_DecideGameMode` (the memory card scene at boot), `lbCardGame_SaveChanges` (marks the save dirty and adds the power-on time), the per-frame writer `lb_8001CC84` |
+| Tasks | `lbcardnew.c` | 41 | A queue of card tasks (mount, check, open, read, write, create, delete, rename, format, list snapshots, find a file), run one step per call of `lbCardNew_CompleteNextTask`, Busy until done; the work areas (`lbCardNew_AllocWorkArea`: 0xA000 and 0x2000 bytes from the heap); other games' files (`lb_8001C2D8`, the Pikmin check at boot) |
+| HSD card | `sysdolphin/baselib/card.c`, `crypt.c` | 43 + 5 | The file's own format: data split into blocks with headers and sequence numbers, two copies, each encrypted (`HSD_Encrypt`, `HSD_Decrypt`: a running XOR keyed by the byte before) and checksummed (`HSD_Checksum`), banner and icons |
+| SDK | `dolphin/card/*` | 85 | The card's directory, allocation table and blocks over EXI |
+
+Snapshots (`lbsnap.c`, 22) are files of their own, named by the clock's seconds, in slot A or B. `mnsnap.c` (19) is their album. The game saves after a VS match (records, KO counts), when options change and when something unlocks.
+
+ssbm-rs runs all four layers on an emulated card (`crates/sdk/src/card.rs`, after Dolphin's): every erase and program finishes at once (`Hw`'s deselect), so a task takes as many steps as the layers' state machines and callbacks need, and no more. That is the timing the oracle sees, and the native save reproduces it.
+
+### What a native save holds
+
+- **The save file's data**, typed: the `GmCardData` the card read fills in memory, which is game state already (snapshots clone it).
+- **The card as the game sees it:** present or not, the save file present, missing or damaged, free blocks (a 59-block card's, as ssbm-rs's), the snapshots' names and data, and whether another game's file the game asks about is there (Pikmin's).
+- **The clock** the game reads ([design calls](#design-calls)).
+
+What it doesn't hold: the card's bytes, the HSD layer's buffers and the SDK's control blocks. The game's own code above the task queue (`lbcardgame.c`, `lbsnap.c`, `gmscmemcard.c`) is ported; the queue's tasks complete natively, each after as many calls of `lbCardNew_CompleteNextTask` as ssbm-rs's card takes (measured from session traces, per task kind and card state); the work areas are still allocated in the allocator model at the original's addresses, and the comparer leaves out what only the card layers read, with that proof in [the engine notes](engine.md).
+
+### `.gci` import and export
+
+A `.gci` is a card file as Dolphin's GCI folders keep it: the 0x40-byte directory entry, then the file's blocks. Import reads Melee's file from a `.gci` or from a raw card image (`.raw`, ssbm-rs's `.card`), undoes the HSD layer (blocks, sequence numbers, `HSD_Decrypt`, `HSD_Checksum`) and yields the save data and name tags, or "damaged" as the game would judge it. Export writes the bytes the console's card layer would write for that data. Both live outside the simulation, in a new crate (`melee-save`) that the player and the oracle share. The check is a round trip over the card corpus: every save imported and exported again is the card's file byte for byte, and every damaged card is judged as the game judges it. The same crate writes raw card images, so a melee-hd save can start an ssbm-rs session.
+
+### Unlock all
+
+The goal asks for an unlock-all that doesn't perturb the random seed. The save reaches the seed only through the game's own questions: the stage's music choice draws `HSD_Randi(100)` only when the save has every character or stage (`gm_80164ABC`, [the engine notes](engine.md#rulesets-in-the-state)), the Poké Ball's rare draws ask about characters and Pokémon records, and the random character and stage picks, the title's attract demo (`gm_SetupTitleDemo`) and the trophy lottery draw from what is unlocked. So unlock-all must change the save's data and nothing else: no code patch (Slippi's unlock code patches `gm_80164ABC` to answer 1 and leaves the records alone), no unlock events (challengers, special messages, the prize interface, each of which runs code and may draw). Then a session with unlock-all is a console's session with a complete save, checkable against ssbm-rs booting the same card.
+
+ssbm-rs's `UNLOCK_ALL=1` (`tools/run/src/matches.rs`, `SaveSetup::apply`) sets the characters' and stages' masks (`| 0x7FF`), the features byte (`x186C` to 0xFF), the 300 trophy bits and the 293 owned trophies' counts, once the main menu is up. It doesn't set the Pokémon records (`x1B4C`), so Celebi still can't come out after it.
+
+### Design calls
+
+| Call | Recommendation | Who |
+| --- | --- | --- |
+| Where the native save replaces the card | Port `lbcardgame`, `lbsnap` and the memory card scene; replace `lbcardnew`'s tasks, the HSD card layer and the SDK's CARD library with `lb::save`, each task done after the original's step count; the work areas still allocated. | Decided here: it changes no file format and can move later |
+| The save file on disk | The game's own file as a `.gci` (`01-GALE-SuperSmashBros0110290334.gci`, Dolphin's GCI folder name), byte for byte what the console's card layer writes, snapshots as `.gci`s beside it, in the settings folder's `saves/`. Import takes `.gci` and raw card images, export writes `.gci` and raw images. One format, Dolphin's and the console's, so moving a save is a file copy. The alternative, melee-hd's own versioned format with `.gci` only at the edges, is easier to read but is a second format to keep compatible forever. | Sarah, decided 2026-10-23 as recommended: compatibility, hard to reverse once players have saves |
+| Writing the save | A tick hands the file's new contents to the frontend as an output event, never writes itself; the frontend writes it whole and renames it over the old, keeping the old as a backup. A rollback's replayed ticks drop their events, as their sounds are dropped. | Decided here |
+| The card's presence and other games' files | A native save is a card in slot A, always present, 59 blocks, with no other game's file: the Pikmin trophy comes only from an imported card that holds a Pikmin save. Sessions take what their card image holds; removals are inputs. | Decided here |
+| The clock | The real-time clock is an explicit input: a power-on time, advancing with the simulation's time base. It reaches gameplay: `main` seeds the random seed from `OSGetTick` (already the clock melee-sim models), and the title draws `HSD_Rand` once for each second of the clock's current minute (`gmTitle_801A165C`), so the attract demo and every draw after depend on it. It also names snapshots, dates the card's comment and times the trophies' records. In play the host's clock at power-on, as a console's; in the oracle ssbm-rs's (2000-01-01 at power-on, plus its time base). | Decided here; the session format change below was Sarah's, decided 2026-10-23 as recommended |
+| Sessions the player records | The player can record a session as `SSBMINP1` with a raw card image, so a menu bug a player meets becomes an ssbm-rs session. The format has no clock, so it needs a version 2 carrying the power-on time (and the DTV status and language, the console's other settings the boot reads) on an ssbm-rs branch. | Sarah, decided 2026-10-23 as recommended: a change to ssbm-rs's format |
+| Unlock all: what it sets | A save edit equal to a complete save without play records: every character, stage and feature, every trophy owned, every Pokémon recorded, every event and special message unlocked, applied to the save once, with the old save kept as a backup. A view over the save that hides the edit can't work: the game writes the whole save back the next time it saves. | Sarah, decided 2026-10-23 as recommended: it decides whether Celebi can come out, and what players see |
+| The unlocks a player's VS match takes | Under the Slippi ruleset, Slippi's (`Unlocks::slippi`), whatever the save holds, as Slippi Dolphin's General Codes always run: its `.slp` recordings replay in Slippi Dolphin exactly, as today. Under Vanilla, the save's, as a console; melee-hd writes the unlocks into the recording's metadata (a key slippi-js ignores) and plays its own recordings with them, and such a recording replays in Slippi Dolphin only when the save answers as Slippi's codes do (every character and stage unlocked, not every Pokémon recorded). | Sarah, decided 2026-10-23 as recommended: `.slp` compatibility |
+| The progressive scan prompt and language | The VI's DTV status (which asks "progressive scan?" at boot) is an explicit input, off in play (the player has its own display settings) and ssbm-rs's in the oracle; the language is the save's, English by default. | Decided here |
+| The game's options against the player's settings | The game's options are the save's and decide what the simulation does (rumble per name, the stereo or mono mix, the screen's deflicker filter, the language); the player honours them in presentation. The player's own settings (resolution, latency, high refresh, controllers) stay the player's. | Decided here |
+
+## The player and the menus
+
+Today the player opens on its launcher, which starts a VS match from settings (`Settings::vs_with`, laid out as a match from the menus) and comes back to it at the match's end. Once the boot and the menus are exact, the player could boot as a console does. Until milestone 6, though, the main menu's 1P mode, Events, Stadium and Training lead into unported code, and Sarah's rule is that the player offers only what can't stop.
+
+Options:
+
+- **A. The launcher stays the front door** until every main menu path is ported (milestone 6), with the real game only behind a developer flag.
+- **B. Boot into the title** as a console does, the launcher reduced to the settings screen.
+- **C. Both:** the launcher keeps a quick match and gains "Play from the title screen".
+
+**Recommendation: C, in two steps** (Sarah decided 2026-10-23 as recommended). In this milestone the launcher stays the front door and gains "Play from the title screen" once task 18's menus audit passes: like the stage audit, a test that reads the port ledger and fails when anything a menu path reaches is unported, except entries it gates. The gated entries (1P mode, Events, Stadium, Training) are refused by the frontend: it holds back the confirming press on them and draws its own note over the menu, so the simulation stays a console's that never pressed A there. In milestone 7 the title becomes the default and the launcher becomes the settings screen with a quick match (today's form, now taking the save's unlocks), kept for testing and for players who want a match at once; the quick match stays checked against `vs-heap` and, with the selects ported, against melee-hd's own session through the menus. **Sarah's call**: it changes what the player offers.
+
+## What's left to port
+
+From the port ledger (`docs/port-ledger.csv`), by unit. "Ported" counts the functions with a check; a few of the VS ones are ported in substance without an alias yet (`gm_Scene_Vs_OnEnter`, `fn_8016E730` in `game::gm::vs`), held back until a check from the menus reaches them.
+
+| Area | Units | Functions | Ported | Not ported |
+| --- | --- | --- | --- | --- |
+| Scene system and boot (`gmboot`, `gmscene`, `gmscdata`, `gmmain`, `gm_1A3F`, `gm_1A36`, `gmmenu`, `gmmenumode`, `gmtitlemode`, `gmprogressive*`, `lbheap`, `lbmemory`, `lbdvd`, `lbfile`, `lbarchive`, `lbarq`, `lblanguage`, `lbtime`) | 19 | 162 | 32 | 130 |
+| Movies and the title (`gmopening`, `gmopeningmode`, `gmtitle`, `gmhowto`, `gmomake15`, `lbmthp`, `mngallery`) | 7 | 83 | 0 | 83 |
+| Saves (`lbcardgame`, `lbcardnew`, `lbsnap`, `gmscmemcard`, `gm_1ADD`, `gmmain_lib`, `mndatadel`) | 7 | 270 | 3 | 267 |
+| Main menu, options and data (`mnmain`, `mn_22EC`, `mnvibration`, `mnsound`, `mndeflicker`, `mnlanguage`, `mnsoundtest`, `if/soundtest`, `if_3004`, `if_2FFC`, `mninfo`, `mninfobonus`, `mncount`, `mndiagram`, `mndiagram2`, `mndiagram3`, `mnsnap`, `ifprize`) | 18 | 357 | 2 | 355 |
+| VS menus, results and unlocks (`mncharsel`, `mnstagesel`, `mnmainrule`, `mnruleplus`, `mnitemsw`, `mnstagesw`, `mnname`, `mnnamenew`, `gmvsmelee`, `gmvsmode`, `gmvs`, `gm_16A2`, `gm_1B03`, `gmresult`, `gmresultplayer`, `ftdemo`, `gm_1601`, `gm_16F1`, `gm_1736`, `gmapproach`, `gm_1BFA`) | 21 | 676 | 113 | 563 |
+| Special Melee (`gmsupersudden`, `gminvisible`, `gmslomo`, `gmlightning`, `gmtiny`, `gmgiant`, `gmstamina`, `gmsinglebutton`, `gmfixedcamera`, `gmcameramode`, `gmcamera`, `gm_1A33`) | 12 | 152 | 0 | 152 |
+| Tournament (`gmtoumode`, `gmtoulib`, `gmtou_0` to `gmtou_2`) | 5 | 163 | 0 | 163 |
+| Trophies (`gmtoygallery`, `gmtoylottery`, `gmtoycollection`, `toy`, `tydisplay`, `tyfigupon`, `tylist`) | 7 | 155 | 3 | 152 |
+| HSD card and crypt (`sysdolphin/baselib/card`, `crypt`) | 2 | 48 | 0 | 48 |
+| Audio the menus reach (`lbaudio_ax`, `axdriver`, `synth`, leftovers) | 3 | 183 | 132 | 51 |
+| **Milestone 5's game code** | 101 | 2,249 | 285 | 1,964 |
+| SDK the boot and saves reach (`dolphin/card` 85, `dvd` 73, `thp` 24, `vi` 19, `OSRtc` 15, `OSTime` 6) | 25 | 222 | 0 | 221 (one already replaced) |
+| Debug menus (`gmdebugmode`, the Hanyu selects, `melee/db`, `textlib_1`) | 15 | 116 | 3 | 113 |
+| Milestone 6's modes and scenes (`gmclassic`, `gmadventure`, `gmallstar`, `gmmultiman`, `gmhomerun`, `gmevent`, `gmtrainingmode`, the game overs and endings, `gm_1798` to `gm_1A9B`, `vi*`, `mnevent`, `mnhyaku`, `plbonus*`) | 47 | 689 | 53 | 636 |
+
+`gm_1601` (151 unported) and `gmmain_lib` (153) are libraries both milestones call: the save data's getters, the unlock queries, the records, the results' setup. They are counted here; the parts only single-player modes call stay for milestone 6. The HUD's last 22 (`ifstock` 10, `if_2FF2` 3, `textlib` 3 and others) are the modes' (stamina's HP, the 1P HUD), each for the task whose mode reaches it.
+
+Most of the SDK row is replaced, not ported: the CARD library by the native save (197 with the DVD, VI, RTC and time functions, each with its reason in `ledger/replaced.txt`); the THP decoder's 24 are ported, for the movies' frames. Of the HSD card layer, the file format's packing and checks and `crypt.c` are ported into `melee-save` for import and export; the rest is replaced.
+
+Function counts understate the menus: the character select (`mncharsel.c`, 5,509 lines of C for its 25 symbol-table functions) and the main menu (`mnmain.c`, 3,046 lines for 51) are the biggest single units of the milestone.
+
+## Proposed tasks
+
+Eighteen tasks in four waves. Sizes count functions to port or check: S under 100 (or tooling), M 100 to 300, L over 300. Every porting task follows the porting guide: each function gets a leaf-check or a line in `ledger/checks.txt`, the sessions it names compare clean from power-on with no stale read and with `--heap`, `sync-test --rollback 7` passes on the VS matches it reaches, each new check is mutation-tested, and a defect of the original goes in [Melee's own bugs](melee-bugs.md). Each task adds its units' statics to the comparer and records the sessions it needs (scripted with `MONKEY_HOLD` and `--record`, traced into `local/traces/session/`).
+
+**Wave 1** (three at once)
+
+1. **Session harness.** `melee-oracle`'s session mode: boot from power-on with an `SSBMINP1` recording's reads, disc rate and card, compare every tick with ssbm-rs's `--inputs` trace, and list the first stops. Trace the thirteen sessions with `MODES=1` and fill in [Sessions](#sessions)' last column. Size: S (tooling). Depends on nothing. **In progress on `feat/session-oracle`.**
+2. **Save files.** `melee-save`: read raw card images and `.gci`s (the directory, the allocation table, the HSD layer's blocks, `HSD_Decrypt`, `HSD_Checksum`), write `.gci`s and raw images as the console's layers would. leaf-check's checks for `crypt.c`; the round trip over the card corpus (1,149 images), byte for byte, every damaged card judged as the game judges it. No simulation code. Size: S (about 30 functions, and tooling). Depends on nothing; the on-disk call ([design calls](#design-calls)) only decides where the player keeps the file.
+3. **Debug modes.** Prove the debug modes unreachable from a retail boot (`DbLevel` 0) and list them dead; keep debug VS, which Slippi's playback runs. Size: S. Depends on nothing.
+
+**Wave 2** (the boot path, one task after the other; tasks 2 and 12a run beside it)
+
+4. **Power-on to the memory card check.** `main`'s setup (the arena, `OSInitAlloc`'s heaps, HSD's init and the text heap in the allocator model, the boot's seed from `OSGetTick`), the mode and scene machine (`gm_1A3F`, the rest of `gmscene`), the boot mode (`gmboot`: the Pikmin check, the soft reset's `skip_intro`), `lbcardgame` and `lb::save` answering the task queue on the original's step counts, the memory card scene (`gmscmemcard`, `gm_1ADD`: no card, no file, damaged, full), the clock and DTV inputs. Oracle: every session to the opening movie's first frame; card-removal and damaged-card sessions from the recipes. Size: M (about 170, and the SDK's replacements listed). Depends on tasks 1 and 2.
+5. **The opening movie and the title.** `lbMthp` and the THP decoder (exact: frames compared with ssbm-rs's renderer, and the decode buffer in the allocator model), the opening movie's mode and scene (`gmopening`, `gmopeningmode`), progressive scan (`gmprogressive*`), the title (`gmtitle`, `gmtitlemode`: the emblem by unlocks, the clock's draws, `gm_SetupTitleDemo`). Oracle: every session to the main menu, and a new one idling at the title through the whole movie. Size: M (about 100). Depends on task 4.
+
+**Wave 3** (up to six at once, as the agent limit allows; all after task 5)
+
+6. **Main menu and the attract loop.** `mnmain`, `mn_22EC`, `gmmenu`, `gmmenumode`; the title's attract loop: How to Play (`gmhowto`), the attract demo's CPU match (its gameplay is ported), the Special Movie and the movie gallery (`gmomake15`, `mngallery`). Size: S (about 90). Depends on task 5.
+7. **Character and stage select, and the match from the menus.** `mncharsel`, `mnstagesel`, `gmvsmelee`, `gmvsmode`, `gmvs`'s rest, `gm_16A2`, `gm_1B03` (Sudden Death's setup, the sub colors, the CPU players' setup): a session's match starts as the console's, the menus' preloads run for real, and `Layout::from_menus` becomes a check. Oracle: every session with a match, the three vanilla traces, `sync-test` on each match. Size: M (about 155, the heaviest code of the milestone). Depends on task 6.
+8. **Rules and name entry.** `mnmainrule`, `mnruleplus`, `mnitemsw`, `mnstagesw`, `mnname`, `mnnamenew` (the random name's draws). Size: M (108). Depends on task 6.
+9. **Results and records.** `gmresult`, `gmresultplayer`, the fighters' results poses (`ftdemo` and the characters' demo callbacks), Sudden Death's flow, the KO counts and records (`gmVsMelee_UpdateKOCounts`, `gm_1601`'s results and records), and the save after a match as an output event. Size: M (about 120). Depends on task 7.
+10. **Options.** `mnvibration`, `mnsound`, `mndeflicker`, `mnlanguage`, `mndatadel` (erasing data), with the player honouring the options in presentation. Size: S (about 40). Depends on task 6.
+11. **Data menus.** `mninfo`, `mninfobonus`, `mncount`, `mndiagram`, `mndiagram2`, `mndiagram3` (records and rankings), `mnsnap` and `lbsnap`'s reading side (the album), `ifprize`. Size: M (about 150). Depends on task 6; sessions with records come easier after task 9.
+12. **Special Melee.** (a) The modes' gameplay that the start data carries (tiny and giant, stamina, the game speed of slow-mo and lightning, `gm_SetGameSpeed`, invisible, single button, fixed camera), from generator matches; it needs no menu and runs in wave 2. (b) The modes' own callbacks and Camera Mode (`gmcameramode`, `gmcamera`, `gm_1A33`, `lbsnap`'s writing side, the snapshot's EFB copy as the frontend's input), through sessions. Size: M (152 and the gameplay). (a) depends on nothing; (b) on task 7.
+
+**Wave 4**
+
+13. **Tournament.** `gmtoumode`, `gmtoulib`, `gmtou_0` to `gmtou_2`: setup, brackets, winner-out and loser-out, up to 64 entrants with CPUs. Oracle: sessions from the `lvtou*` recipes. Size: M (163). Depends on tasks 7, 8 and 9.
+14. **Sound test and the menus' songs.** `mnsoundtest`, `if/soundtest`, `if_3004` (the songs' and sounds' unlock checks), `if_2FFC`, `lbaudio_ax`'s and the driver's leftovers: every song and sound reachable. Oracle: sessions, and `melee-audio-check` on their mix. Size: M (about 175). Depends on task 6.
+15. **Trophies.** The gallery, the lottery (its coins and draws) and the collection (`toy`, `tylist`, `tyfigupon`, `tydisplay`, the trophy models' display), and the stage load's trophy flags. Size: M (152). Depends on task 6.
+16. **Celebi.** `itcerebi.c` whole, on sessions from a card whose records hold every Pokémon, the Poké Ball alone at very high frequency, until one releases it. Size: S (15). Depends on tasks 2 and 7.
+17. **Unlocks and challengers.** The decisions after a match (`gm_16F1`), the challenger approach (`gm_1736`, `gmapproach`, `gm_1BFA`), the special messages (`ifprize`, if task 11 hasn't), and unlock-all as the design calls settle it, checked by a session from a complete card against ssbm-rs's. Size: M (about 110). Depends on task 9.
+18. **The player on the menus.** The front door as Sarah decides it, the menus audit (a roster-style test over the ledger: every menu path ported or gated), the save file's place, import and export in the launcher, the unlock-all toggle, the player's session recording. Size: M (player code). Depends on tasks 4 to 10, and on the design calls.
+
+The critical path is 1, 4, 5, 6, 7, 9, then 17 and 18: the boot is serial, and every menu waits for it, since a session can't start anywhere but power-on. Starting a session at a scene's entry instead (`--from`, as `diff` starts a replay at a trace tick) would let menu tasks start earlier, but it needs the importer to carry a menu scene's whole state, which costs more than the boot's port; the plan doesn't take it. Tasks 2, 3 and 12a keep agents busy beside the boot path. Tasks within a wave share no files beyond the scene table (`gmscdata`'s dispatch), the comparer's mirrors and the ledger, where merges stay mechanical. Each task takes its own worktree and leaves one commit per menu or mode.
+
+### Not in this sequence
+
+- **Single-player modes, their stages and bosses** (milestone 6): Classic, Adventure, All-Star, Events, Target Test, Home-Run Contest, the Multi-Man modes, Training, their intros, game overs, cutscenes (`vi*`, 84), ending movies, the staff roll and their bonuses (`plbonus*`); their stages (885 functions, [milestone 4](milestone-4.md#whats-left-to-port)), Master Hand (263), Crazy Hand (257), Giga Bowser, the Wire Frames, Sandbag, the adventure enemies and items, Ditto, the single-player CPU kinds, and the main menu's gates that task 18 adds, which milestone 6 removes.
+- **The player's polish** (milestone 7): the title as the default front door, remapping, three-OS builds.
+
+## Before the tasks start
+
+- **Sarah's design calls (decided 2026-10-23, every recommendation taken):** the save file on disk, unlock-all's scope, the unlocks a player's VS match takes (with `.slp` compatibility), the player's front door, and the session format's clock (an ssbm-rs branch). The recommendations are in [Design calls](#design-calls) and [The player and the menus](#the-player-and-the-menus). Nothing waits on them now.
+- **The trace campaign (approved by Sarah 2026-10-23).** About 7.5 GB for the thirteen sessions and about 13 GB for the scripted ones, run in batches as each task needs them. The traces' disk had 79 GB free on 2026-10-22 (96% full), and the project keeps 20 GB free, so older batches may need moving off first.
+- **More human sessions would help.** The thirteen recordings are all from 2026-10-06 to 10-10. A few more played by Sarah (a whole console session: the movie and the attract loop left to run, every VS menu, a match, results, options, the data screens, trophies) would cover what scripts reach clumsily; scripts can make the rest.
