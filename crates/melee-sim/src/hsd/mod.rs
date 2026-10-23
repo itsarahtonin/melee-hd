@@ -27,6 +27,7 @@ pub mod psdisp;
 pub mod robj;
 pub mod shadow;
 pub mod sis;
+pub mod sobj;
 pub mod spline;
 pub mod texp;
 pub mod texp_heap;
@@ -54,6 +55,8 @@ pub struct Objects {
     pub lobjs: lobj::LObjs,
     pub fogs: fog::Fogs,
     pub shadows: shadow::Shadows,
+    /// Sprites (`HSD_SObj`).
+    pub sobjs: sobj::SObjs,
     /// HSD's ID table (`HSD_IDInsertToTable` with a null table): joints by the descriptor
     /// they were loaded from.
     pub ids: id::IdTable<DataRef, jobj::JObjId>,

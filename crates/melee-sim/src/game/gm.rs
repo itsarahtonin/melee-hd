@@ -8,10 +8,14 @@ pub mod main_lib;
 pub mod memcard;
 pub mod mode_init;
 pub mod names;
+pub mod opening;
 pub mod pause;
+pub mod progressive;
 pub mod results;
 pub mod scene;
+pub mod title;
 pub mod trophies;
+pub mod unlocks;
 pub mod vs;
 pub mod vs_mode;
 

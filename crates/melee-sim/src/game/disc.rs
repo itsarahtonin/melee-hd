@@ -42,6 +42,16 @@ impl Running<'_> {
             .unwrap_or_else(crate::hsd::heap::Carried::power_on);
         crate::hsd::heap::start_scene_lent(&layout);
         crate::hsd::heap::with(|h| h.carry(&carried));
+        // `HSD_CreateMainHeap`'s forgetting of the old heap: the classes' amnesia
+        // (`CObjAmnesia`, `JObjAmnesia`, `LObjAmnesia`, `MObjAmnesia`) and the ID table's
+        // (`_HSD_IDForgetMemory`).
+        let o = &mut self.game.objs;
+        o.cobjs.current = None;
+        o.jobj.current = None;
+        o.lobjs.current = None;
+        o.mobjs.toon = None;
+        o.mobjs.shadows = None;
+        o.ids = Default::default();
     }
 
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
@@ -116,5 +126,29 @@ impl Running<'_> {
     pub fn load_archive(&mut self, name: &str) -> melee_data::archive::ArchiveId {
         self.disc_load(name, MAIN_MEMORY);
         self.game.ft.data.files.archive(name)
+    }
+
+    /// [`Running::load_archive`], with where its two blocks went in the scene's heap (the
+    /// file's bytes, then its `HSD_Archive`), for its owner to free.
+    pub fn load_archive_blocks(
+        &mut self,
+        name: &str,
+    ) -> (melee_data::archive::ArchiveId, u32, u32) {
+        let (entrynum, len) = self.game.ft.data.files.entry(name);
+        let (file, archive) = crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0));
+        if self.game.audio.clock.is_some() {
+            self.game.audio.load_file(self.data, entrynum, file, len);
+        }
+        (self.game.ft.data.files.archive(name), file, archive)
+    }
+
+    /// `lbArchive_80016EFC`: an archive's two blocks back to the scene's heap
+    /// (`lbHeap_80015CA8`), its bytes first.
+    #[doc(alias = "lbArchive_80016EFC")]
+    pub fn free_archive_blocks(&mut self, file: u32, archive: u32) {
+        crate::hsd::heap::with(|h| {
+            h.mem_free(file);
+            h.mem_free(archive);
+        });
     }
 }

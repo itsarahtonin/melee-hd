@@ -41,6 +41,8 @@ pub mod cb {
     pub const PRELOADED: CodeRef = CodeRef(0x8001_7E64);
     /// `fn_801D4220`: Pokémon Stadium's transformation file has loaded.
     pub const STADIUM_LOADED: CodeRef = CodeRef(0x801D_4220);
+    /// `fn_8001E910`: a movie frame has been read into the movie player's ring.
+    pub const MOVIE_READ: CodeRef = CodeRef(0x8001_E910);
 }
 
 /// A file the preload cache (`lbDvd`) reads into main memory: its disc entry, where it goes,
@@ -723,6 +725,7 @@ impl Audio {
                 );
                 self.devcom.stadium_loaded = true;
             }
+            cb::MOVIE_READ => self.mthp_read_done(data, cancel),
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),

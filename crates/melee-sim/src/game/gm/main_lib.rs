@@ -29,6 +29,9 @@ pub struct MainLib {
     /// The real-time clock at power-on, in seconds since 2000-01-01: an input of the
     /// console's (`session::Setup::clock`), which the time base runs on from (`OSGetTime`).
     pub power_on_clock: u64,
+    /// The video mode the game last set (`HSD_VISetConfigure`): progressive, and with the
+    /// deflicker filter. Not memory of the game's: the presentation shows it.
+    pub video: (bool, bool),
 }
 
 impl MainLib {

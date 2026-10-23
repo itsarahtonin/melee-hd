@@ -73,7 +73,11 @@ const ARAM_CALLBACK: u64 = 8;
 /// interrupt raised meanwhile (measured from a console's boot, where a bank read's interrupt
 /// falls in an audio frame's handler).
 const AI_CHAIN: u64 = 16;
-
+/// Where the movie player's alarm's handler runs (`fn_8001F2A4`), and the decrementer
+/// exception's time after it (56 in all: measured from the sessions' traces, whose ticks
+/// end that much later while the movie's alarm runs beside the pad alarm).
+const MOVIE_ALARM_CALLBACK: u64 = 16;
+const MOVIE_ALARM_TAIL: u64 = 40;
 /// How fast the disc reads: a match setting, since when reads finish decides when the music
 /// stream's commands reach the DSP and so which voices are free (see `docs/engine.md`).
 ///
@@ -130,6 +134,8 @@ pub enum EventKind {
     DiscDone,
     /// The disc driver's timeout alarm, which a read's interrupt cancels long before.
     DiscTimeout,
+    /// The movie player's alarm fires (`fn_8001F2A4`, every 60th of a second).
+    MovieAlarm,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
@@ -182,6 +188,10 @@ pub struct Clock {
     /// Rounds of a scene's loop that start without waiting for a frame buffer: its first
     /// (no render before it) and its second (a buffer is still free).
     pub scene_start: u8,
+    /// The movie player's alarm's period.
+    pub movie_period: u64,
+    /// The round's display pass has run after the render's wait ([`Clock::render_start`]).
+    pub render_started: bool,
 }
 
 /// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
@@ -193,6 +203,12 @@ pub trait Frames {
     fn disc_done(&mut self, base: u64) -> HwLog;
     /// The ARAM interrupt: the next ARAM transfer is done.
     fn aram_done(&mut self, base: u64) -> HwLog;
+    /// The movie player's alarm.
+    fn movie_alarm(&mut self, base: u64) -> HwLog {
+        HwLog::at(base)
+    }
+    /// A handler starts at time base `now` (its log's `base` counts from there).
+    fn handler_at(&mut self, _now: Option<u64>) {}
     /// What the game's code between handlers did to the hardware.
     fn take_log(&mut self) -> HwLog;
     /// Whether what the game waits for has happened.
@@ -223,6 +239,8 @@ pub enum Wait {
     /// The preload cache let go of this heap's unwanted entries already set up
     /// (`lbDvd_80017700`'s spin on `lbDvd_80017644`).
     StaleReleased(i32),
+    /// The movie player has no read in flight (`lbMthp_8001F800`'s spin on `fn_8001F294`).
+    MovieIdle,
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
@@ -333,6 +351,19 @@ impl Clock {
         self.events.retain(|e| e.kind != EventKind::PadAlarm);
     }
 
+    /// Sets the movie player's alarm to fire at `first` and every `period` after, on the
+    /// timeline after the pad alarm when both are due at once (`OSSetPeriodicAlarm`).
+    pub fn set_movie_alarm(&mut self, first: u64, period: u64) {
+        self.cancel_movie_alarm();
+        self.movie_period = period;
+        self.schedule(first, EventKind::MovieAlarm);
+    }
+
+    /// Cancels the movie player's alarm (`OSCancelAlarm`).
+    pub fn cancel_movie_alarm(&mut self) {
+        self.events.retain(|e| e.kind != EventKind::MovieAlarm);
+    }
+
     /// Stops the audio DMA: the block playing raises no interrupt.
     pub fn stop_audio_dma(&mut self) {
         self.events.retain(|e| e.kind != EventKind::AudioDma);
@@ -384,6 +415,15 @@ impl Clock {
                     EventKind::DspResume => self.dsp_ready = true,
                     EventKind::DiscDone => self.di_pending = true,
                     EventKind::DiscTimeout => panic!("a disc read timed out"),
+                    EventKind::MovieAlarm => {
+                        self.schedule(e.at + self.movie_period, EventKind::MovieAlarm);
+                        let start = self.now;
+                        f.handler_at(Some(start));
+                        let log = f.movie_alarm(MOVIE_ALARM_CALLBACK);
+                        f.handler_at(None);
+                        self.apply(start, &log);
+                        self.now = start + log.spent + MOVIE_ALARM_TAIL;
+                    }
                 }
             } else if self.ai_pending {
                 self.ai_pending = false;
@@ -394,7 +434,9 @@ impl Clock {
                 let start = self.now;
                 self.dsp_ready = false;
                 self.schedule(start + AI_MAIL + DSP_FRAME, EventKind::DspResume);
+                f.handler_at(Some(start));
                 let log = f.audio_frame(AI_CALLBACK);
+                f.handler_at(None);
                 let end = start + AI_HANDLER + (log.spent - AI_CALLBACK);
                 self.apply(start, &log);
                 // A disc read that finished while the handler ran: the OS's dispatcher takes
@@ -419,7 +461,9 @@ impl Clock {
             } else if self.aram_pending != 0 {
                 self.aram_pending -= 1;
                 let start = self.now;
+                f.handler_at(Some(start));
                 let log = f.aram_done(ARAM_CALLBACK);
+                f.handler_at(None);
                 self.apply(start, &log);
                 self.now = start + log.spent;
             } else if self.di_pending {
@@ -449,7 +493,9 @@ impl Clock {
             self.cancel(seq);
         }
         let start = self.now;
+        f.handler_at(Some(start));
         let log = f.disc_done(DI_CALLBACK);
+        f.handler_at(None);
         self.apply(start, &log);
         self.now = start + log.spent;
     }
@@ -520,8 +566,8 @@ impl Clock {
         if self.ticks_left == 0 {
             let start = self.scene_start;
             self.scene_start = start.saturating_sub(1);
-            if start < 2 {
-                // The render's wait.
+            // The render's wait, unless the display pass ran after it ([`Clock::render_start`]).
+            if !std::mem::take(&mut self.render_started) && start < 2 {
                 self.wait(WAIT_STEP, f);
             }
             if start < 2 && self.xfb_free() == 0 {
@@ -579,7 +625,9 @@ impl Clock {
     /// flush (`HSD_VIWaitXFBFlush`) waits until every copied frame has shown.
     pub fn end_scene_loop_after(&mut self, copied: bool, f: &mut dyn Frames) {
         self.game_code(f);
-        self.wait(WAIT_STEP, f);
+        if !std::mem::take(&mut self.render_started) {
+            self.wait(WAIT_STEP, f);
+        }
         if copied {
             self.xfb_pending += 1;
         }
@@ -588,6 +636,18 @@ impl Clock {
             let next = self.next_at();
             self.now = self.now.max(next);
             self.service(f);
+        }
+    }
+
+    /// A round's display pass is about to run (a session's, whose pass can read the clock
+    /// and the disc): the render's wait (`lb_800195D0`) runs first, as `gm_801A4D34` has it,
+    /// so the pass's time reads and disc reads fall where the original's do; the next tick's
+    /// start takes it up from there.
+    pub fn render_start(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        if self.scene_start < 2 && !self.render_started {
+            self.wait(WAIT_STEP, f);
+            self.render_started = true;
         }
     }
 

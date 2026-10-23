@@ -418,6 +418,7 @@ impl<'a> Comparer<'a> {
             Some(Obj::CObj(c)) => self.cobj(&format!("{path} cobj"), c, obj),
             Some(Obj::LObj(l)) => self.lobjs(&format!("{path} lobj"), Some(l), obj),
             Some(Obj::Fog(f)) => self.fog(&format!("{path} fog"), f, obj),
+            Some(Obj::SObj(s)) => self.sobjs(&format!("{path} sobj"), s, obj),
             None => {}
         }
         match g.user_data {

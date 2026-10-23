@@ -167,11 +167,12 @@ impl<'a> Comparer<'a> {
             self.u32(LBL_804D3878) as i32,
         );
         self.check(
-            "MoviePlayer",
-            "power",
-            u32::from(game.movie.power),
-            self.u32(sym("MoviePlayer")),
+            "HSD_SObjLib_804D7960",
+            "the sprites' object kind",
+            melee_sim::hsd::sobj::OBJ_SOBJ,
+            self.u8(sym("HSD_SObjLib_804D7960")),
         );
+        self.opening_title();
     }
 
     /// The memory card scene's statics and its windows.

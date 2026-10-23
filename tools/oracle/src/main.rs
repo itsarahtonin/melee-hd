@@ -53,6 +53,9 @@ fn run(args: Vec<String>) -> ExitCode {
         ["record", ref rest @ ..] => record::record(rest),
         ["trace-info", trace] => trace_info(trace),
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
+        ["trace-watch", trace, addr, len, ref range @ ..] if range.len() <= 2 => {
+            trace_watch(trace, addr, len, range)
+        }
         ["trace-world", trace, tick] => trace_world(trace, tick),
         ["trace-mem", trace, out, ref ticks @ ..] if !ticks.is_empty() => {
             trace_mem(trace, out, ticks)
@@ -83,6 +86,7 @@ fn run(args: Vec<String>) -> ExitCode {
             );
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
+            eprintln!("       melee-oracle trace-watch TRACE ADDR LEN [FROM [TO]]");
             eprintln!("       melee-oracle trace-heap TRACE");
             eprintln!("       melee-oracle trace-mem TRACE OUT_DIR TICK...");
             eprintln!(
@@ -432,6 +436,51 @@ fn trace_dump(trace_path: &str, tick: &str, addr: &str, len: &str) -> ExitCode {
     }
     eprintln!("{trace_path}: no tick {tick}");
     ExitCode::FAILURE
+}
+
+/// The words of `len` bytes from `addr` at the end of each tick from `from` to `to` where they
+/// changed, with the tick's time base: a static's history, for a port's timeline.
+fn trace_watch(trace_path: &str, addr: &str, len: &str, range: &[&str]) -> ExitCode {
+    let num = |s: &str| u32::from_str_radix(s.trim_start_matches("0x"), 16).expect("a hex number");
+    let (addr, len) = (num(addr), num(len));
+    let from = range
+        .first()
+        .map_or(0, |t| t.parse::<u32>().expect("a tick"));
+    let to = range
+        .get(1)
+        .map_or(u32::MAX, |t| t.parse::<u32>().expect("a tick"));
+    let mut r = trace::Reader::open(trace_path);
+    let mut image = trace::Image::default();
+    let mut last: Vec<u32> = Vec::new();
+    while let Some(t) = r.tick() {
+        image.apply(&t);
+        if t.number < from {
+            continue;
+        }
+        if t.number > to {
+            break;
+        }
+        let words: Vec<u32> = (addr..addr + len)
+            .step_by(4)
+            .map(|a| image.u32(a))
+            .collect();
+        if words != last {
+            let shown: Vec<String> = words
+                .iter()
+                .enumerate()
+                .map(|(i, w)| {
+                    if last.get(i) == Some(w) {
+                        "........".to_owned()
+                    } else {
+                        format!("{w:08x}")
+                    }
+                })
+                .collect();
+            println!("{} tb {:?}: {}", t.number, image.tb, shown.join(" "));
+            last = words;
+        }
+    }
+    ExitCode::SUCCESS
 }
 
 /// Main memory at the end of each of `ticks`, from a trace with memory, written whole into

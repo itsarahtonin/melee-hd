@@ -60,6 +60,11 @@ pub struct Audio {
     /// Whether the boot is a console's own (a session's), not Slippi's playback: the arena
     /// has no bootloader's heap below the audio's.
     pub console: bool,
+    /// The movie player (`lb::mthp`), whose reads and alarm run on the timeline.
+    pub movie: crate::lb::mthp::MoviePlayer,
+    /// When the interrupt handler running now started, while one runs: its log's times
+    /// count from there (none in the game's own code, whose times count from the timeline's).
+    pub hw_base: Option<u64>,
     /// Presentation output, not state: when the presentation turns it on, each frame's mix
     /// and each ARAM write is recorded here for it to mix (`mix::MixLog`). A clone starts
     /// without it and a restore leaves it alone.
@@ -144,6 +149,11 @@ impl Audio {
     /// ([`clock::Clock::end_scene_loop_after`]).
     pub fn end_scene_loop_after(&mut self, data: &Archives, copied: bool) {
         self.with_clock(data, |c, f| c.end_scene_loop_after(copied, f));
+    }
+
+    /// A round's display pass is about to run ([`clock::Clock::render_start`]).
+    pub fn render_start(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.render_start(f));
     }
 
     /// A scene's loop starts.
@@ -249,6 +259,16 @@ impl clock::Frames for Running<'_> {
         std::mem::take(&mut self.audio.hw)
     }
 
+    fn movie_alarm(&mut self, base: u64) -> HwLog {
+        self.audio.hw = HwLog::at(base);
+        self.audio.movie.alarm();
+        std::mem::take(&mut self.audio.hw)
+    }
+
+    fn handler_at(&mut self, now: Option<u64>) {
+        self.audio.hw_base = now;
+    }
+
     fn take_log(&mut self) -> HwLog {
         std::mem::take(&mut self.audio.hw)
     }
@@ -265,6 +285,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::PreloadFile(e) => self.dvd().file_state(e) != 1,
             clock::Wait::HeapReleased(h) => !self.dvd().release_heap(h),
             clock::Wait::StaleReleased(h) => !self.dvd().release_stale(h),
+            clock::Wait::MovieIdle => self.audio.movie.in_flight == 0,
         }
     }
 }

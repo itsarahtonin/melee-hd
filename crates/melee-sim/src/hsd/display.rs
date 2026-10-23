@@ -104,6 +104,12 @@ pub enum Draw {
     FighterJoint { jobj: JObjId, vmtx: Option<Mtx34> },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
+    /// The sprites' camera's setup (`HSD_SObjLib_803A54EC`): the position matrix from its
+    /// view, two texture coordinates from the first, and a white register channel.
+    SpriteSetup,
+    /// A sprite (`HSD_SObjLib_803A4A68`), with the movie frame its planes hold when it draws
+    /// the movie's.
+    SObj(super::sobj::SObjId, Option<crate::lb::mthp::MovieFrame>),
     /// The magnifier camera's viewport erased, color and depth, for player `n`'s bubble
     /// (`HSD_CObjEraseScreen(cobj, 1, 0, 1)`), in the color `ifMagnify_802FBBDC` blends from
     /// the stage's colors by where the fighter is, which the presentation works out.

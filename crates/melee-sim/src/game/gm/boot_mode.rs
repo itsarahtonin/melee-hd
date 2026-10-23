@@ -23,6 +23,20 @@ pub struct BootMode {
     pub leave_x0: u32,
     pub leave_mode: u8,
     pub opening_state: u8,
+    /// The rest of `gm_8049E548`: the attract match the title picked.
+    pub demo: TitleDemo,
+}
+
+/// The attract match `gm_SetupTitleDemo` picks (`gm_8049E548`'s first 14 bytes): the four
+/// characters and their colors, two numbers drawn apart, the match's kind and the stage.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct TitleDemo {
+    pub ckinds: [u8; 4],
+    pub colors: [u8; 4],
+    pub x8: u8,
+    pub x9: u8,
+    pub match_kind: u8,
+    pub stkind: u16,
 }
 
 impl Running<'_> {
