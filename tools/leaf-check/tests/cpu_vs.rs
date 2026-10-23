@@ -56,6 +56,11 @@
 //! (from 3870) and `oracle-cpu-approach-captain-dl` (from 1060), where the CPU jumps at its
 //! target and rolls away from it (`ftCo_800AB224`, `ftCo_800BA2E8`).
 //!
+//! Two more on Big Blue, captured the same way from `cpu-stage-big-blue`:
+//! `oracle-cpu-stage-big-blue` (from field 1086: CPUs within 20% of the blast zones' sides
+//! searching for safe ground, once against the wind) and `oracle-cpu-stage-big-blue-r5` (from
+//! 2867: floors on the joints whose excluded floors' check leaves r5 1, `grBigBlue_801EF844`).
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
 //! the stage, one beside it with a Starman (the approach and its rolls, standing's roll
