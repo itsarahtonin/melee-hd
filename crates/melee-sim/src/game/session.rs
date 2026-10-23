@@ -23,7 +23,7 @@ use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
 use crate::lb::save::{CardDevice, CardLent};
 
 /// What a session starts with besides its controllers: the console's setup.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Setup {
     /// How fast the disc reads (`vs_match::Settings::disc`).
     pub disc: DiscSpeed,
@@ -33,40 +33,74 @@ pub struct Setup {
     /// reads and writes it through the native save (`lb::save`); the session keeps it as the
     /// console's device.
     pub card: Option<Vec<u8>>,
-    /// The real-time clock at power-on, in seconds since 2000-01-01 (the OS's epoch); the
-    /// time base runs from it (`OSGetTime`). It reaches gameplay: the boot seeds the random
-    /// seed from the time base's low word (`OSGetTick`) and the title draws from it once for
-    /// each second of the clock's minute (`gmTitle_801A165C`).
-    pub clock: u64,
+    /// The real-time clock at power-on, in time base ticks from 2000-01-01 (the OS's epoch):
+    /// what the boot sets the time base to (ssbm-rs's `Regs::tb_power_on`, `SSBMINP1`
+    /// version 2's `power_on`). It is an offset only the code's reads of the time base add
+    /// (`OSGetTime`, `OSGetTick`, and the alarms' grid, [`crate::audio::clock::Clock::tb_power_on`]):
+    /// the timeline still counts from power-on, so it moves no hardware timing. It reaches
+    /// gameplay: the boot seeds the random seed from the time base's low word (`OSGetTick`)
+    /// and the title draws from it once for each second of the clock's minute
+    /// (`gmTitle_801A165C`).
+    pub power_on: u64,
     /// The video interface's DTV status (`VIGetDTVStatus`): whether the console can show
-    /// progressive scan, which with B held at power-on asks for it.
+    /// progressive scan, which with B held at power-on (or the SRAM's setting) asks for it.
     pub dtv: bool,
+    /// The SRAM's flags (`OSSram::flags`), which the boot reads: 0x04 stereo
+    /// (`OSGetSoundMode`, the synth's mode) and 0x80 progressive scan
+    /// (`OSGetProgressiveMode`). The SRAM's language isn't here: Melee's is the save's.
+    pub sram_flags: u8,
     /// The card pulled out of slot A at the start of a video field and put back at the
     /// start of another, or never (ssbm-rs's `CARD_REMOVE=F[,G]`).
     pub card_pull: Option<(u64, Option<u64>)>,
 }
 
+/// The SRAM flags of ssbm-rs's console, as Dolphin initializes them: stereo, setup done,
+/// bit 5 (`SSBMINP1` version 1's).
+pub const SRAM_FLAGS_DEFAULT: u8 = 0x2C;
+/// `OSSram::flags`' stereo bit (`OSGetSoundMode`) and progressive scan bit
+/// (`OSGetProgressiveMode`).
+pub const SRAM_STEREO: u8 = 0x04;
+pub const SRAM_PROGRESSIVE: u8 = 0x80;
+
+impl Default for Setup {
+    /// ssbm-rs's console with no card: Slippi's fast disc speed, the clock at 2000-01-01, no
+    /// component cable, its SRAM's flags.
+    fn default() -> Self {
+        Setup {
+            disc: DiscSpeed::default(),
+            dsp: DspModel::default(),
+            card: None,
+            power_on: 0,
+            dtv: false,
+            sram_flags: SRAM_FLAGS_DEFAULT,
+            card_pull: None,
+        }
+    }
+}
+
 /// The console's card device for `setup`: a card in at power-on was seen by the OS's
 /// probes at boot.
 fn card_device(setup: &Setup) -> CardDevice {
+    // The tenth of a second the OS's first probe at boot (in field 2) saw the card at, as
+    // `__EXIProbe` counts them on the code's time base.
+    let seen = setup.card.as_ref().map_or(0, |_| {
+        crate::lb::save::probe_tenths(field_start(2), setup.power_on)
+    });
     CardDevice {
         card: setup.card.as_ref().map(|image| {
             melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
         }),
         console: melee_save::Console::ssbm_rs(),
-        clock: setup.clock,
         waits: setup.card.is_some(),
         pull: setup
             .card_pull
             .map(|(out, back)| (field_start(out), back.map(field_start))),
-        probe_start: u32::from(setup.card.is_some()),
-        time_offset: setup.clock * TB_HZ,
+        probe_start: seen,
+        time_offset: setup.power_on,
         attached: false,
         // The OS's probes at boot read the card's ID as it settled.
-        id_time: u32::from(setup.card.is_some()),
+        id_time: seen,
         extint_seen: 0,
-        // The boot's ID read left the card's EXT bit in the status register.
-        ext_held: setup.card.is_some(),
     }
 }
 
@@ -149,8 +183,14 @@ impl Session {
         }
     }
 
-    /// Takes up a session from a state: one imported from a trace tick's end, say.
-    pub fn resume(game: Game, data: Archives, setup: Setup) -> Session {
+    /// Takes up a session from a state: one imported from a trace tick's end, say. Its
+    /// timeline takes the setup's clock at power-on.
+    pub fn resume(mut game: Game, data: Archives, setup: Setup) -> Session {
+        game.audio.power_on = setup.power_on;
+        game.audio.mono = setup.sram_flags & SRAM_STEREO == 0;
+        if let Some(c) = game.audio.clock.as_mut() {
+            c.tb_power_on = setup.power_on;
+        }
         let card = Some(card_device(&setup));
         Session {
             game,
@@ -210,21 +250,24 @@ impl Session {
         // model's: the OS heaps it makes are the model's layouts (`hsd::heap`).
         let bank = self.load_files(console);
         let g = &mut self.game;
-        g.main_lib.power_on_clock = self.setup.clock;
-        // `*HSD_RandSeedPtr = OSGetTick()`: the time base's low word, from the clock.
+        // `*HSD_RandSeedPtr = OSGetTick()`: the time base's low word, on the code's time base
+        // (the clock at power-on and the time since).
         let card_in = self.card.as_ref().is_some_and(|c| c.card.is_some());
         let delay = if card_in { CONSOLE_BOOT_DELAY } else { 0 };
-        let tb = self.setup.clock * TB_HZ + BootTimes::SEED + delay;
+        let tb = self.setup.power_on.wrapping_add(BootTimes::SEED + delay);
         g.objs.rng.seed = tb as u32;
         g.audio.boot_delay = delay;
         g.audio.console = true;
+        g.audio.power_on = self.setup.power_on;
+        g.audio.mono = self.setup.sram_flags & SRAM_STEREO == 0;
         let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
         };
-        r.boot_main(&bank, card_in, self.setup.dtv, console);
+        let progressive = self.setup.sram_flags & SRAM_PROGRESSIVE != 0;
+        r.boot_main(&bank, card_in, (self.setup.dtv, progressive), console);
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
     }
@@ -278,7 +321,7 @@ impl Running<'_> {
         &mut self,
         bank: &crate::lb::audio::SoundBank,
         card_in: bool,
-        dtv: bool,
+        (dtv, progressive): (bool, bool),
         console: &mut dyn Console,
     ) {
         // `lbAudioAx_8002838C`, then `lb_80019AAC(gmMain_8015FD24)`: the frame clocks and the
@@ -316,7 +359,7 @@ impl Running<'_> {
         // a retail disc), `db_ClearFPUExceptions`.
         self.game.audio.clock_read(self.data, TB_READ);
         self.game.it.db_menu.ItemSpawnsEnabled = 1;
-        self.start_modes(dtv);
+        self.start_modes(dtv, progressive);
         self.next_scene();
         self.take_alarm_reads(&mut || console.read_pads());
         self.begin_scene_loop();

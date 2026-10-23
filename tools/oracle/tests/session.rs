@@ -71,7 +71,7 @@ fn power_on_runs_to_the_opening_movie() {
         return;
     };
     assert!(
-        out.contains("2 the same (db_gameLaunchButtonState 0x0000, DbLevel 0), 0 different"),
+        out.contains("3 the same (db_gameLaunchButtonState 0x0000, DbLevel 0, the first game mode 0x28), 0 different"),
         "{out}"
     );
     assert!(
@@ -165,6 +165,72 @@ fn a_pulled_card_must_be_pulled() {
     };
     assert!(
         out.contains("212 ticks compared; tick 211 differs"),
+        "{out}"
+    );
+}
+
+/// A version 2 session (`lockstep/v2-sessions/NAME.inputs` with its card, traced into
+/// `traces/v2-sessions/NAME.trc`): recorded with ssbm-rs's `POWER_ON=789004800` (2025-01-01)
+/// and `DTV=1`, `clock` with `SRAM_FLAGS=0x28` (mono) and nothing held, `progressive` with B
+/// held at power-on; `clock-late` is `clock`'s recording with its clock 300,007 time base
+/// ticks later, off the whole seconds and the alarm's grid, traced again.
+fn v2_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/v2-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/v2-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// The clock at power-on reaches the boot's seed, the save's clock and the timeline's alarm
+/// grid; DTV on, with nothing held, still boots into the memory card scene; mono from the
+/// SRAM. Clean to the opening movie, as a version 1 session.
+#[test]
+fn a_version_2_session_takes_its_console() {
+    for name in ["clock", "clock-late"] {
+        let Some(out) = v2_session(name, &["--heap"]) else {
+            return;
+        };
+        assert!(out.contains("the session: version 2"), "{name}: {out}");
+        assert!(
+            out.contains("2 ticks compared, no difference; stopped in tick 2: gm_Scene_Opening_OnEnter isn't ported"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// melee-hd's console at 2000-01-01 shows where the clock is first read: the boot's seed.
+#[test]
+fn a_version_2_session_catches_a_dropped_clock() {
+    let Some(out) = v2_session("clock", &["--mutate", "power-on"]) else {
+        return;
+    };
+    assert!(
+        out.contains("1 ticks compared; tick 0 differs in 3 places, first: HSD_RandSeedPtr"),
+        "{out}"
+    );
+}
+
+/// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, where
+/// melee-hd's port stops.
+#[test]
+fn a_version_2_session_asks_for_progressive_scan() {
+    let Some(out) = v2_session("progressive", &[]) else {
+        return;
+    };
+    assert!(
+        out.contains("3 the same (db_gameLaunchButtonState 0x0200, DbLevel 0, the first game mode 0x27), 0 different"),
+        "{out}"
+    );
+    assert!(
+        out.contains(
+            "stopped in the boot, before trace tick 0: game mode 0x27's loading isn't ported"
+        ),
         "{out}"
     );
 }
