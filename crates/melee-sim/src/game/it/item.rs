@@ -812,6 +812,29 @@ pub fn spawn_ground(r: &mut Running, spawn: &mut SpawnItem) -> Option<GObjId> {
     create(r, spawn)
 }
 
+/// A drop by kind's spawn of `kind` at `pos`: no parent, facing left, still, with a first
+/// collision (the inline `Item_InitSpawnPosition` and `Item_InitSpawnCommonFields` of the
+/// items' spawns by position), its depth put on the plane when `on_plane`.
+pub fn drop_spawn(kind: i32, pos: Vec3, on_plane: bool) -> SpawnItem {
+    let mut spawn = SpawnItem {
+        kind,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    if on_plane {
+        spawn.prev_pos.z = 0.0;
+    }
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = -1.0;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = None;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    spawn
+}
+
 /// Makes an item on the ground with `x18` set, `Item_80268B9C`.
 #[doc(alias = "Item_80268B9C")]
 pub fn spawn_ground_marked(r: &mut Running, spawn: &mut SpawnItem) {

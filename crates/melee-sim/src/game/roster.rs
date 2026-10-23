@@ -255,10 +255,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grbigblue", "melee/gr/grfzerocar"],
             modules: &["gr/bigblue", "gr/fzerocar"],
-            unreached: &[(
-                "Big Blue's platform item",
-                "the items the flying platforms drop, which only a match with items on makes",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },

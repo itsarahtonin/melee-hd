@@ -11751,6 +11751,63 @@ fn bigblue_searches() {
     check_calls_with(&d, "grBigBlue_801E8A1C", 1, &as_saved, &item);
 }
 
+/// The Big Blue items matches' calls of the flying platforms' item (`grBigBlue_801E8A1C`),
+/// made from `items-platforms-big-blue` and `items-platforms-cpu-big-blue` as the stage
+/// match's were, with `bb-items-funcs.txt` (the one function) and `done-bb.txt`.
+const BB_ITEMS: [&str; 2] = [
+    "oracle-items-platforms-big-blue",
+    "oracle-items-platforms-cpu-big-blue",
+];
+
+/// The flying platforms' item: each call as saved, then on each platform with each of the five
+/// kinds alone on, none, all of them, the Party Ball off, and in a sudden death, from several
+/// seeds.
+#[test]
+fn bigblue_platform_items() {
+    use melee_sim::game::gr::bigblue;
+    // `StartMeleeRules` (`x6`, sudden death; `item_freq`) and the spawner's mask's low word.
+    const RULES: u32 = 0x8046_DB68;
+    let mask = leaf_check::sym("it_804A0E30") + 0x1C;
+    let item = |r: &mut Running, _: &Maps, call: &Call| {
+        bigblue::platform_item(r, call.regs.gpr[3] as usize);
+        Ret::Nothing
+    };
+    for set in BB_ITEMS {
+        let d = dir(set);
+        check_calls_with(&d, "grBigBlue_801E8A1C", 1, &as_saved, &item);
+        let kinds: [u32; 9] = [
+            1 << 4,
+            1 << 12,
+            1 << 21,
+            1 << 25,
+            1 << 31,
+            0,
+            !0,
+            !(1 << 4),
+            1 << 12 | 1 << 25,
+        ];
+        for (n, on) in kinds.into_iter().enumerate() {
+            for idx in 0..3u32 {
+                let set = move |c: &mut Call, k: usize| {
+                    c.regs.gpr[3] = idx;
+                    poke_u8(c, RULES + 0xB, 2);
+                    poke_u32(c, mask, on);
+                    set_seed(
+                        c,
+                        0x2545_F491u32.wrapping_mul((k * 31 + n * 3) as u32 + idx + 1),
+                    );
+                };
+                check_calls_with(&d, "grBigBlue_801E8A1C", 1, &set, &item);
+            }
+        }
+        let sudden = move |c: &mut Call, _: usize| {
+            poke_u8(c, RULES + 6, 1);
+            poke_u32(c, mask, !0);
+        };
+        check_calls_with(&d, "grBigBlue_801E8A1C", 1, &sudden, &item);
+    }
+}
+
 /// The flying platforms' process: each platform waiting, counting down, placed (from either
 /// side, with the Falcon Flyer due and the relay platform's count reached) and flying (dipping,
 /// pushed, rising, tilted past its limits, leaving), from several seeds.

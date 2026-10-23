@@ -365,7 +365,7 @@ const DEBUG: &str = "the debug menu's item spawn and the items' debug drawings";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const CEREBI: &str = "Celebi, whose draw (it_8027A4D4) asks gm_80165084 whether the card records every Pokemon trophy; with Slippi's codes, the player's unlocks (Unlocks::slippi), the records' test answers with the index it is asked about (blr at 0x8015D94C), so record 0 reads as missing and Celebi never comes out";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
-const DROP_BY_KIND: &str = "a spawn by kind for the bob-omb rain and single-player stages (it_8026BE84): sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms' items are a gap)";
+const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper, food, Home-Run Bat or bob-omb (it_8026BE84): the bob-omb rain of a sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms make only the five kinds ported)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const EVT_UNK: &str =
@@ -462,12 +462,8 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
     ("it_80284854", DROP_BY_KIND),
-    ("it_80292D48", DROP_BY_KIND),
     ("itFlipper_Spawn", DROP_BY_KIND),
     ("it_80283AE4", DROP_BY_KIND),
-    ("it_802896CC", DROP_BY_KIND),
-    ("it_80294DC0", DROP_BY_KIND),
-    ("it_80291BE0", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026ECE0", DEBUG),
     ("Item_80266F3C", DEBUG),
@@ -559,13 +555,7 @@ pub const UNCHECKED: &[&str] = &[
 ];
 
 /// What an items-on match reaches that isn't ported, task by task: nothing left.
-pub const MISSING: &[ItemGap] = &[ItemGap {
-    what: "Big Blue's flying platforms' items (a Beam Sword, Super Scope, Bunny Hood, Fire Flower or Party Ball, made by kind)",
-    covers: &["Big Blue's platform item"],
-    kinds: &[4, 12, 21, 25, 31],
-    with: &[],
-    stages: &[24],
-}];
+pub const MISSING: &[ItemGap] = &[];
 
 #[cfg(test)]
 mod tests {

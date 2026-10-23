@@ -185,6 +185,15 @@ pub fn shoot(r: &mut Running, gobj: GObjId, pos: Vec3, level: i32, facing: f32) 
     sscopebeam::fire(r, owner, pos, level, facing);
 }
 
+/// A Super Scope standing at `pos`, `it_80291BE0`.
+#[doc(alias = "it_80291BE0")]
+pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
+    let mut spawn = super::super::item::drop_spawn(super::S_SCOPE, pos, false);
+    let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
+    landed(r, gobj);
+    Some(gobj)
+}
+
 /// Stops and stands, `it_80292030`.
 #[doc(alias = "it_80292030")]
 pub fn landed(r: &mut Running, gobj: GObjId) {

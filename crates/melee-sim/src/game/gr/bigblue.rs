@@ -868,19 +868,30 @@ pub fn obstacle(
 
 /// Gives a flying platform an item, `grBigBlue_801E8A1C`: one of the Beam Sword, the Super
 /// Scope, the Bunny Hood, the Fire Flower and the Party Ball the rules have on, at random, a
-/// little above platform joint `idx` (as the item drops of a bob-omb rain make it). With
-/// items off none is on.
+/// little above platform joint `idx` (8 for the Party Ball, 5 for the others), standing and
+/// holding still with its flags held, as a drop by kind (`it_8026BE84`); the platform keeps it
+/// (`x50`, which nothing reads). With items off none is on.
 #[doc(alias = "grBigBlue_801E8A1C")]
 pub fn platform_item(r: &mut Running, idx: usize) {
-    let valid = ITEM_KINDS
-        .into_iter()
-        .filter(|&k| super::super::it::spawn::kind_on(r.game, k))
-        .count();
-    if valid == 0 {
+    let g = map_ground(r.game, 0x20);
+    let platform = r.game.grounds[g.0].u.bigblue_manager().jobjs[idx];
+    let mut valid = [0; 5];
+    let mut count = 0;
+    for k in ITEM_KINDS {
+        if super::super::it::spawn::kind_on(r.game, k) {
+            valid[count] = k;
+            count += 1;
+        }
+    }
+    if count == 0 {
         return;
     }
-    let _ = idx;
-    crate::game::code::unported_call("it_8026BE84 (Big Blue's platform item)");
+    let kind = valid[r.game.objs.rng.below(count as i32) as usize];
+    let mut pos = translation(r.game, platform);
+    let lift = if kind == 4 { 8.0 } else { 5.0 };
+    pos.y = mem(fp::fadds(reg(pos.y), lift));
+    let item = super::super::it::lib26b1::drop_by_kind(r, kind, pos, true);
+    r.game.grounds[g.0].u.bigblue_manager().data[idx].x50 = item;
 }
 
 /// `grBb_803B8120`: `It_Kind_Sword`, `It_Kind_S_Scope`, `It_Kind_RabbitC`, `It_Kind_F_Flower`,

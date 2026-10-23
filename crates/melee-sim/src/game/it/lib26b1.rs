@@ -441,6 +441,42 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
     ip.xDC8_word.flags.x1A = false;
 }
 
+/// Makes an item of `kind` at `pos` (`BobOmbRain`'s `x14` and `x8_vec`), `it_8026BE84`, as the
+/// stages that drop items by kind do: in a sudden death only the bob-omb rain's; the Party
+/// Ball (while the rules have it on), Beam Sword, Super Scope, Fire Flower and Bunny Hood
+/// standing, holding still for their animation, and with `hold` (`x1C.b0`) holding their
+/// flags too ([`hold_flags_on`]). Big Blue's flying platforms make only those five; the box,
+/// Flipper, foods, Home-Run Bat and bob-omb are other modes' (`items_audit`).
+#[doc(alias = "it_8026BE84")]
+pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option<GObjId> {
+    use super::kinds::{fflower, kusudama, rabbitc, sscope, sword};
+    use super::lib2725::hold_still;
+    if r.game.vs_x6() != 0 && kind != 6 {
+        return None;
+    }
+    let gobj = match kind {
+        4 => {
+            if !super::spawn::kind_on(r.game, super::kinds::KUSUDAMA) {
+                return None;
+            }
+            kusudama::spawn_at(r, pos)
+        }
+        12 => sword::spawn_at(r, pos),
+        21 => sscope::spawn_at(r, pos),
+        25 => fflower::spawn_at(r, pos),
+        31 => rabbitc::spawn_at(r, pos),
+        1 | 20 | 8 | 9 | 11 | 6 => {
+            crate::game::code::unported_call("it_8026BE84 (a box, Flipper, food, bat or bob-omb)")
+        }
+        _ => None,
+    }?;
+    hold_still(r.game, gobj);
+    if hold {
+        hold_flags_on(r.game, gobj);
+    }
+    Some(gobj)
+}
+
 /// Makes the item keep clear of others (`xDC8_word.x1A`), `it_8026BD9C`.
 #[doc(alias = "it_8026BD9C")]
 pub fn keep_clear(game: &mut Game, gobj: GObjId) {

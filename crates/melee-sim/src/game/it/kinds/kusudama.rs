@@ -352,6 +352,15 @@ fn stand(r: &mut Running, gobj: GObjId) {
     jobj::set_angle(&mut r.game.objs.jobjs, j, |q| q.x = mem(x));
 }
 
+/// A party ball standing at `pos`, `it_802896CC`.
+#[doc(alias = "it_802896CC")]
+pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
+    let mut spawn = super::super::item::drop_spawn(super::KUSUDAMA, pos, false);
+    let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
+    stopped(r, gobj);
+    Some(gobj)
+}
+
 /// Stops, standing, `it_8028A190`.
 #[doc(alias = "it_8028A190")]
 pub fn stopped(r: &mut Running, gobj: GObjId) {
