@@ -56,13 +56,17 @@ fn card_device(setup: &Setup) -> CardDevice {
         console: melee_save::Console::ssbm_rs(),
         clock: setup.clock,
         waits: setup.card.is_some(),
-        identified: false,
-        last_probe: None,
         pull: setup
             .card_pull
             .map(|(out, back)| (field_start(out), back.map(field_start))),
         probe_start: u32::from(setup.card.is_some()),
         time_offset: setup.clock * TB_HZ,
+        attached: false,
+        // The OS's probes at boot read the card's ID as it settled.
+        id_time: u32::from(setup.card.is_some()),
+        extint_seen: 0,
+        // The boot's ID read left the card's EXT bit in the status register.
+        ext_held: setup.card.is_some(),
     }
 }
 

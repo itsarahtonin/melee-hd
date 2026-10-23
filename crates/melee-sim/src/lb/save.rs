@@ -40,13 +40,10 @@ pub struct CardDevice {
     /// the card's directory with as the time base runs on (`OSGetTime`).
     pub clock: u64,
     /// Whether the card layer's step is a wait point: on ssbm-rs's console, when a card was
-    /// in at power-on (its runner hooks `hsd_803AAA48` then).
+    /// in at power-on (its runner hooks `hsd_803AAA48` then). Only then does ssbm-rs run the
+    /// CARD library and its probes of the slots; without, it stands in for them, and they take
+    /// no time.
     pub waits: bool,
-    /// Whether the memory card scene's probe has run since power-on: its first takes
-    /// longer ([`ID_WORK`]).
-    pub identified: bool,
-    /// What the scene's last probe found (none before the first), for the probe's time.
-    pub last_probe: Option<Probe>,
     /// When the card is out of the slot, on the time base: from the first time to the second
     /// (or for good), an input of the session's ([`crate::game::session::Setup::card_pull`]).
     pub pull: Option<(u64, Option<u64>)>,
@@ -55,15 +52,35 @@ pub struct CardDevice {
     pub probe_start: u32,
     /// The time base's offset from the OS's time (`OSGetTime`): the clock at power-on.
     pub time_offset: u64,
+    /// Slot A's channel is attached (`Ecb[0].state`'s `EXI_STATE_ATTACHED`): from a task
+    /// list's mount to its unmount.
+    pub attached: bool,
+    /// `Ecb[0].idTime`: the probe's tenth of a second when the card's ID was read
+    /// (`EXIGetID`), which a probe that finds it settled reads again when this isn't its
+    /// start (0 once the card changed).
+    pub id_time: u32,
+    /// When a probe of the channel unattached last looked at its insertion interrupt
+    /// (EXTINT), which pulling the card out or putting it back raises, on the time base.
+    pub extint_seen: u64,
+    /// The channel's status register as ssbm-rs's console stores it holds the card's EXT bit
+    /// (a card in). Its reads add EXT while the card is in, and otherwise give what the
+    /// register holds: the interrupt mask's update (`SetInterruptMask`) writes back what it
+    /// read, EXT included, so after a mount's or an ID read's detach the bit stays set until a
+    /// probe's clearing of the insertion interrupt writes the register without it. So the
+    /// first probe after a pull still finds a card (it reads the time and doesn't answer).
+    pub ext_held: bool,
 }
 
-/// What a probe of slot A finds: no card, a card not settled yet, or one that answers.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum Probe {
-    Empty,
-    Settling,
-    Ready,
-}
+/// Time base ticks a hardware register's read takes on ssbm-rs's console, and a read of the
+/// time base (`OSGetTime`).
+pub const EXI_READ: u64 = 8;
+pub const TIME_READ: u64 = 16;
+/// Time base ticks of `EXIGetID` reading a card's ID when it isn't known, counted from
+/// ssbm-rs's ports of it and its callees: its two `__EXIProbe`s (48), the interrupts' clear
+/// and the insertion interrupt's unmask (16), the select (16), a command written and one read
+/// back, each waited for (`EXISync`: 16 and 24, with `__OSGetDIConfig`'s register), the
+/// deselect with its probe (24), and the detach's mask (8).
+pub const ID_READ: u64 = 152;
 
 impl CardDevice {
     /// Whether the card is in the slot at time base `now`.
@@ -74,19 +91,75 @@ impl CardDevice {
                 .is_some_and(|(out, back)| now >= out && back.is_none_or(|b| now < b))
     }
 
-    /// `EXIProbe(0)` at `now` (`__EXIProbe`): no card forgets the probe's start; a card
-    /// answers once it has been seen for three tenths of a second.
-    pub fn exi_probe(&mut self, now: u64) -> bool {
-        if !self.present(now) {
-            self.probe_start = 0;
-            return false;
+    /// `EXIProbe(0)` at `now`: whether a card answers, and the time the probe takes on
+    /// ssbm-rs's console. `__EXIProbe` reads the channel's status register; attached, that is
+    /// all, and a card in answers. Unattached, an insertion interrupt a pull or an insertion
+    /// raised is read again and cleared, forgetting the probe's start and the ID; no card
+    /// (no EXT bit in the first read, [`CardDevice::ext_held`]) forgets them too; a card
+    /// reads the time (`OSGetTime`), and answers once seen for three tenths of a second. A
+    /// card that answers with its ID forgotten has it read (`EXIGetID`).
+    pub fn exi_probe_timed(&mut self, now: u64) -> (bool, u64) {
+        let mut time = EXI_READ;
+        let present = self.present(now);
+        if self.attached {
+            return (present, time);
         }
+        let ext = present || self.ext_held;
+        if self.extint(now) {
+            time += EXI_READ;
+            self.probe_start = 0;
+            self.id_time = 0;
+            self.ext_held = false;
+        }
+        self.extint_seen = now;
+        if !ext {
+            self.probe_start = 0;
+            self.id_time = 0;
+            return (false, time);
+        }
+        time += TIME_READ;
         let tenths = ((now + self.time_offset) / (TB_HZ / 1000) / 100) as u32 + 1;
         if self.probe_start == 0 {
             self.probe_start = tenths;
         }
-        tenths.wrapping_sub(self.probe_start) >= 3
+        let answers = tenths.wrapping_sub(self.probe_start) >= 3;
+        if answers && self.id_time != self.probe_start {
+            time += ID_READ;
+            self.id_time = self.probe_start;
+            self.ext_held = true;
+        }
+        (answers, time)
     }
+
+    /// Whether the card was pulled out or put back since the channel's insertion interrupt
+    /// was last looked at.
+    fn extint(&self, now: u64) -> bool {
+        let Some((out, back)) = self.pull else {
+            return false;
+        };
+        self.card.is_some()
+            && [Some(out), back]
+                .into_iter()
+                .flatten()
+                .any(|b| self.extint_seen < b && b <= now)
+    }
+}
+
+/// The pad alarm's handler's card probes at `now` (`fn_800195FC`'s `lb_8001C600` and
+/// `lbSnap_8001D2BC`: `CARDProbe` of slot A twice, then of slot B, which is empty): their
+/// time, and whether slot A's card answered. On ssbm-rs's console without a card at power-on
+/// they take none, as without a session's card device (a replay's).
+pub fn alarm_card_probes(now: u64) -> (u64, bool) {
+    LENT.with(|l| {
+        let mut l = l.borrow_mut();
+        let Some(dev) = l.as_mut().filter(|d| d.waits) else {
+            return (0, false);
+        };
+        let (card, first) = dev.exi_probe_timed(now);
+        let (again, second) = dev.exi_probe_timed(now + first);
+        debug_assert_eq!(card, again, "slot A's two probes in one alarm differ");
+        (first + second + EXI_READ, card)
+    })
 }
 
 thread_local! {
@@ -177,16 +250,6 @@ pub const MOUNT_WORK: u64 = 1643;
 /// full and broken cards' sessions, whose loads and probes end on that step.
 pub const CHECK_WORK: u64 = 2;
 pub const LOAD_WORK: u64 = 1;
-/// Register reads of `CARDProbeEx` (the memory card scene's probe each frame), fitted to
-/// the prompts' and the pulled card's sessions: with a card that answers ([`PROBE_WORK`],
-/// [`ID_WORK`] more the first time since power-on); with one not settled yet
-/// ([`SETTLING_PROBE_WORK`]) or a pulled card's slot empty ([`EMPTY_PROBE_WORK`]), each
-/// [`CHANGED_PROBE_WORK`] the first time in a row; none with no card at all.
-pub const PROBE_WORK: u64 = 6;
-pub const ID_WORK: u64 = 7;
-pub const SETTLING_PROBE_WORK: u64 = 3;
-pub const EMPTY_PROBE_WORK: u64 = 1;
-pub const CHANGED_PROBE_WORK: u64 = 4;
 /// Register reads of a block's read (sixteen 512-byte segments). Only the last block's
 /// reads reach the load's end (the wait points before it end at events), so the traces fix
 /// the last step's work but not its split; 323 keeps the mount's rate of about 20 a
@@ -303,7 +366,7 @@ impl Running<'_> {
         let mut run = Run::new(melee_save::melee::manifest(), bufs);
         self.card_alarm_probes();
         let now = self.clock_now();
-        let card_in = with_device(|dev| dev.exi_probe(now));
+        let (card_in, probe) = with_device(|dev| dev.exi_probe_timed(now));
         // The mount's probe found the card: the lists that take the card game's status clear
         // it (`*_p(status) = 0`); the others pass none.
         if card_in && status {
@@ -346,16 +409,26 @@ impl Running<'_> {
                 h => melee_save::tasks::from_hsd(h),
             };
         }
-        let (mut first, steps) = time.steps(r, card_in);
-        // A pulled card's mount fails at its probe.
-        if !card_in && with_device(|dev| dev.card.is_some()) {
-            first += EMPTY_PROBE_WORK;
+        let (first, steps) = time.steps(r, card_in);
+        // A list without a card that answers fails at the mount's probe (`CARDProbeEx`, with
+        // interrupts off), which takes no time where ssbm-rs stands in for the CARD library.
+        if !card_in && with_device(|dev| dev.waits) {
+            self.game.audio.clock_read(self.data, probe);
         }
+        // The mount attaches slot A's channel, and the list's end unmounts it.
+        let mounted = !steps.is_empty();
+        with_device(|dev| dev.attached = mounted);
         self.game.audio.clock_reg_reads(self.data, first);
         for work in steps {
             self.game.audio.clock_wait(self.data);
             self.game.audio.clock_reg_reads(self.data, work);
         }
+        // The unmount's detach writes the status register back with the card's EXT bit.
+        let now = self.clock_now();
+        with_device(|dev| {
+            dev.attached = false;
+            dev.ext_held |= mounted && dev.present(now);
+        });
         self.card_alarm_probes();
         (r, run)
     }
@@ -399,37 +472,28 @@ impl Running<'_> {
     }
 
     /// `lbCardNew_ProbeEx`: whether a memory card is in the slot (`lbCardResult` 0), else
-    /// the device error. `CARDProbeEx` reads the interface's registers ([`PROBE_WORK`]).
+    /// the device error. `CARDProbeEx` probes the slot (`EXIProbeEx`) and asks a card that
+    /// answers for its ID (`EXIGetID`, which probes again and finds it known), with
+    /// interrupts off; on ssbm-rs's console without a card at power-on it's stood in for and
+    /// takes no time.
     #[doc(alias = "lbCardNew_ProbeEx")]
     pub fn card_probe(&mut self) -> i32 {
         self.card_alarm_probes();
         let now = self.clock_now();
-        let (probe, reads) = with_device(|dev| {
-            let ready = dev.exi_probe(now);
-            let probe = match (dev.present(now), ready) {
-                (_, true) => Probe::Ready,
-                (true, false) => Probe::Settling,
-                (false, _) => Probe::Empty,
+        let (ready, time) = with_device(|dev| {
+            if !dev.waits {
+                return (false, 0);
+            }
+            let (ready, probe) = dev.exi_probe_timed(now);
+            let id = if ready {
+                dev.exi_probe_timed(now + probe).1
+            } else {
+                0
             };
-            let again = dev.last_probe.replace(probe) == Some(probe);
-            let reads = match probe {
-                Probe::Ready => {
-                    PROBE_WORK
-                        + if std::mem::replace(&mut dev.identified, true) {
-                            0
-                        } else {
-                            ID_WORK
-                        }
-                }
-                Probe::Settling if again => SETTLING_PROBE_WORK,
-                Probe::Empty if dev.card.is_none() => 0,
-                Probe::Empty if again => EMPTY_PROBE_WORK,
-                _ => CHANGED_PROBE_WORK,
-            };
-            (probe, reads)
+            (ready, probe + id)
         });
-        self.game.audio.clock_reg_reads(self.data, reads);
-        if probe == Probe::Ready {
+        self.game.audio.clock_read(self.data, time);
+        if ready {
             result::READY
         } else {
             result::DEVICE_ERROR
@@ -456,17 +520,13 @@ impl Running<'_> {
         else {
             return;
         };
-        for t in times {
-            let p = with_device(|dev| dev.exi_probe(t));
+        for p in times {
             let g = &mut self.game.card_game;
-            if p != g.probe_status {
+            if p.card != g.probe_status {
                 g.unk_status = true;
             }
-            g.probe_status = p;
-            for (chan, card) in [with_device(|dev| dev.exi_probe(t)), false]
-                .into_iter()
-                .enumerate()
-            {
+            g.probe_status = p.card;
+            for (chan, card) in [p.card, false].into_iter().enumerate() {
                 let s = &mut self.game.snap;
                 if i32::from(card) != s.card_state[chan] {
                     s.state_changed[chan] = 1;
@@ -497,5 +557,42 @@ impl Running<'_> {
             t.work_area = crate::hsd::heap::mem_alloc(0xA000);
             t.lib_area = crate::hsd::heap::mem_alloc(0x2000);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A tenth of a second on the time base.
+    const TENTH: u64 = TB_HZ / 10;
+
+    #[test]
+    fn a_probe_takes_what_the_exi_library_reads() {
+        // In since power-on, its ID read at boot, pulled at 10 s and put back at 20 s.
+        let mut dev = CardDevice {
+            card: Some(Card::blank()),
+            waits: true,
+            probe_start: 1,
+            id_time: 1,
+            ext_held: true,
+            pull: Some((100 * TENTH, Some(200 * TENTH))),
+            ..CardDevice::default()
+        };
+        // Settled: the status register and the time.
+        assert_eq!(dev.exi_probe_timed(10 * TENTH), (true, 24));
+        // Attached, the register alone.
+        dev.attached = true;
+        assert_eq!(dev.exi_probe_timed(11 * TENTH), (true, 8));
+        dev.attached = false;
+        // Pulled: the insertion interrupt read and cleared, the held EXT bit read as a card
+        // (the time), then no card.
+        assert_eq!(dev.exi_probe_timed(101 * TENTH), (false, 32));
+        assert_eq!(dev.exi_probe_timed(102 * TENTH), (false, 8));
+        // Put back: the interrupt and the time, settling, then its ID read once it answers.
+        assert_eq!(dev.exi_probe_timed(201 * TENTH), (false, 32));
+        assert_eq!(dev.exi_probe_timed(202 * TENTH), (false, 24));
+        assert_eq!(dev.exi_probe_timed(205 * TENTH), (true, 24 + ID_READ));
+        assert_eq!(dev.exi_probe_timed(206 * TENTH), (true, 24));
     }
 }

@@ -65,11 +65,11 @@ A `.gci` is a file's 0x40-byte directory entry, as the directory holds it, then 
 | A load that finds no file, or a full card | 1: the check and one more (2 + 1) |
 | A load or probe of a broken card | 1: the check (2) |
 | A probe (`lb_8001C87C`) or a search for another game's file (`lb_8001C2D8`) | 1: the check (2) |
-| No card, or one pulled or not settled | none (a pulled card's failed probe 1 read) |
+| No card, or one pulled or not settled | none (the mount's failed probe takes a probe's time, below) |
 
 The step counts are ssbm-rs's (`CARD_STEPS=1`, `CALLS=EXIDma,EXIImm,EXISync,hsd_803AAA48`); the reads are fitted to the sessions' traces. Only a load's last block's reads reach its end (the waits before it end at events), so the twenty blocks' split is the mount's rate of about 20 reads a segment. `lbCardNew_CompleteAllTasks` after each scene is one more wait.
 
-`lbCardNew_ProbeEx` (the memory card scene's probe every frame) and the pad alarm's probes (`lb_8001C600`, `lbSnap_8001D2BC`, at each alarm's time) ask the device: no card, a card not settled (the EXI library answers only three tenths of a second after it first sees one, `__EXIProbeStartTime`), or one that answers. A session's card can be pulled and put back at video fields (`Setup::card_pull`, ssbm-rs's `CARD_REMOVE=F,G`; `melee-oracle session --card-pull F,G`). The scene's probe takes 6 register reads with a card that answers (7 more the first time since power-on), 3 with one settling, 1 with a pulled card's slot empty, 4 the first time in a row either way, and none with no card at all.
+`lbCardNew_ProbeEx` (the memory card scene's probe every frame) and the pad alarm's probes (`lb_8001C600`, `lbSnap_8001D2BC`, at each alarm's time) ask the device: no card, a card not settled (the EXI library answers only three tenths of a second after it first sees one, `__EXIProbeStartTime`), or one that answers. A session's card can be pulled and put back at video fields (`Setup::card_pull`, ssbm-rs's `CARD_REMOVE=F,G`; `melee-oracle session --card-pull F,G`). Each probe takes the time of the SDK's `__EXIProbe` on ssbm-rs's console (`CardDevice::exi_probe_timed`, [the engine notes](engine.md#audio)): the channel's status register, again to clear an insertion interrupt, the time base with a card in, and the card's ID read once it answers after a pull. The scene's probe (`CARDProbeEx`) takes 48 ticks with a card that answers (the probe and the ID's own probe), 24 with one settling and 8 with a pulled card's slot empty; the pad alarm's three take 56 with the card in and settled; a task list's mount runs while the channel is attached, when a probe reads the status register alone. With no card at power-on ssbm-rs stands in for the CARD library and none takes time.
 
 ## Checks
 
