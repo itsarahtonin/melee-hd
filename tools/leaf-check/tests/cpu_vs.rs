@@ -47,6 +47,11 @@
 //! 4110, near the edges, searching against the wind) and `oracle-cpu-stage-great-bay` (from 4720,
 //! by the surfaced turtle).
 //!
+//! Two more on Big Blue, captured the same way from `cpu-stage-big-blue`:
+//! `oracle-cpu-stage-big-blue` (from field 1086: CPUs within 20% of the blast zones' sides
+//! searching for safe ground, once against the wind) and `oracle-cpu-stage-big-blue-r5` (from
+//! 2867: floors on the joints whose excluded floors' check leaves r5 1, `grBigBlue_801EF844`).
+//!
 //! `cpu_vs_changed` changes the saved frames to reach what those don't: level 9, other
 //! characters' recoveries, ranged attacks, charge releases and follow-ups, an enemy entering
 //! the stage, the CPU off camera, its target off the stage or under it with no island end in
