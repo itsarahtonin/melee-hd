@@ -96,8 +96,9 @@ use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_render::predict::{Cost, Predictor};
 use melee_sim::audio::clock::DiscSpeed;
-use melee_sim::game::gm::vs_mode::GamePrefs;
+use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
 use melee_sim::game::roster;
+use melee_sim::game::special_audit;
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
@@ -108,6 +109,15 @@ use winit::window::WindowId;
 
 /// Ticks a second: the engine's pad-polling rate.
 const TICK_RATE: f64 = 60.0;
+
+/// The engine tick's length: a 60th of a second, or shorter in a game sped up (Lightning
+/// Melee's, whose tick the game's clock sets at its speed, `lb_80019628`).
+fn engine_tick(m: &Match) -> Duration {
+    m.game.pacing.short_tick_nanos().map_or(
+        Duration::from_secs_f64(1.0 / TICK_RATE),
+        Duration::from_nanos,
+    )
+}
 
 /// The command line.
 #[derive(Clone)]
@@ -189,6 +199,8 @@ struct Args {
     /// The item frequency and switch the match starts with, as the VS menus keep them: the
     /// launcher's offered items (`items`), else items off.
     items: GamePrefs,
+    /// The Special Melee mode whose rules the match plays by, if any.
+    special: Option<Special>,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -203,11 +215,19 @@ fn usage() -> String {
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
          replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
+         special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::offered_characters().map(|c| c.keys[0]).collect()),
         names(roster::offered_stages().map(|s| s.keys[0]).collect()),
+        names(
+            Special::ALL
+                .into_iter()
+                .filter(|&m| special_audit::offered(m))
+                .map(Special::key)
+                .collect()
+        ),
     )
 }
 
@@ -253,6 +273,7 @@ fn parse_args() -> Result<Args, String> {
         record: true,
         replays: None,
         items: GamePrefs::items_off(),
+        special: None,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -395,6 +416,10 @@ fn parse_args() -> Result<Args, String> {
                 a.given.replays = true;
             }
             "--unfinished-stages" => a.unfinished_stages = true,
+            "--special" => {
+                let v = value()?;
+                a.special = Some(Special::from_key(&v).ok_or("--special MODE")?);
+            }
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
@@ -414,6 +439,9 @@ fn parse_args() -> Result<Args, String> {
             .and_then(|s| s.refusal(&characters))
             .or_else(|| cpu::refusal(&ports, &a.cpus, a.stage, &[]));
         if let Some(why) = why {
+            return Err(format!("{why} (--unfinished-stages plays it anyway)"));
+        }
+        if let Some(why) = a.special.and_then(launcher::special_refusal) {
             return Err(format!("{why} (--unfinished-stages plays it anyway)"));
         }
     }
@@ -459,7 +487,8 @@ impl Session {
             }
             None => {
                 let players = cpu::players(&a.players, &a.cpus);
-                let mut s = Settings::vs_items(a.stage, &players, a.stocks, a.minutes, &a.items);
+                let rules = GameRules::vs(a.stocks, a.minutes);
+                let mut s = Settings::vs_special(a.stage, &players, &rules, &a.items, a.special);
                 // A seed from the clock unless given: presentation-side, set once before the
                 // match.
                 s.seed = a.seed.unwrap_or_else(|| {
@@ -845,11 +874,20 @@ impl App {
         };
         let simulated = start.elapsed();
         let audio = session.sound.as_ref().and_then(sound::Sound::stats);
+        let tick = engine_tick(&session.m);
         self.jit.ran(&plan);
         self.stats.ticks += 1;
         self.ticks += 1;
         if self.max_ticks.is_some_and(|n| self.ticks >= n) {
             session.ended = true;
+        }
+        if tick != self.jit.tick() {
+            // A game sped up (Lightning Melee) runs its engine ticks more often: Melee's clock
+            // follows from the next tick, and the frames between ticks too.
+            self.jit.set_tick(tick);
+            if self.mode.paced() {
+                self.start_pacing(self.mode);
+            }
         }
         let mut frame = None;
         let mut id = None;
@@ -1116,12 +1154,7 @@ impl App {
                 mode.key(),
                 1.0 / refresh.as_secs_f64()
             );
-            pacing::Pacer::new(
-                Duration::from_secs_f64(1.0 / TICK_RATE),
-                refresh,
-                fifo,
-                Instant::now(),
-            )
+            pacing::Pacer::new(self.jit.tick(), refresh, fifo, Instant::now())
         });
     }
 
@@ -1387,6 +1420,10 @@ impl App {
         args.replays = Some(l.form.replays.clone()).filter(|d| !d.is_empty());
         let items = c.items();
         args.items = items.prefs.clone();
+        args.special = c.special;
+        if let Some(m) = c.special {
+            eprintln!("special melee: {}", m.name());
+        }
         let names: Vec<String> = (c.players.iter().zip(&c.cpus))
             .filter_map(|(&k, l)| {
                 let name = roster::character_by_kind(k?)?.name;
