@@ -21,6 +21,7 @@ mod boot;
 mod diff;
 mod golden;
 mod record;
+mod session;
 mod sync;
 mod trace;
 mod vanilla;
@@ -55,6 +56,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-world", trace, tick] => trace_world(trace, tick),
         ["trace-heap", trace] => diff::trace_heap(trace),
         ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
+        ["session", ref rest @ ..] => session::session(rest),
         ["rules", ref replays @ ..] if !replays.is_empty() => rules(replays),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
@@ -81,6 +83,12 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-heap TRACE");
             eprintln!(
                 "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"
+            );
+            eprintln!(
+                "       melee-oracle session TRACE INPUTS [--card FILE] [--from TICK] [--ticks N] [--all] [--scenes]"
+            );
+            eprintln!(
+                "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
             );
             eprintln!("       melee-oracle rules REPLAY.slp...");
             ExitCode::from(2)

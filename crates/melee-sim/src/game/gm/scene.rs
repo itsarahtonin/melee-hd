@@ -152,34 +152,41 @@ impl Game {
 /// The audio frames that fall before the tick on ssbm-rs's timeline run first, and its
 /// perf timer's read at the end lets time pass (`crate::audio::clock`).
 pub fn tick(r: &mut Running) -> bool {
+    tick_polls(r, &mut at_rest)
+}
+
+/// [`tick`] with the pad alarm's polls read from `polls`, each the controllers' next read.
+pub fn tick_polls(r: &mut Running, polls: &mut dyn FnMut() -> PadData) -> bool {
     r.game.audio.tick_start(r.data);
     crate::game::gr::stadium::take_load_end(r.game);
-    queue_alarm_polls(r, 1);
+    queue_alarm_polls(r, 1, polls);
     begin_tick(r);
     let ended = finish_tick(r, Resume::ButtonMaps);
     r.game.audio.tick_end(r.data);
     crate::game::gr::stadium::take_load_end(r.game);
-    queue_alarm_polls(r, 0);
+    queue_alarm_polls(r, 0, polls);
     ended
 }
 
+/// Controllers at rest, as a replay run's report.
+fn at_rest() -> PadData {
+    [crate::input::pad::PadStatus::default(); 4]
+}
+
 /// The pad alarm's polls on the timeline that the pad library hasn't queued yet
-/// (`HSD_PadRenewRawStatus` from the alarm): the alarm runs a little faster than video
-/// fields, so now and then a round finds two queued and ticks twice. `taking` counts the
-/// tick about to read its poll. Only replay runs keep a timeline, and their controllers are
-/// at rest.
-fn queue_alarm_polls(r: &mut Running, taking: u32) {
+/// (`HSD_PadRenewRawStatus` from the alarm), each taking the controllers' next read from
+/// `polls`: the alarm runs a little faster than video fields, so now and then a round finds
+/// two queued and ticks twice. `taking` counts the tick about to read its poll. Only runs
+/// with a timeline queue them: a replay's, whose controllers are at rest, and a session's,
+/// which reads its recording's.
+fn queue_alarm_polls(r: &mut Running, taking: u32, polls: &mut dyn FnMut() -> PadData) {
     let Some(c) = r.game.audio.clock.as_ref() else {
         return;
     };
     let want = c.pads + taking;
     while u32::from(r.game.pads.lib.qcount) < want {
-        r.game.pads.renew_raw(
-            r.data,
-            [crate::input::pad::PadStatus::default(); 4],
-            false,
-            false,
-        );
+        let now = polls();
+        r.game.pads.renew_raw(r.data, now, false, false);
     }
 }
 
@@ -280,14 +287,42 @@ pub fn step(r: &mut Running, poll: PadData, reset_pressed: bool) -> Tick {
 /// [`step`] up to the frame's display pass, where ssbm-rs's state traces sample the
 /// original: whether the pass is due ([`render_screen`]).
 pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, bool) {
-    // The loop waits for a poll only when none is queued (`lb_80019894`): the scene's first
-    // round runs on the one its setup left.
     let mut poll = poll;
     if r.game.rules.player.swap_xz {
         poll.iter_mut().for_each(|p| p.swap_xz());
     }
+    step_tick_polls(r, &mut || poll, &mut at_rest, reset_pressed)
+}
+
+/// [`step_tick`] for a console session, where every poll is one of the controllers' reads,
+/// in order (`reads`): the one the loop queues when it finds none, and the pad alarm's.
+pub fn step_session_tick(
+    r: &mut Running,
+    reads: &mut dyn FnMut() -> PadData,
+    reset_pressed: bool,
+) -> (Tick, bool) {
+    let reads = std::cell::RefCell::new(reads);
+    step_tick_polls(
+        r,
+        &mut || (reads.borrow_mut())(),
+        &mut || (reads.borrow_mut())(),
+        reset_pressed,
+    )
+}
+
+/// [`step_tick`] with the poll the loop queues when it finds none taken from `poll` (only
+/// then), and the pad alarm's from `alarm`.
+fn step_tick_polls(
+    r: &mut Running,
+    poll: &mut dyn FnMut() -> PadData,
+    alarm: &mut dyn FnMut() -> PadData,
+    reset_pressed: bool,
+) -> (Tick, bool) {
+    // The loop waits for a poll only when none is queued (`lb_80019894`): the scene's first
+    // round runs on the one its setup left.
     let pads = if r.game.pads.lib.qcount == 0 {
-        r.game.pads.renew_raw(r.data, poll, false, reset_pressed)
+        let now = poll();
+        r.game.pads.renew_raw(r.data, now, false, reset_pressed)
     } else {
         Requests::default()
     };
@@ -295,7 +330,7 @@ pub fn step_tick(r: &mut Running, poll: PadData, reset_pressed: bool) -> (Tick, 
     if r.game.pads.reset_switch() {
         return (Tick { pads, ended: true }, false);
     }
-    let ended = tick(r);
+    let ended = tick_polls(r, alarm);
     // A round ticks once per poll it found queued (on the timeline, which counts the
     // round's ticks), or until the scene asks to end, then renders once.
     let round_over = r.game.scene.unk_C != 0

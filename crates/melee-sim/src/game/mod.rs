@@ -25,6 +25,7 @@ pub mod player_codes;
 pub mod record;
 pub mod render;
 pub mod roster;
+pub mod session;
 pub mod sfx;
 pub mod slippi;
 pub mod state;

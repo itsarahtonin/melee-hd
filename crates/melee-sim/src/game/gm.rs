@@ -33,6 +33,9 @@ pub struct Globals {
     /// The debug level (`DbLevel`): 0 on a retail disc, where the debug menus, pause frame
     /// stepping and debug buttons never run. Their paths aren't ported.
     pub db_level: i32,
+    /// The buttons held on the first controller as the game started
+    /// (`db_gameLaunchButtonState`, `db_GetGameLaunchButtonState`).
+    pub launch_buttons: u16,
     /// The running scene's frame function (`gm_801A4D34`'s `on_frame`).
     pub on_frame: Option<CodeRef>,
     /// The scene's own GObj (`gm_804D672C`), which the match gives its per-tick process.
