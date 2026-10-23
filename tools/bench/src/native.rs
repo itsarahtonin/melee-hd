@@ -610,6 +610,89 @@ pub fn alloc_sites(args: &[String]) {
 mod tests {
     use super::*;
 
+    /// The launcher's Special Melee matches (`Settings::vs_special`, each mode's VS entry)
+    /// start with the fields the oracle generator's special set gives the modes
+    /// (`matches::Special`), so the oracle's matches play the launcher's modes.
+    #[test]
+    fn special_modes_start_as_the_generators() {
+        use crate::matches::{self, Size, Speed};
+        use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
+        use melee_sim::game::vs_match::Player;
+        for m in matches::special_set() {
+            let s = m.special;
+            let mode = match (s.size, s.speed) {
+                _ if m.name.contains("mix") || s.stamina_short => continue,
+                (Size::Tiny, _) => Special::Tiny,
+                (Size::Giant, _) => Special::Giant,
+                (_, Speed::SlowMo) => Special::SlowMo,
+                (_, Speed::Lightning) => Special::Lightning,
+                _ if s.stamina => Special::Stamina,
+                _ if s.sudden_death => Special::SuperSuddenDeath,
+                _ if s.invisible => Special::Invisible,
+                _ if s.single_button => Special::SingleButton,
+                _ if s.fixed_camera => Special::FixedCamera,
+                _ => panic!("{}: no mode", m.name),
+            };
+            let theirs = Settings::from_game_info(&m.start_data(), m.seed).start;
+            let players: Vec<Player> = (m.players.iter().enumerate())
+                .map(|(i, p)| Player {
+                    character: p.character,
+                    costume: p.costume,
+                    port: i as u8,
+                    kind: 0,
+                    cpu_level: 0,
+                    team: i as u8,
+                })
+                .collect();
+            let (stocks, minutes) = match m.rules {
+                matches::Rules::Stock { stocks, time_limit } => (stocks, (time_limit / 60) as u8),
+                matches::Rules::Time { time_limit } => (0, (time_limit / 60) as u8),
+                matches::Rules::Coin { .. } => unreachable!(),
+            };
+            let rules = GameRules::vs(stocks, minutes);
+            let ours = Settings::vs_special(
+                m.stage,
+                &players,
+                &rules,
+                &GamePrefs::items_off(),
+                Some(mode),
+            );
+            assert_eq!(ours.game_mode, mode.game_mode());
+            let (a, b) = (&ours.start.rules, &theirs.rules);
+            let rules_of = |r: &melee_sim::game::structs::StartMeleeRules| {
+                (
+                    r.game_speed.to_bits(),
+                    r.single_button,
+                    r.on_unpause_override,
+                    r.on_match_start,
+                    r.match_kind,
+                    r.timer_enabled,
+                    r.is_stock,
+                    r.x2_5,
+                    r.x3_0,
+                    r.is_vs,
+                )
+            };
+            assert_eq!(rules_of(a), rules_of(b), "{}: the rules", m.name);
+            for (i, (a, b)) in ours.start.players.iter().zip(&theirs.players).enumerate() {
+                let of = |p: &melee_sim::game::structs::PlayerInitData| {
+                    (
+                        p.model_scale.to_bits(),
+                        p.attack_ratio.to_bits(),
+                        p.defense_ratio.to_bits(),
+                        p.xB,
+                        p.damage1,
+                        p.vs_invisible,
+                        p.xC_b7,
+                        p.hp,
+                        if s.stamina && i < 4 { p.stocks } else { 0 },
+                    )
+                };
+                assert_eq!(of(a), of(b), "{}: player {i}", m.name);
+            }
+        }
+    }
+
     /// The matches the check replays: the benchmark matches but Pokémon Stadium's, whose
     /// transformations and screens' text still allocate (`docs/performance.md`).
     const MATCHES: [&str; 4] = [
@@ -740,6 +823,7 @@ mod tests {
                         time_limit: 480,
                     },
                     items: Items::only(freq, &with_containers),
+                    special: matches::Special::NONE,
                 };
                 let theirs = Settings::from_game_info(&generated.start_data(), seed);
                 let players: Vec<Player> = [matches::FOX, matches::MARTH]

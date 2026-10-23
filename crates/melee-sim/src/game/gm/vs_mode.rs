@@ -7,6 +7,7 @@ use gekko_fp as fp;
 
 use crate::fpu::{mem, reg};
 use crate::game::code::unported_call;
+use crate::game::handles::CodeRef;
 use crate::game::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use crate::game::structs::{PlayerInitData, StartMeleeData, StartMeleeRules};
 
@@ -313,8 +314,25 @@ pub fn setup_sub_colors(start: &mut StartMeleeData) {
 /// The match's start data from the VS mode's, `gmVsMelee_EnterVs` with no callbacks: the
 /// menus' rules applied, the match marked a VS (and stock) match, the sub-colours and rumble
 /// set. The announcer's load (`gm_LoadAnnouncer`) is the match's own, in `Match::start_from`.
-#[doc(alias = "gmVsMelee_EnterVs")]
 pub fn enter_vs(vs: &mut StartMeleeData, rules: &GameRules, prefs: &GamePrefs) -> StartMeleeData {
+    enter_vs_with(vs, rules, prefs, None, None)
+}
+
+/// A mode's change to the rules of its match (`gm_StartMeleeCallback`).
+pub type StartCallback = fn(&mut StartMeleeData);
+/// A mode's change to each player block of its match (`gm_PlayerInitCallback`).
+pub type PlayerCallback = fn(&mut PlayerInitData);
+
+/// `gmVsMelee_EnterVs` with a mode's callbacks: `start_cb` changes the rules once they're
+/// marked, `player_cb` each of the six player blocks once copied.
+#[doc(alias = "gmVsMelee_EnterVs")]
+pub fn enter_vs_with(
+    vs: &mut StartMeleeData,
+    rules: &GameRules,
+    prefs: &GamePrefs,
+    start_cb: Option<StartCallback>,
+    player_cb: Option<PlayerCallback>,
+) -> StartMeleeData {
     apply_menu_rules(vs, rules, prefs);
     let mut start = StartMeleeData::default();
     start.rules.clone_from(&vs.rules);
@@ -322,9 +340,222 @@ pub fn enter_vs(vs: &mut StartMeleeData, rules: &GameRules, prefs: &GamePrefs) -
         start.rules.is_stock = true;
     }
     start.rules.is_vs = true;
+    if let Some(cb) = start_cb {
+        cb(&mut start);
+    }
     start.players.clone_from(&vs.players);
+    if let Some(cb) = player_cb {
+        for p in &mut start.players {
+            cb(p);
+        }
+    }
     setup_sub_colors(&mut start);
     load_rumble_enabled(&mut start, prefs);
+    start
+}
+
+/// Every player slot's defaults, `gm_SetupAllPlayerDefaults`.
+#[doc(alias = "gm_SetupAllPlayerDefaults")]
+pub fn all_player_defaults(players: &mut [PlayerInitData]) {
+    for p in players {
+        *p = player_defaults();
+    }
+}
+
+/// A Special Melee mode, as VS mode's Special Melee menu offers them (Camera Mode, which
+/// takes snapshots, aside): each its own game mode (`GameModeKind`), whose VS entry changes
+/// the start data before the match (`gmsupersudden.c` and the others).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub enum Special {
+    SuperSuddenDeath,
+    Invisible,
+    SlowMo,
+    Lightning,
+    Tiny,
+    Giant,
+    Stamina,
+    SingleButton,
+    FixedCamera,
+}
+
+impl Special {
+    /// The modes, in the menu's order.
+    pub const ALL: [Special; 9] = [
+        Special::Stamina,
+        Special::SuperSuddenDeath,
+        Special::Giant,
+        Special::Tiny,
+        Special::Invisible,
+        Special::SlowMo,
+        Special::Lightning,
+        Special::FixedCamera,
+        Special::SingleButton,
+    ];
+
+    /// Its game mode.
+    pub fn game_mode(self) -> u8 {
+        match self {
+            Special::SuperSuddenDeath => 0x10,
+            Special::Invisible => 0x11,
+            Special::SlowMo => 0x12,
+            Special::Lightning => 0x13,
+            Special::Tiny => 0x1D,
+            Special::Giant => 0x1E,
+            Special::Stamina => 0x1F,
+            Special::FixedCamera => 0x2A,
+            Special::SingleButton => 0x2C,
+        }
+    }
+
+    /// Its name, as the menu shows it.
+    pub fn name(self) -> &'static str {
+        match self {
+            Special::SuperSuddenDeath => "Super Sudden Death",
+            Special::Invisible => "Invisible Melee",
+            Special::SlowMo => "Slo-Mo Melee",
+            Special::Lightning => "Lightning Melee",
+            Special::Tiny => "Tiny Melee",
+            Special::Giant => "Giant Melee",
+            Special::Stamina => "Stamina Mode",
+            Special::FixedCamera => "Fixed-Camera Mode",
+            Special::SingleButton => "Single-Button Melee",
+        }
+    }
+
+    /// Its command-line and settings name.
+    pub fn key(self) -> &'static str {
+        match self {
+            Special::SuperSuddenDeath => "super-sudden-death",
+            Special::Invisible => "invisible",
+            Special::SlowMo => "slo-mo",
+            Special::Lightning => "lightning",
+            Special::Tiny => "tiny",
+            Special::Giant => "giant",
+            Special::Stamina => "stamina",
+            Special::FixedCamera => "fixed-camera",
+            Special::SingleButton => "single-button",
+        }
+    }
+
+    /// The mode named `key` ([`Special::key`]).
+    pub fn from_key(key: &str) -> Option<Special> {
+        Special::ALL.into_iter().find(|m| m.key() == key)
+    }
+
+    /// The match's start data from the mode's VS data, as its VS entry makes it: VS mode's
+    /// (`gmVsMelee_EnterVs`) with the mode's callbacks, or Stamina Mode's own.
+    pub fn enter_vs(
+        self,
+        vs: &mut StartMeleeData,
+        rules: &GameRules,
+        prefs: &GamePrefs,
+    ) -> StartMeleeData {
+        let (start_cb, player_cb): (Option<StartCallback>, Option<PlayerCallback>) = match self {
+            Special::SuperSuddenDeath => (None, Some(super_sudden_death_player)),
+            Special::Invisible => (None, Some(invisible_player)),
+            Special::SlowMo => (Some(slow_mo_rules), None),
+            Special::Lightning => (Some(lightning_rules), None),
+            Special::Tiny => (None, Some(tiny_player)),
+            Special::Giant => (None, Some(giant_player)),
+            Special::SingleButton => (Some(single_button_rules), None),
+            Special::FixedCamera => (Some(fixed_camera_rules), None),
+            Special::Stamina => return enter_stamina(vs, rules, prefs),
+        };
+        enter_vs_with(vs, rules, prefs, start_cb, player_cb)
+    }
+}
+
+/// Super Sudden Death's players start (and come back) at 300%, `fn_801B8C5C`.
+#[doc(alias = "fn_801B8C5C")]
+pub fn super_sudden_death_player(p: &mut PlayerInitData) {
+    p.damage1 = 300;
+}
+
+/// Invisible Melee's players are invisible, `initVsPlayer`.
+#[doc(alias = "initVsPlayer")]
+pub fn invisible_player(p: &mut PlayerInitData) {
+    p.vs_invisible = true;
+}
+
+/// Slo-Mo Melee's game runs at half speed, `fn_801BA5B4`.
+#[doc(alias = "fn_801BA5B4")]
+pub fn slow_mo_rules(start: &mut StartMeleeData) {
+    start.rules.game_speed = 0.5;
+}
+
+/// Lightning Melee's runs at 1.25 times, `fn_801BA7AC`.
+#[doc(alias = "fn_801BA7AC")]
+pub fn lightning_rules(start: &mut StartMeleeData) {
+    start.rules.game_speed = 1.25;
+}
+
+/// Tiny Melee's players: about a third of the size, taking half the damage, `fn_801B8E50`.
+#[doc(alias = "fn_801B8E50")]
+pub fn tiny_player(p: &mut PlayerInitData) {
+    p.model_scale = 0.35;
+    p.defense_ratio = 0.5;
+    p.attack_ratio = 1.0;
+    p.xB = 1;
+}
+
+/// Giant Melee's players: nearly twice the size, dealing half again the damage,
+/// `fn_801B9060`.
+#[doc(alias = "fn_801B9060")]
+pub fn giant_player(p: &mut PlayerInitData) {
+    p.model_scale = 1.8;
+    p.defense_ratio = 1.0;
+    p.attack_ratio = 1.5;
+    p.xB = 2;
+}
+
+/// Single-Button Melee's rules, `fn_801BA1B4`.
+#[doc(alias = "fn_801BA1B4")]
+pub fn single_button_rules(start: &mut StartMeleeData) {
+    start.rules.single_button = true;
+}
+
+/// Fixed-Camera Mode's unpause hook fixes the camera (`gm_80165290`), `fn_801B9FB8`; the
+/// match's start calls it too.
+#[doc(alias = "fn_801B9FB8")]
+pub fn fixed_camera_rules(start: &mut StartMeleeData) {
+    start.rules.on_unpause_override = Some(CodeRef(super::FIXED_CAMERA));
+}
+
+/// Stamina Mode's VS entry: the menus' rules applied to its VS data ([`stamina_entry`]),
+/// then the rumble.
+pub fn enter_stamina(
+    vs: &mut StartMeleeData,
+    rules: &GameRules,
+    prefs: &GamePrefs,
+) -> StartMeleeData {
+    apply_menu_rules(vs, rules, prefs);
+    let mut start = stamina_entry(vs);
+    load_rumble_enabled(&mut start, prefs);
+    start
+}
+
+/// Stamina Mode's VS entry, `gm_801B931C` (between the menus' rules and the rumble): its VS
+/// data's rules taken as they are (no VS or stock mark), a stock match with no timer whose
+/// match start is the mode's (`fn_801B9850`); the first four players with one stock and 150
+/// HP, shown as HP (`xC_b7`), the other two the defaults; the sub-colours set.
+#[doc(alias = "gm_801B931C")]
+pub fn stamina_entry(vs: &StartMeleeData) -> StartMeleeData {
+    let mut start = StartMeleeData::default();
+    start.rules.clone_from(&vs.rules);
+    let r = &mut start.rules;
+    r.x2_5 = false;
+    r.timer_enabled = false;
+    r.match_kind = 1;
+    r.on_match_start = Some(CodeRef(super::stamina::ON_MATCH_START));
+    r.x3_0 = false;
+    all_player_defaults(&mut start.players);
+    for (p, v) in start.players.iter_mut().zip(&vs.players).take(4) {
+        p.clone_from(v);
+        p.xC_b7 = true;
+        p.stocks = 1;
+        p.hp = 150;
+    }
+    setup_sub_colors(&mut start);
     start
 }
 

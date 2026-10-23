@@ -1200,7 +1200,7 @@ Fighter_procCollResolve	leaf-check fighter_procs: every call, real and with a ti
 ftCommon_CalcHitlag	leaf-check fighter_procs: the given results' hitlag
 Fighter_UnkRecursiveFunc_8006D044	leaf-check fighter_procs: the given results' hitlag starting
 ftCo_80090718	leaf-check fighter_procs: frames without a result, with and without a queued sound
-ftCo_800C8D00	leaf-check fighter_procs: every call (no stamina fighter falls)
+ftCo_800C8D00	leaf-check fighter_procs: every call; melee-oracle diff special-stamina-ko-fd (docs/oracle.md, Special Melee): the knockout's fall at frame 352 (ssbm-rs's call log: ftCo_8009750C and ftCo_80090780 from it), compared tick by tick; its branch for a knockout without knockback (the knockout started after the hit) no match reaches
 ftCommon_8007E2A4	leaf-check fighter_procs: the given shield pushes
 ftCo_800C2FD8	leaf-check fighter_procs: Marth's swings in the real calls
 ftCo_800A0DA4	leaf-check fighter_procs: every call
@@ -11637,3 +11637,11 @@ Toy_803060BC	melee-oracle session: the no-file, full, broken, no-card and pulled
 Toy_80311960	melee-oracle session: the no-file, full, broken, no-card and pulled-card sessions, whose failed load resets the save and gives its first trophy in tick 0 (the save data and Toy_804A284C compared)
 Toy_Mode_OnInit	melee-oracle session from power-on: the thirteen recorded sessions to the opening movie's first frame (ticks 0 and 1, the whole state, the game's data and the timeline compared, with --heap the allocator model too) and the six card sessions (docs/oracle.md#sessions)
 lb_8001C87C	melee-oracle session: the no-file, full, broken, no-card and pulled-card sessions' memory card prompts (the probe each prompt starts from, the card's status and the timeline compared)
+ftCo_800C8C84	melee-oracle diff special-stamina-ps and special-stamina-ko-fd (docs/oracle.md, Special Melee): every hit's damage asks it; the knockout from no HP left (frame 352 of special-stamina-ko-fd), compared tick by tick
+fn_800C8E74	melee-oracle diff special-stamina-ko-fd (docs/oracle.md, Special Melee): the stamina knockout, compared tick by tick
+fn_800C8E40	melee-oracle diff special-stamina-ko-fd (docs/oracle.md, Special Melee): the knockout's cry at frame 352, through fn_800C8E74's inline copy of it (the symbol itself is called only from ftCo_800C8D00's branch for a knockout without knockback, which no match reaches); one Rust item ports both, and a mutation of its sound (0xC to 0x8) is caught there
+gm_80165290	melee-oracle diff special-fixed-camera-bf and special-mix-bf (docs/oracle.md, Special Melee): the match's start calls it as Fixed-Camera Mode's unpause hook; the camera compared from the first tick
+gm_SetupAllPlayerDefaults	leaf-check special stamina_entry: gm_801B931C runs it on both sides; the six player blocks compared
+initVsPlayer	leaf-check special: static to its unit, so ssbm-types lists it under tu:: rather than fns::; player_callbacks runs it on 500 random player blocks, each compared field for field
+fn_801BA7AC	leaf-check special: static to its unit, so ssbm-types lists it under tu:: rather than fns::; rules_callbacks runs it on 300 random start data, each compared field for field
+fn_801B96E8	leaf-check player: static to its unit, so ssbm-types lists it under tu:: rather than fns::; gm_accessors runs it on random statics in captured matches, the statics, the game speed asked for and the match's end compared

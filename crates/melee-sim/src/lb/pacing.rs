@@ -84,13 +84,14 @@ impl Pacing {
     }
 
     /// Takes up a new game clock period and the tick length, `lb_80019628` (which the scene
-    /// loop runs each frame through `lb_80019894`).
+    /// loop runs each round through `lb_80019894`). Returns the new tick length when it
+    /// changed, which sets the polling alarm again at that period.
     #[doc(alias = "lb_80019628")]
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Option<i64> {
         let new = self.requested as i64;
         let c = &mut self.clocks[0];
         if new == c.period {
-            return;
+            return None;
         }
         c.period = new;
         if c.elapsed >= c.period {
@@ -106,12 +107,13 @@ impl Pacing {
             period = sixtieth();
         }
         if self.tick == period {
-            return;
+            return None;
         }
         self.tick = period;
         let rate = (self.tick / i64::from(TIMER_CLOCK / 1000)) as u32;
         self.sampling_rate = rate.min(11);
         self.alarm = true;
+        Some(period)
     }
 
     /// Advances both clocks by a tick, `lb_80019900`'s clocks. Its caller renews the game and
@@ -127,6 +129,14 @@ impl Pacing {
                 c.due = false;
             }
         }
+    }
+
+    /// The engine tick's length in nanoseconds when it is shorter than a 60th of a second (a
+    /// game sped up, Lightning Melee's): the frontend runs ticks that often. None at 60 a
+    /// second, a slowed game's too (whose game clock skips ticks instead).
+    pub fn short_tick_nanos(&self) -> Option<u64> {
+        (self.tick > 0 && self.tick < sixtieth())
+            .then(|| (self.tick as u128 * 1_000_000_000 / u128::from(TIMER_CLOCK)) as u64)
     }
 
     /// Whether clock `i` came due this tick, `lb_80019A30`.

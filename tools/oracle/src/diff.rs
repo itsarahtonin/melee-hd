@@ -406,9 +406,13 @@ fn stadium_buffer(image: &Image) -> u32 {
 }
 
 /// The trace tick that ran the VS scene's first tick: the first whose scene loop has counted
-/// one tick with the playback's frame count at the replay's first frame.
+/// one tick with the playback's frame count at the replay's first frame, or still a frame
+/// before it when the game clock didn't come due (a slowed game's first tick runs no logic).
 fn is_first_tick(image: &Image) -> bool {
-    image.u32(sym("gm_80479D58")) == 1 && image.u32(0x804D_6CF4) as i32 == FIRST_FRAME
+    let scene = sym("gm_80479D58");
+    let frame = image.u32(0x804D_6CF4) as i32;
+    image.u32(scene) == 1
+        && (frame == FIRST_FRAME || (frame == FIRST_FRAME - 1 && image.u32(scene + 8) == 0))
 }
 
 pub fn diff(args: &[&str]) -> ExitCode {

@@ -184,6 +184,9 @@ pub struct Clock {
     /// Rounds of a scene's loop that start without waiting for a frame buffer: its first
     /// (no render before it) and its second (a buffer is still free).
     pub scene_start: u8,
+    /// A new tick length the next round's pad check takes up, setting the pad alarm again
+    /// at that period (`lb_80019628`).
+    pub new_alarm_period: Option<u64>,
 }
 
 /// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
@@ -568,6 +571,12 @@ impl Clock {
             self.woken = false;
             if start < 2 {
                 self.xfb_pending += 1;
+            }
+            // The pad check (`lb_80019894`) takes up a new tick length first: the alarm is
+            // cancelled and set again to fire every period (`OSSetPeriodicAlarm` with the
+            // period as its start), at the time base's next multiple of it (`InsertAlarm`).
+            if let Some(p) = self.new_alarm_period.take() {
+                self.set_pad_alarm((self.now / p + 1) * p, p);
             }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {

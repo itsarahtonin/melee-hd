@@ -29,7 +29,7 @@ use std::path::PathBuf;
 use std::sync::{Condvar, Mutex, OnceLock};
 
 use leaf_check::fp::{FpMode, set_fp_mode};
-use leaf_check::{MODES, Rand, hsd_reference};
+use leaf_check::{MODES, Rand, handle, hsd_reference};
 use melee_capture::compare::Comparer;
 use melee_capture::import::{Importer, Maps, sym};
 use melee_capture::{
@@ -981,6 +981,39 @@ fn team_outcome() {
         },
         |r, _| vec![Out::R3(u32::from(r.game.team_outcome()))],
         |ctx, _| (fns::gm_GetTeamBattleOutcome(ctx) as u32, 0),
+    );
+}
+
+/// The stage's music choice (`Ground_801C28AC`) with each set of flags its caller passes
+/// (`Stage_80225074`): the stage's own choice (4), its usual song (1), its alternate (2), the
+/// single player's (0x44), a sudden death's (0x11, 0x12), and Super Sudden Death's (0x24,
+/// 0x22, 0x64), which only that mode's game mode asks for (`gm_8016B3A0`); from match states,
+/// the song written out and whether it's the alternate.
+#[test]
+fn stage_music_flags() {
+    check_calls(
+        "gm_GetMatchOutcome",
+        12,
+        |f| {
+            f.regs.gpr[3] = f.u32(sym("selected_stage"));
+            f.regs.gpr[4] = [4, 1, 2, 0x44, 0x11, 0x12, 0x24, 0x22, 0x64][f.below(9) as usize];
+        },
+        |r, a| {
+            let (bgm, alt) = melee_sim::game::gr::setup::music(r.game, r.data, a.i(3), a.r(4));
+            vec![
+                Out::R3(u32::from(alt)),
+                Out::Words(leaf_check::SCRATCH, vec![bgm as u32]),
+            ]
+        },
+        |ctx, call| {
+            let alt = fns::Ground_801C28AC(
+                ctx,
+                call.regs.gpr[3] as i32,
+                call.regs.gpr[4],
+                handle(ctx, leaf_check::SCRATCH),
+            );
+            (alt as u32, 0)
+        },
     );
 }
 

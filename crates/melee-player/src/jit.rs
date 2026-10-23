@@ -371,6 +371,13 @@ impl Scheduler {
         self.tick
     }
 
+    /// Ticks of `tick` from the next one due on (a game sped up shortens Melee's tick).
+    pub fn set_tick(&mut self, tick: Duration) {
+        self.anchor = self.due();
+        self.n0 = self.n;
+        self.tick = tick;
+    }
+
     /// When Melee's clock has tick `n` due.
     fn due_of(&self, n: u64) -> Instant {
         self.anchor + self.tick * (n - self.n0) as u32
