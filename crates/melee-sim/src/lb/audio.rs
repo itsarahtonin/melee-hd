@@ -10,7 +10,7 @@ use crate::game::state::{Event, Running};
 
 mod boot;
 
-pub use boot::{AUX_DELAY, AUX_REVERB_STD, SoundBank};
+pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, balance_voice};
 
 /// The id that plays nothing, and the one that keys a track off instead of playing.
 pub const SFX_NONE: i32 = 0x83D60;
@@ -19,6 +19,9 @@ pub const SFX_KEY_OFF: i32 = 0x83D61;
 /// The game's audio library's own state.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LbAudio {
+    /// `lbl_804D3878`: the saved language the bank files were last named for (`LANG_JP` 0,
+    /// `LANG_US` 1), -1 at power-on.
+    pub lang: i32,
     /// `lbl_80433984`: each sound bank's load state (-1 not loaded, 1 loaded in the
     /// background, 2 loaded).
     pub banks: [i32; 56],
@@ -117,6 +120,7 @@ impl Default for LbAudio {
         ssm_file[..7].copy_from_slice(b"/audio/");
         let hps_file = ssm_file;
         LbAudio {
+            lang: -1,
             banks: [0; 56],
             bank_want: [0; 56],
             bank_have: [0; 56],

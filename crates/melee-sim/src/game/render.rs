@@ -374,6 +374,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
     match cb.0 {
         JOBJ_CALLBACK => r.render_jobj(gobj, pass),
         CAMERA_CALLBACK => r.render_camera(gobj),
+        crate::lb::cardgame::INDICATOR_RENDER => r.card_indicator_render(gobj),
         LOBJ_CALLBACK | 0x801C_4640 | 0x8009_F54C => r.render_lights(gobj),
         FOG_CALLBACK => r.render_fog(gobj),
         0x801C_1E2C => r.render_stage_fog(gobj),

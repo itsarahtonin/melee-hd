@@ -18,6 +18,9 @@ use super::heap::{Cell, Heap};
 /// `HSD_OSInit`'s audio heap: the arena's start after the boot's allocations (the frame
 /// buffers, the GX FIFO, the OS heap table), and `iparam_audio_heap_size`.
 pub const HEAP_START: u32 = 0x8065_FB20;
+/// The same on a console's own boot: the arena past the OS's four heaps' descriptors, which
+/// Slippi's bootloader's code list and its two more heaps don't move.
+pub const HEAP_START_CONSOLE: u32 = crate::hsd::heap::arena_lo(crate::hsd::heap::CONSOLE_HEAPS);
 pub const HEAP_SIZE: u32 = 0x8_0000;
 
 /// ARAM below this is the DSP's, reserved by `ARInit`; allocations start there.
@@ -69,8 +72,29 @@ impl BootTimes {
     /// makes its audio calls this long after the last read's interrupt, if it waited for it
     /// (at a drive's pace; at the fast disc speed the files are in by the retrace, and the
     /// calls come just after it, 6,081,107 into the boot).
-    pub const PLAYBACK_AFTER_PRELOADS: u64 = 24;
+    pub const PLAYBACK_AFTER_PRELOADS: u64 = 40;
+    /// `main`'s `OSGetTick` for the random seed, after HSD's setup and before the audio
+    /// setup (a console's boot: the seed is the time base's low word then).
+    pub const SEED: u64 = Self::INIT - 9_288;
 }
+
+/// How much later a console's own boot with a card in slot A reaches the audio setup in
+/// ssbm-rs than Slippi's playback boot: 17 video fields, the OS's probes of the card at boot
+/// (`CARDProbeEx` from field 2 to 19), measured from the recorded sessions' boots
+/// (`HSD_AudioInitMultiPStream` at 12,847,145, against [`BootTimes::INIT`]); a boot with no
+/// card has none (the no-card session's boot mode starts 17 fields earlier). Every later
+/// boot time moves with it.
+pub const CONSOLE_BOOT_DELAY: u64 = 17 * super::clock::FIELD;
+
+/// How much longer than Slippi's playback boot a console's own boot with a card in slot A
+/// takes from the audio setup to the save data's audio reset: measured from the recorded
+/// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's). It is
+/// the boot's own probes of the card slots, `lbCardGame_Init`'s `CARDProbe(0)` and
+/// `lbSnap_8001E290`'s of slots A and B, as the pad alarm's handler makes them with the card
+/// in and settled (`lb::save::alarm_card_probes`). One with no card takes as long as the
+/// playback boot (the no-card session's reads): ssbm-rs stands in for the CARD library there.
+pub const CONSOLE_RESET_EXTRA: u64 =
+    2 * (crate::lb::save::EXI_READ + crate::lb::save::TIME_READ) + crate::lb::save::EXI_READ;
 
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
 pub struct Aram {
@@ -84,6 +108,11 @@ impl Aram {
         Aram {
             next: ARAM_USER_BASE,
         }
+    }
+
+    /// Where the next allocation goes.
+    pub fn next(&self) -> u32 {
+        self.next
     }
 
     /// `ARAlloc`.
@@ -165,12 +194,16 @@ impl Audio {
         self.heap = Heap {
             size: HEAP_SIZE as i32,
             free: vec![Cell {
-                at: HEAP_START,
+                at: if self.console {
+                    HEAP_START_CONSOLE
+                } else {
+                    HEAP_START
+                },
                 size: HEAP_SIZE,
             }],
             allocated: Vec::new(),
         };
-        let now = BootTimes::INIT;
+        let now = BootTimes::INIT + self.boot_delay;
         let mut clock = Clock {
             now,
             alarm_period: PAD_ALARM_PERIOD,
@@ -204,8 +237,9 @@ impl Audio {
         if let Some(log) = &mut self.mix {
             log.next_list(&self.ax);
         }
+        let delay = self.boot_delay;
         self.with_clock(data, |c, f| {
-            c.catch_up(BootTimes::DMA_START, f);
+            c.catch_up(BootTimes::DMA_START + delay, f);
             c.schedule(c.now + AUDIO_FRAME, EventKind::AudioDma);
         });
         let silence = aram.alloc(0x500);

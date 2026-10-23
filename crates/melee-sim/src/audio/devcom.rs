@@ -726,6 +726,7 @@ impl Audio {
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),
+            cb::PRELOADED if self.dvd.is_some() => self.preload_done(data, args),
             cb::PRELOADED => {
                 self.devcom.preloaded += 1;
                 self.preload_next(data)

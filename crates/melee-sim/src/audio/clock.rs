@@ -36,7 +36,9 @@ const WAIT_STEP: u64 = 10_125;
 const DSP_FRAME: u64 = 20_250;
 /// Time the retrace interrupt's handler takes.
 const VI_HANDLER: u64 = 32;
-/// Time the pad alarm's handler takes.
+/// Time the pad alarm's handler takes besides its memory card probes ([`Frames::pad_alarm`]):
+/// all of it on ssbm-rs's console without a card at power-on (a replay's, Slippi's playback
+/// boot's), whose CARD library is stood in for.
 const ALARM_HANDLER: u64 = 24;
 /// From the audio interrupt to its DSP mail, and to the end of its handler.
 const AI_MAIL: u64 = 16;
@@ -69,6 +71,10 @@ const DI_CALLBACK: u64 = 32;
 /// one).
 const DI_TAIL: u64 = 8;
 const ARAM_CALLBACK: u64 = 8;
+/// How long before the audio interrupt's handler returns the OS's dispatcher takes a disc
+/// interrupt raised meanwhile (measured from a console's boot, where a bank read's interrupt
+/// falls in an audio frame's handler).
+const AI_CHAIN: u64 = 16;
 
 /// How fast the disc reads: a match setting, since when reads finish decides when the music
 /// stream's commands reach the DSP and so which voices are free (see `docs/engine.md`).
@@ -159,6 +165,16 @@ pub struct Clock {
     pub ticks_left: u32,
     /// The scene loop sleeps until a retrace wakes it.
     pub woken: bool,
+    /// HSD's two frame buffers (`HSD_VIStatus`'s `xfb`): how many copied frames wait to show
+    /// (`HSD_VI_XFB_NEXT` and `DRAWDONE`), and whether one shows (`DISPLAY`); the rest are
+    /// free. A copy needs a free one. At power-on neither has been drawn.
+    pub xfb_pending: u8,
+    pub xfb_shown: bool,
+    /// The pad alarm's firings since the game last looked, with what their card probes found
+    /// (a session's; none elsewhere).
+    pub alarm_times: Option<Vec<AlarmProbe>>,
+    /// A disc read's interrupt was taken since the game's code last waited.
+    pub disc_woke: bool,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
     pub dsp_ready: bool,
     /// Audio frames are placed ([`Clock::place_audio_frames`]) rather than scheduled; the last
@@ -168,6 +184,14 @@ pub struct Clock {
     /// Rounds of a scene's loop that start without waiting for a frame buffer: its first
     /// (no render before it) and its second (a buffer is still free).
     pub scene_start: u8,
+}
+
+/// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
+/// that answers (`CARDProbe(0)`, [`Frames::pad_alarm`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct AlarmProbe {
+    pub at: u64,
+    pub card: bool,
 }
 
 /// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
@@ -181,6 +205,14 @@ pub trait Frames {
     fn aram_done(&mut self, base: u64) -> HwLog;
     /// What the game's code between handlers did to the hardware.
     fn take_log(&mut self) -> HwLog;
+    /// The pad alarm's handler (`fn_800195FC`) probing the memory card slots at `now`, after
+    /// its controllers' poll: the time its probes take, and whether slot A's card answered.
+    /// On ssbm-rs's console without a card at power-on the CARD library is stood in for, and
+    /// they take none.
+    fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
+        let _ = now;
+        (0, false)
+    }
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
 }
@@ -200,6 +232,15 @@ pub enum Wait {
     StreamIdle,
     /// This many of the first scene's preloaded files are in (their callbacks have run).
     Preloaded(u32),
+    /// The preload cache has the file of this disc entry ready, or doesn't hold it
+    /// (`lbDvd_800189EC`'s spin on `lbDvd_800187F4`).
+    PreloadFile(i32),
+    /// The preload cache let go of every entry of this heap, none being read
+    /// (`lbDvd_80017598`'s spin).
+    HeapReleased(i32),
+    /// The preload cache let go of this heap's unwanted entries already set up
+    /// (`lbDvd_80017700`'s spin on `lbDvd_80017644`).
+    StaleReleased(i32),
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
@@ -212,27 +253,44 @@ pub struct HwLog {
     pub read: Option<u64>,
     pub transfer: u64,
     pub aram: u32,
+    /// The log is an interrupt handler's.
+    pub handler: bool,
 }
 
-/// A disc read's command, and an ARAM transfer's request.
-const DISC_ISSUE: u64 = 24;
+/// A disc read's command from the game's code, and from an interrupt handler's callback (the
+/// device command queue's next read), and an ARAM transfer's request.
+const DISC_ISSUE: u64 = 8;
+const DISC_ISSUE_HANDLER: u64 = 24;
+/// After a read's command from a handler's callback, the rest of the handler's work.
+const DISC_ISSUED_HANDLER: u64 = 16;
+/// The game's code going on from a wait a disc read's interrupt ended.
+const DISC_WAKE: u64 = 16;
 /// A hardware register's read (ssbm-rs's read step).
 const REG_READ: u64 = 8;
 const ARQ_POST: u64 = 56;
 
 impl HwLog {
+    /// An interrupt handler's log, its callback `base` into it.
     pub fn at(base: u64) -> HwLog {
         HwLog {
             spent: base,
+            handler: true,
             ..HwLog::default()
         }
     }
 
     /// A disc read's command goes out, for `len` bytes at `speed`.
     pub fn disc_read(&mut self, len: u32, speed: DiscSpeed) {
-        self.spent += DISC_ISSUE;
+        self.spent += if self.handler {
+            DISC_ISSUE_HANDLER
+        } else {
+            DISC_ISSUE
+        };
         assert!(self.read.is_none(), "two disc reads in flight");
         self.read = Some(self.spent);
+        if self.handler {
+            self.spent += DISC_ISSUED_HANDLER;
+        }
         self.transfer = speed.transfer(len);
     }
 
@@ -255,6 +313,9 @@ impl Clock {
             now,
             alarm_period,
             dsp_ready: true,
+            // As a match's tick leaves them: one frame showing, the last copied waiting.
+            xfb_pending: 1,
+            xfb_shown: true,
             ..Clock::default()
         };
         c.schedule((now / FIELD + 1) * FIELD, EventKind::Field);
@@ -307,12 +368,17 @@ impl Clock {
     /// Runs what is due now: events, then the interrupts they raised (the audio interrupt
     /// before the retrace), until nothing is.
     fn service(&mut self, f: &mut dyn Frames) {
-        // An event that came due while the disc interrupt's handler ran happens `DI_TAIL`
-        // after the handler.
+        // An event that came due while the disc or retrace interrupt's handler ran happens
+        // `DI_TAIL` after the handler. That holds for an audio DMA block that ends by the
+        // handler's end on ssbm-rs's clock, whose frame starts `DI_TAIL` past its event here.
         let mut after_disc = false;
         loop {
             let tail = std::mem::take(&mut after_disc);
-            if let Some(i) = self.next_event().filter(|&i| self.events[i].at <= self.now) {
+            let due = |e: &Event| {
+                e.at <= self.now
+                    || (tail && e.kind == EventKind::AudioDma && e.at <= self.now + DI_TAIL)
+            };
+            if let Some(i) = self.next_event().filter(|&i| due(&self.events[i])) {
                 let e = self.events.swap_remove(i);
                 if tail {
                     self.now += DI_TAIL;
@@ -324,6 +390,11 @@ impl Clock {
                     }
                     EventKind::PadAlarm => {
                         self.now += ALARM_HANDLER;
+                        let (probes, card) = f.pad_alarm(self.now);
+                        self.now += probes;
+                        if let Some(t) = &mut self.alarm_times {
+                            t.push(AlarmProbe { at: e.at, card });
+                        }
                         self.pads += 1;
                         self.schedule(e.at + self.alarm_period, EventKind::PadAlarm);
                     }
@@ -351,7 +422,25 @@ impl Clock {
                 let log = f.audio_frame(AI_CALLBACK);
                 let end = start + AI_HANDLER + (log.spent - AI_CALLBACK);
                 self.apply(start, &log);
-                self.now = end;
+                // A disc read that finished while the handler ran: the OS's dispatcher takes
+                // its interrupt before the handler's return (`AI_CHAIN` before its end), and
+                // the return's time after.
+                let chained = self
+                    .events
+                    .iter()
+                    .filter(|e| e.kind == EventKind::DiscDone && e.at + AI_CHAIN <= end)
+                    .min_by_key(|e| (e.at, e.seq))
+                    .map(|e| e.seq);
+                match chained {
+                    Some(seq) => {
+                        self.cancel(seq);
+                        self.now = end - AI_CHAIN;
+                        self.disc_interrupt(f);
+                        self.now += AI_CHAIN;
+                        after_disc = true;
+                    }
+                    None => self.now = end,
+                }
             } else if self.aram_pending != 0 {
                 self.aram_pending -= 1;
                 let start = self.now;
@@ -360,23 +449,34 @@ impl Clock {
                 self.now = start + log.spent;
             } else if self.di_pending {
                 self.di_pending = false;
-                // The interrupt's handler cancels the read's timeout before its callback.
-                if let Some(seq) = self.disc_timeout.take() {
-                    self.cancel(seq);
-                }
-                let start = self.now;
-                let log = f.disc_done(DI_CALLBACK);
-                self.apply(start, &log);
-                self.now = start + log.spent;
+                self.disc_interrupt(f);
                 after_disc = true;
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
                 self.woken = true;
+                after_disc = true;
+                // `HSD_VIPostRetraceCB`: the next copied frame shows, freeing the one shown.
+                if self.xfb_pending > 0 {
+                    self.xfb_pending -= 1;
+                    self.xfb_shown = true;
+                }
             } else {
                 break;
             }
         }
+    }
+
+    /// The disc interrupt's handler: the read's timeout cancelled, then its callback.
+    fn disc_interrupt(&mut self, f: &mut dyn Frames) {
+        self.disc_woke = true;
+        if let Some(seq) = self.disc_timeout.take() {
+            self.cancel(seq);
+        }
+        let start = self.now;
+        let log = f.disc_done(DI_CALLBACK);
+        self.apply(start, &log);
+        self.now = start + log.spent;
     }
 
     /// Schedules a handler's disc reads and raises its ARAM transfers' interrupts.
@@ -415,6 +515,29 @@ impl Clock {
         self.service(f);
     }
 
+    /// A wait point of the game's (`lb_800195D0`, the card layer's step `hsd_803AAA48`):
+    /// time passes to the next event or a quarter millisecond, its interrupts taken.
+    pub fn wait_point(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.wait(WAIT_STEP, f);
+    }
+
+    /// The game's code reading the hardware's registers `reads` times, interrupts taken at
+    /// each read where they come due.
+    pub fn reg_reads(&mut self, reads: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        for _ in 0..reads {
+            self.read(REG_READ, f);
+        }
+    }
+
+    /// The game's code spending `ticks` at the hardware: its log so far, then the time, with
+    /// interrupts taken where they come due.
+    pub fn pass(&mut self, ticks: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.read(ticks, f);
+    }
+
     /// Runs the timeline from the end of the last tick to the start of the next one's game
     /// code, running the audio frames that fall in between.
     pub fn tick_start(&mut self, f: &mut dyn Frames) {
@@ -426,11 +549,10 @@ impl Clock {
                 // The render's wait.
                 self.wait(WAIT_STEP, f);
             }
-            if start == 0 && !self.woken {
-                // The sleep until a retrace frees a frame buffer: the one shown before the
-                // last frame was copied, two buffers back.
+            if start < 2 && self.xfb_free() == 0 {
+                // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
                 self.now += BEFORE_SLEEP;
-                while !self.woken {
+                while self.xfb_free() == 0 {
                     let next = self.next_at();
                     self.now = self.now.max(next);
                     self.service(f);
@@ -442,8 +564,11 @@ impl Clock {
                 // `AFTER_WAKE`).
                 self.read(NO_SLEEP, f);
             }
-            // The frame's copy: the next one needs a retrace after it.
+            // The frame's copy.
             self.woken = false;
+            if start < 2 {
+                self.xfb_pending += 1;
+            }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {
                 self.wait(WAIT_STEP, f);
@@ -470,6 +595,30 @@ impl Clock {
             self.now = self.now.max(next);
             self.service(f);
         }
+        // The copy shows; nothing waits.
+        self.xfb_pending = 0;
+        self.xfb_shown = true;
+    }
+
+    /// [`Clock::end_scene_loop`], `copied` when the loop's last round copied a frame: the
+    /// flush (`HSD_VIWaitXFBFlush`) waits until every copied frame has shown.
+    pub fn end_scene_loop_after(&mut self, copied: bool, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.wait(WAIT_STEP, f);
+        if copied {
+            self.xfb_pending += 1;
+        }
+        self.woken = false;
+        while self.xfb_pending > 0 {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+    }
+
+    /// Frame buffers neither showing nor waiting to.
+    fn xfb_free(&self) -> u8 {
+        2 - self.xfb_pending - u8::from(self.xfb_shown)
     }
 
     /// A scene's loop starts (`gm_801A4D34`'s prologue): the pad queue keeps only its newest
@@ -514,20 +663,36 @@ impl Clock {
     /// spin (`lb_800195D0`), until the load's callback.
     pub fn wait_for_load(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
+        self.disc_woke = false;
         loop {
             self.wait(WAIT_STEP, f);
             if f.done(Wait::FileLoaded) {
                 break;
             }
         }
+        self.after_disc_wait(f);
+    }
+
+    /// A wait a disc read's interrupt ended: the game's code takes `DISC_WAKE` to go on.
+    fn after_disc_wait(&mut self, f: &mut dyn Frames) {
+        if std::mem::take(&mut self.disc_woke) {
+            self.read(DISC_WAKE, f);
+        }
     }
 
     /// The game waiting for `w` in a loop that checks before each wait point.
     pub fn wait_until(&mut self, f: &mut dyn Frames, w: Wait) {
         self.game_code(f);
+        self.disc_woke = false;
+        let mut waited = false;
         while !f.done(w) {
             self.wait(WAIT_STEP, f);
+            waited = true;
         }
+        if waited {
+            self.after_disc_wait(f);
+        }
+        self.disc_woke = false;
     }
 
     /// `VIWaitForRetrace`: time passes, its interrupts taken, until the next retrace's handler
@@ -575,6 +740,9 @@ impl Clock {
         self.pads = 0;
         self.ticks_left = 0;
         self.scene_start = 0;
+        // Slippi's boot has run its own scenes: a frame shows, the last copied waiting.
+        self.xfb_pending = 1;
+        self.xfb_shown = true;
         self.read(TICK_READ, f);
     }
 
@@ -680,6 +848,63 @@ mod tests {
             let end = if ran { 136 + AI_HANDLER } else { 128 };
             assert_eq!(c.now, end, "due at {due}");
         }
+    }
+
+    #[test]
+    fn a_frame_due_as_the_retrace_handler_ends_runs_then() {
+        // The retrace's handler ends at FIELD + 32. A frame due by DI_TAIL after that (its
+        // event due by the handler's end on ssbm-rs's clock) starts then; one due later waits.
+        for (due, ran) in [
+            (FIELD + VI_HANDLER + DI_TAIL, true),
+            (FIELD + VI_HANDLER + DI_TAIL + 1, false),
+        ] {
+            let mut c = Clock::new(FIELD - 1, due, 10 * FIELD, 675_000);
+            c.wait(WAIT_STEP, &mut Stub::new(false));
+            assert_eq!(
+                kinds(&c).contains(&EventKind::DspResume),
+                ran,
+                "due at {due}"
+            );
+        }
+    }
+
+    /// Handlers that take no time, and a pad alarm whose card probes take 56 ticks.
+    struct Probing;
+
+    impl Frames for Probing {
+        fn audio_frame(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn disc_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn aram_done(&mut self, base: u64) -> HwLog {
+            HwLog::at(base)
+        }
+        fn take_log(&mut self) -> HwLog {
+            HwLog::default()
+        }
+        fn done(&mut self, _: Wait) -> bool {
+            true
+        }
+        fn pad_alarm(&mut self, _: u64) -> (u64, bool) {
+            (56, true)
+        }
+    }
+
+    #[test]
+    fn the_alarm_handler_takes_its_card_probes() {
+        let mut c = Clock::new(0, 10 * AUDIO_FRAME, 1_000, 675_000);
+        c.alarm_times = Some(Vec::new());
+        c.wait(WAIT_STEP, &mut Probing);
+        assert_eq!(c.now, 1_000 + ALARM_HANDLER + 56);
+        assert_eq!(
+            c.alarm_times,
+            Some(vec![AlarmProbe {
+                at: 1_000,
+                card: true
+            }])
+        );
     }
 
     #[test]

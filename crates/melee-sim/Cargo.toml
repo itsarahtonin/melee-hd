@@ -14,6 +14,8 @@ publish.workspace = true
 gekko-fp = { package = "melee-gekko-fp", path = "../gekko-fp" }
 melee-data.workspace = true
 melee-derive = { path = "../melee-derive" }
+# The native save's card layers (`lb::save`).
+melee-save = { path = "../melee-save" }
 
 [features]
 # Lets checks stand a function of the original's in for code no port covers yet, so the code

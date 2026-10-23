@@ -453,6 +453,58 @@ class Gen:
         out.append("}")
         return "\n".join(out)
 
+    # The exporter: plain structs (no pointers) written back to memory's bytes, for the ones
+    # config.EXPORT_ROOTS reaches.
+
+    def export_reach(self, rid, out):
+        if rid in out:
+            return
+        out.add(rid)
+        for f in self.fields(rid):
+            assert "splice" not in f, f"{rec_name(rid)}.{f['name']}: a splice in an exported struct"
+            t = f["type"]
+            while t["k"] == "arr":
+                t = t["of"]
+            assert t["k"] != "ptr", f"{rec_name(rid)}.{f['name']}: a pointer in an exported struct"
+            if t["k"] == "rec" and not (self.recs[t["id"]]["kind"] == "union" and not self.external(t)):
+                self.export_reach(t["id"], out)
+
+    def export_stmts(self, t, ours, at, depth=0):
+        """Statements writing `ours` of type `t` at address expression `at`."""
+        k = t["k"]
+        if k in ("int", "enum"):
+            size = t["size"]
+            ty = {1: "u8", 2: "u16", 4: "u32", 8: "u64"}[size]
+            return [f"m.put_{ty}({at}, {ours} as {ty});"]
+        if k == "float":
+            return [f"m.put_u32({at}, {ours}.to_bits());"] if t["size"] == 4 else [f"m.put_u64({at}, {ours}.to_bits());"]
+        if k == "arr":
+            es = self.size(t["of"])
+            i = f"i{depth}"
+            inner = self.export_stmts(t["of"], f"{ours}[{i}]", f"{at} + {i} as u32 * {es:#x}", depth + 1)
+            return [f"for {i} in 0..{t['n']} {{"] + ["    " + s for s in inner] + ["}"]
+        if k == "rec":
+            r = self.recs[t["id"]]
+            if r["kind"] == "union" and not self.external(t):
+                return [f"m.put_bytes({at}, &{ours});"]
+            return [f"{ours}.export(m, {at});"]
+        raise ValueError(f"no export for {t}")
+
+    def exporter(self, rid):
+        name = rust_type_name(rid)
+        out = [f"impl Export for {name} {{", "    fn export(&self, m: &mut MemMut, at: u32) {", "        let _ = (&m, at);"]
+        for f in self.fields(rid):
+            fname = field_name(f["name"])
+            off = f["offset_bits"] // 8
+            if "bits" in f:
+                out.append(f"        m.put_bits(at, {f['offset_bits']}, {f['bits']}, self.{fname} as u32);")
+                continue
+            for st in self.export_stmts(f["type"], f"self.{fname}", f"at + {off:#x}"):
+                out.append("        " + st)
+        out.append("    }")
+        out.append("}")
+        return "\n".join(out)
+
     def tracked_mirror(self, rid, f, fname, at, path, imp, cmp):
         """A tracked struct's field's import and comparison."""
         def guarded(stmts):
@@ -517,7 +569,7 @@ def main():
         "#![allow(non_snake_case, unused_comparisons, unused_imports, unused_parens, clippy::all)]",
         "",
         "use super::handles::*;",
-        "use super::mirror::{Cx, Mem, Mirror, code};",
+        "use super::mirror::{Cx, Export, Mem, MemMut, Mirror, code};",
         "use super::structs::*;",
         "use super::gr::GroundVars;",
         "use crate::hsd::dobj::DObjId;",
@@ -534,6 +586,13 @@ def main():
     for rid in g.order:
         mirror.append(g.mirror(rid))
         mirror.append("")
+    exported = set()
+    for root in config.EXPORT_ROOTS:
+        g.export_reach(by_name[root], exported)
+    for rid in g.order:
+        if rid in exported:
+            mirror.append(g.exporter(rid))
+            mirror.append("")
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "structs.rs").write_text("\n".join(structs), encoding="utf-8", newline="\n")
     (out_dir / "mirror_gen.rs").write_text("\n".join(mirror), encoding="utf-8", newline="\n")

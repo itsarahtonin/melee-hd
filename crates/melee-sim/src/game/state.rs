@@ -279,6 +279,29 @@ pub struct Game {
     pub sis: crate::hsd::sis::SisLib,
     /// The audio library's sound objects (`lbl_80433710`).
     pub sound_objs: crate::lb::sound_obj::SoundObjs,
+    /// The game's data (`gmMainLib_8045A6C0`): the modes' settings, the rules and the
+    /// card's data, as the boot resets them and the memory card loads them.
+    pub game_data: super::structs::gmm_x0,
+    /// The power-on state (`gmMainLib_8046B0F0`) and the clock at power-on.
+    pub main_lib: super::gm::main_lib::MainLib,
+    /// The game modes' machine (`state_machine`) and where its loops stand.
+    pub machine: super::gm::machine::Machine,
+    /// The boot mode's statics (`gmboot.c`) and the opening mode's state to start at.
+    pub boot_mode: super::gm::boot_mode::BootMode,
+    /// The memory card scene's statics (`gmscmemcard.c`, `gm_1ADD.c`).
+    pub memcard: super::gm::memcard::MemCard,
+    /// The game's side of the memory card (`lbcardgame.c`).
+    pub card_game: crate::lb::cardgame::CardGame,
+    /// What the game keeps of the card's task lists (`lbcardnew.c`).
+    pub card_tasks: crate::lb::save::CardTasks,
+    /// Camera Mode's snapshots' state, as far as the boot sets it (`lbsnap.c`).
+    pub snap: crate::lb::snap::Snap,
+    /// The movie player, as far as the boot sets it (`lbmthp.c`).
+    pub movie: crate::lb::mthp::MoviePlayer,
+    /// The modes' settings that live outside the game's data: the training mode's saved
+    /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
+    /// trophy gallery's flag (`_Toy_804A26B8.x194`).
+    pub modes: super::gm::mode_init::ModeStatics,
     /// Presentation output, not state: the Slippi replay the match makes, when the frontend
     /// turns it on (`record`). Simulated code never reads it; a clone starts without it and a
     /// restore leaves it alone.

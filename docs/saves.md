@@ -1,6 +1,6 @@
 # Saves
 
-`melee-save` (`crates/melee-save`) reads Melee's save files and writes them as a console does: raw memory card images (`.raw`, ssbm-rs's `.card`) and `.gci` files, judged as the game judges a card it loads, and written byte for byte as the console's card layers write them. It holds no simulation code: the memory card scene, `lbcardgame` and the native save that answers the game's card tasks (milestone 5's task 4) build on it, and the player's import and export (task 18). Where the player keeps the save is one of Sarah's open design calls ([milestone 5](milestone-5.md#design-calls)); nothing is wired into the player or the simulation yet.
+`melee-save` (`crates/melee-save`) reads Melee's save files and writes them as a console does: raw memory card images (`.raw`, ssbm-rs's `.card`) and `.gci` files, judged as the game judges a card it loads, and written byte for byte as the console's card layers write them. It holds no simulation code: the memory card scene, `lbcardgame` and the native save that answers the game's card tasks (milestone 5's task 4, `melee-sim`'s `lb::save`) build on it, and the player's import and export (task 18). Where the player keeps the save is decided ([milestone 5](milestone-5.md#design-calls)); the player isn't wired to it yet.
 
 ## The layers
 
@@ -54,6 +54,22 @@ A console's slot takes the card's flash ID from the card; ssbm-rs's slot A, whic
 A create writes each file's last block whole, so blocks take what follows each file in memory ([Melee's bugs](melee-bugs.md#a-new-card-files-blocks-run-past-their-files)): the next bank's first bytes, and after the seventh bank 0xB4 bytes of the game's memory, which `SaveData::after` carries.
 
 A `.gci` is a file's 0x40-byte directory entry, as the directory holds it, then its sectors. `Gci::from_card` exports one; `Mounted::insert` brings one into a card (melee-hd's own import: the blocks allocated as `CARDCreate` allocates them, the table and the directory written once each); `Gci::folder_name` is Dolphin's GCI folder name (`01-GALE-SuperSmashBros0110290334.gci`).
+
+## The native save on the timeline
+
+`melee-sim`'s `lb::save` runs the game's task lists on the session's card (`CardDevice`, lent to each step like the allocator model): the list's tasks run at once through `tasks::Run`, the card data's memory as the files' buffers, and the time ssbm-rs's card takes passes on the timeline (`CardTime`). Every list starts with the mount's transfers, run at once from the list's start (`MOUNT_WORK`, 1,643 register reads: 80 512-byte segments), then waits on `lbCardNew_CompleteNextTask` (`hsd_803AAA48`, a wait point on ssbm-rs's console when a card was in at power-on):
+
+| List and outcome | Steps after the mount (register reads each) |
+| --- | --- |
+| A load that opens the file (intact or damaged) | 23: the check and the open (2 + 1), then twenty block reads (`BLOCK_WORK`, 323 each, steps 2 to 13 and 15 to 22), steps 14 and 23 none |
+| A load that finds no file, or a full card | 1: the check and one more (2 + 1) |
+| A load or probe of a broken card | 1: the check (2) |
+| A probe (`lb_8001C87C`) or a search for another game's file (`lb_8001C2D8`) | 1: the check (2) |
+| No card, or one pulled or not settled | none (the mount's failed probe takes a probe's time, below) |
+
+The step counts are ssbm-rs's (`CARD_STEPS=1`, `CALLS=EXIDma,EXIImm,EXISync,hsd_803AAA48`); the reads are fitted to the sessions' traces. Only a load's last block's reads reach its end (the waits before it end at events), so the twenty blocks' split is the mount's rate of about 20 reads a segment. `lbCardNew_CompleteAllTasks` after each scene is one more wait.
+
+`lbCardNew_ProbeEx` (the memory card scene's probe every frame) and the pad alarm's probes (`lb_8001C600`, `lbSnap_8001D2BC`, at each alarm's time) ask the device: no card, a card not settled (the EXI library answers only three tenths of a second after it first sees one, `__EXIProbeStartTime`), or one that answers. A session's card can be pulled and put back at video fields (`Setup::card_pull`, ssbm-rs's `CARD_REMOVE=F,G`; `melee-oracle session --card-pull F,G`). Each probe takes the time of the SDK's `__EXIProbe` on ssbm-rs's console (`CardDevice::exi_probe_timed`, [the engine notes](engine.md#audio)): the channel's status register, again to clear an insertion interrupt, the time base with a card in, and the card's ID read once it answers after a pull. The scene's probe (`CARDProbeEx`) takes 48 ticks with a card that answers (the probe and the ID's own probe), 24 with one settling and 8 with a pulled card's slot empty; the pad alarm's three take 56 with the card in and settled; a task list's mount runs while the channel is attached, when a probe reads the status register alone. With no card at power-on ssbm-rs stands in for the CARD library and none takes time.
 
 ## Checks
 

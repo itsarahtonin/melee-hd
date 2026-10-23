@@ -54,6 +54,9 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-info", trace] => trace_info(trace),
         ["trace-dump", trace, tick, addr, len] => trace_dump(trace, tick, addr, len),
         ["trace-world", trace, tick] => trace_world(trace, tick),
+        ["trace-mem", trace, out, ref ticks @ ..] if !ticks.is_empty() => {
+            trace_mem(trace, out, ticks)
+        }
         ["trace-heap", trace] => diff::trace_heap(trace),
         ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
         ["session", ref rest @ ..] => session::session(rest),
@@ -81,11 +84,12 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-info TRACE");
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-heap TRACE");
+            eprintln!("       melee-oracle trace-mem TRACE OUT_DIR TICK...");
             eprintln!(
                 "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"
             );
             eprintln!(
-                "       melee-oracle session TRACE INPUTS [--card FILE] [--from TICK] [--ticks N] [--all] [--scenes]"
+                "       melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--from TICK] [--ticks N] [--all] [--scenes]"
             );
             eprintln!(
                 "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
@@ -427,6 +431,32 @@ fn trace_dump(trace_path: &str, tick: &str, addr: &str, len: &str) -> ExitCode {
         }
     }
     eprintln!("{trace_path}: no tick {tick}");
+    ExitCode::FAILURE
+}
+
+/// Main memory at the end of each of `ticks`, from a trace with memory, written whole into
+/// `out_dir` as `tTICK.mem` (24 MiB), with the tick's time base printed.
+fn trace_mem(trace_path: &str, out_dir: &str, ticks: &[&str]) -> ExitCode {
+    let mut want: Vec<u32> = ticks
+        .iter()
+        .map(|t| t.parse::<u32>().expect("a tick"))
+        .collect();
+    want.sort_unstable();
+    let mut r = trace::Reader::open(trace_path);
+    let mut image = trace::Image::default();
+    while let Some(t) = r.tick() {
+        image.apply(&t);
+        if want.first() == Some(&t.number) {
+            want.remove(0);
+            let out = format!("{out_dir}/t{}.mem", t.number);
+            std::fs::write(&out, &image.mem1).unwrap_or_else(|e| panic!("{out}: {e}"));
+            println!("tick {}: time base {:?}, {out}", t.number, image.tb);
+            if want.is_empty() {
+                return ExitCode::SUCCESS;
+            }
+        }
+    }
+    eprintln!("{trace_path}: no ticks {want:?}");
     ExitCode::FAILURE
 }
 

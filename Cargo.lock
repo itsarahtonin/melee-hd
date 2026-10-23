@@ -1710,6 +1710,7 @@ dependencies = [
  "melee-data",
  "melee-derive",
  "melee-gekko-fp",
+ "melee-save",
 ]
 
 [[package]]

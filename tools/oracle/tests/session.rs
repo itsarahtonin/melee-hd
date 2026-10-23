@@ -1,13 +1,13 @@
-//! `melee-oracle session` on a real recorded session and ssbm-rs's trace of it: the trace's
-//! ticks align with the recording's reads, power-on stops in the boot at its first unported
-//! function after comparing what the boot's ported part left, a session taken up from a trace
-//! tick plays on with the recording's reads, and each deliberate difference is caught where it
-//! should be.
+//! `melee-oracle session` on real recorded sessions and ssbm-rs's traces of them: the trace's
+//! ticks align with the recording's reads, power-on runs through the memory card scene to the
+//! opening movie's first unported function, the card sessions' scene answers each card's
+//! state, a session taken up from a trace tick plays on with the recording's reads, and each
+//! deliberate difference is caught where it should be.
 //!
 //! The session is ssbm-rs's recording `2026-10-06_17-44-10` (`$SSBM_RS_LOCAL/lockstep/
 //! recordings`, with its card), traced as `docs/oracle.md` ("Sessions") says into
-//! `$SSBM_RS_LOCAL/traces/session/`. The tests skip without the trace, the recording or
-//! `SSBM_DISC`.
+//! `$SSBM_RS_LOCAL/traces/session/`; the card sessions are in `lockstep/card-sessions` and
+//! `traces/card-sessions`. The tests skip without the traces, the recordings or `SSBM_DISC`.
 
 use std::process::Command;
 
@@ -66,8 +66,8 @@ fn ticks_align_with_reads() {
 }
 
 #[test]
-fn power_on_stops_in_the_boot() {
-    let Some(out) = session(&[]) else {
+fn power_on_runs_to_the_opening_movie() {
+    let Some(out) = session(&["--heap"]) else {
         return;
     };
     assert!(
@@ -75,7 +75,96 @@ fn power_on_stops_in_the_boot() {
         "{out}"
     );
     assert!(
-        out.contains("0 ticks compared, no difference; stopped in the boot, before trace tick 0: HSD_SetInitParameter isn't ported"),
+        out.contains("2 ticks compared, no difference; stopped in tick 2: gm_Scene_Opening_OnEnter isn't ported"),
+        "{out}"
+    );
+}
+
+/// The seed from `OSGetTick` one more shows in the first tick.
+#[test]
+fn power_on_catches_a_changed_seed() {
+    let Some(out) = session(&["--mutate", "seed"]) else {
+        return;
+    };
+    assert!(
+        out.contains("1 ticks compared; tick 0 differs in 2 places, first: HSD_RandSeedPtr"),
+        "{out}"
+    );
+}
+
+/// A card session (`lockstep/card-sessions/NAME.inputs` with its card, traced into
+/// `traces/card-sessions/NAME.trc`).
+fn card_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/card-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/card-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// A card with no save: the failed load resets the save (the first trophy drawn), the probe
+/// asks to create one, and the prompt waits until A, which would create it.
+#[test]
+fn no_save_asks_to_create_one() {
+    let Some(out) = card_session("nofile", &[]) else {
+        return;
+    };
+    assert!(
+        out.contains("513 ticks compared, no difference; stopped in tick 513: lb_8001C8BC (creating the save) isn't ported"),
+        "{out}"
+    );
+}
+
+/// The card pulled at field 300 and put back at 450: the prompt says there's no card, then
+/// asks again to create the save; to the trace's end.
+#[test]
+fn a_pulled_card_comes_back() {
+    let Some(out) = card_session("removed", &["--card-pull", "300,450"]) else {
+        return;
+    };
+    assert!(out.contains("872 ticks compared, no difference"), "{out}");
+}
+
+/// A card another game's file leaves too little room on, and a broken one: A goes on without
+/// saving; to the traces' end. From tick 896 the ticks start right after the pad alarm, whose
+/// handler's probes of the card slots take 56 ticks with the card in.
+#[test]
+fn full_and_broken_cards_go_on_without_saving() {
+    for name in ["full", "broken"] {
+        let Some(out) = card_session(name, &["--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains("1173 ticks compared, no difference"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// No card: the scene says so, and A goes on without saving; to the trace's end. Tick 444's
+/// retrace handler ends just as an audio DMA block does, whose frame runs before the wake's
+/// reads.
+#[test]
+fn no_card_goes_on_without_saving() {
+    let Some(out) = card_session("nocard", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1190 ticks compared, no difference"), "{out}");
+}
+
+/// The pulled card's session with the card left in: the scene doesn't see it go.
+#[test]
+fn a_pulled_card_must_be_pulled() {
+    let Some(out) = card_session("removed", &[]) else {
+        return;
+    };
+    assert!(
+        out.contains("212 ticks compared; tick 211 differs"),
         "{out}"
     );
 }
@@ -146,14 +235,25 @@ fn taken_up_match_plays_on_with_the_reads() {
         out.contains("trace tick 3300 imported and compared back: 0 differences"),
         "{out}"
     );
-    // 234 ticks of the match with the players' reads compare clean; tick 3535's audio frame
-    // is the open difference docs/oracle.md ("Sessions") describes.
+    // 463 ticks of the match with the players' reads compare clean, each tick's end on the
+    // time base included (every one 56 ticks past where a replay's would end, the pad alarm's
+    // card probes); tick 3764's new hookshot links hold the menus' heap bytes, the open
+    // difference docs/oracle.md ("Sessions") describes.
     assert!(
-        out.contains(
-            "235 ticks compared; tick 3535 differs in 8 places, first: audio: AX voice 56"
-        ),
+        out.contains("464 ticks compared; tick 3764 differs"),
         "{out}"
     );
+}
+
+/// Taken up from tick 3530: a tick's end comes before its round's copy, so a frame buffer is
+/// free there, and tick 3531 starts after the pad alarm without waiting for the retrace that
+/// comes after it.
+#[test]
+fn taken_up_match_finds_a_free_frame_buffer() {
+    let Some(out) = session(&["--from", "3530", "--ticks", "10"]) else {
+        return;
+    };
+    assert!(out.contains("10 ticks compared, no difference"), "{out}");
 }
 
 #[test]

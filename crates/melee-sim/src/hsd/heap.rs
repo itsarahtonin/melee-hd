@@ -172,6 +172,37 @@ impl ObjAlloc {
     }
 }
 
+/// What a scene's heap leaves the next one, in static data the heap doesn't hold: each
+/// class's object size (a class the game has initialized keeps it when the next scene forgets
+/// the class, `hsdForgetClassLibrary`, as [`Layout::from_menus`] says of the fog class), and
+/// whether each pool has had its `HSD_ObjAllocInit` (an init's size and alignment stay).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Carried {
+    pub classes: Vec<u32>,
+    pub pools: Vec<bool>,
+}
+
+impl Carried {
+    /// What a console's boot sets up before its first scene: the pools of HSD's libraries
+    /// and the audio's ([`Kind::from_boot`]), and the classes HAL's libraries initialize but
+    /// the lights' and the fog's, which no scene before the opening movie makes.
+    pub fn power_on() -> Carried {
+        Carried {
+            classes: Class::ALL
+                .iter()
+                .map(|&c| {
+                    if c.from_boot() && c != Class::LObj {
+                        c.obj_size()
+                    } else {
+                        0
+                    }
+                })
+                .collect(),
+            pools: Kind::ALL.iter().map(|k| k.from_boot()).collect(),
+        }
+    }
+}
+
 /// `obj_heap`: a range objects are carved from in order instead of the main heap. Melee
 /// gives it no range (`top` 0), so pools grow from the main heap.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
@@ -261,6 +292,31 @@ impl Kind {
         Kind::TevReg,
         Kind::Chan,
     ];
+
+    /// Whether the boot inits the pool: all but the match's, which the scenes that use them
+    /// init (`Fighter_800679B0`, `Player_80036DA4`, `Item_80266FCC`, `efLib_Init`,
+    /// `lbBgFlash_Init`).
+    pub fn from_boot(self) -> bool {
+        !matches!(
+            self,
+            Kind::Fighter
+                | Kind::FighterAttrs
+                | Kind::FighterParts
+                | Kind::FighterDObjList
+                | Kind::FighterX2040
+                | Kind::FighterX59C
+                | Kind::Player
+                | Kind::Item
+                | Kind::ItemDynamicBones
+                | Kind::ItemLink
+                | Kind::Effect
+                | Kind::EffectQueued
+                | Kind::Particle
+                | Kind::Generator
+                | Kind::AppSrt
+                | Kind::BgFlash
+        )
+    }
 
     /// The object size and alignment its `HSD_ObjAllocInit` gives the pool (the fighters'
     /// is the layout's, [`Layout::fighter_size`]).
@@ -767,6 +823,7 @@ impl Heap {
             let d = &self.allocs[kind as usize];
             (d.size, d.align)
         };
+        assert!(size != 0, "{kind:?}'s pool is used before its init");
         let mut pool_size = size.wrapping_mul(num);
         let mut num = num;
         let start;
@@ -821,6 +878,27 @@ impl Heap {
         let d = &mut self.allocs[kind as usize];
         d.free.push(ptr);
         d.used -= 1;
+    }
+
+    /// What outlives the scene's heap ([`Carried`]).
+    pub fn carried(&self) -> Carried {
+        Carried {
+            classes: self.classes.iter().map(|c| c.obj_size).collect(),
+            pools: self.allocs.iter().map(|a| a.size != 0).collect(),
+        }
+    }
+
+    /// A new scene's heap with what the last one's [`Heap::carried`] gave: the class sizes,
+    /// and no init for a pool none has had.
+    pub fn carry(&mut self, carried: &Carried) {
+        for (c, &s) in self.classes.iter_mut().zip(&carried.classes) {
+            c.obj_size = s;
+        }
+        for (a, &inited) in self.allocs.iter_mut().zip(&carried.pools) {
+            if !inited {
+                *a = ObjAlloc::default();
+            }
+        }
     }
 
     /// An archive loaded into the main heap (`lbArchive_LoadSymbols` and its kin through

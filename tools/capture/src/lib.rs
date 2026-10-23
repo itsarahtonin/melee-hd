@@ -13,6 +13,7 @@ pub mod import;
 pub mod items;
 pub mod izumi;
 pub mod links;
+pub mod menus;
 pub mod pack;
 pub mod playback;
 pub mod sis;

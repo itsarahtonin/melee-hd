@@ -346,13 +346,15 @@ impl Running<'_> {
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
-        let archive = if dest == MAIN_MEMORY {
-            crate::hsd::heap::with(|h| h.archive_alloc(len).1).unwrap_or(0)
+        let (file, archive) = if dest == MAIN_MEMORY {
+            crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0))
         } else {
-            0
+            (0, 0)
         };
         if self.game.audio.clock.is_some() {
-            self.game.audio.load_file(self.data, entrynum, dest, len);
+            // Into the file's block where the allocator model gives it.
+            let at = if file != 0 { file } else { dest };
+            self.game.audio.load_file(self.data, entrynum, at, len);
         }
         archive
     }
