@@ -128,19 +128,46 @@ impl Ctx<'_> {
         ))
     }
 
-    /// An image in the executable's data or statics: a magnifier bubble's copy.
+    /// An image in the executable's data or statics: a magnifier bubble's copy, or an image
+    /// the executable's data holds (Poké Floats' toon texture, `grPu_803E7620`).
     pub fn static_image(&mut self, at: u32) -> Option<Image> {
-        let i = at.checked_sub(MAGNIFY + IMAGE_DESCS)? / IMAGE_DESC_SIZE;
-        let d = self.game.magnify.image_descs.get(i as usize)?;
-        let size = crate::gx::get_tex_buffer_size(d.width, d.height, d.format as u32, 0, 0);
+        if let Some(i) = at.checked_sub(MAGNIFY + IMAGE_DESCS)
+            && let i = i / IMAGE_DESC_SIZE
+            && let Some(d) = self.game.magnify.image_descs.get(i as usize)
+        {
+            let size = crate::gx::get_tex_buffer_size(d.width, d.height, d.format as u32, 0, 0);
+            return Some(Image {
+                ptr: self.space.dynamic(Dynamic::Magnifier(i as u8 + 1), size),
+                width: d.width,
+                height: d.height,
+                format: d.format as u32,
+                mipmap: d.mipmap != 0,
+                min_lod: d.minLOD,
+                max_lod: d.maxLOD,
+            });
+        }
+        self.executable_image(at)
+    }
+
+    /// An image descriptor (`HSD_ImageDesc`) in the executable's data, and its texels there,
+    /// which the game never writes.
+    fn executable_image(&mut self, at: u32) -> Option<Image> {
+        let Some(d) = self.space.dol_bytes(at, 0x18) else {
+            self.hsd.note(format!(
+                "image descriptor {at:08X} outside the executable's data"
+            ));
+            return None;
+        };
+        let u32_at = |o: usize| u32::from_be_bytes(d[o..o + 4].try_into().unwrap());
+        let u16_at = |o: usize| u16::from_be_bytes(d[o..o + 2].try_into().unwrap());
         Some(Image {
-            ptr: self.space.dynamic(Dynamic::Magnifier(i as u8 + 1), size),
-            width: d.width,
-            height: d.height,
-            format: d.format as u32,
-            mipmap: d.mipmap != 0,
-            min_lod: d.minLOD,
-            max_lod: d.maxLOD,
+            ptr: u32_at(0) & 0x01FF_FFFF,
+            width: u16_at(4),
+            height: u16_at(6),
+            format: u32_at(8),
+            mipmap: u32_at(0xC) != 0,
+            min_lod: f32::from_bits(u32_at(0x10)),
+            max_lod: f32::from_bits(u32_at(0x14)),
         })
     }
 
