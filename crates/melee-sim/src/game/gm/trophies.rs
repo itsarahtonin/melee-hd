@@ -251,7 +251,7 @@ impl Running<'_> {
 
     /// `gm_80164430`: whether the save has a stage kind's stage unlocked (always for a stage
     /// that isn't locked).
-    #[doc(alias = "gm_80164430")]
+    // Ports `gm_80164430`; aliased once a check reaches it.
     pub fn stage_unlocked(&self, stkind: u16) -> bool {
         match stage_unlock(stkind) {
             None => true,
@@ -261,7 +261,7 @@ impl Running<'_> {
 
     /// `gm_80164504`: a stage kind's stage unlocked in the save, with its special message
     /// noted (`gmMainLib_8015D818`).
-    #[doc(alias = "gm_80164504")]
+    // Ports `gm_80164504`; aliased once a check reaches it.
     pub fn unlock_stage(&mut self, stkind: u16) {
         if let Some(u) = stage_unlock(stkind) {
             self.note_special_message(u32::from(u[2]));
@@ -271,10 +271,10 @@ impl Running<'_> {
 
     /// `gmMainLib_8015D818`: a special message the save hasn't announced given the clock's
     /// time (`x1B80`) and marked pending and announced (`x1B40`, `x1B4C`).
-    #[doc(alias = "gmMainLib_8015D818")]
-    #[doc(alias = "gmMainLib_8015D94C")]
-    #[doc(alias = "gmMainLib_8015D888")]
-    #[doc(alias = "gmMainLib_8015D8FC")]
+    // Ports `gmMainLib_8015D818`; aliased once a check reaches it.
+    // Ports `gmMainLib_8015D94C`; aliased once a check reaches it.
+    // Ports `gmMainLib_8015D888`; aliased once a check reaches it.
+    // Ports `gmMainLib_8015D8FC`; aliased once a check reaches it.
     fn note_special_message(&mut self, msg: u32) {
         let (word, bit) = ((msg / 32) as usize, 1u32 << (msg % 32));
         if self.game.game_data.thing.save_data.x1B4C[word] & bit != 0 {

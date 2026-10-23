@@ -202,3 +202,245 @@ Stage_802251B4	Ground_801C06B8 for a stage kind's ground kind: the preload reque
 ftParts_JObjInfoInit	Registers the fighters' joint class (ftJObj) with HAL's class system; melee-sim marks a fighter's root joint's class (heap::Class::FtJObj) and the presentation takes its position matrix (Draw::FighterJoint) (docs/engine.md).
 ftParts_PObjInfoInit	Registers the fighters' shape class (ftPObj) with HAL's class system; melee-sim's PObj class (PObjClass::Fighter, heap::Class::FtPObj) replaces it, its loader and matrix setup dispatched on it (docs/engine.md).
 ftParts_IntpJObjInfoInit	Registers the fighters' interpolated joint class (ftIntpJObj) with HAL's class system; melee-sim's JObjClass::FighterIntp replaces it (docs/engine.md).
+convertSdkResult	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+getNewTask	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+executeNextTask	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+resetState	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+onCardComplete	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+fn_8001A0B0	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskMount	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskCheck	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+setTaskFilename	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskOpen	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskUnk3	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskFormat	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskDelete	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskRename	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskCreate	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskRead	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskWrite	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskSetStatus	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskReadHeader	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskListSnapshots	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+taskFindFile	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001B8C8	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lbCardNew_DeleteSnap	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BA44	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BB48	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BC18	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BE30	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BF04	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001BFD8	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001C0F4	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+lb_8001C4A8	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
+__DVDInitWA	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDInterruptHandler	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+AlarmHandler	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+AlarmHandlerForTimeout	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+Read	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+SeekTwiceBeforeRead	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowRead	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowSeek	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowWaitCoverClose	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowReadDiskID	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowStopMotor	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowRequestError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowInquiry	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowAudioStream	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowRequestAudioStatus	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowAudioBufferConfig	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowReset	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowBreak	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDLowClearCallback	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDLowSetWAType	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDFSInit	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDConvertPathToEntrynum	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDFastOpen	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDClose	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDReadAsyncPrio	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForReadAsync	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDInit	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateReadingFST	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateReadingFST	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateTimeout	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateGettingError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+CategorizeError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateGettingError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForUnrecoveredError	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForUnrecoveredErrorRetry	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateGoToRetry	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateGoToRetry	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateCheckID	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateCheckID3	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateCheckID2	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateCheckID1	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateCheckID2	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateCheckID3	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+AlarmHandler	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateCoverClosed	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateCoverClosed_CMD	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateCoverClosed	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateMotorStopped	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateMotorStopped	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateReady	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+stateBusy	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForStateBusy	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDReadAbsAsyncPrio	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDReadAbsAsyncForBS	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDReadDiskID	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDReset	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDGetDriveStatus	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDSetAutoInvalidation	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDCancelAsync	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDCancel	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cbForCancelSync	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDGetCurrentDiskID	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+DVDCheckDisk	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDPrepareResetAsync	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDClearWaitingQueue	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDPushWaitingQueue	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDPopWaitingQueue	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDCheckWaitingQueue	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDDequeueWaitingQueue	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__DVDStoreErrorCode	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+cb	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+__fstLoad	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
+WriteSramCallback	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+WriteSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSInitSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSLockSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSLockSramEx	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+UnlockSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSUnlockSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSUnlockSramEx	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+__OSSyncSram	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSGetSoundMode	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSSetSoundMode	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSGetProgressiveMode	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSSetProgressiveMode	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSGetWirelessID	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSSetWirelessID	The real-time clock and SRAM: the clock at power-on is a session input (session::Setup::clock) and the console's settings the platform's.
+OSGetTime	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+OSGetTick	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+__OSGetSystemTime	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+__OSTimeToSystemTime	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+GetDates	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+OSTicksToCalendarTime	The time base and calendar: the timeline keeps the time base (audio::clock), the clock in seconds from the session's power-on input (gmMainLib's session_seconds, melee-save's Clock).
+__VIRetraceHandler	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VISetPreRetraceCallback	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VISetPostRetraceCallback	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+getTiming	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+__VIInit	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIInit	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIWaitForRetrace	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+setFbbRegs	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+setVerticalRegs	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIConfigure	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIFlush	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VISetNextFrameBuffer	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VISetBlack	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIGetRetraceCount	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+getCurrentFieldEvenOdd	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIGetNextField	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIGetCurrentLine	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIGetTvFormat	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+VIGetDTVStatus	The video interface: video fields and retraces are the timeline's (audio::clock), the DTV status a session input, and the frame's output the renderer's.
+__CARDDefaultApiCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDSyncCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDExtHandler	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDExiHandler	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDTxHandler	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDUnlockedHandler	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDEnableInterrupt	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDReadStatus	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDClearStatus	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+TimeoutHandler	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+Retry	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+UnlockedCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDStart	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDReadSegment	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDWritePage	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDEraseSector	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDInit	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDSetDiskID	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDGetControlBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDPutControlBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDFreeBlocks	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDSync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+bitrev	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+ReadArrayUnlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+DummyLen	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDUnlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+InitCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+DoneCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+BlockReadCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDRead	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+BlockWriteCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDWrite	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDGetXferredBytes	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDGetFatBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+WriteCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+EraseCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDAllocBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDFreeBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDUpdateFatBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDGetDirBlock	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+WriteCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+EraseCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDUpdateDir	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDCheckSum	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+VerifyID	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+VerifyDir	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+VerifyFAT	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDVerify	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDCheckExAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDCheckAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDProbe	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDProbeEx	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+DoMount	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDMountCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDMountAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+DoUnmount	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDUnmount	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+FormatCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDFormatRegionAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDFormatAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDCompareFileName	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDAccess	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDIsPublic	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDGetFileNo	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDFastOpen	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDOpen	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDClose	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDIsOpened	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CreateCallbackFat	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDCreateAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+__CARDSeek	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+ReadCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDReadAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDRead	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+WriteCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+EraseCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDWriteAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDWrite	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+DeleteCallback	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDDeleteAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+UpdateIconOffsets	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDGetStatus	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDSetStatusAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+CARDRenameAsync	The CARD library: the native save (melee-save's card, under lb::save) answers the game's card tasks; the session's card is the console's device, not emulated hardware.
+hsd_803A949C	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+fn_803AA790	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803AAA48	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+fn_803AC168	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+fn_803AC2D4	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+fn_803AC2E0	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+fn_803AC334	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B2374	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B2550	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B27F4	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B286C	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B2928	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B29D8	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.
+hsd_803B2A4C	The HSD card layer's ring and setup: melee-save's exec runs its commands at once under the native save (lb::save); the layer's buffers aren't the game's state.

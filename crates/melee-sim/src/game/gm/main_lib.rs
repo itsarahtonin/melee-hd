@@ -33,7 +33,7 @@ pub struct MainLib {
 
 impl MainLib {
     /// `gmMainLib_8015FC74`: the seconds since the last call, and the clock noted.
-    #[doc(alias = "gmMainLib_8015FC74")]
+    // Ports `gmMainLib_8015FC74`; aliased once a check reaches it.
     pub fn take_power_time(&mut self, now: u32) -> i32 {
         let prev = self.x10;
         self.x10 = now;

@@ -376,6 +376,7 @@ impl Running<'_> {
     /// save, the game waiting for the list: 1 or 2 when it's there (opened, damaged), else
     /// why not (`lbCardResult`).
     #[doc(alias = "lb_8001B7E0")]
+    #[doc(alias = "lb_8001C87C")]
     pub fn card_probe_save(&mut self) -> i32 {
         let (r, _) = self.run_card_list(
             &lists::probe(melee_save::melee::FILENAME),

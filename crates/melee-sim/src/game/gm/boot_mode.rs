@@ -64,7 +64,7 @@ impl Running<'_> {
     }
 
     /// `memcardOnLoad`: the card scene asks the player about the card.
-    #[doc(alias = "memcardOnLoad")]
+    // Ports `memcardOnLoad`; aliased once a check reaches it.
     pub fn memcard_mode_on_load(&mut self) {
         let b = &mut self.game.boot_mode;
         b.load_x4 = 0;

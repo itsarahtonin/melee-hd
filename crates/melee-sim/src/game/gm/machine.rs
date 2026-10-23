@@ -451,7 +451,7 @@ fn next_state(states: &[StateDesc], cur: u8) -> u8 {
 }
 
 /// `gm_GetCurrentGameMode`.
-#[doc(alias = "gm_GetCurrentGameMode")]
+// Ports `gm_GetCurrentGameMode`; aliased once a check reaches it.
 pub fn current_mode(m: &Machine) -> u8 {
     m.routing.curr_mode
 }

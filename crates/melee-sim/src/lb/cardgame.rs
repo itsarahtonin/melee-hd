@@ -102,7 +102,7 @@ impl CardGame {
     }
 
     /// `lbCardGame_SetCardStatus`.
-    #[doc(alias = "lbCardGame_SetCardStatus")]
+    // Ports `lbCardGame_SetCardStatus`; aliased once a check reaches it.
     pub fn set_card_status(&mut self, status: i32) {
         self.card_status = status;
     }
@@ -271,7 +271,7 @@ impl Running<'_> {
 
     /// `lbCardGame_SaveChanges`: the power-on time added to the save, and the save marked
     /// to write.
-    #[doc(alias = "lbCardGame_SaveChanges")]
+    // Ports `lbCardGame_SaveChanges`; aliased once a check reaches it.
     pub fn card_game_save_changes(&mut self) {
         assert!(self.game.card_game.enable, "_p(enable)");
         let add = self.game.main_lib.take_power_time(self.session_seconds());

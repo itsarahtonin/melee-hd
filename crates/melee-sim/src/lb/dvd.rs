@@ -358,7 +358,7 @@ impl Dvd {
     }
 
     /// `lbDvd_8001823C`.
-    #[doc(alias = "lbDvd_8001823C")]
+    // Ports `lbDvd_8001823C`; aliased once a check reaches it.
     pub fn note_scene_change(&mut self) {
         self.cache.scene.mode_scene_changes = self.cache.new_scene.mode_scene_changes + 1;
     }
