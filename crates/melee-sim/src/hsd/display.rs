@@ -68,6 +68,11 @@ pub enum Draw {
     /// The lights `HSD_LObjSetupInit` gave GX slots light what follows, as
     /// [`Display::light_sets`] holds them at this index.
     Lights(u16),
+    /// As [`Draw::Lights`], but set up after the next material's render mode: a fighter's
+    /// material that set its light up without alpha sets its channels from those lights
+    /// (`HSD_SetupRenderModeWithCustomPE`) before it sets them up again with alpha
+    /// (`ftMaterial_800BF2B8`'s `ftCo_8009F75C(fp, true)`).
+    LightsAfterRenderMode(u16),
     /// The GObj whose render callback draws what follows (`HSD_GObj_804D7814`), whose user
     /// data materials read as they set up (a fighter's, a stage object's, an item's).
     Rendering(Option<super::gobj::GObjId>),
@@ -151,6 +156,11 @@ pub enum Draw {
     /// sets up (`HSD_MObjSetup`): Poké Floats' render callback sets it around each float's
     /// draw and clears it after (`fn_802130D0`), so the frame's end holds none.
     Toon(Option<tobj::ImageRef>),
+    /// The draw flags of the fighter whose materials set up next, as a fighter's material
+    /// sets up (`ftMaterial_800BF2B8`): its render callback sets them before each tree it
+    /// draws (`ftDrawCommon_80080E18`: an outline, the fighter, then its silhouette, in one
+    /// pass), so the frame's end holds only the last tree's.
+    FighterFlags(FighterFlags),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
@@ -169,6 +179,18 @@ pub enum Draw {
     /// ring (`x20B0`, `x2100`, `x2101`), its two widths (`x20F8`, `x20FC`) and the sword
     /// attributes' colors, as the pass left them.
     Afterimage(crate::game::handles::FighterId),
+}
+
+/// What [`Draw::FighterFlags`] names: the flags a fighter's render callback sets for each
+/// tree it draws, which its materials read.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct FighterFlags {
+    /// An outline or silhouette tree (`x2223_b2`): its color, no depth update.
+    pub x2223_b2: bool,
+    /// The silhouette (`x2223_b3`): no tint, its own pixel-engine mode.
+    pub x2223_b3: bool,
+    /// The low models (`x2228_b0`): the shared material only with `x2224_b0` clear.
+    pub x2228_b0: bool,
 }
 
 /// A quad of [`Draw::Quad`]: two corners and its color.
@@ -235,6 +257,8 @@ pub struct Display {
     pub hilight_named: Option<Option<crate::vec::Vec3>>,
     /// The toon texture's image last named this frame ([`Draw::Toon`]).
     pub toon_named: Option<Option<tobj::ImageRef>>,
+    /// The fighter draw flags last named this frame ([`Draw::FighterFlags`]).
+    pub fighter_flags_named: Option<FighterFlags>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -289,6 +313,7 @@ pub fn start_frame(objs: &mut Objects) {
     objs.display.shadows_named = None;
     objs.display.hilight_named = None;
     objs.display.toon_named = None;
+    objs.display.fighter_flags_named = None;
 }
 
 /// Names the toon texture's image a toon material is about to take ([`Draw::Toon`]), when it
@@ -571,8 +596,8 @@ pub struct FighterMaterial {
     pub swapped: Option<MObjId>,
     /// It draws translucent (`x61D` set).
     pub translucent: bool,
-    /// `x2223_b2`.
-    pub x2223_b2: bool,
+    /// The draw flags its render callback set for the tree.
+    pub flags: FighterFlags,
     /// Its color overlay lights it (`x7C_flag2` and `x7C_light_enable`).
     pub overlay_light: bool,
     /// Its own light, and the fighters' lights (`lobj0`, and `lobj1`, the first ambient).
@@ -584,14 +609,21 @@ pub struct FighterMaterial {
 /// A fighter's material setup, `ftMaterial_800BF2B8`: a refracted fighter's refraction
 /// texture; otherwise HAL's setup of the material, or of the shared one it's swapped for,
 /// and when the overlay lights the fighter but the material leaves alpha to the lights
-/// (translucent, or `x2223_b2`), the fighter's light set up without alpha, then with it
-/// (`ftMaterial_800BF534`'s `ftCo_8009F75C(fp, false)`, then `ftCo_8009F75C(fp, true)`).
+/// (translucent, or `x2223_b2`), the fighter's light set up without alpha, the render mode's
+/// channels set from those lights, then the light set up with alpha
+/// (`ftMaterial_800BF534`'s `ftCo_8009F75C(fp, false)`, `HSD_SetupRenderModeWithCustomPE`,
+/// then `ftCo_8009F75C(fp, true)`).
 #[doc(alias = "ftMaterial_800BF2B8")]
 fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     let fm = objs
         .display
         .fighter
         .expect("a fighter's material drawn outside its fighter");
+    let d = &mut objs.display;
+    if d.fighter_flags_named != Some(fm.flags) {
+        d.fighter_flags_named = Some(fm.flags);
+        d.draws.push(Draw::FighterFlags(fm.flags));
+    }
     if let Some(t) = fm.refract {
         // `lbRefract_80022998`: the chain's screen copy is a shadow-coordinate texture, so its
         // setup brings the current camera's inverse view matrix up to date.
@@ -607,24 +639,27 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     mobj::setup(objs, m);
     texture_matrices(objs, data, m);
     let rendermode = objs.mobjs[m].rendermode | if fm.translucent { RENDER_XLU } else { 0 };
-    setup_channel_mode(objs, m);
-    let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.x2223_b2;
-    if !texp && fm.overlay_light {
-        let c = objs
-            .cobjs
-            .current
-            .expect("HSD_LObjSetupInit: no current camera");
-        // `ftCo_8009F75C(fp, false)`.
-        lobj::clear_flags(&mut objs.lobjs, fm.light, 1 << 4);
-        lobj::set_current_all(objs, fm.ambient);
-        lobj::add_current(objs, fm.light);
-        lobj_setup_init(objs, data, c);
-        // `ftCo_8009F75C(fp, true)`.
-        lobj::set_flags(&mut objs.lobjs, fm.light, 1 << 4);
-        lobj::replace_current(objs, fm.lights);
-        lobj::add_current(objs, fm.light);
-        lobj_setup_init(objs, data, c);
+    let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.flags.x2223_b2;
+    if texp || !fm.overlay_light {
+        setup_channel_mode(objs, m);
+        return;
     }
+    let c = objs
+        .cobjs
+        .current
+        .expect("HSD_LObjSetupInit: no current camera");
+    // `ftCo_8009F75C(fp, false)`, before the render mode, whose channels take these lights.
+    lobj::clear_flags(&mut objs.lobjs, fm.light, 1 << 4);
+    lobj::set_current_all(objs, fm.ambient);
+    lobj::add_current(objs, fm.light);
+    lobj_setup_init(objs, data, c);
+    setup_channel_mode(objs, m);
+    // `ftCo_8009F75C(fp, true)`, after it.
+    lobj::set_flags(&mut objs.lobjs, fm.light, 1 << 4);
+    lobj::replace_current(objs, fm.lights);
+    lobj::add_current(objs, fm.light);
+    setup_lights(objs, data, c);
+    push_light_set(objs, c, true);
 }
 
 /// The rest of what `TObjSetupMtx` changes as it loads a material's texture matrices for
@@ -803,6 +838,12 @@ fn lobj_setup_specular_init(objs: &mut Objects) {
 #[doc(alias = "HSD_LObjSetupInit")]
 pub fn lobj_setup_init(objs: &mut Objects, data: &Archives, c: CObjId) {
     setup_lights(objs, data, c);
+    push_light_set(objs, c, false);
+}
+
+/// Names the lights [`setup_lights`] just set up for what follows ([`Draw::Lights`]), or
+/// for what follows the next material's render mode ([`Draw::LightsAfterRenderMode`]).
+fn push_light_set(objs: &mut Objects, c: CObjId, after_render_mode: bool) {
     let l = &objs.lobjs;
     let mut set = LightSet {
         nb_active: l.nb_active,
@@ -826,7 +867,12 @@ pub fn lobj_setup_init(objs: &mut Objects, data: &Archives, c: CObjId) {
         });
     }
     let d = &mut objs.display;
-    d.draws.push(Draw::Lights(d.light_sets.len() as u16));
+    let n = d.light_sets.len() as u16;
+    d.draws.push(if after_render_mode {
+        Draw::LightsAfterRenderMode(n)
+    } else {
+        Draw::Lights(n)
+    });
     d.light_sets.push(set);
 }
 

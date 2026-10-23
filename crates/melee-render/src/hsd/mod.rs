@@ -34,6 +34,9 @@ pub struct Hsd {
     pub state: state::State,
     pub tev: tev::TevState,
     pub lights: lobj::LightState,
+    /// The light set a fighter's material sets up after its render mode, as the last
+    /// `Draw::LightsAfterRenderMode` named it, until that material's setup loads it.
+    pub lights_after_render_mode: Option<u16>,
     /// The vertex description whose arrays and attributes were last set (`setupArrayDesc`'s
     /// `prev_vtxdesclist_array`, `setupVtxDesc`'s `prev_vtxdesc`).
     pub prev_array: Option<DataRef>,
@@ -52,6 +55,9 @@ pub struct Hsd {
     pub hilight: Option<melee_sim::vec::Vec3>,
     /// The toon texture's image (`tobj_toon->imagedesc`), as the last `Draw::Toon` named it.
     pub toon: Option<tobj::ImageRef>,
+    /// The draw flags of the fighter whose materials set up, as the last
+    /// `Draw::FighterFlags` named them.
+    pub fighter_flags: Option<melee_sim::hsd::display::FighterFlags>,
     /// The current camera and the matrices it gives.
     pub camera: Option<CameraView>,
     pub inv_view: Option<Mtx34>,
