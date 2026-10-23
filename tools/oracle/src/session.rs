@@ -469,6 +469,7 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
 pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let mut card_path: Option<PathBuf> = None;
+    let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
     let mut pos = Vec::new();
@@ -476,6 +477,14 @@ pub fn session(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            "--card-pull" => {
+                let mut f = it
+                    .next()
+                    .expect("--card-pull FIELD[,FIELD]")
+                    .split(',')
+                    .map(|f| f.parse::<u64>().expect("--card-pull FIELD[,FIELD]"));
+                card_pull = Some((f.next().unwrap(), f.next()));
+            }
             "--from" => {
                 from = Some(
                     it.next()
@@ -518,7 +527,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
@@ -556,6 +565,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             clock: SSBM_RS_CLOCK,
             // ssbm-rs's video interface reads a DTV status of 0.
             dtv: false,
+            card_pull,
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");

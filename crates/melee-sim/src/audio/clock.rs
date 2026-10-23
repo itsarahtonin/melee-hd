@@ -168,6 +168,9 @@ pub struct Clock {
     /// free. A copy needs a free one. At power-on neither has been drawn.
     pub xfb_pending: u8,
     pub xfb_shown: bool,
+    /// When the pad alarm fired since the game last looked, for its card probes (a
+    /// session's; none elsewhere).
+    pub alarm_times: Option<Vec<u64>>,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
     pub dsp_ready: bool,
     /// Audio frames are placed ([`Clock::place_audio_frames`]) rather than scheduled; the last
@@ -347,6 +350,9 @@ impl Clock {
                         self.schedule(e.at + FIELD, EventKind::Field);
                     }
                     EventKind::PadAlarm => {
+                        if let Some(t) = &mut self.alarm_times {
+                            t.push(e.at);
+                        }
                         self.now += ALARM_HANDLER;
                         self.pads += 1;
                         self.schedule(e.at + self.alarm_period, EventKind::PadAlarm);

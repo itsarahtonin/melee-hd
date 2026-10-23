@@ -140,6 +140,7 @@ impl Running<'_> {
     /// and goes.
     #[doc(alias = "updateCardStatus")]
     pub fn update_card_status(&mut self) -> i32 {
+        self.card_alarm_probes();
         let swapped = std::mem::take(&mut self.game.card_game.unk_status);
         let status = self.game.card_game.card_status;
         let next = match status {

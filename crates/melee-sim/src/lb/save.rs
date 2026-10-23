@@ -13,6 +13,8 @@
 
 use std::cell::RefCell;
 
+use crate::audio::clock::TB_HZ;
+
 use melee_save::tasks::{Run, Task, lists};
 use melee_save::{Card, Clock, Console};
 
@@ -40,9 +42,51 @@ pub struct CardDevice {
     /// Whether the card layer's step is a wait point: on ssbm-rs's console, when a card was
     /// in at power-on (its runner hooks `hsd_803AAA48` then).
     pub waits: bool,
-    /// Whether the EXI library knows the card's ID (`EXIControl.idTime`): a probe asks the
-    /// card for it ([`ID_WORK`]) when not; a task list's unmount forgets it.
+    /// Whether the memory card scene's probe has run since power-on: its first takes
+    /// longer ([`ID_WORK`]).
     pub identified: bool,
+    /// What the scene's last probe found (none before the first), for the probe's time.
+    pub last_probe: Option<Probe>,
+    /// When the card is out of the slot, on the time base: from the first time to the second
+    /// (or for good), an input of the session's ([`crate::game::session::Setup::card_pull`]).
+    pub pull: Option<(u64, Option<u64>)>,
+    /// `__EXIProbeStartTime[0]`: the probe's tenth of a second when it first saw the card
+    /// (0 none); the probe answers only from three tenths later, the card settled.
+    pub probe_start: u32,
+    /// The time base's offset from the OS's time (`OSGetTime`): the clock at power-on.
+    pub time_offset: u64,
+}
+
+/// What a probe of slot A finds: no card, a card not settled yet, or one that answers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Probe {
+    Empty,
+    Settling,
+    Ready,
+}
+
+impl CardDevice {
+    /// Whether the card is in the slot at time base `now`.
+    pub fn present(&self, now: u64) -> bool {
+        self.card.is_some()
+            && !self
+                .pull
+                .is_some_and(|(out, back)| now >= out && back.is_none_or(|b| now < b))
+    }
+
+    /// `EXIProbe(0)` at `now` (`__EXIProbe`): no card forgets the probe's start; a card
+    /// answers once it has been seen for three tenths of a second.
+    pub fn exi_probe(&mut self, now: u64) -> bool {
+        if !self.present(now) {
+            self.probe_start = 0;
+            return false;
+        }
+        let tenths = ((now + self.time_offset) / (TB_HZ / 1000) / 100) as u32 + 1;
+        if self.probe_start == 0 {
+            self.probe_start = tenths;
+        }
+        tenths.wrapping_sub(self.probe_start) >= 3
+    }
 }
 
 thread_local! {
@@ -133,13 +177,16 @@ pub const MOUNT_WORK: u64 = 1643;
 /// full and broken cards' sessions, whose loads and probes end on that step.
 pub const CHECK_WORK: u64 = 2;
 pub const LOAD_WORK: u64 = 1;
-/// Register reads of `CARDProbeEx` with a card in the slot (the memory card scene's probe
-/// each frame), and of `EXIGetID` when it asks the card for its ID first: fitted to the
-/// prompts' sessions.
+/// Register reads of `CARDProbeEx` (the memory card scene's probe each frame), fitted to
+/// the prompts' and the pulled card's sessions: with a card that answers ([`PROBE_WORK`],
+/// [`ID_WORK`] more the first time since power-on); with one not settled yet
+/// ([`SETTLING_PROBE_WORK`]) or a pulled card's slot empty ([`EMPTY_PROBE_WORK`]), each
+/// [`CHANGED_PROBE_WORK`] the first time in a row; none with no card at all.
 pub const PROBE_WORK: u64 = 6;
 pub const ID_WORK: u64 = 7;
-/// Register reads of `CARDProbeEx` with the slot empty.
-pub const EMPTY_PROBE_WORK: u64 = 0;
+pub const SETTLING_PROBE_WORK: u64 = 3;
+pub const EMPTY_PROBE_WORK: u64 = 1;
+pub const CHANGED_PROBE_WORK: u64 = 4;
 /// Register reads of a block's read (sixteen 512-byte segments). Only the last block's
 /// reads reach the load's end (the wait points before it end at events), so the traces fix
 /// the last step's work but not its split; 323 keeps the mount's rate of about 20 a
@@ -254,7 +301,9 @@ impl Running<'_> {
             *f = memory[file_span(i).0..].to_vec();
         }
         let mut run = Run::new(melee_save::melee::manifest(), bufs);
-        let card_in = with_device(|dev| dev.card.is_some());
+        self.card_alarm_probes();
+        let now = self.clock_now();
+        let card_in = with_device(|dev| dev.exi_probe(now));
         // The mount's probe found the card: the lists that take the card game's status clear
         // it (`*_p(status) = 0`); the others pass none.
         if card_in && status {
@@ -262,7 +311,8 @@ impl Running<'_> {
         }
         let r = with_device(|dev| {
             let mut clock = Clock::at((dev.clock + seconds) as u32);
-            run.execute(dev.card.as_mut(), &dev.console.clone(), &mut clock, tasks)
+            let card = if card_in { dev.card.as_mut() } else { None };
+            run.execute(card, &dev.console.clone(), &mut clock, tasks)
         });
         // What the reads wrote, file by file, the bytes they changed.
         let mut after = memory.clone();
@@ -296,14 +346,17 @@ impl Running<'_> {
                 h => melee_save::tasks::from_hsd(h),
             };
         }
-        // The list's unmount detaches the card.
-        with_device(|dev| dev.identified = false);
-        let (first, steps) = time.steps(r, card_in);
+        let (mut first, steps) = time.steps(r, card_in);
+        // A pulled card's mount fails at its probe.
+        if !card_in && with_device(|dev| dev.card.is_some()) {
+            first += EMPTY_PROBE_WORK;
+        }
         self.game.audio.clock_reg_reads(self.data, first);
         for work in steps {
             self.game.audio.clock_wait(self.data);
             self.game.audio.clock_reg_reads(self.data, work);
         }
+        self.card_alarm_probes();
         (r, run)
     }
 
@@ -348,14 +401,77 @@ impl Running<'_> {
     /// the device error. `CARDProbeEx` reads the interface's registers ([`PROBE_WORK`]).
     #[doc(alias = "lbCardNew_ProbeEx")]
     pub fn card_probe(&mut self) -> i32 {
-        if with_device(|dev| dev.card.is_some()) {
-            let known = with_device(|dev| std::mem::replace(&mut dev.identified, true));
-            let reads = PROBE_WORK + if known { 0 } else { ID_WORK };
-            self.game.audio.clock_reg_reads(self.data, reads);
+        self.card_alarm_probes();
+        let now = self.clock_now();
+        let (probe, reads) = with_device(|dev| {
+            let ready = dev.exi_probe(now);
+            let probe = match (dev.present(now), ready) {
+                (_, true) => Probe::Ready,
+                (true, false) => Probe::Settling,
+                (false, _) => Probe::Empty,
+            };
+            let again = dev.last_probe.replace(probe) == Some(probe);
+            let reads = match probe {
+                Probe::Ready => {
+                    PROBE_WORK
+                        + if std::mem::replace(&mut dev.identified, true) {
+                            0
+                        } else {
+                            ID_WORK
+                        }
+                }
+                Probe::Settling if again => SETTLING_PROBE_WORK,
+                Probe::Empty if dev.card.is_none() => 0,
+                Probe::Empty if again => EMPTY_PROBE_WORK,
+                _ => CHANGED_PROBE_WORK,
+            };
+            (probe, reads)
+        });
+        self.game.audio.clock_reg_reads(self.data, reads);
+        if probe == Probe::Ready {
             result::READY
         } else {
-            self.game.audio.clock_reg_reads(self.data, EMPTY_PROBE_WORK);
             result::DEVICE_ERROR
+        }
+    }
+
+    fn clock_now(&self) -> u64 {
+        self.game.audio.clock.as_ref().map_or(0, |c| c.now)
+    }
+
+    /// The pad alarm's card probes since the last look, at the times each alarm fired:
+    /// `lb_8001C600`'s (`CARDProbe(0)`, the swap noted when it changes) and
+    /// `lbSnap_8001D2BC`'s (`CARDProbe` of slots A and B, none in B).
+    #[doc(alias = "lb_8001C600")]
+    #[doc(alias = "lbSnap_8001D2BC")]
+    pub fn card_alarm_probes(&mut self) {
+        let Some(times) = self
+            .game
+            .audio
+            .clock
+            .as_mut()
+            .and_then(|c| c.alarm_times.as_mut())
+            .map(std::mem::take)
+        else {
+            return;
+        };
+        for t in times {
+            let p = with_device(|dev| dev.exi_probe(t));
+            let g = &mut self.game.card_game;
+            if p != g.probe_status {
+                g.unk_status = true;
+            }
+            g.probe_status = p;
+            for (chan, card) in [with_device(|dev| dev.exi_probe(t)), false]
+                .into_iter()
+                .enumerate()
+            {
+                let s = &mut self.game.snap;
+                if i32::from(card) != s.card_state[chan] {
+                    s.state_changed[chan] = 1;
+                }
+                s.card_state[chan] = i32::from(card);
+            }
         }
     }
 

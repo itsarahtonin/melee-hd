@@ -41,6 +41,35 @@ pub struct Setup {
     /// The video interface's DTV status (`VIGetDTVStatus`): whether the console can show
     /// progressive scan, which with B held at power-on asks for it.
     pub dtv: bool,
+    /// The card pulled out of slot A at the start of a video field and put back at the
+    /// start of another, or never (ssbm-rs's `CARD_REMOVE=F[,G]`).
+    pub card_pull: Option<(u64, Option<u64>)>,
+}
+
+/// The console's card device for `setup`: a card in at power-on was seen by the OS's
+/// probes at boot.
+fn card_device(setup: &Setup) -> CardDevice {
+    CardDevice {
+        card: setup.card.as_ref().map(|image| {
+            melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
+        }),
+        console: melee_save::Console::ssbm_rs(),
+        clock: setup.clock,
+        waits: setup.card.is_some(),
+        identified: false,
+        last_probe: None,
+        pull: setup
+            .card_pull
+            .map(|(out, back)| (field_start(out), back.map(field_start))),
+        probe_start: u32::from(setup.card.is_some()),
+        time_offset: setup.clock * TB_HZ,
+    }
+}
+
+/// The start of video field `n` on the time base (ssbm-rs's `field_start`: NTSC's
+/// 60000/1001 fields a second).
+pub fn field_start(n: u64) -> u64 {
+    (u128::from(n) * u128::from(TB_HZ) * 1001 / 60_000) as u64
 }
 
 /// What the game asks the console's platform for as it runs.
@@ -107,15 +136,7 @@ impl Session {
         game.camera.fov = 38.0;
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
-        let card = Some(CardDevice {
-            card: setup.card.as_ref().map(|image| {
-                melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
-            }),
-            console: melee_save::Console::ssbm_rs(),
-            clock: setup.clock,
-            waits: setup.card.is_some(),
-            identified: false,
-        });
+        let card = Some(card_device(&setup));
         Session {
             game,
             data: Archives::default(),
@@ -126,15 +147,7 @@ impl Session {
 
     /// Takes up a session from a state: one imported from a trace tick's end, say.
     pub fn resume(game: Game, data: Archives, setup: Setup) -> Session {
-        let card = Some(CardDevice {
-            card: setup.card.as_ref().map(|image| {
-                melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
-            }),
-            console: melee_save::Console::ssbm_rs(),
-            clock: setup.clock,
-            waits: setup.card.is_some(),
-            identified: false,
-        });
+        let card = Some(card_device(&setup));
         Session {
             game,
             data,
@@ -267,6 +280,9 @@ impl Running<'_> {
         // `lbAudioAx_8002838C`, then `lb_80019AAC(gmMain_8015FD24)`: the frame clocks and the
         // pads, whose alarm the timeline runs from the audio setup.
         let aram_next = self.game.audio.lb_boot(self.data);
+        if let Some(c) = self.game.audio.clock.as_mut() {
+            c.alarm_times = Some(Vec::new());
+        }
         self.game.pacing = crate::lb::pacing::Pacing::new();
         // The VI callbacks (`gmMain_8015FDA0` does nothing, `HSD_VIDrawDoneXFB`) and
         // `HSD_VISetBlack` are the platform's video.
