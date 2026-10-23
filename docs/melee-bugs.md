@@ -1020,6 +1020,38 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none, as long as no stage reads an unset component; the overlay-and-alpha path would draw differently.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 105); `crates/melee-render/src/hsd/texp.rs:102`.
 
+## Saves and the memory card
+
+### A new card file's blocks run past their files
+
+- **Where:** `fn_803B1338` (a new card file's blocks, `sysdolphin/baselib/card.c`), `crates/melee-save/src/hsd.rs` (`write_new_blocks`).
+- **Defect:** it queues every block of a file with data at a whole block's length (`sector_size - 0x20`) from the file's data, whatever the file's size, so each file's last block takes the bytes that follow the file in memory. The writes after (`fn_803AE7F8`, `fn_803AF3F0`, `fn_803B0120`) give the last block only the bytes left.
+- **Effect:** none observable in play: a read copies only the file's size. The card keeps what followed each file when the save was made: after the save data the first 0x850 bytes of the first name tag bank, after each bank the next one's first 0xB4, and after the seventh bank 0xB4 bytes of whatever `gmMainLib`'s data holds after the card data; a snapshot's last block, what follows the snapshot. A later write that changes a file gives its blocks zeros there, so a save's banks at sequence 0 keep the bytes for good (1,143 such blocks in the card corpus).
+- **melee-hd:** modeled: melee-save's create writes what the caller puts after each file (`SaveData::after` for the bytes after the banks), and the corpus's three freshly made saves come out of a format and a create byte for byte.
+- **Fix:** give each file's last block the bytes left, as the writes do.
+- **Fix impact:** changes only what a new card file holds past its files; no gameplay.
+- **Source:** [saves](saves.md); `crates/melee-save/src/hsd.rs` (`write_new_blocks`).
+
+### The spare blocks' file table names file 9
+
+- **Where:** `fn_803B1338` writing the spares, through `fn_803AC3F8` (a block's file table), `crates/melee-save/src/state.rs` (`pack_table`).
+- **Defect:** the spares are written with the file index the loop over files 1 to 8 ends on, 9, so their table covers files 7, 8 and 9, and entry 9 reads `file_sizes[9]` and `file_flags[9]`, one past the nine-entry arrays: `file_data[0]`, file 0's data address, as a size, and `file_sizes[0]` as flags.
+- **Effect:** none observable for the game's files: Melee's save has no file 0, so the entry is `09 00 00 00` on every card. A layout with both file 0 data and spares would write file 0's address into the table, and a scan would take it in as file 9's size, written past the arrays again (`hsd_803AC558`).
+- **melee-hd:** modeled: melee-save keeps the layer's state as the original's bytes, so the read lands where the original's does.
+- **Fix:** write the spares with a file of their own or none.
+- **Fix impact:** none for Melee's files.
+- **Source:** [saves](saves.md); `crates/melee-save/src/state.rs` (`pack_table`).
+
+### The directory's and table's check codes compare without wrapping
+
+- **Where:** `VerifyDir` and `VerifyFAT` (`dolphin/card/CARDCheck.c`, the CARD library Melee links), `crates/melee-save/src/card.rs` (`verify_dir`, `verify_fat`).
+- **Defect:** the newer of two copies is the one whose check code is higher, the two `s16` codes subtracted as ints rather than as `s16`, so when a code passes from 32,767 to -32,768 the newest copy reads as the older.
+- **Effect:** at that write, the next mount takes the directory (or table) as it was before it: the write's change is lost (a file's time, or a file made or deleted then), and later writes go on from there. Every save that changes something writes the directory at least twice (each `CARDWrite` stamps the file's time), so a card's directory gets there after some 16,000 such saves; the table only on creates and deletes.
+- **melee-hd:** modeled.
+- **Fix:** compare `(s16)(a - b)`.
+- **Fix impact:** none in play; a card at the wrap keeps its last write.
+- **Source:** [saves](saves.md); `crates/melee-save/src/card.rs` (`verify_dir`, `verify_fat`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1128,6 +1160,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A particle list on a displayed joint | HSD's joint traversal (displayfunc.c, `efLib_Cb_SPtcl`) | Spawns a joint's particle list on its first display, whose generators then draw from the game's random seed, so a spawn put off by a doubled round would shift every later draw; no joint descriptor on the disc carries a particle list | [engine notes](engine.md#state-the-render-pass-writes) (line 150) |
 | A grab box after a failed grapple beam spawn | `it_802B7C18` and Samus's `Catch`, `CatchDash` and `AirCatch` scripts, `game/ft/samus/tether.rs` | The parts table's last entry (part 139) keeps the freed tip joint after the beam goes, and her grab boxes on that bone would read it if the beam's spawn made no item before them; the spawn sets the entry anew every time it makes the beam | [engine notes](engine.md#uninitialized-values) (Samus's grapple beam's paragraph); `fighter_hitbox_from` |
 | A Lip's Stick swing with nothing held | `ft_800CDB9C`, `game/ft/co/swing.rs` | Asserts the held item's kind before testing it for null, reading a null item; the swing always holds the stick | `crates/melee-sim/src/game/ft/co/swing.rs:257` |
+| A file kept twice missing several mirrors | `fn_803AD16C` (the card layer's repair), `melee-save/src/hsd.rs` | Picks each missing mirror's block as the last free one, which it marks taken only when the copy is written, so every block of the file copies into the same block and only the last survives; Melee's save data takes one block | `crates/melee-save/src/hsd.rs` (`repair`) |
+| A file table entry past nine files | `hsd_803AC558`, `melee-save/src/state.rs` | Takes a table entry's index byte unchecked and writes the size and flags past the file arrays into the rest of the card file's state (up to its comment and icon formats); a block must pass its checksum, and the game's blocks name files 0 to 9 only, 9 with size 0 | `crates/melee-save/src/state.rs` (`unpack_table`) |
 | Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
 
 ## Unsure

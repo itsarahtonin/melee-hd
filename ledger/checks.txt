@@ -11472,3 +11472,26 @@ grBigBlue_801E9F38	leaf-check stages: bigblue_callbacks runs it from an empty pr
 grBigBlue_801EAB4C	leaf-check stages: bigblue_callbacks runs it from an empty process's saved calls and compares the whole state
 db_GetGameLaunchButtonState	melee-oracle session: power-on takes the session's read 0 into db_gameLaunchButtonState, compared with the trace's first tick; --mutate read=0 differs there (tools/oracle/tests/session.rs)
 gmMain_8015FDA4	melee-oracle session: power-on sets DbLevel from the disc's files, compared with the trace's first tick (tools/oracle/tests/session.rs)
+encryptByte	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; bytes_match calls it on every pair of bytes, and HSD_Encrypt runs it on every byte
+decryptByte	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; bytes_match calls it on every pair of bytes, and HSD_Decrypt runs it on every byte
+fn_803AC3F8	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match compares each file's table, 0 to 9, on random states
+hsd_803AC558	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match takes in random tables (any index byte) and compares the whole state
+fn_803AC634	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match compares it for every file on random states
+fn_803AC6B8	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match compares it for every file on random states
+fn_803AC7DC	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match compares it on random states
+fn_803ACB74	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; seq_cmp_matches compares every pair from -2 to 257
+fn_803ACBE8	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; format_helpers_match compares it on random states and blocks
+fn_803AD16C	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; repair_matches compares the result, the whole state and every queued command on random scans
+fn_803AC258	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803AC2A4	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803ACF30	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803ADE4C	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B26CC	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803ADF90	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803AE7F8	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803AF3F0	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B0120	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B0E9C	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B1338	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B1F78	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states
+fn_803B21E8	leaf-check card: static to its unit, so ssbm-types lists it under tu:: rather than fns::; requests_match compares the result, the whole state, every queued command and the active request on random states

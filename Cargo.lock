@@ -1335,6 +1335,7 @@ dependencies = [
  "melee-capture",
  "melee-data",
  "melee-local-data",
+ "melee-save",
  "melee-sim",
  "melee-slippi",
  "ssbm-disc",
@@ -1693,6 +1694,13 @@ dependencies = [
  "melee-sim",
  "melee-slippi",
  "png",
+]
+
+[[package]]
+name = "melee-save"
+version = "0.1.0"
+dependencies = [
+ "melee-local-data",
 ]
 
 [[package]]
