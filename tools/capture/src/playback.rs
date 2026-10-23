@@ -4,7 +4,8 @@
 
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::playback::{
-    FRAME_LEN, Frame, Playback, RECORD_FRAME_START_PROC, RECORD_ITEMS_PROC, SEED_PROC,
+    FRAME_LEN, Frame, Playback, RECORD_FRAME_START_PROC, RECORD_ITEMS_PROC, SEED_PROC, SoundEntry,
+    SoundList, SoundLog, SoundSlot,
 };
 use melee_sim::game::slippi::placed;
 use melee_sim::game::state::Rules;
@@ -68,9 +69,42 @@ fn playback(mem: &[u8]) -> (bool, Option<Playback>) {
     let p = Playback {
         frame_index: word(mem, FRAME_INDEX) as i32,
         frame: Frame { bytes },
+        sounds: sound_log(mem, buffers),
         ..Playback::default()
     };
     (true, Some(p))
+}
+
+/// The codes' sound log in their state block at `at` (`Playback/Core/Sounds`).
+fn sound_log(mem: &[u8], at: u32) -> SoundLog {
+    let byte = |a: u32| mem[(a - MEM1) as usize];
+    let list = |a: u32| {
+        let mut l = SoundList {
+            count: byte(a),
+            ..SoundList::default()
+        };
+        for (i, e) in l.entries.iter_mut().enumerate() {
+            let e_at = a + 1 + 8 * i as u32;
+            *e = SoundEntry {
+                sfx: word(mem, e_at) as i32,
+                handle: word(mem, e_at + 4) as i32,
+            };
+        }
+        l
+    };
+    let mut log = SoundLog {
+        ring: byte(at + 0x1C),
+        last: word(mem, at + 0x72B) as i32,
+        ..SoundLog::default()
+    };
+    for (i, s) in log.slots.iter_mut().enumerate() {
+        let base = at + 0x1D + 0x102 * i as u32;
+        *s = SoundSlot {
+            played: list(base),
+            logged: list(base + 0x81),
+        };
+    }
+    log
 }
 
 impl Importer<'_> {
@@ -89,7 +123,9 @@ impl Importer<'_> {
 impl Comparer<'_> {
     /// Playback's state, the ruleset and UCF's pad buffer, as [`Importer::playback`] imports
     /// them. The frame index and the response only compare while playback has made its
-    /// buffers.
+    /// buffers, and the response only once a frame was counted and read: before it the buffer
+    /// holds the game info's response, which nothing reads and the first read writes over
+    /// whole (docs/engine.md, "Uninitialized values").
     pub fn playback(&mut self) {
         let (patched, p) = playback(self.mem);
         let (rules, ucf) = rules(self.mem);
@@ -100,7 +136,14 @@ impl Comparer<'_> {
         match (&g.playback, p) {
             (Some(o), Some(t)) => {
                 self.check("playback", "frame index", o.frame_index, t.frame_index);
-                if o.frame != t.frame {
+                // Ours waits to close the tick's log (`SoundLog::closing`) where the codes
+                // close it after the trace's sample.
+                let ours = SoundLog {
+                    closing: None,
+                    ..o.sounds
+                };
+                self.check("playback", "sound log", ours, t.sounds);
+                if t.frame_index >= melee_sim::game::playback::FIRST_FRAME && o.frame != t.frame {
                     let at = (0..FRAME_LEN)
                         .find(|&i| o.frame.bytes[i] != t.frame.bytes[i])
                         .unwrap();

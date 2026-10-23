@@ -805,7 +805,7 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
     let b = |v: bool| Got::I(i64::from(v));
     let bit = rand.below(8) as u32;
     let port = rand.below(5) as u8;
-    let op = rand.below(52);
+    let op = rand.below(57);
     let name = format!("op {op} slot {slot} bit {bit} port {port}");
     let (ours, theirs) = match op {
         0 => (i(game.vs_item_freq()), i(fns::gm_8016AE80(ctx))),
@@ -979,12 +979,111 @@ fn gm_step(ctx: &Ctx, game: &mut Game, rand: &mut Rand) -> (String, Got, Got) {
             fns::lb_80019900(ctx);
             (Got::None, Got::None)
         }
+        51 => {
+            // A game speed as the modes set it (`gm_SetGameSpeed`), or the match's own
+            // (`gm_ResetGameSpeed`), as requested of the frame clocks.
+            if rand.below(3) == 0 {
+                game.reset_game_speed();
+                fns::gm_ResetGameSpeed(ctx);
+            } else {
+                let speed = [1.0, 0.5, 1.25, 0.4, 2.0][rand.below(5) as usize];
+                game.set_game_speed(speed);
+                fns::gm_SetGameSpeed(ctx, f64::from(speed));
+            }
+            (
+                Got::I(game.pacing.requested as i64),
+                Got::I(ctx.read_u64(sym("lb_804329F0") + 0x38) as i64),
+            )
+        }
+        52 => {
+            let kind = rand.below(10) as i32;
+            game.vs_set_end_kind(kind);
+            fns::gm_8016B33C(ctx, kind);
+            (
+                u(game.vs.state.unk_B.into()),
+                u(ctx.read_u8(sym("controller") + 0xB).into()),
+            )
+        }
+        53 | 54 => {
+            // Stamina Mode's statics at random, then its count of players left, a knockout or
+            // its process.
+            stamina_scramble(ctx, game, rand);
+            let what = rand.below(3);
+            let got = match what {
+                0 => (i(game.stamina_left()), i(fns::gm_801B9600(ctx))),
+                1 => {
+                    let sub = i32::from(rand.below(4) == 0);
+                    game.stamina_knocked_out(slot, sub);
+                    fns::gm_801B97C4(ctx, slot, sub);
+                    (Got::None, Got::None)
+                }
+                _ => {
+                    game.stamina_proc();
+                    ssbm_types::tu::melee__gm__gmstamina::fn_801B96E8(ctx, handle(ctx, 0));
+                    (
+                        u(game.vs.state.terminate_match.into()),
+                        u(ctx.read_u8(sym("controller") + 0x6).into()),
+                    )
+                }
+            };
+            if got.0 != got.1 {
+                got
+            } else {
+                stamina_statics(ctx, game)
+            }
+        }
+        55 => {
+            // A fighter knocked out of stamina, in Stamina Mode or another.
+            let mode = [0x1F, 0x0E, 0x02, 0x1F][rand.below(4) as usize];
+            game.game_mode = mode;
+            ctx.write_u8(sym("state_machine"), mode);
+            stamina_scramble(ctx, game, rand);
+            let sub = i32::from(rand.below(4) == 0);
+            game.fighter_lost(slot, sub);
+            fns::gm_80167470(ctx, slot, sub);
+            stamina_statics(ctx, game)
+        }
         _ => {
             let k = rand.below(2) as i32;
             (b(game.pacing.due(k as usize)), i(fns::lb_80019A30(ctx, k)))
         }
     };
     (name, ours, theirs)
+}
+
+/// Stamina Mode's statics (`gm_804975F8`) set at random on both sides: counts near their
+/// limits, players out or not.
+fn stamina_scramble(ctx: &Ctx, game: &mut Game, rand: &mut Rand) {
+    // The mode's team flag is its VS mode data's, which the match's rules copy.
+    let vs = ctx.read_u32(sym("gmMainLib_804D3EE0")) + 0x590 + 9 * 0x140 + 8;
+    ctx.write_u8(vs + 8, game.vs.start.is_teams);
+    let at = sym("gm_804975F8");
+    let st = &mut game.gm.stamina;
+    st.done_counter = [0, 1, 99, 100, 101][rand.below(5) as usize];
+    ctx.write_u16(at, st.done_counter);
+    for i in 0..4 {
+        st.eliminated[i] = rand.below(2) == 0;
+        ctx.write_u32(at + 4 + 4 * i as u32, u32::from(st.eliminated[i]));
+        st.slomo_counter[i] = [0, 0, 1, 50, 99, 100][rand.below(6) as usize];
+        ctx.write_u16(at + 0x14 + 2 * i as u32, st.slomo_counter[i]);
+    }
+}
+
+/// Stamina Mode's statics on both sides.
+fn stamina_statics(ctx: &Ctx, game: &Game) -> (Got, Got) {
+    let at = sym("gm_804975F8");
+    let st = &game.gm.stamina;
+    let mut ours = vec![u32::from(st.done_counter)];
+    let mut theirs = vec![u32::from(ctx.read_u16(at))];
+    for i in 0..4 {
+        ours.push(u32::from(st.eliminated[i]));
+        theirs.push(ctx.read_u32(at + 4 + 4 * i as u32));
+        ours.push(u32::from(st.slomo_counter[i]));
+        theirs.push(u32::from(ctx.read_u16(at + 0x14 + 2 * i as u32)));
+    }
+    ours.push(game.pacing.requested as u32);
+    theirs.push(ctx.read_u64(sym("lb_804329F0") + 0x38) as u32);
+    (Got::V(ours), Got::V(theirs))
 }
 
 #[test]
@@ -1044,4 +1143,61 @@ fn gm_accessors() {
         }
     }
     eprintln!("gm accessors: {steps} steps agree");
+}
+
+/// Stamina Mode's match start (`fn_801B9850`) on captured matches: its statics as it leaves
+/// them from random ones, and the GObj it makes for its process (`GObj_Create` and
+/// `HSD_GObj_SetupProc` stand-ins on their side, logging what they're asked).
+#[test]
+fn stamina_match_start() {
+    use std::sync::Mutex;
+    // What the stand-ins were asked, in order.
+    static ASKED: Mutex<Vec<u32>> = Mutex::new(Vec::new());
+    let paths = bases();
+    let Some(ctx) = hsd_reference() else { return };
+    if paths.is_empty() {
+        return;
+    }
+    ctx.register(sym("GObj_Create"), |ctx| {
+        let (c, p, q) = (ctx.regs.r(3), ctx.regs.r(4), ctx.regs.r(5));
+        ASKED.lock().unwrap().extend([c, p, q]);
+        ctx.regs.set_r(3, 0);
+    });
+    ctx.register(sym("HSD_GObj_SetupProc"), |ctx| {
+        let (f, p) = (ctx.regs.r(4), ctx.regs.r(5));
+        ASKED.lock().unwrap().extend([f, p]);
+    });
+    let disc = disc_index(&Disc::open(std::env::var("SSBM_DISC").unwrap()).unwrap());
+    let mut rand = Rand(0x5EC1_A1F1_u64);
+    for path in paths.iter().take(3) {
+        let cap = Capture::read(path);
+        let mut archives = Archives::default();
+        let data = DataMap {
+            loaded: find_archives_in(&disc, &cap.call.mem1, &mut archives),
+        };
+        let mut imp = Importer::new(&cap, &data);
+        imp.world();
+        imp.stage();
+        imp.match_state();
+        let Importer { mut game, .. } = imp;
+        cap.call.load(&ctx);
+        for n in 0..20 {
+            stamina_scramble(&ctx, &mut game, &mut rand);
+            ASKED.lock().unwrap().clear();
+            let g = game.stamina_match_start();
+            fns::fn_801B9850(&ctx);
+            let o = game.world.gobj(g);
+            let p = game.world.procs[o.proc.expect("a process").0].clone();
+            let ours = vec![
+                u32::from(o.classifier),
+                u32::from(o.p_link),
+                u32::from(o.p_priority),
+                p.on_invoke.0,
+                u32::from(p.s_link),
+            ];
+            assert_eq!(ours, *ASKED.lock().unwrap(), "{} {n}", path.display());
+            let (a, b) = stamina_statics(&ctx, &game);
+            assert_eq!(a, b, "{} {n}", path.display());
+        }
+    }
 }

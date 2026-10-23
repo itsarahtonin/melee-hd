@@ -252,6 +252,29 @@ impl Game {
         self.vs.state.terminate_match = 1;
     }
 
+    /// The match's ending kind (`state.unk_B`, one more than the announcement the HUD's end
+    /// shows), `gm_8016B33C`.
+    #[doc(alias = "gm_8016B33C")]
+    pub fn vs_set_end_kind(&mut self, kind: i32) {
+        self.vs.state.unk_B = (kind + 1) as u8;
+    }
+
+    /// The game's speed, `gm_SetGameSpeed`: the game clock's period
+    /// (`OSSecondsToTicks(1 / 60.0F / speed)`), which the scene loop takes up at its next
+    /// frame.
+    #[doc(alias = "gm_SetGameSpeed")]
+    pub fn set_game_speed(&mut self, speed: f32) {
+        self.pacing
+            .request(crate::lb::pacing::ticks_at_speed(speed));
+    }
+
+    /// The game's speed back to the match's rules', `gm_ResetGameSpeed`.
+    #[doc(alias = "gm_ResetGameSpeed")]
+    pub fn reset_game_speed(&mut self) {
+        let speed = self.vs.start.game_speed;
+        self.set_game_speed(speed);
+    }
+
     #[doc(alias = "fn_8016B388")]
     pub fn vs_set_respawn_damage(&mut self, slot: i32, damage: i32) {
         self.vs.state.fighters[slot as usize].x6 = damage as u16;
@@ -1697,10 +1720,7 @@ impl Running<'_> {
         self.game.set_db_pause_handlers(PAUSE_ON_START, STEP_ON_Z);
         self.game.set_pre_gobj_proc(DB_RUN_EVERY_FRAME);
         self.game.set_clock_mask(1);
-        let speed = d.rules.game_speed;
-        self.game
-            .pacing
-            .request(crate::lb::pacing::ticks_at_speed(speed));
+        self.game.set_game_speed(d.rules.game_speed);
         super::super::camera::init(&mut self.game.camera, 70);
         super::super::camera::create(self.game);
         self.game.init_vs(d);

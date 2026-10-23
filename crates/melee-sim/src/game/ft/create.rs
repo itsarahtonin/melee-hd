@@ -474,9 +474,13 @@ impl Game {
     #[doc(alias = "ftLib_DisableInput")]
     #[doc(alias = "Fighter_ResetInputData_80068854")]
     pub fn ft_disable_input(&mut self, gobj: GObjId) {
-        let fp = self.fighter_mut(gobj);
-        reset_inputs(fp);
-        fp.input_disabled = true;
+        self.ft_reset_input(gobj);
+        self.fighter_mut(gobj).input_disabled = true;
+    }
+
+    /// Clears the fighter's controls and their timers (`Fighter_ResetInputData_80068854`).
+    pub fn ft_reset_input(&mut self, gobj: GObjId) {
+        reset_inputs(self.fighter_mut(gobj));
     }
 
     /// The next spawn number, `Fighter_NewSpawn_80068E40`: the counter skips 0 when it wraps.

@@ -163,6 +163,19 @@ impl Settings {
         rules: &vs_mode::GameRules,
         prefs: &vs_mode::GamePrefs,
     ) -> Settings {
+        Settings::vs_special(stage, players, rules, prefs, None)
+    }
+
+    /// [`Settings::vs_with`] in a Special Melee mode (`special`), as that mode's VS entry
+    /// starts the match ([`vs_mode::Special::enter_vs`]), in the mode's game mode; none is VS
+    /// mode's.
+    pub fn vs_special(
+        stage: u16,
+        players: &[Player],
+        rules: &vs_mode::GameRules,
+        prefs: &vs_mode::GamePrefs,
+        special: Option<vs_mode::Special>,
+    ) -> Settings {
         assert!(players.len() <= 4, "a VS match has up to four players");
         let mut vs = vs_mode::start_defaults();
         vs.rules.stkind = stage;
@@ -174,7 +187,10 @@ impl Settings {
             d.team = p.team;
             d.cpu_level = p.cpu_level;
         }
-        let start = vs_mode::enter_vs(&mut vs, rules, prefs);
+        let start = match special {
+            Some(m) => m.enter_vs(&mut vs, rules, prefs),
+            None => vs_mode::enter_vs(&mut vs, rules, prefs),
+        };
         let heap = players
             .iter()
             .any(|p| p.kind == PKIND_CPU || p.character == CKIND_ICE_CLIMBERS)
@@ -182,7 +198,7 @@ impl Settings {
         Settings {
             start,
             seed: 0,
-            game_mode: gm::GM_VS,
+            game_mode: special.map_or(gm::GM_VS, vs_mode::Special::game_mode),
             rules: Rules::default(),
             // A player hears the match: the voices play through their samples, and the music
             // needs a drive's pace to keep playing.

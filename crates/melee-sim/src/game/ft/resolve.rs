@@ -325,14 +325,6 @@ impl Running<'_> {
         }
     }
 
-    /// A stamina fighter out of stamina falls (`ftCo_800C8D00`); not ported.
-    #[doc(alias = "ftCo_800C8D00")]
-    pub(crate) fn stamina_out(&mut self, gobj: GObjId) {
-        if self.game.fighter(gobj).x2224_b3 {
-            unported_call("ftCo_800C8D00 (a stamina fighter out)");
-        }
-    }
-
     /// A shield hit pushes the attacker back along the floor, `ftCommon_8007E2A4`.
     #[doc(alias = "ftCommon_8007E2A4")]
     fn shield_push(&mut self, gobj: GObjId) {

@@ -600,6 +600,20 @@ impl Audio {
         ((sound % 10000) as u32).wrapping_add(entry) as i32
     }
 
+    /// Whether `HSD_AudioSFXStartParam` finds `sound` in the bank (its first checks): a bank
+    /// it has, a sample within the streams and within its bank's.
+    pub fn sfx_known(&self, data: &Archives, sound: i32) -> bool {
+        let (bank_idx, bank_mem) = (sound / 10000, sound % 10000);
+        let d = &self.driver;
+        if d.banks <= bank_idx {
+            return false;
+        }
+        let bank = data.get(d.bank.expect("the sound bank"));
+        let entry = |i: i32| bank.u32(d.bank_table.wrapping_add((i as u32).wrapping_mul(4)));
+        let sample = (bank_mem as u32).wrapping_add(entry(bank_idx)) as i32;
+        d.streams > sample && !(bank_idx < d.banks - 1 && entry(bank_idx + 1) <= sample as u32)
+    }
+
     /// `HSD_AudioSFXStartParam`: starts sound `sound` (bank and index, `bank * 10000 +
     /// index`) on a free voice, returning its handle, or -1. Its stream runs from the next
     /// audio frame.
