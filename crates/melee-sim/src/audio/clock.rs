@@ -63,12 +63,16 @@ pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 /// Where the audio interrupt's handler runs the user callback, where the disc interrupt's
 /// handler runs the disc driver's callback, and the ARAM interrupt's handler its own.
 const AI_CALLBACK: u64 = 64;
-const DI_CALLBACK: u64 = 32;
+const DI_CALLBACK: u64 = 48;
 /// From the disc interrupt's handler's end to an event that came due while it ran (an audio
 /// DMA block's end, measured at a drive's pace, where the boot's bank loads' interrupts meet
 /// one).
 const DI_TAIL: u64 = 8;
 const ARAM_CALLBACK: u64 = 8;
+/// How long before the audio interrupt's handler returns the OS's dispatcher takes a disc
+/// interrupt raised meanwhile (measured from a console's boot, where a bank read's interrupt
+/// falls in an audio frame's handler).
+const AI_CHAIN: u64 = 16;
 
 /// How fast the disc reads: a match setting, since when reads finish decides when the music
 /// stream's commands reach the DSP and so which voices are free (see `docs/engine.md`).
@@ -159,6 +163,11 @@ pub struct Clock {
     pub ticks_left: u32,
     /// The scene loop sleeps until a retrace wakes it.
     pub woken: bool,
+    /// HSD's two frame buffers (`HSD_VIStatus`'s `xfb`): how many copied frames wait to show
+    /// (`HSD_VI_XFB_NEXT` and `DRAWDONE`), and whether one shows (`DISPLAY`); the rest are
+    /// free. A copy needs a free one. At power-on neither has been drawn.
+    pub xfb_pending: u8,
+    pub xfb_shown: bool,
     /// Whether the DSP has answered the last frame's mail (`__AXOutDspReady` 1).
     pub dsp_ready: bool,
     /// Audio frames are placed ([`Clock::place_audio_frames`]) rather than scheduled; the last
@@ -200,6 +209,15 @@ pub enum Wait {
     StreamIdle,
     /// This many of the first scene's preloaded files are in (their callbacks have run).
     Preloaded(u32),
+    /// The preload cache has the file of this disc entry ready, or doesn't hold it
+    /// (`lbDvd_800189EC`'s spin on `lbDvd_800187F4`).
+    PreloadFile(i32),
+    /// The preload cache let go of every entry of this heap, none being read
+    /// (`lbDvd_80017598`'s spin).
+    HeapReleased(i32),
+    /// The preload cache let go of this heap's unwanted entries already set up
+    /// (`lbDvd_80017700`'s spin on `lbDvd_80017644`).
+    StaleReleased(i32),
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
@@ -215,7 +233,9 @@ pub struct HwLog {
 }
 
 /// A disc read's command, and an ARAM transfer's request.
-const DISC_ISSUE: u64 = 24;
+const DISC_ISSUE: u64 = 8;
+/// After a disc read's command: the driver notes the time (`Read`'s `LastReadIssued`).
+const DISC_ISSUED: u64 = 16;
 /// A hardware register's read (ssbm-rs's read step).
 const REG_READ: u64 = 8;
 const ARQ_POST: u64 = 56;
@@ -233,6 +253,7 @@ impl HwLog {
         self.spent += DISC_ISSUE;
         assert!(self.read.is_none(), "two disc reads in flight");
         self.read = Some(self.spent);
+        self.spent += DISC_ISSUED;
         self.transfer = speed.transfer(len);
     }
 
@@ -255,6 +276,9 @@ impl Clock {
             now,
             alarm_period,
             dsp_ready: true,
+            // As a match's tick leaves them: one frame showing, the last copied waiting.
+            xfb_pending: 1,
+            xfb_shown: true,
             ..Clock::default()
         };
         c.schedule((now / FIELD + 1) * FIELD, EventKind::Field);
@@ -307,8 +331,8 @@ impl Clock {
     /// Runs what is due now: events, then the interrupts they raised (the audio interrupt
     /// before the retrace), until nothing is.
     fn service(&mut self, f: &mut dyn Frames) {
-        // An event that came due while the disc interrupt's handler ran happens `DI_TAIL`
-        // after the handler.
+        // An event that came due while the disc or retrace interrupt's handler ran happens
+        // `DI_TAIL` after the handler.
         let mut after_disc = false;
         loop {
             let tail = std::mem::take(&mut after_disc);
@@ -351,7 +375,25 @@ impl Clock {
                 let log = f.audio_frame(AI_CALLBACK);
                 let end = start + AI_HANDLER + (log.spent - AI_CALLBACK);
                 self.apply(start, &log);
-                self.now = end;
+                // A disc read that finished while the handler ran: the OS's dispatcher takes
+                // its interrupt before the handler's return (`AI_CHAIN` before its end), and
+                // the return's time after.
+                let chained = self
+                    .events
+                    .iter()
+                    .filter(|e| e.kind == EventKind::DiscDone && e.at + AI_CHAIN <= end)
+                    .min_by_key(|e| (e.at, e.seq))
+                    .map(|e| e.seq);
+                match chained {
+                    Some(seq) => {
+                        self.cancel(seq);
+                        self.now = end - AI_CHAIN;
+                        self.disc_interrupt(f);
+                        self.now += AI_CHAIN;
+                        after_disc = true;
+                    }
+                    None => self.now = end,
+                }
             } else if self.aram_pending != 0 {
                 self.aram_pending -= 1;
                 let start = self.now;
@@ -360,23 +402,33 @@ impl Clock {
                 self.now = start + log.spent;
             } else if self.di_pending {
                 self.di_pending = false;
-                // The interrupt's handler cancels the read's timeout before its callback.
-                if let Some(seq) = self.disc_timeout.take() {
-                    self.cancel(seq);
-                }
-                let start = self.now;
-                let log = f.disc_done(DI_CALLBACK);
-                self.apply(start, &log);
-                self.now = start + log.spent;
+                self.disc_interrupt(f);
                 after_disc = true;
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
                 self.woken = true;
+                after_disc = true;
+                // `HSD_VIPostRetraceCB`: the next copied frame shows, freeing the one shown.
+                if self.xfb_pending > 0 {
+                    self.xfb_pending -= 1;
+                    self.xfb_shown = true;
+                }
             } else {
                 break;
             }
         }
+    }
+
+    /// The disc interrupt's handler: the read's timeout cancelled, then its callback.
+    fn disc_interrupt(&mut self, f: &mut dyn Frames) {
+        if let Some(seq) = self.disc_timeout.take() {
+            self.cancel(seq);
+        }
+        let start = self.now;
+        let log = f.disc_done(DI_CALLBACK);
+        self.apply(start, &log);
+        self.now = start + log.spent;
     }
 
     /// Schedules a handler's disc reads and raises its ARAM transfers' interrupts.
@@ -415,6 +467,29 @@ impl Clock {
         self.service(f);
     }
 
+    /// A wait point of the game's (`lb_800195D0`, the card layer's step `hsd_803AAA48`):
+    /// time passes to the next event or a quarter millisecond, its interrupts taken.
+    pub fn wait_point(&mut self, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.wait(WAIT_STEP, f);
+    }
+
+    /// The game's code reading the hardware's registers `reads` times, interrupts taken at
+    /// each read where they come due.
+    pub fn reg_reads(&mut self, reads: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        for _ in 0..reads {
+            self.read(REG_READ, f);
+        }
+    }
+
+    /// The game's code spending `ticks` at the hardware: its log so far, then the time, with
+    /// interrupts taken where they come due.
+    pub fn pass(&mut self, ticks: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.read(ticks, f);
+    }
+
     /// Runs the timeline from the end of the last tick to the start of the next one's game
     /// code, running the audio frames that fall in between.
     pub fn tick_start(&mut self, f: &mut dyn Frames) {
@@ -426,11 +501,10 @@ impl Clock {
                 // The render's wait.
                 self.wait(WAIT_STEP, f);
             }
-            if start == 0 && !self.woken {
-                // The sleep until a retrace frees a frame buffer: the one shown before the
-                // last frame was copied, two buffers back.
+            if start < 2 && self.xfb_free() == 0 {
+                // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
                 self.now += BEFORE_SLEEP;
-                while !self.woken {
+                while self.xfb_free() == 0 {
                     let next = self.next_at();
                     self.now = self.now.max(next);
                     self.service(f);
@@ -442,8 +516,11 @@ impl Clock {
                 // `AFTER_WAKE`).
                 self.read(NO_SLEEP, f);
             }
-            // The frame's copy: the next one needs a retrace after it.
+            // The frame's copy.
             self.woken = false;
+            if start < 2 {
+                self.xfb_pending += 1;
+            }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {
                 self.wait(WAIT_STEP, f);
@@ -470,6 +547,30 @@ impl Clock {
             self.now = self.now.max(next);
             self.service(f);
         }
+        // The copy shows; nothing waits.
+        self.xfb_pending = 0;
+        self.xfb_shown = true;
+    }
+
+    /// [`Clock::end_scene_loop`], `copied` when the loop's last round copied a frame: the
+    /// flush (`HSD_VIWaitXFBFlush`) waits until every copied frame has shown.
+    pub fn end_scene_loop_after(&mut self, copied: bool, f: &mut dyn Frames) {
+        self.game_code(f);
+        self.wait(WAIT_STEP, f);
+        if copied {
+            self.xfb_pending += 1;
+        }
+        self.woken = false;
+        while self.xfb_pending > 0 {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+    }
+
+    /// Frame buffers neither showing nor waiting to.
+    fn xfb_free(&self) -> u8 {
+        2 - self.xfb_pending - u8::from(self.xfb_shown)
     }
 
     /// A scene's loop starts (`gm_801A4D34`'s prologue): the pad queue keeps only its newest
@@ -575,6 +676,9 @@ impl Clock {
         self.pads = 0;
         self.ticks_left = 0;
         self.scene_start = 0;
+        // Slippi's boot has run its own scenes: a frame shows, the last copied waiting.
+        self.xfb_pending = 1;
+        self.xfb_shown = true;
         self.read(TICK_READ, f);
     }
 

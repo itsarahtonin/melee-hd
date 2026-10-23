@@ -136,7 +136,14 @@ ROOTS = [
     # The background flash (`lbbgflash.c`, `lb_0219.c`).
     "BgFlashData",
     "BgFlashUserData",
+    # The game's data and save (`gmMainLib_8045A6C0`): the modes' settings, the rules and
+    # the card's data, which the boot resets and the memory card scene loads.
+    "gmm_x0",
 ]
+
+# Structs written back to memory's bytes too (`Export`), with everything they hold: the
+# card's data, which a save writes to the card.
+EXPORT_ROOTS = ["GmCardData"]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {

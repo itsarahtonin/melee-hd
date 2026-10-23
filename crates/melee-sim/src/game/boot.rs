@@ -83,7 +83,7 @@ pub fn boot(
             audio.devcom.files.push((file.entrynum, id));
         }
     }
-    audio.lb_boot(data);
+    let _ = audio.lb_boot(data);
     audio.lb_reset(data, &bank);
     // The first scene's preparation: its preload reads its files one after another, each
     // read's callback starting the next, and the scene waits for the first before its loop

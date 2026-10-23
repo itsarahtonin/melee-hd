@@ -49,6 +49,17 @@ pub struct Audio {
     /// When audio frames run; none where the state came without a timeline (a single
     /// captured call), and no frame runs then.
     pub clock: Option<clock::Clock>,
+    /// The preload cache, its heaps and their blocks, whose reads and callbacks run on the
+    /// timeline (`lb::dvd`); none outside a session from power-on, where the boot's first
+    /// scene's preloads are the fixed list in [`devcom::DevCom::preloads`].
+    pub dvd: Option<crate::lb::dvd::Dvd>,
+    /// How much later than Slippi's playback boot in ssbm-rs the boot reached the audio
+    /// setup ([`boot::BootTimes`]): 0 for a replay's boot or a console's with no card,
+    /// [`boot::CONSOLE_BOOT_DELAY`] for a console's with one.
+    pub boot_delay: u64,
+    /// Whether the boot is a console's own (a session's), not Slippi's playback: the arena
+    /// has no bootloader's heap below the audio's.
+    pub console: bool,
     /// Presentation output, not state: when the presentation turns it on, each frame's mix
     /// and each ARAM write is recorded here for it to mix (`mix::MixLog`). A clone starts
     /// without it and a restore leaves it alone.
@@ -129,9 +140,31 @@ impl Audio {
         self.with_clock(data, |c, f| c.end_scene_loop(f));
     }
 
+    /// A scene's loop ends, its last round having copied a frame or not
+    /// ([`clock::Clock::end_scene_loop_after`]).
+    pub fn end_scene_loop_after(&mut self, data: &Archives, copied: bool) {
+        self.with_clock(data, |c, f| c.end_scene_loop_after(copied, f));
+    }
+
     /// A scene's loop starts.
     pub fn start_scene_loop(&mut self, data: &Archives) {
         self.with_clock(data, |c, f| c.start_scene_loop(f));
+    }
+
+    /// Time the game's code spends at the hardware (`ticks` of register reads and waits the
+    /// model doesn't follow one by one), its interrupts taken as they come due.
+    pub fn clock_read(&mut self, data: &Archives, ticks: u64) {
+        self.with_clock(data, |c, f| c.pass(ticks, f));
+    }
+
+    /// Register reads of the game's ([`clock::Clock::reg_reads`]).
+    pub fn clock_reg_reads(&mut self, data: &Archives, reads: u64) {
+        self.with_clock(data, |c, f| c.reg_reads(reads, f));
+    }
+
+    /// A wait point of the game's ([`clock::Clock::wait_point`]).
+    pub fn clock_wait(&mut self, data: &Archives) {
+        self.with_clock(data, |c, f| c.wait_point(f));
     }
 
     /// An ARAM load of `len` bytes inside a tick.
@@ -186,6 +219,12 @@ struct Running<'a> {
     data: &'a Archives,
 }
 
+impl Running<'_> {
+    fn dvd(&mut self) -> &mut crate::lb::dvd::Dvd {
+        self.audio.dvd.as_mut().expect("the preload cache")
+    }
+}
+
 impl clock::Frames for Running<'_> {
     fn audio_frame(&mut self, base: u64) -> HwLog {
         self.audio.hw = HwLog::at(base);
@@ -223,6 +262,9 @@ impl clock::Frames for Running<'_> {
             clock::Wait::BankRead => !self.audio.driver.reading_bank,
             clock::Wait::StreamIdle => self.audio.synth.stream.busy == 0,
             clock::Wait::Preloaded(n) => self.audio.devcom.preloaded >= n,
+            clock::Wait::PreloadFile(e) => self.dvd().file_state(e) != 1,
+            clock::Wait::HeapReleased(h) => !self.dvd().release_heap(h),
+            clock::Wait::StaleReleased(h) => !self.dvd().release_stale(h),
         }
     }
 }

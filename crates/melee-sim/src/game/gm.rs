@@ -1,11 +1,17 @@
 //! The game's modes and scenes (`melee/gm`): the scene loop that runs engine ticks, the
 //! scenes' button maps, and the VS match.
 
+pub mod boot_mode;
 pub mod input;
+pub mod machine;
+pub mod main_lib;
+pub mod memcard;
+pub mod mode_init;
 pub mod names;
 pub mod pause;
 pub mod results;
 pub mod scene;
+pub mod trophies;
 pub mod vs;
 pub mod vs_mode;
 

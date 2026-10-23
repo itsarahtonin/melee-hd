@@ -1,23 +1,26 @@
 //! A console session from power-on: the boot (`main`), then the game modes' scenes, each engine
 //! tick taking the controllers the session reads. Everything the console's platform hands the
 //! game is an explicit input ([`Setup`], [`Console`]): the memory card, the disc's pace, whether
-//! the DSP mixes sound, the real-time clock, and every `PADRead`'s controllers, in the order the
-//! game reads them.
+//! the DSP mixes sound, the real-time clock, the video interface's DTV status, and every
+//! `PADRead`'s controllers, in the order the game reads them.
 //!
-//! Only the boot's first steps are ported: [`Session::boot`] stops at the first function no
-//! port covers yet, naming it, as a match does (`code::unported_call`). A session taken up from
-//! a state (an imported trace tick, [`Session::resume`]) plays on with [`Session::step_tick`].
+//! [`Session::boot`] runs `main` to the first scene loop and stops at the first function no
+//! port covers yet, naming it, as a match does (`code::unported_call`). Each
+//! [`Session::step_tick`] runs an engine tick of the scene, and when a scene has ended, first
+//! the modes' loops to the next scene (`gm::machine`). A session taken up from a state (an
+//! imported trace tick, [`Session::resume`]) plays on with [`Session::step_tick`].
 
-use melee_data::archive::Archives;
+use melee_data::archive::{Archive, Archives};
 
-use super::code;
 use super::gm::scene;
 use super::state::{Game, Running};
-use super::vs_match::Frame;
-use crate::audio::clock::DiscSpeed;
+use super::vs_match::{DiscFile, Frame};
+use crate::audio::boot::{BootTimes, CONSOLE_BOOT_DELAY};
+use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
 use crate::input::controller::PadData;
 use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
+use crate::lb::save::{CardDevice, CardLent};
 
 /// What a session starts with besides its controllers: the console's setup.
 #[derive(Clone, Debug, Default)]
@@ -26,14 +29,18 @@ pub struct Setup {
     pub disc: DiscSpeed,
     /// Which DSP model the voices follow (`vs_match::Settings::dsp`).
     pub dsp: DspModel,
-    /// The memory card in slot A as the session found it (its raw image), or none. The card
-    /// library's setup (`lbCardNew_Init`) reads it; until that is ported nothing does.
+    /// The memory card in slot A as the session found it (its raw image), or none. The game
+    /// reads and writes it through the native save (`lb::save`); the session keeps it as the
+    /// console's device.
     pub card: Option<Vec<u8>>,
-    /// The real-time clock at power-on, in seconds since 2000-01-01 (the OS's epoch); it then
-    /// runs with the time base. It reaches gameplay: the boot seeds the random seed from the
-    /// time base (`OSGetTick`) and the title draws from it once for each second of the clock's
-    /// minute (`gmTitle_801A165C`). Nothing ported reads it yet.
+    /// The real-time clock at power-on, in seconds since 2000-01-01 (the OS's epoch); the
+    /// time base runs from it (`OSGetTime`). It reaches gameplay: the boot seeds the random
+    /// seed from the time base's low word (`OSGetTick`) and the title draws from it once for
+    /// each second of the clock's minute (`gmTitle_801A165C`).
     pub clock: u64,
+    /// The video interface's DTV status (`VIGetDTVStatus`): whether the console can show
+    /// progressive scan, which with B held at power-on asks for it.
+    pub dtv: bool,
 }
 
 /// What the game asks the console's platform for as it runs.
@@ -43,14 +50,21 @@ pub trait Console {
     fn read_pads(&mut self) -> PadData;
     /// A disc file's entry number, none if the disc hasn't it (`DVDConvertPathToEntrynum`).
     fn entrynum(&mut self, path: &str) -> Option<i32>;
+    /// A disc file's bytes and entry number, for the frontend's loads before the session
+    /// runs.
+    fn file(&mut self, path: &str) -> DiscFile;
 }
 
-/// A running session: the game's state, the archives it has loaded, and the console's setup.
+/// A running session: the game's state, the archives it has loaded, the console's setup and
+/// its memory card.
 #[derive(Debug)]
 pub struct Session {
     pub game: Game,
     pub data: Archives,
     pub setup: Setup,
+    /// The memory card in slot A and the console's card library's setting (its flash ID):
+    /// the console's, lent to each step.
+    pub card: Option<CardDevice>,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -58,51 +72,166 @@ const DB_NO_DEBUG_ROM: i32 = 1;
 /// `DbLKind_Master`, a retail disc's level.
 const DB_MASTER: i32 = 0;
 
+/// The disc files a session's ported scenes load, which the frontend reads before the session
+/// starts: each scene's archives, and the preload cache's files (whose sizes it reads by).
+pub const FILES: &[&str] = &[
+    "LbRb.dat",
+    "LbMcGame.usd",
+    "NtMemAc.usd",
+    "NtMsgWin.dat",
+    "SdMsgBox.usd",
+    "EfMnData.dat",
+    "EfCoData.dat",
+    "ItCo.usd",
+    "IfAll.usd",
+    "TyDatai.usd",
+];
+
+/// A time base read's time on ssbm-rs's clock, and a hardware register's.
+pub(crate) const TB_READ: u64 = 16;
+pub(crate) const REG_READ: u64 = 8;
+
+/// The sound bank, in the US language's directory (the disc has `usa.ini`).
+const SOUND_BANK: &str = "audio/us/smash2.sem";
+
 impl Session {
     /// The console at power-on: nothing of the game has run, and memory holds what the
     /// executable's data holds.
     pub fn new(setup: Setup) -> Session {
         let mut game = Game::default();
         game.gm.db_level = DB_NO_DEBUG_ROM;
+        // What the executable's data holds that the comparison reads: the stage selected
+        // (`selected_stage`, Fountain of Dreams) and the camera's default field of view
+        // (`cm_803BCCA0`'s, 38 degrees).
+        game.gr.stkind = 2;
+        game.camera.fov = 38.0;
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
+        let card = Some(CardDevice {
+            card: setup.card.as_ref().map(|image| {
+                melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
+            }),
+            console: melee_save::Console::ssbm_rs(),
+            clock: setup.clock,
+            waits: setup.card.is_some(),
+            identified: false,
+        });
         Session {
             game,
             data: Archives::default(),
             setup,
+            card,
         }
     }
 
     /// Takes up a session from a state: one imported from a trace tick's end, say.
     pub fn resume(game: Game, data: Archives, setup: Setup) -> Session {
-        Session { game, data, setup }
+        let card = Some(CardDevice {
+            card: setup.card.as_ref().map(|image| {
+                melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
+            }),
+            console: melee_save::Console::ssbm_rs(),
+            clock: setup.clock,
+            waits: setup.card.is_some(),
+            identified: false,
+        });
+        Session {
+            game,
+            data,
+            setup,
+            card,
+        }
     }
 
-    /// The boot, `main`, as far as it is ported: it stops at the first function no port covers
-    /// yet. `OSInit`, `VIInit`, `DVDInit`, `PADInit`, `CARDInit` and `OSInitAlarm` set up the
-    /// console's own libraries, which the platform replaces: what they would read is the
-    /// session's inputs.
+    /// Reads the files the boot and the ported scenes load, before the session runs.
+    fn load_files(&mut self, console: &mut dyn Console) -> crate::lb::audio::SoundBank {
+        let file = console.file(SOUND_BANK);
+        let bank = crate::lb::audio::SoundBank {
+            len: file.bytes.len() as u32,
+            archive: self.data.add(Archive::raw(&file.bytes)),
+        };
+        let audio = &mut self.game.audio;
+        for name in crate::lb::audio::SSM_NAMES {
+            let file = console.file(&format!("audio/us/{name}"));
+            if !audio.devcom.files.iter().any(|f| f.0 == file.entrynum) {
+                let id = self.data.add(Archive::raw(&file.bytes));
+                audio.devcom.files.push((file.entrynum, id));
+            }
+        }
+        let mut sizes = Vec::new();
+        for &name in FILES {
+            let file = console.file(name);
+            let len = file.bytes.len() as u32;
+            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let id = self.data.add(a);
+            let files = &mut self.game.ft.data.files;
+            files.entries.push((name.to_owned(), file.entrynum, len));
+            files.archives.push((name.to_owned(), id));
+            sizes.push((file.entrynum, len));
+        }
+        self.game.audio.dvd = Some(crate::lb::dvd::Dvd {
+            sizes,
+            ..Default::default()
+        });
+        bank
+    }
+
+    /// The boot, `main`, to the first scene loop's start: the launch buttons, the debug
+    /// level, HSD's setup, the random seed, the audio library, the pads' alarm, the game's
+    /// libraries, the game's data reset, then the modes' loop to its first scene. It stops at
+    /// the first function no port covers yet. `OSInit`, `VIInit`, `DVDInit`, `PADInit`,
+    /// `CARDInit` and `OSInitAlarm` set up the console's own libraries, which the platform
+    /// replaces: what they would read is the session's inputs.
     pub fn boot(&mut self, console: &mut dyn Console) {
         let g = &mut self.game;
         g.gm.launch_buttons = launch_buttons(console);
         g.gm.db_level = db_level(g.gm.db_level, console);
         // `OSGetConsoleSimulatedMemSize` is 24 MB on a retail console, which leaves the arena
-        // alone; `arena_size` only goes into the boot's report.
-        code::unported_call("HSD_SetInitParameter")
-    }
-
-    /// One engine tick of the running scene, its polls taking the controllers' next reads from
-    /// `console`, up to the frame's display pass (where ssbm-rs's state traces sample the
-    /// original): the tick's frame without draws, and whether the pass is due
-    /// ([`Session::render`]).
-    pub fn step_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
+        // alone; `arena_size` only goes into the boot's report. HSD's setup
+        // (`HSD_SetInitParameter`, the frame buffers and the GX FIFO, `HSD_InitComponent`'s
+        // heaps and libraries, `GXSetMisc`) is the platform's video and the allocator
+        // model's: the OS heaps it makes are the model's layouts (`hsd::heap`).
+        let bank = self.load_files(console);
+        let g = &mut self.game;
+        g.main_lib.power_on_clock = self.setup.clock;
+        // `*HSD_RandSeedPtr = OSGetTick()`: the time base's low word, from the clock.
+        let card_in = self.card.as_ref().is_some_and(|c| c.card.is_some());
+        let delay = if card_in { CONSOLE_BOOT_DELAY } else { 0 };
+        let tb = self.setup.clock * TB_HZ + BootTimes::SEED + delay;
+        g.objs.rng.seed = tb as u32;
+        g.audio.boot_delay = delay;
+        g.audio.console = true;
+        let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
         };
+        r.boot_main(&bank, card_in, self.setup.dtv, console);
+        lent.give_back(&mut self.game.objs.heap);
+        card.give_back(&mut self.card);
+    }
+
+    /// One engine tick of the running scene, its polls taking the controllers' next reads from
+    /// `console`, up to the frame's display pass (where ssbm-rs's state traces sample the
+    /// original): the tick's frame without draws, and whether the pass is due
+    /// ([`Session::render`]). When the last tick ended its scene, the modes' loops first run
+    /// to the next scene.
+    pub fn step_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
+        let card = CardLent::take(&mut self.card);
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let mut r = Running {
+            game: &mut self.game,
+            data: &self.data,
+        };
+        if r.game.scene.unk_C != 0 {
+            r.next_scene();
+            r.take_alarm_reads(&mut || console.read_pads());
+            r.begin_scene_loop();
+        }
         let (t, render) = scene::step_session_tick(&mut r, &mut || console.read_pads(), false);
         lent.give_back(&mut self.game.objs.heap);
+        card.give_back(&mut self.card);
         let out = Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
@@ -121,6 +250,76 @@ impl Session {
         });
         lent.give_back(&mut self.game.objs.heap);
         std::mem::take(&mut self.game.objs.display.draws)
+    }
+}
+
+impl Running<'_> {
+    /// `main` from the audio setup to the modes' loop's first scene.
+    #[doc(alias = "main")]
+    #[doc(alias = "gmMain_8015FDA0")]
+    fn boot_main(
+        &mut self,
+        bank: &crate::lb::audio::SoundBank,
+        card_in: bool,
+        dtv: bool,
+        console: &mut dyn Console,
+    ) {
+        // `lbAudioAx_8002838C`, then `lb_80019AAC(gmMain_8015FD24)`: the frame clocks and the
+        // pads, whose alarm the timeline runs from the audio setup.
+        let aram_next = self.game.audio.lb_boot(self.data);
+        self.game.pacing = crate::lb::pacing::Pacing::new();
+        // The VI callbacks (`gmMain_8015FDA0` does nothing, `HSD_VIDrawDoneXFB`) and
+        // `HSD_VISetBlack` are the platform's video.
+        let d = self.dvd_mut();
+        d.memory.init(aram_next);
+        let arena = (
+            crate::hsd::heap::arena_lo(crate::hsd::heap::CONSOLE_HEAPS)
+                + crate::hsd::heap::AUDIO_HEAP_SIZE,
+            crate::hsd::heap::ARENA_HI,
+        );
+        let mem = std::mem::take(&mut d.memory);
+        d.heaps.init(arena, &mem);
+        d.memory = mem;
+        d.init_cache();
+        // `lbArq_80014D2C`: the ARAM request queue, which the timeline's ARAM loads stand for.
+        self.game.card_tasks.init();
+        self.game.card_game.init(card_in);
+        self.game.snap.init([card_in, false]);
+        self.init_main_lib();
+        self.game.movie.init();
+        // `HSD_SisLib_803A6048(0xC000)`: the boot's text heap, in HSD's boot heap, which the
+        // first scene's heap replaces.
+        self.game.sis.init(0xC000);
+        self.reset_game_data(bank);
+        // The boot's report (`OSReport`) changes nothing but reads the clock
+        // (`lbTime_GetTimeInSeconds`); `db_EnableItemSpawns` (`gmMain_804D6594` is false on
+        // a retail disc), `db_ClearFPUExceptions`.
+        self.game.audio.clock_read(self.data, TB_READ);
+        self.game.it.db_menu.ItemSpawnsEnabled = 1;
+        self.start_modes(dtv);
+        self.next_scene();
+        self.take_alarm_reads(&mut || console.read_pads());
+        self.begin_scene_loop();
+    }
+
+    /// The pad alarm's reads while the boot or a scene's preparation ran, which the
+    /// timeline counted (`HSD_PadRenewRawStatus` from the alarm, a `PADRead` each), into the
+    /// pad library's queue; the scene loop's start then keeps the newest.
+    pub fn take_alarm_reads(&mut self, read: &mut dyn FnMut() -> PadData) {
+        let Some(c) = self.game.audio.clock.as_ref() else {
+            return;
+        };
+        // Each firing since the last tick is a read; the ones the last tick already read
+        // are in the queue.
+        let n = c.pads.saturating_sub(u32::from(self.game.pads.lib.qcount));
+        for _ in 0..n {
+            let now = read();
+            self.game.pads.renew_raw(self.data, now, false, false);
+        }
+        let qcount = u32::from(self.game.pads.lib.qcount);
+        if let Some(c) = &mut self.game.audio.clock {
+            c.pads = c.pads.min(qcount);
+        }
     }
 }
 

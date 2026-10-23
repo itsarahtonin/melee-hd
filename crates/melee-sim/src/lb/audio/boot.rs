@@ -21,6 +21,52 @@ const SSM_CLASS: [i8; 56] = [
 pub const AUX_REVERB_STD: u32 = 2;
 pub const AUX_DELAY: u32 = 4;
 
+/// The save's sound settings the audio library's reset reads: the saved language (English
+/// or Japanese) and the sound balance (-100 all music to 100 all effects).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct SavedSound {
+    pub us: bool,
+    pub balance: i8,
+}
+
+impl SavedSound {
+    /// A fresh save's, in English.
+    pub const DEFAULT: SavedSound = SavedSound {
+        us: true,
+        balance: 0,
+    };
+}
+
+/// `gm_801601C4`: the announcer's volume at a sound balance, full up to the middle, less
+/// toward the effects' end.
+#[doc(alias = "gm_801601C4")]
+pub fn balance_voice(balance: i8) -> i32 {
+    use gekko_fp as fp;
+    let t = fp::fmuls(
+        fp::fdivs(fp::frsp(f64::from(i32::from(balance) + 100)), 200.0),
+        100.0,
+    );
+    if t == 50.0 || t <= 50.0 {
+        return 0x7F;
+    }
+    fp::fctiwz(fp::fmuls(127.0, fp::fdivs(fp::fsubs(100.0, t), 50.0)))
+}
+
+/// `gm_80160244`: the effects' volume at a sound balance, full from the middle up, less
+/// toward the music's end.
+#[doc(alias = "gm_80160244")]
+pub fn balance_fx(balance: i8) -> i32 {
+    use gekko_fp as fp;
+    let t = fp::fmuls(
+        fp::fdivs(fp::frsp(f64::from(i32::from(balance) + 100)), 200.0),
+        100.0,
+    );
+    if t >= 50.0 {
+        return 0x7F;
+    }
+    fp::fctiwz(fp::fmuls(127.0, fp::fdivs(t, 50.0)))
+}
+
 /// The sound bank's file (`smash2.sem`), loaded and parsed by the caller: its archive and
 /// size.
 pub struct SoundBank {
@@ -55,7 +101,7 @@ impl Audio {
     /// `AIInit` set up hardware the simulation doesn't keep; the language the bank files were
     /// last named for (`lbl_804D3878`) is only ever the boot's.
     #[doc(alias = "lbAudioAx_8002838C")]
-    pub fn lb_boot(&mut self, data: &Archives) {
+    pub fn lb_boot(&mut self, data: &Archives) -> u32 {
         let mut aram = Aram::new();
         let main = SSM_SIZE[0];
         let kept = SSM_SIZE[0x33] + SSM_SIZE[1] + SSM_SIZE[0x36];
@@ -65,7 +111,8 @@ impl Audio {
         scene += SSM_SIZE[banks_by_size(5)[0]];
         let room = main + kept + scene;
         self.init_multi_pstream(data, &mut aram, room);
-        self.with_clock(data, |c, f| c.catch_up(BootTimes::AUX, f));
+        let delay = self.boot_delay;
+        self.with_clock(data, |c, f| c.catch_up(BootTimes::AUX + delay, f));
         self.driver_setup_aux(0, AUX_REVERB_STD);
         self.driver_setup_aux(1, AUX_DELAY);
         for size in [main, kept, scene] {
@@ -81,6 +128,7 @@ impl Audio {
         lb.fgm_loaded = 0;
         lb.fgm_wanted = 0;
         lb.fgm_pending = 0;
+        aram.next()
     }
 
     /// `lbAudioAx_80028690`, the sound settings' reset when the save data is: the settings
@@ -91,21 +139,51 @@ impl Audio {
     /// for (`lb_800195D0` spinning); then the queued sounds and the crowd's loops cleared.
     #[doc(alias = "lbAudioAx_80028690")]
     pub fn lb_reset(&mut self, data: &Archives, bank: &SoundBank) {
-        self.with_clock(data, |c, f| c.catch_up(BootTimes::RESET, f));
+        let delay = self.boot_delay;
+        self.with_clock(data, |c, f| c.catch_up(BootTimes::RESET + delay, f));
+        self.lb.lang = -1;
+        self.lb_reset_saved(data, Some(bank), SavedSound::DEFAULT);
+    }
+
+    /// `lbAudioAx_80028690` as the save's sound settings say (`saved`): the settings at their
+    /// defaults and the save's balance, the bank files named for the saved language's
+    /// directory, and when that language isn't the one the files were last named for
+    /// (`lbl_804D3878`, -1 at power-on), the common bank (the first time), the sound bank and
+    /// the banks every scene keeps loaded for it (`bank`, the language's `smash2.sem`).
+    pub fn lb_reset_saved(&mut self, data: &Archives, bank: Option<&SoundBank>, saved: SavedSound) {
         // `lbAudioAx_80024BD0` reads the sound mode into a global the port doesn't keep.
-        self.lb_reset_settings();
+        self.lb_reset_settings(saved.balance);
         self.lb_volumes(true, false);
+        // `strcpy`: the directory and its terminator.
+        let lang = if saved.us {
+            self.lb.ssm_file[..11].copy_from_slice(b"/audio/us/\0");
+            self.lb.ssm_stem_pos = 10;
+            1
+        } else {
+            self.lb.ssm_file[..8].copy_from_slice(b"/audio/\0");
+            self.lb.ssm_stem_pos = 7;
+            0
+        };
+        assert!(saved.us, "the Japanese sound banks' directory isn't loaded");
         let lb = &mut self.lb;
-        lb.ssm_file[..10].copy_from_slice(b"/audio/us/");
-        lb.ssm_stem_pos = 10;
-        lb.hps_file[..7].copy_from_slice(b"/audio/");
+        lb.hps_file[..8].copy_from_slice(b"/audio/\0");
         lb.hps_stem_pos = 7;
-        // The language was none: the common bank first.
-        self.sfx_key_off_all();
-        self.sfx_unload_bank(0);
-        if self.lb.banks[0] < 1 {
-            self.lb_load_boot_bank(data, 0, 0);
+        if self.lb.lang == -1 {
+            self.sfx_key_off_all();
+            self.sfx_unload_bank(0);
+            if self.lb.banks[0] < 1 {
+                self.lb_load_boot_bank(data, 0, 0);
+            }
         }
+        if self.lb.lang == lang {
+            return;
+        }
+        self.lb.lang = lang;
+        assert!(
+            self.driver.bank.is_none(),
+            "a sound bank to free first (AXDriver_8038DCFC)"
+        );
+        let bank = bank.expect("the language's sound bank (smash2.sem)");
         // The language changes: the sound bank (no old one to free, `AXDriver_8038DCFC`),
         // then the banks every scene keeps.
         self.driver_load_bank(data, bank.archive, bank.len);
@@ -155,7 +233,7 @@ impl Audio {
     /// (`gm_801603B0`), full both.
     #[doc(alias = "fn_800244F4")]
     #[doc(alias = "gm_801603B0")]
-    fn lb_reset_settings(&mut self) {
+    fn lb_reset_settings(&mut self, balance: i8) {
         let lb = &mut self.lb;
         lb.music = 0x7F;
         lb.voice = 0x7F;
@@ -190,6 +268,9 @@ impl Audio {
         lb.volume_8 = 0x7F;
         lb.sent_stream = 0.0;
         lb.master = 0x7F;
+        // `gm_801603B0`: the save's balance (`lbAudioAx_80024614`, `lbAudioAx_800245F4`).
+        lb.voice = balance_voice(balance).clamp(0, 0x7F);
+        lb.fx = balance_fx(balance).clamp(0, 0x7F);
     }
 
     /// `lbAudioAx_80024F6C`: the stream's volume handed to the synth again, and the

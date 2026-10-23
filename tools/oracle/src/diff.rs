@@ -178,6 +178,9 @@ pub(crate) fn compare(
     cmp.audio();
     cmp.match_state();
     cmp.display();
+    if COMPARE_MENUS.with(|c| c.get()) {
+        cmp.menus();
+    }
     let t1 = Instant::now();
     if COMPARE_HEAP.with(|c| c.get()) {
         cmp.heap();
@@ -326,8 +329,11 @@ thread_local! {
 }
 
 thread_local! {
-    /// Whether the comparison takes in the allocator model (`--heap`).
-    static COMPARE_HEAP: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Whether the comparison takes in the allocator model (`--heap`, which a session takes
+    /// too).
+    pub(crate) static COMPARE_HEAP: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+    /// Whether the comparison takes in the boot's and the menus' statics (a session's).
+    pub(crate) static COMPARE_MENUS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
 }
 
 /// The stale reads a run met: the first tick of each, in order.

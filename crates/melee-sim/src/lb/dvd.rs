@@ -1,0 +1,589 @@
+//! The preload cache (`melee/lb/lbdvd.c`): files a scene's mode says it will want, read from
+//! the disc one at a time in the background (the highest load score first) into the
+//! preload heaps ([`super::heap`]), each a block of [`super::memory`]'s, and handed to the
+//! scene's loads when they ask (`lbDvd_GetPreloadedArchive`). Each scene's preparation says
+//! which heaps its mode keeps (`lbDvd_80018CF4`), and what the cache should hold
+//! (`lbDvd_80018254`): entries it no longer wants are let go, the rest kept.
+//!
+//! The cache's reads go through HAL's device command queue on the audio timeline, and their
+//! callbacks run in the disc interrupt, so the cache lives with the audio library's state
+//! ([`crate::audio::Audio::dvd`]), the preload heaps and their blocks with it.
+
+use melee_data::archive::Archives;
+
+use super::heap::{self, LbHeaps};
+use super::memory::LbMemory;
+use crate::audio::Audio;
+use crate::audio::devcom::cb;
+
+/// `PreloadEntry`: a file the cache holds or wants. `state`: 0 free, 1 wanted, 2 reading,
+/// 3 in, 4 in and taken. A load score below 0 marks an entry the current scene doesn't
+/// want, which the next refresh lets go.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct PreloadEntry {
+    pub state: i8,
+    /// 0 raw bytes, 2 an archive, 3 an effect file, 4 a stage's file.
+    pub kind: i8,
+    pub heap: i8,
+    /// 1 read and not yet set up, 2 set up (`lbDvd_GetPreloadedArchive`).
+    pub load_state: i8,
+    /// Which preload class asked for it (`unknown004`): 0x80 the rumble file, 0x40 the
+    /// common files.
+    pub class: u8,
+    pub entry_num: i16,
+    pub load_score: i16,
+    pub size: u32,
+    /// The blocks of its bytes and of its `HSD_Archive`, as `lbMemory` entries.
+    pub raw_data: Option<u8>,
+    pub archive: Option<u8>,
+    pub effect_index: i32,
+}
+
+/// `lbDvd_803BA68C`: a free entry (`{ 0, 0, 0, 0, -1, 0, -1 }`: its class byte and entry
+/// number -1).
+const FREE: PreloadEntry = PreloadEntry {
+    state: 0,
+    kind: 0,
+    heap: 0,
+    load_state: 0,
+    class: 0xFF,
+    entry_num: -1,
+    load_score: 0,
+    size: 0,
+    raw_data: None,
+    archive: None,
+    effect_index: 0,
+};
+
+impl Default for PreloadEntry {
+    fn default() -> Self {
+        FREE
+    }
+}
+
+/// `PreloadCacheSceneEntry`: a character the scene's game cache preloads.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct CacheFighter {
+    pub char_id: i32,
+    pub color: u8,
+    pub x5: u8,
+}
+
+/// `GameCache`: a mode's characters and stage the cache preloads (`lbDvdPreload_3`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct GameCache {
+    pub mode_kind: u8,
+    pub x1: u8,
+    pub x2: u8,
+    pub x3: u8,
+    pub stkind: i32,
+    pub entries: [CacheFighter; 8],
+}
+
+/// `PreloadedGameModeState`: whether the rumble and the common files' heaps stay, the game
+/// cache, and how many times the mode's scenes changed what the cache keeps.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SceneCache {
+    pub is_heap_persistent: [bool; 2],
+    pub game_cache: GameCache,
+    pub mode_scene_changes: i32,
+}
+
+/// `ChKind_None`.
+const CHKIND_NONE: i32 = 0x21;
+/// `preload_cache_scene`: nothing kept, no game cache (stage 0x148, every character none).
+pub const SCENE_DEFAULT: SceneCache = SceneCache {
+    is_heap_persistent: [false; 2],
+    game_cache: GameCache {
+        mode_kind: crate::game::gm::machine::GM_COUNT,
+        x1: 0,
+        x2: 0,
+        x3: 0,
+        stkind: 0x148,
+        entries: [CacheFighter {
+            char_id: CHKIND_NONE,
+            color: 0,
+            x5: 1,
+        }; 8],
+    },
+    mode_scene_changes: 0,
+};
+
+/// `PreloadCache` (`preloadCache`).
+#[derive(Clone, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct PreloadCache {
+    /// The preload class the scene's mode asked for (`lbDvdPreload_0` to `_3`).
+    pub persistent_heaps: i32,
+    pub scene: SceneCache,
+    pub new_scene: SceneCache,
+    pub entries: [PreloadEntry; ENTRIES],
+    /// The heap being compacted, 6 for none: no read starts meanwhile.
+    pub persistent_heap: i32,
+    /// Whether the mode's files are all expected preloaded (`lbDvd_80018F58`).
+    pub preloaded: bool,
+}
+
+/// Entries in the cache.
+pub const ENTRIES: usize = 80;
+
+impl Default for PreloadCache {
+    fn default() -> Self {
+        PreloadCache {
+            persistent_heaps: 0,
+            scene: SCENE_DEFAULT,
+            new_scene: SCENE_DEFAULT,
+            entries: [FREE; ENTRIES],
+            persistent_heap: 6,
+            preloaded: false,
+        }
+    }
+}
+
+/// The preload cache with its heaps and their blocks, and the disc files' sizes it reads
+/// (`DVDFastOpen`'s, from the disc's file table, which the frontend gives for the files the
+/// game may preload).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct Dvd {
+    pub memory: LbMemory,
+    pub heaps: LbHeaps,
+    pub cache: PreloadCache,
+    #[clone_from(if_changed)]
+    pub sizes: Vec<(i32, u32)>,
+}
+
+/// A file a preload class always wants: its kind, name and effect index.
+struct PreloadFile {
+    kind: i8,
+    entry_num: i32,
+    effect_index: i32,
+}
+
+impl Dvd {
+    fn file_size(&self, entry_num: i32) -> u32 {
+        self.sizes
+            .iter()
+            .find(|f| f.0 == entry_num)
+            .unwrap_or_else(|| panic!("disc file {entry_num}'s size isn't known (DVDFastOpen)"))
+            .1
+    }
+
+    /// `lbDvd_80018F68`, at boot: no class, no scene, every entry free.
+    #[doc(alias = "lbDvd_80018F68")]
+    pub fn init_cache(&mut self) {
+        self.cache = PreloadCache::default();
+    }
+
+    /// `lbDvd_80018F58`.
+    #[doc(alias = "lbDvd_80018F58")]
+    pub fn set_preloaded(&mut self, value: bool) {
+        self.cache.preloaded = value;
+    }
+
+    /// `lbDvd_800174E8` (`releaseEntry`): the entry's blocks back to its heap, and the entry
+    /// free.
+    #[doc(alias = "lbDvd_800174E8")]
+    fn release(&mut self, i: usize) {
+        let e = self.cache.entries[i];
+        let heap = e.heap as usize;
+        for b in [e.archive, e.raw_data].into_iter().flatten() {
+            let addr = self.memory.entries[usize::from(b)].addr;
+            self.heaps.free(heap, addr, &mut self.memory);
+        }
+        self.cache.entries[i] = FREE;
+    }
+
+    /// `lbDvd_80017598`: lets go every entry of `heap` but one being read, which it says to
+    /// wait for (as it does a heap being compacted).
+    #[doc(alias = "lbDvd_80017598")]
+    pub fn release_heap(&mut self, heap: i32) -> bool {
+        if self.cache.persistent_heap == heap {
+            return true;
+        }
+        let mut busy = false;
+        for i in 0..ENTRIES {
+            let e = self.cache.entries[i];
+            if e.state != 0 && i32::from(e.heap) == heap {
+                if e.state == 2 {
+                    busy = true;
+                } else {
+                    self.release(i);
+                }
+            }
+        }
+        busy
+    }
+
+    /// `lbDvd_80017644`: lets go of `heap`'s unwanted entries that are in and set up, unless
+    /// the heap is being compacted, which it says to wait for.
+    #[doc(alias = "lbDvd_80017644")]
+    pub fn release_stale(&mut self, heap: i32) -> bool {
+        if self.cache.persistent_heap == heap {
+            return true;
+        }
+        for i in 0..ENTRIES {
+            let e = self.cache.entries[i];
+            if (e.state == 3 || e.state == 4)
+                && i32::from(e.heap) == heap
+                && e.load_score < 0
+                && e.load_state == 2
+            {
+                self.release(i);
+            }
+        }
+        false
+    }
+
+    /// `lbDvd_80017740`: the cache wants a file; an entry it has for the file in that heap is
+    /// wanted again (a read one gets the top score), else a free entry takes it. The entry.
+    #[doc(alias = "lbDvd_80017740")]
+    #[allow(clippy::too_many_arguments)]
+    pub fn want(
+        &mut self,
+        kind: i8,
+        entry_num: i32,
+        transient_heap: i32,
+        heap: i32,
+        size: u32,
+        load_state: i8,
+        load_score: i16,
+        class: u8,
+        effect_index: i32,
+    ) -> usize {
+        let mut free = None;
+        for i in 0..ENTRIES {
+            let e = &mut self.cache.entries[i];
+            if e.state == 0 {
+                free.get_or_insert(i);
+            } else if i32::from(e.entry_num) == entry_num && i32::from(e.heap) == transient_heap {
+                if e.state == 1 {
+                    if e.load_score < 0 {
+                        e.load_score = -e.load_score;
+                        if e.load_score <= 0x2314 {
+                            e.load_score += 10;
+                        }
+                    }
+                } else {
+                    e.load_score = 0x270F;
+                }
+                return i;
+            }
+        }
+        let i = free.expect("the original's assertion failed: lbdvd.c:0x1C1");
+        assert!(
+            self.heaps.status(heap as usize) == heap::CREATED,
+            "[LbDvd] preloading into heap {heap}, which isn't made ({entry_num})"
+        );
+        self.cache.entries[i] = PreloadEntry {
+            state: 1,
+            kind,
+            heap: heap as i8,
+            load_state,
+            class,
+            entry_num: entry_num as i16,
+            load_score,
+            size,
+            raw_data: None,
+            archive: None,
+            effect_index,
+        };
+        i
+    }
+
+    /// `lbDvd_GetPreloadCacheScene`'s, as `lbDvd_80018CF4` sets it for a scene.
+    fn set_scene_from_default(&mut self, persistent: [bool; 2], game_cache: bool) {
+        let s = &mut self.cache.scene;
+        if persistent[0] {
+            s.is_heap_persistent[0] = SCENE_DEFAULT.is_heap_persistent[0];
+        }
+        if persistent[1] {
+            s.is_heap_persistent[1] = SCENE_DEFAULT.is_heap_persistent[1];
+        }
+        if game_cache {
+            s.game_cache = SCENE_DEFAULT.game_cache;
+        }
+    }
+
+    /// `lbDvd_80018CF4`'s first part, a scene's preparation: the mode's preload class says
+    /// which preload heaps stay (0 none, 1 `Seq`, 2 `Seq` and `Stay`, 3 all four) and resets
+    /// what of the scene's cache the class doesn't keep. The heaps that go are then let go,
+    /// waiting for a read in flight there ([`Dvd::release_heap`]), and the scene's heaps made
+    /// ([`Dvd::make_scene_heaps`]).
+    pub fn set_class(&mut self, class: i32) {
+        if self.cache.persistent_heaps != class {
+            self.cache.scene.mode_scene_changes = self.cache.new_scene.mode_scene_changes + 1;
+        }
+        self.cache.persistent_heaps = class;
+        for h in [heap::SEQ, heap::STAY, heap::ALL_M, heap::ALL_A] {
+            self.heaps.set_transient(h, 1);
+        }
+        match class {
+            0 => self.set_scene_from_default([true, true], true),
+            1 => {
+                self.heaps.set_transient(heap::SEQ, 0);
+                self.set_scene_from_default([false, true], true);
+            }
+            2 => {
+                self.heaps.set_transient(heap::SEQ, 0);
+                self.heaps.set_transient(heap::STAY, 0);
+                self.set_scene_from_default([false, false], true);
+            }
+            3 => {
+                for h in [heap::SEQ, heap::STAY, heap::ALL_M, heap::ALL_A] {
+                    self.heaps.set_transient(h, 0);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// `lbDvd_80018CF4`'s end: the scene's heaps (`lbHeap_80015900`), and the main heap's
+    /// layout.
+    pub fn make_scene_heaps(&mut self) -> crate::hsd::heap::Layout {
+        self.heaps.make_scene_heaps(&mut self.memory)
+    }
+
+    /// `lbDvd_80018C6C`: the scene's cache keeps what the class keeps.
+    #[doc(alias = "lbDvd_80018C6C")]
+    pub fn keep_class(&mut self) {
+        let s = &mut self.cache.scene;
+        match self.cache.persistent_heaps {
+            1 => s.is_heap_persistent[0] = true,
+            2 => s.is_heap_persistent = [true, true],
+            3 => {
+                s.is_heap_persistent = [true, true];
+                s.game_cache = SCENE_DEFAULT.game_cache;
+            }
+            _ => {}
+        }
+    }
+
+    /// `lbDvd_8001823C`.
+    #[doc(alias = "lbDvd_8001823C")]
+    pub fn note_scene_change(&mut self) {
+        self.cache.scene.mode_scene_changes = self.cache.new_scene.mode_scene_changes + 1;
+    }
+
+    /// The entry whose read to start next, `lbDvd_80017CC4`'s choice: none while a heap is
+    /// being compacted or a read is in flight, else the wanted entry with the highest score.
+    fn next_to_read(&self) -> Option<usize> {
+        if self.cache.persistent_heap != 6 {
+            return None;
+        }
+        let mut reading = false;
+        let mut best = 0;
+        let mut pick = None;
+        for (i, e) in self.cache.entries.iter().enumerate() {
+            match e.state {
+                2 => reading = true,
+                1 if i32::from(e.load_score) > best => {
+                    best = i32::from(e.load_score);
+                    pick = Some(i);
+                }
+                _ => {}
+            }
+        }
+        if reading { None } else { pick }
+    }
+
+    /// `lbDvd_800187F4`: whether the file is ready to take: 0 not in the cache, 1 not yet
+    /// (wait and ask again), 2 in. Taking a read entry marks it taken, unless a wanted file
+    /// still waits for room its heap's unwanted entries hold.
+    #[doc(alias = "lbDvd_800187F4")]
+    pub fn file_state(&mut self, entry_num: i32) -> i32 {
+        for i in 0..ENTRIES {
+            let e = self.cache.entries[i];
+            if e.state == 0 || e.load_score <= 0 || i32::from(e.entry_num) != entry_num {
+                continue;
+            }
+            if i32::from(e.heap) == self.cache.persistent_heap {
+                return 1;
+            }
+            match e.state {
+                1 | 2 => return 1,
+                3 => {
+                    if self.room_awaited(e.heap) {
+                        return 1;
+                    }
+                    let e = &mut self.cache.entries[i];
+                    e.state = 4;
+                    e.load_score = 0x270F;
+                    return 2;
+                }
+                4 => return 2,
+                _ => continue,
+            }
+        }
+        0
+    }
+
+    /// Whether a wanted file waits to be read into `heap` while unwanted entries there hold
+    /// room (`lbDvd_800187F4`'s and `lbDvd_80018A2C`'s check).
+    fn room_awaited(&self, heap: i8) -> bool {
+        let entries = &self.cache.entries;
+        let pending = entries
+            .iter()
+            .any(|o| o.state == 1 && o.heap == heap && o.load_score > 0);
+        let stale = entries
+            .iter()
+            .any(|o| (o.state == 2 || o.state == 3) && o.heap == heap && o.load_score < 0);
+        pending && stale
+    }
+}
+
+/// `lbDvd_80018254`'s preload classes' files: the rumble file (class 1 and up) and the common
+/// files (class 2 and up), by entry number in GALE01 revision 2's file table (`LbRb.dat`;
+/// `EfMnData.dat`, `EfCoData.dat`, `ItCo.usd`, `IfAll.usd`).
+const RUMBLE_FILE: PreloadFile = PreloadFile {
+    kind: 2,
+    entry_num: 0x1EC,
+    effect_index: 0,
+};
+const COMMON_FILES: [PreloadFile; 4] = [
+    PreloadFile {
+        kind: 3,
+        entry_num: 0xEF,
+        effect_index: 0x1F,
+    },
+    PreloadFile {
+        kind: 3,
+        entry_num: 0xD7,
+        effect_index: 0,
+    },
+    PreloadFile {
+        kind: 2,
+        entry_num: 0x1E5,
+        effect_index: 0,
+    },
+    PreloadFile {
+        kind: 2,
+        entry_num: 0x1CC,
+        effect_index: 0,
+    },
+];
+
+impl Audio {
+    fn dvd(&mut self) -> &mut Dvd {
+        self.dvd.as_mut().expect("the preload cache")
+    }
+
+    /// `lbDvd_80018254`, a scene's preparation once its class is set: unless the scene's
+    /// cache is what the last refresh saw, every entry is marked unwanted, the class's files
+    /// wanted again, the rest of the unwanted ones not yet read let go (read ones stay until
+    /// their room is needed), and the next read started.
+    #[doc(alias = "lbDvd_80018254")]
+    pub fn preload_refresh(&mut self, data: &Archives) {
+        let d = self.dvd();
+        if d.cache.new_scene == d.cache.scene {
+            return;
+        }
+        d.cache.new_scene = d.cache.scene;
+        for e in d.cache.entries.iter_mut() {
+            if e.state != 0 && e.load_score > 0 {
+                e.load_score = -e.load_score;
+            }
+        }
+        let class = d.cache.persistent_heaps;
+        assert!(
+            (0..=2).contains(&class) || d.cache.new_scene.game_cache == SCENE_DEFAULT.game_cache,
+            "a preload class with a game cache (lbDvd_80017960) isn't ported"
+        );
+        if class >= 1 && d.cache.new_scene.is_heap_persistent[0] {
+            let f = &RUMBLE_FILE;
+            d.want(f.kind, f.entry_num, 2, 2, 0, 1, 9, 0x80, f.effect_index);
+        }
+        if class >= 2 && d.cache.new_scene.is_heap_persistent[1] {
+            for f in &COMMON_FILES {
+                d.want(f.kind, f.entry_num, 3, 3, 0, 1, 8, 0x40, f.effect_index);
+            }
+        }
+        for j in 0..ENTRIES {
+            let e = d.cache.entries[j];
+            if e.load_score < 0 {
+                if e.state == 1 {
+                    d.release(j);
+                } else if e.state == 4 {
+                    d.cache.entries[j].state = 3;
+                }
+            }
+        }
+        self.preload_next_entry(data);
+    }
+
+    /// `lbDvd_80017CC4`: the next wanted file's read, unless one is in flight.
+    #[doc(alias = "lbDvd_80017CC4")]
+    pub fn preload_next_entry(&mut self, data: &Archives) {
+        if let Some(i) = self.dvd().next_to_read() {
+            self.cache_preloaded_file(data, i);
+        }
+    }
+
+    /// `lbDvd_CachePreloadedFile`: the heap's unwanted read entries let go to make room, then
+    /// the file's blocks taken from its heap and its read started at priority 2, calling back
+    /// `lbDvd_80017E64`.
+    #[doc(alias = "lbDvd_CachePreloadedFile")]
+    fn cache_preloaded_file(&mut self, data: &Archives, index: usize) {
+        let d = self.dvd();
+        let heap = d.cache.entries[index].heap;
+        for i in 0..ENTRIES {
+            let e = d.cache.entries[i];
+            if e.state == 3 && e.heap == heap && e.load_score < 0 {
+                d.release(i);
+            }
+        }
+        d.cache.persistent_heap = i32::from(heap);
+        let compacting = d.heaps.compact(heap as usize, &d.memory);
+        assert!(!compacting, "a preload heap's compaction isn't ported");
+        d.cache.persistent_heap = 6;
+        let e = d.cache.entries[index];
+        let size = if e.size == 0 {
+            d.file_size(i32::from(e.entry_num))
+        } else {
+            e.size
+        };
+        d.cache.entries[index].size = size;
+        let raw = d
+            .heaps
+            .alloc(heap as usize, size.next_multiple_of(32), &mut d.memory);
+        let archive = if matches!(e.kind, 2..=4) {
+            d.heaps.alloc(heap as usize, 0x44, &mut d.memory)
+        } else {
+            None
+        };
+        let e = &mut d.cache.entries[index];
+        e.raw_data = raw;
+        e.archive = archive;
+        let Some(raw) = raw else {
+            panic!("the original's assertion failed: lbdvd.c:827 (no room to preload)");
+        };
+        assert!(
+            e.kind != 0,
+            "a raw preload (lbDvd_80017E64 at once) isn't ported"
+        );
+        e.state = 2;
+        e.load_score = 9999;
+        let entry_num = i32::from(e.entry_num);
+        // `lbFile_800164A4`: the file's length from the disc's table.
+        let len = d.file_size(entry_num);
+        d.cache.entries[index].size = len;
+        let dest = d.memory.entries[usize::from(raw)].addr;
+        self.devcom_request(
+            data,
+            entry_num,
+            0,
+            dest,
+            len.next_multiple_of(32),
+            0x21,
+            2,
+            Some(cb::PRELOADED),
+            index as u32,
+        );
+    }
+
+    /// `lbDvd_80017E64`, a preload's read callback: the entry is in, and the next read
+    /// starts.
+    #[doc(alias = "lbDvd_80017E64")]
+    pub fn preload_done(&mut self, data: &Archives, index: u32) {
+        self.dvd().cache.entries[index as usize].state = 3;
+        self.preload_next_entry(data);
+    }
+}

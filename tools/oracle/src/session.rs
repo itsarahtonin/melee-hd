@@ -413,6 +413,20 @@ impl melee_sim::game::session::Console for Console<'_> {
     fn entrynum(&mut self, path: &str) -> Option<i32> {
         self.disc.entrynum(path.trim_start_matches('/')).ok()
     }
+
+    fn file(&mut self, path: &str) -> melee_sim::game::vs_match::DiscFile {
+        let path = path.trim_start_matches('/');
+        melee_sim::game::vs_match::DiscFile {
+            entrynum: self
+                .disc
+                .entrynum(path)
+                .unwrap_or_else(|e| panic!("{path}: {e}")),
+            bytes: self
+                .disc
+                .read_file(path)
+                .unwrap_or_else(|e| panic!("{path}: {e}")),
+        }
+    }
 }
 
 /// What `--mutate` changes in melee-hd's run, to see the comparison catch it.
@@ -471,6 +485,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             }
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             "--all" => all = true,
+            "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
             "--ignore" => ignore.extend(
                 it.next()
@@ -503,7 +518,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--from TICK] [--ticks N] [--all] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
@@ -539,6 +554,8 @@ pub fn session(args: &[&str]) -> ExitCode {
             card,
             // `SSBMINP1` keeps no clock: ssbm-rs's console powers on at 2000-01-01 00:00:00.
             clock: SSBM_RS_CLOCK,
+            // ssbm-rs's video interface reads a DTV status of 0.
+            dtv: false,
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");
@@ -582,6 +599,9 @@ pub fn session(args: &[&str]) -> ExitCode {
         }
         return ExitCode::SUCCESS;
     }
+    // The boot's and the menus' statics compare from power-on: an import (`--from`) doesn't
+    // bring them in.
+    crate::diff::COMPARE_MENUS.with(|c| c.set(from.is_none()));
     let run = Run {
         trace_path,
         rec: &rec,
@@ -671,7 +691,10 @@ impl Run<'_> {
                     );
                     return ExitCode::FAILURE;
                 }
-                let files = Files::new(Some(&index), Vec::new(), Vec::new());
+                // The archives the session loaded, which the scans find where the original
+                // loads them.
+                let named = s.game.ft.data.files.archives.clone();
+                let files = Files::new(Some(&index), Vec::new(), named);
                 (s, files, 0, Maps::default())
             }
             Some(n) => {
@@ -782,6 +805,15 @@ impl Run<'_> {
                 &past,
             );
             stale.note(t, &s.game, reads);
+            // The timeline: the tick's end on the time base, where the trace sampled it.
+            if let (Some(c), Some(tb)) = (&s.game.audio.clock, image.tb)
+                && c.now != tb
+            {
+                diffs.push(format!(
+                    "timeline: the tick ended at time base {} on ours, {tb} on the trace's",
+                    c.now
+                ));
+            }
             // The reads melee-hd's tick took, against the ones the trace's can have taken.
             let took = (console.next as u32).saturating_sub(1);
             if !self.plan.ends[t as usize].contains(&took) {
@@ -795,9 +827,11 @@ impl Run<'_> {
             if !diffs.is_empty() {
                 break Some(Stop::Differ(diffs));
             }
-            if ended {
+            // A scene that ended changes to the next as the next step starts (`gm::machine`);
+            // one taken up from a trace tick (`--from`) has no machine to change with.
+            if ended && self.from.is_some() {
                 break Some(Stop::Seam(
-                    "the scene ended: the change to the next scene (gm_801A4014's exits, the next scene's preparation and entry) isn't ported".into(),
+                    "the scene ended: a session taken up from a trace tick carries no game modes' machine to change scenes with".into(),
                 ));
             }
             next = t + 1;

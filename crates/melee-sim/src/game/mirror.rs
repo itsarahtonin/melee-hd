@@ -72,6 +72,56 @@ pub trait Mirror: Sized {
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx);
 }
 
+/// A run of big-endian memory to write a struct into, at address `base`.
+pub struct MemMut<'a> {
+    pub bytes: &'a mut [u8],
+    pub base: u32,
+}
+
+impl MemMut<'_> {
+    fn at(&mut self, a: u32, n: usize) -> &mut [u8] {
+        let i = a.wrapping_sub(self.base) as usize;
+        &mut self.bytes[i..i + n]
+    }
+
+    pub fn put_u8(&mut self, a: u32, v: u8) {
+        self.at(a, 1)[0] = v;
+    }
+
+    pub fn put_u16(&mut self, a: u32, v: u16) {
+        self.at(a, 2).copy_from_slice(&v.to_be_bytes());
+    }
+
+    pub fn put_u32(&mut self, a: u32, v: u32) {
+        self.at(a, 4).copy_from_slice(&v.to_be_bytes());
+    }
+
+    pub fn put_u64(&mut self, a: u32, v: u64) {
+        self.at(a, 8).copy_from_slice(&v.to_be_bytes());
+    }
+
+    pub fn put_bytes(&mut self, a: u32, v: &[u8]) {
+        self.at(a, v.len()).copy_from_slice(v);
+    }
+
+    /// A bitfield of `bits` bits, `bit` bits from the start of the struct at `at`, as
+    /// [`Mem::bits`] reads it.
+    pub fn put_bits(&mut self, at: u32, bit: u32, bits: u32, v: u32) {
+        for (k, b) in (bit..bit + bits).enumerate() {
+            let set = v >> (bits - 1 - k as u32) & 1 != 0;
+            let byte = &mut self.at(at + b / 8, 1)[0];
+            let mask = 0x80u8 >> (b % 8);
+            *byte = if set { *byte | mask } else { *byte & !mask };
+        }
+    }
+}
+
+/// A struct melee-sim writes back as the game keeps it in memory (the card's data, which a
+/// save writes to the card).
+pub trait Export {
+    fn export(&self, m: &mut MemMut, at: u32);
+}
+
 /// A function pointer as the mirror holds it.
 pub fn code(addr: u32) -> Option<CodeRef> {
     (addr != 0).then_some(CodeRef(addr))
