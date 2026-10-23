@@ -269,6 +269,10 @@ impl Ctx<'_> {
                 self.hsd.hilight = *v;
                 1
             }
+            Draw::Toon(image) => {
+                self.hsd.toon = *image;
+                1
+            }
             Draw::Fog(f) => {
                 self.fog_set(*f);
                 1

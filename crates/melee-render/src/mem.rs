@@ -193,6 +193,15 @@ impl Space {
         }
     }
 
+    /// The `len` bytes at an address in the executable's loaded sections, if they lie in one.
+    pub fn dol_bytes(&self, addr: u32, len: usize) -> Option<&[u8]> {
+        let phys = addr & 0x01FF_FFFF;
+        self.dol.iter().find_map(|(start, bytes)| {
+            let at = usize::try_from(phys.checked_sub(*start)?).ok()?;
+            bytes.get(at..at.checked_add(len)?)
+        })
+    }
+
     /// The `len` bytes at a physical address in a loaded archive, where nothing lies over
     /// them (no copy from the EFB, no rewritten display list): what [`Space::read`] would
     /// copy out, without copying.

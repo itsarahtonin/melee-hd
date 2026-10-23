@@ -177,22 +177,23 @@ pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> 
     dst
 }
 
-/// The texture chain a material draws with: the toon texture first for a toon material, the
-/// shadow textures (`shadows`, as the display pass had them at the draw) after its own for a
-/// shadowed one (`HSD_MObjSetup`).
+/// The texture chain a material draws with: the toon texture first for a toon material while
+/// it has an image (`toon`, as the display pass had it at the draw), the shadow textures
+/// (`shadows`, likewise) after its own for a shadowed one (`HSD_MObjSetup`).
 pub fn material_chain(
     objs: &Objects,
     m: MObjId,
     rendermode: u32,
     shadows: &[TObjId],
+    toon: Option<ImageRef>,
 ) -> Vec<TObjId> {
     let mut chain: Vec<TObjId> = objs.tobjs.chain(objs.mobjs[m].tobj).collect();
     if rendermode & RENDER_SHADOW != 0 {
         chain.extend_from_slice(shadows);
     }
     if rendermode & RENDER_TOON != 0
+        && toon.is_some()
         && let Some(toon) = objs.mobjs.toon
-        && objs.tobjs[toon].imagedesc.is_some()
     {
         chain.insert(0, toon);
     }
@@ -242,7 +243,13 @@ impl Ctx<'_> {
     /// The image a texture shows, with its texels' address.
     fn image(&mut self, t: TObjId) -> Option<Image> {
         let objs = self.objs();
-        match objs.tobjs[t].imagedesc {
+        // The toon texture shows the image the display pass named as the material set up.
+        let imagedesc = if objs.mobjs.toon == Some(t) {
+            self.hsd.toon
+        } else {
+            objs.tobjs[t].imagedesc
+        };
+        match imagedesc {
             Some(ImageRef::Data(d)) => {
                 if let Some(img) = self.reflection_image(d) {
                     return Some(img);
@@ -566,7 +573,7 @@ impl Ctx<'_> {
         if rendermode & RENDER_SPECULAR != 0 {
             self.hsd.state.set_material_shininess(mat.shininess);
         }
-        let chain = material_chain(self.objs(), m, rendermode, &self.hsd.shadows);
+        let chain = material_chain(self.objs(), m, rendermode, &self.hsd.shadows, self.hsd.toon);
         self.tobj_setup(&chain);
         self.tobj_setup_coord_gen(&chain);
         let desc = self.setup_tev(m, &chain, rendermode);
@@ -1010,6 +1017,7 @@ impl Ctx<'_> {
                 m,
                 self.objs().mobjs[m].rendermode,
                 &self.hsd.shadows,
+                self.hsd.toon,
             );
             match self.objs().mobjs[m].class {
                 MObjClass::Fighter => self.fighter_mobj_setup(m),
