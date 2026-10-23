@@ -1205,9 +1205,9 @@ fn init_spin() {
 }
 
 #[test]
-fn clear_attack_id() {
+fn stop_holding_still() {
     leaf_check::shard_test!();
-    check_game("it_80274EF8", lib2725::clear_attack_id);
+    check_game("it_80274EF8", lib2725::stop_holding_still);
 }
 
 #[test]

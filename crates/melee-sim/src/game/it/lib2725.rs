@@ -351,9 +351,9 @@ pub fn init_spin(game: &mut Game, gobj: GObjId) {
     ecb_extent(game, gobj);
 }
 
-/// Clears the attack id flag, `it_80274EF8`.
+/// Stops the item holding still for its animation (`xDC8_word.x2`), `it_80274EF8`.
 #[doc(alias = "it_80274EF8")]
-pub fn clear_attack_id(game: &mut Game, gobj: GObjId) {
+pub fn stop_holding_still(game: &mut Game, gobj: GObjId) {
     item_mut(game, gobj).xDC8_word.flags.x2 = false;
 }
 

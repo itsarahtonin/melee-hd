@@ -419,7 +419,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     ip.xD84 = a.i32(data, attr::X80);
     super::hitbox::clear_hit_ids(r.game, gobj);
     super::hitbox::clear_hit_ids2(r.game, gobj);
-    lib2725::clear_attack_id(r.game, gobj);
+    lib2725::stop_holding_still(r.game, gobj);
     let parent = spawn.x0_parent_gobj;
     let parent_is_fighter = is_fighter(r.game, parent);
     let ip = item_mut(r.game, gobj);
@@ -949,6 +949,7 @@ pub fn change_state(r: &mut Running, gobj: GObjId, msid: i32, flags: u32) {
     lib26b1::flush_effects(r, gobj);
     if super::item(r.game, gobj).xDC8_word.flags.x2 {
         lib26b1::hold_flags_off(r.game, gobj);
+        lib2725::stop_holding_still(r.game, gobj);
     }
     if flags & MODEL_UPDATE != 0 {
         lib2725::stop_spin(r.game, data, gobj);
