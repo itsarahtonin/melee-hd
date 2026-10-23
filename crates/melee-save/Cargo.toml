@@ -1,0 +1,12 @@
+[package]
+name = "melee-save"
+description = "Melee's save files: memory card images and .gci files, read and judged as the game does and written as the console's card layers write them"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dev-dependencies]
+melee-local-data = { path = "../../tools/local-data" }

@@ -70,6 +70,10 @@ Vanilla is NTSC 1.02 as the console runs it. Slippi adds the codes Slippi tags a
 
 A Slippi replay records the codes it ran, and its rules are the ones those codes make: melee-sim recognizes each code by where it injects and the instructions it runs, and refuses a replay with a gameplay code it doesn't know. Playing a replay back is not a ruleset: it is what Slippi's playback codes do to a match (`game::playback`), with the replay's settings and frames as inputs.
 
+## Saves
+
+The game's save lives outside the simulation in `melee-save`, which reads memory card images and `.gci` files, judges them as the game's load does and writes them byte for byte as the console's card layers do ([saves](saves.md)). The simulation sees a card only through the game's own card code and the native save that answers its tasks, inputs like any other; where the player keeps the file is still to decide ([milestone 5](milestone-5.md#design-calls)).
+
 ## Netplay and other features
 
 **Decision (2026-10-14): netplay belongs to a follow-on repository.** Sarah's call: melee-hd is the base, exact, fast and complete, and features built on the game (netplay, training tools, mods) belong in a planned follow-on repository that depends on `melee-sim`. A real consumer decides the library's extension points; hooks designed here for imagined users would mostly go unused. Depending on the library rather than forking it keeps a project's accuracy fixes free.

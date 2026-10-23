@@ -23,4 +23,5 @@ ssbm-types.workspace = true
 
 [dev-dependencies]
 melee-local-data = { path = "../local-data" }
+melee-save = { path = "../../crates/melee-save" }
 zstd = "0.13"
