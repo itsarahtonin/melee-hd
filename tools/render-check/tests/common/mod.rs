@@ -39,6 +39,10 @@ pub enum Replay {
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's float mode.
     Session(&'static str),
+    /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
+    /// oracle matches, or a match recorded with the player, played in the console's float
+    /// mode.
+    Local(&'static str),
 }
 
 impl Replay {
@@ -49,6 +53,7 @@ impl Replay {
             Replay::Session(name) => {
                 ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs")).into()
             }
+            Replay::Local(path) => ssbm_rs_local(path).into(),
             Replay::Slippi(rel, var) => var
                 .and_then(std::env::var_os)
                 .map_or_else(|| slippi_replays(rel).into(), PathBuf::from),
@@ -226,6 +231,15 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
     };
     let out = command(game, &id)
         .env("CHECK_SEARCH", search)
+        // The rendered capture's copies wrote memory, so the native side's are written there too.
+        .env(
+            "CHECK_COPIES",
+            if capture == Capture::Rendered {
+                "memory"
+            } else {
+                ""
+            },
+        )
         .arg("compare")
         .arg(disc())
         .arg(&replay)
@@ -603,6 +617,46 @@ pub const YOSHIS_ISLAND_64: Game = stage(
     "stage-yoshis-island-64",
     "Fox vs Marth (oracle match)",
 );
+
+/// Milestone 4's power-ups oracle matches, `items-powerups-*`: metal fighters (the Metal Box,
+/// `ft_804D6580`) and cloaked ones (the Cloaking Device, refraction).
+pub const ITEMS_POWERUPS_PS: Game = Game {
+    stage: "Pokémon Stadium",
+    name: "items-powerups-ps",
+    players: "Mewtwo vs Mr. Game & Watch, power-ups (oracle match)",
+    replay: Replay::Oracle("items-powerups-ps"),
+};
+pub const ITEMS_POWERUPS_BF: Game = Game {
+    stage: "Battlefield",
+    name: "items-powerups-bf",
+    players: "Bowser vs Pichu, power-ups (oracle match)",
+    replay: Replay::Oracle("items-powerups-bf"),
+};
+pub const ITEMS_POWERUPS_FD: Game = Game {
+    stage: "Final Destination",
+    name: "items-powerups-fd",
+    players: "Roy vs Zelda, power-ups (oracle match)",
+    replay: Replay::Oracle("items-powerups-fd"),
+};
+
+/// A four-player match recorded with the player (2026-10-24, `player/replays/
+/// metal-cloak-rc.slp` in ssbm-rs's `local/`), where Mr. Game & Watch goes metal at frame 555
+/// and takes a Cloaking Device at 659 while still metal: the match that showed him white.
+pub const METAL_CLOAK_RC: Game = Game {
+    stage: "Rainbow Cruise",
+    name: "metal-cloak-rc",
+    players: "Donkey Kong, Fox, Dr. Mario and Mr. Game & Watch (a player match)",
+    replay: Replay::Local("player/replays/metal-cloak-rc.slp"),
+};
+
+/// Invisible Melee (milestone 5's Special Melee oracle set): both fighters refract the whole
+/// match.
+pub const SPECIAL_INVISIBLE_YS: Game = Game {
+    stage: "Yoshi's Story",
+    name: "special-invisible-ys",
+    players: "Mario vs Luigi, Invisible Melee (oracle match)",
+    replay: Replay::Local("bench/oracle-m5-special/special-invisible-ys.slp"),
+};
 
 pub const SHEIK_FOX_FOD: Game = Game {
     stage: "Fountain of Dreams",

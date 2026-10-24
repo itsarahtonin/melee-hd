@@ -36,6 +36,7 @@ impl Gx {
     }
 
     /// `GXSetIndTexMtx`.
+    #[doc(alias = "GXSetIndTexMtx")]
     pub fn set_ind_tex_mtx(&mut self, mtx_id: u32, offset: &[[f32; 3]; 2], scale_exp: i8) {
         let id = match mtx_id {
             GX_ITM_0..=GX_ITM_2 => mtx_id - 1,
@@ -94,6 +95,7 @@ impl Gx {
     }
 
     /// `GXSetIndTexOrder`.
+    #[doc(alias = "GXSetIndTexOrder")]
     pub fn set_ind_tex_order(&mut self, ind_stage: u32, tex_coord: u32, tex_map: u32) {
         let g = &mut self.data;
         if ind_stage < 4 {

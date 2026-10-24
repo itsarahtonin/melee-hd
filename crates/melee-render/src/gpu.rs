@@ -89,7 +89,15 @@ impl Memory for Host<'_> {
         if let Some(o) = self.observer {
             o.copy(state, value);
         }
-        self.renderer.borrow_mut().sink().copy(state, value, self);
+        let mut r = self.renderer.borrow_mut();
+        r.sink().copy(state, value, self);
+        // A check observing the draws sees memory as each copy leaves it, as the console's
+        // draws after it do, rather than once the frame's stream has run.
+        if self.observer.is_some() {
+            for w in r.sink().take_written() {
+                self.space.write(w.address, &w.bytes);
+            }
+        }
     }
 }
 
