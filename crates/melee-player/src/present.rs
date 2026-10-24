@@ -473,7 +473,7 @@ impl Shown {
     pub fn new(gpu: &Gpu, event_loop: &ActiveEventLoop, fullscreen: bool) -> Shown {
         let (w, h) = *SIZE.lock().unwrap();
         let attrs = Window::default_attributes()
-            .with_title("melee-hd")
+            .with_title(crate::channel::title())
             .with_window_icon(Some(window_icon()))
             .with_inner_size(winit::dpi::PhysicalSize::new(w, h))
             .with_fullscreen(fullscreen.then_some(Fullscreen::Borderless(None)));

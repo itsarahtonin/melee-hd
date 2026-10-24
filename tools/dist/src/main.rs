@@ -1,9 +1,15 @@
 //! Builds the player to play, the `dist` profile (release with fat LTO), and copies it to the
-//! repository's `dist/` folder, where a double-click starts it.
+//! repository's `dist/` folder (`dist-dev/` for the dev channel), where a double-click starts it.
 //!
 //! ```text
-//! cargo run -p dist [-- [-j N] [--out DIR] [--shortcut] [--shortcut-dir DIR]]
+//! cargo run -p dist [-- [-j N] [--channel stable|dev] [--out DIR] [--shortcut] [--shortcut-dir DIR]]
 //! ```
+//!
+//! The channel and the commit are stamped into the player (`MELEE_HD_CHANNEL` and
+//! `MELEE_HD_COMMIT`, which it reads at compile time): stable (the default) is `dist/`, main after
+//! a full verify; dev is `dist-dev/`, the staging branch after a smoke check, with settings and
+//! caches of its own. The commit is the short hash, with `-dirty` when tracked files have changes.
+//! A dev build goes to `dist-dev/` unless `--out` says otherwise.
 //!
 //! A copy already there that is still running is moved aside (`melee-hd.old-*`), as Windows
 //! lets a running program be renamed but not replaced, and deleted by a later run once it has
@@ -21,12 +27,45 @@ const EXE: &str = std::env::consts::EXE_SUFFIX;
 
 struct Args {
     jobs: Option<String>,
+    channel: Channel,
     out: PathBuf,
     shortcut: Option<Option<PathBuf>>,
 }
 
 fn usage() -> &'static str {
-    "usage: cargo run -p dist [-- [-j N] [--out DIR] [--shortcut] [--shortcut-dir DIR]]"
+    "usage: cargo run -p dist [-- [-j N] [--channel stable|dev] [--out DIR] [--shortcut] [--shortcut-dir DIR]]"
+}
+
+/// The build's channel, which the player names and whose settings it keeps.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Channel {
+    Stable,
+    Dev,
+}
+
+impl Channel {
+    fn parse(s: &str) -> Result<Channel, String> {
+        match s {
+            "stable" => Ok(Channel::Stable),
+            "dev" => Ok(Channel::Dev),
+            _ => Err(format!("--channel is stable or dev, not {s}")),
+        }
+    }
+
+    fn name(self) -> &'static str {
+        match self {
+            Channel::Stable => "stable",
+            Channel::Dev => "dev",
+        }
+    }
+
+    /// The folder its build goes to without `--out`.
+    fn out(self) -> &'static str {
+        match self {
+            Channel::Stable => "dist",
+            Channel::Dev => "dist-dev",
+        }
+    }
 }
 
 /// The repository's root, from this tool's place in it.
@@ -38,7 +77,8 @@ fn root() -> &'static Path {
 fn parse_args() -> Result<Args, String> {
     let mut a = Args {
         jobs: None,
-        out: root().join("dist"),
+        channel: Channel::Stable,
+        out: PathBuf::new(),
         shortcut: None,
     };
     let mut it = std::env::args().skip(1);
@@ -46,12 +86,16 @@ fn parse_args() -> Result<Args, String> {
         let mut value = || it.next().ok_or(format!("{arg} needs a value"));
         match arg.as_str() {
             "-j" | "--jobs" => a.jobs = Some(value()?),
+            "--channel" => a.channel = Channel::parse(&value()?)?,
             "--out" => a.out = value()?.into(),
             "--shortcut" => a.shortcut = Some(a.shortcut.flatten()),
             "--shortcut-dir" => a.shortcut = Some(Some(value()?.into())),
             "-h" | "--help" => return Err(String::new()),
             other => return Err(format!("unknown argument {other}")),
         }
+    }
+    if a.out.as_os_str().is_empty() {
+        a.out = root().join(a.channel.out());
     }
     a.out = std::path::absolute(&a.out).map_err(|e| format!("{}: {e}", a.out.display()))?;
     Ok(a)
@@ -72,6 +116,27 @@ fn cargo(args: &[&str]) -> Result<std::process::Output, String> {
                 Err(format!("cargo {} failed", args.join(" ")))
             }
         })
+}
+
+/// The commit being built: git's short hash of HEAD, with `-dirty` when tracked files differ
+/// from it; `unknown` without git.
+fn commit() -> String {
+    let git = |args: &[&str]| {
+        Command::new("git")
+            .args(args)
+            .current_dir(root())
+            .output()
+            .ok()
+            .filter(|o| o.status.success())
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
+    };
+    let Some(hash) = git(&["rev-parse", "--short=8", "HEAD"]).filter(|h| !h.is_empty()) else {
+        return "unknown".into();
+    };
+    match git(&["status", "--porcelain", "--untracked-files=no"]) {
+        Some(changes) if changes.is_empty() => hash,
+        _ => format!("{hash}-dirty"),
+    }
 }
 
 /// The workspace's target folder, from `cargo metadata`.
@@ -231,11 +296,18 @@ fn run(a: &Args) -> Result<(), String> {
     if let Some(j) = &a.jobs {
         build.extend(["-j", j]);
     }
-    println!("cargo {}", build.join(" "));
+    let commit = commit();
+    println!(
+        "cargo {} (channel {}, commit {commit})",
+        build.join(" "),
+        a.channel.name()
+    );
     let cargo = std::env::var("CARGO").unwrap_or_else(|_| "cargo".into());
     let status = Command::new(&cargo)
         .args(&build)
         .current_dir(root())
+        .env("MELEE_HD_CHANNEL", a.channel.name())
+        .env("MELEE_HD_COMMIT", &commit)
         .env(
             "CARGO_ENCODED_RUSTFLAGS",
             encoded_rustflags(&remap_flags(&target)),
@@ -288,6 +360,25 @@ mod tests {
             Some("C:\\melee-hd\\target \"x\" \u{e9}")
         );
         assert_eq!(json_string(json, "workspace_root"), None);
+    }
+
+    #[test]
+    fn takes_the_channel() {
+        assert_eq!(Channel::parse("stable"), Ok(Channel::Stable));
+        assert_eq!(Channel::parse("dev"), Ok(Channel::Dev));
+        assert!(Channel::parse("local").is_err());
+        assert_eq!(Channel::Dev.out(), "dist-dev");
+        assert_eq!(Channel::Stable.out(), "dist");
+    }
+
+    #[test]
+    fn stamps_a_commit() {
+        let c = commit();
+        let hash = c.strip_suffix("-dirty").unwrap_or(&c);
+        assert!(
+            c == "unknown" || hash.len() >= 8 && hash.bytes().all(|b| b.is_ascii_hexdigit()),
+            "{c}"
+        );
     }
 
     #[test]
