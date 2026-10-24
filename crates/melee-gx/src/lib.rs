@@ -825,6 +825,44 @@ mod tests {
         fifo
     }
 
+    /// A palette load takes its source from LOADTLUT0's low 21 bits alone. `GXInitTlutObj`
+    /// leaves bits 21 to 23 as its caller's stack held them, and the console sends all eight
+    /// values there; melee-render sends 0, which is right only while nothing reads them
+    /// (docs/melee-bugs.md, "A palette load's address goes out with bits from the stack").
+    #[test]
+    fn palette_loads_ignore_the_bits_above_the_address() {
+        struct Palettes(std::cell::RefCell<Vec<u32>>);
+        impl Memory for Palettes {
+            fn read(&self, phys: u32, out: &mut [u8]) {
+                self.0.borrow_mut().push(phys);
+                for (i, b) in out.iter_mut().enumerate() {
+                    *b = (phys as usize + i) as u8 ^ (phys >> 8) as u8;
+                }
+            }
+        }
+        let load = |high: u32| {
+            let mem = Palettes(Default::default());
+            let mut state = State::new();
+            let mut fifo = Vec::new();
+            // A 256-entry palette (16 lines) at 0x00D46A60 into the first palette region.
+            for reg in [
+                (LOADTLUT0 as u32) << 24 | high << 21 | 0x00D4_6A60 >> 5,
+                (LOADTLUT1 as u32) << 24 | 16 << 10 | 0x200,
+            ] {
+                fifo.push(0x61);
+                fifo.extend(reg.to_be_bytes());
+            }
+            state.feed(&mem, &fifo, &mut Vec::new(), false);
+            (mem.0.into_inner(), state.tmem[0x4_0000..0x4_0200].to_vec())
+        };
+        let clear = load(0);
+        assert_eq!(clear.0, [0x00D4_6A60]);
+        assert!(clear.1.iter().any(|&b| b != 0));
+        for high in 1..8 {
+            assert_eq!(load(high), clear, "bits 21 to 23 = {high}");
+        }
+    }
+
     /// The registers' hashes a state starts keeping when a run first asks for digests are those
     /// it would have kept from the start.
     #[test]
