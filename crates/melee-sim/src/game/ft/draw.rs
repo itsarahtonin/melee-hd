@@ -223,12 +223,24 @@ impl Running<'_> {
             let root = self.fighter_root(g);
             self.draw_fighter_tree(f, root, vmtx, pass);
             self.kind_draw(g, vmtx, pass);
+            self.end_refraction(f);
             self.fighter_light_reset(f);
         }
         if let Some(a) = self.game.fighters[f.0].x20A0_accessory {
             self.draw_fighter_tree(f, Some(a), None, pass);
         }
         self.draw_afterimage(f, pass);
+    }
+
+    /// A refracted fighter's drawing ended, `ftCo_800C8AF0`: refraction's material setup
+    /// (`lbRefract_80022998`) left indirect texturing on, which `lbRefract_800225D4` turns
+    /// off, putting HAL's state caches out of date ([`display::Draw::RefractEnd`]).
+    #[doc(alias = "ftCo_800C8AF0")]
+    #[doc(alias = "lbRefract_800225D4")]
+    fn end_refraction(&mut self, f: FighterId) {
+        if self.game.fighters[f.0].x2226_b5 {
+            self.game.objs.display.draws.push(display::Draw::RefractEnd);
+        }
     }
 
     /// A sword's afterimage, `ftCo_800C2600`: in the translucent pass, once the ring holds

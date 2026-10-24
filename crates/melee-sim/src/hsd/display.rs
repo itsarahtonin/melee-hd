@@ -129,6 +129,9 @@ pub enum Draw {
     MagnifierErase(u8),
     /// The screen copied into refraction's source texture (`lbRefract_80022560`).
     RefractCopy,
+    /// A refracted fighter's tree drawn: the TEV back to direct texturing and HAL's state
+    /// caches out of date (`ftCo_800C8AF0`'s `lbRefract_800225D4`).
+    RefractEnd,
     /// The render copied into a shadow's texture (`HSD_ShadowEndRender`).
     ShadowCopy(super::shadow::ShadowId),
     /// Later draws render offscreen (`true`, into a texture) or to the screen
@@ -774,6 +777,7 @@ pub fn pobj_disp(
             setup_envelopes(objs, data, j, &envs);
             objs.pobjs[p].u = Binding::Envelopes(envs);
         }
+        pobj::SHAPEANIM => shape_anim_buffers(objs, p),
         _ => {}
     }
     objs.display.draws.push(Draw::Shape {
@@ -784,6 +788,31 @@ pub fn pobj_disp(
         rendermode,
         vmtx,
     });
+}
+
+/// `HSD_DEFAULT_MAX_SHAPE_VERTICES`, `HSD_DEFAULT_MAX_SHAPE_NORMALS`.
+const MAX_SHAPE_VERTICES: u32 = 2000;
+const MAX_SHAPE_NORMALS: u32 = 2000;
+
+/// The simulation side of `drawShapeAnim`: the scene's first shape animation drawn takes the
+/// blend buffers from the heap (the normals' only with a normal description); the blend
+/// itself is the renderer's.
+fn shape_anim_buffers(objs: &mut Objects, p: PObjId) {
+    let Binding::ShapeSet(set) = &objs.pobjs[p].u else {
+        panic!("a shape animation without its shape set");
+    };
+    let (n_vtx, has_normals) = (set.nb_vertex_index, set.normal_desc.is_some());
+    let o = &mut objs.pobjs;
+    if o.vertex_buffer == 0 {
+        o.vertex_buffer = crate::hsd::heap::mem_alloc(MAX_SHAPE_VERTICES * 12);
+    }
+    assert!(
+        n_vtx <= MAX_SHAPE_VERTICES as i32,
+        "the original's assertion failed: vertex_buffer_size >= shape_set->nb_vertex_index"
+    );
+    if has_normals && o.normal_buffer == 0 {
+        o.normal_buffer = crate::hsd::heap::mem_alloc(MAX_SHAPE_NORMALS * 12);
+    }
 }
 
 /// The joint a skinned joint's envelopes are relative to, the inline `HSD_JObjFindSkeleton`.

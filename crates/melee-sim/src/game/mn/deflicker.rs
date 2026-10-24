@@ -72,7 +72,7 @@ impl Running<'_> {
             self.lb_audio_call(SFX_BACK);
             let on = self.option_menu(g).1.cursor;
             self.set_deflicker(on);
-            self.card_game_save_changes();
+            self.card_game_mark_changes();
             self.game.menu.flow.entering_menu = 0;
             self.go_to_list(SETTINGS, 2, EXIT_TO);
         } else if self.game.options.deflicker.ready != 0 && ev & IN_A != 0 {

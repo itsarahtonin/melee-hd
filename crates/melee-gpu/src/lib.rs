@@ -490,6 +490,11 @@ pub struct Renderer {
     /// frame back too.
     pub xfb_on_gpu: bool,
     pub xfb_readback: bool,
+    /// For checks: copies kept on the GPU in these texture formats are also read back and
+    /// handed to the host as the encoder would have written them (`Sink::take_written`), so
+    /// memory holds them as in a reference whose renderer wrote them there. The copies are
+    /// still sampled from the GPU.
+    pub copies_to_memory: Vec<u32>,
     gpu_xfb: Option<xfb::GpuXfb>,
     draws_this_frame: u64,
     /// How many pixels a side each EFB pixel renders as: the EFB is this many times the
@@ -951,6 +956,7 @@ impl Renderer {
             track_copies: true,
             flush_at: None,
             on_cpu: Default::default(),
+            copies_to_memory: Vec::new(),
             scratch: Scratch::default(),
             built: Built::default(),
             alpha_test: None,
@@ -2005,6 +2011,19 @@ impl Renderer {
         }
     }
 
+    /// Reads a copy kept on the GPU back and hands its bytes, as the encoder would have
+    /// written them, to the host ([`Renderer::copies_to_memory`]), keeping it on the GPU.
+    fn write_back(&mut self, address: u32) {
+        let Some(c) = self.gpu_copies.get(&address) else {
+            return;
+        };
+        let Some(Some(entry)) = self.textures.get(c.id as usize) else {
+            return;
+        };
+        let texels = self.read_texture(&entry._texture, c.width, c.height);
+        self.written.extend(copy::encode_texels(c, &texels));
+    }
+
     /// Reads a copy kept on the GPU back and keeps its bytes as the encoder would have written
     /// them to memory, for a texture that samples it in another format or size.
     fn materialize(&mut self, address: u32) {
@@ -2732,6 +2751,9 @@ impl Renderer {
             && !self.on_cpu.contains(&request.footprint.address)
         {
             self.gpu_copy(&request);
+            if self.copies_to_memory.contains(&request.format) {
+                self.write_back(request.footprint.address);
+            }
             if self.track_copies {
                 self.footprints.record(request.footprint, mem);
             }

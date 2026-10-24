@@ -107,3 +107,44 @@ pub const NAMES_JP: [Option<&[u8]>; 33] = [
     Some(b"\x83T\x83\x93\x83h\x83o\x83b\x83O\x8cN"),
     None,
 ];
+
+impl Game {
+    /// A character kind's name as the saved language shows it, `gm_80160980`.
+    #[doc(alias = "gm_80160980")]
+    pub fn character_name(&self, ckind: u8) -> Option<&'static [u8]> {
+        let table = if self.gm.unlocks.is_us() {
+            &NAMES_US
+        } else {
+            &NAMES_JP
+        };
+        *table
+            .get(usize::from(ckind))
+            .unwrap_or_else(|| panic!("character kind {ckind} reads past the names' table"))
+    }
+
+    /// Name tag `slot`'s name (`GetNameText`), none for an empty slot (`IsNameValid`: its
+    /// first byte the terminator): its Shift-JIS bytes up to the terminator, which the
+    /// name's 8 bytes leave to the byte after them.
+    #[doc(alias = "GetNameText")]
+    #[doc(alias = "IsNameValid")]
+    pub fn name_text(&mut self, slot: u8) -> Option<Vec<u8>> {
+        let t = self.game_data.name_tag(usize::from(slot));
+        if t.namedata[0] == 0 {
+            return None;
+        }
+        let mut out: Vec<u8> = t.namedata.iter().map(|&b| b as u8).collect();
+        out.push(t.x1A0 as u8);
+        let end = out
+            .iter()
+            .position(|&b| b == 0)
+            .unwrap_or_else(|| panic!("name tag {slot}'s name runs past its terminator"));
+        out.truncate(end);
+        Some(out)
+    }
+
+    /// Whether every name tag slot has a name, `IsNameListFull` (`GetNumNameList`).
+    // Ports `IsNameListFull`; aliased once a check reaches it.
+    pub fn name_list_full(&mut self) -> bool {
+        (0..120u8).filter(|&i| self.name_text(i).is_some()).count() >= 0x78
+    }
+}

@@ -281,11 +281,8 @@ impl Ctx<'_> {
             }
             Some(ImageRef::Static(at)) => self.static_image(at),
             Some(ImageRef::Screen(n)) => self.screen_image(n),
-            // Listed one by one, so a new kind of image fails to build here until it's drawn.
-            Some(other @ (ImageRef::Refract(_) | ImageRef::RefractFrame)) => {
-                self.hsd.note(format!("image {other:?}"));
-                None
-            }
+            Some(ImageRef::Refract(i)) => self.refract_map_image(i),
+            Some(ImageRef::RefractFrame) => Some(self.refract_frame_image()),
             None => None,
         }
     }
@@ -341,10 +338,17 @@ impl Ctx<'_> {
                 }
             },
             tobj::COORD_SHADOW => {
-                let m = match self.blend {
+                let mut m = match self.blend {
                     Some(b) => b.shadow_tobj(t, &m),
                     None => m,
                 };
+                // Fountain of Dreams' reflection, its camera widened in widescreen.
+                if let Some(ImageRef::Data(d)) = o.imagedesc
+                    && let Some((_, k)) = self.reflection_widening()
+                    && self.reflection_image(d).is_some()
+                {
+                    m = super::magnify::widen_projection(&m, k);
+                }
                 let inv = self.hsd.inv_view_mtx();
                 let r = m.concat(&inv);
                 self.gx.load_tex_mtx_imm(&r.m, mtxid, GX_MTX3X4);
@@ -381,18 +385,21 @@ impl Ctx<'_> {
             }
             self.tobj_setup_mtx(t);
             let Some(img) = self.image(t) else { continue };
-            let o = &self.game.objs.tobjs[t];
             let data = self.data;
-            let (mut min_filter, lod_bias, bias_clamp, edge_lod, aniso) = match o.lod {
-                Some(l) => (
+            let lod = match self.game.objs.tobjs[t].lod {
+                Some(l) => Some((
                     data.u32(l),
                     data.f32(l.at(4)),
                     data.u8(l.at(8)),
                     data.u8(l.at(9)),
                     data.u32(l.at(0xC)),
-                ),
-                None => (GX_LIN_MIP_LIN, 0.0, GX_FALSE, GX_FALSE, GX_ANISO_1),
+                )),
+                // Refraction's textures take theirs from the executable.
+                None => self.refract_lod(t),
             };
+            let o = &self.game.objs.tobjs[t];
+            let (mut min_filter, lod_bias, bias_clamp, edge_lod, aniso) =
+                lod.unwrap_or((GX_LIN_MIP_LIN, 0.0, GX_FALSE, GX_FALSE, GX_ANISO_1));
             let mut texobj = TexObj::default();
             let mipmap = u8::from(img.mipmap);
             match img.format {

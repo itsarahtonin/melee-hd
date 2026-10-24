@@ -1,7 +1,7 @@
 //! F12's bug capture: a folder beside the executable (`captures/<time>`) with the frame as
 //! shown (`shown.png`), the same draws drawn again by a new frame builder and renderer, with
 //! the same blend (`fresh.png`) and with none (`fresh-unblended.png`), and what drew them
-//! (`info.txt`). A glitch the fresh frame doesn't have lives in what the player keeps between
+//! (`info.txt`, which names the build first). A glitch the fresh frame doesn't have lives in what the player keeps between
 //! frames (the frame builder's caches, the GPU's state, the renderer's textures); one it has
 //! too lives in the draws, the state they read, or the blend. Two more split the first case:
 //! `live-stream.png`, the stream the player drew run by a new renderer from the GPU's registers
@@ -173,6 +173,7 @@ fresh:
         None => return Err("live-stream.png: the stream copied no frame".into()),
     }
     let mut info = String::new();
+    let _ = writeln!(info, "{}", crate::channel::stamp());
     let _ = writeln!(info, "mode {}", about.mode);
     let _ = writeln!(info, "tick {}", about.tick);
     match blend {

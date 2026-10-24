@@ -137,7 +137,7 @@ impl Running<'_> {
             self.lb_audio_call(SFX_BACK);
             self.game.menu.flow.entering_menu = 0;
             self.set_sound_balance(mix as i8);
-            self.card_game_save_changes();
+            self.card_game_mark_changes();
             self.go_to_list(SETTINGS, 1, EXIT_TO);
             return;
         }

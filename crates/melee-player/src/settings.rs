@@ -1,10 +1,13 @@
 //! The player's settings folder: the disc it plays, asked for once with a file picker and
 //! remembered, the launcher's last match, and the log when there's no console (`console`).
 //! It's `%APPDATA%\melee-hd` on Windows and `$XDG_CONFIG_HOME/melee-hd` or `~/.config/melee-hd`
-//! elsewhere, or the folder `MELEE_HD_SETTINGS` names.
+//! elsewhere (`melee-hd-dev` for a dev build, [`crate::channel`]), or the folder
+//! `MELEE_HD_SETTINGS` names.
 
+use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 
+use crate::channel::Channel;
 use melee_data::disc::{Disc, DiscError, GAME_ID, REVISION};
 use rfd::{FileDialog, MessageButtons, MessageDialog, MessageDialogResult, MessageLevel};
 
@@ -15,15 +18,21 @@ pub const LAST_MATCH: &str = "last-match.txt";
 
 /// The settings folder.
 pub fn folder() -> PathBuf {
-    if let Some(dir) = std::env::var_os("MELEE_HD_SETTINGS") {
+    folder_of(crate::channel::channel(), |name| std::env::var_os(name))
+}
+
+/// The settings folder of a build of `channel`, with `var` the environment: the dev build's is
+/// `melee-hd-dev` (`channel`).
+fn folder_of(channel: Channel, var: impl Fn(&str) -> Option<OsString>) -> PathBuf {
+    if let Some(dir) = var("MELEE_HD_SETTINGS") {
         return dir.into();
     }
-    let base = std::env::var_os("APPDATA")
-        .or_else(|| std::env::var_os("XDG_CONFIG_HOME"))
+    let base = var("APPDATA")
+        .or_else(|| var("XDG_CONFIG_HOME"))
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".config")))
+        .or_else(|| var("HOME").map(|h| PathBuf::from(h).join(".config")))
         .unwrap_or_else(|| PathBuf::from("."));
-    base.join("melee-hd")
+    base.join(channel.folder())
 }
 
 /// A settings file's text; none when it's missing or unreadable.
@@ -163,6 +172,7 @@ pub fn capitalized(s: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::channel::env;
 
     #[test]
     fn a_wrong_disc_is_explained() {
@@ -181,5 +191,33 @@ mod tests {
             wrong("GMSE01", 0),
             "It isn't Super Smash Bros. Melee (its game ID is GMSE01)."
         );
+    }
+
+    #[test]
+    fn a_dev_build_keeps_its_own_settings() {
+        let windows = env(&[("APPDATA", "AD"), ("HOME", "H")]);
+        let elsewhere = env(&[("HOME", "H")]);
+        let xdg = env(&[("XDG_CONFIG_HOME", "X")]);
+        let base = |b: &str, f: &str| Path::new(b).join(f);
+        assert_eq!(folder_of(Channel::Stable, &windows), base("AD", "melee-hd"));
+        assert_eq!(folder_of(Channel::Local, &windows), base("AD", "melee-hd"));
+        assert_eq!(
+            folder_of(Channel::Dev, &windows),
+            base("AD", "melee-hd-dev")
+        );
+        assert_eq!(folder_of(Channel::Dev, &xdg), base("X", "melee-hd-dev"));
+        assert_eq!(
+            folder_of(Channel::Dev, &elsewhere),
+            Path::new("H").join(".config").join("melee-hd-dev")
+        );
+        assert_eq!(
+            folder_of(Channel::Local, &elsewhere),
+            Path::new("H").join(".config").join("melee-hd")
+        );
+        // MELEE_HD_SETTINGS wins in every channel.
+        let named = env(&[("MELEE_HD_SETTINGS", "S"), ("APPDATA", "AD")]);
+        for c in [Channel::Stable, Channel::Dev, Channel::Local] {
+            assert_eq!(folder_of(c, &named), PathBuf::from("S"));
+        }
     }
 }

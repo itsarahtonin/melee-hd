@@ -634,6 +634,7 @@ impl Scan {
         }
         let j = hit.judged;
         let mut text = String::new();
+        let _ = writeln!(text, "{}", crate::channel::stamp());
         let _ = writeln!(text, "mode {mode}");
         let _ = writeln!(
             text,

@@ -176,18 +176,14 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022EE84` (with `mask`, stopping as [`Running::anim_loop_stopped`] does) and
-    /// `mn_8022EFD8` (without): one joint's animation, not its tree's, one frame on through
-    /// the loop; a loop that stops does nothing more once at its end.
+    /// `mn_8022EE84`: one joint's animation, not its tree's, one frame on through the loop,
+    /// the objects `mask` names stopped as [`Running::anim_loop_stopped`] does; a loop that
+    /// stops does nothing more once at its end. Without the mask it is `mn_8022EFD8`
+    /// ([`Running::anim_loop_one`]).
     #[doc(alias = "mn_8022EE84")]
-    #[doc(alias = "mn_8022EFD8")]
-    pub(crate) fn anim_loop_one(&mut self, j: JObjId, l: AnimLoop, mask: Option<u32>) -> f64 {
+    pub(crate) fn anim_loop_one_stopped(&mut self, j: JObjId, l: AnimLoop, mask: u32) -> f64 {
         let cur = f64::from(anim_frame(self, j));
-        let stop = |r: &mut Running, j: JObjId| {
-            if let Some(mask) = mask {
-                r.options_stop(Some(j), mask);
-            }
-        };
+        let stop = |r: &mut Running, j: JObjId| r.options_stop(Some(j), mask);
         if !(reg(l.start) <= cur) || !(cur <= reg(l.end)) {
             jobj::req_anim(&mut self.game.objs, Some(j), l.start);
             stop(self, j);

@@ -82,8 +82,8 @@ pub struct DataDel {
     pub data: std::collections::BTreeMap<u32, DataDelData>,
 }
 
-/// `mn_80231634`: a joint's first child, none for no joint.
-#[doc(alias = "mn_80231634")]
+/// `mn_80231634`: a joint's first child, none for no joint (aliased where the rules' list
+/// ports it, `rules_list`).
 fn first_child(r: &Running, j: Option<JObjId>) -> Option<JObjId> {
     j.and_then(|j| r.game.objs.jobjs[j].child)
 }
@@ -204,9 +204,9 @@ impl Running<'_> {
         }
         let f = reg(anim_frame(self, root));
         if reg(WARN_IN.start) <= f && f < reg(WARN_IN.end) {
-            let f = self.anim_loop_one(panel.expect("the warning's panel"), WARN_IN, None);
+            let f = self.anim_loop_one(panel.expect("the warning's panel"), WARN_IN);
             let ex = self.options_node(Some(root), WARN_EXCLAIM);
-            self.anim_loop_one(ex.expect("the warning's mark"), WARN_IN, None);
+            self.anim_loop_one(ex.expect("the warning's mark"), WARN_IN);
             if f >= reg(WARN_IN.end) {
                 self.datadel_warn_text(d.warning);
             }
@@ -430,11 +430,11 @@ impl Running<'_> {
     /// The screen's tree and its entries' panels, one animation frame through `l`.
     fn datadel_anim(&mut self, gobj: GObjId, l: AnimLoop) -> f64 {
         let j = self.options_jobj(gobj);
-        let f = self.anim_loop_one(j, l, Some(0x480));
+        let f = self.anim_loop_one_stopped(j, l, 0x480);
         let d = self.datadel();
         for k in ENTRY_JOINTS.iter().take(6) {
             let e = d.jobjs[*k].expect("an entry's joint");
-            self.anim_loop_one(e, l, Some(0x480));
+            self.anim_loop_one_stopped(e, l, 0x480);
         }
         f
     }

@@ -111,40 +111,6 @@ impl gmm_x0 {
         }
     }
 
-    /// `IsNameValid`: whether name tag `slot` holds a name.
-    #[doc(alias = "IsNameValid")]
-    pub fn name_valid(&self, slot: i32) -> bool {
-        // `mnName_StringTerminator`: "".
-        self.name_tag_ref(slot as u8 as usize).namedata[0] != 0
-    }
-
-    /// `GetNameCount`: how many name tags hold names.
-    #[doc(alias = "GetNameCount")]
-    pub fn name_count(&self) -> i32 {
-        (0..NAMETAG_COUNT as i32)
-            .filter(|&i| self.name_valid(i))
-            .count() as i32
-    }
-
-    /// `GetNameText`: name tag `slot`'s name up to its terminator, none for an empty one.
-    #[doc(alias = "GetNameText")]
-    pub fn name_text(&self, slot: i32) -> Option<Vec<u8>> {
-        if !self.name_valid(slot) {
-            return None;
-        }
-        let d = self.name_tag_ref(slot as u8 as usize);
-        let bytes = d.namedata.iter().map(|&b| b as u8);
-        // A full name runs on into the fields after it, as a C string does.
-        let after = [d.x1A0 as u8, d.rumble_enabled, d.x1A2 as u8, 0];
-        Some(bytes.chain(after).take_while(|&b| b != 0).collect())
-    }
-
-    /// The name tag `slot`, to read.
-    pub fn name_tag_ref(&self, slot: usize) -> &NameTagData {
-        let s = slot as u8 as usize;
-        &self.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
-    }
-
     /// The name tag `slot` (`GetPersistentNameData`).
     pub fn name_tag(&mut self, slot: usize) -> &mut NameTagData {
         let s = slot as u8 as usize;

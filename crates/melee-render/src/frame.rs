@@ -198,14 +198,23 @@ impl Ctx<'_> {
                         v = x;
                     }
                 }
+                // Fountain of Dreams' reflection, which the water shows across the widened
+                // view: its camera and copy widen with it (`Ctx::reflection_widening`).
+                if let Some((width, k)) = self.reflection_widening()
+                    && self.is_reflection_camera(*c)
+                {
+                    v.viewport[1] = v.viewport[0] + f32::from(width);
+                    v.scissor[1] = v.scissor[0] + width;
+                    widen(&mut v, k);
+                }
                 // Cameras that draw the whole screen (not a shadow's or a magnifier
                 // bubble's, which draw into textures); the render pass can't tell, since
                 // the frame stays in the shadows' offscreen pass, as the original's does.
-                if v.viewport == [0.0, 640.0, 0.0, 480.0]
+                else if v.viewport == [0.0, 640.0, 0.0, 480.0]
                     && let Some(aspect) = self.hsd.widescreen
                     && !fills_screen(self.game, *c)
                 {
-                    widen(&mut v, aspect);
+                    widen(&mut v, aspect / GAME_ASPECT);
                 }
                 self.camera_begin(&v);
                 if self.hsd.offscreen
@@ -230,17 +239,6 @@ impl Ctx<'_> {
                 1
             }
             Draw::Rendering(g) => {
-                // A refracted fighter's callback ends each tree it draws by putting the TEV
-                // back to direct and the caches out of date (`ftCo_800C8AF0`,
-                // `lbRefract_800225D4`).
-                if let Some(f) = self.hsd.rendering_fighter
-                    && self.hsd.rendering != *g
-                    && self.game.fighters[f.0].x2226_b5
-                {
-                    self.gx.set_tev_direct(0);
-                    self.gx.set_num_ind_stages(0);
-                    self.invalidate(crate::hsd::state::STATE_ALL);
-                }
                 if let Some(g) = *g {
                     self.particles_rendering(g);
                 }
@@ -329,16 +327,17 @@ impl Ctx<'_> {
                 1
             }
             Draw::Erase => {
-                // The game camera erases color in its background color; a camera whose erase
-                // color the display pass set (Fountain of Dreams' reflection, Pokémon
-                // Stadium's text) color in that color.
+                // A camera whose erase color the display pass set (Fountain of Dreams'
+                // reflection, Pokémon Stadium's text) erases in that color, whatever its
+                // viewport: with the reflection size code the reflection's covers the screen.
+                // The game camera erases in its background color.
                 let full = self
                     .hsd
                     .camera
                     .is_some_and(|v| v.viewport == [0.0, 640.0, 0.0, 480.0]);
                 let color = match self.hsd.erase_color.take() {
-                    _ if full => self.erase_color(),
                     Some(c) => c,
+                    None if full => self.erase_color(),
                     None => {
                         self.hsd.note_once("an erase without an erase color");
                         Color::new(0, 0, 0, 0xFF)
@@ -388,6 +387,17 @@ impl Ctx<'_> {
             Draw::Particles { .. } => self.particles(draws, i),
             Draw::MagnifierCopy(i) => {
                 self.magnifier_copy(*i);
+                1
+            }
+            Draw::RefractCopy => {
+                self.refract_copy();
+                1
+            }
+            Draw::RefractEnd => {
+                // `lbRefract_800225D4`.
+                self.gx.set_tev_direct(0);
+                self.gx.set_num_ind_stages(0);
+                self.invalidate(crate::hsd::state::STATE_ALL);
                 1
             }
             Draw::ReflectionCopy => {
@@ -472,15 +482,14 @@ impl Ctx<'_> {
     }
 }
 
-/// Widescreen: a camera drawing to the screen sees `aspect / GAME_ASPECT` times as wide,
+/// Widescreen: a camera drawing to the screen sees `k` (`aspect / GAME_ASPECT`) times as wide,
 /// keeping its height, so the frame, shown at `aspect`, keeps the proportions it has at the
 /// game's 73:60. The gameplay camera (the simulation's, which decides who is off screen) stays
 /// as it is; only the view widens, and the 2D cameras' content (the HUD) keeps its shape and
 /// its place in the 73:60 middle. What's made to cover the screen ([`fills_screen`]) isn't
 /// widened, so it stretches across the picture.
-fn widen(v: &mut melee_sim::hsd::display::CameraView, aspect: f32) {
+fn widen(v: &mut melee_sim::hsd::display::CameraView, k: f32) {
     use melee_sim::hsd::cobj;
-    let k = aspect / GAME_ASPECT;
     match v.projection_type {
         cobj::PERSPECTIVE => v.projection[1] *= k,
         cobj::FRUSTUM | cobj::ORTHO => {

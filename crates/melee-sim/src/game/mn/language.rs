@@ -90,20 +90,14 @@ impl Running<'_> {
     fn language_change(&mut self, lang: u8) {
         self.game.game_data.set_saved_language(lang);
         self.game.sync_unlocks();
+        // The language's bank loads wait at once, and their first wait starts the save.
         self.card_game_save_changes();
         self.lb_audio_language(0xAD);
-        self.menu_restart_mode(super::super::gm::machine::GM_MENU);
+        self.menu_exit_to(super::super::gm::machine::GM_MENU);
         self.mark_links_ran(1, 9);
         let f = &mut self.game.menu.flow;
         f.cur_menu = SETTINGS;
         f.hovered_selection = 4;
-    }
-
-    /// `mn_80229860`: the scene ends for mode `mode`.
-    #[doc(alias = "mn_80229860")]
-    pub(crate) fn menu_restart_mode(&mut self, mode: u8) {
-        self.game.menu_mode.pending_mode = mode as i8;
-        self.game.end_scene();
     }
 
     /// `mn_8022F1A8`: every process of p-links `from` to `to` marked as run this pass

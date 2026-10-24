@@ -219,7 +219,7 @@ impl Running<'_> {
         s.unk_8 = Default::default();
         self.game.sync_unlocks();
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
         self.game.game_data.x39 = [0; 11];
     }
 
@@ -228,23 +228,19 @@ impl Running<'_> {
     /// open (`gm_801641E4(0, 1)`), the messages taken back and the save written.
     #[doc(alias = "gm_801647D0")]
     #[doc(alias = "gmMainLib_8015F490")]
-    #[doc(alias = "gm_80164430")]
-    #[doc(alias = "gm_IsStageUnlocked")]
-    #[doc(alias = "gm_801641E4")]
     pub fn erase_stages(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;
         s.x186A = 0;
         s.unk_28 = Default::default();
         self.game.sync_unlocks();
         let open = (0..29u8).any(|i| {
-            self.stage_unlocked(super::opening::stage_select_kind(i))
-                && self.game.game_data.thing.save_data.x1CB0.stage_mask & (1 << i) & 0xFF != 0
+            self.stage_unlocked(super::opening::stage_select_kind(i)) && self.stage_enabled(i)
         });
         if !open {
-            self.game.game_data.thing.save_data.x1CB0.stage_mask |= 1;
+            self.set_stage_enabled(0, true);
         }
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
     }
 
     /// Case 2: every character's 1P records (`x7C`) and the save's other records cleared
@@ -263,7 +259,7 @@ impl Running<'_> {
         s.x1B3C = z.x1B3C;
         s.pad_2D5 = z.pad_2D5;
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
     }
 
     /// Case 3: every character's VS records (`gmMainLib_8015F150`) and every name's
@@ -276,7 +272,7 @@ impl Running<'_> {
             super::main_lib::clear_name_tag(self.game.game_data.name_tag(i));
         }
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
     }
 
     /// Case 4: the trophies taken (`Toy_80311960`), their records cleared
@@ -297,7 +293,7 @@ impl Running<'_> {
         }
         self.game.sync_unlocks();
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
     }
 
     /// `mnDataDel_8024EA6C`'s erase: the game's data reset as at boot (`gmMainLib_8015FBA4`)
@@ -322,6 +318,6 @@ impl Running<'_> {
         let d = self.game.game_data.thing.save_data.x1CB0.deflicker;
         self.set_video_mode(d != 0);
         self.relock_messages();
-        self.card_game_save_changes();
+        self.card_game_mark_changes();
     }
 }

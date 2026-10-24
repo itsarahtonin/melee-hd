@@ -383,7 +383,7 @@ pub struct MainMenu {
     pub lights: Option<DataRef>,
     pub fog_desc: Option<DataRef>,
     /// The models (`MenMainBack_Top` to `MenMainCursorSs_Top`), in [`MODELS`]'s order.
-    pub models: [ModelDesc; 19],
+    pub models: [ModelDesc; 20],
     /// The lists' and the panel's user data, by their blocks' addresses.
     pub lists: BTreeMap<u32, ListData>,
     pub panels: BTreeMap<u32, PanelData>,
@@ -400,7 +400,7 @@ pub struct MainMenu {
 }
 
 /// The models' symbol stems, in the archive load's order.
-pub const MODELS: [&str; 19] = [
+pub const MODELS: [&str; 20] = [
     "MenMainBack_Top",
     "MenMainPanel_Top",
     "MenMainConTop_Top",
@@ -420,6 +420,7 @@ pub const MODELS: [&str; 19] = [
     "MenMainConIs_Top",
     "MenMainCursorIs_Top",
     "MenMainConSs_Top",
+    "MenMainCursorSs_Top",
 ];
 const BACK: usize = 0;
 const PANEL: usize = 1;
@@ -532,7 +533,7 @@ impl Running<'_> {
     /// `mn_80229624`: the menus' inputs from `slot`'s button maps (4 for all), none while
     /// the cooldown runs out.
     #[doc(alias = "mn_80229624")]
-    fn menu_inputs(&mut self, slot: u8) -> u32 {
+    pub(crate) fn menu_inputs(&mut self, slot: u8) -> u32 {
         let repeated = self.game.buttons_repeated(slot);
         let trigger = self.game.buttons_triggered(slot);
         let m = &mut self.game.menu;
@@ -1434,7 +1435,8 @@ impl Running<'_> {
     }
 
     /// The scene ends for mode `mode` (`gm_GetCurrentSceneExitData`'s pending mode).
-    fn menu_exit_to(&mut self, mode: u8) {
+    #[doc(alias = "mn_80229860")]
+    pub(crate) fn menu_exit_to(&mut self, mode: u8) {
         self.game.menu_mode.pending_mode = mode as i8;
         self.game.end_scene();
     }
@@ -1613,9 +1615,9 @@ impl Running<'_> {
     }
 
     /// `mn_8022D594`, the VS list's think: Melee and Tournament end the scene, Special
-    /// Melee is a list; the rules and names aren't this menu's.
+    /// Melee is a list, the rules and the names are screens of their own.
     #[doc(alias = "mn_8022D594")]
-    pub fn think_vs(&mut self, _gobj: GObjId) {
+    pub fn think_vs(&mut self, gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
@@ -1633,8 +1635,16 @@ impl Running<'_> {
                     self.lb_audio_call(1);
                     self.go_to_list(SPECIAL, 0, ENTER_TO);
                 }
-                3 => super::super::code::unported_call("mn_80231714 (the rules)"),
-                4 => super::super::code::unported_call("mnName_8023AC40 (the names)"),
+                3 => {
+                    self.lb_audio_call(1);
+                    self.rules_open();
+                    gobj::free(self, gobj);
+                }
+                4 => {
+                    self.lb_audio_call(1);
+                    self.names_open();
+                    gobj::free(self, gobj);
+                }
                 _ => {}
             }
         } else if b & IN_BACK != 0 {
@@ -1789,6 +1799,20 @@ impl Running<'_> {
         }
     }
 
+    /// Frees every GObj on process links `lo` to `hi`, `mn_8022F138` (`mn_8022F0F0` on
+    /// each).
+    // Ports `mn_8022F138`; aliased once a check reaches it.
+    pub(crate) fn free_gobj_links(&mut self, lo: u8, hi: u8) {
+        for link in lo..=hi {
+            let mut cur = self.game.world.first_in(link);
+            while let Some(g) = cur {
+                let next = self.game.world.gobj(g).next;
+                gobj::free(self, g);
+                cur = next;
+            }
+        }
+    }
+
     /// Runs a list's think.
     pub fn run_think(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
@@ -1811,7 +1835,7 @@ impl Running<'_> {
             super::gallery::THINK => self.gallery_think(gobj),
             super::gallery::LIST_PROC => self.gallery_list_proc(gobj),
             super::gallery::CURSOR_PROC => self.gallery_cursor_proc(gobj),
-            _ => return self.options_proc(gobj, f),
+            _ => return self.run_rules_proc(gobj, f) || self.options_proc(gobj, f),
         }
         true
     }
@@ -1836,14 +1860,7 @@ impl Running<'_> {
         self.menu_sound_balance();
         self.card_complete_all_tasks();
         self.mthp_release();
-        for link in 1..9 {
-            let mut cur = self.game.world.first_in(link);
-            while let Some(g) = cur {
-                let next = self.game.world.gobj(g).next;
-                gobj::free(self, g);
-                cur = next;
-            }
-        }
+        self.free_gobj_links(1, 8);
         self.sis_reset();
         self.menu_exit_to(super::super::gm::machine::GM_MENU);
     }
@@ -1921,7 +1938,7 @@ impl Running<'_> {
             matanim: Some(sym(&format!("{p}_matanim_joint"))),
             shapeanim: Some(sym(&format!("{p}_shapeanim_joint"))),
         };
-        let mut models = [ModelDesc::default(); 19];
+        let mut models = [ModelDesc::default(); 20];
         for (m, p) in models.iter_mut().zip(MODELS) {
             *m = model(p);
         }

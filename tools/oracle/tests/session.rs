@@ -67,8 +67,8 @@ fn ticks_align_with_reads() {
 }
 
 /// The memory card scene, the opening movie skipped with Start, the title, whose Start at
-/// tick 272 asks for the main menu, and the main menu, whose entry writes the save on the
-/// game's waits, to the character select's mode.
+/// tick 272 asks for the main menu, the main menu, whose entry writes the save on the game's
+/// waits, and the character select, from tick 357, to its button for the rules.
 #[test]
 fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
@@ -79,30 +79,96 @@ fn power_on_runs_through_the_main_menu() {
         "{out}"
     );
     assert!(
-        out.contains("357 ticks compared, no difference; stopped in tick 357: game mode 0x2's loading isn't ported"),
+        out.contains("475 ticks compared, no difference; stopped in tick 475: mn_80231804 (the rules from the select screen, task 8) isn't ported"),
         "{out}"
     );
 }
 
-/// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
-/// movie skipped, the title left to its attract loop, which starts the attract match, whose
-/// first tick differs in the fields its setup leaves to the heap the menus used (the
-/// stage's first: melee-sim's heap holds no bytes).
-#[test]
-fn an_idle_title_reaches_the_attract_match() {
-    let trace = ssbm_rs_local("traces/session/idle-title.trc");
-    let inputs = ssbm_rs_local("lockstep/idle-sessions/idle-title.inputs");
+fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(trace);
+    let inputs = ssbm_rs_local(inputs);
     if std::env::var("SSBM_DISC").is_err()
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
         eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
-        return;
+        return None;
     }
-    let out = session_with(&trace, &inputs, &["--heap"]);
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
+/// movie skipped, the title left to its attract loop, which starts the attract match on
+/// Fountain of Dreams from the title's preloads. Its first tick holds the heap's leftovers the
+/// menus left in fields no proof covers yet (docs/engine.md, a session's heap leftovers), so a
+/// strict run stops there; a survey, leaving out every field still unknown on both sides,
+/// plays the match to the trace's end.
+#[test]
+fn an_idle_title_reaches_the_attract_match() {
+    let (trace, inputs) = (
+        "traces/session/idle-title.trc",
+        "lockstep/idle-sessions/idle-title.inputs",
+    );
+    let Some(out) = session_at(trace, inputs, &["--heap"]) else {
+        return;
+    };
     assert!(
-        out.contains("799 ticks compared; tick 798 differs in")
-            && out.contains("first: p_link 5 #0 ground"),
+        out.contains("799 ticks compared; tick 798 differs in"),
+        "{out}"
+    );
+    let Some(out) = session_at(trace, inputs, &["--heap", "--leftovers-survey"]) else {
+        return;
+    };
+    assert!(out.contains("1515 ticks compared, no difference"), "{out}");
+}
+
+/// The opening movie played whole (`idle-movie`), then the title's attract loop and its
+/// match on Kongo Jungle, surveyed to the trace's end.
+#[test]
+fn an_idle_movie_plays_the_attract_match() {
+    let Some(out) = session_at(
+        "traces/session/idle-movie.trc",
+        "lockstep/idle-sessions/idle-movie.inputs",
+        &["--heap", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("7136 ticks compared, no difference"), "{out}");
+}
+
+/// The main menu's attract loop to its match on Brinstar (`attract`): the stage's bubbles'
+/// timer (`grZebes_GroundVars5`'s `xF8`) starts from the heap's leftover, which the original
+/// counts down from, so even a survey stops at the match's first tick (docs/melee-bugs.md).
+#[test]
+fn the_attract_match_on_brinstar_reads_a_leftover() {
+    let Some(out) = session_at(
+        "traces/menu-sessions/attract.trc",
+        "lockstep/menu-sessions/attract.inputs",
+        &["--heap", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("899 ticks compared; tick 898 differs in 1 places, first: p_link 5 #2 ground.u.zebes5.xF8: ours -1, theirs 2093"),
+        "{out}"
+    );
+}
+
+/// `2026-10-10_13-05-00`: the character select and the stage select, then the first match
+/// on Pokémon Stadium from the selects' preloads, surveyed to its results.
+#[test]
+fn a_session_plays_its_match_from_the_selects() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_13-05-00.trc",
+        "lockstep/recordings/2026-10-10_13-05-00.inputs",
+        &["--heap", "--ticks", "2600", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "2517 ticks compared, no difference; stopped in tick 2517: gm_Scene_Vs_OnExit's results"
+        ),
         "{out}"
     );
 }
@@ -482,14 +548,15 @@ fn the_options_toured() {
 }
 
 /// Rumble off for port 1, mono with the balance toward the sounds, deflicker off, each
-/// saved, then on to VS mode: clean to the character select's mode.
+/// saved, then on to VS mode: clean through the selects to the match's first tick, which
+/// differs in the heap's leftovers and the stage select's joints.
 #[test]
 fn the_options_set_on_to_a_match() {
     let Some(out) = options_session("set", &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains("1868 ticks compared, no difference; stopped in tick 1868: game mode 0x2's loading isn't ported"),
+        out.contains("2511 ticks compared; tick 2510 differs in"),
         "{out}"
     );
 }
@@ -535,6 +602,89 @@ fn the_options_catch_a_dropped_press() {
     };
     assert!(
         out.contains("726 ticks compared; tick 725 differs in"),
+        "{out}"
+    );
+}
+
+/// A rules or names session (`lockstep/rules-sessions/NAME.inputs` with its card, traced into
+/// `traces/rules-sessions/NAME.trc`).
+fn rules_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/rules-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// The VS rules: every option changed both ways (the mode, the time limit and the stock
+/// count through their wraps, the handicap, the ratio, the stage selection), the two screens
+/// under them hovered, B back to the VS list, the rules again and Start, into the character
+/// select to the trace's end.
+#[test]
+fn the_rules_changed_and_back() {
+    let Some(out) = rules_session("rules", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("4037 ticks compared, no difference"), "{out}");
+}
+
+/// The item switch: items toggled in both columns, the frequency both ways, B's save, the
+/// switch again and Start's save, into the character select to the trace's end.
+#[test]
+fn the_item_switch_saves() {
+    let Some(out) = rules_session("rules-items", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2836 ticks compared, no difference"), "{out}");
+}
+
+/// The extra rules unlocked (the score display and the random stage switch): every option,
+/// the stage switch with locked stages, its save, back out and Start, into the character
+/// select to the trace's end.
+#[test]
+fn the_extra_rules_and_the_stage_switch() {
+    let Some(out) = rules_session("rules-plus", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3236 ticks compared, no difference"), "{out}");
+}
+
+/// Name entry: a name typed and backspaced, random names drawn from the seed, OK and its
+/// save, sort, erase with no and yes, out.
+#[test]
+fn a_name_made_and_one_erased() {
+    let Some(out) = rules_session("names", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2547 ticks compared, no difference"), "{out}");
+}
+
+/// Name entry's kana: the modes, the glyphs' pop-ups (one closed), the mode buttons, the
+/// keys' wraps, a name emptied and cancelled, another typed and OK'd with Start.
+#[test]
+fn a_kana_name_and_a_cancelled_one() {
+    let Some(out) = rules_session("names-kana", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3148 ticks compared, no difference"), "{out}");
+}
+
+/// The rules to a match (a one-minute time match, ratio 1.5, items off), through the character
+/// and stage selects to the match's first tick, which differs in the heap's leftovers,
+/// timeline included (tick 1506's audio frame, due in the draw time's read before the
+/// render's sleep, ran 16 ticks late until the options task's fix).
+#[test]
+fn the_rules_reach_the_match() {
+    let Some(out) = rules_session("rules-match", &["--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("2259 ticks compared; tick 2258 differs in"),
         "{out}"
     );
 }

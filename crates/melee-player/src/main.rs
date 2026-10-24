@@ -58,6 +58,7 @@
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
 mod capture;
+mod channel;
 mod console;
 #[cfg(test)]
 mod cosmetic_tests;
@@ -2237,6 +2238,13 @@ fn run(args: Args) -> ExitCode {
 
 fn main() -> ExitCode {
     console::attach();
+    // Which build this is, and the folders it keeps (a dev build's are its own).
+    eprintln!(
+        "{}; settings in {}, caches in {}",
+        channel::stamp(),
+        settings::folder().display(),
+        pipelines::dir().map_or("none".into(), |d| d.display().to_string())
+    );
     let mut args = match parse_args() {
         Ok(a) => a,
         Err(e) => {

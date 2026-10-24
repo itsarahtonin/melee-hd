@@ -124,7 +124,7 @@ impl Running<'_> {
     /// none.
     fn name_slot_raw(&self, row: i32) -> i32 {
         let scroll = i32::from(self.vibration().scroll);
-        let count = self.game.game_data.name_count();
+        let count = self.name_count();
         if count < 8 && row >= count {
             return 0xFF;
         }
@@ -214,7 +214,7 @@ impl Running<'_> {
             let g = self.game.options.vibration.gobj.expect("the rumble screen");
             gobj::free(self, g);
             self.game.pads.rumble.remove_all();
-            self.card_game_save_changes();
+            self.card_game_mark_changes();
             return;
         }
         if reg(f32::from(self.vibration().intro)) <= reg(INTRO_LOOP.end) {
@@ -246,7 +246,7 @@ impl Running<'_> {
             }
             return;
         }
-        if self.game.game_data.name_count() == 0 {
+        if self.name_count() == 0 {
             return;
         }
         for j in 0..4 {
@@ -291,7 +291,7 @@ impl Running<'_> {
                     self.vibration_mut().row -= 1;
                     self.vibration_place_cursor();
                 }
-            } else if self.game.game_data.name_count() > 8 && self.vibration().scroll != 0 {
+            } else if self.name_count() > 8 && self.vibration().scroll != 0 {
                 self.lb_audio_call(SFX_MOVE);
                 self.vibration_mut().scroll -= 1;
                 self.vibration_refresh_names();
@@ -304,11 +304,11 @@ impl Running<'_> {
                     self.vibration_mut().row += 1;
                     self.vibration_place_cursor();
                 }
-            } else if self.game.game_data.name_count() > 8 && self.name_slot_raw(8) as u8 != 0xFF {
+            } else if self.name_count() > 8 && self.name_slot_raw(8) as u8 != 0xFF {
                 self.lb_audio_call(SFX_MOVE);
                 let d = self.vibration_mut();
                 d.scroll = d.scroll.wrapping_add(1);
-                if i32::from(self.vibration().scroll) >= self.game.game_data.name_count() {
+                if i32::from(self.vibration().scroll) >= self.name_count() {
                     self.vibration_mut().scroll = 0;
                 }
                 self.vibration_refresh_names();
@@ -410,7 +410,7 @@ impl Running<'_> {
         let text = s.text_mut(t);
         text.pos = Vec3::new(at.x, mem(y), at.z);
         text.font_size = [0.03, 0.03];
-        let name = self.game.game_data.name_text(i32::from(slot));
+        let name = self.game.name_text(slot);
         let name = name.unwrap_or_else(|| panic!("the names' row {row} shows empty slot {slot}"));
         self.game.sis.add_string(t, 0.0, 0.0, Some(&name));
         let m = self.game.options.vibration.models[SWITCH];
@@ -503,7 +503,7 @@ impl Running<'_> {
             if d.connected[port] != 0 {
                 jobj::clear_flags_all(&mut self.game.objs.jobjs, d.jobjs[PANEL_IDS[port]], HIDDEN);
             }
-        } else if reg(REVEAL[4]) == frame && self.game.game_data.name_count() != 0 {
+        } else if reg(REVEAL[4]) == frame && self.name_count() != 0 {
             self.vibration_refresh_names();
             let m = self.game.options.vibration.models[CURSOR];
             let data = self.data;
