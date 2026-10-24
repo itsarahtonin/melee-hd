@@ -338,16 +338,17 @@ impl Ctx<'_> {
                 1
             }
             Draw::Erase => {
-                // The game camera erases color in its background color; a camera whose erase
-                // color the display pass set (Fountain of Dreams' reflection, Pokémon
-                // Stadium's text) color in that color.
+                // A camera whose erase color the display pass set (Fountain of Dreams'
+                // reflection, Pokémon Stadium's text) erases in that color, whatever its
+                // viewport: with the reflection size code the reflection's covers the screen.
+                // The game camera erases in its background color.
                 let full = self
                     .hsd
                     .camera
                     .is_some_and(|v| v.viewport == [0.0, 640.0, 0.0, 480.0]);
                 let color = match self.hsd.erase_color.take() {
-                    _ if full => self.erase_color(),
                     Some(c) => c,
+                    None if full => self.erase_color(),
                     None => {
                         self.hsd.note_once("an erase without an erase color");
                         Color::new(0, 0, 0, 0xFF)

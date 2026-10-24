@@ -19,8 +19,8 @@ use common::{
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
     GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
     JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    ONETT, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
+    ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -337,6 +337,20 @@ fn fox_sheik_fd_6000() {
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn sheik_fox_fod_600() {
     compare(&SHEIK_FOX_FOD, 600, Group::Standard, Expect::Identical);
+}
+
+/// Fountain of Dreams with the reflection size code: the reflection camera, its viewport the
+/// whole screen, erases in the white the stage sets, not the game camera's background color.
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_600() {
+    compare(&PC_IZUMI_SIZE, 600, Group::Standard, Expect::Identical);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_6000() {
+    compare(&PC_IZUMI_SIZE, 6000, Group::Standard, Expect::Identical);
 }
 
 #[test]
