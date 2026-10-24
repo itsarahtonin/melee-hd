@@ -265,6 +265,7 @@ impl Running<'_> {
     pub fn card_game_flush(&mut self) {
         loop {
             self.card_writer_take();
+            self.card_writer_kick_due();
             let c = &self.game.card_game;
             if !c.dirty && c.x10 == 0 {
                 return;
@@ -351,10 +352,26 @@ impl Running<'_> {
         c.x10 = 0;
     }
 
-    /// `lbCardGame_SaveChanges`: the power-on time added to the save, and the save marked
-    /// to write.
-    // Ports `lbCardGame_SaveChanges`; aliased once a check reaches it.
+    /// `lbCardGame_SaveChanges` where one of the game's waits follows at once (a scene's
+    /// entry): the save marked to write and the writer started as that wait runs it.
     pub fn card_game_save_changes(&mut self) {
+        self.card_game_mark_changes();
+        self.card_writer_kick();
+    }
+
+    /// The writer started by the game's next wait (`lb_8001CC84`'s first state) if the save
+    /// is marked to write and nothing writes: the display pass's (`Session::render`) after a
+    /// process saved, or the scene's end (`lb_8001CDB4`).
+    pub fn card_writer_kick_due(&mut self) {
+        let c = &self.game.card_game;
+        if c.dirty && c.x10 == 0 {
+            self.card_writer_kick();
+        }
+    }
+
+    /// `lbCardGame_SaveChanges`: the power-on time added to the save, and the save marked
+    /// to write, which the game's next wait takes up ([`Self::card_writer_kick_due`]).
+    pub fn card_game_mark_changes(&mut self) {
         assert!(self.game.card_game.enable, "_p(enable)");
         // `gmMainLib_8015FC74`'s `lbTime_GetTimeInSeconds`: the clock's read.
         let now = self.session_seconds();
@@ -366,6 +383,5 @@ impl Running<'_> {
         let t = &mut self.game.game_data.thing.save_data.x1A54;
         *t = t.wrapping_add(add);
         self.game.card_game.dirty = true;
-        self.card_writer_kick();
     }
 }

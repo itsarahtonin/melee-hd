@@ -509,11 +509,13 @@ impl Session {
         // The pass's wait can take the pad alarm, whose handler probes the card.
         let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
-        self.game.audio.render_start(&self.data);
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
         };
+        // The pass's wait starts a save a process marked (`lb_8001CC84`).
+        r.card_writer_kick_due();
+        r.game.audio.render_start(r.data);
         r.card_writer_take();
         scene::render_screen(&mut r);
         lent.give_back(&mut self.game.objs.heap);
