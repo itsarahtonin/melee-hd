@@ -246,8 +246,9 @@ fn a_version_2_session_catches_a_dropped_clock() {
 }
 
 /// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, its
-/// yes and the switch (the SRAM's write at tick 311), clean through the prompt; the memory
-/// card scene after it differs in its first tick (open, docs/oracle.md).
+/// yes and the switch (the SRAM's write at tick 311), then the memory card scene (its files
+/// loaded over the prompt's freed `EfCoData.dat`), the movie and the title, to the trace's
+/// end.
 #[test]
 fn a_version_2_session_asks_for_progressive_scan() {
     let Some(out) = v2_session("progressive", &[]) else {
@@ -257,10 +258,7 @@ fn a_version_2_session_asks_for_progressive_scan() {
         out.contains("3 the same (db_gameLaunchButtonState 0x0200, DbLevel 0, the first game mode 0x27), 0 different"),
         "{out}"
     );
-    assert!(
-        out.contains("712 ticks compared; tick 711 differs"),
-        "{out}"
-    );
+    assert!(out.contains("1426 ticks compared, no difference"), "{out}");
 }
 
 /// Read 0 is the boot's (`db_GetGameLaunchButtonState`): A held there differs from what the
