@@ -392,6 +392,7 @@ pub fn init_data_bank(
 /// their references, as in the original.
 #[doc(alias = "hsd_80398A08")]
 pub fn init(objs: &mut Objects) {
+    crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Particle]);
     objs.particles = Particles::default();
 }
 

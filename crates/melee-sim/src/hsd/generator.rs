@@ -190,6 +190,7 @@ pub fn follow_joint_unless_paused(objs: &mut Objects, data: &Archives, g: Option
 /// list's nodes stay allocated, as in the original.
 #[doc(alias = "hsd_8039D354")]
 pub fn init(objs: &mut Objects) {
+    crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Generator]);
     let gs = &mut objs.generators;
     gs.pool = Pool::default();
     gs.head = None;

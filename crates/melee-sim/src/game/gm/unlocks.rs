@@ -335,13 +335,33 @@ impl Running<'_> {
         let trophy =
             (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.unk_44.flags, &[], j));
         if message || trophy {
-            let _ = (mode, slot);
+            self.game.gm.challenger = ChallengerData {
+                human_ckind: CKIND_NONE,
+                human_slot: slot,
+                curr_mode: mode,
+                ..ChallengerData::default()
+            };
             self.set_pending_game_mode(GM_CHALLENGER_APPROACH);
             self.set_new_game_mode_pending();
-            super::super::code::unported_call(
-                "gm_80173754's challenger data (a notice before the main menu)",
-            );
+            return true;
         }
         false
     }
+}
+
+/// `ChKind_None`.
+const CKIND_NONE: u8 = 0x21;
+
+/// `ChallengerData` (`gm_1736.c`'s `challenger_data`): who meets the challenger and the
+/// modes before and after.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct ChallengerData {
+    pub human_ckind: u8,
+    pub human_color: u8,
+    pub human_slot: u8,
+    pub human_nametag: u8,
+    pub cpu_ckind: u8,
+    pub curr_mode: u8,
+    pub prev_mode: u8,
+    pub x8: u16,
 }

@@ -50,8 +50,13 @@ impl Running<'_> {
         o.jobj.current = None;
         o.lobjs.current = None;
         // The lights the last scene made are gone with its heap; the active table keeps
-        // naming its slots, which the next scene's lights take as the original's take the
-        // same memory (the table is written again before anything reads it).
+        // naming them, by the addresses they had (the table is cleared before anything but
+        // the ambient slot's test reads it).
+        for k in 0..crate::hsd::lobj::MAX_GXLIGHT {
+            if let Some(l) = o.lobjs.active[k].take() {
+                o.lobjs.active_left[k] = o.lobjs.pool.addr(l.0);
+            }
+        }
         o.lobjs.pool = Default::default();
         o.lobjs.nodes = Default::default();
         o.mobjs.toon = None;

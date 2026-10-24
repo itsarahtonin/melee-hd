@@ -28,9 +28,32 @@ use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 #[derive(Clone, Default)]
 pub struct PastAddrs {
     addrs: HashMap<(&'static str, u32), Vec<u32>>,
+    /// Archives an earlier scan found that the latest doesn't (their scene's heap went with
+    /// them, and their bytes since changed), where they were last: what the original's
+    /// pointers into them still name.
+    gone: Vec<crate::Loaded>,
 }
 
 impl PastAddrs {
+    /// Notes the archives the latest scan no longer finds, at their last place.
+    pub fn note_archives(&mut self, before: &[crate::Loaded], now: &[crate::Loaded]) {
+        for l in before {
+            if !now.iter().any(|n| n.id == l.id) {
+                self.gone.retain(|g| g.id != l.id);
+                self.gone.push(l.clone());
+            }
+        }
+        self.gone.retain(|g| !now.iter().any(|n| n.id == g.id));
+    }
+
+    /// Where data in an archive no longer loaded was, by its last place.
+    pub(crate) fn gone_addr(&self, d: DataRef) -> Option<u32> {
+        self.gone
+            .iter()
+            .find(|g| g.id == d.archive)
+            .map(|g| g.data + d.offset)
+    }
+
     /// Notes each slot's address, where it's new.
     pub fn note(&mut self, game: &Game) {
         fn pool<T, const K: u8>(
@@ -484,6 +507,10 @@ impl<'a> Comparer<'a> {
                 crate::stadium::compare_screen(self, path, which, t)
             }
             Some(UserData::IzumiReflection) => crate::izumi::compare_reflection(self, path, t),
+            Some(UserData::MainMenuList(a)) => self.main_menu_list(path, a, t),
+            Some(UserData::MainMenuPanel(a)) => self.main_menu_panel(path, a, t),
+            Some(UserData::GalleryList(a)) => self.gallery_list(path, a, t),
+            Some(UserData::GalleryCursor(a)) => self.gallery_cursor(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);
@@ -1759,6 +1786,19 @@ impl Cx for Comparer<'_> {
     }
 
     fn compare_data(&mut self, path: &str, ours: Option<DataRef>, theirs: u32) {
+        // Data in an archive the original's scene let go of: the pointer still names where it
+        // was.
+        if let Some(o) = ours
+            && !self.data.loaded.iter().any(|l| l.id == o.archive)
+            && let Some(a) = self.past.and_then(|p| p.gone_addr(o))
+        {
+            if a != theirs {
+                self.diffs.push(format!(
+                    "{path}: data ours {o:?} (at {a:#x}, its archive gone), theirs {theirs:#x}"
+                ));
+            }
+            return;
+        }
         let t = self.data_ref(theirs);
         // Files can hold the same bytes (Luigi's animation file repeats some of Mario's), and
         // the scan names the trace's copy as either: the same offset into the same bytes is

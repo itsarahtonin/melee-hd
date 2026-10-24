@@ -44,6 +44,10 @@ pub struct Layer {
     pub sector: Vec<u8>,
     pub ring: Ring,
     result: i32,
+    /// What the layer asks of the card, in order, for the time it takes: `q` a request taken
+    /// up while the layer is idle, `r` a sector read, `w` a sector written, `s` a file's
+    /// status set, `c` a file created.
+    pub log: Vec<u8>,
 }
 
 /// A callback's arguments: the file index (or 0) and the result.
@@ -57,6 +61,7 @@ impl Layer {
             sector: vec![0; crate::state::SECTOR as usize],
             ring: Ring::default(),
             result: 0,
+            log: Vec::new(),
         }
     }
 
@@ -101,6 +106,7 @@ impl Layer {
     /// callbacks it makes, in order.
     pub fn request(&mut self, card: &mut Mounted, bufs: &mut Bufs, req: Request) -> Vec<Callback> {
         let mut calls = Vec::new();
+        self.log.push(b'q');
         let (r, arg) = match req {
             Request::ReadFile(i) => (
                 hsd::read_file(
@@ -216,12 +222,14 @@ impl Layer {
     fn load(&mut self, card: &Mounted, offset: i32) -> Result<(), CardError> {
         let no = self.state.file_no();
         card.fast_open(no)?;
+        self.log.push(b'r');
         card.read(no, offset as u32, &mut self.sector)
     }
 
     fn store(&mut self, card: &mut Mounted, offset: i32) -> Result<(), CardError> {
         let no = self.state.file_no();
         card.fast_open(no)?;
+        self.log.push(b'w');
         let sector = self.sector.clone();
         card.write(no, offset as u32, &sector)
     }
@@ -435,6 +443,7 @@ impl Layer {
             Cmd::CreateFile { filename, size } => {
                 let name = self.bytes(bufs, filename).to_vec();
                 let name = &name[..name.iter().position(|&c| c == 0).unwrap_or(name.len())];
+                self.log.push(b'c');
                 match card.create(name, size as u32) {
                     Ok(no) => self.state.set_file_no(no),
                     Err(e) => self.fail(e),
@@ -468,6 +477,7 @@ impl Layer {
                 }
                 stat.set_icon_format(format as u16);
                 stat.set_icon_speed(speed as u16);
+                self.log.push(b's');
                 let r = card.set_status(no, &mut stat);
                 self.state.stat_mut().copy_from_slice(&stat.0);
                 if let Err(e) = r {

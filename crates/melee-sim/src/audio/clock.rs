@@ -253,12 +253,23 @@ pub trait Frames {
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
     /// The game's own wait (`lb_800195D0`) at `now` runs the save's writer (`lb_8001CC84`):
-    /// the register reads of its card work, and whether a task step's wait point
-    /// (`hsd_803AAA48`) comes first; none when no write is under way.
-    fn game_wait(&mut self, now: u64) -> Option<(bool, u64)> {
+    /// its card work there; none when no write is under way.
+    fn game_wait(&mut self, now: u64) -> Option<CardWork> {
         let _ = now;
         None
     }
+}
+
+/// The save's writer's card work at one of the game's waits ([`Frames::game_wait`]), in
+/// order: a task step's wait point (`hsd_803AAA48`), time with interrupts off (a probe, the
+/// unmount), a read's segment chain ([`Clock::card_chain`]: its first part, segments and
+/// tail), and register reads.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct CardWork {
+    pub step: bool,
+    pub ticks: u64,
+    pub chain: Option<(u64, u32, u64)>,
+    pub reads: u64,
 }
 
 /// What the game waits for in a loop with a wait point each spin.
@@ -596,12 +607,23 @@ impl Clock {
     /// quarter millisecond, then the save's writer runs ([`Frames::game_wait`]).
     fn lb_wait(&mut self, f: &mut dyn Frames) {
         self.wait(WAIT_STEP, f);
-        if let Some((step, reads)) = f.game_wait(self.now) {
-            if step {
-                self.wait_point(f);
-            }
-            self.reg_reads(reads, f);
+        if let Some(work) = f.game_wait(self.now) {
+            self.card_work(work, f);
         }
+    }
+
+    /// The save's writer's card work ([`CardWork`]).
+    pub fn card_work(&mut self, work: CardWork, f: &mut dyn Frames) {
+        if work.step {
+            self.wait_point(f);
+        }
+        if work.ticks != 0 {
+            self.pass(work.ticks, f);
+        }
+        if let Some((first, segments, tail)) = work.chain {
+            self.card_chain(first, segments, tail, f);
+        }
+        self.reg_reads(work.reads, f);
     }
 
     /// A wait point of the game's (`lb_800195D0`, the card layer's step `hsd_803AAA48`):

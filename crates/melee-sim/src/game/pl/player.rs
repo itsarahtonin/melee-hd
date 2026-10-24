@@ -1180,6 +1180,7 @@ impl Running<'_> {
     /// allocator (`Player_AllocData`) serves nothing in melee-sim.
     #[doc(alias = "Player_80036DA4")]
     pub fn player_80036da4(&mut self) {
+        crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Player]);
         self.fighter_first_init();
     }
 }

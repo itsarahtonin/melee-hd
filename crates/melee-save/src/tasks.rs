@@ -127,6 +127,16 @@ pub struct Run {
     /// Every HSD callback, in order.
     pub callbacks: Vec<Callback>,
     pub snapshots: Vec<Snapshot>,
+    /// What the HSD layer asked of the card over the list, as [`Layer::log`] records it,
+    /// with `t` where a task that makes requests starts and a `k` for each callback (in
+    /// [`Run::callbacks`]' order) after its request's transfers.
+    pub steps: Vec<u8>,
+    /// The files the read or write task queued, each with what queueing it returned (0, or
+    /// the refusal), in order: the results `taskRead` and `taskWrite` set before any runs.
+    pub queued: Vec<(usize, i32)>,
+    /// Where in them the write task started, queueing its files' writes (each file's result
+    /// set then): its `t`.
+    pub write_queued: Option<usize>,
     pub free_bytes: i32,
     pub free_files: i32,
     pub layer: Layer,
@@ -145,6 +155,9 @@ impl Run {
             check: None,
             callbacks: Vec::new(),
             snapshots: Vec::new(),
+            steps: Vec::new(),
+            queued: Vec::new(),
+            write_queued: None,
             free_bytes: 0,
             free_files: 0,
             layer: Layer::new(0),
@@ -172,6 +185,22 @@ impl Run {
         for (task, mask) in tasks {
             if mask & (1u32 << result) == 0 {
                 break;
+            }
+            if mounted.is_some()
+                && matches!(
+                    task,
+                    Task::Open { .. }
+                        | Task::Create(_)
+                        | Task::Read
+                        | Task::Write
+                        | Task::SetStatus
+                        | Task::ReadHeader
+                )
+            {
+                if matches!(task, Task::Write) {
+                    self.write_queued = Some(self.steps.len());
+                }
+                self.steps.push(b't');
             }
             result = match task {
                 Task::Mount => match card.take() {
@@ -235,9 +264,11 @@ impl Run {
                             if matches!(task, Task::Write) && self.layer.state.file_size(i) < 0 {
                                 // hsd_803B2A4C refuses before queueing.
                                 self.file_results[i] = -257;
+                                self.queued.push((i, -257));
                                 saved_error = from_hsd(-257);
                                 continue;
                             }
+                            self.queued.push((i, 0));
                             let req = if matches!(task, Task::Read) {
                                 Request::ReadFile(i as i32)
                             } else {
@@ -293,7 +324,10 @@ impl Run {
     /// Runs one HSD request; each callback's error becomes the task's result
     /// (`fn_8001A0B0`).
     fn request(&mut self, m: &mut Mounted, req: Request, mut saved: i32) -> i32 {
-        for (arg, r) in self.layer.request(m, &mut self.bufs, req) {
+        let calls = self.layer.request(m, &mut self.bufs, req);
+        self.steps.append(&mut self.layer.log);
+        for (arg, r) in calls {
+            self.steps.push(b'k');
             self.callbacks.push((arg, r));
             if (0..9).contains(&arg) {
                 self.file_results[arg as usize] = r;

@@ -223,17 +223,23 @@ impl Running<'_> {
         }
     }
 
+    /// Whether the save holds every trophy (`un_80304470`): its classes' trophies, Mew's and
+    /// the Pikmin's aside.
+    pub fn holds_every_trophy(&self) -> bool {
+        let total: i32 = (0..8).map(class_size).sum();
+        let held = (0..TROPHY_COUNT)
+            .filter(|&i| i != 0xE6 && i != 0xC9 && self.save_trophy_count(i) != 0)
+            .count() as i32;
+        total <= held
+    }
+
     /// `_Toy_80304D30`: unless the save holds every trophy (`un_80304470`), the trophy
     /// screens' notice for a class the save completes. Its count is unused here.
     #[doc(alias = "_Toy_80304D30")]
     #[doc(alias = "un_80304470")]
     fn trophy_class_notices(&mut self) {
         let t = self.trophy_tables();
-        let total: i32 = (0..8).map(class_size).sum();
-        let held = (0..TROPHY_COUNT)
-            .filter(|&i| i != 0xE6 && i != 0xC9 && self.save_trophy_count(i) != 0)
-            .count() as i32;
-        if total <= held {
+        if self.holds_every_trophy() {
             return;
         }
         let mut by_class = [0i32; 9];

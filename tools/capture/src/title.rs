@@ -178,6 +178,12 @@ impl Comparer<'_> {
             t.exit_buttons,
             self.u32(0x804D_6878) as i32,
         );
+        self.check(
+            "title_exit_data",
+            "the attract loop's title's buttons",
+            t.opening_exit_buttons,
+            self.u32(sym("title_exit_data")) as i32,
+        );
         let d = game.boot_mode.demo;
         let at = sym("gm_8049E548");
         self.check(

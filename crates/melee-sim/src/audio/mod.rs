@@ -62,6 +62,8 @@ pub struct Audio {
     pub console: bool,
     /// The movie player (`lb::mthp`), whose reads and alarm run on the timeline.
     pub movie: crate::lb::mthp::MoviePlayer,
+    /// The save's writer, whose steps the game's own waits run (`lb_8001CC84`).
+    pub card_writer: crate::lb::save::Writer,
     /// When the interrupt handler running now started, while one runs: its log's times
     /// count from there (none in the game's own code, whose times count from the timeline's).
     pub hw_base: Option<u64>,
@@ -176,6 +178,11 @@ impl Audio {
     }
 
     /// Register reads of the game's ([`clock::Clock::reg_reads`]).
+    /// The save's writer's card work outside the game's waits (a scene's end finishing it).
+    pub fn clock_card_work(&mut self, data: &Archives, work: clock::CardWork) {
+        self.with_clock(data, |c, f| c.card_work(work, f));
+    }
+
     pub fn clock_reg_reads(&mut self, data: &Archives, reads: u64) {
         self.with_clock(data, |c, f| c.reg_reads(reads, f));
     }
@@ -288,6 +295,10 @@ impl clock::Frames for Running<'_> {
 
     fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
         crate::lb::save::alarm_card_probes(now)
+    }
+
+    fn game_wait(&mut self, now: u64) -> Option<clock::CardWork> {
+        self.audio.card_writer.wait(now)
     }
 
     fn done(&mut self, w: clock::Wait) -> bool {

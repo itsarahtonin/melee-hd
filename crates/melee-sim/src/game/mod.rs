@@ -21,6 +21,7 @@ pub mod it;
 pub mod items_audit;
 pub mod mirror;
 mod mirror_gen;
+pub mod mn;
 pub mod pl;
 pub mod playback;
 pub mod player_codes;

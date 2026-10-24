@@ -17,10 +17,10 @@ mod common;
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
-    JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    ONETT, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, compare, compare_in, scaled,
+    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
+    IDLE_TITLE, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, MUSHROOM_KINGDOM,
+    MUSHROOM_KINGDOM_2, MUTE_CITY, ONETT, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
+    SHEIK_FOX_FOD, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -86,6 +86,25 @@ frames!(IDLE_MOVIE;
 frames!(IDLE_TITLE;
     title_300 300,
     title_700 700,
+);
+// The main menu (`menu-tour`): the main list as it opens (450) and its cursor moving down
+// (650), the camera turned by the C stick (870), the records' list (1200), Special Melee's
+// (2450), and the main list again after L, R and Start restart the menu (3700).
+frames!(MENU_TOUR;
+    menu_450 450,
+    menu_650 650,
+    menu_870 870,
+    menu_1200 1200,
+    menu_2450 2450,
+    menu_3700 3700,
+);
+// The Data menu's movies (`gallery`): the Special Movie playing in the menu (1100, 1400) and
+// How to Play (1960, 2400).
+frames!(GALLERY;
+    gallery_1100 1100,
+    gallery_1400 1400,
+    gallery_1960 1960,
+    gallery_2400 2400,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

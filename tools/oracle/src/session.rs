@@ -738,7 +738,9 @@ impl Run<'_> {
             if self.from.is_none() {
                 files.set_named(&s.game.ft.data.files.archives);
             }
+            let before = files.loaded().to_vec();
             let data = files.refresh(&mut image, &mut s.data, false);
+            past.note_archives(&before, &data.loaded);
             if let Some(d) = files.rescan.disagreements.first() {
                 break Some(Stop::Seam(format!(
                     "the archives' incremental scan differs from a full scan: {d}"

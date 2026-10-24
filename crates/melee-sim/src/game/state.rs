@@ -50,6 +50,14 @@ pub enum UserData {
     ArrowSlot(u8),
     /// A player tag's slot (a heap byte `mn_8022EB04` frees).
     NameTagSlot(u8),
+    /// A main menu list's user data (`MainMenuData`), by its block's address.
+    MainMenuList(u32),
+    /// The main menu panel's user data (`MainMenuPanelData`), by its block's address.
+    MainMenuPanel(u32),
+    /// The movies' list's user data, by its block's address.
+    GalleryList(u32),
+    /// A movie's cursor's user data, by its block's address.
+    GalleryCursor(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
@@ -296,6 +304,16 @@ pub struct Game {
     pub opening: super::gm::opening::Opening,
     /// The title's statics (`gmtitle.c`, `gmtitlemode.c`).
     pub title: super::gm::title::Title,
+    /// The attract match's start data and camera (`gmopeningmode.c`, `gm_181A.c`).
+    pub attract: super::gm::attract::Attract,
+    /// How to Play's and the Special Movie's sprites (`gmhowto.c`, `gmomake15.c`).
+    pub movies: super::gm::howto::Movies,
+    /// The main menu's mode's enter and exit data (`gmmenumode.c`).
+    pub menu_mode: super::gm::menu::MenuMode,
+    /// The main menu's statics (`mnmain.c`) and its lists' user data.
+    pub menu: super::mn::main::MainMenu,
+    /// The Data menu's movies' statics and user data (`mngallery.c`).
+    pub gallery: super::mn::gallery::Gallery,
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).
@@ -353,6 +371,24 @@ impl Host<GameKinds> for Running<'_> {
                 crate::hsd::heap::mem_free(addr);
             }
             UserData::BgFlash => self.game.bg_flash_free(),
+            // `mn_8022EB04`: `HSD_Free`.
+            UserData::MainMenuList(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.menu.lists.remove(&addr);
+            }
+            UserData::MainMenuPanel(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.menu.panels.remove(&addr);
+            }
+            // `HSD_Free`.
+            UserData::GalleryList(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.gallery.data.remove(&addr);
+            }
+            UserData::GalleryCursor(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.gallery.cursors.remove(&addr);
+            }
             // `HSD_Free`.
             UserData::StadiumScreen(which) => {
                 let s = self.game.gr.stadium.screens[usize::from(which)].as_ref();
@@ -377,7 +413,7 @@ impl Host<GameKinds> for Running<'_> {
             Obj::Fog(f) => crate::hsd::fog::unref(&mut self.game.objs, Some(f)),
             Obj::CObj(c) => crate::hsd::cobj::unref(&mut self.game.objs, Some(c)),
             Obj::SObj(s) => crate::hsd::sobj::free_all(&mut self.game.objs.sobjs, s),
-            other => panic!("releasing a GObj's {other:?} needs its port"),
+            Obj::LObj(l) => crate::hsd::lobj::remove_all(&mut self.game.objs, Some(l)),
         }
     }
 }

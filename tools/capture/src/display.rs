@@ -145,6 +145,11 @@ impl Comparer<'_> {
             let t = self.u32(active + 4 * k as u32);
             let o = self.game.objs.lobjs.active[k];
             let path = format!("display active light {k}");
+            let left = self.game.objs.lobjs.active_left[k];
+            if left != 0 {
+                self.check(&path, "freed light", left, t);
+                continue;
+            }
             match o {
                 Some(l) if self.maps.dangling_lobjs.contains_key(&l.0) => {
                     self.check(&path, "freed light", self.maps.dangling_lobjs[&l.0], t);

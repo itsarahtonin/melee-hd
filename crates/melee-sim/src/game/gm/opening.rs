@@ -60,6 +60,19 @@ impl Running<'_> {
     /// (`HSD_SObjLib_803A54EC`) with render priority `prio`.
     #[doc(alias = "gm_801A9DD0")]
     pub fn sprite_camera(&mut self, gobj: GObjId, w: u16, h: u16, prio: u8, narrow: bool) {
+        self.sprite_camera_with(gobj, w, h, prio, narrow, CodeRef(sobj::CAMERA_RENDER));
+    }
+
+    /// [`Running::sprite_camera`] drawing with `render` (`mnGallery_80258A08`'s).
+    pub fn sprite_camera_with(
+        &mut self,
+        gobj: GObjId,
+        w: u16,
+        h: u16,
+        prio: u8,
+        narrow: bool,
+        render: CodeRef,
+    ) {
         let data = self.data;
         let (mut left, mut right) = (0.0f32, f32::from(w));
         if narrow {
@@ -81,7 +94,7 @@ impl Running<'_> {
         cobj::set_ortho(&mut o.cobjs, Some(c), 0.0, bottom, left, right);
         let w = &mut self.game.world;
         w.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
-        w.setup_gx_link_max(gobj, CodeRef(sobj::CAMERA_RENDER), prio, false);
+        w.setup_gx_link_max(gobj, render, prio, false);
     }
 
     /// `gm_Scene_Opening_OnEnter`: the title's archive, the scene's banks, the video mode

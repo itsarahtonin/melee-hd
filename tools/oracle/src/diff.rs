@@ -131,6 +131,11 @@ impl Files<'_> {
         }
     }
 
+    /// The archives the last scan found.
+    pub(crate) fn loaded(&self) -> &[Loaded] {
+        &self.loaded
+    }
+
     /// The archives the session has loaded by name, as it stands now: a scene's files loaded
     /// after the boot (the memory card scene's after the progressive scan prompt) are found
     /// where the original loads them too.

@@ -259,14 +259,97 @@ impl Running<'_> {
         }
     }
 
-    /// `lb_8001CDB4`, after each scene: the writer runs until the save is written.
+    /// `lb_8001CDB4`, after each scene: the writer runs until the save is written, its
+    /// steps waited for here (each `lbCardNew_CompleteNextTask`'s wait point).
     #[doc(alias = "lb_8001CDB4")]
     pub fn card_game_flush(&mut self) {
-        let c = &self.game.card_game;
-        assert!(
-            !c.dirty && c.x10 == 0,
-            "the save's writer (lb_8001CC84) isn't ported"
-        );
+        loop {
+            self.card_writer_take();
+            let c = &self.game.card_game;
+            if !c.dirty && c.x10 == 0 {
+                return;
+            }
+            let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
+            match self.game.audio.card_writer.wait(now) {
+                Some(work) => self.game.audio.clock_card_work(self.data, work),
+                None => unreachable!("a save writer with nothing to run"),
+            }
+        }
+    }
+
+    /// `lb_8001CC84`'s first state as the next of the game's waits runs it, once the save is
+    /// marked to write: the mark taken, the card's status brought up to date, and the save's
+    /// list (`lb_8001BE30`, through `dont_inline_helper`) handed to the waits with the card
+    /// data, the banner the unlocks pick (`getCurrentIcon`) and the icons. Nothing reads what
+    /// it sets before that wait but the pad alarm's card probes, which a card that stays in
+    /// leaves alone ([`Running::card_alarm_probes`]).
+    #[doc(alias = "lb_8001CC84")]
+    #[doc(alias = "dont_inline_helper")]
+    #[doc(alias = "lb_8001BE30")]
+    #[doc(alias = "getCurrentIcon")]
+    fn card_writer_kick(&mut self) {
+        let c = &mut self.game.card_game;
+        if c.x10 != 0 || !c.dirty {
+            return;
+        }
+        c.dirty = false;
+        if c.card_status != 0 {
+            return;
+        }
+        if self.update_card_status() != 0 {
+            self.game.card_game.failed = true;
+            return;
+        }
+        let icons = self.game.card_game.icon_data.expect("the card's icons");
+        let idx = if self.holds_every_trophy() {
+            2
+        } else if self.game.gm.unlocks.all_characters() {
+            1
+        } else {
+            0
+        };
+        let data = self.data;
+        let bytes = |i: u32, n: usize| -> Vec<u8> {
+            let p = data.ptr(icons.at(4 * i)).expect("an icon image");
+            (0..n as u32).map(|k| data.u8(p.at(k))).collect()
+        };
+        let req = super::save::SaveRequest {
+            data: super::save::card_data_bytes(&self.game.game_data.thing),
+            banner: bytes(idx, 0x1800),
+            icons: bytes(3, 0x600),
+        };
+        self.game.audio.card_writer.start = Some(req);
+        self.game.card_game.x10 = 1;
+    }
+
+    /// What the save's writer did at the waits since the game last looked: the comment its
+    /// list made, and the list's end (`lbCardNew_CompleteNextTask` no longer busy): the
+    /// writer idle, the list's failure noted (`fn_8001CC30`, its `on_finished`, marks the card
+    /// failed too), the files' results, the card's status taken by its mount, and the card
+    /// unmounted.
+    #[doc(alias = "fn_8001CC30")]
+    #[doc(alias = "lb_8001C658")]
+    pub fn card_writer_take(&mut self) {
+        let w = &mut self.game.audio.card_writer;
+        if let Some(comment) = w.comment.take() {
+            self.game.card_game.comment = comment;
+        }
+        if std::mem::take(&mut w.errors_due) {
+            self.game.card_tasks.file_errors = w.file_errors;
+        }
+        let Some((r, card_in)) = w.take_done() else {
+            return;
+        };
+        self.game.card_tasks.file_errors = w.file_errors;
+        let c = &mut self.game.card_game;
+        if card_in {
+            c.unk_status = false;
+        }
+        if r != 0 {
+            c.failed = true;
+            c.card_status = STATUS_FAILED;
+        }
+        c.x10 = 0;
     }
 
     /// `lbCardGame_SaveChanges`: the power-on time added to the save, and the save marked
@@ -279,5 +362,6 @@ impl Running<'_> {
         let t = &mut self.game.game_data.thing.save_data.x1A54;
         *t = t.wrapping_add(add);
         self.game.card_game.dirty = true;
+        self.card_writer_kick();
     }
 }

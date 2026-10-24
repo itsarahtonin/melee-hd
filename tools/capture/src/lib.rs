@@ -2,6 +2,7 @@
 //! function's entry, `CAPTURE=DIR CAPTURE_FUNCS=...`), made into melee-sim states, so a port
 //! can run from a real state and be compared with ssbm-rs's run from the same one.
 
+pub mod attract;
 pub mod audio;
 pub mod compare;
 pub mod corpus;
@@ -13,6 +14,7 @@ pub mod import;
 pub mod items;
 pub mod izumi;
 pub mod links;
+pub mod mainmenu;
 pub mod menus;
 pub mod pack;
 pub mod playback;
@@ -307,12 +309,21 @@ fn find_after(
     rescan: Option<(&mut Rescan, &[usize])>,
     freed: Option<&Freed>,
 ) -> Vec<Loaded> {
+    // A file the run loaded itself by name is its own archive wherever it lies, even where an
+    // earlier scan found the same file before the run named it (the title's preload of the
+    // attract match's files, which the match's scene then takes up).
     let known = |name: &str, file: u32| {
-        before
+        named
             .iter()
-            .find(|l| l.name == name && (l.file == file || l.file == 0))
-            .map(|l| l.id)
-            .or_else(|| named.iter().find(|(n, _)| n == name).map(|&(_, id)| id))
+            .rev()
+            .find(|(n, _)| n == name)
+            .map(|&(_, id)| id)
+            .or_else(|| {
+                before
+                    .iter()
+                    .find(|l| l.name == name && (l.file == file || l.file == 0))
+                    .map(|l| l.id)
+            })
     };
     let mut found = scan(index, mem1, archives, &known, rescan, freed);
     let headerless = headerless_stage_files(index, mem1, archives, &found, &known);
@@ -978,6 +989,14 @@ impl DataMap {
     /// The loaded file named `file`'s archive.
     pub fn archive_named(&self, file: &str) -> Option<melee_data::archive::ArchiveId> {
         self.loaded.iter().find(|l| l.name == file).map(|l| l.id)
+    }
+
+    /// The address of a `DataRef` whose archive is loaded.
+    pub fn try_addr(&self, r: DataRef) -> Option<u32> {
+        self.loaded
+            .iter()
+            .find(|l| l.id == r.archive)
+            .map(|l| l.data + r.offset)
     }
 
     /// The address of a `DataRef`.
