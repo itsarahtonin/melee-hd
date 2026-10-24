@@ -7,7 +7,7 @@ use melee_sim::game::gr::{
     self, CollUser, DynamicAttr, GroundVars, StageArchive, StartHook, vars_kind,
 };
 use melee_sim::game::handles::{CodeRef, GroundId, StartHookId};
-use melee_sim::game::mirror::{Mem, Mirror};
+use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::structs::{Ground, GroundParam, StageInfo};
 use melee_sim::hsd::fog::{Fog, FogAdj, FogId};
 use melee_sim::hsd::object::RefCount;
@@ -813,7 +813,10 @@ impl Comparer<'_> {
         }
         let m = mem(self.mem);
         let g = &self.game.grounds[o.0];
-        g.compare(&m, t, &format!("{path} ground"), self);
+        let gpath = format!("{path} ground");
+        self.begin_block("ground", t, &gpath);
+        g.compare(&m, t, &gpath, self);
+        self.block = None;
         // A stage object's dynamics chain (Rainbow Cruise's flag): each link, where both sides
         // have one (the handles compare with the variables).
         if let GroundVars::RCruiseFlag(v) = &self.game.grounds[o.0].u {
@@ -1387,7 +1390,33 @@ impl Comparer<'_> {
             let i = (a - MEM1) as usize;
             u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
         };
-        let theirs = winds(word);
+        let mut theirs = winds(word);
+        // A session's heap: a free source's fields and every source's `x2` and `x3` keep
+        // what the block held (`lb_800100B0` writes neither, and nothing reads them):
+        // compared are the lists and the blowing sources' fields (docs/engine.md).
+        if crate::leftovers::enabled() {
+            let ours = &game.gr.winds;
+            let mut blowing = Vec::new();
+            let mut cur = theirs.active;
+            while let Some(c) = cur {
+                if blowing.contains(&c) {
+                    break;
+                }
+                blowing.push(c);
+                cur = theirs.next[usize::from(c)];
+            }
+            for i in 0..8u8 {
+                let (o, t) = (
+                    &ours.entries[usize::from(i)],
+                    &mut theirs.entries[usize::from(i)],
+                );
+                t.x2 = o.x2;
+                t.x3 = o.x3;
+                if !blowing.contains(&i) {
+                    *t = *o;
+                }
+            }
+        }
         // By bit pattern: a free source keeps what its block held, NaNs among it.
         if wind_bits(&game.gr.winds) != wind_bits(&theirs) {
             self.diff("lb_804D63A8", "wind sources", &game.gr.winds, &theirs);
@@ -1596,14 +1625,21 @@ impl Comparer<'_> {
             );
             self.check(
                 &path,
-                "flags, stamp and dirty",
-                (joint.flags, joint.stamp, joint.dirty),
-                (
-                    self.u32(a + 8),
-                    self.u16(a + 0xC) as i16,
-                    self.u8(a + 0xE) & 0x80 != 0,
-                ),
+                "flags and dirty",
+                (joint.flags, joint.dirty),
+                (self.u32(a + 8), self.u8(a + 0xE) & 0x80 != 0),
             );
+            // The stamp a stage's load leaves unset: a session's heap leftover until the
+            // joint's first move (docs/engine.md).
+            if joint.stamp != self.u16(a + 0xC) as i16 {
+                self.begin_block("coll joint", a, &path);
+                self.mismatch(
+                    &format!("{path}.stamp"),
+                    format!("{}", joint.stamp),
+                    format!("{}", self.u16(a + 0xC) as i16),
+                );
+                self.block = None;
+            }
             let ours = [
                 joint.bounding_min.x,
                 joint.bounding_min.y,

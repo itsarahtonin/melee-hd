@@ -133,6 +133,9 @@ pub struct Comparer<'a> {
     pub archives: Option<&'a Archives>,
     /// The addresses pool slots' earlier objects had, where the caller has followed them.
     pub past: Option<&'a PastAddrs>,
+    /// The block being compared, for its heap leftovers ([`crate::leftovers`]): its kind,
+    /// the original's address, and its path's length.
+    pub(crate) block: Option<(&'static str, u32, usize)>,
 }
 
 impl<'a> Comparer<'a> {
@@ -200,6 +203,7 @@ impl<'a> Comparer<'a> {
             stale_reads: Vec::new(),
             archives: None,
             past: None,
+            block: None,
         }
     }
 
@@ -242,6 +246,14 @@ impl<'a> Comparer<'a> {
 
     pub(crate) fn data_ref(&self, a: u32) -> Option<DataRef> {
         (a != 0).then(|| self.data.get(a)).flatten()
+    }
+
+    /// A block's comparison starts: its heap leftovers are known by its kind and address.
+    pub(crate) fn begin_block(&mut self, kind: &'static str, addr: u32, path: &str) {
+        if crate::leftovers::enabled() {
+            crate::leftovers::begin(kind, addr);
+            self.block = Some((kind, addr, path.len()));
+        }
     }
 
     /// Pairs `ours` with ssbm-rs's object at `theirs`, or reports they don't pair; whether to
@@ -462,7 +474,9 @@ impl<'a> Comparer<'a> {
                         base: MEM1,
                     };
                     let fighter = &self.game.fighters[f.0];
-                    fighter.compare(&mem, ud, &format!("{path} fighter"), self);
+                    let fpath = format!("{path} fighter");
+                    self.begin_block("fighter", ud, &fpath);
+                    fighter.compare(&mem, ud, &fpath, self);
                     // The SDI colors code's count, which only the code reads.
                     if self.game.rules.player.sdi_colors {
                         let ours = self.game.player_code_state.sdi_count.get(f.0 as usize);
@@ -481,6 +495,7 @@ impl<'a> Comparer<'a> {
                         ));
                     }
                     self.fighter_blocks(&format!("{path} fighter"), f, ud);
+                    self.block = None;
                 }
             }
             Some(UserData::Ground(g)) => self.ground(path, g, self.u32(t + 0x2C)),
@@ -496,7 +511,12 @@ impl<'a> Comparer<'a> {
                     base: MEM1,
                 };
                 match self.game.bgflash.user.clone() {
-                    Some(u) => u.compare(&mem, ud, &format!("{path} flash"), self),
+                    Some(u) => {
+                        let fpath = format!("{path} flash");
+                        self.begin_block("flash", ud, &fpath);
+                        u.compare(&mem, ud, &fpath, self);
+                        self.block = None;
+                    }
                     None => self.diff(path, "flash user data", "none", format!("{ud:#x}")),
                 }
             }
@@ -511,6 +531,12 @@ impl<'a> Comparer<'a> {
             Some(UserData::MainMenuPanel(a)) => self.main_menu_panel(path, a, t),
             Some(UserData::GalleryList(a)) => self.gallery_list(path, a, t),
             Some(UserData::GalleryCursor(a)) => self.gallery_cursor(path, a, t),
+            Some(UserData::CssCursor(i)) => self.css_cursor(path, i, t),
+            Some(UserData::CssToken(i)) => self.css_token(path, i, t),
+            Some(UserData::CssTag(i)) => self.css_tag(path, i, t),
+            Some(UserData::SssName(a)) => self.sss_user(path, 0, a, t),
+            Some(UserData::SssPreview(a)) => self.sss_user(path, 1, a, t),
+            Some(UserData::SssHover(a)) => self.sss_user(path, 2, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);
@@ -754,6 +780,8 @@ impl<'a> Comparer<'a> {
                 && ta != 0
             {
                 let theirs = &self.mem[(ta - MEM1) as usize..][..FIGHTER_ATTRS_SIZE as usize];
+                // Ours holds the character's attributes; the block's bytes past them are
+                // never read and keep what the heap held (docs/engine.md).
                 let o = &self.game.fighter_attrs[a.0];
                 if let Some(i) = (0..o.len()).find(|&i| o[i] != theirs[i]) {
                     self.diffs.push(format!(
@@ -1651,6 +1679,15 @@ impl Cx for Comparer<'_> {
         if ours.is_none() && self.maps.unfollowed.contains(&(kind, theirs)) {
             return;
         }
+        // A leftover word in a new block (crate::leftovers): unknown until written.
+        if ours.is_none()
+            && theirs != 0
+            && let Some((bk, addr, n)) = self.block
+            && let Some(field) = path.get(n..)
+            && crate::leftovers::leave_out(bk, addr, field, "None", &format!("{theirs:#x}"))
+        {
+            return;
+        }
         // An unknown word (`Maps::unknown`) neither side has written since compares by the
         // word itself; one the original wrote and ours didn't differs.
         if let Some(word) = ours.and_then(|o| self.maps.unknown.get(&o)) {
@@ -1816,6 +1853,12 @@ impl Cx for Comparer<'_> {
     }
 
     fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
+        if let Some((kind, addr, n)) = self.block
+            && let Some(field) = path.get(n..)
+            && crate::leftovers::leave_out(kind, addr, field, &ours, &theirs)
+        {
+            return;
+        }
         self.diffs
             .push(format!("{path}: ours {ours}, theirs {theirs}"));
     }

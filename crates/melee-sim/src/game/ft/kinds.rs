@@ -47,7 +47,11 @@ impl<'a> Running<'a> {
         let backup = self.game.fighters[f.0]
             .dat_attrs_backup
             .expect("a fighter without an attribute block");
-        self.game.fighter_attrs[backup.0][..size].copy_from_slice(src);
+        // The block's bytes past the character's attributes are never read: a new block's
+        // keep what the heap held, which melee-sim leaves out (docs/engine.md).
+        let block = &mut self.game.fighter_attrs[backup.0];
+        block.resize(size, 0);
+        block.copy_from_slice(src);
         self.game.fighters[f.0].dat_attrs = Some(backup);
     }
 

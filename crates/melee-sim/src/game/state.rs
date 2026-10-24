@@ -58,6 +58,15 @@ pub enum UserData {
     GalleryList(u32),
     /// A movie's cursor's user data, by its block's address.
     GalleryCursor(u32),
+    /// The select screens' blocks: a hand, a coin and a name tag by door
+    /// (`mnCharSel_804A0BC0`, `mnCharSel_804A0BD0`, `mnCharSel_803F0E8C`), and the stage
+    /// select's name, preview and hover frame by block.
+    CssCursor(u8),
+    CssToken(u8),
+    CssTag(u8),
+    SssName(u32),
+    SssPreview(u32),
+    SssHover(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
@@ -316,6 +325,11 @@ pub struct Game {
     pub menu: super::mn::main::MainMenu,
     /// The Data menu's movies' statics and user data (`mngallery.c`).
     pub gallery: super::mn::gallery::Gallery,
+    /// The character select's statics (`mncharsel.c`), the stage select's (`mnstagesel.c`)
+    /// and VS mode's scene data (`gmvsmelee.c`).
+    pub charsel: super::mn::charsel::CharSel,
+    pub stagesel: super::mn::stagesel::StageSel,
+    pub vs_melee: super::gm::vs_melee::VsMelee,
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).
@@ -390,6 +404,31 @@ impl Host<GameKinds> for Running<'_> {
             UserData::GalleryCursor(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.gallery.cursors.remove(&addr);
+            }
+            // `HSD_Free`.
+            UserData::CssCursor(i) => {
+                let c = &mut self.game.charsel.cursors[usize::from(i)];
+                crate::hsd::heap::mem_free(c.take().expect("a hand's block").addr);
+            }
+            UserData::CssToken(i) => {
+                let c = &mut self.game.charsel.tokens[usize::from(i)];
+                crate::hsd::heap::mem_free(c.take().expect("a coin's block").addr);
+            }
+            UserData::CssTag(i) => {
+                let c = &mut self.game.charsel.tags[usize::from(i)];
+                crate::hsd::heap::mem_free(c.take().expect("a tag's block").addr);
+            }
+            UserData::SssName(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.stagesel.names.remove(&addr);
+            }
+            UserData::SssPreview(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.stagesel.previews.remove(&addr);
+            }
+            UserData::SssHover(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.stagesel.hovers.remove(&addr);
             }
             // `HSD_Free`.
             UserData::StadiumScreen(which) => {

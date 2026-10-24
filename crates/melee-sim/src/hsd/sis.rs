@@ -179,11 +179,29 @@ pub struct SisLib {
     /// The strings in the executable's data that game code builds ([`STATIC_STRINGS`]):
     /// their buffers' bytes, from each buffer's start. Static data outlives scenes.
     pub statics: Vec<(u32, Vec<u8>)>,
+    /// Bytes game code wrote into a font's loaded strings (the select screen's rules line,
+    /// `mnCharSel_8025BD30`), by place: the archive's own bytes elsewhere. A font loaded
+    /// afresh forgets its archive's.
+    #[clone_from(if_changed)]
+    pub written: BTreeMap<DataRef, u8>,
+    /// `HSD_SisLib_804D796C`: the arena's block of the scene's heap (0 for none modeled).
+    pub arena_block: u32,
+    /// Each font's archive's two blocks of the scene's heap, where its load recorded them
+    /// (`HSD_SisLib_803A945C`), for `HSD_SisLib_803A947C` to free.
+    pub font_blocks: [Option<(u32, u32)>; FONTS],
 }
 
 /// The executable's string buffers game code writes SIS strings into: their addresses and
 /// sizes (Pokémon Stadium's screen text, `grPs_8049F040`).
-pub const STATIC_STRINGS: [(u32, u32); 1] = [(0x8049_F040, 0x100)];
+pub const STATIC_STRINGS: [(u32, u32); 5] = [
+    (0x8049_F040, 0x100),
+    // The select screen's KO stars' counts (`data2.ko_stars[i]`, from `joint2` to the
+    // star's end: `mnCharSel_8025D1C4`).
+    (0x803F_0F15, 0x17),
+    (0x803F_0F35, 0x17),
+    (0x803F_0F55, 0x17),
+    (0x803F_0F75, 0x17),
+];
 
 /// `HSD_SisLib_8040C4B8`, a canvas camera's descriptor (made orthographic after loading).
 pub const CANVAS_CAMERA: StaticDesc = StaticDesc {
@@ -232,6 +250,8 @@ impl SisLib {
         self.first_canvas = None;
         self.font_archives = [None; FONTS];
         self.font_tables = [None; FONTS];
+        self.font_blocks = [None; FONTS];
+        self.arena_block = 0;
         self.saved_cursors.clear();
         self.table_overrides.clear();
     }
@@ -250,14 +270,13 @@ impl SisLib {
     pub fn sis_byte(&self, data: &Archives, p: SisPtr) -> u8 {
         match p {
             SisPtr::Arena(a) => self.byte(a),
-            SisPtr::Data(d) => data.u8(d),
+            SisPtr::Data(d) => self.written.get(&d).copied().unwrap_or_else(|| data.u8(d)),
             SisPtr::Static(a) => self.static_byte(a),
         }
     }
 
-    /// Writes a byte of a string: in the arena or a static buffer (the original would write
-    /// loaded data too, which no game code does).
-    fn set_sis_byte(&mut self, p: SisPtr, v: u8) {
+    /// Writes a byte of a string: in the arena, a static buffer or a font's loaded strings.
+    pub fn set_sis_byte(&mut self, p: SisPtr, v: u8) {
         match p {
             SisPtr::Arena(a) => self.set_byte(a, v),
             SisPtr::Static(a) => {
@@ -282,7 +301,9 @@ impl SisLib {
                 let (base, bytes) = &mut self.statics[entry];
                 bytes[(a - *base) as usize] = v;
             }
-            SisPtr::Data(d) => panic!("writing a string in loaded data ({d:?}) isn't ported"),
+            SisPtr::Data(d) => {
+                self.written.insert(d, v);
+            }
         }
     }
 

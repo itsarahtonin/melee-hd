@@ -104,6 +104,11 @@ pub struct PObjs {
     pub spare_lists: Vec<Vec<Vec<Envelope>>>,
     #[clone_from(keep)]
     pub spare_sets: Vec<Vec<Envelope>>,
+    /// `vertex_buffer` and `normal_buffer`: the blocks of the scene's heap the first shape
+    /// animation drawn in a scene takes for its blended vertices and normals (2,000 of each,
+    /// `drawShapeAnim`), 0 until then; the heap's amnesia forgets them (`PObjAmnesia`).
+    pub vertex_buffer: u32,
+    pub normal_buffer: u32,
 }
 
 /// Which of `spares` to reuse for `n` items: the smallest that holds them, else the largest.

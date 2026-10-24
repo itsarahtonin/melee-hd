@@ -1740,6 +1740,8 @@ impl Running<'_> {
         super::super::gr::setup::prepare(self.game);
         super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
         self.game.vs.state.unk_34 = vs_speed_scale(self.game);
+        // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
+        self.take_cached_named("ItCo.usd");
         super::super::it::item::load_common_data(self.game, self.data, files.it_co);
         super::super::it::item::init_globals(self.game, self.data);
         super::super::it::spawn::setup(self);
@@ -1768,6 +1770,7 @@ impl Running<'_> {
         }
         // `IfAll` stays loaded from before the match; the HUD's setup loads `SdIntro.dat` and
         // `IfCoGet.dat`.
+        self.take_cached_named("IfAll.usd");
         self.create_hud(files.hud);
         self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {

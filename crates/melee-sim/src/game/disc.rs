@@ -42,6 +42,9 @@ impl Running<'_> {
             .unwrap_or_else(crate::hsd::heap::Carried::power_on);
         crate::hsd::heap::start_scene_lent(&layout);
         crate::hsd::heap::with(|h| h.carry(&carried));
+        // A session's scenes take the heap the boot and the scenes before used: its blocks
+        // hold their bytes (the fighters' animation buffers' unknown fill).
+        crate::hsd::heap::with(|h| h.fresh = false);
         // `HSD_CreateMainHeap`'s forgetting of the old heap: the classes' amnesia
         // (`CObjAmnesia`, `JObjAmnesia`, `LObjAmnesia`, `MObjAmnesia`) and the ID table's
         // (`_HSD_IDForgetMemory`).
@@ -58,6 +61,9 @@ impl Running<'_> {
             }
         }
         o.lobjs.pool = Default::default();
+        // `PObjAmnesia`: the shape animations' blend buffers.
+        o.pobjs.vertex_buffer = 0;
+        o.pobjs.normal_buffer = 0;
         o.lobjs.nodes = Default::default();
         o.mobjs.toon = None;
         o.mobjs.shadows = None;
@@ -79,14 +85,45 @@ impl Running<'_> {
     #[doc(alias = "lbDvd_GetPreloadedArchive")]
     #[doc(alias = "lbDvd_800189EC")]
     pub fn take_preloaded(&mut self, entry_num: i32) -> bool {
+        self.take_preloaded_entry(entry_num).is_some()
+    }
+
+    /// [`Running::take_preloaded`], with where the file is: its `HSD_Archive`'s block (the
+    /// archive's kinds) or its bytes' (a raw file), as the cache's heaps put them.
+    pub fn take_cached(&mut self, entry_num: i32) -> Option<u32> {
+        let i = self.take_preloaded_entry(entry_num)?;
         let d = self.dvd_mut();
-        let Some(i) =
-            d.cache.entries.iter().position(|e| {
-                e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num
-            })
-        else {
-            return false;
-        };
+        let e = d.cache.entries[i];
+        let block = e.archive.or(e.raw_data).expect("a preloaded file's blocks");
+        Some(d.memory.entries[usize::from(block)].addr)
+    }
+
+    /// A file the match's setup takes from the preload cache where it starts from the menus
+    /// (`lbArchive_80017040`'s `lbDvd_8001819C`), nothing otherwise: its archive is the
+    /// frontend's either way.
+    pub fn take_cached_named(&mut self, name: &str) {
+        if self.game.ft.data.files.from_cache {
+            let (entrynum, _) = self.game.ft.data.files.entry(name);
+            self.take_cached(entrynum);
+        }
+    }
+
+    /// A stage's buffer the preload cache may hold (its preload entry `entry`): taken from the
+    /// cache as it stands in a VS match from the menus (its block's address), else by the
+    /// match's list (0, the frontend's place); none when the scene's heap gives it.
+    pub fn preloaded_buffer(&mut self, entry: i32) -> Option<u32> {
+        if self.game.ft.data.files.from_cache {
+            self.take_cached(entry)
+        } else {
+            self.game.ft.data.files.buffer_preloaded(entry).then_some(0)
+        }
+    }
+
+    fn take_preloaded_entry(&mut self, entry_num: i32) -> Option<usize> {
+        let d = self.dvd_mut();
+        let i = d.cache.entries.iter().position(|e| {
+            e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num
+        })?;
         if d.cache.entries[i].state == 1 {
             d.cache.entries[i].load_score = 8980;
         }
@@ -104,7 +141,7 @@ impl Running<'_> {
             );
             e.load_state = 2;
         }
-        true
+        Some(i)
     }
 
     /// `lb_80014534`, each scene's setup: the rumble scripts (`LbRb.dat`'s `lbRumbleData`),

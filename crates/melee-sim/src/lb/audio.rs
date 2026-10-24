@@ -334,6 +334,13 @@ impl Running<'_> {
         self.sfx_start(id, 0x7F, 0x40, track, 7)
     }
 
+    /// A character's name call (the ids `gm_80168C5C` gives) on a track of its own (0xCB
+    /// up to 0xE6, by the call), at full volume, centered, `lbAudioAx_800243F4`.
+    #[doc(alias = "lbAudioAx_800243F4")]
+    pub fn sfx_play_name_call(&mut self, id: i32) -> i32 {
+        self.sfx_start(id, 0x7F, 0x40, name_call_track(id), 7)
+    }
+
     /// Plays a sound on no track, `lbAudioAx_800237A8`. Ids past the last play the silent
     /// one.
     #[doc(alias = "lbAudioAx_800237A8")]
@@ -1269,6 +1276,20 @@ pub fn character_slot(ckind: usize) -> usize {
 /// A ground kind's bank slot, 55 for none (`s32_arr_803BB6B0[gkind][0]`).
 pub fn ground_slot(gkind: usize) -> usize {
     usize::from(GROUND_BANK[gkind])
+}
+
+/// The track a name call plays on (`lbAudioAx_800243F4`'s switch, whose cases fall through
+/// adding one each): 0xCB up to 0xE6 by the call, 0xCA for another id.
+pub fn name_call_track(id: i32) -> i32 {
+    const CALLS: [i32; 28] = [
+        0x7C830, 0x7C831, 0x7C835, 0x7C83A, 0x7C83F, 0x7C840, 0x7C842, 0x7C844, 0x7C845, 0x7C846,
+        0x7C848, 0x7C84A, 0x7C84B, 0x7C84D, 0x7C83B, 0x7C83D, 0x7C84E, 0x7C84F, 0x7C850, 0x7C851,
+        0x7C834, 0x7C843, 0x7C832, 0x7C83C, 0x7C84C, 0x7C836, 0x7C849, 0x7C838,
+    ];
+    match CALLS.iter().position(|&c| c == id) {
+        Some(k) => 0xCA + (CALLS.len() - k) as i32,
+        None => 0xCA,
+    }
 }
 
 /// `lbAudioAx_80026E84`: a character's banks.

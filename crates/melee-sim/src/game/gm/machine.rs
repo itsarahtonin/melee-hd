@@ -16,6 +16,7 @@ use super::super::state::Running;
 /// `GameModeKind`s.
 pub const GM_TITLE: u8 = 0x00;
 pub const GM_MENU: u8 = 0x01;
+pub const GM_VS: u8 = 0x02;
 pub const GM_CHALLENGER_APPROACH: u8 = 0x14;
 pub const GM_OPENING_MV: u8 = 0x18;
 pub const GM_PROGRESSIVE_SCAN: u8 = 0x27;
@@ -27,6 +28,12 @@ pub const GM_COUNT: u8 = 0x2D;
 pub const GS_TITLE: u8 = 0x00;
 pub const GS_MENU: u8 = 0x01;
 pub const GS_VS: u8 = 0x02;
+pub const GS_SUDDEN_DEATH: u8 = 0x03;
+pub const GS_RESULTS: u8 = 0x05;
+pub const GS_CSS: u8 = 0x08;
+pub const GS_SSS: u8 = 0x09;
+pub const GS_PRIZE: u8 = 0x27;
+pub const GS_APPROACH: u8 = 0x29;
 pub const GS_MOVIE_OPENING: u8 = 0x1C;
 pub const GS_PROG_SCAN: u8 = 0x28;
 pub const GS_MEMCARD: u8 = 0x2A;
@@ -109,6 +116,22 @@ enum Hook {
     ProgScanOnExit,
     MenuOnEnter,
     MenuOnExit,
+    VsOnLoad,
+    VsEnterCss,
+    VsExitCss,
+    VsEnterSss,
+    VsExitSss,
+    VsEnterVs,
+    VsExitVs,
+    VsEnterSuddenDeath,
+    VsExitSuddenDeath,
+    VsEnterResults,
+    VsExitResults,
+    ApproachOnEnter,
+    ApproachVsOnEnter,
+    ApproachVsOnExit,
+    PrizeOnEnter,
+    PrizeOnExit,
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
@@ -206,9 +229,69 @@ fn states(mode: u8) -> &'static [StateDesc] {
         on_exit: Some(Hook::MenuOnExit),
         scene: GS_MENU,
     }];
+    // `gm_Mode_Vs_States`.
+    const VS: [StateDesc; 8] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterCss),
+            on_exit: Some(Hook::VsExitCss),
+            scene: GS_CSS,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterSss),
+            on_exit: Some(Hook::VsExitSss),
+            scene: GS_SSS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterVs),
+            on_exit: Some(Hook::VsExitVs),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 3,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterSuddenDeath),
+            on_exit: Some(Hook::VsExitSuddenDeath),
+            scene: GS_SUDDEN_DEATH,
+        },
+        StateDesc {
+            id: 4,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterResults),
+            on_exit: Some(Hook::VsExitResults),
+            scene: GS_RESULTS,
+        },
+        StateDesc {
+            id: 0x80,
+            preload: 2,
+            on_enter: Some(Hook::ApproachOnEnter),
+            on_exit: None,
+            scene: GS_APPROACH,
+        },
+        StateDesc {
+            id: 0x81,
+            preload: 2,
+            on_enter: Some(Hook::ApproachVsOnEnter),
+            on_exit: Some(Hook::ApproachVsOnExit),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 0xC0,
+            preload: 2,
+            on_enter: Some(Hook::PrizeOnEnter),
+            on_exit: Some(Hook::PrizeOnExit),
+            scene: GS_PRIZE,
+        },
+    ];
     match mode {
         GM_BOOT => &BOOT,
         GM_MENU => &MENU,
+        GM_VS => &VS,
         GM_MEMCARD => &MEMCARD,
         GM_OPENING_MV => &OPENING,
         GM_TITLE => &TITLE,
@@ -227,6 +310,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
         GM_PROGRESSIVE_SCAN => (false, None, None),
+        // `gm_Mode_Vs_OnUnload` does nothing.
+        GM_VS => (false, Some(Hook::VsOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -385,6 +470,7 @@ impl Running<'_> {
         };
         match scene_mode {
             GM_OPENING_MV => &self.game.attract.start,
+            GM_VS => &self.game.vs_melee.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -413,6 +499,14 @@ impl Running<'_> {
                 crate::game::mn::main::ON_FRAME,
             ),
             GS_VS => (super::vs::SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
+            GS_CSS => (
+                crate::game::mn::charsel::ON_ENTER,
+                crate::game::mn::charsel::ON_FRAME,
+            ),
+            GS_SSS => (
+                crate::game::mn::stagesel::ON_ENTER,
+                crate::game::mn::stagesel::ON_FRAME,
+            ),
             GS_MOVIE_HOWTO => (super::howto::HOWTO_ON_ENTER, super::howto::HOWTO_ON_FRAME),
             GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
             k => unported_call(&format!("game scene {k:#x}")),
@@ -433,6 +527,8 @@ impl Running<'_> {
             super::progressive::ON_ENTER => self.prog_scan_on_enter(),
             crate::game::mn::main::ON_ENTER => self.menu_on_enter(),
             super::vs::SCENE_ON_ENTER => self.vs_scene_on_enter(scene_mode),
+            crate::game::mn::charsel::ON_ENTER => self.charsel_on_enter(),
+            crate::game::mn::stagesel::ON_ENTER => self.stagesel_on_enter(),
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             _ => unreachable!(),
@@ -496,6 +592,8 @@ impl Running<'_> {
             // No exit of their own.
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
             GS_VS => self.vs_scene_on_exit(),
+            GS_CSS => self.charsel_on_exit(),
+            GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
@@ -544,6 +642,29 @@ impl Running<'_> {
             Hook::ProgScanOnExit => self.prog_scan_mode_on_exit(),
             Hook::MenuOnEnter => self.menu_mode_on_enter(),
             Hook::MenuOnExit => self.menu_mode_on_exit(),
+            Hook::VsOnLoad => self.vs_mode_on_load(),
+            Hook::VsEnterCss => self.vs_mode_enter_css(),
+            Hook::VsExitCss => self.vs_mode_exit_css(),
+            Hook::VsEnterSss => self.vs_mode_enter_sss(),
+            Hook::VsExitSss => self.vs_mode_exit_sss(),
+            Hook::VsEnterVs => self.vs_mode_enter_vs(),
+            Hook::VsExitVs => {
+                unported_call("onExitVs (gmVsMelee_ExitVs, the match's records: task 9)")
+            }
+            Hook::VsEnterSuddenDeath => {
+                unported_call("onEnterSuddenDeath (gmVsMelee_EnterSuddenDeath: task 9)")
+            }
+            Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
+            Hook::VsEnterResults => {
+                unported_call("onEnterResults (gmVsMelee_EnterResults: task 9)")
+            }
+            Hook::VsExitResults => unported_call("onExitResults (task 9)"),
+            Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
+                unported_call("the challenger approach's states (task 17)")
+            }
+            Hook::PrizeOnEnter | Hook::PrizeOnExit => {
+                unported_call("the prize interface's states (task 17)")
+            }
         }
         let _ = state;
     }
@@ -565,13 +686,13 @@ impl Running<'_> {
         self.set_preload_class(class);
         let text = match scene {
             // GS_STAFFROLL, GS_RESULTS.
-            0x1F | 0x0C => 0xC000,
-            // GS_CSS.
-            0x10 => 0x2400,
+            0x2B | GS_RESULTS => 0xC000,
+            GS_CSS => 0x2400,
             _ => 0x4800,
         };
         self.game.sis.init(text);
-        crate::hsd::heap::with(|h| h.mem_alloc(text));
+        let block = crate::hsd::heap::with(|h| h.mem_alloc(text)).unwrap_or(0);
+        self.game.sis.arena_block = block;
         let d = self.dvd_mut();
         if d.heaps.status(crate::lb::heap::SEQ) == crate::lb::heap::CREATED {
             d.cache.scene.is_heap_persistent[0] = true;

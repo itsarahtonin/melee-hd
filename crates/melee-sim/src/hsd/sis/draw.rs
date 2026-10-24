@@ -354,9 +354,8 @@ fn known<T: Copy>(v: Option<T>, what: &str) -> T {
 impl SisLib {
     fn sis_u8(&self, data: &Archives, p: SisPtr) -> u8 {
         match p {
-            SisPtr::Data(d) => data.u8(d),
             SisPtr::Arena(a) => self.byte(a),
-            SisPtr::Static(_) => self.sis_byte(data, p),
+            SisPtr::Data(_) | SisPtr::Static(_) => self.sis_byte(data, p),
         }
     }
 

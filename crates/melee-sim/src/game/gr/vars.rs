@@ -5415,12 +5415,22 @@ impl Mirror for GroundVars {
                 ];
                 let theirs: [i16; 8] =
                     std::array::from_fn(|i| m.u16(at + 0x20 + 2 * i as u32) as i16);
-                if v.timer != m.u32(at + 0x1C) as i32 || ours != theirs {
+                let timer = m.u32(at + 0x1C) as i32;
+                if v.timer != timer {
                     cx.mismatch(
-                        &format!("{path}.xE0..xF2"),
-                        format!("{} {ours:?}", v.timer),
-                        format!("{} {theirs:?}", m.u32(at + 0x1C) as i32),
+                        &format!("{path}.xE0"),
+                        format!("{}", v.timer),
+                        format!("{timer}"),
                     );
+                }
+                for i in 0..8 {
+                    if ours[i] != theirs[i] {
+                        cx.mismatch(
+                            &format!("{path}.xE4[{i}]"),
+                            format!("{}", ours[i]),
+                            format!("{}", theirs[i]),
+                        );
+                    }
                 }
                 cx.compare_handle(
                     &format!("{path}.xF4"),
@@ -5441,24 +5451,31 @@ impl Mirror for GroundVars {
             GroundVars::Stadium(v) => {
                 let path = format!("{path}.stadium");
                 compare_bits(cx, m, at, &path, v.bits);
-                let ours = (
-                    v.size,
-                    v.buffer,
-                    v.archive,
-                    v.path_len.to_bits(),
-                    v.timer,
-                    [v.state, v.kind, v.prev, v.prev2],
-                );
-                let theirs = (
-                    m.u32(at + 4),
-                    m.u32(at + 8),
-                    archive_slot(m.u32(at + 0xC)),
-                    m.u32(at + 0x10),
-                    m.u32(at + 0x14) as i32,
-                    std::array::from_fn(|i| m.u16(at + 0x18 + 2 * i as u32) as i16),
-                );
-                if ours != theirs {
-                    cx.mismatch(&path, format!("{ours:?}"), format!("{theirs:?}"));
+                // Field by field, so a field a new block's heap leftovers fill shows alone.
+                let words = [
+                    ("xC4", v.size, m.u32(at + 4)),
+                    ("xC8", v.buffer, m.u32(at + 8)),
+                    ("xD0", v.path_len.to_bits(), m.u32(at + 0x10)),
+                    ("xD4", v.timer as u32, m.u32(at + 0x14)),
+                ];
+                for (name, o, t) in words {
+                    if o != t {
+                        cx.mismatch(
+                            &format!("{path}.{name}"),
+                            format!("{o:#x}"),
+                            format!("{t:#x}"),
+                        );
+                    }
+                }
+                let (o, t) = (v.archive, archive_slot(m.u32(at + 0xC)));
+                if o != t {
+                    cx.mismatch(&format!("{path}.xCC"), format!("{o:?}"), format!("{t:?}"));
+                }
+                for (i, o) in [v.state, v.kind, v.prev, v.prev2].into_iter().enumerate() {
+                    let t = m.u16(at + 0x18 + 2 * i as u32) as i16;
+                    if o != t {
+                        cx.mismatch(&format!("{path}.xD8[{i}]"), format!("{o}"), format!("{t}"));
+                    }
                 }
                 for (name, g, a) in [("xE4", v.current, 0x20), ("xE8", v.next, 0x24)] {
                     let p = format!("{path}.{name}");
@@ -5522,7 +5539,7 @@ impl Mirror for GroundVars {
             GroundVars::Izumi3(v) => {
                 let path = format!("{path}.izumi3");
                 let ours = (
-                    [v.xC4, v.xC6, v.xC8, v.xCA],
+                    [v.xC4, v.xC6, v.xC8],
                     [v.xD0, v.xD4, v.xD8, v.xDC].map(f32::to_bits),
                 );
                 let theirs = (
@@ -5531,6 +5548,15 @@ impl Mirror for GroundVars {
                 );
                 if ours != theirs {
                     cx.mismatch(&path, format!("{ours:?}"), format!("{theirs:?}"));
+                }
+                // Padding no code names: a stage object's block keeps the heap's bytes there.
+                let xca = m.u16(at + 6) as i16;
+                if v.xCA != xca {
+                    cx.mismatch(
+                        &format!("{path}.xCA"),
+                        format!("{}", v.xCA),
+                        format!("{xca}"),
+                    );
                 }
                 cx.compare_handle(
                     &format!("{path}.xCC"),
@@ -5685,12 +5711,17 @@ impl Mirror for GroundVars {
             }
             GroundVars::KongoBarrel(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
+                // The barrel's wait apart, for the heap's leftovers its creation leaves there.
+                if v.xCA != h(6) {
+                    let p = format!("{path}.kongo3.xCA");
+                    cx.mismatch(&p, format!("{}", v.xCA), format!("{}", h(6)));
+                }
                 let ours = (
-                    [v.xC4, v.xC6, v.xC8, v.xCA, v.xCC, v.xCE],
+                    [v.xC4, v.xC6, v.xC8, v.xCC, v.xCE],
                     [v.xD4, v.xD8, v.xDC, v.xE0, v.xE4, v.xE8].map(f32::to_bits),
                 );
                 let theirs = (
-                    [h(0), h(2), h(4), h(6), h(8), h(0xA)],
+                    [h(0), h(2), h(4), h(8), h(0xA)],
                     std::array::from_fn(|k| m.u32(at + 0x10 + 4 * k as u32)),
                 );
                 if ours != theirs {
@@ -5710,19 +5741,21 @@ impl Mirror for GroundVars {
             GroundVars::KongoPlatform(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
                 let ours = (
-                    [v.xC4, v.xC6, v.xC8, v.xCA],
+                    [v.xC4, v.xC6, v.xC8],
                     [v.xCC, v.xD0, v.xD4].map(f32::to_bits),
                 );
-                let theirs = (
-                    [h(0), h(2), h(4), h(6)],
-                    [8, 0xC, 0x10].map(|a| m.u32(at + a)),
-                );
+                let theirs = ([h(0), h(2), h(4)], [8, 0xC, 0x10].map(|a| m.u32(at + a)));
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.kongo3"),
                         format!("{ours:x?}"),
                         format!("{theirs:x?}"),
                     );
+                }
+                // `xCA` apart, as the barrel's.
+                if v.xCA != h(6) {
+                    let p = format!("{path}.kongo3.xCA");
+                    cx.mismatch(&p, format!("{}", v.xCA), format!("{}", h(6)));
                 }
             }
             GroundVars::KongoLog(v) => {
@@ -6837,8 +6870,13 @@ impl Mirror for GroundVars {
                 }
             }
             GroundVars::ZebesCreature(v) => {
-                let ours = (v.x0, v.x8, v.xA);
-                let theirs = (m.u8(at), m.u16(at + 8) as i16, m.u16(at + 0xA) as i16);
+                // The flag byte apart: code names only its top bit (`x0_b0`).
+                if v.x0 != m.u8(at) {
+                    let p = format!("{path}.zebes.x0");
+                    cx.mismatch(&p, format!("{}", v.x0), format!("{}", m.u8(at)));
+                }
+                let ours = (v.x8, v.xA);
+                let theirs = (m.u16(at + 8) as i16, m.u16(at + 0xA) as i16);
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.zebes"),
@@ -6885,13 +6923,23 @@ impl Mirror for GroundVars {
             GroundVars::ZebesStage(v) => {
                 v.acid
                     .compare(m, at + 4, &format!("{path}.zebes5.acid"), cx);
-                let ours = (v.xC4, v.xC6, v.xEC, [v.xF4, v.xF6, v.xF8, v.xFA]);
-                let theirs = (
-                    m.u16(at) as i16,
-                    m.u16(at + 2) as i16,
-                    m.u32(at + 0x28),
-                    std::array::from_fn(|k| m.u16(at + 0x30 + 2 * k as u32) as i16),
-                );
+                // The timers apart, each its own field for the heap's leftovers: the rise's
+                // wait (`xC6`), the quake's count (`xF6`), the bubbles' timer (`xF8`) and the
+                // half word after it no code names (`xFA`).
+                let h = |a: u32| m.u16(at + a) as i16;
+                for (name, ours, a) in [
+                    ("xC6", v.xC6, 2),
+                    ("xF6", v.xF6, 0x32),
+                    ("xF8", v.xF8, 0x34),
+                    ("xFA", v.xFA, 0x36),
+                ] {
+                    if ours != h(a) {
+                        let p = format!("{path}.zebes5.{name}");
+                        cx.mismatch(&p, format!("{ours}"), format!("{}", h(a)));
+                    }
+                }
+                let ours = (v.xC4, v.xEC, v.xF4);
+                let theirs = (h(0), m.u32(at + 0x28), h(0x30));
                 let xfc = m.u32(at + 0x38);
                 let addr_ok = v.xFC == xfc || v.xFC == 0 && xfc != 0;
                 if ours != theirs || !addr_ok {

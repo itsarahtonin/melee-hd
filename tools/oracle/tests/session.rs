@@ -66,8 +66,8 @@ fn ticks_align_with_reads() {
 }
 
 /// The memory card scene, the opening movie skipped with Start, the title, whose Start at
-/// tick 272 asks for the main menu, and the main menu, whose entry writes the save on the
-/// game's waits, to the character select's mode.
+/// tick 272 asks for the main menu, the main menu, whose entry writes the save on the game's
+/// waits, and the character select, from tick 357, to its button for the rules.
 #[test]
 fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
@@ -78,30 +78,96 @@ fn power_on_runs_through_the_main_menu() {
         "{out}"
     );
     assert!(
-        out.contains("357 ticks compared, no difference; stopped in tick 357: game mode 0x2's loading isn't ported"),
+        out.contains("475 ticks compared, no difference; stopped in tick 475: mn_80231804 (the rules from the select screen, task 8) isn't ported"),
         "{out}"
     );
 }
 
-/// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
-/// movie skipped, the title left to its attract loop, which starts the attract match, whose
-/// first tick differs in the fields its setup leaves to the heap the menus used (the
-/// stage's first: melee-sim's heap holds no bytes).
-#[test]
-fn an_idle_title_reaches_the_attract_match() {
-    let trace = ssbm_rs_local("traces/session/idle-title.trc");
-    let inputs = ssbm_rs_local("lockstep/idle-sessions/idle-title.inputs");
+fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(trace);
+    let inputs = ssbm_rs_local(inputs);
     if std::env::var("SSBM_DISC").is_err()
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
     {
         eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
-        return;
+        return None;
     }
-    let out = session_with(&trace, &inputs, &["--heap"]);
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
+/// movie skipped, the title left to its attract loop, which starts the attract match on
+/// Fountain of Dreams from the title's preloads. Its first tick holds the heap's leftovers the
+/// menus left in fields no proof covers yet (docs/engine.md, a session's heap leftovers), so a
+/// strict run stops there; a survey, leaving out every field still unknown on both sides,
+/// plays the match to the trace's end.
+#[test]
+fn an_idle_title_reaches_the_attract_match() {
+    let (trace, inputs) = (
+        "traces/session/idle-title.trc",
+        "lockstep/idle-sessions/idle-title.inputs",
+    );
+    let Some(out) = session_at(trace, inputs, &["--heap"]) else {
+        return;
+    };
     assert!(
-        out.contains("799 ticks compared; tick 798 differs in")
-            && out.contains("first: p_link 5 #0 ground"),
+        out.contains("799 ticks compared; tick 798 differs in"),
+        "{out}"
+    );
+    let Some(out) = session_at(trace, inputs, &["--heap", "--leftovers-survey"]) else {
+        return;
+    };
+    assert!(out.contains("1515 ticks compared, no difference"), "{out}");
+}
+
+/// The opening movie played whole (`idle-movie`), then the title's attract loop and its
+/// match on Kongo Jungle, surveyed to the trace's end.
+#[test]
+fn an_idle_movie_plays_the_attract_match() {
+    let Some(out) = session_at(
+        "traces/session/idle-movie.trc",
+        "lockstep/idle-sessions/idle-movie.inputs",
+        &["--heap", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("7136 ticks compared, no difference"), "{out}");
+}
+
+/// The main menu's attract loop to its match on Brinstar (`attract`): the stage's bubbles'
+/// timer (`grZebes_GroundVars5`'s `xF8`) starts from the heap's leftover, which the original
+/// counts down from, so even a survey stops at the match's first tick (docs/melee-bugs.md).
+#[test]
+fn the_attract_match_on_brinstar_reads_a_leftover() {
+    let Some(out) = session_at(
+        "traces/menu-sessions/attract.trc",
+        "lockstep/menu-sessions/attract.inputs",
+        &["--heap", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("899 ticks compared; tick 898 differs in 1 places, first: p_link 5 #2 ground.u.zebes5.xF8: ours -1, theirs 2093"),
+        "{out}"
+    );
+}
+
+/// `2026-10-10_13-05-00`: the character select and the stage select, then the first match
+/// on Pokémon Stadium from the selects' preloads, surveyed to its results.
+#[test]
+fn a_session_plays_its_match_from_the_selects() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_13-05-00.trc",
+        "lockstep/recordings/2026-10-10_13-05-00.inputs",
+        &["--heap", "--ticks", "2600", "--leftovers-survey"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "2517 ticks compared, no difference; stopped in tick 2517: gm_Scene_Vs_OnExit's results"
+        ),
         "{out}"
     );
 }

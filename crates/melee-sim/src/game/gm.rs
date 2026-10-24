@@ -16,11 +16,13 @@ pub mod pause;
 pub mod progressive;
 pub mod results;
 pub mod scene;
+pub mod setup_players;
 pub mod stamina;
 pub mod title;
 pub mod trophies;
 pub mod unlocks;
 pub mod vs;
+pub mod vs_melee;
 pub mod vs_mode;
 
 use super::handles::CodeRef;
@@ -85,12 +87,20 @@ pub const TROPHY_DATA_FILE: &str = "TyDatai.usd";
 
 impl super::state::Running<'_> {
     /// The trophies' bookkeeping a stage load does, `tyDisplay_8031C2CC` (`Toy_803124BC`):
-    /// the trophies' data archive loads from the disc if it isn't loaded. The rest marks
-    /// trophies in the save data (`0x4000` on each one the region has and
-    /// `Toy_803060BC(i, 6)` classes 2, and two category bits), which melee-sim doesn't
-    /// keep: nothing in a match reads them (see engine.md).
+    /// the trophies' data archive loads from the disc if it isn't loaded, then the trophies
+    /// the region can't win are marked in the save data (`0x4000` on each of class 2) with
+    /// two category bits. Nothing in a match reads the marks; a session from power-on keeps
+    /// them, as its save is the console's (a replay's match has no save to keep them in).
     #[doc(alias = "tyDisplay_8031C2CC")]
-    #[doc(alias = "Toy_803124BC")]
+    pub fn stage_trophies(&mut self) {
+        self.load_trophy_data();
+        if self.game.audio.dvd.is_some() {
+            self.mark_class_two_trophies();
+        }
+    }
+
+    /// The trophies' data archive loaded from the disc if it isn't (the inline
+    /// `loadTrophyMetadata`).
     pub fn load_trophy_data(&mut self) {
         if !self.game.gm.trophy_data {
             self.disc_load(TROPHY_DATA_FILE, super::ft::data::MAIN_MEMORY);

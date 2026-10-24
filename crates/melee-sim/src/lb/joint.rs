@@ -79,3 +79,11 @@ pub fn set_mobj_flags(objs: &mut Objects, j: JObjId, flags: u32) {
     let d = jobj::get_dobj(&objs.jobjs, Some(j));
     dobjs(objs, d, flags);
 }
+
+/// Gives `j` a position constraint to `target` (`lb_8000C1C0`'s), as the menus place their
+/// models on a layout's joints.
+pub fn constrain_to(objs: &mut Objects, j: Option<JObjId>, target: Option<JObjId>) {
+    let j = j.expect("lb_8000C1C0: a joint");
+    let target = target.expect("lb_8000C1C0: a constraint joint");
+    crate::game::ef::eflib::constrain(objs, j, target, 0x9000_0001);
+}
