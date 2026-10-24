@@ -4,8 +4,8 @@
 
 use melee_sim::game::handles::CodeRef;
 use melee_sim::game::playback::{
-    FRAME_LEN, Frame, Playback, RECORD_FRAME_START_PROC, RECORD_ITEMS_PROC, SEED_PROC, SoundEntry,
-    SoundList, SoundLog, SoundSlot,
+    FRAME_LEN, Frame, MATCH_SCENE, Playback, RECORD_FRAME_START_PROC, RECORD_ITEMS_PROC, SEED_PROC,
+    SoundEntry, SoundList, SoundLog, SoundSlot,
 };
 use melee_sim::game::slippi::placed;
 use melee_sim::game::state::Rules;
@@ -29,6 +29,15 @@ const PROCS: [(u32, u32, u32); 3] = [
     (0x8016_E74C, 0x6E0, RECORD_FRAME_START_PROC),
     (0x8016_E74C, 0x788, RECORD_ITEMS_PROC),
 ];
+
+/// `state_machine`, whose current major and minor scenes the sound codes check.
+const STATE_MACHINE: u32 = 0x8047_9D30;
+
+/// The scene as the sound codes read it (`rlwinm r3, r3, 8, 16, 31` of `state_machine`'s first
+/// word): the current minor scene, then the major.
+fn scene(mem: &[u8]) -> u16 {
+    word(mem, STATE_MACHINE).rotate_left(8) as u16
+}
 
 fn word(mem: &[u8], a: u32) -> u32 {
     let i = (a - MEM1) as usize;
@@ -70,6 +79,7 @@ fn playback(mem: &[u8]) -> (bool, Option<Playback>) {
         frame_index: word(mem, FRAME_INDEX) as i32,
         frame: Frame { bytes },
         sounds: sound_log(mem, buffers),
+        match_scene: scene(mem) == MATCH_SCENE,
         ..Playback::default()
     };
     (true, Some(p))
@@ -143,6 +153,7 @@ impl Comparer<'_> {
                     ..o.sounds
                 };
                 self.check("playback", "sound log", ours, t.sounds);
+                self.check("playback", "match scene", o.match_scene, t.match_scene);
                 if t.frame_index >= melee_sim::game::playback::FIRST_FRAME && o.frame != t.frame {
                     let at = (0..FRAME_LEN)
                         .find(|&i| o.frame.bytes[i] != t.frame.bytes[i])

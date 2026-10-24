@@ -46,6 +46,11 @@ pub const RESP_TERMINATE: u8 = 2;
 /// The replay's first frame, which the scene's first tick reads (`GAME_FIRST_FRAME`).
 pub const FIRST_FRAME: i32 = -123;
 
+/// The scene the sound codes act in (`SCENE_PLAYBACK_IN_GAME`): `state_machine`'s current
+/// minor scene (byte 3) and major (byte 0), as the codes read them, the minor in the high
+/// byte.
+pub const MATCH_SCENE: u16 = 0x010E;
+
 /// The process playback gives its GObj: the code at `0x8016E748`'s entry at 0x4B0, which
 /// playback places on the heap (ssbm-rs's `code_8016E748_4B0`), named by its site and offset.
 pub const SEED_PROC: u32 = 0x8016_E748 + 0x4B0;
@@ -240,6 +245,10 @@ pub struct Playback {
     pub code_list_heap: Option<CodeListHeap>,
     /// The sounds each recent frame played (`Playback/Core/Sounds`).
     pub sounds: SoundLog,
+    /// The scene is the match's ([`MATCH_SCENE`]), which the sound codes check first: Slippi's
+    /// playback scene before it, whose start sound (0xAD, `lbAudioAx_80024030(1)`) plays outside
+    /// it, logs nothing.
+    pub match_scene: bool,
 }
 
 /// The sounds playback's codes log (`Playback/Core/Sounds`, in the codes' state block at
