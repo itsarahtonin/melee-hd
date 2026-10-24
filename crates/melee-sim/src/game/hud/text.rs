@@ -319,6 +319,8 @@ impl Running<'_> {
     pub fn load_font(&mut self, font: i32, archive: ArchiveId, symbol: &str) {
         let s = &mut self.game.sis;
         s.font_archives[font as usize] = Some(archive);
+        // The archive read afresh holds its own bytes again.
+        s.written.retain(|d, _| d.archive != archive);
         let at = self.data.get(archive).public(symbol).unwrap_or_else(|| {
             panic!("the original's assertion failed: Cannot find symbol {symbol}")
         });
@@ -326,6 +328,37 @@ impl Running<'_> {
             archive,
             offset: at,
         });
+    }
+
+    /// [`Running::load_font`] with its archive loaded into the scene's heap by name
+    /// (`HSD_SisLib_803A945C`, `lbArchive_LoadArchive`), its blocks kept for
+    /// [`Running::sis_close_all`].
+    pub fn load_font_named(&mut self, font: i32, name: &str, symbol: &str) {
+        let (archive, file, block) = self.load_archive_blocks(name);
+        self.load_font(font, archive, symbol);
+        self.game.sis.font_blocks[font as usize] = Some((file, block));
+    }
+
+    /// Frees every text and canvas, each font's archive (`HSD_SisLib_803A947C`,
+    /// `lbArchive_80016EFC`) and the arena's block, `HSD_SisLib_803A5FBC`.
+    #[doc(alias = "HSD_SisLib_803A5FBC")]
+    #[doc(alias = "HSD_SisLib_803A947C")]
+    pub fn sis_close_all(&mut self) {
+        self.sis_reset();
+        for i in 0..sis::FONTS {
+            let s = &mut self.game.sis;
+            if s.font_archives[i].is_some() {
+                s.font_archives[i] = None;
+                s.font_tables[i] = None;
+                if let Some((file, block)) = s.font_blocks[i].take() {
+                    self.free_archive_blocks(file, block);
+                }
+            }
+        }
+        let b = std::mem::take(&mut self.game.sis.arena_block);
+        if b != 0 {
+            crate::hsd::heap::mem_free(b);
+        }
     }
 
     /// A full-screen text with a string buffer of its own, `HSD_SisLib_803A6754`.

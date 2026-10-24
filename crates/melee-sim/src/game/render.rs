@@ -381,6 +381,8 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::gm::title::CAMERA_RENDER => r.title_camera_render(gobj),
         super::gm::title::ERASE_RENDER => r.title_erase_render(gobj),
         super::mn::main::FOG_RENDER => r.menu_fog_render(gobj),
+        super::mn::charsel::FOG_RENDER => r.charsel_fog_render(gobj),
+        super::mn::stagesel::FOG_RENDER => r.sss_fog_render(gobj),
         super::mn::main::ERASE_RENDER => r.menu_erase_render(gobj),
         super::mn::gallery::CAMERA_RENDER => r.gallery_camera_render(gobj),
         LOBJ_CALLBACK | 0x801C_4640 | 0x8009_F54C => r.render_lights(gobj),

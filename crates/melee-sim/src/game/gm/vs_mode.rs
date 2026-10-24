@@ -265,11 +265,13 @@ pub fn apply_menu_rules(start: &mut StartMeleeData, rules: &GameRules, prefs: &G
 }
 
 /// Whether a player's pad rumbles (`gm_RumbleEnabledForPlayer`): its port's preference
-/// without a name tag. The save's name tags aren't modeled.
+/// without a name tag, else its name tag's (`tags`, each name tag's setting in the save).
 #[doc(alias = "gm_RumbleEnabledForPlayer")]
-fn rumble_enabled(prefs: &GamePrefs, port: usize, nametag: u8) -> bool {
+pub fn rumble_enabled(prefs: &GamePrefs, port: usize, nametag: u8, tags: &[bool]) -> bool {
     if nametag != NO_NAMETAG {
-        unported_call("GetPersistentNameData");
+        return *tags
+            .get(usize::from(nametag))
+            .unwrap_or_else(|| unported_call("GetPersistentNameData past the name tags"));
     }
     prefs.rumble_enabled[port]
 }
@@ -277,6 +279,11 @@ fn rumble_enabled(prefs: &GamePrefs, port: usize, nametag: u8) -> bool {
 /// Each human player's rumble from the preferences, `gm_LoadRumbleEnabled`.
 #[doc(alias = "gm_LoadRumbleEnabled")]
 pub fn load_rumble_enabled(start: &mut StartMeleeData, prefs: &GamePrefs) {
+    load_rumble_enabled_with(start, prefs, &[]);
+}
+
+/// [`load_rumble_enabled`] with the save's name tags' settings.
+pub fn load_rumble_enabled_with(start: &mut StartMeleeData, prefs: &GamePrefs, tags: &[bool]) {
     for (i, p) in start.players.iter_mut().enumerate() {
         p.rumble_enabled = if i32::from(p.slot_type) == PKIND_HUMAN && i < 4 {
             let port = if p.slot == 0 {
@@ -284,7 +291,7 @@ pub fn load_rumble_enabled(start: &mut StartMeleeData, prefs: &GamePrefs) {
             } else {
                 usize::from(p.slot) - 1
             };
-            rumble_enabled(prefs, port, p.nametag)
+            rumble_enabled(prefs, port, p.nametag, tags)
         } else {
             false
         };
@@ -333,6 +340,28 @@ pub fn enter_vs_with(
     start_cb: Option<StartCallback>,
     player_cb: Option<PlayerCallback>,
 ) -> StartMeleeData {
+    enter_vs_full(vs, rules, prefs, start_cb, player_cb, &[])
+}
+
+/// VS mode's own entry from the menus, [`enter_vs`] with the save's name tags' rumble
+/// settings (`tags`).
+pub fn enter_vs_with_tags(
+    vs: &mut StartMeleeData,
+    rules: &GameRules,
+    prefs: &GamePrefs,
+    tags: &[bool],
+) -> StartMeleeData {
+    enter_vs_full(vs, rules, prefs, None, None, tags)
+}
+
+fn enter_vs_full(
+    vs: &mut StartMeleeData,
+    rules: &GameRules,
+    prefs: &GamePrefs,
+    start_cb: Option<StartCallback>,
+    player_cb: Option<PlayerCallback>,
+    tags: &[bool],
+) -> StartMeleeData {
     apply_menu_rules(vs, rules, prefs);
     let mut start = StartMeleeData::default();
     start.rules.clone_from(&vs.rules);
@@ -350,7 +379,7 @@ pub fn enter_vs_with(
         }
     }
     setup_sub_colors(&mut start);
-    load_rumble_enabled(&mut start, prefs);
+    load_rumble_enabled_with(&mut start, prefs, tags);
     start
 }
 

@@ -169,6 +169,11 @@ pub const FILES: &[&str] = &[
     "SdToy.dat",
     "GmEvent.dat",
     "LbAd.dat",
+    // The character and stage selects'.
+    "MnSlChr.usd",
+    "MnExtAll.usd",
+    "SdSlChr.usd",
+    "MnSlMap.usd",
     // A match's (the attract loop's): `vs_match::Match::start`'s list.
     "LbRf.dat",
     "PdPm.dat",

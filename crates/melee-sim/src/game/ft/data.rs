@@ -110,6 +110,9 @@ pub struct LoadedFiles {
     /// the scene's heap.
     #[clone_from(if_changed)]
     pub preloaded_buffers: Vec<i32>,
+    /// The match's loads take their files from the preload cache as it stands
+    /// (`lbDvd_8001819C`, a session's VS match from the menus), not from [`Self::preloaded`].
+    pub from_cache: bool,
 }
 
 impl LoadedFiles {
@@ -324,7 +327,15 @@ impl Running<'_> {
         let kind = fp.kind;
         fp.x58C = kind_tables(kind).anim_count;
         if let Some((name, aram)) = self.game.load_anim_file(kind) {
-            self.disc_load(name, aram);
+            let at = self.disc_load(name, aram);
+            // Taken from the preload cache: where its ARAM heap's block put it.
+            if self.game.ft.data.files.from_cache && at != 0 {
+                let k = kind as usize;
+                self.game.ft.anim_files[k]
+                    .as_mut()
+                    .expect("the animation file just loaded")
+                    .aram = at;
+            }
         }
     }
 
@@ -341,7 +352,12 @@ impl Running<'_> {
         }
         // A file the preload cache holds: neither read nor in the scene's heap; its archive
         // lives in the cache's heap, where the model doesn't follow it.
-        if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
+        if self.game.ft.data.files.from_cache {
+            let (entrynum, _) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
+            if let Some(addr) = self.take_cached(entrynum) {
+                return addr;
+            }
+        } else if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
             return 0;
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);

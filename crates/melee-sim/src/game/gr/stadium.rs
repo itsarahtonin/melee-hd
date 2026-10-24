@@ -95,9 +95,9 @@ pub struct Screen {
 /// A screen's user data from the scene's heap (its block's size), then its image's buffer
 /// (`lb_800121FC`): preload entry `entry` where the preload cache holds it (a match the VS mode
 /// starts from its menus), else the scene's heap's (the match a replay's playback boots into).
-fn alloc_screen(r: &Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> u32 {
+fn alloc_screen(r: &mut Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> u32 {
     let addr = crate::hsd::heap::mem_alloc(size);
-    if !r.game.ft.data.files.buffer_preloaded(entry) {
+    if r.preloaded_buffer(entry).is_none() {
         let (w, h) = (u32::from(desc.width), u32::from(desc.height));
         crate::hsd::heap::mem_alloc(
             crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32),
@@ -380,8 +380,12 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
         // address the frontend gives; in the match a replay's playback boots into it holds
         // none, and the scene's heap gives the buffer (the allocator model's address, or
         // without the model the frontend's).
-        let address = if r.game.ft.data.files.buffer_preloaded(0x7D5) {
-            r.game.gr.stadium.buffer_address
+        let address = if let Some(a) = r.preloaded_buffer(0x7D5) {
+            if a != 0 {
+                a
+            } else {
+                r.game.gr.stadium.buffer_address
+            }
         } else {
             crate::hsd::heap::with(|h| h.mem_alloc(0x5_0000))
                 .unwrap_or(r.game.gr.stadium.buffer_address)
