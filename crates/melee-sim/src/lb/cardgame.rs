@@ -357,7 +357,12 @@ impl Running<'_> {
     // Ports `lbCardGame_SaveChanges`; aliased once a check reaches it.
     pub fn card_game_save_changes(&mut self) {
         assert!(self.game.card_game.enable, "_p(enable)");
-        let add = self.game.main_lib.take_power_time(self.session_seconds());
+        // `gmMainLib_8015FC74`'s `lbTime_GetTimeInSeconds`: the clock's read.
+        let now = self.session_seconds();
+        self.game
+            .audio
+            .clock_read(self.data, crate::game::session::TB_READ);
+        let add = self.game.main_lib.take_power_time(now);
         // `gm_GetPowerTime`.
         let t = &mut self.game.game_data.thing.save_data.x1A54;
         *t = t.wrapping_add(add);
