@@ -418,7 +418,11 @@ impl Gx {
     }
 
     /// `GXInitTlutObj`: `lut` is the palette's address; the object keeps its physical address
-    /// in 32-byte units.
+    /// in 32-byte units. `load_tlut0`'s bits 21 to 23 stay as the object had them: the
+    /// original's callers pass a stack object, so the console sends there what their stack
+    /// held, and melee-render's callers pass a cleared one, which sends 0. A palette load reads
+    /// only the address below them (docs/melee-bugs.md, "A palette load's address goes out
+    /// with bits from the stack").
     #[doc(alias = "GXInitTlutObj")]
     pub fn init_tlut_obj(&self, tlut_obj: &mut TlutObj, lut: u32, fmt: u32, n_entries: u16) {
         let t = tlut_obj;

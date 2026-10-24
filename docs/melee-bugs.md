@@ -612,6 +612,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded beyond the spin's sign.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (the Octorok's stone's paragraph).
 
+### A stage's hurtbox item's spawn flags keep seven bits from the stack
+
+- **Where:** `it_802E6AEC` (a stage's hurtbox item, from `grMaterial_801C8CFC` and `grMaterial_801C8D44`; Peach's Castle's among them), `crates/melee-sim/src/game/it/kinds/yaku.rs` (`spawn`).
+- **Defect:** its `SpawnItem` is a stack struct (`r1 + 0x3C` of its 0xB0-byte frame), and it sets the fall flag `x44_flag.b0` by reading the flag byte back (`lbz` at `0x802E6BB8`, `it_802E6AEC + 0xCC`, `r1 + 0x80`), inserting the bit (`rlwimi`, 0x80) and storing it, so the byte's other seven bits keep what that slot held from earlier calls. ssbm-rs's lockstep reports the read once in 900 fields of `stage-peachs-castle` with only `melee/gr/grcastle` ported (`LOCKSTEP_UNINIT`); the slot's value is not recorded.
+- **Effect:** none observable: the only reader of the byte is `Item_80268B18`'s placement (`itmaplib.c:233`, `it_80275E98`), which tests `b0` alone, and nothing copies the `SpawnItem` whole.
+- **melee-hd:** stand-in: the spawn starts from a cleared `SpawnItem` (`SpawnItem::default()`), so those bits are 0, and the placement's port reads only 0x80 (`crates/melee-sim/src/game/it/maplib.rs`).
+- **Fix:** clear the flag byte before setting `b0`.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); the decompilation's `it_802E6AEC` (`spawn.x44_flag.x0.b0 = arg5 ? 1 : 0`) and its machine code; `itmaplib.c:233`.
+
 ### A coin scatter with no coin to make returns its caller's register
 
 - **Where:** `it_802E609C` (making a scatter's coins), `crates/melee-sim/src/game/it/kinds/coin.rs` (`drop_all`).
@@ -1019,6 +1029,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** start the registers at zero, or send only the components set.
 - **Fix impact:** none, as long as no stage reads an unset component; the overlay-and-alpha path would draw differently.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 105); `crates/melee-render/src/hsd/texp.rs:102`.
+
+### A palette load's address goes out with bits from the stack
+
+- **Where:** `GXInitTlutObj` (GXTexture.c) on a stack `GXTlutObj`: `HSD_TObjSetup`'s for a color-indexed texture's palette (tobj.c, the object at `r1 + 0x58` of its 0x90-byte frame) and `psDispParticles`'s (`gx_tlut_obj`), so under every render callback that draws a color-indexed texture, Peach's Castle's `fn_801D0924` and Poké Floats' `fn_802130D0` among them; `GXLoadTlut` sends it. `crates/melee-render/src/gx/texture.rs` (`init_tlut_obj`, `load_tlut`), with `crates/melee-render/src/hsd/draw.rs` and `hsd/psdisp.rs` as the callers.
+- **Defect:** it clears the object's first word but sets only the low 21 bits (the address, `lwz` at `0x8033F044`, `clrrwi r4, r4, 21`) and the top byte (0x64, the BP register) of `loadTlut0`, so bits 21 to 23 keep what the caller's stack held there, and `GXLoadTlut` writes the word to BP register 0x64 whole. `GXLoadTlut` then copies the object, those bits and the two padding bytes after `numEntries` with it (`lwz` at `0x8033F0E8`), into the palette region (`r->tlutObj = *t`). What the slot holds is what earlier calls at that depth left: a `WATCH_ADDR` probe of ssbm-rs's interpreter on `stage-peachs-castle` finds `0x804EE614` written by `HSD_TObjSetupVolatileTev`'s `stmw r25` (a material's setup drawn just before, which leaves the heap pointer `0x80DC01A0`, so bits 21 to 23 are 6), and the store at `GXInitTlutObj + 0x3C` keeps them for the next palette set up in the same slot. Over 400 fields of that match (`GX_TRACE_BP=64`) 29,063 palette loads went out with all eight values there, 0 on 20,570 of them; over 1,500 fields of `stage-poke-floats`, 16,276 loads, 0 on 7,818.
+- **Effect:** none observable: nothing reads those bits. A palette load (BP register 0x65) takes its source from the address field below them: the SDK's own field is 21 bits (`GXGetTlutObjData`), ssbm-rs's and melee-gx's loads mask to it, Dolphin's keeps only the GameCube's physical address, and on the console the game's palettes load from the right place while all eight values go out. No other GX register takes BP 0x64, and the region's copy is read again only for its `tlut` word (`GXLoadTexObj`).
+- **melee-hd:** stand-in: the callers pass a cleared object (`TlutObj::default()`), so 0 goes out there. melee-gx's `palette_loads_ignore_the_bits_above_the_address` test holds the load to the address field (widening the mask to 24 bits fails it); the render checks leave BP 0x64 out of the draws they compare and compare palettes by content, and melee-gx's register hashes treat it as a trigger. With the bits forced to 6 Peach's Castle's and Poké Floats' frame checks pass unchanged, and with the address one line off all four fail.
+- **Fix:** clear `loadTlut0` before setting its fields, as the first word is.
+- **Fix impact:** none.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); `crates/melee-render/src/gx/texture.rs:420`; `crates/melee-gx/src/lib.rs` (the test); the decompilation's `GXInitTlutObj` and `GXLoadTlut` and their machine code.
 
 ## Saves and the memory card
 
