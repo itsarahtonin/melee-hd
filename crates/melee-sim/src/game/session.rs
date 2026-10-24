@@ -312,11 +312,14 @@ impl Session {
                         let a =
                             Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
                         let id = self.data.add(a);
-                        self.game.ft.data.files.entries.push((
+                        let files = &mut self.game.ft.data.files;
+                        files.entries.push((
                             (*name).to_owned(),
                             file.entrynum,
                             file.bytes.len() as u32,
                         ));
+                        // Named, so the comparer finds it where the original loads it.
+                        files.archives.push(((*name).to_owned(), id));
                         id
                     }
                 };
