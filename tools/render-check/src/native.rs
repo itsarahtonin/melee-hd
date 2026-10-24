@@ -453,11 +453,18 @@ pub fn distance(a: &[Event], b: &[Event]) -> (f64, usize) {
 }
 
 /// A renderer for checks: `CHECK_DRAW_LIMIT=N` draws only each frame's first N draws, to find
-/// the draw where two frames' images part.
+/// the draw where two frames' images part; `CHECK_COPIES=memory` writes the copies to memory
+/// that a log captured with ssbm-rs's renderer running has there (`Capture::Rendered`), so the
+/// draws that sample them compare their texels: ssbm-render encodes every copy into memory
+/// but those it keeps on the GPU (I4 and RGB5A3), and melee-gpu keeps RGB565 copies there too
+/// (refraction's screen copy, Pokémon Stadium's screens, Fountain of Dreams' reflection).
 pub fn renderer() -> melee_gpu::Renderer {
     let mut r = melee_gpu::Renderer::new().expect("a GPU");
     r.draw_limit = std::env::var("CHECK_DRAW_LIMIT")
         .ok()
         .map(|n| n.parse().expect("CHECK_DRAW_LIMIT=N"));
+    if std::env::var("CHECK_COPIES").as_deref() == Ok("memory") {
+        r.copies_to_memory = vec![4];
+    }
     r
 }

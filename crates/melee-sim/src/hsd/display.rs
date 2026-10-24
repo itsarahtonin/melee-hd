@@ -129,6 +129,9 @@ pub enum Draw {
     MagnifierErase(u8),
     /// The screen copied into refraction's source texture (`lbRefract_80022560`).
     RefractCopy,
+    /// A refracted fighter's tree drawn: the TEV back to direct texturing and HAL's state
+    /// caches out of date (`ftCo_800C8AF0`'s `lbRefract_800225D4`).
+    RefractEnd,
     /// The render copied into a shadow's texture (`HSD_ShadowEndRender`).
     ShadowCopy(super::shadow::ShadowId),
     /// Later draws render offscreen (`true`, into a texture) or to the screen

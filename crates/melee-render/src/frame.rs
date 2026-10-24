@@ -230,17 +230,6 @@ impl Ctx<'_> {
                 1
             }
             Draw::Rendering(g) => {
-                // A refracted fighter's callback ends each tree it draws by putting the TEV
-                // back to direct and the caches out of date (`ftCo_800C8AF0`,
-                // `lbRefract_800225D4`).
-                if let Some(f) = self.hsd.rendering_fighter
-                    && self.hsd.rendering != *g
-                    && self.game.fighters[f.0].x2226_b5
-                {
-                    self.gx.set_tev_direct(0);
-                    self.gx.set_num_ind_stages(0);
-                    self.invalidate(crate::hsd::state::STATE_ALL);
-                }
                 if let Some(g) = *g {
                     self.particles_rendering(g);
                 }
@@ -388,6 +377,17 @@ impl Ctx<'_> {
             Draw::Particles { .. } => self.particles(draws, i),
             Draw::MagnifierCopy(i) => {
                 self.magnifier_copy(*i);
+                1
+            }
+            Draw::RefractCopy => {
+                self.refract_copy();
+                1
+            }
+            Draw::RefractEnd => {
+                // `lbRefract_800225D4`.
+                self.gx.set_tev_direct(0);
+                self.gx.set_num_ind_stages(0);
+                self.invalidate(crate::hsd::state::STATE_ALL);
                 1
             }
             Draw::ReflectionCopy => {
