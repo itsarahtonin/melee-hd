@@ -302,16 +302,19 @@ impl CardTime {
 }
 
 /// Register reads of a sector the save's list writes (a sector's erase and its 64 page
-/// programs, each page two interrupts): fitted to the menu sessions' traces
-/// (`docs/saves.md`), to be replaced by a probe of a save's writes. No session's tick ends on
-/// a write yet, so it stands untested at what a block's read took before reads were chains.
-pub const SAVE_WRITE_WORK: u64 = 323;
-/// The waits a sector the save's list writes takes, its transfers in the first: fitted to
-/// the menu sessions' traces (`docs/saves.md`), to be replaced by a probe of a save's writes.
-/// With one, `2026-10-06_17-44-10`'s tick 274 ends a step early and `2026-10-06_12-42-06`'s
-/// tick 163 has the writer done (`x10`) a step before the trace's; ssbm-rs's step log
-/// (`CARD_STEPS`) shows no step for the wait between, where the HSD layer is still busy.
-pub const SAVE_WRITE_WAITS: usize = 2;
+/// programs, each page two interrupts), after its step's wait point: fitted to the menu
+/// sessions' traces (`docs/saves.md`), to be replaced by a probe of a save's writes. With the
+/// write's waits ([`SAVE_WRITE_WAITS`]) the recorded sessions that save compare clean through
+/// the main menu with none; 323 (a block's read before reads were chains) makes
+/// `2026-10-06_17-44-10`'s tick 274 end 2,239 ticks early.
+pub const SAVE_WRITE_WORK: u64 = 0;
+/// The waits a sector the save's list writes takes, its step's the first: fitted to the menu
+/// sessions' traces (`docs/saves.md`), to be replaced by a probe of a save's writes. With two,
+/// `2026-10-06_17-44-10`'s tick 274 ends 2,239 ticks early and `2026-10-06_12-42-06`'s tick
+/// 163 has the writer done (`x10`) before the trace's; with four, 12-42-06's tick 163 ends
+/// 2,239 ticks early. ssbm-rs's step log (`CARD_STEPS`) shows no step for the waits between,
+/// where the HSD layer is still busy (the erase's interrupt, then the programs').
+pub const SAVE_WRITE_WAITS: usize = 3;
 /// Register reads of a file's status set or a file created in the save's list (a directory's
 /// write): fitted to the menu sessions' traces (`docs/saves.md`), to be replaced by a probe of
 /// a save's writes. The save's list sets no status and creates nothing while its file is

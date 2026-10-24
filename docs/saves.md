@@ -91,8 +91,8 @@ Writes are fitted, a stopgap until a probe of a save's writes gives their interr
 
 | Constant | Value | What | What fixes it |
 | --- | --- | --- | --- |
-| `SAVE_WRITE_WAITS` | 2 waits | a sector the list writes: its transfers, then a wait the HSD layer stays busy through | with one, `2026-10-06_17-44-10`'s tick 274 ends a step early and `2026-10-06_12-42-06`'s tick 163 has the writer done (`x10`) a step before the trace's; ssbm-rs's step log (`CARD_STEPS`) shows no step for the wait between |
-| `SAVE_WRITE_WORK` | 323 register reads | a sector the list writes | nothing yet: no session's tick ends on a write |
+| `SAVE_WRITE_WAITS` | 3 waits | a sector the list writes: its step, then two waits the HSD layer stays busy through | with two, `2026-10-06_17-44-10`'s tick 274 ends 2,239 ticks early and `2026-10-06_12-42-06`'s tick 163 has the writer done (`x10`) before the trace's; with four, 12-42-06's tick 163 ends 2,239 early; ssbm-rs's step log (`CARD_STEPS`) shows no step for the waits between |
+| `SAVE_WRITE_WORK` | 0 register reads | a sector the list writes, after its step's wait point | with three waits, the eight recorded sessions that compare clean through the main menu take none; 323 (a block's read before reads were chains) makes 17-44-10's tick 274 end 2,239 early |
 | `SAVE_OTHER_WORK` | 0 register reads | a status set or a file created (a directory's write) | nothing yet: the save's list does neither while the file is intact |
 
 The steps' order and count otherwise follow the layers (`melee-save`'s run of the list), not a fit, and everything else is exact: what's written (the card's bytes, by `melee-save`'s layers), the tasks' order, the comment's date, the results the game reads and when the indicator draws.
