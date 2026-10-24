@@ -401,17 +401,17 @@ fn menu_session(name: &str, args: &[&str]) -> Option<String> {
 
 /// The main menu toured: every list `menu-tour` visits, the camera, the restart, the save
 /// written as it opens (tick 383: each sector an erase and 64 page programs, all inside the
-/// step's call, `CardChain::Write`), timeline included, to B's return to the title, where an
-/// ARAM request the bank's move queues isn't linked as the trace's is.
+/// step's call, `CardChain::Write`), B's return to the title, whose bank move's chunks queue
+/// their ARAM requests behind the transfers whose callbacks post them (tick 3940), the title and its
+/// attract loop, timeline included, to the attract match's first tick, which differs in the
+/// heap's leftovers.
 #[test]
 fn the_main_menu_toured() {
     let Some(out) = menu_session("menu-tour", &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains(
-            "3941 ticks compared; tick 3940 differs in 1 places, first: audio: devComARQR[0][1]"
-        ),
+        out.contains("4562 ticks compared; tick 4561 differs in"),
         "{out}"
     );
 }

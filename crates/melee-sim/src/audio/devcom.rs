@@ -605,12 +605,23 @@ impl Audio {
         self.devcom.arq_done.push(done);
     }
 
-    /// The ARAM interrupt: the next finished ARAM transfer's callback.
+    /// The ARAM interrupt (`__ARQInterruptServiceRoutine`): the finished transfer's callback,
+    /// and only then is it no longer under way (`__ARQRequestPendingHi` cleared after the
+    /// callback returns), so a request the callback posts (the device command queue's next
+    /// transfer) queues behind it in `ARQPostRequest`, linked behind any already waiting, and
+    /// starts as the routine returns (`__ARQPopTaskQueueHi`). An ARAM-to-ARAM move posts two:
+    /// the second is linked behind the first (`next`) when they're posted from a callback, not
+    /// when the queue was idle.
     pub fn devcom_aram_done(&mut self, data: &Archives) {
         let done = self.devcom.arq_done.remove(0);
+        self.devcom_arq_callback(data, done);
         if !self.devcom.arq_slots.is_empty() {
             self.devcom.arq_slots.remove(0);
         }
+    }
+
+    /// A finished ARAM transfer's callback.
+    fn devcom_arq_callback(&mut self, data: &Archives, done: ArqDone) {
         let buf = match done {
             ArqDone::None => return,
             ArqDone::Std(b) => {
