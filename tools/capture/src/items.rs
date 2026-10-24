@@ -403,7 +403,10 @@ impl Comparer<'_> {
         }
         let m = mem(self.mem);
         let game = self.game;
-        game.items[o.0].compare(&m, t, &format!("{path} item"), self);
+        let ipath = format!("{path} item");
+        self.begin_block("item", t, &ipath);
+        game.items[o.0].compare(&m, t, &ipath, self);
+        self.block = None;
     }
 
     /// An item's joint table's entries for its model, the first time it is met.
