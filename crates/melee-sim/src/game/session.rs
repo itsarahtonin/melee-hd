@@ -120,6 +120,12 @@ pub trait Console {
     /// A disc file's bytes and entry number, for the frontend's loads before the session
     /// runs.
     fn file(&mut self, path: &str) -> DiscFile;
+    /// A disc file's entry number and size (`DVDFastOpen`'s), for the preload cache's reads of
+    /// files the simulation only times.
+    fn file_info(&mut self, path: &str) -> (i32, u32) {
+        let f = self.file(path);
+        (f.entrynum, f.bytes.len() as u32)
+    }
 }
 
 /// A running session: the game's state, the archives it has loaded, the console's setup and
@@ -152,7 +158,16 @@ pub const FILES: &[&str] = &[
     "ItCo.usd",
     "IfAll.usd",
     "TyDatai.usd",
+    "GmTtAll.usd",
+    "NtProge.dat",
+    "SdProge.usd",
 ];
+
+/// The songs the ported scenes play (`lbAudioAx_80023F28`): the opening movie's.
+pub const SONGS: &[usize] = &[0x3E];
+
+/// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
+pub const MOVIES: &[&str] = &[super::gm::opening::MOVIE];
 
 /// A time base read's time on ssbm-rs's clock, and a hardware register's.
 pub(crate) const TB_READ: u64 = 16;
@@ -226,10 +241,46 @@ impl Session {
             files.archives.push((name.to_owned(), id));
             sizes.push((file.entrynum, len));
         }
+        // The files a game cache can preload, by entry and size: the preload cache only times
+        // their reads.
+        let mut names = Vec::new();
+        for name in crate::lb::dvd::game_cache_files() {
+            let (entrynum, len) = console.file_info(&name);
+            if !sizes.iter().any(|s| s.0 == entrynum) {
+                sizes.push((entrynum, len));
+            }
+            names.push((name, entrynum));
+        }
         self.game.audio.dvd = Some(crate::lb::dvd::Dvd {
             sizes,
+            names,
             ..Default::default()
         });
+        // The songs the ported scenes play, which the music stream reads.
+        for &bgm in SONGS {
+            let name = crate::lb::audio::HPS_NAMES[bgm];
+            let file = console.file(&format!("audio/{name}"));
+            if !self
+                .game
+                .audio
+                .devcom
+                .files
+                .iter()
+                .any(|f| f.0 == file.entrynum)
+            {
+                let id = self.data.add(Archive::raw(&file.bytes));
+                self.game.audio.devcom.files.push((file.entrynum, id));
+            }
+        }
+        // The movies, whose frames the movie player reads through the device command queue.
+        for &name in MOVIES {
+            let file = console.file(name);
+            let id = self.data.add(Archive::raw(&file.bytes));
+            self.game.audio.devcom.files.push((file.entrynum, id));
+            let len = file.bytes.len() as u32;
+            let files = &mut self.game.ft.data.files;
+            files.entries.push((name.to_owned(), file.entrynum, len));
+        }
         bank
     }
 
@@ -303,12 +354,16 @@ impl Session {
 
     /// The frame's display pass after [`Session::step_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
+        // The pass's wait can take the pad alarm, whose handler probes the card.
+        let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        self.game.audio.render_start(&self.data);
         scene::render_screen(&mut Running {
             game: &mut self.game,
             data: &self.data,
         });
         lent.give_back(&mut self.game.objs.heap);
+        card.give_back(&mut self.card);
         std::mem::take(&mut self.game.objs.display.draws)
     }
 }
@@ -349,7 +404,7 @@ impl Running<'_> {
         self.game.card_game.init(card_in);
         self.game.snap.init([card_in, false]);
         self.init_main_lib();
-        self.game.movie.init();
+        self.game.audio.movie.init();
         // `HSD_SisLib_803A6048(0xC000)`: the boot's text heap, in HSD's boot heap, which the
         // first scene's heap replaces.
         self.game.sis.init(0xC000);

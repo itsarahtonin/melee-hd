@@ -8,11 +8,15 @@ pub mod main_lib;
 pub mod memcard;
 pub mod mode_init;
 pub mod names;
+pub mod opening;
 pub mod pause;
+pub mod progressive;
 pub mod results;
 pub mod scene;
 pub mod stamina;
+pub mod title;
 pub mod trophies;
+pub mod unlocks;
 pub mod vs;
 pub mod vs_mode;
 
@@ -44,6 +48,10 @@ pub struct Globals {
     /// The buttons held on the first controller as the game started
     /// (`db_gameLaunchButtonState`, `db_GetGameLaunchButtonState`).
     pub launch_buttons: u16,
+    /// The console's SRAM's progressive scan setting (its flags' 0x80): the setup's at
+    /// power-on, set by the progressive scan prompt's yes (`OSSetProgressiveMode`). The
+    /// console's, not memory of the game's; only the next power-on reads it.
+    pub sram_progressive: bool,
     /// The running scene's frame function (`gm_801A4D34`'s `on_frame`).
     pub on_frame: Option<CodeRef>,
     /// The scene's own GObj (`gm_804D672C`), which the match gives its per-tick process.

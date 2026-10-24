@@ -15,6 +15,8 @@ use super::super::state::Running;
 
 /// `GameModeKind`s.
 pub const GM_TITLE: u8 = 0x00;
+pub const GM_MENU: u8 = 0x01;
+pub const GM_CHALLENGER_APPROACH: u8 = 0x14;
 pub const GM_OPENING_MV: u8 = 0x18;
 pub const GM_PROGRESSIVE_SCAN: u8 = 0x27;
 pub const GM_BOOT: u8 = 0x28;
@@ -22,7 +24,11 @@ pub const GM_MEMCARD: u8 = 0x29;
 pub const GM_COUNT: u8 = 0x2D;
 
 /// `GameSceneKind`s.
+pub const GS_TITLE: u8 = 0x00;
+pub const GS_MENU: u8 = 0x01;
+pub const GS_VS: u8 = 0x02;
 pub const GS_MOVIE_OPENING: u8 = 0x1C;
+pub const GS_PROG_SCAN: u8 = 0x28;
 pub const GS_MEMCARD: u8 = 0x2A;
 
 /// `lbCardGame_DecideGameMode`, the override the boot mode leaves.
@@ -82,6 +88,10 @@ enum Hook {
     OpeningOnLoad,
     OpeningOnEnterMovie,
     OpeningOnExitMovie,
+    TitleModeOnEnter,
+    TitleModeOnExit,
+    ProgScanOnEnter,
+    ProgScanOnExit,
     /// A handler of a mode not ported yet: entering it stops.
     Unported(&'static str),
 }
@@ -111,9 +121,9 @@ fn states(mode: u8) -> &'static [StateDesc] {
         on_exit: None,
         scene: GS_MEMCARD,
     }];
-    // `gm_Mode_Opening_States`' first: the movie. Its others (the attract match and the
-    // movies after it) are task 6's.
-    const OPENING: [StateDesc; 2] = [
+    // `gm_Mode_Opening_States`: the movie, then the attract loop (its match, the title, a
+    // second match, How to Play and the Special Movie), which is task 6's.
+    const OPENING: [StateDesc; 6] = [
         StateDesc {
             id: 0,
             preload: 3,
@@ -126,22 +136,74 @@ fn states(mode: u8) -> &'static [StateDesc] {
             preload: 3,
             on_enter: Some(Hook::Unported("onEnterVs")),
             on_exit: None,
-            scene: 0,
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 3,
+            on_enter: Some(Hook::TitleModeOnEnter),
+            on_exit: Some(Hook::Unported("onExitTitle")),
+            scene: GS_TITLE,
+        },
+        StateDesc {
+            id: 3,
+            preload: 3,
+            on_enter: Some(Hook::Unported("onEnterVs")),
+            on_exit: None,
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 4,
+            preload: 3,
+            on_enter: None,
+            on_exit: Some(Hook::Unported("onExitHowto")),
+            scene: GS_MOVIE_HOWTO,
+        },
+        StateDesc {
+            id: 5,
+            preload: 3,
+            on_enter: None,
+            on_exit: Some(Hook::Unported("onExitOmake15")),
+            scene: GS_MOVIE_OMAKE15,
         },
     ];
+    // `gm_Mode_Title_States`.
+    const TITLE: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 3,
+        on_enter: Some(Hook::TitleModeOnEnter),
+        on_exit: Some(Hook::TitleModeOnExit),
+        scene: GS_TITLE,
+    }];
+    // `gm_Mode_ProgScan_States`.
+    const PROG_SCAN: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 2,
+        on_enter: Some(Hook::ProgScanOnEnter),
+        on_exit: Some(Hook::ProgScanOnExit),
+        scene: GS_PROG_SCAN,
+    }];
     match mode {
         GM_BOOT => &BOOT,
         GM_MEMCARD => &MEMCARD,
         GM_OPENING_MV => &OPENING,
+        GM_TITLE => &TITLE,
+        GM_PROGRESSIVE_SCAN => &PROG_SCAN,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
 
+/// `GS_MOVIE_HOWTO`, `GS_MOVIE_OMAKE15`.
+const GS_MOVIE_HOWTO: u8 = 0x1E;
+const GS_MOVIE_OMAKE15: u8 = 0x1F;
+
 /// A mode's `on_load` and `on_unload`, and whether its files are expected preloaded.
 fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
     match mode {
-        GM_BOOT | GM_MEMCARD => (true, None, None),
+        GM_BOOT | GM_MEMCARD | GM_TITLE => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
+        GM_PROGRESSIVE_SCAN => (false, None, None),
+        GM_MENU => unported_call("the main menu's mode (gmmenumode.c)"),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -157,6 +219,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetAllGameModes")]
     pub fn start_modes(&mut self, dtv: bool, progressive: bool) {
         self.game.machine = super::machine::Machine::default();
+        self.game.gm.sram_progressive = progressive;
         self.modes_on_init();
         // `VIGetDTVStatus` reads the video interface's register.
         self.game
@@ -276,7 +339,10 @@ impl Running<'_> {
         let scene = s.scene;
         let (on_enter, on_frame) = match scene {
             GS_MEMCARD => (super::memcard::ON_ENTER, super::memcard::ON_FRAME),
-            GS_MOVIE_OPENING => unported_call("gm_Scene_Opening_OnEnter"),
+            GS_MOVIE_OPENING => (super::opening::ON_ENTER, super::opening::ON_FRAME),
+            GS_TITLE => (super::title::ON_ENTER, super::title::ON_FRAME),
+            GS_PROG_SCAN => (super::progressive::ON_ENTER, super::progressive::ON_FRAME),
+            GS_MENU => unported_call("mnMain_Scene_OnEnter (the main menu's entry)"),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -290,6 +356,9 @@ impl Running<'_> {
         };
         match on_enter {
             super::memcard::ON_ENTER => self.memcard_on_enter(),
+            super::opening::ON_ENTER => self.opening_on_enter(),
+            super::title::ON_ENTER => self.title_on_enter(),
+            super::progressive::ON_ENTER => self.prog_scan_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = Some(on_frame);
@@ -313,12 +382,16 @@ impl Running<'_> {
     #[doc(alias = "gm_FindGameSceneHandler")]
     fn init_mode_scene(&mut self) {
         super::super::vs_match::init_scene(self);
+        // `HSD_SObjLib_804D7960`'s kind registered again and the sprites' pool made anew
+        // (`HSD_SObjLib_803A44A4`); `gm_804D6724` cleared.
+        self.game.objs.sobjs = Default::default();
+        self.game.opening.perf_display = false;
         self.load_rumble_data();
     }
 
     /// `lbMthp_8001F800`.
-    fn mthp_release(&mut self) {
-        self.game.movie.release();
+    pub fn mthp_release(&mut self) {
+        self.game.audio.mthp_close(self.data);
     }
 
     /// The rest of `gm_801A4014` after the scene loop: the scene's exit and the mode
@@ -344,6 +417,9 @@ impl Running<'_> {
         let s = &states(scene_mode)[state as usize];
         match s.scene {
             GS_MEMCARD => self.memcard_on_exit(),
+            // No exit of their own.
+            GS_MOVIE_OPENING | GS_TITLE => {}
+            GS_PROG_SCAN => self.prog_scan_on_exit(),
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -380,7 +456,12 @@ impl Running<'_> {
                 self.set_game_mode_state_id(id);
             }
             Hook::OpeningOnEnterMovie => self.opening_on_enter_movie(),
-            Hook::OpeningOnExitMovie => unported_call("onExitMovie"),
+            // `onExitMovie`.
+            Hook::OpeningOnExitMovie => self.mthp_release(),
+            Hook::TitleModeOnEnter => self.title_mode_on_enter(),
+            Hook::TitleModeOnExit => self.title_mode_on_exit(),
+            Hook::ProgScanOnEnter => self.prog_scan_mode_on_enter(),
+            Hook::ProgScanOnExit => self.prog_scan_mode_on_exit(),
             Hook::Unported(name) => unported_call(name),
         }
         let _ = state;
@@ -438,6 +519,18 @@ impl Running<'_> {
         let m = &mut self.game.machine;
         m.routing.pending_mode = mode;
         m.pending_mode_change = true;
+    }
+
+    /// `gm_SetPendingGameMode`.
+    #[doc(alias = "gm_SetPendingGameMode")]
+    pub fn set_pending_game_mode(&mut self, mode: u8) {
+        self.game.machine.routing.pending_mode = mode;
+    }
+
+    /// `gm_SetNewGameModePending`.
+    #[doc(alias = "gm_SetNewGameModePending")]
+    pub fn set_new_game_mode_pending(&mut self) {
+        self.game.machine.pending_mode_change = true;
     }
 }
 

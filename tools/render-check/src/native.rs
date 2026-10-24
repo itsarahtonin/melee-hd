@@ -48,9 +48,110 @@ pub struct Tick<'a> {
     pub dol: &'a [u8],
 }
 
+/// The console a recorded session plays on: the recording's reads in order (the last one
+/// again past its end, as ssbm-rs's playback does) and the disc.
+struct SessionConsole<'a> {
+    reads: &'a [melee_sim::input::controller::PadData],
+    next: usize,
+    disc: &'a Disc,
+}
+
+impl melee_sim::game::session::Console for SessionConsole<'_> {
+    fn read_pads(&mut self) -> melee_sim::input::controller::PadData {
+        let pads = self.reads[self.next.min(self.reads.len() - 1)];
+        self.next += 1;
+        pads
+    }
+
+    fn entrynum(&mut self, path: &str) -> Option<i32> {
+        self.disc.entrynum(path.trim_start_matches('/')).ok()
+    }
+
+    fn file_info(&mut self, path: &str) -> (i32, u32) {
+        let path = path.trim_start_matches('/');
+        self.disc
+            .file_info(path)
+            .unwrap_or_else(|e| panic!("{path}: {e}"))
+    }
+
+    fn file(&mut self, path: &str) -> DiscFile {
+        let path = path.trim_start_matches('/');
+        DiscFile {
+            entrynum: self
+                .disc
+                .entrynum(path)
+                .unwrap_or_else(|e| panic!("{path}: {e}")),
+            bytes: self
+                .disc
+                .read_file(path)
+                .unwrap_or_else(|e| panic!("{path}: {e}")),
+        }
+    }
+}
+
+/// Plays a recorded console session (ssbm-rs's `SSBMINP1`, a `.inputs` file) from power-on to
+/// its rendered frame `to`, as [`drive`] plays a replay; `replay_frame` counts the session's
+/// engine ticks. In the console's float mode.
+fn drive_session(
+    disc_path: &str,
+    inputs_path: &str,
+    to: u32,
+    mut each: impl FnMut(&Tick<'_>) -> bool,
+) {
+    use melee_sim::game::session::{Session, Setup};
+    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+    let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
+    let rec = melee_sim::game::inputs::Recording::read(std::path::Path::new(inputs_path))
+        .unwrap_or_else(|e| panic!("{e}"));
+    let card = rec.card.as_ref().map(|p| {
+        std::fs::read(p).unwrap_or_else(|e| panic!("the memory card {}: {e}", p.display()))
+    });
+    let setup = Setup {
+        disc: rec.disc().unwrap_or_else(|e| panic!("{inputs_path}: {e}")),
+        dsp: rec.dsp(),
+        card,
+        power_on: rec.power_on,
+        dtv: rec.dtv,
+        sram_flags: rec.sram_flags,
+        card_pull: None,
+    };
+    let mut console = SessionConsole {
+        reads: &rec.reads,
+        next: 0,
+        disc: &disc,
+    };
+    let dol = disc.dol().unwrap_or_else(|e| panic!("main.dol: {e}"));
+    let mut s = Session::new(setup);
+    s.boot(&mut console);
+    let (mut n, mut ticks) = (0u32, 0i32);
+    loop {
+        let (_, render) = s.step_tick(&mut console);
+        ticks += 1;
+        if render {
+            let draws = s.render();
+            let tick = Tick {
+                n,
+                replay_frame: ticks,
+                game: &s.game,
+                data: &s.data,
+                draws: &draws,
+                dol: &dol,
+            };
+            if !each(&tick) {
+                return;
+            }
+            n += 1;
+            if n > to {
+                return;
+            }
+        }
+    }
+}
+
 /// Plays the replay's match to its rendered frame `to`, calling `each` with each rendered
 /// frame until it returns false; with `cosmetic`'s toggles, as the player sets them for the
-/// frames it shows.
+/// frames it shows. A `.inputs` file is a recorded console session instead
+/// ([`drive_session`]).
 fn drive(
     disc_path: &str,
     replay_path: &str,
@@ -58,6 +159,10 @@ fn drive(
     cosmetic: Cosmetic,
     mut each: impl FnMut(&Tick<'_>) -> bool,
 ) {
+    if replay_path.ends_with(".inputs") {
+        drive_session(disc_path, replay_path, to, each);
+        return;
+    }
     // The float mode the replay was recorded in: the console's for the benchmark matches
     // (the default), Slippi Dolphin's for a Slippi replay (`CHECK_FP=slippi`).
     let fp = match std::env::var("CHECK_FP").as_deref() {

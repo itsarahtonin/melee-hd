@@ -347,6 +347,29 @@ impl Ctx<'_> {
                 self.erase_screen(color, false);
                 1
             }
+            Draw::EraseWithDepth => {
+                match self.hsd.erase_color.take() {
+                    Some(c) => self.erase_screen(c, true),
+                    None => self.hsd.note_once("an erase without an erase color"),
+                }
+                1
+            }
+            Draw::SpriteSetup => {
+                self.sprite_setup();
+                1
+            }
+            Draw::SObj(s) => {
+                self.sobj(*s);
+                1
+            }
+            Draw::MoviePlanes(m) => {
+                self.movie_planes(*m);
+                1
+            }
+            Draw::SpriteEnd => {
+                self.sprite_end();
+                1
+            }
             Draw::MagnifierErase(slot) => {
                 match self.magnifier_erase_color(*slot) {
                     Some(c) => self.erase_screen(c, true),
@@ -421,8 +444,12 @@ impl Ctx<'_> {
 
     /// `HSD_VICopyXFBAsync` for the screen pass: the EFB copied to the XFB and cleared.
     fn copy_xfb(&mut self) {
+        // The current render mode's vertical filter: the deflicker filter's unless the game
+        // set a mode without it (the opening movie's, `gmMainLib_8015F588(0)`).
+        let deflicker = self.game.main_lib.video.is_none_or(|(_, d)| d);
+        let vfilter = if deflicker { &VFILTER } else { &VFILTER_NONE };
         let gx = &mut *self.gx;
-        gx.set_copy_filter(GX_FALSE, &[[6, 6]; 12], GX_TRUE, &VFILTER);
+        gx.set_copy_filter(GX_FALSE, &[[6, 6]; 12], GX_TRUE, vfilter);
         gx.set_disp_copy_gamma(GX_GM_1_0);
         self.hsd.state.set_color_update(gx, true);
         self.hsd.state.set_alpha_update(gx, true);
@@ -478,5 +505,8 @@ fn fills_screen(game: &Game, c: melee_sim::hsd::cobj::CObjId) -> bool {
     })
 }
 
-/// The render mode's vertical filter (`GXNtsc480IntDf`).
+/// The render mode's vertical filter (`GXNtsc480IntDf`, and progressive scan's with the
+/// deflicker filter, `gmMainLib_803D4A80`).
 const VFILTER: [u8; 7] = [8, 8, 10, 12, 10, 8, 8];
+/// Without the deflicker filter (`GXNtsc480Int`, `GXNtsc480Prog`).
+const VFILTER_NONE: [u8; 7] = [0, 0, 21, 22, 21, 0, 0];

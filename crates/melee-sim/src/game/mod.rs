@@ -16,6 +16,7 @@ pub mod gm;
 pub mod gr;
 pub mod handles;
 pub mod hud;
+pub mod inputs;
 pub mod it;
 pub mod items_audit;
 pub mod mirror;

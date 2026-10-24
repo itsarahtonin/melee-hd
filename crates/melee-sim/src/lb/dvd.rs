@@ -149,6 +149,73 @@ pub struct Dvd {
     pub cache: PreloadCache,
     #[clone_from(if_changed)]
     pub sizes: Vec<(i32, u32)>,
+    /// The disc entries of the files a game cache may preload, by name
+    /// (`DVDConvertPathToEntrynum`).
+    #[clone_from(if_changed)]
+    pub names: Vec<(String, i32)>,
+}
+
+/// A file name as `lbFileGetFullName` completes it: without a leading slash, and a bare dot's
+/// language extension (`usd`, English).
+fn full_name(name: &str) -> String {
+    let n = name.trim_start_matches('/');
+    match n.strip_suffix('.') {
+        Some(base) => format!("{base}.usd"),
+        None => n.to_owned(),
+    }
+}
+
+/// Every file a game cache can preload ([`Dvd::want_game_cache`]): each fighter kind's data,
+/// costume, effect and animation files, each stage select stage's file, and Kirby's copies.
+pub fn game_cache_files() -> Vec<String> {
+    use crate::game::ft::data::kind_tables;
+    let mut out: Vec<String> = Vec::new();
+    let mut add = |name: &str| {
+        let n = full_name(name);
+        if !out.contains(&n) {
+            out.push(n);
+        }
+    };
+    for kind in 0..0x21 {
+        let t = kind_tables(kind);
+        if let Some(n) = t.dat_file {
+            add(n);
+        }
+        for c in t.costumes.iter().take(usize::from(t.costume_count)) {
+            if let Some(n) = c.file {
+                add(n);
+            }
+        }
+        if let Some(Some((n, _))) = crate::game::ef::FILES.get(usize::from(t.effect_file)) {
+            add(n);
+        }
+        if let Some(n) = t.anim_file {
+            add(n);
+        }
+    }
+    for (n, _) in crate::game::ft::kirby::init::COPY_FILES.iter().flatten() {
+        add(n);
+    }
+    for &k in &crate::game::ft::KIRBY_COSTUME_KINDS {
+        for c in 0..6 {
+            if let Some((n, _, _)) = crate::game::ft::kirby::init::copy_costume_files(k, c) {
+                add(&n);
+            }
+        }
+    }
+    for e in crate::game::ft::kirby::init::COPY_EFFECTS {
+        if let Some(Some((n, _))) = crate::game::ef::FILES.get(usize::from(e)) {
+            add(n);
+        }
+    }
+    for i in 0..0x1D {
+        let st = crate::game::gm::opening::stage_select_kind(i);
+        let gr = crate::lb::audio::ground_kind(i32::from(st)) as i32;
+        if let Some(n) = crate::game::gr::data::stage_data(gr).file {
+            add(n);
+        }
+    }
+    out
 }
 
 /// A file a preload class always wants: its kind, name and effect index.
@@ -165,6 +232,197 @@ impl Dvd {
             .find(|f| f.0 == entry_num)
             .unwrap_or_else(|| panic!("disc file {entry_num}'s size isn't known (DVDFastOpen)"))
             .1
+    }
+
+    /// `lbDvd_800178E8`: [`Dvd::want`] of the file named `name`.
+    #[doc(alias = "lbDvd_800178E8")]
+    #[allow(clippy::too_many_arguments)]
+    fn want_named(
+        &mut self,
+        kind: i8,
+        name: &str,
+        transient: i32,
+        heap: i32,
+        load_state: i8,
+        score: i16,
+        class: u8,
+        effect_index: i32,
+    ) {
+        let n = full_name(name);
+        let entry = self
+            .names
+            .iter()
+            .find(|e| e.0 == n)
+            .unwrap_or_else(|| panic!("{n} isn't among the files a game cache preloads"))
+            .1;
+        self.want(
+            kind,
+            entry,
+            transient,
+            heap,
+            0,
+            load_state,
+            score,
+            class,
+            effect_index,
+        );
+    }
+
+    /// `efAsync_LoadAsync`: effect file `index`.
+    #[doc(alias = "efAsync_LoadAsync")]
+    fn want_effects(&mut self, index: u8) {
+        if index >= 50 {
+            return;
+        }
+        if let Some(Some((n, _))) = crate::game::ef::FILES.get(usize::from(index)) {
+            self.want_named(3, n, 4, 4, 1, 4, 4, i32::from(index));
+        }
+    }
+
+    /// `ftData_800855C8`: a fighter kind's data file, its costume `color`'s (every one's for
+    /// 0xFF), its effect file and its animation file.
+    #[doc(alias = "ftData_800855C8")]
+    fn want_fighter(&mut self, kind: i32, color: u8) {
+        let t = crate::game::ft::data::kind_tables(kind);
+        let mut color = color;
+        if color != 0xFF && color >= t.costume_count {
+            color = 0;
+        }
+        if let Some(n) = t.dat_file {
+            self.want_named(2, n, 4, 4, 1, 4, 2, 0);
+        }
+        let (lo, hi) = if color == 0xFF {
+            (0, t.costume_count)
+        } else {
+            (color, color + 1)
+        };
+        for c in lo..hi {
+            if let Some(n) = t.costumes[usize::from(c)].file {
+                self.want_named(2, n, 4, 4, 1, 3, 1, 0);
+            }
+        }
+        if t.effect_file != 0xFF {
+            self.want_effects(t.effect_file);
+        }
+        if let Some(n) = t.anim_file {
+            self.want_named(1, n, 5, 5, 0, 1, 8, 0);
+        }
+    }
+
+    /// `ftKb_SpecialN_800EEC34` through `ftData_8008578C`: Kirby's copy of fighter kind
+    /// `kind`: its file, its costumes in Kirby's colors (`color`, or every one for 0xFF), and
+    /// its effect file.
+    #[doc(alias = "ftData_8008578C")]
+    #[doc(alias = "ftKb_SpecialN_800EEC34")]
+    fn want_kirby_copy(&mut self, kind: i32, color: u8) {
+        use crate::game::ft::kirby::init;
+        let count = crate::game::ft::data::kind_tables(4).costume_count;
+        let mut color = color;
+        if color != 0xFF && color >= count {
+            color = 0;
+        }
+        let k = kind as usize;
+        if let Some(Some((n, _))) = init::COPY_FILES.get(k) {
+            self.want_named(2, n, 4, 4, 1, 3, 1, 0);
+        }
+        if crate::game::ft::KIRBY_COSTUME_KINDS.contains(&k) {
+            let (lo, hi) = if color == 0xFF {
+                (0, count)
+            } else {
+                (color, color + 1)
+            };
+            for c in lo..hi {
+                if let Some((n, _, _)) = init::copy_costume_files(k, usize::from(c)) {
+                    self.want_named(2, &n, 4, 4, 1, 3, 1, 0);
+                }
+            }
+        }
+        if let Some(&e) = init::COPY_EFFECTS.get(k)
+            && e != 0xFF
+        {
+            self.want_effects(e);
+        }
+    }
+
+    /// `Player_80031CB0` (`Player_80031D2C` for Kirby's copies): each of a character's
+    /// fighter kinds.
+    #[doc(alias = "Player_80031CB0")]
+    #[doc(alias = "Player_80031D2C")]
+    fn want_character(&mut self, ckind: i32, color: u8, copy: bool) {
+        let m = crate::game::pl::player::mapping(ckind);
+        for kind in [m.internal_id, m.extra_internal_id] {
+            if kind < 0 {
+                continue;
+            }
+            if copy {
+                self.want_kirby_copy(i32::from(kind), color);
+            } else {
+                self.want_fighter(i32::from(kind), color);
+            }
+        }
+    }
+
+    /// `lbDvd_80017960`: the game cache's files wanted: its stage's (`Stage_802251B4`,
+    /// `Ground_801C06B8`: the stage's file and its buffers), each character's, and for a Kirby
+    /// every copy he can take.
+    #[doc(alias = "lbDvd_80017960")]
+    #[doc(alias = "Stage_802251B4")]
+    #[doc(alias = "Ground_801C06B8")]
+    #[doc(alias = "grIzumi_801CD2D4")]
+    #[doc(alias = "grStadium_801D511C")]
+    fn want_game_cache(&mut self) {
+        let gc = self.cache.new_scene.game_cache;
+        assert!(
+            gc.mode_kind == crate::game::gm::machine::GM_COUNT || gc.mode_kind != 0xA,
+            "Camera Mode's game cache (gm_801B23F0) isn't ported"
+        );
+        if gc.stkind != 0x148 {
+            let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
+            if let Some(n) = crate::game::gr::data::stage_data(gr).file {
+                self.want_named(4, n, 4, 4, 1, 7, 16, 0);
+            }
+            let tex = |w, h, f| crate::hsd::heap::tex_buffer_size(w, h, f).next_multiple_of(32);
+            match gr {
+                crate::game::gr::GR_KIND_IZUMI => {
+                    self.want(0, 2001, 4, 4, tex(80, 60, 4), 0, 7, 16, 0);
+                }
+                crate::game::gr::GR_KIND_PSTADIUM => {
+                    self.want(0, 0x7D2, 4, 4, tex(0xFA, 0xA0, 4), 0, 7, 0x10, 0);
+                    self.want(0, 0x7D3, 4, 4, tex(0x280, 0x196, 4), 0, 7, 0x10, 0);
+                    self.want(0, 0x7D4, 4, 4, tex(0x7C, 0x50, 4), 0, 7, 0x10, 0);
+                    self.want(0, 0x7D5, 4, 4, 0x5_0000, 0, 7, 0x10, 0);
+                }
+                _ => {}
+            }
+        }
+        const NONE: i32 = 0x21;
+        const KIRBY: i32 = 4;
+        for i in 0..8 {
+            let e = gc.entries[i];
+            if e.char_id != NONE {
+                self.want_character(e.char_id, e.color, false);
+            }
+            if e.char_id == KIRBY {
+                if e.x5 == 0 {
+                    for kind in 0..NONE {
+                        self.want_character(kind, e.color, true);
+                    }
+                } else {
+                    for j in 0..8 {
+                        let o = gc.entries[j];
+                        if o.char_id == NONE {
+                            continue;
+                        }
+                        if o.char_id == KIRBY && o.x5 == 0 {
+                            for kind in 0..NONE {
+                                self.want_character(kind, e.color, true);
+                            }
+                        }
+                        self.want_character(o.char_id, e.color, true);
+                    }
+                }
+            }
+        }
     }
 
     /// `lbDvd_80018F68`, at boot: no class, no scene, every entry free.
@@ -483,10 +741,6 @@ impl Audio {
             }
         }
         let class = d.cache.persistent_heaps;
-        assert!(
-            (0..=2).contains(&class) || d.cache.new_scene.game_cache == SCENE_DEFAULT.game_cache,
-            "a preload class with a game cache (lbDvd_80017960) isn't ported"
-        );
         if class >= 1 && d.cache.new_scene.is_heap_persistent[0] {
             let f = &RUMBLE_FILE;
             d.want(f.kind, f.entry_num, 2, 2, 0, 1, 9, 0x80, f.effect_index);
@@ -495,6 +749,9 @@ impl Audio {
             for f in &COMMON_FILES {
                 d.want(f.kind, f.entry_num, 3, 3, 0, 1, 8, 0x40, f.effect_index);
             }
+        }
+        if class == 3 {
+            d.want_game_cache();
         }
         for j in 0..ENTRIES {
             let e = d.cache.entries[j];
@@ -555,10 +812,12 @@ impl Audio {
         let Some(raw) = raw else {
             panic!("the original's assertion failed: lbdvd.c:827 (no room to preload)");
         };
-        assert!(
-            e.kind != 0,
-            "a raw preload (lbDvd_80017E64 at once) isn't ported"
-        );
+        if e.kind == 0 {
+            // A buffer: in at once (`lbDvd_80017E64`), and the next read.
+            e.state = 3;
+            self.preload_next_entry(data);
+            return;
+        }
         e.state = 2;
         e.load_score = 9999;
         let entry_num = i32::from(e.entry_num);
@@ -566,13 +825,15 @@ impl Audio {
         let len = d.file_size(entry_num);
         d.cache.entries[index].size = len;
         let dest = d.memory.entries[usize::from(raw)].addr;
+        // Into main memory, or ARAM (the animation files' heap) through a relay buffer.
+        let kind = if dest >= 0x8000_0000 { 0x21 } else { 0x23 };
         self.devcom_request(
             data,
             entry_num,
             0,
             dest,
             len.next_multiple_of(32),
-            0x21,
+            kind,
             2,
             Some(cb::PRELOADED),
             index as u32,

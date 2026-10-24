@@ -79,6 +79,19 @@ impl Disc {
             .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
     }
 
+    /// A file's entry number and size, from the file system table alone.
+    pub fn file_info(&self, path: &str) -> Result<(i32, u32), DiscError> {
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        fst.find(path)
+            .filter(|(_, node)| node.is_file())
+            .map(|(i, node)| (i as i32, node.length()))
+            .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
+    }
+
     /// The path of the file with entry number `entrynum`.
     pub fn path_of(&self, entrynum: i32) -> Result<String, DiscError> {
         let mut partition = self

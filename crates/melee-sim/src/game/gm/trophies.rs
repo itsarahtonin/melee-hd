@@ -49,7 +49,7 @@ struct Tables {
 /// `Toy_80304B94`: how many trophies of a class there are (the same on either language
 /// setting but class 5's: 0x11 on a Japanese one).
 #[doc(alias = "Toy_80304B94")]
-fn class_size(class: i32) -> i32 {
+pub(super) fn class_size(class: i32) -> i32 {
     match class {
         0 => 0x1B,
         1 => 0x7E,

@@ -95,6 +95,8 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_BOOT => sym("gm_Mode_Boot_States"),
                 melee_sim::game::gm::machine::GM_MEMCARD => sym("gm_Mode_MemCard_States"),
                 melee_sim::game::gm::machine::GM_OPENING_MV => sym("gm_Mode_Opening_States"),
+                melee_sim::game::gm::machine::GM_TITLE => sym("gm_Mode_Title_States"),
+                melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -167,11 +169,12 @@ impl<'a> Comparer<'a> {
             self.u32(LBL_804D3878) as i32,
         );
         self.check(
-            "MoviePlayer",
-            "power",
-            u32::from(game.movie.power),
-            self.u32(sym("MoviePlayer")),
+            "HSD_SObjLib_804D7960",
+            "the sprites' object kind",
+            melee_sim::hsd::sobj::OBJ_SOBJ,
+            self.u8(sym("HSD_SObjLib_804D7960")),
         );
+        self.opening_title();
     }
 
     /// The memory card scene's statics and its windows.
@@ -292,9 +295,15 @@ impl<'a> Comparer<'a> {
             at = self.u32(at);
         }
         self.check("memcard windows", "list's end", 0, at);
-        let scene = mc.scene;
-        let theirs = self.u32(sym("gm_804D6868"));
-        self.compare_data("gm_804D6868", scene, theirs);
+        // The windows' scene, while the memory card scene runs: past it, the pointer names
+        // the scene's freed heap, which nothing reads until the windows' setup
+        // (`gm_801AEBB0`) sets it again (docs/engine.md, "Uninitialized values").
+        use melee_sim::game::gm::machine::{GM_BOOT, GM_MEMCARD};
+        if matches!(self.game.machine.scene_info, Some((m, _)) if m == GM_BOOT || m == GM_MEMCARD) {
+            let scene = mc.scene;
+            let theirs = self.u32(sym("gm_804D6868"));
+            self.compare_data("gm_804D6868", scene, theirs);
+        }
         self.check(
             "gm_804D686C",
             "canvas",

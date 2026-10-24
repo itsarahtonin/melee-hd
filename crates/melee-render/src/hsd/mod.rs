@@ -10,6 +10,7 @@ pub mod material;
 pub mod psdisp;
 pub mod quad;
 pub mod sis;
+pub mod sobj;
 pub mod state;
 pub mod tev;
 pub mod texp;
@@ -81,6 +82,8 @@ pub struct Hsd {
     pub widescreen: Option<f32>,
     /// What a frame between two ticks keeps track of as it draws (`crate::blend`).
     pub motion: Motion,
+    /// The movie frame the planes' images hold (its file and record's place), decoded once.
+    pub movie: Option<(melee_data::archive::ArchiveId, u32)>,
 }
 
 /// `ft_jobj_scale`: the matrix that undoes a flat fighter's joint scale in view space, and

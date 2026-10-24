@@ -27,4 +27,5 @@ pub mod ppc;
 pub mod quat;
 pub mod rng;
 pub mod state_eq;
+pub mod thp;
 pub mod vec;
