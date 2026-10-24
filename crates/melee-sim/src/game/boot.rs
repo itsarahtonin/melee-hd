@@ -85,6 +85,14 @@ pub fn boot(
     }
     let _ = audio.lb_boot(data);
     audio.lb_reset(data, &bank);
+    // `main` after the save data's reset, as on a console's boot (`game::session`): the boot's
+    // report reads the clock (`lbTime_GetTimeInSeconds`), and the modes' loop the video
+    // interface's DTV status (`VIGetDTVStatus`), before the first scene's preparation
+    // (`preloadState`) asks for its first file. ssbm-rs's probe of both disc speeds' boots has
+    // the read 32 after the bank's last relay read's ARAM request: the ARAM interrupt's
+    // handler (8), the clock (16) and the register (8).
+    audio.clock_read(data, super::session::TB_READ);
+    audio.clock_read(data, super::session::REG_READ);
     // The first scene's preparation: its preload reads its files one after another, each
     // read's callback starting the next, and the scene waits for the first before its loop
     // ticks.
