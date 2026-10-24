@@ -20,6 +20,10 @@
 //! melee-render-check scaled DISC REPLAY.slp FRAME [OUT_DIR]
 //!     native frame FRAME drawn at 2x and 3x, box-downsampled, against the frame at 1x, and
 //!     the frame widened to 16:9 against the game's 73:60 over the picture they share
+//! melee-render-check reflection DISC REPLAY.slp FRAME [W:H]
+//!     native frame FRAME widened to W:H (16:9 by default): every vertex of Fountain of Dreams'
+//!     water on screen takes coordinates inside the reflection's image, those in the added
+//!     sides too
 //! melee-render-check snap DISC REPLAY.slp OUT_DIR [--aspect W:H] FRAME...
 //!     native frames drawn at 1x, saved as OUT_DIR/frame_N.png; with --aspect, as the player
 //!     shows them at that aspect ratio (wider than 73:60, the cameras widened)
@@ -201,6 +205,7 @@ fn run(args: &[String]) -> ExitCode {
         }
         Some("compare") if args.len() >= 6 => compare(args),
         Some("scaled") if args.len() >= 4 => scaled(args),
+        Some("reflection") if args.len() >= 4 => reflection(args),
         Some("snap") if args.len() >= 5 => {
             let dir = std::path::PathBuf::from(&args[3]);
             std::fs::create_dir_all(&dir).expect("making the output directory");
@@ -261,7 +266,8 @@ fn run(args: &[String]) -> ExitCode {
             eprintln!(
                 "usage: melee-render-check dump LOG.dff [FRAME] | draw LOG.dff FRAME DRAW | \
                  align DISC REPLAY LOG FROM TO | compare DISC REPLAY LOG REF_DIR FRAME [OUT] | \
-                 scaled DISC REPLAY FRAME [OUT] | snap DISC REPLAY OUT [--aspect W:H] FRAME... | \
+                 scaled DISC REPLAY FRAME [OUT] | reflection DISC REPLAY FRAME [W:H] | \
+                 snap DISC REPLAY OUT [--aspect W:H] FRAME... | \
                  notes DISC REPLAY [TO] | dashboard RESULTS OUT_DIR"
             );
             ExitCode::from(2)
@@ -765,6 +771,108 @@ fn scaled(args: &[String]) -> ExitCode {
     if failed {
         ExitCode::FAILURE
     } else {
+        ExitCode::SUCCESS
+    }
+}
+
+/// `reflection DISC REPLAY FRAME [W:H]`: Fountain of Dreams' water in widescreen. The water
+/// shows the reflection's image through projected texture coordinates; where they leave the
+/// image, the texture clamps and its edge texels streak across the water, as they did in the
+/// widened view's added sides before the reflection widened with it. So every vertex of the
+/// draws sampling the reflection that's on the screen (inside the draw's scissor, in front of
+/// the camera) must take coordinates inside the image, and some must be in the added sides,
+/// or the frame shows nothing to check.
+fn reflection(args: &[String]) -> ExitCode {
+    let at: u32 = args[3].parse().expect("FRAME");
+    let aspect = args.get(4).map_or(16.0 / 9.0, |r| {
+        let (w, h) = r.split_once(':').expect("W:H");
+        w.parse::<f32>().expect("W") / h.parse::<f32>().expect("H")
+    });
+    let view = native::View::shown(1, aspect);
+    let (drawn, image) = native::record(&args[1], &args[2], at, view);
+    let Some(image) = image else {
+        println!("frame {at}: no reflection");
+        return ExitCode::FAILURE;
+    };
+    // The 73:60 picture's columns in the widened frame, which widens about its middle.
+    let half = 320.0 * melee_render::frame::GAME_ASPECT / aspect;
+    let (mut draws, mut on_screen, mut sides, mut outside) = (0, 0, 0, 0);
+    let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
+    for e in &drawn.events {
+        let Event::Draw(d) = e else { continue };
+        let bp = |r: usize| d.bp.iter().find(|&&(n, _)| n == r).map_or(0, |&(_, v)| v);
+        let Some(map) = d
+            .textures
+            .iter()
+            .find(|t| t.address & 0x03FF_FFFF == image & 0x03FF_FFFF)
+            .map(|t| t.map as u32)
+        else {
+            continue;
+        };
+        // The coordinates of the TEV stages that sample the image.
+        let stages = ((bp(0x00) >> 10) & 0xF) + 1;
+        let mut coords: Vec<usize> = (0..stages as usize)
+            .filter_map(|s| {
+                let order = bp(0x28 + s / 2) >> (12 * (s % 2));
+                (order & 7 == map && order >> 6 & 1 != 0).then_some((order >> 3 & 7) as usize)
+            })
+            .collect();
+        coords.sort_unstable();
+        coords.dedup();
+        if coords.is_empty() {
+            continue;
+        }
+        draws += 1;
+        // The scissor, with its offset (342) as the screen positions have it.
+        let (tl, br) = (bp(0x20), bp(0x21));
+        let (top, left) = ((tl & 0x7FF) as f32, (tl >> 12 & 0x7FF) as f32);
+        let (bottom, right) = ((br & 0x7FF) as f32, (br >> 12 & 0x7FF) as f32);
+        for v in &d.verts {
+            let [x, y, z] = v.screen;
+            let shown = (left..=right + 1.0).contains(&x)
+                && (top..=bottom + 1.0).contains(&y)
+                && (0.0..=16_777_216.0).contains(&z);
+            if !shown {
+                continue;
+            }
+            on_screen += 1;
+            let column = x - 342.0;
+            let side = column < 320.0 - half || column > 320.0 + half;
+            sides += usize::from(side);
+            for &c in &coords {
+                // The rasterizer's coordinates are in texels (scaled by SU_SSIZE, SU_TSIZE).
+                let size = |r: usize| ((bp(r) & 0xFFFF) + 1) as f32;
+                let [s, t, q] = v.tex[c];
+                let st = [s / q / size(0x30 + 2 * c), t / q / size(0x31 + 2 * c)];
+                for i in 0..2 {
+                    lo[i] = lo[i].min(st[i]);
+                    hi[i] = hi[i].max(st[i]);
+                }
+                if !st.iter().all(|u| (0.0..=1.0).contains(u)) {
+                    outside += 1;
+                    if outside <= 10 {
+                        println!(
+                            "  vertex at ({x:.1}, {y:.1}){}: coordinates ({:.4}, {:.4}), outside the image",
+                            if side { ", in the added sides" } else { "" },
+                            st[0],
+                            st[1]
+                        );
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "frame {at} at {aspect:.4}: {draws} draws sample the reflection, {on_screen} of their \
+         vertices on screen ({sides} in the added sides), coordinates from ({:.4}, {:.4}) to \
+         ({:.4}, {:.4}), {outside} outside the image",
+        lo[0], lo[1], hi[0], hi[1]
+    );
+    if draws == 0 || sides == 0 || outside > 0 {
+        println!("reflection: FAILED");
+        ExitCode::FAILURE
+    } else {
+        println!("reflection: inside the image");
         ExitCode::SUCCESS
     }
 }

@@ -1797,6 +1797,20 @@ impl Running<'_> {
         }
     }
 
+    /// Frees every GObj on process links `lo` to `hi`, `mn_8022F138` (`mn_8022F0F0` on
+    /// each).
+    // Ports `mn_8022F138`; aliased once a check reaches it.
+    pub(crate) fn free_gobj_links(&mut self, lo: u8, hi: u8) {
+        for link in lo..=hi {
+            let mut cur = self.game.world.first_in(link);
+            while let Some(g) = cur {
+                let next = self.game.world.gobj(g).next;
+                gobj::free(self, g);
+                cur = next;
+            }
+        }
+    }
+
     /// Runs a list's think.
     pub fn run_think(&mut self, gobj: GObjId, f: u32) -> bool {
         match f {
@@ -1844,14 +1858,7 @@ impl Running<'_> {
         self.menu_sound_balance();
         self.card_complete_all_tasks();
         self.mthp_release();
-        for link in 1..9 {
-            let mut cur = self.game.world.first_in(link);
-            while let Some(g) = cur {
-                let next = self.game.world.gobj(g).next;
-                gobj::free(self, g);
-                cur = next;
-            }
-        }
+        self.free_gobj_links(1, 8);
         self.sis_reset();
         self.menu_exit_to(super::super::gm::machine::GM_MENU);
     }

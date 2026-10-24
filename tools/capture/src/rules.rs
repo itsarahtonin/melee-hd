@@ -289,13 +289,6 @@ impl Comparer<'_> {
                 self.u8(sym("mnStageSw_804D6BF4")),
             ),
         );
-        let r = &self.game.vs_menus;
-        self.check(
-            "mnCharSel_804D6CF4",
-            "a handicap changed",
-            r.charsel_handicap_changed,
-            self.u8(sym("mnCharSel_804D6CF4")),
-        );
         self.names_menus();
     }
 }

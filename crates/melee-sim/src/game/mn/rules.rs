@@ -156,8 +156,6 @@ pub struct RulesMenus {
     pub confirmed_stale: bool,
     /// The lists' user data, by their blocks' addresses.
     pub data: BTreeMap<u32, RulesData>,
-    /// `mnCharSel_804D6CF4`, which a handicap's change sets (`mnCharSel_80264070`).
-    pub charsel_handicap_changed: u8,
     /// The extra rules (`mnruleplus.c`).
     pub plus: super::rule_plus::RulePlus,
     /// The item switch (`mnitemsw.c`).
@@ -362,7 +360,7 @@ impl Running<'_> {
         self.set_confirmed(Some(c));
         if h == 2 {
             self.reset_handicaps();
-            self.game.vs_menus.charsel_handicap_changed = 1;
+            self.charsel_reset_handicaps_next();
         }
     }
 
@@ -382,7 +380,6 @@ impl Running<'_> {
     /// each VS mode (`gmMainLib_8015CDEC`'s name tags to 5, the handicaps to 9).
     #[doc(alias = "gmMainLib_8015EA80")]
     #[doc(alias = "gmMainLib_8015CE44")]
-    #[doc(alias = "mnCharSel_80264070")]
     fn reset_handicaps(&mut self) {
         let m = &mut self.game.game_data.modes;
         m.nametags.fill(5);

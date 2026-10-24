@@ -9,6 +9,7 @@ pub mod magnify;
 pub mod material;
 pub mod psdisp;
 pub mod quad;
+pub mod refract;
 pub mod sis;
 pub mod sobj;
 pub mod state;
@@ -84,6 +85,8 @@ pub struct Hsd {
     pub motion: Motion,
     /// The movie frame the planes' images hold (its file and record's place), decoded once.
     pub movie: Option<(melee_data::archive::ArchiveId, u32)>,
+    /// Refraction's indirect maps whose texels are made, by `LbRf.dat`'s table and entry.
+    pub refract_maps: Vec<(DataRef, u8)>,
 }
 
 /// `ft_jobj_scale`: the matrix that undoes a flat fighter's joint scale in view space, and

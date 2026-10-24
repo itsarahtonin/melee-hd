@@ -93,7 +93,17 @@ fn read_text(mem: &[u8], data: &DataMap, base: u32, size: u32, a: u32) -> (Text,
         entity: None,
         render_callback: Some(mem.w(a + 0x58)).filter(|&c| c != 0),
         sis_buffer: sis_ptr(base, size, data, mem.w(a + 0x5C)),
-        x60: Some(sis_ptr(base, size, data, mem.w(a + 0x60))),
+        // Unknown until `HSD_SisLib_803A6368` writes it: a new text's block holds what the
+        // heap held there (a menu's freed text's font size, after the extra rules), which
+        // names no string.
+        x60: {
+            let w = mem.w(a + 0x60);
+            let known = w == 0
+                || w.wrapping_sub(base) <= size
+                || data.get(w).is_some()
+                || (0x8000_3100..0x804E_0000).contains(&w);
+            known.then(|| sis_ptr(base, size, data, w))
+        },
         alloc_data: o(a + 0x64),
         state_stack: o(a + 0x68),
         state_stack_used: mem.h(a + 0x6C),

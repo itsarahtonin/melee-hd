@@ -18,10 +18,11 @@ use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
     GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, MUSHROOM_KINGDOM,
-    MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT, PEACHS_CASTLE, POKE_FLOATS,
-    RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, compare, compare_in, scaled,
+    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
+    RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -327,6 +328,43 @@ frames!(YOSHIS_ISLAND_64;
     yoshis_island_64_3300 3300,
 );
 
+// Metal fighters (the Metal Box's shared material, `ft_804D6580`) and refracted ones (the
+// Cloaking Device and Invisible Melee: refraction's indirect maps and screen copy).
+frames!(ITEMS_POWERUPS_PS;
+    // Metal Mr. Game & Watch.
+    items_powerups_ps_2100 2100,
+);
+rendered_frames!(ITEMS_POWERUPS_PS;
+    // Metal Mewtwo, and the screen's feed copied before the log.
+    items_powerups_ps_7300 7300,
+);
+frames!(ITEMS_POWERUPS_BF;
+    // Metal Pichu.
+    items_powerups_bf_5300 5300,
+);
+rendered_frames!(ITEMS_POWERUPS_BF;
+    // Bowser cloaked: refraction's screen copy and indirect map.
+    items_powerups_bf_2803 2803,
+);
+frames!(ITEMS_POWERUPS_FD;
+    // Metal Zelda.
+    items_powerups_fd_7000 7000,
+);
+rendered_frames!(METAL_CLOAK_RC;
+    // Metal Mr. Game & Watch, and a magnifier bubble.
+    metal_cloak_rc_603 603,
+    // Metal and cloaked: refracted, as he showed white in the player.
+    metal_cloak_rc_703 703,
+    // Metal and cloaked, between the cloak's refraction flickers: metal.
+    metal_cloak_rc_733 733,
+    // Metal and cloaked, refracted, near where Sarah's capture paused.
+    metal_cloak_rc_1003 1003,
+);
+rendered_frames!(SPECIAL_INVISIBLE_YS;
+    // Both fighters refracted, the whole match.
+    special_invisible_ys_603 603,
+);
+
 /// Slippi's name plates, which its playback draws and melee-sim doesn't (docs/player.md's
 /// open issues).
 const NAME_PLATES: &str = "Slippi's name plates, which melee-sim doesn't draw";
@@ -387,6 +425,20 @@ fn sheik_fox_fod_600() {
     compare(&SHEIK_FOX_FOD, 600, Group::Standard, Expect::Identical);
 }
 
+/// Fountain of Dreams with the reflection size code: the reflection camera, its viewport the
+/// whole screen, erases in the white the stage sets, not the game camera's background color.
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_600() {
+    compare(&PC_IZUMI_SIZE, 600, Group::Standard, Expect::Identical);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_6000() {
+    compare(&PC_IZUMI_SIZE, 6000, Group::Standard, Expect::Identical);
+}
+
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn fox_sheik_ys_600() {
@@ -443,4 +495,33 @@ fn scaled_fox_marth_ps_600() {
 #[ignore = "needs the disc; run with --ignored"]
 fn scaled_fox_marth_bf_600() {
     scaled(&FOX_MARTH_BF, 600, Group::Standard);
+}
+
+/// Refraction widescreen: the screen copy's projection widens with the camera.
+#[test]
+#[ignore = "needs ssbm-rs's local replays and the disc; run with --ignored"]
+fn scaled_special_invisible_ys_603() {
+    scaled(&SPECIAL_INVISIBLE_YS, 603, Group::Standard);
+}
+
+/// Pokémon Stadium's screen showing its feed, a copy of the frame: in 16:9 the feed copies the
+/// 73:60 picture's columns, so the screen shows what it shows at 73:60.
+#[test]
+#[ignore = "needs the disc; run with --ignored"]
+fn scaled_fox_marth_ps_9000() {
+    scaled(&FOX_MARTH_PS, 9000, Group::Standard);
+}
+
+/// Fountain of Dreams' water in 16:9, the reflection in the added sides (the right at 2600,
+/// the left at 6000): its coordinates stay inside the reflection's image.
+#[test]
+#[ignore = "needs the replay and the disc; run with --ignored"]
+fn widescreen_reflection_sheik_fox_fod_2600() {
+    reflection(&SHEIK_FOX_FOD, 2600, Group::Standard);
+}
+
+#[test]
+#[ignore = "needs the replay and the disc; run with --ignored"]
+fn widescreen_reflection_sheik_fox_fod_6000() {
+    reflection(&SHEIK_FOX_FOD, 6000, Group::Standard);
 }

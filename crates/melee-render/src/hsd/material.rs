@@ -275,9 +275,12 @@ impl Ctx<'_> {
                         .note("a metal fighter without the metal material".into()),
                 }
             } else if fp.x2227_b3 {
-                // melee-sim models one shared material (`metal_mobj`), not `ft_804D6588`.
-                self.hsd
-                    .note("a fighter's other shared material (ft_804D6588)".into());
+                match game.ft.clear_mobj {
+                    Some(clear) => m = clear,
+                    None => self
+                        .hsd
+                        .note("a clear fighter without the clear material".into()),
+                }
             }
         }
         let (desc, mut rendermode) = self.mobj_setup_tev_part(m);
@@ -514,7 +517,10 @@ impl Ctx<'_> {
     /// A refracted fighter's material setup, `lbRefract_80022998`: refraction's texture
     /// chain for `frame`, its two coordinates (the normals' through texture matrix 0 and the
     /// positions' projected onto the screen copy), and one stage reading the screen copy
-    /// offset by the indirect map, sent to GX directly (not through HAL's state cache).
+    /// offset by the indirect map, sent to GX directly (not through HAL's state cache). In
+    /// widescreen the screen copy's projection widens with the camera
+    /// ([`Ctx::refract_texture_mtx`]).
+    #[doc(alias = "lbRefract_80022998")]
     fn refract_setup(&mut self, rendermode: u32, frame: usize) {
         const TEXTURE_MTX: [[f32; 4]; 3] = [
             [0.5, 0.0, 0.0, 0.5],
@@ -530,7 +536,7 @@ impl Ctx<'_> {
         let chain: Vec<TObjId> = self.game.objs.tobjs.chain(Some(top)).collect();
         self.hsd.tobj_chain = chain.clone();
         self.tobj_setup(&chain);
-        let screen_mtx = refract.texture_mtx.m;
+        let screen_mtx = self.refract_texture_mtx().m;
         let gx = &mut *self.gx;
         gx.set_num_tex_gens(2);
         gx.set_tex_coord_gen2(

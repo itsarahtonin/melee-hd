@@ -307,8 +307,7 @@ impl Running<'_> {
         self.game.game_data.name_tag(usize::from(slot))
     }
 
-    /// `IsNameValid`: whether a name tag has a name.
-    #[doc(alias = "IsNameValid")]
+    /// `IsNameValid` (ported with `Game::name_text`): whether a name tag has a name.
     fn name_valid(&self, slot: u8) -> bool {
         self.name_tag(slot).namedata[0] != 0
     }

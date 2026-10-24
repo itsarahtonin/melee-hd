@@ -33,7 +33,7 @@ pub struct Attract {
 
 /// The save's VS rules and preferences as `gm_80167BC8` reads them
 /// (`gmMainLib_GetGameRules`, `gmMainLib_GetGamePrefs`, `gmMainLib_8015ED30`).
-fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
+pub(super) fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
     let r = &g.x1850;
     let p = &g.thing.save_data.x1CB0;
     let rules = GameRules {
@@ -231,12 +231,16 @@ impl Running<'_> {
     pub fn vs_scene_on_enter(&mut self, scene_mode: u8) {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
+            super::machine::GM_VS => self.game.vs_melee.start.clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),
         };
         let (files, buffers) = crate::game::vs_match::preloaded_files(&start);
         let f = &mut self.game.ft.data.files;
+        // The match takes its files from the cache the menus' preloads filled (the selects'
+        // for VS mode's, the title's for the attract match's), as the console's.
+        f.from_cache = true;
         f.preloaded = files;
         f.preloaded_buffers = buffers;
         let archive = |r: &Self, name: &str| r.game.ft.data.files.archive(name);

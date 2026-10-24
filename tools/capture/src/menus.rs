@@ -98,6 +98,7 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_TITLE => sym("gm_Mode_Title_States"),
                 melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
                 melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
+                melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -180,6 +181,7 @@ impl<'a> Comparer<'a> {
         self.gallery();
         self.rules_menus();
         self.attract();
+        self.select_screens();
     }
 
     /// The memory card scene's statics and its windows.

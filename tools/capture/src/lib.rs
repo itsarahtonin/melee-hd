@@ -4,6 +4,7 @@
 
 pub mod attract;
 pub mod audio;
+pub mod charsel;
 pub mod compare;
 pub mod corpus;
 pub mod display;
@@ -13,6 +14,7 @@ pub mod hud;
 pub mod import;
 pub mod items;
 pub mod izumi;
+pub mod leftovers;
 pub mod links;
 pub mod mainmenu;
 pub mod menus;

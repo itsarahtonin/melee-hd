@@ -361,12 +361,12 @@ impl<const N: usize> Mirror for Vars<N> {
         let skip = |i: usize| {
             self.handles.iter().any(|&(o, _)| (o..o + 4).contains(&i)) || self.stale.contains(&i)
         };
-        let differ = (0..N).any(|i| !skip(i) && self.bytes[i] != theirs[i]);
-        if differ {
+        // Byte by byte, so a byte a new block's heap leftovers fill shows alone.
+        for i in (0..N).filter(|&i| !skip(i) && self.bytes[i] != theirs[i]) {
             cx.mismatch(
-                path,
-                format!("{:02x?}", self.bytes),
-                format!("{theirs:02x?}"),
+                &format!("{path}[{i}]"),
+                format!("{:#04x}", self.bytes[i]),
+                format!("{:#04x}", theirs[i]),
             );
         }
         for &(o, h) in &self.handles {

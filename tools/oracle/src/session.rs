@@ -385,6 +385,7 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
 
 pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
+    let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
@@ -413,6 +414,10 @@ pub fn session(args: &[&str]) -> ExitCode {
             "--all" => all = true,
             "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
+            // Every field a new block differs in left out as a leftover, and the list of
+            // them printed: to survey a session's leftovers (crate melee_capture::leftovers).
+            "--leftovers-survey" => survey = true,
+            "--leftovers" => leftovers_report = true,
             "--ignore" => ignore.extend(
                 it.next()
                     .expect("--ignore TEXT[,TEXT...]")
@@ -541,6 +546,10 @@ pub fn session(args: &[&str]) -> ExitCode {
     // The boot's and the menus' statics compare from power-on: an import (`--from`) doesn't
     // bring them in.
     crate::diff::COMPARE_MENUS.with(|c| c.set(from.is_none()));
+    // A session from power-on news its objects in a heap the earlier scenes used.
+    if from.is_none() {
+        melee_capture::leftovers::enable(survey);
+    }
     let run = Run {
         trace_path,
         rec: &rec,
@@ -550,6 +559,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         all,
         ignore: &ignore,
         mutation,
+        leftovers_report: leftovers_report || survey,
     };
     run.play(setup)
 }
@@ -564,6 +574,8 @@ struct Run<'a> {
     all: bool,
     ignore: &'a [String],
     mutation: Option<Mutation>,
+    /// Print the heap leftovers the comparison left out.
+    leftovers_report: bool,
 }
 
 impl Run<'_> {
@@ -756,6 +768,7 @@ impl Run<'_> {
                 &past,
             );
             stale.note(t, &s.game, reads);
+            melee_capture::leftovers::end_tick();
             // The timeline: the tick's end on the time base, where the trace sampled it.
             if let (Some(c), Some(tb)) = (&s.game.audio.clock, image.tb)
                 && c.now != tb
@@ -789,6 +802,11 @@ impl Run<'_> {
         };
         let at = format!("tick {tick}");
         stale.report(&|t| format!("tick {t}"));
+        if self.leftovers_report {
+            for l in melee_capture::leftovers::report() {
+                println!("leftover {l}");
+            }
+        }
         match stop {
             None => {
                 println!("{compared} ticks compared, no difference");

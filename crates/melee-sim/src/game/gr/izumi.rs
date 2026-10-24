@@ -665,7 +665,7 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
     // `lb_800121FC`'s buffer: preload entry 2001 where the preload cache holds it (a match the
     // VS mode starts from its menus), else the scene's heap's (the match a replay's playback
     // boots into).
-    if !r.game.ft.data.files.buffer_preloaded(2001) {
+    if r.preloaded_buffer(2001).is_none() {
         crate::hsd::heap::mem_alloc(
             crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 4).next_multiple_of(32),
         );
