@@ -500,6 +500,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play; the CPU's script buffer would differ from the original's by that byte.
 - **Source:** `crates/melee-sim/src/game/ft/cpu_move.rs:349`.
 
+### Nana's input ring starts with the heap's C-sticks
+
+- **Where:** `ftCo_800A101C` (a computer player's setup), read by `ftCo_800B0AF4`, `crates/melee-sim/src/game/ft/cpu_ai.rs`.
+- **Defect:** the setup fills the 30 entries of the ring Nana follows Popo's inputs through (`CpuFighter::xFC`) but their C-stick and two bytes after it (`cstick`, `xA`, `xB`), and points her reading end five entries behind his writing one, so her first five reads take C-sticks the block held.
+- **Effect:** not recorded: her first five frames of following, at the match's start (in her entrance), take the heap's C-stick.
+- **melee-hd:** zero (as a fresh heap and Slippi's zeroed block); a session from power-on with the Ice Climbers would need the heap's bytes to model it.
+- **Fix:** clear the C-stick with the rest.
+- **Fix impact:** none in replays, whose blocks are zeroed.
+- **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
+
 ## Items
 
 ### Item creation clears one coordinate three times
@@ -884,6 +894,36 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play.
 - **Source:** `crates/melee-sim/src/game/gr/castle.rs` (`proc_bill`, "The blaster goes, but the Bullet Bill keeps pointing at it").
 
+### Brinstar's bubbles' timer starts from the heap
+
+- **Where:** `grZebes_801D881C` (the stage's process) and its setup (`grZebes_801D8644`, which writes `grZebes_GroundVars5`'s other fields), `crates/melee-sim/src/game/gr/zebes.rs`.
+- **Defect:** the setup never writes the timer (`*(s16*) &xF8`), which the process counts down from the first tick, calling `grZebes_801DAA08` and drawing `HSD_Randf` for the next period once it passes zero; the first period is whatever the stage object's block held.
+- **Effect:** on a console the first bubbles' time, and every random draw after it, depend on the heap's history: the main menu's attract match on Brinstar starts the timer from 2093 (the menus' bytes), where a fresh heap's 0 (and Slippi's zeroed block) draws on the match's second tick.
+- **melee-hd:** starts it at 0, as a fresh heap and Slippi's playback do; a session from power-on parts from the console's there (docs/engine.md, a session's heap leftovers), which needs the heap's bytes to model.
+- **Fix:** set the timer in the setup.
+- **Fix impact:** changes Brinstar's random draws in every match; replays (whose blocks are zeroed) keep theirs only if the fix sets 0.
+- **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
+
+### Fountain of Dreams' star keeps its alpha flag as the heap held it
+
+- **Where:** `Ground_801C1A20` (a stage object from a joint), called only by `grIzumi_801CCB18` (the star, `GrdIzumiStar_TopN_joint`), `crates/melee-sim/src/game/gr/setup.rs` (`stage_gobj_from_joint`).
+- **Defect:** unlike `Ground_GetStageGObj`'s objects, it leaves `x10_flags`' `b6` and `b7` as the block held them (`b4` the overlay's reset writes).
+- **Effect:** on a console, when the leftover `b6` is set, the star's materials blend with the alpha constant in `xC0`, also the heap's (`fn_801C8EF8`'s TEV setup); `b7` only Princess Peach's Castle reads.
+- **melee-hd:** clear (as a fresh heap and Slippi's zeroed block); a session from power-on would need the heap's bytes to model it.
+- **Fix:** clear `b6` and `b7` as the other creation does.
+- **Fix impact:** changes the star's look only where the heap left the bit set.
+- **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
+
+### A collision joint's stamp starts as the heap held it
+
+- **Where:** `Ground_UpdateMapColl` (`Ground_804D6954`, the update counter), `crates/melee-sim/src/game/gr/ground.rs`.
+- **Defect:** the stage's collision load leaves each joint's stamp (`CollJoint::xC`) unwritten, and the update skips a joint whose stamp already equals the counter it just raised.
+- **Effect:** a leftover equal to the counter skips that joint's collision update once; not recorded in play.
+- **melee-hd:** starts the stamp at 0 (as a fresh heap); the comparer reports the leftover rather than leave it out.
+- **Fix:** clear the stamps at the load.
+- **Fix impact:** none unless a leftover matched.
+- **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
+
 ## Camera
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
@@ -1093,6 +1133,36 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** drop the read.
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/mn/main.rs` (`cursor_unhover`).
+
+### The character select's "ready" check reads the first port's coin for every door
+
+- **Where:** `mnCharSel_Scene_OnFrame`'s pending start (case 1), `crates/melee-sim/src/game/mn/charsel/procs.rs` (`charsel_on_frame`).
+- **Defect:** the loop over the four doors tests each door's kind but the first port's coin (`mnCharSel_804A0BD0[0]->x5`, whether a hand holds it) every time, never door `i`'s.
+- **Effect:** Start goes through to the stage select unless the first port's coin is held while some door is open; another port's held coin doesn't hold it back, and the first port's does even when its own door is closed.
+- **melee-hd:** modeled.
+- **Fix:** test `mnCharSel_804A0BD0[i]`.
+- **Fix impact:** changes when Start leaves the character select; nothing in a match.
+- **Source:** `crates/melee-sim/src/game/mn/charsel/procs.rs` (`charsel_on_frame`).
+
+### The stage select's preview reads past its table with no stage hovered
+
+- **Where:** `mnStageSel_80259D84`'s and the preview's reads of `mnStageSel_803F06D0[hovered]`, `crates/melee-sim/src/game/mn/stagesel.rs` (`stage_frame`, the preview process).
+- **Defect:** with no stage hovered the index is 30, one past the table's 30 entries, so the entry's fields come from the bytes after it, the string `"MnSlMap.usd"`: its frame byte is the `'s'` (115) and its shown byte the `'u'`.
+- **Effect:** none observable: the preview's animation is requested at frame 50 × 115 on the hidden preview, and the shown byte (not below 2) leaves the preview on "none".
+- **melee-hd:** modeled (the two bytes are the string's).
+- **Fix:** test the index against the table's length first.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/stagesel.rs` (`stage_frame`).
+
+### A name tag list's row with no character names Captain Falcon
+
+- **Where:** the name box's list on the character select, `crates/melee-sim/src/game/mn/charsel/procs.rs` (`icon_name_or_none`).
+- **Defect:** a door with no icon (25) hands `gm_80160980` `icons[25].char_kind`, one past the 25 icons, whose zero entry is Captain Falcon's kind.
+- **Effect:** none observable: the text holding his name stays hidden.
+- **melee-hd:** modeled.
+- **Fix:** skip the name when the door has no icon.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/charsel/procs.rs` (`icon_name_or_none`).
 
 ## Gameplay that reads the display pass
 
