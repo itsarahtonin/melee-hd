@@ -930,6 +930,8 @@ impl Running<'_> {
 
     /// `mn_8022ADD8`: the hovered picture: hidden while the list leaves, else its loop a
     /// frame on (from its start when the selection changed or the frame is outside it).
+    // The frame's tests are the original's, a NaN frame outside the loop.
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     #[doc(alias = "mn_8022ADD8")]
     fn list_picture(&mut self, addr: u32, changed: bool) {
         let d = self.game.menu.lists[&addr];

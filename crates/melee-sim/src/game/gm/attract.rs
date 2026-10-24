@@ -176,7 +176,9 @@ impl Running<'_> {
         if ticks >= 0x4B0 {
             self.lb_audio_reset();
             self.sfx_stop_all();
-            if self.game.machine.routing.curr_state_id == 3 && self.game.game_data.unk_1 % 2 == 0 {
+            if self.game.machine.routing.curr_state_id == 3
+                && self.game.game_data.unk_1.is_multiple_of(2)
+            {
                 self.game.game_data.unk_1 = self.game.game_data.unk_1.wrapping_add(1);
                 self.game.machine.routing.next_state_id = 1;
             }
