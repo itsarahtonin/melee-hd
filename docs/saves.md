@@ -57,17 +57,27 @@ A `.gci` is a file's 0x40-byte directory entry, as the directory holds it, then 
 
 ## The native save on the timeline
 
-`melee-sim`'s `lb::save` runs the game's task lists on the session's card (`CardDevice`, lent to each step like the allocator model): the list's tasks run at once through `tasks::Run`, the card data's memory as the files' buffers, and the time ssbm-rs's card takes passes on the timeline (`CardTime`). Every list starts with the mount's transfers, run at once from the list's start (`MOUNT_WORK`, 1,643 register reads: 80 512-byte segments), then waits on `lbCardNew_CompleteNextTask` (`hsd_803AAA48`, a wait point on ssbm-rs's console when a card was in at power-on):
+`melee-sim`'s `lb::save` runs the game's task lists on the session's card (`CardDevice`, lent to each step like the allocator model): the list's tasks run at once through `tasks::Run`, the card data's memory as the files' buffers, and the time ssbm-rs's card takes passes on the timeline (`CardTime`). Every list starts with the mount, run at once from the list's start, then waits on `lbCardNew_CompleteNextTask` (`hsd_803AAA48`, a wait point on ssbm-rs's console when a card was in at power-on), and ends with the unmount.
 
-| List and outcome | Steps after the mount (register reads each) |
+A read is a chain of 512-byte segments: the code that asks for it issues the first with interrupts off, up to its DMA, which completes at once on ssbm-rs's card and raises the channel's transfer-complete interrupt (EXI0 TC, OS interrupt 10); its handler issues the next segment in 160 ticks (the deselect, the select again, three commands and the DMA: `clock::CARD_SEGMENT`), and so on, the last segment's handler finishing the transfer. Interrupts never come back on between the segments, so an event that comes due during a read runs at the next segment's boundary, and its interrupt goes ahead of the chain when the OS takes it first (the audio interrupt's, 5) and after the whole chain otherwise (the retrace's, 24; `Clock::card_chain`). ssbm-rs's probe of the boot's load and the scene's probe on five sessions (every interrupt change, EXI transfer, register read, event and interrupt delivery: `$SSBM_RS_LOCAL/research/card-chain`) gives each part's time:
+
+| Part | Time base ticks |
 | --- | --- |
-| A load that opens the file (intact or damaged) | 23: the check and the open (2 + 1), then twenty block reads (`BLOCK_WORK`, 323 each, steps 2 to 13 and 15 to 22), steps 14 and 23 none |
-| A load that finds no file, or a full card | 1: the check and one more (2 + 1) |
-| A load or probe of a broken card | 1: the check (2) |
-| A probe (`lb_8001C87C`) or a search for another game's file (`lb_8001C2D8`) | 1: the check (2) |
+| The mount's `CARDProbeEx`, interrupts off | the slot's probe and the ID's (48 with the card settled, `CardDevice::exi_probe_timed`) |
+| The mount's first segment: the attach's two probes, `DoMount`'s status commands, the DMA (`MOUNT_FIRST`) | 384, interrupts off |
+| The mount's other 79 segments (the ID, both directories, both tables) | 160 each |
+| The mount's last handler and callbacks (`MOUNT_TAIL`) | 64, and 8 more the first time an ID passes its checksums (`VerifyID`'s `OSGetFontEncode`, which keeps the answer: `CardDevice::font_encode_known`) |
+| A block's read from its step (`BLOCK_FIRST`: the select, three commands, the DMA), then 15 more segments, then its last handler (`BLOCK_TAIL`) | 96, 160 each, 64 |
+| `CARDUnmount` at the list's end (`UNMOUNT`) | 24, interrupts off |
+
+| List and outcome | Steps after the mount |
+| --- | --- |
+| A load that opens the file (intact or damaged) | 23: the check and the open (no transfer), then twenty block reads (steps 2 to 13 and 15 to 22), steps 14 and 23 none |
+| A load that finds no file, a full card, or a broken one | 1: the check |
+| A probe (`lb_8001C87C`) or a search for another game's file (`lb_8001C2D8`) | 1: the check |
 | No card, or one pulled or not settled | none (the mount's failed probe takes a probe's time, below) |
 
-The step counts are ssbm-rs's (`CARD_STEPS=1`, `CALLS=EXIDma,EXIImm,EXISync,hsd_803AAA48`); the reads are fitted to the sessions' traces. Only a load's last block's reads reach its end (the waits before it end at events), so the twenty blocks' split is the mount's rate of about 20 reads a segment. `lbCardNew_CompleteAllTasks` after each scene is one more wait.
+The step counts are ssbm-rs's (`CARD_STEPS=1`, `CALLS=EXIDma,EXIImm,EXISync,hsd_803AAA48`). Until 2026-10-23 the transfers were fitted register reads with interrupts taken at each (`MOUNT_WORK` 1,643, `BLOCK_WORK` 323, `CHECK_WORK` 2 and `LOAD_WORK` 1): their sums came out right wherever a wait ended at an event, but each block was 24 ticks long (the unmount's 24 taken in the last block) and an event due inside a block ran at once; `clock-odd`'s audio frame and `progressive`'s last seven blocks ([the oracle](oracle.md#sessions)) showed both. `lbCardNew_CompleteAllTasks` after each scene is one more wait.
 
 `lbCardNew_ProbeEx` (the memory card scene's probe every frame) and the pad alarm's probes (`lb_8001C600`, `lbSnap_8001D2BC`, at each alarm's time) ask the device: no card, a card not settled (the EXI library answers only three tenths of a second after it first sees one, `__EXIProbeStartTime`), or one that answers. A session's card can be pulled and put back at video fields (`Setup::card_pull`, ssbm-rs's `CARD_REMOVE=F,G`; `melee-oracle session --card-pull F,G`). Each probe takes the time of the SDK's `__EXIProbe` on ssbm-rs's console (`CardDevice::exi_probe_timed`, [the engine notes](engine.md#audio)): the channel's status register, again to clear an insertion interrupt, the time base with a card in, and the card's ID read once it answers after a pull. The scene's probe (`CARDProbeEx`) takes 48 ticks with a card that answers (the probe and the ID's own probe), 24 with one settling and 8 with a pulled card's slot empty; the pad alarm's three take 56 with the card in and settled; a task list's mount runs while the channel is attached, when a probe reads the status register alone. With no card at power-on ssbm-rs stands in for the CARD library and none takes time.
 

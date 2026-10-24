@@ -197,7 +197,9 @@ fn a_pulled_card_must_be_pulled() {
 /// `traces/v2-sessions/NAME.trc`): recorded with ssbm-rs's `POWER_ON=789004800` (2025-01-01)
 /// and `DTV=1`, `clock` with `SRAM_FLAGS=0x28` (mono) and nothing held, `progressive` with B
 /// held at power-on; `clock-late` is `clock`'s recording with its clock 300,007 time base
-/// ticks later, off the whole seconds and the alarm's grid, traced again.
+/// ticks later, off the whole seconds and the alarm's grid, traced again; `clock-odd` 123,457
+/// later, where an audio frame comes due inside a card block's read, which runs it at a segment's
+/// boundary.
 fn v2_session(name: &str, args: &[&str]) -> Option<String> {
     let trace = ssbm_rs_local(&format!("traces/v2-sessions/{name}.trc"));
     let inputs = ssbm_rs_local(&format!("lockstep/v2-sessions/{name}.inputs"));
@@ -217,7 +219,7 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 /// the attract match.
 #[test]
 fn a_version_2_session_takes_its_console() {
-    for name in ["clock", "clock-late"] {
+    for name in ["clock", "clock-late", "clock-odd"] {
         let Some(out) = v2_session(name, &["--heap"]) else {
             return;
         };

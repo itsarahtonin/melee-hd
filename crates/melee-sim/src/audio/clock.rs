@@ -67,6 +67,13 @@ pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 const AI_CALLBACK: u64 = 64;
 const DI_CALLBACK: u64 = 32;
 const ARAM_CALLBACK: u64 = 8;
+/// A memory card segment's transfer-complete interrupt's handler (EXI0's TC, OS interrupt 10,
+/// `TCIntrruptHandler`), from its delivery to the next segment's DMA: the deselect (24),
+/// `BlockReadCallback`'s `__CARDReadSegment` selecting again (64 later), its three commands 16
+/// apart and the 512-byte DMA 32 after them, as ssbm-rs's probe of the boot's card load logs
+/// every segment of it (`local/research/card-chain`). The transfer completes as the DMA starts
+/// and raises the next interrupt at once.
+pub const CARD_SEGMENT: u64 = 160;
 /// How long before an audio frame starts on this timeline ssbm-rs runs the audio DMA event
 /// that raises it: its frames start (and their handler's times count) from 8 ticks after the
 /// event, so an [`EventKind::AudioDma`] here is due `AI_LEAD` before its time. ssbm-rs runs
@@ -163,6 +170,10 @@ pub struct Clock {
     pub ai_pending: bool,
     pub di_pending: bool,
     pub aram_pending: u32,
+    /// A memory card transfer's chain of segments ([`Clock::card_chain`]): the transfer-complete
+    /// interrupts still to deliver, the last one's handler taking `exi_tail`.
+    pub exi_chain: u32,
+    pub exi_tail: u64,
     /// The disc driver's timeout alarm, while a read is in flight, by its event's `seq`.
     pub disc_timeout: Option<u64>,
     /// Pad samples queued and not yet ticked.
@@ -422,9 +433,10 @@ impl Clock {
         Self::due_at(&self.events[self.next_event().expect("the timeline runs dry")])
     }
 
-    /// Runs what is due now: each event due, then the interrupts they raised (the audio
-    /// interrupt before the retrace), one at a time, looking again after each, until nothing
-    /// is. An event that fell due while a handler ran runs as it returns ([`AI_LEAD`]).
+    /// Runs what is due now: each event due, then the interrupts they raised, one at a time in
+    /// the OS's order (the audio interrupt, ARAM's, a card transfer's, the disc's, the
+    /// retrace), looking again after each, until nothing is. An event that fell due while a
+    /// handler ran runs as it returns ([`AI_LEAD`]).
     fn service(&mut self, f: &mut dyn Frames) {
         loop {
             let now = self.now;
@@ -495,6 +507,15 @@ impl Clock {
                 f.handler_at(None);
                 self.apply(start, &log);
                 self.now = start + log.spent;
+            } else if self.exi_chain != 0 {
+                // A card segment's transfer is done (EXI0 TC): its handler starts the next
+                // segment, whose transfer raises the interrupt again, or ends the transfer.
+                self.exi_chain -= 1;
+                self.now += if self.exi_chain == 0 {
+                    self.exi_tail
+                } else {
+                    CARD_SEGMENT
+                };
             } else if self.di_pending {
                 self.di_pending = false;
                 self.disc_interrupt(f);
@@ -700,6 +721,28 @@ impl Clock {
         self.pads = self.pads.min(1);
         self.ticks_left = 0;
         self.scene_start = 2;
+    }
+
+    /// A memory card transfer of `segments` 512-byte segments (the CARD library's
+    /// `__CARDRead`): the game's code issues the first with interrupts off for `first` ticks,
+    /// up to its DMA; then each segment's transfer-complete interrupt's handler issues the next
+    /// ([`CARD_SEGMENT`]), the last one's taking `tail` (the deselect and the transfer's
+    /// callbacks). Interrupts stay off in every handler and never come back on between them: the
+    /// chain is back-to-back deliveries, and an event that comes due meanwhile runs at the next
+    /// segment's boundary, its interrupt ahead of the chain's when it comes first in the OS's
+    /// order (the audio interrupt's, 5, before the transfer's, 10), behind it otherwise (the
+    /// retrace's, 24, after the whole chain). ssbm-rs completes each transfer as its DMA starts,
+    /// so these are its boundaries, not a console's.
+    pub fn card_chain(&mut self, first: u64, segments: u32, tail: u64, f: &mut dyn Frames) {
+        self.game_code(f);
+        assert!(
+            segments > 0 && self.exi_chain == 0,
+            "a card transfer in flight"
+        );
+        self.now += first;
+        self.exi_chain = segments;
+        self.exi_tail = tail;
+        self.service(f);
     }
 
     /// Time a tick's ARAM load takes (`ARAM_CHUNK` per 4 KB), with interrupts taken between
@@ -948,6 +991,38 @@ mod tests {
                 card: true
             }])
         );
+    }
+
+    #[test]
+    fn a_card_read_takes_events_between_its_segments() {
+        // A block's read from 1,000: its first segment's DMA 96 later, then fifteen handlers
+        // of 160 and the last one's 64: it ends at 1,000 + 96 + 2,400 + 64 = 3,560.
+        let end = 1_000 + 96 + 15 * CARD_SEGMENT + 64;
+        let mut c = Clock::new(1_000, 10 * AUDIO_FRAME, 675_000, 675_000);
+        c.card_chain(96, 16, 64, &mut Stub::new(false));
+        assert_eq!(c.now, end);
+        // An audio frame due inside the third handler (its event at 1,500 on ssbm-rs's clock)
+        // runs at that handler's return, 1,000 + 96 + 3 * 160 = 1,576, and its handler goes
+        // ahead of the chain's next: the read ends the audio handler's 128 later.
+        let mut c = Clock::new(1_000, 1_500 + AI_LEAD, 675_000, 675_000);
+        c.card_chain(96, 16, 64, &mut Stub::new(false));
+        assert!(kinds(&c).contains(&EventKind::DspResume));
+        let ran = c
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::AudioDma)
+            .unwrap()
+            .at;
+        assert_eq!(ran, 1_576 + AI_LEAD + AUDIO_FRAME);
+        assert_eq!(c.now, end + AI_LEAD + AI_HANDLER);
+        // A retrace due inside the read waits for the whole chain: its handler after the last.
+        let mut c = Clock::new(FIELD - 200, 10 * AUDIO_FRAME, 10 * FIELD, 675_000);
+        c.card_chain(96, 16, 64, &mut Stub::new(false));
+        assert_eq!(
+            c.now,
+            FIELD - 200 + 96 + 15 * CARD_SEGMENT + 64 + VI_HANDLER
+        );
+        assert!(c.woken);
     }
 
     #[test]
