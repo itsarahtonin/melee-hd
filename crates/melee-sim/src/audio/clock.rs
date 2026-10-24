@@ -241,6 +241,13 @@ pub trait Frames {
     }
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
+    /// The game's own wait (`lb_800195D0`) at `now` runs the save's writer (`lb_8001CC84`):
+    /// the register reads of its card work, and whether a task step's wait point
+    /// (`hsd_803AAA48`) comes first; none when no write is under way.
+    fn game_wait(&mut self, now: u64) -> Option<(bool, u64)> {
+        let _ = now;
+        None
+    }
 }
 
 /// What the game waits for in a loop with a wait point each spin.
@@ -562,6 +569,18 @@ impl Clock {
         self.service(f);
     }
 
+    /// One of the game's own waits (`lb_800195D0`): time passes to the next event or a
+    /// quarter millisecond, then the save's writer runs ([`Frames::game_wait`]).
+    fn lb_wait(&mut self, f: &mut dyn Frames) {
+        self.wait(WAIT_STEP, f);
+        if let Some((step, reads)) = f.game_wait(self.now) {
+            if step {
+                self.wait_point(f);
+            }
+            self.reg_reads(reads, f);
+        }
+    }
+
     /// A wait point of the game's (`lb_800195D0`, the card layer's step `hsd_803AAA48`):
     /// time passes to the next event or a quarter millisecond, its interrupts taken.
     pub fn wait_point(&mut self, f: &mut dyn Frames) {
@@ -594,7 +613,7 @@ impl Clock {
             self.scene_start = start.saturating_sub(1);
             // The render's wait, unless the display pass ran after it ([`Clock::render_start`]).
             if !std::mem::take(&mut self.render_started) && start < 2 {
-                self.wait(WAIT_STEP, f);
+                self.lb_wait(f);
             }
             if start < 2 && self.xfb_free() == 0 {
                 // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
@@ -624,10 +643,10 @@ impl Clock {
             }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {
-                self.wait(WAIT_STEP, f);
+                self.lb_wait(f);
             }
             self.ticks_left = self.pads;
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
         }
         self.ticks_left -= 1;
         self.pads -= 1;
@@ -641,7 +660,7 @@ impl Clock {
     /// before the next scene's first audio call.
     pub fn end_scene_loop(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
-        self.wait(WAIT_STEP, f);
+        self.lb_wait(f);
         self.woken = false;
         while !self.woken {
             let next = self.next_at();
@@ -658,7 +677,7 @@ impl Clock {
     pub fn end_scene_loop_after(&mut self, copied: bool, f: &mut dyn Frames) {
         self.game_code(f);
         if !std::mem::take(&mut self.render_started) {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
         }
         if copied {
             self.xfb_pending += 1;
@@ -678,7 +697,7 @@ impl Clock {
     pub fn render_start(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         if self.scene_start < 2 && !self.render_started {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
             self.render_started = true;
         }
     }
@@ -722,7 +741,7 @@ impl Clock {
     pub fn wait_for_load(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         loop {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
             if f.done(Wait::FileLoaded) {
                 break;
             }
