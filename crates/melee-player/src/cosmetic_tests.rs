@@ -268,8 +268,19 @@ fn play(disc: &Disc, path: &str, report: bool) -> Played {
     played
 }
 
+/// Runs on a stack as deep as the player's (`main`): the simulation recurses as the original
+/// does, and two sessions outgrow a test thread's.
 #[test]
 fn drawing_offscreen_fighters_changes_no_gameplay() {
+    std::thread::Builder::new()
+        .stack_size(512 << 20)
+        .spawn(compare_offscreen_fighters)
+        .expect("the test's thread")
+        .join()
+        .unwrap_or_else(|p| std::panic::resume_unwind(p));
+}
+
+fn compare_offscreen_fighters() {
     let Some(disc) = disc() else { return };
     let fp = match std::env::var("COSMETIC_TEST_FP").as_deref() {
         Ok("slippi") => melee_sim::gekko_fp::FpMode::Slippi,
