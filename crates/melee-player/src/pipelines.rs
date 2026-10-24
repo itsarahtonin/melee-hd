@@ -6,18 +6,26 @@
 //! configuration are kept too, each with its configuration, and made again on the renderer's
 //! shader threads from the start, the uber shader drawing until each is made.
 
+use std::ffi::OsString;
 use std::path::PathBuf;
 
+use crate::channel::Channel;
 use crate::present::{Aspect, Gpu};
 
 /// Where the player keeps its caches: `%LOCALAPPDATA%\melee-hd` on Windows,
-/// `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd` elsewhere.
-fn dir() -> Option<PathBuf> {
-    let base = std::env::var_os("LOCALAPPDATA")
-        .or_else(|| std::env::var_os("XDG_CACHE_HOME"))
+/// `$XDG_CACHE_HOME/melee-hd` or `~/.cache/melee-hd` elsewhere (`melee-hd-dev` for a dev build,
+/// [`crate::channel`]).
+pub fn dir() -> Option<PathBuf> {
+    dir_of(crate::channel::channel(), |name| std::env::var_os(name))
+}
+
+/// The cache folder of a build of `channel`, with `var` the environment.
+fn dir_of(channel: Channel, var: impl Fn(&str) -> Option<OsString>) -> Option<PathBuf> {
+    let base = var("LOCALAPPDATA")
+        .or_else(|| var("XDG_CACHE_HOME"))
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|h| PathBuf::from(h).join(".cache")))?;
-    Some(base.join("melee-hd"))
+        .or_else(|| var("HOME").map(|h| PathBuf::from(h).join(".cache")))?;
+    Some(base.join(channel.folder()))
 }
 
 fn keys_path() -> Option<PathBuf> {
@@ -118,4 +126,32 @@ pub fn save(r: &melee_gpu::Renderer) -> Option<String> {
         let _ = std::fs::write(p, data);
     }
     summary
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::Path;
+
+    use super::*;
+    use crate::channel::env;
+
+    #[test]
+    fn a_dev_build_keeps_its_own_caches() {
+        let windows = env(&[("LOCALAPPDATA", "LA"), ("HOME", "H")]);
+        let elsewhere = env(&[("HOME", "H")]);
+        let xdg = env(&[("XDG_CACHE_HOME", "X")]);
+        let cache = |b: &str, f: &str| Some(Path::new(b).join(f));
+        assert_eq!(dir_of(Channel::Stable, &windows), cache("LA", "melee-hd"));
+        assert_eq!(dir_of(Channel::Local, &windows), cache("LA", "melee-hd"));
+        assert_eq!(dir_of(Channel::Dev, &windows), cache("LA", "melee-hd-dev"));
+        assert_eq!(dir_of(Channel::Dev, &xdg), cache("X", "melee-hd-dev"));
+        assert_eq!(
+            dir_of(Channel::Dev, &elsewhere),
+            Some(Path::new("H").join(".cache").join("melee-hd-dev"))
+        );
+        // MELEE_HD_SETTINGS names the settings folder only.
+        let named = env(&[("MELEE_HD_SETTINGS", "S"), ("LOCALAPPDATA", "LA")]);
+        assert_eq!(dir_of(Channel::Dev, &named), cache("LA", "melee-hd-dev"));
+        assert_eq!(dir_of(Channel::Dev, env(&[])), None);
+    }
 }
