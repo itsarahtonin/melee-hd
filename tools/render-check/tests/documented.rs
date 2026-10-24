@@ -20,8 +20,9 @@ use common::{
     GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, ONETT, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD,
-    SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, scaled,
+    MUTE_CITY, ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD,
+    SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection,
+    scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -396,6 +397,20 @@ fn sheik_fox_fod_600() {
     compare(&SHEIK_FOX_FOD, 600, Group::Standard, Expect::Identical);
 }
 
+/// Fountain of Dreams with the reflection size code: the reflection camera, its viewport the
+/// whole screen, erases in the white the stage sets, not the game camera's background color.
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_600() {
+    compare(&PC_IZUMI_SIZE, 600, Group::Standard, Expect::Identical);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
+fn pc_izumi_size_6000() {
+    compare(&PC_IZUMI_SIZE, 6000, Group::Standard, Expect::Identical);
+}
+
 #[test]
 #[ignore = "needs ssbm-rs's references, the replay and the disc; run with --ignored"]
 fn fox_sheik_ys_600() {
@@ -459,4 +474,26 @@ fn scaled_fox_marth_bf_600() {
 #[ignore = "needs ssbm-rs's local replays and the disc; run with --ignored"]
 fn scaled_special_invisible_ys_603() {
     scaled(&SPECIAL_INVISIBLE_YS, 603, Group::Standard);
+}
+
+/// Pokémon Stadium's screen showing its feed, a copy of the frame: in 16:9 the feed copies the
+/// 73:60 picture's columns, so the screen shows what it shows at 73:60.
+#[test]
+#[ignore = "needs the disc; run with --ignored"]
+fn scaled_fox_marth_ps_9000() {
+    scaled(&FOX_MARTH_PS, 9000, Group::Standard);
+}
+
+/// Fountain of Dreams' water in 16:9, the reflection in the added sides (the right at 2600,
+/// the left at 6000): its coordinates stay inside the reflection's image.
+#[test]
+#[ignore = "needs the replay and the disc; run with --ignored"]
+fn widescreen_reflection_sheik_fox_fod_2600() {
+    reflection(&SHEIK_FOX_FOD, 2600, Group::Standard);
+}
+
+#[test]
+#[ignore = "needs the replay and the disc; run with --ignored"]
+fn widescreen_reflection_sheik_fox_fod_6000() {
+    reflection(&SHEIK_FOX_FOD, 6000, Group::Standard);
 }

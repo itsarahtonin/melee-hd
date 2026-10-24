@@ -33,6 +33,9 @@ pub enum Replay {
     /// A Slippi replay in `$SLIPPI_REPLAYS`, played in Slippi Dolphin's float mode; the
     /// variable named overrides the path.
     Slippi(&'static str, Option<&'static str>),
+    /// A Slippi replay in ssbm-rs's `local/replays/hf/` (`$SSBM_RS_LOCAL`), played in Slippi
+    /// Dolphin's float mode.
+    Hf(&'static str),
     /// One of milestone 4's oracle matches, `$SSBM_RS_LOCAL/bench/oracle-m4/NAME.slp`, played
     /// in the console's float mode.
     Oracle(&'static str),
@@ -51,6 +54,7 @@ impl Replay {
         match self {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
+            Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
@@ -67,7 +71,7 @@ impl Replay {
     }
 
     fn slippi(self) -> bool {
-        matches!(self, Replay::Slippi(..))
+        matches!(self, Replay::Slippi(..) | Replay::Hf(_))
     }
 
     /// How many frames ssbm-rs's log frame N comes after the native frame it draws: a
@@ -436,6 +440,50 @@ fn scaled_as(
     }
 }
 
+/// Runs `reflection` on the game's native frame `frame - 3` widened to 16:9: every vertex of
+/// Fountain of Dreams' water on screen, the added sides' too, takes coordinates inside the
+/// reflection's image (docs/player.md, **Copies in widescreen**).
+pub fn reflection(game: &Game, frame: u32, group: Group) {
+    let replay = game.replay.path();
+    assert!(
+        replay.exists(),
+        "{} is missing (set SLIPPI_REPLAYS)",
+        replay.display()
+    );
+    let id = format!("{}-f{frame:05}-reflection", game.name);
+    let started = Instant::now();
+    let out = command(game, &id)
+        .arg("reflection")
+        .arg(disc())
+        .arg(&replay)
+        .arg((frame - game.replay.log_offset()).to_string())
+        .output()
+        .expect("melee-render-check runs");
+    let seconds = started.elapsed().as_secs_f64();
+    let text = String::from_utf8_lossy(&out.stdout);
+    let failure = (!out.status.success()).then(|| {
+        format!(
+            "{} f{frame}: the reflection leaves its image in widescreen\n{text}{}",
+            game.name,
+            String::from_utf8_lossy(&out.stderr)
+        )
+    });
+    status(
+        &id,
+        game,
+        frame,
+        group,
+        "reflection",
+        "16:9: the water's coordinates inside the reflection's image",
+        "",
+        failure.as_deref(),
+        seconds,
+    );
+    if let Some(f) = failure {
+        panic!("{f}");
+    }
+}
+
 /// How far a session's log frames run ahead of its native frames ([`Replay::log_offset`]):
 /// ssbm-rs's log frame 300 of `idle-movie` is its native frame 299 (the movie's frames,
 /// each shown two ticks, match there and at 300 against 301 only).
@@ -686,6 +734,15 @@ pub const SHEIK_FOX_FOD: Game = Game {
     name: "sheik-fox-fod",
     players: "Sheik vs Fox (Slippi)",
     replay: Replay::Slippi("2026-01/Game_20260129T214216.slp", None),
+};
+
+/// Bowser vs Fox on Fountain of Dreams with a player's reflection size code (`04 801CCE4C`):
+/// the reflection renders 640 by 480, its camera's viewport the whole screen.
+pub const PC_IZUMI_SIZE: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "pc-izumi-size",
+    players: "Bowser vs Fox (Slippi, the reflection size code)",
+    replay: Replay::Hf("bowser-dd-a6/slp/diamond-diamond-7eb9584915b81291725ce78a.slp"),
 };
 
 pub const FOX_SHEIK_YS: Game = Game {
