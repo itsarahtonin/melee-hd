@@ -168,7 +168,7 @@ impl Running<'_> {
     /// video mode as the reset save says (`lbAudioAx_80028690`, `gmMainLib_8015F500`).
     #[doc(alias = "gmMainLib_8015FBA4")]
     pub fn reset_game_data(&mut self, bank: &crate::lb::audio::SoundBank) {
-        self.game.game_data = gmm_x0::default();
+        *self.game.game_data = gmm_x0::default();
         let d = &mut self.game.game_data;
         d.set_language_setting(LANG_US);
         d.set_saved_language(LANG_US);

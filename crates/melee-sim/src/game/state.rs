@@ -282,8 +282,10 @@ pub struct Game {
     /// The audio library's sound objects (`lbl_80433710`).
     pub sound_objs: crate::lb::sound_obj::SoundObjs,
     /// The game's data (`gmMainLib_8045A6C0`): the modes' settings, the rules and the
-    /// card's data, as the boot resets them and the memory card loads them.
-    pub game_data: super::structs::gmm_x0,
+    /// card's data, as the boot resets them and the memory card loads them. Boxed: inline, its
+    /// 0x10A30 bytes made a `Game` half again as large, and every `Game` moved or copied on the
+    /// stack with it.
+    pub game_data: Box<super::structs::gmm_x0>,
     /// The power-on state (`gmMainLib_8046B0F0`) and the clock at power-on.
     pub main_lib: super::gm::main_lib::MainLib,
     /// The game modes' machine (`state_machine`) and where its loops stand.

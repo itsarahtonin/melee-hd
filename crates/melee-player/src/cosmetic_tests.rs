@@ -268,37 +268,28 @@ fn play(disc: &Disc, path: &str, report: bool) -> Played {
     played
 }
 
-/// Runs on a stack as deep as the player's (`main`): the simulation recurses as the original
-/// does, and two sessions outgrow a test thread's.
 #[test]
 fn drawing_offscreen_fighters_changes_no_gameplay() {
-    std::thread::Builder::new()
-        .stack_size(512 << 20)
-        .spawn(compare_offscreen_fighters)
-        .expect("the test's thread")
-        .join()
-        .unwrap_or_else(|p| std::panic::resume_unwind(p));
-}
-
-fn compare_offscreen_fighters() {
-    let Some(disc) = disc() else { return };
-    let fp = match std::env::var("COSMETIC_TEST_FP").as_deref() {
-        Ok("slippi") => melee_sim::gekko_fp::FpMode::Slippi,
-        _ => melee_sim::gekko_fp::FpMode::Hardware,
-    };
-    melee_sim::gekko_fp::set_fp_mode(fp);
-    let report = std::env::var_os("COSMETIC_TEST_REPORT").is_some();
-    let replays: Vec<String> = match std::env::var_os("COSMETIC_TEST_REPLAYS") {
-        Some(list) => std::env::split_paths(&list)
-            .map(|p| p.to_string_lossy().into_owned())
-            .collect(),
-        None => vec![REPLAY.to_owned()],
-    };
-    for path in &replays {
-        let played = play(&disc, path, report);
-        assert!(
-            played.drew_more > 0,
-            "{path}: the toggle drew no fighter the game left out"
-        );
-    }
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        let fp = match std::env::var("COSMETIC_TEST_FP").as_deref() {
+            Ok("slippi") => melee_sim::gekko_fp::FpMode::Slippi,
+            _ => melee_sim::gekko_fp::FpMode::Hardware,
+        };
+        melee_sim::gekko_fp::set_fp_mode(fp);
+        let report = std::env::var_os("COSMETIC_TEST_REPORT").is_some();
+        let replays: Vec<String> = match std::env::var_os("COSMETIC_TEST_REPLAYS") {
+            Some(list) => std::env::split_paths(&list)
+                .map(|p| p.to_string_lossy().into_owned())
+                .collect(),
+            None => vec![REPLAY.to_owned()],
+        };
+        for path in &replays {
+            let played = play(&disc, path, report);
+            assert!(
+                played.drew_more > 0,
+                "{path}: the toggle drew no fighter the game left out"
+            );
+        }
+    });
 }

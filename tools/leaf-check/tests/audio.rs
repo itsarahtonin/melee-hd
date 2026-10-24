@@ -40,16 +40,16 @@ fn r(call: &ssbm_rt::capture::Call, i: usize) -> u32 {
 #[test]
 fn start_param() {
     assert_eq!(leaf_check::sym("HSD_AudioSFXStartParam"), 0x8038_CFF4);
+    // The calls are a replay's: playback's codes in the function log its sounds.
     check_calls(&calls_dir(), "HSD_AudioSFXStartParam", 10, &|g, _, c| {
-        let h = g.game.audio.sfx_start(
-            g.data,
+        let h = g.sfx_start_param(
             r(c, 3) as i32,
             r(c, 4) as u8,
             r(c, 5) as u8,
             r(c, 6) as i32,
             r(c, 7) as i32,
         );
-        Ret::Int(h as u32)
+        Ret::Int(h.handle() as u32)
     });
 }
 

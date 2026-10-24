@@ -112,58 +112,63 @@ fn compare(
 
 #[test]
 fn predicting_a_replay_changes_nothing() {
-    let Some(disc) = disc() else { return };
-    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
-    let bytes = std::fs::read(REPLAY).expect("the benchmark replay");
-    let start = |d: &Disc| {
-        let replay = Replay::parse(&bytes).expect("a replay");
-        let settings = Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
-        Session::begin(d, &settings, Some(replay), false).expect("the match starts")
-    };
-    let none = [PadStatus::default(); 4];
-    let seen = compare(start(&disc), start(&disc), 1800, |_| none);
-    // A replay's inputs are known: every prediction is the tick that followed it.
-    assert!(seen.made > 1700, "{seen:?}");
-    assert_eq!(seen.missed, 0, "{seen:?}");
-    assert!(seen.exact + 1 >= seen.made, "{seen:?}");
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let bytes = std::fs::read(REPLAY).expect("the benchmark replay");
+        let start = |d: &Disc| {
+            let replay = Replay::parse(&bytes).expect("a replay");
+            let settings =
+                Settings::from_replay(&melee_slippi::start(&replay)).expect("its settings");
+            Session::begin(d, &settings, Some(replay), false).expect("the match starts")
+        };
+        let none = [PadStatus::default(); 4];
+        let seen = compare(start(&disc), start(&disc), 1800, |_| none);
+        // A replay's inputs are known: every prediction is the tick that followed it.
+        assert!(seen.made > 1700, "{seen:?}");
+        assert_eq!(seen.missed, 0, "{seen:?}");
+        assert!(seen.exact + 1 >= seen.made, "{seen:?}");
+    });
 }
 
 #[test]
 fn predicting_with_held_controllers_changes_nothing() {
-    let Some(disc) = disc() else { return };
-    melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
-    let player = |key: &str, port: u8| Player {
-        character: roster::character(key).expect("ported").kind,
-        costume: 0,
-        port,
-        kind: 0,
-        cpu_level: 0,
-        team: port,
-    };
-    let players = [player("fox", 0), player("marth", 1)];
-    let stage = roster::stage("fd").expect("ported").kind;
-    let start = |d: &Disc| {
-        let settings = Settings::vs(stage, &players, 4, 8);
-        Session::begin(d, &settings, None, false).expect("the match starts")
-    };
-    // Each port's stick and buttons change every few ticks: running, turning, jabs and jumps.
-    let pads = |tick: u32| {
-        let mut p = [PadStatus::default(); 4];
-        for (port, pad) in p.iter_mut().enumerate().take(2) {
-            let phase = tick / (11 + 4 * port as u32);
-            pad.stick_x = [0, 90, 90, -90, 0, -60][(phase % 6) as usize];
-            if phase % 7 == 3 && tick % 4 < 2 {
-                pad.button |= 0x0100;
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let player = |key: &str, port: u8| Player {
+            character: roster::character(key).expect("ported").kind,
+            costume: 0,
+            port,
+            kind: 0,
+            cpu_level: 0,
+            team: port,
+        };
+        let players = [player("fox", 0), player("marth", 1)];
+        let stage = roster::stage("fd").expect("ported").kind;
+        let start = |d: &Disc| {
+            let settings = Settings::vs(stage, &players, 4, 8);
+            Session::begin(d, &settings, None, false).expect("the match starts")
+        };
+        // Each port's stick and buttons change every few ticks: running, turning, jabs and jumps.
+        let pads = |tick: u32| {
+            let mut p = [PadStatus::default(); 4];
+            for (port, pad) in p.iter_mut().enumerate().take(2) {
+                let phase = tick / (11 + 4 * port as u32);
+                pad.stick_x = [0, 90, 90, -90, 0, -60][(phase % 6) as usize];
+                if phase % 7 == 3 && tick % 4 < 2 {
+                    pad.button |= 0x0100;
+                }
+                if phase % 5 == 2 && tick % 9 < 3 {
+                    pad.button |= 0x0800;
+                }
             }
-            if phase % 5 == 2 && tick % 9 < 3 {
-                pad.button |= 0x0800;
-            }
-        }
-        p
-    };
-    let seen = compare(start(&disc), start(&disc), 900, pads);
-    assert!(seen.made > 800, "{seen:?}");
-    // Held controllers predict most ticks exactly and miss where an input changed.
-    assert!(seen.missed > 10, "{seen:?}");
-    assert!(seen.exact > seen.missed, "{seen:?}");
+            p
+        };
+        let seen = compare(start(&disc), start(&disc), 900, pads);
+        assert!(seen.made > 800, "{seen:?}");
+        // Held controllers predict most ticks exactly and miss where an input changed.
+        assert!(seen.missed > 10, "{seen:?}");
+        assert!(seen.exact > seen.missed, "{seen:?}");
+    });
 }

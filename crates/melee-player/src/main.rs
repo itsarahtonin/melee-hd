@@ -110,6 +110,21 @@ use winit::window::WindowId;
 /// Ticks a second: the engine's pad-polling rate.
 const TICK_RATE: f64 = 60.0;
 
+/// The stack the game runs on: the simulation recurses as the original does (joint trees).
+const GAME_STACK: usize = 512 << 20;
+
+/// Runs a test's body on the game's stack ([`GAME_STACK`]), as every test that starts a
+/// [`Session`] does: a test thread's is the standard library's 2 MiB.
+#[cfg(test)]
+fn on_game_stack(body: impl FnOnce() + Send + 'static) {
+    std::thread::Builder::new()
+        .stack_size(GAME_STACK)
+        .spawn(body)
+        .expect("the test's thread")
+        .join()
+        .unwrap_or_else(|p| std::panic::resume_unwind(p));
+}
+
 /// The engine tick's length: a 60th of a second, or shorter in a game sped up (Lightning
 /// Melee's, whose tick the game's clock sets at its speed, `lb_80019628`).
 fn engine_tick(m: &Match) -> Duration {
@@ -2228,11 +2243,10 @@ fn main() -> ExitCode {
             None => return ExitCode::SUCCESS,
         }
     }
-    // The simulation recurses as the original does (joint trees): a deep stack. The window
-    // must live on the main thread on some systems, so the main thread gets the stack by
+    // The window must live on the main thread on some systems, so the game gets its stack by
     // running everything on a thread that is itself the event loop's only user.
     let child = std::thread::Builder::new()
-        .stack_size(512 << 20)
+        .stack_size(GAME_STACK)
         .spawn(move || run(args))
         .expect("the player's thread");
     child.join().unwrap_or_else(|p| {
