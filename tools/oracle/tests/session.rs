@@ -65,10 +65,11 @@ fn ticks_align_with_reads() {
     );
 }
 
-/// The memory card scene, the opening movie skipped with Start, and the title, whose Start
-/// at tick 272 asks for the main menu.
+/// The memory card scene, the opening movie skipped with Start, the title, whose Start at
+/// tick 272 asks for the main menu, and the main menu, whose entry writes the save on the
+/// game's waits, to the character select's mode.
 #[test]
-fn power_on_runs_to_the_main_menu() {
+fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
         return;
     };
@@ -77,13 +78,15 @@ fn power_on_runs_to_the_main_menu() {
         "{out}"
     );
     assert!(
-        out.contains("273 ticks compared, no difference; stopped in tick 273: the main menu's mode (gmmenumode.c) isn't ported"),
+        out.contains("357 ticks compared, no difference; stopped in tick 357: game mode 0x2's loading isn't ported"),
         "{out}"
     );
 }
 
 /// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
-/// movie skipped, the title left to its attract loop, which starts the attract match.
+/// movie skipped, the title left to its attract loop, which starts the attract match, whose
+/// first tick differs in the fields its setup leaves to the heap the menus used (the
+/// stage's first: melee-sim's heap holds no bytes).
 #[test]
 fn an_idle_title_reaches_the_attract_match() {
     let trace = ssbm_rs_local("traces/session/idle-title.trc");
@@ -97,9 +100,8 @@ fn an_idle_title_reaches_the_attract_match() {
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
     assert!(
-        out.contains(
-            "798 ticks compared, no difference; stopped in tick 798: onEnterVs isn't ported"
-        ),
+        out.contains("799 ticks compared; tick 798 differs in")
+            && out.contains("first: p_link 5 #0 ground"),
         "{out}"
     );
 }
@@ -216,7 +218,7 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 /// The clock at power-on reaches the boot's seed, the save's clock and the timeline's alarm
 /// grid; DTV on, with nothing held, still boots into the memory card scene; mono from the
 /// SRAM; the title's draws by the clock's seconds. Clean through the movie and the title to
-/// the attract match.
+/// the attract match, whose first tick differs in the heap's leftovers.
 #[test]
 fn a_version_2_session_takes_its_console() {
     for name in ["clock", "clock-late", "clock-odd"] {
@@ -225,9 +227,8 @@ fn a_version_2_session_takes_its_console() {
         };
         assert!(out.contains("the session: version 2"), "{name}: {out}");
         assert!(
-            out.contains(
-                "898 ticks compared, no difference; stopped in tick 898: onEnterVs isn't ported"
-            ),
+            out.contains("899 ticks compared; tick 898 differs in")
+                && out.contains("first: p_link 5 #0 ground"),
             "{name}: {out}"
         );
     }
@@ -379,6 +380,45 @@ fn taken_up_match_catches_a_changed_read() {
     };
     assert!(
         out.contains("10 ticks compared; tick 3310 differs"),
+        "{out}"
+    );
+}
+
+/// A menu session (`lockstep/menu-sessions/NAME.inputs` with its card, traced into
+/// `traces/menu-sessions/NAME.trc`).
+fn menu_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/menu-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/menu-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// The main menu toured: every list `menu-tour` visits, the camera, the restart, the save
+/// written as it opens. Its tick 383 ends early on the save's fitted writes, so with the
+/// timeline set aside it runs to B's return to the title, where an ARAM request the bank's
+/// move queues isn't linked as the trace's is.
+#[test]
+fn the_main_menu_toured() {
+    let Some(out) = menu_session("menu-tour", &["--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("384 ticks compared; tick 383 differs in 1 places, first: timeline"),
+        "{out}"
+    );
+    let Some(out) = menu_session("menu-tour", &["--heap", "--ignore", "timeline"]) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "3941 ticks compared; tick 3940 differs in 1 places, first: audio: devComARQR[0][1]"
+        ),
         "{out}"
     );
 }
