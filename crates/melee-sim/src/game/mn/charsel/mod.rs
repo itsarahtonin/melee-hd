@@ -1043,7 +1043,7 @@ impl Running<'_> {
     }
 
     /// `mnCharSel_80264070`: the next entry resets the handicaps.
-    // Ports `mnCharSel_80264070`; aliased once a check reaches it.
+    #[doc(alias = "mnCharSel_80264070")]
     pub fn charsel_reset_handicaps_next(&mut self) {
         self.game.charsel.reset_handicaps = 1;
     }

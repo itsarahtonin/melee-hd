@@ -523,3 +523,86 @@ fn a_save_written_through_an_audio_frame() {
         "{out}"
     );
 }
+
+/// A rules or names session (`lockstep/rules-sessions/NAME.inputs` with its card, traced into
+/// `traces/rules-sessions/NAME.trc`).
+fn rules_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/rules-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// The VS rules: every option changed both ways (the mode, the time limit and the stock
+/// count through their wraps, the handicap, the ratio, the stage selection), the two screens
+/// under them hovered, B back to the VS list, the rules again and Start, into the character
+/// select to the trace's end.
+#[test]
+fn the_rules_changed_and_back() {
+    let Some(out) = rules_session("rules", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("4037 ticks compared, no difference"), "{out}");
+}
+
+/// The item switch: items toggled in both columns, the frequency both ways, B's save, the
+/// switch again and Start's save, into the character select to the trace's end.
+#[test]
+fn the_item_switch_saves() {
+    let Some(out) = rules_session("rules-items", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2836 ticks compared, no difference"), "{out}");
+}
+
+/// The extra rules unlocked (the score display and the random stage switch): every option,
+/// the stage switch with locked stages, its save, back out and Start, into the character
+/// select to the trace's end.
+#[test]
+fn the_extra_rules_and_the_stage_switch() {
+    let Some(out) = rules_session("rules-plus", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3236 ticks compared, no difference"), "{out}");
+}
+
+/// Name entry: a name typed and backspaced, random names drawn from the seed, OK and its
+/// save, sort, erase with no and yes, out.
+#[test]
+fn a_name_made_and_one_erased() {
+    let Some(out) = rules_session("names", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2547 ticks compared, no difference"), "{out}");
+}
+
+/// Name entry's kana: the modes, the glyphs' pop-ups (one closed), the mode buttons, the
+/// keys' wraps, a name emptied and cancelled, another typed and OK'd with Start.
+#[test]
+fn a_kana_name_and_a_cancelled_one() {
+    let Some(out) = rules_session("names-kana", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3148 ticks compared, no difference"), "{out}");
+}
+
+/// The rules to a match (a one-minute time match, ratio 1.5, items off), through the character
+/// and stage selects to the match's first tick, which differs in the heap's leftovers; the
+/// timeline is set aside for tick 1506's audio frame, due just before the tick, which
+/// melee-sim's clock places 16 ticks late (the options task's fix).
+#[test]
+fn the_rules_reach_the_match() {
+    let Some(out) = rules_session("rules-match", &["--heap", "--ignore", "timeline"]) else {
+        return;
+    };
+    assert!(
+        out.contains("2259 ticks compared; tick 2258 differs in"),
+        "{out}"
+    );
+}

@@ -58,6 +58,20 @@ pub enum UserData {
     GalleryList(u32),
     /// A movie's cursor's user data, by its block's address.
     GalleryCursor(u32),
+    /// The rules' list's user data (`struct mn_802307F8_t`), by its block's address.
+    RulesList(u32),
+    /// The extra rules' list's user data (`MenuRulesPlusData`), by its block's address.
+    RulePlusList(u32),
+    /// The item switch's user data (`MnItemSwData`), by its block's address.
+    ItemSwitch(u32),
+    /// The random stage switch's user data (`MnStageSwData`), by its block's address.
+    StageSwitch(u32),
+    /// The names' list's user data (`MnName_GObj`'s 0x44 bytes), by its block's address.
+    NameList(u32),
+    /// The new name's keyboard's user data (`NameNewEntry`), by its block's address.
+    NameNew(u32),
+    /// A glyph's variants' user data (`GlyphVariantEntry`), by its block's address.
+    GlyphVariants(u32),
     /// The select screens' blocks: a hand, a coin and a name tag by door
     /// (`mnCharSel_804A0BC0`, `mnCharSel_804A0BD0`, `mnCharSel_803F0E8C`), and the stage
     /// select's name, preview and hover frame by block.
@@ -325,6 +339,9 @@ pub struct Game {
     pub menu: super::mn::main::MainMenu,
     /// The Data menu's movies' statics and user data (`mngallery.c`).
     pub gallery: super::mn::gallery::Gallery,
+    /// The VS menu's rules' and names' statics and user data (`mnmainrule.c` to
+    /// `mnnamenew.c`).
+    pub vs_menus: super::mn::rules::RulesMenus,
     /// The character select's statics (`mncharsel.c`), the stage select's (`mnstagesel.c`)
     /// and VS mode's scene data (`gmvsmelee.c`).
     pub charsel: super::mn::charsel::CharSel,
@@ -438,6 +455,15 @@ impl Host<GameKinds> for Running<'_> {
             UserData::IzumiReflection => {
                 let r = self.game.gr.izumi.reflection.as_ref();
                 crate::hsd::heap::mem_free(r.map_or(0, |r| r.addr));
+            }
+            UserData::RulesList(_)
+            | UserData::RulePlusList(_)
+            | UserData::ItemSwitch(_)
+            | UserData::StageSwitch(_)
+            | UserData::NameList(_)
+            | UserData::NameNew(_)
+            | UserData::GlyphVariants(_) => {
+                self.rules_release(data);
             }
             // `ifMagnify_802FC3BC` does nothing.
             UserData::MagnifyPlayer(_) => {}

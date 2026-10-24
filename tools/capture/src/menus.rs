@@ -179,6 +179,7 @@ impl<'a> Comparer<'a> {
         self.opening_title();
         self.main_menu();
         self.gallery();
+        self.rules_menus();
         self.attract();
         self.select_screens();
     }

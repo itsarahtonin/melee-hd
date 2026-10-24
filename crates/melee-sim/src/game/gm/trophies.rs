@@ -257,7 +257,7 @@ impl Running<'_> {
 
     /// `gm_80164430`: whether the save has a stage kind's stage unlocked (always for a stage
     /// that isn't locked).
-    // Ports `gm_80164430`; aliased once a check reaches it.
+    #[doc(alias = "gm_80164430")]
     pub fn stage_unlocked(&self, stkind: u16) -> bool {
         match stage_unlock(stkind) {
             None => true,

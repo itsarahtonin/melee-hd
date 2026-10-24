@@ -40,7 +40,8 @@ pub enum Replay {
     /// in the console's float mode.
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
-    /// NAME.inputs` or `lockstep/menu-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in
+    /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
+    /// NAME.inputs` (ssbm-rs's `SSBMINP1`), played in
     /// the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -57,8 +58,11 @@ impl Replay {
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
+                let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
                     idle.into()
+                } else if std::path::Path::new(&rules).exists() {
+                    rules.into()
                 } else {
                     ssbm_rs_local(&format!("lockstep/menu-sessions/{name}.inputs")).into()
                 }
@@ -521,6 +525,46 @@ pub const GALLERY: Game = Game {
     name: "gallery",
     players: "the Data menu's movies (session gallery)",
     replay: Replay::Session("gallery"),
+};
+
+/// The VS rules changed (`rules`): the mode, the stock count, the extra rules hovered.
+pub const RULES: Game = Game {
+    stage: "Main menu",
+    name: "rules",
+    players: "the VS rules (session rules)",
+    replay: Replay::Session("rules"),
+};
+
+/// The item switch (`rules-items`): items toggled, the frequency hovered.
+pub const RULES_ITEMS: Game = Game {
+    stage: "Main menu",
+    name: "rules-items",
+    players: "the item switch (session rules-items)",
+    replay: Replay::Session("rules-items"),
+};
+
+/// The extra rules and the random stage switch (`rules-plus`).
+pub const RULES_PLUS: Game = Game {
+    stage: "Main menu",
+    name: "rules-plus",
+    players: "the extra rules and the stage switch (session rules-plus)",
+    replay: Replay::Session("rules-plus"),
+};
+
+/// Name entry (`names`): the keyboard, a random name, the erase prompt.
+pub const NAMES: Game = Game {
+    stage: "Main menu",
+    name: "names",
+    players: "name entry (session names)",
+    replay: Replay::Session("names"),
+};
+
+/// Name entry's kana (`names-kana`): a glyph's pop-up, the katakana keys.
+pub const NAMES_KANA: Game = Game {
+    stage: "Main menu",
+    name: "names-kana",
+    players: "name entry's kana (session names-kana)",
+    replay: Replay::Session("names-kana"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

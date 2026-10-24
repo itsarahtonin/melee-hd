@@ -20,6 +20,7 @@ pub mod mainmenu;
 pub mod menus;
 pub mod pack;
 pub mod playback;
+pub mod rules;
 pub mod sis;
 pub mod sound;
 pub mod stadium;

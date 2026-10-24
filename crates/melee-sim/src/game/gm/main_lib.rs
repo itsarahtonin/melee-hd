@@ -148,7 +148,7 @@ fn clear_stats(s: &mut GmStats) {
 
 /// `InitializePersistentNameData`: a name tag's records cleared.
 #[doc(alias = "InitializePersistentNameData")]
-fn clear_name_tag(d: &mut NameTagData) {
+pub(crate) fn clear_name_tag(d: &mut NameTagData) {
     d.vs_kos = [0; NAMETAG_COUNT];
     clear_stats(&mut d.stats);
     d.play_time_by_fighter = [0; SELKIND_COUNT];

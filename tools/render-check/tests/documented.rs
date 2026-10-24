@@ -20,9 +20,9 @@ use common::{
     GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, SHEIK_FOX_FOD,
-    SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection,
-    scaled,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
+    RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -107,6 +107,34 @@ frames!(GALLERY;
     gallery_1400 1400,
     gallery_1960 1960,
     gallery_2400 2400,
+);
+// The VS rules (`rules`): the mode set to stock (1010), the stock count at 1 (1830), the
+// extra rules hovered (3430); the item switch (`rules-items`): items toggled (1300), the
+// frequency hovered (1620); the extra rules (`rules-plus`): the time limit changing (1090),
+// the random stage switch with its locked stages (1990); name entry (`names`): a name typed
+// (1200), a random name (1450), the erase prompt (1900); its kana (`names-kana`): a glyph's
+// pop-up (1300), the katakana keys (1760).
+frames!(RULES;
+    rules_1010 1010,
+    rules_1830 1830,
+    rules_3430 3430,
+);
+frames!(RULES_ITEMS;
+    rules_items_1300 1300,
+    rules_items_1620 1620,
+);
+frames!(RULES_PLUS;
+    rules_plus_1090 1090,
+    rules_plus_1990 1990,
+);
+frames!(NAMES;
+    names_1200 1200,
+    names_1450 1450,
+    names_1900 1900,
+);
+frames!(NAMES_KANA;
+    names_kana_1300 1300,
+    names_kana_1760 1760,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,
