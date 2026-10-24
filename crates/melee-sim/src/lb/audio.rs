@@ -243,14 +243,16 @@ impl LbAudio {
 
 impl Running<'_> {
     /// `fn_80023750`: a sound at the game's volume and pan (0-127, doubled for the driver).
-    /// In a replay, playback's codes log it with the frame it plays in, and hand back the
+    /// In a replay's match scene, playback's codes log it with the frame it plays in, and hand back the
     /// handle of a sound the frame already played instead of playing it again
     /// ([`SoundLog`](crate::game::playback::SoundLog)).
     fn sfx_start(&mut self, id: i32, vol: i32, pan: i32, track: i32, channel: i32) -> i32 {
         let vol = vol.wrapping_mul(2).clamp(0, 0xFF) as u8;
         let pan = pan.wrapping_mul(2).clamp(0, 0xFF) as u8;
         let frame = self.game.scene.unk_8 as i32;
-        let logs = id != SFX_NONE && self.game.audio.sfx_known(self.data, id);
+        let logs = id != SFX_NONE
+            && self.game.playback.as_ref().is_some_and(|p| p.match_scene)
+            && self.game.audio.sfx_known(self.data, id);
         if logs
             && let Some(p) = self.game.playback.as_mut()
             && let Some(handle) = p.sounds.starting(frame, id)
