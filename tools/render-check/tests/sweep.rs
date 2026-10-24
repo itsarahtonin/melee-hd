@@ -152,7 +152,7 @@ fn scaled_sheik_fox_fod_6000() {
             "scaled 1x GPU XFB: PSNR inf dB, 0.000% off by 8, 0.000% off by 32, worst block 0.00 levels at (0, 0): within tolerance",
             "scaled 2x: PSNR 30.07 dB, 17.157% off by 8, 2.379% off by 32, worst block 49.23 levels at (48, 448): OUT OF TOLERANCE",
             "scaled 3x: PSNR 30.71 dB, 17.356% off by 8, 2.038% off by 32, worst block 32.35 levels at (0, 448): OUT OF TOLERANCE",
-            "scaled 3x 16:9: PSNR 36.92 dB, 3.528% off by 8, 0.263% off by 32, worst block 13.93 levels at (288, 416): within tolerance",
+            "scaled 3x 16:9: PSNR 36.89 dB, 3.556% off by 8, 0.262% off by 32, worst block 13.93 levels at (288, 416): within tolerance",
         ],
         why::REFLECTION_SCALE,
     );

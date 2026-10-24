@@ -416,6 +416,50 @@ fn scaled_as(
     }
 }
 
+/// Runs `reflection` on the game's native frame `frame - 3` widened to 16:9: every vertex of
+/// Fountain of Dreams' water on screen, the added sides' too, takes coordinates inside the
+/// reflection's image (docs/player.md, **Copies in widescreen**).
+pub fn reflection(game: &Game, frame: u32, group: Group) {
+    let replay = game.replay.path();
+    assert!(
+        replay.exists(),
+        "{} is missing (set SLIPPI_REPLAYS)",
+        replay.display()
+    );
+    let id = format!("{}-f{frame:05}-reflection", game.name);
+    let started = Instant::now();
+    let out = command(game, &id)
+        .arg("reflection")
+        .arg(disc())
+        .arg(&replay)
+        .arg((frame - game.replay.log_offset()).to_string())
+        .output()
+        .expect("melee-render-check runs");
+    let seconds = started.elapsed().as_secs_f64();
+    let text = String::from_utf8_lossy(&out.stdout);
+    let failure = (!out.status.success()).then(|| {
+        format!(
+            "{} f{frame}: the reflection leaves its image in widescreen\n{text}{}",
+            game.name,
+            String::from_utf8_lossy(&out.stderr)
+        )
+    });
+    status(
+        &id,
+        game,
+        frame,
+        group,
+        "reflection",
+        "16:9: the water's coordinates inside the reflection's image",
+        "",
+        failure.as_deref(),
+        seconds,
+    );
+    if let Some(f) = failure {
+        panic!("{f}");
+    }
+}
+
 /// How far a session's log frames run ahead of its native frames ([`Replay::log_offset`]):
 /// ssbm-rs's log frame 300 of `idle-movie` is its native frame 299 (the movie's frames,
 /// each shown two ticks, match there and at 300 against 301 only).

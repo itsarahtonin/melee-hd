@@ -341,10 +341,17 @@ impl Ctx<'_> {
                 }
             },
             tobj::COORD_SHADOW => {
-                let m = match self.blend {
+                let mut m = match self.blend {
                     Some(b) => b.shadow_tobj(t, &m),
                     None => m,
                 };
+                // Fountain of Dreams' reflection, its camera widened in widescreen.
+                if let Some(ImageRef::Data(d)) = o.imagedesc
+                    && let Some((_, k)) = self.reflection_widening()
+                    && self.reflection_image(d).is_some()
+                {
+                    m = super::magnify::widen_projection(&m, k);
+                }
                 let inv = self.hsd.inv_view_mtx();
                 let r = m.concat(&inv);
                 self.gx.load_tex_mtx_imm(&r.m, mtxid, GX_MTX3X4);

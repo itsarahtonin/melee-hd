@@ -339,6 +339,43 @@ pub fn play(
     });
 }
 
+/// The replay's native frame `at` drawn as `view` draws it (and the [`WARM_UP`] frames before,
+/// whose copies it may sample), with its events recorded, and the address of Fountain of
+/// Dreams' reflection image, which its draws sample, if the frame has one.
+pub fn record(disc_path: &str, replay_path: &str, at: u32, view: View) -> (Drawn, Option<u32>) {
+    let mut r = renderer();
+    r.resize_efb(view.scale, view.width);
+    (r.xfb_on_gpu, r.xfb_readback) = (view.gpu_xfb, view.gpu_xfb);
+    let mut drawer = Drawer::new(r, view.widescreen);
+    let cosmetic = Cosmetic {
+        draw_offscreen_fighters: view.widescreen.is_some(),
+    };
+    let mut out = None;
+    drive(disc_path, replay_path, at, cosmetic, |t| {
+        if t.n < at {
+            drawer.frame(t, drawn_for(t.n, at), None);
+            return true;
+        }
+        let rec = Recorder::default();
+        let (images, notes) = drawer.frame(t, true, Some(&Watch(&rec)));
+        let reflection = t.game.gr.izumi.reflection.is_some().then(|| {
+            drawer
+                .frames
+                .space
+                .dynamic(melee_render::mem::Dynamic::Reflection, 0)
+        });
+        let drawn = Drawn {
+            replay_frame: t.replay_frame,
+            events: rec.events.into_inner(),
+            image: images.into_iter().last(),
+            notes,
+        };
+        out = Some((drawn, reflection));
+        false
+    });
+    out.unwrap_or_else(|| panic!("{replay_path}: the match ends before frame {at}"))
+}
+
 /// How a frame is drawn: the EFB's scale and width (for the console's 640 columns), the aspect
 /// ratio the cameras widen to, as the player's aspect sets them, and whether the copy to the
 /// XFB runs on the GPU at the EFB's size, as the player's does, or on the CPU at the console's,
