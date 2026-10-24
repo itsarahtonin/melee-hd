@@ -287,6 +287,8 @@ pub enum Wait {
     StaleReleased(i32),
     /// The movie player has no read in flight (`lbMthp_8001F800`'s spin on `fn_8001F294`).
     MovieIdle,
+    /// No sound group's move in ARAM pending (`HSD_SynthSFXBankDeflagSync`'s spin).
+    BanksMoved,
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by

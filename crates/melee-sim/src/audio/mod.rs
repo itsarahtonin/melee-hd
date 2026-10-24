@@ -303,6 +303,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::HeapReleased(h) => !self.dvd().release_heap(h),
             clock::Wait::StaleReleased(h) => !self.dvd().release_stale(h),
             clock::Wait::MovieIdle => self.audio.movie.in_flight == 0,
+            clock::Wait::BanksMoved => b.moving == 0,
         }
     }
 }
