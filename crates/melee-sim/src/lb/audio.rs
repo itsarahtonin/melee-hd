@@ -1401,7 +1401,7 @@ impl crate::audio::Audio {
             }
         }
         self.sfx_bank_deflag(data, 2);
-        self.sfx_bank_deflag_sync();
+        self.sfx_bank_deflag_sync(data);
     }
 
     /// `lbAudioAx_80027168`: starts loading the wanted banks in the background, after

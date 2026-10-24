@@ -487,13 +487,17 @@ impl Audio {
         self.synth.banks.moving -= 1;
     }
 
-    /// `HSD_SynthSFXBankDeflagSync`: the original spins until the moves are done with no wait
-    /// point, which never ends unless they already are.
+    /// `HSD_SynthSFXBankDeflagSync`: spins, reading nothing but the count, until the moves'
+    /// callbacks have run: the ARAM transfers finish at once and interrupt, so the spin takes
+    /// their interrupts as they come due ([`super::clock::Wait::BanksMoved`]).
     #[doc(alias = "HSD_SynthSFXBankDeflagSync")]
-    pub fn sfx_bank_deflag_sync(&self) {
-        assert_eq!(
-            self.synth.banks.moving, 0,
-            "HSD_SynthSFXBankDeflagSync would spin forever"
-        );
+    pub fn sfx_bank_deflag_sync(&mut self, data: &Archives) {
+        if self.synth.banks.moving != 0 {
+            assert!(
+                self.clock.is_some(),
+                "a sound bank move waiting without the timeline isn't ported"
+            );
+            self.with_clock(data, |c, f| c.wait_until(f, super::clock::Wait::BanksMoved));
+        }
     }
 }

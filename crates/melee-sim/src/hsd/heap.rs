@@ -967,6 +967,22 @@ pub fn obj_free(kind: Kind, addr: u32) {
     with(|h| h.obj_free(kind, addr));
 }
 
+/// `HSD_ObjAllocInit` for pools a scene's setup inits (the match's, [`Kind::from_boot`]):
+/// each that no scene has inited yet, which a session's later scenes find as their start
+/// left it ([`Heap::carry`]), takes its init's size and alignment. A pool the scene's
+/// start already set up is as the init leaves it, empty, and stays so.
+pub fn init_pools(kinds: &[Kind]) {
+    with(|h| {
+        for &k in kinds {
+            let a = &mut h.allocs[k as usize];
+            if a.size == 0 {
+                let (size, align) = k.init();
+                *a = ObjAlloc::init(size, align);
+            }
+        }
+    });
+}
+
 /// A memory piece from the lent-out model (`hsdAllocMemPiece`): its address, or 0.
 pub fn piece_alloc(size: u32) -> u32 {
     with(|h| h.piece_alloc(size)).unwrap_or(0)

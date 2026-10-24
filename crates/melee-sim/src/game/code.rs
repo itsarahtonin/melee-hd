@@ -50,6 +50,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::title::LOGO_PROC => game.title_logo_proc(gobj),
         super::gm::title::LOGO_STILL_PROC => game.title_logo_still_proc(gobj),
         super::gm::title::FOG_PROC => game.title_fog_proc(gobj),
+        addr if game.run_think(gobj, addr) => {}
+        super::gm::attract::PROC => game.attract_proc(gobj),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
@@ -167,6 +169,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),
+        f if f == super::mn::main::ON_FRAME.0 => game.menu_on_frame(),
+        f if f == super::gm::howto::HOWTO_ON_FRAME.0 => game.howto_on_frame(),
+        f if f == super::gm::howto::OMAKE_ON_FRAME.0 => game.omake_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),

@@ -37,7 +37,8 @@ pub enum Replay {
     /// in the console's float mode.
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
-    /// NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's float mode.
+    /// NAME.inputs` or `lockstep/menu-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in
+    /// the console's float mode.
     Session(&'static str),
 }
 
@@ -47,7 +48,12 @@ impl Replay {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Session(name) => {
-                ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs")).into()
+                let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
+                if std::path::Path::new(&idle).exists() {
+                    idle.into()
+                } else {
+                    ssbm_rs_local(&format!("lockstep/menu-sessions/{name}.inputs")).into()
+                }
             }
             Replay::Slippi(rel, var) => var
                 .and_then(std::env::var_os)
@@ -436,6 +442,23 @@ pub const IDLE_TITLE: Game = Game {
     name: "idle-title",
     players: "the title screen (session idle-title)",
     replay: Replay::Session("idle-title"),
+};
+
+/// The main menu's lists toured from the title (`menu-tour`): the main list's cursor, the C
+/// stick turning the camera, the records' and Special Melee's lists.
+pub const MENU_TOUR: Game = Game {
+    stage: "Main menu",
+    name: "menu-tour",
+    players: "the main menu (session menu-tour)",
+    replay: Replay::Session("menu-tour"),
+};
+
+/// The Data menu's movies (`gallery`): the Special Movie and How to Play played in the menu.
+pub const GALLERY: Game = Game {
+    stage: "Main menu",
+    name: "gallery",
+    players: "the Data menu's movies (session gallery)",
+    replay: Replay::Session("gallery"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

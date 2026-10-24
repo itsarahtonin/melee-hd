@@ -67,6 +67,42 @@ pub const DISC_TIMEOUT: u64 = 10 * TB_HZ;
 const AI_CALLBACK: u64 = 64;
 const DI_CALLBACK: u64 = 32;
 const ARAM_CALLBACK: u64 = 8;
+/// A memory card segment's transfer-complete interrupt's handler (EXI0's TC, OS interrupt 10,
+/// `TCIntrruptHandler`), from its delivery to the next segment's DMA: the deselect (24),
+/// `BlockReadCallback`'s `__CARDReadSegment` selecting again (64 later), its three commands 16
+/// apart and the 512-byte DMA 32 after them, as ssbm-rs's probe of the boot's card load logs
+/// every segment of it (`local/research/card-chain`). The transfer completes as the DMA starts
+/// and raises the next interrupt at once.
+pub const CARD_SEGMENT: u64 = 160;
+/// The OS interrupts of slot A's channel (EXI0): the card's own (`EXIIntrruptHandler`, which
+/// a sector's erase or a page's program raises as it finishes) and a transfer's completion
+/// (`TCIntrruptHandler`). Both come after ARAM's (6) and before the disc's (21).
+pub const EXI0_EXI: u8 = 9;
+pub const EXI0_TC: u8 = 10;
+/// A memory card sector's erase (`__CARDEraseSector`), with interrupts off: `EXILock`'s mask
+/// (16), the select (16), the 3-byte command waited for (16), the deselect with its unmask and
+/// probe (24) and `EXIUnlock`'s mask (16), as ssbm-rs's probe of a save's writes logs every
+/// erase (`local/research/card-chain/write-*.log`). ssbm-rs's card finishes the erase at once
+/// and raises the card's interrupt.
+pub const CARD_ERASE: u64 = 88;
+/// The card's interrupt's handler up to its callback: `EXIIntrruptHandler`'s status read (8),
+/// then `__CARDExiHandler`'s lock (16), `__CARDReadStatus` (80) and `__CARDClearStatus` (56)
+/// and the unlock (16).
+const CARD_STATUS: u64 = 176;
+/// `__CARDWritePage` from a callback (the erase's, or the last page's `BlockWriteCallback`):
+/// the lock (16), the select (16), its two commands waited for (32), and the 128-byte DMA's
+/// interrupt clear and unmask (16). The program finishes as the DMA starts and raises the
+/// transfer-complete interrupt.
+const CARD_PAGE: u64 = 80;
+/// A page's transfer-complete interrupt's handler: `TCIntrruptHandler`'s mask and read (16),
+/// `__CARDTxHandler`'s deselect with its unmask and probe (24) and the unlock (16). The deselect
+/// ends the program, which raises the card's interrupt.
+const CARD_PAGE_DONE: u64 = 56;
+/// A sector's pages of 128 bytes (`__CARDWrite` of 0x2000 bytes).
+const CARD_PAGES: u32 = 64;
+/// A file's directory entry stamped with the time (`OSGetTime`): `CARDWrite`'s `WriteCallback`
+/// before the directory's update, and `CARDSetStatusAsync`.
+pub const CARD_STAMP: u64 = 16;
 /// How long before an audio frame starts on this timeline ssbm-rs runs the audio DMA event
 /// that raises it: its frames start (and their handler's times count) from 8 ticks after the
 /// event, so an [`EventKind::AudioDma`] here is due `AI_LEAD` before its time. ssbm-rs runs
@@ -163,6 +199,11 @@ pub struct Clock {
     pub ai_pending: bool,
     pub di_pending: bool,
     pub aram_pending: u32,
+    /// A memory card transfer's interrupts still to deliver ([`Clock::card_chain`]), the next
+    /// one last. The chain always ends before the call that starts it returns, so it's never
+    /// state between the clock's calls.
+    #[clone_from(keep)]
+    pub exi_chain: Vec<ExiIrq>,
     /// The disc driver's timeout alarm, while a read is in flight, by its event's `seq`.
     pub disc_timeout: Option<u64>,
     /// Pad samples queued and not yet ticked.
@@ -241,6 +282,109 @@ pub trait Frames {
     }
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
+    /// The game's own wait (`lb_800195D0`) at `now` runs the save's writer (`lb_8001CC84`):
+    /// its card work there; none when no write is under way.
+    fn game_wait(&mut self, now: u64) -> Option<CardWork> {
+        let _ = now;
+        None
+    }
+    /// The save's list unmounted the card ([`CardWork::unmount`]), detaching slot A's channel.
+    fn card_unmounted(&mut self) {}
+}
+
+/// The save's writer's card work at one of the game's waits ([`Frames::game_wait`]), in
+/// order: a task step's wait point (`hsd_803AAA48`), time with interrupts off (a probe, the
+/// unmount), a transfer's interrupt chain ([`Clock::card_chain`]), and for the list's last
+/// step the unmount's detaching slot A's channel ([`Frames::card_unmounted`]), after the
+/// step's wait point: a pad alarm that fires in that wait still finds the channel attached.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct CardWork {
+    pub step: bool,
+    pub ticks: u64,
+    pub chain: Option<CardChain>,
+    pub unmount: bool,
+}
+
+/// One interrupt of a memory card transfer's chain: its OS interrupt ([`EXI0_EXI`] or
+/// [`EXI0_TC`]) and its handler's time from its delivery to its return.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct ExiIrq {
+    pub irq: u8,
+    pub ticks: u64,
+}
+
+/// A memory card transfer as the CARD library runs it on ssbm-rs's card, whose transfers,
+/// erases and programs finish at once ([`Clock::card_chain`]): the code that asks for it with
+/// interrupts off up to its first transfer, then the interrupts each transfer's end raises,
+/// whose handlers start the next.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub enum CardChain {
+    /// A read of `segments` 512-byte segments (`__CARDRead`): `first` ticks up to the first
+    /// segment's DMA, then each segment's transfer-complete handler issues the next
+    /// ([`CARD_SEGMENT`]), the last one's taking `tail` (the deselect and the callbacks).
+    Read {
+        first: u64,
+        segments: u32,
+        tail: u64,
+    },
+    /// A write of `sectors` sectors, each erased and then programmed a page at a time: `first`
+    /// ticks up to and through the first sector's erase ([`CARD_ERASE`]); then for each sector
+    /// the erase's interrupt (its status read and cleared, `EraseCallback` starting the first
+    /// page) and 64 pages, each a transfer-complete interrupt that ends its program and the
+    /// card's interrupt whose `BlockWriteCallback` starts the next. The last page's callback
+    /// ends the sector: before the next one, `CARDWrite`'s `WriteCallback` stamps the file's
+    /// directory entry ([`CARD_STAMP`]) and `__CARDUpdateDir` erases the directory's sector;
+    /// after the last, the request's callback (the HSD layer's) returns at once. A file's
+    /// sector written (`CARDWriteAsync` of 0x2000 bytes) is two sectors, the file's and the
+    /// directory's; a status set (`CARDSetStatusAsync`) the directory's alone. ssbm-rs's
+    /// probe of a save's writes (`local/research/card-chain/write-*.log`) logs every one of
+    /// the 258 interrupts of each of a save's writes, each page 312 ticks.
+    Write { first: u64, sectors: u32 },
+}
+
+impl CardChain {
+    /// The time before the first interrupt, with interrupts off.
+    pub fn first(self) -> u64 {
+        match self {
+            CardChain::Read { first, .. } | CardChain::Write { first, .. } => first,
+        }
+    }
+
+    /// The chain's interrupts, in the order they come, into `out`.
+    pub fn irqs(self, out: &mut Vec<ExiIrq>) {
+        let tc = |ticks| ExiIrq {
+            irq: EXI0_TC,
+            ticks,
+        };
+        let exi = |ticks| ExiIrq {
+            irq: EXI0_EXI,
+            ticks,
+        };
+        match self {
+            CardChain::Read { segments, tail, .. } => {
+                assert!(segments > 0, "a card read of no segments");
+                out.extend(std::iter::repeat_n(tc(CARD_SEGMENT), segments as usize - 1));
+                out.push(tc(tail));
+            }
+            CardChain::Write { sectors, .. } => {
+                assert!(sectors > 0, "a card write of no sectors");
+                for s in 0..sectors {
+                    out.push(exi(CARD_STATUS + CARD_PAGE));
+                    for _ in 1..CARD_PAGES {
+                        out.push(tc(CARD_PAGE_DONE));
+                        out.push(exi(CARD_STATUS + CARD_PAGE));
+                    }
+                    out.push(tc(CARD_PAGE_DONE));
+                    let next = if s + 1 < sectors {
+                        CARD_STAMP + CARD_ERASE
+                    } else {
+                        0
+                    };
+                    out.push(exi(CARD_STATUS + next));
+                }
+            }
+        }
+    }
 }
 
 /// What the game waits for in a loop with a wait point each spin.
@@ -269,6 +413,8 @@ pub enum Wait {
     StaleReleased(i32),
     /// The movie player has no read in flight (`lbMthp_8001F800`'s spin on `fn_8001F294`).
     MovieIdle,
+    /// No sound group's move in ARAM pending (`HSD_SynthSFXBankDeflagSync`'s spin).
+    BanksMoved,
 }
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
@@ -422,9 +568,10 @@ impl Clock {
         Self::due_at(&self.events[self.next_event().expect("the timeline runs dry")])
     }
 
-    /// Runs what is due now: each event due, then the interrupts they raised (the audio
-    /// interrupt before the retrace), one at a time, looking again after each, until nothing
-    /// is. An event that fell due while a handler ran runs as it returns ([`AI_LEAD`]).
+    /// Runs what is due now: each event due, then the interrupts they raised, one at a time in
+    /// the OS's order (the audio interrupt, ARAM's, a card transfer's, the disc's, the
+    /// retrace), looking again after each, until nothing is. An event that fell due while a
+    /// handler ran runs as it returns ([`AI_LEAD`]).
     fn service(&mut self, f: &mut dyn Frames) {
         loop {
             let now = self.now;
@@ -495,6 +642,10 @@ impl Clock {
                 f.handler_at(None);
                 self.apply(start, &log);
                 self.now = start + log.spent;
+            } else if let Some(irq) = self.exi_chain.pop() {
+                // A card transfer's interrupt (EXI0's): its handler starts the next transfer,
+                // which raises the next interrupt as it ends, or ends the chain.
+                self.now += irq.ticks;
             } else if self.di_pending {
                 self.di_pending = false;
                 self.disc_interrupt(f);
@@ -562,6 +713,31 @@ impl Clock {
         self.service(f);
     }
 
+    /// One of the game's own waits (`lb_800195D0`): time passes to the next event or a
+    /// quarter millisecond, then the save's writer runs ([`Frames::game_wait`]).
+    fn lb_wait(&mut self, f: &mut dyn Frames) {
+        self.wait(WAIT_STEP, f);
+        if let Some(work) = f.game_wait(self.now) {
+            self.card_work(work, f);
+        }
+    }
+
+    /// The save's writer's card work ([`CardWork`]).
+    pub fn card_work(&mut self, work: CardWork, f: &mut dyn Frames) {
+        if work.step {
+            self.wait_point(f);
+        }
+        if work.ticks != 0 {
+            self.pass(work.ticks, f);
+        }
+        if let Some(chain) = work.chain {
+            self.card_chain(chain, f);
+        }
+        if work.unmount {
+            f.card_unmounted();
+        }
+    }
+
     /// A wait point of the game's (`lb_800195D0`, the card layer's step `hsd_803AAA48`):
     /// time passes to the next event or a quarter millisecond, its interrupts taken.
     pub fn wait_point(&mut self, f: &mut dyn Frames) {
@@ -594,7 +770,7 @@ impl Clock {
             self.scene_start = start.saturating_sub(1);
             // The render's wait, unless the display pass ran after it ([`Clock::render_start`]).
             if !std::mem::take(&mut self.render_started) && start < 2 {
-                self.wait(WAIT_STEP, f);
+                self.lb_wait(f);
             }
             if start < 2 && self.xfb_free() == 0 {
                 // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
@@ -624,10 +800,10 @@ impl Clock {
             }
             // The scene loop's wait for a pad sample, and one more wait after it.
             while self.pads == 0 {
-                self.wait(WAIT_STEP, f);
+                self.lb_wait(f);
             }
             self.ticks_left = self.pads;
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
         }
         self.ticks_left -= 1;
         self.pads -= 1;
@@ -641,7 +817,7 @@ impl Clock {
     /// before the next scene's first audio call.
     pub fn end_scene_loop(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
-        self.wait(WAIT_STEP, f);
+        self.lb_wait(f);
         self.woken = false;
         while !self.woken {
             let next = self.next_at();
@@ -658,7 +834,7 @@ impl Clock {
     pub fn end_scene_loop_after(&mut self, copied: bool, f: &mut dyn Frames) {
         self.game_code(f);
         if !std::mem::take(&mut self.render_started) {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
         }
         if copied {
             self.xfb_pending += 1;
@@ -678,7 +854,7 @@ impl Clock {
     pub fn render_start(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         if self.scene_start < 2 && !self.render_started {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
             self.render_started = true;
         }
     }
@@ -702,6 +878,24 @@ impl Clock {
         self.scene_start = 2;
     }
 
+    /// A memory card transfer ([`CardChain`]): the game's code asks for it with interrupts off
+    /// up to its first transfer, then each transfer's interrupt's handler starts the next.
+    /// Interrupts stay off in every handler and never come back on between them: the chain is
+    /// back-to-back deliveries, and an event that comes due meanwhile runs as a handler returns,
+    /// its interrupt ahead of the chain's next when it comes first in the OS's order (the audio
+    /// interrupt's, 5, and ARAM's, 6, before the card's, 9 and 10), behind it otherwise (the
+    /// disc's, 21, and the retrace's, 24, after the whole chain). ssbm-rs completes each
+    /// transfer as it starts, so these are its boundaries, not a console's.
+    pub fn card_chain(&mut self, chain: CardChain, f: &mut dyn Frames) {
+        self.game_code(f);
+        assert!(self.exi_chain.is_empty(), "a card transfer in flight");
+        self.now += chain.first();
+        chain.irqs(&mut self.exi_chain);
+        self.exi_chain.reverse();
+        self.service(f);
+        debug_assert!(self.exi_chain.is_empty());
+    }
+
     /// Time a tick's ARAM load takes (`ARAM_CHUNK` per 4 KB), with interrupts taken between
     /// its chunks. In ssbm-rs the load's request and each chunk's ARAM interrupt handler run
     /// with interrupts off, and an event that came due meanwhile runs when a handler returns:
@@ -722,7 +916,7 @@ impl Clock {
     pub fn wait_for_load(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
         loop {
-            self.wait(WAIT_STEP, f);
+            self.lb_wait(f);
             if f.done(Wait::FileLoaded) {
                 break;
             }
@@ -948,6 +1142,85 @@ mod tests {
                 card: true
             }])
         );
+    }
+
+    /// A block's read, as the save's list reads one.
+    const BLOCK: CardChain = CardChain::Read {
+        first: 96,
+        segments: 16,
+        tail: 64,
+    };
+
+    #[test]
+    fn a_card_read_takes_events_between_its_segments() {
+        // A block's read from 1,000: its first segment's DMA 96 later, then fifteen handlers
+        // of 160 and the last one's 64: it ends at 1,000 + 96 + 2,400 + 64 = 3,560.
+        let end = 1_000 + 96 + 15 * CARD_SEGMENT + 64;
+        let mut c = Clock::new(1_000, 10 * AUDIO_FRAME, 675_000, 675_000);
+        c.card_chain(BLOCK, &mut Stub::new(false));
+        assert_eq!(c.now, end);
+        // An audio frame due inside the third handler (its event at 1,500 on ssbm-rs's clock)
+        // runs at that handler's return, 1,000 + 96 + 3 * 160 = 1,576, and its handler goes
+        // ahead of the chain's next: the read ends the audio handler's 128 later.
+        let mut c = Clock::new(1_000, 1_500 + AI_LEAD, 675_000, 675_000);
+        c.card_chain(BLOCK, &mut Stub::new(false));
+        assert!(kinds(&c).contains(&EventKind::DspResume));
+        let ran = c
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::AudioDma)
+            .unwrap()
+            .at;
+        assert_eq!(ran, 1_576 + AI_LEAD + AUDIO_FRAME);
+        assert_eq!(c.now, end + AI_LEAD + AI_HANDLER);
+        // A retrace due inside the read waits for the whole chain: its handler after the last.
+        let mut c = Clock::new(FIELD - 200, 10 * AUDIO_FRAME, 10 * FIELD, 675_000);
+        c.card_chain(BLOCK, &mut Stub::new(false));
+        assert_eq!(
+            c.now,
+            FIELD - 200 + 96 + 15 * CARD_SEGMENT + 64 + VI_HANDLER
+        );
+        assert!(c.woken);
+    }
+
+    #[test]
+    fn a_card_write_takes_events_between_its_interrupts() {
+        // `2026-10-06_16-58-24`'s second write of the save (ssbm-rs's probe,
+        // `write-16-58.log`): `CARDWriteAsync` from 277,485,778, the file's sector and the
+        // directory's, 40,480 ticks with nothing due, as `2026-10-06_17-44-10`'s two writes.
+        let write = CardChain::Write {
+            first: CARD_ERASE,
+            sectors: 2,
+        };
+        let start = 277_485_778;
+        let mut irqs = Vec::new();
+        write.irqs(&mut irqs);
+        assert_eq!(irqs.len(), 258);
+        assert_eq!(irqs.iter().filter(|i| i.irq == EXI0_EXI).count(), 130);
+        let mut c = Clock::new(start, start + 100_000, 10 * FIELD * 1_000, 675_000);
+        c.card_chain(write, &mut Stub::new(false));
+        assert_eq!(c.now, start + 40_480);
+        // The audio event due at 277,514,677 on ssbm-rs's clock runs at 277,514,794, as the
+        // directory's 28th page's card interrupt returns, and its handler goes ahead of the
+        // next page's transfer-complete interrupt: the write ends 128 later.
+        let mut c = Clock::new(start, 277_514_677 + AI_LEAD, 10 * FIELD * 1_000, 675_000);
+        c.card_chain(write, &mut Stub::new(false));
+        let ran = c
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::AudioDma)
+            .unwrap()
+            .at;
+        assert_eq!(ran, 277_514_794 + AI_LEAD + AUDIO_FRAME);
+        // Its handler starts then, not after the chain: the DSP's answer is due from it.
+        let dsp = c
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::DspResume)
+            .unwrap()
+            .at;
+        assert_eq!(dsp, 277_514_794 + AI_LEAD + AI_MAIL + DSP_FRAME);
+        assert_eq!(c.now, 277_526_386);
     }
 
     #[test]

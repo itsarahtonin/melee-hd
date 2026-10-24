@@ -159,6 +159,7 @@ pub fn tick(r: &mut Running) -> bool {
 pub fn tick_polls(r: &mut Running, polls: &mut dyn FnMut() -> PadData) -> bool {
     close_sound_log(r);
     r.game.audio.tick_start(r.data);
+    r.card_writer_take();
     crate::game::gr::stadium::take_load_end(r.game);
     queue_alarm_polls(r, 1, polls);
     begin_tick(r);
@@ -202,14 +203,26 @@ fn at_rest() -> PadData {
 /// two queued and ticks twice. `taking` counts the tick about to read its poll. Only runs
 /// with a timeline queue them: a replay's, whose controllers are at rest, and a session's,
 /// which reads its recording's.
+///
+/// A stretch that holds the scene's code past several alarms (a movie opened mid-tick,
+/// waiting for its first reads) can fire more than the queue holds: each alarm still reads
+/// the controllers and renews the queue, which takes the overflow as its type says
+/// (`HSD_PadRenewRawStatus`), and the scene loop then counts only what the queue holds.
 fn queue_alarm_polls(r: &mut Running, taking: u32, polls: &mut dyn FnMut() -> PadData) {
     let Some(c) = r.game.audio.clock.as_ref() else {
         return;
     };
     let want = c.pads + taking;
-    while u32::from(r.game.pads.lib.qcount) < want {
+    let fired = want.saturating_sub(u32::from(r.game.pads.lib.qcount));
+    for _ in 0..fired {
         let now = polls();
         r.game.pads.renew_raw(r.data, now, false, false);
+    }
+    let held = u32::from(r.game.pads.lib.qcount);
+    if let Some(c) = r.game.audio.clock.as_mut()
+        && held < want
+    {
+        c.pads = held - taking;
     }
 }
 

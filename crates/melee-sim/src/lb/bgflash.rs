@@ -299,6 +299,7 @@ impl Running<'_> {
     /// animations' alpha scales by `alpha`, `LbBf.dat`'s table, and the flash's GObjs.
     #[doc(alias = "lbBgFlash_Init")]
     pub fn bg_flash_init(&mut self, alpha: u8, lb_bf: ArchiveId) {
+        crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::BgFlash]);
         let g = &mut *self.game;
         let gobj = g.world.create(0xE, 0xE, 0);
         g.world

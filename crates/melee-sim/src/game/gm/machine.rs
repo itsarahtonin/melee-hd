@@ -56,6 +56,14 @@ pub enum Phase {
     StartMode,
     /// `runGameMode`'s loop over the mode's scenes: its next round.
     ModeLoop { mode: u8 },
+    /// A scene's preparation and its mode state's entry have run, and its own entry waits
+    /// for the frontend to read the files it loads ([`Machine::files_wanted`]).
+    Entering {
+        mode: u8,
+        scene_mode: u8,
+        state: u8,
+        overridden: bool,
+    },
     /// A scene's loop is running: the mode the loop's round runs, the scene's mode state,
     /// and whether the round is the override's (its routing to put back).
     Scene {
@@ -77,6 +85,9 @@ pub struct Machine {
     /// `gm_804D6720`, the running scene's info: its mode and mode state, whose enter and exit
     /// data the scene's code finds.
     pub scene_info: Option<(u8, u8)>,
+    /// The scene about to enter loads a match's files ([`Running::scene_start_data`]), for the
+    /// frontend to read first (a session's console): not memory of the original's.
+    pub files_wanted: bool,
 }
 
 /// What a mode or mode state calls (`GameMode`'s and `GameModeState`'s handlers).
@@ -90,10 +101,14 @@ enum Hook {
     OpeningOnExitMovie,
     TitleModeOnEnter,
     TitleModeOnExit,
+    OpeningOnEnterVs,
+    OpeningOnExitTitle,
+    /// `onExitHowto`, `onExitOmake15`: the movie player let go.
+    MovieOnExit,
     ProgScanOnEnter,
     ProgScanOnExit,
-    /// A handler of a mode not ported yet: entering it stops.
-    Unported(&'static str),
+    MenuOnEnter,
+    MenuOnExit,
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
@@ -134,7 +149,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         StateDesc {
             id: 1,
             preload: 3,
-            on_enter: Some(Hook::Unported("onEnterVs")),
+            on_enter: Some(Hook::OpeningOnEnterVs),
             on_exit: None,
             scene: GS_VS,
         },
@@ -142,13 +157,13 @@ fn states(mode: u8) -> &'static [StateDesc] {
             id: 2,
             preload: 3,
             on_enter: Some(Hook::TitleModeOnEnter),
-            on_exit: Some(Hook::Unported("onExitTitle")),
+            on_exit: Some(Hook::OpeningOnExitTitle),
             scene: GS_TITLE,
         },
         StateDesc {
             id: 3,
             preload: 3,
-            on_enter: Some(Hook::Unported("onEnterVs")),
+            on_enter: Some(Hook::OpeningOnEnterVs),
             on_exit: None,
             scene: GS_VS,
         },
@@ -156,14 +171,14 @@ fn states(mode: u8) -> &'static [StateDesc] {
             id: 4,
             preload: 3,
             on_enter: None,
-            on_exit: Some(Hook::Unported("onExitHowto")),
+            on_exit: Some(Hook::MovieOnExit),
             scene: GS_MOVIE_HOWTO,
         },
         StateDesc {
             id: 5,
             preload: 3,
             on_enter: None,
-            on_exit: Some(Hook::Unported("onExitOmake15")),
+            on_exit: Some(Hook::MovieOnExit),
             scene: GS_MOVIE_OMAKE15,
         },
     ];
@@ -183,8 +198,17 @@ fn states(mode: u8) -> &'static [StateDesc] {
         on_exit: Some(Hook::ProgScanOnExit),
         scene: GS_PROG_SCAN,
     }];
+    // `gm_Mode_Menu_States`.
+    const MENU: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 2,
+        on_enter: Some(Hook::MenuOnEnter),
+        on_exit: Some(Hook::MenuOnExit),
+        scene: GS_MENU,
+    }];
     match mode {
         GM_BOOT => &BOOT,
+        GM_MENU => &MENU,
         GM_MEMCARD => &MEMCARD,
         GM_OPENING_MV => &OPENING,
         GM_TITLE => &TITLE,
@@ -200,10 +224,9 @@ const GS_MOVIE_OMAKE15: u8 = 0x1F;
 /// A mode's `on_load` and `on_unload`, and whether its files are expected preloaded.
 fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
     match mode {
-        GM_BOOT | GM_MEMCARD | GM_TITLE => (true, None, None),
+        GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
         GM_PROGRESSIVE_SCAN => (false, None, None),
-        GM_MENU => unported_call("the main menu's mode (gmmenumode.c)"),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -248,6 +271,12 @@ impl Running<'_> {
             match self.game.machine.phase {
                 Phase::Boot => panic!("the modes' loop hasn't started (gm_801A4510)"),
                 Phase::Scene { .. } => self.end_scene(),
+                Phase::Entering { .. } => {
+                    if !self.game.machine.files_wanted {
+                        self.finish_entering();
+                    }
+                    return;
+                }
                 Phase::StartMode => self.run_game_mode(),
                 Phase::ModeLoop { mode } => {
                     let m = &mut self.game.machine;
@@ -283,6 +312,9 @@ impl Running<'_> {
                             self.enter_scene(mode, o, true);
                         }
                         _ => self.enter_scene(mode, mode, false),
+                    }
+                    if !self.game.machine.files_wanted {
+                        self.finish_entering();
                     }
                     return;
                 }
@@ -336,13 +368,53 @@ impl Running<'_> {
         if let Some(h) = s.on_enter {
             self.mode_hook(h, Some((scene_mode, state as u8)));
         }
-        let scene = s.scene;
+        self.game.machine.phase = Phase::Entering {
+            mode,
+            scene_mode,
+            state: state as u8,
+            overridden,
+        };
+        // The VS scene loads its match's files: the frontend reads them first.
+        self.game.machine.files_wanted = s.scene == GS_VS;
+    }
+
+    /// The match the VS scene about to enter starts: its mode state's enter data.
+    pub fn scene_start_data(&self) -> &crate::game::structs::StartMeleeData {
+        let Phase::Entering { scene_mode, .. } = self.game.machine.phase else {
+            unreachable!("no scene entering")
+        };
+        match scene_mode {
+            GM_OPENING_MV => &self.game.attract.start,
+            m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
+        }
+    }
+
+    /// The rest of `gm_801A4014` up to the scene loop, once the scene's files are read: the
+    /// scene's setup (`gm_801A4BD4`) and its entry.
+    fn finish_entering(&mut self) {
+        let Phase::Entering {
+            mode,
+            scene_mode,
+            state,
+            overridden,
+        } = self.game.machine.phase
+        else {
+            unreachable!()
+        };
+        let state = usize::from(state);
+        let scene = states(scene_mode)[state].scene;
         let (on_enter, on_frame) = match scene {
             GS_MEMCARD => (super::memcard::ON_ENTER, super::memcard::ON_FRAME),
             GS_MOVIE_OPENING => (super::opening::ON_ENTER, super::opening::ON_FRAME),
             GS_TITLE => (super::title::ON_ENTER, super::title::ON_FRAME),
             GS_PROG_SCAN => (super::progressive::ON_ENTER, super::progressive::ON_FRAME),
-            GS_MENU => unported_call("mnMain_Scene_OnEnter (the main menu's entry)"),
+            GS_MENU => (
+                crate::game::mn::main::ON_ENTER,
+                crate::game::mn::main::ON_FRAME,
+            ),
+            GS_VS => (super::vs::SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
+            GS_MOVIE_HOWTO => (super::howto::HOWTO_ON_ENTER, super::howto::HOWTO_ON_FRAME),
+            GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -359,6 +431,10 @@ impl Running<'_> {
             super::opening::ON_ENTER => self.opening_on_enter(),
             super::title::ON_ENTER => self.title_on_enter(),
             super::progressive::ON_ENTER => self.prog_scan_on_enter(),
+            crate::game::mn::main::ON_ENTER => self.menu_on_enter(),
+            super::vs::SCENE_ON_ENTER => self.vs_scene_on_enter(scene_mode),
+            super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
+            super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = Some(on_frame);
@@ -418,7 +494,8 @@ impl Running<'_> {
         match s.scene {
             GS_MEMCARD => self.memcard_on_exit(),
             // No exit of their own.
-            GS_MOVIE_OPENING | GS_TITLE => {}
+            GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
+            GS_VS => self.vs_scene_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
@@ -460,9 +537,13 @@ impl Running<'_> {
             Hook::OpeningOnExitMovie => self.mthp_release(),
             Hook::TitleModeOnEnter => self.title_mode_on_enter(),
             Hook::TitleModeOnExit => self.title_mode_on_exit(),
+            Hook::OpeningOnEnterVs => self.opening_on_enter_vs(),
+            Hook::OpeningOnExitTitle => self.opening_on_exit_title(),
+            Hook::MovieOnExit => self.mthp_release(),
             Hook::ProgScanOnEnter => self.prog_scan_mode_on_enter(),
             Hook::ProgScanOnExit => self.prog_scan_mode_on_exit(),
-            Hook::Unported(name) => unported_call(name),
+            Hook::MenuOnEnter => self.menu_mode_on_enter(),
+            Hook::MenuOnExit => self.menu_mode_on_exit(),
         }
         let _ = state;
     }

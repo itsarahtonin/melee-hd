@@ -65,10 +65,11 @@ fn ticks_align_with_reads() {
     );
 }
 
-/// The memory card scene, the opening movie skipped with Start, and the title, whose Start
-/// at tick 272 asks for the main menu.
+/// The memory card scene, the opening movie skipped with Start, the title, whose Start at
+/// tick 272 asks for the main menu, and the main menu, whose entry writes the save on the
+/// game's waits, to the character select's mode.
 #[test]
-fn power_on_runs_to_the_main_menu() {
+fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
         return;
     };
@@ -77,13 +78,15 @@ fn power_on_runs_to_the_main_menu() {
         "{out}"
     );
     assert!(
-        out.contains("273 ticks compared, no difference; stopped in tick 273: the main menu's mode (gmmenumode.c) isn't ported"),
+        out.contains("357 ticks compared, no difference; stopped in tick 357: game mode 0x2's loading isn't ported"),
         "{out}"
     );
 }
 
 /// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
-/// movie skipped, the title left to its attract loop, which starts the attract match.
+/// movie skipped, the title left to its attract loop, which starts the attract match, whose
+/// first tick differs in the fields its setup leaves to the heap the menus used (the
+/// stage's first: melee-sim's heap holds no bytes).
 #[test]
 fn an_idle_title_reaches_the_attract_match() {
     let trace = ssbm_rs_local("traces/session/idle-title.trc");
@@ -97,9 +100,8 @@ fn an_idle_title_reaches_the_attract_match() {
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
     assert!(
-        out.contains(
-            "798 ticks compared, no difference; stopped in tick 798: onEnterVs isn't ported"
-        ),
+        out.contains("799 ticks compared; tick 798 differs in")
+            && out.contains("first: p_link 5 #0 ground"),
         "{out}"
     );
 }
@@ -197,7 +199,9 @@ fn a_pulled_card_must_be_pulled() {
 /// `traces/v2-sessions/NAME.trc`): recorded with ssbm-rs's `POWER_ON=789004800` (2025-01-01)
 /// and `DTV=1`, `clock` with `SRAM_FLAGS=0x28` (mono) and nothing held, `progressive` with B
 /// held at power-on; `clock-late` is `clock`'s recording with its clock 300,007 time base
-/// ticks later, off the whole seconds and the alarm's grid, traced again.
+/// ticks later, off the whole seconds and the alarm's grid, traced again; `clock-odd` 123,457
+/// later, where an audio frame comes due inside a card block's read, which runs it at a segment's
+/// boundary.
 fn v2_session(name: &str, args: &[&str]) -> Option<String> {
     let trace = ssbm_rs_local(&format!("traces/v2-sessions/{name}.trc"));
     let inputs = ssbm_rs_local(&format!("lockstep/v2-sessions/{name}.inputs"));
@@ -214,18 +218,17 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 /// The clock at power-on reaches the boot's seed, the save's clock and the timeline's alarm
 /// grid; DTV on, with nothing held, still boots into the memory card scene; mono from the
 /// SRAM; the title's draws by the clock's seconds. Clean through the movie and the title to
-/// the attract match.
+/// the attract match, whose first tick differs in the heap's leftovers.
 #[test]
 fn a_version_2_session_takes_its_console() {
-    for name in ["clock", "clock-late"] {
+    for name in ["clock", "clock-late", "clock-odd"] {
         let Some(out) = v2_session(name, &["--heap"]) else {
             return;
         };
         assert!(out.contains("the session: version 2"), "{name}: {out}");
         assert!(
-            out.contains(
-                "898 ticks compared, no difference; stopped in tick 898: onEnterVs isn't ported"
-            ),
+            out.contains("899 ticks compared; tick 898 differs in")
+                && out.contains("first: p_link 5 #0 ground"),
             "{name}: {out}"
         );
     }
@@ -244,8 +247,9 @@ fn a_version_2_session_catches_a_dropped_clock() {
 }
 
 /// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, its
-/// yes and the switch (the SRAM's write at tick 311), clean through the prompt; the memory
-/// card scene after it differs in its first tick (open, docs/oracle.md).
+/// yes and the switch (the SRAM's write at tick 311), then the memory card scene (its files
+/// loaded over the prompt's freed `EfCoData.dat`), the movie and the title, to the trace's
+/// end.
 #[test]
 fn a_version_2_session_asks_for_progressive_scan() {
     let Some(out) = v2_session("progressive", &[]) else {
@@ -255,10 +259,7 @@ fn a_version_2_session_asks_for_progressive_scan() {
         out.contains("3 the same (db_gameLaunchButtonState 0x0200, DbLevel 0, the first game mode 0x27), 0 different"),
         "{out}"
     );
-    assert!(
-        out.contains("712 ticks compared; tick 711 differs"),
-        "{out}"
-    );
+    assert!(out.contains("1426 ticks compared, no difference"), "{out}");
 }
 
 /// Read 0 is the boot's (`db_GetGameLaunchButtonState`): A held there differs from what the
@@ -379,6 +380,80 @@ fn taken_up_match_catches_a_changed_read() {
     };
     assert!(
         out.contains("10 ticks compared; tick 3310 differs"),
+        "{out}"
+    );
+}
+
+/// A menu session (`lockstep/menu-sessions/NAME.inputs` with its card, traced into
+/// `traces/menu-sessions/NAME.trc`).
+fn menu_session(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/menu-sessions/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/menu-sessions/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    Some(session_with(&trace, &inputs, args))
+}
+
+/// The main menu toured: every list `menu-tour` visits, the camera, the restart, the save
+/// written as it opens (tick 383: each sector an erase and 64 page programs, all inside the
+/// step's call, `CardChain::Write`), B's return to the title, whose bank move's chunks queue
+/// their ARAM requests behind the transfers whose callbacks post them (tick 3940), the title and its
+/// attract loop, timeline included, to the attract match's first tick, which differs in the
+/// heap's leftovers.
+#[test]
+fn the_main_menu_toured() {
+    let Some(out) = menu_session("menu-tour", &["--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("4562 ticks compared; tick 4561 differs in"),
+        "{out}"
+    );
+}
+
+/// `2026-10-06_17-37-52`'s save runs whole inside tick 211, and the pad alarm fires in its
+/// last step's wait point, before the unmount: its card probes find the channel still
+/// attached (24 ticks, not 56).
+#[test]
+fn a_save_ends_attached_until_its_unmount() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-37-52.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-37-52.inputs");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--heap"]);
+    assert!(
+        out.contains("289 ticks compared, no difference; stopped in tick 289: game mode 0x1b"),
+        "{out}"
+    );
+}
+
+/// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
+/// directory sector, runs as a page's card interrupt returns, and goes ahead of the next
+/// page's (tick 152), to the Event list.
+#[test]
+fn a_save_written_through_an_audio_frame() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_16-58-24.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_16-58-24.inputs");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--heap"]);
+    assert!(
+        out.contains("336 ticks compared, no difference; stopped in tick 336: mnEvent_8024E838"),
         "{out}"
     );
 }

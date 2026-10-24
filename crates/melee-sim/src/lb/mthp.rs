@@ -338,6 +338,20 @@ impl Audio {
         rate: Rate,
         looping: i32,
     ) {
+        self.mthp_open_in(data, entrynum, file, rate, None, looping);
+    }
+
+    /// [`Audio::mthp_open`] into a buffer the caller gives (its address and size), which the
+    /// player then doesn't own (`unk_140` none).
+    pub fn mthp_open_in(
+        &mut self,
+        data: &Archives,
+        entrynum: i32,
+        file: ArchiveId,
+        rate: Rate,
+        given: Option<(u32, u32)>,
+        looping: i32,
+    ) {
         assert!(
             !self.movie.power,
             "the original's assertion failed: lbmthp.c:833"
@@ -370,9 +384,22 @@ impl Audio {
         m.x130 = 0;
         m.rate = rate;
         let size = memory_required(m);
-        let buf = crate::hsd::heap::mem_alloc(size);
+        let buf = match given {
+            Some((buf, heap_size)) => {
+                assert!(
+                    heap_size >= size,
+                    "the original's assertion failed: lbmthp.c:848"
+                );
+                self.movie.alloc = 0;
+                buf
+            }
+            None => {
+                let buf = crate::hsd::heap::mem_alloc(size);
+                self.movie.alloc = buf;
+                buf
+            }
+        };
         let m = &mut self.movie;
-        m.alloc = buf;
         m.looping = looping;
         self.mthp_setup_buffer(data, buf);
         let m = &mut self.movie;
@@ -579,9 +606,9 @@ impl Audio {
 
     /// The alarm set on the timeline's grid (`OSSetPeriodicAlarm` from 1/60 s, every 1/60 s).
     fn movie_alarm_start(&mut self) {
-        // `__OSGetSystemTime` in `InsertAlarm` reads the time base.
+        // ssbm-rs stands in for the OS's alarms (`OSSetPeriodicAlarm` on its event queue): no
+        // time passes, though `InsertAlarm` reads the time base on a console.
         let now = self.hw_now();
-        self.hw.spent += crate::game::session::TB_READ;
         let c = self
             .clock
             .as_mut()

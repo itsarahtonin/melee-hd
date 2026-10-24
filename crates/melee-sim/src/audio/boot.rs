@@ -59,26 +59,14 @@ impl BootTimes {
     /// `lbAudioAx_80028690`'s start, after the rest of `main`'s setup up to the save data's
     /// reset.
     pub const RESET: u64 = 1_360_814;
-    /// The first scene's preparation (`preloadState`) starts its preload as the boot's bank
-    /// loads end, and the scene waits for its first file: its loop's first engine tick starts
-    /// this long after that read's interrupt is handled. At Slippi's fast disc speed the
-    /// boot's first reads straddle the first tick's start (ssbm-rs's order of calls puts the
-    /// second file's request before it and the third's after), so the preload starts between
-    /// 5,402,160 and 5,422,440 and the tick at 5,442,771; at a drive's pace the tick starts
-    /// 48,515,331 into the boot, the same time after the first file's read.
+    /// The first scene's preparation (`preloadState`) starts its preload after the boot's
+    /// bank loads end (its first read 32 after the last relay read's ARAM request:
+    /// `game::boot`), and the scene waits for its first file: its loop's first engine tick
+    /// starts this long after that read's interrupt is handled. At Slippi's fast disc speed
+    /// the preload's first read starts at 5,412,316 and the tick at 5,442,771; at a drive's
+    /// pace the read at 48,470,620 and the tick 48,515,331 into the boot, the same time after
+    /// the first file's read.
     pub const FIRST_TICK_AFTER_PRELOAD: u64 = 10_149;
-    /// In that tick, Slippi's playback scene asks the Slippi device for the replay's game,
-    /// waits for the next retrace and then until the preload cache has read every file, and
-    /// makes its audio calls this long after the last read's interrupt, if it waited for it
-    /// (at a drive's pace; at the fast disc speed the files are in by the retrace, and the
-    /// calls come just after it, 6,081,107 into the boot). Fitted: with it the song's first
-    /// read (0x20 bytes) starts at ssbm-rs's time (`DVD_TIMELINE`, the Fox–Marth drive boot:
-    /// 119,094,894), and the boot's state compares exactly. ssbm-rs's playback scene has
-    /// that read queued before the last preload's end, its handler starting it; melee-sim's
-    /// preload reads from the boot's 200th on come 24 early (the music stream's last relay
-    /// read hands the next read on 32 later in ssbm-rs than here), which this takes up. 40
-    /// until 2026-10-23, when a read from the game's code went out 8 into its request.
-    pub const PLAYBACK_AFTER_PRELOADS: u64 = 24;
     /// `main`'s `OSGetTick` for the random seed, after HSD's setup and before the audio
     /// setup (a console's boot: the seed is the time base's low word then).
     pub const SEED: u64 = Self::INIT - 9_288;

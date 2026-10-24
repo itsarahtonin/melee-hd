@@ -97,6 +97,7 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_OPENING_MV => sym("gm_Mode_Opening_States"),
                 melee_sim::game::gm::machine::GM_TITLE => sym("gm_Mode_Title_States"),
                 melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
+                melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -175,6 +176,9 @@ impl<'a> Comparer<'a> {
             self.u8(sym("HSD_SObjLib_804D7960")),
         );
         self.opening_title();
+        self.main_menu();
+        self.gallery();
+        self.attract();
     }
 
     /// The memory card scene's statics and its windows.
@@ -389,17 +393,15 @@ impl<'a> Comparer<'a> {
         let addr = |p: Option<u32>| p.unwrap_or(0);
         self.check(
             "lbsnap state",
-            "snapshot, icons, slot, probes, changes",
+            "snapshot, slot, probes, changes",
             (
                 addr(sn.snap),
-                addr(sn.icon_data),
                 addr(sn.slot),
                 sn.card_state,
                 sn.state_changed,
             ),
             (
                 self.u32(SNAP),
-                self.u32(SNAP + 0x44),
                 self.u32(SNAP + 0x48),
                 [self.u32(SNAP + 0x4C) as i32, self.u32(SNAP + 0x50) as i32],
                 [
@@ -409,6 +411,12 @@ impl<'a> Comparer<'a> {
                 ],
             ),
         );
+        let theirs = self.u32(SNAP + 0x44);
+        self.compare_data("lbsnap state icon_data", sn.icon_data, theirs);
+        if let Some(slot) = sn.slot {
+            let theirs = [self.u32(slot) as i32, self.u32(slot + 0x408) as i32];
+            self.check("lbsnap slots", "card results", sn.slot_results, theirs);
+        }
     }
 
     /// The preload cache, its heaps (`lbHeap_80431FA0`) and their blocks

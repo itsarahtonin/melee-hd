@@ -75,6 +75,17 @@ impl Running<'_> {
         if code::stubbed(addr::FIRST_INITIALIZE, &[]).is_some() {
             return;
         }
+        {
+            use crate::hsd::heap::Kind;
+            crate::hsd::heap::init_pools(&[
+                Kind::Fighter,
+                Kind::FighterAttrs,
+                Kind::FighterParts,
+                Kind::FighterDObjList,
+                Kind::FighterX2040,
+                Kind::FighterX59C,
+            ]);
+        }
         self.game.reset_fighter_data();
         // `Fighter_LoadCommonData`'s `lbArchive_LoadSymbols`: from the disc.
         self.disc_load("PlCo.dat", super::data::MAIN_MEMORY);

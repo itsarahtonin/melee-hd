@@ -1072,6 +1072,28 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play; a card at the wrap keeps its last write.
 - **Source:** [saves](saves.md); `crates/melee-save/src/card.rs` (`verify_dir`, `verify_fat`).
 
+## Menus and the attract loop
+
+### The attract match's rumble is worked out from the last match's players and dropped
+
+- **Where:** `onEnterVs` (`gmopeningmode.c`), `crates/melee-sim/src/game/gm/attract.rs` (`opening_on_enter_vs`).
+- **Defect:** the entry calls `gm_LoadRumbleEnabled` on the start data before it resets the players (`gm_SetupAllPlayerDefaults`), so the rumble it works out is the last attract match's players' (or, the first time, the zeroed data's: human players with name tag 0, whose rumble it looks up in the save's name tags), and the reset overwrites it at once.
+- **Effect:** none observable: the reset sets every player's rumble again, and the lookups have no side effects.
+- **melee-hd:** the call is left out, with this proof in the port's comment.
+- **Fix:** call `gm_LoadRumbleEnabled` after the players are set up, or drop it (every attract player is a computer, whose rumble is off).
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/gm/attract.rs` (`opening_on_enter_vs`).
+
+### A cursor's unhover reads its arrow's frame and drops it
+
+- **Where:** `mn_8022A440`, `crates/melee-sim/src/game/mn/main.rs` (`cursor_unhover`).
+- **Defect:** the cursor's unhover reads its arrow's animation frame (`mn_8022F298(sp24[2])`) and throws it away, then sets the arrow's unhovered loop's start; the hover (`mn_80229F60`) uses the same read to carry the arrow's place over.
+- **Effect:** none observable: the read has no side effects.
+- **melee-hd:** modeled (the read is kept).
+- **Fix:** drop the read.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/main.rs` (`cursor_unhover`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1155,6 +1177,10 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Peach's Castle's path draw with no path left | `grCastle_801CE054`, `game/gr/castle.rs` | Takes the first entry of a stack array it never filled when all nine Bullet Bill paths are among the last three flown; only three are ever recorded | `crates/melee-sim/src/game/gr/castle.rs` (`pick_path`) |
 | A sound command's pan direction past 3 | `ftAction_80072320`, `game/ft/commands.rs` | Passes what `f31` holds | `crates/melee-sim/src/game/ft/commands.rs:973` |
 | PK Flash of another kind | `it_802AAA80`, `game/it/kinds/nesspkflash.rs` | Reads a register it never set | `crates/melee-sim/src/game/it/kinds/nesspkflash.rs:243` |
+| The main menu's light color for a list past the table | `mn_8022C010`, `mn_8022BFBC` (inlined in `fn_8022C128`, `mn_8022C304`), `game/mn/main.rs` (`light_color`) | A list kind past 0x21 falls out of the switch and returns its own number as the color group, and a group past 4 returns its own number as the color's address (inlined, a callee-saved register its caller left); every list the menu reaches is in the table | `crates/melee-sim/src/game/mn/main.rs` (`light_color`) |
+| A leaving list's process in another state | `fn_8022AF10`, `game/mn/main.rs` (`list_leave_proc`) | Leaves its animation loop pointer unset for a state other than the two it's set up for; only those two hand a list to it | `crates/melee-sim/src/game/mn/main.rs` (`list_leave_proc`) |
+| An idle list without a description | `fn_8022AFEC`, `game/mn/main.rs` (`list_proc`) | Writes the description's `hidden` byte through a null pointer (address 0x4D) when an idle list has no description; every list the menu makes has its strings | `crates/melee-sim/src/game/mn/main.rs` (`list_proc`) |
+| A fixed handicap of 0 | `gm_80167BC8`, `game/gm/vs_mode.rs` (`apply_menu_rules`) | Reads the handicap table one entry before its start (`handicap - 1` as an unsigned index); the menus set handicaps 1 to 9 | `crates/melee-sim/src/game/gm/vs_mode.rs` (`apply_menu_rules`) |
 | Kirby's aerial Thunder Jolt for another copy | `ftKb_PkSpecialAirN_Anim`, `game/ft/kirby/special_pikachu.rs` | Takes the landing lag from `f31`, which its caller left, for a copy other than Pikachu's or Pichu's; only those two copies enter the state (ssbm-rs transliterates the function from its machine code for it) | `crates/melee-sim/src/game/ft/kirby/special_pikachu.rs:161` |
 | Held needles of another kind | `it_802B18B0`, `game/it/kinds/seakneedleheld.rs` | Shows as many needles as a count it never set for a kind other than Sheik's and Kirby's copy's; only those two make them | `crates/melee-sim/src/game/it/kinds/seakneedleheld.rs:63` |
 | Sheik's chain with no link out | `it_802BC080`, `game/it/kinds/seakchain.rs` | Stores a register its caller set (`env_flags`) when its loop doesn't run | `crates/melee-sim/src/game/it/kinds/seakchain.rs:796` |

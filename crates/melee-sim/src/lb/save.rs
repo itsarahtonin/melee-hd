@@ -13,7 +13,7 @@
 
 use std::cell::RefCell;
 
-use crate::audio::clock::TB_HZ;
+use crate::audio::clock::{CARD_ERASE, CARD_STAMP, CardChain, CardWork, TB_HZ};
 
 use melee_save::tasks::{Run, Task, lists};
 use melee_save::{Card, Clock, Console};
@@ -62,6 +62,9 @@ pub struct CardDevice {
     /// When a probe of the channel unattached last looked at its insertion interrupt
     /// (EXTINT), which pulling the card out or putting it back raises, on the time base.
     pub extint_seen: u64,
+    /// `OSGetFontEncode` has read the video interface's register, and keeps the answer: the
+    /// first mount whose ID passes its checksums reads it (`VerifyID`).
+    pub font_encode_known: bool,
 }
 
 /// Time base ticks a hardware register's read takes on ssbm-rs's console, and a read of the
@@ -218,20 +221,23 @@ pub struct CardTasks {
     pub file_errors: [i32; 9],
 }
 
-/// How a task list the game waits on spends time on ssbm-rs's card: the first task's work
-/// (the mount's transfers, run at once from the list's start), then each call of
-/// `lbCardNew_CompleteNextTask` until the list ends: a wait point (`hsd_803AAA48`) and that
-/// step's transfers. The transfers are the CARD library's EXI commands, which on ssbm-rs's
-/// card finish at once but read the interface's registers ([`MOUNT_WORK`],
-/// [`BLOCK_WORK`]). The steps were counted from ssbm-rs's runs of the recorded sessions
-/// (`CARD_STEPS`, `CALLS=EXIDma,EXIImm,EXISync`: 80 segments for the mount, 16 for a
-/// block); the reads were fitted to the sessions' traces (`docs/saves.md`).
+/// How a task list the game waits on spends time on ssbm-rs's card: the mount's probe and
+/// transfers, run at once from the list's start, then each call of
+/// `lbCardNew_CompleteNextTask` until the list ends (a wait point, `hsd_803AAA48`, and that
+/// step's transfers), then the unmount. The transfers are the CARD library's EXI commands,
+/// which on ssbm-rs's card finish at once: a read is a chain of 512-byte segments, each issued
+/// by the last one's transfer-complete interrupt's handler with interrupts off
+/// ([`crate::audio::clock::Clock::card_chain`]). ssbm-rs's probe of the boot's load (every
+/// interrupt change, EXI transfer, event and interrupt delivery, `local/research/card-chain`)
+/// gives each part's time; the steps were counted from its runs of the recorded sessions
+/// (`CARD_STEPS`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum CardTime {
     /// `lb_8001BD34` loading the save. With the file opened (intact or damaged): the
-    /// mount, then 23 steps, twenty of which read a block each (steps 2 to 13 and 15 to 22:
-    /// the file's eleven blocks, a block a step, twice over for the data kept twice and the
-    /// spare). Without (no file, a full card, a broken one): as [`CardTime::Mount`].
+    /// mount, then 23 steps: the check and the open (no transfer: they run from what the
+    /// mount read), twenty block reads (steps 2 to 13 and 15 to 22: the file's eleven blocks,
+    /// a block a step, twice over for the data kept twice and the spare), steps 14 and 23
+    /// none. Without (no file, a full card, a broken one): the mount and the check.
     Load,
     /// A list that only mounts the card and looks at its directory (`lb_8001C2D8` looking
     /// for another game's file, `lb_8001C87C` probing for the save): the mount, then one
@@ -239,48 +245,296 @@ pub enum CardTime {
     Mount,
 }
 
-/// Register reads of the mount's transfers (80 segments: the ID, the directories and the
-/// allocation tables, with the status commands around them). The search's preload issue
-/// (62,195,550 on the traces) is linear in it and the search's step, which fixes it.
-pub const MOUNT_WORK: u64 = 1643;
-/// Register reads of the step after the mount: the check's ([`CHECK_WORK`]), and in the
-/// load's list, when the card isn't broken, one more ([`LOAD_WORK`]). Fitted to the no-file,
-/// full and broken cards' sessions, whose loads and probes end on that step.
-pub const CHECK_WORK: u64 = 2;
-pub const LOAD_WORK: u64 = 1;
-/// Register reads of a block's read (sixteen 512-byte segments). Only the last block's
-/// reads reach the load's end (the wait points before it end at events), so the traces fix
-/// the last step's work but not its split; 323 keeps the mount's rate of about 20 a
-/// segment.
-pub const BLOCK_WORK: u64 = 323;
+/// A step's transfers after its wait point.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Step {
+    /// None: the step runs from what the card layers already read.
+    Idle,
+    /// A block's read (`CARDReadAsync` of 0x2000 bytes: sixteen segments).
+    Block,
+}
+
+/// The mount (`taskMount`, `CARDMountAsync`) with interrupts off from its attach (two probes
+/// of the slot) through `DoMount`'s status commands (the status cleared and read, the card's
+/// interrupt enabled) to its first segment's DMA, after `CARDProbeEx`'s probes: 384 ticks.
+pub const MOUNT_FIRST: u64 = 384;
+/// The mount's reads: the ID, both directories and both allocation tables, 0x2000 bytes each.
+pub const MOUNT_SEGMENTS: u32 = 80;
+/// The last segment's handler, its deselect and the mount's callbacks (`__CARDMountCallback`'s
+/// `__CARDVerify`), and with them `OSGetFontEncode`'s register read ([`EXI_READ`]) the first
+/// time an ID gets that far ([`CardDevice::font_encode_known`]): ssbm-rs's probe has 72 for
+/// the boot's load, 64 for the memory card scene's probe after it and for a broken card's.
+pub const MOUNT_TAIL: u64 = 64;
+/// A block's read from its step (`hsd_803AAA48` after `CARDFastOpen`): the select (24), three
+/// commands 16 apart and the DMA 32 after them, with interrupts off.
+pub const BLOCK_FIRST: u64 = 96;
+pub const BLOCK_SEGMENTS: u32 = 16;
+/// The block's last segment's handler: the deselect and `BlockReadCallback`'s callbacks into
+/// the HSD layer.
+pub const BLOCK_TAIL: u64 = 64;
+/// A block's read from its step.
+const BLOCK_READ: CardChain = CardChain::Read {
+    first: BLOCK_FIRST,
+    segments: BLOCK_SEGMENTS,
+    tail: BLOCK_TAIL,
+};
+/// The mount's reads, `font` the font encoding's read with the tail ([`MOUNT_TAIL`]).
+fn mount_read(font: u64) -> CardChain {
+    CardChain::Read {
+        first: MOUNT_FIRST,
+        segments: MOUNT_SEGMENTS,
+        tail: MOUNT_TAIL + font,
+    }
+}
+/// A sector the save's list writes from its step (`CARDWriteAsync` of 0x2000 bytes, with
+/// interrupts off): its erase, its 64 pages, then from `CARDWrite`'s `WriteCallback` the file's
+/// directory entry stamped and the directory written (`__CARDUpdateDir`: its sector erased and
+/// programmed), all in the step's call, as ssbm-rs's probe of a save's writes logs each one
+/// (40,480 ticks with nothing due, `local/research/card-chain/write-*.log`). No table is
+/// written: a write's blocks are already the file's (`__CARDUpdateFatBlock` runs for a create
+/// or a delete).
+pub const SECTOR_WRITE: CardChain = CardChain::Write {
+    first: CARD_ERASE,
+    sectors: 2,
+};
+/// A status set from its step (`CARDSetStatusAsync`, with interrupts off): the file's
+/// directory entry stamped and the directory's sector erased, then programmed. Counted from
+/// ssbm-rs's ports (the call reads nothing else of the hardware), with each part's time a
+/// save's writes take; no session's save sets a status yet, as each one's header is intact.
+pub const STATUS_SET: CardChain = CardChain::Write {
+    first: CARD_STAMP + CARD_ERASE,
+    sectors: 1,
+};
+/// `CARDUnmount` at a list's end (`DoUnmount`: the channel's callback cleared and the channel
+/// detached), with interrupts off: 24 in every list ssbm-rs's probe logs (the intact, no-file
+/// and broken cards' loads, and the scene's probe).
+pub const UNMOUNT: u64 = 24;
 
 impl CardTime {
-    /// The first task's work, and each step's work after its wait point, for a list that
-    /// ended on `result` and found a card in the slot or not (no card: the probe fails, and
-    /// the list with it, before any wait).
-    fn steps(self, result: i32, card_in: bool) -> (u64, Vec<u64>) {
+    /// The steps after the mount's for a list that ended on `result`; `None` when no card
+    /// answered the mount's probe (the list fails there, before any wait).
+    fn steps(self, result: i32, card_in: bool) -> Option<Vec<Step>> {
         if !card_in {
-            return (0, Vec::new());
+            return None;
         }
-        match (self, result) {
-            (CardTime::Load, result::READY | result::DAMAGED) => (
-                MOUNT_WORK,
-                (1..=23)
-                    .map(|s| match s {
-                        1 => CHECK_WORK + LOAD_WORK,
-                        14 | 23 => 0,
-                        _ => BLOCK_WORK,
-                    })
-                    .collect(),
-            ),
-            (CardTime::Load, result::NO_FILE) => (MOUNT_WORK, vec![CHECK_WORK + LOAD_WORK]),
-            (CardTime::Load, result::MALFORMED) | (CardTime::Mount, _) => {
-                (MOUNT_WORK, vec![CHECK_WORK])
+        Some(match (self, result) {
+            (CardTime::Load, result::READY | result::DAMAGED) => (1..=23)
+                .map(|s| match s {
+                    1 | 14 | 23 => Step::Idle,
+                    _ => Step::Block,
+                })
+                .collect(),
+            (CardTime::Load, result::NO_FILE | result::MALFORMED) | (CardTime::Mount, _) => {
+                vec![Step::Idle]
             }
             (CardTime::Load, r) => unported_call(&format!(
                 "the card's time over a load that ends on lbCardResult {r}"
             )),
+        })
+    }
+}
+
+/// A step of the save's list at one of the game's waits: its wait point, then `work`.
+fn step(work: CardWork) -> CardWork {
+    CardWork { step: true, ..work }
+}
+
+/// The save list's steps after the mount, from what the HSD layer asked of the card
+/// (`run.steps`), and when each file's result changes: at its callback (`fn_8001A0B0`, in
+/// the call that sees its request's last transfer done) and at the write task's start
+/// (`taskWrite` queueing each file's write). One step a wait, each a
+/// `lbCardNew_CompleteNextTask`: the check's and the open's (no transfer, as a load's); each
+/// sector transfer after its wait point (a request starts in the call that issues its first
+/// transfer, and a later request of the same task in the call its previous one ends in; a
+/// read is a chain of segments, as a load's blocks, a write [`SECTOR_WRITE`] and a status
+/// set [`STATUS_SET`], each ending in its call); between two tasks, the call that sees the first's last transfer
+/// done, runs its callbacks and starts the next (`executeNextTask`, whose requests the HSD
+/// layer takes up at its next call); and the list's end, the call that sees its last transfer
+/// done, runs the callbacks and unmounts the card ([`UNMOUNT`]).
+fn save_steps(run: &Run) -> (Vec<CardWork>, Vec<(usize, usize, i32)>) {
+    let idle = step(CardWork::default());
+    let mut steps = vec![idle];
+    let mut results = Vec::new();
+    let mut tasks = 0;
+    let mut callbacks = run.callbacks.iter();
+    for (i, &c) in run.steps.iter().enumerate() {
+        match c {
+            b't' => {
+                if tasks > 0 {
+                    steps.push(idle);
+                }
+                tasks += 1;
+                if run.write_queued == Some(i) {
+                    let at = steps.len() - 1;
+                    for &(file, h) in &run.queued {
+                        results.push((at, file, melee_save::tasks::from_hsd(h)));
+                    }
+                }
+            }
+            b'k' => {
+                let &(arg, h) = callbacks.next().expect("a callback for each k");
+                if (0..9).contains(&arg) {
+                    results.push((steps.len(), arg as usize, melee_save::tasks::from_hsd(h)));
+                }
+            }
+            b'q' => {}
+            b'r' | b'w' | b's' => steps.push(step(CardWork {
+                chain: Some(match c {
+                    b'r' => BLOCK_READ,
+                    b'w' => SECTOR_WRITE,
+                    _ => STATUS_SET,
+                }),
+                ..CardWork::default()
+            })),
+            b'c' => unported_call(
+                "a file the save's list creates (CARDCreateAsync's table and directory writes)",
+            ),
+            other => unreachable!("the HSD layer's log entry {:?}", other as char),
         }
+    }
+    // The list's end task unmounts the card, detaching the channel after its wait point.
+    steps.push(step(CardWork {
+        ticks: UNMOUNT,
+        unmount: true,
+        ..CardWork::default()
+    }));
+    (steps, results)
+}
+
+/// The save's card data and header as the writer's list takes them (`lb_8001BE30`'s
+/// manifest, banner and icons).
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SaveRequest {
+    pub data: Vec<u8>,
+    pub banner: Vec<u8>,
+    pub icons: Vec<u8>,
+}
+
+/// The save's writer as it runs over the game's waits (`lb_8001CC84` from `lb_800195D0`):
+/// the list the writer's first step starts, the register reads of each step left after it,
+/// and what the game takes up of a list started or ended at its next look
+/// ([`Running::card_writer_take`]). It lives on the audio side, where the waits are.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct Writer {
+    /// A list to start at the next wait.
+    pub start: Option<SaveRequest>,
+    /// Each later step's card work, after its wait point; `next` the next one's.
+    pub steps: Vec<CardWork>,
+    pub next: usize,
+    /// The list's result once its last step ran, and whether its mount found the card.
+    pub done: Option<(i32, bool)>,
+    /// The list's per-file results (`unk_38`'s `lb_error`) as of the last step run.
+    pub file_errors: [i32; 9],
+    /// The comment the list's start made (`lb_8001C658`).
+    pub comment: Option<[u8; 0x40]>,
+    /// Each change of a file's result: the step it comes in, the file and the result.
+    pub results: Vec<(usize, usize, i32)>,
+    /// Whether the results changed since the game last took them.
+    pub errors_due: bool,
+}
+
+impl Writer {
+    /// Whether a list is started or running.
+    pub fn busy(&self) -> bool {
+        self.start.is_some() || self.next < self.steps.len()
+    }
+
+    /// The writer's step at one of the game's waits at `now` ([`crate::audio::clock::Frames::game_wait`]):
+    /// a list started (its probe, the comment's clock read and the mount, with no wait point
+    /// first), or its next step (after its wait point); none when no list runs.
+    pub fn wait(&mut self, now: u64) -> Option<CardWork> {
+        if let Some(req) = self.start.take() {
+            return Some(self.begin(req, now));
+        }
+        if self.next < self.steps.len() {
+            let w = self.steps[self.next];
+            for &(at, file, e) in &self.results {
+                if at == self.next {
+                    self.file_errors[file] = e;
+                    self.errors_due = true;
+                }
+            }
+            self.next += 1;
+            return Some(w);
+        }
+        None
+    }
+
+    /// Starts the list on the lent card at `now`: it writes what it writes at once, and the
+    /// steps' time is left for the waits after. The start's work: the mount's probe
+    /// (`CARDProbeEx`: the slot's and its ID's) and transfers, as a load's.
+    fn begin(&mut self, req: SaveRequest, now: u64) -> CardWork {
+        let (card_in, probe, offset) = with_device(|dev| {
+            if !dev.waits {
+                // No card at power-on: ssbm-rs stands in for the CARD library.
+                return (false, 0, dev.time_offset);
+            }
+            let (card, probe) = dev.exi_probe_timed(now + TIME_READ);
+            let id = if card {
+                dev.exi_probe_timed(now + TIME_READ + probe).1
+            } else {
+                0
+            };
+            (card, probe + id, dev.time_offset)
+        });
+        // `lb_8001C658`: the comment's date, from `OSGetTime` as the list starts.
+        let seconds = ((now + offset) / TB_HZ) as u32;
+        let comment = melee_save::melee::comment(seconds, false);
+        self.comment = Some(comment);
+        let mut bufs = melee_save::exec::Bufs::default();
+        for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {
+            *f = req.data[file_span(i).0..].to_vec();
+        }
+        bufs.banner = req.banner;
+        bufs.icons = req.icons;
+        let mut run = Run::new(melee_save::melee::manifest(), bufs);
+        run.comment = comment;
+        let r = with_device(|dev| {
+            let mut clock = Clock::at(seconds);
+            let card = if card_in { dev.card.as_mut() } else { None };
+            run.execute(
+                card,
+                &dev.console.clone(),
+                &mut clock,
+                &lists::save(melee_save::melee::FILENAME),
+            )
+        });
+        // `resetState`: no file has a result yet.
+        self.file_errors = [result::START; 9];
+        self.errors_due = true;
+        self.next = 0;
+        self.steps.clear();
+        // The comment's `OSGetTime` (`lb_8001C658`), before the list starts.
+        let mut work = CardWork {
+            ticks: TIME_READ + probe,
+            ..CardWork::default()
+        };
+        if !card_in {
+            // The mount's probe fails, and the list with it, before any step.
+            self.done = Some((r, false));
+            return work;
+        }
+        // The mount attaches slot A's channel; its check reads the font encoding the first
+        // time the card's ID gets that far.
+        let font = with_device(|dev| {
+            dev.attached = true;
+            let read = !dev.font_encode_known && dev.card.as_ref().is_some_and(id_valid);
+            dev.font_encode_known |= read;
+            if read { EXI_READ } else { 0 }
+        });
+        work.chain = Some(mount_read(font));
+        (self.steps, self.results) = save_steps(&run);
+        self.done = Some((r, true));
+        work
+    }
+
+    /// The list's end, once its last step ran: its result and whether its mount found the
+    /// card.
+    pub fn take_done(&mut self) -> Option<(i32, bool)> {
+        if self.busy() {
+            return None;
+        }
+        self.done.take()
     }
 }
 
@@ -309,6 +563,16 @@ impl CardTasks {
     }
 }
 
+/// Whether the card's ID passes `VerifyID`'s first checks (no device ID, a 4 Mbit card, its
+/// checksums), which reach the font encoding's.
+fn id_valid(card: &Card) -> bool {
+    let id = &card.image()[..0x200];
+    let be16 = |at: usize| u16::from_be_bytes([id[at], id[at + 1]]);
+    be16(0x20) == 0
+        && be16(0x22) == 4
+        && melee_save::card::checksum(&id[..0x1FC]) == (be16(0x1FC), be16(0x1FE))
+}
+
 /// The card data's logical files: where each lies in `GmCardData` (file 1 the save data,
 /// 2 to 8 the name tag banks).
 fn file_span(file: usize) -> (usize, usize) {
@@ -320,8 +584,13 @@ fn file_span(file: usize) -> (usize, usize) {
     }
 }
 
+/// The list's end unmounts the card, detaching slot A's channel.
+pub fn detach() {
+    with_device(|dev| dev.attached = false);
+}
+
 /// The card data as memory holds it.
-fn card_data_bytes(d: &GmCardData) -> Vec<u8> {
+pub fn card_data_bytes(d: &GmCardData) -> Vec<u8> {
     let mut bytes = vec![0u8; GmCardData::SIZE as usize];
     d.export(
         &mut MemMut {
@@ -363,7 +632,17 @@ impl Running<'_> {
         let mut run = Run::new(melee_save::melee::manifest(), bufs);
         self.card_alarm_probes();
         let now = self.clock_now();
-        let (card_in, probe) = with_device(|dev| dev.exi_probe_timed(now));
+        // The mount's `CARDProbeEx`: the slot's probe and, for a card that answers, its ID's
+        // (`EXIGetID`, a second probe, reading the ID when it isn't known), interrupts off.
+        let (card_in, probe) = with_device(|dev| {
+            let (card, probe) = dev.exi_probe_timed(now);
+            let id = if card {
+                dev.exi_probe_timed(now + probe).1
+            } else {
+                0
+            };
+            (card, probe + id)
+        });
         // The mount's probe found the card: the lists that take the card game's status clear
         // it (`*_p(status) = 0`); the others pass none.
         if card_in && status {
@@ -407,19 +686,30 @@ impl Running<'_> {
                 h => melee_save::tasks::from_hsd(h),
             };
         }
-        let (first, steps) = time.steps(r, card_in);
-        // A list without a card that answers fails at the mount's probe (`CARDProbeEx`, with
-        // interrupts off), which takes no time where ssbm-rs stands in for the CARD library.
-        if !card_in && with_device(|dev| dev.waits) {
+        let steps = time.steps(r, card_in);
+        // The mount's probe, with interrupts off; a list without a card that answers fails
+        // there. Where ssbm-rs stands in for the CARD library it takes no time.
+        if with_device(|dev| dev.waits) {
             self.game.audio.clock_read(self.data, probe);
         }
-        // The mount attaches slot A's channel, and the list's end unmounts it.
-        let mounted = !steps.is_empty();
-        with_device(|dev| dev.attached = mounted);
-        self.game.audio.clock_reg_reads(self.data, first);
-        for work in steps {
-            self.game.audio.clock_wait(self.data);
-            self.game.audio.clock_reg_reads(self.data, work);
+        if let Some(steps) = steps {
+            // The mount attaches slot A's channel, and the list's end unmounts it. Its check
+            // reads the font encoding the first time the card's ID gets that far.
+            let font = with_device(|dev| {
+                dev.attached = true;
+                let read = !dev.font_encode_known && dev.card.as_ref().is_some_and(id_valid);
+                dev.font_encode_known |= read;
+                if read { EXI_READ } else { 0 }
+            });
+            let a = &mut self.game.audio;
+            a.clock_card_chain(self.data, mount_read(font));
+            for step in steps {
+                a.clock_wait(self.data);
+                if step == Step::Block {
+                    a.clock_card_chain(self.data, BLOCK_READ);
+                }
+            }
+            a.clock_read(self.data, UNMOUNT);
         }
         // The list's end unmounts the card, detaching the channel.
         with_device(|dev| dev.attached = false);

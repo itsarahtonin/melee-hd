@@ -77,6 +77,7 @@ const SIZE: i32 = 0xA4;
 #[doc(alias = "psInitAppSRT")]
 pub fn init(objs: &mut Objects, _num: i32, size: i32) -> i32 {
     assert!(size >= SIZE, "psInitAppSRT: objects of {size:#x} bytes");
+    crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::AppSrt]);
     objs.app_srts = AppSrts::default();
     0
 }

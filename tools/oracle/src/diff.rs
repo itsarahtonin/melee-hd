@@ -131,6 +131,11 @@ impl Files<'_> {
         }
     }
 
+    /// The archives the last scan found.
+    pub(crate) fn loaded(&self) -> &[Loaded] {
+        &self.loaded
+    }
+
     /// The archives the session has loaded by name, as it stands now: a scene's files loaded
     /// after the boot (the memory card scene's after the progressive scan prompt) are found
     /// where the original loads them too.
@@ -159,6 +164,7 @@ impl Files<'_> {
             &self.named,
             &mut self.rescan,
             &changed,
+            &melee_capture::Freed::read(&image.mem1),
         );
         DataMap {
             loaded: self.loaded.clone(),

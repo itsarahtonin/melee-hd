@@ -1,11 +1,14 @@
 //! The game's modes and scenes (`melee/gm`): the scene loop that runs engine ticks, the
 //! scenes' button maps, and the VS match.
 
+pub mod attract;
 pub mod boot_mode;
+pub mod howto;
 pub mod input;
 pub mod machine;
 pub mod main_lib;
 pub mod memcard;
+pub mod menu;
 pub mod mode_init;
 pub mod names;
 pub mod opening;
@@ -69,6 +72,8 @@ pub struct Globals {
     pub unlocks: Unlocks,
     /// Stamina Mode's statics (`gmstamina.c`).
     pub stamina: stamina::Stamina,
+    /// The challenger approach's data (`gm_1736.c`'s `challenger_data`).
+    pub challenger: unlocks::ChallengerData,
     /// Whether the trophies' data archive is loaded (`_Toy_sbss_804D6ED0` isn't null): the
     /// first stage load of a session loads it.
     pub trophy_data: bool,
@@ -368,6 +373,10 @@ pub fn call(
     match f {
         FIXED_CAMERA => {
             fixed_camera(r);
+            Some(super::code::Val::None)
+        }
+        attract::ON_MATCH_START => {
+            r.attract_match_start();
             Some(super::code::Val::None)
         }
         _ => stamina::call(r, f, args),

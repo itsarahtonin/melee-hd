@@ -158,6 +158,40 @@ impl Running<'_> {
         }
     }
 
+    /// Frees every text and every canvas with its camera, and makes the whole arena free
+    /// again (the fonts kept), `HSD_SisLib_803A5E70`.
+    #[doc(alias = "HSD_SisLib_803A5E70")]
+    pub fn sis_reset(&mut self) {
+        self.destroy_all_texts();
+        let mut cur = self.game.sis.first_canvas;
+        while let Some(c) = cur {
+            let e = *self.game.sis.canvas(c);
+            if let Some(o) = e.gobj {
+                gobj::free(self, o);
+                if let Some(k) = self.game.sis.canvases.get_mut(&c.0) {
+                    k.gobj = None;
+                }
+            }
+            self.game.sis.free(c.0);
+            cur = e.next;
+        }
+        let s = &mut self.game.sis;
+        s.first_canvas = None;
+        s.used_head = None;
+        s.free_head = Some(0);
+        s.blocks.clear();
+        s.blocks.insert(
+            0,
+            sis::Block {
+                next: None,
+                size: s.size - sis::HEADER,
+            },
+        );
+        s.texts.clear();
+        s.canvases.clear();
+        s.buffers.clear();
+    }
+
     /// Adds a canvas for font `font`'s texts at the end of the list; without a parent GObj,
     /// with its own orthographic camera GObj. Returns how many canvases the font had,
     /// `HSD_SisLib_803A611C`.

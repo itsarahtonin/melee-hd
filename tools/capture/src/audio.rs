@@ -784,6 +784,7 @@ fn import_devcom(m: &Mem) -> DevCom {
         }
     }
     d.arq_done = arq_in_flight(m);
+    d.arq_slots = arq_in_flight_slots(m);
     d
 }
 
@@ -813,6 +814,28 @@ fn arq_in_flight(m: &Mem) -> Vec<melee_sim::audio::devcom::ArqDone> {
                 0x8035_1FDC => ArqDone::None,
                 cb => panic!("an ARAM transfer in flight with callback {cb:#x}"),
             });
+        }
+    }
+    v
+}
+
+/// Which of `devComARQR`'s requests the ARAM queue's transfers in flight are, in
+/// [`arq_in_flight`]'s order.
+fn arq_in_flight_slots(m: &Mem) -> Vec<(u8, u8)> {
+    let mut v = Vec::new();
+    for (pending, queue) in [
+        ("__ARQRequestPendingHi", "__ARQRequestQueueHi"),
+        ("__ARQRequestPendingLo", "__ARQRequestQueueLo"),
+    ] {
+        let mut chain = vec![m.u32(sym(pending))];
+        let mut q = m.u32(sym(queue));
+        while q != 0 {
+            chain.push(q);
+            q = m.u32(q);
+        }
+        for req in chain.into_iter().filter(|&r| r != 0) {
+            let off = req.wrapping_sub(sym("devComARQR"));
+            v.push(((off / 0x40) as u8, ((off % 0x40) / 0x20) as u8));
         }
     }
     v

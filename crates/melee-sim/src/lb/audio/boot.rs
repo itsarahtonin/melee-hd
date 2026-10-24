@@ -273,6 +273,13 @@ impl Audio {
         lb.fx = balance_fx(balance).clamp(0, 0x7F);
     }
 
+    /// The announcer's and the effects' volumes at a sound balance, as `gm_801603B0` sets
+    /// them outside the settings' reset (`lbAudioAx_80024614`, `lbAudioAx_800245F4` clamp).
+    pub fn lb_apply_balance(&mut self, balance: i8) {
+        self.lb.voice = balance_voice(balance).clamp(0, 0x7F);
+        self.lb.fx = balance_fx(balance).clamp(0, 0x7F);
+    }
+
     /// `lbAudioAx_80024F6C`: the stream's volume handed to the synth again, and the
     /// channels resumed: the announcer's and the effects', and the match's unless the pause
     /// menu holds them.

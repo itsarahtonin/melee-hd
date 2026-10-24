@@ -75,6 +75,14 @@ pub struct Command {
     pub args: u32,
 }
 
+/// `devComARQR`, the queue's four ARAM requests (two a relay buffer, 0x20 bytes each).
+pub const ARQ_REQUESTS: u32 = 0x804C_62A0;
+
+/// The address of `devComARQR[buf][slot]`.
+pub fn arq_request_addr(buf: u8, slot: usize) -> u32 {
+    ARQ_REQUESTS + 0x40 * u32::from(buf) + 0x20 * slot as u32
+}
+
 /// `ARQRequest`, one of the queue's four ARAM requests (`devComARQR`), as last posted.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ArqRequest {
@@ -148,6 +156,9 @@ pub struct DevCom {
     pub arq: [[ArqRequest; 2]; 2],
     /// ARAM transfers finished and waiting for the ARAM interrupt, in order.
     pub arq_done: Vec<ArqDone>,
+    /// Which of `devComARQR`'s requests (buffer, slot) each of them is: the one under way
+    /// (`__ARQRequestPendingHi`), then those queued behind it.
+    pub arq_slots: Vec<(u8, u8)>,
     /// The disc files reads come from, by entry number.
     pub files: Vec<(i32, ArchiveId)>,
     /// `lbFile`'s `cancel` (0x804D63C8), which a synchronous file load clears and its
@@ -570,7 +581,15 @@ impl Audio {
         length: u32,
         done: ArqDone,
     ) {
-        // `ARQPostRequest` leaves the request's priority word as it was.
+        // `ARQPostRequest` (every request the queue posts is high priority) queues the request
+        // behind the last one waiting, if one waits behind the transfer under way.
+        let d = &mut self.devcom;
+        if d.arq_slots.len() >= 2 {
+            let (b, s) = d.arq_slots[d.arq_slots.len() - 1];
+            d.arq[usize::from(b)][usize::from(s)].next = arq_request_addr(buf, slot);
+        }
+        d.arq_slots.push((buf, slot as u8));
+        // It leaves the request's priority word as it was.
         let r = &mut self.devcom.arq[usize::from(buf)][slot];
         *r = ArqRequest {
             next: 0,
@@ -586,9 +605,23 @@ impl Audio {
         self.devcom.arq_done.push(done);
     }
 
-    /// The ARAM interrupt: the next finished ARAM transfer's callback.
+    /// The ARAM interrupt (`__ARQInterruptServiceRoutine`): the finished transfer's callback,
+    /// and only then is it no longer under way (`__ARQRequestPendingHi` cleared after the
+    /// callback returns), so a request the callback posts (the device command queue's next
+    /// transfer) queues behind it in `ARQPostRequest`, linked behind any already waiting, and
+    /// starts as the routine returns (`__ARQPopTaskQueueHi`). An ARAM-to-ARAM move posts two:
+    /// the second is linked behind the first (`next`) when they're posted from a callback, not
+    /// when the queue was idle.
     pub fn devcom_aram_done(&mut self, data: &Archives) {
         let done = self.devcom.arq_done.remove(0);
+        self.devcom_arq_callback(data, done);
+        if !self.devcom.arq_slots.is_empty() {
+            self.devcom.arq_slots.remove(0);
+        }
+    }
+
+    /// A finished ARAM transfer's callback.
+    fn devcom_arq_callback(&mut self, data: &Archives, done: ArqDone) {
         let buf = match done {
             ArqDone::None => return,
             ArqDone::Std(b) => {

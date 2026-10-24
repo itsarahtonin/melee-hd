@@ -1949,6 +1949,10 @@ pub fn load_common_data(game: &mut Game, data: &Archives, it_co: melee_data::arc
 /// no items out with the common data's limits, and empty spawn tables.
 #[doc(alias = "Item_80266FCC")]
 pub fn init_globals(game: &mut Game, data: &Archives) {
+    {
+        use crate::hsd::heap::Kind;
+        crate::hsd::heap::init_pools(&[Kind::Item, Kind::ItemDynamicBones, Kind::ItemLink]);
+    }
     game.items = Default::default();
     game.it.bone_tables = Default::default();
     let c = common_data(game);

@@ -62,6 +62,8 @@ pub struct Audio {
     pub console: bool,
     /// The movie player (`lb::mthp`), whose reads and alarm run on the timeline.
     pub movie: crate::lb::mthp::MoviePlayer,
+    /// The save's writer, whose steps the game's own waits run (`lb_8001CC84`).
+    pub card_writer: crate::lb::save::Writer,
     /// When the interrupt handler running now started, while one runs: its log's times
     /// count from there (none in the game's own code, whose times count from the timeline's).
     pub hw_base: Option<u64>,
@@ -175,9 +177,19 @@ impl Audio {
         self.with_clock(data, |c, f| c.pass(ticks, f));
     }
 
+    /// The save's writer's card work outside the game's waits (a scene's end finishing it).
+    pub fn clock_card_work(&mut self, data: &Archives, work: clock::CardWork) {
+        self.with_clock(data, |c, f| c.card_work(work, f));
+    }
+
     /// Register reads of the game's ([`clock::Clock::reg_reads`]).
     pub fn clock_reg_reads(&mut self, data: &Archives, reads: u64) {
         self.with_clock(data, |c, f| c.reg_reads(reads, f));
+    }
+
+    /// A memory card transfer's interrupt chain ([`clock::Clock::card_chain`]).
+    pub fn clock_card_chain(&mut self, data: &Archives, chain: clock::CardChain) {
+        self.with_clock(data, |c, f| c.card_chain(chain, f));
     }
 
     /// A wait point of the game's ([`clock::Clock::wait_point`]).
@@ -285,6 +297,14 @@ impl clock::Frames for Running<'_> {
         crate::lb::save::alarm_card_probes(now)
     }
 
+    fn game_wait(&mut self, now: u64) -> Option<clock::CardWork> {
+        self.audio.card_writer.wait(now)
+    }
+
+    fn card_unmounted(&mut self) {
+        crate::lb::save::detach();
+    }
+
     fn done(&mut self, w: clock::Wait) -> bool {
         let b = &self.audio.synth.banks;
         match w {
@@ -298,6 +318,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::HeapReleased(h) => !self.dvd().release_heap(h),
             clock::Wait::StaleReleased(h) => !self.dvd().release_stale(h),
             clock::Wait::MovieIdle => self.audio.movie.in_flight == 0,
+            clock::Wait::BanksMoved => b.moving == 0,
         }
     }
 }

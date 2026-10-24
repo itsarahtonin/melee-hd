@@ -101,6 +101,8 @@ fn card_device(setup: &Setup) -> CardDevice {
         // The OS's probes at boot read the card's ID as it settled.
         id_time: seen,
         extint_seen: 0,
+        // Nothing before the first mount asks for the font encoding.
+        font_encode_known: false,
     }
 }
 
@@ -161,13 +163,32 @@ pub const FILES: &[&str] = &[
     "GmTtAll.usd",
     "NtProge.dat",
     "SdProge.usd",
+    "LbMcSnap.usd",
+    "MnMaAll.usd",
+    "SdMenu.usd",
+    "SdToy.dat",
+    "GmEvent.dat",
+    "LbAd.dat",
+    // A match's (the attract loop's): `vs_match::Match::start`'s list.
+    "LbRf.dat",
+    "PdPm.dat",
+    "GmPause.usd",
+    "SdIntro.dat",
+    "IfCoGet.dat",
+    "LbBf.dat",
 ];
 
-/// The songs the ported scenes play (`lbAudioAx_80023F28`): the opening movie's.
-pub const SONGS: &[usize] = &[0x3E];
+/// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's, which
+/// [`Session::read_song`] reads as the stage starts it: the opening movie's, the menus' two,
+/// How to Play's and the Special Movie's.
+pub const SONGS: &[usize] = &[0x3E, 0x34, 0x36, 0x24, 0x52];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
-pub const MOVIES: &[&str] = &[super::gm::opening::MOVIE];
+pub const MOVIES: &[&str] = &[
+    super::gm::opening::MOVIE,
+    super::gm::howto::HOWTO_MOVIE,
+    super::gm::howto::OMAKE_MOVIE,
+];
 
 /// A time base read's time on ssbm-rs's clock, and a hardware register's.
 pub(crate) const TB_READ: u64 = 16;
@@ -272,6 +293,39 @@ impl Session {
                 self.game.audio.devcom.files.push((file.entrynum, id));
             }
         }
+        // The effect files a match registers as it and its fighters ask for them
+        // (`efAsync_LoadSync`): disc data, each read before it's needed.
+        for (i, f) in super::ef::FILES.iter().enumerate() {
+            if let Some((name, _)) = f {
+                let loaded = self
+                    .game
+                    .ft
+                    .data
+                    .files
+                    .archives
+                    .iter()
+                    .find(|a| a.0 == *name);
+                let id = match loaded {
+                    Some(&(_, id)) => id,
+                    None => {
+                        let file = console.file(name);
+                        let a =
+                            Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                        let id = self.data.add(a);
+                        let files = &mut self.game.ft.data.files;
+                        files.entries.push((
+                            (*name).to_owned(),
+                            file.entrynum,
+                            file.bytes.len() as u32,
+                        ));
+                        // Named, so the comparer finds it where the original loads it.
+                        files.archives.push(((*name).to_owned(), id));
+                        id
+                    }
+                };
+                self.game.ef.files[i] = Some(id);
+            }
+        }
         // The movies, whose frames the movie player reads through the device command queue.
         for &name in MOVIES {
             let file = console.file(name);
@@ -330,16 +384,14 @@ impl Session {
     /// to the next scene.
     pub fn step_tick(&mut self, console: &mut dyn Console) -> (Frame, bool) {
         let card = CardLent::take(&mut self.card);
+        if self.game.scene.unk_C != 0 {
+            self.enter_next_scene(console);
+        }
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
             game: &mut self.game,
             data: &self.data,
         };
-        if r.game.scene.unk_C != 0 {
-            r.next_scene();
-            r.take_alarm_reads(&mut || console.read_pads());
-            r.begin_scene_loop();
-        }
         let (t, render) = scene::step_session_tick(&mut r, &mut || console.read_pads(), false);
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
@@ -352,16 +404,118 @@ impl Session {
         (out, render)
     }
 
+    /// The modes' loops to the next scene (the card lent): its files read first when its
+    /// entry loads a match's, then the pad alarm's reads meanwhile and the scene loop's start.
+    fn enter_next_scene(&mut self, console: &mut dyn Console) {
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        Running {
+            game: &mut self.game,
+            data: &self.data,
+        }
+        .next_scene();
+        lent.give_back(&mut self.game.objs.heap);
+        if std::mem::take(&mut self.game.machine.files_wanted) {
+            let start = Running {
+                game: &mut self.game,
+                data: &self.data,
+            }
+            .scene_start_data()
+            .clone();
+            self.read_match_files(&start, console);
+            let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+            Running {
+                game: &mut self.game,
+                data: &self.data,
+            }
+            .next_scene();
+            lent.give_back(&mut self.game.objs.heap);
+            self.read_song(console);
+        }
+        let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
+        let mut r = Running {
+            game: &mut self.game,
+            data: &self.data,
+        };
+        r.take_alarm_reads(&mut || console.read_pads());
+        r.begin_scene_loop();
+        lent.give_back(&mut self.game.objs.heap);
+    }
+
+    /// Reads the files a match's scene loads (`files_wanted`): its fighters' (`PlCo.dat`, each
+    /// character's data, costume and animations), its stage's and Pokémon Stadium's
+    /// transformations', as `vs_match::Match::start` does.
+    fn read_match_files(
+        &mut self,
+        start: &super::structs::StartMeleeData,
+        console: &mut dyn Console,
+    ) {
+        super::vs_match::load_fighter_files(&mut self.game, &mut self.data, start, &mut |n| {
+            console.file(n)
+        });
+        let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
+        let mut names: Vec<&str> = Vec::new();
+        if let Some(name) = super::gr::data::stage_data(grkind).file {
+            names.push(name.trim_start_matches('/'));
+        }
+        if grkind == super::gr::GR_KIND_PSTADIUM {
+            names.extend(super::gr::stadium::FILES);
+        }
+        for name in names {
+            let files = &self.game.ft.data.files;
+            if files.archives.iter().any(|a| a.0 == name) {
+                continue;
+            }
+            let file = console.file(name);
+            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let id = self.data.add(a);
+            let files = &mut self.game.ft.data.files;
+            files.archives.push((name.to_owned(), id));
+            files
+                .entries
+                .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
+        }
+        if grkind == super::gr::GR_KIND_PSTADIUM {
+            for (i, name) in super::gr::stadium::FILES.iter().enumerate() {
+                self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
+            }
+        }
+    }
+
+    /// Reads the song the scene's entry started (`cur_hps_stem`, a match's stage's) unless the
+    /// music stream has it already: its first reads come in the scene's first ticks.
+    fn read_song(&mut self, console: &mut dyn Console) {
+        let stem = self.game.audio.lb.stem;
+        let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());
+        if len <= 1 {
+            return;
+        }
+        let path = std::str::from_utf8(&stem[1..len]).expect("a music path");
+        let file = console.file(path);
+        if !self
+            .game
+            .audio
+            .devcom
+            .files
+            .iter()
+            .any(|f| f.0 == file.entrynum)
+        {
+            let id = self.data.add(Archive::raw(&file.bytes));
+            self.game.audio.devcom.files.push((file.entrynum, id));
+        }
+    }
+
     /// The frame's display pass after [`Session::step_tick`]: its draw commands.
     pub fn render(&mut self) -> Vec<crate::hsd::display::Draw> {
         // The pass's wait can take the pad alarm, whose handler probes the card.
         let card = CardLent::take(&mut self.card);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         self.game.audio.render_start(&self.data);
-        scene::render_screen(&mut Running {
+        let mut r = Running {
             game: &mut self.game,
             data: &self.data,
-        });
+        };
+        r.card_writer_take();
+        scene::render_screen(&mut r);
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
         std::mem::take(&mut self.game.objs.display.draws)

@@ -1096,7 +1096,12 @@ impl Comparer<'_> {
             let count = self.u32(sym("psCmdListArray") + 4 * b) as i32;
             let theirs = (tex != 0).then(|| (self.data.get(tex - 4), ptclref, count));
             let ours = ps.banks[b as usize].map(|k| {
-                let table = self.data.addr(k.table);
+                // A bank a scene before loaded stays set up after its file is freed.
+                let table = self
+                    .data
+                    .try_addr(k.table)
+                    .or_else(|| self.past.and_then(|p| p.gone_addr(k.table)))
+                    .unwrap_or_else(|| panic!("particle bank {b}'s table isn't loaded"));
                 (Some(k.tex), table.wrapping_sub(4 * k.first as u32), k.count)
             });
             self.check("particles", &format!("bank {b}"), ours, theirs);

@@ -10,7 +10,10 @@ pub struct Snap {
     pub state_changed: [i32; 3],
     pub snap: Option<u32>,
     pub slot: Option<u32>,
-    pub icon_data: Option<u32>,
+    pub icon_data: Option<melee_data::archive::DataRef>,
+    /// The two slots' card results (`Unk80433380_48::card_result`, the first word of each
+    /// 0x408-byte half of the `slot` block): 8 for none, as `lbSnap_8001E218` sets them.
+    pub slot_results: [i32; 2],
 }
 
 impl Snap {
@@ -30,5 +33,21 @@ impl Snap {
     pub fn forget(&mut self) {
         self.snap = None;
         self.slot = None;
+    }
+}
+
+impl crate::game::state::Running<'_> {
+    /// `lbSnap_8001E218`: the snapshot's and the slots' buffers, each slot's result none
+    /// (8), and the snapshots' icons (`LbMcSnap.usd`'s `MemSnapIconData`).
+    #[doc(alias = "lbSnap_8001E218")]
+    pub fn snap_set_buffers(&mut self, snap: u32, slot: u32) {
+        let s = &mut self.game.snap;
+        s.snap = Some(snap);
+        s.slot = Some(slot);
+        s.slot_results = [8, 8];
+        let a = self.load_archive("LbMcSnap.usd");
+        let at = self.data.get(a).public("MemSnapIconData");
+        self.game.snap.icon_data =
+            at.map(|offset| melee_data::archive::DataRef { archive: a, offset });
     }
 }

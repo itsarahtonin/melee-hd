@@ -41,6 +41,8 @@ pub const OUTCOME_TERMINATED: u8 = 9;
 const SCENE_F26: f64 = 0.0;
 
 pub const ON_FRAME: u32 = 0x8016_D800;
+/// `gm_Scene_Vs_OnEnter`.
+pub const SCENE_ON_ENTER: CodeRef = CodeRef(0x8016_E934);
 /// The match's process on the scene's GObj, `fn_8016C7D0`.
 pub const PROC: u32 = 0x8016_C7D0;
 /// The scene GObj's first process, which does nothing (`fn_801A4BD0`).

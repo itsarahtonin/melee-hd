@@ -81,6 +81,10 @@ fn root_of(objs: &Objects, mut j: JObjId) -> JObjId {
 #[doc(alias = "efLib_Init")]
 #[doc(alias = "efAsync_QueueInit")]
 pub fn init(r: &mut Running) {
+    crate::hsd::heap::init_pools(&[
+        crate::hsd::heap::Kind::Effect,
+        crate::hsd::heap::Kind::EffectQueued,
+    ]);
     let g = &mut *r.game;
     g.ef.effects = Default::default();
     g.ef.count = 0;

@@ -82,6 +82,8 @@ pub struct Title {
     pub bg_made: bool,
     /// The title mode's `exit_data.buttons`.
     pub exit_buttons: i32,
+    /// The opening mode's title's (`gmopeningmode.c`'s `title_exit_data`).
+    pub opening_exit_buttons: i32,
 }
 
 /// `mn_8022F298`: the frame of the first animation found in the joint tree (its joint's, its
@@ -467,7 +469,7 @@ impl Running<'_> {
         }
         t.frames += 1;
         if t.frames > 600 {
-            t.exit_buttons = 0;
+            *self.title_exit_data() = 0;
             self.game.end_scene();
         } else if input & u32::from(crate::input::pad::BUTTON_START) != 0 {
             let a = &mut self.game.audio;
@@ -477,10 +479,33 @@ impl Running<'_> {
             self.game.audio.lb_wait_for_banks(self.data);
             self.lb_audio_call(1);
             self.pick_menu_song();
-            self.game.title.exit_buttons = input as i32;
+            *self.title_exit_data() = input as i32;
             self.game.end_scene();
         } else {
             self.game.assert_retail();
+        }
+    }
+
+    /// The running scene's exit data (`gm_GetCurrentSceneExitData`): the title mode's, or the
+    /// opening mode's title's.
+    #[doc(alias = "gm_GetCurrentSceneExitData")]
+    fn title_exit_data(&mut self) -> &mut i32 {
+        match self.game.machine.scene_info {
+            Some((GM_OPENING_MV, _)) => &mut self.game.title.opening_exit_buttons,
+            _ => &mut self.game.title.exit_buttons,
+        }
+    }
+
+    /// `onExitTitle` (`gmopeningmode.c`): after the attract loop's title, Start goes to the
+    /// main menu (or a challenger first), as the title mode's exit does; a timeout goes on with
+    /// the loop. A debug level's other exits aren't retail's.
+    // Aliased once a session leaves the attract loop's title clean: attract-a's attract match
+    // differs first (docs/oracle.md, the menu sessions).
+    pub fn opening_on_exit_title(&mut self) {
+        self.game.assert_retail();
+        if self.game.title.opening_exit_buttons & i32::from(crate::input::pad::BUTTON_START) != 0 {
+            self.menu_entry_unlocks();
+            self.set_new_game_mode_pending();
         }
     }
 

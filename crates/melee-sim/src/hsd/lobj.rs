@@ -131,6 +131,10 @@ pub struct LObjs {
     pub current: Option<SListId>,
     pub nodes: SLists<LObjId>,
     pub active: [Option<LObjId>; MAX_GXLIGHT],
+    /// Active entries naming lights a scene's heap took with it: the freed lights'
+    /// addresses (0 for none), which the table keeps until it is next cleared. Nothing
+    /// reads them but the ambient slot's test, which finds the slot taken.
+    pub active_left: [u32; MAX_GXLIGHT],
     pub nb_active: i32,
     pub lightmask_diffuse: u32,
     pub lightmask_specular: u32,
@@ -206,7 +210,7 @@ pub fn light_type(lobjs: &LObjs, l: LObjId) -> u16 {
 /// `HSD_LObjSetActive`.
 pub fn set_active(lobjs: &mut LObjs, l: LObjId) {
     let idx = if light_type(lobjs, l) == AMBIENT {
-        if lobjs.active[MAX_GXLIGHT - 1].is_some() {
+        if lobjs.active[MAX_GXLIGHT - 1].is_some() || lobjs.active_left[MAX_GXLIGHT - 1] != 0 {
             return;
         }
         MAX_GXLIGHT - 1
@@ -250,6 +254,7 @@ pub fn active_by_index(lobjs: &LObjs, idx: i32) -> Option<LObjId> {
 /// Empties the active table, the inline `HSD_LObjClearActive`.
 pub fn clear_active(lobjs: &mut LObjs) {
     lobjs.active = [None; MAX_GXLIGHT];
+    lobjs.active_left = [0; MAX_GXLIGHT];
     lobjs.nb_active = 0;
 }
 
