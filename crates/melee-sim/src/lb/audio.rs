@@ -16,6 +16,24 @@ pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, bal
 pub const SFX_NONE: i32 = 0x83D60;
 pub const SFX_KEY_OFF: i32 = 0x83D61;
 
+/// What [`Running::sfx_start_param`] did.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SfxStart {
+    /// The driver ran, starting a voice with this handle or none (-1).
+    Driver(i32),
+    /// Playback's codes handed back the handle the frame already played the sound with.
+    Again(i32),
+}
+
+impl SfxStart {
+    /// The handle the caller gets.
+    pub fn handle(self) -> i32 {
+        match self {
+            SfxStart::Driver(h) | SfxStart::Again(h) => h,
+        }
+    }
+}
+
 /// The game's audio library's own state.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct LbAudio {
@@ -243,12 +261,37 @@ impl LbAudio {
 
 impl Running<'_> {
     /// `fn_80023750`: a sound at the game's volume and pan (0-127, doubled for the driver).
-    /// In a replay's match scene, playback's codes log it with the frame it plays in, and hand back the
-    /// handle of a sound the frame already played instead of playing it again
-    /// ([`SoundLog`](crate::game::playback::SoundLog)).
     fn sfx_start(&mut self, id: i32, vol: i32, pan: i32, track: i32, channel: i32) -> i32 {
         let vol = vol.wrapping_mul(2).clamp(0, 0xFF) as u8;
         let pan = pan.wrapping_mul(2).clamp(0, 0xFF) as u8;
+        let handle = match self.sfx_start_param(id, vol, pan, track, channel) {
+            SfxStart::Again(handle) => return handle,
+            SfxStart::Driver(handle) => handle,
+        };
+        self.game.events.push(Event::SfxStart {
+            handle,
+            id,
+            volume: vol,
+            pan,
+            track,
+        });
+        handle
+    }
+
+    /// `HSD_AudioSFXStartParam` as a replay's console runs it, the driver's
+    /// ([`Audio::sfx_start`](crate::audio::Audio::sfx_start)) with playback's codes in it: in
+    /// the match scene they log the sound with the frame it plays in, past its bank checks
+    /// (`PreventDuplicateSounds`, at +0xBC), and hand back the handle of a sound the frame
+    /// already played instead of playing it again; then the handle it started with
+    /// (`AssignSoundInstanceId`, at +0x230) ([`SoundLog`](crate::game::playback::SoundLog)).
+    pub fn sfx_start_param(
+        &mut self,
+        id: i32,
+        vol: u8,
+        pan: u8,
+        track: i32,
+        channel: i32,
+    ) -> SfxStart {
         let frame = self.game.scene.unk_8 as i32;
         let logs = id != SFX_NONE
             && self.game.playback.as_ref().is_some_and(|p| p.match_scene)
@@ -257,7 +300,7 @@ impl Running<'_> {
             && let Some(p) = self.game.playback.as_mut()
             && let Some(handle) = p.sounds.starting(frame, id)
         {
-            return handle;
+            return SfxStart::Again(handle);
         }
         let handle = self
             .game
@@ -269,14 +312,7 @@ impl Running<'_> {
         {
             p.sounds.started(frame, handle);
         }
-        self.game.events.push(Event::SfxStart {
-            handle,
-            id,
-            volume: vol,
-            pan,
-            track,
-        });
-        handle
+        SfxStart::Driver(handle)
     }
 
     /// Plays a sound on channel 5 or 6, where the crowd's chants and cheers go
