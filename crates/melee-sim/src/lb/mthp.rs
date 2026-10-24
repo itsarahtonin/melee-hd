@@ -579,9 +579,9 @@ impl Audio {
 
     /// The alarm set on the timeline's grid (`OSSetPeriodicAlarm` from 1/60 s, every 1/60 s).
     fn movie_alarm_start(&mut self) {
-        // `__OSGetSystemTime` in `InsertAlarm` reads the time base.
+        // ssbm-rs stands in for the OS's alarms (`OSSetPeriodicAlarm` on its event queue): no
+        // time passes, though `InsertAlarm` reads the time base on a console.
         let now = self.hw_now();
-        self.hw.spent += crate::game::session::TB_READ;
         let c = self
             .clock
             .as_mut()

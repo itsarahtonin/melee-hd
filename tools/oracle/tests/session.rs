@@ -197,7 +197,9 @@ fn a_pulled_card_must_be_pulled() {
 /// `traces/v2-sessions/NAME.trc`): recorded with ssbm-rs's `POWER_ON=789004800` (2025-01-01)
 /// and `DTV=1`, `clock` with `SRAM_FLAGS=0x28` (mono) and nothing held, `progressive` with B
 /// held at power-on; `clock-late` is `clock`'s recording with its clock 300,007 time base
-/// ticks later, off the whole seconds and the alarm's grid, traced again.
+/// ticks later, off the whole seconds and the alarm's grid, traced again; `clock-odd` 123,457
+/// later, where an audio frame comes due inside a card block's read, which runs it at a segment's
+/// boundary.
 fn v2_session(name: &str, args: &[&str]) -> Option<String> {
     let trace = ssbm_rs_local(&format!("traces/v2-sessions/{name}.trc"));
     let inputs = ssbm_rs_local(&format!("lockstep/v2-sessions/{name}.inputs"));
@@ -217,7 +219,7 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 /// the attract match.
 #[test]
 fn a_version_2_session_takes_its_console() {
-    for name in ["clock", "clock-late"] {
+    for name in ["clock", "clock-late", "clock-odd"] {
         let Some(out) = v2_session(name, &["--heap"]) else {
             return;
         };
@@ -244,8 +246,9 @@ fn a_version_2_session_catches_a_dropped_clock() {
 }
 
 /// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, its
-/// yes and the switch (the SRAM's write at tick 311), clean through the prompt; the memory
-/// card scene after it differs in its first tick (open, docs/oracle.md).
+/// yes and the switch (the SRAM's write at tick 311), then the memory card scene (its files
+/// loaded over the prompt's freed `EfCoData.dat`), the movie and the title, to the trace's
+/// end.
 #[test]
 fn a_version_2_session_asks_for_progressive_scan() {
     let Some(out) = v2_session("progressive", &[]) else {
@@ -255,10 +258,7 @@ fn a_version_2_session_asks_for_progressive_scan() {
         out.contains("3 the same (db_gameLaunchButtonState 0x0200, DbLevel 0, the first game mode 0x27), 0 different"),
         "{out}"
     );
-    assert!(
-        out.contains("712 ticks compared; tick 711 differs"),
-        "{out}"
-    );
+    assert!(out.contains("1426 ticks compared, no difference"), "{out}");
 }
 
 /// Read 0 is the boot's (`db_GetGameLaunchButtonState`): A held there differs from what the

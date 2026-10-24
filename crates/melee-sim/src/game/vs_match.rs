@@ -376,6 +376,15 @@ impl Match {
                 ..Playback::default()
             });
             game.pads.playback = true;
+            // Playback reaches the match's scene from Slippi's playback scene (`game::boot`),
+            // which runs one tick, its game clock due, and ends: the scene loop's counts it
+            // leaves (`gm_80479D58`, as every trace of ssbm-rs's playback has them at the boot
+            // state) last until the loop's setup clears them, after the scene's entry. The
+            // sound log takes their game ticks for the frame of a sound the entry starts (Big
+            // Blue's first cars' engines): 1, past the last frame logged, the current slot.
+            game.scene.unk_0 = 1;
+            game.scene.unk_8 = 1;
+            game.scene.unk_C = 1;
         }
         game.ft.address_seed = settings.fighter_addresses.iter().copied().collect();
         game.gm.unlocks = settings.unlocks;
@@ -536,6 +545,10 @@ impl Match {
         // playback takes too): the announcer's bank.
         if r.game.audio.clock.is_some() {
             r.game.audio.end_scene_loop(r.data);
+        }
+        // The match's scene is current from here, where the sound codes act.
+        if let Some(p) = r.game.playback.as_mut() {
+            p.match_scene = true;
         }
         r.load_announcer();
         // The scene's heap, made anew (`lbHeap_80015900`, `HSD_CreateMainHeap`).

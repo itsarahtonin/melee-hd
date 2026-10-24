@@ -239,6 +239,7 @@ pub fn find_archives_in(index: &DiscIndex, mem1: &[u8], archives: &mut Archives)
         archives,
         &|name, _| anims.get(name).copied(),
         None,
+        None,
     );
     let headerless = headerless_stage_files(index, mem1, archives, &found, &|_, _| None);
     found.extend(headerless);
@@ -255,7 +256,7 @@ pub fn find_archives_after(
     archives: &mut Archives,
     before: &[Loaded],
 ) -> Vec<Loaded> {
-    find_after(index, mem1, archives, before, &[], None)
+    find_after(index, mem1, archives, before, &[], None, None)
 }
 
 /// [`find_archives_after`], with archives added beforehand by name (files loaded for the
@@ -268,12 +269,14 @@ pub fn find_archives_named(
     before: &[Loaded],
     named: &[(String, ArchiveId)],
 ) -> Vec<Loaded> {
-    find_after(index, mem1, archives, before, named, None)
+    find_after(index, mem1, archives, before, named, None, None)
 }
 
 /// [`find_archives_named`] on memory that changed only in the pages `changed` (their indices,
 /// in increasing order, [`PAGE`] bytes each) since `rescan`'s last scan, which finds the same
-/// archives as a full scan without going over the unchanged pages again ([`Rescan`]).
+/// archives as a full scan without going over the unchanged pages again ([`Rescan`]). A file
+/// the OS heaps freed claims nothing ([`Freed`]).
+#[allow(clippy::too_many_arguments)]
 pub fn find_archives_rescan(
     index: &DiscIndex,
     mem1: &[u8],
@@ -282,6 +285,7 @@ pub fn find_archives_rescan(
     named: &[(String, ArchiveId)],
     rescan: &mut Rescan,
     changed: &[usize],
+    freed: &Freed,
 ) -> Vec<Loaded> {
     find_after(
         index,
@@ -290,6 +294,7 @@ pub fn find_archives_rescan(
         before,
         named,
         Some((rescan, changed)),
+        Some(freed),
     )
 }
 
@@ -300,6 +305,7 @@ fn find_after(
     before: &[Loaded],
     named: &[(String, ArchiveId)],
     rescan: Option<(&mut Rescan, &[usize])>,
+    freed: Option<&Freed>,
 ) -> Vec<Loaded> {
     let known = |name: &str, file: u32| {
         before
@@ -308,7 +314,7 @@ fn find_after(
             .map(|l| l.id)
             .or_else(|| named.iter().find(|(n, _)| n == name).map(|&(_, id)| id))
     };
-    let mut found = scan(index, mem1, archives, &known, rescan);
+    let mut found = scan(index, mem1, archives, &known, rescan, freed);
     let headerless = headerless_stage_files(index, mem1, archives, &found, &known);
     found.extend(headerless);
     found.extend(before.iter().filter(|l| l.file == 0).cloned());
@@ -335,6 +341,82 @@ pub fn anim_subarchives(index: &DiscIndex, name: &str) -> Vec<(u32, Vec<u8>)> {
         .collect()
 }
 
+/// The OS heaps' arenas and allocated cells as memory holds them (`HeapArray`, `NumHeaps`): a
+/// file that lies in a heap's arena but in none of its allocated cells was freed, and its stale
+/// header and data claim nothing, so the files loaded since over its range are found. A
+/// scene's heap made anew (`HSD_CreateMainHeap`) leaves the last scene's files there until
+/// they're written over: the progressive scan prompt's `EfCoData.dat` under the memory card
+/// scene's files.
+#[derive(Clone, Debug, Default)]
+pub struct Freed {
+    heaps: Vec<HeapCells>,
+}
+
+/// A live OS heap's arena, and its allocated cells by address (each with its header), with
+/// their sizes.
+#[derive(Clone, Debug, Default)]
+struct HeapCells {
+    lo: u32,
+    hi: u32,
+    allocated: Vec<(u32, u32)>,
+}
+
+impl Freed {
+    pub fn read(mem1: &[u8]) -> Freed {
+        let in_mem = |a: u32| a >= MEM1 && ((a - MEM1) as usize) + 4 <= mem1.len();
+        let word = |a: u32| {
+            let i = (a - MEM1) as usize;
+            u32::from_be_bytes(mem1[i..i + 4].try_into().unwrap())
+        };
+        // A cell list's cells (address, size), stopping at anything that isn't one.
+        let cells = |mut c: u32| {
+            let mut v = Vec::new();
+            while c != 0 && in_mem(c + 8) && v.len() < 1 << 16 {
+                v.push((c, word(c + 8)));
+                c = word(c + 4);
+            }
+            v
+        };
+        let array = word(crate::import::sym("HeapArray"));
+        let n = word(crate::import::sym("NumHeaps")) as i32;
+        let mut heaps = Vec::new();
+        for i in 0..n.clamp(0, 64) as u32 {
+            let desc = array.wrapping_add(12 * i);
+            if !in_mem(desc + 8) || (word(desc) as i32) < 0 {
+                continue;
+            }
+            let free = cells(word(desc + 4));
+            let mut allocated = cells(word(desc + 8));
+            let all = || free.iter().chain(&allocated);
+            let (Some(lo), Some(hi)) = (
+                all().map(|c| c.0).min(),
+                all().map(|c| c.0.wrapping_add(c.1)).max(),
+            ) else {
+                continue;
+            };
+            allocated.sort_unstable();
+            heaps.push(HeapCells { lo, hi, allocated });
+        }
+        Freed { heaps }
+    }
+
+    /// Whether a file of `len` bytes at `file` can be live: outside every heap's arena, or in
+    /// one of a heap's allocated cells.
+    pub fn claims(&self, file: u32, len: usize) -> bool {
+        let end = u64::from(file) + len as u64;
+        self.heaps.iter().all(|h| {
+            if end <= u64::from(h.lo) || file >= h.hi {
+                return true;
+            }
+            let i = h.allocated.partition_point(|c| c.0 <= file);
+            i > 0 && {
+                let (at, size) = h.allocated[i - 1];
+                end <= u64::from(at) + u64::from(size)
+            }
+        })
+    }
+}
+
 /// A disc file the scan placed in memory: where it starts, and the index's entry.
 type Placed<'i> = (usize, &'i (String, Vec<u8>));
 
@@ -346,15 +428,17 @@ fn scan(
     archives: &mut Archives,
     known: &dyn Fn(&str, u32) -> Option<ArchiveId>,
     rescan: Option<(&mut Rescan, &[usize])>,
+    freed: Option<&Freed>,
 ) -> Vec<Loaded> {
     let prefer = |name: &str, file: u32| known(name, file).is_some();
+    let live = |file: u32, len: usize| freed.is_none_or(|f| f.claims(file, len));
     let placed = match rescan {
-        None => placements(index, mem1, &prefer),
+        None => placements(index, mem1, &prefer, &live),
         Some((r, changed)) => {
-            let placed = r.placements(index, mem1, &prefer, changed);
+            let placed = r.placements(index, mem1, &prefer, &live, changed);
             if r.check {
                 r.checks += 1;
-                let full = placements(index, mem1, &prefer);
+                let full = placements(index, mem1, &prefer, &live);
                 let same = |a: &Placed, b: &Placed| a.0 == b.0 && std::ptr::eq(a.1, b.1);
                 if full.len() != placed.len() || !full.iter().zip(&placed).all(|(a, b)| same(a, b))
                 {
@@ -411,6 +495,7 @@ fn placements<'i>(
     index: &'i DiscIndex,
     mem1: &[u8],
     prefer: &dyn Fn(&str, u32) -> bool,
+    live: &dyn Fn(u32, usize) -> bool,
 ) -> Vec<Placed<'i>> {
     let mut out = Vec::new();
     let mut at = 0;
@@ -425,7 +510,9 @@ fn placements<'i>(
             continue;
         };
         let file = MEM1 + at as u32;
-        match best_match(index, candidates, mem1, at, &|n| prefer(n, file)) {
+        match best_match(index, candidates, mem1, at, &|n| prefer(n, file), &|len| {
+            live(file, len)
+        }) {
             Some(c) => {
                 out.push((at, c));
                 at += c.1.len().next_multiple_of(32);
@@ -584,6 +671,7 @@ impl Rescan {
         index: &'i DiscIndex,
         mem1: &[u8],
         prefer: &dyn Fn(&str, u32) -> bool,
+        live: &dyn Fn(u32, usize) -> bool,
         changed: &[usize],
     ) -> Vec<Placed<'i>> {
         self.update(index, mem1, changed);
@@ -610,9 +698,15 @@ impl Rescan {
                 .map(|c| c.as_ref().map(|c| c.sum))
                 .collect();
             let file = MEM1 + at as u32;
-            match choose(index, candidates, &agreements, mem1, at, &|n| {
-                prefer(n, file)
-            }) {
+            match choose(
+                index,
+                candidates,
+                &agreements,
+                mem1,
+                at,
+                &|n| prefer(n, file),
+                &|len| live(file, len),
+            ) {
                 Some(c) => {
                     out.push((at, c));
                     at += c.1.len().next_multiple_of(32);
@@ -637,6 +731,7 @@ fn best_match<'c>(
     mem1: &[u8],
     at: usize,
     prefer: &dyn Fn(&str) -> bool,
+    live: &dyn Fn(usize) -> bool,
 ) -> Option<&'c (String, Vec<u8>)> {
     let agreements: Vec<Option<Agreement>> = candidates
         .iter()
@@ -644,11 +739,12 @@ fn best_match<'c>(
             (at + file.len() <= mem1.len()).then(|| agreement(&mem1[at..at + file.len()], file))
         })
         .collect();
-    choose(index, candidates, &agreements, mem1, at, prefer)
+    choose(index, candidates, &agreements, mem1, at, prefer, live)
 }
 
 /// [`best_match`]'s pick from the candidates' agreements with memory (none for one past its
-/// end).
+/// end), of those `live` (by their length) says weren't freed.
+#[allow(clippy::too_many_arguments)]
 fn choose<'c>(
     index: &DiscIndex,
     candidates: &'c [(String, Vec<u8>)],
@@ -656,11 +752,13 @@ fn choose<'c>(
     mem1: &[u8],
     at: usize,
     prefer: &dyn Fn(&str) -> bool,
+    live: &dyn Fn(usize) -> bool,
 ) -> Option<&'c (String, Vec<u8>)> {
     candidates
         .iter()
         .zip(agreements)
         .filter_map(|(c, a)| a.map(|a| (a, c)))
+        .filter(|(_, c)| live(c.1.len()))
         // One already found here, or the only file with its header, needs only most of the data
         // words relocation leaves alone, if no other file was loaded over it: loading a copy
         // costume onto Kirby's bones rewrites the matrix indices of its display lists in place,
@@ -734,7 +832,8 @@ fn headerless_stage_files(
             continue;
         };
         let at = (data - 0x20 - MEM1) as usize;
-        if let Some((name, bytes)) = best_match(index, candidates, mem1, at, &|_| false) {
+        if let Some((name, bytes)) = best_match(index, candidates, mem1, at, &|_| false, &|_| true)
+        {
             let id = known(name, data - 0x20)
                 .unwrap_or_else(|| archives.add(Archive::parse(bytes).unwrap()));
             let archive = archives.get(id);
@@ -999,8 +1098,8 @@ mod tests {
                 h % 3 == 0
             };
             let changed: Vec<usize> = changed.into_iter().collect();
-            let ours = rescan.placements(&index, &mem, &prefer, &changed);
-            let full = placements(&index, &mem, &prefer);
+            let ours = rescan.placements(&index, &mem, &prefer, &|_, _| true, &changed);
+            let full = placements(&index, &mem, &prefer, &|_, _| true);
             let key = |p: &[Placed]| {
                 p.iter()
                     .map(|(at, (n, _))| (*at, n.clone()))

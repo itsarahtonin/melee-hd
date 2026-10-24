@@ -301,6 +301,15 @@ impl<'a> Importer<'a> {
             base: MEM1,
         };
         self.game.scene = gm_80479D58_t::import(&mem, sym("gm_80479D58"), self);
+        // The tick's sound log, which the codes close after the trace's sample, is still to
+        // close: the next tick's start does, as after a tick melee-sim ran
+        // (`scene::finish_tick`).
+        let s = &self.game.scene;
+        if let Some(p) = self.game.playback.as_mut()
+            && s.unk_C == 0
+        {
+            p.sounds.closing = Some((s.unk_8 as i32).wrapping_sub(1));
+        }
         let r = self.r();
         let pacing = r.pacing();
         let ranks = r.ranks();

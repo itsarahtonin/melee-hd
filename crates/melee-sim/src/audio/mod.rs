@@ -180,6 +180,11 @@ impl Audio {
         self.with_clock(data, |c, f| c.reg_reads(reads, f));
     }
 
+    /// A memory card transfer's chain of segments ([`clock::Clock::card_chain`]).
+    pub fn clock_card_chain(&mut self, data: &Archives, first: u64, segments: u32, tail: u64) {
+        self.with_clock(data, |c, f| c.card_chain(first, segments, tail, f));
+    }
+
     /// A wait point of the game's ([`clock::Clock::wait_point`]).
     pub fn clock_wait(&mut self, data: &Archives) {
         self.with_clock(data, |c, f| c.wait_point(f));

@@ -159,6 +159,7 @@ impl Files<'_> {
             &self.named,
             &mut self.rescan,
             &changed,
+            &melee_capture::Freed::read(&image.mem1),
         );
         DataMap {
             loaded: self.loaded.clone(),
