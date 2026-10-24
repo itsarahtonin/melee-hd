@@ -511,6 +511,13 @@ impl<'a> Comparer<'a> {
             Some(UserData::MainMenuPanel(a)) => self.main_menu_panel(path, a, t),
             Some(UserData::GalleryList(a)) => self.gallery_list(path, a, t),
             Some(UserData::GalleryCursor(a)) => self.gallery_cursor(path, a, t),
+            Some(UserData::RulesList(a)) => self.rules_list(path, a, t),
+            Some(UserData::RulePlusList(a)) => self.rule_plus_list(path, a, t),
+            Some(UserData::ItemSwitch(a)) => self.item_switch(path, a, t),
+            Some(UserData::StageSwitch(a)) => self.stage_switch(path, a, t),
+            Some(UserData::NameList(a)) => self.name_list(path, a, t),
+            Some(UserData::NameNew(a)) => self.name_new(path, a, t),
+            Some(UserData::GlyphVariants(a)) => self.glyph_variants(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

@@ -165,6 +165,51 @@ impl Running<'_> {
         }
     }
 
+    /// `mn_8022EFD8`: [`Self::anim_loop`] on the joint alone (`HSD_JObjReqAnim`,
+    /// `HSD_JObjAnim`), stopping at `l.end` unless already there.
+    // The frame's tests are the original's (a NaN frame outside the loop).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
+    #[doc(alias = "mn_8022EFD8")]
+    pub fn anim_loop_one(&mut self, j: JObjId, l: AnimLoop) -> f64 {
+        use gekko_fp as fp;
+        let reg = |v: f32| crate::fpu::reg(v);
+        let one = |r: &mut Self| {
+            jobj::anim(
+                &mut r.game.objs,
+                r.data,
+                &mut super::super::code::ParticleHooks,
+                Some(j),
+            )
+        };
+        let cur = f64::from(anim_frame(self, j));
+        if !(reg(l.start) <= cur) || !(cur <= reg(l.end)) {
+            jobj::req_anim(&mut self.game.objs, Some(j), l.start);
+        }
+        if reg(l.loop_frame) == fp::fneg(fp::frsp(0.1)) {
+            let mut cur = f64::from(anim_frame(self, j));
+            if reg(l.end) != cur {
+                one(self);
+                cur = f64::from(anim_frame(self, j));
+                if cur > reg(l.end) {
+                    cur = reg(l.end);
+                    jobj::req_anim(&mut self.game.objs, Some(j), cur as f32);
+                    one(self);
+                }
+            }
+            cur
+        } else {
+            one(self);
+            let mut cur = f64::from(anim_frame(self, j));
+            let end = reg(l.end);
+            if cur >= end {
+                cur = fp::fadds(reg(l.loop_frame), fp::fsubs(cur, end));
+                jobj::req_anim(&mut self.game.objs, Some(j), cur as f32);
+                one(self);
+            }
+            cur
+        }
+    }
+
     fn title_jobj(&self, g: GObjId) -> JObjId {
         match self.game.world.gobj(g).obj {
             Some(Obj::JObj(j)) => j,

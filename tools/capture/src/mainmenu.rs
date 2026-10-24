@@ -110,6 +110,14 @@ impl Comparer<'_> {
             .light_color
             .map_or(0, |c| sym("mn_804D4B50") + 4 * u32::from(c));
         let _ = LIGHT_COLORS;
+        // The value isn't compared while it holds a rules list's unwritten heap byte
+        // (`RulesMenus::confirmed_stale`, docs/engine.md).
+        let theirs_confirmed = self.u8(at + 4);
+        let confirmed = if game.vs_menus.confirmed_stale {
+            theirs_confirmed
+        } else {
+            f.confirmed_selection
+        };
         self.check(
             "mn_804A04F0",
             "menus, hovered, confirmed, buttons, x10, entering, light",
@@ -117,7 +125,7 @@ impl Comparer<'_> {
                 f.cur_menu,
                 f.prev_menu,
                 f.hovered_selection,
-                f.confirmed_selection,
+                confirmed,
                 f.buttons,
                 f.x10,
                 f.entering_menu,
@@ -128,7 +136,7 @@ impl Comparer<'_> {
                 self.u8(at),
                 self.u8(at + 1),
                 self.u16(at + 2),
-                self.u8(at + 4),
+                theirs_confirmed,
                 u64::from(self.u32(at + 8)) << 32 | u64::from(self.u32(at + 0xC)),
                 self.u8(at + 0x10),
                 self.u8(at + 0x11),
