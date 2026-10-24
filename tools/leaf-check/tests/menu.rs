@@ -6,15 +6,23 @@ use leaf_check::{reference, sym};
 use melee_sim::game::mn::main::{LIGHT_COLORS, light_color, shown_before_with, shown_with};
 use ssbm_types::fns;
 
-/// The save data's unlock flags (`save_data.x186C`, the card data's first file at
-/// `gmMainLib_8045A6C0 + 0x1868`).
-const X186C: u32 = 0x8045_A6C0 + 0x1868 + 0x186C;
+/// The save data's unlock flags (`save_data.x186C`): the game data's byte 0x186C (the card
+/// data starting at 0x1868), through `gmMainLib_804D3EE0`, pointed at the data if the
+/// reference hasn't yet.
+fn x186c(ctx: &ssbm_rt::Ctx) -> u32 {
+    let ptr = sym("gmMainLib_804D3EE0");
+    if ctx.read_u32(ptr) == 0 {
+        ctx.write_u32(ptr, sym("gmMainLib_8045A6C0"));
+    }
+    ctx.read_u32(ptr) + 0x186C
+}
 
 #[test]
 fn shown_selections_match() {
     let Some(ctx) = reference() else { return };
+    let at = x186c(&ctx);
     for flags in [0u8, 4, 8, 0xC, 0xF3, 0xFF] {
-        ctx.write_u8(X186C, flags);
+        ctx.write_u8(at, flags);
         for kind in 0..34u8 {
             for sel in 0..12 {
                 let theirs = fns::mn_80229938(&ctx, i32::from(kind), sel) != 0;
