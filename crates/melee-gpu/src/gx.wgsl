@@ -12,7 +12,8 @@ struct State {
     // Viewport z range and far z, fog A and C, viewport half width.
     depth: vec4<f32>,
     fog: vec4<f32>,
-    // Mip levels of each texture map's texture.
+    // Mip levels of each texture map's texture, and above its low 8 bits the scale of a copy
+    // made at the render's scale (`copy_scale`).
     levels: array<vec4<u32>, 2>,
     // x: draw mode (0 draw, 1 clear, 2 depth only); y: clear color (RGBA8); z: clear depth.
     mode: vec4<u32>,
@@ -144,11 +145,37 @@ fn wrap(coord: i32, mode: u32, size: i32) -> i32 {
     }
 }
 
+/// `wrap` for a copy at the render's scale, whose size needn't be a power of two.
+fn wrap_scaled(coord: i32, mode: u32, size: i32) -> i32 {
+    switch mode {
+        case 1u: { return ((coord % size) + size) % size; }
+        case 2u: {
+            let period = 2 * size;
+            let c = ((coord % period) + period) % period;
+            return select(c, period - 1 - c, c >= size);
+        }
+        default: { return clamp(coord, 0, size - 1); }
+    }
+}
+
+/// How many texels a texture map's texture has for each of the game's in each direction: a
+/// copy from the EFB made at the render's scale (melee-gpu's `Copied::scaled`), else 1.
+fn copy_scale(map: u32) -> i32 {
+    return max(i32(st.levels[map >> 2u][map & 3u] >> 8u), 1);
+}
+
 fn texel(map: u32, s: i32, t: i32, mip: i32, w: i32, h: i32) -> vec4<i32> {
     let mode0 = bp(tex_reg(0x80u, map));
-    let x = wrap(s, bits(mode0, 0u, 2u), w);
-    let y = wrap(t, bits(mode0, 2u, 2u), h);
-    let levels = max(i32(st.levels[map >> 2u][map & 3u]), 1);
+    var x: i32;
+    var y: i32;
+    if copy_scale(map) > 1 {
+        x = wrap_scaled(s, bits(mode0, 0u, 2u), w);
+        y = wrap_scaled(t, bits(mode0, 2u, 2u), h);
+    } else {
+        x = wrap(s, bits(mode0, 0u, 2u), w);
+        y = wrap(t, bits(mode0, 2u, 2u), h);
+    }
+    let levels = max(i32(st.levels[map >> 2u][map & 3u] & 0xFFu), 1);
     let m = min(mip, levels - 1);
     let dims = vec2<i32>(textureDimensionsOf(map, m));
     return vec4<i32>(load(map, min(x, dims.x - 1), min(y, dims.y - 1), m));
@@ -169,10 +196,12 @@ fn textureDimensionsOf(map: u32, mip: i32) -> vec2<u32> {
 
 fn sample_mip(map: u32, s_in: i32, t_in: i32, mip: i32, linear: bool) -> vec4<i32> {
     let img0 = bp(tex_reg(0x88u, map));
-    let w = (i32(bits(img0, 0u, 10u)) >> u32(mip)) + 1;
-    let h = (i32(bits(img0, 10u, 10u)) >> u32(mip)) + 1;
-    var s = s_in >> u32(mip);
-    var t = t_in >> u32(mip);
+    // A copy at the render's scale is sampled where the game's would be, `k` texels a texel.
+    let k = copy_scale(map);
+    let w = ((i32(bits(img0, 0u, 10u)) >> u32(mip)) + 1) * k;
+    let h = ((i32(bits(img0, 10u, 10u)) >> u32(mip)) + 1) * k;
+    var s = (s_in >> u32(mip)) * k;
+    var t = (t_in >> u32(mip)) * k;
     if linear {
         s -= 64;
         t -= 64;

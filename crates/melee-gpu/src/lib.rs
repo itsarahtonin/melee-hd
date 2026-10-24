@@ -17,6 +17,8 @@ mod copy_tests;
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
+#[cfg(test)]
+mod scaled_copy_tests;
 pub mod testing;
 mod tev;
 #[cfg(test)]
@@ -533,8 +535,10 @@ impl EfbTargets {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: COLOR_FORMAT,
+            // Written directly only by tests (`scaled_copy_tests`).
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                 | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::COPY_DST
                 | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
@@ -1245,10 +1249,17 @@ impl Renderer {
         if let Some(c) = self.gpu_copies.get(&image.address) {
             if (c.format, c.width, c.height, image.levels)
                 == (image.format, image.width, image.height, 1)
-                && let Some(Some(entry)) = self.textures.get_mut(c.id as usize)
             {
-                entry.last_used = self.frame;
-                return (c.id, 1);
+                // The copy at the render's scale, its scale above the level count's bits
+                // (gx.wgsl's `copy_scale`).
+                let (id, levels) = match c.scaled {
+                    Some((s, k)) => (s, 1 | k << 8),
+                    None => (c.id, 1),
+                };
+                if let Some(Some(entry)) = self.textures.get_mut(id as usize) {
+                    entry.last_used = self.frame;
+                    return (id, levels);
+                }
             }
             // Sampled some other way: from now on, its bytes as the encoder would have
             // written them.
@@ -1937,66 +1948,79 @@ impl Renderer {
         out
     }
 
-    /// Makes a copy from the EFB into a texture of its own, on the GPU.
+    /// A texture a copy from the EFB is made into.
+    fn copy_texture(&mut self, width: u32, height: u32) -> u32 {
+        let texture = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("efb copy"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Uint,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        self.insert_texture(texture, 1)
+    }
+
+    /// Makes a copy from the EFB into a texture of its own, on the GPU: at the game's size,
+    /// which reads back to memory as the encoder would write it, and at a render scale above
+    /// 1 also at that scale, which draws sample (`copy::Copied::scaled`), as Dolphin's scaled
+    /// EFB copies are.
     fn gpu_copy(&mut self, r: &copy::Request) {
         let address = r.footprint.address;
+        let live = |id: u32| matches!(self.textures.get(id as usize), Some(Some(_)));
         let reuse = self.gpu_copies.get(&address).and_then(|c| {
-            ((c.format, c.width, c.height) == (r.format, r.width, r.height)
-                && matches!(self.textures.get(c.id as usize), Some(Some(_))))
-            .then_some(c.id)
+            ((c.format, c.width, c.height) == (r.format, r.width, r.height) && live(c.id))
+                .then_some((c.id, c.scaled.filter(|&(s, k)| k == self.scale && live(s))))
         });
-        let id = match reuse {
-            Some(id) => {
-                if let Some(c) = self.gpu_copies.get_mut(&address) {
-                    c.footprint = r.footprint;
-                }
-                id
-            }
-            None => {
-                let texture = self.device.create_texture(&wgpu::TextureDescriptor {
-                    label: Some("efb copy"),
-                    size: wgpu::Extent3d {
-                        width: r.width,
-                        height: r.height,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Rgba8Uint,
-                    usage: wgpu::TextureUsages::TEXTURE_BINDING
-                        | wgpu::TextureUsages::RENDER_ATTACHMENT
-                        | wgpu::TextureUsages::COPY_SRC,
-                    view_formats: &[],
-                });
-                let id = self.insert_texture(texture, 1);
-                self.gpu_copies.insert(
-                    address,
-                    copy::Copied {
-                        id,
-                        format: r.format,
-                        width: r.width,
-                        height: r.height,
-                        footprint: r.footprint,
-                    },
-                );
-                id
-            }
+        let (id, scaled) = match reuse {
+            Some(ids) => ids,
+            None => (self.copy_texture(r.width, r.height), None),
         };
-        let entry = self.textures[id as usize].as_mut().expect("copy texture");
-        entry.last_used = self.frame;
-        let time = self
-            .timer
-            .as_ref()
-            .and_then(|t| t.pass(gpu_time::Stage::EfbCopy));
-        self.copier.copy(
-            &self.device,
-            &self.queue,
-            &entry.view,
-            r,
-            (self.scale, self.width),
-            time,
+        let scaled = match scaled {
+            Some((s, _)) => Some(s),
+            None if self.scale > 1 => {
+                Some(self.copy_texture(r.width * self.scale, r.height * self.scale))
+            }
+            None => None,
+        };
+        self.gpu_copies.insert(
+            address,
+            copy::Copied {
+                id,
+                format: r.format,
+                width: r.width,
+                height: r.height,
+                footprint: r.footprint,
+                scaled: scaled.map(|s| (s, self.scale)),
+            },
         );
+        for (target, factor) in std::iter::once((id, 1)).chain(scaled.map(|s| (s, self.scale))) {
+            let entry = self.textures[target as usize]
+                .as_mut()
+                .expect("copy texture");
+            entry.last_used = self.frame;
+            let time = self
+                .timer
+                .as_ref()
+                .and_then(|t| t.pass(gpu_time::Stage::EfbCopy));
+            self.copier.copy(
+                &self.device,
+                &self.queue,
+                &entry.view,
+                r,
+                (self.scale, self.width),
+                factor,
+                time,
+            );
+        }
         // What earlier copies read back left in memory there is gone.
         let f = r.footprint;
         let before = self.copies.len();
@@ -2125,6 +2149,9 @@ impl Renderer {
         (self.scale, self.width) = (scale, width);
         for (_, c) in self.gpu_copies.drain() {
             self.textures[c.id as usize] = None;
+            if let Some((s, _)) = c.scaled {
+                self.textures[s as usize] = None;
+            }
         }
         let textures = &self.textures;
         self.texture_ids
@@ -2149,8 +2176,10 @@ impl Renderer {
         }
         if dropped {
             let textures = &self.textures;
-            self.gpu_copies
-                .retain(|_, c| textures[c.id as usize].is_some());
+            self.gpu_copies.retain(|_, c| {
+                textures[c.id as usize].is_some()
+                    && c.scaled.is_none_or(|(s, _)| textures[s as usize].is_some())
+            });
             self.texture_ids
                 .retain(|_, id| textures[*id as usize].is_some());
             self.bind_groups

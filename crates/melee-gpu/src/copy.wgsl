@@ -15,6 +15,12 @@ struct Params {
     // console's 640.
     scale: u32,
     width: u32,
+    // How many texels the texture has for each of the copy's in each direction: 1, or the
+    // EFB's scale for a copy at the render's scale.
+    factor: u32,
+    pad0: u32,
+    pad1: u32,
+    pad2: u32,
 }
 
 @group(0) @binding(0) var efb: texture_2d<f32>;
@@ -29,38 +35,50 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
     return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
 }
 
-// EFB pixel `i`, counting along rows of 640 as the encoder does.
-fn pixel(i: u32) -> vec4<u32> {
+// Part (`jx`, `jy`) of EFB pixel `i` (counting along rows of 640 as the encoder does), cut
+// into `factor` by `factor` parts: the scaled pixels in it. With a factor of 1, the whole
+// pixel's: the scaled pixels from its column's start to the next column's, its rows'.
+fn pixel(i: u32, jx: u32, jy: u32) -> vec4<u32> {
     if i >= EFB_WIDTH * EFB_HEIGHT {
         return vec4<u32>(0u);
     }
     let s = max(p.scale, 1u);
     let w = max(p.width, 1u);
-    // The scaled pixels from the column's start to the next column's.
-    let ex = i % EFB_WIDTH;
-    let left = ex * w / EFB_WIDTH;
-    let n = max((ex + 1u) * w / EFB_WIDTH, left + 1u) - left;
-    let at = vec2<u32>(left, i / EFB_WIDTH * s);
+    let f = max(p.factor, 1u);
+    let rows = max(s / f, 1u);
+    let ex = (i % EFB_WIDTH) * f + jx;
+    let cols = EFB_WIDTH * f;
+    let left = ex * w / cols;
+    let n = max((ex + 1u) * w / cols, left + 1u) - left;
+    let at = vec2<u32>(left, i / EFB_WIDTH * s + jy * rows);
     var sum = vec4<f32>(0.0);
-    for (var y = 0u; y < s; y++) {
+    for (var y = 0u; y < rows; y++) {
         for (var x = 0u; x < n; x++) {
             sum += textureLoad(efb, at + vec2<u32>(x, y), 0);
         }
     }
-    let c = vec4<u32>(round(sum / f32(n * s) * 255.0));
+    let c = vec4<u32>(round(sum / f32(n * rows) * 255.0));
     return vec4<u32>(c.rgb, select(255u, c.a, p.six != 0u));
 }
 
-// A texel's color: its pixel, or the 2x2 box at it at half scale.
+// The part (`x`, `y`) of the copied rectangle cut into `factor` by `factor` parts per pixel.
+fn part(x: u32, y: u32) -> vec4<u32> {
+    let f = max(p.factor, 1u);
+    let i = p.top * EFB_WIDTH + p.left + y / f * EFB_WIDTH + x / f;
+    return pixel(i, x % f, y % f);
+}
+
+// A texel's color: its part of the rectangle, or the 2x2 box of parts at it at half scale.
 fn texel(s: u32, t: u32) -> vec4<u32> {
-    let i = p.top * EFB_WIDTH + p.left + (t << p.half) * EFB_WIDTH + (s << p.half);
+    let x = s << p.half;
+    let y = t << p.half;
     if p.half == 0u {
-        return pixel(i);
+        return part(x, y);
     }
-    let a = pixel(i);
-    let b = pixel(i + 1u);
-    let c = pixel(i + EFB_WIDTH);
-    let d = pixel(i + EFB_WIDTH + 1u);
+    let a = part(x, y);
+    let b = part(x + 1u, y);
+    let c = part(x, y + 1u);
+    let d = part(x + 1u, y + 1u);
     if p.six != 0u {
         // Sums of six-bit values, widened.
         let sum = (a >> vec4<u32>(2u)) + (b >> vec4<u32>(2u)) + (c >> vec4<u32>(2u)) + (d >> vec4<u32>(2u));
