@@ -43,8 +43,10 @@ const ALARM_HANDLER: u64 = 24;
 /// From the audio interrupt to its DSP mail, and to the end of its handler.
 const AI_MAIL: u64 = 16;
 const AI_HANDLER: u64 = 120;
-/// From the render's wait to its sleep, and from the wake to the pad check.
-const BEFORE_SLEEP: u64 = 32;
+/// From the render's wait to its sleep: the draw time's read (`HSD_PerfSetDrawTime`'s
+/// `OSGetTime`), after which `HSD_VIGetXFBDrawEnable` turns interrupts on and takes what came
+/// due; and from the wake to the pad check.
+const BEFORE_SLEEP: u64 = 16;
 const AFTER_WAKE: u64 = 24;
 /// From the render's wait to the pad check when a frame buffer is free.
 const NO_SLEEP: u64 = 40;
@@ -774,7 +776,7 @@ impl Clock {
             }
             if start < 2 && self.xfb_free() == 0 {
                 // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
-                self.now += BEFORE_SLEEP;
+                self.read(BEFORE_SLEEP, f);
                 while self.xfb_free() == 0 {
                     let next = self.next_at();
                     self.now = self.now.max(next);
@@ -929,6 +931,16 @@ impl Clock {
         self.game_code(f);
         while !f.done(w) {
             self.wait(WAIT_STEP, f);
+        }
+    }
+
+    /// The game spinning on its own wait (`lb_800195D0`, the callback the audio library's
+    /// loads spin with) until `w`: each spin a wait point that also runs the save's writer
+    /// ([`Frames::game_wait`]).
+    pub fn spin_until(&mut self, f: &mut dyn Frames, w: Wait) {
+        self.game_code(f);
+        while !f.done(w) {
+            self.lb_wait(f);
         }
     }
 

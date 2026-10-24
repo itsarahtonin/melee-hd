@@ -210,7 +210,7 @@ impl Running<'_> {
     #[doc(alias = "Toy_GetTrophyTotal")]
     #[doc(alias = "gmMainLib_8015EDC8")]
     #[doc(alias = "gmMainLib_8015EDA4")]
-    fn message_due(&mut self, n: u32, mask: u16) -> bool {
+    pub(super) fn message_due(&mut self, n: u32, mask: u16) -> bool {
         assert_eq!(mask, 0x100, "fn_8017279C's other masks aren't ported");
         let u = self.game.gm.unlocks;
         let total = i32::from(self.game.game_data.thing.save_data.trophy_count);
@@ -268,16 +268,7 @@ impl Running<'_> {
     /// announced, announced; the two trophies' messages; and the features they unlock set
     /// (`fn_8017280C`). How many were new.
     #[doc(alias = "gm_80172898")]
-    #[doc(alias = "fn_8017280C")]
     #[doc(alias = "Toy_803048C0")]
-    #[doc(alias = "gmMainLib_8015EE54")]
-    #[doc(alias = "gmMainLib_8015EE68")]
-    #[doc(alias = "gmMainLib_8015EE1C")]
-    #[doc(alias = "gmMainLib_8015EE30")]
-    #[doc(alias = "gmMainLib_8015EDE4")]
-    #[doc(alias = "gmMainLib_8015EDF8")]
-    #[doc(alias = "gmMainLib_8015EEA0")]
-    #[doc(alias = "gmMainLib_8015EEB4")]
     pub fn special_unlocks(&mut self, mask: u16) -> i32 {
         self.game.sync_unlocks();
         let mut count = 0;
@@ -293,6 +284,22 @@ impl Running<'_> {
         if flags(self, 0xC9) > 0 && !self.message_noted(0x40) {
             self.note_message(0x40);
         }
+        self.features_from_messages();
+        count
+    }
+
+    /// `fn_8017280C`: the features the special messages unlock: the stages' random switch
+    /// (opened whole when it goes), the sound test, All-Star and the score display.
+    #[doc(alias = "fn_8017280C")]
+    #[doc(alias = "gmMainLib_8015EE54")]
+    #[doc(alias = "gmMainLib_8015EE68")]
+    #[doc(alias = "gmMainLib_8015EE1C")]
+    #[doc(alias = "gmMainLib_8015EE30")]
+    #[doc(alias = "gmMainLib_8015EDE4")]
+    #[doc(alias = "gmMainLib_8015EDF8")]
+    #[doc(alias = "gmMainLib_8015EEA0")]
+    #[doc(alias = "gmMainLib_8015EEB4")]
+    pub(crate) fn features_from_messages(&mut self) {
         let noted = [0x18, 0x17, 0x16, 0x1B].map(|n| self.message_noted(n));
         let s = &mut self.game.game_data.thing.save_data;
         if noted[0] {
@@ -318,7 +325,6 @@ impl Running<'_> {
             s.x186C &= !8;
         }
         self.game.sync_unlocks();
-        count
     }
 
     /// `gm_80173754`: when a trophy or special message waits for its notice, the challenger

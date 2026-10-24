@@ -41,8 +41,8 @@ pub enum Replay {
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
-    /// NAME.inputs` (ssbm-rs's `SSBMINP1`), played in
-    /// the console's float mode.
+    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` (ssbm-rs's
+    /// `SSBMINP1`), played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -57,6 +57,9 @@ impl Replay {
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("options-") {
+                    return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
+                }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
@@ -565,6 +568,16 @@ pub const NAMES_KANA: Game = Game {
     name: "names-kana",
     players: "name entry's kana (session names-kana)",
     replay: Replay::Session("names-kana"),
+};
+
+/// The Options menus toured (`options-sessions/tour`): the rumble screen's ports and names,
+/// the sound screen's balance, the screen options with the deflicker filter off, the language
+/// screen and erasing data.
+pub const OPTIONS_TOUR: Game = Game {
+    stage: "Main menu",
+    name: "options-tour",
+    players: "the Options menus (session options-sessions/tour)",
+    replay: Replay::Session("options-tour"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

@@ -20,9 +20,9 @@ use common::{
     GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
-    RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -135,6 +135,19 @@ frames!(NAMES;
 frames!(NAMES_KANA;
     names_kana_1300 1300,
     names_kana_1760 1760,
+);
+// The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
+// Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase
+// Data's list (3800, 3880) and its warning (3700).
+frames!(OPTIONS_TOUR;
+    options_1100 1100,
+    options_2300 2300,
+    options_2790 2790,
+    options_2870 2870,
+    options_3080 3080,
+    options_3700 3700,
+    options_3800 3800,
+    options_3880 3880,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

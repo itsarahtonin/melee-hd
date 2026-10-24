@@ -718,6 +718,9 @@ struct App {
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
     inputs: Inputs,
+    /// Each port's rumble motor as the match last set it (`PADControlMotor`'s commands):
+    /// the controllers' rumble output, which the save's rumble options decide.
+    motors: [bool; 4],
     /// Places the ticks on Melee's clock, just in time for their refreshes.
     jit: jit::Scheduler,
     /// How ticks are timed and its margin, how they're placed now, and whether frames wait for
@@ -889,6 +892,15 @@ impl App {
             }
         };
         let simulated = start.elapsed();
+        // The pad library's motor commands this tick, to the controllers.
+        if f.pads.motors.iter().any(Option::is_some) {
+            for (on, m) in self.motors.iter_mut().zip(f.pads.motors) {
+                if let Some(m) = m {
+                    *on = m == melee_sim::input::rumble::Motor::Rumble;
+                }
+            }
+            self.inputs.rumble(self.motors);
+        }
         let audio = session.sound.as_ref().and_then(sound::Sound::stats);
         let tick = engine_tick(&session.m);
         self.jit.ran(&plan);
@@ -2118,6 +2130,7 @@ fn run(args: Args) -> ExitCode {
         renderer: None,
         shown: None,
         inputs: Inputs::new(args.adapter),
+        motors: [false; 4],
         jit: jit::Scheduler::new(
             Duration::from_secs_f64(1.0 / TICK_RATE),
             args.jit_margin,

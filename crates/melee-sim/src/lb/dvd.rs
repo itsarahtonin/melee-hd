@@ -690,12 +690,16 @@ impl Dvd {
 
 /// `lbDvd_80018254`'s preload classes' files: the rumble file (class 1 and up) and the common
 /// files (class 2 and up), by entry number in GALE01 revision 2's file table (`LbRb.dat`;
-/// `EfMnData.dat`, `EfCoData.dat`, `ItCo.usd`, `IfAll.usd`).
+/// `EfMnData.dat`, `EfCoData.dat`, `ItCo.usd`, `IfAll.usd`). `ItCo.` takes the disc's language
+/// (`lbFileGetFullName`: English), `IfAll` the saved one: `IfAll.dat` ([`IF_ALL_JP`]) in
+/// Japanese.
 const RUMBLE_FILE: PreloadFile = PreloadFile {
     kind: 2,
     entry_num: 0x1EC,
     effect_index: 0,
 };
+/// `IfAll.dat`'s entry number.
+const IF_ALL_JP: i32 = 0x1CB;
 const COMMON_FILES: [PreloadFile; 4] = [
     PreloadFile {
         kind: 3,
@@ -729,7 +733,7 @@ impl Audio {
     /// wanted again, the rest of the unwanted ones not yet read let go (read ones stay until
     /// their room is needed), and the next read started.
     #[doc(alias = "lbDvd_80018254")]
-    pub fn preload_refresh(&mut self, data: &Archives) {
+    pub fn preload_refresh(&mut self, data: &Archives, saved_us: bool) {
         let d = self.dvd();
         if d.cache.new_scene == d.cache.scene {
             return;
@@ -747,7 +751,12 @@ impl Audio {
         }
         if class >= 2 && d.cache.new_scene.is_heap_persistent[1] {
             for f in &COMMON_FILES {
-                d.want(f.kind, f.entry_num, 3, 3, 0, 1, 8, 0x40, f.effect_index);
+                let entry = if f.entry_num == 0x1CC && !saved_us {
+                    IF_ALL_JP
+                } else {
+                    f.entry_num
+                };
+                d.want(f.kind, entry, 3, 3, 0, 1, 8, 0x40, f.effect_index);
             }
         }
         if class == 3 {
@@ -846,5 +855,13 @@ impl Audio {
     pub fn preload_done(&mut self, data: &Archives, index: u32) {
         self.dvd().cache.entries[index as usize].state = 3;
         self.preload_next_entry(data);
+    }
+}
+
+impl crate::game::state::Running<'_> {
+    /// [`Audio::preload_refresh`] with the saved language the common files are named for.
+    pub fn preload_refresh(&mut self) {
+        let us = self.game.game_data.saved_language() == crate::game::gm::main_lib::LANG_US;
+        self.game.audio.preload_refresh(self.data, us);
     }
 }

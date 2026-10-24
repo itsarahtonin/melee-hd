@@ -950,7 +950,7 @@ impl Running<'_> {
         if start {
             let stkind = i32::from(self.game.vs_melee.sss.vs.start.rules.stkind);
             self.dvd_mut().cache.scene.game_cache.stkind = stkind;
-            self.game.audio.preload_refresh(self.data);
+            self.preload_refresh();
         }
     }
 }

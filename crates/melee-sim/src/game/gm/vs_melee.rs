@@ -207,7 +207,7 @@ impl Running<'_> {
     #[doc(alias = "lbDvd_SetupVsPreloadCache")]
     pub fn setup_vs_preload_cache(&mut self) {
         self.dvd_mut().keep_class();
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         self.wait_preload_stale_released(crate::lb::heap::ALL_M as i32);
     }
 

@@ -129,6 +129,9 @@ pub struct LbAudio {
     /// directory.
     pub hps_file: [u8; 0x40],
     pub hps_stem_pos: i32,
+    /// `sound_mode`: the synth's mix as `lbAudioAx_80024BD0` last read it from the console
+    /// (1 stereo, 0 mono) or `lbAudioAx_80024C08` last set it.
+    pub sound_mode: u32,
 }
 
 impl Default for LbAudio {
@@ -192,6 +195,7 @@ impl Default for LbAudio {
             stem: [0; 0x40],
             hps_file,
             hps_stem_pos: 7,
+            sound_mode: 0,
         }
     }
 }

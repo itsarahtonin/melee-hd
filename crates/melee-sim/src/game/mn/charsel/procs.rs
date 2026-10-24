@@ -873,7 +873,7 @@ impl Running<'_> {
                     e.char_id = i32::from(CHKIND_NONE);
                 }
             }
-            self.game.audio.preload_refresh(self.data);
+            self.preload_refresh();
         }
         if self.game.buttons_triggered(4) & super::super::main::PAD_LR_START != 0 {
             self.lb_audio_call(0);

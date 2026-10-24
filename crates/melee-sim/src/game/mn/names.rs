@@ -314,7 +314,7 @@ impl Running<'_> {
 
     /// `GetNameCount`, `IsNameListFull`'s count.
     #[doc(alias = "GetNameCount")]
-    fn name_count(&self) -> i32 {
+    pub(crate) fn name_count(&self) -> i32 {
         (0..SLOTS as u8).filter(|&i| self.name_valid(i)).count() as i32
     }
 
@@ -1534,7 +1534,6 @@ impl Running<'_> {
     /// `WriteCharactersForNameAtIndex`: the name into a name tag, its rumble from the
     /// confirming port's (`GetRumbleSettingOfPort`).
     #[doc(alias = "WriteCharactersForNameAtIndex")]
-    #[doc(alias = "GetRumbleSettingOfPort")]
     fn write_name(&mut self, slot: u8, port: usize) {
         let mut len = 0;
         for i in 0..4 {
@@ -1550,7 +1549,7 @@ impl Running<'_> {
             }
         }
         set_name_byte(self.name_tag_mut(slot), len, 0);
-        let r = self.game.game_data.thing.save_data.x1CB0.rumble_enabled[port];
+        let r = self.port_rumble(port);
         self.name_tag_mut(slot).rumble_enabled = r;
     }
 

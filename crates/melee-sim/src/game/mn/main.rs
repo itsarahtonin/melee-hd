@@ -70,9 +70,9 @@ const STATE_5: u8 = 5;
 /// `MenuInput`s (`mn_80229624`'s).
 pub(crate) const IN_UP: u32 = 1 << 0;
 pub(crate) const IN_DOWN: u32 = 1 << 1;
-const IN_LEFT: u32 = 1 << 2;
-const IN_RIGHT: u32 = 1 << 3;
-const IN_CONFIRM: u32 = 1 << 4;
+pub(crate) const IN_LEFT: u32 = 1 << 2;
+pub(crate) const IN_RIGHT: u32 = 1 << 3;
+pub(crate) const IN_CONFIRM: u32 = 1 << 4;
 pub(crate) const IN_BACK: u32 = 1 << 5;
 const IN_L: u32 = 1 << 6;
 const IN_R: u32 = 1 << 7;
@@ -1710,22 +1710,24 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022D104`, the options' list's think: each option's screen isn't this menu's.
+    /// `mn_8022D104`, the options' list's think: each option opens its screen.
     #[doc(alias = "mn_8022D104")]
-    pub fn think_settings(&mut self, _gobj: GObjId) {
+    pub fn think_settings(&mut self, gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
             self.game.menu.flow.entering_menu = 1;
-            let name = match self.game.menu.flow.hovered_selection {
-                0 => "mnVibration_Init (the rumble options)",
-                1 => "mnSound_8024A09C (the sound options)",
-                2 => "mnDeflicker_8024A6C4 (the screen options)",
-                4 => "mnLanguage_8024C5C0 (the language options)",
-                5 => "mnDataDel_80250170 (erasing data)",
+            let open: fn(&mut Self) = match self.game.menu.flow.hovered_selection {
+                0 => Self::vibration_open,
+                1 => Self::sound_open,
+                2 => Self::deflicker_open,
+                4 => Self::language_open,
+                5 => Self::datadel_open,
                 _ => return,
             };
-            super::super::code::unported_call(name);
+            self.lb_audio_call(1);
+            open(self);
+            gobj::free(self, gobj);
         } else if b & IN_BACK != 0 {
             self.list_back(MAIN, 3);
         } else {
@@ -1833,7 +1835,7 @@ impl Running<'_> {
             super::gallery::THINK => self.gallery_think(gobj),
             super::gallery::LIST_PROC => self.gallery_list_proc(gobj),
             super::gallery::CURSOR_PROC => self.gallery_cursor_proc(gobj),
-            _ => return self.run_rules_proc(gobj, f),
+            _ => return self.run_rules_proc(gobj, f) || self.options_proc(gobj, f),
         }
         true
     }
@@ -1946,11 +1948,11 @@ impl Running<'_> {
         m.lights = Some(sym("ScMenMain_scene_lights"));
         m.fog_desc = Some(sym("ScMenMain_fog"));
         m.models = models;
-        assert!(
-            self.game.game_data.saved_language() == LANG_US,
-            "the Japanese menus' strings (SdMenu.dat) aren't loaded"
-        );
-        let font = self.load_archive("SdMenu.usd");
+        let font = self.load_archive(if self.game.game_data.saved_language() == LANG_US {
+            "SdMenu.usd"
+        } else {
+            "SdMenu.dat"
+        });
         self.load_font(0, font, "SIS_MenuData");
         let font = self.load_archive("SdToy.dat");
         self.load_font(3, font, "SIS_ToyData");

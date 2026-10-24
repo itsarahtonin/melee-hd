@@ -156,7 +156,7 @@ pub(crate) fn clear_name_tag(d: &mut NameTagData) {
 }
 
 /// `ResetPersistentFighterData`: a character's KOs and statistics cleared.
-fn clear_fighter(d: &mut FighterData) {
+pub(crate) fn clear_fighter(d: &mut FighterData) {
     d.fighter_kos = [0; SELKIND_COUNT];
     clear_stats(&mut d.stats);
 }
@@ -168,14 +168,7 @@ impl Running<'_> {
     /// video mode as the reset save says (`lbAudioAx_80028690`, `gmMainLib_8015F500`).
     #[doc(alias = "gmMainLib_8015FBA4")]
     pub fn reset_game_data(&mut self, bank: &crate::lb::audio::SoundBank) {
-        *self.game.game_data = gmm_x0::default();
-        let d = &mut self.game.game_data;
-        d.set_language_setting(LANG_US);
-        d.set_saved_language(LANG_US);
-        d.x1850 = default_rules();
-        for i in 1..9 {
-            self.reset_card_file(i, true);
-        }
+        self.reset_game_data_fields();
         // Where ssbm-rs's clock has the boot reach the audio reset: a console's boot with a
         // card (the one with a boot delay) or without.
         let at = if self.game.audio.boot_delay != 0 {
@@ -188,6 +181,29 @@ impl Running<'_> {
         self.game.audio.clock_catch_up(self.data, at);
         self.game.sync_unlocks();
         self.setup_audio_video(Some(bank));
+    }
+
+    /// The data `gmMainLib_8015FBA4` resets: all of it cleared, the language from the disc,
+    /// the VS rules' defaults and every logical file of the card's data reset.
+    fn reset_game_data_fields(&mut self) {
+        *self.game.game_data = gmm_x0::default();
+        let d = &mut self.game.game_data;
+        d.set_language_setting(LANG_US);
+        d.set_saved_language(LANG_US);
+        d.x1850 = default_rules();
+        for i in 1..9 {
+            self.reset_card_file(i, true);
+        }
+    }
+
+    /// `gmMainLib_8015FBA4` from the menus (erasing all data): the data reset, and the sound
+    /// settings and the video mode as the reset save says, with the sound bank of the
+    /// language the boot loaded still the reset's.
+    pub fn reset_game_data_menu(&mut self) {
+        self.reset_game_data_fields();
+        self.game.sync_unlocks();
+        self.setup_audio_video(None);
+        self.reset_video_mode();
     }
 
     /// `setupAudioVideo`: the sound settings from the save (`lbAudioAx_80028690`), and the

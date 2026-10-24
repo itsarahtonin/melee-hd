@@ -1134,6 +1134,45 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/mn/main.rs` (`cursor_unhover`).
 
+### The rumble screen reads its title before writing it
+
+- **Where:** `mnVibration_CreateScreen`, `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_make_screen`).
+- **Defect:** the screen's user data (`MnVibrationData`, 0x98 bytes from `HSD_MemAlloc`) is never cleared, and the creation tests its `title_text` (`+0x90`) and frees the text it names (`HSD_SisLib_803A5CC4`) before writing it, so it frees whatever text the heap block's last occupant left a pointer to there.
+- **Effect:** none observable in the sessions: the block was fresh (zero) memory each time. Were a live text to sit where a freed title was (a text made in its slot of the text arena since), the original would free it, a text another screen still shows.
+- **melee-hd:** modeled where melee-sim knows the word: the last rumble screen's block and its title (`Vibration::left`), freed again when the new block is the same; any other block's word names no text ([the engine notes](engine.md#uninitialized-values)).
+- **Fix:** clear `title_text` with the other texts.
+- **Fix impact:** none in play.
+- **Source:** `mnvibration.c`'s `mnVibration_CreateScreen`; `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_make_screen`).
+
+### The sound screen reads its description from freed user data
+
+- **Where:** `fn_80249A1C`, `crates/melee-sim/src/game/mn/sound.rs` (`sound_think`).
+- **Defect:** when the flow leaves the screen, its process frees the screen's GObj, its user data with it (`HSD_Free`), then reads the description's text from that user data to free it.
+- **Effect:** none observable: nothing allocates between the two, so the freed block still holds the pointer.
+- **melee-hd:** the text is read before the GObj goes, the same text freed.
+- **Fix:** read the text first, or free it before the GObj.
+- **Fix impact:** none.
+- **Source:** `mnsound.c`'s `fn_80249A1C`.
+
+### Erasing all data frees the sound bank under a playing sound
+
+- **Where:** `lbAudioAx_80028690` and `lbAudioAx_80027AB0` (`AXDriver_8038DCFC`), `crates/melee-sim/src/lb/audio/boot.rs` (`driver_replace_bank`) and `crates/melee-sim/src/audio/driver.rs` (`driver_stream_word`).
+- **Defect:** a change of language frees the sound bank (`smash2.sem`) and loads the other language's, while the driver's voices keep their command streams as pointers into the old block. `lbAudioAx_80027AB0` keys every sound off first, which stops the effects but leaves a voice's stream running; `lbAudioAx_80028690` keys nothing off unless the audio was never set up. Erase All in Japanese reaches it twice in one tick: the save's reset puts the language back to English (`lbAudioAx_80028690`: the English bank), then the screen sets it back to Japanese (`lbAudioAx_80027AB0`: the Japanese bank again), with the confirming sound (0xBD) still running.
+- **Effect:** the playing voice reads its next commands from the freed block: the old bank's bytes, while nothing has written over them, or the new bank's at an unrelated offset where the new block covers the old. In the `lang` session the confirming sound's next command is read from the freed Japanese bank during the English bank's load, and the voice is then taken for Erase All's sound (0xBF), so nothing is heard of it. A stream reading a new bank's bytes as commands could play or stop any sound.
+- **melee-hd:** modeled: a voice's stream stays an address, and a read outside the current bank reads the freed bank that held the address (`Driver::freed_banks`).
+- **Fix:** key every voice off, streams too, before freeing the bank.
+- **Fix impact:** none in the sessions: the stale read's command is the confirming sound's own.
+- **Source:** `lbaudio_ax.c`'s `lbAudioAx_80028690` and `lbAudioAx_80027AB0`, `axdriver.c`'s `AXDriver_8038DCFC`.
+
+### The sound screen asks for the rules and drops them
+
+- **Where:** `mnSound_80249C08`, `crates/melee-sim/src/game/mn/sound.rs` (`sound_make`).
+- **Defect:** the screen's creation calls `gmMainLib_GetGameRules` and drops what it returns.
+- **Effect:** none: the call reads nothing and has no side effects.
+- **melee-hd:** the call is left out.
+- **Fix:** drop the call.
+- **Fix impact:** none.
+- **Source:** `mnsound.c`'s `mnSound_80249C08`.
 ### Hovering the item switch or the extra rules copies an unwritten byte into the menu's value
 
 - **Where:** `fn_8022F538` and `mn_80230E38` (`mnmainrule.c`), `fn_8023201C` and `mn_80233218` (`mnruleplus.c`); `crates/melee-sim/src/game/mn/rules.rs`, `rule_plus.rs`.
@@ -1297,6 +1336,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
+| The rumble screen's name rows on an empty slot | `mnVibration_CreateNameRow`, `game/mn/vibration.rs` | A row's slot is the scroll plus the row, not the row's name: with a gap among the save's names, `GetNameText` hands `HSD_SisLib_803A6B98` a null format. The game keeps names packed (`DeleteName` moves them up), so only an edited save could leave a gap | `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_name_row`) |
 | An overflowing substep count | `mpColl_80043754`, `mp/coll/mod.rs` | Returns a register its caller left when a move over about 10¹⁰ units runs no substep | [engine notes](engine.md#uninitialized-values) (line 64) |
 | No logged hit above -1 knockback | `ftColl_8007A06C`, `game/ft/attack.rs`; `it_80270E30`, `game/it/coll.rs` | Leaves the index it reads uninitialized when every knockback is NaN or -1 and below | [engine notes](engine.md#uninitialized-values) (line 69); `crates/melee-sim/src/game/it/coll.rs:647` |
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |

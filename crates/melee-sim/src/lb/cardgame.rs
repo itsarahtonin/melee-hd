@@ -174,8 +174,11 @@ impl Running<'_> {
         if self.game.card_game.icon_data.is_some() {
             return;
         }
+        // `LbMcGame.` takes the disc's language (English), `NtMemAc` the saved one
+        // (`lbFileGetFullName`).
         let icons = self.load_archive("LbMcGame.usd");
-        let scene = self.load_archive("NtMemAc.usd");
+        let us = self.game.game_data.saved_language() == crate::game::gm::main_lib::LANG_US;
+        let scene = self.load_archive(if us { "NtMemAc.usd" } else { "NtMemAc.dat" });
         let sym = |r: &Running, a, name: &str| {
             let offset = r
                 .data

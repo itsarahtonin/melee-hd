@@ -180,6 +180,7 @@ impl<'a> Comparer<'a> {
         self.main_menu();
         self.gallery();
         self.rules_menus();
+        self.options();
         self.attract();
         self.select_screens();
     }

@@ -166,6 +166,11 @@ pub const FILES: &[&str] = &[
     "LbMcSnap.usd",
     "MnMaAll.usd",
     "SdMenu.usd",
+    // The menus in Japanese, which the language options change to.
+    "MnMaAll.dat",
+    "SdMenu.dat",
+    "IfAll.dat",
+    "NtMemAc.dat",
     "SdToy.dat",
     "GmEvent.dat",
     "LbAd.dat",
@@ -201,6 +206,7 @@ pub(crate) const REG_READ: u64 = 8;
 
 /// The sound bank, in the US language's directory (the disc has `usa.ini`).
 const SOUND_BANK: &str = "audio/us/smash2.sem";
+const SOUND_BANK_JP: &str = "audio/smash2.sem";
 
 impl Session {
     /// The console at power-on: nothing of the game has run, and memory holds what the
@@ -248,12 +254,21 @@ impl Session {
             len: file.bytes.len() as u32,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
+        // Japanese's, which the language options load.
+        let file = console.file(SOUND_BANK_JP);
+        let bank_jp = crate::lb::audio::SoundBank {
+            len: file.bytes.len() as u32,
+            archive: self.data.add(Archive::raw(&file.bytes)),
+        };
         let audio = &mut self.game.audio;
-        for name in crate::lb::audio::SSM_NAMES {
-            let file = console.file(&format!("audio/us/{name}"));
-            if !audio.devcom.files.iter().any(|f| f.0 == file.entrynum) {
-                let id = self.data.add(Archive::raw(&file.bytes));
-                audio.devcom.files.push((file.entrynum, id));
+        audio.lang_banks = [Some(bank_jp), Some(bank)];
+        for dir in ["audio/us/", "audio/"] {
+            for name in crate::lb::audio::SSM_NAMES {
+                let file = console.file(&format!("{dir}{name}"));
+                if !audio.devcom.files.iter().any(|f| f.0 == file.entrynum) {
+                    let id = self.data.add(Archive::raw(&file.bytes));
+                    audio.devcom.files.push((file.entrynum, id));
+                }
             }
         }
         let mut sizes = Vec::new();

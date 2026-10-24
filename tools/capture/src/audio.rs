@@ -339,6 +339,7 @@ pub fn import(mem1: &[u8], bank: Option<ArchiveId>) -> Audio {
     a.lb = import_lb(mem1);
     let d = &mut a.driver;
     d.bank = bank;
+    d.bank_addr = base;
     d.banks = m.i32(sym("AXDriver_804D77B0"));
     d.streams = m.i32(sym("AXDriver_804D77B8"));
     if base != 0 {
@@ -639,6 +640,7 @@ fn lb_fields(lb: &mut melee_sim::lb::audio::LbAudio) -> Vec<(&'static str, u32, 
         ("lbl_804D63FC", 0x804D_63FC, I(&mut lb.sent_23)),
         ("lbl_804D6400", 0x804D_6400, I(&mut lb.sent_47)),
         ("lbl_804D6404", 0x804D_6404, I(&mut lb.sent_8)),
+        ("sound_mode", 0x804D_3874, U(&mut lb.sound_mode)),
     ];
     let [c0, c1] = &mut lb.crowd;
     let [t0, t1] = &mut lb.crowd_timer;
@@ -1319,6 +1321,7 @@ pub fn compare(mem1: &[u8], a: &Audio, diffs: &mut Vec<String>) {
         ("AXDriver_804D77E4", d.pitch_cents as u32),
         ("AXDriver_804D77B0", d.banks as u32),
         ("AXDriver_804D77B8", d.streams as u32),
+        ("AXDriver_804D7798", d.bank_addr),
     ] {
         img.u32(name, sym(name), v);
     }

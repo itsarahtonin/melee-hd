@@ -7,7 +7,8 @@
 //! The session is ssbm-rs's recording `2026-10-06_17-44-10` (`$SSBM_RS_LOCAL/lockstep/
 //! recordings`, with its card), traced as `docs/oracle.md` ("Sessions") says into
 //! `$SSBM_RS_LOCAL/traces/session/`; the card sessions are in `lockstep/card-sessions` and
-//! `traces/card-sessions`. The tests skip without the traces, the recordings or `SSBM_DISC`.
+//! `traces/card-sessions`, the menu and Options sessions in `menu-sessions` and
+//! `options-sessions`. The tests skip without the traces, the recordings or `SSBM_DISC`.
 
 use std::process::Command;
 
@@ -453,8 +454,14 @@ fn taken_up_match_catches_a_changed_read() {
 /// A menu session (`lockstep/menu-sessions/NAME.inputs` with its card, traced into
 /// `traces/menu-sessions/NAME.trc`).
 fn menu_session(name: &str, args: &[&str]) -> Option<String> {
-    let trace = ssbm_rs_local(&format!("traces/menu-sessions/{name}.trc"));
-    let inputs = ssbm_rs_local(&format!("lockstep/menu-sessions/{name}.inputs"));
+    scripted_session("menu-sessions", name, args)
+}
+
+/// A scripted session (`lockstep/DIR/NAME.inputs` with its card, traced into
+/// `traces/DIR/NAME.trc`).
+fn scripted_session(dir: &str, name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/{dir}/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/{dir}/{name}.inputs"));
     if std::env::var("SSBM_DISC").is_err()
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
@@ -520,6 +527,81 @@ fn a_save_written_through_an_audio_frame() {
     let out = session_with(&trace, &inputs, &["--heap"]);
     assert!(
         out.contains("336 ticks compared, no difference; stopped in tick 336: mnEvent_8024E838"),
+        "{out}"
+    );
+}
+
+/// An Options session (`lockstep/options-sessions/NAME.inputs`, on a copy of
+/// `2026-10-06_17-44-10`'s card with ten names, `names10.card`).
+fn options_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("options-sessions", name, args)
+}
+
+/// Every Options screen toured, each setting changed and changed back and B out, with the
+/// saves their exits write, then B to the title: clean to the trace's end.
+#[test]
+fn the_options_toured() {
+    let Some(out) = options_session("tour", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("4463 ticks compared, no difference"), "{out}");
+}
+
+/// Rumble off for port 1, mono with the balance toward the sounds, deflicker off, each
+/// saved, then on to VS mode: clean through the selects to the match's first tick, which
+/// differs in the heap's leftovers and the stage select's joints.
+#[test]
+fn the_options_set_on_to_a_match() {
+    let Some(out) = options_session("set", &["--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("2511 ticks compared; tick 2510 differs in"),
+        "{out}"
+    );
+}
+
+/// Each kind of data erased but all, each answered yes and saved: clean to the trace's end.
+#[test]
+fn the_data_erased_kind_by_kind() {
+    let Some(out) = options_session("erase", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2441 ticks compared, no difference"), "{out}");
+}
+
+/// All data erased, the second warning answered no, then yes: clean to the trace's end.
+#[test]
+fn all_data_erased() {
+    let Some(out) = options_session("erase-all", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1940 ticks compared, no difference"), "{out}");
+}
+
+/// The language changed to Japanese, the menu restarted in it, all data erased in Japanese
+/// (the sound bank changed twice under a playing sound), English again: clean to the
+/// trace's end.
+#[test]
+fn the_language_changed_and_back() {
+    let Some(out) = options_session("lang", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2416 ticks compared, no difference"), "{out}");
+}
+
+/// `tour` with port 1's A on the rumble screen dropped (read 922, which turns its rumble
+/// off): the panel's lights differ in the tick that read it.
+#[test]
+fn the_options_catch_a_dropped_press() {
+    let Some(out) = options_session(
+        "tour",
+        &["--heap", "--ticks", "1000", "--mutate", "read=922"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("726 ticks compared; tick 725 differs in"),
         "{out}"
     );
 }
@@ -593,12 +675,12 @@ fn a_kana_name_and_a_cancelled_one() {
 }
 
 /// The rules to a match (a one-minute time match, ratio 1.5, items off), through the character
-/// and stage selects to the match's first tick, which differs in the heap's leftovers; the
-/// timeline is set aside for tick 1506's audio frame, due just before the tick, which
-/// melee-sim's clock places 16 ticks late (the options task's fix).
+/// and stage selects to the match's first tick, which differs in the heap's leftovers,
+/// timeline included (tick 1506's audio frame, due in the draw time's read before the
+/// render's sleep, ran 16 ticks late until the options task's fix).
 #[test]
 fn the_rules_reach_the_match() {
-    let Some(out) = rules_session("rules-match", &["--heap", "--ignore", "timeline"]) else {
+    let Some(out) = rules_session("rules-match", &["--heap"]) else {
         return;
     };
     assert!(

@@ -544,6 +544,9 @@ impl<'a> Comparer<'a> {
             Some(UserData::SssName(a)) => self.sss_user(path, 0, a, t),
             Some(UserData::SssPreview(a)) => self.sss_user(path, 1, a, t),
             Some(UserData::SssHover(a)) => self.sss_user(path, 2, a, t),
+            Some(UserData::OptionMenu(a)) => self.option_menu(path, a, t),
+            Some(UserData::Vibration(a)) => self.vibration_data(path, a, t),
+            Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

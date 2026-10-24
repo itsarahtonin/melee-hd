@@ -10,7 +10,7 @@
 //! timing relative to the game's ticks ([`super::clock`]).
 
 use gekko_fp as fp;
-use melee_data::archive::{ArchiveId, Archives};
+use melee_data::archive::{Archive, ArchiveId, Archives};
 
 use super::Audio;
 use crate::fpu::reg;
@@ -111,6 +111,13 @@ pub struct Driver {
     /// The sound bank (`AXDriver_804D7798`), its bank table (`77B4`, count `77B0`) and its
     /// command stream table (`77BC`, count `77B8`), as offsets in it.
     pub bank: Option<ArchiveId>,
+    /// The bank's block in the audio heap.
+    pub bank_addr: u32,
+    /// The sound banks freed for a new one, newest first, each with its block's address: a
+    /// voice's command stream is a pointer, which a bank's change leaves pointing into the
+    /// freed block, whose bytes stay until something writes over them
+    /// ([`Audio::driver_stream_word`]).
+    pub freed_banks: [Option<(ArchiveId, u32)>; 2],
     pub banks: i32,
     pub bank_table: u32,
     pub streams: i32,
@@ -139,6 +146,8 @@ impl Default for Driver {
             pitch_due: 0,
             pitch_cents: 0,
             bank: None,
+            bank_addr: 0,
+            freed_banks: [None; 2],
             banks: 0,
             bank_table: 0,
             streams: 0,
@@ -376,12 +385,35 @@ impl Audio {
         }
     }
 
+    /// A voice's next command, at `at` from the sound bank's block: in the bank, or outside
+    /// it, where a stream the bank's change left pointing into the old bank's freed block
+    /// reads that block (the language options change the bank while a sound plays): the
+    /// newest bank to have held the address, the current one first. A freed bank's bytes
+    /// stay until something written into the audio heap covers them: a newer bank, checked
+    /// first, or another block or a free cell's header, which this doesn't model (the
+    /// options sessions' stale reads land on neither).
+    fn driver_stream_word(&self, data: &Archives, bank: &Archive, at: u32) -> u32 {
+        if (at as usize) + 4 <= bank.data().len() {
+            return bank.u32(at);
+        }
+        let addr = self.driver.bank_addr.wrapping_add(at);
+        for &(old, base) in self.driver.freed_banks.iter().flatten() {
+            let off = addr.wrapping_sub(base);
+            let old = data.get(old);
+            if (off as usize) + 4 <= old.data().len() {
+                return old.u32(off);
+            }
+        }
+        panic!("a voice's command stream at {addr:#x}, in no sound bank");
+    }
+
     /// `AXDriverInterp`: runs the voice's commands due this frame, up to the next wait.
     #[doc(alias = "AXDriverInterp")]
     pub fn driver_interp(&mut self, data: &Archives, v: u8) {
         let bank = data.get(self.driver.bank.expect("the sound bank"));
         while self.driver.voices[usize::from(v)].due == self.driver.frame {
-            let word = bank.u32(self.driver.voices[usize::from(v)].stream);
+            let word =
+                self.driver_stream_word(data, bank, self.driver.voices[usize::from(v)].stream);
             let kind = word >> 24;
             let wait = parse_wait(kind, word) as i32;
             if wait != 0 {

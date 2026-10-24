@@ -19,7 +19,7 @@ pub const ON_FRAME: CodeRef = CodeRef(0x801A_D620);
 /// transfers' register reads): 288 time base ticks in ssbm-rs (the `progressive` session's
 /// tick 311, `AUDIO_TIMELINE`: the tick's game code 304 ticks from its start to its end, 16
 /// otherwise).
-const SRAM_WRITE: u64 = 288;
+pub(crate) const SRAM_WRITE: u64 = 288;
 
 /// `gm_80480D70`, the prompt's statics, and the mode's enter and exit data
 /// (`gm_804D6938`, `gm_804D693C`).
