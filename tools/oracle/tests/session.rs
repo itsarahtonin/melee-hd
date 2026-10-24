@@ -1,6 +1,6 @@
 //! `melee-oracle session` on real recorded sessions and ssbm-rs's traces of them: the trace's
-//! ticks align with the recording's reads, power-on runs through the memory card scene to the
-//! opening movie's first unported function, the card sessions' scene answers each card's
+//! ticks align with the recording's reads, power-on runs through the memory card scene, the
+//! opening movie and the title to the main menu's mode, the card sessions' scene answers each card's
 //! state, a session taken up from a trace tick plays on with the recording's reads, and each
 //! deliberate difference is caught where it should be.
 //!
@@ -65,8 +65,10 @@ fn ticks_align_with_reads() {
     );
 }
 
+/// The memory card scene, the opening movie skipped with Start, and the title, whose Start
+/// at tick 272 asks for the main menu.
 #[test]
-fn power_on_runs_to_the_opening_movie() {
+fn power_on_runs_to_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
         return;
     };
@@ -75,7 +77,29 @@ fn power_on_runs_to_the_opening_movie() {
         "{out}"
     );
     assert!(
-        out.contains("2 ticks compared, no difference; stopped in tick 2: gm_Scene_Opening_OnEnter isn't ported"),
+        out.contains("273 ticks compared, no difference; stopped in tick 273: the main menu's mode (gmmenumode.c) isn't ported"),
+        "{out}"
+    );
+}
+
+/// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
+/// movie skipped, the title left to its attract loop, which starts the attract match.
+#[test]
+fn an_idle_title_reaches_the_attract_match() {
+    let trace = ssbm_rs_local("traces/session/idle-title.trc");
+    let inputs = ssbm_rs_local("lockstep/idle-sessions/idle-title.inputs");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--heap"]);
+    assert!(
+        out.contains(
+            "798 ticks compared, no difference; stopped in tick 798: onEnterVs isn't ported"
+        ),
         "{out}"
     );
 }
@@ -189,7 +213,8 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 
 /// The clock at power-on reaches the boot's seed, the save's clock and the timeline's alarm
 /// grid; DTV on, with nothing held, still boots into the memory card scene; mono from the
-/// SRAM. Clean to the opening movie, as a version 1 session.
+/// SRAM; the title's draws by the clock's seconds. Clean through the movie and the title to
+/// the attract match.
 #[test]
 fn a_version_2_session_takes_its_console() {
     for name in ["clock", "clock-late"] {
@@ -198,7 +223,9 @@ fn a_version_2_session_takes_its_console() {
         };
         assert!(out.contains("the session: version 2"), "{name}: {out}");
         assert!(
-            out.contains("2 ticks compared, no difference; stopped in tick 2: gm_Scene_Opening_OnEnter isn't ported"),
+            out.contains(
+                "898 ticks compared, no difference; stopped in tick 898: onEnterVs isn't ported"
+            ),
             "{name}: {out}"
         );
     }
@@ -216,8 +243,9 @@ fn a_version_2_session_catches_a_dropped_clock() {
     );
 }
 
-/// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, where
-/// melee-hd's port stops.
+/// DTV on and B held at power-on: the progressive scan prompt's mode, as the trace's, its
+/// yes and the switch (the SRAM's write at tick 311), clean through the prompt; the memory
+/// card scene after it differs in its first tick (open, docs/oracle.md).
 #[test]
 fn a_version_2_session_asks_for_progressive_scan() {
     let Some(out) = v2_session("progressive", &[]) else {
@@ -228,9 +256,7 @@ fn a_version_2_session_asks_for_progressive_scan() {
         "{out}"
     );
     assert!(
-        out.contains(
-            "stopped in the boot, before trace tick 0: game mode 0x27's loading isn't ported"
-        ),
+        out.contains("712 ticks compared; tick 711 differs"),
         "{out}"
     );
 }

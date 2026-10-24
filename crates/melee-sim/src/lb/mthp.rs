@@ -434,8 +434,9 @@ impl Audio {
     pub fn tb_read(&mut self) -> u64 {
         let now = self.hw_now();
         self.hw.spent += crate::game::session::TB_READ;
-        // The code's time base counts from the clock at power-on (`Clock::code_time`).
-        now.wrapping_add(self.clock.as_ref().map_or(0, |c| c.tb_power_on))
+        // The code's time base counts from the clock at power-on (`Clock::code_time`; the
+        // clock is out of `self` while a handler runs, so the setup's copy).
+        now.wrapping_add(self.power_on)
     }
 
     /// `OSGetTick`: the time base's low word.
@@ -565,7 +566,7 @@ impl Audio {
         // `fn_8001F294`'s spin: a wait point each spin until the read's callback has run.
         if self.movie.in_flight != 0 {
             self.with_clock(data, |c, f| {
-                c.spin_until(f, crate::audio::clock::Wait::MovieIdle)
+                c.wait_until(f, crate::audio::clock::Wait::MovieIdle)
             });
         }
         self.movie_alarm_cancel();

@@ -171,7 +171,23 @@ fn check_info(ctx: &Ctx, ours: &FileInfo, what: &str) {
         "{what}: quantization tables"
     );
     t.quant_tabs = ours.quant_tabs;
-    assert_eq!(t, *ours, "{what}: the work area");
+    // The planes' addresses: the reference's buffers, where melee-sim's planes are its own.
+    t.tile = ours.tile;
+    if t != *ours {
+        // Where the two first part, field by field in their debug form.
+        let (a, b) = (format!("{t:?}"), format!("{ours:?}"));
+        let at = a
+            .bytes()
+            .zip(b.bytes())
+            .position(|(x, y)| x != y)
+            .unwrap_or(0);
+        let from = a[..at].rfind(", ").map_or(0, |i| i + 2);
+        panic!(
+            "{what}: the work area: theirs …{}…, ours …{}…",
+            &a[from..(at + 40).min(a.len())],
+            &b[from..(at + 40).min(b.len())]
+        );
+    }
 }
 
 /// Decodes `frames` of `file` on both sides and compares, one reference per call.
@@ -220,13 +236,26 @@ fn run(name: &str, file: &[u8], frames: &[(usize, usize)]) {
             u: vec![0; usize::from(w) * usize::from(h) / 4],
             v: vec![0; usize::from(w) * usize::from(h) / 4],
         };
-        fns::THPDec_80331340(
-            &ctx,
-            handle(&ctx, WORK),
-            handle(&ctx, PY),
-            handle(&ctx, PU),
-            handle(&ctx, PV),
-        );
+        // As `fn_8001EF5C` picks: the 640-wide path for a 640-wide movie, else the general
+        // one with the width.
+        if w == 640 {
+            fns::THPDec_80331340(
+                &ctx,
+                handle(&ctx, WORK),
+                handle(&ctx, PY),
+                handle(&ctx, PU),
+                handle(&ctx, PV),
+            );
+        } else {
+            fns::THPDec_803313D0(
+                &ctx,
+                handle(&ctx, WORK),
+                handle(&ctx, PY),
+                handle(&ctx, PU),
+                handle(&ctx, PV),
+                u32::from(w),
+            );
+        }
         thp::decompress(&mut info, rec, u32::from(w), &mut planes);
         check_info(&ctx, &info, &format!("{what}, decoded"));
         for (plane, at, ours) in [

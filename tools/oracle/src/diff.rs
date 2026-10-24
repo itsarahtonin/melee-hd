@@ -131,6 +131,15 @@ impl Files<'_> {
         }
     }
 
+    /// The archives the session has loaded by name, as it stands now: a scene's files loaded
+    /// after the boot (the memory card scene's after the progressive scan prompt) are found
+    /// where the original loads them too.
+    pub(crate) fn set_named(&mut self, named: &[(String, ArchiveId)]) {
+        if self.named.len() != named.len() {
+            self.named = named.to_vec();
+        }
+    }
+
     /// The archives in memory as the image holds it now, with `check` also scanned whole and
     /// compared (`--check-rescan`).
     pub(crate) fn refresh(

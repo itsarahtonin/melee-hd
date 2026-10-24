@@ -35,6 +35,9 @@ pub enum Dynamic {
     /// Data of the executable the GPU reads, by its address there (the particles' texture
     /// coordinates).
     Dol(u32),
+    /// The movie player's planes (`MoviePlayer.unk_50`, `unk_54`, `unk_58`): luma, then the
+    /// two chroma planes, as the last frame decoded them.
+    Movie(u8),
 }
 
 #[derive(Default)]

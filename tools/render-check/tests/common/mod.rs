@@ -36,6 +36,9 @@ pub enum Replay {
     /// One of milestone 4's oracle matches, `$SSBM_RS_LOCAL/bench/oracle-m4/NAME.slp`, played
     /// in the console's float mode.
     Oracle(&'static str),
+    /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
+    /// NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's float mode.
+    Session(&'static str),
 }
 
 impl Replay {
@@ -43,6 +46,9 @@ impl Replay {
         match self {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
+            Replay::Session(name) => {
+                ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs")).into()
+            }
             Replay::Slippi(rel, var) => var
                 .and_then(std::env::var_os)
                 .map_or_else(|| slippi_replays(rel).into(), PathBuf::from),
@@ -51,6 +57,16 @@ impl Replay {
 
     fn slippi(self) -> bool {
         matches!(self, Replay::Slippi(..))
+    }
+
+    /// How many frames ssbm-rs's log frame N comes after the native frame it draws: a
+    /// replay's match starts its frames 3 before ssbm-rs's log does; a session's native frames
+    /// count from its first render, the log's from power-on's first copy.
+    fn log_offset(self) -> u32 {
+        match self {
+            Replay::Session(_) => SESSION_LOG_OFFSET,
+            _ => 3,
+        }
     }
 }
 
@@ -198,12 +214,18 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
         );
     }
     let id = format!("{}-f{frame:05}", game.name);
-    let native = frame - 3;
+    let native = frame - game.replay.log_offset();
     let started = Instant::now();
-    // The log's first frame is native frame N - 3 (asserted below), so a search of two
-    // frames either way finds it.
+    // The log's first frame is native frame N - 3 for a replay (asserted below), so a search of
+    // two frames either way finds it. A session's frames can't be told apart by where their
+    // draws sit (the movie's one sprite), so it takes the frame as it stands.
+    let search = if matches!(game.replay, Replay::Session(_)) {
+        "0"
+    } else {
+        "2"
+    };
     let out = command(game, &id)
-        .env("CHECK_SEARCH", "2")
+        .env("CHECK_SEARCH", search)
         .arg("compare")
         .arg(disc())
         .arg(&replay)
@@ -350,7 +372,7 @@ fn scaled_as(
         .arg("scaled")
         .arg(disc())
         .arg(&replay)
-        .arg((frame - 3).to_string())
+        .arg((frame - game.replay.log_offset()).to_string())
         .output()
         .expect("melee-render-check runs");
     let seconds = started.elapsed().as_secs_f64();
@@ -393,6 +415,28 @@ fn scaled_as(
         panic!("{f}");
     }
 }
+
+/// How far a session's log frames run ahead of its native frames ([`Replay::log_offset`]):
+/// ssbm-rs's log frame 300 of `idle-movie` is its native frame 299 (the movie's frames,
+/// each shown two ticks, match there and at 300 against 301 only).
+const SESSION_LOG_OFFSET: u32 = 1;
+
+/// The opening movie played whole, nothing pressed (`idle-movie`): the movie's frames, the
+/// title's mark and logo flash over it.
+pub const IDLE_MOVIE: Game = Game {
+    stage: "Opening movie",
+    name: "idle-movie",
+    players: "the opening movie (session idle-movie)",
+    replay: Replay::Session("idle-movie"),
+};
+
+/// The title screen left idle to its attract match (`idle-title`).
+pub const IDLE_TITLE: Game = Game {
+    stage: "Title",
+    name: "idle-title",
+    players: "the title screen (session idle-title)",
+    replay: Replay::Session("idle-title"),
+};
 
 pub const FOX_FOX_FD: Game = Game {
     stage: "Final Destination",

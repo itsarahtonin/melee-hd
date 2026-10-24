@@ -16,8 +16,8 @@ mod common;
 
 use common::{
     Capture, Expect, FLAT_ZONE, FOUR_FD, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
-    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, POKE_FLOATS, SHEIK_FOX_FOD, compare,
-    compare_in, scaled,
+    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, Game, Group, IDLE_MOVIE, IDLE_TITLE, POKE_FLOATS,
+    SHEIK_FOX_FOD, compare, compare_in, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -56,6 +56,19 @@ frames!(FOX_MARTH_BF;
 frames!(FOX_MARTH_FD;
     fox_marth_fd_600 600,
     fox_marth_fd_6000 6000,
+);
+// The opening movie (its frames as `lbMthp` decodes them, the title's mark over them at 470,
+// the logo's flash at 960) and the title screen, from power-on in a recorded session.
+frames!(IDLE_MOVIE;
+    movie_300 300,
+    movie_470 470,
+    movie_960 960,
+    movie_3000 3000,
+    movie_6000 6000,
+);
+frames!(IDLE_TITLE;
+    title_300 300,
+    title_700 700,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

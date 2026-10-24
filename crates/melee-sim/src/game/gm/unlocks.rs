@@ -142,9 +142,8 @@ impl Running<'_> {
     #[doc(alias = "un_80304780")]
     pub fn trophy_unlocks(&mut self) {
         self.game.sync_unlocks();
-        for selkind in 0..25 {
+        for (selkind, &ck) in SELKIND_TO_CKIND.iter().enumerate().take(25) {
             let n = self.game.game_data.thing.save_data.unk_30.x18[selkind];
-            let ck = SELKIND_TO_CKIND[selkind];
             for (min, mode) in [(100, GM_CLASSIC), (200, GM_ADVENTURE), (300, GM_ALLSTAR)] {
                 if n >= min {
                     self.give_record_trophy(mode_trophy(ck, mode));

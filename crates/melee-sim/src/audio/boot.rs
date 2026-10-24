@@ -71,8 +71,14 @@ impl BootTimes {
     /// waits for the next retrace and then until the preload cache has read every file, and
     /// makes its audio calls this long after the last read's interrupt, if it waited for it
     /// (at a drive's pace; at the fast disc speed the files are in by the retrace, and the
-    /// calls come just after it, 6,081,107 into the boot).
-    pub const PLAYBACK_AFTER_PRELOADS: u64 = 40;
+    /// calls come just after it, 6,081,107 into the boot). Fitted: with it the song's first
+    /// read (0x20 bytes) starts at ssbm-rs's time (`DVD_TIMELINE`, the Fox–Marth drive boot:
+    /// 119,094,894), and the boot's state compares exactly. ssbm-rs's playback scene has
+    /// that read queued before the last preload's end, its handler starting it; melee-sim's
+    /// preload reads from the boot's 200th on come 24 early (the music stream's last relay
+    /// read hands the next read on 32 later in ssbm-rs than here), which this takes up. 40
+    /// until 2026-10-23, when a read from the game's code went out 8 into its request.
+    pub const PLAYBACK_AFTER_PRELOADS: u64 = 24;
     /// `main`'s `OSGetTick` for the random seed, after HSD's setup and before the audio
     /// setup (a console's boot: the seed is the time base's low word then).
     pub const SEED: u64 = Self::INIT - 9_288;

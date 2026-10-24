@@ -27,8 +27,10 @@ pub struct MainLib {
     pub xc: bool,
     pub x10: u32,
     /// The video mode the game last set (`HSD_VISetConfigure`): progressive, and with the
-    /// deflicker filter. Not memory of the game's: the presentation shows it.
-    pub video: (bool, bool),
+    /// deflicker filter (the copy to the XFB's vertical filter). Not memory of the game's:
+    /// the presentation draws by it. None until a ported scene sets it (a replay's match:
+    /// the save's default, interlaced with the filter).
+    pub video: Option<(bool, bool)>,
 }
 
 impl MainLib {

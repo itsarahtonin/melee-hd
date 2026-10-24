@@ -219,6 +219,7 @@ impl Running<'_> {
     #[doc(alias = "gm_GetAllGameModes")]
     pub fn start_modes(&mut self, dtv: bool, progressive: bool) {
         self.game.machine = super::machine::Machine::default();
+        self.game.gm.sram_progressive = progressive;
         self.modes_on_init();
         // `VIGetDTVStatus` reads the video interface's register.
         self.game

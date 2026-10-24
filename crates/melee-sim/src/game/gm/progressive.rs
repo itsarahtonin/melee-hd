@@ -15,6 +15,11 @@ use crate::hsd::sis::TextId;
 /// `gm_Scene_ProgScan_OnEnter` and `gm_Scene_ProgScan_OnFrame`.
 pub const ON_ENTER: CodeRef = CodeRef(0x801A_D874);
 pub const ON_FRAME: CodeRef = CodeRef(0x801A_D620);
+/// The SRAM's write to the real-time clock (`__OSUnlockSram(TRUE)`'s `WriteSram`, its EXI
+/// transfers' register reads): 288 time base ticks in ssbm-rs (the `progressive` session's
+/// tick 311, `AUDIO_TIMELINE`: the tick's game code 304 ticks from its start to its end, 16
+/// otherwise).
+const SRAM_WRITE: u64 = 288;
 
 /// `gm_80480D70`, the prompt's statics, and the mode's enter and exit data
 /// (`gm_804D6938`, `gm_804D693C`).
@@ -151,6 +156,7 @@ impl Running<'_> {
             if p.switch_ticks == 0xB {
                 self.game.main_lib.progressive = true;
                 self.reset_video_mode();
+                self.os_set_progressive_mode(true);
             } else if p.switch_ticks == 0x6E {
                 self.game.prog_scan.answer = 1;
                 self.prog_scan_show(4);
@@ -236,8 +242,20 @@ impl Running<'_> {
     /// progressive as the console shows (`HSD_VISetConfigure`, the platform's video: the
     /// presentation takes the mode).
     #[doc(alias = "gmMainLib_8015F588")]
+    /// `OSSetProgressiveMode`: the SRAM's progressive scan flag set to `on`, written back to
+    /// the real-time clock's SRAM when it changes (`__OSUnlockSram(TRUE)`, interrupts off
+    /// through the EXI transfers: `SRAM_WRITE`).
+    #[doc(alias = "OSSetProgressiveMode")]
+    pub fn os_set_progressive_mode(&mut self, on: bool) {
+        if self.game.gm.sram_progressive == on {
+            return;
+        }
+        self.game.gm.sram_progressive = on;
+        self.game.audio.clock_read(self.data, SRAM_WRITE);
+    }
+
     pub fn set_video_mode(&mut self, deflicker: bool) {
-        self.game.main_lib.video = (self.game.main_lib.progressive, deflicker);
+        self.game.main_lib.video = Some((self.game.main_lib.progressive, deflicker));
     }
 
     /// `gmMainLib_8015F500`: the video mode the save's deflicker option asks for.

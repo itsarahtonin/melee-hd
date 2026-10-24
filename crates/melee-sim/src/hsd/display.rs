@@ -104,6 +104,9 @@ pub enum Draw {
     FighterJoint { jobj: JObjId, vmtx: Option<Mtx34> },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
+    /// The current camera's viewport erased, color and depth, to the erase color set before
+    /// it (`HSD_CObjEraseScreen(cobj, 1, 0, 1)`, the title's erase camera).
+    EraseWithDepth,
     /// The sprites' camera's setup (`HSD_SObjLib_803A54EC`): the position matrix from its
     /// view, two texture coordinates from the first, and a white register channel.
     SpriteSetup,

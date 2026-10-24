@@ -349,7 +349,7 @@ impl Running<'_> {
         if d {
             let draws = &mut self.game.objs.display.draws;
             draws.push(crate::hsd::display::Draw::EraseColor(rgba));
-            draws.push(crate::hsd::display::Draw::Erase);
+            draws.push(crate::hsd::display::Draw::EraseWithDepth);
             crate::hsd::display::camera_end(&mut self.game.objs);
         }
     }

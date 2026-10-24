@@ -348,10 +348,10 @@ fn read_quantization_table(info: &mut FileInfo, data: &[u8]) {
             q[usize::from(n)] = fp::frsp(f64::from(info.take(data)));
         }
         info.valid_quant_tabs |= (1u32 << id) as u8;
-        for row in 0..8 {
-            for col in 0..8 {
+        for (row, &r) in AAN_SCALE.iter().enumerate() {
+            for (col, &c) in AAN_SCALE.iter().enumerate() {
                 let i = row * 8 + col;
-                let v = fp::frsp(fp::fmul(AAN_SCALE[col], fp::fmul(q[i], AAN_SCALE[row])));
+                let v = fp::frsp(fp::fmul(c, fp::fmul(q[i], r)));
                 info.quant_tabs.0[id][i] = f32::from_bits(fp::stfs(v));
             }
         }
@@ -656,8 +656,9 @@ impl Scan<'_> {
     }
 }
 
-/// The IDCT's constants as `lfs` loads them, both lanes (the original's digits).
-#[allow(clippy::excessive_precision)]
+/// The IDCT's constants as `lfs` loads them, both lanes (the original's digits; `cc4` is
+/// the SDK's literal for the square root of two).
+#[allow(clippy::excessive_precision, clippy::approx_constant)]
 fn cc4() -> Ps {
     Ps::splat(f64::from(1.414213562f32))
 }
@@ -883,9 +884,8 @@ fn idct_columns(ws: &[f32; 64], out: &mut [u8], base: usize, wid: usize) {
 }
 
 /// `__THPInverseDCTNoYPos` (`y8` false) and `__THPInverseDCTY8`: a block into the MCU row's
-/// buffer at texel column `x`, in its first eight rows or its second.
-#[doc(alias = "__THPInverseDCTNoYPos")]
-#[doc(alias = "__THPInverseDCTY8")]
+/// buffer at texel column `x`, in its first eight rows or its second. (Both are inlined:
+/// the executable has no symbol for them.)
 fn inverse_dct(block: &[i16; 64], q: &[f32; 64], x: u32, y8: bool, out: &mut [u8], wid: u32) {
     let mut ws = [0f32; 64];
     idct_rows(block, q, &mut ws);
@@ -904,7 +904,6 @@ fn inverse_dct(block: &[i16; 64], q: &[f32; 64], x: u32, y8: bool, out: &mut [u8
 #[doc(alias = "__THPHuffDecodeDCTCompY")]
 #[doc(alias = "__THPHuffDecodeDCTCompU")]
 #[doc(alias = "__THPHuffDecodeDCTCompV")]
-#[doc(alias = "__THPHuffDecodeTab")]
 pub fn decompress(info: &mut FileInfo, data: &[u8], width: u32, planes: &mut Planes) {
     prep_bit_stream(info, data);
     let (yw, cw) = if width == 640 {

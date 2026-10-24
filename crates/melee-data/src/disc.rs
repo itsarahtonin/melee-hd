@@ -88,7 +88,7 @@ impl Disc {
         let fst = meta.fst().map_err(DiscError::InvalidFst)?;
         fst.find(path)
             .filter(|(_, node)| node.is_file())
-            .map(|(i, node)| (i as i32, node.length() as u32))
+            .map(|(i, node)| (i as i32, node.length()))
             .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))
     }
 
