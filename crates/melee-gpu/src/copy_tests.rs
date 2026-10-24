@@ -146,6 +146,7 @@ fn check_case(
         width: r.width,
         height: r.height,
         footprint: f,
+        scaled: None,
     };
     // The texture the GPU copy holds: the decoder's reading of the encoder's bytes, its rows
     // of blocks laid end to end as the decoder expects.

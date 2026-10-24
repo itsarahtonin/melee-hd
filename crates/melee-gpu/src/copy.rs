@@ -23,6 +23,9 @@ struct Params {
     yuv: u32,
     six: u32,
     pad: [u32; 2],
+    /// Texels for each of the copy's in each direction ([`Copier::copy`]'s `factor`).
+    factor: u32,
+    pad2: [u32; 3],
 }
 
 /// A copy to make on the GPU: where it goes and the texture it makes there.
@@ -111,6 +114,8 @@ pub(crate) fn request(state: &State, value: u32) -> Option<Request> {
             yuv: u32::from(bits(value, 15, 1) != 0 && bits(value, 16, 1) != 0),
             six: u32::from(pixel_format == 1),
             pad: [0; 2],
+            factor: 1,
+            pad2: [0; 3],
         },
         format,
         width: (bits(wh, 0, 10) >> half) + 1,
@@ -239,6 +244,10 @@ pub(crate) struct Copied {
     pub width: u32,
     pub height: u32,
     pub footprint: Footprint,
+    /// At a render scale above 1, the same copy at that scale, which draws sample
+    /// ([`Copier::copy`]): its texture and the scale. `id`'s texture at the game's size is
+    /// what reads back to memory.
+    pub scaled: Option<(u32, u32)>,
 }
 
 pub(crate) struct Copier {
@@ -351,7 +360,12 @@ impl Copier {
         self.group = copier_group(device, &self.layout, efb, &self.params);
     }
 
-    /// Makes the copy into `target`, after everything already submitted.
+    /// Makes the copy into `target`, `factor` texels for each of the copy's in each direction,
+    /// after everything already submitted. At a factor of 1 each texel is the block of scaled
+    /// pixels at a console pixel, averaged, as the game's copy is; at the EFB's scale each is
+    /// one scaled pixel (a part of one where the EFB is narrower than the scale's 640 columns),
+    /// put through the same format's quantization.
+    #[allow(clippy::too_many_arguments)]
     pub fn copy(
         &self,
         device: &wgpu::Device,
@@ -359,12 +373,14 @@ impl Copier {
         target: &wgpu::TextureView,
         request: &Request,
         (scale, width): (u32, u32),
+        factor: u32,
         time: Option<crate::gpu_time::PassTime>,
     ) {
         let mut params = request.params;
         // The EFB's scale and its width for the console's 640: each texel reads the block of
         // scaled pixels at it.
         params.pad = [scale, width];
+        params.factor = factor;
         queue.write_buffer(&self.params, 0, bytemuck::bytes_of(&params));
         let mut encoder = device.create_command_encoder(&Default::default());
         {
