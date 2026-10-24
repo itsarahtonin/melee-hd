@@ -400,25 +400,39 @@ fn menu_session(name: &str, args: &[&str]) -> Option<String> {
 }
 
 /// The main menu toured: every list `menu-tour` visits, the camera, the restart, the save
-/// written as it opens. Its tick 383 ends early on the save's fitted writes, so with the
-/// timeline set aside it runs to B's return to the title, where an ARAM request the bank's
-/// move queues isn't linked as the trace's is.
+/// written as it opens (tick 383: each sector an erase and 64 page programs, all inside the
+/// step's call, `CardChain::Write`), timeline included, to B's return to the title, where an
+/// ARAM request the bank's move queues isn't linked as the trace's is.
 #[test]
 fn the_main_menu_toured() {
     let Some(out) = menu_session("menu-tour", &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains("384 ticks compared; tick 383 differs in 1 places, first: timeline"),
-        "{out}"
-    );
-    let Some(out) = menu_session("menu-tour", &["--heap", "--ignore", "timeline"]) else {
-        return;
-    };
-    assert!(
         out.contains(
             "3941 ticks compared; tick 3940 differs in 1 places, first: audio: devComARQR[0][1]"
         ),
+        "{out}"
+    );
+}
+
+/// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
+/// directory sector, runs as a page's card interrupt returns, and goes ahead of the next
+/// page's (tick 152), to the Event list.
+#[test]
+fn a_save_written_through_an_audio_frame() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_16-58-24.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_16-58-24.inputs");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--heap"]);
+    assert!(
+        out.contains("336 ticks compared, no difference; stopped in tick 336: mnEvent_8024E838"),
         "{out}"
     );
 }

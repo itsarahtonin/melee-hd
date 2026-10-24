@@ -177,19 +177,19 @@ impl Audio {
         self.with_clock(data, |c, f| c.pass(ticks, f));
     }
 
-    /// Register reads of the game's ([`clock::Clock::reg_reads`]).
     /// The save's writer's card work outside the game's waits (a scene's end finishing it).
     pub fn clock_card_work(&mut self, data: &Archives, work: clock::CardWork) {
         self.with_clock(data, |c, f| c.card_work(work, f));
     }
 
+    /// Register reads of the game's ([`clock::Clock::reg_reads`]).
     pub fn clock_reg_reads(&mut self, data: &Archives, reads: u64) {
         self.with_clock(data, |c, f| c.reg_reads(reads, f));
     }
 
-    /// A memory card transfer's chain of segments ([`clock::Clock::card_chain`]).
-    pub fn clock_card_chain(&mut self, data: &Archives, first: u64, segments: u32, tail: u64) {
-        self.with_clock(data, |c, f| c.card_chain(first, segments, tail, f));
+    /// A memory card transfer's interrupt chain ([`clock::Clock::card_chain`]).
+    pub fn clock_card_chain(&mut self, data: &Archives, chain: clock::CardChain) {
+        self.with_clock(data, |c, f| c.card_chain(chain, f));
     }
 
     /// A wait point of the game's ([`clock::Clock::wait_point`]).

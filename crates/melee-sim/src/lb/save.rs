@@ -13,7 +13,7 @@
 
 use std::cell::RefCell;
 
-use crate::audio::clock::{CardWork, TB_HZ};
+use crate::audio::clock::{CARD_ERASE, CARD_STAMP, CardChain, CardWork, TB_HZ};
 
 use melee_save::tasks::{Run, Task, lists};
 use melee_save::{Card, Clock, Console};
@@ -272,6 +272,39 @@ pub const BLOCK_SEGMENTS: u32 = 16;
 /// The block's last segment's handler: the deselect and `BlockReadCallback`'s callbacks into
 /// the HSD layer.
 pub const BLOCK_TAIL: u64 = 64;
+/// A block's read from its step.
+const BLOCK_READ: CardChain = CardChain::Read {
+    first: BLOCK_FIRST,
+    segments: BLOCK_SEGMENTS,
+    tail: BLOCK_TAIL,
+};
+/// The mount's reads, `font` the font encoding's read with the tail ([`MOUNT_TAIL`]).
+fn mount_read(font: u64) -> CardChain {
+    CardChain::Read {
+        first: MOUNT_FIRST,
+        segments: MOUNT_SEGMENTS,
+        tail: MOUNT_TAIL + font,
+    }
+}
+/// A sector the save's list writes from its step (`CARDWriteAsync` of 0x2000 bytes, with
+/// interrupts off): its erase, its 64 pages, then from `CARDWrite`'s `WriteCallback` the file's
+/// directory entry stamped and the directory written (`__CARDUpdateDir`: its sector erased and
+/// programmed), all in the step's call, as ssbm-rs's probe of a save's writes logs each one
+/// (40,480 ticks with nothing due, `local/research/card-chain/write-*.log`). No table is
+/// written: a write's blocks are already the file's (`__CARDUpdateFatBlock` runs for a create
+/// or a delete).
+pub const SECTOR_WRITE: CardChain = CardChain::Write {
+    first: CARD_ERASE,
+    sectors: 2,
+};
+/// A status set from its step (`CARDSetStatusAsync`, with interrupts off): the file's
+/// directory entry stamped and the directory's sector erased, then programmed. Counted from
+/// ssbm-rs's ports (the call reads nothing else of the hardware), with each part's time a
+/// save's writes take; no session's save sets a status yet, as each one's header is intact.
+pub const STATUS_SET: CardChain = CardChain::Write {
+    first: CARD_STAMP + CARD_ERASE,
+    sectors: 1,
+};
 /// `CARDUnmount` at a list's end (`DoUnmount`: the channel's callback cleared and the channel
 /// detached), with interrupts off: 24 in every list ssbm-rs's probe logs (the intact, no-file
 /// and broken cards' loads, and the scene's probe).
@@ -301,26 +334,6 @@ impl CardTime {
     }
 }
 
-/// Register reads of a sector the save's list writes (a sector's erase and its 64 page
-/// programs, each page two interrupts), after its step's wait point: fitted to the menu
-/// sessions' traces (`docs/saves.md`), to be replaced by a probe of a save's writes. With the
-/// write's waits ([`SAVE_WRITE_WAITS`]) the recorded sessions that save compare clean through
-/// the main menu with none; 323 (a block's read before reads were chains) makes
-/// `2026-10-06_17-44-10`'s tick 274 end 2,239 ticks early.
-pub const SAVE_WRITE_WORK: u64 = 0;
-/// The waits a sector the save's list writes takes, its step's the first: fitted to the menu
-/// sessions' traces (`docs/saves.md`), to be replaced by a probe of a save's writes. With two,
-/// `2026-10-06_17-44-10`'s tick 274 ends 2,239 ticks early and `2026-10-06_12-42-06`'s tick
-/// 163 has the writer done (`x10`) before the trace's; with four, 12-42-06's tick 163 ends
-/// 2,239 ticks early. ssbm-rs's step log (`CARD_STEPS`) shows no step for the waits between,
-/// where the HSD layer is still busy (the erase's interrupt, then the programs').
-pub const SAVE_WRITE_WAITS: usize = 3;
-/// Register reads of a file's status set or a file created in the save's list (a directory's
-/// write): fitted to the menu sessions' traces (`docs/saves.md`), to be replaced by a probe of
-/// a save's writes. The save's list sets no status and creates nothing while its file is
-/// intact.
-pub const SAVE_OTHER_WORK: u64 = 0;
-
 /// A step of the save's list at one of the game's waits: its wait point, then `work`.
 fn step(work: CardWork) -> CardWork {
     CardWork { step: true, ..work }
@@ -333,8 +346,8 @@ fn step(work: CardWork) -> CardWork {
 /// `lbCardNew_CompleteNextTask`: the check's and the open's (no transfer, as a load's); each
 /// sector transfer after its wait point (a request starts in the call that issues its first
 /// transfer, and a later request of the same task in the call its previous one ends in; a
-/// read is a chain of segments, as a load's blocks, a write [`SAVE_WRITE_WORK`] over
-/// [`SAVE_WRITE_WAITS`]); between two tasks, the call that sees the first's last transfer
+/// read is a chain of segments, as a load's blocks, a write [`SECTOR_WRITE`] and a status
+/// set [`STATUS_SET`], each ending in its call); between two tasks, the call that sees the first's last transfer
 /// done, runs its callbacks and starts the next (`executeNextTask`, whose requests the HSD
 /// layer takes up at its next call); and the list's end, the call that sees its last transfer
 /// done, runs the callbacks and unmounts the card ([`UNMOUNT`]).
@@ -365,21 +378,18 @@ fn save_steps(run: &Run) -> (Vec<CardWork>, Vec<(usize, usize, i32)>) {
                 }
             }
             b'q' => {}
-            b'r' => steps.push(step(CardWork {
-                chain: Some((BLOCK_FIRST, BLOCK_SEGMENTS, BLOCK_TAIL)),
+            b'r' | b'w' | b's' => steps.push(step(CardWork {
+                chain: Some(match c {
+                    b'r' => BLOCK_READ,
+                    b'w' => SECTOR_WRITE,
+                    _ => STATUS_SET,
+                }),
                 ..CardWork::default()
             })),
-            b'w' => {
-                steps.push(step(CardWork {
-                    reads: SAVE_WRITE_WORK,
-                    ..CardWork::default()
-                }));
-                steps.extend(std::iter::repeat_n(idle, SAVE_WRITE_WAITS - 1));
-            }
-            _ => steps.push(step(CardWork {
-                reads: SAVE_OTHER_WORK,
-                ..CardWork::default()
-            })),
+            b'c' => unported_call(
+                "a file the save's list creates (CARDCreateAsync's table and directory writes)",
+            ),
+            other => unreachable!("the HSD layer's log entry {:?}", other as char),
         }
     }
     steps.push(step(CardWork {
@@ -514,7 +524,7 @@ impl Writer {
             dev.font_encode_known |= read;
             if read { EXI_READ } else { 0 }
         });
-        work.chain = Some((MOUNT_FIRST, MOUNT_SEGMENTS, MOUNT_TAIL + font));
+        work.chain = Some(mount_read(font));
         (self.steps, self.results) = save_steps(&run);
         self.done = Some((r, true));
         work
@@ -694,11 +704,11 @@ impl Running<'_> {
                 if read { EXI_READ } else { 0 }
             });
             let a = &mut self.game.audio;
-            a.clock_card_chain(self.data, MOUNT_FIRST, MOUNT_SEGMENTS, MOUNT_TAIL + font);
+            a.clock_card_chain(self.data, mount_read(font));
             for step in steps {
                 a.clock_wait(self.data);
                 if step == Step::Block {
-                    a.clock_card_chain(self.data, BLOCK_FIRST, BLOCK_SEGMENTS, BLOCK_TAIL);
+                    a.clock_card_chain(self.data, BLOCK_READ);
                 }
             }
             a.clock_read(self.data, UNMOUNT);
