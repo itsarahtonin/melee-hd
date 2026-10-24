@@ -1094,6 +1094,76 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/mn/main.rs` (`cursor_unhover`).
 
+### Hovering the item switch or the extra rules copies an unwritten byte into the menu's value
+
+- **Where:** `fn_8022F538` and `mn_80230E38` (`mnmainrule.c`), `fn_8023201C` and `mn_80233218` (`mnruleplus.c`); `crates/melee-sim/src/game/mn/rules.rs`, `rule_plus.rs`.
+- **Defect:** the rules' list data's bytes `x7` and `x8` (`indexed.values[5]` and `[6]`) and the extra rules' `x7` (`rule_values.values[5]`) are never written (the lists' setups write the rules and the stock count only), but hovering the item switch, the extra rules or the random stage switch, or coming back to a list from one of them, copies the hovered option's value from them into the menu's value (`mn_804A04F0.confirmed_selection`), which then holds what the heap block held there.
+- **Effect:** none observable: on those options left and right return before the value is read, the list's change test compares the byte with itself, A opens a screen that sets the value anew, and up and down set it from a written option.
+- **melee-hd:** stale (`RulesMenus::confirmed_stale`): the comparer leaves the value out while it holds the byte, and a read of it stops ([the engine notes](engine.md#uninitialized-values)).
+- **Fix:** write the bytes (zero) when a list is made.
+- **Fix impact:** none.
+- **Source:** [engine notes](engine.md#uninitialized-values).
+
+### An item's arrow starts from a register's leftover after the frequency
+
+- **Where:** `mnItemSw_8023453C` (`mnitemsw.c`), `crates/melee-sim/src/game/mn/item_switch.rs` (`items_update`).
+- **Defect:** moving from one item to another carries the hover arrow's frame over (`anim_val`, read from the old item's arrow); moving from the frequency to an item never sets it, so the new item's arrow starts at whatever `f30` held: the boot's 0.0, since nothing from `main` down to the process writes `f30`.
+- **Effect:** the arrow starts from its first frame there instead of carrying its place over; always the same, so nothing varies.
+- **melee-hd:** modeled (`item_switch::PROC_F30`).
+- **Fix:** start the arrow from its loop's start.
+- **Fix impact:** none (the same frame).
+- **Source:** [engine notes](engine.md#uninitialized-values).
+
+### The item switch's last bit spills into the mask's upper half
+
+- **Where:** `mn_8022E978` (`mnmain.c`), `crates/melee-sim/src/game/mn/item_switch.rs` (`set_item_enabled`).
+- **Defect:** shifts an `int` 1 by the item's bit and widens it to the preferences' 64-bit item mask, so bit 31 (the item in place 22) sign-extends: turning it on sets bits 31 to 63, turning it off clears them all.
+- **Effect:** none on play: the mask's readers (`gm_8016403C`, `fn_801640B0`, the VS start data's setup in `gm_1601.c`) read bits 0 to 31 only; the upper half goes into the save as it stands.
+- **melee-hd:** modeled.
+- **Fix:** shift a 64-bit 1.
+- **Fix impact:** the save's bytes only.
+- **Source:** `crates/melee-sim/src/game/mn/item_switch.rs` (`set_item_enabled`).
+
+### The item switch reads its texts from its freed user data
+
+- **Where:** `fn_80234C24` (`mnitemsw.c`), `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`).
+- **Defect:** at the end of its way out it frees its GObj, and with it its user data (`HSD_Free`), then reads its two texts from that data to free them.
+- **Effect:** none observable: nothing allocates in between, and the free leaves the block's words.
+- **melee-hd:** modeled (the texts read before the free).
+- **Fix:** read them before the free.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`).
+
+### New frees the names' description and keeps it
+
+- **Where:** `mnName_MainInput` (`mnname.c`), `crates/melee-sim/src/game/mn/names.rs` (`name_list_input`).
+- **Defect:** A on New frees the list's button description (`text2`) and leaves the pointer in the list's data.
+- **Effect:** none observable: the list goes as the keyboard comes in, and only a new hovered button frees the description again, which the list's process doesn't look for under the keyboard.
+- **melee-hd:** modeled: the handle kept as the original keeps its pointer, compared by the freed text.
+- **Fix:** clear the pointer.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/names.rs` (`name_list_input`).
+
+### Deleting a name moves the Multi-Man players' names twice
+
+- **Where:** `gmMainLib_8015DBF4` (`gmmain_lib.c`), `crates/melee-sim/src/game/mn/names.rs` (`name_deleted`).
+- **Defect:** adjusts the remembered players' name tags of each VS mode for the deleted name, but the Multi-Man mode's (`table[GmVsMode_Multiman]`) twice, first and again at the end.
+- **Effect:** after a name is deleted, a Multi-Man player set to the name after it ends with none, and one set to a later name moves two names down instead of one, so the Multi-Man setup offers a name other than the one chosen (milestone 6's mode). The other modes move one.
+- **melee-hd:** modeled.
+- **Fix:** drop the second call.
+- **Fix impact:** the Multi-Man setup's names after a deletion, which reach the match's name tags (presentation and the records).
+- **Source:** `crates/melee-sim/src/game/mn/names.rs` (`name_deleted`).
+
+### A name is the text library's format
+
+- **Where:** `mnName_80239A24`, `mnNameNew_KeySetup`, `mnNameNew_8023CE4C`, `mnNameNew_8023D130`, through `HSD_SisLib_803A6B98`; `crates/melee-sim/src/game/mn/names.rs` (`as_format`).
+- **Defect:** hands each name and glyph to the text library as its `vsnprintf` format with no arguments, so a `%` in one formats from registers and the stack.
+- **Effect:** none from the game's keyboard (Shift-JIS, none of whose bytes is `%`); a save edited elsewhere with a `%` in a name would print what the registers held, or fault.
+- **melee-hd:** stops.
+- **Fix:** format with `"%s"`.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/mn/names.rs` (`as_format`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1212,6 +1282,10 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The memory card prompt sized for the message before | `gm_801AF250`, `game/gm/memcard.rs` (`memcard_probe_prompt`) | Shows the "load the save?" message (7) in a window sized for message 6's line count; the two have the same count in both languages (3 in English, 2 in Japanese) | `crates/melee-sim/src/game/gm/memcard.rs` (`memcard_probe_prompt`) |
 | A trophy draw's guard one past its end | `Toy_80305058`, `game/gm/trophies.rs` (`draw_trophy_of_class`) | Resets a drawn index to 0 only when it exceeds the candidates' count, so an index equal to the count would read past them; `HSD_Randi(n)` is always below `n` | `crates/melee-sim/src/game/gm/trophies.rs` (`draw_trophy_of_class`) |
 | The trophy screens' notice count reads a stale class | `_Toy_80304D30`, `game/gm/trophies.rs` (`trophy_class_notices`) | Its last loop tests the class of the last trophy the first loop met (`x`) instead of each category's, so its count depends on that trophy; every caller drops the count | `crates/melee-sim/src/game/gm/trophies.rs` (`trophy_class_notices`) |
+| A rules list made coming in from neither side | `mn_80230E38` (`mnmainrule.c`), `mn_80233218` (`mnruleplus.c`), `game/mn/rules.rs`, `rule_plus.rs` | Takes its way in from an uninitialized pointer for state 2; every caller makes the list in state 1 or 3 (melee-hd stops) | `crates/melee-sim/src/game/mn/rules.rs` (`rules_list`) |
+| A name list button past Erase | `mnName_80238964` (`mnname.c`), `game/mn/names.rs` | Returns `f1` unset for an index other than New, Sort and Erase; its only caller passes those three (melee-hd stops) | `crates/melee-sim/src/game/mn/names.rs` (`name_button_frame`) |
+| The item switch left neither forward nor back | `fn_80234C24` (`mnitemsw.c`), `game/mn/item_switch.rs` | Takes its way out from an uninitialized pointer when the flow leaves it with neither the entering flag nor B; only B and the scene's end leave it (melee-hd stops) | `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`) |
+| The keyboard's OK set twice | `mnNameNew_8023E0D8` (`mnnamenew.c`), `game/mn/names.rs` | Sets the OK button's joint (`jobjs[5]`) for the hovered key being OK, then again for it being back (`0x32`), whose joint is `jobjs[3]`; the keyboard opens on a key, so both are 0 | `crates/melee-sim/src/game/mn/names.rs` (`keys_first_frames`) |
 | Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
 
 ## Unsure
