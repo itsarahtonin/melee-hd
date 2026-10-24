@@ -416,6 +416,27 @@ fn the_main_menu_toured() {
     );
 }
 
+/// `2026-10-06_17-37-52`'s save runs whole inside tick 211, and the pad alarm fires in its
+/// last step's wait point, before the unmount: its card probes find the channel still
+/// attached (24 ticks, not 56).
+#[test]
+fn a_save_ends_attached_until_its_unmount() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-37-52.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-37-52.inputs");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--heap"]);
+    assert!(
+        out.contains("289 ticks compared, no difference; stopped in tick 289: game mode 0x1b"),
+        "{out}"
+    );
+}
+
 /// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
 /// directory sector, runs as a page's card interrupt returns, and goes ahead of the next
 /// page's (tick 152), to the Event list.

@@ -392,8 +392,10 @@ fn save_steps(run: &Run) -> (Vec<CardWork>, Vec<(usize, usize, i32)>) {
             other => unreachable!("the HSD layer's log entry {:?}", other as char),
         }
     }
+    // The list's end task unmounts the card, detaching the channel after its wait point.
     steps.push(step(CardWork {
         ticks: UNMOUNT,
+        unmount: true,
         ..CardWork::default()
     }));
     (steps, results)
@@ -453,10 +455,6 @@ impl Writer {
                 }
             }
             self.next += 1;
-            // The list's last step unmounts the card (its end task), detaching the channel.
-            if self.next == self.steps.len() {
-                detach();
-            }
             return Some(w);
         }
         None

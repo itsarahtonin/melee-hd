@@ -288,16 +288,21 @@ pub trait Frames {
         let _ = now;
         None
     }
+    /// The save's list unmounted the card ([`CardWork::unmount`]), detaching slot A's channel.
+    fn card_unmounted(&mut self) {}
 }
 
 /// The save's writer's card work at one of the game's waits ([`Frames::game_wait`]), in
 /// order: a task step's wait point (`hsd_803AAA48`), time with interrupts off (a probe, the
-/// unmount), and a transfer's interrupt chain ([`Clock::card_chain`]).
+/// unmount), a transfer's interrupt chain ([`Clock::card_chain`]), and for the list's last
+/// step the unmount's detaching slot A's channel ([`Frames::card_unmounted`]), after the
+/// step's wait point: a pad alarm that fires in that wait still finds the channel attached.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CardWork {
     pub step: bool,
     pub ticks: u64,
     pub chain: Option<CardChain>,
+    pub unmount: bool,
 }
 
 /// One interrupt of a memory card transfer's chain: its OS interrupt ([`EXI0_EXI`] or
@@ -727,6 +732,9 @@ impl Clock {
         }
         if let Some(chain) = work.chain {
             self.card_chain(chain, f);
+        }
+        if work.unmount {
+            f.card_unmounted();
         }
     }
 
@@ -1204,6 +1212,14 @@ mod tests {
             .unwrap()
             .at;
         assert_eq!(ran, 277_514_794 + AI_LEAD + AUDIO_FRAME);
+        // Its handler starts then, not after the chain: the DSP's answer is due from it.
+        let dsp = c
+            .events
+            .iter()
+            .find(|e| e.kind == EventKind::DspResume)
+            .unwrap()
+            .at;
+        assert_eq!(dsp, 277_514_794 + AI_LEAD + AI_MAIL + DSP_FRAME);
         assert_eq!(c.now, 277_526_386);
     }
 

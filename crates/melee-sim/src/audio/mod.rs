@@ -301,6 +301,10 @@ impl clock::Frames for Running<'_> {
         self.audio.card_writer.wait(now)
     }
 
+    fn card_unmounted(&mut self) {
+        crate::lb::save::detach();
+    }
+
     fn done(&mut self, w: clock::Wait) -> bool {
         let b = &self.audio.synth.banks;
         match w {
