@@ -19,7 +19,7 @@ use common::{
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
     GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, MUSHROOM_KINGDOM,
-    MUSHROOM_KINGDOM_2, MUTE_CITY, ONETT, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
+    MUSHROOM_KINGDOM_2, MUTE_CITY, ONETT, OPTIONS_TOUR, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE,
     SHEIK_FOX_FOD, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, scaled,
 };
 
@@ -105,6 +105,19 @@ frames!(GALLERY;
     gallery_1400 1400,
     gallery_1960 1960,
     gallery_2400 2400,
+);
+// The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
+// Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase
+// Data's list (3800, 3880) and its warning (3700).
+frames!(OPTIONS_TOUR;
+    options_1100 1100,
+    options_2300 2300,
+    options_2790 2790,
+    options_2870 2870,
+    options_3080 3080,
+    options_3700 3700,
+    options_3800 3800,
+    options_3880 3880,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

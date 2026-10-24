@@ -511,6 +511,9 @@ impl<'a> Comparer<'a> {
             Some(UserData::MainMenuPanel(a)) => self.main_menu_panel(path, a, t),
             Some(UserData::GalleryList(a)) => self.gallery_list(path, a, t),
             Some(UserData::GalleryCursor(a)) => self.gallery_cursor(path, a, t),
+            Some(UserData::OptionMenu(a)) => self.option_menu(path, a, t),
+            Some(UserData::Vibration(a)) => self.vibration_data(path, a, t),
+            Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

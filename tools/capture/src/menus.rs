@@ -178,6 +178,7 @@ impl<'a> Comparer<'a> {
         self.opening_title();
         self.main_menu();
         self.gallery();
+        self.options();
         self.attract();
     }
 

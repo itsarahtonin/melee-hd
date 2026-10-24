@@ -37,8 +37,9 @@ pub enum Replay {
     /// in the console's float mode.
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
-    /// NAME.inputs` or `lockstep/menu-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in
-    /// the console's float mode.
+    /// NAME.inputs` or `lockstep/menu-sessions/NAME.inputs`, or for `options-NAME`
+    /// `lockstep/options-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's
+    /// float mode.
     Session(&'static str),
 }
 
@@ -48,6 +49,9 @@ impl Replay {
             Replay::Bench(name) => melee_local_data::bench_replay(name),
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("options-") {
+                    return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
+                }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
                     idle.into()
@@ -459,6 +463,16 @@ pub const GALLERY: Game = Game {
     name: "gallery",
     players: "the Data menu's movies (session gallery)",
     replay: Replay::Session("gallery"),
+};
+
+/// The Options menus toured (`options-sessions/tour`): the rumble screen's ports and names,
+/// the sound screen's balance, the screen options with the deflicker filter off, the language
+/// screen and erasing data.
+pub const OPTIONS_TOUR: Game = Game {
+    stage: "Main menu",
+    name: "options-tour",
+    players: "the Options menus (session options-sessions/tour)",
+    replay: Replay::Session("options-tour"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

@@ -111,6 +111,40 @@ impl gmm_x0 {
         }
     }
 
+    /// `IsNameValid`: whether name tag `slot` holds a name.
+    #[doc(alias = "IsNameValid")]
+    pub fn name_valid(&self, slot: i32) -> bool {
+        // `mnName_StringTerminator`: "".
+        self.name_tag_ref(slot as u8 as usize).namedata[0] != 0
+    }
+
+    /// `GetNameCount`: how many name tags hold names.
+    #[doc(alias = "GetNameCount")]
+    pub fn name_count(&self) -> i32 {
+        (0..NAMETAG_COUNT as i32)
+            .filter(|&i| self.name_valid(i))
+            .count() as i32
+    }
+
+    /// `GetNameText`: name tag `slot`'s name up to its terminator, none for an empty one.
+    #[doc(alias = "GetNameText")]
+    pub fn name_text(&self, slot: i32) -> Option<Vec<u8>> {
+        if !self.name_valid(slot) {
+            return None;
+        }
+        let d = self.name_tag_ref(slot as u8 as usize);
+        let bytes = d.namedata.iter().map(|&b| b as u8);
+        // A full name runs on into the fields after it, as a C string does.
+        let after = [d.x1A0 as u8, d.rumble_enabled, d.x1A2 as u8, 0];
+        Some(bytes.chain(after).take_while(|&b| b != 0).collect())
+    }
+
+    /// The name tag `slot`, to read.
+    pub fn name_tag_ref(&self, slot: usize) -> &NameTagData {
+        let s = slot as u8 as usize;
+        &self.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
+    }
+
     /// The name tag `slot` (`GetPersistentNameData`).
     pub fn name_tag(&mut self, slot: usize) -> &mut NameTagData {
         let s = slot as u8 as usize;
@@ -148,7 +182,7 @@ fn clear_stats(s: &mut GmStats) {
 
 /// `InitializePersistentNameData`: a name tag's records cleared.
 #[doc(alias = "InitializePersistentNameData")]
-fn clear_name_tag(d: &mut NameTagData) {
+pub(crate) fn clear_name_tag(d: &mut NameTagData) {
     d.vs_kos = [0; NAMETAG_COUNT];
     clear_stats(&mut d.stats);
     d.play_time_by_fighter = [0; SELKIND_COUNT];
@@ -156,7 +190,7 @@ fn clear_name_tag(d: &mut NameTagData) {
 }
 
 /// `ResetPersistentFighterData`: a character's KOs and statistics cleared.
-fn clear_fighter(d: &mut FighterData) {
+pub(crate) fn clear_fighter(d: &mut FighterData) {
     d.fighter_kos = [0; SELKIND_COUNT];
     clear_stats(&mut d.stats);
 }
@@ -168,14 +202,7 @@ impl Running<'_> {
     /// video mode as the reset save says (`lbAudioAx_80028690`, `gmMainLib_8015F500`).
     #[doc(alias = "gmMainLib_8015FBA4")]
     pub fn reset_game_data(&mut self, bank: &crate::lb::audio::SoundBank) {
-        *self.game.game_data = gmm_x0::default();
-        let d = &mut self.game.game_data;
-        d.set_language_setting(LANG_US);
-        d.set_saved_language(LANG_US);
-        d.x1850 = default_rules();
-        for i in 1..9 {
-            self.reset_card_file(i, true);
-        }
+        self.reset_game_data_fields();
         // Where ssbm-rs's clock has the boot reach the audio reset: a console's boot with a
         // card (the one with a boot delay) or without.
         let at = if self.game.audio.boot_delay != 0 {
@@ -188,6 +215,29 @@ impl Running<'_> {
         self.game.audio.clock_catch_up(self.data, at);
         self.game.sync_unlocks();
         self.setup_audio_video(Some(bank));
+    }
+
+    /// The data `gmMainLib_8015FBA4` resets: all of it cleared, the language from the disc,
+    /// the VS rules' defaults and every logical file of the card's data reset.
+    fn reset_game_data_fields(&mut self) {
+        *self.game.game_data = gmm_x0::default();
+        let d = &mut self.game.game_data;
+        d.set_language_setting(LANG_US);
+        d.set_saved_language(LANG_US);
+        d.x1850 = default_rules();
+        for i in 1..9 {
+            self.reset_card_file(i, true);
+        }
+    }
+
+    /// `gmMainLib_8015FBA4` from the menus (erasing all data): the data reset, and the sound
+    /// settings and the video mode as the reset save says, with the sound bank of the
+    /// language the boot loaded still the reset's.
+    pub fn reset_game_data_menu(&mut self) {
+        self.reset_game_data_fields();
+        self.game.sync_unlocks();
+        self.setup_audio_video(None);
+        self.reset_video_mode();
     }
 
     /// `setupAudioVideo`: the sound settings from the save (`lbAudioAx_80028690`), and the

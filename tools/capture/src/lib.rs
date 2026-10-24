@@ -16,6 +16,7 @@ pub mod izumi;
 pub mod links;
 pub mod mainmenu;
 pub mod menus;
+pub mod options;
 pub mod pack;
 pub mod playback;
 pub mod sis;

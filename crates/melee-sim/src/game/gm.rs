@@ -3,6 +3,7 @@
 
 pub mod attract;
 pub mod boot_mode;
+pub mod erase;
 pub mod howto;
 pub mod input;
 pub mod machine;

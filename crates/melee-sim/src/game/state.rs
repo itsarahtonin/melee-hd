@@ -58,6 +58,12 @@ pub enum UserData {
     GalleryList(u32),
     /// A movie's cursor's user data, by its block's address.
     GalleryCursor(u32),
+    /// An Options screen's `Menu` user data (sound, screen, language), by its block's address.
+    OptionMenu(u32),
+    /// The rumble screen's user data (`MnVibrationData`), by its block's address.
+    Vibration(u32),
+    /// The erasing screen's user data (`MnDataDelGObjUserData`), by its block's address.
+    DataDel(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
@@ -316,6 +322,9 @@ pub struct Game {
     pub menu: super::mn::main::MainMenu,
     /// The Data menu's movies' statics and user data (`mngallery.c`).
     pub gallery: super::mn::gallery::Gallery,
+    /// The Options menus' statics and user data (`mnvibration.c`, `mnsound.c`,
+    /// `mndeflicker.c`, `mnlanguage.c`, `mndatadel.c`).
+    pub options: super::mn::options::Options,
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).
@@ -390,6 +399,20 @@ impl Host<GameKinds> for Running<'_> {
             UserData::GalleryCursor(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.gallery.cursors.remove(&addr);
+            }
+            UserData::OptionMenu(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.options.menus.remove(&addr);
+            }
+            UserData::Vibration(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                let v = &mut self.game.options.vibration;
+                let d = v.data.remove(&addr);
+                v.left = Some((addr, d.and_then(|d| d.title)));
+            }
+            UserData::DataDel(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.options.datadel.data.remove(&addr);
             }
             // `HSD_Free`.
             UserData::StadiumScreen(which) => {
