@@ -284,7 +284,6 @@ impl Running<'_> {
     /// it sets before that wait but the pad alarm's card probes, which a card that stays in
     /// leaves alone ([`Running::card_alarm_probes`]).
     #[doc(alias = "lb_8001CC84")]
-    #[doc(alias = "dont_inline_helper")]
     #[doc(alias = "lb_8001BE30")]
     #[doc(alias = "getCurrentIcon")]
     fn card_writer_kick(&mut self) {

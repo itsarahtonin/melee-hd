@@ -499,7 +499,8 @@ impl Running<'_> {
     /// `onExitTitle` (`gmopeningmode.c`): after the attract loop's title, Start goes to the
     /// main menu (or a challenger first), as the title mode's exit does; a timeout goes on with
     /// the loop. A debug level's other exits aren't retail's.
-    #[doc(alias = "onExitTitle")]
+    // Aliased once a session leaves the attract loop's title clean: attract-a's attract match
+    // differs first (docs/oracle.md, the menu sessions).
     pub fn opening_on_exit_title(&mut self) {
         self.game.assert_retail();
         if self.game.title.opening_exit_buttons & i32::from(crate::input::pad::BUTTON_START) != 0 {
