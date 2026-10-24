@@ -252,8 +252,21 @@ impl Ctx<'_> {
             let rendermode = game.objs.mobjs[m].rendermode;
             return self.refract_setup(rendermode, usize::from(fp.smash_attrs.x2134_vibrateFrame));
         }
+        // The flags the fighter's render callback set for this tree, as melee-sim named them.
+        let flags = match self.hsd.fighter_flags {
+            Some(flags) => flags,
+            None => {
+                self.hsd
+                    .note_once("a fighter material before its draw flags were named");
+                melee_sim::hsd::display::FighterFlags {
+                    x2223_b2: fp.x2223_b2,
+                    x2223_b3: fp.x2223_b3,
+                    x2228_b0: fp.x2228_b0,
+                }
+            }
+        };
         let mut m = m;
-        if !fp.x2223_b2 && (!fp.x2228_b0 || !fp.x2224_b0) {
+        if !flags.x2223_b2 && (!flags.x2228_b0 || !fp.x2224_b0) {
             if fp.is_metal {
                 match game.ft.metal_mobj {
                     Some(metal) => m = metal,
@@ -275,28 +288,26 @@ impl Ctx<'_> {
 
         // `ftMaterial_800BF534`.
         let mut light_reg = None;
-        if overlay.x7C_flag2 && overlay.x7C_light_enable {
-            if rendermode & RENDER_XLU == 0 && !fp.x2223_b2 {
-                light_reg =
-                    Some(self.light_overlay_stage(&desc, &overlay.x50_light_color, GX_ENABLE));
-            } else {
-                // `ftCo_8009F75C(fp, false)`: melee-sim sets the lights up once, with alpha.
-                self.hsd
-                    .note_once("a fighter's light overlay set up without alpha (ftCo_8009F75C)");
-            }
+        // `ftCo_8009F75C(fp, false)` otherwise: melee-sim named those lights before the
+        // material (`Draw::Lights`), and the render mode's channels take them.
+        let without_alpha = overlay.x7C_flag2
+            && overlay.x7C_light_enable
+            && (rendermode & RENDER_XLU != 0 || flags.x2223_b2);
+        if overlay.x7C_flag2 && overlay.x7C_light_enable && !without_alpha {
+            light_reg = Some(self.light_overlay_stage(&desc, &overlay.x50_light_color, GX_ENABLE));
         }
 
         // `ftMaterial_800BF6BC`.
-        if !fp.x2223_b3 {
+        if !flags.x2223_b3 {
             let mut sub = fp.sub_color;
-            if fp.x2228_b0 && fp.x2224_b0 {
+            if flags.x2228_b0 && fp.x2224_b0 {
                 if fp.is_metal {
                     sub = 4;
                 } else if fp.x2227_b3 {
                     sub = 5;
                 }
             }
-            let tint = if fp.x2223_b2 {
+            let tint = if flags.x2223_b2 {
                 Some(color(&fp.x610_color_rgba[1]))
             } else if sub != 0 {
                 if overlay.x7C_color_enable {
@@ -315,17 +326,27 @@ impl Ctx<'_> {
             }
         }
 
-        if fp.x2223_b2 && !fp.x2223_b3 {
+        if flags.x2223_b2 && !flags.x2223_b3 {
             rendermode |= RENDER_NO_ZUPDATE;
         }
-        let pe = if fp.x2223_b3 && fp.x61D == 0xFF {
+        let pe = if flags.x2223_b3 && fp.x61D == 0xFF {
             Some(SILHOUETTE_PE)
         } else {
             game.objs.mobjs[m].pe
         };
         self.mobj_setup_render_mode(rendermode, pe);
-        // `ftCo_8009F75C(fp, true)` when no light stage was made: melee-sim pushes those
-        // lights as a `Draw::Lights` the frame loads before this material's shapes.
+        // `ftCo_8009F75C(fp, true)` when no light stage was made: the lights with alpha, after
+        // the render mode, as melee-sim named them (`Draw::LightsAfterRenderMode`) when the
+        // overlay lit the fighter.
+        let after = self.hsd.lights_after_render_mode.take();
+        if after.is_some() != without_alpha {
+            self.hsd.note_once(
+                "a fighter's lights after its render mode not where its material sets them up",
+            );
+        }
+        if let Some(n) = after {
+            self.load_lights(n);
+        }
     }
 
     /// The fighters' tint colors (`p_ftCommonData->sub_colors[i - 1]`).

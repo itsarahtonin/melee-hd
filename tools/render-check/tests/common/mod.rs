@@ -449,6 +449,117 @@ pub const POKE_FLOATS: Game = Game {
     replay: Replay::Oracle("stage-poke-floats"),
 };
 
+/// One of the stages set's oracle matches, `stage-KEY`: its references are in
+/// `ref-stage-KEY`.
+const fn stage(stage: &'static str, name: &'static str, players: &'static str) -> Game {
+    Game {
+        stage,
+        name,
+        players,
+        replay: Replay::Oracle(name),
+    }
+}
+
+pub const BIG_BLUE: Game = stage("Big Blue", "stage-big-blue", "Roy vs Zelda (oracle match)");
+pub const BRINSTAR: Game = stage(
+    "Brinstar",
+    "stage-brinstar",
+    "Donkey Kong vs Young Link (oracle match)",
+);
+pub const BRINSTAR_DEPTHS: Game = stage(
+    "Brinstar Depths",
+    "stage-brinstar-depths",
+    "Dr. Mario vs Ganondorf (oracle match)",
+);
+pub const CORNERIA: Game = stage(
+    "Corneria",
+    "stage-corneria",
+    "Falco vs Sheik (oracle match)",
+);
+pub const FOURSIDE: Game = stage("Fourside", "stage-fourside", "Fox vs Marth (oracle match)");
+pub const GREAT_BAY: Game = stage(
+    "Great Bay",
+    "stage-great-bay",
+    "Roy vs Zelda (oracle match)",
+);
+pub const GREEN_GREENS: Game = stage(
+    "Green Greens",
+    "stage-green-greens",
+    "Bowser vs Pichu (oracle match)",
+);
+pub const HYRULE_TEMPLE: Game = stage(
+    "Hyrule Temple",
+    "stage-hyrule-temple",
+    "Samus vs Luigi (oracle match)",
+);
+pub const ICICLE_MOUNTAIN: Game = stage(
+    "Icicle Mountain",
+    "stage-icicle-mountain",
+    "Dr. Mario vs Ganondorf (oracle match)",
+);
+pub const JUNGLE_JAPES: Game = stage(
+    "Jungle Japes",
+    "stage-jungle-japes",
+    "Mario vs Pikachu (oracle match)",
+);
+pub const KONGO_JUNGLE: Game = stage(
+    "Kongo Jungle",
+    "stage-kongo-jungle",
+    "Ness vs Yoshi (oracle match)",
+);
+pub const KONGO_JUNGLE_64: Game = stage(
+    "Kongo Jungle N64",
+    "stage-kongo-jungle-64",
+    "Falco vs Sheik (oracle match)",
+);
+pub const MUSHROOM_KINGDOM: Game = stage(
+    "Mushroom Kingdom",
+    "stage-mushroom-kingdom",
+    "Samus vs Luigi (oracle match)",
+);
+pub const MUSHROOM_KINGDOM_2: Game = stage(
+    "Mushroom Kingdom II",
+    "stage-mushroom-kingdom-2",
+    "Mario vs Pikachu (oracle match)",
+);
+pub const MUTE_CITY: Game = stage(
+    "Mute City",
+    "stage-mute-city",
+    "Bowser vs Pichu (oracle match)",
+);
+/// Mewtwo against Mr. Game & Watch, whose render callback draws an outline, him and a
+/// silhouette in one pass.
+pub const ONETT: Game = stage(
+    "Onett",
+    "stage-onett",
+    "Mewtwo vs Mr. Game & Watch (oracle match)",
+);
+pub const PEACHS_CASTLE: Game = stage(
+    "Princess Peach's Castle",
+    "stage-peachs-castle",
+    "Link vs Jigglypuff (oracle match)",
+);
+pub const RAINBOW_CRUISE: Game = stage(
+    "Rainbow Cruise",
+    "stage-rainbow-cruise",
+    "Donkey Kong vs Young Link (oracle match)",
+);
+pub const VENOM: Game = stage(
+    "Venom",
+    "stage-venom",
+    "Captain Falcon vs Peach (oracle match)",
+);
+pub const YOSHIS_ISLAND: Game = stage(
+    "Yoshi's Island",
+    "stage-yoshis-island",
+    "Captain Falcon vs Peach (oracle match)",
+);
+pub const YOSHIS_ISLAND_64: Game = stage(
+    "Yoshi's Island N64",
+    "stage-yoshis-island-64",
+    "Fox vs Marth (oracle match)",
+);
+
 pub const SHEIK_FOX_FOD: Game = Game {
     stage: "Fountain of Dreams",
     name: "sheik-fox-fod",

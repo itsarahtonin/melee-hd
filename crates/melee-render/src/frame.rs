@@ -136,6 +136,9 @@ impl Frames {
         while i < draws.len() {
             i += ctx.draw(draws, i);
         }
+        if let Some(n) = ctx.hsd.lights_after_render_mode.take() {
+            ctx.load_lights(n);
+        }
         ctx.copy_xfb();
         if self.gx.unset_reads != 0 {
             *self.hsd.notes.entry(UNSET_READ.to_owned()).or_default() += self.gx.unset_reads;
@@ -146,6 +149,21 @@ impl Frames {
 }
 
 impl Ctx<'_> {
+    /// `HSD_LObjSetupInit`'s GX side for the lights the display pass's light set `n` names
+    /// ([`Draw::Lights`]).
+    pub fn load_lights(&mut self, n: u16) {
+        let mut set = self.game.objs.display.light_sets[usize::from(n)];
+        // Lights set up in the current camera's view take its blended view.
+        if self.blend.is_some()
+            && let (Some(b), Some(v)) = (self.hsd.motion.camera_b, self.hsd.camera)
+            && set.view_mtx == b.view_mtx
+        {
+            set.view_mtx = v.view_mtx;
+        }
+        let objs = &self.game.objs;
+        self.hsd.lights.setup_init(self.gx, objs, &set);
+    }
+
     /// `HSD_StartRender`: the pixel format and field mode for the pass.
     pub fn start_render(&mut self, offscreen: bool) {
         self.hsd.offscreen = offscreen;
@@ -158,6 +176,13 @@ impl Ctx<'_> {
     fn draw(&mut self, draws: &[Draw], i: usize) -> usize {
         if self.hsd.debug_dl {
             eprintln!("CMD {i} {:?}", draws[i]);
+        }
+        // A fighter material's lights after its render mode come before anything else but its
+        // shapes, whose material setup loads them (`fighter_mobj_setup`).
+        if !matches!(draws[i], Draw::Shape { .. })
+            && let Some(n) = self.hsd.lights_after_render_mode.take()
+        {
+            self.load_lights(n);
         }
         match &draws[i] {
             Draw::Camera(c, view) => {
@@ -197,16 +222,11 @@ impl Ctx<'_> {
             }
             Draw::EndCamera => 1,
             Draw::Lights(n) => {
-                let mut set = self.game.objs.display.light_sets[usize::from(*n)];
-                // Lights set up in the current camera's view take its blended view.
-                if self.blend.is_some()
-                    && let (Some(b), Some(v)) = (self.hsd.motion.camera_b, self.hsd.camera)
-                    && set.view_mtx == b.view_mtx
-                {
-                    set.view_mtx = v.view_mtx;
-                }
-                let objs = &self.game.objs;
-                self.hsd.lights.setup_init(self.gx, objs, &set);
+                self.load_lights(*n);
+                1
+            }
+            Draw::LightsAfterRenderMode(n) => {
+                self.hsd.lights_after_render_mode = Some(*n);
                 1
             }
             Draw::Rendering(g) => {
@@ -271,6 +291,10 @@ impl Ctx<'_> {
             }
             Draw::Toon(image) => {
                 self.hsd.toon = *image;
+                1
+            }
+            Draw::FighterFlags(flags) => {
+                self.hsd.fighter_flags = Some(*flags);
                 1
             }
             Draw::Fog(f) => {
