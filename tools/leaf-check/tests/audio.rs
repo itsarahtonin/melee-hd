@@ -542,7 +542,7 @@ fn run_timeline(dir: &str, start: u32, end: u32, dsp: DspModel) {
                         ret
                     }
                     "HSD_SynthSFXBankDeflagSync" => {
-                        a.sfx_bank_deflag_sync();
+                        a.sfx_bank_deflag_sync(&data);
                         ret
                     }
                     "HSD_SynthSFXWaitForLoadCompletion" => {
