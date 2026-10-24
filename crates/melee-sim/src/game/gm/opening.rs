@@ -478,7 +478,7 @@ impl Running<'_> {
             }
             gc.stkind = i32::from(d.stkind as u8);
         }
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         let mut banks = 4u64;
         for &c in &d.ckinds {
             if c != 0x21 {

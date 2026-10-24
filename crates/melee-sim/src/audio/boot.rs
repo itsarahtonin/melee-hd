@@ -284,12 +284,12 @@ impl Audio {
             .heap
             .alloc(len.next_multiple_of(32))
             .expect("audio heap overflow.");
-        let _ = base;
+        self.driver.bank_addr = base;
         // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency
         // (and its transfer); its callback (`fn_8038DA5C`) ends the spin.
         self.hw.disc_read(len.next_multiple_of(32), self.disc);
         self.driver.reading_bank = true;
-        self.with_clock(data, |c, f| c.wait_until(f, super::clock::Wait::BankRead));
+        self.with_clock(data, |c, f| c.spin_until(f, super::clock::Wait::BankRead));
         let file = data.get(bank).data();
         let word = |at: usize| u32::from_be_bytes(file[at..at + 4].try_into().unwrap());
         let d = &mut self.driver;
@@ -304,5 +304,15 @@ impl Audio {
         at += 4 + 4 * d.banks as usize;
         d.streams = word(at) as i32;
         d.stream_table = (at + 4) as u32;
+    }
+
+    /// `AXDriver_8038DCFC`: the sound bank's block freed.
+    #[doc(alias = "AXDriver_8038DCFC")]
+    pub fn driver_free_bank(&mut self) {
+        if self.driver.bank.is_some() {
+            self.heap.free(self.driver.bank_addr);
+        }
+        self.driver.bank = None;
+        self.driver.bank_addr = 0;
     }
 }

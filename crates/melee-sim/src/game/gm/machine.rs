@@ -579,7 +579,7 @@ impl Running<'_> {
         if d.heaps.status(crate::lb::heap::STAY) == crate::lb::heap::CREATED {
             d.cache.scene.is_heap_persistent[1] = true;
         }
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         // `lbCardNew_ForgetMemory`, `lbCardGame_Reset`, `lbSnap_8001E27C`, `Toy_803127D4`,
         // `tyDisplay_8031C8B8`.
         self.game.card_tasks.forget_memory();

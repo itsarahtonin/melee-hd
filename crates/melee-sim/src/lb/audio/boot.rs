@@ -69,6 +69,7 @@ pub fn balance_fx(balance: i8) -> i32 {
 
 /// The sound bank's file (`smash2.sem`), loaded and parsed by the caller: its archive and
 /// size.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SoundBank {
     pub archive: ArchiveId,
     pub len: u32,
@@ -151,7 +152,8 @@ impl Audio {
     /// (`lbl_804D3878`, -1 at power-on), the common bank (the first time), the sound bank and
     /// the banks every scene keeps loaded for it (`bank`, the language's `smash2.sem`).
     pub fn lb_reset_saved(&mut self, data: &Archives, bank: Option<&SoundBank>, saved: SavedSound) {
-        // `lbAudioAx_80024BD0` reads the sound mode into a global the port doesn't keep.
+        // `lbAudioAx_80024BD0`: the console's mix (`OSGetSoundMode`) noted.
+        self.lb.sound_mode = u32::from(!self.mono);
         self.lb_reset_settings(saved.balance);
         self.lb_volumes(true, false);
         // `strcpy`: the directory and its terminator.
@@ -164,7 +166,6 @@ impl Audio {
             self.lb.ssm_stem_pos = 7;
             0
         };
-        assert!(saved.us, "the Japanese sound banks' directory isn't loaded");
         let lb = &mut self.lb;
         lb.hps_file[..8].copy_from_slice(b"/audio/\0");
         lb.hps_stem_pos = 7;
@@ -179,28 +180,14 @@ impl Audio {
             return;
         }
         self.lb.lang = lang;
-        assert!(
-            self.driver.bank.is_none(),
-            "a sound bank to free first (AXDriver_8038DCFC)"
-        );
-        let bank = bank.expect("the language's sound bank (smash2.sem)");
-        // The language changes: the sound bank (no old one to free, `AXDriver_8038DCFC`),
-        // then the banks every scene keeps.
-        self.driver_load_bank(data, bank.archive, bank.len);
-        let lb = &mut self.lb;
-        for i in 1..55 {
-            lb.bank_load[i] = -1;
-            lb.bank_want[i] = -1;
-            lb.bank_have[i] = -1;
-            lb.banks[i] = -1;
-        }
-        self.sfx_unload_bank(1);
-        self.sfx_unload_bank(2);
-        for (slot, b) in [(0x33, 1), (1, 1), (0x36, 1), (2, 2)] {
-            if self.lb.banks[slot] < 1 {
-                self.lb_load_boot_bank(data, slot, b);
-            }
-        }
+        let bank = bank
+            .copied()
+            .or(self.lang_banks[lang as usize])
+            .expect("the language's sound bank (smash2.sem)");
+        // The language changes: the sound bank (the old one freed first, `AXDriver_8038DCFC`;
+        // none at boot), then the banks every scene keeps.
+        self.driver_replace_bank(data, bank);
+        self.lb_reload_scene_banks(data, &[(0x33, 1), (1, 1), (0x36, 1), (2, 2)]);
         let lb = &mut self.lb;
         lb.queue = [SFX_NONE; 16];
         lb.queue_timer = [0; 16];
@@ -216,6 +203,47 @@ impl Audio {
         lb.crowd_timer = [0; 2];
         lb.voice_scale = 1.0;
         lb.fx_scale = 1.0;
+    }
+
+    /// The sound bank replaced by `bank` (`AXDriver_8038DCFC`, `AXDriver_8038DA70`). A voice
+    /// keeps its command stream's pointer, into the freed bank then: kept by its address, and
+    /// a voice still playing reads on from the freed block (`freed_banks`).
+    pub fn driver_replace_bank(&mut self, data: &Archives, bank: SoundBank) {
+        let old = self.driver.bank_addr;
+        if let Some(id) = self.driver.bank {
+            let freed = &mut self.driver.freed_banks;
+            freed.rotate_right(1);
+            freed[0] = Some((id, old));
+        }
+        self.driver_free_bank();
+        self.driver_load_bank(data, bank.archive, bank.len);
+        let new = self.driver.bank_addr;
+        if old != 0 {
+            for v in self.driver.voices.iter_mut().filter(|v| v.stream != 0) {
+                v.stream = v.stream.wrapping_add(old).wrapping_sub(new);
+            }
+        }
+    }
+
+    /// The banks every scene keeps, loaded again for a new language: every bank's load
+    /// forgotten, sound banks 1 and 2 emptied, and `banks` loaded (slot and sound bank), each
+    /// waited for: the reset's four (`lbAudioAx_80028690`), or the language options' first
+    /// three (`lbAudioAx_80027AB0`), which leave sound bank 2's to the next scene.
+    pub fn lb_reload_scene_banks(&mut self, data: &Archives, banks: &[(usize, i32)]) {
+        let lb = &mut self.lb;
+        for i in 1..55 {
+            lb.bank_load[i] = -1;
+            lb.bank_want[i] = -1;
+            lb.bank_have[i] = -1;
+            lb.banks[i] = -1;
+        }
+        self.sfx_unload_bank(1);
+        self.sfx_unload_bank(2);
+        for &(slot, b) in banks {
+            if self.lb.banks[slot] < 1 {
+                self.lb_load_boot_bank(data, slot, b);
+            }
+        }
     }
 
     /// Bank `slot`'s file loaded into sound bank `bank`, waited for, and marked loaded.

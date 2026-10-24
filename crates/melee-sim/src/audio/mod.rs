@@ -46,6 +46,9 @@ pub struct Audio {
     pub disc: clock::DiscSpeed,
     /// The game's audio library's state (`melee/lb/lbaudio_ax.c`).
     pub lb: crate::lb::audio::LbAudio,
+    /// The two languages' sound banks (`smash2.sem` in `/audio/` and `/audio/us/`), by
+    /// `LANG_JP` and `LANG_US`: disc files the session read, which a language change loads.
+    pub lang_banks: [Option<crate::lb::audio::SoundBank>; 2],
     /// When audio frames run; none where the state came without a timeline (a single
     /// captured call), and no frame runs then.
     pub clock: Option<clock::Clock>,

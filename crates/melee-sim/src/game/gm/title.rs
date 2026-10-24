@@ -529,7 +529,7 @@ impl Running<'_> {
     #[doc(alias = "gmTitleMode_OnEnter")]
     pub fn title_mode_on_enter(&mut self) {
         self.dvd_mut().keep_class();
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         self.wait_preload_stale_released(crate::lb::heap::ALL_M as i32);
     }
 

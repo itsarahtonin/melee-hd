@@ -92,7 +92,7 @@ impl Running<'_> {
         }
         self.dvd_mut().keep_class();
         self.dvd_mut().note_scene_change();
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         self.game.menu.gallery_rate_table = crate::hsd::heap::mem_alloc(0x271000);
         let rules = &mut self.game.game_data.x1850;
         let m = &mut self.game.menu_mode;

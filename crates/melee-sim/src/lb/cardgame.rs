@@ -53,6 +53,9 @@ pub struct CardGame {
     /// `lbCardGame_Init` has pointed the save's manifest at the card data (`manifest`'s
     /// `data`), which only it writes.
     pub manifest_set: bool,
+    /// The save's list is handed to the waits (`Writer::start`) and the writer's state is
+    /// the game's once the next wait starts it ([`Running::card_writer_take`]). Not memory.
+    pub kicked: bool,
 }
 
 impl Default for CardGame {
@@ -70,6 +73,7 @@ impl Default for CardGame {
             jobj_translate_idx: 0,
             scene_data: None,
             manifest_set: false,
+            kicked: false,
         }
     }
 }
@@ -174,8 +178,11 @@ impl Running<'_> {
         if self.game.card_game.icon_data.is_some() {
             return;
         }
+        // `LbMcGame.` takes the disc's language (English), `NtMemAc` the saved one
+        // (`lbFileGetFullName`).
         let icons = self.load_archive("LbMcGame.usd");
-        let scene = self.load_archive("NtMemAc.usd");
+        let us = self.game.game_data.saved_language() == crate::game::gm::main_lib::LANG_US;
+        let scene = self.load_archive(if us { "NtMemAc.usd" } else { "NtMemAc.dat" });
         let sym = |r: &Running, a, name: &str| {
             let offset = r
                 .data
@@ -280,9 +287,11 @@ impl Running<'_> {
     /// `lb_8001CC84`'s first state as the next of the game's waits runs it, once the save is
     /// marked to write: the mark taken, the card's status brought up to date, and the save's
     /// list (`lb_8001BE30`, through `dont_inline_helper`) handed to the waits with the card
-    /// data, the banner the unlocks pick (`getCurrentIcon`) and the icons. Nothing reads what
-    /// it sets before that wait but the pad alarm's card probes, which a card that stays in
-    /// leaves alone ([`Running::card_alarm_probes`]).
+    /// data, the banner the unlocks pick (`getCurrentIcon`) and the icons. The mark and the
+    /// writer's state change when that wait starts the list ([`CardGame::kicked`]): a save
+    /// marked from a screen's process is still marked at its tick's end. Nothing else reads
+    /// what it sets before that wait but the pad alarm's card probes, which a card that stays
+    /// in leaves alone ([`Running::card_alarm_probes`]).
     #[doc(alias = "lb_8001CC84")]
     #[doc(alias = "lb_8001BE30")]
     #[doc(alias = "getCurrentIcon")]
@@ -291,13 +300,17 @@ impl Running<'_> {
         if c.x10 != 0 || !c.dirty {
             return;
         }
-        c.dirty = false;
-        if c.card_status != 0 {
-            return;
-        }
-        if self.update_card_status() != 0 {
-            self.game.card_game.failed = true;
-            return;
+        if !c.kicked {
+            if c.card_status != 0 {
+                c.dirty = false;
+                return;
+            }
+            if self.update_card_status() != 0 {
+                let c = &mut self.game.card_game;
+                c.dirty = false;
+                c.failed = true;
+                return;
+            }
         }
         let icons = self.game.card_game.icon_data.expect("the card's icons");
         let idx = if self.holds_every_trophy() {
@@ -317,8 +330,9 @@ impl Running<'_> {
             banner: bytes(idx, 0x1800),
             icons: bytes(3, 0x600),
         };
+        // Marked again before the wait starts it: the list writes the save as it is now.
         self.game.audio.card_writer.start = Some(req);
-        self.game.card_game.x10 = 1;
+        self.game.card_game.kicked = true;
     }
 
     /// What the save's writer did at the waits since the game last looked: the comment its
@@ -329,6 +343,13 @@ impl Running<'_> {
     #[doc(alias = "fn_8001CC30")]
     #[doc(alias = "lb_8001C658")]
     pub fn card_writer_take(&mut self) {
+        // `lb_8001CC84`'s first state ran at a wait: the mark taken, the writer running.
+        let c = &mut self.game.card_game;
+        if c.kicked && self.game.audio.card_writer.start.is_none() {
+            c.kicked = false;
+            c.dirty = false;
+            c.x10 = 1;
+        }
         let w = &mut self.game.audio.card_writer;
         if let Some(comment) = w.comment.take() {
             self.game.card_game.comment = comment;

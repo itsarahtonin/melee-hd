@@ -91,9 +91,9 @@ impl Running<'_> {
     #[doc(alias = "lbDvd_SetupVsPreloadCache")]
     pub fn opening_on_enter_movie(&mut self) {
         self.dvd_mut().keep_class();
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
         self.wait_preload_stale_released(crate::lb::heap::ALL_M as i32);
         self.dvd_mut().cache.scene.is_heap_persistent[1] = false;
-        self.game.audio.preload_refresh(self.data);
+        self.preload_refresh();
     }
 }

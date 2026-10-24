@@ -324,7 +324,7 @@ impl Audio {
     pub fn sfx_wait_for_loads(&mut self, data: &Archives) {
         if self.synth.banks.load_count != 0 {
             self.with_clock(data, |c, f| {
-                c.wait_until(f, super::clock::Wait::SfxLoadsDone)
+                c.spin_until(f, super::clock::Wait::SfxLoadsDone)
             });
         }
     }
@@ -461,6 +461,10 @@ impl Audio {
             Some(cb::SFX_READDRESS),
             0,
         );
+        // ssbm-rs's ARAM finishes the transfer as it's posted and interrupts at once: the
+        // move's chunks and its callback run before the next group's request, so that request
+        // takes the device command the move freed.
+        self.with_clock(data, |c, f| c.reg_reads(0, f));
         let delta = to.wrapping_sub(g.aram).wrapping_mul(2);
         for id in g.base..g.base + g.count {
             let bucket = &mut self.synth.sfx[(id & 0x1F) as usize];
