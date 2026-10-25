@@ -75,6 +75,13 @@ impl<T, const K: u8> Pool<T, K> {
         slot
     }
 
+    /// A session's heap image notes the scene's objects (`hsd::image`).
+    fn note(slot: u32) {
+        if heap::image_on() {
+            heap::with(|h| h.image.note_slot(std::any::type_name::<T>(), slot));
+        }
+    }
+
     /// A slot as `HSD_ObjAlloc` hands it out uncleared: the most recently freed keeps its last
     /// contents and a fresh slot the heap's, else a new one holds `fresh`.
     pub fn alloc_stale(&mut self, fresh: T) -> u32 {
@@ -90,6 +97,7 @@ impl<T, const K: u8> Pool<T, K> {
     }
 
     fn track_alloc(&mut self, slot: u32) {
+        Self::note(slot);
         if K != 0 {
             self.addrs[slot as usize] =
                 heap::with(|h| h.obj_alloc(heap::Kind::ALL[K as usize - 1])).unwrap_or(0);

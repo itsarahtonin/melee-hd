@@ -83,17 +83,22 @@ impl Running<'_> {
     pub fn menu_mode_on_enter(&mut self) {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
-        // The slots' block is taken first, as the machine code calls them.
+        // The slots' block is taken first, as the machine code calls them. The snapshot's
+        // buffer only a snapshot read from the card writes (`lbsnap`'s reading side), so the
+        // heap's image keeps what it held until it does.
         let slot = crate::hsd::heap::mem_alloc(0x840);
-        let snap = crate::hsd::heap::mem_alloc(0x3E840);
+        let snap = crate::hsd::heap::mem_alloc_unclaimed(0x3E840);
         self.snap_set_buffers(snap, slot);
+        // The snapshots' images: only a snapshot read from the card writes one (`lbsnap`'s
+        // reading side), so the heap's image keeps what they held until it does.
         for i in 0..4 {
-            self.game.menu.snap_buffers[i] = crate::hsd::heap::mem_alloc(0x96000);
+            self.game.menu.snap_buffers[i] = crate::hsd::heap::mem_alloc_unclaimed(0x96000);
         }
         self.dvd_mut().keep_class();
         self.dvd_mut().note_scene_change();
         self.preload_refresh();
-        self.game.menu.gallery_rate_table = crate::hsd::heap::mem_alloc(0x271000);
+        // The movies' buffer, which the movie player says what it writes into (`lb::mthp`).
+        self.game.menu.gallery_rate_table = crate::hsd::heap::mem_alloc_unclaimed(0x271000);
         let rules = &mut self.game.game_data.x1850;
         let m = &mut self.game.menu_mode;
         if rules.force_main_menu != 0 {

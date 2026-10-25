@@ -283,6 +283,63 @@ impl MoviePlayer {
         &bytes[(at as usize).min(end)..end]
     }
 
+    /// A read of the movie's bytes at `offset` into the buffer at `dest`: the heap's image
+    /// knows them once the buffer goes ([`crate::hsd::image`]).
+    fn hold_read(&self, dest: u32, offset: u32, len: u32) {
+        if let Some(archive) = self.file {
+            crate::hsd::heap::with(|h| {
+                h.image.hold(
+                    dest,
+                    dest + len,
+                    crate::hsd::image::Src::Raw { archive, offset },
+                )
+            });
+        }
+    }
+
+    /// What the buffer holds as it goes, for the heap's image ([`crate::hsd::image`]): the
+    /// ring's table of slots and the planes of the frame last decoded (the slots' frames it
+    /// knows from their reads).
+    fn export_buffer(&self, data: &Archives) {
+        crate::hsd::heap::with(|h| {
+            if !h.image.on {
+                return;
+            }
+            // The player writes only these: the table, the slots' reads, the planes and the
+            // decode's work area, which isn't laid out (with the frame offsets' table after
+            // it); the rest keeps what it held.
+            h.image
+                .claim(self.work, self.ring_table + self.buffer_len());
+            for i in 0..self.slots {
+                h.image.word(self.ring_table + 4 * i, self.slot_addr(i));
+            }
+            if let (Some((off, len)), Some(file)) = (self.planes, self.file) {
+                let bytes = data.get(file).data();
+                let end = (off as usize + len as usize).min(bytes.len());
+                let frame = &bytes[(off as usize).min(end)..end];
+                if let Ok(p) =
+                    crate::thp::decode_frame(frame, self.width as u16, self.height as u16)
+                {
+                    h.image.put(self.plane_y, &p.y);
+                    h.image.put(self.plane_u, &p.u);
+                    h.image.put(self.plane_v, &p.v);
+                }
+            }
+        });
+    }
+
+    /// The buffer's size, as `fn_8001EBF0` gave it (the ring's table, the slots, the planes,
+    /// the decode's work area and the frame offsets' table).
+    fn buffer_len(&self) -> u32 {
+        let wh = self.width.wrapping_mul(self.height);
+        (self.slots * 4).next_multiple_of(32)
+            + self.buf_size.next_multiple_of(32).wrapping_mul(self.slots)
+            + wh
+            + (wh >> 2) * 2
+            + crate::thp::work_size(&self.desc, self.height as u16) as u32
+            + (self.num_frames * 4).next_multiple_of(32)
+    }
+
     /// The next frame's size, which the frame in slot `i` starts with.
     fn next_size(&self, data: &Archives, i: u32) -> u32 {
         let b = self.slot_bytes(data, i);
@@ -394,7 +451,9 @@ impl Audio {
                 buf
             }
             None => {
-                let buf = crate::hsd::heap::mem_alloc(size);
+                // The player writes the slots' reads, the planes, its tables and the decode's
+                // work area, which the heap's image takes from it ([`MoviePlayer::export_buffer`]).
+                let buf = crate::hsd::heap::mem_alloc_unclaimed(size);
                 self.movie.alloc = buf;
                 buf
             }
@@ -428,6 +487,7 @@ impl Audio {
                 let (entry, offset) = (m.entrynum, m.file_offset);
                 let len = size.next_multiple_of(32);
                 self.movie.ring[i as usize] = (offset, len);
+                self.movie.hold_read(at, offset, len);
                 self.file_load(data, entry, offset, at, len, 0x21, 1);
                 let m = &mut self.movie;
                 m.file_offset += size;
@@ -502,6 +562,7 @@ impl Audio {
         let len = m.packed_size.next_multiple_of(32);
         let dest = m.slot_addr(slot);
         self.movie.ring[slot as usize] = (offset, len);
+        self.movie.hold_read(dest, offset, len);
         self.devcom_request(
             data,
             entry,
@@ -598,6 +659,7 @@ impl Audio {
         }
         self.movie_alarm_cancel();
         // `HSD_VIWaitXFBFlush`: the scene's loop has ended and its frames shown already.
+        self.movie.export_buffer(data);
         if self.movie.alloc != 0 {
             crate::hsd::heap::mem_free(self.movie.alloc);
         }

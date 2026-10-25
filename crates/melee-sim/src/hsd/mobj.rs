@@ -531,6 +531,16 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
         .unwrap_or_else(super::texp::TevDesc::with_room);
     tev.make_room();
     s.list.describe(num, &order, &mut tev);
+    // `TExp2TevDesc` writes no map or coordinates for a stage that samples a texture: its
+    // piece keeps what it held there until the first setup.
+    let at = mobjs[m].heap.tevdesc;
+    super::export::with_image(|img| {
+        for (k, st) in tev.stages.iter().take(num).enumerate() {
+            if st.tobj.is_some() {
+                img.unclaim(at[k] + 0xC, at[k] + 0x14);
+            }
+        }
+    });
     mobjs[m].tev = Some(tev);
     mobjs.texp_scratch = s;
     return_chain(&mut objs.tobjs, tail);
@@ -543,9 +553,22 @@ pub fn compile_tev(objs: &mut Objects, m: Option<MObjId>) {
 /// mode in GX: that's the display pass's.
 #[doc(alias = "HSD_MObjSetup")]
 pub fn setup(objs: &mut Objects, m: MObjId) {
-    let (mobjs, tobjs) = (&objs.mobjs, &mut objs.tobjs);
+    let (mobjs, tobjs) = (&mut objs.mobjs, &mut objs.tobjs);
     let (first, tail) = borrow_chain(mobjs, tobjs, m, mobjs[m].rendermode);
     tobj::setup(tobjs, first);
+    // `HSD_TExpSetupTev` writes each texture's stage the texture's map and coordinates, which
+    // only a session's heap image reads (the display pass takes them from the textures).
+    let n = usize::from(mobjs[m].heap.n_tevdesc);
+    if super::heap::image_on()
+        && let Some(tev) = &mut mobjs[m].tev
+    {
+        for s in tev.stages.iter_mut().take(n) {
+            if let Some(t) = s.tobj {
+                s.desc.coord = tobjs[t].coord;
+                s.desc.map = tobjs[t].id;
+            }
+        }
+    }
     return_chain(tobjs, tail);
 }
 
@@ -593,6 +616,7 @@ pub fn tobj(mobjs: &MObjs, m: Option<MObjId>) -> Option<TObjId> {
 #[doc(alias = "MObjRelease")]
 pub fn remove(objs: &mut Objects, m: Option<MObjId>) {
     let Some(m) = m else { return };
+    super::export::with_image(|img| super::export::mobj(objs, img, m));
     jobj::remove_aobj(objs, objs.mobjs[m].aobj);
     let h = objs.mobjs[m].heap;
     if objs.mobjs[m].mat.is_some() {

@@ -355,6 +355,15 @@ impl<K: Kinds> Geometry<K> {
             right: f32::MAX,
         };
         let joint_count = descs.len();
+        // The stamp the load leaves as the joints' array held it: after the menus, what they
+        // left there (docs/engine.md, a session's heap leftovers).
+        let left = crate::game::leftovers::bytes(data, joints_addr, 0x34 * joint_count as u32);
+        let stamp = |i: usize| {
+            left.as_ref().map_or(0, |b| {
+                let o = 0x34 * i + 0xC;
+                i16::from_be_bytes([b[o], b[o + 1]])
+            })
+        };
         let joints = descs
             .iter()
             .enumerate()
@@ -362,7 +371,7 @@ impl<K: Kinds> Geometry<K> {
                 next: (i + 1 < joint_count).then_some(i as u16 + 1),
                 desc: *d,
                 flags: JOINT_ENABLED,
-                stamp: 0,
+                stamp: stamp(i),
                 dirty: true,
                 bounding_min: Vec2 {
                     x: mem(fp::fmuls(scale, reg(d.left))),

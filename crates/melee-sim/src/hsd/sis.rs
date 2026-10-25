@@ -303,6 +303,12 @@ impl SisLib {
             }
             SisPtr::Data(d) => {
                 self.written.insert(d, v);
+                // Into the file's bytes where the heap's image holds them.
+                super::export::with_image(|img| {
+                    if let Some(a) = img.data_addr(d) {
+                        img.put(a, &[v]);
+                    }
+                });
             }
         }
     }

@@ -830,12 +830,16 @@ impl<'a> Comparer<'a> {
         }
         // Each chain link, where both sides have one (the handles compare as the fighter
         // does).
-        for i in 0..fighter.dynamic_bone_sets.len() {
+        // The sets past the count hold what the block held (a session's leftovers), which
+        // nothing follows.
+        let sets = fighter.dynamics_num.clamp(0, 10) as usize;
+        for i in 0..sets {
             let mut ours = fighter.dynamic_bone_sets[i].dyn_desc.data;
             let mut theirs = self.u32(t + 0x2F0 + 0x18 * i as u32 + 4);
             let mut k = 0;
             while let Some(d) = ours
                 && theirs != 0
+                && d.0 < melee_sim::hsd::pool::UNKNOWN
             {
                 let link = self.game.fighter_dynamics[d.0].clone();
                 link.compare(
@@ -1648,6 +1652,21 @@ impl Comparer<'_> {
         Some((pool, free, addr))
     }
 
+    /// Whether our object `o` (a handle of `kind`) is one an earlier scene made, whose heap
+    /// the original has since made anew: what a session's heap image knows.
+    fn scene_gone(&self, kind: &str, o: u32) -> bool {
+        use std::any::type_name;
+        let img = &self.game.objs.heap.image;
+        let ty = match kind {
+            "JObjId" => type_name::<melee_sim::hsd::jobj::JObj>(),
+            "DObjId" => type_name::<melee_sim::hsd::dobj::DObj>(),
+            "MObjId" => type_name::<melee_sim::hsd::mobj::MObj>(),
+            "TObjId" => type_name::<melee_sim::hsd::tobj::TObj>(),
+            _ => return false,
+        };
+        img.on && !img.in_scene(ty, o)
+    }
+
     /// A fighter's animation buffer, ours `slot` and theirs at `addr`: every byte we know.
     fn anim_buf(&mut self, path: &str, slot: u32, addr: u32) {
         let Some(archives) = self.archives else {
@@ -1704,6 +1723,19 @@ impl Cx for Comparer<'_> {
             if *word != theirs {
                 self.diffs.push(format!(
                     "{path}: {kind} ours unknown until written ({word:#x}), theirs {theirs:#x}"
+                ));
+            }
+            return;
+        }
+        // A leftover word a new object took from the heap's image (melee_sim::hsd::image),
+        // which neither side has written since, compares by the word.
+        if let Some(o) = ours
+            && o >= melee_sim::hsd::pool::UNKNOWN
+            && let Some(word) = self.game.objs.heap.image.unknown_word(o)
+        {
+            if word != theirs {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours the heap's leftover {word:#x}, theirs {theirs:#x}"
                 ));
             }
             return;
@@ -1814,6 +1846,18 @@ impl Cx for Comparer<'_> {
                     "{path}: {kind} ours dangling {o}, theirs {theirs:#x} (paired with {known:?})"
                 ));
             }
+            return;
+        }
+        // An object of a scene whose heap was made anew (the original abandons its objects with
+        // the heap; melee-sim's pools keep them) shares its address with what the new heap put
+        // there: a pointer the original kept to it (the stage select's icons' joints, its
+        // `mnStageSel_803F06D0`) is the same word as the pointer to the new object, so it
+        // compares by the address.
+        if let (Some(o), Some(k), Some((_, (_, false, addr)))) = (ours, known, slot)
+            && k != o
+            && addr == theirs
+            && self.scene_gone(kind, o)
+        {
             return;
         }
         match (ours, theirs, known) {

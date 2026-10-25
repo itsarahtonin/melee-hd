@@ -221,6 +221,8 @@ impl Session {
         game.camera.fov = 38.0;
         game.audio.disc = setup.disc;
         game.audio.dsp = setup.dsp;
+        // The heap's memory as the scenes leave it, for a match's leftovers.
+        game.objs.heap.image = crate::hsd::image::Image::power_on();
         let card = Some(card_device(&setup));
         Session {
             game,

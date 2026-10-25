@@ -763,6 +763,7 @@ fn load_rvalues(rvalues: &mut Rvalues, data: &Archives, list: Option<DataRef>) -
 #[doc(alias = "HSD_RObjRemove")]
 pub fn remove(objs: &mut Objects, r: Option<RObjId>) {
     let Some(r) = r else { return };
+    super::export::with_image(|img| super::export::robj(objs, img, r));
     match objs.robjs[r].u {
         Ref::JObj(j) if objs.robjs[r].has_type(JOBJ) => jobj::unref_this(objs, Some(j)),
         Ref::Exp(exp) if objs.robjs[r].has_type(EXP) => remove_rvalues(objs, exp.rvalue),

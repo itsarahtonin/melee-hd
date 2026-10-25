@@ -2274,21 +2274,54 @@ impl Bytes<'_> {
         f32::from_bits(self.u32(at))
     }
 
-    /// A pointer the variables held before a typed member took them over: only null can carry
-    /// over, as a freed object's pointer means nothing here.
+    /// A pointer the variables held before a typed member took them over: null, or a word the
+    /// heap's leftovers left (a session's, [`crate::hsd::image`]), which becomes a handle
+    /// that carries the word and stops when followed.
     fn null(&self, at: usize) -> Option<GObjId> {
-        assert_eq!(
-            self.u32(at),
-            0,
-            "a stage object's stale pointer at +{at:#x}"
-        );
-        None
+        self.null_of(at)
     }
 
     /// [`Self::null`] for a pointer of another type.
-    fn null_of<T>(&self, at: usize) -> Option<T> {
-        self.null(at);
-        None
+    fn null_of<T: Leftover>(&self, at: usize) -> Option<T> {
+        let w = self.u32(at);
+        (w != 0).then(|| {
+            T::leftover(
+                crate::hsd::image::leftover_word(w).unwrap_or_else(|| {
+                    panic!("a stage object's stale pointer at +{at:#x}: {w:#010x}")
+                }),
+            )
+        })
+    }
+}
+
+/// A handle a stage object's variables hold, as a leftover word makes it.
+trait Leftover {
+    fn leftover(handle: u32) -> Self;
+}
+
+macro_rules! leftover {
+    ($($t:ty),*) => {$(
+        impl Leftover for $t {
+            fn leftover(handle: u32) -> Self {
+                Self(handle)
+            }
+        }
+    )*};
+}
+
+leftover!(
+    GObjId,
+    crate::hsd::jobj::JObjId,
+    crate::hsd::lobj::LObjId,
+    crate::hsd::generator::GeneratorId,
+    crate::game::handles::CameraBoxId,
+    crate::game::handles::DynamicsId
+);
+
+/// A data pointer can't stand for a leftover word: one a typed member takes over stops.
+impl Leftover for melee_data::archive::DataRef {
+    fn leftover(handle: u32) -> Self {
+        panic!("a stage object's stale data pointer ({handle:#x})")
     }
 }
 

@@ -595,6 +595,7 @@ fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
         // GX's.
         MObjClass::Hsd | MObjClass::Ground | MObjClass::Item => {
             mobj::setup(objs, m);
+            super::export::tlut_names(objs, data);
             texture_matrices(objs, data, m);
             setup_channel_mode(objs, m);
         }
@@ -645,6 +646,7 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
         // `lbRefract_80022998`: the chain's screen copy is a shadow-coordinate texture, so its
         // setup brings the current camera's inverse view matrix up to date.
         tobj::setup(&mut objs.tobjs, Some(t));
+        super::export::tlut_names(objs, data);
         let mut next = Some(t);
         while let Some(t) = next {
             next = objs.tobjs[t].next;
@@ -654,6 +656,7 @@ fn fighter_material(objs: &mut Objects, data: &Archives, m: MObjId) {
     }
     let m = fm.swapped.unwrap_or(m);
     mobj::setup(objs, m);
+    super::export::tlut_names(objs, data);
     texture_matrices(objs, data, m);
     let rendermode = objs.mobjs[m].rendermode | if fm.translucent { RENDER_XLU } else { 0 };
     let texp = fm.overlay_light && rendermode & RENDER_XLU == 0 && !fm.flags.x2223_b2;

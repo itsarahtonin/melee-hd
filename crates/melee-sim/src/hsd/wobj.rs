@@ -260,6 +260,7 @@ pub fn unref(objs: &mut Objects, w: Option<WObjId>) {
 /// destroy.
 #[doc(alias = "WObjRelease")]
 pub fn delete(objs: &mut Objects, w: WObjId) {
+    super::export::with_image(|img| super::export::wobj(objs, img, w));
     robj::remove_all(objs, objs.wobjs[w.0].robj);
     jobj::remove_aobj(objs, objs.wobjs[w.0].aobj);
     super::heap::class_free(super::heap::Class::WObj, objs.wobjs.addr(w.0));

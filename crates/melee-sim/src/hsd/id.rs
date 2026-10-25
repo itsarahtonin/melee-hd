@@ -63,6 +63,10 @@ impl<K: std::hash::Hash + Eq + Copy, V: Copy> IdTable<K, V> {
             Some(e) => e.0 = data,
             None => {
                 let addr = super::heap::obj_alloc(super::heap::Kind::IdEntry);
+                // A session's heap image follows the entries' chains (`hsd::image`).
+                if super::heap::image_on() {
+                    super::heap::with(|h| h.image.id_insert(addr));
+                }
                 self.map.insert(id, (data, addr));
             }
         }
@@ -72,6 +76,9 @@ impl<K: std::hash::Hash + Eq + Copy, V: Copy> IdTable<K, V> {
     #[doc(alias = "HSD_IDRemoveByIDFromTable")]
     pub fn remove(&mut self, id: K) {
         if let Some((_, addr)) = self.map.remove(&id) {
+            if super::heap::image_on() {
+                super::heap::with(|h| h.image.id_remove(addr));
+            }
             super::heap::obj_free(super::heap::Kind::IdEntry, addr);
         }
     }
@@ -87,6 +94,16 @@ impl<K: std::hash::Hash + Eq + Copy, V: Copy> IdTable<K, V> {
     #[doc(alias = "_HSD_IDForgetMemory")]
     pub fn clear(&mut self) {
         self.map.clear();
+    }
+
+    /// `id`'s value and where its entry lives.
+    pub fn entry(&self, id: K) -> Option<(V, u32)> {
+        self.map.get(&id).copied()
+    }
+
+    /// Every key, its value and its entry's address, in no particular order.
+    pub fn entries(&self) -> impl Iterator<Item = (K, V, u32)> + '_ {
+        self.map.iter().map(|(&k, &(v, a))| (k, v, a))
     }
 
     /// Every key and its value, in no particular order.

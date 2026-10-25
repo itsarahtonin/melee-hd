@@ -98,16 +98,21 @@ struct FloorProbe {
 impl Game {
     /// Allocates the links and the wind sources and empties them, `lb_8000FCDC`.
     #[doc(alias = "lb_8000FCDC")]
-    pub fn alloc_dynamics(&mut self) {
-        // A fresh block from the scene's heap: what the reset leaves is zero (engine.md). The
-        // links' block, then the wind sources'.
-        crate::hsd::heap::with(|h| {
-            h.mem_alloc(0xBE00);
+    pub fn alloc_dynamics(&mut self, data: &Archives) {
+        // The links' block, then the wind sources', from the scene's heap: a fresh heap's are
+        // zero (engine.md), after the menus each link holds what the scenes before left there,
+        // the reset's writes over it.
+        let links = crate::hsd::heap::with(|h| {
+            let links = h.mem_alloc(LINKS * 0x98);
             h.mem_alloc(0x1C0);
-        });
+            links
+        })
+        .unwrap_or(0);
         self.fighter_dynamics = Pool::default();
         for k in 0..LINKS {
-            let id = self.fighter_dynamics.alloc(DynamicsData::default());
+            let left =
+                crate::game::leftovers::import::<DynamicsData>(data, links + 0x98 * k, links != 0);
+            let id = self.fighter_dynamics.alloc(left.unwrap_or_default());
             assert_eq!(id, k, "a fresh pool's slots in order");
         }
         self.gr.winds = crate::lb::wind::Winds::default();

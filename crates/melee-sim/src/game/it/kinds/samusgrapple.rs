@@ -391,7 +391,7 @@ pub fn make_links(
     let (mut head, mut tail, mut result) = (None, None, None);
     for i in 0..n {
         let g = r.game.world.create(link::CLASS, LINK_P_LINK, 0);
-        let l = link::alloc(r.game);
+        let l = link::alloc(r.game, r.data);
         r.game
             .world
             .init_user_data(g, link::USER_DATA_KIND, UserData::ItemLink(l));
@@ -546,11 +546,8 @@ pub fn spawn(r: &mut Running, owner: GObjId, pos: Vec3, facing_dir: f32) -> Opti
     // Past her bones, the table's last entry (`MAX_FT_PARTS` of them).
     let f = r.game.fighter_id(owner);
     let parts = r.game.fighters[f.0].parts.expect("a fighter without parts");
-    let bones = &mut r.game.fighter_parts[parts.0];
-    if bones.len() <= PART_TIP {
-        bones.resize(PART_TIP + 1, Default::default());
-    }
-    bones[PART_TIP].joint = tip_model;
+    crate::game::leftovers::grow_parts(r, parts, PART_TIP + 1);
+    r.game.fighter_parts[parts.0][PART_TIP].joint = tip_model;
     pick_up(r, beam, owner, PART_THROW_N);
     stop_anim(r, beam);
     Some(beam)

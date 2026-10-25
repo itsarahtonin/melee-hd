@@ -223,6 +223,7 @@ pub fn remove_all(objs: &mut Objects, d: Option<DObjId>) {
     while let Some(d) = cur {
         cur = objs.dobjs[d].next;
         release(objs, d);
+        super::export::with_image(|img| super::export::dobj(objs, img, d));
         super::heap::class_free(super::heap::Class::DObj, objs.dobjs.pool.addr(d.0));
         objs.dobjs.pool.free(d.0);
     }

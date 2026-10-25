@@ -591,10 +591,17 @@ pub const GROUND_SIZE: u32 = 0x204;
 /// The original leaves the block uncleared; Slippi's playback codes zero it (a determinism
 /// fix). At stage creation the heap's blocks are fresh, zero memory, so both start as zero
 /// here (see [`super::vars`]).
-fn new_ground(game: &mut Game, gobj: GObjId) -> GroundId {
+fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
     let id = GroundId(game.grounds.alloc(Ground::default()));
-    game.grounds
-        .set_addr(id.0, crate::hsd::heap::mem_alloc(GROUND_SIZE));
+    let addr = crate::hsd::heap::mem_alloc(GROUND_SIZE);
+    game.grounds.set_addr(id.0, addr);
+    // After the menus the block holds what they left, where Slippi's Init Stage Data
+    // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).
+    if !game.rules.slippi
+        && let Some(left) = crate::game::leftovers::import(data, addr, true)
+    {
+        game.grounds[id.0] = left;
+    }
     game.world
         .init_user_data(gobj, USER_DATA_GROUND, UserData::Ground(id));
     id
@@ -608,7 +615,7 @@ fn new_ground(game: &mut Game, gobj: GObjId) -> GroundId {
 pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
-    let g = new_ground(game, gobj);
+    let g = new_ground(game, data, gobj);
     {
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;
@@ -738,7 +745,7 @@ pub fn stage_gobj_from_joint(
 ) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
-    let g = new_ground(game, gobj);
+    let g = new_ground(game, data, gobj);
     {
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;

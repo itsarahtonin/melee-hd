@@ -397,6 +397,8 @@ impl Host<GameKinds> for Running<'_> {
         match data {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => {
+                let game = &*self.game;
+                crate::hsd::export::with_image(|img| super::export::ground(game, img, g));
                 crate::hsd::heap::mem_free(self.game.grounds.addr(g.0));
                 self.game.grounds.free(g.0);
             }

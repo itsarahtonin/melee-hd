@@ -124,6 +124,17 @@ impl Running<'_> {
             0 => seeded.unwrap_or(0),
             a => a,
         };
+        // After the menus the block holds what they left, where Slippi's Init Player Data
+        // (`80068EEC`) doesn't zero it (docs/engine.md, a session's heap leftovers).
+        if !self.game.rules.slippi
+            && let Some(left) = crate::game::leftovers::import(
+                self.data,
+                address,
+                crate::game::leftovers::pool_grew(),
+            )
+        {
+            self.game.fighters[f.0] = left;
+        }
         self.game.ft.addresses.insert(f.0, address);
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);

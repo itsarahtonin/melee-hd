@@ -31,11 +31,11 @@ pub fn alloc_exprs(objs: &mut Objects, m: MObjId, s: &mut Scratch) {
     free_kept(objs, m);
     s.addrs.clear();
     for node in &s.list.nodes {
-        let size = match node {
-            Node::Tev(_) => TEV_SIZE,
-            Node::Cnst(_) => CNST_SIZE,
-        };
-        s.addrs.push(heap::piece_alloc(size));
+        s.addrs.push(match node {
+            Node::Tev(_) => heap::piece_alloc(TEV_SIZE),
+            // `HSD_TExpCnst` writes all but the last byte (`range`).
+            Node::Cnst(_) => heap::piece_alloc_partly(CNST_SIZE, &[(0, CNST_SIZE - 1)]),
+        });
     }
 }
 
@@ -43,13 +43,20 @@ pub fn alloc_exprs(objs: &mut Objects, m: MObjId, s: &mut Scratch) {
 /// operations and the unread constants freed, and what the material keeps recorded in its
 /// [`super::mobj::MObjHeap`].
 pub fn finish(objs: &mut Objects, m: MObjId, s: &Scratch, num: usize) {
-    let h = &mut objs.mobjs[m].heap;
-    assert!(num <= h.tevdesc.len(), "{num} TEV stages");
-    // Each stage goes on the front of the list.
-    for i in 0..num {
-        h.tevdesc[num - 1 - i] = heap::piece_alloc(TEVDESC_SIZE);
+    {
+        let h = &mut objs.mobjs[m].heap;
+        assert!(num <= h.tevdesc.len(), "{num} TEV stages");
+        // Each stage goes on the front of the list.
+        // `TExp2TevDesc` writes the fields one by one, leaving the padding after each clamp.
+        for i in 0..num {
+            h.tevdesc[num - 1 - i] =
+                heap::piece_alloc_partly(TEVDESC_SIZE, &[(0, 0x35), (0x38, 0x59), (0x5C, 0x78)]);
+        }
+        h.n_tevdesc = num as u8;
     }
-    h.n_tevdesc = num as u8;
+    // What the freed expressions' pieces hold as they go, for a session's leftovers.
+    super::export::with_image(|img| super::export::freed_texps(objs, img, &s.list, &s.addrs));
+    let h = &mut objs.mobjs[m].heap;
     // `HSD_TExpFreeList(list, HSD_TE_TEV, 1)`, then `(list, HSD_TE_CNST, 0)`: the list runs
     // newest first.
     for (node, &addr) in s.list.nodes.iter().zip(&s.addrs).rev() {
@@ -72,6 +79,7 @@ pub fn finish(objs: &mut Objects, m: MObjId, s: &Scratch, num: usize) {
 
 /// The pieces the material's last compile kept, back to the model.
 pub fn free_kept(objs: &mut Objects, m: MObjId) {
+    super::export::with_image(|img| super::export::mobj_tev(objs, img, m));
     let h = &mut objs.mobjs[m].heap;
     for &p in &h.tevdesc[..usize::from(h.n_tevdesc)] {
         heap::piece_free(p, TEVDESC_SIZE);

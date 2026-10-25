@@ -198,6 +198,8 @@ pub fn read(m: &[u8]) -> Heap {
         obj_heap,
         allocs,
         classes,
+        // An import from memory keeps no image: its leftovers come in with the state.
+        image: Default::default(),
     }
 }
 
