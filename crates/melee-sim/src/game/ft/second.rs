@@ -37,6 +37,19 @@ fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
     (addr != 0 && off < SIZE).then_some(off)
 }
 
+impl crate::game::mirror::LayOut for SecondTree {
+    /// A figatree outside the main buffer by its address; one in it stays unknown (its address
+    /// is the buffer's, which the fighter's layout doesn't pass).
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        let w = if self.in_main {
+            None
+        } else {
+            cx.data(self.tree)
+        };
+        l.put_word(at, w);
+    }
+}
+
 impl Mirror for SecondTree {
     const SIZE: u32 = 4;
 

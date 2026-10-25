@@ -55,7 +55,14 @@ pub fn import<T: Mirror>(data: &Archives, addr: u32, fresh: bool) -> Option<T> {
         if !h.image.on || !fresh || addr == 0 {
             return None;
         }
-        let (bytes, _) = h.image.leftover_bytes(data, addr, T::SIZE);
+        let (mut bytes, _) = h.image.leftover_bytes(data, addr, T::SIZE);
+        // The GPU's pixels: the image's fill (docs/engine.md, "Uninitialized values").
+        let fill = h.image.render_fill;
+        for (b, rt) in bytes.iter_mut().zip(h.image.render_target(addr, T::SIZE)) {
+            if rt {
+                *b = fill;
+            }
+        }
         let m = Mem {
             bytes: &bytes,
             base: addr,
@@ -66,6 +73,31 @@ pub fn import<T: Mirror>(data: &Archives, addr: u32, fresh: bool) -> Option<T> {
         Some(T::import(&m, addr, &mut cx))
     })
     .flatten()
+}
+
+/// The runs of `[addr, addr + len)` a new object's block holds from a render target (the
+/// GPU's pixels, [`crate::hsd::image::Src::RenderTarget`]), as offsets into the block, in a
+/// session; [`import`] gave the object the image's fill there.
+pub fn render_target_runs(addr: u32, len: u32) -> Vec<(u32, u32)> {
+    if !heap::image_on() || addr == 0 {
+        return Vec::new();
+    }
+    heap::with(|h| {
+        let rt = h.image.render_target(addr, len);
+        let mut out = Vec::new();
+        let mut i = 0;
+        while i < rt.len() {
+            if !rt[i] {
+                i += 1;
+                continue;
+            }
+            let j = (i..rt.len()).find(|&j| !rt[j]).unwrap_or(rt.len());
+            out.push((i as u32, j as u32));
+            i = j;
+        }
+        out
+    })
+    .unwrap_or_default()
 }
 
 /// A fighter's parts table grown to `len` entries (`MAX_FT_PARTS` for Samus's grapple beam's
@@ -87,8 +119,20 @@ pub fn bytes(data: &Archives, addr: u32, len: u32) -> Option<Vec<u8>> {
     if !heap::image_on() {
         return None;
     }
-    heap::with(|h| (h.image.on && addr != 0).then(|| h.image.leftover_bytes(data, addr, len).0))
-        .flatten()
+    heap::with(|h| {
+        (h.image.on && addr != 0).then(|| {
+            let mut b = h.image.leftover_bytes(data, addr, len).0;
+            // The GPU's pixels: the image's fill (docs/engine.md, "Uninitialized values").
+            let fill = h.image.render_fill;
+            for (b, rt) in b.iter_mut().zip(h.image.render_target(addr, len)) {
+                if rt {
+                    *b = fill;
+                }
+            }
+            b
+        })
+    })
+    .flatten()
 }
 
 /// Whether the last object a pool handed out came new from the heap (its pool grew), in a

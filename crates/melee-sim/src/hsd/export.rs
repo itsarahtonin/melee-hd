@@ -21,6 +21,9 @@ pub struct Lay {
     at: u32,
     bytes: Vec<u8>,
     known: Vec<bool>,
+    /// The bits bitfields have laid of each byte (`put_bits`): a byte is known once all eight
+    /// are.
+    bits: Vec<u8>,
 }
 
 impl Lay {
@@ -29,6 +32,97 @@ impl Lay {
             at,
             bytes: vec![0; len as usize],
             known: vec![false; len as usize],
+            bits: vec![0; len as usize],
+        }
+    }
+
+    /// Bytes at address `a` (the generated layouts', `game::mirror::LayOut`).
+    pub fn put_bytes(&mut self, a: u32, b: &[u8]) {
+        self.bytes(a - self.at, b);
+    }
+
+    pub fn put_u8(&mut self, a: u32, v: u8) {
+        self.put_bytes(a, &[v]);
+    }
+
+    pub fn put_u16(&mut self, a: u32, v: u16) {
+        self.put_bytes(a, &v.to_be_bytes());
+    }
+
+    pub fn put_u32(&mut self, a: u32, v: u32) {
+        self.put_bytes(a, &v.to_be_bytes());
+    }
+
+    pub fn put_u64(&mut self, a: u32, v: u64) {
+        self.put_bytes(a, &v.to_be_bytes());
+    }
+
+    /// The byte laid out at address `a`, if known.
+    pub fn byte(&self, a: u32) -> Option<u8> {
+        let i = a.wrapping_sub(self.at) as usize;
+        self.known
+            .get(i)
+            .copied()
+            .unwrap_or(false)
+            .then(|| self.bytes[i])
+    }
+
+    /// The byte laid out at address `a` and which of its bits are known (a bitfield can lay
+    /// some), if any are.
+    pub fn bits_at(&self, a: u32) -> Option<(u8, u8)> {
+        let i = a.wrapping_sub(self.at) as usize;
+        let mask = if *self.known.get(i)? {
+            0xFF
+        } else {
+            self.bits[i]
+        };
+        (mask != 0).then(|| (self.bytes[i], mask))
+    }
+
+    /// Marks `len` bytes at address `a` unknown again.
+    pub fn forget(&mut self, a: u32, len: u32) {
+        let o = (a - self.at) as usize;
+        self.known[o..o + len as usize].fill(false);
+        self.bits[o..o + len as usize].fill(0);
+    }
+
+    /// A word at address `a` that may be unknown: an unknown one is unknown even over what
+    /// the block held ([`Lay::over`]), since the owner wrote it.
+    pub fn put_word(&mut self, a: u32, v: Option<u32>) {
+        match v {
+            Some(v) => self.put_u32(a, v),
+            None => self.forget(a, 4),
+        }
+    }
+
+    /// A layout over what the block holds now as the image knows it (`Image::leftover_bytes`,
+    /// its owner's claim aside): the bytes its owner never writes keep that, and the layout
+    /// writes the rest.
+    pub fn over(at: u32, bytes: Vec<u8>, known: Vec<bool>) -> Lay {
+        let bits = known.iter().map(|&k| if k { 0xFF } else { 0 }).collect();
+        Lay {
+            at,
+            bytes,
+            known,
+            bits,
+        }
+    }
+
+    /// A bitfield of `bits` bits, `bit` bits from the struct at `at`, the first bit the top
+    /// one (as `game::mirror::Mem::bits` reads it). A byte only some laid bits cover stays
+    /// unknown: its other bits are what the block held.
+    pub fn put_bits(&mut self, at: u32, bit: u32, bits: u32, v: u32) {
+        for k in 0..bits {
+            let b = bit + k;
+            let i = (at + b / 8 - self.at) as usize;
+            let mask = 0x80u8 >> (b % 8);
+            if v >> (bits - 1 - k) & 1 != 0 {
+                self.bytes[i] |= mask;
+            } else {
+                self.bytes[i] &= !mask;
+            }
+            self.bits[i] |= mask;
+            self.known[i] = self.bits[i] == 0xFF;
         }
     }
 
@@ -874,6 +968,11 @@ pub fn with_image(f: impl FnOnce(&mut Image)) {
 /// Every object of the scene's classes and pools that still lives as its heap is made anew,
 /// laid out where it is ([`Image::scene_slots`]).
 pub fn live_objects(objs: &Objects, img: &mut Image) {
+    let mut n = objs.lobjs.current;
+    while let Some(c) = n {
+        lobj_node(objs, img, c);
+        n = objs.lobjs.nodes[c.0].next;
+    }
     let slots = img.scene_slots();
     for (kind, slot) in slots {
         match kind {
@@ -931,4 +1030,18 @@ pub fn live_objects(objs: &Objects, img: &mut Image) {
             _ => {}
         }
     }
+}
+
+/// A current light's list node (`HSD_SList`, 8): the next node and the light.
+pub fn lobj_node(objs: &Objects, img: &mut Image, n: super::list::SListId) {
+    let lobjs = &objs.lobjs;
+    let at = lobjs.nodes.addr(n.0);
+    if at == 0 {
+        return;
+    }
+    let node = &lobjs.nodes[n.0];
+    let mut l = Lay::new(at, 8);
+    l.u32(0, node.next.map_or(0, |x| lobjs.nodes.addr(x.0)));
+    l.u32(4, lobjs.pool.addr(node.data.0));
+    l.put(img);
 }

@@ -587,3 +587,36 @@ pub fn shape(hit: &HitCapsule) -> HitShape {
         contact: hit.hurt_coll_pos,
     }
 }
+
+impl crate::game::mirror::LayOut for Victim {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        let w = match *self {
+            Victim::None => Some(0),
+            Victim::Fighter(f) => cx.handle("FighterId", Some(f.0)),
+            Victim::Item(i) => cx.handle("ItemId", Some(i.0)),
+            Victim::Stale(a) => Some(a),
+        };
+        l.put_word(at, w);
+    }
+}
+
+impl crate::game::mirror::LayOut for HitOwner {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        match *self {
+            HitOwner::Bits(b) => l.put_bytes(at, &b),
+            HitOwner::Thrower(g) => l.put_word(at, cx.handle("GObjId", Some(g.0))),
+            HitOwner::ClearedThrower(g) => {
+                l.put_word(at, cx.handle("GObjId", Some(g.0)).map(|a| a & 0x7FFF_FFFF));
+            }
+        }
+    }
+}
+
+impl crate::game::mirror::LayOut for HitJObj {
+    /// Unknown until the item writes it.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        if let Some(j) = self.0 {
+            l.put_word(at, cx.handle("JObjId", j.map(|h| h.0)));
+        }
+    }
+}

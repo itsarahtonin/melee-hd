@@ -227,3 +227,19 @@ impl Mirror for Script {
         }
     }
 }
+
+impl crate::game::mirror::LayOut for Script {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        l.put_u32(at, self.timer);
+        l.put_u32(at + 4, self.frame_count);
+        l.put_word(at + 8, cx.data(self.cursor));
+        l.put_u32(at + 0xC, self.loop_count);
+        for (i, s) in self.ret.iter().enumerate() {
+            let w = match *s {
+                Slot::Data(d) => cx.data(Some(d)),
+                Slot::Word(w) => Some(w),
+            };
+            l.put_word(at + 0x10 + 4 * i as u32, w);
+        }
+    }
+}

@@ -202,6 +202,11 @@ pub struct Geometry<K: Kinds> {
     /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
     /// model (0 without), which `mpJointFromLine` leaves in r5 for the computer player's DI.
     pub joints_addr: u32,
+    /// The joints whose stamp the load left where the array's block held the GPU's pixels (a
+    /// render target's, `hsd::image::Src::RenderTarget`), until the stage code stamps them:
+    /// the comparer leaves such a stamp out, and reading one stops (docs/engine.md,
+    /// "Uninitialized values").
+    pub render_stamps: Vec<u16>,
 }
 
 /// The geometry a stage without collision data gets (`mpLib_803BF760`): one floor below the
@@ -358,6 +363,13 @@ impl<K: Kinds> Geometry<K> {
         // The stamp the load leaves as the joints' array held it: after the menus, what they
         // left there (docs/engine.md, a session's heap leftovers).
         let left = crate::game::leftovers::bytes(data, joints_addr, 0x34 * joint_count as u32);
+        let render_stamps = (0..joint_count)
+            .filter(|&i| {
+                let at = joints_addr + 0x34 * i as u32 + 0xC;
+                joints_addr != 0 && crate::game::leftovers::render_target_runs(at, 2) == [(0, 2)]
+            })
+            .map(|i| i as u16)
+            .collect();
         let stamp = |i: usize| {
             left.as_ref().map_or(0, |b| {
                 let o = 0x34 * i + 0xC;
@@ -441,6 +453,7 @@ impl<K: Kinds> Geometry<K> {
             generation: 0,
             islands: Islands::default(),
             joints_addr,
+            render_stamps,
         };
         g.build_islands();
         g.uncheck_bounding();

@@ -265,6 +265,60 @@ impl Mirror for EcbSource {
     }
 }
 
+impl crate::game::mirror::LayOut for X34Flags {
+    /// The whole byte: `b5` as the last move left it (each move's substeps clear it first),
+    /// which a collision that hasn't moved since its setup holds as the block did, as melee-sim
+    /// imported it.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_bits(at, 0, 1, u32::from(self.b0));
+        l.put_bits(at, 1, 4, u32::from(self.b1234));
+        l.put_bits(at, 5, 1, u32::from(self.b5));
+        l.put_bits(at, 6, 1, u32::from(self.b6));
+        l.put_bits(at, 7, 1, u32::from(self.b7));
+    }
+}
+
+impl crate::game::mirror::LayOut for X35Flags {
+    /// The top bit: the rest of the byte stays unknown.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_bits(at, 0, 1, u32::from(self.b0));
+    }
+}
+
+impl crate::game::mirror::LayOut for EcbSource {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        l.put_u32(at, self.kind as u32);
+        match &self.x4 {
+            // A box's five words; the joint member's last two keep what the block held, which
+            // the mirror doesn't keep (nothing compares them), so they're unknown.
+            EcbShape::Box {
+                up,
+                down,
+                front,
+                back,
+                angle,
+            } => {
+                for (i, v) in [up, down, front, back, angle].iter().enumerate() {
+                    l.put_u32(at + 4 + 4 * i as u32, v.to_bits());
+                }
+                l.forget(at + 0x18, 8);
+            }
+            EcbShape::Joints {
+                x108_joint,
+                x10C_joint,
+            } => {
+                let joints = std::iter::once(x108_joint).chain(x10C_joint.iter());
+                for (i, j) in joints.enumerate() {
+                    l.put_word(at + 4 + 4 * i as u32, cx.handle("JObjId", j.map(|h| h.0)));
+                }
+            }
+        }
+        l.put_u32(at + 0x20, self.x124.to_bits());
+        l.put_u32(at + 0x24, self.x128.to_bits());
+        l.put_u32(at + 0x28, self.x12C.to_bits());
+    }
+}
+
 /// mpcoll.c's statics: scratch results the checks leave for the corrections, and the floor
 /// filter of the pass in progress.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]

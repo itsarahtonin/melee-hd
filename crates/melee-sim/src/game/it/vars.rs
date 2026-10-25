@@ -106,6 +106,20 @@ macro_rules! members {
             }
         }
 
+        impl crate::game::mirror::LayOut for ItemVars {
+            fn lay(
+                &self,
+                l: &mut crate::hsd::export::Lay,
+                at: u32,
+                cx: &dyn crate::game::mirror::LayCx,
+            ) {
+                match self {
+                    ItemVars::Bytes(b) => l.put_bytes(at, b),
+                    $(ItemVars::$variant(v) => v.lay(l, at, cx),)*
+                }
+            }
+        }
+
         impl Mirror for ItemVars {
             const SIZE: u32 = SIZE as u32;
 
@@ -355,6 +369,12 @@ impl<T: Copy> Var<T> {
         self.read = false;
     }
 
+    /// Whether the field is live (written, or known when imported): the comparer compares it
+    /// and the heap's image takes its value.
+    pub fn is_live(&self) -> bool {
+        self.stale == 0
+    }
+
     /// The value as the comparer sees it, without marking a read.
     pub fn peek(&self) -> &T {
         &self.v
@@ -407,6 +427,20 @@ impl Var<Vec3> {
     pub fn set_z(&mut self, v: f32) {
         self.v.z = v;
         self.stale &= !4;
+    }
+
+    /// Lays the vector's live components out for the heap's image.
+    pub fn lay(
+        &self,
+        l: &mut crate::hsd::export::Lay,
+        at: u32,
+        _: &dyn crate::game::mirror::LayCx,
+    ) {
+        for (i, v) in [self.v.x, self.v.y, self.v.z].into_iter().enumerate() {
+            if self.stale & 1 << i == 0 {
+                l.put_u32(at + 4 * i as u32, v.to_bits());
+            }
+        }
     }
 
     /// Compares the vector's live components with memory.
@@ -476,3 +510,62 @@ impl Mirror for LinkBombFlags {
         }
     }
 }
+
+impl crate::game::mirror::LayOut for TurnipFlag {
+    /// The top bit; the byte's others are what the block held.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_bits(at, 0, 1, u32::from(self.picked_up));
+    }
+}
+
+impl crate::game::mirror::LayOut for CoinFlags {
+    /// The two bits; the byte's others are what the block held.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_bits(at, 0, 1, u32::from(self.others));
+        l.put_bits(at, 1, 1, u32::from(self.owner));
+    }
+}
+
+impl crate::game::mirror::LayOut for LinkBombFlags {
+    /// The bits the bomb wrote; the byte's others are what the block held.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_bits(at, 0, 1, u32::from(self.fuse_end));
+        if let Some(r) = self.rolling {
+            l.put_bits(at, 1, 1, u32::from(r));
+        }
+        l.put_bits(at, 2, 1, u32::from(self.knocked));
+    }
+}
+
+/// Members of an item's variables written by hand, which aren't laid out yet: their bytes are
+/// unknown in the heap's image once the item goes back.
+macro_rules! unlaid {
+    ($($t:ty),*) => {$(
+        impl crate::game::mirror::LayOut for $t {
+            fn lay(
+                &self,
+                l: &mut crate::hsd::export::Lay,
+                at: u32,
+                _: &dyn crate::game::mirror::LayCx,
+            ) {
+                l.forget(at, <$t as Mirror>::SIZE);
+            }
+        }
+    )*};
+}
+
+unlaid!(
+    ArwingLaserVars,
+    GameWatchRescueVars,
+    GameWatchVars,
+    GreatFoxLaserVars,
+    HeihoVars,
+    KlapVars,
+    KyasarinVars,
+    KyasarinEggVars,
+    TincleVars,
+    ToolsVars,
+    WhispyAppleVars,
+    YakuVars,
+    PokemonVars
+);

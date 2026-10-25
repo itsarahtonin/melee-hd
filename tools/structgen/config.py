@@ -145,6 +145,10 @@ ROOTS = [
 # card's data, which a save writes to the card.
 EXPORT_ROOTS = ["GmCardData"]
 
+# Structs laid out for the heap's image (`LayOut`), with everything they hold: a fighter's and
+# an item's blocks, as they go back to the heap, and an item's variables' members.
+LAY_ROOTS = ["Fighter", "Item", "BoneDynamicsDesc", "Item_DynamicBones", "HurtCapsule", "FighterBone"] + [r for r in ROOTS if r.endswith("_ItemVars")]
+
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {
     "HSD_GObj": "Option<GObjId>",

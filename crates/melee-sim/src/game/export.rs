@@ -5,6 +5,8 @@
 
 use melee_data::archive::Archives;
 
+use super::handles::{FighterId, ItemId};
+use super::mirror::{LayCx, LayOut, Mirror};
 use super::state::{Game, Obj, UserData};
 use crate::hsd::export::{Lay, live_objects};
 use crate::hsd::gobj::{GObjId, ProcId};
@@ -139,6 +141,37 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     }
 }
 
+/// The game's objects the scene's heap holds as it ends, laid out before the heap's claims
+/// go (`Heap::end_scene_image`), so a layout over what a block held reads under its owner's
+/// claim: the stage's collision joints (when this scene loaded them, `geometry_live`), the
+/// scene's fighters with their parts tables and DObj lists, its items and its animation
+/// buffers.
+pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, geometry_live: bool) {
+    if geometry_live {
+        coll_joints(game, data, img);
+    }
+    // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
+    let fighters = std::any::type_name::<super::structs::Fighter>();
+    for (slot, _) in game.fighters.iter() {
+        if img.in_scene(fighters, slot) {
+            fighter(game, data, img, FighterId(slot));
+            fighter_parts(game, data, img, FighterId(slot));
+        }
+    }
+    let items = std::any::type_name::<super::structs::Item>();
+    for (slot, _) in game.items.iter() {
+        if img.in_scene(items, slot) {
+            item(game, data, img, ItemId(slot));
+        }
+    }
+    let bufs = std::any::type_name::<super::ft::anim_buf::AnimBuf>();
+    for (slot, _) in game.fighter_anim_bufs.iter() {
+        if img.in_scene(bufs, slot) {
+            anim_buf(game, img, slot);
+        }
+    }
+}
+
 /// A color overlay (`ColorStruct`, 0x80) at `off` of `l`: its script's place where the image
 /// knows the file it's in.
 fn color_overlay(img: &Image, l: &mut Lay, off: u32, c: &super::structs::ColorOverlay) {
@@ -255,6 +288,212 @@ pub fn ground(game: &Game, img: &mut Image, g: super::handles::GroundId) {
     l.f32(0xC0, o.xC0);
     if let super::gr::GroundVars::Bytes(b) = &o.u {
         l.bytes(0xC4, b);
+    }
+    l.put(img);
+}
+
+/// The addresses the game's handles name now, for a generated layout ([`LayOut`]): a pool's
+/// slot's address where the allocator model gives it, a leftover handle's word, and a place in
+/// loaded data where the image knows the file's; none (an unknown word) otherwise.
+struct Addrs<'a> {
+    game: &'a Game,
+    img: &'a Image,
+}
+
+impl LayCx for Addrs<'_> {
+    fn handle(&self, kind: &'static str, h: Option<u32>) -> Option<u32> {
+        let Some(h) = h else { return Some(0) };
+        if h >= crate::hsd::pool::UNKNOWN {
+            return self.img.unknown_word(h);
+        }
+        let g = self.game;
+        let a = match kind {
+            "GObjId" => g.world.gobjs.addr(h),
+            "JObjId" => g.objs.jobjs.pool.addr(h),
+            "DObjId" => g.objs.dobjs.pool.addr(h),
+            "MObjId" => g.objs.mobjs.pool.addr(h),
+            "TObjId" => g.objs.tobjs.pool.addr(h),
+            "LObjId" => g.objs.lobjs.pool.addr(h),
+            "FighterId" => g.fighters.addr(h),
+            "ItemId" => g.items.addr(h),
+            "ItemLinkId" => g.it.links.addr(h),
+            "BoneTableId" => g.it.bone_tables.addr(h),
+            "PartsId" => g.fighter_parts.addr(h),
+            "AttrsId" => g.fighter_attrs.addr(h),
+            "AnimBufId" => g.fighter_anim_bufs.addr(h),
+            "DObjListId" => g.fighter_dobj_lists.addr(h),
+            "DynamicsId" => g.fighter_dynamics.addr(h),
+            "EffectId" => g.ef.effects.addr(h),
+            "QueuedId" => g.ef.queued.addr(h),
+            // The items' tables in the executable: the handle is the address.
+            "GroundId" => g.grounds.addr(h),
+            "ItemLogicRef" | "ItemStatesRef" => h,
+            _ => 0,
+        };
+        (a != 0).then_some(a)
+    }
+
+    /// A null place is unknown: the mirror imports a pointer into data no archive holds (the
+    /// executable's tables) as none too, so its word can't be told from null.
+    fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
+        d.and_then(|d| self.img.data_addr(d))
+    }
+}
+
+/// `Fighter` (0x23EC), as its block goes back with its scene's heap: the fields the comparer
+/// checks, its dynamic bone sets up to their count, over what the block held where creation
+/// leaves it (a field the original wrote but melee-sim doesn't know stays unknown).
+pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
+    let at = game.fighters.addr(f.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.fighters[f.0];
+    let (b, k) = img.leftover_bytes(data, at, super::structs::Fighter::SIZE);
+    let mut l = Lay::over(at, b, k);
+    let cx = Addrs { game, img };
+    o.lay(&mut l, at, &cx);
+    let n = o.dynamics_num.max(0) as usize;
+    o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
+    l.put(img);
+}
+
+/// `Item` (0xFCC), as its block goes back (`HSD_ObjFree`, or with its scene's heap): the
+/// fields the comparer checks, its dynamic bones and hurtboxes up to their counts, over what
+/// the block held where the item never writes (a stale variable, the variables past its
+/// member, the unused words; a field the original wrote but melee-sim doesn't know stays
+/// unknown).
+pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
+    let at = game.items.addr(i.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.items[i.0];
+    let (b, k) = img.leftover_bytes(data, at, super::structs::Item::SIZE);
+    let mut l = Lay::over(at, b, k);
+    let cx = Addrs { game, img };
+    o.lay(&mut l, at, &cx);
+    let n = o.x374_dynamicBonesNum.max(0) as usize;
+    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
+    let n = usize::from(o.xAC8_hurtboxNum);
+    o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    l.put(img);
+}
+
+/// A fighter's animation buffer (`fighter_x59C_alloc_data`, 0x8000): the archives its loads
+/// copied there, each relocated to the buffer, the newest over the older ones' longer runs
+/// (`ft::anim_buf`); what the buffer held before them stays as the image had it.
+pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
+    let at = game.fighter_anim_bufs.addr(slot);
+    if at == 0 {
+        return;
+    }
+    for l in game.fighter_anim_bufs[slot].layers().iter().rev() {
+        img.hold(
+            at,
+            at + l.length(),
+            crate::hsd::image::Src::File {
+                archive: l.archive,
+                offset: 0,
+                base: at + super::ft::anim_buf::ARCHIVE_HEADER,
+            },
+        );
+    }
+}
+
+/// A fighter's parts table (`fighter_parts_alloc_data`, `FighterBone`s) and DObj list
+/// (`fighter_dobj_list_alloc_data`, the DObjs `ftParts_SetupParts` listed), over what their
+/// blocks held where the fighter never writes (the table's entries past its bones, the list's
+/// past its count).
+pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
+    let fp = &game.fighters[f.0];
+    let cx = Addrs { game, img };
+    let mut lays = Vec::new();
+    if let Some(p) = fp.parts {
+        let at = game.fighter_parts.addr(p.0);
+        if at != 0 {
+            let bones = &game.fighter_parts[p.0];
+            // The whole block: past the bones it holds what it held.
+            let len = crate::hsd::heap::Kind::FighterParts
+                .init()
+                .0
+                .max(0x10 * bones.len() as u32);
+            let (b, k) = img.leftover_bytes(data, at, len);
+            let mut l = Lay::over(at, b, k);
+            for (i, bone) in bones.iter().enumerate() {
+                bone.lay(&mut l, at + 0x10 * i as u32, &cx);
+            }
+            lays.push(l);
+        }
+    }
+    if let Some(d) = fp.dobj_list.data {
+        let at = game.fighter_dobj_lists.addr(d.0);
+        if at != 0 {
+            let list = &game.fighter_dobj_lists[d.0];
+            let n = (fp.dobj_list.count as usize).min(list.len());
+            let len = crate::hsd::heap::Kind::FighterDObjList.init().0;
+            let (b, k) = img.leftover_bytes(data, at, len);
+            let mut l = Lay::over(at, b, k);
+            for (i, o) in list.iter().take(n).enumerate() {
+                l.put_word(at + 4 * i as u32, cx.handle("DObjId", o.map(|o| o.0)));
+            }
+            lays.push(l);
+        }
+    }
+    for l in lays {
+        l.put(img);
+    }
+}
+
+/// `mpLib_803BF760`'s joints (`MapJoint`s), where a stage without collision data points.
+const DEFAULT_MAP_JOINTS: u32 = 0x803B_F738;
+
+/// The stage's collision joints (`CollJoint`, 0x34 each, `groundCollJoint`), as the scene's
+/// heap goes: the list's links, each joint's descriptor in the data, flags, stamp, dirty bit,
+/// bounds, model joint and callbacks; the rest of the dirty bit's byte and the byte after it
+/// keep what the block held.
+pub fn coll_joints(game: &Game, data: &Archives, img: &mut Image) {
+    let Some(g) = &game.geometry else { return };
+    let at = g.joints_addr;
+    if at == 0 || g.joints.is_empty() {
+        return;
+    }
+    let descs = match game.stage_info.coll_data {
+        None => Some(DEFAULT_MAP_JOINTS),
+        Some(c) => data.ptr(c.at(0x24)).and_then(|d| img.data_addr(d)),
+    };
+    let len = 0x34 * g.joints.len() as u32;
+    let (b, k) = img.leftover_bytes(data, at, len);
+    let mut l = Lay::over(at, b, k);
+    let cx = Addrs { game, img };
+    let user = |u: Option<super::gr::CollUser>| match u {
+        None => Some(0),
+        Some(super::gr::CollUser::Ground(gr)) => cx.handle("GroundId", Some(gr.0)),
+        Some(super::gr::CollUser::GObj(o)) => cx.handle("GObjId", Some(o.0)),
+    };
+    for (j, o) in g.joints.iter().enumerate() {
+        let a = at + 0x34 * j as u32;
+        l.put_u32(a, o.next.map_or(0, |n| at + 0x34 * u32::from(n)));
+        l.put_word(a + 4, descs.map(|d| d + 0x28 * j as u32));
+        l.put_u32(a + 8, o.flags);
+        l.put_u16(a + 0xC, o.stamp as u16);
+        l.put_bits(a + 0xE, 0, 1, u32::from(o.dirty));
+        for (i, v) in [
+            o.bounding_min.x,
+            o.bounding_min.y,
+            o.bounding_max.x,
+            o.bounding_max.y,
+        ]
+        .iter()
+        .enumerate()
+        {
+            l.put_u32(a + 0x10 + 4 * i as u32, v.to_bits());
+        }
+        l.put_word(a + 0x20, cx.handle("JObjId", o.jobj.map(|j| j.0)));
+        l.put_u32(a + 0x24, o.ledge_callback.map_or(0, |c| c.0));
+        l.put_word(a + 0x28, user(o.ledge_user_data));
+        l.put_u32(a + 0x2C, o.callback.map_or(0, |c| c.0));
+        l.put_word(a + 0x30, user(o.user_data));
     }
     l.put(img);
 }

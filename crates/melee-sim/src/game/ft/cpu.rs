@@ -39,6 +39,15 @@ impl<const TARGET: u32, const FIELD: u32> Mirror for SelfRef<TARGET, FIELD> {
     }
 }
 
+impl<const TARGET: u32, const FIELD: u32> crate::game::mirror::LayOut for SelfRef<TARGET, FIELD> {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_u32(
+            at,
+            self.0.map_or(0, |o| o.wrapping_add(at - FIELD + TARGET)),
+        );
+    }
+}
+
 /// `Fighter_x1A88_xFC_t`'s size: one of the 30 recorded inputs.
 const INPUT_SIZE: u32 = 0x1C;
 

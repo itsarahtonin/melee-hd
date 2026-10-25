@@ -112,7 +112,8 @@ pub fn set_size(objs: &mut Objects, s: ShadowId, width: u16, height: u16) {
             super::heap::mem_free(sh.image_addr);
         }
         let size = super::heap::tex_buffer_size(u32::from(width), u32::from(height), 0);
-        sh.image_addr = super::heap::mem_alloc(size);
+        // Only the GPU writes it, at each copy: until then it holds what the block held.
+        sh.image_addr = super::heap::mem_alloc_unclaimed(size);
         let img = &mut sh.image;
         img.allocated = true;
         img.width = width;
@@ -228,6 +229,15 @@ pub fn end_render(objs: &mut Objects, s: ShadowId) {
         set_size(objs, s, img.width, img.height);
     }
     objs.display.draws.push(super::display::Draw::ShadowCopy(s));
+    // The GPU's pixels in the texture's buffer, which the simulation never reads: for the heap's
+    // image, a render target (docs/engine.md, "Uninitialized values").
+    let sh = &objs.shadows[s.0];
+    if sh.image_addr != 0 {
+        let size =
+            super::heap::tex_buffer_size(u32::from(sh.image.width), u32::from(sh.image.height), 0);
+        let at = sh.image_addr;
+        super::heap::with(|h| h.image.hold(at, at + size, super::image::Src::RenderTarget));
+    }
     let sh = &objs.shadows[s.0];
     let c = sh.camera.expect("a shadow without a camera");
     let o = &objs.cobjs[c];

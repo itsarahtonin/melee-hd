@@ -193,6 +193,13 @@ impl crate::game::mirror::Mirror for IgnoreId {
     }
 }
 
+impl crate::game::mirror::LayOut for IgnoreId {
+    /// A stale id stays unknown.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
+        l.put_word(at, self.0);
+    }
+}
+
 /// An item GObj's `Item` (`gobj->user_data`).
 pub fn item_of(game: &Game, gobj: GObjId) -> ItemId {
     match game.world.gobjs[gobj.0].user_data {

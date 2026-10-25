@@ -122,6 +122,23 @@ pub trait Export {
     fn export(&self, m: &mut MemMut, at: u32);
 }
 
+/// What laying a struct out for the heap's image needs from the caller: the address each
+/// handle and data place names now, where it knows it (none leaves the word unknown).
+pub trait LayCx {
+    /// The address of the object a handle names (`kind` names the handle type); `Some(0)` for
+    /// none.
+    fn handle(&self, kind: &'static str, h: Option<u32>) -> Option<u32>;
+    /// The address of a place in loaded data; `Some(0)` for none.
+    fn data(&self, d: Option<DataRef>) -> Option<u32>;
+}
+
+/// A struct laid out as the game keeps it, for the heap's image ([`crate::hsd::image`]): what
+/// its block holds once the object goes back, which a later object there takes as leftovers.
+/// A field the comparer leaves out (a stale variable, an unknown word) stays unknown.
+pub trait LayOut {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn LayCx);
+}
+
 /// A function pointer as the mirror holds it.
 pub fn code(addr: u32) -> Option<CodeRef> {
     (addr != 0).then_some(CodeRef(addr))
@@ -159,6 +176,22 @@ impl Mirror for Vec3 {
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         compare_floats(&[self.x, self.y, self.z], m, at, path, cx);
+    }
+}
+
+impl LayOut for Vec3 {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn LayCx) {
+        for (i, v) in [self.x, self.y, self.z].iter().enumerate() {
+            l.put_u32(at + 4 * i as u32, v.to_bits());
+        }
+    }
+}
+
+impl LayOut for Quat {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn LayCx) {
+        for (i, v) in [self.x, self.y, self.z, self.w].iter().enumerate() {
+            l.put_u32(at + 4 * i as u32, v.to_bits());
+        }
     }
 }
 

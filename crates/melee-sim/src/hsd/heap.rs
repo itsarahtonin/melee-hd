@@ -175,11 +175,17 @@ impl ObjAlloc {
 /// What a scene's heap leaves the next one, in static data the heap doesn't hold: each
 /// class's object size (a class the game has initialized keeps it when the next scene forgets
 /// the class, `hsdForgetClassLibrary`, as [`Layout::from_menus`] says of the fog class), and
-/// whether each pool has had its `HSD_ObjAllocInit` (an init's size and alignment stay).
+/// whether each pool has had its `HSD_ObjAllocInit` (an init's size and alignment stay), and
+/// each such pool as the scene left it: `HSD_ObjAllocData` is static data, which the heap's
+/// remake doesn't touch (`_HSD_ObjAllocForgetMemory` only forgets the pools' list), so a pool
+/// the next scene doesn't init again keeps its counts and its free list (naming the old
+/// heap's blocks), as the background flash's does on the results screen. HSD's own
+/// libraries' pools ([`Kind::from_boot`]) are set up again with each scene's heap.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Carried {
     pub classes: Vec<u32>,
     pub pools: Vec<bool>,
+    pub allocs: Vec<ObjAlloc>,
 }
 
 impl Carried {
@@ -199,6 +205,13 @@ impl Carried {
                 })
                 .collect(),
             pools: Kind::ALL.iter().map(|k| k.from_boot()).collect(),
+            allocs: Kind::ALL
+                .iter()
+                .map(|&k| {
+                    let (size, align) = k.init();
+                    ObjAlloc::init(size, align)
+                })
+                .collect(),
         }
     }
 }
@@ -579,6 +592,9 @@ pub struct Heap {
     /// What memory holds where the heap is, as far as melee-sim knows it, which the scenes
     /// before left: a session's leftovers ([`super::image`]). Each scene's heap carries it on.
     pub image: super::image::Image,
+    /// The game's pools that hold the last scene's counts and free list ([`Carried`]) until
+    /// this scene's code inits them again, by [`Kind`].
+    pub carried: Vec<bool>,
 }
 
 /// `HSD_MemoryEntry`'s size.
@@ -626,6 +642,7 @@ impl Heap {
             allocs,
             classes,
             image: Default::default(),
+            carried: vec![false; Kind::COUNT],
         }
     }
 
@@ -997,6 +1014,7 @@ impl Heap {
         Carried {
             classes: self.classes.iter().map(|c| c.obj_size).collect(),
             pools: self.allocs.iter().map(|a| a.size != 0).collect(),
+            allocs: self.allocs.clone(),
         }
     }
 
@@ -1006,9 +1024,20 @@ impl Heap {
         for (c, &s) in self.classes.iter_mut().zip(&carried.classes) {
             c.obj_size = s;
         }
-        for (a, &inited) in self.allocs.iter_mut().zip(&carried.pools) {
+        for (((a, &inited), old), k) in self
+            .allocs
+            .iter_mut()
+            .zip(&carried.pools)
+            .zip(&carried.allocs)
+            .zip(Kind::ALL)
+        {
             if !inited {
                 *a = ObjAlloc::default();
+            } else if !k.from_boot() {
+                // HSD's own libraries init their pools again with each scene's heap; the game's
+                // keep theirs until the scene's code inits them.
+                a.clone_from(old);
+                self.carried[k as usize] = true;
             }
         }
     }
@@ -1165,11 +1194,22 @@ pub fn init_pools(kinds: &[Kind]) {
     with(|h| {
         for &k in kinds {
             let a = &mut h.allocs[k as usize];
-            if a.size == 0 {
+            if a.size == 0 || h.carried[k as usize] {
                 let (size, align) = k.init();
                 *a = ObjAlloc::init(size, align);
+                h.carried[k as usize] = false;
             }
         }
+    });
+}
+
+/// `HSD_ObjAllocInit` of a pool whatever its last init: the pool empty, of `size` bytes
+/// aligned to `align` (the fighters' animation buffers, which the match and the results
+/// screen size differently).
+pub fn init_pool(kind: Kind, size: u32, align: u32) {
+    with(|h| {
+        h.allocs[kind as usize] = ObjAlloc::init(size, align);
+        h.carried[kind as usize] = false;
     });
 }
 

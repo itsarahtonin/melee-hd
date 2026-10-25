@@ -11,7 +11,7 @@
 
 use super::gr::GroundVars;
 use super::handles::*;
-use super::mirror::{Cx, Export, Mem, MemMut, Mirror, code};
+use super::mirror::{Cx, Export, LayCx, LayOut, Mem, MemMut, Mirror, code};
 use super::structs::*;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
@@ -24,6 +24,7 @@ use crate::game::it::Var;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
 use crate::hsd::dobj::DObjId;
+use crate::hsd::export::Lay;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::hsd::lobj::LObjId;
@@ -26383,6 +26384,3817 @@ impl Export for GmCardData {
         self.save_data.export(m, at + 0x0);
         for i0 in 0..7 {
             self.nametag_banks[i0].export(m, at + 0x1790 + i0 as u32 * 0x1f2c);
+        }
+    }
+}
+
+impl LayOut for Vec2 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x.to_bits());
+        l.put_u32(at + 0x4, self.y.to_bits());
+    }
+}
+
+impl LayOut for ftCo_DatAttrs_xBC_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.size.to_bits());
+        self.x4.lay(l, at + 0x4, cx);
+        self.x10.lay(l, at + 0x10, cx);
+        l.put_u32(at + 0x1c, self.x1C.to_bits());
+    }
+}
+
+impl LayOut for ftCo_DatAttrs {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.walk_accel_mul.to_bits());
+        l.put_u32(at + 0x4, self.walk_accel_base.to_bits());
+        l.put_u32(at + 0x8, self.walk_max_vel.to_bits());
+        l.put_u32(at + 0xc, self.slow_walk_max.to_bits());
+        l.put_u32(at + 0x10, self.mid_walk_point.to_bits());
+        l.put_u32(at + 0x14, self.fast_walk_min.to_bits());
+        l.put_u32(at + 0x18, self.ground_friction.to_bits());
+        l.put_u32(at + 0x1c, self.dash_initial_velocity.to_bits());
+        l.put_u32(at + 0x20, self.dash_accel_mul.to_bits());
+        l.put_u32(at + 0x24, self.dash_accel_base.to_bits());
+        l.put_u32(at + 0x28, self.dash_max_velocity.to_bits());
+        l.put_u32(at + 0x2c, self.run_animation_scaling.to_bits());
+        l.put_u32(at + 0x30, self.max_run_brake_frames.to_bits());
+        l.put_u32(at + 0x34, self.ground_max_horizontal_velocity.to_bits());
+        l.put_u32(at + 0x38, self.jump_startup_time.to_bits());
+        l.put_u32(at + 0x3c, self.jump_h_initial_velocity.to_bits());
+        l.put_u32(at + 0x40, self.jump_v_initial_velocity.to_bits());
+        l.put_u32(
+            at + 0x44,
+            self.ground_to_air_jump_momentum_multiplier.to_bits(),
+        );
+        l.put_u32(at + 0x48, self.jump_h_max_velocity.to_bits());
+        l.put_u32(at + 0x4c, self.hop_v_initial_velocity.to_bits());
+        l.put_u32(at + 0x50, self.air_jump_v_multiplier.to_bits());
+        l.put_u32(at + 0x54, self.air_jump_h_multiplier.to_bits());
+        l.put_u32(at + 0x58, self.max_jumps as u32);
+        l.put_u32(at + 0x5c, self.gravity.to_bits());
+        l.put_u32(at + 0x60, self.terminal_velocity.to_bits());
+        l.put_u32(at + 0x64, self.air_drift_stick_mul.to_bits());
+        l.put_u32(at + 0x68, self.aerial_drift_base.to_bits());
+        l.put_u32(at + 0x6c, self.air_drift_max.to_bits());
+        l.put_u32(at + 0x70, self.aerial_friction.to_bits());
+        l.put_u32(at + 0x74, self.fast_fall_velocity.to_bits());
+        l.put_u32(at + 0x78, self.air_max_horizontal_velocity.to_bits());
+        l.put_u32(at + 0x7c, self.jab_2_input_window.to_bits());
+        l.put_u32(at + 0x80, self.jab_3_input_window.to_bits());
+        l.put_u32(at + 0x84, self.standing_turn_frames.to_bits());
+        l.put_u32(at + 0x88, self.weight.to_bits());
+        l.put_u32(at + 0x8c, self.model_scaling.to_bits());
+        l.put_u32(at + 0x90, self.initial_shield_size.to_bits());
+        l.put_u32(at + 0x94, self.shield_break_initial_velocity.to_bits());
+        l.put_u32(at + 0x98, self.rapid_jab_window as u32);
+        l.put_u32(at + 0x9c, self.clank_animation_length.to_bits());
+        l.put_u32(at + 0xa0, self.hit_spark_variant as u32);
+        l.put_u32(at + 0xa4, self.unused_0 as u32);
+        l.put_u32(at + 0xa8, self.ledge_jump_horizontal_velocity.to_bits());
+        l.put_u32(at + 0xac, self.ledge_jump_vertical_velocity.to_bits());
+        l.put_u32(at + 0xb0, self.item_throw_velocity_multiplier.to_bits());
+        l.put_u32(at + 0xb4, self.heavy_throw_velocity_multiplier.to_bits());
+        l.put_u32(at + 0xb8, self.specials_ground_speed_retention.to_bits());
+        self.xBC.lay(l, at + 0xbc, cx);
+        l.put_u32(at + 0xdc, self.xDC.to_bits());
+        l.put_u32(at + 0xe0, self.kirby_b_star_damage.to_bits());
+        l.put_u32(at + 0xe4, self.normal_landing_lag.to_bits());
+        l.put_u32(at + 0xe8, self.landingairn_lag.to_bits());
+        l.put_u32(at + 0xec, self.landingairf_lag.to_bits());
+        l.put_u32(at + 0xf0, self.landingairb_lag.to_bits());
+        l.put_u32(at + 0xf4, self.landingairhi_lag.to_bits());
+        l.put_u32(at + 0xf8, self.landingairlw_lag.to_bits());
+        l.put_u32(at + 0xfc, self.name_tag_height.to_bits());
+        l.put_u32(at + 0x100, self.passivewall_vel_x.to_bits());
+        l.put_u32(at + 0x104, self.wall_jump_horizontal_velocity.to_bits());
+        l.put_u32(at + 0x108, self.wall_jump_vertical_velocity.to_bits());
+        l.put_u32(at + 0x10c, self.passiveceil_vel_x.to_bits());
+        l.put_u32(at + 0x110, self.trophy_scale.to_bits());
+        self.x114.lay(l, at + 0x114, cx);
+        self.x120.lay(l, at + 0x120, cx);
+        l.put_u32(at + 0x12c, self.x12C.to_bits());
+        self.x130.lay(l, at + 0x130, cx);
+        l.put_u32(at + 0x13c, self.x13C.to_bits());
+        l.put_u32(at + 0x140, self.screw_attack_launch_velocity.to_bits());
+        l.put_u32(at + 0x144, self.x144.to_bits());
+        l.put_u32(at + 0x148, self.wall_jump_min_approach_speed.to_bits());
+        l.put_u32(at + 0x14c, self.damageice_ice_size.to_bits());
+        l.put_u32(at + 0x150, self.x150_damageice_unk.to_bits());
+        l.put_u32(at + 0x154, self.x154_damageice_unk.to_bits());
+        l.put_u32(at + 0x158, self.damageicejump_vel_y.to_bits());
+        l.put_u32(at + 0x15c, self.damageicejump_vel_x_mult.to_bits());
+        l.put_u32(at + 0x160, self.respawn_platform_scale.to_bits());
+        l.put_u32(at + 0x164, self.warp_star_hitbox_scale.to_bits());
+        l.put_u32(at + 0x168, self.x168.to_bits());
+        l.put_u32(at + 0x16c, self.camera_zoom_target_bone as u32);
+        self.x170.lay(l, at + 0x170, cx);
+        l.put_u32(at + 0x17c, self.x17C.to_bits());
+        l.put_u8(at + 0x180, self.weight_independent_throws_mask as u8);
+    }
+}
+
+impl LayOut for itPickup {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.gr_light_offset.lay(l, at + 0x0, cx);
+        self.gr_heavy_offset.lay(l, at + 0x10, cx);
+        self.air_light_offset.lay(l, at + 0x20, cx);
+    }
+}
+
+impl LayOut for CommandInfo {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.script.lay(l, at + 0x0, cx);
+    }
+}
+
+impl LayOut for _GXColor {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u8(at + 0x0, self.r as u8);
+        l.put_u8(at + 0x1, self.g as u8);
+        l.put_u8(at + 0x2, self.b as u8);
+        l.put_u8(at + 0x3, self.a as u8);
+    }
+}
+
+impl LayOut for ColorOverlay {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.script.lay(l, at + 0x0, cx);
+        l.put_u32(at + 0x24, self.x24 as u32);
+        l.put_bytes(at + 0x28, &self.x28_colanim);
+        self.x2C_hex.lay(l, at + 0x2c, cx);
+        l.put_u32(at + 0x30, self.x30_color_red.to_bits());
+        l.put_u32(at + 0x34, self.x34_color_green.to_bits());
+        l.put_u32(at + 0x38, self.x38_color_blue.to_bits());
+        l.put_u32(at + 0x3c, self.x3C_color_alpha.to_bits());
+        l.put_u32(at + 0x40, self.x40_colorblend_red.to_bits());
+        l.put_u32(at + 0x44, self.x44_colorblend_green.to_bits());
+        l.put_u32(at + 0x48, self.x48_colorblend_blue.to_bits());
+        l.put_u32(at + 0x4c, self.x4C_colorblend_alpha.to_bits());
+        self.x50_light_color.lay(l, at + 0x50, cx);
+        l.put_u32(at + 0x54, self.x54_light_red.to_bits());
+        l.put_u32(at + 0x58, self.x58_light_green.to_bits());
+        l.put_u32(at + 0x5c, self.x5C_light_blue.to_bits());
+        l.put_u32(at + 0x60, self.x60_light_alpha.to_bits());
+        l.put_u32(at + 0x64, self.x64_lightblend_red.to_bits());
+        l.put_u32(at + 0x68, self.x68_lightblend_green.to_bits());
+        l.put_u32(at + 0x6c, self.x6C_lightblend_blue.to_bits());
+        l.put_u32(at + 0x70, self.x70_lightblend_alpha.to_bits());
+        l.put_u32(at + 0x74, self.x74_light_rot_x.to_bits());
+        l.put_u32(at + 0x78, self.x78_light_rot_yz.to_bits());
+        l.put_bits(at, 992, 1, (self.x7C_color_enable) as u32);
+        l.put_bits(at, 993, 1, (self.x7C_flag2) as u32);
+        l.put_bits(at, 994, 1, (self.x7C_light_enable) as u32);
+        l.put_bits(at, 995, 1, (self.x7C_flag4) as u32);
+        l.put_bits(at, 996, 1, (self.x7C_flag5) as u32);
+        l.put_bits(at, 997, 1, (self.x7C_flag6) as u32);
+        l.put_bits(at, 998, 1, (self.x7C_flag7) as u32);
+        l.put_bits(at, 999, 1, (self.x7C_flag8) as u32);
+    }
+}
+
+impl LayOut for FtPartsVis {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.model_num as u32);
+        for i0 in 0..5 {
+            l.put_u8(at + 0x4 + i0 as u32 * 0x1, self.cleared[i0] as u8);
+        }
+        for i0 in 0..5 {
+            l.put_word(at + 0xc + i0 as u32 * 0x4, cx.data(self.xC[i0]));
+        }
+    }
+}
+
+impl LayOut for DObjList {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.count as u32);
+        l.put_word(at + 0x4, cx.handle("DObjListId", (self.data).map(|h| h.0)));
+    }
+}
+
+impl LayOut for Fighter_x5F4_arr {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u8(at + 0x0, self.prev as u8);
+        l.put_u8(at + 0x1, self.idx as u8);
+    }
+}
+
+impl LayOut for Fighter_input {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        for i0 in 0..3 {
+            self.lstick[i0].lay(l, at + 0x0 + i0 as u32 * 0x8, cx);
+        }
+        for i0 in 0..3 {
+            self.cstick[i0].lay(l, at + 0x18 + i0 as u32 * 0x8, cx);
+        }
+        for i0 in 0..3 {
+            l.put_u32(at + 0x30 + i0 as u32 * 0x4, self.triggers[i0].to_bits());
+        }
+        for i0 in 0..3 {
+            l.put_u32(at + 0x3c + i0 as u32 * 0x4, self.held_buttons[i0] as u32);
+        }
+        l.put_u32(at + 0x48, self.pressed_buttons as u32);
+        l.put_u32(at + 0x4c, self.released_buttons as u32);
+    }
+}
+
+impl LayOut for U8Vec2 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u8(at + 0x0, self.x as u8);
+        l.put_u8(at + 0x1, self.y as u8);
+    }
+}
+
+impl LayOut for FtInputTimers {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.lstick.lay(l, at + 0x0, cx);
+        l.put_u8(at + 0x2, self.trigger as u8);
+    }
+}
+
+impl LayOut for _ftECB {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.top.lay(l, at + 0x0, cx);
+        self.bottom.lay(l, at + 0x8, cx);
+        self.right.lay(l, at + 0x10, cx);
+        self.left.lay(l, at + 0x18, cx);
+    }
+}
+
+impl LayOut for SurfaceData {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.index as u32);
+        l.put_u32(at + 0x4, self.flags as u32);
+        self.normal.lay(l, at + 0x8, cx);
+    }
+}
+
+impl LayOut for CollData {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("GObjId", self.x0_gobj.map(|h| h.0)));
+        self.cur_pos.lay(l, at + 0x4, cx);
+        self.prev_pos.lay(l, at + 0x10, cx);
+        self.last_pos.lay(l, at + 0x1c, cx);
+        self.x28_vec.lay(l, at + 0x28, cx);
+        self.x34_flags.lay(l, at + 0x34, cx);
+        self.x35_flags.lay(l, at + 0x35, cx);
+        l.put_u16(at + 0x36, self.facing_dir as u16);
+        l.put_u32(at + 0x38, self.x38 as u32);
+        l.put_u32(at + 0x3c, self.floor_skip as u32);
+        l.put_u32(at + 0x40, self.ledge_id_right as u32);
+        l.put_u32(at + 0x44, self.ledge_id_left as u32);
+        l.put_u32(at + 0x48, self.joint_id_skip as u32);
+        l.put_u32(at + 0x4c, self.joint_id_only as u32);
+        l.put_u32(at + 0x50, self.x50.to_bits());
+        l.put_u32(at + 0x54, self.ledge_snap_x.to_bits());
+        l.put_u32(at + 0x58, self.ledge_snap_y.to_bits());
+        l.put_u32(at + 0x5c, self.ledge_snap_height.to_bits());
+        l.put_u32(at + 0x60, self.lstick_x.to_bits());
+        self.x64_ecb.lay(l, at + 0x64, cx);
+        self.desired_ecb.lay(l, at + 0x84, cx);
+        self.ecb.lay(l, at + 0xa4, cx);
+        self.prev_ecb.lay(l, at + 0xc4, cx);
+        self.xE4_ecb.lay(l, at + 0xe4, cx);
+        self.ecb_source.lay(l, at + 0x104, cx);
+        l.put_u32(at + 0x130, self.x130_flags as u32);
+        l.put_u32(at + 0x134, self.env_flags as u32);
+        l.put_u32(at + 0x138, self.prev_env_flags as u32);
+        l.put_u32(at + 0x13c, self.x13C as u32);
+        self.contact.lay(l, at + 0x140, cx);
+        self.floor.lay(l, at + 0x14c, cx);
+        self.left_facing_wall.lay(l, at + 0x160, cx);
+        self.right_facing_wall.lay(l, at + 0x174, cx);
+        self.ceiling.lay(l, at + 0x188, cx);
+    }
+}
+
+impl LayOut for Fighter_x8B0_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x0 as u32);
+        l.put_u32(at + 0x4, self.x4.to_bits());
+        l.put_u32(at + 0x8, self.x8.to_bits());
+        l.put_u32(at + 0xc, self.xC.to_bits());
+        l.put_u8(at + 0x10, self.x10 as u8);
+        l.put_u8(at + 0x11, self.x11 as u8);
+    }
+}
+
+impl LayOut for HitVictim {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.victim.lay(l, at + 0x0, cx);
+        l.put_u32(at + 0x4, self.x4 as u32);
+    }
+}
+
+impl LayOut for HitCapsule {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.state as u32);
+        l.put_u32(at + 0x4, self.x4 as u32);
+        l.put_u32(at + 0x8, self.unk_count as u32);
+        l.put_u32(at + 0xc, self.damage.to_bits());
+        self.b_offset.lay(l, at + 0x10, cx);
+        l.put_u32(at + 0x1c, self.scale.to_bits());
+        l.put_u32(at + 0x20, self.kb_angle as u32);
+        l.put_u32(at + 0x24, self.x24 as u32);
+        l.put_u32(at + 0x28, self.x28 as u32);
+        l.put_u32(at + 0x2c, self.x2C as u32);
+        l.put_u32(at + 0x30, self.element as u32);
+        l.put_u32(at + 0x34, self.x34 as u32);
+        l.put_u32(at + 0x38, self.sfx_severity as u32);
+        l.put_u32(at + 0x3c, self.sfx_kind as u32);
+        l.put_bits(at, 512, 1, (self.x40_b0) as u32);
+        l.put_bits(at, 513, 1, (self.x40_b1) as u32);
+        l.put_bits(at, 514, 1, (self.x40_b2) as u32);
+        l.put_bits(at, 515, 1, (self.x40_b3) as u32);
+        l.put_bits(at, 516, 8, (self.x40_b4) as u32);
+        l.put_bits(at, 524, 1, (self.x41_b4) as u32);
+        l.put_bits(at, 525, 1, (self.x41_b5) as u32);
+        l.put_bits(at, 526, 1, (self.x41_b6) as u32);
+        l.put_bits(at, 527, 1, (self.x41_b7) as u32);
+        l.put_bits(at, 528, 1, (self.x42_b0) as u32);
+        l.put_bits(at, 529, 1, (self.x42_b1) as u32);
+        l.put_bits(at, 530, 1, (self.x42_b2) as u32);
+        l.put_bits(at, 531, 1, (self.x42_b3) as u32);
+        l.put_bits(at, 532, 1, (self.x42_b4) as u32);
+        l.put_bits(at, 533, 1, (self.x42_b5) as u32);
+        l.put_bits(at, 534, 1, (self.x42_b6) as u32);
+        l.put_bits(at, 535, 1, (self.x42_b7) as u32);
+        l.put_bits(at, 536, 1, (self.x43_b0) as u32);
+        l.put_bits(at, 537, 1, (self.x43_b1) as u32);
+        l.put_bits(at, 538, 1, (self.x43_b2) as u32);
+        l.put_bits(at, 539, 1, (self.x43_b3) as u32);
+        l.put_bits(at, 540, 1, (self.x43_b4) as u32);
+        l.put_bits(at, 541, 1, (self.x43_b5) as u32);
+        l.put_bits(at, 542, 1, (self.x43_b6) as u32);
+        l.put_bits(at, 543, 1, (self.x43_b7) as u32);
+        l.put_u8(at + 0x44, self.x44 as u8);
+        l.put_u8(at + 0x45, self.x45 as u8);
+        for i0 in 0..2 {
+            l.put_u8(at + 0x46 + i0 as u32 * 0x1, self.x46[i0] as u8);
+        }
+        self.jobj.lay(l, at + 0x48, cx);
+        self.x4C.lay(l, at + 0x4c, cx);
+        self.x58.lay(l, at + 0x58, cx);
+        self.hurt_coll_pos.lay(l, at + 0x64, cx);
+        l.put_u32(at + 0x70, self.coll_distance.to_bits());
+        for i0 in 0..12 {
+            self.victims_1[i0].lay(l, at + 0x74 + i0 as u32 * 0x8, cx);
+        }
+        for i0 in 0..12 {
+            self.victims_2[i0].lay(l, at + 0xd4 + i0 as u32 * 0x8, cx);
+        }
+        self.x134.lay(l, at + 0x134, cx);
+    }
+}
+
+impl LayOut for HurtCapsule {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.state as u32);
+        self.a_offset.lay(l, at + 0x4, cx);
+        self.b_offset.lay(l, at + 0x10, cx);
+        l.put_u32(at + 0x1c, self.scale.to_bits());
+        l.put_word(at + 0x20, cx.handle("JObjId", self.bone.map(|h| h.0)));
+        l.put_bits(at, 288, 1, (self.skip_update_pos) as u32);
+        l.put_bits(at, 289, 1, (self.x24_b1) as u32);
+        l.put_bits(at, 290, 1, (self.x24_b2) as u32);
+        l.put_bits(at, 291, 1, (self.x24_b3) as u32);
+        l.put_bits(at, 292, 1, (self.x24_b4) as u32);
+        l.put_bits(at, 293, 1, (self.x24_b5) as u32);
+        l.put_bits(at, 294, 1, (self.x24_b6) as u32);
+        l.put_bits(at, 295, 1, (self.x24_b7) as u32);
+        self.a_pos.lay(l, at + 0x28, cx);
+        self.b_pos.lay(l, at + 0x34, cx);
+        l.put_u32(at + 0x40, self.bone_idx as u32);
+    }
+}
+
+impl LayOut for FighterHurtCapsule {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.capsule.lay(l, at + 0x0, cx);
+        l.put_u32(at + 0x44, self.height as u32);
+        l.put_u32(at + 0x48, self.is_grabbable as u32);
+    }
+}
+
+impl LayOut for Fighter_x1614_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x0.to_bits());
+        l.put_word(at + 0x4, cx.handle("JObjId", self.x4.map(|h| h.0)));
+        self.x8.lay(l, at + 0x8, cx);
+        self.x14.lay(l, at + 0x14, cx);
+        self.x20.lay(l, at + 0x20, cx);
+    }
+}
+
+impl LayOut for Fighter_x1670_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.v1.lay(l, at + 0x0, cx);
+        l.put_u32(at + 0xc, self.v2.to_bits());
+        l.put_word(at + 0x10, cx.handle("JObjId", self.jobj.map(|h| h.0)));
+        l.put_u32(at + 0x14, self.x14.to_bits());
+        self.x18.lay(l, at + 0x18, cx);
+        l.put_u32(at + 0x24, self.x24 as u32);
+    }
+}
+
+impl LayOut for ft_800898B4_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x0 as u32);
+        l.put_u32(at + 0x4, self.x4 as u32);
+        l.put_u32(at + 0x8, self.kb_applied1.to_bits());
+        l.put_u32(at + 0xc, self.xC as u32);
+        l.put_bits(at, 128, 1, (self.x10_b0) as u32);
+        l.put_bits(at, 129, 1, (self.x10_b1) as u32);
+        l.put_bits(at, 130, 1, (self.x10_b2) as u32);
+        l.put_bits(at, 131, 1, (self.x10_b3) as u32);
+        l.put_bits(at, 132, 1, (self.x10_b4) as u32);
+        l.put_bits(at, 133, 1, (self.x10_b5) as u32);
+        l.put_bits(at, 134, 1, (self.x10_b6) as u32);
+        l.put_bits(at, 135, 1, (self.x10_b7) as u32);
+        l.put_bits(at, 136, 1, (self.x11_b0) as u32);
+        l.put_bits(at, 137, 1, (self.x11_b1) as u32);
+        l.put_bits(at, 138, 1, (self.x11_b2) as u32);
+        l.put_bits(at, 139, 1, (self.x11_b3) as u32);
+        l.put_bits(at, 140, 1, (self.x11_b4) as u32);
+    }
+}
+
+impl LayOut for lb_80014638_arg0_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x0.lay(l, at + 0x0, cx);
+        self.xC.lay(l, at + 0xc, cx);
+    }
+}
+
+impl LayOut for dmg {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x182c_behavior.to_bits());
+        l.put_u32(at + 0x4, self.x1830_percent.to_bits());
+        l.put_u32(at + 0x8, self.x1834.to_bits());
+        l.put_u32(at + 0xc, self.x1838_percentTemp.to_bits());
+        l.put_u32(at + 0x10, self.x183C_applied as u32);
+        l.put_u32(at + 0x14, self.x1840 as u32);
+        l.put_u32(at + 0x18, self.facing_dir_1.to_bits());
+        l.put_u32(at + 0x1c, self.x1848_kb_angle as u32);
+        l.put_u32(at + 0x20, self.x184c_damaged_hurtbox as u32);
+        l.put_u32(at + 0x24, self.kb_applied.to_bits());
+        self.x1854_collpos.lay(l, at + 0x28, cx);
+        l.put_u32(at + 0x34, self.x1860_element as u32);
+        l.put_u32(at + 0x38, self.x1864 as u32);
+        l.put_word(
+            at + 0x3c,
+            cx.handle("GObjId", self.x1868_source.map(|h| h.0)),
+        );
+        l.put_u32(at + 0x40, self.x186c as u32);
+        l.put_u32(at + 0x44, self.x1870.0);
+        l.put_u32(at + 0x48, self.x1874 as u32);
+        l.put_u32(at + 0x4c, self.x1878 as u32);
+        l.put_u32(at + 0x50, self.x187c.to_bits());
+        self.x1880.lay(l, at + 0x54, cx);
+        l.put_u32(at + 0x60, self.x188c as u32);
+        l.put_u32(at + 0x64, self.x1890 as u32);
+        l.put_word(at + 0x68, cx.handle("GObjId", self.x1894.map(|h| h.0)));
+        l.put_u32(at + 0x6c, self.x1898.to_bits());
+        l.put_u32(at + 0x70, self.x189C_unk_num_frames.to_bits());
+        l.put_u32(at + 0x74, self.x18a0.to_bits());
+        l.put_u32(at + 0x78, self.x18A4_knockbackMagnitude.to_bits());
+        l.put_u32(at + 0x7c, self.x18A8.to_bits());
+        l.put_u32(at + 0x80, self.x18ac_time_since_hit as u32);
+        l.put_u32(at + 0x84, self.armor0.to_bits());
+        l.put_u32(at + 0x88, self.armor1.to_bits());
+        l.put_u32(at + 0x8c, self.x18B8.to_bits());
+        l.put_u32(at + 0x90, self.x18BC.to_bits());
+        l.put_u32(at + 0x94, self.x18C0 as u32);
+        l.put_u32(at + 0x98, self.x18c4_source_ply as u32);
+        l.put_u32(at + 0x9c, self.x18C8 as u32);
+        l.put_u32(at + 0xa0, self.x18CC as u32);
+        l.put_u32(at + 0xa4, self.x18D0 as u32);
+        l.put_bytes(at + 0xa8, &self.x18d4);
+        self.x18d8.lay(l, at + 0xac, cx);
+        l.put_u16(at + 0xc0, self.x18ec_instancehitby as u16);
+        l.put_u32(at + 0xc4, self.x18F0 as u32);
+        l.put_u32(at + 0xc8, self.x18F4 as u32);
+        l.put_u8(at + 0xcc, self.x18F8 as u8);
+        l.put_u8(at + 0xcd, self.x18f9 as u8);
+        l.put_u16(at + 0xce, self.x18fa_model_shift_frames as u16);
+        l.put_u8(at + 0xd0, self.x18FC as u8);
+        l.put_u8(at + 0xd1, self.x18FD as u8);
+        l.put_u32(at + 0xd4, self.x1900.to_bits());
+        l.put_u32(at + 0xd8, self.x1904.to_bits());
+        l.put_u32(at + 0xdc, self.x1908 as u32);
+        l.put_word(at + 0xe0, cx.data(self.x190C));
+        l.put_u32(at + 0xe4, self.x1910 as u32);
+        l.put_u32(at + 0xe8, self.x1914 as u32);
+        l.put_u32(at + 0xec, self.int_value as u32);
+        l.put_u32(at + 0xf0, self.x191C.to_bits());
+        l.put_u32(at + 0xf4, self.facing_dir.to_bits());
+        l.put_u32(at + 0xf8, self.x1924 as u32);
+        l.put_u32(at + 0xfc, self.x1928.to_bits());
+        l.put_u32(at + 0x100, self.x192c.to_bits());
+        self.x1930.lay(l, at + 0x104, cx);
+        l.put_u32(at + 0x11c, self.x1948 as u32);
+        l.put_u32(at + 0x120, self.x194C as u32);
+        l.put_u32(at + 0x124, self.x1950 as u32);
+        l.put_u32(at + 0x128, self.x1954.to_bits());
+        l.put_u32(at + 0x12c, self.x1958.to_bits());
+        l.put_u32(at + 0x130, self.x195c_hitlag_frames.to_bits());
+    }
+}
+
+impl LayOut for HitResult {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("JObjId", self.bone.map(|h| h.0)));
+        l.put_bits(at, 32, 1, (self.skip_update_pos) as u32);
+        self.pos.lay(l, at + 0x8, cx);
+        self.offset.lay(l, at + 0x14, cx);
+        l.put_u32(at + 0x20, self.size.to_bits());
+    }
+}
+
+impl LayOut for Fighter_ReflectAttr {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x1A2C_reflectHitDirection.to_bits());
+        l.put_u32(at + 0x4, self.x1A30_maxDamage as u32);
+        l.put_u32(at + 0x8, self.x1A34_damageMul.to_bits());
+        l.put_u32(at + 0xc, self.x1A38_speedMul.to_bits());
+        l.put_u32(at + 0x10, self.x1A3C_damageOver as u32);
+    }
+}
+
+impl LayOut for Fighter_AbsorbAttr {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x1A40_absorbHitDirection.to_bits());
+        l.put_u32(at + 0x4, self.x1A44_damageTaken as u32);
+        l.put_u32(at + 0x8, self.x1A48_hitsTaken as u32);
+    }
+}
+
+impl LayOut for S8Vec2 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u8(at + 0x0, self.x as u8);
+        l.put_u8(at + 0x1, self.y as u8);
+    }
+}
+
+impl LayOut for Fighter_x1A88_xFC_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x0 as u32);
+        l.put_u8(at + 0x4, self.x4 as u8);
+        l.put_u8(at + 0x5, self.x5 as u8);
+        self.lstick.lay(l, at + 0x6, cx);
+        self.cstick.lay(l, at + 0x8, cx);
+        l.put_u8(at + 0xa, self.xA as u8);
+        l.put_u8(at + 0xb, self.xB as u8);
+        self.cur_pos.lay(l, at + 0xc, cx);
+        l.put_u32(at + 0x18, self.facing_dir.to_bits());
+    }
+}
+
+impl LayOut for CpuFighter {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.buttons as u32);
+        self.lstick.lay(l, at + 0x4, cx);
+        self.cstick.lay(l, at + 0x6, cx);
+        l.put_u8(at + 0x8, self.ltrigger as u8);
+        l.put_u8(at + 0x9, self.rtrigger as u8);
+        l.put_u32(at + 0xc, self.kind as u32);
+        l.put_u32(at + 0x10, self.level as u32);
+        l.put_u32(at + 0x14, self.x14 as u32);
+        l.put_u32(at + 0x18, self.x18 as u32);
+        l.put_u32(at + 0x1c, self.x1C as u32);
+        l.put_u32(at + 0x20, self.x20 as u32);
+        l.put_u32(at + 0x24, self.x24 as u32);
+        l.put_u32(at + 0x28, self.x28 as u32);
+        l.put_u32(at + 0x2c, self.x2C as u32);
+        l.put_u32(at + 0x30, self.x30 as u32);
+        l.put_u32(at + 0x34, self.x34 as u32);
+        l.put_u32(at + 0x38, self.x38.to_bits());
+        l.put_u32(at + 0x3c, self.x3C.to_bits());
+        l.put_u32(at + 0x40, self.x40.to_bits());
+        l.put_word(at + 0x44, cx.handle("FighterId", self.x44.map(|h| h.0)));
+        l.put_word(at + 0x48, cx.handle("FighterId", (self.x48).map(|h| h.0)));
+        l.put_word(at + 0x4c, cx.handle("ItemId", self.x4C.map(|h| h.0)));
+        l.put_word(at + 0x50, cx.handle("ItemId", self.x50.map(|h| h.0)));
+        self.x54.lay(l, at + 0x54, cx);
+        l.put_u32(at + 0x5c, self.x5C.to_bits());
+        l.put_u32(at + 0x60, self.x60 as u32);
+        self.x64.lay(l, at + 0x64, cx);
+        self.x6C.lay(l, at + 0x6c, cx);
+        self.x74.lay(l, at + 0x74, cx);
+        l.put_u32(at + 0x7c, self.x7C as u32);
+        l.put_u32(at + 0x80, self.x80 as u32);
+        l.put_u32(at + 0x84, self.x84 as u32);
+        l.put_u32(at + 0x88, self.x88 as u32);
+        l.put_u32(at + 0x8c, self.x8C as u32);
+        l.put_u32(at + 0x90, self.x90 as u32);
+        l.put_u32(at + 0x94, self.x94 as u32);
+        self.x98.lay(l, at + 0x98, cx);
+        l.put_u32(at + 0xa4, self.xA4 as u32);
+        for i0 in 0..8 {
+            l.put_u32(at + 0xa8 + i0 as u32 * 0x4, self.xA8_array[i0] as u32);
+        }
+        l.put_u8(at + 0xc8, self.xC8 as u8);
+        for i0 in 0..3 {
+            l.put_u8(at + 0xc9 + i0 as u32 * 0x1, self.pad_xC9[i0] as u8);
+        }
+        for i0 in 0..8 {
+            l.put_u32(at + 0xcc + i0 as u32 * 0x4, self.xCC_array[i0] as u32);
+        }
+        l.put_u8(at + 0xec, self.xEC as u8);
+        for i0 in 0..3 {
+            l.put_u8(at + 0xed + i0 as u32 * 0x1, self.pad_xED[i0] as u8);
+        }
+        l.put_word(at + 0xf0, cx.handle("FighterId", self.xF0.map(|h| h.0)));
+        l.put_word(at + 0xf4, cx.handle("ItemId", self.xF4.map(|h| h.0)));
+        l.put_bits(at, 1984, 1, (self.xF8_b0) as u32);
+        l.put_bits(at, 1985, 2, (self.xF8_b12) as u32);
+        l.put_bits(at, 1987, 2, (self.xF8_b34) as u32);
+        l.put_bits(at, 1989, 1, (self.xF8_b5) as u32);
+        l.put_bits(at, 1990, 1, (self.xF8_b6) as u32);
+        l.put_bits(at, 1991, 1, (self.xF8_b7) as u32);
+        l.put_bits(at, 1992, 1, (self.xF9_b0) as u32);
+        l.put_bits(at, 1993, 1, (self.xF9_b1) as u32);
+        l.put_bits(at, 1994, 1, (self.xF9_b2) as u32);
+        l.put_bits(at, 1995, 1, (self.xF9_b3) as u32);
+        l.put_bits(at, 1996, 1, (self.xF9_b4) as u32);
+        l.put_bits(at, 1997, 1, (self.xF9_b5) as u32);
+        l.put_bits(at, 1998, 1, (self.xF9_b6) as u32);
+        l.put_bits(at, 1999, 1, (self.xF9_b7) as u32);
+        l.put_bits(at, 2000, 1, (self.xFA_b0) as u32);
+        l.put_bits(at, 2001, 1, (self.xFA_b1) as u32);
+        l.put_bits(at, 2002, 1, (self.xFA_b2) as u32);
+        l.put_bits(at, 2003, 2, (self.xFA_b34) as u32);
+        l.put_bits(at, 2005, 1, (self.xFA_b5) as u32);
+        l.put_bits(at, 2006, 1, (self.xFA_b6) as u32);
+        l.put_bits(at, 2007, 1, (self.xFA_b7) as u32);
+        l.put_bits(at, 2008, 1, (self.xFB_b0) as u32);
+        l.put_bits(at, 2009, 1, (self.xFB_b1) as u32);
+        l.put_bits(at, 2010, 1, (self.xFB_b2) as u32);
+        l.put_bits(at, 2011, 1, (self.xFB_b3) as u32);
+        l.put_bits(at, 2012, 1, (self.xFB_b4) as u32);
+        l.put_bits(at, 2013, 1, (self.xFB_b5) as u32);
+        l.put_bits(at, 2014, 1, (self.xFB_b6) as u32);
+        l.put_bits(at, 2015, 1, (self.xFB_b7) as u32);
+        for i0 in 0..30 {
+            self.xFC[i0].lay(l, at + 0xfc + i0 as u32 * 0x1c, cx);
+        }
+        self.x444.lay(l, at + 0x444, cx);
+        self.x448.lay(l, at + 0x448, cx);
+        l.put_u32(at + 0x44c, self.command_duration as u32);
+        self.csP.lay(l, at + 0x450, cx);
+        for i0 in 0..256 {
+            l.put_u8(at + 0x454 + i0 as u32 * 0x1, self.buffer[i0] as u8);
+        }
+        self.write_pos.lay(l, at + 0x554, cx);
+        l.put_u32(at + 0x558, self.x558.to_bits());
+        l.put_u32(at + 0x55c, self.x55C.to_bits());
+        l.put_u32(at + 0x560, self.x560.to_bits());
+        l.put_u32(at + 0x564, self.x564.to_bits());
+        l.put_u32(at + 0x568, self.x568.to_bits());
+        l.put_u32(at + 0x56c, self.x56C.to_bits());
+        l.put_u32(at + 0x570, self.x570.to_bits());
+        l.put_u32(at + 0x574, self.half_width.to_bits());
+        l.put_u32(at + 0x578, self.half_height.to_bits());
+    }
+}
+
+impl LayOut for S32Vec2 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x as u32);
+        l.put_u32(at + 0x4, self.y as u32);
+    }
+}
+
+impl LayOut for Struct207C {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x.to_bits());
+        l.put_u32(at + 0x4, self.y as u32);
+    }
+}
+
+impl LayOut for Struct2074 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x2074_vec.lay(l, at + 0x0, cx);
+        self.x207C.lay(l, at + 0x8, cx);
+        l.put_bytes(at + 0x10, &self.x10);
+        l.put_u16(at + 0x14, self.x2088 as u16);
+    }
+}
+
+impl LayOut for LbShadow {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_bits(at, 0, 1, (self.x0_b0) as u32);
+        l.put_bits(at, 1, 1, (self.x0_b1) as u32);
+        l.put_bits(at, 2, 1, (self.x0_b2) as u32);
+        l.put_bits(at, 3, 1, (self.x0_b3) as u32);
+        l.put_bits(at, 4, 1, (self.x0_b4) as u32);
+        l.put_bits(at, 5, 1, (self.x0_b5) as u32);
+        l.put_bits(at, 6, 1, (self.x0_b6) as u32);
+        l.put_bits(at, 7, 1, (self.x0_b7) as u32);
+        l.put_word(at + 0x4, cx.handle("ShadowId", (self.shadow).map(|h| h.0)));
+    }
+}
+
+impl LayOut for Fighter_x20B0_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x0.lay(l, at + 0x0, cx);
+        self.xC.lay(l, at + 0xc, cx);
+    }
+}
+
+impl LayOut for _SmashAttr {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.state as u32);
+        l.put_u32(at + 0x4, self.x2118_frames.to_bits());
+        l.put_u32(at + 0x8, self.x211C_holdFrame.to_bits());
+        l.put_u32(at + 0xc, self.x2120_damageMul.to_bits());
+        l.put_u32(at + 0x10, self.x2124_frameSpeedMul.to_bits());
+        l.put_u32(at + 0x14, self.x2128 as u32);
+        l.put_u8(at + 0x18, self.x212C as u8);
+        l.put_u8(at + 0x19, self.x212D as u8);
+        l.put_u8(at + 0x1a, self.x212E as u8);
+        l.put_u8(at + 0x1b, self.x212F as u8);
+        l.put_u32(at + 0x1c, self.x2130_sfxBool as u32);
+        l.put_u8(at + 0x20, self.x2134_vibrateFrame as u8);
+        l.put_u8(at + 0x21, self.x2135 as u8);
+        l.put_u8(at + 0x22, self.x2136 as u8);
+        l.put_u8(at + 0x23, self.x2137 as u8);
+        l.put_u32(at + 0x24, self.x2138_smashSinceHitbox.to_bits());
+    }
+}
+
+impl LayOut for Fighter_x221B {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_bits(at, 0, 1, (self.x221B_b0) as u32);
+        l.put_bits(at, 1, 1, (self.x221B_b1) as u32);
+        l.put_bits(at, 2, 1, (self.x221B_b2) as u32);
+        l.put_bits(at, 3, 1, (self.x221B_b3) as u32);
+        l.put_bits(at, 4, 1, (self.x221B_b4) as u32);
+        l.put_bits(at, 5, 1, (self.x221B_b5) as u32);
+        l.put_bits(at, 6, 1, (self.x221B_b6) as u32);
+        l.put_bits(at, 7, 1, (self.x221B_b7) as u32);
+    }
+}
+
+impl LayOut for IntVec2 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.x as u32);
+        l.put_u32(at + 0x4, self.y as u32);
+    }
+}
+
+impl LayOut for Fighter {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("GObjId", self.gobj.map(|h| h.0)));
+        l.put_u32(at + 0x4, self.kind as u32);
+        l.put_u32(at + 0x8, self.x8_spawnNum as u32);
+        l.put_u8(at + 0xc, self.player_idx as u8);
+        l.put_u32(at + 0x10, self.motion_id as u32);
+        l.put_u32(at + 0x14, self.anim_id as u32);
+        l.put_u32(at + 0x18, self.x18 as u32);
+        l.put_u32(at + 0x1c, self.x1C_actionStateList.0);
+        l.put_u32(at + 0x20, self.x20_actionStateList.0);
+        l.put_word(at + 0x24, cx.data(self.x24));
+        l.put_word(at + 0x28, cx.data(self.x28));
+        l.put_u32(at + 0x2c, self.facing_dir.to_bits());
+        l.put_u32(at + 0x30, self.facing_dir1.to_bits());
+        self.x34_scale.lay(l, at + 0x34, cx);
+        l.put_u32(at + 0x40, self.x40.to_bits());
+        for i0 in 0..3 {
+            for i1 in 0..4 {
+                l.put_u32(
+                    at + 0x44 + i0 as u32 * 0x10 + i1 as u32 * 0x4,
+                    self.x44_mtx[i0][i1].to_bits(),
+                );
+            }
+        }
+        self.x74_self_accel.lay(l, at + 0x74, cx);
+        self.self_vel.lay(l, at + 0x80, cx);
+        self.x8c_kb_vel.lay(l, at + 0x8c, cx);
+        self.x98_atk_shield_kb.lay(l, at + 0x98, cx);
+        self.xA4_unk_vel.lay(l, at + 0xa4, cx);
+        self.cur_pos.lay(l, at + 0xb0, cx);
+        self.prev_pos.lay(l, at + 0xbc, cx);
+        self.pos_delta.lay(l, at + 0xc8, cx);
+        self.xD4_unk_vel.lay(l, at + 0xd4, cx);
+        l.put_u32(at + 0xe0, self.ground_or_air as u32);
+        l.put_u32(at + 0xe4, self.xE4_ground_accel_1.to_bits());
+        l.put_u32(at + 0xe8, self.xE8_ground_accel_2.to_bits());
+        l.put_u32(at + 0xec, self.gr_vel.to_bits());
+        l.put_u32(at + 0xf0, self.xF0_ground_kb_vel.to_bits());
+        l.put_u32(at + 0xf4, self.xF4_ground_attacker_shield_kb_vel.to_bits());
+        self.xF8_playerNudgeVel.lay(l, at + 0xf8, cx);
+        l.put_u32(at + 0x100, self.x100.to_bits());
+        l.put_u8(at + 0x104, self.x104 as u8);
+        l.put_u8(at + 0x105, self.x105 as u8);
+        l.put_u8(at + 0x106, self.x106 as u8);
+        l.put_u8(at + 0x107, self.x107 as u8);
+        l.put_word(at + 0x108, cx.data(self.x108_costume_joint));
+        l.put_word(at + 0x10c, cx.data(self.ft_data));
+        self.co_attrs.lay(l, at + 0x110, cx);
+        self.x294_itPickup.lay(l, at + 0x294, cx);
+        self.x2C4.lay(l, at + 0x2c4, cx);
+        l.put_word(at + 0x2cc, cx.handle("AttrsId", (self.x2CC).map(|h| h.0)));
+        l.put_word(at + 0x2d0, cx.handle("AttrsId", (self.x2D0).map(|h| h.0)));
+        l.put_word(
+            at + 0x2d4,
+            cx.handle("AttrsId", (self.dat_attrs).map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0x2d8,
+            cx.handle("AttrsId", (self.dat_attrs_backup).map(|h| h.0)),
+        );
+        l.put_u32(at + 0x2dc, self.x2DC.to_bits());
+        l.put_u32(at + 0x2e0, self.x2E0.to_bits());
+        l.put_u32(at + 0x2e4, self.x2E4.to_bits());
+        l.put_u32(at + 0x2e8, self.x2E8.to_bits());
+        l.put_u32(at + 0x2ec, self.x2EC.to_bits());
+        self.dynamic_bone_sets.lay(l, at + 0x2f0, cx);
+        l.put_u32(at + 0x3e0, self.dynamics_num as u32);
+        self.x3E4_fighterCmdScript.lay(l, at + 0x3e4, cx);
+        self.x408.lay(l, at + 0x408, cx);
+        self.x488.lay(l, at + 0x488, cx);
+        self.x508.lay(l, at + 0x508, cx);
+        l.put_word(at + 0x588, cx.handle("LObjId", (self.x588).map(|h| h.0)));
+        l.put_u32(at + 0x58c, self.x58C as u32);
+        l.put_word(at + 0x590, cx.data(self.x590));
+        l.put_bytes(at + 0x594, &self.x594);
+        self.x598.lay(l, at + 0x598, cx);
+        l.put_word(at + 0x59c, cx.handle("AnimBufId", (self.x59C).map(|h| h.0)));
+        l.put_word(at + 0x5a0, cx.handle("AnimBufId", (self.x5A0).map(|h| h.0)));
+        l.put_u32(at + 0x5a4, self.x5A4 as u32);
+        l.put_u32(at + 0x5a8, self.x5A8 as u32);
+        self.x5AC.lay(l, at + 0x5ac, cx);
+        self.tobj_list.lay(l, at + 0x5cc, cx);
+        l.put_word(at + 0x5e8, cx.handle("PartsId", self.parts.map(|h| h.0)));
+        self.dobj_list.lay(l, at + 0x5ec, cx);
+        for i0 in 0..12 {
+            self.x5F4_arr[i0].lay(l, at + 0x5f4 + i0 as u32 * 0x2, cx);
+        }
+        l.put_word(at + 0x60c, cx.handle("QueuedId", self.x60C.map(|h| h.0)));
+        for i0 in 0..2 {
+            self.x610_color_rgba[i0].lay(l, at + 0x610 + i0 as u32 * 0x4, cx);
+        }
+        l.put_u8(at + 0x618, self.pad_port as u8);
+        l.put_u8(at + 0x619, self.costume_id as u8);
+        l.put_u8(at + 0x61a, self.sub_color as u8);
+        l.put_u8(at + 0x61b, self.team as u8);
+        l.put_u8(at + 0x61c, self.x61C as u8);
+        l.put_u8(at + 0x61d, self.x61D as u8);
+        for i0 in 0..2 {
+            l.put_u8(at + 0x61e + i0 as u32 * 0x1, self.filler_x61E[i0] as u8);
+        }
+        self.input.lay(l, at + 0x620, cx);
+        self.active_timer.lay(l, at + 0x670, cx);
+        self.active_sticky.lay(l, at + 0x673, cx);
+        self.active_duration.lay(l, at + 0x676, cx);
+        self.activity_timer.lay(l, at + 0x679, cx);
+        l.put_u8(at + 0x67c, self.x67C as u8);
+        l.put_u8(at + 0x67d, self.x67D as u8);
+        l.put_u8(at + 0x67e, self.x67E as u8);
+        l.put_u8(at + 0x67f, self.x67F as u8);
+        l.put_u8(at + 0x680, self.x680 as u8);
+        l.put_u8(at + 0x681, self.x681 as u8);
+        l.put_u8(at + 0x682, self.x682 as u8);
+        l.put_u8(at + 0x683, self.x683 as u8);
+        l.put_u8(at + 0x684, self.x684 as u8);
+        l.put_u8(at + 0x685, self.x685 as u8);
+        l.put_u8(at + 0x686, self.x686 as u8);
+        l.put_u8(at + 0x687, self.x687 as u8);
+        l.put_u8(at + 0x688, self.x688 as u8);
+        l.put_u8(at + 0x689, self.x689 as u8);
+        l.put_u8(at + 0x68a, self.x68A as u8);
+        l.put_u8(at + 0x68b, self.x68B as u8);
+        self.x68C_transNPos.lay(l, at + 0x68c, cx);
+        self.x698.lay(l, at + 0x698, cx);
+        self.x6A4_transNOffset.lay(l, at + 0x6a4, cx);
+        self.x6B0.lay(l, at + 0x6b0, cx);
+        l.put_u32(at + 0x6bc, self.lstick_angle.to_bits());
+        self.x6C0.lay(l, at + 0x6c0, cx);
+        self.x6CC.lay(l, at + 0x6cc, cx);
+        self.x6D8.lay(l, at + 0x6d8, cx);
+        self.x6E4.lay(l, at + 0x6e4, cx);
+        self.coll_data.lay(l, at + 0x6f0, cx);
+        l.put_u32(at + 0x88c, self.ecb_lock as u32);
+        l.put_word(
+            at + 0x890,
+            cx.handle("CameraBoxId", self.x890_cameraBox.map(|h| h.0)),
+        );
+        l.put_u32(at + 0x894, self.cur_anim_frame.to_bits());
+        l.put_u32(at + 0x898, self.x898_unk.to_bits());
+        l.put_u32(at + 0x89c, self.frame_speed_mul.to_bits());
+        l.put_u32(at + 0x8a0, self.x8A0_unk.to_bits());
+        l.put_u32(at + 0x8a4, self.x8A4_animBlendFrames.to_bits());
+        l.put_u32(at + 0x8a8, self.x8A8_anim_frame.to_bits());
+        l.put_word(
+            at + 0x8ac,
+            cx.handle("JObjId", self.x8AC_animSkeleton.map(|h| h.0)),
+        );
+        for i0 in 0..5 {
+            self.x8B0[i0].lay(l, at + 0x8b0 + i0 as u32 * 0x14, cx);
+        }
+        for i0 in 0..4 {
+            self.x914[i0].lay(l, at + 0x914 + i0 as u32 * 0x138, cx);
+        }
+        for i0 in 0..2 {
+            self.xDF4[i0].lay(l, at + 0xdf4 + i0 as u32 * 0x138, cx);
+        }
+        self.x1064_thrownHitbox.lay(l, at + 0x1064, cx);
+        l.put_u8(at + 0x119c, self.x119C_teamUnk as u8);
+        l.put_u8(at + 0x119d, self.grabber_unk1 as u8);
+        l.put_u8(at + 0x119e, self.hurt_capsules_len as u8);
+        l.put_u8(at + 0x119f, self.x119F as u8);
+        for i0 in 0..15 {
+            self.hurt_capsules[i0].lay(l, at + 0x11a0 + i0 as u32 * 0x4c, cx);
+        }
+        for i0 in 0..2 {
+            self.x1614[i0].lay(l, at + 0x1614 + i0 as u32 * 0x2c, cx);
+        }
+        l.put_u8(at + 0x166c, self.x166C as u8);
+        for i0 in 0..1 {
+            self.x1670[i0].lay(l, at + 0x1670 + i0 as u32 * 0x28, cx);
+        }
+        for i0 in 0..400 {
+            l.put_u8(at + 0x1698 + i0 as u32 * 0x1, self.filler_x1674[i0] as u8);
+        }
+        l.put_u32(at + 0x1828, self.x1828 as u32);
+        self.dmg.lay(l, at + 0x182c, cx);
+        l.put_u32(at + 0x1960, self.x1960_vibrateMult.to_bits());
+        l.put_u32(at + 0x1964, self.x1964.to_bits());
+        l.put_u8(at + 0x1968, self.x1968_jumpsUsed as u8);
+        l.put_u8(at + 0x1969, self.x1969_walljumpUsed as u8);
+        l.put_u32(at + 0x196c, self.hitlag_mul.to_bits());
+        l.put_u32(at + 0x1970, self.unk_msid as u32);
+        l.put_word(
+            at + 0x1974,
+            cx.handle("GObjId", self.item_gobj.map(|h| h.0)),
+        );
+        l.put_word(at + 0x1978, cx.handle("GObjId", self.x1978.map(|h| h.0)));
+        l.put_word(at + 0x197c, cx.handle("GObjId", self.x197C.map(|h| h.0)));
+        l.put_word(at + 0x1980, cx.handle("GObjId", self.x1980.map(|h| h.0)));
+        l.put_word(
+            at + 0x1984,
+            cx.handle("GObjId", self.x1984_heldItemSpec.map(|h| h.0)),
+        );
+        l.put_u32(at + 0x1988, self.x1988 as u32);
+        l.put_u32(at + 0x198c, self.x198C as u32);
+        l.put_u32(at + 0x1990, self.x1990 as u32);
+        l.put_u32(at + 0x1994, self.x1994 as u32);
+        l.put_u32(at + 0x1998, self.shield_health.to_bits());
+        l.put_u32(at + 0x199c, self.lightshield_amount.to_bits());
+        l.put_u32(at + 0x19a0, self.x19A0_shieldDamageTaken as u32);
+        l.put_u32(at + 0x19a4, self.x19A4 as u32);
+        l.put_word(at + 0x19a8, cx.handle("GObjId", self.x19A8.map(|h| h.0)));
+        l.put_u32(at + 0x19ac, self.specialn_facing_dir.to_bits());
+        l.put_u32(at + 0x19b0, self.x19B0 as u32);
+        l.put_u32(at + 0x19b4, self.shield_unk0.to_bits());
+        l.put_u32(at + 0x19b8, self.shield_unk1.to_bits());
+        l.put_u32(at + 0x19bc, self.x19BC_shieldDamageTaken3 as u32);
+        self.shield_hit.lay(l, at + 0x19c0, cx);
+        self.reflect_hit.lay(l, at + 0x19e4, cx);
+        self.absorb_hit.lay(l, at + 0x1a08, cx);
+        self.ReflectAttr.lay(l, at + 0x1a2c, cx);
+        self.AbsorbAttr.lay(l, at + 0x1a40, cx);
+        l.put_u32(at + 0x1a4c, self.grab_timer.to_bits());
+        l.put_u8(at + 0x1a50, self.x1A50 as u8);
+        l.put_u8(at + 0x1a51, self.x1A51 as u8);
+        l.put_u8(at + 0x1a52, self.x1A52 as u8);
+        l.put_u8(at + 0x1a53, self.x1A53 as u8);
+        l.put_u32(at + 0x1a54, self.x1A54 as u32);
+        l.put_word(
+            at + 0x1a58,
+            cx.handle("GObjId", self.victim_gobj.map(|h| h.0)),
+        );
+        l.put_word(at + 0x1a5c, cx.handle("GObjId", self.x1A5C.map(|h| h.0)));
+        l.put_word(
+            at + 0x1a60,
+            cx.handle("GObjId", self.target_item_gobj.map(|h| h.0)),
+        );
+        l.put_word(at + 0x1a64, cx.handle("GObjId", (self.x1A64).map(|h| h.0)));
+        l.put_u16(at + 0x1a68, self.x1A68 as u16);
+        l.put_u16(at + 0x1a6a, self.x1A6A as u16);
+        l.put_u32(at + 0x1a6c, self.x1A6C.to_bits());
+        self.x1A70.lay(l, at + 0x1a70, cx);
+        self.x1A7C.lay(l, at + 0x1a7c, cx);
+        self.cpu.lay(l, at + 0x1a88, cx);
+        l.put_u32(at + 0x2004, self.x2004 as u32);
+        l.put_u32(at + 0x2008, self.x2008 as u32);
+        l.put_u32(at + 0x200c, self.x200C as u32);
+        l.put_u32(at + 0x2010, self.x2010 as u32);
+        l.put_u32(at + 0x2014, self.x2014 as u32);
+        l.put_u32(at + 0x2018, self.x2018 as u32);
+        l.put_u32(at + 0x201c, self.x201C as u32);
+        l.put_u8(at + 0x2020, self.x2020 as u8);
+        l.put_u8(at + 0x2021, self.x2021 as u8);
+        l.put_u8(at + 0x2022, self.x2022 as u8);
+        l.put_u32(at + 0x2024, self.x2024 as u32);
+        l.put_u32(at + 0x2028, self.metal_timer as u32);
+        l.put_u32(at + 0x202c, self.metal_health as u32);
+        l.put_u32(at + 0x2030, self.x2030 as u32);
+        l.put_u32(at + 0x2034, self.x2034 as u32);
+        l.put_u32(at + 0x2038, self.x2038 as u32);
+        self.x203C.lay(l, at + 0x203c, cx);
+        for i0 in 0..32 {
+            l.put_u8(at + 0x2044 + i0 as u32 * 0x1, self.filler_x2044[i0] as u8);
+        }
+        l.put_u32(at + 0x2064, self.x2064_ledgeCooldown as u32);
+        l.put_u32(at + 0x2068, self.x2068_attackID as u32);
+        l.put_u16(at + 0x206c, self.x206C_attack_instance as u16);
+        l.put_u16(at + 0x206e, self.x206E as u16);
+        l.put_bytes(at + 0x2070, &self.x2070);
+        self.x2074.lay(l, at + 0x2074, cx);
+        l.put_u32(at + 0x208c, self.x208C as u32);
+        l.put_u16(at + 0x2090, self.x2090 as u16);
+        l.put_u16(at + 0x2092, self.x2092 as u16);
+        l.put_word(at + 0x2094, cx.handle("GObjId", self.x2094.map(|h| h.0)));
+        l.put_u16(at + 0x2098, self.x2098 as u16);
+        l.put_u16(at + 0x209a, self.x209A as u16);
+        l.put_u16(at + 0x209c, self.x209C as u16);
+        l.put_word(
+            at + 0x20a0,
+            cx.handle("JObjId", self.x20A0_accessory.map(|h| h.0)),
+        );
+        self.x20A4.lay(l, at + 0x20a4, cx);
+        l.put_word(at + 0x20ac, cx.handle("GObjId", self.unk_gobj.map(|h| h.0)));
+        for i0 in 0..3 {
+            self.x20B0[i0].lay(l, at + 0x20b0 + i0 as u32 * 0x18, cx);
+        }
+        l.put_u32(at + 0x20f8, self.x20F8.to_bits());
+        l.put_u32(at + 0x20fc, self.x20FC.to_bits());
+        l.put_u8(at + 0x2100, self.x2100 as u8);
+        l.put_bits(at, 67592, 7, (self.x2101_bits_0to6) as u32);
+        l.put_bits(at, 67599, 1, (self.x2101_bits_8) as u32);
+        l.put_u8(at + 0x2102, self.x2102 as u8);
+        l.put_u8(at + 0x2103, self.x2103 as u8);
+        l.put_u32(at + 0x2104, self.x2104 as u32);
+        l.put_u32(at + 0x2108, self.capture_timer as u32);
+        l.put_u8(at + 0x210c, self.wall_jump_input_timer as u8);
+        for i0 in 0..3 {
+            l.put_u8(at + 0x210d + i0 as u32 * 0x1, self.filler_x210C[i0] as u8);
+        }
+        l.put_u32(at + 0x2110, self.x2110_walljumpWallSide.to_bits());
+        self.smash_attrs.lay(l, at + 0x2114, cx);
+        l.put_u32(at + 0x213c, self.x213C as u32);
+        l.put_u32(at + 0x2140, self.x2140.to_bits());
+        l.put_u32(at + 0x2144, self.x2144 as u32);
+        l.put_u32(at + 0x2148, self.x2148 as u32);
+        l.put_u32(at + 0x214c, self.x214C as u32);
+        l.put_u32(at + 0x2150, self.x2150 as u32);
+        l.put_u32(at + 0x2154, self.x2154 as u32);
+        l.put_u32(at + 0x2158, self.x2158 as u32);
+        l.put_u32(at + 0x215c, self.x215C as u32);
+        l.put_u32(at + 0x2160, self.x2160 as u32);
+        l.put_u32(at + 0x2164, self.x2164 as u32);
+        l.put_u32(at + 0x2168, self.x2168 as u32);
+        l.put_u32(at + 0x216c, self.unk_grab_val.to_bits());
+        l.put_u32(at + 0x2170, self.x2170.to_bits());
+        self.x2174.lay(l, at + 0x2174, cx);
+        l.put_u32(at + 0x2180, self.x2180 as u32);
+        l.put_word(at + 0x2184, cx.handle("JObjId", self.x2184.map(|h| h.0)));
+        self.x2188.lay(l, at + 0x2188, cx);
+        l.put_u32(at + 0x2190, self.grab_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x2194, self.x2194.map_or(0, |c| c.0));
+        l.put_u32(at + 0x2198, self.grabbed_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x219c, self.input_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21a0, self.anim_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21a4, self.phys_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21a8, self.coll_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21ac, self.cam_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21b0, self.accessory1_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21b4, self.accessory2_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21b8, self.accessory3_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21bc, self.accessory4_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21c0, self.deal_dmg_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21c4, self.shield_hit_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21c8, self.reflect_hit_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21cc, self.x21CC.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21d0, self.hitlag_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21d4, self.pre_hitlag_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21d8, self.post_hitlag_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21dc, self.take_dmg_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21e0, self.death1_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21e4, self.death2_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21e8, self.death3_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21ec, self.x21EC.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21f0, self.take_dmg_2_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21f4, self.hurtbox_detect_cb.map_or(0, |c| c.0));
+        l.put_u32(at + 0x21f8, self.x21F8.map_or(0, |c| c.0));
+        l.put_bytes(at + 0x21fc, &self.x21FC_flag);
+        for i0 in 0..3 {
+            l.put_u8(at + 0x21fd + i0 as u32 * 0x1, self.filler_x21FC[i0] as u8);
+        }
+        for i0 in 0..4 {
+            l.put_u32(at + 0x2200 + i0 as u32 * 0x4, self.cmd_vars[i0] as u32);
+        }
+        l.put_bytes(at + 0x2210, &self.x2210);
+        l.put_u32(at + 0x2214, self.cmd_timer.to_bits());
+        l.put_bits(at, 69824, 1, (self.allow_interrupt) as u32);
+        l.put_bits(at, 69825, 1, (self.x2218_b1) as u32);
+        l.put_bits(at, 69826, 1, (self.x2218_b2) as u32);
+        l.put_bits(at, 69827, 1, (self.reflecting) as u32);
+        l.put_bits(at, 69828, 1, (self.x2218_b4) as u32);
+        l.put_bits(at, 69829, 1, (self.x2218_b5) as u32);
+        l.put_bits(at, 69830, 1, (self.x2218_b6) as u32);
+        l.put_bits(at, 69831, 1, (self.x2218_b7) as u32);
+        l.put_bits(at, 69832, 1, (self.x2219_b0) as u32);
+        l.put_bits(at, 69833, 1, (self.x2219_b1) as u32);
+        l.put_bits(at, 69834, 1, (self.x2219_b2) as u32);
+        l.put_bits(at, 69835, 1, (self.x2219_b3) as u32);
+        l.put_bits(at, 69836, 1, (self.x2219_b4) as u32);
+        l.put_bits(at, 69837, 1, (self.x2219_b5) as u32);
+        l.put_bits(at, 69838, 1, (self.x2219_b6) as u32);
+        l.put_bits(at, 69839, 1, (self.x2219_b7) as u32);
+        l.put_bits(at, 69840, 1, (self.x221A_b0) as u32);
+        l.put_bits(at, 69841, 1, (self.x221A_b1) as u32);
+        l.put_bits(at, 69842, 1, (self.allow_sdi) as u32);
+        l.put_bits(at, 69843, 1, (self.x221A_b3) as u32);
+        l.put_bits(at, 69844, 1, (self.fall_fast) as u32);
+        l.put_bits(at, 69845, 1, (self.x221A_b5) as u32);
+        l.put_bits(at, 69846, 1, (self.x221A_b6) as u32);
+        l.put_bits(at, 69847, 1, (self.x221A_b7) as u32);
+        self.x221B.lay(l, at + 0x221b, cx);
+        l.put_bits(at, 69856, 1, (self.x221C_b0) as u32);
+        l.put_bits(at, 69857, 1, (self.x221C_b1) as u32);
+        l.put_bits(at, 69858, 1, (self.x221C_b2) as u32);
+        l.put_bits(at, 69859, 1, (self.x221C_b3) as u32);
+        l.put_bits(at, 69860, 1, (self.x221C_b4) as u32);
+        l.put_bits(at, 69861, 1, (self.x221C_b5) as u32);
+        l.put_bits(at, 69862, 1, (self.x221C_b6) as u32);
+        l.put_bits(at, 69863, 3, (self.x221C_u16_y) as u32);
+        l.put_bits(at, 69866, 1, (self.x221D_b2) as u32);
+        l.put_bits(at, 69867, 1, (self.has_prev_input) as u32);
+        l.put_bits(at, 69868, 1, (self.input_disabled) as u32);
+        l.put_bits(at, 69869, 1, (self.x221D_b5) as u32);
+        l.put_bits(at, 69870, 1, (self.x221D_b6) as u32);
+        l.put_bits(at, 69871, 1, (self.x221D_b7) as u32);
+        l.put_bits(at, 69872, 1, (self.invisible) as u32);
+        l.put_bits(at, 69873, 1, (self.x221E_b1) as u32);
+        l.put_bits(at, 69874, 1, (self.x221E_b2) as u32);
+        l.put_bits(at, 69875, 1, (self.x221E_b3) as u32);
+        l.put_bits(at, 69876, 1, (self.x221E_b4) as u32);
+        l.put_bits(at, 69877, 1, (self.x221E_b5) as u32);
+        l.put_bits(at, 69878, 1, (self.x221E_b6) as u32);
+        l.put_bits(at, 69879, 1, (self.x221E_b7) as u32);
+        l.put_bits(at, 69880, 1, (self.x221F_b0) as u32);
+        l.put_bits(at, 69881, 1, (self.x221F_b1) as u32);
+        l.put_bits(at, 69882, 1, (self.x221F_b2) as u32);
+        l.put_bits(at, 69883, 1, (self.is_sleeping) as u32);
+        l.put_bits(at, 69884, 1, (self.is_sub_fighter) as u32);
+        l.put_bits(at, 69885, 1, (self.x221F_b5) as u32);
+        l.put_bits(at, 69886, 1, (self.x221F_b6) as u32);
+        l.put_bits(at, 69887, 1, (self.x221F_b7) as u32);
+        l.put_bits(at, 69888, 3, (self.x2220_b0) as u32);
+        l.put_bits(at, 69891, 1, (self.x2220_b3) as u32);
+        l.put_bits(at, 69892, 1, (self.x2220_b4) as u32);
+        l.put_bits(at, 69893, 1, (self.x2220_b5) as u32);
+        l.put_bits(at, 69894, 1, (self.x2220_b6) as u32);
+        l.put_bits(at, 69895, 1, (self.x2220_b7) as u32);
+        l.put_bits(at, 69896, 1, (self.x2221_b0) as u32);
+        l.put_bits(at, 69897, 1, (self.x2221_b1) as u32);
+        l.put_bits(at, 69898, 1, (self.x2221_b2) as u32);
+        l.put_bits(at, 69899, 1, (self.x2221_b3) as u32);
+        l.put_bits(at, 69900, 1, (self.x2221_b4) as u32);
+        l.put_bits(at, 69901, 1, (self.x2221_b5) as u32);
+        l.put_bits(at, 69902, 1, (self.x2221_b6) as u32);
+        l.put_bits(at, 69903, 1, (self.x2221_b7) as u32);
+        l.put_bits(at, 69904, 1, (self.x2222_b0) as u32);
+        l.put_bits(at, 69905, 1, (self.can_multijump) as u32);
+        l.put_bits(at, 69906, 1, (self.x2222_b2) as u32);
+        l.put_bits(at, 69907, 1, (self.x2222_b3) as u32);
+        l.put_bits(at, 69908, 1, (self.x2222_b4) as u32);
+        l.put_bits(at, 69909, 1, (self.x2222_b5) as u32);
+        l.put_bits(at, 69910, 1, (self.x2222_b6) as u32);
+        l.put_bits(at, 69911, 1, (self.x2222_b7) as u32);
+        l.put_bits(at, 69912, 1, (self.x2223_b0) as u32);
+        l.put_bits(at, 69913, 1, (self.x2223_b1) as u32);
+        l.put_bits(at, 69914, 1, (self.x2223_b2) as u32);
+        l.put_bits(at, 69915, 1, (self.x2223_b3) as u32);
+        l.put_bits(at, 69916, 1, (self.x2223_b4) as u32);
+        l.put_bits(at, 69917, 1, (self.x2223_b5) as u32);
+        l.put_bits(at, 69918, 1, (self.is_always_metal) as u32);
+        l.put_bits(at, 69919, 1, (self.is_metal) as u32);
+        l.put_bits(at, 69920, 1, (self.x2224_b0) as u32);
+        l.put_bits(at, 69921, 1, (self.x2224_b1) as u32);
+        l.put_bits(at, 69922, 1, (self.stamina_dead) as u32);
+        l.put_bits(at, 69923, 1, (self.x2224_b3) as u32);
+        l.put_bits(at, 69924, 1, (self.x2224_b4) as u32);
+        l.put_bits(at, 69925, 1, (self.x2224_b5) as u32);
+        l.put_bits(at, 69926, 1, (self.x2224_b6) as u32);
+        l.put_bits(at, 69927, 1, (self.can_walljump) as u32);
+        l.put_bits(at, 69928, 1, (self.x2225_b0) as u32);
+        l.put_bits(at, 69929, 1, (self.x2225_b1) as u32);
+        l.put_bits(at, 69930, 1, (self.x2225_b2) as u32);
+        l.put_bits(at, 69931, 1, (self.x2225_b3) as u32);
+        l.put_bits(at, 69932, 1, (self.x2225_b4) as u32);
+        l.put_bits(at, 69933, 1, (self.x2225_b5) as u32);
+        l.put_bits(at, 69934, 1, (self.x2225_b6) as u32);
+        l.put_bits(at, 69935, 1, (self.x2225_b7) as u32);
+        l.put_bits(at, 69936, 1, (self.x2226_b0) as u32);
+        l.put_bits(at, 69937, 1, (self.x2226_b1) as u32);
+        l.put_bits(at, 69938, 1, (self.x2226_b2) as u32);
+        l.put_bits(at, 69939, 1, (self.x2226_b3) as u32);
+        l.put_bits(at, 69940, 1, (self.x2226_b4) as u32);
+        l.put_bits(at, 69941, 1, (self.x2226_b5) as u32);
+        l.put_bits(at, 69942, 1, (self.x2226_b6) as u32);
+        l.put_bits(at, 69943, 1, (self.x2226_b7) as u32);
+        l.put_bits(at, 69944, 1, (self.x2227_b0) as u32);
+        l.put_bits(at, 69945, 1, (self.x2227_b1) as u32);
+        l.put_bits(at, 69946, 1, (self.x2227_b2) as u32);
+        l.put_bits(at, 69947, 1, (self.x2227_b3) as u32);
+        l.put_bits(at, 69948, 1, (self.x2227_b4) as u32);
+        l.put_bits(at, 69949, 1, (self.x2227_b5) as u32);
+        l.put_bits(at, 69950, 1, (self.x2227_b6) as u32);
+        l.put_bits(at, 69951, 1, (self.x2227_b7) as u32);
+        l.put_bits(at, 69952, 1, (self.x2228_b0) as u32);
+        l.put_bits(at, 69953, 1, (self.x2228_b1) as u32);
+        l.put_bits(at, 69954, 1, (self.is_sandbag) as u32);
+        l.put_bits(at, 69955, 2, (self.x2228_b3) as u32);
+        l.put_bits(at, 69957, 1, (self.x2228_b5) as u32);
+        l.put_bits(at, 69958, 1, (self.used_tether) as u32);
+        l.put_bits(at, 69959, 1, (self.x2228_b7) as u32);
+        l.put_bits(at, 69960, 1, (self.x2229_b0) as u32);
+        l.put_bits(at, 69961, 1, (self.x2229_b1) as u32);
+        l.put_bits(at, 69962, 1, (self.x2229_b2) as u32);
+        l.put_bits(at, 69963, 1, (self.x2229_b3) as u32);
+        l.put_bits(at, 69964, 1, (self.x2229_b4) as u32);
+        l.put_bits(at, 69965, 1, (self.no_normal_motion) as u32);
+        l.put_bits(at, 69966, 1, (self.x2229_b6) as u32);
+        l.put_bits(at, 69967, 1, (self.no_kb) as u32);
+        l.put_bits(at, 69968, 1, (self.x222A_b0) as u32);
+        l.put_bits(at, 69969, 1, (self.x222A_b1) as u32);
+        l.put_bits(at, 69970, 1, (self.x222A_b2) as u32);
+        l.put_bits(at, 69971, 2, (self.x222A_b3) as u32);
+        l.put_bits(at, 69973, 1, (self.x222A_b5) as u32);
+        l.put_bits(at, 69974, 1, (self.x222A_b6) as u32);
+        l.put_bits(at, 69975, 1, (self.x222A_b7) as u32);
+        self.u.lay(l, at + 0x222c, cx);
+        l.put_u32(at + 0x2324, self.bury_grkind as u32);
+        l.put_u32(at + 0x2328, self.bury_timer_1 as u32);
+        l.put_u32(at + 0x232c, self.bury_timer_2 as u32);
+        self.x2330.lay(l, at + 0x2330, cx);
+        self.x2338.lay(l, at + 0x2338, cx);
+        self.mv.lay(l, at + 0x2340, cx);
+    }
+}
+
+impl LayOut for ItemHitbox {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.hit.lay(l, at + 0x0, cx);
+        l.put_bits(at, 2496, 1, (self.x138) as u32);
+        l.put_bits(at, 2497, 7, (self.x138_b1_7) as u32);
+        for i0 in 0..3 {
+            l.put_u8(at + 0x139 + i0 as u32 * 0x1, self.x139[i0] as u8);
+        }
+    }
+}
+
+impl LayOut for lb_80014638_arg1_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.unk_x.to_bits());
+        l.put_u32(at + 0x4, self.unk_y.to_bits());
+        self.x8.lay(l, at + 0x8, cx);
+    }
+}
+
+impl LayOut for xB6C_t {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.xB6C.lay(l, at + 0x0, cx);
+        l.put_u32(at + 0xc, self.xB78.to_bits());
+        l.put_word(at + 0x10, cx.handle("JObjId", self.xB7C.map(|h| h.0)));
+        l.put_u32(at + 0x14, self.xB80 as u32);
+        self.xB84.lay(l, at + 0x18, cx);
+        l.put_u32(at + 0x24, self.xB90 as u32);
+    }
+}
+
+impl LayOut for ItemModStruct {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x0_unk.lay(l, at + 0x0, cx);
+    }
+}
+
+impl LayOut for _itECB {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.top.to_bits());
+        l.put_u32(at + 0x4, self.bottom.to_bits());
+        l.put_u32(at + 0x8, self.right.to_bits());
+        l.put_u32(at + 0xc, self.left.to_bits());
+    }
+}
+
+impl LayOut for flag32_flags {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_bits(at, 0, 1, (self.x0) as u32);
+        l.put_bits(at, 1, 1, (self.x1) as u32);
+        l.put_bits(at, 2, 1, (self.x2) as u32);
+        l.put_bits(at, 3, 1, (self.x3) as u32);
+        l.put_bits(at, 4, 1, (self.x4) as u32);
+        l.put_bits(at, 5, 1, (self.x5) as u32);
+        l.put_bits(at, 6, 1, (self.x6) as u32);
+        l.put_bits(at, 7, 1, (self.x7) as u32);
+        l.put_bits(at, 8, 1, (self.x8) as u32);
+        l.put_bits(at, 9, 1, (self.x9) as u32);
+        l.put_bits(at, 10, 1, (self.xA) as u32);
+        l.put_bits(at, 11, 1, (self.xB) as u32);
+        l.put_bits(at, 12, 1, (self.xC) as u32);
+        l.put_bits(at, 13, 1, (self.xD) as u32);
+        l.put_bits(at, 14, 1, (self.xE) as u32);
+        l.put_bits(at, 15, 4, (self.xF) as u32);
+        l.put_bits(at, 19, 1, (self.x13) as u32);
+        l.put_bits(at, 20, 1, (self.x14) as u32);
+        l.put_bits(at, 21, 1, (self.x15) as u32);
+        l.put_bits(at, 22, 1, (self.x16) as u32);
+        l.put_bits(at, 23, 2, (self.x17) as u32);
+        l.put_bits(at, 25, 1, (self.x19) as u32);
+        l.put_bits(at, 26, 1, (self.x1A) as u32);
+        l.put_bits(at, 27, 1, (self.x1B) as u32);
+        l.put_bits(at, 28, 1, (self.x1C) as u32);
+        l.put_bits(at, 29, 1, (self.x1D) as u32);
+        l.put_bits(at, 30, 1, (self.x1E) as u32);
+        l.put_bits(at, 31, 1, (self.x1F) as u32);
+    }
+}
+
+impl LayOut for flag32 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.flags.lay(l, at + 0x0, cx);
+    }
+}
+
+impl LayOut for Item_xDCC_flag {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_bits(at, 0, 1, (self.b0) as u32);
+        l.put_bits(at, 1, 1, (self.b1) as u32);
+        l.put_bits(at, 2, 1, (self.b2) as u32);
+        l.put_bits(at, 3, 1, (self.b3) as u32);
+        l.put_bits(at, 4, 4, (self.b4567) as u32);
+    }
+}
+
+impl LayOut for CameraBoxFlags_x0 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_bits(at, 0, 2, (self.b01) as u32);
+        l.put_bits(at, 2, 1, (self.b2) as u32);
+        l.put_bits(at, 3, 1, (self.b3) as u32);
+        l.put_bits(at, 4, 1, (self.b4) as u32);
+        l.put_bits(at, 5, 1, (self.b5) as u32);
+        l.put_bits(at, 6, 1, (self.b6) as u32);
+        l.put_bits(at, 7, 1, (self.b7) as u32);
+    }
+}
+
+impl LayOut for CameraBoxFlags {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x0.lay(l, at + 0x0, cx);
+    }
+}
+
+impl LayOut for Item {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("ItemId", (self.x0).map(|h| h.0)));
+        l.put_word(at + 0x4, cx.handle("GObjId", self.entity.map(|h| h.0)));
+        l.put_u32(at + 0xc, self.spawn_kind as u32);
+        l.put_u32(at + 0x10, self.kind as u32);
+        l.put_u32(at + 0x14, self.hold_kind as u32);
+        l.put_u32(at + 0x18, self.x18 as u32);
+        l.put_u32(at + 0x1c, self.x1C as u32);
+        l.put_u8(at + 0x20, self.x20_team_id as u8);
+        l.put_u32(at + 0x24, self.msid as u32);
+        l.put_u32(at + 0x28, self.anim_id as u32);
+        l.put_u32(at + 0x2c, self.facing_dir.to_bits());
+        l.put_u32(at + 0x30, self.init_facing_dir.to_bits());
+        l.put_u32(at + 0x34, self.spin_spd.to_bits());
+        l.put_u32(at + 0x38, self.scl.to_bits());
+        l.put_u32(at + 0x3c, self.x3C.to_bits());
+        self.x40_vel.lay(l, at + 0x40, cx);
+        self.pos.lay(l, at + 0x4c, cx);
+        self.x58_vec_unk.lay(l, at + 0x58, cx);
+        self.x64_vec_unk2.lay(l, at + 0x64, cx);
+        self.x70_nudge.lay(l, at + 0x70, cx);
+        self.x7C.lay(l, at + 0x7c, cx);
+        self.x88.lay(l, at + 0x88, cx);
+        self.x94.lay(l, at + 0x94, cx);
+        self.xA0.lay(l, at + 0xa0, cx);
+        self.xAC_unk.lay(l, at + 0xac, cx);
+        l.put_word(
+            at + 0xb8,
+            cx.handle("ItemLogicRef", self.xB8_itemLogicTable.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0xbc,
+            cx.handle("ItemStatesRef", self.xBC_itemStateContainer.map(|h| h.0)),
+        );
+        l.put_u32(at + 0xc0, self.ground_or_air as u32);
+        l.put_word(at + 0xc4, cx.data(self.xC4_article_data));
+        l.put_word(at + 0xc8, cx.data(self.xC8_joint));
+        l.put_word(at + 0xcc, cx.data(self.xCC_item_attr));
+        l.put_word(at + 0xd0, cx.data(self.xD0_itemStateDesc));
+        self.xD4_dynamicBones.lay(l, at + 0xd4, cx);
+        l.put_u32(at + 0x374, self.x374_dynamicBonesNum as u32);
+        self.x378_itemColl.lay(l, at + 0x378, cx);
+        l.put_u32(at + 0x514, self.ecb_lock as u32);
+        l.put_word(at + 0x518, cx.handle("GObjId", self.owner.map(|h| h.0)));
+        l.put_word(at + 0x51c, cx.handle("GObjId", self.x51C.map(|h| h.0)));
+        l.put_word(
+            at + 0x520,
+            cx.handle("CameraBoxId", self.x520_cameraBox.map(|h| h.0)),
+        );
+        self.x524_cmd.lay(l, at + 0x524, cx);
+        self.x548_colorOverlay.lay(l, at + 0x548, cx);
+        l.put_u8(at + 0x5c8, self.x5C8 as u8);
+        l.put_u8(at + 0x5c9, self.x5C9 as u8);
+        l.put_u8(at + 0x5ca, self.x5CA as u8);
+        l.put_u8(at + 0x5cb, self.x5CB as u8);
+        l.put_u32(at + 0x5cc, self.x5CC_currentAnimFrame.to_bits());
+        l.put_u32(at + 0x5d0, self.x5D0_animFrameSpeed.to_bits());
+        for i0 in 0..4 {
+            self.x5D4_hitboxes[i0].lay(l, at + 0x5d4 + i0 as u32 * 0x13c, cx);
+        }
+        self.xAC4_ignoreItemID.lay(l, at + 0xac4, cx);
+        l.put_u8(at + 0xac8, self.xAC8_hurtboxNum as u8);
+        self.xACC_itemHurtbox.lay(l, at + 0xacc, cx);
+        self.xB54.lay(l, at + 0xb54, cx);
+        l.put_u8(at + 0xb68, self.xB68 as u8);
+        l.put_u8(at + 0xb69, self.xB69 as u8);
+        l.put_u8(at + 0xb6a, self.xB6A as u8);
+        l.put_u8(at + 0xb6b, self.xB6B as u8);
+        for i0 in 0..2 {
+            self.xB6C_vars[i0].lay(l, at + 0xb6c + i0 as u32 * 0x28, cx);
+        }
+        l.put_word(
+            at + 0xbbc,
+            cx.handle("BoneTableId", self.xBBC_dynamicBoneTable.map(|h| h.0)),
+        );
+        l.put_word(at + 0xbc0, cx.handle("QueuedId", self.xBC0.map(|h| h.0)));
+        self.xBC4.lay(l, at + 0xbc4, cx);
+        self.xBC8.lay(l, at + 0xbc8, cx);
+        self.xBCC_unk.lay(l, at + 0xbcc, cx);
+        self.xBD4_grabRange.lay(l, at + 0xbd4, cx);
+        self.xBDC.lay(l, at + 0xbdc, cx);
+        self.xBEC.lay(l, at + 0xbec, cx);
+        self.xBFC.lay(l, at + 0xbfc, cx);
+        self.xC0C.lay(l, at + 0xc0c, cx);
+        self.xC1C.lay(l, at + 0xc1c, cx);
+        l.put_u32(at + 0xc2c, self.xC2C as u32);
+        l.put_u32(at + 0xc30, self.xC30 as u32);
+        l.put_u32(at + 0xc34, self.xC34_damageDealt as u32);
+        l.put_u32(at + 0xc38, self.xC38 as u32);
+        l.put_u32(at + 0xc3c, self.xC3C.to_bits());
+        l.put_u32(at + 0xc40, self.xC40.to_bits());
+        l.put_u32(at + 0xc44, self.xC44.to_bits());
+        l.put_u32(at + 0xc48, self.xC48 as u32);
+        l.put_u32(at + 0xc4c, self.xC4C as u32);
+        l.put_u32(at + 0xc50, self.xC50 as u32);
+        l.put_u32(at + 0xc54, self.xC54.to_bits());
+        self.xC58.lay(l, at + 0xc58, cx);
+        l.put_word(
+            at + 0xc64,
+            cx.handle("GObjId", self.xC64_reflectGObj.map(|h| h.0)),
+        );
+        l.put_u32(at + 0xc68, self.xC68.to_bits());
+        l.put_u32(at + 0xc6c, self.xC6C.to_bits());
+        l.put_u32(at + 0xc70, self.xC70.to_bits());
+        l.put_u32(at + 0xc74, self.xC74 as u32);
+        self.xC78.lay(l, at + 0xc78, cx);
+        self.xC80.lay(l, at + 0xc80, cx);
+        l.put_u32(at + 0xc88, self.xC88 as u32);
+        l.put_u16(at + 0xc8c, self.xC8C as u16);
+        l.put_word(
+            at + 0xc90,
+            cx.handle("GObjId", self.xC90_absorbGObj.map(|h| h.0)),
+        );
+        l.put_u32(at + 0xc94, self.xC94 as u32);
+        l.put_u32(at + 0xc98, self.xC98.to_bits());
+        l.put_u32(at + 0xc9c, self.xC9C as u32);
+        l.put_u32(at + 0xca0, self.xCA0 as u32);
+        l.put_u32(at + 0xca4, self.xCA4 as u32);
+        l.put_u32(at + 0xca8, self.xCA8 as u32);
+        l.put_u32(at + 0xcac, self.xCAC_angle as u32);
+        l.put_u32(at + 0xcb0, self.xCB0_source_ply as u32);
+        l.put_u32(at + 0xcb4, self.xCB4 as u32);
+        l.put_u32(at + 0xcb8, self.xCB8_outDamageDirection.to_bits());
+        l.put_u32(at + 0xcbc, self.xCBC_hitlagFrames.to_bits());
+        l.put_u32(at + 0xcc0, self.xCC0.to_bits());
+        l.put_u32(at + 0xcc4, self.xCC4 as u32);
+        l.put_u32(at + 0xcc8, self.xCC8_knockback.to_bits());
+        l.put_u32(at + 0xccc, self.xCCC_incDamageDirection.to_bits());
+        l.put_u32(at + 0xcd0, self.xCD0.to_bits());
+        self.xCD4.lay(l, at + 0xcd4, cx);
+        self.xCE0.lay(l, at + 0xce0, cx);
+        l.put_word(
+            at + 0xcec,
+            cx.handle("GObjId", self.xCEC_fighterGObj.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0xcf0,
+            cx.handle("GObjId", self.xCF0_itemGObj.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0xcf4,
+            cx.handle("GObjId", self.xCF4_fighterGObjUnk.map(|h| h.0)),
+        );
+        l.put_word(at + 0xcf8, cx.handle("GObjId", self.toucher.map(|h| h.0)));
+        l.put_word(at + 0xcfc, cx.handle("GObjId", self.xCFC.map(|h| h.0)));
+        l.put_word(
+            at + 0xd00,
+            cx.handle("GObjId", self.grab_victim.map(|h| h.0)),
+        );
+        l.put_word(
+            at + 0xd04,
+            cx.handle("GObjId", self.atk_victim.map(|h| h.0)),
+        );
+        l.put_u8(at + 0xd08, self.xD08 as u8);
+        l.put_u8(at + 0xd09, self.xD09 as u8);
+        l.put_u8(at + 0xd0a, self.xD0A as u8);
+        l.put_u8(at + 0xd0b, self.xD0B as u8);
+        l.put_u32(at + 0xd0c, self.xD0C as u32);
+        l.put_u32(at + 0xd10, self.xD10.to_bits());
+        l.put_u32(at + 0xd14, self.animated.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd18, self.physics_updated.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd1c, self.collided.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd20, self.on_accessory.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd24, self.touched.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd28, self.entered_hitlag.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd2c, self.exited_hitlag.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd30, self.jumped_on.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd34, self.grab_dealt.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd38, self.grabbed_for_victim.map_or(0, |c| c.0));
+        l.put_u32(at + 0xd3c, self.xD3C_spinSpeed.to_bits());
+        l.put_u32(at + 0xd40, self.xD40.to_bits());
+        l.put_u32(at + 0xd44, self.xD44_lifeTimer.to_bits());
+        l.put_u32(at + 0xd48, self.xD48_halfLifeTimer.to_bits());
+        l.put_u32(at + 0xd4c, self.xD4C as u32);
+        l.put_u32(at + 0xd50, self.xD50_landNum as u32);
+        l.put_u32(at + 0xd54, self.xD54_throwNum as u32);
+        l.put_u32(at + 0xd58, self.xD58 as u32);
+        l.put_u32(at + 0xd5c, self.xD5C as u32);
+        l.put_u32(at + 0xd60, self.destroy_type as u32);
+        l.put_u32(at + 0xd64, self.sfx_unk1 as u32);
+        l.put_u32(at + 0xd68, self.sfx_unk2 as u32);
+        l.put_u32(at + 0xd6c, self.xD6C as u32);
+        l.put_u32(at + 0xd70, self.xD70 as u32);
+        l.put_u32(at + 0xd74, self.xD74 as u32);
+        l.put_u32(at + 0xd78, self.xD78 as u32);
+        l.put_u32(at + 0xd7c, self.destroy_sfx as u32);
+        l.put_u32(at + 0xd80, self.xD80 as u32);
+        l.put_u32(at + 0xd84, self.xD84 as u32);
+        l.put_u32(at + 0xd88, self.xD88_attackID as u32);
+        l.put_u16(at + 0xd8c, self.xD8C_attack_instance as u16);
+        l.put_u16(at + 0xd8e, self.xD8E as u16);
+        l.put_bytes(at + 0xd90, &self.xD90);
+        self.xD94.lay(l, at + 0xd94, cx);
+        self.xD9C.lay(l, at + 0xd9c, cx);
+        l.put_u32(at + 0xda4, self.xDA4_word as u32);
+        l.put_u16(at + 0xda8, self.xDA8_short as u16);
+        l.put_bytes(at + 0xdaa, &self.xDAA);
+        l.put_u32(at + 0xdac, self.xDAC_itcmd_var0 as u32);
+        l.put_u32(at + 0xdb0, self.xDB0_itcmd_var1 as u32);
+        l.put_u32(at + 0xdb4, self.xDB4_itcmd_var2 as u32);
+        l.put_u32(at + 0xdb8, self.xDB8_itcmd_var3 as u32);
+        l.put_bytes(at + 0xdbc, &self.xDBC);
+        l.put_u32(at + 0xdc0, self.xDC0 as u32);
+        l.put_u32(at + 0xdc4, self.xDC4 as u32);
+        self.xDC8_word.lay(l, at + 0xdc8, cx);
+        self.xDCC_flag.lay(l, at + 0xdcc, cx);
+        self.xDCD_flag.lay(l, at + 0xdcd, cx);
+        l.put_bytes(at + 0xdce, &self.xDCE_flag);
+        l.put_bytes(at + 0xdcf, &self.xDCF_flag);
+        l.put_bytes(at + 0xdd0, &self.xDD0_flag);
+        l.put_bytes(at + 0xdd1, &self.xDD1_flag);
+        l.put_bytes(at + 0xdd2, &self.xDD2_flag);
+        l.put_bytes(at + 0xdd3, &self.xDD3_flag);
+        self.xDD4_itemVar.lay(l, at + 0xdd4, cx);
+    }
+}
+
+impl LayOut for FighterBone {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("JObjId", self.joint.map(|h| h.0)));
+        l.put_word(at + 0x4, cx.handle("JObjId", self.x4_jobj2.map(|h| h.0)));
+        l.put_bytes(at + 0x8, &self.x8);
+        l.put_bytes(at + 0xc, &self.xC_u);
+    }
+}
+
+impl LayOut for itFoxBlaster_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()) as u32);
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()) as u32);
+        }
+        for i in 0..6 {
+            if self.xDE4[i].is_live() {
+                l.put_word(
+                    at + 0x10 + 4 * i as u32,
+                    cx.handle("EffectId", self.xDE4[i].peek().map(|h| h.0)),
+                );
+            }
+        }
+        for i0 in 0..6 {
+            if self.xDFC[i0].is_live() {
+                l.put_u32(at + 0x28 + i0 as u32 * 0x4, (*self.xDFC[i0].peek()) as u32);
+            }
+        }
+        for i0 in 0..6 {
+            self.xE14[i0].lay(l, at + 0x40 + i0 as u32 * 0xc, cx);
+        }
+        for i0 in 0..6 {
+            if self.angle[i0].is_live() {
+                l.put_u32(
+                    at + 0x88 + i0 as u32 * 0x4,
+                    (*self.angle[i0].peek()).to_bits(),
+                );
+            }
+        }
+        if self.gfx_spawn_var.is_live() {
+            l.put_u32(at + 0xa0, (*self.gfx_spawn_var.peek()) as u32);
+        }
+        if self.set_sfx_var2.is_live() {
+            l.put_u32(at + 0xa4, (*self.set_sfx_var2.peek()) as u32);
+        }
+        if self.owner.is_live() {
+            l.put_word(
+                at + 0xa8,
+                cx.handle("GObjId", (*self.owner.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itFoxLaser_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.scale.is_live() {
+            l.put_u32(at + 0x0, (*self.scale.peek()).to_bits());
+        }
+        if self.angle.is_live() {
+            l.put_u32(at + 0x4, (*self.angle.peek()).to_bits());
+        }
+        if self.speed.is_live() {
+            l.put_u32(at + 0x8, (*self.speed.peek()).to_bits());
+        }
+        self.pos.lay(l, at + 0xc, cx);
+    }
+}
+
+impl LayOut for itFoxIllusion_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_word(at + 0x0, cx.data((*self.xDD4.peek())));
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("JObjId", (*self.xDDC.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itSeakNeedleHeld_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.owner.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.owner.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itSeakNeedleThrown_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        self.xDE4.lay(l, at + 0x10, cx);
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()).to_bits());
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()) as u32);
+        }
+        if self.xDF8.is_live() {
+            l.put_u32(at + 0x24, (*self.xDF8.peek()).to_bits());
+        }
+        if self.xDFC.is_live() {
+            l.put_u32(at + 0x28, (*self.xDFC.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itSeakChain_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("ItemLinkId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("ItemLinkId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.parent_gobj.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.parent_gobj.peek()).map(|h| h.0)),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_C[i0].is_live() {
+                l.put_u8(at + 0xc + i0 as u32 * 0x1, (*self.pad_C[i0].peek()) as u8);
+            }
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()) as u32);
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()) as u32);
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()) as u32);
+        }
+        for i0 in 0..15 {
+            self.history[i0].lay(l, at + 0x1c + i0 as u32 * 0xc, cx);
+        }
+    }
+}
+
+impl LayOut for itZeldaDinFire_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.padDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.padDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()) as u32);
+        }
+        if self.xDE0.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("GObjId", (*self.xDE0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()) as u32);
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()).to_bits());
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()).to_bits());
+        }
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()).to_bits());
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itZeldaDinFireExplode_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.xDDC.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itPKFlush_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4_PKFlash.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4_PKFlash.peek()) as u32);
+        }
+        if self.xDD8_PKFlash.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8_PKFlash.peek()).to_bits());
+        }
+        if self.xDDC_PKFlash.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC_PKFlash.peek()) as u32);
+        }
+        if self.xDE0_PKFlash_Owner.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("GObjId", (*self.xDE0_PKFlash_Owner.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDE4_PKFlash.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4_PKFlash.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itPKFlushExplode_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.xDDC.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itPKThunder_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        for i0 in 0..6 {
+            if self.xDD4[i0].is_live() {
+                l.put_word(
+                    at + 0x0 + i0 as u32 * 0x4,
+                    cx.handle("GObjId", (*self.xDD4[i0].peek()).map(|h| h.0)),
+                );
+            }
+        }
+        for i0 in 0..16 {
+            self.positions[i0].lay(l, at + 0x18 + i0 as u32 * 0xc, cx);
+        }
+        for i0 in 0..16 {
+            if self.angles[i0].is_live() {
+                l.put_u32(
+                    at + 0xd8 + i0 as u32 * 0x4,
+                    (*self.angles[i0].peek()).to_bits(),
+                );
+            }
+        }
+        if self.xEEC.is_live() {
+            l.put_u32(at + 0x118, (*self.xEEC.peek()).to_bits());
+        }
+        if self.xEF0.is_live() {
+            l.put_u32(at + 0x11c, (*self.xEF0.peek()) as u32);
+        }
+        if self.xEF4.is_live() {
+            l.put_word(
+                at + 0x120,
+                cx.handle("GObjId", (*self.xEF4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xEF8.is_live() {
+            l.put_u32(at + 0x124, (*self.xEF8.peek()) as u32);
+        }
+        if self.xEFC.is_live() {
+            l.put_u32(at + 0x128, (*self.xEFC.peek()) as u32);
+        }
+        if self.xF00.is_live() {
+            l.put_u32(at + 0x12c, (*self.xF00.peek()) as u32);
+        }
+        if self.xF04.is_live() {
+            l.put_word(
+                at + 0x130,
+                cx.handle("GObjId", (*self.xF04.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xF08.is_live() {
+            l.put_word(
+                at + 0x134,
+                cx.handle("GObjId", (*self.xF08.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itNesspkthundertrail_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itNessbat_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itNessYoyo_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+        if self.x8.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("ItemLinkId", (*self.x8.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xC.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("ItemLinkId", (*self.xC.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x10.is_live() {
+            l.put_word(
+                at + 0x10,
+                cx.handle("GObjId", (*self.x10.peek()).map(|h| h.0)),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_14[i0].is_live() {
+                l.put_u8(at + 0x14 + i0 as u32 * 0x1, (*self.pad_14[i0].peek()) as u8);
+            }
+        }
+        if self.x18.is_live() {
+            l.put_word(
+                at + 0x18,
+                cx.handle("JObjId", (*self.x18.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itSamusBomb_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.owner.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("GObjId", (*self.owner.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itSamusChargeshot_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4_pad.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4_pad.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()).to_bits());
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()) as u32);
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()) as u32);
+        }
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()) as u32);
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()) as u32);
+        }
+        if self.xDF8.is_live() {
+            l.put_u32(at + 0x24, (*self.xDF8.peek()) as u32);
+        }
+        if self.xDFC.is_live() {
+            l.put_u32(at + 0x28, (*self.xDFC.peek()) as u32);
+        }
+        if self.xE00.is_live() {
+            l.put_word(
+                at + 0x2c,
+                cx.handle("GObjId", (*self.xE00.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xE04.is_live() {
+            l.put_u32(at + 0x30, (*self.xE04.peek()).to_bits());
+        }
+        for i0 in 0..9 {
+            if self.pad1[i0].is_live() {
+                l.put_u32(at + 0x34 + i0 as u32 * 0x4, (*self.pad1[i0].peek()) as u32);
+            }
+        }
+        if self.xE2C.is_live() {
+            l.put_u32(at + 0x58, (*self.xE2C.peek()).to_bits());
+        }
+        if self.xE30.is_live() {
+            l.put_u32(at + 0x5c, (*self.xE30.peek()).to_bits());
+        }
+        if self.xE34.is_live() {
+            l.put_u32(at + 0x60, (*self.xE34.peek()).to_bits());
+        }
+        for i0 in 0..15 {
+            if self.padding[i0].is_live() {
+                l.put_u32(
+                    at + 0x64 + i0 as u32 * 0x4,
+                    (*self.padding[i0].peek()) as u32,
+                );
+            }
+        }
+    }
+}
+
+impl LayOut for itSamusMissile_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.is_smash_missile.is_live() {
+            l.put_u32(at + 0x0, (*self.is_smash_missile.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.owner.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("GObjId", (*self.owner.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x10.is_live() {
+            l.put_word(
+                at + 0x10,
+                cx.handle("GObjId", (*self.x10.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itSamusGrapple_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("ItemLinkId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("ItemLinkId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x8.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.x8.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xC.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("JObjId", (*self.xC.peek()).map(|h| h.0)),
+            );
+        }
+        if self.unk_10.is_live() {
+            l.put_u32(at + 0x10, (*self.unk_10.peek()).map_or(0, |c| c.0));
+        }
+        if self.x14.is_live() {
+            l.put_u8(at + 0x14, (*self.x14.peek()) as u8);
+        }
+        if self.x15.is_live() {
+            l.put_u8(at + 0x15, (*self.x15.peek()) as u8);
+        }
+        if self.x16.is_live() {
+            l.put_u8(at + 0x16, (*self.x16.peek()) as u8);
+        }
+    }
+}
+
+impl LayOut for itDrMarioPill_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("GObjId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itPikachuthunder_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()).to_bits());
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()).to_bits());
+        }
+        self.x1C.lay(l, at + 0x1c, cx);
+        self.x28.lay(l, at + 0x28, cx);
+        if self.x34.is_live() {
+            l.put_word(
+                at + 0x34,
+                cx.handle("GObjId", (*self.x34.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x38.is_live() {
+            l.put_word(
+                at + 0x38,
+                cx.handle("GObjId", (*self.x38.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itPikachutJoltGround_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("GObjId", (*self.xDD8.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDDC.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.xDDC.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()) as u32);
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()) as u32);
+        }
+        self.xDE8.lay(l, at + 0x14, cx);
+        self.xDF4.lay(l, at + 0x20, cx);
+        self.xE00.lay(l, at + 0x2c, cx);
+    }
+}
+
+impl LayOut for itPikachutJoltAir_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.xDD4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDD8.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("GObjId", (*self.xDD8.peek()).map(|h| h.0)),
+            );
+        }
+        for i0 in 0..12 {
+            if self.pad_8[i0].is_live() {
+                l.put_u8(at + 0x8 + i0 as u32 * 0x1, (*self.pad_8[i0].peek()) as u8);
+            }
+        }
+        self.xDE8.lay(l, at + 0x14, cx);
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itClimbersIce_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+        if self.x8_b0.is_live() {
+            l.put_bits(at, 64, 1, (*self.x8_b0.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itClimbersBlizzard_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.flag0.is_live() {
+            l.put_bits(at, 32, 1, (*self.flag0.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itClimbersString_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("ItemLinkId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x8.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("ItemLinkId", (*self.x8.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xC.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("GObjId", (*self.xC.peek()).map(|h| h.0)),
+            );
+        }
+        for i0 in 0..4 {
+            if self.pad_10[i0].is_live() {
+                l.put_u8(at + 0x10 + i0 as u32 * 0x1, (*self.pad_10[i0].peek()) as u8);
+            }
+        }
+        if self.x14.is_live() {
+            l.put_word(
+                at + 0x14,
+                cx.handle("JObjId", (*self.x14.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itPeachTurnip_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            self.xDD4.peek().lay(l, at + 0x0, cx);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        if self.xDDC_damage.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC_damage.peek()) as u32);
+        }
+        if self.xDE0_scl.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0_scl.peek()).to_bits());
+        }
+        if self.xDE4_owner.is_live() {
+            l.put_word(
+                at + 0x10,
+                cx.handle("GObjId", (*self.xDE4_owner.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xDE8_scl.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8_scl.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itLinkBomb_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            self.x0.peek().lay(l, at + 0x0, cx);
+        }
+        if self.x1.is_live() {
+            l.put_u8(at + 0x1, (*self.x1.peek()) as u8);
+        }
+        if self.x2.is_live() {
+            l.put_u8(at + 0x2, (*self.x2.peek()) as u8);
+        }
+        if self.x3.is_live() {
+            l.put_u8(at + 0x3, (*self.x3.peek()) as u8);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.x10.is_live() {
+            l.put_word(
+                at + 0x10,
+                cx.handle("GObjId", (*self.x10.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itLinkBoomerang_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        for i0 in 0..2 {
+            if self.xDDC[i0].is_live() {
+                l.put_u32(at + 0x8 + i0 as u32 * 0x4, (*self.xDDC[i0].peek()) as u32);
+            }
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()) as u32);
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()) as u32);
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()) as u32);
+        }
+        for i0 in 0..16 {
+            self.xDF0[i0].lay(l, at + 0x1c + i0 as u32 * 0xc, cx);
+        }
+        for i0 in 0..16 {
+            self.xEB0[i0].lay(l, at + 0xdc + i0 as u32 * 0xc, cx);
+        }
+        if self.xF70.is_live() {
+            l.put_u32(at + 0x19c, (*self.xF70.peek()).to_bits());
+        }
+        if self.xF74.is_live() {
+            l.put_u32(at + 0x1a0, (*self.xF74.peek()).to_bits());
+        }
+        if self.xF78.is_live() {
+            l.put_u32(at + 0x1a4, (*self.xF78.peek()).to_bits());
+        }
+        if self.xF7C.is_live() {
+            l.put_u32(at + 0x1a8, (*self.xF7C.peek()).to_bits());
+        }
+        if self.xF80.is_live() {
+            l.put_u32(at + 0x1ac, (*self.xF80.peek()).to_bits());
+        }
+        if self.xF84.is_live() {
+            l.put_u32(at + 0x1b0, (*self.xF84.peek()).to_bits());
+        }
+        if self.xF88.is_live() {
+            l.put_u32(at + 0x1b4, (*self.xF88.peek()).to_bits());
+        }
+        if self.xF8C.is_live() {
+            l.put_u32(at + 0x1b8, (*self.xF8C.peek()).to_bits());
+        }
+        for i0 in 0..2 {
+            if self.xF90[i0].is_live() {
+                l.put_word(
+                    at + 0x1bc + i0 as u32 * 0x4,
+                    cx.handle("JObjId", (*self.xF90[i0].peek()).map(|h| h.0)),
+                );
+            }
+        }
+        if self.xF98.is_live() {
+            l.put_word(
+                at + 0x1c4,
+                cx.handle("GObjId", (*self.xF98.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itLinkHookshot_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("ItemLinkId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("ItemLinkId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x8.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.x8.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xC.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("JObjId", (*self.xC.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).map_or(0, |c| c.0));
+        }
+        if self.x14.is_live() {
+            l.put_u8(at + 0x14, (*self.x14.peek()) as u8);
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()).to_bits());
+        }
+        if self.x1C.is_live() {
+            l.put_u32(at + 0x1c, (*self.x1C.peek()).to_bits());
+        }
+        if self.x20.is_live() {
+            l.put_u32(at + 0x20, (*self.x20.peek()).to_bits());
+        }
+        if self.x24.is_live() {
+            l.put_u32(at + 0x24, (*self.x24.peek()).to_bits());
+        }
+        if self.x28.is_live() {
+            l.put_u32(at + 0x28, (*self.x28.peek()).to_bits());
+        }
+        if self.x2C.is_live() {
+            l.put_u32(at + 0x2c, (*self.x2C.peek()).to_bits());
+        }
+        if self.x30.is_live() {
+            l.put_u32(at + 0x30, (*self.x30.peek()).to_bits());
+        }
+        if self.x34.is_live() {
+            l.put_u32(at + 0x34, (*self.x34.peek()).to_bits());
+        }
+        if self.x38.is_live() {
+            l.put_u32(at + 0x38, (*self.x38.peek()).to_bits());
+        }
+        if self.x3C.is_live() {
+            l.put_u32(at + 0x3c, (*self.x3C.peek()).to_bits());
+        }
+        if self.x40.is_live() {
+            l.put_u32(at + 0x40, (*self.x40.peek()).to_bits());
+        }
+        if self.x44.is_live() {
+            l.put_u32(at + 0x44, (*self.x44.peek()).to_bits());
+        }
+        if self.x48.is_live() {
+            l.put_u32(at + 0x48, (*self.x48.peek()).to_bits());
+        }
+        if self.x4C.is_live() {
+            l.put_u32(at + 0x4c, (*self.x4C.peek()).to_bits());
+        }
+        if self.x50.is_live() {
+            l.put_u32(at + 0x50, (*self.x50.peek()).to_bits());
+        }
+        if self.x54.is_live() {
+            l.put_u32(at + 0x54, (*self.x54.peek()).to_bits());
+        }
+        if self.x58.is_live() {
+            l.put_u32(at + 0x58, (*self.x58.peek()).to_bits());
+        }
+        if self.x5C.is_live() {
+            l.put_u32(at + 0x5c, (*self.x5C.peek()).to_bits());
+        }
+        if self.x60.is_live() {
+            l.put_u32(at + 0x60, (*self.x60.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itLinkArrow_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()).to_bits());
+        }
+        self.x18.lay(l, at + 0x18, cx);
+        self.x24.lay(l, at + 0x24, cx);
+        self.x30.lay(l, at + 0x30, cx);
+        self.x3C.lay(l, at + 0x3c, cx);
+        self.x48.lay(l, at + 0x48, cx);
+        if self.x54.is_live() {
+            (*self.x54.peek()).lay(l, at + 0x54, cx);
+        }
+        if self.x64.is_live() {
+            (*self.x64.peek()).lay(l, at + 0x64, cx);
+        }
+        if self.x74.is_live() {
+            (*self.x74.peek()).lay(l, at + 0x74, cx);
+        }
+        if self.x84.is_live() {
+            (*self.x84.peek()).lay(l, at + 0x84, cx);
+        }
+        if self.x94.is_live() {
+            l.put_u32(at + 0x94, (*self.x94.peek()).to_bits());
+        }
+        if self.x98.is_live() {
+            l.put_u32(at + 0x98, (*self.x98.peek()).to_bits());
+        }
+        if self.x9C.is_live() {
+            l.put_u32(at + 0x9c, (*self.x9C.peek()) as u32);
+        }
+        if self.xA0.is_live() {
+            l.put_u32(at + 0xa0, (*self.xA0.peek()) as u32);
+        }
+        if self.xA4.is_live() {
+            l.put_u32(at + 0xa4, (*self.xA4.peek()) as u32);
+        }
+        if self.xA8.is_live() {
+            l.put_u32(at + 0xa8, (*self.xA8.peek()).to_bits());
+        }
+        if self.xAC.is_live() {
+            l.put_u32(at + 0xac, (*self.xAC.peek()).to_bits());
+        }
+        if self.xB0.is_live() {
+            l.put_u32(at + 0xb0, (*self.xB0.peek()) as u32);
+        }
+        for i0 in 0..3 {
+            if self.xB4[i0].is_live() {
+                l.put_word(
+                    at + 0xb4 + i0 as u32 * 0x4,
+                    cx.handle("JObjId", (*self.xB4[i0].peek()).map(|h| h.0)),
+                );
+            }
+        }
+        if self.xC0.is_live() {
+            l.put_u32(at + 0xc0, (*self.xC0.peek()).to_bits());
+        }
+        if self.xC4.is_live() {
+            l.put_word(
+                at + 0xc4,
+                cx.handle("GObjId", (*self.xC4.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xC8.is_live() {
+            l.put_u32(at + 0xc8, (*self.xC8.peek()).to_bits());
+        }
+        if self.xCC.is_live() {
+            l.put_u32(at + 0xcc, (*self.xCC.peek()).to_bits());
+        }
+        if self.xD0.is_live() {
+            l.put_u32(at + 0xd0, (*self.xD0.peek()).0);
+        }
+        if self.xD4.is_live() {
+            l.put_u32(at + 0xd4, (*self.xD4.peek()).to_bits());
+        }
+        if self.xD8.is_live() {
+            l.put_u32(at + 0xd8, (*self.xD8.peek()).to_bits());
+        }
+        if self.xDC.is_live() {
+            l.put_u32(at + 0xdc, (*self.xDC.peek()).to_bits());
+        }
+        if self.xE0.is_live() {
+            l.put_word(
+                at + 0xe0,
+                cx.handle("GObjId", (*self.xE0.peek()).map(|h| h.0)),
+            );
+        }
+        if self.xE4.is_live() {
+            l.put_u32(at + 0xe4, (*self.xE4.peek()) as u32);
+        }
+        if self.xE8.is_live() {
+            l.put_u32(at + 0xe8, (*self.xE8.peek()).to_bits());
+        }
+        if self.xEC.is_live() {
+            l.put_u32(at + 0xec, (*self.xEC.peek()).to_bits());
+        }
+        if self.xF0.is_live() {
+            l.put_u32(at + 0xf0, (*self.xF0.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itLinkBow_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("GObjId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itCLinkMilk_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.x0.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itYoshiEggLay_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itMewtwoShadowball_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        self.x4.lay(l, at + 0x4, cx);
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()) as u32);
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()) as u32);
+        }
+        if self.x1C.is_live() {
+            l.put_u32(at + 0x1c, (*self.x1C.peek()) as u32);
+        }
+        if self.x20.is_live() {
+            l.put_u32(at + 0x20, (*self.x20.peek()) as u32);
+        }
+        if self.x24.is_live() {
+            l.put_u32(at + 0x24, (*self.x24.peek()) as u32);
+        }
+        if self.x28.is_live() {
+            l.put_u32(at + 0x28, (*self.x28.peek()) as u32);
+        }
+        if self.x2C.is_live() {
+            l.put_word(
+                at + 0x2c,
+                cx.handle("GObjId", (*self.x2C.peek()).map(|h| h.0)),
+            );
+        }
+        self.x30.lay(l, at + 0x30, cx);
+        if self.x3C.is_live() {
+            l.put_u32(at + 0x3c, (*self.x3C.peek()).to_bits());
+        }
+        if self.x40.is_live() {
+            l.put_u32(at + 0x40, (*self.x40.peek()).to_bits());
+        }
+        if self.x44.is_live() {
+            l.put_u32(at + 0x44, (*self.x44.peek()).to_bits());
+        }
+        if self.x48.is_live() {
+            l.put_u32(at + 0x48, (*self.x48.peek()) as u32);
+        }
+        if self.x4C.is_live() {
+            l.put_u32(at + 0x4c, (*self.x4C.peek()) as u32);
+        }
+        if self.x50.is_live() {
+            l.put_u32(at + 0x50, (*self.x50.peek()).to_bits());
+        }
+        if self.x54.is_live() {
+            l.put_u32(at + 0x54, (*self.x54.peek()).to_bits());
+        }
+        self.x58.lay(l, at + 0x58, cx);
+        if self.x64.is_live() {
+            l.put_u32(at + 0x64, (*self.x64.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itMDisable_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.owner.is_live() {
+            l.put_word(
+                at + 0x0,
+                cx.handle("GObjId", (*self.owner.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itKoopaFlame_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.x0_pos.lay(l, at + 0x0, cx);
+        self.xC_direction.lay(l, at + 0xc, cx);
+        self.x18_vel.lay(l, at + 0x18, cx);
+        if self.x24_angle.is_live() {
+            l.put_u32(at + 0x24, (*self.x24_angle.peek()).to_bits());
+        }
+        if self.x28_speed.is_live() {
+            l.put_u32(at + 0x28, (*self.x28_speed.peek()).to_bits());
+        }
+        if self.x2C_lifetime.is_live() {
+            l.put_u32(at + 0x2c, (*self.x2C_lifetime.peek()).to_bits());
+        }
+        if self.x30.is_live() {
+            l.put_u32(at + 0x30, (*self.x30.peek()) as u32);
+        }
+        if self.x34_base_scale.is_live() {
+            l.put_u32(at + 0x34, (*self.x34_base_scale.peek()).to_bits());
+        }
+        if self.x38_base_speed.is_live() {
+            l.put_u32(at + 0x38, (*self.x38_base_speed.peek()).to_bits());
+        }
+        if self.x3C_scale.is_live() {
+            l.put_u32(at + 0x3c, (*self.x3C_scale.peek()).to_bits());
+        }
+        if self.x40_frame_counter.is_live() {
+            l.put_u32(at + 0x40, (*self.x40_frame_counter.peek()) as u32);
+        }
+        if self.x44_spawned.is_live() {
+            l.put_u32(at + 0x44, (*self.x44_spawned.peek()) as u32);
+        }
+        if self.x48_gfx.is_live() {
+            l.put_u32(at + 0x48, (*self.x48_gfx.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itKirbyCutterBeam_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.angle.is_live() {
+            l.put_u32(at + 0x0, (*self.angle.peek()).to_bits());
+        }
+        if self.speed.is_live() {
+            l.put_u32(at + 0x4, (*self.speed.peek()).to_bits());
+        }
+        self.dir.lay(l, at + 0x8, cx);
+        self.init_pos.lay(l, at + 0x14, cx);
+    }
+}
+
+impl LayOut for itKirbyHammer_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itKirby2F23_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        for i0 in 0..456 {
+            if self._pad[i0].is_live() {
+                l.put_u8(at + 0x0 + i0 as u32 * 0x1, (*self._pad[i0].peek()) as u8);
+            }
+        }
+        if self.x1C8.is_live() {
+            l.put_u32(at + 0x1c8, (*self.x1C8.peek()).to_bits());
+        }
+        if self.x1CC.is_live() {
+            l.put_u32(at + 0x1cc, (*self.x1CC.peek()).to_bits());
+        }
+        if self.x1D0.is_live() {
+            l.put_u32(at + 0x1d0, (*self.x1D0.peek()).to_bits());
+        }
+        if self.x1D4.is_live() {
+            l.put_u32(at + 0x1d4, (*self.x1D4.peek()).to_bits());
+        }
+        if self.x1D8.is_live() {
+            l.put_u32(at + 0x1d8, (*self.x1D8.peek()).to_bits());
+        }
+        if self.x1DC.is_live() {
+            l.put_u32(at + 0x1dc, (*self.x1DC.peek()).to_bits());
+        }
+        for i0 in 0..8 {
+            if self._pad2[i0].is_live() {
+                l.put_u8(at + 0x1e0 + i0 as u32 * 0x1, (*self._pad2[i0].peek()) as u8);
+            }
+        }
+        self.x1E8.lay(l, at + 0x1e8, cx);
+        if self.x1F4.is_live() {
+            l.put_u32(at + 0x1f4, (*self.x1F4.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for DynamicsDesc {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("DynamicsId", self.data.map(|h| h.0)));
+        l.put_u32(at + 0x4, self.count as u32);
+        self.pos.lay(l, at + 0x8, cx);
+    }
+}
+
+impl LayOut for BoneDynamicsDesc {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.bone_id.lay(l, at + 0x0, cx);
+        self.dyn_desc.lay(l, at + 0x4, cx);
+    }
+}
+
+impl LayOut for Item_DynamicBones {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_u32(at + 0x0, self.flags as u32);
+        l.put_word(at + 0x4, cx.handle("JObjId", self.skeleton.map(|h| h.0)));
+        self.dyn_desc.lay(l, at + 0x8, cx);
+    }
+}
+
+impl LayOut for itCapsule_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itHeart_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4_heal.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4_heal.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            self.xDD8.peek().lay(l, at + 0x4, cx);
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()) as u32);
+        }
+        for i0 in 0..8 {
+            if self.xDE0_filler[i0].is_live() {
+                l.put_u8(
+                    at + 0xc + i0 as u32 * 0x1,
+                    (*self.xDE0_filler[i0].peek()) as u8,
+                );
+            }
+        }
+        if self.xDE8_float.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8_float.peek()).to_bits());
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itTomato_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.heal_amount.is_live() {
+            l.put_u32(at + 0x0, (*self.heal_amount.peek()) as u32);
+        }
+        if self.x4_b0.is_live() {
+            l.put_bits(at, 32, 1, (*self.x4_b0.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itBox_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.opened.is_live() {
+            l.put_u32(at + 0x0, (*self.opened.peek()) as u32);
+        }
+        if self.despawn_timer.is_live() {
+            l.put_u32(at + 0x4, (*self.despawn_timer.peek()) as u32);
+        }
+        if self.spawned_gobj.is_live() {
+            l.put_word(
+                at + 0x8,
+                cx.handle("GObjId", (*self.spawned_gobj.peek()).map(|h| h.0)),
+            );
+        }
+        if self.rot_vel_x.is_live() {
+            l.put_u32(at + 0xc, (*self.rot_vel_x.peek()).to_bits());
+        }
+        if self.rot_vel_y.is_live() {
+            l.put_u32(at + 0x10, (*self.rot_vel_y.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itTaru_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()).to_bits());
+        }
+        self.xDE8.lay(l, at + 0x14, cx);
+    }
+}
+
+impl LayOut for itKusudama_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itBombHei_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()) as u32);
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()) as u32);
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()) as u32);
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()).to_bits());
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()).to_bits());
+        }
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()).to_bits());
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()).to_bits());
+        }
+        if self.xDF8.is_live() {
+            l.put_u32(at + 0x24, (*self.xDF8.peek()).to_bits());
+        }
+        if self.xDFC.is_live() {
+            l.put_u32(at + 0x28, (*self.xDFC.peek()).to_bits());
+        }
+        if self._E00.is_live() {
+            l.put_u32(at + 0x2c, (*self._E00.peek()) as u32);
+        }
+        if self.xE04.is_live() {
+            l.put_u32(at + 0x30, (*self.xE04.peek()).to_bits());
+        }
+        if self._E08.is_live() {
+            l.put_u32(at + 0x34, (*self._E08.peek()) as u32);
+        }
+        self.xE0C.lay(l, at + 0x38, cx);
+    }
+}
+
+impl LayOut for itGShell_HurtInit {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.state.is_live() {
+            l.put_u32(at + 0x0, (*self.state.peek()) as u32);
+        }
+        self.a_offset.lay(l, at + 0x4, cx);
+        self.b_offset.lay(l, at + 0x10, cx);
+        if self.scale.is_live() {
+            l.put_u32(at + 0x1c, (*self.scale.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itGShell_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()).to_bits());
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()) as u32);
+        }
+        if self.xDEC_b0.is_live() {
+            l.put_bits(at, 192, 1, (*self.xDEC_b0.peek()) as u32);
+        }
+        if self.xDEC_b1.is_live() {
+            l.put_bits(at, 193, 1, (*self.xDEC_b1.peek()) as u32);
+        }
+        if self.xDEC_b2.is_live() {
+            l.put_bits(at, 194, 1, (*self.xDEC_b2.peek()) as u32);
+        }
+        if self.xDEC_b3.is_live() {
+            l.put_bits(at, 195, 1, (*self.xDEC_b3.peek()) as u32);
+        }
+        if self.xDEC_b4.is_live() {
+            l.put_bits(at, 196, 1, (*self.xDEC_b4.peek()) as u32);
+        }
+        if self.xDEC_b5.is_live() {
+            l.put_bits(at, 197, 1, (*self.xDEC_b5.peek()) as u32);
+        }
+        if self.xDEC_b6.is_live() {
+            l.put_bits(at, 198, 1, (*self.xDEC_b6.peek()) as u32);
+        }
+        if self.xDEC_b7.is_live() {
+            l.put_bits(at, 199, 1, (*self.xDEC_b7.peek()) as u32);
+        }
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()) as u32);
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()).to_bits());
+        }
+        if self.xDF8.is_live() {
+            l.put_u32(at + 0x24, (*self.xDF8.peek()).to_bits());
+        }
+        if self.xDFC.is_live() {
+            l.put_u32(at + 0x28, (*self.xDFC.peek()).to_bits());
+        }
+        if self.xE00.is_live() {
+            l.put_u32(at + 0x2c, (*self.xE00.peek()).to_bits());
+        }
+        if self.xE04.is_live() {
+            l.put_u32(at + 0x30, (*self.xE04.peek()).to_bits());
+        }
+        if self.xE08_b0.is_live() {
+            l.put_bits(at, 416, 1, (*self.xE08_b0.peek()) as u32);
+        }
+        if self.xE08_b1.is_live() {
+            l.put_bits(at, 417, 1, (*self.xE08_b1.peek()) as u32);
+        }
+        if self.xE08_b2.is_live() {
+            l.put_bits(at, 418, 1, (*self.xE08_b2.peek()) as u32);
+        }
+        if self.xE08_b3.is_live() {
+            l.put_bits(at, 419, 1, (*self.xE08_b3.peek()) as u32);
+        }
+        if self.xE08_b4.is_live() {
+            l.put_bits(at, 420, 1, (*self.xE08_b4.peek()) as u32);
+        }
+        if self.xE08_b5.is_live() {
+            l.put_bits(at, 421, 1, (*self.xE08_b5.peek()) as u32);
+        }
+        if self.xE08_b6.is_live() {
+            l.put_bits(at, 422, 1, (*self.xE08_b6.peek()) as u32);
+        }
+        if self.xE08_b7.is_live() {
+            l.put_bits(at, 423, 1, (*self.xE08_b7.peek()) as u32);
+        }
+        for i0 in 0..3 {
+            if self.pad_E09[i0].is_live() {
+                l.put_u8(
+                    at + 0x35 + i0 as u32 * 0x1,
+                    (*self.pad_E09[i0].peek()) as u8,
+                );
+            }
+        }
+        if self.xE0C.is_live() {
+            l.put_u32(at + 0x38, (*self.xE0C.peek()) as u32);
+        }
+        if self.xE10.is_live() {
+            l.put_u32(at + 0x3c, (*self.xE10.peek()) as u32);
+        }
+        if self.xE14.is_live() {
+            l.put_u32(at + 0x40, (*self.xE14.peek()) as u32);
+        }
+        if self.xE18.is_live() {
+            l.put_u32(at + 0x44, (*self.xE18.peek()) as u32);
+        }
+        if self.xE1C_b0.is_live() {
+            l.put_bits(at, 576, 1, (*self.xE1C_b0.peek()) as u32);
+        }
+        if self.xE1C_b1.is_live() {
+            l.put_bits(at, 577, 1, (*self.xE1C_b1.peek()) as u32);
+        }
+        if self.xE1C_b2.is_live() {
+            l.put_bits(at, 578, 1, (*self.xE1C_b2.peek()) as u32);
+        }
+        if self.xE1C_b3.is_live() {
+            l.put_bits(at, 579, 1, (*self.xE1C_b3.peek()) as u32);
+        }
+        if self.xE1C_b4.is_live() {
+            l.put_bits(at, 580, 1, (*self.xE1C_b4.peek()) as u32);
+        }
+        if self.xE1C_b5.is_live() {
+            l.put_bits(at, 581, 1, (*self.xE1C_b5.peek()) as u32);
+        }
+        if self.xE1C_b6.is_live() {
+            l.put_bits(at, 582, 1, (*self.xE1C_b6.peek()) as u32);
+        }
+        if self.xE1C_b7.is_live() {
+            l.put_bits(at, 583, 1, (*self.xE1C_b7.peek()) as u32);
+        }
+        for i0 in 0..3 {
+            if self.pad_E1D[i0].is_live() {
+                l.put_u8(
+                    at + 0x49 + i0 as u32 * 0x1,
+                    (*self.pad_E1D[i0].peek()) as u8,
+                );
+            }
+        }
+        self.vel.lay(l, at + 0x4c, cx);
+        self.x58_hurtInit.lay(l, at + 0x58, cx);
+    }
+}
+
+impl LayOut for itRShell_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        if self.xDE4.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4.peek()).to_bits());
+        }
+        if self.xDE8.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8.peek()) as u32);
+        }
+        if self.xDEC.is_live() {
+            l.put_u32(at + 0x18, (*self.xDEC.peek()) as u32);
+        }
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()) as u32);
+        }
+        if self.xDF4_b0.is_live() {
+            l.put_bits(at, 256, 1, (*self.xDF4_b0.peek()) as u32);
+        }
+        if self.xDF4_b1.is_live() {
+            l.put_bits(at, 257, 1, (*self.xDF4_b1.peek()) as u32);
+        }
+        if self.xDF4_b2.is_live() {
+            l.put_bits(at, 258, 1, (*self.xDF4_b2.peek()) as u32);
+        }
+        if self.xDF4_b3.is_live() {
+            l.put_bits(at, 259, 1, (*self.xDF4_b3.peek()) as u32);
+        }
+        if self.xDF4_b4.is_live() {
+            l.put_bits(at, 260, 1, (*self.xDF4_b4.peek()) as u32);
+        }
+        if self.xDF4_b5.is_live() {
+            l.put_bits(at, 261, 1, (*self.xDF4_b5.peek()) as u32);
+        }
+        if self.xDF4_b6.is_live() {
+            l.put_bits(at, 262, 1, (*self.xDF4_b6.peek()) as u32);
+        }
+        if self.xDF4_b7.is_live() {
+            l.put_bits(at, 263, 1, (*self.xDF4_b7.peek()) as u32);
+        }
+        for i0 in 0..43 {
+            if self.pad_DF5[i0].is_live() {
+                l.put_u8(
+                    at + 0x21 + i0 as u32 * 0x1,
+                    (*self.pad_DF5[i0].peek()) as u8,
+                );
+            }
+        }
+        self.vel.lay(l, at + 0x4c, cx);
+    }
+}
+
+impl LayOut for itSword_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()) as u32);
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()).to_bits());
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()).to_bits());
+        }
+        if self.x1C.is_live() {
+            l.put_u32(at + 0x1c, (*self.x1C.peek()) as u32);
+        }
+        if self.x20.is_live() {
+            l.put_u32(at + 0x20, (*self.x20.peek()) as u32);
+        }
+        if self.x24.is_live() {
+            l.put_u32(at + 0x24, (*self.x24.peek()) as u32);
+        }
+        if self.x28.is_live() {
+            l.put_u32(at + 0x28, (*self.x28.peek()).to_bits());
+        }
+        if self.x2C.is_live() {
+            l.put_u32(at + 0x2c, (*self.x2C.peek()).to_bits());
+        }
+        if self.x30.is_live() {
+            l.put_u32(at + 0x30, (*self.x30.peek()).to_bits());
+        }
+        if self.x34.is_live() {
+            l.put_u32(at + 0x34, (*self.x34.peek()) as u32);
+        }
+        if self.x38.is_live() {
+            l.put_u32(at + 0x38, (*self.x38.peek()) as u32);
+        }
+        if self.x3C.is_live() {
+            l.put_u32(at + 0x3c, (*self.x3C.peek()) as u32);
+        }
+        if self.x40.is_live() {
+            l.put_u32(at + 0x40, (*self.x40.peek()).to_bits());
+        }
+        if self.x44.is_live() {
+            l.put_u32(at + 0x44, (*self.x44.peek()).to_bits());
+        }
+        if self.x48.is_live() {
+            l.put_u32(at + 0x48, (*self.x48.peek()).to_bits());
+        }
+        if self.x4C.is_live() {
+            l.put_u32(at + 0x4c, (*self.x4C.peek()).to_bits());
+        }
+        if self.x50.is_live() {
+            l.put_u32(at + 0x50, (*self.x50.peek()).to_bits());
+        }
+        if self.x54.is_live() {
+            l.put_u32(at + 0x54, (*self.x54.peek()) as u32);
+        }
+        if self.x58.is_live() {
+            l.put_u32(at + 0x58, (*self.x58.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itDosei_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()) as u32);
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()).to_bits());
+        }
+        if self.xDE0.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0.peek()).to_bits());
+        }
+        self.xDE4.lay(l, at + 0x10, cx);
+        if self.xDF0.is_live() {
+            l.put_u32(at + 0x1c, (*self.xDF0.peek()) as u32);
+        }
+        if self.xDF4.is_live() {
+            l.put_u32(at + 0x20, (*self.xDF4.peek()).to_bits());
+        }
+        self.xDF8.lay(l, at + 0x24, cx);
+    }
+}
+
+impl LayOut for itEgg_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.rand_max.is_live() {
+            l.put_u32(at + 0x4, (*self.rand_max.peek()) as u32);
+        }
+        for i0 in 0..88 {
+            if self._8[i0].is_live() {
+                l.put_u8(at + 0x8 + i0 as u32 * 0x1, (*self._8[i0].peek()) as u8);
+            }
+        }
+        if self.heal_amount.is_live() {
+            l.put_u32(at + 0x60, (*self.heal_amount.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itFFlower_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itFreeze_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        self.x4.lay(l, at + 0x4, cx);
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()).to_bits());
+        }
+        if self.x18.is_live() {
+            l.put_u32(at + 0x18, (*self.x18.peek()) as u32);
+        }
+        if self.unk_1C.is_live() {
+            l.put_word(
+                at + 0x1c,
+                cx.handle("GObjId", (*self.unk_1C.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x20.is_live() {
+            l.put_u32(at + 0x20, (*self.x20.peek()).0);
+        }
+    }
+}
+
+impl LayOut for itLGun_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.timer.is_live() {
+            l.put_u32(at + 0x0, (*self.timer.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itMBall_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.b0.is_live() {
+            l.put_bits(at, 0, 1, (*self.b0.peek()) as u32);
+        }
+        if self.b1.is_live() {
+            l.put_bits(at, 1, 1, (*self.b1.peek()) as u32);
+        }
+        if self.b2.is_live() {
+            l.put_bits(at, 2, 1, (*self.b2.peek()) as u32);
+        }
+        if self.b3.is_live() {
+            l.put_bits(at, 3, 1, (*self.b3.peek()) as u32);
+        }
+        if self.b4.is_live() {
+            l.put_bits(at, 4, 1, (*self.b4.peek()) as u32);
+        }
+        if self.b5.is_live() {
+            l.put_bits(at, 5, 1, (*self.b5.peek()) as u32);
+        }
+        if self.b6.is_live() {
+            l.put_bits(at, 6, 1, (*self.b6.peek()) as u32);
+        }
+        if self.b7.is_live() {
+            l.put_bits(at, 7, 1, (*self.b7.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itScopeBeam_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itWstar_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()).to_bits());
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+        if self.xDDC.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itStar_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.dir.is_live() {
+            l.put_u32(at + 0x0, (*self.dir.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.xvel.is_live() {
+            l.put_u32(at + 0x10, (*self.xvel.peek()).to_bits());
+        }
+        if self.yvel.is_live() {
+            l.put_u32(at + 0x14, (*self.yvel.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itKinoko_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        self.x4.lay(l, at + 0x4, cx);
+    }
+}
+
+impl LayOut for itFoods_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.heal_amount.is_live() {
+            l.put_u32(at + 0x4, (*self.heal_amount.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itMsBomb_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4_b0.is_live() {
+            l.put_bits(at, 0, 1, (*self.xDD4_b0.peek()) as u32);
+        }
+        if self.xDD4_b1.is_live() {
+            l.put_bits(at, 1, 1, (*self.xDD4_b1.peek()) as u32);
+        }
+        if self.xDD4_b2.is_live() {
+            l.put_bits(at, 2, 1, (*self.xDD4_b2.peek()) as u32);
+        }
+        if self.xDD4_b3.is_live() {
+            l.put_bits(at, 3, 1, (*self.xDD4_b3.peek()) as u32);
+        }
+        if self.xDD4_b4.is_live() {
+            l.put_bits(at, 4, 1, (*self.xDD4_b4.peek()) as u32);
+        }
+        if self.xDD4_b5.is_live() {
+            l.put_bits(at, 5, 1, (*self.xDD4_b5.peek()) as u32);
+        }
+        if self.xDD4_b6.is_live() {
+            l.put_bits(at, 6, 1, (*self.xDD4_b6.peek()) as u32);
+        }
+        if self.xDD4_b7.is_live() {
+            l.put_bits(at, 7, 1, (*self.xDD4_b7.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for itFlipper_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4_flightTimer.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4_flightTimer.peek()) as u32);
+        }
+        if self.xDD8_isSettled.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8_isSettled.peek()) as u32);
+        }
+        if self.xDDC_hitboxTimer.is_live() {
+            l.put_u32(at + 0x8, (*self.xDDC_hitboxTimer.peek()) as u32);
+        }
+        if self.xDE0_spinAngle.is_live() {
+            l.put_u32(at + 0xc, (*self.xDE0_spinAngle.peek()).to_bits());
+        }
+        if self.xDE4_spinVel.is_live() {
+            l.put_u32(at + 0x10, (*self.xDE4_spinVel.peek()).to_bits());
+        }
+        if self.xDE8_isStageFixed.is_live() {
+            l.put_u32(at + 0x14, (*self.xDE8_isStageFixed.peek()) as u32);
+        }
+        if self.xDEC_stageAnchor.is_live() {
+            l.put_word(
+                at + 0x18,
+                cx.handle("JObjId", (*self.xDEC_stageAnchor.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itLGunBeam_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.position0.lay(l, at + 0x0, cx);
+        self.position1.lay(l, at + 0xc, cx);
+        self.velocity.lay(l, at + 0x18, cx);
+        if self.angle0.is_live() {
+            l.put_u32(at + 0x24, (*self.angle0.peek()).to_bits());
+        }
+        if self.angle1.is_live() {
+            l.put_u32(at + 0x28, (*self.angle1.peek()).to_bits());
+        }
+        if self.lifetime.is_live() {
+            l.put_u32(at + 0x2c, (*self.lifetime.peek()).to_bits());
+        }
+        if self.xE04.is_live() {
+            l.put_u32(at + 0x30, (*self.xE04.peek()) as u32);
+        }
+    }
+}
+
+impl LayOut for it_2E5A_SubVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
+        }
+        if self.x4.is_live() {
+            l.put_word(
+                at + 0x4,
+                cx.handle("JObjId", (*self.x4.peek()).map(|h| h.0)),
+            );
+        }
+        self.x8.lay(l, at + 0x8, cx);
+        self.x14.lay(l, at + 0x14, cx);
+    }
+}
+
+impl LayOut for it_2E5A_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()) as u32);
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        if self.x14.is_live() {
+            l.put_u32(at + 0x14, (*self.x14.peek()).to_bits());
+        }
+        if self.x18.is_live() {
+            self.x18.peek().lay(l, at + 0x18, cx);
+        }
+        self.sub.lay(l, at + 0x1c, cx);
+    }
+}
+
+impl LayOut for itTarucann_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()).to_bits());
+        }
+        self.x14.lay(l, at + 0x14, cx);
+        if self.x20.is_live() {
+            l.put_word(
+                at + 0x20,
+                cx.handle("GObjId", (*self.x20.peek()).map(|h| h.0)),
+            );
+        }
+        if self.x24.is_live() {
+            l.put_u32(at + 0x24, (*self.x24.peek()) as u32);
+        }
+        if self.x28.is_live() {
+            l.put_u32(at + 0x28, (*self.x28.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itStarRodStar_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itLipstickSpore_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.xDD4.is_live() {
+            l.put_u32(at + 0x0, (*self.xDD4.peek()) as u32);
+        }
+        if self.xDD8.is_live() {
+            l.put_u32(at + 0x4, (*self.xDD8.peek()).to_bits());
+        }
+    }
+}
+
+impl LayOut for itFFlowerFlame_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.pos.lay(l, at + 0x0, cx);
+        if self.unk.is_live() {
+            l.put_u32(at + 0xc, (*self.unk.peek()).to_bits());
         }
     }
 }

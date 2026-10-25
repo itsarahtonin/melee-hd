@@ -12,8 +12,9 @@ use core::ops::{Deref, DerefMut};
 
 use melee_data::archive::DataRef;
 
-use crate::game::mirror::{Cx, Mem, Mirror};
+use crate::game::mirror::{Cx, LayCx, LayOut, Mem, Mirror};
 use crate::game::structs::{BoneDynamicsDesc, HurtCapsule, Item_DynamicBones};
+use crate::hsd::export::Lay;
 use crate::hsd::tobj::TObjId;
 
 /// `CostumeTObjList`, 0x1c bytes.
@@ -75,6 +76,19 @@ impl Mirror for CostumeTObjList {
     }
 }
 
+impl LayOut for CostumeTObjList {
+    /// The count, the indices and the textures it sets; the slots past it keep what the block
+    /// held.
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        l.put_u32(at, self.n_costume_tobjs);
+        l.put_word(at + 4, cx.data(self.x5D0));
+        for i in 0..Self::used(self.n_costume_tobjs) {
+            let h = self.costume_tobjs[i].map(|h| h.0);
+            l.put_word(at + 8 + 4 * i as u32, cx.handle("TObjId", h));
+        }
+    }
+}
+
 /// An array of `N` `T`s whose count is the word right after it: the first that many set up.
 macro_rules! counted_array {
     ($(#[$doc:meta])* $name:ident, $elem:ty, $n:literal) => {
@@ -105,6 +119,21 @@ macro_rules! counted_array {
             fn deref_mut(&mut self) -> &mut Self::Target {
                 &mut self.0
             }
+        }
+
+        impl $name {
+            /// Lays out the first `n` entries, the ones the count sets up (the owner's layout
+            /// passes its count); the rest keep what the block held.
+            pub fn lay_counted(&self, l: &mut Lay, at: u32, cx: &dyn LayCx, n: usize) {
+                for (i, e) in self.0.iter().enumerate().take(n.min($n)) {
+                    e.lay(l, at + i as u32 * <$elem>::SIZE, cx);
+                }
+            }
+        }
+
+        /// Laid out by the owner, which knows the count ([`Self::lay_counted`]).
+        impl LayOut for $name {
+            fn lay(&self, _: &mut Lay, _: u32, _: &dyn LayCx) {}
         }
 
         impl Mirror for $name {
@@ -177,6 +206,21 @@ impl DerefMut for ItemHurtboxes {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
+}
+
+impl ItemHurtboxes {
+    /// Lays out the first `n` hurtboxes, the ones the count sets up (the item's layout passes
+    /// its count); the rest keep what the block held.
+    pub fn lay_counted(&self, l: &mut Lay, at: u32, cx: &dyn LayCx, n: usize) {
+        for (i, e) in self.0.iter().enumerate().take(n.min(2)) {
+            e.lay(l, at + i as u32 * HurtCapsule::SIZE, cx);
+        }
+    }
+}
+
+/// Laid out by the item, which knows the count ([`ItemHurtboxes::lay_counted`]).
+impl LayOut for ItemHurtboxes {
+    fn lay(&self, _: &mut Lay, _: u32, _: &dyn LayCx) {}
 }
 
 impl Mirror for ItemHurtboxes {

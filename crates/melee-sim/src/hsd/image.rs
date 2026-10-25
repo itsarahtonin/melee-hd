@@ -46,12 +46,19 @@ pub enum Src {
     Raw { archive: ArchiveId, offset: u32 },
     /// Bytes an object laid out as the game keeps it, from `offset` of `bytes`.
     Bytes { bytes: Arc<[u8]>, offset: u32 },
+    /// Pixels the GPU copied into a buffer (`GXCopyTex`: the magnifier's bubbles): the
+    /// renderer's output, which isn't simulation state and never reaches it. Unknown as bytes;
+    /// a new object over them takes the image's fill there ([`Image::render_fill`]), and
+    /// the comparer leaves such a byte out while it still holds the fill (docs/engine.md,
+    /// "Uninitialized values").
+    RenderTarget,
 }
 
 impl Src {
     fn advance(&self, n: u32) -> Src {
         match self {
             Src::Unknown => Src::Unknown,
+            Src::RenderTarget => Src::RenderTarget,
             &Src::File {
                 archive,
                 offset,
@@ -75,7 +82,7 @@ impl Src {
     /// The `i`th byte from the source's place, if known.
     fn byte(&self, data: &Archives, i: u32) -> Option<u8> {
         match self {
-            Src::Unknown => None,
+            Src::Unknown | Src::RenderTarget => None,
             &Src::File {
                 archive,
                 offset,
@@ -377,6 +384,10 @@ pub struct Image {
     /// The scene heap's allocated cells, oldest first: the order of `OSAllocFromHeap`'s
     /// allocated list, which the cells' headers link.
     alloc_order: Vec<u32>,
+    /// What a new object takes where its block held render-target bytes ([`Src::RenderTarget`]):
+    /// 0, or another value for the oracle's mutation run (`--mutate render-target=ff`), which
+    /// shows any read of them before a write.
+    pub render_fill: u8,
 }
 
 impl Clone for Image {
@@ -400,6 +411,7 @@ impl Clone for Image {
         self.pool_grew = o.pool_grew;
         self.scene_slots.clone_from(&o.scene_slots);
         self.alloc_order.clone_from(&o.alloc_order);
+        self.render_fill = o.render_fill;
     }
 }
 
@@ -417,7 +429,8 @@ impl PartialEq for Image {
                     && self.claim_parts == other.claim_parts
                     && self.pool_grew == other.pool_grew
                     && self.scene_slots == other.scene_slots
-                    && self.alloc_order == other.alloc_order))
+                    && self.alloc_order == other.alloc_order
+                    && self.render_fill == other.render_fill))
     }
 }
 
@@ -444,6 +457,7 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
                 h.word(3 << 48 | u64::from(*offset));
                 h.bytes(bytes);
             }
+            Src::RenderTarget => h.word(4 << 48),
         }
     }
 }
@@ -497,6 +511,7 @@ impl StateEq for Image {
         for &c in &self.alloc_order {
             h.word(u64::from(c));
         }
+        h.word(u64::from(self.render_fill));
     }
 }
 
@@ -597,6 +612,32 @@ impl Image {
         (out, known)
     }
 
+    /// Which of the bytes `[lo, lo + len)` a new object's block holds from a render target
+    /// ([`Src::RenderTarget`]), as [`Image::leftover_bytes`] reads the block.
+    pub fn render_target(&self, lo: u32, len: u32) -> Vec<bool> {
+        let mut out = vec![false; len as usize];
+        if !self.on {
+            return out;
+        }
+        let hi = lo + len;
+        let mut mark = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+            for (k, s) in runs {
+                for a in k.max(lo)..s.end.min(hi) {
+                    out[(a - lo) as usize] = s.src == Src::RenderTarget;
+                }
+            }
+        };
+        mark(&mut self.base().range(lo, hi));
+        mark(&mut self.overlay.range(lo, hi));
+        mark(
+            &mut self
+                .live
+                .range(lo, hi)
+                .filter(|(_, s)| s.src != Src::Unknown),
+        );
+        out
+    }
+
     /// A pool or a size class handed out the object at `at`, whose first word holds the free
     /// list's link `link` until its owner writes it.
     pub fn taken(&mut self, at: u32, link: u32) {
@@ -624,6 +665,16 @@ impl Image {
             ));
         }
         write(&mut self.live, lo, hi, src);
+    }
+
+    /// An archive whose data block is at `base` (`len` bytes) outside the heap the image
+    /// keeps (the preload cache's): where a pointer into it points, which the image doesn't
+    /// hold the bytes of.
+    pub fn place(&mut self, base: u32, len: u32, archive: ArchiveId) {
+        if self.on {
+            Arc::make_mut(self.places.get_or_insert_with(Default::default))
+                .push((base, len, archive));
+        }
     }
 
     /// The owner of `[lo, hi)` of a block now allocated writes it: unknown until the owner
@@ -832,16 +883,24 @@ impl Image {
         }
     }
 
-    /// The archive data a leftover pointer points into, at its newest place there.
+    /// The archive data a leftover pointer points into, at its newest place there: none where
+    /// the archive has been placed elsewhere since (a file loaded again, the pointer naming the
+    /// old copy's freed block), which a place in the data can't stand for, so the word stays a
+    /// word.
     pub fn data_at(&self, addr: u32) -> Option<melee_data::archive::DataRef> {
-        self.places()
+        let places = self.places();
+        let (i, &(b, _, archive)) = places
             .iter()
+            .enumerate()
             .rev()
-            .find(|&&(b, len, _)| addr >= b && addr < b + len)
-            .map(|&(b, _, archive)| melee_data::archive::DataRef {
-                archive,
-                offset: addr - b,
-            })
+            .find(|&(_, &(b, len, _))| addr >= b && addr < b + len)?;
+        if places[i + 1..].iter().any(|&(_, _, a)| a == archive) {
+            return None;
+        }
+        Some(melee_data::archive::DataRef {
+            archive,
+            offset: addr - b,
+        })
     }
 
     /// The handle a leftover pointer word stands as: past every pool, carrying the word.
@@ -902,6 +961,7 @@ impl Image {
                         Src::File { .. } => "file",
                         Src::Raw { .. } => "raw file",
                         Src::Bytes { .. } => "object",
+                        Src::RenderTarget => "render target",
                     },
                 )
             })

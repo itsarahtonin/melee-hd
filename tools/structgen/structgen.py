@@ -505,6 +505,120 @@ class Gen:
         out.append("}")
         return "\n".join(out)
 
+    # The image's layouts: every struct config.LAY_ROOTS reaches (a fighter's, an item's),
+    # written back as the game keeps it when its block goes back to the heap. Pointers become
+    # the addresses the caller's `LayCx` gives; a stale variable stays unknown.
+
+    def lay_reach(self, rid, out, splices):
+        if rid in out:
+            return
+        out.add(rid)
+        for f in self.fields(rid):
+            if "splice" in f:
+                splices.add(f["splice"])
+                continue
+            if "bits" in f:
+                continue
+            t = f["type"]
+            while t["k"] == "arr":
+                t = t["of"]
+            if t["k"] == "rec":
+                if self.external(t):
+                    splices.add(config.EXTERNAL[rec_name(t["id"])])
+                elif self.recs[t["id"]]["kind"] != "union":
+                    self.lay_reach(t["id"], out, splices)
+
+    def lay_stmts(self, t, ours, at, depth=0):
+        """Statements laying `ours` of type `t` out at address expression `at`."""
+        k = t["k"]
+        if k in ("int", "enum"):
+            ty = {1: "u8", 2: "u16", 4: "u32", 8: "u64"}[t["size"]]
+            return [f"l.put_{ty}({at}, {ours} as {ty});"]
+        if k == "float":
+            return [f"l.put_u32({at}, {ours}.to_bits());"] if t["size"] == 4 else [f"l.put_u64({at}, {ours}.to_bits());"]
+        if k == "ptr":
+            ty, kind = self.pointer(t["to"])
+            if kind == "code":
+                return [f"l.put_u32({at}, {ours}.map_or(0, |c| c.0));"]
+            if kind == "data":
+                return [f"l.put_word({at}, cx.data({ours}));"]
+            if kind == "raw":
+                return [f"l.put_u32({at}, {ours}.0);"]
+            handle = ty[len("Option<"):-1]
+            return [f'l.put_word({at}, cx.handle("{handle}", {ours}.map(|h| h.0)));']
+        if k == "arr":
+            es = self.size(t["of"])
+            i = f"i{depth}"
+            inner = self.lay_stmts(t["of"], f"{ours}[{i}]", f"{at} + {i} as u32 * {es:#x}", depth + 1)
+            return [f"for {i} in 0..{t['n']} {{"] + ["    " + s for s in inner] + ["}"]
+        if k == "rec":
+            r = self.recs[t["id"]]
+            if r["kind"] == "union" and not self.external(t):
+                return [f"l.put_bytes({at}, &{ours});"]
+            return [f"{ours}.lay(l, {at}, cx);"]
+        raise ValueError(f"no layout for {t}")
+
+    def wrap_lay(self, t, ours, at, depth=0):
+        """A tracked field's layout: a stale value stays unknown."""
+        if t["k"] == "arr":
+            es = self.size(t["of"])
+            i = f"i{depth}"
+            inner = self.wrap_lay(t["of"], f"{ours}[{i}]", f"{at} + {i} as u32 * {es:#x}", depth + 1)
+            return [f"for {i} in 0..{t['n']} {{"] + ["    " + s for s in inner] + ["}"]
+        if self.nested(t) or (t["k"] == "rec" and self.ty(t) == "Vec3"):
+            return [f"{ours}.lay(l, {at}, cx);"]
+        inner = self.lay_stmts(t, f"(*{ours}.peek())", at, depth)
+        return [f"if {ours}.is_live() {{"] + ["    " + s for s in inner] + ["}"]
+
+    def layout(self, rid):
+        name = rust_type_name(rid)
+        tracked = self.is_tracked(rid)
+        out = [f"impl LayOut for {name} {{", "    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {", "        let _ = (&l, at, &cx);"]
+        for f in self.fields(rid):
+            fname = field_name(f["name"])
+            off = f["offset_bits"] // 8
+            at = f"at + {off:#x}"
+            ours = f"self.{fname}"
+            stmts = []
+            if "splice" in f:
+                stmts = [f"{ours}.peek().lay(l, {at}, cx);"] if tracked else [f"{ours}.lay(l, {at}, cx);"]
+                if tracked:
+                    stmts = [f"if {ours}.is_live() {{", "    " + stmts[0], "}"]
+            elif "bits" in f:
+                v = f"*{ours}.peek()" if tracked else ours
+                stmts = [f"l.put_bits(at, {f['offset_bits']}, {f['bits']}, ({v}) as u32);"]
+                if tracked:
+                    stmts = [f"if {ours}.is_live() {{", "    " + stmts[0], "}"]
+            elif self.handle_array(rid, f):
+                h = config.FIELD_HANDLE_ARRAYS[f"{rec_name(rid)}.{f['name']}"]
+                n = f["type"]["n"]
+                v = f"{ours}[i].peek()" if tracked else f"{ours}[i]"
+                stmts = [f"for i in 0..{n} {{"]
+                if tracked:
+                    stmts.append(f"    if {ours}[i].is_live() {{")
+                    stmts.append(f'        l.put_word({at} + 4 * i as u32, cx.handle("{h}", {v}.map(|h| h.0)));')
+                    stmts.append("    }")
+                else:
+                    stmts.append(f'    l.put_word({at} + 4 * i as u32, cx.handle("{h}", {v}.map(|h| h.0)));')
+                stmts.append("}")
+            elif self.field_override(rid, f):
+                over = self.field_override(rid, f)
+                v = f"*{ours}.peek()" if tracked else ours
+                if over == "Option<DataRef>":
+                    st = f"l.put_word({at}, cx.data({v}));"
+                else:
+                    handle = over[len("Option<"):-1]
+                    st = f'l.put_word({at}, cx.handle("{handle}", ({v}).map(|h| h.0)));'
+                stmts = [f"if {ours}.is_live() {{", "    " + st, "}"] if tracked else [st]
+            elif tracked:
+                stmts = self.wrap_lay(f["type"], ours, at)
+            else:
+                stmts = self.lay_stmts(f["type"], ours, at)
+            out.extend("        " + s for s in stmts)
+        out.append("    }")
+        out.append("}")
+        return "\n".join(out)
+
     def tracked_mirror(self, rid, f, fname, at, path, imp, cmp):
         """A tracked struct's field's import and comparison."""
         def guarded(stmts):
@@ -569,7 +683,8 @@ def main():
         "#![allow(non_snake_case, unused_comparisons, unused_imports, unused_parens, clippy::all)]",
         "",
         "use super::handles::*;",
-        "use super::mirror::{Cx, Export, Mem, MemMut, Mirror, code};",
+        "use super::mirror::{Cx, Export, LayCx, LayOut, Mem, MemMut, Mirror, code};",
+        "use crate::hsd::export::Lay;",
         "use super::structs::*;",
         "use super::gr::GroundVars;",
         "use crate::hsd::dobj::DObjId;",
@@ -593,6 +708,15 @@ def main():
         if rid in exported:
             mirror.append(g.exporter(rid))
             mirror.append("")
+    laid = set()
+    lay_splices = set()
+    for root in config.LAY_ROOTS:
+        g.lay_reach(by_name[root], laid, lay_splices)
+    for rid in g.order:
+        if rid in laid:
+            mirror.append(g.layout(rid))
+            mirror.append("")
+    print("hand-written layouts needed:", ", ".join(sorted(lay_splices)))
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "structs.rs").write_text("\n".join(structs), encoding="utf-8", newline="\n")
     (out_dir / "mirror_gen.rs").write_text("\n".join(mirror), encoding="utf-8", newline="\n")

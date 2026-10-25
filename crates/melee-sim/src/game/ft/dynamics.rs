@@ -69,6 +69,15 @@ impl Mirror for BoneSlot {
     }
 }
 
+impl crate::game::mirror::LayOut for BoneSlot {
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        match *self {
+            BoneSlot::Id(v) => l.put_u32(at, v as u32),
+            BoneSlot::Tree(d) => l.put_word(at, cx.data(Some(d))),
+        }
+    }
+}
+
 impl Running<'_> {
     /// A part's dynamics toggled, `ftCo_8009E318`: the chain link on the part's joint found,
     /// its bone flag flipped and the chain's slot set past it (physics off from the link on,

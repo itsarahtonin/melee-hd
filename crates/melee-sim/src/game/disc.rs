@@ -41,6 +41,19 @@ impl Running<'_> {
             .filter(|c| !c.classes.is_empty())
             .unwrap_or_else(crate::hsd::heap::Carried::power_on);
         // What the scene's heap held, for the next scenes' leftovers.
+        let (game, data) = (&*self.game, self.data);
+        // The collision joints are this scene's when its heap holds their array's block.
+        let joints = game.geometry.as_ref().map_or(0, |g| g.joints_addr);
+        let geometry_live = joints != 0
+            && crate::hsd::heap::with(|h| {
+                h.os.allocated
+                    .iter()
+                    .any(|&(c, _)| c + crate::hsd::heap::HEADER == joints)
+            })
+            .unwrap_or(false);
+        crate::hsd::export::with_image(|img| {
+            super::export::scene_game_objects(game, data, img, geometry_live)
+        });
         crate::hsd::heap::with(|h| h.end_scene_image());
         self.export_heap_image();
         crate::hsd::heap::start_scene_lent(&layout);
@@ -102,21 +115,54 @@ impl Running<'_> {
     /// [`Running::take_preloaded`], with where the file is: its `HSD_Archive`'s block (the
     /// archive's kinds) or its bytes' (a raw file), as the cache's heaps put them.
     pub fn take_cached(&mut self, entry_num: i32) -> Option<u32> {
+        self.take_cached_blocks(entry_num).map(|(a, _)| a)
+    }
+
+    /// [`Running::take_cached`], with the address of the file's bytes too (0 for none).
+    pub fn take_cached_blocks(&mut self, entry_num: i32) -> Option<(u32, u32)> {
         let i = self.take_preloaded_entry(entry_num)?;
         let d = self.dvd_mut();
         let e = d.cache.entries[i];
         let block = e.archive.or(e.raw_data).expect("a preloaded file's blocks");
-        Some(d.memory.entries[usize::from(block)].addr)
+        let raw = e
+            .raw_data
+            .map_or(0, |b| d.memory.entries[usize::from(b)].addr);
+        Some((d.memory.entries[usize::from(block)].addr, raw))
     }
 
     /// A file the match's setup takes from the preload cache where it starts from the menus
     /// (`lbArchive_80017040`'s `lbDvd_8001819C`), nothing otherwise: its archive is the
     /// frontend's either way.
-    pub fn take_cached_named(&mut self, name: &str) {
+    ///
+    /// Whether the file was set up before (an earlier scene took it, so its bytes hold what
+    /// code wrote into them since, as the items' table of character articles does).
+    pub fn take_cached_named(&mut self, name: &str) -> bool {
+        let mut kept = false;
         if self.game.ft.data.files.from_cache {
-            let (entrynum, _) = self.game.ft.data.files.entry(name);
-            self.take_cached(entrynum);
+            let (entrynum, len) = self.game.ft.data.files.entry(name);
+            kept = self.cached_set_up(entrynum);
+            // Where its data is, for a pointer into it a block of the scene's heap keeps once
+            // freed (docs/engine.md, a session's heap leftovers).
+            if let Some((_, file)) = self.take_cached_blocks(entrynum)
+                && file != 0
+                && let Some(id) = self.game.ft.data.files.archive_id(name)
+            {
+                let data = len.saturating_sub(0x20);
+                crate::hsd::heap::with(|h| h.image.place(file + 0x20, data, id));
+            }
         }
+        kept
+    }
+
+    /// Whether the preload cache holds disc entry `entry_num` set up already (taken by an
+    /// earlier scene since its read).
+    fn cached_set_up(&mut self, entry_num: i32) -> bool {
+        self.dvd_mut().cache.entries.iter().any(|e| {
+            e.state != 0
+                && e.load_score > 0
+                && i32::from(e.entry_num) == entry_num
+                && e.load_state == 2
+        })
     }
 
     /// A stage's buffer the preload cache may hold (its preload entry `entry`): taken from the

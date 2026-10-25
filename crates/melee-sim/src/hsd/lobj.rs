@@ -400,6 +400,8 @@ pub fn delete_current(objs: &mut Objects, l: Option<LObjId>) {
                     *a = None;
                 }
             }
+            super::export::with_image(|img| super::export::lobj_node(objs, img, n));
+            let lobjs = &mut objs.lobjs;
             let rest = list::remove(&mut lobjs.nodes, Some(n));
             match prev {
                 Some(p) => lobjs.nodes[p.0].next = rest,
@@ -420,6 +422,7 @@ fn clear_current(objs: &mut Objects) {
     while let Some(n) = objs.lobjs.current {
         let l = objs.lobjs.nodes[n.0].data;
         unref(objs, Some(l));
+        super::export::with_image(|img| super::export::lobj_node(objs, img, n));
         objs.lobjs.current = list::remove(&mut objs.lobjs.nodes, Some(n));
     }
 }

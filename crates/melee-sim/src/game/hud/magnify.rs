@@ -177,15 +177,16 @@ impl Running<'_> {
                 panic!("the first bubble's image isn't the model's");
             };
             // The copy's pixels: a buffer `HSD_MemAlloc` gives (`GXGetTexBufferSize`), which
-            // the scene's heap keeps until the scene ends.
-            crate::hsd::heap::mem_alloc(
-                crate::hsd::heap::tex_buffer_size(
-                    u32::from(data.u16(src.at(4))),
-                    u32::from(data.u16(src.at(6))),
-                    data.u32(src.at(8)),
-                )
-                .next_multiple_of(32),
-            );
+            // the scene's heap keeps until the scene ends. Only the GPU writes it, when the
+            // bubble is copied: until then it holds what the block held.
+            let size = crate::hsd::heap::tex_buffer_size(
+                u32::from(data.u16(src.at(4))),
+                u32::from(data.u16(src.at(6))),
+                data.u32(src.at(8)),
+            )
+            .next_multiple_of(32);
+            let at = crate::hsd::heap::mem_alloc_unclaimed(size);
+            g.magnify_buffers[i] = (at, size);
             g.magnify.image_descs[i - 1] = HSD_ImageDesc {
                 image_ptr: TexBuffer(true),
                 width: data.u16(src.at(4)),
@@ -324,6 +325,14 @@ impl Running<'_> {
                 .display
                 .draws
                 .push(Draw::MagnifierCopy(i as u8));
+            // The GPU's pixels in the bubble's buffer, which the simulation never reads.
+            let (at, size) = self.game.magnify_buffers[i];
+            if at != 0 {
+                crate::hsd::heap::with(|h| {
+                    h.image
+                        .hold(at, at + size, crate::hsd::image::Src::RenderTarget)
+                });
+            }
             display::camera_end(&mut self.game.objs);
             self.game.magnify.player[i].state.is_offscreen = true;
         }

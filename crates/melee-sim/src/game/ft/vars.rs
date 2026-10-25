@@ -387,6 +387,34 @@ impl<const N: usize> Mirror for Vars<N> {
     }
 }
 
+impl<const N: usize> crate::game::mirror::LayOut for Vars<N> {
+    /// The bytes as the comparer reads them: a handle's word as its address, a stale byte
+    /// unknown.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        for i in 0..N {
+            if self.stale.contains(&i) {
+                l.forget(at + i as u32, 1);
+            } else {
+                l.put_u8(at + i as u32, self.bytes[i]);
+            }
+        }
+        for &(o, h) in &self.handles {
+            let a = match h {
+                Handle::GObj(g) => cx.handle("GObjId", Some(g.0)),
+                Handle::JObj(j) => cx.handle("JObjId", Some(j.0)),
+                Handle::DObjList(d) => cx.handle("DObjListId", Some(d.0)),
+                Handle::TObj(t) => cx.handle("TObjId", Some(t.0)),
+                Handle::Data(d) => cx.data(Some(d)),
+            };
+            // An unknown address leaves the word unknown, not the bytes under the handle.
+            match a {
+                Some(a) => l.put_u32(at + o as u32, a),
+                None => l.forget(at + o as u32, 4),
+            }
+        }
+    }
+}
+
 impl<const N: usize> Vars<N> {
     /// Types the word at `off` as a GObj pointer, from a captured state: what memory holds
     /// there becomes the handle.
