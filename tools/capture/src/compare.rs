@@ -216,6 +216,21 @@ impl<'a> Comparer<'a> {
         u16::from_be_bytes(self.mem[i..i + 2].try_into().unwrap())
     }
 
+    /// Whether a match's statics are live: in the scenes that set them up (a match's, and the
+    /// results screen's, which sets up its own stage, items and fighters), or before any match
+    /// (they hold what the boot left). Past such a scene their pointers name its freed heap and
+    /// files, ours the scene's last ones, until the next such scene sets them again, and
+    /// nothing reads them (docs/engine.md, "A scene's statics past its heap").
+    pub(crate) fn match_statics_live(&self) -> bool {
+        use melee_sim::game::gm::machine::{GS_RESULTS, GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        let g = self.game;
+        g.gr.param.is_none()
+            || matches!(
+                scene_kind(g.machine.scene_info),
+                Some(GS_VS | GS_SUDDEN_DEATH | GS_RESULTS)
+            )
+    }
+
     pub(crate) fn u32(&self, a: u32) -> u32 {
         let i = (a - MEM1) as usize;
         u32::from_be_bytes(self.mem[i..i + 4].try_into().unwrap())
@@ -469,14 +484,27 @@ impl<'a> Comparer<'a> {
                     Some(f),
                     ud,
                 ) {
-                    let mem = Mem {
-                        bytes: self.mem,
-                        base: MEM1,
-                    };
                     let fighter = &self.game.fighters[f.0];
                     let fpath = format!("{path} fighter");
                     self.begin_block("fighter", ud, &fpath);
-                    fighter.compare(&mem, ud, &fpath, self);
+                    match render_target_view(self.game, f, ud, self.mem) {
+                        // A block that held the GPU's pixels: compared over a copy of theirs
+                        // that holds ours where ours still has the image's fill.
+                        Some(block) => {
+                            let mem = Mem {
+                                bytes: &block,
+                                base: ud,
+                            };
+                            fighter.compare(&mem, ud, &fpath, self);
+                        }
+                        None => {
+                            let mem = Mem {
+                                bytes: self.mem,
+                                base: MEM1,
+                            };
+                            fighter.compare(&mem, ud, &fpath, self);
+                        }
+                    }
                     // The SDI colors code's count, which only the code reads.
                     if self.game.rules.player.sdi_colors {
                         let ours = self.game.player_code_state.sdi_count.get(f.0 as usize);
@@ -603,10 +631,16 @@ impl<'a> Comparer<'a> {
             ("Fighter_804D6524", melee_sim::game::ft::SCALE_PARAMS),
         ] {
             // Ours is a pointer in the loaded `ftLoadCommonData`, which sits in their memory.
-            let ours = game
+            // Past the scene whose heap held `PlCo.dat` (an attract match's), both point into
+            // the freed file until the next match loads it again, and nothing reads them.
+            let Some(at) = game
                 .ft
                 .load_common
-                .map_or(0, |c| self.u32(self.data.addr(c.at(offset))));
+                .map_or(Some(0), |c| self.data.try_addr(c.at(offset)))
+            else {
+                continue;
+            };
+            let ours = if at == 0 { 0 } else { self.u32(at) };
             let theirs = self.u32(sym(name));
             self.check("ft", name, ours, theirs);
         }
@@ -708,11 +742,19 @@ impl<'a> Comparer<'a> {
             ft.spawn_counter,
             self.u32(SPAWN_COUNTER),
         );
-        // The free dynamics links, in order.
+        // The free dynamics links, in order: in the scenes that set them up (a match's and
+        // the results screen's, `lb_8000FCDC`); past such a scene the pointer names its freed
+        // heap, ours the scene's last list, which nothing reads until the next one sets them
+        // up again.
+        use melee_sim::game::gm::machine::{GS_RESULTS, GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        let live = matches!(
+            scene_kind(game.machine.scene_info),
+            Some(GS_VS | GS_SUDDEN_DEATH | GS_RESULTS)
+        );
         let mut ours = ft.dynamics_free;
         let mut theirs = self.u32(DYNAMICS_FREE);
         let mut i = 0;
-        while ours.is_some() || theirs != 0 {
+        while live && (ours.is_some() || theirs != 0) {
             self.compare_handle(
                 &format!("ft free dynamics link {i}"),
                 "DynamicsId",
@@ -726,9 +768,11 @@ impl<'a> Comparer<'a> {
             theirs = self.u32(theirs + 0x90);
             i += 1;
         }
+        // The fighters' lights likewise live in the scene that made them.
         for (at, ours, name) in [(LOBJ0, ft.lobj0, "lobj0"), (LOBJ1, ft.lobj1, "lobj1")] {
             let t = self.u32(at);
             match ours {
+                _ if !live => {}
                 Some(_) if t != 0 => self.lobjs(&format!("ft {name}"), ours, t),
                 _ => self.check("ft", name, ours.is_some(), t != 0),
             }
@@ -1879,9 +1923,14 @@ impl Cx for Comparer<'_> {
     fn compare_data(&mut self, path: &str, ours: Option<DataRef>, theirs: u32) {
         // Data in an archive the original's scene let go of: the pointer still names where it
         // was.
+        // Where it was: as an earlier scan found it, else where the heap's image placed it
+        // (a file the scan named under another archive).
         if let Some(o) = ours
             && !self.data.loaded.iter().any(|l| l.id == o.archive)
-            && let Some(a) = self.past.and_then(|p| p.gone_addr(o))
+            && let Some(a) = self
+                .past
+                .and_then(|p| p.gone_addr(o))
+                .or_else(|| self.game.objs.heap.image.data_addr(o))
         {
             if a != theirs {
                 self.diffs.push(format!(
@@ -1920,4 +1969,68 @@ impl Cx for Comparer<'_> {
     fn stale_read(&mut self, path: &str) {
         self.stale_reads.push(path.to_owned());
     }
+}
+
+/// Where a fighter's block held the GPU's pixels when it was made (a render target's,
+/// `Globals::render_leftovers`), which creation gave the heap image's fill: theirs as a copy of
+/// the block in which each such bit that ours still holds as the fill's holds ours, so the
+/// comparison leaves it out until written. A bit ours wrote otherwise compares, and the
+/// oracle's mutation run with the other fill (`--mutate render-target=ff`) catches a write of
+/// the fill's and any read before a write (docs/engine.md, "Uninitialized values"). A results
+/// pose's fighter's `x61C` is left out too (see there). None for any other fighter.
+fn render_target_view(
+    game: &melee_sim::game::state::Game,
+    f: melee_sim::game::handles::FighterId,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    use melee_sim::game::mirror::{LayCx, LayOut, Mirror};
+    use melee_sim::game::structs::Fighter;
+    /// Only nulls are known: a pointer in a render target's run compares as usual.
+    struct Nulls;
+    impl LayCx for Nulls {
+        fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
+            h.is_none().then_some(0)
+        }
+        fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
+            d.is_none().then_some(0)
+        }
+    }
+    let o = &game.fighters[f.0];
+    let size = <Fighter as Mirror>::SIZE;
+    let lo = (at - MEM1) as usize;
+    let demo = o.is_demo();
+    let Some(runs) = game.ft.render_leftovers.get(&f.0) else {
+        // A results pose's fighter: its `x61C` is a stack byte `initFighter` never set, which
+        // ssbm-rs's ported callers leave a stale register's byte in (61 in its traces) where
+        // the console's code leaves 0 (the saved r28's byte), and whose only reader
+        // (`ftData_800859A8`) never runs for such a fighter (docs/engine.md).
+        return demo.then(|| {
+            let mut block = mem[lo..lo + size as usize].to_vec();
+            block[0x61C] = o.x61C as u8;
+            block
+        });
+    };
+    let fill = game.objs.heap.image.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, size);
+    o.lay(&mut l, at, &Nulls);
+    let n = o.dynamics_num.max(0) as usize;
+    o.dynamic_bone_sets
+        .lay_counted(&mut l, at + 0x2F0, &Nulls, n);
+    let mut block = mem[lo..lo + size as usize].to_vec();
+    if demo {
+        block[0x61C] = o.x61C as u8;
+    }
+    // Bit by bit (a bitfield's byte can be written in part): each bit ours still holds as
+    // the fill's takes ours.
+    for &(a, b) in runs {
+        for o in a..b {
+            if let Some((ours, known)) = l.bits_at(at + o) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[o as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
 }

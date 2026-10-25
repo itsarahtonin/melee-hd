@@ -286,6 +286,10 @@ impl Comparer<'_> {
     }
 
     fn hud_statics(&mut self) {
+        // As the stage's (`Comparer::stage`): the HUD's statics in the scenes that set them up.
+        if !self.match_statics_live() {
+            return;
+        }
         let m = self.mem;
         let mem = Mem {
             bytes: m,
@@ -370,10 +374,18 @@ impl Comparer<'_> {
         );
         h.coins.state.compare(&mem, COINS, "hud coins", self);
         let ca = m.w(COINS_ARCHIVE);
-        let theirs = (ca != 0)
+        // Past the match, the coins' `HSD_Archive` is in its freed heap: ours names the
+        // match's archive, theirs the block it was in, which nothing reads.
+        let gone = h
+            .coins
+            .archive
+            .is_some_and(|a| !self.data.loaded.iter().any(|l| l.id == a));
+        let theirs = (ca != 0 && !gone)
             .then(|| self.data.get(m.w(ca + 0x20)).map(|d| d.archive))
             .flatten();
-        self.check("hud coins", "archive", h.coins.archive, theirs);
+        if !gone {
+            self.check("hud coins", "archive", h.coins.archive, theirs);
+        }
         self.compare_data("hud coins scene", h.coins.scene, m.w(COINS_SCENE));
         h.arrows.compare(&mem, ARROWS, "hud arrows", self);
         self.check(

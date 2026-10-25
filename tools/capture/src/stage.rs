@@ -597,18 +597,13 @@ impl Importer<'_> {
     /// describe the stage's `coll_data` (until then they belong to the previous stage).
     fn geometry(&mut self) -> Option<gr::Geometry> {
         let joints = self.cap.u32(sym("groundCollJoint"));
-        let coll = self.cap.u32(sym("stage_info") + 0x6AC);
+        let coll = coll_data(self.cap.u32(sym("stage_info") + 0x6AC));
         if joints == 0 || coll == 0 || self.cap.u32(joints + 4) != self.cap.u32(coll + 0x24) {
             return None;
         }
         let cap = self.cap;
         let r32 = |a: u32| cap.u32(a);
-        let info = sym("stage_info");
-        let coll = r32(info + 0x6AC);
-        if coll == 0 {
-            self.unhandled.push("the default collision data".into());
-            return None;
-        }
+        let coll = coll_data(r32(sym("stage_info") + 0x6AC));
         let range = |s: &Self, at: u32| LineRange {
             start: s.u16_at(at) as i16,
             count: s.u16_at(at + 2) as i16,
@@ -703,6 +698,8 @@ impl Importer<'_> {
         });
         let islands = self.islands();
         Some(gr::Geometry {
+            // An import starts from the capture's stamps, none left over the GPU's pixels.
+            render_stamps: Vec::new(),
             vertices,
             lines,
             joints: out,
@@ -901,9 +898,16 @@ impl Comparer<'_> {
     /// The stage: `stage_info`, its parameters, the stage code's globals, the collision
     /// geometry, and the game camera.
     pub fn stage(&mut self) {
+        let game = self.game;
+        // The stage's statics compare in the scenes that run a stage and before any stage
+        // (`Comparer::match_statics_live`): only stage code reads them, and a value that changed
+        // in between shows when the next stage's scene compares them again.
+        if !self.match_statics_live() {
+            return;
+        }
+        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
         let m = mem(self.mem);
         let info = sym("stage_info");
-        let game = self.game;
         game.stage_info.compare(&m, info, "stage_info", self);
         let param = self.u32(info + 0x6B0);
         match (&game.gr.param, param) {
@@ -1157,15 +1161,16 @@ impl Comparer<'_> {
                 game.gr.bigblue_yakumono,
             ),
         ] {
-            let yaku = self.u32(at);
-            self.check(
-                name,
-                "data",
-                ours,
-                (yaku != 0).then(|| self.data.get(yaku)).flatten(),
-            );
+            // A stage's parameters stay set past its match, into its freed file.
+            use melee_sim::game::mirror::Cx;
+            self.compare_data(&format!("{name} data"), ours, self.u32(at));
         }
-        self.compare_zebes();
+        // A stage's own statics compare on that stage: past its match they name its freed
+        // heap, ours as well, and only its code reads them.
+        let on = |k: i32| game.stage_info.grkind == k;
+        if on(gr::GR_KIND_ZEBES) {
+            self.compare_zebes();
+        }
         for (i, g) in game.gr.icemt_fields.iter().enumerate() {
             use melee_sim::game::mirror::Cx;
             let theirs = self.u32(GRICEMT_FIELDS + 4 * i as u32);
@@ -1357,7 +1362,15 @@ impl Comparer<'_> {
             ),
         );
         let slots = self.u32(z + 4);
+        // Past the match scene whose heap held the slots (the results screen's), the pointer
+        // names freed memory, ours the match's last slots, which nothing reads until a match's
+        // setup sets them again.
+        let in_match = matches!(
+            scene_kind(game.machine.scene_info),
+            Some(GS_VS | GS_SUDDEN_DEATH)
+        );
         match (&zk.slots, slots) {
+            _ if !in_match && zk.slots.is_some() => {}
             (None, 0) => {}
             (Some(ours), t) if t != 0 => {
                 for (i, o) in ours.iter().enumerate() {
@@ -1509,7 +1522,12 @@ impl Comparer<'_> {
                 &path,
                 o,
                 t,
-            ) {
+            ) || o.is_none()
+                || t == 0
+            {
+                if o.is_some() != (t != 0) {
+                    self.diff(&path, "presence", o.is_some(), format!("{t:#x}"));
+                }
                 break;
             }
             let h = self.game.gr.start_hooks[o.unwrap().0].clone();
@@ -1566,8 +1584,7 @@ impl Comparer<'_> {
 
     /// The collision geometry, as `tools/leaf-check/tests/mplib/state.rs` compares it.
     fn geometry(&mut self, g: &gr::Geometry) {
-        let info = sym("stage_info");
-        let coll = self.u32(info + 0x6AC);
+        let coll = coll_data(self.u32(sym("stage_info") + 0x6AC));
         let vtx = self.u32(sym("groundCollVtx"));
         let lines = self.u32(sym("groundCollLine"));
         let joints = self.u32(sym("groundCollJoint"));
@@ -1630,8 +1647,10 @@ impl Comparer<'_> {
                 (self.u32(a + 8), self.u8(a + 0xE) & 0x80 != 0),
             );
             // The stamp a stage's load leaves unset: a session's heap leftover until the
-            // joint's first move (docs/engine.md).
-            if joint.stamp != self.u16(a + 0xC) as i16 {
+            // joint's first move (docs/engine.md); one the GPU's pixels left is out until then
+            // (its read stops the simulation).
+            let render = g.render_stamps.contains(&(j as u16));
+            if !render && joint.stamp != self.u16(a + 0xC) as i16 {
                 self.begin_block("coll joint", a, &path);
                 self.mismatch(
                     &format!("{path}.stamp"),
@@ -2258,4 +2277,10 @@ impl Comparer<'_> {
             self.check(&format!("grMc_8049F4B8[{i}]"), "item", c.item.map(Some), ip);
         }
     }
+}
+
+/// The collision data `mpLibLoad` loads: the stage's `coll_data`, or for a stage without one
+/// (the dummy stage) the executable's default floor, `mpLib_803BF760`.
+fn coll_data(coll: u32) -> u32 {
+    if coll == 0 { 0x803B_F760 } else { coll }
 }

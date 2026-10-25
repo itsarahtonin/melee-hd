@@ -9,6 +9,8 @@ use crate::import::sym;
 
 /// `gmopeningmode.c`'s `vs_enter_data` (a `StartMeleeData`).
 const VS_ENTER_DATA: u32 = 0x8049_C188;
+/// `gmopeningmode.c`'s `vs_exit_data` (a `MatchExitInfo`).
+const VS_EXIT_DATA: u32 = 0x8049_C2C0;
 
 impl Comparer<'_> {
     /// The attract match's start data and camera step, and the movies' GObjs.
@@ -21,6 +23,7 @@ impl Comparer<'_> {
         game.attract
             .start
             .compare(&mem, VS_ENTER_DATA, "vs_enter_data", self);
+        self.match_exit_info("vs_exit_data", &game.attract.exit, VS_EXIT_DATA);
         self.check(
             "lbl_804D65E8",
             "the attract camera's step",

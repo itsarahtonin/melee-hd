@@ -915,6 +915,7 @@ impl Run<'_> {
             };
             if self.from.is_none() {
                 files.set_named(&s.game.ft.data.files.archives);
+                files.set_statics(&s.game, &s.data);
             }
             let before = files.loaded().to_vec();
             let data = files.refresh(&mut image, &mut s.data, false);

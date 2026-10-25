@@ -19,6 +19,9 @@ const CSS_DATA: u32 = 0x8048_07B0;
 const SSS_DATA: u32 = 0x8048_0668;
 const START_DATA: u32 = 0x8048_0530;
 const KO_COUNTS: u32 = 0x804D_6730;
+/// `gmVsMelee_VsExitInfo`, `gmVsMelee_SuddenDeathExitInfo`.
+const VS_EXIT: u32 = 0x8047_9D98;
+const SD_EXIT: u32 = 0x8047_E2A4;
 /// The select screen's tables in the executable's data.
 const ICONS_AT: u32 = 0x803F_0B24;
 const DOORS_AT: u32 = 0x803F_0DFC;
@@ -242,8 +245,32 @@ impl<'a> Comparer<'a> {
         v.start.compare(&m, START_DATA, "gmVsMelee_StartData", self);
         let ko: [u8; 4] = core::array::from_fn(|i| self.u8(KO_COUNTS + i as u32));
         self.check("ko_counts", "KO counts", v.ko_counts, ko);
+        for (name, e, at) in [
+            ("gmVsMelee_VsExitInfo", &v.exit, VS_EXIT),
+            ("gmVsMelee_SuddenDeathExitInfo", &v.sd_exit, SD_EXIT),
+        ] {
+            self.match_exit_info(name, e, at);
+        }
         self.charsel_statics();
         self.stagesel_statics();
+    }
+
+    /// A match's exit data (`MatchExitInfo`) at `at`.
+    pub(crate) fn match_exit_info(
+        &mut self,
+        name: &str,
+        e: &melee_sim::game::gm::match_exit::MatchExitInfo,
+        at: u32,
+    ) {
+        let m = self.mem_view();
+        self.check(
+            name,
+            "x0, x4, x8",
+            (e.x0, e.x4, e.x8),
+            (self.u32(at), self.u32(at + 4), self.u32(at + 8)),
+        );
+        e.match_end
+            .compare(&m, at + 0xC, &format!("{name}.match_end"), self);
     }
 
     fn charsel_statics(&mut self) {

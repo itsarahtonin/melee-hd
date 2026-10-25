@@ -115,6 +115,8 @@ pub(crate) struct Files<'a> {
     /// The scan's work from the tick before: only the pages the ticks since changed are
     /// scanned again, which finds what a scan of all of memory would.
     pub(crate) rescan: Rescan,
+    /// The executable's data the frontend added as archives ([`Files::set_statics`]).
+    statics: Vec<Loaded>,
 }
 
 impl Files<'_> {
@@ -128,6 +130,7 @@ impl Files<'_> {
             loaded,
             named,
             rescan: Rescan::default(),
+            statics: Vec::new(),
         }
     }
 
@@ -166,8 +169,29 @@ impl Files<'_> {
             &changed,
             &melee_capture::Freed::read(&image.mem1),
         );
-        DataMap {
-            loaded: self.loaded.clone(),
+        let mut loaded = self.loaded.clone();
+        loaded.extend(self.statics.iter().cloned());
+        DataMap { loaded }
+    }
+
+    /// The executable's data the state points into as archives the frontend added (the
+    /// dummy stage's defaults), at their addresses.
+    pub(crate) fn set_statics(&mut self, game: &Game, archives: &Archives) {
+        self.statics.clear();
+        if let Some(id) = game.gr.defaults {
+            let _ = archives;
+            // Each region at its address: a pointer there maps to the region's offset in the
+            // archive's data.
+            for &(addr, off, len) in &melee_sim::game::gr::exe_data::REGIONS {
+                self.statics.push(Loaded {
+                    name: "main.dol".to_owned(),
+                    file: addr - off - 0x20,
+                    data: addr - off,
+                    data_len: off + len,
+                    id,
+                    publics: Vec::new(),
+                });
+            }
         }
     }
 }

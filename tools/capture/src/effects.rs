@@ -770,8 +770,10 @@ impl Comparer<'_> {
         let entries = sym("efAsync_DatEntries");
         for i in 0..ef::FILES.len() {
             let t = self.u32(entries + DAT_ENTRY * i as u32 + 8);
-            let theirs = (t != 0).then(|| self.data.get(t)).flatten();
-            self.check("ef", &format!("table {i}"), game.ef.tables[i], theirs);
+            // A table in an effects file its scene let go of: the pointer still names where it
+            // was (`compare_data`'s rule).
+            use melee_sim::game::mirror::Cx;
+            self.compare_data(&format!("ef table {i}"), game.ef.tables[i], t);
         }
         self.check(
             "ef",
@@ -902,7 +904,9 @@ impl Comparer<'_> {
             let path = format!("generator {i}");
             let o = objs.generators[g].clone();
             let theirs_list = self.u32(tg + 0x20);
-            self.check(&path, "cmd list", o.cmd_list, self.data.get(theirs_list));
+            // A list in a file its scene let go of compares by where it was.
+            use melee_sim::game::mirror::Cx;
+            self.compare_data(&format!("{path} cmd list"), o.cmd_list, theirs_list);
             self.handle_jobj(&format!("{path} jobj"), o.jobj, self.u32(tg + 0x10));
             let ours = vec![
                 o.kind,
@@ -1094,15 +1098,32 @@ impl Comparer<'_> {
             let tex = self.u32(sym("psTexGroupArray") + 4 * b);
             let ptclref = self.u32(sym("ptclref_804D0E5C") + 4 * b);
             let count = self.u32(sym("psCmdListArray") + 4 * b) as i32;
-            let theirs = (tex != 0).then(|| (self.data.get(tex - 4), ptclref, count));
+            // A bank a scene before loaded stays set up after its file is freed: its
+            // textures' pointer then names where the file was.
+            let tex_gone = ps.banks[b as usize].and_then(|k| {
+                (self.data.try_addr(k.tex).is_none())
+                    .then(|| self.past.and_then(|p| p.gone_addr(k.tex)))
+                    .flatten()
+            });
+            let theirs = (tex != 0).then(|| {
+                let t = if tex_gone.is_some() {
+                    None
+                } else {
+                    self.data.get(tex - 4)
+                };
+                (t, tex, ptclref, count)
+            });
             let ours = ps.banks[b as usize].map(|k| {
-                // A bank a scene before loaded stays set up after its file is freed.
                 let table = self
                     .data
                     .try_addr(k.table)
                     .or_else(|| self.past.and_then(|p| p.gone_addr(k.table)))
                     .unwrap_or_else(|| panic!("particle bank {b}'s table isn't loaded"));
-                (Some(k.tex), table.wrapping_sub(4 * k.first as u32), k.count)
+                let (t, addr) = match tex_gone {
+                    Some(a) => (None, a + 4),
+                    None => (Some(k.tex), tex),
+                };
+                (t, addr, table.wrapping_sub(4 * k.first as u32), k.count)
             });
             self.check("particles", &format!("bank {b}"), ours, theirs);
         }
@@ -1138,8 +1159,8 @@ impl Comparer<'_> {
         gt: &dyn Fn(u32) -> u32,
         go: &dyn Fn(Option<GeneratorId>) -> u32,
     ) {
-        let list = self.data.get(self.u32(t + 0x20));
-        self.check(path, "cmd list", p.cmd_list, list);
+        use melee_sim::game::mirror::Cx;
+        self.compare_data(&format!("{path} cmd list"), p.cmd_list, self.u32(t + 0x20));
         let r16 = |o| u32::from(self.u16(t + o));
         let r8 = |o| u32::from(self.u8(t + o));
         let rgba = |o| self.u32(t + o);

@@ -186,6 +186,24 @@ fn index_files(files: impl Iterator<Item = (String, Vec<u8>)>) -> DiscIndex {
             anim_bytes.insert(name.clone(), bytes);
             continue;
         }
+        if name.starts_with("GmRstM") && name.ends_with(".dat") {
+            // A character's results poses: its data is one archive per animation, each at a
+            // 32-byte boundary, which `ftDemo_SetArchiveData` copies into a fighter's buffer
+            // on its own. Named by their offset in the file, as melee-sim names them.
+            let end = (0x20 + w(4) as usize).min(bytes.len());
+            let mut off = 0x20;
+            while off + 0x20 <= end {
+                let size = w(off) as usize;
+                if size < 0x20 || off + size > end {
+                    break;
+                }
+                by_header
+                    .entry([w(off), w(off + 4), w(off + 8)])
+                    .or_default()
+                    .push((format!("{name}@{off:#x}"), bytes[off..off + size].to_vec()));
+                off = (off + size).next_multiple_of(32);
+            }
+        }
         by_header
             .entry([w(0), w(4), w(8)])
             .or_default()

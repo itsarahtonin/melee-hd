@@ -277,23 +277,36 @@ impl Comparer<'_> {
         let at = sym(REFRACT);
         let r = self.game.refract.clone();
         self.check("refract", "users", r.users, self.u32(at) as i32);
-        let data = self.u32(sym("refract_data"));
-        let theirs = self.data_ref(data);
-        self.check("refract", "table", r.data, theirs);
-        let list = self.u32(at + 0xC);
-        let n = r.tobjs.len() as u32;
-        let theirs_n = if data == 0 {
-            0
-        } else {
-            u32::from(self.u8(data))
-        };
-        self.check("refract", "chains", n, theirs_n);
-        for (i, t) in r.tobjs.iter().enumerate() {
-            if list == 0 {
-                break;
+        // Past the match scene whose heap held `LbRf.dat`, the table, the image and the
+        // chains (`lbRefract_800222A4`'s), the pointers name freed memory, ours as well,
+        // which nothing reads until a match's setup sets them again: the users' count is 0,
+        // which `lbRefract_8002247C` and `lbRefract_80022560` check, and only a refracting
+        // material's setup (`lbRefract_80022998`) reads the chains.
+        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        let live = r.data.is_none()
+            || matches!(
+                scene_kind(self.game.machine.scene_info),
+                Some(GS_VS | GS_SUDDEN_DEATH)
+            );
+        if live {
+            let data = self.u32(sym("refract_data"));
+            let theirs = self.data_ref(data);
+            self.check("refract", "table", r.data, theirs);
+            let list = self.u32(at + 0xC);
+            let n = r.tobjs.len() as u32;
+            let theirs_n = if data == 0 {
+                0
+            } else {
+                u32::from(self.u8(data))
+            };
+            self.check("refract", "chains", n, theirs_n);
+            for (i, t) in r.tobjs.iter().enumerate() {
+                if list == 0 {
+                    break;
+                }
+                let tt = self.u32(list + 4 * i as u32);
+                self.tobj_chain(&format!("refract chain {i}"), Some(*t), tt);
             }
-            let tt = self.u32(list + 4 * i as u32);
-            self.tobj_chain(&format!("refract chain {i}"), Some(*t), tt);
         }
         let ours: Vec<u32> = r
             .texture_mtx

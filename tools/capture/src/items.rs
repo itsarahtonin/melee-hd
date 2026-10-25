@@ -424,6 +424,10 @@ impl Comparer<'_> {
 
     /// The item code's globals, the effects' parameters and mpcoll's statics.
     pub fn items(&mut self) {
+        // As the stage's (`Comparer::stage`): the items' statics in the scenes that set them up.
+        if !self.match_statics_live() {
+            return;
+        }
         let m = mem(self.mem);
         let game = self.game;
         let g = &game.it;
@@ -462,12 +466,13 @@ impl Comparer<'_> {
             .get((melee_sim::game::it::kinds::PKIND_RANDOM - FIRST_CHAR_ITEM) as usize)
             .copied()
             .flatten();
-        if let Some(a) = random {
-            let theirs = self.u32(self.data.addr(a)) == crate::import::YAKU_ATTR;
+        // A file its scene let go of (a match's, until the next one's items load again): what
+        // its words were isn't in memory any more, and nothing reads them.
+        if let Some(at) = random.and_then(|a| self.data.try_addr(a)) {
+            let theirs = self.u32(at) == crate::import::YAKU_ATTR;
             self.check("items", "stage items' attributes", g.yaku_attr, theirs);
         }
-        if let Some(attrs) = g.grapple_lengths.attrs {
-            let at = self.data.addr(attrs);
+        if let Some(at) = g.grapple_lengths.attrs.and_then(|a| self.data.try_addr(a)) {
             let l = &g.grapple_lengths;
             let ours: Vec<u32> = core::iter::once(l.n as u32)
                 .chain(l.words.iter().map(|w| w.to_bits()))
@@ -477,8 +482,9 @@ impl Comparer<'_> {
         }
         // Link's and Young Link's hookshots' lengths, each where its spawn wrote them.
         for (l, kind) in g.hookshot_lengths.iter().zip(HOOKSHOT_KINDS) {
-            let Some(attrs) = l.attrs else { continue };
-            let at = self.data.addr(attrs);
+            let Some(at) = l.attrs.and_then(|a| self.data.try_addr(a)) else {
+                continue;
+            };
             let ours: Vec<u32> = core::iter::once(l.n as u32)
                 .chain(l.words.iter().map(|w| w.to_bits()))
                 .collect();
@@ -519,6 +525,26 @@ impl Comparer<'_> {
             no_containers: pick_table(word, sym("it_804A0E50")),
             monsters: pick_table(word, sym("it_804A0E60")),
         };
-        self.check("it_804A0E30", "spawn tables", &g.spawn, &theirs);
+        // Each table's arrays as far as its size reaches (as `pick_table` reads theirs): past a
+        // scene's end they point into its freed heap, ours keeping the last ones, until the next
+        // match's tables replace them, and nothing reads past the size.
+        let mut ours = g.spawn.clone();
+        for t in [
+            &mut ours.spawner.table,
+            &mut ours.no_containers,
+            &mut ours.monsters,
+        ] {
+            let size = usize::from(t.size);
+            let extra = matches!((&t.kinds, &t.weights), (Some(k), Some(w))
+                if k.get(size) == Some(&34) && w.get(size) == Some(&t.total));
+            let len = size + usize::from(extra);
+            for v in t.kinds.iter_mut() {
+                v.truncate(len);
+            }
+            for v in t.weights.iter_mut() {
+                v.truncate(len);
+            }
+        }
+        self.check("it_804A0E30", "spawn tables", &ours, &theirs);
     }
 }

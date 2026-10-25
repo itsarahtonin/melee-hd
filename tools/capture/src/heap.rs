@@ -200,6 +200,7 @@ pub fn read(m: &[u8]) -> Heap {
         classes,
         // An import from memory keeps no image: its leftovers come in with the state.
         image: Default::default(),
+        carried: vec![false; Kind::COUNT],
     }
 }
 

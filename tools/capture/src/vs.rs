@@ -445,12 +445,17 @@ impl<'a> Comparer<'a> {
         self.check("lb_804329F0", "clocks", game.pacing.clone(), r.pacing());
         self.check("gm_16F1", "ranks", game.gm.ranks.clone(), r.ranks());
         let common = r.u32(sym("pl_804D6470"));
-        // `pl_804D6470` is the first pointer of the root we keep.
-        let kept = game
+        // `pl_804D6470` is the first pointer of the root we keep. Once the match's heap is
+        // gone (the results screen) it points into the freed `PdPm.dat`, ours too, until the
+        // next match loads it again: nothing reads it there.
+        if let Some(at) = game
             .pl
             .load_common
-            .map_or(0, |r| self.u32(self.data.addr(r)));
-        self.check("pl_804D6470", "common data", kept, common);
+            .map_or(Some(0), |r| self.data.try_addr(r))
+        {
+            let kept = if at == 0 { 0 } else { self.u32(at) };
+            self.check("pl_804D6470", "common data", kept, common);
+        }
         self.check(
             "pl counters",
             "attack instances",
