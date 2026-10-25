@@ -345,6 +345,8 @@ impl<K: Kinds> World<K> {
             (p_link as usize) < P_LINKS,
             "p_link {p_link} past the maximum"
         );
+        // `GObj_Create` writes all but its last word, the remove function null.
+        super::heap::with(|h| h.image.claim_next(&[(0, 0x30)]));
         let g = GObjId(self.gobjs.alloc(GObj {
             classifier,
             p_link,
@@ -363,6 +365,8 @@ impl<K: Kinds> World<K> {
             obj: None,
             user_data: None,
         }));
+        let at = self.gobjs.addr(g.0);
+        super::heap::with(|h| h.image.word(at + 0x30, 0));
         self.place(g, place);
         g
     }
@@ -494,6 +498,8 @@ impl<K: Kinds> World<K> {
             (priority as usize) < PROC_PRIORITIES,
             "process priority {priority} past the maximum"
         );
+        // Its flags' bitfields leave the byte's low bits, and the padding after it.
+        super::heap::with(|h| h.image.claim_next(&[(0, 0xD), (0x10, 0x18)]));
         let p = ProcId(self.procs.alloc(Proc {
             child: None,
             next: None,
@@ -746,6 +752,9 @@ impl<K: Kinds> World<K> {
         assert!(o.user_data_kind == 0xFF, "GObj already has user data");
         o.user_data_kind = kind;
         o.user_data = Some(data);
+        // Its remove function, which melee-sim's user data names only by its kind.
+        let at = self.gobjs.addr(g.0);
+        super::heap::with(|h| h.image.claim(at + 0x30, at + 0x34));
     }
 
     fn take_user_data(&mut self, g: GObjId) -> Option<(u8, K::UserData)> {

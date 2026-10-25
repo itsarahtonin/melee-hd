@@ -78,6 +78,9 @@ pub struct Arg {
     pub ty: u8,
     pub sel: u8,
     pub arg: u8,
+    /// The padding byte after `arg`, which only a whole input's copy writes (nothing reads
+    /// it; a session's heap image keeps it, `hsd::export::freed_texps`).
+    pub pad: u8,
     pub exp: Exp,
 }
 
@@ -87,6 +90,7 @@ impl Arg {
         ty: 0xFF,
         sel: 0xFF,
         arg: 0xFF,
+        pad: 0xFF,
         exp: Exp::Zero,
     };
     /// A zero input (texpdag.c's `HSD_TExpDag_804D5FF8`).
@@ -94,6 +98,7 @@ impl Arg {
         ty: TY_ZERO,
         sel: TE_0,
         arg: 0xFF,
+        pad: 0,
         exp: Exp::Zero,
     };
 }
@@ -417,6 +422,7 @@ impl TExpList {
             sel,
             exp,
             arg: 0xFF,
+            pad: prev.pad,
         };
         match sel {
             TE_0 => {
@@ -520,6 +526,7 @@ impl TExpList {
             sel,
             exp,
             arg: 0xFF,
+            pad: prev.pad,
         };
         match sel {
             TE_0 => {

@@ -26,11 +26,42 @@ mod sync;
 mod trace;
 mod vanilla;
 
+use std::alloc::{GlobalAlloc, Layout, System};
 use std::collections::HashMap;
 use std::process::ExitCode;
+use std::sync::atomic::{AtomicUsize, Ordering::Relaxed};
 
 use ssbm_slippi::{compare, replay};
 use trace::Kind;
+
+/// Counts allocated bytes, so a session's snapshot can be measured (`session --snapshot`).
+struct Counting;
+
+static BYTES: AtomicUsize = AtomicUsize::new(0);
+
+unsafe impl GlobalAlloc for Counting {
+    unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
+        BYTES.fetch_add(layout.size(), Relaxed);
+        unsafe { System.alloc(layout) }
+    }
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        unsafe { System.dealloc(ptr, layout) }
+    }
+    unsafe fn realloc(&self, ptr: *mut u8, layout: Layout, new_size: usize) -> *mut u8 {
+        BYTES.fetch_add(new_size.saturating_sub(layout.size()), Relaxed);
+        unsafe { System.realloc(ptr, layout, new_size) }
+    }
+}
+
+#[global_allocator]
+static GLOBAL: Counting = Counting;
+
+/// The bytes `f` allocates.
+fn allocated<T>(f: impl FnOnce() -> T) -> (T, usize) {
+    let before = BYTES.load(Relaxed);
+    let out = f();
+    (out, BYTES.load(Relaxed) - before)
+}
 
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();

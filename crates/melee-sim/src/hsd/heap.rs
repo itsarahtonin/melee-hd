@@ -576,6 +576,9 @@ pub struct Heap {
     pub allocs: Vec<ObjAlloc>,
     /// The classes, by [`Class`].
     pub classes: Vec<ClassInfo>,
+    /// What memory holds where the heap is, as far as melee-sim knows it, which the scenes
+    /// before left: a session's leftovers ([`super::image`]). Each scene's heap carries it on.
+    pub image: super::image::Image,
 }
 
 /// `HSD_MemoryEntry`'s size.
@@ -622,27 +625,96 @@ impl Heap {
             pieces: MemPieces::default(),
             allocs,
             classes,
+            image: Default::default(),
         }
     }
 
     /// `HSD_MemAlloc`: a block of the main heap. The original asserts it got one.
     pub fn mem_alloc(&mut self, size: u32) -> u32 {
         let p = self.mem_alloc_raw(size);
+        // Its owner writes what it asked for, as far as the image knows; the block's rest
+        // keeps what it held.
+        self.image.claim(p, p + size);
         log(|| format!("MA {size:#x} -> {p:#010x}"));
         p
     }
 
     fn mem_alloc_raw(&mut self, size: u32) -> u32 {
         assert!(size as i32 > 0, "HSD_MemAlloc of {size:#x} bytes");
-        self.os
+        let p = self
+            .os
             .alloc(size)
-            .unwrap_or_else(|| panic!("the main heap has no {size:#x} bytes free"))
+            .unwrap_or_else(|| panic!("the main heap has no {size:#x} bytes free"));
+        if self.image.on {
+            // `OSAllocFromHeap` writes the block's header, and a split's free rest's.
+            let cell = p - HEADER;
+            self.image.alloc_cell(cell);
+            self.image.claim(cell, cell + 0xC);
+            let i = self.os.allocated.partition_point(|&(c, _)| c < cell);
+            let end = cell + self.os.allocated[i].1;
+            if self.os.free.binary_search_by_key(&end, |f| f.0).is_ok() {
+                self.image.unknown(end, end + 0xC);
+            }
+        }
+        p
     }
 
     /// `HSD_Free`.
     pub fn mem_free(&mut self, ptr: u32) {
         log(|| format!("MF {ptr:#010x}"));
+        if self.image.on {
+            // The block keeps what its owner left (what the image knows of it), its header
+            // and the free list's links around it the heap's.
+            let cell = ptr - HEADER;
+            let at = self.os.allocated.partition_point(|&(c, _)| c < cell);
+            if let Some(&(c, size)) = self.os.allocated.get(at)
+                && c == cell
+            {
+                self.image.free_cell(cell);
+                self.image.unknown(cell, cell + 0xC);
+                self.image.release(ptr, cell + size);
+            }
+        }
         self.os.free(ptr);
+        if self.image.on {
+            let cell = ptr - HEADER;
+            let i = self.os.free.partition_point(|&(c, s)| c + s <= cell);
+            for j in i.saturating_sub(1)..(i + 2).min(self.os.free.len()) {
+                let c = self.os.free[j].0;
+                self.image.unknown(c, c + 0xC);
+            }
+        }
+    }
+
+    /// The scene's heap is about to be made anew: what its allocated blocks hold goes to the
+    /// image, unknown but where melee-sim knows it (a loaded file's bytes; the objects laid
+    /// out after this, as the caller exports them), and the free cells' headers the heap's
+    /// links. The caller then folds the scene into the image (`Image::end_scene`).
+    pub fn end_scene_image(&mut self) {
+        if !self.image.on || !self.active {
+            return;
+        }
+        // Each block holds what its owner wrote, which the image has as claims, objects and
+        // files, and past that what it held before.
+        self.image.flush_live();
+        // Every cell's header as the heap's lists leave it (`Cell`: prev, next, size): the
+        // allocated list newest first (`DLAddFront`), the free list by address.
+        let size_of = |c: u32| {
+            let i = self.os.allocated.partition_point(|&(a, _)| a < c);
+            self.os.allocated[i].1
+        };
+        let order = self.image.alloc_order().to_vec();
+        for (i, &c) in order.iter().enumerate().rev() {
+            let prev = order.get(i + 1).copied().unwrap_or(0);
+            let next = if i > 0 { order[i - 1] } else { 0 };
+            self.image.header(c, prev, next, size_of(c));
+        }
+        let free = self.os.free.clone();
+        for (i, &(c, size)) in free.iter().enumerate() {
+            let prev = if i > 0 { free[i - 1].0 } else { 0 };
+            let next = free.get(i + 1).map_or(0, |f| f.0);
+            self.image.header(c, prev, next, size);
+        }
     }
 
     fn entry(&mut self, idx: usize) -> &mut MemEntry {
@@ -659,6 +731,8 @@ impl Heap {
                     new_nb *= 2;
                 }
                 self.pieces.array = self.mem_alloc_raw(new_nb as u32 * 4);
+                let a = self.pieces.array;
+                self.image.claim(a, a + new_nb as u32 * 4);
                 self.pieces.list = vec![None; new_nb];
             } else {
                 let mut new_nb = nb * 2;
@@ -666,6 +740,7 @@ impl Heap {
                     new_nb *= 2;
                 }
                 let new_array = self.mem_alloc_raw(4 * new_nb as u32);
+                self.image.claim(new_array, new_array + 4 * new_nb as u32);
                 let old = self.pieces.array;
                 let old_nb = (nb as u32 * 4) & !31;
                 self.pieces.array = new_array;
@@ -677,6 +752,7 @@ impl Heap {
         }
         if self.pieces.list[idx].is_none() {
             let addr = self.mem_alloc_raw(ENTRY_SIZE);
+            self.image.claim(addr, addr + ENTRY_SIZE);
             let mut e = MemEntry {
                 addr,
                 size: (idx as u32 + 1) * 32,
@@ -709,6 +785,7 @@ impl Heap {
         let e = self.memory_entry(idx);
         if let Some(p) = self.entry(e).free.pop() {
             self.entry(e).nb_free -= 1;
+            self.image.claim_piece(p, size);
             return p;
         }
         let esize = self.entry(e).size;
@@ -723,10 +800,13 @@ impl Heap {
                 ve.nb_free -= 1;
                 ve.nb_alloc -= 1;
                 let rest = self.entry(e2);
+                let head = rest.free.last().copied().unwrap_or(0);
                 rest.free.push(p + esize);
                 rest.nb_alloc += 1;
                 rest.nb_free += 1;
                 self.entry(e).nb_alloc += 1;
+                self.image.claim_piece(p, size);
+                self.image.free_word(p + esize, head);
                 return p;
             }
             var = self.entry(v).next;
@@ -737,11 +817,14 @@ impl Heap {
         let p = self.mem_alloc_raw(nb as u32 * 32);
         if let Some(r) = rest {
             let r = self.entry(r);
+            let head = r.free.last().copied().unwrap_or(0);
             r.free.push(p + esize);
             r.nb_alloc += 1;
             r.nb_free += 1;
+            self.image.free_word(p + esize, head);
         }
         self.entry(e).nb_alloc += 1;
+        self.image.claim_piece(p, size);
         p
     }
 
@@ -757,8 +840,14 @@ impl Heap {
         }
         let e = self.memory_entry(((size as i32 + 31) / 32 - 1) as usize);
         let e = self.entry(e);
+        let head = e.free.last().copied().unwrap_or(0);
+        let esize = e.size;
         e.free.push(ptr);
         e.nb_free += 1;
+        // The piece holds what its owner left (what the owner's free gave the image), and
+        // `hsdFreeMemPiece` links it in by its first word.
+        self.image.release(ptr, ptr + esize);
+        self.image.free_word(ptr, head);
     }
 
     /// The class's `info_init` if it isn't initialized (`hsdInitClassInfo`): its size set, its
@@ -847,8 +936,17 @@ impl Heap {
             self.obj_heap.remain = self.obj_heap.remain.wrapping_sub(pool_size);
         }
         let d = &mut self.allocs[kind as usize];
+        let head = d.free.last().copied().unwrap_or(0);
         // The new objects link in address order ahead of the old free list.
         d.free.extend((0..num).rev().map(|i| start + size * i));
+        for i in 0..num {
+            let next = if i + 1 < num {
+                start + size * (i + 1)
+            } else {
+                head
+            };
+            self.image.free_word(start + size * i, next);
+        }
         num
     }
 
@@ -861,14 +959,22 @@ impl Heap {
             !d.num_limit_flag && !d.heap_limit_flag,
             "{kind:?}'s pool has limits, which the model doesn't follow"
         );
-        if d.free.is_empty() {
+        let grew = d.free.is_empty();
+        if grew {
             let added = self.obj_add_free(kind, 1);
             assert!(added != 0, "{kind:?}'s pool couldn't grow");
+        }
+        if self.image.on {
+            self.image.pool_grew = grew;
         }
         let d = &mut self.allocs[kind as usize];
         let p = d.free.pop().unwrap();
         d.used += 1;
         d.peak = d.peak.max(d.used);
+        let size = d.size;
+        let link = d.free.last().copied().unwrap_or(0);
+        self.image.claim_piece(p, size);
+        self.image.taken(p, link);
         p
     }
 
@@ -876,8 +982,14 @@ impl Heap {
     pub fn obj_free(&mut self, kind: Kind, ptr: u32) {
         log(|| format!("OF {kind:?} {ptr:#010x}"));
         let d = &mut self.allocs[kind as usize];
+        let head = d.free.last().copied().unwrap_or(0);
+        let size = d.size;
         d.free.push(ptr);
         d.used -= 1;
+        // The object holds what its owner left, and `HSD_ObjFree` links it in by its first
+        // word.
+        self.image.release(ptr, ptr + size);
+        self.image.free_word(ptr, head);
     }
 
     /// What outlives the scene's heap ([`Carried`]).
@@ -907,9 +1019,80 @@ impl Heap {
     pub fn archive_alloc(&mut self, len: u32) -> (u32, u32) {
         log(|| format!("LA {:#x}", len.next_multiple_of(32)));
         let file = self.mem_alloc_raw(len.next_multiple_of(32));
+        // The read brings the disc's next bytes up to 32 (the file's own, the holder says).
+        self.image
+            .claim(file + len, file + len.next_multiple_of(32));
         log(|| "LA 0x44".to_owned());
         let archive = self.mem_alloc_raw(0x44);
+        self.image.claim(archive, archive + 0x44);
         (file, archive)
+    }
+}
+
+impl Heap {
+    /// The free lists' links (`HSD_ObjAlloc`'s pools', the memory pieces' classes'), each
+    /// object's first word, over what the objects left: as the scene's heap is made anew.
+    pub fn write_free_links(&mut self) {
+        if !self.image.on {
+            return;
+        }
+        let lists: Vec<Vec<u32>> = self
+            .allocs
+            .iter()
+            .map(|a| a.free.clone())
+            .chain(self.pieces.list.iter().flatten().map(|e| e.free.clone()))
+            .collect();
+        for free in lists {
+            // The list's head is the vector's end; each links to the one before it.
+            for (i, &p) in free.iter().enumerate() {
+                let next = if i > 0 { free[i - 1] } else { 0 };
+                self.image.word(p, next);
+            }
+        }
+        // The size classes (`HSD_MemoryEntry`: size, counts, free list, next) and their array.
+        let list = &self.pieces.list;
+        let addr_of = |i: Option<u32>| {
+            i.and_then(|i| list[i as usize].as_ref())
+                .map_or(0, |e| e.addr)
+        };
+        let mut words = Vec::new();
+        let mut entries = Vec::new();
+        for e in list {
+            words.extend(e.as_ref().map_or(0, |e| e.addr).to_be_bytes());
+            if let Some(e) = e {
+                let mut b = Vec::with_capacity(0x14);
+                for w in [
+                    e.size,
+                    e.nb_alloc,
+                    e.nb_free,
+                    e.free.last().copied().unwrap_or(0),
+                    addr_of(e.next),
+                ] {
+                    b.extend(w.to_be_bytes());
+                }
+                entries.push((e.addr, b));
+            }
+        }
+        if self.pieces.array != 0 {
+            self.image.put(self.pieces.array, &words);
+        }
+        for (a, b) in entries {
+            self.image.put(a, &b);
+        }
+    }
+
+    /// An archive loaded into the block at `file` (`len` bytes): the image knows its bytes,
+    /// relocated to the block (`HSD_ArchiveParse`).
+    pub fn hold_archive(&mut self, file: u32, len: u32, archive: melee_data::archive::ArchiveId) {
+        self.image.hold(
+            file,
+            file + len,
+            super::image::Src::File {
+                archive,
+                offset: 0,
+                base: file + 0x20,
+            },
+        );
     }
 }
 
@@ -919,6 +1102,13 @@ thread_local! {
     static LENT: RefCell<Option<Heap>> = const { RefCell::new(None) };
     static DEPTH: Cell<u32> = const { Cell::new(0) };
     static LOG: RefCell<Option<Vec<String>>> = const { RefCell::new(None) };
+    static IMAGE_ON: Cell<bool> = const { Cell::new(false) };
+}
+
+/// Whether the lent-out model keeps a heap image (a session from power-on): the cheap test
+/// the image's hooks make first, as they run in every match (a replay's has none).
+pub fn image_on() -> bool {
+    IMAGE_ON.with(Cell::get)
 }
 
 /// The lent-out model, if a step has lent one and its scene has started: what `f` makes of
@@ -988,6 +1178,17 @@ pub fn piece_alloc(size: u32) -> u32 {
     with(|h| h.piece_alloc(size)).unwrap_or(0)
 }
 
+/// A memory piece from the lent-out model whose owner writes only `parts` of it (offsets:
+/// `HSD_TECnst`'s leaves its last byte, a TEV stage's its clamps' padding): the rest keeps what
+/// it held.
+pub fn piece_alloc_partly(size: u32, parts: &[(u32, u32)]) -> u32 {
+    with(|h| {
+        h.image.claim_next(parts);
+        h.piece_alloc(size)
+    })
+    .unwrap_or(0)
+}
+
 /// A memory piece back to the lent-out model (`hsdFreeMemPiece`).
 pub fn piece_free(addr: u32, size: u32) {
     with(|h| h.piece_free(addr, size));
@@ -996,6 +1197,17 @@ pub fn piece_free(addr: u32, size: u32) {
 /// A block of the lent-out model's heap (`HSD_MemAlloc`): its address, or 0.
 pub fn mem_alloc(size: u32) -> u32 {
     with(|h| h.mem_alloc(size)).unwrap_or(0)
+}
+
+/// A block of the lent-out model's heap whose owner says what it writes there (the movie
+/// player's): the image doesn't take it as written whole.
+pub fn mem_alloc_unclaimed(size: u32) -> u32 {
+    with(|h| {
+        let p = h.mem_alloc_raw(size);
+        log(|| format!("MA {size:#x} -> {p:#010x}"));
+        p
+    })
+    .unwrap_or(0)
 }
 
 /// A block back to the lent-out model's heap (`HSD_Free`).
@@ -1013,7 +1225,13 @@ pub fn change_class(from: Class, to: Class) {
 pub fn start_scene_lent(layout: &Layout) {
     LENT.with(|l| {
         if let Some(h) = l.borrow_mut().as_mut() {
+            let mut image = std::mem::take(&mut h.image);
+            image.end_scene();
             *h = Heap::start_scene(layout);
+            // `OSCreateHeap`'s first cell, the whole heap free.
+            let lo = h.os.free.first().map_or(0, |f| f.0);
+            image.unknown(lo, lo + 0xC);
+            h.image = image;
         }
     });
 }
@@ -1034,6 +1252,7 @@ impl Lent {
             d.get() == 1
         });
         if outer {
+            IMAGE_ON.with(|o| o.set(heap.image.on));
             LENT.with(|l| *l.borrow_mut() = Some(std::mem::take(heap)));
         }
         Lent { outer }
@@ -1041,6 +1260,7 @@ impl Lent {
 
     pub fn give_back(self, heap: &mut Heap) {
         if self.outer {
+            IMAGE_ON.with(|o| o.set(false));
             *heap = LENT.with(|l| l.borrow_mut().take()).unwrap_or_default();
         }
     }
@@ -1050,6 +1270,7 @@ impl Drop for Lent {
     fn drop(&mut self) {
         DEPTH.with(|d| d.set(d.get() - 1));
         if self.outer {
+            IMAGE_ON.with(|o| o.set(false));
             LENT.with(|l| l.borrow_mut().take());
         }
     }

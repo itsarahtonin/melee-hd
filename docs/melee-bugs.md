@@ -505,7 +505,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `ftCo_800A101C` (a computer player's setup), read by `ftCo_800B0AF4`, `crates/melee-sim/src/game/ft/cpu_ai.rs`.
 - **Defect:** the setup fills the 30 entries of the ring Nana follows Popo's inputs through (`CpuFighter::xFC`) but their C-stick and two bytes after it (`cstick`, `xA`, `xB`), and points her reading end five entries behind his writing one, so her first five reads take C-sticks the block held.
 - **Effect:** not recorded: her first five frames of following, at the match's start (in her entrance), take the heap's C-stick.
-- **melee-hd:** zero (as a fresh heap and Slippi's zeroed block); a session from power-on with the Ice Climbers would need the heap's bytes to model it.
+- **melee-hd:** modeled: in a session from power-on the ring's block holds the heap's image's bytes (`game::leftovers`, the `Fighter` read from it), and zero in a replay, as Slippi's zeroed block.
 - **Fix:** clear the C-stick with the rest.
 - **Fix impact:** none in replays, whose blocks are zeroed.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
@@ -899,7 +899,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `grZebes_801D881C` (the stage's process) and its setup (`grZebes_801D8644`, which writes `grZebes_GroundVars5`'s other fields), `crates/melee-sim/src/game/gr/zebes.rs`.
 - **Defect:** the setup never writes the timer (`*(s16*) &xF8`), which the process counts down from the first tick, calling `grZebes_801DAA08` and drawing `HSD_Randf` for the next period once it passes zero; the first period is whatever the stage object's block held.
 - **Effect:** on a console the first bubbles' time, and every random draw after it, depend on the heap's history: the main menu's attract match on Brinstar starts the timer from 2093 (the menus' bytes), where a fresh heap's 0 (and Slippi's zeroed block) draws on the match's second tick.
-- **melee-hd:** starts it at 0, as a fresh heap and Slippi's playback do; a session from power-on parts from the console's there (docs/engine.md, a session's heap leftovers), which needs the heap's bytes to model.
+- **melee-hd:** modeled: a session from power-on starts it from the heap's image (`game::leftovers`, the `Ground` read from it: 2093 in the main menu's attract match, as the console's), a replay from 0, as Slippi's playback does.
 - **Fix:** set the timer in the setup.
 - **Fix impact:** changes Brinstar's random draws in every match; replays (whose blocks are zeroed) keep theirs only if the fix sets 0.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
@@ -909,7 +909,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `Ground_801C1A20` (a stage object from a joint), called only by `grIzumi_801CCB18` (the star, `GrdIzumiStar_TopN_joint`), `crates/melee-sim/src/game/gr/setup.rs` (`stage_gobj_from_joint`).
 - **Defect:** unlike `Ground_GetStageGObj`'s objects, it leaves `x10_flags`' `b6` and `b7` as the block held them (`b4` the overlay's reset writes).
 - **Effect:** on a console, when the leftover `b6` is set, the star's materials blend with the alpha constant in `xC0`, also the heap's (`fn_801C8EF8`'s TEV setup); `b7` only Princess Peach's Castle reads.
-- **melee-hd:** clear (as a fresh heap and Slippi's zeroed block); a session from power-on would need the heap's bytes to model it.
+- **melee-hd:** modeled: a session from power-on takes the bits from the heap's image (the `Ground` read from it), a replay has them clear, as Slippi's zeroed block.
 - **Fix:** clear `b6` and `b7` as the other creation does.
 - **Fix impact:** changes the star's look only where the heap left the bit set.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
@@ -919,7 +919,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `Ground_UpdateMapColl` (`Ground_804D6954`, the update counter), `crates/melee-sim/src/game/gr/ground.rs`.
 - **Defect:** the stage's collision load leaves each joint's stamp (`CollJoint::xC`) unwritten, and the update skips a joint whose stamp already equals the counter it just raised.
 - **Effect:** a leftover equal to the counter skips that joint's collision update once; not recorded in play.
-- **melee-hd:** starts the stamp at 0 (as a fresh heap); the comparer reports the leftover rather than leave it out.
+- **melee-hd:** modeled: a session from power-on takes the stamps from the heap's image (`mp`'s load, `game::leftovers::bytes`), a replay at 0, as a fresh heap.
 - **Fix:** clear the stamps at the load.
 - **Fix impact:** none unless a leftover matched.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
@@ -1079,6 +1079,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** clear `loadTlut0` before setting its fields, as the first word is.
 - **Fix impact:** none.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); `crates/melee-render/src/gx/texture.rs:420`; `crates/melee-gx/src/lib.rs` (the test); the decompilation's `GXInitTlutObj` and `GXLoadTlut` and their machine code.
+
+### A material's textures share a palette by its size alone
+
+- **Where:** `DifferentTluts` (tobj.c), called by `HSD_TObjSetup` as it names each color-indexed texture's palette in a material's chain; `crates/melee-render/src/hsd/draw.rs` (the names as the draw sets them up) and `crates/melee-sim/src/hsd/export.rs` (`tlut_names`, the names the heap's image keeps).
+- **Defect:** it should tell two palettes apart by their tables or their sizes, but compares the first palette's table with itself (`t0->lut != t0->lut`, false), so two palettes of the same entry count count as one: the second texture takes the first's name, and its own palette is never loaded.
+- **Effect:** in a material with two color-indexed textures whose palettes differ but have as many entries, the second draws with the first's colors; not recorded in play. The names it writes (`HSD_Tlut::tlut_name`) stay in each palette's block, so the heap's image after a scene holds them.
+- **melee-hd:** modeled: the draw shares a name where the entry counts match, and the image writes the names as each setup does.
+- **Fix:** compare `t0->lut` with `t1->lut`.
+- **Fix impact:** picture only, in such a material; no gameplay, replay or Slippi compatibility change (a palette's name in a freed block is a leftover no match reads).
+- **Source:** the decompilation's `DifferentTluts` (`MUST_MATCH`); `crates/melee-sim/src/hsd/export.rs` (`tlut_names`).
 
 ## Saves and the memory card
 

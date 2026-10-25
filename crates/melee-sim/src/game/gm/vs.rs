@@ -1729,7 +1729,7 @@ impl Running<'_> {
         // The scene's files load where the original loads them, timed on the audio timeline.
         self.disc_load("LbRf.dat", MAIN_MEMORY);
         self.game.refract_init(self.data, files.lb_rf);
-        self.game.alloc_dynamics();
+        self.game.alloc_dynamics(self.data);
         code::call(self, addr::EFLIB_INIT, &[]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0)]);
         code::call(self, addr::EFASYNC_LOAD_SYNC, &[Val::Int(0x1F)]);

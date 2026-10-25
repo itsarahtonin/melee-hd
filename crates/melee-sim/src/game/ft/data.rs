@@ -133,6 +133,14 @@ impl LoadedFiles {
             })
     }
 
+    /// The archive of the file named `name`, if the frontend loaded it.
+    pub fn archive_id(&self, name: &str) -> Option<ArchiveId> {
+        self.archives
+            .iter()
+            .find(|(n, _)| n == name)
+            .map(|&(_, id)| id)
+    }
+
     /// The disc entry number and size of the file named `name`.
     pub fn entry(&self, name: &str) -> (i32, u32) {
         self.entries
@@ -367,6 +375,11 @@ impl Running<'_> {
         } else {
             (0, 0)
         };
+        if file != 0
+            && let Some(id) = self.game.ft.data.files.archive_id(name)
+        {
+            crate::hsd::heap::with(|h| h.hold_archive(file, len, id));
+        }
         if self.game.audio.clock.is_some() {
             // Into the file's block where the allocator model gives it.
             let at = if file != 0 { file } else { dest };

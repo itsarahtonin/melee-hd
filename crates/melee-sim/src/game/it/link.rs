@@ -74,9 +74,18 @@ pub fn free(game: &mut Game, l: ItemLinkId) {
     game.it.links.free(l.0);
 }
 
-/// A new link's block, `HSD_ObjAlloc(&item_link_alloc_data)`: a freed one keeps its bytes.
-pub fn alloc(game: &mut Game) -> ItemLinkId {
-    ItemLinkId(game.it.links.alloc_stale(ItemLink::default()))
+/// A new link's block, `HSD_ObjAlloc(&item_link_alloc_data)`: a freed one keeps its bytes,
+/// and one new from the heap in a session what the scenes before left there (docs/engine.md,
+/// a session's heap leftovers).
+pub fn alloc(game: &mut Game, data: &melee_data::archive::Archives) -> ItemLinkId {
+    let l = ItemLinkId(game.it.links.alloc_stale(ItemLink::default()));
+    let addr = game.it.links.addr(l.0);
+    if let Some(left) =
+        crate::game::leftovers::import(data, addr, crate::game::leftovers::pool_grew())
+    {
+        game.it.links[l.0] = left;
+    }
+    l
 }
 
 /// Resets a link for its GObj, `it_80275328`: no neighbours, still, at the origin, no model.

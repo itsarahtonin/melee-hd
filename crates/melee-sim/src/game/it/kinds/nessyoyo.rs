@@ -164,7 +164,7 @@ pub fn make_links(r: &mut Running, gobj: GObjId, bone: Option<JObjId>) {
     let (mut head, mut tail) = (None, None);
     for i in 0..n {
         let g = r.game.world.create(link::CLASS, LINK_P_LINK, 0);
-        let l = link::alloc(r.game);
+        let l = link::alloc(r.game, r.data);
         link::reset(r.game, g, l);
         r.game
             .world

@@ -344,6 +344,8 @@ enum Mutation {
     /// melee-hd's console powered on at 2000-01-01 whatever the recording's clock: the
     /// code's time base without its offset.
     PowerOn,
+    /// The heap's image dropped at power-on: every leftover a new block takes reads zero.
+    NoImage,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -383,6 +385,92 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
     (compared, diffs)
 }
 
+/// The heap's image against memory at a tick's end: in every free block past its header and in
+/// every file the scene holds, the bytes the image knows, by where they come from.
+fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem: &[u8]) {
+    let heap = &game.objs.heap;
+    let img = &heap.image;
+    let mut ranges: Vec<(u32, u32)> = heap
+        .os
+        .free
+        .iter()
+        .map(|&(c, size)| (c + melee_sim::hsd::heap::HEADER, c + size))
+        .collect();
+    ranges.extend(img.live_runs());
+    ranges.sort_unstable();
+    let runs = img.runs();
+    let kind_at = |a: u32| {
+        let i = runs.partition_point(|r| r.1 <= a);
+        runs.get(i).filter(|r| r.0 <= a).map_or("zero", |r| r.2)
+    };
+    let mut counts: std::collections::BTreeMap<(&str, &str), u64> = Default::default();
+    let mut first: Vec<String> = Vec::new();
+    // The differing bytes as runs: where each starts, its end and its kind.
+    let mut wrong: Vec<(u32, u32, &str)> = Vec::new();
+    for (lo, hi) in ranges {
+        let (bytes, known) = img.bytes(data, lo, hi - lo);
+        for (k, (&b, &kn)) in bytes.iter().zip(&known).enumerate() {
+            let a = lo + k as u32;
+            let m = mem[(a - 0x8000_0000) as usize];
+            let kind = kind_at(a);
+            let what = if !kn {
+                "unknown"
+            } else if b == m {
+                "same"
+            } else {
+                if first.len() < 8 {
+                    first.push(format!(
+                        "{a:#010x} ({kind}): ours {b:#04x}, memory {m:#04x}"
+                    ));
+                }
+                match wrong.last_mut() {
+                    Some(r) if r.1 <= a && r.1 + 16 >= a && r.2 == kind => r.1 = a + 1,
+                    _ => wrong.push((a, a + 1, kind)),
+                }
+                "different"
+            };
+            *counts.entry((kind, what)).or_default() += 1;
+        }
+    }
+    if let Ok(at) = std::env::var("IMAGE_AT") {
+        for spec in at.split(',') {
+            let (a, n) = spec.split_once(':').unwrap_or((spec, "40"));
+            let a = u32::from_str_radix(a.trim_start_matches("0x"), 16).unwrap();
+            let n = u32::from_str_radix(n.trim_start_matches("0x"), 16).unwrap();
+            let (b, k) = img.bytes(data, a, n);
+            for row in (0..n).step_by(16) {
+                let line: Vec<String> = (row..(row + 16).min(n))
+                    .map(|i| {
+                        let i = i as usize;
+                        let m = mem[(a + i as u32 - 0x8000_0000) as usize];
+                        if !k[i] {
+                            format!("??/{m:02x}")
+                        } else if b[i] == m {
+                            format!("{m:02x}   ")
+                        } else {
+                            format!("{:02x}!{m:02x}", b[i])
+                        }
+                    })
+                    .collect();
+                println!(
+                    "  {:#010x} {} [{}]",
+                    a + row,
+                    line.join(" "),
+                    kind_at(a + row)
+                );
+            }
+        }
+    }
+    println!("tick {tick}: the heap's image against memory: {counts:?}");
+    for f in first {
+        println!("  {f}");
+    }
+    println!("  {} differing runs:", wrong.len());
+    for (a, b, k) in wrong.iter().take(40) {
+        println!("    {a:#010x}..{b:#010x} ({k}, {:#x} bytes)", b - a);
+    }
+}
+
 pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let (mut survey, mut leftovers_report) = (false, false);
@@ -390,6 +478,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
+    let mut heap_log: Option<String> = None;
+    let mut image_ticks: Vec<u32> = Vec::new();
+    let mut snapshot_ticks: Vec<u32> = Vec::new();
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -418,6 +509,24 @@ pub fn session(args: &[&str]) -> ExitCode {
             // them printed: to survey a session's leftovers (crate melee_capture::leftovers).
             "--leftovers-survey" => survey = true,
             "--leftovers" => leftovers_report = true,
+            // The allocator model's operations from power-on, each tick's marked, into FILE.
+            "--heap-log" => heap_log = Some(it.next().expect("--heap-log FILE").to_string()),
+            // The heap's image against memory at the end of each tick named: what it knows of
+            // the free blocks and the loaded files (melee_sim::hsd::image).
+            "--image" => image_ticks.extend(
+                it.next()
+                    .expect("--image TICK[,TICK...]")
+                    .split(',')
+                    .map(|t| t.parse::<u32>().expect("--image TICK[,TICK...]")),
+            ),
+            // A rollback snapshot of the state at the end of each tick named, measured: its
+            // size, a clone's and a restore's time, and the heap's image's part.
+            "--snapshot" => snapshot_ticks.extend(
+                it.next()
+                    .expect("--snapshot TICK[,TICK...]")
+                    .split(',')
+                    .map(|t| t.parse::<u32>().expect("--snapshot TICK[,TICK...]")),
+            ),
             "--ignore" => ignore.extend(
                 it.next()
                     .expect("--ignore TEXT[,TEXT...]")
@@ -439,6 +548,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("scene-ticks") => Mutation::SceneTicks,
                     Some("seed") => Mutation::Seed,
                     Some("power-on") => Mutation::PowerOn,
+                    Some("no-image") => Mutation::NoImage,
                     Some(m) if m.starts_with("read=") => {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
@@ -560,8 +670,49 @@ pub fn session(args: &[&str]) -> ExitCode {
         ignore: &ignore,
         mutation,
         leftovers_report: leftovers_report || survey,
+        heap_log,
+        image_ticks,
+        snapshot_ticks,
     };
     run.play(setup)
+}
+
+/// A rollback snapshot of the session's state measured as `melee-bench snapshot-match` measures
+/// a match's (docs/performance.md): the state's size with what it owns, the median of 200
+/// clones and of 200 restores (`clone_from`), and the heap image's part of each.
+fn snapshot_report(t: u32, game: &melee_sim::game::state::Game) {
+    use std::time::Instant;
+    let median_us = |f: &mut dyn FnMut()| {
+        let mut v: Vec<f64> = (0..200)
+            .map(|_| {
+                let s = Instant::now();
+                f();
+                s.elapsed().as_secs_f64() * 1e6
+            })
+            .collect();
+        v.sort_by(f64::total_cmp);
+        v[100]
+    };
+    let (copy, bytes) = crate::allocated(|| game.clone());
+    let size = std::mem::size_of_val(game) + bytes;
+    let clone = median_us(&mut || {
+        std::hint::black_box(game.clone());
+    });
+    let mut target = copy.clone();
+    let restore = median_us(&mut || target.clone_from(game));
+    let img = &game.objs.heap.image;
+    let (img_copy, img_bytes) = crate::allocated(|| img.clone());
+    let img_size = std::mem::size_of_val(img) + img_bytes;
+    let img_clone = median_us(&mut || {
+        std::hint::black_box(img.clone());
+    });
+    let mut img_target = img_copy.clone();
+    let img_restore = median_us(&mut || img_target.clone_from(img));
+    println!(
+        "snapshot at tick {t}: {:.2} MB, clone {clone:.1} µs, restore {restore:.1} µs; the heap's image {:.1} KB of it, clone {img_clone:.1} µs, restore {img_restore:.1} µs",
+        size as f64 / (1 << 20) as f64,
+        img_size as f64 / 1024.0
+    );
 }
 
 /// A session's run against its trace.
@@ -576,6 +727,12 @@ struct Run<'a> {
     mutation: Option<Mutation>,
     /// Print the heap leftovers the comparison left out.
     leftovers_report: bool,
+    /// Where to write the allocator model's operations.
+    heap_log: Option<String>,
+    /// The ticks to check the heap's image at.
+    image_ticks: Vec<u32>,
+    /// The ticks to measure a snapshot at.
+    snapshot_ticks: Vec<u32>,
 }
 
 impl Run<'_> {
@@ -609,6 +766,12 @@ impl Run<'_> {
                 // Power-on: the boot runs as far as it's ported, before the first scene's
                 // first tick (trace tick 0).
                 let mut s = Session::new(setup);
+                if self.mutation == Some(Mutation::NoImage) {
+                    s.game.objs.heap.image = Default::default();
+                }
+                if self.heap_log.is_some() {
+                    melee_sim::hsd::heap::start_log();
+                }
                 let booted = catch_unwind(AssertUnwindSafe(|| {
                     s.boot(&mut console);
                 }));
@@ -734,6 +897,9 @@ impl Run<'_> {
                 }
             };
             tick = t;
+            if self.heap_log.is_some() {
+                melee_sim::hsd::heap::log_mark(&format!("T {t}"));
+            }
             let stepped = catch_unwind(AssertUnwindSafe(|| {
                 if render_due {
                     s.render();
@@ -767,6 +933,12 @@ impl Run<'_> {
                 dangling.clone(),
                 &past,
             );
+            if self.image_ticks.contains(&t) {
+                image_check(t, &s.game, &s.data, &image.mem1);
+            }
+            if self.snapshot_ticks.contains(&t) {
+                snapshot_report(t, &s.game);
+            }
             stale.note(t, &s.game, reads);
             melee_capture::leftovers::end_tick();
             // The timeline: the tick's end on the time base, where the trace sampled it.
@@ -801,6 +973,18 @@ impl Run<'_> {
             next = t + 1;
         };
         let at = format!("tick {tick}");
+        if let Some(path) = &self.heap_log {
+            let log = melee_sim::hsd::heap::take_log();
+            std::fs::write(
+                path,
+                log.join(
+                    "
+",
+                ) + "
+",
+            )
+            .unwrap_or_else(|e| panic!("{path}: {e}"));
+        }
         stale.report(&|t| format!("tick {t}"));
         if self.leftovers_report {
             for l in melee_capture::leftovers::report() {

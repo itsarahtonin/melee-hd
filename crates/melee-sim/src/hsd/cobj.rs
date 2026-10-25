@@ -239,6 +239,7 @@ pub fn unref(objs: &mut Objects, c: Option<CObjId>) {
 /// and destroy.
 #[doc(alias = "CObjRelease")]
 pub fn delete(objs: &mut Objects, c: CObjId) {
+    super::export::with_image(|img| super::export::cobj(objs, img, c));
     jobj::remove_aobj(objs, objs.cobjs[c].aobj);
     let (eye, interest) = (objs.cobjs[c].eyepos, objs.cobjs[c].interest);
     wobj::unref(objs, eye);

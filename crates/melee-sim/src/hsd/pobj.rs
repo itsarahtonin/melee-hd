@@ -379,6 +379,7 @@ fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> 
 #[doc(alias = "PObjRelease")]
 pub fn remove(objs: &mut Objects, p: Option<PObjId>) {
     let Some(p) = p else { return };
+    super::export::with_image(|img| super::export::pobj(objs, img, p));
     let u = std::mem::replace(&mut objs.pobjs[p].u, Binding::Skin(None));
     match u {
         Binding::ShapeSet(set) => {

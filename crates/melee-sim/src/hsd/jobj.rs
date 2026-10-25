@@ -1117,8 +1117,11 @@ fn delete(objs: &mut Objects, j: JObjId) {
     if let Some(id) = id
         && objs.ids.get(id) == Some(j)
     {
+        super::export::with_image(|img| super::export::id_entry_freed(objs, img, id));
         objs.ids.remove(id);
     }
+    // What the joint's block holds as it goes, for a session's leftovers.
+    super::export::with_image(|img| super::export::jobj(objs, img, j));
     let o = &objs.jobjs[j];
     if o.scl.is_some() {
         heap::obj_free(heap::Kind::Vec, o.scl_addr);
@@ -1804,5 +1807,6 @@ pub fn remove_aobj(objs: &mut Objects, a: Option<AObjId>) {
     if let Some(j) = objs.aobjs[a].hsd_obj.take() {
         unref(objs, Some(j));
     }
+    super::export::with_image(|img| super::export::aobj(&objs.aobjs, &objs.fobjs, 0, img, a));
     aobj::free(&mut objs.aobjs, Some(a));
 }

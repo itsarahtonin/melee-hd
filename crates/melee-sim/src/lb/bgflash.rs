@@ -267,6 +267,7 @@ impl Game {
     /// The flash's user data released, `lbBgFlash_Free`.
     #[doc(alias = "lbBgFlash_Free")]
     pub fn bg_flash_free(&mut self) {
+        crate::hsd::export::with_image(|img| crate::game::export::bg_flash(self, img));
         self.bgflash.user = None;
         crate::hsd::heap::obj_free(crate::hsd::heap::Kind::BgFlash, self.bgflash.user_addr);
     }
@@ -310,7 +311,15 @@ impl Running<'_> {
             x0: alpha,
             ..BgFlashUserData::default()
         });
-        g.bgflash.user_addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::BgFlash);
+        let addr = crate::hsd::heap::obj_alloc(crate::hsd::heap::Kind::BgFlash);
+        g.bgflash.user_addr = addr;
+        // The block holds what the heap's last owner left there, but its alpha.
+        let fresh = crate::game::leftovers::pool_grew();
+        if let Some(left) =
+            crate::game::leftovers::import::<BgFlashUserData>(self.data, addr, fresh)
+        {
+            g.bgflash.user = Some(BgFlashUserData { x0: alpha, ..left });
+        }
         // `lbArchive_LoadSymbols("LbBf.dat", ...)`.
         self.disc_load("LbBf.dat", crate::game::ft::data::MAIN_MEMORY);
         let g = &mut *self.game;

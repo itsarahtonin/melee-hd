@@ -584,6 +584,14 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         .world
         .setup_gx_link(gobj, tables::render_func(spawn.kind), 6, 0);
     let id = ItemId(r.game.items.alloc_stale(Item::default()));
+    // A block new from the heap holds what the scenes before left there (docs/engine.md, a
+    // session's heap leftovers).
+    let addr = r.game.items.addr(id.0);
+    if let Some(left) =
+        crate::game::leftovers::import(r.data, addr, crate::game::leftovers::pool_grew())
+    {
+        r.game.items[id.0] = left;
+    }
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
     // So are its hitboxes' joints, until the script makes each box (`HitJObj`).

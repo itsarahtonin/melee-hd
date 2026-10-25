@@ -39,8 +39,6 @@ const PKIND_CEREBI: i32 = 0xB8;
 /// `Pokemon_ID_Metamon` and `Pokemon_ID_Tosakinto` (`PokemonKind`, from Goldeen's 0).
 const POKEMON_ID_METAMON: i32 = PKIND_METAMON - PKIND_START;
 const POKEMON_ID_TOSAKINTO: i32 = 0;
-/// `GM_OPENING_MV`, the opening movie's game mode.
-const GM_OPENING_MV: u8 = 0x2A;
 
 /// The release's variables (`itPokemonSpawn_ItemVars`), by offset in the union.
 pub mod spawn {
@@ -166,7 +164,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
     if crate::game::gm::is_training(r.game) {
         code::unported_call("it_8027A780 (training's Pokémon)");
     }
-    if r.game.game_mode == GM_OPENING_MV {
+    if r.game.game_mode == crate::game::gm::machine::GM_OPENING_MV {
         return draw_weighted(r, ball);
     }
     let mut kind = r.game.it.db_menu.CurrentlySelectedPokemon;

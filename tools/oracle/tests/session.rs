@@ -99,10 +99,10 @@ fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
 
 /// Nothing pressed after the memory card scene (`lockstep/idle-sessions/idle-title`): the
 /// movie skipped, the title left to its attract loop, which starts the attract match on
-/// Fountain of Dreams from the title's preloads. Its first tick holds the heap's leftovers the
-/// menus left in fields no proof covers yet (docs/engine.md, a session's heap leftovers), so a
-/// strict run stops there; a survey, leaving out every field still unknown on both sides,
-/// plays the match to the trace's end.
+/// Fountain of Dreams from the title's preloads. Its blocks hold the heap's leftovers the
+/// menus left, which the heap's image models (docs/engine.md, a session's heap leftovers): the
+/// match compares strictly to the trace's end. With the image dropped, its first tick
+/// differs in them.
 #[test]
 fn an_idle_title_reaches_the_attract_match() {
     let (trace, inputs) = (
@@ -112,24 +112,24 @@ fn an_idle_title_reaches_the_attract_match() {
     let Some(out) = session_at(trace, inputs, &["--heap"]) else {
         return;
     };
+    assert!(out.contains("1515 ticks compared, no difference"), "{out}");
+    let Some(out) = session_at(trace, inputs, &["--ticks", "900", "--mutate", "no-image"]) else {
+        return;
+    };
     assert!(
         out.contains("799 ticks compared; tick 798 differs in"),
         "{out}"
     );
-    let Some(out) = session_at(trace, inputs, &["--heap", "--leftovers-survey"]) else {
-        return;
-    };
-    assert!(out.contains("1515 ticks compared, no difference"), "{out}");
 }
 
 /// The opening movie played whole (`idle-movie`), then the title's attract loop and its
-/// match on Kongo Jungle, surveyed to the trace's end.
+/// match on Kongo Jungle, to the trace's end.
 #[test]
 fn an_idle_movie_plays_the_attract_match() {
     let Some(out) = session_at(
         "traces/session/idle-movie.trc",
         "lockstep/idle-sessions/idle-movie.inputs",
-        &["--heap", "--leftovers-survey"],
+        &["--heap"],
     ) else {
         return;
     };
@@ -138,30 +138,38 @@ fn an_idle_movie_plays_the_attract_match() {
 
 /// The main menu's attract loop to its match on Brinstar (`attract`): the stage's bubbles'
 /// timer (`grZebes_GroundVars5`'s `xF8`) starts from the heap's leftover, which the original
-/// counts down from, so even a survey stops at the match's first tick (docs/melee-bugs.md).
+/// counts down from (docs/melee-bugs.md), as melee-hd's does, to the match's bonus (task 9).
+/// A survey finds nothing the image is missing.
 #[test]
 fn the_attract_match_on_brinstar_reads_a_leftover() {
-    let Some(out) = session_at(
+    let (trace, inputs) = (
         "traces/menu-sessions/attract.trc",
         "lockstep/menu-sessions/attract.inputs",
-        &["--heap", "--leftovers-survey"],
-    ) else {
+    );
+    let Some(out) = session_at(trace, inputs, &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains("899 ticks compared; tick 898 differs in 1 places, first: p_link 5 #2 ground.u.zebes5.xF8: ours -1, theirs 2093"),
+        out.contains("899 ticks compared, no difference; stopped in tick 899: fn_8016FFD4"),
+        "{out}"
+    );
+    let Some(out) = session_at(trace, inputs, &["--leftovers-survey"]) else {
+        return;
+    };
+    assert!(
+        out.contains("899 ticks compared, no difference") && !out.contains("leftover "),
         "{out}"
     );
 }
 
 /// `2026-10-10_13-05-00`: the character select and the stage select, then the first match
-/// on Pokémon Stadium from the selects' preloads, surveyed to its results.
+/// on Pokémon Stadium from the selects' preloads, to its results.
 #[test]
 fn a_session_plays_its_match_from_the_selects() {
     let Some(out) = session_at(
         "traces/session/2026-10-10_13-05-00.trc",
         "lockstep/recordings/2026-10-10_13-05-00.inputs",
-        &["--heap", "--ticks", "2600", "--leftovers-survey"],
+        &["--heap", "--ticks", "2600"],
     ) else {
         return;
     };
@@ -284,18 +292,17 @@ fn v2_session(name: &str, args: &[&str]) -> Option<String> {
 
 /// The clock at power-on reaches the boot's seed, the save's clock and the timeline's alarm
 /// grid; DTV on, with nothing held, still boots into the memory card scene; mono from the
-/// SRAM; the title's draws by the clock's seconds. Clean through the movie and the title to
-/// the attract match, whose first tick differs in the heap's leftovers.
+/// SRAM; the title's draws by the clock's seconds. Clean through the movie, the title and
+/// its attract match to the trace's end.
 #[test]
 fn a_version_2_session_takes_its_console() {
-    for name in ["clock", "clock-late", "clock-odd"] {
+    for (name, ticks) in [("clock", 1115), ("clock-late", 1114), ("clock-odd", 1114)] {
         let Some(out) = v2_session(name, &["--heap"]) else {
             return;
         };
         assert!(out.contains("the session: version 2"), "{name}: {out}");
         assert!(
-            out.contains("899 ticks compared; tick 898 differs in")
-                && out.contains("first: p_link 5 #0 ground"),
+            out.contains(&format!("{ticks} ticks compared, no difference")),
             "{name}: {out}"
         );
     }
@@ -476,17 +483,14 @@ fn scripted_session(dir: &str, name: &str, args: &[&str]) -> Option<String> {
 /// written as it opens (tick 383: each sector an erase and 64 page programs, all inside the
 /// step's call, `CardChain::Write`), B's return to the title, whose bank move's chunks queue
 /// their ARAM requests behind the transfers whose callbacks post them (tick 3940), the title and its
-/// attract loop, timeline included, to the attract match's first tick, which differs in the
-/// heap's leftovers.
+/// attract loop, timeline included, and the attract match to the trace's end (a Poké Ball's
+/// Pokémon drawn in tick 5481 as the opening movie's mode draws them).
 #[test]
 fn the_main_menu_toured() {
     let Some(out) = menu_session("menu-tour", &["--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("4562 ticks compared; tick 4561 differs in"),
-        "{out}"
-    );
+    assert!(out.contains("5589 ticks compared, no difference"), "{out}");
 }
 
 /// `2026-10-06_17-37-52`'s save runs whole inside tick 211, and the pad alarm fires in its
@@ -548,17 +552,13 @@ fn the_options_toured() {
 }
 
 /// Rumble off for port 1, mono with the balance toward the sounds, deflicker off, each
-/// saved, then on to VS mode: clean through the selects to the match's first tick, which
-/// differs in the heap's leftovers and the stage select's joints.
+/// saved, then on to VS mode: clean through the selects and the match to the trace's end.
 #[test]
 fn the_options_set_on_to_a_match() {
     let Some(out) = options_session("set", &["--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("2511 ticks compared; tick 2510 differs in"),
-        "{out}"
-    );
+    assert!(out.contains("3787 ticks compared, no difference"), "{out}");
 }
 
 /// Each kind of data erased but all, each answered yes and saved: clean to the trace's end.
@@ -675,16 +675,16 @@ fn a_kana_name_and_a_cancelled_one() {
 }
 
 /// The rules to a match (a one-minute time match, ratio 1.5, items off), through the character
-/// and stage selects to the match's first tick, which differs in the heap's leftovers,
-/// timeline included (tick 1506's audio frame, due in the draw time's read before the
-/// render's sleep, ran 16 ticks late until the options task's fix).
+/// and stage selects and the match to its end, timeline included (tick 1506's audio frame,
+/// due in the draw time's read before the render's sleep, ran 16 ticks late until the options
+/// task's fix), where its results aren't ported (task 9).
 #[test]
 fn the_rules_reach_the_match() {
     let Some(out) = rules_session("rules-match", &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains("2259 ticks compared; tick 2258 differs in"),
+        out.contains("6096 ticks compared, no difference; stopped in tick 6096"),
         "{out}"
     );
 }

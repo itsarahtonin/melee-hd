@@ -272,6 +272,7 @@ pub fn remove(aobjs: &mut AObjs, fobjs: &mut FObjs, a: Option<AObjId>) {
         fobj::remove_all(fobjs, Some(f));
     }
     aobjs[a].fobj = None;
+    super::export::with_image(|img| super::export::aobj(aobjs, fobjs, 0, img, a));
     free(aobjs, Some(a));
 }
 

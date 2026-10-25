@@ -312,7 +312,12 @@ pub fn remove_all(objs: &mut Objects, t: Option<TObjId>) {
     let mut cur = t;
     while let Some(t) = cur {
         cur = objs.tobjs[t].next;
+        super::export::with_image(|img| {
+            super::export::tobj_tev(objs, img, t);
+            super::export::tobj_tlut(objs, img, t);
+        });
         release(objs, t);
+        super::export::with_image(|img| super::export::tobj(objs, img, t));
         super::heap::class_free(super::heap::Class::TObj, objs.tobjs.pool.addr(t.0));
         objs.tobjs.pool.free(t.0);
     }
@@ -362,8 +367,9 @@ pub fn load_desc(tobjs: &mut TObjs, data: &Archives, desc: Option<DataRef>) -> O
     o.imagedesc = data.ptr(td.at(0x4C)).map(ImageRef::Data);
     o.tlut = data.ptr(td.at(0x50));
     o.lod = data.ptr(td.at(0x54));
-    if o.tlut.is_some() {
+    if let Some(d) = o.tlut {
         o.tlut_addr = super::heap::piece_alloc(TLUT_SIZE);
+        super::export::hold_tlut(o.tlut_addr, d);
     }
     o.aobj = None;
     o.flags |= MTX_DIRTY;
@@ -441,9 +447,20 @@ pub fn add_anim(objs: &mut Objects, data: &Archives, t: Option<TObjId>, texanim:
         // The table, a null-ended list of the palettes' copies, then each copy.
         o.tluttbl_addr = super::heap::mem_alloc((u32::from(len) + 1) * 4);
         o.tluttbl_tluts.clear();
-        for _ in 0..len {
-            o.tluttbl_tluts.push(super::heap::piece_alloc(TLUT_SIZE));
+        let table = o.tluttbl.map(|t| t.table);
+        for i in 0..len {
+            let p = super::heap::piece_alloc(TLUT_SIZE);
+            if let Some(d) = table.and_then(|t| data.ptr(t.at(4 * u32::from(i)))) {
+                super::export::hold_tlut(p, d);
+            }
+            o.tluttbl_tluts.push(p);
         }
+        let (at, tluts) = (o.tluttbl_addr, &o.tluttbl_tluts);
+        super::export::with_image(|img| {
+            let mut words: Vec<u8> = tluts.iter().flat_map(|p| p.to_be_bytes()).collect();
+            words.extend([0; 4]);
+            img.put(at, &words);
+        });
     } else {
         o.tluttbl_tluts.clear();
     }

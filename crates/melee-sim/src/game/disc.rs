@@ -40,6 +40,9 @@ impl Running<'_> {
         let carried = crate::hsd::heap::with(|h| h.carried())
             .filter(|c| !c.classes.is_empty())
             .unwrap_or_else(crate::hsd::heap::Carried::power_on);
+        // What the scene's heap held, for the next scenes' leftovers.
+        crate::hsd::heap::with(|h| h.end_scene_image());
+        self.export_heap_image();
         crate::hsd::heap::start_scene_lent(&layout);
         crate::hsd::heap::with(|h| h.carry(&carried));
         // A session's scenes take the heap the boot and the scenes before used: its blocks
@@ -68,6 +71,14 @@ impl Running<'_> {
         o.mobjs.toon = None;
         o.mobjs.shadows = None;
         o.ids = Default::default();
+    }
+
+    /// The objects of the scene's heap as the game lays them out, into the heap's image as the
+    /// heap is made anew ([`crate::hsd::image`]).
+    fn export_heap_image(&mut self) {
+        let (game, data) = (&*self.game, self.data);
+        crate::hsd::export::with_image(|img| super::export::scene_end(game, data, img));
+        crate::hsd::heap::with(|h| h.write_free_links());
     }
 
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
@@ -183,6 +194,11 @@ impl Running<'_> {
     ) -> (melee_data::archive::ArchiveId, u32, u32) {
         let (entrynum, len) = self.game.ft.data.files.entry(name);
         let (file, archive) = crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0));
+        if file != 0
+            && let Some(id) = self.game.ft.data.files.archive_id(name)
+        {
+            crate::hsd::heap::with(|h| h.hold_archive(file, len, id));
+        }
         if self.game.audio.clock.is_some() {
             self.game.audio.load_file(self.data, entrynum, file, len);
         }

@@ -167,6 +167,7 @@ pub fn load_desc(fobjs: &mut FObjs, data: &Archives, desc: Option<DataRef>) -> O
 #[doc(alias = "HSD_FObjFree")]
 pub fn remove_all(fobjs: &mut FObjs, f: Option<FObjId>) {
     let Some(f) = f else { return };
+    super::export::with_image(|img| super::export::fobj(fobjs, img, f));
     remove_all(fobjs, fobjs[f.0].next);
     fobjs.free(f.0);
 }
