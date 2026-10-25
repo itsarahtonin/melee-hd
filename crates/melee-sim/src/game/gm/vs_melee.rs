@@ -197,7 +197,7 @@ impl Running<'_> {
     }
 
     /// `gm_SetNextGameModeStateId`.
-    // Ports `gm_SetNextGameModeStateId`; aliased once a check reaches it.
+    #[doc(alias = "gm_SetNextGameModeStateId")]
     pub fn set_next_game_mode_state_id(&mut self, id: u8) {
         self.game.machine.routing.next_state_id = id + 1;
     }
@@ -253,8 +253,8 @@ impl Running<'_> {
 
     /// Every port's rumble stopped, `lb_800145F4` (`lb_800145C0` on each:
     /// `HSD_PadRumbleRemove`, `HSD_PadRumbleOn`).
-    // Ports `lb_800145F4`; aliased once a check reaches it.
-    // Ports `lb_800145C0`; aliased once a check reaches it.
+    #[doc(alias = "lb_800145F4")]
+    #[doc(alias = "lb_800145C0")]
     pub fn rumble_stop_all(&mut self) {
         for i in 0..4 {
             self.game.pads.rumble.remove(i);

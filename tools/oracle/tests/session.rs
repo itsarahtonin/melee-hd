@@ -757,6 +757,19 @@ fn matches_from_the_menus_on_three_stages() {
     }
 }
 
+/// Custom Rules' stage selection set to random: the stage select skipped for a random stage
+/// (Princess Peach's Castle), Fox against a computer player.
+#[test]
+fn the_random_stage_rule() {
+    let Some(out) = select_session("stage-rule", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("2900 ticks compared, no difference; stopped in tick 2900"),
+        "{out}"
+    );
+}
+
 /// The selects left by L, R and Start (the character select's exit reading its freed coins)
 /// and by B from the stage select, to the main menu again.
 #[test]

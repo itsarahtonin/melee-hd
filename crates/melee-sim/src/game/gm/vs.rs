@@ -1711,7 +1711,8 @@ impl Running<'_> {
     /// and game speed, the camera, the match's state and players, the effects, the stage and
     /// items, the fighters on their spawn points, the camera's first frame, the pause screen,
     /// the HUD, and the match's process on the scene's GObj. Its parts are checked one by
-    /// one; the sequence isn't yet, as its file loads can't run in ssbm-rs's reference.
+    /// one, and the whole sequence by the sessions' matches from the menus.
+    #[doc(alias = "fn_8016E730")]
     pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives) {
         // `db_Setup` sets the debug menus up; on a retail disc it does nothing that lasts.
         self.game.assert_retail();
