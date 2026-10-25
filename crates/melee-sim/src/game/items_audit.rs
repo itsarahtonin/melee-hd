@@ -386,7 +386,6 @@ const LIKE_LIKE: &str = "the Like Like's held fighter's death callback, which on
 const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor found under the item, one whose span holds the item's x, which mpLib_8004DD90_Floor then finds at that x and writes the height of";
 const ONE_PLAYER_TROPHY: &str = "a beaten enemy's trophy, which it_8027CC88 rolls only when gm_IsCurrently1PMode says a single-player mode is on";
 const ENEMY_KINDS: &str = "an enemy of another kind: in a VS match only a container (the monsters' table, it_8026CF04: Goomba, ReDead, Octorok, Topi) and the offered stages' own enemies (Shy Guys, Tingle, Klap Traps) spawn one; the rest come from the stage enemy spawner or adventure stages";
-const ENEMY_BONUS: &str = "a bonus other than an enemy's KO: gm_8016F2F8's only caller in melee-hd is pl_8004049C, whose bonuses for the enemies a VS match spawns are all transcribed";
 const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001 onto the line it last stood on (mpLib_8004DD90_Floor), so the first line's length to its end is positive unless that lift is lost to rounding (2,048 units or more from the origin) and its sideways distance squares to 0 (closer than 4e-23), which no stage's lines give. A walk reaches its end only on a line neither a wall nor a ceiling, so on a floor (every line has one kind: the data's, or the one mpJointUpdateDynamics gives a dynamic line); the walk of 0 goes back and ends on its first line with positive length: from a floor, there with its normal; from a wall (a dynamic line tilted into one) the wall's length added to f27, 0 there (PROC_F27), passes the walk's limit of 0 and stops it short, as it stops the walk ahead, which then doesn't read the normals";
 
 /// Functions, units (for every function of one not named on its own) and stops no items-on
@@ -521,10 +520,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ),
     ("it_8027B5B0 (an enemy of kind", ENEMY_KINDS),
     ("pl_8004049C (an enemy of kind", ENEMY_KINDS),
-    (
-        "gm_8016F2F8 (a bonus besides the enemies' KOs)",
-        ENEMY_BONUS,
-    ),
     (
         "it_802EA804 (a floor normal the first walk left unwritten)",
         WALK_ENDS,

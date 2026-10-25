@@ -814,14 +814,6 @@ pub(crate) mod tests {
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
         (
-            "Ground_803E06C8",
-            "the default lights, which no VS stage uses",
-        ),
-        (
-            "grDatFiles_803E0848",
-            "stages without an archive, none of them VS stages",
-        ),
-        (
             "lbAudioAx_8002305C",
             "random music, which no roster stage's music entry asks",
         ),
