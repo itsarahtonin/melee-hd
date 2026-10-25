@@ -688,3 +688,162 @@ fn the_rules_reach_the_match() {
         "{out}"
     );
 }
+
+fn select_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("select-sessions", name, args)
+}
+
+/// A computer player's door opened by port 1's hand (a random character), Mario's costumes
+/// changed, the stage select's random pick (Princess Peach's Castle) and the match, to its
+/// results (task 9's).
+#[test]
+fn a_random_character_and_stage() {
+    let Some(out) = select_session("random", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("2443 ticks compared, no difference; stopped in tick 2443"),
+        "{out}"
+    );
+}
+
+/// Three computer players at levels 3, 5 and 9 against Samus on Yoshi's Story, a computer
+/// player's coin taken and put back with B.
+#[test]
+fn computer_players_at_three_levels() {
+    let Some(out) = select_session("cpus", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("3341 ticks compared, no difference; stopped in tick 3341"),
+        "{out}"
+    );
+}
+
+/// The rules (handicap on, friendly fire, the self-destruct penalty), then a team battle with
+/// handicaps on Onett; the bank move before the match runs its ARAM interrupts' chain with
+/// each queued transfer started by the handler that pops it, so the audio frames that run
+/// late behind it stay on ssbm-rs's phase to tick 3652 and on.
+#[test]
+fn a_team_battle_with_handicaps() {
+    let Some(out) = select_session("teams", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("4269 ticks compared, no difference; stopped in tick 4269"),
+        "{out}"
+    );
+}
+
+/// Matches from the menus on Corneria, Kongo Jungle and Pokémon Stadium: on the first two a
+/// fighter's block takes the stage select's morphing background's blend buffer's bytes, and
+/// Corneria's splash lines their spawns' leftovers.
+#[test]
+fn matches_from_the_menus_on_three_stages() {
+    for (name, ticks) in [
+        ("stage-corneria", "2476"),
+        ("stage-kongo", "2554"),
+        ("stage-ps", "2489"),
+    ] {
+        let Some(out) = select_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!(
+                "{ticks} ticks compared, no difference; stopped in tick {ticks}"
+            )),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The selects left by L, R and Start (the character select's exit reading its freed coins)
+/// and by B from the stage select, to the main menu again.
+#[test]
+fn the_selects_left_by_l_r_and_start() {
+    let Some(out) = select_session("lras", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2352 ticks compared, no difference"), "{out}");
+}
+
+/// The vanilla traces' runs recorded as sessions: from a new save through the title, the main
+/// menu and the selects to a match on Fountain of Dreams, to the traces' ends.
+#[test]
+fn the_vanilla_runs_from_power_on() {
+    for (name, ticks) in [
+        ("menus-ics-fox-fod", "1195"),
+        ("menus-ics-fox-fod-noitems", "1894"),
+        ("menus-cpu-fox-fox-fod", "2004"),
+    ] {
+        let Some(out) = scripted_session("vanilla-sessions", name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// `session-sync` on a recording: its matches rolled back 7 ticks after each tick, and the
+/// launcher's shortcut checked against the match the menus started.
+fn session_sync(dir: &str, name: &str, args: &[&str]) -> Option<String> {
+    let inputs = ssbm_rs_local(&format!("lockstep/{dir}/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&inputs).exists() {
+        eprintln!("no recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(["session-sync", &inputs])
+        .args(args)
+        .output()
+        .expect("melee-oracle runs");
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{text}");
+    Some(text)
+}
+
+#[test]
+fn a_session_match_rolls_back() {
+    let Some(out) = session_sync(
+        "vanilla-sessions",
+        "menus-cpu-fox-fox-fod",
+        &["--rollback", "7", "--shortcut"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("a match's scene from tick 1601 to 1944"),
+        "{out}"
+    );
+    assert!(
+        out.contains("the shortcut at tick 1601: the menus' start data (2 players, stage 2)"),
+        "{out}"
+    );
+    assert!(
+        out.contains("its heap after its first tick is the menus' match's"),
+        "{out}"
+    );
+    assert!(
+        out.contains("337 ticks checked in 1 matches, rolled back 7 each, no difference"),
+        "{out}"
+    );
+}
+
+#[test]
+fn a_session_rollback_catches_a_perturbation() {
+    let Some(out) = session_sync(
+        "vanilla-sessions",
+        "menus-ics-fox-fod",
+        &["--rollback", "7", "--perturb", "1000"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "the state after tick 1000, restored from before tick 994 and played again, differs"
+        ),
+        "{out}"
+    );
+}

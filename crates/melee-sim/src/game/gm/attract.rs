@@ -33,7 +33,7 @@ pub struct Attract {
 
 /// The save's VS rules and preferences as `gm_80167BC8` reads them
 /// (`gmMainLib_GetGameRules`, `gmMainLib_GetGamePrefs`, `gmMainLib_8015ED30`).
-pub(super) fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
+pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
     let r = &g.x1850;
     let p = &g.thing.save_data.x1CB0;
     let rules = GameRules {
@@ -64,8 +64,7 @@ impl Running<'_> {
     /// in a stock match). `gm_LoadRumbleEnabled` runs on the players the last match left and
     /// writes only their rumble, which the players' defaults then set again, so it changes
     /// nothing.
-    // Aliased once a session compares the attract match clean: its first tick still differs in
-    // the heap's leftovers the menus' scenes leave (docs/oracle.md, the menu sessions).
+    #[doc(alias = "onEnterVs@801BF4DC")]
     pub fn opening_on_enter_vs(&mut self) {
         let (rules, prefs) = saved_rules(&self.game.game_data);
         let vs = &mut self.game.game_data.modes.table[VS_MODE_OPENING].start;
@@ -103,8 +102,7 @@ impl Running<'_> {
 
     /// `gm_80183218`, the attract match's start: the camera's first step, and its process
     /// (`fn_80182F40`) on a GObj of its own.
-    // Aliased once a session compares the attract match clean: its first tick still differs in
-    // the heap's leftovers the menus' scenes leave (docs/oracle.md, the menu sessions).
+    #[doc(alias = "gm_80183218")]
     pub fn attract_match_start(&mut self) {
         self.game.attract.camera_step = 0;
         let w = &mut self.game.world;
@@ -157,8 +155,7 @@ impl Running<'_> {
     /// camera turns to the first focus player while the others play at level 2, at 640 (or
     /// once that fighter leaves the bounds) to the second, and at 880 (or once it leaves) back
     /// to the standard view with every player at level 9.
-    // Aliased once a session compares the attract match clean: its first tick still differs in
-    // the heap's leftovers the menus' scenes leave (docs/oracle.md, the menu sessions).
+    #[doc(alias = "fn_80182F40")]
     pub fn attract_proc(&mut self, _gobj: GObjId) {
         let pressed = self.game.buttons_triggered(4)
             & u64::from(crate::input::pad::BUTTON_START | crate::input::pad::BUTTON_A)
@@ -226,8 +223,7 @@ impl Running<'_> {
     /// ([`super::machine::Machine::files_wanted`]); the stage's and characters' files the
     /// title's game cache preloaded (`gm_PreloadTitleDemo`) are taken from the cache, not
     /// read again.
-    // Aliased once a session compares the attract match clean: its first tick still differs in
-    // the heap's leftovers the menus' scenes leave (docs/oracle.md, the menu sessions).
+    #[doc(alias = "gm_Scene_Vs_OnEnter")]
     pub fn vs_scene_on_enter(&mut self, scene_mode: u8) {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
