@@ -584,6 +584,7 @@ impl Audio {
         // `ARQPostRequest` (every request the queue posts is high priority) queues the request
         // behind the last one waiting, if one waits behind the transfer under way.
         let d = &mut self.devcom;
+        let starts = d.arq_slots.is_empty();
         if d.arq_slots.len() >= 2 {
             let (b, s) = d.arq_slots[d.arq_slots.len() - 1];
             d.arq[usize::from(b)][usize::from(s)].next = arq_request_addr(buf, slot);
@@ -601,7 +602,7 @@ impl Audio {
             length,
             callback: done.callback(),
         };
-        self.hw.arq_post();
+        self.hw.arq_post(starts);
         self.devcom.arq_done.push(done);
     }
 
@@ -609,7 +610,11 @@ impl Audio {
     /// and only then is it no longer under way (`__ARQRequestPendingHi` cleared after the
     /// callback returns), so a request the callback posts (the device command queue's next
     /// transfer) queues behind it in `ARQPostRequest`, linked behind any already waiting, and
-    /// starts as the routine returns (`__ARQPopTaskQueueHi`). An ARAM-to-ARAM move posts two:
+    /// starts as the routine returns (`__ARQPopTaskQueueHi`), its `ARStartDMA` in this
+    /// handler: a request posted while another is under way costs nothing as it's posted, and
+    /// the handler that pops it takes the start's register reads (ssbm-rs's probe of the
+    /// `teams` session's bank move, `research/card-chain/teams-late-2676.log`: each handler
+    /// 64 ticks, the status read and the next start). An ARAM-to-ARAM move posts two:
     /// the second is linked behind the first (`next`) when they're posted from a callback, not
     /// when the queue was idle.
     pub fn devcom_aram_done(&mut self, data: &Archives) {
@@ -617,6 +622,10 @@ impl Audio {
         self.devcom_arq_callback(data, done);
         if !self.devcom.arq_slots.is_empty() {
             self.devcom.arq_slots.remove(0);
+            // The next one queued starts as the routine returns (`__ARQPopTaskQueueHi`).
+            if !self.devcom.arq_slots.is_empty() {
+                self.hw.arq_start();
+            }
         }
     }
 
