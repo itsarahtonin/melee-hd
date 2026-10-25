@@ -175,7 +175,7 @@ fn a_session_plays_its_match_from_the_selects() {
     };
     assert!(
         out.contains(
-            "2517 ticks compared, no difference; stopped in tick 2517: gm_Scene_Vs_OnExit's results"
+            "2518 ticks compared, no difference; stopped in tick 2518: render callback 0x80179d3c (fn_80179D3C) isn't ported"
         ),
         "{out}"
     );
@@ -440,7 +440,7 @@ fn taken_up_match_catches_a_changed_seed() {
         return;
     };
     assert!(
-        out.contains("1 ticks compared; tick 3301 differs in 30 places, first: HSD_RandSeedPtr"),
+        out.contains("1 ticks compared; tick 3301 differs in 29 places, first: HSD_RandSeedPtr"),
         "{out}"
     );
 }
