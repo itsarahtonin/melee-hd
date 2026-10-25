@@ -32,7 +32,7 @@ pub mod result {
 
 /// The memory card in slot A, if one is in, and the console the card library runs on
 /// (its flash ID, which a card's serial must match): the console's device, lent to a step.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct CardDevice {
     pub card: Option<Card>,
     pub console: Console,

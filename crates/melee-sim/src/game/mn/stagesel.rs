@@ -221,7 +221,7 @@ const NOW_LOADING: usize = 11;
 
 impl Running<'_> {
     /// `mnSelStageRandom`: a random stage's kind.
-    // Ports `mnSelStageRandom`; aliased once a check reaches it.
+    #[doc(alias = "mnSelStageRandom")]
     pub fn random_stage(&mut self) -> u8 {
         let i = self.sss_random_entry();
         STAGES[i].stkind
@@ -230,7 +230,7 @@ impl Running<'_> {
     /// Whether the random switch lets entry `i`'s stage come up (`gm_80164330` on its
     /// switch bit): unlocked, and on in the item switch's stages once the save has the
     /// switch.
-    // Ports `gm_80164330`; aliased once a check reaches it.
+    #[doc(alias = "gm_80164330")]
     fn sss_random_on(&self, switch: u8) -> bool {
         let stkind = super::super::gm::opening::stage_select_kind(switch);
         if !self.stage_unlocked(stkind) {
@@ -246,7 +246,7 @@ impl Running<'_> {
     /// The random pick, `mnStageSel_802599EC`: every stage free again if none is, the
     /// waits counted down until one is free, then a free one drawn (the first if 100,000
     /// draws find none), kept from the next pick and its neighbour in its pair held for 3.
-    // Ports `mnStageSel_802599EC`; aliased once a check reaches it.
+    #[doc(alias = "mnStageSel_802599EC")]
     pub fn sss_random_entry(&mut self) -> usize {
         let st = &self.game.stagesel.stages;
         let any =

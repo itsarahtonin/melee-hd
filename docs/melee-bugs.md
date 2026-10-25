@@ -1283,6 +1283,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/mn/charsel/procs.rs` (`icon_name_or_none`).
 
+### The character select's exit after L, R and Start reads its freed coins
+
+- **Where:** `mnCharSel_Scene_OnExit`, `crates/melee-sim/src/game/mn/charsel/procs.rs` (`charsel_on_exit`, `charsel_exit_coin_up`).
+- **Defect:** L, R and Start on the character select free every GObj on process links 1 to 8 (`mn_8022F138`), the coins' among them with their user data (`HSD_Free`), and end the scene with no change pending; the exit then works out the characters' sound banks from each door's coin (`mnCharSel_804A0BD0[i]->x5`, whether a hand holds it) through the table's pointers, which now name freed blocks. The hands' and name tags' tables keep dangling pointers too.
+- **Effect:** the read takes the byte the freed block kept, as the coin last had it: nothing allocates between the free and the exit, in the same tick. The banks it asks for are the ones a normal exit would ask for, which the main menu's entry then lets go. Seen in `select-sessions/lras` (tick 783).
+- **melee-hd:** modeled: a freed coin's block and its `x5` stay (`CharSel::left_tokens`), and the exit reads them; a block the heap has handed out again stops (`unported_call`). The tables' freed blocks stay as addresses for the comparer (`left_hands`, `left_tags`).
+- **Fix:** test the scene's pending change (or clear the tables) before reading the coins.
+- **Fix impact:** none in play.
+- **Source:** `mncharsel.c`'s `mnCharSel_Scene_OnExit` and `mnCharSel_Scene_OnFrame`'s L, R and Start; `crates/melee-sim/src/game/mn/charsel/procs.rs`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

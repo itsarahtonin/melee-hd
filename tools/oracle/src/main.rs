@@ -22,6 +22,7 @@ mod diff;
 mod golden;
 mod record;
 mod session;
+mod session_sync;
 mod sync;
 mod trace;
 mod vanilla;
@@ -94,6 +95,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["trace-heap", trace] => diff::trace_heap(trace),
         ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
         ["session", ref rest @ ..] => session::session(rest),
+        ["session-sync", ref rest @ ..] => session_sync::session_sync(rest),
         ["rules", ref replays @ ..] if !replays.is_empty() => rules(replays),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
@@ -128,6 +130,9 @@ fn run(args: Vec<String>) -> ExitCode {
             );
             eprintln!(
                 "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"
+            );
+            eprintln!(
+                "       melee-oracle session-sync INPUTS [--card FILE] [--card-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
             );
             eprintln!("       melee-oracle rules REPLAY.slp...");
             ExitCode::from(2)

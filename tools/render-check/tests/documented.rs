@@ -21,8 +21,9 @@ use common::{
     IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM,
-    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
+    RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
+    compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -148,6 +149,33 @@ frames!(OPTIONS_TOUR;
     options_3700 3700,
     options_3800 3800,
     options_3880 3880,
+);
+// The character and stage selects (`select-sessions`): port 1's door opening as its hand
+// takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer
+// player's door opened at random (946), the stage select's random icon hovered (1091) and
+// its pick, the stage's name over "Now loading" (1121); three computer players' level sliders
+// (1301, 1501); a team battle's doors (2001), a computer player's door with its handicap and
+// level sliders (2201), a handicap moved (2401); Kongo Jungle hovered, its name and emblem
+// (1181).
+frames!(SELECT_RANDOM;
+    select_random_701 701,
+    select_random_796 796,
+    select_random_831 831,
+    select_random_946 946,
+    select_random_1091 1091,
+    select_random_1121 1121,
+);
+frames!(SELECT_CPUS;
+    select_cpus_1301 1301,
+    select_cpus_1501 1501,
+);
+frames!(SELECT_TEAMS;
+    select_teams_2001 2001,
+    select_teams_2201 2201,
+    select_teams_2401 2401,
+);
+frames!(SELECT_KONGO;
+    select_kongo_1181 1181,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

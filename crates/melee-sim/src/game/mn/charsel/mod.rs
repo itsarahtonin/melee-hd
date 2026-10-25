@@ -728,6 +728,15 @@ pub struct CharSel {
     /// `mnCharSel_804A0BC0` and `mnCharSel_804A0BD0`.
     pub cursors: [Option<Cursor>; 4],
     pub tokens: [Option<Token>; 4],
+    /// A freed coin's block and its `held_by` byte (`x5`) as its free left them: L, R and
+    /// Start free the coins before the scene's exit reads them through the table's dangling
+    /// pointers (docs/melee-bugs.md).
+    pub left_tokens: [Option<(u32, u8)>; 4],
+    /// The blocks of the hands' and name tags' user data last freed, which the tables keep
+    /// pointing at (`mnCharSel_804A0BC0`, `mnCharSel_803F0E8C`): nothing reads them before
+    /// the next entry writes the tables again.
+    pub left_hands: [u32; 4],
+    pub left_tags: [u32; 4],
 }
 
 impl Default for CharSel {
@@ -776,6 +785,9 @@ impl Default for CharSel {
             ko_texts: [None; 4],
             cursors: [None; 4],
             tokens: [None; 4],
+            left_tokens: [None; 4],
+            left_hands: [0; 4],
+            left_tags: [0; 4],
         }
     }
 }

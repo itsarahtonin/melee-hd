@@ -466,10 +466,21 @@ impl HwLog {
         self.spent += REG_READ;
     }
 
-    /// An ARAM transfer is posted (and done).
-    pub fn arq_post(&mut self) {
-        self.spent += ARQ_POST;
+    /// An ARAM transfer is posted (and done). `ARQPostRequest` starts it at once
+    /// (`ARStartDMA`'s seven register reads) only when no transfer is under way; else it only
+    /// queues it, and the ARAM interrupt's handler that pops it starts it
+    /// ([`HwLog::arq_start`]).
+    pub fn arq_post(&mut self, starts: bool) {
+        if starts {
+            self.spent += ARQ_POST;
+        }
         self.aram += 1;
+    }
+
+    /// A queued ARAM transfer starts from the interrupt handler of the one before
+    /// (`__ARQInterruptServiceRoutine`'s `ARStartDMA`, after the finished one's callback).
+    pub fn arq_start(&mut self) {
+        self.spent += ARQ_POST;
     }
 }
 

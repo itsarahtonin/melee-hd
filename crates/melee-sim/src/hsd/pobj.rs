@@ -26,8 +26,155 @@ pub const SHAPEANIM: u16 = 1 << 12;
 /// Weighted between joints.
 pub const ENVELOPE: u16 = 2 << 12;
 
+/// A morphing shape's blend interpolates between two neighbouring shapes
+/// (`SHAPESET_AVERAGE`, which `drawShapeAnim` tests).
+pub const SHAPESET_AVERAGE: u16 = 1 << 0;
 /// A morphing shape's blend weights adds the shapes rather than interpolating two.
 pub const SHAPESET_ADDITIVE: u16 = 1 << 1;
+
+/// `GX_VA_NBT`.
+const GX_VA_NBT: u32 = 25;
+/// `GX_INDEX16`, `GX_F32` and the integer component types.
+const GX_INDEX16: u32 = 3;
+const GX_U8: u32 = 0;
+const GX_S8: u32 = 1;
+const GX_U16: u32 = 2;
+const GX_S16: u32 = 3;
+const GX_F32: u32 = 4;
+
+/// A morphing shape's blended vertices and normals as `drawShapeAnim` leaves them in its
+/// buffers (`vertex_buffer`, `normal_buffer`): its vertices' positions, and its normals (three
+/// vectors each for a normal, binormal and tangent set, `GX_VA_NBT`). An averaging set
+/// interpolates between the shape its blend falls in and the next; an additive one adds each
+/// shape after the first by its weight. The float steps follow the machine code (ssbm-rs
+/// transliterates `drawShapeAnim`): each component's difference, then a fused multiply-add.
+// Ports `get_shape_normal_xyz` and `get_shape_nbt_xyz` (in `get`); aliased once a check
+// reaches a morphing shape with normals.
+#[doc(alias = "drawShapeAnim")]
+#[doc(alias = "get_shape_vertex_xyz")]
+pub fn blend_shape(data: &Archives, set: &ShapeSet) -> (Vec<[f32; 3]>, Vec<[f32; 3]>) {
+    use crate::fpu::{mem, reg};
+    use gekko_fp as fp;
+    let nbt = set.normal_desc.is_some_and(|d| data.u32(d) == GX_VA_NBT);
+    let per = if nbt { 9 } else { 3 };
+    let mut vertices = vec![[0.0f32; 3]; set.nb_vertex_index.max(0) as usize];
+    let normals_n = if set.normal_desc.is_some() {
+        set.nb_normal_index.max(0) as usize
+    } else {
+        0
+    };
+    let mut normals = vec![[0.0f32; 3]; normals_n * per / 3];
+    let last = i32::from(set.nb_shape) - 1;
+    // `get_shape_vertex_xyz`, `get_shape_normal_xyz` and `get_shape_nbt_xyz`: shape `shape`'s
+    // `n` components of entry `i`, decoded as single floats in registers.
+    let get = |desc: DataRef, list: DataRef, shape: i32, i: i32, n: usize| -> [f64; 9] {
+        let index = data
+            .ptr(list.at(4 * shape as u32))
+            .expect("a shape's index array");
+        let idx = if data.u32(desc.at(4)) == GX_INDEX16 {
+            (u32::from(data.u8(index.at(2 * i as u32))) << 8)
+                + u32::from(data.u8(index.at(2 * i as u32 + 1)))
+        } else {
+            u32::from(data.u8(index.at(i as u32)))
+        };
+        let base = data
+            .ptr(desc.at(0x14))
+            .expect("a shape's vertex array")
+            .at(idx * u32::from(data.u16(desc.at(0x12))));
+        let mut out = [0.0; 9];
+        let ty = data.u32(desc.at(0xC));
+        let scale = fp::frsp(f64::from(1i32 << data.u8(desc.at(0x10))));
+        for (k, o) in out.iter_mut().take(n).enumerate() {
+            let k = k as u32;
+            *o = match ty {
+                GX_F32 => fp::lfs(data.u32(base.at(4 * k))),
+                GX_U8 => fp::fdivs(fp::frsp(f64::from(data.u8(base.at(k)))), scale),
+                GX_S8 => fp::fdivs(fp::frsp(f64::from(data.u8(base.at(k)) as i8)), scale),
+                GX_U16 => fp::fdivs(fp::frsp(f64::from(data.u16(base.at(2 * k)))), scale),
+                GX_S16 => fp::fdivs(fp::frsp(f64::from(data.u16(base.at(2 * k)) as i16)), scale),
+                t => panic!("a shape's components of type {t} (HSD_Panic: unexpected type)"),
+            };
+        }
+        out
+    };
+    let flat = |v: &[[f32; 3]], at: usize, k: usize| -> f64 { reg(v[at + k / 3][k % 3]) };
+    let store = |v: &mut Vec<[f32; 3]>, at: usize, k: usize, x: f64| {
+        v[at + k / 3][k % 3] = mem(x);
+    };
+    if set.flags & SHAPESET_AVERAGE != 0 {
+        assert!(
+            set.flags & SHAPESET_ADDITIVE == 0,
+            "an averaging shape set whose blend is additive"
+        );
+        let bl = reg(set.blend[0]);
+        let shape = fp::fctiwz(bl).max(0).min(last);
+        let d = fp::fsubs(bl, f64::from(shape));
+        // `pobj_min(MAX(0.0, d), 1.0f)`, the maximum taken again when it's below 1.
+        let up = if 0.0 > d { 0.0 } else { d };
+        let blend = fp::frsp(if up < 1.0 { up } else { 1.0 });
+        let next = (shape + 1).min(last);
+        let mix =
+            |out: &mut Vec<[f32; 3]>, desc: DataRef, list: DataRef, count: usize, n: usize| {
+                for i in 0..count {
+                    let s0 = get(desc, list, shape, i as i32, n);
+                    let s1 = get(desc, list, next, i as i32, n);
+                    for k in 0..n {
+                        let v = fp::fmadds(blend, fp::fsubs(s1[k], s0[k]), s0[k]);
+                        store(out, i * n / 3, k, v);
+                    }
+                }
+            };
+        if let (Some(desc), Some(list)) = (set.vertex_desc, set.vertex_idx_list) {
+            mix(
+                &mut vertices,
+                desc,
+                list,
+                set.nb_vertex_index.max(0) as usize,
+                3,
+            );
+        }
+        if let (Some(desc), Some(list)) = (set.normal_desc, set.normal_idx_list) {
+            mix(&mut normals, desc, list, normals_n, per);
+        }
+    } else {
+        assert!(
+            set.flags & SHAPESET_ADDITIVE != 0 && set.blend.len() == usize::from(set.nb_shape),
+            "an additive blend without its weights"
+        );
+        let add =
+            |out: &mut Vec<[f32; 3]>, desc: DataRef, list: DataRef, count: usize, n: usize| {
+                for i in 0..count {
+                    let at = i * n / 3;
+                    let s = get(desc, list, 0, i as i32, n);
+                    for (k, &x) in s.iter().enumerate().take(n) {
+                        store(out, at, k, x);
+                    }
+                    for j in 0..i32::from(set.nb_shape) {
+                        let w = reg(set.blend[j as usize]);
+                        let b = fp::frsp(if 0.0 > w { 0.0 } else { w });
+                        let s = get(desc, list, j + 1, i as i32, n);
+                        for (k, &x) in s.iter().enumerate().take(n) {
+                            let v = fp::fmadds(x, b, flat(out, at, k));
+                            store(out, at, k, v);
+                        }
+                    }
+                }
+            };
+        if let (Some(desc), Some(list)) = (set.vertex_desc, set.vertex_idx_list) {
+            add(
+                &mut vertices,
+                desc,
+                list,
+                set.nb_vertex_index.max(0) as usize,
+                3,
+            );
+        }
+        if let (Some(desc), Some(list)) = (set.normal_desc, set.normal_idx_list) {
+            add(&mut normals, desc, list, normals_n, per);
+        }
+    }
+    (vertices, normals)
+}
 
 /// One joint's weight in an envelope (`HSD_Envelope`).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]

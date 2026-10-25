@@ -286,12 +286,12 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
 
 /// The console a session plays on: the recording's reads, in order, and the disc. Past the
 /// recording's end it keeps reporting the last read, as ssbm-rs's playback does.
-struct Console<'a> {
-    reads: &'a [PadData],
-    next: usize,
-    disc: &'a Disc,
+pub(crate) struct Console<'a> {
+    pub(crate) reads: &'a [PadData],
+    pub(crate) next: usize,
+    pub(crate) disc: &'a Disc,
     /// `--mutate read=N`: read N's first connected controller has A toggled, for melee-hd only.
-    mutate: Option<usize>,
+    pub(crate) mutate: Option<usize>,
 }
 
 impl melee_sim::game::session::Console for Console<'_> {
