@@ -25,7 +25,7 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms::DAMAGE_SONG, 0, 0.0, 1.0, 0.0, None);
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let c = self.common();
-        let rank = self.game.player_rank(slot).wrapping_add(1);
+        let rank = self.player_rank(slot).wrapping_add(1);
         let by_rank = fp::fmuls(
             reg(c.f32(0x630)),
             fp::fsubs(reg(c.f32(0x634)), fp::frsp(f64::from(rank))),

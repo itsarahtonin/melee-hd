@@ -1065,7 +1065,7 @@ impl Running<'_> {
         let tick = self.game.scene_ticks();
         if self.game.vs.state.x24C.x0 != tick {
             self.game.vs.state.x24C.x0 = tick;
-            self.game.compile_results();
+            self.compile_results();
         }
         self.game.vs.state.x24C.player_standings[slot as usize].x20
     }

@@ -53,6 +53,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if game.run_think(gobj, addr) => {}
         addr if game.charsel_run(gobj, addr) => {}
         addr if game.stagesel_run(gobj, addr) => {}
+        addr if game.results_run(gobj, addr) => {}
         super::gm::attract::PROC => game.attract_proc(gobj),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
@@ -133,6 +134,8 @@ pub fn run_pred(game: &mut Running, gobj: GObjId, f: CodeRef) -> bool {
 pub fn run_event(game: &mut Running, f: u32) {
     use super::gr::{battle, last};
     match f {
+        // `Ground_OnStart`: the dummy stage's, empty.
+        super::gr::data::GROUND_ON_START => {}
         0x8021_9CA4 => battle::on_init(game),
         0x8021_9D54 => battle::on_load(game),
         0x8021_9D58 => battle::on_start(game),

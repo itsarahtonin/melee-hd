@@ -144,6 +144,12 @@ struct StateDesc {
 }
 
 /// The mode states of the modes ported this far, by mode.
+/// The game scene (`GS_*`) the machine's current scene runs, if any.
+pub fn scene_kind(info: Option<(u8, u8)>) -> Option<u8> {
+    let (mode, state) = info?;
+    states(mode).get(usize::from(state)).map(|s| s.scene)
+}
+
 fn states(mode: u8) -> &'static [StateDesc] {
     const BOOT: [StateDesc; 1] = [StateDesc {
         id: 0,
@@ -299,6 +305,9 @@ fn states(mode: u8) -> &'static [StateDesc] {
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
+
+/// `gm_Scene_Results_OnEnter`.
+const RESULTS_ON_ENTER: u32 = 0x8017_7368;
 
 /// `GS_MOVIE_HOWTO`, `GS_MOVIE_OMAKE15`.
 const GS_MOVIE_HOWTO: u8 = 0x1E;
@@ -509,6 +518,8 @@ impl Running<'_> {
             ),
             GS_MOVIE_HOWTO => (super::howto::HOWTO_ON_ENTER, super::howto::HOWTO_ON_FRAME),
             GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
+            // No frame function: the model GObj's process runs the screen.
+            GS_RESULTS => (CodeRef(RESULTS_ON_ENTER), CodeRef(0)),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -531,9 +542,10 @@ impl Running<'_> {
             crate::game::mn::stagesel::ON_ENTER => self.stagesel_on_enter(),
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
+            CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
             _ => unreachable!(),
         }
-        self.game.gm.on_frame = Some(on_frame);
+        self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
     }
 
     /// `gm_801A4D34`'s prologue, once [`Running::next_scene`] has entered the scene (and the
@@ -591,10 +603,11 @@ impl Running<'_> {
             GS_MEMCARD => self.memcard_on_exit(),
             // No exit of their own.
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
-            GS_VS => self.vs_scene_on_exit(),
+            GS_VS | GS_SUDDEN_DEATH => self.vs_scene_on_exit(scene_mode, state),
             GS_CSS => self.charsel_on_exit(),
             GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
+            GS_RESULTS => self.results_on_exit(),
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -648,16 +661,12 @@ impl Running<'_> {
             Hook::VsEnterSss => self.vs_mode_enter_sss(),
             Hook::VsExitSss => self.vs_mode_exit_sss(),
             Hook::VsEnterVs => self.vs_mode_enter_vs(),
-            Hook::VsExitVs => {
-                unported_call("onExitVs (gmVsMelee_ExitVs, the match's records: task 9)")
-            }
+            Hook::VsExitVs => self.vs_mode_exit_vs(),
             Hook::VsEnterSuddenDeath => {
                 unported_call("onEnterSuddenDeath (gmVsMelee_EnterSuddenDeath: task 9)")
             }
             Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
-            Hook::VsEnterResults => {
-                unported_call("onEnterResults (gmVsMelee_EnterResults: task 9)")
-            }
+            Hook::VsEnterResults => self.vs_mode_enter_results(),
             Hook::VsExitResults => unported_call("onExitResults (task 9)"),
             Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
                 unported_call("the challenger approach's states (task 17)")

@@ -873,6 +873,23 @@ fn light_list(game: &Game, data: &Archives) -> Option<Vec<(DataRef, u16)>> {
     None
 }
 
+/// The default lights (`Ground_803E06C8`, in the executable's data): an ambient light and a
+/// light from the front, each with its descriptor's flags.
+fn default_lights(game: &Game, data: &Archives) -> Vec<(DataRef, u16)> {
+    let d = game
+        .gr
+        .defaults
+        .expect("the executable's stage defaults aren't loaded");
+    let mut at = exe_ref(d, 0x803E_06C8);
+    let mut out = Vec::new();
+    while let Some(entry) = data.ptr(at) {
+        let desc = data.ptr(entry).expect("a light list entry without a light");
+        out.push((entry, data.u16(desc.at(8))));
+        at = at.at(4);
+    }
+    out
+}
+
 /// The lights fighters use, loaded (`lb_80011AC4` on `Ground_801C49B4`'s list): the stage's
 /// own (`stage_info.map_plit`) as its light overrides leave them, or none, for the defaults.
 #[doc(alias = "Ground_801C49B4")]
@@ -982,9 +999,7 @@ pub fn load_light_list(game: &mut Game, data: &Archives, list: DataRef) -> Optio
 /// says, run once, and their process.
 #[doc(alias = "Ground_801C466C")]
 pub fn create_lights(game: &mut Game, data: &Archives) {
-    let Some(entries) = light_list(game, data) else {
-        unimplemented!("the default lights (Ground_803E06C8) live in the executable");
-    };
+    let entries = light_list(game, data).unwrap_or_else(|| default_lights(game, data));
     let gobj = game.world.create(0xD, 3, 0);
     // `lb_80011AC4` on the list as the overrides leave it.
     let mut first = None;
@@ -1339,10 +1354,35 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         .position(Option::is_none)
         .expect("the original's assertion failed: grdatfiles.c:229");
     let Some((name, archive)) = file else {
-        unimplemented!("a stage without an archive (grDatFiles_803E0848's defaults)");
+        // The defaults: the executable's `GroundParam` and `map_head`, no collisions, items,
+        // particles or stage objects.
+        let d = r
+            .game
+            .gr
+            .defaults
+            .expect("the executable's stage defaults aren't loaded");
+        let at = |addr: u32| exe_ref(d, addr);
+        r.game.gr.archives[slot] = Some(super::StageArchive {
+            archive: d,
+            map_head: Some(at(0x803E_0924)),
+            kind: 0,
+            addr: u32::MAX,
+        });
+        let i = &mut r.game.stage_info;
+        i.coll_data = None;
+        i.param = Some(at(0x803E_0848));
+        i.itemdata = None;
+        i.ald_yaku_all = None;
+        i.map_ptcl = None;
+        i.map_texg = None;
+        i.yakumono_param = None;
+        i.map_plit = None;
+        i.x6C8 = None;
+        r.game.gr.param = Some(read_ground_param(r.data, at(0x803E_0848)));
+        return;
     };
     // `lbArchive_800171CC`: the preload holds no stage archive in a match, so it loads.
-    let addr = r.disc_load(name, super::super::ft::data::MAIN_MEMORY);
+    let addr = r.disc_load_as(name, super::super::ft::data::MAIN_MEMORY, Some(archive));
     let data = r.data;
     let a = data.get(archive);
     let public = |n: &str| a.public(n).map(|offset| DataRef { archive, offset });
@@ -1368,6 +1408,19 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         crate::hsd::particle::load_data_bank(&mut r.game.objs, data, 0x40, ptcl, texg, None, None);
     }
     mark_materials(r.game, data, map_head);
+}
+
+/// Where an address in the executable's data the archive of [`super::exe_data`] holds is
+/// there.
+pub fn exe_ref(archive: ArchiveId, addr: u32) -> DataRef {
+    let &(base, off, _) = super::exe_data::REGIONS
+        .iter()
+        .find(|&&(a, _, n)| (a..a + n).contains(&addr))
+        .unwrap_or_else(|| panic!("{addr:#x} isn't in the executable's data the archive holds"));
+    DataRef {
+        archive,
+        offset: off + addr - base,
+    }
 }
 
 /// Marks the materials the `map_head` lists (`unk28`) `1 << 26`, `grDatFiles_801C6228`: in

@@ -1113,7 +1113,7 @@ impl Running<'_> {
             g.player_lose_stock(donor);
             let n = g.player_stocks(i);
             g.set_player_stocks(i, n + 1);
-            g.match_end_score(i);
+            self.match_end_score(i);
             self.respawn(i, 0);
         }
     }
@@ -1741,8 +1741,8 @@ impl Running<'_> {
         super::super::gr::setup::select(self, i32::from(d.rules.stkind), files.stage);
         self.game.vs.state.unk_34 = vs_speed_scale(self.game);
         // `Item_80266F70`'s `lbArchive_80017040`: the common items from the preload cache.
-        self.take_cached_named("ItCo.usd");
-        super::super::it::item::load_common_data(self.game, self.data, files.it_co);
+        let kept = self.take_cached_named("ItCo.usd");
+        super::super::it::item::load_common_data(self.game, self.data, files.it_co, kept);
         super::super::it::item::init_globals(self.game, self.data);
         super::super::it::spawn::setup(self);
         // The match's sound banks load through the device command queue when the boot left a

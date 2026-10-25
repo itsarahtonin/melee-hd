@@ -78,7 +78,7 @@ impl Running<'_> {
         self.stop_dead(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
         let c = self.common();
-        let rank = self.game.player_rank(slot).wrapping_add(1);
+        let rank = self.player_rank(slot).wrapping_add(1);
         let by_rank = fp::fmuls(
             reg(c.f32(0x604)),
             fp::fsubs(reg(c.f32(0x608)), fp::frsp(f64::from(rank))),

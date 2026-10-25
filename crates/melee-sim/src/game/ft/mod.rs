@@ -31,6 +31,7 @@ pub mod cpu_vs;
 pub mod create;
 pub mod create_model;
 pub mod data;
+pub mod demo;
 pub mod donkey;
 pub mod draw;
 pub mod drmario;
@@ -114,6 +115,13 @@ pub struct Globals {
     /// recorded when `Fighter_Create` allocates the fighter (`docs/engine.md`).
     #[clone_from(if_changed)]
     pub addresses: std::collections::BTreeMap<u32, u32>,
+    /// Each fighter's runs of its block (offsets) that held the GPU's pixels when it was made
+    /// (a render target's, the magnifier's bubbles'), which creation gave the heap image's fill
+    /// ([`crate::game::leftovers::render_target_runs`]): the comparer leaves a byte there out
+    /// while it still holds the fill, and the oracle's mutation run with another fill shows
+    /// any read before a write (docs/engine.md, "Uninitialized values").
+    #[clone_from(if_changed)]
+    pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
     /// The addresses the original's allocator gives the next fighters, in creation order,
     /// as the frontend seeds them (from ssbm-rs's trace); a fighter created without one
     /// records 0. An input until an allocator model computes them.

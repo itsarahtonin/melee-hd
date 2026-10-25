@@ -1551,7 +1551,7 @@ pub fn text_results(r: &mut Running, _gobj: GObjId) {
             return false;
         };
         let idx = i32::from(r.game.fighters[r.game.fighter_id(f).0].player_idx);
-        r.game.player_rank(idx) == 0
+        r.player_rank(idx) == 0
     };
     let mut n = 0;
     for slot in 0..6 {

@@ -6,7 +6,7 @@
 use gekko_fp as fp;
 
 use super::super::code::unported_call;
-use super::super::state::Game;
+use super::super::state::{Game, Running};
 use super::super::structs::MatchEnd;
 use super::GM_STAMINA_VS;
 use crate::fpu::reg;
@@ -34,23 +34,19 @@ fn clamp_score(v: i32) -> i32 {
     }
 }
 
-impl Game {
+impl Running<'_> {
     /// The player's score in the results as they stand, `gm_GetMatchEndPlayerScore`: the
     /// results brought up to date once a tick.
     #[doc(alias = "gm_GetMatchEndPlayerScore")]
     pub fn match_end_score(&mut self, slot: i32) -> i32 {
-        let tick = self.scene_ticks();
-        if self.vs.state.x24C.x0 != tick {
-            self.vs.state.x24C.x0 = tick;
-            self.compile_results();
-        }
-        self.vs.state.x24C.player_standings[slot as usize].score
+        self.results_up_to_date();
+        self.game.vs.state.x24C.player_standings[slot as usize].score
     }
 
     /// A fighter's player's rank in the results as they stand, `gm_8016C6C0`.
     #[doc(alias = "gm_8016C6C0")]
     pub fn fighter_rank(&mut self, fighter: crate::hsd::gobj::GObjId) -> i32 {
-        let slot = i32::from(self.fighter(fighter).player_idx);
+        let slot = i32::from(self.game.fighter(fighter).player_idx);
         self.player_rank(slot)
     }
 
@@ -59,17 +55,23 @@ impl Game {
     #[doc(alias = "Player_80033BB8")]
     #[doc(alias = "gm_8016C5C0")]
     pub fn player_rank(&mut self, slot: i32) -> i32 {
-        let tick = self.scene_ticks();
-        if self.vs.state.x24C.x0 != tick {
-            self.vs.state.x24C.x0 = tick;
-            self.compile_results();
-        }
-        let r = &self.vs.state.x24C;
+        self.results_up_to_date();
+        let g = &*self.game;
+        let r = &g.vs.state.x24C;
         let p = &r.player_standings[slot as usize];
-        if self.vs.start.is_teams == 0 {
+        if g.vs.start.is_teams == 0 {
             i32::from(p.is_big_loser)
         } else {
             i32::from(r.team_standings[usize::from(p.team)].is_big_loser)
+        }
+    }
+
+    /// The results brought up to date once a tick (`x24C.x0` the tick they were).
+    pub(crate) fn results_up_to_date(&mut self) {
+        let tick = self.game.scene_ticks();
+        if self.game.vs.state.x24C.x0 != tick {
+            self.game.vs.state.x24C.x0 = tick;
+            self.compile_results();
         }
     }
 
@@ -77,7 +79,50 @@ impl Game {
     /// stocks, KOs, falls and statistics, then the scores, the ranks and the teams'.
     #[doc(alias = "gm_80166378")]
     pub(crate) fn compile_results(&mut self) {
+        let mut r = std::mem::take(&mut self.game.vs.state.x24C);
+        self.compile_results_into(&mut r);
+        self.game.vs.state.x24C = r;
+    }
+
+    /// `gm_80166378` on results `r`: a bonus match's scores tally each player's bonuses
+    /// (`fn_8016588C`).
+    pub(crate) fn compile_results_into(&mut self, r: &mut MatchEnd) {
+        self.game.fill_standings(r);
+        for i in 0..6 {
+            if r.player_standings[i].pkind != PKIND_NA {
+                r.player_standings[i].score =
+                    if self.game.game_mode != GM_STAMINA_VS && r.match_kind == 3 {
+                        self.tally_bonuses(i as i32);
+                        clamp_score(self.bonus_total(r, 2, i as u8))
+                    } else {
+                        self.game.player_score(r, i)
+                    };
+                r.player_standings[i].x30 = sub_rank(r, i);
+            }
+        }
+        self.game.rank_results(r);
+    }
+}
+
+impl Game {
+    /// `gm_80166378` on a copy of the game's results, where no bonus match's tally can
+    /// run (the Slippi recorder's).
+    pub(crate) fn compile_results(&mut self) {
         let mut r = std::mem::take(&mut self.vs.state.x24C);
+        self.fill_standings(&mut r);
+        for i in 0..6 {
+            if r.player_standings[i].pkind != PKIND_NA {
+                r.player_standings[i].score = self.player_score(&r, i);
+                r.player_standings[i].x30 = sub_rank(&r, i);
+            }
+        }
+        self.rank_results(&mut r);
+        self.vs.state.x24C = r;
+    }
+
+    /// `gm_80166378`'s standings before the scores: every player's fields from the player
+    /// library, and the KOs and falls by team.
+    fn fill_standings(&self, r: &mut MatchEnd) {
         for p in &mut r.player_standings {
             *p = Default::default();
         }
@@ -195,18 +240,16 @@ impl Game {
                 }
             }
         }
-        for i in 0..6 {
-            if r.player_standings[i].pkind != PKIND_NA {
-                r.player_standings[i].score = self.player_score(&r, i);
-                r.player_standings[i].x30 = sub_rank(&r, i);
-            }
-        }
-        rank_big(&mut r);
-        rank_small(&mut r);
-        self.team_scores(&mut r);
-        rank_teams_big(&mut r);
-        rank_teams_small(&mut r);
-        self.vs.state.x24C = r;
+    }
+
+    /// `gm_80166378`'s ranks once the scores are in: the players', the teams' scores and
+    /// theirs.
+    fn rank_results(&self, r: &mut MatchEnd) {
+        rank_big(r);
+        rank_small(r);
+        self.team_scores(r);
+        rank_teams_big(r);
+        rank_teams_small(r);
     }
 
     /// The stick inputs' weight in the results, `fn_8016B5B0`: 3 in single-player modes (a
@@ -272,7 +315,9 @@ impl Game {
                 };
                 clamp_score(v)
             }
-            3 => unported_call("fn_8016FFD4 (a bonus match's score)"),
+            3 => unported_call(
+                "fn_8016588C's bonus match score outside a tick (the recorder's copy)",
+            ),
             _ => {
                 let a = u32::from(p.self_destructs);
                 let v = p

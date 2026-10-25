@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Transcribes the game's action-state tables (`ftData_MotionStateList` and each character's
-`ft*_Init_MotionStateTable`) from the executable into a Rust table: each state's animation,
+"""Transcribes the game's action-state tables (`ftData_MotionStateList`, each character's
+`ft*_Init_MotionStateTable`, and the demos' `ftData_803C52A0` and `ft*_Init_UnkMotionStates0`) from the executable into a Rust table: each state's animation,
 flags, move id and the addresses of its five callbacks, which melee-sim dispatches on.
 
 Usage: motion_states.py MAIN_DOL SYMBOLS_TXT OUT_RS
@@ -40,7 +40,13 @@ def main():
         addr = int(addr, 16)
         if kind == 'function':
             names[addr] = name
-        if name == 'ftData_MotionStateList' or re.match(r'ft\w\w_Init_MotionStateTable$', name):
+        # The demos' tables too: the results screen's poses (`ftData_803C52A0`) and the
+        # characters' own (`ft*_Init_UnkMotionStates0`).
+        if (
+            name in ('ftData_MotionStateList', 'ftData_803C52A0')
+            or re.match(r'ft\w\w_Init_MotionStateTable$', name)
+            or re.match(r'ft\w\w_Init_UnkMotionStates0$', name)
+        ):
             tables.append((addr, name, int(size, 16) // 0x20))
     out = [
         '// SPDX-License-Identifier: GPL-3.0-or-later',

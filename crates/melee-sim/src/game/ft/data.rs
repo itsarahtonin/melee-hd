@@ -113,6 +113,10 @@ pub struct LoadedFiles {
     /// The match's loads take their files from the preload cache as it stands
     /// (`lbDvd_8001819C`, a session's VS match from the menus), not from [`Self::preloaded`].
     pub from_cache: bool,
+    /// The demo animations the results files hold, each an archive of its own: by the
+    /// results file's archive and the animation's offset in its data.
+    #[clone_from(if_changed)]
+    pub demo_anims: Vec<(ArchiveId, u32, ArchiveId)>,
 }
 
 impl LoadedFiles {
@@ -150,6 +154,14 @@ impl LoadedFiles {
             .unwrap_or_else(|| panic!("{name}'s disc entry isn't known"))
     }
 
+    /// The demo animation at `offset` in results file `archive`'s data.
+    pub fn demo_anim(&self, archive: ArchiveId, offset: u32) -> Option<ArchiveId> {
+        self.demo_anims
+            .iter()
+            .find(|&&(a, o, _)| a == archive && o == offset)
+            .map(|&(_, _, id)| id)
+    }
+
     /// The animation file named `name`, in ARAM.
     pub fn anim_file(&self, name: &str) -> &AnimFile {
         self.anim_files
@@ -183,6 +195,12 @@ pub struct DataGlobals {
     /// Each kind's demo animations' address (`ftData_UnkIntPairs[kind].data`), which the
     /// fighters' first setup clears.
     pub demo_anims: [u32; KIND_COUNT],
+    /// Each kind's results file and its demo animations' symbol's offset there, as the
+    /// results screen last set them (`ftDemo_SetArchiveData`).
+    pub demo_files: [Option<(ArchiveId, u32)>; KIND_COUNT],
+    /// What the original writes into each kind's demo animations' entries
+    /// (`ftData::x14[i].x14`, `ftData_80085B98`): where each animation is in main memory.
+    pub demo_x14: [[u32; 18]; KIND_COUNT],
     /// Each kind's reference count (`ft_8045996C`).
     pub ref_counts: [i32; KIND_COUNT],
     pub slot_words: [Ft8045993C; 6],
@@ -195,6 +213,8 @@ impl Default for DataGlobals {
             data_list: [None; KIND_COUNT],
             costumes: [[Costume::default(); MAX_COSTUMES]; KIND_COUNT],
             demo_anims: [0; KIND_COUNT],
+            demo_files: [None; KIND_COUNT],
+            demo_x14: [[0; 18]; KIND_COUNT],
             ref_counts: [0; KIND_COUNT],
             slot_words: [Ft8045993C::default(); 6],
         }
@@ -304,7 +324,7 @@ impl Game {
 
 /// The public symbol `name` of a loaded archive; the original asserts it's there
 /// (`vLoadSectionsFatal`).
-fn public(data: &Archives, archive: ArchiveId, name: &str) -> DataRef {
+pub(crate) fn public(data: &Archives, archive: ArchiveId, name: &str) -> DataRef {
     let offset = data
         .get(archive)
         .public(name)
@@ -317,19 +337,8 @@ impl Running<'_> {
     /// kind's animation file in ARAM unless it's there, `ftData_80085B10`.
     #[doc(alias = "ftData_80085B10")]
     pub fn init_anim_buffers(&mut self, f: FighterId) {
-        // A block the pool gives again keeps what its last fighter's loads left; a new one
-        // holds a fresh heap's zeros, or after the menus an earlier scene's bytes.
-        let fill = if crate::hsd::heap::with(|h| h.fresh).unwrap_or(false) {
-            Fill::Zero
-        } else {
-            Fill::Unknown
-        };
-        let bufs = &mut self.game.fighter_anim_bufs;
-        let a = AnimBufId(bufs.alloc_stale(AnimBuf::new(fill)));
-        let b = AnimBufId(bufs.alloc_stale(AnimBuf::new(fill)));
+        self.alloc_anim_buffers(f);
         let fp = &mut self.game.fighters[f.0];
-        fp.x59C = Some(a);
-        fp.x5A0 = Some(b);
         fp.x5A4 = 0;
         fp.x5A8 = 0;
         let kind = fp.kind;
@@ -347,6 +356,34 @@ impl Running<'_> {
         }
     }
 
+    /// A fighter's two animation buffers (`HSD_ObjAlloc` on `fighter_x59C_alloc_data`): a
+    /// block the pool gives again keeps what its last fighter's loads left; a new one holds
+    /// a fresh heap's zeros, or after the menus an earlier scene's bytes.
+    pub(super) fn alloc_anim_buffers(&mut self, f: FighterId) {
+        let fill = if crate::hsd::heap::with(|h| h.fresh).unwrap_or(false) {
+            Fill::Zero
+        } else {
+            Fill::Unknown
+        };
+        let bufs = &mut self.game.fighter_anim_bufs;
+        let mut alloc = || {
+            let id = bufs.alloc_stale(AnimBuf::new(fill));
+            // Only its loads write the buffer (`lbArq_80014BD0`, laid out with its scene,
+            // `game::export::anim_buf`): for the heap's image, past them it keeps what the
+            // block held.
+            let at = bufs.addr(id);
+            if at != 0 {
+                crate::hsd::heap::with(|h| h.image.unclaim(at, at + super::anim_buf::SIZE));
+            }
+            AnimBufId(id)
+        };
+        let a = alloc();
+        let b = alloc();
+        let fp = &mut self.game.fighters[f.0];
+        fp.x59C = Some(a);
+        fp.x5A0 = Some(b);
+    }
+
     /// A fighter file's synchronous disc load (`lbFile_8001668C`), where the original loads
     /// it, on the audio timeline that times it: `dest` its ARAM address, or [`MAIN_MEMORY`]
     /// for main memory, where the allocator model gives it its blocks. Not timed without a
@@ -354,6 +391,23 @@ impl Running<'_> {
     /// ([`LoadedFiles::preloaded`]) is neither read nor allocated. The `HSD_Archive`'s address
     /// for a load into main memory, else 0.
     pub fn disc_load(&mut self, name: &str, dest: u32) -> u32 {
+        let id = self
+            .game
+            .ft
+            .data
+            .files
+            .archive_id(name.trim_start_matches('/'));
+        self.disc_load_as(name, dest, id)
+    }
+
+    /// [`Running::disc_load`] of the file whose archive is `id` (a stage's, which the files'
+    /// names don't hold).
+    pub fn disc_load_as(
+        &mut self,
+        name: &str,
+        dest: u32,
+        id: Option<melee_data::archive::ArchiveId>,
+    ) -> u32 {
         // Neither timed nor modeled (a state imported from a single call): nothing to do.
         if self.game.audio.clock.is_none() && crate::hsd::heap::with(|_| ()).is_none() {
             return 0;
@@ -361,8 +415,16 @@ impl Running<'_> {
         // A file the preload cache holds: neither read nor in the scene's heap; its archive
         // lives in the cache's heap, where the model doesn't follow it.
         if self.game.ft.data.files.from_cache {
-            let (entrynum, _) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
-            if let Some(addr) = self.take_cached(entrynum) {
+            let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
+            if let Some((addr, file)) = self.take_cached_blocks(entrynum) {
+                // Where its data is, for a pointer into it a block of the scene's heap keeps
+                // once freed (docs/engine.md, a session's heap leftovers).
+                if file != 0
+                    && let Some(id) = id
+                {
+                    let data = len.saturating_sub(0x20);
+                    crate::hsd::heap::with(|h| h.image.place(file + 0x20, data, id));
+                }
                 return addr;
             }
         } else if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
@@ -376,7 +438,7 @@ impl Running<'_> {
             (0, 0)
         };
         if file != 0
-            && let Some(id) = self.game.ft.data.files.archive_id(name)
+            && let Some(id) = id
         {
             crate::hsd::heap::with(|h| h.hold_archive(file, len, id));
         }

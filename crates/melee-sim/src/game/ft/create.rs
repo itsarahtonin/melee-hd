@@ -22,7 +22,7 @@ const P_LINK_FIGHTER: u8 = 8;
 /// The user data kind of fighters.
 const USER_DATA_FIGHTER: u8 = 4;
 /// `ftDrawCommon_80080E18`, the fighters' render callback, on GX link 5.
-const RENDER: u32 = 0x8008_0E18;
+pub(super) const RENDER: u32 = 0x8008_0E18;
 /// The fighter processes and their priorities, as `Fighter_Create` sets them up.
 const PROCS: [(u32, u8); 15] = [
     (0x8006_A1BC, 0),  // Fighter_procHitlag
@@ -69,12 +69,26 @@ impl Running<'_> {
     /// common data, the fighters' light and metal and clear models, the spawn counter, and
     /// each kind's own setup. The pools need no setting up here.
     #[doc(alias = "Fighter_FirstInitialize_80067A84")]
-    #[doc(alias = "Fighter_800679B0")]
     pub fn fighter_first_init(&mut self) {
         #[cfg(feature = "stubs")]
         if code::stubbed(addr::FIRST_INITIALIZE, &[]).is_some() {
             return;
         }
+        self.fighter_init_pools();
+        crate::hsd::heap::init_pool(crate::hsd::heap::Kind::FighterX59C, 0x8000, 0x20);
+    }
+
+    /// The fighters' setup for the results screen's posing fighters, `ftDemo_ObjAllocInit`:
+    /// [`Running::fighter_first_init`]'s, their animation buffers 0xB000 bytes.
+    #[doc(alias = "ftDemo_ObjAllocInit")]
+    pub fn fighter_demo_init(&mut self) {
+        self.fighter_init_pools();
+        crate::hsd::heap::init_pool(crate::hsd::heap::Kind::FighterX59C, 0xB000, 0x20);
+    }
+
+    /// `Fighter_800679B0`.
+    #[doc(alias = "Fighter_800679B0")]
+    fn fighter_init_pools(&mut self) {
         {
             use crate::hsd::heap::Kind;
             crate::hsd::heap::init_pools(&[
@@ -83,7 +97,6 @@ impl Running<'_> {
                 Kind::FighterParts,
                 Kind::FighterDObjList,
                 Kind::FighterX2040,
-                Kind::FighterX59C,
             ]);
         }
         self.game.reset_fighter_data();
@@ -115,6 +128,19 @@ impl Running<'_> {
             .world
             .create(GOBJ_CLASS_FIGHTER, P_LINK_FIGHTER, 0);
         self.game.world.setup_gx_link(gobj, CodeRef(RENDER), 5, 0);
+        let f = self.alloc_fighter_block();
+        self.game
+            .world
+            .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
+        if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
+            self.disc_load(file, super::data::MAIN_MEMORY);
+        }
+        self.fighter_create_rest(gobj, f, info)
+    }
+
+    /// A fighter's block and its attributes' (`HSD_ObjAlloc` on `fighter_alloc_data` and
+    /// `fighter_dat_attrs_alloc_data`): after the menus the block holds what they left.
+    pub(super) fn alloc_fighter_block(&mut self) -> FighterId {
         // `HSD_ObjAlloc` hands the block back uncleared; a fresh heap's is zero (see
         // `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc(Fighter::default()));
@@ -134,16 +160,26 @@ impl Running<'_> {
             )
         {
             self.game.fighters[f.0] = left;
+            // Where the block held the GPU's pixels, which the comparer leaves out while they
+            // hold the image's fill (docs/engine.md, "Uninitialized values").
+            let rt = crate::game::leftovers::render_target_runs(
+                address,
+                <Fighter as crate::game::mirror::Mirror>::SIZE,
+            );
+            if rt.is_empty() {
+                self.game.ft.render_leftovers.remove(&f.0);
+            } else {
+                self.game.ft.render_leftovers.insert(f.0, rt);
+            }
         }
         self.game.ft.addresses.insert(f.0, address);
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);
-        self.game
-            .world
-            .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
-        if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
-            self.disc_load(file, super::data::MAIN_MEMORY);
-        }
+        f
+    }
+
+    /// `Fighter_Create` from its data's load on.
+    fn fighter_create_rest(&mut self, gobj: GObjId, f: FighterId, info: AllocInfo) -> GObjId {
         self.init_load(gobj, info);
         let kind = self.game.fighters[f.0].kind;
         let effects = kind_tables(kind).effect_file;
@@ -217,7 +253,7 @@ impl Running<'_> {
 
     /// The fighter's identity and settings from its player slot, `Fighter_UnkInitLoad_80068914`.
     #[doc(alias = "Fighter_UnkInitLoad_80068914")]
-    fn init_load(&mut self, gobj: GObjId, info: AllocInfo) {
+    pub(super) fn init_load(&mut self, gobj: GObjId, info: AllocInfo) {
         let f = self.game.fighter_id(gobj);
         let slot = i32::from(info.slot);
         let g = &*self.game;
@@ -363,7 +399,7 @@ impl Running<'_> {
     #[doc(alias = "ftParts_80073758")]
     #[doc(alias = "ftPartsPObjSetDefaultClass")]
     #[doc(alias = "ftPartsPObjClearDefaultClass")]
-    fn load_costume_joint(&mut self, gobj: GObjId) {
+    pub(super) fn load_costume_joint(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         let joint = self.game.ft.data.costumes[fp.kind as usize][usize::from(fp.costume_id)].joint;
@@ -384,7 +420,7 @@ impl Running<'_> {
     /// The fighter's depth scale: Flat Zone's for its flat fighters, else 1,
     /// `Fighter_80068E64`.
     #[doc(alias = "Fighter_80068E64")]
-    fn set_depth_scale(&mut self, f: FighterId) {
+    pub(super) fn set_depth_scale(&mut self, f: FighterId) {
         // `Gr_Kind_Flatzone`.
         let z = if self.game.stage_info.grkind == 27 {
             self.common().f32(0x7E4)
@@ -397,7 +433,7 @@ impl Running<'_> {
     /// The fighter's height ratio and its bone 2 to bone 1 offset,
     /// `Fighter_UnkUpdateVecFromBones_8006876C`.
     #[doc(alias = "Fighter_UnkUpdateVecFromBones_8006876C")]
-    fn measure_bones(&mut self, f: FighterId) {
+    pub(super) fn measure_bones(&mut self, f: FighterId) {
         let b2 = self
             .bone(f, self.bone_index(&self.game.fighters[f.0], 2))
             .joint;
@@ -417,7 +453,7 @@ impl Running<'_> {
 
     /// The fighter's shadow, cast from its model, `lbShadow_8000ED54`.
     #[doc(alias = "lbShadow_8000ED54")]
-    fn create_shadow(&mut self, f: FighterId, root: crate::hsd::jobj::JObjId) {
+    pub(super) fn create_shadow(&mut self, f: FighterId, root: crate::hsd::jobj::JObjId) {
         let objs = &mut self.game.objs;
         let s = shadow::alloc(objs);
         let camera = objs.shadows[s.0].camera;

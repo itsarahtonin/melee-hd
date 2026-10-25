@@ -170,7 +170,7 @@ pub fn drop_from(
     spawn.facing_dir = if a > std::f64::consts::PI { -1.0 } else { 1.0 };
     // `gm_8016C6C0`: the dropper's player's standing.
     let slot = i32::from(r.game.fighter(fighter).player_idx);
-    let standing = r.game.player_rank(slot);
+    let standing = r.player_rank(slot);
     let mut s = Scatter {
         owner: Some(fighter),
         angle: mem(a),

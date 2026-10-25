@@ -3,11 +3,13 @@
 
 pub mod attract;
 pub mod boot_mode;
+pub mod decisions;
 pub mod erase;
 pub mod howto;
 pub mod input;
 pub mod machine;
 pub mod main_lib;
+pub mod match_exit;
 pub mod memcard;
 pub mod menu;
 pub mod mode_init;
@@ -15,7 +17,12 @@ pub mod names;
 pub mod opening;
 pub mod pause;
 pub mod progressive;
+pub mod records;
 pub mod results;
+pub mod results_fighters;
+pub mod results_player;
+pub mod results_scene;
+pub mod results_stats;
 pub mod scene;
 pub mod setup_players;
 pub mod stamina;
@@ -80,6 +87,9 @@ pub struct Globals {
     /// Whether the trophies' data archive is loaded (`_Toy_sbss_804D6ED0` isn't null): the
     /// first stage load of a session loads it.
     pub trophy_data: bool,
+    /// Whether the standings' bonuses are off (`lbl_804D65A0.x0`): the results screen
+    /// turns them on as it ends (`fn_801701AC`).
+    pub bonuses_off: u8,
 }
 
 /// The trophies' data (`TyDatai.usd`, the English one: `getDataiDatFilename` takes

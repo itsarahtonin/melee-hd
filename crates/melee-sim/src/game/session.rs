@@ -262,6 +262,11 @@ impl Session {
             len: file.bytes.len() as u32,
             archive: self.data.add(Archive::raw(&file.bytes)),
         };
+        // The executable's data the dummy stage points into (the results screen's).
+        self.game.gr.defaults = Some(
+            self.data
+                .add(Archive::parse(&super::gr::exe_data::FILE).expect("the executable's data")),
+        );
         let audio = &mut self.game.audio;
         audio.lang_banks = [Some(bank_jp), Some(bank)];
         for dir in ["audio/us/", "audio/"] {
@@ -472,6 +477,9 @@ impl Session {
         console: &mut dyn Console,
     ) {
         super::vs_match::load_fighter_files(&mut self.game, &mut self.data, start, &mut |n| {
+            console.file(n)
+        });
+        super::vs_match::load_results_files(&mut self.game, &mut self.data, start, &mut |n| {
             console.file(n)
         });
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;

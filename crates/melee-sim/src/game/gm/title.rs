@@ -121,7 +121,7 @@ pub fn anim_frame(r: &Running, j: JObjId) -> f32 {
 }
 
 impl Running<'_> {
-    fn anim_all(&mut self, j: JObjId) {
+    pub(crate) fn anim_all(&mut self, j: JObjId) {
         jobj::anim_all(
             &mut self.game.objs,
             self.data,

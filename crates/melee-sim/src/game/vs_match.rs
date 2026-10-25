@@ -956,6 +956,96 @@ pub fn load_fighter_files(
     }
 }
 
+/// Reads the files the results screen after a match loads: its panel's and texts'
+/// (`GmRst`, `SdRst`), each player's character's results file (Zelda's and Sheik's both),
+/// and each demo animation those hold, one archive each, as `ftData_80085CD8` parses it
+/// from its copy (the animation's own size).
+pub fn load_results_files(
+    game: &mut Game,
+    data: &mut Archives,
+    start: &StartMeleeData,
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) {
+    use super::ft::data::kind_tables;
+    let files = &mut game.ft.data.files;
+    let mut add = |files: &mut super::ft::data::LoadedFiles, data: &mut Archives, name: &str| {
+        if let Some(id) = files.archive_id(name) {
+            return id;
+        }
+        let file = load(name);
+        let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+        let id = data.add(a);
+        files.archives.push((name.to_owned(), id));
+        files
+            .entries
+            .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
+        id
+    };
+    for name in ["GmRst.usd", "SdRst.usd"] {
+        add(files, data, name);
+    }
+    for p in &start.players {
+        if i32::from(p.slot_type) == super::pl::player::PKIND_NONE {
+            continue;
+        }
+        let ck = i32::from(p.ckind);
+        let cks: &[i32] = if ck == 0x12 || ck == 0x13 {
+            &[0x12, 0x13]
+        } else {
+            &[ck]
+        };
+        for &ck in cks {
+            let Some(name) = super::gm::results_stats::results_file(ck) else {
+                continue;
+            };
+            let results = add(files, data, name);
+            let m = super::pl::player::mapping(ck);
+            for kind in [m.internal_id, m.extra_internal_id] {
+                if kind < 0 {
+                    continue;
+                }
+                let kind = i32::from(kind);
+                let Some(sym) = super::ft::demo::result_symbol(kind) else {
+                    continue;
+                };
+                let Some(base) = data.get(results).public(&sym) else {
+                    continue;
+                };
+                let t = kind_tables(kind);
+                let dat = files.archive(t.dat_file.expect("a fighter kind without a data file"));
+                let ft_data = super::ft::data::public(
+                    data,
+                    dat,
+                    t.data_symbol.expect("a fighter kind without data"),
+                );
+                let Some(list) = data.ptr(ft_data.at(0x14)) else {
+                    continue;
+                };
+                // The results' poses take the first ten (`ftDemo_CreateFighter`'s 0 to 9); the
+                // others are the intros', endings' and waits' files'.
+                for i in 0..10 {
+                    let e = list.at(0x18 * i);
+                    let (x4, x8) = (data.u32(e.at(4)), data.u32(e.at(8)));
+                    let off = base.wrapping_add(x4);
+                    if x8 == 0 || files.demo_anim(results, off).is_some() {
+                        continue;
+                    }
+                    let bytes = &data.get(results).data()[off as usize..(off + x8) as usize];
+                    let a = Archive::parse(bytes)
+                        .unwrap_or_else(|e| panic!("{name}'s {sym}@{x4:#x}: {e:?}"));
+                    let id = data.add(a);
+                    files.demo_anims.push((results, off, id));
+                    // Named by its offset in the file (past the header), as the oracle finds
+                    // it in a fighter's buffer.
+                    files
+                        .archives
+                        .push((format!("{name}@{:#x}", off + 0x20), id));
+                }
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{Player, Settings};

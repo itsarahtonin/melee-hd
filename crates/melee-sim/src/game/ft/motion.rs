@@ -6,7 +6,7 @@
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
-use super::super::code::{run_fighter_cb, unported_call};
+use super::super::code::run_fighter_cb;
 use super::super::handles::FighterId;
 use super::super::pl::player::PKIND_DEMO;
 use super::super::state::Running;
@@ -62,6 +62,17 @@ pub mod flags {
 /// command script, flags and (once loaded) ARAM address.
 const ANIM_ENTRY_SIZE: u32 = 0x18;
 
+/// The index of a demo fighter's animation entry in its character's demo animations
+/// (`ftData::x14`), none for a fighter that isn't a demo's.
+fn demo_index(fp: &Fighter, entry: DataRef) -> Option<usize> {
+    if !fp.is_demo() {
+        return None;
+    }
+    let list = fp.x24?;
+    (list.archive == entry.archive && entry.offset >= list.offset)
+        .then(|| ((entry.offset - list.offset) / ANIM_ENTRY_SIZE) as usize)
+}
+
 impl Running<'_> {
     /// The fighter's action state `msid`: a common one, or from `x18` on, its character's.
     pub fn motion_state(fp: &Fighter, msid: i32) -> &'static MotionState {
@@ -76,7 +87,7 @@ impl Running<'_> {
     /// Nana outside demos takes Popo's entry (`gFtDataList[Ft_Kind_Popo]->xC`) where hers
     /// has no animation in ARAM.
     #[doc(alias = "ftData_80085FD4")]
-    pub(super) fn anim_entry(&self, f: FighterId, anim: i32) -> DataRef {
+    pub(crate) fn anim_entry(&self, f: FighterId, anim: i32) -> DataRef {
         let fp = &self.game.fighters[f.0];
         let own = fp
             .x24
@@ -114,6 +125,10 @@ impl Running<'_> {
     pub(super) fn anim_aram(&self, fp: &Fighter, entry: DataRef) -> u32 {
         if self.data.u32(entry.at(8)) == 0 {
             return self.data.u32(entry.at(0x14));
+        }
+        // A demo's animation: where `ftData_80085B98` placed it in main memory.
+        if let Some(i) = demo_index(fp, entry) {
+            return self.game.ft.data.demo_x14[fp.kind as usize][i];
         }
         let kind = self.anim_entry_kind(fp.kind, entry);
         let file = self.game.ft.anim_files[kind as usize]
@@ -162,13 +177,15 @@ impl Running<'_> {
                 size
             } else {
                 if aram >= 0x8000_0000 {
-                    unported_call("ftData_80085CD8 from main memory");
+                    // A demo's animation in main memory: `memcpy`, untimed.
+                    size
+                } else {
+                    // `lbArq_80014BD0` copies the archive from ARAM, rounded up to 32 bytes,
+                    // which takes time on ssbm-rs's timeline; `HSD_ArchiveParse` relocates it.
+                    let len = (size + 31) & !31;
+                    self.game.audio.aram_load(self.data, len);
+                    len
                 }
-                // `lbArq_80014BD0` copies the archive from ARAM, rounded up to 32 bytes, which
-                // takes time on ssbm-rs's timeline; `HSD_ArchiveParse` relocates it.
-                let len = (size + 31) & !31;
-                self.game.audio.aram_load(self.data, len);
-                len
             };
             let kind = self.anim_entry_kind(self.game.fighters[src.0].kind, entry);
             let tree = self.anim_tree(kind, entry);
@@ -186,6 +203,41 @@ impl Running<'_> {
     /// The figatree of a kind's animation table entry, as copying its archive from ARAM
     /// (`lbArq_80014BD0`) and relocating it (`HSD_ArchiveParse`) finds it.
     pub(super) fn anim_tree(&self, kind: i32, entry: DataRef) -> DataRef {
+        let demo = self.game.ft.data.demo_files[kind as usize].filter(|_| {
+            self.game.ft.data.data_list[kind as usize].is_some_and(|d| {
+                self.data.ptr(d.at(0x14)).is_some_and(|l| {
+                    l.archive == entry.archive
+                        && entry.offset >= l.offset
+                        && entry.offset < l.offset + 0x18 * 18
+                })
+            })
+        });
+        if let Some((archive, sym)) = demo {
+            let off = sym.wrapping_add(self.data.u32(entry.at(4)));
+            let id = self
+                .game
+                .ft
+                .data
+                .files
+                .demo_anim(archive, off)
+                .unwrap_or_else(|| {
+                    panic!("no demo animation at {off:#x} of character {kind}'s results file")
+                });
+            let mut buf = [0u8; 128];
+            let name = self.c_string(
+                self.data.ptr(entry).expect("an animation without a name"),
+                &mut buf,
+            );
+            let offset = self
+                .data
+                .get(id)
+                .public(name)
+                .unwrap_or_else(|| panic!("{name} isn't in its demo animation's archive"));
+            return DataRef {
+                archive: id,
+                offset,
+            };
+        }
         let file = self.game.ft.anim_files[kind as usize]
             .as_ref()
             .expect("the character's animation file isn't in ARAM");

@@ -54,7 +54,7 @@ impl Running<'_> {
         fp.mv.set_gobj_at(LEADEAD, redead);
         self.stop_dead(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
-        let rank = self.game.player_rank(slot).wrapping_add(1);
+        let rank = self.player_rank(slot).wrapping_add(1);
         let c = self.common();
         let (x71c, x720, x724, x728, x72c, x730) = (
             reg(c.f32(0x71C)),

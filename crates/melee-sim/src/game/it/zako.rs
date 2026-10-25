@@ -727,22 +727,9 @@ impl Running<'_> {
     }
 }
 
-/// A point bonus's points, `gm_8016F2F8`: the bonus's entry in `lbl_803D5A4C` names its
-/// points in `lbl_803D5648`. Transcribed for the enemies' KO bonuses, those `pl_8004049C`
-/// counts (`main.dol`'s tables: entries 240 to 248).
-#[doc(alias = "gm_8016F2F8")]
+/// A point bonus's points (`gm_8016F2F8`, [`crate::game::gm::decisions::decision_points`]).
 pub fn bonus_points(bonus: i32) -> i32 {
-    match bonus {
-        0xCE => 100,
-        0xCF => 200,
-        0xD0 | 0xD1 => 300,
-        0xD2 => 500,
-        0xD3 => 150,
-        0xD4 => 200,
-        0xD5 => 800,
-        0xD6 => 20,
-        _ => code::unported_call("gm_8016F2F8 (a bonus besides the enemies' KOs)"),
-    }
+    crate::game::gm::decisions::decision_points(bonus)
 }
 
 impl Game {

@@ -638,7 +638,7 @@ impl Running<'_> {
         fp.facing_dir = mem(fp::fneg(reg(gf)));
         let slot = i32::from(fp.player_idx);
         let c = self.common();
-        let rank = self.game.player_rank(slot).wrapping_add(1);
+        let rank = self.player_rank(slot).wrapping_add(1);
         let v = fp::fmuls(
             reg(c.f32(0x360)),
             fp::fsubs(reg(c.f32(0x364)), fp::frsp(f64::from(rank))),

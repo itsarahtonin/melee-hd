@@ -281,6 +281,10 @@ pub struct Game {
     /// The off-screen magnifier (`ifMagnify_804A1DE0`): which players are off screen, which
     /// deals them damage over time.
     pub magnify: ifMagnify,
+    /// Where the magnifier's bubbles but the first copy their pixels (`image_descs`'
+    /// buffers), where the allocator model gives them: the heap's image takes them as a render
+    /// target once a bubble is copied ([`crate::hsd::image::Src::RenderTarget`]).
+    pub magnify_buffers: [(u32, u32); 6],
     /// mpcoll's statics: the last pass's walls and correction, and the floor filter.
     pub coll: crate::mp::coll::CollStatics,
     /// The scene loop's state (`gm_80479D58`): its tick counts, the debug pause flags and
@@ -353,6 +357,8 @@ pub struct Game {
     pub charsel: super::mn::charsel::CharSel,
     pub stagesel: super::mn::stagesel::StageSel,
     pub vs_melee: super::gm::vs_melee::VsMelee,
+    /// The results screen's statics (`gmresult.c`, `gm_1798.c`).
+    pub results: super::gm::results_scene::Results,
     /// The Options menus' statics and user data (`mnvibration.c`, `mnsound.c`,
     /// `mndeflicker.c`, `mnlanguage.c`, `mndatadel.c`).
     pub options: super::mn::options::Options,
@@ -402,7 +408,13 @@ impl Host<GameKinds> for Running<'_> {
                 crate::hsd::heap::mem_free(self.game.grounds.addr(g.0));
                 self.game.grounds.free(g.0);
             }
-            UserData::Item(i) => super::it::item::free_user_data(self.game, i),
+            UserData::Item(i) => {
+                // The block holds the item as it was when it goes back (docs/engine.md, a
+                // session's heap leftovers).
+                let (game, data) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| super::export::item(game, data, img, i));
+                super::it::item::free_user_data(self.game, i);
+            }
             // `it_802A2474`: the link goes back to `item_link_alloc_data`.
             UserData::ItemLink(l) => super::it::link::free(self.game, l),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),

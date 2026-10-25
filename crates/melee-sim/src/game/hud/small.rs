@@ -492,7 +492,7 @@ impl Running<'_> {
 
     /// A player's score, capped at 9999 (`inl_getScore`).
     fn score(&mut self, slot: i32) -> i32 {
-        self.game.match_end_score(slot).min(0x270F)
+        self.match_end_score(slot).min(0x270F)
     }
 
     /// A score's process, `fn_802FF218`: "-" while hidden, else the score when it changes.

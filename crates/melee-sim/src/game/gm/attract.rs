@@ -28,6 +28,8 @@ const DEG: f32 = 0.017_453_292;
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Attract {
     pub start: StartMeleeData,
+    /// The attract match's exit data (`vs_exit_data`).
+    pub exit: super::match_exit::MatchExitInfo,
     pub camera_step: u8,
 }
 
@@ -263,14 +265,5 @@ impl Running<'_> {
         };
         self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
         self.vs_on_enter(&start, files);
-    }
-
-    /// `gm_Scene_Vs_OnExit` after a match its scene ended before its result (the attract
-    /// match's): the results' standings, then each player's bonuses (`fn_8016C4F4`), which
-    /// aren't ported.
-    pub fn vs_scene_on_exit(&mut self) {
-        crate::game::code::unported_call(
-            "gm_Scene_Vs_OnExit's results (gm_80166378, and fn_8016C4F4's bonuses, pl_80039450)",
-        );
     }
 }

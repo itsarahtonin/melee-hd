@@ -34,7 +34,7 @@ impl Running<'_> {
         }
         self.change_motion_state(gobj, ms::DAMAGE_BIND, 0, 0.0, 1.0, 0.0, None);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
-        let rank = self.game.player_rank(slot).wrapping_add(1);
+        let rank = self.player_rank(slot).wrapping_add(1);
         let c = self.common();
         let (x658, x65c, x660, x664, x668, x66c) = (
             reg(c.f32(0x658)),

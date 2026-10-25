@@ -3760,6 +3760,164 @@ pub static FT_DATA_MOTION_STATE_LIST: [MotionState; 341] = [
     },
 ];
 
+/// `ftData_803C52A0`, at 0x803c52a0.
+pub static FT_DATA_803_C52_A0: [MotionState; 14] = [
+    // 0: ftCo_800BED84, -, -, -, -
+    MotionState {
+        anim_id: 0,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: Some(CodeRef(0x800bed84)),
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 1: -, -, -, -, -
+    MotionState {
+        anim_id: 1,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 2: ftCo_800BEF00, -, -, -, -
+    MotionState {
+        anim_id: 2,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: Some(CodeRef(0x800bef00)),
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 3: -, -, -, -, -
+    MotionState {
+        anim_id: 3,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 4: -, -, -, -, -
+    MotionState {
+        anim_id: 4,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 5: ftCo_800BEFD0, -, -, -, -
+    MotionState {
+        anim_id: 5,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: Some(CodeRef(0x800befd0)),
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 6: -, -, -, -, -
+    MotionState {
+        anim_id: 6,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 7: -, -, -, -, -
+    MotionState {
+        anim_id: 7,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 8: -, -, -, -, -
+    MotionState {
+        anim_id: 8,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 9: -, -, -, -, -
+    MotionState {
+        anim_id: 9,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 10: -, -, -, -, -
+    MotionState {
+        anim_id: 10,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 11: -, -, -, -, -
+    MotionState {
+        anim_id: 11,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 12: -, -, -, -, -
+    MotionState {
+        anim_id: 12,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 13: -, -, -, -, -
+    MotionState {
+        anim_id: 13,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: None,
+        coll_cb: None,
+        cam_cb: None,
+    },
+];
+
 /// `ftMr_Init_MotionStateTable`, at 0x803c7120.
 pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
     // 0: -, -, -, -, -
@@ -3871,6 +4029,32 @@ pub static FT_MR_INIT_MOTION_STATE_TABLE: [MotionState; 10] = [
         phys_cb: Some(CodeRef(0x800e2508)),
         coll_cb: Some(CodeRef(0x800e2778)),
         cam_cb: Some(CodeRef(0x800761c8)),
+    },
+];
+
+/// `ftMr_Init_UnkMotionStates0`, at 0x803c7260.
+pub static FT_MR_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
+    // 0: -, -, ftCo_800C7158, -, -
+    MotionState {
+        anim_id: 14,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c7158)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 1: -, -, ftCo_800C7200, -, -
+    MotionState {
+        anim_id: 15,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c7200)),
+        coll_cb: None,
+        cam_cb: None,
     },
 ];
 
@@ -6989,6 +7173,54 @@ pub static FT_KB_INIT_MOTION_STATE_TABLE: [MotionState; 203] = [
         phys_cb: Some(CodeRef(0x800fb014)),
         coll_cb: Some(CodeRef(0x800fb304)),
         cam_cb: Some(CodeRef(0x800761c8)),
+    },
+];
+
+/// `ftKb_Init_UnkMotionStates0`, at 0x803ca04c.
+pub static FT_KB_INIT_UNK_MOTION_STATES0: [MotionState; 4] = [
+    // 0: -, -, ftCo_800C737C, -, -
+    MotionState {
+        anim_id: 14,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c737c)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 1: -, -, ftCo_800C737C, -, -
+    MotionState {
+        anim_id: 15,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c737c)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 2: -, -, ftCo_800C737C, -, -
+    MotionState {
+        anim_id: 16,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c737c)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 3: -, -, ftCo_800C7414, -, -
+    MotionState {
+        anim_id: 17,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c7414)),
+        coll_cb: None,
+        cam_cb: None,
     },
 ];
 
@@ -11261,6 +11493,32 @@ pub static FT_LG_INIT_MOTION_STATE_TABLE: [MotionState; 18] = [
     },
 ];
 
+/// `ftLg_Init_UnkMotionStates0`, at 0x803d0868.
+pub static FT_LG_INIT_UNK_MOTION_STATES0: [MotionState; 2] = [
+    // 0: -, -, ftCo_800C7158, -, -
+    MotionState {
+        anim_id: 14,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c7158)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+    // 1: -, -, ftCo_800C7200, -, -
+    MotionState {
+        anim_id: 15,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c7200)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+];
+
 /// `ftMt_Init_MotionStateTable`, at 0x803d0b00.
 pub static FT_MT_INIT_MOTION_STATE_TABLE: [MotionState; 20] = [
     // 0: ftMt_SpecialNStart_Anim, ftMt_SpecialNStart_IASA, ftMt_SpecialNStart_Phys, ftMt_SpecialNStart_Coll, ftCamera_UpdateCameraBox
@@ -13827,6 +14085,21 @@ pub static FT_GK_INIT_MOTION_STATE_TABLE: [MotionState; 23] = [
     },
 ];
 
+/// `ftGk_Init_UnkMotionStates0`, at 0x803d38c8.
+pub static FT_GK_INIT_UNK_MOTION_STATES0: [MotionState; 1] = [
+    // 0: -, -, ftCo_800C74AC, -, -
+    MotionState {
+        anim_id: 14,
+        flags: 0x0,
+        x8: 0x1000000,
+        anim_cb: None,
+        input_cb: None,
+        phys_cb: Some(CodeRef(0x800c74ac)),
+        coll_cb: None,
+        cam_cb: None,
+    },
+];
+
 /// `ftSb_Init_MotionStateTable`, at 0x803d3998.
 pub static FT_SB_INIT_MOTION_STATE_TABLE: [MotionState; 1] = [
     // 0: ftSb_WaitReverse_Anim, ftSb_WaitReverse_IASA, ftSb_WaitReverse_Phys, ftSb_WaitReverse_Coll, ftCamera_UpdateCameraBox
@@ -14940,13 +15213,16 @@ pub static FT_CH_INIT_MOTION_STATE_TABLE: [MotionState; 49] = [
 ];
 
 /// Every table, by its address.
-pub static TABLES: [(u32, &[MotionState]); 32] = [
+pub static TABLES: [(u32, &[MotionState]); 37] = [
     (0x803c2800, &FT_DATA_MOTION_STATE_LIST),
+    (0x803c52a0, &FT_DATA_803_C52_A0),
     (0x803c7120, &FT_MR_INIT_MOTION_STATE_TABLE),
+    (0x803c7260, &FT_MR_INIT_UNK_MOTION_STATES0),
     (0x803c72b8, &FT_CA_INIT_MOTION_STATE_TABLE),
     (0x803c7788, &FT_FX_INIT_MOTION_STATE_TABLE),
     (0x803c7e18, &FT_LK_INIT_MOTION_STATE_TABLE),
     (0x803c8368, &FT_KB_INIT_MOTION_STATE_TABLE),
+    (0x803ca04c, &FT_KB_INIT_UNK_MOTION_STATES0),
     (0x803cb838, &FT_DK_INIT_MOTION_STATE_TABLE),
     (0x803cc060, &FT_SK_INIT_MOTION_STATE_TABLE),
     (0x803cc650, &FT_NS_INIT_MOTION_STATE_TABLE),
@@ -14961,6 +15237,7 @@ pub static TABLES: [(u32, &[MotionState]); 32] = [
     (0x803cfa58, &FT_ZD_INIT_MOTION_STATE_TABLE),
     (0x803cfef0, &FT_PR_INIT_MOTION_STATE_TABLE),
     (0x803d0628, &FT_LG_INIT_MOTION_STATE_TABLE),
+    (0x803d0868, &FT_LG_INIT_UNK_MOTION_STATES0),
     (0x803d0b00, &FT_MT_INIT_MOTION_STATE_TABLE),
     (0x803d0fa0, &FT_CL_INIT_MOTION_STATE_TABLE),
     (0x803d1498, &FT_DR_INIT_MOTION_STATE_TABLE),
@@ -14970,6 +15247,7 @@ pub static TABLES: [(u32, &[MotionState]); 32] = [
     (0x803d29f8, &FT_GN_INIT_MOTION_STATE_TABLE),
     (0x803d2e80, &FT_FE_INIT_MOTION_STATE_TABLE),
     (0x803d35e8, &FT_GK_INIT_MOTION_STATE_TABLE),
+    (0x803d38c8, &FT_GK_INIT_UNK_MOTION_STATES0),
     (0x803d3998, &FT_SB_INIT_MOTION_STATE_TABLE),
     (0x803d3a30, &FT_MH_INIT_MOTION_STATE_TABLE),
     (0x803d41f8, &FT_CH_INIT_MOTION_STATE_TABLE),

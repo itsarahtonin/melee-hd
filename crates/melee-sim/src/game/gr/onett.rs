@@ -638,7 +638,7 @@ pub fn proc_cars(r: &mut Running, gobj: GObjId) {
                     if !on_street(r, f) {
                         continue;
                     }
-                    let rank = r.game.fighter_rank(f);
+                    let rank = r.fighter_rank(f);
                     if count == 1 || rank == 0 {
                         r.game.grounds[g.0].u.onett_car().x108 = 0;
                         jobj::clear_flags_all(&mut r.game.objs.jobjs, car_j, jobj::HIDDEN);

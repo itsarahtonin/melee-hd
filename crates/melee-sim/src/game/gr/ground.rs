@@ -332,19 +332,33 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
     let (own, list, n) = coll_joints(game, data, map_id);
     for j in own.iter().filter(|j| i32::from(j.y) == map_id) {
         update_coll_joint(game, data, j.x.into());
-        game.geometry.as_mut().unwrap().joints[j.x as usize].stamp = stamp;
+        set_stamp(game, j.x as u16, stamp);
         moved = true;
     }
     for i in 0..n {
         let j = &GrJoint::read(data, list.expect("collision joints").at(6 * i));
         let g = game.geometry.as_mut().unwrap();
+        // A stamp the load left over the GPU's pixels: what the console compares here is a
+        // rendered texture's bytes (docs/melee-bugs.md).
+        assert!(
+            !g.render_stamps.contains(&(j.x as u16)),
+            "Ground_UpdateMapColl reads joint {}'s stamp, which the GPU's pixels left",
+            j.x
+        );
         if stamp != g.joints[j.x as usize].stamp {
             update_coll_joint(game, data, j.x.into());
-            game.geometry.as_mut().unwrap().joints[j.x as usize].stamp = stamp;
+            set_stamp(game, j.x as u16, stamp);
             moved = true;
         }
     }
     moved
+}
+
+/// Stamps a collision joint with this update's value.
+fn set_stamp(game: &mut Game, joint: u16, stamp: i16) {
+    let g = game.geometry.as_mut().unwrap();
+    g.joints[joint as usize].stamp = stamp;
+    g.render_stamps.retain(|&j| j != joint);
 }
 
 /// A stage object's first process (priority 1), `Ground_801C1CD0`: animates its model and

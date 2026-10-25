@@ -1928,7 +1928,15 @@ pub fn is_grabbable(game: &Game, gobj: GObjId) -> bool {
 /// Pokémon's.
 #[doc(alias = "Item_80266F70")]
 #[doc(alias = "it_8027870C")]
-pub fn load_common_data(game: &mut Game, data: &Archives, it_co: melee_data::archive::ArchiveId) {
+///
+/// `kept` says the file was set up by an earlier scene and stayed in memory (the preload
+/// cache's): its table of character articles then holds what `it_8026B3F8` wrote into it since.
+pub fn load_common_data(
+    game: &mut Game,
+    data: &Archives,
+    it_co: melee_data::archive::ArchiveId,
+    kept: bool,
+) {
     let public = data
         .get(it_co)
         .public("itPublicData")
@@ -1941,12 +1949,15 @@ pub fn load_common_data(game: &mut Game, data: &Archives, it_co: melee_data::arc
     it.common = data.ptr(public);
     it.common_articles = data.ptr(public.at(4));
     let table = data.ptr(public.at(8));
-    it.char_articles = match table {
-        Some(t) => (0..super::CHAR_ARTICLES as u32)
-            .map(|k| data.ptr(t.at(4 * k)))
-            .collect(),
-        None => Vec::new(),
-    };
+    let kept = kept && it.char_articles.len() == super::CHAR_ARTICLES;
+    if !kept {
+        it.char_articles = match table {
+            Some(t) => (0..super::CHAR_ARTICLES as u32)
+                .map(|k| data.ptr(t.at(4 * k)))
+                .collect(),
+            None => Vec::new(),
+        };
+    }
     it.pokemon_articles = data.ptr(public.at(0xC));
     it.zako = data.ptr(public.at(0x10));
     it.colanims = data.ptr(public.at(0x14));

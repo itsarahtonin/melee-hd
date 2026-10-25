@@ -40,6 +40,12 @@ pub struct VsMelee {
     pub start: StartMeleeData,
     /// `ko_counts` (`0x804D6730`): each port's KOs in the session's matches.
     pub ko_counts: [u8; 4],
+    /// `gmVsMelee_VsExitInfo`, `gmVsMelee_SuddenDeathExitInfo`: the match's and Sudden
+    /// Death's exit data.
+    pub exit: super::match_exit::MatchExitInfo,
+    pub sd_exit: super::match_exit::MatchExitInfo,
+    /// `gmVsMelee_ResultsEnterData`, the results screen's enter data.
+    pub results_enter: super::results_scene::ResultsMatchInfo,
 }
 
 /// `GmVsMode_Melee`, VS mode's entry of the modes table.
@@ -187,6 +193,55 @@ impl Running<'_> {
         self.vs_data().start.clone_from(&vs);
         self.game.vs_melee.start.clone_from(&start);
         self.load_announcer();
+    }
+
+    /// `onExitVs`: the match's records (`gmVsMelee_ExitVs` to the results, or Sudden Death
+    /// with several winners), then each player's KOs, self-destructs and damage added to
+    /// the save's totals.
+    #[doc(alias = "onExitVs@801B15C8")]
+    pub fn vs_mode_exit_vs(&mut self) {
+        self.vs_melee_exit_vs(STATE_RESULTS, STATE_SUDDEN_DEATH);
+        let standings = self.game.vs_melee.exit.match_end.player_standings.clone();
+        for p in &standings {
+            if p.pkind != 3 {
+                self.game.add_kos(p.x20 as i32);
+                self.game.add_self_destructs(i32::from(p.self_destructs));
+                self.game.add_damage(p.x44 as i32);
+            }
+        }
+    }
+
+    /// `gmVsMelee_ExitVs`: each human's character counted, the match's kind, play time and
+    /// contestants counted when a human played, and the next state: `one` for one winner or
+    /// none, `several` for several.
+    #[doc(alias = "gmVsMelee_ExitVs")]
+    pub fn vs_melee_exit_vs(&mut self, one: u8, several: u8) {
+        let end = self.game.vs_melee.exit.match_end.clone();
+        for p in &end.player_standings {
+            if p.pkind == 0 {
+                self.game.count_character_play(p.ckind as u8, end.outcome);
+            }
+        }
+        if super::records::any_human(&end) {
+            self.game.count_match_kind(end.match_kind, end.outcome);
+            let humans = self.game.count_contestants(&end);
+            self.game.add_play_time(end.frame_count / 60, humans);
+        }
+        if super::records::several_winners(&end) {
+            self.set_next_game_mode_state_id(several);
+        } else {
+            self.set_next_game_mode_state_id(one);
+        }
+    }
+
+    /// `onEnterResults` (`gmVsMelee_EnterResults`): the results screen's enter data
+    /// cleared (`gm_80177724`) and the match's results in it.
+    #[doc(alias = "onEnterResults@801B16A8")]
+    #[doc(alias = "gmVsMelee_EnterResults")]
+    pub fn vs_mode_enter_results(&mut self) {
+        self.results_enter_clear();
+        let me = self.game.vs_melee.exit.match_end.clone();
+        self.game.vs_melee.results_enter.match_end = me;
     }
 
     /// Each name tag's rumble setting, as the save holds them.

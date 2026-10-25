@@ -13,6 +13,7 @@ pub mod data;
 pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
+pub mod exe_data;
 pub mod flatzone;
 pub mod fourside;
 pub mod fzerocar;
@@ -192,6 +193,9 @@ pub struct DynamicAttrs {
 /// The stage code's globals besides `stage_info`.
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
+    /// The executable's data the dummy stage points into ([`exe_data`]), which the frontend
+    /// adds to the archives: the stage loaded with no archive takes its defaults from there.
+    pub defaults: Option<melee_data::archive::ArchiveId>,
     /// The loaded stage archives (`grDatFiles_8049EE10`).
     pub archives: [Option<StageArchive>; 4],
     /// The stage archive's `grGroundParam`, which `stage_info.param` points to: the stage

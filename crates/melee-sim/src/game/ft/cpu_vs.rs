@@ -643,7 +643,7 @@ impl Running<'_> {
                 }
             }
             let slot = i32::from(self.game.fighters[o.0].player_idx);
-            let standing = self.game.player_rank(slot);
+            let standing = self.player_rank(slot);
             let d = self.cpu_distance(f, o);
             match best {
                 None => best = Some((o, standing, d)),

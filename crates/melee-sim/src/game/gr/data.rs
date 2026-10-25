@@ -1360,6 +1360,26 @@ pub const VENOM_CALLBACKS: [StageCallbacks; 16] = [
     VENOM_WING,
 ];
 
+/// `Ground_StageData`, the dummy stage the results screen's fighters stand on: no archive,
+/// no objects, and callbacks that do nothing (`Ground_OnStart`, `Ground_801BFFAC`).
+pub const DUMMY: StageData = StageData {
+    grkind: 0,
+    callbacks: &[],
+    file: None,
+    on_init: GROUND_ON_START,
+    on_demo_init: 0x801B_FFAC,
+    on_load: GROUND_ON_START,
+    on_start: GROUND_ON_START,
+    callback4: 0,
+    on_touch_line: 0,
+    on_check_shadow_render: 0,
+    flags2: 0,
+    joints: &[],
+};
+
+/// `Ground_OnStart`, empty.
+pub const GROUND_ON_START: u32 = 0x801B_FFA8;
+
 /// `grVe_803E5348.joints`: the platforms' and the Arwings' collision joints the stage binds
 /// itself.
 pub const VENOM_JOINTS: [GrJoint; 5] = [
@@ -1681,6 +1701,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_CASTLE => &CASTLE,
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
+        0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }
 }

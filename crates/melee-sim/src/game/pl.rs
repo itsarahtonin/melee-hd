@@ -6,6 +6,7 @@ pub mod bonus;
 pub mod death;
 pub mod player;
 pub mod stats;
+pub mod tally;
 pub mod trick;
 
 use melee_data::archive::DataRef;
@@ -28,7 +29,7 @@ pub struct Globals {
 
 impl Running<'_> {
     /// `pl_804D6470`.
-    fn pl_data(&self) -> DataRef {
+    pub(crate) fn pl_data(&self) -> DataRef {
         let base = self.game.pl.load_common.expect("PdPm.dat isn't loaded");
         self.data.ptr(base).expect("plLoadCommonData's data")
     }
