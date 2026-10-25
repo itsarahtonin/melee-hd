@@ -653,14 +653,14 @@ impl Ctx<'_> {
         }
         let objs = &self.game.objs;
         let po = &objs.pobjs[p];
-        if po.ty() == pobj::SHAPEANIM {
-            self.hsd.note("a shape animation (drawShapeAnim)".into());
-            return;
-        }
         let (Some(verts), Some(display)) = (po.verts, po.display) else {
             return;
         };
         let n_display = po.n_display;
+        if po.ty() == pobj::SHAPEANIM {
+            self.shape_anim_disp(p, verts, display, n_display);
+            return;
+        }
         self.setup_array_desc(verts);
         self.setup_vtx_desc(verts);
         let addr = self.space.addr(self.data, display);
@@ -681,6 +681,155 @@ impl Ctx<'_> {
             );
         }
         self.gx.call_display_list(addr, u32::from(n_display) << 5);
+    }
+
+    /// `PObjDispShapeAnim`: the shape's arrays and vertex descriptions as a morph draws them
+    /// (`setupShapeAnimArrayDesc`, `setupShapeAnimVtxDesc`: positions and normals sent
+    /// directly as floats), the shapes blended (`drawShapeAnim`, `pobj::blend_shape`, as the
+    /// simulation's display pass blends them into its buffers), and the display list sent
+    /// again with the blended vertices (`interpretShapeAnimDisplayList`).
+    #[doc(alias = "setupShapeAnimArrayDesc")]
+    #[doc(alias = "setupShapeAnimVtxDesc")]
+    #[doc(alias = "interpretShapeAnimDisplayList")]
+    fn shape_anim_disp(&mut self, p: PObjId, verts: DataRef, display: DataRef, n_display: u16) {
+        let data = self.data;
+        let mut d = verts;
+        loop {
+            let attr = data.u32(d);
+            if attr == GX_VA_NULL {
+                break;
+            }
+            if data.u32(d.at(4)) != GX_DIRECT && !matches!(attr, GX_VA_POS | GX_VA_NRM | GX_VA_NBT)
+            {
+                let base = data.ptr(d.at(0x14)).map_or(0, |p| self.space.addr(data, p));
+                self.gx.set_array(attr, base, data.u16(d.at(0x12)) as u8);
+            }
+            d = d.at(0x18);
+        }
+        self.hsd.prev_array = None;
+        self.gx.clear_vtx_desc();
+        let mut descs = Vec::new();
+        let mut d = verts;
+        loop {
+            let attr = data.u32(d);
+            if attr == GX_VA_NULL {
+                break;
+            }
+            let (ty, cnt, comp) = (data.u32(d.at(4)), data.u32(d.at(8)), data.u32(d.at(0xC)));
+            match attr {
+                GX_VA_NRM | GX_VA_POS | GX_VA_NBT => {
+                    self.gx.set_vtx_desc(attr, GX_DIRECT);
+                    self.gx.set_vtx_attr_fmt(GX_VTXFMT0, attr, cnt, GX_F32, 0);
+                }
+                GX_VA_PNMTXIDX..=GX_VA_TEX7MTXIDX => self.gx.set_vtx_desc(attr, ty),
+                _ => {
+                    self.gx.set_vtx_desc(attr, ty);
+                    self.gx
+                        .set_vtx_attr_fmt(GX_VTXFMT0, attr, cnt, comp, data.u8(d.at(0x10)));
+                }
+            }
+            descs.push((attr, ty, comp));
+            d = d.at(0x18);
+        }
+        self.hsd.prev_vtxdesc = None;
+        let Binding::ShapeSet(set) = &self.game.objs.pobjs[p].u else {
+            panic!("a shape animation without its shape set");
+        };
+        let (vertex, normal) = pobj::blend_shape(data, set);
+        let byte = |i: u32| data.u8(display.at(i));
+        let length = u32::from(n_display) << 5;
+        let (mut l, mut at) = (0u32, 0u32);
+        while l + 3 < length {
+            let op = byte(at);
+            let n = (u16::from(byte(at + 1)) << 8) | u16::from(byte(at + 2));
+            let mut m = 3u32;
+            if u32::from(op) & 0xF8 == 0 {
+                break;
+            }
+            self.gx.begin(u32::from(op) & 0xF8, u32::from(op) & 7, n);
+            let next = |m: &mut u32| {
+                let b = byte(at + *m);
+                *m += 1;
+                b
+            };
+            for _ in 0..n {
+                for &(attr, ty, comp) in &descs {
+                    let mut idx = u16::from(next(&mut m));
+                    let wide = ty == GX_INDEX16;
+                    match attr {
+                        GX_VA_PNMTXIDX..=GX_VA_TEX7MTXIDX => self.gx.tex_coord1u8(idx as u8),
+                        GX_VA_POS => {
+                            if wide {
+                                idx = (idx << 8) | u16::from(next(&mut m));
+                            }
+                            let v = vertex[usize::from(idx)];
+                            self.gx.position3f32(v[0], v[1], v[2]);
+                        }
+                        GX_VA_NRM => {
+                            if wide {
+                                idx = (idx << 8) | u16::from(next(&mut m));
+                            }
+                            let v = normal[usize::from(idx)];
+                            self.gx.normal3f32(v[0], v[1], v[2]);
+                        }
+                        GX_VA_NBT => {
+                            if wide {
+                                idx = (idx << 8) | u16::from(next(&mut m));
+                            }
+                            let i = usize::from(idx) * 3;
+                            for v in &normal[i..i + 3] {
+                                self.gx.normal3f32(v[0], v[1], v[2]);
+                            }
+                        }
+                        GX_VA_TEX0..=GX_VA_TEX7 => {
+                            if wide {
+                                idx = (idx << 8) | u16::from(next(&mut m));
+                                self.gx.tex_coord1x16(idx);
+                            } else {
+                                self.gx.tex_coord1x8(idx as u8);
+                            }
+                        }
+                        GX_VA_CLR0 | GX_VA_CLR1 => {
+                            if wide {
+                                idx = (idx << 8) | u16::from(next(&mut m));
+                                self.gx.color1x16(idx);
+                            } else if ty == GX_INDEX8 {
+                                self.gx.color1x8(idx as u8);
+                            } else {
+                                match comp {
+                                    GX_RGB565 | GX_RGBA4 => {
+                                        let lo = u16::from(next(&mut m));
+                                        self.gx.color1u16((idx << 8) | lo);
+                                    }
+                                    GX_RGB8 | GX_RGBA6 => {
+                                        let (g, b) = (byte(at + m), byte(at + m + 1));
+                                        m += 2;
+                                        self.gx.color3u8(idx as u8, g, b);
+                                    }
+                                    GX_RGBA8 | GX_RGBX8 => {
+                                        let (g, b, a) =
+                                            (byte(at + m), byte(at + m + 1), byte(at + m + 2));
+                                        m += 3;
+                                        self.gx.color4u8(idx as u8, g, b, a);
+                                    }
+                                    _ => {}
+                                }
+                            }
+                        }
+                        _ => {
+                            if wide {
+                                next(&mut m);
+                            }
+                            self.hsd
+                                .note_once("a shape animation's attribute sysdolphin skips");
+                        }
+                    }
+                }
+            }
+            self.gx.end();
+            l += m;
+            at += m;
+        }
     }
 
     /// `GetSetupFlags`: (normals, normal projection).
