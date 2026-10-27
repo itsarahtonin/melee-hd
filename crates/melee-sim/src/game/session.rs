@@ -234,6 +234,11 @@ pub const FILES: &[&str] = &[
     "SdIntro.dat",
     "IfCoGet.dat",
     "LbBf.dat",
+    // Camera Mode's: its strings and its menu's models.
+    "SdVsCam.usd",
+    "IfVsCam.usd",
+    "SdVsCam.dat",
+    "IfVsCam.dat",
     // The trophy screens' (the trophies' own models, which `TyDataf.dat` names, after).
     "TyDatai.dat",
     "TyDataf.dat",
@@ -337,6 +342,7 @@ impl Session {
         // The heap's memory as the scenes leave it, for a match's leftovers.
         game.objs.heap.image = crate::hsd::image::Image::power_on();
         let card = Some(card_device(&setup));
+        crate::lb::snap_write::forget_frame();
         Session {
             game,
             data: Archives::default(),
@@ -563,6 +569,9 @@ impl Session {
         let (t, render) = with_feed(console, |read| {
             scene::step_session_tick(&mut r, read, false)
         });
+        // The pad alarm's card probes in the tick, which nothing in it looked at since, as
+        // the alarm's handler left them (`lb_8001C600`, `lbSnap_8001D2BC`).
+        r.card_alarm_probes();
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
         // A song a scene started mid-scene (the sound test's): its reads come after the tick.

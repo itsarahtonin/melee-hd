@@ -732,20 +732,55 @@ impl Heap {
 
     fn mem_alloc_raw(&mut self, size: u32) -> u32 {
         assert!(size as i32 > 0, "HSD_MemAlloc of {size:#x} bytes");
+        // The free list around the cell it takes, for the links `OSAllocFromHeap` writes.
+        let want = (size.wrapping_add(HEADER) + 31) & !31;
+        let fi = self
+            .os
+            .free
+            .iter()
+            .position(|&(_, have)| want as i32 <= have as i32);
+        let neighbours = fi.map(|i| {
+            let prev = if i > 0 { self.os.free[i - 1].0 } else { 0 };
+            let next = self.os.free.get(i + 1).map_or(0, |f| f.0);
+            (prev, next)
+        });
+        let head = self.image.alloc_order().last().copied().unwrap_or(0);
         let p = self
             .os
             .alloc(size)
             .unwrap_or_else(|| panic!("the main heap has no {size:#x} bytes free"));
         if self.image.on {
-            // `OSAllocFromHeap` writes the block's header, and a split's free rest's.
+            // `OSAllocFromHeap` writes the block's header, a split's free rest's and the
+            // lists' links around them: the free list's by address (`DLExtract`, or the rest
+            // taking the cell's place), the allocated list's newest first (`DLAddFront`).
             let cell = p - HEADER;
             self.image.alloc_cell(cell);
             self.image
                 .claim(cell, cell + 0xC, super::image::CELL_HEADER);
             let i = self.os.allocated.partition_point(|&(c, _)| c < cell);
-            let end = cell + self.os.allocated[i].1;
+            let cell_size = self.os.allocated[i].1;
+            let end = cell + cell_size;
+            let (prev, next) = neighbours.expect("a free cell taken");
             if self.os.free.binary_search_by_key(&end, |f| f.0).is_ok() {
-                self.image.unknown(end, end + 0xC);
+                let left = self.os.free[self.os.free.partition_point(|f| f.0 < end)].1;
+                self.image.free_header(end, prev, next, left);
+                if next != 0 {
+                    self.image.free_word(next, end);
+                }
+                if prev != 0 {
+                    self.image.free_word(prev + 4, end);
+                }
+            } else {
+                if next != 0 {
+                    self.image.free_word(next, prev);
+                }
+                if prev != 0 {
+                    self.image.free_word(prev + 4, next);
+                }
+            }
+            self.image.header(cell, 0, head, cell_size);
+            if head != 0 {
+                self.image.word(head, cell);
             }
         }
         p
@@ -754,28 +789,64 @@ impl Heap {
     /// `HSD_Free`.
     pub fn mem_free(&mut self, ptr: u32) {
         log(|| format!("MF {ptr:#010x}"));
+        // The free list around the cell, for the links `OSFreeToHeap` writes.
+        let cell = ptr - HEADER;
+        let fi = self.os.free.partition_point(|&(c, _)| c < cell);
+        let free_prev = (fi > 0).then(|| self.os.free[fi - 1]);
+        let free_next = self.os.free.get(fi).copied();
         if self.image.on {
             // The block keeps what its owner left (what the image knows of it), its header
-            // and the free list's links around it the heap's.
-            let cell = ptr - HEADER;
+            // and the lists' links around it the heap's: out of the allocated list
+            // (`DLExtract`), then into the free list by address, merged with the cells either
+            // side that touch it (`DLInsert`).
             let at = self.os.allocated.partition_point(|&(c, _)| c < cell);
             if let Some(&(c, size)) = self.os.allocated.get(at)
                 && c == cell
             {
+                let order = self.image.alloc_order();
+                let k = order.iter().rposition(|&o| o == cell);
+                let (newer, older) = k.map_or((0, 0), |k| {
+                    (
+                        order.get(k + 1).copied().unwrap_or(0),
+                        if k > 0 { order[k - 1] } else { 0 },
+                    )
+                });
                 self.image.free_cell(cell);
-                self.image.unknown(cell, cell + 0xC);
+                if older != 0 {
+                    self.image.word(older, newer);
+                }
+                if newer != 0 {
+                    self.image.word(newer + 4, older);
+                }
                 self.image.release(ptr, cell + size);
+                // `DLInsert`.
+                let mut size = size;
+                let mut next = free_next.map_or(0, |n| n.0);
+                if let Some((n, n_size)) = free_next {
+                    self.image.free_word(n, cell);
+                    if cell + size == n {
+                        size += n_size;
+                        next = self.os.free.get(fi + 1).map_or(0, |f| f.0);
+                        if next != 0 {
+                            self.image.free_word(next, cell);
+                        }
+                    }
+                }
+                let prev = free_prev.map_or(0, |p| p.0);
+                self.image.free_header(cell, prev, next, size);
+                if let Some((pc, p_size)) = free_prev {
+                    self.image.free_word(pc + 4, cell);
+                    if pc + p_size == cell {
+                        self.image.free_word(pc + 8, p_size + size);
+                        self.image.free_word(pc + 4, next);
+                        if next != 0 {
+                            self.image.free_word(next, pc);
+                        }
+                    }
+                }
             }
         }
         self.os.free(ptr);
-        if self.image.on {
-            let cell = ptr - HEADER;
-            let i = self.os.free.partition_point(|&(c, s)| c + s <= cell);
-            for j in i.saturating_sub(1)..(i + 2).min(self.os.free.len()) {
-                let c = self.os.free[j].0;
-                self.image.unknown(c, c + 0xC);
-            }
-        }
     }
 
     /// The scene's heap is about to be made anew: what its allocated blocks hold goes to the

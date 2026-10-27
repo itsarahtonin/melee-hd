@@ -174,6 +174,9 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
+    /// The frame copied into Camera Mode's snapshot's image (`lb_800122C8` from
+    /// `cmSnap_80031640`): the whole 640 by 480 frame as RGB565, the frame kept.
+    SnapCopy,
     /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
     /// (`lb_800122C8`).
     ReflectionCopy,

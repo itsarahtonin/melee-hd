@@ -17,6 +17,7 @@ pub mod heap;
 pub mod id;
 pub mod image;
 pub mod jobj;
+pub mod jpeg;
 pub mod list;
 pub mod lobj;
 pub mod mobj;

@@ -106,35 +106,21 @@ impl CardGame {
     pub fn set_card_status(&mut self, status: i32) {
         self.card_status = status;
     }
+}
 
+impl Running<'_> {
     /// `lbCardGame_DecideGameMode`, every mode's override once the boot is done: the memory
     /// card mode when the card needs the player, else none (`GM_COUNT`).
     #[doc(alias = "lbCardGame_DecideGameMode")]
-    pub fn decide_game_mode(&mut self) -> u8 {
-        self.update_card_status_known();
-        if self.card_status != STATUS_OK && self.card_status != STATUS_NO_CARD {
+    pub fn card_decide_game_mode(&mut self) -> u8 {
+        let status = self.update_card_status();
+        if status != STATUS_OK && status != STATUS_NO_CARD {
             super::super::game::gm::machine::GM_MEMCARD
         } else {
             super::super::game::gm::machine::GM_COUNT
         }
     }
 
-    /// `updateCardStatus` where the card's probe isn't needed: the status unless a swap
-    /// moves it (statuses 0 and 1, 2), which needs no probe.
-    fn update_card_status_known(&mut self) {
-        let swapped = std::mem::take(&mut self.unk_status);
-        match self.card_status {
-            STATUS_OK if swapped => self.card_status = STATUS_SWAPPED,
-            STATUS_NO_SAVE | STATUS_NO_CARD => panic!(
-                "updateCardStatus after going on without saving needs the card's probe \
-                 (lbCardNew_ProbeEx), which this path doesn't have"
-            ),
-            _ => {}
-        }
-    }
-}
-
-impl Running<'_> {
     /// `updateCardStatus`: the card's status moved on by a swap the probe saw
     /// (`unk_status`), and a player who went on without saving followed as the card comes
     /// and goes.

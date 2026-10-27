@@ -257,10 +257,15 @@ struct Drawer {
     frames: Frames,
     gpu: Gpu,
     loaded: bool,
+    /// Whether the copies are written to memory (`CHECK_COPIES=memory`): then Camera Mode's
+    /// snapshots are of the frames drawn, as a console with a renderer takes them
+    /// ([`Drawer::frame`]).
+    snapshots: bool,
 }
 
 impl Drawer {
     fn new(renderer: melee_gpu::Renderer, widescreen: Option<f32>) -> Drawer {
+        let snapshots = renderer.copies_to_memory.contains(&4);
         let mut frames = Frames::new();
         frames.hsd.widescreen = widescreen;
         // `CHECK_THREADED=1` draws on the renderer's own threads, as the player does.
@@ -273,12 +278,18 @@ impl Drawer {
             frames,
             gpu,
             loaded: false,
+            snapshots,
         }
     }
 
     /// Runs the tick's frame: drawn (watched by `observer`), or only followed, as the GPU's
     /// registers follow the stream all the same. Returns the frames it copied to the XFB and
     /// what melee-render noted it didn't draw exactly.
+    ///
+    /// With the copies written to memory, every frame of Camera Mode's match is drawn (a
+    /// snapshot's frame shows Pokémon Stadium's screens, copies of the frames before), and a
+    /// frame that copies a snapshot hands the game the copy's pixels (`give_frame`), as a
+    /// console with a renderer has them.
     fn frame(
         &mut self,
         t: &Tick<'_>,
@@ -290,8 +301,22 @@ impl Drawer {
             self.loaded = true;
         }
         let fifo = self.frames.frame(t.game, t.data, t.draws);
-        let images = if draw {
-            self.gpu.run(&self.frames.space, t.data, &fifo, observer)
+        let snapshot = self.snapshots && t.game.camera_mode.snap.image != 0;
+        let images = if draw || snapshot {
+            let images = self.gpu.run(&self.frames.space, t.data, &fifo, observer);
+            if snapshot
+                && t.draws
+                    .iter()
+                    .any(|d| matches!(d, melee_sim::hsd::display::Draw::SnapCopy))
+            {
+                use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame};
+                let space = &self.frames.space;
+                let at = space.dynamic(melee_render::mem::Dynamic::Snapshot, IMAGE_SIZE);
+                let mut pixels = vec![0; IMAGE_SIZE as usize];
+                space.read(t.data, at, &mut pixels);
+                give_frame(pixels);
+            }
+            images
         } else {
             self.gpu.follow(&self.frames.space, t.data, &fifo);
             Vec::new()

@@ -42,7 +42,8 @@ pub enum Replay {
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
     /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `trophy-NAME`
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
+    /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
     /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/` and
     /// for `results-NAME` `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
     /// played in the console's float mode.
@@ -71,6 +72,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("special-") {
+                    return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("trophy-") {
                     return ssbm_rs_local(&format!("lockstep/trophy-sessions/{o}.inputs")).into();
@@ -708,6 +712,23 @@ pub const RESULTS_TEAMS: Game = Game {
     name: "results-teams",
     players: "a team battle's results (session results-sessions/teams)",
     replay: Replay::Session("results-teams"),
+};
+
+/// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
+/// camera's info, the snapshot's offer and its question, the save.
+pub const CAMERA_SNAPS: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-snaps",
+    players: "Camera Mode (session special-sessions/camera-snaps)",
+    replay: Replay::Session("special-camera-snaps"),
+};
+
+/// Camera Mode with no card (`special-sessions/camera-nocard`).
+pub const CAMERA_NOCARD: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-nocard",
+    players: "Camera Mode, no card (session special-sessions/camera-nocard)",
+    replay: Replay::Session("special-camera-nocard"),
 };
 
 /// The trophy gallery round its six lights (`trophy-sessions/gallery-lights`): the view, the

@@ -516,7 +516,9 @@ impl Running<'_> {
             .sis
             .table_entry(self.data, 0, 0x4A)
             .expect("font 0's string 0x4A");
-        let s = |r: &mut Self, src: i32| r.game.sis.copy_table_string(r.data, 0, 0x4A, src);
+        let s = |r: &mut Self, src: i32| {
+            r.game.sis.copy_table_string(r.data, 0, 0x4A, src);
+        };
         let a = |r: &mut Self, src: i32| r.game.sis.append_table_string(r.data, 0, 0x4A, src);
         match self.css().match_type {
             VS_CAMERA => return s(self, 0x4F),

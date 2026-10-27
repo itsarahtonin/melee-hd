@@ -66,18 +66,15 @@ fn newest_poll(image: &Image) -> PadData {
 
 /// When the pad alarm (`lb_804329F0`'s) fires next, on the time base from power-on (the
 /// trace's): its system time less the OS's offset and the console's clock at power-on, which
-/// the code's time base adds.
-fn next_alarm(image: &Image, tick: u32, power_on: u64) -> Result<u64, String> {
+/// the code's time base adds; and its period, 60 Hz's or a faster game's (`gm_SetGameSpeed`
+/// sets the alarm again, `lb_80019628`).
+fn next_alarm(image: &Image, power_on: u64) -> (u64, u64) {
     let alarm = sym("lb_804329F0") + 0x50;
     let period = u64_at(image, alarm + 0x18);
-    if period != PERIOD {
-        return Err(format!(
-            "trace tick {tick}: the pad alarm's period is {period}, not {PERIOD}: the alignment follows only the 60 Hz alarm"
-        ));
-    }
-    Ok(u64_at(image, alarm + 8)
+    let at = u64_at(image, alarm + 8)
         .wrapping_sub(u64_at(image, SYSTEM_TIME_OFFSET))
-        .wrapping_sub(power_on))
+        .wrapping_sub(power_on);
+    (at, period)
 }
 
 /// The scene the trace's memory is in: the game mode (`state_machine`'s current mode), its
@@ -206,7 +203,11 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
     // reads the controllers itself (`HSD_PadRenewStatus`), on top of the alarm's reads.
     let mut extras: Vec<u64> = Vec::new();
     let mut scenes = Vec::new();
-    let mut last_alarm: Option<u64> = None;
+    let mut last_alarm: Option<(u64, u64)> = None;
+    // Ticks across which the alarm was set again at another period: how often each grid
+    // fired around the change isn't known, so the tick may have taken from none to as many
+    // reads as the faster grid's firings fit.
+    let mut loose: Vec<bool> = Vec::new();
     while let Some(t) = reader.tick() {
         image.apply(&t);
         if !image.seen || image.tb.is_none() {
@@ -222,35 +223,53 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         {
             scenes.push((t.number, mode, state, on_frame));
         }
-        let alarm = next_alarm(&image, t.number, rec.power_on)?;
+        let (alarm, period) = next_alarm(&image, rec.power_on);
         let extra = direct_reads(mode);
         let newest = newest_poll(&image);
         // Past the recording's end ssbm-rs's playback reports its last read, for a second.
         let matching = |r: u64| rec.reads[r.min(n - 1) as usize] == newest;
         // The reads the tick can have ended on, given the tick before's.
         let mut now = Vec::new();
+        let mut changed = false;
         let f = match last_alarm {
             None => {
+                if period != PERIOD {
+                    return Err(format!(
+                        "trace tick {}: the pad alarm's period is {period} at the first tick, not {PERIOD}",
+                        t.number
+                    ));
+                }
                 // Read 0 is the boot's; at most every alarm read since the time base started.
                 let most = alarm / PERIOD;
                 now.extend((1..=most).filter(|&r| matching(r)).map(|r| r as u32));
                 most
             }
-            Some(before) => {
-                if alarm < before || (alarm - before) % PERIOD != 0 {
-                    return Err(format!(
-                        "trace tick {}: the pad alarm left its grid ({before} at the tick before, {alarm} now)",
-                        t.number
-                    ));
-                }
-                let f = (alarm - before) / PERIOD;
+            Some((before, before_period)) => {
+                changed = period != before_period;
+                let f = if changed {
+                    if alarm < before {
+                        return Err(format!(
+                            "trace tick {}: the pad alarm set again went back ({before} at the tick before, {alarm} now)",
+                            t.number
+                        ));
+                    }
+                    (alarm - before).div_ceil(period.min(before_period)) + 1
+                } else {
+                    if alarm < before || (alarm - before) % period != 0 {
+                        return Err(format!(
+                            "trace tick {}: the pad alarm left its grid ({before} at the tick before, {alarm} now)",
+                            t.number
+                        ));
+                    }
+                    (alarm - before) / period
+                };
                 let prev = ends.last().expect("the tick before's reads");
                 if f == 0 && extra == 0 {
                     now.extend(prev.iter().copied().filter(|&r| matching(u64::from(r))));
                 } else {
                     let mut next = 0u64;
                     for &r in prev {
-                        let lo = u64::from(r) + u64::from(f > 0);
+                        let lo = u64::from(r) + u64::from(f > 0 && !changed);
                         let hi = u64::from(r) + f + extra;
                         for j in lo.max(next)..=hi {
                             if matching(j) {
@@ -283,8 +302,9 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         }
         ends.push(now);
         fired.push(f);
+        loose.push(changed);
         extras.push(extra);
-        last_alarm = Some(alarm);
+        last_alarm = Some((alarm, period));
     }
     // Back from the last tick: each tick keeps the reads a later tick's can follow from.
     for t in (1..ends.len()).rev() {
@@ -292,8 +312,9 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         let extra = extras[t] as u32;
         let (before, after) = ends.split_at_mut(t);
         let later = &after[0];
+        let loose = loose[t];
         before[t - 1].retain(|&r| {
-            let lo = if f == 0 { r } else { r + 1 };
+            let lo = if f == 0 || loose { r } else { r + 1 };
             let k = later.partition_point(|&j| j < lo);
             k < later.len() && later[k] <= r + f + extra
         });

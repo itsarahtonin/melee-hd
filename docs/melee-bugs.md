@@ -1363,6 +1363,38 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `mnsoundtest.c`'s `mnSoundTest_8024AA70`; `crates/melee-sim/src/game/mn/sound_test.rs`.
 
+## Special Melee and Camera Mode
+
+### Stamina Mode's stage select asks for no stage's sound bank
+
+- **Where:** `gm_801B927C` (Stamina Mode's stage select exit), `crates/melee-sim/src/game/gm/special.rs` (`stamina_exit_sss`, `stamina_stage_banks`).
+- **Defect:** where VS mode's exit (`gmVsMelee_ExitSss`) asks for the picked stage's sound bank (`lbAudioAx_80026EBC(vs->start.rules.stkind)`), Stamina Mode's passes the select's forced stage (`sss->force_stage_id`), which is -1 whenever the player picked the stage. `Stage_8022519C(-1)` reads the entry before `stage_id_map`, whose ground kind is four bytes of the assertion string before the table (`"no!=St_Player_InitPos_None"`'s `"s_No"`, 0x735F4E6F), past the banks' table, so no bank is asked for.
+- **Effect:** the stage's sound bank isn't wanted from the stage select (bank 8 asked for with an empty mask); the match's own load brings the stage's sounds. Seen in `special-sessions/special-stamina`.
+- **melee-hd:** modeled: a forced stage of -1 asks for no bank.
+- **Fix:** pass `vs->start.rules.stkind`, as VS mode does.
+- **Fix impact:** changes when the stage's bank loads, so the timeline (and what the disc and ARAM do before the match), not the match itself.
+- **Source:** `gmstamina.c`'s `gm_801B927C`; `crates/melee-sim/src/game/gm/special.rs`.
+
+### A snapshot's card file carries its header's padding as the buffer held it
+
+- **Where:** `lbSnap_8001DC0C` and `lbSnap_8001DF6C` (`lb_8001BB48`), `crates/melee-sim/src/lb/snap_write.rs` (`snap_make`, `snap_save`).
+- **Defect:** the snapshot's header (`Unk80433380_0`) is written field by field into the preload cache's buffer, which nothing clears, and the whole struct up to the compressed image (`x38`) goes to the card: the padding after `x8` (3 bytes) and after `stkind` (2 bytes) are whatever the buffer held, and the file's last block, written whole, takes the buffer's bytes past the image too.
+- **Effect:** five bytes of each snapshot file (and its last block's tail) are the heap's leftovers; the album never reads them.
+- **melee-hd:** modeled: the file is made from the heap's image of the buffer, the header's fields over what it held; the card `2026-10-06_17-11-18` leaves is the next recorded session's byte for byte.
+- **Fix:** clear the buffer (or the header) before writing it.
+- **Fix impact:** none in play; card files made after a fix differ in those bytes.
+- **Source:** `lbsnap.c`'s `lbSnap_8001DC0C`; `crates/melee-sim/src/lb/snap_write.rs`.
+
+### Camera Mode's match frees the last match's texts
+
+- **Where:** `gmCamera_801A31FC` (the match's start) through `gmCamera_801A26C0` (the menu's first state's entry), `crates/melee-sim/src/game/gm/camera_mode.rs` (`camera_match_start`, `cam_resume`).
+- **Defect:** the match's start enters the menu's first state, which frees the menu's texts (`gmCamera_VsCamUiState.x48`) when the first is set, before the start clears them: a second Camera Mode match in a session finds the last match's text pointers there, into a text arena the scene's end made anew, and `HSD_SisLib_803A5CC4` frees whatever text the new scene has at those places.
+- **Effect:** none observed: no recorded session plays two Camera Mode matches. A text of the new match's at one of those places would vanish.
+- **melee-hd:** modeled: the menu keeps the old texts' arena places (`CamUi::texts`) and frees what the text list holds there.
+- **Fix:** clear `x48` before entering the first state.
+- **Fix impact:** none in play but the vanished text.
+- **Source:** `gmcamera.c`'s `gmCamera_801A31FC` and `gmCamera_801A26C0`; `crates/melee-sim/src/game/gm/camera_mode.rs`.
+
 ## Results and records
 
 ### A results pose's fighter takes an unset byte of its allocation info
@@ -1513,6 +1545,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | No logged hit above -1 knockback | `ftColl_8007A06C`, `game/ft/attack.rs`; `it_80270E30`, `game/it/coll.rs` | Leaves the index it reads uninitialized when every knockback is NaN or -1 and below | [engine notes](engine.md#uninitialized-values) (line 69); `crates/melee-sim/src/game/it/coll.rs:647` |
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
+| An output that ends exactly at its room | `hsd_803B3398` and `hsd_803B46D4` (HAL's JPEG writer), `hsd/jpeg.rs` | A block of bytes is refused unless it ends before the output's end (`<` where `<=` would do), so an image that would fill the room exactly is dropped as too big; the snapshot's room is 256,000 bytes, and the frames compressed in the sessions took up to 248,093 | `crates/melee-sim/src/hsd/jpeg.rs` (`Encoder::bytes`, `jfif`) |
 | The sound test's category checks | `lbAudioAx_80023968` and `lbAudioAx_80023A44`, `lb/audio/sound_test.rs` | Guard a category and a sound with `arg0 < 0 && arg0 >= 30` and `arg1 < 0 && 0x83D60 <= arg1`, which no value passes, so an out-of-range category reads past `lbAudioLoadData`'s table; the sound test passes only categories 0 to 29 and sounds of their lists | `lbaudio_ax.c` (`MUST_MATCH`) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
 | The approach's roll with no target | `ftCo_800AB224` calling `ftCo_800BA2E8`, `game/ft/cpu_move.rs` | Passes the target on unchecked after its own null test, so with no target and `xF8_b6` set the roll reads a fighter at address 0; the VS decision sets the target on every frame it sets `xF9_b1`, which the approach needs, and nothing before the walk clears it | `crates/melee-sim/src/game/ft/cpu_move.rs:664` |
