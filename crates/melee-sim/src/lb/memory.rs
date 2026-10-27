@@ -89,8 +89,9 @@ pub struct Handle {
 }
 
 /// `lbMemory_804318B0` (`struct Allocator`), but for its copy manager's alarm (`mgr.alarm`,
-/// which ssbm-rs's stand-in for the OS's alarms never writes): the heaps, and a heap's
-/// compaction (`lbMemory_8001529C`) with its main memory copy manager (`mgr`).
+/// which the clock keeps as an event, [`crate::audio::clock::EventKind::CopyAlarm`]): the
+/// heaps, and a heap's compaction (`lbMemory_8001529C`) with its main memory copy manager
+/// (`mgr`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct LbMemory {
     /// ARAM's range the game's heaps may use (`a_arenaLo`, `a_arenaHi`).
