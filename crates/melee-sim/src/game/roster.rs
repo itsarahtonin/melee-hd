@@ -802,10 +802,6 @@ pub(crate) mod tests {
             "the point search, which single-player modes ask for",
         ),
         (
-            "it_8026BE84",
-            "the bob-omb rain of a sudden death, which the player doesn't play: a match's end goes back to the launcher",
-        ),
-        (
             "grMaterial_804D456C",
             "a stage's own color script command: the roster stages' scripts (Battlefield's, Final Destination's and the barrels' flashes) use none",
         ),

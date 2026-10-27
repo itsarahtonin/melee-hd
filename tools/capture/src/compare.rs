@@ -2020,6 +2020,24 @@ impl melee_sim::game::mirror::LayCx for Nulls {
     }
 }
 
+/// [`Nulls`] that also lays a leftover handle as the word it stands for
+/// (`melee_sim::hsd::image::Image::unknown_word`): a field still holding what the block
+/// held, the GPU's pixels among them.
+struct LeftoverWords<'a>(&'a melee_sim::hsd::image::Image);
+
+impl melee_sim::game::mirror::LayCx for LeftoverWords<'_> {
+    fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
+        match h {
+            None => Some(0),
+            Some(h) if h >= melee_sim::hsd::pool::UNKNOWN => self.0.unknown_word(h),
+            Some(_) => None,
+        }
+    }
+    fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
+        d.is_none().then_some(0)
+    }
+}
+
 impl Comparer<'_> {
     /// Where a new object's block held bytes the heap's image didn't know
     /// (`melee_sim::hsd::image::Unlaid`), which its creation gave zero: theirs as a copy of
@@ -2105,12 +2123,12 @@ pub(crate) fn item_render_target_view(
     let lo = (at - MEM1) as usize;
     let fill = game.objs.heap.image.render_fill;
     let mut l = melee_sim::hsd::export::Lay::new(at, size);
-    o.lay(&mut l, at, &Nulls);
+    let cx = LeftoverWords(&game.objs.heap.image);
+    o.lay(&mut l, at, &cx);
     let n = o.x374_dynamicBonesNum.max(0) as usize;
-    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &Nulls, n);
+    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
     let n = usize::from(o.xAC8_hurtboxNum);
-    o.xACC_itemHurtbox
-        .lay_counted(&mut l, at + 0xACC, &Nulls, n);
+    o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
     let mut block = mem[lo..lo + size as usize].to_vec();
     for &(a, b) in runs {
         for off in a..b {
@@ -2149,10 +2167,10 @@ fn render_target_view(
     };
     let fill = game.objs.heap.image.render_fill;
     let mut l = melee_sim::hsd::export::Lay::new(at, size);
-    o.lay(&mut l, at, &Nulls);
+    let cx = LeftoverWords(&game.objs.heap.image);
+    o.lay(&mut l, at, &cx);
     let n = o.dynamics_num.max(0) as usize;
-    o.dynamic_bone_sets
-        .lay_counted(&mut l, at + 0x2F0, &Nulls, n);
+    o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
     let mut block = mem[lo..lo + size as usize].to_vec();
     if demo {
         block[0x61C] = o.x61C as u8;
