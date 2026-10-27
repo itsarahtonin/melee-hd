@@ -42,7 +42,8 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         | UserData::SssHover(a)
         | UserData::OptionMenu(a)
         | UserData::Vibration(a)
-        | UserData::DataDel(a) => known(a),
+        | UserData::DataDel(a)
+        | UserData::SoundTest(a) => known(a),
         _ => None,
     }
 }

@@ -64,6 +64,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("select-") {
                     return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("sound-") {
+                    return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
+                }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
