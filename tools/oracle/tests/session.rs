@@ -869,3 +869,38 @@ fn a_session_rollback_catches_a_perturbation() {
         "{out}"
     );
 }
+
+/// A Data menu session (`lockstep/data-sessions/NAME.inputs`, on a copy of `records.card`:
+/// `options-sessions/names10.card` with every character, stage and trophy unlocked, every
+/// special message noted, two thirds of the bonuses seen, thirty names and random records).
+fn data_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("data-sessions", name, args)
+}
+
+/// The special messages scrolled to the end and back, B out to the title: clean to the
+/// trace's end.
+#[test]
+fn the_special_messages_scrolled() {
+    let Some(out) = data_session("info", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2446 ticks compared, no difference"), "{out}");
+}
+
+/// The bonuses scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_bonuses_scrolled() {
+    let Some(out) = data_session("bonus", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2398 ticks compared, no difference"), "{out}");
+}
+
+/// The other records scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_other_records_scrolled() {
+    let Some(out) = data_session("count", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2318 ticks compared, no difference"), "{out}");
+}

@@ -607,6 +607,8 @@ impl<'a> Comparer<'a> {
             Some(UserData::OptionMenu(a)) => self.option_menu(path, a, t),
             Some(UserData::Vibration(a)) => self.vibration_data(path, a, t),
             Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
+            Some(UserData::Info(a)) => self.info_data(path, a, t),
+            Some(UserData::Count(a)) => self.count_data(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

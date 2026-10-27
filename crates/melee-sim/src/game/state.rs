@@ -87,6 +87,10 @@ pub enum UserData {
     Vibration(u32),
     /// The erasing screen's user data (`MnDataDelGObjUserData`), by its block's address.
     DataDel(u32),
+    /// The special messages' user data (`MnInfoData`), by its block's address.
+    Info(u32),
+    /// The other records' user data (`MnCountData`), by its block's address.
+    Count(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
@@ -378,6 +382,9 @@ pub struct Game {
     /// The Options menus' statics and user data (`mnvibration.c`, `mnsound.c`,
     /// `mndeflicker.c`, `mnlanguage.c`, `mndatadel.c`).
     pub options: super::mn::options::Options,
+    /// The Data menu's screens' statics and user data (`mninfo.c` and the others
+    /// [`super::mn::data`] lists).
+    pub data_menus: super::mn::data::DataMenus,
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).
@@ -464,6 +471,16 @@ impl Host<GameKinds> for Running<'_> {
             UserData::OptionMenu(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.options.menus.remove(&addr);
+            }
+            UserData::Info(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.data_menus.info.data.remove(&addr);
+            }
+            UserData::Count(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                let c = &mut self.game.data_menus.count;
+                let d = c.data.remove(&addr);
+                c.left = Some((addr, d.and_then(|d| d.title)));
             }
             UserData::Vibration(addr) => {
                 crate::hsd::heap::mem_free(addr);
