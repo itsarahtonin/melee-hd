@@ -60,7 +60,8 @@ const PAD_B: u64 = 0x200;
 const PAD_START: u64 = 0x1000;
 const PAD_STICK_LEFT: u64 = 0x4_0000;
 const PAD_STICK_RIGHT: u64 = 0x8_0000;
-const PAD_LR_START: u64 = 0x1060;
+/// `PAD_LR_START`: L, R and Start held together, as the controller map reports it.
+const PAD_LR_START: u64 = super::super::mn::main::PAD_LR_START;
 /// The menus' sounds (`lbAudioAx_80024030`).
 const SFX_BACK: i32 = 0;
 const SFX_FORWARD: i32 = 1;

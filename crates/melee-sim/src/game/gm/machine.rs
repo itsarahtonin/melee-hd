@@ -533,7 +533,7 @@ impl Running<'_> {
     /// `GM_COUNT` for none.
     fn call_override(&mut self, f: CodeRef) -> u8 {
         match f {
-            DECIDE_GAME_MODE => self.game.card_game.decide_game_mode(),
+            DECIDE_GAME_MODE => self.card_decide_game_mode(),
             other => unported_call(&format!("the mode override {:#010x}", other.0)),
         }
     }
