@@ -496,6 +496,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
+    let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
@@ -507,6 +508,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            "--card-after" => card_after = Some(it.next().expect("--card-after FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -694,6 +696,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
+        card_after,
     };
     run.play(setup)
 }
@@ -754,6 +757,9 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
+    /// The card as ssbm-rs's run left it (its recording's `NAME-run.card`), to check the
+    /// card melee-hd's run leaves against: the saves it wrote, byte for byte.
+    card_after: Option<PathBuf>,
 }
 
 impl Run<'_> {
@@ -1026,6 +1032,29 @@ impl Run<'_> {
             next = t + 1;
         };
         let at = format!("tick {tick}");
+        if let Some(path) = &self.card_after {
+            let theirs = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            let ours = s
+                .card
+                .as_ref()
+                .and_then(|c| c.card.as_ref())
+                .map(|c| c.image().to_vec());
+            match ours {
+                Some(o) if o == theirs => {
+                    println!("the card after the run: the same as {}", path.display())
+                }
+                Some(o) => {
+                    let n = o.iter().zip(&theirs).filter(|(a, b)| a != b).count();
+                    let first = o.iter().zip(&theirs).position(|(a, b)| a != b);
+                    println!(
+                        "the card after the run: {n} bytes differ from {} (the first at {:#x?})",
+                        path.display(),
+                        first
+                    );
+                }
+                None => println!("the card after the run: none"),
+            }
+        }
         if let Some(path) = &self.heap_log {
             let log = melee_sim::hsd::heap::take_log();
             std::fs::write(

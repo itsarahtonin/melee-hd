@@ -13,7 +13,7 @@ use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
 use super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
-use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
+use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use super::{Loaded, TROPHY_COUNT};
 use crate::fpu::{mem, reg};
 use crate::hsd::cobj::{self, CObjId};
@@ -366,7 +366,7 @@ impl Running<'_> {
     /// trophies marked in the flags in play, the categories' third bit in the save's and the
     /// table's, `TyDataf`, and the save into the table.
     #[doc(alias = "Toy_8031263C")]
-    fn toy_scene_prepare(&mut self) {
+    pub(super) fn toy_scene_prepare(&mut self) {
         self.game.toys.table.exit = 0;
         self.load_trophy_data();
         for i in 0..TROPHY_COUNT {
@@ -564,7 +564,7 @@ impl Running<'_> {
     /// `Toy_8030813C`: a trophy's model file (`TyDataf`): the English table's five first
     /// where the setting is English, else the main table's.
     #[doc(alias = "Toy_8030813C")]
-    fn toy_model_file(&self, trophy: i32) -> DataRef {
+    pub(super) fn toy_model_file(&self, trophy: i32) -> DataRef {
         if super::super::gm::language_setting_is_us() {
             let at = self.dataf_sym("tyModelFileUsTbl");
             for i in 0..5 {
@@ -582,7 +582,7 @@ impl Running<'_> {
     }
 
     /// A model file's name (`ToyModelFile.archive_name`).
-    fn toy_file_name(&self, file: DataRef) -> String {
+    pub(super) fn toy_file_name(&self, file: DataRef) -> String {
         self.toy_cstr(file.at(4))
     }
 
@@ -1375,8 +1375,9 @@ impl Running<'_> {
         let Some(Obj::JObj(j)) = self.game.world.gobj(gobj).obj else {
             panic!("Toy_80306BB8 on a GObj without a model");
         };
-        if self.game.world.gobj(gobj).user_data.is_some() {
-            super::super::code::unported_call("Toy_80306BB8 with its frames (the lottery's)");
+        if let Some(UserData::Toy(a)) = self.game.world.gobj(gobj).user_data {
+            self.toy_anim_frames_proc(gobj, a);
+            return;
         }
         let data = self.data;
         let o = &mut self.game.objs;
@@ -1736,6 +1737,12 @@ impl Running<'_> {
         g.cooldown = 0;
         g.state = 0;
         g.cam_block = block;
+    }
+
+    /// The lights' block (`Toy_sbss_804D6ED4`) at `block`, cleared.
+    pub(super) fn gal_reset_lights_block(&mut self, block: u32) {
+        self.gal().light_block = block;
+        self.gal_clear_lights();
     }
 
     /// `memzero(Toy_sbss_804D6ED4, 0xE4)`.

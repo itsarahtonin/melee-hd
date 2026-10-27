@@ -3,14 +3,15 @@
 //! the first trophy given. Outside the single-player modes and the lottery, which keep a
 //! table of their own (`_Toy_804A26B8`), every count and flag here is the save's.
 
+use gekko_fp as fp;
+
 use super::super::code::unported_call;
 use super::super::state::Running;
+use crate::fpu::reg;
 use melee_data::archive::DataRef;
 
 /// `TY_TROPHY_COUNT`.
 pub const TROPHY_COUNT: usize = 293;
-/// `GM_TOY_LOTTERY`.
-const GM_TOY_LOTTERY: u8 = 0xC;
 /// A `TrophyData`'s size.
 const ENTRY: u32 = 0x24;
 /// A trophy's flags: in the save's set already this session (`Toy_80304988`), and one the
@@ -49,7 +50,7 @@ struct Tables {
 /// `Toy_80304B94`: how many trophies of a class there are (the same on either language
 /// setting but class 5's: 0x11 on a Japanese one).
 #[doc(alias = "Toy_80304B94")]
-pub(super) fn class_size(class: i32) -> i32 {
+pub(crate) fn class_size(class: i32) -> i32 {
     match class {
         0 => 0x1B,
         1 => 0x7E,
@@ -95,17 +96,6 @@ impl Running<'_> {
         }
     }
 
-    /// The save's trophy table is the one in play: neither a single-player mode's nor the
-    /// lottery's (`gm_IsCurrently1PMode`, `GM_TOY_LOTTERY`), which aren't ported.
-    fn assert_save_trophies(&self) {
-        let game = &*self.game;
-        assert!(
-            !super::super::gm::is_1p_mode(game) && game.game_mode != GM_TOY_LOTTERY,
-            "the trophy table of game mode {:#x} isn't ported",
-            game.game_mode
-        );
-    }
-
     /// Whether the region can win a trophy (`Toy_80304CC8`): on an English setting, any but
     /// those `tyNoGetUsTbl` lists.
     #[doc(alias = "Toy_80304CC8")]
@@ -141,11 +131,6 @@ impl Running<'_> {
         i32::from(self.data.u8(at.at(0x20)) as i8)
     }
 
-    /// `Toy_803048C0`: how many of a trophy the save holds.
-    fn save_trophy_count(&self, trophy: usize) -> i32 {
-        i32::from(self.game.game_data.thing.save_data.trophy_flags[trophy] & 0xFF)
-    }
-
     /// `Toy_803124BC`: each trophy the region can win of class 2 marked as one it can't
     /// (`0x4000`), and class 2's bit in the save's categories and the trophy screens'
     /// (`Toy_804A284C[3]`).
@@ -161,20 +146,39 @@ impl Running<'_> {
         self.game.toys.table.categories |= 4;
     }
 
-    /// `Toy_80305058(class, 0x63, 0, 100.0)`: one trophy of `class` the region can win, drawn
-    /// from those the save doesn't hold if there are any (`HSD_Randi`), else from those it
-    /// does; -1 if the class has none. Only these arguments are ported (the save's first
-    /// gift's).
-    #[doc(alias = "Toy_80305058")]
+    /// `Toy_80305058(class, 0x63, 0, 100.0)`: one trophy of `class`, a new one if the class
+    /// has any (the save's first gift).
     pub fn draw_trophy_of_class(&mut self, class: i32) -> i32 {
-        self.assert_save_trophies();
+        self.toy_draw(class, 0x63, 0, 100.0)
+    }
+
+    /// `Toy_80305058(class, also, marked, chance)`: a trophy the region can win from those of
+    /// `class` (any, for 0x63: then every trophy marked `0x4000` and those of class `also` not
+    /// marked), and of class `also` (with `marked`, only those marked); drawn from the new
+    /// ones with `chance` percent (`HSD_Randf` and `HSD_Randi(100)`; always at 100 or above,
+    /// or with none held), else from those held. -1 if there are none.
+    #[doc(alias = "Toy_80305058")]
+    pub fn toy_draw(&mut self, class: i32, also: i32, marked: i32, chance: f32) -> i32 {
         let t = self.trophy_tables();
         let (mut held, mut new) = (Vec::new(), Vec::new());
         for i in 0..TROPHY_COUNT {
-            if !self.trophy_winnable(&t, i) || self.trophy_class(&t, i) != class {
+            if !self.trophy_winnable(&t, i) {
                 continue;
             }
-            if self.save_trophy_count(i) != 0 {
+            let c = self.trophy_class(&t, i);
+            let f = self.toy_flags()[i];
+            let of_also = also != 0x63 && also == c && (marked == 0 || f & FLAG_UNWINNABLE != 0);
+            let take = if class == 0x63 {
+                f & FLAG_UNWINNABLE != 0 || of_also
+            } else if class != c {
+                of_also
+            } else {
+                marked == 0 || f & FLAG_UNWINNABLE != 0
+            };
+            if !take {
+                continue;
+            }
+            if f as u8 != 0 {
                 held.push(i as i32);
             } else {
                 new.push(i as i32);
@@ -183,10 +187,20 @@ impl Running<'_> {
         if held.is_empty() && new.is_empty() {
             return -1;
         }
-        // `farg0` is 100: the new ones whenever there are any.
-        let rng = &mut self.game.objs.rng;
-        let from = if new.is_empty() { &held } else { &new };
-        let idx = rng.below(from.len() as i32);
+        let use_new = if reg(chance) >= reg(100.0) || held.is_empty() {
+            true
+        } else {
+            let rng = &mut self.game.objs.rng;
+            let f = rng.draw_f32();
+            let n = rng.below(100);
+            fp::fadds(fp::frsp(f64::from(n)), reg(f)) < reg(chance)
+        };
+        let from = if use_new && !new.is_empty() {
+            &new
+        } else {
+            &held
+        };
+        let idx = self.game.objs.rng.below(from.len() as i32);
         from[if idx > from.len() as i32 {
             0
         } else {
@@ -194,24 +208,40 @@ impl Running<'_> {
         }]
     }
 
-    /// `Toy_SetUnlockState(trophy, add)`: one more of a trophy in the save (`add` more,
-    /// up to 255), a trophy new to the save counted and flagged, then the checks a new
-    /// trophy runs: the trophy screens' notices, the stage the stage trophy unlocks, and a
-    /// class 1 trophy's record.
+    /// `Toy_SetUnlockState(trophy, add)`: one more of a trophy in the table in play (`add`
+    /// more, up to 255), a trophy new to it counted and flagged new, then the checks a new
+    /// trophy runs: every trophy's notice (250 held, unless the categories have it), the
+    /// completed classes' notices, the stage the stage trophy unlocks, and a class 1 trophy's
+    /// record.
     #[doc(alias = "Toy_SetUnlockState")]
     pub fn add_trophy(&mut self, trophy: i32, add: i32) {
-        self.assert_save_trophies();
         let idx = trophy as i16 as usize;
-        let s = &mut self.game.game_data.thing.save_data;
-        if s.trophy_flags[idx] & 0xFF == 0 {
-            s.trophy_flags[idx] ^= FLAG_NEW;
-            s.trophy_count = s.trophy_count.wrapping_add(1);
+        let own = self.toy_own_table();
+        if self.toy_flags()[idx] & 0xFF == 0 {
+            self.toy_flags_mut()[idx] ^= FLAG_NEW;
+            if own {
+                self.game.toys.table.count = self.game.toys.table.count.wrapping_add(1);
+            } else {
+                let s = &mut self.game.game_data.thing.save_data;
+                s.trophy_count = s.trophy_count.wrapping_add(1);
+            }
         }
-        let held = i32::from(s.trophy_flags[idx] & 0xFF);
-        let low = if add + held <= 0xFF { add + held } else { 0xFF };
-        s.trophy_flags[idx] = (low as u16).wrapping_add(s.trophy_flags[idx] & 0xFF00);
-        if s.trophy_category_flags & 0x80 == 0 && s.trophy_count >= 0xFA {
-            unported_call("Toy_80305918 (every trophy's notice)");
+        let held = i32::from(self.toy_flags()[idx] & 0xFF);
+        let f = &mut self.toy_flags_mut()[idx];
+        *f = if add + held <= 0xFF {
+            ((add + held) as u16).wrapping_add(*f & 0xFF00)
+        } else {
+            (*f & 0xFF00) + 0xFF
+        };
+        let categories = if own {
+            let t = &self.game.toys.table;
+            t.categories | t.x8
+        } else {
+            self.game.game_data.thing.save_data.trophy_category_flags
+        };
+        if categories & 0x80 == 0 && self.toy_total() >= 0xFA {
+            self.game.toys.table.x0 = 2;
+            self.toy_mark_class(7, false, false);
         }
         self.trophy_class_notices();
         if idx == STAGE_TROPHY && !self.stage_unlocked(STAGE_TROPHY_STKIND) {
@@ -223,18 +253,75 @@ impl Running<'_> {
         }
     }
 
-    /// Whether the save holds every trophy (`un_80304470`): its classes' trophies, Mew's and
-    /// the Pikmin's aside.
+    /// `Toy_80305918(class, clear, extra)`: each trophy of `class` the region can win marked
+    /// `0x4000` in the table in play (or the mark cleared, with `clear`), and the class's bit
+    /// set (or cleared) in the categories: the extra ones (`x19C`, with `extra`) or those in
+    /// play. Class 8 has none.
+    #[doc(alias = "Toy_80305918")]
+    pub fn toy_mark_class(&mut self, class: i32, clear: bool, extra: bool) {
+        if class == 8 {
+            return;
+        }
+        let t = self.trophy_tables();
+        for i in 0..TROPHY_COUNT {
+            if !self.trophy_winnable(&t, i) || self.trophy_class(&t, i) != class {
+                continue;
+            }
+            let f = &mut self.toy_flags_mut()[i];
+            if clear {
+                if *f & FLAG_UNWINNABLE != 0 {
+                    *f ^= FLAG_UNWINNABLE;
+                }
+            } else {
+                *f |= FLAG_UNWINNABLE;
+            }
+        }
+        let bit = 1u16 << class;
+        let own = self.toy_own_table();
+        let cats = if extra {
+            &mut self.game.toys.table.x8
+        } else if own {
+            &mut self.game.toys.table.categories
+        } else {
+            &mut self.game.game_data.thing.save_data.trophy_category_flags
+        };
+        if clear {
+            if *cats & bit != 0 {
+                *cats ^= bit;
+            }
+        } else {
+            *cats |= bit;
+        }
+    }
+
+    /// Whether the table in play holds every trophy (`un_80304470`): its classes' trophies,
+    /// Mew's and the Pikmin's aside.
     pub fn holds_every_trophy(&self) -> bool {
         let total: i32 = (0..8).map(class_size).sum();
         let held = (0..TROPHY_COUNT)
-            .filter(|&i| i != 0xE6 && i != 0xC9 && self.save_trophy_count(i) != 0)
+            .filter(|&i| i != 0xE6 && i != 0xC9 && self.toy_flags()[i] & 0xFF != 0)
             .count() as i32;
         total <= held
     }
 
-    /// `_Toy_80304D30`: unless the save holds every trophy (`un_80304470`), the trophy
-    /// screens' notice for a class the save completes. Its count is unused here.
+    /// `Toy_80304B0C(class)`: whether the categories in play (both of the screens' own in the
+    /// single-player modes and the lottery) have a class's bit.
+    #[doc(alias = "Toy_80304B0C")]
+    pub fn toy_class_open(&self, class: i32) -> bool {
+        let cats = if self.toy_own_table() {
+            let t = &self.game.toys.table;
+            t.categories | t.x8
+        } else {
+            self.game.game_data.thing.save_data.trophy_category_flags
+        };
+        cats & (1 << class) != 0
+    }
+
+    /// `_Toy_80304D30`: unless every trophy is held (`un_80304470`), the notices of the
+    /// classes the trophies held complete: for the highest of 3 to 6 whose trophies are all
+    /// held, each class from 2 below it not yet open (but 3) is opened (`x194` 2, its notice),
+    /// and then the next class of 4 to 6 with trophies, if not open. Its count goes unused
+    /// (and reads a register it may not set: [Melee's bugs](../../../../../docs/melee-bugs.md)).
     #[doc(alias = "_Toy_80304D30")]
     #[doc(alias = "un_80304470")]
     fn trophy_class_notices(&mut self) {
@@ -244,14 +331,29 @@ impl Running<'_> {
         }
         let mut by_class = [0i32; 9];
         for i in 0..TROPHY_COUNT {
-            if self.trophy_winnable(&t, i) && self.save_trophy_count(i) != 0 {
+            if self.trophy_winnable(&t, i) && self.toy_flags()[i] & 0xFF != 0 {
                 by_class[self.trophy_class(&t, i) as usize] += 1;
             }
         }
         for class in (1..=6).rev() {
-            if class > 2 && by_class[class] != 0 && by_class[class] == class_size(class as i32) {
-                unported_call("Toy_80305918 (a completed class's notice)");
+            if class <= 2 || by_class[class] == 0 || by_class[class] != class_size(class as i32) {
+                continue;
             }
+            for i in 0..class as i32 {
+                if i > 1 && i != 3 && !self.toy_class_open(i) {
+                    self.game.toys.table.x0 = 2;
+                    self.toy_mark_class(i, false, false);
+                }
+            }
+            let mut next = class as i32 + 1;
+            while class_size(next) == 0 {
+                next += 1;
+            }
+            if (4..=6).contains(&next) && !self.toy_class_open(next) {
+                self.game.toys.table.x0 = 2;
+                self.toy_mark_class(next, false, false);
+            }
+            break;
         }
     }
 

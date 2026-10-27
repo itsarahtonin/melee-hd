@@ -6,6 +6,7 @@
 
 pub mod gallery;
 pub mod list;
+pub mod lottery;
 pub mod view;
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -139,6 +140,8 @@ pub struct Toys {
     pub gallery: gallery::Gallery,
     /// The gallery's list (`tylist.c`).
     pub list: list::List,
+    /// The lottery's (`tyfigupon.c`).
+    pub lottery: lottery::Lottery,
 }
 
 impl Toys {

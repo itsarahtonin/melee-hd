@@ -196,7 +196,8 @@ impl Running<'_> {
     }
 
     /// `fn_8017279C(n, mask)`: whether special message `n` has come, by its row of
-    /// `lbl_803D6300` whose mask `mask` matches (the rows `0x100` takes, the main menu's).
+    /// `lbl_803D6300` whose mask `mask` matches (the rows `0x100` takes, the main menu's, and
+    /// `4`, the lottery's: the same rows, those every mask takes).
     #[doc(alias = "fn_8017279C")]
     #[doc(alias = "fn_801735F0")]
     #[doc(alias = "fn_80173510")]
@@ -211,9 +212,16 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EDC8")]
     #[doc(alias = "gmMainLib_8015EDA4")]
     pub(super) fn message_due(&mut self, n: u32, mask: u16) -> bool {
-        assert_eq!(mask, 0x100, "fn_8017279C's other masks aren't ported");
+        assert!(
+            mask == 0x100 || mask == 4,
+            "fn_8017279C's mask {mask:#x} isn't ported"
+        );
         let u = self.game.gm.unlocks;
-        let total = i32::from(self.game.game_data.thing.save_data.trophy_count);
+        let total = self.toy_total();
+        let every = self.holds_every_trophy();
+        let held_all = (0..super::trophies::TROPHY_COUNT)
+            .filter(|&i| self.toy_flags()[i] & 0xFF != 0)
+            .count() as i32;
         let s = &mut self.game.game_data.thing.save_data;
         match n {
             0x16 => {
@@ -241,24 +249,11 @@ impl Running<'_> {
             0x39 => total >= 0x96,
             0x3A => total >= 0xC8,
             0x3B => total >= 0xFA,
-            0x3C => {
-                // `un_80304470`.
-                let sum: i32 = (0..8).map(super::trophies::class_size).sum();
-                let held = (0..super::trophies::TROPHY_COUNT)
-                    .filter(|&i| {
-                        i != 0xE6
-                            && i != 0xC9
-                            && self.game.game_data.thing.save_data.trophy_flags[i] & 0xFF != 0
-                    })
-                    .count() as i32;
-                sum <= held
-            }
+            // `un_80304470`.
+            0x3C => every,
             0x3D => {
                 let sum: i32 = (0..9).map(super::trophies::class_size).sum();
-                let held = (0..super::trophies::TROPHY_COUNT)
-                    .filter(|&i| self.game.game_data.thing.save_data.trophy_flags[i] & 0xFF != 0)
-                    .count() as i32;
-                sum == held
+                sum == held_all
             }
             _ => false,
         }

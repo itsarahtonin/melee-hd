@@ -89,6 +89,9 @@ pub enum UserData {
     DataDel(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
+    /// A trophy screen's block (0x58 bytes of `HSD_MemAlloc`, freed with `HSD_Free`), by its
+    /// address ([`super::ty::lottery::Lottery::user`]).
+    Toy(u32),
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
     MagnifyPlayer(u8),
     /// One of Pokémon Stadium's screens (user data kind 3, freed with `HSD_Free`): its index in
@@ -182,6 +185,8 @@ impl Kinds for GameKinds {
             UserData::Effect(_) => 0x8005_BB40,
             UserData::Sound(_) => 0x8002_63B4,
             UserData::BgFlash => 0x8002_19E4,
+            // `Toy_RemoveUserData`.
+            UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
             _ => return None,
         })
     }
@@ -476,6 +481,11 @@ impl Host<GameKinds> for Running<'_> {
             UserData::DataDel(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.options.datadel.data.remove(&addr);
+            }
+            // `Toy_RemoveUserData`: `HSD_Free`.
+            UserData::Toy(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.toys.lottery.user.remove(&addr);
             }
             // `HSD_Free`.
             UserData::CssCursor(i) => {

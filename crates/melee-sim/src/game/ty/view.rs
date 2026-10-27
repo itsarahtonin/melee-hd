@@ -31,7 +31,7 @@ fn int_f(n: i32) -> f64 {
 
 /// A stick's value past its dead zone of 0.2, rescaled to 0 to 1:
 /// `-((0.2f * sign) - v) / 0.8f`, or 0 inside it.
-fn dead_zone(v: f32) -> f32 {
+pub(super) fn dead_zone(v: f32) -> f32 {
     let r = reg(v);
     if r > reg(-0.2) && r < reg(0.2) {
         return 0.0;

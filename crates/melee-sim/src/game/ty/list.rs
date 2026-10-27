@@ -274,7 +274,7 @@ impl Running<'_> {
 
     /// A joint's first display object's material's first texture's animation
     /// (`jobj->u.dobj->mobj->tobj->aobj`).
-    fn toy_tobj_aobj(&self, j: Option<JObjId>) -> Option<crate::hsd::aobj::AObjId> {
+    pub(super) fn toy_tobj_aobj(&self, j: Option<JObjId>) -> Option<crate::hsd::aobj::AObjId> {
         let o = &self.game.objs;
         let jobj::Contents::DObjs(d) = o.jobjs[j?].u else {
             return None;

@@ -7,7 +7,7 @@
 use melee_data::archive::DataRef;
 use melee_sim::game::gm::machine::scene_kind;
 use melee_sim::game::mirror::Cx;
-use melee_sim::game::ty::{GS_TOY_GALLERY, Loaded, TROPHY_COUNT};
+use melee_sim::game::ty::{GS_TOY_GALLERY, GS_TOY_LOTTERY, Loaded, TROPHY_COUNT};
 
 use crate::compare::Comparer;
 use crate::import::sym;
@@ -166,11 +166,14 @@ impl Comparer<'_> {
         for (name, ours) in blocks {
             self.check(name, "block", ours, self.u32(sym(name)));
         }
-        if scene_kind(game.machine.scene_info) != Some(GS_TOY_GALLERY) {
-            return;
+        match scene_kind(game.machine.scene_info) {
+            Some(GS_TOY_GALLERY) => {
+                self.toy_gallery_blocks();
+                self.toy_list();
+            }
+            Some(GS_TOY_LOTTERY) => self.toy_lottery(),
+            _ => {}
         }
-        self.toy_gallery_blocks();
-        self.toy_list();
     }
 
     /// The gallery's seven blocks.
@@ -225,29 +228,7 @@ impl Comparer<'_> {
         self.toy_archive("ToyED8Data.x50", g.view_archive, e + 0x50);
         self.toy_archive("ToyED8Data.x54", g.bg_archive, e + 0x54);
         self.toy_archive("ToyED8Data.x58", g.info_archive, e + 0x58);
-        let l = g.light_block;
-        self.toy_gobj("ToyCameraControl.x00", g.scene_lights, l);
-        self.toy_gobj("ToyCameraControl.x04", g.lights, l + 4);
-        self.toy_gobj("ToyCameraControl.x08", g.fog, l + 8);
-        self.toy_archive("ToyCameraControl.archive", g.light_archive, l + 0xC);
-        self.check(
-            "ToyCameraControl",
-            "light",
-            g.light,
-            self.u32(l + 0x10) as i32,
-        );
-        self.toy_floats(
-            "ToyCameraControl x14, x18",
-            &[g.light_pitch, g.light_yaw],
-            l + 0x14,
-        );
-        let mut pos = Vec::new();
-        for v in g.positions.iter().chain(&g.interests) {
-            pos.extend([v.x, v.y, v.z]);
-        }
-        self.toy_floats("ToyCameraControl positions, interests", &pos, l + 0x1C);
-        let an: Vec<i8> = (0..8).map(|i| self.u8(l + 0xDC + i) as i8).collect();
-        self.check("ToyCameraControl", "animated", g.animated.to_vec(), an);
+        self.toy_lights();
         let order: Vec<i16> = (0..TROPHY_COUNT as u32)
             .map(|i| self.u16(g.order_block + 2 * i) as i16)
             .collect();
@@ -324,6 +305,133 @@ impl Comparer<'_> {
             g.axes_hidden,
             self.u8(v + 4) as i8,
         );
+    }
+
+    /// The lights' block (`Toy_sbss_804D6ED4`, `ToyCameraControl`), the gallery's or the
+    /// lottery's.
+    fn toy_lights(&mut self) {
+        let g = &self.game.toys.gallery;
+        let l = g.light_block;
+        self.toy_gobj("ToyCameraControl.x00", g.scene_lights, l);
+        self.toy_gobj("ToyCameraControl.x04", g.lights, l + 4);
+        self.toy_gobj("ToyCameraControl.x08", g.fog, l + 8);
+        self.toy_archive("ToyCameraControl.archive", g.light_archive, l + 0xC);
+        self.check(
+            "ToyCameraControl",
+            "light",
+            g.light,
+            self.u32(l + 0x10) as i32,
+        );
+        self.toy_floats(
+            "ToyCameraControl x14, x18",
+            &[g.light_pitch, g.light_yaw],
+            l + 0x14,
+        );
+        let mut pos = Vec::new();
+        for v in g.positions.iter().chain(&g.interests) {
+            pos.extend([v.x, v.y, v.z]);
+        }
+        self.toy_floats("ToyCameraControl positions, interests", &pos, l + 0x1C);
+        let an: Vec<i8> = (0..8).map(|i| self.u8(l + 0xDC + i) as i8).collect();
+        self.check("ToyCameraControl", "animated", g.animated.to_vec(), an);
+    }
+
+    /// The lottery's blocks (`_tyFigupon_804D6EF0` to `EF8`) and `.sbss`.
+    fn toy_lottery(&mut self) {
+        let l = &self.game.toys.lottery;
+        for (name, ours) in [
+            ("_tyFigupon_804D6EF0", l.data_block),
+            ("_tyFigupon_804D6EF4", l.ef4_block),
+            ("_tyFigupon_804D6EF8", l.entry_block),
+        ] {
+            self.check(name, "block", ours, self.u32(sym(name)));
+        }
+        let c: Vec<i32> = ["EFC", "F00"]
+            .iter()
+            .map(|n| self.u32(sym(&format!("_tyFigupon_804D6{n}"))) as i32)
+            .collect();
+        self.check("_tyFigupon_804D6EFC", "canvases", l.canvases.to_vec(), c);
+        self.compare_data(
+            "_tyFigupon_804D6F04",
+            l.camera_desc,
+            self.u32(sym("_tyFigupon_804D6F04")),
+        );
+        let f08 = if l.trophy_desc {
+            melee_sim::game::ty::lottery::TROPHY_CAMERA_ADDR
+        } else {
+            0
+        };
+        self.check(
+            "_tyFigupon_804D6F08",
+            "the trophy's camera",
+            f08,
+            self.u32(sym("_tyFigupon_804D6F08")),
+        );
+        let d = l.data_block;
+        self.toy_gobj("TyFiguponData.x0", l.camera, d);
+        self.toy_gobj("TyFiguponData.x4", l.trophy_camera, d + 4);
+        self.toy_gobj("TyFiguponData.x8", l.new_sign, d + 8);
+        self.check(
+            "TyFiguponData",
+            "the text's process",
+            l.text_proc.is_some(),
+            self.u32(d + 0x10) != 0,
+        );
+        self.toy_text("TyFiguponData.x14", l.name, d + 0x14);
+        self.toy_text("TyFiguponData.x18", l.notice, d + 0x18);
+        self.check(
+            "TyFiguponData",
+            "drawn, text frames, wait, drawing",
+            (l.drawn, l.text_frames, l.wait, l.drawing),
+            (
+                self.u32(d + 0x20) as i32,
+                self.u32(d + 0x24) as i32,
+                self.u8(d + 0x28),
+                self.u8(d + 0x29),
+            ),
+        );
+        let e = l.ef4_block;
+        self.toy_gobj("un_804D6EF4_t.x00", l.panel, e);
+        self.toy_gobj("un_804D6EF4_t.unk4", l.bg, e + 4);
+        self.toy_gobj("un_804D6EF4_t.x08", l.lever, e + 8);
+        self.toy_gobj("un_804D6EF4_t.x0C", l.chance, e + 0xC);
+        for i in 0..16u32 {
+            self.toy_jobj(
+                &format!("un_804D6EF4_t.jobjs[{i}]"),
+                l.jobjs[i as usize],
+                e + 0x10 + 4 * i,
+            );
+        }
+        self.toy_archive("un_804D6EF4_t.archive", l.archive, e + 0x50);
+        self.check(
+            "un_804D6EF4_t",
+            "left, x56, x58, state, drawn bet, bet",
+            (l.left, l.x56, l.x58, l.state, l.drawn_bet, l.bet),
+            (
+                self.u16(e + 0x54) as i16,
+                self.u16(e + 0x56) as i16,
+                self.u16(e + 0x58) as i16,
+                self.u8(e + 0x5C) as i8,
+                self.u8(e + 0x5D) as i8,
+                self.u8(e + 0x5E) as i8,
+            ),
+        );
+        let b = l.entry_block;
+        let file = |o: u32| l.entry_file.map(|f| f.at(o));
+        self.check(
+            "_tyFigupon_804D6EF8",
+            "prev, next, trophy",
+            (0u32, 0u32, l.entry_trophy),
+            (self.u32(b), self.u32(b + 4), self.u16(b + 0x10) as i16),
+        );
+        self.compare_data("_tyFigupon_804D6EF8.archive_name", file(4), self.u32(b + 8));
+        self.compare_data(
+            "_tyFigupon_804D6EF8.symbol_name",
+            file(0x24),
+            self.u32(b + 0xC),
+        );
+        self.toy_archive("_tyFigupon_804D6EF8.archive", l.entry_archive, b + 0x14);
+        self.toy_lights();
     }
 
     /// The gallery's list's statics (`tylist.c`).
@@ -453,5 +561,61 @@ impl Comparer<'_> {
                 self.u32(sym("_tyList_804D6EEC")) as i32,
             ),
         );
+    }
+}
+
+impl Comparer<'_> {
+    /// A trophy screen's user data block at `t + 0x2C` (`Toy_RemoveUserData` its release):
+    /// the words its owner wrote.
+    pub(crate) fn toy_user_data(&mut self, path: &str, addr: u32, t: u32) {
+        let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));
+        self.check(
+            path,
+            "user data and release",
+            (addr, melee_sim::game::ty::lottery::TOY_REMOVE_USER_DATA),
+            (ud, release),
+        );
+        if ud != addr {
+            return;
+        }
+        let Some(b) = self.game.toys.lottery.user.get(&addr).copied() else {
+            self.diff(path, "Toy user data", "none", format!("{addr:#x}"));
+            return;
+        };
+        let w = |c: &Self, o: u32| c.u32(ud + o) as i32;
+        match b.kind {
+            0 => {
+                self.check(path, "coin frames", b.x8, w(self, 8));
+                self.toy_floats(
+                    &format!("{path} coin step"),
+                    &[b.step.x, b.step.y, b.step.z],
+                    ud + 0x40,
+                );
+                // `offset.y` sits past `translate`'s z and `offset.x` (+0x4C).
+                let fall = self.u32(ud + 0x50);
+                self.check(path, "coin fall", b.fall.to_bits(), fall);
+            }
+            1 => self.check(path, "lever frames", b.x8, w(self, 8)),
+            2 => {
+                let ours = (b.x8, b.x10);
+                let theirs = (w(self, 8), [w(self, 0x10), w(self, 0x14), w(self, 0x18)]);
+                self.check(path, "drop frames, coins' digits", ours, theirs);
+                if b.armed {
+                    let theirs = [w(self, 0x28), w(self, 0x2C), w(self, 0x30)];
+                    self.check(path, "drop bet's digits", b.x28, theirs);
+                }
+            }
+            3 => self.check(path, "fall speed", b.x44.to_bits(), self.u32(ud + 0x44)),
+            _ => {
+                if b.armed {
+                    self.check(
+                        path,
+                        "sign frames, shown",
+                        (b.x8, b.x4),
+                        (w(self, 8), w(self, 4)),
+                    );
+                }
+            }
+        }
     }
 }

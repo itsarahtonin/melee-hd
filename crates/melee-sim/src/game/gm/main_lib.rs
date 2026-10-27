@@ -344,15 +344,18 @@ impl Game {
         u.trophy_11a = s.trophy_flags[0x11A] as u8;
     }
 
-    /// `Toy_803048C0`: how many of trophy `id` the save holds (the low byte of its flags; the
-    /// single-player modes' and the lottery's table is the trophies' own, not reached here).
+    /// `Toy_803048C0`: how many of trophy `id` the table in play holds (the low byte of its
+    /// flags): the save's, or in the single-player modes and the lottery the trophy screens'
+    /// own (`Toy_804A284C`).
     #[doc(alias = "Toy_803048C0")]
     pub fn trophy_count(&self, id: usize) -> i32 {
-        assert!(
-            !super::is_1p_mode(self) && self.game_mode != 0x0B,
-            "a single-player mode's trophy table isn't ported"
-        );
-        i32::from(self.game_data.thing.save_data.trophy_flags[id] as u8)
+        let flags = if super::is_1p_mode(self) || self.game_mode == crate::game::ty::GM_TOY_LOTTERY
+        {
+            &self.toys.table.flags
+        } else {
+            &self.game_data.thing.save_data.trophy_flags
+        };
+        i32::from(flags[id] as u8)
     }
 }
 
