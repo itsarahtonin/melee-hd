@@ -321,8 +321,116 @@ impl Comparer<'_> {
         );
     }
 
+    /// A queued notice of the prize interface at `at`, and the notices after it.
+    fn prize_entry(&mut self, path: &str, e: melee_sim::game::hud::prize::PrizeEntry, at: u32) {
+        self.check(
+            path,
+            "kind, trophy, time",
+            (e.kind, e.trophy, e.time),
+            (self.u16(at), self.u16(at + 2), self.u32(at + 4)),
+        );
+        let theirs = self.u32(at + 8);
+        let ours = self.prize_ref_addr(e.next);
+        self.check(path, "next", ours, theirs);
+        // A later notice lives in the heap of the prize's scene, which goes with it: the
+        // first's link names it after, a dangling pointer.
+        let live = self.game.machine.routing.curr_mode
+            == melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH;
+        if let Some(melee_sim::game::hud::prize::EntryRef::Heap(a)) = e.next
+            && a == theirs
+            && live
+        {
+            let n = self.game.prize.heap[&a];
+            self.prize_entry(&format!("{path} next"), n, a);
+        }
+    }
+
+    fn prize_ref_addr(&self, r: Option<melee_sim::game::hud::prize::EntryRef>) -> u32 {
+        match r {
+            None => 0,
+            Some(melee_sim::game::hud::prize::EntryRef::Static) => sym("if_Scene_Prize_EnterData"),
+            Some(melee_sim::game::hud::prize::EntryRef::Heap(a)) => a,
+        }
+    }
+
+    /// The special messages' interface's statics and its queue (`ifprize.c`).
+    fn prize(&mut self) {
+        let p = self.game.prize.clone();
+        let at = sym("if_Scene_Prize_EnterData");
+        // The queue's first notice is only the prize state's since it ran.
+        if p.first != Default::default() {
+            self.prize_entry("if_Scene_Prize_EnterData", p.first, at);
+        }
+        let q = sym("gm_8049E558");
+        let theirs: Vec<u8> = (0..0x170).map(|i| self.u8(q + i)).collect();
+        self.check("gm_8049E558", "queued", p.queued.to_vec(), theirs);
+        let s = sym("un_803F9D48");
+        let path = "un_803F9D48";
+        self.check(
+            path,
+            "shows, open, state, frame, song, kind, text, text2, time",
+            (
+                (p.shows << 4) | p.open,
+                p.state,
+                p.frame,
+                p.song,
+                p.kind,
+                p.text,
+                p.text2,
+                p.time,
+            ),
+            (
+                self.u8(s),
+                self.u8(s + 1),
+                self.u8(s + 2) as i8,
+                self.u8(s + 3),
+                self.u16(s + 4),
+                self.u16(s + 6),
+                self.u16(s + 8),
+                self.u32(s + 0xC) as i32,
+            ),
+        );
+        let theirs = self.u32(s + 0x10);
+        self.compare_handle(
+            &format!("{path} part"),
+            "JObjId",
+            p.part.map(|j| j.0),
+            theirs,
+        );
+        for (name, g, off) in [
+            ("panel", p.panel, 0x14),
+            ("camera", p.camera, 0x18),
+            ("light", p.light, 0x1C),
+        ] {
+            self.data_gobj(&format!("{path} {name}"), g, s + off);
+        }
+        self.data_text(path, "message", p.message, s + 0x20);
+        self.data_text(path, "date", p.date, s + 0x24);
+        let (c, n) = (self.prize_ref_addr(p.current), self.prize_ref_addr(p.next));
+        self.check(
+            path,
+            "current, next",
+            (c, n),
+            (self.u32(s + 0x28), self.u32(s + 0x2C)),
+        );
+        let theirs: Vec<i32> = (0..3).map(|i| self.u32(s + 0x30 + 4 * i) as i32).collect();
+        self.check(path, "songs", p.songs.to_vec(), theirs);
+        if p.archive.is_some() {
+            self.check(
+                "un_804D6D98",
+                "archive",
+                p.blocks.1,
+                self.u32(sym("un_804D6D98")),
+            );
+            let theirs = self.u32(sym("un_804D6D9C"));
+            self.compare_data("un_804D6D9C", p.scene, theirs);
+        }
+    }
+
     /// The Data menu's screens' statics.
     pub(crate) fn data_menus(&mut self) {
+        self.prize();
+
         let (g2, g3) = (
             self.game.data_menus.diagram2.gobj,
             self.game.data_menus.diagram3.gobj,

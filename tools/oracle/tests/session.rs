@@ -936,3 +936,15 @@ fn the_vs_rankings_scrolled() {
     };
     assert!(out.contains("2620 ticks compared, no difference"), "{out}");
 }
+
+/// Two special messages waiting on `2026-10-06_17-13-21`'s card: the title's Start goes to the
+/// challenger approach's mode at its prize state, each message shown with its song and date
+/// (the music stream's clock reading past its boxes once a song ends), A past both, then the
+/// main menu and the title: clean to the trace's end.
+#[test]
+fn the_special_messages_announced() {
+    let Some(out) = data_session("prize", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1617 ticks compared, no difference"), "{out}");
+}

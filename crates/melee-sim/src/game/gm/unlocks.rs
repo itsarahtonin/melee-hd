@@ -73,7 +73,7 @@ impl Running<'_> {
     }
 
     /// The real-time clock's seconds as `lbTime_GetTimeInSeconds` reads them now.
-    fn clock_seconds(&mut self) -> u32 {
+    pub(crate) fn clock_seconds(&mut self) -> u32 {
         let tb = self.game.audio.tb_read();
         (tb / crate::audio::clock::TB_HZ).min(u64::from(u32::MAX)) as u32
     }
@@ -211,7 +211,12 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EDC8")]
     #[doc(alias = "gmMainLib_8015EDA4")]
     pub(super) fn message_due(&mut self, n: u32, mask: u16) -> bool {
+        if mask == 0xFFFF {
+            // Every row of `lbl_803D6300` takes the full mask: the message's condition.
+            return self.message_condition(n).unwrap_or(false);
+        }
         assert_eq!(mask, 0x100, "fn_8017279C's other masks aren't ported");
+
         let u = self.game.gm.unlocks;
         let total = i32::from(self.game.game_data.thing.save_data.trophy_count);
         let s = &mut self.game.game_data.thing.save_data;

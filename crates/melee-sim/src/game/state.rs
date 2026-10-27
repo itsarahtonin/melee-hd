@@ -393,6 +393,10 @@ pub struct Game {
     /// The Data menu's screens' statics and user data (`mninfo.c` and the others
     /// [`super::mn::data`] lists).
     pub data_menus: super::mn::data::DataMenus,
+    /// The special messages' interface's statics and its queue of notices (`ifprize.c`,
+    /// `if_Scene_Prize_EnterData`, `gm_8049E558`).
+    pub prize: super::hud::prize::Prize,
+
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).

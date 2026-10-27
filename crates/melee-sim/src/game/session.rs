@@ -179,6 +179,9 @@ pub const FILES: &[&str] = &[
     "MnExtAll.usd",
     "SdSlChr.usd",
     "MnSlMap.usd",
+    // The special messages' interface's.
+    "IfPrize.usd",
+    "SdPrize.usd",
     // A match's (the attract loop's): `vs_match::Match::start`'s list.
     "LbRf.dat",
     "PdPm.dat",
@@ -190,8 +193,8 @@ pub const FILES: &[&str] = &[
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's, which
 /// [`Session::read_song`] reads as the stage starts it: the opening movie's, the menus' two,
-/// How to Play's and the Special Movie's.
-pub const SONGS: &[usize] = &[0x3E, 0x34, 0x36, 0x24, 0x52];
+/// How to Play's and the Special Movie's, and the special messages' three.
+pub const SONGS: &[usize] = &[0x3E, 0x34, 0x36, 0x24, 0x52, 0x43, 0x44, 0x45];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
 pub const MOVIES: &[&str] = &[

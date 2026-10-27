@@ -99,6 +99,10 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
                 melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
                 melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
+                melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
+                    sym("gm_Mode_ChallengerApproach_States")
+                }
+
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC

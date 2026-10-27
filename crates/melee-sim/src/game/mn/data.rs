@@ -87,6 +87,7 @@ impl Running<'_> {
             d3::THINK => self.d3_think(gobj),
             d3::OUT => self.d3_out(gobj),
 
+            super::super::hud::prize::PROC => self.prize_proc(gobj),
             _ => return false,
         }
         true

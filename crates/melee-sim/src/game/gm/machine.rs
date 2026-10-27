@@ -132,6 +132,9 @@ enum Hook {
     ApproachVsOnExit,
     PrizeOnEnter,
     PrizeOnExit,
+    ChallengerOnLoad,
+    ChallengerApproachOnExit,
+    ChallengerPrizeOnExit,
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
@@ -294,8 +297,33 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_PRIZE,
         },
     ];
+    // `gm_Mode_ChallengerApproach_States`.
+    const CHALLENGER: [StateDesc; 3] = [
+        StateDesc {
+            id: 0,
+            preload: 2,
+            on_enter: Some(Hook::ApproachOnEnter),
+            on_exit: None,
+            scene: GS_APPROACH,
+        },
+        StateDesc {
+            id: 1,
+            preload: 2,
+            on_enter: Some(Hook::ApproachVsOnEnter),
+            on_exit: Some(Hook::ChallengerApproachOnExit),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 2,
+            on_enter: Some(Hook::PrizeOnEnter),
+            on_exit: Some(Hook::ChallengerPrizeOnExit),
+            scene: GS_PRIZE,
+        },
+    ];
     match mode {
         GM_BOOT => &BOOT,
+        GM_CHALLENGER_APPROACH => &CHALLENGER,
         GM_MENU => &MENU,
         GM_VS => &VS,
         GM_MEMCARD => &MEMCARD,
@@ -321,6 +349,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_PROGRESSIVE_SCAN => (false, None, None),
         // `gm_Mode_Vs_OnUnload` does nothing.
         GM_VS => (false, Some(Hook::VsOnLoad), None),
+        GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -520,6 +549,8 @@ impl Running<'_> {
             GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
             // No frame function: the model GObj's process runs the screen.
             GS_RESULTS => (CodeRef(RESULTS_ON_ENTER), CodeRef(0)),
+            // No frame function: the panel's process runs the interface.
+            GS_PRIZE => (crate::game::hud::prize::ON_ENTER, CodeRef(0)),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -543,6 +574,7 @@ impl Running<'_> {
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
+            crate::game::hud::prize::ON_ENTER => self.prize_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -608,6 +640,8 @@ impl Running<'_> {
             GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             GS_RESULTS => self.results_on_exit(),
+            // `ifPrize_Scene_OnExit` does nothing.
+            GS_PRIZE => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -668,12 +702,16 @@ impl Running<'_> {
             Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
             Hook::VsEnterResults => self.vs_mode_enter_results(),
             Hook::VsExitResults => unported_call("onExitResults (task 9)"),
-            Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
+            Hook::ApproachOnEnter
+            | Hook::ApproachVsOnEnter
+            | Hook::ApproachVsOnExit
+            | Hook::ChallengerApproachOnExit => {
                 unported_call("the challenger approach's states (task 17)")
             }
-            Hook::PrizeOnEnter | Hook::PrizeOnExit => {
-                unported_call("the prize interface's states (task 17)")
-            }
+            Hook::PrizeOnEnter => self.prize_state_on_enter(),
+            Hook::PrizeOnExit => unported_call("gm_ModeState_Prize_OnExit (VS mode's, task 17)"),
+            Hook::ChallengerOnLoad => self.challenger_mode_on_load(),
+            Hook::ChallengerPrizeOnExit => self.prize_state_on_exit(),
         }
         let _ = state;
     }
