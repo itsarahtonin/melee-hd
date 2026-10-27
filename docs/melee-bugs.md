@@ -1531,12 +1531,24 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Fix impact:** changes Onett's random sequence and car timing.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 146).
 
+### A sprite's palette object keeps bits from its block
+
+- **Where:** `HSD_SObjLib_803A477C` (sobjlib.c) calling `GXInitTlutObj` on the sprite's own `x70_tlutobj` (a sprite with a palette), and `HSD_SObjLib_803A4A68`'s `GXLoadTlut`; `crates/melee-sim/src/game/export.rs` (`sobj`, the heap's image).
+- **Defect:** the same as [the stack palette's](#a-palette-loads-address-goes-out-with-bits-from-the-stack): `GXInitTlutObj` sets only the low 21 bits and the top byte of `loadTlut0`, and the sprite's block comes uncleared from `HSD_ObjAlloc` (`HSD_SObjLib_804D10E0`), so bits 21 to 23 and the two padding bytes after `numEntries` keep what the block held (a previous scene's bytes), and `GXLoadTlut` sends the word.
+- **Effect:** none observable, for the same reasons: a palette load reads only the address field.
+- **melee-hd:** the heap's image keeps those bits as the block held them (the sprite's layout writes the fields `GXInitTlutObj` sets); the renderer sends 0 there, as for the stack's object.
+- **Fix:** clear `loadTlut0` before setting its fields.
+- **Fix impact:** none.
+- **Source:** the decompilation's `HSD_SObjLib_803A477C` (sobjlib.c:176); `crates/melee-sim/src/game/export.rs` (`sobj`).
+
 ## Latent defects
 
 Defects no game data or code reaches in play. For each, the effect is none observable, the fix is a guard or a defined value, and a fix changes nothing in play. melee-hd stops (panics, or reports an unported case) or counts a stale read where the original would go wrong, so a case that turns out reachable can't pass unnoticed.
 
 | Defect | Where | What goes wrong | Source |
 | --- | --- | --- | --- |
+| A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position; the lights the game sets up have one | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown) |
+| A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
@@ -1612,6 +1624,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 
 ## Unsure
 
+- **The size classes' old array goes back as a piece.** When the memory pieces' size classes outgrow their array, `GetMemoryEntry` (class.c) copies it into a new `HSD_MemAlloc` block and gives the old one back with `hsdFreeMemPiece`, its size rounded down to 32, not `HSD_Free`: a block of the main heap joins a size class's free list (and the class counts one more allocated, so its books balance), and the heap never gets it back. It may be intended, recycling the array's memory as a piece. melee-hd models it (`Heap::memory_entry`), and the heap's image lays the old array out as it goes (the classes' addresses). Source: the decompilation's `GetMemoryEntry`; `crates/melee-sim/src/hsd/heap.rs` (`memory_entry`).
 - **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).
 - **Popo's hammer holder.** Squall Hammer's hammer joint lean and visibility (`ftPp_SpecialS_8011F720`) runs only with a holder (`specials.x8`) that the entries clear and nothing sets, so it never runs. It may be code HAL left disabled on purpose. Source: `crates/melee-sim/src/game/ft/popo/special_s.rs:149`.
 - **Luigi's `x222C`.** `Fighter_Create` leaves thousands of a fighter's bytes unwritten, which creation never reads; the decompilation notes a later read of Luigi's `x222C`, which on a console would see a previous object's bytes. Whether that read happens before a write isn't settled. Source: [engine notes](engine.md#uninitialized-values) (line 67).
