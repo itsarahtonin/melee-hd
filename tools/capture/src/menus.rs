@@ -526,9 +526,41 @@ impl<'a> Comparer<'a> {
         let at = memory::handle_addr(memory::HANDLES as u8);
         self.check(
             "lbMemory",
-            "free handles, ARAM heap, copy",
-            (handle(mm.free_heap), handle(mm.aram_heap), mm.copy_size),
-            (self.u32(at), self.u32(at + 4), self.u32(at + 0x38)),
+            "free handles, ARAM heap",
+            (handle(mm.free_heap), handle(mm.aram_heap)),
+            (self.u32(at), self.u32(at + 4)),
+        );
+        // The copy manager (`mgr`, but for its alarm, which ssbm-rs's stand-in for the OS's
+        // alarms never writes) and the compaction's state.
+        self.check(
+            "lbMemory",
+            "copy manager",
+            (
+                mm.copy_src,
+                mm.copy_dst,
+                mm.copy_size,
+                mm.copy_offset,
+                mm.copy_cb_arg,
+                mm.copy_cb,
+            ),
+            (
+                self.u32(at + 0x30),
+                self.u32(at + 0x34),
+                self.u32(at + 0x38),
+                self.u32(at + 0x3C),
+                self.u32(at + 0x40),
+                self.u32(at + 0x44),
+            ),
+        );
+        self.check(
+            "lbMemory",
+            "compaction",
+            (mm.compact_arg, mm.compact_cursor, mm.compact_cb),
+            (
+                self.u32(at + 0x48),
+                self.u32(at + 0x4C),
+                self.u32(at + 0x50),
+            ),
         );
         // `lbHeap_80431FA0`.
         let h = &d.heaps;
