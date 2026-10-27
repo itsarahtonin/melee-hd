@@ -102,6 +102,9 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::ty::GM_TOY_GALLERY => sym("gm_Mode_ToyGallery_States"),
                 melee_sim::game::ty::GM_TOY_LOTTERY => sym("gm_Mode_ToyLottery_States"),
                 melee_sim::game::ty::GM_TOY_COLLECTION => sym("gm_Mode_ToyCollection_States"),
+                melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
+                    sym("gm_Mode_ChallengerApproach_States")
+                }
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -183,6 +186,7 @@ impl<'a> Comparer<'a> {
         self.rules_menus();
         self.options();
         self.toys();
+        self.data_menus();
         self.sound_test();
         self.attract();
         self.select_screens();

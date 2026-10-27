@@ -11,7 +11,7 @@ use super::super::state::Running;
 use super::machine::GM_CHALLENGER_APPROACH;
 
 /// `selkind_to_ckind_map`.
-const SELKIND_TO_CKIND: [u8; 25] = [
+pub(crate) const SELKIND_TO_CKIND: [u8; 25] = [
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x10, 0x11, 0x12, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
 ];
@@ -53,7 +53,7 @@ fn mode_trophy(ckind: u8, mode: u8) -> i32 {
 
 /// A bit of a set of words (`bitset_test`), past its words into the bytes after them as the
 /// original reads them.
-fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
+pub(crate) fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
     let w = (n / 32) as usize;
     let word = match words.get(w) {
         Some(&v) => v,
@@ -73,7 +73,7 @@ impl Running<'_> {
     }
 
     /// The real-time clock's seconds as `lbTime_GetTimeInSeconds` reads them now.
-    fn clock_seconds(&mut self) -> u32 {
+    pub(crate) fn clock_seconds(&mut self) -> u32 {
         let tb = self.game.audio.tb_read();
         (tb / crate::audio::clock::TB_HZ).min(u64::from(u32::MAX)) as u32
     }
@@ -212,10 +212,15 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EDC8")]
     #[doc(alias = "gmMainLib_8015EDA4")]
     pub(super) fn message_due(&mut self, n: u32, mask: u16) -> bool {
+        if mask == 0xFFFF {
+            // Every row of `lbl_803D6300` takes the full mask: the message's condition.
+            return self.message_condition(n).unwrap_or(false);
+        }
         assert!(
             mask == 0x100 || mask == 4,
             "fn_8017279C's mask {mask:#x} isn't ported"
         );
+
         let u = self.game.gm.unlocks;
         let total = self.toy_total();
         let every = self.holds_every_trophy();

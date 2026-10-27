@@ -768,3 +768,21 @@ impl Running<'_> {
         }
     }
 }
+
+impl Game {
+    /// `gm_8017219C`: whether special message `n` is announced and its notice waits
+    /// (`gmMainLib_8015D94C`, `gmMainLib_8015D8D8`).
+    #[doc(alias = "gm_8017219C")]
+    pub fn message_waits(&self, n: u32) -> bool {
+        let s = &self.game_data.thing.save_data;
+        let bit = |w: &[u32; 3]| w[(n / 32) as usize] & (1 << (n % 32)) != 0;
+        bit(&s.x1B4C) && bit(&s.x1B40)
+    }
+
+    /// `gm_80172174`: the trophies' notices and their times cleared (`gmMainLib_8015CCE4`).
+    #[doc(alias = "gm_80172174")]
+    #[doc(alias = "gmMainLib_8015CCE4")]
+    pub fn clear_trophy_notices(&mut self) {
+        self.game_data.unk_44 = Default::default();
+    }
+}

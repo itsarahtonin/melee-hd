@@ -7,6 +7,7 @@ pub mod audio;
 pub mod charsel;
 pub mod compare;
 pub mod corpus;
+pub mod data;
 pub mod display;
 pub mod effects;
 pub mod heap;

@@ -12,6 +12,9 @@ use super::devcom::{HAKO_HEADERS, cb};
 use crate::fpu::{mem, reg};
 use crate::ppc::cvt_fp2unsigned;
 
+/// `pstHakoHeader`, the music stream's three box headers.
+const PST_HAKO_HEADER: u32 = 0x804C_4540;
+
 /// A box header's words (`pstHakoHeader`): its size, the end of its samples, and the next
 /// box's offset in the file (-1 for the last).
 fn hako_word(h: &[u8; 0x20], i: usize) -> u32 {
@@ -297,6 +300,30 @@ impl Audio {
         s.busy = 0;
     }
 
+    /// Box header `pos` (`pstHakoHeader[pos]`): past the three boxes, what memory holds
+    /// there, which a song that doesn't loop reaches once its voice has stopped in the silence
+    /// after its last box (its address then names no box: [Melee's bugs](docs/melee-bugs.md),
+    /// "The music stream's clock reads past its boxes"), as the heap's image has it.
+    fn hako_or_past(&self, data: &Archives, pos: u32) -> [u8; 0x20] {
+        if let Some(h) = self.synth.stream.hako.get(pos as usize) {
+            return *h;
+        }
+        let at = PST_HAKO_HEADER.wrapping_add(pos.wrapping_mul(0x20));
+        let bytes = crate::hsd::heap::image_on()
+            .then(|| crate::hsd::heap::with(|h| h.image.bytes(data, at, 8)))
+            .flatten();
+        match bytes {
+            Some((b, known)) if known.iter().all(|&k| k) => {
+                let mut h = [0u8; 0x20];
+                h[..8].copy_from_slice(&b);
+                h
+            }
+            _ => crate::game::code::unported_call(&format!(
+                "the music stream's clock reading box {pos:#x}, past its three, at {at:#x}                  (memory the heap's image doesn't know)"
+            )),
+        }
+    }
+
     /// `HSD_SynthPStreamMasterClockCallback`: follows the playing voice to the box it's in,
     /// moving the voices' end to that box's, setting the loop into the next box (or to the
     /// silence after the last), and reading the box after the playing one.
@@ -316,7 +343,7 @@ impl Audio {
         let count = usize::from(node.voice_count);
         if pos != s.pos {
             self.synth.stream.pos = pos;
-            let h = self.synth.stream.hako[pos as usize];
+            let h = self.hako_or_past(data, pos);
             for i in 0..count {
                 let end = s
                     .base
