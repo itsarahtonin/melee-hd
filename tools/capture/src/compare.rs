@@ -1973,7 +1973,10 @@ impl Cx for Comparer<'_> {
                 .and_then(|p| p.gone_addr(o))
                 .or_else(|| self.game.objs.heap.image.data_addr(o))
         {
-            if a != theirs {
+            // Two copies of the file gone together (a match's and the next select's): the
+            // pointer names the same data in either.
+            let other_copy = self.past.is_some_and(|p| p.in_gone_copy(o, theirs));
+            if a != theirs && !other_copy {
                 self.diffs.push(format!(
                     "{path}: data ours {o:?} (at {a:#x}, its archive gone), theirs {theirs:#x}"
                 ));
