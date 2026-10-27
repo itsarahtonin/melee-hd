@@ -15,17 +15,22 @@ pub const TRACK_SIZE: u32 = 0xC;
 /// An FObj playing a track.
 fn track_fobj(objs: &mut Objects, data: &Archives, track: DataRef) -> FObjId {
     let ad_head = data.ptr(track.at(8)).map_or(0, |r| r.offset);
-    FObjId(objs.fobjs.alloc(FObj {
-        archive: track.archive,
-        startframe: data.u16(track.at(2)) as i16,
-        obj_type: data.u8(track.at(4)),
-        frac_value: data.u8(track.at(5)),
-        frac_slope: data.u8(track.at(6)),
-        ad_head,
-        length: u32::from(data.u16(track)),
-        flags: 0,
-        ..FObj::default()
-    }))
+    FObjId(
+        objs.fobjs.alloc(FObj {
+            archive: track.archive,
+            startframe: data.u16(track.at(2)) as i16,
+            obj_type: data.u8(track.at(4)),
+            frac_value: data.u8(track.at(5)),
+            frac_slope: data.u8(track.at(6)),
+            ad_head,
+            length: u32::from(data.u16(track)),
+            flags: 0,
+            data_at: crate::hsd::heap::with(|h| h.image.copy_at(track.archive))
+                .flatten()
+                .unwrap_or(0),
+            ..FObj::default()
+        }),
+    )
 }
 
 /// FObjs for `frames` tracks from `track` on, `lbAnim_InitFrames`.

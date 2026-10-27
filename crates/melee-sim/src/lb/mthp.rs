@@ -308,8 +308,11 @@ impl MoviePlayer {
             // The player writes only these: the table, the slots' reads, the planes and the
             // decode's work area, which isn't laid out (with the frame offsets' table after
             // it); the rest keeps what it held.
-            h.image
-                .claim(self.work, self.ring_table + self.buffer_len());
+            h.image.claim(
+                self.work,
+                self.ring_table + self.buffer_len(),
+                "the THP decoder's work area",
+            );
             for i in 0..self.slots {
                 h.image.word(self.ring_table + 4 * i, self.slot_addr(i));
             }

@@ -96,6 +96,12 @@ fn run(args: Vec<String>) -> ExitCode {
         ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
         ["session", ref rest @ ..] => session::session(rest),
         ["session-sync", ref rest @ ..] => session_sync::session_sync(rest),
+        ["list-unlaid"] => {
+            for (t, why) in melee_sim::game::export::unlaid_types() {
+                println!("{t}: {why}");
+            }
+            ExitCode::SUCCESS
+        }
         ["rules", ref replays @ ..] if !replays.is_empty() => rules(replays),
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
@@ -121,6 +127,7 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-dump TRACE TICK ADDR LEN");
             eprintln!("       melee-oracle trace-watch TRACE ADDR LEN [FROM [TO]]");
             eprintln!("       melee-oracle trace-heap TRACE");
+            eprintln!("       melee-oracle list-unlaid");
             eprintln!("       melee-oracle trace-mem TRACE OUT_DIR TICK...");
             eprintln!(
                 "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"

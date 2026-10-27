@@ -24,6 +24,10 @@ pub struct Lay {
     /// The bits bitfields have laid of each byte (`put_bits`): a byte is known once all eight
     /// are.
     bits: Vec<u8>,
+    /// Whose each unknown byte is, where not the block's owner's: a member of a type the
+    /// layout doesn't lay out ([`Lay::forget_as`]), or what the block held before, which its
+    /// owner never writes ([`Lay::leftover`]). Empty until one is set.
+    owners: Vec<Option<&'static str>>,
 }
 
 impl Lay {
@@ -33,6 +37,7 @@ impl Lay {
             bytes: vec![0; len as usize],
             known: vec![false; len as usize],
             bits: vec![0; len as usize],
+            owners: Vec::new(),
         }
     }
 
@@ -79,11 +84,25 @@ impl Lay {
         (mask != 0).then(|| (self.bytes[i], mask))
     }
 
-    /// Marks `len` bytes at address `a` unknown again.
+    /// Marks `len` bytes at address `a` unknown again: the owner wrote them.
     pub fn forget(&mut self, a: u32, len: u32) {
         let o = (a - self.at) as usize;
         self.known[o..o + len as usize].fill(false);
         self.bits[o..o + len as usize].fill(0);
+        if !self.owners.is_empty() {
+            self.owners[o..o + len as usize].fill(None);
+        }
+    }
+
+    /// Marks `len` bytes at address `a` unknown: a member of type `owner` that isn't laid out,
+    /// which the image names as the bytes' owner.
+    pub fn forget_as(&mut self, a: u32, len: u32, owner: &'static str) {
+        self.forget(a, len);
+        let o = (a - self.at) as usize;
+        if self.owners.is_empty() {
+            self.owners = vec![None; self.bytes.len()];
+        }
+        self.owners[o..o + len as usize].fill(Some(owner));
     }
 
     /// A word at address `a` that may be unknown: an unknown one is unknown even over what
@@ -105,7 +124,22 @@ impl Lay {
             bytes,
             known,
             bits,
+            owners: Vec::new(),
         }
+    }
+
+    /// A layout over what the block at `at` holds now as the image knows it, as
+    /// [`Lay::over`], with the unknown bytes its owner never writes kept as their owners'.
+    pub fn leftover(img: &Image, data: &melee_data::archive::Archives, at: u32, len: u32) -> Lay {
+        let (b, k) = img.leftover_bytes(data, at, len);
+        let mut l = Lay::over(at, b, k);
+        for (a, b, owner) in img.leftover_unknown(at, len) {
+            if l.owners.is_empty() {
+                l.owners = vec![None; len as usize];
+            }
+            l.owners[a as usize..b as usize].fill(Some(owner));
+        }
+        l
     }
 
     /// A bitfield of `bits` bits, `bit` bits from the struct at `at`, the first bit the top
@@ -161,8 +195,21 @@ impl Lay {
         }
     }
 
-    /// Writes the known bytes into the image, run by run.
+    /// Writes the known bytes into the image, run by run, and the members it doesn't lay out
+    /// as theirs ([`Lay::forget_as`]).
     pub fn put(self, img: &mut Image) {
+        let mut i = 0;
+        while i < self.owners.len() {
+            let Some(owner) = self.owners[i].filter(|_| !self.known[i]) else {
+                i += 1;
+                continue;
+            };
+            let j = (i..self.owners.len())
+                .find(|&j| self.known[j] || self.owners[j] != Some(owner))
+                .unwrap_or(self.owners.len());
+            img.claim(self.at + i as u32, self.at + j as u32, owner);
+            i = j;
+        }
         let mut i = 0;
         while i < self.bytes.len() {
             if !self.known[i] {
@@ -182,7 +229,7 @@ impl Lay {
 pub fn data_addr(img: &Image, d: Option<DataRef>) -> Option<u32> {
     match d {
         None => Some(0),
-        Some(d) => img.data_addr(d),
+        Some(d) => img.lay_addr(d),
     }
 }
 
@@ -868,8 +915,12 @@ pub fn fobj(fobjs: &FObjs, img: &mut Image, f: FObjId) {
     if at == 0 {
         return;
     }
+    // Into the copy of its file it was made from, where a buffer held one.
     let data = |off: u32| {
-        img.data_addr(DataRef {
+        if o.data_at != 0 {
+            return Some(o.data_at + off);
+        }
+        img.lay_addr(DataRef {
             archive: o.archive,
             offset: off,
         })

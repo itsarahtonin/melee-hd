@@ -401,11 +401,33 @@ impl Comparer<'_> {
         ) {
             return;
         }
-        let m = mem(self.mem);
         let game = self.game;
         let ipath = format!("{path} item");
         self.begin_block("item", t, &ipath);
-        game.items[o.0].compare(&m, t, &ipath, self);
+        let item = &game.items[o.0];
+        let view = self.unlaid_view(
+            t,
+            <melee_sim::game::structs::Item as Mirror>::SIZE,
+            None,
+            |l, cx| {
+                use melee_sim::game::mirror::LayOut;
+                item.lay(l, t, cx);
+                let n = item.x374_dynamicBonesNum.max(0) as usize;
+                item.xD4_dynamicBones.lay_counted(l, t + 0xD4, cx, n);
+                let n = usize::from(item.xAC8_hurtboxNum);
+                item.xACC_itemHurtbox.lay_counted(l, t + 0xACC, cx, n);
+            },
+        );
+        match view {
+            Some(block) => {
+                let m = Mem {
+                    bytes: &block,
+                    base: t,
+                };
+                item.compare(&m, t, &ipath, self);
+            }
+            None => item.compare(&mem(self.mem), t, &ipath, self),
+        }
         self.block = None;
     }
 

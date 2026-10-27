@@ -951,7 +951,12 @@ impl Comparer<'_> {
             }
         }
         for (&desc, &bits) in &game.objs.rendermode_patches {
-            let mem = self.u32(self.data.addr(desc) + 4);
+            // A mark in a stage file its scene let go of went with the file (a later load of
+            // it is marked again as it's registered).
+            let Some(at) = self.data.try_addr(desc) else {
+                continue;
+            };
+            let mem = self.u32(at + 4);
             self.check(
                 &format!("MObjDesc {desc:?}"),
                 "rendermode marks",
@@ -964,12 +969,9 @@ impl Comparer<'_> {
             let article = self.u32(articles + 4 * (160 - 43));
             let slot = self.u32(article + 0xC) + 0x10 * u32::from(i) + 0xC;
             let theirs = self.u32(slot);
-            self.check(
-                &format!("yaku script {i}"),
-                "script",
-                Some(script),
-                self.data.get(theirs),
-            );
+            // A script of an earlier stage's that this one doesn't replace names its freed file.
+            use melee_sim::game::mirror::Cx;
+            self.compare_data(&format!("yaku script {i}"), Some(script), theirs);
         }
         let buf = self.u32(sym("Ground_804D6950"));
         let theirs = (buf != 0).then(|| {
@@ -1172,6 +1174,9 @@ impl Comparer<'_> {
             self.compare_zebes();
         }
         for (i, g) in game.gr.icemt_fields.iter().enumerate() {
+            if !on(gr::GR_KIND_ICEMT) {
+                break;
+            }
             use melee_sim::game::mirror::Cx;
             let theirs = self.u32(GRICEMT_FIELDS + 4 * i as u32);
             self.compare_handle(
@@ -1181,24 +1186,32 @@ impl Comparer<'_> {
                 theirs,
             );
         }
-        self.compare_corneria();
-        self.compare_venom();
+        if on(gr::GR_KIND_CORNERIA) {
+            self.compare_corneria();
+        }
+        if on(gr::GR_KIND_VENOM) {
+            self.compare_venom();
+        }
         let castle = &game.gr.castle;
         let pool = self.u32(gr::vars::WIND_POOL);
         let w = castle
             .wind
             .map_or(0, |i| pool + gr::vars::WIND_SIZE * u32::from(i));
-        self.check(
-            "grCs_804D6974",
-            "castle statics",
-            (w, castle.step.to_bits(), castle.gusts),
-            (
-                self.u32(GRCASTLE_WIND),
-                self.u32(GRCASTLE_STEP),
-                self.u8(GRCASTLE_GUSTS),
-            ),
-        );
-        self.compare_mutecity();
+        if on(gr::GR_KIND_CASTLE) {
+            self.check(
+                "grCs_804D6974",
+                "castle statics",
+                (w, castle.step.to_bits(), castle.gusts),
+                (
+                    self.u32(GRCASTLE_WIND),
+                    self.u32(GRCASTLE_STEP),
+                    self.u8(GRCASTLE_GUSTS),
+                ),
+            );
+        }
+        if on(gr::GR_KIND_MUTECITY) {
+            self.compare_mutecity();
+        }
         for (i, d) in game.gr.bigblue.track_deltas.iter().enumerate() {
             let at = GRBIGBLUE_TRACK + 0x14 * i as u32 + 8;
             self.check(
@@ -1287,6 +1300,9 @@ impl Comparer<'_> {
             (p != 0).then(|| s.maps.jobjs.get(&p).copied())
         };
         for (i, pl) in kongo.planks.iter().enumerate() {
+            if !on(gr::GR_KIND_KONGO) {
+                break;
+            }
             let at = GRKONGO_PLANKS + 0x18 * i as u32;
             self.check(
                 &format!("grKg_803E188C[{i}]"),
@@ -1301,16 +1317,21 @@ impl Comparer<'_> {
                 jobj_pair(self, at + 4),
             );
         }
-        self.check(
-            "grKg_804D6984",
-            "posts",
-            kongo.posts.map(|j| j.map(Some)),
-            [
-                jobj_pair(self, GRKONGO_POSTS),
-                jobj_pair(self, GRKONGO_POSTS + 4),
-            ],
-        );
+        if on(gr::GR_KIND_KONGO) {
+            self.check(
+                "grKg_804D6984",
+                "posts",
+                kongo.posts.map(|j| j.map(Some)),
+                [
+                    jobj_pair(self, GRKONGO_POSTS),
+                    jobj_pair(self, GRKONGO_POSTS + 4),
+                ],
+            );
+        }
         for i in 0..gr::pura::VTX_COUNT {
+            if !on(gr::GR_KIND_PURA) {
+                break;
+            }
             let ours = game.gr.pura_vtx_jobjs.get(i).copied().flatten();
             self.check(
                 &format!("grPu_803E6C0C[{i}]"),
@@ -1339,14 +1360,10 @@ impl Comparer<'_> {
         }
         let articles = sym("it_804A0F60");
         for k in 0..30 {
+            // An earlier stage's article this one doesn't replace names its freed file.
             let a = self.u32(articles + 4 * k as u32);
-            let theirs = (a != 0).then(|| self.data.get(a)).flatten();
-            self.check(
-                &format!("it_804A0F60[{k}]"),
-                "article",
-                game.gr.stage_articles[k],
-                theirs,
-            );
+            use melee_sim::game::mirror::Cx;
+            self.compare_data(&format!("it_804A0F60[{k}]"), game.gr.stage_articles[k], a);
         }
         let z = sym("lbl_8049F030");
         let zk = &game.gr.zako;

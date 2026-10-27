@@ -57,6 +57,12 @@ pub trait Kinds: Clone + Debug + 'static {
     type UserData: Copy + Debug + PartialEq;
     /// The HSD object (`hsd_obj`): a joint tree, a camera, ….
     type Obj: Copy + Debug + PartialEq;
+
+    /// The function `GObj_InitUserData` names to free user data (its GObj's word after the
+    /// user data), where melee-sim knows it: the heap's image lays it out.
+    fn user_data_remover(_: &Self::UserData) -> Option<u32> {
+        None
+    }
 }
 
 /// `HSD_GObj`.
@@ -752,9 +758,16 @@ impl<K: Kinds> World<K> {
         assert!(o.user_data_kind == 0xFF, "GObj already has user data");
         o.user_data_kind = kind;
         o.user_data = Some(data);
-        // Its remove function, which melee-sim's user data names only by its kind.
+        // Its remove function, which melee-sim's user data names only by its kind: the
+        // image knows the ones `Kinds::user_data_remover` gives.
         let at = self.gobjs.addr(g.0);
-        super::heap::with(|h| h.image.claim(at + 0x30, at + 0x34));
+        let remover = K::user_data_remover(&data);
+        super::heap::with(|h| match remover {
+            Some(r) => h.image.word(at + 0x30, r),
+            None => h
+                .image
+                .claim(at + 0x30, at + 0x34, "a GObj's user data remover"),
+        });
     }
 
     fn take_user_data(&mut self, g: GObjId) -> Option<(u8, K::UserData)> {

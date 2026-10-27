@@ -123,6 +123,15 @@ fn cells(m: &[u8], mut c: u32) -> Vec<(u32, u32)> {
 
 /// The main heap's allocators as memory holds them.
 pub fn read(m: &[u8]) -> Heap {
+    read_past(m, &[])
+}
+
+/// The main heap's allocators as memory holds them, but the free lists of the pools `carried`
+/// names: a game pool past the scene whose heap held its objects keeps its free list until
+/// the scene's code inits it again (`Heap::carried`), and its links lie in that freed heap,
+/// which a later scene may write over (the opening movie's frames), so only the list's head
+/// is read.
+pub fn read_past(m: &[u8], carried: &[bool]) -> Heap {
     let index = w(m, sym("current_heap")) as i32;
     let desc = w(m, sym("HeapArray")) + 12 * index as u32;
     let os = OsHeap {
@@ -163,10 +172,16 @@ pub fn read(m: &[u8]) -> Heap {
             let d = alloc_data(k);
             let flags = w(m, d);
             let free = w(m, d + 12);
+            let head = w(m, d + 4);
+            let free = if carried.get(k as usize).copied().unwrap_or(false) {
+                (head != 0).then_some(head).into_iter().collect()
+            } else {
+                free_list(m, head, free)
+            };
             ObjAlloc {
                 num_limit_flag: flags & 0x8000_0000 != 0,
                 heap_limit_flag: flags & 0x4000_0000 != 0,
-                free: free_list(m, w(m, d + 4), free),
+                free,
                 used: w(m, d + 8),
                 peak: w(m, d + 16),
                 num_limit: w(m, d + 20),
@@ -218,7 +233,7 @@ impl Comparer<'_> {
         if !ours.active {
             return;
         }
-        let theirs = read(self.mem);
+        let theirs = read_past(self.mem, &ours.carried);
         let p = "heap";
         self.check(
             p,
@@ -301,6 +316,18 @@ impl Comparer<'_> {
             }
         }
         for ((k, o), t) in Kind::ALL.iter().zip(&ours.allocs).zip(&theirs.allocs) {
+            // A carried pool's free list past its heap: its head and count (`read_past`).
+            let o = &if ours.carried[*k as usize] {
+                let mut o = o.clone();
+                let n = o.free.len();
+                o.free = o.free.last().copied().into_iter().collect();
+                if n as u32 != w(self.mem, alloc_data(*k) + 12) {
+                    o.free.push(0);
+                }
+                o
+            } else {
+                o.clone()
+            };
             if o != t {
                 self.diff(
                     &format!("{p} pool {k:?}"),

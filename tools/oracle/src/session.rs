@@ -926,14 +926,26 @@ impl Run<'_> {
                 )));
             }
             past.note(&s.game);
-            let (mut diffs, reads) = compare(
-                &image.mem1,
-                &data,
-                &s.game,
-                &s.data,
-                dangling.clone(),
-                &past,
-            );
+            // A comparer that meets memory it can't follow stops the run at that tick.
+            let compared_tick = catch_unwind(AssertUnwindSafe(|| {
+                compare(
+                    &image.mem1,
+                    &data,
+                    &s.game,
+                    &s.data,
+                    dangling.clone(),
+                    &past,
+                )
+            }));
+            let (mut diffs, reads) = match compared_tick {
+                Ok(v) => v,
+                Err(p) => {
+                    break Some(Stop::Seam(format!(
+                        "the comparison panicked: {}",
+                        panic_text(&p)
+                    )));
+                }
+            };
             if self.image_ticks.contains(&t) {
                 image_check(t, &s.game, &s.data, &image.mem1);
             }
@@ -961,8 +973,27 @@ impl Run<'_> {
             }
             diffs.retain(|d| !self.ignore.iter().any(|p| d.contains(p.as_str())));
             compared += 1;
-            if !diffs.is_empty() {
-                break Some(Stop::Differ(diffs));
+            // A new object's leftovers the heap's image doesn't know, where the original's
+            // differ: a stop at a layout that isn't ported, unless something else differs.
+            let (unlaid, others): (Vec<String>, Vec<String>) = diffs
+                .into_iter()
+                .partition(|d| d.starts_with(melee_capture::compare::UNLAID));
+            if !others.is_empty() {
+                break Some(Stop::Differ(others.into_iter().chain(unlaid).collect()));
+            }
+            if let Some(first) = unlaid.first() {
+                let what = |d: &str| {
+                    let d = &d[melee_capture::compare::UNLAID.len()..];
+                    d.split_once('\t')
+                        .map_or((d.to_owned(), String::new()), |(a, b)| {
+                            (a.to_owned(), b.to_owned())
+                        })
+                };
+                for d in &unlaid {
+                    let (m, at) = what(d);
+                    println!("  {m}: the object at {at}");
+                }
+                break Some(Stop::Seam(what(first).0));
             }
             // A scene that ended changes to the next as the next step starts (`gm::machine`);
             // one taken up from a trace tick (`--from`) has no machine to change with.

@@ -244,6 +244,9 @@ pub(super) fn free_effect(game: &mut Game, e: EffectId) {
 /// Returns a deferred spawn's block to efAsync's allocator, `HSD_ObjFree`: its `next` becomes
 /// the free list's link.
 pub(super) fn free_queued(game: &mut Game, q: super::QueuedId) {
+    // The block holds the spawn as it was (docs/engine.md, a session's heap leftovers).
+    let g = &*game;
+    crate::hsd::export::with_image(|img| crate::game::export::queued(g, img, q));
     let link = game.ef.queued.free_head().map(super::QueuedId);
     game.ef.queued[q.0].next = link;
     game.ef.queued.free(q.0);

@@ -56,6 +56,12 @@ pub fn import<T: Mirror>(data: &Archives, addr: u32, fresh: bool) -> Option<T> {
             return None;
         }
         let (mut bytes, _) = h.image.leftover_bytes(data, addr, T::SIZE);
+        // Where the image doesn't know the bytes: the comparer stops if the original's differ.
+        let ty = std::any::type_name::<T>()
+            .rsplit("::")
+            .next()
+            .unwrap_or("?");
+        h.image.note_unlaid(addr, T::SIZE, ty);
         // The GPU's pixels: the image's fill (docs/engine.md, "Uninitialized values").
         let fill = h.image.render_fill;
         for (b, rt) in bytes.iter_mut().zip(h.image.render_target(addr, T::SIZE)) {

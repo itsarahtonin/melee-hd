@@ -105,6 +105,10 @@ pub struct FObj {
     pub p1: f32,
     pub d0: f32,
     pub d1: f32,
+    /// Where its archive's data was as it was made, where a buffer held a copy of the file (a
+    /// fighter's animation in its animation buffer, `Image::place_copy`), else 0: the heap's
+    /// image lays its cursors out there.
+    pub data_at: u32,
 }
 
 /// The FObj pool (`fobj_alloc_data`).

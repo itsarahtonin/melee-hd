@@ -540,7 +540,10 @@ impl crate::game::mirror::LayOut for LinkBombFlags {
 /// Members of an item's variables written by hand, which aren't laid out yet: their bytes are
 /// unknown in the heap's image once the item goes back.
 macro_rules! unlaid {
-    ($($t:ty),*) => {$(
+    ($($t:ty),*) => {
+        /// The members `unlaid!` names, which the heap's image doesn't lay out.
+        pub const UNLAID: &[&str] = &[$(stringify!($t)),*];
+        $(
         impl crate::game::mirror::LayOut for $t {
             fn lay(
                 &self,
@@ -548,7 +551,7 @@ macro_rules! unlaid {
                 at: u32,
                 _: &dyn crate::game::mirror::LayCx,
             ) {
-                l.forget(at, <$t as Mirror>::SIZE);
+                l.forget_as(at, <$t as Mirror>::SIZE, stringify!($t));
             }
         }
     )*};

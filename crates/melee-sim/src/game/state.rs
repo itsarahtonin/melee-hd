@@ -169,6 +169,22 @@ impl Kinds for GameKinds {
     type Render = CodeRef;
     type UserData = UserData;
     type Obj = Obj;
+
+    fn user_data_remover(u: &UserData) -> Option<u32> {
+        Some(match u {
+            // `Fighter_Unload_8006DABC`, `Item_OnUserDataRemove`, the links' `it_802A2474`,
+            // grlib's `mem_free`, `efLib_remove_user_data`, `lbAudioAx_ObjFree`,
+            // `lbBgFlash_Free`.
+            UserData::Fighter(_) => 0x8006_DABC,
+            UserData::Item(_) => 0x8026_AE10,
+            UserData::ItemLink(_) => 0x802A_2474,
+            UserData::Ground(_) => 0x801C_0478,
+            UserData::Effect(_) => 0x8005_BB40,
+            UserData::Sound(_) => 0x8002_63B4,
+            UserData::BgFlash => 0x8002_19E4,
+            _ => return None,
+        })
+    }
 }
 
 /// What the simulation hands the presentation: sounds and controller rumble, which the
@@ -403,8 +419,8 @@ impl Host<GameKinds> for Running<'_> {
         match data {
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => {
-                let game = &*self.game;
-                crate::hsd::export::with_image(|img| super::export::ground(game, img, g));
+                let (game, data) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| super::export::ground(game, data, img, g));
                 crate::hsd::heap::mem_free(self.game.grounds.addr(g.0));
                 self.game.grounds.free(g.0);
             }

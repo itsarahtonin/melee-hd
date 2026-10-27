@@ -29,11 +29,34 @@ use melee_data::archive::{ArchiveId, Archives};
 
 use crate::state_eq::{Diff, StateEq, StateHasher};
 
+/// The owner of a free cell's header, which the heap's lists write ([`Image::unknown`]).
+pub const CELL_HEADER: &str = "a heap cell's header";
+/// The owner of an `HSD_MemAlloc` block that names no type of its own.
+pub const HEAP_BLOCK: &str = "a main-heap block";
+/// The owner of a memory piece that names no class or pool.
+pub const PIECE: &str = "a memory piece";
+
+/// An object made in a block where the image didn't know some of the bytes its creation
+/// leaves as they were: which, by their owners. A new object reads those as zero; where the
+/// original's differ, the oracle stops there, naming the owner whose layout it lacks, rather
+/// than report a difference (docs/engine.md, a session's heap leftovers).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Unlaid {
+    /// The object's address.
+    pub at: u32,
+    /// Its type.
+    pub ty: &'static str,
+    /// The unknown runs, as offsets into the object, each with its owner.
+    pub runs: Vec<(u32, u32, &'static str)>,
+}
+
 /// Where a run of the image's bytes comes from, its first byte's place.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Src {
-    /// Bytes an owner wrote that melee-sim doesn't lay out.
-    Unknown,
+    /// Bytes an owner wrote that melee-sim doesn't lay out: the owner's type (an object
+    /// pool's, a class's, a named block's), which says whose layout a new object over them
+    /// needs ([`Image::unlaid`]).
+    Unknown(&'static str),
     /// A file read into memory, from byte `offset` of `archive`'s file as read (header first,
     /// `Archive::file_byte`); with a `base`, the words its relocation table names hold the
     /// data block's address `base` added, as `HSD_ArchiveParse` leaves them.
@@ -57,7 +80,7 @@ pub enum Src {
 impl Src {
     fn advance(&self, n: u32) -> Src {
         match self {
-            Src::Unknown => Src::Unknown,
+            &Src::Unknown(o) => Src::Unknown(o),
             Src::RenderTarget => Src::RenderTarget,
             &Src::File {
                 archive,
@@ -79,10 +102,15 @@ impl Src {
         }
     }
 
+    /// Whether the bytes are unknown.
+    pub fn is_unknown(&self) -> bool {
+        matches!(self, Src::Unknown(_))
+    }
+
     /// The `i`th byte from the source's place, if known.
     fn byte(&self, data: &Archives, i: u32) -> Option<u8> {
         match self {
-            Src::Unknown | Src::RenderTarget => None,
+            Src::Unknown(_) | Src::RenderTarget => None,
             &Src::File {
                 archive,
                 offset,
@@ -261,17 +289,17 @@ fn cut(spans: &mut Page, lo: u32, hi: u32) {
 /// Writes `src` over `[lo, hi)` of one page.
 fn write_page(spans: &mut Page, lo: u32, hi: u32, src: Src) {
     cut(spans, lo, hi);
-    // An unknown run joins an unknown neighbour.
+    // An unknown run joins an unknown neighbour of the same owner.
     let (mut lo, mut hi) = (lo, hi);
-    if src == Src::Unknown {
+    if src.is_unknown() {
         if let Some((&k, s)) = spans.range(..lo).next_back()
             && s.end == lo
-            && s.src == Src::Unknown
+            && s.src == src
         {
             spans.remove(&k);
             lo = k;
         }
-        if spans.get(&hi).is_some_and(|s| s.src == Src::Unknown) {
+        if spans.get(&hi).is_some_and(|s| s.src == src) {
             hi = spans.remove(&hi).unwrap().end;
         }
     }
@@ -388,6 +416,13 @@ pub struct Image {
     /// 0, or another value for the oracle's mutation run (`--mutate render-target=ff`), which
     /// shows any read of them before a write.
     pub render_fill: u8,
+    /// The objects this scene made over bytes the image doesn't know ([`Unlaid`]), until
+    /// their blocks go back.
+    unlaid: Vec<Unlaid>,
+    /// Copies of an archive's file a buffer holds besides its places (a fighter's animation
+    /// in its animation buffer), newest last: where the objects laid out as they go point
+    /// into ([`Image::lay_addr`]), which the comparison's own places don't take.
+    copies: Option<Arc<Vec<(u32, u32, ArchiveId)>>>,
 }
 
 impl Clone for Image {
@@ -412,6 +447,8 @@ impl Clone for Image {
         self.scene_slots.clone_from(&o.scene_slots);
         self.alloc_order.clone_from(&o.alloc_order);
         self.render_fill = o.render_fill;
+        self.unlaid.clone_from(&o.unlaid);
+        self.copies.clone_from(&o.copies);
     }
 }
 
@@ -430,7 +467,9 @@ impl PartialEq for Image {
                     && self.pool_grew == other.pool_grew
                     && self.scene_slots == other.scene_slots
                     && self.alloc_order == other.alloc_order
-                    && self.render_fill == other.render_fill))
+                    && self.render_fill == other.render_fill
+                    && self.unlaid == other.unlaid
+                    && self.copies() == other.copies()))
     }
 }
 
@@ -441,7 +480,10 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
     for (k, s) in spans.iter() {
         h.word(u64::from(k) << 32 | u64::from(s.end));
         match &s.src {
-            Src::Unknown => h.word(0),
+            Src::Unknown(o) => {
+                h.word(0);
+                h.bytes(o.as_bytes());
+            }
             Src::File {
                 archive,
                 offset,
@@ -512,6 +554,20 @@ impl StateEq for Image {
             h.word(u64::from(c));
         }
         h.word(u64::from(self.render_fill));
+        h.word(self.copies().len() as u64);
+        for &(b, len, a) in self.copies() {
+            h.word(u64::from(b) << 32 | u64::from(len));
+            h.word(u64::from(a.0));
+        }
+        h.word(self.unlaid.len() as u64);
+        for u in &self.unlaid {
+            h.word(u64::from(u.at));
+            h.bytes(u.ty.as_bytes());
+            for &(a, b, o) in &u.runs {
+                h.word(u64::from(a) << 32 | u64::from(b));
+                h.bytes(o.as_bytes());
+            }
+        }
     }
 }
 
@@ -549,6 +605,51 @@ impl Image {
         self.places.as_deref().map_or(&NO_PLACES, |p| p)
     }
 
+    fn copies(&self) -> &[(u32, u32, ArchiveId)] {
+        self.copies.as_deref().map_or(&NO_PLACES, |p| p)
+    }
+
+    /// A copy of an archive's file's data (`len` bytes at `base`) a buffer holds now: where
+    /// the objects laid out as they go point into it ([`Image::lay_addr`]).
+    pub fn place_copy(&mut self, base: u32, len: u32, archive: ArchiveId) {
+        if self.on {
+            let c = Arc::make_mut(self.copies.get_or_insert_with(Default::default));
+            // An object pointing into an earlier copy at the same place may still go after
+            // the next is loaded there (an animation's FObjs, as the next animation starts),
+            // so every copy is kept, and one copied into two places is ambiguous.
+            c.retain(|&(b, _, a)| b != base || a != archive);
+            c.push((base, len, archive));
+        }
+    }
+
+    /// Where the newest copy of an archive's file's data is ([`Image::place_copy`]).
+    pub fn copy_at(&self, archive: ArchiveId) -> Option<u32> {
+        if !self.on {
+            return None;
+        }
+        self.copies()
+            .iter()
+            .rev()
+            .find(|&&(_, _, a)| a == archive)
+            .map(|&(b, _, _)| b)
+    }
+
+    /// The address a layout gives a place in an archive: its copy ([`Image::place_copy`]),
+    /// unknown where two places hold one, else its newest place.
+    pub fn lay_addr(&self, d: melee_data::archive::DataRef) -> Option<u32> {
+        // Copies in two places (a fighter's two animation buffers holding the same
+        // animation) leave the object's place unknown.
+        let mut bases = self
+            .copies()
+            .iter()
+            .filter(|&&(_, len, a)| a == d.archive && d.offset < len)
+            .map(|&(b, _, _)| b);
+        match bases.next() {
+            Some(b) => bases.all(|o| o == b).then_some(b + d.offset),
+            None => self.data_addr(d),
+        }
+    }
+
     /// A session's image from power-on: the boot cleared the arena.
     pub fn power_on() -> Image {
         Image {
@@ -566,7 +667,7 @@ impl Image {
 
     /// Marks `[lo, hi)` of memory no block holds now unknown (a free cell's header).
     pub fn unknown(&mut self, lo: u32, hi: u32) {
-        self.write(lo, hi, Src::Unknown);
+        self.write(lo, hi, Src::Unknown(CELL_HEADER));
     }
 
     /// Bytes `[lo, lo + len)` and which of them are known (unknown ones read zero).
@@ -599,7 +700,7 @@ impl Image {
             let written = self
                 .live
                 .range(lo, lo + len)
-                .filter(|(_, s)| s.src != Src::Unknown);
+                .filter(|(_, s)| !s.src.is_unknown());
             read_runs(written, data, lo, &mut out, &mut known);
             if let Some((a, w)) = self.taken
                 && a == lo
@@ -610,6 +711,63 @@ impl Image {
             }
         }
         (out, known)
+    }
+
+    /// The runs of `[lo, lo + len)` a new object's block holds unknown, as
+    /// [`Image::leftover_bytes`] reads the block: offsets into it, each with its owner.
+    pub fn leftover_unknown(&self, lo: u32, len: u32) -> Vec<(u32, u32, &'static str)> {
+        let mut owner: Vec<Option<&'static str>> = vec![None; len as usize];
+        if !self.on {
+            return Vec::new();
+        }
+        let hi = lo + len;
+        let mut mark = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+            for (k, s) in runs {
+                for a in k.max(lo)..s.end.min(hi) {
+                    owner[(a - lo) as usize] = match s.src {
+                        Src::Unknown(o) => Some(o),
+                        _ => None,
+                    };
+                }
+            }
+        };
+        mark(&mut self.base().range(lo, hi));
+        mark(&mut self.overlay.range(lo, hi));
+        mark(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
+        if let Some((a, _)) = self.taken
+            && a == lo
+        {
+            owner.iter_mut().take(4).for_each(|o| *o = None);
+        }
+        let mut out: Vec<(u32, u32, &'static str)> = Vec::new();
+        for (i, o) in owner.into_iter().enumerate() {
+            let Some(o) = o else { continue };
+            match out.last_mut() {
+                Some((_, end, last)) if *end == i as u32 && *last == o => *end += 1,
+                _ => out.push((i as u32, i as u32 + 1, o)),
+            }
+        }
+        out
+    }
+
+    /// An object of type `ty` made at `at` over `len` bytes of its block: where the image
+    /// doesn't know what the block held, it notes which bytes and whose they were
+    /// ([`Unlaid`]).
+    pub fn note_unlaid(&mut self, at: u32, len: u32, ty: &'static str) {
+        if !self.on {
+            return;
+        }
+        self.unlaid.retain(|u| u.at != at);
+        let runs = self.leftover_unknown(at, len);
+        if !runs.is_empty() {
+            self.unlaid.push(Unlaid { at, ty, runs });
+        }
+    }
+
+    /// The bytes the object at `at` was made over that the image didn't know
+    /// ([`Image::note_unlaid`]).
+    pub fn unlaid(&self, at: u32) -> Option<&Unlaid> {
+        self.unlaid.iter().find(|u| u.at == at)
     }
 
     /// Which of the bytes `[lo, lo + len)` a new object's block holds from a render target
@@ -629,12 +787,7 @@ impl Image {
         };
         mark(&mut self.base().range(lo, hi));
         mark(&mut self.overlay.range(lo, hi));
-        mark(
-            &mut self
-                .live
-                .range(lo, hi)
-                .filter(|(_, s)| s.src != Src::Unknown),
-        );
+        mark(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
         out
     }
 
@@ -677,11 +830,11 @@ impl Image {
         }
     }
 
-    /// The owner of `[lo, hi)` of a block now allocated writes it: unknown until the owner
-    /// says what it wrote (its layout as it goes, [`super::export`]).
-    pub fn claim(&mut self, lo: u32, hi: u32) {
+    /// The owner of `[lo, hi)` of a block now allocated, an `owner` (its type), writes it:
+    /// unknown until the owner says what it wrote (its layout as it goes, [`super::export`]).
+    pub fn claim(&mut self, lo: u32, hi: u32, owner: &'static str) {
         if self.on {
-            write(&mut self.live, lo, hi, Src::Unknown);
+            write(&mut self.live, lo, hi, Src::Unknown(owner));
         }
     }
 
@@ -700,15 +853,15 @@ impl Image {
         }
     }
 
-    /// A piece of `size` bytes handed out at `p`: its owner's claim on it.
-    pub fn claim_piece(&mut self, p: u32, size: u32) {
+    /// A piece of `size` bytes handed out at `p` to an `owner`: its claim on it.
+    pub fn claim_piece(&mut self, p: u32, size: u32, owner: &'static str) {
         match self.claim_parts.take() {
             Some(parts) => {
                 for (a, b) in parts {
-                    self.claim(p + a, p + b.min(size));
+                    self.claim(p + a, p + b.min(size), owner);
                 }
             }
-            None => self.claim(p, p + size),
+            None => self.claim(p, p + size, owner),
         }
     }
 
@@ -853,6 +1006,7 @@ impl Image {
         for (a, b, src) in take(&mut self.live, lo, hi) {
             write(&mut self.overlay, a, b, src);
         }
+        self.unlaid.retain(|u| u.at < lo || u.at >= hi);
     }
 
     /// The scene's heap is made anew: what its allocated blocks hold stays in memory
@@ -872,6 +1026,7 @@ impl Image {
         self.flush_live();
         self.scene_slots.clear();
         self.alloc_order.clear();
+        self.unlaid.clear();
         // The scene's ID table is forgotten with its heap (`_HSD_IDForgetMemory`).
         self.id_order.clear();
         if self.overlay.is_empty() {
@@ -938,7 +1093,7 @@ impl Image {
     pub fn live_runs(&self) -> Vec<(u32, u32)> {
         self.live
             .iter()
-            .filter(|(_, s)| s.src != Src::Unknown)
+            .filter(|(_, s)| !s.src.is_unknown())
             .map(|(k, s)| (k, s.end))
             .collect()
     }
@@ -957,7 +1112,7 @@ impl Image {
                     k,
                     s.end,
                     match s.src {
-                        Src::Unknown => "unknown",
+                        Src::Unknown(_) => "unknown",
                         Src::File { .. } => "file",
                         Src::Raw { .. } => "raw file",
                         Src::Bytes { .. } => "object",
@@ -1009,7 +1164,7 @@ mod tests {
         let mut img = Image::power_on();
         img.write(0x8040_0200, 0x8040_0210, bytes(&[0xAA; 16]));
         img.end_scene();
-        img.claim(0x8040_0200, 0x8040_0208);
+        img.claim(0x8040_0200, 0x8040_0208, "a test");
         // A new object reads what the block held before its owner wrote it.
         let (b, k) = img.leftover_bytes(&data, 0x8040_0200, 16);
         assert_eq!(b, [0xAA; 16]);
@@ -1030,7 +1185,7 @@ mod tests {
         let data = Archives::default();
         let mut img = Image::power_on();
         img.word(0x8040_0300, 0x8012_3450);
-        img.claim(0x8040_0300, 0x8040_0310);
+        img.claim(0x8040_0300, 0x8040_0310, "a test");
         img.taken(0x8040_0300, 0x8012_3450);
         let (b, k) = img.leftover_bytes(&data, 0x8040_0300, 8);
         assert_eq!(b, [0x80, 0x12, 0x34, 0x50, 0, 0, 0, 0]);
@@ -1042,7 +1197,7 @@ mod tests {
         let data = Archives::default();
         let mut img = Image::power_on();
         img.claim_next(&[(0, 4), (8, 0x10)]);
-        img.claim_piece(0x8040_0400, 0xC);
+        img.claim_piece(0x8040_0400, 0xC, "a test");
         let (_, k) = img.bytes(&data, 0x8040_0400, 0x10);
         assert_eq!(k, [[false; 4], [true; 4], [false; 4], [true; 4]].concat());
     }

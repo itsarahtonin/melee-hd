@@ -821,6 +821,13 @@ impl Comparer<'_> {
                 self.u32(sym("sptcl_callback")),
             ),
         );
+        // The fighters' deferred spawns and the particle system live in the scenes that set
+        // them up (`efLib_Init`: a match's, the results screen's) and before any: past such a
+        // scene they name its freed heap, which a later scene writes over (the opening movie's
+        // frames), and nothing reads them until the next `efLib_Init` makes them anew.
+        if !self.match_statics_live() {
+            return;
+        }
         let fighters: Vec<(u32, melee_sim::game::handles::FighterId)> =
             self.maps.fighters.iter().map(|(&a, &f)| (a, f)).collect();
         for (a, f) in fighters {

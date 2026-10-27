@@ -1347,6 +1347,8 @@ impl Importer<'_> {
             p1: self.f32(a + 0x24),
             d0: self.f32(a + 0x28),
             d1: self.f32(a + 0x2C),
+            // An imported state keeps no heap image.
+            data_at: 0,
         };
         self.game.objs.fobjs[id.0] = o;
         id

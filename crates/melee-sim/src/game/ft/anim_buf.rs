@@ -202,6 +202,18 @@ impl Running<'_> {
     pub(super) fn anim_buf_load(&mut self, buf: Option<AnimBufId>, archive: ArchiveId, len: u32) {
         let buf = buf.expect("a fighter without animation buffers");
         self.game.fighter_anim_bufs[buf.0].load(archive, len);
+        // Where the animation's data is now, for the objects that point into it as they go
+        // (an FObj's command list, freed as the fighter's next animation starts).
+        let at = self.game.fighter_anim_bufs.addr(buf.0);
+        if at != 0 {
+            crate::hsd::heap::with(|h| {
+                h.image.place_copy(
+                    at + ARCHIVE_HEADER,
+                    len.saturating_sub(ARCHIVE_HEADER),
+                    archive,
+                )
+            });
+        }
     }
 }
 

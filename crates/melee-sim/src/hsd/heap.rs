@@ -267,6 +267,47 @@ pub enum Kind {
 }
 
 impl Kind {
+    /// The pool's object type, as the heap's image names an owner.
+    pub fn name(self) -> &'static str {
+        match self {
+            Kind::GObj => "GObj",
+            Kind::GObjProc => "GObjProc",
+            Kind::AObj => "AObj",
+            Kind::FObj => "FObj",
+            Kind::RObj => "RObj",
+            Kind::Rvalue => "Rvalue",
+            Kind::IdEntry => "IdEntry",
+            Kind::SList => "SList",
+            Kind::DList => "DList",
+            Kind::Fighter => "Fighter",
+            Kind::FighterAttrs => "FighterAttrs",
+            Kind::FighterParts => "FighterParts",
+            Kind::FighterDObjList => "FighterDObjList",
+            Kind::FighterX2040 => "FighterX2040",
+            Kind::FighterX59C => "FighterX59C",
+            Kind::Player => "Player",
+            Kind::Item => "Item",
+            Kind::ItemDynamicBones => "ItemDynamicBones",
+            Kind::ItemLink => "ItemLink",
+            Kind::Effect => "Effect",
+            Kind::EffectQueued => "EffectQueued",
+            Kind::Particle => "Particle",
+            Kind::Generator => "Generator",
+            Kind::AppSrt => "AppSrt",
+            Kind::SObj => "SObj",
+            Kind::BgFlash => "BgFlash",
+            Kind::AudioUserData => "AudioUserData",
+            Kind::DebugMenu => "DebugMenu",
+            Kind::Shadow => "Shadow",
+            Kind::ZList => "ZList",
+            Kind::Vec => "Vec",
+            Kind::Mtx => "Mtx",
+            Kind::Render => "Render",
+            Kind::TevReg => "TevReg",
+            Kind::Chan => "Chan",
+        }
+    }
+
     pub const COUNT: usize = 35;
     pub const ALL: [Kind; Kind::COUNT] = [
         Kind::GObj,
@@ -374,6 +415,11 @@ impl Kind {
     }
 }
 
+/// The owner of the memory pieces' size classes and their array (`HSD_MemoryEntry`).
+const MEMORY_ENTRIES: &str = "HSD_MemoryEntry";
+/// The owner of the bytes a disc read brings past a file's end, up to 32.
+const FILE_TAIL: &str = "a disc read's bytes past a file";
+
 /// `sizeof(Fighter)`, the fighters' pool's object size on the console.
 pub const FIGHTER_SIZE: u32 = 0x23EC;
 
@@ -407,6 +453,29 @@ pub enum Class {
 }
 
 impl Class {
+    /// The class's name, as the heap's image names an owner.
+    pub fn name(self) -> &'static str {
+        match self {
+            Class::JObj => "JObj",
+            Class::DObj => "DObj",
+            Class::MObj => "MObj",
+            Class::TObj => "TObj",
+            Class::PObj => "PObj",
+            Class::CObj => "CObj",
+            Class::LObj => "LObj",
+            Class::WObj => "WObj",
+            Class::Fog => "Fog",
+            Class::FtJObj => "FtJObj",
+            Class::FtIntpJObj => "FtIntpJObj",
+            Class::FtPObj => "FtPObj",
+            Class::FtMObj => "FtMObj",
+            Class::GrMObj => "GrMObj",
+            Class::ItMObj => "ItMObj",
+            Class::RfDObj => "RfDObj",
+            Class::RfPObj => "RfPObj",
+        }
+    }
+
     pub const COUNT: usize = 17;
     pub const ALL: [Class; Class::COUNT] = [
         Class::JObj,
@@ -648,10 +717,15 @@ impl Heap {
 
     /// `HSD_MemAlloc`: a block of the main heap. The original asserts it got one.
     pub fn mem_alloc(&mut self, size: u32) -> u32 {
+        self.mem_alloc_as(size, super::image::HEAP_BLOCK)
+    }
+
+    /// `HSD_MemAlloc` for an `owner` the heap's image names (its type).
+    pub fn mem_alloc_as(&mut self, size: u32, owner: &'static str) -> u32 {
         let p = self.mem_alloc_raw(size);
         // Its owner writes what it asked for, as far as the image knows; the block's rest
         // keeps what it held.
-        self.image.claim(p, p + size);
+        self.image.claim(p, p + size, owner);
         log(|| format!("MA {size:#x} -> {p:#010x}"));
         p
     }
@@ -666,7 +740,8 @@ impl Heap {
             // `OSAllocFromHeap` writes the block's header, and a split's free rest's.
             let cell = p - HEADER;
             self.image.alloc_cell(cell);
-            self.image.claim(cell, cell + 0xC);
+            self.image
+                .claim(cell, cell + 0xC, super::image::CELL_HEADER);
             let i = self.os.allocated.partition_point(|&(c, _)| c < cell);
             let end = cell + self.os.allocated[i].1;
             if self.os.free.binary_search_by_key(&end, |f| f.0).is_ok() {
@@ -749,7 +824,7 @@ impl Heap {
                 }
                 self.pieces.array = self.mem_alloc_raw(new_nb as u32 * 4);
                 let a = self.pieces.array;
-                self.image.claim(a, a + new_nb as u32 * 4);
+                self.image.claim(a, a + new_nb as u32 * 4, MEMORY_ENTRIES);
                 self.pieces.list = vec![None; new_nb];
             } else {
                 let mut new_nb = nb * 2;
@@ -757,7 +832,8 @@ impl Heap {
                     new_nb *= 2;
                 }
                 let new_array = self.mem_alloc_raw(4 * new_nb as u32);
-                self.image.claim(new_array, new_array + 4 * new_nb as u32);
+                self.image
+                    .claim(new_array, new_array + 4 * new_nb as u32, MEMORY_ENTRIES);
                 let old = self.pieces.array;
                 let old_nb = (nb as u32 * 4) & !31;
                 self.pieces.array = new_array;
@@ -769,7 +845,7 @@ impl Heap {
         }
         if self.pieces.list[idx].is_none() {
             let addr = self.mem_alloc_raw(ENTRY_SIZE);
-            self.image.claim(addr, addr + ENTRY_SIZE);
+            self.image.claim(addr, addr + ENTRY_SIZE, MEMORY_ENTRIES);
             let mut e = MemEntry {
                 addr,
                 size: (idx as u32 + 1) * 32,
@@ -792,17 +868,17 @@ impl Heap {
     /// piece, else one split from the first larger class with a free piece (the rest going
     /// to the class of its size), else a new block of the main heap split the same way.
     pub fn piece_alloc(&mut self, size: u32) -> u32 {
-        let p = self.piece_alloc_inner(size);
+        let p = self.piece_alloc_inner(size, super::image::PIECE);
         log(|| format!("PA {size:#x} -> {p:#010x}"));
         p
     }
 
-    fn piece_alloc_inner(&mut self, size: u32) -> u32 {
+    fn piece_alloc_inner(&mut self, size: u32, owner: &'static str) -> u32 {
         let idx = ((size as i32 + 0x1F) / 32 - 1) as usize;
         let e = self.memory_entry(idx);
         if let Some(p) = self.entry(e).free.pop() {
             self.entry(e).nb_free -= 1;
-            self.image.claim_piece(p, size);
+            self.image.claim_piece(p, size, owner);
             return p;
         }
         let esize = self.entry(e).size;
@@ -822,7 +898,7 @@ impl Heap {
                 rest.nb_alloc += 1;
                 rest.nb_free += 1;
                 self.entry(e).nb_alloc += 1;
-                self.image.claim_piece(p, size);
+                self.image.claim_piece(p, size, owner);
                 self.image.free_word(p + esize, head);
                 return p;
             }
@@ -841,7 +917,7 @@ impl Heap {
             self.image.free_word(p + esize, head);
         }
         self.entry(e).nb_alloc += 1;
-        self.image.claim_piece(p, size);
+        self.image.claim_piece(p, size, owner);
         p
     }
 
@@ -894,7 +970,7 @@ impl Heap {
     pub fn class_alloc(&mut self, class: Class) -> u32 {
         log(|| format!("CA {class:?}"));
         let size = self.classes[class as usize].obj_size;
-        let p = self.piece_alloc_inner(size);
+        let p = self.piece_alloc_inner(size, class.name());
         let c = &mut self.classes[class as usize];
         c.nb_exist += 1;
         c.nb_peak = c.nb_peak.max(c.nb_exist);
@@ -990,7 +1066,7 @@ impl Heap {
         d.peak = d.peak.max(d.used);
         let size = d.size;
         let link = d.free.last().copied().unwrap_or(0);
-        self.image.claim_piece(p, size);
+        self.image.claim_piece(p, size, kind.name());
         self.image.taken(p, link);
         p
     }
@@ -1050,10 +1126,10 @@ impl Heap {
         let file = self.mem_alloc_raw(len.next_multiple_of(32));
         // The read brings the disc's next bytes up to 32 (the file's own, the holder says).
         self.image
-            .claim(file + len, file + len.next_multiple_of(32));
+            .claim(file + len, file + len.next_multiple_of(32), FILE_TAIL);
         log(|| "LA 0x44".to_owned());
         let archive = self.mem_alloc_raw(0x44);
-        self.image.claim(archive, archive + 0x44);
+        self.image.claim(archive, archive + 0x44, "HSD_Archive");
         (file, archive)
     }
 }
@@ -1237,6 +1313,12 @@ pub fn piece_free(addr: u32, size: u32) {
 /// A block of the lent-out model's heap (`HSD_MemAlloc`): its address, or 0.
 pub fn mem_alloc(size: u32) -> u32 {
     with(|h| h.mem_alloc(size)).unwrap_or(0)
+}
+
+/// A block of the lent-out model's heap (`HSD_MemAlloc`) for an `owner` the heap's image
+/// names: its address, or 0.
+pub fn mem_alloc_as(size: u32, owner: &'static str) -> u32 {
+    with(|h| h.mem_alloc_as(size, owner)).unwrap_or(0)
 }
 
 /// A block of the lent-out model's heap whose owner says what it writes there (the movie

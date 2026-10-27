@@ -593,7 +593,7 @@ pub const GROUND_SIZE: u32 = 0x204;
 /// here (see [`super::vars`]).
 fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
     let id = GroundId(game.grounds.alloc(Ground::default()));
-    let addr = crate::hsd::heap::mem_alloc(GROUND_SIZE);
+    let addr = crate::hsd::heap::mem_alloc_as(GROUND_SIZE, "Ground");
     game.grounds.set_addr(id.0, addr);
     // After the menus the block holds what they left, where Slippi's Init Stage Data
     // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).

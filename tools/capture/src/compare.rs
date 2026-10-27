@@ -18,6 +18,11 @@ use melee_sim::hsd::pool::Pool;
 use melee_sim::hsd::robj::{self, RObjId, Ref};
 
 use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index};
+
+/// The start of a difference that is a stop instead: a new object's leftover bytes the heap's
+/// image doesn't know differ from the original's ([`Comparer::unlaid_view`]). The oracle
+/// stops there, as at an unported function, rather than report the bytes as a difference.
+pub const UNLAID: &str = "unlaid: ";
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 
 /// The addresses the allocator model has given each pool slot's objects, noted after every
@@ -37,21 +42,32 @@ pub struct PastAddrs {
 impl PastAddrs {
     /// Notes the archives the latest scan no longer finds, at their last place.
     pub fn note_archives(&mut self, before: &[crate::Loaded], now: &[crate::Loaded]) {
+        let here = |l: &crate::Loaded| now.iter().any(|n| n.id == l.id && n.data == l.data);
         for l in before {
-            if !now.iter().any(|n| n.id == l.id) {
-                self.gone.retain(|g| g.id != l.id);
+            if !here(l) {
+                self.gone.retain(|g| !(g.id == l.id && g.data == l.data));
                 self.gone.push(l.clone());
             }
         }
-        self.gone.retain(|g| !now.iter().any(|n| n.id == g.id));
+        self.gone.retain(|g| !here(g));
     }
 
     /// Where data in an archive no longer loaded was, by its last place.
     pub(crate) fn gone_addr(&self, d: DataRef) -> Option<u32> {
         self.gone
             .iter()
+            .rev()
             .find(|g| g.id == d.archive)
             .map(|g| g.data + d.offset)
+    }
+
+    /// Whether `addr` is where data was in a copy of its archive that is gone, while another
+    /// copy of the same file is loaded (the session loads a file by name once, and every copy
+    /// of it is that archive).
+    pub(crate) fn in_gone_copy(&self, d: DataRef, addr: u32) -> bool {
+        self.gone
+            .iter()
+            .any(|g| g.id == d.archive && g.data + d.offset == addr && d.offset < g.data_len)
     }
 
     /// Notes each slot's address, where it's new.
@@ -217,14 +233,18 @@ impl<'a> Comparer<'a> {
     }
 
     /// Whether a match's statics are live: in the scenes that set them up (a match's, and the
-    /// results screen's, which sets up its own stage, items and fighters), or before any match
+    /// results screen's, which sets up its own stage, items and fighters, or a state with no
+    /// modes' machine, which is a match's), or before any match
     /// (they hold what the boot left). Past such a scene their pointers name its freed heap and
     /// files, ours the scene's last ones, until the next such scene sets them again, and
     /// nothing reads them (docs/engine.md, "A scene's statics past its heap").
     pub(crate) fn match_statics_live(&self) -> bool {
         use melee_sim::game::gm::machine::{GS_RESULTS, GS_SUDDEN_DEATH, GS_VS, scene_kind};
         let g = self.game;
+        // With no modes' machine (a replay's match, a state taken up from a trace tick) the
+        // state is a match's.
         g.gr.param.is_none()
+            || g.machine.scene_info.is_none()
             || matches!(
                 scene_kind(g.machine.scene_info),
                 Some(GS_VS | GS_SUDDEN_DEATH | GS_RESULTS)
@@ -487,7 +507,19 @@ impl<'a> Comparer<'a> {
                     let fighter = &self.game.fighters[f.0];
                     let fpath = format!("{path} fighter");
                     self.begin_block("fighter", ud, &fpath);
-                    match render_target_view(self.game, f, ud, self.mem) {
+                    let block = render_target_view(self.game, f, ud, self.mem);
+                    let block = self.unlaid_view(
+                        ud,
+                        <melee_sim::game::structs::Fighter as Mirror>::SIZE,
+                        block,
+                        |l, cx| {
+                            use melee_sim::game::mirror::LayOut;
+                            fighter.lay(l, ud, cx);
+                            let n = fighter.dynamics_num.max(0) as usize;
+                            fighter.dynamic_bone_sets.lay_counted(l, ud + 0x2F0, cx, n);
+                        },
+                    );
+                    match block {
                         // A block that held the GPU's pixels: compared over a copy of theirs
                         // that holds ours where ours still has the image's fill.
                         Some(block) => {
@@ -746,11 +778,7 @@ impl<'a> Comparer<'a> {
         // the results screen's, `lb_8000FCDC`); past such a scene the pointer names its freed
         // heap, ours the scene's last list, which nothing reads until the next one sets them
         // up again.
-        use melee_sim::game::gm::machine::{GS_RESULTS, GS_SUDDEN_DEATH, GS_VS, scene_kind};
-        let live = matches!(
-            scene_kind(game.machine.scene_info),
-            Some(GS_VS | GS_SUDDEN_DEATH | GS_RESULTS)
-        );
+        let live = self.match_statics_live();
         let mut ours = ft.dynamics_free;
         let mut theirs = self.u32(DYNAMICS_FREE);
         let mut i = 0;
@@ -777,11 +805,16 @@ impl<'a> Comparer<'a> {
                 _ => self.check("ft", name, ours.is_some(), t != 0),
             }
         }
+        // And the metal and clear materials: past their scene both name its freed heap, which a
+        // later scene (the opening movie's frames) writes over, and nothing reads them until
+        // the next match makes them again.
         for (at, ours, name) in [
             (METAL_MOBJ, ft.metal_mobj, "metal mobj"),
             (CLEAR_MOBJ, ft.clear_mobj, "clear mobj"),
         ] {
-            self.mobj(&format!("ft {name}"), ours, self.u32(at));
+            if live || ours.is_none() && self.u32(at) == 0 {
+                self.mobj(&format!("ft {name}"), ours, self.u32(at));
+            }
         }
         for (i, &kind) in melee_sim::game::ft::KIRBY_COSTUME_KINDS.iter().enumerate() {
             let table = self.u32(KIRBY_TABLES + 4 * kind as u32);
@@ -1949,7 +1982,11 @@ impl Cx for Comparer<'_> {
             }
             _ => false,
         };
-        if ours != t && !same_bytes && !(ours.is_none() && theirs != 0 && t.is_none()) {
+        // A pointer the original keeps into a copy of the file gone since, where ours names
+        // the same data, compares by that copy's place (the same rule as a file gone whole).
+        let gone_copy = ours.is_some_and(|o| self.past.is_some_and(|p| p.in_gone_copy(o, theirs)));
+        if ours != t && !same_bytes && !gone_copy && !(ours.is_none() && theirs != 0 && t.is_none())
+        {
             self.diffs
                 .push(format!("{path}: data ours {ours:?}, theirs {theirs:#x}"));
         }
@@ -1971,6 +2008,79 @@ impl Cx for Comparer<'_> {
     }
 }
 
+/// Only nulls are known: a pointer laid out elsewhere compares as usual.
+struct Nulls;
+
+impl melee_sim::game::mirror::LayCx for Nulls {
+    fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
+        h.is_none().then_some(0)
+    }
+    fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
+        d.is_none().then_some(0)
+    }
+}
+
+impl Comparer<'_> {
+    /// Where a new object's block held bytes the heap's image didn't know
+    /// (`melee_sim::hsd::image::Unlaid`), which its creation gave zero: theirs as a copy of
+    /// the block (or of `block`, a view already made) in which each such bit that ours still
+    /// holds as zero holds ours, so the comparison leaves it out. A bit theirs holds set there
+    /// is the original's leftover the image lacks: it stops the session instead
+    /// ([`UNLAID`]), naming the bytes' owner, whose layout isn't ported. A known byte is never
+    /// left out. `lay` lays ours out. None where the object was made over known bytes.
+    pub(crate) fn unlaid_view(
+        &mut self,
+        at: u32,
+        size: u32,
+        block: Option<Vec<u8>>,
+        lay: impl FnOnce(&mut melee_sim::hsd::export::Lay, &dyn melee_sim::game::mirror::LayCx),
+    ) -> Option<Vec<u8>> {
+        let Some(u) = self.game.objs.heap.image.unlaid(at) else {
+            return block;
+        };
+        let mut l = melee_sim::hsd::export::Lay::new(at, size);
+        lay(&mut l, &Nulls);
+        let lo = (at - MEM1) as usize;
+        let mut block = block.unwrap_or_else(|| self.mem[lo..lo + size as usize].to_vec());
+        let mut stops: Vec<(&'static str, Vec<String>)> = Vec::new();
+        for &(a, b, owner) in &u.runs {
+            for o in a..b.min(size) {
+                let Some((ours, known)) = l.bits_at(at + o) else {
+                    continue;
+                };
+                let zero = !ours & known;
+                let t = &mut block[o as usize];
+                if *t & zero != 0 {
+                    let at_owner = match stops.iter_mut().find(|(w, _)| *w == owner) {
+                        Some(s) => s,
+                        None => {
+                            stops.push((owner, Vec::new()));
+                            stops.last_mut().unwrap()
+                        }
+                    };
+                    if at_owner.1.len() < 8 {
+                        at_owner.1.push(format!(
+                            "+{o:#x}: ours {:02x}, theirs {:02x}",
+                            ours & known,
+                            *t
+                        ));
+                    }
+                }
+                *t &= !zero;
+            }
+        }
+        for (owner, places) in stops {
+            self.diffs.push(format!(
+                "{UNLAID}unknown leftover bytes of a freed {owner} under {}: its layout isn't ported\t{:#x} {}",
+                u.ty,
+                at,
+                places.join(", ")
+            ));
+        }
+        Some(block)
+    }
+}
+
 /// Where a fighter's block held the GPU's pixels when it was made (a render target's,
 /// `Globals::render_leftovers`), which creation gave the heap image's fill: theirs as a copy of
 /// the block in which each such bit that ours still holds as the fill's holds ours, so the
@@ -1984,18 +2094,8 @@ fn render_target_view(
     at: u32,
     mem: &[u8],
 ) -> Option<Vec<u8>> {
-    use melee_sim::game::mirror::{LayCx, LayOut, Mirror};
+    use melee_sim::game::mirror::{LayOut, Mirror};
     use melee_sim::game::structs::Fighter;
-    /// Only nulls are known: a pointer in a render target's run compares as usual.
-    struct Nulls;
-    impl LayCx for Nulls {
-        fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
-            h.is_none().then_some(0)
-        }
-        fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
-            d.is_none().then_some(0)
-        }
-    }
     let o = &game.fighters[f.0];
     let size = <Fighter as Mirror>::SIZE;
     let lo = (at - MEM1) as usize;
