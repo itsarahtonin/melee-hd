@@ -362,6 +362,28 @@ impl Dvd {
         }
     }
 
+    /// `gm_801B23F0`, Camera Mode's game cache: the snapshot's EFB copy (a 640 by 480 RGB565
+    /// image), the snapshot's data and the slots' lists (`lbSnap_8001E204`,
+    /// `lbSnap_8001E210`), raw buffers of the game cache's heap.
+    #[doc(alias = "gm_801B23F0")]
+    fn want_camera_mode(&mut self) {
+        use crate::game::gm::camera_mode::{SNAP_COPY, SNAP_DATA, SNAP_SLOTS};
+        let copy = crate::hsd::heap::tex_buffer_size(640, 480, 4).next_multiple_of(32);
+        self.want(0, SNAP_COPY, 4, 4, copy, 0, 1, 32, 0);
+        self.want(0, SNAP_DATA, 4, 4, crate::lb::snap::SNAP_SIZE, 0, 1, 32, 0);
+        self.want(
+            0,
+            SNAP_SLOTS,
+            4,
+            4,
+            crate::lb::snap::SLOTS_SIZE,
+            0,
+            1,
+            32,
+            0,
+        );
+    }
+
     /// `lbDvd_80017960`: the game cache's files wanted: its stage's (`Stage_802251B4`,
     /// `Ground_801C06B8`: the stage's file and its buffers), each character's, and for a Kirby
     /// every copy he can take.
@@ -372,10 +394,9 @@ impl Dvd {
     #[doc(alias = "grStadium_801D511C")]
     fn want_game_cache(&mut self) {
         let gc = self.cache.new_scene.game_cache;
-        assert!(
-            gc.mode_kind == crate::game::gm::machine::GM_COUNT || gc.mode_kind != 0xA,
-            "Camera Mode's game cache (gm_801B23F0) isn't ported"
-        );
+        if gc.mode_kind == crate::game::gm::machine::GM_CAMERA_MODE {
+            self.want_camera_mode();
+        }
         if gc.stkind != 0x148 {
             let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
             if let Some(n) = crate::game::gr::data::stage_data(gr).file {

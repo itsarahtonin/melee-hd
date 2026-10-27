@@ -86,6 +86,15 @@ pub fn show(game: &mut Game, gobj: GObjId) {
 
 /// Sets a joint's scale in all three axes, `it_80272F7C`.
 #[doc(alias = "it_80272F7C")]
+/// The item's model at its owner's model's height scale, all three axes
+/// (`Item_CopyJObjScale`).
+pub fn copy_owner_scale(game: &mut Game, gobj: GObjId, owner: GObjId) {
+    let src = super::jobj_of(game, owner).expect("an owner without a model");
+    let s = game.objs.jobjs[src].scale.y;
+    let j = super::jobj_of(game, gobj).expect("an item without a model");
+    set_uniform_scale(game, j, s);
+}
+
 pub fn set_uniform_scale(game: &mut Game, j: JObjId, scale: f32) {
     jobj::set_srt(&mut game.objs.jobjs, j, |o| {
         o.scale = Vec3::new(scale, scale, scale)

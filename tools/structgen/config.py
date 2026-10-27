@@ -147,7 +147,7 @@ EXPORT_ROOTS = ["GmCardData"]
 
 # Structs laid out for the heap's image (`LayOut`), with everything they hold: a fighter's and
 # an item's blocks, as they go back to the heap, and an item's variables' members.
-LAY_ROOTS = ["Fighter", "Item", "BoneDynamicsDesc", "Item_DynamicBones", "HurtCapsule", "FighterBone"] + [r for r in ROOTS if r.endswith("_ItemVars")]
+LAY_ROOTS = ["Fighter", "Item", "BoneDynamicsDesc", "DynamicsData", "lb_00F9_UnkDesc0", "Item_DynamicBones", "HurtCapsule", "FighterBone"] + [r for r in ROOTS if r.endswith("_ItemVars")]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {
@@ -306,6 +306,8 @@ SPLICE = {
     # his Illusion's ghost) hold handles.
     "Fighter": [
         ("dynamic_bone_sets", 0x2F0, 0x3E0, "DynamicBoneSets"),
+        # The action's figatree, in the fighter's main animation buffer.
+        ("x590", 0x590, 0x594, "ActionTree"),
         # The second animation's figatree, and which of the fighter's two animation buffers
         # it points into.
         ("x598", 0x598, 0x59C, "SecondTree"),
@@ -333,7 +335,7 @@ EXTRA_USES = [
     "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
-    "use crate::game::ft::second::SecondTree;",
+    "use crate::game::ft::second::{ActionTree, SecondTree};",
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::game::it::link::LinkX20;",
@@ -395,7 +397,7 @@ PRELUDE = """use melee_data::archive::DataRef;
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::dynamics::BoneSlot;
-use crate::game::ft::second::SecondTree;
+use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;

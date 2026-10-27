@@ -55,9 +55,26 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if game.stagesel_run(gobj, addr) => {}
         addr if game.results_run(gobj, addr) => {}
         super::gm::attract::PROC => game.attract_proc(gobj),
+        super::ty::gallery::PROC_VIEW => game.toy_view_proc(gobj),
+        super::ty::gallery::PROC_ANIM => game.toy_anim_proc(gobj),
+        super::ty::gallery::PROC_STAND => game.toy_stand_proc(gobj),
+        super::ty::gallery::PROC_LIGHTS => game.toy_lights_proc(gobj),
+        super::ty::list::PROC_INTRO => game.toy_list_intro(gobj),
+        super::ty::lottery::PROC_COIN => game.lot_coin_proc(gobj),
+        super::ty::lottery::PROC_LEVER => game.lot_lever_proc(gobj),
+        super::ty::lottery::PROC_TEXT => game.lot_text_proc(gobj),
+        super::ty::lottery::PROC_DRAW => game.lot_draw_proc(gobj),
+        super::ty::lottery::PROC_DROP => game.lot_drop_proc(gobj),
+        super::ty::lottery::PROC_FALL => game.lot_fall_proc(gobj),
+        super::ty::lottery::PROC_TILT => game.lot_tilt_proc(gobj),
+        super::ty::lottery::PROC_SONG => game.lot_song_proc(gobj),
+        super::ty::lottery::PROC_INPUT => game.lot_input_proc(gobj),
+        super::ty::list::PROC_INPUT => game.toy_list_input(gobj),
+        super::ty::collection::PROC_CAMERA => game.coll_camera_proc(gobj),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
+        super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -175,10 +192,14 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),
         f if f == super::mn::main::ON_FRAME.0 => game.menu_on_frame(),
+        f if f == super::gm::camera_mode::ON_FRAME.0 => game.camera_check_on_frame(),
         f if f == super::mn::charsel::ON_FRAME.0 => game.charsel_on_frame(),
         f if f == super::mn::stagesel::ON_FRAME.0 => game.stagesel_on_frame(),
         f if f == super::gm::howto::HOWTO_ON_FRAME.0 => game.howto_on_frame(),
         f if f == super::gm::howto::OMAKE_ON_FRAME.0 => game.omake_on_frame(),
+        f if f == super::ty::gallery::ON_FRAME.0 => game.toy_on_frame(),
+        f if f == super::ty::lottery::ON_FRAME.0 => game.lot_on_frame(),
+        f if f == super::ty::collection::ON_FRAME.0 => game.coll_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),
@@ -397,6 +418,10 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         super::ft::zelda::addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
         super::ft::zelda::addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
+        // The results' demo states' animation callbacks, which do nothing.
+        super::ft::demo::DEMO_ANIM_2
+        | super::ft::demo::DEMO_ANIM_3
+        | super::ft::demo::DEMO_ANIM_5 => super::ft::demo::demo_anim(),
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         // efLib_ResumeAll, a state's hook for hitlag's end.
         EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),

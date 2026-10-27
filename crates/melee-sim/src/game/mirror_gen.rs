@@ -16,7 +16,7 @@ use super::structs::*;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
-use crate::game::ft::second::SecondTree;
+use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
@@ -4409,7 +4409,7 @@ impl Mirror for Fighter {
             x508: ColorOverlay::import(m, at + 0x508, cx),
             x588: cx.import_handle("LObjId", m.u32(at + 0x588)).map(LObjId),
             x58C: m.u32(at + 0x58c),
-            x590: cx.import_data(m.u32(at + 0x590)),
+            x590: ActionTree::import(m, at + 0x590, cx),
             x594: m.bytes(at + 0x594),
             x598: SecondTree::import(m, at + 0x598, cx),
             x59C: cx
@@ -5115,7 +5115,8 @@ impl Mirror for Fighter {
                 format!("{:?}", m.u32(at + 0x58c)),
             );
         }
-        cx.compare_data(&format!("{path}.x590"), self.x590, m.u32(at + 0x590));
+        self.x590
+            .compare(m, at + 0x590, &format!("{path}.x590"), cx);
         if self.x594 != m.bytes::<4>(at + 0x594) {
             cx.mismatch(
                 &format!("{path}.x594"),
@@ -27258,7 +27259,7 @@ impl LayOut for Fighter {
         self.x508.lay(l, at + 0x508, cx);
         l.put_word(at + 0x588, cx.handle("LObjId", (self.x588).map(|h| h.0)));
         l.put_u32(at + 0x58c, self.x58C as u32);
-        l.put_word(at + 0x590, cx.data(self.x590));
+        self.x590.lay(l, at + 0x590, cx);
         l.put_bytes(at + 0x594, &self.x594);
         self.x598.lay(l, at + 0x598, cx);
         l.put_word(at + 0x59c, cx.handle("AnimBufId", (self.x59C).map(|h| h.0)));
@@ -28026,6 +28027,39 @@ impl LayOut for FighterBone {
         l.put_word(at + 0x4, cx.handle("JObjId", self.x4_jobj2.map(|h| h.0)));
         l.put_bytes(at + 0x8, &self.x8);
         l.put_bytes(at + 0xc, &self.xC_u);
+    }
+}
+
+impl LayOut for DynamicsData {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        self.desc.lay(l, at + 0x0, cx);
+        l.put_word(at + 0x90, cx.handle("DynamicsId", self.next.map(|h| h.0)));
+        l.put_u32(at + 0x94, self.unk_94 as u32);
+    }
+}
+
+impl LayOut for lb_00F9_UnkDesc0 {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("JObjId", self.jobj.map(|h| h.0)));
+        self.rotate.lay(l, at + 0x4, cx);
+        self.translate.lay(l, at + 0x14, cx);
+        self.scale.lay(l, at + 0x20, cx);
+        self.unk_2C.lay(l, at + 0x2c, cx);
+        self.unk_38.lay(l, at + 0x38, cx);
+        l.put_u32(at + 0x44, self.unk_44.to_bits());
+        l.put_u32(at + 0x48, self.unk_48.to_bits());
+        l.put_u32(at + 0x4c, self.unk_4C.to_bits());
+        l.put_u32(at + 0x50, self.unk_50.to_bits());
+        l.put_u32(at + 0x54, self.unk_54 as u32);
+        self.unk_58.lay(l, at + 0x58, cx);
+        l.put_u32(at + 0x68, self.unk_68.to_bits());
+        self.unk_6C.lay(l, at + 0x6c, cx);
+        self.unk_78.lay(l, at + 0x78, cx);
+        l.put_u32(at + 0x84, self.unk_84.to_bits());
+        l.put_u32(at + 0x88, self.unk_88.to_bits());
+        l.put_u32(at + 0x8c, self.unk_8C.to_bits());
     }
 }
 

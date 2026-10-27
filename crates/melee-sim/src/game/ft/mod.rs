@@ -100,6 +100,8 @@ pub struct Globals {
     /// The first free dynamics link (`lb_00F9.c`'s `cur_data`); each link's `next` leads to
     /// the one after it.
     pub dynamics_free: Option<super::handles::DynamicsId>,
+    /// The links' block in the scene's heap (`lb_8000FCDC`'s), 0 for none modeled.
+    pub dynamics_block: u32,
     /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
     pub lobj0: Option<crate::hsd::lobj::LObjId>,
     pub lobj1: Option<crate::hsd::lobj::LObjId>,

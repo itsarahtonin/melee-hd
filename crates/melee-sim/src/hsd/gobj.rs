@@ -813,6 +813,14 @@ impl<K: Kinds> World<K> {
     }
 }
 
+/// Releases a GObj's user data through the game and leaves it without, `GObj_RemoveUserData`.
+#[doc(alias = "GObj_RemoveUserData")]
+pub fn remove_user_data<K: Kinds, H: Host<K>>(host: &mut H, g: GObjId) {
+    if let Some((kind, data)) = host.world().take_user_data(g) {
+        host.remove_user_data(g, kind, data);
+    }
+}
+
 /// Destroys a GObj: its user data and object through the game, then its processes and links,
 /// `HSD_GObjFree`. A GObj whose process is running goes when the process returns.
 #[doc(alias = "HSD_GObjFree")]

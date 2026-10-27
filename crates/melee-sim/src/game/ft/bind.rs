@@ -476,7 +476,8 @@ impl Running<'_> {
         };
         if self.game.fighters[f.0].x8A4_animBlendFrames == 0.0 {
             self.reset_parts(f, part, desc, false);
-            self.bind_part_figatree(f, part, false);
+            let buf = self.game.fighters[f.0].x59C;
+            self.in_anim_buf(buf, |r| r.bind_part_figatree(f, part, false));
             self.request_anim(j, frame);
             let anim = self.game.fighters[f.0].anim_id;
             let entry = self.anim_entry(f, anim);
@@ -489,7 +490,8 @@ impl Running<'_> {
         }
         let j2 = bone.x4_jobj2;
         self.reset_parts(f, part, desc, true);
-        self.bind_part_figatree(f, part, true);
+        let buf = self.game.fighters[f.0].x59C;
+        self.in_anim_buf(buf, |r| r.bind_part_figatree(f, part, true));
         self.request_anim(j2, frame);
         self.request_anim(j, frame);
         if self.game.fighters[f.0].x594[0] & 0x40 != 0 {
@@ -546,11 +548,13 @@ impl Running<'_> {
 
         let trees: &[Option<JObjId>] = if blend == 0.0 {
             self.reset_parts(f, TRANS_N, first, false);
-            self.bind_figatree(f, false);
+            let buf = self.game.fighters[f.0].x59C;
+            self.in_anim_buf(buf, |r| r.bind_figatree(f, false));
             &[root]
         } else {
             self.reset_parts(f, TRANS_N, first, true);
-            self.bind_figatree(f, true);
+            let buf = self.game.fighters[f.0].x59C;
+            self.in_anim_buf(buf, |r| r.bind_figatree(f, true));
             &[skel, root]
         };
         for &t in trees {

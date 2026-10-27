@@ -59,18 +59,12 @@ pub fn character(kind: u8) -> Option<&'static Character> {
 }
 
 const DEMO: &str = "the demo fighters' items (ftDemo_CreateFighter's motion table: results and intros, never a match), whose spawns set the command variables that choose these states";
-const BLASTER_DEMO: (&str, &str) = (
-    "ftCo_800BF228 (a resized blaster owner)",
-    "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them; a match's blaster takes the fighter's state (ftFx_SpecialN_GetBlasterAction: 0 to 9)",
-);
-const BLASTER_SPAWN: (&str, &str) = ("it_802AE994", DEMO);
 const BLASTER_DEMO_STATE: &str = "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them";
 const BLASTER_STATE_9: &str = "the blaster's state 9, which its pickup (itFoxBlaster_Logic96_PickedUp) enters for its owner's actions 1, 2, 4, 5 and 9 (it_803F6E68); the pickup runs only from Item_8026AB54 in the blaster's spawns, and a match's spawn (it_802AE8A8) follows the owner's entry into the neutral special's start on the ground or in the air (ftFx_SpecialN_Enter, ftFx_SpecialAirN_Enter, Kirby's ftKb_SpecialNFx_800FE100 and ftKb_SpecialNFx_800FE240: actions 0 and 3) or comes in ThrowB, ThrowHi or ThrowLw (ftFx_Throw_Anim: 6, 7 and 8); a blaster let go is destroyed, never lies free to be picked up again";
-const BLASTER_STATES: [(&str, &str); 6] = [
+const BLASTER_STATES: [(&str, &str); 5] = [
     ("itFoxblaster_UnkMotion9_Anim", BLASTER_STATE_9),
     ("itFoxblaster_UnkMotion9_Phys", BLASTER_STATE_9),
     ("itFoxblaster_UnkMotion9_Coll", BLASTER_STATE_9),
-    ("itFoxblaster_UnkMotion10_Anim", BLASTER_DEMO_STATE),
     ("itFoxblaster_UnkMotion10_Phys", BLASTER_DEMO_STATE),
     ("itFoxblaster_UnkMotion10_Coll", BLASTER_DEMO_STATE),
 ];
@@ -130,14 +124,11 @@ pub const CHARACTERS: &[Character] = &[
         kind: 2,
         items: &[54, 56, 74],
         unreached: &[
-            BLASTER_DEMO,
-            BLASTER_SPAWN,
             BLASTER_STATES[0],
             BLASTER_STATES[1],
             BLASTER_STATES[2],
             BLASTER_STATES[3],
             BLASTER_STATES[4],
-            BLASTER_STATES[5],
         ],
         unsure: &[],
         missing: &[],
@@ -160,8 +151,6 @@ pub const CHARACTERS: &[Character] = &[
             145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157,
         ],
         unreached: &[
-            BLASTER_DEMO,
-            BLASTER_SPAWN,
             PK_FLASH_KIND,
             PILL_DEMO[0],
             PILL_DEMO[1],
@@ -171,7 +160,6 @@ pub const CHARACTERS: &[Character] = &[
             BLASTER_STATES[2],
             BLASTER_STATES[3],
             BLASTER_STATES[4],
-            BLASTER_STATES[5],
             PILL_HELD_STATES[0],
             PILL_HELD_STATES[1],
             PILL_HELD_STATES[2],
@@ -237,10 +225,6 @@ pub const CHARACTERS: &[Character] = &[
         items: &[66, 67, 68, 69, 70, 71, 72, 73, 78, 101, 102],
         unreached: &[
             PK_FLASH_KIND,
-            ("it_802AD590", DEMO),
-            ("itNessbat_UnkMotion1_Anim", DEMO),
-            ("itNessbat_UnkMotion1_Phys", DEMO),
-            ("itNessbat_UnkMotion1_Coll", DEMO),
             PK_FLASH_HITS[0],
             PK_FLASH_HITS[1],
             PK_FLASH_HITS[2],
@@ -321,14 +305,11 @@ pub const CHARACTERS: &[Character] = &[
         kind: 20,
         items: &[55, 57, 75],
         unreached: &[
-            BLASTER_DEMO,
-            BLASTER_SPAWN,
             BLASTER_STATES[0],
             BLASTER_STATES[1],
             BLASTER_STATES[2],
             BLASTER_STATES[3],
             BLASTER_STATES[4],
-            BLASTER_STATES[5],
         ],
         unsure: &[],
         missing: &[],

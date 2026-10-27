@@ -8,13 +8,15 @@ use super::super::structs::{StartMeleeData, VsModeData};
 use super::machine::GM_MENU;
 
 /// `CSSData` (`gmVsMelee_CssData`): the select screen's port for one-player modes, the
-/// match type, the change the screen asks for, and its copy of the mode's VS data. Its
-/// `ko_counts` pointer is always VS mode's [`VsMelee::ko_counts`] here.
+/// type, the change the screen asks for, and its copy of the mode's VS data. Its
+/// `ko_counts` pointer is VS mode's [`VsMelee::ko_counts`], or null where Stamina Mode's
+/// entry sets it so (`ko_counts_null`).
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CssData {
     pub unk_0x0: u16,
     pub match_type: u8,
     pub pending_scene_change: u8,
+    pub ko_counts_null: bool,
     pub vs: VsModeData,
 }
 
@@ -39,7 +41,7 @@ pub struct VsMelee {
     /// `gmVsMelee_StartData`, the match's (and Sudden Death's) enter data.
     pub start: StartMeleeData,
     /// `ko_counts` (`0x804D6730`): each port's KOs in the session's matches.
-    pub ko_counts: [u8; 4],
+    pub ko_counts: [u8; 6],
     /// `gmVsMelee_VsExitInfo`, `gmVsMelee_SuddenDeathExitInfo`: the match's and Sudden
     /// Death's exit data.
     pub exit: super::match_exit::MatchExitInfo,
@@ -106,27 +108,35 @@ pub fn team_costume(ckind: u8, team: u8) -> u8 {
 }
 
 impl Running<'_> {
-    fn vs_data(&mut self) -> &mut VsModeData {
-        &mut self.game.game_data.modes.table[VS_MODE_MELEE]
+    /// The modes table's entry `table` (`gmMainLib_804D3EE0->modes.table[table]`).
+    pub fn vs_table(&mut self, table: usize) -> &mut VsModeData {
+        &mut self.game.game_data.modes.table[table]
     }
 
     /// `gmVsMelee_Mode_OnLoad`: the KO counts start over (`gmVsMelee_ResetKOCounts`).
     #[doc(alias = "gmVsMelee_Mode_OnLoad")]
     #[doc(alias = "gmVsMelee_ResetKOCounts")]
     pub fn vs_mode_on_load(&mut self) {
-        self.game.vs_melee.ko_counts = [0; 4];
+        self.game.vs_melee.ko_counts = [0; 6];
     }
 
     /// `onEnterCss` (`gmVsMelee_EnterCss` with VS Melee's match type): the screen's data
     /// from the mode's, and the preload cache set up for VS (`lbDvd_SetupVsPreloadCache`).
     #[doc(alias = "onEnterCss")]
-    #[doc(alias = "gmVsMelee_EnterCss")]
     #[doc(alias = "gmVsMelee_GetVsData")]
-    #[doc(alias = "gmVsMelee_GetKOCounts")]
     pub fn vs_mode_enter_css(&mut self) {
-        let vs = self.vs_data().clone();
+        self.vs_melee_enter_css(VS_MODE_MELEE, super::super::mn::charsel::VS_MELEE);
+    }
+
+    /// `gmVsMelee_EnterCss`: the select screen's data from the modes table's entry `table`,
+    /// with its match type and VS mode's KO counts, and the preload cache set up for VS.
+    #[doc(alias = "gmVsMelee_EnterCss")]
+    #[doc(alias = "gmVsMelee_GetKOCounts")]
+    pub fn vs_melee_enter_css(&mut self, table: usize, match_type: u8) {
+        let vs = self.vs_table(table).clone();
         let css = &mut self.game.vs_melee.css;
-        css.match_type = super::super::mn::charsel::VS_MELEE;
+        css.match_type = match_type;
+        css.ko_counts_null = false;
         css.vs.clone_from(&vs);
         self.setup_vs_preload_cache();
     }
@@ -134,8 +144,13 @@ impl Running<'_> {
     /// `onExitCss` (`gmVsMelee_ExitCss`): back to the main menu if the screen asked, else
     /// the mode's data from the screen's and the characters' sound banks (bank 4) loading.
     #[doc(alias = "onExitCss")]
-    #[doc(alias = "gmVsMelee_ExitCss")]
     pub fn vs_mode_exit_css(&mut self) {
+        self.vs_melee_exit_css(VS_MODE_MELEE);
+    }
+
+    /// `gmVsMelee_ExitCss` for the modes table's entry `table`.
+    #[doc(alias = "gmVsMelee_ExitCss")]
+    pub fn vs_melee_exit_css(&mut self, table: usize) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
             return;
@@ -145,7 +160,7 @@ impl Running<'_> {
         for p in &vs.start.players[..4] {
             mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
         }
-        self.vs_data().clone_from(&vs);
+        self.vs_table(table).clone_from(&vs);
         self.game.audio.lb.unwant_banks(20);
         self.game.audio.lb.want_banks(4, mask);
         self.game.audio.lb_start_bank_loads(self.data);
@@ -154,9 +169,14 @@ impl Running<'_> {
     /// `onEnterSss` (`gmVsMelee_EnterSss`): the stage select's data from the mode's, and its
     /// stage rule's start (`gm_80167FC4`).
     #[doc(alias = "onEnterSss")]
-    #[doc(alias = "gmVsMelee_EnterSss")]
     pub fn vs_mode_enter_sss(&mut self) {
-        let vs = self.vs_data().clone();
+        self.vs_melee_enter_sss(VS_MODE_MELEE);
+    }
+
+    /// `gmVsMelee_EnterSss` for the modes table's entry `table`.
+    #[doc(alias = "gmVsMelee_EnterSss")]
+    pub fn vs_melee_enter_sss(&mut self, table: usize) {
+        let vs = self.vs_table(table).clone();
         self.game.vs_melee.sss.vs.clone_from(&vs);
         self.sss_stage_rule();
     }
@@ -164,12 +184,18 @@ impl Running<'_> {
     /// `onExitSss` (`gmVsMelee_ExitSss`): a stage picked brings the mode's data from the
     /// select's and the stage's sound banks (bank 8); else back to the character select.
     #[doc(alias = "onExitSss")]
-    #[doc(alias = "gmVsMelee_ExitSss")]
     pub fn vs_mode_exit_sss(&mut self) {
+        self.vs_melee_exit_sss(VS_MODE_MELEE, STATE_CSS);
+    }
+
+    /// `gmVsMelee_ExitSss` for the modes table's entry `table`, back to state `cancel` when
+    /// no stage was picked.
+    #[doc(alias = "gmVsMelee_ExitSss")]
+    pub fn vs_melee_exit_sss(&mut self, table: usize, cancel: u8) {
         if self.game.vs_melee.sss.start_game != 0 {
             let vs = self.game.vs_melee.sss.vs.clone();
             let stkind = i32::from(vs.start.rules.stkind);
-            self.vs_data().clone_from(&vs);
+            self.vs_table(table).clone_from(&vs);
             self.game.audio.lb.unwant_banks(24);
             self.game
                 .audio
@@ -177,7 +203,7 @@ impl Running<'_> {
                 .want_banks(8, crate::lb::audio::stage_banks(stkind));
             self.game.audio.lb_start_bank_loads(self.data);
         } else {
-            self.set_next_game_mode_state_id(STATE_CSS);
+            self.set_next_game_mode_state_id(cancel);
         }
     }
 
@@ -186,11 +212,32 @@ impl Running<'_> {
     /// match, its sub-colors and rumble, and the announcer's bank.
     #[doc(alias = "onEnterVs@801B1588")]
     pub fn vs_mode_enter_vs(&mut self) {
+        self.vs_melee_enter_vs(VS_MODE_MELEE, None, None);
+    }
+
+    /// `gmVsMelee_EnterVs` for the modes table's entry `table` with a mode's callbacks: the
+    /// saved rules applied to its data (`gm_80167BC8`), the match's start data from it, and
+    /// the announcer's bank.
+    pub fn vs_melee_enter_vs(
+        &mut self,
+        table: usize,
+        start_cb: Option<super::vs_mode::StartCallback>,
+        player_cb: Option<super::vs_mode::PlayerCallback>,
+    ) {
         let (rules, prefs) = super::attract::saved_rules(&self.game.game_data);
-        let mut vs = self.vs_data().start.clone();
+        let mut vs = self.vs_table(table).start.clone();
         let tags = self.nametag_rumbles();
-        let start = super::vs_mode::enter_vs_with_tags(&mut vs, &rules, &prefs, &tags);
-        self.vs_data().start.clone_from(&vs);
+        let auto = super::vs_mode::AutoHandicaps::of(&self.game.game_data);
+        let start = super::vs_mode::enter_vs_full(
+            &mut vs,
+            &rules,
+            &prefs,
+            start_cb,
+            player_cb,
+            &tags,
+            Some(&auto),
+        );
+        self.vs_table(table).start.clone_from(&vs);
         self.game.vs_melee.start.clone_from(&start);
         self.load_announcer();
     }
@@ -234,6 +281,56 @@ impl Running<'_> {
         }
     }
 
+    /// `onEnterSuddenDeath` (`gmVsMelee_EnterSuddenDeath` with no callbacks): the match's
+    /// start data (the VS match's, left as it was) takes VS mode's rules and players again,
+    /// their sub-colors and rumble, and Sudden Death's setup from the match that tied
+    /// (`gm_SetupSuddenDeath`).
+    #[doc(alias = "onEnterSuddenDeath@801B1648")]
+    #[doc(alias = "gmVsMelee_EnterSuddenDeath")]
+    pub fn vs_mode_enter_sudden_death(&mut self) {
+        self.vs_melee_enter_sudden_death(VS_MODE_MELEE, None, None);
+    }
+
+    /// `gmVsMelee_EnterSuddenDeath` for the modes table's entry `table` with a mode's
+    /// callbacks: the match's start data (the match that tied's, left as it was) takes the
+    /// entry's rules (then `start_cb`) and players (then `player_cb` on each), their
+    /// sub-colors and rumble, and Sudden Death's setup from the match that tied.
+    pub fn vs_melee_enter_sudden_death(
+        &mut self,
+        table: usize,
+        start_cb: Option<super::vs_mode::StartCallback>,
+        player_cb: Option<super::vs_mode::PlayerCallback>,
+    ) {
+        let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
+        let tags = self.nametag_rumbles();
+        let vs = self.vs_table(table).start.clone();
+        let mut start = self.game.vs_melee.start.clone();
+        start.rules.clone_from(&vs.rules);
+        if let Some(cb) = start_cb {
+            cb(&mut start);
+        }
+        start.players.clone_from(&vs.players);
+        if let Some(cb) = player_cb {
+            for p in &mut start.players {
+                cb(p);
+            }
+        }
+        super::vs_mode::setup_sub_colors(&mut start);
+        super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
+        super::setup_players::setup_sudden_death(&mut start, &self.game.vs_melee.exit.match_end);
+        self.game.vs_melee.start.clone_from(&start);
+    }
+
+    /// `onExitSuddenDeath` (`gmVsMelee_ExitSuddenDeath`): the match's results take Sudden
+    /// Death's places (`gm_80166CCC`).
+    #[doc(alias = "onExitSuddenDeath@801B1688")]
+    #[doc(alias = "gmVsMelee_ExitSuddenDeath")]
+    pub fn vs_mode_exit_sudden_death(&mut self) {
+        let mut sd = self.game.vs_melee.sd_exit.match_end.clone();
+        super::records::merge_sudden_death(&mut self.game.vs_melee.exit.match_end, &mut sd);
+        self.game.vs_melee.sd_exit.match_end.clone_from(&sd);
+    }
+
     /// `onEnterResults` (`gmVsMelee_EnterResults`): the results screen's enter data
     /// cleared (`gm_80177724`) and the match's results in it.
     #[doc(alias = "onEnterResults@801B16A8")]
@@ -245,7 +342,7 @@ impl Running<'_> {
     }
 
     /// Each name tag's rumble setting, as the save holds them.
-    fn nametag_rumbles(&mut self) -> Vec<bool> {
+    pub fn nametag_rumbles(&mut self) -> Vec<bool> {
         (0..super::vs_mode::NO_NAMETAG)
             .map(|i| self.game.game_data.name_tag(usize::from(i)).rumble_enabled != 0)
             .collect()
@@ -270,7 +367,7 @@ impl Running<'_> {
     /// the cursor's start; the other rules (in order, by the loser or the winner) aren't
     /// ported.
     #[doc(alias = "gm_80167FC4")]
-    fn sss_stage_rule(&mut self) {
+    pub(crate) fn sss_stage_rule(&mut self) {
         let sel = self.game.game_data.x1850.stage_sel;
         if sel == 1 {
             let id = self.random_stage() as i8;

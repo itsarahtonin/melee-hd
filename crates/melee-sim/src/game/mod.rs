@@ -36,5 +36,6 @@ pub mod slippi;
 pub mod special_audit;
 pub mod state;
 pub mod structs;
+pub mod ty;
 pub mod ucf;
 pub mod vs_match;

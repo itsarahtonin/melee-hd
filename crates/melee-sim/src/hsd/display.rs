@@ -115,6 +115,9 @@ pub enum Draw {
     /// The current camera's viewport erased, color, alpha and depth, to the erase color set
     /// before it (`HSD_CObjEraseScreen(cobj, 1, 1, 1)`, the results screen's cameras).
     EraseFull,
+    /// The scissor box from (`x`, `y`), `w` by `h` (`GXSetScissor`, a text's render
+    /// callback's: the results screen's statistics, `fn_801749B8`).
+    Scissor { x: u32, y: u32, w: u32, h: u32 },
     /// The render from (`x`, `y`) copied into one of the results screen's images (by
     /// `game::gm::results_fighters::image_addr`'s index), the frame cleared after it with
     /// `clear` (`HSD_ImageDescCopyFromEFB`, `fn_80179990`).
@@ -171,6 +174,9 @@ pub enum Draw {
     SisText(Box<super::sis::TextDraw>),
     /// The render copied into a player's magnifier bubble (`lb_800122C8`).
     MagnifierCopy(u8),
+    /// The frame copied into Camera Mode's snapshot's image (`lb_800122C8` from
+    /// `cmSnap_80031640`): the whole 640 by 480 frame as RGB565, the frame kept.
+    SnapCopy,
     /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
     /// (`lb_800122C8`).
     ReflectionCopy,
@@ -192,6 +198,10 @@ pub enum Draw {
     FighterFlags(FighterFlags),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
+    /// The trophy gallery's close-up axes (`_Toy_80312050`): three lines of 6.5 units
+    /// through the camera's interest along its left, up and eye vectors, red, green and blue,
+    /// in the current camera's view (`GX_LINES`, line width 6).
+    Axes([crate::vec::Vec3; 6]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
     /// frame cleared after it with `clear` (`lb_800122C8`).
     ScreenCopy {

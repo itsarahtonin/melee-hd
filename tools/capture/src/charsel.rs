@@ -220,9 +220,12 @@ impl<'a> Comparer<'a> {
                 self.u8(CSS_DATA + 3),
             ),
         );
-        // The KO counts' pointer once an entry has set it.
+        // The KO counts' pointer once an entry has set it: VS mode's, or null (Stamina
+        // Mode's entry).
         let ko = self.u32(CSS_DATA + 4);
-        if ko != 0 {
+        if v.css.ko_counts_null {
+            self.check("gmVsMelee_CssData", "KO counts' pointer", 0, ko);
+        } else if ko != 0 {
             self.check("gmVsMelee_CssData", "KO counts' pointer", KO_COUNTS, ko);
         }
         v.css
@@ -243,7 +246,7 @@ impl<'a> Comparer<'a> {
         );
         s.vs.compare(&m, SSS_DATA + 8, "gmVsMelee_SssData.vs", self);
         v.start.compare(&m, START_DATA, "gmVsMelee_StartData", self);
-        let ko: [u8; 4] = core::array::from_fn(|i| self.u8(KO_COUNTS + i as u32));
+        let ko: [u8; 6] = core::array::from_fn(|i| self.u8(KO_COUNTS + i as u32));
         self.check("ko_counts", "KO counts", v.ko_counts, ko);
         for (name, e, at) in [
             ("gmVsMelee_VsExitInfo", &v.exit, VS_EXIT),

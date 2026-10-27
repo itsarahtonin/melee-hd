@@ -43,6 +43,12 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         | UserData::OptionMenu(a)
         | UserData::Vibration(a)
         | UserData::DataDel(a)
+        | UserData::Info(a)
+        | UserData::Count(a)
+        | UserData::Diagram(a)
+        | UserData::DiagramPopup(a)
+        | UserData::Diagram2(a)
+        | UserData::Diagram3(a)
         | UserData::SoundTest(a) => known(a),
         _ => None,
     }
@@ -125,7 +131,7 @@ fn proc(game: &Game, data: &Archives, img: &mut Image, p: ProcId) {
 /// scheduler's GObjs and processes (the scene's own, live or freed), HSD's objects the scene
 /// made and still has, and the free lists' links over them.
 pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
-    live_objects(&game.objs, img);
+    live_objects(&game.objs, data, img);
     crate::hsd::export::id_table(&game.objs, img);
     for (slot, _) in game.world.gobjs.slots().iter().enumerate() {
         gobj(game, img, GObjId(slot as u32));
@@ -141,9 +147,20 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
 /// claim: the stage's collision joints (when this scene loaded them, `geometry_live`), the
 /// scene's fighters with their parts tables and DObj lists, its items, its stage parts
 /// (`Ground`), its deferred spawns and its animation buffers.
-pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, geometry_live: bool) {
+pub fn scene_game_objects(
+    game: &Game,
+    data: &Archives,
+    img: &mut Image,
+    geometry_live: bool,
+    dynamics_live: bool,
+) {
     if geometry_live {
         coll_joints(game, data, img);
+        coll_arrays(game, data, img);
+        zako_slots(game, data, img);
+    }
+    if dynamics_live {
+        dynamics_links(game, data, img);
     }
     // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
     let fighters = std::any::type_name::<super::structs::Fighter>();
@@ -177,6 +194,87 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, geometr
             anim_buf(game, img, slot);
         }
     }
+}
+
+/// The stage's vertices and lines (`groundCollVtx`, 0x18 each, and `groundCollLine`, 8 each),
+/// as their blocks go back with the scene's heap: each vertex's data position, place and
+/// place before; each line in the data's groups its data's line and flags; the rest of each
+/// block (past the stage's, and a line no group holds) what it held.
+fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
+    let Some(g) = &game.geometry else { return };
+    if g.vertices_addr != 0 {
+        let at = g.vertices_addr;
+        let mut l = Lay::leftover(img, data, at, 2048 * 0x18);
+        for (i, v) in g.vertices.iter().enumerate().take(2048) {
+            let a = at + 0x18 * i as u32;
+            for (k, f) in [v.base.x, v.base.y, v.pos.x, v.pos.y, v.prev.x, v.prev.y]
+                .into_iter()
+                .enumerate()
+            {
+                l.put_u32(a + 4 * k as u32, f.to_bits());
+            }
+        }
+        l.put(img);
+    }
+    if g.lines_addr != 0 {
+        let at = g.lines_addr;
+        let lines = match game.stage_info.coll_data {
+            None => None,
+            Some(c) => data.ptr(c.at(8)).and_then(|d| img.data_addr(d)),
+        };
+        let mut l = Lay::leftover(img, data, at, 1536 * 8);
+        for r in &g.ranges {
+            for id in r.start as i32..r.start as i32 + r.count as i32 {
+                let Some(line) = g.lines.get(id as usize) else {
+                    continue;
+                };
+                let a = at + 8 * id as u32;
+                // A stage without collision data's line is the executable's (`mpLib_803BF760`).
+                l.put_word(a, lines.map(|d| d + 0x10 * id as u32));
+                l.put_u32(a + 4, line.flags);
+            }
+        }
+        l.put(img);
+    }
+}
+
+/// The enemy spawner's slots (`grZakoGenerator_Data`, 81 of 12 bytes), as their block goes
+/// back with the scene's heap: each slot's point, timer and spawn; its trophy word where the
+/// stage wrote it, else what the block held.
+fn zako_slots(game: &Game, data: &Archives, img: &mut Image) {
+    let z = &game.gr.zako;
+    let (Some(slots), at) = (&z.slots, z.addr) else {
+        return;
+    };
+    if at == 0 {
+        return;
+    }
+    let mut l = Lay::leftover(img, data, at, 0x3CC);
+    let cx = Addrs { game, img };
+    for (i, s) in slots.iter().enumerate().take(81) {
+        let a = at + 0xC * i as u32;
+        l.put_u16(a, s.point as u16);
+        l.put_u16(a + 2, s.timer as u16);
+        l.put_word(a + 4, cx.handle("GObjId", s.item.map(|g| g.0)));
+        if let Some(x8) = s.x8 {
+            l.put_u32(a + 8, x8 as u32);
+        }
+    }
+    l.put(img);
+}
+
+/// The dynamics' links (`lb_8000FCDC`'s block, 0x140 links of 0x98), as their block goes
+/// back with its scene's heap: each link as melee-sim holds it, its unwritten fields (the last
+/// link's dominant axis, `unk_54`) what the block held.
+fn dynamics_links(game: &Game, data: &Archives, img: &mut Image) {
+    let block = game.ft.dynamics_block;
+    let len = crate::lb::dynamics::LINKS * 0x98;
+    let mut l = Lay::leftover(img, data, block, len);
+    let cx = Addrs { game, img };
+    for (k, link) in game.fighter_dynamics.iter() {
+        link.lay(&mut l, block + 0x98 * k, &cx);
+    }
+    l.put(img);
 }
 
 /// A color overlay (`ColorStruct`, 0x80) at `off` of `l`: its script's place where the image
@@ -319,6 +417,9 @@ pub const LAID_GROUND_VARS: &[&str] = &[
     "ZebesLavaVars",
     "CorneriaCityVars",
     "CorneriaCity8Vars",
+    "IzumiVars",
+    "Izumi2Vars",
+    "Izumi3Vars",
 ];
 
 /// The types of what the heap's image doesn't lay out, each with a note: an object of one
@@ -344,7 +445,11 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::FighterX59C
             | Kind::Item
             | Kind::EffectQueued
-            | Kind::BgFlash => continue,
+            | Kind::BgFlash
+            | Kind::Particle
+            | Kind::Generator
+            | Kind::AppSrt
+            | Kind::Shadow => continue,
             Kind::SList => "a list node: only the lights' lists are laid out",
             Kind::DList
             | Kind::TevReg
@@ -359,12 +464,8 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::ItemDynamicBones
             | Kind::ItemLink
             | Kind::Effect
-            | Kind::Particle
-            | Kind::Generator
-            | Kind::AppSrt
             | Kind::SObj
             | Kind::AudioUserData
-            | Kind::Shadow
             | Kind::Vec
             | Kind::Mtx => "an object pool's objects (`HSD_ObjAlloc`)",
         };
@@ -510,6 +611,26 @@ fn ground_vars(l: &mut Lay, a: u32, v: &super::gr::GroundVars, cx: &Addrs) -> bo
             l.put_u8(a + 1, v.xC5);
             l.put_bits(a + 2, 0, 1, u32::from(v.still));
         }
+        V::Izumi(v) => {
+            l.put_word(a, cx.handle("TObjId", v.xC4.map(|o| o.0)));
+            gobj(l, a + 4, v.xC8);
+            gobj(l, a + 8, v.xCC);
+            jobj(l, a + 0xC, v.xD0);
+            jobj(l, a + 0x10, v.xD4);
+        }
+        V::Izumi2(v) => {
+            jobj(l, a, v.xC4);
+            jobj(l, a + 4, v.xC8);
+        }
+        V::Izumi3(v) => {
+            for (k, h) in [v.xC4, v.xC6, v.xC8, v.xCA].into_iter().enumerate() {
+                l.put_u16(a + 2 * k as u32, h as u16);
+            }
+            jobj(l, a + 8, v.xCC);
+            for (k, f) in [v.xD0, v.xD4, v.xD8, v.xDC].into_iter().enumerate() {
+                l.put_u32(a + 0xC + 4 * k as u32, f.to_bits());
+            }
+        }
         V::CorneriaCity8(v) => {
             l.put_u8(a, v.xC4);
             l.put_u8(a + 1, v.xC5);
@@ -554,11 +675,15 @@ impl LayCx for Addrs<'_> {
             "AttrsId" => g.fighter_attrs.addr(h),
             "AnimBufId" => g.fighter_anim_bufs.addr(h),
             "DObjListId" => g.fighter_dobj_lists.addr(h),
-            "DynamicsId" => g.fighter_dynamics.addr(h),
+            "DynamicsId" => match g.ft.dynamics_block {
+                0 => g.fighter_dynamics.addr(h),
+                b => b + 0x98 * h,
+            },
             "EffectId" => g.ef.effects.addr(h),
             "QueuedId" => g.ef.queued.addr(h),
             // The items' tables in the executable: the handle is the address.
             "GroundId" => g.grounds.addr(h),
+            "CameraBoxId" if g.camera.boxes.addr != 0 => g.camera.boxes.addr + 0x6C * h,
             "ItemLogicRef" | "ItemStatesRef" => h,
             _ => 0,
         };
@@ -586,6 +711,23 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
     o.lay(&mut l, at, &cx);
     let n = o.dynamics_num.max(0) as usize;
     o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
+    // The action's figatree (`x590`) is in the main animation buffer, the second one
+    // (`x598`) in the main or the second: their places are the buffers', whichever other
+    // copies of their archives there are (two fighters' buffers can hold one).
+    let in_buf = |b: Option<super::handles::AnimBufId>, t: Option<melee_data::archive::DataRef>| {
+        let (b, t) = (b?, t?);
+        let base = game.fighter_anim_bufs.addr(b.0);
+        (base != 0).then(|| base + super::ft::anim_buf::ARCHIVE_HEADER + t.offset)
+    };
+    if o.x590.is_some() {
+        l.put_word(at + 0x590, in_buf(o.x59C, *o.x590));
+    }
+    if o.x598.addr.is_some() {
+        l.put_word(at + 0x598, o.x598.addr);
+    } else if o.x598.tree.is_some() {
+        let b = if o.x598.in_main { o.x59C } else { o.x5A0 };
+        l.put_word(at + 0x598, in_buf(b, o.x598.tree));
+    }
     l.put(img);
 }
 

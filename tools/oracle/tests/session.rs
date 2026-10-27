@@ -167,7 +167,7 @@ fn the_attract_match_on_brinstar_reads_a_leftover() {
 }
 
 /// `2026-10-10_13-05-00`: the character select and the stage select, then the first match
-/// on Pokémon Stadium from the selects' preloads, to its results.
+/// on Pokémon Stadium from the selects' preloads, into its results.
 #[test]
 fn a_session_plays_its_match_from_the_selects() {
     let Some(out) = session_at(
@@ -177,12 +177,7 @@ fn a_session_plays_its_match_from_the_selects() {
     ) else {
         return;
     };
-    assert!(
-        out.contains(
-            "2572 ticks compared, no difference; stopped in tick 2572: fn_80178BB4 (the results' panel) isn't ported"
-        ),
-        "{out}"
-    );
+    assert!(out.contains("2600 ticks compared, no difference"), "{out}");
 }
 
 /// The seed from `OSGetTick` one more shows in the first tick.
@@ -794,16 +789,13 @@ fn a_kana_name_and_a_cancelled_one() {
 /// The rules to a match (a one-minute time match, ratio 1.5, items off), through the character
 /// and stage selects and the match to its end, timeline included (tick 1506's audio frame,
 /// due in the draw time's read before the render's sleep, ran 16 ticks late until the options
-/// task's fix), where its results aren't ported (task 9).
+/// task's fix), Sudden Death, the results and the character select after, to the trace's end.
 #[test]
 fn the_rules_reach_the_match() {
     let Some(out) = rules_session("rules-match", &["--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("6096 ticks compared, no difference; stopped in tick 6096"),
-        "{out}"
-    );
+    assert!(out.contains("8371 ticks compared, no difference"), "{out}");
 }
 
 fn select_session(name: &str, args: &[&str]) -> Option<String> {
@@ -811,17 +803,14 @@ fn select_session(name: &str, args: &[&str]) -> Option<String> {
 }
 
 /// A computer player's door opened by port 1's hand (a random character), Mario's costumes
-/// changed, the stage select's random pick (Princess Peach's Castle) and the match, to its
-/// results (task 9's).
+/// changed, the stage select's random pick (Princess Peach's Castle), the match, its results
+/// and the character select after.
 #[test]
 fn a_random_character_and_stage() {
     let Some(out) = select_session("random", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("2603 ticks compared, no difference; stopped in tick 2603: fn_80178BB4"),
-        "{out}"
-    );
+    assert!(out.contains("2827 ticks compared, no difference"), "{out}");
 }
 
 /// Three computer players at levels 3, 5 and 9 against Samus on Yoshi's Story, a computer
@@ -831,10 +820,7 @@ fn computer_players_at_three_levels() {
     let Some(out) = select_session("cpus", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("3501 ticks compared, no difference; stopped in tick 3501: fn_80178BB4"),
-        "{out}"
-    );
+    assert!(out.contains("3718 ticks compared, no difference"), "{out}");
 }
 
 /// The rules (handicap on, friendly fire, the self-destruct penalty), then a team battle with
@@ -846,10 +832,7 @@ fn a_team_battle_with_handicaps() {
     let Some(out) = select_session("teams", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("4429 ticks compared, no difference; stopped in tick 4429: fn_80178BB4"),
-        "{out}"
-    );
+    assert!(out.contains("4647 ticks compared, no difference"), "{out}");
 }
 
 /// Matches from the menus on Corneria, Kongo Jungle and Pokémon Stadium: on the first two a
@@ -858,20 +841,11 @@ fn a_team_battle_with_handicaps() {
 #[test]
 fn matches_from_the_menus_on_three_stages() {
     // On Pokémon Stadium the results screen's second fighter lands on a freed shadow's,
-    // generator's and particle's blocks, whose layouts aren't ported.
+    // generator's and particle's blocks, laid out as they go back.
     for (name, want) in [
-        (
-            "stage-corneria",
-            "2636 ticks compared, no difference; stopped in tick 2636: fn_80178BB4",
-        ),
-        (
-            "stage-kongo",
-            "2714 ticks compared, no difference; stopped in tick 2714: fn_80178BB4",
-        ),
-        (
-            "stage-ps",
-            "2490 ticks compared, no difference; stopped in tick 2489: unknown leftover bytes of a freed Shadow under Fighter: its layout isn't ported",
-        ),
+        ("stage-corneria", "2858 ticks compared, no difference"),
+        ("stage-kongo", "2936 ticks compared, no difference"),
+        ("stage-ps", "2873 ticks compared, no difference"),
     ] {
         let Some(out) = select_session(name, &["--all", "--heap"]) else {
             return;
@@ -887,8 +861,51 @@ fn the_random_stage_rule() {
     let Some(out) = select_session("stage-rule", &["--all", "--heap"]) else {
         return;
     };
+    assert!(out.contains("3282 ticks compared, no difference"), "{out}");
+}
+
+fn results_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("results-sessions", name, args)
+}
+
+/// The results sessions: a time match with Sudden Death and Fox's blaster pose, a stock match
+/// with the automatic handicap, a team battle with Ness's bat pose; each to the trace's end
+/// with the card after it the original's (the statistics and the records saved after the
+/// match), and with the GPU's pixels filled with 0xFF instead of 0.
+#[test]
+fn the_results_sessions_end_with_their_cards() {
+    for name in ["sd-ko", "stock", "teams"] {
+        let card = ssbm_rs_local(&format!("lockstep/results-sessions/{name}-run.card"));
+        let Some(out) = results_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains("ticks compared, no difference")
+                && out.contains("the card after the session: the original's, 524288 bytes"),
+            "{name}: {out}"
+        );
+    }
+    let Some(out) = results_session(
+        "teams",
+        &["--all", "--heap", "--mutate", "render-target=ff"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3957 ticks compared, no difference"), "{out}");
+}
+
+/// A card whose every count and statistic is at its largest: the match's records held and
+/// wrapped, the results' exit earning a notice, the prize screen (task 11's) and the trace's
+/// end, the card after it the original's.
+#[test]
+fn records_at_their_largest() {
+    let card = ssbm_rs_local("lockstep/results-sessions/ko-max-run.card");
+    let Some(out) = results_session("ko-max", &["--all", "--heap", "--card-after", &card]) else {
+        return;
+    };
     assert!(
-        out.contains("3060 ticks compared, no difference; stopped in tick 3060: fn_80178BB4"),
+        out.contains("8224 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
         "{out}"
     );
 }
@@ -982,4 +999,237 @@ fn a_session_rollback_catches_a_perturbation() {
         ),
         "{out}"
     );
+}
+
+/// Camera Mode from the recorded session `2026-10-06_17-11-18`: the card check, the selects
+/// and the match with the camera's menu, two snapshots taken (their frames compressed into
+/// the snapshot's buffer) and one saved to the card, clean to the trace's end.
+#[test]
+fn camera_mode_takes_and_saves_a_snapshot() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-11-18.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-11-18.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--all", "--heap"]);
+    assert!(out.contains("6749 ticks compared, no difference"), "{out}");
+}
+
+/// The snapshot `2026-10-06_17-11-18` saves lands on the card as the console's: the card the
+/// session leaves is the one the next recorded session started with, byte for byte.
+#[test]
+fn a_snapshot_lands_on_the_card_as_the_consoles() {
+    let next = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.card");
+    if !std::path::Path::new(&next).exists() {
+        eprintln!("no card ({next}): skipping");
+        return;
+    }
+    let out_card =
+        std::env::temp_dir().join(format!("melee-oracle-17-11-18-{}.card", std::process::id()));
+    let Some(out) = session_sync(
+        "recordings",
+        "2026-10-06_17-11-18",
+        &["--rollback", "7", "--card-out", out_card.to_str().unwrap()],
+    ) else {
+        return;
+    };
+    assert!(out.contains("rolled back 7 each, no difference"), "{out}");
+    let ours = std::fs::read(&out_card).expect("the card written");
+    let _ = std::fs::remove_file(&out_card);
+    assert!(
+        ours == std::fs::read(&next).unwrap(),
+        "the card differs from {next}"
+    );
+}
+
+/// Camera Mode's menu in a match: the info hidden and shown, snapshots offered, asked about
+/// and refused, one saved; the same with the card pulled out while a snapshot is offered, and
+/// pulled out and put back on the card check (the memory card mode then probing the save,
+/// read whole); Tiny Melee through its selects, its match and its results to the trace's end;
+/// and Stamina Mode's match exit, its selects again and the main menu, past two copies of its
+/// fighters' files gone together.
+#[test]
+fn special_melee_sessions() {
+    let Some(out) = scripted_session("special-sessions", "camera-snaps", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(out.contains("3688 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session(
+        "special-sessions",
+        "camera-pull-offer",
+        &["--card-pull", "2600,2640", "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3688 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session(
+        "special-sessions",
+        "camera-pull-check",
+        &["--card-pull", "1000,1080", "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3677 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session("special-sessions", "special-tiny", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(out.contains("3163 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session("special-sessions", "special-stamina", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(out.contains("2896 ticks compared, no difference"), "{out}");
+}
+
+/// A trophy session (`lockstep/trophy-sessions/NAME.inputs` with its card, traced into
+/// `traces/trophy-sessions`).
+fn trophy_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("trophy-sessions", name, args)
+}
+
+/// The gallery on a card with 9 trophies (its view, its close-up, the list's sorts) and on one
+/// with 196 (the list paged by X and Y), and its six lights: each clean from power-on to the
+/// trace's end.
+#[test]
+fn the_trophy_gallery_toured() {
+    for (name, ticks) in [
+        ("gallery-few", "4858"),
+        ("gallery-many", "6670"),
+        ("gallery-lights", "5317"),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The lottery's draws, seed for seed, with few and many trophies: clean to the trace's end,
+/// and the card the run leaves is ssbm-rs's byte for byte (the draws' trophies and coins
+/// saved).
+#[test]
+fn the_trophy_lottery_draws_and_saves() {
+    for (name, ticks) in [("lottery-few", "5017"), ("lottery-many", "5027")] {
+        let card = ssbm_rs_local(&format!("lockstep/trophy-sessions/{name}-run.card"));
+        let Some(out) = trophy_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The collection in its four layouts (rings jittered and even, rows, the triangle), on
+/// cards with 9 and 196 trophies, and left by L, R and Start: each clean from power-on through
+/// the collection to the trace's end (`coll-r` to its attract match's first tick, where the
+/// heap's image has no layout for a freed archive).
+#[test]
+fn the_trophy_collection_in_each_layout() {
+    for (name, want) in [
+        ("coll-few", "3820 ticks compared, no difference"),
+        ("coll-many", "3820 ticks compared, no difference"),
+        ("coll-l", "3820 ticks compared, no difference"),
+        ("coll-y", "3820 ticks compared, no difference"),
+        ("coll-lrs", "2519 ticks compared, no difference"),
+        (
+            "coll-r",
+            "3793 ticks compared, no difference; stopped in tick 3792",
+        ),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(out.contains(want), "{name}: {out}");
+    }
+}
+
+/// A Data menu session (`lockstep/data-sessions/NAME.inputs`, on a copy of `records.card`:
+/// `options-sessions/names10.card` with every character, stage and trophy unlocked, every
+/// special message noted, two thirds of the bonuses seen, thirty names and random records).
+fn data_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("data-sessions", name, args)
+}
+
+/// The special messages scrolled to the end and back, B out to the title: clean to the
+/// trace's end.
+#[test]
+fn the_special_messages_scrolled() {
+    let Some(out) = data_session("info", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2446 ticks compared, no difference"), "{out}");
+}
+
+/// The bonuses scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_bonuses_scrolled() {
+    let Some(out) = data_session("bonus", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2398 ticks compared, no difference"), "{out}");
+}
+
+/// The other records scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_other_records_scrolled() {
+    let Some(out) = data_session("count", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2318 ticks compared, no difference"), "{out}");
+}
+
+/// The VS records: the grid in characters and names, scrolled every way, a cell's detail on
+/// and off the diagonal, the statistics and the rankings in both, each page turned both ways:
+/// clean to the trace's end.
+#[test]
+fn the_vs_records_toured() {
+    let Some(out) = data_session("diagram", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("5569 ticks compared, no difference"), "{out}");
+}
+
+/// Every Data screen on `2026-10-06_17-13-21`'s card (no names, one character unlocked, the
+/// records of a few matches): the messages, the grid with X refused, the statistics and the
+/// rankings, the bonuses and the other records: clean to the trace's end.
+#[test]
+fn the_data_screens_on_a_played_card() {
+    let Some(out) = data_session("plain", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3817 ticks compared, no difference"), "{out}");
+}
+
+/// The rankings to their ends in characters and names, the most and least played's counts
+/// over the names included: clean to the trace's end.
+#[test]
+fn the_vs_rankings_scrolled() {
+    let Some(out) = data_session("ranks", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2620 ticks compared, no difference"), "{out}");
+}
+
+/// Two special messages waiting on `2026-10-06_17-13-21`'s card: the title's Start goes to the
+/// challenger approach's mode at its prize state, each message shown with its song and date
+/// (the music stream's clock reading past its boxes once a song ends), A past both, then the
+/// main menu and the title: clean to the trace's end.
+#[test]
+fn the_special_messages_announced() {
+    let Some(out) = data_session("prize", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1617 ticks compared, no difference"), "{out}");
 }

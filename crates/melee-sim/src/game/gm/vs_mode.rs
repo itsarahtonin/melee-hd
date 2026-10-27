@@ -204,9 +204,52 @@ pub fn start_defaults() -> StartMeleeData {
     start
 }
 
+/// The automatic handicaps `gmMainLib_8015CE44` gives: each port's own (without a name tag;
+/// a port past the four has none) and each name tag's (`x1A2`).
+#[derive(Clone, Debug, Default)]
+pub struct AutoHandicaps {
+    pub ports: [i8; 4],
+    pub tags: Vec<i8>,
+}
+
+impl AutoHandicaps {
+    /// The save's.
+    pub fn of(g: &crate::game::structs::gmm_x0) -> AutoHandicaps {
+        AutoHandicaps {
+            ports: g.modes.nametags[..4].try_into().expect("four ports"),
+            tags: g
+                .thing
+                .nametag_banks
+                .iter()
+                .flat_map(|b| b.inner.iter().map(|t| t.x1A2))
+                .collect(),
+        }
+    }
+
+    /// `gmMainLib_8015CE44(port, nametag)`'s handicap, none where it gives null.
+    pub fn get(&self, port: usize, nametag: u8) -> Option<i8> {
+        if nametag == NO_NAMETAG {
+            self.ports.get(port).copied()
+        } else {
+            self.tags.get(usize::from(nametag)).copied()
+        }
+    }
+}
+
 /// The VS menus' rules and the item switch applied to `start`, `gm_80167BC8`.
-#[doc(alias = "gm_80167BC8")]
 pub fn apply_menu_rules(start: &mut StartMeleeData, rules: &GameRules, prefs: &GamePrefs) {
+    apply_menu_rules_auto(start, rules, prefs, None);
+}
+
+/// [`apply_menu_rules`] with the automatic handicaps the save gives (`auto`; none where the
+/// caller has no save, which stops at the automatic handicap).
+#[doc(alias = "gm_80167BC8")]
+pub fn apply_menu_rules_auto(
+    start: &mut StartMeleeData,
+    rules: &GameRules,
+    prefs: &GamePrefs,
+    auto: Option<&AutoHandicaps>,
+) {
     let r = &mut start.rules;
     r.timer_enabled = false;
     let limit = match rules.mode {
@@ -224,15 +267,32 @@ pub fn apply_menu_rules(start: &mut StartMeleeData, rules: &GameRules, prefs: &G
         r.timer_enabled = true;
         r.time_limit = u32::from(limit) * 60;
     }
-    for p in &mut start.players {
+    for (i, p) in start.players.iter_mut().enumerate() {
         p.stocks = rules.stock_count as i8;
         match rules.handicap {
             0 => {
                 p.attack_ratio = 1.0;
                 p.defense_ratio = 1.0;
             }
-            // By name tag (`gmMainLib_8015CE44`): the save's name tags aren't modeled.
-            1 => unported_call("gmMainLib_8015CE44"),
+            // By port or name tag (`gmMainLib_8015CE44`), 5 where it gives none.
+            1 => {
+                let auto = auto.unwrap_or_else(|| {
+                    unported_call("gmMainLib_8015CE44 (the automatic handicap without a save)")
+                });
+                let h = match auto.get(i, p.nametag) {
+                    Some(h) => {
+                        p.handicap = h;
+                        h as u8
+                    }
+                    None => {
+                        p.handicap = 5;
+                        5
+                    }
+                };
+                let (a, d) = HANDICAP_RATIOS[h.wrapping_sub(1) as usize];
+                p.attack_ratio = a;
+                p.defense_ratio = d;
+            }
             2 => {
                 let (a, d) = HANDICAP_RATIOS[(p.handicap as u8).wrapping_sub(1) as usize];
                 p.attack_ratio = a;
@@ -340,7 +400,7 @@ pub fn enter_vs_with(
     start_cb: Option<StartCallback>,
     player_cb: Option<PlayerCallback>,
 ) -> StartMeleeData {
-    enter_vs_full(vs, rules, prefs, start_cb, player_cb, &[])
+    enter_vs_full(vs, rules, prefs, start_cb, player_cb, &[], None)
 }
 
 /// VS mode's own entry from the menus, [`enter_vs`] with the save's name tags' rumble
@@ -350,19 +410,23 @@ pub fn enter_vs_with_tags(
     rules: &GameRules,
     prefs: &GamePrefs,
     tags: &[bool],
+    auto: &AutoHandicaps,
 ) -> StartMeleeData {
-    enter_vs_full(vs, rules, prefs, None, None, tags)
+    enter_vs_full(vs, rules, prefs, None, None, tags, Some(auto))
 }
 
-fn enter_vs_full(
+/// `gmVsMelee_EnterVs` with a mode's callbacks and the save's name tags' rumble settings
+/// (`tags`).
+pub fn enter_vs_full(
     vs: &mut StartMeleeData,
     rules: &GameRules,
     prefs: &GamePrefs,
     start_cb: Option<StartCallback>,
     player_cb: Option<PlayerCallback>,
     tags: &[bool],
+    auto: Option<&AutoHandicaps>,
 ) -> StartMeleeData {
-    apply_menu_rules(vs, rules, prefs);
+    apply_menu_rules_auto(vs, rules, prefs, auto);
     let mut start = StartMeleeData::default();
     start.rules.clone_from(&vs.rules);
     if start.rules.match_kind == 1 {

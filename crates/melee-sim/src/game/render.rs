@@ -326,8 +326,10 @@ impl Running<'_> {
             .current
             .expect("HSD_SisLib_803A84BC: no current camera");
         crate::hsd::cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
-        if let Some(cb) = callback {
-            code::unported_call(&format!("the text render callback {cb:#010x}"));
+        match callback {
+            None | Some(super::hud::small::SCORE_TEXT_RENDER) => {}
+            Some(super::gm::results_scene::STATS_TEXT_RENDER) => self.results_stats_text_render(),
+            Some(cb) => code::unported_call(&format!("the text render callback {cb:#010x}")),
         }
         let d = self.game.sis.layout_text(self.data, t);
         self.game
@@ -400,6 +402,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         crate::hsd::sobj::RENDER => r.render_sobjs(gobj),
         crate::hsd::sobj::CAMERA_RENDER => r.render_sprite_camera(gobj),
         super::gm::title::CAMERA_RENDER => r.title_camera_render(gobj),
+        super::gm::camera_mode::SNAP_RENDER => r.cm_snap_render(),
         c if super::gm::results_fighters::PLAYER_RENDER.contains(&c) => {
             let slot = super::gm::results_fighters::PLAYER_RENDER
                 .iter()
@@ -417,8 +420,13 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::mn::stagesel::FOG_RENDER => r.sss_fog_render(gobj),
         super::mn::main::ERASE_RENDER => r.menu_erase_render(gobj),
         super::mn::gallery::CAMERA_RENDER => r.gallery_camera_render(gobj),
+        super::ty::gallery::RENDER_MAIN => r.toy_main_render(gobj),
+        super::ty::gallery::RENDER_CAMERA => r.toy_camera_render(gobj),
+        super::ty::gallery::RENDER_AXES => r.toy_axes_render(),
+        super::ty::list::RENDER_TEXTS => r.toy_list_texts_render(gobj),
+        super::ty::lottery::RENDER_MAIN => r.lot_main_render(gobj),
         LOBJ_CALLBACK | 0x801C_4640 | 0x8009_F54C => r.render_lights(gobj),
-        FOG_CALLBACK => r.render_fog(gobj),
+        FOG_CALLBACK | super::ty::collection::RENDER_FOG => r.render_fog(gobj),
         0x801C_1E2C => r.render_stage_fog(gobj),
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
         0x8003_01D0 => r.render_game_camera(gobj),

@@ -128,28 +128,28 @@ impl Running<'_> {
         }
     }
 
-    /// The panel comes in, `fn_80178BB4`: not ported yet.
-    fn results_panel_in(&mut self, _gobj: GObjId) {
-        super::super::code::unported_call("fn_80178BB4 (the results' panel)");
-    }
-
-    /// The players' rows shown, `fn_80177748`: not ported yet.
-    fn results_rows(&mut self) {
-        super::super::code::unported_call("fn_80177748 (the results' rows)");
-    }
-
-    /// Waiting for a button, `fn_80177920`: not ported yet.
-    fn results_wait(&mut self, _gobj: GObjId) {
-        super::super::code::unported_call("fn_80177920 (the results' wait)");
-    }
-
-    /// The statistics' frame, `fn_80178050`: not ported yet.
-    fn results_stats_frame(&mut self, _gobj: GObjId) {
-        super::super::code::unported_call("fn_80178050 (the results' statistics)");
-    }
-
-    /// The announcer names the winner, `fn_80168E54`: not ported yet.
-    fn announce_winner(&mut self, _ckind: i32, _ftkind: i32, _team: i32, _teams: bool) {
-        super::super::code::unported_call("fn_80168E54 (the winner's name)");
+    /// The announcer names the winner, `fn_80168E54`: a team's color in a team battle,
+    /// else the winning character (Zelda's kind as Sheik and Sheik's as Zelda where the
+    /// fighter is the other).
+    #[doc(alias = "fn_80168E54")]
+    fn announce_winner(&mut self, ckind: i32, ftkind: i32, team: i32, teams: bool) {
+        let (ckind, ftkind) = (ckind as i8, ftkind as i8);
+        if teams {
+            match team as u8 {
+                0 => self.sfx_play(0xC354, 0x7F, 0x40),
+                1 => self.sfx_play(0xC352, 0x7F, 0x40),
+                2 => self.sfx_play(0xC353, 0x7F, 0x40),
+                _ => 0,
+            };
+        } else {
+            let k = if ckind == 0x12 && ftkind == 7 {
+                0x13
+            } else if ckind == 0x13 && ftkind == 0x13 {
+                0x12
+            } else {
+                ckind
+            };
+            self.preload_character_sfx(k as i32 as u32);
+        }
     }
 }

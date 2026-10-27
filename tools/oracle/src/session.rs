@@ -66,22 +66,29 @@ fn newest_poll(image: &Image) -> PadData {
 
 /// When the pad alarm (`lb_804329F0`'s) fires next, on the time base from power-on (the
 /// trace's): its system time less the OS's offset and the console's clock at power-on, which
-/// the code's time base adds.
-fn next_alarm(image: &Image, tick: u32, power_on: u64) -> Result<u64, String> {
+/// the code's time base adds; and its period, 60 Hz's or a faster game's (`gm_SetGameSpeed`
+/// sets the alarm again, `lb_80019628`).
+fn next_alarm(image: &Image, power_on: u64) -> (u64, u64) {
     let alarm = sym("lb_804329F0") + 0x50;
     let period = u64_at(image, alarm + 0x18);
-    if period != PERIOD {
-        return Err(format!(
-            "trace tick {tick}: the pad alarm's period is {period}, not {PERIOD}: the alignment follows only the 60 Hz alarm"
-        ));
-    }
-    Ok(u64_at(image, alarm + 8)
+    let at = u64_at(image, alarm + 8)
         .wrapping_sub(u64_at(image, SYSTEM_TIME_OFFSET))
-        .wrapping_sub(power_on))
+        .wrapping_sub(power_on);
+    (at, period)
 }
 
 /// The scene the trace's memory is in: the game mode (`state_machine`'s current mode), its
 /// state's index and the scene's frame function.
+/// The reads a tick of game mode `mode` can take past the pad alarm's: the trophy screens'
+/// own (`HSD_PadRenewStatus`: the gallery's entry and its close-up's, the list's choice), at
+/// most two in a tick.
+fn direct_reads(mode: u8) -> u64 {
+    match mode {
+        0xB..=0xD => 2,
+        _ => 0,
+    }
+}
+
 fn scene_of(image: &Image) -> (u8, u8, u32) {
     let sm = sym("state_machine");
     let info = image.u32(sym("gm_804D6720"));
@@ -192,8 +199,15 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
     let mut ends: Vec<Vec<u32>> = Vec::new();
     // How often the alarm fired between each tick's end and the one before's.
     let mut fired: Vec<u64> = Vec::new();
+    // How many reads past the alarm's each tick may have taken: the trophy screens' code
+    // reads the controllers itself (`HSD_PadRenewStatus`), on top of the alarm's reads.
+    let mut extras: Vec<u64> = Vec::new();
     let mut scenes = Vec::new();
-    let mut last_alarm: Option<u64> = None;
+    let mut last_alarm: Option<(u64, u64)> = None;
+    // Ticks across which the alarm was set again at another period: how often each grid
+    // fired around the change isn't known, so the tick may have taken from none to as many
+    // reads as the faster grid's firings fit.
+    let mut loose: Vec<bool> = Vec::new();
     while let Some(t) = reader.tick() {
         image.apply(&t);
         if !image.seen || image.tb.is_none() {
@@ -209,34 +223,54 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         {
             scenes.push((t.number, mode, state, on_frame));
         }
-        let alarm = next_alarm(&image, t.number, rec.power_on)?;
+        let (alarm, period) = next_alarm(&image, rec.power_on);
+        let extra = direct_reads(mode);
         let newest = newest_poll(&image);
         // Past the recording's end ssbm-rs's playback reports its last read, for a second.
         let matching = |r: u64| rec.reads[r.min(n - 1) as usize] == newest;
         // The reads the tick can have ended on, given the tick before's.
         let mut now = Vec::new();
+        let mut changed = false;
         let f = match last_alarm {
             None => {
+                if period != PERIOD {
+                    return Err(format!(
+                        "trace tick {}: the pad alarm's period is {period} at the first tick, not {PERIOD}",
+                        t.number
+                    ));
+                }
                 // Read 0 is the boot's; at most every alarm read since the time base started.
                 let most = alarm / PERIOD;
                 now.extend((1..=most).filter(|&r| matching(r)).map(|r| r as u32));
                 most
             }
-            Some(before) => {
-                if alarm < before || (alarm - before) % PERIOD != 0 {
-                    return Err(format!(
-                        "trace tick {}: the pad alarm left its grid ({before} at the tick before, {alarm} now)",
-                        t.number
-                    ));
-                }
-                let f = (alarm - before) / PERIOD;
+            Some((before, before_period)) => {
+                changed = period != before_period;
+                let f = if changed {
+                    if alarm < before {
+                        return Err(format!(
+                            "trace tick {}: the pad alarm set again went back ({before} at the tick before, {alarm} now)",
+                            t.number
+                        ));
+                    }
+                    (alarm - before).div_ceil(period.min(before_period)) + 1
+                } else {
+                    if alarm < before || (alarm - before) % period != 0 {
+                        return Err(format!(
+                            "trace tick {}: the pad alarm left its grid ({before} at the tick before, {alarm} now)",
+                            t.number
+                        ));
+                    }
+                    (alarm - before) / period
+                };
                 let prev = ends.last().expect("the tick before's reads");
-                if f == 0 {
+                if f == 0 && extra == 0 {
                     now.extend(prev.iter().copied().filter(|&r| matching(u64::from(r))));
                 } else {
                     let mut next = 0u64;
                     for &r in prev {
-                        let (lo, hi) = (u64::from(r) + 1, u64::from(r) + f);
+                        let lo = u64::from(r) + u64::from(f > 0 && !changed);
+                        let hi = u64::from(r) + f + extra;
                         for j in lo.max(next)..=hi {
                             if matching(j) {
                                 now.push(j as u32);
@@ -252,7 +286,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
             let (lo, hi) = match ends.last() {
                 Some(prev) => (
                     u64::from(prev[0]) + u64::from(f > 0),
-                    u64::from(*prev.last().unwrap()) + f,
+                    u64::from(*prev.last().unwrap()) + f + extra,
                 ),
                 None => (1, f),
             };
@@ -268,17 +302,21 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         }
         ends.push(now);
         fired.push(f);
-        last_alarm = Some(alarm);
+        loose.push(changed);
+        extras.push(extra);
+        last_alarm = Some((alarm, period));
     }
     // Back from the last tick: each tick keeps the reads a later tick's can follow from.
     for t in (1..ends.len()).rev() {
         let f = fired[t] as u32;
+        let extra = extras[t] as u32;
         let (before, after) = ends.split_at_mut(t);
         let later = &after[0];
+        let loose = loose[t];
         before[t - 1].retain(|&r| {
-            let lo = if f == 0 { r } else { r + 1 };
+            let lo = if f == 0 || loose { r } else { r + 1 };
             let k = later.partition_point(|&j| j < lo);
-            k < later.len() && later[k] <= r + f
+            k < later.len() && later[k] <= r + f + extra
         });
     }
     Ok(Plan { ends, scenes })
@@ -304,6 +342,10 @@ impl melee_sim::game::session::Console for Console<'_> {
         }
         self.next += 1;
         pads
+    }
+
+    fn unread(&mut self, n: usize) {
+        self.next -= n;
     }
 
     fn entrynum(&mut self, path: &str) -> Option<i32> {
@@ -346,6 +388,10 @@ enum Mutation {
     PowerOn,
     /// The heap's image dropped at power-on: every leftover a new block takes reads zero.
     NoImage,
+    /// The fill a new object takes where the GPU's pixels are (`Image::render_fill`) another
+    /// byte: a session that compares as with the zero fill shows the pixels reach nothing
+    /// compared.
+    RenderFill(u8),
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -475,6 +521,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
+    let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
@@ -486,6 +533,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            // The card as the original's run left it: the session's card at the trace's end
+            // must equal it, byte for byte (the saves the session wrote).
+            "--card-after" => card_after = Some(it.next().expect("--card-after FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -549,10 +599,16 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("seed") => Mutation::Seed,
                     Some("power-on") => Mutation::PowerOn,
                     Some("no-image") => Mutation::NoImage,
+                    Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
+                        u8::from_str_radix(&m[14..], 16)
+                            .expect("--mutate render-target=XX, in hex"),
+                    ),
                     Some(m) if m.starts_with("read=") => {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
-                    _ => panic!("--mutate scene-ticks|seed|power-on|read=N"),
+                    _ => panic!(
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N"
+                    ),
                 })
             }
             _ => pos.push(a),
@@ -673,6 +729,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
+        card_after,
     };
     run.play(setup)
 }
@@ -733,6 +790,10 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
+    /// The card as ssbm-rs's run left it (its recording's `NAME-run.card`), to check the
+    /// card melee-hd's run leaves against at the trace's end: the saves it wrote, byte for
+    /// byte.
+    card_after: Option<PathBuf>,
 }
 
 impl Run<'_> {
@@ -768,6 +829,9 @@ impl Run<'_> {
                 let mut s = Session::new(setup);
                 if self.mutation == Some(Mutation::NoImage) {
                     s.game.objs.heap.image = Default::default();
+                }
+                if let Some(Mutation::RenderFill(b)) = self.mutation {
+                    s.game.objs.heap.image.render_fill = b;
                 }
                 if self.heap_log.is_some() {
                     melee_sim::hsd::heap::start_log();
@@ -1021,6 +1085,40 @@ impl Run<'_> {
         if self.leftovers_report {
             for l in melee_capture::leftovers::report() {
                 println!("leftover {l}");
+            }
+        }
+        if stop.is_none()
+            && let Some(path) = &self.card_after
+        {
+            let want = std::fs::read(path)
+                .unwrap_or_else(|e| panic!("the card after {}: {e}", path.display()));
+            let have = s
+                .card
+                .as_ref()
+                .and_then(|d| d.card.as_ref())
+                .map(|c| c.image());
+            match have {
+                Some(h) if h == &want[..] => {
+                    println!(
+                        "the card after the session: the original's, {} bytes",
+                        h.len()
+                    )
+                }
+                Some(h) => {
+                    let diffs: Vec<usize> = (0..h.len().min(want.len()))
+                        .filter(|&i| h[i] != want[i])
+                        .collect();
+                    println!(
+                        "{compared} ticks compared; the card after the session differs in {} bytes, first at {:#x}",
+                        diffs.len(),
+                        diffs.first().copied().unwrap_or(0)
+                    );
+                    return ExitCode::FAILURE;
+                }
+                None => {
+                    println!("{compared} ticks compared; the session has no card to compare");
+                    return ExitCode::FAILURE;
+                }
             }
         }
         match stop {

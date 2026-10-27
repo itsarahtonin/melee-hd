@@ -322,6 +322,10 @@ impl Ctx<'_> {
                 self.joint_shapes(&draws[i..i + n]);
                 n
             }
+            Draw::Axes(ends) => {
+                self.axes(ends);
+                1
+            }
             Draw::EraseColor([r, g, b, a]) => {
                 self.hsd.erase_color = Some(Color::new(*r, *g, *b, *a));
                 1
@@ -353,8 +357,16 @@ impl Ctx<'_> {
                 }
                 1
             }
+            Draw::Scissor { x, y, w, h } => {
+                self.game_scissor(*x, *y, *w, *h);
+                1
+            }
             Draw::ResultsCopy { image, x, y, clear } => {
                 self.results_copy(*image, *x, *y, *clear);
+                1
+            }
+            Draw::SnapCopy => {
+                self.snap_copy();
                 1
             }
             Draw::EraseWithDepth => {

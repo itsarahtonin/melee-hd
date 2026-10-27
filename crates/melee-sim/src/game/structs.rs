@@ -8,7 +8,7 @@ use melee_data::archive::DataRef;
 use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};
 use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
-use crate::game::ft::second::SecondTree;
+use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;
@@ -2167,7 +2167,7 @@ pub struct Fighter {
     /// +0x58c
     pub x58C: u32,
     /// +0x590
-    pub x590: Option<DataRef>,
+    pub x590: ActionTree,
     /// +0x594
     pub x594: [u8; 4],
     /// +0x598
@@ -2962,7 +2962,7 @@ impl Default for Fighter {
             x508: Default::default(),
             x588: None,
             x58C: 0,
-            x590: None,
+            x590: Default::default(),
             x594: [0; 4],
             x598: Default::default(),
             x59C: None,

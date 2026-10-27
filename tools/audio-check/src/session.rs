@@ -32,6 +32,10 @@ impl melee_sim::game::session::Console for Console<'_> {
         pads
     }
 
+    fn unread(&mut self, n: usize) {
+        self.next -= n;
+    }
+
     fn entrynum(&mut self, path: &str) -> Option<i32> {
         self.disc.entrynum(path.trim_start_matches('/')).ok()
     }

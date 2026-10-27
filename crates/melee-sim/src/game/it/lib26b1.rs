@@ -465,8 +465,13 @@ pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option
         21 => sscope::spawn_at(r, pos),
         25 => fflower::spawn_at(r, pos),
         31 => rabbitc::spawn_at(r, pos),
-        1 | 20 | 8 | 9 | 11 | 6 => {
-            crate::game::code::unported_call("it_8026BE84 (a box, Flipper, food, bat or bob-omb)")
+        // A bob-omb (`it_8027D670`), given back as none.
+        6 => {
+            super::kinds::bombhei::spawn_at(r, pos);
+            return None;
+        }
+        1 | 20 | 8 | 9 | 11 => {
+            crate::game::code::unported_call("it_8026BE84 (a box, Flipper, food or bat)")
         }
         _ => None,
     }?;
