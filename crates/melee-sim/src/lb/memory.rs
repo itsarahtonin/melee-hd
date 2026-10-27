@@ -31,7 +31,7 @@ pub fn entry_at(addr: u32) -> Option<u8> {
     }
     let off = addr - ENTRIES_AT;
     assert!(
-        off % ENTRY_SIZE == 0 && off / ENTRY_SIZE < ENTRIES as u32,
+        off.is_multiple_of(ENTRY_SIZE) && off / ENTRY_SIZE < ENTRIES as u32,
         "{addr:#010x} isn't a block entry"
     );
     Some((off / ENTRY_SIZE) as u8)
