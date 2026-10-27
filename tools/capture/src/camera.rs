@@ -101,6 +101,7 @@ impl Comparer<'_> {
             (c.snap.status, c.snap.image),
             (self.u32(s) as i32, self.u32(s + 4)),
         );
+        self.snap_written();
         // The image's descriptor once the match's start set it up: 640 by 480 RGB565.
         if c.snap.image != 0 {
             self.check(
@@ -109,6 +110,82 @@ impl Comparer<'_> {
                 (640u16, 480u16, 4u32),
                 (self.u16(s + 8), self.u16(s + 0xA), self.u32(s + 0xC)),
             );
+        }
+    }
+
+    /// The snapshot `lbSnap_8001DC0C` wrote: its header and compressed image in its buffer,
+    /// the card file's comment (`lbSnap_80433380.filename`), the banner drawn into
+    /// `LbMcSnap`'s icon data, and the encoder's quality (`lbl_804D6398`).
+    fn snap_written(&mut self) {
+        let w = &self.game.snap_write;
+        self.check(
+            "lbl_804D6398",
+            "the encoder's quality",
+            w.quality,
+            self.u32(sym("lbl_804D6398")) as i32,
+        );
+        let snap = self.game.snap;
+        if let (Some(h), Some(at)) = (w.header, snap.snap) {
+            self.check(
+                "lbSnap_80433380.snap",
+                "kind, size, quality, image's bytes, stage",
+                (h.x0, h.width, h.height, h.x8, h.xc, h.stkind),
+                (
+                    self.u32(at) as i32,
+                    self.u16(at + 4),
+                    self.u16(at + 6),
+                    self.u8(at + 8),
+                    self.u32(at + 0xC) as i32,
+                    self.u16(at + 0x10),
+                ),
+            );
+            let items: [i32; 8] =
+                core::array::from_fn(|i| self.u32(at + 0x14 + 4 * i as u32) as i32);
+            self.check("lbSnap_80433380.snap", "items out", h.items, items);
+            self.check(
+                "lbSnap_80433380.snap",
+                "fighters out",
+                h.fighters,
+                self.u32(at + 0x34) as i32,
+            );
+            let base = at + melee_sim::lb::snap_write::HEADER;
+            if let Some(k) = (0..w.image.len()).find(|&k| w.image[k] != self.u8(base + k as u32)) {
+                let theirs = self.u8(base + k as u32);
+                self.diff(
+                    "lbSnap_80433380.snap",
+                    &format!("compressed image's byte {k:#x} (of {:#x})", w.image.len()),
+                    w.image[k],
+                    theirs,
+                );
+            }
+        }
+        let name = sym("lbSnap_80433380") + 4;
+        if let Some(f) = w.filename {
+            let theirs: Vec<u8> = (0..0x40).map(|i| self.u8(name + i)).collect();
+            self.check(
+                "lbSnap_80433380.filename",
+                "comment",
+                String::from_utf8_lossy(&f).into_owned(),
+                String::from_utf8_lossy(&theirs).into_owned(),
+            );
+        }
+        // The banner where the trace's icon data (`lbSnap_80433380.icon_data`) points.
+        let icons = self.u32(sym("lbSnap_80433380") + 0x44);
+        if let Some(b) = w
+            .banner
+            .as_ref()
+            .filter(|_| icons != 0 && snap.icon_data.is_some())
+        {
+            let banner = self.u32(icons);
+            if let Some(k) = (0..b.len()).find(|&k| b[k] != self.u8(banner + k as u32)) {
+                let theirs = self.u8(banner + k as u32);
+                self.diff(
+                    "LbMcSnap MemSnapIconData",
+                    &format!("banner's byte {k:#x}"),
+                    b[k],
+                    theirs,
+                );
+            }
         }
     }
 }
