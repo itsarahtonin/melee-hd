@@ -203,6 +203,33 @@ impl Kinds for GameKinds {
             UserData::Effect(_) => 0x8005_BB40,
             UserData::Sound(_) => 0x8002_63B4,
             UserData::BgFlash => 0x8002_19E4,
+            // The menus' and two stages' blocks, freed with `HSD_Free` (their
+            // `GObj_InitUserData` calls).
+            UserData::CssCursor(_)
+            | UserData::CssToken(_)
+            | UserData::CssTag(_)
+            | UserData::SssName(_)
+            | UserData::SssPreview(_)
+            | UserData::SssHover(_)
+            | UserData::GalleryList(_)
+            | UserData::GalleryCursor(_)
+            | UserData::RulesList(_)
+            | UserData::RulePlusList(_)
+            | UserData::ItemSwitch(_)
+            | UserData::StageSwitch(_)
+            | UserData::NameList(_)
+            | UserData::NameNew(_)
+            | UserData::OptionMenu(_)
+            | UserData::Vibration(_)
+            | UserData::DataDel(_)
+            | UserData::StadiumScreen(_)
+            | UserData::IzumiReflection => 0x8037_F1B0,
+            // The main menu's lists, panel and player tags (`mn_8022EB04`), a glyph's
+            // variants (`fn_8023D0F8`).
+            UserData::MainMenuList(_) | UserData::MainMenuPanel(_) | UserData::NameTagSlot(_) => {
+                0x8022_EB04
+            }
+            UserData::GlyphVariants(_) => 0x8023_D0F8,
             // `Toy_RemoveUserData`.
             UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
             // A text's (`HSD_SisLib_803A5A2C`) and a canvas's own camera's (`fn_803A60EC`).
@@ -217,6 +244,10 @@ impl Kinds for GameKinds {
 /// original passes to the audio and pad drivers mid-tick.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Event {
+    /// The save's list wrote the card: the save file as the card now holds it, a `.gci`
+    /// (its directory entry, then its blocks), for the frontend to keep (milestone 5's design
+    /// calls: the frontend writes it whole; a tick never writes it itself).
+    SaveWritten(Vec<u8>),
     /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
     SfxKeyOffTrack(i32),
     /// `HSD_PadRumbleRemoveId`: a controller's rumble of one kind stops.

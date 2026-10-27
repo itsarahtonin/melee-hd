@@ -41,7 +41,7 @@ pub struct VsMelee {
     /// `gmVsMelee_StartData`, the match's (and Sudden Death's) enter data.
     pub start: StartMeleeData,
     /// `ko_counts` (`0x804D6730`): each port's KOs in the session's matches.
-    pub ko_counts: [u8; 4],
+    pub ko_counts: [u8; 6],
     /// `gmVsMelee_VsExitInfo`, `gmVsMelee_SuddenDeathExitInfo`: the match's and Sudden
     /// Death's exit data.
     pub exit: super::match_exit::MatchExitInfo,
@@ -117,7 +117,7 @@ impl Running<'_> {
     #[doc(alias = "gmVsMelee_Mode_OnLoad")]
     #[doc(alias = "gmVsMelee_ResetKOCounts")]
     pub fn vs_mode_on_load(&mut self) {
-        self.game.vs_melee.ko_counts = [0; 4];
+        self.game.vs_melee.ko_counts = [0; 6];
     }
 
     /// `onEnterCss` (`gmVsMelee_EnterCss` with VS Melee's match type): the screen's data
@@ -227,8 +227,16 @@ impl Running<'_> {
         let (rules, prefs) = super::attract::saved_rules(&self.game.game_data);
         let mut vs = self.vs_table(table).start.clone();
         let tags = self.nametag_rumbles();
-        let start =
-            super::vs_mode::enter_vs_full(&mut vs, &rules, &prefs, start_cb, player_cb, &tags);
+        let auto = super::vs_mode::AutoHandicaps::of(&self.game.game_data);
+        let start = super::vs_mode::enter_vs_full(
+            &mut vs,
+            &rules,
+            &prefs,
+            start_cb,
+            player_cb,
+            &tags,
+            Some(&auto),
+        );
         self.vs_table(table).start.clone_from(&vs);
         self.game.vs_melee.start.clone_from(&start);
         self.load_announcer();
@@ -271,6 +279,56 @@ impl Running<'_> {
         } else {
             self.set_next_game_mode_state_id(one);
         }
+    }
+
+    /// `onEnterSuddenDeath` (`gmVsMelee_EnterSuddenDeath` with no callbacks): the match's
+    /// start data (the VS match's, left as it was) takes VS mode's rules and players again,
+    /// their sub-colors and rumble, and Sudden Death's setup from the match that tied
+    /// (`gm_SetupSuddenDeath`).
+    #[doc(alias = "onEnterSuddenDeath@801B1648")]
+    #[doc(alias = "gmVsMelee_EnterSuddenDeath")]
+    pub fn vs_mode_enter_sudden_death(&mut self) {
+        self.vs_melee_enter_sudden_death(VS_MODE_MELEE, None, None);
+    }
+
+    /// `gmVsMelee_EnterSuddenDeath` for the modes table's entry `table` with a mode's
+    /// callbacks: the match's start data (the match that tied's, left as it was) takes the
+    /// entry's rules (then `start_cb`) and players (then `player_cb` on each), their
+    /// sub-colors and rumble, and Sudden Death's setup from the match that tied.
+    pub fn vs_melee_enter_sudden_death(
+        &mut self,
+        table: usize,
+        start_cb: Option<super::vs_mode::StartCallback>,
+        player_cb: Option<super::vs_mode::PlayerCallback>,
+    ) {
+        let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
+        let tags = self.nametag_rumbles();
+        let vs = self.vs_table(table).start.clone();
+        let mut start = self.game.vs_melee.start.clone();
+        start.rules.clone_from(&vs.rules);
+        if let Some(cb) = start_cb {
+            cb(&mut start);
+        }
+        start.players.clone_from(&vs.players);
+        if let Some(cb) = player_cb {
+            for p in &mut start.players {
+                cb(p);
+            }
+        }
+        super::vs_mode::setup_sub_colors(&mut start);
+        super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
+        super::setup_players::setup_sudden_death(&mut start, &self.game.vs_melee.exit.match_end);
+        self.game.vs_melee.start.clone_from(&start);
+    }
+
+    /// `onExitSuddenDeath` (`gmVsMelee_ExitSuddenDeath`): the match's results take Sudden
+    /// Death's places (`gm_80166CCC`).
+    #[doc(alias = "onExitSuddenDeath@801B1688")]
+    #[doc(alias = "gmVsMelee_ExitSuddenDeath")]
+    pub fn vs_mode_exit_sudden_death(&mut self) {
+        let mut sd = self.game.vs_melee.sd_exit.match_end.clone();
+        super::records::merge_sudden_death(&mut self.game.vs_melee.exit.match_end, &mut sd);
+        self.game.vs_melee.sd_exit.match_end.clone_from(&sd);
     }
 
     /// `onEnterResults` (`gmVsMelee_EnterResults`): the results screen's enter data

@@ -390,8 +390,9 @@ pub fn proc_callback(r: &mut Running, gobj: GObjId) {
 }
 
 /// The stage's watcher process (priority 10), `Ground_801C0C2C`: finds the point of interest
-/// player 1 stands in when asked (`unk8C.b6`, `b7`), and rains bob-ombs in that mode (not
-/// ported past a bomb's starting point: the bomb is an item, `it_8026BE84`).
+/// player 1 stands in when asked (`unk8C.b6`, `b7`), and rains bob-ombs in Sudden Death
+/// (`it_8026BE84`), one every 30 frames from its 1200th, where `Ground_801C0A70` finds a
+/// point.
 #[doc(alias = "Ground_801C0C2C")]
 pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
     let info = &r.game.stage_info;
@@ -405,9 +406,10 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
             r.game.stage_info.x9C = frame;
             // `sp2C` is a stack vector the point fills whenever it finds one; it isn't read
             // otherwise.
-            let (found, _at) = bomb_rain_point(r.game, r.data, Vec3::default());
+            let (found, at) = bomb_rain_point(r.game, r.data, Vec3::default());
             if found {
-                super::super::code::unported_call("it_8026BE84 (a bob-omb of the rain)");
+                // `Ground_803B7DEC`: a bob-omb (kind 6), not held.
+                super::super::it::lib26b1::drop_by_kind(r, 6, at, false);
             }
         }
     }

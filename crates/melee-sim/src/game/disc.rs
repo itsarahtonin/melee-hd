@@ -51,8 +51,16 @@ impl Running<'_> {
                     .any(|&(c, _)| c + crate::hsd::heap::HEADER == joints)
             })
             .unwrap_or(false);
+        let links = game.ft.dynamics_block;
+        let dynamics_live = links != 0
+            && crate::hsd::heap::with(|h| {
+                h.os.allocated
+                    .iter()
+                    .any(|&(c, _)| c + crate::hsd::heap::HEADER == links)
+            })
+            .unwrap_or(false);
         crate::hsd::export::with_image(|img| {
-            super::export::scene_game_objects(game, data, img, geometry_live)
+            super::export::scene_game_objects(game, data, img, geometry_live, dynamics_live)
         });
         crate::hsd::heap::with(|h| h.end_scene_image());
         self.export_heap_image();

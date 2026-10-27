@@ -13,8 +13,13 @@ use super::super::state::{Running, UserData};
 use super::super::structs::Fighter;
 use super::create::AllocInfo;
 use super::data::kind_tables;
+use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
+use gekko_fp as fp;
+
+/// `FtPart_RThumbNb`: the joint a pose's item is held at.
+const PART_R_THUMB_NB: i32 = 49;
 
 /// The demo action-state table (`ftData_803C52A0`) and its states' count (`x18`).
 const DEMO_STATE_LIST: u32 = 0x803C_52A0;
@@ -331,7 +336,8 @@ impl Running<'_> {
     }
 
     /// A winner's pose: its state, the pose's flags (`setupInitialState`), and what the
-    /// character holds in it (`ftCo_800BECB0`, `ftCo_800BED88`, `ftCo_800BEF04`).
+    /// character holds in it (`ftCo_800BECB0`, `ftCo_800BED88`, `ftCo_800BEF04`): Fox his
+    /// blaster, Dr. Mario two pills (not ported), Ness his bat.
     #[doc(alias = "ftCo_800BECB0")]
     #[doc(alias = "ftCo_800BED88")]
     #[doc(alias = "ftCo_800BEF04")]
@@ -345,16 +351,41 @@ impl Running<'_> {
         fp.x1984_heldItemSpec = None;
         let kind = fp.kind;
         match (msid, kind) {
-            // Fox's blaster (the first two poses).
+            // Fox's blaster (the first two poses), at his right thumb, his size.
             (0 | 2, 1) => {
-                super::super::code::unported_call("ftCo_800BECB0's blaster (it_802AE994)")
+                let f = self.game.fighter_id(gobj);
+                let fp = &self.game.fighters[f.0];
+                let part = self.bone_index(fp, PART_R_THUMB_NB);
+                let kind = self.fox_attr_i32(f, super::fox::attr::BLASTER_GUN_ITKIND);
+                let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
+                self.game.fighters[f.0].item_gobj = item;
+                let fp = &self.game.fighters[f.0];
+                let s = mem(fp::fmuls(
+                    reg(fp.x34_scale.y),
+                    reg(fp.co_attrs.model_scaling),
+                ));
+                if let Some(i) = item {
+                    super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
+                }
             }
             // Dr. Mario's two pills (the second pose).
             (2, 0x15) => {
                 super::super::code::unported_call("ftCo_800BED88's pills (itDrMarioPill_802C09C4)")
             }
-            // Ness's yo-yo (the third pose).
-            (5, 8) => super::super::code::unported_call("ftCo_800BEF04's yo-yo (it_802AD590)"),
+            // Ness's bat (the third pose), at his right thumb, 0.8 his size.
+            (5, 8) => {
+                let f = self.game.fighter_id(gobj);
+                let fp = &self.game.fighters[f.0];
+                let part = self.bone_index(fp, PART_R_THUMB_NB);
+                let item = super::super::it::kinds::nessbat::spawn_demo(self, gobj, part);
+                self.game.fighters[f.0].item_gobj = item;
+                let fp = &self.game.fighters[f.0];
+                let s = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling));
+                let s = mem(fp::fmuls(f64::from(0.8_f32), s));
+                if let Some(i) = item {
+                    super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
+                }
+            }
             _ => {}
         }
     }
@@ -366,3 +397,24 @@ impl Fighter {
         self.x1C_actionStateList.0 == DEMO_STATE_LIST
     }
 }
+
+/// The animation callbacks of the common motion states 2 and 5 (`ftCo_800BEF00`,
+/// `ftCo_800BEFD0`).
+pub const DEMO_ANIM_2: u32 = 0x800B_EF00;
+pub const DEMO_ANIM_5: u32 = 0x800B_EFD0;
+/// The common motion state 3's (`ftCo_800BED84`).
+pub const DEMO_ANIM_3: u32 = 0x800B_ED84;
+
+/// Whether a fighter is frozen in a KO toward the screen or asleep, `ftCo_800BF228`: the
+/// states a results pose's held item follows its size in.
+#[doc(alias = "ftCo_800BF228")]
+pub fn frozen_or_asleep(game: &crate::game::state::Game, gobj: GObjId) -> bool {
+    let m = game.fighter(gobj).motion_id;
+    m == super::co::ids::ms::DEAD_UP_FALL_HIT_CAMERA_ICE || m == super::co::ids::ms::SLEEP
+}
+
+/// `ftCo_800BEF00`, `ftCo_800BED84` and `ftCo_800BEFD0`: empty.
+#[doc(alias = "ftCo_800BEF00")]
+#[doc(alias = "ftCo_800BED84")]
+#[doc(alias = "ftCo_800BEFD0")]
+pub fn demo_anim() {}

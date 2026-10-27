@@ -198,6 +198,21 @@ impl Running<'_> {
             .unwrap_or_else(|| panic!("reading animation buffer byte {at:#x}, which isn't known"))
     }
 
+    /// Runs `f` with the objects it makes pointing into the fighter's buffer `buf`'s copy of
+    /// their archive ([`crate::hsd::image::Image::set_copy_hint`]).
+    pub(super) fn in_anim_buf<R>(
+        &mut self,
+        buf: Option<AnimBufId>,
+        f: impl FnOnce(&mut Self) -> R,
+    ) -> R {
+        let at = buf.map_or(0, |b| self.game.fighter_anim_bufs.addr(b.0));
+        let hint = (at != 0).then_some(at + ARCHIVE_HEADER);
+        crate::hsd::heap::with(|h| h.image.set_copy_hint(hint));
+        let r = f(self);
+        crate::hsd::heap::with(|h| h.image.set_copy_hint(None));
+        r
+    }
+
     /// The fighter's buffer `buf` now holds `len` bytes of `archive`'s file from its start.
     pub(super) fn anim_buf_load(&mut self, buf: Option<AnimBufId>, archive: ArchiveId, len: u32) {
         let buf = buf.expect("a fighter without animation buffers");

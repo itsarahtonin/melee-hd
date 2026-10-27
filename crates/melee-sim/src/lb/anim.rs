@@ -405,3 +405,54 @@ pub fn add_model_anim(
     let list = |o: u32| data.ptr(model.at(o));
     add_anim_index(objs, data, j, i, list(4), list(8), list(0xC));
 }
+
+/// The animations of a display object's shape sets, material and textures run at `rate`,
+/// `lbDObjSetRateAll` (the display object alone, not those after it).
+#[doc(alias = "lbDObjSetRateAll")]
+pub fn dobj_set_rate_all(objs: &mut Objects, d: Option<crate::hsd::dobj::DObjId>, rate: f32) {
+    for a in dobj_anims(objs, d) {
+        crate::hsd::aobj::set_rate(&mut objs.aobjs, Some(a), rate);
+    }
+}
+
+/// The animations of a display object's shape sets, material and textures requested from
+/// `frame`, `lbDObjReqAnimAll`.
+#[doc(alias = "lbDObjReqAnimAll")]
+pub fn dobj_req_anim_all(objs: &mut Objects, d: Option<crate::hsd::dobj::DObjId>, frame: f32) {
+    for a in dobj_anims(objs, d) {
+        crate::hsd::aobj::req_anim(&mut objs.aobjs, &mut objs.fobjs, Some(a), frame);
+    }
+}
+
+/// A display object's shape sets' animations, then its material's and its textures', in
+/// `lbDObjSetRateAll`'s order.
+fn dobj_anims(
+    objs: &Objects,
+    d: Option<crate::hsd::dobj::DObjId>,
+) -> Vec<crate::hsd::aobj::AObjId> {
+    let mut out = Vec::new();
+    let Some(d) = d else { return out };
+    let mut p = objs.dobjs[d].pobj;
+    while let Some(id) = p {
+        if objs.pobjs[id].ty() == crate::hsd::pobj::SHAPEANIM
+            && let crate::hsd::pobj::Binding::ShapeSet(set) = &objs.pobjs[id].u
+            && let Some(a) = set.aobj
+        {
+            out.push(a);
+        }
+        p = objs.pobjs[id].next;
+    }
+    if let Some(m) = objs.dobjs[d].mobj {
+        if let Some(a) = objs.mobjs[m].aobj {
+            out.push(a);
+        }
+        let mut t = objs.mobjs[m].tobj;
+        while let Some(id) = t {
+            if let Some(a) = objs.tobjs[id].aobj {
+                out.push(a);
+            }
+            t = objs.tobjs[id].next;
+        }
+    }
+    out
+}
