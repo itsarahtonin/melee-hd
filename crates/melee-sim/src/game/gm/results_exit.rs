@@ -197,7 +197,7 @@ impl Running<'_> {
     /// `gm_80168638`: under the automatic handicap, each port's moved by the places
     /// (`fn_80169000`) and put back where a player played.
     #[doc(alias = "gm_80168638")]
-    fn results_handicaps(&mut self, end: &MatchEnd) {
+    pub(super) fn results_handicaps(&mut self, end: &MatchEnd) {
         if self.game.game_data.x1850.handicap != 1 {
             return;
         }
@@ -213,10 +213,10 @@ impl Running<'_> {
         }
     }
 
-    /// `gm_80168710`: VS mode's winner, drawn among the humans that placed best (none
-    /// without a human), for the stage rule that picks by the winner.
+    /// `gm_80168710`: the winner of the mode's table entry `table`, drawn among the humans
+    /// that placed best (none without a human), for the stage rule that picks by the winner.
     #[doc(alias = "gm_80168710")]
-    fn results_draw_winner(&mut self, end: &MatchEnd) {
+    pub(super) fn results_draw_winner(&mut self, end: &MatchEnd, table: usize) {
         let mut best = -1;
         for p in &end.player_standings[..4] {
             if p.pkind == PKIND_HUMAN && i32::from(p.is_big_loser) > best {
@@ -236,7 +236,7 @@ impl Running<'_> {
         } else {
             -1
         };
-        self.game.game_data.modes.table[0].winner = winner;
+        self.game.game_data.modes.table[table].winner = winner;
     }
 
     /// `gm_8016247C`: the coins the humans' KOs earn: the save's total and its records' (held
@@ -244,7 +244,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8016247C")]
     #[doc(alias = "gmMainLib_8015CCF0")]
     #[doc(alias = "gmMainLib_8015CCFC")]
-    fn results_add_coins(&mut self, n: i32) -> i32 {
+    pub(super) fn results_add_coins(&mut self, n: i32) -> i32 {
         let s = &mut self.game.game_data.thing.save_data;
         let current = s.x1A48 as i32;
         // The original's test (`total > (u32)-1`) can never hold: the sums wrap.
@@ -379,8 +379,9 @@ impl Running<'_> {
         self.card_game_mark_changes();
     }
 
-    /// `onExitResults` (`gmVsMelee_ExitResults` with the character select next): unless the
-    /// match was cancelled, the automatic handicaps and VS mode's winner; each port's KOs;
+    /// `gmVsMelee_ExitResults` for the modes table's entry `table`, the character select
+    /// (`state_id`) next: unless the match was cancelled, the automatic handicaps and the
+    /// mode's winner; each port's KOs;
     /// with a human, the coins, and where the mode goes on (`next_terminates` false) the
     /// challengers (by the matches played, the play time, the characters played), the
     /// stage the 1P matches earn, the records' trophies, the special messages and the
@@ -388,11 +389,11 @@ impl Running<'_> {
     #[doc(alias = "onExitResults@801B16C8")]
     #[doc(alias = "gmVsMelee_ExitResults")]
     #[doc(alias = "findSmallestLoser")]
-    pub fn vs_mode_exit_results(&mut self, next_terminates: bool, state_id: u8) {
+    pub fn vs_mode_exit_results(&mut self, next_terminates: bool, state_id: u8, table: usize) {
         let me = self.game.vs_melee.exit.match_end.clone();
         if !canceled(me.outcome) {
             self.results_handicaps(&me);
-            self.results_draw_winner(&me);
+            self.results_draw_winner(&me, table);
         }
         update_ko_counts(&mut self.game.vs_melee.ko_counts, &me);
         if any_human(&me) {

@@ -288,12 +288,33 @@ impl Running<'_> {
     #[doc(alias = "onEnterSuddenDeath@801B1648")]
     #[doc(alias = "gmVsMelee_EnterSuddenDeath")]
     pub fn vs_mode_enter_sudden_death(&mut self) {
+        self.vs_melee_enter_sudden_death(VS_MODE_MELEE, None, None);
+    }
+
+    /// `gmVsMelee_EnterSuddenDeath` for the modes table's entry `table` with a mode's
+    /// callbacks: the match's start data (the match that tied's, left as it was) takes the
+    /// entry's rules (then `start_cb`) and players (then `player_cb` on each), their
+    /// sub-colors and rumble, and Sudden Death's setup from the match that tied.
+    pub fn vs_melee_enter_sudden_death(
+        &mut self,
+        table: usize,
+        start_cb: Option<super::vs_mode::StartCallback>,
+        player_cb: Option<super::vs_mode::PlayerCallback>,
+    ) {
         let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
         let tags = self.nametag_rumbles();
-        let vs = self.vs_table(VS_MODE_MELEE).start.clone();
+        let vs = self.vs_table(table).start.clone();
         let mut start = self.game.vs_melee.start.clone();
         start.rules.clone_from(&vs.rules);
+        if let Some(cb) = start_cb {
+            cb(&mut start);
+        }
         start.players.clone_from(&vs.players);
+        if let Some(cb) = player_cb {
+            for p in &mut start.players {
+                cb(p);
+            }
+        }
         super::vs_mode::setup_sub_colors(&mut start);
         super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
         super::setup_players::setup_sudden_death(&mut start, &self.game.vs_melee.exit.match_end);

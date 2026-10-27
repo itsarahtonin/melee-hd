@@ -188,6 +188,26 @@ impl Running<'_> {
         self.vs_melee_exit_vs(STATE_RESULTS, STATE_SUDDEN_DEATH);
     }
 
+    /// A mode's Sudden Death's entry: VS mode's (`gmVsMelee_EnterSuddenDeath`) on its table
+    /// entry with its callbacks (`gm_801B8CC4`, `gm_801B8ED0`, `gm_801B90E0`, `gm_801BA024`,
+    /// `gm_801BA224`, `gm_801BA61C`, `gm_801BA814` and Invisible's `onEnterSuddenDeath`, held
+    /// unaliased until a session reaches a mode's Sudden Death).
+    pub fn special_enter_sudden_death(&mut self, mode: u8) {
+        let m = special(mode);
+        let (start_cb, player_cb) = m.callbacks();
+        self.vs_melee_enter_sudden_death(m.table(), start_cb, player_cb);
+    }
+
+    /// A mode's results' exit: VS mode's (`gmVsMelee_ExitResults`) on its table entry, the
+    /// character select next; unlike VS mode's own, the match's statistics aren't added to
+    /// the save (`gm_801B8D34`, `gm_801B8F44`, `gm_801B9154`, `gm_801BA098`, `gm_801BA298`,
+    /// `gm_801BA690`, `gm_801BA888` and Invisible's `onExitResults`, held unaliased until a
+    /// session leaves a mode's results).
+    pub fn special_exit_results(&mut self, mode: u8, next_terminates: bool) {
+        let table = special(mode).table();
+        self.vs_mode_exit_results(next_terminates, super::results_exit::VS_STATE_CSS, table);
+    }
+
     /// A mode's results screen's entry: VS mode's (`gmVsMelee_EnterResults`).
     #[doc(alias = "gm_801B8D14")]
     #[doc(alias = "gm_801B8F24")]
@@ -251,9 +271,10 @@ impl Running<'_> {
     /// Stamina Mode's match's exit, `gm_801B9560`: the stage's records (`gm_80168710`, task
     /// 9's records after a match), then VS mode's records, back to the character select
     /// whatever the outcome.
+    #[doc(alias = "gm_801B9560")]
     pub fn stamina_exit_vs(&mut self) {
-        super::super::code::unported_call(
-            "gm_801B9560's gm_80168710 (the stage's records after a match: Stamina Mode's exit)",
-        );
+        let me = self.game.vs_melee.exit.match_end.clone();
+        self.results_draw_winner(&me, TABLE_STAMINA);
+        self.vs_melee_exit_vs(0, 0);
     }
 }
