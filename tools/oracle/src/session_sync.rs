@@ -59,6 +59,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     let mut shortcut = false;
     let mut shortcut_failed = false;
     let mut card_path: Option<PathBuf> = None;
+    let mut card_out: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut pos = Vec::new();
     let mut it = args.iter();
@@ -89,6 +90,8 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             // started: its start data and its heap after its first tick.
             "--shortcut" => shortcut = true,
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            // The memory card's image as the straight run leaves it, written at the end.
+            "--card-out" => card_out = Some(it.next().expect("--card-out FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -102,7 +105,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let [inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
+            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
         );
         return ExitCode::from(2);
     };
@@ -304,6 +307,15 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         let _ = ended;
     };
     report_matches(&match_ticks);
+    if let Some(p) = card_out {
+        match s.card.as_ref().and_then(|d| d.card.as_ref()) {
+            Some(c) => match std::fs::write(&p, c.image()) {
+                Ok(()) => println!("the memory card's image written to {}", p.display()),
+                Err(e) => eprintln!("{}: {e}", p.display()),
+            },
+            None => println!("no memory card to write"),
+        }
+    }
     if shortcut_failed {
         return ExitCode::FAILURE;
     }

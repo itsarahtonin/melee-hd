@@ -99,6 +99,16 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
                 melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
                 melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
+                melee_sim::game::gm::machine::GM_CAMERA_MODE => sym("gm_Mode_Camera_States"),
+                0x10 => sym("gm_Mode_SuperSuddenDeath_States"),
+                0x11 => sym("gm_Mode_InvisibleVs_States"),
+                0x12 => sym("gm_Mode_SlowMo_States"),
+                0x13 => sym("gm_Mode_LightningVs_States"),
+                0x1D => sym("gm_Mode_TinyVs_States"),
+                0x1E => sym("gm_Mode_GiantVs_States"),
+                0x1F => sym("gm_Mode_StaminaVs_States"),
+                0x2A => sym("gm_Mode_CameraVs_States"),
+                0x2C => sym("gm_Mode_SingleButtonVs_States"),
                 melee_sim::game::ty::GM_TOY_GALLERY => sym("gm_Mode_ToyGallery_States"),
                 melee_sim::game::ty::GM_TOY_LOTTERY => sym("gm_Mode_ToyLottery_States"),
                 melee_sim::game::ty::GM_TOY_COLLECTION => sym("gm_Mode_ToyCollection_States"),
@@ -190,6 +200,8 @@ impl<'a> Comparer<'a> {
         self.sound_test();
         self.attract();
         self.select_screens();
+        self.camera_mode();
+        self.stamina_mode();
     }
 
     /// The memory card scene's statics and its windows.
@@ -426,7 +438,37 @@ impl<'a> Comparer<'a> {
         self.compare_data("lbsnap state icon_data", sn.icon_data, theirs);
         if let Some(slot) = sn.slot {
             let theirs = [self.u32(slot) as i32, self.u32(slot + 0x408) as i32];
-            self.check("lbsnap slots", "card results", sn.slot_results, theirs);
+            let ours = [sn.slots[0].card_result, sn.slots[1].card_result];
+            self.check("lbsnap slots", "card results", ours, theirs);
+            // What a listing wrote (`lbSnap_8001D40C`): the rest holds the block's bytes.
+            for (i, l) in sn.slots.iter().enumerate() {
+                let at = slot + 0x408 * i as u32;
+                let field = |s: &mut Self, name: &str, ours: Option<i32>, off: u32| {
+                    if let Some(v) = ours {
+                        let theirs = s.u32(at + off) as i32;
+                        s.check("lbsnap slots", &format!("slot {i} {name}"), v, theirs);
+                    }
+                };
+                field(self, "num", l.num, 4);
+                field(self, "free blocks", l.free_blocks, 8);
+                field(self, "free files", l.free_files, 0xC);
+                for (k, e) in l.entries.iter().enumerate() {
+                    let e_at = at + 0x10 + 8 * k as u32;
+                    let name = format!("slot {i} entry {k}");
+                    if let Some(t) = e.time {
+                        let theirs = self.u32(e_at);
+                        self.check("lbsnap slots", &format!("{name} time"), t, theirs);
+                    }
+                    if let Some(f) = e.file_no {
+                        let theirs = self.u16(e_at + 4) as i16;
+                        self.check("lbsnap slots", &format!("{name} file"), f, theirs);
+                    }
+                    if let Some(b) = e.blocks {
+                        let theirs = self.u16(e_at + 6);
+                        self.check("lbsnap slots", &format!("{name} blocks"), b, theirs);
+                    }
+                }
+            }
         }
     }
 

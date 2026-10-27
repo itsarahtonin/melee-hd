@@ -15,13 +15,13 @@
 mod common;
 
 use common::{
-    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
-    DATA_INFO, DATA_PRIZE, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF,
-    FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY,
-    GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
-    ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE,
-    KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CORNERIA, Capture,
+    DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE, Expect, FLAT_ZONE, FOUR_FD,
+    FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD,
+    FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
     SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
     SPECIAL_INVISIBLE_YS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
@@ -272,6 +272,48 @@ results_frames!(RESULTS_TEAMS;
 );
 rendered_frames!(RESULTS_TEAMS;
     results_teams_3771 3771,
+);
+// Camera Mode (`special-sessions/camera-snaps`): the card check's slots and the blocks a
+// snapshot may take (900), the character select's camera door (1000), the snapshot's offer
+// over the match (2400), the match with the menu hidden (2640) and the camera's menu with
+// its info boxes (2880); with no card (`camera-nocard`), the offer's message (3500).
+frames!(CAMERA_SNAPS;
+    camera_snaps_900 900,
+    camera_snaps_1000 1000,
+);
+
+/// Camera Mode's match on Pokémon Stadium, captured with ssbm-rs's renderer running: the
+/// snapshot is of the frame drawn (its blocks, the offer's text, come from the compressed
+/// image), and the screens show feeds copied before the log. The images are identical; the
+/// screens' draws differ only in their texture's hash, a copy kept on the GPU, `same` events
+/// of each frame comparing the same.
+macro_rules! camera_frames {
+    ($game:expr; $($name:ident $frame:literal $same:literal),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                compare_in(
+                    &$game,
+                    $frame,
+                    Group::Standard,
+                    Expect::SameImages {
+                        same: [$same, $same],
+                        why: common::why::SCREEN_COPY,
+                    },
+                    Capture::Rendered,
+                );
+            }
+        )*
+    };
+}
+camera_frames!(CAMERA_SNAPS;
+    camera_snaps_2400 2400 1584,
+    camera_snaps_2640 2640 1486,
+    camera_snaps_2880 2880 1528,
+);
+camera_frames!(CAMERA_NOCARD;
+    camera_nocard_3500 3500 1862,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

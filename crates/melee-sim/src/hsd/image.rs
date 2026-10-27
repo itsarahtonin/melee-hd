@@ -943,6 +943,14 @@ impl Image {
         self.put(cell, &b);
     }
 
+    /// A free cell's header (`Cell`'s first 0xC bytes) as `OSAllocFromHeap` or
+    /// `OSFreeToHeap` writes it, in memory no block holds now.
+    pub fn free_header(&mut self, cell: u32, prev: u32, next: u32, size: u32) {
+        self.free_word(cell, prev);
+        self.free_word(cell + 4, next);
+        self.free_word(cell + 8, size);
+    }
+
     /// HSD's ID table made an entry at `addr`.
     pub fn id_insert(&mut self, addr: u32) {
         if self.on {

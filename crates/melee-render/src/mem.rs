@@ -33,6 +33,8 @@ pub enum Dynamic {
     /// One of the results screen's images, by its index
     /// (`melee_sim::game::gm::results_fighters::image_addr`).
     Results(u8),
+    /// Camera Mode's snapshot's copy of the frame (`cmsnap_data`'s image).
+    Snapshot,
     /// `HSD_EraseRect`'s depth image: 4 by 4 texels of 0xFF.
     EraseDepth,
     /// Data of the executable the GPU reads, by its address there (the particles' texture

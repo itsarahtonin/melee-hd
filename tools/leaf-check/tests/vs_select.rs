@@ -167,6 +167,7 @@ fn one_player_screens() {
             unk_0x0: u16::from_be_bytes([b[0], b[1]]),
             match_type: b[2],
             pending_scene_change: b[3],
+            ko_counts_null: false,
             vs: import(&b[8..], at + 8),
         };
         ctx.write_bytes(at, &b);
