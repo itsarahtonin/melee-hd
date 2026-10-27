@@ -980,8 +980,9 @@ fn a_snapshot_lands_on_the_card_as_the_consoles() {
 }
 
 /// Camera Mode's menu in a match: the info hidden and shown, snapshots offered, asked about
-/// and refused, one saved; the same with the card pulled out while a snapshot is offered;
-/// and Tiny Melee through its selects and match into the results.
+/// and refused, one saved; the same with the card pulled out while a snapshot is offered, and
+/// pulled out and put back on the card check (the memory card mode then probing the save,
+/// read whole); and Tiny Melee through its selects and match into the results.
 #[test]
 fn special_melee_sessions() {
     let Some(out) = scripted_session("special-sessions", "camera-snaps", &["--all", "--heap"])
@@ -997,6 +998,14 @@ fn special_melee_sessions() {
         return;
     };
     assert!(out.contains("3688 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session(
+        "special-sessions",
+        "camera-pull-check",
+        &["--card-pull", "1000,1080", "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3677 ticks compared, no difference"), "{out}");
     let Some(out) = scripted_session("special-sessions", "special-tiny", &["--all", "--heap"])
     else {
         return;

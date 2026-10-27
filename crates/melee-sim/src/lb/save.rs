@@ -241,7 +241,9 @@ pub enum CardTime {
     Load,
     /// A list that only mounts the card and looks at its directory (`lb_8001C2D8` looking
     /// for another game's file, `lb_8001C87C` probing for the save): the mount, then one
-    /// step (the check, the free blocks and the open run from what the mount read).
+    /// step (the check, the free blocks and the open run from what the mount read). An open
+    /// that finds its file reads it whole (`hsd_803B2550`'s load, a block a step), and the
+    /// list ends in the step after the last.
     Mount,
 }
 
@@ -318,9 +320,10 @@ pub const CREATE: CardChain = CardChain::Write {
 pub const UNMOUNT: u64 = 24;
 
 impl CardTime {
-    /// The steps after the mount's for a list that ended on `result`; `None` when no card
-    /// answered the mount's probe (the list fails there, before any wait).
-    fn steps(self, result: i32, card_in: bool) -> Option<Vec<Step>> {
+    /// The steps after the mount's for a list that ended on `result`, whose HSD layer read
+    /// `reads` blocks; `None` when no card answered the mount's probe (the list fails there,
+    /// before any wait).
+    fn steps(self, result: i32, card_in: bool, reads: usize) -> Option<Vec<Step>> {
         if !card_in {
             return None;
         }
@@ -330,6 +333,10 @@ impl CardTime {
                     1 | 14 | 23 => Step::Idle,
                     _ => Step::Block,
                 })
+                .collect(),
+            (CardTime::Mount, _) if reads > 0 => std::iter::once(Step::Idle)
+                .chain(std::iter::repeat_n(Step::Block, reads))
+                .chain(std::iter::once(Step::Idle))
                 .collect(),
             (CardTime::Load, result::NO_FILE | result::MALFORMED) | (CardTime::Mount, _) => {
                 vec![Step::Idle]
@@ -822,7 +829,8 @@ impl Running<'_> {
                 h => melee_save::tasks::from_hsd(h),
             };
         }
-        let steps = time.steps(r, card_in);
+        let reads = run.steps.iter().filter(|&&c| c == b'r').count();
+        let steps = time.steps(r, card_in, reads);
         // The mount's probe, with interrupts off; a list without a card that answers fails
         // there. Where ssbm-rs stands in for the CARD library it takes no time.
         if with_device(|dev| dev.waits) {
