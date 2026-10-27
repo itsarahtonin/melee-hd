@@ -182,6 +182,33 @@ impl Kinds for GameKinds {
             UserData::Effect(_) => 0x8005_BB40,
             UserData::Sound(_) => 0x8002_63B4,
             UserData::BgFlash => 0x8002_19E4,
+            // The menus' and two stages' blocks, freed with `HSD_Free` (their
+            // `GObj_InitUserData` calls).
+            UserData::CssCursor(_)
+            | UserData::CssToken(_)
+            | UserData::CssTag(_)
+            | UserData::SssName(_)
+            | UserData::SssPreview(_)
+            | UserData::SssHover(_)
+            | UserData::GalleryList(_)
+            | UserData::GalleryCursor(_)
+            | UserData::RulesList(_)
+            | UserData::RulePlusList(_)
+            | UserData::ItemSwitch(_)
+            | UserData::StageSwitch(_)
+            | UserData::NameList(_)
+            | UserData::NameNew(_)
+            | UserData::OptionMenu(_)
+            | UserData::Vibration(_)
+            | UserData::DataDel(_)
+            | UserData::StadiumScreen(_)
+            | UserData::IzumiReflection => 0x8037_F1B0,
+            // The main menu's lists, panel and player tags (`mn_8022EB04`), a glyph's
+            // variants (`fn_8023D0F8`).
+            UserData::MainMenuList(_) | UserData::MainMenuPanel(_) | UserData::NameTagSlot(_) => {
+                0x8022_EB04
+            }
+            UserData::GlyphVariants(_) => 0x8023_D0F8,
             _ => return None,
         })
     }

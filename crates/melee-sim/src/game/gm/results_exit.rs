@@ -182,7 +182,8 @@ fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4]) {
 impl Running<'_> {
     /// `gmMainLib_8015CE44(port, nametag)`: a port's automatic handicap, its own without a
     /// name tag, else its name tag's (`x1A2`).
-    fn auto_handicap(&mut self, port: usize, nametag: u8) -> &mut i8 {
+    #[doc(alias = "gmMainLib_8015CE44")]
+    pub(crate) fn auto_handicap(&mut self, port: usize, nametag: u8) -> &mut i8 {
         if nametag == NO_NAMETAG {
             let m = &mut self.game.game_data.modes.nametags;
             // The original's own test (`arg0 < PAD_MAX_CONTROLLERS`); a port is always one.

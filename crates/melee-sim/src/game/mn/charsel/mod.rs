@@ -977,10 +977,10 @@ impl Running<'_> {
     }
 
     /// `gm_801685D4`: the handicap the auto handicap gives a port's name tag, 0 for none.
-    // Ports `gm_801685D4`; aliased once a check reaches it.
+    #[doc(alias = "gm_801685D4")]
     pub(crate) fn nametag_handicap(&mut self, port: u8, tag: u8) -> i8 {
         if self.game.game_data.x1850.handicap == 1 {
-            super::super::code::unported_call("gmMainLib_8015CE44 (the auto handicap)")
+            return *self.auto_handicap(usize::from(port), tag);
         }
         let _ = (port, tag);
         0
