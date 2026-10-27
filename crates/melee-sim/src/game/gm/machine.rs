@@ -699,9 +699,9 @@ impl Running<'_> {
         match s.scene {
             GS_MEMCARD => self.memcard_on_exit(),
             // No exit of their own.
-            // No exit of their own (`gm_Scene_CameraVs_OnExit` does nothing).
+            // No exit of their own.
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
-            super::camera_mode::GS_CAMERA_VS => {}
+            super::camera_mode::GS_CAMERA_VS => self.camera_check_on_exit(),
             GS_VS | GS_SUDDEN_DEATH => self.vs_scene_on_exit(scene_mode, state),
             GS_CSS => self.charsel_on_exit(),
             GS_SSS => self.stagesel_on_exit(),

@@ -194,6 +194,7 @@ impl<'a> Comparer<'a> {
         self.attract();
         self.select_screens();
         self.camera_mode();
+        self.stamina_mode();
     }
 
     /// The memory card scene's statics and its windows.

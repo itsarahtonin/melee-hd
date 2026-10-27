@@ -1,7 +1,7 @@
 //! Camera Mode's statics, compared with memory: the card check's exit and texts
 //! (`gm_804D68C8`, `gmCamera_VsCameraTextLayout`), the match's menu
 //! (`gmCamera_VsCamUiState`), the frame's copy (`cmsnap_data`) and the snapshot being written
-//! (`lbSnap_80433380`'s header and name).
+//! (`lbSnap_80433380`'s header and name); and Stamina Mode's (`gm_804975F8`).
 
 use melee_sim::game::mirror::Cx;
 
@@ -9,6 +9,21 @@ use crate::compare::Comparer;
 use crate::import::sym;
 
 impl Comparer<'_> {
+    /// Stamina Mode's statics (`gm_804975F8`: the match's end's count, each port's
+    /// knockout and its slowdown's count), which its match start sets.
+    pub(crate) fn stamina_mode(&mut self) {
+        let st = self.game.gm.stamina;
+        let a = sym("gm_804975F8");
+        let elim: [bool; 4] = core::array::from_fn(|i| self.u32(a + 4 + 4 * i as u32) != 0);
+        let slomo: [u16; 4] = core::array::from_fn(|i| self.u16(a + 0x14 + 2 * i as u32));
+        self.check(
+            "gm_804975F8",
+            "done, eliminated, slow-mo",
+            (st.done_counter, st.eliminated, st.slomo_counter),
+            (self.u16(a), elim, slomo),
+        );
+    }
+
     /// Camera Mode's statics.
     pub(crate) fn camera_mode(&mut self) {
         let c = self.game.camera_mode;

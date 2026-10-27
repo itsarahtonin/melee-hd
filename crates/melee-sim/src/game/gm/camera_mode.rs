@@ -405,6 +405,10 @@ impl Running<'_> {
         self.camera_check_texts();
     }
 
+    /// `gm_Scene_CameraVs_OnExit`: nothing.
+    #[doc(alias = "gm_Scene_CameraVs_OnExit")]
+    pub fn camera_check_on_exit(&mut self) {}
+
     /// `gmCamera_801A2650`: two blocks a snapshot for now, the menu's strings (`SdVsCam`) as
     /// font 3, and its canvas.
     #[doc(alias = "gmCamera_801A2650")]
@@ -843,7 +847,6 @@ impl Running<'_> {
     /// State 6's entry, `gmCamera_801A2BF0`: the question's slot shown (frame 1 for slot A,
     /// 2 for B, its texture animations stopped there), the cursor on yes.
     #[doc(alias = "gmCamera_801A2BF0")]
-    #[doc(alias = "gmCamera_801A2BF0_get_translate_x")]
     fn cam_ask(&mut self) {
         let model = self.game.camera_mode.ui.model;
         let part = super::pause::tree_nodes(&self.game.objs.jobjs, model, &[9])[0];

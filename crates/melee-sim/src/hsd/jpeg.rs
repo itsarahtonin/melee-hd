@@ -348,8 +348,8 @@ impl Encoder {
             self.put_bits(value, length)?;
         }
         let mut run = 0;
-        for index in 1..64 {
-            let mut ac = self.coef[usize::from(ZIGZAG[index])];
+        for &z in &ZIGZAG[1..] {
+            let mut ac = self.coef[usize::from(z)];
             if ac != 0 {
                 let length = bit_length(run + 1);
                 let i = length as usize;
@@ -466,7 +466,8 @@ pub fn dct(w: &mut [i32; 64]) {
 }
 
 /// One pass of [`dct`] over the eight values from `at`, `step` apart, as the machine code
-/// computes it.
+/// computes it. Its constants are the original's doubles (0.707107, not 1/√2's).
+#[allow(clippy::approx_constant)]
 fn dct_pass(w: &mut [i32; 64], at: usize, step: usize) {
     let v = |i: usize| w[at + i * step];
     let s = |x: i32| fp::frsp(f64::from(x));

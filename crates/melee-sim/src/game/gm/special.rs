@@ -166,6 +166,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BA1C8")]
     #[doc(alias = "gm_801BA5C0")]
     #[doc(alias = "gm_801BA7B8")]
+    #[doc(alias = "onEnterVs")]
     pub fn special_enter_vs(&mut self, mode: u8) {
         let m = special(mode);
         let (start_cb, player_cb) = m.callbacks();
@@ -182,6 +183,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BA1FC")]
     #[doc(alias = "gm_801BA5F4")]
     #[doc(alias = "gm_801BA7EC")]
+    #[doc(alias = "onExitVs")]
     pub fn special_exit_vs(&mut self, _mode: u8) {
         self.vs_melee_exit_vs(STATE_RESULTS, STATE_SUDDEN_DEATH);
     }
@@ -194,6 +196,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BA278")]
     #[doc(alias = "gm_801BA670")]
     #[doc(alias = "gm_801BA868")]
+    #[doc(alias = "onEnterResults")]
     pub fn special_enter_results(&mut self, _mode: u8) {
         self.vs_mode_enter_results();
     }
