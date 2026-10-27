@@ -1303,6 +1303,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play; it changes the collection's framing for the L and Y layouts.
 - **Source:** `tydisplay.c`'s `tyDisplay_Scene_OnEnter` and the layouts' `memzero`; `crates/melee-sim/src/game/ty/collection.rs` (`coll_frame`).
 
+### The sound test writes a sound's three-digit number past its buffer
+
+- **Where:** `mnSoundTest_8024AA70`, `crates/melee-sim/src/game/mn/sound_test.rs` (`sound_test_sound_box`, `sound_test_number`).
+- **Defect:** entering a category's sounds shows the picked sound's number, written by `mn_8022EA08` into a 3-byte stack buffer (`char string[3]`, at `sp+0x24`): a number of three digits and its terminator take four bytes. Categories hold up to 113 sounds, and the number picked stays when B leaves the category, so leaving and entering again with a sound from 100 on writes the terminator one byte past the buffer. The song's number (`mnSoundTest_8024A958`, at most 79) and the number shown as left and right move (`fn_8024AED0`, a 20-byte buffer) fit.
+- **Effect:** none observable: the byte past the buffer (`sp+0x27`) is a stack slot the function never uses, and the text takes the whole number. Seen in `sound-sessions/jp` (the last category, sound 112, left and entered again).
+- **melee-hd:** the number is made as a string of its own; nothing models the stack byte.
+- **Fix:** a 4-byte buffer.
+- **Fix impact:** none.
+- **Source:** `mnsoundtest.c`'s `mnSoundTest_8024AA70`; `crates/melee-sim/src/game/mn/sound_test.rs`.
+
 ## Results and records
 
 ### A results pose's fighter takes an unset byte of its allocation info
@@ -1393,6 +1403,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | No logged hit above -1 knockback | `ftColl_8007A06C`, `game/ft/attack.rs`; `it_80270E30`, `game/it/coll.rs` | Leaves the index it reads uninitialized when every knockback is NaN or -1 and below | [engine notes](engine.md#uninitialized-values) (line 69); `crates/melee-sim/src/game/it/coll.rs:647` |
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
+| The sound test's category checks | `lbAudioAx_80023968` and `lbAudioAx_80023A44`, `lb/audio/sound_test.rs` | Guard a category and a sound with `arg0 < 0 && arg0 >= 30` and `arg1 < 0 && 0x83D60 <= arg1`, which no value passes, so an out-of-range category reads past `lbAudioLoadData`'s table; the sound test passes only categories 0 to 29 and sounds of their lists | `lbaudio_ax.c` (`MUST_MATCH`) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
 | The approach's roll with no target | `ftCo_800AB224` calling `ftCo_800BA2E8`, `game/ft/cpu_move.rs` | Passes the target on unchecked after its own null test, so with no target and `xF8_b6` set the roll reads a fighter at address 0; the VS decision sets the target on every frame it sets `xF9_b1`, which the approach needs, and nothing before the walk clears it | `crates/melee-sim/src/game/ft/cpu_move.rs:664` |
 | Unown's swarm from an edge past the four | `it_802CED54`, `game/it/kinds/unknown.rs` | Spawns the swarm from an uninitialized stack vector when the edge index (`+0x84`) is outside 0 to 3; `it_802CE8D0` always sets it | `crates/melee-sim/src/game/it/kinds/unknown.rs:305` |

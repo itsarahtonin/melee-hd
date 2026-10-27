@@ -87,6 +87,8 @@ pub enum UserData {
     Vibration(u32),
     /// The erasing screen's user data (`MnDataDelGObjUserData`), by its block's address.
     DataDel(u32),
+    /// The sound test's user data (`soundtest_user_data`), by its block's address.
+    SoundTest(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A trophy screen's block (0x58 bytes of `HSD_MemAlloc`, freed with `HSD_Free`), by its
@@ -370,6 +372,8 @@ pub struct Game {
     pub menu: super::mn::main::MainMenu,
     /// The Data menu's movies' statics and user data (`mngallery.c`).
     pub gallery: super::mn::gallery::Gallery,
+    /// The sound test's statics and user data (`mnsoundtest.c`).
+    pub sound_test: super::mn::sound_test::SoundTest,
     /// The VS menu's rules' and names' statics and user data (`mnmainrule.c` to
     /// `mnnamenew.c`).
     pub vs_menus: super::mn::rules::RulesMenus,
@@ -486,6 +490,10 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Toy(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.toys.lottery.user.remove(&addr);
+            }
+            UserData::SoundTest(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.sound_test.data.remove(&addr);
             }
             // `HSD_Free`.
             UserData::CssCursor(i) => {

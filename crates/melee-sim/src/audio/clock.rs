@@ -40,7 +40,10 @@ const VI_HANDLER: u64 = 32;
 /// all of it on ssbm-rs's console without a card at power-on (a replay's, Slippi's playback
 /// boot's), whose CARD library is stood in for.
 const ALARM_HANDLER: u64 = 24;
-/// The pad library's queue of polls (`HSD_PadInit`'s `qnum`, `gmMain_8015FD24`'s five).
+
+/// The pad library's queue (`HSD_PadInit`'s `qnum` in `main`): a round of the scene's loop
+/// ticks once per poll the queue holds (`lb_80019894`), however many more the alarm read while
+/// the loop was held (the queue merges the overflow, `HSD_PadRenewRawStatus`).
 const PAD_QUEUE: u32 = 5;
 /// From the audio interrupt to its DSP mail, and to the end of its handler.
 const AI_MAIL: u64 = 16;

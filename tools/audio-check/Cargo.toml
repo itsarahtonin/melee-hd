@@ -1,6 +1,6 @@
 [package]
 name = "melee-audio-check"
-description = "Compares melee-audio's mix of a replay with ssbm-rs's recording of what the audio interface played"
+description = "Compares melee-audio's mix of a replay or a recorded session with ssbm-rs's recording of what the audio interface played"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

@@ -1735,8 +1735,8 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022CE6C`, the data list's think: Records is a list; the snapshots, movies,
-    /// sound test and special screens aren't this menu's.
+    /// `mn_8022CE6C`, the data list's think: Records is a list; the movies and the sound
+    /// test are screens; the snapshots and special screens aren't this menu's.
     #[doc(alias = "mn_8022CE6C")]
     pub fn think_data(&mut self, _gobj: GObjId) {
         let b = self.list_inputs();
@@ -1749,7 +1749,12 @@ impl Running<'_> {
                     self.gallery_open();
                     gobj::free(self, _gobj);
                 }
-                2 => super::super::code::unported_call("mnSoundTest_8024BEE0 (the sound test)"),
+                2 => {
+                    self.sfx_stop_all();
+                    self.lb_audio_music_stop();
+                    self.sound_test_open();
+                    gobj::free(self, _gobj);
+                }
                 3 => {
                     self.lb_audio_call(1);
                     self.go_to_list(RECORDS, 0, ENTER_TO);
@@ -1835,7 +1840,11 @@ impl Running<'_> {
             super::gallery::THINK => self.gallery_think(gobj),
             super::gallery::LIST_PROC => self.gallery_list_proc(gobj),
             super::gallery::CURSOR_PROC => self.gallery_cursor_proc(gobj),
-            _ => return self.run_rules_proc(gobj, f) || self.options_proc(gobj, f),
+            _ => {
+                return self.run_rules_proc(gobj, f)
+                    || self.options_proc(gobj, f)
+                    || self.sound_test_proc(gobj, f);
+            }
         }
         true
     }
@@ -1968,7 +1977,7 @@ impl Running<'_> {
 impl Running<'_> {
     /// `gm_801603B0`: the announcer's and the effects' volumes from the save's sound
     /// balance (`gmMainLib_8015ED74`, `lbAudioAx_80024614`, `lbAudioAx_800245F4`).
-    fn menu_sound_balance(&mut self) {
+    pub(crate) fn menu_sound_balance(&mut self) {
         let b = self.game.game_data.thing.save_data.x1CB0.sound_balance;
         self.game.audio.lb_apply_balance(b);
     }

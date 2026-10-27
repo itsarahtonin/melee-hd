@@ -608,6 +608,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::Vibration(a)) => self.vibration_data(path, a, t),
             Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
             Some(UserData::Toy(a)) => self.toy_user_data(path, a, t),
+            Some(UserData::SoundTest(a)) => self.sound_test_data(path, a, t),
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

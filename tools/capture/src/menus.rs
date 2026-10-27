@@ -183,6 +183,7 @@ impl<'a> Comparer<'a> {
         self.rules_menus();
         self.options();
         self.toys();
+        self.sound_test();
         self.attract();
         self.select_screens();
     }

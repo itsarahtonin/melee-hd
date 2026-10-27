@@ -293,9 +293,9 @@ pub const FILES: &[&str] = &[
     "TyStandD.dat",
 ];
 
-/// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's, which
-/// [`Session::read_song`] reads as the stage starts it: the opening movie's, the menus' two,
-/// How to Play's, the Special Movie's and the lottery's.
+/// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
+/// test's, which [`Session::read_song`] reads as the stage or the test starts them: the
+/// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's.
 pub const SONGS: &[usize] = &[0x3E, 0x34, 0x36, 0x24, 0x52, 0x35];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
@@ -557,6 +557,8 @@ impl Session {
         });
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
+        // A song a scene started mid-scene (the sound test's): its reads come after the tick.
+        self.read_song(console);
         let out = Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
@@ -650,8 +652,9 @@ impl Session {
         }
     }
 
-    /// Reads the song the scene's entry started (`cur_hps_stem`, a match's stage's) unless the
-    /// music stream has it already: its first reads come in the scene's first ticks.
+    /// Reads the song the scene's entry or its last tick started (`cur_hps_stem`: a match's
+    /// stage's, the sound test's) unless the music stream has it already: its first reads come
+    /// in the ticks after, behind the disc's latency.
     fn read_song(&mut self, console: &mut dyn Console) {
         let stem = self.game.audio.lb.stem;
         let len = stem.iter().position(|&c| c == 0).unwrap_or(stem.len());

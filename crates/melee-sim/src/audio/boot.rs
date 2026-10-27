@@ -279,11 +279,9 @@ impl Audio {
     /// read whole into a block of the audio heap, the game spinning on `lb_800195D0` until
     /// the read's callback; its tables then point into it.
     #[doc(alias = "AXDriver_8038DA70")]
+    #[doc(alias = "fn_8038DA5C")]
     pub fn driver_load_bank(&mut self, data: &Archives, bank: ArchiveId, len: u32) {
-        let base = self
-            .heap
-            .alloc(len.next_multiple_of(32))
-            .expect("audio heap overflow.");
+        let base = self.audio_malloc(len.next_multiple_of(32));
         self.driver.bank_addr = base;
         // `DVDReadAsyncPrio`: one read straight into the block, done after the disc's latency
         // (and its transfer); its callback (`fn_8038DA5C`) ends the spin.
@@ -310,7 +308,7 @@ impl Audio {
     #[doc(alias = "AXDriver_8038DCFC")]
     pub fn driver_free_bank(&mut self) {
         if self.driver.bank.is_some() {
-            self.heap.free(self.driver.bank_addr);
+            self.audio_free(self.driver.bank_addr);
         }
         self.driver.bank = None;
         self.driver.bank_addr = 0;
