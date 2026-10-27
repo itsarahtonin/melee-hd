@@ -609,6 +609,11 @@ impl<'a> Comparer<'a> {
             Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
             Some(UserData::Info(a)) => self.info_data(path, a, t),
             Some(UserData::Count(a)) => self.count_data(path, a, t),
+            Some(UserData::Diagram(a)) => self.diagram_data(path, a, t),
+            Some(UserData::DiagramPopup(a)) => self.diagram_popup_data(path, a, t),
+            Some(UserData::Diagram2(a)) => self.diagram2_data(path, a, t),
+            Some(UserData::Diagram3(a)) => self.diagram3_data(path, a, t),
+
             None => {
                 // Kindless user data ours lacks.
                 let ud = self.u32(t + 0x2C);

@@ -904,3 +904,14 @@ fn the_other_records_scrolled() {
     };
     assert!(out.contains("2318 ticks compared, no difference"), "{out}");
 }
+
+/// The VS records: the grid in characters and names, scrolled every way, a cell's detail on
+/// and off the diagonal, the statistics and the rankings in both, each page turned both ways:
+/// clean to the trace's end.
+#[test]
+fn the_vs_records_toured() {
+    let Some(out) = data_session("diagram", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("5569 ticks compared, no difference"), "{out}");
+}

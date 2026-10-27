@@ -12,6 +12,9 @@ pub mod data;
 pub mod datadel;
 pub mod deflicker;
 pub mod diagram;
+pub mod diagram2;
+pub mod diagram3;
+
 pub mod gallery;
 pub mod info;
 pub mod info_bonus;

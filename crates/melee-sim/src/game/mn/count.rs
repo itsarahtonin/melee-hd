@@ -124,6 +124,12 @@ const NAME_SCALE_JP: [u32; 33] = [
     0,
 ];
 
+/// A character's name's width scale in the English or the Japanese game.
+pub(crate) fn name_scale(us: bool, ckind: u8) -> f32 {
+    let t = if us { &NAME_SCALE_US } else { &NAME_SCALE_JP };
+    f32::from_bits(t[usize::from(ckind)])
+}
+
 /// The rows (`mnCount_row`).
 mod row {
     pub const POWER_COUNT: u8 = 0;
@@ -531,13 +537,9 @@ impl Running<'_> {
         if us {
             self.game.sis.text_mut(t).default_kerning = 1;
         }
-        let (names, scales) = if us {
-            (&NAMES_US, &NAME_SCALE_US)
-        } else {
-            (&NAMES_JP, &NAME_SCALE_JP)
-        };
+        let names = if us { &NAMES_US } else { &NAMES_JP };
         let name = names[usize::from(ckind)].expect("a character's name");
-        let scale = f32::from_bits(scales[usize::from(ckind)]);
+        let scale = name_scale(us, ckind);
         self.game.sis.add_string(t, 0.0, 0.0, Some(name));
         let x = self.game.sis.text_mut(t);
         x.font_size[0] = mem(fp::fmuls(reg(x.font_size[0]), reg(scale)));

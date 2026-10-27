@@ -1776,7 +1776,7 @@ impl Running<'_> {
             self.game.menu.cooldown = 5;
             self.game.menu.flow.entering_menu = 1;
             let open: fn(&mut Self) = match self.game.menu.flow.hovered_selection {
-                0 => |_| super::super::code::unported_call("mnDiagram_Init (the VS records)"),
+                0 => |r| r.diagram_open(true, 1),
                 1 => Self::bonus_open,
                 2 => Self::count_open,
                 _ => return,

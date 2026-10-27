@@ -44,7 +44,12 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         | UserData::Vibration(a)
         | UserData::DataDel(a)
         | UserData::Info(a)
-        | UserData::Count(a) => known(a),
+        | UserData::Count(a)
+        | UserData::Diagram(a)
+        | UserData::DiagramPopup(a)
+        | UserData::Diagram2(a)
+        | UserData::Diagram3(a) => known(a),
+
         _ => None,
     }
 }

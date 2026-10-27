@@ -91,6 +91,14 @@ pub enum UserData {
     Info(u32),
     /// The other records' user data (`MnCountData`), by its block's address.
     Count(u32),
+    /// The VS records' user data (`Diagram`), by its block's address.
+    Diagram(u32),
+    /// A VS records detail's user data (`mnDiagram_PopupData`), by its block's address.
+    DiagramPopup(u32),
+    /// The VS records' statistics' user data (`Diagram2`), by its block's address.
+    Diagram2(u32),
+    /// The VS records' rankings' user data (`Diagram3`), by its block's address.
+    Diagram3(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
@@ -482,6 +490,14 @@ impl Host<GameKinds> for Running<'_> {
                 let d = c.data.remove(&addr);
                 c.left = Some((addr, d.and_then(|d| d.title)));
             }
+            UserData::Diagram(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.data_menus.diagram.data.remove(&addr);
+            }
+            UserData::DiagramPopup(addr) => self.diagram_popup_cleanup(addr),
+            UserData::Diagram2(addr) => self.d2_free(addr),
+            UserData::Diagram3(addr) => self.d3_free(addr),
+
             UserData::Vibration(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 let v = &mut self.game.options.vibration;
