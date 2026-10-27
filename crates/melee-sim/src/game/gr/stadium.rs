@@ -1956,7 +1956,7 @@ pub fn start_load(r: &mut Running, idx: usize) {
         return;
     }
     r.disc_load(name, buffer);
-    let slot = register_archive(r.game, r.data, archive);
+    let slot = register_archive(r.game, r.data, archive, buffer, size);
     r.game.grounds[g.0].u.stadium().archive = Some(slot);
 }
 
@@ -1977,9 +1977,21 @@ pub fn take_load_end(game: &mut Game) {
 
 /// Registers a loaded transformation file in the stage's archive table's first free entry as
 /// loaded from a buffer (`unk8` 1), `grDatFiles_801C6478` without marking its materials: its
-/// `HSD_Archive` comes from the scene's heap (`lbHeap_80015BD0`).
-fn register_archive(game: &mut Game, data: &Archives, archive: ArchiveId) -> u8 {
+/// `HSD_Archive` comes from the scene's heap (`lbHeap_80015BD0`), parsed over the file of
+/// `size` bytes in `buffer`.
+fn register_archive(
+    game: &mut Game,
+    data: &Archives,
+    archive: ArchiveId,
+    buffer: u32,
+    size: u32,
+) -> u8 {
     let addr = crate::hsd::heap::mem_alloc(0x44);
+    if addr != 0 {
+        crate::hsd::export::with_image(|img| {
+            crate::hsd::export::archive(img, data, addr, buffer, size, archive)
+        });
+    }
     let slot = game
         .gr
         .archives
@@ -2021,7 +2033,9 @@ fn load_done(r: &mut Running) -> bool {
             k => panic!("a transformation file for map {k}"),
         };
         let archive = r.game.gr.stadium.files[idx].expect("the transformation's file");
-        let slot = register_archive(r.game, r.data, archive);
+        let st = r.game.grounds[g.0].u.stadium();
+        let (buffer, size) = (st.buffer, st.size);
+        let slot = register_archive(r.game, r.data, archive, buffer, size);
         let map_head = r.game.gr.archives[slot as usize]
             .as_ref()
             .and_then(|a| a.map_head);

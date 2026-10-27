@@ -66,6 +66,121 @@ pub struct LObj {
     /// The GX light slot (`GXLightID`) the light was last given, and its specular one.
     pub id: u32,
     pub spec_id: u32,
+    /// The GX light objects the display pass made (`lightobj`, `spec_lightobj`), which only
+    /// GX reads; kept for the heap's image (docs/engine.md, a session's heap leftovers).
+    pub light: GxLight,
+    pub spec: GxLight,
+}
+
+/// A `GXLightObj` as GX's `GXInitLight*` leave it (`__GXLightObjInt_struct`): its color, its
+/// angular (`a`) and distance (`k`) attenuation, position and direction. Its three reserved
+/// words nothing writes, so they keep `hsdNew`'s zeros.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GxLight {
+    pub color: [u8; 4],
+    pub a: [f32; 3],
+    pub k: [f32; 3],
+    pub lpos: [f32; 3],
+    pub ldir: [f32; 3],
+    /// The position came from a stack vector the setup never wrote (a light without a
+    /// position WObj: `HSD_LObjGetPosition` writes nothing), unknown.
+    pub stale_pos: bool,
+}
+
+/// `GXSpotFn`s and `GXDistAttnFn`s.
+pub const GX_SP_FLAT: u32 = 1;
+pub const GX_SP_COS: u32 = 2;
+pub const GX_SP_COS2: u32 = 3;
+pub const GX_SP_SHARP: u32 = 4;
+pub const GX_SP_RING1: u32 = 5;
+pub const GX_SP_RING2: u32 = 6;
+pub const GX_DA_GENTLE: u32 = 1;
+pub const GX_DA_MEDIUM: u32 = 2;
+pub const GX_DA_STEEP: u32 = 3;
+
+/// The angular attenuation `GXInitLightSpot` gives a spot with `cutoff` (degrees) and
+/// `spot_func`, with the game's `cosf`.
+pub fn spot_attn(cutoff: f32, spot_func: u32) -> [f32; 3] {
+    let mut spot_func = spot_func;
+    if cutoff <= 0.0 || cutoff > 90.0 {
+        spot_func = 0;
+    }
+    let r = crate::fpu::mem(fp::fdivs(
+        fp::fmuls(reg(std::f32::consts::PI), reg(cutoff)),
+        180.0,
+    ));
+    let cr = reg(crate::math::cos(r));
+    let one_minus = || fp::fsubs(1.0, cr);
+    let (a0, a1, a2) = match spot_func {
+        GX_SP_FLAT => (fp::fmuls(-1000.0, cr), 1000.0, 0.0),
+        GX_SP_COS => (
+            fp::fdivs(fp::fneg(cr), one_minus()),
+            fp::fdivs(1.0, one_minus()),
+            0.0,
+        ),
+        GX_SP_COS2 => (
+            0.0,
+            fp::fdivs(fp::fneg(cr), one_minus()),
+            fp::fdivs(1.0, one_minus()),
+        ),
+        GX_SP_SHARP => {
+            let d = fp::fmuls(one_minus(), one_minus());
+            (
+                fp::fdivs(fp::fmuls(cr, fp::fsubs(cr, 2.0)), d),
+                fp::fdivs(2.0, d),
+                fp::fdivs(-1.0, d),
+            )
+        }
+        GX_SP_RING1 => {
+            let d = fp::fmuls(one_minus(), one_minus());
+            (
+                fp::fdivs(fp::fmuls(-4.0, cr), d),
+                fp::fdivs(fp::fmuls(4.0, fp::fadds(1.0, cr)), d),
+                fp::fdivs(-4.0, d),
+            )
+        }
+        GX_SP_RING2 => {
+            let d = fp::fmuls(one_minus(), one_minus());
+            (
+                fp::fsubs(1.0, fp::fdivs(fp::fmuls(fp::fmuls(2.0, cr), cr), d)),
+                fp::fdivs(fp::fmuls(4.0, cr), d),
+                fp::fdivs(-2.0, d),
+            )
+        }
+        _ => (1.0, 0.0, 0.0),
+    };
+    [a0, a1, a2].map(crate::fpu::mem)
+}
+
+/// The distance attenuation `GXInitLightDistAttn` gives a light of `ref_br` brightness at
+/// `ref_dist` with `dist_func`.
+pub fn dist_attn(ref_dist: f32, ref_br: f32, dist_func: u32) -> [f32; 3] {
+    let mut dist_func = dist_func;
+    if ref_dist < 0.0 {
+        dist_func = 0;
+    }
+    if ref_br <= 0.0 || ref_br >= 1.0 {
+        dist_func = 0;
+    }
+    let (d, b) = (reg(ref_dist), reg(ref_br));
+    let (k0, k1, k2) = match dist_func {
+        GX_DA_GENTLE => (1.0, fp::fdivs(fp::fsubs(1.0, b), fp::fmuls(b, d)), 0.0),
+        GX_DA_MEDIUM => (
+            1.0,
+            fp::fdivs(fp::fmuls(0.5, fp::fsubs(1.0, b)), fp::fmuls(b, d)),
+            fp::fdivs(
+                fp::fmuls(0.5, fp::fsubs(1.0, b)),
+                fp::fmuls(d, fp::fmuls(b, d)),
+            ),
+        ),
+        GX_DA_STEEP => (
+            1.0,
+            0.0,
+            fp::fdivs(fp::fsubs(1.0, b), fp::fmuls(d, fp::fmuls(b, d))),
+        ),
+        _ => (1.0, 0.0, 0.0),
+    };
+    [k0, k1, k2].map(crate::fpu::mem)
 }
 
 /// Word indexes into [`LObj::params`].
@@ -381,6 +496,7 @@ pub fn delete(objs: &mut Objects, l: LObjId) {
     let (p, i) = (objs.lobjs[l].position, objs.lobjs[l].interest);
     wobj::unref(objs, p);
     wobj::unref(objs, i);
+    super::export::with_image(|img| super::export::lobj(objs, img, l));
     super::heap::class_free(super::heap::Class::LObj, objs.lobjs.pool.addr(l.0));
     objs.lobjs.pool.free(l.0);
 }

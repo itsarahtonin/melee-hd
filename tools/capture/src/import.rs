@@ -1512,6 +1512,24 @@ impl Importer<'_> {
         id
     }
 
+    /// A `GXLightObj` past its reserved words.
+    fn gx_light(&self, a: u32) -> melee_sim::hsd::lobj::GxLight {
+        let f3 = |at: u32| [self.f32(at), self.f32(at + 4), self.f32(at + 8)];
+        melee_sim::hsd::lobj::GxLight {
+            color: [
+                self.u8(a + 0xC),
+                self.u8(a + 0xD),
+                self.u8(a + 0xE),
+                self.u8(a + 0xF),
+            ],
+            a: f3(a + 0x10),
+            k: f3(a + 0x1C),
+            lpos: f3(a + 0x28),
+            ldir: f3(a + 0x34),
+            stale_pos: false,
+        }
+    }
+
     pub fn lobj(&mut self, a: u32) -> LObjId {
         if let Some(&x) = self.maps.lobjs.get(&a) {
             return x;
@@ -1544,6 +1562,8 @@ impl Importer<'_> {
             aobj,
             id: self.u32(a + 0x4C),
             spec_id: self.u32(a + 0x90),
+            light: self.gx_light(a + 0x50),
+            spec: self.gx_light(a + 0x94),
         };
         id
     }

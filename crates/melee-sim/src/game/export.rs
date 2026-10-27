@@ -188,6 +188,18 @@ pub fn scene_game_objects(
             queued(game, img, super::ef::QueuedId(slot));
         }
     }
+    // The DObj lists from `fighter_x2040_alloc_data`: every live list in the scene but the
+    // fighters' own (`fighter_dobj_list_alloc_data`, laid out with their parts).
+    let lists = std::any::type_name::<Vec<Option<crate::hsd::dobj::DObjId>>>();
+    for (slot, _) in game.fighter_dobj_lists.iter() {
+        let own = game
+            .fighters
+            .iter()
+            .any(|(_, f)| f.dobj_list.data.is_some_and(|d| d.0 == slot));
+        if !own && img.in_scene(lists, slot) {
+            x2040_list(game, data, img, super::handles::DObjListId(slot));
+        }
+    }
     let bufs = std::any::type_name::<super::ft::anim_buf::AnimBuf>();
     for (slot, _) in game.fighter_anim_bufs.iter() {
         if img.in_scene(bufs, slot) {
@@ -442,6 +454,7 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::Fighter
             | Kind::FighterParts
             | Kind::FighterDObjList
+            | Kind::FighterX2040
             | Kind::FighterX59C
             | Kind::Item
             | Kind::EffectQueued
@@ -459,7 +472,6 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::DebugMenu => "a pool melee-sim's model allocates nothing from",
             Kind::Rvalue
             | Kind::FighterAttrs
-            | Kind::FighterX2040
             | Kind::Player
             | Kind::ItemDynamicBones
             | Kind::ItemLink
@@ -523,7 +535,6 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             "a GObj's user data remover",
             "the word after a GObj's user data",
         ),
-        ("HSD_Archive", "an archive's header block"),
         ("HSD_MemoryEntry", "the memory pieces' size classes"),
         (
             "a disc read's bytes past a file",
@@ -845,6 +856,30 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
     for l in lays {
         l.put(img);
     }
+}
+
+/// A DObj list from `fighter_x2040_alloc_data` (0x80 bytes, 32 `HSD_DObj*`): a fighter's
+/// second model's (`ftCo_800C884C`, `x203C`) or a Kirby or Jigglypuff hat's, as its block goes
+/// back (`HSD_ObjFree`, or with its scene's heap). Its owner writes only the entries it lists
+/// (`ft_800C85B8`, the hats' `ftParts_80075650`), each a DObj, never null, so an entry melee-sim
+/// holds as none is one the owner never wrote: what the block held.
+pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::handles::DObjListId) {
+    let at = game.fighter_dobj_lists.addr(list.0);
+    if at == 0 {
+        return;
+    }
+    let mut l = Lay::leftover(img, data, at, crate::hsd::heap::Kind::FighterX2040.init().0);
+    let cx = Addrs { game, img };
+    for (i, o) in game.fighter_dobj_lists[list.0]
+        .iter()
+        .enumerate()
+        .take(0x20)
+    {
+        if let Some(o) = o {
+            l.put_word(at + 4 * i as u32, cx.handle("DObjId", Some(o.0)));
+        }
+    }
+    l.put(img);
 }
 
 /// `mpLib_803BF760`'s joints (`MapJoint`s), where a stage without collision data points.
