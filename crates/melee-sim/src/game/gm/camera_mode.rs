@@ -388,10 +388,14 @@ impl Running<'_> {
 
     /// The match's exit, `gm_801B2AF8`: the match's records (`gm_80168638`, `gm_80168710`,
     /// `gm_8016247C`, the KO counts), then back to the character select.
+    #[doc(alias = "gm_801B2AF8")]
     pub fn camera_exit_vs(&mut self) {
-        super::super::code::unported_call(
-            "gm_801B2AF8's records after a match (gm_80168638, gm_80168710: task 9's)",
-        );
+        let me = self.game.vs_melee.exit.match_end.clone();
+        self.results_handicaps(&me);
+        self.results_draw_winner(&me, TABLE);
+        self.results_add_coins(super::results_exit::human_kos(&me));
+        super::results_exit::update_ko_counts(&mut self.game.vs_melee.ko_counts, &me);
+        self.set_next_game_mode_state_id(1);
     }
 
     // --- The card check's scene (`gm_1A33.c`).

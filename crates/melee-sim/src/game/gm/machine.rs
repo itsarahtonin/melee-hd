@@ -852,15 +852,21 @@ impl Running<'_> {
                     self.special_enter_results(m);
                     true
                 }
-                Hook::VsEnterSuddenDeath => unported_call(&format!(
-                    "game mode {m:#x}'s Sudden Death's entry (gmVsMelee_EnterSuddenDeath: task 9)"
-                )),
-                Hook::VsExitSuddenDeath => unported_call(&format!(
-                    "game mode {m:#x}'s Sudden Death's exit (gmVsMelee_ExitSuddenDeath: task 9)"
-                )),
-                Hook::VsExitResults => unported_call(&format!(
-                    "game mode {m:#x}'s results' exit (gmVsMelee_ExitResults: task 9)"
-                )),
+                Hook::VsEnterSuddenDeath => {
+                    self.special_enter_sudden_death(m);
+                    true
+                }
+                Hook::VsExitSuddenDeath => {
+                    // VS mode's (`gmVsMelee_ExitSuddenDeath`).
+                    self.vs_mode_exit_sudden_death();
+                    true
+                }
+                Hook::VsExitResults => {
+                    let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
+                    let terminates = next.is_none_or(|d| d.id == 0xFF);
+                    self.special_exit_results(m, terminates);
+                    true
+                }
                 _ => false,
             };
             if done {
@@ -903,7 +909,7 @@ impl Running<'_> {
                 // `state[1].id != GM_GAMEMODESTATE_TERMINATE`: the state after the results'.
                 let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
                 let terminates = next.is_none_or(|d| d.id == 0xFF);
-                self.vs_mode_exit_results(terminates, super::results_exit::VS_STATE_CSS);
+                self.vs_mode_exit_results(terminates, super::results_exit::VS_STATE_CSS, 0);
                 // `onExitResults`'s own: the match's statistics, unless it was cancelled.
                 let me = self.game.vs_melee.results_enter.match_end.clone();
                 if !super::results_scene::canceled(me.outcome) {
