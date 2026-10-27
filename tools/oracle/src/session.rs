@@ -587,6 +587,15 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
     }
     pool!("GObj", g.world.gobjs, 0x38);
     pool!("Proc", g.world.procs, 0x18);
+    if g.bgflash.user_addr != 0 {
+        v.push((
+            "BgFlash",
+            g.bgflash.user_addr,
+            0x84,
+            0,
+            g.bgflash.user.is_none(),
+        ));
+    }
     let o = &g.objs;
     pool!("JObj", o.jobjs.pool, 0x88);
     pool!("DObj", o.dobjs.pool, 0x18);
