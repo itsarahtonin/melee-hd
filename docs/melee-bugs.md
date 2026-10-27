@@ -1365,6 +1365,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** the voices' end address in the audio state after a fanfare.
 - **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; `rules-match`'s results screen (tick 8208).
 
+### A winner's portrait shows its image's uninitialized bytes until the pose ends
+
+- **Where:** `fn_80179990` (a player's camera's render callback) and the panel's columns (`fn_80177748`), `crates/melee-sim/src/game/gm/results_fighters.rs` (`results_image_alloc`, `results_player_render`).
+- **Defect:** each player's second image is a block from the scene's heap (`lb_800121FC`), which nothing clears; a loser's camera copies its fighter into it every frame, but a winner's only once its pose's frames have run out, while its column shows the image from the panel's arrival on.
+- **Effect:** visible: for the seconds a winner poses, its portrait in the panel shows whatever the block held (the match's freed fighters, lights and files) as RGB5A3 texels, a field of colored noise; then the copy replaces it. It changes with the match before.
+- **melee-hd:** modeled: the renderer starts each results image from the bytes the heap's image says its block held (`ResultsFighters::leftovers`); where the image doesn't know a byte it shows zero and notes it.
+- **Fix:** clear the images when the scene takes them, or take the winner's copy before its column shows.
+- **Fix impact:** the portraits during the pose; nothing the simulation reads.
+- **Source:** `gm_1798.c`'s `fn_80179990`; ssbm-rs's renderer's frames of `results-sessions/stock` (frames 2451 to 3401).
+
+### The results' 32-bit records wrap where the code means to hold them
+
+- **Where:** `fn_80161C90` (a player's statistics added), `gm_8016247C` (the coins the KOs earn), `crates/melee-sim/src/game/gm/records.rs` (`add_stats`) and `results_exit.rs` (`results_add_coins`).
+- **Defect:** the 32-bit sums (attacks, damage dealt, taken and recovered, play time, the distances, the coins collected, swiped and lost, the save's coin totals) are added as unsigned words and then tested against `0xFFFFFFFF` to hold them there; the test can never hold, so each sum wraps past the largest word instead. The 16-bit counts are held at 0xFFFF as meant.
+- **Effect:** none in play: no save reaches four billion of any of them. A save edited to the largest value (`results-sessions/ko-max`) wraps to small numbers after a match.
+- **melee-hd:** modeled: the sums wrap.
+- **Fix:** add in 64 bits, or test before adding.
+- **Fix impact:** the records' values past the largest word.
+- **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

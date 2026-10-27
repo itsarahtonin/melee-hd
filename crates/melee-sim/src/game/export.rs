@@ -438,7 +438,11 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::FighterX59C
             | Kind::Item
             | Kind::EffectQueued
-            | Kind::BgFlash => continue,
+            | Kind::BgFlash
+            | Kind::Particle
+            | Kind::Generator
+            | Kind::AppSrt
+            | Kind::Shadow => continue,
             Kind::SList => "a list node: only the lights' lists are laid out",
             Kind::DList
             | Kind::TevReg
@@ -453,12 +457,8 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::ItemDynamicBones
             | Kind::ItemLink
             | Kind::Effect
-            | Kind::Particle
-            | Kind::Generator
-            | Kind::AppSrt
             | Kind::SObj
             | Kind::AudioUserData
-            | Kind::Shadow
             | Kind::Vec
             | Kind::Mtx => "an object pool's objects (`HSD_ObjAlloc`)",
         };
