@@ -81,6 +81,38 @@ pub fn spawn(
     Some(bat)
 }
 
+/// The bat in a posing Ness's hand at `part`, `it_802AD590`: made at his place and facing,
+/// its script's variables 1, held.
+#[doc(alias = "it_802AD590")]
+pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
+    let fp = r.game.fighter_mut(ness);
+    let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
+    let mut spawn = SpawnItem {
+        kind: super::NESS_BAT,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    spawn.prev_pos.z = 0.0;
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = facing_dir;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = Some(ness);
+    spawn.x4_parent_gobj2 = spawn.x0_parent_gobj;
+    spawn.x44_flag[0] &= !0x80;
+    spawn.x40 = 0;
+    let bat = spawn_air(r, &mut spawn)?;
+    let ip = item_mut(r.game, bat);
+    ip.xDB8_itcmd_var3 = 1;
+    ip.xDB4_itcmd_var2 = 1;
+    ip.xDB0_itcmd_var1 = 1;
+    ip.xDAC_itcmd_var0 = 1;
+    ip.xDCC_flag.b3 = false;
+    ip.xDD4_itemVar.ness_bat().x0.set(Some(ness));
+    pick_up(r, bat, ness, part);
+    Some(bat)
+}
+
 /// The bat gone, `it_802AD6B8`.
 #[doc(alias = "it_802AD6B8")]
 pub fn remove(r: &mut Running, gobj: GObjId) {

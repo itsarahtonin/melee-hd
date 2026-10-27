@@ -346,6 +346,10 @@ enum Mutation {
     PowerOn,
     /// The heap's image dropped at power-on: every leftover a new block takes reads zero.
     NoImage,
+    /// The fill a new object takes where the GPU's pixels are (`Image::render_fill`) another
+    /// byte: a session that compares as with the zero fill shows the pixels reach nothing
+    /// compared.
+    RenderFill(u8),
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -475,6 +479,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
+    let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
@@ -486,6 +491,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            // The card as the original's run left it: the session's card at the trace's end
+            // must equal it, byte for byte (the saves the session wrote).
+            "--card-after" => card_after = Some(it.next().expect("--card-after FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -549,10 +557,16 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("seed") => Mutation::Seed,
                     Some("power-on") => Mutation::PowerOn,
                     Some("no-image") => Mutation::NoImage,
+                    Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
+                        u8::from_str_radix(&m[14..], 16)
+                            .expect("--mutate render-target=XX, in hex"),
+                    ),
                     Some(m) if m.starts_with("read=") => {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
-                    _ => panic!("--mutate scene-ticks|seed|power-on|read=N"),
+                    _ => panic!(
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N"
+                    ),
                 })
             }
             _ => pos.push(a),
@@ -673,6 +687,9 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
+        card_after: card_after.map(|p| {
+            std::fs::read(&p).unwrap_or_else(|e| panic!("the card after {}: {e}", p.display()))
+        }),
     };
     run.play(setup)
 }
@@ -733,6 +750,8 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
+    /// The card the original's run left, to compare with the session's at the trace's end.
+    card_after: Option<Vec<u8>>,
 }
 
 impl Run<'_> {
@@ -768,6 +787,9 @@ impl Run<'_> {
                 let mut s = Session::new(setup);
                 if self.mutation == Some(Mutation::NoImage) {
                     s.game.objs.heap.image = Default::default();
+                }
+                if let Some(Mutation::RenderFill(b)) = self.mutation {
+                    s.game.objs.heap.image.render_fill = b;
                 }
                 if self.heap_log.is_some() {
                     melee_sim::hsd::heap::start_log();
@@ -1021,6 +1043,38 @@ impl Run<'_> {
         if self.leftovers_report {
             for l in melee_capture::leftovers::report() {
                 println!("leftover {l}");
+            }
+        }
+        if stop.is_none()
+            && let Some(want) = &self.card_after
+        {
+            let have = s
+                .card
+                .as_ref()
+                .and_then(|d| d.card.as_ref())
+                .map(|c| c.image());
+            match have {
+                Some(h) if h == &want[..] => {
+                    println!(
+                        "the card after the session: the original's, {} bytes",
+                        h.len()
+                    )
+                }
+                Some(h) => {
+                    let diffs: Vec<usize> = (0..h.len().min(want.len()))
+                        .filter(|&i| h[i] != want[i])
+                        .collect();
+                    println!(
+                        "{compared} ticks compared; the card after the session differs in {} bytes, first at {:#x}",
+                        diffs.len(),
+                        diffs.first().copied().unwrap_or(0)
+                    );
+                    return ExitCode::FAILURE;
+                }
+                None => {
+                    println!("{compared} ticks compared; the session has no card to compare");
+                    return ExitCode::FAILURE;
+                }
             }
         }
         match stop {

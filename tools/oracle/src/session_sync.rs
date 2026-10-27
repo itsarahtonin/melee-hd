@@ -231,6 +231,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             && now_match
             && in_scene == 1
             && s.game.machine.routing.curr_mode == melee_sim::game::gm::GM_VS
+            // The VS scene's match, not Sudden Death's or the results screen's fighters.
+            && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
+                == Some(melee_sim::game::gm::machine::GS_VS)
             && !check_shortcut(tick - 1, &s, ring[slot].game.objs.rng.seed, &disc)
         {
             shortcut_failed = true;

@@ -1315,6 +1315,56 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `gm_1798.c`'s `fn_80179990` and its machine code (`.L_80179BD8` returns without `HSD_CObjEndCurrent`).
 
+### Every column's "more below" arrow counts the first player's statistics
+
+- **Where:** `fn_80174B4C` (a player's statistics page), `crates/melee-sim/src/game/gm/results_panel.rs` (`stats_page`).
+- **Defect:** the page's count of rows to show, which decides whether the "more below" arrow (`x0_2`) shows, is `fn_80174A60(list, 0)`: the rows the first player's statistics show, whichever player's page it is. The rows a KO page shows depend on the player (a player's own row and an absent player's are left out).
+- **Effect:** on the KOs page a player's arrow can show with nothing below or stay hidden with rows below, by the first player's count; the scroll itself (`fn_80177B7C`, `fn_80177DD0`) counts the player's own rows. Only what the arrow shows differs.
+- **melee-hd:** modeled: the count takes slot 0.
+- **Fix:** pass the page's player.
+- **Fix impact:** the arrow; nothing else reads `x0_2`.
+- **Source:** `gmresult.c`'s `fn_80174B4C`; ssbm-rs's port.
+
+### The statistics' rows clip to the first player's column
+
+- **Where:** `fn_801749B8` (the statistics' texts' render callback), `crates/melee-sim/src/game/gm/results_panel.rs` (`results_stats_text_render`).
+- **Defect:** every player's statistics' texts set the scissor from the first player's statistics' spot to the first player's last row's joint (`player_data[0]`), not their own.
+- **Effect:** none observable: the four columns' spots and rows' joints sit at the same heights.
+- **melee-hd:** modeled.
+- **Fix:** use the text's own column.
+- **Fix impact:** none.
+- **Source:** `gmresult.c`'s `fn_801749B8`.
+
+### The panel's setup makes texts it never uses
+
+- **Where:** `fn_80175C5C` and `fn_80175DC8`, `crates/melee-sim/src/game/gm/results_panel.rs` (`results_panel_texts`, `results_panel_model`).
+- **Defect:** `fn_80175C5C` makes two text buffers (`HSD_SisLib_803A6754(0, 0)`) and drops them; `fn_80175DC8` frees the title text `x2C`, which nothing sets, and makes the match kind's title without keeping it there.
+- **Effect:** none observable: the two empty buffers hold no string and draw nothing; the texts live in the text heap until the scene ends.
+- **melee-hd:** modeled: the texts are made and kept in the text list.
+- **Fix:** drop the two calls; keep the title in `x2C`.
+- **Fix impact:** the text heap's layout.
+- **Source:** `gmresult.c`'s `fn_80175C5C` and `fn_80175DC8`.
+
+### Sudden Death's team count reads past the five teams
+
+- **Where:** `gm_80166CCC` (the match's results with Sudden Death's), `crates/melee-sim/src/game/gm/records.rs` (`merge_sudden_death`).
+- **Defect:** counting Sudden Death's active teams, the loop runs over six where `team_standings` has five, so its sixth `active` byte is 0xA bytes past the fifth team: the first player's self-destructs' high byte (`player_standings[0].self_destructs`).
+- **Effect:** with 256 or more self-destructs by the first player in Sudden Death, the count is one more, and in a team battle the winning teams that sat Sudden Death out place one lower. No match reaches that many.
+- **melee-hd:** modeled: the sixth team counts by that byte.
+- **Fix:** loop over five.
+- **Fix impact:** none in play.
+- **Source:** `gm_1601.c`'s `gm_80166CCC`; ssbm-rs's port, which reads the byte from memory.
+
+### The music stream reads a box header past its three at a song's end
+
+- **Where:** `HSD_SynthPStreamMasterClockCallback`, `crates/melee-sim/src/audio/stream.rs` (`stream_frame`, `past_hako`).
+- **Defect:** once a song that doesn't loop plays its last box, the voices loop into the silence after the stream's buffer (`HSD_Synth_804D7784`); the callback then takes the box the voice is in from its address, a box number far past the three (32,672 in `rules-match`'s fanfare), and reads that box's header past `pstHakoHeader`'s end, 0xFF400 bytes on, in the heap, to set the voices' end address.
+- **Effect:** the voices' end address is made from whatever words the heap holds there; they play silence either way, so nothing is heard. The words change with what the scene put in the heap.
+- **melee-hd:** modeled: the header's words come from the heap's image, and the session stops where the image doesn't know them.
+- **Fix:** stop following the voice once the stream has ended.
+- **Fix impact:** the voices' end address in the audio state after a fanfare.
+- **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; `rules-match`'s results screen (tick 8208).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1439,6 +1489,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The item switch left neither forward nor back | `fn_80234C24` (`mnitemsw.c`), `game/mn/item_switch.rs` | Takes its way out from an uninitialized pointer when the flow leaves it with neither the entering flag nor B; only B and the scene's end leave it (melee-hd stops) | `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`) |
 | The keyboard's OK set twice | `mnNameNew_8023E0D8` (`mnnamenew.c`), `game/mn/names.rs` | Sets the OK button's joint (`jobjs[5]`) for the hovered key being OK, then again for it being back (`0x32`), whose joint is `jobjs[3]`; the keyboard opens on a key, so both are 0 | `crates/melee-sim/src/game/mn/names.rs` (`keys_first_frames`) |
 | Brinstar's platform's columns no bubble reaches | `grZebes_801D881C`, `game/gr/zebes.rs` | Leaves an inner column's x from an uninitialized stack array when no bubble's edge reaches it; while the platform is whole its bubbles have reached every column on every tick checked (melee-hd counts a stale read) | `crates/melee-sim/src/game/gr/zebes.rs:607` |
+| The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
+| The automatic handicaps after a tie | `fn_80169000`, `game/gm/results_exit.rs` (`move_handicaps`) | Fills a stack array of the players by place, one entry a place; tied players share a place and leave the last places' entries unset, which the first place's and the last place's handicaps are then read through (melee-hd stops) | `crates/melee-sim/src/game/gm/results_exit.rs` (`move_handicaps`) |
 
 ## Unsure
 

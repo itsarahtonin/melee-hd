@@ -191,6 +191,10 @@ impl Kinds for GameKinds {
 /// original passes to the audio and pad drivers mid-tick.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub enum Event {
+    /// The save's list wrote the card: the save file as the card now holds it, a `.gci`
+    /// (its directory entry, then its blocks), for the frontend to keep (milestone 5's design
+    /// calls: the frontend writes it whole; a tick never writes it itself).
+    SaveWritten(Vec<u8>),
     /// `HSD_AudioSFXKeyOffTrack`: the sound on a track stops.
     SfxKeyOffTrack(i32),
     /// `HSD_PadRumbleRemoveId`: a controller's rumble of one kind stops.

@@ -415,6 +415,38 @@ pub fn spawn(
     Some(gobj)
 }
 
+/// A blaster in a posing fighter's hand, `it_802AE994`: made at the fighter's place and
+/// facing, its variables cleared, its script's variables 1, held at `part`.
+#[doc(alias = "it_802AE994")]
+pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: i32) -> Option<GObjId> {
+    let fp = r.game.fighter_mut(fighter);
+    let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
+    let mut spawn = SpawnItem {
+        kind,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    spawn.prev_pos.z = 0.0;
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = facing_dir;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = Some(fighter);
+    spawn.x4_parent_gobj2 = Some(fighter);
+    spawn.x44_flag[0] &= !0x80;
+    spawn.x40 = 0;
+    let gobj = spawn_air(r, &mut spawn)?;
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .fox_blaster()
+        .owner
+        .set(Some(fighter));
+    reset(r.game, gobj);
+    set_command_vars(item_mut(r.game, gobj), 1);
+    super::super::item::pick_up(r, gobj, fighter, part);
+    Some(gobj)
+}
+
 /// Destroys a blaster its owner lets go of, `it_802AEAB4`.
 #[doc(alias = "it_802AEAB4")]
 pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
