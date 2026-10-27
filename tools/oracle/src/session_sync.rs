@@ -350,17 +350,8 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
             team: p.team,
         })
         .collect();
-    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
-    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
-    // The match's own: the save's unlocks, the session's console, the allocator model on
-    // whatever the players (the menus' match always runs it).
-    settings.unlocks = s.game.gm.unlocks;
-    settings.seed = seed;
-    settings.disc = s.setup.disc;
-    settings.dsp = s.setup.dsp;
-    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
-    // A team battle and handicaps are the menus' alone: the launcher makes neither, so its
-    // shortcut can't make such a match.
+    // A team battle and handicaps (the automatic handicap's too) are the menus' alone: the
+    // launcher makes neither, so its shortcut can't make such a match.
     let handicaps = start.players.iter().take(4).any(|p| {
         i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE && p.handicap != 9
     });
@@ -376,6 +367,15 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         );
         return true;
     }
+    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
+    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
+    // The match's own: the save's unlocks, the session's console, the allocator model on
+    // whatever the players (the menus' match always runs it).
+    settings.unlocks = s.game.gm.unlocks;
+    settings.seed = seed;
+    settings.disc = s.setup.disc;
+    settings.dsp = s.setup.dsp;
+    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
     // The players' name tags, which the launcher doesn't offer: taken from the menus', and
     // listed.
     let mut taken = Vec::new();
