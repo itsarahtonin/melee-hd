@@ -104,6 +104,7 @@ pub fn human_kos(end: &MatchEnd) -> i32 {
 }
 
 /// The human that placed best, `findSmallestLoser` (by team first in a team battle).
+#[allow(clippy::needless_range_loop)] // the original's loop over the six slots
 fn smallest_loser(end: &MatchEnd) -> usize {
     let losers: Vec<i32> = (0..6)
         .map(|i| {

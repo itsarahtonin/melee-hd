@@ -21,9 +21,9 @@ use common::{
     IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
-    compare, compare_in, reflection, scaled,
+    RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
+    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -176,6 +176,59 @@ frames!(SELECT_TEAMS;
 );
 frames!(SELECT_KONGO;
     select_kongo_1181 1181,
+);
+// The results screen, against captures made with ssbm-rs's renderer running (the portraits
+// are copies of the players' cameras' renders): a stock match's panel, rows and portraits as
+// Mario poses (2451, 2901), the statistics' first page (3201), scrolled down (3271), the next
+// pages (3361, 3401), "Ready for the next battle" once port 1 has pressed Start (3441), the
+// character select after with the automatic handicaps the places moved (3521); a team
+// battle's rows under its team's name (3301), its last player's statistics beside two
+// players ready (3461), the team battle's character select after (3771).
+/// A results frame against a capture made with ssbm-rs's renderer running, its draws the
+/// same but those sampling an image copied before the log ([`common::why::RESULTS_COPY`]).
+fn results_frame(game: &Game, frame: u32, same: usize) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same: [same, same],
+            why: common::why::RESULTS_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! results_frames {
+    ($game:expr; $($name:ident $frame:literal $same:literal),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                results_frame(&$game, $frame, $same);
+            }
+        )*
+    };
+}
+
+results_frames!(RESULTS_STOCK;
+    results_stock_2451 2451 1402,
+    results_stock_2901 2901 1402,
+    results_stock_3201 3201 1429,
+    results_stock_3271 3271 1470,
+    results_stock_3361 3361 1470,
+    results_stock_3401 3401 1511,
+    results_stock_3441 3441 1357,
+);
+rendered_frames!(RESULTS_STOCK;
+    results_stock_3521 3521,
+);
+results_frames!(RESULTS_TEAMS;
+    results_teams_3301 3301 2959,
+    results_teams_3461 3461 2804,
+);
+rendered_frames!(RESULTS_TEAMS;
+    results_teams_3771 3771,
 );
 frames!(FLAT_ZONE;
     flat_zone_600 600,

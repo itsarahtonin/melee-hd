@@ -750,12 +750,8 @@ impl Running<'_> {
     fn stats_check(&self, getter: u32, slot: usize) -> i32 {
         let me = self.results_end();
         match getter {
-            0x8017_BACC => {
-                super::results_stats::clamp_to(me.player_standings[slot].x9C as i32, 999_999)
-            }
-            0x8017_BB30 => {
-                super::results_stats::clamp_to(me.player_standings[slot].xA0 as i32, 999_999)
-            }
+            0x8017_BACC => super::results_stats::clamp_to(me.player_standings[slot].x9C, 999_999),
+            0x8017_BB30 => super::results_stats::clamp_to(me.player_standings[slot].xA0, 999_999),
             g => super::results_stats::stat_value(me, self.saved_us(), g, slot),
         }
     }
@@ -1151,14 +1147,10 @@ impl Running<'_> {
                     scroll(p)
                 }
             }
-            2 => {
-                if i32::from(p.x2) < 1000 {
-                    let r = scroll(p);
-                    p.x2 = p.x2.wrapping_add(1);
-                    r
-                } else {
-                    false
-                }
+            2 if i32::from(p.x2) < 1000 => {
+                let r = scroll(p);
+                p.x2 = p.x2.wrapping_add(1);
+                r
             }
             _ => false,
         }

@@ -372,7 +372,6 @@ impl Running<'_> {
             (2, 0x15) => {
                 super::super::code::unported_call("ftCo_800BED88's pills (itDrMarioPill_802C09C4)")
             }
-            // Ness's yo-yo (the third pose).
             // Ness's bat (the third pose), at his right thumb, 0.8 his size.
             (5, 8) => {
                 let f = self.game.fighter_id(gobj);

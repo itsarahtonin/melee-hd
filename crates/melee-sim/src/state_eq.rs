@@ -344,6 +344,22 @@ impl<T: StateEq + ?Sized> StateEq for &T {
     }
 }
 
+impl<T: StateEq + ?Sized> StateEq for std::sync::Arc<T> {
+    #[inline]
+    fn state_diff(&self, other: &Self) -> Option<Diff> {
+        (**self).state_diff(&**other)
+    }
+
+    fn state_diffs(&self, other: &Self, out: &mut Vec<Diff>) {
+        (**self).state_diffs(&**other, out);
+    }
+
+    #[inline]
+    fn state_hash(&self, h: &mut StateHasher) {
+        (**self).state_hash(h);
+    }
+}
+
 impl<T: StateEq + ?Sized> StateEq for Box<T> {
     #[inline]
     fn state_diff(&self, other: &Self) -> Option<Diff> {
