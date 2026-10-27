@@ -621,7 +621,12 @@ impl Running<'_> {
     /// Runs a task list on the lent card, with the card data's memory as the files' buffers
     /// (a read writes into it), and keeps what the game reads of it; the time it takes passes
     /// on the timeline. The list's result.
-    fn run_card_list(&mut self, tasks: &[(Task, u32)], time: CardTime, status: bool) -> (i32, Run) {
+    pub(crate) fn run_card_list(
+        &mut self,
+        tasks: &[(Task, u32)],
+        time: CardTime,
+        status: bool,
+    ) -> (i32, Run) {
         let start = self.clock_now();
         let thing = &self.game.game_data.thing;
         let memory = card_data_bytes(thing);
@@ -715,6 +720,23 @@ impl Running<'_> {
         with_device(|dev| dev.attached = false);
         self.card_alarm_probes();
         (r, run)
+    }
+
+    /// A task list on slot B, which never has a card on the session's console: the mount's
+    /// `CARDProbeEx` finds the slot empty (the channel's status register, no device line) and
+    /// the list fails there, before any wait. Its result.
+    pub(crate) fn run_card_list_slot_b(&mut self, tasks: &[(Task, u32)]) -> i32 {
+        self.card_alarm_probes();
+        let mut run = Run::new(melee_save::melee::manifest(), Default::default());
+        let r = with_device(|dev| {
+            let mut clock = Clock::at(0);
+            run.execute(None, &dev.console.clone(), &mut clock, tasks)
+        });
+        if with_device(|dev| dev.waits) {
+            self.game.audio.clock_read(self.data, EXI_READ);
+        }
+        self.card_alarm_probes();
+        r
     }
 
     /// `lb_8001BD34` with the save's manifest (`lb_8001CBBC`'s): the save loaded into the

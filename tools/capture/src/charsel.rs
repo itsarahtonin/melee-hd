@@ -220,9 +220,12 @@ impl<'a> Comparer<'a> {
                 self.u8(CSS_DATA + 3),
             ),
         );
-        // The KO counts' pointer once an entry has set it.
+        // The KO counts' pointer once an entry has set it: VS mode's, or null (Stamina
+        // Mode's entry).
         let ko = self.u32(CSS_DATA + 4);
-        if ko != 0 {
+        if v.css.ko_counts_null {
+            self.check("gmVsMelee_CssData", "KO counts' pointer", 0, ko);
+        } else if ko != 0 {
             self.check("gmVsMelee_CssData", "KO counts' pointer", KO_COUNTS, ko);
         }
         v.css

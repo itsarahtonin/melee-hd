@@ -376,16 +376,23 @@ impl SisLib {
         d
     }
 
-    /// Copies font `font`'s string `src` over its string `dst`, `HSD_SisLib_803A6530`.
+    /// Copies font `font`'s string `src` over its string `dst`, `HSD_SisLib_803A6530`; where
+    /// the copy's terminator went.
     #[doc(alias = "HSD_SisLib_803A6530")]
-    pub fn copy_table_string(&mut self, data: &Archives, font: usize, dst: i32, src: i32) {
+    pub fn copy_table_string(
+        &mut self,
+        data: &Archives,
+        font: usize,
+        dst: i32,
+        src: i32,
+    ) -> SisPtr {
         let d = self
             .table_entry(data, font, dst)
             .expect("a string table entry");
         let s = self
             .table_entry(data, font, src)
             .expect("a string table entry");
-        self.copy_string(data, d, s);
+        self.copy_string(data, d, s)
     }
 
     /// Appends font `font`'s string `src` to its string `dst`, `HSD_SisLib_803A660C`.

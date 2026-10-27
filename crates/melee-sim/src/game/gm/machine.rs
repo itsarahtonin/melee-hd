@@ -17,6 +17,8 @@ use super::super::state::Running;
 pub const GM_TITLE: u8 = 0x00;
 pub const GM_MENU: u8 = 0x01;
 pub const GM_VS: u8 = 0x02;
+pub const GM_CAMERA_MODE: u8 = super::camera_mode::GM_CAMERA_MODE;
+pub const GM_STAMINA_VS: u8 = 0x1F;
 pub const GM_CHALLENGER_APPROACH: u8 = 0x14;
 pub const GM_OPENING_MV: u8 = 0x18;
 pub const GM_PROGRESSIVE_SCAN: u8 = 0x27;
@@ -132,6 +134,35 @@ enum Hook {
     ApproachVsOnExit,
     PrizeOnEnter,
     PrizeOnExit,
+    /// A Special Melee mode's `OnLoad`.
+    SpecialOnLoad,
+    StaminaEnterCss,
+    StaminaExitSss,
+    StaminaEnterVs,
+    StaminaExitVs,
+    CameraEnterCheck,
+    CameraExitCheck,
+    CameraEnterCss,
+    CameraExitCss,
+    CameraEnterSss,
+    CameraExitSss,
+    CameraEnterVs,
+    CameraExitVs,
+}
+
+/// Whether `mode` is a Special Melee mode with VS mode's states (`gmsupersudden.c` and the
+/// others but Stamina Mode's).
+fn vs_like(mode: u8) -> bool {
+    super::vs_mode::Special::from_game_mode(mode)
+        .is_some_and(|m| m != super::vs_mode::Special::Stamina)
+}
+
+/// Whether the mode's match scenes take VS mode's enter and exit data (`gmVsMelee_StartData`,
+/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes and Camera Mode.
+pub fn uses_vs_melee(mode: u8) -> bool {
+    mode == GM_VS
+        || mode == GM_CAMERA_MODE
+        || super::vs_mode::Special::from_game_mode(mode).is_some()
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
@@ -294,10 +325,69 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_PRIZE,
         },
     ];
+    // `gm_Mode_StaminaVs_States`: the selects and the match.
+    const STAMINA: [StateDesc; 3] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::StaminaEnterCss),
+            on_exit: Some(Hook::VsExitCss),
+            scene: GS_CSS,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: Some(Hook::VsEnterSss),
+            on_exit: Some(Hook::StaminaExitSss),
+            scene: GS_SSS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 3,
+            on_enter: Some(Hook::StaminaEnterVs),
+            on_exit: Some(Hook::StaminaExitVs),
+            scene: GS_VS,
+        },
+    ];
+    // `gm_Mode_Camera_States`: the card check, the selects and the match.
+    const CAMERA: [StateDesc; 4] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::CameraEnterCheck),
+            on_exit: Some(Hook::CameraExitCheck),
+            scene: super::camera_mode::GS_CAMERA_VS,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: Some(Hook::CameraEnterCss),
+            on_exit: Some(Hook::CameraExitCss),
+            scene: GS_CSS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 3,
+            on_enter: Some(Hook::CameraEnterSss),
+            on_exit: Some(Hook::CameraExitSss),
+            scene: GS_SSS,
+        },
+        StateDesc {
+            id: 3,
+            preload: 3,
+            on_enter: Some(Hook::CameraEnterVs),
+            on_exit: Some(Hook::CameraExitVs),
+            scene: GS_VS,
+        },
+    ];
     match mode {
         GM_BOOT => &BOOT,
         GM_MENU => &MENU,
-        GM_VS => &VS,
+        // The Special Melee modes' states are VS mode's, each with its own handlers
+        // ([`Running::mode_hook`] takes the mode).
+        m if m == GM_VS || vs_like(m) => &VS,
+        GM_STAMINA_VS => &STAMINA,
+        GM_CAMERA_MODE => &CAMERA,
         GM_MEMCARD => &MEMCARD,
         GM_OPENING_MV => &OPENING,
         GM_TITLE => &TITLE,
@@ -321,6 +411,9 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_PROGRESSIVE_SCAN => (false, None, None),
         // `gm_Mode_Vs_OnUnload` does nothing.
         GM_VS => (false, Some(Hook::VsOnLoad), None),
+        GM_STAMINA_VS => (true, Some(Hook::SpecialOnLoad), None),
+        m if vs_like(m) => (false, Some(Hook::SpecialOnLoad), None),
+        GM_CAMERA_MODE => (true, None, None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -479,7 +572,7 @@ impl Running<'_> {
         };
         match scene_mode {
             GM_OPENING_MV => &self.game.attract.start,
-            GM_VS => &self.game.vs_melee.start,
+            m if uses_vs_melee(m) => &self.game.vs_melee.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -520,6 +613,9 @@ impl Running<'_> {
             GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
             // No frame function: the model GObj's process runs the screen.
             GS_RESULTS => (CodeRef(RESULTS_ON_ENTER), CodeRef(0)),
+            super::camera_mode::GS_CAMERA_VS => {
+                (super::camera_mode::ON_ENTER, super::camera_mode::ON_FRAME)
+            }
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -543,6 +639,7 @@ impl Running<'_> {
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
+            super::camera_mode::ON_ENTER => self.camera_check_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -602,7 +699,9 @@ impl Running<'_> {
         match s.scene {
             GS_MEMCARD => self.memcard_on_exit(),
             // No exit of their own.
+            // No exit of their own (`gm_Scene_CameraVs_OnExit` does nothing).
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
+            super::camera_mode::GS_CAMERA_VS => {}
             GS_VS | GS_SUDDEN_DEATH => self.vs_scene_on_exit(scene_mode, state),
             GS_CSS => self.charsel_on_exit(),
             GS_SSS => self.stagesel_on_exit(),
@@ -633,6 +732,53 @@ impl Running<'_> {
 
     /// A mode's or mode state's handler.
     fn mode_hook(&mut self, h: Hook, state: Option<(u8, u8)>) {
+        // A Special Melee mode's handler for one of VS mode's states, by its mode.
+        let special = state.map(|s| s.0).filter(|&m| m != GM_VS);
+        if let Some(m) = special {
+            let done = match h {
+                Hook::VsEnterCss => {
+                    self.special_enter_css(m);
+                    true
+                }
+                Hook::VsExitCss => {
+                    self.special_exit_css(m);
+                    true
+                }
+                Hook::VsEnterSss => {
+                    self.special_enter_sss(m);
+                    true
+                }
+                Hook::VsExitSss => {
+                    self.special_exit_sss(m);
+                    true
+                }
+                Hook::VsEnterVs => {
+                    self.special_enter_vs(m);
+                    true
+                }
+                Hook::VsExitVs => {
+                    self.special_exit_vs(m);
+                    true
+                }
+                Hook::VsEnterResults => {
+                    self.special_enter_results(m);
+                    true
+                }
+                Hook::VsEnterSuddenDeath => unported_call(&format!(
+                    "game mode {m:#x}'s Sudden Death's entry (gmVsMelee_EnterSuddenDeath: task 9)"
+                )),
+                Hook::VsExitSuddenDeath => unported_call(&format!(
+                    "game mode {m:#x}'s Sudden Death's exit (gmVsMelee_ExitSuddenDeath: task 9)"
+                )),
+                Hook::VsExitResults => unported_call(&format!(
+                    "game mode {m:#x}'s results' exit (gmVsMelee_ExitResults: task 9)"
+                )),
+                _ => false,
+            };
+            if done {
+                return;
+            }
+        }
         match h {
             Hook::BootOnLoad => self.boot_on_load(),
             Hook::BootOnLeave => self.boot_on_leave(),
@@ -674,6 +820,22 @@ impl Running<'_> {
             Hook::PrizeOnEnter | Hook::PrizeOnExit => {
                 unported_call("the prize interface's states (task 17)")
             }
+            Hook::SpecialOnLoad => {
+                let mode = self.game.machine.routing.curr_mode;
+                self.special_on_load(mode);
+            }
+            Hook::StaminaEnterCss => self.stamina_enter_css(),
+            Hook::StaminaExitSss => self.stamina_exit_sss(),
+            Hook::StaminaEnterVs => self.stamina_enter_vs(),
+            Hook::StaminaExitVs => self.stamina_exit_vs(),
+            Hook::CameraEnterCheck => self.camera_enter_check(),
+            Hook::CameraExitCheck => self.camera_exit_check(),
+            Hook::CameraEnterCss => self.camera_enter_css(),
+            Hook::CameraExitCss => self.camera_exit_css(),
+            Hook::CameraEnterSss => self.camera_enter_sss(),
+            Hook::CameraExitSss => self.camera_exit_sss(),
+            Hook::CameraEnterVs => self.camera_enter_vs(),
+            Hook::CameraExitVs => self.camera_exit_vs(),
         }
         let _ = state;
     }

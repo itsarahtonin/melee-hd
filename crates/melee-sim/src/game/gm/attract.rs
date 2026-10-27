@@ -229,7 +229,7 @@ impl Running<'_> {
     pub fn vs_scene_on_enter(&mut self, scene_mode: u8) {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
-            super::machine::GM_VS => self.game.vs_melee.start.clone(),
+            m if super::machine::uses_vs_melee(m) => self.game.vs_melee.start.clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

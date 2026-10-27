@@ -400,6 +400,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         crate::hsd::sobj::RENDER => r.render_sobjs(gobj),
         crate::hsd::sobj::CAMERA_RENDER => r.render_sprite_camera(gobj),
         super::gm::title::CAMERA_RENDER => r.title_camera_render(gobj),
+        super::gm::camera_mode::SNAP_RENDER => r.cm_snap_render(),
         c if super::gm::results_fighters::PLAYER_RENDER.contains(&c) => {
             let slot = super::gm::results_fighters::PLAYER_RENDER
                 .iter()

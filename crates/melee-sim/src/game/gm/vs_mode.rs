@@ -354,7 +354,9 @@ pub fn enter_vs_with_tags(
     enter_vs_full(vs, rules, prefs, None, None, tags)
 }
 
-fn enter_vs_full(
+/// `gmVsMelee_EnterVs` with a mode's callbacks and the save's name tags' rumble settings
+/// (`tags`).
+pub fn enter_vs_full(
     vs: &mut StartMeleeData,
     rules: &GameRules,
     prefs: &GamePrefs,

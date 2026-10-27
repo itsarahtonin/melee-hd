@@ -3,6 +3,7 @@
 
 pub mod attract;
 pub mod boot_mode;
+pub mod camera_mode;
 pub mod decisions;
 pub mod erase;
 pub mod howto;
@@ -25,6 +26,7 @@ pub mod results_scene;
 pub mod results_stats;
 pub mod scene;
 pub mod setup_players;
+pub mod special;
 pub mod stamina;
 pub mod title;
 pub mod trophies;
@@ -385,6 +387,16 @@ pub fn is_super_sudden_death(game: &Game) -> bool {
 /// (`StartMeleeRules::on_unpause_override`), which the match's start also calls.
 pub const FIXED_CAMERA: u32 = 0x8016_5290;
 
+/// Camera Mode's pause and unpause camera, `gm_80165268`.
+pub const PAUSE_CAMERA: u32 = 0x8016_5268;
+
+/// `gm_80165268`: the camera Camera Mode's pause and unpause leave (`Camera_8002FC7C(4, 3)`),
+/// whoever paused.
+#[doc(alias = "gm_80165268")]
+pub fn pause_camera(r: &mut super::state::Running) {
+    super::camera::set_up_free_2(r.game, 4, 3);
+}
+
 /// The game modes' functions the match calls by address: the rules' hooks.
 pub fn call(
     r: &mut super::state::Running,
@@ -400,7 +412,7 @@ pub fn call(
             r.attract_match_start();
             Some(super::code::Val::None)
         }
-        _ => stamina::call(r, f, args),
+        _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),
     }
 }
 

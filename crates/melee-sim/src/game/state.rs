@@ -384,8 +384,13 @@ pub struct Game {
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).
     pub card_tasks: crate::lb::save::CardTasks,
-    /// Camera Mode's snapshots' state, as far as the boot sets it (`lbsnap.c`).
+    /// Camera Mode's snapshots' state (`lbsnap.c`).
     pub snap: crate::lb::snap::Snap,
+    /// Camera Mode's statics: the card check, the match's menu and the frame's copy
+    /// (`gm_1A33.c`, `gmcamera.c`, `cmsnap.c`).
+    pub camera_mode: super::gm::camera_mode::CameraMode,
+    /// The snapshot being written (`lbsnap.c`'s writing side).
+    pub snap_write: crate::lb::snap_write::SnapWrite,
     /// The modes' settings that live outside the game's data: the training mode's saved
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
     /// trophy gallery's flag (`_Toy_804A26B8.x194`).

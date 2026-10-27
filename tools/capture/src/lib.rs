@@ -4,6 +4,7 @@
 
 pub mod attract;
 pub mod audio;
+pub mod camera;
 pub mod charsel;
 pub mod compare;
 pub mod corpus;

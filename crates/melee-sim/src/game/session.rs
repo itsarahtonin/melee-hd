@@ -186,6 +186,11 @@ pub const FILES: &[&str] = &[
     "SdIntro.dat",
     "IfCoGet.dat",
     "LbBf.dat",
+    // Camera Mode's: its strings and its menu's models.
+    "SdVsCam.usd",
+    "IfVsCam.usd",
+    "SdVsCam.dat",
+    "IfVsCam.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's, which

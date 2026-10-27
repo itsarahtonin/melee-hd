@@ -58,6 +58,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
+        super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -175,6 +176,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),
         f if f == super::mn::main::ON_FRAME.0 => game.menu_on_frame(),
+        f if f == super::gm::camera_mode::ON_FRAME.0 => game.camera_check_on_frame(),
         f if f == super::mn::charsel::ON_FRAME.0 => game.charsel_on_frame(),
         f if f == super::mn::stagesel::ON_FRAME.0 => game.stagesel_on_frame(),
         f if f == super::gm::howto::HOWTO_ON_FRAME.0 => game.howto_on_frame(),
