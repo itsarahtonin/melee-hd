@@ -158,6 +158,81 @@ impl Game {
     }
 }
 
+/// The match's results with Sudden Death's (`end` and `sd`), `gm_80166CCC`: a cancelled
+/// Sudden Death cancels the match; with several winners Sudden Death's places add to the
+/// match's (each player's and team's), and the match's winners take Sudden Death's places (a
+/// player out of it placed after every one in it), their KOs added.
+///
+/// Counting Sudden Death's teams, the loop runs over six where there are five, so its sixth
+/// "team" is the bytes after the fifth: its `active` byte is the first player's
+/// self-destructs' high byte (Melee's bugs).
+#[doc(alias = "gm_80166CCC")]
+pub fn merge_sudden_death(end: &mut MatchEnd, sd: &mut MatchEnd) {
+    let result = sd.outcome;
+    if result == super::match_exit::OUTCOME_NO_CONTEST || result == super::match_exit::OUTCOME_RETRY
+    {
+        end.outcome = result;
+    }
+    if sd.n_winners > 1 {
+        for i in 0..6 {
+            if sd.player_standings[i].pkind != 3 {
+                sd.player_standings[i].is_big_loser = end.player_standings[i]
+                    .is_big_loser
+                    .wrapping_add(sd.player_standings[i].is_small_loser);
+            }
+        }
+    }
+    if sd.n_team_winners > 1 {
+        for i in 0..5 {
+            if sd.team_standings[i].active != 0 {
+                sd.team_standings[i].is_big_loser = end.team_standings[i]
+                    .is_big_loser
+                    .wrapping_add(sd.team_standings[i].is_small_loser);
+            }
+        }
+    }
+    let players = sd.player_standings.iter().filter(|p| p.pkind != 3).count() as u8;
+    if end.n_winners > 1 {
+        for i in 0..6 {
+            if end.player_standings[i].pkind == 3 {
+                continue;
+            }
+            let (s, e) = (&sd.player_standings[i], &mut end.player_standings[i]);
+            e.ftkind = s.ftkind;
+            e.xE = e.xE.wrapping_add(s.xE);
+            if e.is_big_loser == 0 {
+                if s.pkind == 3 {
+                    e.is_big_loser = e.is_big_loser.wrapping_add(players);
+                    e.is_small_loser = e.is_small_loser.wrapping_add(players);
+                } else {
+                    e.is_big_loser = s.is_big_loser;
+                    e.is_small_loser = s.is_big_loser;
+                }
+            }
+        }
+    }
+    // `team_standings[5].active`: 0xA bytes past the teams' end, the first player's
+    // self-destructs' high byte.
+    let sixth = (sd.player_standings[0].self_destructs >> 8) as u8;
+    let teams =
+        sd.team_standings.iter().filter(|t| t.active != 0).count() as u8 + u8::from(sixth != 0);
+    if end.n_team_winners > 1 {
+        for i in 0..5 {
+            if end.team_standings[i].active == 0 || end.team_standings[i].is_big_loser != 0 {
+                continue;
+            }
+            let (s, e) = (&sd.team_standings[i], &mut end.team_standings[i]);
+            if s.active != 0 {
+                e.is_big_loser = s.is_big_loser;
+                e.is_small_loser = s.is_big_loser;
+            } else {
+                e.is_big_loser = e.is_big_loser.wrapping_add(teams);
+                e.is_small_loser = e.is_small_loser.wrapping_add(teams);
+            }
+        }
+    }
+}
+
 /// Whether any player was human, `gmVsMelee_WasAnyPlayerHuman`.
 #[doc(alias = "gmVsMelee_WasAnyPlayerHuman")]
 pub fn any_human(end: &MatchEnd) -> bool {

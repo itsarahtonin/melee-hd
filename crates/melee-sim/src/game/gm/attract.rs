@@ -227,6 +227,31 @@ impl Running<'_> {
     /// read again.
     #[doc(alias = "gm_Scene_Vs_OnEnter")]
     pub fn vs_scene_on_enter(&mut self, scene_mode: u8) {
+        let (start, files) = self.vs_scene_files(scene_mode);
+        self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
+        self.vs_on_enter(&start, files);
+    }
+
+    /// `gm_Scene_SuddenDeath_OnEnter`: the match as the VS scene's (`fn_8016E730`), its start
+    /// data marked Sudden Death (`rules.x6`), then the announcer's one-stock start, the
+    /// timers and the damage displays. The players' codes hook only the VS scene's entry.
+    #[doc(alias = "gm_Scene_SuddenDeath_OnEnter")]
+    pub fn sudden_death_scene_on_enter(&mut self, scene_mode: u8) {
+        self.game.vs_melee.start.rules.x6 = 1;
+        let (start, files) = self.vs_scene_files(scene_mode);
+        self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
+        self.sudden_death_on_enter(&start, files);
+    }
+
+    /// The start data and the files a VS scene's match takes, from its mode's state's enter
+    /// data and the preload cache.
+    fn vs_scene_files(
+        &mut self,
+        scene_mode: u8,
+    ) -> (
+        crate::game::structs::StartMeleeData,
+        super::vs::MatchArchives,
+    ) {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
             super::machine::GM_VS => self.game.vs_melee.start.clone(),
@@ -259,7 +284,6 @@ impl Running<'_> {
             it_co: archive(self, "ItCo.usd"),
             stage,
         };
-        self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
-        self.vs_on_enter(&start, files);
+        (start, files)
     }
 }

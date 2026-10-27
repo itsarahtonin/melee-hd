@@ -28,6 +28,10 @@ pub struct SecondTree {
     pub tree: Option<DataRef>,
     /// Whether the figatree is in the main buffer.
     pub in_main: bool,
+    /// The word as it was taken up (a new fighter's leftover, or a state imported), until the
+    /// game writes the figatree: which copy of its archive it points into, where several
+    /// fighters' buffers held one.
+    pub addr: Option<u32>,
 }
 
 /// Where `addr` is in the fighter's main animation buffer, which the word after `x598`
@@ -37,12 +41,62 @@ fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
     (addr != 0 && off < SIZE).then_some(off)
 }
 
+/// The action's figatree (`Fighter::x590`), a pointer into the fighter's main animation buffer
+/// (`x59C`, three words on): as an `Option<DataRef>` it names the archive the buffer holds.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ActionTree(pub Option<DataRef>);
+
+impl core::ops::Deref for ActionTree {
+    type Target = Option<DataRef>;
+    fn deref(&self) -> &Option<DataRef> {
+        &self.0
+    }
+}
+
+impl core::ops::DerefMut for ActionTree {
+    fn deref_mut(&mut self) -> &mut Option<DataRef> {
+        &mut self.0
+    }
+}
+
+impl crate::game::mirror::LayOut for ActionTree {
+    /// Its place is the main buffer's, which the fighter's layout gives
+    /// (`game::export::fighter`).
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        l.put_word(at, cx.data(self.0));
+    }
+}
+
+impl Mirror for ActionTree {
+    const SIZE: u32 = 4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        ActionTree(cx.import_data(m.u32(at)))
+    }
+
+    /// By its offset in the main buffer where it's there: another copy of its archive (a
+    /// buffer of a scene gone, the other climber's) can hold the same bytes.
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let theirs = m.u32(at);
+        let buf = m.u32(at + 0xC);
+        if let Some(t) = self.0
+            && buf != 0
+            && theirs.wrapping_sub(buf) == t.offset.wrapping_add(ARCHIVE_HEADER)
+        {
+            return;
+        }
+        cx.compare_data(path, self.0, theirs);
+    }
+}
+
 impl crate::game::mirror::LayOut for SecondTree {
     /// A figatree outside the main buffer by its address; one in it stays unknown (its address
     /// is the buffer's, which the fighter's layout doesn't pass).
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
         let w = if self.in_main {
             None
+        } else if self.addr.is_some() {
+            self.addr
         } else {
             cx.data(self.tree)
         };
@@ -67,11 +121,13 @@ impl Mirror for SecondTree {
                     offset: off.wrapping_sub(ARCHIVE_HEADER),
                 }),
                 in_main: true,
+                addr: None,
             };
         }
         SecondTree {
             tree: cx.import_data(w),
             in_main: false,
+            addr: Some(w),
         }
     }
 
@@ -90,6 +146,21 @@ impl Mirror for SecondTree {
                     );
                 }
             }
+            _ if self.addr.is_some() => {
+                if self.addr != Some(theirs) {
+                    cx.mismatch(
+                        path,
+                        format!("{:#x?} ({:?})", self.addr, self.tree),
+                        format!("{theirs:#x}"),
+                    );
+                }
+            }
+            // In the second buffer (`x5A0`, two words on): by its offset there, as another
+            // copy of its archive (a buffer of a scene gone) can hold the same bytes.
+            (false, Some(t))
+                if m.u32(at + 8) != 0
+                    && theirs.wrapping_sub(m.u32(at + 8))
+                        == t.offset.wrapping_add(ARCHIVE_HEADER) => {}
             _ => {
                 if self.tree.is_some() && main_buffer_offset(m, at, theirs).is_some() {
                     cx.mismatch(
@@ -145,6 +216,7 @@ impl Running<'_> {
                 SecondTree {
                     tree: Some(tree),
                     in_main: shared,
+                    addr: None,
                 }
             } else {
                 SecondTree::default()
@@ -161,7 +233,7 @@ impl Running<'_> {
     /// same offsets.
     pub(super) fn overwrite_main_buffer(&mut self, f: FighterId, archive: ArchiveId) {
         let fp = &mut self.game.fighters[f.0];
-        if let Some(t) = &mut fp.x590 {
+        if let Some(t) = fp.x590.as_mut() {
             t.archive = archive;
         }
         if fp.x598.in_main

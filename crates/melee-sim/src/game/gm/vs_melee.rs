@@ -234,6 +234,35 @@ impl Running<'_> {
         }
     }
 
+    /// `onEnterSuddenDeath` (`gmVsMelee_EnterSuddenDeath` with no callbacks): the match's
+    /// start data (the VS match's, left as it was) takes VS mode's rules and players again,
+    /// their sub-colors and rumble, and Sudden Death's setup from the match that tied
+    /// (`gm_SetupSuddenDeath`).
+    #[doc(alias = "onEnterSuddenDeath@801B1648")]
+    #[doc(alias = "gmVsMelee_EnterSuddenDeath")]
+    pub fn vs_mode_enter_sudden_death(&mut self) {
+        let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
+        let tags = self.nametag_rumbles();
+        let vs = self.vs_data().start.clone();
+        let mut start = self.game.vs_melee.start.clone();
+        start.rules.clone_from(&vs.rules);
+        start.players.clone_from(&vs.players);
+        super::vs_mode::setup_sub_colors(&mut start);
+        super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
+        super::setup_players::setup_sudden_death(&mut start, &self.game.vs_melee.exit.match_end);
+        self.game.vs_melee.start.clone_from(&start);
+    }
+
+    /// `onExitSuddenDeath` (`gmVsMelee_ExitSuddenDeath`): the match's results take Sudden
+    /// Death's places (`gm_80166CCC`).
+    #[doc(alias = "onExitSuddenDeath@801B1688")]
+    #[doc(alias = "gmVsMelee_ExitSuddenDeath")]
+    pub fn vs_mode_exit_sudden_death(&mut self) {
+        let mut sd = self.game.vs_melee.sd_exit.match_end.clone();
+        super::records::merge_sudden_death(&mut self.game.vs_melee.exit.match_end, &mut sd);
+        self.game.vs_melee.sd_exit.match_end.clone_from(&sd);
+    }
+
     /// `onEnterResults` (`gmVsMelee_EnterResults`): the results screen's enter data
     /// cleared (`gm_80177724`) and the match's results in it.
     #[doc(alias = "onEnterResults@801B16A8")]

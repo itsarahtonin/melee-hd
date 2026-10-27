@@ -140,9 +140,18 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
 /// claim: the stage's collision joints (when this scene loaded them, `geometry_live`), the
 /// scene's fighters with their parts tables and DObj lists, its items, its stage parts
 /// (`Ground`), its deferred spawns and its animation buffers.
-pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, geometry_live: bool) {
+pub fn scene_game_objects(
+    game: &Game,
+    data: &Archives,
+    img: &mut Image,
+    geometry_live: bool,
+    dynamics_live: bool,
+) {
     if geometry_live {
         coll_joints(game, data, img);
+    }
+    if dynamics_live {
+        dynamics_links(game, data, img);
     }
     // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
     let fighters = std::any::type_name::<super::structs::Fighter>();
@@ -176,6 +185,20 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, geometr
             anim_buf(game, img, slot);
         }
     }
+}
+
+/// The dynamics' links (`lb_8000FCDC`'s block, 0x140 links of 0x98), as their block goes
+/// back with its scene's heap: each link as melee-sim holds it, its unwritten fields (the last
+/// link's dominant axis, `unk_54`) what the block held.
+fn dynamics_links(game: &Game, data: &Archives, img: &mut Image) {
+    let block = game.ft.dynamics_block;
+    let len = crate::lb::dynamics::LINKS * 0x98;
+    let mut l = Lay::leftover(img, data, block, len);
+    let cx = Addrs { game, img };
+    for (k, link) in game.fighter_dynamics.iter() {
+        link.lay(&mut l, block + 0x98 * k, &cx);
+    }
+    l.put(img);
 }
 
 /// A color overlay (`ColorStruct`, 0x80) at `off` of `l`: its script's place where the image
@@ -318,6 +341,9 @@ pub const LAID_GROUND_VARS: &[&str] = &[
     "ZebesLavaVars",
     "CorneriaCityVars",
     "CorneriaCity8Vars",
+    "IzumiVars",
+    "Izumi2Vars",
+    "Izumi3Vars",
 ];
 
 /// The types of what the heap's image doesn't lay out, each with a note: an object of one
@@ -509,6 +535,26 @@ fn ground_vars(l: &mut Lay, a: u32, v: &super::gr::GroundVars, cx: &Addrs) -> bo
             l.put_u8(a + 1, v.xC5);
             l.put_bits(a + 2, 0, 1, u32::from(v.still));
         }
+        V::Izumi(v) => {
+            l.put_word(a, cx.handle("TObjId", v.xC4.map(|o| o.0)));
+            gobj(l, a + 4, v.xC8);
+            gobj(l, a + 8, v.xCC);
+            jobj(l, a + 0xC, v.xD0);
+            jobj(l, a + 0x10, v.xD4);
+        }
+        V::Izumi2(v) => {
+            jobj(l, a, v.xC4);
+            jobj(l, a + 4, v.xC8);
+        }
+        V::Izumi3(v) => {
+            for (k, h) in [v.xC4, v.xC6, v.xC8, v.xCA].into_iter().enumerate() {
+                l.put_u16(a + 2 * k as u32, h as u16);
+            }
+            jobj(l, a + 8, v.xCC);
+            for (k, f) in [v.xD0, v.xD4, v.xD8, v.xDC].into_iter().enumerate() {
+                l.put_u32(a + 0xC + 4 * k as u32, f.to_bits());
+            }
+        }
         V::CorneriaCity8(v) => {
             l.put_u8(a, v.xC4);
             l.put_u8(a + 1, v.xC5);
@@ -553,7 +599,10 @@ impl LayCx for Addrs<'_> {
             "AttrsId" => g.fighter_attrs.addr(h),
             "AnimBufId" => g.fighter_anim_bufs.addr(h),
             "DObjListId" => g.fighter_dobj_lists.addr(h),
-            "DynamicsId" => g.fighter_dynamics.addr(h),
+            "DynamicsId" => match g.ft.dynamics_block {
+                0 => g.fighter_dynamics.addr(h),
+                b => b + 0x98 * h,
+            },
             "EffectId" => g.ef.effects.addr(h),
             "QueuedId" => g.ef.queued.addr(h),
             // The items' tables in the executable: the handle is the address.
@@ -585,6 +634,23 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
     o.lay(&mut l, at, &cx);
     let n = o.dynamics_num.max(0) as usize;
     o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
+    // The action's figatree (`x590`) is in the main animation buffer, the second one
+    // (`x598`) in the main or the second: their places are the buffers', whichever other
+    // copies of their archives there are (two fighters' buffers can hold one).
+    let in_buf = |b: Option<super::handles::AnimBufId>, t: Option<melee_data::archive::DataRef>| {
+        let (b, t) = (b?, t?);
+        let base = game.fighter_anim_bufs.addr(b.0);
+        (base != 0).then(|| base + super::ft::anim_buf::ARCHIVE_HEADER + t.offset)
+    };
+    if o.x590.is_some() {
+        l.put_word(at + 0x590, in_buf(o.x59C, *o.x590));
+    }
+    if o.x598.addr.is_some() {
+        l.put_word(at + 0x598, o.x598.addr);
+    } else if o.x598.tree.is_some() {
+        let b = if o.x598.in_main { o.x59C } else { o.x5A0 };
+        l.put_word(at + 0x598, in_buf(b, o.x598.tree));
+    }
     l.put(img);
 }
 
