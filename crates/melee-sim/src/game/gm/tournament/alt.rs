@@ -775,7 +775,6 @@ impl Running<'_> {
     /// `GmTou4p`) and the strings, the screen, the menus' song; the match's characters and
     /// stage (a random one drawn) preloaded with their sound banks, and the song again.
     #[doc(alias = "gm_Scene_TouAlt_OnEnter")]
-    #[doc(alias = "gm_8019ECAC_OnEnter_inline")]
     pub fn tou_alt_on_enter(&mut self) {
         let a = &mut self.game.audio;
         a.lb.unwant_banks(0x12);

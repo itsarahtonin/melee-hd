@@ -880,7 +880,6 @@ impl Running<'_> {
     /// `fn_8018E618`: the bracket's GObjs and camera made anew (every GObj of process links
     /// 27 and 20 freed), the boxes loaded first if `reset`, and their GObjs.
     #[doc(alias = "fn_8018E618")]
-    #[doc(alias = "gmTournament_InitBracket")]
     pub fn tou_bracket_make(&mut self, count: i32, thickness: f32, reset: bool) {
         while let Some(g) = self.game.world.first_in(27) {
             gobj::free(self, g);
@@ -1132,7 +1131,6 @@ impl Running<'_> {
 
     /// `fn_8018F74C`: the box being played (64 for none).
     #[doc(alias = "fn_8018F74C")]
-    #[doc(alias = "fn_8018F888_inline0")]
     pub fn tou_current_box(&self) -> usize {
         self.game
             .tou
