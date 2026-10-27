@@ -667,7 +667,12 @@ impl Running<'_> {
             }
             Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
             Hook::VsEnterResults => self.vs_mode_enter_results(),
-            Hook::VsExitResults => unported_call("onExitResults (task 9)"),
+            Hook::VsExitResults => {
+                // `state[1].id != GM_GAMEMODESTATE_TERMINATE`: the state after the results'.
+                let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
+                let terminates = next.is_none_or(|d| d.id == 0xFF);
+                self.vs_mode_exit_results(terminates, super::results_exit::VS_STATE_CSS);
+            }
             Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
                 unported_call("the challenger approach's states (task 17)")
             }

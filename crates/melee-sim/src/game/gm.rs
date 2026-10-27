@@ -19,7 +19,9 @@ pub mod pause;
 pub mod progressive;
 pub mod records;
 pub mod results;
+pub mod results_exit;
 pub mod results_fighters;
+pub mod results_panel;
 pub mod results_player;
 pub mod results_scene;
 pub mod results_stats;
@@ -220,6 +222,24 @@ const UNLOCK_INDEX: [(u8, u32); 11] = [
     (0x18, 9),
     (0x19, 10),
 ];
+
+/// A character's unlock index, `gm_CKindToUnlockIndex` (none for one never locked).
+#[doc(alias = "gm_CKindToUnlockIndex")]
+pub fn unlock_index(ckind: u8) -> Option<u32> {
+    UNLOCK_INDEX
+        .iter()
+        .find(|&&(k, _)| k == ckind)
+        .map(|&(_, i)| i)
+}
+
+/// The character of an unlock index, `gm_GetCKindByUnlockIndex`.
+pub fn ckind_by_unlock_index(i: u8) -> u8 {
+    UNLOCK_INDEX
+        .iter()
+        .find(|&&(_, n)| n == u32::from(i))
+        .map(|&(k, _)| k)
+        .unwrap_or_else(|| panic!("no character has unlock index {i}"))
+}
 
 impl Unlocks {
     /// What Slippi Dolphin plays with: its codes unlock everything.

@@ -353,6 +353,10 @@ impl Ctx<'_> {
                 }
                 1
             }
+            Draw::Scissor { x, y, w, h } => {
+                self.game_scissor(*x, *y, *w, *h);
+                1
+            }
             Draw::ResultsCopy { image, x, y, clear } => {
                 self.results_copy(*image, *x, *y, *clear);
                 1

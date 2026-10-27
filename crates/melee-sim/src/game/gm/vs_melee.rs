@@ -39,7 +39,7 @@ pub struct VsMelee {
     /// `gmVsMelee_StartData`, the match's (and Sudden Death's) enter data.
     pub start: StartMeleeData,
     /// `ko_counts` (`0x804D6730`): each port's KOs in the session's matches.
-    pub ko_counts: [u8; 4],
+    pub ko_counts: [u8; 6],
     /// `gmVsMelee_VsExitInfo`, `gmVsMelee_SuddenDeathExitInfo`: the match's and Sudden
     /// Death's exit data.
     pub exit: super::match_exit::MatchExitInfo,
@@ -114,7 +114,7 @@ impl Running<'_> {
     #[doc(alias = "gmVsMelee_Mode_OnLoad")]
     #[doc(alias = "gmVsMelee_ResetKOCounts")]
     pub fn vs_mode_on_load(&mut self) {
-        self.game.vs_melee.ko_counts = [0; 4];
+        self.game.vs_melee.ko_counts = [0; 6];
     }
 
     /// `onEnterCss` (`gmVsMelee_EnterCss` with VS Melee's match type): the screen's data

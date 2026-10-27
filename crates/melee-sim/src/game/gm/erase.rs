@@ -130,7 +130,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80172624")]
     #[doc(alias = "fn_80172664")]
     #[doc(alias = "fn_80173644")]
-    fn message_condition(&mut self, n: u32) -> Option<bool> {
+    pub(super) fn message_condition(&mut self, n: u32) -> Option<bool> {
         let any = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().any(f);
         let all = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().all(f);
         let played = self.vs_matches_played();
