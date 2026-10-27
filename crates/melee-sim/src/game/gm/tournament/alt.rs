@@ -687,9 +687,88 @@ impl Running<'_> {
     /// (`fn_80166CBC`), their handicaps adjusted with the rule on (`fn_80169000`), the
     /// winners (winner-out) or losers (loser-out) stay and the others go to the back of the
     /// line, the next players taken from the front, and their sound banks.
+    ///
+    /// The places sorted ascending carry the seats `0..4` along; with the handicap rule on,
+    /// each place's own value (not its seat) names the entrant whose handicap moves, and the
+    /// sound banks are the match-up's icons' rather than their characters'
+    /// (docs/melee-bugs.md).
     #[doc(alias = "gm_8019E634")]
     pub fn tou_next_match_up(&mut self) {
-        super::super::super::code::unported_call("gm_8019E634 (the match-up after a match)")
+        let hmn_cpu = self.game.tou.tm.hmn_cpu_count();
+        let n = i32::from(self.game.tou.tm.x30);
+        // `lbl_803B7D3C`.
+        let mut indices: [i32; 4] = [0, 1, 2, 3];
+        let mut results = [0i32; 4];
+        for (r, p) in results
+            .iter_mut()
+            .zip(&self.game.tou.match_end.player_standings)
+            .take(n as usize)
+        {
+            *r = i32::from(p.is_small_loser);
+        }
+        for i in 0..(n - 1).max(0) {
+            for j in 0..(n - 1 - i) as usize {
+                if results[j] > results[j + 1] {
+                    results.swap(j, j + 1);
+                    indices.swap(j, j + 1);
+                }
+            }
+        }
+        if self.game.game_data.x1850.handicap == 1 {
+            let mut hbuf = [0u8; 4];
+            for (i, h) in hbuf.iter_mut().enumerate().take(n as usize) {
+                let j = self.alt_entrant_kept(results[i]);
+                *h = self.game.tou.tm.x37[j].x2;
+            }
+            let end = (*self.game.tou.match_end).clone();
+            super::super::results_exit::move_handicaps(&end, &mut hbuf);
+            for (i, &h) in hbuf.iter().enumerate().take(n as usize) {
+                let j = self.alt_entrant_kept(results[i]);
+                self.game.tou.tm.x37[j].x2 = h;
+            }
+        }
+        let x2e = i32::from(self.game.tou.tm.x2e);
+        let winner_out = self.game.tou.tm.match_type() == 1;
+        for i in 0..hmn_cpu {
+            let at = if winner_out { i } else { n - 1 - i };
+            let id = indices[at as usize];
+            let j = self.alt_entrant_kept(id);
+            self.game.tou.tm.x37[j].xe = (x2e - 1 - i) as u8;
+            let j = self.alt_entrant_kept(n + i);
+            self.game.tou.tm.x37[j].xe = id as u8;
+        }
+        for i in n + hmn_cpu..x2e {
+            let j = self.alt_entrant_kept(i);
+            let e = &mut self.game.tou.tm.x37[j];
+            e.xe = e.xe.wrapping_sub(hmn_cpu as u8);
+        }
+        for i in 0..n as usize {
+            let e = self.game.tou.tm.x37[self.alt_entrant_at(i as i32)];
+            let m = &mut self.game.tou.tm.x4b8[i];
+            m.x6 = e.x9;
+            m.x5 = e.x2;
+            m.x1 = e.x3;
+            m.x0 = e.x0;
+            m.x3 = e.x7;
+            m.x2 = e.x5;
+        }
+        let mut mask = 8u64;
+        for m in self.game.tou.tm.x4b8.iter().take(n as usize) {
+            mask |= crate::lb::audio::character_banks(i32::from(m.x1));
+        }
+        let a = &mut self.game.audio;
+        a.lb.unwant_banks(22);
+        a.lb.want_banks(6, mask);
+        a.lb_start_bank_loads(self.data);
+    }
+
+    /// The entrant whose kept seat is `p` (`get_match_player_index_xF`: the first, else the
+    /// first entrant).
+    fn alt_entrant_kept(&self, p: i32) -> usize {
+        let tm = &self.game.tou.tm;
+        (0..usize::from(tm.x2e))
+            .find(|&i| i32::from(tm.x37[i].xf) == p)
+            .unwrap_or(0)
     }
 
     /// `gm_Scene_TouAlt_OnEnter`: the menus' sound banks, the archives (`GmTou1p`,

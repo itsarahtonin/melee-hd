@@ -425,6 +425,8 @@ pub struct Alt {
 /// The tournament's statics.
 #[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Tournament {
+    /// `gm_804771C4` (`gm_GetTournamentData`).
+    #[doc(alias = "gm_GetTournamentData")]
     pub tm: TmData,
     /// `lbl_80473AB8`.
     pub bracket: [BracketEntry; 64],
@@ -451,7 +453,9 @@ pub struct Tournament {
     /// bracket's and the match-up's models.
     pub bounce: [f32; 41],
     pub alt_bounce: [f32; 41],
-    /// `lbl_804D4190`, `lbl_804D4194`: the random stage and the last one.
+    /// `lbl_804D4190`, `lbl_804D4194`: the random stage (which `fn_8019655C` returns) and
+    /// the last one.
+    #[doc(alias = "fn_8019655C")]
     pub stage: i32,
     pub last_stage: i32,
     pub setup: Setup,
@@ -563,13 +567,21 @@ impl Running<'_> {
     /// `gm_801B18D4`, Sudden Death's entry: the match's players, set up for it.
     #[doc(alias = "gm_801B18D4")]
     pub fn tou_enter_sudden_death(&mut self) {
-        super::super::code::unported_call("gm_801B18D4 (Tournament's Sudden Death)")
+        // Its enter data is the match's (`gm_804876D8`): the players copied onto themselves.
+        let end = self.game.tou.exit.match_end.clone();
+        super::setup_players::setup_sudden_death(&mut self.game.tou.start, &end);
     }
 
     /// `gm_801B1A2C`, Sudden Death's exit.
     #[doc(alias = "gm_801B1A2C")]
     pub fn tou_exit_sudden_death(&mut self) {
-        super::super::code::unported_call("gm_801B1A2C (Tournament's Sudden Death's exit)")
+        // `gm_801629B4`: the Sudden Death's seconds added to the save's (`x1A44`).
+        let secs = self.game.tou.sd_exit.match_end.frame_count / 60;
+        let s = &mut self.game.game_data.thing.save_data;
+        s.x1A44 = (s.x1A44 as u32).wrapping_add(secs) as i32;
+        let mut sd = self.game.tou.sd_exit.match_end.clone();
+        super::records::merge_sudden_death(&mut self.game.tou.exit.match_end, &mut sd);
+        self.game.tou.sd_exit.match_end.clone_from(&sd);
     }
 
     /// `gm_801B1A84`, the results' entry: the match's end.
@@ -582,6 +594,16 @@ impl Running<'_> {
     /// `gm_801B1AD4`, the results' exit.
     #[doc(alias = "gm_801B1AD4")]
     pub fn tou_exit_results(&mut self) {
-        super::super::code::unported_call("gm_801B1AD4 (Tournament's results' exit)")
+        let me = self.game.tou.results_enter.match_end.clone();
+        (*self.game.tou.match_end).clone_from(&me);
+        let kos = super::results_exit::human_kos(&me);
+        self.results_add_coins(kos);
+        if self.game.tou.tm.match_type() == 0 {
+            self.set_next_game_mode_state_id(STATE_BRACKET);
+            self.game.tou.tm.cur_option = 0x1F;
+            return;
+        }
+        self.tou_next_match_up();
+        self.set_next_game_mode_state_id(STATE_ALT);
     }
 }
