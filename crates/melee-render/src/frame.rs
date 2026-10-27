@@ -357,6 +357,10 @@ impl Ctx<'_> {
                 self.results_copy(*image, *x, *y, *clear);
                 1
             }
+            Draw::SnapCopy => {
+                self.snap_copy();
+                1
+            }
             Draw::EraseWithDepth => {
                 match self.hsd.erase_color.take() {
                     Some(c) => self.erase_screen(c, true),

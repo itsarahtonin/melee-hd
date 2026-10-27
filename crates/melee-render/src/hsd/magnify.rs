@@ -351,6 +351,22 @@ impl Ctx<'_> {
         self.copy_from_efb(&img, x, y, clear);
     }
 
+    /// `lb_800122C8(&cmsnap_data.image, 0, 0, false)` (`cmSnap_80031640`): the whole frame
+    /// copied into Camera Mode's snapshot's image, 640 by 480 RGB565, the frame kept.
+    pub fn snap_copy(&mut self) {
+        use melee_sim::lb::snap_write::{HEIGHT, IMAGE_SIZE, WIDTH};
+        let img = Image {
+            ptr: self.space.dynamic(Dynamic::Snapshot, IMAGE_SIZE),
+            width: WIDTH,
+            height: HEIGHT,
+            format: 4,
+            mipmap: false,
+            min_lod: 0.0,
+            max_lod: 0.0,
+        };
+        self.copy_from_efb(&img, 0, 0, false);
+    }
+
     /// In widescreen, how many times as wide the game camera sees, for Pokémon Stadium's
     /// screens copied from the frame (the stage feed and the zoomed view; not the text
     /// screen, which its own camera renders into the EFB's corner); None otherwise.

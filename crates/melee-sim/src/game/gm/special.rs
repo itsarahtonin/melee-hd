@@ -69,6 +69,19 @@ impl Special {
     }
 }
 
+/// `lbAudioAx_80026EBC` of the stage select's forced stage, as Stamina Mode's exit takes it:
+/// with no stage forced (-1, a stage picked), `Stage_8022519C` reads the entry before
+/// `stage_id_map`, whose ground kind is the bytes of the assertion string before the table
+/// (`"no!=St_Player_InitPos_None"`'s `"s_No"`, 0x735F4E6F), out of the banks' table: no bank
+/// (docs/melee-bugs.md).
+fn stamina_stage_banks(forced: i32) -> u64 {
+    if forced < 0 {
+        assert_eq!(forced, -1, "a forced stage before -1");
+        return 0;
+    }
+    crate::lb::audio::stage_banks(forced)
+}
+
 /// The Special Melee mode game mode `mode` is.
 fn special(mode: u8) -> Special {
     Special::from_game_mode(mode)
@@ -210,7 +223,7 @@ impl Running<'_> {
             self.game
                 .audio
                 .lb
-                .want_banks(8, crate::lb::audio::stage_banks(forced));
+                .want_banks(8, stamina_stage_banks(forced));
             self.game.audio.lb_start_bank_loads(self.data);
         } else {
             self.set_next_game_mode_state_id(STATE_CSS);
