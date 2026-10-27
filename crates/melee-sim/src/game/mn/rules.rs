@@ -366,7 +366,7 @@ impl Running<'_> {
 
     /// `mn_8022F4CC`: leaving the rules (or a screen under them) by B or Start: back to the
     /// VS list from the menu, or the texts and the menus' GObjs freed and back to
-    /// Tournament's setup; the character select's isn't ported.
+    /// Tournament's setup or the character select's screen (`mnCharSel_802640A0`).
     #[doc(alias = "mn_8022F4CC")]
     pub(crate) fn rules_leave(&mut self) {
         match game_mode(self) {
@@ -376,7 +376,11 @@ impl Running<'_> {
                 self.tou_back_from_rules();
             }
             super::super::gm::machine::GM_MENU => self.go_to_list(2, 3, 3),
-            _ => super::super::code::unported_call("mnCharSel_802640A0 (the character select)"),
+            _ => {
+                self.sis_reset();
+                self.menu_free_gobjs();
+                self.charsel_setup();
+            }
         }
     }
 

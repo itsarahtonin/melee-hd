@@ -1073,7 +1073,7 @@ impl Running<'_> {
     /// line and the KO stars, "Ready to fight", the doors from the players, and the
     /// screen's song.
     #[doc(alias = "mnCharSel_802640A0")]
-    fn charsel_setup(&mut self) {
+    pub(crate) fn charsel_setup(&mut self) {
         let match_type = self.css().match_type;
         if match_type != 0 {
             self.sfx_play(MODE_INFO[usize::from(match_type)].2, 0x7F, 0x40);
