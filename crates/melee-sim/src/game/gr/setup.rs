@@ -1125,6 +1125,8 @@ pub fn load_collision(game: &mut Game, data: &Archives) {
     );
     g.generation = generation;
     game.geometry = Some(g);
+    // The new joints hold no joint yet: the last stage's freed ones are its own.
+    game.gr.freed_coll_jobjs.clear();
 }
 
 /// Creates the stage's collision GObj and resets the stage's boxes, `mpLib_80058820`.
