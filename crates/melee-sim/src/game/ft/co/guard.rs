@@ -225,7 +225,8 @@ impl Running<'_> {
             let skel = self.game.fighters[f.0].x8AC_animSkeleton;
             let tree = self.second_figatree(f, 38);
             let tree = tree.expect("ftAnim_8006F4C8 reads a missing figatree at address 0");
-            self.bind_own_figatree(f, true, tree);
+            let buf = self.game.fighters[f.0].second_tree_buf();
+            self.in_anim_buf(buf, |r| r.bind_own_figatree(f, true, tree));
             let angle = self.game.fighters[f.0].mv_f32(GUARD_X8);
             self.request_anim(skel, angle);
             let costume = self.game.fighters[f.0].x108_costume_joint;

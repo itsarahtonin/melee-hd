@@ -1119,7 +1119,11 @@ pub fn printf(fmt: &[u8], args: &[FmtArg], out: &mut [u8]) -> usize {
                 }
                 (*v < 0, &digits[at..])
             }
-            (Some(b's'), Some(FmtArg::Str(s))) => (false, s),
+            // A C string: up to its terminator, where the slice holds one.
+            (Some(b's'), Some(FmtArg::Str(s))) => (
+                false,
+                &s[..s.iter().position(|&c| c == 0).unwrap_or(s.len())],
+            ),
             (conv, arg) => panic!("the format {conv:?} with {arg:?} isn't ported"),
         };
         let sign: &[u8] = if negative { b"-" } else { b"" };

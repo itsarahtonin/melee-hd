@@ -171,7 +171,6 @@ pub const UNITS: &[&str] = &[
     "melee/ft/ftCo_800C78B0",
     "melee/ft/ftCo_800C7590",
     "melee/ft/ftCo_800C7434",
-    "melee/ft/ft_0BEC",
     "melee/ft/ft_0BF0",
 ];
 
@@ -475,13 +474,11 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026B7D8", BONUS),
     ("it_8026B7E0", BONUS),
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
-    ("melee/ft/ft_0BEC", DEMO),
     ("melee/ft/ft_0BF0", DEMO),
     ("it_8027A9B8 (an event", POKEMON_MODES),
     ("it_8027A780 (training", POKEMON_MODES),
     ("fn_8017DF28", ONE_PLAYER),
     ("gm_80473A18", EVENT),
-    ("ftCo_800BF228", DEMO),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
     ("ftLib_CountFighters (Ditto's check)", DITTO),
     ("melee/it/kinds/itcerebi", CEREBI),

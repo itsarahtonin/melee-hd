@@ -996,7 +996,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **melee-hd:** modeled: the header is read from the heap's image ([the engine notes](engine.md#uninitialized-values)); a session stops where the image doesn't know those bytes, and outside a session (no image) so does the run.
 - **Fix:** stop the clock's work when the voice has stopped, or bound the box.
 - **Fix impact:** none audible; the stopped voice's end address changes.
-- **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; the Data session `prize`'s tick 560.
+- **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; the Data session `prize`'s tick 560, and the results' fanfares (`rules-match`'s results screen, tick 8208).
 
 ## Engine and HSD
 
@@ -1417,6 +1417,66 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `gm_1798.c`'s `fn_80179990` and its machine code (`.L_80179BD8` returns without `HSD_CObjEndCurrent`).
 
+### Every column's "more below" arrow counts the first player's statistics
+
+- **Where:** `fn_80174B4C` (a player's statistics page), `crates/melee-sim/src/game/gm/results_panel.rs` (`stats_page`).
+- **Defect:** the page's count of rows to show, which decides whether the "more below" arrow (`x0_2`) shows, is `fn_80174A60(list, 0)`: the rows the first player's statistics show, whichever player's page it is. The rows a KO page shows depend on the player (a player's own row and an absent player's are left out).
+- **Effect:** on the KOs page a player's arrow can show with nothing below or stay hidden with rows below, by the first player's count; the scroll itself (`fn_80177B7C`, `fn_80177DD0`) counts the player's own rows. Only what the arrow shows differs.
+- **melee-hd:** modeled: the count takes slot 0.
+- **Fix:** pass the page's player.
+- **Fix impact:** the arrow; nothing else reads `x0_2`.
+- **Source:** `gmresult.c`'s `fn_80174B4C`; ssbm-rs's port.
+
+### The statistics' rows clip to the first player's column
+
+- **Where:** `fn_801749B8` (the statistics' texts' render callback), `crates/melee-sim/src/game/gm/results_panel.rs` (`results_stats_text_render`).
+- **Defect:** every player's statistics' texts set the scissor from the first player's statistics' spot to the first player's last row's joint (`player_data[0]`), not their own.
+- **Effect:** none observable: the four columns' spots and rows' joints sit at the same heights.
+- **melee-hd:** modeled.
+- **Fix:** use the text's own column.
+- **Fix impact:** none.
+- **Source:** `gmresult.c`'s `fn_801749B8`.
+
+### The panel's setup makes texts it never uses
+
+- **Where:** `fn_80175C5C` and `fn_80175DC8`, `crates/melee-sim/src/game/gm/results_panel.rs` (`results_panel_texts`, `results_panel_model`).
+- **Defect:** `fn_80175C5C` makes two text buffers (`HSD_SisLib_803A6754(0, 0)`) and drops them; `fn_80175DC8` frees the title text `x2C`, which nothing sets, and makes the match kind's title without keeping it there.
+- **Effect:** none observable: the two empty buffers hold no string and draw nothing; the texts live in the text heap until the scene ends.
+- **melee-hd:** modeled: the texts are made and kept in the text list.
+- **Fix:** drop the two calls; keep the title in `x2C`.
+- **Fix impact:** the text heap's layout.
+- **Source:** `gmresult.c`'s `fn_80175C5C` and `fn_80175DC8`.
+
+### Sudden Death's team count reads past the five teams
+
+- **Where:** `gm_80166CCC` (the match's results with Sudden Death's), `crates/melee-sim/src/game/gm/records.rs` (`merge_sudden_death`).
+- **Defect:** counting Sudden Death's active teams, the loop runs over six where `team_standings` has five, so its sixth `active` byte is 0xA bytes past the fifth team: the first player's self-destructs' high byte (`player_standings[0].self_destructs`).
+- **Effect:** with 256 or more self-destructs by the first player in Sudden Death, the count is one more, and in a team battle the winning teams that sat Sudden Death out place one lower. No match reaches that many.
+- **melee-hd:** modeled: the sixth team counts by that byte.
+- **Fix:** loop over five.
+- **Fix impact:** none in play.
+- **Source:** `gm_1601.c`'s `gm_80166CCC`; ssbm-rs's port, which reads the byte from memory.
+
+### A winner's portrait shows its image's uninitialized bytes until the pose ends
+
+- **Where:** `fn_80179990` (a player's camera's render callback) and the panel's columns (`fn_80177748`), `crates/melee-sim/src/game/gm/results_fighters.rs` (`results_image_alloc`, `results_player_render`).
+- **Defect:** each player's second image is a block from the scene's heap (`lb_800121FC`), which nothing clears; a loser's camera copies its fighter into it every frame, but a winner's only once its pose's frames have run out, while its column shows the image from the panel's arrival on.
+- **Effect:** visible: for the seconds a winner poses, its portrait in the panel shows whatever the block held (the match's freed fighters, lights and files) as RGB5A3 texels, a field of colored noise; then the copy replaces it. It changes with the match before.
+- **melee-hd:** modeled: the renderer starts each results image from the bytes the heap's image says its block held (`ResultsFighters::leftovers`); where the image doesn't know a byte it shows zero and notes it.
+- **Fix:** clear the images when the scene takes them, or take the winner's copy before its column shows.
+- **Fix impact:** the portraits during the pose; nothing the simulation reads.
+- **Source:** `gm_1798.c`'s `fn_80179990`; ssbm-rs's renderer's frames of `results-sessions/stock` (frames 2451 to 3401).
+
+### The results' 32-bit records wrap where the code means to hold them
+
+- **Where:** `fn_80161C90` (a player's statistics added), `gm_8016247C` (the coins the KOs earn), `crates/melee-sim/src/game/gm/records.rs` (`add_stats`) and `results_exit.rs` (`results_add_coins`).
+- **Defect:** the 32-bit sums (attacks, damage dealt, taken and recovered, play time, the distances, the coins collected, swiped and lost, the save's coin totals) are added as unsigned words and then tested against `0xFFFFFFFF` to hold them there; the test can never hold, so each sum wraps past the largest word instead. The 16-bit counts are held at 0xFFFF as meant.
+- **Effect:** none in play: no save reaches four billion of any of them. A save edited to the largest value (`results-sessions/ko-max`) wraps to small numbers after a match.
+- **melee-hd:** modeled: the sums wrap.
+- **Fix:** add in 64 bits, or test before adding.
+- **Fix impact:** the records' values past the largest word.
+- **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1550,6 +1610,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The album's dialog's answer | `mnSnap_8025441C` (`mnsnap.c`), `game/mn/snap.rs` (`album_dialog_input`) | Declared to return a value its code never sets: it returns whatever `r3` holds at its end (its buttons' high word, or what its last call left there; ssbm-rs transliterates it from its machine code for that); its only caller, the album's think, drops the result | `crates/melee-sim/src/game/mn/snap.rs` (`album_dialog_input`) |
 | A swap that fails as it starts | `fn_802545C4` (`mnsnap.c`, state 11), `game/mn/snap.rs` (`album_state_moving`) | Tests the swap's start for 8 instead of busy, so a list that fails at its start with another result (a mount that finds no card, the card pulled since the pad alarm's last probe) is still stepped until it isn't busy, the queue's next call running none; nothing pulls a card between the alarm's probe and the move's A in any session (melee-hd stops) | `crates/melee-sim/src/lb/snap_read.rs` (`snap_task_step`) |
 | A broken snapshot's stream | `hsd_803B5EA0`, `hsd_803B5D70`, `hsd_803B5C4C`, `hsd_803B6BE4` (`hsd_3B5C.c`), `hsd/jpeg_decode.rs` | A run of zeros past a block's end writes coefficients past its 64, taking places from the DC tables that follow the zigzag order: into the last DCs, then past the work area; a value size of 0 (no code in 16 bits) reads bits until the stream ends; the bit reader looks at the byte after a 0xFF, and the markers' scan at the halfword on the stream's last byte, before testing the stream's end. The card's checksums keep a snapshot's bytes as HAL's encoder wrote them, so only a hand-made file reaches it (melee-hd models the DCs and stops past them) | `crates/melee-sim/src/hsd/jpeg_decode.rs` (`set_coef`, `bits`); `tools/leaf-check/tests/jpeg_decode.rs` |
+| The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
+| The automatic handicaps after a tie | `fn_80169000`, `game/gm/results_exit.rs` (`move_handicaps`) | Fills a stack array of the players by place, one entry a place; tied players share a place and leave the last places' entries unset, which the first place's and the last place's handicaps are then read through (melee-hd stops) | `crates/melee-sim/src/game/gm/results_exit.rs` (`move_handicaps`) |
 
 ## Unsure
 

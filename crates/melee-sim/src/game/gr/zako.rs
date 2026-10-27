@@ -40,6 +40,8 @@ pub struct Zako {
     pub cursor: i16,
     /// `xA`'s bits, `b0` (scanning on) first.
     pub flags: u8,
+    /// The slots' block in the scene's heap, 0 where the model doesn't know it.
+    pub addr: u32,
 }
 
 impl Zako {
@@ -53,7 +55,7 @@ impl Zako {
 #[doc(alias = "grZakoGenerator_801CA67C")]
 pub fn new_slots(game: &mut Game) -> Vec<Slot> {
     // The slots' block (`grZakoGenerator_Data`), which the scene's heap keeps.
-    crate::hsd::heap::mem_alloc(0x3CC);
+    game.gr.zako.addr = crate::hsd::heap::mem_alloc(0x3CC);
     let mut slots: Vec<Slot> = (0..80)
         .map(|i| Slot {
             point: i + 0x20,

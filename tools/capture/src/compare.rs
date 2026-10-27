@@ -1973,7 +1973,10 @@ impl Cx for Comparer<'_> {
                 .and_then(|p| p.gone_addr(o))
                 .or_else(|| self.game.objs.heap.image.data_addr(o))
         {
-            if a != theirs {
+            // Two copies of the file gone together (a match's and the next select's): the
+            // pointer names the same data in either.
+            let other_copy = self.past.is_some_and(|p| p.in_gone_copy(o, theirs));
+            if a != theirs && !other_copy {
                 self.diffs.push(format!(
                     "{path}: data ours {o:?} (at {a:#x}, its archive gone), theirs {theirs:#x}"
                 ));
@@ -2022,6 +2025,24 @@ struct Nulls;
 impl melee_sim::game::mirror::LayCx for Nulls {
     fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
         h.is_none().then_some(0)
+    }
+    fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
+        d.is_none().then_some(0)
+    }
+}
+
+/// [`Nulls`] that also lays a leftover handle as the word it stands for
+/// (`melee_sim::hsd::image::Image::unknown_word`): a field still holding what the block
+/// held, the GPU's pixels among them.
+struct LeftoverWords<'a>(&'a melee_sim::hsd::image::Image);
+
+impl melee_sim::game::mirror::LayCx for LeftoverWords<'_> {
+    fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {
+        match h {
+            None => Some(0),
+            Some(h) if h >= melee_sim::hsd::pool::UNKNOWN => self.0.unknown_word(h),
+            Some(_) => None,
+        }
     }
     fn data(&self, d: Option<melee_data::archive::DataRef>) -> Option<u32> {
         d.is_none().then_some(0)
@@ -2096,6 +2117,42 @@ impl Comparer<'_> {
 /// oracle's mutation run with the other fill (`--mutate render-target=ff`) catches a write of
 /// the fill's and any read before a write (docs/engine.md, "Uninitialized values"). A results
 /// pose's fighter's `x61C` is left out too (see there). None for any other fighter.
+/// An item's block as [`render_target_view`] makes a fighter's: where it held the GPU's
+/// pixels when made, each bit ours still holds as the fill's takes ours. None for an item
+/// made over none.
+pub(crate) fn item_render_target_view(
+    game: &melee_sim::game::state::Game,
+    i: melee_sim::game::handles::ItemId,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    use melee_sim::game::mirror::{LayOut, Mirror};
+    use melee_sim::game::structs::Item;
+    let runs = game.it.render_leftovers.get(&i.0)?;
+    let o = &game.items[i.0];
+    let size = <Item as Mirror>::SIZE;
+    let lo = (at - MEM1) as usize;
+    let fill = game.objs.heap.image.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, size);
+    let cx = LeftoverWords(&game.objs.heap.image);
+    o.lay(&mut l, at, &cx);
+    let n = o.x374_dynamicBonesNum.max(0) as usize;
+    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
+    let n = usize::from(o.xAC8_hurtboxNum);
+    o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    let mut block = mem[lo..lo + size as usize].to_vec();
+    for &(a, b) in runs {
+        for off in a..b {
+            if let Some((ours, known)) = l.bits_at(at + off) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[off as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
+}
+
 fn render_target_view(
     game: &melee_sim::game::state::Game,
     f: melee_sim::game::handles::FighterId,
@@ -2121,10 +2178,10 @@ fn render_target_view(
     };
     let fill = game.objs.heap.image.render_fill;
     let mut l = melee_sim::hsd::export::Lay::new(at, size);
-    o.lay(&mut l, at, &Nulls);
+    let cx = LeftoverWords(&game.objs.heap.image);
+    o.lay(&mut l, at, &cx);
     let n = o.dynamics_num.max(0) as usize;
-    o.dynamic_bone_sets
-        .lay_counted(&mut l, at + 0x2F0, &Nulls, n);
+    o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
     let mut block = mem[lo..lo + size as usize].to_vec();
     if demo {
         block[0x61C] = o.x61C as u8;

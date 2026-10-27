@@ -240,6 +240,7 @@ pub fn remove(
     if let Some(j) = objs.generators[g].jobj.take() {
         jobj::unref(objs, Some(j));
     }
+    super::export::with_image(|img| super::export::generator(objs, data, img, g));
     objs.generators.pool.free(g.0);
     objs.generators.live = objs.generators.live.wrapping_sub(1);
     prev

@@ -405,10 +405,11 @@ impl Comparer<'_> {
         let ipath = format!("{path} item");
         self.begin_block("item", t, &ipath);
         let item = &game.items[o.0];
+        let rt = crate::compare::item_render_target_view(game, o, t, self.mem);
         let view = self.unlaid_view(
             t,
             <melee_sim::game::structs::Item as Mirror>::SIZE,
-            None,
+            rt,
             |l, cx| {
                 use melee_sim::game::mirror::LayOut;
                 item.lay(l, t, cx);

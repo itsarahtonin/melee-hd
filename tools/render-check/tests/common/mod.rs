@@ -43,9 +43,10 @@ pub enum Replay {
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
     /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
-    /// `lockstep/special-sessions/NAME.inputs` and for `trophy-NAME`
-    /// `lockstep/trophy-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's
-    /// float mode.
+    /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
+    /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/` and
+    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
+    /// played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -68,6 +69,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("select-") {
                     return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("results-") {
+                    return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("special-") {
                     return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
@@ -707,6 +711,24 @@ pub const SELECT_KONGO: Game = Game {
     replay: Replay::Session("select-stage-kongo"),
 };
 
+/// A one-stock match's results (`results-sessions/stock`): the panel coming in, Mario's
+/// second pose, the rows and portraits, the statistics' pages turned and scrolled.
+pub const RESULTS_STOCK: Game = Game {
+    stage: "Results",
+    name: "results-stock",
+    players: "a stock match's results (session results-sessions/stock)",
+    replay: Replay::Session("results-stock"),
+};
+
+/// A team battle's results (`results-sessions/teams`): three teams' rows, Ness's bat pose,
+/// the KOs page.
+pub const RESULTS_TEAMS: Game = Game {
+    stage: "Results",
+    name: "results-teams",
+    players: "a team battle's results (session results-sessions/teams)",
+    replay: Replay::Session("results-teams"),
+};
+
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
 /// camera's info, the snapshot's offer and its question, the save.
 pub const CAMERA_SNAPS: Game = Game {
@@ -1010,5 +1032,11 @@ pub mod why {
     /// comparison hashes from memory the copy never writes.
     pub const SCREEN_COPY: &str =
         "Pokémon Stadium's screen: a copy kept on the GPU, compared by memory it never writes";
+    /// The results screen's images: copies kept on the GPU (RGB5A3, as ssbm-rs keeps them),
+    /// which the comparison hashes from memory holding what their blocks held before, a
+    /// few of whose bytes the heap's image doesn't know (fields of freed fighters, lights and
+    /// an archive's header no layout covers): the draws sample the copies, and the images
+    /// are identical.
+    pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

@@ -418,6 +418,10 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         super::ft::zelda::addr::ON_KNOCKBACK_ENTER => g.seak_on_knockback_enter(gobj),
         super::ft::zelda::addr::ON_KNOCKBACK_EXIT => g.seak_on_knockback_exit(gobj),
         // efLib_PauseAll, a state's hitlag hook that freezes the fighter's effects.
+        // The results' demo states' animation callbacks, which do nothing.
+        super::ft::demo::DEMO_ANIM_2
+        | super::ft::demo::DEMO_ANIM_3
+        | super::ft::demo::DEMO_ANIM_5 => super::ft::demo::demo_anim(),
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         // efLib_ResumeAll, a state's hook for hitlag's end.
         EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),

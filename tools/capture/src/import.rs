@@ -877,6 +877,7 @@ impl Importer<'_> {
             free: id(self, "cm_804D6458"),
             first: id(self, "cm_804D6460"),
             last: id(self, "cm_804D6468"),
+            addr: base,
         };
         let cam = Camera::import(&mem, sym("game_camera"), self);
         let copy = self.u32(sym("cm_804D6464"));

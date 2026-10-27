@@ -234,6 +234,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             && now_match
             && in_scene == 1
             && s.game.machine.routing.curr_mode == melee_sim::game::gm::GM_VS
+            // The VS scene's match, not Sudden Death's or the results screen's fighters.
+            && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
+                == Some(melee_sim::game::gm::machine::GS_VS)
             && !check_shortcut(tick - 1, &s, ring[slot].game.objs.rng.seed, &disc)
         {
             shortcut_failed = true;
@@ -359,17 +362,8 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
             team: p.team,
         })
         .collect();
-    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
-    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
-    // The match's own: the save's unlocks, the session's console, the allocator model on
-    // whatever the players (the menus' match always runs it).
-    settings.unlocks = s.game.gm.unlocks;
-    settings.seed = seed;
-    settings.disc = s.setup.disc;
-    settings.dsp = s.setup.dsp;
-    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
-    // A team battle and handicaps are the menus' alone: the launcher makes neither, so its
-    // shortcut can't make such a match.
+    // A team battle and handicaps (the automatic handicap's too) are the menus' alone: the
+    // launcher makes neither, so its shortcut can't make such a match.
     let handicaps = start.players.iter().take(4).any(|p| {
         i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE && p.handicap != 9
     });
@@ -385,6 +379,15 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         );
         return true;
     }
+    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
+    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
+    // The match's own: the save's unlocks, the session's console, the allocator model on
+    // whatever the players (the menus' match always runs it).
+    settings.unlocks = s.game.gm.unlocks;
+    settings.seed = seed;
+    settings.disc = s.setup.disc;
+    settings.dsp = s.setup.dsp;
+    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
     // The players' name tags, which the launcher doesn't offer: taken from the menus', and
     // listed.
     let mut taken = Vec::new();
