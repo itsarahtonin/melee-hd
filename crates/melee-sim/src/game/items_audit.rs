@@ -373,7 +373,6 @@ const EVT_UNK: &str =
 const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
 const POKEMON_MODES: &str =
     "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
-const SCENES: &str = "other scenes' item setup (intros, cutscenes, the trophy fall)";
 const YAKU: &str =
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)";
 const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
@@ -466,7 +465,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026ECE0", DEBUG),
     ("Item_80266F3C", DEBUG),
-    ("Item_80266FA8", SCENES),
     ("it_8026C1E8", ZAKO),
     ("it_802EA9FC", ZAKO),
     ("it_802DC4BC", ZAKO),
