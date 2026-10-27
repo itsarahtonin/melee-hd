@@ -387,8 +387,8 @@ impl Running<'_> {
     }
 
     /// The match's exit, `gm_801B2AF8`: the match's records (`gm_80168638`, `gm_80168710`,
-    /// `gm_8016247C`, the KO counts), then back to the character select.
-    #[doc(alias = "gm_801B2AF8")]
+    /// `gm_8016247C`, the KO counts), then back to the character select. Held unaliased until
+    /// a session leaves Camera Mode's match (the camera sessions end in it).
     pub fn camera_exit_vs(&mut self) {
         let me = self.game.vs_melee.exit.match_end.clone();
         self.results_handicaps(&me);

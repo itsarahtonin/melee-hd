@@ -999,7 +999,9 @@ fn a_snapshot_lands_on_the_card_as_the_consoles() {
 /// Camera Mode's menu in a match: the info hidden and shown, snapshots offered, asked about
 /// and refused, one saved; the same with the card pulled out while a snapshot is offered, and
 /// pulled out and put back on the card check (the memory card mode then probing the save,
-/// read whole); and Tiny Melee through its selects and match into the results.
+/// read whole); Tiny Melee through its selects, its match and its results to the trace's end;
+/// and Stamina Mode's match exit, its selects again and the main menu, past two copies of its
+/// fighters' files gone together.
 #[test]
 fn special_melee_sessions() {
     let Some(out) = scripted_session("special-sessions", "camera-snaps", &["--all", "--heap"])
@@ -1027,10 +1029,12 @@ fn special_melee_sessions() {
     else {
         return;
     };
-    assert!(
-        out.contains("2782 ticks compared, no difference; stopped in tick 2781"),
-        "{out}"
-    );
+    assert!(out.contains("3163 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session("special-sessions", "special-stamina", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(out.contains("2896 ticks compared, no difference"), "{out}");
 }
 
 /// A trophy session (`lockstep/trophy-sessions/NAME.inputs` with its card, traced into
