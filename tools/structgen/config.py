@@ -147,7 +147,7 @@ EXPORT_ROOTS = ["GmCardData"]
 
 # Structs laid out for the heap's image (`LayOut`), with everything they hold: a fighter's and
 # an item's blocks, as they go back to the heap, and an item's variables' members.
-LAY_ROOTS = ["Fighter", "Item", "BoneDynamicsDesc", "DynamicsData", "lb_00F9_UnkDesc0", "Item_DynamicBones", "HurtCapsule", "FighterBone"] + [r for r in ROOTS if r.endswith("_ItemVars")]
+LAY_ROOTS = ["Fighter", "Item", "BoneDynamicsDesc", "DynamicsData", "lb_00F9_UnkDesc0", "Item_DynamicBones", "HurtCapsule", "FighterBone", "ItemLink"] + [r for r in ROOTS if r.endswith("_ItemVars")]
 
 # Handles for pointers to runtime objects, by the pointee's C name.
 POINTERS = {

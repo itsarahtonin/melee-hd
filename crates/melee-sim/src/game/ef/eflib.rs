@@ -236,6 +236,9 @@ pub fn remove_user_data(game: &mut Game, e: EffectId) {
 /// effect's `next`, becomes the free list's link to the block freed before it, which a spawn
 /// that chained this effect still reads.
 pub(super) fn free_effect(game: &mut Game, e: EffectId) {
+    // The block holds the effect as it was (docs/engine.md, a session's heap leftovers).
+    let g = &*game;
+    crate::hsd::export::with_image(|img| crate::game::export::effect(g, img, e));
     let link = game.ef.effects.free_head().map(EffectId);
     game.ef.effects[e.0].next = link;
     game.ef.effects.free(e.0);
@@ -355,10 +358,21 @@ pub fn create(r: &mut Running, gfx_id: i32, parent: Option<GObjId>) -> Option<Ef
         r.game.ef.count = r.game.ef.count.wrapping_add(1);
     }
     let load_kind = r.game.ef.load_kind;
-    let e = EffectId(r.game.ef.effects.alloc(Effect {
-        is_async: load_kind as u8,
-        ..Effect::default()
-    }));
+    let e = new_effect(r);
+    {
+        // `efLib_Create` writes these; `params`, `user_data`, `x2A` and `x2B` stay the block's.
+        let ef = &mut r.game.ef.effects[e.0];
+        ef.next = None;
+        ef.gobj = None;
+        ef.attach_jobj = None;
+        ef.update = None;
+        ef.state_flags = 0;
+        ef.expire_flags = 0;
+        ef.scale_flags = 0;
+        ef.lifetime = 0;
+        ef.is_async = load_kind as u8;
+        ef.user_data = None;
+    }
     assert!(
         !(parent.is_none() && load_kind != 0),
         "error no parent gobj!"
@@ -397,6 +411,55 @@ pub fn create(r: &mut Running, gfx_id: i32, parent: Option<GObjId>) -> Option<Ef
     }
     r.game.world.setup_proc(gobj, CodeRef(UPDATE_PROC), 15);
     Some(e)
+}
+
+/// An effect's block from efLib's allocator (`HSD_ObjAlloc`), uncleared: a slot freed before
+/// keeps its last effect's words ([`super::EffectLeft`]: its `user_data` as the word it was),
+/// and in a session a block new from the heap holds what the heap's image knows there.
+fn new_effect(r: &mut Running) -> EffectId {
+    use super::Held;
+    let e = EffectId(r.game.ef.effects.alloc_stale(Effect::default()));
+    let addr = r.game.ef.effects.addr(e.0);
+    if crate::game::leftovers::pool_grew() {
+        let ef = &mut r.game.ef.effects[e.0];
+        *ef = Effect::default();
+        if let Some((b, k)) = crate::game::leftovers::bytes_known(r.data, addr + 0x14, 0x18) {
+            let word = |i: usize| u32::from_be_bytes(b[i..i + 4].try_into().unwrap());
+            let known = |i: usize| k[i..i + 4].iter().all(|&k| k);
+            ef.left.user_data = if known(0) {
+                Held::Word(word(0))
+            } else {
+                Held::Unknown
+            };
+            ef.left.params_unknown = 0;
+            let mut p = [0.0f32; 3];
+            for (i, v) in p.iter_mut().enumerate() {
+                if known(4 + 4 * i) {
+                    *v = f32::from_bits(word(4 + 4 * i));
+                } else {
+                    ef.left.params_unknown |= 1 << i;
+                }
+            }
+            ef.params = crate::vec::Vec3::new(p[0], p[1], p[2]);
+            ef.left.x2a = [0x16, 0x17].map(|i| k[i].then_some(b[i]));
+        }
+    } else {
+        let g = &*r.game;
+        let ef = &g.ef.effects[e.0];
+        let user_data = match ef.left.user_data {
+            // A fighter whose address the model doesn't give leaves the word unknown.
+            Held::Written => match ef.user_data.map_or(0, |f| g.fighters.addr(f.0)) {
+                0 if ef.user_data.is_some() => Held::Unknown,
+                a => Held::Word(a),
+            },
+            h => h,
+        };
+        let unknown = (0..3).fold(0, |m, i| if ef.param_known(i) { m } else { m | 1 << i });
+        let ef = &mut r.game.ef.effects[e.0];
+        ef.left.user_data = user_data;
+        ef.left.params_unknown = unknown;
+    }
+    e
 }
 
 /// An effect constrained to a joint's position, starting there, `efLib_Create_Attach`.

@@ -309,14 +309,19 @@ pub fn jobj(objs: &Objects, img: &mut Image, j: JObjId) {
     };
     l.word(0x84, id);
     l.put(img);
-    if let Some(s) = o.scl {
-        let mut l = Lay::new(o.scl_addr, 0xC);
-        l.f32s(0, &[s.x, s.y, s.z]);
-        l.put(img);
-    }
+    scl(img, o.scl_addr, o.scl);
     if let Some(m) = o.envelopemtx {
         let mut l = Lay::new(o.envelopemtx_addr, 0x30);
         l.f32s(0, m.m.as_flattened());
+        l.put(img);
+    }
+}
+
+/// A joint's accumulated scale (`scl`, a `Vec3` from `HSD_VecAlloc`), where it has one.
+pub fn scl(img: &mut Image, at: u32, s: Option<crate::vec::Vec3>) {
+    if let Some(s) = s {
+        let mut l = Lay::new(at, 0xC);
+        l.f32s(0, &[s.x, s.y, s.z]);
         l.put(img);
     }
 }
@@ -868,7 +873,11 @@ pub fn cobj(objs: &Objects, img: &mut Image, c: super::cobj::CObjId) {
         },
     );
     l.put(img);
-    if let Some(m) = o.inv_view_mtx {
+    // An inverse is never all zero: such a matrix is one `PSMTXInverse` left as its new
+    // block held it (a singular view), which melee-sim doesn't know.
+    if let Some(m) = o.inv_view_mtx
+        && m.m.as_flattened().iter().any(|v| v.to_bits() != 0)
+    {
         let mut l = Lay::new(o.inv_view_mtx_addr, 0x30);
         l.f32s(0, m.m.as_flattened());
         l.put(img);
@@ -931,6 +940,32 @@ pub fn lobj(objs: &Objects, img: &mut Image, l: super::lobj::LObjId) {
         }
     }
     lay.put(img);
+}
+
+/// `HSD_Fog` (0x20), which `hsdNew` clears: its type, range adjustment (whose address the
+/// model doesn't give: unknown when it has one), distances, color (its alpha unknown while
+/// stale) and animation.
+pub fn fog(objs: &Objects, img: &mut Image, f: super::fog::FogId) {
+    let at = objs.fogs.fogs.addr(f.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.fogs[f];
+    let mut l = Lay::new(at, 0x20);
+    l.u32(0, Class::Fog.info_addr());
+    l.u16(4, o.ref_count.0);
+    l.u16(6, 0);
+    l.u32(8, o.ty);
+    if o.fog_adj.is_none() {
+        l.u32(0xC, 0);
+    }
+    l.f32s(0x10, &[o.start, o.end]);
+    l.bytes(0x18, &o.color);
+    if o.stale_alpha {
+        l.forget(at + 0x1B, 1);
+    }
+    l.u32(0x1C, addr_of(o.aobj, |x| objs.aobjs.pool.addr(x.0)));
+    l.put(img);
 }
 
 /// `HSD_AObj` (0x1C); `jobj_addr` gives the bound joint's address.
@@ -1148,6 +1183,15 @@ pub fn live_objects(objs: &Objects, data: &melee_data::archive::Archives, img: &
             {
                 cobj(objs, img, super::cobj::CObjId(slot));
             }
+            k if k
+                == std::any::type_name::<super::list::SList<super::generator::GeneratorId>>()
+                && !objs.generators.nodes.is_free(slot) =>
+            {
+                generator_node(objs, img, super::list::SListId(slot));
+            }
+            k if k == std::any::type_name::<super::fog::Fog>() && !objs.fogs.fogs.is_free(slot) => {
+                fog(objs, img, super::fog::FogId(slot));
+            }
             k if k == std::any::type_name::<super::lobj::LObj>()
                 && !objs.lobjs.pool.is_free(slot) =>
             {
@@ -1334,6 +1378,41 @@ pub fn generator(
     l.put(img);
 }
 
+/// A list node (`HSD_SList`, 8): its next node and its data word.
+pub fn slist_node(img: &mut Image, at: u32, next: u32, data: u32) {
+    let mut l = Lay::new(at, 8);
+    l.u32(0, next);
+    l.u32(4, data);
+    l.put(img);
+}
+
+/// A node of the generators waiting to be oriented (`hsd_8039F6CC`'s list): the next node and
+/// the generator.
+pub fn generator_node(objs: &Objects, img: &mut Image, n: super::list::SListId) {
+    let gs = &objs.generators;
+    let at = gs.nodes.addr(n.0);
+    if at == 0 {
+        return;
+    }
+    let node = &gs.nodes[n.0];
+    let next = addr_of(node.next, |x| gs.nodes.addr(x.0));
+    slist_node(img, at, next, gs.pool.addr(node.data.0));
+}
+
+/// The node holding a shadow's `i`th joint (`HSD_ShadowAddObject`'s): the next node and the
+/// joint.
+pub fn shadow_node(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId, i: usize) {
+    let o = &objs.shadows[s.0];
+    let (Some(&at), Some(&j)) = (o.object_nodes.get(i), o.objects.get(i)) else {
+        return;
+    };
+    if at == 0 {
+        return;
+    }
+    let next = o.object_nodes.get(i + 1).copied().unwrap_or(0);
+    slist_node(img, at, next, objs.jobjs.pool.addr(j.0));
+}
+
 /// `HSD_Shadow` (0x28), cleared whole as it's made (`HSD_ShadowAlloc`): its first list node,
 /// camera, texture, the texture's scale and translation, whether it's active, its intensity.
 pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
@@ -1351,6 +1430,9 @@ pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
     l.bytes(0x20, &[o.intensity, 0, 0, 0]);
     l.u32(0x24, 0);
     l.put(img);
+    for i in 0..o.object_nodes.len() {
+        shadow_node(objs, img, s, i);
+    }
 }
 
 /// `HSD_psAppSRT` (0xA4), cleared whole as it's made (`psAddGeneratorAppSRT`'s `memset`):

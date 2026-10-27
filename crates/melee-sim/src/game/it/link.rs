@@ -51,6 +51,15 @@ impl Mirror for LinkX20 {
     }
 }
 
+impl crate::game::mirror::LayOut for LinkX20 {
+    /// Once written; until then the block's bytes, which the layout keeps.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        if let Some(v) = &self.0 {
+            crate::game::mirror::LayOut::lay(v, l, at, cx);
+        }
+    }
+}
+
 /// The link.
 pub fn link(game: &Game, l: ItemLinkId) -> &ItemLink {
     &game.it.links[l.0]
@@ -70,7 +79,10 @@ pub fn link_of(game: &Game, gobj: GObjId) -> ItemLinkId {
 
 /// Gives a link back to `item_link_alloc_data`, `it_802A2474` (the links' user data release).
 #[doc(alias = "it_802A2474")]
-pub fn free(game: &mut Game, l: ItemLinkId) {
+pub fn free(game: &mut Game, data: &melee_data::archive::Archives, l: ItemLinkId) {
+    // The block holds the link as it was (docs/engine.md, a session's heap leftovers).
+    let g = &*game;
+    crate::hsd::export::with_image(|img| crate::game::export::item_link(g, data, img, l));
     game.it.links.free(l.0);
 }
 

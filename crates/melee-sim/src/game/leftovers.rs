@@ -141,6 +141,16 @@ pub fn bytes(data: &Archives, addr: u32, len: u32) -> Option<Vec<u8>> {
     .flatten()
 }
 
+/// The bytes the image knows at `[addr, addr + len)` and which it knows (an unknown byte and
+/// a render target's are unknown), in a session (none outside one).
+pub fn bytes_known(data: &Archives, addr: u32, len: u32) -> Option<(Vec<u8>, Vec<bool>)> {
+    if !heap::image_on() {
+        return None;
+    }
+    heap::with(|h| (h.image.on && addr != 0).then(|| h.image.leftover_bytes(data, addr, len)))
+        .flatten()
+}
+
 /// Whether the last object a pool handed out came new from the heap (its pool grew), in a
 /// session.
 pub fn pool_grew() -> bool {
