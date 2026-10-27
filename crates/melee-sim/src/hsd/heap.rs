@@ -1257,9 +1257,17 @@ impl Heap {
         }
     }
 
-    /// An archive loaded into the block at `file` (`len` bytes): the image knows its bytes,
-    /// relocated to the block (`HSD_ArchiveParse`).
-    pub fn hold_archive(&mut self, file: u32, len: u32, archive: melee_data::archive::ArchiveId) {
+    /// An archive loaded into the block at `file` (`len` bytes), its `HSD_Archive` at
+    /// `header`: the image knows its bytes, relocated to the block, and the header block as
+    /// the parse leaves it (`HSD_ArchiveParse`, [`super::export::archive`]).
+    pub fn hold_archive(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        file: u32,
+        len: u32,
+        header: u32,
+        archive: melee_data::archive::ArchiveId,
+    ) {
         self.image.hold(
             file,
             file + len,
@@ -1269,6 +1277,9 @@ impl Heap {
                 base: file + 0x20,
             },
         );
+        if header != 0 {
+            super::export::archive(&mut self.image, data, header, file, len, archive);
+        }
     }
 }
 

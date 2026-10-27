@@ -1413,6 +1413,26 @@ impl<'a> Comparer<'a> {
                 (l.id, l.spec_id),
                 (self.u32(t + 0x4C), self.u32(t + 0x90)),
             );
+            // The GX light objects (`lightobj`, `spec_lightobj`): their reserved words, color,
+            // attenuation, position and direction; a stale position isn't known.
+            for (what, g, off) in [
+                ("GX light", l.light, 0x50),
+                ("specular GX light", l.spec, 0x94),
+            ] {
+                let mut ours = vec![0, 0, 0, u32::from_be_bytes(g.color)];
+                ours.extend(
+                    g.a.iter()
+                        .chain(&g.k)
+                        .chain(&g.lpos)
+                        .chain(&g.ldir)
+                        .map(|f| f.to_bits()),
+                );
+                let mut theirs: Vec<u32> = (0..16).map(|k| self.u32(t + off + 4 * k)).collect();
+                if g.stale_pos {
+                    theirs[10..13].copy_from_slice(&ours[10..13]);
+                }
+                self.check(&lp, what, ours, theirs);
+            }
             let (pos, interest, aobj, next) = (l.position, l.interest, l.aobj, l.next);
             self.wobj(&format!("{lp} position"), pos, self.u32(t + 0x18));
             self.wobj(&format!("{lp} interest"), interest, self.u32(t + 0x1C));

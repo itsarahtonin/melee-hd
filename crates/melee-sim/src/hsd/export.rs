@@ -893,6 +893,46 @@ pub fn wobj(objs: &Objects, img: &mut Image, w: super::wobj::WObjId) {
     l.put(img);
 }
 
+/// `HSD_LObj` (0xD4), which `hsdNew` clears: its flags, priority, next light, colors, WObjs,
+/// attenuation words, shininess and vector, animation, GX slots, and the two GX light objects
+/// the display pass last made (`lightobj` and `spec_lightobj`, their reserved words zero).
+pub fn lobj(objs: &Objects, img: &mut Image, l: super::lobj::LObjId) {
+    let at = objs.lobjs.pool.addr(l.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.lobjs[l];
+    let mut lay = Lay::new(at, 0xD4);
+    lay.bytes(0, &[0; 0xD4]);
+    lay.u32(0, Class::LObj.info_addr());
+    lay.u16(4, o.ref_count.0);
+    lay.u16(8, o.flags);
+    lay.u16(0xA, o.priority);
+    lay.u32(0xC, addr_of(o.next, |x| objs.lobjs.pool.addr(x.0)));
+    lay.bytes(0x10, &o.color);
+    lay.bytes(0x14, &o.hw_color);
+    lay.u32(0x18, addr_of(o.position, |x| objs.wobjs.addr(x.0)));
+    lay.u32(0x1C, addr_of(o.interest, |x| objs.wobjs.addr(x.0)));
+    for (i, &w) in o.params.iter().enumerate() {
+        lay.u32(0x20 + 4 * i as u32, w);
+    }
+    lay.f32s(0x38, &[o.shininess, o.lvec.x, o.lvec.y, o.lvec.z]);
+    lay.u32(0x48, addr_of(o.aobj, |x| objs.aobjs.pool.addr(x.0)));
+    lay.u32(0x4C, o.id);
+    lay.u32(0x90, o.spec_id);
+    for (off, g) in [(0x50, &o.light), (0x94, &o.spec)] {
+        lay.bytes(off + 0xC, &g.color);
+        lay.f32s(off + 0x10, &g.a);
+        lay.f32s(off + 0x1C, &g.k);
+        lay.f32s(off + 0x28, &g.lpos);
+        lay.f32s(off + 0x34, &g.ldir);
+        if g.stale_pos {
+            lay.forget(at + off + 0x28, 0xC);
+        }
+    }
+    lay.put(img);
+}
+
 /// `HSD_AObj` (0x1C); `jobj_addr` gives the bound joint's address.
 pub fn aobj(aobjs: &AObjs, fobjs: &FObjs, jobj_addr: u32, img: &mut Image, a: AObjId) {
     let o = &aobjs[a];
@@ -1004,6 +1044,54 @@ pub fn id_table(objs: &Objects, img: &mut Image) {
     }
 }
 
+/// `HSD_Archive` (0x44) at `at`, as `HSD_ArchiveParse` leaves it for the file of `len` bytes
+/// read to `file`: cleared, its flags 1 (`HSD_ARCHIVE_DONT_FREE`), the file's header copied
+/// over its first 0x20 bytes, and its data, relocations, public and extern tables and symbols
+/// pointed into the file where the header gives them; no next or name, and the file's start as
+/// `top_ptr`. Nothing writes it after the parse. A file whose header doesn't give its length
+/// isn't parsed (the parse fails and the game stops), so its block stays its owner's.
+pub fn archive(
+    img: &mut Image,
+    data: &melee_data::archive::Archives,
+    at: u32,
+    file: u32,
+    len: u32,
+    id: melee_data::archive::ArchiveId,
+) {
+    let a = data.get(id);
+    let mut head = [0u8; 0x20];
+    for (i, b) in head.iter_mut().enumerate() {
+        *b = a.file_byte(i as u32).unwrap_or(0);
+    }
+    let word = |i: usize| u32::from_be_bytes(head[4 * i..4 * i + 4].try_into().unwrap());
+    let (file_size, data_size, nb_reloc, nb_public, nb_extern) =
+        (word(0), word(1), word(2), word(3), word(4));
+    if file_size != len {
+        return;
+    }
+    let mut l = Lay::new(at, 0x44);
+    l.bytes(0, &head);
+    let mut off = 0x20u32;
+    let mut ptr = |l: &mut Lay, field: u32, n: u32, each: u32| {
+        if n != 0 {
+            l.u32(field, file.wrapping_add(off));
+            off = off.wrapping_add(n.wrapping_mul(each));
+        } else {
+            l.u32(field, 0);
+        }
+    };
+    ptr(&mut l, 0x20, data_size, 1);
+    ptr(&mut l, 0x24, nb_reloc, 4);
+    ptr(&mut l, 0x28, nb_public, 8);
+    ptr(&mut l, 0x2C, nb_extern, 8);
+    l.u32(0x30, if off < file_size { file + off } else { 0 });
+    l.u32(0x34, 0);
+    l.u32(0x38, 0);
+    l.u32(0x3C, 1);
+    l.u32(0x40, file);
+    l.put(img);
+}
+
 /// Runs `f` on the lent-out model's image, in a session that keeps one.
 pub fn with_image(f: impl FnOnce(&mut Image)) {
     if !super::heap::image_on() {
@@ -1059,6 +1147,11 @@ pub fn live_objects(objs: &Objects, data: &melee_data::archive::Archives, img: &
                 && !objs.cobjs.pool.is_free(slot) =>
             {
                 cobj(objs, img, super::cobj::CObjId(slot));
+            }
+            k if k == std::any::type_name::<super::lobj::LObj>()
+                && !objs.lobjs.pool.is_free(slot) =>
+            {
+                lobj(objs, img, super::lobj::LObjId(slot));
             }
             k if k == std::any::type_name::<super::wobj::WObj>() && !objs.wobjs.is_free(slot) => {
                 wobj(objs, img, super::wobj::WObjId(slot));

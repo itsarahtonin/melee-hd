@@ -440,7 +440,7 @@ impl Running<'_> {
         if file != 0
             && let Some(id) = id
         {
-            crate::hsd::heap::with(|h| h.hold_archive(file, len, id));
+            crate::hsd::heap::with(|h| h.hold_archive(self.data, file, len, archive, id));
         }
         if self.game.audio.clock.is_some() {
             // Into the file's block where the allocator model gives it.
