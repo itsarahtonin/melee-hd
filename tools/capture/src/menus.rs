@@ -532,8 +532,8 @@ impl<'a> Comparer<'a> {
             (handle(mm.free_heap), handle(mm.aram_heap)),
             (self.u32(at), self.u32(at + 4)),
         );
-        // The copy manager (`mgr`, but for its alarm, which ssbm-rs's stand-in for the OS's
-        // alarms never writes) and the compaction's state.
+        // The copy manager (`mgr`, but for its alarm, an event on our clock) and the
+        // compaction's state.
         self.check(
             "lbMemory",
             "copy manager",
