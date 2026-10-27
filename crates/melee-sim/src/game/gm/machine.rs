@@ -760,6 +760,7 @@ impl Running<'_> {
         self.game.card_game.reset();
         self.game.snap.forget();
         self.game.gm.trophy_data = false;
+        self.game.toys.forget();
     }
 
     /// `gm_SetGameModeOverride`.

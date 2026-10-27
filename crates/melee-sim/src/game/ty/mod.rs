@@ -141,6 +141,17 @@ pub struct Toys {
     pub list: list::List,
 }
 
+impl Toys {
+    /// `Toy_803127D4` (with `tyDisplay_8031C8B8`'s): the trophies' archives forgotten with the
+    /// scene's heap, and the shown trophy's state cleared.
+    #[doc(alias = "Toy_803127D4")]
+    pub fn forget(&mut self) {
+        self.dataf = None;
+        self.stand = None;
+        self.anim = AnimState::default();
+    }
+}
+
 impl Running<'_> {
     /// Whether the trophy table in play is the screens' own (`Toy_804A284C`): in the
     /// single-player modes and the lottery (`gm_IsCurrently1PMode`, `GM_TOY_LOTTERY`); else

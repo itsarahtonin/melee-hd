@@ -148,6 +148,8 @@ pub(super) const FRUSTUM_STEP: [f32; 4] = [
 /// loaded while it's shown or about to be.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Entry {
+    /// Linked into the ring (its `prev` and `next` set); an entry past the ring's stays zero.
+    pub linked: bool,
     pub prev: u8,
     pub next: u8,
     /// `x8`, `xC`: its `ToyModelFile` (`TyDataf`'s entry: the file's name at +4, the
@@ -647,8 +649,10 @@ impl Running<'_> {
         if !relink {
             let n = entries as u8;
             for i in 0..n {
-                g.entries[usize::from(i)].prev = if i == 0 { n - 1 } else { i - 1 };
-                g.entries[usize::from(i)].next = if i == n - 1 { 0 } else { i + 1 };
+                let e = &mut g.entries[usize::from(i)];
+                e.linked = true;
+                e.prev = if i == 0 { n - 1 } else { i - 1 };
+                e.next = if i == n - 1 { 0 } else { i + 1 };
             }
         }
         for e in g.entries.iter_mut() {
