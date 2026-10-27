@@ -303,6 +303,10 @@ impl Running<'_> {
         if s.font_archives[font as usize].is_some() {
             s.font_archives[font as usize] = None;
             s.font_tables[font as usize] = None;
+            // `HSD_SisLib_803A947C`: an archive loaded by name goes back to the heap.
+            if let Some((file, block)) = s.font_blocks[font as usize].take() {
+                self.free_archive_blocks(file, block);
+            }
         }
     }
 

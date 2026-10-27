@@ -988,6 +988,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** presentation only; no gameplay, replay or Slippi compatibility change.
 - **Source:** `crates/melee-sim/src/game/hud/announce.rs:443`; the Pokémon Stadium items-shoot match ([the oracle](oracle.md#shooting-and-thrown-items)).
 
+### The music stream's clock reads past its boxes once a song has ended
+
+- **Where:** `HSD_SynthPStreamMasterClockCallback`, `crates/melee-sim/src/audio/stream.rs` (`stream_frame`, `hako_or_past`).
+- **Defect:** each audio frame the clock works out which of the stream's three boxes (`pstHakoHeader`) the playing voice is in from its current address. Once a song that doesn't loop has played its last box, its voice stops in the silence after it (`HSD_Synth_804D7784`), whose address lies before the stream's buffer, so the box comes out about 0x7FA0 and the clock reads that "box's" header 0xFF400 bytes past the three, in the heap, and sets the stopped voice's end address from it (`AXSetVoiceEndAddr`).
+- **Effect:** none audible: the voice is stopped, and the next sound that takes it sets its whole address block. The special messages' songs (0x43 to 0x45) end this way; so does any song that doesn't loop.
+- **melee-hd:** modeled: the header is read from the heap's image ([the engine notes](engine.md#uninitialized-values)); a session stops where the image doesn't know those bytes, and outside a session (no image) so does the run.
+- **Fix:** stop the clock's work when the voice has stopped, or bound the box.
+- **Fix impact:** none audible; the stopped voice's end address changes.
+- **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; the Data session `prize`'s tick 560.
+
 ## Engine and HSD
 
 ### The expression argument buffer outlives its heap
@@ -1293,6 +1303,56 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play.
 - **Source:** `mncharsel.c`'s `mnCharSel_Scene_OnExit` and `mnCharSel_Scene_OnFrame`'s L, R and Start; `crates/melee-sim/src/game/mn/charsel/procs.rs`.
 
+### The other records read their title before writing it
+
+- **Where:** `mnCount_Create`, `crates/melee-sim/src/game/mn/count.rs` (`count_open`).
+- **Defect:** the screen's user data (`MnCountData`, 0x5C bytes from `HSD_MemAlloc`) has its title (`+0x58`) left out of `mnCount_InitUserData`, and the creation tests it and frees the text it names (`HSD_SisLib_803A5CC4`) before writing it, so it frees whatever text the heap block's last occupant left a pointer to there, as the rumble screen does with its title.
+- **Effect:** none observable in the sessions: the block held no live text's address each time. Were a live text to sit where an earlier screen's freed title was, the original would free it.
+- **melee-hd:** modeled where melee-sim knows the word: the last screen's block and its title (`Count::left`), freed again when the new block is the same; any other block's word names no text, as for the rumble screen.
+- **Fix:** clear the title with the rows.
+- **Fix impact:** none in play.
+- **Source:** `mncount.c`'s `mnCount_Create` and `mnCount_InitUserData`.
+
+### The VS records read their cursors before writing them
+
+- **Where:** `mnDiagram_CreateScreen`, `crates/melee-sim/src/game/mn/diagram.rs` (`diagram_screen_make`).
+- **Defect:** the screen's user data (`Diagram`, 0x50 bytes from `HSD_MemAlloc`) has each cursor (`+0x3C`, `+0x3E`) set from its own low byte (`(u8) fighter_cursor_pos`), a word the block's last occupant left, then masked to its high byte, so the read is dropped and the cursors are always 0; the cursors the pages save in the rules (`xE` to `x11`) are never read back.
+- **Effect:** none observable: the masked value is 0 whatever the word held. The screens always open on the first characters and names.
+- **melee-hd:** the cursors start at 0.
+- **Fix:** take the saved cursors from the rules, or set the cursors without reading them.
+- **Fix impact:** a fix that restores the saved cursors would change where the grid opens.
+- **Source:** `mndiagram.c`'s `mnDiagram_CreateScreen`.
+
+### A VS records cell's detail aligns its name where it meant the numbers
+
+- **Where:** `mnDiagram_PopupAnimProc`, `crates/melee-sim/src/game/mn/diagram.rs` (`diagram_popup_anim`).
+- **Defect:** each frame the detail places its texts on their joints, setting the name's alignment (`text[0]`) to left first, then, after placing each of the other texts, setting the name's alignment to centered again where each placed text's was meant.
+- **Effect:** the row's name is drawn centered on its joint, not left-aligned as its creation sets it, from the detail's first frame.
+- **melee-hd:** modeled.
+- **Fix:** set each placed text's alignment, or none.
+- **Fix impact:** the name's place in the detail (presentation only).
+- **Source:** `mndiagram.c`'s `mnDiagram_PopupAnimProc`.
+
+### The VS records step through names by slot, not by the order they show
+
+- **Where:** `mnDiagram_InputProc`'s scrolling (`mnDiagram_FindPrevName`, `mnDiagram_FindNextName`), `mnDiagram_GetPrevNameIndex` and `mnDiagram_GetNextNameIndex` (the statistics' left and right), `mnDiagram2_GetAggregatedFighterRank`; `crates/melee-sim/src/game/mn/diagram.rs`, `diagram2.rs`.
+- **Defect:** the grid's and the statistics' places are indices into the names in the order shown (`mnDiagram_NameDisplayOrder`, by KOs), but the steps test the name slot of the same index for a name (`GetNameText(i)`), and the aggregated ranking takes the names' slots 0 to the count, not the names.
+- **Effect:** none in the sessions: the game keeps names packed from slot 0 (`DeleteName` moves them up), so the first count of places and slots both hold names. An edited save with a gap among its names would scroll past or stop short of names, and the most and least played counts would skip some.
+- **melee-hd:** modeled.
+- **Fix:** test the name the place names (`GetNameText(mnDiagram_GetNameByIndex(i))`), and rank over the names.
+- **Fix impact:** none for a save the game made.
+- **Source:** `mndiagram.c`, `mndiagram2.c`.
+
+### The sound test writes a sound's three-digit number past its buffer
+
+- **Where:** `mnSoundTest_8024AA70`, `crates/melee-sim/src/game/mn/sound_test.rs` (`sound_test_sound_box`, `sound_test_number`).
+- **Defect:** entering a category's sounds shows the picked sound's number, written by `mn_8022EA08` into a 3-byte stack buffer (`char string[3]`, at `sp+0x24`): a number of three digits and its terminator take four bytes. Categories hold up to 113 sounds, and the number picked stays when B leaves the category, so leaving and entering again with a sound from 100 on writes the terminator one byte past the buffer. The song's number (`mnSoundTest_8024A958`, at most 79) and the number shown as left and right move (`fn_8024AED0`, a 20-byte buffer) fit.
+- **Effect:** none observable: the byte past the buffer (`sp+0x27`) is a stack slot the function never uses, and the text takes the whole number. Seen in `sound-sessions/jp` (the last category, sound 112, left and entered again).
+- **melee-hd:** the number is made as a string of its own; nothing models the stack byte.
+- **Fix:** a 4-byte buffer.
+- **Fix impact:** none.
+- **Source:** `mnsoundtest.c`'s `mnSoundTest_8024AA70`; `crates/melee-sim/src/game/mn/sound_test.rs`.
+
 ## Special Melee and Camera Mode
 
 ### Stamina Mode's stage select asks for no stage's sound bank
@@ -1416,11 +1476,16 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
 | An output that ends exactly at its room | `hsd_803B3398` and `hsd_803B46D4` (HAL's JPEG writer), `hsd/jpeg.rs` | A block of bytes is refused unless it ends before the output's end (`<` where `<=` would do), so an image that would fill the room exactly is dropped as too big; the snapshot's room is 256,000 bytes, and the frames compressed in the sessions took up to 248,093 | `crates/melee-sim/src/hsd/jpeg.rs` (`Encoder::bytes`, `jfif`) |
+| The sound test's category checks | `lbAudioAx_80023968` and `lbAudioAx_80023A44`, `lb/audio/sound_test.rs` | Guard a category and a sound with `arg0 < 0 && arg0 >= 30` and `arg1 < 0 && 0x83D60 <= arg1`, which no value passes, so an out-of-range category reads past `lbAudioLoadData`'s table; the sound test passes only categories 0 to 29 and sounds of their lists | `lbaudio_ax.c` (`MUST_MATCH`) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
 | The approach's roll with no target | `ftCo_800AB224` calling `ftCo_800BA2E8`, `game/ft/cpu_move.rs` | Passes the target on unchecked after its own null test, so with no target and `xF8_b6` set the roll reads a fighter at address 0; the VS decision sets the target on every frame it sets `xF9_b1`, which the approach needs, and nothing before the walk clears it | `crates/melee-sim/src/game/ft/cpu_move.rs:664` |
 | Unown's swarm from an edge past the four | `it_802CED54`, `game/it/kinds/unknown.rs` | Spawns the swarm from an uninitialized stack vector when the edge index (`+0x84`) is outside 0 to 3; `it_802CE8D0` always sets it | `crates/melee-sim/src/game/it/kinds/unknown.rs:305` |
 | Judgement's roll past its sums | `ftGw_SpecialS_GetRandomInt`, `game/ft/gamewatch/special_s.rs` | Returns a register it never set when the roll isn't below any running sum; a roll below their total always is | [engine notes](engine.md#uninitialized-values) (line 90) |
 | Falcon Kick's flame in another state | `ftCa_SpecialHi_800E3EAC`, `game/ft/captain/special_lw.rs` | Reads a register and a stack word it never set outside the kick's two states; only those states call it | `crates/melee-sim/src/game/ft/captain/special_lw.rs:24` |
+| The play time's cap | `gm_GetPlayTime`, `game/mn/count.rs` | Caps the VS and single-player times' sum at `u32::MAX` by testing whether the sum is over it, which a wrapped sum never is: past 2^32 seconds (136 years) it wraps | `gm_1601.c`'s `gm_GetPlayTime`; `crates/melee-sim/src/game/mn/count.rs` (`count_row_number`) |
+| A statistic past the table | `mnDiagram2_GetStatValue`, `mnDiagram2_GetAggregatedFighterRank`; `game/mn/diagram2.rs` | Return or use a register they never set for a statistic outside 0 to 23 (or 0x15 to 0x17); the pages only ask for those | `crates/melee-sim/src/game/mn/diagram2.rs` (`stat_value`, `aggregated_rank`) |
+| A ranking past the unlocked characters | `mnDiagram3_PopulateRankings`, `game/mn/diagram3.rs` | A rank past the unlocked characters is 25, whose records (`GetPersistentFighterData(25)`) lie past the 25 characters'; at least 14 are always unlocked and the page ranks five | `crates/melee-sim/src/game/mn/diagram3.rs` (`d3_rankings`) |
+| A special message the table doesn't have | `un_802FE3F8`, `game/hud/prize.rs` | Leaves its string unset for a message outside 0 to 65; every caller asks for one of those | `crates/melee-sim/src/game/hud/prize.rs` (`message_strings`) |
 | A walk's animation outside the walk | `ftWalkCommon_800DFDDC`, `game/ft/co/ground.rs` | Leaves the rate in `f31` from its caller for a state that isn't one of the walk's three | `crates/melee-sim/src/game/ft/co/ground.rs:243` |
 | A Corneria talk of five lines | `grCorneria_801E2598`, `game/gr/corneria.rs` | Reads the next talk's first line past a talk's five; no talk in the table has five lines | `crates/melee-sim/src/game/gr/corneria.rs` (`talk_has_line`) |
 | Venom's Arwings held still | `grVenom_80205F30`, `game/gr/venom.rs` | Tests a flag (`grVe_804D6A3C`) nothing writes, so the Arwings never hold; Corneria's counterpart holds them before the start | `crates/melee-sim/src/game/gr/venom.rs` (`FROZEN`) |

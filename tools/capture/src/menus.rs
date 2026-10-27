@@ -109,6 +109,10 @@ impl<'a> Comparer<'a> {
                 0x1F => sym("gm_Mode_StaminaVs_States"),
                 0x2A => sym("gm_Mode_CameraVs_States"),
                 0x2C => sym("gm_Mode_SingleButtonVs_States"),
+                melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
+                    sym("gm_Mode_ChallengerApproach_States")
+                }
+
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -191,6 +195,8 @@ impl<'a> Comparer<'a> {
         self.gallery();
         self.rules_menus();
         self.options();
+        self.data_menus();
+        self.sound_test();
         self.attract();
         self.select_screens();
         self.camera_mode();

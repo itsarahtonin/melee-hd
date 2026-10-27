@@ -10,6 +10,7 @@ pub mod announce;
 pub mod devtext;
 pub mod magnify;
 pub mod nametag;
+pub mod prize;
 pub mod small;
 pub mod status;
 pub mod stock;

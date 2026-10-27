@@ -148,6 +148,9 @@ enum Hook {
     CameraExitSss,
     CameraEnterVs,
     CameraExitVs,
+    ChallengerOnLoad,
+    ChallengerApproachOnExit,
+    ChallengerPrizeOnExit,
 }
 
 /// Whether `mode` is a Special Melee mode with VS mode's states (`gmsupersudden.c` and the
@@ -325,6 +328,30 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_PRIZE,
         },
     ];
+    // `gm_Mode_ChallengerApproach_States`.
+    const CHALLENGER: [StateDesc; 3] = [
+        StateDesc {
+            id: 0,
+            preload: 2,
+            on_enter: Some(Hook::ApproachOnEnter),
+            on_exit: None,
+            scene: GS_APPROACH,
+        },
+        StateDesc {
+            id: 1,
+            preload: 2,
+            on_enter: Some(Hook::ApproachVsOnEnter),
+            on_exit: Some(Hook::ChallengerApproachOnExit),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 2,
+            on_enter: Some(Hook::PrizeOnEnter),
+            on_exit: Some(Hook::ChallengerPrizeOnExit),
+            scene: GS_PRIZE,
+        },
+    ];
     // `gm_Mode_StaminaVs_States`: the selects and the match.
     const STAMINA: [StateDesc; 3] = [
         StateDesc {
@@ -382,6 +409,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
     ];
     match mode {
         GM_BOOT => &BOOT,
+        GM_CHALLENGER_APPROACH => &CHALLENGER,
         GM_MENU => &MENU,
         // The Special Melee modes' states are VS mode's, each with its own handlers
         // ([`Running::mode_hook`] takes the mode).
@@ -414,6 +442,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_STAMINA_VS => (true, Some(Hook::SpecialOnLoad), None),
         m if vs_like(m) => (false, Some(Hook::SpecialOnLoad), None),
         GM_CAMERA_MODE => (true, None, None),
+        GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -616,6 +645,8 @@ impl Running<'_> {
             super::camera_mode::GS_CAMERA_VS => {
                 (super::camera_mode::ON_ENTER, super::camera_mode::ON_FRAME)
             }
+            // No frame function: the panel's process runs the interface.
+            GS_PRIZE => (crate::game::hud::prize::ON_ENTER, CodeRef(0)),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -640,6 +671,7 @@ impl Running<'_> {
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
             super::camera_mode::ON_ENTER => self.camera_check_on_enter(),
+            crate::game::hud::prize::ON_ENTER => self.prize_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -707,6 +739,8 @@ impl Running<'_> {
             GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             GS_RESULTS => self.results_on_exit(),
+            // `ifPrize_Scene_OnExit` does nothing.
+            GS_PRIZE => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -814,12 +848,16 @@ impl Running<'_> {
             Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
             Hook::VsEnterResults => self.vs_mode_enter_results(),
             Hook::VsExitResults => unported_call("onExitResults (task 9)"),
-            Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
+            Hook::ApproachOnEnter
+            | Hook::ApproachVsOnEnter
+            | Hook::ApproachVsOnExit
+            | Hook::ChallengerApproachOnExit => {
                 unported_call("the challenger approach's states (task 17)")
             }
-            Hook::PrizeOnEnter | Hook::PrizeOnExit => {
-                unported_call("the prize interface's states (task 17)")
-            }
+            Hook::PrizeOnEnter => self.prize_state_on_enter(),
+            Hook::PrizeOnExit => unported_call("gm_ModeState_Prize_OnExit (VS mode's, task 17)"),
+            Hook::ChallengerOnLoad => self.challenger_mode_on_load(),
+            Hook::ChallengerPrizeOnExit => self.prize_state_on_exit(),
             Hook::SpecialOnLoad => {
                 let mode = self.game.machine.routing.curr_mode;
                 self.special_on_load(mode);
