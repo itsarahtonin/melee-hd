@@ -42,7 +42,8 @@ pub enum Replay {
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
     /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` and for `special-NAME`
+    /// `lockstep/special-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
     /// in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -63,6 +64,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("select-") {
                     return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("special-") {
+                    return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -618,6 +622,23 @@ pub const SELECT_KONGO: Game = Game {
     name: "select-stage-kongo",
     players: "the stage select's preview (session select-sessions/stage-kongo)",
     replay: Replay::Session("select-stage-kongo"),
+};
+
+/// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
+/// camera's info, the snapshot's offer and its question, the save.
+pub const CAMERA_SNAPS: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-snaps",
+    players: "Camera Mode (session special-sessions/camera-snaps)",
+    replay: Replay::Session("special-camera-snaps"),
+};
+
+/// Camera Mode with no card (`special-sessions/camera-nocard`).
+pub const CAMERA_NOCARD: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-nocard",
+    players: "Camera Mode, no card (session special-sessions/camera-nocard)",
+    replay: Replay::Session("special-camera-nocard"),
 };
 
 pub const FOX_FOX_FD: Game = Game {
