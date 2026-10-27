@@ -69,8 +69,9 @@ impl Running<'_> {
     #[doc(alias = "onEnterVs@801BF4DC")]
     pub fn opening_on_enter_vs(&mut self) {
         let (rules, prefs) = saved_rules(&self.game.game_data);
+        let auto = super::vs_mode::AutoHandicaps::of(&self.game.game_data);
         let vs = &mut self.game.game_data.modes.table[VS_MODE_OPENING].start;
-        super::vs_mode::apply_menu_rules(vs, &rules, &prefs);
+        super::vs_mode::apply_menu_rules_auto(vs, &rules, &prefs, Some(&auto));
         self.load_announcer();
         let d = self.game.boot_mode.demo;
         let start = &mut self.game.attract.start;

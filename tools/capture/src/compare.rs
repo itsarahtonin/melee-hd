@@ -2088,6 +2088,42 @@ impl Comparer<'_> {
 /// oracle's mutation run with the other fill (`--mutate render-target=ff`) catches a write of
 /// the fill's and any read before a write (docs/engine.md, "Uninitialized values"). A results
 /// pose's fighter's `x61C` is left out too (see there). None for any other fighter.
+/// An item's block as [`render_target_view`] makes a fighter's: where it held the GPU's
+/// pixels when made, each bit ours still holds as the fill's takes ours. None for an item
+/// made over none.
+pub(crate) fn item_render_target_view(
+    game: &melee_sim::game::state::Game,
+    i: melee_sim::game::handles::ItemId,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    use melee_sim::game::mirror::{LayOut, Mirror};
+    use melee_sim::game::structs::Item;
+    let runs = game.it.render_leftovers.get(&i.0)?;
+    let o = &game.items[i.0];
+    let size = <Item as Mirror>::SIZE;
+    let lo = (at - MEM1) as usize;
+    let fill = game.objs.heap.image.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, size);
+    o.lay(&mut l, at, &Nulls);
+    let n = o.x374_dynamicBonesNum.max(0) as usize;
+    o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &Nulls, n);
+    let n = usize::from(o.xAC8_hurtboxNum);
+    o.xACC_itemHurtbox
+        .lay_counted(&mut l, at + 0xACC, &Nulls, n);
+    let mut block = mem[lo..lo + size as usize].to_vec();
+    for &(a, b) in runs {
+        for off in a..b {
+            if let Some((ours, known)) = l.bits_at(at + off) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[off as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
+}
+
 fn render_target_view(
     game: &melee_sim::game::state::Game,
     f: melee_sim::game::handles::FighterId,

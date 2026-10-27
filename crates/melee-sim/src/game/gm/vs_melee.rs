@@ -189,7 +189,8 @@ impl Running<'_> {
         let (rules, prefs) = super::attract::saved_rules(&self.game.game_data);
         let mut vs = self.vs_data().start.clone();
         let tags = self.nametag_rumbles();
-        let start = super::vs_mode::enter_vs_with_tags(&mut vs, &rules, &prefs, &tags);
+        let auto = super::vs_mode::AutoHandicaps::of(&self.game.game_data);
+        let start = super::vs_mode::enter_vs_with_tags(&mut vs, &rules, &prefs, &tags, &auto);
         self.vs_data().start.clone_from(&vs);
         self.game.vs_melee.start.clone_from(&start);
         self.load_announcer();

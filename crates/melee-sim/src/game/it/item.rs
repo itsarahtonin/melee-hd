@@ -591,6 +591,19 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         crate::game::leftovers::import(r.data, addr, crate::game::leftovers::pool_grew())
     {
         r.game.items[id.0] = left;
+        // Where the block held the GPU's pixels, which the comparer leaves out while they
+        // hold the image's fill (docs/engine.md, "Uninitialized values").
+        let rt = crate::game::leftovers::render_target_runs(
+            addr,
+            <crate::game::structs::Item as crate::game::mirror::Mirror>::SIZE,
+        );
+        if rt.is_empty() {
+            r.game.it.render_leftovers.remove(&id.0);
+        } else {
+            r.game.it.render_leftovers.insert(id.0, rt);
+        }
+    } else {
+        r.game.it.render_leftovers.remove(&id.0);
     }
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
