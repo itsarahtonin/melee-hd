@@ -75,6 +75,9 @@ pub struct BgFlash {
     pub scale: f32,
     /// Where the original's pool put the user data (`docs/engine.md`).
     pub user_addr: u32,
+    /// Where the user data's block held the GPU's pixels when made (as offsets), which the
+    /// heap image's fill stands for ([`crate::game::leftovers::render_target_runs`]).
+    pub render_leftovers: Vec<(u32, u32)>,
 }
 
 /// A color channel's byte as the fade's float holds it (`stb` of `fctiwz`).
@@ -315,6 +318,11 @@ impl Running<'_> {
         g.bgflash.user_addr = addr;
         // The block holds what the heap's last owner left there, but its alpha.
         let fresh = crate::game::leftovers::pool_grew();
+        g.bgflash.render_leftovers = if fresh {
+            crate::game::leftovers::render_target_runs(addr, 0x84)
+        } else {
+            Vec::new()
+        };
         if let Some(left) =
             crate::game::leftovers::import::<BgFlashUserData>(self.data, addr, fresh)
         {

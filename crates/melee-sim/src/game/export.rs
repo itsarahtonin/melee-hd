@@ -21,6 +21,9 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         UserData::ItemLink(l) => known(game.it.links.addr(l.0)),
         UserData::Ground(g) => known(game.grounds.addr(g.0)),
         UserData::BgFlash => known(game.bgflash.user_addr),
+        // The magnifier's player entries (`ifMagnify_804A1DE0.player`, 0x10 each from
+        // `0x804A1DF4`), in the executable's data.
+        UserData::MagnifyPlayer(slot) => Some(0x804A_1DF4 + 0x10 * u32::from(slot)),
         UserData::Sound(s) => known(game.sound_objs.addr(s.0)),
         UserData::Effect(e) => known(game.ef.effects.addr(e.0)),
         UserData::Text(t) => {
@@ -395,9 +398,15 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
         return;
     }
     let mut l = Lay::new(at, 0x84);
-    l.u8(0, u.x0);
-    color_overlay(img, &mut l, 4, &u.x4);
+    bg_flash_fields(img, &mut l, u);
     l.put(img);
+}
+
+/// The background flash's user data's fields laid out into `l` (its block at `l`'s start):
+/// its alpha and color overlay.
+pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUserData) {
+    l.u8(0, u.x0);
+    color_overlay(img, l, 4, &u.x4);
 }
 
 /// `Ground` (0x204), as its block goes back to the heap, over what the block held where the
@@ -609,6 +618,16 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
     o.lay(&mut l, at, &cx);
     let n = o.dynamics_num.max(0) as usize;
     o.dynamic_bone_sets.lay_counted(&mut l, at + 0x2F0, &cx, n);
+    // The common attributes are a struct copy of the file's (`fp->co_attrs =
+    // *fp->ft_data->x0`), whose padding after their last byte comes along.
+    if let Some(src) = o.ft_data.and_then(|d| data.ptr(d)) {
+        let pad: Vec<u8> = (0x181..0x184).map(|k| data.u8(src.at(k))).collect();
+        l.put_bytes(at + 0x110 + 0x181, &pad);
+    }
+    // A hit's struct copy of its attacker's hit data (`fn_80037F00`'s `fp->dmg.x18d8 = *ev`,
+    // the attacker's `x2074`) brings the attacker's bits past the named ones and its padding,
+    // which melee-sim doesn't keep: unknown.
+    l.forget(at + 0x18E9, 3);
     // The action's figatree (`x590`) is in the main animation buffer, the second one
     // (`x598`) in the main or the second: their places are the buffers', whichever other
     // copies of their archives there are (two fighters' buffers can hold one).
