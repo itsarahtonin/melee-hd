@@ -654,6 +654,24 @@ impl Running<'_> {
         true
     }
 
+    /// The stage select's enter and exit data (`gm_GetGameModeStateEnterData`): Tournament
+    /// mode's own (`gm_8048BD20`), else VS mode's (the modes kept with it share it).
+    fn sss_data(&self) -> &super::super::gm::vs_melee::SssData {
+        if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
+            &self.game.tou.sss
+        } else {
+            &self.game.vs_melee.sss
+        }
+    }
+
+    fn sss_data_mut(&mut self) -> &mut super::super::gm::vs_melee::SssData {
+        if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
+            &mut self.game.tou.sss
+        } else {
+            &mut self.game.vs_melee.sss
+        }
+    }
+
     /// `mnStageSel_Scene_OnEnter`: with no stage forced, `MnSlMap`'s screen: the camera (the
     /// main menu's process turning it), the lights, the fog, the background, the border,
     /// the layout's nineteen places, the icons on them (pairs, the special and the large
@@ -661,7 +679,7 @@ impl Running<'_> {
     /// the preview, the hover frame, and the screen's song.
     #[doc(alias = "mnStageSel_Scene_OnEnter")]
     pub fn stagesel_on_enter(&mut self) {
-        if self.game.vs_melee.sss.force_stage_id >= 0 {
+        if self.sss_data().force_stage_id >= 0 {
             return;
         }
         let us = self.game.game_data.saved_language() == super::super::gm::main_lib::LANG_US;
@@ -692,7 +710,7 @@ impl Running<'_> {
             };
         }
         self.game.menu.cam = self.game.stagesel.cam;
-        let unk = self.game.vs_melee.sss.unk_stage;
+        let unk = self.sss_data().unk_stage;
         let s = &mut self.game.stagesel;
         s.picked = 0;
         s.buttons = 0;
@@ -873,15 +891,15 @@ impl Running<'_> {
     /// ends the scene with its stage.
     #[doc(alias = "mnStageSel_Scene_OnFrame")]
     pub fn stagesel_on_frame(&mut self) {
-        let sss = &self.game.vs_melee.sss;
-        if sss.force_stage_id >= 0 {
+        let sss = self.sss_data();
+        let (forced, no_lras) = (sss.force_stage_id, sss.no_lras);
+        if forced >= 0 {
             self.game.stagesel.picked = 2;
-            let id = sss.force_stage_id;
-            self.game.vs_melee.sss.vs.start.rules.stkind = id as u8 as u16;
+            self.sss_data_mut().vs.start.rules.stkind = forced as u8 as u16;
             self.game.end_scene();
             return;
         }
-        if sss.no_lras == 0 && self.game.buttons_triggered(4) & super::main::PAD_LR_START != 0 {
+        if no_lras == 0 && self.game.buttons_triggered(4) & super::main::PAD_LR_START != 0 {
             self.lb_audio_call(0);
             self.rumble_stop_all();
             if let Some(c) = self.game.stagesel.camera {
@@ -924,7 +942,7 @@ impl Running<'_> {
             s.wait -= 1;
             return;
         }
-        if self.game.vs_melee.sss.x1 == 0
+        if self.sss_data().x1 == 0
             && self.game.stagesel.buttons & 0x200 != 0
             && self.game.stagesel.picked == 0
         {
@@ -933,7 +951,7 @@ impl Running<'_> {
         }
         if self.game.stagesel.picked == 2 {
             let h = usize::from(self.game.stagesel.hovered);
-            self.game.vs_melee.sss.vs.start.rules.stkind = u16::from(STAGES[h].stkind);
+            self.sss_data_mut().vs.start.rules.stkind = u16::from(STAGES[h].stkind);
             self.game.end_scene();
         }
     }
@@ -946,9 +964,9 @@ impl Running<'_> {
             self.free_archive_blocks(file, archive);
         }
         let start = self.game.stagesel.picked == 2;
-        self.game.vs_melee.sss.start_game = u8::from(start);
+        self.sss_data_mut().start_game = u8::from(start);
         if start {
-            let stkind = i32::from(self.game.vs_melee.sss.vs.start.rules.stkind);
+            let stkind = i32::from(self.sss_data().vs.start.rules.stkind);
             self.dvd_mut().cache.scene.game_cache.stkind = stkind;
             self.preload_refresh();
         }
