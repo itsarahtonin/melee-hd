@@ -346,6 +346,17 @@ impl Ctx<'_> {
                 self.erase_screen(color, false);
                 1
             }
+            Draw::EraseFull => {
+                match self.hsd.erase_color.take() {
+                    Some(c) => self.erase_screen_alpha(c),
+                    None => self.hsd.note_once("an erase without an erase color"),
+                }
+                1
+            }
+            Draw::ResultsCopy { image, x, y, clear } => {
+                self.results_copy(*image, *x, *y, *clear);
+                1
+            }
             Draw::EraseWithDepth => {
                 match self.hsd.erase_color.take() {
                     Some(c) => self.erase_screen(c, true),

@@ -146,18 +146,21 @@ fn the_attract_match_on_brinstar_reads_a_leftover() {
         "traces/menu-sessions/attract.trc",
         "lockstep/menu-sessions/attract.inputs",
     );
+    // The attract loop three times over: its matches (on Brinstar, its bubbles' timer from
+    // the menus' leftover, then its next two), their bonuses and the titles between, the
+    // opening movie, to the title's preload heap's compaction.
     let Some(out) = session_at(trace, inputs, &["--heap"]) else {
         return;
     };
     assert!(
-        out.contains("899 ticks compared, no difference; stopped in tick 899: fn_8016FFD4"),
+        out.contains("11365 ticks compared, no difference; stopped in tick 11365: a preload heap's compaction (lbMemory_80015320) isn't ported"),
         "{out}"
     );
-    let Some(out) = session_at(trace, inputs, &["--leftovers-survey"]) else {
+    let Some(out) = session_at(trace, inputs, &["--leftovers-survey", "--ticks", "3000"]) else {
         return;
     };
     assert!(
-        out.contains("899 ticks compared, no difference") && !out.contains("leftover "),
+        out.contains("3000 ticks compared, no difference") && !out.contains("leftover "),
         "{out}"
     );
 }
@@ -175,7 +178,7 @@ fn a_session_plays_its_match_from_the_selects() {
     };
     assert!(
         out.contains(
-            "2518 ticks compared, no difference; stopped in tick 2518: render callback 0x80179d3c (fn_80179D3C) isn't ported"
+            "2572 ticks compared, no difference; stopped in tick 2572: fn_80178BB4 (the results' panel) isn't ported"
         ),
         "{out}"
     );
@@ -440,7 +443,7 @@ fn taken_up_match_catches_a_changed_seed() {
         return;
     };
     assert!(
-        out.contains("1 ticks compared; tick 3301 differs in 29 places, first: HSD_RandSeedPtr"),
+        out.contains("1 ticks compared; tick 3301 differs in 30 places, first: HSD_RandSeedPtr"),
         "{out}"
     );
 }
@@ -702,7 +705,7 @@ fn a_random_character_and_stage() {
         return;
     };
     assert!(
-        out.contains("2443 ticks compared, no difference; stopped in tick 2443"),
+        out.contains("2603 ticks compared, no difference; stopped in tick 2603: fn_80178BB4"),
         "{out}"
     );
 }
@@ -715,7 +718,7 @@ fn computer_players_at_three_levels() {
         return;
     };
     assert!(
-        out.contains("3341 ticks compared, no difference; stopped in tick 3341"),
+        out.contains("3501 ticks compared, no difference; stopped in tick 3501: fn_80178BB4"),
         "{out}"
     );
 }
@@ -730,7 +733,7 @@ fn a_team_battle_with_handicaps() {
         return;
     };
     assert!(
-        out.contains("4269 ticks compared, no difference; stopped in tick 4269"),
+        out.contains("4429 ticks compared, no difference; stopped in tick 4429: fn_80178BB4"),
         "{out}"
     );
 }
@@ -740,20 +743,26 @@ fn a_team_battle_with_handicaps() {
 /// Corneria's splash lines their spawns' leftovers.
 #[test]
 fn matches_from_the_menus_on_three_stages() {
-    for (name, ticks) in [
-        ("stage-corneria", "2476"),
-        ("stage-kongo", "2554"),
-        ("stage-ps", "2489"),
+    // On Pokémon Stadium the results screen's second fighter lands on a freed shadow's,
+    // generator's and particle's blocks, whose layouts aren't ported.
+    for (name, want) in [
+        (
+            "stage-corneria",
+            "2636 ticks compared, no difference; stopped in tick 2636: fn_80178BB4",
+        ),
+        (
+            "stage-kongo",
+            "2714 ticks compared, no difference; stopped in tick 2714: fn_80178BB4",
+        ),
+        (
+            "stage-ps",
+            "2490 ticks compared, no difference; stopped in tick 2489: unknown leftover bytes of a freed Shadow under Fighter: its layout isn't ported",
+        ),
     ] {
         let Some(out) = select_session(name, &["--all", "--heap"]) else {
             return;
         };
-        assert!(
-            out.contains(&format!(
-                "{ticks} ticks compared, no difference; stopped in tick {ticks}"
-            )),
-            "{name}: {out}"
-        );
+        assert!(out.contains(want), "{name}: {out}");
     }
 }
 
@@ -765,7 +774,7 @@ fn the_random_stage_rule() {
         return;
     };
     assert!(
-        out.contains("2900 ticks compared, no difference; stopped in tick 2900"),
+        out.contains("3060 ticks compared, no difference; stopped in tick 3060: fn_80178BB4"),
         "{out}"
     );
 }

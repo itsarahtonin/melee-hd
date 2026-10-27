@@ -100,6 +100,27 @@ impl Running<'_> {
         }
     }
 
+    /// The fighters' passes through a camera other than the game camera, `Camera_800313E0`:
+    /// the game camera's second pass over `prios` and the fighters' links, then its first over
+    /// the fighters' links alone, then its first's third pass over `prios` and theirs (as
+    /// [`Running::render_game_camera`]'s fighters' passes, the game camera's layers hiding
+    /// links the same way).
+    #[doc(alias = "Camera_800313E0")]
+    pub fn camera_fighters(&mut self, gobj: GObjId, prios: u64) {
+        use super::camera;
+        let cam = &self.game.camera.cam;
+        let bit = |hidden: bool, v: u64| if hidden { 0 } else { v };
+        let b0 = bit(cam.x398_b0, 0x20);
+        let b1 = bit(cam.x398_b1, 0x40);
+        let b4 = bit(cam.x398_b4, 0x10);
+        camera::set_pass(&mut self.game.camera.cam, 1);
+        self.camera_pass(gobj, prios | b0 | b1, 3);
+        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, b1 | b4 | b0, 3);
+        camera::set_pass(&mut self.game.camera.cam, 0);
+        self.camera_pass(gobj, prios | b4 | b0 | b1, 4);
+    }
+
     /// Sets the game camera's links and runs the passes `mask` names over them.
     fn camera_pass(&mut self, gobj: GObjId, prios: u64, mask: u32) {
         self.game.world.gobj_mut(gobj).gxlink_prios = prios;
@@ -379,6 +400,17 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         crate::hsd::sobj::RENDER => r.render_sobjs(gobj),
         crate::hsd::sobj::CAMERA_RENDER => r.render_sprite_camera(gobj),
         super::gm::title::CAMERA_RENDER => r.title_camera_render(gobj),
+        c if super::gm::results_fighters::PLAYER_RENDER.contains(&c) => {
+            let slot = super::gm::results_fighters::PLAYER_RENDER
+                .iter()
+                .position(|&a| a == c)
+                .unwrap();
+            r.results_player_render(gobj, slot);
+        }
+        c if super::gm::results_fighters::WINNER_RENDER.contains(&c) => {
+            r.results_winner_render(gobj)
+        }
+        super::gm::results_scene::PANEL_RENDER => r.results_panel_render(gobj, pass),
         super::gm::title::ERASE_RENDER => r.title_erase_render(gobj),
         super::mn::main::FOG_RENDER => r.menu_fog_render(gobj),
         super::mn::charsel::FOG_RENDER => r.charsel_fog_render(gobj),

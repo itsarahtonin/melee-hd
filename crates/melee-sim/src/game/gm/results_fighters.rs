@@ -54,6 +54,43 @@ pub struct ResultsFighters {
     /// `lbl_8046E39C`: the panel's four columns' joints.
     pub jobjs: [Option<JObjId>; 4],
     pub state: DisplayState,
+    /// Each image's pixels' block in the scene's heap and its size, by [`image_addr`]'s
+    /// index: the GPU's copies write them ([`crate::hsd::image::Src::RenderTarget`]).
+    pub buffers: [(u32, u32); 9],
+}
+
+/// The images the cameras copy into, by index: a player's first (0 to 3), its second (4 to
+/// 7) and the shared one (8). An image descriptor's address in `lbl_8046E1B0`
+/// (`player_img1` at 0x104, `player_img2` at 0x164, `shared_img` at 0x1C4), which the
+/// panel's textures point to (`ImageRef::Static`).
+pub const SHARED_IMAGE: u8 = 8;
+
+/// `lbl_8046E1B0`'s address.
+const DISPLAY_DATA: u32 = 0x8046_E1B0;
+
+/// The address of image `n`'s descriptor ([`SHARED_IMAGE`]).
+pub fn image_addr(n: u8) -> u32 {
+    match n {
+        0..=3 => DISPLAY_DATA + 0x104 + 0x18 * u32::from(n),
+        4..=7 => DISPLAY_DATA + 0x164 + 0x18 * u32::from(n - 4),
+        _ => DISPLAY_DATA + 0x1C4,
+    }
+}
+
+impl ResultsFighters {
+    /// Image `n`'s descriptor ([`SHARED_IMAGE`]).
+    pub fn image(&self, n: u8) -> &HSD_ImageDesc {
+        match n {
+            0..=3 => &self.player_img1[usize::from(n)],
+            4..=7 => &self.player_img2[usize::from(n - 4)],
+            _ => &self.shared_img,
+        }
+    }
+
+    /// The image whose descriptor is at `addr`, if one of the screen's.
+    pub fn image_at(addr: u32) -> Option<u8> {
+        (0..=SHARED_IMAGE).find(|&n| image_addr(n) == addr)
+    }
 }
 
 /// `lbl_804D3FD0` to `lbl_804D3FF8`: the images' sizes and the copies' offsets, by place.
@@ -232,16 +269,182 @@ impl Running<'_> {
             .setup_gx_link(gobj, CodeRef(super::super::render::LOBJ_CALLBACK), 0, 0);
     }
 
-    /// An image's pixels from the scene's heap (`lb_800121FC` with no preload entry).
+    /// An image's pixels from the scene's heap (`lb_800121FC` with no preload entry), which
+    /// only the GPU's copies write: the block keeps what it held until the first.
     fn results_image_alloc(&mut self, which: Image, w: u16, h: u16) {
         let size = crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 5);
-        crate::hsd::heap::mem_alloc(size.next_multiple_of(32));
+        let size = size.next_multiple_of(32);
+        let at = crate::hsd::heap::mem_alloc_unclaimed(size);
         let d = super::super::gr::stadium::screen_image(w, h, GX_TF_RGB5A3);
         let f = &mut self.game.results.fighters;
-        match which {
-            Image::Shared => f.shared_img = d,
-            Image::One(i) => f.player_img1[i] = d,
-            Image::Two(i) => f.player_img2[i] = d,
+        let n = match which {
+            Image::Shared => {
+                f.shared_img = d;
+                SHARED_IMAGE
+            }
+            Image::One(i) => {
+                f.player_img1[i] = d;
+                i as u8
+            }
+            Image::Two(i) => {
+                f.player_img2[i] = d;
+                4 + i as u8
+            }
+        };
+        f.buffers[usize::from(n)] = (at, size);
+    }
+
+    /// `HSD_ImageDescCopyFromEFB` into image `n` from (`x`, `y`), the frame cleared after it
+    /// when `clear`: a draw, and the GPU's pixels in the image's block, which the simulation
+    /// never reads.
+    fn results_copy(&mut self, n: u8, x: u16, y: u16, clear: bool) {
+        self.game
+            .objs
+            .display
+            .draws
+            .push(crate::hsd::display::Draw::ResultsCopy {
+                image: n,
+                x,
+                y,
+                clear,
+            });
+        let (at, size) = self.game.results.fighters.buffers[usize::from(n)];
+        if at != 0 {
+            crate::hsd::heap::with(|h| {
+                h.image
+                    .hold(at, at + size, crate::hsd::image::Src::RenderTarget)
+            });
+        }
+    }
+
+    /// The erase color a player's image takes, its HUD color (`gm_80160968` of
+    /// `gm_80160854`), `HSD_SetEraseColor`.
+    fn results_erase_color(&mut self, slot: usize) {
+        let me = &self.game.results.fighters.state.match_end;
+        let p = &me.player_standings[slot];
+        let c = super::vs::hud_color(super::vs::player_color(
+            slot as u8,
+            p.team,
+            u8::from(me.is_teams == 1),
+            p.pkind,
+        ));
+        self.game
+            .objs
+            .display
+            .draws
+            .push(crate::hsd::display::Draw::EraseColor(c));
+    }
+
+    /// A player's camera's render callback, `fn_80179990` (through `fn_80179D3C` to
+    /// `fn_80179DA8`, one a player): a loser's fighter rendered every frame onto its HUD
+    /// color and copied into its second image (and its first, before the panel's columns
+    /// come in), the frame erased and the shared image copied with a clear; the flame's
+    /// texture shows the first image (before the columns), the column's the second. A
+    /// winner's is taken once, when its pose's frames have run out after the flames went
+    /// away, into its second image, which its column shows. A winner's camera stays current
+    /// when it takes nothing (its C ends the camera only after a copy).
+    #[doc(alias = "fn_80179990")]
+    #[doc(alias = "fn_80179D3C")]
+    #[doc(alias = "fn_80179D60")]
+    #[doc(alias = "fn_80179D84")]
+    #[doc(alias = "fn_80179DA8")]
+    pub fn results_player_render(&mut self, gobj: GObjId, slot: usize) {
+        use crate::hsd::display::{self, Draw};
+        let _ = self.results_winner_count();
+        let _ = self.results_winner_index(slot);
+        let c = match self.game.world.gobj(gobj).obj {
+            Some(Obj::CObj(c)) => Some(c),
+            _ => None,
+        };
+        let f = &self.game.results.fighters;
+        let k = place(&f.state.match_end, slot) as usize;
+        // The flame's model's first child, a loser's.
+        let child = if k != 0 {
+            match f.gobjs[slot].and_then(|g| self.game.world.gobj(g).obj) {
+                Some(Obj::JObj(j)) => self.game.objs.jobjs[j].child,
+                _ => None,
+            }
+        } else {
+            None
+        };
+        if !display::camera_begin(&mut self.game.objs, self.data, c) {
+            return;
+        }
+        let s = &self.game.results.fighters.state;
+        let (w, h, sx, sy) = (s.dim_w1[k], s.dim_h1[k], s.scissor_x[k], s.scissor_y[k]);
+        let x = 0x140 - (w / 4) * 2;
+        let y = 0xF4 - (h / 2) * 2;
+        let second = 4 + slot as u8;
+        if k != 0 {
+            let columns = s.x0_4 != 0;
+            self.results_erase_color(slot);
+            self.game.objs.display.draws.push(Draw::Erase);
+            self.camera_fighters(gobj, 0);
+            self.results_copy(second, sx + x, sy + y, false);
+            if !columns {
+                self.results_copy(slot as u8, x, y, false);
+            }
+            self.game.objs.display.draws.push(Draw::EraseFull);
+            self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
+            display::camera_end(&mut self.game.objs);
+            if !columns {
+                let child = child.expect("the original's flame has a child");
+                self.results_set_texture(child, false, slot as u8);
+            } else {
+                let col = self.game.results.fighters.jobjs[slot].expect("a column");
+                self.results_set_texture(col, true, second);
+            }
+        } else {
+            let fighter = self.game.player_entity(slot as i32);
+            let done = fighter.is_some_and(|g| !self.anim_frames_remaining(g));
+            let s = &self.game.results.fighters.state;
+            if done && s.player_flags[slot] == 0 && s.x0_6 != 0 {
+                self.results_erase_color(slot);
+                self.game.objs.display.draws.push(Draw::Erase);
+                self.camera_fighters(gobj, 0);
+                self.results_copy(second, sx + x, sy + y, false);
+                self.game.objs.display.draws.push(Draw::EraseFull);
+                self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
+                display::camera_end(&mut self.game.objs);
+                self.game.results.fighters.state.player_flags[slot] = 1;
+                let col = self.game.results.fighters.jobjs[slot].expect("a column");
+                self.results_set_texture(col, true, second);
+            }
+        }
+    }
+
+    /// The texture of a joint's display object (`u.dobj`, or its next when `next`) shows
+    /// image `n` (its material's first texture's `imagedesc`).
+    fn results_set_texture(&mut self, j: JObjId, next: bool, n: u8) {
+        let objs = &mut self.game.objs;
+        let d = objs.jobjs[j].dobj().expect("a joint with a display object");
+        let d = if next {
+            objs.dobjs[d].next.expect("a second display object")
+        } else {
+            d
+        };
+        let m = objs.dobjs[d].mobj.expect("a material");
+        let t = objs.mobjs[m].tobj.expect("a texture");
+        objs.tobjs[t].imagedesc = Some(crate::hsd::tobj::ImageRef::Static(image_addr(n)));
+    }
+
+    /// A winner's second camera's render callback, `fn_80179DCC` (to `fn_80179F04`, one a
+    /// player): the fighters' passes, then render link 7's three passes (the panel).
+    #[doc(alias = "fn_80179DCC")]
+    #[doc(alias = "fn_80179E34")]
+    #[doc(alias = "fn_80179E9C")]
+    #[doc(alias = "fn_80179F04")]
+    pub fn results_winner_render(&mut self, gobj: GObjId) {
+        use crate::hsd::display;
+        let c = match self.game.world.gobj(gobj).obj {
+            Some(Obj::CObj(c)) => Some(c),
+            _ => None,
+        };
+        if display::camera_begin(&mut self.game.objs, self.data, c) {
+            self.camera_fighters(gobj, 0);
+            self.game.world.gobj_mut(gobj).gxlink_prios = 0x80;
+            self.render_links(gobj, 7);
+            display::camera_end(&mut self.game.objs);
         }
     }
 

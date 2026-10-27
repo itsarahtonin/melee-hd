@@ -561,6 +561,7 @@ impl Running<'_> {
     }
 
     /// The panel's render callback, `fn_80175038`: its tree for the pass's transparency.
+    #[doc(alias = "fn_80175038")]
     pub fn results_panel_render(&mut self, gobj: GObjId, pass: i32) {
         self.render_jobj(gobj, pass);
     }

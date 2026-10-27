@@ -219,6 +219,7 @@ pub(crate) fn compare(
     cmp.display();
     if COMPARE_MENUS.with(|c| c.get()) {
         cmp.menus();
+        cmp.results();
     }
     let t1 = Instant::now();
     if COMPARE_HEAP.with(|c| c.get()) {

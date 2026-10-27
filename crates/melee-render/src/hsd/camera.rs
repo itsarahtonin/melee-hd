@@ -71,6 +71,15 @@ impl Ctx<'_> {
     /// `HSD_CObjEraseScreen` for color, and depth when `depth`, in `color`
     /// (`HSD_SetEraseColor`).
     pub fn erase_screen(&mut self, color: Color, depth: bool) {
+        self.erase_screen_with(color, depth, false);
+    }
+
+    /// `HSD_CObjEraseScreen(cobj, 1, 1, 1)`: color, alpha and depth, in `color`.
+    pub fn erase_screen_alpha(&mut self, color: Color) {
+        self.erase_screen_with(color, true, true);
+    }
+
+    fn erase_screen_with(&mut self, color: Color, depth: bool, alpha: bool) {
         let Some(v) = self.hsd.camera else { return };
         let z = (0.5 * f64::from(v.near + v.far)) as f32;
         let [p0, p1, p2, p3] = v.projection;
@@ -87,7 +96,7 @@ impl Ctx<'_> {
             }
             _ => (p0, p1, p2, p3),
         };
-        self.erase_rect(top, bottom, left, right, -z, color, depth);
+        self.erase_rect(top, bottom, left, right, -z, color, depth, alpha);
     }
 
     /// `HSD_EraseRect` for color, and depth when `depth`.
@@ -101,6 +110,7 @@ impl Ctx<'_> {
         z: f32,
         c: Color,
         depth: bool,
+        alpha: bool,
     ) {
         if depth {
             let at = self.space.dynamic(crate::mem::Dynamic::EraseDepth, 32);
@@ -138,7 +148,7 @@ impl Ctx<'_> {
         gx.set_z_mode(GX_ENABLE, GX_ALWAYS, u8::from(depth));
         gx.set_blend_mode(GX_BM_LOGIC, GX_BL_ONE, GX_BL_ZERO, GX_LO_COPY);
         gx.set_color_update(GX_ENABLE);
-        gx.set_alpha_update(GX_DISABLE);
+        gx.set_alpha_update(u8::from(alpha));
         gx.set_num_chans(1);
         gx.set_chan_ctrl(
             GX_COLOR0A0,

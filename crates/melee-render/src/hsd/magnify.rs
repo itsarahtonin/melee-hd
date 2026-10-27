@@ -131,6 +131,10 @@ impl Ctx<'_> {
     /// An image in the executable's data or statics: a magnifier bubble's copy, or an image
     /// the executable's data holds (Poké Floats' toon texture, `grPu_803E7620`).
     pub fn static_image(&mut self, at: u32) -> Option<Image> {
+        use melee_sim::game::gm::results_fighters::ResultsFighters;
+        if let Some(n) = ResultsFighters::image_at(at) {
+            return self.results_image(n);
+        }
         if let Some(i) = at.checked_sub(MAGNIFY + IMAGE_DESCS)
             && let i = i / IMAGE_DESC_SIZE
             && let Some(d) = self.game.magnify.image_descs.get(i as usize)
@@ -314,6 +318,35 @@ impl Ctx<'_> {
         let x = match self.screen_widening(n) {
             Some(k) => widened_x(x, k),
             None => x,
+        };
+        self.copy_from_efb(&img, x, y, clear);
+    }
+
+    /// One of the results screen's images, once its descriptor is made.
+    pub fn results_image(&self, n: u8) -> Option<Image> {
+        let d = self.game.results.fighters.image(n);
+        if d.width == 0 {
+            return None;
+        }
+        let format = d.format as u32;
+        let size = crate::gx::get_tex_buffer_size(d.width, d.height, format, 0, 0);
+        Some(Image {
+            ptr: self.space.dynamic(Dynamic::Results(n), size),
+            width: d.width,
+            height: d.height,
+            format,
+            mipmap: d.mipmap != 0,
+            min_lod: d.minLOD,
+            max_lod: d.maxLOD,
+        })
+    }
+
+    /// `HSD_ImageDescCopyFromEFB(desc, x, y, clear, false)` for one of the results screen's
+    /// images (`fn_80179990`).
+    pub fn results_copy(&mut self, n: u8, x: u16, y: u16, clear: bool) {
+        let Some(img) = self.results_image(n) else {
+            self.hsd.note_once("a results copy without an image");
+            return;
         };
         self.copy_from_efb(&img, x, y, clear);
     }

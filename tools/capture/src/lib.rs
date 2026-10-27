@@ -21,6 +21,7 @@ pub mod menus;
 pub mod options;
 pub mod pack;
 pub mod playback;
+pub mod results;
 pub mod rules;
 pub mod sis;
 pub mod sound;

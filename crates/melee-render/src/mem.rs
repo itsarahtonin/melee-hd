@@ -30,6 +30,9 @@ pub enum Dynamic {
     Reflection,
     /// One of Pokémon Stadium's screens' images, by its index (`ImageRef::Screen`).
     Screen(u8),
+    /// One of the results screen's images, by its index
+    /// (`melee_sim::game::gm::results_fighters::image_addr`).
+    Results(u8),
     /// `HSD_EraseRect`'s depth image: 4 by 4 texels of 0xFF.
     EraseDepth,
     /// Data of the executable the GPU reads, by its address there (the particles' texture

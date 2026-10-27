@@ -112,6 +112,18 @@ pub enum Draw {
     /// The current camera's viewport erased, color and depth, to the erase color set before
     /// it (`HSD_CObjEraseScreen(cobj, 1, 0, 1)`, the title's erase camera).
     EraseWithDepth,
+    /// The current camera's viewport erased, color, alpha and depth, to the erase color set
+    /// before it (`HSD_CObjEraseScreen(cobj, 1, 1, 1)`, the results screen's cameras).
+    EraseFull,
+    /// The render from (`x`, `y`) copied into one of the results screen's images (by
+    /// `game::gm::results_fighters::image_addr`'s index), the frame cleared after it with
+    /// `clear` (`HSD_ImageDescCopyFromEFB`, `fn_80179990`).
+    ResultsCopy {
+        image: u8,
+        x: u16,
+        y: u16,
+        clear: bool,
+    },
     /// The sprites' camera's setup (`HSD_SObjLib_803A54EC`): the position matrix from its
     /// view, two texture coordinates from the first, and a white register channel.
     SpriteSetup,
