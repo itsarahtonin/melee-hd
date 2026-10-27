@@ -14,9 +14,11 @@ const NODES: u32 = 127;
 const SECTOR: i32 = 0x2000;
 
 impl Running<'_> {
-    /// `lbSnap_8001D338`: whether slot `chan`'s card came or went since it was last listed.
+    /// `lbSnap_8001D338`: whether slot `chan`'s card came or went since it was last listed
+    /// (as the pad alarm's probes so far found it: `lbSnap_8001D2BC`).
     #[doc(alias = "lbSnap_8001D338")]
-    pub fn snap_changed(&self, chan: usize) -> i32 {
+    pub fn snap_changed(&mut self, chan: usize) -> i32 {
+        self.card_alarm_probes();
         self.game.snap.state_changed[chan]
     }
 

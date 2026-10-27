@@ -913,11 +913,20 @@ fn a_snapshot_lands_on_the_card_as_the_consoles() {
 }
 
 /// Camera Mode's menu in a match: the info hidden and shown, snapshots offered, asked about
-/// and refused, one saved; and Tiny Melee through its selects and match into the results.
+/// and refused, one saved; the same with the card pulled out while a snapshot is offered;
+/// and Tiny Melee through its selects and match into the results.
 #[test]
 fn special_melee_sessions() {
     let Some(out) = scripted_session("special-sessions", "camera-snaps", &["--all", "--heap"])
     else {
+        return;
+    };
+    assert!(out.contains("3688 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session(
+        "special-sessions",
+        "camera-pull-offer",
+        &["--card-pull", "2600,2640", "--all", "--heap"],
+    ) else {
         return;
     };
     assert!(out.contains("3688 ticks compared, no difference"), "{out}");

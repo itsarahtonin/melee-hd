@@ -426,6 +426,9 @@ impl Session {
             data: &self.data,
         };
         let (t, render) = scene::step_session_tick(&mut r, &mut || console.read_pads(), false);
+        // The pad alarm's card probes in the tick, which nothing in it looked at since, as
+        // the alarm's handler left them (`lb_8001C600`, `lbSnap_8001D2BC`).
+        r.card_alarm_probes();
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
         let out = Frame {
