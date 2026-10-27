@@ -156,6 +156,12 @@ pub fn give_frame(pixels: Vec<u8>) {
     FRAME.with(|f| *f.borrow_mut() = (true, Some(pixels), 0));
 }
 
+/// A new console: no frame copied, and none the frontend gives until it says so
+/// ([`give_frame`]).
+pub fn forget_frame() {
+    FRAME.with(|f| *f.borrow_mut() = (false, None, 0));
+}
+
 /// The frame the copy left in the snapshot's image.
 fn take_frame() -> Option<Vec<u8>> {
     FRAME.with(|f| f.borrow().1.clone())
