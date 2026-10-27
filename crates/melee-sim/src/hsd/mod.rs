@@ -18,6 +18,7 @@ pub mod id;
 pub mod image;
 pub mod jobj;
 pub mod jpeg;
+pub mod jpeg_decode;
 pub mod list;
 pub mod lobj;
 pub mod mobj;
