@@ -80,3 +80,17 @@ impl Heap {
         self.free.insert(j, cell);
     }
 }
+
+impl super::Audio {
+    /// `HSD_AudioMalloc`: `size` bytes of the audio heap; the original asserts there was room.
+    #[doc(alias = "HSD_AudioMalloc")]
+    pub fn audio_malloc(&mut self, size: u32) -> u32 {
+        self.heap.alloc(size).expect("audio heap overflow.")
+    }
+
+    /// `HSD_AudioFree`: a block back to the audio heap.
+    #[doc(alias = "HSD_AudioFree")]
+    pub fn audio_free(&mut self, ptr: u32) {
+        self.heap.free(ptr);
+    }
+}
