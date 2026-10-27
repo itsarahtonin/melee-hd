@@ -49,9 +49,13 @@ const AI_HANDLER: u64 = 120;
 /// `OSGetTime`), after which `HSD_VIGetXFBDrawEnable` turns interrupts on and takes what came
 /// due; and from the wake to the pad check.
 const BEFORE_SLEEP: u64 = 16;
-const AFTER_WAKE: u64 = 24;
-/// From the render's wait to the pad check when a frame buffer is free.
-const NO_SLEEP: u64 = 40;
+/// From the copy to the pad check: `GXSetDrawDone`'s finish interrupt, taken at once with
+/// interrupts off (`GXFinishInterruptHandler`), then the total time's read
+/// (`HSD_PerfSetTotalTime`'s `OSGetTime`), each a point where interrupts that came due are
+/// taken (ssbm-rs's probe of `trophy-sessions/coll-l`, its disc interrupt at time base 2,496,845,386 taken
+/// as the finish handler returns).
+const GX_FINISH: u64 = 8;
+const TOTAL_TIME_READ: u64 = 16;
 /// The perf timer's time base read at a tick's start and end.
 const TICK_READ: u64 = 16;
 /// Time an ARAM load takes per 4 KB chunk (eight register reads).
@@ -795,12 +799,15 @@ impl Clock {
                     self.now = self.now.max(next);
                     self.service(f);
                 }
-                self.read(AFTER_WAKE, f);
+                self.read(GX_FINISH, f);
+                self.read(TOTAL_TIME_READ, f);
             } else if start < 2 {
-                // A buffer is free: a read, the frame's GX finish interrupt and a read before
-                // the pad check (the sleep's wake covers the last two otherwise,
-                // `AFTER_WAKE`).
-                self.read(NO_SLEEP, f);
+                // A buffer is free: the draw time's read, then the frame's GX finish
+                // interrupt and the total time's read before the pad check, as after a sleep's
+                // wake.
+                self.read(BEFORE_SLEEP, f);
+                self.read(GX_FINISH, f);
+                self.read(TOTAL_TIME_READ, f);
             }
             // The frame's copy.
             self.woken = false;
