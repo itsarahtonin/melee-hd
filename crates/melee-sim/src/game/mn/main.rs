@@ -1801,7 +1801,7 @@ impl Running<'_> {
 
     /// Frees every GObj on process links `lo` to `hi`, `mn_8022F138` (`mn_8022F0F0` on
     /// each).
-    // Ports `mn_8022F138`; aliased once a check reaches it.
+    #[doc(alias = "mn_8022F138")]
     pub(crate) fn free_gobj_links(&mut self, lo: u8, hi: u8) {
         for link in lo..=hi {
             let mut cur = self.game.world.first_in(link);

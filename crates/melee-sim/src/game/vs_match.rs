@@ -179,13 +179,21 @@ impl Settings {
         assert!(players.len() <= 4, "a VS match has up to four players");
         let mut vs = vs_mode::start_defaults();
         vs.rules.stkind = stage;
+        // What the character select leaves in the four ports' blocks as it sets up its coins
+        // and doors on its first entry: a port with no character on the screen takes `0x1A`
+        // (`CKIND_PLAYABLE`), and every port's computer level is at least 1 (docs/oracle.md,
+        // the shortcut's check against the menus' match).
+        for d in &mut vs.players[..4] {
+            d.ckind = 0x1A;
+            d.cpu_level = d.cpu_level.max(1);
+        }
         for p in players {
             let d = &mut vs.players[usize::from(p.port)];
             d.ckind = p.character as i8;
             d.slot_type = p.kind;
             d.color = p.costume;
             d.team = p.team;
-            d.cpu_level = p.cpu_level;
+            d.cpu_level = p.cpu_level.max(1);
         }
         let start = match special {
             Some(m) => m.enter_vs(&mut vs, rules, prefs),

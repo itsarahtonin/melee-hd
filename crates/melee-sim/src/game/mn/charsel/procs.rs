@@ -227,7 +227,7 @@ impl Running<'_> {
 
     /// A held coin put back on its player's character's icon, `mnCharSel_8025FDEC`: 0 if the
     /// player has a character, else 1 and nothing done.
-    // Ports `mnCharSel_8025FDEC`; aliased once a check reaches it.
+    #[doc(alias = "mnCharSel_8025FDEC")]
     pub(super) fn charsel_coin_back(&mut self, door: u8) -> i32 {
         let player = self.door_player(door);
         let ckind = self.css().vs.start.players[player].ckind;
@@ -948,14 +948,42 @@ impl Running<'_> {
         let mut mask = 0u64;
         for i in 0..n {
             let p = &self.css().vs.start.players[i];
-            let up = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
-            if (p.slot_type == PKIND_HUMAN || p.slot_type == PKIND_CPU) && !up {
-                mask |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            let (slot, ckind) = (p.slot_type, p.ckind);
+            let up = self.charsel_exit_coin_up(i);
+            if (slot == PKIND_HUMAN || slot == PKIND_CPU) && !up {
+                mask |= crate::lb::audio::character_banks(i32::from(ckind));
             }
         }
         self.game.audio.lb.unwant_banks(0x14);
         self.game.audio.lb.want_banks(4, mask);
         self.game.audio.lb_start_bank_loads(self.data);
+    }
+}
+
+impl Running<'_> {
+    /// Whether door `i`'s coin is held, as the scene's exit reads it (`mnCharSel_804A0BD0[i]
+    /// ->x5`): after L, R and Start freed the coins (`mn_8022F138` over the process links),
+    /// the table still points at their blocks, and the exit reads the byte the freed block
+    /// kept (docs/melee-bugs.md). Nothing allocates between the free and the exit, in the
+    /// same tick; a block the heap has handed out again stops.
+    fn charsel_exit_coin_up(&mut self, i: usize) -> bool {
+        if let Some(t) = self.game.charsel.tokens[i] {
+            return t.held_by != 0;
+        }
+        let (addr, held_by) = self.game.charsel.left_tokens[i].expect("a coin");
+        let cell = addr - crate::hsd::heap::HEADER;
+        let reused = crate::hsd::heap::with(|h| {
+            h.os.allocated
+                .iter()
+                .any(|&(c, size)| c <= cell && cell < c + size)
+        })
+        .unwrap_or(false);
+        if reused {
+            crate::game::code::unported_call(
+                "the character select's exit reading a freed coin's block the heap gave out again",
+            );
+        }
+        held_by != 0
     }
 }
 

@@ -417,7 +417,7 @@ pub fn init_stage(r: &mut Running, gobj: GObjId) {
     material::item_hurtbox_on(r.game, bubbles);
     r.game.grounds[g.0].u.zebes_stage().x100 = Some(bubbles);
     reset_bubbles(r, gobj);
-    let config = zako::new_config(r.game, STAGE_LINES, 10, CodeRef(STAGE_BUBBLES), 1.0);
+    let config = zako::new_config(r.game, r.data, STAGE_LINES, 10, CodeRef(STAGE_BUBBLES), 1.0);
     r.game.grounds[g.0].u.zebes_stage().xFC = config;
     r.game.geometry_mut().set_always_near(0);
     super::ground::update_map_coll(r.game, r.data, gobj);
@@ -821,7 +821,14 @@ pub fn init_island(r: &mut Running, gobj: GObjId) {
         x20: 0xD,
     };
     v.xE8 = 0;
-    let config = zako::new_config(r.game, ISLAND_LINES, 4, CodeRef(ISLAND_BUBBLES), 1.0);
+    let config = zako::new_config(
+        r.game,
+        r.data,
+        ISLAND_LINES,
+        4,
+        CodeRef(ISLAND_BUBBLES),
+        1.0,
+    );
     r.game.grounds[g.0].u.zebes_island().xEC = config;
     super::ground::update_map_coll(r.game, r.data, gobj);
 }

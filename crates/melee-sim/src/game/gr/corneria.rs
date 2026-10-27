@@ -753,8 +753,8 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     jobj::clear_flags(&mut r.game.objs.jobjs, whole, jobj::HIDDEN);
     let broken = nth_joint(r.game, gobj, 5);
     jobj::set_flags(&mut r.game.objs.jobjs, broken, jobj::HIDDEN);
-    let front = zako::new_config(r.game, FRONT_LINES, 1, CodeRef(SPLASH_FRONT), 0.3);
-    let back = zako::new_config(r.game, BACK_LINES, 2, CodeRef(SPLASH_BACK), 0.3);
+    let front = zako::new_config(r.game, r.data, FRONT_LINES, 1, CodeRef(SPLASH_FRONT), 0.3);
+    let back = zako::new_config(r.game, r.data, BACK_LINES, 2, CodeRef(SPLASH_BACK), 0.3);
     let v = r.game.grounds[gid.0].u.corneria();
     v.xC8 = front;
     v.xCC = back;

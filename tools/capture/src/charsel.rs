@@ -397,15 +397,16 @@ impl<'a> Comparer<'a> {
         let _ = NO_ICON;
         for i in 0..4 {
             let theirs = self.u32(TAGS_AT + 0xC * i as u32);
-            let ours = c.tags[i].map_or(0, |t| t.addr);
+            // A freed block's address where the table still points at it.
+            let ours = c.tags[i].map_or(c.left_tags[i], |t| t.addr);
             self.check(&format!("mnCharSel_803F0E8C[{i}]"), "data", ours, theirs);
             let theirs = self.u32(CURSORS_AT + 4 * i as u32);
-            let ours = c.cursors[i].map_or(0, |t| t.addr);
+            let ours = c.cursors[i].map_or(c.left_hands[i], |t| t.addr);
             if c.cursors[i].is_some() || theirs != 0 {
                 self.check(&format!("mnCharSel_804A0BC0[{i}]"), "hand", ours, theirs);
             }
             let theirs = self.u32(TOKENS_AT + 4 * i as u32);
-            let ours = c.tokens[i].map_or(0, |t| t.addr);
+            let ours = c.tokens[i].map_or(c.left_tokens[i].map_or(0, |t| t.0), |t| t.addr);
             if c.tokens[i].is_some() || theirs != 0 {
                 self.check(&format!("mnCharSel_804A0BD0[{i}]"), "coin", ours, theirs);
             }

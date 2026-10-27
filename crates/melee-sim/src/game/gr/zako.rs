@@ -194,10 +194,14 @@ pub struct SpawnConfig {
     pub spawns: Vec<[crate::vec::Vec3; 2]>,
 }
 
-/// A new spawn configuration, `grZakoGenerator_801CA394`: its address.
+/// A new spawn configuration, `grZakoGenerator_801CA394`: its address. Its spawns' block is
+/// uncleared heap, written as each line is first placed (`grZakoGenerator_801CA43C`): until
+/// then it holds what the block held, which a session's heap image knows (docs/engine.md, a
+/// session's heap leftovers), else zero.
 #[doc(alias = "grZakoGenerator_801CA394")]
 pub fn new_config(
     game: &mut Game,
+    data: &melee_data::archive::Archives,
     descs: u32,
     count: i32,
     callback: super::super::handles::CodeRef,
@@ -205,6 +209,31 @@ pub fn new_config(
 ) -> u32 {
     let addr = crate::hsd::heap::mem_alloc(0x1C);
     let spawns_addr = crate::hsd::heap::mem_alloc((count * 0x18) as u32);
+    let left = crate::hsd::heap::image_on()
+        .then(|| {
+            crate::hsd::heap::with(|h| {
+                h.image
+                    .leftover_bytes(data, spawns_addr, (count * 0x18) as u32)
+                    .0
+            })
+        })
+        .flatten();
+    let spawns = (0..count as usize)
+        .map(|i| {
+            let f = |o: usize| {
+                left.as_ref().map_or(0.0, |b| {
+                    let at = 0x18 * i + o;
+                    f32::from_bits(u32::from_be_bytes([b[at], b[at + 1], b[at + 2], b[at + 3]]))
+                })
+            };
+            let v = |o: usize| crate::vec::Vec3 {
+                x: f(o),
+                y: f(o + 4),
+                z: f(o + 8),
+            };
+            [v(0), v(0xC)]
+        })
+        .collect();
     game.gr.spawn_configs.push(SpawnConfig {
         addr,
         spawns_addr,
@@ -214,7 +243,7 @@ pub fn new_config(
         x10,
         generator: None,
         x18: 0,
-        spawns: vec![[crate::vec::Vec3::default(); 2]; count as usize],
+        spawns,
     });
     addr
 }

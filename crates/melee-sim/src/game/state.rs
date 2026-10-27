@@ -462,15 +462,22 @@ impl Host<GameKinds> for Running<'_> {
             // `HSD_Free`.
             UserData::CssCursor(i) => {
                 let c = &mut self.game.charsel.cursors[usize::from(i)];
-                crate::hsd::heap::mem_free(c.take().expect("a hand's block").addr);
+                let addr = c.take().expect("a hand's block").addr;
+                crate::hsd::heap::mem_free(addr);
+                self.game.charsel.left_hands[usize::from(i)] = addr;
             }
             UserData::CssToken(i) => {
-                let c = &mut self.game.charsel.tokens[usize::from(i)];
-                crate::hsd::heap::mem_free(c.take().expect("a coin's block").addr);
+                let c = self.game.charsel.tokens[usize::from(i)]
+                    .take()
+                    .expect("a coin's block");
+                crate::hsd::heap::mem_free(c.addr);
+                self.game.charsel.left_tokens[usize::from(i)] = Some((c.addr, c.held_by));
             }
             UserData::CssTag(i) => {
                 let c = &mut self.game.charsel.tags[usize::from(i)];
-                crate::hsd::heap::mem_free(c.take().expect("a tag's block").addr);
+                let addr = c.take().expect("a tag's block").addr;
+                crate::hsd::heap::mem_free(addr);
+                self.game.charsel.left_tags[usize::from(i)] = addr;
             }
             UserData::SssName(addr) => {
                 crate::hsd::heap::mem_free(addr);

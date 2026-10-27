@@ -41,8 +41,9 @@ pub enum Replay {
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
-    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` (ssbm-rs's
-    /// `SSBMINP1`), played in the console's float mode.
+    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
+    /// in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -59,6 +60,9 @@ impl Replay {
             Replay::Session(name) => {
                 if let Some(o) = name.strip_prefix("options-") {
                     return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("select-") {
+                    return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -578,6 +582,42 @@ pub const OPTIONS_TOUR: Game = Game {
     name: "options-tour",
     players: "the Options menus (session options-sessions/tour)",
     replay: Replay::Session("options-tour"),
+};
+
+/// The character select with a random computer player and the random stage
+/// (`select-sessions/random`): a door opening under a hand holding its coin, Mario's
+/// costumes, the computer player's door, the stage select's random icon and its pick.
+pub const SELECT_RANDOM: Game = Game {
+    stage: "Main menu",
+    name: "select-random",
+    players: "the character and stage selects (session select-sessions/random)",
+    replay: Replay::Session("select-random"),
+};
+
+/// Three computer players' levels set on their sliders (`select-sessions/cpus`).
+pub const SELECT_CPUS: Game = Game {
+    stage: "Main menu",
+    name: "select-cpus",
+    players: "computer players' levels (session select-sessions/cpus)",
+    replay: Replay::Session("select-cpus"),
+};
+
+/// A team battle with handicaps (`select-sessions/teams`): the teams' doors, a computer
+/// player's door with both sliders, a handicap moved.
+pub const SELECT_TEAMS: Game = Game {
+    stage: "Main menu",
+    name: "select-teams",
+    players: "a team battle with handicaps (session select-sessions/teams)",
+    replay: Replay::Session("select-teams"),
+};
+
+/// The stage select with Kongo Jungle hovered: its name and emblem (`select-sessions/
+/// stage-kongo`).
+pub const SELECT_KONGO: Game = Game {
+    stage: "Main menu",
+    name: "select-stage-kongo",
+    players: "the stage select's preview (session select-sessions/stage-kongo)",
+    replay: Replay::Session("select-stage-kongo"),
 };
 
 pub const FOX_FOX_FD: Game = Game {
