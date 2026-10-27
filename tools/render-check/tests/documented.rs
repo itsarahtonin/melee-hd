@@ -569,15 +569,17 @@ fn widescreen_reflection_sheik_fox_fod_6000() {
 }
 
 // The trophy screens: the gallery's view under its first light (1250), the second light's back
-// (1640), the third's background sprite (1760), the close-up (2330) and the list (3300); the
+// (1340), the third's background sprite (1400), the close-up (2330), its axes as the camera
+// pans (2440) and the list (3300); the
 // lottery's machine with a bet (1400), the draw (1700) and the trophy shown (2000); the
 // collection's 196 trophies in rings (1300), turned (1700) and zoomed (2500), and in rows
 // (1300).
 frames!(TROPHY_GALLERY;
     trophy_gallery_1250 1250,
-    trophy_gallery_1640 1640,
-    trophy_gallery_1760 1760,
+    trophy_gallery_1340 1340,
+    trophy_gallery_1400 1400,
     trophy_gallery_2330 2330,
+    trophy_gallery_2440 2440,
     trophy_gallery_3300 3300,
 );
 frames!(TROPHY_LOTTERY;
