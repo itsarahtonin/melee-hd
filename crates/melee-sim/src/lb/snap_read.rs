@@ -1,0 +1,523 @@
+//! Camera Mode's snapshots as the album reads them back (`lbsnap.c`'s reading side): what the
+//! game asks of a slot's list (`lbSnap_8001D350`, `D394`, `D3E8`), a snapshot read into the
+//! snapshot's buffer with its header (`lbSnap_8001E058`, `lb_8001BF04`), deleted
+//! (`lbSnap_8001D5FC`, `lbCardNew_DeleteSnap`) or swapped with another by renaming both
+//! (`lbSnap_8001D7B0`, `lb_8001C0F4`), and the buffer's image decoded (`lbSnap_8001DE8C`).
+//!
+//! The album steps each list itself (`lbCardNew_CompleteNextTask`) in the tick that starts
+//! it: the list runs on the lent card at its start ([`super::save::start_list`]), its steps'
+//! time passing at each call ([`Running::snap_task_step`]), and a read's bytes reach the
+//! buffers at its end. A rename's stamps take the clock at their steps, so the swap runs on a
+//! copy of the card first and on the card at its end, as the snapshot's save does.
+
+use melee_save::tasks::{Run, Task, lists};
+
+use super::save::{CardList, STATUS_SET, result};
+use super::snap::SNAP_SIZE;
+use super::snap_write::{HEADER, SnapHeader};
+use crate::audio::clock::{CARD_ERASE, CardChain, CardWork};
+use crate::game::code::unported_call;
+use crate::game::state::Running;
+use crate::hsd::heap;
+use crate::hsd::jpeg_decode;
+
+/// The album's images (`mnSnap_804A0B90`'s buffers): 640 by 480 RGB565.
+pub const IMAGE_SIZE: u32 = 0x96000;
+
+/// What a list does at its end besides its result.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub enum ListEnd {
+    #[default]
+    Nothing,
+    /// A read: the file's data, comment, banner and icons as it wrote them, into the
+    /// snapshot's buffer, `lbSnap_80433380.filename` and `LbMcSnap`'s icon data.
+    Read(ReadInto),
+    /// A swap's renames, run on the card now with the times its stamps took.
+    Swap {
+        tasks: Vec<Vec<u8>>,
+        seconds: u32,
+        stamps: Vec<usize>,
+        times: Vec<u32>,
+    },
+}
+
+/// What a read wrote into its buffers: each the bytes from its start.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct ReadInto {
+    pub data: Vec<u8>,
+    pub comment: Vec<u8>,
+    pub banner: Vec<u8>,
+    pub icons: Vec<u8>,
+}
+
+/// A list the album started and steps through: its steps, the next, and its end.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct AlbumList {
+    pub list: CardList,
+    pub next: usize,
+    pub end: ListEnd,
+}
+
+/// One of the album's images as the decoder left it: its buffer's address and bytes (the
+/// heap's image's before the first decode into it, unknown bytes as zero).
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct AlbumImage {
+    pub addr: u32,
+    pub bytes: Vec<u8>,
+    /// How many decodes wrote it, for the display's copy.
+    pub version: u32,
+}
+
+/// `lbsnap.c`'s reading side's state: the list under way, the JPEG decoder's statics, the
+/// icons a read wrote into `LbMcSnap`'s icon data, and the images decoded.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SnapRead {
+    pub list: Option<AlbumList>,
+    pub decoder: jpeg_decode::Decoder,
+    pub icons: Option<Vec<u8>>,
+    pub images: Vec<AlbumImage>,
+}
+
+/// A step's work after its wait point: `chain`'s transfers.
+fn chain_step(chain: CardChain) -> CardWork {
+    CardWork {
+        step: true,
+        chain: Some(chain),
+        ..CardWork::default()
+    }
+}
+
+/// The step `save_steps` makes at each task's start after the first that follows transfers
+/// (the call that sees the task before done and starts the next), by the task's place in the
+/// log, as it walks the HSD layer's log.
+fn task_steps(log: &[u8]) -> Vec<Option<usize>> {
+    let mut out = Vec::new();
+    let mut idx = 1usize;
+    let mut tasks = 0;
+    let mut transfers = false;
+    for &c in log {
+        match c {
+            b't' => {
+                if tasks > 0 {
+                    if transfers {
+                        out.push(Some(idx));
+                        idx += 1;
+                    } else {
+                        out.push(None);
+                    }
+                }
+                tasks += 1;
+                transfers = false;
+            }
+            b'r' | b'w' | b's' | b'c' => {
+                transfers = true;
+                idx += 1;
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
+/// Inserts a step at `at`, moving the results of later steps along.
+fn insert_step(list: &mut CardList, at: usize, work: CardWork) {
+    list.steps.insert(at, work);
+    for r in &mut list.results {
+        if r.0 >= at {
+            r.0 += 1;
+        }
+    }
+}
+
+impl Running<'_> {
+    /// The slot's last result, 8 (a card came or went since its listing) in place of a
+    /// listing's 0 once the pad alarm's probes saw a change (each starting function's
+    /// preamble, and `lbSnap_8001D350` whole).
+    fn snap_fresh(&mut self, chan: usize) -> i32 {
+        self.card_alarm_probes();
+        let s = &mut self.game.snap;
+        if s.slots[chan].card_result == 0 && s.state_changed[chan] != 0 {
+            s.slots[chan].card_result = 8;
+        }
+        s.slots[chan].card_result
+    }
+
+    /// `lbSnap_8001D350`: slot `chan`'s last result, 8 once a card came or went since its
+    /// listing.
+    #[doc(alias = "lbSnap_8001D350")]
+    pub fn snap_card_result(&mut self, chan: usize) -> i32 {
+        self.snap_fresh(chan)
+    }
+
+    /// `lbSnap_8001D394`: the snapshots slot `chan`'s last listing found.
+    #[doc(alias = "lbSnap_8001D394")]
+    pub fn snap_count(&self, chan: usize) -> i32 {
+        self.game.snap.slots[chan]
+            .num
+            .expect("a slot's count before its listing")
+    }
+
+    /// `lbSnap_8001D3E8`: the blocks of slot `chan`'s snapshot `index`.
+    #[doc(alias = "lbSnap_8001D3E8")]
+    pub fn snap_entry_blocks(&self, chan: usize, index: i32) -> i32 {
+        let e = self.game.snap.slots[chan].entries[index as usize];
+        i32::from(e.blocks.expect("a listed snapshot's blocks"))
+    }
+
+    /// `lbSnap_FormatTime`: snapshot `index`'s name, its time's digits.
+    fn snap_entry_name(&self, chan: usize, index: i32) -> Vec<u8> {
+        let slot = &self.game.snap.slots[chan];
+        let num = slot.num.expect("a listed slot");
+        assert!(
+            index < num,
+            "the original's assertion failed: index < _p(slot)[chan].num"
+        );
+        let time = slot.entries[index as usize]
+            .time
+            .expect("a listed snapshot's time");
+        time.to_string().into_bytes()
+    }
+
+    /// `lbSnap_8001D5FC`: snapshot `index` of slot `chan` deleted (`lbCardNew_DeleteSnap`),
+    /// the slot's result 8 until it's listed again; the list's start's result (busy), or the
+    /// slot's when its last listing failed or a card came or went.
+    #[doc(alias = "lbSnap_8001D5FC")]
+    #[doc(alias = "lbCardNew_DeleteSnap")]
+    pub fn snap_delete(&mut self, chan: usize, index: i32) -> i32 {
+        let r = self.snap_fresh(chan);
+        if r != 0 {
+            return r;
+        }
+        let name = self.snap_entry_name(chan, index);
+        self.game.snap.slots[chan].card_result = 8;
+        self.snap_list_start(chan, lists::delete(&name), ListKind::Delete)
+    }
+
+    /// `lbSnap_8001D7B0`: snapshots `index` and `jndex` of slot `chan` swap names through a
+    /// new one (`lb_8001C0F4`), the slot's result 8 until it's listed again; the list's
+    /// start's result (busy), or the slot's when its last listing failed or a card came or
+    /// went.
+    #[doc(alias = "lbSnap_8001D7B0")]
+    #[doc(alias = "lb_8001C0F4")]
+    pub fn snap_swap(&mut self, chan: usize, index: i32, jndex: i32) -> i32 {
+        let r = self.snap_fresh(chan);
+        if r != 0 {
+            return r;
+        }
+        let a = self.snap_entry_name(chan, index);
+        let b = self.snap_entry_name(chan, jndex);
+        let c = self.snap_name(chan).into_bytes();
+        self.game.snap.slots[chan].card_result = 8;
+        self.snap_list_start(chan, lists::swap(&a, &b, &c), ListKind::Swap)
+    }
+
+    /// `lbSnap_8001E058`: snapshot `index` of slot `chan` read into the snapshot's buffer,
+    /// its comment into `lbSnap_80433380.filename` and its banner and icon into `LbMcSnap`'s
+    /// icon data (`lb_8001BF04`); the list's start's result (busy), or the slot's when its
+    /// last listing failed or a card came or went.
+    #[doc(alias = "lbSnap_8001E058")]
+    #[doc(alias = "lb_8001BF04")]
+    pub fn snap_read(&mut self, chan: usize, index: i32) -> i32 {
+        let r = self.snap_fresh(chan);
+        if r != 0 {
+            return r;
+        }
+        let name = self.snap_entry_name(chan, index);
+        self.snap_list_start(chan, lists::read_with_header(&name), ListKind::Read)
+    }
+
+    /// Starts one of the album's lists on slot `chan`: the mount at once, the steps left for
+    /// [`Running::snap_task_step`]. Busy, or the mount's failure.
+    fn snap_list_start(&mut self, chan: usize, tasks: Vec<(Task, u32)>, kind: ListKind) -> i32 {
+        if chan != 0 {
+            return self.run_card_list_slot_b(&tasks);
+        }
+        if self.game.snap_read.list.is_some() {
+            unported_call("an album list started while another runs");
+        }
+        self.card_alarm_probes();
+        let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
+        let seconds = self.session_seconds();
+        let run = Run::new(
+            melee_save::melee::snapshot_manifest(0),
+            melee_save::exec::Bufs::default(),
+        );
+        let (mut list, run) = match kind {
+            ListKind::Swap => super::save::start_list_dry_run(run, &tasks, now, seconds),
+            _ => super::save::start_list_run(run, &tasks, now, seconds),
+        };
+        for &w in &list.start {
+            self.game.audio.clock_card_work(self.data, w);
+        }
+        if !list.card_in {
+            return list.result;
+        }
+        // The CARD library's own tasks (a delete, the renames) transfer from the call that
+        // starts them: the one that sees the open before them done, after which another
+        // call starts the next task (`executeNextTask`), or ends the list.
+        let sdk = |t: &Task| matches!(t, Task::Delete(_) | Task::Rename { .. });
+        let ran: Vec<&Task> = run
+            .results
+            .iter()
+            .map(|(t, _)| t)
+            .filter(|t| sdk(t))
+            .collect();
+        let mut stamps = Vec::new();
+        let starts = task_steps(&run.steps);
+        let mut added = 0;
+        for (k, t) in ran.iter().enumerate() {
+            let chain = match t {
+                Task::Delete(_) => CardChain::Delete { first: CARD_ERASE },
+                _ => STATUS_SET,
+            };
+            // The open after this task (a swap's): the step that starts it, else the
+            // list's end.
+            let at = match starts.get(k).copied().flatten() {
+                Some(i) => i + added,
+                None => list.steps.len() - 1,
+            };
+            let last = at == list.steps.len() - 1;
+            if last {
+                // The list's end: the task's call, then the unmount's.
+                let unmount = list.steps[at];
+                list.steps[at] = chain_step(chain);
+                list.steps.push(unmount);
+            } else {
+                list.steps[at].chain = Some(chain);
+                insert_step(
+                    &mut list,
+                    at + 1,
+                    CardWork {
+                        step: true,
+                        ..CardWork::default()
+                    },
+                );
+                added += 1;
+            }
+            if matches!(t, Task::Rename { .. }) {
+                stamps.push(at);
+            }
+        }
+        let end = match kind {
+            ListKind::Read => ListEnd::Read(ReadInto {
+                data: run.bufs.files[0].clone(),
+                comment: run.bufs.comment.clone(),
+                banner: run.bufs.banner.clone(),
+                icons: run.bufs.icons.clone(),
+            }),
+            ListKind::Swap => ListEnd::Swap {
+                tasks: tasks
+                    .iter()
+                    .filter_map(|(t, _)| match t {
+                        Task::Open { name: Some(n), .. } => Some(n.clone()),
+                        _ => None,
+                    })
+                    .collect(),
+                seconds,
+                stamps,
+                times: Vec::new(),
+            },
+            ListKind::Delete => ListEnd::Nothing,
+        };
+        self.game.snap_read.list = Some(AlbumList { list, next: 0, end });
+        result::BUSY
+    }
+
+    /// `lbCardNew_CompleteNextTask` for the album's list: its wait point and the next step's
+    /// transfers; busy until its last step, which returns the list's result and, for a read,
+    /// hands its bytes to the buffers. With no list it returns the last list's result.
+    pub fn snap_task_step(&mut self) -> i32 {
+        let Some(l) = self.game.snap_read.list.as_mut() else {
+            unported_call("lbCardNew_CompleteNextTask with no album list")
+        };
+        let work = l.list.steps[l.next];
+        let k = l.next;
+        l.next += 1;
+        let last = l.next == l.list.steps.len();
+        let results: Vec<(usize, i32)> = l
+            .list
+            .results
+            .iter()
+            .filter(|(at, _, _)| *at == k + 1)
+            .map(|&(_, f, e)| (f, e))
+            .collect();
+        for (f, e) in results {
+            self.game.card_tasks.file_errors[f] = e;
+        }
+        self.game.audio.clock_card_work(self.data, work);
+        let stamped = matches!(&self.game.snap_read.list, Some(AlbumList { end: ListEnd::Swap { stamps, .. }, .. }) if stamps.contains(&k));
+        if stamped {
+            let now = self.session_seconds();
+            if let Some(AlbumList {
+                end: ListEnd::Swap { times, .. },
+                ..
+            }) = self.game.snap_read.list.as_mut()
+            {
+                times.push(now);
+            }
+        }
+        if !last {
+            return result::BUSY;
+        }
+        let l = self.game.snap_read.list.take().expect("the album's list");
+        let r = l.list.result;
+        match l.end {
+            ListEnd::Nothing => {}
+            ListEnd::Read(read) => self.snap_read_into(read),
+            ListEnd::Swap {
+                tasks,
+                seconds,
+                times,
+                ..
+            } => {
+                let [a, b, c] = <[Vec<u8>; 3]>::try_from(tasks).unwrap_or_else(|t| {
+                    unported_call(&format!("a swap whose list opened {} files", t.len()))
+                });
+                let run = Run::new(
+                    melee_save::melee::snapshot_manifest(0),
+                    melee_save::exec::Bufs::default(),
+                );
+                let written =
+                    super::save::finish_list(run, &lists::swap(&a, &b, &c), seconds, &times);
+                assert_eq!(written, r, "the swap's list ended otherwise on the card");
+            }
+        }
+        r
+    }
+
+    /// A read's bytes where its list wrote them: the file's into the snapshot's buffer (its
+    /// header and image, as `lbSnap_8001DC0C` leaves them), the comment into
+    /// `lbSnap_80433380.filename`, the banner and the icon into `LbMcSnap`'s icon data.
+    fn snap_read_into(&mut self, read: ReadInto) {
+        let snap = self.game.snap.snap.expect("the snapshot's buffer");
+        if read.data.len() > SNAP_SIZE as usize {
+            unported_call("a snapshot read past its buffer");
+        }
+        heap::with(|h| h.image.put(snap, &read.data));
+        let d = &read.data;
+        if d.len() >= HEADER as usize {
+            let be32 = |at: usize| i32::from_be_bytes(d[at..at + 4].try_into().unwrap());
+            let be16 = |at: usize| u16::from_be_bytes([d[at], d[at + 1]]);
+            let header = SnapHeader {
+                x0: be32(0),
+                width: be16(4),
+                height: be16(6),
+                x8: d[8],
+                xc: be32(0xC),
+                stkind: be16(0x10),
+                items: std::array::from_fn(|i| be32(0x14 + 4 * i)),
+                fighters: be32(0x34),
+            };
+            let end = (HEADER as usize + header.xc.max(0) as usize).min(d.len());
+            let w = &mut self.game.snap_write;
+            w.header = Some(header);
+            w.image = d[HEADER as usize..end].to_vec();
+        }
+        let w = &mut self.game.snap_write;
+        if !read.comment.is_empty() {
+            let mut f = w.filename.unwrap_or([0; 0x40]);
+            let n = read.comment.len().min(0x40);
+            f[..n].copy_from_slice(&read.comment[..n]);
+            w.filename = Some(f);
+        }
+        let icon = self.game.snap.icon_data.expect("LbMcSnap's icon data");
+        let at = |i: u32| self.data.ptr(icon.at(4 * i)).expect("an icon data pointer");
+        let (banner_at, icons_at) = (at(0), at(1));
+        if !read.banner.is_empty() {
+            let mut b = self.game.snap_write.banner.clone().unwrap_or_else(|| {
+                (0..read.banner.len() as u32)
+                    .map(|i| self.data.u8(banner_at.at(i)))
+                    .collect()
+            });
+            let n = read.banner.len().min(b.len());
+            b[..n].copy_from_slice(&read.banner[..n]);
+            crate::hsd::export::with_image(|img| {
+                if let Some(a) = img.data_addr(banner_at) {
+                    img.put(a, &b);
+                }
+            });
+            self.game.snap_write.banner = Some(b);
+        }
+        if !read.icons.is_empty() {
+            crate::hsd::export::with_image(|img| {
+                if let Some(a) = img.data_addr(icons_at) {
+                    img.put(a, &read.icons);
+                }
+            });
+            self.game.snap_read.icons = Some(read.icons);
+        }
+    }
+
+    /// `lbSnap_8001DE8C`: the snapshot's buffer's image decoded into the album's image at
+    /// `dst` (`hsd_803B6BE4`, then `DCFlushRange`), when its header says it's an image (kind
+    /// 4); whether it decoded.
+    #[doc(alias = "lbSnap_8001DE8C")]
+    pub fn snap_decode(&mut self, dst: u32) -> i32 {
+        let snap = self.game.snap.snap.expect("the snapshot's buffer");
+        let data = self.data;
+        let (bytes, known) =
+            heap::with(|h| h.image.bytes(data, snap, SNAP_SIZE)).expect("the heap's image");
+        let byte = |i: usize| -> u8 {
+            if !known[i] {
+                unported_call(&format!(
+                    "the snapshot's buffer's byte {i:#x}, which the heap's image doesn't know"
+                ));
+            }
+            bytes[i]
+        };
+        let be32 =
+            |at: usize| u32::from_be_bytes([byte(at), byte(at + 1), byte(at + 2), byte(at + 3)]);
+        if be32(0) != 4 {
+            return 0;
+        }
+        let size = be32(0xC) as i32;
+        let width = u16::from_be_bytes([byte(4), byte(5)]);
+        let height = u16::from_be_bytes([byte(6), byte(7)]);
+        let i = match self
+            .game
+            .snap_read
+            .images
+            .iter()
+            .position(|m| m.addr == dst)
+        {
+            Some(i) => i,
+            None => {
+                let (b, _) =
+                    heap::with(|h| h.image.bytes(data, dst, IMAGE_SIZE)).expect("the heap's image");
+                self.game.snap_read.images.push(AlbumImage {
+                    addr: dst,
+                    bytes: b,
+                    version: 0,
+                });
+                self.game.snap_read.images.len() - 1
+            }
+        };
+        let mut image = std::mem::take(&mut self.game.snap_read.images[i].bytes);
+        self.game.snap_read.decoder.start = snap + HEADER;
+        let done = jpeg_decode::decode_counted(
+            &mut self.game.snap_read.decoder,
+            |k| byte(HEADER as usize + k as usize),
+            size,
+            &mut image,
+        );
+        let r = done.result;
+        // The macroblocks it stored, into the heap's image.
+        for (lo, hi) in jpeg_decode::stored_spans(done.width, done.stored) {
+            heap::with(|h| h.image.put(dst + lo, &image[lo as usize..hi as usize]));
+        }
+        let img = &mut self.game.snap_read.images[i];
+        img.bytes = image;
+        img.version = img.version.wrapping_add(1);
+        // `DCFlushRange` over the header's size.
+        let _ = (width, height);
+        i32::from(r != 0)
+    }
+}
+
+/// The album's lists, by what their end does.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum ListKind {
+    Read,
+    Delete,
+    Swap,
+}

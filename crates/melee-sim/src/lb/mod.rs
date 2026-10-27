@@ -23,6 +23,7 @@ pub mod screen;
 pub mod shadow;
 pub mod snap;
 pub mod snap_list;
+pub mod snap_read;
 pub mod snap_write;
 pub mod sound_obj;
 pub mod stomp;

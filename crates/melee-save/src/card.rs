@@ -1102,6 +1102,55 @@ impl Mounted<'_> {
         Ok(())
     }
 
+    /// `CARDRename`: this game's file `old` named `new` (`strncpy`'s zeros after it) and
+    /// stamped with the clock's time, then the directory written; refused when there's no
+    /// `old` or there's already a `new`.
+    pub fn rename(&mut self, old: &[u8], new: &[u8]) -> Result<(), CardError> {
+        let first = |n: &[u8]| n.first().copied().unwrap_or(0);
+        if [first(old), first(new)]
+            .iter()
+            .any(|&c| c == 0xFF || c == 0)
+        {
+            return Err(CardError::FatalError);
+        }
+        let len = |n: &[u8]| n.iter().take_while(|&&c| c != 0).count();
+        if len(old) > 32 || len(new) > 32 {
+            return Err(CardError::NameTooLong);
+        }
+        let (d, _) = self.ready()?;
+        let (mut old_no, mut new_no) = (None, None);
+        for n in 0..MAX_FILES {
+            let ent = self.entry_in(d, n);
+            if ent.0[0] == 0xFF
+                || ent.game_name() != self.console.game_name
+                || ent.company() != self.console.company
+            {
+                continue;
+            }
+            if ent.name_matches(old) {
+                old_no = Some(n);
+            }
+            if ent.name_matches(new) {
+                new_no = Some(n);
+            }
+        }
+        let Some(old_no) = old_no else {
+            return Err(CardError::NoFile);
+        };
+        if new_no.is_some() {
+            return Err(CardError::Exist);
+        }
+        let mut ent = self.entry_in(d, old_no);
+        self.access(&ent)?;
+        for (i, b) in ent.0[8..40].iter_mut().enumerate() {
+            *b = if i < len(new) { new[i] } else { 0 };
+        }
+        ent.set_time(self.clock.read());
+        self.set_entry(old_no, &ent);
+        self.update_dir();
+        Ok(())
+    }
+
     /// `__CARDGetFileNo`.
     fn file_no(&self, name: &[u8]) -> Result<usize, CardError> {
         let (d, _) = self.ready()?;

@@ -88,6 +88,11 @@ pub enum Task {
         ticks: u64,
     },
     Delete(Vec<u8>),
+    /// `taskRename`: `old` named `new`.
+    Rename {
+        old: Vec<u8>,
+        new: Vec<u8>,
+    },
     Create(Vec<u8>),
     Read,
     Write,
@@ -244,6 +249,10 @@ impl Run {
                 Task::Delete(name) => match mounted.as_mut() {
                     None => lb::DEVICE_ERROR,
                     Some(m) => from_sdk(crate::card::code(m.delete(name))),
+                },
+                Task::Rename { old, new } => match mounted.as_mut() {
+                    None => lb::DEVICE_ERROR,
+                    Some(m) => from_sdk(crate::card::code(m.rename(old, new))),
                 },
                 Task::Create(name) => match mounted.as_mut() {
                     None => lb::DEVICE_ERROR,
@@ -484,6 +493,33 @@ pub mod lists {
             Task::Delete(name.to_vec()),
             1 << lb::OPENED | 1 << lb::DAMAGED | 1 << lb::BAD_FILE,
         ));
+        v
+    }
+
+    /// `lb_8001C0F4`: files `a` and `b` swap names through `c`: `a` opened and named `c`,
+    /// `b` opened and named `a`, then `c` opened and named `b`.
+    pub fn swap(a: &[u8], b: &[u8], c: &[u8]) -> Vec<(Task, u32)> {
+        let renamed = 1 << lb::OPENED | 1 << lb::DAMAGED | 1 << lb::BAD_FILE;
+        let mut v = open(a, false);
+        for (opened, old, new) in [(a, a, c), (b, b, a), (c, c, b)] {
+            if opened != a {
+                v.push((
+                    Task::Open {
+                        name: Some(opened.to_vec()),
+                        with_manifest: false,
+                    },
+                    1 << lb::READY,
+                ));
+                v.push((Task::Unk3, u32::MAX));
+            }
+            v.push((
+                Task::Rename {
+                    old: old.to_vec(),
+                    new: new.to_vec(),
+                },
+                renamed,
+            ));
+        }
         v
     }
 
