@@ -7,9 +7,9 @@
 //! The session is ssbm-rs's recording `2026-10-06_17-44-10` (`$SSBM_RS_LOCAL/lockstep/
 //! recordings`, with its card), traced as `docs/oracle.md` ("Sessions") says into
 //! `$SSBM_RS_LOCAL/traces/session/`; the card sessions are in `lockstep/card-sessions` and
-//! `traces/card-sessions`, the menu, Options and sound test sessions in `menu-sessions`,
-//! `options-sessions` and `sound-sessions`. The tests skip without the traces, the recordings
-//! or `SSBM_DISC`.
+//! `traces/card-sessions`, the menu, Options, sound test and Celebi sessions in
+//! `menu-sessions`, `options-sessions`, `sound-sessions` and `celebi-sessions`. The tests skip
+//! without the traces, the recordings or `SSBM_DISC`.
 
 use std::process::Command;
 
@@ -672,6 +672,53 @@ fn the_sound_test_catches_a_dropped_press() {
     };
     assert!(
         out.contains("897 ticks compared; tick 896 differs in"),
+        "{out}"
+    );
+}
+
+/// A Celebi session (`lockstep/celebi-sessions/NAME.inputs`, on `pokemon.card`: every
+/// Pokémon's record but Celebi's own, the Poké Ball alone at very high; `locked` on
+/// `items-only.card`, the same item switch without the records).
+fn celebi_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("celebi-sessions", name, args)
+}
+
+/// Fox against three level 9 computer players on Fountain of Dreams with Poké Balls alone:
+/// Celebi drawn from the twelfth ball (tick 4245), its record written to the save with the
+/// clock's time, out of the ball, sparkling and flying off; clean through the whole match
+/// to the results screen's entry (task 9's).
+#[test]
+fn celebi_out_of_a_poke_ball() {
+    let Some(out) = celebi_session("celebi1", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
+        "{out}"
+    );
+}
+
+/// Another match the same way, Celebi from another ball (tick 4725).
+#[test]
+fn celebi_out_of_another_poke_ball() {
+    let Some(out) = celebi_session("celebi2", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
+        "{out}"
+    );
+}
+
+/// `celebi1`'s reads on a card without the records: the same draws, and the twelfth ball
+/// lets out another Pokémon where Celebi came out.
+#[test]
+fn no_celebi_without_the_records() {
+    let Some(out) = celebi_session("locked", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
         "{out}"
     );
 }
