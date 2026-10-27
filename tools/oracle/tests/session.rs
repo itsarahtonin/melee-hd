@@ -915,3 +915,24 @@ fn the_vs_records_toured() {
     };
     assert!(out.contains("5569 ticks compared, no difference"), "{out}");
 }
+
+/// Every Data screen on `2026-10-06_17-13-21`'s card (no names, one character unlocked, the
+/// records of a few matches): the messages, the grid with X refused, the statistics and the
+/// rankings, the bonuses and the other records: clean to the trace's end.
+#[test]
+fn the_data_screens_on_a_played_card() {
+    let Some(out) = data_session("plain", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3817 ticks compared, no difference"), "{out}");
+}
+
+/// The rankings to their ends in characters and names, the most and least played's counts
+/// over the names included: clean to the trace's end.
+#[test]
+fn the_vs_rankings_scrolled() {
+    let Some(out) = data_session("ranks", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2620 ticks compared, no difference"), "{out}");
+}
