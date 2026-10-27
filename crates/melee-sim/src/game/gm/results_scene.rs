@@ -310,6 +310,7 @@ impl Running<'_> {
         let x6 = usize::from(self.game.results.data.x6);
         let w = &me.player_standings[x6];
         if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.x3_u[0] & 0x02 != 0 {
+            self.alarm_rumble_catch_up();
             self.rumble_start(x6 as u8, 3, 0x20, 0);
         }
         let coget = self.game.ft.data.files.archive("IfCoGet.dat");

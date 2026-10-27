@@ -124,7 +124,7 @@ fn proc(game: &Game, data: &Archives, img: &mut Image, p: ProcId) {
 /// scheduler's GObjs and processes (the scene's own, live or freed), HSD's objects the scene
 /// made and still has, and the free lists' links over them.
 pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
-    live_objects(&game.objs, img);
+    live_objects(&game.objs, data, img);
     crate::hsd::export::id_table(&game.objs, img);
     for (slot, _) in game.world.gobjs.slots().iter().enumerate() {
         gobj(game, img, GObjId(slot as u32));

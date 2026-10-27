@@ -59,6 +59,17 @@ impl core::ops::DerefMut for ActionTree {
     }
 }
 
+impl crate::game::structs::Fighter {
+    /// The buffer the second figatree (`x598`) is in: the main one or the second.
+    pub fn second_tree_buf(&self) -> Option<crate::game::handles::AnimBufId> {
+        if self.x598.in_main {
+            self.x59C
+        } else {
+            self.x5A0
+        }
+    }
+}
+
 impl crate::game::mirror::LayOut for ActionTree {
     /// Its place is the main buffer's, which the fighter's layout gives
     /// (`game::export::fighter`).
@@ -323,7 +334,8 @@ impl Running<'_> {
         let tree = self
             .second_figatree(f, msid)
             .expect("ftAnim_80070A10 with no figatree");
-        self.bind_second_figatree(f, TOP_N, tree);
+        let buf = self.game.fighters[f.0].second_tree_buf();
+        self.in_anim_buf(buf, |r| r.bind_second_figatree(f, TOP_N, tree));
         self.request_anim(skel, frame);
         let entry = self.anim_entry(f, msid);
         let flags = self.data.u32(entry.at(0x10));

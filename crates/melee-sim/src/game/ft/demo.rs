@@ -366,3 +366,13 @@ impl Fighter {
         self.x1C_actionStateList.0 == DEMO_STATE_LIST
     }
 }
+
+/// The animation callbacks of the common motion states 2 and 5 (`ftCo_800BEF00`,
+/// `ftCo_800BEFD0`).
+pub const DEMO_ANIM_2: u32 = 0x800B_EF00;
+pub const DEMO_ANIM_5: u32 = 0x800B_EFD0;
+
+/// `ftCo_800BEF00` and `ftCo_800BEFD0`: empty.
+#[doc(alias = "ftCo_800BEF00")]
+#[doc(alias = "ftCo_800BEFD0")]
+pub fn demo_anim() {}

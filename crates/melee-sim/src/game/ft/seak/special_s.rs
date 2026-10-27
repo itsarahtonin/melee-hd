@@ -172,7 +172,8 @@ impl Running<'_> {
             let skel = fp.x8AC_animSkeleton;
             let tree = self.second_figatree(f, anim);
             let tree = tree.expect("ftAnim_8006F4C8 reads a missing figatree at address 0");
-            self.bind_own_figatree(f, true, tree);
+            let buf = self.game.fighters[f.0].second_tree_buf();
+            self.in_anim_buf(buf, |r| r.bind_own_figatree(f, true, tree));
             self.request_anim(skel, frame);
             let costume = self.game.fighters[f.0].x108_costume_joint;
             let child = costume.and_then(|c| self.data.ptr(c.at(8)));

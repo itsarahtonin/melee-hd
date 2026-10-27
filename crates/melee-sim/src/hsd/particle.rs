@@ -1015,6 +1015,7 @@ fn free(
         }
     }
     release_point_jobj(objs, pp);
+    super::export::with_image(|img| super::export::particle(objs, img, pp));
     objs.particles.pool.free(pp.0);
     objs.particles.live = objs.particles.live.wrapping_sub(1);
     next_pp
@@ -1877,6 +1878,7 @@ pub fn kill_generator_particles(
                 appsrt::remove_from_particle(objs, p);
             }
             release_point_jobj(objs, p);
+            super::export::with_image(|img| super::export::particle(objs, img, p));
             objs.particles.pool.free(p.0);
             objs.particles.live = objs.particles.live.wrapping_sub(1);
         } else {

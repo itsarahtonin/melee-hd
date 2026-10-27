@@ -14,6 +14,25 @@ use crate::ppc::cvt_fp2unsigned;
 
 /// A box header's words (`pstHakoHeader`): its size, the end of its samples, and the next
 /// box's offset in the file (-1 for the last).
+/// The header `HSD_SynthPStreamMasterClockCallback` reads for a box past the three, where the
+/// playing voice runs on past the stream's last box into the silence after it: the
+/// executable's array read past its end, the words at that place in memory (Melee's bugs).
+/// Its first two words are what the read uses; the heap's image knows them where a file or
+/// an object laid out holds them.
+fn past_hako(data: &Archives, pos: u32) -> [u8; 0x20] {
+    let at = HAKO_HEADERS.wrapping_add(pos.wrapping_mul(0x20));
+    let read = crate::hsd::heap::with(|h| h.image.bytes(data, at, 8));
+    let mut out = [0u8; 0x20];
+    match read {
+        Some((b, known)) if known.iter().all(|&k| k) => out[..8].copy_from_slice(&b),
+        other => crate::game::code::unported_call(&format!(
+            "HSD_SynthPStreamMasterClockCallback reading box {pos}'s header past the three, at              {at:#x}, which the heap's image doesn't know ({:?})",
+            other.map(|(b, k)| (b, k))
+        )),
+    }
+    out
+}
+
 fn hako_word(h: &[u8; 0x20], i: usize) -> u32 {
     u32::from_be_bytes(h[4 * i..4 * i + 4].try_into().unwrap())
 }
@@ -316,7 +335,10 @@ impl Audio {
         let count = usize::from(node.voice_count);
         if pos != s.pos {
             self.synth.stream.pos = pos;
-            let h = self.synth.stream.hako[pos as usize];
+            let h = match self.synth.stream.hako.get(pos as usize) {
+                Some(h) => *h,
+                None => past_hako(data, pos),
+            };
             for i in 0..count {
                 let end = s
                     .base
