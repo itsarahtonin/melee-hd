@@ -1862,7 +1862,6 @@ impl Running<'_> {
     #[doc(alias = "mnMain_Scene_OnFrame")]
     #[doc(alias = "mn_8022F218")]
     #[doc(alias = "mn_8022F268")]
-    #[doc(alias = "mn_8022EBDC")]
     #[doc(alias = "mn_8022F0F0")]
     pub fn menu_on_frame(&mut self) {
         if self.game.buttons_triggered(4) & PAD_LR_START == 0
@@ -1926,6 +1925,51 @@ impl Running<'_> {
         let bgm = self.game.game_data.x1850.bgm;
         self.lb_play_music(i32::from(bgm));
         self.card_game_save_changes();
+    }
+
+    /// The menus' scene from another screen's archive (`MnExtAll`, as `mn_80231804` and
+    /// `mnNameNew_EnterFromMnCharSel` load its sections): the camera, lights and fog and the
+    /// models `models` names, then the light, fog, cameras, background and panel.
+    pub(crate) fn menu_from_archive(
+        &mut self,
+        a: melee_data::archive::ArchiveId,
+        models: &[usize],
+    ) {
+        let ar = self.data.get(a);
+        let sym = |s: &str| {
+            let at = ar
+                .public(s)
+                .unwrap_or_else(|| panic!("Cannot find symbol {s}."));
+            DataRef {
+                archive: a,
+                offset: at,
+            }
+        };
+        let m = &mut self.game.menu;
+        for &i in models {
+            let p = MODELS[i];
+            m.models[i] = ModelDesc {
+                joint: Some(sym(&format!("{p}_joint"))),
+                anim: Some(sym(&format!("{p}_animjoint"))),
+                matanim: Some(sym(&format!("{p}_matanim_joint"))),
+                shapeanim: Some(sym(&format!("{p}_shapeanim_joint"))),
+            };
+        }
+        m.cam = Some(sym("ScMenMain_cam_int1_camera"));
+        m.lights = Some(sym("ScMenMain_scene_lights"));
+        m.fog_desc = Some(sym("ScMenMain_fog"));
+        self.menu_light();
+        self.menu_fog();
+        let erase = self.menu_erase_camera();
+        self.menu_text_camera(erase);
+        self.menu_back();
+        self.menu_panel();
+    }
+
+    /// `mn_8022EBDC`: the menus' GObjs (process links 1 to 8) freed.
+    #[doc(alias = "mn_8022EBDC")]
+    pub(crate) fn menu_free_gobjs(&mut self) {
+        self.free_gobj_links(1, 8);
     }
 
     /// The entry's archives: `MnMaAll` and its symbols, the menus' strings (font 0) and the

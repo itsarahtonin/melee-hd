@@ -230,6 +230,7 @@ impl Running<'_> {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
             m if super::machine::uses_vs_melee(m) => self.game.vs_melee.start.clone(),
+            super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

@@ -1265,6 +1265,7 @@ impl Running<'_> {
             LIST_PROC => self.name_list_proc(gobj),
             PROMPT_PROC => self.name_prompt_proc(gobj),
             KEYS_PROC => self.name_keys_proc(gobj),
+            KEYS_THINK => self.name_keys_input(gobj),
             KEYS_LEAVE_PROC => self.name_keys_leave_proc(gobj),
             VARIANTS_PROC => self.name_variants_proc(gobj),
             _ => return false,
@@ -1328,8 +1329,8 @@ impl Running<'_> {
     }
 
     /// `mnNameNew_8023B224`: the keyboard left, a new name saved (`ok`): back to the names'
-    /// list (scrolled to the new name past 24); Tournament's and the character select's
-    /// aren't this menu's.
+    /// list (scrolled to the new name past 24), or the texts and the menus' GObjs freed and
+    /// back to Tournament's setup with the name; the character select's isn't ported.
     #[doc(alias = "mnNameNew_8023B224")]
     fn keys_done(&mut self, ok: bool) {
         let index = self.keys_data().name_index;
@@ -1338,7 +1339,9 @@ impl Running<'_> {
         }
         match game_mode(self) {
             super::common::GM_TOURNAMENT => {
-                super::super::code::unported_call("gm_80190FE4 (Tournament's names)")
+                self.sis_reset();
+                self.menu_free_gobjs();
+                self.tou_back_from_names(if ok { i32::from(index) } else { 0x78 });
             }
             super::super::gm::machine::GM_MENU => {
                 self.game.menu.cooldown = 5;
@@ -2214,6 +2217,63 @@ impl Running<'_> {
         self.keys_mut().key_text = Some(t);
         self.keys_description(d.hovered);
         self.keys_mode_buttons(gobj, d.hovered);
+    }
+
+    /// `mnNameNew_EnterFromMnCharSel` (`mnNameNew_8023EA08` for Tournament's setup, port 4):
+    /// the inputs' cooldown, the flow on the keyboard (letters in English), the texts reset,
+    /// the menus' scene and the keyboard's models from the screen's `MnExtAll` with the
+    /// random and refused names, the keyboard's think, the name empty, the keyboard for the
+    /// next name tag, and the menus' song.
+    #[doc(alias = "mnNameNew_EnterFromMnCharSel")]
+    #[doc(alias = "mnNameNew_8023EA08")]
+    pub(crate) fn name_new_from_screen(&mut self, a: melee_data::archive::ArchiveId, port: u8) {
+        let m = &mut self.game.menu;
+        m.cooldown = 0x14;
+        m.input_x2 = 0;
+        m.input_x4 = 0;
+        let f = &mut m.flow;
+        f.buttons = 0;
+        f.prev_menu = f.cur_menu;
+        f.cur_menu = NAMES;
+        let us = self.game.game_data.saved_language() == LANG_US;
+        self.game.menu.flow.hovered_selection = if us { 0x2D } else { 0 };
+        self.game.menu.flow.x10 = 1;
+        self.sis_reset();
+        self.names_mut().port = port;
+        let ar = self.data.get(a);
+        let sym = |s: &str| ar.public(s).map(|offset| DataRef { archive: a, offset });
+        let model = |p: &str| ModelDesc {
+            joint: sym(&format!("{p}_joint")),
+            anim: sym(&format!("{p}_animjoint")),
+            matanim: sym(&format!("{p}_matanim_joint")),
+            shapeanim: sym(&format!("{p}_shapeanim_joint")),
+        };
+        let n = &mut self.game.vs_menus.names;
+        n.keys_model = model("MenMainConEtNw_Top");
+        n.key_model = model("MenMainBaseEtNw_Top");
+        n.popup_model = model("MenMainSubEtNw_Top");
+        n.variant_model = model("MenMainSbaseEtNw_Top");
+        let (auto, refused) = if us {
+            ("mnNameAutoNameUs", "mnNameRefuseNameUs")
+        } else {
+            ("mnNameAutoName", "mnNameRefuseName")
+        };
+        n.auto_names = sym(auto);
+        n.refused_names = sym(refused);
+        self.menu_from_archive(a, &[0, 1]);
+        let count = self.name_count() as u8;
+        let w = &mut self.game.world;
+        let o = w.create(0, 1, 0x80);
+        let p = w.setup_proc(o, CodeRef(KEYS_THINK), 0);
+        w.proc_mut(p).flags_3 = w.phase;
+        let n = self.names_mut();
+        n.text[0] = 0;
+        n.text[3] = 0;
+        n.text[6] = 0;
+        n.text[9] = 0;
+        self.keys_open(count);
+        let bgm = self.game.game_data.x1850.bgm;
+        self.lb_play_music(i32::from(bgm));
     }
 
     /// `mnNameNew_EnterFromMnName`, from the names' list's New: the flow on the keyboard

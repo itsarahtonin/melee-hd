@@ -100,6 +100,7 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
                 melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
                 melee_sim::game::gm::machine::GM_CAMERA_MODE => sym("gm_Mode_Camera_States"),
+                melee_sim::game::gm::tournament::GM_TOURNAMENT => sym("gm_Mode_Tournament_States"),
                 0x10 => sym("gm_Mode_SuperSuddenDeath_States"),
                 0x11 => sym("gm_Mode_InvisibleVs_States"),
                 0x12 => sym("gm_Mode_SlowMo_States"),
@@ -202,6 +203,7 @@ impl<'a> Comparer<'a> {
         self.select_screens();
         self.camera_mode();
         self.stamina_mode();
+        self.tournament();
     }
 
     /// The memory card scene's statics and its windows.

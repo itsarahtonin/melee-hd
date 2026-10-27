@@ -299,13 +299,22 @@ pub const FILES: &[&str] = &[
     "TyItemD.dat",
     "TyItemE.dat",
     "TyStandD.dat",
+    // Tournament mode's: its scenes, its bracket's boxes and its strings.
+    "GmTou1p.usd",
+    "GmTou2p.usd",
+    "GmTou3p.usd",
+    "GmTou4p.usd",
+    "TmBox.dat",
+    "SdTou.usd",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
 /// test's, which [`Session::read_song`] reads as the stage or the test starts them: the
 /// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, and
 /// the special messages' three.
-pub const SONGS: &[usize] = &[0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45];
+pub const SONGS: &[usize] = &[
+    0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x5D, 0x5E,
+];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
 pub const MOVIES: &[&str] = &[

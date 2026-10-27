@@ -156,6 +156,15 @@ enum Hook {
     ChallengerOnLoad,
     ChallengerApproachOnExit,
     ChallengerPrizeOnExit,
+    TouEnterSetup,
+    TouEnterSss,
+    TouExitSss,
+    TouEnterVs,
+    TouExitVs,
+    TouEnterSuddenDeath,
+    TouExitSuddenDeath,
+    TouEnterResults,
+    TouExitResults,
 }
 
 /// Whether `mode` is a Special Melee mode with VS mode's states (`gmsupersudden.c` and the
@@ -434,7 +443,60 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_VS,
         },
     ];
+    // `gm_Mode_Tournament_States`.
+    const TOURNAMENT: [StateDesc; 7] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::TouEnterSetup),
+            on_exit: None,
+            scene: super::tournament::GS_TOU_SETUP,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: None,
+            on_exit: None,
+            scene: super::tournament::GS_TOU_BRACKET,
+        },
+        StateDesc {
+            id: 2,
+            preload: 3,
+            on_enter: None,
+            on_exit: None,
+            scene: super::tournament::GS_TOU_ALT,
+        },
+        StateDesc {
+            id: 3,
+            preload: 3,
+            on_enter: Some(Hook::TouEnterSss),
+            on_exit: Some(Hook::TouExitSss),
+            scene: GS_SSS,
+        },
+        StateDesc {
+            id: 4,
+            preload: 3,
+            on_enter: Some(Hook::TouEnterVs),
+            on_exit: Some(Hook::TouExitVs),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 5,
+            preload: 3,
+            on_enter: Some(Hook::TouEnterSuddenDeath),
+            on_exit: Some(Hook::TouExitSuddenDeath),
+            scene: GS_SUDDEN_DEATH,
+        },
+        StateDesc {
+            id: 6,
+            preload: 3,
+            on_enter: Some(Hook::TouEnterResults),
+            on_exit: Some(Hook::TouExitResults),
+            scene: GS_RESULTS,
+        },
+    ];
     match mode {
+        super::tournament::GM_TOURNAMENT => &TOURNAMENT,
         crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
         crate::game::ty::GM_TOY_LOTTERY => &TOY_LOTTERY,
         crate::game::ty::GM_TOY_COLLECTION => &TOY_COLLECTION,
@@ -465,6 +527,7 @@ const GS_MOVIE_OMAKE15: u8 = 0x1F;
 fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
     match mode {
         GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
+        super::tournament::GM_TOURNAMENT => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
         GM_PROGRESSIVE_SCAN => (false, None, None),
         crate::game::ty::GM_TOY_GALLERY
@@ -635,6 +698,7 @@ impl Running<'_> {
         match scene_mode {
             GM_OPENING_MV => &self.game.attract.start,
             m if uses_vs_melee(m) => &self.game.vs_melee.start,
+            super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -692,6 +756,18 @@ impl Running<'_> {
             ),
             // No frame function: the panel's process runs the interface.
             GS_PRIZE => (crate::game::hud::prize::ON_ENTER, CodeRef(0)),
+            super::tournament::GS_TOU_SETUP => (
+                super::tournament::SETUP_ON_ENTER,
+                super::tournament::SETUP_ON_FRAME,
+            ),
+            super::tournament::GS_TOU_BRACKET => (
+                super::tournament::BRACKET_ON_ENTER,
+                super::tournament::BRACKET_ON_FRAME,
+            ),
+            super::tournament::GS_TOU_ALT => (
+                super::tournament::ALT_ON_ENTER,
+                super::tournament::ALT_ON_FRAME,
+            ),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -720,6 +796,9 @@ impl Running<'_> {
             crate::game::ty::lottery::ON_ENTER => self.lot_on_enter(),
             crate::game::ty::collection::ON_ENTER => self.coll_on_enter(),
             crate::game::hud::prize::ON_ENTER => self.prize_on_enter(),
+            super::tournament::SETUP_ON_ENTER => self.tou_setup_on_enter(),
+            super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
+            super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -793,6 +872,9 @@ impl Running<'_> {
             | crate::game::ty::GS_TOY_COLLECTION => {}
             // `ifPrize_Scene_OnExit` does nothing.
             GS_PRIZE => {}
+            super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
+            super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
+            super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -929,6 +1011,15 @@ impl Running<'_> {
             Hook::CameraExitSss => self.camera_exit_sss(),
             Hook::CameraEnterVs => self.camera_enter_vs(),
             Hook::CameraExitVs => self.camera_exit_vs(),
+            Hook::TouEnterSetup => self.tou_enter_setup(),
+            Hook::TouEnterSss => self.tou_enter_sss(),
+            Hook::TouExitSss => self.tou_exit_sss(),
+            Hook::TouEnterVs => self.tou_enter_vs(),
+            Hook::TouExitVs => self.tou_exit_vs(),
+            Hook::TouEnterSuddenDeath => self.tou_enter_sudden_death(),
+            Hook::TouExitSuddenDeath => self.tou_exit_sudden_death(),
+            Hook::TouEnterResults => self.tou_enter_results(),
+            Hook::TouExitResults => self.tou_exit_results(),
         }
         let _ = state;
     }
