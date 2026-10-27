@@ -1477,6 +1477,48 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** the records' values past the largest word.
 - **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
 
+### A tournament match's teams run past the five into the players' decision tables
+
+- **Where:** `fn_80165E7C` (the teams' scores and subscores at a match's end), `crates/melee-sim/src/game/gm/results.rs` (`team_scores`, `TeamStanding`).
+- **Defect:** the function indexes the match end's five `team_standings` by each player's team byte with no bound; Tournament mode's matches give every player team 0xFF (`gm_801905F0`), so the index runs 250 entries past the table, into the players' decision tables (`x44C`).
+- **Effect:** each player of a tournament match adds its score and subscore into the second player's `x104[110]` and `x104[111]` and sets the third byte of its `x104[112]` (the team's active flag). Whether anything reads those words afterwards: not recorded; the bytes reach the results screen's state, which the comparer checks.
+- **melee-hd:** modeled: `TeamStanding::Past` maps a team past the five to the words it lands on.
+- **Fix:** skip players whose team is outside the table (or not a team match).
+- **Fix impact:** not recorded (none if the words are never read).
+- **Source:** `gm_1601.c`'s `fn_80165E7C`; session `2026-10-06_12-42-06` at its match's end.
+
+## Tournament
+
+### Four computers' last two places weigh the wrong seat once
+
+- **Where:** `fn_801967E0` (a computers-only match of four drawn by the players' levels), `crates/melee-sim/src/game/gm/tournament/bracket.rs` (`tou_draw_ranks_4`).
+- **Defect:** the draw picks the first place, then the second among the other three, then splits the last two by their levels; in the branch where the first seat came first and the fourth second, the code tests the draw against the later seat's level instead of the earlier one's, so that seat's chance takes the other's weight.
+- **Effect:** in that one case, the third and fourth places of a computers-only match go by the swapped levels: the two computers' chances of third place are exchanged.
+- **melee-hd:** modeled.
+- **Fix:** compare against the earlier remaining seat's level, as the other branches do.
+- **Fix impact:** changes the third and fourth places of those matches; no replay or Slippi play reaches Tournament mode.
+- **Source:** `gmtou_1.c`'s `fn_801967E0`; `bracket.rs`'s `tou_draw_ranks_4`.
+
+### The next match-up's automatic handicaps go by places, not seats
+
+- **Where:** `gm_8019E634`, `crates/melee-sim/src/game/gm/tournament/alt.rs` (`tou_next_match_up`).
+- **Defect:** with the automatic handicap (`handicap` 1), the function reads each player's handicap into `fn_80169000`'s buffer, and writes the moved ones back, through the entrant whose kept seat (`xF`) is the player's place after sorting (`results[i]`) rather than the player's seat (`i`).
+- **Effect:** while the places all differ the sorted places are the seats and nothing changes. On a tie the match-up still goes on when the tie decides nothing (`gm_8018F1B0`), and then one entrant's handicap is read for two players and written twice, the other tied player's never moves, and `fn_80169000` sees the wrong player's handicap in that slot.
+- **melee-hd:** modeled.
+- **Fix:** index by the seat `i`.
+- **Fix impact:** the next match's handicaps after a tie with the automatic handicap; no replay or Slippi play reaches Tournament mode.
+- **Source:** `gmtou_2.c`'s `gm_8019E634`; ssbm-rs's port.
+
+### The next match-up loads its players' sound banks by their icons
+
+- **Where:** `gm_8019E634` (winner-out's and loser-out's next match-up after a match's results), `crates/melee-sim/src/game/gm/tournament/alt.rs` (`tou_next_match_up`).
+- **Defect:** the players' sound banks are asked for by `lbAudioAx_80026E84(x4B8[k].x1)`, where `x1` is the player's icon (the select's order) and the function takes a character kind (`fn_8018F6FC` converts one to the other, as the match-up screen's entry does).
+- **Effect:** the banks of other characters are asked for and start loading as the results end; the match-up screen's entry asks for the right ones again (its characters through `fn_8018F6FC`), so the match plays with the right sounds. What changes is the loads made in between and their time on the audio side.
+- **melee-hd:** modeled: the icons go to `character_banks` as they are.
+- **Fix:** convert each icon with `fn_8018F6FC` first.
+- **Fix impact:** the loads between the results and the match-up screen; nothing heard.
+- **Source:** `gmtou_2.c`'s `gm_8019E634`; ssbm-rs's port.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1546,6 +1588,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | Stages without spawn points | `Ground_801C2D24`, read by `Stage_80224E64` and `fn_80167638`; `game/gr/ground.rs`, `game/gm/vs.rs` | Leaves its vector alone (and adds into its out parameter for combined points) when the stage lacks the point; every VS stage has them | [engine notes](engine.md#uninitialized-values) (line 78); `crates/melee-sim/src/game/gr/ground.rs:207` |
 | A string ending in a lead byte | `HSD_SisLib_803A67EC`, `hsd/sis.rs` | Reads past a string that ends in a Shift-JIS lead byte; the game's strings end in whole characters | [engine notes](engine.md#uninitialized-values) (line 91) |
 | An output that ends exactly at its room | `hsd_803B3398` and `hsd_803B46D4` (HAL's JPEG writer), `hsd/jpeg.rs` | A block of bytes is refused unless it ends before the output's end (`<` where `<=` would do), so an image that would fill the room exactly is dropped as too big; the snapshot's room is 256,000 bytes, and the frames compressed in the sessions took up to 248,093 | `crates/melee-sim/src/hsd/jpeg.rs` (`Encoder::bytes`, `jfif`) |
+| The character select's setup's return value | `mnCharSel_802640A0`, `game/mn/charsel/mod.rs` (`charsel_setup`) | Returns an `int` it never sets: r3 holds the last call's result (`lbAudioAx_80023F28`'s, the screen's song) as it returns. Its two callers, the scene's entry and the rules' way back (`mn_8022F4CC`), drop it; ssbm-rs's transliterations note both | ssbm-rs's `melee__mn__mncharsel.rs` and `melee__mn__mn_22EC.rs` (the transliterations' notes) |
 | The sound test's category checks | `lbAudioAx_80023968` and `lbAudioAx_80023A44`, `lb/audio/sound_test.rs` | Guard a category and a sound with `arg0 < 0 && arg0 >= 30` and `arg1 < 0 && 0x83D60 <= arg1`, which no value passes, so an out-of-range category reads past `lbAudioLoadData`'s table; the sound test passes only categories 0 to 29 and sounds of their lists | `lbaudio_ax.c` (`MUST_MATCH`) |
 | Character-specific effect spawns for another character | `efSync_Spawn`, `game/ef/sync.rs` | Case 0x501 reads Peach's part 85, past a shorter parts table, and action-state callbacks read the character's `mv` words | [engine notes](engine.md#uninitialized-values) (line 59) |
 | The approach's roll with no target | `ftCo_800AB224` calling `ftCo_800BA2E8`, `game/ft/cpu_move.rs` | Passes the target on unchecked after its own null test, so with no target and `xF8_b6` set the roll reads a fighter at address 0; the VS decision sets the target on every frame it sets `xF9_b1`, which the approach needs, and nothing before the walk clears it | `crates/melee-sim/src/game/ft/cpu_move.rs:664` |
