@@ -345,9 +345,32 @@ fn block_of_joint(joint: i32) -> usize {
 pub fn init_blocks(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let addr = crate::hsd::heap::mem_alloc(0x24 * BLOCK_COUNT as u32);
+    // The fields the setup never writes (`x6`, `x20`, `x22`) hold the block's leftovers
+    // (docs/engine.md, a session's heap leftovers), else zero.
+    let left = crate::hsd::heap::image_on()
+        .then(|| {
+            crate::hsd::heap::with(|h| {
+                h.image
+                    .leftover_bytes(r.data, addr, 0x24 * BLOCK_COUNT as u32)
+                    .0
+            })
+        })
+        .flatten();
+    let half = |i: usize, o: usize| {
+        left.as_ref().map_or(0, |b| {
+            i16::from_be_bytes([b[0x24 * i + o], b[0x24 * i + o + 1]])
+        })
+    };
     let v = r.game.grounds[g.0].u.inishie1();
     v.blocks_addr = addr;
-    v.blocks = (0..BLOCK_COUNT).map(|_| Default::default()).collect();
+    v.blocks = (0..BLOCK_COUNT)
+        .map(|i| super::vars::Inishie1Block {
+            x6: half(i, 6),
+            x20: half(i, 0x20),
+            x22: half(i, 0x22),
+            ..Default::default()
+        })
+        .collect();
     for (i, &(joint, part)) in BLOCKS.iter().enumerate() {
         let Some(j) = nth_joint(r.game, gobj, part) else {
             super::super::code::unported_call("grinishie1.c:541: oioi.. (the game hangs)")
