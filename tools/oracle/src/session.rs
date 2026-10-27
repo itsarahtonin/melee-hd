@@ -79,6 +79,16 @@ fn next_alarm(image: &Image, power_on: u64) -> (u64, u64) {
 
 /// The scene the trace's memory is in: the game mode (`state_machine`'s current mode), its
 /// state's index and the scene's frame function.
+/// The reads a tick of game mode `mode` can take past the pad alarm's: the trophy screens'
+/// own (`HSD_PadRenewStatus`: the gallery's entry and its close-up's, the list's choice), at
+/// most two in a tick.
+fn direct_reads(mode: u8) -> u64 {
+    match mode {
+        0xB..=0xD => 2,
+        _ => 0,
+    }
+}
+
 fn scene_of(image: &Image) -> (u8, u8, u32) {
     let sm = sym("state_machine");
     let info = image.u32(sym("gm_804D6720"));
@@ -189,6 +199,9 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
     let mut ends: Vec<Vec<u32>> = Vec::new();
     // How often the alarm fired between each tick's end and the one before's.
     let mut fired: Vec<u64> = Vec::new();
+    // How many reads past the alarm's each tick may have taken: the trophy screens' code
+    // reads the controllers itself (`HSD_PadRenewStatus`), on top of the alarm's reads.
+    let mut extras: Vec<u64> = Vec::new();
     let mut scenes = Vec::new();
     let mut last_alarm: Option<(u64, u64)> = None;
     // Ticks across which the alarm was set again at another period: how often each grid
@@ -211,6 +224,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
             scenes.push((t.number, mode, state, on_frame));
         }
         let (alarm, period) = next_alarm(&image, rec.power_on);
+        let extra = direct_reads(mode);
         let newest = newest_poll(&image);
         // Past the recording's end ssbm-rs's playback reports its last read, for a second.
         let matching = |r: u64| rec.reads[r.min(n - 1) as usize] == newest;
@@ -250,13 +264,13 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
                     (alarm - before) / period
                 };
                 let prev = ends.last().expect("the tick before's reads");
-                if f == 0 {
+                if f == 0 && extra == 0 {
                     now.extend(prev.iter().copied().filter(|&r| matching(u64::from(r))));
                 } else {
                     let mut next = 0u64;
                     for &r in prev {
-                        let lo = u64::from(r) + u64::from(!changed);
-                        let hi = u64::from(r) + f;
+                        let lo = u64::from(r) + u64::from(f > 0 && !changed);
+                        let hi = u64::from(r) + f + extra;
                         for j in lo.max(next)..=hi {
                             if matching(j) {
                                 now.push(j as u32);
@@ -272,7 +286,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
             let (lo, hi) = match ends.last() {
                 Some(prev) => (
                     u64::from(prev[0]) + u64::from(f > 0),
-                    u64::from(*prev.last().unwrap()) + f,
+                    u64::from(*prev.last().unwrap()) + f + extra,
                 ),
                 None => (1, f),
             };
@@ -289,18 +303,20 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         ends.push(now);
         fired.push(f);
         loose.push(changed);
+        extras.push(extra);
         last_alarm = Some((alarm, period));
     }
     // Back from the last tick: each tick keeps the reads a later tick's can follow from.
     for t in (1..ends.len()).rev() {
         let f = fired[t] as u32;
+        let extra = extras[t] as u32;
         let (before, after) = ends.split_at_mut(t);
         let later = &after[0];
         let loose = loose[t];
         before[t - 1].retain(|&r| {
             let lo = if f == 0 || loose { r } else { r + 1 };
             let k = later.partition_point(|&j| j < lo);
-            k < later.len() && later[k] <= r + f
+            k < later.len() && later[k] <= r + f + extra
         });
     }
     Ok(Plan { ends, scenes })
@@ -326,6 +342,10 @@ impl melee_sim::game::session::Console for Console<'_> {
         }
         self.next += 1;
         pads
+    }
+
+    fn unread(&mut self, n: usize) {
+        self.next -= n;
     }
 
     fn entrynum(&mut self, path: &str) -> Option<i32> {
@@ -497,6 +517,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
+    let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
@@ -508,6 +529,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     while let Some(&a) = it.next() {
         match a {
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            "--card-after" => card_after = Some(it.next().expect("--card-after FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -695,6 +717,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
+        card_after,
     };
     run.play(setup)
 }
@@ -755,6 +778,9 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
+    /// The card as ssbm-rs's run left it (its recording's `NAME-run.card`), to check the
+    /// card melee-hd's run leaves against: the saves it wrote, byte for byte.
+    card_after: Option<PathBuf>,
 }
 
 impl Run<'_> {
@@ -1027,6 +1053,29 @@ impl Run<'_> {
             next = t + 1;
         };
         let at = format!("tick {tick}");
+        if let Some(path) = &self.card_after {
+            let theirs = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+            let ours = s
+                .card
+                .as_ref()
+                .and_then(|c| c.card.as_ref())
+                .map(|c| c.image().to_vec());
+            match ours {
+                Some(o) if o == theirs => {
+                    println!("the card after the run: the same as {}", path.display())
+                }
+                Some(o) => {
+                    let n = o.iter().zip(&theirs).filter(|(a, b)| a != b).count();
+                    let first = o.iter().zip(&theirs).position(|(a, b)| a != b);
+                    println!(
+                        "the card after the run: {n} bytes differ from {} (the first at {:#x?})",
+                        path.display(),
+                        first
+                    );
+                }
+                None => println!("the card after the run: none"),
+            }
+        }
         if let Some(path) = &self.heap_log {
             let log = melee_sim::hsd::heap::take_log();
             std::fs::write(

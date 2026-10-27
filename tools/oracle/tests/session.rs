@@ -1007,6 +1007,77 @@ fn special_melee_sessions() {
     );
 }
 
+/// A trophy session (`lockstep/trophy-sessions/NAME.inputs` with its card, traced into
+/// `traces/trophy-sessions`).
+fn trophy_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("trophy-sessions", name, args)
+}
+
+/// The gallery on a card with 9 trophies (its view, its close-up, the list's sorts) and on one
+/// with 196 (the list paged by X and Y), and its six lights: each clean from power-on to the
+/// trace's end.
+#[test]
+fn the_trophy_gallery_toured() {
+    for (name, ticks) in [
+        ("gallery-few", "4858"),
+        ("gallery-many", "6670"),
+        ("gallery-lights", "5317"),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The lottery's draws, seed for seed, with few and many trophies: clean to the trace's end,
+/// and the card the run leaves is ssbm-rs's byte for byte (the draws' trophies and coins
+/// saved).
+#[test]
+fn the_trophy_lottery_draws_and_saves() {
+    for (name, ticks) in [("lottery-few", "5017"), ("lottery-many", "5027")] {
+        let card = ssbm_rs_local(&format!("lockstep/trophy-sessions/{name}-run.card"));
+        let Some(out) = trophy_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains("the card after the run: the same as"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The collection in its four layouts (rings jittered and even, rows, the triangle), on
+/// cards with 9 and 196 trophies, and left by L, R and Start: each clean from power-on through
+/// the collection to the trace's end (`coll-r` to its attract match's first tick, where the
+/// heap's image has no layout for a freed archive).
+#[test]
+fn the_trophy_collection_in_each_layout() {
+    for (name, want) in [
+        ("coll-few", "3820 ticks compared, no difference"),
+        ("coll-many", "3820 ticks compared, no difference"),
+        ("coll-l", "3820 ticks compared, no difference"),
+        ("coll-y", "3820 ticks compared, no difference"),
+        ("coll-lrs", "2519 ticks compared, no difference"),
+        (
+            "coll-r",
+            "3793 ticks compared, no difference; stopped in tick 3792",
+        ),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(out.contains(want), "{name}: {out}");
+    }
+}
+
 /// A Data menu session (`lockstep/data-sessions/NAME.inputs`, on a copy of `records.card`:
 /// `options-sessions/names10.card` with every character, stage and trophy unlocked, every
 /// special message noted, two thirds of the bonuses seen, thirty names and random records).

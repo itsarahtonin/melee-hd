@@ -41,10 +41,11 @@ pub enum Replay {
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
-    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` and for `special-NAME`
-    /// `lockstep/special-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
-    /// in the console's float mode.
+    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
+    /// `lockstep/special-sessions/NAME.inputs` and for `trophy-NAME`
+    /// `lockstep/trophy-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the console's
+    /// float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -70,6 +71,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("special-") {
                     return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("trophy-") {
+                    return ssbm_rs_local(&format!("lockstep/trophy-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("sound-") {
                     return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
@@ -703,6 +707,40 @@ pub const CAMERA_NOCARD: Game = Game {
     name: "special-camera-nocard",
     players: "Camera Mode, no card (session special-sessions/camera-nocard)",
     replay: Replay::Session("special-camera-nocard"),
+};
+
+/// The trophy gallery round its six lights (`trophy-sessions/gallery-lights`): the view, the
+/// lights' backs and the background's sprites, the close-up with its axes, the list.
+pub const TROPHY_GALLERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-gallery-lights",
+    players: "the trophy gallery (session trophy-sessions/gallery-lights)",
+    replay: Replay::Session("trophy-gallery-lights"),
+};
+
+/// The trophy lottery's draws (`trophy-sessions/lottery-few`): the machine, the coins, the
+/// draw's capsule and the trophy on its stand with its name.
+pub const TROPHY_LOTTERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-lottery-few",
+    players: "the trophy lottery (session trophy-sessions/lottery-few)",
+    replay: Replay::Session("trophy-lottery-few"),
+};
+
+/// The trophy collection with 196 trophies (`trophy-sessions/coll-many`, the rings, and
+/// `coll-l`, the rows).
+pub const TROPHY_COLLECTION: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-many",
+    players: "the trophy collection (session trophy-sessions/coll-many)",
+    replay: Replay::Session("trophy-coll-many"),
+};
+
+pub const TROPHY_COLLECTION_ROWS: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-l",
+    players: "the trophy collection in rows (session trophy-sessions/coll-l)",
+    replay: Replay::Session("trophy-coll-l"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

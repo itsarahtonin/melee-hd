@@ -607,6 +607,7 @@ impl<'a> Comparer<'a> {
             Some(UserData::OptionMenu(a)) => self.option_menu(path, a, t),
             Some(UserData::Vibration(a)) => self.vibration_data(path, a, t),
             Some(UserData::DataDel(a)) => self.datadel_data(path, a, t),
+            Some(UserData::Toy(a)) => self.toy_user_data(path, a, t),
             Some(UserData::Info(a)) => self.info_data(path, a, t),
             Some(UserData::Count(a)) => self.count_data(path, a, t),
             Some(UserData::Diagram(a)) => self.diagram_data(path, a, t),

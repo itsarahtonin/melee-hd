@@ -23,7 +23,8 @@ use common::{
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, VENOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, VENOM,
     YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
@@ -649,3 +650,31 @@ fn widescreen_reflection_sheik_fox_fod_2600() {
 fn widescreen_reflection_sheik_fox_fod_6000() {
     reflection(&SHEIK_FOX_FOD, 6000, Group::Standard);
 }
+
+// The trophy screens: the gallery's view under its first light (1250), the second light's back
+// (1340), the third's background sprite (1400), the close-up (2330), its axes as the camera
+// pans (2440) and the list (3300); the
+// lottery's machine with a bet (1400), the draw (1700) and the trophy shown (2000); the
+// collection's 196 trophies in rings (1300), turned (1700) and zoomed (2500), and in rows
+// (1300).
+frames!(TROPHY_GALLERY;
+    trophy_gallery_1250 1250,
+    trophy_gallery_1340 1340,
+    trophy_gallery_1400 1400,
+    trophy_gallery_2330 2330,
+    trophy_gallery_2440 2440,
+    trophy_gallery_3300 3300,
+);
+frames!(TROPHY_LOTTERY;
+    trophy_lottery_1400 1400,
+    trophy_lottery_1700 1700,
+    trophy_lottery_2000 2000,
+);
+frames!(TROPHY_COLLECTION;
+    trophy_collection_1300 1300,
+    trophy_collection_1700 1700,
+    trophy_collection_2500 2500,
+);
+frames!(TROPHY_COLLECTION_ROWS;
+    trophy_collection_rows_1300 1300,
+);

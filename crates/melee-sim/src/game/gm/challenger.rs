@@ -153,13 +153,13 @@ impl Running<'_> {
     fn trophy_set_checks(&mut self) {
         if self.message_condition(0x1E) == Some(true) && self.message_condition(0x1F) == Some(true)
         {
-            super::super::code::unported_call("Toy_80305918 (the 1P trophy set, task 15)");
+            self.toy_mark_class(4, false, false);
         }
         if self.vs_matches_played() >= 0xC8 {
-            super::super::code::unported_call("Toy_80305918 (the VS trophy set, task 15)");
+            self.toy_mark_class(5, false, false);
         }
         if self.game.gm.unlocks.all_characters() {
-            super::super::code::unported_call("Toy_80305918 (every character's set, task 15)");
+            self.toy_mark_class(6, false, false);
         }
     }
 }
