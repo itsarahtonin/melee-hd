@@ -43,6 +43,8 @@ const SCENE_F26: f64 = 0.0;
 pub const ON_FRAME: u32 = 0x8016_D800;
 /// `gm_Scene_Vs_OnEnter`.
 pub const SCENE_ON_ENTER: CodeRef = CodeRef(0x8016_E934);
+/// `gm_Scene_SuddenDeath_OnEnter`.
+pub const SD_SCENE_ON_ENTER: CodeRef = CodeRef(0x8016_EBC0);
 /// The match's process on the scene's GObj, `fn_8016C7D0`.
 pub const PROC: u32 = 0x8016_C7D0;
 /// The scene GObj's first process, which does nothing (`fn_801A4BD0`).
@@ -1786,6 +1788,25 @@ impl Running<'_> {
             let alt = self.game.alternate_stage(d);
             self.start_stage_music(alt);
         }
+    }
+
+    /// Sudden Death's scene's entry once its start data is marked
+    /// (`gm_Scene_SuddenDeath_OnEnter`): the match, the announcer's start with one stock,
+    /// the timers and the damage displays.
+    pub fn sudden_death_on_enter(&mut self, d: &StartMeleeData, files: MatchArchives) {
+        let mut d = d.clone();
+        let d = &mut d;
+        self.start_vs(d, files);
+        self.announce(
+            1,
+            -1,
+            -1,
+            0,
+            Some(CodeRef(addr::FN_8016B7B4)),
+            Some(CodeRef(addr::FN_8016B7F8)),
+        );
+        self.create_timers();
+        self.show_damage_displays(i32::from(d.rules.x0_3));
     }
 
     /// The VS scene's entry, `gm_Scene_Vs_OnEnter`: the match, then its HUD and timer. The

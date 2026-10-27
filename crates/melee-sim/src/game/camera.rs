@@ -105,6 +105,8 @@ pub struct CameraBoxes {
     /// The oldest and newest boxes in use (`cm_804D6460`, `cm_804D6468`).
     pub first: Option<CameraBoxId>,
     pub last: Option<CameraBoxId>,
+    /// The array's block in the scene's heap, 0 where the model doesn't know it.
+    pub addr: u32,
 }
 
 impl Index<CameraBoxId> for CameraBoxes {
@@ -324,8 +326,9 @@ pub fn init(state: &mut CameraState, n: i32) {
     c.gobj = None;
     let n = n.max(0) as u32;
     // The boxes' array, a block of the scene's heap.
-    crate::hsd::heap::mem_alloc(n * 0x6C);
+    let addr = crate::hsd::heap::mem_alloc(n * 0x6C);
     let b = &mut state.boxes;
+    b.addr = addr;
     b.boxes = vec![CmSubject::default(); n as usize];
     for i in 0..n.saturating_sub(1) {
         b.boxes[i as usize].prev = Some(CameraBoxId(i + 1));

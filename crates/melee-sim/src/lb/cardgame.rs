@@ -339,6 +339,14 @@ impl Running<'_> {
             c.card_status = STATUS_FAILED;
         }
         c.x10 = 0;
+        // The save written: its file for the frontend (a replayed tick's events are dropped).
+        if r == 0
+            && let Some(gci) = super::save::lent_save_gci()
+        {
+            self.game
+                .events
+                .push(crate::game::state::Event::SaveWritten(gci));
+        }
     }
 
     /// `lbCardGame_SaveChanges` where one of the game's waits follows at once (a scene's

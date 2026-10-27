@@ -115,6 +115,9 @@ pub enum Draw {
     /// The current camera's viewport erased, color, alpha and depth, to the erase color set
     /// before it (`HSD_CObjEraseScreen(cobj, 1, 1, 1)`, the results screen's cameras).
     EraseFull,
+    /// The scissor box from (`x`, `y`), `w` by `h` (`GXSetScissor`, a text's render
+    /// callback's: the results screen's statistics, `fn_801749B8`).
+    Scissor { x: u32, y: u32, w: u32, h: u32 },
     /// The render from (`x`, `y`) copied into one of the results screen's images (by
     /// `game::gm::results_fighters::image_addr`'s index), the frame cleared after it with
     /// `clear` (`HSD_ImageDescCopyFromEFB`, `fn_80179990`).

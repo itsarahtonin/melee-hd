@@ -1018,7 +1018,7 @@ pub fn with_image(f: impl FnOnce(&mut Image)) {
 
 /// Every object of the scene's classes and pools that still lives as its heap is made anew,
 /// laid out where it is ([`Image::scene_slots`]).
-pub fn live_objects(objs: &Objects, img: &mut Image) {
+pub fn live_objects(objs: &Objects, data: &melee_data::archive::Archives, img: &mut Image) {
     let mut n = objs.lobjs.current;
     while let Some(c) = n {
         lobj_node(objs, img, c);
@@ -1078,6 +1078,26 @@ pub fn live_objects(objs: &Objects, img: &mut Image) {
             k if k == std::any::type_name::<super::fobj::FObj>() && !objs.fobjs.is_free(slot) => {
                 fobj(&objs.fobjs, img, FObjId(slot));
             }
+            k if k == std::any::type_name::<super::particle::Particle>()
+                && !objs.particles.pool.is_free(slot) =>
+            {
+                particle(objs, img, super::particle::ParticleId(slot));
+            }
+            k if k == std::any::type_name::<super::generator::Generator>()
+                && !objs.generators.pool.is_free(slot) =>
+            {
+                generator(objs, data, img, super::generator::GeneratorId(slot));
+            }
+            k if k == std::any::type_name::<super::appsrt::AppSrt>()
+                && !objs.app_srts.pool.is_free(slot) =>
+            {
+                app_srt(objs, img, super::appsrt::AppSrtId(slot));
+            }
+            k if k == std::any::type_name::<super::shadow::Shadow>()
+                && !objs.shadows.is_free(slot) =>
+            {
+                shadow(objs, img, super::shadow::ShadowId(slot));
+            }
             _ => {}
         }
     }
@@ -1094,5 +1114,179 @@ pub fn lobj_node(objs: &Objects, img: &mut Image, n: super::list::SListId) {
     let mut l = Lay::new(at, 8);
     l.u32(0, node.next.map_or(0, |x| lobjs.nodes.addr(x.0)));
     l.u32(4, lobjs.pool.addr(node.data.0));
+    l.put(img);
+}
+
+/// `HSD_Particle` (0x98), as it goes back to its pool or with its scene's heap.
+pub fn particle(objs: &Objects, img: &mut Image, p: super::particle::ParticleId) {
+    let at = objs.particles.pool.addr(p.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.particles.pool[p.0];
+    let rgba = |c: super::particle::Rgba| [c.r, c.g, c.b, c.a];
+    let mut l = Lay::new(at, 0x98);
+    l.u32(0, addr_of(o.next, |n| objs.particles.pool.addr(n.0)));
+    l.u32(4, o.kind);
+    l.bytes(8, &[o.bank, o.tex_group, o.pose_num, o.pal_num]);
+    l.u16(0xC, o.size_count);
+    l.u16(0xE, o.prim_col_count);
+    l.u16(0x10, o.env_col_count);
+    l.bytes(0x12, &rgba(o.prim_col));
+    l.bytes(0x16, &rgba(o.env_col));
+    l.u16(0x1A, o.cmd_wait);
+    l.bytes(0x1C, &[o.loop_count, o.link_no]);
+    l.u16(0x1E, o.idnum);
+    l.word(0x20, data_addr(img, o.cmd_list));
+    l.u16(0x24, o.cmd_ptr);
+    l.u16(0x26, o.cmd_mark_ptr);
+    l.u16(0x28, o.cmd_loop_ptr);
+    l.u16(0x2A, o.life);
+    l.f32s(0x2C, &[o.vel.x, o.vel.y, o.vel.z, o.grav, o.fric]);
+    l.f32s(0x40, &[o.pos.x, o.pos.y, o.pos.z, o.size, o.rotate]);
+    l.u16(0x54, o.a_cmp_count);
+    l.bytes(
+        0x56,
+        &[o.a_cmp_mode, o.a_cmp_param1, o.a_cmp_param2, o.p_jobj_ofs],
+    );
+    l.u16(0x5A, o.mat_col_count);
+    l.u16(0x5C, o.amb_col_count);
+    l.u16(0x5E, o.rotate_count);
+    l.f32s(0x60, &[o.size_target, o.rotate_target]);
+    l.u16(0x68, o.prim_col_remain);
+    l.u16(0x6A, o.env_col_remain);
+    l.bytes(0x6C, &rgba(o.prim_col_target));
+    l.bytes(0x70, &rgba(o.env_col_target));
+    l.u16(0x74, o.mat_col_remain);
+    l.u16(0x76, o.amb_col_remain);
+    l.u16(0x78, o.a_cmp_remain);
+    l.bytes(
+        0x7A,
+        &[
+            o.a_cmp_param1_target,
+            o.a_cmp_param2_target,
+            o.mat_rgb,
+            o.mat_a,
+            o.amb_rgb,
+            o.amb_a,
+            o.mat_rgb_target,
+            o.mat_a_target,
+            o.amb_rgb_target,
+            o.amb_a_target,
+        ],
+    );
+    l.f32(0x84, o.trail);
+    l.u32(
+        0x88,
+        addr_of(o.generator, |g| objs.generators.pool.addr(g.0)),
+    );
+    l.u32(0x8C, addr_of(o.appsrt, |s| objs.app_srts.pool.addr(s.0)));
+    // The game's particles carry no user data or callback (the comparer's import asserts it).
+    l.word(0x90, o.userdata.is_none().then_some(0));
+    l.word(0x94, o.callback.is_none().then_some(0));
+    l.put(img);
+}
+
+/// `HSD_Generator` (0x94), as it goes back to its pool or with its scene's heap: cleared
+/// whole as it's made (`hsd_8039D4F0`'s `memset`), so its callback (`0x5C`), which nothing
+/// sets, and its padding are zero.
+pub fn generator(
+    objs: &Objects,
+    data: &melee_data::archive::Archives,
+    img: &mut Image,
+    g: super::generator::GeneratorId,
+) {
+    let at = objs.generators.pool.addr(g.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.generators.pool[g.0];
+    let _ = data;
+    let mut l = Lay::new(at, 0x94);
+    l.bytes(0, &[0; 0x94]);
+    let w = |l: &mut Lay, a: u32, v: u32| l.put_u32(at + a, v);
+    w(
+        &mut l,
+        0,
+        addr_of(o.next, |n| objs.generators.pool.addr(n.0)),
+    );
+    w(&mut l, 4, o.kind);
+    w(&mut l, 8, o.random.to_bits());
+    w(&mut l, 0xC, o.count.to_bits());
+    w(&mut l, 0x10, addr_of(o.jobj, |j| objs.jobjs.pool.addr(j.0)));
+    l.put_u16(at + 0x14, o.gen_life);
+    l.put_u16(at + 0x16, o.ty);
+    l.put_bytes(at + 0x18, &[o.bank, o.link_no, o.tex_group]);
+    l.put_u16(at + 0x1C, o.idnum);
+    l.put_u16(at + 0x1E, o.life);
+    l.put_word(at + 0x20, data_addr(img, o.cmd_list));
+    let fs = [
+        o.pos.x, o.pos.y, o.pos.z, o.vel.x, o.vel.y, o.vel.z, o.grav, o.fric, o.size, o.radius,
+        o.angle,
+    ];
+    for (k, f) in fs.iter().enumerate() {
+        w(&mut l, 0x24 + 4 * k as u32, f.to_bits());
+    }
+    w(&mut l, 0x50, o.num_child);
+    w(
+        &mut l,
+        0x54,
+        addr_of(o.appsrt, |s| objs.app_srts.pool.addr(s.0)),
+    );
+    w(&mut l, 0x58, o.userfunc.map_or(0, |u| u.0));
+    for (k, f) in o.aux.iter().enumerate() {
+        w(&mut l, 0x60 + 4 * k as u32, f.to_bits());
+    }
+    l.put_u16(at + 0x90, o.rect_flag);
+    l.put(img);
+}
+
+/// `HSD_Shadow` (0x28), cleared whole as it's made (`HSD_ShadowAlloc`): its first list node,
+/// camera, texture, the texture's scale and translation, whether it's active, its intensity.
+pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
+    let at = objs.shadows.addr(s.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.shadows[s.0];
+    let mut l = Lay::new(at, 0x28);
+    l.u32(0, o.object_nodes.first().copied().unwrap_or(0));
+    l.u32(4, addr_of(o.camera, |c| objs.cobjs.pool.addr(c.0)));
+    l.u32(8, addr_of(o.texture, |t| objs.tobjs.pool.addr(t.0)));
+    l.f32s(0xC, &[o.scale_s, o.scale_t, o.trans_s, o.trans_t]);
+    l.u32(0x1C, u32::from(o.active));
+    l.bytes(0x20, &[o.intensity, 0, 0, 0]);
+    l.u32(0x24, 0);
+    l.put(img);
+}
+
+/// `HSD_psAppSRT` (0xA4), cleared whole as it's made (`psAddGeneratorAppSRT`'s `memset`):
+/// its link (always null: nothing links app-SRTs), generator, transform, status, frame and
+/// uses, matrix, the display pass's view matrix and screen scale, free function (null),
+/// id and flag.
+pub fn app_srt(objs: &Objects, img: &mut Image, s: super::appsrt::AppSrtId) {
+    let at = objs.app_srts.pool.addr(s.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.app_srts.pool[s.0];
+    let mut l = Lay::new(at, 0xA4);
+    l.bytes(0, &[0; 0xA4]);
+    l.u32(4, addr_of(o.gp, |g| objs.generators.pool.addr(g.0)));
+    l.f32s(8, &[o.translate.x, o.translate.y, o.translate.z]);
+    l.f32s(0x14, &[o.rot.x, o.rot.y, o.rot.z, o.rot.w]);
+    l.f32s(0x24, &[o.scale.x, o.scale.y, o.scale.z]);
+    l.bytes(0x30, &[o.status, o.frame_num]);
+    l.u16(0x32, o.used_count);
+    let m = |l: &mut Lay, off: u32, m: &crate::mtx::Mtx34| {
+        for (i, v) in m.m.iter().flatten().enumerate() {
+            l.f32(off + 4 * i as u32, *v);
+        }
+    };
+    m(&mut l, 0x34, &o.mmtx);
+    m(&mut l, 0x64, &o.view);
+    l.f32s(0x94, &o.view_scale);
+    l.u16(0xA0, o.idnum);
+    l.u8(0xA2, o.xa2);
     l.put(img);
 }

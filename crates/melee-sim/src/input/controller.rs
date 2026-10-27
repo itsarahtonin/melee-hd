@@ -468,6 +468,10 @@ pub struct Controllers {
     pub playback: bool,
     pub lib: PadLib,
     pub rumble: Rumble,
+    /// Polls of a scene's entry whose frame of rumble ran before the entry finished (a
+    /// rumble started in it: [`Controllers::rumble_ahead`]), which their queued reads then
+    /// skip.
+    pub rumble_ahead: u32,
     pub master: [Status; 4],
     pub copy: [Status; 4],
     pub game: [Status; 4],
@@ -490,6 +494,7 @@ impl Controllers {
             playback: false,
             lib: PadLib::new(qnum),
             rumble: Rumble::new(nb_list),
+            rumble_ahead: 0,
             master: [Status::DEFAULT; 4],
             copy: [Status::DEFAULT; 4],
             game: [Status::DEFAULT; 4],
@@ -539,7 +544,12 @@ impl Controllers {
         err_check: bool,
         reset_pressed: bool,
     ) -> Requests {
-        let motors = self.rumble.interpret(data);
+        let motors = if self.rumble_ahead > 0 {
+            self.rumble_ahead -= 1;
+            [None; 4]
+        } else {
+            self.rumble.interpret(data)
+        };
         let mut now = now;
         if err_check && now.iter().all(|s| s.err != ERR_NONE) {
             return Requests { reset: 0, motors };
