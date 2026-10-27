@@ -23,8 +23,8 @@ use common::{
     KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
     NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
-    compare, compare_in, reflection, scaled,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -177,6 +177,19 @@ frames!(DATA_DIAGRAM;
 frames!(DATA_PRIZE;
     data_prize_600 600,
     data_prize_950 950,
+);
+// The sound test (`sound-sessions`): a song playing with its name and number (songs 5000), a
+// category's icon in the categories (sounds 1450), a category's sounds with the sound's number
+// (sounds 4400), and a song's name in Japanese (jp 1620).
+frames!(SOUND_SONGS;
+    sound_songs_5000 5000,
+);
+frames!(SOUND_SOUNDS;
+    sound_sounds_1450 1450,
+    sound_sounds_4400 4400,
+);
+frames!(SOUND_JP;
+    sound_jp_1620 1620,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer

@@ -26,6 +26,7 @@ pub mod results;
 pub mod rules;
 pub mod sis;
 pub mod sound;
+pub mod sound_test;
 pub mod stadium;
 pub mod stage;
 pub mod tev;

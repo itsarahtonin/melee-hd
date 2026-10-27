@@ -67,6 +67,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("select-") {
                     return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("sound-") {
+                    return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
+                }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
@@ -618,6 +621,31 @@ pub const OPTIONS_TOUR: Game = Game {
     name: "options-tour",
     players: "the Options menus (session options-sessions/tour)",
     replay: Replay::Session("options-tour"),
+};
+
+/// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.
+pub const SOUND_SONGS: Game = Game {
+    stage: "Main menu",
+    name: "sound-songs",
+    players: "the sound test's songs (session sound-sessions/songs)",
+    replay: Replay::Session("sound-songs"),
+};
+
+/// The sound test's categories (`sound-sessions/sounds`): a category's icon, and a category's
+/// sounds with the sound's number.
+pub const SOUND_SOUNDS: Game = Game {
+    stage: "Main menu",
+    name: "sound-sounds",
+    players: "the sound test's categories (session sound-sessions/sounds)",
+    replay: Replay::Session("sound-sounds"),
+};
+
+/// The sound test in Japanese (`sound-sessions/jp`): a song's name in Japanese.
+pub const SOUND_JP: Game = Game {
+    stage: "Main menu",
+    name: "sound-jp",
+    players: "the sound test in Japanese (session sound-sessions/jp)",
+    replay: Replay::Session("sound-jp"),
 };
 
 /// The character select with a random computer player and the random stage

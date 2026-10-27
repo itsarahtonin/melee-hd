@@ -326,7 +326,6 @@ impl Running<'_> {
     fn sound_object_update(&mut self, g: GObjId, addr: u32) -> bool {
         match addr {
             0x8002_51EC => return self.sound_pan_on_screen(g),
-            0x8002_53D8 | 0x8002_56BC => sound_sweep_directed(sound(self.game, g)),
             0x8002_59A0 => {
                 let o = sound(self.game, g);
                 if !o.x44 {
@@ -334,23 +333,11 @@ impl Running<'_> {
                     self.sound_pan_on_screen(g);
                 }
             }
-            0x8002_59EC | 0x8002_5A98 => {
-                let o = sound(self.game, g);
-                if !o.x44 {
-                    o.x44 = true;
-                    sound_sweep_directed(o);
+            other => {
+                if !behavior_alone(sound(self.game, g), other) {
+                    panic!("sound object behavior {other:#x}");
                 }
             }
-            0x8002_5B44 => {
-                let o = sound(self.game, g);
-                o.pan = sweep_pan(o.current_frame, o.end_frame, o.pan_left, o.pan_right);
-            }
-            0x8002_5CBC => {
-                let o = sound(self.game, g);
-                o.pan = 0x7F - sweep_pan(o.current_frame, o.end_frame, o.pan_left, o.pan_right);
-            }
-            0x8002_5E38 => sound_fade(sound(self.game, g)),
-            other => panic!("sound object behavior {other:#x}"),
         }
         false
     }
@@ -440,6 +427,37 @@ impl Running<'_> {
     }
 }
 
+/// A frame of the behaviors that work on the object alone, all but `fn_800251EC` and
+/// `fn_800259A0`, which read the owner's place against the camera: the pan swept by the
+/// frames (`fn_800253D8`, `fn_800256BC`; once, `fn_800259EC`, `fn_80025A98`; straight,
+/// `fn_80025B44`; mirrored, `fn_80025CBC`) or the volume faded (`fn_80025E38`). Whether
+/// `update` is one of them.
+#[doc(alias = "fn_800259EC")]
+#[doc(alias = "fn_80025A98")]
+#[doc(alias = "fn_80025B44")]
+#[doc(alias = "fn_80025CBC")]
+#[doc(alias = "fn_80025E38")]
+pub fn behavior_alone(o: &mut SoundObj, update: u32) -> bool {
+    match update {
+        0x8002_53D8 | 0x8002_56BC => sound_sweep_directed(o),
+        0x8002_59EC | 0x8002_5A98 => {
+            if !o.x44 {
+                o.x44 = true;
+                sound_sweep_directed(o);
+            }
+        }
+        0x8002_5B44 => {
+            o.pan = sweep_pan(o.current_frame, o.end_frame, o.pan_left, o.pan_right);
+        }
+        0x8002_5CBC => {
+            o.pan = 0x7F - sweep_pan(o.current_frame, o.end_frame, o.pan_left, o.pan_right);
+        }
+        0x8002_5E38 => sound_fade(o),
+        _ => return false,
+    }
+    true
+}
+
 /// `fn_800253D8` (and its twin `fn_800256BC`): the pan swept by the object's frames, mirrored
 /// for a direction other than 1.
 #[doc(alias = "fn_800253D8")]
@@ -451,7 +469,6 @@ fn sound_sweep_directed(o: &mut SoundObj) {
 
 /// `fn_80025E38`: the volume faded from the start's to the end's over the object's frames,
 /// full after them.
-// Ports `fn_80025E38`; aliased once a check reaches it.
 fn sound_fade(o: &mut SoundObj) {
     if o.current_frame > o.end_frame {
         o.vol = 0x7F;

@@ -5,7 +5,6 @@
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
 
-use super::super::code::unported_call;
 use super::super::handles::{CodeRef, GroundId, StartHookId};
 use super::super::mirror::{Cx, Mem, Mirror};
 use super::super::state::{
@@ -1600,7 +1599,10 @@ pub fn music(game: &mut Game, data: &Archives, stkind: i32, mut flags: u32) -> (
         "the original's assertion failed: bgm!=BGM_Undefined"
     );
     if bgm == -2 {
-        unported_call("lbAudioAx_8002305C");
+        // The first player's character's songs, one drawn.
+        let ckind = game.player_ckind(0);
+        let which = game.objs.rng.below(2);
+        bgm = crate::lb::audio::character_song(ckind, which);
     }
     (bgm, alternate)
 }
