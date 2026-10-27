@@ -809,10 +809,6 @@ pub(crate) mod tests {
             "a stage item's",
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
-        (
-            "lbAudioAx_8002305C",
-            "random music, which no roster stage's music entry asks",
-        ),
         ("the spawner's trophies", "trophy stages"),
         (
             "the spawner's enemies",

@@ -99,6 +99,12 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_PROGRESSIVE_SCAN => sym("gm_Mode_ProgScan_States"),
                 melee_sim::game::gm::machine::GM_MENU => sym("gm_Mode_Menu_States"),
                 melee_sim::game::gm::machine::GM_VS => sym("gm_Mode_Vs_States"),
+                melee_sim::game::ty::GM_TOY_GALLERY => sym("gm_Mode_ToyGallery_States"),
+                melee_sim::game::ty::GM_TOY_LOTTERY => sym("gm_Mode_ToyLottery_States"),
+                melee_sim::game::ty::GM_TOY_COLLECTION => sym("gm_Mode_ToyCollection_States"),
+                melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
+                    sym("gm_Mode_ChallengerApproach_States")
+                }
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -157,9 +163,7 @@ impl<'a> Comparer<'a> {
             .compare(&m, HOMERUN, "gmHomeRun_VsModeData", self);
         let _ = VsModeData::SIZE;
         let toy: Vec<u8> = (0..0x25A).map(|i| self.u8(TOY_X194 + i)).collect();
-        let mut ours = vec![0u8; 0x25A];
-        ours[0] = game.modes.toy_x194;
-        ours[6..8].copy_from_slice(&game.modes.toy_x19a.to_be_bytes());
+        let ours = game.toys.table.bytes()[..0x25A].to_vec();
         if toy != ours {
             let at = (0..0x25A).find(|&i| toy[i] != ours[i]).unwrap();
             self.diff("Toy_804A284C", &format!("byte {at:#x}"), ours[at], toy[at]);
@@ -181,6 +185,9 @@ impl<'a> Comparer<'a> {
         self.gallery();
         self.rules_menus();
         self.options();
+        self.toys();
+        self.data_menus();
+        self.sound_test();
         self.attract();
         self.select_screens();
     }

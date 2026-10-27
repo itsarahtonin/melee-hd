@@ -41,10 +41,11 @@ pub enum Replay {
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
-    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` and for `results-NAME`
-    /// `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
-    /// in the console's float mode.
+    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `trophy-NAME`
+    /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/` and
+    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
+    /// played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -59,6 +60,9 @@ impl Replay {
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("data-") {
+                    return ssbm_rs_local(&format!("lockstep/data-sessions/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("options-") {
                     return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
                 }
@@ -67,6 +71,12 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("trophy-") {
+                    return ssbm_rs_local(&format!("lockstep/trophy-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("sound-") {
+                    return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -581,11 +591,69 @@ pub const NAMES_KANA: Game = Game {
 /// The Options menus toured (`options-sessions/tour`): the rumble screen's ports and names,
 /// the sound screen's balance, the screen options with the deflicker filter off, the language
 /// screen and erasing data.
+/// The Data menu's sessions (`data-sessions/NAME`): the special messages, the bonuses, the
+/// other records, the VS records' three pages, and two special messages announced.
+pub const DATA_INFO: Game = Game {
+    stage: "Main menu",
+    name: "data-info",
+    players: "the special messages (session data-sessions/info)",
+    replay: Replay::Session("data-info"),
+};
+pub const DATA_BONUS: Game = Game {
+    stage: "Main menu",
+    name: "data-bonus",
+    players: "the bonuses (session data-sessions/bonus)",
+    replay: Replay::Session("data-bonus"),
+};
+pub const DATA_COUNT: Game = Game {
+    stage: "Main menu",
+    name: "data-count",
+    players: "the other records (session data-sessions/count)",
+    replay: Replay::Session("data-count"),
+};
+pub const DATA_DIAGRAM: Game = Game {
+    stage: "Main menu",
+    name: "data-diagram",
+    players: "the VS records (session data-sessions/diagram)",
+    replay: Replay::Session("data-diagram"),
+};
+pub const DATA_PRIZE: Game = Game {
+    stage: "Special messages",
+    name: "data-prize",
+    players: "two special messages announced (session data-sessions/prize)",
+    replay: Replay::Session("data-prize"),
+};
+
 pub const OPTIONS_TOUR: Game = Game {
     stage: "Main menu",
     name: "options-tour",
     players: "the Options menus (session options-sessions/tour)",
     replay: Replay::Session("options-tour"),
+};
+
+/// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.
+pub const SOUND_SONGS: Game = Game {
+    stage: "Main menu",
+    name: "sound-songs",
+    players: "the sound test's songs (session sound-sessions/songs)",
+    replay: Replay::Session("sound-songs"),
+};
+
+/// The sound test's categories (`sound-sessions/sounds`): a category's icon, and a category's
+/// sounds with the sound's number.
+pub const SOUND_SOUNDS: Game = Game {
+    stage: "Main menu",
+    name: "sound-sounds",
+    players: "the sound test's categories (session sound-sessions/sounds)",
+    replay: Replay::Session("sound-sounds"),
+};
+
+/// The sound test in Japanese (`sound-sessions/jp`): a song's name in Japanese.
+pub const SOUND_JP: Game = Game {
+    stage: "Main menu",
+    name: "sound-jp",
+    players: "the sound test in Japanese (session sound-sessions/jp)",
+    replay: Replay::Session("sound-jp"),
 };
 
 /// The character select with a random computer player and the random stage
@@ -640,6 +708,40 @@ pub const RESULTS_TEAMS: Game = Game {
     name: "results-teams",
     players: "a team battle's results (session results-sessions/teams)",
     replay: Replay::Session("results-teams"),
+};
+
+/// The trophy gallery round its six lights (`trophy-sessions/gallery-lights`): the view, the
+/// lights' backs and the background's sprites, the close-up with its axes, the list.
+pub const TROPHY_GALLERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-gallery-lights",
+    players: "the trophy gallery (session trophy-sessions/gallery-lights)",
+    replay: Replay::Session("trophy-gallery-lights"),
+};
+
+/// The trophy lottery's draws (`trophy-sessions/lottery-few`): the machine, the coins, the
+/// draw's capsule and the trophy on its stand with its name.
+pub const TROPHY_LOTTERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-lottery-few",
+    players: "the trophy lottery (session trophy-sessions/lottery-few)",
+    replay: Replay::Session("trophy-lottery-few"),
+};
+
+/// The trophy collection with 196 trophies (`trophy-sessions/coll-many`, the rings, and
+/// `coll-l`, the rows).
+pub const TROPHY_COLLECTION: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-many",
+    players: "the trophy collection (session trophy-sessions/coll-many)",
+    replay: Replay::Session("trophy-coll-many"),
+};
+
+pub const TROPHY_COLLECTION_ROWS: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-l",
+    players: "the trophy collection in rows (session trophy-sessions/coll-l)",
+    replay: Replay::Session("trophy-coll-l"),
 };
 
 pub const FOX_FOX_FD: Game = Game {

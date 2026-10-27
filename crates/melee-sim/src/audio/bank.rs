@@ -189,10 +189,7 @@ impl Audio {
         );
         let header = b.load_buf[0];
         let alloc = b.load_buf[2] * 8 + NODE;
-        let block = self
-            .heap
-            .alloc((alloc + header).next_multiple_of(32))
-            .expect("audio heap overflow.");
+        let block = self.audio_malloc((alloc + header).next_multiple_of(32));
         self.synth.banks.block = block;
         self.synth.banks.requests[1] = self.devcom_request(
             data,
@@ -292,7 +289,7 @@ impl Audio {
         } else {
             if self.synth.banks.block != 0 {
                 let block = self.synth.banks.block;
-                self.heap.free(block);
+                self.audio_free(block);
             }
             self.synth.banks.cancelling = 0;
         }
@@ -378,7 +375,7 @@ impl Audio {
         let groups = std::mem::take(&mut self.synth.banks.groups[bank as usize]);
         for g in groups {
             self.sfx_group_unlink(&g);
-            self.heap.free(g.block);
+            self.audio_free(g.block);
         }
         let b = &mut self.synth.banks;
         b.next[bank as usize] = b.head[bank as usize];
@@ -421,7 +418,7 @@ impl Audio {
             {
                 let g = self.synth.banks.groups[bank].remove(i);
                 self.sfx_group_unlink(&g);
-                self.heap.free(g.block);
+                self.audio_free(g.block);
                 return;
             }
         }

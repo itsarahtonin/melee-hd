@@ -1735,8 +1735,8 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022CE6C`, the data list's think: Records is a list; the snapshots, movies,
-    /// sound test and special screens aren't this menu's.
+    /// `mn_8022CE6C`, the data list's think: Records is a list; the movies and the sound
+    /// test are screens; the snapshots and special screens aren't this menu's.
     #[doc(alias = "mn_8022CE6C")]
     pub fn think_data(&mut self, _gobj: GObjId) {
         let b = self.list_inputs();
@@ -1749,12 +1749,21 @@ impl Running<'_> {
                     self.gallery_open();
                     gobj::free(self, _gobj);
                 }
-                2 => super::super::code::unported_call("mnSoundTest_8024BEE0 (the sound test)"),
+                2 => {
+                    self.sfx_stop_all();
+                    self.lb_audio_music_stop();
+                    self.sound_test_open();
+                    gobj::free(self, _gobj);
+                }
                 3 => {
                     self.lb_audio_call(1);
                     self.go_to_list(RECORDS, 0, ENTER_TO);
                 }
-                4 => super::super::code::unported_call("mnInfo_80252758 (the special screens)"),
+                4 => {
+                    self.lb_audio_call(1);
+                    self.info_open();
+                    gobj::free(self, _gobj);
+                }
                 _ => {}
             }
         } else if b & IN_BACK != 0 {
@@ -1764,20 +1773,22 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022CA54`, the records' list's think: each record screen isn't this menu's.
+    /// `mn_8022CA54`, the records' list's think: each record opens its screen.
     #[doc(alias = "mn_8022CA54")]
     pub fn think_records(&mut self, _gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
             self.game.menu.flow.entering_menu = 1;
-            let name = match self.game.menu.flow.hovered_selection {
-                0 => "mnDiagram_Init (the VS records)",
-                1 => "mnInfoBonus_80252F8C (the bonuses)",
-                2 => "mnCount_Create (the other records)",
+            let open: fn(&mut Self) = match self.game.menu.flow.hovered_selection {
+                0 => |r| r.diagram_open(true, 1),
+                1 => Self::bonus_open,
+                2 => Self::count_open,
                 _ => return,
             };
-            super::super::code::unported_call(name);
+            self.lb_audio_call(1);
+            open(self);
+            gobj::free(self, _gobj);
         } else if b & IN_BACK != 0 {
             self.list_back(DATA, 3);
         } else if b & IN_UP != 0 {
@@ -1835,7 +1846,12 @@ impl Running<'_> {
             super::gallery::THINK => self.gallery_think(gobj),
             super::gallery::LIST_PROC => self.gallery_list_proc(gobj),
             super::gallery::CURSOR_PROC => self.gallery_cursor_proc(gobj),
-            _ => return self.run_rules_proc(gobj, f) || self.options_proc(gobj, f),
+            _ => {
+                return self.run_rules_proc(gobj, f)
+                    || self.options_proc(gobj, f)
+                    || self.data_menus_proc(gobj, f)
+                    || self.sound_test_proc(gobj, f);
+            }
         }
         true
     }
@@ -1968,7 +1984,7 @@ impl Running<'_> {
 impl Running<'_> {
     /// `gm_801603B0`: the announcer's and the effects' volumes from the save's sound
     /// balance (`gmMainLib_8015ED74`, `lbAudioAx_80024614`, `lbAudioAx_800245F4`).
-    fn menu_sound_balance(&mut self) {
+    pub(crate) fn menu_sound_balance(&mut self) {
         let b = self.game.game_data.thing.save_data.x1CB0.sound_balance;
         self.game.audio.lb_apply_balance(b);
     }
