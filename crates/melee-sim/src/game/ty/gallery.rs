@@ -308,6 +308,7 @@ impl Running<'_> {
     /// `onExit` (`gmtoygallery.c`) and `gm_801BED14` (`gmtoycollection.c`): the main menu
     /// next.
     #[doc(alias = "gm_801BED14")]
+    #[doc(alias = "onExit@801BEC80")]
     pub fn toy_mode_exit_to_menu(&mut self) {
         self.set_pending_game_mode(super::super::gm::machine::GM_MENU);
         self.set_new_game_mode_pending();

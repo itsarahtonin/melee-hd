@@ -1293,6 +1293,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play.
 - **Source:** `mncharsel.c`'s `mnCharSel_Scene_OnExit` and `mnCharSel_Scene_OnFrame`'s L, R and Start; `crates/melee-sim/src/game/mn/charsel/procs.rs`.
 
+### The trophy collection frames every layout as the rings
+
+- **Where:** `_tyDisplay_80319EF0` with the layouts `_tyDisplay_80318CB4`, `_tyDisplay_80319540` and `_tyDisplay_80319994` (`tydisplay.c`), `crates/melee-sim/src/game/ty/collection.rs` (`coll_frame`, `coll_clear_grid`).
+- **Defect:** the scene's entry stores the layout the buttons held choose (L rows, R even rings, Y the triangle, else jittered rings) in the grid's first word (`TyDspGrid.x00`), and the framing reads it back to pick the view's sides (a margin of 14 for the rings, 7 for the rows, none for the triangle) and, for the triangle, to center the camera on x 0. But each layout starts by clearing the whole grid (`memzero(grid, 0x12E4)`), that word too, so the framing always reads 0.
+- **Effect:** the rows and the triangle get the rings' sides (which bound the camera's turn), and the triangle, which grows to the left, is framed on its places' middle rather than on 0. Only the collection's view is affected.
+- **melee-hd:** modeled: the layout's word clears with the grid.
+- **Fix:** keep the layout outside the grid, or set it again after the layout.
+- **Fix impact:** none in play; it changes the collection's framing for the L and Y layouts.
+- **Source:** `tydisplay.c`'s `tyDisplay_Scene_OnEnter` and the layouts' `memzero`; `crates/melee-sim/src/game/ty/collection.rs` (`coll_frame`).
+
 ## Results and records
 
 ### A results pose's fighter takes an unset byte of its allocation info
@@ -1433,7 +1443,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The saved language from a language setting past English | `gmMainLib_8015F600`, `game/gm/main_lib.rs` (`reset_card_file`) | Resetting the save data sets the saved language from a switch on the language setting with cases for Japanese (0) and English (1) only, so any other setting saves the uninitialized local `lang`; the boot sets the setting from the disc, always one of the two (melee-hd stops) | `crates/melee-sim/src/game/gm/main_lib.rs` (`reset_card_file`) |
 | The memory card prompt sized for the message before | `gm_801AF250`, `game/gm/memcard.rs` (`memcard_probe_prompt`) | Shows the "load the save?" message (7) in a window sized for message 6's line count; the two have the same count in both languages (3 in English, 2 in Japanese) | `crates/melee-sim/src/game/gm/memcard.rs` (`memcard_probe_prompt`) |
 | A trophy draw's guard one past its end | `Toy_80305058`, `game/gm/trophies.rs` (`draw_trophy_of_class`) | Resets a drawn index to 0 only when it exceeds the candidates' count, so an index equal to the count would read past them; `HSD_Randi(n)` is always below `n` | `crates/melee-sim/src/game/gm/trophies.rs` (`draw_trophy_of_class`) |
-| The trophy screens' notice count reads a stale class | `_Toy_80304D30`, `game/gm/trophies.rs` (`trophy_class_notices`) | Its last loop tests the class of the last trophy the first loop met (`x`) instead of each category's, so its count depends on that trophy; every caller drops the count | `crates/melee-sim/src/game/gm/trophies.rs` (`trophy_class_notices`) |
+| The trophy screens' notice count reads a stale class | `_Toy_80304D30`, `game/gm/trophies.rs` (`trophy_class_notices`) | Its last loop tests the class of the last trophy the first loop met (`x`, `r29`) instead of each category's, so its count depends on that trophy, and with no trophy the region can win held it reads `r29` as the caller left it; every caller drops the count | `crates/melee-sim/src/game/gm/trophies.rs` (`trophy_class_notices`) |
 | A rules list made coming in from neither side | `mn_80230E38` (`mnmainrule.c`), `mn_80233218` (`mnruleplus.c`), `game/mn/rules.rs`, `rule_plus.rs` | Takes its way in from an uninitialized pointer for state 2; every caller makes the list in state 1 or 3 (melee-hd stops) | `crates/melee-sim/src/game/mn/rules.rs` (`rules_list`) |
 | A name list button past Erase | `mnName_80238964` (`mnname.c`), `game/mn/names.rs` | Returns `f1` unset for an index other than New, Sort and Erase; its only caller passes those three (melee-hd stops) | `crates/melee-sim/src/game/mn/names.rs` (`name_button_frame`) |
 | The item switch left neither forward nor back | `fn_80234C24` (`mnitemsw.c`), `game/mn/item_switch.rs` | Takes its way out from an uninitialized pointer when the flow leaves it with neither the entering flag nor B; only B and the scene's end leave it (melee-hd stops) | `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`) |

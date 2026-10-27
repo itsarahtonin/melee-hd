@@ -32,7 +32,8 @@ pub const PROC_SONG: u32 = 0x8031_6BF8;
 pub const PROC_INPUT: u32 = 0x8031_6C24;
 pub const RENDER_MAIN: u32 = 0x8031_4BE4;
 
-/// `Toy_RemoveUserData`, the blocks' release.
+/// `Toy_RemoveUserData`, the blocks' release (`HSD_Free`, [`super::super::state`]).
+#[doc(alias = "Toy_RemoveUserData")]
 pub const TOY_REMOVE_USER_DATA: u32 = 0x8030_6CF4;
 
 /// `tyFigupon_Scene_OnEnter`, `tyFigupon_Scene_OnFrame`.
@@ -803,6 +804,7 @@ impl Running<'_> {
     /// class completed.
     #[doc(alias = "_tyFigupon_80316420")]
     #[doc(alias = "Toy_80308250")]
+    #[doc(alias = "Toy_80308328")]
     fn lot_reveal(&mut self, trophy: i16) {
         let count = self.trophy_count(trophy as usize);
         let file = self.toy_model_file(i32::from(trophy));
@@ -1427,6 +1429,7 @@ impl Running<'_> {
 
     /// `onEnter` (`gmtoylottery.c`): the card's work areas and the card's archive (for the
     /// save the draws write).
+    #[doc(alias = "onEnter@801BECA8")]
     pub fn lot_mode_enter(&mut self) {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
@@ -1434,6 +1437,7 @@ impl Running<'_> {
 
     /// `onExit` (`gmtoylottery.c`): the special messages the lottery can unlock
     /// (`gm_80172898(4)`), then the main menu unless a challenger comes first.
+    #[doc(alias = "onExit@801BECD0")]
     pub fn lot_mode_exit(&mut self) {
         self.special_unlocks(4);
         if !self.challenger_check(1, 0) {

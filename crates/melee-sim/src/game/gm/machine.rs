@@ -561,6 +561,10 @@ impl Running<'_> {
                 crate::game::ty::lottery::ON_ENTER,
                 crate::game::ty::lottery::ON_FRAME,
             ),
+            crate::game::ty::GS_TOY_COLLECTION => (
+                crate::game::ty::collection::ON_ENTER,
+                crate::game::ty::collection::ON_FRAME,
+            ),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -586,6 +590,7 @@ impl Running<'_> {
             CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
             crate::game::ty::gallery::ON_ENTER => self.toy_on_enter(),
             crate::game::ty::lottery::ON_ENTER => self.lot_on_enter(),
+            crate::game::ty::collection::ON_ENTER => self.coll_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -652,7 +657,9 @@ impl Running<'_> {
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             GS_RESULTS => self.results_on_exit(),
             // No exit of their own.
-            crate::game::ty::GS_TOY_GALLERY | crate::game::ty::GS_TOY_LOTTERY => {}
+            crate::game::ty::GS_TOY_GALLERY
+            | crate::game::ty::GS_TOY_LOTTERY
+            | crate::game::ty::GS_TOY_COLLECTION => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {

@@ -7,7 +7,9 @@
 use melee_data::archive::DataRef;
 use melee_sim::game::gm::machine::scene_kind;
 use melee_sim::game::mirror::Cx;
-use melee_sim::game::ty::{GS_TOY_GALLERY, GS_TOY_LOTTERY, Loaded, TROPHY_COUNT};
+use melee_sim::game::ty::{
+    GS_TOY_COLLECTION, GS_TOY_GALLERY, GS_TOY_LOTTERY, Loaded, TROPHY_COUNT,
+};
 
 use crate::compare::Comparer;
 use crate::import::sym;
@@ -172,8 +174,117 @@ impl Comparer<'_> {
                 self.toy_list();
             }
             Some(GS_TOY_LOTTERY) => self.toy_lottery(),
+            Some(GS_TOY_COLLECTION) => self.toy_collection(),
             _ => {}
         }
+        let c = &game.toys.collection;
+        for (name, ours) in [
+            ("_tyDisplay_804D6F10", c.jobjs_block),
+            ("_tyDisplay_804D6F14", c.grid_block),
+            ("_tyDisplay_804D6F18", c.cfg_block),
+            ("_tyDisplay_804D6F1C", c.bg_block),
+        ] {
+            self.check(name, "block", ours, self.u32(sym(name)));
+        }
+        self.check(
+            "tydisplay.c .sbss",
+            "debug view, its text, its B's frames, its trophy",
+            (c.debug, 0u32, c.debug_b, 0u32),
+            (
+                self.u32(sym("_tyDisplay_804D6F20")) as i32,
+                self.u32(sym("_tyDisplay_804D6F24")),
+                self.u32(sym("_tyDisplay_804D6F28")) as i32,
+                self.u32(sym("_tyDisplay_804D6F2C")),
+            ),
+        );
+    }
+
+    /// The collection's four blocks (`tydisplay.c`) and the lights' block.
+    fn toy_collection(&mut self) {
+        let c = &self.game.toys.collection;
+        let j = c.jobjs_block;
+        for i in 0..c.count.max(0) as usize {
+            self.toy_jobj(
+                &format!("_tyDisplay_804D6F10[{i}]"),
+                c.jobjs[i],
+                j + 4 * i as u32,
+            );
+        }
+        let g = c.grid_block;
+        self.check("TyDspGrid", "layout", c.mode, self.u32(g) as i32);
+        self.toy_floats(
+            "TyDspGrid bounds",
+            &[c.min_x, c.min_z, c.max_x, c.max_z],
+            g + 4,
+        );
+        let theirs: Vec<(i32, i32)> = (0..c.sort.len() as u32)
+            .map(|i| {
+                (
+                    self.u32(g + 0x14 + 8 * i) as i32,
+                    self.u32(g + 0x18 + 8 * i) as i32,
+                )
+            })
+            .collect();
+        self.check(
+            "TyDspGrid.sort",
+            "trophies and keys",
+            c.sort.clone(),
+            theirs,
+        );
+        let pos: Vec<f32> = c.pos.iter().flatten().copied().collect();
+        self.toy_floats("TyDspGrid.pos", &pos, g + 0x97C);
+        let f = c.cfg_block;
+        self.toy_gobj("TyDspConfig.x00", c.camera, f);
+        self.check("TyDspConfig", "count", c.count, self.u32(f + 8) as i32);
+        self.toy_floats("TyDspConfig x0C, x10", &[c.pitch, c.yaw], f + 0xC);
+        self.toy_floats(
+            "TyDspConfig x18 to x24",
+            &[c.pitch_max, c.yaw_max, c.stick[0], c.stick[1]],
+            f + 0x18,
+        );
+        self.toy_floats("TyDspConfig x30, x34", &c.cstick, f + 0x30);
+        self.toy_floats(
+            "TyDspConfig x40 to x70",
+            &[
+                c.width,
+                c.fov,
+                c.zoom_step,
+                c.fov_min,
+                c.fov_max,
+                c.left,
+                c.right,
+                c.interest.x,
+                c.interest.y,
+                c.interest.z,
+                c.eye.x,
+                c.eye.y,
+                c.eye.z,
+            ],
+            f + 0x40,
+        );
+        self.check(
+            "TyDspConfig",
+            "wait, columns, rows, x7C",
+            (c.wait, c.cols, c.rows, c.x7c),
+            (
+                self.u8(f + 0x74) as i8,
+                self.u8(f + 0x75),
+                self.u8(f + 0x76),
+                self.u32(f + 0x7C) as i32,
+            ),
+        );
+        self.toy_gobj("TyDspConfig.x78", c.last, f + 0x78);
+        let b = c.bg_block;
+        self.check("TyDspBgData", "gobj0", 0u32, self.u32(b));
+        self.toy_gobj("TyDspBgData.gobj4", c.bg, b + 4);
+        self.toy_jobj("TyDspBgData.jobj", c.bg_jobj, b + 0xC);
+        self.toy_archive("TyDspBgData.archive", c.archive, b + 0x4C);
+        for i in 0..43u32 {
+            let a = c.archives.get(i as usize).copied().flatten();
+            self.toy_archive(&format!("TyDspBgData.archives[{i}]"), a, b + 0x50 + 4 * i);
+        }
+        self.check("TyDspBgData", "x104", c.x104, self.u16(b + 0x104) as i16);
+        self.toy_lights();
     }
 
     /// The gallery's seven blocks.

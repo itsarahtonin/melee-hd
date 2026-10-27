@@ -48,6 +48,7 @@ impl Running<'_> {
 
     /// `Toy_80305B88`: the first port's triggered buttons that has any (its port noted),
     /// else the fourth's (none).
+    #[doc(alias = "Toy_80305B88")]
     pub fn toy_triggered(&mut self) -> u32 {
         let mut b = 0;
         for i in 0..4 {
@@ -61,6 +62,7 @@ impl Running<'_> {
     }
 
     /// `Toy_80305C44`: the same for the buttons held.
+    #[doc(alias = "Toy_80305C44")]
     pub fn toy_held(&mut self) -> u32 {
         let mut b = 0;
         for i in 0..4 {
@@ -75,6 +77,7 @@ impl Running<'_> {
 
     /// `Toy_80305D00`: the first port's control stick's x tilted past 0.1, else the fourth's
     /// (no port noted).
+    #[doc(alias = "Toy_80305D00")]
     pub fn toy_stick_x(&self) -> f32 {
         let mut v = 0.0;
         for i in 0..4 {
@@ -88,6 +91,9 @@ impl Running<'_> {
 
     /// `Toy_80305DB0`, `Toy_80305EB4`, `Toy_80305FB8`: the first port's control stick's y,
     /// C-stick's x or y tilted past 0.1 (its port noted), else the fourth's.
+    #[doc(alias = "Toy_80305DB0")]
+    #[doc(alias = "Toy_80305EB4")]
+    #[doc(alias = "Toy_80305FB8")]
     pub fn toy_axis(&mut self, axis: u8) -> f32 {
         let mut v = 0.0;
         for i in 0..4 {
@@ -122,6 +128,7 @@ impl Running<'_> {
     }
 
     /// `_Toy_803102C4`: whether the close-up's axes hide.
+    #[doc(alias = "_Toy_803102C4")]
     fn toy_axes_hidden(&mut self, hidden: i8) {
         self.game.toys.gallery.axes_hidden = hidden;
     }

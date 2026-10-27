@@ -4,6 +4,7 @@
 //! The save's own trophy bookkeeping (the counts, the class marks, the first trophy) is in
 //! [`super::gm::trophies`].
 
+pub mod collection;
 pub mod gallery;
 pub mod list;
 pub mod lottery;
@@ -142,6 +143,8 @@ pub struct Toys {
     pub list: list::List,
     /// The lottery's (`tyfigupon.c`).
     pub lottery: lottery::Lottery,
+    /// The collection's (`tydisplay.c`).
+    pub collection: collection::Collection,
 }
 
 impl Toys {

@@ -322,7 +322,10 @@ impl Ctx<'_> {
                 self.joint_shapes(&draws[i..i + n]);
                 n
             }
-            Draw::Axes(_) => 1,
+            Draw::Axes(ends) => {
+                self.axes(ends);
+                1
+            }
             Draw::EraseColor([r, g, b, a]) => {
                 self.hsd.erase_color = Some(Color::new(*r, *g, *b, *a));
                 1

@@ -184,6 +184,7 @@ impl Running<'_> {
     /// black on the highlighted slot and white otherwise (99 leaves the colors), its trophy's
     /// name, its count's glyphs; with ten trophies or fewer, the rows past the list aren't.
     #[doc(alias = "_tyList_80312904")]
+    #[doc(alias = "Toy_803082F8")]
     fn toy_list_row(&mut self, r: u8, highlight: i8) {
         let row = self.game.toys.list.state.rows[usize::from(r)];
         if row.idx == -1 {
@@ -241,6 +242,7 @@ impl Running<'_> {
 
     /// The trophy at `idx` in the gallery's order (`Toy_80308354`'s check that the trophy
     /// has an entry).
+    #[doc(alias = "Toy_80308354")]
     fn toy_list_trophy(&self, idx: i16) -> i16 {
         self.game.toys.gallery.order[idx as usize]
     }
@@ -500,6 +502,7 @@ impl Running<'_> {
     /// `_tyList_80313464(row)`: a row's series mark, and its new-trophy mark made again
     /// (`ToyFigureListMarkN_Top`) if its trophy is new.
     #[doc(alias = "_tyList_80313464")]
+    #[doc(alias = "Toy_80304924")]
     fn toy_list_marks(&mut self, r: u8) {
         let row = self.game.toys.list.state.rows[usize::from(r)];
         let trophy = self.toy_list_trophy(row.idx);
@@ -1086,6 +1089,7 @@ impl Running<'_> {
     /// with it), the selection's new mark cleared; its GObjs freed (only when `chosen`; the
     /// scene's end frees the rest) and its texts too.
     #[doc(alias = "_tyList_803148E4")]
+    #[doc(alias = "Toy_80304988")]
     fn toy_list_close(&mut self, chosen: bool) {
         if self.toy_total() != 0 {
             if !chosen {

@@ -423,7 +423,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::ty::list::RENDER_TEXTS => r.toy_list_texts_render(gobj),
         super::ty::lottery::RENDER_MAIN => r.lot_main_render(gobj),
         LOBJ_CALLBACK | 0x801C_4640 | 0x8009_F54C => r.render_lights(gobj),
-        FOG_CALLBACK => r.render_fog(gobj),
+        FOG_CALLBACK | super::ty::collection::RENDER_FOG => r.render_fog(gobj),
         0x801C_1E2C => r.render_stage_fog(gobj),
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
         0x8003_01D0 => r.render_game_camera(gobj),
