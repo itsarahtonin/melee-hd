@@ -510,11 +510,38 @@ fn dct_pass(w: &mut [i32; 64], at: usize, step: usize) {
     }
 }
 
+/// What the encoder leaves in its statics (`hsd_804D2648`'s `JpegWork` but its `jmp_buf`,
+/// which only its own `longjmp` reads, and the bit writer's `hsd_804D79AC` and
+/// `hsd_804D79B0`): the last macroblock's blocks as it left them, the last block quantized and
+/// each component's last DC.
+#[derive(Clone, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct Work {
+    pub luma: Vec<i32>,
+    pub cb: Vec<i32>,
+    pub cr: Vec<i32>,
+    pub coef: Vec<i32>,
+    pub prev_dc: [i32; 3],
+    pub nbits: i32,
+    pub bits: u8,
+}
+
 /// `hsd_803B51C8`: a `width` by `height` GX RGB565 image compressed at `quality`
 /// (`hsd_803B5C2C`'s factor) into at most `room` bytes. The bytes written, and their count, or
 /// 0 when they didn't fit (the bytes written until then stay in the output).
 #[doc(alias = "hsd_803B51C8")]
 pub fn encode(image: &[u8], width: i32, height: i32, room: usize, quality: i32) -> (u32, Vec<u8>) {
+    let (n, out, _) = encode_work(image, width, height, room, quality);
+    (n, out)
+}
+
+/// [`encode`], with what it leaves in its statics.
+pub fn encode_work(
+    image: &[u8],
+    width: i32,
+    height: i32,
+    room: usize,
+    quality: i32,
+) -> (u32, Vec<u8>, Work) {
     let mut e = Encoder {
         out: Vec::with_capacity(room.min(0x40000)),
         room,
@@ -527,9 +554,19 @@ pub fn encode(image: &[u8], width: i32, height: i32, room: usize, quality: i32) 
         prev_dc: [0; 3],
         quality,
     };
-    match e.encode(image, width, height) {
-        Ok(()) => (e.out.len() as u32, e.out),
-        Err(Full) => (0, e.out),
+    let r = e.encode(image, width, height);
+    let work = Work {
+        luma: e.luma.to_vec(),
+        cb: e.cb.to_vec(),
+        cr: e.cr.to_vec(),
+        coef: e.coef.to_vec(),
+        prev_dc: e.prev_dc,
+        nbits: e.nbits,
+        bits: e.bits,
+    };
+    match r {
+        Ok(()) => (e.out.len() as u32, e.out, work),
+        Err(Full) => (0, e.out, work),
     }
 }
 

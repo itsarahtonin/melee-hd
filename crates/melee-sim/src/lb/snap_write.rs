@@ -123,6 +123,8 @@ pub struct SnapWrite {
     pub banner: Option<Vec<u8>>,
     pub quality: i32,
     pub save: Option<SnapSave>,
+    /// What the encoder left in its statics, once it ran.
+    pub jpeg: Option<crate::hsd::jpeg::Work>,
 }
 
 impl Default for SnapWrite {
@@ -134,6 +136,7 @@ impl Default for SnapWrite {
             banner: None,
             quality: 3,
             save: None,
+            jpeg: None,
         }
     }
 }
@@ -215,13 +218,14 @@ impl Running<'_> {
         let w = &mut self.game.snap_write;
         w.quality = crate::hsd::jpeg::quality(3);
         let frame = take_frame().expect("the snapshot's frame (the copy made none)");
-        let (size, bytes) = crate::hsd::jpeg::encode(
+        let (size, bytes, work) = crate::hsd::jpeg::encode_work(
             &frame,
             i32::from(WIDTH),
             i32::from(HEIGHT),
             ROOM as usize,
             w.quality,
         );
+        w.jpeg = Some(work);
         let header = SnapHeader {
             x0: 4,
             width: WIDTH,

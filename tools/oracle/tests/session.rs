@@ -869,3 +869,64 @@ fn a_session_rollback_catches_a_perturbation() {
         "{out}"
     );
 }
+
+/// Camera Mode from the recorded session `2026-10-06_17-11-18`: the card check, the selects
+/// and the match with the camera's menu, two snapshots taken (their frames compressed into
+/// the snapshot's buffer) and one saved to the card, clean to the trace's end.
+#[test]
+fn camera_mode_takes_and_saves_a_snapshot() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-11-18.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-11-18.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--all", "--heap"]);
+    assert!(out.contains("6749 ticks compared, no difference"), "{out}");
+}
+
+/// The snapshot `2026-10-06_17-11-18` saves lands on the card as the console's: the card the
+/// session leaves is the one the next recorded session started with, byte for byte.
+#[test]
+fn a_snapshot_lands_on_the_card_as_the_consoles() {
+    let next = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.card");
+    if !std::path::Path::new(&next).exists() {
+        eprintln!("no card ({next}): skipping");
+        return;
+    }
+    let out_card =
+        std::env::temp_dir().join(format!("melee-oracle-17-11-18-{}.card", std::process::id()));
+    let Some(out) = session_sync(
+        "recordings",
+        "2026-10-06_17-11-18",
+        &["--rollback", "7", "--card-out", out_card.to_str().unwrap()],
+    ) else {
+        return;
+    };
+    assert!(out.contains("rolled back 7 each, no difference"), "{out}");
+    let ours = std::fs::read(&out_card).expect("the card written");
+    let _ = std::fs::remove_file(&out_card);
+    assert!(
+        ours == std::fs::read(&next).unwrap(),
+        "the card differs from {next}"
+    );
+}
+
+/// Camera Mode's menu in a match: the info hidden and shown, snapshots offered, asked about
+/// and refused, one saved; and Tiny Melee through its selects and match into the results.
+#[test]
+fn special_melee_sessions() {
+    let Some(out) = scripted_session("special-sessions", "camera-snaps", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(out.contains("3688 ticks compared, no difference"), "{out}");
+    let Some(out) = scripted_session("special-sessions", "special-tiny", &["--all", "--heap"])
+    else {
+        return;
+    };
+    assert!(
+        out.contains("2782 ticks compared, no difference; stopped in tick 2781"),
+        "{out}"
+    );
+}

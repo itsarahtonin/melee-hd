@@ -174,6 +174,60 @@ impl Comparer<'_> {
                 );
             }
         }
+        // The encoder's statics: its work area but its `jmp_buf`, and its writer's.
+        if let (Some(j), Some(at)) = (&w.jpeg, snap.snap) {
+            let work = sym("hsd_804D2648");
+            let words = |s: &Self, off: u32, n: usize| -> Vec<i32> {
+                (0..n as u32)
+                    .map(|i| s.u32(work + off + 4 * i) as i32)
+                    .collect()
+            };
+            self.check(
+                "hsd_804D2648",
+                "luma blocks",
+                j.luma.clone(),
+                words(self, 0x118, 0x100),
+            );
+            self.check(
+                "hsd_804D2648",
+                "Cb block",
+                j.cb.clone(),
+                words(self, 0x518, 0x40),
+            );
+            self.check(
+                "hsd_804D2648",
+                "Cr block",
+                j.cr.clone(),
+                words(self, 0x618, 0x40),
+            );
+            self.check(
+                "hsd_804D2648",
+                "coefficients",
+                j.coef.clone(),
+                words(self, 0x718, 0x40),
+            );
+            let dc = words(self, 0x818, 3);
+            self.check("hsd_804D2648", "last DCs", j.prev_dc.to_vec(), dc);
+            let base = at + melee_sim::lb::snap_write::HEADER;
+            self.check(
+                "hsd_804D79A0",
+                "the writer's place, start, room, bits",
+                (
+                    base + w.image.len() as u32,
+                    base,
+                    melee_sim::lb::snap_write::ROOM,
+                    j.nbits,
+                    j.bits,
+                ),
+                (
+                    self.u32(sym("hsd_804D79A0")),
+                    self.u32(sym("hsd_804D79A4")),
+                    self.u32(sym("hsd_804D79A8")),
+                    self.u32(sym("hsd_804D79AC")) as i32,
+                    self.u8(sym("hsd_804D79B0")),
+                ),
+            );
+        }
         let name = sym("lbSnap_80433380") + 4;
         if let Some(f) = w.filename {
             let theirs: Vec<u8> = (0..0x40).map(|i| self.u8(name + i)).collect();
