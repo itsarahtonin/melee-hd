@@ -288,6 +288,12 @@ impl clock::Frames for Running<'_> {
         std::mem::take(&mut self.audio.hw)
     }
 
+    fn copy_alarm(&mut self, base: u64) -> HwLog {
+        self.audio.hw = HwLog::at(base);
+        self.audio.copy_alarm(self.data);
+        std::mem::take(&mut self.audio.hw)
+    }
+
     fn handler_at(&mut self, now: Option<u64>) {
         self.audio.hw_base = now;
     }
