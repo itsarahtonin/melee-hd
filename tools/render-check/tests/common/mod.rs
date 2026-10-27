@@ -42,7 +42,9 @@ pub enum Replay {
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
     /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `sound-NAME`
+    /// `lockstep/sound-sessions/NAME.inputs` and for `celebiN` `lockstep/celebi-sessions/
+    /// celebiN.inputs` (ssbm-rs's `SSBMINP1`), played
     /// in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -66,6 +68,10 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("sound-") {
                     return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
+                }
+                if name.starts_with("celebi") {
+                    return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
+                        .into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -612,6 +618,15 @@ pub const SOUND_JP: Game = Game {
     replay: Replay::Session("sound-jp"),
 };
 
+/// Celebi out of a Poké Ball on Fountain of Dreams (`celebi-sessions/celebi1`): sparkling
+/// above the left platform, before it flies off.
+pub const CELEBI1: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "celebi1",
+    players: "Fox and three computer players, Celebi out of a Poké Ball (session celebi-sessions/celebi1)",
+    replay: Replay::Session("celebi1"),
+};
+
 /// The character select with a random computer player and the random stage
 /// (`select-sessions/random`): a door opening under a hand holding its coin, Mario's
 /// costumes, the computer player's door, the stage select's random icon and its pick.
@@ -900,5 +915,9 @@ pub mod why {
     /// comparison hashes from memory the copy never writes.
     pub const SCREEN_COPY: &str =
         "Pokémon Stadium's screen: a copy kept on the GPU, compared by memory it never writes";
+    /// The fighters' shadows are copies melee-gpu keeps on the GPU, which the comparison
+    /// hashes from memory the copy never writes; ssbm-rs's renderer writes them.
+    pub const SHADOW_COPY: &str =
+        "the fighters' shadows: copies kept on the GPU, compared by memory they never write";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }
