@@ -285,7 +285,7 @@ impl Running<'_> {
         s.trophy_flags = [0; 293];
         s.trophy_category_flags = 0;
         s.trophy_count = 0;
-        self.game.modes.toy_x19a = 0;
+        self.toy_reset_table();
         let s = &mut self.game.game_data.thing.save_data;
         s.unk_30 = Default::default();
         for i in 0..300 {

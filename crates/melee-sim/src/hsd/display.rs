@@ -192,6 +192,10 @@ pub enum Draw {
     FighterFlags(FighterFlags),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
+    /// The trophy gallery's close-up axes (`_Toy_80312050`): three lines of 6.5 units
+    /// through the camera's interest along its left, up and eye vectors, red, green and blue,
+    /// in the current camera's view (`GX_LINES`, line width 6).
+    Axes([crate::vec::Vec3; 6]),
     /// The render from (`x`, `y`) copied into one of Pokémon Stadium's screens' images, the
     /// frame cleared after it with `clear` (`lb_800122C8`).
     ScreenCopy {

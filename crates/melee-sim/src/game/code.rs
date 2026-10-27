@@ -55,6 +55,12 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if game.stagesel_run(gobj, addr) => {}
         addr if game.results_run(gobj, addr) => {}
         super::gm::attract::PROC => game.attract_proc(gobj),
+        super::ty::gallery::PROC_VIEW => game.toy_view_proc(gobj),
+        super::ty::gallery::PROC_ANIM => game.toy_anim_proc(gobj),
+        super::ty::gallery::PROC_STAND => game.toy_stand_proc(gobj),
+        super::ty::gallery::PROC_LIGHTS => game.toy_lights_proc(gobj),
+        super::ty::list::PROC_INTRO => game.toy_list_intro(gobj),
+        super::ty::list::PROC_INPUT => game.toy_list_input(gobj),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
@@ -179,6 +185,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::mn::stagesel::ON_FRAME.0 => game.stagesel_on_frame(),
         f if f == super::gm::howto::HOWTO_ON_FRAME.0 => game.howto_on_frame(),
         f if f == super::gm::howto::OMAKE_ON_FRAME.0 => game.omake_on_frame(),
+        f if f == super::ty::gallery::ON_FRAME.0 => game.toy_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),

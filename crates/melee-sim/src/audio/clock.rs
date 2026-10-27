@@ -40,6 +40,8 @@ const VI_HANDLER: u64 = 32;
 /// all of it on ssbm-rs's console without a card at power-on (a replay's, Slippi's playback
 /// boot's), whose CARD library is stood in for.
 const ALARM_HANDLER: u64 = 24;
+/// The pad library's queue of polls (`HSD_PadInit`'s `qnum`, `gmMain_8015FD24`'s five).
+const PAD_QUEUE: u32 = 5;
 /// From the audio interrupt to its DSP mail, and to the end of its handler.
 const AI_MAIL: u64 = 16;
 const AI_HANDLER: u64 = 120;
@@ -811,11 +813,13 @@ impl Clock {
             if let Some(p) = self.new_alarm_period.take() {
                 self.set_pad_alarm(self.next_period(self.now, p), p);
             }
-            // The scene loop's wait for a pad sample, and one more wait after it.
+            // The scene loop's wait for a pad sample, and one more wait after it. The round
+            // runs a tick for each sample the queue holds (`lb_80019894`'s count): no more than
+            // its five, however often the alarm fired.
             while self.pads == 0 {
                 self.lb_wait(f);
             }
-            self.ticks_left = self.pads;
+            self.ticks_left = self.pads.min(PAD_QUEUE);
             self.lb_wait(f);
         }
         self.ticks_left -= 1;

@@ -388,8 +388,10 @@ pub struct Game {
     pub snap: crate::lb::snap::Snap,
     /// The modes' settings that live outside the game's data: the training mode's saved
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
-    /// trophy gallery's flag (`_Toy_804A26B8.x194`).
+    /// trophy gallery's (`Toy_804A284C`, in [`Game::toys`]).
     pub modes: super::gm::mode_init::ModeStatics,
+    /// The trophies' statics (`toy.c`, `tylist.c`).
+    pub toys: super::ty::Toys,
     /// Presentation output, not state: the Slippi replay the match makes, when the frontend
     /// turns it on (`record`). Simulated code never reads it; a clone starts without it and a
     /// restore leaves it alone.

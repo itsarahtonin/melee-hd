@@ -158,7 +158,7 @@ impl Running<'_> {
             }
         }
         self.game.game_data.thing.save_data.trophy_category_flags |= 4;
-        self.game.modes.toy_x19a |= 4;
+        self.game.toys.table.categories |= 4;
     }
 
     /// `Toy_80305058(class, 0x63, 0, 100.0)`: one trophy of `class` the region can win, drawn

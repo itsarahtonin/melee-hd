@@ -128,6 +128,51 @@ pub trait Console {
         let f = self.file(path);
         (f.entrynum, f.bytes.len() as u32)
     }
+    /// Gives back the last `n` reads [`Console::read_pads`] handed out, which the next reads
+    /// hand out again ([`with_feed`]'s reads ahead that the game didn't take).
+    fn unread(&mut self, n: usize) {
+        assert!(n == 0, "this console can't give back {n} reads");
+    }
+}
+
+/// How many of the console's reads [`with_feed`] takes ahead: more than a step or a scene's
+/// entry reads.
+const FEED_AHEAD: usize = 2048;
+
+thread_local! {
+    /// The console's next reads while a session step runs ([`with_feed`]), for the game's
+    /// own `PADRead`s in its code ([`direct_read`]) as well as the step's polls.
+    static FEED: std::cell::RefCell<Option<std::collections::VecDeque<PadData>>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+/// Runs `f` with the console's next reads taken ahead into the step's feed, `f`'s reads
+/// (the closure it's handed, and the game's [`direct_read`]) taking them in order; the
+/// reads left are given back to the console.
+pub fn with_feed<R>(
+    console: &mut dyn Console,
+    f: impl FnOnce(&mut dyn FnMut() -> PadData) -> R,
+) -> R {
+    let ahead: std::collections::VecDeque<PadData> =
+        (0..FEED_AHEAD).map(|_| console.read_pads()).collect();
+    let outer = FEED.with(|c| c.borrow_mut().replace(ahead));
+    assert!(outer.is_none(), "a session step's feed inside another's");
+    let r = f(&mut direct_read);
+    let left = FEED.with(|c| c.borrow_mut().take()).map_or(0, |q| q.len());
+    console.unread(left);
+    r
+}
+
+/// The controllers of the console's next `PADRead` within a session's step: the game's own
+/// reads (`HSD_PadRenewStatus`) and the step's polls.
+pub fn direct_read() -> PadData {
+    FEED.with(|c| {
+        c.borrow_mut()
+            .as_mut()
+            .expect("a PADRead outside a session's step isn't ported")
+            .pop_front()
+            .expect("a step read more than its feed holds")
+    })
 }
 
 /// A running session: the game's state, the archives it has loaded, the console's setup and
@@ -186,6 +231,19 @@ pub const FILES: &[&str] = &[
     "SdIntro.dat",
     "IfCoGet.dat",
     "LbBf.dat",
+    // The trophy screens' (the trophies' own models, which `TyDataf.dat` names, after).
+    "TyDatai.dat",
+    "TyDataf.dat",
+    "TyMnView.usd",
+    "TyMnView.dat",
+    "TyMnBg.dat",
+    "TyMnInfo.usd",
+    "TyMnInfo.dat",
+    "TyLight.dat",
+    "TyStand.dat",
+    "SdToy.usd",
+    "SdToyExp.usd",
+    "SdToyExp.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's, which
@@ -287,6 +345,34 @@ impl Session {
             let files = &mut self.game.ft.data.files;
             files.entries.push((name.to_owned(), file.entrynum, len));
             files.archives.push((name.to_owned(), id));
+            sizes.push((file.entrynum, len));
+        }
+        // The trophies' models, each a file `TyDataf.dat`'s tables name (`ToyModelFile`).
+        let dataf = self.game.ft.data.files.archive("TyDataf.dat");
+        let a = self.data.get(dataf);
+        let mut models = Vec::new();
+        for (table, n) in [
+            ("tyModelFileTbl", super::ty::TROPHY_COUNT),
+            ("tyModelFileUsTbl", 5),
+        ] {
+            let at = a.public(table).expect("TyDataf.dat's tables") as usize;
+            for i in 0..n {
+                let name = &a.data()[at + 0x54 * i + 4..at + 0x54 * i + 0x24];
+                let len = name.iter().position(|&b| b == 0).unwrap_or(name.len());
+                let name = String::from_utf8_lossy(&name[..len]).into_owned();
+                if !models.contains(&name) {
+                    models.push(name);
+                }
+            }
+        }
+        for name in models {
+            let file = console.file(&name);
+            let len = file.bytes.len() as u32;
+            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let id = self.data.add(a);
+            let files = &mut self.game.ft.data.files;
+            files.entries.push((name.clone(), file.entrynum, len));
+            files.archives.push((name, id));
             sizes.push((file.entrynum, len));
         }
         // The files a game cache can preload, by entry and size: the preload cache only times
@@ -419,7 +505,9 @@ impl Session {
             game: &mut self.game,
             data: &self.data,
         };
-        let (t, render) = scene::step_session_tick(&mut r, &mut || console.read_pads(), false);
+        let (t, render) = with_feed(console, |read| {
+            scene::step_session_tick(&mut r, read, false)
+        });
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
         let out = Frame {
@@ -435,11 +523,13 @@ impl Session {
     /// entry loads a match's, then the pad alarm's reads meanwhile and the scene loop's start.
     fn enter_next_scene(&mut self, console: &mut dyn Console) {
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
-        Running {
-            game: &mut self.game,
-            data: &self.data,
-        }
-        .next_scene();
+        with_feed(console, |_| {
+            Running {
+                game: &mut self.game,
+                data: &self.data,
+            }
+            .next_scene()
+        });
         lent.give_back(&mut self.game.objs.heap);
         if std::mem::take(&mut self.game.machine.files_wanted) {
             let start = Running {
@@ -450,11 +540,13 @@ impl Session {
             .clone();
             self.read_match_files(&start, console);
             let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
-            Running {
-                game: &mut self.game,
-                data: &self.data,
-            }
-            .next_scene();
+            with_feed(console, |_| {
+                Running {
+                    game: &mut self.game,
+                    data: &self.data,
+                }
+                .next_scene()
+            });
             lent.give_back(&mut self.game.objs.heap);
             self.read_song(console);
         }
@@ -463,7 +555,7 @@ impl Session {
             game: &mut self.game,
             data: &self.data,
         };
-        r.take_alarm_reads(&mut || console.read_pads());
+        with_feed(console, |read| r.take_alarm_reads(read));
         r.begin_scene_loop();
         lent.give_back(&mut self.game.objs.heap);
     }
@@ -604,6 +696,30 @@ impl Running<'_> {
         self.next_scene();
         self.take_alarm_reads(&mut || console.read_pads());
         self.begin_scene_loop();
+    }
+
+    /// `HSD_PadRenewStatus` from the game's code (the trophy screens'): the pad alarm's reads
+    /// the timeline counted meanwhile queued, then a `PADRead` of its own (the console's next
+    /// read) queued after them (`HSD_PadRenewRawStatus(0)`), and the master, copy and game
+    /// statuses renewed from the oldest.
+    #[doc(alias = "HSD_PadRenewStatus")]
+    pub fn pads_renew_status(&mut self) {
+        // `PADRead`'s serial interface registers: three reads, as the alarm handler's.
+        self.game.audio.clock_read(self.data, 3 * REG_READ);
+        self.take_alarm_reads(&mut direct_read);
+        let before = u32::from(self.game.pads.lib.qcount);
+        let now = direct_read();
+        let p = &mut self.game.pads;
+        p.renew_raw(self.data, now, false, false);
+        p.renew_master();
+        p.renew_copy();
+        p.renew_game();
+        // Its own poll queued and the oldest taken: the polls the scene's loop can take are
+        // one fewer when the queue was full (`qtype` 0 merges the newest into the oldest).
+        let after = u32::from(self.game.pads.lib.qcount);
+        if let Some(c) = self.game.audio.clock.as_mut() {
+            c.pads = (c.pads + after).saturating_sub(before);
+        }
     }
 
     /// The pad alarm's reads while the boot or a scene's preparation ran, which the

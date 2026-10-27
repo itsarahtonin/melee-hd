@@ -236,7 +236,7 @@ impl Running<'_> {
             s.trophy_category_flags = 0;
             s.trophy_flags = [0; 293];
             s.padding_trophy_flags = [0; 14];
-            self.game.modes.toy_x19a = 0;
+            self.toy_reset_table();
             if !at_boot {
                 // The save's first trophy: one of class 2 it doesn't hold.
                 self.mark_class_two_trophies();
