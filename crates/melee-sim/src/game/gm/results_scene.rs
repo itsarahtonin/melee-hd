@@ -205,7 +205,6 @@ impl Running<'_> {
     /// A player's bonuses earned, from the results' decisions (`x44C[slot].x0`, the first
     /// 0x100); each one a human earned noted in the save (`fn_8016F140`), `fn_80174284`.
     #[doc(alias = "fn_80174284")]
-    #[doc(alias = "fn_80174284_noinline")]
     #[doc(alias = "fn_8016F140")]
     fn results_bonus_count(&mut self, slot: u8) -> i32 {
         let me = self.results_end();

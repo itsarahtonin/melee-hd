@@ -128,32 +128,27 @@ impl Running<'_> {
         }
     }
 
-    /// The panel comes in, `fn_80178BB4`.
-    #[doc(alias = "fn_80178BB4")]
+    /// The panel comes in, `fn_80178BB4`: not ported yet.
     fn results_panel_in(&mut self, _gobj: GObjId) {
         super::super::code::unported_call("fn_80178BB4 (the results' panel)");
     }
 
-    /// The players' rows shown, `fn_80177748`.
-    #[doc(alias = "fn_80177748")]
+    /// The players' rows shown, `fn_80177748`: not ported yet.
     fn results_rows(&mut self) {
         super::super::code::unported_call("fn_80177748 (the results' rows)");
     }
 
-    /// Waiting for a button, `fn_80177920`.
-    #[doc(alias = "fn_80177920")]
+    /// Waiting for a button, `fn_80177920`: not ported yet.
     fn results_wait(&mut self, _gobj: GObjId) {
         super::super::code::unported_call("fn_80177920 (the results' wait)");
     }
 
-    /// The statistics' frame, `fn_80178050`.
-    #[doc(alias = "fn_80178050")]
+    /// The statistics' frame, `fn_80178050`: not ported yet.
     fn results_stats_frame(&mut self, _gobj: GObjId) {
         super::super::code::unported_call("fn_80178050 (the results' statistics)");
     }
 
-    /// The announcer names the winner, `fn_80168E54`.
-    #[doc(alias = "fn_80168E54")]
+    /// The announcer names the winner, `fn_80168E54`: not ported yet.
     fn announce_winner(&mut self, _ckind: i32, _ftkind: i32, _team: i32, _teams: bool) {
         super::super::code::unported_call("fn_80168E54 (the winner's name)");
     }

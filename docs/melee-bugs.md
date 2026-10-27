@@ -1293,6 +1293,28 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play.
 - **Source:** `mncharsel.c`'s `mnCharSel_Scene_OnExit` and `mnCharSel_Scene_OnFrame`'s L, R and Start; `crates/melee-sim/src/game/mn/charsel/procs.rs`.
 
+## Results and records
+
+### A results pose's fighter takes an unset byte of its allocation info
+
+- **Where:** `ftDemo_CreateFighter` (with `initFighter`'s `plAllocInfo` inlined), `crates/melee-sim/src/game/ft/demo.rs`.
+- **Defect:** the stack `plAllocInfo` handed to the fighter's creation never has its byte +5 set (sp+0x11 at `0x804EEA21` in the results screen's setup), and `Fighter_Create` copies it into the fighter (`x61C`).
+- **Effect:** none observable: the byte's only reader, `ftData_800859A8`, never runs for a results pose's fighter. On a console the slot holds byte 1 of the saved r28 of `HSD_ArchiveGetPublicAddress`, 0; ssbm-rs's ported callers leave a stale register's byte there (61 in its traces), from probes of its port mode (`$SSBM_RS_LOCAL/research/x61c-byte`). The costume-list corruption the byte seemed to cause isn't real.
+- **melee-hd:** stand-in: the byte is 0, as a console's, and the comparer leaves `x61C` out for a demo fighter (`render_target_view`, the comment there), with the proof in the engine notes.
+- **Fix:** set the byte (or clear the struct) before the creation.
+- **Fix impact:** none.
+- **Source:** `ftdemo.c`'s `ftDemo_CreateFighter`; the x61C probe logs.
+
+### A winner's camera stays current when it takes no image
+
+- **Where:** `fn_80179990` (the players' cameras' render callback, through `fn_80179D3C` to `fn_80179DA8`), `crates/melee-sim/src/game/gm/results_fighters.rs` (`results_player_render`).
+- **Defect:** the callback makes its camera current (`HSD_CObjSetCurrent`) and ends it (`HSD_CObjEndCurrent`) only after it copies an image; a winner's camera copies once, when its pose has run out and the flames have gone, so on every other frame it returns with its camera still current.
+- **Effect:** none observable: the next camera's callback makes its own current before drawing, and nothing between them draws.
+- **melee-hd:** modeled: no `Draw::EndCamera` on those frames.
+- **Fix:** end the camera on every path that set it.
+- **Fix impact:** none.
+- **Source:** `gm_1798.c`'s `fn_80179990` and its machine code (`.L_80179BD8` returns without `HSD_CObjEndCurrent`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
