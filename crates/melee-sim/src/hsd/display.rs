@@ -324,6 +324,7 @@ pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> b
         return false;
     };
     objs.cobjs.current = Some(c);
+    objs.cobjs.freed_current = 0;
     super::cobj::setup_viewing_mtx(objs, data, c);
     let o = &objs.cobjs[c];
     let view = CameraView {

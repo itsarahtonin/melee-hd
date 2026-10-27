@@ -118,6 +118,15 @@ impl Comparer<'_> {
         let t = self.u32(sym("current"));
         match objs.cobjs.current {
             Some(c) if t != 0 => self.cobj("display current camera", c, t),
+            // A camera freed since it was drawn last (a scene that freed its cameras and
+            // drew nothing since): the pointer names where it was, which the heap may have
+            // handed on.
+            None if objs.cobjs.freed_current != 0 => self.check(
+                "display",
+                "current camera (freed)",
+                objs.cobjs.freed_current,
+                t,
+            ),
             ours => self.check("display", "current camera", ours.is_some(), t != 0),
         }
         let mut node = objs.lobjs.current;

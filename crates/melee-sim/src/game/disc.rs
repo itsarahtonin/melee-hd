@@ -66,6 +66,7 @@ impl Running<'_> {
         // (`_HSD_IDForgetMemory`).
         let o = &mut self.game.objs;
         o.cobjs.current = None;
+        o.cobjs.freed_current = 0;
         o.jobj.current = None;
         o.lobjs.current = None;
         // The lights the last scene made are gone with its heap; the active table keeps
