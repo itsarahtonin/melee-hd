@@ -26,8 +26,7 @@ fn past_hako(data: &Archives, pos: u32) -> [u8; 0x20] {
     match read {
         Some((b, known)) if known.iter().all(|&k| k) => out[..8].copy_from_slice(&b),
         other => crate::game::code::unported_call(&format!(
-            "HSD_SynthPStreamMasterClockCallback reading box {pos}'s header past the three, at              {at:#x}, which the heap's image doesn't know ({:?})",
-            other.map(|(b, k)| (b, k))
+            "HSD_SynthPStreamMasterClockCallback reading box {pos}'s header past the three, at              {at:#x}, which the heap's image doesn't know ({other:?})"
         )),
     }
     out

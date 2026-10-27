@@ -982,7 +982,6 @@ impl Running<'_> {
         if self.game.game_data.x1850.handicap == 1 {
             return *self.auto_handicap(usize::from(port), tag);
         }
-        let _ = (port, tag);
         0
     }
 }

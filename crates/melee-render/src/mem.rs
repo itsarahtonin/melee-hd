@@ -51,7 +51,13 @@ struct Ranges {
     /// Images the presentation makes: (start, size, what), with their bytes.
     dynamic: Vec<(u32, u32, Dynamic, Vec<u8>)>,
     next_dynamic: u32,
+    /// Images whose bytes start as what their block held (the results screen's): the
+    /// leftovers last written into each, and whether a copy has written it since.
+    seeds: Vec<(Dynamic, Seed, bool)>,
 }
+
+/// What an image's block held when the game took it.
+type Seed = std::sync::Arc<melee_sim::game::gm::results_fighters::ImageLeftovers>;
 
 /// A display list `lbRefract_PObjLoad` rewrote.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -160,6 +166,42 @@ impl Space {
             .dynamic
             .push((start, size, what, vec![0; size as usize]));
         start
+    }
+
+    /// Starts image `what` (at `at`) as `seed`'s bytes, unless it already started as them: a
+    /// new block the game took for it.
+    pub fn seed(&self, what: Dynamic, at: u32, seed: &Seed) {
+        {
+            let mut ranges = self.ranges.borrow_mut();
+            if ranges
+                .seeds
+                .iter()
+                .any(|s| s.0 == what && std::sync::Arc::ptr_eq(&s.1, seed))
+            {
+                return;
+            }
+            ranges.seeds.retain(|s| s.0 != what);
+            ranges.seeds.push((what, seed.clone(), false));
+        }
+        self.write(at, &seed.bytes);
+    }
+
+    /// Marks image `what` copied into since its seed.
+    pub fn seed_copied(&self, what: Dynamic) {
+        for s in &mut self.ranges.borrow_mut().seeds {
+            if s.0 == what {
+                s.2 = true;
+            }
+        }
+    }
+
+    /// Whether image `what` still shows its seed's bytes and the game didn't know them all.
+    pub fn seed_unknown(&self, what: Dynamic) -> bool {
+        self.ranges
+            .borrow()
+            .seeds
+            .iter()
+            .any(|s| s.0 == what && !s.2 && !s.1.known)
     }
 
     /// Writes bytes the renderer copied back: into an image the presentation made, or over

@@ -57,6 +57,18 @@ pub struct ResultsFighters {
     /// Each image's pixels' block in the scene's heap and its size, by [`image_addr`]'s
     /// index: the GPU's copies write them ([`crate::hsd::image::Src::RenderTarget`]).
     pub buffers: [(u32, u32); 9],
+    /// What each image's block held when the scene took it, from the heap's image: what its
+    /// texture shows until the first copy into it (a winner's column until its pose ends).
+    pub leftovers: [Option<std::sync::Arc<ImageLeftovers>>; 9],
+}
+
+/// An image's block's bytes as the scene found it ([`ResultsFighters::leftovers`]).
+#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
+pub struct ImageLeftovers {
+    /// The bytes; zero where the heap's image doesn't know them.
+    pub bytes: Vec<u8>,
+    /// Whether the heap's image knew every byte.
+    pub known: bool,
 }
 
 /// The images the cameras copy into, by index: a player's first (0 to 3), its second (4 to
@@ -292,6 +304,12 @@ impl Running<'_> {
             }
         };
         f.buffers[usize::from(n)] = (at, size);
+        let (bytes, known) =
+            crate::hsd::heap::with(|h| h.image.leftover_bytes(self.data, at, size))
+                .unwrap_or_else(|| (vec![0; size as usize], vec![false; size as usize]));
+        let known = known.iter().all(|&k| k);
+        self.game.results.fighters.leftovers[usize::from(n)] =
+            Some(std::sync::Arc::new(ImageLeftovers { bytes, known }));
     }
 
     /// `HSD_ImageDescCopyFromEFB` into image `n` from (`x`, `y`), the frame cleared after it
@@ -384,6 +402,9 @@ impl Running<'_> {
             if !columns {
                 self.results_copy(slot as u8, x, y, false);
             }
+            // `HSD_CObjEraseScreen` erases in the erase color still set (HSD's global), which
+            // the renderer takes per erase.
+            self.results_erase_color(slot);
             self.game.objs.display.draws.push(Draw::EraseFull);
             self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
             display::camera_end(&mut self.game.objs);
@@ -403,6 +424,7 @@ impl Running<'_> {
                 self.game.objs.display.draws.push(Draw::Erase);
                 self.camera_fighters(gobj, 0);
                 self.results_copy(second, sx + x, sy + y, false);
+                self.results_erase_color(slot);
                 self.game.objs.display.draws.push(Draw::EraseFull);
                 self.results_copy(SHARED_IMAGE, 0x10E, 0x7C, true);
                 display::camera_end(&mut self.game.objs);

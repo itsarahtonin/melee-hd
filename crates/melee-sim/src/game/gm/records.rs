@@ -278,6 +278,7 @@ fn last_place(end: &MatchEnd) -> i32 {
 
 /// One of `fn_80161154`'s tie-breaks over the players still tied (`spc`): the player `keep`
 /// prefers, then the others not equal to it dropped; that player, and whether no tie is left.
+#[allow(clippy::needless_range_loop)] // the original's loops over the four slots
 fn tie_break(
     spc: &mut [bool; 4],
     keep: impl Fn(usize, usize) -> bool,
@@ -476,6 +477,7 @@ impl Game {
     #[doc(alias = "gm_801623A4")]
     #[doc(alias = "fn_80162068")]
     #[doc(alias = "fn_80162170")]
+    #[allow(clippy::needless_range_loop)] // the original's loops over the four slots
     pub fn add_match_stats(&mut self, end: &MatchEnd) {
         let ps = &end.player_standings;
         for i in 0..4 {
