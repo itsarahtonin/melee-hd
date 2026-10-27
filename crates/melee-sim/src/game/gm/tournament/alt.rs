@@ -535,14 +535,6 @@ impl Running<'_> {
             .unwrap_or(0)
     }
 
-    /// The entrant whose kept seat is `p` (`get_match_player_index_xF`).
-    fn alt_entrant_kept(&self, p: i32) -> usize {
-        let tm = &self.game.tou.tm;
-        (0..usize::from(tm.x2e))
-            .find(|&i| i32::from(tm.x37[i].xf) == p)
-            .unwrap_or(0)
-    }
-
     /// `gm_Scene_TouAlt_OnFrame`: L, R and Start back to the main menu; once every player is
     /// ready (their seats kept) the match; else each plugged-in player's B held a second
     /// and a half back to the setup, L and R a random character, left and right the
@@ -741,9 +733,9 @@ impl Running<'_> {
         let _ = self.tou_stage_chosen();
         self.setup_vs_preload_cache();
         let mut mask = 0u64;
-        for i in 0..4 {
-            if self.game.tou.tm.x4b8[i].x0 != 3 {
-                mask |= crate::lb::audio::character_banks(chars[i]);
+        for (m, &c) in self.game.tou.tm.x4b8.iter().zip(&chars) {
+            if m.x0 != 3 {
+                mask |= crate::lb::audio::character_banks(c);
             }
         }
         mask |= crate::lb::audio::stage_banks(stage);

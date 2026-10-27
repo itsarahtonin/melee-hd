@@ -1138,8 +1138,8 @@ impl Running<'_> {
             s.pad2[i] = 0xA;
             s.pad2[i + 6] = 0;
         }
-        for i in 0..6 {
-            self.game.tou.tm.opts[i] = i32::from(MIN[i][0]);
+        for (o, m) in self.game.tou.tm.opts.iter_mut().zip(&MIN) {
+            *o = i32::from(m[0]);
         }
         let handicap = self.game.game_data.x1850.handicap;
         let s = self.su();
@@ -1216,8 +1216,8 @@ impl Running<'_> {
             let tm = &mut self.game.tou.tm;
             tm.cur_option += 1;
             let idx = tm.cur_option as usize;
-            for k in idx..6 {
-                *tm.word_mut(k + 1) = i32::from(MIN[k][col]);
+            for (k, m) in MIN.iter().enumerate().skip(idx) {
+                *tm.word_mut(k + 1) = i32::from(m[col]);
             }
             if self.mt() == 0 {
                 let pads = self.tou_pads();
@@ -1276,7 +1276,7 @@ impl Running<'_> {
             if mt0 {
                 let v = self.game.tou.tm.word(idx + 1);
                 if v < i32::from(MAX[idx][col]) {
-                    if v + 1 <= clamp {
+                    if v < clamp {
                         *self.game.tou.tm.word_mut(idx + 1) = v + 1;
                         self.lb_audio_call(2);
                         self.su().x8 = 5;
@@ -1382,7 +1382,7 @@ impl Running<'_> {
                 let v = self.game.tou.tm.word(idx + 1);
                 if v < i32::from(MAX[idx][col]) + 1 {
                     let w2 = self.game.tou.tm.word(2);
-                    if v + 1 <= clamp && v + 1 < w2 {
+                    if v < clamp && v + 1 < w2 {
                         *self.game.tou.tm.word_mut(idx + 1) = v + 1;
                         self.lb_audio_call(2);
                         self.su().x8 = 5;
@@ -1964,7 +1964,7 @@ impl Running<'_> {
         let count = self.name_count();
         if b & PAD_LEFT != 0 {
             self.lb_audio_call(2);
-            if self.su().x5 % 4 != 0 {
+            if !self.su().x5.is_multiple_of(4) {
                 self.su().x5 -= 1;
                 self.tou_name_pick();
             }

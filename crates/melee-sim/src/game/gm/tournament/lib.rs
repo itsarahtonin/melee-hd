@@ -1060,7 +1060,7 @@ impl Running<'_> {
         let t = &self.game.tou;
         let mut c;
         loop {
-            c = self.game.objs.rng.below(0x19) as i32;
+            c = self.game.objs.rng.below(0x19);
             let t = &self.game.tou;
             if t.unlocked[c as usize] != 0
                 && t.recent[0] != c
@@ -1802,25 +1802,21 @@ fn lines_1(
                 }
             }
         }
-        5 => {
-            if b.slots[1].x32 != 0 {
-                rect(q, f(right), f(bottom), t, -40.0, YELLOW);
-                if lit && b.slots[0].x4c != 0 {
-                    rect(q, f(right), f(bottom), t, -40.0, c);
-                }
+        5 if b.slots[1].x32 != 0 => {
+            rect(q, f(right), f(bottom), t, -40.0, YELLOW);
+            if lit && b.slots[0].x4c != 0 {
+                rect(q, f(right), f(bottom), t, -40.0, c);
             }
         }
-        7 => {
-            if b.slots[1].x32 != 0 {
-                let at = if b.x2 == 0 {
-                    bottom
-                } else {
-                    y.wrapping_add(0x1E)
-                };
-                rect(q, f(right), f(at), t, -30.0, YELLOW);
-                if lit && b.slots[0].x4c != 0 {
-                    rect(q, f(right), f(at), t, -30.0, c);
-                }
+        7 if b.slots[1].x32 != 0 => {
+            let at = if b.x2 == 0 {
+                bottom
+            } else {
+                y.wrapping_add(0x1E)
+            };
+            rect(q, f(right), f(at), t, -30.0, YELLOW);
+            if lit && b.slots[0].x4c != 0 {
+                rect(q, f(right), f(at), t, -30.0, c);
             }
         }
         _ => {}

@@ -1388,9 +1388,9 @@ impl Running<'_> {
         }
         self.preload_refresh();
         let mut mask = 0u64;
-        for i in 0..4 {
-            if self.game.tou.tm.x4b8[i].x0 != 3 {
-                mask |= crate::lb::audio::character_banks(chars[i]);
+        for (m, &c) in self.game.tou.tm.x4b8.iter().zip(&chars) {
+            if m.x0 != 3 {
+                mask |= crate::lb::audio::character_banks(c);
             }
         }
         mask |= crate::lb::audio::stage_banks(stage);
