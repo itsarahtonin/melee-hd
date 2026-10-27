@@ -196,7 +196,7 @@ impl Running<'_> {
             None
         };
         let fp = &mut self.game.fighters[f.0];
-        fp.x590 = tree;
+        fp.x590 = super::second::ActionTree(tree);
         fp.x5A4 = aram;
     }
 

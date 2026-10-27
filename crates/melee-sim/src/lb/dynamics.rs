@@ -108,6 +108,7 @@ impl Game {
             links
         })
         .unwrap_or(0);
+        self.ft.dynamics_block = links;
         self.fighter_dynamics = Pool::default();
         for k in 0..LINKS {
             let left =

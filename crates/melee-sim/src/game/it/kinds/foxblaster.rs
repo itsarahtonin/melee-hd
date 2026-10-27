@@ -6,7 +6,6 @@ use super::super::item::{animate, change_state, destroy, logic, play_sfx, spawn_
 use super::super::{item, item_mut, jobj_of, lib26b1, lib2725};
 use super::{FALCO_BLASTER, FOX_BLASTER, KIRBY_FALCO_BLASTER, KIRBY_FOX_BLASTER};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{Item, SpawnItem};
 use crate::hsd::gobj::GObjId;
@@ -415,6 +414,38 @@ pub fn spawn(
     Some(gobj)
 }
 
+/// A blaster in a posing fighter's hand, `it_802AE994`: made at the fighter's place and
+/// facing, its variables cleared, its script's variables 1, held at `part`.
+#[doc(alias = "it_802AE994")]
+pub fn spawn_demo(r: &mut Running, fighter: GObjId, part: i32, kind: i32) -> Option<GObjId> {
+    let fp = r.game.fighter_mut(fighter);
+    let (pos, facing_dir) = (fp.cur_pos, fp.facing_dir);
+    let mut spawn = SpawnItem {
+        kind,
+        ..Default::default()
+    };
+    spawn.prev_pos = pos;
+    spawn.prev_pos.z = 0.0;
+    spawn.pos = spawn.prev_pos;
+    spawn.facing_dir = facing_dir;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = Some(fighter);
+    spawn.x4_parent_gobj2 = Some(fighter);
+    spawn.x44_flag[0] &= !0x80;
+    spawn.x40 = 0;
+    let gobj = spawn_air(r, &mut spawn)?;
+    item_mut(r.game, gobj)
+        .xDD4_itemVar
+        .fox_blaster()
+        .owner
+        .set(Some(fighter));
+    reset(r.game, gobj);
+    set_command_vars(item_mut(r.game, gobj), 1);
+    super::super::item::pick_up(r, gobj, fighter, part);
+    Some(gobj)
+}
+
 /// Destroys a blaster its owner lets go of, `it_802AEAB4`.
 #[doc(alias = "it_802AEAB4")]
 pub fn remove(r: &mut Running, gobj: Option<GObjId>) {
@@ -547,16 +578,19 @@ pub fn clear(r: &mut Running, gobj: GObjId) {
     destroy(r, gobj);
 }
 
-/// Matches the owner's scale when the owner's been resized, `itFoxblaster_UnkMotion10_Anim`.
+/// Matches the owner's size while the owner is frozen in a KO toward the screen or asleep
+/// (`ftCo_800BF228`: a results pose's states), `itFoxblaster_UnkMotion10_Anim`.
+#[doc(alias = "itFoxblaster_UnkMotion10_Anim")]
 pub fn scale_with_owner(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj)
+    let owner = item_mut(r.game, gobj)
         .xDD4_itemVar
         .fox_blaster()
         .owner
-        .get()
-        .is_some()
+        .get();
+    if let Some(o) = owner
+        && crate::game::ft::demo::frozen_or_asleep(r.game, o)
     {
-        code::unported_call("ftCo_800BF228 (a resized blaster owner)");
+        lib2725::copy_owner_scale(r.game, gobj, o);
     }
     false
 }

@@ -149,6 +149,7 @@ fn release(objs: &mut Objects, s: AppSrtId) -> i32 {
     srt.used_count = srt.used_count.wrapping_sub(1);
     let count = i32::from(srt.used_count);
     if count == 0 {
+        super::export::with_image(|img| super::export::app_srt(objs, img, s));
         objs.app_srts.pool.free(s.0);
         objs.app_srts.live = objs.app_srts.live.wrapping_sub(1);
     }

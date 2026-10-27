@@ -310,10 +310,12 @@ pub const FILES: &[&str] = &[
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
 /// test's, which [`Session::read_song`] reads as the stage or the test starts them: the
-/// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, and
-/// the special messages' three.
+/// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, the
+/// special messages' three, the results screen's fanfares (`ff_dk.hps` to `ff_yoshi.hps`,
+/// each character's), which the screen's entry starts, and Tournament's bracket's two.
 pub const SONGS: &[usize] = &[
-    0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x5D, 0x5E,
+    0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x13, 0x14,
+    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E,
 ];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
@@ -619,8 +621,9 @@ impl Session {
                 .next_scene()
             });
             lent.give_back(&mut self.game.objs.heap);
-            self.read_song(console);
         }
+        // The song the scene's entry started (a match's stage's, the results' fanfare).
+        self.read_song(console);
         let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
         let mut r = Running {
             game: &mut self.game,
@@ -768,6 +771,21 @@ impl Running<'_> {
         self.next_scene();
         self.take_alarm_reads(&mut || console.read_pads());
         self.begin_scene_loop();
+    }
+
+    /// The pad alarm's firings so far in a scene's entry run their frames of rumble now,
+    /// ahead of their reads ([`Self::take_alarm_reads`]): a rumble the entry starts begins
+    /// after them, as the original's alarm handlers ran each in its time.
+    pub fn alarm_rumble_catch_up(&mut self) {
+        let Some(c) = self.game.audio.clock.as_ref() else {
+            return;
+        };
+        let p = &mut self.game.pads;
+        let due = c.pads.saturating_sub(u32::from(p.lib.qcount));
+        for _ in p.rumble_ahead..due {
+            p.rumble.interpret(self.data);
+            p.rumble_ahead += 1;
+        }
     }
 
     /// `HSD_PadRenewStatus` from the game's code (the trophy screens'): the pad alarm's reads

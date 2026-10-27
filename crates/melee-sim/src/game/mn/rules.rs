@@ -387,7 +387,6 @@ impl Running<'_> {
     /// `gmMainLib_8015EA80`: every player's name tag and handicap back to their defaults in
     /// each VS mode (`gmMainLib_8015CDEC`'s name tags to 5, the handicaps to 9).
     #[doc(alias = "gmMainLib_8015EA80")]
-    #[doc(alias = "gmMainLib_8015CE44")]
     fn reset_handicaps(&mut self) {
         let m = &mut self.game.game_data.modes;
         m.nametags.fill(5);

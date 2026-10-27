@@ -423,6 +423,8 @@ pub struct Image {
     /// in its animation buffer), newest last: where the objects laid out as they go point
     /// into ([`Image::lay_addr`]), which the comparison's own places don't take.
     copies: Option<Arc<Vec<(u32, u32, ArchiveId)>>>,
+    /// [`Image::set_copy_hint`]'s copy, set only while a figatree binds.
+    copy_hint: Option<u32>,
 }
 
 impl Clone for Image {
@@ -622,10 +624,25 @@ impl Image {
         }
     }
 
+    /// The copy the objects made now point into, where it holds their archive (a fighter's
+    /// own animation buffer while its figatree binds: another fighter's buffer can hold a copy
+    /// of the same archive), or none for the newest copy.
+    pub fn set_copy_hint(&mut self, base: Option<u32>) {
+        self.copy_hint = base;
+    }
+
     /// Where the newest copy of an archive's file's data is ([`Image::place_copy`]).
     pub fn copy_at(&self, archive: ArchiveId) -> Option<u32> {
         if !self.on {
             return None;
+        }
+        if let Some(b) = self.copy_hint
+            && self
+                .copies()
+                .iter()
+                .any(|&(c, _, a)| c == b && a == archive)
+        {
+            return Some(b);
         }
         self.copies()
             .iter()

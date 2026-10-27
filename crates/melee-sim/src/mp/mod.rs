@@ -202,6 +202,10 @@ pub struct Geometry<K: Kinds> {
     /// The joints' array's address in the scene's heap (`groundCollJoint`), from the allocator
     /// model (0 without), which `mpJointFromLine` leaves in r5 for the computer player's DI.
     pub joints_addr: u32,
+    /// The vertices' and lines' arrays' addresses (`groundCollVtx`, `groundCollLine`), as
+    /// `joints_addr` (0 without).
+    pub vertices_addr: u32,
+    pub lines_addr: u32,
     /// The joints whose stamp the load left where the array's block held the GPU's pixels (a
     /// render target's, `hsd::image::Src::RenderTarget`), until the stage code stamps them:
     /// the comparer leaves such a stamp out, and reading one stops (docs/engine.md,
@@ -341,12 +345,14 @@ impl<K: Kinds> Geometry<K> {
     /// attribute areas first (`grDynamicAttr_801CA0B4`), as the original does here.
     pub fn load(data: &Archives, coll_data: Option<DataRef>, scale: f32, grkind: i32) -> Self {
         // The vertices', lines' and joints' arrays, for 2048, 1536 and 256 of them.
-        let joints_addr = crate::hsd::heap::with(|h| {
-            h.mem_alloc(2048 * 0x18);
-            h.mem_alloc(1536 * 8);
-            h.mem_alloc(256 * 0x34)
+        let (vertices_addr, lines_addr, joints_addr) = crate::hsd::heap::with(|h| {
+            (
+                h.mem_alloc(2048 * 0x18),
+                h.mem_alloc(1536 * 8),
+                h.mem_alloc(256 * 0x34),
+            )
         })
-        .unwrap_or(0);
+        .unwrap_or((0, 0, 0));
         let (verts, mut lines, ranges, descs) = match coll_data {
             Some(c) => read_data(data, c),
             None => default_data(),
@@ -363,6 +369,16 @@ impl<K: Kinds> Geometry<K> {
         // The stamp the load leaves as the joints' array held it: after the menus, what they
         // left there (docs/engine.md, a session's heap leftovers).
         let left = crate::game::leftovers::bytes(data, joints_addr, 0x34 * joint_count as u32);
+        // Where the image doesn't know a stamp's bytes, the comparer stops if the original's
+        // differ from the zero read (the unlaid-layout stop).
+        if joints_addr != 0 && crate::hsd::heap::image_on() {
+            crate::hsd::heap::with(|h| {
+                for i in 0..joint_count as u32 {
+                    h.image
+                        .note_unlaid(joints_addr + 0x34 * i + 0xC, 2, "CollJoint");
+                }
+            });
+        }
         let render_stamps = (0..joint_count)
             .filter(|&i| {
                 let at = joints_addr + 0x34 * i as u32 + 0xC;
@@ -453,6 +469,8 @@ impl<K: Kinds> Geometry<K> {
             generation: 0,
             islands: Islands::default(),
             joints_addr,
+            vertices_addr,
+            lines_addr,
             render_stamps,
         };
         g.build_islands();

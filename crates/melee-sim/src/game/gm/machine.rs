@@ -727,6 +727,7 @@ impl Running<'_> {
                 crate::game::mn::main::ON_FRAME,
             ),
             GS_VS => (super::vs::SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
+            GS_SUDDEN_DEATH => (super::vs::SD_SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
             GS_CSS => (
                 crate::game::mn::charsel::ON_ENTER,
                 crate::game::mn::charsel::ON_FRAME,
@@ -786,6 +787,7 @@ impl Running<'_> {
             super::progressive::ON_ENTER => self.prog_scan_on_enter(),
             crate::game::mn::main::ON_ENTER => self.menu_on_enter(),
             super::vs::SCENE_ON_ENTER => self.vs_scene_on_enter(scene_mode),
+            super::vs::SD_SCENE_ON_ENTER => self.sudden_death_scene_on_enter(scene_mode),
             crate::game::mn::charsel::ON_ENTER => self.charsel_on_enter(),
             crate::game::mn::stagesel::ON_ENTER => self.stagesel_on_enter(),
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
@@ -932,15 +934,21 @@ impl Running<'_> {
                     self.special_enter_results(m);
                     true
                 }
-                Hook::VsEnterSuddenDeath => unported_call(&format!(
-                    "game mode {m:#x}'s Sudden Death's entry (gmVsMelee_EnterSuddenDeath: task 9)"
-                )),
-                Hook::VsExitSuddenDeath => unported_call(&format!(
-                    "game mode {m:#x}'s Sudden Death's exit (gmVsMelee_ExitSuddenDeath: task 9)"
-                )),
-                Hook::VsExitResults => unported_call(&format!(
-                    "game mode {m:#x}'s results' exit (gmVsMelee_ExitResults: task 9)"
-                )),
+                Hook::VsEnterSuddenDeath => {
+                    self.special_enter_sudden_death(m);
+                    true
+                }
+                Hook::VsExitSuddenDeath => {
+                    // VS mode's (`gmVsMelee_ExitSuddenDeath`).
+                    self.vs_mode_exit_sudden_death();
+                    true
+                }
+                Hook::VsExitResults => {
+                    let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
+                    let terminates = next.is_none_or(|d| d.id == 0xFF);
+                    self.special_exit_results(m, terminates);
+                    true
+                }
                 _ => false,
             };
             if done {
@@ -976,12 +984,20 @@ impl Running<'_> {
             Hook::VsExitSss => self.vs_mode_exit_sss(),
             Hook::VsEnterVs => self.vs_mode_enter_vs(),
             Hook::VsExitVs => self.vs_mode_exit_vs(),
-            Hook::VsEnterSuddenDeath => {
-                unported_call("onEnterSuddenDeath (gmVsMelee_EnterSuddenDeath: task 9)")
-            }
-            Hook::VsExitSuddenDeath => unported_call("onExitSuddenDeath (task 9)"),
+            Hook::VsEnterSuddenDeath => self.vs_mode_enter_sudden_death(),
+            Hook::VsExitSuddenDeath => self.vs_mode_exit_sudden_death(),
             Hook::VsEnterResults => self.vs_mode_enter_results(),
-            Hook::VsExitResults => unported_call("onExitResults (task 9)"),
+            Hook::VsExitResults => {
+                // `state[1].id != GM_GAMEMODESTATE_TERMINATE`: the state after the results'.
+                let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
+                let terminates = next.is_none_or(|d| d.id == 0xFF);
+                self.vs_mode_exit_results(terminates, super::results_exit::VS_STATE_CSS, 0);
+                // `onExitResults`'s own: the match's statistics, unless it was cancelled.
+                let me = self.game.vs_melee.results_enter.match_end.clone();
+                if !super::results_scene::canceled(me.outcome) {
+                    self.game.add_match_stats(&me);
+                }
+            }
             Hook::ApproachOnEnter
             | Hook::ApproachVsOnEnter
             | Hook::ApproachVsOnExit

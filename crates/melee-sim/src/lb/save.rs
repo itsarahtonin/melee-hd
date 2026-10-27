@@ -196,6 +196,25 @@ impl Drop for CardLent {
     }
 }
 
+/// The save file as the lent card holds it now, a `.gci`: none without a lent card, or with
+/// no save file on it.
+pub fn lent_save_gci() -> Option<Vec<u8>> {
+    LENT.with(|l| {
+        let l = l.borrow();
+        let dev = l.as_ref()?;
+        let mut card = dev.card.clone()?;
+        let mut clock = melee_save::card::Clock::at(0);
+        let (m, r) = card.mount(&dev.console, &mut clock);
+        if r < 0 {
+            return None;
+        }
+        let file = m.open(melee_save::melee::FILENAME).ok()?;
+        melee_save::gci::Gci::from_card(&m, file)
+            .ok()
+            .map(|g| g.to_bytes())
+    })
+}
+
 /// The lent device, if a step has it: what `f` makes of it.
 fn with_device<R>(f: impl FnOnce(&mut CardDevice) -> R) -> R {
     LENT.with(|l| {

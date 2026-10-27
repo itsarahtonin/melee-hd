@@ -4,7 +4,7 @@ Every function in ssbm-rs's symbol table and what melee-hd did with it: ported (
 
 | Area | Ported | Ported, unchecked | Replaced | Dead | Unaccounted | Total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **All** | 13915 | 0 | 444 | 253 | 5215 | 19827 |
+| **All** | 13993 | 0 | 444 | 253 | 5137 | 19827 |
 | MSL | 6 | 0 | 14 | 0 | 33 | 53 |
 | MetroTRK | 0 | 0 | 133 | 0 | 0 | 133 |
 | Runtime | 10 | 0 | 10 | 0 | 2 | 22 |
@@ -12,12 +12,12 @@ Every function in ssbm-rs's symbol table and what melee-hd did with it: ported (
 | melee/cm | 124 | 0 | 0 | 0 | 3 | 127 |
 | melee/db | 3 | 0 | 0 | 0 | 77 | 80 |
 | melee/ef | 64 | 0 | 1 | 0 | 0 | 65 |
-| melee/ft | 5408 | 0 | 3 | 21 | 1376 | 6808 |
-| melee/gm | 670 | 0 | 0 | 0 | 975 | 1645 |
+| melee/ft | 5412 | 0 | 3 | 21 | 1372 | 6808 |
+| melee/gm | 734 | 0 | 0 | 0 | 911 | 1645 |
 | melee/gr | 1473 | 0 | 0 | 225 | 919 | 2617 |
 | melee/if | 175 | 0 | 0 | 0 | 146 | 321 |
-| melee/it | 3659 | 0 | 0 | 0 | 618 | 4277 |
-| melee/lb | 376 | 0 | 27 | 0 | 132 | 535 |
+| melee/it | 3665 | 0 | 0 | 0 | 612 | 4277 |
+| melee/lb | 380 | 0 | 27 | 0 | 128 | 535 |
 | melee/mn | 379 | 0 | 0 | 1 | 51 | 431 |
 | melee/mp | 214 | 0 | 4 | 0 | 11 | 229 |
 | melee/pl | 256 | 0 | 0 | 0 | 57 | 313 |
