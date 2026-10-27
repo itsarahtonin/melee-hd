@@ -149,6 +149,8 @@ pub fn scene_game_objects(
 ) {
     if geometry_live {
         coll_joints(game, data, img);
+        coll_arrays(game, data, img);
+        zako_slots(game, data, img);
     }
     if dynamics_live {
         dynamics_links(game, data, img);
@@ -185,6 +187,73 @@ pub fn scene_game_objects(
             anim_buf(game, img, slot);
         }
     }
+}
+
+/// The stage's vertices and lines (`groundCollVtx`, 0x18 each, and `groundCollLine`, 8 each),
+/// as their blocks go back with the scene's heap: each vertex's data position, place and
+/// place before; each line in the data's groups its data's line and flags; the rest of each
+/// block (past the stage's, and a line no group holds) what it held.
+fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
+    let Some(g) = &game.geometry else { return };
+    if g.vertices_addr != 0 {
+        let at = g.vertices_addr;
+        let mut l = Lay::leftover(img, data, at, 2048 * 0x18);
+        for (i, v) in g.vertices.iter().enumerate().take(2048) {
+            let a = at + 0x18 * i as u32;
+            for (k, f) in [v.base.x, v.base.y, v.pos.x, v.pos.y, v.prev.x, v.prev.y]
+                .into_iter()
+                .enumerate()
+            {
+                l.put_u32(a + 4 * k as u32, f.to_bits());
+            }
+        }
+        l.put(img);
+    }
+    if g.lines_addr != 0 {
+        let at = g.lines_addr;
+        let lines = match game.stage_info.coll_data {
+            None => None,
+            Some(c) => data.ptr(c.at(8)).and_then(|d| img.data_addr(d)),
+        };
+        let mut l = Lay::leftover(img, data, at, 1536 * 8);
+        for r in &g.ranges {
+            for id in r.start as i32..r.start as i32 + r.count as i32 {
+                let Some(line) = g.lines.get(id as usize) else {
+                    continue;
+                };
+                let a = at + 8 * id as u32;
+                // A stage without collision data's line is the executable's (`mpLib_803BF760`).
+                l.put_word(a, lines.map(|d| d + 0x10 * id as u32));
+                l.put_u32(a + 4, line.flags);
+            }
+        }
+        l.put(img);
+    }
+}
+
+/// The enemy spawner's slots (`grZakoGenerator_Data`, 81 of 12 bytes), as their block goes
+/// back with the scene's heap: each slot's point, timer and spawn; its trophy word where the
+/// stage wrote it, else what the block held.
+fn zako_slots(game: &Game, data: &Archives, img: &mut Image) {
+    let z = &game.gr.zako;
+    let (Some(slots), at) = (&z.slots, z.addr) else {
+        return;
+    };
+    if at == 0 {
+        return;
+    }
+    let mut l = Lay::leftover(img, data, at, 0x3CC);
+    let cx = Addrs { game, img };
+    for (i, s) in slots.iter().enumerate().take(81) {
+        let a = at + 0xC * i as u32;
+        l.put_u16(a, s.point as u16);
+        l.put_u16(a + 2, s.timer as u16);
+        l.put_word(a + 4, cx.handle("GObjId", s.item.map(|g| g.0)));
+        if let Some(x8) = s.x8 {
+            l.put_u32(a + 8, x8 as u32);
+        }
+    }
+    l.put(img);
 }
 
 /// The dynamics' links (`lb_8000FCDC`'s block, 0x140 links of 0x98), as their block goes
@@ -607,6 +676,7 @@ impl LayCx for Addrs<'_> {
             "QueuedId" => g.ef.queued.addr(h),
             // The items' tables in the executable: the handle is the address.
             "GroundId" => g.grounds.addr(h),
+            "CameraBoxId" if g.camera.boxes.addr != 0 => g.camera.boxes.addr + 0x6C * h,
             "ItemLogicRef" | "ItemStatesRef" => h,
             _ => 0,
         };

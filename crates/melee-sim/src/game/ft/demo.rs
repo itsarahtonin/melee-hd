@@ -403,8 +403,19 @@ impl Fighter {
 /// `ftCo_800BEFD0`).
 pub const DEMO_ANIM_2: u32 = 0x800B_EF00;
 pub const DEMO_ANIM_5: u32 = 0x800B_EFD0;
+/// The common motion state 3's (`ftCo_800BED84`).
+pub const DEMO_ANIM_3: u32 = 0x800B_ED84;
 
-/// `ftCo_800BEF00` and `ftCo_800BEFD0`: empty.
+/// Whether a fighter is frozen in a KO toward the screen or asleep, `ftCo_800BF228`: the
+/// states a results pose's held item follows its size in.
+#[doc(alias = "ftCo_800BF228")]
+pub fn frozen_or_asleep(game: &crate::game::state::Game, gobj: GObjId) -> bool {
+    let m = game.fighter(gobj).motion_id;
+    m == super::co::ids::ms::DEAD_UP_FALL_HIT_CAMERA_ICE || m == super::co::ids::ms::SLEEP
+}
+
+/// `ftCo_800BEF00`, `ftCo_800BED84` and `ftCo_800BEFD0`: empty.
 #[doc(alias = "ftCo_800BEF00")]
+#[doc(alias = "ftCo_800BED84")]
 #[doc(alias = "ftCo_800BEFD0")]
 pub fn demo_anim() {}

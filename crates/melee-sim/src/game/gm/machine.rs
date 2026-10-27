@@ -672,6 +672,11 @@ impl Running<'_> {
                 let next = state.and_then(|(m, s)| states(m).get(usize::from(s) + 1));
                 let terminates = next.is_none_or(|d| d.id == 0xFF);
                 self.vs_mode_exit_results(terminates, super::results_exit::VS_STATE_CSS);
+                // `onExitResults`'s own: the match's statistics, unless it was cancelled.
+                let me = self.game.vs_melee.results_enter.match_end.clone();
+                if !super::results_scene::canceled(me.outcome) {
+                    self.game.add_match_stats(&me);
+                }
             }
             Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
                 unported_call("the challenger approach's states (task 17)")

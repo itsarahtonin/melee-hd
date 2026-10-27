@@ -3,7 +3,7 @@
 //! damage, and whether the match had several winners (Sudden Death's question).
 
 use super::super::state::Game;
-use super::super::structs::MatchEnd;
+use super::super::structs::{GmStats, MatchEnd};
 use super::match_exit::selkind;
 
 /// `Gm_PKind_Human`.
@@ -253,4 +253,271 @@ pub fn several_winners(end: &MatchEnd) -> bool {
         end.n_winners
     };
     winners > 1
+}
+
+/// The player whose place is `end`'s last (the largest `is_big_loser`, by team in a team
+/// battle), `fn_80161004`.
+#[doc(alias = "fn_80161004")]
+fn last_place(end: &MatchEnd) -> i32 {
+    let mut max = 0;
+    if end.is_teams == 1 {
+        for t in &end.team_standings {
+            if t.active != 0 && i32::from(t.is_big_loser) > max {
+                max = i32::from(t.is_big_loser);
+            }
+        }
+    } else {
+        for p in &end.player_standings[..4] {
+            if p.pkind != 3 && i32::from(p.is_big_loser) > max {
+                max = i32::from(p.is_big_loser);
+            }
+        }
+    }
+    max
+}
+
+/// One of `fn_80161154`'s tie-breaks over the players still tied (`spc`): the player `keep`
+/// prefers, then the others not equal to it dropped; that player, and whether no tie is left.
+fn tie_break(
+    spc: &mut [bool; 4],
+    keep: impl Fn(usize, usize) -> bool,
+    eq: impl Fn(usize, usize) -> bool,
+) -> (usize, bool) {
+    let mut idx = 4usize;
+    for i in 0..4 {
+        if spc[i] && (idx == 4 || keep(idx, i)) {
+            idx = i;
+        }
+    }
+    let mut cnt = 0;
+    for i in 0..4 {
+        if spc[i] && idx != i {
+            if eq(i, idx) {
+                cnt += 1;
+            } else {
+                spc[i] = false;
+            }
+        }
+    }
+    (idx, cnt == 0)
+}
+
+/// The match's loser, `fn_80161154`: the player in the last place (in a team battle, of the
+/// last team), ties broken by the fewest KOs, then the most falls, then the least damage
+/// taken, then the longest walk, then the first port.
+#[doc(alias = "fn_80161154")]
+pub fn loser(end: &MatchEnd) -> usize {
+    let result = last_place(end);
+    let ps = &end.player_standings;
+    let mut spc = [false; 4];
+    let mut idx = 4usize;
+    let mut tied = false;
+    for i in 0..4 {
+        let p = &ps[i];
+        let last = p.pkind != 3
+            && if end.is_teams == 1 {
+                i32::from(end.team_standings[usize::from(p.team)].is_big_loser) == result
+            } else {
+                i32::from(p.is_big_loser) == result
+            };
+        if last {
+            // A team battle counts its last team's players as tied, the first one too; a free
+            // for all from the second player in the last place on.
+            if end.is_teams == 1 {
+                tied = true;
+                idx = i;
+            } else if idx != 4 {
+                tied = true;
+            } else {
+                idx = i;
+            }
+            spc[i] = true;
+        }
+    }
+    if !tied {
+        return idx;
+    }
+    let (i, done) = tie_break(
+        &mut spc,
+        |a, b| ps[a].x20 > ps[b].x20,
+        |a, b| ps[a].x20 == ps[b].x20,
+    );
+    if done {
+        return i;
+    }
+    let (i, done) = tie_break(
+        &mut spc,
+        |a, b| (ps[a].x24 as u32) < (ps[b].x24 as u32),
+        |a, b| ps[a].x24 == ps[b].x24,
+    );
+    if done {
+        return i;
+    }
+    let (i, done) = tie_break(
+        &mut spc,
+        |a, b| ps[a].x44 > ps[b].x44,
+        |a, b| ps[a].x44 == ps[b].x44,
+    );
+    if done {
+        return i;
+    }
+    let (i, done) = tie_break(
+        &mut spc,
+        |a, b| ps[a].x50 < ps[b].x50,
+        |a, b| ps[a].x50 == ps[b].x50,
+    );
+    if done {
+        return i;
+    }
+    spc.iter()
+        .position(|&s| s)
+        .unwrap_or_else(|| panic!("fn_80161154 returns a register its C never sets: no tie left"))
+}
+
+/// The match's winner the statistics count, `fn_80165548(end, fn_80165418(end),
+/// fn_801654A0(end))`: in a team battle the winning team's best player (the loop stops at the
+/// first), else the last player that isn't a small loser.
+#[doc(alias = "fn_80165548")]
+#[doc(alias = "fn_80165418")]
+#[doc(alias = "fn_801654A0")]
+pub fn stats_winner(end: &MatchEnd) -> i32 {
+    let mut winner = 0;
+    for i in 0..4 {
+        let p = &end.player_standings[i];
+        if p.pkind != 3 && p.is_small_loser == 0 {
+            winner = i as i32;
+        }
+    }
+    let mut team = 0;
+    for i in 0..5 {
+        let t = &end.team_standings[i];
+        if t.active != 0 && t.is_small_loser == 0 {
+            team = i as i32;
+        }
+    }
+    if end.is_teams != 1 {
+        return winner;
+    }
+    let ps = &end.player_standings;
+    let mut ret = 0;
+    for i in 0..4 {
+        if ps[i].pkind != 3 && i32::from(ps[i].team) == team {
+            let mut result = i as i32;
+            for j in 0..4 {
+                if ps[j].pkind != 3
+                    && i32::from(ps[j].team) == team
+                    && i != j
+                    && ps[i].is_small_loser > ps[j].is_small_loser
+                {
+                    result = -1;
+                    break;
+                }
+            }
+            if result >= 0 {
+                ret += result;
+                break;
+            }
+        }
+    }
+    ret
+}
+
+/// A player's match added to a set of statistics, `fn_80161C90`: its self-destructs (held at
+/// 0xFFFF), attacks, damage dealt, taken and recovered, its peak damage, a match, a victory
+/// for the statistics' winner and a loss for the loser, the play time, the players (held at
+/// 0xFFFF), the distances walked (`vs_walk`, the save's VS total, too), run and fallen, the
+/// peak height, and in a coin match the coins. The 32-bit sums' tests against the largest
+/// word never hold: they wrap.
+#[doc(alias = "fn_80161C90")]
+fn add_stats(end: &MatchEnd, slot: usize, s: &mut GmStats, vs_walk: &mut i32) {
+    let p = &end.player_standings[slot];
+    let sat16 = |a: u16, b: u32| -> u16 { (u32::from(a) + b).min(0xFFFF) as u16 };
+    let add = |a: i32, b: u32| -> i32 { (a as u32).wrapping_add(b) as i32 };
+    s.sd_count = sat16(s.sd_count, u32::from(p.self_destructs));
+    s.attacks_hit = s.attacks_hit.wrapping_add(p.x38);
+    s.attacks_total = s.attacks_total.wrapping_add(p.x3C);
+    s.damage_dealt = add(s.damage_dealt, p.x40);
+    s.damage_taken = add(s.damage_taken, p.x44);
+    s.damage_recovered = add(s.damage_recovered, p.x48);
+    if u32::from(s.peak_damage) < p.x4C {
+        s.peak_damage = p.x4C as u16;
+    }
+    s.match_count = sat16(s.match_count, 1);
+    if slot as i32 == stats_winner(end) {
+        s.victories = sat16(s.victories, 1);
+    }
+    if slot == loser(end) {
+        s.losses = sat16(s.losses, 1);
+    }
+    s.play_time = s.play_time.wrapping_add(end.frame_count / 60);
+    let count = end.player_standings[..4]
+        .iter()
+        .filter(|q| q.pkind != 3)
+        .count() as u32;
+    let total = s.total_player_count.wrapping_add(count);
+    s.total_player_count = if total > 0xFFFF { 0xFFFF } else { total };
+    s.walk_distance = add(s.walk_distance, p.x50);
+    *vs_walk = p.x50.wrapping_add(*vs_walk as u32) as i32;
+    s.run_distance = add(s.run_distance, p.x54);
+    s.fall_distance = add(s.fall_distance, p.x58);
+    s.peak_height = add(s.peak_height, p.x5C);
+    if end.match_kind == 2 {
+        s.coins_collected = add(s.coins_collected, p.x60);
+        s.coins_swiped = add(s.coins_swiped, p.x64);
+        s.coins_lost = add(s.coins_lost, p.x68);
+    }
+}
+
+impl Game {
+    /// The match's statistics added to the save after the results of a match not cancelled,
+    /// `gm_801623A4`: each player's character's KOs on each other character (held at 0xFFFF)
+    /// and statistics (`fn_80162068`), then each named player's KOs on each other named
+    /// player, play time with its character and statistics (`fn_80162170`).
+    #[doc(alias = "gm_801623A4")]
+    #[doc(alias = "fn_80162068")]
+    #[doc(alias = "fn_80162170")]
+    pub fn add_match_stats(&mut self, end: &MatchEnd) {
+        let ps = &end.player_standings;
+        for i in 0..4 {
+            if ps[i].pkind == 3 {
+                continue;
+            }
+            let si = usize::from(selkind(ps[i].ckind as u8));
+            for j in 0..4 {
+                if i == j || ps[j].pkind == 3 {
+                    continue;
+                }
+                let sj = usize::from(selkind(ps[j].ckind as u8));
+                let fd = &mut self.game_data.thing.save_data.x1F2C[si];
+                let sum = u32::from(ps[i].kills[j]) + u32::from(fd.fighter_kos[sj]);
+                fd.fighter_kos[sj] = sum.min(0xFFFF) as u16;
+            }
+            let sd = &mut self.game_data.thing.save_data;
+            let mut walk = sd.unk_30.x10;
+            add_stats(end, i, &mut sd.x1F2C[si].stats, &mut walk);
+            sd.unk_30.x10 = walk;
+        }
+        for i in 0..4 {
+            let p = &ps[i];
+            if p.pkind == 3 || p.x4 == 0x78 {
+                continue;
+            }
+            for j in 0..4 {
+                let q = &ps[j];
+                if i != j && q.pkind != 3 && q.x4 != 0x78 {
+                    let nt = self.game_data.name_tag(usize::from(p.x4));
+                    let at = usize::from(q.x4);
+                    let v = (i32::from(p.kills[j]) + i32::from(nt.vs_kos[at])).min(0xFFFF);
+                    nt.vs_kos[at] = v as u16;
+                }
+            }
+            let s = usize::from(selkind(p.ckind as u8));
+            let mut walk = self.game_data.thing.save_data.unk_30.x10;
+            let nt = self.game_data.name_tag(usize::from(p.x4));
+            nt.play_time_by_fighter[s] =
+                nt.play_time_by_fighter[s].wrapping_add(end.frame_count / 60);
+            add_stats(end, i, &mut nt.stats, &mut walk);
+            self.game_data.thing.save_data.unk_30.x10 = walk;
+        }
+    }
 }

@@ -532,6 +532,7 @@ impl Importer<'_> {
             }),
             cursor: self.u16_at(z + 8) as i16,
             flags: self.u8_at(z + 0xA),
+            addr: slots,
         };
         self.game.gr.winds = winds(|a| cap.u32(a));
         self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
@@ -610,6 +611,7 @@ impl Importer<'_> {
         };
         let vtx = r32(sym("groundCollVtx"));
         let lines = r32(sym("groundCollLine"));
+        let lines_addr = lines;
         let joints = r32(sym("groundCollJoint"));
         let n_vtx = r32(coll + 4);
         let n_lines = r32(coll + 0xC);
@@ -711,6 +713,8 @@ impl Importer<'_> {
             generation: r32(sym("mpColl_804D64AC")) as i32,
             islands,
             joints_addr: joints,
+            vertices_addr: vtx,
+            lines_addr,
         })
     }
 
@@ -1667,7 +1671,15 @@ impl Comparer<'_> {
             // joint's first move (docs/engine.md); one the GPU's pixels left is out until then
             // (its read stops the simulation).
             let render = g.render_stamps.contains(&(j as u16));
-            if !render && joint.stamp != self.u16(a + 0xC) as i16 {
+            // A stamp over bytes the heap's image doesn't know: its owner's layout isn't
+            // ported (the comparer's unlaid-layout stop, as a fighter's or an item's).
+            let unlaid = !render && joint.stamp != self.u16(a + 0xC) as i16 && {
+                let ours = (joint.stamp as u16).to_be_bytes();
+                let before = self.diffs.len();
+                let _ = self.unlaid_view(a + 0xC, 2, None, |l, _| l.put_bytes(a + 0xC, &ours));
+                self.diffs.len() > before
+            };
+            if !render && !unlaid && joint.stamp != self.u16(a + 0xC) as i16 {
                 self.begin_block("coll joint", a, &path);
                 self.mismatch(
                     &format!("{path}.stamp"),

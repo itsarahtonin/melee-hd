@@ -1088,6 +1088,11 @@ pub fn live_objects(objs: &Objects, data: &melee_data::archive::Archives, img: &
             {
                 generator(objs, data, img, super::generator::GeneratorId(slot));
             }
+            k if k == std::any::type_name::<super::appsrt::AppSrt>()
+                && !objs.app_srts.pool.is_free(slot) =>
+            {
+                app_srt(objs, img, super::appsrt::AppSrtId(slot));
+            }
             k if k == std::any::type_name::<super::shadow::Shadow>()
                 && !objs.shadows.is_free(slot) =>
             {
@@ -1252,5 +1257,36 @@ pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
     l.u32(0x1C, u32::from(o.active));
     l.bytes(0x20, &[o.intensity, 0, 0, 0]);
     l.u32(0x24, 0);
+    l.put(img);
+}
+
+/// `HSD_psAppSRT` (0xA4), cleared whole as it's made (`psAddGeneratorAppSRT`'s `memset`):
+/// its link (always null: nothing links app-SRTs), generator, transform, status, frame and
+/// uses, matrix, the display pass's view matrix and screen scale, free function (null),
+/// id and flag.
+pub fn app_srt(objs: &Objects, img: &mut Image, s: super::appsrt::AppSrtId) {
+    let at = objs.app_srts.pool.addr(s.0);
+    if at == 0 {
+        return;
+    }
+    let o = &objs.app_srts.pool[s.0];
+    let mut l = Lay::new(at, 0xA4);
+    l.bytes(0, &[0; 0xA4]);
+    l.u32(4, addr_of(o.gp, |g| objs.generators.pool.addr(g.0)));
+    l.f32s(8, &[o.translate.x, o.translate.y, o.translate.z]);
+    l.f32s(0x14, &[o.rot.x, o.rot.y, o.rot.z, o.rot.w]);
+    l.f32s(0x24, &[o.scale.x, o.scale.y, o.scale.z]);
+    l.bytes(0x30, &[o.status, o.frame_num]);
+    l.u16(0x32, o.used_count);
+    let m = |l: &mut Lay, off: u32, m: &crate::mtx::Mtx34| {
+        for (i, v) in m.m.iter().flatten().enumerate() {
+            l.f32(off + 4 * i as u32, *v);
+        }
+    };
+    m(&mut l, 0x34, &o.mmtx);
+    m(&mut l, 0x64, &o.view);
+    l.f32s(0x94, &o.view_scale);
+    l.u16(0xA0, o.idnum);
+    l.u8(0xA2, o.xa2);
     l.put(img);
 }

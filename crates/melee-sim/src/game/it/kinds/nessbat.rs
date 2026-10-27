@@ -13,6 +13,11 @@ pub const SPAWN: u32 = 0x802A_D478;
 pub const REMOVE: u32 = 0x802A_D6B8;
 pub const PICKED_UP: u32 = 0x802A_D6F0;
 pub const ANIM_0: u32 = 0x802A_D768;
+pub const ANIM_1: u32 = 0x802A_D8DC;
+#[doc(alias = "itNessbat_UnkMotion1_Phys")]
+pub const PHYS_1: u32 = 0x802A_D9F0;
+#[doc(alias = "itNessbat_UnkMotion1_Coll")]
+pub const COLL_1: u32 = 0x802A_D9F4;
 #[doc(alias = "itNessbat_UnkMotion0_Phys")]
 pub const PHYS_0: u32 = 0x802A_D8D0;
 #[doc(alias = "itNessbat_UnkMotion0_Coll")]
@@ -26,7 +31,8 @@ const HIDDEN: u32 = 1 << 4;
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         ANIM_0 => animate_0(r, gobj),
-        COLL_0 => false,
+        COLL_0 | COLL_1 => false,
+        ANIM_1 => animate_1(r, gobj),
         _ => return None,
     })
 }
@@ -35,7 +41,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         PICKED_UP => picked_up(r, gobj),
-        PHYS_0 => {}
+        PHYS_0 | PHYS_1 => {}
         _ => return false,
     }
     true
@@ -111,6 +117,19 @@ pub fn spawn_demo(r: &mut Running, ness: GObjId, part: i32) -> Option<GObjId> {
     ip.xDD4_itemVar.ness_bat().x0.set(Some(ness));
     pick_up(r, bat, ness, part);
     Some(bat)
+}
+
+/// The bat in a posing Ness's hand matches his size while he's frozen in a KO toward the
+/// screen or asleep (`ftCo_800BF228`), `itNessbat_UnkMotion1_Anim`.
+#[doc(alias = "itNessbat_UnkMotion1_Anim")]
+pub fn animate_1(r: &mut Running, gobj: GObjId) -> bool {
+    let ness = item_mut(r.game, gobj).xDD4_itemVar.ness_bat().x0.get();
+    if let Some(n) = ness
+        && crate::game::ft::demo::frozen_or_asleep(r.game, n)
+    {
+        lib2725::copy_owner_scale(r.game, gobj, n);
+    }
+    false
 }
 
 /// The bat gone, `it_802AD6B8`.
