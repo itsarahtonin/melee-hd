@@ -106,7 +106,7 @@ fn rare(r: &mut Running) -> Option<i32> {
         && r.game.gm.unlocks.pokemon_trophies()
     {
         r.game.it.pokemon.rare_spawned = 1;
-        r.game.gm.unlocks.record_rare(RECORD_CEREBI);
+        r.record_rare_pokemon(RECORD_CEREBI);
         return Some(PKIND_CEREBI - PKIND_START);
     }
     if r.game.objs.rng.below(251) == 0
@@ -114,7 +114,7 @@ fn rare(r: &mut Running) -> Option<i32> {
         && r.game.gm.unlocks.all_characters()
     {
         r.game.it.pokemon.rare_spawned = 1;
-        r.game.gm.unlocks.record_rare(RECORD_MEW);
+        r.record_rare_pokemon(RECORD_MEW);
         return Some(PKIND_MEW - PKIND_START);
     }
     None
@@ -205,10 +205,10 @@ pub fn release(r: &mut Running, ball: GObjId) -> bool {
     };
     spawn.x44_flag[0] |= 0x80;
     if spawn.kind == PKIND_CEREBI {
-        r.game.gm.unlocks.record_rare(RECORD_CEREBI);
+        r.record_rare_pokemon(RECORD_CEREBI);
     }
     if spawn.kind == PKIND_MEW {
-        r.game.gm.unlocks.record_rare(RECORD_MEW);
+        r.record_rare_pokemon(RECORD_MEW);
     }
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return false;

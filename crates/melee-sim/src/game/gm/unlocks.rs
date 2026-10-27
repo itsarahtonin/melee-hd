@@ -88,12 +88,27 @@ impl Running<'_> {
         if self.message_noted(n) {
             return false;
         }
+        self.stamp_message(n);
+        true
+    }
+
+    /// `gmMainLib_8015D818`'s writes once its test passes: the clock's time, pending, noted.
+    fn stamp_message(&mut self, n: u32) {
         let now = self.clock_seconds();
         let s = &mut self.game.game_data.thing.save_data;
         s.x1B80[n as usize] = now;
         s.x1B40[(n / 32) as usize] |= 1 << (n % 32);
         s.x1B4C[(n / 32) as usize] |= 1 << (n % 32);
-        true
+    }
+
+    /// A rare Pokémon's record when it comes out, `gm_80172BC4` (Mew) and `gm_80172C04`
+    /// (Celebi): when the card's records (as the players' codes answer for them) haven't it,
+    /// the matches' view takes it ([`super::Unlocks::record_rare`]) and the save takes it
+    /// timed, pending and noted (`gmMainLib_8015D818`), so the next scene announces it.
+    pub fn record_rare_pokemon(&mut self, n: u32) {
+        if self.game.gm.unlocks.record_rare(n) {
+            self.stamp_message(n);
+        }
     }
 
     /// `fn_80172C78`: trophy `n` given to the save if it's new there (`gmMainLib_8015D984`:
