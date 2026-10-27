@@ -587,6 +587,31 @@ pub const OPTIONS_TOUR: Game = Game {
     replay: Replay::Session("options-tour"),
 };
 
+/// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.
+pub const SOUND_SONGS: Game = Game {
+    stage: "Main menu",
+    name: "sound-songs",
+    players: "the sound test's songs (session sound-sessions/songs)",
+    replay: Replay::Session("sound-songs"),
+};
+
+/// The sound test's categories (`sound-sessions/sounds`): a category's icon, and a category's
+/// sounds with the sound's number.
+pub const SOUND_SOUNDS: Game = Game {
+    stage: "Main menu",
+    name: "sound-sounds",
+    players: "the sound test's categories (session sound-sessions/sounds)",
+    replay: Replay::Session("sound-sounds"),
+};
+
+/// The sound test in Japanese (`sound-sessions/jp`): a song's name in Japanese.
+pub const SOUND_JP: Game = Game {
+    stage: "Main menu",
+    name: "sound-jp",
+    players: "the sound test in Japanese (session sound-sessions/jp)",
+    replay: Replay::Session("sound-jp"),
+};
+
 /// The character select with a random computer player and the random stage
 /// (`select-sessions/random`): a door opening under a hand holding its coin, Mario's
 /// costumes, the computer player's door, the stage select's random icon and its pick.
