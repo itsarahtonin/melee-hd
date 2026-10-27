@@ -1054,6 +1054,14 @@ impl Running<'_> {
         }
     }
 
+    /// `fn_8019B81C`: the players' screen made, its step on (0x1C) and its counter reset.
+    #[doc(alias = "fn_8019B81C")]
+    fn br_players_start(&mut self) {
+        self.br_players();
+        self.game.tou.tm.cur_option = 0x1C;
+        self.br().x0 = 0;
+    }
+
     /// `fn_8019A86C`: the match's players' screen: each human readies (A or Start), backs
     /// out of ready (X), or opens the out menu (X) and leaves (A on "out", not the last one
     /// in); once everyone's ready, those out are out, a box left with one player wins it, a
@@ -1062,9 +1070,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8019A86C")]
     fn br_players_step(&mut self, t: u32) {
         if self.game.tou.tm.cur_option == 0x1B {
-            self.br_players();
-            self.game.tou.tm.cur_option = 0x1C;
-            self.br().x0 = 0;
+            self.br_players_start();
         }
         if self.game.tou.tm.cur_option == 0x1D {
             self.br().x0 += 1;

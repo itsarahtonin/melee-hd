@@ -772,7 +772,7 @@ impl Running<'_> {
         let xa = i32::from(self.su().xa);
         self.tou_frame(Some(j), mem(f(xa)));
         let x5 = i32::from(self.su().x5);
-        let x = fp::fmadds(reg(7.19), f(x5 % 4), fp::fneg(reg(1.8)));
+        let x = fp::fmadds(reg(7.189_999_6), f(x5 % 4), fp::fneg(reg(1.8)));
         let y = fp::fnmsubs(reg(2.3), f(x5 / 4), reg(2.7));
         self.tou_move(j, x, y, 666.0);
     }
