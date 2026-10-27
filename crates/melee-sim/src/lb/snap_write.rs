@@ -67,11 +67,48 @@ impl SnapHeader {
 }
 
 /// The snapshot's save to a card under way: the list's steps, each a call of
-/// `lbCardNew_CompleteNextTask` from Camera Mode's menu, and the next.
+/// `lbCardNew_CompleteNextTask` from Camera Mode's menu, and the next. The card takes the
+/// list's writes at its last step, its directory stamped with the times the steps that stamp
+/// it (`stamps`) came to (`times`); the list is made of `request`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SnapSave {
     pub list: CardList,
     pub next: usize,
+    pub request: SnapRequest,
+    pub stamps: Vec<usize>,
+    pub times: Vec<u32>,
+    pub seconds: u32,
+}
+
+/// What the snapshot's card file is made of (`lb_8001BB48`'s arguments): its name, its data's
+/// size and bytes (the buffer's, past the data as far as its last block), its comment, banner
+/// and icon.
+#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct SnapRequest {
+    pub name: Vec<u8>,
+    pub size: i32,
+    pub data: Vec<u8>,
+    pub comment: Vec<u8>,
+    pub banner: Vec<u8>,
+    pub icons: Vec<u8>,
+}
+
+impl SnapRequest {
+    /// The task list's run over the request's files.
+    fn run(&self) -> melee_save::tasks::Run {
+        let mut bufs = melee_save::exec::Bufs::default();
+        bufs.files[0] = self.data.clone();
+        bufs.banner = self.banner.clone();
+        bufs.icons = self.icons.clone();
+        let mut run =
+            melee_save::tasks::Run::new(melee_save::melee::snapshot_manifest(self.size), bufs);
+        run.comment.copy_from_slice(&self.comment);
+        run
+    }
+
+    fn tasks(&self) -> Vec<(melee_save::tasks::Task, u32)> {
+        melee_save::tasks::lists::create(&self.name)
+    }
 }
 
 /// `lbsnap.c`'s writing side's state: the snapshot as `lbSnap_8001DC0C` made it (its header,
@@ -342,7 +379,8 @@ impl Running<'_> {
         let data = self.data;
         let (bytes, known) = heap::with(|h| h.image.bytes(data, snap, crate::lb::snap::SNAP_SIZE))
             .expect("the heap's image");
-        let need = (size as usize).next_multiple_of(0x1FE0).min(bytes.len());
+        // The last block may start up to a block's data before the file's end.
+        let need = (size as usize + 0x2000).min(bytes.len());
         if let Some(i) = known[..need].iter().position(|k| !k) {
             crate::game::code::unported_call(&format!(
                 "the snapshot's buffer's byte {i:#x} past its image, which the heap's image doesn't know"
@@ -362,33 +400,39 @@ impl Running<'_> {
             .snap_write
             .filename
             .expect("the snapshot's comment");
-        let mut bufs = melee_save::exec::Bufs::default();
-        bufs.files[0] = bytes;
-        bufs.banner = banner;
-        bufs.icons = icons;
-        let mut run = melee_save::tasks::Run::new(melee_save::melee::snapshot_manifest(size), bufs);
-        run.comment = comment;
+        let request = SnapRequest {
+            name: name.into_bytes(),
+            size,
+            data: bytes[..need].to_vec(),
+            comment: comment.to_vec(),
+            banner,
+            icons,
+        };
         let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
         let seconds = self.session_seconds();
-        let list = super::save::start_list(
-            run,
-            &melee_save::tasks::lists::create(name.as_bytes()),
-            now,
-            seconds,
-        );
-        let mut done = !list.card_in;
+        let (list, stamps) =
+            super::save::start_list_dry(request.run(), &request.tasks(), now, seconds);
+        let done = !list.card_in;
         let r = list.result;
         for &w in &list.start {
             self.game.audio.clock_card_work(self.data, w);
         }
-        if list.steps.is_empty() {
-            done = true;
-        }
-        self.game.snap_write.save = Some(SnapSave { list, next: 0 });
+        assert!(
+            done || !list.steps.is_empty(),
+            "a snapshot's save that ends in its first call"
+        );
         if done {
-            self.game.snap_write.save = None;
+            // Nothing written: the list failed at its mount.
             return r;
         }
+        self.game.snap_write.save = Some(SnapSave {
+            list,
+            next: 0,
+            request,
+            stamps,
+            times: Vec::new(),
+            seconds,
+        });
         result::BUSY
     }
 
@@ -413,8 +457,38 @@ impl Running<'_> {
             self.game.card_tasks.file_errors[f] = e;
         }
         self.game.audio.clock_card_work(self.data, work);
+        // A step that stamps the directory reads the clock in its transfers' chain, which
+        // its end is a fraction of a millisecond past.
+        let k = self.game.snap_write.save.as_ref().map_or(0, |s| s.next - 1);
+        if self
+            .game
+            .snap_write
+            .save
+            .as_ref()
+            .is_some_and(|s| s.stamps.contains(&k))
+        {
+            let now = self.session_seconds();
+            if let Some(s) = self.game.snap_write.save.as_mut() {
+                s.times.push(now);
+            }
+        }
         if last {
-            self.game.snap_write.save = None;
+            let save = self
+                .game
+                .snap_write
+                .save
+                .take()
+                .expect("the snapshot's save");
+            let written = super::save::finish_list(
+                save.request.run(),
+                &save.request.tasks(),
+                save.seconds,
+                &save.times,
+            );
+            assert_eq!(
+                written, r,
+                "the snapshot's save's list ended otherwise on the card"
+            );
             return r;
         }
         result::BUSY

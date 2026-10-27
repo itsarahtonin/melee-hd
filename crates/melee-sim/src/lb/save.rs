@@ -438,7 +438,41 @@ pub struct CardList {
 /// `seconds`: the list writes what it writes at once, and its steps' time is left for the calls
 /// of `lbCardNew_CompleteNextTask` after ([`save_steps`]). A list whose mount finds no card
 /// fails there, with no step.
-pub(crate) fn start_list(mut run: Run, tasks: &[(Task, u32)], now: u64, seconds: u32) -> CardList {
+pub(crate) fn start_list(run: Run, tasks: &[(Task, u32)], now: u64, seconds: u32) -> CardList {
+    start_list_on(run, tasks, now, seconds, false).0
+}
+
+/// [`start_list`] on a copy of the card, which stays as it was: for a list whose writes the
+/// caller makes at its end ([`finish_list`]), with each of the library's clock reads at the
+/// time its step comes to. Also the steps that read the clock (a create's, each sector
+/// written and a status set stamp the file's directory entry), in order.
+pub(crate) fn start_list_dry(
+    run: Run,
+    tasks: &[(Task, u32)],
+    now: u64,
+    seconds: u32,
+) -> (CardList, Vec<usize>) {
+    start_list_on(run, tasks, now, seconds, true)
+}
+
+/// Runs `tasks` with `run`'s files on the lent card, the library's clock reading `times` in
+/// turn (`seconds` before the first): a list started with [`start_list_dry`], at its end.
+pub(crate) fn finish_list(mut run: Run, tasks: &[(Task, u32)], seconds: u32, times: &[u32]) -> i32 {
+    with_device(|dev| {
+        let mut clock = Clock::at(seconds);
+        clock.script = times.iter().copied().collect();
+        let console = dev.console.clone();
+        run.execute(dev.card.as_mut(), &console, &mut clock, tasks)
+    })
+}
+
+fn start_list_on(
+    mut run: Run,
+    tasks: &[(Task, u32)],
+    now: u64,
+    seconds: u32,
+    dry: bool,
+) -> (CardList, Vec<usize>) {
     let (card_in, probe) = with_device(|dev| {
         if !dev.waits {
             // No card at power-on: ssbm-rs stands in for the CARD library.
@@ -454,19 +488,27 @@ pub(crate) fn start_list(mut run: Run, tasks: &[(Task, u32)], now: u64, seconds:
     });
     let r = with_device(|dev| {
         let mut clock = Clock::at(seconds);
-        let card = if card_in { dev.card.as_mut() } else { None };
-        run.execute(card, &dev.console.clone(), &mut clock, tasks)
+        let console = dev.console.clone();
+        if dry {
+            let mut copy = dev.card.clone();
+            let card = if card_in { copy.as_mut() } else { None };
+            run.execute(card, &console, &mut clock, tasks)
+        } else {
+            let card = if card_in { dev.card.as_mut() } else { None };
+            run.execute(card, &console, &mut clock, tasks)
+        }
     });
     let mut start = CardWork {
         ticks: probe,
         ..CardWork::default()
     };
     if !card_in {
-        return CardList {
+        let list = CardList {
             start: vec![start],
             result: r,
             ..CardList::default()
         };
+        return (list, Vec::new());
     }
     // The mount attaches slot A's channel; its check reads the font encoding the first time
     // the card's ID gets that far.
@@ -478,13 +520,43 @@ pub(crate) fn start_list(mut run: Run, tasks: &[(Task, u32)], now: u64, seconds:
     });
     start.chain = Some(mount_read(font));
     let (steps, results) = save_steps(&run);
-    CardList {
+    // The steps that stamp the directory: those of the log's creates, writes and status sets.
+    let mut stamps = Vec::new();
+    {
+        // Walk the log as `save_steps` does, noting each pushed step's kind.
+        let mut idx = 1usize;
+        let mut tasks_seen = 0;
+        let mut transfers = false;
+        for &c in &run.steps {
+            match c {
+                b't' => {
+                    if tasks_seen > 0 && transfers {
+                        idx += 1;
+                    }
+                    tasks_seen += 1;
+                    transfers = false;
+                }
+                b'r' => {
+                    transfers = true;
+                    idx += 1;
+                }
+                b'c' | b'w' | b's' => {
+                    transfers = true;
+                    stamps.push(idx);
+                    idx += 1;
+                }
+                _ => {}
+            }
+        }
+    }
+    let list = CardList {
         start: vec![start],
         steps,
         results,
         result: r,
         card_in: true,
-    }
+    };
+    (list, stamps)
 }
 
 /// The save's card data and header as the writer's list takes them (`lb_8001BE30`'s
