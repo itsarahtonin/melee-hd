@@ -3,6 +3,8 @@
 
 pub mod attract;
 pub mod boot_mode;
+pub mod camera_mode;
+pub mod challenger;
 pub mod decisions;
 pub mod erase;
 pub mod howto;
@@ -19,12 +21,15 @@ pub mod pause;
 pub mod progressive;
 pub mod records;
 pub mod results;
+pub mod results_exit;
 pub mod results_fighters;
+pub mod results_panel;
 pub mod results_player;
 pub mod results_scene;
 pub mod results_stats;
 pub mod scene;
 pub mod setup_players;
+pub mod special;
 pub mod stamina;
 pub mod title;
 pub mod trophies;
@@ -221,6 +226,24 @@ const UNLOCK_INDEX: [(u8, u32); 11] = [
     (0x19, 10),
 ];
 
+/// A character's unlock index, `gm_CKindToUnlockIndex` (none for one never locked).
+#[doc(alias = "gm_CKindToUnlockIndex")]
+pub fn unlock_index(ckind: u8) -> Option<u32> {
+    UNLOCK_INDEX
+        .iter()
+        .find(|&&(k, _)| k == ckind)
+        .map(|&(_, i)| i)
+}
+
+/// The character of an unlock index, `gm_GetCKindByUnlockIndex`.
+pub fn ckind_by_unlock_index(i: u8) -> u8 {
+    UNLOCK_INDEX
+        .iter()
+        .find(|&&(_, n)| n == u32::from(i))
+        .map(|&(k, _)| k)
+        .unwrap_or_else(|| panic!("no character has unlock index {i}"))
+}
+
 impl Unlocks {
     /// What Slippi Dolphin plays with: its codes unlock everything.
     pub fn slippi() -> Unlocks {
@@ -385,6 +408,16 @@ pub fn is_super_sudden_death(game: &Game) -> bool {
 /// (`StartMeleeRules::on_unpause_override`), which the match's start also calls.
 pub const FIXED_CAMERA: u32 = 0x8016_5290;
 
+/// Camera Mode's pause and unpause camera, `gm_80165268`.
+pub const PAUSE_CAMERA: u32 = 0x8016_5268;
+
+/// `gm_80165268`: the camera Camera Mode's pause and unpause leave (`Camera_8002FC7C(4, 3)`),
+/// whoever paused.
+#[doc(alias = "gm_80165268")]
+pub fn pause_camera(r: &mut super::state::Running) {
+    super::camera::set_up_free_2(r.game, 4, 3);
+}
+
 /// The game modes' functions the match calls by address: the rules' hooks.
 pub fn call(
     r: &mut super::state::Running,
@@ -400,7 +433,7 @@ pub fn call(
             r.attract_match_start();
             Some(super::code::Val::None)
         }
-        _ => stamina::call(r, f, args),
+        _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),
     }
 }
 

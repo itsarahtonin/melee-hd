@@ -79,6 +79,10 @@ impl Default for BoneTable {
 /// The item code's globals.
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct Globals {
+    /// Each item's runs of its block (offsets) that held the GPU's pixels when it was made,
+    /// as the fighters' (`ft::Globals::render_leftovers`), by slot.
+    #[clone_from(if_changed)]
+    pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
     pub bone_tables: Pool<BoneTable, { pool_kind(Kind::ItemDynamicBones) }>,
     /// The links of items made of links (`item_link_alloc_data`), each the user data of a GObj

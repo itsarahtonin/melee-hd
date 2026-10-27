@@ -59,6 +59,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     let mut shortcut = false;
     let mut shortcut_failed = false;
     let mut card_path: Option<PathBuf> = None;
+    let mut card_out: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
     let mut pos = Vec::new();
     let mut it = args.iter();
@@ -89,6 +90,8 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             // started: its start data and its heap after its first tick.
             "--shortcut" => shortcut = true,
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
+            // The memory card's image as the straight run leaves it, written at the end.
+            "--card-out" => card_out = Some(it.next().expect("--card-out FILE").into()),
             "--card-pull" => {
                 let mut f = it
                     .next()
@@ -102,7 +105,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let [inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
+            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
         );
         return ExitCode::from(2);
     };
@@ -231,6 +234,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             && now_match
             && in_scene == 1
             && s.game.machine.routing.curr_mode == melee_sim::game::gm::GM_VS
+            // The VS scene's match, not Sudden Death's or the results screen's fighters.
+            && melee_sim::game::gm::machine::scene_kind(s.game.machine.scene_info)
+                == Some(melee_sim::game::gm::machine::GS_VS)
             && !check_shortcut(tick - 1, &s, ring[slot].game.objs.rng.seed, &disc)
         {
             shortcut_failed = true;
@@ -301,6 +307,15 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         let _ = ended;
     };
     report_matches(&match_ticks);
+    if let Some(p) = card_out {
+        match s.card.as_ref().and_then(|d| d.card.as_ref()) {
+            Some(c) => match std::fs::write(&p, c.image()) {
+                Ok(()) => println!("the memory card's image written to {}", p.display()),
+                Err(e) => eprintln!("{}: {e}", p.display()),
+            },
+            None => println!("no memory card to write"),
+        }
+    }
     if shortcut_failed {
         return ExitCode::FAILURE;
     }
@@ -347,17 +362,8 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
             team: p.team,
         })
         .collect();
-    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
-    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
-    // The match's own: the save's unlocks, the session's console, the allocator model on
-    // whatever the players (the menus' match always runs it).
-    settings.unlocks = s.game.gm.unlocks;
-    settings.seed = seed;
-    settings.disc = s.setup.disc;
-    settings.dsp = s.setup.dsp;
-    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
-    // A team battle and handicaps are the menus' alone: the launcher makes neither, so its
-    // shortcut can't make such a match.
+    // A team battle and handicaps (the automatic handicap's too) are the menus' alone: the
+    // launcher makes neither, so its shortcut can't make such a match.
     let handicaps = start.players.iter().take(4).any(|p| {
         i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE && p.handicap != 9
     });
@@ -373,6 +379,15 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
         );
         return true;
     }
+    let (rules, prefs) = melee_sim::game::gm::attract::saved_rules(&s.game.game_data);
+    let mut settings = Settings::vs_with(start.rules.stkind, &players, &rules, &prefs);
+    // The match's own: the save's unlocks, the session's console, the allocator model on
+    // whatever the players (the menus' match always runs it).
+    settings.unlocks = s.game.gm.unlocks;
+    settings.seed = seed;
+    settings.disc = s.setup.disc;
+    settings.dsp = s.setup.dsp;
+    settings.heap = Some(melee_sim::hsd::heap::Layout::vanilla_vs());
     // The players' name tags, which the launcher doesn't offer: taken from the menus', and
     // listed.
     let mut taken = Vec::new();

@@ -130,7 +130,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80172624")]
     #[doc(alias = "fn_80172664")]
     #[doc(alias = "fn_80173644")]
-    fn message_condition(&mut self, n: u32) -> Option<bool> {
+    pub(super) fn message_condition(&mut self, n: u32) -> Option<bool> {
         let any = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().any(f);
         let all = |r: &Self, f: &dyn Fn(&FighterData_x7C) -> bool| r.records_1p().all(f);
         let played = self.vs_matches_played();
@@ -285,7 +285,7 @@ impl Running<'_> {
         s.trophy_flags = [0; 293];
         s.trophy_category_flags = 0;
         s.trophy_count = 0;
-        self.game.modes.toy_x19a = 0;
+        self.toy_reset_table();
         let s = &mut self.game.game_data.thing.save_data;
         s.unk_30 = Default::default();
         for i in 0..300 {

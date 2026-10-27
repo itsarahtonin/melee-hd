@@ -41,11 +41,13 @@ pub enum Replay {
     Oracle(&'static str),
     /// A recorded console session from power-on, `$SSBM_RS_LOCAL/lockstep/idle-sessions/
     /// NAME.inputs`, `lockstep/rules-sessions/NAME.inputs` or `lockstep/menu-sessions/
-    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs` and for
-    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `sound-NAME`
-    /// `lockstep/sound-sessions/NAME.inputs` and for `celebiN` `lockstep/celebi-sessions/
-    /// celebiN.inputs` (ssbm-rs's `SSBMINP1`), played
-    /// in the console's float mode.
+    /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
+    /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
+    /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
+    /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`, for
+    /// `results-NAME` `lockstep/results-sessions/NAME.inputs` and for `celebiN`
+    /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -60,11 +62,23 @@ impl Replay {
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("data-") {
+                    return ssbm_rs_local(&format!("lockstep/data-sessions/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("options-") {
                     return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("select-") {
                     return ssbm_rs_local(&format!("lockstep/select-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("results-") {
+                    return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("special-") {
+                    return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("trophy-") {
+                    return ssbm_rs_local(&format!("lockstep/trophy-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("sound-") {
                     return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
@@ -586,6 +600,39 @@ pub const NAMES_KANA: Game = Game {
 /// The Options menus toured (`options-sessions/tour`): the rumble screen's ports and names,
 /// the sound screen's balance, the screen options with the deflicker filter off, the language
 /// screen and erasing data.
+/// The Data menu's sessions (`data-sessions/NAME`): the special messages, the bonuses, the
+/// other records, the VS records' three pages, and two special messages announced.
+pub const DATA_INFO: Game = Game {
+    stage: "Main menu",
+    name: "data-info",
+    players: "the special messages (session data-sessions/info)",
+    replay: Replay::Session("data-info"),
+};
+pub const DATA_BONUS: Game = Game {
+    stage: "Main menu",
+    name: "data-bonus",
+    players: "the bonuses (session data-sessions/bonus)",
+    replay: Replay::Session("data-bonus"),
+};
+pub const DATA_COUNT: Game = Game {
+    stage: "Main menu",
+    name: "data-count",
+    players: "the other records (session data-sessions/count)",
+    replay: Replay::Session("data-count"),
+};
+pub const DATA_DIAGRAM: Game = Game {
+    stage: "Main menu",
+    name: "data-diagram",
+    players: "the VS records (session data-sessions/diagram)",
+    replay: Replay::Session("data-diagram"),
+};
+pub const DATA_PRIZE: Game = Game {
+    stage: "Special messages",
+    name: "data-prize",
+    players: "two special messages announced (session data-sessions/prize)",
+    replay: Replay::Session("data-prize"),
+};
+
 pub const OPTIONS_TOUR: Game = Game {
     stage: "Main menu",
     name: "options-tour",
@@ -661,6 +708,75 @@ pub const SELECT_KONGO: Game = Game {
     name: "select-stage-kongo",
     players: "the stage select's preview (session select-sessions/stage-kongo)",
     replay: Replay::Session("select-stage-kongo"),
+};
+
+/// A one-stock match's results (`results-sessions/stock`): the panel coming in, Mario's
+/// second pose, the rows and portraits, the statistics' pages turned and scrolled.
+pub const RESULTS_STOCK: Game = Game {
+    stage: "Results",
+    name: "results-stock",
+    players: "a stock match's results (session results-sessions/stock)",
+    replay: Replay::Session("results-stock"),
+};
+
+/// A team battle's results (`results-sessions/teams`): three teams' rows, Ness's bat pose,
+/// the KOs page.
+pub const RESULTS_TEAMS: Game = Game {
+    stage: "Results",
+    name: "results-teams",
+    players: "a team battle's results (session results-sessions/teams)",
+    replay: Replay::Session("results-teams"),
+};
+
+/// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
+/// camera's info, the snapshot's offer and its question, the save.
+pub const CAMERA_SNAPS: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-snaps",
+    players: "Camera Mode (session special-sessions/camera-snaps)",
+    replay: Replay::Session("special-camera-snaps"),
+};
+
+/// Camera Mode with no card (`special-sessions/camera-nocard`).
+pub const CAMERA_NOCARD: Game = Game {
+    stage: "Main menu",
+    name: "special-camera-nocard",
+    players: "Camera Mode, no card (session special-sessions/camera-nocard)",
+    replay: Replay::Session("special-camera-nocard"),
+};
+
+/// The trophy gallery round its six lights (`trophy-sessions/gallery-lights`): the view, the
+/// lights' backs and the background's sprites, the close-up with its axes, the list.
+pub const TROPHY_GALLERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-gallery-lights",
+    players: "the trophy gallery (session trophy-sessions/gallery-lights)",
+    replay: Replay::Session("trophy-gallery-lights"),
+};
+
+/// The trophy lottery's draws (`trophy-sessions/lottery-few`): the machine, the coins, the
+/// draw's capsule and the trophy on its stand with its name.
+pub const TROPHY_LOTTERY: Game = Game {
+    stage: "Trophies",
+    name: "trophy-lottery-few",
+    players: "the trophy lottery (session trophy-sessions/lottery-few)",
+    replay: Replay::Session("trophy-lottery-few"),
+};
+
+/// The trophy collection with 196 trophies (`trophy-sessions/coll-many`, the rings, and
+/// `coll-l`, the rows).
+pub const TROPHY_COLLECTION: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-many",
+    players: "the trophy collection (session trophy-sessions/coll-many)",
+    replay: Replay::Session("trophy-coll-many"),
+};
+
+pub const TROPHY_COLLECTION_ROWS: Game = Game {
+    stage: "Trophies",
+    name: "trophy-coll-l",
+    players: "the trophy collection in rows (session trophy-sessions/coll-l)",
+    replay: Replay::Session("trophy-coll-l"),
 };
 
 pub const FOX_FOX_FD: Game = Game {
@@ -919,5 +1035,11 @@ pub mod why {
     /// hashes from memory the copy never writes; ssbm-rs's renderer writes them.
     pub const SHADOW_COPY: &str =
         "the fighters' shadows: copies kept on the GPU, compared by memory they never write";
+    /// The results screen's images: copies kept on the GPU (RGB5A3, as ssbm-rs keeps them),
+    /// which the comparison hashes from memory holding what their blocks held before, a
+    /// few of whose bytes the heap's image doesn't know (fields of freed fighters, lights and
+    /// an archive's header no layout covers): the draws sample the copies, and the images
+    /// are identical.
+    pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

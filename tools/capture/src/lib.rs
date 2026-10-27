@@ -4,9 +4,11 @@
 
 pub mod attract;
 pub mod audio;
+pub mod camera;
 pub mod charsel;
 pub mod compare;
 pub mod corpus;
+pub mod data;
 pub mod display;
 pub mod effects;
 pub mod heap;
@@ -30,6 +32,7 @@ pub mod stadium;
 pub mod stage;
 pub mod tev;
 pub mod title;
+pub mod toys;
 pub mod vs;
 
 use std::collections::HashMap;

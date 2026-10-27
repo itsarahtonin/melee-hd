@@ -68,6 +68,22 @@ impl Ctx<'_> {
         }
     }
 
+    /// `GXSetScissor` from game code, in the game's 640 by 480 frame: as a camera's scissor
+    /// is scaled to the frame buffer outside the offscreen pass.
+    pub fn game_scissor(&mut self, x: u32, y: u32, w: u32, h: u32) {
+        if self.hsd.offscreen {
+            self.gx.set_scissor(x, y, w, h);
+            return;
+        }
+        let x_scale = f32::from(FB_WIDTH) / 640.0;
+        let y_scale = f32::from(EFB_HEIGHT) / 480.0;
+        let (left, right) = (x as f32 * x_scale, x.wrapping_add(w) as f32 * x_scale);
+        let (top, bottom) = (y as f32 * y_scale, y.wrapping_add(h) as f32 * y_scale);
+        let u = |x: f32| x as i32 as u32;
+        self.gx
+            .set_scissor(u(left), u(top), u(right - left), u(bottom - top));
+    }
+
     /// `HSD_CObjEraseScreen` for color, and depth when `depth`, in `color`
     /// (`HSD_SetEraseColor`).
     pub fn erase_screen(&mut self, color: Color, depth: bool) {

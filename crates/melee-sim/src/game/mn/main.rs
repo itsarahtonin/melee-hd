@@ -1759,7 +1759,11 @@ impl Running<'_> {
                     self.lb_audio_call(1);
                     self.go_to_list(RECORDS, 0, ENTER_TO);
                 }
-                4 => super::super::code::unported_call("mnInfo_80252758 (the special screens)"),
+                4 => {
+                    self.lb_audio_call(1);
+                    self.info_open();
+                    gobj::free(self, _gobj);
+                }
                 _ => {}
             }
         } else if b & IN_BACK != 0 {
@@ -1769,20 +1773,22 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022CA54`, the records' list's think: each record screen isn't this menu's.
+    /// `mn_8022CA54`, the records' list's think: each record opens its screen.
     #[doc(alias = "mn_8022CA54")]
     pub fn think_records(&mut self, _gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
             self.game.menu.flow.entering_menu = 1;
-            let name = match self.game.menu.flow.hovered_selection {
-                0 => "mnDiagram_Init (the VS records)",
-                1 => "mnInfoBonus_80252F8C (the bonuses)",
-                2 => "mnCount_Create (the other records)",
+            let open: fn(&mut Self) = match self.game.menu.flow.hovered_selection {
+                0 => |r| r.diagram_open(true, 1),
+                1 => Self::bonus_open,
+                2 => Self::count_open,
                 _ => return,
             };
-            super::super::code::unported_call(name);
+            self.lb_audio_call(1);
+            open(self);
+            gobj::free(self, _gobj);
         } else if b & IN_BACK != 0 {
             self.list_back(DATA, 3);
         } else if b & IN_UP != 0 {
@@ -1843,6 +1849,7 @@ impl Running<'_> {
             _ => {
                 return self.run_rules_proc(gobj, f)
                     || self.options_proc(gobj, f)
+                    || self.data_menus_proc(gobj, f)
                     || self.sound_test_proc(gobj, f);
             }
         }

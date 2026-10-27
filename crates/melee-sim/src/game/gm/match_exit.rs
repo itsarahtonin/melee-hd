@@ -52,9 +52,13 @@ impl Game {
     /// The match's exit data for the scene that ends: VS mode's match or Sudden Death's,
     /// or the attract match's.
     pub fn match_exit_data(&mut self, scene_mode: u8, state: u8) -> &mut MatchExitInfo {
+        use super::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind, uses_vs_melee};
+        let scene = scene_kind(Some((scene_mode, state)));
         match (scene_mode, state) {
-            (GM_VS, 2) => &mut self.vs_melee.exit,
-            (GM_VS, 3) => &mut self.vs_melee.sd_exit,
+            (m, _) if uses_vs_melee(m) && scene == Some(GS_VS) => &mut self.vs_melee.exit,
+            (m, _) if uses_vs_melee(m) && scene == Some(GS_SUDDEN_DEATH) => {
+                &mut self.vs_melee.sd_exit
+            }
             (GM_OPENING_MV, _) => &mut self.attract.exit,
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"

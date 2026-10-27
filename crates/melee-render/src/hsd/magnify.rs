@@ -133,6 +133,11 @@ impl Ctx<'_> {
     pub fn static_image(&mut self, at: u32) -> Option<Image> {
         use melee_sim::game::gm::results_fighters::ResultsFighters;
         if let Some(n) = ResultsFighters::image_at(at) {
+            // Sampled: until a copy writes it, it shows what its block held.
+            if self.space.seed_unknown(Dynamic::Results(n)) {
+                self.hsd
+                    .note_once("a results image showing bytes the heap's image doesn't know");
+            }
             return self.results_image(n);
         }
         if let Some(i) = at.checked_sub(MAGNIFY + IMAGE_DESCS)
@@ -330,8 +335,12 @@ impl Ctx<'_> {
         }
         let format = d.format as u32;
         let size = crate::gx::get_tex_buffer_size(d.width, d.height, format, 0, 0);
+        let ptr = self.space.dynamic(Dynamic::Results(n), size);
+        if let Some(seed) = &self.game.results.fighters.leftovers[usize::from(n)] {
+            self.space.seed(Dynamic::Results(n), ptr, seed);
+        }
         Some(Image {
-            ptr: self.space.dynamic(Dynamic::Results(n), size),
+            ptr,
             width: d.width,
             height: d.height,
             format,
@@ -349,6 +358,23 @@ impl Ctx<'_> {
             return;
         };
         self.copy_from_efb(&img, x, y, clear);
+        self.space.seed_copied(Dynamic::Results(n));
+    }
+
+    /// `lb_800122C8(&cmsnap_data.image, 0, 0, false)` (`cmSnap_80031640`): the whole frame
+    /// copied into Camera Mode's snapshot's image, 640 by 480 RGB565, the frame kept.
+    pub fn snap_copy(&mut self) {
+        use melee_sim::lb::snap_write::{HEIGHT, IMAGE_SIZE, WIDTH};
+        let img = Image {
+            ptr: self.space.dynamic(Dynamic::Snapshot, IMAGE_SIZE),
+            width: WIDTH,
+            height: HEIGHT,
+            format: 4,
+            mipmap: false,
+            min_lod: 0.0,
+            max_lod: 0.0,
+        };
+        self.copy_from_efb(&img, 0, 0, false);
     }
 
     /// In widescreen, how many times as wide the game camera sees, for Pokémon Stadium's

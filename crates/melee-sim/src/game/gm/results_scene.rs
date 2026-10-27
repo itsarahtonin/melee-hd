@@ -13,7 +13,7 @@ use super::super::structs::MatchEnd;
 use crate::fpu::mem;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
-use crate::hsd::sis::{FmtArg, TextId};
+use crate::hsd::sis::TextId;
 use crate::vec::Vec3;
 
 /// `ResultsPlayerData`: a player's column of the panel.
@@ -160,24 +160,18 @@ const EMBLEMS: [(u8, u8); 26] = [
     (0x19, 0xD),
 ];
 /// `lbl_803B7B18.translate`: where the title sits above its joint.
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const TITLE_OFFSET: Vec3 = Vec3::new(0.0, 4.0, 0.0);
+pub(super) const TITLE_OFFSET: Vec3 = Vec3::new(0.0, 4.0, 0.0);
 
 /// The SJIS strings the panel prints: three dashes (`lbl_804D3F8C`), a minus (`lbl_804D3FA0`),
 /// a plus (`lbl_804D3FA4`), and a dashed time (`lbl_804D3FA8`).
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const DASHES: &[u8] = &[0x81, 0x7C, 0x81, 0x7C, 0x81, 0x7C, 0];
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const MINUS: &[u8] = &[0x81, 0x7C, 0];
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const PLUS: &[u8] = &[0x81, 0x7B, 0];
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const NO_TIME: &[u8] = &[0x81, 0x7C, 0x81, 0x46, 0x81, 0x7C, 0];
+pub(super) const DASHES: &[u8] = &[0x81, 0x7C, 0x81, 0x7C, 0x81, 0x7C, 0];
+pub(super) const MINUS: &[u8] = &[0x81, 0x7C, 0];
+pub(super) const PLUS: &[u8] = &[0x81, 0x7B, 0];
+pub(super) const NO_TIME: &[u8] = &[0x81, 0x7C, 0x81, 0x46, 0x81, 0x7C, 0];
 
 /// The panel's column joints of each player (`fn_80175DC8`'s `lb_80011E24` indices), by
 /// column joint and player.
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-const COLUMNS: [[i32; 4]; 15] = [
+pub(super) const COLUMNS: [[i32; 4]; 15] = [
     [0x42, 0x43, 0x44, 0x45],
     [0x1D, 0x25, 0x2D, 0x35],
     [0x1E, 0x26, 0x2E, 0x36],
@@ -316,6 +310,7 @@ impl Running<'_> {
         let x6 = usize::from(self.game.results.data.x6);
         let w = &me.player_standings[x6];
         if w.pkind == PKIND_HUMAN && !canceled(me.outcome) && w.x3_u[0] & 0x02 != 0 {
+            self.alarm_rumble_catch_up();
             self.rumble_start(x6 as u8, 3, 0x20, 0);
         }
         let coget = self.game.ft.data.files.archive("IfCoGet.dat");
@@ -574,14 +569,6 @@ impl Running<'_> {
         }
         true
     }
-
-    /// A panel text's string in font 0's format with the panel's arguments, at (`x`, `y`).
-    #[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
-    fn results_printf(&mut self, t: TextId, x: f64, y: f64, fmt: &[u8], args: &[FmtArg]) -> i32 {
-        let mut s = [0u8; 0x200];
-        let len = crate::hsd::sis::printf(fmt, args, &mut s);
-        self.game.sis.add_string(t, x, y, Some(&s[..=len]))
-    }
 }
 
 /// A byte of the results' enter data from offset 1 (`fn_8017AA78`'s `&arg0->x1`): `x1`,
@@ -605,7 +592,6 @@ pub struct ResultsMatchInfo {
 }
 
 /// `fn_8017507C`'s colors: a team's light color, or white outside teams.
-#[allow(dead_code)] // For the panel's rows and statistics (`fn_80177748`, `fn_80174B4C`), still to port.
 pub(super) fn column_color(me: &MatchEnd, slot: usize) -> [u8; 4] {
     if me.is_teams != 1 {
         return [0xFF; 4];
