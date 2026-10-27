@@ -58,6 +58,9 @@ impl Replay {
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("data-") {
+                    return ssbm_rs_local(&format!("lockstep/data-sessions/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("options-") {
                     return ssbm_rs_local(&format!("lockstep/options-sessions/{o}.inputs")).into();
                 }
@@ -577,6 +580,39 @@ pub const NAMES_KANA: Game = Game {
 /// The Options menus toured (`options-sessions/tour`): the rumble screen's ports and names,
 /// the sound screen's balance, the screen options with the deflicker filter off, the language
 /// screen and erasing data.
+/// The Data menu's sessions (`data-sessions/NAME`): the special messages, the bonuses, the
+/// other records, the VS records' three pages, and two special messages announced.
+pub const DATA_INFO: Game = Game {
+    stage: "Main menu",
+    name: "data-info",
+    players: "the special messages (session data-sessions/info)",
+    replay: Replay::Session("data-info"),
+};
+pub const DATA_BONUS: Game = Game {
+    stage: "Main menu",
+    name: "data-bonus",
+    players: "the bonuses (session data-sessions/bonus)",
+    replay: Replay::Session("data-bonus"),
+};
+pub const DATA_COUNT: Game = Game {
+    stage: "Main menu",
+    name: "data-count",
+    players: "the other records (session data-sessions/count)",
+    replay: Replay::Session("data-count"),
+};
+pub const DATA_DIAGRAM: Game = Game {
+    stage: "Main menu",
+    name: "data-diagram",
+    players: "the VS records (session data-sessions/diagram)",
+    replay: Replay::Session("data-diagram"),
+};
+pub const DATA_PRIZE: Game = Game {
+    stage: "Special messages",
+    name: "data-prize",
+    players: "two special messages announced (session data-sessions/prize)",
+    replay: Replay::Session("data-prize"),
+};
+
 pub const OPTIONS_TOUR: Game = Game {
     stage: "Main menu",
     name: "options-tour",

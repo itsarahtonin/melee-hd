@@ -15,12 +15,13 @@
 mod common;
 
 use common::{
-    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
-    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
-    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
+    DATA_INFO, DATA_PRIZE, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF,
+    FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY,
+    GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
+    ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE,
+    KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
+    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
     SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
     compare, compare_in, reflection, scaled,
@@ -149,6 +150,33 @@ frames!(OPTIONS_TOUR;
     options_3700 3700,
     options_3800 3800,
     options_3880 3880,
+);
+// The Data menu's screens (`data-sessions`): the special messages as they come in (1200) and
+// scrolled (1900); the bonuses (1250, 1900); the other records (1300, 1700); the VS records'
+// grid (1250), a cell's detail (1470), the names' grid (2050), the statistics (2750) and the
+// rankings (3550); a special message announced (600) and the second (950).
+frames!(DATA_INFO;
+    data_info_1200 1200,
+    data_info_1900 1900,
+);
+frames!(DATA_BONUS;
+    data_bonus_1250 1250,
+    data_bonus_1900 1900,
+);
+frames!(DATA_COUNT;
+    data_count_1300 1300,
+    data_count_1700 1700,
+);
+frames!(DATA_DIAGRAM;
+    data_diagram_1250 1250,
+    data_diagram_1470 1470,
+    data_diagram_2050 2050,
+    data_diagram_2750 2750,
+    data_diagram_3550 3550,
+);
+frames!(DATA_PRIZE;
+    data_prize_600 600,
+    data_prize_950 950,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer
