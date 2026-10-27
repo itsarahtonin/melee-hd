@@ -848,16 +848,17 @@ fn the_results_sessions_end_with_their_cards() {
 }
 
 /// A card whose every count and statistic is at its largest: the match's records held and
-/// wrapped, and the results' exit earning a notice, to the prize screen (task 17's).
+/// wrapped, the results' exit earning a notice, the prize screen (task 11's) and the trace's
+/// end, the card after it the original's.
 #[test]
 fn records_at_their_largest() {
-    let Some(out) = results_session("ko-max", &["--all", "--heap"]) else {
+    let card = ssbm_rs_local("lockstep/results-sessions/ko-max-run.card");
+    let Some(out) = results_session("ko-max", &["--all", "--heap", "--card-after", &card]) else {
         return;
     };
     assert!(
-        out.contains(
-            "7650 ticks compared, no difference; stopped in tick 7650: the prize interface"
-        ),
+        out.contains("8224 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
         "{out}"
     );
 }
@@ -994,7 +995,7 @@ fn the_trophy_lottery_draws_and_saves() {
             "{name}: {out}"
         );
         assert!(
-            out.contains("the card after the run: the same as"),
+            out.contains("the card after the session: the original's"),
             "{name}: {out}"
         );
     }
