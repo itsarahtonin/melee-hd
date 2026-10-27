@@ -370,9 +370,8 @@ pub fn loser(end: &MatchEnd) -> usize {
     if done {
         return i;
     }
-    spc.iter()
-        .position(|&s| s)
-        .unwrap_or_else(|| panic!("fn_80161154 returns a register its C never sets: no tie left"))
+    // With no player left tied (which the tie-breaks never leave), the last place's number.
+    spc.iter().position(|&s| s).unwrap_or(result as usize)
 }
 
 /// The match's winner the statistics count, `fn_80165548(end, fn_80165418(end),

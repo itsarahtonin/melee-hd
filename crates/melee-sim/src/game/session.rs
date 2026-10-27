@@ -611,9 +611,6 @@ impl Running<'_> {
         self.begin_scene_loop();
     }
 
-    /// The pad alarm's reads while the boot or a scene's preparation ran, which the
-    /// timeline counted (`HSD_PadRenewRawStatus` from the alarm, a `PADRead` each), into the
-    /// pad library's queue; the scene loop's start then keeps the newest.
     /// The pad alarm's firings so far in a scene's entry run their frames of rumble now,
     /// ahead of their reads ([`Self::take_alarm_reads`]): a rumble the entry starts begins
     /// after them, as the original's alarm handlers ran each in its time.
@@ -629,6 +626,9 @@ impl Running<'_> {
         }
     }
 
+    /// The pad alarm's reads while the boot or a scene's preparation ran, which the
+    /// timeline counted (`HSD_PadRenewRawStatus` from the alarm, a `PADRead` each), into the
+    /// pad library's queue; the scene loop's start then keeps the newest.
     pub fn take_alarm_reads(&mut self, read: &mut dyn FnMut() -> PadData) {
         let Some(c) = self.game.audio.clock.as_ref() else {
             return;
