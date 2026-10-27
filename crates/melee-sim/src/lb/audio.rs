@@ -9,8 +9,10 @@ use crate::fpu::{mem, reg};
 use crate::game::state::{Event, Running};
 
 mod boot;
+mod sound_test;
 
 pub use boot::{AUX_DELAY, AUX_REVERB_STD, SavedSound, SoundBank, balance_fx, balance_voice};
+pub use sound_test::{character_song, song_flag};
 
 /// The id that plays nothing, and the one that keys a track off instead of playing.
 pub const SFX_NONE: i32 = 0x83D60;
@@ -245,9 +247,11 @@ impl LbAudio {
     /// them loaded, an original voice becomes Kirby's copy; without it, a copy becomes the
     /// original.
     #[doc(alias = "lbAudioAx_800233EC")]
+    #[doc(alias = "fn_80026E58")]
     pub fn kirby_voice(&self, id: i32) -> i32 {
         let bank = sfx_bank(id);
         let pairs = &KIRBY_SFX[..0x4A];
+        // `fn_80026E58`: whether the bank is loaded.
         if self.banks[0x21] == 2 {
             if matches!(bank, 6..=11 | 13 | 15..=31)
                 && let Some(&(_, copy)) = pairs.iter().find(|p| p.0 == id)
@@ -265,6 +269,7 @@ impl LbAudio {
 
 impl Running<'_> {
     /// `fn_80023750`: a sound at the game's volume and pan (0-127, doubled for the driver).
+    #[doc(alias = "fn_80023750")]
     fn sfx_start(&mut self, id: i32, vol: i32, pan: i32, track: i32, channel: i32) -> i32 {
         let vol = vol.wrapping_mul(2).clamp(0, 0xFF) as u8;
         let pan = pan.wrapping_mul(2).clamp(0, 0xFF) as u8;
@@ -652,6 +657,7 @@ impl Running<'_> {
     /// Without a timeline (a match from its settings alone, whose audio the boot didn't set
     /// up) the frontend is told instead.
     #[doc(alias = "lbAudioAx_80023F28")]
+    #[doc(alias = "fn_80023ED4")]
     pub fn lb_play_music(&mut self, bgm: i32) -> bool {
         #[cfg(feature = "stubs")]
         if let Some(v) =

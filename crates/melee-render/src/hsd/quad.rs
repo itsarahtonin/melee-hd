@@ -51,3 +51,55 @@ impl Ctx<'_> {
         }
     }
 }
+
+impl Ctx<'_> {
+    /// `HSD_StateInitDirect(fmt, rendermode)`: positions and colors given directly in vertex
+    /// format `fmt`, the TEV stages reset and `rendermode` set up with `0x28000000`.
+    #[doc(alias = "HSD_StateInitDirect")]
+    pub fn state_init_direct(&mut self, fmt: u32, rendermode: u32) {
+        self.clear_vtx_desc();
+        self.gx
+            .set_vtx_attr_fmt(fmt, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+        self.gx
+            .set_vtx_attr_fmt(fmt, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+        self.hsd.tev.init_tev();
+        self.setup_render_mode(rendermode | 0x2800_0000);
+        self.gx.set_vtx_desc(GX_VA_POS, GX_DIRECT);
+        self.gx.set_vtx_desc(GX_VA_CLR0, GX_DIRECT);
+        self.gx.set_current_mtx(GX_PNMTX0);
+    }
+
+    /// `HSD_SetupRenderMode`.
+    fn setup_render_mode(&mut self, rendermode: u32) {
+        let objs = &self.game.objs;
+        let mut lights = ChannelLights {
+            state: &mut self.hsd.lights,
+            objs,
+        };
+        States {
+            state: &mut self.hsd.state,
+            tev: &mut self.hsd.tev,
+        }
+        .setup_render_mode(self.gx, rendermode, None, &mut lights);
+    }
+
+    /// The trophy gallery's close-up axes ([`Draw::Axes`], `_Toy_80312050`): three lines
+    /// through the camera's interest, red, green and blue, six wide.
+    ///
+    /// [`Draw::Axes`]: melee_sim::hsd::display::Draw::Axes
+    pub fn axes(&mut self, ends: &[melee_sim::vec::Vec3; 6]) {
+        self.state_init_direct(GX_VTXFMT0, 2);
+        self.setup_render_mode(2);
+        let view = self.hsd.view_mtx();
+        self.gx.load_pos_mtx_imm(&view.m, GX_PNMTX0);
+        self.hsd.state.set_line_width(self.gx, 6, 5);
+        self.gx.begin(GX_LINES, GX_VTXFMT0, 6);
+        for (k, e) in ends.iter().enumerate() {
+            let mut c = [0, 0, 0, 0xFF];
+            c[k / 2] = 0xFF;
+            self.gx.position3f32(e.x, e.y, e.z);
+            self.gx.color4u8(c[0], c[1], c[2], c[3]);
+        }
+        self.gx.end();
+    }
+}

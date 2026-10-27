@@ -298,7 +298,7 @@ impl Running<'_> {
 
     /// `GetPersistentNameData`.
     #[doc(alias = "GetPersistentNameData")]
-    fn name_tag(&self, slot: u8) -> &NameTagData {
+    pub(crate) fn name_tag(&self, slot: u8) -> &NameTagData {
         let s = usize::from(slot);
         &self.game.game_data.thing.nametag_banks[s / NAMETAG_BANK_SIZE].inner[s % NAMETAG_BANK_SIZE]
     }
@@ -308,7 +308,7 @@ impl Running<'_> {
     }
 
     /// `IsNameValid` (ported with `Game::name_text`): whether a name tag has a name.
-    fn name_valid(&self, slot: u8) -> bool {
+    pub(crate) fn name_valid(&self, slot: u8) -> bool {
         self.name_tag(slot).namedata[0] != 0
     }
 

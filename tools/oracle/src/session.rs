@@ -82,6 +82,16 @@ fn next_alarm(image: &Image, tick: u32, power_on: u64) -> Result<u64, String> {
 
 /// The scene the trace's memory is in: the game mode (`state_machine`'s current mode), its
 /// state's index and the scene's frame function.
+/// The reads a tick of game mode `mode` can take past the pad alarm's: the trophy screens'
+/// own (`HSD_PadRenewStatus`: the gallery's entry and its close-up's, the list's choice), at
+/// most two in a tick.
+fn direct_reads(mode: u8) -> u64 {
+    match mode {
+        0xB..=0xD => 2,
+        _ => 0,
+    }
+}
+
 fn scene_of(image: &Image) -> (u8, u8, u32) {
     let sm = sym("state_machine");
     let info = image.u32(sym("gm_804D6720"));
@@ -192,6 +202,9 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
     let mut ends: Vec<Vec<u32>> = Vec::new();
     // How often the alarm fired between each tick's end and the one before's.
     let mut fired: Vec<u64> = Vec::new();
+    // How many reads past the alarm's each tick may have taken: the trophy screens' code
+    // reads the controllers itself (`HSD_PadRenewStatus`), on top of the alarm's reads.
+    let mut extras: Vec<u64> = Vec::new();
     let mut scenes = Vec::new();
     let mut last_alarm: Option<u64> = None;
     while let Some(t) = reader.tick() {
@@ -210,6 +223,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
             scenes.push((t.number, mode, state, on_frame));
         }
         let alarm = next_alarm(&image, t.number, rec.power_on)?;
+        let extra = direct_reads(mode);
         let newest = newest_poll(&image);
         // Past the recording's end ssbm-rs's playback reports its last read, for a second.
         let matching = |r: u64| rec.reads[r.min(n - 1) as usize] == newest;
@@ -231,12 +245,13 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
                 }
                 let f = (alarm - before) / PERIOD;
                 let prev = ends.last().expect("the tick before's reads");
-                if f == 0 {
+                if f == 0 && extra == 0 {
                     now.extend(prev.iter().copied().filter(|&r| matching(u64::from(r))));
                 } else {
                     let mut next = 0u64;
                     for &r in prev {
-                        let (lo, hi) = (u64::from(r) + 1, u64::from(r) + f);
+                        let lo = u64::from(r) + u64::from(f > 0);
+                        let hi = u64::from(r) + f + extra;
                         for j in lo.max(next)..=hi {
                             if matching(j) {
                                 now.push(j as u32);
@@ -252,7 +267,7 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
             let (lo, hi) = match ends.last() {
                 Some(prev) => (
                     u64::from(prev[0]) + u64::from(f > 0),
-                    u64::from(*prev.last().unwrap()) + f,
+                    u64::from(*prev.last().unwrap()) + f + extra,
                 ),
                 None => (1, f),
             };
@@ -268,17 +283,19 @@ pub fn align(trace_path: &str, rec: &Recording) -> Result<Plan, String> {
         }
         ends.push(now);
         fired.push(f);
+        extras.push(extra);
         last_alarm = Some(alarm);
     }
     // Back from the last tick: each tick keeps the reads a later tick's can follow from.
     for t in (1..ends.len()).rev() {
         let f = fired[t] as u32;
+        let extra = extras[t] as u32;
         let (before, after) = ends.split_at_mut(t);
         let later = &after[0];
         before[t - 1].retain(|&r| {
             let lo = if f == 0 { r } else { r + 1 };
             let k = later.partition_point(|&j| j < lo);
-            k < later.len() && later[k] <= r + f
+            k < later.len() && later[k] <= r + f + extra
         });
     }
     Ok(Plan { ends, scenes })
@@ -304,6 +321,10 @@ impl melee_sim::game::session::Console for Console<'_> {
         }
         self.next += 1;
         pads
+    }
+
+    fn unread(&mut self, n: usize) {
+        self.next -= n;
     }
 
     fn entrynum(&mut self, path: &str) -> Option<i32> {
@@ -687,9 +708,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
-        card_after: card_after.map(|p| {
-            std::fs::read(&p).unwrap_or_else(|e| panic!("the card after {}: {e}", p.display()))
-        }),
+        card_after,
     };
     run.play(setup)
 }
@@ -750,8 +769,10 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
-    /// The card the original's run left, to compare with the session's at the trace's end.
-    card_after: Option<Vec<u8>>,
+    /// The card as ssbm-rs's run left it (its recording's `NAME-run.card`), to check the
+    /// card melee-hd's run leaves against at the trace's end: the saves it wrote, byte for
+    /// byte.
+    card_after: Option<PathBuf>,
 }
 
 impl Run<'_> {
@@ -1046,8 +1067,10 @@ impl Run<'_> {
             }
         }
         if stop.is_none()
-            && let Some(want) = &self.card_after
+            && let Some(path) = &self.card_after
         {
+            let want = std::fs::read(path)
+                .unwrap_or_else(|e| panic!("the card after {}: {e}", path.display()));
             let have = s
                 .card
                 .as_ref()

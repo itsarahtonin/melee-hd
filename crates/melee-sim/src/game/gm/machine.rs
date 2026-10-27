@@ -132,6 +132,14 @@ enum Hook {
     ApproachVsOnExit,
     PrizeOnEnter,
     PrizeOnExit,
+    /// `onExit` (`gmtoygallery.c`), `gm_801BED14` (`gmtoycollection.c`).
+    ToyToMenu,
+    /// `onEnter` and `onExit` (`gmtoylottery.c`).
+    LotteryOnEnter,
+    LotteryOnExit,
+    ChallengerOnLoad,
+    ChallengerApproachOnExit,
+    ChallengerPrizeOnExit,
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
@@ -294,8 +302,58 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_PRIZE,
         },
     ];
+    // `gm_Mode_ToyGallery_States`, `gm_Mode_ToyLottery_States`, `gm_Mode_ToyCollection_States`.
+    const TOY_GALLERY: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 2,
+        on_enter: None,
+        on_exit: Some(Hook::ToyToMenu),
+        scene: crate::game::ty::GS_TOY_GALLERY,
+    }];
+    const TOY_LOTTERY: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 2,
+        on_enter: Some(Hook::LotteryOnEnter),
+        on_exit: Some(Hook::LotteryOnExit),
+        scene: crate::game::ty::GS_TOY_LOTTERY,
+    }];
+    const TOY_COLLECTION: [StateDesc; 1] = [StateDesc {
+        id: 0,
+        preload: 2,
+        on_enter: None,
+        on_exit: Some(Hook::ToyToMenu),
+        scene: crate::game::ty::GS_TOY_COLLECTION,
+    }];
+    // `gm_Mode_ChallengerApproach_States`.
+    const CHALLENGER: [StateDesc; 3] = [
+        StateDesc {
+            id: 0,
+            preload: 2,
+            on_enter: Some(Hook::ApproachOnEnter),
+            on_exit: None,
+            scene: GS_APPROACH,
+        },
+        StateDesc {
+            id: 1,
+            preload: 2,
+            on_enter: Some(Hook::ApproachVsOnEnter),
+            on_exit: Some(Hook::ChallengerApproachOnExit),
+            scene: GS_VS,
+        },
+        StateDesc {
+            id: 2,
+            preload: 2,
+            on_enter: Some(Hook::PrizeOnEnter),
+            on_exit: Some(Hook::ChallengerPrizeOnExit),
+            scene: GS_PRIZE,
+        },
+    ];
     match mode {
+        crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
+        crate::game::ty::GM_TOY_LOTTERY => &TOY_LOTTERY,
+        crate::game::ty::GM_TOY_COLLECTION => &TOY_COLLECTION,
         GM_BOOT => &BOOT,
+        GM_CHALLENGER_APPROACH => &CHALLENGER,
         GM_MENU => &MENU,
         GM_VS => &VS,
         GM_MEMCARD => &MEMCARD,
@@ -319,8 +377,12 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
         GM_OPENING_MV => (true, Some(Hook::OpeningOnLoad), None),
         GM_PROGRESSIVE_SCAN => (false, None, None),
+        crate::game::ty::GM_TOY_GALLERY
+        | crate::game::ty::GM_TOY_LOTTERY
+        | crate::game::ty::GM_TOY_COLLECTION => (false, None, None),
         // `gm_Mode_Vs_OnUnload` does nothing.
         GM_VS => (false, Some(Hook::VsOnLoad), None),
+        GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -521,6 +583,20 @@ impl Running<'_> {
             GS_MOVIE_OMAKE15 => (super::howto::OMAKE_ON_ENTER, super::howto::OMAKE_ON_FRAME),
             // No frame function: the model GObj's process runs the screen.
             GS_RESULTS => (CodeRef(RESULTS_ON_ENTER), CodeRef(0)),
+            crate::game::ty::GS_TOY_GALLERY => (
+                crate::game::ty::gallery::ON_ENTER,
+                crate::game::ty::gallery::ON_FRAME,
+            ),
+            crate::game::ty::GS_TOY_LOTTERY => (
+                crate::game::ty::lottery::ON_ENTER,
+                crate::game::ty::lottery::ON_FRAME,
+            ),
+            crate::game::ty::GS_TOY_COLLECTION => (
+                crate::game::ty::collection::ON_ENTER,
+                crate::game::ty::collection::ON_FRAME,
+            ),
+            // No frame function: the panel's process runs the interface.
+            GS_PRIZE => (crate::game::hud::prize::ON_ENTER, CodeRef(0)),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -545,6 +621,10 @@ impl Running<'_> {
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
             super::howto::OMAKE_ON_ENTER => self.omake_on_enter(),
             CodeRef(RESULTS_ON_ENTER) => self.results_on_enter(),
+            crate::game::ty::gallery::ON_ENTER => self.toy_on_enter(),
+            crate::game::ty::lottery::ON_ENTER => self.lot_on_enter(),
+            crate::game::ty::collection::ON_ENTER => self.coll_on_enter(),
+            crate::game::hud::prize::ON_ENTER => self.prize_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -610,6 +690,12 @@ impl Running<'_> {
             GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
             GS_RESULTS => self.results_on_exit(),
+            // No exit of their own.
+            crate::game::ty::GS_TOY_GALLERY
+            | crate::game::ty::GS_TOY_LOTTERY
+            | crate::game::ty::GS_TOY_COLLECTION => {}
+            // `ifPrize_Scene_OnExit` does nothing.
+            GS_PRIZE => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -678,12 +764,19 @@ impl Running<'_> {
                     self.game.add_match_stats(&me);
                 }
             }
-            Hook::ApproachOnEnter | Hook::ApproachVsOnEnter | Hook::ApproachVsOnExit => {
+            Hook::ApproachOnEnter
+            | Hook::ApproachVsOnEnter
+            | Hook::ApproachVsOnExit
+            | Hook::ChallengerApproachOnExit => {
                 unported_call("the challenger approach's states (task 17)")
             }
-            Hook::PrizeOnEnter | Hook::PrizeOnExit => {
-                unported_call("the prize interface's states (task 17)")
-            }
+            Hook::ToyToMenu => self.toy_mode_exit_to_menu(),
+            Hook::LotteryOnEnter => self.lot_mode_enter(),
+            Hook::LotteryOnExit => self.lot_mode_exit(),
+            Hook::PrizeOnEnter => self.prize_state_on_enter(),
+            Hook::PrizeOnExit => unported_call("gm_ModeState_Prize_OnExit (VS mode's, task 17)"),
+            Hook::ChallengerOnLoad => self.challenger_mode_on_load(),
+            Hook::ChallengerPrizeOnExit => self.prize_state_on_exit(),
         }
         let _ = state;
     }
@@ -726,6 +819,7 @@ impl Running<'_> {
         self.game.card_game.reset();
         self.game.snap.forget();
         self.game.gm.trophy_data = false;
+        self.game.toys.forget();
     }
 
     /// `gm_SetGameModeOverride`.

@@ -13,11 +13,6 @@ pub struct ModeStatics {
     pub training_players: [PlayerInitData; 4],
     /// `gmHomeRun_VsModeData`.
     pub homerun: VsModeData,
-    /// `Toy_804A284C` (`_Toy_804A26B8.x194` and the trophy screens' 0x25A bytes after it,
-    /// which `Toy_Mode_OnInit` clears): its first byte and the categories' bits at `x19A`
-    /// (`Toy_804A284C[3]`), the rest zero.
-    pub toy_x194: u8,
-    pub toy_x19a: u16,
 }
 
 impl Default for ModeStatics {
@@ -25,8 +20,6 @@ impl Default for ModeStatics {
         ModeStatics {
             training_players: core::array::from_fn(|_| PlayerInitData::default()),
             homerun: VsModeData::default(),
-            toy_x194: 0,
-            toy_x19a: 0,
         }
     }
 }
@@ -101,8 +94,7 @@ impl Running<'_> {
         init_vs_mode(&mut d.modes.table[VS_CAMERA]);
         // The trophy gallery (`Toy_Mode_OnInit`): its screens' state cleared, the gallery
         // flagged seen in the save's categories (the current mode is the title's here).
-        self.game.modes.toy_x194 = 1;
-        self.game.game_data.thing.save_data.trophy_category_flags |= 4;
+        self.toy_mode_init();
         let d = &mut self.game.game_data;
         // Target Test: no character, no name tag.
         let t = &mut d.vs.unk_530.unk_584;

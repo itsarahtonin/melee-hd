@@ -7,8 +7,9 @@
 //! The session is ssbm-rs's recording `2026-10-06_17-44-10` (`$SSBM_RS_LOCAL/lockstep/
 //! recordings`, with its card), traced as `docs/oracle.md` ("Sessions") says into
 //! `$SSBM_RS_LOCAL/traces/session/`; the card sessions are in `lockstep/card-sessions` and
-//! `traces/card-sessions`, the menu and Options sessions in `menu-sessions` and
-//! `options-sessions`. The tests skip without the traces, the recordings or `SSBM_DISC`.
+//! `traces/card-sessions`, the menu, Options and sound test sessions in `menu-sessions`,
+//! `options-sessions` and `sound-sessions`. The tests skip without the traces, the recordings
+//! or `SSBM_DISC`.
 
 use std::process::Command;
 
@@ -604,6 +605,72 @@ fn the_options_catch_a_dropped_press() {
     );
 }
 
+/// A sound test session (`lockstep/sound-sessions/NAME.inputs`, on a copy of
+/// `2026-10-06_17-44-10`'s card with the sound test's special message noted, `sound-src.card`;
+/// `locked` on the card itself).
+fn sound_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("sound-sessions", name, args)
+}
+
+/// Every song of the sound test played (the first stopped with A, the last faded out with
+/// Start, L held through a song's start), each read from the disc as it starts: clean through
+/// the screen and back to the title.
+#[test]
+fn every_song_of_the_sound_test() {
+    let Some(out) = sound_session("songs", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("9157 ticks compared, no difference"), "{out}");
+}
+
+/// Every category of the sound test entered, its first and last sound played, each bank
+/// loaded as the sound asks (the first category's sound faded with Start and played with R
+/// held): clean through the screen and back to the title.
+#[test]
+fn every_category_of_the_sound_test() {
+    let Some(out) = sound_session("sounds", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("10156 ticks compared, no difference"), "{out}");
+}
+
+/// The sound test in Japanese: a song, the categories' Japanese lists, the last category's
+/// three-digit sound shown again on entering it, its bank's load holding the loop through
+/// more pad alarms than the queue holds (tick 2110): clean to the trace's end.
+#[test]
+fn the_sound_test_in_japanese() {
+    let Some(out) = sound_session("jp", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2866 ticks compared, no difference"), "{out}");
+}
+
+/// The Data list round both ways on a save without the sound test, which it skips: clean to
+/// the trace's end.
+#[test]
+fn the_data_list_without_the_sound_test() {
+    let Some(out) = sound_session("locked", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1480 ticks compared, no difference"), "{out}");
+}
+
+/// `songs` with port 1's first A on the songs (read 1093) dropped: the press lands a read
+/// later, and the song starts a tick late (the screen's lamp first, tick 896).
+#[test]
+fn the_sound_test_catches_a_dropped_press() {
+    let Some(out) = sound_session(
+        "songs",
+        &["--heap", "--ticks", "1200", "--mutate", "read=1093"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("897 ticks compared; tick 896 differs in"),
+        "{out}"
+    );
+}
+
 /// A rules or names session (`lockstep/rules-sessions/NAME.inputs` with its card, traced into
 /// `traces/rules-sessions/NAME.trc`).
 fn rules_session(name: &str, args: &[&str]) -> Option<String> {
@@ -884,4 +951,154 @@ fn a_session_rollback_catches_a_perturbation() {
         ),
         "{out}"
     );
+}
+
+/// A trophy session (`lockstep/trophy-sessions/NAME.inputs` with its card, traced into
+/// `traces/trophy-sessions`).
+fn trophy_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("trophy-sessions", name, args)
+}
+
+/// The gallery on a card with 9 trophies (its view, its close-up, the list's sorts) and on one
+/// with 196 (the list paged by X and Y), and its six lights: each clean from power-on to the
+/// trace's end.
+#[test]
+fn the_trophy_gallery_toured() {
+    for (name, ticks) in [
+        ("gallery-few", "4858"),
+        ("gallery-many", "6670"),
+        ("gallery-lights", "5317"),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The lottery's draws, seed for seed, with few and many trophies: clean to the trace's end,
+/// and the card the run leaves is ssbm-rs's byte for byte (the draws' trophies and coins
+/// saved).
+#[test]
+fn the_trophy_lottery_draws_and_saves() {
+    for (name, ticks) in [("lottery-few", "5017"), ("lottery-many", "5027")] {
+        let card = ssbm_rs_local(&format!("lockstep/trophy-sessions/{name}-run.card"));
+        let Some(out) = trophy_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains("the card after the run: the same as"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The collection in its four layouts (rings jittered and even, rows, the triangle), on
+/// cards with 9 and 196 trophies, and left by L, R and Start: each clean from power-on through
+/// the collection to the trace's end (`coll-r` to its attract match's first tick, where the
+/// heap's image has no layout for a freed archive).
+#[test]
+fn the_trophy_collection_in_each_layout() {
+    for (name, want) in [
+        ("coll-few", "3820 ticks compared, no difference"),
+        ("coll-many", "3820 ticks compared, no difference"),
+        ("coll-l", "3820 ticks compared, no difference"),
+        ("coll-y", "3820 ticks compared, no difference"),
+        ("coll-lrs", "2519 ticks compared, no difference"),
+        (
+            "coll-r",
+            "3793 ticks compared, no difference; stopped in tick 3792",
+        ),
+    ] {
+        let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(out.contains(want), "{name}: {out}");
+    }
+}
+
+/// A Data menu session (`lockstep/data-sessions/NAME.inputs`, on a copy of `records.card`:
+/// `options-sessions/names10.card` with every character, stage and trophy unlocked, every
+/// special message noted, two thirds of the bonuses seen, thirty names and random records).
+fn data_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("data-sessions", name, args)
+}
+
+/// The special messages scrolled to the end and back, B out to the title: clean to the
+/// trace's end.
+#[test]
+fn the_special_messages_scrolled() {
+    let Some(out) = data_session("info", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2446 ticks compared, no difference"), "{out}");
+}
+
+/// The bonuses scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_bonuses_scrolled() {
+    let Some(out) = data_session("bonus", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2398 ticks compared, no difference"), "{out}");
+}
+
+/// The other records scrolled to the end and back: clean to the trace's end.
+#[test]
+fn the_other_records_scrolled() {
+    let Some(out) = data_session("count", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2318 ticks compared, no difference"), "{out}");
+}
+
+/// The VS records: the grid in characters and names, scrolled every way, a cell's detail on
+/// and off the diagonal, the statistics and the rankings in both, each page turned both ways:
+/// clean to the trace's end.
+#[test]
+fn the_vs_records_toured() {
+    let Some(out) = data_session("diagram", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("5569 ticks compared, no difference"), "{out}");
+}
+
+/// Every Data screen on `2026-10-06_17-13-21`'s card (no names, one character unlocked, the
+/// records of a few matches): the messages, the grid with X refused, the statistics and the
+/// rankings, the bonuses and the other records: clean to the trace's end.
+#[test]
+fn the_data_screens_on_a_played_card() {
+    let Some(out) = data_session("plain", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("3817 ticks compared, no difference"), "{out}");
+}
+
+/// The rankings to their ends in characters and names, the most and least played's counts
+/// over the names included: clean to the trace's end.
+#[test]
+fn the_vs_rankings_scrolled() {
+    let Some(out) = data_session("ranks", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2620 ticks compared, no difference"), "{out}");
+}
+
+/// Two special messages waiting on `2026-10-06_17-13-21`'s card: the title's Start goes to the
+/// challenger approach's mode at its prize state, each message shown with its song and date
+/// (the music stream's clock reading past its boxes once a song ends), A past both, then the
+/// main menu and the title: clean to the trace's end.
+#[test]
+fn the_special_messages_announced() {
+    let Some(out) = data_session("prize", &["--heap"]) else {
+        return;
+    };
+    assert!(out.contains("1617 ticks compared, no difference"), "{out}");
 }

@@ -257,15 +257,16 @@ impl Audio {
         callback: Option<CodeRef>,
         args: u32,
     ) -> i32 {
-        let d = &mut self.devcom;
-        let dc = match d.free {
+        let dc = match self.devcom.free {
             Some(dc) => {
+                let d = &mut self.devcom;
                 d.free = d.nodes[usize::from(dc)].next;
                 dc
             }
             None => {
-                // `HSD_AudioMalloc`: sixteen at a time from the audio heap.
-                self.heap.alloc(16 * 0x24).expect("audio heap overflow.");
+                // Sixteen at a time from the audio heap.
+                self.audio_malloc(16 * 0x24);
+                let d = &mut self.devcom;
                 let base = d.nodes.len() as u16;
                 d.nodes.extend([Command::default(); 16]);
                 for i in 1..15 {
@@ -280,6 +281,7 @@ impl Audio {
             !(kind & 7 == 2 && size > BUF_SIZE),
             "a relay buffer read of {size:#x} bytes"
         );
+        let d = &mut self.devcom;
         let pri = if kind & 0x38 == 0x20 { pri } else { 3 } as usize;
         let id = d.next_id.wrapping_add(pri as i32);
         *d.node(dc) = Command {

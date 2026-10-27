@@ -15,15 +15,18 @@
 mod common;
 
 use common::{
-    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
-    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
-    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CORNERIA, Capture, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
+    DATA_INFO, DATA_PRIZE, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF,
+    FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY,
+    GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
+    ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE,
+    KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
+    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
-    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SPECIAL_INVISIBLE_YS, VENOM,
-    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
+    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    SPECIAL_INVISIBLE_YS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
+    TROPHY_LOTTERY, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection,
+    scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -149,6 +152,46 @@ frames!(OPTIONS_TOUR;
     options_3700 3700,
     options_3800 3800,
     options_3880 3880,
+);
+// The Data menu's screens (`data-sessions`): the special messages as they come in (1200) and
+// scrolled (1900); the bonuses (1250, 1900); the other records (1300, 1700); the VS records'
+// grid (1250), a cell's detail (1470), the names' grid (2050), the statistics (2750) and the
+// rankings (3550); a special message announced (600) and the second (950).
+frames!(DATA_INFO;
+    data_info_1200 1200,
+    data_info_1900 1900,
+);
+frames!(DATA_BONUS;
+    data_bonus_1250 1250,
+    data_bonus_1900 1900,
+);
+frames!(DATA_COUNT;
+    data_count_1300 1300,
+    data_count_1700 1700,
+);
+frames!(DATA_DIAGRAM;
+    data_diagram_1250 1250,
+    data_diagram_1470 1470,
+    data_diagram_2050 2050,
+    data_diagram_2750 2750,
+    data_diagram_3550 3550,
+);
+frames!(DATA_PRIZE;
+    data_prize_600 600,
+    data_prize_950 950,
+);
+// The sound test (`sound-sessions`): a song playing with its name and number (songs 5000), a
+// category's icon in the categories (sounds 1450), a category's sounds with the sound's number
+// (sounds 4400), and a song's name in Japanese (jp 1620).
+frames!(SOUND_SONGS;
+    sound_songs_5000 5000,
+);
+frames!(SOUND_SOUNDS;
+    sound_sounds_1450 1450,
+    sound_sounds_4400 4400,
+);
+frames!(SOUND_JP;
+    sound_jp_1620 1620,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer
@@ -619,3 +662,31 @@ fn widescreen_reflection_sheik_fox_fod_2600() {
 fn widescreen_reflection_sheik_fox_fod_6000() {
     reflection(&SHEIK_FOX_FOD, 6000, Group::Standard);
 }
+
+// The trophy screens: the gallery's view under its first light (1250), the second light's back
+// (1340), the third's background sprite (1400), the close-up (2330), its axes as the camera
+// pans (2440) and the list (3300); the
+// lottery's machine with a bet (1400), the draw (1700) and the trophy shown (2000); the
+// collection's 196 trophies in rings (1300), turned (1700) and zoomed (2500), and in rows
+// (1300).
+frames!(TROPHY_GALLERY;
+    trophy_gallery_1250 1250,
+    trophy_gallery_1340 1340,
+    trophy_gallery_1400 1400,
+    trophy_gallery_2330 2330,
+    trophy_gallery_2440 2440,
+    trophy_gallery_3300 3300,
+);
+frames!(TROPHY_LOTTERY;
+    trophy_lottery_1400 1400,
+    trophy_lottery_1700 1700,
+    trophy_lottery_2000 2000,
+);
+frames!(TROPHY_COLLECTION;
+    trophy_collection_1300 1300,
+    trophy_collection_1700 1700,
+    trophy_collection_2500 2500,
+);
+frames!(TROPHY_COLLECTION_ROWS;
+    trophy_collection_rows_1300 1300,
+);

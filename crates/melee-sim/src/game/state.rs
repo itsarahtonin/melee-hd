@@ -87,8 +87,25 @@ pub enum UserData {
     Vibration(u32),
     /// The erasing screen's user data (`MnDataDelGObjUserData`), by its block's address.
     DataDel(u32),
+    /// The special messages' user data (`MnInfoData`), by its block's address.
+    Info(u32),
+    /// The other records' user data (`MnCountData`), by its block's address.
+    Count(u32),
+    /// The VS records' user data (`Diagram`), by its block's address.
+    Diagram(u32),
+    /// A VS records detail's user data (`mnDiagram_PopupData`), by its block's address.
+    DiagramPopup(u32),
+    /// The VS records' statistics' user data (`Diagram2`), by its block's address.
+    Diagram2(u32),
+    /// The VS records' rankings' user data (`Diagram3`), by its block's address.
+    Diagram3(u32),
+    /// The sound test's user data (`soundtest_user_data`), by its block's address.
+    SoundTest(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
+    /// A trophy screen's block (0x58 bytes of `HSD_MemAlloc`, freed with `HSD_Free`), by its
+    /// address ([`super::ty::lottery::Lottery::user`]).
+    Toy(u32),
     /// A player's magnifier bubble (`&ifMagnify_804A1DE0.player[slot]`).
     MagnifyPlayer(u8),
     /// One of Pokémon Stadium's screens (user data kind 3, freed with `HSD_Free`): its index in
@@ -209,6 +226,8 @@ impl Kinds for GameKinds {
                 0x8022_EB04
             }
             UserData::GlyphVariants(_) => 0x8023_D0F8,
+            // `Toy_RemoveUserData`.
+            UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
             _ => return None,
         })
     }
@@ -396,6 +415,8 @@ pub struct Game {
     pub menu: super::mn::main::MainMenu,
     /// The Data menu's movies' statics and user data (`mngallery.c`).
     pub gallery: super::mn::gallery::Gallery,
+    /// The sound test's statics and user data (`mnsoundtest.c`).
+    pub sound_test: super::mn::sound_test::SoundTest,
     /// The VS menu's rules' and names' statics and user data (`mnmainrule.c` to
     /// `mnnamenew.c`).
     pub vs_menus: super::mn::rules::RulesMenus,
@@ -409,6 +430,13 @@ pub struct Game {
     /// The Options menus' statics and user data (`mnvibration.c`, `mnsound.c`,
     /// `mndeflicker.c`, `mnlanguage.c`, `mndatadel.c`).
     pub options: super::mn::options::Options,
+    /// The Data menu's screens' statics and user data (`mninfo.c` and the others
+    /// [`super::mn::data`] lists).
+    pub data_menus: super::mn::data::DataMenus,
+    /// The special messages' interface's statics and its queue of notices (`ifprize.c`,
+    /// `if_Scene_Prize_EnterData`, `gm_8049E558`).
+    pub prize: super::hud::prize::Prize,
+
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
     /// The game's side of the memory card (`lbcardgame.c`).
@@ -419,8 +447,10 @@ pub struct Game {
     pub snap: crate::lb::snap::Snap,
     /// The modes' settings that live outside the game's data: the training mode's saved
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
-    /// trophy gallery's flag (`_Toy_804A26B8.x194`).
+    /// trophy gallery's (`Toy_804A284C`, in [`Game::toys`]).
     pub modes: super::gm::mode_init::ModeStatics,
+    /// The trophies' statics (`toy.c`, `tylist.c`).
+    pub toys: super::ty::Toys,
     /// Presentation output, not state: the Slippi replay the match makes, when the frontend
     /// turns it on (`record`). Simulated code never reads it; a clone starts without it and a
     /// restore leaves it alone.
@@ -496,6 +526,24 @@ impl Host<GameKinds> for Running<'_> {
                 crate::hsd::heap::mem_free(addr);
                 self.game.options.menus.remove(&addr);
             }
+            UserData::Info(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.data_menus.info.data.remove(&addr);
+            }
+            UserData::Count(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                let c = &mut self.game.data_menus.count;
+                let d = c.data.remove(&addr);
+                c.left = Some((addr, d.and_then(|d| d.title)));
+            }
+            UserData::Diagram(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.data_menus.diagram.data.remove(&addr);
+            }
+            UserData::DiagramPopup(addr) => self.diagram_popup_cleanup(addr),
+            UserData::Diagram2(addr) => self.d2_free(addr),
+            UserData::Diagram3(addr) => self.d3_free(addr),
+
             UserData::Vibration(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 let v = &mut self.game.options.vibration;
@@ -505,6 +553,15 @@ impl Host<GameKinds> for Running<'_> {
             UserData::DataDel(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.options.datadel.data.remove(&addr);
+            }
+            // `Toy_RemoveUserData`: `HSD_Free`.
+            UserData::Toy(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.toys.lottery.user.remove(&addr);
+            }
+            UserData::SoundTest(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.sound_test.data.remove(&addr);
             }
             // `HSD_Free`.
             UserData::CssCursor(i) => {

@@ -207,6 +207,7 @@ impl Audio {
     }
 
     /// `AXDriverUnlink` from the active list (`free` false) or the free list.
+    #[doc(alias = "AXDriverUnlink")]
     fn driver_unlink(&mut self, v: u8, free: bool) {
         let Voice { prev, next, .. } = self.driver.voices[usize::from(v)];
         let voice = self.dv(v);

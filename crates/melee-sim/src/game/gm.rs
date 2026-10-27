@@ -3,6 +3,7 @@
 
 pub mod attract;
 pub mod boot_mode;
+pub mod challenger;
 pub mod decisions;
 pub mod erase;
 pub mod howto;

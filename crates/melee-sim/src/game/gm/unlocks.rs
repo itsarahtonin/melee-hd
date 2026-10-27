@@ -16,7 +16,7 @@ pub fn selkind_to_ckind(selkind: u8) -> u8 {
 }
 
 /// `selkind_to_ckind_map`.
-const SELKIND_TO_CKIND: [u8; 25] = [
+pub(crate) const SELKIND_TO_CKIND: [u8; 25] = [
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
     0x10, 0x11, 0x12, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19,
 ];
@@ -58,7 +58,7 @@ fn mode_trophy(ckind: u8, mode: u8) -> i32 {
 
 /// A bit of a set of words (`bitset_test`), past its words into the bytes after them as the
 /// original reads them.
-fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
+pub(crate) fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
     let w = (n / 32) as usize;
     let word = match words.get(w) {
         Some(&v) => v,
@@ -78,7 +78,7 @@ impl Running<'_> {
     }
 
     /// The real-time clock's seconds as `lbTime_GetTimeInSeconds` reads them now.
-    fn clock_seconds(&mut self) -> u32 {
+    pub(crate) fn clock_seconds(&mut self) -> u32 {
         let tb = self.game.audio.tb_read();
         (tb / crate::audio::clock::TB_HZ).min(u64::from(u32::MAX)) as u32
     }
@@ -201,7 +201,8 @@ impl Running<'_> {
     }
 
     /// `fn_8017279C(n, mask)`: whether special message `n` has come, by its row of
-    /// `lbl_803D6300` whose mask `mask` matches (the rows `0x100` takes, the main menu's).
+    /// `lbl_803D6300` whose mask `mask` matches (the rows `0x100` takes, the main menu's, and
+    /// `4`, the lottery's: the same rows, those every mask takes).
     #[doc(alias = "fn_8017279C")]
     #[doc(alias = "fn_801735F0")]
     #[doc(alias = "fn_80173510")]
@@ -216,9 +217,21 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EDC8")]
     #[doc(alias = "gmMainLib_8015EDA4")]
     pub(super) fn message_due(&mut self, n: u32, mask: u16) -> bool {
-        assert_eq!(mask, 0x100, "fn_8017279C's other masks aren't ported");
+        if mask == 0xFFFF {
+            // Every row of `lbl_803D6300` takes the full mask: the message's condition.
+            return self.message_condition(n).unwrap_or(false);
+        }
+        assert!(
+            mask == 0x100 || mask == 4,
+            "fn_8017279C's mask {mask:#x} isn't ported"
+        );
+
         let u = self.game.gm.unlocks;
-        let total = i32::from(self.game.game_data.thing.save_data.trophy_count);
+        let total = self.toy_total();
+        let every = self.holds_every_trophy();
+        let held_all = (0..super::trophies::TROPHY_COUNT)
+            .filter(|&i| self.toy_flags()[i] & 0xFF != 0)
+            .count() as i32;
         let s = &mut self.game.game_data.thing.save_data;
         match n {
             0x16 => {
@@ -246,24 +259,11 @@ impl Running<'_> {
             0x39 => total >= 0x96,
             0x3A => total >= 0xC8,
             0x3B => total >= 0xFA,
-            0x3C => {
-                // `un_80304470`.
-                let sum: i32 = (0..8).map(super::trophies::class_size).sum();
-                let held = (0..super::trophies::TROPHY_COUNT)
-                    .filter(|&i| {
-                        i != 0xE6
-                            && i != 0xC9
-                            && self.game.game_data.thing.save_data.trophy_flags[i] & 0xFF != 0
-                    })
-                    .count() as i32;
-                sum <= held
-            }
+            // `un_80304470`.
+            0x3C => every,
             0x3D => {
                 let sum: i32 = (0..9).map(super::trophies::class_size).sum();
-                let held = (0..super::trophies::TROPHY_COUNT)
-                    .filter(|&i| self.game.game_data.thing.save_data.trophy_flags[i] & 0xFF != 0)
-                    .count() as i32;
-                sum == held
+                sum == held_all
             }
             _ => false,
         }

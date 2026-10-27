@@ -15,6 +15,9 @@
 //! drive` reads it at a drive's pace, the player's, as ssbm-rs's window and its runs with
 //! `DISC_RATE=3000000` do.
 //!
+//! With `--session INPUTS` (and no trace or replay) a recorded session plays from power-on
+//! instead (`session.rs`).
+//!
 //! The disc comes from `SSBM_DISC`. `--out` writes the native mix as a WAV file.
 
 use std::process::ExitCode;
@@ -28,6 +31,7 @@ use melee_sim::gekko_fp::{FpMode, set_fp_mode};
 use melee_slippi::Replay;
 
 mod boot;
+mod session;
 
 /// The mixer's rate.
 const RATE: usize = 32_000;
@@ -163,6 +167,9 @@ impl Window {
 }
 
 fn run(args: &[String]) -> Result<bool, String> {
+    if args.iter().any(|a| a == "--session") {
+        return session::run(args);
+    }
     let mut pos = Vec::new();
     let (mut ticks, mut window, mut out, mut port) = (2000u32, 1.0f64, None, false);
     let mut fp_mode = FpMode::Slippi;
@@ -314,7 +321,13 @@ fn run(args: &[String]) -> Result<bool, String> {
     if let Some(path) = &out {
         write_wav(path, &ours).map_err(|e| format!("{path}: {e}"))?;
     }
-    let Some((offset, how)) = align(&ours, &theirs) else {
+    compare(&ours, &theirs, window)
+}
+
+/// Aligns our mix with the recording and compares them window by window; whether they're
+/// sample-exact.
+fn compare(ours: &[Sample], theirs: &[Sample], window: f64) -> Result<bool, String> {
+    let Some((offset, how)) = align(ours, theirs) else {
         return Err("the two streams don't line up (ours is silent, or too short)".into());
     };
     println!(
