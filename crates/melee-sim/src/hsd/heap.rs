@@ -909,6 +909,12 @@ impl Heap {
                 let old_nb = (nb as u32 * 4) & !31;
                 self.pieces.array = new_array;
                 self.pieces.list.resize(new_nb, None);
+                // The old array holds the classes' addresses as it goes back.
+                let words: Vec<u8> = self.pieces.list[..nb]
+                    .iter()
+                    .flat_map(|e| e.as_ref().map_or(0, |e| e.addr).to_be_bytes())
+                    .collect();
+                self.image.put(old, &words);
                 self.piece_free_raw(old, old_nb);
                 let i = (old_nb.div_ceil(32) - 1) as usize;
                 self.entry(i).nb_alloc += 1;
@@ -1268,9 +1274,14 @@ impl Heap {
         header: u32,
         archive: melee_data::archive::ArchiveId,
     ) {
+        // The read's bytes past the file, where the archive keeps them (the disc's next).
+        let a = data.get(archive);
+        let end = (len..len.next_multiple_of(32))
+            .find(|&o| a.file_byte(o).is_none())
+            .unwrap_or(len.next_multiple_of(32));
         self.image.hold(
             file,
-            file + len,
+            file + end,
             super::image::Src::File {
                 archive,
                 offset: 0,

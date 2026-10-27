@@ -337,6 +337,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/yoshitongue",
     "it/kinds/zeldadinfire",
     "it/kinds/zeldadinfireexplode",
+    "it/lay",
     "it/lib26b1",
     "it/lib2725",
     "it/lib279c",

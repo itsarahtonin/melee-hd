@@ -150,10 +150,11 @@ impl Update {
     }
 }
 
-/// `EF_Effect`. `efLib_Create` leaves `params` and `user_data` as the pool's slot had them;
-/// each spawn sets what its update reads before the update runs, and nothing else reads them,
-/// so the slot's leftover words are no state: a new effect starts them at zero, and the oracle
-/// compares the parts its update reads (`x2A` and `x2B`, which nothing reads, aren't kept).
+/// `EF_Effect`. `efLib_Create` leaves `params`, `user_data`, `x2A` and `x2B` as the pool's
+/// slot had them; each spawn sets what its update reads before the update runs, and nothing
+/// else reads them. A new effect takes the block's words as the original has them (the slot's
+/// last effect's, or in a session what the heap's image knows of a block new from the heap,
+/// [`EffectLeft`]); the oracle compares the parts its update reads, and the words it knows.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Effect {
     /// The next effect of a spawn that made several (`next`).
@@ -174,6 +175,49 @@ pub struct Effect {
     pub state_flags: u8,
     /// `efLib_LoadKind` when it was made: 0 counts towards the 64 (`is_async`).
     pub is_async: u8,
+    /// What the block held where `efLib_Create` doesn't write.
+    pub left: EffectLeft,
+}
+
+/// A word an object's creation leaves as its block held it, until its owner writes it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub enum Held {
+    /// Unknown: outside a session, or where the heap's image doesn't know it.
+    #[default]
+    Unknown,
+    /// The block's word.
+    Word(u32),
+    /// The owner wrote it (the field holds it).
+    Written,
+}
+
+/// What an effect's block held where `efLib_Create` doesn't write (docs/engine.md, a session's
+/// heap leftovers): `user_data`'s word until a spawn sets it, which of `params`' words were
+/// unknown (their bits zero until written: a written word that is still zero is unknown too,
+/// which only ever hides a zero), and `x2A` and `x2B`, which nothing writes.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct EffectLeft {
+    pub user_data: Held,
+    pub params_unknown: u8,
+    pub x2a: [Option<u8>; 2],
+}
+
+impl Default for EffectLeft {
+    fn default() -> Self {
+        EffectLeft {
+            user_data: Held::Unknown,
+            params_unknown: 7,
+            x2a: [None; 2],
+        }
+    }
+}
+
+impl Effect {
+    /// Whether `params`' word `i` is known: the block's, or written.
+    pub fn param_known(&self, i: usize) -> bool {
+        let p = [self.params.x, self.params.y, self.params.z];
+        self.left.params_unknown & 1 << i == 0 || p[i].to_bits() != 0
+    }
 }
 
 /// How a deferred spawn finds where to spawn (`EF_SpawnKind`).

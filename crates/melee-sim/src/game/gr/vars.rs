@@ -15,6 +15,8 @@ use crate::game::handles::RawPtr;
 use crate::game::mirror::{Cx, Mem, Mirror};
 use crate::hsd::gobj::GObjId;
 
+mod lay;
+
 /// The union's size.
 pub const SIZE: usize = 0x140;
 

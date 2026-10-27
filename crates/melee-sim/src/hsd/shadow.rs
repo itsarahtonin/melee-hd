@@ -170,6 +170,7 @@ pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>)
     match j {
         Some(j) => {
             if let Some(i) = objs.shadows[s.0].objects.iter().position(|&o| o == j) {
+                super::export::with_image(|img| super::export::shadow_node(objs, img, s, i));
                 jobj::unref(objs, Some(j));
                 objs.shadows[s.0].objects.remove(i);
                 let node = objs.shadows[s.0].object_nodes.remove(i);
@@ -178,6 +179,7 @@ pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>)
         }
         None => {
             while let Some(&o) = objs.shadows[s.0].objects.first() {
+                super::export::with_image(|img| super::export::shadow_node(objs, img, s, 0));
                 jobj::unref(objs, Some(o));
                 objs.shadows[s.0].objects.remove(0);
                 let node = objs.shadows[s.0].object_nodes.remove(0);

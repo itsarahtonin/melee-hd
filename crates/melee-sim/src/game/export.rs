@@ -182,6 +182,36 @@ pub fn scene_game_objects(
             ground(game, data, img, super::handles::GroundId(slot));
         }
     }
+    let kind = std::any::type_name::<super::structs::ItemLink>();
+    for (slot, _) in game.it.links.iter() {
+        if img.in_scene(kind, slot) {
+            item_link(game, data, img, super::handles::ItemLinkId(slot));
+        }
+    }
+    let kind = std::any::type_name::<super::it::BoneTable>();
+    for (slot, _) in game.it.bone_tables.iter() {
+        if img.in_scene(kind, slot) {
+            bone_table(game, img, super::handles::BoneTableId(slot));
+        }
+    }
+    let kind = std::any::type_name::<crate::lb::sound_obj::SoundObj>();
+    for (slot, _) in game.sound_objs.iter() {
+        if img.in_scene(kind, slot) {
+            sound_obj(game, Some(data), img, super::handles::SoundObjId(slot));
+        }
+    }
+    let kind = std::any::type_name::<crate::hsd::sobj::SObj>();
+    for (slot, _) in game.objs.sobjs.iter() {
+        if img.in_scene(kind, slot) {
+            sobj(game, data, img, crate::hsd::sobj::SObjId(slot), false);
+        }
+    }
+    let kind = std::any::type_name::<super::ef::Effect>();
+    for (slot, _) in game.ef.effects.iter() {
+        if img.in_scene(kind, slot) {
+            effect(game, img, super::ef::EffectId(slot));
+        }
+    }
     let kind = std::any::type_name::<super::ef::Queued>();
     for (slot, _) in game.ef.queued.iter() {
         if img.in_scene(kind, slot) {
@@ -372,8 +402,7 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
 
 /// `Ground` (0x204), as its block goes back to the heap, over what the block held where the
 /// stage's code never writes (the padding, a typed member's bytes past its fields): a stage
-/// part's union is laid out where melee-sim keeps it as bytes or lays its member out
-/// ([`ground_vars`]); another typed member's bytes are its type's, unknown.
+/// part's union as melee-sim keeps it as bytes or lays its member out (`GroundVars::lay`).
 pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::GroundId) {
     let at = game.grounds.addr(g.0);
     if at == 0 {
@@ -405,34 +434,28 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
     }
     color_overlay(img, &mut l, 0x40, &o.color_overlay);
     l.f32(0xC0, o.xC0);
-    match (&o.u, o.u.type_name()) {
-        (super::gr::GroundVars::Bytes(b), _) => l.bytes(0xC4, b),
-        (v, Some(ty)) => {
+    match &o.u {
+        super::gr::GroundVars::Bytes(b) => l.bytes(0xC4, b),
+        v => {
             let cx = Addrs { game, img };
-            if !ground_vars(&mut l, at + 0xC4, v, &cx) {
-                // A typed member isn't laid out yet: its bytes are its type's.
+            if !v.lay(&mut l, at + 0xC4, &cx)
+                && let Some(ty) = v.type_name()
+            {
+                // A typed member melee-sim doesn't lay out: its bytes are its type's.
                 l.forget_as(at + 0xC4, super::gr::vars::SIZE as u32, ty);
             }
         }
-        _ => {}
+    }
+    // The member's tables in blocks of their own.
+    let blocks = {
+        let cx = Addrs { game, img };
+        o.u.lay_blocks(&cx)
+    };
+    for b in blocks {
+        b.put(img);
     }
     l.put(img);
 }
-
-/// The typed members of a stage part's union [`ground_vars`] lays out.
-pub const LAID_GROUND_VARS: &[&str] = &[
-    "ZebesCreatureVars",
-    "ZebesBackVars",
-    "ZebesBubbleVars",
-    "ZebesIslandVars",
-    "ZebesStageVars",
-    "ZebesLavaVars",
-    "CorneriaCityVars",
-    "CorneriaCity8Vars",
-    "IzumiVars",
-    "Izumi2Vars",
-    "Izumi3Vars",
-];
 
 /// The types of what the heap's image doesn't lay out, each with a note: an object of one
 /// leaves unknown bytes in its block as it goes, and a new object made over those stops a
@@ -441,7 +464,7 @@ pub const LAID_GROUND_VARS: &[&str] = &[
 /// prints them; laying them out is a campaign of its own (docs/engine.md, a session's heap
 /// leftovers).
 pub fn unlaid_types() -> Vec<(String, &'static str)> {
-    use crate::hsd::heap::{Class, Kind};
+    use crate::hsd::heap::Kind;
     let mut v = Vec::new();
     for k in Kind::ALL {
         let why = match k {
@@ -452,66 +475,38 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::RObj
             | Kind::IdEntry
             | Kind::Fighter
+            | Kind::FighterAttrs
             | Kind::FighterParts
             | Kind::FighterDObjList
             | Kind::FighterX2040
             | Kind::FighterX59C
             | Kind::Item
+            | Kind::Effect
             | Kind::EffectQueued
             | Kind::BgFlash
             | Kind::Particle
             | Kind::Generator
             | Kind::AppSrt
-            | Kind::Shadow => continue,
-            Kind::SList => "a list node: only the lights' lists are laid out",
+            | Kind::Shadow
+            | Kind::Vec
+            | Kind::Mtx
+            | Kind::ItemDynamicBones
+            | Kind::ItemLink
+            | Kind::SList
+            | Kind::Rvalue
+            | Kind::AudioUserData => continue,
+            Kind::Player => "a pool the game allocates nothing from (`Player_AllocData`)",
             Kind::DList
             | Kind::TevReg
             | Kind::Chan
             | Kind::Render
             | Kind::ZList
             | Kind::DebugMenu => "a pool melee-sim's model allocates nothing from",
-            Kind::Rvalue
-            | Kind::FighterAttrs
-            | Kind::Player
-            | Kind::ItemDynamicBones
-            | Kind::ItemLink
-            | Kind::Effect
-            | Kind::SObj
-            | Kind::AudioUserData
-            | Kind::Vec
-            | Kind::Mtx => "an object pool's objects (`HSD_ObjAlloc`)",
+            Kind::SObj => continue,
         };
         v.push((k.name().to_owned(), why));
     }
-    for c in Class::ALL {
-        let why = match c {
-            Class::JObj
-            | Class::DObj
-            | Class::MObj
-            | Class::TObj
-            | Class::PObj
-            | Class::CObj
-            | Class::WObj
-            | Class::FtJObj
-            | Class::FtIntpJObj
-            | Class::FtPObj
-            | Class::FtMObj
-            | Class::GrMObj
-            | Class::ItMObj
-            | Class::RfDObj
-            | Class::RfPObj => continue,
-            Class::LObj | Class::Fog => "an HSD class's objects (`hsdNew`)",
-        };
-        v.push((c.name().to_owned(), why));
-    }
-    for t in super::gr::GroundVars::TYPED {
-        if !LAID_GROUND_VARS.contains(t) {
-            v.push((
-                (*t).to_owned(),
-                "a typed member of a stage part's union (`Ground::u`)",
-            ));
-        }
-    }
+    // Every HSD class's objects are laid out (`hsd::export`).
     for t in super::it::vars::UNLAID {
         v.push((
             (*t).to_owned(),
@@ -535,7 +530,6 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             "a GObj's user data remover",
             "the word after a GObj's user data",
         ),
-        ("HSD_MemoryEntry", "the memory pieces' size classes"),
         (
             "a disc read's bytes past a file",
             "the bytes a read brings past a file's end",
@@ -544,116 +538,6 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
         v.push((t.to_owned(), why));
     }
     v
-}
-
-/// A typed member of a stage part's union at `a`, its fields alone (the bytes past them are
-/// what the block held, which the stage's code never writes): whether melee-sim lays the
-/// member out (Brinstar's and Corneria's city, so far; the others are unknown,
-/// `GroundVars::TYPED`).
-fn ground_vars(l: &mut Lay, a: u32, v: &super::gr::GroundVars, cx: &Addrs) -> bool {
-    use super::gr::GroundVars as V;
-    let gobj = |l: &mut Lay, at: u32, g: Option<GObjId>| {
-        l.put_word(at, cx.handle("GObjId", g.map(|g| g.0)));
-    };
-    let jobj = |l: &mut Lay, at: u32, j: Option<crate::hsd::jobj::JObjId>| {
-        l.put_word(at, cx.handle("JObjId", j.map(|j| j.0)));
-    };
-    // A spawn configuration's address, which melee-sim keeps only once found (0 before).
-    let addr = |l: &mut Lay, at: u32, w: u32| {
-        if w != 0 {
-            l.put_u32(at, w);
-        } else {
-            l.forget(at, 4);
-        }
-    };
-    let acid = |l: &mut Lay, at: u32, s: &super::gr::vars::AcidState| {
-        l.put_u8(at, s.x00);
-        l.put_u8(at + 1, s.x01);
-        l.put_u16(at + 2, s.x02 as u16);
-        for (k, f) in [s.x04, s.x08, s.x0C, s.x10].into_iter().enumerate() {
-            l.put_u32(at + 4 + 4 * k as u32, f.to_bits());
-        }
-        jobj(l, at + 0x14, s.x14);
-        jobj(l, at + 0x18, s.x18);
-        gobj(l, at + 0x1C, s.x1C);
-        l.put_u16(at + 0x20, s.x20 as u16);
-    };
-    match v {
-        V::ZebesCreature(v) => {
-            l.put_u8(a, v.x0);
-            jobj(l, a + 4, v.stored_jobj);
-            l.put_u16(a + 8, v.x8 as u16);
-            l.put_u16(a + 0xA, v.xA as u16);
-        }
-        V::ZebesBack(v) => l.put_u16(a, v.xC4 as u16),
-        V::ZebesBubble(v) => {
-            gobj(l, a, v.xC4);
-            l.put_u32(a + 4, v.xC8 as u32);
-        }
-        V::ZebesIsland(v) => {
-            acid(l, a, &v.acid);
-            l.put_u32(a + 0x24, v.xE8 as u32);
-            addr(l, a + 0x28, v.xEC);
-        }
-        V::ZebesStage(v) => {
-            l.put_u16(a, v.xC4 as u16);
-            l.put_u16(a + 2, v.xC6 as u16);
-            acid(l, a + 4, &v.acid);
-            l.put_u32(a + 0x28, v.xEC);
-            gobj(l, a + 0x2C, v.xF0);
-            l.put_u16(a + 0x30, v.xF4 as u16);
-            l.put_u16(a + 0x32, v.xF6 as u16);
-            l.put_u16(a + 0x34, v.xF8 as u16);
-            l.put_u16(a + 0x36, v.xFA as u16);
-            addr(l, a + 0x38, v.xFC);
-            gobj(l, a + 0x3C, v.x100);
-        }
-        V::ZebesLava(v) => {
-            l.put_u16(a, v.xC4 as u16);
-            l.put_u16(a + 2, v.xC6 as u16);
-            l.put_u32(a + 4, v.xC8);
-            for (k, f) in [v.xCC, v.xD0, v.xD4, v.xD8].into_iter().enumerate() {
-                l.put_u32(a + 8 + 4 * k as u32, f.to_bits());
-            }
-            l.put_word(a + 0x18, cx.handle("LObjId", v.xDC.map(|o| o.0)));
-        }
-        V::CorneriaCity(v) => {
-            l.put_u8(a, v.xC4);
-            l.put_u8(a + 1, v.xC5);
-            l.put_bits(a + 2, 0, 1, u32::from(v.still));
-        }
-        V::Izumi(v) => {
-            l.put_word(a, cx.handle("TObjId", v.xC4.map(|o| o.0)));
-            gobj(l, a + 4, v.xC8);
-            gobj(l, a + 8, v.xCC);
-            jobj(l, a + 0xC, v.xD0);
-            jobj(l, a + 0x10, v.xD4);
-        }
-        V::Izumi2(v) => {
-            jobj(l, a, v.xC4);
-            jobj(l, a + 4, v.xC8);
-        }
-        V::Izumi3(v) => {
-            for (k, h) in [v.xC4, v.xC6, v.xC8, v.xCA].into_iter().enumerate() {
-                l.put_u16(a + 2 * k as u32, h as u16);
-            }
-            jobj(l, a + 8, v.xCC);
-            for (k, f) in [v.xD0, v.xD4, v.xD8, v.xDC].into_iter().enumerate() {
-                l.put_u32(a + 0xC + 4 * k as u32, f.to_bits());
-            }
-        }
-        V::CorneriaCity8(v) => {
-            l.put_u8(a, v.xC4);
-            l.put_u8(a + 1, v.xC5);
-            l.put_u8(a + 2, v.xC6);
-            for (k, &w) in v.xC8.iter().enumerate() {
-                l.put_u32(a + 4 + 4 * k as u32, w);
-            }
-            l.put_bits(a + 0x1C, 0, 1, u32::from(v.still));
-        }
-        _ => return false,
-    }
-    true
 }
 
 /// The addresses the game's handles name now, for a generated layout ([`LayOut`]): a pool's
@@ -678,6 +562,9 @@ impl LayCx for Addrs<'_> {
             "MObjId" => g.objs.mobjs.pool.addr(h),
             "TObjId" => g.objs.tobjs.pool.addr(h),
             "LObjId" => g.objs.lobjs.pool.addr(h),
+            "GeneratorId" => g.objs.generators.pool.addr(h),
+            // A text is its offset in the text arena's block.
+            "TextId" if g.sis.arena_block != 0 => g.sis.arena_block.wrapping_add(h),
             "FighterId" => g.fighters.addr(h),
             "ItemId" => g.items.addr(h),
             "ItemLinkId" => g.it.links.addr(h),
@@ -760,6 +647,258 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
     let n = usize::from(o.xAC8_hurtboxNum);
     o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    l.put(img);
+}
+
+/// `ItemLink` (0x1D8), as its block goes back (`HSD_ObjFree`, or with its scene's heap): the
+/// fields the comparer checks, over what the block held where the link never writes.
+pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handles::ItemLinkId) {
+    let at = game.it.links.addr(k.0);
+    if at == 0 {
+        return;
+    }
+    let mut l = Lay::leftover(img, data, at, super::structs::ItemLink::SIZE);
+    let cx = Addrs { game, img };
+    game.it.links[k.0].lay(&mut l, at, &cx);
+    l.put(img);
+}
+
+/// An item's table of its model's joints (`DynamicBoneTable`, 0x190: 100 `HSD_JObj*`), as its
+/// block goes back: the joints `Item_802682F0`'s walk wrote, the rest what the block held.
+pub fn bone_table(game: &Game, img: &mut Image, t: super::handles::BoneTableId) {
+    let at = game.it.bone_tables.addr(t.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.it.bone_tables[t.0];
+    let mut l = Lay::new(at, 0x190);
+    {
+        let cx = Addrs { game, img };
+        for (i, j) in o.bones.iter().enumerate().take(usize::from(o.len)) {
+            l.put_word(at + 4 * i as u32, cx.handle("JObjId", j.map(|j| j.0)));
+        }
+    }
+    // The entries past the joints keep what the block held: an image layout over its claim
+    // would hide them, so only the written ones go in.
+    img.unclaim(at + 4 * u32::from(o.len), at + 0x190);
+    l.put(img);
+}
+
+/// A sound object's user data (`lbAudioAx_UserData`, 0x48), as its block goes back
+/// (`HSD_ObjFree`, whose link then takes its first word, or with its scene's heap): every word
+/// `fn_80025FAC` writes; its first word, which nothing writes, what the block held (with `data`,
+/// from the image).
+pub fn sound_obj(
+    game: &Game,
+    data: Option<&Archives>,
+    img: &mut Image,
+    s: super::handles::SoundObjId,
+) {
+    let at = game.sound_objs.addr(s.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.sound_objs[s.0];
+    let mut l = match data {
+        Some(d) => Lay::leftover(img, d, at, 0x48),
+        None => Lay::new(at, 0x48),
+    };
+    {
+        let cx = Addrs { game, img };
+        l.put_word(at + 4, cx.handle("GObjId", o.gobj.map(|g| g.0)));
+        l.put_word(at + 8, cx.handle("GObjId", o.owner.map(|g| g.0)));
+    }
+    l.u32(0xC, o.behavior as u32);
+    l.u32(0x10, o.update.map_or(0, |c| c.0));
+    for (i, w) in [
+        o.id,
+        o.start_vol,
+        o.end_vol,
+        o.vol,
+        o.pan_left,
+        o.pan_right,
+        o.pan,
+        o.voice_id,
+        o.current_frame,
+        o.end_frame,
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        l.u32(0x14 + 4 * i as u32, w as u32);
+    }
+    l.f32(0x3C, o.direction);
+    l.u32(0x40, o.track as u32);
+    l.u32(0x44, u32::from(o.x44));
+    l.put(img);
+}
+
+/// A sprite (`HSD_SObj`, 0x9C), as its block goes back (`HSD_ObjFree`, unlinked first:
+/// `freed`) or with its scene's heap: its fields, its texture object as `GXInitTexObj` (or
+/// `GXInitTexObjCI`) made it and its first draw's `GXLoadTexObj` left it, its palette's object
+/// (`GXInitTlutObj`'s bits; those the stack held, bits 21 to 23 of `loadTlut0`, and its padding,
+/// keep what the block held) and its second image's texture object. A part the sprite doesn't
+/// make (no palette, no second image) and the priority's padding keep what the block held; an
+/// image's address the image doesn't place is unknown, and so is a palette `GXLoadTlut` loaded
+/// (its region's offset).
+pub fn sobj(
+    game: &Game,
+    data: &Archives,
+    img: &mut Image,
+    s: crate::hsd::sobj::SObjId,
+    freed: bool,
+) {
+    use crate::hsd::sobj::{GxTexObj, Image as SImage, gx_init_tex_obj};
+    let at = game.objs.sobjs.addr(s.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.objs.sobjs[s.0];
+    let mut l = Lay::new(at, 0x9C);
+    let cx = Addrs { game, img };
+    let sa = |x: Option<crate::hsd::sobj::SObjId>| x.map_or(0, |x| game.objs.sobjs.addr(x.0));
+    l.u32(0, o.x0);
+    if freed {
+        l.u32(4, 0);
+        l.u32(8, 0);
+    } else {
+        l.u32(4, sa(o.next));
+        l.u32(8, sa(o.prev));
+    }
+    l.put_word(at + 0xC, cx.handle("GObjId", o.gobj.map(|g| g.0)));
+    l.f32s(
+        0x10,
+        &[
+            o.x, o.y, o.rotation, o.scale_x, o.scale_y, o.s0, o.t0, o.s1, o.t1,
+        ],
+    );
+    l.u16(0x34, o.width);
+    l.u16(0x36, o.height);
+    l.bytes(0x38, &o.color0);
+    l.bytes(0x3C, &o.color1);
+    l.u32(0x40, o.flags);
+    l.u8(0x44, o.priority);
+    l.u32(0x48, o.x48);
+    l.u32(0x4C, o.callback.map_or(0, |c| c.0));
+    // A texture object at `off`, unknown where its image's address is.
+    let tex = |l: &mut Lay, off: u32, t: GxTexObj, image: Option<u32>| {
+        l.u32(off, t.mode0);
+        l.u32(off + 4, t.mode1);
+        l.u32(off + 8, t.image0);
+        match image {
+            Some(_) => l.u32(off + 0xC, t.image3),
+            None => l.forget(at + off + 0xC, 4),
+        }
+        l.u32(off + 0x10, t.user_data);
+        l.u32(off + 0x14, t.fmt);
+        l.u32(off + 0x18, t.tlut_name);
+        l.u16(off + 0x1C, t.load_cnt);
+        l.u8(off + 0x1E, t.load_fmt);
+        l.u8(off + 0x1F, t.flags);
+    };
+    let tx = o.tex;
+    let (image_ptr, tlut) = match o.image {
+        SImage::Data(d) => (cx.data(data.ptr(d)), tx.tlut),
+        SImage::Movie { .. } => (Some(0), None),
+        SImage::None => (None, None),
+    };
+    let mut t = gx_init_tex_obj(
+        image_ptr.unwrap_or(0),
+        tx.width,
+        tx.height,
+        tx.format,
+        tx.wrap_s,
+        tx.wrap_t,
+        tx.mipmap,
+    );
+    if let Some(tl) = tlut {
+        // `GXInitTexObjCI`, and the palette's object.
+        t.flags &= !2;
+        t.tlut_name = data.u32(tl.at(8));
+        let lut = cx.data(data.ptr(tl));
+        if let Some(lut) = lut {
+            l.put_bits(at + 0x74, 11, 21, (lut & 0x3FFF_FFFF) >> 5);
+        }
+        l.u8(0x74, 0x64);
+        l.u16(0x78, data.u16(tl.at(0xC)));
+        let ci = matches!(tx.format, 8 | 9);
+        if o.loaded && ci {
+            // `GXLoadTlut` sets the region's place in the low bits.
+            l.forget(at + 0x70, 4);
+        } else {
+            l.u32(0x70, (data.u32(tl.at(4)) & 3) << 10);
+        }
+    }
+    if o.loaded {
+        t = t.loaded(0);
+    }
+    tex(&mut l, 0x50, t, image_ptr);
+    if let Some(d) = o.image2 {
+        let image2 = cx.data(data.ptr(d));
+        let mut t2 = gx_init_tex_obj(
+            image2.unwrap_or(0),
+            data.u16(d.at(4)),
+            data.u16(d.at(6)),
+            data.u32(d.at(8)),
+            tx.wrap_s,
+            tx.wrap_t,
+            data.u32(d.at(0xC)) as u8,
+        );
+        if o.loaded && o.flags & 0x14 == 4 {
+            t2 = t2.loaded(1);
+        }
+        tex(&mut l, 0x7C, t2, image2);
+    }
+    l.put(img);
+}
+
+/// `EF_Effect` (0x2C), as its block goes back (`HSD_ObjFree`, or with its scene's heap): its
+/// links, GObjs, joint, update and lifetime and flags; `user_data`, `params`, `x2A` and `x2B`
+/// as the effect holds them where it wrote them or knows the block's ([`super::ef::EffectLeft`]),
+/// else unknown.
+pub fn effect(game: &Game, img: &mut Image, e: super::ef::EffectId) {
+    use super::ef::Held;
+    let at = game.ef.effects.addr(e.0);
+    if at == 0 {
+        return;
+    }
+    let o = &game.ef.effects[e.0];
+    let mut l = Lay::new(at, 0x2C);
+    {
+        let cx = Addrs { game, img };
+        l.put_word(at, cx.handle("EffectId", o.next.map(|n| n.0)));
+        l.put_word(at + 4, cx.handle("GObjId", o.gobj.map(|g| g.0)));
+        l.put_word(at + 8, cx.handle("GObjId", o.parent.map(|g| g.0)));
+        l.put_word(at + 0xC, cx.handle("JObjId", o.attach_jobj.map(|j| j.0)));
+        let ud = match o.left.user_data {
+            Held::Written => cx.handle("FighterId", o.user_data.map(|f| f.0)),
+            Held::Word(w) => Some(w),
+            Held::Unknown => None,
+        };
+        l.put_word(at + 0x14, ud);
+    }
+    l.u32(0x10, o.update.map_or(0, |u| u.addr()));
+    let p = [o.params.x, o.params.y, o.params.z];
+    for (i, f) in p.iter().enumerate() {
+        if o.param_known(i) {
+            l.f32(0x18 + 4 * i as u32, *f);
+        }
+    }
+    l.u16(0x24, o.lifetime);
+    l.bytes(
+        0x26,
+        &[
+            o.expire_flags as u8,
+            o.scale_flags,
+            o.state_flags,
+            o.is_async,
+        ],
+    );
+    for (i, b) in o.left.x2a.iter().enumerate() {
+        if let Some(b) = *b {
+            l.u8(0x2A + i as u32, b);
+        }
+    }
     l.put(img);
 }
 
@@ -853,6 +992,20 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
             lays.push(l);
         }
     }
+    // The attributes' block (`fighter_dat_attrs_alloc_data`, 0x424): the character's
+    // attributes copied in (`PUSH_ATTRS`), past them what the block held.
+    if let Some(a) = fp.dat_attrs_backup {
+        let at = game.fighter_attrs.addr(a.0);
+        if at != 0 {
+            let len = crate::hsd::heap::Kind::FighterAttrs.init().0;
+            let mut l = Lay::leftover(img, data, at, len);
+            if fp.dat_attrs == Some(a) {
+                let b = &game.fighter_attrs[a.0];
+                l.bytes(0, &b[..b.len().min(len as usize)]);
+            }
+            lays.push(l);
+        }
+    }
     for l in lays {
         l.put(img);
     }
@@ -937,16 +1090,18 @@ pub fn coll_joints(game: &Game, data: &Archives, img: &mut Image) {
 #[cfg(test)]
 mod tests {
     #[test]
-    fn the_laid_ground_vars_are_typed_members() {
-        for t in super::LAID_GROUND_VARS {
-            assert!(super::super::gr::GroundVars::TYPED.contains(t), "{t}");
-        }
+    fn the_laid_types_are_off_the_list() {
         let list = super::unlaid_types();
-        assert!(list.iter().any(|(t, _)| t == "MapVars"));
-        assert!(
-            !list
-                .iter()
-                .any(|(t, _)| t == "ZebesStageVars" || t == "Item")
-        );
+        for t in [
+            "MapVars",
+            "ZebesStageVars",
+            "Item",
+            "Effect",
+            "LObj",
+            "HSD_Archive",
+        ] {
+            assert!(!list.iter().any(|(n, _)| n == t), "{t}");
+        }
+        assert!(list.iter().any(|(t, _)| t == "Player"));
     }
 }

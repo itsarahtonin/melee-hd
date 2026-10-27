@@ -122,6 +122,13 @@ pub trait Console {
     /// A disc file's bytes and entry number, for the frontend's loads before the session
     /// runs.
     fn file(&mut self, path: &str) -> DiscFile;
+    /// The bytes a disc read of a file brings past its end, the disc's next bytes up to its
+    /// length rounded up to 32, which the heap's image takes as the file's block's tail (none
+    /// where the console doesn't give them: unknown).
+    fn file_after(&mut self, path: &str) -> Vec<u8> {
+        let _ = path;
+        Vec::new()
+    }
     /// A disc file's entry number and size (`DVDFastOpen`'s), for the preload cache's reads of
     /// files the simulation only times.
     fn file_info(&mut self, path: &str) -> (i32, u32) {
@@ -401,7 +408,8 @@ impl Session {
         for &name in FILES {
             let file = console.file(name);
             let len = file.bytes.len() as u32;
-            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let a = Archive::parse_in(&file.bytes, &console.file_after(name))
+                .unwrap_or_else(|e| panic!("{name}: {e:?}"));
             let id = self.data.add(a);
             let files = &mut self.game.ft.data.files;
             files.entries.push((name.to_owned(), file.entrynum, len));
@@ -429,7 +437,8 @@ impl Session {
         for name in models {
             let file = console.file(&name);
             let len = file.bytes.len() as u32;
-            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let a = Archive::parse_in(&file.bytes, &console.file_after(&name))
+                .unwrap_or_else(|e| panic!("{name}: {e:?}"));
             let id = self.data.add(a);
             let files = &mut self.game.ft.data.files;
             files.entries.push((name.clone(), file.entrynum, len));
@@ -483,8 +492,8 @@ impl Session {
                     Some(&(_, id)) => id,
                     None => {
                         let file = console.file(name);
-                        let a =
-                            Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                        let a = Archive::parse_in(&file.bytes, &console.file_after(name))
+                            .unwrap_or_else(|e| panic!("{name}: {e:?}"));
                         let id = self.data.add(a);
                         let files = &mut self.game.ft.data.files;
                         files.entries.push((
@@ -655,7 +664,8 @@ impl Session {
                 continue;
             }
             let file = console.file(name);
-            let a = Archive::parse(&file.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+            let a = Archive::parse_in(&file.bytes, &console.file_after(name))
+                .unwrap_or_else(|e| panic!("{name}: {e:?}"));
             let id = self.data.add(a);
             let files = &mut self.game.ft.data.files;
             files.archives.push((name.to_owned(), id));

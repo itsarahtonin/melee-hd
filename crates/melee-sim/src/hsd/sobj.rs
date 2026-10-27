@@ -97,6 +97,108 @@ pub struct SObj {
 /// The sprites' pool.
 pub type SObjs = Pool<SObj, { kind(heap::Kind::SObj) }>;
 
+/// `__GXTexObjInt_struct`, the private layout of `GXTexObj`, as GX's `GXInitTexObj` packs it:
+/// a sprite's own (its block holds them, which the heap's image lays out), and melee-render's.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct GxTexObj {
+    pub mode0: u32,
+    pub mode1: u32,
+    pub image0: u32,
+    pub image3: u32,
+    /// `userData`, a pointer the SDK only keeps.
+    pub user_data: u32,
+    /// `GXTexFmt`.
+    pub fmt: u32,
+    pub tlut_name: u32,
+    pub load_cnt: u16,
+    pub load_fmt: u8,
+    /// Bit 0: mipmapped; bit 1: not color indexed.
+    pub flags: u8,
+}
+
+/// `SET_REG_FIELD`.
+fn set_field(reg: &mut u32, size: u32, shift: u32, val: u32) {
+    let mask = ((1u32 << size) - 1) << shift;
+    *reg = (*reg & !mask) | (val << shift);
+}
+
+/// `GXInitTexObj`'s object: `image_ptr` is the image's address, which the object keeps in
+/// 32-byte units, `(addr >> 5) & 0x01FFFFFF`.
+#[allow(clippy::too_many_arguments)]
+pub fn gx_init_tex_obj(
+    image_ptr: u32,
+    width: u16,
+    height: u16,
+    format: u32,
+    wrap_s: u32,
+    wrap_t: u32,
+    mipmap: u8,
+) -> GxTexObj {
+    let mut t = GxTexObj::default();
+    set_field(&mut t.mode0, 2, 0, wrap_s);
+    set_field(&mut t.mode0, 2, 2, wrap_t);
+    set_field(&mut t.mode0, 1, 4, 1);
+    if mipmap != 0 {
+        t.flags |= 1;
+        if format.wrapping_sub(8) <= 2 {
+            t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0xA0;
+        } else {
+            t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0xC0;
+        }
+        let max_lod = if width > height {
+            31u32.wrapping_sub(u32::from(width).leading_zeros())
+        } else {
+            31u32.wrapping_sub(u32::from(height).leading_zeros())
+        };
+        let lmax = u32::from(gekko_fp::fctiwz(gekko_fp::fmuls(
+            16.0,
+            gekko_fp::frsp(f64::from(max_lod)),
+        )) as u8);
+        set_field(&mut t.mode1, 8, 8, lmax);
+    } else {
+        t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0x80;
+    }
+    t.fmt = format;
+    set_field(&mut t.image0, 10, 0, u32::from(width).wrapping_sub(1));
+    set_field(&mut t.image0, 10, 10, u32::from(height).wrapping_sub(1));
+    set_field(&mut t.image0, 4, 20, format & 0xF);
+    let image_base = (image_ptr >> 5) & 0x01FF_FFFF;
+    set_field(&mut t.image3, 21, 0, image_base);
+    let (load_fmt, row_t, col_t) = match format & 0xF {
+        0 | 8 => (1, 3, 3),
+        1 | 2 | 9 => (2, 3, 2),
+        3 | 4 | 5 | 10 => (2, 2, 2),
+        6 => (3, 2, 2),
+        14 => (0, 3, 3),
+        _ => (2, 2, 2),
+    };
+    t.load_fmt = load_fmt;
+    let row_c = (u32::from(width) + (1 << row_t) - 1) >> row_t;
+    let col_c = (u32::from(height) + (1 << col_t) - 1) >> col_t;
+    t.load_cnt = ((row_c * col_c) & 0x7FFF) as u16;
+    t.flags |= 2;
+    t
+}
+
+/// The texture map registers' IDs `GXLoadTexObj` writes into an object's top bytes for map
+/// `id` (`mode0`, `mode1`, `image0`, `image3`).
+pub const TEX_MODE0_IDS: [u8; 8] = [0x80, 0x81, 0x82, 0x83, 0xA0, 0xA1, 0xA2, 0xA3];
+pub const TEX_MODE1_IDS: [u8; 8] = [0x84, 0x85, 0x86, 0x87, 0xA4, 0xA5, 0xA6, 0xA7];
+pub const TEX_IMAGE0_IDS: [u8; 8] = [0x88, 0x89, 0x8A, 0x8B, 0xA8, 0xA9, 0xAA, 0xAB];
+pub const TEX_IMAGE3_IDS: [u8; 8] = [0x94, 0x95, 0x96, 0x97, 0xB4, 0xB5, 0xB6, 0xB7];
+
+impl GxTexObj {
+    /// The object as `GXLoadTexObj` leaves it in memory for texture map `id`: the registers'
+    /// IDs in its words' top bytes.
+    pub fn loaded(mut self, id: usize) -> GxTexObj {
+        set_field(&mut self.mode0, 8, 24, u32::from(TEX_MODE0_IDS[id]));
+        set_field(&mut self.mode1, 8, 24, u32::from(TEX_MODE1_IDS[id]));
+        set_field(&mut self.image0, 8, 24, u32::from(TEX_IMAGE0_IDS[id]));
+        set_field(&mut self.image3, 8, 24, u32::from(TEX_IMAGE3_IDS[id]));
+        self
+    }
+}
+
 /// `HSD_ImageDesc`'s fields: the image, its size and format, and whether it has mipmaps.
 fn image_desc(data: &Archives, d: DataRef) -> (u16, u16, u32, u8) {
     (

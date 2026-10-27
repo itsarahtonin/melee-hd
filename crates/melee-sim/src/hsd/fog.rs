@@ -208,6 +208,8 @@ pub fn unref(objs: &mut Objects, f: Option<FogId>) {
 /// (`FogRelease`) and destroy.
 #[doc(alias = "FogRelease")]
 pub fn delete(objs: &mut Objects, f: FogId) {
+    // The block holds the fog as it was (docs/engine.md, a session's heap leftovers).
+    super::export::with_image(|img| super::export::fog(objs, img, f));
     let fogs = &mut objs.fogs;
     if let Some(a) = fogs[f].fog_adj
         && fogs.adjs[a.0].ref_count.dec()

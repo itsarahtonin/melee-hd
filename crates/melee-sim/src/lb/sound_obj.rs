@@ -186,6 +186,10 @@ fn sweep_pan(current: i32, end: i32, left: i32, right: i32) -> i32 {
 /// Releases a sound object's user data, `lbAudioAx_ObjFree`.
 #[doc(alias = "lbAudioAx_ObjFree")]
 pub fn free(game: &mut Game, s: SoundObjId) {
+    // The block holds the sound object as it was (docs/engine.md, a session's heap
+    // leftovers); its first word becomes the free list's link.
+    let g = &*game;
+    crate::hsd::export::with_image(|img| crate::game::export::sound_obj(g, None, img, s));
     game.sound_objs.free(s.0);
 }
 

@@ -186,6 +186,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                 ef.update = Some(Update::SetRotYAndTransition);
                 ef.lifetime = 0x41;
                 ef.user_data = None;
+                ef.left.user_data = super::Held::Written;
                 let e2 = create_attach(r, 0x1389, gobj, j);
                 r.game.ef.effects[e1.0].next = e2;
                 if let Some(e2) = e2 {
@@ -193,6 +194,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                     ef.update = Some(Update::SetRotYAndTransition);
                     ef.lifetime = 0x41;
                     ef.user_data = Some(fighter);
+                    ef.left.user_data = super::Held::Written;
                     let e3 = create_attach(r, 0x138A, gobj, j2);
                     r.game.ef.effects[e2.0].next = e3;
                     if let Some(e3) = e3 {
@@ -200,6 +202,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                         ef.update = Some(Update::SetRotYAndTransition);
                         ef.lifetime = 0x41;
                         ef.user_data = Some(fighter);
+                        ef.left.user_data = super::Held::Written;
                     }
                 }
             }

@@ -903,6 +903,7 @@ pub fn run_all(objs: &mut Objects, data: &Archives, hooks: &mut dyn Hooks, mask:
     while let Some(n) = objs.generators.pending {
         let g = objs.generators.nodes[n.0].data;
         orient_to_jobj(objs, data, g);
+        super::export::with_image(|img| super::export::generator_node(objs, img, n));
         let gs = &mut objs.generators;
         gs.pending = list::remove(&mut gs.nodes, gs.pending);
         if let Some(j) = objs.generators[g].jobj.take() {

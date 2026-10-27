@@ -4,23 +4,9 @@ use super::enums::*;
 use super::{Gx, GxData, cntlzw, get_field, reg, set_field};
 use gekko_fp as fp;
 
-/// `__GXTexObjInt_struct`, the private layout of `GXTexObj`.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub struct TexObj {
-    pub mode0: u32,
-    pub mode1: u32,
-    pub image0: u32,
-    pub image3: u32,
-    /// `userData`, a pointer the SDK only keeps.
-    pub user_data: u32,
-    /// `GXTexFmt`.
-    pub fmt: u32,
-    pub tlut_name: u32,
-    pub load_cnt: u16,
-    pub load_fmt: u8,
-    /// Bit 0: mipmapped; bit 1: not color indexed.
-    pub flags: u8,
-}
+/// `__GXTexObjInt_struct`, the private layout of `GXTexObj` (melee-sim's, whose sprites keep
+/// theirs in the heap's image).
+pub use melee_sim::hsd::sobj::GxTexObj as TexObj;
 
 /// `__GXTexRegionInt_struct`, the private layout of `GXTexRegion`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -166,47 +152,9 @@ impl Gx {
         wrap_t: u32,
         mipmap: u8,
     ) {
-        let t = obj;
-        *t = TexObj::default();
-        set_field(&mut t.mode0, 2, 0, wrap_s);
-        set_field(&mut t.mode0, 2, 2, wrap_t);
-        set_field(&mut t.mode0, 1, 4, 1);
-        if mipmap != 0 {
-            t.flags |= 1;
-            if format.wrapping_sub(8) <= 2 {
-                t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0xA0;
-            } else {
-                t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0xC0;
-            }
-            let max_lod = if width > height {
-                31u32.wrapping_sub(cntlzw(u32::from(width)))
-            } else {
-                31u32.wrapping_sub(cntlzw(u32::from(height)))
-            };
-            let lmax = lod_byte(fp::fmuls(16.0, fp::frsp(f64::from(max_lod))));
-            set_field(&mut t.mode1, 8, 8, lmax);
-        } else {
-            t.mode0 = (t.mode0 & 0xFFFF_FF1F) | 0x80;
-        }
-        t.fmt = format;
-        set_field(&mut t.image0, 10, 0, u32::from(width).wrapping_sub(1));
-        set_field(&mut t.image0, 10, 10, u32::from(height).wrapping_sub(1));
-        set_field(&mut t.image0, 4, 20, format & 0xF);
-        let image_base = (image_ptr >> 5) & 0x01FF_FFFF;
-        set_field(&mut t.image3, 21, 0, image_base);
-        let (load_fmt, row_t, col_t) = match format & 0xF {
-            0 | 8 => (1, 3, 3),
-            1 | 2 | 9 => (2, 3, 2),
-            3 | 4 | 5 | 10 => (2, 2, 2),
-            6 => (3, 2, 2),
-            14 => (0, 3, 3),
-            _ => (2, 2, 2),
-        };
-        t.load_fmt = load_fmt;
-        let row_c = (u32::from(width) + (1 << row_t) - 1) >> row_t;
-        let col_c = (u32::from(height) + (1 << col_t) - 1) >> col_t;
-        t.load_cnt = ((row_c * col_c) & 0x7FFF) as u16;
-        t.flags |= 2;
+        *obj = melee_sim::hsd::sobj::gx_init_tex_obj(
+            image_ptr, width, height, format, wrap_s, wrap_t, mipmap,
+        );
     }
 
     #[doc(alias = "GXInitTexObjCI")]

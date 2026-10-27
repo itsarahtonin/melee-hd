@@ -59,6 +59,36 @@ impl Disc {
         Ok(data)
     }
 
+    /// The bytes a disc read of the file brings past its end (`DVDRead`'s lengths are 32-byte
+    /// multiples): the disc's next bytes, up to the file's length rounded up to 32.
+    pub fn read_after(&self, path: &str) -> Result<Vec<u8>, DiscError> {
+        use std::io::{Seek, SeekFrom};
+        let mut partition = self
+            .reader
+            .open_partition_kind(PartitionKind::Data, &PartitionOptions::default())?;
+        let meta = partition.meta()?;
+        let fst = meta.fst().map_err(DiscError::InvalidFst)?;
+        let (_, node) = fst
+            .find(path)
+            .filter(|(_, node)| node.is_file())
+            .ok_or_else(|| DiscError::FileNotFound(path.to_owned()))?;
+        let len = node.length();
+        let n = (len.next_multiple_of(32) - len) as usize;
+        let end = node.offset(partition.is_wii()) + u64::from(len);
+        partition.seek(SeekFrom::Start(end))?;
+        let mut out = vec![0; n];
+        let mut got = 0;
+        while got < n {
+            let k = partition.read(&mut out[got..])?;
+            if k == 0 {
+                break;
+            }
+            got += k;
+        }
+        out.truncate(got);
+        Ok(out)
+    }
+
     /// The game's executable (`main.dol`), as the disc holds it.
     pub fn dol(&self) -> Result<Vec<u8>, DiscError> {
         let mut partition = self
