@@ -21,7 +21,8 @@ impl Ctx<'_> {
             AlbumTexels::Buffer(b) => {
                 let images = &self.game.snap_read.images;
                 let Some(i) = images.iter().position(|m| m.addr == b) else {
-                    self.hsd.note_once("an album image drawn before its first decode");
+                    self.hsd
+                        .note_once("an album image drawn before its first decode");
                     return None;
                 };
                 let img = &images[i];

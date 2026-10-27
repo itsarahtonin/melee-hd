@@ -338,7 +338,7 @@ impl Running<'_> {
             .list
             .results
             .iter()
-            .filter(|(at, _, _)| *at == k + 1)
+            .filter(|(at, _, _)| *at == k)
             .map(|&(_, f, e)| (f, e))
             .collect();
         for (f, e) in results {

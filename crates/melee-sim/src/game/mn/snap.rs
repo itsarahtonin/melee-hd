@@ -362,12 +362,10 @@ impl Running<'_> {
     fn album_texts(&mut self) {
         let a = self.album().clone();
         let shown = a.state >= 4;
-        let mut base = a.cur_page * 4;
-        for i in 0..4 {
+        for (i, base) in (a.cur_page * 4..).take(4).enumerate() {
             let s = (shown && base < a.photo_count[a.active_slot as usize])
                 .then(|| format!("{:03}", base + 1));
             self.album_text(a.thumb_labels[i], s);
-            base += 1;
         }
         for i in 0..2 {
             let s = (shown && a.card_status[i] == 1).then(|| a.photo_count[i].to_string());
