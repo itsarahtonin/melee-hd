@@ -21,7 +21,7 @@ const VS_STATE_PRIZE: u8 = 0xC0;
 
 /// `lbl_803B7AD0`: each unlockable character's challenger by its unlock index, its CPU's
 /// level's base and step, and the VS matches it waits for.
-const CHALLENGERS: [(u8, u8, u8, u16); 11] = [
+pub(super) const CHALLENGERS: [(u8, u8, u8, u16); 11] = [
     (0, 5, 2, 0x3E8),
     (1, 5, 2, 0x320),
     (2, 5, 2, 0x190),
@@ -373,7 +373,7 @@ impl Running<'_> {
 
     /// `lbCardGame_SetupArchive`: the card's work areas and its archive, and the save marked
     /// to write, which the game's next wait (the scene's end) starts.
-    fn card_setup_archive(&mut self) {
+    pub(super) fn card_setup_archive(&mut self) {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
         self.card_game_mark_changes();
