@@ -50,6 +50,10 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         | UserData::Diagram2(a)
         | UserData::Diagram3(a)
         | UserData::SoundTest(a) => known(a),
+        // `&ifStock_804A157C[player]` (0x54 bytes each) and `&ifMagnify_804A1DE0.player[slot]`
+        // (0x10 each, from 0x14): statics.
+        UserData::StockIcons(p) => Some(0x804A_157C + 0x54 * u32::from(p)),
+        UserData::MagnifyPlayer(s) => Some(0x804A_1DE0 + 0x14 + 0x10 * u32::from(s)),
         _ => None,
     }
 }
