@@ -246,9 +246,6 @@ impl Kinds for GameKinds {
             UserData::SisCamera(_) => 0x803A_60EC,
             // `Toy_RemoveUserData`.
             UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
-            // A text's (`HSD_SisLib_803A5A2C`) and a canvas's own camera's (`fn_803A60EC`).
-            UserData::Text(_) => 0x803A_5A2C,
-            UserData::SisCamera(_) => 0x803A_60EC,
             _ => return None,
         })
     }
