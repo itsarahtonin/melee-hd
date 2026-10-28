@@ -468,6 +468,18 @@ pub(crate) fn start_list(run: Run, tasks: &[(Task, u32)], now: u64, seconds: u32
     start_list_on(run, tasks, now, seconds, false).0
 }
 
+/// [`start_list`], with the run as the list left it (what its reads wrote into its buffers,
+/// each task's result, the HSD layer's log).
+pub(crate) fn start_list_run(
+    run: Run,
+    tasks: &[(Task, u32)],
+    now: u64,
+    seconds: u32,
+) -> (CardList, Run) {
+    let (list, _, run) = start_list_on(run, tasks, now, seconds, false);
+    (list, run)
+}
+
 /// [`start_list`] on a copy of the card, which stays as it was: for a list whose writes the
 /// caller makes at its end ([`finish_list`]), with each of the library's clock reads at the
 /// time its step comes to. Also the steps that read the clock (a create's, each sector
@@ -478,7 +490,19 @@ pub(crate) fn start_list_dry(
     now: u64,
     seconds: u32,
 ) -> (CardList, Vec<usize>) {
-    start_list_on(run, tasks, now, seconds, true)
+    let (list, stamps, _) = start_list_on(run, tasks, now, seconds, true);
+    (list, stamps)
+}
+
+/// [`start_list_dry`], with the run as the list left it on the copy.
+pub(crate) fn start_list_dry_run(
+    run: Run,
+    tasks: &[(Task, u32)],
+    now: u64,
+    seconds: u32,
+) -> (CardList, Run) {
+    let (list, _, run) = start_list_on(run, tasks, now, seconds, true);
+    (list, run)
 }
 
 /// Runs `tasks` with `run`'s files on the lent card, the library's clock reading `times` in
@@ -498,7 +522,7 @@ fn start_list_on(
     now: u64,
     seconds: u32,
     dry: bool,
-) -> (CardList, Vec<usize>) {
+) -> (CardList, Vec<usize>, Run) {
     let (card_in, probe) = with_device(|dev| {
         if !dev.waits {
             // No card at power-on: ssbm-rs stands in for the CARD library.
@@ -534,7 +558,7 @@ fn start_list_on(
             result: r,
             ..CardList::default()
         };
-        return (list, Vec::new());
+        return (list, Vec::new(), run);
     }
     // The mount attaches slot A's channel; its check reads the font encoding the first time
     // the card's ID gets that far.
@@ -582,7 +606,7 @@ fn start_list_on(
         result: r,
         card_in: true,
     };
-    (list, stamps)
+    (list, stamps, run)
 }
 
 /// The save's card data and header as the writer's list takes them (`lb_8001BE30`'s

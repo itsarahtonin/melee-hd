@@ -420,6 +420,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::mn::stagesel::FOG_RENDER => r.sss_fog_render(gobj),
         super::mn::main::ERASE_RENDER => r.menu_erase_render(gobj),
         super::mn::gallery::CAMERA_RENDER => r.gallery_camera_render(gobj),
+        c if r.album_render(gobj, c, pass) => {}
         super::ty::gallery::RENDER_MAIN => r.toy_main_render(gobj),
         super::ty::gallery::RENDER_CAMERA => r.toy_camera_render(gobj),
         super::ty::gallery::RENDER_AXES => r.toy_axes_render(),

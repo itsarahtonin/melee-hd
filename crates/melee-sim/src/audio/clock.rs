@@ -358,13 +358,21 @@ pub enum CardChain {
     /// probe of a save's writes (`local/research/card-chain/write-*.log`) logs every one of
     /// the 258 interrupts of each of a save's writes, each page 312 ticks.
     Write { first: u64, sectors: u32 },
+    /// A file deleted (`CARDDeleteAsync`, with interrupts off): the directory's sector erased
+    /// and programmed (`__CARDUpdateDir`), then from its callback the file's blocks freed
+    /// (`__CARDFreeBlock`) and the allocation table's sector erased and programmed
+    /// (`__CARDUpdateFatBlock`), with no stamp between: [`CardChain::Write`]'s two sectors
+    /// less the stamp. `first` as a write's.
+    Delete { first: u64 },
 }
 
 impl CardChain {
     /// The time before the first interrupt, with interrupts off.
     pub fn first(self) -> u64 {
         match self {
-            CardChain::Read { first, .. } | CardChain::Write { first, .. } => first,
+            CardChain::Read { first, .. }
+            | CardChain::Write { first, .. }
+            | CardChain::Delete { first } => first,
         }
     }
 
@@ -384,7 +392,11 @@ impl CardChain {
                 out.extend(std::iter::repeat_n(tc(CARD_SEGMENT), segments as usize - 1));
                 out.push(tc(tail));
             }
-            CardChain::Write { sectors, .. } => {
+            CardChain::Write { .. } | CardChain::Delete { .. } => {
+                let (sectors, between) = match self {
+                    CardChain::Write { sectors, .. } => (sectors, CARD_STAMP + CARD_ERASE),
+                    _ => (2, CARD_ERASE),
+                };
                 assert!(sectors > 0, "a card write of no sectors");
                 for s in 0..sectors {
                     out.push(exi(CARD_STATUS + CARD_PAGE));
@@ -393,11 +405,7 @@ impl CardChain {
                         out.push(exi(CARD_STATUS + CARD_PAGE));
                     }
                     out.push(tc(CARD_PAGE_DONE));
-                    let next = if s + 1 < sectors {
-                        CARD_STAMP + CARD_ERASE
-                    } else {
-                        0
-                    };
+                    let next = if s + 1 < sectors { between } else { 0 };
                     out.push(exi(CARD_STATUS + next));
                 }
             }

@@ -251,6 +251,9 @@ impl Ctx<'_> {
         };
         match imagedesc {
             Some(ImageRef::Data(d)) => {
+                if let Some(img) = self.album_image(d) {
+                    return Some(img);
+                }
                 if let Some(img) = self.reflection_image(d) {
                     return Some(img);
                 }
