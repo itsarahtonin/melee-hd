@@ -89,7 +89,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D804")]
     #[doc(alias = "gmMainLib_8015D888")]
     #[doc(alias = "gmMainLib_8015D8FC")]
-    fn note_message(&mut self, n: u32) -> bool {
+    pub(super) fn note_message(&mut self, n: u32) -> bool {
         if self.message_noted(n) {
             return false;
         }

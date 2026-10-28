@@ -334,7 +334,7 @@ impl Game {
         self.assert_retail();
         if super::is_1p_mode(self)
             || self.game_mode == GM_CHALLENGER_APPROACH
-            || (self.game_mode == GM_VS && self.gm.scene_index == 0x81)
+            || (self.game_mode == GM_VS && self.machine.routing.curr_state_id == 0x81)
         {
             let port = self.player_port(0);
             return if self.start_pressed(usize::from(port as u8)) {

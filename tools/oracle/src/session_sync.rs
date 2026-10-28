@@ -367,6 +367,14 @@ fn check_shortcut(t: u64, s: &Session, seed: u32, disc: &Disc) -> bool {
     let handicaps = start.players.iter().take(4).any(|p| {
         i32::from(p.slot_type) != melee_sim::game::pl::player::PKIND_NONE && p.handicap != 9
     });
+    // The challenger approach's match (VS mode's state 0x81) is set up from the challenger's
+    // data, not the select screens': the launcher makes none.
+    if s.game.machine.routing.curr_state_id == 0x81 {
+        println!(
+            "the shortcut at tick {t}: not a match the launcher makes (a challenger's), not checked"
+        );
+        return true;
+    }
     if start.rules.is_teams != 0 || handicaps {
         println!(
             "the shortcut at tick {t}: not a match the launcher makes ({}{}), not checked",

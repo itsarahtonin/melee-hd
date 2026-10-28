@@ -75,6 +75,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
+        super::gm::approach::PROC => game.approach_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -200,6 +201,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::ty::gallery::ON_FRAME.0 => game.toy_on_frame(),
         f if f == super::ty::lottery::ON_FRAME.0 => game.lot_on_frame(),
         f if f == super::ty::collection::ON_FRAME.0 => game.coll_on_frame(),
+        f if f == super::gm::approach::ON_FRAME.0 => game.approach_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),

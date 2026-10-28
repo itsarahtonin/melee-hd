@@ -232,6 +232,34 @@ impl Comparer<'_> {
                 self.u16(at + 8),
             ),
         );
+        self.approach();
+    }
+
+    /// The challenger approach's screen's statics (`gm_80480D98`) and its enter data
+    /// (`gmVsMelee_ApproachData`, two bytes of eight: the rest nothing writes).
+    fn approach(&mut self) {
+        let a = self.game.approach;
+        let at = sym("gm_80480D98");
+        self.check(
+            "gm_80480D98",
+            "archive, challenger, frames, ticks, port",
+            (a.blocks.1, a.ckind, a.frame, a.frame2, a.ticks, a.port),
+            (
+                self.u32(at),
+                self.u32(at + 4) as i32,
+                self.u16(at + 8),
+                self.u16(at + 0xA),
+                self.u16(at + 0xC),
+                self.u8(at + 0xE),
+            ),
+        );
+        let at = sym("gmVsMelee_ApproachData");
+        self.check(
+            "gmVsMelee_ApproachData",
+            "challenger, slot",
+            a.data,
+            [self.u8(at), self.u8(at + 1)],
+        );
     }
 }
 

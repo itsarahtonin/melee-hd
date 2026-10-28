@@ -75,6 +75,7 @@ impl Running<'_> {
     /// console comes from (a challenger's approach by the mode before it).
     #[doc(alias = "onEnter@801B0FF8")]
     #[doc(alias = "gm_GetPreviousGameMode")]
+    #[doc(alias = "gm_801737D8")]
     #[doc(alias = "lbSnap_8001E204")]
     #[doc(alias = "lbSnap_8001E210")]
     #[doc(alias = "lbDvd_8001823C")]

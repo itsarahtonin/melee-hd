@@ -1,6 +1,7 @@
 //! The game's modes and scenes (`melee/gm`): the scene loop that runs engine ticks, the
 //! scenes' button maps, and the VS match.
 
+pub mod approach;
 pub mod attract;
 pub mod boot_mode;
 pub mod camera_mode;
