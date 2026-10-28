@@ -210,18 +210,15 @@ impl LbHeaps {
         mem.free(h.handle.expect("a made heap's handle"), addr);
     }
 
-    /// `lbHeap_80015D6C`: whether a compaction of the heap is under way, which
-    /// `lbMemory_8001529C` starts when a gap opened in it. The first two heaps never compact.
+    /// `lbHeap_80015D6C`: a compaction of the heap (`lbMemory_8001529C`) calling back `cb`
+    /// with `arg`: the first block out of place, from which it starts, or none when no gap
+    /// opened. The first two heaps never compact.
     #[doc(alias = "lbHeap_80015D6C")]
-    pub fn compact(&self, heap: usize, mem: &LbMemory) -> bool {
+    pub fn compact(&self, heap: usize, cb: u32, arg: u32, mem: &mut LbMemory) -> Option<u8> {
         if heap <= ARAM {
-            return false;
+            return None;
         }
         let h = self.heaps[heap].handle.expect("a made heap's handle");
-        assert!(
-            !mem.needs_compaction(h),
-            "a preload heap's compaction (lbMemory_80015320) isn't ported"
-        );
-        false
+        mem.compact_begin(h, cb, arg)
     }
 }

@@ -12,7 +12,7 @@
 use melee_data::archive::Archives;
 
 use super::heap::{self, LbHeaps};
-use super::memory::LbMemory;
+use super::memory::{COPY_PERIOD, CompactStep, LbMemory};
 use crate::audio::Audio;
 use crate::audio::devcom::cb;
 
@@ -715,6 +715,9 @@ impl Dvd {
     }
 }
 
+/// `lbDvd_80017A80`, the preload cache's callback for a heap's compaction.
+const HEAP_COMPACTED: u32 = 0x8001_7A80;
+
 /// `lbDvd_80018254`'s preload classes' files: the rumble file (class 1 and up) and the common
 /// files (class 2 and up), by entry number in GALE01 revision 2's file table (`LbRb.dat`;
 /// `EfMnData.dat`, `EfCoData.dat`, `ItCo.usd`, `IfAll.usd`). `ItCo.` takes the disc's language
@@ -824,8 +827,15 @@ impl Audio {
             }
         }
         d.cache.persistent_heap = i32::from(heap);
-        let compacting = d.heaps.compact(heap as usize, &d.memory);
-        assert!(!compacting, "a preload heap's compaction isn't ported");
+        // A gap in the heap: it's compacted first, and the read waits for the callback
+        // (`lbDvd_80017A80`).
+        let first = d
+            .heaps
+            .compact(heap as usize, HEAP_COMPACTED, heap as u32, &mut d.memory);
+        if let Some(b) = first {
+            self.compact_step(data, Some(b));
+            return;
+        }
         d.cache.persistent_heap = 6;
         let e = d.cache.entries[index];
         let size = if e.size == 0 {
@@ -882,6 +892,71 @@ impl Audio {
             Some(cb::PRELOADED),
             index as u32,
         );
+    }
+
+    /// `lbMemory_80015320`'s step of a heap's compaction from `block` on: the next block out
+    /// of place moved (within ARAM through the device command queue, at its lowest priority;
+    /// in main memory by the copy manager's alarms), each calling back here with the block
+    /// after it; past the last, the compaction's callback.
+    #[doc(alias = "lbMemory_80015320")]
+    pub fn compact_step(&mut self, data: &Archives, block: Option<u8>) {
+        match self.dvd().memory.compact_step(block) {
+            CompactStep::Aram {
+                src,
+                dst,
+                size,
+                next,
+            } => {
+                self.devcom_request(
+                    data,
+                    0,
+                    src,
+                    dst,
+                    size,
+                    0x1B,
+                    1,
+                    Some(cb::COMPACT_STEP),
+                    next,
+                );
+            }
+            CompactStep::Ram {
+                src,
+                dst,
+                size,
+                next,
+            } => {
+                self.dvd().memory.copy_start(src, dst, size, next);
+                self.set_copy_alarm();
+            }
+            CompactStep::Done { cb, arg } => {
+                assert_eq!(cb, HEAP_COMPACTED, "a compaction's callback");
+                self.compacted(data, arg);
+            }
+        }
+    }
+
+    /// `lbDvd_80017A80`, a preload heap's compaction's callback: no heap is being compacted,
+    /// and the next read starts.
+    #[doc(alias = "lbDvd_80017A80")]
+    fn compacted(&mut self, data: &Archives, _heap: u32) {
+        self.dvd().cache.persistent_heap = 6;
+        self.preload_next_entry(data);
+    }
+
+    /// `fn_80015184`, the copy manager's alarm: the copy's next slice, then its callback
+    /// (the compaction's next step) once it's done, else the alarm again.
+    #[doc(alias = "fn_80015184")]
+    pub fn copy_alarm(&mut self, data: &Archives) {
+        match self.dvd().memory.copy_slice() {
+            Some(next) => self.compact_step(data, crate::lb::memory::entry_at(next)),
+            None => self.set_copy_alarm(),
+        }
+    }
+
+    /// `OSSetAlarm` of the copy manager's alarm, [`COPY_PERIOD`] on from now: ssbm-rs stands
+    /// in for the OS's alarms, and no time passes.
+    fn set_copy_alarm(&mut self) {
+        self.hw.copy_alarm = Some(self.hw.spent + COPY_PERIOD);
     }
 
     /// `lbDvd_80017E64`, a preload's read callback: the entry is in, and the next read
