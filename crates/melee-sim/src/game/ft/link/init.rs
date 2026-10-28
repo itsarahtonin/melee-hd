@@ -71,7 +71,7 @@ impl Running<'_> {
             .ptr(table.at(4 * kind as u32))
             .expect("Fighter_804D6540[kind]");
         let desc = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");
-        self.attach_part_model(f, desc, joint);
+        self.attach_part_model(f, desc, joint, LINK_STACK);
     }
 
     /// The down aerial's hit animation's length his creation writes over his loaded
@@ -108,7 +108,9 @@ impl Running<'_> {
     /// tree its joint is. The joint's descriptor is copied onto the stack with no child or
     /// sibling and loaded twice in the blend skeleton's class (`ftParts_8007482C`), so neither
     /// copy has display objects; the first becomes the part's joint, the second its blend
-    /// joint. The ID table files both under the copy's stack address.
+    /// joint. The ID table files both under the copy's stack address, `stack`, which depends on
+    /// the calls that led here: a key that names another call path's live entry would take it
+    /// over, where the original files a new one.
     #[doc(alias = "ftParts_800753D4")]
     #[doc(alias = "ftParts_80075304")]
     pub fn attach_part_model(
@@ -116,6 +118,7 @@ impl Running<'_> {
         f: FighterId,
         desc: melee_data::archive::DataRef,
         joint: melee_data::archive::DataRef,
+        stack: u32,
     ) {
         let part = usize::from(self.data.u8(desc));
         let parent = usize::from(self.data.u8(desc.at(1)));
@@ -128,7 +131,7 @@ impl Running<'_> {
                 j = next_joint(self.data, j, &mut stack).expect("a joint past the tree's end");
             }
         }
-        let key = crate::hsd::id::stack_key(STACK_SITE);
+        let key = crate::hsd::id::stack_key(stack);
         let objs = &mut self.game.objs;
         jobj::set_default_class(objs, jobj::JObjClass::FighterIntp);
         let model = jobj::load_joint_copy(objs, self.data, j, key);
@@ -335,8 +338,10 @@ impl Running<'_> {
     }
 }
 
-/// Where `ftParts_800753D4` keeps its descriptor copy, named by the function.
-const STACK_SITE: u32 = 0x8007_53D4;
+/// Where `ftParts_800753D4` keeps its descriptor copy under Link's and Young Link's creation:
+/// not measured, so named by the function, a word no other path's key takes. The heap's image
+/// lays it out as the joints' `id` (`hsd::export::jobj`), which no session has read yet.
+const LINK_STACK: u32 = 0x8007_53D4;
 
 /// Hangs `new` on `root` the way `how` says, `ftParts_80075304`: 0 as its only child (taking
 /// its children), 1 as its first child, 2 as its next sibling (taking its later siblings as
