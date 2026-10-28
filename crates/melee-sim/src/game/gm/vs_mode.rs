@@ -134,7 +134,7 @@ pub const ITEM_SWITCH_KINDS: [u8; 32] = [
 ];
 
 /// Each handicap's attack and defense ratios (`lbl_803B7930`), handicap 1 first.
-const HANDICAP_RATIOS: [(f32, f32); 9] = [
+pub(crate) const HANDICAP_RATIOS: [(f32, f32); 9] = [
     (0.35, 2.857143),
     (0.4, 2.5),
     (0.46, 2.173913),

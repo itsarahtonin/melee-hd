@@ -35,7 +35,7 @@ const STAGES_AT: u32 = 0x803F_06D0;
 const SSS_PORT: u32 = 0x804D_50A0;
 
 impl<'a> Comparer<'a> {
-    fn mem_view(&self) -> Mem<'a> {
+    pub(crate) fn mem_view(&self) -> Mem<'a> {
         Mem {
             bytes: self.mem,
             base: MEM1,

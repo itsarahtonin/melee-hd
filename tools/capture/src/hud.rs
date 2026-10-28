@@ -569,6 +569,13 @@ pub(crate) fn compare_user_data(cmp: &mut Comparer, path: &str, ud: UserData, t:
                 kindless_user_data(theirs),
             );
         }
+        UserData::TouIndex(i) => cmp.check(path, "tournament number", i as u32, theirs),
+        UserData::TouBox(i) => cmp.check(
+            path,
+            "bracket box",
+            sym("lbl_80473AB8") + 0xDC * u32::from(i),
+            theirs,
+        ),
         other => cmp.diff(path, "user data", other, format!("{theirs:#x}")),
     }
 }

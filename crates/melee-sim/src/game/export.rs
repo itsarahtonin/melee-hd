@@ -26,6 +26,11 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         UserData::Text(t) => {
             (game.sis.arena_block != 0).then(|| game.sis.arena_block.wrapping_add(t.0))
         }
+        // A canvas's own camera names itself.
+        UserData::SisCamera(g) => known(game.world.gobjs.addr(g.0)),
+        // Tournament mode's, set without a kind: a number, or a bracket box's address.
+        UserData::TouIndex(i) => Some(i as u32),
+        UserData::TouBox(i) => Some(super::gm::tournament::BRACKET_ADDR + 0xDC * u32::from(i)),
         UserData::MainMenuList(a)
         | UserData::MainMenuPanel(a)
         | UserData::GalleryList(a)

@@ -338,22 +338,92 @@ impl Game {
             }
             let team = usize::from(r.player_standings[i].team);
             let score = r.player_standings[i].score;
-            let t = &mut r.team_standings[team];
-            if self.game_mode == GM_STAMINA_VS || r.match_kind == 1 {
+            let x30 = r.player_standings[i].x30;
+            let stock = self.game_mode == GM_STAMINA_VS || r.match_kind == 1;
+            let mut t = TeamStanding::of(r, team);
+            if stock {
                 if score < 0 {
-                    if t.score == 0 || (t.score < 0 && t.score < score) {
-                        t.score = score;
+                    let ts = t.score();
+                    if ts == 0 || (ts < 0 && ts < score) {
+                        t.set_score(score);
                     }
-                } else if t.score < 0 {
-                    t.score = score;
+                } else if t.score() < 0 {
+                    t.set_score(score);
                 } else {
-                    t.score = t.score.wrapping_add(score);
+                    let ts = t.score();
+                    t.set_score(ts.wrapping_add(score));
                 }
             } else {
-                t.score = t.score.wrapping_add(score);
+                let ts = t.score();
+                t.set_score(ts.wrapping_add(score));
             }
-            t.subscore = (t.subscore as u32).wrapping_add(r.player_standings[i].x30) as i32;
-            t.active = 1;
+            let sub = t.subscore();
+            t.set_subscore((sub as u32).wrapping_add(x30) as i32);
+            t.set_active();
+        }
+    }
+}
+
+/// A team's standing as `fn_80165E7C` indexes `team_standings` by a player's team: past the
+/// five teams (the 0xFF of a tournament's players, `gm_801905F0`) the index runs on into the
+/// players' decision tables (`x44C`): team 0xFF is the second player's `x104[110]` (its score),
+/// `x104[111]` (its subscore) and the third byte of `x104[112]` (its active flag)
+/// (docs/melee-bugs.md).
+enum TeamStanding<'a> {
+    Team(&'a mut super::super::structs::MatchTeamData),
+    Past(&'a mut [i32; 257], usize),
+}
+
+impl<'a> TeamStanding<'a> {
+    fn of(r: &'a mut MatchEnd, team: usize) -> TeamStanding<'a> {
+        if team < r.team_standings.len() {
+            return TeamStanding::Team(&mut r.team_standings[team]);
+        }
+        // `team_standings` at 0x1C, 0xC bytes each; the decision tables at 0x44C, 0x508 bytes
+        // each, their points (`x104`) 0x104 bytes in.
+        let at = 0x1C + 0xC * team;
+        let rel = at - 0x44C;
+        let (p, within) = (rel / 0x508, rel % 0x508);
+        assert!(
+            within >= 0x104 && (within - 0x104) % 4 == 0 && (within - 0x104) / 4 + 2 < 257,
+            "fn_80165E7C: team {team:#x}'s standing past the teams isn't modeled"
+        );
+        TeamStanding::Past(&mut r.x44C[p].x104, (within - 0x104) / 4)
+    }
+
+    fn score(&self) -> i32 {
+        match self {
+            TeamStanding::Team(t) => t.score,
+            TeamStanding::Past(w, k) => w[*k],
+        }
+    }
+
+    fn set_score(&mut self, v: i32) {
+        match self {
+            TeamStanding::Team(t) => t.score = v,
+            TeamStanding::Past(w, k) => w[*k] = v,
+        }
+    }
+
+    fn subscore(&self) -> i32 {
+        match self {
+            TeamStanding::Team(t) => t.subscore,
+            TeamStanding::Past(w, k) => w[*k + 1],
+        }
+    }
+
+    fn set_subscore(&mut self, v: i32) {
+        match self {
+            TeamStanding::Team(t) => t.subscore = v,
+            TeamStanding::Past(w, k) => w[*k + 1] = v,
+        }
+    }
+
+    /// `active = 1`: the standing's byte at +0xA.
+    fn set_active(&mut self) {
+        match self {
+            TeamStanding::Team(t) => t.active = 1,
+            TeamStanding::Past(w, k) => w[*k + 2] = (w[*k + 2] & !0xFF00) | 0x100,
         }
     }
 }

@@ -94,6 +94,10 @@ impl CObj {
 pub struct CObjs {
     pub pool: Pool<CObj>,
     pub current: Option<CObjId>,
+    /// The address of the current camera when it was freed before another was drawn (a
+    /// scene that freed its cameras and drew nothing since): the original's pointer keeps
+    /// naming it, and nothing reads it before the next camera is made current.
+    pub freed_current: u32,
 }
 
 impl Index<CObjId> for CObjs {
@@ -248,7 +252,12 @@ pub fn delete(objs: &mut Objects, c: CObjId) {
         super::heap::obj_free(super::heap::Kind::Mtx, objs.cobjs[c].inv_view_mtx_addr);
     }
     objs.cobjs[c].inv_view_mtx = None;
-    super::heap::class_free(super::heap::Class::CObj, objs.cobjs.pool.addr(c.0));
+    let addr = objs.cobjs.pool.addr(c.0);
+    if objs.cobjs.current == Some(c) {
+        objs.cobjs.current = None;
+        objs.cobjs.freed_current = addr;
+    }
+    super::heap::class_free(super::heap::Class::CObj, addr);
     objs.cobjs.pool.free(c.0);
 }
 

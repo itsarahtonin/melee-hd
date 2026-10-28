@@ -909,9 +909,16 @@ impl Running<'_> {
                 self.game.end_scene();
                 self.lb_audio_call(0);
             }
-            3 => super::super::super::code::unported_call(
-                "mn_80231804 (the rules from the select screen, task 8)",
-            ),
+            // The rules over the screen (`mn_80231804` with `MnExtAll`, the automatic handicap
+            // allowed), the screen's GObjs and texts let go first; the screen waits (5).
+            3 => {
+                self.free_gobj_links(1, 8);
+                self.sis_reset();
+                let ext = self.game.charsel.archives[1].expect("MnExtAll").0;
+                self.rules_from_screen(ext, 1);
+                self.game.charsel.pending = 5;
+                self.lb_audio_call(1);
+            }
             4 => super::super::super::code::unported_call(
                 "mnNameNew_EnterFromMnCharSel (the name entry, task 8)",
             ),

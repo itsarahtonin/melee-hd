@@ -32,6 +32,7 @@ pub mod setup_players;
 pub mod special;
 pub mod stamina;
 pub mod title;
+pub mod tournament;
 pub mod trophies;
 pub mod unlocks;
 pub mod vs;

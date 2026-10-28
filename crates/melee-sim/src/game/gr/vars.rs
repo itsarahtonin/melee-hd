@@ -4506,8 +4506,6 @@ impl GroundVars {
             let b = Bytes(b);
             let blocks = std::array::from_fn(|i| {
                 let at = 4 + 0x20 * i;
-                b.null(at + 0x18);
-                b.null(at + 0x1C);
                 YorsterBlock {
                     x00: b.0[at] as i8,
                     x01: b.0[at + 1],
@@ -4516,8 +4514,8 @@ impl GroundVars {
                     x0C: b.u32(at + 0xC) as i32,
                     x10: b.u32(at + 0x10) as i32,
                     x14: b.u32(at + 0x14) as i32,
-                    x18: None,
-                    x1C: None,
+                    x18: b.null_of(at + 0x18),
+                    x1C: b.null(at + 0x1C),
                 }
             });
             *self = GroundVars::Yorster(YorsterVars {
