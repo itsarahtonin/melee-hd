@@ -694,6 +694,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the random sequence (and the trophies) wherever it runs, so gameplay after it; breaks replay compatibility on those stages.
 - **Source:** `crates/melee-sim/src/game/gr/ground.rs` (`x6e4_drawn`); the decompilation's `ground.c` (`Ground_801C5840`).
 
+### Mushroom Kingdom: a block's item drops its upward speed
+
+- **Where:** `grInishie1_801FBA34` and `grInishie1_801FBCEC` (an item out of a brick block), `crates/melee-sim/src/game/gr/inishie1.rs` (`pop_item`, `break_block`).
+- **Defect:** each copies the stage's item speed (`grI1_803B8268`, straight up at 5) into the velocity it hands `it_8026F7C8`, but passes 0 for its last argument, which tells `it_8026F7C8` to replace the velocity with a random sideways pop (`HSD_Randf`) and the item's own upward speed (`xCC_item_attr->x18`). The copied speed is computed and dropped; Peach's Castle's blocks pass 1 and keep theirs.
+- **Effect:** a ? block's item pops out sideways at random, at its kind's own upward speed, instead of straight up at 5, and the pop takes a random number.
+- **melee-hd:** modeled (`drop_random` with no velocity). Until 2026-10-27 melee-hd gave the item the stage's speed and drew nothing: `2026-10-07_23-52-34`'s match on Mushroom Kingdom differed at tick 2767: its block's next wait (`xC6`) took the pop's random number, and the seed fell behind (ssbm-rs's probe of the tick's draws, `$SSBM_RS_LOCAL/research/card-chain/vs-23-52-34-2767.draws.txt`).
+- **Fix:** pass 1, if straight up was meant, or drop the copy.
+- **Fix impact:** passing 1 changes the items' paths and the random sequence after every block's item, so gameplay; breaks replay compatibility on Mushroom Kingdom.
+- **Source:** the decompilation's `grinishie1.c` (`grInishie1_801FBA34`, `grInishie1_801FBCEC`) and `itdrop.c` (`it_8026F7C8`); ssbm-rs's port passes 0 too.
+
 ### Brinstar Depths: a debugging button steps Kraid's haze's animation
 
 - **Where:** `grKraid_801FE2D0` (the process of Kraid's "copy", map 1: a translucent smoky haze drawn behind him that follows him), `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`).

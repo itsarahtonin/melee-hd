@@ -956,16 +956,24 @@ impl Clock {
     /// Time a tick's ARAM load takes (`ARAM_CHUNK` per 4 KB), with interrupts taken between
     /// its chunks. In ssbm-rs the load's request and each chunk's ARAM interrupt handler run
     /// with interrupts off, and an event that came due meanwhile runs when a handler returns:
-    /// the request takes 56 ticks, each chunk's handler 64 and the last one's 8, so on this
-    /// timeline (whose audio frames start [`AI_LEAD`] after ssbm-rs runs their events) the
-    /// chunks end every `ARAM_CHUNK` from the load's start. The last handler returns as the
-    /// load ends, and an audio DMA event due by then runs there too, before the game's code
-    /// goes on: its frame starts `AI_LEAD` after the load's end.
+    /// the request takes 56 ticks (`ARQ_POST`), each chunk's handler 64 and the last one's 8,
+    /// so events are taken 56 ticks into the load and every 64 after, and as it ends. An audio
+    /// DMA event taken there (due [`AI_LEAD`] before its frame) starts its frame `AI_LEAD`
+    /// after, before the game's code goes on. Until 2026-10-27 the chunks ended every 64 from
+    /// the load's start, which was ssbm-rs's while this timeline's audio events were due at
+    /// their frames' starts, and took an event due in a request's last 8 ticks 8 late
+    /// (2026-10-10_12-54-40's tick 3771, which put every later frame 8 late).
     pub fn aram_load(&mut self, len: u32, f: &mut dyn Frames) {
         self.game_code(f);
-        for _ in 0..len.div_ceil(0x1000) {
+        let chunks = len.div_ceil(0x1000);
+        if chunks == 0 {
+            return;
+        }
+        self.read(ARQ_POST, f);
+        for _ in 1..chunks {
             self.read(ARAM_CHUNK, f);
         }
+        self.read(ARAM_CHUNK - ARQ_POST, f);
     }
 
     /// The game waiting inside a tick for its file load: `lbFile`'s loop, a wait point each
@@ -1151,6 +1159,24 @@ mod tests {
             );
             let end = if ran { 136 + AI_HANDLER } else { 128 };
             assert_eq!(c.now, end, "due at {due}");
+        }
+    }
+
+    #[test]
+    fn an_aram_load_takes_events_as_its_request_and_handlers_return() {
+        // The request returns at 56 and the first chunk's handler at 120: a frame whose event
+        // is due by 56 (its start by 64) starts at 64, its handler then pushing the load on;
+        // one due by 120 starts at 128.
+        for (due, start) in [(64, 64), (65, 128), (128, 128)] {
+            let mut c = Clock::new(0, due, 675_000, 675_000);
+            c.aram_load(0x2000, &mut Stub::new(false));
+            let resume = c.events.iter().find(|e| e.kind == EventKind::DspResume);
+            assert_eq!(
+                resume.map(|e| e.at),
+                Some(start + AI_MAIL + DSP_FRAME),
+                "due at {due}"
+            );
+            assert_eq!(c.now, 128 + AI_LEAD + AI_HANDLER, "due at {due}");
         }
     }
 
