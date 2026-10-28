@@ -188,6 +188,9 @@ pub enum EventKind {
     DiscTimeout,
     /// The movie player's alarm fires (`fn_8001F2A4`, every 60th of a second).
     MovieAlarm,
+    /// The preload heaps' copy manager's alarm fires (`fn_80015184`), copying a compacted
+    /// heap's block in slices.
+    CopyAlarm,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
@@ -277,6 +280,10 @@ pub trait Frames {
     fn aram_done(&mut self, base: u64) -> HwLog;
     /// The movie player's alarm.
     fn movie_alarm(&mut self, base: u64) -> HwLog {
+        HwLog::at(base)
+    }
+    /// The preload heaps' copy manager's alarm.
+    fn copy_alarm(&mut self, base: u64) -> HwLog {
         HwLog::at(base)
     }
     /// A handler starts at time base `now` (its log's `base` counts from there).
@@ -438,14 +445,17 @@ pub enum Wait {
 
 /// Time a stretch of the audio code took at the hardware, and what it started: a disc read (by
 /// the time into the stretch its command went out, and the time its bytes take to transfer
-/// after the latency; a second one can't start before it ends) and ARAM transfers, which
-/// finish at once and interrupt.
+/// after the latency; a second one can't start before it ends), ARAM transfers, which
+/// finish at once and interrupt, and the copy manager's alarm.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HwLog {
     pub spent: u64,
     pub read: Option<u64>,
     pub transfer: u64,
     pub aram: u32,
+    /// The copy manager's alarm set (`OSSetAlarm` in `lbMemory_80015320`'s copies), by
+    /// when it fires counted from the stretch's start.
+    pub copy_alarm: Option<u64>,
     /// The log is an interrupt handler's.
     pub handler: bool,
 }
@@ -647,6 +657,14 @@ impl Clock {
                         self.apply(start, &log);
                         self.now = start + log.spent + MOVIE_ALARM_TAIL;
                     }
+                    EventKind::CopyAlarm => {
+                        let start = self.now;
+                        f.handler_at(Some(start));
+                        let log = f.copy_alarm(0);
+                        f.handler_at(None);
+                        self.apply(start, &log);
+                        self.now = start + log.spent;
+                    }
                 }
             } else if self.ai_pending {
                 self.ai_pending = false;
@@ -716,13 +734,17 @@ impl Clock {
                 Some(self.schedule(start + r + DISC_TIMEOUT, EventKind::DiscTimeout));
         }
         self.aram_pending += log.aram;
+        if let Some(at) = log.copy_alarm {
+            self.events.retain(|e| e.kind != EventKind::CopyAlarm);
+            self.schedule(start + at, EventKind::CopyAlarm);
+        }
     }
 
     /// The game's code since the last handler: its hardware time passes, with interrupts
     /// enabled.
     fn game_code(&mut self, f: &mut dyn Frames) {
         let log = f.take_log();
-        if log.spent != 0 || log.read.is_some() || log.aram != 0 {
+        if log.spent != 0 || log.read.is_some() || log.aram != 0 || log.copy_alarm.is_some() {
             let start = self.now;
             self.apply(start, &log);
             self.now = start + log.spent;
