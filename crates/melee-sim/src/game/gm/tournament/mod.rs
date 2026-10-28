@@ -97,7 +97,7 @@ pub struct MatchPlayer {
 /// The tournament's data (`gm_804771C4`, `TmData`, 0x574 bytes of `.bss`): the setup's
 /// cursor and options, the round's counters, the entrants and the next match's players, and
 /// the texts the scenes make.
-#[derive(Clone, Debug, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct TmData {
     /// `cur_option`: the setup's option, then the scenes' steps.
     pub cur_option: i32,
@@ -315,7 +315,7 @@ pub struct Loaded {
 /// the names' cursor and page, the arrows' flashes and the models' counters), the archives
 /// and their scenes, the option to go back to after the confirmation, the panel's counter and
 /// the controllers counted.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Setup {
     pub x0: u8,
     pub x1: u8,
@@ -361,7 +361,7 @@ pub struct PlayerAnim {
 /// The bracket screen's statics (`gmtou_1.c`): `lbl_804799D8` (its counters, the players'
 /// models' states, the winner's name and the result overlay's place), the archives and
 /// scenes, and the song's steps.
-#[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Bracket {
     pub x0: u32,
     pub x4: u32,
@@ -401,7 +401,7 @@ pub struct Bracket {
 
 /// The match-up screen's statics (`gmtou_2.c`): `lbl_80479A58` (its counters and the
 /// players' models' states), the archives and scenes.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Alt {
     pub x0: u32,
     pub x4: u16,
@@ -423,7 +423,7 @@ pub struct Alt {
 }
 
 /// The tournament's statics.
-#[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Tournament {
     /// `gm_804771C4` (`gm_GetTournamentData`).
     #[doc(alias = "gm_GetTournamentData")]

@@ -136,7 +136,7 @@ const AC_VALUES: [usize; 2] = [0x274, 0x500];
 /// bit reader: the next byte's offset in the stream (`hsd_804D79B8` less `hsd_804D79BC`), the
 /// stream's size (`hsd_804D79C0`), the bits left in the byte (`hsd_804D79C4`) and the byte
 /// (`hsd_804D79C8`).
-#[derive(Clone, Debug, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Decoder {
     /// Where the last stream lay (`hsd_804D79BC`), the caller's to set.
     pub start: u32,

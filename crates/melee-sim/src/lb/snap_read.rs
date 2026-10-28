@@ -25,7 +25,7 @@ use crate::hsd::jpeg_decode;
 pub const IMAGE_SIZE: u32 = 0x96000;
 
 /// What a list does at its end besides its result.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum ListEnd {
     #[default]
     Nothing,
@@ -42,7 +42,7 @@ pub enum ListEnd {
 }
 
 /// What a read wrote into its buffers: each the bytes from its start.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct ReadInto {
     pub data: Vec<u8>,
     pub comment: Vec<u8>,
@@ -51,7 +51,7 @@ pub struct ReadInto {
 }
 
 /// A list the album started and steps through: its steps, the next, and its end.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AlbumList {
     pub list: CardList,
     pub next: usize,
@@ -60,7 +60,7 @@ pub struct AlbumList {
 
 /// One of the album's images as the decoder left it: its buffer's address and bytes (the
 /// heap's image's before the first decode into it, unknown bytes as zero).
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AlbumImage {
     pub addr: u32,
     pub bytes: Vec<u8>,
@@ -70,7 +70,7 @@ pub struct AlbumImage {
 
 /// `lbsnap.c`'s reading side's state: the list under way, the JPEG decoder's statics, the
 /// icons a read wrote into `LbMcSnap`'s icon data, and the images decoded.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SnapRead {
     pub list: Option<AlbumList>,
     pub decoder: jpeg_decode::Decoder,
