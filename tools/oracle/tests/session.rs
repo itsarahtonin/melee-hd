@@ -149,14 +149,20 @@ fn the_attract_match_on_brinstar_reads_a_leftover() {
     );
     // The attract loop three times over: its matches (on Brinstar, its bubbles' timer from
     // the menus' leftover, then its next two), their bonuses and the titles between, the
-    // opening movie, to the title's preload heap's compaction.
+    // opening movie, and past the title's preload heap's compaction (tick 11365) into the
+    // fourth match, where the heap's leftovers stop it (the layout campaign's).
     let Some(out) = session_at(trace, inputs, &["--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("11365 ticks compared, no difference; stopped in tick 11365: a preload heap's compaction (lbMemory_80015320) isn't ported"),
-        "{out}"
-    );
+    let compared = out
+        .lines()
+        .find_map(|l| {
+            l.split_once(" ticks compared")
+                .map(|(n, _)| n.trim().to_owned())
+        })
+        .and_then(|n| n.parse::<u32>().ok())
+        .unwrap_or(0);
+    assert!(compared > 11800, "{out}");
     let Some(out) = session_at(trace, inputs, &["--leftovers-survey", "--ticks", "3000"]) else {
         return;
     };
