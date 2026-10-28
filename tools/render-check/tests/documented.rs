@@ -25,8 +25,8 @@ use common::{
     RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
     SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
     SPECIAL_INVISIBLE_YS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
-    TROPHY_LOTTERY, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection,
-    scaled,
+    TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
+    reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -192,6 +192,12 @@ frames!(SOUND_SOUNDS;
 );
 frames!(SOUND_JP;
     sound_jp_1620 1620,
+);
+// The challenger approach's screen (`unlock-sessions/time`): coming in (3090) and waiting
+// for A with Mewtwo's name (3240).
+frames!(UNLOCK_TIME;
+    unlock_time_3090 3090,
+    unlock_time_3240 3240,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer

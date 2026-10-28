@@ -44,8 +44,9 @@ pub enum Replay {
     /// NAME.inputs`, or for `options-NAME` `lockstep/options-sessions/NAME.inputs`, for
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
     /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
-    /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/` and
-    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
+    /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`, for
+    /// `unlock-NAME` `lockstep/unlock-sessions/` and for `results-NAME`
+    /// `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
     /// played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -81,6 +82,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("sound-") {
                     return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("unlock-") {
+                    return ssbm_rs_local(&format!("lockstep/unlock-sessions/{o}.inputs")).into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -712,6 +716,15 @@ pub const RESULTS_TEAMS: Game = Game {
     name: "results-teams",
     players: "a team battle's results (session results-sessions/teams)",
     replay: Replay::Session("results-teams"),
+};
+
+/// The challenger approach's screen (`unlock-sessions/time`): "A new foe has appeared!" with
+/// Mewtwo's name, as it comes in and as it waits for A.
+pub const UNLOCK_TIME: Game = Game {
+    stage: "Challenger approach",
+    name: "unlock-time",
+    players: "the challenger approach's screen (session unlock-sessions/time)",
+    replay: Replay::Session("unlock-time"),
 };
 
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
