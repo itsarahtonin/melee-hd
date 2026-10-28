@@ -2269,7 +2269,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1788`'s bracket path (`gm_8019A828`): the bracket's players' step again.
-    #[doc(alias = "gm_8019A828")]
+    // Ports `gm_8019A828`; aliased once a check reaches it.
     pub fn tou_back_to_players(&mut self) {
         let tm = &mut self.game.tou.tm;
         tm.x32 = 0;
