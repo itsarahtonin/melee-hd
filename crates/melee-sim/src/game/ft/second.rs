@@ -120,10 +120,12 @@ impl Mirror for SecondTree {
 
     /// A figatree in the main buffer is taken as the offset it's at in the archive the action's
     /// figatree (`x590`) names, which may be past that archive's data once a main animation
-    /// overwrote the copy.
+    /// overwrote the copy. A new fighter's leftover word is taken as it is: the buffers the
+    /// block's words name are the freed fighter's, and the new one's creation gives it others.
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let w = m.u32(at);
-        if let Some(off) = main_buffer_offset(m, at, w)
+        if !cx.leftover()
+            && let Some(off) = main_buffer_offset(m, at, w)
             && let Some(main) = cx.import_data(m.u32(at - 8))
         {
             return SecondTree {

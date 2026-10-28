@@ -41,6 +41,10 @@ impl Cx for ImageCx<'_> {
     fn mismatch(&mut self, _: &str, _: String, _: String) {
         unreachable!("leftovers are only imported")
     }
+
+    fn leftover(&self) -> bool {
+        true
+    }
 }
 
 /// What a block at `addr` holds where its new `T` doesn't write, read as a `T`, in a session
