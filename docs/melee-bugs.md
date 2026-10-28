@@ -714,6 +714,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** passing 1 changes the items' paths and the random sequence after every block's item, so gameplay; breaks replay compatibility on Mushroom Kingdom.
 - **Source:** the decompilation's `grinishie1.c` (`grInishie1_801FBA34`, `grInishie1_801FBCEC`) and `itdrop.c` (`it_8026F7C8`); ssbm-rs's port passes 0 too.
 
+### Rainbow Cruise's planks, blocks and vanishing parts keep fields as the heap held them
+
+- **Where:** `grRCruise_801FF5B4` (the ship's setup: the planks' `Map_Chikuwa` block from `HSD_MemAlloc`), `grRCruise_80200B48` (the planks), `grRCruise_80201410` (the vanishing parts' block) and `grRCruise_80200074` (the falling blocks, in the stage object's `Ground`), `crates/melee-sim/src/game/gr/rcruise.rs` (`init_ship`, `init_vanish`, `init_blocks`).
+- **Defect:** none of them clears its block: a plank's second byte (`pad_01`, whose `b0` is its blink flag) and its fall speed (`x10`), a vanishing part's `x2`, and a falling block's second byte (`x1`, whose `b0` is its blink flag) stay as the heap held them.
+- **Effect:** none observable: each read of them comes after a write. A plank's `x10` is set to 0 as it starts to fall (state 2 into 3) before the fall reads it, its `b0` cleared as it comes back (state 4 into 5) before the blink toggles it, and its other bits never read; a falling block's `b0` is cleared in state 3, the only way into state 4, which toggles it, and its other bits never read; nothing reads a vanishing part's `x2`. In `2026-10-10_12-54-40`'s match on Rainbow Cruise (tick 17809) the planks held the menus' words (`0x80c6b688`, `0x1e0000`), the parts' halfwords and the third block's byte 0xBD, the high byte of a free cell's link the stage select's last free left there.
+- **melee-hd:** modeled: a session from power-on takes them from the heap's image (`game::gr::rcruise`'s `leftover_bytes`, the blocks' through the `Ground` read from it), a replay has them 0, as a fresh heap and Slippi's zeroed `Ground`.
+- **Fix:** clear the blocks (or the fields) in the setups.
+- **Fix impact:** none in play.
+- **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values); the decompilation's `grrcruise.c`.
+
 ### Brinstar Depths: a debugging button steps Kraid's haze's animation
 
 - **Where:** `grKraid_801FE2D0` (the process of Kraid's "copy", map 1: a translucent smoky haze drawn behind him that follows him), `crates/melee-sim/src/game/gr/kraid.rs` (`proc_copy`).
