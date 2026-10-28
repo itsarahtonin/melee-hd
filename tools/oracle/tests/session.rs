@@ -1270,6 +1270,58 @@ fn the_special_messages_announced() {
     assert!(out.contains("1617 ticks compared, no difference"), "{out}");
 }
 
+fn unlock_session(name: &str, args: &[&str]) -> Option<String> {
+    scripted_session("unlock-sessions", name, args)
+}
+
+/// The unlock sessions (milestone 5's task 17), each with the card it leaves: the challenger
+/// approaches a VS match's records earn (Dr. Mario by the VS matches, lost, then fought again
+/// one level lower; Pichu, won and unlocked; Mewtwo by the play time and Marth by the characters played, lost), the
+/// stage the matches earn through VS mode's prize screen, and a VS match on a card
+/// `melee-save`'s unlock-all made, which leaves nothing to decide.
+#[test]
+fn the_unlock_sessions_end_with_their_cards() {
+    for (name, ticks) in [
+        ("count", "11842"),
+        ("win-pichu", "8096"),
+        ("time", "4429"),
+        ("chars", "4414"),
+        ("stage", "3939"),
+        ("complete", "3744"),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/unlock-sessions/{name}-run.card"));
+        let Some(out) = unlock_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference"))
+                && out.contains("the card after the session: the original's, 524288 bytes"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The approach's match rolls back as any match does, and the launcher's shortcut leaves it
+/// unchecked: it isn't a match the launcher makes.
+#[test]
+fn the_approach_match_rolls_back() {
+    let Some(out) = session_sync(
+        "unlock-sessions",
+        "win-pichu",
+        &["--rollback", "7", "--shortcut"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("not a match the launcher makes (a challenger's), not checked"),
+        "{out}"
+    );
+    assert!(
+        out.contains("6357 ticks checked in 6 matches, rolled back 7 each, no difference"),
+        "{out}"
+    );
+}
+
 /// `2026-10-06_17-13-21` through the album on its card's one snapshot: the slots, its page,
 /// the menu, the view, the move refused, the copy and the other slot with no card in slot B,
 /// the delete answered no, then the main menu and the title: clean to the trace's end.

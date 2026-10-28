@@ -25,6 +25,7 @@ pub mod image;
 pub mod melee;
 pub mod state;
 pub mod tasks;
+pub mod unlock;
 
 pub use card::{Card, CardError, Clock, Console};
 pub use gci::Gci;

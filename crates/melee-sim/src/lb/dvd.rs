@@ -153,6 +153,12 @@ pub struct Dvd {
     /// (`DVDConvertPathToEntrynum`).
     #[clone_from(if_changed)]
     pub names: Vec<(String, i32)>,
+    /// The preloads' reads into main memory since the heap's image last took them up
+    /// ([`crate::game::state::Running::image_preload_reads`]): each block, its length and the
+    /// file's disc entry (-1 for an `HSD_Archive` block, which a parse fills). Not memory of
+    /// the original's: the image's record of what the reads write there.
+    #[clone_from(if_changed)]
+    pub image_reads: Vec<(u32, u32, i32)>,
 }
 
 /// A file name as `lbFileGetFullName` completes it: without a leading slash, and a bare dot's
@@ -867,6 +873,14 @@ impl Audio {
         let dest = d.memory.entries[usize::from(raw)].addr;
         // Into main memory, or ARAM (the animation files' heap) through a relay buffer.
         let kind = if dest >= 0x8000_0000 { 0x21 } else { 0x23 };
+        if dest >= 0x8000_0000 {
+            d.image_reads
+                .push((dest, len.next_multiple_of(32), entry_num));
+            if let Some(a) = d.cache.entries[index].archive {
+                let at = d.memory.entries[usize::from(a)].addr;
+                d.image_reads.push((at, 0x44, -1));
+            }
+        }
         self.devcom_request(
             data,
             entry_num,

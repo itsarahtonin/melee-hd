@@ -316,6 +316,11 @@ pub struct Globals {
     pub start_points: [crate::vec::Vec3; 4],
     /// The enemy spawner (`lbl_8049F030`).
     pub zako: zako::Zako,
+    /// Each stage part's runs of its block (offsets) that held the GPU's pixels when it was
+    /// made, as the fighters' (`ft::Globals::render_leftovers`), by slot: the comparer leaves a
+    /// byte there out while it still holds the image's fill.
+    #[clone_from(if_changed)]
+    pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
     /// The items' table of stage item descriptions (`it_804A0F60`, by kind from
     /// `It_Kind_Old_Kuri`), which the stage fills from its `itemdata`: here until items are
     /// ported.

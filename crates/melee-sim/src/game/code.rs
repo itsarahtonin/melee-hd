@@ -76,6 +76,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
+        super::gm::approach::PROC => game.approach_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -201,6 +202,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::ty::gallery::ON_FRAME.0 => game.toy_on_frame(),
         f if f == super::ty::lottery::ON_FRAME.0 => game.lot_on_frame(),
         f if f == super::ty::collection::ON_FRAME.0 => game.coll_on_frame(),
+        f if f == super::gm::approach::ON_FRAME.0 => game.approach_on_frame(),
         f if f == super::gm::tournament::SETUP_ON_FRAME.0 => game.tou_setup_on_frame(),
         f if f == super::gm::tournament::BRACKET_ON_FRAME.0 => game.tou_bracket_on_frame(),
         f if f == super::gm::tournament::ALT_ON_FRAME.0 => game.tou_alt_on_frame(),

@@ -25,7 +25,7 @@ const STAGE_MESSAGES: [[u8; 3]; 11] = [
 
 /// `fn_80160710`: an unlockable character's special message, 0x42 for none.
 #[doc(alias = "fn_80160710")]
-fn character_message(i: i32) -> u8 {
+pub(super) fn character_message(i: i32) -> u8 {
     usize::try_from(i)
         .ok()
         .and_then(|i| CHARACTER_MESSAGES.get(i).copied())

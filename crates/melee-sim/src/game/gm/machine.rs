@@ -757,6 +757,7 @@ impl Running<'_> {
             ),
             // No frame function: the panel's process runs the interface.
             GS_PRIZE => (crate::game::hud::prize::ON_ENTER, CodeRef(0)),
+            GS_APPROACH => (super::approach::ON_ENTER, super::approach::ON_FRAME),
             super::tournament::GS_TOU_SETUP => (
                 super::tournament::SETUP_ON_ENTER,
                 super::tournament::SETUP_ON_FRAME,
@@ -798,6 +799,7 @@ impl Running<'_> {
             crate::game::ty::lottery::ON_ENTER => self.lot_on_enter(),
             crate::game::ty::collection::ON_ENTER => self.coll_on_enter(),
             crate::game::hud::prize::ON_ENTER => self.prize_on_enter(),
+            super::approach::ON_ENTER => self.approach_on_enter(),
             super::tournament::SETUP_ON_ENTER => self.tou_setup_on_enter(),
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
@@ -874,6 +876,7 @@ impl Running<'_> {
             | crate::game::ty::GS_TOY_COLLECTION => {}
             // `ifPrize_Scene_OnExit` does nothing.
             GS_PRIZE => {}
+            GS_APPROACH => self.approach_on_exit(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
@@ -998,17 +1001,15 @@ impl Running<'_> {
                     self.game.add_match_stats(&me);
                 }
             }
-            Hook::ApproachOnEnter
-            | Hook::ApproachVsOnEnter
-            | Hook::ApproachVsOnExit
-            | Hook::ChallengerApproachOnExit => {
-                unported_call("the challenger approach's states (task 17)")
-            }
+            Hook::ApproachOnEnter => self.approach_state_on_enter(),
+            Hook::ApproachVsOnEnter => self.approach_vs_on_enter(),
+            Hook::ApproachVsOnExit => self.approach_vs_on_exit(),
+            Hook::ChallengerApproachOnExit => self.challenger_approach_vs_on_exit(),
             Hook::ToyToMenu => self.toy_mode_exit_to_menu(),
             Hook::LotteryOnEnter => self.lot_mode_enter(),
             Hook::LotteryOnExit => self.lot_mode_exit(),
             Hook::PrizeOnEnter => self.prize_state_on_enter(),
-            Hook::PrizeOnExit => unported_call("gm_ModeState_Prize_OnExit (VS mode's, task 17)"),
+            Hook::PrizeOnExit => self.vs_prize_state_on_exit(),
             Hook::ChallengerOnLoad => self.challenger_mode_on_load(),
             Hook::ChallengerPrizeOnExit => self.prize_state_on_exit(),
             Hook::SpecialOnLoad => {

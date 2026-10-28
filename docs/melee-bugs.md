@@ -1489,14 +1489,23 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The results' 32-bit records wrap where the code means to hold them
 
-- **Where:** `fn_80161C90` (a player's statistics added), `gm_8016247C` (the coins the KOs earn), `crates/melee-sim/src/game/gm/records.rs` (`add_stats`) and `results_exit.rs` (`results_add_coins`).
-- **Defect:** the 32-bit sums (attacks, damage dealt, taken and recovered, play time, the distances, the coins collected, swiped and lost, the save's coin totals) are added as unsigned words and then tested against `0xFFFFFFFF` to hold them there; the test can never hold, so each sum wraps past the largest word instead. The 16-bit counts are held at 0xFFFF as meant.
+- **Where:** `fn_80161C90` (a player's statistics added), `gm_8016247C` (the coins the KOs earn), `gm_80162968` (a challenger approach's match's seconds added to the single-player time), `crates/melee-sim/src/game/gm/records.rs` (`add_stats`), `results_exit.rs` (`results_add_coins`) and `approach.rs` (`approach_vs_exit`).
+- **Defect:** the 32-bit sums (attacks, damage dealt, taken and recovered, play time, the distances, the coins collected, swiped and lost, the save's coin totals, the single-player time) are added as unsigned words and then tested against `0xFFFFFFFF` to hold them there; the test can never hold, so each sum wraps past the largest word instead. The 16-bit counts are held at 0xFFFF as meant.
 - **Effect:** none in play: no save reaches four billion of any of them. A save edited to the largest value (`results-sessions/ko-max`) wraps to small numbers after a match.
 - **melee-hd:** modeled: the sums wrap.
 - **Fix:** add in 64 bits, or test before adding.
 - **Fix impact:** the records' values past the largest word.
 - **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
 
+### The challenger approach's screen counts its ticks in 16 bits
+
+- **Where:** `gm_Scene_Approach_OnFrame` (`gmapproach.c`), `crates/melee-sim/src/game/gm/approach.rs` (`approach_on_frame`).
+- **Defect:** the screen counts its ticks in a `u16` (`gm_80480D98.xC`) that it adds to every tick with no stop, and takes A or Start only once the count is 0xB4 or more; after 65,536 ticks the count wraps to 0.
+- **Effect:** a player who leaves the "A new foe has appeared!" screen for 18 minutes and 12 seconds finds A and Start ignored for the next three seconds, as when the screen came in.
+- **melee-hd:** modeled: the count wraps.
+- **Fix:** stop counting at 0xB4.
+- **Fix impact:** none in play but that wait.
+- **Source:** `gmapproach.c`'s `gm_Scene_Approach_OnFrame`; not recorded elsewhere.
 ### A tournament match's teams run past the five into the players' decision tables
 
 - **Where:** `fn_80165E7C` (the teams' scores and subscores at a match's end), `crates/melee-sim/src/game/gm/results.rs` (`team_scores`, `TeamStanding`).

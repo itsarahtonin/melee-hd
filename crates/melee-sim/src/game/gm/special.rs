@@ -183,7 +183,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801BA1FC")]
     #[doc(alias = "gm_801BA5F4")]
     #[doc(alias = "gm_801BA7EC")]
-    #[doc(alias = "onExitVs")]
+    #[doc(alias = "onExitVs@801BA3FC")]
     pub fn special_exit_vs(&mut self, _mode: u8) {
         self.vs_melee_exit_vs(STATE_RESULTS, STATE_SUDDEN_DEATH);
     }

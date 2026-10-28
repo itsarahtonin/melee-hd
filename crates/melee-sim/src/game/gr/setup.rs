@@ -596,10 +596,18 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
     game.grounds.set_addr(id.0, addr);
     // After the menus the block holds what they left, where Slippi's Init Stage Data
     // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).
+    game.gr.render_leftovers.remove(&id.0);
     if !game.rules.slippi
         && let Some(left) = crate::game::leftovers::import(data, addr, true)
     {
         game.grounds[id.0] = left;
+        // Where the block held the GPU's pixels (the results screen's images under a later
+        // match's stage), which the comparer leaves out while they hold the image's fill
+        // (docs/engine.md, "Uninitialized values").
+        let rt = crate::game::leftovers::render_target_runs(addr, GROUND_SIZE);
+        if !rt.is_empty() {
+            game.gr.render_leftovers.insert(id.0, rt);
+        }
     }
     game.world
         .init_user_data(gobj, USER_DATA_GROUND, UserData::Ground(id));
