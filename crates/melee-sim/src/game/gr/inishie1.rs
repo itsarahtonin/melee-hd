@@ -74,13 +74,6 @@ const BLOCKS: [(i32, i32); 19] = [
 ];
 const BLOCK_COUNT: usize = BLOCKS.len();
 
-/// A ? block's item's speed out of its brick block (`grI1_803B8268`).
-const ITEM_VEL: Vec3 = Vec3 {
-    x: 0.0,
-    y: 5.0,
-    z: 0.0,
-};
-
 /// The tries a new ? block gets at a free block (`HATENA_APPEAR_CHECKLOOP`).
 const HATENA_TRIES: i32 = 0x14;
 
@@ -658,13 +651,14 @@ pub fn update_blocks(r: &mut Running, gobj: GObjId) {
     }
 }
 
-/// Pops a random item out of a block at joint `j`, 5 above it, straight up,
-/// `grInishie1_801FBA34`.
+/// Pops a random item out of a block at joint `j`, 5 above it, `grInishie1_801FBA34`. It
+/// hands `it_8026F7C8` the stage's speed (`grI1_803B8268`, straight up at 5) but asks it to
+/// replace it, so the item pops sideways at random at its own upward speed (docs/melee-bugs.md).
 #[doc(alias = "grInishie1_801FBA34")]
 pub fn pop_item(r: &mut Running, j: Option<JObjId>) {
     let mut pos = world_position(&mut r.game.objs, r.data, j, None);
     pos.y = mem(fp::fadds(reg(pos.y), 5.0));
-    super::super::it::drop::drop_random(r, pos, Some(ITEM_VEL));
+    super::super::it::drop::drop_random(r, pos, None);
 }
 
 /// Puts a ? block over block `ix`, `grInishie1_801FBAA0`: where the block is, following it,
