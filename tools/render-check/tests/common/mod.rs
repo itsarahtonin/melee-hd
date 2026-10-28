@@ -1036,5 +1036,10 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
+    /// A point light's direction in the transform unit's memory (XF 061D to 061F for light
+    /// 1), which melee-render writes from the light and ssbm-rs's log leaves zero: no draw
+    /// reads a point light's direction, and the images are identical.
+    pub const LIGHT_DIRECTION: &str =
+        "a point light's direction in the transform unit's memory, which no draw reads";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

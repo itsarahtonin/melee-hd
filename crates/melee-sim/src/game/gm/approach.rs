@@ -17,8 +17,8 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::{aobj, tobj};
 
-/// `gm_Scene_Approach_OnEnter`, `gm_Scene_Approach_OnFrame`, `gm_Scene_Approach_OnExit`'s
-/// scene and `fn_801AD920`, the screen's model's process.
+/// `gm_Scene_Approach_OnEnter` and `gm_Scene_Approach_OnFrame`, the scene's, and `fn_801AD920`,
+/// the screen's model's process.
 pub const ON_ENTER: CodeRef = CodeRef(0x801A_DCE4);
 pub const ON_FRAME: CodeRef = CodeRef(0x801A_DC88);
 pub const PROC: u32 = 0x801A_D920;
@@ -91,7 +91,8 @@ pub fn challenger_stage(ckind: u8) -> u16 {
 
 impl Running<'_> {
     /// `gm_ModeState_Approach_OnEnter`: the screen's data, the challenger's character and the
-    /// human's slot; the card's archive and the save marked (`lbCardGame_SetupArchive`).
+    /// human's slot; the card's archive, and the save started at the scene's waits
+    /// (`lbCardGame_SetupArchive`).
     #[doc(alias = "gm_ModeState_Approach_OnEnter")]
     #[doc(alias = "gm_GetChallengerData")]
     pub fn approach_state_on_enter(&mut self) {

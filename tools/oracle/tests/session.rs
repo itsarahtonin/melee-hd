@@ -1199,13 +1199,14 @@ fn unlock_session(name: &str, args: &[&str]) -> Option<String> {
 
 /// The unlock sessions (milestone 5's task 17), each with the card it leaves: the challenger
 /// approaches a VS match's records earn (Dr. Mario by the VS matches, lost, then fought again
-/// one level lower; Mewtwo by the play time and Marth by the characters played, lost), the
+/// one level lower; Pichu, won and unlocked; Mewtwo by the play time and Marth by the characters played, lost), the
 /// stage the matches earn through VS mode's prize screen, and a VS match on a card
 /// `melee-save`'s unlock-all made, which leaves nothing to decide.
 #[test]
 fn the_unlock_sessions_end_with_their_cards() {
     for (name, ticks) in [
-        ("count", "COUNT"),
+        ("count", "11842"),
+        ("win-pichu", "8096"),
         ("time", "4429"),
         ("chars", "4414"),
         ("stage", "3939"),
@@ -1221,4 +1222,22 @@ fn the_unlock_sessions_end_with_their_cards() {
             "{name}: {out}"
         );
     }
+}
+
+/// The approach's match rolls back as any match does, and the launcher's shortcut leaves it
+/// unchecked: it isn't a match the launcher makes.
+#[test]
+fn the_approach_match_rolls_back() {
+    let Some(out) = session_sync(
+        "unlock-sessions",
+        "win-pichu",
+        &["--rollback", "7", "--shortcut"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("not a match the launcher makes (a challenger's), not checked"),
+        "{out}"
+    );
+    assert!(out.contains("6357 ticks checked in 6 matches, rolled back 7 each, no difference"), "{out}");
 }

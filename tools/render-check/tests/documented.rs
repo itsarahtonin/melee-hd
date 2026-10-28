@@ -193,11 +193,32 @@ frames!(SOUND_SOUNDS;
 frames!(SOUND_JP;
     sound_jp_1620 1620,
 );
-// The challenger approach's screen (`unlock-sessions/time`): coming in (3090) and waiting
-// for A with Mewtwo's name (3240).
-frames!(UNLOCK_TIME;
-    unlock_time_3090 3090,
-    unlock_time_3240 3240,
+// The challenger approach's screen (`unlock-sessions/time`): coming in (2720) and waiting
+// for A with Mewtwo's silhouette (2870). The images are identical; the transform unit's
+// memory holds a point light's direction, which no draw reads, as melee-render writes it
+// (docs/player.md's open issues).
+macro_rules! approach_frames {
+    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                compare(
+                    &$game,
+                    $frame,
+                    Group::Standard,
+                    Expect::SameImages {
+                        same: [1, 1],
+                        why: common::why::LIGHT_DIRECTION,
+                    },
+                );
+            }
+        )*
+    };
+}
+approach_frames!(UNLOCK_TIME;
+    unlock_time_2720 2720,
+    unlock_time_2870 2870,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer
