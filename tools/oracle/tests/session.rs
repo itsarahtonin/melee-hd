@@ -69,7 +69,9 @@ fn ticks_align_with_reads() {
 
 /// The memory card scene, the opening movie skipped with Start, the title, whose Start at
 /// tick 272 asks for the main menu, the main menu, whose entry writes the save on the game's
-/// waits, and the character select, from tick 357, to its button for the rules.
+/// waits, and the character select, from tick 357, its button for the rules and back
+/// (`mn_80231804`, `mn_8022F4CC`), then Tournament mode's setup, match-up screens and a
+/// match, to the trace's end.
 #[test]
 fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
@@ -79,10 +81,7 @@ fn power_on_runs_through_the_main_menu() {
         out.contains("3 the same (db_gameLaunchButtonState 0x0000, DbLevel 0, the first game mode 0x28), 0 different"),
         "{out}"
     );
-    assert!(
-        out.contains("475 ticks compared, no difference; stopped in tick 475: mn_80231804 (the rules from the select screen, task 8) isn't ported"),
-        "{out}"
-    );
+    assert!(out.contains("4000 ticks compared, no difference"), "{out}");
 }
 
 fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
@@ -500,7 +499,8 @@ fn the_main_menu_toured() {
 
 /// `2026-10-06_17-37-52`'s save runs whole inside tick 211, and the pad alarm fires in its
 /// last step's wait point, before the unmount: its card probes find the channel still
-/// attached (24 ticks, not 56).
+/// attached (24 ticks, not 56). Then Tournament mode: the setup, the match-up screen and a
+/// match, to the trace's end.
 #[test]
 fn a_save_ends_attached_until_its_unmount() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_17-37-52.trc");
@@ -513,10 +513,7 @@ fn a_save_ends_attached_until_its_unmount() {
         return;
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
-    assert!(
-        out.contains("289 ticks compared, no difference; stopped in tick 289: game mode 0x1b"),
-        "{out}"
-    );
+    assert!(out.contains("6745 ticks compared, no difference"), "{out}");
 }
 
 /// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's

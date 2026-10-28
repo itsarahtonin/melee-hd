@@ -238,7 +238,13 @@ impl Running<'_> {
     /// timers and the damage displays. The players' codes hook only the VS scene's entry.
     #[doc(alias = "gm_Scene_SuddenDeath_OnEnter")]
     pub fn sudden_death_scene_on_enter(&mut self, scene_mode: u8) {
-        self.game.vs_melee.start.rules.x6 = 1;
+        // The mark goes on the scene's own enter data: Tournament mode's is its own
+        // (`gm_804876D8`).
+        if scene_mode == super::tournament::GM_TOURNAMENT {
+            self.game.tou.start.rules.x6 = 1;
+        } else {
+            self.game.vs_melee.start.rules.x6 = 1;
+        }
         let (start, files) = self.vs_scene_files(scene_mode);
         self.game.gm.on_frame = Some(CodeRef(super::vs::ON_FRAME));
         self.sudden_death_on_enter(&start, files);
@@ -256,6 +262,7 @@ impl Running<'_> {
         let start = match scene_mode {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
             m if super::machine::uses_vs_melee(m) => self.game.vs_melee.start.clone(),
+            super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

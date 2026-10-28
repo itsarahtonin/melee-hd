@@ -54,6 +54,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if game.charsel_run(gobj, addr) => {}
         addr if game.stagesel_run(gobj, addr) => {}
         addr if game.results_run(gobj, addr) => {}
+        addr if game.tou_run(gobj, addr) => {}
         super::gm::attract::PROC => game.attract_proc(gobj),
         super::ty::gallery::PROC_VIEW => game.toy_view_proc(gobj),
         super::ty::gallery::PROC_ANIM => game.toy_anim_proc(gobj),
@@ -200,6 +201,9 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::ty::gallery::ON_FRAME.0 => game.toy_on_frame(),
         f if f == super::ty::lottery::ON_FRAME.0 => game.lot_on_frame(),
         f if f == super::ty::collection::ON_FRAME.0 => game.coll_on_frame(),
+        f if f == super::gm::tournament::SETUP_ON_FRAME.0 => game.tou_setup_on_frame(),
+        f if f == super::gm::tournament::BRACKET_ON_FRAME.0 => game.tou_bracket_on_frame(),
+        f if f == super::gm::tournament::ALT_ON_FRAME.0 => game.tou_alt_on_frame(),
         // db_RunEveryFrame: returns at once below the debug ROM's level.
         super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
         other => unported("function", other),
