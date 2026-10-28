@@ -48,7 +48,14 @@ impl Stack {
     /// Pops the top value, if any (`HSD_SListRemove` of none does nothing).
     fn pop(&mut self) -> Option<u32> {
         let v = self.values.pop()?;
-        heap::obj_free(Kind::SList, self.nodes.pop().unwrap());
+        let node = self.nodes.pop().unwrap();
+        // The node holds the value as it was and the node below (`HSD_SList`), as it goes
+        // back (docs/engine.md, a session's heap leftovers).
+        if node != 0 {
+            let next = self.nodes.last().copied().unwrap_or(0);
+            super::export::with_image(|img| super::export::slist_node(img, node, next, v));
+        }
+        heap::obj_free(Kind::SList, node);
         Some(v)
     }
 

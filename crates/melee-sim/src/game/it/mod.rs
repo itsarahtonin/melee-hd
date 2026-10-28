@@ -16,6 +16,7 @@ pub mod ground;
 pub mod hitbox;
 pub mod item;
 pub mod kinds;
+mod lay;
 pub mod lib26b1;
 pub mod lib2725;
 pub mod lib279c;

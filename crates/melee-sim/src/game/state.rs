@@ -230,6 +230,20 @@ impl Kinds for GameKinds {
                 0x8022_EB04
             }
             UserData::GlyphVariants(_) => 0x8023_D0F8,
+            // The Data menus' and the sound test's blocks (`HSD_Free`), the VS records'
+            // pop-up (`mnDiagram_PopupCleanup`) and lists (`mnDiagram2_FreeUserData`,
+            // `mnDiagram3_FreeUserData`), the magnifier's (`ifMagnify_802FC3BC`), a text's
+            // (`HSD_SisLib_803A5A2C`) and a text canvas's camera (`fn_803A60EC`).
+            UserData::Info(_)
+            | UserData::Count(_)
+            | UserData::Diagram(_)
+            | UserData::SoundTest(_) => 0x8037_F1B0,
+            UserData::DiagramPopup(_) => 0x8024_0B18,
+            UserData::Diagram2(_) => 0x8024_5028,
+            UserData::Diagram3(_) => 0x8024_6F0C,
+            UserData::MagnifyPlayer(_) => 0x802F_C3BC,
+            UserData::Text(_) => 0x803A_5A2C,
+            UserData::SisCamera(_) => 0x803A_60EC,
             // `Toy_RemoveUserData`.
             UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
             // A text's (`HSD_SisLib_803A5A2C`) and a canvas's own camera's (`fn_803A60EC`).
@@ -510,7 +524,7 @@ impl Host<GameKinds> for Running<'_> {
                 super::it::item::free_user_data(self.game, i);
             }
             // `it_802A2474`: the link goes back to `item_link_alloc_data`.
-            UserData::ItemLink(l) => super::it::link::free(self.game, l),
+            UserData::ItemLink(l) => super::it::link::free(self.game, self.data, l),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
             UserData::Sound(s) => crate::lb::sound_obj::free(self.game, s),
             UserData::Text(t) => self.game.sis.free_text(t),
@@ -644,7 +658,19 @@ impl Host<GameKinds> for Running<'_> {
             Obj::JObj(j) => crate::hsd::jobj::remove_all(&mut self.game.objs, Some(j)),
             Obj::Fog(f) => crate::hsd::fog::unref(&mut self.game.objs, Some(f)),
             Obj::CObj(c) => crate::hsd::cobj::unref(&mut self.game.objs, Some(c)),
-            Obj::SObj(s) => crate::hsd::sobj::free_all(&mut self.game.objs.sobjs, s),
+            Obj::SObj(s) => {
+                // The blocks hold the sprites as they were, unlinked (docs/engine.md, a
+                // session's heap leftovers).
+                let (game, data) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    let mut cur = s;
+                    while let Some(c) = cur {
+                        super::export::sobj(game, data, img, c, true);
+                        cur = game.objs.sobjs[c.0].next;
+                    }
+                });
+                crate::hsd::sobj::free_all(&mut self.game.objs.sobjs, s)
+            }
             Obj::LObj(l) => crate::hsd::lobj::remove_all(&mut self.game.objs, Some(l)),
         }
     }

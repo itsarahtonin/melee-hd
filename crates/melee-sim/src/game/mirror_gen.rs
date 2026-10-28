@@ -28194,6 +28194,24 @@ impl LayOut for itSeakNeedleThrown_ItemVars {
     }
 }
 
+impl LayOut for ItemLink {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        l.put_word(at + 0x0, cx.handle("ItemLinkId", self.prev.map(|h| h.0)));
+        l.put_word(at + 0x4, cx.handle("ItemLinkId", self.next.map(|h| h.0)));
+        self.vel.lay(l, at + 0x8, cx);
+        self.pos.lay(l, at + 0x14, cx);
+        self.x20.lay(l, at + 0x20, cx);
+        l.put_bits(at, 352, 1, (self.x2C_b0) as u32);
+        l.put_bits(at, 353, 1, (self.x2C_b1) as u32);
+        l.put_bits(at, 354, 1, (self.x2C_b2) as u32);
+        self.coll_data.lay(l, at + 0x30, cx);
+        l.put_u32(at + 0x1cc, self.x1CC as u32);
+        l.put_word(at + 0x1d0, cx.handle("GObjId", self.gobj.map(|h| h.0)));
+        l.put_word(at + 0x1d4, cx.handle("JObjId", self.jobj.map(|h| h.0)));
+    }
+}
+
 impl LayOut for itSeakChain_ItemVars {
     fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
         let _ = (&l, at, &cx);

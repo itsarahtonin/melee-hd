@@ -314,13 +314,13 @@ macro_rules! results_frames {
 }
 
 results_frames!(RESULTS_STOCK;
-    results_stock_2451 2451 1402,
-    results_stock_2901 2901 1402,
-    results_stock_3201 3201 1429,
-    results_stock_3271 3271 1470,
-    results_stock_3361 3361 1470,
-    results_stock_3401 3401 1511,
-    results_stock_3441 3441 1357,
+    results_stock_2451 2451 1404,
+    results_stock_2901 2901 1404,
+    results_stock_3201 3201 1431,
+    results_stock_3271 3271 1472,
+    results_stock_3361 3361 1472,
+    results_stock_3401 3401 1513,
+    results_stock_3441 3441 1359,
 );
 rendered_frames!(RESULTS_STOCK;
     results_stock_3521 3521,

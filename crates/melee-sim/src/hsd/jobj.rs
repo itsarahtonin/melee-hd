@@ -337,6 +337,9 @@ pub fn make_matrix(objs: &mut Objects, data: &Archives, j: JObjId) {
     if o.scl.is_none() && (parent_scl.is_some() || o.flags & CLASSICAL_SCALE == 0) {
         o.scl_addr = heap::obj_alloc(heap::Kind::Vec);
     } else if o.scl.is_some() && parent_scl.is_none() && o.flags & CLASSICAL_SCALE != 0 {
+        // The block holds the scale as it was (docs/engine.md, a session's heap leftovers).
+        let (at, s) = (o.scl_addr, o.scl);
+        super::export::with_image(|img| super::export::scl(img, at, s));
         heap::obj_free(heap::Kind::Vec, o.scl_addr);
     }
     if o.flags & CLASSICAL_SCALE != 0 {

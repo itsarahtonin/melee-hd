@@ -206,6 +206,7 @@ impl Importer<'_> {
             scale_flags: self.h8(a + 0x27),
             state_flags: self.h8(a + 0x28),
             is_async: self.h8(a + 0x29),
+            left: Default::default(),
         };
         self.game.ef.effects[id.0] = e;
         id
@@ -680,10 +681,20 @@ impl Comparer<'_> {
                 ud,
             );
         }
+        // `user_data`'s and the bytes' words the effect knows its block held.
+        if let ef::Held::Word(w) = e.left.user_data {
+            self.check(path, "user_data's word", w, self.u32(t + 0x14));
+        }
+        for (i, b) in e.left.x2a.iter().enumerate() {
+            if let Some(b) = *b {
+                let off = 0x2A + i as u32;
+                self.check(path, &format!("x{off:X}"), b, self.u8(t + off));
+            }
+        }
         let reads = e.update.map_or([false; 3], |u| u.reads_params());
         let ours = [e.params.x, e.params.y, e.params.z];
         for (i, &r) in reads.iter().enumerate() {
-            if r {
+            if r || e.param_known(i) {
                 let th = self.ef_f32(t + 0x18 + 4 * i as u32);
                 self.check(path, &format!("params[{i}]"), ours[i].to_bits(), th);
             }

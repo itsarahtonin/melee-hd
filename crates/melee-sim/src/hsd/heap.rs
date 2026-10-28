@@ -909,6 +909,12 @@ impl Heap {
                 let old_nb = (nb as u32 * 4) & !31;
                 self.pieces.array = new_array;
                 self.pieces.list.resize(new_nb, None);
+                // The old array holds the classes' addresses as it goes back.
+                let words: Vec<u8> = self.pieces.list[..nb]
+                    .iter()
+                    .flat_map(|e| e.as_ref().map_or(0, |e| e.addr).to_be_bytes())
+                    .collect();
+                self.image.put(old, &words);
                 self.piece_free_raw(old, old_nb);
                 let i = (old_nb.div_ceil(32) - 1) as usize;
                 self.entry(i).nb_alloc += 1;
@@ -1212,10 +1218,15 @@ impl Heap {
         if !self.image.on {
             return;
         }
+        // A pool carried from an earlier scene's heap that this scene hasn't inited lists
+        // objects of that heap, whose memory this scene's blocks may have taken since: its
+        // links were written as its objects went back, and memory no longer holds them.
         let lists: Vec<Vec<u32>> = self
             .allocs
             .iter()
-            .map(|a| a.free.clone())
+            .zip(&self.carried)
+            .filter(|&(_, &carried)| !carried)
+            .map(|(a, _)| a.free.clone())
             .chain(self.pieces.list.iter().flatten().map(|e| e.free.clone()))
             .collect();
         for free in lists {
@@ -1257,18 +1268,34 @@ impl Heap {
         }
     }
 
-    /// An archive loaded into the block at `file` (`len` bytes): the image knows its bytes,
-    /// relocated to the block (`HSD_ArchiveParse`).
-    pub fn hold_archive(&mut self, file: u32, len: u32, archive: melee_data::archive::ArchiveId) {
+    /// An archive loaded into the block at `file` (`len` bytes), its `HSD_Archive` at
+    /// `header`: the image knows its bytes, relocated to the block, and the header block as
+    /// the parse leaves it (`HSD_ArchiveParse`, [`super::export::archive`]).
+    pub fn hold_archive(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        file: u32,
+        len: u32,
+        header: u32,
+        archive: melee_data::archive::ArchiveId,
+    ) {
+        // The read's bytes past the file, where the archive keeps them (the disc's next).
+        let a = data.get(archive);
+        let end = (len..len.next_multiple_of(32))
+            .find(|&o| a.file_byte(o).is_none())
+            .unwrap_or(len.next_multiple_of(32));
         self.image.hold(
             file,
-            file + len,
+            file + end,
             super::image::Src::File {
                 archive,
                 offset: 0,
                 base: file + 0x20,
             },
         );
+        if header != 0 {
+            super::export::archive(&mut self.image, data, header, file, len, archive);
+        }
     }
 }
 

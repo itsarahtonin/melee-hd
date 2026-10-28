@@ -23,6 +23,8 @@ use super::particle::{Hooks, ParticleId};
 use super::pobj::{self, Binding, PObjId};
 use super::tobj::{self, TObjId};
 use crate::mtx::Mtx34;
+use crate::vec::Vec3;
+use gekko_fp as fp;
 
 /// A transparency pass (`HSD_TrspMask`).
 pub const TRSP_OPA: u32 = 1;
@@ -553,7 +555,7 @@ pub fn jobj_disp_sub(
 ) {
     jobj::set_current(objs, Some(j));
     if rendermode & RENDER_SHADOW == 0 && objs.jobjs[j].flags & jobj::SPECULAR != 0 {
-        lobj_setup_specular_init(objs);
+        lobj_setup_specular_init(objs, j, vmtx);
         objs.display
             .draws
             .push(Draw::SpecularInit { jobj: j, vmtx });
@@ -909,20 +911,40 @@ fn setup_envelopes(objs: &mut Objects, data: &Archives, j: JObjId, envs: &[Vec<p
     }
 }
 
-/// The simulation side of `HSD_LObjSetupSpecularInit`: each active light with a specular slot
-/// needs its GX object loaded again.
+/// `HSD_LObjSetupSpecularInit` for joint `j` drawn in view `vmtx`: each active light with a
+/// specular slot points its specular GX object along the half vector between the light and
+/// the camera's direction to the joint, and needs it loaded again. The joint's place in view
+/// space is its position matrix's translation (`HSD_JObjMakePositionMtx`: the view and the
+/// joint's matrix concatenated, which no billboard's turn changes).
 #[doc(alias = "HSD_LObjSetupSpecularInit")]
-fn lobj_setup_specular_init(objs: &mut Objects) {
+fn lobj_setup_specular_init(objs: &mut Objects, j: JObjId, vmtx: Option<Mtx34>) {
+    let vmtx = match vmtx {
+        Some(v) => v,
+        None => {
+            let c = objs
+                .cobjs
+                .current
+                .expect("HSD_LObjSetupSpecularInit: no current camera");
+            objs.cobjs[c].view_mtx
+        }
+    };
+    let src = vmtx.concat(&objs.jobjs[j].mtx);
+    let jpos = Vec3::new(src.m[0][3], src.m[1][3], src.m[2][3]);
+    let cdir = jpos.sdk_normalize();
     for i in 0..lobj::nb_active(&objs.lobjs) {
         let l = lobj::active_by_index(&objs.lobjs, i).expect("an active light");
         if objs.lobjs[l].spec_id == 0 {
             continue;
         }
-        assert!(
-            lobj::light_type(&objs.lobjs, l) != lobj::AMBIENT,
-            "an ambient light with a specular slot"
-        );
-        objs.lobjs[l].flags |= LOBJ_SPEC_DIRTY;
+        let o = &mut objs.lobjs[l];
+        let half = match o.flags & lobj::TYPE_MASK {
+            lobj::POINT | lobj::SPOT => jpos.sdk_sub(o.lvec).sdk_normalize().sdk_add(cdir),
+            lobj::INFINITE => o.lvec.sdk_add(cdir),
+            _ => panic!("an ambient light with a specular slot"),
+        }
+        .sdk_normalize();
+        o.spec.ldir = [-half.x, -half.y, -half.z];
+        o.flags |= LOBJ_SPEC_DIRTY;
     }
 }
 
@@ -1009,17 +1031,9 @@ fn setup_lights(objs: &mut Objects, data: &Archives, c: CObjId) {
         // their GX objects from the light's position (a spot's also from its vector), which
         // reading brings a path-animated position into world space (`HSD_WObjGetPosition`).
         match ty {
-            lobj::INFINITE => {
-                lobj::position(objs, data, Some(l));
-            }
-            lobj::POINT => {
-                objs.lobjs[l].hw_color = objs.lobjs[l].color;
-                lobj::position(objs, data, Some(l));
-            }
-            lobj::SPOT => {
-                lobj::position(objs, data, Some(l));
-                lobj::light_vector(objs, data, Some(l));
-            }
+            lobj::INFINITE => setup_infinite(objs, data, l, &vmtx),
+            lobj::POINT => setup_point(objs, data, l, &vmtx),
+            lobj::SPOT => setup_spot(objs, data, l, &vmtx),
             lobj::AMBIENT => continue,
             _ => {}
         }
@@ -1067,10 +1081,101 @@ fn setup_lights(objs: &mut Objects, data: &Archives, c: CObjId) {
     }
 }
 
+/// The light's position in view space for its GX objects, `HSD_LObjGetPosition` and
+/// `MTXMultVec` (an infinite light's pushed 2^20 times out first): none where the light has no
+/// position WObj, whose stack vector the setup never wrote.
+fn view_pos(
+    objs: &mut Objects,
+    data: &Archives,
+    l: LObjId,
+    vmtx: &Mtx34,
+    far: bool,
+) -> Option<Vec3> {
+    let p = lobj::position(objs, data, Some(l))?;
+    let p = if far {
+        let s = |v: f32| crate::fpu::mem(fp::fmuls(crate::fpu::reg(v), 1_048_576.0));
+        Vec3::new(s(p.x), s(p.y), s(p.z))
+    } else {
+        p
+    };
+    Some(vmtx.transform(p))
+}
+
+/// `GXInitLightPos`, or a stale position ([`lobj::GxLight::stale_pos`]).
+fn init_pos(g: &mut lobj::GxLight, p: Option<Vec3>) {
+    match p {
+        Some(p) => {
+            g.lpos = [p.x, p.y, p.z];
+            g.stale_pos = false;
+        }
+        None => g.stale_pos = true,
+    }
+}
+
+/// `setup_infinite_lightobj`: the GX objects' position far along the light's position.
+fn setup_infinite(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34) {
+    let lpos = view_pos(objs, data, l, vmtx, true);
+    let o = &mut objs.lobjs[l];
+    if o.flags & lobj::DIFFUSE != 0 {
+        init_pos(&mut o.light, lpos);
+        o.light.a = [1.0, 0.0, 0.0];
+        o.light.k = [1.0, 0.0, 0.0];
+    }
+    if o.flags & lobj::SPECULAR != 0 {
+        init_pos(&mut o.spec, lpos);
+    }
+}
+
+/// A light's attenuation word `i` (`LObj::params`) as a float.
+fn param(o: &lobj::LObj, i: usize) -> f32 {
+    f32::from_bits(o.params[i])
+}
+
+/// `setup_point_lightobj`.
+fn setup_point(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34) {
+    let lpos = view_pos(objs, data, l, vmtx, false);
+    let o = &mut objs.lobjs[l];
+    o.light.color = o.color;
+    o.hw_color = o.color;
+    init_pos(&mut o.light, lpos);
+    init_pos(&mut o.spec, lpos);
+    if o.flags & lobj::RAW_PARAM != 0 {
+        o.light.a = [1.0, 0.0, 0.0];
+        o.light.k = [param(o, 3), param(o, 4), param(o, 5)];
+    } else {
+        let (br, dist, func) = (param(o, 2), param(o, 3), o.params[4]);
+        o.light.k = lobj::dist_attn(dist, br, func);
+        o.light.a = lobj::spot_attn(0.0, 0);
+        o.spec.k = lobj::dist_attn(dist, br, func);
+    }
+}
+
+/// `setup_spot_lightobj`.
+fn setup_spot(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34) {
+    let lpos = view_pos(objs, data, l, vmtx, false);
+    let v = lobj::light_vector(objs, data, Some(l)).expect("a light");
+    let ldir = vmtx.rotate(v).sdk_normalize();
+    let o = &mut objs.lobjs[l];
+    init_pos(&mut o.light, lpos);
+    init_pos(&mut o.spec, lpos);
+    o.light.ldir = [-ldir.x, -ldir.y, -ldir.z];
+    if o.flags & lobj::RAW_PARAM != 0 {
+        o.light.a = [param(o, 0), param(o, 1), param(o, 2)];
+        o.light.k = [param(o, 3), param(o, 4), param(o, 5)];
+    } else {
+        let (br, dist, cutoff) = (param(o, 2), param(o, 3), param(o, 0));
+        let (spot, func) = (o.params[1], o.params[4]);
+        o.light.k = lobj::dist_attn(dist, br, func);
+        o.spec.k = lobj::dist_attn(dist, br, func);
+        o.light.a = lobj::spot_attn(cutoff, spot);
+    }
+}
+
 /// `setup_diffuse_lightobj`.
 fn setup_diffuse(objs: &mut Objects, l: LObjId) {
     let ty = lobj::light_type(&objs.lobjs, l);
     let o = &mut objs.lobjs[l];
+    o.light.color = o.color;
     o.hw_color = o.color;
     o.flags |= LOBJ_DIFF_DIRTY;
     let (id, flags) = (o.id, o.flags);
@@ -1094,6 +1199,11 @@ fn setup_spec(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34, spec
         return;
     }
     objs.lobjs[l].shininess = 50.0;
+    {
+        let o = &mut objs.lobjs[l];
+        o.spec.color = o.color;
+        spec_attn(o, 50.0);
+    }
     let lvec = match lobj::light_type(&objs.lobjs, l) {
         lobj::POINT | lobj::SPOT => {
             // Without a position WObj the original transforms the vector as it was.
@@ -1112,6 +1222,17 @@ fn setup_spec(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34, spec
     objs.lobjs.lightmask_specular |= spec_id;
 }
 
+/// A specular light's attenuation for `shininess`: `GXInitLightAttn` with `k0` half of it.
+fn spec_attn(o: &mut lobj::LObj, shininess: f32) {
+    let k0 = fp::fmuls(crate::fpu::reg(shininess), 0.5);
+    o.spec.a = [0.0, 0.0, 1.0];
+    o.spec.k = [
+        crate::fpu::mem(k0),
+        0.0,
+        crate::fpu::mem(fp::fsubs(1.0, k0)),
+    ];
+}
+
 /// Loads a light's GX objects with `color` and `shininess`, `HSD_LObjSetup`: what changed is
 /// kept, and what loads is no longer dirty.
 #[doc(alias = "HSD_LObjSetup")]
@@ -1122,6 +1243,7 @@ fn lobj_setup(objs: &mut Objects, l: LObjId, color: [u8; 4], shininess: f32) {
     }
     if o.flags & lobj::DIFFUSE != 0 {
         if o.hw_color != color {
+            o.light.color = color;
             o.hw_color = color;
             o.flags |= LOBJ_DIFF_DIRTY;
         }
@@ -1130,6 +1252,7 @@ fn lobj_setup(objs: &mut Objects, l: LObjId, color: [u8; 4], shininess: f32) {
     if o.spec_id != 0 {
         if crate::fpu::reg(o.shininess) != crate::fpu::reg(shininess) {
             o.shininess = shininess;
+            spec_attn(o, shininess);
             o.flags |= LOBJ_SPEC_DIRTY;
         }
         o.flags &= !LOBJ_SPEC_DIRTY;

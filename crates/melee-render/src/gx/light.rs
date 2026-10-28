@@ -56,58 +56,11 @@ impl Gx {
         lt_obj.k
     }
 
-    /// `GXInitLightSpot`, with the game's `cosf`.
+    /// `GXInitLightSpot`, with the game's `cosf` (melee-sim's, which the heap's image takes
+    /// the light objects from).
     #[doc(alias = "GXInitLightSpot")]
     pub fn init_light_spot(&self, lt_obj: &mut LightObj, cutoff: f32, spot_func: u32) {
-        let mut spot_func = spot_func;
-        if cutoff <= 0.0 || cutoff > 90.0 {
-            spot_func = GX_SP_OFF;
-        }
-        let r = mem(fp::fdivs(
-            fp::fmuls(reg(std::f32::consts::PI), reg(cutoff)),
-            180.0,
-        ));
-        let cr = reg(melee_sim::math::cos(r));
-        let one_minus = || fp::fsubs(1.0, cr);
-        let (a0, a1, a2) = match spot_func {
-            GX_SP_FLAT => (fp::fmuls(-1000.0, cr), 1000.0, 0.0),
-            GX_SP_COS => (
-                fp::fdivs(fp::fneg(cr), one_minus()),
-                fp::fdivs(1.0, one_minus()),
-                0.0,
-            ),
-            GX_SP_COS2 => (
-                0.0,
-                fp::fdivs(fp::fneg(cr), one_minus()),
-                fp::fdivs(1.0, one_minus()),
-            ),
-            GX_SP_SHARP => {
-                let d = fp::fmuls(one_minus(), one_minus());
-                (
-                    fp::fdivs(fp::fmuls(cr, fp::fsubs(cr, 2.0)), d),
-                    fp::fdivs(2.0, d),
-                    fp::fdivs(-1.0, d),
-                )
-            }
-            GX_SP_RING1 => {
-                let d = fp::fmuls(one_minus(), one_minus());
-                (
-                    fp::fdivs(fp::fmuls(-4.0, cr), d),
-                    fp::fdivs(fp::fmuls(4.0, fp::fadds(1.0, cr)), d),
-                    fp::fdivs(-4.0, d),
-                )
-            }
-            GX_SP_RING2 => {
-                let d = fp::fmuls(one_minus(), one_minus());
-                (
-                    fp::fsubs(1.0, fp::fdivs(fp::fmuls(fp::fmuls(2.0, cr), cr), d)),
-                    fp::fdivs(fp::fmuls(4.0, cr), d),
-                    fp::fdivs(-2.0, d),
-                )
-            }
-            _ => (1.0, 0.0, 0.0),
-        };
-        lt_obj.a = [mem(a0), mem(a1), mem(a2)];
+        lt_obj.a = melee_sim::hsd::lobj::spot_attn(cutoff, spot_func);
     }
 
     #[doc(alias = "GXInitLightDistAttn")]
@@ -118,32 +71,7 @@ impl Gx {
         ref_br: f32,
         dist_func: u32,
     ) {
-        let mut dist_func = dist_func;
-        if ref_dist < 0.0 {
-            dist_func = GX_DA_OFF;
-        }
-        if ref_br <= 0.0 || ref_br >= 1.0 {
-            dist_func = GX_DA_OFF;
-        }
-        let (d, b) = (reg(ref_dist), reg(ref_br));
-        let (k0, k1, k2) = match dist_func {
-            GX_DA_GENTLE => (1.0, fp::fdivs(fp::fsubs(1.0, b), fp::fmuls(b, d)), 0.0),
-            GX_DA_MEDIUM => (
-                1.0,
-                fp::fdivs(fp::fmuls(0.5, fp::fsubs(1.0, b)), fp::fmuls(b, d)),
-                fp::fdivs(
-                    fp::fmuls(0.5, fp::fsubs(1.0, b)),
-                    fp::fmuls(d, fp::fmuls(b, d)),
-                ),
-            ),
-            GX_DA_STEEP => (
-                1.0,
-                0.0,
-                fp::fdivs(fp::fsubs(1.0, b), fp::fmuls(d, fp::fmuls(b, d))),
-            ),
-            _ => (1.0, 0.0, 0.0),
-        };
-        lt_obj.k = [mem(k0), mem(k1), mem(k2)];
+        lt_obj.k = melee_sim::hsd::lobj::dist_attn(ref_dist, ref_br, dist_func);
     }
 
     #[doc(alias = "GXInitLightPos")]
