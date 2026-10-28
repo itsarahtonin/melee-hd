@@ -343,7 +343,27 @@ impl Running<'_> {
         fp.x5A8 = 0;
         let kind = fp.kind;
         fp.x58C = kind_tables(kind).anim_count;
-        if let Some((name, aram)) = self.game.load_anim_file(kind) {
+        if let Some((name, mut aram)) = self.game.load_anim_file(kind) {
+            // `lbFile_800168A0`: a file the preload cache doesn't hold (a match whose mode
+            // state preloads nothing, as the challenger approach's) goes into a block of the
+            // ARAM heap (`lbHeap_80015BD0(1, ...)`), best fit, where the console puts it.
+            if self.game.ft.data.files.from_cache && !self.anim_file_cached(name) {
+                let (_, len) = self.game.ft.data.files.entry(name);
+                let d = self.dvd_mut();
+                let e = d
+                    .heaps
+                    .alloc(
+                        crate::lb::heap::ARAM,
+                        len.next_multiple_of(32),
+                        &mut d.memory,
+                    )
+                    .expect("the ARAM heap");
+                aram = d.memory.entries[usize::from(e)].addr;
+                self.game.ft.anim_files[kind as usize]
+                    .as_mut()
+                    .expect("the animation file just put")
+                    .aram = aram;
+            }
             let at = self.disc_load(name, aram);
             // Taken from the preload cache: where its ARAM heap's block put it.
             if self.game.ft.data.files.from_cache && at != 0 {
@@ -354,6 +374,16 @@ impl Running<'_> {
                     .aram = at;
             }
         }
+    }
+
+    /// Whether the preload cache holds the animation file `name` (`lbDvd_8001819C`'s find).
+    fn anim_file_cached(&mut self, name: &str) -> bool {
+        let (entry_num, _) = self.game.ft.data.files.entry(name);
+        self.dvd_mut()
+            .cache
+            .entries
+            .iter()
+            .any(|e| e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num)
     }
 
     /// A fighter's two animation buffers (`HSD_ObjAlloc` on `fighter_x59C_alloc_data`): a
@@ -422,15 +452,16 @@ impl Running<'_> {
                 if file != 0
                     && let Some(id) = id
                 {
-                    let data = len.saturating_sub(0x20);
-                    crate::hsd::heap::with(|h| h.image.place(file + 0x20, data, id));
+                    crate::hsd::heap::with(|h| h.image.place_held(file, len, id));
                 }
                 return addr;
             }
         } else if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
             return 0;
         }
-        let (entrynum, len) = self.game.ft.data.files.entry(name);
+        // A stage's file is named from the disc's root (`/GrCs.dat`), as
+        // `DVDConvertPathToEntrynum` takes it; the frontend lists it without the slash.
+        let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let (file, archive) = if dest == MAIN_MEMORY {
             crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0))

@@ -42,6 +42,10 @@ pub struct Zako {
     pub flags: u8,
     /// The slots' block in the scene's heap, 0 where the model doesn't know it.
     pub addr: u32,
+    /// The slots are a match before's, freed with its scene's heap, until this match's stage
+    /// starts the spawner again (set by the stage's reset, `Ground_801BFFB0`): not memory of
+    /// the original's, whose pointer just names the freed block.
+    pub stale: bool,
 }
 
 impl Zako {
@@ -68,6 +72,7 @@ pub fn new_slots(game: &mut Game) -> Vec<Slot> {
     });
     game.gr.zako.flags |= 0x80;
     game.gr.zako.cursor = 0;
+    game.gr.zako.stale = false;
     slots
 }
 
