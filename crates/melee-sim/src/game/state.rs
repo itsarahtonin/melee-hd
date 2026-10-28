@@ -226,6 +226,8 @@ impl Kinds for GameKinds {
                 0x8022_EB04
             }
             UserData::GlyphVariants(_) => 0x8023_D0F8,
+            // A magnifier bubble's (`ifMagnify_802FC3BC`, which does nothing).
+            UserData::MagnifyPlayer(_) => 0x802F_C3BC,
             // `Toy_RemoveUserData`.
             UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
             _ => return None,
