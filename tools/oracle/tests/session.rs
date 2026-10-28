@@ -69,7 +69,9 @@ fn ticks_align_with_reads() {
 
 /// The memory card scene, the opening movie skipped with Start, the title, whose Start at
 /// tick 272 asks for the main menu, the main menu, whose entry writes the save on the game's
-/// waits, and the character select, from tick 357, to its button for the rules.
+/// waits, and the character select, from tick 357, its button for the rules and back
+/// (`mn_80231804`, `mn_8022F4CC`), then Tournament mode's setup, match-up screens and a
+/// match, to the trace's end.
 #[test]
 fn power_on_runs_through_the_main_menu() {
     let Some(out) = session(&["--heap"]) else {
@@ -79,10 +81,7 @@ fn power_on_runs_through_the_main_menu() {
         out.contains("3 the same (db_gameLaunchButtonState 0x0000, DbLevel 0, the first game mode 0x28), 0 different"),
         "{out}"
     );
-    assert!(
-        out.contains("475 ticks compared, no difference; stopped in tick 475: mn_80231804 (the rules from the select screen, task 8) isn't ported"),
-        "{out}"
-    );
+    assert!(out.contains("4000 ticks compared, no difference"), "{out}");
 }
 
 fn session_at(trace: &str, inputs: &str, args: &[&str]) -> Option<String> {
@@ -184,6 +183,51 @@ fn a_session_plays_its_match_from_the_selects() {
         return;
     };
     assert!(out.contains("2600 ticks compared, no difference"), "{out}");
+}
+
+/// `2026-10-10_13-05-00`'s second match, past its stage's start (tick 3346), which sets the
+/// spawner's slots up again: until then the last match's slots name freed memory on both
+/// sides and aren't compared.
+#[test]
+fn a_second_match_sets_its_spawner_up_again() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_13-05-00.trc",
+        "lockstep/recordings/2026-10-10_13-05-00.inputs",
+        &["--all", "--heap", "--ticks", "3400"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3400 ticks compared, no difference"), "{out}");
+}
+
+/// `2026-10-10_12-54-40`'s first match: tick 3771's animation load takes an audio event as
+/// its request returns (56 ticks in), so tick 3774, which ends on an audio frame, ends on
+/// the trace's time base; and in tick 8579 Kirby's copy files its hat's parts under their own
+/// stack key, apart from Link's.
+#[test]
+fn an_aram_load_takes_an_audio_event_as_its_request_returns() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_12-54-40.trc",
+        "lockstep/recordings/2026-10-10_12-54-40.inputs",
+        &["--all", "--heap", "--ticks", "8600"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("8600 ticks compared, no difference"), "{out}");
+}
+
+/// `2026-10-07_23-52-34`'s first match on Mushroom Kingdom: a brick block's item pops out
+/// sideways at random, as `it_8026F7C8` replaces the stage's speed (tick 2767).
+#[test]
+fn a_brick_blocks_item_pops_out_at_random() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-07_23-52-34.trc",
+        "lockstep/recordings/2026-10-07_23-52-34.inputs",
+        &["--all", "--heap", "--ticks", "2800"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("2800 ticks compared, no difference"), "{out}");
 }
 
 /// The seed from `OSGetTick` one more shows in the first tick.
@@ -500,7 +544,8 @@ fn the_main_menu_toured() {
 
 /// `2026-10-06_17-37-52`'s save runs whole inside tick 211, and the pad alarm fires in its
 /// last step's wait point, before the unmount: its card probes find the channel still
-/// attached (24 ticks, not 56).
+/// attached (24 ticks, not 56). Then Tournament mode: the setup, the match-up screen and a
+/// match, to the trace's end.
 #[test]
 fn a_save_ends_attached_until_its_unmount() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_17-37-52.trc");
@@ -513,10 +558,7 @@ fn a_save_ends_attached_until_its_unmount() {
         return;
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
-    assert!(
-        out.contains("289 ticks compared, no difference; stopped in tick 289: game mode 0x1b"),
-        "{out}"
-    );
+    assert!(out.contains("6745 ticks compared, no difference"), "{out}");
 }
 
 /// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
@@ -1239,5 +1281,101 @@ fn the_approach_match_rolls_back() {
         out.contains("not a match the launcher makes (a challenger's), not checked"),
         "{out}"
     );
-    assert!(out.contains("6357 ticks checked in 6 matches, rolled back 7 each, no difference"), "{out}");
+    assert!(
+        out.contains("6357 ticks checked in 6 matches, rolled back 7 each, no difference"),
+        "{out}"
+    );
+}
+
+/// `2026-10-06_17-13-21` through the album on its card's one snapshot: the slots, its page,
+/// the menu, the view, the move refused, the copy and the other slot with no card in slot B,
+/// the delete answered no, then the main menu and the title: clean to the trace's end.
+#[test]
+fn the_album_of_a_recorded_session() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-13-21.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--all", "--heap"]);
+    assert!(out.contains("2891 ticks compared, no difference"), "{out}");
+}
+
+/// The album on a card of seven snapshots (`album7.card`, made by `mksnaps` in the task's
+/// notes): its two pages turned with the directions and the triggers, each snapshot read and
+/// decoded into its thumbnail, the menu round its options, the view: clean to the trace's end,
+/// the decoded images, the descriptors and the decoder's statics compared every tick.
+#[test]
+fn the_album_browsed() {
+    let Some(out) = data_session("album-browse", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2991 ticks compared, no difference"), "{out}");
+}
+
+/// Two snapshots swapped across the pages and two on one page (`lb_8001C0F4`'s three
+/// renames, each stamping the directory), one moved onto itself refused: clean to the trace's
+/// end, the card's timeline included.
+#[test]
+fn album_snapshots_swapped() {
+    let Some(out) = data_session("album-move", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2231 ticks compared, no difference"), "{out}");
+}
+
+/// The delete's question answered no, then yes (the directory's sector and the table's
+/// written, `CardChain::Delete`), the last snapshot deleted with the cursor moving back, B on
+/// the question: clean to the trace's end.
+#[test]
+fn album_snapshots_deleted() {
+    let Some(out) = data_session("album-delete", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2670 ticks compared, no difference"), "{out}");
+}
+
+/// The copy and the other slot with no card in slot B (their messages), and both questions
+/// answered no: clean to the trace's end.
+#[test]
+fn album_copy_without_a_second_card() {
+    let Some(out) = data_session("album-copy", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2471 ticks compared, no difference"), "{out}");
+}
+
+/// A damaged snapshot (its second block changed after it was written): its read fails, its
+/// thumbnail stays blank and A asks to delete it; deleted, then the other, back to the slots
+/// with none left: clean to the trace's end.
+#[test]
+fn album_damaged_snapshot_deleted() {
+    let Some(out) = data_session("album-damaged", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2231 ticks compared, no difference"), "{out}");
+}
+
+/// No card in either slot: the memory card scene's prompt passed, then the album's message
+/// that there's none: clean to the trace's end.
+#[test]
+fn album_with_no_card() {
+    let Some(out) = data_session("album-nocard", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2243 ticks compared, no difference"), "{out}");
+}
+
+/// The card pulled while a page shows and put back (`--card-pull`): back to the slots with
+/// no card's message, then the slot listed again and its page: clean to the trace's end.
+#[test]
+fn album_card_pulled() {
+    let Some(out) = data_session(
+        "album-pull",
+        &["--card-pull", "1200,1300", "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("1885 ticks compared, no difference"), "{out}");
 }

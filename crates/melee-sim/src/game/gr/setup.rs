@@ -31,7 +31,6 @@ pub const IT_KIND_OLD_KURI: i32 = 208;
 #[doc(alias = "Ground_801BFFB0")]
 pub fn reset(game: &mut Game) {
     datfiles::clear(game);
-    game.gr.zako.stale = game.gr.zako.slots.is_some();
     let i = &mut game.stage_info;
     i.flags = 0;
     i.x6D0 = -1;

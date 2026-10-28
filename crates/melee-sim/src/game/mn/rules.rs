@@ -365,14 +365,22 @@ impl Running<'_> {
     }
 
     /// `mn_8022F4CC`: leaving the rules (or a screen under them) by B or Start: back to the
-    /// VS list from the menu; Tournament's setup and the character select aren't this
-    /// menu's.
+    /// VS list from the menu, or the texts and the menus' GObjs freed and back to
+    /// Tournament's setup or the character select's screen (`mnCharSel_802640A0`).
     #[doc(alias = "mn_8022F4CC")]
     pub(crate) fn rules_leave(&mut self) {
         match game_mode(self) {
-            GM_TOURNAMENT => super::super::code::unported_call("gm_80190EA4 (Tournament's setup)"),
+            GM_TOURNAMENT => {
+                self.sis_reset();
+                self.menu_free_gobjs();
+                self.tou_back_from_rules();
+            }
             super::super::gm::machine::GM_MENU => self.go_to_list(2, 3, 3),
-            _ => super::super::code::unported_call("mnCharSel_802640A0 (the character select)"),
+            _ => {
+                self.sis_reset();
+                self.menu_free_gobjs();
+                self.charsel_setup();
+            }
         }
     }
 
@@ -951,6 +959,36 @@ impl Running<'_> {
                 1
             }
         }
+    }
+
+    /// `mn_80231804` (`mn_802317E4`), from Tournament's setup or the character select: the
+    /// inputs' cooldown, the flow on the rules, the texts reset, the menus' scene from the
+    /// screen's `MnExtAll` (all its parts but the main lists'), the automatic handicap
+    /// allowed or not, the think and the rules coming in, and the menus' song.
+    #[doc(alias = "mn_80231804")]
+    #[doc(alias = "mn_802317E4")]
+    pub(crate) fn rules_from_screen(&mut self, archive: melee_data::archive::ArchiveId, auto: i32) {
+        let m = &mut self.game.menu;
+        m.cooldown = 0x14;
+        m.input_x2 = 0;
+        m.input_x4 = 0;
+        let f = &mut m.flow;
+        f.buttons = 0;
+        f.prev_menu = f.cur_menu;
+        f.cur_menu = RULES;
+        f.hovered_selection = 0;
+        self.sis_reset();
+        let parts: Vec<usize> = (0..20).filter(|&i| i != 2 && i != 3).collect();
+        self.game.vs_menus.auto_handicap = auto;
+        self.menu_from_archive(archive, &parts);
+        let w = &mut self.game.world;
+        let o = w.create(0, 1, 0x80);
+        let p = w.setup_proc(o, CodeRef(THINK), 0);
+        w.proc_mut(p).flags_3 = w.phase;
+        let g = self.rules_list(1);
+        self.game.world.mark_ran(g);
+        let bgm = self.game.game_data.x1850.bgm;
+        self.lb_play_music(i32::from(bgm));
     }
 
     /// `mn_80231714`, from the VS list: the rules, as [`Self::rules_back_from_sub`] opens

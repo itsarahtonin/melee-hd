@@ -100,5 +100,9 @@ impl crate::game::state::Running<'_> {
         let at = self.data.get(a).public("MemSnapIconData");
         self.game.snap.icon_data =
             at.map(|offset| melee_data::archive::DataRef { archive: a, offset });
+        // A new copy of the file: its banner and icon as the disc has them, whatever a
+        // snapshot drew or read into the last one.
+        self.game.snap_write.banner = None;
+        self.game.snap_read.icons = None;
     }
 }

@@ -114,6 +114,10 @@ pub enum UserData {
     /// Fountain of Dreams' reflection camera's (user data kind 3, freed with `HSD_Free`):
     /// [`super::gr::izumi::Globals::reflection`].
     IzumiReflection,
+    /// A bracket box's lines' GObj (`&lbl_80473AB8[i]`, set without a kind).
+    TouBox(u8),
+    /// A tournament model's number (`fn_8018FBD8`, set without a kind).
+    TouIndex(i32),
 }
 
 /// The GObj object kinds as Melee's `HSD_GObj_80391260` numbers them, after the game's own
@@ -228,6 +232,9 @@ impl Kinds for GameKinds {
             UserData::GlyphVariants(_) => 0x8023_D0F8,
             // `Toy_RemoveUserData`.
             UserData::Toy(_) => crate::game::ty::lottery::TOY_REMOVE_USER_DATA,
+            // A text's (`HSD_SisLib_803A5A2C`) and a canvas's own camera's (`fn_803A60EC`).
+            UserData::Text(_) => 0x803A_5A2C,
+            UserData::SisCamera(_) => 0x803A_60EC,
             _ => return None,
         })
     }
@@ -453,12 +460,17 @@ pub struct Game {
     pub camera_mode: super::gm::camera_mode::CameraMode,
     /// The snapshot being written (`lbsnap.c`'s writing side).
     pub snap_write: crate::lb::snap_write::SnapWrite,
+    /// The snapshots the album reads back (`lbsnap.c`'s reading side, the JPEG decoder's
+    /// statics).
+    pub snap_read: crate::lb::snap_read::SnapRead,
     /// The modes' settings that live outside the game's data: the training mode's saved
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
     /// trophy gallery's (`Toy_804A284C`, in [`Game::toys`]).
     pub modes: super::gm::mode_init::ModeStatics,
     /// The trophies' statics (`toy.c`, `tylist.c`).
     pub toys: super::ty::Toys,
+    /// Tournament mode's statics (`gmtoumode.c`, `gmtoulib.c`, `gmtou_0.c` to `gmtou_2.c`).
+    pub tou: super::gm::tournament::Tournament,
     /// Presentation output, not state: the Slippi replay the match makes, when the frontend
     /// turns it on (`record`). Simulated code never reads it; a clone starts without it and a
     /// restore leaves it alone.

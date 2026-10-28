@@ -224,12 +224,9 @@ taskReadHeader	lbcardnew's task queue: the native save runs each list's tasks at
 taskListSnapshots	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 taskFindFile	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 lb_8001B8C8	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
-lbCardNew_DeleteSnap	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 lb_8001BA44	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 lb_8001BC18	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 lb_8001BE30	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
-lb_8001BF04	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
-lb_8001C0F4	lbcardnew's task queue: the native save runs each list's tasks at once (melee-save tasks::Run under lb::save), the time ssbm-rs's card takes passing on the timeline (lb::save::CardTime).
 __DVDInitWA	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
 __DVDInterruptHandler	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.
 AlarmHandler	The DVD library: disc reads are the timeline's device command reads (audio::devcom, audio::clock) with the files' bytes from the archives the frontend loaded; the driver's own state isn't the game's.

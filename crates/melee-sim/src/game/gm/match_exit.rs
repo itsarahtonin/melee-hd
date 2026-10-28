@@ -60,6 +60,10 @@ impl Game {
                 &mut self.vs_melee.sd_exit
             }
             (GM_OPENING_MV, _) => &mut self.attract.exit,
+            (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_VS) => &mut self.tou.exit,
+            (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_SUDDEN_DEATH) => {
+                &mut self.tou.sd_exit
+            }
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"
             )),

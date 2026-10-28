@@ -132,7 +132,7 @@ fn smallest_loser(end: &MatchEnd) -> usize {
 /// the last's up, by one or two within 1 and 9 (with three or more players, the second's
 /// down too at the ends of the range).
 #[doc(alias = "fn_80169000")]
-fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4]) {
+pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4]) {
     let mut count = 0usize;
     // `positions`, a stack array: a place no player took stays as the stack held it.
     let mut positions: [Option<usize>; 4] = [None; 4];

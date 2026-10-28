@@ -1,6 +1,7 @@
 //! What the Data menu's screens share: their statics in one place and the dispatch of their
 //! processes. The screens: the special messages (`mninfo.c`), the bonuses
-//! (`mninfobonus.c`) and the other records (`mncount.c`).
+//! (`mninfobonus.c`), the other records (`mncount.c`), the VS records (`mndiagram*.c`) and the
+//! album (`mnsnap.c`).
 
 use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
@@ -14,6 +15,7 @@ pub struct DataMenus {
     pub diagram: super::diagram::Diagram,
     pub diagram2: super::diagram2::Diagram2,
     pub diagram3: super::diagram3::Diagram3,
+    pub album: super::snap::Album,
 }
 
 /// `powi`: `base` to the `exp`, by repeated multiplication (0 for a base of 0 or a negative
@@ -87,6 +89,8 @@ impl Running<'_> {
             d3::THINK => self.d3_think(gobj),
             d3::OUT => self.d3_out(gobj),
 
+            super::snap::THINK => self.album_think(gobj),
+            super::snap::INPUT => self.album_input(gobj),
             super::super::hud::prize::PROC => self.prize_proc(gobj),
             _ => return false,
         }
