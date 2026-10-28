@@ -18,17 +18,17 @@ use crate::hsd::mobj::{self, MObjClass};
 use crate::hsd::pobj::{self, PObjClass};
 
 /// Where `ftParts_800753D4` keeps its descriptor copy as a copy's hat is set up from the
-/// swallow: 0x24 into its frame, under the frames of the calls that lead there from a
-/// fighter's animation callback (`Fighter_procAnim`, a GObj process, so always at the same
-/// depth): `ftKb_SpecialNDrink_Anim` or `ftKb_SpecialAirNDrink_Anim` (0x40 each), then
-/// `ftKb_SpecialN_800F1BAC` (0x28), `800F10D4` (0xB8), `800EF040` (0x38) and
-/// `ftParts_800753D4` (0x80), as ssbm-rs's ports size them. ssbm-rs's probe logs the key at
-/// 0x804EE8EC (2026-10-10_12-54-40's tick 8579,
-/// `$SSBM_RS_LOCAL/research/card-chain/vs-12-54-40-8579.log`), so the callback runs with the
-/// stack at `ANIM_CB_SP`. A copy carried over a death (`ftKb_Init_OnDeath`) comes another way,
-/// which isn't ported.
-const ANIM_CB_SP: u32 = 0x804E_EAA0;
-const KIRBY_COPY_STACK: u32 = ANIM_CB_SP - (0x40 + 0x28 + 0xB8 + 0x38 + 0x80) + 0x24;
+/// swallow: `PARTS_COPY_BELOW_SP` below the stack pointer it's entered with, under the frames
+/// of the calls from the fighter's animation callback (`Fighter_procAnim`, a GObj process run
+/// at the scene loop's one depth): `ftKb_SpecialNDrink_Anim` or `ftKb_SpecialAirNDrink_Anim`
+/// (0x40 each), `ftKb_SpecialN_800F1BAC` (0x28), `800F10D4` (0xB8) and `800EF040` (0x38), as
+/// ssbm-rs's ports size them: ssbm-rs's probe of 2026-10-10_12-54-40's tick 8579
+/// (`$SSBM_RS_LOCAL/research/card-chain/vs-12-54-40-link-key.log`) logs `ftParts_800753D4`
+/// entered at 0x804EE940 under the ground swallow, the key 0x804EE8EC. A copy carried over a
+/// death (`ftKb_Init_OnDeath`) comes another way, which isn't ported.
+const DRINK_ANIM_SP: u32 = 0x804E_E940 + 0x40 + 0x28 + 0xB8 + 0x38;
+const KIRBY_COPY_STACK: u32 =
+    DRINK_ANIM_SP - (0x40 + 0x28 + 0xB8 + 0x38) - super::super::link::init::PARTS_COPY_BELOW_SP;
 
 /// `u` offsets of the hat's model variants (`hat.x24`, an `FtPartsVis`): the variants'
 /// count, which lookups are shown, and the lookups.

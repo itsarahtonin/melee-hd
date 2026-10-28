@@ -18,6 +18,16 @@ use crate::hsd::mobj::MObjClass;
 use crate::hsd::pobj::{self, PObjClass};
 use crate::vec::Vec3;
 
+/// What creates a fighter, which decides where its creation callback's stack lies (Link's
+/// parts' ID key, `link::init`): `Fighter_Create` (VS mode's match setup, `fn_8016E2BC`'s
+/// `Player_80031AD0`, for a match and Sudden Death alike) or `ftDemo_CreateFighter` (the
+/// results screen's posing fighters).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Creator {
+    FighterCreate,
+    Demo,
+}
+
 /// The fighters' light (`ftCo_09F4.c`'s `node0`): infinite, white, at (0.57, 0.57, 0.57).
 const FIGHTER_LIGHT: StaticLightDesc = StaticLightDesc {
     flags: 5,
@@ -330,8 +340,8 @@ impl Running<'_> {
         self.game.fighters[f.0].x588 = Some(l);
     }
 
-    /// The character's creation callback (`ftData_OnLoad`).
-    pub fn on_load(&mut self, gobj: GObjId) {
+    /// The character's creation callback (`ftData_OnLoad`), from `by`.
+    pub fn on_load(&mut self, gobj: GObjId, by: Creator) {
         let kind = self.game.fighter(gobj).kind;
         match super::data::kind_tables(kind).on_load {
             0 => {}
@@ -348,8 +358,8 @@ impl Running<'_> {
             0x8013_2ABC => self.kp_on_load(gobj),
             0x8014_A37C => self.gw_on_load(gobj),
             0x800E_E680 => self.kb_on_load(gobj),
-            0x800E_AE44 => self.link_on_load(gobj),
-            0x8014_8CE4 => self.clink_on_load(gobj),
+            0x800E_AE44 => self.link_on_load(gobj, by),
+            0x8014_8CE4 => self.clink_on_load(gobj, by),
             0x8014_9CC4 => self.falco_on_load(gobj),
             0x800E_2AEC => self.ca_on_load(gobj),
             0x8014_EE1C => self.gn_on_load(gobj),
