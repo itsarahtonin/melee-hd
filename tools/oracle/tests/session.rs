@@ -1092,8 +1092,8 @@ fn the_trophy_lottery_draws_and_saves() {
 
 /// The collection in its four layouts (rings jittered and even, rows, the triangle), on
 /// cards with 9 and 196 trophies, and left by L, R and Start: each clean from power-on through
-/// the collection to the trace's end (`coll-r` to its attract match's first tick, where the
-/// heap's image has no layout for a freed archive).
+/// the collection to the trace's end (`coll-r`'s past its attract match's first tick, whose
+/// item and fighter lie over the trophies' freed archives and lights).
 #[test]
 fn the_trophy_collection_in_each_layout() {
     for (name, want) in [
@@ -1102,10 +1102,7 @@ fn the_trophy_collection_in_each_layout() {
         ("coll-l", "3820 ticks compared, no difference"),
         ("coll-y", "3820 ticks compared, no difference"),
         ("coll-lrs", "2519 ticks compared, no difference"),
-        (
-            "coll-r",
-            "3793 ticks compared, no difference; stopped in tick 3792",
-        ),
+        ("coll-r", "3819 ticks compared, no difference"),
     ] {
         let Some(out) = trophy_session(name, &["--all", "--heap"]) else {
             return;
