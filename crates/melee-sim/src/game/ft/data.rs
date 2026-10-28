@@ -145,11 +145,15 @@ impl LoadedFiles {
             .map(|&(_, id)| id)
     }
 
-    /// The disc entry number and size of the file named `name`.
+    /// The disc entry number and size of the file named `name`. A stage's file is named from
+    /// the disc's root (`/GrCs.dat`), as `DVDConvertPathToEntrynum` takes it, which a session's
+    /// frontend lists without the slash.
     pub fn entry(&self, name: &str) -> (i32, u32) {
+        let bare = name.trim_start_matches('/');
         self.entries
             .iter()
             .find(|(n, ..)| n == name)
+            .or_else(|| self.entries.iter().find(|(n, ..)| n == bare))
             .map(|&(_, e, len)| (e, len))
             .unwrap_or_else(|| panic!("{name}'s disc entry isn't known"))
     }
@@ -459,9 +463,7 @@ impl Running<'_> {
         } else if self.game.ft.data.files.preloaded.iter().any(|n| n == name) {
             return 0;
         }
-        // A stage's file is named from the disc's root (`/GrCs.dat`), as
-        // `DVDConvertPathToEntrynum` takes it; the frontend lists it without the slash.
-        let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
+        let (entrynum, len) = self.game.ft.data.files.entry(name);
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let (file, archive) = if dest == MAIN_MEMORY {
             crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0))
