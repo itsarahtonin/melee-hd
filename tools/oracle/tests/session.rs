@@ -149,7 +149,7 @@ fn the_attract_match_on_brinstar_reads_a_leftover() {
     // The attract loop three times over: its matches (on Brinstar, its bubbles' timer from
     // the menus' leftover, then its next two), their bonuses and the titles between, the
     // opening movie, and past the title's preload heap's compaction (tick 11365) into the
-    // fourth match, where the heap's leftovers stop it (fix/m5-vs-stops).
+    // fourth match, where the heap's leftovers stop it (the layout campaign's).
     let Some(out) = session_at(trace, inputs, &["--heap"]) else {
         return;
     };
