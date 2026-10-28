@@ -67,7 +67,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("gm_801B90E0", AFTER),
     ("gm_801B9114", AFTER),
     ("gm_801B9154", AFTER),
-    ("gm_801B9560", AFTER),
     ("gm_801BA024", AFTER),
     ("gm_801BA058", AFTER),
     ("gm_801BA098", AFTER),
