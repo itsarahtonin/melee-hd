@@ -333,7 +333,7 @@ impl Running<'_> {
     }
 
     /// `fn_8019D074`: a player's handicap.
-    #[doc(alias = "fn_8019D074")]
+    // Ports `fn_8019D074`; aliased once a check reaches it.
     fn alt_handicap_proc(&mut self, gobj: GObjId) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
@@ -692,7 +692,7 @@ impl Running<'_> {
     /// each place's own value (not its seat) names the entrant whose handicap moves, and the
     /// sound banks are the match-up's icons' rather than their characters'
     /// (docs/melee-bugs.md).
-    #[doc(alias = "gm_8019E634")]
+    // Ports `gm_8019E634`; aliased once a check reaches it.
     pub fn tou_next_match_up(&mut self) {
         let hmn_cpu = self.game.tou.tm.hmn_cpu_count();
         let n = i32::from(self.game.tou.tm.x30);

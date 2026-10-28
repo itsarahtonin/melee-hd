@@ -126,7 +126,7 @@ impl Running<'_> {
     }
 
     /// `fn_801642A0`: whether one stage at most can come up (the random switch's mask).
-    #[doc(alias = "fn_801642A0")]
+    // Ports `fn_801642A0`; aliased once a check reaches it.
     fn tou_one_stage(&self) -> bool {
         let mask = self.game.game_data.thing.save_data.x1CB0.stage_mask;
         (0..0x1D).filter(|&i| (1u32 << i) & mask != 0).count() <= 1
@@ -431,7 +431,7 @@ impl Running<'_> {
     }
 
     /// `fn_80197FD8`: a player's handicap (with the rule on), hidden once out.
-    #[doc(alias = "fn_80197FD8")]
+    // Ports `fn_80197FD8`; aliased once a check reaches it.
     fn br_handicap_proc(&mut self, gobj: GObjId) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);
@@ -973,7 +973,7 @@ impl Running<'_> {
     /// last two between them. With the first seat first and the last second, the last draw
     /// weighs the second and third seats the wrong way round: it takes the third seat's level
     /// as the second seat's chance (`docs/melee-bugs.md`).
-    #[doc(alias = "fn_801967E0")]
+    // Ports `fn_801967E0`; aliased once a check reaches it.
     fn tou_draw_ranks_4(&mut self, i: usize) {
         let w = |r: &Running, k: usize| i32::from(r.game.tou.bracket[i].slots[k].x51);
         let ws = [w(self, 0), w(self, 1), w(self, 2), w(self, 3)];

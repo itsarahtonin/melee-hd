@@ -512,7 +512,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B174C`, the stage select's entry: no L, R and Start, no forced stage.
-    #[doc(alias = "gm_801B174C")]
+    // Ports `gm_801B174C`; aliased once a check reaches it.
     pub fn tou_enter_sss(&mut self) {
         let s = &mut self.game.tou.sss;
         s.x1 = 0;
@@ -523,7 +523,7 @@ impl Running<'_> {
 
     /// `gm_801B1788`, the stage select's exit: the match with the stage picked, else back to
     /// the bracket (its players' step again) or the match-up screen.
-    #[doc(alias = "gm_801B1788")]
+    // Ports `gm_801B1788`; aliased once a check reaches it.
     pub fn tou_exit_sss(&mut self) {
         let s = &self.game.tou.sss;
         if s.start_game != 0 {
@@ -573,7 +573,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1A2C`, Sudden Death's exit.
-    #[doc(alias = "gm_801B1A2C")]
+    // Ports `gm_801B1A2C`; aliased once a check reaches it.
     pub fn tou_exit_sudden_death(&mut self) {
         // `gm_801629B4`: the Sudden Death's seconds added to the save's (`x1A44`).
         let secs = self.game.tou.sd_exit.match_end.frame_count / 60;
