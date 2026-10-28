@@ -262,7 +262,7 @@ impl Running<'_> {
         self.load_blend_skeleton(gobj);
         self.measure_bones(f);
         self.create_own_light(f);
-        self.on_load(gobj);
+        self.on_load(gobj, super::create_model::Creator::Demo);
         self.init_hurt_capsules(f);
         let cam_box = super::super::camera::alloc_box(&mut self.game.camera.boxes, 0);
         self.game.fighters[f.0].x890_cameraBox = Some(cam_box);

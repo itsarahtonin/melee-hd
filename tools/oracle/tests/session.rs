@@ -185,6 +185,51 @@ fn a_session_plays_its_match_from_the_selects() {
     assert!(out.contains("2600 ticks compared, no difference"), "{out}");
 }
 
+/// `2026-10-10_13-05-00`'s second match, past its stage's start (tick 3346), which sets the
+/// spawner's slots up again: until then the last match's slots name freed memory on both
+/// sides and aren't compared.
+#[test]
+fn a_second_match_sets_its_spawner_up_again() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_13-05-00.trc",
+        "lockstep/recordings/2026-10-10_13-05-00.inputs",
+        &["--all", "--heap", "--ticks", "3400"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("3400 ticks compared, no difference"), "{out}");
+}
+
+/// `2026-10-10_12-54-40`'s first match: tick 3771's animation load takes an audio event as
+/// its request returns (56 ticks in), so tick 3774, which ends on an audio frame, ends on
+/// the trace's time base; and in tick 8579 Kirby's copy files its hat's parts under their own
+/// stack key, apart from Link's.
+#[test]
+fn an_aram_load_takes_an_audio_event_as_its_request_returns() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_12-54-40.trc",
+        "lockstep/recordings/2026-10-10_12-54-40.inputs",
+        &["--all", "--heap", "--ticks", "8600"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("8600 ticks compared, no difference"), "{out}");
+}
+
+/// `2026-10-07_23-52-34`'s first match on Mushroom Kingdom: a brick block's item pops out
+/// sideways at random, as `it_8026F7C8` replaces the stage's speed (tick 2767).
+#[test]
+fn a_brick_blocks_item_pops_out_at_random() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-07_23-52-34.trc",
+        "lockstep/recordings/2026-10-07_23-52-34.inputs",
+        &["--all", "--heap", "--ticks", "2800"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("2800 ticks compared, no difference"), "{out}");
+}
+
 /// The seed from `OSGetTick` one more shows in the first tick.
 #[test]
 fn power_on_catches_a_changed_seed() {

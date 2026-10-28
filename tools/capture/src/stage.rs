@@ -1383,15 +1383,22 @@ impl Comparer<'_> {
             ),
         );
         let slots = self.u32(z + 4);
-        // Past the match scene whose heap held the slots (the results screen's), the pointer
-        // names freed memory, ours the match's last slots, which nothing reads until a match's
-        // setup sets them again.
+        // Past the match scene whose heap held the slots (the results screen's, and the next
+        // match's until its stage's start sets them again, `grZakoGenerator_801CAE04` from the
+        // stage's `OnStart` some 84 ticks in), the pointer names freed memory, ours the last
+        // match's slots, which nothing reads until then: the slots are this scene's while the
+        // spawner's process (`fn_801CADBC`, made with them) lives.
         let in_match = matches!(
             scene_kind(game.machine.scene_info),
             Some(GS_VS | GS_SUDDEN_DEATH)
         );
+        let started = game
+            .world
+            .procs
+            .iter()
+            .any(|(_, p)| p.on_invoke == CodeRef(0x801C_ADBC));
         match (&zk.slots, slots) {
-            _ if !in_match && zk.slots.is_some() => {}
+            _ if !(in_match && started) && zk.slots.is_some() => {}
             (None, 0) => {}
             (Some(ours), t) if t != 0 => {
                 for (i, o) in ours.iter().enumerate() {
