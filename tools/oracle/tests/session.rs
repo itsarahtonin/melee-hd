@@ -681,16 +681,13 @@ fn celebi_session(name: &str, args: &[&str]) -> Option<String> {
 /// Fox against three level 9 computer players on Fountain of Dreams with Poké Balls alone:
 /// Celebi drawn from the twelfth ball (tick 4245), its record written to the save with the
 /// clock's time, out of the ball, sparkling and flying off; clean through the whole match
-/// to the results screen's entry (task 9's).
+/// and into the results screen to the trace's end.
 #[test]
 fn celebi_out_of_a_poke_ball() {
     let Some(out) = celebi_session("celebi1", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
-        "{out}"
-    );
+    assert!(out.contains("9898 ticks compared, no difference"), "{out}");
 }
 
 /// Another match the same way, Celebi from another ball (tick 4725).
@@ -699,10 +696,7 @@ fn celebi_out_of_another_poke_ball() {
     let Some(out) = celebi_session("celebi2", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
-        "{out}"
-    );
+    assert!(out.contains("9898 ticks compared, no difference"), "{out}");
 }
 
 /// `celebi1`'s reads on a card without the records: the same draws, and the twelfth ball
@@ -712,10 +706,7 @@ fn no_celebi_without_the_records() {
     let Some(out) = celebi_session("locked", &["--all", "--heap"]) else {
         return;
     };
-    assert!(
-        out.contains("9063 ticks compared, no difference; stopped in tick 9063"),
-        "{out}"
-    );
+    assert!(out.contains("9898 ticks compared, no difference"), "{out}");
 }
 
 /// A rules or names session (`lockstep/rules-sessions/NAME.inputs` with its card, traced into
