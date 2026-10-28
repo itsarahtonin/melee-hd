@@ -356,8 +356,36 @@ fn find_after(
     let mut found = scan(index, mem1, archives, &known, rescan, freed);
     let headerless = headerless_stage_files(index, mem1, archives, &found, &known);
     found.extend(headerless);
+    keep_earlier_copies(&mut found, before, named);
     found.extend(before.iter().filter(|l| l.file == 0).cloned());
     found
+}
+
+/// Where the run loaded a named file again beside the copy an earlier scan found (the
+/// fighters' first setup reads `PlCo.dat` from the disc once more, and the state's copy stays
+/// where it was), the new copy is the run's archive and the earlier one keeps its id: the name
+/// alone takes every copy of the file as the run's.
+fn keep_earlier_copies(found: &mut [Loaded], before: &[Loaded], named: &[(String, ArchiveId)]) {
+    let earlier = |l: &Loaded| {
+        before
+            .iter()
+            .find(|b| b.name == l.name && b.file == l.file && b.file != 0)
+            .map(|b| b.id)
+    };
+    for (name, id) in named {
+        let copies = || found.iter().filter(|l| l.id == *id && &l.name == name);
+        if copies().count() < 2 || copies().all(|l| earlier(l).is_some()) {
+            continue;
+        }
+        for l in found.iter_mut() {
+            if l.id == *id
+                && &l.name == name
+                && let Some(b) = earlier(l)
+            {
+                l.id = b;
+            }
+        }
+    }
 }
 
 /// The disc's file named `name`, whole, if the index has it as an archive.
