@@ -272,6 +272,14 @@ pub fn on_ship_start(r: &mut Running, gobj: GObjId) {
     r.game.grounds[g.0].u.rcruise().x10 = 0;
 }
 
+/// What a block new from the heap at `addr` held, in a session whose heap's image knows it
+/// (docs/engine.md, a session's heap leftovers); none outside one, where it holds zero bytes.
+fn leftover_bytes(r: &Running, addr: u32, len: u32) -> Option<Vec<u8>> {
+    crate::hsd::heap::image_on()
+        .then(|| crate::hsd::heap::with(|h| h.image.leftover_bytes(r.data, addr, len).0))
+        .flatten()
+}
+
 /// The ship's setup (map 1), `grRCruise_801FF5B4`: its collision and animation, held until the
 /// match starts; its planks' block from the heap; the parts that appear with the camera; its
 /// start hook; the tilt at rest; the planks; its collision where its model stands, every joint
@@ -285,11 +293,22 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
     setup::init_map_coll(r.game, r.data, j, m);
     anime::start_map(r.game, r.data, gobj, m, 0);
     r.game.grounds[g.0].u.rcruise().x10 = 1;
-    // A fresh block from the scene's heap: zero bytes (`Map_Chikuwa`, 0x198).
+    // The planks' block (`Map_Chikuwa`, 0x198): the fields their setup never writes (`x1`,
+    // `x10`) hold the block's leftovers (docs/engine.md, a session's heap leftovers), else zero.
     let addr = crate::hsd::heap::mem_alloc(0x198);
+    let left = leftover_bytes(r, addr, 0x198);
     let v = r.game.grounds[g.0].u.rcruise();
     v.entries_addr = addr;
-    v.entries = (0..PLANKS.len()).map(|_| Default::default()).collect();
+    v.entries = (0..PLANKS.len())
+        .map(|i| {
+            let b = |o: usize| left.as_ref().map_or(0, |b| b[0x18 * i + o]);
+            super::vars::RCruisePlank {
+                x1: b(1),
+                x10: f32::from_bits(u32::from_be_bytes([b(0x10), b(0x11), b(0x12), b(0x13)])),
+                ..Default::default()
+            }
+        })
+        .collect();
     init_vanish(r, gobj);
     setup::add_start_hook(r.game, gobj, CodeRef(START_HOOK));
     reset_tilt(r, gobj);
@@ -1083,10 +1102,19 @@ fn vanish_go(r: &mut Running, i: usize) {
 #[doc(alias = "grRCruise_80201410")]
 pub fn init_vanish(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
+    // The halfword the setup never writes (`x2`) holds the block's leftovers, else zero.
     let addr = crate::hsd::heap::mem_alloc(0xA0);
+    let left = leftover_bytes(r, addr, 0xA0);
     let v = r.game.grounds[g.0].u.rcruise();
     v.vanish_addr = addr;
-    v.vanish = (0..VANISH.len()).map(|_| Default::default()).collect();
+    v.vanish = (0..VANISH.len())
+        .map(|i| super::vars::VanishEntry {
+            x2: left
+                .as_ref()
+                .map_or(0, |b| i16::from_be_bytes([b[8 * i + 2], b[8 * i + 3]])),
+            ..Default::default()
+        })
+        .collect();
     for (i, &(part, joint, there)) in VANISH.iter().enumerate() {
         let j = nth_joint(r.game, gobj, part);
         assert!(j.is_some(), "grrcruise.c: gp->u.map.vanish[i].jobj");
