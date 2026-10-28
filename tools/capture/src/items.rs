@@ -550,16 +550,21 @@ impl Comparer<'_> {
         };
         // Each table's arrays as far as its size reaches (as `pick_table` reads theirs): past a
         // scene's end they point into its freed heap, ours keeping the last ones, until the next
-        // match's tables replace them, and nothing reads past the size.
+        // match's tables replace them, and nothing reads past the size. The Poké Ball's entry
+        // past the size is taken where `pick_table` found it on theirs: a table of the ball
+        // alone, reset by the results screen's entry (`Item_80266FCC`: size and total 0), looks
+        // like one drawn from without it, and theirs no longer holds it there.
         let mut ours = g.spawn.clone();
-        for t in [
-            &mut ours.spawner.table,
-            &mut ours.no_containers,
-            &mut ours.monsters,
+        let theirs_len = |t: &PickTable| t.kinds.as_ref().map_or(0, Vec::len);
+        for (t, th) in [
+            (&mut ours.spawner.table, &theirs.spawner.table),
+            (&mut ours.no_containers, &theirs.no_containers),
+            (&mut ours.monsters, &theirs.monsters),
         ] {
             let size = usize::from(t.size);
-            let extra = matches!((&t.kinds, &t.weights), (Some(k), Some(w))
-                if k.get(size) == Some(&34) && w.get(size) == Some(&t.total));
+            let extra = theirs_len(th) > size
+                && matches!((&t.kinds, &t.weights), (Some(k), Some(w))
+                    if k.get(size) == Some(&34) && w.get(size) == Some(&t.total));
             let len = size + usize::from(extra);
             for v in t.kinds.iter_mut() {
                 v.truncate(len);
