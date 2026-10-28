@@ -83,7 +83,7 @@ pub struct AlbumDesc {
 
 /// `mnSnap_804A0A10` (`mnSnap_State`, 0x180 bytes, cleared at the screen's entry), and the
 /// image descriptors it wrote, which outlive it.
-#[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Album {
     pub frame_count: i32,
     pub timer: i32,
