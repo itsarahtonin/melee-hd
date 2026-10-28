@@ -216,6 +216,21 @@ fn an_aram_load_takes_an_audio_event_as_its_request_returns() {
     assert!(out.contains("8600 ticks compared, no difference"), "{out}");
 }
 
+/// `2026-10-10_12-54-40`'s match on Rainbow Cruise (from tick 17809): the planks', vanishing
+/// parts' and falling blocks' unwritten fields hold the heap's leftovers, a free cell's link
+/// among them, which the stage select's last free wrote over the allocated list's.
+#[test]
+fn rainbow_cruises_blocks_hold_the_heaps_leftovers() {
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_12-54-40.trc",
+        "lockstep/recordings/2026-10-10_12-54-40.inputs",
+        &["--all", "--heap", "--ticks", "17850"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("17850 ticks compared, no difference"), "{out}");
+}
+
 /// `2026-10-07_23-52-34`'s first match on Mushroom Kingdom: a brick block's item pops out
 /// sideways at random, as `it_8026F7C8` replaces the stage's speed (tick 2767).
 #[test]
