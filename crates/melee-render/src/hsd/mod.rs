@@ -2,6 +2,7 @@
 //! display pass names (cameras, lights, fog, materials, textures, shapes, particles).
 
 pub mod afterimage;
+pub mod album;
 pub mod camera;
 pub mod draw;
 pub mod lobj;
@@ -85,6 +86,8 @@ pub struct Hsd {
     pub motion: Motion,
     /// The movie frame the planes' images hold (its file and record's place), decoded once.
     pub movie: Option<(melee_data::archive::ArchiveId, u32)>,
+    /// The album's images' bytes the display holds, by image: each one's buffer and decode.
+    pub album: Vec<(u32, u32)>,
     /// Refraction's indirect maps whose texels are made, by `LbRf.dat`'s table and entry.
     pub refract_maps: Vec<(DataRef, u8)>,
 }

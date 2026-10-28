@@ -1,5 +1,6 @@
 //! The Data menu's screens' statics (`mninfo.c` and the others `melee_sim::game::mn::data`
-//! lists) and their user data, compared with memory.
+//! lists, the album's `mnsnap.c` with the JPEG decoder's) and their user data, compared with
+//! memory.
 
 use melee_sim::game::gm::title::ModelDesc;
 use melee_sim::game::mirror::Cx;
@@ -427,9 +428,250 @@ impl Comparer<'_> {
         }
     }
 
+    fn data_jobj(&mut self, name: &str, j: Option<melee_sim::hsd::jobj::JObjId>, at: u32) {
+        let theirs = self.u32(at);
+        self.compare_handle(name, "JObjId", j.map(|j| j.0), theirs);
+    }
+
+    /// The album's statics (`mnSnap_804A0A10`), the image descriptors it wrote in the menus'
+    /// archive, its images while it's up, and the JPEG decoder's statics.
+    fn album(&mut self) {
+        use melee_sim::game::mn::snap::AlbumTexels;
+        let a = self.game.data_menus.album.clone();
+        let at = sym("mnSnap_804A0A10");
+        let p = "mnSnap_804A0A10";
+        let w = |s: &Self, off: u32| s.u32(at + off) as i32;
+        self.check(
+            p,
+            "frame count, timer",
+            (a.frame_count, a.timer),
+            (w(self, 0), w(self, 4)),
+        );
+        for (i, g) in [a.main_gobj, a.cursor_gobj, a.sub_gobj, a.warn_gobj]
+            .into_iter()
+            .enumerate()
+        {
+            self.data_gobj(&format!("{p} gobj[{i}]"), g, at + 8 + 4 * i as u32);
+        }
+        self.data_model(&format!("{p} main"), a.main, at + 0x18);
+        self.data_model(&format!("{p} csr"), a.csr, at + 0x28);
+        self.data_model(&format!("{p} photo"), a.photo, at + 0x38);
+        let theirs = self.u32(at + 0x48);
+        self.compare_data(&format!("{p} page_joint"), a.page_joint, theirs);
+        // The load model's sections, which the archive's load leaves alone.
+        self.check(
+            p,
+            "load_joint, its anims",
+            (0, 0, 0),
+            (w(self, 0x4C), w(self, 0x50), w(self, 0x54)),
+        );
+        self.data_model(&format!("{p} arrows"), a.arrows, at + 0x58);
+        self.data_model(&format!("{p} warn"), a.warn, at + 0x68);
+        let jobjs = a
+            .thumb_jobjs
+            .iter()
+            .chain(&[a.select_jobj, a.move_jobj, a.arrow_jobj, a.scroll_jobj])
+            .chain(&a.slot_jobjs)
+            .chain(&[a.thumb_root, a.submenu_jobj, a.thumb_start, a.thumb_end])
+            .chain(&a.option_jobjs)
+            .chain(&[
+                a.fullview_jobj,
+                a.dlg_root,
+                a.dlg_pos,
+                a.dlg_x36,
+                a.dlg_x37,
+                a.yes_jobj,
+                a.no_jobj,
+                a.dlg_frame,
+                a.dlg_btn_l,
+                a.dlg_btn_r,
+                a.progress_jobj,
+            ])
+            .copied()
+            .collect::<Vec<_>>();
+        for (i, j) in jobjs.into_iter().enumerate() {
+            let off = 0x78 + 4 * i as u32;
+            self.data_jobj(&format!("{p} jobj at {off:#x}"), j, at + off);
+        }
+        let texts = a
+            .thumb_labels
+            .iter()
+            .chain(&a.count_texts)
+            .chain(&[a.page_text, a.total_text, a.dlg_text])
+            .copied()
+            .collect::<Vec<_>>();
+        for (i, t) in texts.into_iter().enumerate() {
+            let off = 0xF8 + 4 * i as u32;
+            self.data_text(p, &format!("text at {off:#x}"), t, at + off);
+        }
+        self.check(
+            p,
+            "state, photo counts, card states",
+            (a.state, a.photo_count, a.card_status),
+            (
+                w(self, 0x11C),
+                [w(self, 0x120), w(self, 0x124)],
+                [self.u16(at + 0x128) as i16, self.u16(at + 0x12A) as i16],
+            ),
+        );
+        self.check(
+            p,
+            "cursor, move, option, x138, page, slot, pending, loading",
+            (
+                a.cursor_idx,
+                a.move_idx,
+                a.menu_sel,
+                0,
+                a.cur_page,
+                a.active_slot,
+                a.pending_loads,
+                a.load_idx,
+            ),
+            (
+                w(self, 0x12C),
+                w(self, 0x130),
+                w(self, 0x134),
+                w(self, 0x138),
+                w(self, 0x13C),
+                w(self, 0x140),
+                w(self, 0x144),
+                w(self, 0x148),
+            ),
+        );
+        self.check(
+            p,
+            "dialog active, timer, type, result, card result",
+            (
+                a.dlg_active,
+                a.dlg_timer,
+                a.dlg_type,
+                a.dlg_result,
+                a.card_result,
+            ),
+            (
+                w(self, 0x14C),
+                w(self, 0x150),
+                w(self, 0x154),
+                w(self, 0x158),
+                w(self, 0x15C),
+            ),
+        );
+        let damaged: [i32; 4] = core::array::from_fn(|i| w(self, 0x160 + 4 * i as u32));
+        self.check(p, "damaged", a.thumb_loaded, damaged);
+        self.data_jobj(&format!("{p} left_btn"), a.left_btn, at + 0x170);
+        self.data_jobj(&format!("{p} right_btn"), a.right_btn, at + 0x174);
+        self.check(p, "btn_idx", a.btn_idx, w(self, 0x178));
+        let theirs = self.u32(at + 0x17C);
+        self.compare_data(&format!("{p} blank_img"), a.blank_img, theirs);
+        // The descriptors, while their archive is loaded.
+        for d in &a.descs {
+            let Some(addr) = self.data.try_addr(d.desc) else {
+                continue;
+            };
+            let path = format!("the album's image descriptor at {addr:#x}");
+            let ptr = self.u32(addr);
+            match d.texels {
+                AlbumTexels::Data(r) => self.compare_data(&path, Some(r), ptr),
+                AlbumTexels::Buffer(b) => self.check(&path, "image", b, ptr),
+            }
+            self.check(
+                &path,
+                "width, height",
+                (d.width, d.height),
+                (self.u16(addr + 4), self.u16(addr + 6)),
+            );
+        }
+        // The images a descriptor shows, while the album is up.
+        if self.game.menu.flow.cur_menu == 0x19 {
+            let shown: Vec<u32> = a
+                .descs
+                .iter()
+                .filter_map(|d| match d.texels {
+                    AlbumTexels::Buffer(b) => Some(b),
+                    _ => None,
+                })
+                .collect();
+            for img in &self.game.snap_read.images {
+                if !shown.contains(&img.addr) {
+                    continue;
+                }
+                let base = img.addr;
+                let differs =
+                    (0..img.bytes.len()).find(|&k| img.bytes[k] != self.u8(base + k as u32));
+                if let Some(k) = differs {
+                    let theirs = self.u8(base + k as u32);
+                    self.diff(
+                        "mnSnap_804A0B90",
+                        &format!("the image at {base:#x}'s byte {k:#x}"),
+                        img.bytes[k],
+                        theirs,
+                    );
+                }
+            }
+        }
+        // The decoder's statics: its quantization tables, work area and bit reader.
+        let d = self.game.snap_read.decoder.clone();
+        let quant: Vec<u8> = (0..0x80)
+            .map(|i| self.u8(sym("lbl_80431090") + i))
+            .collect();
+        self.check(
+            "lbl_80431090",
+            "quantization tables",
+            d.quant.clone(),
+            quant,
+        );
+        let work = sym("hsd_804D2E70") + 0x118;
+        let words = |s: &Self, off: u32, n: u32| -> Vec<i32> {
+            (0..n).map(|i| s.u32(work + off + 4 * i) as i32).collect()
+        };
+        self.check(
+            "hsd_804D2E70",
+            "luma blocks",
+            d.luma.clone(),
+            words(self, 0, 0x100),
+        );
+        self.check(
+            "hsd_804D2E70",
+            "Cb block",
+            d.cb.clone(),
+            words(self, 0x400, 0x40),
+        );
+        self.check(
+            "hsd_804D2E70",
+            "Cr block",
+            d.cr.clone(),
+            words(self, 0x500, 0x40),
+        );
+        self.check(
+            "hsd_804D2E70",
+            "coefficients",
+            d.coef.clone(),
+            words(self, 0x600, 0x40),
+        );
+        self.check(
+            "hsd_804D2E70",
+            "last DCs",
+            d.prev_dc.to_vec(),
+            words(self, 0x700, 3),
+        );
+        self.check(
+            "hsd_804D79B8",
+            "the reader's place, start, size, bits, byte",
+            (d.start + d.next, d.start, d.size, d.bits_left, d.byte),
+            (
+                self.u32(sym("hsd_804D79B8")),
+                self.u32(sym("hsd_804D79BC")),
+                self.u32(sym("hsd_804D79C0")) as i32,
+                self.u32(sym("hsd_804D79C4")) as i32,
+                self.u8(sym("hsd_804D79C8")),
+            ),
+        );
+    }
+
     /// The Data menu's screens' statics.
     pub(crate) fn data_menus(&mut self) {
         self.prize();
+        self.album();
 
         let (g2, g3) = (
             self.game.data_menus.diagram2.gobj,

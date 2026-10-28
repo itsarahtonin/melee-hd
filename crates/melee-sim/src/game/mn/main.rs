@@ -1735,15 +1735,19 @@ impl Running<'_> {
         }
     }
 
-    /// `mn_8022CE6C`, the data list's think: Records is a list; the movies and the sound
-    /// test are screens; the snapshots and special screens aren't this menu's.
+    /// `mn_8022CE6C`, the data list's think: Records is a list; the album, the movies, the
+    /// sound test and the special messages are screens.
     #[doc(alias = "mn_8022CE6C")]
     pub fn think_data(&mut self, _gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.flow.entering_menu = 1;
             match self.game.menu.flow.hovered_selection {
-                0 => super::super::code::unported_call("mnSnap_80257F24 (the snapshots)"),
+                0 => {
+                    self.lb_audio_call(1);
+                    self.album_open();
+                    gobj::free(self, _gobj);
+                }
                 1 => {
                     self.lb_audio_call(1);
                     self.gallery_open();

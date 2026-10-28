@@ -1189,3 +1189,96 @@ fn the_special_messages_announced() {
     };
     assert!(out.contains("1617 ticks compared, no difference"), "{out}");
 }
+
+/// `2026-10-06_17-13-21` through the album on its card's one snapshot: the slots, its page,
+/// the menu, the view, the move refused, the copy and the other slot with no card in slot B,
+/// the delete answered no, then the main menu and the title: clean to the trace's end.
+#[test]
+fn the_album_of_a_recorded_session() {
+    let trace = ssbm_rs_local("traces/session/2026-10-06_17-13-21.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/2026-10-06_17-13-21.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = session_with(&trace, &inputs, &["--all", "--heap"]);
+    assert!(out.contains("2891 ticks compared, no difference"), "{out}");
+}
+
+/// The album on a card of seven snapshots (`album7.card`, made by `mksnaps` in the task's
+/// notes): its two pages turned with the directions and the triggers, each snapshot read and
+/// decoded into its thumbnail, the menu round its options, the view: clean to the trace's end,
+/// the decoded images, the descriptors and the decoder's statics compared every tick.
+#[test]
+fn the_album_browsed() {
+    let Some(out) = data_session("album-browse", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2991 ticks compared, no difference"), "{out}");
+}
+
+/// Two snapshots swapped across the pages and two on one page (`lb_8001C0F4`'s three
+/// renames, each stamping the directory), one moved onto itself refused: clean to the trace's
+/// end, the card's timeline included.
+#[test]
+fn album_snapshots_swapped() {
+    let Some(out) = data_session("album-move", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2231 ticks compared, no difference"), "{out}");
+}
+
+/// The delete's question answered no, then yes (the directory's sector and the table's
+/// written, `CardChain::Delete`), the last snapshot deleted with the cursor moving back, B on
+/// the question: clean to the trace's end.
+#[test]
+fn album_snapshots_deleted() {
+    let Some(out) = data_session("album-delete", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2670 ticks compared, no difference"), "{out}");
+}
+
+/// The copy and the other slot with no card in slot B (their messages), and both questions
+/// answered no: clean to the trace's end.
+#[test]
+fn album_copy_without_a_second_card() {
+    let Some(out) = data_session("album-copy", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2471 ticks compared, no difference"), "{out}");
+}
+
+/// A damaged snapshot (its second block changed after it was written): its read fails, its
+/// thumbnail stays blank and A asks to delete it; deleted, then the other, back to the slots
+/// with none left: clean to the trace's end.
+#[test]
+fn album_damaged_snapshot_deleted() {
+    let Some(out) = data_session("album-damaged", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2231 ticks compared, no difference"), "{out}");
+}
+
+/// No card in either slot: the memory card scene's prompt passed, then the album's message
+/// that there's none: clean to the trace's end.
+#[test]
+fn album_with_no_card() {
+    let Some(out) = data_session("album-nocard", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("2243 ticks compared, no difference"), "{out}");
+}
+
+/// The card pulled while a page shows and put back (`--card-pull`): back to the slots with
+/// no card's message, then the slot listed again and its page: clean to the trace's end.
+#[test]
+fn album_card_pulled() {
+    let Some(out) = data_session(
+        "album-pull",
+        &["--card-pull", "1200,1300", "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("1885 ticks compared, no difference"), "{out}");
+}

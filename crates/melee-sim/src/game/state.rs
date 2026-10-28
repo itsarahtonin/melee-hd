@@ -457,6 +457,9 @@ pub struct Game {
     pub camera_mode: super::gm::camera_mode::CameraMode,
     /// The snapshot being written (`lbsnap.c`'s writing side).
     pub snap_write: crate::lb::snap_write::SnapWrite,
+    /// The snapshots the album reads back (`lbsnap.c`'s reading side, the JPEG decoder's
+    /// statics).
+    pub snap_read: crate::lb::snap_read::SnapRead,
     /// The modes' settings that live outside the game's data: the training mode's saved
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
     /// trophy gallery's (`Toy_804A284C`, in [`Game::toys`]).

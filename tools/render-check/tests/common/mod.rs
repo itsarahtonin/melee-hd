@@ -632,6 +632,21 @@ pub const DATA_PRIZE: Game = Game {
     players: "two special messages announced (session data-sessions/prize)",
     replay: Replay::Session("data-prize"),
 };
+/// The album on a card of seven snapshots (`data-sessions/album-browse`): the slots, its pages
+/// of thumbnails, the snapshot's menu and its view.
+pub const DATA_ALBUM: Game = Game {
+    stage: "Main menu",
+    name: "data-album-browse",
+    players: "the album's pages and a snapshot's view (session data-sessions/album-browse)",
+    replay: Replay::Session("data-album-browse"),
+};
+/// The album's delete (`data-sessions/album-delete`): its question.
+pub const DATA_ALBUM_DELETE: Game = Game {
+    stage: "Main menu",
+    name: "data-album-delete",
+    players: "the album's delete question (session data-sessions/album-delete)",
+    replay: Replay::Session("data-album-delete"),
+};
 
 pub const OPTIONS_TOUR: Game = Game {
     stage: "Main menu",

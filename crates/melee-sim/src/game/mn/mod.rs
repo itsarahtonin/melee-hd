@@ -4,7 +4,7 @@
 //! `mnruleplus.c`, `mnitemsw.c`, `mnstagesw.c`, `mnname.c`, `mnnamenew.c`), the Options
 //! menus (`mnvibration.c`, `mnsound.c`, `mndeflicker.c`, `mnlanguage.c`, `mndatadel.c`), the
 //! sound test (`mnsoundtest.c`), and the Data menu's screens (`mninfo.c` and the others `data`
-//! lists).
+//! lists, the album `mnsnap.c`).
 
 pub mod charsel;
 pub mod common;
@@ -26,6 +26,7 @@ pub mod names;
 pub mod options;
 pub mod rule_plus;
 pub mod rules;
+pub mod snap;
 pub mod sound;
 pub mod sound_test;
 pub mod stage_switch;

@@ -238,12 +238,14 @@ impl Comparer<'_> {
                 String::from_utf8_lossy(&theirs).into_owned(),
             );
         }
-        // The banner where the trace's icon data (`lbSnap_80433380.icon_data`) points.
+        // The banner where the trace's icon data (`lbSnap_80433380.icon_data`) points, while
+        // the scene that loaded it runs (its buffers set, `lbSnap_8001E218`, until the next
+        // scene's `lbSnap_8001E27C`): past it the archive is freed and the pointer dangles.
         let icons = self.u32(sym("lbSnap_80433380") + 0x44);
         if let Some(b) = w
             .banner
             .as_ref()
-            .filter(|_| icons != 0 && snap.icon_data.is_some())
+            .filter(|_| icons != 0 && snap.icon_data.is_some() && snap.snap.is_some())
         {
             let banner = self.u32(icons);
             if let Some(k) = (0..b.len()).find(|&k| b[k] != self.u8(banner + k as u32)) {
