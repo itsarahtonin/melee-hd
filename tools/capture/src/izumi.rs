@@ -54,6 +54,8 @@ pub(crate) fn import_reflection(imp: &mut Importer, ud: u32) -> UserData {
         image,
         desc,
         addr: ud,
+        buffer: 0,
+        buffer_len: 0,
     });
     UserData::IzumiReflection
 }

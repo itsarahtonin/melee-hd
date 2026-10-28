@@ -366,6 +366,12 @@ impl<K: Kinds> Geometry<K> {
             right: f32::MAX,
         };
         let joint_count = descs.len();
+        // The load writes only the stage's joints: the array's rest keeps what memory held,
+        // where a later scene's joints may fall (menu-attract, tick 25789).
+        if joints_addr != 0 && crate::hsd::heap::image_on() {
+            let used = joints_addr + 0x34 * joint_count as u32;
+            crate::hsd::heap::with(|h| h.image.unclaim(used, joints_addr + 256 * 0x34));
+        }
         // The stamp the load leaves as the joints' array held it: after the menus, what they
         // left there (docs/engine.md, a session's heap leftovers).
         let left = crate::game::leftovers::bytes(data, joints_addr, 0x34 * joint_count as u32);

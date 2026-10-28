@@ -586,7 +586,24 @@ impl<'a> Comparer<'a> {
                     Some(u) => {
                         let fpath = format!("{path} flash");
                         self.begin_block("flash", ud, &fpath);
-                        u.compare(&mem, ud, &fpath, self);
+                        // As an item's block: the GPU's pixels it was made over, and the
+                        // bytes the heap's image didn't know.
+                        let game = self.game;
+                        let img = &game.objs.heap.image;
+                        let rt = flash_render_target_view(game, &u, ud, self.mem);
+                        let view = self.unlaid_view(ud, 0x84, rt, |l, _| {
+                            melee_sim::game::export::bg_flash_fields(img, l, &u)
+                        });
+                        match view {
+                            Some(block) => {
+                                let m = Mem {
+                                    bytes: &block,
+                                    base: ud,
+                                };
+                                u.compare(&m, ud, &fpath, self);
+                            }
+                            None => u.compare(&mem, ud, &fpath, self),
+                        }
                         self.block = None;
                     }
                     None => self.diff(path, "flash user data", "none", format!("{ud:#x}")),
@@ -1425,6 +1442,26 @@ impl<'a> Comparer<'a> {
                 (l.id, l.spec_id),
                 (self.u32(t + 0x4C), self.u32(t + 0x90)),
             );
+            // The GX light objects (`lightobj`, `spec_lightobj`): their reserved words, color,
+            // attenuation, position and direction; a stale position isn't known.
+            for (what, g, off) in [
+                ("GX light", l.light, 0x50),
+                ("specular GX light", l.spec, 0x94),
+            ] {
+                let mut ours = vec![0, 0, 0, u32::from_be_bytes(g.color)];
+                ours.extend(
+                    g.a.iter()
+                        .chain(&g.k)
+                        .chain(&g.lpos)
+                        .chain(&g.ldir)
+                        .map(|f| f.to_bits()),
+                );
+                let mut theirs: Vec<u32> = (0..16).map(|k| self.u32(t + off + 4 * k)).collect();
+                if g.stale_pos {
+                    theirs[10..13].copy_from_slice(&ours[10..13]);
+                }
+                self.check(&lp, what, ours, theirs);
+            }
             let (pos, interest, aobj, next) = (l.position, l.interest, l.aobj, l.next);
             self.wobj(&format!("{lp} position"), pos, self.u32(t + 0x18));
             self.wobj(&format!("{lp} interest"), interest, self.u32(t + 0x1C));
@@ -2129,6 +2166,34 @@ impl Comparer<'_> {
 /// oracle's mutation run with the other fill (`--mutate render-target=ff`) catches a write of
 /// the fill's and any read before a write (docs/engine.md, "Uninitialized values"). A results
 /// pose's fighter's `x61C` is left out too (see there). None for any other fighter.
+/// The background flash's user data's block as [`render_target_view`] makes a fighter's.
+fn flash_render_target_view(
+    game: &melee_sim::game::state::Game,
+    u: &melee_sim::game::structs::BgFlashUserData,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    let runs = &game.bgflash.render_leftovers;
+    if runs.is_empty() {
+        return None;
+    }
+    let lo = (at - MEM1) as usize;
+    let fill = game.objs.heap.image.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, 0x84);
+    melee_sim::game::export::bg_flash_fields(&game.objs.heap.image, &mut l, u);
+    let mut block = mem[lo..lo + 0x84].to_vec();
+    for &(a, b) in runs {
+        for off in a..b {
+            if let Some((ours, known)) = l.bits_at(at + off) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[off as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
+}
+
 /// An item's block as [`render_target_view`] makes a fighter's: where it held the GPU's
 /// pixels when made, each bit ours still holds as the fill's takes ours. None for an item
 /// made over none.

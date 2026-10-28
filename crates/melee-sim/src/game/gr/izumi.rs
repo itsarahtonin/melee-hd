@@ -596,6 +596,10 @@ pub struct Reflection {
     pub desc: crate::game::structs::HSD_ImageDesc,
     /// Where the original's heap put this user data (`docs/engine.md`).
     pub addr: u32,
+    /// Where the image's buffer is (0 where the model doesn't give it) and its size: the GPU's
+    /// copies fill it.
+    pub buffer: u32,
+    pub buffer_len: u32,
 }
 
 /// The stage's state besides its objects'.
@@ -665,16 +669,19 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
     // `lb_800121FC`'s buffer: preload entry 2001 where the preload cache holds it (a match the
     // VS mode starts from its menus), else the scene's heap's (the match a replay's playback
     // boots into).
-    if r.preloaded_buffer(2001).is_none() {
-        crate::hsd::heap::mem_alloc(
-            crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 4).next_multiple_of(32),
-        );
-    }
+    let buffer_len =
+        crate::hsd::heap::tex_buffer_size(u32::from(w), u32::from(h), 4).next_multiple_of(32);
+    let buffer = match r.preloaded_buffer(2001) {
+        Some(b) => b,
+        None => crate::hsd::heap::mem_alloc(buffer_len),
+    };
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,
         image,
         desc: super::stadium::screen_image(w, h, 4),
         addr,
+        buffer,
+        buffer_len,
     });
     gobj
 }
@@ -750,6 +757,13 @@ pub fn render_reflection(r: &mut Running, gobj: GObjId) {
         .display
         .draws
         .push(display::Draw::ReflectionCopy);
+    // The copy's pixels in the image's buffer (docs/engine.md, the GPU's pixels).
+    if let Some(rf) = &r.game.gr.izumi.reflection
+        && rf.buffer != 0
+    {
+        let (lo, hi) = (rf.buffer, rf.buffer + rf.buffer_len);
+        crate::hsd::heap::with(|h| h.image.hold(lo, hi, crate::hsd::image::Src::RenderTarget));
+    }
     let o = &mut r.game.objs;
     let (fov, aspect) = (
         cobj::fov(&o.cobjs, Some(c)),

@@ -359,6 +359,13 @@ impl melee_sim::game::session::Console for Console<'_> {
             .unwrap_or_else(|e| panic!("{path}: {e}"))
     }
 
+    fn file_after(&mut self, path: &str) -> Vec<u8> {
+        let path = path.trim_start_matches('/');
+        self.disc
+            .read_after(path)
+            .unwrap_or_else(|e| panic!("{path}: {e}"))
+    }
+
     fn file(&mut self, path: &str) -> melee_sim::game::vs_match::DiscFile {
         let path = path.trim_start_matches('/');
         melee_sim::game::vs_match::DiscFile {
@@ -512,9 +519,105 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
         println!("  {f}");
     }
     println!("  {} differing runs:", wrong.len());
+    let objects = image_objects(game);
     for (a, b, k) in wrong.iter().take(40) {
-        println!("    {a:#010x}..{b:#010x} ({k}, {:#x} bytes)", b - a);
+        // The objects melee-sim has (or had) there, by pool and slot.
+        let who: Vec<String> = objects
+            .iter()
+            .filter(|o| o.1 <= *a && *a < o.1 + o.2)
+            .map(|o| {
+                format!(
+                    "{} {} +{:#x}{}",
+                    o.0,
+                    o.3,
+                    a - o.1,
+                    if o.4 { " (freed)" } else { "" }
+                )
+            })
+            .collect();
+        println!(
+            "    {a:#010x}..{b:#010x} ({k}, {:#x} bytes){}{}",
+            b - a,
+            if who.is_empty() { "" } else { ": " },
+            who.join(", ")
+        );
     }
+}
+
+/// The objects whose addresses the allocator model gives, for naming a differing run: the
+/// pool's type, address, size, slot and whether the slot is free.
+fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
+    use melee_sim::hsd::heap::Kind;
+    let mut v = Vec::new();
+    macro_rules! pool {
+        ($name:expr, $pool:expr, $size:expr) => {
+            for slot in 0..$pool.slots().len() as u32 {
+                let a = $pool.addr(slot);
+                if a != 0 {
+                    v.push(($name, a, $size, slot, $pool.is_free(slot)));
+                }
+            }
+        };
+    }
+    let g = game;
+    pool!("Fighter", g.fighters, Kind::Fighter.init().0);
+    pool!("Item", g.items, Kind::Item.init().0);
+    pool!("ItemLink", g.it.links, Kind::ItemLink.init().0);
+    pool!(
+        "BoneTable",
+        g.it.bone_tables,
+        Kind::ItemDynamicBones.init().0
+    );
+    pool!("Effect", g.ef.effects, Kind::Effect.init().0);
+    pool!("Queued", g.ef.queued, Kind::EffectQueued.init().0);
+    pool!("SoundObj", g.sound_objs, Kind::AudioUserData.init().0);
+    pool!("Attrs", g.fighter_attrs, Kind::FighterAttrs.init().0);
+    pool!("Parts", g.fighter_parts, Kind::FighterParts.init().0);
+    pool!("DObjList", g.fighter_dobj_lists, 0x80);
+    pool!("AnimBuf", g.fighter_anim_bufs, 0x8000);
+    for slot in 0..g.grounds.slots().len() as u32 {
+        let a = g.grounds.addr(slot);
+        if a != 0 {
+            let ty = g.grounds.slots()[slot as usize]
+                .u
+                .type_name()
+                .unwrap_or("Ground");
+            v.push((ty, a, 0x204, slot, g.grounds.is_free(slot)));
+        }
+    }
+    pool!("GObj", g.world.gobjs, 0x38);
+    pool!("Proc", g.world.procs, 0x18);
+    if g.bgflash.user_addr != 0 {
+        v.push((
+            "BgFlash",
+            g.bgflash.user_addr,
+            0x84,
+            0,
+            g.bgflash.user.is_none(),
+        ));
+    }
+    let o = &g.objs;
+    pool!("JObj", o.jobjs.pool, 0x88);
+    pool!("DObj", o.dobjs.pool, 0x18);
+    pool!("MObj", o.mobjs.pool, 0x20);
+    pool!("TObj", o.tobjs.pool, 0x5C);
+    pool!("PObj", o.pobjs.pool, 0x30);
+    pool!("CObj", o.cobjs.pool, 0x8C);
+    pool!("LObj", o.lobjs.pool, 0xD4);
+    pool!("LObjNode", o.lobjs.nodes, 8);
+    pool!("WObj", o.wobjs, 0x20);
+    pool!("Fog", o.fogs.fogs, 0x20);
+    pool!("AObj", o.aobjs.pool, 0x1C);
+    pool!("FObj", o.fobjs, 0x28);
+    pool!("RObj", o.robjs.pool, 0x1C);
+    pool!("Rvalue", o.rvalues.pool, 0xC);
+    pool!("SObj", o.sobjs, 0x9C);
+    pool!("Particle", o.particles.pool, 0x98);
+    pool!("Generator", o.generators.pool, 0x94);
+    pool!("GenNode", o.generators.nodes, 8);
+    pool!("AppSrt", o.app_srts.pool, 0xA4);
+    pool!("Shadow", o.shadows, 0x28);
+    v
 }
 
 pub fn session(args: &[&str]) -> ExitCode {

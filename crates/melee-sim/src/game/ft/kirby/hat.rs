@@ -88,6 +88,10 @@ impl Running<'_> {
         fp.u.set_dobj_list_at(u::HAT_DOBJS, None);
         if let Some(l) = list {
             let addr = self.game.fighter_dobj_lists.addr(l.0);
+            let (game, data) = (&*self.game, self.data);
+            crate::hsd::export::with_image(|img| {
+                crate::game::export::x2040_list(game, data, img, l)
+            });
             crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, addr);
             self.game.fighter_dobj_lists.free(l.0);
         }
@@ -667,6 +671,10 @@ impl Running<'_> {
             let low = self.game.fighters[f.0].u.dobj_list_at(u::HAT_DOBJS2);
             for list in [Some(l), low].into_iter().flatten() {
                 let addr = self.game.fighter_dobj_lists.addr(list.0);
+                let (game, data) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    crate::game::export::x2040_list(game, data, img, list)
+                });
                 crate::hsd::heap::obj_free(crate::hsd::heap::Kind::FighterX2040, addr);
                 self.game.fighter_dobj_lists.free(list.0);
             }

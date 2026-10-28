@@ -842,6 +842,11 @@ impl Image {
     /// hold the bytes of.
     pub fn place(&mut self, base: u32, len: u32, archive: ArchiveId) {
         if self.on {
+            // Placed again where it is already the archive's newest place: nothing new.
+            let newest = self.places().iter().rev().find(|&&(_, _, a)| a == archive);
+            if newest == Some(&(base, len, archive)) {
+                return;
+            }
             Arc::make_mut(self.places.get_or_insert_with(Default::default))
                 .push((base, len, archive));
         }

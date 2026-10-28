@@ -90,20 +90,35 @@ pub struct Screen {
     pub copy_y: u16,
     /// Where the original's heap put this user data (`docs/engine.md`).
     pub addr: u32,
+    /// Where its image's buffer is (the preload cache's block or the scene heap's), 0 where
+    /// the model doesn't give it, and its size: the GPU's copies fill it.
+    pub buffer: u32,
+    pub buffer_len: u32,
 }
 
 /// A screen's user data from the scene's heap (its block's size), then its image's buffer
 /// (`lb_800121FC`): preload entry `entry` where the preload cache holds it (a match the VS mode
 /// starts from its menus), else the scene's heap's (the match a replay's playback boots into).
-fn alloc_screen(r: &mut Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> u32 {
+fn alloc_screen(r: &mut Running, size: u32, desc: &HSD_ImageDesc, entry: i32) -> (u32, u32, u32) {
     let addr = crate::hsd::heap::mem_alloc(size);
-    if r.preloaded_buffer(entry).is_none() {
-        let (w, h) = (u32::from(desc.width), u32::from(desc.height));
-        crate::hsd::heap::mem_alloc(
-            crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32),
-        );
+    let (w, h) = (u32::from(desc.width), u32::from(desc.height));
+    let len = crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32);
+    let buffer = match r.preloaded_buffer(entry) {
+        Some(b) => b,
+        None => crate::hsd::heap::mem_alloc(len),
+    };
+    (addr, buffer, len)
+}
+
+/// A screen's image's buffer, which a copy from the EFB just filled: the GPU's pixels in the
+/// heap's image ([`crate::hsd::image::Src::RenderTarget`]).
+fn screen_copied(game: &Game, which: u8) {
+    if let Some(s) = &game.gr.stadium.screens[which as usize]
+        && s.buffer != 0
+    {
+        let (lo, hi) = (s.buffer, s.buffer + s.buffer_len);
+        crate::hsd::heap::with(|h| h.image.hold(lo, hi, crate::hsd::image::Src::RenderTarget));
     }
-    addr
 }
 
 /// The fields of `grPStadium_YakumonoParam` the code reads, by offset.
@@ -1108,13 +1123,15 @@ pub fn create_text_camera(r: &mut Running) -> GObjId {
     r.game.world.gobj_mut(gobj).gxlink_prios = 2;
     let desc = screen_image(0xFA, 0xA0, 4);
     // `TextWrapper`.
-    let addr = alloc_screen(r, 0x20, &desc, 0x7D2);
+    let (addr, buffer, buffer_len) = alloc_screen(r, 0x20, &desc, 0x7D2);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_TEXT));
     r.game.gr.stadium.screens[SCREEN_TEXT as usize] = Some(Screen {
         desc,
         addr,
+        buffer,
+        buffer_len,
         ..Default::default()
     });
     let archive = super::datfiles::main_archive(r.game).archive;
@@ -1146,7 +1163,7 @@ pub fn create_feed(r: &mut Running) -> GObjId {
         .setup_gx_link_max(gobj, CodeRef(0x801D_2FD0), 3, false);
     let desc = screen_image(0x280, 0x196, 4);
     // 0x1C bytes, two short of an `ImageDescWrapper`.
-    let addr = alloc_screen(r, 0x1C, &desc, 0x7D3);
+    let (addr, buffer, buffer_len) = alloc_screen(r, 0x1C, &desc, 0x7D3);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_FEED));
@@ -1154,6 +1171,8 @@ pub fn create_feed(r: &mut Running) -> GObjId {
         desc,
         flag: true,
         addr,
+        buffer,
+        buffer_len,
         ..Default::default()
     });
     gobj
@@ -1169,7 +1188,7 @@ pub fn create_zoom(r: &mut Running) -> GObjId {
         .setup_gx_link_max(gobj, CodeRef(0x801D_3084), 3, false);
     let desc = screen_image(0x7C, 0x50, 4);
     // `ImageDescWrapper`.
-    let addr = alloc_screen(r, 0x20, &desc, 0x7D4);
+    let (addr, buffer, buffer_len) = alloc_screen(r, 0x20, &desc, 0x7D4);
     r.game
         .world
         .init_user_data(gobj, 3, UserData::StadiumScreen(SCREEN_ZOOM));
@@ -1177,6 +1196,8 @@ pub fn create_zoom(r: &mut Running) -> GObjId {
         desc,
         flag: false,
         addr,
+        buffer,
+        buffer_len,
         ..Default::default()
     });
     gobj
@@ -1210,6 +1231,7 @@ pub fn render_text_camera(r: &mut Running, gobj: GObjId) {
         y: 0,
         clear: true,
     });
+    screen_copied(r.game, SCREEN_TEXT);
     mark_rendered(r.game);
 }
 
@@ -1228,6 +1250,7 @@ pub fn render_feed(r: &mut Running, _gobj: GObjId) {
         y: 36,
         clear: false,
     });
+    screen_copied(r.game, SCREEN_FEED);
     mark_rendered(r.game);
 }
 
@@ -1247,6 +1270,7 @@ pub fn render_zoom(r: &mut Running, _gobj: GObjId) {
         y,
         clear: false,
     });
+    screen_copied(r.game, SCREEN_ZOOM);
     mark_rendered(r.game);
 }
 
@@ -1956,7 +1980,7 @@ pub fn start_load(r: &mut Running, idx: usize) {
         return;
     }
     r.disc_load(name, buffer);
-    let slot = register_archive(r.game, r.data, archive);
+    let slot = register_archive(r.game, r.data, archive, buffer, size);
     r.game.grounds[g.0].u.stadium().archive = Some(slot);
 }
 
@@ -1977,9 +2001,25 @@ pub fn take_load_end(game: &mut Game) {
 
 /// Registers a loaded transformation file in the stage's archive table's first free entry as
 /// loaded from a buffer (`unk8` 1), `grDatFiles_801C6478` without marking its materials: its
-/// `HSD_Archive` comes from the scene's heap (`lbHeap_80015BD0`).
-fn register_archive(game: &mut Game, data: &Archives, archive: ArchiveId) -> u8 {
+/// `HSD_Archive` comes from the scene's heap (`lbHeap_80015BD0`), parsed over the file of
+/// `size` bytes in `buffer`.
+fn register_archive(
+    game: &mut Game,
+    data: &Archives,
+    archive: ArchiveId,
+    buffer: u32,
+    size: u32,
+) -> u8 {
     let addr = crate::hsd::heap::mem_alloc(0x44);
+    if addr != 0 {
+        crate::hsd::export::with_image(|img| {
+            // Where the file's data is, for a pointer into it a freed block keeps. Its bytes
+            // aren't held: in memory they differ from the file's once the stage runs (0x1C
+            // bytes at 0x34-byte steps from the data's +0xBC, single bytes past +0x5280).
+            img.place(buffer + 0x20, size.saturating_sub(0x20), archive);
+            crate::hsd::export::archive(img, data, addr, buffer, size, archive)
+        });
+    }
     let slot = game
         .gr
         .archives
@@ -2021,7 +2061,9 @@ fn load_done(r: &mut Running) -> bool {
             k => panic!("a transformation file for map {k}"),
         };
         let archive = r.game.gr.stadium.files[idx].expect("the transformation's file");
-        let slot = register_archive(r.game, r.data, archive);
+        let st = r.game.grounds[g.0].u.stadium();
+        let (buffer, size) = (st.buffer, st.size);
+        let slot = register_archive(r.game, r.data, archive, buffer, size);
         let map_head = r.game.gr.archives[slot as usize]
             .as_ref()
             .and_then(|a| a.map_head);

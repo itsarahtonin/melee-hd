@@ -557,18 +557,4 @@ macro_rules! unlaid {
     )*};
 }
 
-unlaid!(
-    ArwingLaserVars,
-    GameWatchRescueVars,
-    GameWatchVars,
-    GreatFoxLaserVars,
-    HeihoVars,
-    KlapVars,
-    KyasarinVars,
-    KyasarinEggVars,
-    TincleVars,
-    ToolsVars,
-    WhispyAppleVars,
-    YakuVars,
-    PokemonVars
-);
+unlaid!();

@@ -336,6 +336,40 @@ pub fn handle_words(kind: i32) -> &'static [(usize, &'static str)] {
     }
 }
 
+impl crate::game::mirror::LayOut for PokemonVars {
+    /// The bytes the Pokémon has written since it was made (of a stale byte, the bits code
+    /// wrote alone), and its handles' words; a stale byte keeps what the block held.
+    fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
+        for i in 0..SIZE {
+            let a = at + i as u32;
+            if !self.is_stale(i) {
+                l.put_u8(a, self.bytes[i]);
+                continue;
+            }
+            let known = self.known(i);
+            for b in 0..8 {
+                if known & (0x80 >> b) != 0 {
+                    l.put_bits(a, b, 1, u32::from(self.bytes[i] & (0x80 >> b) != 0));
+                }
+            }
+        }
+        for &(o, h) in &self.handles {
+            if self.is_stale(o as usize) {
+                continue;
+            }
+            let a = at + u32::from(o);
+            let w = match h {
+                Handle::GObj(g) => cx.handle("GObjId", Some(g.0)),
+                Handle::JObj(j) => cx.handle("JObjId", Some(j.0)),
+                Handle::DObjList(d) => cx.handle("DObjListId", Some(d.0)),
+                Handle::TObj(t) => cx.handle("TObjId", Some(t.0)),
+                Handle::Data(d) => cx.data(Some(d)),
+            };
+            l.put_word(a, w);
+        }
+    }
+}
+
 impl Mirror for PokemonVars {
     const SIZE: u32 = SIZE as u32;
 

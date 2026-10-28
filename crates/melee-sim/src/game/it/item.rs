@@ -61,6 +61,8 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
 /// when reused.
 pub fn free_user_data(game: &mut Game, item: ItemId) {
     if let Some(t) = game.items[item.0].xBBC_dynamicBoneTable {
+        let g = &*game;
+        crate::hsd::export::with_image(|img| crate::game::export::bone_table(g, img, t));
         game.it.bone_tables.free(t.0);
     }
     game.items[item.0].x0 = game.items.free_head().map(ItemId);
