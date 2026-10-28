@@ -533,6 +533,7 @@ impl Importer<'_> {
             cursor: self.u16_at(z + 8) as i16,
             flags: self.u8_at(z + 0xA),
             addr: slots,
+            stale: false,
         };
         self.game.gr.winds = winds(|a| cap.u32(a));
         self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
@@ -816,7 +817,18 @@ impl Comparer<'_> {
         let g = &self.game.grounds[o.0];
         let gpath = format!("{path} ground");
         self.begin_block("ground", t, &gpath);
-        g.compare(&m, t, &gpath, self);
+        match ground_render_target_view(self.game, o, t, self.mem) {
+            // A block that held the GPU's pixels: compared over a copy of theirs that holds
+            // ours where ours still has the image's fill.
+            Some(block) => {
+                let view = Mem {
+                    bytes: &block,
+                    base: t,
+                };
+                g.compare(&view, t, &gpath, self);
+            }
+            None => g.compare(&m, t, &gpath, self),
+        }
         self.block = None;
         // A stage object's dynamics chain (Rainbow Cruise's flag): each link, where both sides
         // have one (the handles compare with the variables).
@@ -1390,8 +1402,12 @@ impl Comparer<'_> {
             scene_kind(game.machine.scene_info),
             Some(GS_VS | GS_SUDDEN_DEATH)
         );
+        // At a later match's start, before its stage's start makes them again
+        // (`grZakoGenerator_801CAE04`, from `Ground_801C0FB8`), the pointer still names the
+        // match before's slots, freed with its heap: ours keep those slots, which nothing
+        // reads, theirs whatever the heap holds there now.
         match (&zk.slots, slots) {
-            _ if !in_match && zk.slots.is_some() => {}
+            _ if (!in_match || zk.stale) && zk.slots.is_some() => {}
             (None, 0) => {}
             (Some(ours), t) if t != 0 => {
                 for (i, o) in ours.iter().enumerate() {
@@ -2312,4 +2328,33 @@ impl Comparer<'_> {
 /// (the dummy stage) the executable's default floor, `mpLib_803BF760`.
 fn coll_data(coll: u32) -> u32 {
     if coll == 0 { 0x803B_F760 } else { coll }
+}
+
+/// A stage part's block as `compare`'s `item_render_target_view` makes an item's: where it held
+/// the GPU's pixels when made, each bit ours still holds as the fill's takes ours. None for a
+/// stage part made over none.
+fn ground_render_target_view(
+    game: &melee_sim::game::state::Game,
+    g: GroundId,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    let runs = game.gr.render_leftovers.get(&g.0)?;
+    let size = melee_sim::game::gr::setup::GROUND_SIZE;
+    let img = &game.objs.heap.image;
+    let fill = img.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, size);
+    melee_sim::game::export::lay_ground(game, img, &mut l, g);
+    let lo = (at - MEM1) as usize;
+    let mut block = mem[lo..lo + size as usize].to_vec();
+    for &(a, b) in runs {
+        for off in a..b {
+            if let Some((ours, known)) = l.bits_at(at + off) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[off as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
 }

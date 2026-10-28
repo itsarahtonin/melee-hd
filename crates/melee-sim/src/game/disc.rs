@@ -17,6 +17,55 @@ impl Running<'_> {
         self.game.audio.dvd.as_mut().expect("the preload cache")
     }
 
+    /// The preloads' reads into main memory, for the heap's image (`Dvd::image_reads`): a
+    /// later scene's heap may lie over the preload heaps (a mode state that preloads nothing,
+    /// the challenger approach's, makes its heap over them), and its blocks then take what the
+    /// files left (docs/engine.md, a session's heap leftovers). A file read holds its bytes as
+    /// the disc has them until its parse relocates them ([`Self::take_cached_blocks`]'s
+    /// callers, [`crate::hsd::image::Image::place_held`]); its `HSD_Archive` block what its
+    /// parse wrote, unknown. Taken up before each take and each scene's heaps, so a read
+    /// always lands before the parse of what it read.
+    pub fn image_preload_reads(&mut self) {
+        let Some(d) = self.game.audio.dvd.as_mut() else {
+            return;
+        };
+        if d.image_reads.is_empty() {
+            return;
+        }
+        let reads = std::mem::take(&mut d.image_reads);
+        if !crate::hsd::heap::image_on() {
+            return;
+        }
+        for (at, len, entry) in reads {
+            let f = &self.game.ft.data.files;
+            let id = f
+                .entries
+                .iter()
+                .find(|e| e.1 == entry && entry >= 0)
+                .and_then(|e| f.archive_id(&e.0));
+            crate::hsd::heap::with(|h| match id {
+                Some(archive) => h.image.write(
+                    at,
+                    at + len,
+                    crate::hsd::image::Src::File {
+                        archive,
+                        offset: 0,
+                        base: 0,
+                    },
+                ),
+                None => h.image.preloaded(
+                    at,
+                    at + len,
+                    if entry < 0 {
+                        "HSD_Archive"
+                    } else {
+                        "a preloaded file"
+                    },
+                ),
+            });
+        }
+    }
+
     /// `lbDvd_80018CF4` for a scene: the preload class's heaps, waiting (`lb_800195D0`) for
     /// a read into a heap the class lets go, and the scene's heaps made: the main heap's
     /// allocator model starts over (`HSD_CreateMainHeap`).
@@ -35,6 +84,7 @@ impl Running<'_> {
                 });
             }
         }
+        self.image_preload_reads();
         let layout = self.dvd_mut().make_scene_heaps();
         // The boot's first scene finds the heap as the session's start left it, empty.
         let carried = crate::hsd::heap::with(|h| h.carried())
@@ -100,6 +150,10 @@ impl Running<'_> {
         let (game, data) = (&*self.game, self.data);
         crate::hsd::export::with_image(|img| super::export::scene_end(game, data, img));
         crate::hsd::heap::with(|h| h.write_free_links());
+        // The flash's user data goes with its scene's heap: a later scene's end mustn't lay it
+        // out again over what took its block since (a preloaded file, where a scene that
+        // preloads nothing made its heap over the preload heaps).
+        self.game.bgflash.user = None;
     }
 
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
@@ -128,6 +182,7 @@ impl Running<'_> {
 
     /// [`Running::take_cached`], with the address of the file's bytes too (0 for none).
     pub fn take_cached_blocks(&mut self, entry_num: i32) -> Option<(u32, u32)> {
+        self.image_preload_reads();
         let i = self.take_preloaded_entry(entry_num)?;
         let d = self.dvd_mut();
         let e = d.cache.entries[i];
@@ -155,8 +210,7 @@ impl Running<'_> {
                 && file != 0
                 && let Some(id) = self.game.ft.data.files.archive_id(name)
             {
-                let data = len.saturating_sub(0x20);
-                crate::hsd::heap::with(|h| h.image.place(file + 0x20, data, id));
+                crate::hsd::heap::with(|h| h.image.place_held(file, len, id));
             }
         }
         kept

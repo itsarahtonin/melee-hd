@@ -847,6 +847,33 @@ impl Image {
         }
     }
 
+    /// A preload heap's block in main memory, `[lo, hi)`, that a preload's read fills (or
+    /// its `HSD_Archive`, which its parse fills): unknown, until a parse says what it holds.
+    pub fn preloaded(&mut self, lo: u32, hi: u32, owner: &'static str) {
+        self.write(lo, hi, Src::Unknown(owner));
+    }
+
+    /// A preloaded archive taken up (`lbArchive_InitializeDAT`'s parse of a file the preload
+    /// cache holds, `len` bytes at `file`): its bytes, relocated to where they are, in memory
+    /// no block of the scene's heap holds (a preload heap's), and where a pointer into its
+    /// data points ([`Self::place`]).
+    pub fn place_held(&mut self, file: u32, len: u32, archive: ArchiveId) {
+        if !self.on {
+            return;
+        }
+        let base = file + 0x20;
+        self.place(base, len.saturating_sub(0x20), archive);
+        self.write(
+            file,
+            file + len,
+            Src::File {
+                archive,
+                offset: 0,
+                base,
+            },
+        );
+    }
+
     /// The owner of `[lo, hi)` of a block now allocated, an `owner` (its type), writes it:
     /// unknown until the owner says what it wrote (its layout as it goes, [`super::export`]).
     pub fn claim(&mut self, lo: u32, hi: u32, owner: &'static str) {
