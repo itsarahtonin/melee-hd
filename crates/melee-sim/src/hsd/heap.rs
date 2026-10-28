@@ -818,7 +818,9 @@ impl Heap {
                 if newer != 0 {
                     self.image.word(newer + 4, older);
                 }
-                self.image.release(ptr, cell + size);
+                // The cell's header too: the allocated list's links the image holds in it
+                // give way to the free list's, which `DLInsert` writes below.
+                self.image.release(cell, cell + size);
                 // `DLInsert`.
                 let mut size = size;
                 let mut next = free_next.map_or(0, |n| n.0);
