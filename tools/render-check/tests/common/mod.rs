@@ -45,7 +45,8 @@ pub enum Replay {
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
     /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
     /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`,
-    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
+    /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
+    /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
     /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
     /// console's float mode.
@@ -83,6 +84,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("sound-") {
                     return ssbm_rs_local(&format!("lockstep/sound-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("unlock-") {
+                    return ssbm_rs_local(&format!("lockstep/unlock-sessions/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("tou-") {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
@@ -766,6 +770,15 @@ pub const RESULTS_TEAMS: Game = Game {
     name: "results-teams",
     players: "a team battle's results (session results-sessions/teams)",
     replay: Replay::Session("results-teams"),
+};
+
+/// The challenger approach's screen (`unlock-sessions/time`): "A new foe has appeared!" with
+/// Mewtwo's name, as it comes in and as it waits for A.
+pub const UNLOCK_TIME: Game = Game {
+    stage: "Challenger approach",
+    name: "unlock-time",
+    players: "the challenger approach's screen (session unlock-sessions/time)",
+    replay: Replay::Session("unlock-time"),
 };
 
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the

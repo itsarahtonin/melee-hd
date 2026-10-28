@@ -424,10 +424,26 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
     if at == 0 {
         return;
     }
+    let mut l = Lay::leftover(img, data, at, 0x204);
+    lay_ground(game, img, &mut l, g);
+    // The member's tables in blocks of their own.
+    let blocks = {
+        let cx = Addrs { game, img };
+        game.grounds[g.0].u.lay_blocks(&cx)
+    };
+    for b in blocks {
+        b.put(img);
+    }
+    l.put(img);
+}
+
+/// [`ground`]'s fields, laid into `l` (a block at the stage part's address): what the comparer
+/// takes ours to be where the block held the GPU's pixels (`melee_capture`'s ground view).
+pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::GroundId) {
+    let at = game.grounds.addr(g.0);
     let o = &game.grounds[g.0];
     let ga = |x: Option<GObjId>| x.map_or(0, |x| game.world.gobjs.addr(x.0));
     let code = |c: Option<super::handles::CodeRef>| c.map_or(0, |c| c.0);
-    let mut l = Lay::leftover(img, data, at, 0x204);
     l.u32(0, o.x0 as u32);
     l.u32(4, ga(o.gobj));
     l.u32(8, code(o.x8_callback));
@@ -448,13 +464,13 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
     for (i, &v) in o.x20.iter().enumerate() {
         l.u32(0x20 + 4 * i as u32, v as u32);
     }
-    color_overlay(img, &mut l, 0x40, &o.color_overlay);
+    color_overlay(img, l, 0x40, &o.color_overlay);
     l.f32(0xC0, o.xC0);
     match &o.u {
         super::gr::GroundVars::Bytes(b) => l.bytes(0xC4, b),
         v => {
             let cx = Addrs { game, img };
-            if !v.lay(&mut l, at + 0xC4, &cx)
+            if !v.lay(l, at + 0xC4, &cx)
                 && let Some(ty) = v.type_name()
             {
                 // A typed member melee-sim doesn't lay out: its bytes are its type's.
@@ -462,15 +478,6 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
             }
         }
     }
-    // The member's tables in blocks of their own.
-    let blocks = {
-        let cx = Addrs { game, img };
-        o.u.lay_blocks(&cx)
-    };
-    for b in blocks {
-        b.put(img);
-    }
-    l.put(img);
 }
 
 /// The types of what the heap's image doesn't lay out, each with a note: an object of one

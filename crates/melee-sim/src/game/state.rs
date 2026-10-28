@@ -457,6 +457,9 @@ pub struct Game {
 
     /// The progressive scan prompt's statics (`gmprogressive.c`, `gmprogressivemode.c`).
     pub prog_scan: super::gm::progressive::ProgScan,
+    /// The challenger approach's screen's statics and its data (`gmapproach.c`'s
+    /// `gm_80480D98`, `gmVsMelee_ApproachData`).
+    pub approach: super::gm::approach::Approach,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).

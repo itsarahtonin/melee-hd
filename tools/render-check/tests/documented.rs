@@ -25,7 +25,7 @@ use common::{
     PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES,
     RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD,
     SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, VENOM,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_TIME, VENOM,
     YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
 };
 
@@ -207,6 +207,33 @@ frames!(SOUND_SOUNDS;
 frames!(SOUND_JP;
     sound_jp_1620 1620,
 );
+// The challenger approach's screen (`unlock-sessions/time`): coming in (2720) and waiting
+// for A with Mewtwo's silhouette (2870). The images are identical; the transform unit's
+// memory holds light 1's direction, which no draw reads, as melee-render writes it
+// (docs/player.md's open issues).
+macro_rules! approach_frames {
+    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                compare(
+                    &$game,
+                    $frame,
+                    Group::Standard,
+                    Expect::SameImages {
+                        same: [1, 1],
+                        why: common::why::LIGHT_1,
+                    },
+                );
+            }
+        )*
+    };
+}
+approach_frames!(UNLOCK_TIME;
+    unlock_time_2720 2720,
+    unlock_time_2870 2870,
+);
 // Tournament mode (`tournament-sessions`): the setup's options with the bracket of 64 shown
 // (1300) and the bracket as it comes in (1600); the entrants' list with the character grid
 // (1400) and the name tags (1700), and a match's players' screen (2700); winner-out's
@@ -237,7 +264,6 @@ macro_rules! tou_frames {
         )*
     };
 }
-
 tou_frames!(TOU_BRACKET64;
     tou_bracket64_1300 1300,
     tou_bracket64_1600 1600,
