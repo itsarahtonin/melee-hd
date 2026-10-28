@@ -205,7 +205,7 @@ impl Running<'_> {
         self.load_blend_skeleton(gobj);
         self.measure_bones(f);
         self.create_own_light(f);
-        self.on_load(gobj);
+        self.on_load(gobj, super::create_model::Creator::FighterCreate);
         // `Fighter_Create_Inline2`.
         let fp = &self.game.fighters[f.0];
         if !fp.no_normal_motion {
