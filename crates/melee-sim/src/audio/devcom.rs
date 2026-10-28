@@ -39,6 +39,9 @@ pub mod cb {
     pub const SFX_READDRESS: CodeRef = CodeRef(0x8038_8EB4);
     /// `lbDvd_80017E64`: a preloaded file is in, and the preload cache reads the next.
     pub const PRELOADED: CodeRef = CodeRef(0x8001_7E64);
+    /// `lbMemory_80015320`: a compacted heap's block has moved within ARAM, and the
+    /// compaction goes on with the next.
+    pub const COMPACT_STEP: CodeRef = CodeRef(0x8001_5320);
     /// `fn_801D4220`: Pokémon Stadium's transformation file has loaded.
     pub const STADIUM_LOADED: CodeRef = CodeRef(0x801D_4220);
     /// `fn_8001E910`: a movie frame has been read into the movie player's ring.
@@ -773,6 +776,13 @@ impl Audio {
             cb::SFX_HEADER => self.sfx_header_loaded(data),
             cb::SFX_SAMPLES => self.sfx_samples_loaded(data),
             cb::SFX_READDRESS => self.sfx_readdressed(),
+            cb::COMPACT_STEP => {
+                assert!(
+                    !cancel,
+                    "the original's assertion failed: lbmemory.c:392 (!cancelflag)"
+                );
+                self.compact_step(data, crate::lb::memory::entry_at(args));
+            }
             cb::PRELOADED if self.dvd.is_some() => self.preload_done(data, args),
             cb::PRELOADED => {
                 self.devcom.preloaded += 1;
