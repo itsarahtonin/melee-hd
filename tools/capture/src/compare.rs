@@ -409,7 +409,20 @@ impl<'a> Comparer<'a> {
             self.compare_handle(name, "CameraBoxId", ours.map(|b| b.0), theirs);
         }
         let copy = self.u32(sym("cm_804D6464"));
+        // The second CObj is the match camera's (`Camera_Create`): past the match's scene
+        // (the results screen's) the pointer names its freed heap, ours the match's last CObj,
+        // which nothing reads until the next match's camera makes another (`Camera_800310B8`
+        // and the camera's process are the match's).
+        let past_match = {
+            use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+            game.machine.scene_info.is_some()
+                && !matches!(
+                    scene_kind(game.machine.scene_info),
+                    Some(GS_VS | GS_SUDDEN_DEATH)
+                )
+        };
         match c.cobj_copy {
+            Some(_) if past_match => {}
             Some(o) => self.cobj("camera cobj copy", o, copy),
             None => self.check("camera cobj copy", "CObj", 0, copy),
         }
