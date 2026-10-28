@@ -1218,10 +1218,15 @@ impl Heap {
         if !self.image.on {
             return;
         }
+        // A pool carried from an earlier scene's heap that this scene hasn't inited lists
+        // objects of that heap, whose memory this scene's blocks may have taken since: its
+        // links were written as its objects went back, and memory no longer holds them.
         let lists: Vec<Vec<u32>> = self
             .allocs
             .iter()
-            .map(|a| a.free.clone())
+            .zip(&self.carried)
+            .filter(|&(_, &carried)| !carried)
+            .map(|(a, _)| a.free.clone())
             .chain(self.pieces.list.iter().flatten().map(|e| e.free.clone()))
             .collect();
         for free in lists {
