@@ -1218,9 +1218,22 @@ impl Heap {
             .map(|a| a.free.clone())
             .chain(self.pieces.list.iter().flatten().map(|e| e.free.clone()))
             .collect();
+        // A carried pool's free objects past this scene's heap (an earlier scene's) had their
+        // links written as they went back; their memory may hold another owner's bytes since
+        // (a preloaded file, where a scene that preloads nothing made its heap over the preload
+        // heaps), so only the objects in this heap's blocks take their links again.
+        let mut cells = self.os.allocated.clone();
+        cells.sort_unstable();
+        let in_heap = |p: u32| {
+            let i = cells.partition_point(|c| c.0 <= p);
+            i > 0 && p < cells[i - 1].0.wrapping_add(cells[i - 1].1)
+        };
         for free in lists {
             // The list's head is the vector's end; each links to the one before it.
             for (i, &p) in free.iter().enumerate() {
+                if !in_heap(p) {
+                    continue;
+                }
                 let next = if i > 0 { free[i - 1] } else { 0 };
                 self.image.word(p, next);
             }
