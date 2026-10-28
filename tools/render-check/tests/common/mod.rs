@@ -45,9 +45,10 @@ pub enum Replay {
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
     /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
     /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`, for
-    /// `unlock-NAME` `lockstep/unlock-sessions/` and for `results-NAME`
-    /// `lockstep/results-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`),
-    /// played in the console's float mode.
+    /// `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
+    /// `lockstep/results-sessions/NAME.inputs` and for `tou-NAME`
+    /// `lockstep/tournament-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -85,6 +86,10 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("unlock-") {
                     return ssbm_rs_local(&format!("lockstep/unlock-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("tou-") {
+                    return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
+                        .into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
@@ -631,6 +636,21 @@ pub const DATA_PRIZE: Game = Game {
     players: "two special messages announced (session data-sessions/prize)",
     replay: Replay::Session("data-prize"),
 };
+/// The album on a card of seven snapshots (`data-sessions/album-browse`): the slots, its pages
+/// of thumbnails, the snapshot's menu and its view.
+pub const DATA_ALBUM: Game = Game {
+    stage: "Main menu",
+    name: "data-album-browse",
+    players: "the album's pages and a snapshot's view (session data-sessions/album-browse)",
+    replay: Replay::Session("data-album-browse"),
+};
+/// The album's delete (`data-sessions/album-delete`): its question.
+pub const DATA_ALBUM_DELETE: Game = Game {
+    stage: "Main menu",
+    name: "data-album-delete",
+    players: "the album's delete question (session data-sessions/album-delete)",
+    replay: Replay::Session("data-album-delete"),
+};
 
 pub const OPTIONS_TOUR: Game = Game {
     stage: "Main menu",
@@ -662,6 +682,27 @@ pub const SOUND_JP: Game = Game {
     name: "sound-jp",
     players: "the sound test in Japanese (session sound-sessions/jp)",
     replay: Replay::Session("sound-jp"),
+};
+
+/// Tournament mode's sessions (`tournament-sessions/NAME`): the setup's options and its
+/// bracket preview, the bracket, the entrants' list and the match-up screen.
+pub const TOU_BRACKET64: Game = Game {
+    stage: "Tournament",
+    name: "tou-bracket64",
+    players: "a bracket of 64, four a match (session tournament-sessions/bracket64)",
+    replay: Replay::Session("tou-bracket64"),
+};
+pub const TOU_LIST: Game = Game {
+    stage: "Tournament",
+    name: "tou-list",
+    players: "the entrants' list of eight (session tournament-sessions/list)",
+    replay: Replay::Session("tou-list"),
+};
+pub const TOU_WINNER: Game = Game {
+    stage: "Tournament",
+    name: "tou-winner",
+    players: "winner-out's match-up screen (session tournament-sessions/winner)",
+    replay: Replay::Session("tou-winner"),
 };
 
 /// The character select with a random computer player and the random stage
@@ -1036,10 +1077,11 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
-    /// A point light's direction in the transform unit's memory (XF 061D to 061F for light
-    /// 1), which melee-render writes from the light and ssbm-rs's log leaves zero: no draw
-    /// reads a point light's direction, and the images are identical.
-    pub const LIGHT_DIRECTION: &str =
-        "a point light's direction in the transform unit's memory, which no draw reads";
+    /// The menus' scenes' second light: three words of the transform unit's light memory
+    /// (`XF 061D`, light 1's direction) differ from ssbm-rs's log while no draw reads that
+    /// light, and the images are identical (docs/player.md's open issues; the Data menu's
+    /// `count` 2000 shows it too).
+    pub const LIGHT_1: &str =
+        "light 1's direction in the transform unit's memory (XF 061D), read by no draw";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

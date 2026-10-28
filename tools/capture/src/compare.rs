@@ -409,7 +409,19 @@ impl<'a> Comparer<'a> {
             self.compare_handle(name, "CameraBoxId", ours.map(|b| b.0), theirs);
         }
         let copy = self.u32(sym("cm_804D6464"));
+        // The second CObj is a match's (`Camera_Create`, from the VS mode's match setup): past
+        // the match, the results screen's included, it names the match's freed heap, which
+        // the next scenes' blocks write over, ours the match's last CObj, and nothing reads it
+        // until the next match makes it again (its one reader, `Camera_800310B8`, places a
+        // fighter KO'd up into the screen as the fighters' draw runs, `x2220_b7`).
+        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        let in_match = game.machine.scene_info.is_none()
+            || matches!(
+                scene_kind(game.machine.scene_info),
+                Some(GS_VS | GS_SUDDEN_DEATH)
+            );
         match c.cobj_copy {
+            Some(_) if !in_match => {}
             Some(o) => self.cobj("camera cobj copy", o, copy),
             None => self.check("camera cobj copy", "CObj", 0, copy),
         }

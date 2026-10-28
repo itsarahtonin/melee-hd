@@ -190,10 +190,21 @@ pub(super) const COLUMNS: [[i32; 4]; 15] = [
 ];
 
 impl Running<'_> {
+    /// The screen's enter data (`gm_GetGameModeStateEnterData`): Tournament mode's own
+    /// (`gm_80489A98`), else VS mode's (`gmVsMelee_ResultsEnterData`, which the modes kept
+    /// with it share).
+    pub fn results_enter(&self) -> &ResultsMatchInfo {
+        if self.game.machine.routing.curr_mode == super::tournament::GM_TOURNAMENT {
+            &self.game.tou.results_enter
+        } else {
+            &self.game.vs_melee.results_enter
+        }
+    }
+
     /// The results the screen shows (`fn_80174274`: `lbl_8046DBE8.x94`, the enter data's).
     #[doc(alias = "fn_80174274")]
     pub fn results_end(&self) -> &MatchEnd {
-        &self.game.vs_melee.results_enter.match_end
+        &self.results_enter().match_end
     }
 
     /// A player's bonuses earned, from the results' decisions (`x44C[slot].x0`, the first
@@ -273,7 +284,7 @@ impl Running<'_> {
     /// light, the winner's fanfare, then each player's images, fighter and camera.
     #[doc(alias = "gm_Scene_Results_OnEnter")]
     pub fn results_on_enter(&mut self) {
-        let enter = &self.game.vs_melee.results_enter;
+        let enter = self.results_enter();
         let (f0, f1) = (enter.x0_0, enter.x0_1);
         let me = enter.match_end.clone();
         let r = &mut self.game.results;
@@ -331,10 +342,10 @@ impl Running<'_> {
         g.world.setup_proc(model, CodeRef(MODEL_PROC), 0);
         self.results_flames();
         let costumes = [
-            enter_byte(&self.game.vs_melee.results_enter, 1),
-            enter_byte(&self.game.vs_melee.results_enter, 2),
-            enter_byte(&self.game.vs_melee.results_enter, 3),
-            enter_byte(&self.game.vs_melee.results_enter, 4),
+            enter_byte(self.results_enter(), 1),
+            enter_byte(self.results_enter(), 2),
+            enter_byte(self.results_enter(), 3),
+            enter_byte(self.results_enter(), 4),
         ];
         self.results_fighters_setup(costumes);
         self.results_fighters_light();

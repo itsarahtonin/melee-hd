@@ -533,7 +533,6 @@ impl Importer<'_> {
             cursor: self.u16_at(z + 8) as i16,
             flags: self.u8_at(z + 0xA),
             addr: slots,
-            stale: false,
         };
         self.game.gr.winds = winds(|a| cap.u32(a));
         self.game.gr.wind_level = cap.u32(sym("lb_804D63B4")) as i32;
@@ -1395,19 +1394,22 @@ impl Comparer<'_> {
             ),
         );
         let slots = self.u32(z + 4);
-        // Past the match scene whose heap held the slots (the results screen's), the pointer
-        // names freed memory, ours the match's last slots, which nothing reads until a match's
-        // setup sets them again.
+        // Past the match scene whose heap held the slots (the results screen's, and the next
+        // match's until its stage's start sets them again, `grZakoGenerator_801CAE04` from the
+        // stage's `OnStart` some 84 ticks in), the pointer names freed memory, ours the last
+        // match's slots, which nothing reads until then: the slots are this scene's while the
+        // spawner's process (`fn_801CADBC`, made with them) lives.
         let in_match = matches!(
             scene_kind(game.machine.scene_info),
             Some(GS_VS | GS_SUDDEN_DEATH)
         );
-        // At a later match's start, before its stage's start makes them again
-        // (`grZakoGenerator_801CAE04`, from `Ground_801C0FB8`), the pointer still names the
-        // match before's slots, freed with its heap: ours keep those slots, which nothing
-        // reads, theirs whatever the heap holds there now.
+        let started = game
+            .world
+            .procs
+            .iter()
+            .any(|(_, p)| p.on_invoke == CodeRef(0x801C_ADBC));
         match (&zk.slots, slots) {
-            _ if (!in_match || zk.stale) && zk.slots.is_some() => {}
+            _ if !(in_match && started) && zk.slots.is_some() => {}
             (None, 0) => {}
             (Some(ours), t) if t != 0 => {
                 for (i, o) in ours.iter().enumerate() {

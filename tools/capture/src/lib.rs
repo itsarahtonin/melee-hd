@@ -32,6 +32,7 @@ pub mod stadium;
 pub mod stage;
 pub mod tev;
 pub mod title;
+pub mod tournament;
 pub mod toys;
 pub mod vs;
 

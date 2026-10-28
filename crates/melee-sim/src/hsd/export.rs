@@ -602,6 +602,34 @@ pub fn pobj(objs: &Objects, img: &mut Image, p: PObjId) {
     };
     l.word(0x14, u);
     l.put(img);
+    if let Binding::ShapeSet(set) = &o.u {
+        // `HSD_ShapeSet` (a memory piece, cleared then copied from its description by
+        // `loadShapeSetDesc`), and its additive weights' block.
+        let additive = set.flags & super::pobj::SHAPESET_ADDITIVE != 0;
+        let mut l = Lay::new(set.addr, 0x24);
+        l.u16(0, set.flags);
+        l.u16(2, set.nb_shape);
+        l.u32(4, set.nb_vertex_index as u32);
+        l.word(8, data_addr(img, set.vertex_desc));
+        l.word(0xC, data_addr(img, set.vertex_idx_list));
+        l.u32(0x10, set.nb_normal_index as u32);
+        l.word(0x14, data_addr(img, set.normal_desc));
+        l.word(0x18, data_addr(img, set.normal_idx_list));
+        if additive {
+            l.u32(0x1C, set.blend_addr);
+        } else {
+            l.f32(0x1C, set.blend[0]);
+        }
+        l.u32(0x20, addr_of(set.aobj, |x| objs.aobjs.pool.addr(x.0)));
+        l.put(img);
+        if additive && set.blend_addr != 0 {
+            let mut l = Lay::new(set.blend_addr, 4 * set.blend.len() as u32);
+            for (i, &w) in set.blend.iter().enumerate() {
+                l.f32(4 * i as u32, w);
+            }
+            l.put(img);
+        }
+    }
     if let Binding::Envelopes(sets) = &o.u {
         for (i, set) in sets.iter().enumerate() {
             let Some(first) = set.first() else { continue };

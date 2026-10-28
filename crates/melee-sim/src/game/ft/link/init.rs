@@ -8,6 +8,7 @@ use super::super::super::code::Val;
 use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::bind::{JointStack, next_joint};
+use super::super::create_model::Creator;
 use super::super::parts::{bone_from_joint, set_bone_bit, set_bone_xd};
 use super::{addr, attr, u};
 use crate::fpu::{mem, reg};
@@ -26,21 +27,21 @@ impl Running<'_> {
     /// items registered, and the optional part his `ftData` names hung on his model
     /// (`ftParts_800753D4`).
     #[doc(alias = "ftLk_Init_OnLoad")]
-    pub fn link_on_load(&mut self, gobj: GObjId) {
-        self.link_load(gobj, false);
+    pub fn link_on_load(&mut self, gobj: GObjId, by: Creator) {
+        self.link_load(gobj, false, by);
     }
 
     /// Young Link's creation, `ftCl_Init_OnLoad`: he can wall jump, then Link's (his attributes
     /// pushed by `ftLk_Init_OnLoadForCLink`), with the milk his taunt makes registered too.
     #[doc(alias = "ftCl_Init_OnLoad")]
     #[doc(alias = "ftLk_Init_OnLoadForCLink")]
-    pub fn clink_on_load(&mut self, gobj: GObjId) {
+    pub fn clink_on_load(&mut self, gobj: GObjId, by: Creator) {
         self.game.fighter_mut(gobj).can_walljump = true;
-        self.link_load(gobj, true);
+        self.link_load(gobj, true, by);
     }
 
-    /// Link's creation, or Young Link's with `clink`.
-    fn link_load(&mut self, gobj: GObjId, clink: bool) {
+    /// Link's creation, or Young Link's with `clink`, from `by`.
+    fn link_load(&mut self, gobj: GObjId, clink: bool, by: Creator) {
         let f = self.game.fighter_id(gobj);
         // `lbAnim_8001E8F8(ftData_80085E50(fp, 72))`: the animation goes through the second
         // buffer, which keeps it.
@@ -71,7 +72,12 @@ impl Running<'_> {
             .ptr(table.at(4 * kind as u32))
             .expect("Fighter_804D6540[kind]");
         let desc = self.data.ptr(entry).expect("Fighter_804D6540[kind]->x0");
-        self.attach_part_model(f, desc, joint);
+        // `ftLk_Init_OnLoad` and `ftCl_Init_OnLoad` (0x28 each) call it from the creator's.
+        let sp = match by {
+            Creator::FighterCreate => FIGHTER_CREATE_SP - 0x48,
+            Creator::Demo => DEMO_CREATE_SP - 0x30,
+        };
+        self.attach_part_model(f, desc, joint, sp - 0x28 - PARTS_COPY_BELOW_SP);
     }
 
     /// The down aerial's hit animation's length his creation writes over his loaded
@@ -108,7 +114,9 @@ impl Running<'_> {
     /// tree its joint is. The joint's descriptor is copied onto the stack with no child or
     /// sibling and loaded twice in the blend skeleton's class (`ftParts_8007482C`), so neither
     /// copy has display objects; the first becomes the part's joint, the second its blend
-    /// joint. The ID table files both under the copy's stack address.
+    /// joint. The ID table files both under the copy's stack address, `stack`, which depends on
+    /// the calls that led here: a key that names another call path's live entry would take it
+    /// over, where the original files a new one.
     #[doc(alias = "ftParts_800753D4")]
     #[doc(alias = "ftParts_80075304")]
     pub fn attach_part_model(
@@ -116,6 +124,7 @@ impl Running<'_> {
         f: FighterId,
         desc: melee_data::archive::DataRef,
         joint: melee_data::archive::DataRef,
+        stack: u32,
     ) {
         let part = usize::from(self.data.u8(desc));
         let parent = usize::from(self.data.u8(desc.at(1)));
@@ -128,7 +137,7 @@ impl Running<'_> {
                 j = next_joint(self.data, j, &mut stack).expect("a joint past the tree's end");
             }
         }
-        let key = crate::hsd::id::stack_key(STACK_SITE);
+        let key = crate::hsd::id::stack_key(stack);
         let objs = &mut self.game.objs;
         jobj::set_default_class(objs, jobj::JObjClass::FighterIntp);
         let model = jobj::load_joint_copy(objs, self.data, j, key);
@@ -335,8 +344,19 @@ impl Running<'_> {
     }
 }
 
-/// Where `ftParts_800753D4` keeps its descriptor copy, named by the function.
-const STACK_SITE: u32 = 0x8007_53D4;
+/// How far below the stack pointer it's entered with `ftParts_800753D4` keeps its descriptor
+/// copy (its frame 0x80, the copy 0x2C into it): the part's ID key, which ssbm-rs's probe of
+/// 2026-10-10_12-54-40 logs 0x54 below that pointer on every path
+/// (`$SSBM_RS_LOCAL/research/card-chain/vs-12-54-40-link-key.log`, `vs-12-54-40-8579.log`).
+pub(crate) const PARTS_COPY_BELOW_SP: u32 = 0x54;
+/// The stack pointer `Fighter_Create` (frame 0x48) is entered with from VS mode's match setup
+/// (`fn_8016E730`, `fn_8016E2BC`, `Player_80031AD0`, from `gm_Scene_Vs_OnEnter` or
+/// `gm_Scene_SuddenDeath_OnEnter`, both 0x18), and `ftDemo_CreateFighter` (0x30) from the
+/// results screen's entry (`gm_Scene_Results_OnEnter`, `fn_8017A67C`, `Player_80036F34`):
+/// the probe logs `ftParts_800753D4` entered at 0x804EE9F8 under Link's match creation (tick
+/// 2442, key 0x804EE9A4) and at 0x804EE9E8 under his results pose (tick 9880, key 0x804EE994).
+const FIGHTER_CREATE_SP: u32 = 0x804E_E9F8 + 0x28 + 0x48;
+const DEMO_CREATE_SP: u32 = 0x804E_E9E8 + 0x28 + 0x30;
 
 /// Hangs `new` on `root` the way `how` says, `ftParts_80075304`: 0 as its only child (taking
 /// its children), 1 as its first child, 2 as its next sibling (taking its later siblings as

@@ -16,17 +16,17 @@ mod common;
 
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CORNERIA, Capture,
-    DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE, Expect, FLAT_ZONE, FOUR_FD,
-    FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD,
-    FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
-    IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
-    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
-    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
-    SPECIAL_INVISIBLE_YS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
-    TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
-    reflection, scaled,
+    DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
+    Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
+    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group,
+    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC,
+    MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR,
+    PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, RESULTS_STOCK, RESULTS_TEAMS, RULES,
+    RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD,
+    SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_TIME, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -180,6 +180,20 @@ frames!(DATA_PRIZE;
     data_prize_600 600,
     data_prize_950 950,
 );
+// The album (`data-sessions/album-browse` on seven snapshots made with HAL's encoder): the
+// slots (761), the first page's thumbnails, each snapshot decoded into its image (851), the
+// second page (1151), the snapshot's menu (1801) and its view whole (2101); and the delete's
+// question (`album-delete` 1041).
+frames!(DATA_ALBUM;
+    data_album_761 761,
+    data_album_851 851,
+    data_album_1151 1151,
+    data_album_1801 1801,
+    data_album_2101 2101,
+);
+frames!(DATA_ALBUM_DELETE;
+    data_album_delete_1041 1041,
+);
 // The sound test (`sound-sessions`): a song playing with its name and number (songs 5000), a
 // category's icon in the categories (sounds 1450), a category's sounds with the sound's number
 // (sounds 4400), and a song's name in Japanese (jp 1620).
@@ -195,7 +209,7 @@ frames!(SOUND_JP;
 );
 // The challenger approach's screen (`unlock-sessions/time`): coming in (2720) and waiting
 // for A with Mewtwo's silhouette (2870). The images are identical; the transform unit's
-// memory holds a point light's direction, which no draw reads, as melee-render writes it
+// memory holds light 1's direction, which no draw reads, as melee-render writes it
 // (docs/player.md's open issues).
 macro_rules! approach_frames {
     ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
@@ -209,7 +223,7 @@ macro_rules! approach_frames {
                     Group::Standard,
                     Expect::SameImages {
                         same: [1, 1],
-                        why: common::why::LIGHT_DIRECTION,
+                        why: common::why::LIGHT_1,
                     },
                 );
             }
@@ -219,6 +233,50 @@ macro_rules! approach_frames {
 approach_frames!(UNLOCK_TIME;
     unlock_time_2720 2720,
     unlock_time_2870 2870,
+);
+// Tournament mode (`tournament-sessions`): the setup's options with the bracket of 64 shown
+// (1300) and the bracket as it comes in (1600); the entrants' list with the character grid
+// (1400) and the name tags (1700), and a match's players' screen (2700); winner-out's
+// match-up screen (1900).
+/// A Tournament frame whose images are identical but for light 1's direction in the transform
+/// unit's memory, which no draw reads ([`common::why::LIGHT_1`]).
+fn tou_frame(game: &Game, frame: u32) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1, 1],
+            why: common::why::LIGHT_1,
+        },
+        Capture::Headless,
+    );
+}
+
+macro_rules! tou_frames {
+    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                tou_frame(&$game, $frame);
+            }
+        )*
+    };
+}
+tou_frames!(TOU_BRACKET64;
+    tou_bracket64_1300 1300,
+    tou_bracket64_1600 1600,
+);
+tou_frames!(TOU_LIST;
+    tou_list_1400 1400,
+    tou_list_1700 1700,
+);
+frames!(TOU_LIST;
+    tou_list_2700 2700,
+);
+tou_frames!(TOU_WINNER;
+    tou_winner_1900 1900,
 );
 // The character and stage selects (`select-sessions`): port 1's door opening as its hand
 // takes its coin (701), Mario's costumes changed with X and Y (796, 831), a computer
