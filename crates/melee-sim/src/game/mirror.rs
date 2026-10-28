@@ -63,6 +63,11 @@ pub trait Cx {
     /// Code read the field at `path` while it was stale (a new item's variable it hadn't
     /// written, `it::Var`).
     fn stale_read(&mut self, _path: &str) {}
+    /// Whether the block is a new object's leftovers (`game::leftovers`): what its words
+    /// point into is the freed objects', not the new one's.
+    fn leftover(&self) -> bool {
+        false
+    }
 }
 
 /// A struct melee-sim mirrors from the game.

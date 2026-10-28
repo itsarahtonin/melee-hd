@@ -4,6 +4,7 @@ pub mod arwinglaser;
 pub mod bat;
 pub mod bombhei;
 pub mod capsule;
+pub mod cerebi;
 pub mod chicorita;
 pub mod climbersblizzard;
 pub mod climbersice;
@@ -325,6 +326,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pippi::run_event(r, gobj, addr)
         || porygon2::run_event(r, gobj, addr)
         || mew::run_event(r, gobj, addr)
+        || cerebi::run_event(r, gobj, addr)
         || hitodeman::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
 }
@@ -477,6 +479,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pippi::run_pred(r, gobj, addr))
         .or_else(|| porygon2::run_pred(r, gobj, addr))
         .or_else(|| mew::run_pred(r, gobj, addr))
+        .or_else(|| cerebi::run_pred(r, gobj, addr))
         .or_else(|| hitodeman::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
 }

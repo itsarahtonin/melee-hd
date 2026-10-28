@@ -512,6 +512,16 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ## Items
 
+### A rare Pokémon is recorded before it's made
+
+- **Where:** `it_8027A4D4` (the Poké Ball's draw) and `it_8027AB64` (the release), `crates/melee-sim/src/game/it/pokemon/mod.rs` (`rare`, `release`).
+- **Defect:** the draw marks the match's rare Pokémon as out (`Item_804A0E24.rare_spawned`) and records Mew or Celebi in the save (`gm_80172BC4`, `gm_80172C04`: the clock's time, pending, noted), and the release records it again, all before `Item_80268B18` makes the item, which gives nothing back when its hold kind is at its limit (`Item_8026784C`) or no GObj or block is left. The release then returns false with nothing made.
+- **Effect:** none observed: in the Celebi sessions every drawn Celebi came out. Were the spawn to fail, the match's one rare release would be spent and the save would note Mew or Celebi as seen (its special message pending; for Celebi, its trophy given at the next main menu, `gm_80173EEC`) with none on screen.
+- **melee-hd:** modeled: the records are written where the original writes them (`Running::record_rare_pokemon`), before the spawn.
+- **Fix:** record the rare Pokémon and mark it out only once `Item_80268B18` returns an item.
+- **Fix impact:** none in play; a save could no longer note a rare Pokémon never seen.
+- **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`rare`, `release`); the decomp's `it_279C.c`.
+
 ### Item creation clears one coordinate three times
 
 - **Where:** `Item_80267AA8` (a new item's variables), `crates/melee-sim/src/game/it/item.rs` (`init_vars`).

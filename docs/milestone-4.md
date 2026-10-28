@@ -5,9 +5,9 @@ A survey of what milestone 4 needs and a plan for splitting it into small agent 
 ## Status (2026-10-22, `integrate/m4-batch3`)
 
 - **Stages:** all 29 VS stages are ported, each diffed whole on its oracle matches, and the launcher offers every one with every character, with computer players and with every item kind (Big Blue's flying platforms' items since `feat/bigblue-items`).
-- **Items:** every switch kind, the Poké Ball's Pokémon, the containers' monsters, the characters' own items and the stages' items are ported, but Celebi, whose draw asks whether the memory card records every Pokémon trophy: it waits for native saves in milestone 5.
+- **Items:** every switch kind, the Poké Ball's Pokémon, the containers' monsters, the characters' own items and the stages' items are ported, but Celebi, whose draw asks whether the memory card records every Pokémon trophy: it waited for native saves, and milestone 5's task 16 ported it (2026-10-27).
 - **Computer players:** done for VS. The CPU audit names no gap: a VS computer player at every level, of every character, plays on every offered stage with any item set, and Nana with them ([the player](player.md#cpu-players-the-player-offers)).
-- **Left in the milestone:** Celebi with native saves, and the modes and menus ([Not in this sequence](#not-in-this-sequence)).
+- **Left in the milestone:** Celebi with native saves (done in milestone 5's task 16), and the modes and menus ([Not in this sequence](#not-in-this-sequence)).
 
 ## What the local replays cover
 

@@ -45,8 +45,9 @@ pub enum Replay {
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
     /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
     /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`,
-    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs` and for `tou-NAME`
-    /// `lockstep/tournament-sessions/NAME.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// for `results-NAME` `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
+    /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
+    /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
     /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -85,6 +86,10 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("tou-") {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
+                        .into();
+                }
+                if name.starts_with("celebi") {
+                    return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
                         .into();
                 }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
@@ -700,6 +705,14 @@ pub const TOU_WINNER: Game = Game {
     players: "winner-out's match-up screen (session tournament-sessions/winner)",
     replay: Replay::Session("tou-winner"),
 };
+/// Celebi out of a Poké Ball on Fountain of Dreams (`celebi-sessions/celebi1`): sparkling
+/// above the left platform, before it flies off.
+pub const CELEBI1: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "celebi1",
+    players: "Fox and three computer players, Celebi out of a Poké Ball (session celebi-sessions/celebi1)",
+    replay: Replay::Session("celebi1"),
+};
 
 /// The character select with a random computer player and the random stage
 /// (`select-sessions/random`): a door opening under a hand holding its coin, Mario's
@@ -1058,6 +1071,10 @@ pub mod why {
     /// comparison hashes from memory the copy never writes.
     pub const SCREEN_COPY: &str =
         "Pokémon Stadium's screen: a copy kept on the GPU, compared by memory it never writes";
+    /// The fighters' shadows are copies melee-gpu keeps on the GPU, which the comparison
+    /// hashes from memory the copy never writes; ssbm-rs's renderer writes them.
+    pub const SHADOW_COPY: &str =
+        "the fighters' shadows: copies kept on the GPU, compared by memory they never write";
     /// The results screen's images: copies kept on the GPU (RGB5A3, as ssbm-rs keeps them),
     /// which the comparison hashes from memory holding what their blocks held before, a
     /// few of whose bytes the heap's image doesn't know (fields of freed fighters, lights and
