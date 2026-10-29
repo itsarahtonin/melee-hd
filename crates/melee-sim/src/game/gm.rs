@@ -134,7 +134,8 @@ impl super::state::Running<'_> {
     /// `loadTrophyMetadata`).
     pub fn load_trophy_data(&mut self) {
         if !self.game.gm.trophy_data {
-            let jp = self.game.game_data.saved_language() == main_lib::LANG_JP;
+            // A replay's match has no save: its files take English names.
+            let jp = !self.files_us();
             self.game.gm.trophy_data_jp = jp;
             let name = self.game.trophy_data_file();
             self.disc_load(name, super::ft::data::MAIN_MEMORY);

@@ -277,7 +277,7 @@ impl Running<'_> {
         f.preloaded_buffers = buffers;
         let archive = |r: &Self, name: &str| r.game.ft.data.files.archive(name);
         // Named for the saved language (`lbFileGetFullName` of a name with no extension).
-        let us = self.saved_us();
+        let us = self.files_us();
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind));
         let stage = crate::game::gr::data::stage_file(grkind as i32, us)
             .map(|name| archive(self, name.trim_start_matches('/')));
