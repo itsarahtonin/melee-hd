@@ -108,6 +108,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::castle::run(game, gobj, addr) => {}
         addr if super::gr::mutecity::run(game, gobj, addr) => {}
         addr if super::gr::bigblue::run(game, gobj, addr) => {}
+        crate::game::hud::debug_menu::MENU_PROC => game.menu_proc(gobj),
         0x8006_A1BC => fighter::proc_hitlag(game, gobj),
         0x8006_A360 => fighter::proc_anim(game, gobj),
         0x8006_ABA0 => fighter::proc_cpu(game, gobj),

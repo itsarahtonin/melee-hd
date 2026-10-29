@@ -39,6 +39,7 @@ pub const GS_APPROACH: u8 = 0x29;
 pub const GS_MOVIE_OPENING: u8 = 0x1C;
 pub const GS_PROG_SCAN: u8 = 0x28;
 pub const GS_MEMCARD: u8 = 0x2A;
+pub const GS_DEBUG_MENU: u8 = crate::game::hud::debug_menu::GS_DEBUG_MENU;
 
 /// `lbCardGame_DecideGameMode`, the override the boot mode leaves.
 pub const DECIDE_GAME_MODE: CodeRef = CodeRef(0x8001_CE78);
@@ -165,6 +166,9 @@ enum Hook {
     TouExitSuddenDeath,
     TouEnterResults,
     TouExitResults,
+    /// `gmdebugmode.c`'s states' handlers.
+    DebugEnterMenu0,
+    DebugUnported(&'static str),
 }
 
 /// Whether `mode` is a Special Melee mode with VS mode's states (`gmsupersudden.c` and the
@@ -495,6 +499,89 @@ fn states(mode: u8) -> &'static [StateDesc] {
             scene: GS_RESULTS,
         },
     ];
+    // `gm_Mode_Debug_States`: the debug menu's three pages, then the scenes its entries go
+    // to, each back to the first page.
+    const fn debug(id: u8, on_enter: Option<Hook>, on_exit: Option<Hook>, scene: u8) -> StateDesc {
+        StateDesc {
+            id,
+            preload: 2,
+            on_enter,
+            on_exit,
+            scene,
+        }
+    }
+    const DEBUG: [StateDesc; 15] = [
+        debug(0, Some(Hook::DebugEnterMenu0), None, GS_DEBUG_MENU),
+        debug(
+            1,
+            Some(Hook::DebugUnported("onEnterMenu1")),
+            None,
+            GS_DEBUG_MENU,
+        ),
+        debug(
+            2,
+            Some(Hook::DebugUnported("onEnterMenu2")),
+            None,
+            GS_DEBUG_MENU,
+        ),
+        debug(
+            3,
+            Some(Hook::DebugUnported("onEnterPrize")),
+            Some(Hook::DebugUnported("onExitPrize")),
+            GS_PRIZE,
+        ),
+        debug(4, Some(Hook::DebugUnported("onEnterVs")), None, GS_VS),
+        debug(
+            5,
+            Some(Hook::DebugUnported("onEnterResults0")),
+            Some(Hook::DebugUnported("onExitResults0")),
+            GS_RESULTS,
+        ),
+        debug(
+            6,
+            Some(Hook::DebugUnported("onEnterIntroEasy")),
+            Some(Hook::DebugUnported("onExitIntro")),
+            0x20,
+        ),
+        debug(
+            7,
+            Some(Hook::DebugUnported("onEnterIntroAllstar")),
+            Some(Hook::DebugUnported("onExitIntro")),
+            0x21,
+        ),
+        debug(8, None, Some(Hook::DebugUnported("onExitIntro")), 0x23),
+        debug(
+            9,
+            Some(Hook::DebugUnported("onEnterGameOver")),
+            Some(Hook::DebugUnported("onExitIntro")),
+            0x22,
+        ),
+        debug(
+            10,
+            Some(Hook::DebugUnported("onEnterApproach")),
+            Some(Hook::DebugUnported("onExitIntro")),
+            GS_APPROACH,
+        ),
+        debug(
+            11,
+            Some(Hook::DebugUnported("onEnterResults1")),
+            Some(Hook::DebugUnported("onExitResults1")),
+            GS_RESULTS,
+        ),
+        debug(
+            12,
+            None,
+            Some(Hook::DebugUnported("onExitIntro")),
+            GS_MOVIE_OPENING,
+        ),
+        debug(
+            13,
+            Some(Hook::DebugUnported("onEnterMemCard")),
+            Some(Hook::DebugUnported("onExitMemCard")),
+            GS_MEMCARD,
+        ),
+        debug(14, None, None, 0x2B),
+    ];
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
         crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
@@ -512,6 +599,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         GM_OPENING_MV => &OPENING,
         GM_TITLE => &TITLE,
         GM_PROGRESSIVE_SCAN => &PROG_SCAN,
+        super::GM_DEBUG => &DEBUG,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -539,6 +627,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         m if vs_like(m) => (false, Some(Hook::SpecialOnLoad), None),
         GM_CAMERA_MODE => (true, None, None),
         GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
+        super::GM_DEBUG => (false, None, None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -770,6 +859,8 @@ impl Running<'_> {
                 super::tournament::ALT_ON_ENTER,
                 super::tournament::ALT_ON_FRAME,
             ),
+            // No frame function: the menus' process runs the scene.
+            GS_DEBUG_MENU => (crate::game::hud::debug_menu::ON_ENTER, CodeRef(0)),
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -803,6 +894,7 @@ impl Running<'_> {
             super::tournament::SETUP_ON_ENTER => self.tou_setup_on_enter(),
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
+            crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
             _ => unreachable!(),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -874,8 +966,8 @@ impl Running<'_> {
             crate::game::ty::GS_TOY_GALLERY
             | crate::game::ty::GS_TOY_LOTTERY
             | crate::game::ty::GS_TOY_COLLECTION => {}
-            // `ifPrize_Scene_OnExit` does nothing.
-            GS_PRIZE => {}
+            // `ifPrize_Scene_OnExit` does nothing; the debug menu has no exit.
+            GS_PRIZE | GS_DEBUG_MENU => {}
             GS_APPROACH => self.approach_on_exit(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
@@ -1037,6 +1129,8 @@ impl Running<'_> {
             Hook::TouExitSuddenDeath => self.tou_exit_sudden_death(),
             Hook::TouEnterResults => self.tou_enter_results(),
             Hook::TouExitResults => self.tou_exit_results(),
+            Hook::DebugEnterMenu0 => self.debug_mode_enter_menu0(),
+            Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;
     }

@@ -475,6 +475,100 @@ impl Comparer<'_> {
             Some(c) => self.cobj("hud devtext cobj", c, cobj),
             None => self.check("hud devtext cobj", "CObj", 0, cobj),
         }
+        self.debug_menus();
+    }
+
+    /// The debug menus (`textlib_1.c`'s pool and statics) and their variables
+    /// (`un_803FA258` and the words their tables name, `gmdebugmode.c`'s menu data).
+    fn debug_menus(&mut self) {
+        use melee_sim::game::hud::debug_menu::SETTINGS;
+        use melee_sim::game::hud::debug_tables::WORDS;
+        let mem = self.mem;
+        let game = self.game;
+        let d = &game.hud.devtext;
+        let pool = sym("devtext_pool");
+        let addr = |slot: Option<u32>| {
+            slot.map_or(0, |s| d.menus.as_ref().expect("the menus' pool").addr(s))
+        };
+        let text_at = |t: Option<u8>| t.map_or(0, |t| pool + DEVTEXT_SIZE * u32::from(t));
+        if let Some(menus) = &d.menus {
+            for (slot, m) in menus.iter() {
+                let a = menus.addr(slot);
+                let path = format!("debug menu {slot} at {a:#x}");
+                self.check(
+                    &path,
+                    "cursor, flags, screen, table, callback, submenu, under",
+                    (
+                        m.cursor,
+                        m.flags,
+                        text_at(m.text),
+                        m.table,
+                        m.cb,
+                        addr(m.prev),
+                        addr(m.next),
+                    ),
+                    (
+                        mem.b(a),
+                        mem.b(a + 1),
+                        mem.w(a + 4),
+                        mem.w(a + 8),
+                        mem.w(a + 0xC),
+                        mem.w(a + 0x18),
+                        mem.w(a + 0x1C),
+                    ),
+                );
+                self.compare_gobj(&format!("{path} gobj"), m.gobj, mem.w(a + 0x10));
+                // The process: on the menu's GObj, running the menus' process.
+                let p = mem.w(a + 0x14);
+                let theirs = (p != 0).then(|| mem.w(p + 0x14));
+                self.check(
+                    &path,
+                    "process",
+                    m.proc.map(|_| melee_sim::game::hud::debug_menu::MENU_PROC),
+                    theirs,
+                );
+                self.check(&path, "glyphs' block", m.buf, mem.w(text_at(m.text) + 0x28));
+            }
+        }
+        self.check(
+            "debug menus",
+            "first, current, entry, stick wait",
+            (
+                addr(d.menu_top),
+                addr(d.menu_current),
+                d.menu_entry.map_or(0, |(t, i)| t + 0x20 * u32::from(i)),
+                d.stick_wait,
+            ),
+            (
+                mem.w(sym("un_804D6E40")),
+                mem.w(sym("un_804D6E44")),
+                mem.w(sym("un_804D6E48")),
+                mem.b(sym("un_804D6E4C")),
+            ),
+        );
+        let v = &game.hud.debug;
+        if let Some(at) = (0..0x190).find(|&i| v.settings[i] != mem.b(SETTINGS + i as u32)) {
+            self.diff(
+                "un_803FA258",
+                &format!("byte {at:#x}"),
+                v.settings[at],
+                mem.b(SETTINGS + at as u32),
+            );
+        }
+        for (i, &(a, _)) in WORDS.iter().enumerate() {
+            self.check(
+                "debug menus' words",
+                &format!("{a:#010x}"),
+                v.words[i],
+                mem.w(a),
+            );
+        }
+        self.check(
+            "gmdebugmode menu_enter_data",
+            "table, callback",
+            game.debug_mode.menu_enter,
+            (mem.w(0x804D_6890), mem.w(0x804D_6894)),
+        );
     }
 
     /// A GObj pointer: paired with ours, and compared in full if the scheduler doesn't
