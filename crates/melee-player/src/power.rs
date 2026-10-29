@@ -139,6 +139,8 @@ pub fn setup(card: Vec<u8>, power_on: u64) -> Setup {
         dtv: false,
         sram_flags: session::SRAM_FLAGS_DEFAULT,
         card_pull: None,
+        // Retail's debug level: the developer setting (milestone 5's task 19) isn't offered yet.
+        develop: None,
     }
 }
 

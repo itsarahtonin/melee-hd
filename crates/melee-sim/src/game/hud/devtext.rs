@@ -92,10 +92,7 @@ pub struct DevText {
     pub next: Option<u8>,
 }
 
-/// A debug menu's state (`un_80304138_objalloc_t`): the debug menus aren't ported, only
-/// their pool, which every scene resets.
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
-pub struct DebugMenu;
+pub use super::debug_menu::DebugMenu;
 
 /// The system's globals (`textdraw.c`'s statics and `textlib_1.c`'s menu pool).
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
@@ -118,6 +115,14 @@ pub struct DevTexts {
     pub gobj: Option<GObjId>,
     /// `un_804A2688`: the debug menus' pool, once a scene has set it up.
     pub menus: Option<Pool<DebugMenu, { pool_kind(Kind::DebugMenu) }>>,
+    /// `un_804D6E40`: the first menu, whose submenus the menus' process walks.
+    pub menu_top: Option<super::debug_menu::MenuRef>,
+    /// `un_804D6E44`: the menu being set up, or the last one the controller left.
+    pub menu_current: Option<super::debug_menu::MenuRef>,
+    /// `un_804D6E48`: the entry whose callback runs (its table's address and index).
+    pub menu_entry: Option<(u32, u8)>,
+    /// `un_804D6E4C`: frames until the stick repeats a direction.
+    pub stick_wait: u8,
 }
 
 /// What drawing a screen asks of the presentation layer, its floats as the registers
@@ -200,6 +205,7 @@ impl DevTexts {
             Link::DrawList => self.draw_list,
             Link::PoolHead => self.pool_head,
             Link::NextOf(i) => self.pool[usize::from(i)].next,
+            Link::Held(i) => Some(i),
         }
     }
 
@@ -208,6 +214,7 @@ impl DevTexts {
             Link::DrawList => self.draw_list = v,
             Link::PoolHead => self.pool_head = v,
             Link::NextOf(i) => self.text(i).next = v,
+            Link::Held(_) => {}
         }
     }
 
@@ -299,6 +306,9 @@ pub enum Link {
     DrawList,
     PoolHead,
     NextOf(u8),
+    /// A debug menu's own pointer to its screen (`&menu->x4`), which the menu frees right
+    /// after: a write through it goes nowhere the game reads.
+    Held(u8),
 }
 
 impl DevText {

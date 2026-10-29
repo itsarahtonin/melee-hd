@@ -7,6 +7,10 @@
 
 pub mod all;
 pub mod announce;
+pub mod debug_items;
+pub mod debug_menu;
+pub mod debug_sound;
+pub mod debug_tables;
 pub mod devtext;
 pub mod magnify;
 pub mod nametag;
@@ -60,6 +64,9 @@ pub struct ModelDesc {
 pub struct Hud {
     /// The debug text screens (`textdraw.c`, `textlib.c`).
     pub devtext: devtext::DevTexts,
+    /// The debug menus' variables (`if_2FFC.c`'s `un_803FA258` and the words their tables
+    /// name).
+    pub debug: debug_menu::DebugVars,
     /// `ifAll_804A0FD8`: the HUD's camera and light and the places its parts go.
     pub all: ifAll_804A0FD8_t,
     /// `ifall.c`'s `hidden`.
@@ -111,6 +118,7 @@ impl Default for Hud {
         let (wait, once) = (announce::WAIT, announce::ONCE);
         Hud {
             devtext: Default::default(),
+            debug: Default::default(),
             all: Default::default(),
             hidden: false,
             archive: None,

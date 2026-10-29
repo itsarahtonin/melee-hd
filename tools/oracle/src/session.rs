@@ -10,7 +10,7 @@ use melee_capture::compare::PastAddrs;
 use melee_capture::import::{Maps, sym};
 use melee_data::disc::Disc;
 use melee_sim::game::code::{Val, stubs};
-use melee_sim::game::session::{Session, Setup};
+use melee_sim::game::session::{Develop, Session, Setup};
 use melee_sim::game::state::Game;
 use melee_sim::input::controller::PadData;
 use melee_sim::input::pad::{ERR_NONE, PadStatus};
@@ -626,6 +626,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut card_path: Option<PathBuf> = None;
     let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
+    let mut dblevel: Option<i32> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
     let mut heap_log: Option<String> = None;
@@ -646,6 +647,16 @@ pub fn session(args: &[&str]) -> ExitCode {
                     .split(',')
                     .map(|f| f.parse::<u64>().expect("--card-pull FIELD[,FIELD]"));
                 card_pull = Some((f.next().unwrap(), f.next()));
+            }
+            // The debug level alone, as ssbm-rs's `DBLEVEL=N` raises it for a run whose
+            // recording doesn't keep it (no `/develop.ini` found).
+            "--dblevel" => {
+                dblevel = Some(
+                    it.next()
+                        .and_then(|t| t.parse().ok())
+                        .filter(|l| (0..=4).contains(l))
+                        .expect("--dblevel LEVEL (0 to 4)"),
+                )
             }
             "--from" => {
                 from = Some(
@@ -719,7 +730,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--dblevel N] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
@@ -760,6 +771,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             dtv: rec.dtv,
             sram_flags: rec.sram_flags,
             card_pull,
+            develop: Develop::from_recording(rec.develop),
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");
@@ -786,6 +798,16 @@ pub fn session(args: &[&str]) -> ExitCode {
                 c.len()
             ))
     );
+    if let Some(level) = dblevel {
+        setup.develop = Some(Develop { level, ini: false });
+    }
+    if let Some(d) = setup.develop {
+        println!(
+            "the developer setting: DbLevel {}{}",
+            d.level,
+            if d.ini { ", /develop.ini found" } else { "" }
+        );
+    }
     if mutation == Some(Mutation::PowerOn) {
         setup.power_on = 0;
     }

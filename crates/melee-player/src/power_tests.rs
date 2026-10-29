@@ -54,6 +54,7 @@ fn a_played_session_records_its_reads_again() {
                 dtv: rec.dtv,
                 sram_flags: rec.sram_flags,
                 card_pull: None,
+                develop: melee_sim::game::session::Develop::from_recording(rec.develop),
             });
             let d = melee_data::disc::Disc::open(&disc).unwrap();
             let mut console = crate::power::Live::new(

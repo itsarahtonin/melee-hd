@@ -53,37 +53,10 @@ pub const UNITS: &[&str] = &[
 /// of whose stops the audit names.
 pub const MODULES: &[&str] = &["gm/stamina", "ft/co/stamina", "gm/special"];
 
-const AFTER: &str = "the mode's Sudden Death after a tie and its results' exit (Stamina Mode's match's exit), through VS mode's gmVsMelee_EnterSuddenDeath, gmVsMelee_ExitSuddenDeath, gmVsMelee_ExitResults and gm_80168710 (milestone 5's task 9); the launcher starts the match from its settings as the VS entry would (Special::enter_vs) and returns at its end";
 const HANDS: &str = "Master Hand and Crazy Hand play only in the single-player modes";
 
 /// What of the units no match from the launcher reaches, and why.
-pub const UNREACHED: &[(&str, &str)] = &[
-    ("gm_801B8CC4", AFTER),
-    ("gm_801B8CF4", AFTER),
-    ("gm_801B8D34", AFTER),
-    ("gm_801B8ED0", AFTER),
-    ("gm_801B8F04", AFTER),
-    ("gm_801B8F44", AFTER),
-    ("gm_801B90E0", AFTER),
-    ("gm_801B9114", AFTER),
-    ("gm_801B9154", AFTER),
-    ("gm_801BA024", AFTER),
-    ("gm_801BA058", AFTER),
-    ("gm_801BA098", AFTER),
-    ("gm_801BA224", AFTER),
-    ("gm_801BA258", AFTER),
-    ("gm_801BA298", AFTER),
-    ("onEnterSuddenDeath", AFTER),
-    ("onExitSuddenDeath", AFTER),
-    ("onExitResults", AFTER),
-    ("gm_801BA61C", AFTER),
-    ("gm_801BA650", AFTER),
-    ("gm_801BA690", AFTER),
-    ("gm_801BA814", AFTER),
-    ("gm_801BA848", AFTER),
-    ("gm_801BA888", AFTER),
-    ("a hand's stamina knockout", HANDS),
-];
+pub const UNREACHED: &[(&str, &str)] = &[("a hand's stamina knockout", HANDS)];
 
 /// What a mode's match reaches that isn't ported.
 pub const MISSING: &[ModeGap] = &[];

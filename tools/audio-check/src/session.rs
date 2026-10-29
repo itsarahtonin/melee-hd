@@ -12,7 +12,7 @@ use std::path::Path;
 use melee_audio::Mixer;
 use melee_data::disc::Disc;
 use melee_sim::game::inputs::Recording;
-use melee_sim::game::session::{Session, Setup};
+use melee_sim::game::session::{Develop, Session, Setup};
 use melee_sim::game::vs_match::DiscFile;
 use melee_sim::input::controller::PadData;
 
@@ -104,6 +104,7 @@ pub fn run(args: &[String]) -> Result<bool, String> {
         dtv: rec.dtv,
         sram_flags: rec.sram_flags,
         card_pull: None,
+        develop: Develop::from_recording(rec.develop),
     };
     let disc_path = std::env::var("SSBM_DISC").map_err(|_| "SSBM_DISC names the disc")?;
     let disc = Disc::open(&disc_path).map_err(|e| format!("{disc_path}: {e}"))?;
