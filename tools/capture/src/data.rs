@@ -18,6 +18,9 @@ const POPUP_CLEANUP: u32 = 0x8024_0B18;
 const D2_FREE: u32 = 0x8024_5028;
 const D3_FREE: u32 = 0x8024_6F0C;
 
+/// `gmdebugmode.c`'s `prize_enter_data`.
+const DEBUG_PRIZE_ENTER: u32 = 0x8048_542C;
+
 impl Comparer<'_> {
     /// The user data block at `t + 0x2C` with `HSD_Free` as its release: its address, or
     /// none when it isn't ours.
@@ -351,6 +354,7 @@ impl Comparer<'_> {
             None => 0,
             Some(melee_sim::game::hud::prize::EntryRef::Static) => sym("if_Scene_Prize_EnterData"),
             Some(melee_sim::game::hud::prize::EntryRef::Heap(a)) => a,
+            Some(melee_sim::game::hud::prize::EntryRef::Debug) => DEBUG_PRIZE_ENTER,
         }
     }
 
@@ -361,6 +365,9 @@ impl Comparer<'_> {
         // The queue's first notice is only the prize state's since it ran.
         if p.first != Default::default() {
             self.prize_entry("if_Scene_Prize_EnterData", p.first, at);
+        }
+        if p.debug_first != Default::default() {
+            self.prize_entry("prize_enter_data", p.debug_first, DEBUG_PRIZE_ENTER);
         }
         let q = sym("gm_8049E558");
         let theirs: Vec<u8> = (0..0x170).map(|i| self.u8(q + i)).collect();

@@ -294,12 +294,40 @@ impl Running<'_> {
                 self.game.game_data.increment_power_count();
             }
         }
-        assert!(
-            self.game.gm.db_level <= 2,
-            "a debug level's unlock-all (gmMainLib_8015FA34) isn't ported"
-        );
+        if self.game.gm.db_level > 2 && self.game.gm.develop_ini {
+            self.debug_unlock_all();
+        }
         self.game.sync_unlocks();
         self.setup_audio_video(None);
+    }
+
+    /// HAL's debug unlock-all, which the save's load runs at the debug ROM's level and above
+    /// on a development disc (`/develop.ini` found): every feature (`x186C`), character
+    /// (`gm_80164F18`) and stage (`gm_8016468C`), every special message not yet announced
+    /// stamped now and announced but not pending (`gm_8017297C`), and every trophy's record
+    /// (`gm_801741FC`).
+    #[doc(alias = "gm_80164F18")]
+    #[doc(alias = "gm_8016468C")]
+    #[doc(alias = "gm_8017297C")]
+    #[doc(alias = "gm_801741FC")]
+    pub fn debug_unlock_all(&mut self) {
+        let s = &mut self.game.game_data.thing.save_data;
+        s.x186C = 0xFF;
+        s.unlocked_characters |= (1 << 11) - 1;
+        s.x186A |= (1 << 11) - 1;
+        for i in 0..0x42 {
+            if !self.message_noted(i) {
+                let now = self.clock_seconds();
+                let s = &mut self.game.game_data.thing.save_data;
+                s.x1B80[i as usize] = now;
+                s.x1B4C[(i / 32) as usize] |= 1 << (i % 32);
+                s.x1B40[(i / 32) as usize] &= !(1 << (i % 32));
+            }
+        }
+        let s = &mut self.game.game_data.thing.save_data;
+        for i in 0..0x12C {
+            s.x1B58[i / 32] |= 1 << (i % 32);
+        }
     }
 
     /// The real-time clock's seconds now (`lbTime_GetTimeInSeconds`): the code's time base

@@ -58,7 +58,6 @@ pub fn character(kind: u8) -> Option<&'static Character> {
     CHARACTERS.iter().find(|c| c.kind == kind)
 }
 
-const DEMO: &str = "the demo fighters' items (ftDemo_CreateFighter's motion table: results and intros, never a match), whose spawns set the command variables that choose these states";
 const BLASTER_DEMO_STATE: &str = "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them";
 const BLASTER_STATE_9: &str = "the blaster's state 9, which its pickup (itFoxBlaster_Logic96_PickedUp) enters for its owner's actions 1, 2, 4, 5 and 9 (it_803F6E68); the pickup runs only from Item_8026AB54 in the blaster's spawns, and a match's spawn (it_802AE8A8) follows the owner's entry into the neutral special's start on the ground or in the air (ftFx_SpecialN_Enter, ftFx_SpecialAirN_Enter, Kirby's ftKb_SpecialNFx_800FE100 and ftKb_SpecialNFx_800FE240: actions 0 and 3) or comes in ThrowB, ThrowHi or ThrowLw (ftFx_Throw_Anim: 6, 7 and 8); a blaster let go is destroyed, never lies free to be picked up again";
 const BLASTER_STATES: [(&str, &str); 5] = [
@@ -68,23 +67,16 @@ const BLASTER_STATES: [(&str, &str); 5] = [
     ("itFoxblaster_UnkMotion10_Phys", BLASTER_DEMO_STATE),
     ("itFoxblaster_UnkMotion10_Coll", BLASTER_DEMO_STATE),
 ];
-const PILL_HELD: &str = "the pill's held states (3 to 6): its spawns for the demo fighters (itDrMarioPill_802C09C4, itDrMarioPill_802C1180: msid + 4) and its pickup (state 6) enter them, and the pickup runs only from Item_8026AB54 in itDrMarioPill_802C09C4 (msid 2), the demo fighters' spawn; every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up";
-const PILL_HELD_STATES: [(&str, &str); 4] = [
-    ("itDrMarioPill_PickedUp", PILL_HELD),
-    ("itDrMarioPill_Motion6_Anim", PILL_HELD),
-    ("itDrMarioPill_Motion6_Phys", PILL_HELD),
-    ("itDrMarioPill_Motion6_Coll", PILL_HELD),
-];
+const PILL_PICKED_UP: (&str, &str) = (
+    "itDrMarioPill_PickedUp",
+    "the pill's pickup (state 6) runs only from Item_8026AB54 in itDrMarioPill_802C09C4 with msid 2, which only the sleeping demo pose passes (ftCo_800BF108, ftDemo_CreateFighter's pose 6: the single-player modes' screens, never a VS match's results, whose winners take poses 0 to 2 and losers 4); the results' second pose (ftCo_800BED88) passes 1 and 0, and every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up",
+);
 const NO_HITBOX: &str = "every state's script of the kind opens no hitbox, and no code opens one (only the Flipper's, the red shell's and the hammer's own code turn item hitboxes on outside a script), so nothing absorbs it or clanks with it: the absorb test (ftColl_8007925C) and the clanks (ftColl_80077970, it_8026FE68) meet only live hitboxes";
 const NO_CLANK: &str = "every hitbox the kind's state scripts open has its clank bit (x40_b0) clear, and an item's box clanks with a fighter's (ftColl_8007925C, then ftColl_80077970) or another item's (it_802706D0, then it_8026FE68) only when both boxes have it; its element is never the inert one, whose touches take the other branch";
 const PK_FLASH_HITS: [(&str, &str); 3] = [
     ("itNesspkflash_Logic102_Absorbed", NO_HITBOX),
     ("itNesspkflash_Logic102_Clanked", NO_HITBOX),
     ("itNessPKFlashExplode_Logic103_Clanked", NO_CLANK),
-];
-const PILL_DEMO: [(&str, &str); 2] = [
-    ("itDrMarioPill_802C09C4", DEMO),
-    ("itDrMarioPill_802C1180", DEMO),
 ];
 const PK_FLASH_KIND: (&str, &str) = (
     "itNesspkflash_UnkMotion0_Anim on another kind",
@@ -152,18 +144,13 @@ pub const CHARACTERS: &[Character] = &[
         ],
         unreached: &[
             PK_FLASH_KIND,
-            PILL_DEMO[0],
-            PILL_DEMO[1],
             ARROW_OWNER,
             BLASTER_STATES[0],
             BLASTER_STATES[1],
             BLASTER_STATES[2],
             BLASTER_STATES[3],
             BLASTER_STATES[4],
-            PILL_HELD_STATES[0],
-            PILL_HELD_STATES[1],
-            PILL_HELD_STATES[2],
-            PILL_HELD_STATES[3],
+            PILL_PICKED_UP,
             PK_FLASH_HITS[0],
             PK_FLASH_HITS[1],
             PK_FLASH_HITS[2],
@@ -326,14 +313,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 22,
         items: &[49, 84],
-        unreached: &[
-            PILL_DEMO[0],
-            PILL_DEMO[1],
-            PILL_HELD_STATES[0],
-            PILL_HELD_STATES[1],
-            PILL_HELD_STATES[2],
-            PILL_HELD_STATES[3],
-        ],
+        unreached: &[PILL_PICKED_UP],
         unsure: &[],
         missing: &[],
     },

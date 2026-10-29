@@ -133,7 +133,7 @@ fn run(args: Vec<String>) -> ExitCode {
                 "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"
             );
             eprintln!(
-                "       melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--from TICK] [--ticks N] [--all] [--scenes]"
+                "       melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--dblevel N] [--from TICK] [--ticks N] [--all] [--scenes]"
             );
             eprintln!(
                 "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|read=N]"

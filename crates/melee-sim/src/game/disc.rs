@@ -258,10 +258,22 @@ impl Running<'_> {
     }
 
     fn take_preloaded_entry(&mut self, entry_num: i32) -> Option<usize> {
+        let level = self.game.gm.db_level;
         let d = self.dvd_mut();
-        let i = d.cache.entries.iter().position(|e| {
-            e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num
-        })?;
+        let Some(i) =
+            d.cache.entries.iter().position(|e| {
+                e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num
+            })
+        else {
+            // `lbDvd_8001819C`'s check, above retail's level, that a mode expecting its files
+            // preloaded finds each (its other caller, `lbDvd_GetPreloadedArchive` alone, is
+            // only ever asked for a file the cache holds).
+            assert!(
+                !(level != 0 && d.cache.preloaded),
+                "the original's assertion failed: lbdvd.c:948 (entry {entry_num} is not PRELOADed)"
+            );
+            return None;
+        };
         if d.cache.entries[i].state == 1 {
             d.cache.entries[i].load_score = 8980;
         }

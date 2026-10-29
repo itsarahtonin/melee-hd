@@ -388,6 +388,8 @@ pub struct Game {
     pub gm: gm::Globals,
     /// The HUD and the debug text (`melee/if`).
     pub hud: super::hud::Hud,
+    /// The debug mode's statics (`gmdebugmode.c`).
+    pub debug_mode: super::hud::debug_menu::DebugMode,
     /// Refraction's textures and users (`lbrefract.c`).
     pub refract: crate::lb::refract::Refract,
     /// The background flash (`lbbgflash.c`, `lb_0219.c`).
