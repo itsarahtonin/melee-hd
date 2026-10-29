@@ -319,11 +319,22 @@ impl Game {
         }
     }
 
-    /// Whether a port's controller pressed Start this frame, as the pause checks test it on a
-    /// retail disc.
+    /// Whether a port's controller pressed the pause buttons this frame: Start on a retail
+    /// disc, D-pad up with X held from the debug ROM's level.
     fn start_pressed(&self, port: usize) -> bool {
         let p = &self.pads.copy[port];
-        p.err == 0 && p.trigger & 0x1000 != 0
+        p.err == 0 && self.pause_pressed(port)
+    }
+
+    /// The pause buttons on a port's copy status, whatever its error: Start, or from the
+    /// debug ROM's level D-pad up with X held (`gm_DefaultVSGetPauser` and the others).
+    pub fn pause_pressed(&self, port: usize) -> bool {
+        let p = &self.pads.copy[port];
+        if self.gm.db_level >= super::DB_DEBUG_ROM {
+            p.trigger & 0x0008 != 0 && p.button & 0x0400 != 0
+        } else {
+            p.trigger & 0x1000 != 0
+        }
     }
 
     /// The port of a player pausing the match, or -1, `gm_DefaultVSGetPauser`: in
@@ -331,7 +342,6 @@ impl Game {
     /// slot plays with its fighter up.
     #[doc(alias = "gm_DefaultVSGetPauser")]
     pub fn vs_pauser(&self) -> i32 {
-        self.assert_retail();
         if super::is_1p_mode(self)
             || self.game_mode == GM_CHALLENGER_APPROACH
             || (self.game_mode == GM_VS && self.machine.routing.curr_state_id == 0x81)
@@ -362,7 +372,6 @@ impl Game {
 
     /// The port of a player unpausing, or -1 (the inline `gm_GetPlayerPressingUnpause`).
     fn vs_unpauser(&self) -> i32 {
-        self.assert_retail();
         (0..4)
             .find(|&p| self.start_pressed(p))
             .map_or(-1, |p| p as i32)
@@ -919,12 +928,25 @@ impl Running<'_> {
         }
     }
 
-    /// Ends the match from the pause menu, `fn_8016CF4C`.
+    /// Ends the match from the pause menu, `fn_8016CF4C`: at once, or from the debug ROM's
+    /// level (but for a retry) unpaused into the match's end as an outcome ends it, its
+    /// frozen frames one fewer than the rules'.
     #[doc(alias = "fn_8016CF4C")]
     pub fn vs_quit(&mut self, slot: i32, outcome: u8) {
         self.game.hide_pause(slot);
         self.game.vs.state.match_result = outcome;
-        self.game.assert_retail();
+        if outcome != OUTCOME_RETRY && self.game.gm.db_level >= super::DB_DEBUG_ROM {
+            self.game.clear_db_pause_flag(1);
+            let xd = self.game.vs.start.xD;
+            if xd > 1 {
+                self.game.vs.state.unk_30 = xd - 1;
+            }
+            self.vs_end();
+            self.lb_audio_reset_flush();
+            self.game.set_db_pause_flag(4);
+            self.game.vs.state.unk_0 = 1;
+            return;
+        }
         self.vs_end();
         self.game.end_scene();
     }
@@ -933,7 +955,16 @@ impl Running<'_> {
     /// quit buttons, pausing, team stock sharing, the outcome, and the clock.
     #[doc(alias = "fn_8016CFE0")]
     pub fn vs_frame(&mut self) {
-        self.game.assert_retail();
+        // From the debug ROM's level, L, R, A and Start on the first controller while a
+        // debug frame step is pending end the match at once.
+        let quit = 0x0040 | 0x0020 | 0x0100 | 0x1000;
+        if self.game.gm.db_level >= super::DB_DEBUG_ROM
+            && self.game.db_frame_step(0)
+            && self.game.pads.copy[0].button & quit == quit
+        {
+            self.vs_end();
+            self.game.end_scene();
+        }
         for (slot, sub) in self.game.respawns_due() {
             self.respawn(slot, sub);
         }
@@ -941,7 +972,12 @@ impl Running<'_> {
         self.game.vs_tick_platforms();
         if self.game.db_pause_flag(1) {
             let unpauser = self.game.vs_unpauser();
-            let quit = 0x0040 | 0x0020 | 0x0100 | 0x1000;
+            // L, R and A, and Start but from the debug ROM's level.
+            let quit = if self.game.gm.db_level >= super::DB_DEBUG_ROM {
+                0x0040 | 0x0020 | 0x0100
+            } else {
+                0x0040 | 0x0020 | 0x0100 | 0x1000
+            };
             let s = &self.game.vs;
             let pauser = s.state.pauser as u8;
             if s.start.x3_4 && s.state.pause_timer == 0 && s.state.unk_3 == 0 {
@@ -1089,11 +1125,8 @@ impl Running<'_> {
                 if !g.playback_stock_steal(port as u8) {
                     continue;
                 }
-            } else {
-                g.assert_retail();
-                if g.pads.copy[usize::from(port as u8)].trigger & 0x1000 == 0 {
-                    continue;
-                }
+            } else if !g.pause_pressed(usize::from(port as u8)) {
+                continue;
             }
             let team = g.player_team(i);
             let donor = (0..6)
@@ -1716,8 +1749,7 @@ impl Running<'_> {
     /// one, and the whole sequence by the sessions' matches from the menus.
     #[doc(alias = "fn_8016E730")]
     pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives) {
-        // `db_Setup` sets the debug menus up; on a retail disc it does nothing that lasts.
-        self.game.assert_retail();
+        self.db_setup();
         if let Some(seed) = self.game.playback.as_ref().map(|p| p.start_seed) {
             self.playback_start(seed);
         }
@@ -1764,7 +1796,9 @@ impl Running<'_> {
         super::super::gr::setup::on_load(self, grkind);
         self.enable_match_camera();
         super::super::camera::snap(self);
-        self.disc_load("GmPause.usd", MAIN_MEMORY);
+        // `GmPause` and `IfAll` are named for the saved language (`lbFileGetFullName`).
+        let us = self.saved_us();
+        self.disc_load(if us { "GmPause.usd" } else { "GmPause.dat" }, MAIN_MEMORY);
         super::pause::create(self, files.gm_pause);
         code::call(self, addr::SFX_SETUP_CROWD_SFX, &[]);
         if let Some(f) = self.game.vs.start.on_unpause_override {
@@ -1773,7 +1807,17 @@ impl Running<'_> {
         }
         // `IfAll` stays loaded from before the match; the HUD's setup loads `SdIntro.dat` and
         // `IfCoGet.dat`.
-        self.take_cached_named("IfAll.usd");
+        // `lbArchive_80016F80`: from the preload cache, or in a session's match from the
+        // disc into the scene's heap when the cache hasn't it (a debug VS match in the
+        // saved language the cache didn't preload for).
+        let if_all = if us { "IfAll.usd" } else { "IfAll.dat" };
+        if self.game.ft.data.files.from_cache {
+            let (entrynum, _) = self.game.ft.data.files.entry(if_all);
+            self.take_preloaded(entrynum);
+            self.disc_load(if_all, MAIN_MEMORY);
+        } else {
+            self.take_cached_named(if_all);
+        }
         self.create_hud(files.hud);
         self.bg_flash_init(0xFF, files.lb_bf);
         if let Some(f) = d.rules.on_match_start {

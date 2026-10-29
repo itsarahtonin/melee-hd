@@ -217,8 +217,10 @@ pub fn game_cache_files() -> Vec<String> {
     for i in 0..0x1D {
         let st = crate::game::gm::opening::stage_select_kind(i);
         let gr = crate::lb::audio::ground_kind(i32::from(st)) as i32;
-        if let Some(n) = crate::game::gr::data::stage_data(gr).file {
-            add(n);
+        for us in [true, false] {
+            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+                add(n);
+            }
         }
     }
     out
@@ -398,14 +400,14 @@ impl Dvd {
     #[doc(alias = "Ground_801C06B8")]
     #[doc(alias = "grIzumi_801CD2D4")]
     #[doc(alias = "grStadium_801D511C")]
-    fn want_game_cache(&mut self) {
+    fn want_game_cache(&mut self, saved_us: bool) {
         let gc = self.cache.new_scene.game_cache;
         if gc.mode_kind == crate::game::gm::machine::GM_CAMERA_MODE {
             self.want_camera_mode();
         }
         if gc.stkind != 0x148 {
             let gr = crate::lb::audio::ground_kind(gc.stkind) as i32;
-            if let Some(n) = crate::game::gr::data::stage_data(gr).file {
+            if let Some(n) = crate::game::gr::data::stage_file(gr, saved_us) {
                 self.want_named(4, n, 4, 4, 1, 7, 16, 0);
             }
             let tex = |w, h, f| crate::hsd::heap::tex_buffer_size(w, h, f).next_multiple_of(32);
@@ -790,7 +792,7 @@ impl Audio {
             }
         }
         if class == 3 {
-            d.want_game_cache();
+            d.want_game_cache(saved_us);
         }
         for j in 0..ENTRIES {
             let e = d.cache.entries[j];

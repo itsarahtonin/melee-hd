@@ -497,7 +497,7 @@ impl Match {
             }
         }
         if settings.heap.is_some_and(|l| l.from_menus) {
-            let (files, buffers) = preloaded_files(&settings.start);
+            let (files, buffers) = preloaded_files(&settings.start, true);
             game.ft.data.files.preloaded = files;
             game.ft.data.files.preloaded_buffers = buffers;
         }
@@ -786,7 +786,7 @@ pub fn init_scene(r: &mut Running) {
 /// Stadium's screens and transformation buffer, by preload entry), and for each playing
 /// slot's characters (`Player_80031CB0`, `ftData_800855C8`) their data file, the costume's
 /// file, their effect file and their animation file.
-pub fn preloaded_files(start: &StartMeleeData) -> (Vec<String>, Vec<i32>) {
+pub fn preloaded_files(start: &StartMeleeData, saved_us: bool) -> (Vec<String>, Vec<i32>) {
     use super::ft::data::kind_tables;
     let mut out: Vec<String> = Vec::new();
     let mut add = |name: &str| {
@@ -795,7 +795,7 @@ pub fn preloaded_files(start: &StartMeleeData) -> (Vec<String>, Vec<i32>) {
         }
     };
     let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
-    if let Some(name) = super::gr::data::stage_data(grkind).file {
+    if let Some(name) = super::gr::data::stage_file(grkind, saved_us) {
         add(name);
     }
     // `grIzumi_801CD2D4` and `grStadium_801D511C`.
@@ -989,7 +989,7 @@ pub fn load_results_files(
             .push((name.to_owned(), file.entrynum, file.bytes.len() as u32));
         id
     };
-    for name in ["GmRst.usd", "SdRst.usd"] {
+    for name in ["GmRst.usd", "SdRst.usd", "GmRst.dat", "SdRst.dat"] {
         add(files, data, name);
     }
     for p in &start.players {

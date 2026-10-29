@@ -263,11 +263,12 @@ impl Running<'_> {
             super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
             m if super::machine::uses_vs_melee(m) => self.game.vs_melee.start.clone(),
             super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
+            super::GM_DEBUG => self.game.debug_mode.vs_enter.clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),
         };
-        let (files, buffers) = crate::game::vs_match::preloaded_files(&start);
+        let (files, buffers) = crate::game::vs_match::preloaded_files(&start, self.files_us());
         let f = &mut self.game.ft.data.files;
         // The match takes its files from the cache the menus' preloads filled (the selects'
         // for VS mode's, the title's for the attract match's), as the console's.
@@ -275,16 +276,17 @@ impl Running<'_> {
         f.preloaded = files;
         f.preloaded_buffers = buffers;
         let archive = |r: &Self, name: &str| r.game.ft.data.files.archive(name);
+        // Named for the saved language (`lbFileGetFullName` of a name with no extension).
+        let us = self.saved_us();
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind));
-        let stage = crate::game::gr::data::stage_data(grkind as i32)
-            .file
+        let stage = crate::game::gr::data::stage_file(grkind as i32, us)
             .map(|name| archive(self, name.trim_start_matches('/')));
         let files = super::vs::MatchArchives {
             lb_rf: archive(self, "LbRf.dat"),
             pdpm: archive(self, "PdPm.dat"),
-            gm_pause: archive(self, "GmPause.usd"),
+            gm_pause: archive(self, if us { "GmPause.usd" } else { "GmPause.dat" }),
             hud: crate::game::hud::all::HudArchives {
-                if_all: archive(self, "IfAll.usd"),
+                if_all: archive(self, if us { "IfAll.usd" } else { "IfAll.dat" }),
                 sd_intro: archive(self, "SdIntro.dat"),
                 if_coget: archive(self, "IfCoGet.dat"),
             },
