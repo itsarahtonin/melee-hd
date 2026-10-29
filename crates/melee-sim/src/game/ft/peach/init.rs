@@ -30,6 +30,7 @@ impl Running<'_> {
         }
         self.push_attrs(f, attr::SIZE);
         self.peach_patch_float_fall_starts(f);
+        self.image_ext_attrs(f, &FLOAT_FALL_ANIMS.map(|(_, off)| off));
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");

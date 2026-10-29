@@ -124,6 +124,28 @@ impl Src {
     }
 }
 
+/// The slots `lbArchive_InitializeDAT` writes null into after the parse, as it locates each
+/// extern symbol (`HSD_ArchiveLocateExtern` with no address): each chain the symbol's name
+/// first names, so a name listed twice leaves its second chain as read.
+fn extern_slots(data: &Archives, archive: ArchiveId) -> Vec<u32> {
+    let a = data.get(archive);
+    let mut slots = Vec::new();
+    let mut i = 0;
+    while let Some(name) = a.extern_name(i) {
+        slots.extend(a.extern_slots(name));
+        i += 1;
+    }
+    slots
+}
+
+/// A word of zeros, as an object's bytes.
+fn zero_word() -> Src {
+    Src::Bytes {
+        bytes: Arc::from(&[0u8; 4][..]),
+        offset: 0,
+    }
+}
+
 /// Byte `at` of an archive's file in memory: as read, or with its relocated words holding the
 /// data block's address (`base`) added.
 fn file_byte(data: &Archives, archive: ArchiveId, at: u32, base: u32) -> Option<u8> {
@@ -862,7 +884,7 @@ impl Image {
     /// cache holds, `len` bytes at `file`): its bytes, relocated to where they are, in memory
     /// no block of the scene's heap holds (a preload heap's), and where a pointer into its
     /// data points ([`Self::place`]).
-    pub fn place_held(&mut self, file: u32, len: u32, archive: ArchiveId) {
+    pub fn place_held(&mut self, data: &Archives, file: u32, len: u32, archive: ArchiveId) {
         if !self.on {
             return;
         }
@@ -877,6 +899,20 @@ impl Image {
                 base,
             },
         );
+        for at in extern_slots(data, archive) {
+            self.write(base + at, base + at + 4, zero_word());
+        }
+    }
+
+    /// `lbArchive_InitializeDAT`'s part after the parse of an archive read into a block now
+    /// allocated at `file` ([`Image::hold`]): every extern reference located as null.
+    pub fn hold_externs(&mut self, data: &Archives, file: u32, archive: ArchiveId) {
+        if !self.on {
+            return;
+        }
+        for at in extern_slots(data, archive) {
+            self.put(file + 0x20 + at, &[0; 4]);
+        }
     }
 
     /// The owner of `[lo, hi)` of a block now allocated, an `owner` (its type), writes it:
@@ -1059,22 +1095,31 @@ impl Image {
     /// heap, preload class 2), the word replaces the file's. A file outside the image (the
     /// preload cache's) is left alone.
     pub fn file_word(&mut self, d: melee_data::archive::DataRef, w: u32) {
-        if !self.on {
+        self.file_bytes(d, &w.to_be_bytes());
+    }
+
+    /// [`Image::file_word`] for any run of bytes: all of them replace the file's where the
+    /// image holds the file over the whole run, none elsewhere. A run written before holds
+    /// what the code wrote, which the game writes again the same where it runs again (a shape
+    /// loaded for a second fighter), so it's left as it is.
+    pub fn file_bytes(&mut self, d: melee_data::archive::DataRef, bytes: &[u8]) {
+        if !self.on || bytes.is_empty() {
             return;
         }
         let Some(at) = self.data_addr(d) else {
             return;
         };
+        let hi = at + bytes.len() as u32;
         let mut covered = at;
-        for (k, s) in self.live.range(at, at + 4) {
+        for (k, s) in self.live.range(at, hi) {
             let file = matches!(s.src, Src::File { archive, .. } if archive == d.archive);
             if !file || k > covered {
                 return;
             }
             covered = covered.max(s.end);
         }
-        if covered >= at + 4 {
-            self.put(at, &w.to_be_bytes());
+        if covered >= hi {
+            self.put(at, bytes);
         }
     }
 
