@@ -80,6 +80,15 @@ impl Running<'_> {
     }
 
     /// The sound test's entries' callbacks by address, none for another address.
+    #[doc(alias = "un_802FF88C")]
+    #[doc(alias = "un_802FF934")]
+    #[doc(alias = "un_802FF958")]
+    #[doc(alias = "un_802FF99C")]
+    #[doc(alias = "un_802FF9DC")]
+    #[doc(alias = "un_802FFBAC")]
+    #[doc(alias = "un_802FFC30")]
+    #[doc(alias = "un_802FFC6C")]
+    #[doc(alias = "fn_802FFCC8")]
     pub fn sound_test_item(&mut self, cb: u32, arg: i32) -> Option<i32> {
         let ret = match cb {
             // `un_802FF88C`, the title's, as the menu is made: the settings reset, the mix
