@@ -587,11 +587,22 @@ impl Comparer<'_> {
                 mem.w(a),
             );
         }
+        let dm = &game.debug_mode;
         self.check(
-            "gmdebugmode menu_enter_data",
-            "table, callback",
-            game.debug_mode.menu_enter,
-            (mem.w(0x804D_6890), mem.w(0x804D_6894)),
+            "gmdebugmode",
+            "menu_enter_data, memcard_enter_data, memcard_exit_data, approach_data",
+            (
+                dm.menu_enter,
+                dm.memcard_enter,
+                dm.memcard_exit,
+                dm.approach,
+            ),
+            (
+                (mem.w(0x804D_6890), mem.w(0x804D_6894)),
+                (mem.w(0x804D_689C), mem.b(0x804D_68A0), mem.b(0x804D_68A1)),
+                (mem.w(0x804D_68A4), mem.b(0x804D_68A8)),
+                [mem.b(0x804D_6898), mem.b(0x804D_6899)],
+            ),
         );
     }
 
