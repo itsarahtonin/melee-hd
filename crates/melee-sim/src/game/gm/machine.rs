@@ -168,6 +168,8 @@ enum Hook {
     TouExitResults,
     /// `gmdebugmode.c`'s states' handlers.
     DebugEnterMenu0,
+    DebugEnterMenu1,
+    DebugEnterMenu2,
     DebugUnported(&'static str),
 }
 
@@ -512,18 +514,8 @@ fn states(mode: u8) -> &'static [StateDesc] {
     }
     const DEBUG: [StateDesc; 15] = [
         debug(0, Some(Hook::DebugEnterMenu0), None, GS_DEBUG_MENU),
-        debug(
-            1,
-            Some(Hook::DebugUnported("onEnterMenu1")),
-            None,
-            GS_DEBUG_MENU,
-        ),
-        debug(
-            2,
-            Some(Hook::DebugUnported("onEnterMenu2")),
-            None,
-            GS_DEBUG_MENU,
-        ),
+        debug(1, Some(Hook::DebugEnterMenu1), None, GS_DEBUG_MENU),
+        debug(2, Some(Hook::DebugEnterMenu2), None, GS_DEBUG_MENU),
         debug(
             3,
             Some(Hook::DebugUnported("onEnterPrize")),
@@ -1130,6 +1122,8 @@ impl Running<'_> {
             Hook::TouEnterResults => self.tou_enter_results(),
             Hook::TouExitResults => self.tou_exit_results(),
             Hook::DebugEnterMenu0 => self.debug_mode_enter_menu0(),
+            Hook::DebugEnterMenu1 => self.debug_mode_enter_menu1(),
+            Hook::DebugEnterMenu2 => self.debug_mode_enter_menu2(),
             Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;

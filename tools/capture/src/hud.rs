@@ -87,7 +87,12 @@ pub(crate) trait Words {
         let a = pool + DEVTEXT_SIZE * i;
         let (w, h) = (self.b(a + 4), self.b(a + 5));
         let buf_at = self.w(a + 0x28);
-        let buf = if buf_at == 0 {
+        // A free screen's buffer may be anything a later scene's heap left there.
+        let in_ram = |a: u32| (crate::MEM1..crate::MEM1 + 0x0180_0000).contains(&a);
+        let buf = if buf_at == 0
+            || !in_ram(buf_at)
+            || !in_ram(buf_at + 2 * u32::from(w) * u32::from(h))
+        {
             Vec::new()
         } else {
             (0..u32::from(w) * u32::from(h))
@@ -534,15 +539,18 @@ impl Comparer<'_> {
                     ),
                 );
                 self.compare_gobj(&format!("{path} gobj"), m.gobj, mem.w(a + 0x10));
-                // The process: on the menu's GObj, running the menus' process.
-                let p = mem.w(a + 0x14);
-                let theirs = (p != 0).then(|| mem.w(p + 0x14));
-                self.check(
-                    &path,
-                    "process",
-                    m.proc.map(|_| melee_sim::game::hud::debug_menu::MENU_PROC),
-                    theirs,
-                );
+                // The first menu's process, running the menus' process. A submenu's `x14` is
+                // what its block held: nothing sets or reads it.
+                if m.proc.is_some() {
+                    let p = mem.w(a + 0x14);
+                    let theirs = (p != 0).then(|| mem.w(p + 0x14));
+                    self.check(
+                        &path,
+                        "process",
+                        Some(melee_sim::game::hud::debug_menu::MENU_PROC),
+                        theirs,
+                    );
+                }
                 self.check(&path, "glyphs' block", m.buf, mem.w(text_at(m.text) + 0x28));
             }
         }
