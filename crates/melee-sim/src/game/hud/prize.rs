@@ -66,6 +66,11 @@ use crate::hsd::sis::TextId;
 use crate::vec::Vec3;
 
 /// `ifPrize_Scene_OnEnter` and the interface's process.
+/// The trophies' notice (`gm_ModeState_Prize_OnEnter`'s for a trophy whose notice waits).
+const TROPHY_NOTICE: u16 = 0x3E;
+/// The prize font's string a trophy's notice is made in.
+const TROPHY_STRING: i32 = 0x4A;
+
 pub const ON_ENTER: CodeRef = CodeRef(0x802F_EBE0);
 pub const PROC: u32 = 0x802F_E470;
 
@@ -307,10 +312,11 @@ impl Running<'_> {
     }
 
     /// `un_802FE918`: notice `a` shown: the song stopped and the next of the three drawn
-    /// (`HSD_Randi`), the message's notice taken back, its kind, its message and the date
-    /// and time it came.
+    /// (`HSD_Randi`), the message's notice taken back, its kind, its message (a trophy's
+    /// notice, for trophy `b`, its two halves around the trophy's name in string 0x4A) and the
+    /// date and time it came.
     #[doc(alias = "un_802FE918")]
-    fn prize_show(&mut self, a: u16, _b: u16, c: u32) {
+    fn prize_show(&mut self, a: u16, b: u16, c: u32) {
         self.lb_audio_music_stop();
         let song = self.game.prize.songs[usize::from(self.game.prize.song)];
         self.lb_play_music(song);
@@ -329,14 +335,29 @@ impl Running<'_> {
         let s = &mut self.game.game_data.thing.save_data;
         s.x1B40[usize::from(a / 32)] &= !(1 << (a % 32));
         self.game.prize.kind = message_kind(i32::from(a)) as u16;
-        if a == 0x3E {
-            super::super::code::unported_call("un_802FE918 for a trophy's notice (Toy_803063D4)");
-        }
-        let (s, _) = message_strings(i32::from(a), 2);
-        let s = s.expect("a message the table has");
-        self.game.prize.text = s;
         let t = self.game.prize.message.expect("the prize's message");
-        self.game.sis.reset_text(self.data, t, i32::from(s));
+        if a == TROPHY_NOTICE {
+            // The notice's string 0x4A made of its two halves around the trophy's name
+            // (`Toy_803063D4`).
+            let (s, s2) = message_strings(i32::from(a), 2);
+            let (s, s2) = (
+                s.expect("the trophies' notice"),
+                s2.expect("its second half"),
+            );
+            self.game.prize.text = s;
+            self.game.prize.text2 = s2;
+            let name = self.toy_string(i32::from(b), 0x4E, 0x174);
+            let sis = &mut self.game.sis;
+            sis.copy_table_string(self.data, 2, TROPHY_STRING, i32::from(s));
+            sis.append_table_string(self.data, 2, TROPHY_STRING, name);
+            sis.append_table_string(self.data, 2, TROPHY_STRING, i32::from(s2));
+            sis.reset_text(self.data, t, TROPHY_STRING);
+        } else {
+            let (s, _) = message_strings(i32::from(a), 2);
+            let s = s.expect("a message the table has");
+            self.game.prize.text = s;
+            self.game.sis.reset_text(self.data, t, i32::from(s));
+        }
         let d = super::super::mn::info::datetime(c);
         let line = if self.game.game_data.saved_language() == super::super::gm::LANG_US {
             format!(
