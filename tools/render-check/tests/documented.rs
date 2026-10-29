@@ -17,17 +17,17 @@ mod common;
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
     DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
-    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group,
-    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
-    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC,
-    MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR,
-    PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
-    TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
-    reflection, scaled, why,
+    DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_SOUND, DEBUG_VS_TOOLS, Expect, FLAT_ZONE, FOUR_FD,
+    FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD,
+    FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
+    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
+    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION,
+    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -195,6 +195,55 @@ frames!(DATA_ALBUM;
 frames!(DATA_ALBUM_DELETE;
     data_album_delete_1041 1041,
 );
+// The debug mode (`debug-sessions`, at debug level 3): the debug menu's first page
+// (menu-enter 700), Global Data Edit over it (menu-sub 950), the sound test's debug menu
+// (sound-debug 700), and the debug VS match's readouts (vs-tools): the computer players'
+// (1400), the animations' (1650), the stage hidden (2000), the first port's bonuses (2200),
+// the second's over its background (2300) and the sound's (2700). Final Destination's floor
+// shows the reflection copied the frame before, so the match's references are captured with
+// ssbm-rs's renderer running; at 1400 and 1650, where a fighter's shadow falls on the floor,
+// its draws differ only in the shadow textures' hashes, copies kept on the GPU, and the images
+// are identical.
+frames!(DEBUG_MENU_ENTER;
+    debug_menu_enter_700 700,
+);
+frames!(DEBUG_MENU_SUB;
+    debug_menu_sub_950 950,
+);
+frames!(DEBUG_SOUND;
+    debug_sound_debug_700 700,
+);
+rendered_frames!(DEBUG_VS_TOOLS;
+    debug_vs_tools_2000 2000,
+    debug_vs_tools_2200 2200,
+    debug_vs_tools_2300 2300,
+    debug_vs_tools_2700 2700,
+);
+fn debug_vs_tools(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &DEBUG_VS_TOOLS,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_vs_tools_1400() {
+    debug_vs_tools(1400, [1566, 1566]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_vs_tools_1650() {
+    debug_vs_tools(1650, [1356, 1382]);
+}
+
 // The sound test (`sound-sessions`): a song playing with its name and number (songs 5000), a
 // category's icon in the categories (sounds 1450), a category's sounds with the sound's number
 // (sounds 4400), and a song's name in Japanese (jp 1620).
