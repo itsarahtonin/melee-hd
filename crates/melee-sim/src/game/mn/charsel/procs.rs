@@ -791,7 +791,11 @@ impl Running<'_> {
             } else if i32::from(tag.next_tag) == row {
                 if !self.game.name_list_full() {
                     let c = &mut self.game.charsel;
-                    c.new_tag_port = tag.port as i8;
+                    c.new_tag_port = if c.doors_used == 1 {
+                        c.port0
+                    } else {
+                        tag.port as i8
+                    };
                     c.pending = 4;
                     for k in 0..usize::from(c.doors_used) {
                         if self.game.charsel.cursors[k].expect("a hand").state == 1
@@ -919,9 +923,17 @@ impl Running<'_> {
                 self.game.charsel.pending = 5;
                 self.lb_audio_call(1);
             }
-            4 => super::super::super::code::unported_call(
-                "mnNameNew_EnterFromMnCharSel (the name entry, task 8)",
-            ),
+            // The keyboard over the screen for the door's port (`mnNameNew_EnterFromMnCharSel`
+            // with `MnExtAll`), the screen's GObjs and texts let go first; the screen waits (5).
+            4 => {
+                self.free_gobj_links(1, 8);
+                self.sis_reset();
+                let ext = self.game.charsel.archives[1].expect("MnExtAll").0;
+                let port = self.game.charsel.new_tag_port as u8;
+                self.name_new_from_screen(ext, port);
+                self.game.charsel.pending = 5;
+                self.lb_audio_call(1);
+            }
             _ => {}
         }
     }
