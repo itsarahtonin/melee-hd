@@ -25,7 +25,11 @@ pub const MOTION2_PHYS: u32 = 0x802C_1114;
 pub const MOTION2_COLL: u32 = 0x802C_1148;
 pub const PICKED_UP: u32 = 0x802C_11E0;
 pub const MOTION6_ANIM: u32 = 0x802C_1234;
+/// `itDrMarioPill_Motion6_Phys` (the held states'): no pickup.
+#[doc(alias = "itDrMarioPill_Motion6_Phys")]
 pub const MOTION6_PHYS: u32 = 0x802C_1340;
+/// `itDrMarioPill_Motion6_Coll` (the held states'): no pickup.
+#[doc(alias = "itDrMarioPill_Motion6_Coll")]
 pub const MOTION6_COLL: u32 = 0x802C_1360;
 #[doc(alias = "itDrMarioPill_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802C_1384;
@@ -244,6 +248,60 @@ pub fn appeal_spawn(
     Some(gobj)
 }
 
+/// A pill a posing fighter holds, `itDrMarioPill_802C09C4`: color combination `color`,
+/// made at the fighter's place, in held state `msid + 4` on its owner (the taunt's
+/// accessory, `itDrMarioPill_802C061C`, keeps it at the owner's position and facing),
+/// blinking; with `msid` 2 picked up at `part`.
+#[doc(alias = "itDrMarioPill_802C09C4")]
+pub fn spawn_demo(
+    r: &mut Running,
+    parent: GObjId,
+    color: i32,
+    kind: i32,
+    msid: i32,
+    part: i32,
+    facing_dir: f32,
+) -> Option<GObjId> {
+    let pos = r.game.fighter(parent).cur_pos;
+    let mut spawn = spawn_fields(r, parent, pos, kind, facing_dir);
+    let gobj = spawn_air(r, &mut spawn)?;
+    held_start(r, gobj, msid);
+    set_pose(r, gobj, 1, mem(fp::frsp(f64::from(color))));
+    super::super::hitbox::start_blink(r.game, gobj);
+    lib26b1::disable_pickup(r.game, gobj);
+    change_state(r, gobj, msid.wrapping_add(4), change::ANIM_UPDATE);
+    let ip = item_mut(r.game, gobj);
+    ip.xDB8_itcmd_var3 = 0;
+    ip.xDB4_itcmd_var2 = 0;
+    ip.xDB0_itcmd_var1 = 0;
+    ip.xDAC_itcmd_var0 = 0;
+    ip.xDC8_word.flags.x19 = false;
+    ip.on_accessory = Some(CodeRef(ACCESSORY));
+    ip.xDC8_word.flags.x13 = true;
+    ip.owner = Some(parent);
+    let v = ip.xDD4_itemVar.drmario_pill();
+    v.x4.set(Some(parent));
+    v.x0.set(facing_dir);
+    lib2725::stop_spin(r.game, r.data, gobj);
+    super::super::hitbox::start_blink(r.game, gobj);
+    lib26b1::disable_pickup(r.game, gobj);
+    super::super::lib2725::first_frame(r, gobj);
+    if msid == 2 {
+        super::super::item::pick_up(r, gobj, parent, part);
+    }
+    lib26b1::disable_pickup(r.game, gobj);
+    Some(gobj)
+}
+
+/// A held pill's start, `itDrMarioPill_802C1180`: its lifetime and held state `msid + 4`.
+#[doc(alias = "itDrMarioPill_802C1180")]
+fn held_start(r: &mut Running, gobj: GObjId, msid: i32) {
+    let lifetime = attr_f32(r, gobj, attr::LIFETIME);
+    lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
+    change_state(r, gobj, msid.wrapping_add(4), change::ANIM_UPDATE);
+    lib26b1::disable_pickup(r.game, gobj);
+}
+
 /// `itDrMarioPill_UnkMotion0_Anim`: its lifetime.
 #[doc(alias = "itDrMarioPill_UnkMotion0_Anim")]
 fn motion0_anim(r: &mut Running, gobj: GObjId) -> bool {
@@ -363,7 +421,8 @@ fn motion2_phys(r: &mut Running, gobj: GObjId) {
 }
 
 /// `itDrMarioPill_PickedUp`: its lifetime and the held state.
-// Ports `itDrMarioPill_PickedUp`; aliased once a check reaches it.
+// Ports `itDrMarioPill_PickedUp`; aliased once a check reaches it (only the sleeping demo
+// pose, `ftCo_800BF108`, spawns a pill picked up).
 fn picked_up(r: &mut Running, gobj: GObjId) {
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);
@@ -371,23 +430,19 @@ fn picked_up(r: &mut Running, gobj: GObjId) {
     lib26b1::disable_pickup(r.game, gobj);
 }
 
-/// `itDrMarioPill_Motion6_Anim`: held by a frozen or sleeping owner, it takes the owner's
-/// scale.
-// Ports `itDrMarioPill_Motion6_Anim`; aliased once a check reaches it.
+/// `itDrMarioPill_Motion6_Anim` (the held states 3 to 6): held by a frozen or sleeping
+/// owner, it takes the owner's scale (`Item_CopyJObjScale`: its y on every axis).
+#[doc(alias = "itDrMarioPill_Motion6_Anim")]
 fn motion6_anim(r: &mut Running, gobj: GObjId) -> bool {
     lib26b1::disable_pickup(r.game, gobj);
     let owner = item_mut(r.game, gobj).xDD4_itemVar.drmario_pill().x4.get();
-    if let Some(o) = owner {
-        let m = r.game.fighter(o).motion_id;
-        // `ftCo_800BF228`: frozen in a KO toward the screen, or asleep.
-        if m == crate::game::ft::co::ids::ms::DEAD_UP_FALL_HIT_CAMERA_ICE
-            || m == crate::game::ft::co::ids::ms::SLEEP
-        {
-            let src = jobj_of(r.game, o).expect("an owner without a model");
-            let s = r.game.objs.jobjs[src].scale.y;
-            let j = jobj_of(r.game, gobj).expect("a pill without a model");
-            lib2725::set_uniform_scale(r.game, j, s);
-        }
+    if let Some(o) = owner
+        && crate::game::ft::demo::frozen_or_asleep(r.game, o)
+    {
+        let src = jobj_of(r.game, o).expect("an owner without a model");
+        let s = r.game.objs.jobjs[src].scale.y;
+        let j = jobj_of(r.game, gobj).expect("a pill without a model");
+        lib2725::set_uniform_scale(r.game, j, s);
     }
     false
 }

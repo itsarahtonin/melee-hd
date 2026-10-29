@@ -328,7 +328,6 @@ onExitOmake15	unchecked	ported in the scene machine's dispatch (game/gm/machine.
 memcardOnLoad	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 onExitVs	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 mnName_8023749C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-IsNameListFull	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 mnCharSel_8025C020	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
