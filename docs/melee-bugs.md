@@ -642,6 +642,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); the decompilation's `it_802E6AEC` (`spawn.x44_flag.x0.b0 = arg5 ? 1 : 0`) and its machine code; `itmaplib.c:233`.
 
+### Dr. Mario's pills' spawns keep seven flag bits from the stack
+
+- **Where:** `itDrMarioPill_Spawn`, `itDrMarioPill_Appeal_Spawn` and `itDrMarioPill_802C09C4` (the thrown pill, the taunt's and a results pose's), through the `Item_InitSpawnCommonFields` inline, `crates/melee-sim/src/game/it/kinds/drmariopill.rs` (`spawn_fields`).
+- **Defect:** each fills a stack `SpawnItem` and sets its fall flag `x44_flag.b0` by reading the flag byte back, inserting the bit and storing it (`lbz`, `rlwimi r0, rN, 7, 24, 24`, `stb` on `r1 + 0x60`, `0x64` and `0x6C` of their frames, at `0x802C0594`, `0x802C08CC` and `0x802C0A4C`), so the byte's other seven bits keep what that slot held from earlier calls, as the stage's hurtbox item's spawn does (above).
+- **Effect:** none observable: the only reader of the byte is `Item_80268B18`'s placement (`itmaplib.c:233`), which tests `b0` alone, and nothing copies the `SpawnItem` whole.
+- **melee-hd:** stand-in: the spawns start from a cleared `SpawnItem`, so those bits are 0; the results session `results-sessions/pills` (two pills from `itDrMarioPill_802C09C4`) compares clean.
+- **Fix:** clear the flag byte before setting `b0`.
+- **Fix impact:** none.
+- **Source:** the machine code of the three spawns (the decompilation's build, `itdrmariopill.s`); the decompilation's `Item_InitSpawnCommonFields` (`spawn->x44_flag.b0 = initial_collision`).
+
 ### A coin scatter with no coin to make returns its caller's register
 
 - **Where:** `it_802E609C` (making a scatter's coins), `crates/melee-sim/src/game/it/kinds/coin.rs` (`drop_all`).
