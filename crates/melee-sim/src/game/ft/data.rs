@@ -377,7 +377,39 @@ impl Running<'_> {
                     .expect("the animation file just loaded")
                     .aram = at;
             }
+            self.image_anim_addresses(kind);
         }
+    }
+
+    /// `ftData_80085A14`'s writes into the character's data: each animation's ARAM address
+    /// (`x14`, the file's plus its offset) in the kind's animation table, which the heap's
+    /// image holds where the scene loaded the data into its heap (a debug VS match's).
+    fn image_anim_addresses(&mut self, kind: i32) {
+        if !crate::hsd::heap::image_on() {
+            return;
+        }
+        let Some(ft_data) = self.game.ft.data.data_list[kind as usize] else {
+            return;
+        };
+        let Some(aram) = self.game.ft.anim_files[kind as usize]
+            .as_ref()
+            .map(|f| f.aram)
+        else {
+            return;
+        };
+        let Some(table) = self.data.ptr(ft_data.at(0xC)) else {
+            return;
+        };
+        let data = self.data;
+        crate::hsd::heap::with(|h| {
+            for i in 0..kind_tables(kind).anim_count {
+                let e = table.at(0x18 * i);
+                if data.u32(e.at(8)) != 0 {
+                    h.image
+                        .file_word(e.at(0x14), aram.wrapping_add(data.u32(e.at(4))));
+                }
+            }
+        });
     }
 
     /// Whether the preload cache holds the animation file `name` (`lbDvd_8001819C`'s find).

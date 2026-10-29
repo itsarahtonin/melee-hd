@@ -1054,6 +1054,30 @@ impl Image {
             .map(|&(b, _, _)| b + d.offset)
     }
 
+    /// Code writes a word into a loaded file (`d`, a place in its data): where the image holds
+    /// that file there in a block now allocated (a scene that loads its files into its own
+    /// heap, preload class 2), the word replaces the file's. A file outside the image (the
+    /// preload cache's) is left alone.
+    pub fn file_word(&mut self, d: melee_data::archive::DataRef, w: u32) {
+        if !self.on {
+            return;
+        }
+        let Some(at) = self.data_addr(d) else {
+            return;
+        };
+        let mut covered = at;
+        for (k, s) in self.live.range(at, at + 4) {
+            let file = matches!(s.src, Src::File { archive, .. } if archive == d.archive);
+            if !file || k > covered {
+                return;
+            }
+            covered = covered.max(s.end);
+        }
+        if covered >= at + 4 {
+            self.put(at, &w.to_be_bytes());
+        }
+    }
+
     /// The block `[lo, hi)` goes back to its heap (`OSFreeToHeap`): it holds what its owner
     /// left, as far as the image knows it, and what it held before past that.
     pub fn release(&mut self, lo: u32, hi: u32) {
