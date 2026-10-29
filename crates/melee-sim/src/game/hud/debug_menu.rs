@@ -54,8 +54,6 @@ const KIND_BYTE: i32 = 5;
 const KIND_HALF: i32 = 6;
 const KIND_WORD: i32 = 7;
 const KIND_FLOAT: i32 = 8;
-/// The terminator, whose callback is the menu's on closing.
-const KIND_END: i32 = 9;
 
 /// What a callback is told (`soundtest_callback_arg0`): B, A, left, right, the menu made,
 /// the menu closed and Start.
@@ -785,7 +783,7 @@ impl Running<'_> {
     /// (`dx`, `dy` further), which covers the parent and takes the controller from the
     /// next frame.
     #[doc(alias = "un_80304210")]
-    fn menu_open_sub(&mut self, parent: u32, table_addr: u32, dx: i32, dy: i32) -> u32 {
+    pub(super) fn menu_open_sub(&mut self, parent: u32, table_addr: u32, dx: i32, dy: i32) -> u32 {
         let pool = self
             .game
             .hud
@@ -923,33 +921,38 @@ impl Running<'_> {
     pub fn menu_call(&mut self, cb: u32, arg: i32) -> i32 {
         match cb {
             0x801B_09F8 => self.debug_menu_back_to_title(arg),
+            0x801B_0A8C => self.debug_menu_back_to_first(arg),
             0x802F_FE6C => self.debug_submenu_back(arg),
-            0x8030_01DC => self.debug_menu_state_item(arg, 1),
-            0x8030_02FC => self.debug_menu_state_item(arg, 2),
-            0x8030_0218 => {
-                let lang = self.game.debug_setting(0) as u8;
-                self.game.game_data.set_saved_language(lang);
-                self.game.sync_unlocks();
-                0
-            }
-            0x8030_0248 => {
-                if self.game.debug_setting(4) != 0 && arg == CB_SELECT {
-                    self.lb_audio_call(1);
-                    self.debug_relock_all();
-                }
-                0
-            }
-            // `un_80300290` (Global Data Edit) and `un_80301420` (Result Test): a submenu on A.
-            0x8030_0290 | 0x8030_1420 => {
-                if arg == CB_SELECT {
-                    super::super::code::unported_call(&format!(
-                        "the debug menu's submenu callback {cb:#010x}"
-                    ));
-                }
-                0
-            }
-            other => super::super::code::unported("debug menu callback", other),
+            0x8030_01DC => self.debug_page_item(arg, 1),
+            0x8030_02FC => self.debug_page_item(arg, 2),
+            0x8030_0218 => self.debug_language(),
+            0x8030_0248 => self.debug_publicity(arg),
+            other => match self.debug_item(other, arg) {
+                Some(r) => r,
+                None => super::super::code::unported("debug menu callback", other),
+            },
         }
+    }
+
+    /// Sets a menu's own callback (`un_80302DF8`).
+    #[doc(alias = "un_80302DF8")]
+    pub(super) fn menu_set_cb(&mut self, m: u32, cb: u32) {
+        self.menu_mut(m).cb = cb;
+    }
+
+    /// Marks the current menu (`un_80302DF0`) to close at its process's next walk
+    /// (`un_80304334`).
+    #[doc(alias = "un_80304334")]
+    #[doc(alias = "un_80302DF0")]
+    pub(super) fn menu_close_current(&mut self) {
+        let cur = self
+            .game
+            .hud
+            .devtext
+            .menu_current
+            .expect("a current menu")
+            .slot;
+        self.menu_mut(cur).flags |= CLOSING;
     }
 
     /// The debug menu's Publicity (`gmMainLib_8015FB68`): the save as before any unlock, the
@@ -975,43 +978,14 @@ impl Running<'_> {
         self.game.sync_unlocks();
     }
 
-    /// `fn_801B09F8`, the debug menu's own callback: B goes back to the title.
-    #[doc(alias = "fn_801B09F8")]
-    fn debug_menu_back_to_title(&mut self, arg: i32) -> i32 {
-        if arg == CB_BACK {
-            self.lb_audio_call(0);
-            self.change_game_mode_after_scene(super::super::gm::machine::GM_TITLE);
-            self.game.end_scene();
-        }
-        0
-    }
-
-    /// `fn_802FFE6C`, a submenu's callback: B closes it.
+    /// `fn_802FFE6C`, a submenu's own callback: B closes it. It answers what it was told.
     #[doc(alias = "fn_802FFE6C")]
     fn debug_submenu_back(&mut self, arg: i32) -> i32 {
         if arg == CB_BACK {
             self.lb_audio_call(0);
-            let cur = self
-                .game
-                .hud
-                .devtext
-                .menu_current
-                .expect("a current menu")
-                .slot;
-            self.menu_mut(cur).flags |= CLOSING;
+            self.menu_close_current();
         }
         arg
-    }
-
-    /// `un_803001DC` (Versus Mode) and `un_803002FC` (Mode Team Test): A goes to the debug
-    /// mode's state `state`.
-    fn debug_menu_state_item(&mut self, arg: i32, state: u8) -> i32 {
-        if arg == CB_SELECT {
-            self.lb_audio_call(1);
-            self.set_next_game_mode_state_id(state);
-            self.game.end_scene();
-        }
-        0
     }
 }
 
@@ -1058,6 +1032,24 @@ impl Running<'_> {
     #[doc(alias = "onEnterMenu0")]
     pub fn debug_mode_enter_menu0(&mut self) {
         self.game.debug_mode.menu_enter = (0x803F_A4E0, 0x801B_09F8);
+    }
+
+    /// `onEnterMenu1`: the Versus Mode page, back to the first page, with the menus' sound
+    /// banks.
+    #[doc(alias = "onEnterMenu1")]
+    pub fn debug_mode_enter_menu1(&mut self) {
+        self.game.debug_mode.menu_enter = (0x803F_A790, 0x801B_0A8C);
+        let a = &mut self.game.audio;
+        a.lb.unwant_banks(0x12);
+        a.lb.want_banks(2, 0x20);
+        a.lb_start_bank_loads(self.data);
+        self.game.audio.lb_wait_for_banks(self.data);
+    }
+
+    /// `onEnterMenu2`: the Mode Team Test page, back to the first page.
+    #[doc(alias = "onEnterMenu2")]
+    pub fn debug_mode_enter_menu2(&mut self) {
+        self.game.debug_mode.menu_enter = (0x803F_C4CC, 0x801B_0A8C);
     }
 }
 
