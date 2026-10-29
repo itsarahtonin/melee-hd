@@ -211,6 +211,9 @@ pub struct Geometry<K: Kinds> {
     /// the comparer leaves such a stamp out, and reading one stops (docs/engine.md,
     /// "Uninitialized values").
     pub render_stamps: Vec<u16>,
+    /// Whether `DbLevel` is at the debug ROM's or above, as at the load, where `mpGetSpeed`
+    /// checks the speeds it gives (a session's developer setting; retail's never is).
+    pub debug_rom: bool,
 }
 
 /// The geometry a stage without collision data gets (`mpLib_803BF760`): one floor below the
@@ -478,6 +481,7 @@ impl<K: Kinds> Geometry<K> {
             vertices_addr,
             lines_addr,
             render_stamps,
+            debug_rom: false,
         };
         g.build_islands();
         g.uncheck_bounding();
