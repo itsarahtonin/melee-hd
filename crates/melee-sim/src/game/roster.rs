@@ -773,7 +773,7 @@ pub(crate) mod tests {
     /// The shared stage code's stops (`game/gr`'s modules no one stage owns), each with why no
     /// roster stage reaches it from the launcher or the command line. A new stop there has to be
     /// added here, with its reason, or the audit test fails.
-    const SHARED_MODULES: &[&str] = &[
+    pub(crate) const SHARED_MODULES: &[&str] = &[
         "gr/anime",
         "gr/data",
         "gr/datfiles",

@@ -58,7 +58,7 @@ fn every_roster_stage_plays() {
             while ticks < 3600 {
                 let f = session.tick(pads(ticks));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 ticks += 1;
                 if ended {
                     break;
@@ -134,12 +134,12 @@ fn every_offered_stage_plays_with_items() {
             for tick in 0..1800 {
                 let f = session.tick(pads(tick));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 if ended {
                     break;
                 }
             }
-            let spawned = session.m.game.it.spawned;
+            let spawned = session.game().it.spawned;
             assert!(spawned > 0, "{}: no item came out", s.name);
             eprintln!(
                 "{}: {} kinds, {spawned} items came out",
@@ -212,13 +212,13 @@ fn every_offered_special_mode_plays() {
             while ticks < 3600 {
                 let f = session.tick(pads(ticks));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 ticks += 1;
                 if ended {
                     break;
                 }
             }
-            let g = &session.m.game;
+            let g = session.game();
             assert_eq!(g.game_mode, mode.game_mode(), "{}", mode.name());
             assert_eq!(
                 g.pacing.short_tick_nanos().is_some(),
@@ -284,7 +284,7 @@ fn live_slow_mo_keeps_its_sounds() {
         let mut shadow = SoundLog::default();
         let (mut would_stop, mut playing) = (0, 0);
         for tick in 0..1200 {
-            let frame = session.m.game.scene.unk_8 as i32;
+            let frame = session.game().scene.unk_8 as i32;
             let f = session.tick(pads(tick));
             for e in &f.events {
                 if let Event::SfxStart { handle, id, .. } = *e
@@ -294,15 +294,15 @@ fn live_slow_mo_keeps_its_sounds() {
                     shadow.started(frame, handle);
                 }
             }
-            session.m.recycle(f);
+            session.recycle(f);
             assert!(
-                session.m.game.playback.is_none(),
+                session.game().playback.is_none(),
                 "a live match has no playback"
             );
-            let after = session.m.game.scene.unk_8 as i32;
+            let after = session.game().scene.unk_8 as i32;
             for h in shadow.tick_end(after.wrapping_sub(1)) {
                 would_stop += 1;
-                if session.m.game.audio.sfx_check(h) {
+                if session.game().audio.sfx_check(h) {
                     playing += 1;
                 }
             }

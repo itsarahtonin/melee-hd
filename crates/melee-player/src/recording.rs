@@ -58,7 +58,7 @@ pub fn default_dir() -> PathBuf {
 
 /// The local date and time of day, as Slippi names replays by: on Windows the system's local
 /// time, elsewhere UTC.
-fn local_now() -> [u32; 6] {
+pub fn local_now() -> [u32; 6] {
     #[cfg(windows)]
     {
         use windows_sys::Win32::Foundation::SYSTEMTIME;

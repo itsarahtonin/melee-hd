@@ -184,7 +184,7 @@ pub fn direct_read() -> PadData {
 
 /// A running session: the game's state, the archives it has loaded, the console's setup and
 /// its memory card.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Session {
     pub game: Game,
     pub data: Archives,
