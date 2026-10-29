@@ -118,6 +118,8 @@ impl<'a> Comparer<'a> {
                 }
                 melee_sim::game::gm::GM_DEBUG => sym("gm_Mode_Debug_States"),
                 melee_sim::game::gm::GM_DEBUG_SOUND_TEST => sym("gm_Mode_DebugMenu_States"),
+                melee_sim::game::gm::GM_HANYU_CSS => sym("gm_Mode_HanyuCss_States"),
+                melee_sim::game::gm::GM_HANYU_SSS => sym("gm_Mode_HanyuSss_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC

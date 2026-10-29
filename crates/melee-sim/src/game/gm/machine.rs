@@ -172,6 +172,9 @@ enum Hook {
     DebugEnterMenu2,
     DebugEnterMemCard,
     SoundTestEnter,
+    HanyuCssEnter,
+    HanyuCssExit,
+    HanyuSssEnter,
     DebugEnterPrize,
     DebugEnterApproach,
     DebugExitPrize,
@@ -577,6 +580,14 @@ fn states(mode: u8) -> &'static [StateDesc] {
     ];
     // `gm_Mode_DebugMenu_States`: the sound test's debug menu.
     const SOUND_TEST: [StateDesc; 1] = [debug(0, Some(Hook::SoundTestEnter), None, GS_DEBUG_MENU)];
+    // `gm_Mode_HanyuCss_States`, `gm_Mode_HanyuSss_States`.
+    const HANYU_CSS: [StateDesc; 1] = [debug(
+        0,
+        Some(Hook::HanyuCssEnter),
+        Some(Hook::HanyuCssExit),
+        GS_CSS,
+    )];
+    const HANYU_SSS: [StateDesc; 1] = [debug(0, Some(Hook::HanyuSssEnter), None, GS_SSS)];
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
         crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
@@ -596,6 +607,8 @@ fn states(mode: u8) -> &'static [StateDesc] {
         GM_PROGRESSIVE_SCAN => &PROG_SCAN,
         super::GM_DEBUG => &DEBUG,
         super::GM_DEBUG_SOUND_TEST => &SOUND_TEST,
+        super::GM_HANYU_CSS => &HANYU_CSS,
+        super::GM_HANYU_SSS => &HANYU_SSS,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -623,7 +636,10 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         m if vs_like(m) => (false, Some(Hook::SpecialOnLoad), None),
         GM_CAMERA_MODE => (true, None, None),
         GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
-        super::GM_DEBUG | super::GM_DEBUG_SOUND_TEST => (false, None, None),
+        super::GM_DEBUG
+        | super::GM_DEBUG_SOUND_TEST
+        | super::GM_HANYU_CSS
+        | super::GM_HANYU_SSS => (false, None, None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -1130,6 +1146,9 @@ impl Running<'_> {
             Hook::DebugEnterMenu2 => self.debug_mode_enter_menu2(),
             Hook::DebugEnterMemCard => self.debug_mode_enter_memcard(),
             Hook::SoundTestEnter => self.sound_test_mode_enter(),
+            Hook::HanyuCssEnter => self.hanyu_css_enter(),
+            Hook::HanyuCssExit => self.hanyu_css_exit(),
+            Hook::HanyuSssEnter => self.hanyu_sss_enter(),
             Hook::DebugEnterPrize => self.debug_mode_enter_prize(),
             Hook::DebugEnterApproach => self.debug_mode_enter_approach(),
             // `onExitPrize`: the Mode Team Test page.

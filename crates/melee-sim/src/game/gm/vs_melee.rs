@@ -51,7 +51,7 @@ pub struct VsMelee {
 }
 
 /// `GmVsMode_Melee`, VS mode's entry of the modes table.
-const VS_MODE_MELEE: usize = 0;
+pub const VS_MODE_MELEE: usize = 0;
 
 /// `gmVsMode_StateId`s.
 pub const STATE_CSS: u8 = 0;

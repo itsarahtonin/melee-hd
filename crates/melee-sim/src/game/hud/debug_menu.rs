@@ -1143,6 +1143,9 @@ pub struct DebugMode {
     /// it's paused.
     pub song_playing: i32,
     pub song_paused: i32,
+    /// The Hanyu selects' data (`gm_8049BEE8`, `gm_8049C030`).
+    pub hanyu_css: crate::game::gm::vs_melee::CssData,
+    pub hanyu_sss: crate::game::gm::vs_melee::SssData,
 }
 
 impl Default for DebugMode {
@@ -1156,6 +1159,12 @@ impl Default for DebugMode {
             sound: None,
             song_playing: -1,
             song_paused: 0,
+            // Nothing sets the select's KO counts' pointer: null, as `.bss` holds it.
+            hanyu_css: crate::game::gm::vs_melee::CssData {
+                ko_counts_null: true,
+                ..Default::default()
+            },
+            hanyu_sss: Default::default(),
         }
     }
 }
@@ -1228,6 +1237,50 @@ impl Running<'_> {
         self.game.debug_mode.approach = [ckind, 0];
     }
 
+    /// `gm_801BED3C`, the Hanyu character select's entry: VS mode's data, every character
+    /// unlocked (`gm_80164F18`), and on an odd match type Ice Climbers' locked again
+    /// (`gm_80164A0C(7)`).
+    #[doc(alias = "gm_801BED3C")]
+    pub fn hanyu_css_enter(&mut self) {
+        let vs = self
+            .vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
+            .clone();
+        self.game.debug_mode.hanyu_css.vs.clone_from(&vs);
+        self.game.game_data.thing.save_data.unlocked_characters |= (1 << 11) - 1;
+        if self.game.debug_mode.hanyu_css.match_type & 1 != 0 {
+            crate::game::code::unported_call("gm_80164A0C (the Hanyu select's odd match types)");
+        }
+        self.game.sync_unlocks();
+    }
+
+    /// `gm_801BEDA8`, its exit: the next match type (the one before when the screen went
+    /// back), and its data back into VS mode's.
+    #[doc(alias = "gm_801BEDA8")]
+    pub fn hanyu_css_exit(&mut self) {
+        let c = &mut self.game.debug_mode.hanyu_css;
+        c.match_type = if c.pending_scene_change == 2 {
+            if c.match_type != 0 {
+                c.match_type - 1
+            } else {
+                0x17
+            }
+        } else {
+            (c.match_type + 1) % 24
+        };
+        let vs = self.game.debug_mode.hanyu_css.vs.clone();
+        self.vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
+            .clone_from(&vs);
+    }
+
+    /// `gm_801BEE58`, the Hanyu stage select's entry: VS mode's data.
+    #[doc(alias = "gm_801BEE58")]
+    pub fn hanyu_sss_enter(&mut self) {
+        let vs = self
+            .vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
+            .clone();
+        self.game.debug_mode.hanyu_sss.vs.clone_from(&vs);
+    }
+
     /// `onEnterMemCard`: the memory card scene asks the boot's question on slot A.
     #[doc(alias = "onEnterMemCard")]
     pub fn debug_mode_enter_memcard(&mut self) {
@@ -1259,5 +1312,67 @@ mod tests {
         assert_eq!(format_value(KIND_HALF, 0x1), b"0001");
         assert_eq!(format_value(KIND_FLOAT, 1.0f32.to_bits()), b"1.00");
         assert_eq!(format_value(KIND_DECIMAL, (-3i32) as u32), b"-3");
+    }
+
+    /// The generated tables (`debug_tables`) against the executable on the disc
+    /// (`SSBM_DISC`): every entry's words, its label's and names' strings, and the settings'
+    /// and words' first values.
+    #[test]
+    fn tables_match_the_executable() {
+        let Ok(path) = std::env::var("SSBM_DISC") else {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        };
+        let dol = melee_data::disc::Disc::open(&path)
+            .expect("the disc")
+            .dol()
+            .expect("main.dol");
+        let w = |o: usize| u32::from_be_bytes(dol[o..o + 4].try_into().unwrap());
+        let at = |a: u32| -> usize {
+            (0..18)
+                .find_map(|i| {
+                    let (off, addr, size) = (w(4 * i), w(72 + 4 * i), w(144 + 4 * i));
+                    (addr <= a && a < addr + size).then(|| (off + a - addr) as usize)
+                })
+                .unwrap_or_else(|| panic!("{a:#x} outside main.dol"))
+        };
+        let cstr = |a: u32| {
+            let o = at(a);
+            let n = dol[o..].iter().position(|&b| b == 0).unwrap();
+            dol[o..o + n].to_vec()
+        };
+        for t in TABLES {
+            for (i, e) in t.entries.iter().enumerate() {
+                let o = at(t.addr + 0x20 * i as u32);
+                let word = |k: usize| w(o + 4 * k);
+                assert_eq!(
+                    (word(0) as i32, word(1), word(2), word(3), word(4)),
+                    (e.kind, e.cb, e.label_at, e.choices_at, e.var),
+                    "{:#x} entry {i}",
+                    t.addr
+                );
+                assert_eq!(
+                    (word(5), word(6), word(7)),
+                    (e.min.to_bits(), e.max.to_bits(), e.step.to_bits()),
+                    "{:#x} entry {i}'s bounds",
+                    t.addr
+                );
+                assert_eq!(
+                    e.label.map(<[u8]>::to_vec),
+                    (e.label_at != 0).then(|| cstr(e.label_at))
+                );
+                for (k, name) in e.choices.iter().enumerate() {
+                    assert_eq!(name.to_vec(), cstr(w(at(e.choices_at) + 4 * k)));
+                }
+            }
+        }
+        assert_eq!(dol[at(SETTINGS)..at(SETTINGS) + 0x190], SETTINGS_INIT);
+        for (a, v) in WORDS {
+            // `.sbss` words, which start at 0 and aren't in the file.
+            if (0x804D_6B80..0x804D_7000).contains(&a) {
+                continue;
+            }
+            assert_eq!(w(at(a)), v, "{a:#x}");
+        }
     }
 }

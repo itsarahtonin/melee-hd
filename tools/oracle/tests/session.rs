@@ -1429,3 +1429,32 @@ fn album_card_pulled() {
     };
     assert!(out.contains("1885 ticks compared, no difference"), "{out}");
 }
+
+/// A session at the debug ROM's level (`lockstep/debug-sessions/menu-enter`, recorded with
+/// ssbm-rs's `--develop 3`): the recording's flags carry the level, the boot marks
+/// `/develop.ini` found, the save's load runs HAL's debug unlock-all, the title shows the
+/// build's date and Y opens the debug menu (game mode 6), clean to the trace's end; without
+/// the level from the recording, power-on already differs.
+#[test]
+fn a_debug_level_opens_the_debug_menu() {
+    let (trace, inputs) = (
+        "traces/debug-sessions/menu-enter.trc",
+        "lockstep/debug-sessions/menu-enter.inputs",
+    );
+    let Some(out) = session_at(trace, inputs, &["--scenes"]) else {
+        return;
+    };
+    assert!(out.contains("tick 381: game mode 6 state 0"), "{out}");
+    let Some(out) = session_at(trace, inputs, &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(
+        out.contains("the developer setting: DbLevel 3, /develop.ini found"),
+        "{out}"
+    );
+    assert!(out.contains("820 ticks compared, no difference"), "{out}");
+    let Some(out) = session_at(trace, inputs, &["--dblevel", "0", "--ticks", "2"]) else {
+        return;
+    };
+    assert!(out.contains("DbLevel: ours 0, theirs 3"), "{out}");
+}

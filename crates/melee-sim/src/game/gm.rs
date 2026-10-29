@@ -55,6 +55,9 @@ pub const GM_DEBUG_VS: u8 = 14;
 /// exits reach.
 pub const GM_DEBUG: u8 = 6;
 pub const GM_DEBUG_SOUND_TEST: u8 = 7;
+/// The Hanyu selects, the debug menu's character and stage select tests.
+pub const GM_HANYU_CSS: u8 = 8;
+pub const GM_HANYU_SSS: u8 = 9;
 pub const GM_TARGET_TEST: u8 = 15;
 pub const GM_SUPER_SUDDEN_DEATH_VS: u8 = 16;
 pub const GM_CHALLENGER_APPROACH: u8 = 20;

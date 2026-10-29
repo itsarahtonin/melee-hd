@@ -345,7 +345,7 @@ pub static T_803FA8E8: Table = Table {
             choices_at: 0x00000000,
             var: 0x803FA324,
             min: 0.0_f32,
-            max: 100.0_f32,
+            max: 1e+02_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -382,7 +382,7 @@ pub static T_803FA8E8: Table = Table {
             var: 0x803FA344,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 1,
@@ -1085,9 +1085,9 @@ pub static T_803FB728: Table = Table {
             choices: &[],
             choices_at: 0x00000000,
             var: 0x803FA2F0,
-            min: 0.10000000149011612_f32,
+            min: 0.1_f32,
             max: 5.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1097,9 +1097,9 @@ pub static T_803FB728: Table = Table {
             choices: &[],
             choices_at: 0x00000000,
             var: 0x803FA2F4,
-            min: 0.10000000149011612_f32,
+            min: 0.1_f32,
             max: 5.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1109,9 +1109,9 @@ pub static T_803FB728: Table = Table {
             choices: &[],
             choices_at: 0x00000000,
             var: 0x803FA2F8,
-            min: 0.10000000149011612_f32,
+            min: 0.1_f32,
             max: 5.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1121,9 +1121,9 @@ pub static T_803FB728: Table = Table {
             choices: &[],
             choices_at: 0x00000000,
             var: 0x803FA2FC,
-            min: 0.10000000149011612_f32,
+            min: 0.1_f32,
             max: 5.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 9,
@@ -1494,7 +1494,7 @@ pub static T_803FBCAC: Table = Table {
             var: 0x803FA2D0,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1506,7 +1506,7 @@ pub static T_803FBCAC: Table = Table {
             var: 0x803FA2D4,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1518,7 +1518,7 @@ pub static T_803FBCAC: Table = Table {
             var: 0x803FA2D8,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1530,7 +1530,7 @@ pub static T_803FBCAC: Table = Table {
             var: 0x803FA2DC,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 9,
@@ -1573,7 +1573,7 @@ pub static T_803FBDC0: Table = Table {
             var: 0x803FA2E0,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1585,7 +1585,7 @@ pub static T_803FBDC0: Table = Table {
             var: 0x803FA2E4,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1597,7 +1597,7 @@ pub static T_803FBDC0: Table = Table {
             var: 0x803FA2E8,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 8,
@@ -1609,7 +1609,7 @@ pub static T_803FBDC0: Table = Table {
             var: 0x803FA2EC,
             min: 0.0_f32,
             max: 3.0_f32,
-            step: 0.10000000149011612_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 9,
@@ -2146,7 +2146,7 @@ pub static T_803FC70C: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DE0,
             min: 0.0_f32,
-            max: 1000000.0_f32,
+            max: 1e+06_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -2158,7 +2158,7 @@ pub static T_803FC70C: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DE4,
             min: 0.0_f32,
-            max: 1000000.0_f32,
+            max: 1e+06_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -2170,7 +2170,7 @@ pub static T_803FC70C: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DE8,
             min: 0.0_f32,
-            max: 1000000.0_f32,
+            max: 1e+06_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -2182,7 +2182,7 @@ pub static T_803FC70C: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DEC,
             min: 0.0_f32,
-            max: 1000000.0_f32,
+            max: 1e+06_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -2194,8 +2194,8 @@ pub static T_803FC70C: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DF0,
             min: 0.0_f32,
-            max: 1000000.0_f32,
-            step: 1000.0_f32,
+            max: 1e+06_f32,
+            step: 1e+03_f32,
         },
         Entry {
             kind: 9,
@@ -2284,7 +2284,7 @@ pub static T_803FC828: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DCC,
             min: 0.0_f32,
-            max: 1000000.0_f32,
+            max: 1e+06_f32,
             step: 1.0_f32,
         },
         Entry {
@@ -2296,8 +2296,8 @@ pub static T_803FC828: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DD4,
             min: 0.0_f32,
-            max: 1000000.0_f32,
-            step: 10.0_f32,
+            max: 1e+06_f32,
+            step: 1e+01_f32,
         },
         Entry {
             kind: 9,
@@ -2386,8 +2386,8 @@ pub static T_803FC8C8: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DD0,
             min: 0.0_f32,
-            max: 1000000.0_f32,
-            step: 0.10000000149011612_f32,
+            max: 1e+06_f32,
+            step: 0.1_f32,
         },
         Entry {
             kind: 3,
@@ -2398,8 +2398,8 @@ pub static T_803FC8C8: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DD4,
             min: 0.0_f32,
-            max: 1000000.0_f32,
-            step: 10.0_f32,
+            max: 1e+06_f32,
+            step: 1e+01_f32,
         },
         Entry {
             kind: 9,
@@ -2525,7 +2525,7 @@ pub static T_803FCA40: Table = Table {
             choices_at: 0x00000000,
             var: 0x804D6DF4,
             min: 0.0_f32,
-            max: 100000000.0_f32,
+            max: 1e+08_f32,
             step: 1.0_f32,
         },
         Entry {

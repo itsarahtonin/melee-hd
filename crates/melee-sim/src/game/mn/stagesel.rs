@@ -659,6 +659,8 @@ impl Running<'_> {
     fn sss_data(&self) -> &super::super::gm::vs_melee::SssData {
         if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
             &self.game.tou.sss
+        } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
+            &self.game.debug_mode.hanyu_sss
         } else {
             &self.game.vs_melee.sss
         }
@@ -667,6 +669,8 @@ impl Running<'_> {
     fn sss_data_mut(&mut self) -> &mut super::super::gm::vs_melee::SssData {
         if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
             &mut self.game.tou.sss
+        } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
+            &mut self.game.debug_mode.hanyu_sss
         } else {
             &mut self.game.vs_melee.sss
         }
