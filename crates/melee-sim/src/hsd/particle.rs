@@ -384,8 +384,82 @@ pub fn init_data_bank(
     form: Option<DataRef>,
 ) {
     if bank < BANKS {
+        locate_in_image(data, cmd, tex);
         load_data_bank(objs, data, bank, cmd, tex, remap, form);
     }
+}
+
+/// `psInitDataBankLocate`'s writes into the loaded file, for the heap's image where the scene
+/// loaded the file into its heap (a debug VS match's effects and stage): the command bank's
+/// list offsets made addresses, each list's draw-order
+/// bits fixed (`x8`'s bits 25 to 27 made 4), the texture bank's groups' offsets, each group's
+/// images' and, for the palette formats (8 to 10), its palettes'. melee-sim reads the banks
+/// unlocated (the module's notes), so this only writes the image. `formBank` is null in every
+/// call the game makes.
+#[doc(alias = "psInitDataBankLocate")]
+pub fn locate_in_image(data: &Archives, cmd: DataRef, tex: DataRef) {
+    if !crate::hsd::heap::image_on() {
+        return;
+    }
+    crate::hsd::heap::with(|h| {
+        let img = &mut h.image;
+        let (Some(cmd_at), Some(tex_at)) = (img.data_addr(cmd), img.data_addr(tex)) else {
+            return;
+        };
+        // Version 0 relocates a null entry too, which no bank has ([`load_data_bank`]).
+        let (table, n) = match data.u16(cmd) {
+            0 => (cmd.at(8), data.u32(cmd.at(4))),
+            0x40..=0x43 => (cmd.at(12), data.u32(cmd.at(8))),
+            _ => panic!("psInitDataBanks: unknown version"),
+        };
+        let lists: Vec<u32> = (0..n).map(|i| data.u32(table.at(4 * i))).collect();
+        for (i, &off) in lists.iter().enumerate() {
+            if off != 0 {
+                img.file_word(table.at(4 * i as u32), off.wrapping_add(cmd_at));
+            }
+        }
+        for &off in lists.iter().filter(|&&o| o != 0) {
+            let kind = cmd.at(off).at(8);
+            img.file_word(kind, (data.u32(kind) & 0xF1FF_FFFF) | 0x0800_0000);
+        }
+        let groups = data.u32(tex) as i32;
+        for k in 0..groups.max(0) as u32 {
+            let at = tex.at(4 + 4 * k);
+            let off = data.u32(at);
+            if off == 0 {
+                continue;
+            }
+            img.file_word(at, off.wrapping_add(tex_at));
+            let g = tex.at(off);
+            let num = data.u32(g);
+            let entry = |i: u32| g.at(0x18 + 4 * i);
+            let locate = |img: &mut crate::hsd::image::Image, i: u32| {
+                let w = data.u32(entry(i));
+                if w != 0 {
+                    img.file_word(entry(i), w.wrapping_add(tex_at));
+                }
+            };
+            for i in 0..num {
+                locate(img, i);
+            }
+            let fmt = data.u32(g.at(4));
+            if fmt != 8 && fmt.wrapping_sub(9) > 1 {
+                continue;
+            }
+            let (palnum, palflag) = (u32::from(data.u16(g.at(0x14))), data.u16(g.at(0x16)));
+            if palflag & 1 != 0 {
+                locate(img, num);
+            } else if palnum != 0 {
+                for i in num..num + palnum {
+                    locate(img, i);
+                }
+            } else {
+                for i in num..num * 2 {
+                    locate(img, i);
+                }
+            }
+        }
+    });
 }
 
 /// Empties the particle system, `hsd_80398A08`. Point joints are dropped without releasing

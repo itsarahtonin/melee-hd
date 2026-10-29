@@ -49,6 +49,7 @@ impl Running<'_> {
         let _ = super::super::data::figatree_frames(self.data, tree);
         self.push_attrs(f, attr::SIZE);
         self.link_patch_attack_air_lw_end(f);
+        self.image_ext_attrs(f, &[attr::ATTACK_AIR_LW_HIT_FRAME_END]);
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");

@@ -117,18 +117,29 @@ pub enum ParamColor {
 #[doc(alias = "Ground_801C05EC")]
 pub fn set_param_color(game: &mut Game, which: ParamColor, c: _GXColor) {
     let p = game.gr.param.as_mut().expect("stage_info.param is null");
-    let slot = match which {
-        ParamColor::B8 => &mut p.xB8,
-        ParamColor::BC => &mut p.xBC,
-        ParamColor::C0 => &mut p.xC0,
-        ParamColor::C4 => &mut p.xC4,
-        ParamColor::C8 => &mut p.xC8,
-        ParamColor::CC => &mut p.xCC,
-        ParamColor::D0 => &mut p.xD0,
-        ParamColor::D4 => &mut p.xD4,
-        ParamColor::D8 => &mut p.xD8,
+    let (slot, off) = match which {
+        ParamColor::B8 => (&mut p.xB8, 0xB8),
+        ParamColor::BC => (&mut p.xBC, 0xBC),
+        ParamColor::C0 => (&mut p.xC0, 0xC0),
+        ParamColor::C4 => (&mut p.xC4, 0xC4),
+        ParamColor::C8 => (&mut p.xC8, 0xC8),
+        ParamColor::CC => (&mut p.xCC, 0xCC),
+        ParamColor::D0 => (&mut p.xD0, 0xD0),
+        ParamColor::D4 => (&mut p.xD4, 0xD4),
+        ParamColor::D8 => (&mut p.xD8, 0xD8),
     };
+    image_param(game.stage_info.param, off, [c.r, c.g, c.b, c.a]);
     *slot = c;
+}
+
+/// A write into the stage's loaded parameters (`stage_info.param`, at `off`), which the heap's
+/// image takes where the scene read the stage's file into its heap (a debug VS match's).
+fn image_param(param: Option<DataRef>, off: u32, bytes: [u8; 4]) {
+    if let Some(p) = param
+        && crate::hsd::heap::image_on()
+    {
+        crate::hsd::heap::with(|h| h.image.file_bytes(p.at(off), &bytes));
+    }
 }
 
 /// The stage fog's color, `Ground_801C2090`, if there is a fog.
@@ -492,6 +503,7 @@ pub fn item_freq_scale(game: &Game, data: &Archives, stkind: i32) -> f64 {
 #[doc(alias = "Ground_SetParamY")]
 pub fn set_scale(game: &mut Game, y: f32) {
     game.gr.param.as_mut().expect("ground.c: param").y = y;
+    image_param(game.stage_info.param, 0, y.to_bits().to_be_bytes());
 }
 
 /// The stage parameters' `x4`, or 128 without them, `Ground_801C0508`.
