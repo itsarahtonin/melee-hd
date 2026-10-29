@@ -567,6 +567,13 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         }
     }
     g.hurt_capsules_follow(gobj);
+    let pos = g.game.fighters[f.0].cur_pos;
+    if g.game.gm.db_level >= DB_DEBUG_ROM && (pos.x.is_nan() || pos.y.is_nan() || pos.z.is_nan()) {
+        panic!(
+            "fighter procUpdate pos error.\tpos.x={}\tpos.y={}",
+            pos.x, pos.y
+        );
+    }
 }
 
 /// `Fighter_procCpu`: a computer player's decisions.

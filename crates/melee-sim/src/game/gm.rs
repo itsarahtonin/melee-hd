@@ -51,6 +51,10 @@ pub const GM_ADVENTURE: u8 = 4;
 pub const GM_ALLSTAR: u8 = 5;
 /// The debug VS mode, which Slippi's playback codes run a replay's match in.
 pub const GM_DEBUG_VS: u8 = 14;
+/// The debug menu's mode and the sound test's debug mode, which only a debug level's title
+/// exits reach.
+pub const GM_DEBUG: u8 = 6;
+pub const GM_DEBUG_SOUND_TEST: u8 = 7;
 pub const GM_TARGET_TEST: u8 = 15;
 pub const GM_SUPER_SUDDEN_DEATH_VS: u8 = 16;
 pub const GM_CHALLENGER_APPROACH: u8 = 20;
@@ -63,8 +67,12 @@ pub const GM_EVENT: u8 = 43;
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Globals {
     /// The debug level (`DbLevel`): 0 on a retail disc, where the debug menus, pause frame
-    /// stepping and debug buttons never run. Their paths aren't ported.
+    /// stepping and debug buttons never run; a session's developer setting raises it
+    /// (`session::Develop`).
     pub db_level: i32,
+    /// Whether the boot found `/develop.ini` (`db_804D6B20`): a development disc's, or a
+    /// session's developer setting that marks it.
+    pub develop_ini: bool,
     /// The buttons held on the first controller as the game started
     /// (`db_gameLaunchButtonState`, `db_GetGameLaunchButtonState`).
     pub launch_buttons: u16,
