@@ -109,8 +109,24 @@ impl Running<'_> {
                     .any(|&(c, _)| c + crate::hsd::heap::HEADER == links)
             })
             .unwrap_or(false);
+        // The enemy spawner's slots are this scene's when its heap holds their block (the
+        // spawner's globals keep a past stage's).
+        let zako = game.gr.zako.addr;
+        let zako_live = zako != 0
+            && game.gr.zako.slots.is_some()
+            && crate::hsd::heap::with(|h| {
+                h.os.allocated
+                    .iter()
+                    .any(|&(c, _)| c + crate::hsd::heap::HEADER == zako)
+            })
+            .unwrap_or(false);
         crate::hsd::export::with_image(|img| {
-            super::export::scene_game_objects(game, data, img, geometry_live, dynamics_live)
+            let live = super::export::Live {
+                geometry: geometry_live,
+                dynamics: dynamics_live,
+                zako: zako_live,
+            };
+            super::export::scene_game_objects(game, data, img, live)
         });
         crate::hsd::heap::with(|h| h.end_scene_image());
         self.export_heap_image();

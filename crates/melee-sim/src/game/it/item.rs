@@ -589,9 +589,8 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // A block new from the heap holds what the scenes before left there (docs/engine.md, a
     // session's heap leftovers).
     let addr = r.game.items.addr(id.0);
-    if let Some(left) =
-        crate::game::leftovers::import(r.data, addr, crate::game::leftovers::pool_grew())
-    {
+    let fresh = crate::game::leftovers::pool_grew();
+    if let Some(left) = crate::game::leftovers::import(r.data, addr, fresh) {
         r.game.items[id.0] = left;
         // Where the block held the GPU's pixels, which the comparer leaves out while they
         // hold the image's fill (docs/engine.md, "Uninitialized values").
@@ -604,9 +603,11 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
         } else {
             r.game.it.render_leftovers.insert(id.0, rt);
         }
-    } else {
+    } else if fresh || !crate::hsd::heap::image_on() {
         r.game.it.render_leftovers.remove(&id.0);
     }
+    // A slot handed out again keeps its last item's record (`alloc_stale`): what that item
+    // left of the GPU's pixels, this one holds still where it doesn't write it.
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
     // So are its hitboxes' joints, until the script makes each box (`HitJObj`).
@@ -1468,6 +1469,15 @@ pub fn react_reflect(r: &mut Running, gobj: GObjId) -> bool {
         ip.xD9C = ip.xC80.clone();
         ip.xDA4_word = ip.xC88 as u32;
         ip.xDA8_short = ip.xC8C;
+        let i = item_of(r.game, gobj);
+        crate::game::leftovers::carry_render(
+            r.game,
+            crate::game::leftovers::RenderOf::Item(i),
+            0xC88,
+            crate::game::leftovers::RenderOf::Item(i),
+            0xDA4,
+            4,
+        );
     }
     let cb = logic(r.game, gobj).reflected;
     if react_with(r, gobj, cb) {
