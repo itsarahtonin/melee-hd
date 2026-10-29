@@ -27,9 +27,6 @@ pub const CAMERA_RENDER: u32 = 0x802F_CAC4;
 /// `NAMETAG_DISABLED`.
 const NO_NAMETAG: u8 = 0x78;
 
-/// `GetNameText`, the memory card's names (the name entry screen's port's).
-const GET_NAME_TEXT: &str = "GetNameText";
-
 /// The marker frames (`un_803F98B8`): by port (or computer) and team.
 const FRAMES: [[f32; 5]; 5] = [
     [0.0, 1.0, 3.0, 0.0, 16.0],
@@ -253,21 +250,19 @@ impl Running<'_> {
     }
 
     /// A slot's name entry in the text (the inline `createNameText`): its name tag's name
-    /// (`GetNameText`, which the text takes as its format) far off at (-5000, 0) until the
-    /// render places it, at 0.4 by 0.55.
+    /// (`GetNameText`, which the text takes as its format) off screen, at 0.4 by 0.55; a name
+    /// holding a % stops, as only an edited save can hold one.
     fn create_name_text(&mut self, slot: i32) {
+        let t = self.game.hud.nametags.text.expect("the names' text");
         let tag = self.game.player_nametag(slot);
         let name = self.game.name_text(tag);
         if name.as_ref().is_some_and(|n| n.contains(&b'%')) {
-            code::unported_call(&format!(
-                "{GET_NAME_TEXT}'s name with a % as the text's format"
-            ));
+            code::unported_call("GetNameText's name with a % as the text's format");
         }
-        let t = self.game.hud.nametags.text.expect("the names' text");
-        let k = self.game.sis.add_string(t, -5000.0, 0.0, name.as_deref());
+        let k = (self.game.sis).add_string(t, f64::from(-5000.0_f32), 0.0, name.as_deref());
         self.game.hud.nametags.entries[slot as usize] = k;
-        let (x, y) = (f64::from(0.4f32), f64::from(0.55f32));
-        self.game.sis.set_scale(self.data, t, k, x, y);
+        let (sx, sy) = (f64::from(0.4_f32), f64::from(0.55_f32));
+        self.game.sis.set_scale(self.data, t, k, sx, sy);
     }
 
     /// A slot's marker, `NameTag_Create`.

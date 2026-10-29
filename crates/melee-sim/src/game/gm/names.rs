@@ -143,7 +143,7 @@ impl Game {
     }
 
     /// Whether every name tag slot has a name, `IsNameListFull` (`GetNumNameList`).
-    // Ports `IsNameListFull`; aliased once a check reaches it.
+    #[doc(alias = "IsNameListFull")]
     pub fn name_list_full(&mut self) -> bool {
         (0..120u8).filter(|&i| self.name_text(i).is_some()).count() >= 0x78
     }

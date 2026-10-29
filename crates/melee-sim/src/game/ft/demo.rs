@@ -21,6 +21,9 @@ use gekko_fp as fp;
 /// `FtPart_RThumbNb`: the joint a pose's item is held at.
 const PART_R_THUMB_NB: i32 = 49;
 
+/// `It_Kind_DrMario_Vitamin`.
+const IT_KIND_DRMARIO_VITAMIN: i32 = 49;
+
 /// The demo action-state table (`ftData_803C52A0`) and its states' count (`x18`).
 const DEMO_STATE_LIST: u32 = 0x803C_52A0;
 const DEMO_STATES: i32 = 14;
@@ -337,7 +340,7 @@ impl Running<'_> {
 
     /// A winner's pose: its state, the pose's flags (`setupInitialState`), and what the
     /// character holds in it (`ftCo_800BECB0`, `ftCo_800BED88`, `ftCo_800BEF04`): Fox his
-    /// blaster, Dr. Mario two pills (not ported), Ness his bat.
+    /// blaster, Dr. Mario two pills, Ness his bat.
     #[doc(alias = "ftCo_800BECB0")]
     #[doc(alias = "ftCo_800BED88")]
     #[doc(alias = "ftCo_800BEF04")]
@@ -368,9 +371,36 @@ impl Running<'_> {
                     super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
                 }
             }
-            // Dr. Mario's two pills (the second pose).
+            // Dr. Mario's two pills (the second pose, `DocHelper`), each a random color
+            // combination, in held states 5 and 4 at his place, 0.71428 his size.
             (2, 0x15) => {
-                super::super::code::unported_call("ftCo_800BED88's pills (itDrMarioPill_802C09C4)")
+                let f = self.game.fighter_id(gobj);
+                for (msid, held) in [(1, false), (0, true)] {
+                    let color = self.mr_special_n_vitamin_random(gobj);
+                    let fp = &self.game.fighters[f.0];
+                    let facing = fp.facing_dir;
+                    let pill = super::super::it::kinds::drmariopill::spawn_demo(
+                        self,
+                        gobj,
+                        color,
+                        IT_KIND_DRMARIO_VITAMIN,
+                        msid,
+                        0,
+                        facing,
+                    );
+                    let fp = &mut self.game.fighters[f.0];
+                    if held {
+                        fp.x1984_heldItemSpec = pill;
+                    } else {
+                        fp.item_gobj = pill;
+                    }
+                    let fp = &self.game.fighters[f.0];
+                    let s = fp::fmuls(reg(fp.x34_scale.y), reg(fp.co_attrs.model_scaling));
+                    let s = mem(fp::fmuls(f64::from(0.71428_f32), s));
+                    if let Some(i) = pill {
+                        super::super::it::lib26b1::set_scale(self.game, self.data, i, s);
+                    }
+                }
             }
             // Ness's bat (the third pose), at his right thumb, 0.8 his size.
             (5, 8) => {

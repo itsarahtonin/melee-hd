@@ -167,10 +167,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the Multi-Man list, behind the Multi-Man Melee gate",
     ),
     (
-        "mnCharSel_802640A0 (the character select)",
-        "Open: the name entry from the character select's name list, reachable; m5-pills ports it (milestone 5), and its merge removes this stop",
-    ),
-    (
         "a copy's list waited for as the card goes",
         "the album's copy states (15, 16) start only with a card in the other slot, and the player's console has slot B empty (melee-player's power::setup)",
     ),
@@ -205,10 +201,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "fn_80262F44's one-door screen",
         "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "mnNameNew_EnterFromMnCharSel (the name entry",
-        "Open: the name entry from the character select's name list, reachable; m5-pills ports it (milestone 5), and its merge removes this stop",
     ),
     (
         "reading a freed coin's block the heap gave out again",
