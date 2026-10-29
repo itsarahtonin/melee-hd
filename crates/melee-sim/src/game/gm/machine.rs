@@ -170,6 +170,11 @@ enum Hook {
     DebugEnterMenu0,
     DebugEnterMenu1,
     DebugEnterMenu2,
+    DebugEnterMemCard,
+    DebugEnterPrize,
+    DebugEnterApproach,
+    DebugExitPrize,
+    DebugBackToMenu,
     DebugUnported(&'static str),
 }
 
@@ -518,8 +523,8 @@ fn states(mode: u8) -> &'static [StateDesc] {
         debug(2, Some(Hook::DebugEnterMenu2), None, GS_DEBUG_MENU),
         debug(
             3,
-            Some(Hook::DebugUnported("onEnterPrize")),
-            Some(Hook::DebugUnported("onExitPrize")),
+            Some(Hook::DebugEnterPrize),
+            Some(Hook::DebugExitPrize),
             GS_PRIZE,
         ),
         debug(4, Some(Hook::DebugUnported("onEnterVs")), None, GS_VS),
@@ -532,26 +537,26 @@ fn states(mode: u8) -> &'static [StateDesc] {
         debug(
             6,
             Some(Hook::DebugUnported("onEnterIntroEasy")),
-            Some(Hook::DebugUnported("onExitIntro")),
+            Some(Hook::DebugBackToMenu),
             0x20,
         ),
         debug(
             7,
             Some(Hook::DebugUnported("onEnterIntroAllstar")),
-            Some(Hook::DebugUnported("onExitIntro")),
+            Some(Hook::DebugBackToMenu),
             0x21,
         ),
-        debug(8, None, Some(Hook::DebugUnported("onExitIntro")), 0x23),
+        debug(8, None, Some(Hook::DebugBackToMenu), 0x23),
         debug(
             9,
             Some(Hook::DebugUnported("onEnterGameOver")),
-            Some(Hook::DebugUnported("onExitIntro")),
+            Some(Hook::DebugBackToMenu),
             0x22,
         ),
         debug(
             10,
-            Some(Hook::DebugUnported("onEnterApproach")),
-            Some(Hook::DebugUnported("onExitIntro")),
+            Some(Hook::DebugEnterApproach),
+            Some(Hook::DebugBackToMenu),
             GS_APPROACH,
         ),
         debug(
@@ -560,16 +565,11 @@ fn states(mode: u8) -> &'static [StateDesc] {
             Some(Hook::DebugUnported("onExitResults1")),
             GS_RESULTS,
         ),
-        debug(
-            12,
-            None,
-            Some(Hook::DebugUnported("onExitIntro")),
-            GS_MOVIE_OPENING,
-        ),
+        debug(12, None, Some(Hook::DebugBackToMenu), GS_MOVIE_OPENING),
         debug(
             13,
-            Some(Hook::DebugUnported("onEnterMemCard")),
-            Some(Hook::DebugUnported("onExitMemCard")),
+            Some(Hook::DebugEnterMemCard),
+            Some(Hook::DebugBackToMenu),
             GS_MEMCARD,
         ),
         debug(14, None, None, 0x2B),
@@ -1124,6 +1124,12 @@ impl Running<'_> {
             Hook::DebugEnterMenu0 => self.debug_mode_enter_menu0(),
             Hook::DebugEnterMenu1 => self.debug_mode_enter_menu1(),
             Hook::DebugEnterMenu2 => self.debug_mode_enter_menu2(),
+            Hook::DebugEnterMemCard => self.debug_mode_enter_memcard(),
+            Hook::DebugEnterPrize => self.debug_mode_enter_prize(),
+            Hook::DebugEnterApproach => self.debug_mode_enter_approach(),
+            // `onExitPrize`: the Mode Team Test page.
+            Hook::DebugExitPrize => self.set_next_game_mode_state_id(2),
+            Hook::DebugBackToMenu => self.debug_mode_back_to_menu(),
             Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;

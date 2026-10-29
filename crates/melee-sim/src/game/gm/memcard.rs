@@ -115,6 +115,13 @@ impl Running<'_> {
     #[doc(alias = "gm_Scene_MemCard_OnEnter")]
     pub fn memcard_on_enter(&mut self) {
         let b = self.game.boot_mode;
+        // The enter data of the mode state the scene runs in: the boot's and the memory
+        // card mode's (`load_data`), or the debug mode's (`memcard_enter_data`).
+        let (x0, chan, mode) = if self.debug_mode_scene() {
+            self.game.debug_mode.memcard_enter
+        } else {
+            (b.load_x0, b.load_x4, b.load_mode)
+        };
         let m = &mut self.game.memcard;
         *m = super::memcard::MemCard {
             windows: std::mem::take(&mut m.windows),
@@ -124,9 +131,9 @@ impl Running<'_> {
             m.windows.is_empty(),
             "the last scene's windows weren't closed"
         );
-        m.question = b.load_x0 as i32;
-        m.chan = b.load_x4;
-        m.mode_id = b.load_mode;
+        m.question = x0 as i32;
+        m.chan = chan;
+        m.mode_id = mode;
         m.decision = i32::from(m.question != 0);
         m.exit_mode = m.mode_id;
         self.card_alloc_work_area();
@@ -142,9 +149,15 @@ impl Running<'_> {
     pub fn memcard_on_exit(&mut self) {
         let m = &self.game.memcard;
         let (answer, mode) = (m.answer, m.exit_mode);
-        let b = &mut self.game.boot_mode;
-        b.leave_x0 = answer;
-        b.leave_mode = mode;
+        if self.debug_mode_scene() {
+            let e = &mut self.game.debug_mode.memcard_exit;
+            e.0 = answer;
+            e.1 = mode;
+        } else {
+            let b = &mut self.game.boot_mode;
+            b.leave_x0 = answer;
+            b.leave_mode = mode;
+        }
         self.close_windows(0);
     }
 
@@ -495,11 +508,12 @@ impl Running<'_> {
             .expect("NtMsgWin.dat's ScNtcCommon_scene_data");
         let scene = DataRef { archive: a, offset };
         self.game.memcard.scene = Some(scene);
-        assert!(
-            self.game.game_data.saved_language() == super::main_lib::LANG_US,
-            "the Japanese message font (SdMsgBox.dat) isn't loaded"
-        );
-        let font = self.load_archive("SdMsgBox.usd");
+        let name = if self.game.game_data.saved_language() == super::main_lib::LANG_US {
+            "SdMsgBox.usd"
+        } else {
+            "SdMsgBox.dat"
+        };
+        let font = self.load_archive(name);
         self.load_font(FONT, font, "SIS_MessageData");
         let data = self.data;
         let g = &mut *self.game;

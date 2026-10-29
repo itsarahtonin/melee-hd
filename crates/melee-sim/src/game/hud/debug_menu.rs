@@ -1025,6 +1025,13 @@ fn menu_width(rows: &[Entry]) -> i32 {
 pub struct DebugMode {
     /// `menu_enter_data`: the debug menu scene's table and callback.
     pub menu_enter: (u32, u32),
+    /// `memcard_enter_data`: the memory card scene's question, channel and mode after (the
+    /// struct's padding byte, which nothing writes).
+    pub memcard_enter: (u32, u8, u8),
+    /// `memcard_exit_data`: its answer and mode after.
+    pub memcard_exit: (u32, u8),
+    /// `approach_data`: the challenger approach's character and slot.
+    pub approach: [u8; 2],
 }
 
 impl Running<'_> {
@@ -1044,6 +1051,58 @@ impl Running<'_> {
         a.lb.want_banks(2, 0x20);
         a.lb_start_bank_loads(self.data);
         self.game.audio.lb_wait_for_banks(self.data);
+    }
+
+    /// Whether the running scene is the debug mode's.
+    pub fn debug_mode_scene(&self) -> bool {
+        self.game
+            .machine
+            .scene_info
+            .is_some_and(|(m, _)| m == crate::game::gm::GM_DEBUG)
+    }
+
+    /// `onEnterPrize`: the special message the settings name (`un_802FFEE0`: its id, at most
+    /// 0x3E, and the trophy), dated far ahead.
+    #[doc(alias = "onEnterPrize")]
+    #[doc(alias = "un_802FFEE0")]
+    pub fn debug_mode_enter_prize(&mut self) {
+        let id = self.game.debug_setting(0x12C) as u16;
+        let trophy = self.game.debug_setting(0x130) as u16;
+        self.game.prize.debug_first = super::prize::PrizeEntry {
+            kind: id.min(0x3E),
+            trophy,
+            time: 0x0098_967F,
+            next: None,
+        };
+    }
+
+    /// `onEnterApproach`: the challenger approach screen for the character the Kim test's
+    /// Approach entry names (12 and past the list Dr. Mario, as the table's default).
+    #[doc(alias = "onEnterApproach")]
+    pub fn debug_mode_enter_approach(&mut self) {
+        const CKINDS: [u8; 12] = [0x19, 3, 7, 9, 0xA, 0xF, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19];
+        let i = self.game.debug_setting(0x140) as i32;
+        let ckind = if (0..12).contains(&i) {
+            CKINDS[i as usize]
+        } else {
+            0x19
+        };
+        self.game.debug_mode.approach = [ckind, 0];
+    }
+
+    /// `onEnterMemCard`: the memory card scene asks the boot's question on slot A.
+    #[doc(alias = "onEnterMemCard")]
+    pub fn debug_mode_enter_memcard(&mut self) {
+        let e = &mut self.game.debug_mode.memcard_enter;
+        e.0 = 1;
+        e.1 = 0;
+    }
+
+    /// `onExitIntro` and `onExitMemCard`: back to the first page.
+    #[doc(alias = "onExitIntro")]
+    #[doc(alias = "onExitMemCard")]
+    pub fn debug_mode_back_to_menu(&mut self) {
+        self.set_next_game_mode_state_id(0);
     }
 
     /// `onEnterMenu2`: the Mode Team Test page, back to the first page.

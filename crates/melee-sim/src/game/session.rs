@@ -248,6 +248,8 @@ pub const FILES: &[&str] = &[
     "SdMenu.dat",
     "IfAll.dat",
     "NtMemAc.dat",
+    "SdMsgBox.dat",
+    "SdProge.dat",
     "SdToy.dat",
     "GmEvent.dat",
     "LbAd.dat",
@@ -259,6 +261,8 @@ pub const FILES: &[&str] = &[
     // The special messages' interface's.
     "IfPrize.usd",
     "SdPrize.usd",
+    "IfPrize.dat",
+    "SdPrize.dat",
     // The challenger approach's screen, in either language.
     "NtAppro.usd",
     "NtAppro.dat",

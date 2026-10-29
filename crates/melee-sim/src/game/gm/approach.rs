@@ -337,7 +337,12 @@ impl Running<'_> {
     #[doc(alias = "gm_Scene_Approach_OnEnter")]
     pub fn approach_on_enter(&mut self) {
         self.approach_setup();
-        let [ckind, port] = self.game.approach.data;
+        // The scene's enter data: VS mode's, or the debug mode's (`approach_data`).
+        let [ckind, port] = if self.debug_mode_scene() {
+            self.game.debug_mode.approach
+        } else {
+            self.game.approach.data
+        };
         let ckind = i32::from(ckind as i8);
         let ap = &mut self.game.approach;
         ap.ckind = if NAME_FRAMES.iter().any(|&(k, _)| k == ckind) {
