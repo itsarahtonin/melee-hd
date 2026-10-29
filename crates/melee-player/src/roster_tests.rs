@@ -74,11 +74,10 @@ fn every_roster_stage_plays() {
     });
 }
 
-/// Every offered stage plays a short items-on match from the launcher's setting: Fox against
-/// Marth with the whole item switch on at very high, which starts with the kinds the launcher
-/// offers for them there (`items::Switch::for_match`), and half a minute of scripted
-/// controllers that pick items up (A near one), throw and swing them, without reaching code no
-/// port covers. A stage with no kind offered is skipped, saying so. Skips without `SSBM_DISC`.
+/// Every offered stage plays a short items-on match: Fox against Marth with the whole item
+/// switch on at very high, and half a minute of scripted controllers that pick items up (A near
+/// one), throw and swing them, without reaching code no port covers. Skips without
+/// `SSBM_DISC`.
 #[test]
 fn every_offered_stage_plays_with_items() {
     crate::on_game_stack(|| {
@@ -97,11 +96,8 @@ fn every_offered_stage_plays_with_items() {
             team: port,
         };
         let players = [player("fox", 0), player("marth", 1)];
-        let characters: Vec<u8> = players.iter().map(|p| p.character).collect();
-        let switch = crate::items::Switch {
-            freq: 4,
-            ..Default::default()
-        };
+        // Every kind on: the items audit names no gap (the menus audit holds the item switch to it).
+        let prefs = melee_sim::game::gm::vs_mode::GamePrefs::items(4, |_| true);
         // Walking about, jabbing (which picks up an item underfoot), throwing with Z and shielding.
         let pads = |tick: u32| {
             let mut p = [PadStatus::default(); 4];
@@ -122,12 +118,7 @@ fn every_offered_stage_plays_with_items() {
         };
         let mut played = 0;
         for s in roster::offered_stages() {
-            let items = switch.for_match(&characters, s.kind);
-            if items.kinds.is_empty() {
-                eprintln!("{}: no item offered, skipped", s.name);
-                continue;
-            }
-            let mut settings = Settings::vs_items(s.kind, &players, 4, 8, &items.prefs);
+            let mut settings = Settings::vs_items(s.kind, &players, 4, 8, &prefs);
             settings.seed = 0x5EED_0000 | u32::from(s.kind);
             let mut session = Session::begin(&disc, &settings, None, false)
                 .unwrap_or_else(|e| panic!("{}: {e}", s.name));
@@ -141,11 +132,7 @@ fn every_offered_stage_plays_with_items() {
             }
             let spawned = session.game().it.spawned;
             assert!(spawned > 0, "{}: no item came out", s.name);
-            eprintln!(
-                "{}: {} kinds, {spawned} items came out",
-                s.name,
-                items.kinds.len()
-            );
+            eprintln!("{}: {spawned} items came out", s.name);
             played += 1;
         }
         eprintln!("{played} stages played with items");

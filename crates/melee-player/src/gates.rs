@@ -5,12 +5,15 @@
 //! entry. The game runs as a console's on which nobody confirmed there, and the session's
 //! recording, which takes the reads the game took, is still a console's.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use melee_sim::game::menus_audit::{self, Gate};
 use melee_sim::game::state::Game;
 use melee_sim::input::controller::PadData;
 use melee_sim::input::pad::{BUTTON_A, BUTTON_START};
+
+/// How long the note that a gated entry was refused shows.
+pub const NOTE: Duration = Duration::from_secs(3);
 
 /// The confirming buttons.
 const CONFIRM: u16 = BUTTON_A | BUTTON_START;
