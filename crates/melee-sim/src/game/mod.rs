@@ -8,6 +8,7 @@ pub mod boot;
 pub mod camera;
 pub mod code;
 pub mod cpu_audit;
+pub mod db;
 pub mod disc;
 pub mod ef;
 pub mod export;

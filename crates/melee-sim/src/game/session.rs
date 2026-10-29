@@ -267,6 +267,8 @@ pub const FILES: &[&str] = &[
     "SdPrize.dat",
     // The sound test debug mode's lists.
     "SmSt.dat",
+    // The match's develop tools' names, at the debug ROM's level.
+    "DbCo.dat",
     // The challenger approach's screen, in either language.
     "NtAppro.usd",
     "NtAppro.dat",
@@ -274,6 +276,8 @@ pub const FILES: &[&str] = &[
     "LbRf.dat",
     "PdPm.dat",
     "GmPause.usd",
+    // The pause screen's in Japanese, the saved language a match takes it in.
+    "GmPause.dat",
     "SdIntro.dat",
     "IfCoGet.dat",
     "LbBf.dat",
@@ -662,13 +666,27 @@ impl Session {
         });
         lent.give_back(&mut self.game.objs.heap);
         if std::mem::take(&mut self.game.machine.files_wanted) {
-            let start = Running {
+            let (start, is_match) = Running {
                 game: &mut self.game,
                 data: &self.data,
             }
-            .scene_start_data()
-            .clone();
-            self.read_match_files(&start, console);
+            .scene_files_data();
+            if is_match {
+                self.read_match_files(&start, console);
+            } else {
+                super::vs_match::load_fighter_files(
+                    &mut self.game,
+                    &mut self.data,
+                    &start,
+                    &mut |n| console.file(n),
+                );
+                super::vs_match::load_results_files(
+                    &mut self.game,
+                    &mut self.data,
+                    &start,
+                    &mut |n| console.file(n),
+                );
+            }
             let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
             with_feed(console, |_| {
                 Running {
@@ -707,7 +725,8 @@ impl Session {
         });
         let grkind = crate::lb::audio::ground_kind(i32::from(start.rules.stkind)) as i32;
         let mut names: Vec<&str> = Vec::new();
-        if let Some(name) = super::gr::data::stage_data(grkind).file {
+        let us = self.game.game_data.saved_language() == super::gm::main_lib::LANG_US;
+        if let Some(name) = super::gr::data::stage_file(grkind, us) {
             names.push(name.trim_start_matches('/'));
         }
         if grkind == super::gr::GR_KIND_PSTADIUM {

@@ -486,7 +486,9 @@ impl Running<'_> {
         // lives in the cache's heap, where the model doesn't follow it.
         if self.game.ft.data.files.from_cache {
             let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
-            if let Some((addr, file)) = self.take_cached_blocks(entrynum) {
+            // Without `lbDvd_8001819C`'s check: a file a match loads with `loadArchive`
+            // (`lbArchive_LoadSymbols`, `lbArchive_80016DBC`) never asks the cache.
+            if let Some((addr, file)) = self.take_cached_blocks_unchecked(entrynum) {
                 // Where its data is, for a pointer into it a block of the scene's heap keeps
                 // once freed (docs/engine.md, a session's heap leftovers).
                 if file != 0

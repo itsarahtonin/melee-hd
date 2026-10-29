@@ -1032,20 +1032,19 @@ impl Comparer<'_> {
             game.gr.stkind,
             self.u32(sym("selected_stage")) as i32,
         );
-        let yaku = self.u32(GRLAST_YAKUMONO);
-        self.check(
-            "grLast yakumono_param",
-            "data",
-            game.gr.last_yakumono,
-            (yaku != 0).then(|| self.data.get(yaku)).flatten(),
-        );
-        let yaku = self.u32(GRBATTLE_YAKUMONO);
-        self.check(
-            "grBattle yakumono_param",
-            "data",
-            game.gr.battle_yakumono,
-            (yaku != 0).then(|| self.data.get(yaku)).flatten(),
-        );
+        // Final Destination's and Battlefield's parameters stay set past their match too, into
+        // its freed file where its scene's heap held it (a debug VS match's).
+        {
+            use melee_sim::game::mirror::Cx;
+            let yaku = self.u32(GRLAST_YAKUMONO);
+            self.compare_data("grLast yakumono_param data", game.gr.last_yakumono, yaku);
+            let yaku = self.u32(GRBATTLE_YAKUMONO);
+            self.compare_data(
+                "grBattle yakumono_param data",
+                game.gr.battle_yakumono,
+                yaku,
+            );
+        }
         crate::stadium::compare_statics(self);
         for (name, at, ours) in [
             (

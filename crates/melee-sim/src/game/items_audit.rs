@@ -464,7 +464,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_80283AE4", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026ECE0", DEBUG),
-    ("Item_80266F3C", DEBUG),
     ("it_8026C1E8", ZAKO),
     ("it_802EA9FC", ZAKO),
     ("it_802DC4BC", ZAKO),

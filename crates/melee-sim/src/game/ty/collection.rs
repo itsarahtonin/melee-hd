@@ -919,7 +919,6 @@ impl Running<'_> {
     /// (rows and triangle with a coin toss) and the framing.
     #[doc(alias = "tyDisplay_Scene_OnEnter")]
     pub fn coll_on_enter(&mut self) {
-        self.game.assert_retail();
         let alloc = |n: u32| crate::hsd::heap::mem_alloc(n);
         let jobjs_block = alloc(4 * JOBJS as u32);
         let grid_block = alloc(0x12E4);
@@ -948,6 +947,12 @@ impl Running<'_> {
             0
         };
         self.coll().mode = mode;
+        // From the debug ROM's level, Z held: the debug view (`_tyDisplay_804D6F20`).
+        if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM && self.toy_held() & 0x10 != 0 {
+            crate::game::code::unported_call(
+                "the trophy collection's debug view (_tyDisplay_8031C1D0)",
+            );
+        }
         self.toy_scene_prepare();
         self.gal_reset_lights_block(light_block);
         let total = self.toy_total();
