@@ -99,6 +99,61 @@ impl Running<'_> {
     }
 
     /// The debug menus' entries' callbacks by address, none for another address.
+    #[doc(alias = "fn_802FFE0C")]
+    #[doc(alias = "un_802FFEA4")]
+    #[doc(alias = "un_80300AB8")]
+    #[doc(alias = "un_80300FEC")]
+    #[doc(alias = "un_80301DCC")]
+    #[doc(alias = "un_80300290")]
+    #[doc(alias = "un_803003C4")]
+    #[doc(alias = "un_80300378")]
+    #[doc(alias = "un_80300338")]
+    #[doc(alias = "un_80300410")]
+    #[doc(alias = "un_80300480")]
+    #[doc(alias = "un_803004B4")]
+    #[doc(alias = "un_803004E8")]
+    #[doc(alias = "un_8030051C")]
+    #[doc(alias = "un_80300550")]
+    #[doc(alias = "un_80300584")]
+    #[doc(alias = "un_803005B8")]
+    #[doc(alias = "un_803005EC")]
+    #[doc(alias = "un_80300620")]
+    #[doc(alias = "un_80300654")]
+    #[doc(alias = "un_80300688")]
+    #[doc(alias = "un_803006BC")]
+    #[doc(alias = "un_803006F0")]
+    #[doc(alias = "un_80300724")]
+    #[doc(alias = "un_803007C8")]
+    #[doc(alias = "un_803007FC")]
+    #[doc(alias = "un_80300830")]
+    #[doc(alias = "un_80300864")]
+    #[doc(alias = "un_80300898")]
+    #[doc(alias = "un_803008CC")]
+    #[doc(alias = "un_80300900")]
+    #[doc(alias = "un_80300934")]
+    #[doc(alias = "un_80300758")]
+    #[doc(alias = "un_80300790")]
+    #[doc(alias = "un_80300968")]
+    #[doc(alias = "un_803009A4")]
+    #[doc(alias = "un_80300AF4")]
+    #[doc(alias = "un_80300B58")]
+    #[doc(alias = "un_80301328")]
+    #[doc(alias = "un_8030136C")]
+    #[doc(alias = "un_803013B0")]
+    #[doc(alias = "un_80301454")]
+    #[doc(alias = "un_803015BC")]
+    #[doc(alias = "un_80301D40")]
+    #[doc(alias = "un_803013EC")]
+    #[doc(alias = "un_80301420")]
+    #[doc(alias = "un_80301490")]
+    #[doc(alias = "un_803014CC")]
+    #[doc(alias = "un_80301508")]
+    #[doc(alias = "un_80301544")]
+    #[doc(alias = "un_80301580")]
+    #[doc(alias = "un_803015F8")]
+    #[doc(alias = "un_80301E08")]
+    #[doc(alias = "un_80301C80")]
+    #[doc(alias = "un_80301CE0")]
     pub fn debug_item(&mut self, cb: u32, arg: i32) -> Option<i32> {
         let ret = match cb {
             // `fn_802FFE0C`, the DaiRanTou page's own: B closes it, Start starts the match.
@@ -354,6 +409,7 @@ impl Running<'_> {
     }
 
     /// `un_80300248`, Publicity: A, with it on, relocks the save.
+    #[doc(alias = "un_80300248")]
     pub fn debug_publicity(&mut self, arg: i32) -> i32 {
         if self.game.debug_setting(4) != 0 && arg == CB_SELECT {
             self.sfx_forward();
@@ -364,11 +420,14 @@ impl Running<'_> {
 
     /// `un_803001DC` (Versus Mode) and `un_803002FC` (Mode Team Test): the debug mode's
     /// second and third pages.
+    #[doc(alias = "un_803001DC")]
+    #[doc(alias = "un_803002FC")]
     pub fn debug_page_item(&mut self, arg: i32, state: u8) -> i32 {
         self.debug_state_item(arg, state)
     }
 
     /// `un_80300218`, Language: the saved language from the entry, whatever happened.
+    #[doc(alias = "un_80300218")]
     pub fn debug_language(&mut self) -> i32 {
         let lang = self.game.debug_setting(0) as u8;
         self.game.game_data.set_saved_language(lang);

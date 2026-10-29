@@ -1237,8 +1237,7 @@ impl Running<'_> {
     }
 
     /// `onExitIntro` and `onExitMemCard`: back to the first page.
-    #[doc(alias = "onExitIntro")]
-    #[doc(alias = "onExitMemCard")]
+    // Ports `onExitIntro` and `onExitMemCard`; aliased once a session leaves their scenes.
     pub fn debug_mode_back_to_menu(&mut self) {
         self.set_next_game_mode_state_id(0);
     }
