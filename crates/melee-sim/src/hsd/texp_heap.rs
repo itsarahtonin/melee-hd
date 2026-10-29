@@ -55,7 +55,7 @@ pub fn finish(objs: &mut Objects, m: MObjId, s: &Scratch, num: usize) {
         h.n_tevdesc = num as u8;
     }
     // What the freed expressions' pieces hold as they go, for a session's leftovers.
-    super::export::with_image(|img| super::export::freed_texps(objs, img, &s.list, &s.addrs));
+    super::export::with_image(|img| super::export::freed_texps(objs, img, m, &s.list, &s.addrs));
     let h = &mut objs.mobjs[m].heap;
     // `HSD_TExpFreeList(list, HSD_TE_TEV, 1)`, then `(list, HSD_TE_CNST, 0)`: the list runs
     // newest first.
