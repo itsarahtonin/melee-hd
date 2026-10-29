@@ -1162,10 +1162,12 @@ impl Comparer<'_> {
         theirs.extend((0..16).map(|i| at(&where_t, self.u32(sym("particle_list") + 4 * i))));
         let mut ours = vec![u32::from(d.frame)];
         ours.extend(d.sorted.map(u32::from));
-        ours.extend(
-            d.non_edge
-                .map(|p| p.map_or(u32::MAX, |p| where_o.get(&p).copied().unwrap_or(u32::MAX))),
-        );
+        // One sorted before the particle system was emptied names a freed particle on
+        // either side, though our handle may name a new one in its slot.
+        ours.extend(d.non_edge.iter().zip(d.stale).map(|(p, stale)| match p {
+            Some(p) if !stale => where_o.get(p).copied().unwrap_or(u32::MAX),
+            _ => u32::MAX,
+        }));
         self.check("particles", "display sorting", ours, theirs);
     }
 
