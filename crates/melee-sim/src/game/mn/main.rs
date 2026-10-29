@@ -47,14 +47,14 @@ pub const ON_FRAME: CodeRef = CodeRef(0x8022_DD38);
 
 /// `MenuKind`s.
 pub const MAIN: u8 = 0;
-const ONE_P: u8 = 1;
+pub const ONE_P: u8 = 1;
 const VS: u8 = 2;
 const TOY: u8 = 3;
 const SETTINGS: u8 = 4;
 const DATA: u8 = 5;
-const REG: u8 = 6;
+pub const REG: u8 = 6;
 const EVENT: u8 = 7;
-const STADIUM: u8 = 9;
+pub const STADIUM: u8 = 9;
 const SPECIAL: u8 = 12;
 const RECORDS: u8 = 28;
 const MULTI_VS: u8 = 33;

@@ -770,6 +770,60 @@ pub fn detach() {
     with_device(|dev| dev.attached = false);
 }
 
+/// The create's step that writes the seventh bank's block (physical block 8): its steps are the
+/// list's first, the create's ('c'), then a sector written each (the header's block 0, then
+/// blocks 1 to 10 in order).
+const BANK7_WRITE_STEP: usize = 2 + 8;
+
+/// What memory holds after the card data (`GmCardData`, whose last four bytes are padding
+/// the game never writes): the power-on state (`gmMainLib_8046B0F0`, its last word unused)
+/// and the pad library's queue (`gmMain_8046B108`, [`pad_queue_bytes`]).
+pub fn after_card_data(
+    main: &crate::game::gm::main_lib::MainLib,
+    lib: &crate::input::controller::PadLib,
+) -> Vec<u8> {
+    let mut out = Vec::with_capacity(0x18 + 5 * 0x30);
+    for w in [
+        u32::from(main.skip_intro),
+        u32::from(main.resetting),
+        u32::from(main.progressive),
+        u32::from(main.xc),
+        main.x10,
+        0,
+    ] {
+        out.extend_from_slice(&w.to_be_bytes());
+    }
+    out.extend(pad_queue_bytes(lib));
+    out
+}
+
+/// The pad library's queue as memory holds it (`HSD_PadData[5]`, `gmMain_8046B108`): each
+/// poll's four `PADStatus`es (the buttons, the sticks, the triggers, the analog buttons and
+/// the error, then a byte of padding).
+pub fn pad_queue_bytes(lib: &crate::input::controller::PadLib) -> Vec<u8> {
+    let mut out = Vec::with_capacity(5 * 0x30);
+    for poll in &lib.queue {
+        for p in poll {
+            let [b0, b1] = p.button.to_be_bytes();
+            out.extend_from_slice(&[
+                b0,
+                b1,
+                p.stick_x as u8,
+                p.stick_y as u8,
+                p.substick_x as u8,
+                p.substick_y as u8,
+                p.trigger_left,
+                p.trigger_right,
+                p.analog_a,
+                p.analog_b,
+                p.err as u8,
+                0,
+            ]);
+        }
+    }
+    out
+}
+
 /// The card data as memory holds it.
 pub fn card_data_bytes(d: &GmCardData) -> Vec<u8> {
     let mut bytes = vec![0u8; GmCardData::SIZE as usize];
@@ -935,6 +989,88 @@ impl Running<'_> {
             CardTime::Load,
             true,
         );
+        r
+    }
+
+    /// `lb_8001C8BC`: the save created on the card (`lb_8001BC18` with the save's manifest,
+    /// the card data, the comment `lb_8001C658` makes from the clock as it's called, the
+    /// banner the unlocks pick, `getCurrentIcon`, and the icons), the game waiting for the
+    /// list: its steps run one after another in the call, each after its wait point. The
+    /// create writes each file's last block whole, so the seventh bank's takes what memory
+    /// holds after the card data: the pad library's queue (`gmMain_8046B108`), from its
+    /// 0x14th byte ([`pad_queue_bytes`]). Its result.
+    #[doc(alias = "lb_8001C8BC")]
+    pub fn card_game_create(&mut self) -> i32 {
+        self.card_alarm_probes();
+        // `lb_8001C658`'s `OSGetTime`, before the list starts.
+        self.game.audio.clock_read(self.data, TIME_READ);
+        let now = self.clock_now();
+        let offset = with_device(|dev| dev.time_offset);
+        let seconds = ((now + offset) / TB_HZ) as u32;
+        let comment = melee_save::melee::comment(seconds, false);
+        self.game.card_game.comment = comment;
+        let icons = self.game.card_game.icon_data.expect("the card's icons");
+        let idx = if self.holds_every_trophy() {
+            2
+        } else if self.game.gm.unlocks.all_characters() {
+            1
+        } else {
+            0
+        };
+        let data = self.data;
+        let bytes = |i: u32, n: usize| -> Vec<u8> {
+            let p = data.ptr(icons.at(4 * i)).expect("an icon image");
+            (0..n as u32).map(|k| data.u8(p.at(k))).collect()
+        };
+        let mut memory = card_data_bytes(&self.game.game_data.thing);
+        memory.extend_from_slice(&after_card_data(&self.game.main_lib, &self.game.pads.lib));
+        let mut bufs = melee_save::exec::Bufs::default();
+        for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {
+            *f = memory[file_span(i).0..].to_vec();
+        }
+        bufs.banner = bytes(idx, 0x1800);
+        bufs.icons = bytes(3, 0x600);
+        let mut run = Run::new(melee_save::melee::manifest(), bufs);
+        run.comment = comment;
+        // `resetState`: no file has a result yet.
+        self.game.card_tasks.file_errors = [result::START; 9];
+        let tasks = lists::create(melee_save::melee::FILENAME);
+        let (list, stamps) = start_list_dry(run.clone(), &tasks, now, seconds);
+        for &w in &list.start {
+            self.game.audio.clock_card_work(self.data, w);
+        }
+        let r = list.result;
+        if !list.card_in {
+            self.card_alarm_probes();
+            return r;
+        }
+        // The mount found the card: `*_p(status) = 0`.
+        self.game.card_game.unk_status = false;
+        let mut times = Vec::new();
+        for (k, &w) in list.steps.iter().enumerate() {
+            for &(at, file, e) in &list.results {
+                if at == k {
+                    self.game.card_tasks.file_errors[file] = e;
+                }
+            }
+            if k == BANK7_WRITE_STEP {
+                // The seventh bank's block takes memory as its write starts: the pad alarm's
+                // polls since the list began queued by then.
+                self.take_alarm_reads(&mut crate::game::session::direct_read);
+                let after = after_card_data(&self.game.main_lib, &self.game.pads.lib);
+                let f = &mut run.bufs.files[8];
+                f.truncate(melee_save::melee::NAME_TAG_BANK + 4);
+                f.extend_from_slice(&after);
+            }
+            self.game.audio.clock_card_work(self.data, w);
+            if stamps.contains(&k) {
+                times.push(self.session_seconds());
+            }
+        }
+        let written = finish_list(run, &tasks, seconds, &times);
+        assert_eq!(written, r, "the save's create ended otherwise on the card");
+        with_device(|dev| dev.attached = false);
+        self.card_alarm_probes();
         r
     }
 

@@ -1,12 +1,13 @@
-//! melee-hd's player: a VS match in a window.
+//! melee-hd's player: Melee from power-on in a window, or a VS match.
 //!
 //! ```text
+//! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
 //!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
-//! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
+//! melee-hd --settings-shot FILE.png [--size WxH] draws the settings panel to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
@@ -17,13 +18,16 @@
 //!
 //! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
 //! picker keeps the one it asks for the first time ([`settings`]). Characters and stages are melee-sim's
-//! `game::roster`, what it has ported (`--help` lists them). With no `--p1` to `--p4`, `--stage`
-//! or `--replay` (and no `--bench`), the window opens on the launcher, which picks the match
-//! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
+//! `game::roster`, what it has ported (`--help` lists them); a match the command line names is a
+//! developer's. With no `--p1` to `--p4`, `--stage`, `--replay` or `--inputs`, Melee boots from
+//! power-on with the native save ([`saves`]), its menus gated where they lead into unported
+//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]).
+//! Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
 //! borderless fullscreen; F12 saves a bug capture ([`capture`]), and `--flicker-scan` saves one by
-//! itself when a presented frame drops out for one frame ([`flicker`]). Escape quits, or from a match the launcher started, goes back to it.
+//! itself when a presented frame drops out for one frame ([`flicker`]). Escape opens the settings
+//! over Melee, or quits a match the command line named.
 //!
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
 //! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
@@ -62,18 +66,22 @@ mod channel;
 mod console;
 #[cfg(test)]
 mod cosmetic_tests;
-mod cpu;
+mod dialogs;
 mod flicker;
-mod items;
+mod front;
+mod gates;
+mod holds;
 mod jit;
 mod latency;
-mod launcher;
 mod paced;
 #[cfg(test)]
 mod paced_tests;
 mod pacing;
 mod perf;
 mod pipelines;
+mod power;
+#[cfg(test)]
+mod power_tests;
 #[cfg(test)]
 mod predict_tests;
 mod present;
@@ -82,9 +90,12 @@ mod record_tests;
 mod recording;
 #[cfg(test)]
 mod roster_tests;
+mod saves;
+mod session_rec;
 mod settings;
 mod sound;
 mod timing;
+mod ui;
 
 use std::collections::VecDeque;
 use std::process::ExitCode;
@@ -100,7 +111,7 @@ use melee_sim::audio::clock::DiscSpeed;
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
 use melee_sim::game::roster;
 use melee_sim::game::special_audit;
-use melee_sim::game::vs_match::{DiscFile, Match, Settings};
+use melee_sim::game::vs_match::{DiscFile, Settings};
 use melee_slippi::Replay;
 use winit::application::ApplicationHandler;
 use winit::event::{ElementState, KeyEvent, StartCause, WindowEvent};
@@ -128,8 +139,8 @@ fn on_game_stack(body: impl FnOnce() + Send + 'static) {
 
 /// The engine tick's length: a 60th of a second, or shorter in a game sped up (Lightning
 /// Melee's, whose tick the game's clock sets at its speed, `lb_80019628`).
-fn engine_tick(m: &Match) -> Duration {
-    m.game.pacing.short_tick_nanos().map_or(
+fn engine_tick(game: &melee_sim::game::state::Game) -> Duration {
+    game.pacing.short_tick_nanos().map_or(
         Duration::from_secs_f64(1.0 / TICK_RATE),
         Duration::from_nanos,
     )
@@ -140,9 +151,6 @@ fn engine_tick(m: &Match) -> Duration {
 struct Args {
     disc: String,
     players: Vec<(u8, u8)>,
-    /// Each port's CPU level, or none for a human: the launcher's (the command line has only
-    /// humans).
-    cpus: [Option<u8>; 4],
     stage: u16,
     stocks: u8,
     minutes: u8,
@@ -187,16 +195,16 @@ struct Args {
     one_thread: bool,
     /// Samples a pixel: 4 for MSAA, 1 as the console draws.
     msaa: u32,
-    /// No match on the command line: the launcher picks one.
-    launch: bool,
-    /// Draws the launcher to this PNG and quits.
-    launcher_shot: Option<String>,
+    /// The console from power-on with the settings panel (no match on the command line).
+    front: bool,
+    /// Draws the settings panel to this PNG and quits.
+    settings_shot: Option<String>,
     /// Borderless fullscreen on the window's monitor.
     fullscreen: bool,
     /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
     disc_speed: DiscSpeed,
-    /// The launcher's choices the command line gave, which win over the last match's.
-    given: launcher::Given,
+    /// The settings the command line gave, which win over the kept ones.
+    given: front::Given,
     /// Scans presented frames for one-frame dropouts and captures them.
     flicker_scan: bool,
     /// Writes the run's frame, GPU and CPU times here when the player quits.
@@ -205,25 +213,47 @@ struct Args {
     refresh: Option<f64>,
     /// The match's random seed, instead of one from the clock.
     seed: Option<u32>,
-    /// Plays a stage or character the launcher doesn't offer (`--unfinished-stages`, for
+    /// Plays a stage or character the command line doesn't offer (`--unfinished-stages`, for
     /// developers): one whose audit isn't done or found code a match can reach unported.
     unfinished_stages: bool,
     /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
     record: bool,
     /// Where the replays go: the replays folder beside the executable unless given.
     replays: Option<String>,
-    /// The item frequency and switch the match starts with, as the VS menus keep them: the
-    /// launcher's offered items (`items`), else items off.
+    /// The item frequency and switch a command line's match starts with: items off.
     items: GamePrefs,
     /// The Special Melee mode whose rules the match plays by, if any.
     special: Option<Special>,
+    /// Boots the console from power-on into Melee's own menus.
+    power_on: bool,
+    /// Plays a recorded session (`SSBMINP1`) from power-on, its reads instead of the
+    /// controllers.
+    inputs: Option<String>,
+    /// Where the console's session is recorded: `--record-session FILE`, else a new file in the
+    /// sessions folder; none with `--no-session-record`.
+    record_session: Option<String>,
+    session_record: bool,
+    /// The saves folder the console's card comes from (`--saves DIR`), else the settings
+    /// folder's.
+    saves: Option<String>,
+    /// Scripted controllers by tick (`--holds`), for play-testing without anyone at them.
+    holds: Option<holds::Holds>,
+    /// Imports this save or card image into the saves folder and quits (`--import-save`).
+    import_save: Option<String>,
+    /// Exports the saves folder's save as a `.gci`, or its card as a raw image (`.raw`,
+    /// `.card`), and quits (`--export-save`).
+    export_save: Option<String>,
+    /// Unlocks everything in the saves folder's save and quits (`--unlock-all`).
+    unlock_all: bool,
+    /// Writes the console's memory card as the session leaves it here (`--card-after`).
+    card_after: Option<String>,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -233,7 +263,9 @@ fn usage() -> String {
          replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match\n\
-         with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
+         console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
+         saves: [--import-save FILE.gci|.raw] [--export-save FILE.gci|.raw] [--unlock-all], each with [--saves DIR], then quit\n\
+         with no --p1..--p4, --stage, --replay or --inputs, Melee boots from power-on with the native save; Esc opens the settings\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::offered_characters().map(|c| c.keys[0]).collect()),
         names(roster::offered_stages().map(|s| s.keys[0]).collect()),
@@ -248,10 +280,14 @@ fn usage() -> String {
 }
 
 fn parse_args() -> Result<Args, String> {
+    parse_args_from(std::env::args().skip(1).collect())
+}
+
+/// [`parse_args`] for these arguments.
+fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
     let mut a = Args {
         disc: std::env::var("SSBM_DISC").unwrap_or_default(),
         players: vec![(2, 0), (2, 1)],
-        cpus: [None; 4],
         stage: 32,
         stocks: 4,
         minutes: 8,
@@ -276,11 +312,11 @@ fn parse_args() -> Result<Args, String> {
         aspect: present::Aspect::GAME,
         one_thread: false,
         msaa: 1,
-        launch: false,
-        launcher_shot: None,
+        front: false,
+        settings_shot: None,
         fullscreen: false,
         disc_speed: DiscSpeed::Drive,
-        given: launcher::Given::default(),
+        given: front::Given::default(),
         flicker_scan: false,
         perf_report: None,
         refresh: None,
@@ -290,10 +326,20 @@ fn parse_args() -> Result<Args, String> {
         replays: None,
         items: GamePrefs::items_off(),
         special: None,
+        power_on: false,
+        inputs: None,
+        record_session: None,
+        session_record: true,
+        saves: None,
+        holds: None,
+        import_save: None,
+        export_save: None,
+        unlock_all: false,
+        card_after: None,
     };
     // Whether the command line names a match.
     let mut chosen = false;
-    let mut it = std::env::args().skip(1);
+    let mut it = args.into_iter();
     let size = |s: &str| -> Result<(u32, u32), String> {
         let (w, h) = s.split_once('x').ok_or("a size is WxH")?;
         Ok((
@@ -326,11 +372,9 @@ fn parse_args() -> Result<Args, String> {
             }
             "--stocks" => {
                 a.stocks = value()?.parse().map_err(|_| "--stocks N")?;
-                a.given.stocks = true;
             }
             "--minutes" => {
                 a.minutes = value()?.parse().map_err(|_| "--minutes N")?;
-                a.given.minutes = true;
             }
             "--replay" => {
                 a.replay = Some(value()?);
@@ -358,10 +402,8 @@ fn parse_args() -> Result<Args, String> {
                 a.given.tick_timing = true;
             }
             "--jit-margin" => {
-                let ms = launcher::parse_margin(&value()?).ok_or(format!(
-                    "--jit-margin MS (0 to {})",
-                    launcher::MAX_MARGIN_MS
-                ))?;
+                let ms = front::parse_margin(&value()?)
+                    .ok_or(format!("--jit-margin MS (0 to {})", front::MAX_MARGIN_MS))?;
                 a.jit_margin = Duration::from_secs_f64(f64::from(ms) / 1000.0);
                 a.given.jit_margin = true;
             }
@@ -395,7 +437,7 @@ fn parse_args() -> Result<Args, String> {
                 let tick = tick.parse().map_err(|_| "--resize-at TICK:WxH")?;
                 a.resize_at.push((tick, size(s)?));
             }
-            "--launcher-shot" => a.launcher_shot = Some(value()?),
+            "--settings-shot" => a.settings_shot = Some(value()?),
             "--fullscreen" => {
                 a.fullscreen = true;
                 a.given.fullscreen = true;
@@ -432,6 +474,34 @@ fn parse_args() -> Result<Args, String> {
                 a.given.replays = true;
             }
             "--unfinished-stages" => a.unfinished_stages = true,
+            "--power-on" => {
+                a.power_on = true;
+                chosen = true;
+            }
+            "--inputs" => {
+                a.inputs = Some(value()?);
+                chosen = true;
+            }
+            "--record-session" => a.record_session = Some(value()?),
+            "--no-session-record" => {
+                a.session_record = false;
+                a.given.record_sessions = true;
+            }
+            "--saves" => a.saves = Some(value()?),
+            "--holds" => a.holds = Some(holds::Holds::parse(&value()?)?),
+            "--import-save" => {
+                a.import_save = Some(value()?);
+                chosen = true;
+            }
+            "--export-save" => {
+                a.export_save = Some(value()?);
+                chosen = true;
+            }
+            "--card-after" => a.card_after = Some(value()?),
+            "--unlock-all" => {
+                a.unlock_all = true;
+                chosen = true;
+            }
             "--special" => {
                 let v = value()?;
                 a.special = Some(Special::from_key(&v).ok_or("--special MODE")?);
@@ -440,33 +510,44 @@ fn parse_args() -> Result<Args, String> {
             other => return Err(format!("unknown argument {other}")),
         }
     }
-    a.launch = !chosen && a.bench.is_none();
-    if a.replay.is_none() && !a.launch && !a.unfinished_stages {
+    a.front = !chosen && a.bench.is_none();
+    a.power_on |= a.front;
+    let console = a.power_on || a.inputs.is_some();
+    if a.replay.is_none() && !a.front && !a.unfinished_stages && !console {
         let characters: Vec<u8> = a.players.iter().map(|p| p.0).collect();
         if let Some(why) = roster::characters_refusal(&characters) {
             return Err(format!("{why} (--unfinished-stages plays it anyway)"));
         }
-        // Nana's computer player with the Ice Climbers, items off.
-        let ports: Vec<Option<u8>> = characters
-            .iter()
-            .map(|&c| Some(c).filter(|&c| c != 0xFF))
-            .collect();
-        let why = roster::stage_by_kind(a.stage)
-            .and_then(|s| s.refusal(&characters))
-            .or_else(|| cpu::refusal(&ports, &a.cpus, a.stage, &[]));
+        let why = roster::stage_by_kind(a.stage).and_then(|s| s.refusal(&characters));
         if let Some(why) = why {
             return Err(format!("{why} (--unfinished-stages plays it anyway)"));
         }
-        if let Some(why) = a.special.and_then(launcher::special_refusal) {
+        if let Some(why) = a.special.and_then(special_refusal) {
             return Err(format!("{why} (--unfinished-stages plays it anyway)"));
         }
     }
     Ok(a)
 }
 
-/// The match and what drives it: the controllers, or a replay's recorded inputs.
+/// Why a Special Melee mode isn't offered: what its audit finds a match with its rules reaches
+/// unported (`special_audit::missing`).
+fn special_refusal(mode: Special) -> Option<String> {
+    let gaps = special_audit::missing(mode);
+    if gaps.is_empty() {
+        return None;
+    }
+    let whats: Vec<&str> = gaps.iter().map(|g| g.what).collect();
+    Some(format!(
+        "{} isn't ported yet: {}.",
+        mode.name(),
+        whats.join("; ")
+    ))
+}
+
+/// What the player runs and what drives it: the console from power-on with the controllers
+/// ([`power`]), or a match (a replay's recorded inputs, or the command line's for developers).
 struct Session {
-    m: Match,
+    run: power::Run,
     /// The game's executable, whose static data the renderer reads (the default font).
     dol: Vec<u8>,
     replay: Option<Replay>,
@@ -474,12 +555,173 @@ struct Session {
     sound: Option<sound::Sound>,
     /// Where the match's recording goes when the session ends, when it's recorded.
     recording: Option<recording::Recording>,
+    /// The console's platform from power-on: the disc, the saves, the session's recording and
+    /// the menus' gates.
+    console: Option<Box<Platform>>,
+}
+
+impl Platform {
+    /// The reads `live` handed the game, recorded, and the feed moved on.
+    fn after(&mut self, next: usize) {
+        if let Some((_, n)) = &mut self.feed {
+            *n = next;
+        }
+    }
+
+    /// The VS matches' Slippi replays: a recorder waits in the game for the next match's start
+    /// (it records nothing before it), and the match's replay is saved at its end.
+    fn replay(&mut self, g: &mut melee_sim::game::state::Game) {
+        use melee_sim::game::gm::machine::{GM_OPENING_MV, GM_TITLE, Phase};
+        use melee_sim::game::record::{Recorder, Setup};
+        let Some(dir) = &self.replays else {
+            if let Some(r) = g.recorder.take() {
+                self.save_replay(&r);
+            }
+            return;
+        };
+        match &g.recorder {
+            None => g.recorder = Some(Box::new(Recorder::new(Setup::vanilla()))),
+            Some(r) => {
+                if self.slp.is_none() && r.last_frame().is_some() && g.vs.start.match_kind == 3 {
+                    // A Bonus match's placements at its end take its bonuses' tally
+                    // (`fn_8016588C`), which the recorder, only reading, can't run: it isn't
+                    // recorded (a fresh recorder waits for the next match's start).
+                    eprintln!("a Bonus match isn't saved as a replay");
+                    g.recorder = Some(Box::new(Recorder::new(Setup::vanilla())));
+                    return;
+                }
+                if self.slp.is_none() && r.last_frame().is_some() {
+                    // The title's attract match plays itself: not the player's.
+                    let attract = matches!(g.machine.phase, Phase::Scene { mode, .. }
+                        if mode == GM_TITLE || mode == GM_OPENING_MV);
+                    self.slp = Some((recording::Recording::new(dir.as_deref()), !attract));
+                }
+                if r.ended() {
+                    let r = g.recorder.take().expect("the recorder");
+                    self.save_replay(&r);
+                    g.recorder = Some(Box::new(Recorder::new(Setup::vanilla())));
+                }
+            }
+        }
+    }
+
+    /// Saves the match's replay, if one started and is kept.
+    fn save_replay(&mut self, r: &melee_sim::game::record::Recorder) {
+        if let Some((to, true)) = self.slp.take() {
+            match to.save(r) {
+                Ok(Some(path)) => eprintln!("saved the replay {}", path.display()),
+                Ok(None) => {}
+                Err(e) => eprintln!("the replay couldn't be saved: {e}"),
+            }
+        }
+    }
+
+    /// Power-on: the boot to the first scene.
+    fn boot(&mut self, s: &mut melee_sim::game::session::Session) {
+        let pads =
+            [melee_sim::input::pad::PadStatus::error(melee_sim::input::pad::ERR_NO_CONTROLLER); 4];
+        let feed = self.feed.take();
+        let next = {
+            let source = match &feed {
+                Some((reads, next)) => power::Source::Reads { reads, next: *next },
+                None => power::Source::Now(pads),
+            };
+            let mut live = power::Live::new(&self.disc, source);
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| s.boot(&mut live)));
+            let next = live.record(self.rec.as_mut());
+            if let Err(p) = r {
+                std::panic::resume_unwind(p);
+            }
+            next
+        };
+        self.feed = feed;
+        self.after(next);
+    }
+
+    /// One tick with the controllers `pads`; the card's changes written to the saves folder.
+    fn step(
+        &mut self,
+        s: &mut melee_sim::game::session::Session,
+        pads: melee_sim::input::controller::PadData,
+    ) -> melee_sim::game::vs_match::Frame {
+        let feed = self.feed.take();
+        let gated = match &feed {
+            Some(_) => pads,
+            None => self.gates.apply(&s.game, pads),
+        };
+        let (f, next) = {
+            let source = match &feed {
+                Some((reads, next)) => power::Source::Reads { reads, next: *next },
+                None => power::Source::Now(gated),
+            };
+            let mut live = power::Live::new(&self.disc, source);
+            let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                power::step(s, &mut live)
+            }));
+            let next = live.record(self.rec.as_mut());
+            match r {
+                Ok(f) => (f, next),
+                Err(p) => {
+                    self.feed = feed;
+                    self.after(next);
+                    std::panic::resume_unwind(p);
+                }
+            }
+        };
+        self.feed = feed;
+        self.after(next);
+        self.replay(&mut s.game);
+        if let (Some(k), Some(card)) = (
+            &mut self.kept,
+            s.card.as_ref().and_then(|c| c.card.as_ref()),
+        ) {
+            for name in k.update(card.image()) {
+                eprintln!("saved {name}");
+            }
+        }
+        f
+    }
+}
+
+/// What the console from power-on reads from and writes to besides the game's state.
+struct Platform {
+    disc: Disc,
+    /// The reads played back (`--inputs`), and the next; none: the controllers.
+    feed: Option<(Vec<melee_sim::input::controller::PadData>, usize)>,
+    /// The session's recording.
+    rec: Option<session_rec::Writer>,
+    /// The saves folder, kept as the card changes.
+    kept: Option<saves::Kept>,
+    /// Where the card goes as the session ends (`--card-after`).
+    card_after: Option<std::path::PathBuf>,
+    /// Each VS match saved as a Slippi replay: to this folder (none: the replays folder beside
+    /// the program), when on.
+    replays: Option<Option<String>>,
+    /// The replay of the match playing, once it started, and whether it's kept (the title's
+    /// attract match isn't).
+    slp: Option<(recording::Recording, bool)>,
+    gates: gates::Gates,
 }
 
 impl Drop for Session {
-    /// Saves the match's recording, however it ended.
+    /// Saves the match's recording, however it ended, and with `--card-after` the console's
+    /// card.
     fn drop(&mut self) {
-        let (Some(to), Some(r)) = (&self.recording, &self.m.game.recorder) else {
+        if let (Some(p), power::Run::Console(s)) = (&mut self.console, &mut self.run)
+            && let Some(r) = s.game.recorder.take()
+        {
+            p.save_replay(&r);
+        }
+        if let (Some(p), power::Run::Console(s)) = (&self.console, &self.run)
+            && let Some(path) = &p.card_after
+            && let Some(card) = s.card.as_ref().and_then(|c| c.card.as_ref())
+        {
+            match std::fs::write(path, card.image()) {
+                Ok(()) => eprintln!("the card after the session: {}", path.display()),
+                Err(e) => eprintln!("{}: {e}", path.display()),
+            }
+        }
+        let (Some(to), Some(r)) = (&self.recording, &self.game().recorder) else {
             return;
         };
         match to.save(r) {
@@ -491,6 +733,147 @@ impl Drop for Session {
 }
 
 impl Session {
+    fn game(&self) -> &melee_sim::game::state::Game {
+        self.run.game()
+    }
+
+    fn game_mut(&mut self) -> &mut melee_sim::game::state::Game {
+        self.run.game_mut()
+    }
+
+    fn data(&self) -> &melee_data::archive::Archives {
+        self.run.data()
+    }
+
+    fn recycle(&mut self, f: melee_sim::game::vs_match::Frame) {
+        self.run.recycle(f);
+    }
+
+    /// The console from power-on, on `args`' disc: the card from the saves folder (none with
+    /// `saves` none: a blank card's), the session recorded into `rec` when given, the reads
+    /// played from `feed` when given.
+    fn power_on(
+        args: &Args,
+        saves: Option<&std::path::Path>,
+        feed: Option<melee_sim::game::inputs::Recording>,
+        rec: Option<&std::path::Path>,
+    ) -> Result<Session, String> {
+        let disc =
+            Disc::open(&args.disc).map_err(|e| format!("{}: {}", args.disc, settings::why(&e)))?;
+        let (setup, kept, feed) = match feed {
+            Some(r) => {
+                let card = match &r.card {
+                    Some(p) => Some(std::fs::read(p).map_err(|e| format!("{}: {e}", p.display()))?),
+                    None => None,
+                };
+                let setup = melee_sim::game::session::Setup {
+                    disc: r.disc()?,
+                    dsp: r.dsp(),
+                    card,
+                    power_on: r.power_on,
+                    dtv: r.dtv,
+                    sram_flags: r.sram_flags,
+                    card_pull: None,
+                    develop: melee_sim::game::session::Develop::from_recording(r.develop),
+                };
+                (setup, None, Some((r.reads, 0)))
+            }
+            None => {
+                let (card, kept) = match saves {
+                    Some(dir) => {
+                        let (card, kept) = saves::Kept::open(dir);
+                        (card, Some(kept))
+                    }
+                    None => (saves::card_of(&Default::default()).0.into_image(), None),
+                };
+                (power::setup(card, power::power_on_clock()), kept, None)
+            }
+        };
+        let rec = match rec {
+            Some(p) => match session_rec::Writer::create(p, &setup) {
+                Ok(w) => {
+                    eprintln!("recording the session in {}", p.display());
+                    Some(w)
+                }
+                Err(e) => {
+                    eprintln!("the session isn't recorded ({}): {e}", p.display());
+                    None
+                }
+            },
+            None => None,
+        };
+        let play = args.bench.is_none() && !args.mute;
+        let (s, sound) = sound::power_on(setup, play)?;
+        if feed.as_ref().is_some_and(|f| f.0.is_empty()) {
+            return Err("the recording has no reads".into());
+        }
+        let mut platform = Box::new(Platform {
+            disc,
+            feed,
+            rec,
+            kept,
+            card_after: args.card_after.as_ref().map(std::path::PathBuf::from),
+            replays: (args.record && args.bench.is_none() && args.inputs.is_none())
+                .then(|| args.replays.clone()),
+            slp: None,
+            gates: gates::Gates::default(),
+        });
+        let mut s = s;
+        let dol = platform.disc.dol().map_err(|e| format!("main.dol: {e}"))?;
+        let booted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            platform.boot(&mut s);
+        }));
+        if let Err(p) = booted {
+            return Err(format!("Melee stopped at power-on: {}", panic_text(&p)));
+        }
+        let mut session = Session {
+            run: power::Run::Console(Box::new(s)),
+            dol,
+            replay: None,
+            ended: false,
+            sound,
+            recording: None,
+            console: Some(platform),
+        };
+        if let Some(snd) = &mut session.sound {
+            let power::Run::Console(s) = &mut session.run else {
+                unreachable!()
+            };
+            snd.mix(&mut s.game.audio, &s.data);
+        }
+        Ok(session)
+    }
+
+    /// What the command line asks for: the console from power-on, a replay's match or the
+    /// command line's.
+    fn open(a: &Args) -> Result<Session, String> {
+        if !(a.power_on || a.inputs.is_some()) {
+            return Session::start(a);
+        }
+        let feed = match &a.inputs {
+            Some(p) => Some(melee_sim::game::inputs::Recording::read(
+                std::path::Path::new(p),
+            )?),
+            None => None,
+        };
+        let rec = match (&a.record_session, a.session_record) {
+            (Some(p), _) => Some(std::path::PathBuf::from(p)),
+            // A benchmark or a played-back session isn't recorded unless asked.
+            (None, true) if a.bench.is_none() && feed.is_none() => {
+                let dir = session_rec::dir();
+                Some(session_rec::new_path(&dir, recording::local_now()))
+            }
+            (None, _) => None,
+        };
+        let saves = a
+            .saves
+            .as_ref()
+            .map_or_else(saves::dir, std::path::PathBuf::from);
+        let mut s = Session::power_on(a, Some(&saves), feed, rec.as_deref())?;
+        s.set_aspect(a.aspect);
+        Ok(s)
+    }
+
     fn start(a: &Args) -> Result<Session, String> {
         let disc = Disc::open(&a.disc).map_err(|e| format!("{}: {}", a.disc, settings::why(&e)))?;
         let (settings, replay) = match &a.replay {
@@ -502,7 +885,20 @@ impl Session {
                 (s, Some(replay))
             }
             None => {
-                let players = cpu::players(&a.players, &a.cpus);
+                let players: Vec<melee_sim::game::vs_match::Player> = (a.players.iter())
+                    .enumerate()
+                    .filter(|(_, p)| p.0 != 0xFF)
+                    .map(
+                        |(i, &(character, costume))| melee_sim::game::vs_match::Player {
+                            character,
+                            costume,
+                            port: i as u8,
+                            kind: 0,
+                            cpu_level: 0,
+                            team: i as u8,
+                        },
+                    )
+                    .collect();
                 let rules = GameRules::vs(a.stocks, a.minutes);
                 let mut s = Settings::vs_special(a.stage, &players, &rules, &a.items, a.special);
                 // A seed from the clock unless given: presentation-side, set once before the
@@ -534,7 +930,7 @@ impl Session {
     /// game camera doesn't reach, every fighter it marks off screen draws, as Slippi's
     /// widescreen code draws them (a cosmetic toggle, `Cosmetic::draw_offscreen_fighters`).
     fn set_aspect(&mut self, aspect: present::Aspect) {
-        self.m.game.cosmetic.draw_offscreen_fighters = aspect.widescreen().is_some();
+        self.game_mut().cosmetic.draw_offscreen_fighters = aspect.widescreen().is_some();
     }
 
     /// Starts the match `settings` set from `disc`, with its sound mixed (and played when
@@ -558,12 +954,13 @@ impl Session {
         }))
         .map_err(|p| format!("the match couldn't start: {}", panic_text(&p)))??;
         Ok(Session {
-            m,
+            run: power::Run::Match(Box::new(m)),
             dol: disc.dol().map_err(|e| format!("main.dol: {e}"))?,
             replay,
             ended: false,
             sound,
             recording: None,
+            console: None,
         })
     }
 
@@ -572,12 +969,26 @@ impl Session {
         &mut self,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
-        let f = match &self.replay {
-            Some(r) => self.m.step_replay(&mut melee_slippi::Device(r)),
-            None => self.m.step(pads),
+        let f = match (&mut self.run, &mut self.console) {
+            (power::Run::Console(s), Some(p)) => {
+                let f = p.step(s, pads);
+                if let Some(snd) = &mut self.sound {
+                    snd.mix(&mut s.game.audio, &s.data);
+                }
+                // A scene's end isn't the session's; a played-back session's is its last read.
+                if p.feed.as_ref().is_some_and(|(r, n)| *n >= r.len()) {
+                    self.ended = true;
+                }
+                return f;
+            }
+            (power::Run::Match(m), _) => match &self.replay {
+                Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
+                None => m.step(pads),
+            },
+            (power::Run::Console(_), None) => unreachable!("a console without its platform"),
         };
-        if let Some(s) = &mut self.sound {
-            s.tick(&mut self.m);
+        if let (Some(snd), power::Run::Match(m)) = (&mut self.sound, &mut self.run) {
+            snd.mix(&mut m.game.audio, &m.data);
         }
         self.ended |= f.ended;
         f
@@ -588,13 +999,17 @@ impl Session {
     /// included, is only read.
     fn predict(
         &self,
-        predictor: &mut Predictor,
+        predictor: &mut Predictor<power::Run>,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> Result<Cost, String> {
-        match &self.replay {
-            Some(r) => predictor.predict(&self.m, |c| c.step_replay(&mut melee_slippi::Device(r))),
-            None => predictor.predict(&self.m, |c| c.step(pads)),
-        }
+        let replay = self.replay.as_ref();
+        predictor.predict(&self.run, |c| match c {
+            power::Run::Match(m) => match replay {
+                Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
+                None => m.step(pads),
+            },
+            power::Run::Console(s) => power::step_predicted(s, pads),
+        })
     }
 }
 
@@ -700,19 +1115,26 @@ struct Row {
 /// How long a row waits for its frame's GPU time before it's written without it.
 const ROW_WAIT: Duration = Duration::from_millis(500);
 
-/// The launcher, when the player started without a match: its form, and its egui state once
-/// the window exists.
-struct Launcher {
-    form: launcher::Form,
-    window: Option<launcher::Window>,
+/// The settings panel, when the player boots the console: its settings, and its egui state
+/// once the window exists.
+struct Front {
+    panel: front::Panel,
+    window: Option<ui::Window>,
 }
 
 struct App {
-    /// The match playing; none while the launcher shows.
+    /// The console (or a command line's match) playing; none while it powers on.
     session: Option<Session>,
-    launcher: Option<Launcher>,
-    /// The command line, which the launcher's matches start from with its choices.
+    /// The power-on running in the background, which makes the next session.
+    booting: Option<std::thread::JoinHandle<Result<Session, String>>>,
+    /// The settings panel, when the player boots the console.
+    front: Option<Front>,
+    /// The command line, with the settings applied.
     args: Args,
+    /// The last frame shown, which the panel draws over.
+    last_image: Option<melee_gpu::Frame>,
+    /// The menus' gate note's painter, once it's shown.
+    note_painter: Option<ui::Painter>,
     frames: Frames,
     gpu: present::Gpu,
     renderer: Option<Gpu>,
@@ -756,7 +1178,7 @@ struct App {
     window_size: (u32, u32),
     /// Alt is held (Alt+Enter toggles fullscreen).
     alt: bool,
-    /// Why the match stopped, for the launcher to show.
+    /// Why the match stopped, for the panel to show.
     stopped: Option<String>,
     /// The latency log, with `--latency-log`.
     latency: Option<latency::Log>,
@@ -764,7 +1186,7 @@ struct App {
     delay: melee_input::Delay,
     /// The last second's latency, and the overlay showing it (F3), while it's on.
     live: latency::Live,
-    overlay: Option<launcher::Painter>,
+    overlay: Option<ui::Painter>,
     /// F12 was pressed, or the flicker scan hit: the next frame drawn is captured into this
     /// folder ([`capture`]).
     capture_next: Option<std::path::PathBuf>,
@@ -784,6 +1206,62 @@ struct App {
     perf: Option<perf::Perf>,
     /// What the specialized shaders did, when the renderer last went.
     specialized: Option<String>,
+    /// Camera Mode's frames drawn as the console draws them, for its snapshots
+    /// ([`App::give_snapshot`]).
+    console_view: Option<ConsoleView>,
+}
+
+/// [`App::give_snapshot`], with the console's view in `view` and the GPU `gpu`.
+fn give_snapshot(
+    view: &mut Option<ConsoleView>,
+    gpu: &present::Gpu,
+    s: &Session,
+    draws: &[melee_sim::hsd::display::Draw],
+) {
+    use melee_sim::game::gm::camera_mode::GM_CAMERA_MODE;
+    use melee_sim::game::gm::machine::Phase;
+    use melee_sim::hsd::display::Draw;
+    use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame};
+    let camera =
+        matches!(s.game().machine.phase, Phase::Scene { mode, .. } if mode == GM_CAMERA_MODE);
+    if !camera {
+        *view = None;
+        return;
+    }
+    if draws.is_empty() {
+        return;
+    }
+    let view = view.get_or_insert_with(|| {
+        let mut frames = Frames::new();
+        frames.space.load_dol(&s.dol);
+        ConsoleView {
+            frames,
+            gpu: Gpu::new(pipelines::renderer(gpu, 1, 1, present::Aspect::STRETCHED)),
+        }
+    });
+    let snapshot =
+        s.game().camera_mode.snap.image != 0 && draws.iter().any(|d| matches!(d, Draw::SnapCopy));
+    let fifo = view.frames.frame(s.game(), s.data(), draws);
+    if snapshot {
+        // RGB565, the snapshot copy's format (`snap_copy`).
+        view.gpu.set_copies_to_memory(vec![4]);
+    }
+    let _ = view.gpu.run(&view.frames.space, s.data(), &fifo, None);
+    if snapshot {
+        view.gpu.set_copies_to_memory(Vec::new());
+        let space = &view.frames.space;
+        let at = space.dynamic(melee_render::mem::Dynamic::Snapshot, IMAGE_SIZE);
+        let mut pixels = vec![0; IMAGE_SIZE as usize];
+        space.read(s.data(), at, &mut pixels);
+        give_frame(pixels);
+        eprintln!("Camera Mode: the snapshot's frame handed to the game");
+    }
+}
+
+/// A renderer drawing the frames as the console does (640 by 480, unwidened), never shown.
+struct ConsoleView {
+    frames: Frames,
+    gpu: Gpu,
 }
 
 impl App {
@@ -878,13 +1356,21 @@ impl App {
     /// Runs a tick as planned; false when the match stopped.
     fn run_tick(&mut self, plan: jit::Plan) -> bool {
         let start = Instant::now();
-        let pads = self.delay.apply(self.inputs.read());
+        let mut pads = self.delay.apply(self.inputs.read());
+        if let Some(h) = &self.args.holds {
+            pads = h.at(self.ticks);
+        }
         let session = self.session.as_mut().expect("a match");
         let f = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| session.tick(pads)))
         {
             Ok(f) => f,
             Err(p) => {
-                let text = format!("the match stopped: {}", panic_text(&p));
+                let what = if self.front.is_some() {
+                    "Melee"
+                } else {
+                    "the match"
+                };
+                let text = format!("{what} stopped: {}", panic_text(&p));
                 eprintln!("{text}");
                 session.ended = true;
                 self.stopped = Some(text);
@@ -902,7 +1388,9 @@ impl App {
             self.inputs.rumble(self.motors);
         }
         let audio = session.sound.as_ref().and_then(sound::Sound::stats);
-        let tick = engine_tick(&session.m);
+        let tick = engine_tick(session.game());
+        self.give_snapshot(&f.draws);
+        let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
         self.stats.ticks += 1;
         self.ticks += 1;
@@ -924,8 +1412,8 @@ impl App {
             // tick draws again, rather than draw the last tick's draws on the new state
             // ([`paced`]).
             let session = self.session.as_mut().expect("a match");
-            if let Some(old) = self.paced.ran(self.mode, &session.m.game, f, plan.due) {
-                session.m.recycle(old);
+            if let Some(old) = self.paced.ran(self.mode, session.game(), f, plan.due) {
+                session.recycle(old);
             }
             if self.mode == pacing::Mode::Extrapolate {
                 self.predict(pads);
@@ -940,7 +1428,7 @@ impl App {
                 }
                 self.stats.frame(start.elapsed());
             }
-            self.session.as_mut().expect("a match").m.recycle(f);
+            self.session.as_mut().expect("a match").recycle(f);
         }
         let t = latency::Tick {
             at: Some(start),
@@ -1218,8 +1706,8 @@ impl App {
                 g.resize_efb(scale, width);
             }
         }
-        let m = &self.session.as_ref().expect("a match").m;
-        let fifo = self.frames.frame_blended(&m.game, &m.data, draws, blend);
+        let m = self.session.as_ref().expect("a match");
+        let fifo = self.frames.frame_blended(m.game(), m.data(), draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
                 pipelines::renderer(&self.gpu, self.scale, self.msaa, self.aspect),
@@ -1230,7 +1718,7 @@ impl App {
             .capture_next
             .is_some()
             .then(|| capture::Regs::of(&gpu.state));
-        let images = gpu.run(&self.frames.space, &m.data, &fifo, None);
+        let images = gpu.run(&self.frames.space, m.data(), &fifo, None);
         let after = before.as_ref().map(|_| capture::Regs::of(&gpu.state));
         if let Some(dir) = self.capture_next.take()
             && let (Some(before), Some(after)) = (before, after)
@@ -1256,7 +1744,16 @@ impl App {
                 hsd: format!("{:?}", self.frames.hsd.state),
             };
             match capture::save(
-                &dir, &self.gpu, tex, &s.m, &s.dol, draws, blend, &about, &live,
+                &dir,
+                &self.gpu,
+                tex,
+                s.game(),
+                s.data(),
+                &s.dol,
+                draws,
+                blend,
+                &about,
+                &live,
             ) {
                 Ok(()) => eprintln!("captured to {}", dir.display()),
                 Err(e) => eprintln!("the capture failed: {e}"),
@@ -1269,7 +1766,18 @@ impl App {
             self.live
                 .text(&format!("{:?}", shown.present_mode()), self.delay.frames())
         });
-        let (gpu, overlay) = (&self.gpu, &mut self.overlay);
+        // The menus' gate note, for three seconds after a refusal.
+        let note = (self.session.as_ref())
+            .and_then(|s| s.console.as_ref())
+            .and_then(|p| p.gates.refused)
+            .filter(|(_, at)| at.elapsed() < gates::NOTE)
+            .map(|(g, _)| gates::note_text(g));
+        if note.is_some() && self.note_painter.is_none() {
+            let mut p = ui::Painter::new(&self.gpu, shown.format());
+            p.clear = false;
+            self.note_painter = Some(p);
+        }
+        let (gpu, overlay, note_painter) = (&self.gpu, &mut self.overlay, &mut self.note_painter);
         let meta = flicker::Meta {
             tick: self.ticks,
             t: blend.map(|b| b.t),
@@ -1280,7 +1788,12 @@ impl App {
             if let (Some(p), Some(text)) = (overlay, text) {
                 latency::overlay(p, gpu, &text, view, w, h);
             }
+            if let (Some(p), Some(text)) = (note_painter, note) {
+                front::note(p, gpu, &text, view, w, h);
+            }
         });
+        // Kept to draw the settings panel over.
+        self.last_image = Some(frame);
         if let Some(s) = &mut self.scan
             && let Some(dir) = s.collect(gpu, self.mode.key()).pop()
         {
@@ -1305,6 +1818,19 @@ impl App {
             },
             presented,
         ))
+    }
+
+    /// Camera Mode's snapshot (`snap_write::give_frame`): its pixels are what a console's
+    /// renderer leaves in the buffer, so they're drawn as the console draws, whatever the
+    /// player shows: while a Camera Mode match runs, each tick's frame is drawn again by a
+    /// renderer of its own at the console's 640 by 480 (scale 1, no MSAA, unwidened, as the
+    /// frames checks draw), never presented; a frame that copies the snapshot
+    /// (`Draw::SnapCopy`) while the game waits for one has that copy read back to memory and
+    /// handed to the game. Nothing of the player's settings reaches the snapshot.
+    fn give_snapshot(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
+        if let Some(s) = &self.session {
+            give_snapshot(&mut self.console_view, &self.gpu, s, draws);
+        }
     }
 
     /// A frame presented `at` with its CPU times, and the GPU times read back since the last:
@@ -1390,7 +1916,7 @@ impl App {
     fn toggle_overlay(&mut self) {
         self.overlay = match (self.overlay.take(), &self.shown) {
             (None, Some(s)) => {
-                let mut p = launcher::Painter::new(&self.gpu, s.format());
+                let mut p = ui::Painter::new(&self.gpu, s.format());
                 p.clear = false;
                 Some(p)
             }
@@ -1401,8 +1927,9 @@ impl App {
     fn toggle_fullscreen(&mut self) {
         if let Some(s) = &mut self.shown {
             s.set_fullscreen(!s.fullscreen());
-            if let Some(l) = &mut self.launcher {
-                l.form.fullscreen = s.fullscreen();
+            if let Some(f) = &mut self.front {
+                f.panel.settings.fullscreen = s.fullscreen();
+                f.panel.settings.keep();
                 s.window.request_redraw();
             }
         }
@@ -1418,120 +1945,205 @@ impl App {
         present::set_aspect(aspect.shown);
     }
 
-    /// Starts the launcher's match in the window, or says why it can't.
-    fn start_match(&mut self) {
-        let Some(l) = &mut self.launcher else { return };
-        let aspect = l.form.aspect;
-        let (present, added_delay) = (l.form.present, l.form.added_delay);
-        let high_refresh = l.form.high_refresh;
-        let (tick_timing, margin) = (l.form.tick_timing, l.form.jit_margin);
-        // The internal resolution chosen, and the scale it has at the window's size now, so
-        // the renderer starts at it.
-        self.args.scale = l.form.scale;
-        self.msaa = if l.form.msaa { 4 } else { 1 };
-        self.scale = scale_for(self.args.scale, self.window_size, aspect);
-        settings::write(settings::LAST_MATCH, &l.form.save());
-        // The form starts only a match its gate allows; this keeps it so whatever calls here.
-        if let Some(why) = l.form.choice.refusal() {
-            l.form.message = Some(why);
-            return;
-        }
-        let c = &l.form.choice;
+    /// Powers the console on in the background (its disc files read, the boot run), the
+    /// window black meanwhile, as a console's is.
+    fn power_on(&mut self) {
         let mut args = self.args.clone();
-        args.aspect = aspect;
-        args.players = c.ports();
-        args.cpus = c.cpus;
-        args.stage = c.stage;
-        args.stocks = c.stocks;
-        args.minutes = c.minutes;
-        args.record = l.form.record;
-        args.replays = Some(l.form.replays.clone()).filter(|d| !d.is_empty());
-        let items = c.items();
-        args.items = items.prefs.clone();
-        args.special = c.special;
-        if let Some(m) = c.special {
-            eprintln!("special melee: {}", m.name());
+        if let Some(f) = &self.front {
+            let s = &f.panel.settings;
+            args.session_record = s.record_sessions;
+            args.record = s.record;
+            args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
         }
-        let names: Vec<String> = (c.players.iter().zip(&c.cpus))
-            .filter_map(|(&k, l)| {
-                let name = roster::character_by_kind(k?)?.name;
-                Some(match l {
-                    Some(l) => format!("{name} (CPU {l})"),
-                    None => name.to_owned(),
+        eprintln!("power on");
+        self.booting = Some(
+            std::thread::Builder::new()
+                .stack_size(GAME_STACK)
+                .spawn(move || {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Session::open(&args)))
+                        .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))))
                 })
-            })
-            .collect();
-        let stage = roster::stage_by_kind(c.stage).map_or("?", |s| s.name);
-        eprintln!("the launcher starts {} on {stage}", names.join(" vs "));
-        if c.items.freq != items::OFF {
-            let on: Vec<&str> = items.kinds.iter().map(|&k| items::name(k)).collect();
-            match on.is_empty() {
-                true => eprintln!("items off: none of the items switched on is offered"),
-                false => eprintln!("items: {}", on.join(", ")),
-            }
-            for (k, why) in &items.dropped {
-                eprintln!("  {} off: {}", items::name(*k), why.short());
-            }
-        }
-        match Session::start(&args) {
-            Ok(session) => {
-                l.form.message = None;
-                self.frames = Frames::new();
-                self.frames.space.load_dol(&session.dol);
-                self.set_aspect(aspect);
-                self.efb_width = aspect.efb_width(self.scale);
-                self.renderer = Some(gpu_for(
-                    pipelines::renderer(&self.gpu, self.scale, self.msaa, aspect),
-                    self.one_thread,
-                ));
-                if let Some(s) = &mut self.shown {
-                    s.set_present(&self.gpu, present);
-                }
-                self.delay = melee_input::Delay::new(added_delay);
-                // What the controllers did in the launcher doesn't reach the match.
-                self.inputs.read();
-                self.session = Some(session);
-                self.ticks = 0;
-                self.stats = Stats::default();
-                self.timing = tick_timing;
-                self.margin = Duration::from_secs_f64(f64::from(margin) / 1000.0);
-                self.start_clock();
-                self.start_pacing(high_refresh);
-            }
-            Err(e) => {
-                eprintln!("{e}");
-                l.form.message = Some(e);
-            }
-        }
+                .expect("the power-on's thread"),
+        );
     }
 
-    /// Leaves the match (its sound stops with it) for the launcher.
-    fn back_to_launcher(&mut self) {
-        eprintln!("back to the launcher");
+    /// Takes up the console the power-on made.
+    fn powered_on(&mut self, session: Session) {
+        self.frames = Frames::new();
+        self.frames.space.load_dol(&session.dol);
+        self.session = Some(session);
+        let aspect = self.aspect;
+        self.set_aspect(aspect);
+        self.renderer = Some(gpu_for(
+            pipelines::renderer(&self.gpu, self.scale, self.msaa, aspect),
+            self.one_thread,
+        ));
+        // What the controllers did meanwhile doesn't reach the game.
+        self.inputs.read();
+        self.ticks = 0;
+        self.stats = Stats::default();
+        self.start_clock();
+        self.start_pacing(self.mode);
+    }
+
+    /// Powers the console off: the session ends (its recordings saved), its renderer goes.
+    fn power_off(&mut self) {
         self.paced.clear();
         self.session = None;
         self.drop_renderer();
-        if let Some(l) = &mut self.launcher {
-            l.form.message = self.stopped.take();
+        self.console_view = None;
+        self.last_image = None;
+    }
+
+    /// Opens the settings panel over the game, which pauses.
+    fn open_panel(&mut self) {
+        let Some(f) = &mut self.front else { return };
+        f.panel.open = true;
+        f.panel.look_at_save();
+        // Every key goes up: none stays held into the game when it resumes.
+        self.inputs.keyboard = Default::default();
+        if let Some(s) = &self.shown {
+            s.window.request_redraw();
+        }
+    }
+
+    /// Closes the panel: its settings kept and applied, and the game resumes on Melee's clock
+    /// from now.
+    fn close_panel(&mut self) {
+        let Some(f) = &mut self.front else { return };
+        f.panel.open = false;
+        f.panel.message = None;
+        let s = f.panel.settings.clone();
+        s.keep();
+        self.apply(&s);
+        self.start_clock();
+        self.start_pacing(s.high_refresh);
+    }
+
+    /// The settings to the frames, the latency and the recordings.
+    fn apply(&mut self, s: &front::Settings) {
+        let msaa = if s.msaa { 4 } else { 1 };
+        self.args.scale = s.scale;
+        self.set_aspect(s.aspect);
+        self.scale = scale_for(s.scale, self.window_size, s.aspect);
+        let width = s.aspect.efb_width(self.scale);
+        if msaa != self.msaa {
+            // Its pipelines take the sample count: a renderer made anew.
+            self.msaa = msaa;
+            if self.renderer.is_some() {
+                self.drop_renderer();
+                self.renderer = Some(gpu_for(
+                    pipelines::renderer(&self.gpu, self.scale, msaa, s.aspect),
+                    self.one_thread,
+                ));
+            }
+        } else if let Some(g) = &mut self.renderer {
+            g.resize_efb(self.scale, width);
+        }
+        self.efb_width = width;
+        if let Some(sh) = &mut self.shown {
+            sh.set_present(&self.gpu, s.present);
+            if sh.fullscreen() != s.fullscreen {
+                sh.set_fullscreen(s.fullscreen);
+            }
+        }
+        self.delay = melee_input::Delay::new(s.added_delay);
+        self.timing = s.tick_timing;
+        self.margin = Duration::from_secs_f64(f64::from(s.jit_margin) / 1000.0);
+        self.mode = s.high_refresh;
+        self.args.record = s.record;
+        self.args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+        let replays = s.record.then(|| self.args.replays.clone());
+        if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
+            p.replays = replays;
+        }
+    }
+
+    /// Melee stopped: the panel shows why, and it can be restarted.
+    fn halted(&mut self, why: String) {
+        if let Some(f) = &mut self.front {
+            f.panel.message = Some(why);
+            f.panel.halted = true;
+        }
+        self.open_panel();
+    }
+
+    /// Draws the panel over the last frame, doing what it was asked.
+    fn redraw_panel(&mut self, event_loop: &ActiveEventLoop) {
+        let (Some(f), Some(shown)) = (&mut self.front, &mut self.shown) else {
+            return;
+        };
+        let Some(w) = &mut f.window else { return };
+        let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
+        if f.panel.settings.fullscreen != shown.fullscreen() {
+            shown.set_fullscreen(f.panel.settings.fullscreen);
+        }
+        if let Some(a) = action {
+            self.act(a, event_loop);
+        }
+    }
+
+    /// What the panel asked for: resume, restart, quit, or a change to the save or the disc
+    /// (each confirmed first, each restarting Melee).
+    fn act(&mut self, action: front::Action, event_loop: &ActiveEventLoop) {
+        use front::Action;
+        match action {
+            Action::Resume => self.close_panel(),
+            Action::Quit => {
+                self.quit = true;
+                event_loop.exit();
+            }
+            Action::Restart => {
+                if dialogs::confirm(
+                    "Restart Melee from power-on? Anything the game hasn't saved is lost.",
+                    "Restart",
+                ) {
+                    self.restart(None);
+                }
+            }
+            Action::ChangeDisc => {
+                if let Some(disc) = dialogs::change_disc() {
+                    self.args.disc = disc.clone();
+                    if let Some(f) = &mut self.front {
+                        f.panel.disc = disc;
+                    }
+                    self.restart(None);
+                }
+            }
+            Action::Import => {
+                if dialogs::import() {
+                    self.restart(None);
+                }
+            }
+            Action::Export => {
+                if let Some(f) = &mut self.front {
+                    f.panel.message = dialogs::export();
+                }
+            }
+            Action::UnlockAll => {
+                if dialogs::unlock_all() {
+                    self.restart(None);
+                }
+            }
         }
         if let Some(s) = &self.shown {
             s.window.request_redraw();
         }
     }
 
-    /// Draws the launcher, starting its match if Start was pressed.
-    fn redraw_launcher(&mut self) {
-        let (Some(l), Some(shown)) = (&mut self.launcher, &mut self.shown) else {
-            return;
-        };
-        let Some(w) = &mut l.window else { return };
-        let start = w.redraw(&self.gpu, shown, &mut l.form);
-        if l.form.fullscreen != shown.fullscreen() {
-            shown.set_fullscreen(l.form.fullscreen);
+    /// Powers off and on again, the panel closed.
+    fn restart(&mut self, _said: Option<String>) {
+        self.power_off();
+        if let Some(f) = &mut self.front {
+            f.panel.halted = false;
+            f.panel.message = None;
+            f.panel.look_at_save();
+            f.panel.open = false;
+            let s = f.panel.settings.clone();
+            s.keep();
+            self.apply(&s);
         }
-        if start {
-            self.start_match();
-        }
+        self.power_on();
     }
 }
 
@@ -1550,8 +2162,8 @@ impl ApplicationHandler for App {
     fn resumed(&mut self, event_loop: &ActiveEventLoop) {
         if self.shown.is_none() {
             let shown = present::Shown::new(&self.gpu, event_loop, self.args.fullscreen);
-            if let Some(l) = &mut self.launcher {
-                l.window = Some(launcher::Window::new(&self.gpu, &shown));
+            if let Some(f) = &mut self.front {
+                f.window = Some(ui::Window::new(&self.gpu, &shown));
             }
             self.shown = Some(shown);
             self.start_clock();
@@ -1565,7 +2177,7 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        // F11 and Alt+Enter toggle fullscreen, in a match and in the launcher alike.
+        // F11 and Alt+Enter toggle fullscreen, in Melee and with the settings open alike.
         if let WindowEvent::KeyboardInput {
             event:
                 KeyEvent {
@@ -1613,14 +2225,14 @@ impl ApplicationHandler for App {
             self.toggle_overlay();
             return;
         }
-        let in_launcher = self.session.is_none();
-        if in_launcher
+        let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        if paneled
             && let (
-                Some(Launcher {
+                Some(Front {
                     window: Some(w), ..
                 }),
                 Some(shown),
-            ) = (&mut self.launcher, &self.shown)
+            ) = (&mut self.front, &self.shown)
         {
             w.event(shown, &event);
         }
@@ -1632,10 +2244,24 @@ impl ApplicationHandler for App {
             WindowEvent::Resized(size) => {
                 self.resized(size.width, size.height);
                 self.update_refresh();
+                if paneled && let Some(s) = &self.shown {
+                    s.window.request_redraw();
+                }
             }
             WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. } => self.update_refresh(),
             WindowEvent::ModifiersChanged(m) => self.alt = m.state().alt_key(),
-            WindowEvent::RedrawRequested if in_launcher => self.redraw_launcher(),
+            WindowEvent::RedrawRequested if paneled => self.redraw_panel(event_loop),
+            WindowEvent::RedrawRequested if self.session.is_none() => {
+                if let (
+                    Some(Front {
+                        window: Some(w), ..
+                    }),
+                    Some(shown),
+                ) = (&mut self.front, &mut self.shown)
+                {
+                    w.black(&self.gpu, shown);
+                }
+            }
             WindowEvent::KeyboardInput {
                 event:
                     KeyEvent {
@@ -1647,26 +2273,28 @@ impl ApplicationHandler for App {
                 ..
             } => {
                 if code == KeyCode::Escape && state == ElementState::Pressed {
-                    if !in_launcher && self.launcher.is_some() {
-                        self.back_to_launcher();
-                        return;
-                    }
-                    let popup = self
-                        .launcher
-                        .as_ref()
-                        .and_then(|l| l.window.as_ref())
-                        .is_some_and(|w| w.popup_open());
-                    if !(in_launcher && popup) {
-                        self.quit = true;
-                        event_loop.exit();
+                    // Escape opens the settings panel over the console, and closes it again (a
+                    // drop-down open in it closes first); without the panel, it quits.
+                    match &self.front {
+                        Some(f) if f.panel.open => {
+                            let popup = f.window.as_ref().is_some_and(ui::Window::popup_open);
+                            if !popup && !f.panel.halted {
+                                self.close_panel();
+                            }
+                        }
+                        Some(_) => self.open_panel(),
+                        None => {
+                            self.quit = true;
+                            event_loop.exit();
+                        }
                     }
                     return;
                 }
-                // The launcher's key presses aren't the keyboard controller's; releases
-                // always are, so no key stays held into a match.
+                // The panel's key presses aren't the keyboard controller's; releases always
+                // are, so no key stays held.
                 let pressed = state == ElementState::Pressed;
                 if let Some(k) = key(code)
-                    && !(in_launcher && pressed)
+                    && !(paneled && pressed)
                 {
                     self.inputs.keyboard.set(k, pressed);
                 }
@@ -1679,7 +2307,30 @@ impl ApplicationHandler for App {
         if self.quit {
             return;
         }
-        if self.session.is_some() {
+        // The power-on's console, once its boot ran.
+        if self
+            .booting
+            .as_ref()
+            .is_some_and(std::thread::JoinHandle::is_finished)
+        {
+            let r = (self.booting.take().expect("the power-on").join())
+                .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))));
+            match r {
+                Ok(s) => self.powered_on(s),
+                Err(e) if self.front.is_some() => {
+                    eprintln!("{e}");
+                    self.halted(e);
+                }
+                Err(e) => {
+                    console::fatal(&e);
+                    self.quit = true;
+                    event_loop.exit();
+                    return;
+                }
+            }
+        }
+        let paneled = self.front.as_ref().is_some_and(|f| f.panel.open);
+        if self.session.is_some() && !paneled {
             // Ticks and frames that are due run; the event loop sleeps until shortly before the
             // next (it wakes for window events too), and a precise wait takes it the rest of the
             // way. The fixed timer only sleeps.
@@ -1704,17 +2355,29 @@ impl ApplicationHandler for App {
                 event_loop.set_control_flow(ControlFlow::Poll);
                 return;
             }
-            eprintln!("the match ended");
-            if self.launcher.is_none() {
+            if self.front.is_none() {
+                eprintln!("the match ended");
                 self.quit = true;
                 event_loop.exit();
                 return;
             }
-            self.back_to_launcher();
+            let why = self
+                .stopped
+                .take()
+                .unwrap_or_else(|| "Melee stopped.".to_owned());
+            self.power_off();
+            self.halted(why);
         }
-        // The launcher: woken by events, or when egui asked for its next frame.
-        let flow = match self.launcher.as_mut().and_then(|l| l.window.as_mut()) {
-            Some(w) => match w.repaint_at {
+        if self.booting.is_some() {
+            // The window stays black while the console powers on.
+            event_loop.set_control_flow(ControlFlow::WaitUntil(
+                Instant::now() + Duration::from_millis(10),
+            ));
+            return;
+        }
+        // The panel: woken by events, or when egui asked for its next frame.
+        let flow = match self.front.as_mut().and_then(|f| f.window.as_mut()) {
+            Some(w) if paneled => match w.repaint_at {
                 Some(t) if t <= Instant::now() => {
                     w.repaint_at = None;
                     if let Some(s) = &self.shown {
@@ -1725,7 +2388,7 @@ impl ApplicationHandler for App {
                 Some(t) => ControlFlow::WaitUntil(t),
                 None => ControlFlow::Wait,
             },
-            None => ControlFlow::Wait,
+            _ => ControlFlow::Wait,
         };
         event_loop.set_control_flow(flow);
     }
@@ -1758,7 +2421,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     if args.high_refresh.paced() {
         return bench_paced(args, ticks);
     }
-    let mut session = match Session::start(args) {
+    let mut session = match Session::open(args) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
@@ -1772,12 +2435,13 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
+    let mut console_view = None;
     let mut last = None;
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.aspect.widescreen();
     present::set_aspect(args.aspect.shown);
-    let pads = [melee_sim::input::pad::PadStatus::default(); 4];
+    let rest = [melee_sim::input::pad::PadStatus::default(); 4];
     let (mut sim, mut draw, mut n) = (Duration::ZERO, Duration::ZERO, 0u32);
     let mut worst = Duration::ZERO;
     let mut parts = [Duration::ZERO; 3];
@@ -1812,14 +2476,15 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             }
         }
         let t0 = Instant::now();
+        let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
         let f = session.tick(pads);
         let t1 = Instant::now();
+        give_snapshot(&mut console_view, &gpu, &session, &f.draws);
         round += t1 - t0;
         if !f.draws.is_empty() {
-            let m = &session.m;
-            let fifo = frames.frame(&m.game, &m.data, &f.draws);
+            let fifo = frames.frame(session.game(), session.data(), &f.draws);
             let ta = Instant::now();
-            let images = renderer.run(&frames.space, &m.data, &fifo, None);
+            let images = renderer.run(&frames.space, session.data(), &fifo, None);
             let tb = Instant::now();
             if let Some(frame) = images.into_iter().last() {
                 target.present(&gpu, &frame);
@@ -1858,7 +2523,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
             n += 1;
         }
         sim += t1 - t0;
-        session.m.recycle(f);
+        session.recycle(f);
         if session.ended {
             break;
         }
@@ -1911,7 +2576,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
 /// ticks shows them, and reports what keeping a tick's transforms (and predicting the next) and
 /// drawing a frame take.
 fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
-    let mut session = match Session::start(args) {
+    let mut session = match Session::open(args) {
         Ok(s) => s,
         Err(e) => {
             eprintln!("{e}");
@@ -1928,11 +2593,11 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     frames.space.load_dol(&session.dol);
     frames.hsd.widescreen = args.aspect.widescreen();
     present::set_aspect(args.aspect.shown);
-    let pads = [melee_sim::input::pad::PadStatus::default(); 4];
+    let rest = [melee_sim::input::pad::PadStatus::default(); 4];
     let per_tick = args.frames_per_tick;
     let extrapolate = args.high_refresh == pacing::Mode::Extrapolate;
     let (mut before, mut after) = (Capture::default(), Capture::default());
-    let mut predictor = Predictor::default();
+    let mut predictor = Predictor::<power::Run>::default();
     // Each prediction's parts, and a tick with its prediction.
     let mut costs: Vec<Cost> = Vec::with_capacity(ticks as usize);
     let mut ticked: Vec<Duration> = Vec::with_capacity(ticks as usize);
@@ -1942,8 +2607,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     let mut presented: Vec<Duration> = Vec::with_capacity((ticks * per_tick) as usize);
     let mut last = None;
     let mut rendered = 0u32;
-    for _ in 0..ticks {
+    for tick in 0..ticks {
         let t0 = Instant::now();
+        let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
         let f = session.tick(pads);
         let t1 = Instant::now();
         sim += t1 - t0;
@@ -1958,9 +2624,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 }
             } else {
                 std::mem::swap(&mut before, &mut after);
-                after.fill(&session.m.game, &f.draws);
+                after.fill(session.game(), &f.draws);
             }
-            let m = &session.m;
+            let (game, data) = (session.game(), session.data());
             let t2 = Instant::now();
             kept += t2 - t1;
             rendered += 1;
@@ -1972,9 +2638,9 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                     Blend { from: &before, t }
                 };
                 let ta = Instant::now();
-                let fifo = frames.frame_blended(&m.game, &m.data, &f.draws, Some(blend));
+                let fifo = frames.frame_blended(game, data, &f.draws, Some(blend));
                 let tb = Instant::now();
-                let images = renderer.run(&frames.space, &m.data, &fifo, None);
+                let images = renderer.run(&frames.space, data, &fifo, None);
                 let tc = Instant::now();
                 if let Some(frame) = images.into_iter().last() {
                     target.present(&gpu, &frame);
@@ -1988,7 +2654,7 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
                 presented.push(td - ta);
             }
         }
-        session.m.recycle(f);
+        session.recycle(f);
         if session.ended {
             break;
         }
@@ -2057,14 +2723,73 @@ fn bench_paced(args: &Args, ticks: u32) -> ExitCode {
     ExitCode::SUCCESS
 }
 
+/// The settings: the kept ones, and over them what the command line gave.
+fn settings_of(args: &Args) -> front::Settings {
+    let mut s = front::Settings::default();
+    s.load(&args.given);
+    let g = &args.given;
+    if g.aspect {
+        s.aspect = args.aspect;
+    }
+    if g.fullscreen {
+        s.fullscreen = args.fullscreen;
+    }
+    if g.scale {
+        s.scale = args.scale;
+    }
+    if g.msaa {
+        s.msaa = args.msaa == 4;
+    }
+    if g.present {
+        s.present = args.present;
+    }
+    if g.added_delay {
+        s.added_delay = args.added_delay;
+    }
+    if g.high_refresh {
+        s.high_refresh = args.high_refresh;
+    }
+    if g.tick_timing {
+        s.tick_timing = args.tick_timing;
+    }
+    if g.jit_margin {
+        s.jit_margin = (args.jit_margin.as_secs_f64() * 1000.0) as f32;
+    }
+    if g.record {
+        s.record = args.record;
+    }
+    if g.replays {
+        s.replays = args.replays.clone().unwrap_or_default();
+    }
+    if g.record_sessions {
+        s.record_sessions = args.session_record;
+    }
+    s
+}
+
+/// The command line with the settings in it.
+fn with_settings(mut a: Args, s: &front::Settings) -> Args {
+    a.aspect = s.aspect;
+    a.fullscreen = s.fullscreen;
+    a.scale = s.scale;
+    a.msaa = if s.msaa { 4 } else { 1 };
+    a.present = s.present;
+    a.added_delay = s.added_delay;
+    a.high_refresh = s.high_refresh;
+    a.tick_timing = s.tick_timing;
+    a.jit_margin = Duration::from_secs_f64(f64::from(s.jit_margin) / 1000.0);
+    a.record = s.record;
+    a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
+    a.session_record = s.record_sessions;
+    a
+}
+
 fn run(args: Args) -> ExitCode {
-    if let Some(path) = &args.launcher_shot {
+    if let Some(path) = &args.settings_shot {
         let gpu = present::Gpu::new();
-        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
-        form.present = args.present;
-        form.added_delay = args.added_delay;
-        form.high_refresh = args.high_refresh;
-        return match launcher::shot(&gpu, &mut form, args.size, std::path::Path::new(path)) {
+        let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
+        panel.open = true;
+        return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
                 console::fatal(&format!("{path}: {e}"));
@@ -2080,10 +2805,23 @@ fn run(args: Args) -> ExitCode {
     if let Some(ticks) = args.bench {
         return bench(&args, ticks);
     }
-    let session = if args.launch {
+    // The console from power-on, with the settings panel: its settings in the command line,
+    // and its power-on in the background once the window is up.
+    let front = args.front.then(|| {
+        let settings = settings_of(&args);
+        Front {
+            panel: front::Panel::new(settings, args.disc.clone()),
+            window: None,
+        }
+    });
+    let args = match &front {
+        Some(f) => with_settings(args, &f.panel.settings),
+        None => args,
+    };
+    let session = if args.front {
         None
     } else {
-        match Session::start(&args) {
+        match Session::open(&args) {
             Ok(s) => Some(s),
             Err(e) => {
                 console::fatal(&e);
@@ -2106,25 +2844,12 @@ fn run(args: Args) -> ExitCode {
     }
     frames.hsd.widescreen = args.aspect.widescreen();
     present::set_aspect(args.aspect.shown);
-    let launcher = args.launch.then(|| {
-        let mut form = launcher::Form::new(args.stocks, args.minutes, args.fullscreen, args.aspect);
-        form.present = args.present;
-        form.added_delay = args.added_delay;
-        form.high_refresh = args.high_refresh;
-        form.tick_timing = args.tick_timing;
-        form.jit_margin = (args.jit_margin.as_secs_f64() * 1000.0) as f32;
-        form.scale = args.scale;
-        form.msaa = args.msaa == 4;
-        form.record = args.record;
-        form.replays = args.replays.clone().unwrap_or_default();
-        if let Some(text) = settings::read(settings::LAST_MATCH) {
-            form.restore(&text, &args.given);
-        }
-        Launcher { form, window: None }
-    });
     let mut app = App {
         session,
-        launcher,
+        booting: None,
+        front,
+        last_image: None,
+        note_painter: None,
         frames,
         gpu,
         renderer: None,
@@ -2167,13 +2892,18 @@ fn run(args: Args) -> ExitCode {
         overlay: None,
         capture_next: None,
         scan,
-        mode: pacing::Mode::Off,
+        mode: if args.front {
+            args.high_refresh
+        } else {
+            pacing::Mode::Off
+        },
         pacer: None,
         paced: paced::Paced::default(),
         prediction_failed: false,
         pending: None,
         perf: args.perf_report.as_deref().map(perf::Perf::new),
         specialized: None,
+        console_view: None,
         args,
     };
     if let Some(path) = &app.args.latency_log {
@@ -2186,6 +2916,9 @@ fn run(args: Args) -> ExitCode {
         }
     }
     present::set_size(app.args.size);
+    if app.front.is_some() {
+        app.power_on();
+    }
     // The pipelines the last runs needed, made before the first tick.
     if app.session.is_some() {
         app.renderer = Some(gpu_for(
@@ -2195,6 +2928,11 @@ fn run(args: Args) -> ExitCode {
     }
     let r = event_loop.run_app(&mut app);
     app.inputs.close();
+    // A power-on still running ends, its session's recordings saved as it goes.
+    if let Some(h) = app.booting.take() {
+        let _ = h.join();
+    }
+    app.session = None;
     app.drop_renderer();
     // The rows still waiting for their frames' GPU times.
     app.collect_done();
@@ -2257,8 +2995,80 @@ fn main() -> ExitCode {
             return ExitCode::from(2);
         }
     };
+    let dir = args
+        .saves
+        .as_ref()
+        .map_or_else(saves::dir, std::path::PathBuf::from);
+    if let Some(path) = &args.export_save {
+        let raw = [".raw", ".card"]
+            .iter()
+            .any(|x| path.to_lowercase().ends_with(x));
+        let bytes = if raw {
+            Some(saves::export_raw(&dir))
+        } else {
+            saves::export_gci(&dir)
+        };
+        let Some(bytes) = bytes else {
+            console::fatal(&format!("{} has no save to export", dir.display()));
+            return ExitCode::FAILURE;
+        };
+        return match std::fs::write(path, bytes) {
+            Ok(()) => {
+                eprintln!("exported to {path}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                console::fatal(&format!("{path}: {e}"));
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if args.unlock_all {
+        let r = match saves::unlocked(&dir) {
+            Some(true) => Ok("everything is unlocked already".to_owned()),
+            Some(false) => {
+                let now = (power::power_on_clock() / melee_sim::audio::clock::TB_HZ) as u32;
+                saves::unlock_all(&dir, now).map(|()| "unlocked everything".to_owned())
+            }
+            None => Err(format!("{} has no save to unlock", dir.display())),
+        };
+        return match r {
+            Ok(m) => {
+                eprintln!("{m}");
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                console::fatal(&e);
+                ExitCode::FAILURE
+            }
+        };
+    }
+    if let Some(path) = &args.import_save {
+        let r = std::fs::read(path)
+            .map_err(|e| e.to_string())
+            .and_then(|b| saves::import(&b))
+            .and_then(|i| {
+                saves::replace(&dir, &i)
+                    .map(|()| i)
+                    .map_err(|e| e.to_string())
+            });
+        return match r {
+            Ok(i) => {
+                eprintln!(
+                    "imported {path} into {}: the save and {} snapshots",
+                    dir.display(),
+                    i.snapshots()
+                );
+                ExitCode::SUCCESS
+            }
+            Err(e) => {
+                console::fatal(&format!("{path}: {e}"));
+                ExitCode::FAILURE
+            }
+        };
+    }
     // The disc picker on the main thread, where macOS wants its dialogs.
-    if args.disc.is_empty() && args.launcher_shot.is_none() {
+    if args.disc.is_empty() && args.settings_shot.is_none() {
         match settings::disc() {
             Some(disc) => args.disc = disc,
             None => return ExitCode::SUCCESS,

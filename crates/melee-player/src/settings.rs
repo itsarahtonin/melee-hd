@@ -1,5 +1,5 @@
 //! The player's settings folder: the disc it plays, asked for once with a file picker and
-//! remembered, the launcher's last match, and the log when there's no console (`console`).
+//! remembered, the settings (`front`), the saves and the session recordings, and the log when there's no console (`console`).
 //! It's `%APPDATA%\melee-hd` on Windows and `$XDG_CONFIG_HOME/melee-hd` or `~/.config/melee-hd`
 //! elsewhere (`melee-hd-dev` for a dev build, [`crate::channel`]), or the folder
 //! `MELEE_HD_SETTINGS` names.
@@ -13,8 +13,6 @@ use rfd::{FileDialog, MessageButtons, MessageDialog, MessageDialogResult, Messag
 
 /// The file that keeps the disc's path.
 const DISC: &str = "disc.txt";
-/// The file that keeps the launcher's last match.
-pub const LAST_MATCH: &str = "last-match.txt";
 
 /// The settings folder.
 pub fn folder() -> PathBuf {
@@ -48,6 +46,11 @@ pub fn write(name: &str, text: &str) {
     {
         eprintln!("couldn't keep {name} in {}: {e}", folder.display());
     }
+}
+
+/// Keeps `path` as the disc to play.
+pub fn keep_disc(path: &str) {
+    write(DISC, path);
 }
 
 /// Why a disc can't be played, in words for whoever picked it.

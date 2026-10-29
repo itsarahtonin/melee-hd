@@ -15,7 +15,7 @@ use melee_data::archive::{Archive, Archives};
 use super::gm::scene;
 use super::state::{Game, Running};
 use super::vs_match::{DiscFile, Frame};
-use crate::audio::boot::{BootTimes, CONSOLE_BOOT_DELAY};
+use crate::audio::boot::{BootTimes, console_boot_delay};
 use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
 use crate::input::controller::PadData;
@@ -106,11 +106,13 @@ impl Default for Setup {
 /// The console's card device for `setup`: a card in at power-on was seen by the OS's
 /// probes at boot.
 fn card_device(setup: &Setup) -> CardDevice {
-    // The tenth of a second the OS's first probe at boot (in field 2) saw the card at, as
-    // `__EXIProbe` counts them on the code's time base.
-    let seen = setup.card.as_ref().map_or(0, |_| {
-        crate::lb::save::probe_tenths(field_start(2), setup.power_on)
-    });
+    // The tenth of a second the OS's first probe at boot (`OSInit`'s `EXIInit`, at the boot's
+    // start: `audio::boot::console_boot_delay`) saw the card at, as `__EXIProbe` counts them
+    // on the code's time base.
+    let seen = setup
+        .card
+        .as_ref()
+        .map_or(0, |_| crate::lb::save::probe_tenths(0, setup.power_on));
     CardDevice {
         card: setup.card.as_ref().map(|image| {
             melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
@@ -209,7 +211,7 @@ pub fn direct_read() -> PadData {
 
 /// A running session: the game's state, the archives it has loaded, the console's setup and
 /// its memory card.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Session {
     pub game: Game,
     pub data: Archives,
@@ -583,7 +585,11 @@ impl Session {
         // `*HSD_RandSeedPtr = OSGetTick()`: the time base's low word, on the code's time base
         // (the clock at power-on and the time since).
         let card_in = self.card.as_ref().is_some_and(|c| c.card.is_some());
-        let delay = if card_in { CONSOLE_BOOT_DELAY } else { 0 };
+        let delay = if card_in {
+            console_boot_delay(self.setup.power_on)
+        } else {
+            0
+        };
         let tb = self.setup.power_on.wrapping_add(BootTimes::SEED + delay);
         g.objs.rng.seed = tb as u32;
         g.audio.boot_delay = delay;
