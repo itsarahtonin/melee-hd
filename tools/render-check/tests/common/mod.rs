@@ -64,6 +64,9 @@ impl Replay {
             Replay::Oracle(name) => ssbm_rs_local(&format!("bench/oracle-m4/{name}.slp")).into(),
             Replay::Hf(rel) => ssbm_rs_local(&format!("replays/hf/{rel}")).into(),
             Replay::Session(name) => {
+                if let Some(o) = name.strip_prefix("debug-") {
+                    return ssbm_rs_local(&format!("lockstep/debug-sessions/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("data-") {
                     return ssbm_rs_local(&format!("lockstep/data-sessions/{o}.inputs")).into();
                 }
@@ -662,6 +665,41 @@ pub const OPTIONS_TOUR: Game = Game {
     name: "options-tour",
     players: "the Options menus (session options-sessions/tour)",
     replay: Replay::Session("options-tour"),
+};
+
+/// The debug menu (`debug-sessions/menu-enter`, at debug level 3): its first page.
+pub const DEBUG_MENU_ENTER: Game = Game {
+    stage: "Debug menu",
+    name: "debug-menu-enter",
+    players: "the debug menu's first page (session debug-sessions/menu-enter)",
+    replay: Replay::Session("debug-menu-enter"),
+};
+
+/// The debug menu's submenus (`debug-sessions/menu-sub`): Global Data Edit over the first
+/// page.
+pub const DEBUG_MENU_SUB: Game = Game {
+    stage: "Debug menu",
+    name: "debug-menu-sub",
+    players: "the debug menu's Global Data Edit (session debug-sessions/menu-sub)",
+    replay: Replay::Session("debug-menu-sub"),
+};
+
+/// The sound test's debug mode (`debug-sessions/sound-debug`): its menu.
+pub const DEBUG_SOUND: Game = Game {
+    stage: "Debug menu",
+    name: "debug-sound-debug",
+    players: "the sound test's debug mode (session debug-sessions/sound-debug)",
+    replay: Replay::Session("debug-sound-debug"),
+};
+
+/// The debug VS match's develop tools (`debug-sessions/vs-tools`): Link and Mario on Final
+/// Destination with the computer players', the animations', the bonuses' and the sound's
+/// readouts.
+pub const DEBUG_VS_TOOLS: Game = Game {
+    stage: "Final Destination",
+    name: "debug-vs-tools",
+    players: "Link vs Mario, the debug VS match's readouts (session debug-sessions/vs-tools)",
+    replay: Replay::Session("debug-vs-tools"),
 };
 
 /// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.

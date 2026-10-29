@@ -4,6 +4,7 @@
 pub mod afterimage;
 pub mod album;
 pub mod camera;
+pub mod devtext;
 pub mod draw;
 pub mod lobj;
 pub mod magnify;
@@ -90,6 +91,8 @@ pub struct Hsd {
     pub album: Vec<(u32, u32)>,
     /// Refraction's indirect maps whose texels are made, by `LbRf.dat`'s table and entry.
     pub refract_maps: Vec<(DataRef, u8)>,
+    /// `lbl_804D6070`, `lbl_804D6074`: the debug text's glyph scale, as the last screen set it.
+    pub text_scale: (f64, f64),
 }
 
 /// `ft_jobj_scale`: the matrix that undoes a flat fighter's joint scale in view space, and

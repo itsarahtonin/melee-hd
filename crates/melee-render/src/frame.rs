@@ -440,6 +440,10 @@ impl Ctx<'_> {
                 self.sis_text(d);
                 1
             }
+            Draw::Text(d) => {
+                self.devtext(d);
+                1
+            }
             Draw::Quad(_) => {
                 let quads: Vec<_> = draws[i..]
                     .iter()
