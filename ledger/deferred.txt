@@ -30,7 +30,6 @@ onExitResults1	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see o
 onExitMemCard	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 gm_801BED3C	A callback of the Hanyu character select mode's states (gm_Mode_HanyuCss_States, mode 8), which a retail boot never enters: mode 8 is made pending only by un_80300968 and mode 9 only by un_803009A4, items of the debug menu (un_803FC63C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 gm_801BEDA8	Named only by gm_Mode_HanyuCss_States (the Hanyu select modes, 8 and 9: see gm_801BED3C).
-gm_801BEE58	Named only by gm_Mode_HanyuSss_States (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 gm_801BF040	Named only by fn_8030110C (the debug menu mode, 6: see onExitIntro).
 onEnterCutsceneLuigi	A callback of the debug cutscene mode's states (gm_Mode_DebugCutscene_States, mode 0x19), which a retail boot never enters: mode 0x19 is made pending only by un_803013B0, an item of the debug menu (un_803FCE4C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 onExitRegendCongrats	Named only by gm_Mode_DebugCutscene_States (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
