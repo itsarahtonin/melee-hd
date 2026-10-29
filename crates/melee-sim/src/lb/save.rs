@@ -995,7 +995,6 @@ impl Running<'_> {
     /// holds after the card data: the pad library's queue (`gmMain_8046B108`), from its
     /// 0x14th byte ([`pad_queue_bytes`]). Its result.
     #[doc(alias = "lb_8001C8BC")]
-    #[doc(alias = "lb_8001BC18")]
     pub fn card_game_create(&mut self) -> i32 {
         self.card_alarm_probes();
         // `lb_8001C658`'s `OSGetTime`, before the list starts.
