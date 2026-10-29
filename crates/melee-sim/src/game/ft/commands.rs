@@ -7,6 +7,7 @@ use gekko_fp as fp;
 
 use super::super::code::unported_call;
 use super::super::handles::FighterId;
+use super::super::leftovers::{RenderOf, carry_victims};
 use super::super::state::Running;
 use super::colanim::Overlay;
 use super::common::{FIGHTER_P_LINK, GA_AIR};
@@ -259,6 +260,10 @@ impl Running<'_> {
                 Some(i) => {
                     let s = fp.x914[i].clone();
                     hitcapsule::copy_victims(&s, &mut fp.x914[id]);
+                    // What the source's block held there comes along (the GPU's pixels).
+                    let hit = |k: usize| 0x914 + 0x138 * k as u32;
+                    let me = RenderOf::Fighter(f);
+                    carry_victims(self.game, me, hit(i), me, hit(id));
                 }
                 None => hitcapsule::clear_victims(&mut fp.x914[id]),
             }

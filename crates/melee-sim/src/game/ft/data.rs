@@ -407,7 +407,11 @@ impl Running<'_> {
             // block held.
             let at = bufs.addr(id);
             if at != 0 {
-                crate::hsd::heap::with(|h| h.image.unclaim(at, at + super::anim_buf::SIZE));
+                // The pool's size: 0xB000 for the results screen's (`ftDemo_ObjAllocInit`).
+                crate::hsd::heap::with(|h| {
+                    let size = h.allocs[crate::hsd::heap::Kind::FighterX59C as usize].size;
+                    h.image.unclaim(at, at + size);
+                });
             }
             AnimBufId(id)
         };

@@ -163,3 +163,97 @@ pub fn pool_grew() -> bool {
     }
     heap::with(|h| h.image.pool_grew).unwrap_or(false)
 }
+
+/// The records of where objects' blocks held the GPU's pixels, by slot.
+type RenderRuns = std::collections::BTreeMap<u32, Vec<(u32, u32)>>;
+
+/// Whose block a copy of leftover bytes comes from or goes to, for [`carry_render`].
+#[derive(Clone, Copy)]
+pub enum RenderOf {
+    Fighter(super::handles::FighterId),
+    Item(super::handles::ItemId),
+}
+
+impl RenderOf {
+    fn runs(self, game: &super::state::Game) -> Option<&Vec<(u32, u32)>> {
+        match self {
+            RenderOf::Fighter(f) => game.ft.render_leftovers.get(&f.0),
+            RenderOf::Item(i) => game.it.render_leftovers.get(&i.0),
+        }
+    }
+
+    fn runs_mut(self, game: &mut super::state::Game) -> (&mut RenderRuns, u32) {
+        match self {
+            RenderOf::Fighter(f) => (&mut game.ft.render_leftovers, f.0),
+            RenderOf::Item(i) => (&mut game.it.render_leftovers, i.0),
+        }
+    }
+}
+
+/// Bytes `[to_off, to_off + len)` of `to` copied from `from`'s at `from_off`: the copy
+/// carries the GPU's pixels where `from`'s block held them unwritten
+/// (`ft::Globals::render_leftovers`, `it::Globals::render_leftovers`), so the comparer leaves
+/// those bits of `to` out while they hold the image's fill, as it does the source's
+/// (docs/engine.md, "Uninitialized values"). Outside a session neither has a record, and
+/// nothing changes.
+pub fn carry_render(
+    game: &mut super::state::Game,
+    from: RenderOf,
+    from_off: u32,
+    to: RenderOf,
+    to_off: u32,
+    len: u32,
+) {
+    let src = from.runs(game);
+    let covered = |k: u32| {
+        src.is_some_and(|r| {
+            r.iter()
+                .any(|&(a, b)| a <= from_off + k && from_off + k < b)
+        })
+    };
+    let carried: Vec<u32> = (0..len)
+        .filter(|&k| covered(k))
+        .map(|k| to_off + k)
+        .collect();
+    let dst = to.runs(game);
+    if carried.is_empty()
+        && !dst.is_some_and(|r| r.iter().any(|&(a, b)| a < to_off + len && to_off < b))
+    {
+        return;
+    }
+    let mut bytes: Vec<u32> = dst
+        .map(|r| r.iter().flat_map(|&(a, b)| a..b).collect())
+        .unwrap_or_default();
+    bytes.retain(|&o| o < to_off || o >= to_off + len);
+    bytes.extend(carried);
+    bytes.sort_unstable();
+    let mut runs: Vec<(u32, u32)> = Vec::new();
+    for o in bytes {
+        match runs.last_mut() {
+            Some((_, b)) if *b == o => *b = o + 1,
+            _ => runs.push((o, o + 1)),
+        }
+    }
+    let (map, slot) = to.runs_mut(game);
+    if runs.is_empty() {
+        map.remove(&slot);
+    } else {
+        map.insert(slot, runs);
+    }
+}
+
+/// A hitbox's victims copied from another's (`lbColl_CopyHitCapsule`: both lists and their
+/// counts), the hitboxes at `from_hit` of `from` and `to_hit` of `to`: [`carry_render`] over
+/// what the copy takes.
+pub fn carry_victims(
+    game: &mut super::state::Game,
+    from: RenderOf,
+    from_hit: u32,
+    to: RenderOf,
+    to_hit: u32,
+) {
+    // `x44` and `x45`, then `victims_1` and `victims_2`.
+    for (off, len) in [(0x44, 2), (0x74, 0xC0)] {
+        carry_render(game, from, from_hit + off, to, to_hit + off, len);
+    }
+}
