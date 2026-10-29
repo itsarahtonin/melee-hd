@@ -219,7 +219,13 @@ impl Running<'_> {
             }
             6 => {
                 if !self.memcard_watch() {
-                    super::super::code::unported_call("lb_8001C8BC (creating the save)");
+                    if self.card_game_create() == 0 {
+                        self.show_message(0, 0xC);
+                        self.game.memcard.decision = 7;
+                    } else {
+                        self.show_message(0, 0xD);
+                        self.game.memcard.decision = 8;
+                    }
                 }
             }
             7 => {
