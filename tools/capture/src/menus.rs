@@ -117,6 +117,7 @@ impl<'a> Comparer<'a> {
                     sym("gm_Mode_ChallengerApproach_States")
                 }
                 melee_sim::game::gm::GM_DEBUG => sym("gm_Mode_Debug_States"),
+                melee_sim::game::gm::GM_DEBUG_VS => sym("gm_Mode_DebugVs_States"),
                 melee_sim::game::gm::GM_DEBUG_SOUND_TEST => sym("gm_Mode_DebugMenu_States"),
                 melee_sim::game::gm::GM_HANYU_CSS => sym("gm_Mode_HanyuCss_States"),
                 melee_sim::game::gm::GM_HANYU_SSS => sym("gm_Mode_HanyuSss_States"),

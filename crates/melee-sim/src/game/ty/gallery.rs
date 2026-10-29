@@ -406,9 +406,30 @@ impl Running<'_> {
     /// test chose one, and the gallery.
     #[doc(alias = "Toy_Scene_OnEnter")]
     pub fn toy_on_enter(&mut self) {
-        self.game.assert_retail();
         let g = &mut self.game.toys.gallery;
         g.xa1 = 0;
+        // From the debug ROM's level, the buttons held as it enters: L the debug view
+        // (`_Toy_sbss_804D6E50`), Z the fog's (`_Toy_sbss_804D6EA2`), Start and R the
+        // parameters' editor's step (`_Toy_sbss_804D6EA0`).
+        if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM {
+            let debug_view = self.toy_held() & 0x40 != 0;
+            let fog_view = self.toy_held() & 0x10 != 0;
+            if self.toy_held() & 0x1000 != 0 {
+                self.game.toys.gallery.xa0 = 0;
+            }
+            let g = &mut self.game.toys.gallery;
+            if g.xa0 as i8 != 0 {
+                g.xa0 = g.xa0.wrapping_add(1);
+            }
+            if self.toy_held() & 0x20 != 0 {
+                self.game.toys.gallery.xa0 = 1;
+            }
+            if debug_view || fog_view || self.game.toys.gallery.xa0 != 0 {
+                crate::game::code::unported_call(
+                    "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2, 804D6EA0)",
+                );
+            }
+        }
         let alloc = |size: u32| crate::hsd::heap::mem_alloc(size);
         let cam_block = alloc(0x64);
         let scene_block = alloc(0x5C);

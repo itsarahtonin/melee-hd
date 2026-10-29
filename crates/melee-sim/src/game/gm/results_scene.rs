@@ -191,13 +191,28 @@ pub(super) const COLUMNS: [[i32; 4]; 15] = [
 
 impl Running<'_> {
     /// The screen's enter data (`gm_GetGameModeStateEnterData`): Tournament mode's own
-    /// (`gm_80489A98`), else VS mode's (`gmVsMelee_ResultsEnterData`, which the modes kept
-    /// with it share).
+    /// (`gm_80489A98`), the debug mode's (`results0_data`), else VS mode's
+    /// (`gmVsMelee_ResultsEnterData`, which the modes kept with it share).
     pub fn results_enter(&self) -> &ResultsMatchInfo {
-        if self.game.machine.routing.curr_mode == super::tournament::GM_TOURNAMENT {
-            &self.game.tou.results_enter
-        } else {
-            &self.game.vs_melee.results_enter
+        match self.game.machine.routing.curr_mode {
+            super::tournament::GM_TOURNAMENT => &self.game.tou.results_enter,
+            super::GM_DEBUG if self.game.machine.routing.curr_state_id == 11 => {
+                &self.game.debug_mode.results1
+            }
+            super::GM_DEBUG => &self.game.debug_mode.results0,
+            _ => &self.game.vs_melee.results_enter,
+        }
+    }
+
+    /// [`Running::results_enter`], to write.
+    pub fn results_enter_mut(&mut self) -> &mut ResultsMatchInfo {
+        match self.game.machine.routing.curr_mode {
+            super::tournament::GM_TOURNAMENT => &mut self.game.tou.results_enter,
+            super::GM_DEBUG if self.game.machine.routing.curr_state_id == 11 => {
+                &mut self.game.debug_mode.results1
+            }
+            super::GM_DEBUG => &mut self.game.debug_mode.results0,
+            _ => &mut self.game.vs_melee.results_enter,
         }
     }
 
@@ -587,7 +602,8 @@ impl Running<'_> {
 fn enter_byte(e: &ResultsMatchInfo, off: usize) -> u8 {
     match off {
         1 => e.x1,
-        2 | 3 => 0,
+        2 => e.x2,
+        3 => e.x3,
         _ => (e.x4 >> 24) as u8,
     }
 }
@@ -598,6 +614,10 @@ pub struct ResultsMatchInfo {
     pub x0_0: bool,
     pub x0_1: bool,
     pub x1: u8,
+    /// The padding bytes a VS mode's clear leaves zero, which the debug mode's Result Test
+    /// sets (`DebugResultsData`'s `x2` and `x3`).
+    pub x2: u8,
+    pub x3: u8,
     pub x4: i32,
     pub match_end: MatchEnd,
 }

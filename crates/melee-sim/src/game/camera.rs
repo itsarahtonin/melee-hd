@@ -1676,7 +1676,7 @@ pub fn cobj_copy_view(game: &mut Game, data: &melee_data::archive::Archives) -> 
 
 // What is on screen.
 
-fn camera_cobj(game: &Game) -> CObjId {
+pub(crate) fn camera_cobj(game: &Game) -> CObjId {
     let g = game.camera.cam.gobj.expect("the camera's GObj");
     match game.world.gobjs[g.0].obj {
         Some(Obj::CObj(c)) => c,

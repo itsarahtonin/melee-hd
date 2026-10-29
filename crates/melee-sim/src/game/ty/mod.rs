@@ -196,7 +196,12 @@ impl Running<'_> {
     /// `TyDatai`'s table `name`.
     fn datai_sym(&self, name: &str) -> DataRef {
         assert!(self.game.gm.trophy_data, "TyDatai loaded");
-        let a = self.game.ft.data.files.archive(super::gm::TROPHY_DATA_FILE);
+        let a = self
+            .game
+            .ft
+            .data
+            .files
+            .archive(self.game.trophy_data_file());
         DataRef {
             archive: a,
             offset: self

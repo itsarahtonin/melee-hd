@@ -179,6 +179,15 @@ enum Hook {
     DebugEnterApproach,
     DebugExitPrize,
     DebugBackToMenu,
+    DebugEnterVs,
+    DebugEnterResults0,
+    DebugExitResults0,
+    DebugEnterResults1,
+    DebugExitResults1,
+    /// `onEnterDebugVs` (`gmvsmode.c`), debug VS's match.
+    DebugVsEnterVs,
+    /// `onEnterResults` (`gmvsmode.c`'s, VS mode's) in debug VS.
+    DebugVsEnterResults,
     DebugUnported(&'static str),
 }
 
@@ -190,10 +199,11 @@ fn vs_like(mode: u8) -> bool {
 }
 
 /// Whether the mode's match scenes take VS mode's enter and exit data (`gmVsMelee_StartData`,
-/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes and Camera Mode.
+/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes, Camera Mode and debug VS.
 pub fn uses_vs_melee(mode: u8) -> bool {
     mode == GM_VS
         || mode == GM_CAMERA_MODE
+        || mode == super::GM_DEBUG_VS
         || super::vs_mode::Special::from_game_mode(mode).is_some()
 }
 
@@ -531,11 +541,11 @@ fn states(mode: u8) -> &'static [StateDesc] {
             Some(Hook::DebugExitPrize),
             GS_PRIZE,
         ),
-        debug(4, Some(Hook::DebugUnported("onEnterVs")), None, GS_VS),
+        debug(4, Some(Hook::DebugEnterVs), None, GS_VS),
         debug(
             5,
-            Some(Hook::DebugUnported("onEnterResults0")),
-            Some(Hook::DebugUnported("onExitResults0")),
+            Some(Hook::DebugEnterResults0),
+            Some(Hook::DebugExitResults0),
             GS_RESULTS,
         ),
         debug(
@@ -565,8 +575,8 @@ fn states(mode: u8) -> &'static [StateDesc] {
         ),
         debug(
             11,
-            Some(Hook::DebugUnported("onEnterResults1")),
-            Some(Hook::DebugUnported("onExitResults1")),
+            Some(Hook::DebugEnterResults1),
+            Some(Hook::DebugExitResults1),
             GS_RESULTS,
         ),
         debug(12, None, Some(Hook::DebugBackToMenu), GS_MOVIE_OPENING),
@@ -577,6 +587,12 @@ fn states(mode: u8) -> &'static [StateDesc] {
             GS_MEMCARD,
         ),
         debug(14, None, None, 0x2B),
+    ];
+    // `gm_Mode_DebugVs_States` (`gmvsmode.c`): the match, then VS mode's results, and the
+    // match again.
+    const DEBUG_VS: [StateDesc; 2] = [
+        debug(1, Some(Hook::DebugVsEnterVs), None, GS_VS),
+        debug(3, Some(Hook::DebugVsEnterResults), None, GS_RESULTS),
     ];
     // `gm_Mode_DebugMenu_States`: the sound test's debug menu.
     const SOUND_TEST: [StateDesc; 1] = [debug(0, Some(Hook::SoundTestEnter), None, GS_DEBUG_MENU)];
@@ -606,6 +622,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         GM_TITLE => &TITLE,
         GM_PROGRESSIVE_SCAN => &PROG_SCAN,
         super::GM_DEBUG => &DEBUG,
+        super::GM_DEBUG_VS => &DEBUG_VS,
         super::GM_DEBUG_SOUND_TEST => &SOUND_TEST,
         super::GM_HANYU_CSS => &HANYU_CSS,
         super::GM_HANYU_SSS => &HANYU_SSS,
@@ -637,6 +654,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         GM_CAMERA_MODE => (true, None, None),
         GM_CHALLENGER_APPROACH => (false, Some(Hook::ChallengerOnLoad), None),
         super::GM_DEBUG
+        | super::GM_DEBUG_VS
         | super::GM_DEBUG_SOUND_TEST
         | super::GM_HANYU_CSS
         | super::GM_HANYU_SSS => (false, None, None),
@@ -787,8 +805,34 @@ impl Running<'_> {
             state: state as u8,
             overridden,
         };
-        // The VS scene loads its match's files: the frontend reads them first.
-        self.game.machine.files_wanted = s.scene == GS_VS;
+        // The VS scene loads its match's files, the Result Test's results screen its players'
+        // (with no match before it): the frontend reads them first.
+        self.game.machine.files_wanted =
+            s.scene == GS_VS || (scene_mode == super::GM_DEBUG && s.id == 11);
+    }
+
+    /// The players whose files the scene about to enter loads, and whether it's a match (else
+    /// only the results screen's files): the match's start data, or the Result Test's
+    /// players as a start data (each one's character, kind and costume).
+    pub fn scene_files_data(&self) -> (crate::game::structs::StartMeleeData, bool) {
+        if let Phase::Entering {
+            scene_mode: super::GM_DEBUG,
+            state,
+            ..
+        } = self.game.machine.phase
+            && states(super::GM_DEBUG)[usize::from(state)].id == 11
+        {
+            let e = &self.game.debug_mode.results1;
+            let mut d = crate::game::structs::StartMeleeData::default();
+            for (p, s) in d.players.iter_mut().zip(&e.match_end.player_standings) {
+                p.ckind = s.ckind;
+                p.slot_type = s.pkind;
+                // The costume the screen's fighters take (`x3_u`'s top six bits).
+                p.color = s.x3_u[0] >> 2;
+            }
+            return (d, false);
+        }
+        (self.scene_start_data().clone(), true)
     }
 
     /// The match the VS scene about to enter starts: its mode state's enter data.
@@ -800,6 +844,7 @@ impl Running<'_> {
             GM_OPENING_MV => &self.game.attract.start,
             m if uses_vs_melee(m) => &self.game.vs_melee.start,
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
+            super::GM_DEBUG => &self.game.debug_mode.vs_enter,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -1153,6 +1198,14 @@ impl Running<'_> {
             // `onExitPrize`: the Mode Team Test page.
             Hook::DebugExitPrize => self.set_next_game_mode_state_id(2),
             Hook::DebugBackToMenu => self.debug_mode_back_to_menu(),
+            Hook::DebugEnterVs => self.debug_mode_enter_vs(),
+            Hook::DebugEnterResults0 => self.debug_mode_enter_results0(),
+            // `onExitResults0`: the first page.
+            Hook::DebugExitResults0 => self.set_next_game_mode_state_id(0),
+            Hook::DebugVsEnterVs => self.debug_vs_enter_vs(),
+            Hook::DebugEnterResults1 => self.debug_mode_enter_results1(),
+            Hook::DebugExitResults1 => self.debug_mode_exit_results1(),
+            Hook::DebugVsEnterResults => self.vs_mode_enter_results(),
             Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;

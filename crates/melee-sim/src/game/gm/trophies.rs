@@ -80,7 +80,7 @@ impl Running<'_> {
             .ft
             .data
             .files
-            .archive(super::super::gm::TROPHY_DATA_FILE);
+            .archive(self.game.trophy_data_file());
         let sym = |name: &str| DataRef {
             archive: a,
             offset: self
@@ -128,6 +128,34 @@ impl Running<'_> {
             at = at.at(ENTRY);
         }
         i32::from(self.data.u8(at.at(0x20)) as i8)
+    }
+
+    /// `Toy_80311680` (the debug menu's Figure Max): the trophies taken
+    /// (`Toy_80311960`), then each one the region can win held once, the classes past 1 but
+    /// 3 and 8 marked unwinnable, every category's bit but 0 and 1, and
+    /// `_Toy_sbss_804D6EA1` set.
+    #[doc(alias = "Toy_80311680")]
+    pub fn hold_every_trophy(&mut self) {
+        let s = &mut self.game.game_data.thing.save_data;
+        s.trophy_flags = [0; TROPHY_COUNT];
+        s.trophy_category_flags = 0;
+        s.trophy_count = 0;
+        self.toy_reset_table();
+        let t = self.trophy_tables();
+        for i in 0..TROPHY_COUNT {
+            if !self.trophy_winnable(&t, i) {
+                continue;
+            }
+            let class = self.trophy_class(&t, i);
+            let s = &mut self.game.game_data.thing.save_data;
+            s.trophy_count = s.trophy_count.wrapping_add(1);
+            s.trophy_flags[i] = 1;
+            if class as u32 > 1 && class != 8 && class != 3 {
+                s.trophy_flags[i] |= FLAG_UNWINNABLE;
+            }
+        }
+        self.game.game_data.thing.save_data.trophy_category_flags = 0xF4;
+        self.game.toys.gallery.xa1 = 1;
     }
 
     /// `Toy_803124BC`: each trophy the region can win of class 2 marked as one it can't
