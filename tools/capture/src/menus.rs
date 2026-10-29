@@ -116,6 +116,7 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::machine::GM_CHALLENGER_APPROACH => {
                     sym("gm_Mode_ChallengerApproach_States")
                 }
+                melee_sim::game::gm::GM_DEBUG => sym("gm_Mode_Debug_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC

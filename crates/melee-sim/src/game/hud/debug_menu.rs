@@ -1,0 +1,1027 @@
+//! The debug menus (`melee/if/textlib_1.c`, `if_2FF2.c`, `if_2FFC.c`, `gmdebugmode.c` and
+//! the debug menu scene's entry in `gmmovieend.c`): menus of entries drawn on the debug text
+//! screens ([`super::devtext`]), each entry a label and maybe a value it edits, moved through
+//! with the first controller. Only a debug level reaches them (the title's Y and X, at the
+//! debug ROM's level and above): melee-hd's developer setting (`session::Develop`).
+//!
+//! An entry's callback and the variable it edits are addresses in the original
+//! ([`Entry::cb`], [`Entry::var`]): the callbacks are dispatched by address
+//! ([`Running::menu_call`]) and the variables are the debug menus' own statics
+//! ([`DebugVars`]), the debug level, and the words the tables name.
+
+use gekko_fp as fp;
+
+use super::debug_tables::{SETTINGS_INIT, TABLES, WORDS};
+use super::devtext::Link;
+use crate::fpu::{mem, reg};
+use crate::game::handles::CodeRef;
+use crate::game::state::{Game, OBJ_CAMERA, OBJ_LIGHT, Obj, Running};
+use crate::hsd::cobj::{self, StaticDesc};
+use crate::hsd::gobj::{GObjId, ProcId};
+use crate::hsd::lobj::{self, StaticLightDesc};
+use crate::input::pad::{
+    BUTTON_A, BUTTON_B, BUTTON_START, BUTTON_X, BUTTON_Y, TRIGGER_L, TRIGGER_R,
+};
+use crate::vec::Vec3;
+
+/// `fn_80303EF4`, a menu GObj's process.
+pub const MENU_PROC: u32 = 0x8030_3EF4;
+/// `gm_Scene_DebugMenu_OnEnter`.
+pub const ON_ENTER: CodeRef = CodeRef(0x801B_E1D0);
+/// `GS_DEBUG_MENU`.
+pub const GS_DEBUG_MENU: u8 = 0x07;
+
+/// The stick's directions as `un_803039A4` reports them, above the buttons' bits.
+const STICK_LEFT: u32 = 0x4000_0000;
+const STICK_RIGHT: u32 = 0x8000_0000;
+const STICK_DOWN: u32 = 0x2000_0000;
+const STICK_UP: u32 = 0x1000_0000;
+
+/// A menu's flags (`un_80304138_objalloc_t::x1`): redraw, skip this frame's input, a
+/// submenu open over it, hidden, and closing.
+const REDRAW: u8 = 1;
+const SKIP_INPUT: u8 = 2;
+const COVERED: u8 = 0x10;
+const HIDDEN: u8 = 0x20;
+const CLOSING: u8 = 0x80;
+
+/// An entry's kinds (`un_80304138_objalloc_t_x8::x0`).
+const KIND_TITLE: i32 = 0;
+const KIND_CHOICE: i32 = 2;
+const KIND_INT: i32 = 3;
+const KIND_DECIMAL: i32 = 4;
+const KIND_BYTE: i32 = 5;
+const KIND_HALF: i32 = 6;
+const KIND_WORD: i32 = 7;
+const KIND_FLOAT: i32 = 8;
+/// The terminator, whose callback is the menu's on closing.
+const KIND_END: i32 = 9;
+
+/// What a callback is told (`soundtest_callback_arg0`): B, A, left, right, the menu made,
+/// the menu closed and Start.
+pub const CB_BACK: i32 = 0;
+pub const CB_SELECT: i32 = 1;
+pub const CB_LEFT: i32 = 2;
+pub const CB_RIGHT: i32 = 3;
+pub const CB_INIT: i32 = 4;
+pub const CB_CLOSE: i32 = 5;
+pub const CB_START: i32 = 6;
+
+/// An entry of a menu's table (`un_80304138_objalloc_t_x8`), as the executable holds it.
+#[derive(Debug)]
+pub struct Entry {
+    pub kind: i32,
+    /// The callback's address, 0 for none.
+    pub cb: u32,
+    pub label: Option<&'static [u8]>,
+    pub label_at: u32,
+    /// A choice entry's names (`xC`), as many as its maximum.
+    pub choices: &'static [&'static [u8]],
+    pub choices_at: u32,
+    /// The variable's address, 0 for none.
+    pub var: u32,
+    pub min: f32,
+    pub max: f32,
+    pub step: f32,
+}
+
+/// A menu's table: its entries up to and with the terminator.
+#[derive(Debug)]
+pub struct Table {
+    pub addr: u32,
+    pub entries: &'static [Entry],
+}
+
+/// The table at `addr`.
+pub fn table(addr: u32) -> &'static Table {
+    TABLES
+        .iter()
+        .find(|t| t.addr == addr)
+        .copied()
+        .unwrap_or_else(|| panic!("no debug menu table at {addr:#010x}"))
+}
+
+/// The debug menus' variables: `un_803FA258` (the settings the menus edit, as the
+/// executable's data starts them) and the other words the tables name, at their addresses.
+/// The debug level is the game's ([`crate::game::gm::Globals::db_level`]).
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct DebugVars {
+    /// `un_803FA258`'s bytes, big-endian as memory holds them.
+    pub settings: [u8; 0x190],
+    /// [`WORDS`]' values, in its order.
+    pub words: [u32; WORDS.len()],
+}
+
+/// `un_803FA258`'s address.
+pub const SETTINGS: u32 = 0x803F_A258;
+/// `DbLevel`'s address.
+const DB_LEVEL: u32 = 0x804D_4A08;
+/// `db_804D4AF8`: the legs' reach for the fighters' IK (1 on a retail disc).
+pub const IK_DEBUG: u32 = 0x804D_4AF8;
+
+impl Default for DebugVars {
+    fn default() -> Self {
+        DebugVars {
+            settings: SETTINGS_INIT,
+            words: WORDS.map(|(_, v)| v),
+        }
+    }
+}
+
+impl DebugVars {
+    /// A word of the settings, at `off`.
+    pub fn setting(&self, off: u32) -> u32 {
+        let o = off as usize;
+        u32::from_be_bytes(self.settings[o..o + 4].try_into().unwrap())
+    }
+
+    pub fn set_setting(&mut self, off: u32, v: u32) {
+        let o = off as usize;
+        self.settings[o..o + 4].copy_from_slice(&v.to_be_bytes());
+    }
+
+    /// The word at `addr` of [`WORDS`].
+    pub fn word(&self, addr: u32) -> u32 {
+        self.words[word_index(addr)]
+    }
+}
+
+fn word_index(addr: u32) -> usize {
+    WORDS
+        .iter()
+        .position(|&(a, _)| a == addr)
+        .unwrap_or_else(|| panic!("no debug menu variable at {addr:#010x}"))
+}
+
+impl Game {
+    /// A byte of the variables the debug menus edit, as memory holds it.
+    fn menu_var_byte(&self, addr: u32) -> u8 {
+        let v = &self.hud.debug;
+        if (SETTINGS..SETTINGS + 0x190).contains(&addr) {
+            return v.settings[(addr - SETTINGS) as usize];
+        }
+        let base = addr & !3;
+        let word = if base == DB_LEVEL {
+            self.gm.db_level as u32
+        } else {
+            v.word(base)
+        };
+        word.to_be_bytes()[(addr & 3) as usize]
+    }
+
+    fn set_menu_var_byte(&mut self, addr: u32, b: u8) {
+        if (SETTINGS..SETTINGS + 0x190).contains(&addr) {
+            self.hud.debug.settings[(addr - SETTINGS) as usize] = b;
+            return;
+        }
+        let base = addr & !3;
+        let mut bytes = if base == DB_LEVEL {
+            (self.gm.db_level as u32).to_be_bytes()
+        } else {
+            self.hud.debug.word(base).to_be_bytes()
+        };
+        bytes[(addr & 3) as usize] = b;
+        let word = u32::from_be_bytes(bytes);
+        if base == DB_LEVEL {
+            self.gm.db_level = word as i32;
+        } else {
+            self.hud.debug.words[word_index(base)] = word;
+        }
+    }
+
+    /// A variable of `n` bytes at `addr`, big-endian.
+    fn menu_var(&self, addr: u32, n: u32) -> u32 {
+        (0..n).fold(0, |acc, i| {
+            acc << 8 | u32::from(self.menu_var_byte(addr + i))
+        })
+    }
+
+    fn set_menu_var(&mut self, addr: u32, n: u32, v: u32) {
+        for i in 0..n {
+            let b = (v >> (8 * (n - 1 - i))) as u8;
+            self.set_menu_var_byte(addr + i, b);
+        }
+    }
+
+    /// A word of the debug menus' settings (`un_803FA258`), at `off`.
+    pub fn debug_setting(&self, off: u32) -> u32 {
+        self.hud.debug.setting(off)
+    }
+}
+
+/// A menu (`un_80304138_objalloc_t`, from `un_804A2688`'s pool).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct DebugMenu {
+    /// `x0`: the entry the cursor is on.
+    pub cursor: u8,
+    /// `x1`: [`REDRAW`] and the other flags.
+    pub flags: u8,
+    /// `x4`: its debug text screen.
+    pub text: Option<u8>,
+    /// `x8`: its table's address.
+    pub table: u32,
+    /// `xC`: the menu's own callback's address, 0 for none.
+    pub cb: u32,
+    /// `x10`: the GObj its process runs on.
+    pub gobj: Option<GObjId>,
+    /// `x14`: that process, the first menu's only.
+    pub proc: Option<ProcId>,
+    /// `prev`: the submenu open over it; `next`: the menu it was opened over.
+    pub prev: Option<u32>,
+    pub next: Option<u32>,
+    /// The screen's glyph buffer (`HSD_MemAlloc`), which the menu frees as it closes.
+    pub buf: u32,
+}
+
+/// `un_803F9E60`: the debug menu scene's camera.
+const SCENE_CAMERA: StaticDesc = StaticDesc {
+    flags: 0,
+    projection_type: 1,
+    viewport: [0, 640, 0, 480],
+    scissor: [0, 640, 0, 480],
+    eye: Vec3::new(0.0, 40.241_425, 100.240_99),
+    interest: Vec3::new(0.0, 10.0, 0.0),
+    roll: 0.0,
+    near: 0.1,
+    far: 32768.0,
+    projection: [30.0, 1.18, 0.0, 0.0],
+};
+
+/// `light1` and `light0` (`if_2FF2.c`): an infinite light with no position, then an
+/// ambient one (whose position and point parameters `LObjLoad` doesn't read).
+const SCENE_LIGHTS: [StaticLightDesc; 2] = [
+    StaticLightDesc {
+        flags: 1,
+        color: [0xFF; 4],
+        position: None,
+    },
+    StaticLightDesc {
+        flags: 1 << 3,
+        color: [0xFF; 4],
+        position: None,
+    },
+];
+
+/// `un_804D5A08` to `un_804D5A14`: a menu's background, text, cursor and title colours.
+const BG_COLOR: [u8; 4] = [0x40, 0x50, 0x80, 0x80];
+const TEXT_COLOR: [u8; 4] = [0xE2, 0xE2, 0xE2, 0xFF];
+const CURSOR_COLOR: [u8; 4] = [0xFF, 0x80, 0x20, 0xFF];
+const TITLE_COLOR: [u8; 4] = [0xA0, 0xA0, 0xFF, 0xFF];
+
+/// A menu's colours dimmed while a submenu covers it (`adjust`).
+fn dim(c: [u8; 4]) -> [u8; 4] {
+    [
+        (u32::from(c[0]) * 50 / 100) as u8,
+        (u32::from(c[1]) * 50 / 100) as u8,
+        (u32::from(c[2]) * 50 / 100) as u8,
+        c[3],
+    ]
+}
+
+/// `vsnprintf` of the formats the menus print their values with.
+fn format_value(kind: i32, raw: u32) -> Vec<u8> {
+    match kind {
+        KIND_DECIMAL => format!("{}", raw as i32),
+        KIND_BYTE => format!("{:02x}", raw as u8),
+        KIND_HALF => format!("{:04x}", raw as u16),
+        KIND_WORD => format!("{raw:08x}"),
+        // `%3.2f` of the float promoted to a double.
+        _ => format!("{:3.2}", f64::from(f32::from_bits(raw))),
+    }
+    .into_bytes()
+}
+
+impl Running<'_> {
+    fn menu(&self, m: u32) -> &DebugMenu {
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_ref()
+            .expect("the debug menus' pool");
+        &pool.slots()[m as usize]
+    }
+
+    fn menu_mut(&mut self, m: u32) -> &mut DebugMenu {
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_mut()
+            .expect("the debug menus' pool");
+        &mut pool.slots_mut()[m as usize]
+    }
+
+    fn menu_text(&mut self, m: u32) -> &mut super::devtext::DevText {
+        let t = self.menu(m).text.expect("a menu's screen");
+        &mut self.game.hud.devtext.pool[usize::from(t)]
+    }
+
+    /// A menu's entry under its cursor.
+    fn menu_entry(&self, m: u32) -> &'static Entry {
+        let d = self.menu(m);
+        &table(d.table).entries[usize::from(d.cursor)]
+    }
+
+    /// `lbAudioAx_80024030(2)`, the menus' move sound (`sfxMove`).
+    fn sfx_move(&mut self) {
+        self.lb_audio_call(2);
+    }
+
+    /// `un_80302E00`: an entry's callback told `arg`, then, when there is none or it answers
+    /// 0, the current menu's.
+    #[doc(alias = "un_80302E00")]
+    fn menu_entry_call(&mut self, table_addr: u32, index: usize, arg: i32) -> i32 {
+        let e = &table(table_addr).entries[index];
+        let mut ret = 0;
+        if e.cb != 0 {
+            self.game.hud.devtext.menu_entry = Some((table_addr, index as u8));
+            ret = self.menu_call(e.cb, arg);
+            if ret != 0 {
+                return ret;
+            }
+        }
+        if let Some(cur) = self.game.hud.devtext.menu_current {
+            let cb = self.menu(cur).cb;
+            if cb != 0 {
+                return self.menu_call(cb, arg);
+            }
+        }
+        ret
+    }
+
+    /// `un_80302FFC`: a menu's rows, each its label and then its value at the column past the
+    /// longest label of an entry with a value; the title rows in the title colour and the
+    /// cursor's row in the cursor's, all dimmed while a submenu covers it.
+    #[doc(alias = "un_80302FFC")]
+    fn menu_draw(&mut self, m: u32) {
+        let (flags, t, cursor) = {
+            let d = self.menu(m);
+            (d.flags, table(d.table), d.cursor)
+        };
+        let column = t.entries[..t.entries.len() - 1]
+            .iter()
+            .filter(|e| e.kind != 0 && e.kind != 1)
+            .map(|e| super::devtext::str_len(e.label) + 1)
+            .fold(1, i32::max);
+        let colors = if flags & COVERED != 0 {
+            [
+                dim(TEXT_COLOR),
+                dim(CURSOR_COLOR),
+                dim(TITLE_COLOR),
+                dim(BG_COLOR),
+            ]
+        } else {
+            [TEXT_COLOR, CURSOR_COLOR, TITLE_COLOR, BG_COLOR]
+        };
+        let text = self.menu_text(m);
+        for (i, c) in colors[..3].iter().enumerate() {
+            text.store_color_index(i as u8);
+            text.set_text_color(*c);
+        }
+        text.set_bg_color(colors[3]);
+        let h = i32::from(self.menu_text(m).h);
+        for row in 0..h {
+            let e = &t.entries[row as usize];
+            let color = if e.kind == KIND_TITLE {
+                2
+            } else if i32::from(cursor) == row {
+                1
+            } else {
+                0
+            };
+            let value = match e.kind {
+                KIND_CHOICE => {
+                    let i = self.game.menu_var(e.var, 4) as i32;
+                    Some(e.choices[i as usize].to_vec())
+                }
+                KIND_INT => Some(super::devtext::num_to_str(
+                    self.game.menu_var(e.var, 4) as i32
+                )),
+                KIND_DECIMAL | KIND_WORD | KIND_FLOAT => {
+                    Some(format_value(e.kind, self.game.menu_var(e.var, 4)))
+                }
+                KIND_BYTE => Some(format_value(e.kind, self.game.menu_var(e.var, 1))),
+                KIND_HALF => Some(format_value(e.kind, self.game.menu_var(e.var, 2))),
+                _ => None,
+            };
+            let text = self.menu_text(m);
+            text.store_color_index(color);
+            text.set_cursor_xy(0, row);
+            text.print(e.label.expect("a menu row with a label"));
+            text.set_cursor_xy(column, row);
+            if let Some(v) = value {
+                text.print(&v);
+            }
+        }
+    }
+
+    /// `un_80303444`: right on the cursor's entry: a choice or number up a step to its
+    /// maximum, a byte, half or word wrapping. Whether it changed.
+    #[doc(alias = "un_80303444")]
+    fn menu_increase(&mut self, m: u32) -> bool {
+        let e = self.menu_entry(m);
+        let g = &mut *self.game;
+        let changed = match e.kind {
+            KIND_CHOICE => {
+                let q = g.menu_var(e.var, 4) as i32;
+                let ok = fp::frsp(f64::from(q)) < fp::fsubs(reg(e.max), 1.0);
+                if ok {
+                    g.set_menu_var(e.var, 4, q.wrapping_add(1) as u32);
+                }
+                ok
+            }
+            KIND_INT => {
+                let q = g.menu_var(e.var, 4) as i32;
+                let sum = fp::fadds(fp::frsp(f64::from(q)), reg(e.step));
+                let ok = sum <= reg(e.max);
+                if ok {
+                    g.set_menu_var(e.var, 4, fp::fctiwz(sum) as u32);
+                }
+                ok
+            }
+            KIND_BYTE => {
+                let q = g.menu_var(e.var, 1) as i32;
+                let idk = fp::fctiwz(reg(e.step));
+                let v = if q + (idk & 0xFF) <= 0xFF {
+                    q.wrapping_add(idk)
+                } else {
+                    q.wrapping_sub(0x100 - idk)
+                };
+                g.set_menu_var(e.var, 1, v as u8 as u32);
+                true
+            }
+            KIND_HALF => {
+                let q = g.menu_var(e.var, 2) as i32;
+                let idk = fp::fctiwz(reg(e.step));
+                let v = if q + (idk & 0xFFFF) <= 0xFFFF {
+                    q.wrapping_add(idk)
+                } else {
+                    q.wrapping_sub(0x10000 - idk)
+                };
+                g.set_menu_var(e.var, 2, v as u16 as u32);
+                true
+            }
+            KIND_DECIMAL | KIND_WORD => {
+                let q = g.menu_var(e.var, 4);
+                g.set_menu_var(
+                    e.var,
+                    4,
+                    q.wrapping_add(crate::ppc::cvt_fp2unsigned(reg(e.step))),
+                );
+                true
+            }
+            KIND_FLOAT => {
+                let q = reg(f32::from_bits(g.menu_var(e.var, 4)));
+                let sum = fp::fadds(q, reg(e.step));
+                let ok = sum <= reg(e.max);
+                if ok {
+                    g.set_menu_var(e.var, 4, mem(sum).to_bits());
+                }
+                ok
+            }
+            _ => false,
+        };
+        if changed {
+            self.menu_mut(m).flags |= REDRAW;
+            self.sfx_move();
+        }
+        changed
+    }
+
+    /// `un_80303720`: left on the cursor's entry, as [`Running::menu_increase`] down to the
+    /// minimum.
+    #[doc(alias = "un_80303720")]
+    fn menu_decrease(&mut self, m: u32) -> bool {
+        let e = self.menu_entry(m);
+        let g = &mut *self.game;
+        let changed = match e.kind {
+            KIND_CHOICE => {
+                let q = g.menu_var(e.var, 4) as i32;
+                let ok = fp::frsp(f64::from(q)) > reg(e.min);
+                if ok {
+                    g.set_menu_var(e.var, 4, q.wrapping_sub(1) as u32);
+                }
+                ok
+            }
+            KIND_INT => {
+                let q = g.menu_var(e.var, 4) as i32;
+                let diff = fp::fsubs(fp::frsp(f64::from(q)), reg(e.step));
+                let ok = diff >= reg(e.min);
+                if ok {
+                    g.set_menu_var(e.var, 4, fp::fctiwz(diff) as u32);
+                }
+                ok
+            }
+            KIND_BYTE => {
+                let q = g.menu_var(e.var, 1) as i32;
+                let idk = fp::fctiwz(reg(e.step));
+                let v = if q - (idk & 0xFF) >= 0 {
+                    q.wrapping_sub(idk)
+                } else {
+                    q.wrapping_add(0x100 - idk)
+                };
+                g.set_menu_var(e.var, 1, v as u8 as u32);
+                true
+            }
+            KIND_HALF => {
+                let q = g.menu_var(e.var, 2) as i32;
+                let idk = fp::fctiwz(reg(e.step));
+                let v = if q - (idk & 0xFFFF) >= 0 {
+                    q.wrapping_sub(idk)
+                } else {
+                    q.wrapping_add(0x10000 - idk)
+                };
+                g.set_menu_var(e.var, 2, v as u16 as u32);
+                true
+            }
+            KIND_DECIMAL | KIND_WORD => {
+                let q = g.menu_var(e.var, 4);
+                g.set_menu_var(
+                    e.var,
+                    4,
+                    q.wrapping_sub(crate::ppc::cvt_fp2unsigned(reg(e.step))),
+                );
+                true
+            }
+            KIND_FLOAT => {
+                let q = reg(f32::from_bits(g.menu_var(e.var, 4)));
+                let diff = fp::fsubs(q, reg(e.step));
+                let ok = diff >= reg(e.min);
+                if ok {
+                    g.set_menu_var(e.var, 4, mem(diff).to_bits());
+                }
+                ok
+            }
+            _ => false,
+        };
+        if changed {
+            self.menu_mut(m).flags |= REDRAW;
+            self.sfx_move();
+        }
+        changed
+    }
+
+    /// `un_803039A4`: the stick's directions on `port`'s controller, past 60 either way, once
+    /// and then again after a wait (1 frame with R held on the first controller, else 8)
+    /// while it stays out.
+    #[doc(alias = "un_803039A4")]
+    fn menu_stick(&mut self, port: usize) -> u32 {
+        let wait = if self.game.pads.copy[0].button & u32::from(TRIGGER_R) != 0 {
+            1
+        } else {
+            8
+        };
+        let p = self.game.pads.copy[port];
+        let (x, y) = (i32::from(p.stick_x), i32::from(p.stick_y));
+        let d = &mut self.game.hud.devtext;
+        let mut ret = 0;
+        if x < -60 && d.stick_wait == 0 {
+            ret |= STICK_LEFT;
+        }
+        if x > 60 && d.stick_wait == 0 {
+            ret |= STICK_RIGHT;
+        }
+        if y < -60 && d.stick_wait == 0 {
+            ret |= STICK_DOWN;
+        }
+        if y > 60 && d.stick_wait == 0 {
+            ret |= STICK_UP;
+        }
+        if ret != 0 && d.stick_wait == 0 {
+            d.stick_wait = wait;
+        }
+        if x.abs() <= 60 && y.abs() <= 60 {
+            d.stick_wait = 0;
+        }
+        if d.stick_wait != 0 {
+            d.stick_wait -= 1;
+        }
+        ret
+    }
+
+    /// `un_80303AC4`: the first controller on a menu: Start, up and down (Y and X too) to the
+    /// next entry that isn't a title, right and left (R and L too) on the value, A and B,
+    /// the first that applies.
+    #[doc(alias = "un_80303AC4")]
+    fn menu_input(&mut self, m: u32) {
+        let trigger = self.game.pads.copy[0].trigger;
+        let buttons = self.menu_stick(0) | trigger;
+        let (t, cursor) = (self.menu(m).table, usize::from(self.menu(m).cursor));
+        let entries = table(t).entries;
+        let h = i32::from(self.menu_text(m).h);
+        if buttons & u32::from(BUTTON_START) != 0 {
+            self.menu_entry_call(t, cursor, CB_START);
+        } else if buttons & (STICK_UP | u32::from(BUTTON_Y)) != 0 {
+            let prev = (0..cursor).rev().find(|&i| entries[i].kind != 0);
+            if let Some(i) = prev {
+                let d = self.menu_mut(m);
+                d.cursor = i as u8;
+                d.flags |= REDRAW;
+                self.sfx_move();
+            }
+        } else if buttons & (STICK_DOWN | u32::from(BUTTON_X)) != 0 {
+            let next = (cursor + 1..h.max(0) as usize).find(|&i| entries[i].kind != 0);
+            if let Some(i) = next {
+                let d = self.menu_mut(m);
+                d.cursor = i as u8;
+                d.flags |= REDRAW;
+                self.sfx_move();
+            }
+        } else if buttons & (STICK_RIGHT | u32::from(TRIGGER_R)) != 0 {
+            if self.menu_increase(m) {
+                self.menu_entry_call(t, cursor, CB_RIGHT);
+            }
+        } else if buttons & (STICK_LEFT | u32::from(TRIGGER_L)) != 0 {
+            if self.menu_decrease(m) {
+                self.menu_entry_call(t, cursor, CB_LEFT);
+            }
+        } else if buttons & u32::from(BUTTON_A) != 0 {
+            self.menu_entry_call(t, cursor, CB_SELECT);
+        } else if buttons & u32::from(BUTTON_B) != 0 {
+            self.menu_entry_call(t, cursor, CB_BACK);
+        }
+    }
+
+    /// `fn_80303EF4`, the menus' process: from the first menu through the submenus open over
+    /// it, each shown (or hidden), redrawn, and given the controller unless a submenu covers
+    /// it or it opened this frame; a closing one closes with those over it, and the walk
+    /// stops there.
+    #[doc(alias = "fn_80303EF4")]
+    pub fn menu_proc(&mut self, _gobj: GObjId) {
+        let mut q = self.game.hud.devtext.menu_top;
+        while let Some(m) = q {
+            let flags = self.menu(m).flags;
+            let text = self.menu_text(m);
+            if flags & HIDDEN != 0 {
+                text.hide_text();
+                text.hide_background();
+            } else {
+                text.show_text();
+                text.show_background();
+                if flags & REDRAW != 0 {
+                    text.erase();
+                    self.menu_draw(m);
+                    self.menu_mut(m).flags &= !REDRAW;
+                } else {
+                    self.menu_draw(m);
+                }
+                let flags = self.menu(m).flags;
+                if flags & SKIP_INPUT != 0 {
+                    self.menu_mut(m).flags &= !SKIP_INPUT;
+                } else if flags & COVERED == 0 {
+                    self.menu_input(m);
+                }
+            }
+            if self.menu(m).flags & CLOSING != 0 {
+                self.menu_close(m);
+                q = None;
+            } else {
+                q = self.menu(m).prev;
+            }
+        }
+    }
+
+    /// `un_80303FD4`: a menu set up on `gobj` with `table`: its screen (as wide as its labels
+    /// and values, a row an entry, its glyphs in a heap block, its id past the menus open
+    /// before it) at (`x`, `y`), the cursor on the first entry that isn't a title, and each
+    /// entry's callback told the menu is made.
+    #[doc(alias = "un_80303FD4")]
+    fn menu_setup(&mut self, gobj: GObjId, m: u32, table_addr: u32, x: i32, y: i32) {
+        let t = table(table_addr);
+        {
+            let d = self.menu_mut(m);
+            d.table = table_addr;
+            d.flags = 0;
+            d.prev = None;
+            d.next = None;
+            d.gobj = Some(gobj);
+        }
+        let rows = &t.entries[..t.entries.len() - 1];
+        let count = rows.len() as i32;
+        let width = menu_width(rows);
+        self.game.hud.devtext.menu_current = Some(m);
+        let buf = crate::hsd::heap::with(|h| h.mem_alloc((width * count * 2) as u32)).unwrap_or(0);
+        self.menu_mut(m).buf = buf;
+        let mut depth = 0;
+        let mut un = self.game.hud.devtext.menu_top;
+        while let Some(u) = un
+            && u != m
+        {
+            un = self.menu(u).prev;
+            depth += 1;
+        }
+        let text = self
+            .game
+            .hud
+            .devtext
+            .create(depth + 0x78, x, y, width, count);
+        self.menu_mut(m).text = text;
+        let Some(text) = text else { return };
+        self.game.hud.devtext.show(text);
+        let first = rows.iter().position(|e| e.kind != 0).unwrap_or(0);
+        let d = self.menu_mut(m);
+        d.cursor = first as u8;
+        d.cb = 0;
+        let text = self.menu_text(m);
+        text.hide_cursor();
+        text.set_scale(10.0, 17.0);
+        self.game.hud.devtext.menu_entry = None;
+        for i in 0..rows.len() {
+            self.menu_entry_call(table_addr, i, CB_INIT);
+        }
+    }
+
+    /// `un_80304168`: the first menu, `table` at (`x`, `y`), on a GObj of the debug text's
+    /// GObj's kind with its process.
+    #[doc(alias = "un_80304168")]
+    pub fn menu_open(&mut self, table_addr: u32, x: i32, y: i32) -> Option<GObjId> {
+        let base = self.game.hud.devtext.get_gobj()?;
+        let (classifier, p_link, priority) = {
+            let o = self.game.world.gobj(base);
+            (o.classifier, o.p_link, o.p_priority)
+        };
+        let gobj = self.game.world.create(classifier, p_link, priority);
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_mut()
+            .expect("the debug menus' pool");
+        let m = pool.alloc(DebugMenu::default());
+        self.game.hud.devtext.menu_top = Some(m);
+        self.menu_setup(gobj, m, table_addr, x, y);
+        let p = self.game.world.setup_proc(gobj, CodeRef(MENU_PROC), 0);
+        self.menu_mut(m).proc = Some(p);
+        Some(gobj)
+    }
+
+    /// `un_80304210`: a submenu with `table` over `parent`, beside it, by its cursor's row
+    /// (`dx`, `dy` further), which covers the parent and takes the controller from the
+    /// next frame.
+    #[doc(alias = "un_80304210")]
+    fn menu_open_sub(&mut self, parent: u32, table_addr: u32, dx: i32, dy: i32) -> u32 {
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_mut()
+            .expect("the debug menus' pool");
+        let m = pool.alloc(DebugMenu::default());
+        let cursor = self.menu(parent).cursor;
+        let text = self.menu_text(parent);
+        let (tx, ty) = (i32::from(text.x), i32::from(text.y));
+        let x = fp::fmuls(reg(text.scale_x), fp::frsp(f64::from(text.w)));
+        let x_pos = fp::fctiwz(fp::fadds(fp::frsp(f64::from(dx)), x));
+        let y_pos = fp::fctiwz(fp::fmadds(
+            reg(text.scale_y),
+            fp::frsp(f64::from(cursor)),
+            fp::frsp(f64::from(dy)),
+        ));
+        let gobj = self.menu(parent).gobj.expect("a menu's GObj");
+        self.menu_setup(
+            gobj,
+            m,
+            table_addr,
+            tx.wrapping_add(x_pos),
+            ty.wrapping_add(y_pos),
+        );
+        let d = self.menu_mut(parent);
+        d.flags |= COVERED;
+        d.prev = Some(m);
+        let s = self.menu_mut(m);
+        s.next = Some(parent);
+        s.flags |= SKIP_INPUT;
+        m
+    }
+
+    /// `un_80304344`: a menu and the submenus over it closed, each telling its terminator's
+    /// callback (and then the current menu's) or its own that it closes, its glyphs freed,
+    /// its screen taken out and the menu freed; the menu under it takes the controller
+    /// again and becomes the current one.
+    #[doc(alias = "un_80304344")]
+    fn menu_close(&mut self, m: u32) {
+        let next = self.menu(m).next;
+        if let Some(n) = next {
+            let d = self.menu_mut(n);
+            d.flags &= !COVERED;
+            d.prev = None;
+        }
+        let mut cur = Some(m);
+        while let Some(a) = cur {
+            let t = table(self.menu(a).table);
+            let end = t.entries.len() - 1;
+            self.game.hud.devtext.menu_current = Some(a);
+            if t.entries[end].cb != 0 {
+                self.game.hud.devtext.menu_entry = Some((t.addr, end as u8));
+                if self.menu_call(t.entries[end].cb, CB_CLOSE) == 0
+                    && let Some(c) = self.game.hud.devtext.menu_current
+                {
+                    let cb = self.menu(c).cb;
+                    if cb != 0 {
+                        self.menu_call(cb, CB_CLOSE);
+                    }
+                }
+            } else {
+                let cb = self.menu(a).cb;
+                if cb != 0 {
+                    self.menu_call(cb, CB_CLOSE);
+                }
+            }
+            let buf = self.menu(a).buf;
+            crate::hsd::heap::with(|h| h.mem_free(buf));
+            // `DevText_Remove(&menu->x4)`: the menu's own pointer stands for the list link,
+            // so a screen first in the draw list stays its head ([`Link::Held`]).
+            let text = self.menu(a).text.expect("a menu's screen");
+            self.game.hud.devtext.remove(Link::Held(text));
+            let prev = self.menu(a).prev;
+            let pool = self
+                .game
+                .hud
+                .devtext
+                .menus
+                .as_mut()
+                .expect("the debug menus' pool");
+            pool.free(a);
+            cur = prev;
+        }
+        self.game.hud.devtext.menu_current = next;
+    }
+
+    /// `un_802FF710`: the debug menu scene's camera.
+    #[doc(alias = "un_802FF710")]
+    fn debug_menu_camera(&mut self) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(0x13, 20, 0);
+        let c = cobj::load_static_desc(&mut g.objs, data, &SCENE_CAMERA);
+        g.world.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
+        g.world
+            .setup_gx_link_max(gobj, CodeRef(super::CAMERA_RENDER), 11, false);
+        g.world.gobj_mut(gobj).gxlink_prios = 0x20000;
+    }
+
+    /// `un_802FF6A0`: the debug menu scene's lights.
+    #[doc(alias = "un_802FF6A0")]
+    fn debug_menu_lights(&mut self) {
+        let g = &mut *self.game;
+        let gobj = g.world.create(11, 3, 0);
+        let first = lobj::load_static(&mut g.objs, &SCENE_LIGHTS[0]);
+        let second = lobj::load_static(&mut g.objs, &SCENE_LIGHTS[1]);
+        g.objs.lobjs[first].next = Some(second);
+        g.objs.lobjs[second].next = None;
+        g.world.set_obj(gobj, OBJ_LIGHT, Obj::LObj(first));
+        g.world
+            .setup_gx_link(gobj, CodeRef(super::LIGHT_RENDER), 0, 0);
+    }
+
+    /// `gm_Scene_DebugMenu_OnEnter`: the camera and lights, and the menu the mode state
+    /// asks for (its table and callback) at (10, 10).
+    #[doc(alias = "gm_Scene_DebugMenu_OnEnter")]
+    pub fn debug_menu_on_enter(&mut self) {
+        self.debug_menu_camera();
+        self.debug_menu_lights();
+        let (table_addr, cb) = self.game.debug_mode.menu_enter;
+        self.menu_open(table_addr, 10, 10);
+        let cur = self
+            .game
+            .hud
+            .devtext
+            .menu_current
+            .expect("the menu just made");
+        self.menu_mut(cur).cb = cb;
+    }
+
+    /// An entry's or menu's callback (`soundtest_callback`), by its address.
+    pub fn menu_call(&mut self, cb: u32, arg: i32) -> i32 {
+        match cb {
+            0x801B_09F8 => self.debug_menu_back_to_title(arg),
+            0x802F_FE6C => self.debug_submenu_back(arg),
+            0x8030_01DC => self.debug_menu_state_item(arg, 1),
+            0x8030_02FC => self.debug_menu_state_item(arg, 2),
+            0x8030_0218 => {
+                let lang = self.game.debug_setting(0) as u8;
+                self.game.game_data.set_saved_language(lang);
+                self.game.sync_unlocks();
+                0
+            }
+            0x8030_0248 => {
+                if self.game.debug_setting(4) != 0 && arg == CB_SELECT {
+                    self.lb_audio_call(1);
+                    super::super::code::unported_call(
+                        "the debug menu's relock (gmMainLib_8015FB68)",
+                    );
+                }
+                0
+            }
+            // `un_80300290` (Global Data Edit) and `un_80301420` (Result Test): a submenu on A.
+            0x8030_0290 | 0x8030_1420 => {
+                if arg == CB_SELECT {
+                    super::super::code::unported_call(&format!(
+                        "the debug menu's submenu callback {cb:#010x}"
+                    ));
+                }
+                0
+            }
+            other => super::super::code::unported("debug menu callback", other),
+        }
+    }
+
+    /// `fn_801B09F8`, the debug menu's own callback: B goes back to the title.
+    #[doc(alias = "fn_801B09F8")]
+    fn debug_menu_back_to_title(&mut self, arg: i32) -> i32 {
+        if arg == CB_BACK {
+            self.lb_audio_call(0);
+            self.change_game_mode_after_scene(super::super::gm::machine::GM_TITLE);
+            self.game.end_scene();
+        }
+        0
+    }
+
+    /// `fn_802FFE6C`, a submenu's callback: B closes it.
+    #[doc(alias = "fn_802FFE6C")]
+    fn debug_submenu_back(&mut self, arg: i32) -> i32 {
+        if arg == CB_BACK {
+            self.lb_audio_call(0);
+            let cur = self.game.hud.devtext.menu_current.expect("a current menu");
+            self.menu_mut(cur).flags |= CLOSING;
+        }
+        arg
+    }
+
+    /// `un_803001DC` (Versus Mode) and `un_803002FC` (Mode Team Test): A goes to the debug
+    /// mode's state `state`.
+    fn debug_menu_state_item(&mut self, arg: i32, state: u8) -> i32 {
+        if arg == CB_SELECT {
+            self.lb_audio_call(1);
+            self.set_next_game_mode_state_id(state);
+            self.game.end_scene();
+        }
+        0
+    }
+}
+
+/// `un_80302EA4`: a menu's width: its labels and values side by side, or the longest title
+/// or plain entry's label, whichever is wider, and one more.
+#[doc(alias = "un_80302EA4")]
+fn menu_width(rows: &[Entry]) -> i32 {
+    let (mut x, mut y, mut z) = (1, 1, 1);
+    for e in rows {
+        let len = super::devtext::str_len(e.label) + 1;
+        if (e.kind as u32) <= 1 {
+            z = z.max(len);
+        } else {
+            x = x.max(len);
+        }
+        let min = match e.kind {
+            KIND_INT | KIND_FLOAT => 3,
+            KIND_DECIMAL => 10,
+            KIND_BYTE => 2,
+            KIND_HALF => 4,
+            KIND_WORD => 8,
+            _ => 1,
+        };
+        y = y.max(min);
+        if e.kind == KIND_CHOICE {
+            for i in 0..fp::fctiwz(reg(e.max)) {
+                y = y.max(super::devtext::str_len(Some(e.choices[i as usize])));
+            }
+        }
+    }
+    x += y;
+    if x > z { x + 1 } else { z + 1 }
+}
+
+/// The debug mode's statics (`gmdebugmode.c`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct DebugMode {
+    /// `menu_enter_data`: the debug menu scene's table and callback.
+    pub menu_enter: (u32, u32),
+}
+
+impl Running<'_> {
+    /// `onEnterMenu0`: the debug menu's first page and its callback, back to the title.
+    #[doc(alias = "onEnterMenu0")]
+    pub fn debug_mode_enter_menu0(&mut self) {
+        self.game.debug_mode.menu_enter = (0x803F_A4E0, 0x801B_09F8);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn widths_and_formats() {
+        assert_eq!(format_value(KIND_BYTE, 0xAB), b"ab");
+        assert_eq!(format_value(KIND_HALF, 0x1), b"0001");
+        assert_eq!(format_value(KIND_FLOAT, 1.0f32.to_bits()), b"1.00");
+        assert_eq!(format_value(KIND_DECIMAL, (-3i32) as u32), b"-3");
+        let t = table(0x803F_A4E0);
+        assert_eq!(menu_width(&t.entries[..t.entries.len() - 1]), 33);
+    }
+}
