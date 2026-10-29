@@ -1240,7 +1240,8 @@ impl Running<'_> {
     /// `gm_801BED3C`, the Hanyu character select's entry: VS mode's data, every character
     /// unlocked (`gm_80164F18`), and on an odd match type Ice Climbers' locked again
     /// (`gm_80164A0C(7)`).
-    #[doc(alias = "gm_801BED3C")]
+    // Ports `gm_801BED3C`; aliased once a check reaches it (the select it opens crashes in
+    // its entry, before any traced tick).
     pub fn hanyu_css_enter(&mut self) {
         let vs = self
             .vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
@@ -1255,7 +1256,7 @@ impl Running<'_> {
 
     /// `gm_801BEDA8`, its exit: the next match type (the one before when the screen went
     /// back), and its data back into VS mode's.
-    #[doc(alias = "gm_801BEDA8")]
+    // Ports `gm_801BEDA8`, which no console reaches: the select crashes as it opens.
     pub fn hanyu_css_exit(&mut self) {
         let c = &mut self.game.debug_mode.hanyu_css;
         c.match_type = if c.pending_scene_change == 2 {
