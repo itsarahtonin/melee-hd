@@ -233,6 +233,14 @@ pub struct DebugMenu {
     pub buf: u32,
 }
 
+/// A menu a static names (`un_804D6E40`, `un_804D6E44`): its slot, and its address, which
+/// the static keeps once the scene's pool is made anew (its menus forgotten unclosed).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub struct MenuRef {
+    pub slot: u32,
+    pub addr: u32,
+}
+
 /// `un_803F9E60`: the debug menu scene's camera.
 const SCENE_CAMERA: StaticDesc = StaticDesc {
     flags: 0,
@@ -292,6 +300,20 @@ fn format_value(kind: i32, raw: u32) -> Vec<u8> {
 }
 
 impl Running<'_> {
+    fn menu_ref(&self, slot: u32) -> MenuRef {
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_ref()
+            .expect("the debug menus' pool");
+        MenuRef {
+            slot,
+            addr: pool.addr(slot),
+        }
+    }
+
     fn menu(&self, m: u32) -> &DebugMenu {
         let pool = self
             .game
@@ -343,7 +365,7 @@ impl Running<'_> {
                 return ret;
             }
         }
-        if let Some(cur) = self.game.hud.devtext.menu_current {
+        if let Some(cur) = self.game.hud.devtext.menu_current.map(|r| r.slot) {
             let cb = self.menu(cur).cb;
             if cb != 0 {
                 return self.menu_call(cb, arg);
@@ -651,7 +673,7 @@ impl Running<'_> {
     /// stops there.
     #[doc(alias = "fn_80303EF4")]
     pub fn menu_proc(&mut self, _gobj: GObjId) {
-        let mut q = self.game.hud.devtext.menu_top;
+        let mut q = self.game.hud.devtext.menu_top.map(|r| r.slot);
         while let Some(m) = q {
             let flags = self.menu(m).flags;
             let text = self.menu_text(m);
@@ -702,11 +724,11 @@ impl Running<'_> {
         let rows = &t.entries[..t.entries.len() - 1];
         let count = rows.len() as i32;
         let width = menu_width(rows);
-        self.game.hud.devtext.menu_current = Some(m);
+        self.game.hud.devtext.menu_current = Some(self.menu_ref(m));
         let buf = crate::hsd::heap::with(|h| h.mem_alloc((width * count * 2) as u32)).unwrap_or(0);
         self.menu_mut(m).buf = buf;
         let mut depth = 0;
-        let mut un = self.game.hud.devtext.menu_top;
+        let mut un = self.game.hud.devtext.menu_top.map(|r| r.slot);
         while let Some(u) = un
             && u != m
         {
@@ -752,7 +774,7 @@ impl Running<'_> {
             .as_mut()
             .expect("the debug menus' pool");
         let m = pool.alloc(DebugMenu::default());
-        self.game.hud.devtext.menu_top = Some(m);
+        self.game.hud.devtext.menu_top = Some(self.menu_ref(m));
         self.menu_setup(gobj, m, table_addr, x, y);
         let p = self.game.world.setup_proc(gobj, CodeRef(MENU_PROC), 0);
         self.menu_mut(m).proc = Some(p);
@@ -815,11 +837,11 @@ impl Running<'_> {
         while let Some(a) = cur {
             let t = table(self.menu(a).table);
             let end = t.entries.len() - 1;
-            self.game.hud.devtext.menu_current = Some(a);
+            self.game.hud.devtext.menu_current = Some(self.menu_ref(a));
             if t.entries[end].cb != 0 {
                 self.game.hud.devtext.menu_entry = Some((t.addr, end as u8));
                 if self.menu_call(t.entries[end].cb, CB_CLOSE) == 0
-                    && let Some(c) = self.game.hud.devtext.menu_current
+                    && let Some(c) = self.game.hud.devtext.menu_current.map(|r| r.slot)
                 {
                     let cb = self.menu(c).cb;
                     if cb != 0 {
@@ -849,7 +871,7 @@ impl Running<'_> {
             pool.free(a);
             cur = prev;
         }
-        self.game.hud.devtext.menu_current = next;
+        self.game.hud.devtext.menu_current = next.map(|n| self.menu_ref(n));
     }
 
     /// `un_802FF710`: the debug menu scene's camera.
@@ -892,7 +914,8 @@ impl Running<'_> {
             .hud
             .devtext
             .menu_current
-            .expect("the menu just made");
+            .expect("the menu just made")
+            .slot;
         self.menu_mut(cur).cb = cb;
     }
 
@@ -912,9 +935,7 @@ impl Running<'_> {
             0x8030_0248 => {
                 if self.game.debug_setting(4) != 0 && arg == CB_SELECT {
                     self.lb_audio_call(1);
-                    super::super::code::unported_call(
-                        "the debug menu's relock (gmMainLib_8015FB68)",
-                    );
+                    self.debug_relock_all();
                 }
                 0
             }
@@ -929,6 +950,29 @@ impl Running<'_> {
             }
             other => super::super::code::unported("debug menu callback", other),
         }
+    }
+
+    /// The debug menu's Publicity (`gmMainLib_8015FB68`): the save as before any unlock, the
+    /// features, characters and stages locked (`gm_8016505C`, `gm_801647D0`), the special
+    /// messages whose conditions no longer hold taken back (`gm_801729EC`), and every
+    /// trophy's record and trophy taken (`gm_80174238`, `Toy_80311960`).
+    #[doc(alias = "gmMainLib_8015FB68")]
+    pub fn debug_relock_all(&mut self) {
+        let s = &mut self.game.game_data.thing.save_data;
+        s.x186C = 0;
+        s.unlocked_characters = 0;
+        s.x186A = 0;
+        self.game.sync_unlocks();
+        self.relock_messages();
+        let s = &mut self.game.game_data.thing.save_data;
+        for i in 0..300 {
+            s.x1B58[i / 32] &= !(1 << (i % 32));
+        }
+        s.trophy_flags = [0; 293];
+        s.trophy_category_flags = 0;
+        s.trophy_count = 0;
+        self.toy_reset_table();
+        self.game.sync_unlocks();
     }
 
     /// `fn_801B09F8`, the debug menu's own callback: B goes back to the title.
@@ -947,7 +991,13 @@ impl Running<'_> {
     fn debug_submenu_back(&mut self, arg: i32) -> i32 {
         if arg == CB_BACK {
             self.lb_audio_call(0);
-            let cur = self.game.hud.devtext.menu_current.expect("a current menu");
+            let cur = self
+                .game
+                .hud
+                .devtext
+                .menu_current
+                .expect("a current menu")
+                .slot;
             self.menu_mut(cur).flags |= CLOSING;
         }
         arg

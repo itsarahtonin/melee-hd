@@ -417,9 +417,25 @@ impl Comparer<'_> {
         let game = self.game;
         let d = &game.hud.devtext;
         let pool = sym("devtext_pool");
+        // A screen on the free list keeps the glyph buffer its creator gave it (a debug menu's,
+        // in a heap a later scene makes anew), which `DevText_Create` replaces before anything
+        // reads it: its glyphs are left out.
+        let mut free = Vec::new();
+        let mut at = d.pool_head;
+        while let Some(t) = at {
+            if free.contains(&t) {
+                break;
+            }
+            free.push(t);
+            at = d.pool.get(usize::from(t)).and_then(|s| s.next);
+        }
         for i in 0..POOL as u32 {
-            let theirs = mem.devtext(pool, i);
-            let ours = d.pool.get(i as usize).cloned().unwrap_or_default();
+            let mut theirs = mem.devtext(pool, i);
+            let mut ours = d.pool.get(i as usize).cloned().unwrap_or_default();
+            if free.contains(&(i as u8)) {
+                theirs.buf.clear();
+                ours.buf.clear();
+            }
             self.check(
                 &format!("hud devtext[{i}]"),
                 "screen",
@@ -534,8 +550,8 @@ impl Comparer<'_> {
             "debug menus",
             "first, current, entry, stick wait",
             (
-                addr(d.menu_top),
-                addr(d.menu_current),
+                d.menu_top.map_or(0, |r| r.addr),
+                d.menu_current.map_or(0, |r| r.addr),
                 d.menu_entry.map_or(0, |(t, i)| t + 0x20 * u32::from(i)),
                 d.stick_wait,
             ),
