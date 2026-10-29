@@ -115,7 +115,7 @@ pub fn power_on_clock() -> u64 {
 }
 
 /// Days from 2000-01-01 to a date of the Gregorian calendar (0 before it).
-fn days_since_2000(y: u32, m: u32, d: u32) -> u64 {
+pub(crate) fn days_since_2000(y: u32, m: u32, d: u32) -> u64 {
     let days_from_civil = |y: i64, m: i64, d: i64| {
         let y = if m <= 2 { y - 1 } else { y };
         let era = y.div_euclid(400);
