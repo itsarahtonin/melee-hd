@@ -1,12 +1,13 @@
-//! melee-hd's player: a VS match in a window.
+//! melee-hd's player: Melee from power-on in a window, or a VS match.
 //!
 //! ```text
+//! melee-hd [--saves DIR] [--no-session-record]     boots Melee from power-on with the native save
 //! melee-hd [--p1 fox] [--p2 marth] [--stage fd] [--stocks 4] [--minutes 8] [--disc ISO]
 //!          [--replay FILE.slp] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread]
 //!          [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--ticks N]
 //! melee-hd --bench TICKS [--size WxH] [--resize-at TICK:WxH] [...]
 //!                                               plays headless, timing each frame
-//! melee-hd --launcher-shot FILE.png [--size WxH] draws the launcher to a PNG
+//! melee-hd --settings-shot FILE.png [--size WxH] draws the settings panel to a PNG
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
@@ -17,13 +18,16 @@
 //!
 //! The disc comes from `--disc`, else `SSBM_DISC`, else the settings folder, where the disc
 //! picker keeps the one it asks for the first time ([`settings`]). Characters and stages are melee-sim's
-//! `game::roster`, what it has ported (`--help` lists them). With no `--p1` to `--p4`, `--stage`
-//! or `--replay` (and no `--bench`), the window opens on the launcher, which picks the match
-//! ([`launcher`]). Controllers: GameCube controllers on a Wii U adapter play their own ports;
+//! `game::roster`, what it has ported (`--help` lists them); a match the command line names is a
+//! developer's. With no `--p1` to `--p4`, `--stage`, `--replay` or `--inputs`, Melee boots from
+//! power-on with the native save ([`saves`]), its menus gated where they lead into unported
+//! code ([`gates`]), each session recorded ([`session_rec`]); Esc opens the settings ([`front`]).
+//! Controllers: GameCube controllers on a Wii U adapter play their own ports;
 //! gamepads and the keyboard play the first ports left (arrows: stick, IJKL: C-stick, X/Z/C/S:
 //! A/B/X/Y, D: Z, Q/W: L/R, Enter: start, left shift: half stick). F11 or Alt+Enter toggles
 //! borderless fullscreen; F12 saves a bug capture ([`capture`]), and `--flicker-scan` saves one by
-//! itself when a presented frame drops out for one frame ([`flicker`]). Escape quits, or from a match the launcher started, goes back to it.
+//! itself when a presented frame drops out for one frame ([`flicker`]). Escape opens the settings
+//! over Melee, or quits a match the command line named.
 //!
 //! The disc reads at a drive's pace, as ssbm-rs's window reads it, which the music needs
 //! (`melee_sim::audio::clock::DiscSpeed`); `--disc-speed fast` reads at Slippi's fast disc
@@ -209,7 +213,7 @@ struct Args {
     refresh: Option<f64>,
     /// The match's random seed, instead of one from the clock.
     seed: Option<u32>,
-    /// Plays a stage or character the launcher doesn't offer (`--unfinished-stages`, for
+    /// Plays a stage or character the command line doesn't offer (`--unfinished-stages`, for
     /// developers): one whose audit isn't done or found code a match can reach unported.
     unfinished_stages: bool,
     /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
@@ -249,7 +253,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--launcher-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -261,7 +265,7 @@ fn usage() -> String {
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match\n\
          console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
          saves: [--import-save FILE.gci|.raw] [--export-save FILE.gci|.raw] [--unlock-all], each with [--saves DIR], then quit\n\
-         with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
+         with no --p1..--p4, --stage, --replay or --inputs, Melee boots from power-on with the native save; Esc opens the settings\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
         names(roster::offered_characters().map(|c| c.keys[0]).collect()),
         names(roster::offered_stages().map(|s| s.keys[0]).collect()),
@@ -578,6 +582,14 @@ impl Platform {
         match &g.recorder {
             None => g.recorder = Some(Box::new(Recorder::new(Setup::vanilla()))),
             Some(r) => {
+                if self.slp.is_none() && r.last_frame().is_some() && g.vs.start.match_kind == 3 {
+                    // A Bonus match's placements at its end take its bonuses' tally
+                    // (`fn_8016588C`), which the recorder, only reading, can't run: it isn't
+                    // recorded (a fresh recorder waits for the next match's start).
+                    eprintln!("a Bonus match isn't saved as a replay");
+                    g.recorder = Some(Box::new(Recorder::new(Setup::vanilla())));
+                    return;
+                }
                 if self.slp.is_none() && r.last_frame().is_some() {
                     // The title's attract match plays itself: not the player's.
                     let attract = matches!(g.machine.phase, Phase::Scene { mode, .. }
@@ -2164,7 +2176,7 @@ impl ApplicationHandler for App {
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
-        // F11 and Alt+Enter toggle fullscreen, in a match and in the launcher alike.
+        // F11 and Alt+Enter toggle fullscreen, in Melee and with the settings open alike.
         if let WindowEvent::KeyboardInput {
             event:
                 KeyEvent {
