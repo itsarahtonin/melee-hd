@@ -17,10 +17,11 @@
 //! the exit's call chain, `main` > `gm_801A4510` > `runGameMode` > `gm_801A4014` >
 //! `onExitResults@801B16C8` > `gmVsMelee_ExitResults` > `gm_80168638` > `fn_80169000`, and the
 //! cells between them that the chain's frames leave as earlier calls wrote them
-//! ([`VS_EXIT`]). Each was read off ssbm-rs's run of the original code (`WATCH_ADDR` on the
-//! stack through the results sessions) and from the functions' prologues. Melee moving a
-//! byte of a saved register or a saved return address changes what the caller does after
-//! the return, which isn't modelled: the exit stops there.
+//! ([`VS_EXIT`]). Each was read off ssbm-rs's run of the original code at its b0abe5e, which
+//! takes interrupts in the console's frames (`WATCH_ADDR` on the stack through the results
+//! and tie sessions), and from the functions' prologues. Melee moving a byte of a saved
+//! register or a saved return address changes what the caller does after the return, which
+//! isn't modelled: the exit stops there.
 //!
 //! [`Clock::flush_count`]: crate::audio::clock::Clock::flush_count
 
@@ -76,8 +77,8 @@ use Use::{Dead, Live, StateId};
 const VS_EXIT: [(Holds, Use, &str); 63] = [
     // fn_80169000's frame top (sp+0x28): unused.
     (Word(0x804E_EAD8), Dead, "VIWaitForRetrace's back chain"),
-    // The console's: OSSleepThread's saved return address into VIWaitForRetrace (ssbm-rs's
-    // original code holds 0xFFFFFFF0 here, its interrupt's stand-in return address).
+    // OSSleepThread's saved return address into VIWaitForRetrace (ssbm-rs before its b0abe5e
+    // held 0xFFFFFFF0 here, its interrupt's stand-in return address).
     (
         Word(0x8034_F33C),
         Dead,
@@ -169,7 +170,9 @@ const VS_EXIT: [(Holds, Use, &str); 63] = [
         "onExitResults's saved return address",
     ),
     (Word(0x804E_EB88), Dead, "gm_801A4014's padding"),
-    (Word(1), Dead, "gm_801A4014's padding"),
+    // An ARAM interrupt's handler in the boot (`__ARHandler`'s save of the dispatcher's r31,
+    // the handler's address), taken while the main thread waited this high on the stack.
+    (Word(0x8035_0F98), Dead, "gm_801A4014's padding"),
     (Word(0), Dead, "gm_801A4014's padding"),
     (Word(0), Dead, "gm_801A4014's padding"),
     (Word(0), Dead, "gm_801A4014's padding"),
