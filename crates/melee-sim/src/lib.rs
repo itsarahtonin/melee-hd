@@ -21,6 +21,7 @@ pub mod lb;
 pub mod math;
 mod memo;
 pub mod mp;
+pub mod msl;
 pub mod mtx;
 mod pairs;
 pub mod ppc;

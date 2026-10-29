@@ -448,6 +448,20 @@ impl DevText {
         }
     }
 
+    /// Writes `format` with `args` as MSL's `vsnprintf` formats them, `DevText_Printf`. The
+    /// original formats into a 64-byte stack buffer with no limit: a longer line would write
+    /// past it, which no caller's does.
+    #[doc(alias = "DevText_Printf")]
+    pub fn printf(&mut self, format: &[u8], args: &[crate::msl::Arg]) {
+        let s = crate::msl::vsprintf(format, args);
+        assert!(
+            s.len() < 64,
+            "DevText_Printf's line overflows its stack buffer ({} bytes)",
+            s.len()
+        );
+        self.print(&s);
+    }
+
     /// Writes a number in decimal, `DevText_PrintInt`.
     #[doc(alias = "DevText_PrintInt")]
     pub fn print_int(&mut self, n: i32) {
