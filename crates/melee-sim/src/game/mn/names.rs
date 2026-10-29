@@ -1330,7 +1330,8 @@ impl Running<'_> {
 
     /// `mnNameNew_8023B224`: the keyboard left, a new name saved (`ok`): back to the names'
     /// list (scrolled to the new name past 24), or the texts and the menus' GObjs freed and
-    /// back to Tournament's setup with the name; the character select's isn't ported.
+    /// back to Tournament's setup with the name, or to the character select's screen
+    /// (`mnCharSel_802640A0`), which gives the name to the door that asked for it.
     #[doc(alias = "mnNameNew_8023B224")]
     fn keys_done(&mut self, ok: bool) {
         let index = self.keys_data().name_index;
@@ -1351,7 +1352,11 @@ impl Running<'_> {
                     self.names_back(0);
                 }
             }
-            _ => super::super::code::unported_call("mnCharSel_802640A0 (the character select)"),
+            _ => {
+                self.sis_reset();
+                self.menu_free_gobjs();
+                self.charsel_setup();
+            }
         }
     }
 
