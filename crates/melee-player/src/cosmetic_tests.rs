@@ -207,7 +207,7 @@ fn play(disc: &Disc, path: &str, report: bool) -> Played {
             melee_sim::game::vs_match::Settings::from_replay(&melee_slippi::start(&replay))
                 .expect("its settings");
         let mut s = Session::begin(disc, &settings, Some(replay), false).expect("the match");
-        s.m.game.cosmetic.draw_offscreen_fighters = on;
+        s.game_mut().cosmetic.draw_offscreen_fighters = on;
         s
     };
     let (mut off, mut on) = (start(false), start(true));
@@ -236,20 +236,20 @@ fn play(disc: &Disc, path: &str, report: bool) -> Played {
             a.samples() == b.samples(),
             "{path}: tick {tick}'s mixed sound differs with the toggle on"
         );
-        if fighter_shapes(&on.m.game, &got.draws) > fighter_shapes(&off.m.game, &want.draws) {
+        if fighter_shapes(on.game(), &got.draws) > fighter_shapes(off.game(), &want.draws) {
             played.drew_more += 1;
         }
         diffs.clear();
-        on.m.game.state_diffs(&off.m.game, &mut diffs);
+        on.game().state_diffs(off.game(), &mut diffs);
         let hats = if diffs.is_empty() {
             HashSet::new()
         } else {
-            hat_joints(&on.m.game)
+            hat_joints(on.game())
         };
         let mut counted = Vec::new();
         for d in &diffs {
             let field = unindexed(d);
-            if !report && !display_only(&on.m.game, &hats, &field, d) {
+            if !report && !display_only(on.game(), &hats, &field, d) {
                 panic!("{path}: the state after tick {tick} differs with the toggle on at game{d}");
             }
             if !counted.contains(&field) {
@@ -264,8 +264,8 @@ fn play(disc: &Disc, path: &str, report: bool) -> Played {
         }
         played.ticks = tick + 1;
         let ended = got.ended;
-        off.m.recycle(want);
-        on.m.recycle(got);
+        off.recycle(want);
+        on.recycle(got);
         if ended {
             break;
         }

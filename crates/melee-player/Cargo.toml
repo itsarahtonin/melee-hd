@@ -17,6 +17,7 @@ melee-audio = { path = "../melee-audio" }
 melee-data.workspace = true
 melee-input = { path = "../melee-input" }
 melee-render = { path = "../melee-render" }
+melee-save = { path = "../melee-save" }
 melee-slippi = { path = "../melee-slippi" }
 melee-sim.workspace = true
 melee-gpu = { path = "../melee-gpu" }

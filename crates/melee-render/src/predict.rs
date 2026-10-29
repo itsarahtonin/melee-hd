@@ -19,9 +19,41 @@
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::time::{Duration, Instant};
 
+use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::{Frame, Match};
 
 use crate::blend::{Blend, Capture};
+
+/// What a prediction runs on: a match, or a console's session from power-on (the player's).
+/// The copy is the real state cloned once; each prediction restores it from the real state,
+/// reusing its storage.
+pub trait Ahead: Clone {
+    fn game(&self) -> &Game;
+    fn game_mut(&mut self) -> &mut Game;
+    /// Restores this copy from `real`.
+    fn restore_from(&mut self, real: &Self);
+    /// Takes a frame's buffers back.
+    fn recycle(&mut self, frame: Frame);
+}
+
+impl Ahead for Match {
+    fn game(&self) -> &Game {
+        &self.game
+    }
+
+    fn game_mut(&mut self) -> &mut Game {
+        &mut self.game
+    }
+
+    /// The archives are fixed once the match has started; only the state changes.
+    fn restore_from(&mut self, real: &Self) {
+        self.game.clone_from(&real.game);
+    }
+
+    fn recycle(&mut self, frame: Frame) {
+        Match::recycle(self, frame);
+    }
+}
 
 /// What a prediction took, by part.
 #[derive(Clone, Copy, Debug, Default)]
@@ -41,29 +73,36 @@ impl Cost {
 }
 
 /// The copy of the state the next tick runs on, and what its display pass left.
-#[derive(Default)]
-pub struct Predictor {
-    copy: Option<Match>,
+pub struct Predictor<S: Ahead = Match> {
+    copy: Option<S>,
     capture: Capture,
 }
 
-impl Predictor {
+impl<S: Ahead> Default for Predictor<S> {
+    fn default() -> Self {
+        Predictor {
+            copy: None,
+            capture: Capture::default(),
+        }
+    }
+}
+
+impl<S: Ahead> Predictor<S> {
     /// Predicts the tick after the one `real` has just run: restores the copy from `real`, runs
     /// `step` on it (one tick with the inputs predicted) and keeps its display pass. A tick
     /// without a display pass, or one that stops (unported code, which the real tick would
     /// reach next), leaves no prediction, and frames draw the real tick as it is.
     pub fn predict(
         &mut self,
-        real: &Match,
-        step: impl FnOnce(&mut Match) -> Frame,
+        real: &S,
+        step: impl FnOnce(&mut S) -> Frame,
     ) -> Result<Cost, String> {
         let t0 = Instant::now();
         match &mut self.copy {
-            // The archives are fixed once the match has started; only the state changes.
-            Some(copy) => copy.game.clone_from(&real.game),
+            Some(copy) => copy.restore_from(real),
             None => {
                 let mut copy = real.clone();
-                copy.game.audio.mix = None;
+                copy.game_mut().audio.mix = None;
                 self.copy = Some(copy);
             }
         }
@@ -86,7 +125,7 @@ impl Predictor {
         if frame.draws.is_empty() {
             self.capture.clear();
         } else {
-            self.capture.fill(&copy.game, &frame.draws);
+            self.capture.fill(copy.game(), &frame.draws);
         }
         // Its sounds, rumble and events go nowhere.
         copy.recycle(frame);
@@ -124,7 +163,7 @@ impl Predictor {
     }
 
     /// The copy as the predicted tick left it.
-    pub fn predicted(&self) -> Option<&Match> {
+    pub fn predicted(&self) -> Option<&S> {
         self.copy.as_ref()
     }
 }
