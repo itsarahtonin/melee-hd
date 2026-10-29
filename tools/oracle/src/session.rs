@@ -520,7 +520,9 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
     }
     println!("  {} differing runs:", wrong.len());
     let objects = image_objects(game);
-    for (a, b, k) in wrong.iter().take(40) {
+    let all = std::env::var_os("IMAGE_RUNS").is_some();
+    let names = &game.ft.data.files.archives;
+    for (a, b, k) in wrong.iter().take(if all { usize::MAX } else { 40 }) {
         // The objects melee-sim has (or had) there, by pool and slot.
         let who: Vec<String> = objects
             .iter()
@@ -535,8 +537,16 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
                 )
             })
             .collect();
+        // The file a file's run is a place in, by name and data offset.
+        let file = img
+            .data_at(*a)
+            .and_then(|d| {
+                let n = names.iter().find(|(_, id)| *id == d.archive)?;
+                Some(format!(" in {} +{:#x}", n.0, d.offset))
+            })
+            .unwrap_or_default();
         println!(
-            "    {a:#010x}..{b:#010x} ({k}, {:#x} bytes){}{}",
+            "    {a:#010x}..{b:#010x} ({k}, {:#x} bytes){file}{}{}",
             b - a,
             if who.is_empty() { "" } else { ": " },
             who.join(", ")
