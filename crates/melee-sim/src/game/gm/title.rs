@@ -13,13 +13,40 @@ use melee_data::archive::DataRef;
 use super::super::handles::CodeRef;
 use super::super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
-use super::machine::{GM_OPENING_MV, GM_TITLE};
+use super::machine::{GM_MENU, GM_OPENING_MV, GM_TITLE};
+use super::{DB_DEBUG_ROM, GM_DEBUG, GM_DEBUG_SOUND_TEST, GM_DEBUG_VS};
 use crate::hsd::fog;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
+use crate::input::pad::{BUTTON_A, BUTTON_START, BUTTON_X, BUTTON_Y};
 use crate::vec::Vec3;
 
 /// `HSD_GOBJ_CLASS_UI`, `HSD_GOBJ_CLASS_CAMERA`, `HSD_GOBJ_CLASS_LIGHT`, `HSD_GOBJ_CLASS_FOG`.
+/// `DbLKind_NoDebugRom`, the lowest debug level above retail's.
+const DB_NO_DEBUG_ROM: i32 = 1;
+/// The build's date (`db_build_timestamp`), which the title shows above retail's level.
+pub const BUILD_TIMESTAMP: &[u8] = b"DATE Feb 13 2002  TIME 22:06:27";
+
+/// `gmTitle_801A1D38`: the build's date in full-width Shift-JIS, the title's text for it: a
+/// space as an ideographic one, digits and capitals as their full-width forms, small letters
+/// as their full-width forms by a wrap of the low byte, and anything else (the time's colons)
+/// as a full-width full stop.
+#[doc(alias = "gmTitle_801A1D38")]
+pub fn build_date(src: &[u8]) -> Vec<u8> {
+    let mut dst = Vec::with_capacity(2 * src.len() + 1);
+    for &c in src.iter().take_while(|&&c| c != 0) {
+        let pair = match c {
+            0x20 => [0x81, 0x40],
+            0x30..=0x39 | 0x41..=0x5A => [0x82, c.wrapping_add(0x1F)],
+            0x61..=0x7A => [0x82, c.wrapping_sub(0xE0)],
+            _ => [0x81, 0x44],
+        };
+        dst.extend_from_slice(&pair);
+    }
+    dst.push(0);
+    dst
+}
+
 pub const CLASS_UI: u16 = 14;
 pub const CLASS_CAMERA: u16 = 19;
 const CLASS_LIGHT: u16 = 11;
@@ -476,8 +503,8 @@ impl Running<'_> {
     }
 
     /// `gm_Scene_Title_OnEnter`: the music stopped, the scene's banks, its fog, lights,
-    /// cameras and logo, the attract demo's files preloaded, and the background. (A debug
-    /// level shows the build's date: retail's doesn't.)
+    /// cameras and logo, the attract demo's files preloaded, and the background; above
+    /// retail's debug level, the build's date in a corner.
     #[doc(alias = "gm_Scene_Title_OnEnter")]
     pub fn title_on_enter(&mut self) {
         self.lb_audio_music_stop();
@@ -497,7 +524,15 @@ impl Running<'_> {
         self.game.audio.lb_wait_for_banks(self.data);
         self.preload_title_demo();
         self.title_bg();
-        self.game.assert_retail();
+        if self.game.gm.db_level >= DB_NO_DEBUG_ROM {
+            self.add_canvas(0, None, 9, 0xD, 0, 0xE, 0, 0x13);
+            let t = self.create_text_buffer(0, 0);
+            let date = build_date(BUILD_TIMESTAMP);
+            let i = self.game.sis.add_string(t, 30.0, 30.0, Some(&date));
+            self.game.sis.text_mut(t).default_kerning = 1;
+            let (x, y) = (f64::from(0.7f32), f64::from(0.55f32));
+            self.game.sis.set_scale(self.data, t, i, x, y);
+        }
     }
 
     /// `gm_Scene_Title_OnFrame`: after 20 ticks, Start ends the scene for the main menu (the
@@ -526,8 +561,13 @@ impl Running<'_> {
             self.pick_menu_song();
             *self.title_exit_data() = input as i32;
             self.game.end_scene();
-        } else {
-            self.game.assert_retail();
+        } else if self.game.gm.db_level >= DB_DEBUG_ROM
+            && input & u32::from(BUTTON_Y | BUTTON_A | BUTTON_X) != 0
+        {
+            // A debug level's exits: Y to the debug menu, A to debug VS, X to the sound test.
+            self.lb_audio_call(1);
+            *self.title_exit_data() = input as i32;
+            self.game.end_scene();
         }
     }
 
@@ -547,8 +587,23 @@ impl Running<'_> {
     // Aliased once a session leaves the attract loop's title clean: attract-a's attract match
     // differs first (docs/oracle.md, the menu sessions).
     pub fn opening_on_exit_title(&mut self) {
-        self.game.assert_retail();
-        if self.game.title.opening_exit_buttons & i32::from(crate::input::pad::BUTTON_START) != 0 {
+        let b = self.game.title.opening_exit_buttons;
+        if self.game.gm.db_level >= DB_DEBUG_ROM {
+            // A debug level's exits, Start to the main menu with no unlocks' checks.
+            let mode = if b & i32::from(BUTTON_A) != 0 {
+                GM_DEBUG_VS
+            } else if b & i32::from(BUTTON_START) != 0 {
+                GM_MENU
+            } else if b & i32::from(BUTTON_X) != 0 {
+                GM_DEBUG_SOUND_TEST
+            } else if b & i32::from(BUTTON_Y) != 0 {
+                GM_DEBUG
+            } else {
+                return;
+            };
+            self.set_pending_game_mode(mode);
+            self.set_new_game_mode_pending();
+        } else if b & i32::from(BUTTON_START) != 0 {
             self.menu_entry_unlocks();
             self.set_new_game_mode_pending();
         }
@@ -581,9 +636,16 @@ impl Running<'_> {
     /// `onExit` (`gmtitlemode.c`): Start goes to the main menu (or a challenger first), else
     /// the attract loop's match. A debug level's other exits aren't retail's.
     pub fn title_mode_on_exit(&mut self) {
-        self.game.assert_retail();
-        if self.game.title.exit_buttons & i32::from(crate::input::pad::BUTTON_START) != 0 {
+        let b = self.game.title.exit_buttons;
+        let debug = self.game.gm.db_level >= DB_DEBUG_ROM;
+        if debug && b & i32::from(BUTTON_A) != 0 {
+            self.set_pending_game_mode(GM_DEBUG_VS);
+        } else if b & i32::from(BUTTON_START) != 0 {
             self.menu_entry_unlocks();
+        } else if debug && b & i32::from(BUTTON_X) != 0 {
+            self.set_pending_game_mode(GM_DEBUG_SOUND_TEST);
+        } else if debug && b & i32::from(BUTTON_Y) != 0 {
+            self.set_pending_game_mode(GM_DEBUG);
         } else {
             self.game.boot_mode.opening_state = 1;
             self.set_pending_game_mode(GM_OPENING_MV);

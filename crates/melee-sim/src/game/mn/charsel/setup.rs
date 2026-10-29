@@ -112,7 +112,7 @@ impl Running<'_> {
             let c = &self.game.charsel;
             if player as i32 == i32::from(c.new_tag_port) && c.next_tag < next_tag {
                 if counts_kos(self.css().match_type) {
-                    self.game.vs_melee.ko_counts[player] = 0;
+                    self.css_ko_counts()[player] = 0;
                 }
                 let tag = self.game.charsel.next_tag.wrapping_sub(1);
                 self.css_start().players[player].nametag = tag;
@@ -404,7 +404,7 @@ impl Running<'_> {
         if !counts_kos(self.css().match_type) {
             return;
         }
-        let count = i32::from(self.game.vs_melee.ko_counts[port]);
+        let count = i32::from(self.css_ko_counts()[port]);
         let mut star_x = reg(KO_STARS[port].1);
         let text = self.game.charsel.ko_texts[port].expect("a KO stars' text");
         let mut j = self.menu_node(KO_STARS[port].0);

@@ -781,7 +781,7 @@ impl Running<'_> {
                 if self.css().vs.start.players[player].nametag != NO_TAG
                     && counts_kos(self.css().match_type)
                 {
-                    self.game.vs_melee.ko_counts[port] = 0;
+                    self.css_ko_counts()[port] = 0;
                 }
                 self.css_start().players[player].nametag = NO_TAG;
                 let t = self.game.charsel.tags[me].as_mut().expect("a tag");
@@ -822,7 +822,7 @@ impl Running<'_> {
                     if i32::from(self.css().vs.start.players[player].nametag) != row - 1
                         && counts_kos(self.css().match_type)
                     {
-                        self.game.vs_melee.ko_counts[port] = 0;
+                        self.css_ko_counts()[port] = 0;
                     }
                     self.css_start().players[player].nametag = (row - 1) as u8;
                     let t = self.game.charsel.tags[me].as_mut().expect("a tag");

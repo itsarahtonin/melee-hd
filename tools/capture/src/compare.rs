@@ -735,11 +735,17 @@ impl<'a> Comparer<'a> {
         let g = &game.gm;
         self.check(
             "gm",
-            "pause flags, debug level, trophies' data loaded",
-            (game.scene.unk_10.x0, g.db_level, g.trophy_data),
+            "pause flags, debug level, develop.ini found, trophies' data loaded",
+            (
+                game.scene.unk_10.x0,
+                g.db_level,
+                g.develop_ini,
+                g.trophy_data,
+            ),
             (
                 self.u8(sym("gm_80479D58") + 0x10),
                 self.u32(sym("DbLevel")) as i32,
+                self.u32(sym("db_804D6B20")) != 0,
                 self.u32(sym("_Toy_sbss_804D6ED0")) != 0,
             ),
         );

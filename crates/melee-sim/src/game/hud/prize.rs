@@ -90,6 +90,8 @@ impl PrizeEntry {
 pub enum EntryRef {
     Static,
     Heap(u32),
+    /// The debug mode's own enter data (`prize_enter_data`, `gmdebugmode.c`).
+    Debug,
 }
 
 /// The special messages' interface's state: its enter data (`if_Scene_Prize_EnterData`)
@@ -103,6 +105,8 @@ pub enum EntryRef {
 #[derive(Clone, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Prize {
     pub first: PrizeEntry,
+    /// The debug mode's enter data for the interface (`prize_enter_data`).
+    pub debug_first: PrizeEntry,
     pub heap: BTreeMap<u32, PrizeEntry>,
     pub queued: [u8; 0x170],
     pub shows: u8,
@@ -132,6 +136,7 @@ impl Default for Prize {
     fn default() -> Self {
         Self {
             first: PrizeEntry::default(),
+            debug_first: PrizeEntry::default(),
             heap: BTreeMap::new(),
             queued: [0; 0x170],
             shows: 0,
@@ -163,6 +168,7 @@ impl Prize {
     pub fn entry(&self, r: EntryRef) -> PrizeEntry {
         match r {
             EntryRef::Static => self.first,
+            EntryRef::Debug => self.debug_first,
             EntryRef::Heap(a) => self.heap[&a],
         }
     }
@@ -170,6 +176,7 @@ impl Prize {
     pub fn entry_mut(&mut self, r: EntryRef) -> &mut PrizeEntry {
         match r {
             EntryRef::Static => &mut self.first,
+            EntryRef::Debug => &mut self.debug_first,
             EntryRef::Heap(a) => self.heap.get_mut(&a).expect("a queued notice"),
         }
     }
@@ -364,10 +371,15 @@ impl Running<'_> {
     #[doc(alias = "ifPrize_Scene_OnExit")]
     pub fn prize_on_enter(&mut self) {
         self.mark_class_two_trophies();
-        let first = self.game.prize.first;
+        // The scene's enter data: the prize state's static, or the debug mode's.
+        let (first, current) = if self.debug_mode_scene() {
+            (self.game.prize.debug_first, EntryRef::Debug)
+        } else {
+            (self.game.prize.first, EntryRef::Static)
+        };
         let song = self.game.objs.rng.below(3) as u8;
         let p = &mut self.game.prize;
-        p.current = Some(EntryRef::Static);
+        p.current = Some(current);
         p.next = first.next;
         p.song = song;
         p.open = 1;
