@@ -252,9 +252,22 @@ impl Running<'_> {
         }
     }
 
-    /// A slot's name entry in the text (the inline `createNameText`).
-    fn create_name_text(&mut self, _slot: i32) {
-        code::unported_call(GET_NAME_TEXT);
+    /// A slot's name entry in the text (the inline `createNameText`): its name tag's name
+    /// (`GetNameText`, which the text takes as its format) far off at (-5000, 0) until the
+    /// render places it, at 0.4 by 0.55.
+    fn create_name_text(&mut self, slot: i32) {
+        let tag = self.game.player_nametag(slot);
+        let name = self.game.name_text(tag);
+        if name.as_ref().is_some_and(|n| n.contains(&b'%')) {
+            code::unported_call(&format!(
+                "{GET_NAME_TEXT}'s name with a % as the text's format"
+            ));
+        }
+        let t = self.game.hud.nametags.text.expect("the names' text");
+        let k = self.game.sis.add_string(t, -5000.0, 0.0, name.as_deref());
+        self.game.hud.nametags.entries[slot as usize] = k;
+        let (x, y) = (f64::from(0.4f32), f64::from(0.55f32));
+        self.game.sis.set_scale(self.data, t, k, x, y);
     }
 
     /// A slot's marker, `NameTag_Create`.
