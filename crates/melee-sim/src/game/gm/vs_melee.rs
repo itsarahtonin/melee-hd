@@ -363,9 +363,11 @@ impl Running<'_> {
         self.wait_preload_stale_released(crate::lb::heap::ALL_M as i32);
     }
 
-    /// The stage rule's start on the stage select (`gm_80167FC4`): a random stage forced, or
-    /// the cursor's start; the other rules (in order, by the loser or the winner) aren't
-    /// ported.
+    /// The stage rule's start on the stage select (`gm_80167FC4`): rule 1 forces a random
+    /// stage; rule 2 the next stage in the select's order the save has unlocked
+    /// (`mnStageSel_8025BC08`, `gm_80164430`'s test); rule 0 leaves the cursor to any port,
+    /// rule 3 to the next human port in turn after the last, and rule 4 to the port
+    /// `gm_80168710` drew after the last match (a random human's before the first).
     #[doc(alias = "gm_80167FC4")]
     pub(crate) fn sss_stage_rule(&mut self) {
         let sel = self.game.game_data.x1850.stage_sel;
@@ -374,16 +376,66 @@ impl Running<'_> {
             self.game.vs_melee.sss.force_stage_id = id;
             return;
         }
-        let sss = &mut self.game.vs_melee.sss;
-        sss.force_stage_id = -1;
+        self.game.vs_melee.sss.force_stage_id = -1;
         match sel {
-            0 => sss.unk_stage = 0,
-            s => super::super::code::unported_call(&format!(
-                "gm_80167FC4's stage rule {s} (in order, the loser's or the winner's pick)"
-            )),
+            0 => self.game.vs_melee.sss.unk_stage = 0,
+            2 => {
+                let at = i32::from(self.game.vs_melee.sss.vs.ordered_stage_index);
+                for i in 0..ST_KIND_OLD_YOSHI {
+                    let idx = (at + i + 1) % ST_KIND_OLD_YOSHI;
+                    let stkind = super::super::mn::stagesel::STAGES[idx as usize].stkind;
+                    if self.stage_unlocked(u16::from(stkind)) {
+                        let sss = &mut self.game.vs_melee.sss;
+                        sss.force_stage_id = stkind as i8;
+                        sss.vs.ordered_stage_index = idx as i8;
+                        return;
+                    }
+                }
+            }
+            3 => {
+                let next = i32::from(self.game.vs_melee.sss.vs.loser) + 1;
+                let port = self.sss_human_from(next);
+                let sss = &mut self.game.vs_melee.sss;
+                sss.vs.loser = port as i8;
+                if port < 0 {
+                    sss.vs.loser = 0;
+                    sss.unk_stage = 0;
+                } else {
+                    sss.unk_stage = (port + 1) as u8;
+                }
+            }
+            4 => {
+                let winner = self.game.vs_melee.sss.vs.winner;
+                let base = if winner == -1 {
+                    self.game.objs.rng.below(4)
+                } else {
+                    i32::from(winner)
+                };
+                let port = self.sss_human_from(base);
+                self.game.vs_melee.sss.unk_stage = (port + 1) as u8;
+            }
+            _ => {}
         }
     }
+
+    /// `gm_80167FC4`'s `pad_inline`: the first port from `base` on (five tries, wrapping at
+    /// four) with a controller in and a human in its slot, or -1.
+    fn sss_human_from(&self, base: i32) -> i32 {
+        let sss = &self.game.vs_melee.sss;
+        for i in 0..5 {
+            let j = ((base + i) % 4) as usize;
+            if self.game.pads.master[j].err == 0
+                && sss.vs.start.players[j].slot_type == super::results_scene::PKIND_HUMAN
+            {
+                return j as i32;
+            }
+        }
+        -1
+    }
 }
+
+/// `St_Kind_OldYoshi`: the stage select's entries rule 2 goes through in order.
+const ST_KIND_OLD_YOSHI: i32 = 0x1D;
 
 impl Running<'_> {
     /// The announcer calls a character kind's name, `gm_80168C5C` (none for the kinds past
