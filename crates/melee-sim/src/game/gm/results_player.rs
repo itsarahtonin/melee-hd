@@ -11,10 +11,11 @@ use super::results_scene::{PKIND_HUMAN, canceled};
 use crate::hsd::gobj::GObjId;
 
 impl Running<'_> {
-    /// The results screen's enter data cleared, `gm_80177724`.
+    /// The results screen's enter data cleared, `gm_80177724`: the mode's (VS mode's, or the
+    /// debug mode's).
     #[doc(alias = "gm_80177724")]
     pub fn results_enter_clear(&mut self) {
-        self.game.vs_melee.results_enter = Default::default();
+        *self.results_enter_mut() = Default::default();
     }
 
     /// Whether the panel comes in, `fn_801791E4`: after a cancelled match a human's Start,

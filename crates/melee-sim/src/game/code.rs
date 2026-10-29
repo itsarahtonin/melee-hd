@@ -207,8 +207,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::tournament::SETUP_ON_FRAME.0 => game.tou_setup_on_frame(),
         f if f == super::gm::tournament::BRACKET_ON_FRAME.0 => game.tou_bracket_on_frame(),
         f if f == super::gm::tournament::ALT_ON_FRAME.0 => game.tou_alt_on_frame(),
-        // db_RunEveryFrame: returns at once below the debug ROM's level.
-        super::gm::vs::DB_RUN_EVERY_FRAME => game.game.assert_retail(),
+        super::gm::vs::DB_RUN_EVERY_FRAME => game.db_run_every_frame(),
         other => unported("function", other),
     }
 }

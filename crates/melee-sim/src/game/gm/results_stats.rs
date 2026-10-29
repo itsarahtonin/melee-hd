@@ -203,4 +203,10 @@ impl Running<'_> {
     pub fn saved_us(&self) -> bool {
         self.game.game_data.saved_language() == super::main_lib::LANG_US
     }
+
+    /// Whether files named for the saved language take English names: always outside a
+    /// console's session (a replay's match has no save).
+    pub fn files_us(&self) -> bool {
+        self.game.audio.dvd.is_none() || self.saved_us()
+    }
 }

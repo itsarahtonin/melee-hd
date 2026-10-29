@@ -1305,6 +1305,24 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
     GrJoint { x: 7, y: 18, z: 0 },
 ];
 
+/// A stage's file as the game names it (`lbFileGetFullName`): the four stages whose table
+/// gives no extension (Pokémon Stadium's, Onett's, Corneria's and Venom's) take the saved
+/// language's, `.dat` with Japanese saved.
+pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
+    let f = stage_data(grkind).file?;
+    Some(if saved_us {
+        f
+    } else {
+        match f {
+            "/GrPs.usd" => "/GrPs.dat",
+            "/GrOt.usd" => "/GrOt.dat",
+            "/GrCn.usd" => "/GrCn.dat",
+            "/GrVe.usd" => "/GrVe.dat",
+            f => f,
+        }
+    })
+}
+
 /// `grCn_StageData`.
 pub const CORNERIA: StageData = StageData {
     grkind: GR_KIND_CORNERIA,

@@ -244,6 +244,11 @@ impl Game {
 
     /// `gm_80166378`'s ranks once the scores are in: the players', the teams' scores and
     /// theirs.
+    /// The ranks of results made up whole (`gm_80166A98`'s `fn_80165AC0` to `fn_801661E0`).
+    pub(crate) fn rank_results_standalone(&self, r: &mut MatchEnd) {
+        self.rank_results(r);
+    }
+
     fn rank_results(&self, r: &mut MatchEnd) {
         rank_big(r);
         rank_small(r);

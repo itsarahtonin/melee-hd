@@ -90,11 +90,7 @@ impl Comparer<'_> {
                 self.u32(sym("_Toy_sbss_804D6EA8")),
             );
             if game.gm.trophy_data {
-                let datai = game
-                    .ft
-                    .data
-                    .files
-                    .archive(melee_sim::game::gm::TROPHY_DATA_FILE);
+                let datai = game.ft.data.files.archive(game.trophy_data_file());
                 for (name, sym_name) in [
                     ("_Toy_sbss_804D6EC4", "tyInitModelTbl"),
                     ("_Toy_sbss_804D6EC0", "tyInitModelDTbl"),
