@@ -115,6 +115,13 @@ impl Running<'_> {
     #[doc(alias = "gm_Scene_MemCard_OnEnter")]
     pub fn memcard_on_enter(&mut self) {
         let b = self.game.boot_mode;
+        // The enter data of the mode state the scene runs in: the boot's and the memory
+        // card mode's (`load_data`), or the debug mode's (`memcard_enter_data`).
+        let (x0, chan, mode) = if self.debug_mode_scene() {
+            self.game.debug_mode.memcard_enter
+        } else {
+            (b.load_x0, b.load_x4, b.load_mode)
+        };
         let m = &mut self.game.memcard;
         *m = super::memcard::MemCard {
             windows: std::mem::take(&mut m.windows),
@@ -124,9 +131,9 @@ impl Running<'_> {
             m.windows.is_empty(),
             "the last scene's windows weren't closed"
         );
-        m.question = b.load_x0 as i32;
-        m.chan = b.load_x4;
-        m.mode_id = b.load_mode;
+        m.question = x0 as i32;
+        m.chan = chan;
+        m.mode_id = mode;
         m.decision = i32::from(m.question != 0);
         m.exit_mode = m.mode_id;
         self.card_alloc_work_area();
@@ -142,20 +149,52 @@ impl Running<'_> {
     pub fn memcard_on_exit(&mut self) {
         let m = &self.game.memcard;
         let (answer, mode) = (m.answer, m.exit_mode);
-        let b = &mut self.game.boot_mode;
-        b.leave_x0 = answer;
-        b.leave_mode = mode;
+        if self.debug_mode_scene() {
+            let e = &mut self.game.debug_mode.memcard_exit;
+            e.0 = answer;
+            e.1 = mode;
+        } else {
+            let b = &mut self.game.boot_mode;
+            b.leave_x0 = answer;
+            b.leave_mode = mode;
+        }
         self.close_windows(0);
     }
 
-    /// `gm_Scene_MemCard_OnFrame`: the decision's step. A retail disc never runs the debug
-    /// viewer (`DbLevel` below `DbLKind_DebugRom`).
+    /// `gm_Scene_MemCard_OnFrame`: the decision's step. At the debug ROM's level, L, R and A
+    /// held on the first controller open the messages' viewer instead, for good: L and R step
+    /// through the messages, L, R and B held end the scene.
     #[doc(alias = "gm_Scene_MemCard_OnFrame")]
     pub fn memcard_on_frame(&mut self) {
-        self.game.assert_retail();
+        if self.game.gm.db_level >= super::DB_DEBUG_ROM {
+            use crate::input::pad::{BUTTON_A, BUTTON_B, TRIGGER_L, TRIGGER_R};
+            let pad = self.game.pads.copy[0];
+            let (lra, lrb) = (
+                u32::from(TRIGGER_L | TRIGGER_R | BUTTON_A),
+                u32::from(TRIGGER_L | TRIGGER_R | BUTTON_B),
+            );
+            let (l, r) = (u32::from(TRIGGER_L), u32::from(TRIGGER_R));
+            if pad.button & lra == lra {
+                self.game.memcard.debug_viewer = 1;
+            }
+            if self.game.memcard.debug_viewer != 0 {
+                let msg = self.game.memcard.debug_msg;
+                if pad.trigger & l != 0 {
+                    if msg > 6 {
+                        self.game.memcard.debug_msg = msg - 1;
+                        self.show_window(0, i32::from(msg - 1), self.lines(i32::from(msg - 1)));
+                    }
+                } else if pad.trigger & r != 0 && msg < 0x18 {
+                    self.game.memcard.debug_msg = msg + 1;
+                    self.show_window(0, i32::from(msg + 1), self.lines(i32::from(msg + 1)));
+                }
+                if pad.button & lrb == lrb {
+                    self.game.end_scene();
+                }
+                return;
+            }
+        }
         let decision = self.game.memcard.decision;
-        let m = &mut self.game.memcard;
-        let _ = m;
         match decision {
             0 => {
                 let r = self.card_game_load();
@@ -475,11 +514,12 @@ impl Running<'_> {
             .expect("NtMsgWin.dat's ScNtcCommon_scene_data");
         let scene = DataRef { archive: a, offset };
         self.game.memcard.scene = Some(scene);
-        assert!(
-            self.game.game_data.saved_language() == super::main_lib::LANG_US,
-            "the Japanese message font (SdMsgBox.dat) isn't loaded"
-        );
-        let font = self.load_archive("SdMsgBox.usd");
+        let name = if self.game.game_data.saved_language() == super::main_lib::LANG_US {
+            "SdMsgBox.usd"
+        } else {
+            "SdMsgBox.dat"
+        };
+        let font = self.load_archive(name);
         self.load_font(FONT, font, "SIS_MessageData");
         let data = self.data;
         let g = &mut *self.game;

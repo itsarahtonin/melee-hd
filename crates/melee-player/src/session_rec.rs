@@ -75,7 +75,12 @@ pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
     } else {
         0
     };
-    h.push(sound | if card { CARD } else { 0 });
+    // A raised debug level, as ssbm-rs's `--develop` marks the file (level + 1, 0 for none).
+    let develop = setup.develop.map_or(0, |d| {
+        ((d.level + 1) as u8) << melee_sim::game::inputs::DEVELOP_SHIFT
+            & melee_sim::game::inputs::DEVELOP_MASK
+    });
+    h.push(sound | if card { CARD } else { 0 } | develop);
     h.extend_from_slice(&setup.power_on.to_le_bytes());
     // The SRAM's language: Melee never reads it (its language is the save's).
     h.extend_from_slice(&[u8::from(setup.dtv), 0, setup.sram_flags]);
@@ -209,6 +214,7 @@ mod tests {
             dtv: false,
             sram_flags: 0x2C,
             card_pull: None,
+            develop: None,
         };
         let mut bytes = header(&setup, true);
         let mut w = Writer::memory();

@@ -53,10 +53,21 @@ impl Comparer<'_> {
         let a = sym("gmCamera_VsCamUiState");
         let p = "gmCamera_VsCamUiState";
         let archive = self.u32(a);
-        let theirs = (archive != 0)
-            .then(|| self.data_ref(self.u32(archive + 0x20)).map(|d| d.archive))
-            .flatten();
-        self.check(p, "ifvscam", ui.archive, theirs);
+        // Past the match's scene the archive is freed and the word names its old header in
+        // both, whose bytes the next scene's heap takes; only `gmCamera_801A31FC` reads it,
+        // right after it loads the file again and sets it, so a gone archive's word compares
+        // by being set.
+        let gone = ui
+            .archive
+            .is_some_and(|id| !self.data.loaded.iter().any(|l| l.id == id));
+        if gone {
+            self.check(p, "ifvscam (its archive gone) set", true, archive != 0);
+        } else {
+            let theirs = (archive != 0)
+                .then(|| self.data_ref(self.u32(archive + 0x20)).map(|d| d.archive))
+                .flatten();
+            self.check(p, "ifvscam", ui.archive, theirs);
+        }
         self.compare_handle(
             &format!("{p}.x4"),
             "JObjId",

@@ -73,7 +73,7 @@ pub(crate) fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
 impl Running<'_> {
     /// `gmMainLib_8015D94C`: whether the save has announced special message `n`.
     #[doc(alias = "gmMainLib_8015D94C")]
-    fn message_noted(&self, n: u32) -> bool {
+    pub(super) fn message_noted(&self, n: u32) -> bool {
         bit(&self.game.game_data.thing.save_data.x1B4C, &[], n)
     }
 

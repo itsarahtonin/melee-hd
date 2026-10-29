@@ -87,7 +87,12 @@ pub(crate) trait Words {
         let a = pool + DEVTEXT_SIZE * i;
         let (w, h) = (self.b(a + 4), self.b(a + 5));
         let buf_at = self.w(a + 0x28);
-        let buf = if buf_at == 0 {
+        // A free screen's buffer may be anything a later scene's heap left there.
+        let in_ram = |a: u32| (crate::MEM1..crate::MEM1 + 0x0180_0000).contains(&a);
+        let buf = if buf_at == 0
+            || !in_ram(buf_at)
+            || !in_ram(buf_at + 2 * u32::from(w) * u32::from(h))
+        {
             Vec::new()
         } else {
             (0..u32::from(w) * u32::from(h))
@@ -417,9 +422,25 @@ impl Comparer<'_> {
         let game = self.game;
         let d = &game.hud.devtext;
         let pool = sym("devtext_pool");
+        // A screen on the free list keeps the glyph buffer its creator gave it (a debug menu's,
+        // in a heap a later scene makes anew), which `DevText_Create` replaces before anything
+        // reads it: its glyphs are left out.
+        let mut free = Vec::new();
+        let mut at = d.pool_head;
+        while let Some(t) = at {
+            if free.contains(&t) {
+                break;
+            }
+            free.push(t);
+            at = d.pool.get(usize::from(t)).and_then(|s| s.next);
+        }
         for i in 0..POOL as u32 {
-            let theirs = mem.devtext(pool, i);
-            let ours = d.pool.get(i as usize).cloned().unwrap_or_default();
+            let mut theirs = mem.devtext(pool, i);
+            let mut ours = d.pool.get(i as usize).cloned().unwrap_or_default();
+            if free.contains(&(i as u8)) {
+                theirs.buf.clear();
+                ours.buf.clear();
+            }
             self.check(
                 &format!("hud devtext[{i}]"),
                 "screen",
@@ -475,6 +496,156 @@ impl Comparer<'_> {
             Some(c) => self.cobj("hud devtext cobj", c, cobj),
             None => self.check("hud devtext cobj", "CObj", 0, cobj),
         }
+        self.debug_menus();
+    }
+
+    /// The debug menus (`textlib_1.c`'s pool and statics) and their variables
+    /// (`un_803FA258` and the words their tables name, `gmdebugmode.c`'s menu data).
+    fn debug_menus(&mut self) {
+        use melee_sim::game::hud::debug_menu::SETTINGS;
+        use melee_sim::game::hud::debug_tables::WORDS;
+        let mem = self.mem;
+        let game = self.game;
+        let d = &game.hud.devtext;
+        let pool = sym("devtext_pool");
+        let addr = |slot: Option<u32>| {
+            slot.map_or(0, |s| d.menus.as_ref().expect("the menus' pool").addr(s))
+        };
+        let text_at = |t: Option<u8>| t.map_or(0, |t| pool + DEVTEXT_SIZE * u32::from(t));
+        if let Some(menus) = &d.menus {
+            for (slot, m) in menus.iter() {
+                let a = menus.addr(slot);
+                let path = format!("debug menu {slot} at {a:#x}");
+                self.check(
+                    &path,
+                    "cursor, flags, screen, table, callback, submenu, under",
+                    (
+                        m.cursor,
+                        m.flags,
+                        text_at(m.text),
+                        m.table,
+                        m.cb,
+                        addr(m.prev),
+                        addr(m.next),
+                    ),
+                    (
+                        mem.b(a),
+                        mem.b(a + 1),
+                        mem.w(a + 4),
+                        mem.w(a + 8),
+                        mem.w(a + 0xC),
+                        mem.w(a + 0x18),
+                        mem.w(a + 0x1C),
+                    ),
+                );
+                self.compare_gobj(&format!("{path} gobj"), m.gobj, mem.w(a + 0x10));
+                // The first menu's process, running the menus' process. A submenu's `x14` is
+                // what its block held: nothing sets or reads it.
+                if m.proc.is_some() {
+                    let p = mem.w(a + 0x14);
+                    let theirs = (p != 0).then(|| mem.w(p + 0x14));
+                    self.check(
+                        &path,
+                        "process",
+                        Some(melee_sim::game::hud::debug_menu::MENU_PROC),
+                        theirs,
+                    );
+                }
+                self.check(&path, "glyphs' block", m.buf, mem.w(text_at(m.text) + 0x28));
+            }
+        }
+        self.check(
+            "debug menus",
+            "first, current, entry, stick wait",
+            (
+                d.menu_top.map_or(0, |r| r.addr),
+                d.menu_current.map_or(0, |r| r.addr),
+                d.menu_entry.map_or(0, |(t, i)| t + 0x20 * u32::from(i)),
+                d.stick_wait,
+            ),
+            (
+                mem.w(sym("un_804D6E40")),
+                mem.w(sym("un_804D6E44")),
+                mem.w(sym("un_804D6E48")),
+                mem.b(sym("un_804D6E4C")),
+            ),
+        );
+        let v = &game.hud.debug;
+        if let Some(at) = (0..0x190).find(|&i| v.settings[i] != mem.b(SETTINGS + i as u32)) {
+            self.diff(
+                "un_803FA258",
+                &format!("byte {at:#x}"),
+                v.settings[at],
+                mem.b(SETTINGS + at as u32),
+            );
+        }
+        for (i, &(a, _)) in WORDS.iter().enumerate() {
+            self.check(
+                "debug menus' words",
+                &format!("{a:#010x}"),
+                v.words[i],
+                mem.w(a),
+            );
+        }
+        // The sound test's table as its mode wrote it (`un_802FF7DC`, `un_802FF9DC`): the
+        // bounds always, the name lists while their archive is loaded.
+        {
+            use melee_sim::game::hud::debug_menu::{SOUND_TEST_TABLE, table};
+            let t = table(SOUND_TEST_TABLE);
+            let p = game.debug_mode.sound;
+            for (i, list_at) in [(1usize, 4u32), (6, 8), (7, 0xC), (8, 0x1C)] {
+                let e = &t.entries[i];
+                let (min, max) = match (i, p) {
+                    (1, Some(p)) => (e.min, p.max1),
+                    (7, Some(p)) => (p.min7, p.max7),
+                    _ => (e.min, e.max),
+                };
+                let at = SOUND_TEST_TABLE + 0x20 * i as u32;
+                self.check(
+                    "un_803F9FA4",
+                    &format!("entry {i}'s bounds"),
+                    (min.to_bits(), max.to_bits()),
+                    (mem.w(at + 0x14), mem.w(at + 0x18)),
+                );
+                if let (Some(p), Some(archives)) = (p, self.archives)
+                    && self.data.loaded.iter().any(|l| l.id == p.load.archive)
+                {
+                    let list = archives.ptr(p.load.at(list_at));
+                    self.compare_data(
+                        &format!("un_803F9FA4 entry {i}'s names"),
+                        list,
+                        mem.w(at + 0xC),
+                    );
+                }
+            }
+        }
+        let dm = &game.debug_mode;
+        self.check(
+            "gmmenumode debug_enter_data, soundtest's song",
+            "table, callback, playing, paused",
+            (dm.sound_enter, dm.song_playing, dm.song_paused),
+            (
+                (mem.w(0x804D_68B0), mem.w(0x804D_68B4)),
+                mem.w(0x804D_585C) as i32,
+                mem.w(0x804D_6DC0) as i32,
+            ),
+        );
+        self.check(
+            "gmdebugmode",
+            "menu_enter_data, memcard_enter_data, memcard_exit_data, approach_data",
+            (
+                dm.menu_enter,
+                dm.memcard_enter,
+                dm.memcard_exit,
+                dm.approach,
+            ),
+            (
+                (mem.w(0x804D_6890), mem.w(0x804D_6894)),
+                (mem.w(0x804D_689C), mem.b(0x804D_68A0), mem.b(0x804D_68A1)),
+                (mem.w(0x804D_68A4), mem.b(0x804D_68A8)),
+                [mem.b(0x804D_6898), mem.b(0x804D_6899)],
+            ),
+        );
     }
 
     /// A GObj pointer: paired with ours, and compared in full if the scheduler doesn't

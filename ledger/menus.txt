@@ -79,7 +79,6 @@ lbMthp_8001F5D4	unreached	the opening scene's debug performance display (fn_801A
 lbMthp_8001F5E4	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
 lbMthp_8001F5F4	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
 lbAudioAx_8002438C	gated	Master Hand's and Crazy Hand's sounds: the single-player modes', which only the 1P list's gated entries lead to
-lbAudioAx_80024634	gated	named only by the single-player modes' code (un_802FF99C, un_8031D030): the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_800259A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
@@ -319,7 +318,6 @@ onEnterDebugVs	unreached	debug VS's entry from the title, made pending only at a
 gm_801B174C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_801B1788	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_801B1A2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_801B2AF8	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitTitle	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_801BF718	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitMovie	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it

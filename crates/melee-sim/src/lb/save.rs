@@ -837,6 +837,11 @@ pub fn card_data_bytes(d: &GmCardData) -> Vec<u8> {
     bytes
 }
 
+/// The card data from its bytes as memory holds them ([`card_data_bytes`]' inverse).
+pub fn card_data_import(bytes: &[u8]) -> GmCardData {
+    GmCardData::import(&Mem { bytes, base: 0 }, 0, &mut Plain)
+}
+
 /// A mirror's `Cx` for structs with no pointers.
 struct Plain;
 

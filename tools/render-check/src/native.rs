@@ -102,7 +102,7 @@ fn drive_session(
     to: u32,
     mut each: impl FnMut(&Tick<'_>) -> bool,
 ) {
-    use melee_sim::game::session::{Session, Setup};
+    use melee_sim::game::session::{Develop, Session, Setup};
     melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     let disc = Disc::open(disc_path).unwrap_or_else(|e| panic!("{disc_path}: {e}"));
     let rec = melee_sim::game::inputs::Recording::read(std::path::Path::new(inputs_path))
@@ -118,6 +118,7 @@ fn drive_session(
         dtv: rec.dtv,
         sram_flags: rec.sram_flags,
         card_pull: None,
+        develop: Develop::from_recording(rec.develop),
     };
     let mut console = SessionConsole {
         reads: &rec.reads,

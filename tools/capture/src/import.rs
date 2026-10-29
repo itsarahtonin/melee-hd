@@ -718,6 +718,7 @@ impl<'a> Importer<'a> {
         // The scene loop's state holds the debug pause flags.
         self.game.scene = gm_80479D58_t::import(&mem, sym("gm_80479D58"), self);
         self.game.gm.db_level = self.u32(sym("DbLevel")) as i32;
+        self.game.gm.develop_ini = self.u32(sym("db_804D6B20")) != 0;
         self.game.gm.trophy_data = self.u32(sym("_Toy_sbss_804D6ED0")) != 0;
         self.game.gm.unlocks = melee_sim::game::gm::Unlocks::from_memory(&|a| self.u32(a));
         let pads = sym("HSD_PadGameStatus");

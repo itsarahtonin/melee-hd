@@ -256,6 +256,44 @@ impl<'a> Comparer<'a> {
         }
         self.charsel_statics();
         self.stagesel_statics();
+        // The Hanyu selects' own data (`gm_8049BEE8`, `gm_8049C030`), the debug mode's.
+        let d = &game.debug_mode;
+        let (hc, hs) = (0x8049_BEE8, 0x8049_C030);
+        self.check(
+            "gm_8049BEE8",
+            "port, match type, pending, KO counts' pointer",
+            (
+                d.hanyu_css.unk_0x0,
+                d.hanyu_css.match_type,
+                d.hanyu_css.pending_scene_change,
+                if d.hanyu_css.ko_counts_null {
+                    0
+                } else {
+                    KO_COUNTS
+                },
+            ),
+            (
+                self.u16(hc),
+                self.u8(hc + 2),
+                self.u8(hc + 3),
+                self.u32(hc + 4),
+            ),
+        );
+        d.hanyu_css.vs.compare(&m, hc + 8, "gm_8049BEE8.vs", self);
+        let s = &d.hanyu_sss;
+        self.check(
+            "gm_8049C030",
+            "stage, x1, no LRAS, forced, start",
+            (s.unk_stage, s.x1, s.no_lras, s.force_stage_id, s.start_game),
+            (
+                self.u8(hs),
+                self.u8(hs + 1),
+                self.u8(hs + 2),
+                self.u8(hs + 3) as i8,
+                self.u8(hs + 4),
+            ),
+        );
+        s.vs.compare(&m, hs + 8, "gm_8049C030.vs", self);
     }
 
     /// A match's exit data (`MatchExitInfo`) at `at`.

@@ -450,11 +450,20 @@ impl<K: Kinds> Geometry<K> {
             reg(pos.x),
             reg(pos.y),
         );
-        // The debug ROM's check that the speed stays under 10000 doesn't run in retail.
-        Some(Vec3::new(
+        let speed = Vec3::new(
             mem(fp::fsubs(reg(nx), reg(pos.x))),
             mem(fp::fsubs(reg(ny), reg(pos.y))),
             0.0,
-        ))
+        );
+        // The debug ROM's check that the speed stays under 10000 (retail's never runs it).
+        if self.debug_rom {
+            assert!(
+                !(speed.x.abs() > 10000.0 || speed.y.abs() > 10000.0),
+                "the original's assertion failed: mplib.c:5334 (mpGetSpeed() x={} y={})",
+                speed.x,
+                speed.y
+            );
+        }
+        Some(speed)
     }
 }

@@ -366,6 +366,42 @@ pub const STOPS: &[(&str, &str)] = &[
         "fn_8018F508 past the bracket",
         "the box being played is one of the bracket's 64",
     ),
+    (
+        "the character select's KO counts through a null pointer",
+        "only the Hanyu select, a debug mode (ledger/deferred.txt), leaves the pointer null, and the player raises no debug level",
+    ),
+    (
+        "the debug menu's Global Data Edit past the card data",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "the debug menu entry callback",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "unported(\"debug menu callback\"",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "gm_80164A0C (the Hanyu select's odd match types)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "Hook::DebugUnported(name)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "the scene loop's debug report (gm_801A4970)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "unported(\"debug pause predicate\"",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "the debug screenshot (db_CheckScreenshot)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
 ];
 
 #[cfg(test)]

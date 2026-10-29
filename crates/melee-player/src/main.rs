@@ -774,6 +774,7 @@ impl Session {
                     dtv: r.dtv,
                     sram_flags: r.sram_flags,
                     card_pull: None,
+                    develop: melee_sim::game::session::Develop::from_recording(r.develop),
                 };
                 (setup, None, Some((r.reads, 0)))
             }
