@@ -25,9 +25,9 @@ use common::{
     PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
     RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
     SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
-    TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
-    reflection, scaled, why,
+    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION,
+    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -394,6 +394,18 @@ rendered_frames!(RESULTS_TEAMS;
 results_frames!(RESULTS_PILLS;
     results_pills_2701 2701 1532,
     results_pills_2901 2901 1532,
+);
+// The character select after a tie under the automatic handicap (`tie-sessions`), captured in
+// ssbm-rs's original code, whose stack leftovers move the handicaps: Fox's handicap at 4
+// after a tie for second (`tie3-time`, 9381 and 9551); Fox's at 4 and Kirby's at 6 after a
+// tie for third (`tie4-stock`, 8741 and 8911).
+frames!(TIE3_TIME;
+    tie3_time_9381 9381,
+    tie3_time_9551 9551,
+);
+frames!(TIE4_STOCK;
+    tie4_stock_8741 8741,
+    tie4_stock_8911 8911,
 );
 // Camera Mode (`special-sessions/camera-snaps`): the card check's slots and the blocks a
 // snapshot may take (900), the character select's camera door (1000), the snapshot's offer
