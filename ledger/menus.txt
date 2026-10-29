@@ -293,7 +293,6 @@ fn_8017435C	unchecked	a getter or setter of the game's data, which its callers' 
 fn_80174380	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8017507C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8019D074	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_8019E634	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_GetGameModeStateEnterData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_GetGameModeStateExitData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_GetPreviousSceneIndex	gated	named only by the single-player modes' code (gm_801B461C): the single-player modes', which only the 1P list's gated entries lead to
@@ -317,7 +316,6 @@ onExit	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, tit
 onEnterDebugVs	unreached	debug VS's entry from the title, made pending only at a debug level
 gm_801B174C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_801B1788	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_801B1A2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 onExitTitle	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_801BF718	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitMovie	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
