@@ -1180,6 +1180,28 @@ fn special_melee_sessions() {
     assert!(out.contains("2896 ticks compared, no difference"), "{out}");
 }
 
+/// The modes' exits: Super Sudden Death's tied match into its Sudden Death (whose entry passes
+/// no callbacks), its results and their exit back to the mode's character select, and Camera
+/// Mode's match quit back to its character select, each to the trace's end with the card the
+/// run leaves the console's byte for byte.
+#[test]
+fn the_modes_exits() {
+    for (name, ticks) in [("sd-ssd", "7926"), ("camera-exit", "3273")] {
+        let card = ssbm_rs_local(&format!("lockstep/exit-sessions/{name}-run.card"));
+        let Some(out) = scripted_session(
+            "exit-sessions",
+            name,
+            &["--all", "--heap", "--card-after", &card],
+        ) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// A trophy session (`lockstep/trophy-sessions/NAME.inputs` with its card, traced into
 /// `traces/trophy-sessions`).
 fn trophy_session(name: &str, args: &[&str]) -> Option<String> {
