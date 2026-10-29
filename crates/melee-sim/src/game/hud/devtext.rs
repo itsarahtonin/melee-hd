@@ -116,9 +116,9 @@ pub struct DevTexts {
     /// `un_804A2688`: the debug menus' pool, once a scene has set it up.
     pub menus: Option<Pool<DebugMenu, { pool_kind(Kind::DebugMenu) }>>,
     /// `un_804D6E40`: the first menu, whose submenus the menus' process walks.
-    pub menu_top: Option<u32>,
+    pub menu_top: Option<super::debug_menu::MenuRef>,
     /// `un_804D6E44`: the menu being set up, or the last one the controller left.
-    pub menu_current: Option<u32>,
+    pub menu_current: Option<super::debug_menu::MenuRef>,
     /// `un_804D6E48`: the entry whose callback runs (its table's address and index).
     pub menu_entry: Option<(u32, u8)>,
     /// `un_804D6E4C`: frames until the stick repeats a direction.
