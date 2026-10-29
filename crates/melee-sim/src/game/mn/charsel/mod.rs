@@ -803,12 +803,33 @@ const REGEND_MENU: usize = 6;
 
 impl Running<'_> {
     /// The `CSSData` the screen edits (`mnCharSel_804D6CB0`).
+    /// The Hanyu select's own (`gm_8049BEE8`) in its debug mode.
     pub(crate) fn css(&self) -> &super::super::gm::vs_melee::CssData {
-        &self.game.vs_melee.css
+        if super::common::game_mode(self) == crate::game::gm::GM_HANYU_CSS {
+            &self.game.debug_mode.hanyu_css
+        } else {
+            &self.game.vs_melee.css
+        }
     }
 
     pub(crate) fn css_mut(&mut self) -> &mut super::super::gm::vs_melee::CssData {
-        &mut self.game.vs_melee.css
+        if super::common::game_mode(self) == crate::game::gm::GM_HANYU_CSS {
+            &mut self.game.debug_mode.hanyu_css
+        } else {
+            &mut self.game.vs_melee.css
+        }
+    }
+
+    /// The KO counts the screen's data points to (`CSSData::x4`): VS mode's. A null pointer
+    /// (the Hanyu select's, which nothing sets) is read and written in the VS match types, a
+    /// crash on a console ([Melee's bugs]): the port stops there.
+    pub(crate) fn css_ko_counts(&mut self) -> &mut [u8; 6] {
+        if self.css().ko_counts_null {
+            crate::game::code::unported_call(
+                "the character select's KO counts through a null pointer (a crash on a console)",
+            );
+        }
+        &mut self.game.vs_melee.ko_counts
     }
 
     fn css_start(&mut self) -> &mut StartMeleeData {

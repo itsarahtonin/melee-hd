@@ -702,6 +702,7 @@ impl Importer<'_> {
         Some(gr::Geometry {
             // An import starts from the capture's stamps, none left over the GPU's pixels.
             render_stamps: Vec::new(),
+            debug_rom: r32(sym("DbLevel")) as i32 >= melee_sim::game::gm::DB_DEBUG_ROM,
             vertices,
             lines,
             joints: out,

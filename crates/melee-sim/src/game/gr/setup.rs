@@ -1132,6 +1132,7 @@ pub fn load_collision(game: &mut Game, data: &Archives) {
         game.stage_info.grkind,
     );
     g.generation = generation;
+    g.debug_rom = game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM;
     game.geometry = Some(g);
     // The new joints hold no joint yet: the last stage's freed ones are its own.
     game.gr.freed_coll_jobjs.clear();

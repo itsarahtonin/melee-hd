@@ -79,6 +79,71 @@ impl Game {
         h.check_framestep = super::super::mirror::code(step);
     }
 
+    /// The scene loop's debug buttons at the debug ROM's level, `gm_801A4970`: D-pad right
+    /// with X held for the memory report, then the scene's debug pause buttons, which pause
+    /// or go on and, while paused, step a frame.
+    // Ports `gm_801A4970` but its memory report; aliased once the report is ported.
+    pub fn db_scene_input(&mut self) {
+        use crate::input::pad::{BUTTON_RIGHT, BUTTON_X};
+        let report = self.pads.master.iter().any(|p| {
+            p.trigger & u32::from(BUTTON_RIGHT) != 0 && p.button & u32::from(BUTTON_X) != 0
+        });
+        if report {
+            super::super::code::unported_call("the scene loop's debug report (gm_801A4970)");
+        }
+        let (pause, step) = (
+            self.scene.unk_10.db_input.check_pause,
+            self.scene.unk_10.db_input.check_framestep,
+        );
+        if let Some(f) = pause
+            && self.db_pause_predicate(f.0)
+        {
+            self.scene.unk_10.x0 ^= 1;
+        }
+        if self.db_pause_flag(0)
+            && let Some(f) = step
+            && self.db_pause_predicate(f.0)
+        {
+            self.scene.unk_10.x2 |= 1;
+        }
+    }
+
+    /// A scene's debug pause buttons (`gm_DbPauseInputHandlers`' predicates): whether a
+    /// controller with no error pressed them on its master status this frame.
+    fn db_pause_predicate(&self, f: u32) -> bool {
+        use crate::input::pad::{BUTTON_START, BUTTON_UP, BUTTON_X, TRIGGER_Z};
+        let pressed = |held: u16, trigger: u16| {
+            self.pads.master.iter().any(|p| {
+                p.err == 0
+                    && p.trigger & u32::from(trigger) != 0
+                    && p.button & u32::from(held) == u32::from(held)
+            })
+        };
+        match f {
+            // `fn_801A46F4`: D-pad up with X held; `fn_801A47E4`: Z.
+            0x801A_46F4 => pressed(BUTTON_X, BUTTON_UP),
+            0x801A_47E4 => pressed(0, TRIGGER_Z),
+            // `gm_AnyControllerPressedStart`, `gm_AnyControllerPressedZ`.
+            0x8016_BAF4 => pressed(0, BUTTON_START),
+            0x8016_BBB4 => pressed(0, TRIGGER_Z),
+            other => super::super::code::unported("debug pause predicate", other),
+        }
+    }
+
+    /// `db_CheckScreenshot`: Y held and D-pad up on a controller asks for a screenshot.
+    // Ports `db_CheckScreenshot`'s test; aliased once the screenshot it asks for is ported.
+    pub fn db_check_screenshot(&mut self) {
+        use crate::input::pad::{BUTTON_UP, BUTTON_Y};
+        if self
+            .pads
+            .master
+            .iter()
+            .any(|p| p.button & u32::from(BUTTON_Y) != 0 && p.trigger & u32::from(BUTTON_UP) != 0)
+        {
+            super::super::code::unported_call("the debug screenshot (db_CheckScreenshot)");
+        }
+    }
+
     /// The debug pause buttons every scene starts with, `gm_801A4B1C`.
     #[doc(alias = "gm_801A4B1C")]
     pub fn default_db_pause_handlers(&mut self) {
@@ -231,7 +296,9 @@ fn queue_alarm_polls(r: &mut Running, taking: u32, polls: &mut dyn FnMut() -> Pa
 pub fn begin_tick(r: &mut Running) {
     let g = &mut *r.game;
     g.pads.renew_master();
-    g.assert_retail();
+    if g.gm.db_level >= super::DB_DEBUG_ROM {
+        g.db_scene_input();
+    }
     let run = g.db_frame_step(0) || !g.db_pause_flag(0);
     g.scene.unk_10.unk_38_0 = run;
     if run {
@@ -287,6 +354,9 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     }
     if !g.pacing.due(1) {
         s.unk_28 |= !mask;
+    }
+    if r.game.gm.db_level >= super::DB_DEBUG_ROM {
+        r.game.db_check_screenshot();
     }
     r.lb_audio_tick();
     if let Some(f) = r.game.scene.unk_10.pre_gobj_proc {

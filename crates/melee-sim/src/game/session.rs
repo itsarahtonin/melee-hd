@@ -52,6 +52,30 @@ pub struct Setup {
     /// The card pulled out of slot A at the start of a video field and put back at the
     /// start of another, or never (ssbm-rs's `CARD_REMOVE=F[,G]`).
     pub card_pull: Option<(u64, Option<u64>)>,
+    /// The developer setting that raises the debug level (milestone 5's task 19), none on a
+    /// retail disc's console, the default. A session's own input, never a replay's.
+    pub develop: Option<Develop>,
+}
+
+/// The debug level a developer setting raises `DbLevel` to, as ssbm-rs's runner does
+/// (`--develop N`, `DBLEVEL=N`): from `db_InitScreenshot` on, after the boot's own
+/// `gmMain_8015FDA4` set retail's level from the disc (no `/develop.ini`) and its USB host
+/// check read it. The debug menus and the match's develop tools are reached past it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Develop {
+    /// `DbLevel` (`DbLKind`: 0 Master, 1 NoDebugRom, 2 DebugDevelop, 3 DebugRom, 4 Develop).
+    pub level: i32,
+    /// Whether `/develop.ini` counts as found (`db_804D6B20`), as on a development disc and
+    /// under ssbm-rs's `--develop`: at levels 3 and 4 the save's load then runs HAL's debug
+    /// unlock-all (`gmMainLib_8015FA34`), which the game saves. `DBLEVEL=N` leaves it clear.
+    pub ini: bool,
+}
+
+impl Develop {
+    /// A recording's level (`SSBMINP1`'s flags, ssbm-rs's `--develop`), which marks the file.
+    pub fn from_recording(level: Option<i32>) -> Option<Develop> {
+        level.map(|level| Develop { level, ini: true })
+    }
 }
 
 /// The SRAM flags of ssbm-rs's console, as Dolphin initializes them: stereo, setup done,
@@ -74,6 +98,7 @@ impl Default for Setup {
             dtv: false,
             sram_flags: SRAM_FLAGS_DEFAULT,
             card_pull: None,
+            develop: None,
         }
     }
 }
@@ -223,6 +248,8 @@ pub const FILES: &[&str] = &[
     "SdMenu.dat",
     "IfAll.dat",
     "NtMemAc.dat",
+    "SdMsgBox.dat",
+    "SdProge.dat",
     "SdToy.dat",
     "GmEvent.dat",
     "LbAd.dat",
@@ -234,6 +261,10 @@ pub const FILES: &[&str] = &[
     // The special messages' interface's.
     "IfPrize.usd",
     "SdPrize.usd",
+    "IfPrize.dat",
+    "SdPrize.dat",
+    // The sound test debug mode's lists.
+    "SmSt.dat",
     // The challenger approach's screen, in either language.
     "NtAppro.usd",
     "NtAppro.dat",
@@ -566,7 +597,14 @@ impl Session {
             data: &self.data,
         };
         let progressive = self.setup.sram_flags & SRAM_PROGRESSIVE != 0;
-        r.boot_main(&bank, card_in, (self.setup.dtv, progressive), console);
+        let develop = self.setup.develop;
+        r.boot_main(
+            &bank,
+            card_in,
+            (self.setup.dtv, progressive),
+            develop,
+            console,
+        );
         lent.give_back(&mut self.game.objs.heap);
         card.give_back(&mut self.card);
     }
@@ -744,6 +782,7 @@ impl Running<'_> {
         bank: &crate::lb::audio::SoundBank,
         card_in: bool,
         (dtv, progressive): (bool, bool),
+        develop: Option<Develop>,
         console: &mut dyn Console,
     ) {
         // `lbAudioAx_8002838C`, then `lb_80019AAC(gmMain_8015FD24)`: the frame clocks and the
@@ -776,6 +815,18 @@ impl Running<'_> {
         // first scene's heap replaces.
         self.game.sis.init(0xC000);
         self.reset_game_data(bank);
+        // The USB host check reads the level `gmMain_8015FDA4` set (retail's: no host), and
+        // `db_InitScreenshot` clears the screenshot's state, which nothing has set. A developer
+        // setting raises the level from here, where ssbm-rs's runner does.
+        if let Some(d) = develop {
+            assert!(
+                (0..=4).contains(&d.level),
+                "DbLevel {} isn't a DbLKind",
+                d.level
+            );
+            self.game.gm.db_level = d.level;
+            self.game.gm.develop_ini |= d.ini;
+        }
         // The boot's report (`OSReport`) changes nothing but reads the clock
         // (`lbTime_GetTimeInSeconds`); `db_EnableItemSpawns` (`gmMain_804D6594` is false on
         // a retail disc), `db_ClearFPUExceptions`.

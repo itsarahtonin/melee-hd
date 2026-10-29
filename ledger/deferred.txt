@@ -2,7 +2,6 @@
 # One per line: NAME<TAB>gate and evidence. "Named only by" lists every symbol in the executable that names the function (the decomp's asm listings), each gated for the reason in parentheses.
 lbMemory_80014F7C	Named only by lbHeap_80015DF8 (the scene loop's debug report: see gm_801A4970).
 lbHeap_80015DF8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-lbAudioAx_800245D4	Named only by un_802FF88C, un_802FF958, un_802FFC30, un_802FFC6C (the sound test debug mode, 7: see onEnterDebug).
 lbAudioAx_80025064	Named only by fn_CheckSoundInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 lbAudioAx_80025098	Named only by fn_UpdateSoundInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 lbAudioAx_80028B2C	Named only by fn_UpdateSoundInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
@@ -10,28 +9,15 @@ lbAudioAx_80028B4C	Named only by fn_UpdateSoundInfo (the match's debug tools und
 ftLib_IsMasterHandPresent	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 ftLib_IsCrazyHandPresent	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 ftZd_Init_801395C8	Called only by ftCo_800DEBD0 (the side taunt), only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gmMainLib_8015FB68	Named only by un_80300248 (the debug menu mode, 6: see onExitIntro).
-gm_8016468C	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_80164A0C	Named only by gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
-gm_80164F18	Named only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; and gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 fn_801652D8	Named only by gm_80165388 (the scene loop's debug report: see gm_801A4970).
 gm_80165388	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 gm_801653C8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 gm_80166A98	Named only by onEnterResults1 (the debug menu mode, 6: see onExitIntro).
 gm_ResetGameSpeed	Named only by fn_Toggle5xSpeed (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 gm_801701A0	Named only by onEnterResults1 (the debug menu mode, 6: see onExitIntro).
-gm_8017297C	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gm_801741FC	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gmTitle_801A1D38	Called only by gm_Scene_Title_OnEnter, only inside `if (DbLevel >= DbLKind_NoDebugRom)`, which draws the build date on the title; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_801A4970	The scene loop's debug report (D-pad right with X: object counts, threads, leaks), called only by gm_801A4D34 inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gm_Scene_DebugMenu_OnEnter	Scene 7's (GS_DEBUG_MENU) enter function, named only by the scene table; only the states of modes 6 and 7 enter scene 7 (gm_Mode_Debug_States, gm_Mode_DebugMenu_States; no other mode's states name it), and neither mode runs on a retail boot (see onExitIntro, onEnterDebug).
 onExitIntro	A callback of the debug menu mode's states (gm_Mode_Debug_States, mode 6), which a retail boot never enters. Only the title's exits make mode 6 pending (gmtitlemode.c's onExit on Y, gmopeningmode.c's onExitTitle on 0x800), both inside `if (DbLevel >= DbLKind_DebugRom)`. DbLevel is DbLKind_Master, 0, on a retail disc: gmMain_8015FDA4 sets it when the disc has no /develop.ini, and only it and the debug menu's own item (un_803FA4E0) write DbLevel. All 13 recorded sessions log DbLevel 0 and enter no debug mode.
-onEnterMenu0	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-fn_801B09F8	Named only by onEnterMenu0 (the debug menu mode, 6: see onExitIntro).
-onEnterMenu1	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-fn_801B0A8C	Named only by onEnterMenu1, onEnterMenu2 (the debug menu mode, 6: see onExitIntro).
-onEnterMenu2	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-onEnterPrize	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onExitPrize@801B0B24	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterVs@801B0B48	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterResults0	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
@@ -39,15 +25,11 @@ onExitResults0	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see o
 onEnterIntroEasy	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterIntroAllstar	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterGameOver	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-onEnterApproach	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterResults1	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onExitResults1	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-onEnterMemCard	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onExitMemCard	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-onEnterDebug	The enter callback of the sound test debug mode's states (gm_Mode_DebugMenu_States, mode 7), which a retail boot never enters: only the title's exits make mode 7 pending (gmtitlemode.c's onExit on X, gmopeningmode.c's onExitTitle on 0x400), both inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_801BED3C	A callback of the Hanyu character select mode's states (gm_Mode_HanyuCss_States, mode 8), which a retail boot never enters: mode 8 is made pending only by un_80300968 and mode 9 only by un_803009A4, items of the debug menu (un_803FC63C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 gm_801BEDA8	Named only by gm_Mode_HanyuCss_States (the Hanyu select modes, 8 and 9: see gm_801BED3C).
-gm_801BEE58	Named only by gm_Mode_HanyuSss_States (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 gm_801BF040	Named only by fn_8030110C (the debug menu mode, 6: see onExitIntro).
 onEnterCutsceneLuigi	A callback of the debug cutscene mode's states (gm_Mode_DebugCutscene_States, mode 0x19), which a retail boot never enters: mode 0x19 is made pending only by un_803013B0, an item of the debug menu (un_803FCE4C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 onExitRegendCongrats	Named only by gm_Mode_DebugCutscene_States (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
@@ -114,67 +96,9 @@ fn_CheckBonusInfo	Called only by db_RunEveryFrame, only after its `if (DbLevel <
 fn_SetupObjAllocLimiter	Called only by db_Setup, only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 fn_UpdateObjAllocLimiter	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 Item_80266F3C	Named only by db_CheckAndSpawnItem (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-un_802FF6A0	Named only by gm_Scene_DebugMenu_OnEnter (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_802FF710	Named only by gm_Scene_DebugMenu_OnEnter (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_802FF7DC	Named only by onEnterDebug (the sound test debug mode, 7: see onEnterDebug).
-un_802FF884	Named only by onEnterDebug (the sound test debug mode, 7: see onEnterDebug).
-un_802FF88C	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FF934	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FF958	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FF99C	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FF9DC	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FFB58	Named only by un_802FF99C, un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FFBAC	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FFC30	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-un_802FFC6C	Named only by un_803F9FA4 (the sound test debug mode, 7: see onEnterDebug).
-fn_802FFCC8	Named only by un_802FF88C (the sound test debug mode, 7: see onEnterDebug).
-un_802FFCD0	Named only by un_80300758, un_80300790, un_80301CE0 (the debug menu mode, 6: see onExitIntro).
-un_802FFD94	Named only by un_80300480, un_803004B4, un_803004E8, un_8030051C, un_80300550, un_80300584, un_803005B8, un_803005EC, un_80300620, un_80300654, un_80300688, un_803006BC, un_803006F0, un_80300724, un_803007C8, un_803007FC, un_80300830, un_80300864, un_80300898, un_803008CC, un_80300900, un_80300934, un_80300D78, un_80300E74, un_80300F3C, un_80301280, un_803012D4, un_803013EC, un_80301420 (the debug menu mode, 6: see onExitIntro).
-fn_802FFE0C	Named only by un_80300480 (the debug menu mode, 6: see onExitIntro).
-fn_802FFE6C	Named only by un_80300290, un_803004B4, un_803004E8, un_8030051C, un_80300550, un_80300584, un_803005B8, un_803005EC, un_80300620, un_80300654, un_80300688, un_803006BC, un_803006F0, un_80300724, un_803007C8, un_803007FC, un_80300830, un_80300864, un_80300898, un_803008CC, un_80300900, un_80300934 (the debug menu mode, 6: see onExitIntro).
-un_802FFEA4	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_802FFEE0	Named only by onEnterPrize (the debug menu mode, 6: see onExitIntro).
 un_802FFF2C	Named only by onEnterVs (the debug menu mode, 6: see onExitIntro).
-un_803001DC	Named only by un_803FA4E0 (the debug menu mode, 6: see onExitIntro).
-un_80300218	Named only by un_803FA4E0 (the debug menu mode, 6: see onExitIntro).
-un_80300248	Named only by un_803FA4E0 (the debug menu mode, 6: see onExitIntro).
-un_80300290	Named only by un_803FA4E0 (the debug menu mode, 6: see onExitIntro).
-un_803002FC	Named only by un_803FA4E0 (the debug menu mode, 6: see onExitIntro).
-un_80300338	Named only by un_803FA658 (the debug menu mode, 6: see onExitIntro).
-un_80300378	Named only by un_803FA658 (the debug menu mode, 6: see onExitIntro).
-un_803003C4	Named only by un_803FA658 (the debug menu mode, 6: see onExitIntro).
-un_80300410	Named only by un_803FA658 (the debug menu mode, 6: see onExitIntro).
-un_80300480	Named only by un_803FA790 (the debug menu mode, 6: see onExitIntro).
-un_803004B4	Named only by un_803FA790 (the debug menu mode, 6: see onExitIntro).
-un_803004E8	Named only by un_803FA8E8 (the debug menu mode, 6: see onExitIntro).
-un_8030051C	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300550	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300584	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_803005B8	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_803005EC	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300620	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300654	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300688	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_803006BC	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_803006F0	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300724	Named only by un_803FB168 (the debug menu mode, 6: see onExitIntro).
-un_80300758	Named only by un_803FB60C (the debug menu mode, 6: see onExitIntro).
-un_80300790	Named only by un_803FB870 (the debug menu mode, 6: see onExitIntro).
-un_803007C8	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_803007FC	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300830	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300864	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300898	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_803008CC	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300900	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300934	Named only by un_803FC4CC (the debug menu mode, 6: see onExitIntro).
-un_80300968	Named only by un_803FC63C (the debug menu mode, 6: see onExitIntro).
-un_803009A4	Named only by un_803FC63C (the debug menu mode, 6: see onExitIntro).
 un_803009E0	Named only by un_803FC828, un_803FC8C8 (the debug menu mode, 6: see onExitIntro).
 un_80300A88	Named only by un_803FC828, un_803FC8C8 (the debug menu mode, 6: see onExitIntro).
-un_80300AB8	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80300AF4	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80300B58	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300BBC	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300BF8	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300C3C	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
@@ -186,7 +110,6 @@ un_80300E74	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 fn_80300ED0	Named only by un_80300F3C (the debug menu mode, 6: see onExitIntro).
 un_80300F3C	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300F98	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80300FEC	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
 un_80301028	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
 un_80301074	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
 un_803010C0	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
@@ -194,19 +117,6 @@ fn_8030110C	Named only by un_803012D4 (the debug menu mode, 6: see onExitIntro).
 fn_803011EC	Named only by un_80301280 (the debug menu mode, 6: see onExitIntro).
 un_80301280	Named only by un_803FCE4C (the debug menu mode, 6: see onExitIntro).
 un_803012D4	Named only by un_803FCE4C (the debug menu mode, 6: see onExitIntro).
-un_80301328	Named only by un_803FCE4C (the debug menu mode, 6: see onExitIntro).
-un_8030136C	Named only by un_803FCE4C (the debug menu mode, 6: see onExitIntro).
-un_803013B0	Named only by un_803FCE4C (the debug menu mode, 6: see onExitIntro).
-un_803013EC	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301420	Named only by un_803FA4E0, un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301454	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301490	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_803014CC	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301508	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301544	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_80301580	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_803015BC	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
-un_803015F8	Named only by un_803FD064 (the debug menu mode, 6: see onExitIntro).
 un_80301634	Named only by un_803FD310 (the debug menu mode, 6: see onExitIntro).
 un_803016D8	Named only by un_803FD310 (the debug menu mode, 6: see onExitIntro).
 un_80301734	Named only by un_803FD310 (the debug menu mode, 6: see onExitIntro).
@@ -221,27 +131,7 @@ un_80301AD4	Named only by un_803FD310 (the debug menu mode, 6: see onExitIntro).
 un_80301B48	Named only by un_803013EC, un_803FD58C (the debug menu mode, 6: see onExitIntro).
 un_80301BA8	Named only by onEnterIntroEasy (the debug menu mode, 6: see onExitIntro).
 un_80301C64	Named only by onEnterIntroAllstar (the debug menu mode, 6: see onExitIntro).
-un_80301C80	Named only by un_80301420, un_803FD864 (the debug menu mode, 6: see onExitIntro).
-un_80301CE0	Named only by un_803FD864 (the debug menu mode, 6: see onExitIntro).
-un_80301D40	Named only by un_803FDAF8 (the debug menu mode, 6: see onExitIntro).
 un_80301D7C	Named only by un_803FDAF8 (the debug menu mode, 6: see onExitIntro).
-un_80301DCC	Named only by un_803FDB9C (the debug menu mode, 6: see onExitIntro).
-un_80301E08	Named only by un_803FDB9C (the debug menu mode, 6: see onExitIntro).
-un_80302DF0	Named only by fn_802FFE0C, fn_802FFE6C, fn_80300CC8, fn_80300DE0, fn_80300ED0, fn_8030110C, fn_803011EC, un_802FFD94, un_80300290, un_80301B48, un_80301C80 (the debug menu mode, 6: see onExitIntro); and gm_Scene_DebugMenu_OnEnter (the debug menu scene: see gm_Scene_DebugMenu_OnEnter); and un_802FF88C (the sound test debug mode, 7: see onEnterDebug).
-un_80302DF8	Named only by gm_Scene_DebugMenu_OnEnter (the debug menu scene: see gm_Scene_DebugMenu_OnEnter); and un_802FF88C (the sound test debug mode, 7: see onEnterDebug); and un_802FFD94, un_80300290 (the debug menu mode, 6: see onExitIntro).
-un_80302E00	Named only by un_80303FD4 (the debug menu mode, 6: see onExitIntro).
-un_80302EA4	Named only by un_80303FD4 (the debug menu mode, 6: see onExitIntro).
-un_80302FFC	Named only by fn_80303EF4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_80303444	Named only by un_80303AC4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_80303720	Named only by un_80303AC4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_803039A4	Named only by un_80303AC4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_80303AC4	Named only by fn_80303EF4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-fn_80303EF4	Named only by un_80304168 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_80303FD4	Named only by un_80304168 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter); and un_80304210 (the debug menu mode, 6: see onExitIntro).
-un_80304168	Named only by gm_Scene_DebugMenu_OnEnter (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
-un_80304210	Named only by un_802FFD94, un_80300290 (the debug menu mode, 6: see onExitIntro).
-un_80304334	Named only by fn_802FFE0C, fn_802FFE6C, fn_80300CC8, fn_80300DE0, fn_80300ED0, fn_8030110C, fn_803011EC, un_80301B48, un_80301C80 (the debug menu mode, 6: see onExitIntro).
-un_80304344	Named only by fn_80303EF4 (the debug menu scene: see gm_Scene_DebugMenu_OnEnter).
 Toy_80311680	Named only by un_80300BBC (the debug menu mode, 6: see onExitIntro).
 _tyDisplay_8031A94C	Called only by tyDisplay_Scene_OnEnter, only when _tyDisplay_804D6F20 is set, which it sets only inside `if (DbLevel >= DbLKind_DebugRom && Toy_80305C44() & 0x10)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 _tyDisplay_8031BA78	Named only by _tyDisplay_8031A94C (the trophy collection's debug view: see _tyDisplay_8031C1D0).

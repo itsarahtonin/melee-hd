@@ -26,6 +26,7 @@ pub(super) const KIND_PIKACHU: i32 = 12;
 pub(super) const KIND_PICHU: i32 = 23;
 pub(super) const KIND_GAME_WATCH: i32 = 24;
 pub(super) const KIND_KIRBY: i32 = 4;
+const KIND_ZELDA: i32 = 19;
 /// `Ft_Kind_DrMario` and `Ft_Kind_Ganon`.
 const KIND_DRMARIO: i32 = 21;
 const KIND_GANON: i32 = 25;
@@ -312,9 +313,17 @@ impl Running<'_> {
         }
     }
 
-    /// The side taunt, `ftCo_800DEBD0`: Kirby drops his copy first, as a star.
+    /// The side taunt, `ftCo_800DEBD0`: Kirby drops his copy first, as a star; at the debug
+    /// ROM's level Peach and Zelda swap a model's variant.
     #[doc(alias = "ftCo_800DEBD0")]
     pub fn enter_appeal_s(&mut self, gobj: GObjId) {
+        if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM {
+            match self.game.fighter(gobj).kind {
+                KIND_PEACH => self.peach_appeal_swap(gobj),
+                KIND_ZELDA => self.zelda_appeal_swap(gobj),
+                _ => {}
+            }
+        }
         if self.game.fighter(gobj).kind == KIND_KIRBY {
             self.kb_lose_copy(gobj, true);
         }

@@ -772,6 +772,15 @@ pub const RESULTS_TEAMS: Game = Game {
     replay: Replay::Session("results-teams"),
 };
 
+/// A one-stock match's results won by Dr. Mario (`results-sessions/pills`): his second pose
+/// with his two pills in hand.
+pub const RESULTS_PILLS: Game = Game {
+    stage: "Results",
+    name: "results-pills",
+    players: "Dr. Mario's results pose with his pills (session results-sessions/pills)",
+    replay: Replay::Session("results-pills"),
+};
+
 /// The challenger approach's screen (`unlock-sessions/time`): "A new foe has appeared!" with
 /// Mewtwo's name, as it comes in and as it waits for A.
 pub const UNLOCK_TIME: Game = Game {

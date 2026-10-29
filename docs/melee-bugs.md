@@ -642,6 +642,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); the decompilation's `it_802E6AEC` (`spawn.x44_flag.x0.b0 = arg5 ? 1 : 0`) and its machine code; `itmaplib.c:233`.
 
+### Dr. Mario's pills' spawns keep seven flag bits from the stack
+
+- **Where:** `itDrMarioPill_Spawn`, `itDrMarioPill_Appeal_Spawn` and `itDrMarioPill_802C09C4` (the thrown pill, the taunt's and a results pose's), through the `Item_InitSpawnCommonFields` inline, `crates/melee-sim/src/game/it/kinds/drmariopill.rs` (`spawn_fields`).
+- **Defect:** each fills a stack `SpawnItem` and sets its fall flag `x44_flag.b0` by reading the flag byte back, inserting the bit and storing it (`lbz`, `rlwimi r0, rN, 7, 24, 24`, `stb` on `r1 + 0x60`, `0x64` and `0x6C` of their frames, at `0x802C0594`, `0x802C08CC` and `0x802C0A4C`), so the byte's other seven bits keep what that slot held from earlier calls, as the stage's hurtbox item's spawn does (above).
+- **Effect:** none observable: the only reader of the byte is `Item_80268B18`'s placement (`itmaplib.c:233`), which tests `b0` alone, and nothing copies the `SpawnItem` whole.
+- **melee-hd:** stand-in: the spawns start from a cleared `SpawnItem`, so those bits are 0; the results session `results-sessions/pills` (two pills from `itDrMarioPill_802C09C4`) compares clean.
+- **Fix:** clear the flag byte before setting `b0`.
+- **Fix impact:** none.
+- **Source:** the machine code of the three spawns (the decompilation's build, `itdrmariopill.s`); the decompilation's `Item_InitSpawnCommonFields` (`spawn->x44_flag.b0 = initial_collision`).
+
 ### A coin scatter with no coin to make returns its caller's register
 
 - **Where:** `it_802E609C` (making a scatter's coins), `crates/melee-sim/src/game/it/kinds/coin.rs` (`drop_all`).
@@ -1557,6 +1567,60 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** convert each icon with `fn_8018F6FC` first.
 - **Fix impact:** the loads between the results and the match-up screen; nothing heard.
 - **Source:** `gmtou_2.c`'s `gm_8019E634`; ssbm-rs's port.
+
+## Debug mode
+
+The developers' menus and tools, reached only above retail's debug level (milestone 5's task 19: a session's developer setting, `session::Develop`).
+
+### The All entries' callbacks return nothing
+
+- **Where:** `un_80300758` (All Char), `un_80300790` (All PKind) and `un_80301CE0` (the result test's All Player), `crates/melee-sim/src/game/hud/debug_items.rs` (`debug_item`).
+- **Defect:** the C has no `return`; the machine code returns what `r3` holds: the argument the menu passed, or after A the count (4) `un_802FFCD0` was called with, or after Start (`un_80301CE0`) the address `gm_801A4B60` left (`gm_80479D58`).
+- **Effect:** the menu's own callback runs after an entry's only when the entry's answers 0 (`un_80302E00`): it runs for B (argument 0), so B closes the submenu as on any other entry, and not after A or Start. None observable beyond that.
+- **melee-hd:** modeled: the callbacks answer what the machine code leaves.
+- **Fix:** return 0 (or 1 where the menu's callback mustn't run).
+- **Fix impact:** none on gameplay; the debug menus behave the same.
+- **Source:** `if_3004.s` (`un_80300758`, `un_80301CE0`), `if_2FFC.s` (`un_802FFCD0` leaves `r3`).
+
+### The test menus' own callbacks return nothing
+
+- **Where:** `fn_80300CC8`, `fn_80300DE0`, `fn_80300ED0` and `fn_803011EC` (the Otoguro and Nagasima tests' submenus' own callbacks), not ported yet.
+- **Defect:** the C has no `return`.
+- **Effect:** none observable: a menu's own callback's answer is never read (`un_80302E00` returns it to `un_80303AC4`, which drops it, and `un_80304344` calls it last).
+- **melee-hd:** not ported yet (their Start paths go to records and the single-player modes).
+- **Fix:** return 0.
+- **Fix impact:** none.
+- **Source:** `if_3004.c`.
+
+### The debug menu sets the saved language as it opens
+
+- **Where:** `un_80300218` (the first page's Language), told the menu is made by `un_80303FD4`, `crates/melee-sim/src/game/hud/debug_items.rs` (`debug_language`).
+- **Defect:** the callback sets the save's language from the entry's value whatever it's told, and every entry's callback is told when its menu is made; the entry's value (`un_803FA258.x0`) starts at 0, Japanese, not the save's.
+- **Effect:** entering the debug menu switches the save's language to Japanese (or to whatever the entry last held), so the scenes after it load the Japanese files and texts.
+- **melee-hd:** modeled.
+- **Fix:** act only on left and right, or start the entry from the save.
+- **Fix impact:** none on gameplay; the debug menus' language changes.
+- **Source:** `if_2FFC.c` (`un_80300218`), `textlib_1.c` (`un_80303FD4`'s `initEntries`).
+
+### The Hanyu character select reads KO counts through a null pointer
+
+- **Where:** `gm_801BED3C` (the Hanyu select's entry, `gmhanyucss.c`), then `mnCharSel_8025D1C4` (a door's KO stars) and the name tags' resets in `mncharsel.c`; `crates/melee-sim/src/game/mn/charsel/mod.rs` (`css_ko_counts`).
+- **Defect:** the mode's `CSSData` (`gm_8049BEE8`) never gets its KO counts' pointer (`x4`, which VS mode's entry points at its counts), and its first match type is VS Melee's, whose doors show KO stars read through it.
+- **Effect:** the select crashes as it opens its doors (ssbm-rs: an unmapped read of address 0 in `mnCharSel_8025D1C4`, `debug-sessions/hanyu-css`), so the debug menu's Hanyu test's Select Char can't be used on a console.
+- **melee-hd:** stops (`css_ko_counts`, an unported call where the original reads or writes through the null pointer).
+- **Fix:** point `x4` at VS mode's KO counts in the entry.
+- **Fix impact:** none on gameplay; the debug select would open.
+- **Source:** `gmhanyucss.c`, `mncharsel.s` (`mnCharSel_8025D1C4+0x68`, `lbzx r29, r4, r3` with `r4` the null pointer).
+
+### A closing menu's screen removed through the menu's own pointer
+
+- **Where:** `un_80304344`'s `DevText_Remove(&arg0->x4)`, `crates/melee-sim/src/game/hud/debug_menu.rs` (`menu_close`, `devtext::Link::Held`).
+- **Defect:** `DevText_Remove` takes the link that points to the screen; the menu passes its own field, not the draw list's link, so for a screen first in the draw list the draw list keeps pointing to it after it goes back on the free list, and the menu's freed block takes the next screen's address.
+- **Effect:** none observed: a menu's screen is never first in the draw list in the debug menus (the first menu's screen comes first, and only submenus close), and the freed block's word is never read.
+- **melee-hd:** modeled (the write through the menu's pointer goes nowhere: the menu is freed right after).
+- **Fix:** pass the draw list.
+- **Fix impact:** none.
+- **Source:** `textlib_1.c` (`un_80304344`), `textdraw.c` (`DevText_Remove`).
 
 ## Gameplay that reads the display pass
 
