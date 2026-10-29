@@ -396,7 +396,7 @@ impl Running<'_> {
 
     /// `gm_80164504`: a stage kind's stage unlocked in the save, with its special message
     /// noted (`gmMainLib_8015D818`).
-    // Ports `gm_80164504`; aliased once a check reaches it.
+    #[doc(alias = "gm_80164504")]
     pub fn unlock_stage(&mut self, stkind: u16) {
         if let Some(u) = stage_unlock(stkind) {
             self.note_special_message(u32::from(u[2]));

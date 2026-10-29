@@ -828,6 +828,15 @@ pub const UNLOCK_TIME: Game = Game {
     replay: Replay::Session("unlock-time"),
 };
 
+/// The challenger approach's screen for the last challenger (`unlock-sessions/gw`): "A new
+/// foe has appeared!" with Mr. Game & Watch's name, waiting for A.
+pub const UNLOCK_GW: Game = Game {
+    stage: "Challenger approach",
+    name: "unlock-gw",
+    players: "the challenger approach's screen (session unlock-sessions/gw)",
+    replay: Replay::Session("unlock-gw"),
+};
+
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
 /// camera's info, the snapshot's offer and its question, the save.
 pub const CAMERA_SNAPS: Game = Game {
