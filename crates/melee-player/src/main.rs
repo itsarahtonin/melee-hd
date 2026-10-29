@@ -243,6 +243,8 @@ struct Args {
     export_save: Option<String>,
     /// Unlocks everything in the saves folder's save and quits (`--unlock-all`).
     unlock_all: bool,
+    /// Writes the console's memory card as the session leaves it here (`--card-after`).
+    card_after: Option<String>,
 }
 
 /// The command line's usage, with the characters and stages melee-sim has ported.
@@ -259,7 +261,7 @@ fn usage() -> String {
          replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match\n\
-         console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form)\n\
+         console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
          saves: [--import-save FILE.gci|.raw] [--export-save FILE.gci|.raw] [--unlock-all], each with [--saves DIR], then quit\n\
          with no --p1..--p4, --stage or --replay, the window opens on a launcher that picks the match\n\
          the disc is --disc's, else SSBM_DISC's, else the one the disc picker asked for and remembered",
@@ -327,6 +329,7 @@ fn parse_args() -> Result<Args, String> {
         import_save: None,
         export_save: None,
         unlock_all: false,
+        card_after: None,
     };
     // Whether the command line names a match.
     let mut chosen = false;
@@ -489,6 +492,7 @@ fn parse_args() -> Result<Args, String> {
                 a.export_save = Some(value()?);
                 chosen = true;
             }
+            "--card-after" => a.card_after = Some(value()?),
             "--unlock-all" => {
                 a.unlock_all = true;
                 chosen = true;
@@ -625,12 +629,24 @@ struct Platform {
     rec: Option<session_rec::Writer>,
     /// The saves folder, kept as the card changes.
     kept: Option<saves::Kept>,
+    /// Where the card goes as the session ends (`--card-after`).
+    card_after: Option<std::path::PathBuf>,
     gates: gates::Gates,
 }
 
 impl Drop for Session {
-    /// Saves the match's recording, however it ended.
+    /// Saves the match's recording, however it ended, and with `--card-after` the console's
+    /// card.
     fn drop(&mut self) {
+        if let (Some(p), power::Run::Console(s)) = (&self.console, &self.run)
+            && let Some(path) = &p.card_after
+            && let Some(card) = s.card.as_ref().and_then(|c| c.card.as_ref())
+        {
+            match std::fs::write(path, card.image()) {
+                Ok(()) => eprintln!("the card after the session: {}", path.display()),
+                Err(e) => eprintln!("{}: {e}", path.display()),
+            }
+        }
         let (Some(to), Some(r)) = (&self.recording, &self.game().recorder) else {
             return;
         };
@@ -721,6 +737,7 @@ impl Session {
             feed,
             rec,
             kept,
+            card_after: args.card_after.as_ref().map(std::path::PathBuf::from),
             gates: gates::Gates::default(),
         });
         let mut s = s;
@@ -1091,6 +1108,62 @@ struct App {
     perf: Option<perf::Perf>,
     /// What the specialized shaders did, when the renderer last went.
     specialized: Option<String>,
+    /// Camera Mode's frames drawn as the console draws them, for its snapshots
+    /// ([`App::give_snapshot`]).
+    console_view: Option<ConsoleView>,
+}
+
+/// [`App::give_snapshot`], with the console's view in `view` and the GPU `gpu`.
+fn give_snapshot(
+    view: &mut Option<ConsoleView>,
+    gpu: &present::Gpu,
+    s: &Session,
+    draws: &[melee_sim::hsd::display::Draw],
+) {
+    use melee_sim::game::gm::camera_mode::GM_CAMERA_MODE;
+    use melee_sim::game::gm::machine::Phase;
+    use melee_sim::hsd::display::Draw;
+    use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame};
+    let camera =
+        matches!(s.game().machine.phase, Phase::Scene { mode, .. } if mode == GM_CAMERA_MODE);
+    if !camera {
+        *view = None;
+        return;
+    }
+    if draws.is_empty() {
+        return;
+    }
+    let view = view.get_or_insert_with(|| {
+        let mut frames = Frames::new();
+        frames.space.load_dol(&s.dol);
+        ConsoleView {
+            frames,
+            gpu: Gpu::new(pipelines::renderer(gpu, 1, 1, present::Aspect::STRETCHED)),
+        }
+    });
+    let snapshot =
+        s.game().camera_mode.snap.image != 0 && draws.iter().any(|d| matches!(d, Draw::SnapCopy));
+    let fifo = view.frames.frame(s.game(), s.data(), draws);
+    if snapshot {
+        // RGB565, the snapshot copy's format (`snap_copy`).
+        view.gpu.set_copies_to_memory(vec![4]);
+    }
+    let _ = view.gpu.run(&view.frames.space, s.data(), &fifo, None);
+    if snapshot {
+        view.gpu.set_copies_to_memory(Vec::new());
+        let space = &view.frames.space;
+        let at = space.dynamic(melee_render::mem::Dynamic::Snapshot, IMAGE_SIZE);
+        let mut pixels = vec![0; IMAGE_SIZE as usize];
+        space.read(s.data(), at, &mut pixels);
+        give_frame(pixels);
+        eprintln!("Camera Mode: the snapshot's frame handed to the game");
+    }
+}
+
+/// A renderer drawing the frames as the console does (640 by 480, unwidened), never shown.
+struct ConsoleView {
+    frames: Frames,
+    gpu: Gpu,
 }
 
 impl App {
@@ -1213,6 +1286,8 @@ impl App {
         }
         let audio = session.sound.as_ref().and_then(sound::Sound::stats);
         let tick = engine_tick(session.game());
+        self.give_snapshot(&f.draws);
+        let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
         self.stats.ticks += 1;
         self.ticks += 1;
@@ -1624,6 +1699,19 @@ impl App {
             },
             presented,
         ))
+    }
+
+    /// Camera Mode's snapshot (`snap_write::give_frame`): its pixels are what a console's
+    /// renderer leaves in the buffer, so they're drawn as the console draws, whatever the
+    /// player shows: while a Camera Mode match runs, each tick's frame is drawn again by a
+    /// renderer of its own at the console's 640 by 480 (scale 1, no MSAA, unwidened, as the
+    /// frames checks draw), never presented; a frame that copies the snapshot
+    /// (`Draw::SnapCopy`) while the game waits for one has that copy read back to memory and
+    /// handed to the game. Nothing of the player's settings reaches the snapshot.
+    fn give_snapshot(&mut self, draws: &[melee_sim::hsd::display::Draw]) {
+        if let Some(s) = &self.session {
+            give_snapshot(&mut self.console_view, &self.gpu, s, draws);
+        }
     }
 
     /// A frame presented `at` with its CPU times, and the GPU times read back since the last:
@@ -2091,6 +2179,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
     let mut r = pipelines::renderer(&gpu, scale, args.msaa, args.aspect);
     r.xfb_readback = args.shot.is_some();
     let mut renderer = gpu_for(r, args.one_thread);
+    let mut console_view = None;
     let mut last = None;
     let mut frames = Frames::new();
     frames.space.load_dol(&session.dol);
@@ -2134,6 +2223,7 @@ fn bench(args: &Args, ticks: u32) -> ExitCode {
         let pads = args.holds.as_ref().map_or(rest, |h| h.at(u64::from(tick)));
         let f = session.tick(pads);
         let t1 = Instant::now();
+        give_snapshot(&mut console_view, &gpu, &session, &f.draws);
         round += t1 - t0;
         if !f.draws.is_empty() {
             let fifo = frames.frame(session.game(), session.data(), &f.draws);
@@ -2494,6 +2584,7 @@ fn run(args: Args) -> ExitCode {
         pending: None,
         perf: args.perf_report.as_deref().map(perf::Perf::new),
         specialized: None,
+        console_view: None,
         args,
     };
     if let Some(path) = &app.args.latency_log {
