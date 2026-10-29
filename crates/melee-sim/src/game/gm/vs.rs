@@ -1797,7 +1797,7 @@ impl Running<'_> {
         self.enable_match_camera();
         super::super::camera::snap(self);
         // `GmPause` and `IfAll` are named for the saved language (`lbFileGetFullName`).
-        let us = self.saved_us();
+        let us = self.files_us();
         self.disc_load(if us { "GmPause.usd" } else { "GmPause.dat" }, MAIN_MEMORY);
         super::pause::create(self, files.gm_pause);
         code::call(self, addr::SFX_SETUP_CROWD_SFX, &[]);
