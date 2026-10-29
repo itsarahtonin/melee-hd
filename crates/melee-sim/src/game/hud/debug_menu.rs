@@ -90,6 +90,31 @@ pub struct Table {
     pub entries: &'static [Entry],
 }
 
+/// An entry's names (`xC`): the table's own, or a list in a loaded archive (the sound test's,
+/// from `SmSt.dat`).
+#[derive(Clone, Copy, Debug)]
+pub enum Choices {
+    Static(&'static [&'static [u8]]),
+    Archive(melee_data::archive::DataRef),
+}
+
+/// An entry as the menus read it: the table's, with the sound test's changes to its own
+/// table in `.data` (`un_802FF7DC`, `un_802FF9DC`).
+#[derive(Clone, Copy, Debug)]
+pub struct View {
+    pub kind: i32,
+    pub cb: u32,
+    pub label: Option<&'static [u8]>,
+    pub choices: Choices,
+    pub var: u32,
+    pub min: f32,
+    pub max: f32,
+    pub step: f32,
+}
+
+/// The sound test's table (`un_803F9FA4`).
+pub const SOUND_TEST_TABLE: u32 = 0x803F_9FA4;
+
 /// The table at `addr`.
 pub fn table(addr: u32) -> &'static Table {
     TABLES
@@ -334,15 +359,76 @@ impl Running<'_> {
         &mut pool.slots_mut()[m as usize]
     }
 
+    /// A menu's debug text screen.
+    pub(super) fn menu_screen(&mut self, m: u32) -> &mut super::devtext::DevText {
+        self.menu_text(m)
+    }
+
     fn menu_text(&mut self, m: u32) -> &mut super::devtext::DevText {
         let t = self.menu(m).text.expect("a menu's screen");
         &mut self.game.hud.devtext.pool[usize::from(t)]
     }
 
+    /// Entry `i` of the table at `table_addr`, as the menus read it.
+    pub fn entry_view(&self, table_addr: u32, i: usize) -> View {
+        let e = &table(table_addr).entries[i];
+        let mut v = View {
+            kind: e.kind,
+            cb: e.cb,
+            label: e.label,
+            choices: Choices::Static(e.choices),
+            var: e.var,
+            min: e.min,
+            max: e.max,
+            step: e.step,
+        };
+        if table_addr == SOUND_TEST_TABLE
+            && let Some(p) = self.game.debug_mode.sound
+        {
+            let list =
+                |at: u32| Choices::Archive(self.data.ptr(p.load.at(at)).expect("a name list"));
+            match i {
+                1 => {
+                    v.max = p.max1;
+                    v.choices = list(4);
+                }
+                6 => v.choices = list(8),
+                7 => {
+                    v.min = p.min7;
+                    v.max = p.max7;
+                    v.choices = list(0xC);
+                }
+                8 => v.choices = list(0x1C),
+                _ => {}
+            }
+        }
+        v
+    }
+
+    /// Name `i` of an entry's names.
+    fn choice_name(&self, c: Choices, i: i32) -> Vec<u8> {
+        match c {
+            Choices::Static(names) => names[i as usize].to_vec(),
+            Choices::Archive(list) => {
+                let at = self
+                    .data
+                    .ptr(list.at(4 * i as u32))
+                    .expect("a name in the list");
+                let d = self.data.get(at.archive).data();
+                let start = at.offset as usize;
+                let len = d[start..]
+                    .iter()
+                    .position(|&b| b == 0)
+                    .unwrap_or(d.len() - start);
+                d[start..start + len].to_vec()
+            }
+        }
+    }
+
     /// A menu's entry under its cursor.
-    fn menu_entry(&self, m: u32) -> &'static Entry {
+    fn menu_entry(&self, m: u32) -> View {
         let d = self.menu(m);
-        &table(d.table).entries[usize::from(d.cursor)]
+        self.entry_view(d.table, usize::from(d.cursor))
     }
 
     /// `lbAudioAx_80024030(2)`, the menus' move sound (`sfxMove`).
@@ -381,7 +467,10 @@ impl Running<'_> {
             let d = self.menu(m);
             (d.flags, table(d.table), d.cursor)
         };
-        let column = t.entries[..t.entries.len() - 1]
+        let rows: Vec<View> = (0..t.entries.len() - 1)
+            .map(|i| self.entry_view(t.addr, i))
+            .collect();
+        let column = rows
             .iter()
             .filter(|e| e.kind != 0 && e.kind != 1)
             .map(|e| super::devtext::str_len(e.label) + 1)
@@ -404,7 +493,7 @@ impl Running<'_> {
         text.set_bg_color(colors[3]);
         let h = i32::from(self.menu_text(m).h);
         for row in 0..h {
-            let e = &t.entries[row as usize];
+            let e = rows[row as usize];
             let color = if e.kind == KIND_TITLE {
                 2
             } else if i32::from(cursor) == row {
@@ -415,7 +504,7 @@ impl Running<'_> {
             let value = match e.kind {
                 KIND_CHOICE => {
                     let i = self.game.menu_var(e.var, 4) as i32;
-                    Some(e.choices[i as usize].to_vec())
+                    Some(self.choice_name(e.choices, i))
                 }
                 KIND_INT => Some(super::devtext::num_to_str(
                     self.game.menu_var(e.var, 4) as i32
@@ -719,9 +808,11 @@ impl Running<'_> {
             d.next = None;
             d.gobj = Some(gobj);
         }
-        let rows = &t.entries[..t.entries.len() - 1];
+        let rows: Vec<View> = (0..t.entries.len() - 1)
+            .map(|i| self.entry_view(table_addr, i))
+            .collect();
         let count = rows.len() as i32;
-        let width = menu_width(rows);
+        let width = self.menu_width(&rows);
         self.game.hud.devtext.menu_current = Some(self.menu_ref(m));
         let buf = crate::hsd::heap::with(|h| h.mem_alloc((width * count * 2) as u32)).unwrap_or(0);
         self.menu_mut(m).buf = buf;
@@ -752,6 +843,39 @@ impl Running<'_> {
         for i in 0..rows.len() {
             self.menu_entry_call(table_addr, i, CB_INIT);
         }
+    }
+
+    /// `un_80302EA4`: a menu's width: its labels and values side by side, or the longest
+    /// title or plain entry's label, whichever is wider, and one more.
+    #[doc(alias = "un_80302EA4")]
+    fn menu_width(&self, rows: &[View]) -> i32 {
+        let (mut x, mut y, mut z) = (1, 1, 1);
+        for e in rows {
+            let len = super::devtext::str_len(e.label) + 1;
+            if (e.kind as u32) <= 1 {
+                z = z.max(len);
+            } else {
+                x = x.max(len);
+            }
+            let min = match e.kind {
+                KIND_INT | KIND_FLOAT => 3,
+                KIND_DECIMAL => 10,
+                KIND_BYTE => 2,
+                KIND_HALF => 4,
+                KIND_WORD => 8,
+                _ => 1,
+            };
+            y = y.max(min);
+            if e.kind == KIND_CHOICE {
+                for i in 0..fp::fctiwz(reg(e.max)) {
+                    y = y.max(super::devtext::str_len(Some(
+                        &self.choice_name(e.choices, i),
+                    )));
+                }
+            }
+        }
+        x += y;
+        if x > z { x + 1 } else { z + 1 }
     }
 
     /// `un_80304168`: the first menu, `table` at (`x`, `y`), on a GObj of the debug text's
@@ -905,7 +1029,12 @@ impl Running<'_> {
     pub fn debug_menu_on_enter(&mut self) {
         self.debug_menu_camera();
         self.debug_menu_lights();
-        let (table_addr, cb) = self.game.debug_mode.menu_enter;
+        // The mode state's enter data: the debug mode's, or the sound test debug mode's.
+        let (table_addr, cb) = if self.debug_mode_scene() {
+            self.game.debug_mode.menu_enter
+        } else {
+            self.game.debug_mode.sound_enter
+        };
         self.menu_open(table_addr, 10, 10);
         let cur = self
             .game
@@ -929,7 +1058,10 @@ impl Running<'_> {
             0x8030_0248 => self.debug_publicity(arg),
             other => match self.debug_item(other, arg) {
                 Some(r) => r,
-                None => super::super::code::unported("debug menu callback", other),
+                None => match self.sound_test_item(other, arg) {
+                    Some(r) => r,
+                    None => super::super::code::unported("debug menu callback", other),
+                },
             },
         }
     }
@@ -989,39 +1121,9 @@ impl Running<'_> {
     }
 }
 
-/// `un_80302EA4`: a menu's width: its labels and values side by side, or the longest title
-/// or plain entry's label, whichever is wider, and one more.
-#[doc(alias = "un_80302EA4")]
-fn menu_width(rows: &[Entry]) -> i32 {
-    let (mut x, mut y, mut z) = (1, 1, 1);
-    for e in rows {
-        let len = super::devtext::str_len(e.label) + 1;
-        if (e.kind as u32) <= 1 {
-            z = z.max(len);
-        } else {
-            x = x.max(len);
-        }
-        let min = match e.kind {
-            KIND_INT | KIND_FLOAT => 3,
-            KIND_DECIMAL => 10,
-            KIND_BYTE => 2,
-            KIND_HALF => 4,
-            KIND_WORD => 8,
-            _ => 1,
-        };
-        y = y.max(min);
-        if e.kind == KIND_CHOICE {
-            for i in 0..fp::fctiwz(reg(e.max)) {
-                y = y.max(super::devtext::str_len(Some(e.choices[i as usize])));
-            }
-        }
-    }
-    x += y;
-    if x > z { x + 1 } else { z + 1 }
-}
-
-/// The debug mode's statics (`gmdebugmode.c`).
-#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+/// The debug mode's statics (`gmdebugmode.c`), the sound test debug mode's (`gmmenumode.c`)
+/// and the sound test's (`soundtest.c`).
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct DebugMode {
     /// `menu_enter_data`: the debug menu scene's table and callback.
     pub menu_enter: (u32, u32),
@@ -1032,6 +1134,42 @@ pub struct DebugMode {
     pub memcard_exit: (u32, u8),
     /// `approach_data`: the challenger approach's character and slot.
     pub approach: [u8; 2],
+    /// The sound test debug mode's enter data (`debug_enter_data`, `gmmenumode.c`): its
+    /// table and callback.
+    pub sound_enter: (u32, u32),
+    /// The sound test's changes to its table (`un_802FF7DC`, `un_802FF9DC`), once made.
+    pub sound: Option<SoundTestPatch>,
+    /// `un_804D585C`: the song the sound test plays, -1 for none; `un_804D6DC0`: whether
+    /// it's paused.
+    pub song_playing: i32,
+    pub song_paused: i32,
+}
+
+impl Default for DebugMode {
+    fn default() -> Self {
+        DebugMode {
+            menu_enter: (0, 0),
+            memcard_enter: (0, 0, 0),
+            memcard_exit: (0, 0),
+            approach: [0; 2],
+            sound_enter: (0, 0),
+            sound: None,
+            song_playing: -1,
+            song_paused: 0,
+        }
+    }
+}
+
+/// What the sound test wrote into its table: its load data (`smSoundTestLoadData` in
+/// `SmSt.dat`, `un_804D6DA8`), whose name lists entries 1, 6, 7 and 8 take, the sound mode
+/// entry's maximum (the modes' count), and the sound name entry's bounds (the group's first
+/// sound and the next group's).
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
+pub struct SoundTestPatch {
+    pub load: melee_data::archive::DataRef,
+    pub max1: f32,
+    pub min7: f32,
+    pub max7: f32,
 }
 
 impl Running<'_> {
@@ -1122,7 +1260,5 @@ mod tests {
         assert_eq!(format_value(KIND_HALF, 0x1), b"0001");
         assert_eq!(format_value(KIND_FLOAT, 1.0f32.to_bits()), b"1.00");
         assert_eq!(format_value(KIND_DECIMAL, (-3i32) as u32), b"-3");
-        let t = table(0x803F_A4E0);
-        assert_eq!(menu_width(&t.entries[..t.entries.len() - 1]), 33);
     }
 }
