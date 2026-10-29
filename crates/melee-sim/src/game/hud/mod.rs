@@ -9,6 +9,7 @@ pub mod all;
 pub mod announce;
 pub mod debug_items;
 pub mod debug_menu;
+pub mod debug_sound;
 pub mod debug_tables;
 pub mod devtext;
 pub mod magnify;

@@ -81,6 +81,20 @@ impl crate::audio::Audio {
         self.lb.fx
     }
 
+    /// `lbAudioAx_800245D4`: the music's volume (`lbl_804D387C`), 0 to 127 (the debug sound
+    /// test's master volume).
+    #[doc(alias = "lbAudioAx_800245D4")]
+    pub fn lb_set_music_volume(&mut self, v: i32) {
+        self.lb.music = v.clamp(0, 0x7F);
+    }
+
+    /// `lbAudioAx_80024634`: the music channels' aux B send (`lbl_804D38D8`), 0 to 255 (the
+    /// debug sound test's DSP level).
+    #[doc(alias = "lbAudioAx_80024634")]
+    pub fn lb_set_send(&mut self, v: i32) {
+        self.lb.send = v.clamp(0, 0xFF);
+    }
+
     /// `lbAudioAx_80024614`: the announcer's volume (`lbl_804D3884`), 0 to 127.
     #[doc(alias = "lbAudioAx_80024614")]
     pub fn lb_set_voice_volume(&mut self, v: i32) {

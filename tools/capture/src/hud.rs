@@ -587,7 +587,49 @@ impl Comparer<'_> {
                 mem.w(a),
             );
         }
+        // The sound test's table as its mode wrote it (`un_802FF7DC`, `un_802FF9DC`): the
+        // bounds always, the name lists while their archive is loaded.
+        {
+            use melee_sim::game::hud::debug_menu::{SOUND_TEST_TABLE, table};
+            let t = table(SOUND_TEST_TABLE);
+            let p = game.debug_mode.sound;
+            for (i, list_at) in [(1usize, 4u32), (6, 8), (7, 0xC), (8, 0x1C)] {
+                let e = &t.entries[i];
+                let (min, max) = match (i, p) {
+                    (1, Some(p)) => (e.min, p.max1),
+                    (7, Some(p)) => (p.min7, p.max7),
+                    _ => (e.min, e.max),
+                };
+                let at = SOUND_TEST_TABLE + 0x20 * i as u32;
+                self.check(
+                    "un_803F9FA4",
+                    &format!("entry {i}'s bounds"),
+                    (min.to_bits(), max.to_bits()),
+                    (mem.w(at + 0x14), mem.w(at + 0x18)),
+                );
+                if let (Some(p), Some(archives)) = (p, self.archives)
+                    && self.data.loaded.iter().any(|l| l.id == p.load.archive)
+                {
+                    let list = archives.ptr(p.load.at(list_at));
+                    self.compare_data(
+                        &format!("un_803F9FA4 entry {i}'s names"),
+                        list,
+                        mem.w(at + 0xC),
+                    );
+                }
+            }
+        }
         let dm = &game.debug_mode;
+        self.check(
+            "gmmenumode debug_enter_data, soundtest's song",
+            "table, callback, playing, paused",
+            (dm.sound_enter, dm.song_playing, dm.song_paused),
+            (
+                (mem.w(0x804D_68B0), mem.w(0x804D_68B4)),
+                mem.w(0x804D_585C) as i32,
+                mem.w(0x804D_6DC0) as i32,
+            ),
+        );
         self.check(
             "gmdebugmode",
             "menu_enter_data, memcard_enter_data, memcard_exit_data, approach_data",

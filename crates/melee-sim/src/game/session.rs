@@ -263,6 +263,8 @@ pub const FILES: &[&str] = &[
     "SdPrize.usd",
     "IfPrize.dat",
     "SdPrize.dat",
+    // The sound test debug mode's lists.
+    "SmSt.dat",
     // The challenger approach's screen, in either language.
     "NtAppro.usd",
     "NtAppro.dat",
