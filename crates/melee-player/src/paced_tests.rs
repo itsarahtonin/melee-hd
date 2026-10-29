@@ -60,15 +60,15 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
             assert!(!f.ended, "the replay ended at tick {tick}, skips {skips:?}");
             let due = Instant::now();
             let draws = f.draws.clone();
-            let game = &session.m.game;
+            let game = session.game();
             let old = [
                 interpolate.ran(Mode::Interpolate, game, f.clone(), due),
                 extrapolate.ran(Mode::Extrapolate, game, f, due),
             ];
             for f in old.into_iter().flatten() {
-                session.m.recycle(f);
+                session.recycle(f);
             }
-            let m = &session.m;
+            let m = (session.game(), session.data());
             let predicted = extrapolate.predict(|p| session.predict(p, none));
             if draws.is_empty() {
                 if last.is_some() {
@@ -90,8 +90,8 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                     );
                     // The bug the hold fixes: the last draws on this tick's state aren't the image
                     // they drew.
-                    let held = fresh(&dol).frame(game, &m.data, drawn);
-                    let stale = fresh(&dol).frame(&m.game, &m.data, drawn);
+                    let held = fresh(&dol).frame(game, m.1, drawn);
+                    let stale = fresh(&dol).frame(m.0, m.1, drawn);
                     let joints: std::collections::BTreeSet<u32> = drawn
                         .iter()
                         .filter_map(|d| match d {
@@ -99,7 +99,7 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                             _ => None,
                         })
                         .collect();
-                    let (was, now) = (&game.objs.jobjs.pool, &m.game.objs.jobjs.pool);
+                    let (was, now) = (&game.objs.jobjs.pool, &m.0.objs.jobjs.pool);
                     let moved = joints.iter().filter(|&&j| was[j].mtx != now[j].mtx).count();
                     let dirty = joints.iter().filter(|&&j| now[j].mtx_is_dirty()).count();
                     let differ = held.iter().zip(&stale).filter(|(a, b)| a != b).count()
@@ -116,16 +116,16 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                     after_skip = true;
                 }
             } else {
-                let own = off.frame(&m.game, &m.data, &draws);
+                let own = off.frame(m.0, m.1, &draws);
                 let (d, blend) = interpolate.frame(Mode::Interpolate, 1.0).expect("a frame");
                 assert!(d == draws.as_slice(), "tick {tick}: Interpolate's draws");
                 assert!(
-                    at_1.frame_blended(&m.game, &m.data, d, Some(blend)) == own,
+                    at_1.frame_blended(m.0, m.1, d, Some(blend)) == own,
                     "tick {tick}: Interpolate's frame at t = 1 isn't Off's"
                 );
                 let (d, blend) = extrapolate.frame(Mode::Extrapolate, 0.0).expect("a frame");
                 assert!(
-                    at_0.frame_blended(&m.game, &m.data, d, Some(blend)) == own,
+                    at_0.frame_blended(m.0, m.1, d, Some(blend)) == own,
                     "tick {tick}: Extrapolate's frame at t = 0 isn't Off's"
                 );
                 if let Some(Err(why)) = &predicted {
@@ -137,8 +137,8 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                     unpredicted = Some(tick);
                     let (d, blend) = extrapolate.frame(Mode::Extrapolate, 0.5).expect("a frame");
                     assert!(
-                        fresh(&dol).frame_blended(&m.game, &m.data, d, Some(blend))
-                            == fresh(&dol).frame(&m.game, &m.data, &draws),
+                        fresh(&dol).frame_blended(m.0, m.1, d, Some(blend))
+                            == fresh(&dol).frame(m.0, m.1, &draws),
                         "tick {tick}: Extrapolate's unpredicted frame isn't the tick's own"
                     );
                 }
@@ -151,18 +151,18 @@ fn paced_frames_hold_through_a_tick_that_draws_nothing() {
                         let (d, blend) = interpolate.frame(Mode::Interpolate, t).expect("a frame");
                         let want = Blend { from: &a, t };
                         assert!(
-                            fresh(&dol).frame_blended(&m.game, &m.data, d, Some(blend))
-                                == fresh(&dol).frame_blended(&m.game, &m.data, &draws, Some(want)),
+                            fresh(&dol).frame_blended(m.0, m.1, d, Some(blend))
+                                == fresh(&dol).frame_blended(m.0, m.1, &draws, Some(want)),
                             "tick {tick}: Interpolate at t = {t} doesn't blend from the last tick that drew"
                         );
                     }
                 }
                 match &mut last {
                     Some((game, drawn)) => {
-                        game.clone_from(&m.game);
+                        game.clone_from(m.0);
                         drawn.clone_from(&draws);
                     }
-                    None => last = Some((m.game.clone(), draws)),
+                    None => last = Some((m.0.clone(), draws)),
                 }
             }
             tick += 1;

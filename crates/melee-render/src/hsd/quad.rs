@@ -12,12 +12,19 @@ impl Ctx<'_> {
     /// `hsd_80391A04(1, 1, 1)`: positions in the camera's view, a color per vertex, lines and
     /// points one wide, no culling.
     pub fn debug_draw_setup(&mut self) {
+        self.debug_draw_setup_width(1);
+    }
+
+    /// `hsd_80391A04`'s setup with lines `width` wide and points twice that.
+    pub fn debug_draw_setup_width(&mut self, width: u8) {
         self.clear_vtx_desc();
         self.gx.set_current_mtx(0);
         let view = self.hsd.view_mtx();
         self.gx.load_pos_mtx_imm(&view.m, 0);
-        self.hsd.state.set_line_width(self.gx, 1, 5);
-        self.hsd.state.set_point_size(self.gx, 2, 5);
+        self.hsd.state.set_line_width(self.gx, width, 5);
+        self.hsd
+            .state
+            .set_point_size(self.gx, width.wrapping_mul(2), 5);
         let objs = &self.game.objs;
         let mut lights = ChannelLights {
             state: &mut self.hsd.lights,

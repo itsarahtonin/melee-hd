@@ -12,10 +12,11 @@
 use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
+use melee_data::archive::Archives;
 use melee_render::blend::Blend;
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
-use melee_sim::game::vs_match::Match;
+use melee_sim::game::state::Game;
 use melee_sim::hsd::display::Draw;
 
 use crate::{pipelines, present};
@@ -115,13 +116,14 @@ pub struct About<'a> {
 }
 
 /// Saves a capture of the frame just drawn into `dir`: `texture` is it as shown, `draws` and
-/// `blend` what drew it from `m`.
+/// `blend` what drew it from `game`.
 #[allow(clippy::too_many_arguments)]
 pub fn save(
     dir: &Path,
     gpu: &present::Gpu,
     texture: &wgpu::Texture,
-    m: &Match,
+    game: &Game,
+    data: &Archives,
     dol: &[u8],
     draws: &[Draw],
     blend: Option<Blend<'_>>,
@@ -143,8 +145,8 @@ pub fn save(
     let mut fresh = Gpu::new(r);
     let mut regs = String::new();
     for (name, b) in [("fresh.png", blend), ("fresh-unblended.png", None)] {
-        let fifo = frames.frame_blended(&m.game, &m.data, draws, b);
-        let frame = fresh.run(&frames.space, &m.data, &fifo, None).pop();
+        let fifo = frames.frame_blended(game, data, draws, b);
+        let frame = fresh.run(&frames.space, data, &fifo, None).pop();
         match frame {
             Some(f) => save(name, &f)?,
             None => return Err(format!("{name}: the stream copied no frame")),
@@ -168,7 +170,7 @@ fresh:
     r.xfb_readback = true;
     let mut again = Gpu::new(r);
     live.before.set(&mut again.state);
-    match again.run(live.space, &m.data, live.fifo, None).pop() {
+    match again.run(live.space, data, live.fifo, None).pop() {
         Some(f) => save("live-stream.png", &f)?,
         None => return Err("live-stream.png: the stream copied no frame".into()),
     }

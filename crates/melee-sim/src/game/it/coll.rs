@@ -235,6 +235,16 @@ pub fn share_group_victims(game: &mut Game, gobj: GObjId, idx: usize) {
                 if let Some(i) = src {
                     let h = other.x5D4_hitboxes[i].hit.clone();
                     hitcapsule::copy_victims(&h, &mut item_mut(game, gobj).x5D4_hitboxes[idx].hit);
+                    // What the source's block held there comes along (the GPU's pixels).
+                    let hit = |k: usize| 0x5D4 + 0x13C * k as u32;
+                    let (from, to) = (super::item_of(game, g), super::item_of(game, gobj));
+                    crate::game::leftovers::carry_victims(
+                        game,
+                        crate::game::leftovers::RenderOf::Item(from),
+                        hit(i),
+                        crate::game::leftovers::RenderOf::Item(to),
+                        hit(idx),
+                    );
                     return;
                 }
             }

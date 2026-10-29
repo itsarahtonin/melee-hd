@@ -60,7 +60,31 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         | UserData::SoundTest(a) => known(a),
         // `&ifStock_804A157C[player]` (0x54 bytes each), a static.
         UserData::StockIcons(p) => Some(0x804A_157C + 0x54 * u32::from(p)),
-        _ => None,
+        // `&un_804DDBA8[slot]`, a byte each (`un_802FE260`).
+        UserData::ArrowSlot(slot) => Some(0x804D_DBA8 + u32::from(slot)),
+        // `NameTag_Create`'s heap byte.
+        UserData::NameTagSlot(slot) => known(game.hud.nametags.user_data_addrs[usize::from(slot)]),
+        UserData::Raw(p) => Some(p.0),
+        UserData::Toy(a) => known(a),
+        // The select screen's blocks, while their GObjs have them.
+        UserData::CssCursor(i) => game.charsel.cursors[usize::from(i)]
+            .as_ref()
+            .and_then(|c| known(c.addr)),
+        UserData::CssToken(i) => game.charsel.tokens[usize::from(i)]
+            .as_ref()
+            .and_then(|c| known(c.addr)),
+        UserData::CssTag(i) => game.charsel.tags[usize::from(i)]
+            .as_ref()
+            .and_then(|c| known(c.addr)),
+        UserData::StadiumScreen(which) => game.gr.stadium.screens[usize::from(which)]
+            .as_ref()
+            .and_then(|s| known(s.addr)),
+        UserData::IzumiReflection => game
+            .gr
+            .izumi
+            .reflection
+            .as_ref()
+            .and_then(|r| known(r.addr)),
     }
 }
 
@@ -152,24 +176,29 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     bg_flash(game, img);
 }
 
+/// Which of the scene's blocks that outlive their owners' state are this scene's, so
+/// [`scene_game_objects`] lays them out: the stage's collision joints and arrays, the
+/// dynamics' links and the enemy spawner's slots (a past stage's stay in the globals).
+pub struct Live {
+    pub geometry: bool,
+    pub dynamics: bool,
+    pub zako: bool,
+}
+
 /// The game's objects the scene's heap holds as it ends, laid out before the heap's claims
 /// go (`Heap::end_scene_image`), so a layout over what a block held reads under its owner's
-/// claim: the stage's collision joints (when this scene loaded them, `geometry_live`), the
+/// claim: the stage's collision joints (when this scene loaded them, [`Live`]), the
 /// scene's fighters with their parts tables and DObj lists, its items, its stage parts
 /// (`Ground`), its deferred spawns and its animation buffers.
-pub fn scene_game_objects(
-    game: &Game,
-    data: &Archives,
-    img: &mut Image,
-    geometry_live: bool,
-    dynamics_live: bool,
-) {
-    if geometry_live {
+pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: Live) {
+    if live.geometry {
         coll_joints(game, data, img);
         coll_arrays(game, data, img);
+    }
+    if live.zako {
         zako_slots(game, data, img);
     }
-    if dynamics_live {
+    if live.dynamics {
         dynamics_links(game, data, img);
     }
     // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
@@ -406,6 +435,7 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
     }
     let mut l = Lay::new(at, 0x84);
     bg_flash_fields(img, &mut l, u);
+    l.keep_render_target(&game.bgflash.render_leftovers, img.render_fill);
     l.put(img);
 }
 
@@ -433,6 +463,9 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
     };
     for b in blocks {
         b.put(img);
+    }
+    if let Some(runs) = game.gr.render_leftovers.get(&g.0) {
+        l.keep_render_target(runs, img.render_fill);
     }
     l.put(img);
 }
@@ -659,6 +692,9 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
         let b = if o.x598.in_main { o.x59C } else { o.x5A0 };
         l.put_word(at + 0x598, in_buf(b, o.x598.tree));
     }
+    if let Some(runs) = game.ft.render_leftovers.get(&f.0) {
+        l.keep_render_target(runs, img.render_fill);
+    }
     l.put(img);
 }
 
@@ -675,11 +711,21 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     let o = &game.items[i.0];
     let mut l = Lay::leftover(img, data, at, super::structs::Item::SIZE);
     let cx = Addrs { game, img };
+    // The state's animation description (`xD0`) is written only by a state with an
+    // animation (`Item_80268E5C`, always a place in the item's file): an item whose states
+    // have none keeps the word its block held, which a place in no file reads as none.
+    let state_desc = l.kept(at + 0xD0, 4);
     o.lay(&mut l, at, &cx);
+    if o.xD0_itemStateDesc.is_none() {
+        l.restore(state_desc);
+    }
     let n = o.x374_dynamicBonesNum.max(0) as usize;
     o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
     let n = usize::from(o.xAC8_hurtboxNum);
     o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
+    if let Some(runs) = game.it.render_leftovers.get(&i.0) {
+        l.keep_render_target(runs, img.render_fill);
+    }
     l.put(img);
 }
 

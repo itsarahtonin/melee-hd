@@ -82,18 +82,18 @@ fn recording_changes_nothing() {
             if let Some(d) = got.state_diff(&want) {
                 panic!("tick {tick}'s output differs with the recorder on at frame{d}");
             }
-            if let Some(d) = b.m.game.state_diff(&a.m.game) {
+            if let Some(d) = b.game().state_diff(a.game()) {
                 panic!("the state after tick {tick} differs with the recorder on at game{d}");
             }
             let ended = got.ended;
-            a.m.recycle(want);
-            b.m.recycle(got);
+            a.recycle(want);
+            b.recycle(got);
             if ended {
                 break;
             }
         }
-        assert!(a.m.game.recorder.is_none());
-        let r = b.m.game.recorder.as_ref().expect("the recorder");
+        assert!(a.game().recorder.is_none());
+        let r = b.game().recorder.as_ref().expect("the recorder");
         assert!(
             r.last_frame().is_some_and(|f| f > 2000),
             "{:?}",
@@ -108,13 +108,13 @@ fn play(session: &mut Session, limit: u32, pads: impl Fn(u32) -> [PadStatus; 4])
     for tick in 0..limit {
         let f = session.tick(pads(tick));
         let ended = f.ended;
-        session.m.recycle(f);
-        let r = session.m.game.recorder.as_ref().expect("the recorder");
+        session.recycle(f);
+        let r = session.game().recorder.as_ref().expect("the recorder");
         if ended || r.ended() {
             break;
         }
     }
-    let r = session.m.game.recorder.as_ref().expect("the recorder");
+    let r = session.game().recorder.as_ref().expect("the recorder");
     assert!(r.ended(), "the match didn't end in {limit} ticks");
     melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
 }
@@ -256,9 +256,9 @@ fn a_recording_carries_the_item_settings() {
             let mut session = start(&disc, &s, None);
             for tick in 0..30 {
                 let f = session.tick(pads(tick, false));
-                session.m.recycle(f);
+                session.recycle(f);
             }
-            let r = session.m.game.recorder.as_ref().expect("the recorder");
+            let r = session.game().recorder.as_ref().expect("the recorder");
             let file = melee_slippi::write::recording(r, std::time::UNIX_EPOCH);
             let replay = Replay::parse(&file).expect("the recording parses");
             let info = melee_slippi::start(&replay).info;

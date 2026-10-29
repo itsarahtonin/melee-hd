@@ -1,9 +1,9 @@
-//! Every stage the roster lists (offered by the launcher or not) starts from the player's settings
-//! (`Settings::vs`, as the launcher starts a match: VS mode's layout from its menus, items off)
+//! Every stage the roster lists (offered by the command line or not) starts from the player's settings
+//! (`Settings::vs`, as the command line starts a match: VS mode's layout from its menus, items off)
 //! and plays a minute with scripted controllers (or until the match ends) without reaching code
 //! no port covers. A stage's port adds its roster line once its oracle match diffs whole; this
 //! checks the player's side of that line; `every_offered_stage_plays_with_items` plays the
-//! launcher's items on each offered stage. Skips without `SSBM_DISC`.
+//! items on each offered stage. Skips without `SSBM_DISC`.
 
 use melee_data::disc::Disc;
 use melee_sim::game::roster;
@@ -58,7 +58,7 @@ fn every_roster_stage_plays() {
             while ticks < 3600 {
                 let f = session.tick(pads(ticks));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 ticks += 1;
                 if ended {
                     break;
@@ -74,11 +74,10 @@ fn every_roster_stage_plays() {
     });
 }
 
-/// Every offered stage plays a short items-on match from the launcher's setting: Fox against
-/// Marth with the whole item switch on at very high, which starts with the kinds the launcher
-/// offers for them there (`items::Switch::for_match`), and half a minute of scripted
-/// controllers that pick items up (A near one), throw and swing them, without reaching code no
-/// port covers. A stage with no kind offered is skipped, saying so. Skips without `SSBM_DISC`.
+/// Every offered stage plays a short items-on match: Fox against Marth with the whole item
+/// switch on at very high, and half a minute of scripted controllers that pick items up (A near
+/// one), throw and swing them, without reaching code no port covers. Skips without
+/// `SSBM_DISC`.
 #[test]
 fn every_offered_stage_plays_with_items() {
     crate::on_game_stack(|| {
@@ -97,11 +96,8 @@ fn every_offered_stage_plays_with_items() {
             team: port,
         };
         let players = [player("fox", 0), player("marth", 1)];
-        let characters: Vec<u8> = players.iter().map(|p| p.character).collect();
-        let switch = crate::items::Switch {
-            freq: 4,
-            ..Default::default()
-        };
+        // Every kind on: the items audit names no gap (the menus audit holds the item switch to it).
+        let prefs = melee_sim::game::gm::vs_mode::GamePrefs::items(4, |_| true);
         // Walking about, jabbing (which picks up an item underfoot), throwing with Z and shielding.
         let pads = |tick: u32| {
             let mut p = [PadStatus::default(); 4];
@@ -122,38 +118,29 @@ fn every_offered_stage_plays_with_items() {
         };
         let mut played = 0;
         for s in roster::offered_stages() {
-            let items = switch.for_match(&characters, s.kind);
-            if items.kinds.is_empty() {
-                eprintln!("{}: no item offered, skipped", s.name);
-                continue;
-            }
-            let mut settings = Settings::vs_items(s.kind, &players, 4, 8, &items.prefs);
+            let mut settings = Settings::vs_items(s.kind, &players, 4, 8, &prefs);
             settings.seed = 0x5EED_0000 | u32::from(s.kind);
             let mut session = Session::begin(&disc, &settings, None, false)
                 .unwrap_or_else(|e| panic!("{}: {e}", s.name));
             for tick in 0..1800 {
                 let f = session.tick(pads(tick));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 if ended {
                     break;
                 }
             }
-            let spawned = session.m.game.it.spawned;
+            let spawned = session.game().it.spawned;
             assert!(spawned > 0, "{}: no item came out", s.name);
-            eprintln!(
-                "{}: {} kinds, {spawned} items came out",
-                s.name,
-                items.kinds.len()
-            );
+            eprintln!("{}: {spawned} items came out", s.name);
             played += 1;
         }
         eprintln!("{played} stages played with items");
     });
 }
 
-/// Every Special Melee mode the launcher offers plays a minute from its settings
-/// (`Settings::vs_special`, as the launcher starts it: Fox against Marth on Battlefield, four
+/// Every Special Melee mode the command line offers plays a minute from its settings
+/// (`Settings::vs_special`, as the command line starts it: Fox against Marth on Battlefield, four
 /// stocks, items off) with scripted controllers that run, jump, jab and shield, or until the
 /// match ends, without reaching code no port covers; in the mode's game mode, with Lightning
 /// Melee's shorter tick taken up. Skips without `SSBM_DISC`.
@@ -212,13 +199,13 @@ fn every_offered_special_mode_plays() {
             while ticks < 3600 {
                 let f = session.tick(pads(ticks));
                 let ended = f.ended;
-                session.m.recycle(f);
+                session.recycle(f);
                 ticks += 1;
                 if ended {
                     break;
                 }
             }
-            let g = &session.m.game;
+            let g = session.game();
             assert_eq!(g.game_mode, mode.game_mode(), "{}", mode.name());
             assert_eq!(
                 g.pacing.short_tick_nanos().is_some(),
@@ -284,7 +271,7 @@ fn live_slow_mo_keeps_its_sounds() {
         let mut shadow = SoundLog::default();
         let (mut would_stop, mut playing) = (0, 0);
         for tick in 0..1200 {
-            let frame = session.m.game.scene.unk_8 as i32;
+            let frame = session.game().scene.unk_8 as i32;
             let f = session.tick(pads(tick));
             for e in &f.events {
                 if let Event::SfxStart { handle, id, .. } = *e
@@ -294,15 +281,15 @@ fn live_slow_mo_keeps_its_sounds() {
                     shadow.started(frame, handle);
                 }
             }
-            session.m.recycle(f);
+            session.recycle(f);
             assert!(
-                session.m.game.playback.is_none(),
+                session.game().playback.is_none(),
                 "a live match has no playback"
             );
-            let after = session.m.game.scene.unk_8 as i32;
+            let after = session.game().scene.unk_8 as i32;
             for h in shadow.tick_end(after.wrapping_sub(1)) {
                 would_stop += 1;
-                if session.m.game.audio.sfx_check(h) {
+                if session.game().audio.sfx_check(h) {
                     playing += 1;
                 }
             }

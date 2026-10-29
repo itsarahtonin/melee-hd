@@ -662,6 +662,19 @@ impl Running<'_> {
             ip.xC88 = i32::from_be_bytes(rec.x10);
             ip.xC8C = rec.x2088;
         }
+        if !over {
+            // The record's flags keep what the fighter's block held below the read bits.
+            let i = it::item_of(self.game, g);
+            crate::game::leftovers::carry_render(
+                self.game,
+                crate::game::leftovers::RenderOf::Fighter(me),
+                0x2084,
+                crate::game::leftovers::RenderOf::Item(i),
+                0xC88,
+                4,
+            );
+        }
+        let ip = it::item_mut(self.game, g);
         ip.xC68 = if reg(fx) > reg(ip.pos.x) { -1.0 } else { 1.0 };
         if !over {
             ip.xC6C = dmg_mul;

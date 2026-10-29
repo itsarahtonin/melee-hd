@@ -5,6 +5,8 @@
 use std::sync::Mutex;
 
 use melee_audio::{Mixer, Output, OutputOptions, OutputStats};
+use melee_data::archive::Archives;
+use melee_sim::game::session::{Session, Setup};
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 
 /// How the output device is opened (`--audio-exclusive`).
@@ -24,10 +26,9 @@ pub struct Sound {
 
 impl Sound {
     /// Mixes the frames the tick ran and queues them; never waits.
-    pub fn tick(&mut self, m: &mut Match) {
+    pub fn mix(&mut self, audio: &mut melee_sim::audio::Audio, data: &Archives) {
         self.samples.clear();
-        self.mixer
-            .mix(&mut m.game.audio, &m.data, &mut self.samples);
+        self.mixer.mix(audio, data, &mut self.samples);
         if let Some(out) = &self.output {
             out.push(&self.samples);
         }
@@ -43,6 +44,37 @@ impl Sound {
     pub fn stats(&self) -> Option<OutputStats> {
         self.output.as_ref().map(Output::stats)
     }
+}
+
+/// The output device when `play`, else none.
+fn output(play: bool) -> Option<Output> {
+    if !play {
+        return None;
+    }
+    match Output::open_with(*OPTIONS.lock().unwrap()) {
+        Ok(o) => {
+            eprintln!("sound: {} Hz, {}", o.rate, o.describe);
+            Some(o)
+        }
+        Err(e) => {
+            eprintln!("no sound: {e}");
+            None
+        }
+    }
+}
+
+/// The console at power-on, its sound mixed from the boot's audio setup on and played on the
+/// default device when `play`: the boot is the caller's, the sound's first mix after it.
+pub fn power_on(setup: Setup, play: bool) -> Result<(Session, Option<Sound>), String> {
+    let mut s = Session::new(setup);
+    let mut mixer = Mixer::new();
+    mixer.start(&mut s.game.audio, None);
+    let sound = Sound {
+        mixer,
+        output: output(play),
+        samples: Vec::new(),
+    };
+    Ok((s, Some(sound)))
 }
 
 /// Starts the match, with its sound played on the default device when `play`.
@@ -62,23 +94,9 @@ pub fn start(
         m.game.audio.mix = None;
         return Ok((m, None));
     }
-    let output = if play {
-        match Output::open_with(*OPTIONS.lock().unwrap()) {
-            Ok(o) => {
-                eprintln!("sound: {} Hz, {}", o.rate, o.describe);
-                Some(o)
-            }
-            Err(e) => {
-                eprintln!("no sound: {e}");
-                None
-            }
-        }
-    } else {
-        None
-    };
     let sound = Sound {
         mixer,
-        output,
+        output: output(play),
         samples: Vec::new(),
     };
     Ok((m, Some(sound)))

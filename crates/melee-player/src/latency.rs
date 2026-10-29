@@ -15,8 +15,8 @@ use melee_audio::OutputStats;
 use melee_gpu::gpu_time::{FrameGpu, Stage};
 use melee_input::InputAges;
 
-use crate::launcher::Painter;
 use crate::present::Gpu;
+use crate::ui::Painter;
 
 /// When a frame's stages finished, from its tick's start.
 #[derive(Clone, Copy, Debug, Default)]

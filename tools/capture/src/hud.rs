@@ -401,9 +401,20 @@ impl Comparer<'_> {
         );
         h.scores.compare(&mem, SCORES, "hud scores", self);
         let archive = m.w(ARCHIVE);
-        let theirs = (archive != 0)
-            .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
-            .flatten();
+        // Past a match whose scene's heap held `IfAll` (a debug VS match's, in a saved language
+        // the preload cache didn't hold it in), the static keeps the freed `HSD_Archive`'s
+        // address, which nothing reads before the next match's HUD sets it again
+        // (docs/engine.md, Uninitialized values): ours keeps naming the archive.
+        let gone = h
+            .archive
+            .is_some_and(|a| !self.data.loaded.iter().any(|l| l.id == a));
+        let theirs = if gone && archive != 0 {
+            h.archive
+        } else {
+            (archive != 0)
+                .then(|| self.data.get(m.w(archive + 0x20)).map(|d| d.archive))
+                .flatten()
+        };
         self.check(
             "hud all",
             "hidden, archive, display count and flip",
@@ -497,6 +508,150 @@ impl Comparer<'_> {
             None => self.check("hud devtext cobj", "CObj", 0, cobj),
         }
         self.debug_menus();
+        self.debug_tools();
+    }
+
+    /// The match's develop tools' statics (`melee/db`): the ports' buttons, the name lists,
+    /// each tool's screen and state.
+    fn debug_tools(&mut self) {
+        use melee_sim::game::mirror::Cx;
+        let mem = self.mem;
+        let game = self.game;
+        let db = &game.db;
+        let pool = sym("devtext_pool");
+        let text_at = |t: Option<u8>| t.map_or(0, |t| pool + DEVTEXT_SIZE * u32::from(t));
+        let buttons: Vec<[u32; 5]> = db
+            .buttons
+            .iter()
+            .map(|b| [b.current, b.prev, b.pressed, b.released, b.repeat])
+            .collect();
+        let at = sym("db_ButtonStates");
+        let theirs: Vec<[u32; 5]> = (0..4)
+            .map(|i| core::array::from_fn(|k| mem.w(at + 0x14 * i + 4 * k as u32)))
+            .collect();
+        self.check("db_ButtonStates", "ports", buttons, theirs);
+        for (name, ours) in [
+            ("db_bonus_names", db.bonus_names),
+            ("db_motionstate_names", db.motionstate_names),
+            ("db_submotion_names", db.submotion_names),
+        ] {
+            let w = mem.w(sym(name));
+            self.compare_data(name, ours, w);
+        }
+        let b = |a: u32, mask: u8| mem.b(a) & mask != 0;
+        let anim = mem.w(sym("db_804D6B48"));
+        self.check(
+            "db screens",
+            "cpu, animation, item menu, sound, camera",
+            [
+                text_at(db.cpu_text),
+                text_at(db.anim_text),
+                text_at(db.item_text),
+                text_at(db.sound_text),
+                text_at(db.camera_text),
+            ],
+            [
+                mem.w(sym("db_CpuHandicapInfo")),
+                mem.w(sym("db_AnimationInfo")),
+                mem.w(sym("db_ItemAndPokemonMenuText")),
+                mem.w(sym("db_SoundInfoText")),
+                mem.w(sym("db_CameraInfoDisplay")),
+            ],
+        );
+        self.check(
+            "db flags",
+            "cpu shown, fighter bubbles, fighter visuals, animation shown, 5x speed, item bubbles",
+            (
+                db.cpu_shown,
+                db.fighter_bubbles,
+                db.fighter_visuals,
+                db.anim_shown,
+                db.speed_5x,
+                game.it.db_bubbles,
+            ),
+            (
+                b(sym("db_ShowCpuHandicapInfo"), 0x80),
+                (anim >> 29) as u8,
+                ((anim >> 23) & 0x3F) as u8,
+                anim & 0x0040_0000 != 0,
+                b(sym("db_5xSpeedStatus"), 0x80),
+                mem.w(sym("db_ShowItemCollisionBubbles")) as i32,
+            ),
+        );
+        self.check(
+            "db sound",
+            "toggles, step, peaks, lbaudio_ax debug_enabled",
+            (
+                db.sound_toggles,
+                db.sound_shown,
+                db.sound_peaks,
+                db.audio_debug,
+            ),
+            (
+                mem.w(sym("db_SoundToggles")) as i32,
+                mem.w(sym("db_ShowSoundInfo")) as i32,
+                [
+                    mem.w(sym("db_SoundRelated_6B68")) as i32,
+                    mem.w(sym("db_SoundRelated_6B6C")) as i32,
+                    mem.w(sym("db_SoundRelated_6B70")) as i32,
+                    mem.w(sym("db_SoundRelated_6B74")) as i32,
+                ],
+                mem.w(sym("debug_enabled")) != 0,
+            ),
+        );
+        self.compare_gobj("db_804D6B7C", db.sound_gobj, mem.w(sym("db_804D6B7C")));
+        self.check(
+            "db stage and camera",
+            "stage visuals, camera timer, camera shown, display step",
+            (
+                db.stage_visuals,
+                db.camera_timer,
+                db.camera_shown,
+                db.misc_effects,
+            ),
+            (
+                mem.w(sym("db")),
+                mem.b(sym("db_CameraInfoDisplayTimer")),
+                mem.b(sym("db_ShowCameraInfo")),
+                mem.w(sym("db_MiscVisualEffectsStatus")) as i32,
+            ),
+        );
+        let bonus = sym("db_804D6B98");
+        let limits = sym("db_804D6BA0");
+        self.check(
+            "db bonuses and limits",
+            "port, second colours, block, effect and particle limits",
+            (
+                db.bonus_port,
+                db.bonus_colors,
+                db.bonus_block,
+                db.alloc_limits,
+            ),
+            (
+                mem.b(bonus),
+                b(bonus + 1, 0x80),
+                mem.w(sym("db_804D6B9C")),
+                [b(limits, 0x80), b(limits, 0x40)],
+            ),
+        );
+        // The bonus screens' pointers, in their block while the scene that made it lives.
+        let block = db.bonus_block;
+        let live = block != 0
+            && game
+                .objs
+                .heap
+                .os
+                .allocated
+                .iter()
+                .any(|&(c, _)| c + melee_sim::hsd::heap::HEADER == block);
+        if live {
+            self.check(
+                "db_804D6B9C",
+                "screens",
+                [text_at(db.bonus_texts[0]), text_at(db.bonus_texts[1])],
+                [mem.w(block), mem.w(block + 0x5E0)],
+            );
+        }
     }
 
     /// The debug menus (`textlib_1.c`'s pool and statics) and their variables

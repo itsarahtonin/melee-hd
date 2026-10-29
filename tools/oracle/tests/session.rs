@@ -273,14 +273,17 @@ fn card_session(name: &str, args: &[&str]) -> Option<String> {
 }
 
 /// A card with no save: the failed load resets the save (the first trophy drawn), the probe
-/// asks to create one, and the prompt waits until A, which would create it.
+/// asks to create one, and A creates it (`lb_8001C8BC`); to the trace's end, the card after
+/// the run's (`nofile-run.card`, ssbm-rs's card as the session left it) block for block.
 #[test]
 fn no_save_asks_to_create_one() {
-    let Some(out) = card_session("nofile", &[]) else {
+    let after = ssbm_rs_local("lockstep/card-sessions/nofile-run.card");
+    let Some(out) = card_session("nofile", &["--card-after", &after]) else {
         return;
     };
+    assert!(out.contains("1173 ticks compared, no difference"), "{out}");
     assert!(
-        out.contains("513 ticks compared, no difference; stopped in tick 513: lb_8001C8BC (creating the save) isn't ported"),
+        out.contains("the card after the session: the original's"),
         "{out}"
     );
 }

@@ -377,7 +377,39 @@ impl Running<'_> {
                     .expect("the animation file just loaded")
                     .aram = at;
             }
+            self.image_anim_addresses(kind);
         }
+    }
+
+    /// `ftData_80085A14`'s writes into the character's data: each animation's ARAM address
+    /// (`x14`, the file's plus its offset) in the kind's animation table, which the heap's
+    /// image holds where the scene loaded the data into its heap (a debug VS match's).
+    fn image_anim_addresses(&mut self, kind: i32) {
+        if !crate::hsd::heap::image_on() {
+            return;
+        }
+        let Some(ft_data) = self.game.ft.data.data_list[kind as usize] else {
+            return;
+        };
+        let Some(aram) = self.game.ft.anim_files[kind as usize]
+            .as_ref()
+            .map(|f| f.aram)
+        else {
+            return;
+        };
+        let Some(table) = self.data.ptr(ft_data.at(0xC)) else {
+            return;
+        };
+        let data = self.data;
+        crate::hsd::heap::with(|h| {
+            for i in 0..kind_tables(kind).anim_count {
+                let e = table.at(0x18 * i);
+                if data.u32(e.at(8)) != 0 {
+                    h.image
+                        .file_word(e.at(0x14), aram.wrapping_add(data.u32(e.at(4))));
+                }
+            }
+        });
     }
 
     /// Whether the preload cache holds the animation file `name` (`lbDvd_8001819C`'s find).
@@ -407,7 +439,11 @@ impl Running<'_> {
             // block held.
             let at = bufs.addr(id);
             if at != 0 {
-                crate::hsd::heap::with(|h| h.image.unclaim(at, at + super::anim_buf::SIZE));
+                // The pool's size: 0xB000 for the results screen's (`ftDemo_ObjAllocInit`).
+                crate::hsd::heap::with(|h| {
+                    let size = h.allocs[crate::hsd::heap::Kind::FighterX59C as usize].size;
+                    h.image.unclaim(at, at + size);
+                });
             }
             AnimBufId(id)
         };
@@ -450,7 +486,9 @@ impl Running<'_> {
         // lives in the cache's heap, where the model doesn't follow it.
         if self.game.ft.data.files.from_cache {
             let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
-            if let Some((addr, file)) = self.take_cached_blocks(entrynum) {
+            // Without `lbDvd_8001819C`'s check: a file a match loads with `loadArchive`
+            // (`lbArchive_LoadSymbols`, `lbArchive_80016DBC`) never asks the cache.
+            if let Some((addr, file)) = self.take_cached_blocks_unchecked(entrynum) {
                 // Where its data is, for a pointer into it a block of the scene's heap keeps
                 // once freed (docs/engine.md, a session's heap leftovers).
                 if file != 0

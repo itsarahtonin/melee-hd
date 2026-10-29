@@ -390,6 +390,8 @@ pub struct Game {
     pub hud: super::hud::Hud,
     /// The debug mode's statics (`gmdebugmode.c`).
     pub debug_mode: super::hud::debug_menu::DebugMode,
+    /// The match's develop tools' statics (`melee/db`).
+    pub db: super::db::Db,
     /// Refraction's textures and users (`lbrefract.c`).
     pub refract: crate::lb::refract::Refract,
     /// The background flash (`lbbgflash.c`, `lb_0219.c`).

@@ -193,6 +193,16 @@ impl Gpu {
         }
     }
 
+    /// Has the EFB copies in texture formats `formats` also written to memory from the next
+    /// copy on (`Renderer::copies_to_memory`), still sampled from the GPU: the player's
+    /// Camera Mode snapshot, whose pixels the game takes from memory.
+    pub fn set_copies_to_memory(&mut self, formats: Vec<u32>) {
+        match &mut *self.renderer.borrow_mut() {
+            Backend::Here(r) => r.copies_to_memory = formats,
+            Backend::Threaded(t) => t.set_copies_to_memory(formats),
+        }
+    }
+
     /// Runs a frame's stream; returns the frames it copied to the XFB.
     pub fn run(
         &mut self,

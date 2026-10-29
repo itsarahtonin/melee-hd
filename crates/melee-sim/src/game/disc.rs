@@ -109,8 +109,24 @@ impl Running<'_> {
                     .any(|&(c, _)| c + crate::hsd::heap::HEADER == links)
             })
             .unwrap_or(false);
+        // The enemy spawner's slots are this scene's when its heap holds their block (the
+        // spawner's globals keep a past stage's).
+        let zako = game.gr.zako.addr;
+        let zako_live = zako != 0
+            && game.gr.zako.slots.is_some()
+            && crate::hsd::heap::with(|h| {
+                h.os.allocated
+                    .iter()
+                    .any(|&(c, _)| c + crate::hsd::heap::HEADER == zako)
+            })
+            .unwrap_or(false);
         crate::hsd::export::with_image(|img| {
-            super::export::scene_game_objects(game, data, img, geometry_live, dynamics_live)
+            let live = super::export::Live {
+                geometry: geometry_live,
+                dynamics: dynamics_live,
+                zako: zako_live,
+            };
+            super::export::scene_game_objects(game, data, img, live)
         });
         crate::hsd::heap::with(|h| h.end_scene_image());
         self.export_heap_image();
@@ -174,7 +190,7 @@ impl Running<'_> {
     #[doc(alias = "lbDvd_GetPreloadedArchive")]
     #[doc(alias = "lbDvd_800189EC")]
     pub fn take_preloaded(&mut self, entry_num: i32) -> bool {
-        self.take_preloaded_entry(entry_num).is_some()
+        self.take_preloaded_entry(entry_num, true).is_some()
     }
 
     /// [`Running::take_preloaded`], with where the file is: its `HSD_Archive`'s block (the
@@ -185,8 +201,20 @@ impl Running<'_> {
 
     /// [`Running::take_cached`], with the address of the file's bytes too (0 for none).
     pub fn take_cached_blocks(&mut self, entry_num: i32) -> Option<(u32, u32)> {
+        self.take_cached_blocks_with(entry_num, true)
+    }
+
+    /// [`Running::take_cached_blocks`] without `lbDvd_8001819C`'s check.
+    pub fn take_cached_blocks_unchecked(&mut self, entry_num: i32) -> Option<(u32, u32)> {
+        self.take_cached_blocks_with(entry_num, false)
+    }
+
+    /// [`Running::take_cached_blocks`], with `lbDvd_8001819C`'s check that a mode expecting
+    /// its files preloaded finds each, or without it (a load the original makes with
+    /// `loadArchive`, which never asks the cache).
+    fn take_cached_blocks_with(&mut self, entry_num: i32, check: bool) -> Option<(u32, u32)> {
         self.image_preload_reads();
-        let i = self.take_preloaded_entry(entry_num)?;
+        let i = self.take_preloaded_entry(entry_num, check)?;
         let d = self.dvd_mut();
         let e = d.cache.entries[i];
         let block = e.archive.or(e.raw_data).expect("a preloaded file's blocks");
@@ -241,7 +269,7 @@ impl Running<'_> {
         }
     }
 
-    fn take_preloaded_entry(&mut self, entry_num: i32) -> Option<usize> {
+    fn take_preloaded_entry(&mut self, entry_num: i32, check: bool) -> Option<usize> {
         let level = self.game.gm.db_level;
         let d = self.dvd_mut();
         let Some(i) =
@@ -253,7 +281,7 @@ impl Running<'_> {
             // preloaded finds each (its other caller, `lbDvd_GetPreloadedArchive` alone, is
             // only ever asked for a file the cache holds).
             assert!(
-                !(level != 0 && d.cache.preloaded),
+                !(check && level != 0 && d.cache.preloaded),
                 "the original's assertion failed: lbdvd.c:948 (entry {entry_num} is not PRELOADed)"
             );
             return None;

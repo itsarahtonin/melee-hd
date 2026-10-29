@@ -4,7 +4,7 @@
 //! it answers 0 for the menu's own callback to run after it.
 
 use super::debug_menu::{CB_BACK, CB_SELECT, CB_START};
-use crate::game::gm::machine::{GM_BOOT, GM_OPENING_MV, GM_PROGRESSIVE_SCAN, GM_TITLE};
+use crate::game::gm::machine::{GM_BOOT, GM_MENU, GM_OPENING_MV, GM_PROGRESSIVE_SCAN, GM_TITLE};
 use crate::game::state::Running;
 
 /// `GM_HANYU_CSS`, `GM_HANYU_SSS`, `GM_DEBUG_CUTSCENE`, `GM_CAMERA_VS`.
@@ -345,12 +345,76 @@ impl Running<'_> {
                 }
                 _ => arg,
             },
-            // The Otoguro, Taniguti, Nagasima, Kim and Sakoda tests' entries that act only on
-            // A: trophies, coins, records and the single-player modes, not ported yet.
-            0x8030_0BBC | 0x8030_0BF8 | 0x8030_0C3C | 0x8030_0C80 | 0x8030_0D78 | 0x8030_0E74
-            | 0x8030_0F3C | 0x8030_0F98 | 0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1280
-            | 0x8030_12D4 | 0x8030_1D7C | 0x8030_16D8 | 0x8030_1734 | 0x8030_178C | 0x8030_1800
-            | 0x8030_1840 | 0x8030_18BC | 0x8030_191C | 0x8030_1964 | 0x8030_1A64 | 0x8030_1AD4 => {
+            // The Otoguro test: trophies, coins and records.
+            0x8030_09E0 => {
+                self.debug_record_read();
+                0
+            }
+            0x8030_0A88 => {
+                if self.game.debug_mode.records_kind == 3
+                    && self.game.hud.debug.word(0x804D_6DCC) as i32 >= 1
+                {
+                    self.game.hud.debug.set_word(0x804D_6DCC, 1);
+                }
+                0
+            }
+            0x8030_0BBC | 0x8030_0BF8 | 0x8030_0C3C | 0x8030_0C80 | 0x8030_0F98 => {
+                if arg == CB_SELECT {
+                    self.debug_otoguro_item(cb);
+                }
+                0
+            }
+            // `un_80300D78` (Set Melee Count): the totals' values to its default, and their
+            // submenu; `un_80300E74` (Set HomeRun Record) and `un_80300F3C` (Set Target
+            // Clear): the record's submenu.
+            0x8030_0D78 => {
+                if arg == CB_SELECT {
+                    self.sfx_forward();
+                    let d = &mut self.game.hud.debug;
+                    let v = d.word(0x804D_6DF0);
+                    for a in [0x804D_6DE0, 0x804D_6DE4, 0x804D_6DE8, 0x804D_6DEC] {
+                        d.set_word(a, v);
+                    }
+                    self.debug_submenu(arg, 0x803F_C70C, 0x8030_0CC8);
+                }
+                0
+            }
+            0x8030_0E74 | 0x8030_0F3C => {
+                if arg == CB_SELECT {
+                    self.sfx_forward();
+                    let (kind, table, own) = if cb == 0x8030_0E74 {
+                        (2, 0x803F_C8C8, 0x8030_0DE0)
+                    } else {
+                        (3, 0x803F_C828, 0x8030_0ED0)
+                    };
+                    self.game.debug_mode.records_kind = kind;
+                    self.debug_submenu(arg, table, own);
+                }
+                0
+            }
+            // The submenus' own callbacks: B closes the submenu, Start writes the save and
+            // goes to the main menu. Their C returns nothing; no caller reads a menu's own
+            // callback's answer.
+            0x8030_0CC8 | 0x8030_0DE0 | 0x8030_0ED0 => {
+                match arg {
+                    CB_BACK => {
+                        self.sfx_back();
+                        self.menu_close_current();
+                    }
+                    CB_START => {
+                        self.sfx_forward();
+                        self.debug_records_write(cb);
+                        self.debug_to_mode(GM_MENU);
+                    }
+                    _ => {}
+                }
+                0
+            }
+            // The single-player modes' and their game overs' entries (milestone 6's), the
+            // Yoshiki test's card tests and the others acting only on A, not ported yet.
+            0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1280 | 0x8030_12D4 | 0x8030_1D7C
+            | 0x8030_16D8 | 0x8030_1734 | 0x8030_178C | 0x8030_1800 | 0x8030_1840 | 0x8030_18BC
+            | 0x8030_191C | 0x8030_1964 | 0x8030_1A64 | 0x8030_1AD4 => {
                 if arg == CB_SELECT {
                     super::super::code::unported_call(&format!(
                         "the debug menu entry callback {cb:#010x}"
@@ -361,6 +425,106 @@ impl Running<'_> {
             _ => return None,
         };
         Some(ret)
+    }
+
+    /// `un_803009E0`, the record's character's callback: its record into the count (the
+    /// home-run distance in metres, or the target test's clear flag, written back).
+    #[doc(alias = "un_803009E0")]
+    #[doc(alias = "un_80300A88")]
+    #[doc(alias = "gmMainLib_8015D06C")]
+    #[doc(alias = "gmMainLib_8015D48C")]
+    #[doc(alias = "gmMainLib_8015D4E8")]
+    fn debug_record_read(&mut self) {
+        let chara = usize::from(self.game.hud.debug.word(0x804D_6DC8) as u8);
+        match self.game.debug_mode.records_kind {
+            2 => {
+                let v = self.game.game_data.thing.save_data.x1F2C[chara].x7C.x84 as u32;
+                let m = crate::fpu::mem(crate::gekko_fp::frsp(f64::from(v / 100)));
+                self.game.hud.debug.set_word(0x804D_6DD0, m.to_bits());
+            }
+            3 => {
+                let f = &mut self.game.game_data.thing.save_data.x1F2C[chara].x7C;
+                let r = i32::from(f.b0);
+                f.b0 = r & 1 != 0;
+                self.game.hud.debug.set_word(0x804D_6DCC, r as u32);
+            }
+            _ => {}
+        }
+    }
+
+    /// The Otoguro test's entries that act on A: every trophy (`un_80300BBC`, then the
+    /// gallery), the Samus mask's and Mario and Yoshi's trophies (`un_80300BF8`,
+    /// `un_80300C3C`), the coins (`un_80300C80`) and the KO total (`un_80300F98`), each
+    /// then the main menu.
+    #[doc(alias = "un_80300BBC")]
+    #[doc(alias = "un_80300BF8")]
+    #[doc(alias = "un_80300C3C")]
+    #[doc(alias = "un_80300C80")]
+    #[doc(alias = "un_80300F98")]
+    fn debug_otoguro_item(&mut self, cb: u32) {
+        let mode = match cb {
+            0x8030_0BBC => {
+                self.mark_class_two_trophies();
+                self.hold_every_trophy();
+                crate::game::ty::GM_TOY_GALLERY
+            }
+            0x8030_0BF8 | 0x8030_0C3C => {
+                self.mark_class_two_trophies();
+                self.add_trophy(if cb == 0x8030_0BF8 { 0xE6 } else { 0xC9 }, 1);
+                GM_MENU
+            }
+            0x8030_0C80 => {
+                let n = self.game.hud.debug.word(0x804D_6DDC);
+                self.game.game_data.thing.save_data.x1A48 = n.wrapping_mul(10);
+                self.mark_class_two_trophies();
+                GM_MENU
+            }
+            _ => {
+                let n = self.game.hud.debug.word(0x804D_6DF4);
+                self.sfx_forward();
+                self.game.game_data.thing.save_data.x1A5C = n as i32;
+                GM_MENU
+            }
+        };
+        self.game.sync_unlocks();
+        self.change_game_mode_after_scene(mode);
+        self.game.end_scene();
+    }
+
+    /// The submenus' Start: the VS totals (`fn_80300CC8`), the home-run record
+    /// (`fn_80300DE0`, the count's metres as centimetres) or the target test's clear
+    /// (`fn_80300ED0`) into the save.
+    #[doc(alias = "fn_80300CC8")]
+    #[doc(alias = "fn_80300DE0")]
+    #[doc(alias = "fn_80300ED0")]
+    fn debug_records_write(&mut self, cb: u32) {
+        let d = &self.game.hud.debug;
+        let chara = usize::from(d.word(0x804D_6DC8) as u8);
+        let w = |a: u32| d.word(a);
+        let (t, st, c, b) = (
+            w(0x804D_6DE0),
+            w(0x804D_6DE4),
+            w(0x804D_6DE8),
+            w(0x804D_6DEC),
+        );
+        let count = f32::from_bits(w(0x804D_6DD0));
+        let clear = w(0x804D_6DCC);
+        let s = &mut self.game.game_data.thing.save_data;
+        match cb {
+            0x8030_0CC8 => {
+                s.time_matches = t;
+                s.stock_matches = st;
+                s.coin_matches = c;
+                s.bonus_matches = b;
+            }
+            0x8030_0DE0 => {
+                use crate::gekko_fp as fp;
+                let v = fp::fmuls(100.0, crate::fpu::reg(count));
+                s.x1F2C[chara].x7C.x84 = crate::ppc::cvt_fp2unsigned(v) as i32;
+            }
+            _ => s.x1F2C[chara].x7C.b0 = clear & 1 != 0,
+        }
+        self.game.sync_unlocks();
     }
 
     /// A submenu with the submenus' own callback, answering 0.

@@ -1331,11 +1331,10 @@ pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId
     reset(r.game);
     r.game.stage_info.grkind = grkind;
     let stage = stage_data(grkind);
+    let us = r.files_us();
     load_dat(
         r,
-        stage
-            .file
-            .map(|f| (f, archive.expect("the stage's archive"))),
+        super::data::stage_file(grkind, us).map(|f| (f, archive.expect("the stage's archive"))),
         stkind != ST_KIND_HEAL,
     );
     item_frequencies(r.game, r.data, stkind);
