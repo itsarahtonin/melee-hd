@@ -148,14 +148,40 @@ impl Running<'_> {
         self.close_windows(0);
     }
 
-    /// `gm_Scene_MemCard_OnFrame`: the decision's step. A retail disc never runs the debug
-    /// viewer (`DbLevel` below `DbLKind_DebugRom`).
+    /// `gm_Scene_MemCard_OnFrame`: the decision's step. At the debug ROM's level, L, R and A
+    /// held on the first controller open the messages' viewer instead, for good: L and R step
+    /// through the messages, L, R and B held end the scene.
     #[doc(alias = "gm_Scene_MemCard_OnFrame")]
     pub fn memcard_on_frame(&mut self) {
-        self.game.assert_retail();
+        if self.game.gm.db_level >= super::DB_DEBUG_ROM {
+            use crate::input::pad::{BUTTON_A, BUTTON_B, TRIGGER_L, TRIGGER_R};
+            let pad = self.game.pads.copy[0];
+            let (lra, lrb) = (
+                u32::from(TRIGGER_L | TRIGGER_R | BUTTON_A),
+                u32::from(TRIGGER_L | TRIGGER_R | BUTTON_B),
+            );
+            let (l, r) = (u32::from(TRIGGER_L), u32::from(TRIGGER_R));
+            if pad.button & lra == lra {
+                self.game.memcard.debug_viewer = 1;
+            }
+            if self.game.memcard.debug_viewer != 0 {
+                let msg = self.game.memcard.debug_msg;
+                if pad.trigger & l != 0 {
+                    if msg > 6 {
+                        self.game.memcard.debug_msg = msg - 1;
+                        self.show_window(0, i32::from(msg - 1), self.lines(i32::from(msg - 1)));
+                    }
+                } else if pad.trigger & r != 0 && msg < 0x18 {
+                    self.game.memcard.debug_msg = msg + 1;
+                    self.show_window(0, i32::from(msg + 1), self.lines(i32::from(msg + 1)));
+                }
+                if pad.button & lrb == lrb {
+                    self.game.end_scene();
+                }
+                return;
+            }
+        }
         let decision = self.game.memcard.decision;
-        let m = &mut self.game.memcard;
-        let _ = m;
         match decision {
             0 => {
                 let r = self.card_game_load();

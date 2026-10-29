@@ -11,18 +11,13 @@ ftLib_IsMasterHandPresent	Called only by db_RunEveryFrame, only after its `if (D
 ftLib_IsCrazyHandPresent	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 ftZd_Init_801395C8	Called only by ftCo_800DEBD0 (the side taunt), only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gmMainLib_8015FB68	Named only by un_80300248 (the debug menu mode, 6: see onExitIntro).
-gm_8016468C	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_80164A0C	Named only by gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
-gm_80164F18	Named only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; and gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 fn_801652D8	Named only by gm_80165388 (the scene loop's debug report: see gm_801A4970).
 gm_80165388	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 gm_801653C8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 gm_80166A98	Named only by onEnterResults1 (the debug menu mode, 6: see onExitIntro).
 gm_ResetGameSpeed	Named only by fn_Toggle5xSpeed (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 gm_801701A0	Named only by onEnterResults1 (the debug menu mode, 6: see onExitIntro).
-gm_8017297C	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gm_801741FC	Called only by gmMainLib_8015FA34, only inside `if (DbLevel > DbLKind_DebugDevelop && db_804D6B20)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-gmTitle_801A1D38	Called only by gm_Scene_Title_OnEnter, only inside `if (DbLevel >= DbLKind_NoDebugRom)`, which draws the build date on the title; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_801A4970	The scene loop's debug report (D-pad right with X: object counts, threads, leaks), called only by gm_801A4D34 inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_Scene_DebugMenu_OnEnter	Scene 7's (GS_DEBUG_MENU) enter function, named only by the scene table; only the states of modes 6 and 7 enter scene 7 (gm_Mode_Debug_States, gm_Mode_DebugMenu_States; no other mode's states name it), and neither mode runs on a retail boot (see onExitIntro, onEnterDebug).
 onExitIntro	A callback of the debug menu mode's states (gm_Mode_Debug_States, mode 6), which a retail boot never enters. Only the title's exits make mode 6 pending (gmtitlemode.c's onExit on Y, gmopeningmode.c's onExitTitle on 0x800), both inside `if (DbLevel >= DbLKind_DebugRom)`. DbLevel is DbLKind_Master, 0, on a retail disc: gmMain_8015FDA4 sets it when the disc has no /develop.ini, and only it and the debug menu's own item (un_803FA4E0) write DbLevel. All 13 recorded sessions log DbLevel 0 and enter no debug mode.

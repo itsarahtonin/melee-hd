@@ -447,7 +447,7 @@ pub fn run_hud_callback(r: &mut Running, f: CodeRef, arg: i32) {
 }
 
 /// The original reaches a function no port covers yet: stopping beats diverging.
-fn unported(what: &str, addr: u32) -> ! {
+pub(crate) fn unported(what: &str, addr: u32) -> ! {
     panic!("{what} {addr:#010x} isn't ported")
 }
 
