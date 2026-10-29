@@ -5,7 +5,6 @@
 
 use gekko_fp as fp;
 
-use super::super::code::unported_call;
 use super::super::state::Running;
 use crate::fpu::reg;
 use melee_data::archive::DataRef;
@@ -212,7 +211,7 @@ impl Running<'_> {
     /// more, up to 255), a trophy new to it counted and flagged new, then the checks a new
     /// trophy runs: every trophy's notice (250 held, unless the categories have it), the
     /// completed classes' notices, the stage the stage trophy unlocks, and a class 1 trophy's
-    /// record.
+    /// record given again (`gm_80172C44`).
     #[doc(alias = "Toy_SetUnlockState")]
     pub fn add_trophy(&mut self, trophy: i32, add: i32) {
         let idx = trophy as i16 as usize;
@@ -249,7 +248,7 @@ impl Running<'_> {
         }
         let t = self.trophy_tables();
         if self.trophy_class(&t, idx) == 1 {
-            unported_call("gm_80172C44 (a class 1 trophy's record)");
+            self.regive_record_trophy(idx as i32);
         }
     }
 

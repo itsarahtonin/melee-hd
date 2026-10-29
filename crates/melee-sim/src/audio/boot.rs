@@ -80,6 +80,25 @@ impl BootTimes {
 /// boot time moves with it.
 pub const CONSOLE_BOOT_DELAY: u64 = 17 * super::clock::FIELD;
 
+/// [`CONSOLE_BOOT_DELAY`] at a clock `power_on` (time base ticks from 2000-01-01): `OSInit`'s
+/// `EXIInit` probes the card first, at the boot's start, which starts `__EXIProbe`'s count of
+/// tenths of a second (on the clock); the boot then probes it at each field from field 2
+/// (`EXIProbeEx`) until it answers, three tenths after that first probe, and goes on from the
+/// field before the one it answers in. At 2000-01-01's clock, ssbm-rs's for version 1
+/// sessions, it answers in field 18: 17 fields; a clock whose tenths turn sooner answers
+/// sooner. The first probe's time within the boot is taken as its start: ssbm-rs logs it in
+/// the boot's first field, and the sessions recorded put it before 769,000 ticks.
+pub fn console_boot_delay(power_on: u64) -> u64 {
+    use crate::game::session::field_start;
+    use crate::lb::save::probe_tenths;
+    let first = probe_tenths(0, power_on);
+    let mut n = 2;
+    while probe_tenths(field_start(n), power_on).wrapping_sub(first) < 3 {
+        n += 1;
+    }
+    (n - 1) * super::clock::FIELD
+}
+
 /// How much longer than Slippi's playback boot a console's own boot with a card in slot A
 /// takes from the audio setup to the save data's audio reset: measured from the recorded
 /// sessions' first bank read (`LastReadIssued` 12,847,369 against the replay boot's). It is

@@ -47,7 +47,7 @@ fn compare(
     ticks: u32,
     pads: impl Fn(u32) -> [PadStatus; 4],
 ) -> Predictions {
-    let mut predictor = Predictor::default();
+    let mut predictor = Predictor::<crate::power::Run>::default();
     let mut seen = Predictions::default();
     let mut samples = 0usize;
     for tick in 0..ticks {
@@ -66,21 +66,21 @@ fn compare(
             "tick {tick}'s mixed sound differs from the straight run's"
         );
         samples += a.samples().len();
-        if let Some(d) = predicting.m.game.state_diff(&straight.m.game) {
+        if let Some(d) = predicting.game().state_diff(straight.game()) {
             panic!("the state after tick {tick} differs from the straight run's at game{d}");
         }
         // The last prediction against the tick it predicted.
         if predictor.is_filled() {
             let copy = predictor.predicted().expect("the copy");
-            match copy.game.state_diff(&predicting.m.game) {
+            match copy.game().state_diff(predicting.game()) {
                 None => seen.exact += 1,
                 Some(_) => seen.missed += 1,
             }
         }
         let rendered = !got.draws.is_empty();
         let ended = got.ended;
-        straight.m.recycle(want);
-        predicting.m.recycle(got);
+        straight.recycle(want);
+        predicting.recycle(got);
         if ended {
             break;
         }
@@ -90,13 +90,13 @@ fn compare(
                 .unwrap_or_else(|why| panic!("tick {tick}'s prediction stopped: {why}"));
             seen.made += u32::from(predictor.is_filled());
             let copy = predictor.predicted().expect("the copy");
-            assert!(copy.game.audio.mix.is_none(), "the copy logs its mix");
+            assert!(copy.game().audio.mix.is_none(), "the copy logs its mix");
             assert!(
-                predicting.m.game.audio.mix.is_some(),
+                predicting.game().audio.mix.is_some(),
                 "the match's mix log is off"
             );
             // Nothing written back.
-            if let Some(d) = predicting.m.game.state_diff(&straight.m.game) {
+            if let Some(d) = predicting.game().state_diff(straight.game()) {
                 panic!(
                     "the state after tick {tick}'s prediction differs from the straight run's at game{d}"
                 );

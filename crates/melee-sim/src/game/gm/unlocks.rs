@@ -141,6 +141,21 @@ impl Running<'_> {
         true
     }
 
+    /// `gm_80172C44`: record trophy `n` given again as `Toy_SetUnlockState` gives a class 1
+    /// trophy: its record mark taken back (`gmMainLib_8015DA68`), then given as new
+    /// (`gmMainLib_8015D984`, the mark now clear): timed, flagged for its notice and marked.
+    #[doc(alias = "gm_80172C44")]
+    pub(super) fn regive_record_trophy(&mut self, n: i32) {
+        let n = n as u32;
+        let (w, b) = ((n / 32) as usize, 1u32 << (n % 32));
+        self.game.game_data.thing.save_data.x1B58[w] &= !b;
+        let now = self.clock_seconds();
+        let g = &mut self.game.game_data;
+        g.unk_44.times[n as usize] = now;
+        g.unk_44.flags[w] |= b;
+        g.thing.save_data.x1B58[w] |= b;
+    }
+
     /// `Toy_803048C0` over a list: whether the save holds every one.
     fn holds_all(&self, list: impl Iterator<Item = usize>) -> bool {
         let f = &self.game.game_data.thing.save_data.trophy_flags;

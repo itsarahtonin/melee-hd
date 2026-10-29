@@ -41,7 +41,7 @@ pub enum Mode {
 }
 
 impl Mode {
-    /// The launcher's choices, with their names.
+    /// The settings panel's choices, with their names.
     pub const CHOICES: [(Mode, &str); 3] = [
         (Mode::Off, "Off (a frame a tick)"),
         (Mode::Interpolate, "Interpolate (up to a tick later)"),
@@ -73,7 +73,7 @@ impl Mode {
         self != Mode::Off
     }
 
-    /// The name the launcher shows.
+    /// The name the settings panel shows.
     pub fn name(self) -> &'static str {
         Mode::CHOICES
             .iter()

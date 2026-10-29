@@ -5,6 +5,7 @@
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, DataRef};
 
+use super::super::code;
 use super::super::handles::CodeRef;
 use super::super::pl::player::{PKIND_HUMAN, PKIND_NONE};
 use super::super::state::{Game, OBJ_CAMERA, OBJ_JOBJ, Obj, Running, UserData};
@@ -249,11 +250,15 @@ impl Running<'_> {
     }
 
     /// A slot's name entry in the text (the inline `createNameText`): its name tag's name
-    /// (`GetNameText`) off screen, at 0.4 by 0.55.
+    /// (`GetNameText`, which the text takes as its format) off screen, at 0.4 by 0.55; a name
+    /// holding a % stops, as only an edited save can hold one.
     fn create_name_text(&mut self, slot: i32) {
         let t = self.game.hud.nametags.text.expect("the names' text");
         let tag = self.game.player_nametag(slot);
         let name = self.game.name_text(tag);
+        if name.as_ref().is_some_and(|n| n.contains(&b'%')) {
+            code::unported_call("GetNameText's name with a % as the text's format");
+        }
         let k = (self.game.sis).add_string(t, f64::from(-5000.0_f32), 0.0, name.as_deref());
         self.game.hud.nametags.entries[slot as usize] = k;
         let (sx, sy) = (f64::from(0.4_f32), f64::from(0.55_f32));

@@ -53,7 +53,7 @@ pub enum Timing {
 }
 
 impl Timing {
-    /// The launcher's choices, with their names.
+    /// The settings panel's choices, with their names.
     pub const CHOICES: [(Timing, &str); 4] = [
         (Timing::Timer, "Fixed timer"),
         (Timing::Auto, "Just in time, auto (experimental)"),
@@ -84,7 +84,7 @@ impl Timing {
         }
     }
 
-    /// The name the launcher shows.
+    /// The name the settings panel shows.
     pub fn name(self) -> &'static str {
         Timing::CHOICES
             .iter()
