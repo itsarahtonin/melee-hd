@@ -5190,16 +5190,21 @@ impl GroundVars {
     pub fn scroll(&mut self) -> &mut ScrollVars {
         if let GroundVars::Bytes(b) = self {
             let b = Bytes(b);
-            for at in (0x28..=0x44).step_by(4) {
-                b.null(at);
-            }
             let v3 = |a: usize| crate::vec::Vec3::new(b.f32(a), b.f32(a + 4), b.f32(a + 8));
+            // The pointers keep the block's words: the course's first copy, which leads the
+            // second, never writes its own `anim_gobj` (`grRCruise_801FF168`) and never reads
+            // it (its process returns first, frozen).
             *self = GroundVars::Scroll(ScrollVars {
                 xC4: b.0[0],
                 x4: v3(4),
                 x10: v3(0x10),
                 x1C: v3(0x1C),
-                ..Default::default()
+                anim_gobj: b.null(0x28),
+                int_jobj: b.null_of(0x2C),
+                cam_jobj: b.null_of(0x30),
+                ctr_jobj: b.null_of(0x34),
+                x38: std::array::from_fn(|i| b.null_of(0x38 + 4 * i)),
+                x44: b.null_of(0x44),
             });
         }
         match self {
