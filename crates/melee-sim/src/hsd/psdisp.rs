@@ -117,6 +117,10 @@ pub struct Globals {
     pub sorted: [u8; LINKS],
     /// Each link's first particle without `TEX_EDGE` as last sorted (`particle_list`).
     pub non_edge: [Option<ParticleId>; LINKS],
+    /// The link's `non_edge` was sorted before the particle system was last emptied
+    /// (`hsd_80398A08`): the original's pointer names freed memory, where a handle may name
+    /// a new particle in the same slot. Nothing reads it before the link's next sort.
+    pub stale: [bool; LINKS],
 }
 
 impl Default for Globals {
@@ -125,6 +129,7 @@ impl Default for Globals {
             frame: 0x7B,
             sorted: [0; LINKS],
             non_edge: [None; LINKS],
+            stale: [false; LINKS],
         }
     }
 }
@@ -145,9 +150,15 @@ pub fn sort(
 ) -> (Option<ParticleId>, Option<ParticleId>) {
     let head = objs.particles.links[link];
     if objs.psdisp.sorted[link] == frame {
+        if objs.psdisp.stale[link] {
+            crate::game::code::unported_call(
+                "particleSort's cached particle from before the particle system was emptied",
+            );
+        }
         return (head, objs.psdisp.non_edge[link]);
     }
     objs.psdisp.sorted[link] = frame;
+    objs.psdisp.stale[link] = false;
     let Some(first) = head else {
         objs.psdisp.non_edge[link] = None;
         return (None, None);
