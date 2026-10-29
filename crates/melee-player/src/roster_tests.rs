@@ -1,9 +1,9 @@
-//! Every stage the roster lists (offered by the launcher or not) starts from the player's settings
-//! (`Settings::vs`, as the launcher starts a match: VS mode's layout from its menus, items off)
+//! Every stage the roster lists (offered by the command line or not) starts from the player's settings
+//! (`Settings::vs`, as the command line starts a match: VS mode's layout from its menus, items off)
 //! and plays a minute with scripted controllers (or until the match ends) without reaching code
 //! no port covers. A stage's port adds its roster line once its oracle match diffs whole; this
 //! checks the player's side of that line; `every_offered_stage_plays_with_items` plays the
-//! launcher's items on each offered stage. Skips without `SSBM_DISC`.
+//! items on each offered stage. Skips without `SSBM_DISC`.
 
 use melee_data::disc::Disc;
 use melee_sim::game::roster;
@@ -139,8 +139,8 @@ fn every_offered_stage_plays_with_items() {
     });
 }
 
-/// Every Special Melee mode the launcher offers plays a minute from its settings
-/// (`Settings::vs_special`, as the launcher starts it: Fox against Marth on Battlefield, four
+/// Every Special Melee mode the command line offers plays a minute from its settings
+/// (`Settings::vs_special`, as the command line starts it: Fox against Marth on Battlefield, four
 /// stocks, items off) with scripted controllers that run, jump, jab and shield, or until the
 /// match ends, without reaching code no port covers; in the mode's game mode, with Lightning
 /// Melee's shorter tick taken up. Skips without `SSBM_DISC`.

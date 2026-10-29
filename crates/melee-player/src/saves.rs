@@ -76,7 +76,9 @@ pub fn files_of(image: &[u8]) -> BTreeMap<String, Vec<u8>> {
         .collect()
 }
 
-/// The `.gci`s in a folder, by name; unreadable ones are skipped.
+/// Melee's `.gci`s in a folder, by name; unreadable ones and other games' are skipped, so
+/// the card holds Melee's files alone (the boot's search for a Pikmin save, which gives a
+/// trophy, never finds one: `bootOnLeave`'s stop, melee-sim's menus audit).
 pub fn read_dir(dir: &Path) -> BTreeMap<String, Vec<u8>> {
     let mut out = BTreeMap::new();
     let Ok(entries) = std::fs::read_dir(dir) else {
@@ -86,6 +88,7 @@ pub fn read_dir(dir: &Path) -> BTreeMap<String, Vec<u8>> {
         let p = e.path();
         if p.extension().is_some_and(|x| x.eq_ignore_ascii_case("gci"))
             && let (Some(name), Ok(bytes)) = (p.file_name(), std::fs::read(&p))
+            && melee_file(&bytes)
         {
             out.insert(name.to_string_lossy().into_owned(), bytes);
         }
