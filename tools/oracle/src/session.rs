@@ -25,6 +25,8 @@ const SYSTEM_TIME_OFFSET: u32 = 0x8000_30D8;
 /// `db_gameLaunchButtonState`.
 const LAUNCH_BUTTONS: u32 = 0x804D_6B30;
 const PAD_STATUS_BYTES: u32 = 12;
+/// The VI library's `retraceCount`.
+const RETRACE_COUNT: u32 = 0x804D_7420;
 const PERIOD: u64 = melee_sim::audio::boot::PAD_ALARM_PERIOD;
 
 fn u8_at(image: &Image, addr: u32) -> u8 {
@@ -1150,6 +1152,17 @@ impl Run<'_> {
                 diffs.push(format!(
                     "timeline: the tick ended at time base {} on ours, {tb} on the trace's",
                     c.now
+                ));
+            }
+            // The VI's retrace count, which a tie's automatic handicaps read off the stack
+            // (`Clock::retraces`, `results_exit::move_handicaps`).
+            if let Some(c) = &s.game.audio.clock
+                && c.retraces != image.u32(RETRACE_COUNT)
+            {
+                diffs.push(format!(
+                    "retraceCount: ours {}, the trace's {}",
+                    c.retraces,
+                    image.u32(RETRACE_COUNT)
                 ));
             }
             // The reads melee-hd's tick took, against the ones the trace's can have taken.
