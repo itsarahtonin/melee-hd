@@ -33,7 +33,7 @@ pub struct Paced {
     before: Capture,
     after: Capture,
     /// With Extrapolate: the next tick, predicted.
-    pub predictor: Predictor,
+    pub predictor: Predictor<crate::power::Run>,
 }
 
 impl Paced {
@@ -61,7 +61,7 @@ impl Paced {
     /// nothing is predicted (None).
     pub fn predict(
         &mut self,
-        predict: impl FnOnce(&mut Predictor) -> Result<Cost, String>,
+        predict: impl FnOnce(&mut Predictor<crate::power::Run>) -> Result<Cost, String>,
     ) -> Option<Result<Cost, String>> {
         if self.latest.as_ref().is_none_or(|(f, _)| f.draws.is_empty()) {
             self.predictor.forget();

@@ -53,6 +53,9 @@ enum Packet {
     Forget(u32, u32),
     /// The EFB made again at a scale and width, and cleared (`Renderer::resize_efb`).
     Resize(u32, u32),
+    /// The copy formats also handed back to the host from now on
+    /// (`Renderer::copies_to_memory`).
+    CopiesToMemory(Vec<u32>),
 }
 
 /// A batch of packets, its draws' vertices and the state's changes, which every thread reads.
@@ -286,6 +289,12 @@ impl Threaded {
         self.changes(state);
         self.batch.packets.push(Packet::Resize(scale, width));
         self.footprints = copy::Footprints::default();
+    }
+
+    /// Has the copies in `formats` also handed back to the host from the next copy on
+    /// (`Renderer::copies_to_memory`), on the render thread in its turn.
+    pub fn set_copies_to_memory(&mut self, formats: Vec<u32>) {
+        self.batch.packets.push(Packet::CopiesToMemory(formats));
     }
 
     /// Sends the transform threads what they don't hold of the arrays a draw's vertices (as
@@ -650,6 +659,7 @@ fn run(
                     renderer.resize_efb(*scale, *width);
                     renderer.clear_efb(&state);
                 }
+                Packet::CopiesToMemory(formats) => renderer.copies_to_memory.clone_from(formats),
                 Packet::Copy(value) => {
                     renderer.copy(&state, *value, &memory);
                     if bits(*value, 14, 1) != 0 {

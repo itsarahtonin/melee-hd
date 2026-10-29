@@ -727,9 +727,9 @@ When porting shows that the original game does something wrong, keep the behavio
 ### Rainbow Cruise's planks, blocks and vanishing parts keep fields as the heap held them
 
 - **Where:** `grRCruise_801FF5B4` (the ship's setup: the planks' `Map_Chikuwa` block from `HSD_MemAlloc`), `grRCruise_80200B48` (the planks), `grRCruise_80201410` (the vanishing parts' block) and `grRCruise_80200074` (the falling blocks, in the stage object's `Ground`), `crates/melee-sim/src/game/gr/rcruise.rs` (`init_ship`, `init_vanish`, `init_blocks`).
-- **Defect:** none of them clears its block: a plank's second byte (`pad_01`, whose `b0` is its blink flag) and its fall speed (`x10`), a vanishing part's `x2`, and a falling block's second byte (`x1`, whose `b0` is its blink flag) stay as the heap held them.
-- **Effect:** none observable: each read of them comes after a write. A plank's `x10` is set to 0 as it starts to fall (state 2 into 3) before the fall reads it, its `b0` cleared as it comes back (state 4 into 5) before the blink toggles it, and its other bits never read; a falling block's `b0` is cleared in state 3, the only way into state 4, which toggles it, and its other bits never read; nothing reads a vanishing part's `x2`. In `2026-10-10_12-54-40`'s match on Rainbow Cruise (tick 17809) the planks held the menus' words (`0x80c6b688`, `0x1e0000`), the parts' halfwords and the third block's byte 0xBD, the high byte of a free cell's link the stage select's last free left there.
-- **melee-hd:** modeled: a session from power-on takes them from the heap's image (`game::gr::rcruise`'s `leftover_bytes`, the blocks' through the `Ground` read from it), a replay has them 0, as a fresh heap and Slippi's zeroed `Ground`.
+- **Defect:** none of them clears its block: a plank's second byte (`pad_01`, whose `b0` is its blink flag) and its fall speed (`x10`), a vanishing part's `x2`, and a falling block's second byte (`x1`, whose `b0` is its blink flag) stay as the heap held them; and `grRCruise_801FF168` sets only the second course copy's `anim_gobj` (`u.scroll`, the copy it follows), so the first copy's, in a `Ground` its creation doesn't clear, stays as the heap held it too.
+- **Effect:** none observable: each read of them comes after a write. A plank's `x10` is set to 0 as it starts to fall (state 2 into 3) before the fall reads it, its `b0` cleared as it comes back (state 4 into 5) before the blink toggles it, and its other bits never read; a falling block's `b0` is cleared in state 3, the only way into state 4, which toggles it, and its other bits never read; nothing reads a vanishing part's `x2`, nor the first course copy's `anim_gobj`: its process returns while the copy is frozen (`xC4`'s 0x80), which it is from its setup. In `2026-10-10_12-54-40`'s match on Rainbow Cruise (tick 17809) the planks held the menus' words (`0x80c6b688`, `0x1e0000`), the parts' halfwords and the third block's byte 0xBD, the high byte of a free cell's link the stage select's last free left there.
+- **melee-hd:** modeled: a session from power-on takes them from the heap's image (`game::gr::rcruise`'s `leftover_bytes`, the blocks' through the `Ground` read from it), a replay has them 0, as a fresh heap and Slippi's zeroed `Ground`; the first course copy's `anim_gobj` comes from the image as the `Ground`'s other fields do, and where the image knows no bytes there it's none: `player-sessions/stage-rules` stops at Rainbow Cruise's first tick (6938) on its 0x88888888 (2026-10-29, open).
 - **Fix:** clear the blocks (or the fields) in the setups.
 - **Fix impact:** none in play.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values); the decompilation's `grrcruise.c`.
@@ -1584,13 +1584,33 @@ The developers' menus and tools, reached only above retail's debug level (milest
 
 ### The test menus' own callbacks return nothing
 
-- **Where:** `fn_80300CC8`, `fn_80300DE0`, `fn_80300ED0` and `fn_803011EC` (the Otoguro and Nagasima tests' submenus' own callbacks), not ported yet.
+- **Where:** `fn_80300CC8`, `fn_80300DE0`, `fn_80300ED0` (the Otoguro test's submenus' own callbacks, `crates/melee-sim/src/game/hud/debug_items.rs`, `debug_item`) and `fn_803011EC` (the Nagasima test's, not ported: it goes to a single-player game over).
 - **Defect:** the C has no `return`.
 - **Effect:** none observable: a menu's own callback's answer is never read (`un_80302E00` returns it to `un_80303AC4`, which drops it, and `un_80304344` calls it last).
-- **melee-hd:** not ported yet (their Start paths go to records and the single-player modes).
+- **melee-hd:** the three answer 0, which no caller reads.
 - **Fix:** return 0.
 - **Fix impact:** none.
-- **Source:** `if_3004.c`.
+- **Source:** `if_3004.c`, `if_3004.s`.
+
+### The sound readout's first count is the second's
+
+- **Where:** `fn_UpdateSoundInfo` (the match's develop tools, X and D-pad left), `crates/melee-sim/src/game/db.rs` (`db_update_sound`).
+- **Defect:** the readout reads the voices playing an effect (`lbAudioAx_80028B2C`) into `x`, keeps its peak, then reads the active list's voices (`lbAudioAx_80028B4C`) into the same `x`, and prints `x` on both lines: the `PVoice` line shows the active list's count beside the playing voices' peak.
+- **Effect:** the readout's first column is wrong in its `PVoice` row. Nothing else reads it.
+- **melee-hd:** modeled.
+- **Fix:** keep the first count in its own variable.
+- **Fix impact:** the readout's text only.
+- **Source:** `dbsound.c`.
+
+### The sound readout's BGM toggle scales the announcer
+
+- **Where:** `fn_CheckSoundInfo`'s `lbAudioAx_80025064(bgm, fgm)`, `crates/melee-sim/src/game/db.rs` (`db_sound_mix`).
+- **Defect:** the readout labels its toggles FGM and BGM, but the first argument sets `lbl_804D38C4`, which `fn_80024654` multiplies into channel 1's volume (the announcer's, with `lbl_804D3884`), not into the music stream's (`lbl_804D38C0`).
+- **Effect:** "BGM:OFF" silences the announcer and leaves the music playing.
+- **melee-hd:** modeled (`voice_scale`).
+- **Fix:** scale the stream's volume.
+- **Fix impact:** the debug mix only.
+- **Source:** `dbsound.c`, `lbaudio_ax.c`.
 
 ### The debug menu sets the saved language as it opens
 

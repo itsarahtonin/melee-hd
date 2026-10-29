@@ -994,14 +994,12 @@ impl Running<'_> {
 }
 
 impl crate::game::state::Game {
-    /// `gm_CameraModeVSGetPauser`: the first controller pressing Start that the camera's
-    /// (the fourth) or a player's is, or -1.
+    /// `gm_CameraModeVSGetPauser`: the first controller pressing Start (from the debug ROM's
+    /// level D-pad up with X held) that the camera's (the fourth) or a player's is, or -1.
     #[doc(alias = "gm_CameraModeVSGetPauser")]
     pub fn camera_pauser(&self) -> i32 {
-        self.assert_retail();
         for port in 0..4 {
-            let p = &self.pads.copy[port];
-            if p.err != 0 || p.trigger & PAD_START as u32 == 0 {
+            if self.pads.copy[port].err != 0 || !self.pause_pressed(port) {
                 continue;
             }
             if port == CAMERA_PORT {

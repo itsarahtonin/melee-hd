@@ -55,7 +55,7 @@ impl Aspect {
         Aspect { shown, widen: true }
     }
 
-    /// The launcher's choices, with their names.
+    /// The settings panel's choices, with their names.
     pub const CHOICES: [(Aspect, &str); 5] = [
         (Aspect::GAME, "73:60 (the game's)"),
         (Aspect::wide(16.0 / 9.0), "16:9 (widescreen)"),
@@ -91,7 +91,7 @@ impl Aspect {
         self.widen.then_some(self.shown)
     }
 
-    /// The name the launcher shows.
+    /// The name the settings panel shows.
     pub fn name(self) -> String {
         Aspect::CHOICES
             .iter()
@@ -130,7 +130,7 @@ pub enum Present {
 }
 
 impl Present {
-    /// The launcher's choices, with their names.
+    /// The settings panel's choices, with their names.
     pub const CHOICES: [(Present, &str); 3] = [
         (Present::Mailbox, "Mailbox (no tearing)"),
         (Present::Fifo, "FIFO (vsync)"),

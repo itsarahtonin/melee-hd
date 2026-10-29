@@ -152,6 +152,73 @@ impl Default for DebugVars {
 }
 
 impl DebugVars {
+    /// The match the Versus Mode page's settings make, `un_802FFF2C`: the rules' defaults
+    /// with the settings' teams, kind and time, stage, items and speed, and the four
+    /// players' characters, kinds, colors, teams, rumble, damage, ratios, computer players,
+    /// stocks and scale.
+    #[doc(alias = "un_802FFF2C")]
+    pub fn start_data(&self) -> crate::game::structs::StartMeleeData {
+        use crate::game::gm::vs_mode::{all_player_defaults, rules_defaults};
+        let w = |off: u32| self.setting(off);
+        let f = |off: u32| f32::from_bits(self.setting(off));
+        let mut d = crate::game::structs::StartMeleeData::default();
+        let r = &mut d.rules;
+        *r = rules_defaults();
+        r.x2_2 = false;
+        r.is_teams = w(0xC) as u8;
+        let timer = w(0xD0).wrapping_add(w(0xCC).wrapping_mul(60)) as u16;
+        let timed = |r: &mut crate::game::structs::StartMeleeRules| {
+            if timer != 0 {
+                r.time_limit = u32::from(timer);
+                r.timer_enabled = true;
+            } else {
+                r.timer_enabled = false;
+            }
+        };
+        match w(0xC8) as i32 {
+            0 => {
+                r.match_kind = 0;
+                timed(r);
+            }
+            1 => {
+                r.match_kind = 1;
+                r.timer_enabled = false;
+            }
+            2 => {
+                r.match_kind = 2;
+                timed(r);
+            }
+            _ => {
+                r.match_kind = 0;
+                r.timer_enabled = false;
+            }
+        }
+        r.stkind = w(0x8) as u16;
+        r.x20 = u64::MAX;
+        r.item_freq = w(0xD8).wrapping_sub(1) as i8;
+        r.sd_penalty = -1;
+        r.x30 = f(0xEC);
+        all_player_defaults(&mut d.players);
+        for (i, p) in d.players[..4].iter_mut().enumerate() {
+            let i = 4 * i as u32;
+            p.ckind = w(0x10 + i) as i8;
+            p.slot_type = w(0x24 + i) as u8;
+            p.color = w(0x38 + i) as u8;
+            p.sub_color = w(0x48 + i) as u8;
+            p.team = w(0x58 + i) as u8;
+            p.rumble_enabled = w(0xDC + i) as u8 & 1 != 0;
+            p.damage1 = w(0x68 + i) as u16;
+            p.attack_ratio = f(0x78 + i);
+            p.defense_ratio = f(0x88 + i);
+            p.cpu_kind = w(0xA8 + i) as u8;
+            p.cpu_level = w(0xB8 + i) as u8;
+            p.stocks = w(0xD4) as i8;
+            p.xC_b1 = false;
+            p.model_scale = f(0x98 + i);
+        }
+        d
+    }
+
     /// A word of the settings, at `off`.
     pub fn setting(&self, off: u32) -> u32 {
         let o = off as usize;
@@ -166,6 +233,10 @@ impl DebugVars {
     /// The word at `addr` of [`WORDS`].
     pub fn word(&self, addr: u32) -> u32 {
         self.words[word_index(addr)]
+    }
+
+    pub fn set_word(&mut self, addr: u32, v: u32) {
+        self.words[word_index(addr)] = v;
     }
 }
 
@@ -1146,6 +1217,16 @@ pub struct DebugMode {
     /// The Hanyu selects' data (`gm_8049BEE8`, `gm_8049C030`).
     pub hanyu_css: crate::game::gm::vs_melee::CssData,
     pub hanyu_sss: crate::game::gm::vs_melee::SssData,
+    /// `vs_enter_data`, `vs_exit_data`: the debug match's start and exit data.
+    pub vs_enter: crate::game::structs::StartMeleeData,
+    pub vs_exit: crate::game::gm::match_exit::MatchExitInfo,
+    /// `results0_data`: the results screen's enter data after the match.
+    pub results0: crate::game::gm::results_scene::ResultsMatchInfo,
+    /// `results1_enter_data` (`DebugResultsData`): the Result Test's.
+    pub results1: crate::game::gm::results_scene::ResultsMatchInfo,
+    /// `un_804D6DD8`: which record the Otoguro test's Player Count Set edits (2 the
+    /// home-run contest's, 3 the target test's).
+    pub records_kind: i32,
 }
 
 impl Default for DebugMode {
@@ -1165,6 +1246,11 @@ impl Default for DebugMode {
                 ..Default::default()
             },
             hanyu_sss: Default::default(),
+            vs_enter: Default::default(),
+            vs_exit: Default::default(),
+            results0: Default::default(),
+            results1: Default::default(),
+            records_kind: 0,
         }
     }
 }
@@ -1291,9 +1377,141 @@ impl Running<'_> {
     }
 
     /// `onExitIntro` and `onExitMemCard`: back to the first page.
-    // Ports `onExitIntro` and `onExitMemCard`; aliased once a session leaves their scenes.
+    #[doc(alias = "onExitIntro")]
+    #[doc(alias = "onExitMemCard")]
     pub fn debug_mode_back_to_menu(&mut self) {
         self.set_next_game_mode_state_id(0);
+    }
+
+    /// `onEnterVs`: the match the Versus Mode page's settings make (`un_802FFF2C`), with the
+    /// menus' sound banks.
+    #[doc(alias = "onEnterVs@801B0B48")]
+    pub fn debug_mode_enter_vs(&mut self) {
+        let start = self.game.hud.debug.start_data();
+        self.game.debug_mode.vs_enter.clone_from(&start);
+        let a = &mut self.game.audio;
+        a.lb.unwant_banks(0x12);
+        a.lb.want_banks(2, 0x20);
+        a.lb_start_bank_loads(self.data);
+        self.game.audio.lb_wait_for_banks(self.data);
+    }
+
+    /// `onEnterResults0`: the results screen's enter data cleared (`gm_80177724`) and the
+    /// match's results in it.
+    #[doc(alias = "onEnterResults0")]
+    pub fn debug_mode_enter_results0(&mut self) {
+        self.results_enter_clear();
+        let me = self.game.debug_mode.vs_exit.match_end.clone();
+        self.game.debug_mode.results0.match_end = me;
+    }
+
+    /// `onEnterResults1`, the Result Test: the screen's flags and costumes from the page's
+    /// settings, the results of a timed match it makes up (`gm_80166A98`: each player's
+    /// character, rank and colour), the winners' fanfares' banks, the announcer's, and the
+    /// standings' bonuses off (`gm_801701A0`).
+    #[doc(alias = "onEnterResults1")]
+    #[doc(alias = "gm_80166A98")]
+    pub fn debug_mode_enter_results1(&mut self) {
+        let w = |r: &Self, i: u32| r.game.hud.debug.setting(4 * i);
+        let mut e = std::mem::take(&mut self.game.debug_mode.results1);
+        e.x0_0 = w(self, 0x5E) & 1 != 0;
+        e.x0_1 = w(self, 0x5F) & 1 != 0;
+        e.x1 = w(self, 0x5A) as u8;
+        e.x2 = w(self, 0x5B) as u8;
+        e.x3 = w(self, 0x5C) as u8;
+        e.x4 = (e.x4 & 0x00FF_FFFF) | (w(self, 0x5D) as u8 as i32) << 24;
+        let color = w(self, 0x60) as u8;
+        let ckinds = [0x51, 0x52, 0x53, 0x54].map(|i| w(self, i) as i8);
+        let ranks = [0x56, 0x57, 0x58, 0x59].map(|i| w(self, i).wrapping_sub(1) as u8);
+        let me = &mut e.match_end;
+        *me = Default::default();
+        me.outcome = 1;
+        me.match_kind = 0;
+        me.is_teams = 0;
+        for i in 0..4 {
+            let p = &mut me.player_standings[i];
+            p.ckind = ckinds[i];
+            p.x3_u[0] = (p.x3_u[0] & 3) | (color & 0x3F) << 2;
+            let score = 10i32.wrapping_sub(i32::from(ranks[i]));
+            p.score = score;
+            p.x30 = score as u32;
+        }
+        for i in 0..4 {
+            let err = self.game.pads.master[i].err;
+            let p = &mut me.player_standings[i];
+            p.x30 = p.x30.wrapping_add(6 - i as u32);
+            p.pkind = if i32::from(p.ckind) == 0x21 {
+                3
+            } else if err == 0 {
+                0
+            } else {
+                1
+            };
+            if p.ckind == 0x13 {
+                p.ckind = 0x12;
+                p.ftkind = 7;
+            }
+        }
+        me.player_standings[4].pkind = 3;
+        me.player_standings[5].pkind = 3;
+        self.game.rank_results_standalone(me);
+        let mut sfx = 0u64;
+        for p in &me.player_standings[..4] {
+            if p.pkind != 3 && p.is_big_loser == 0 {
+                sfx |= crate::lb::audio::character_banks(i32::from(p.ckind));
+            }
+        }
+        self.game.debug_mode.results1 = e;
+        // The screen takes the files the preload cache holds (`lbArchive_80017040`), as
+        // after a match.
+        self.game.ft.data.files.from_cache = true;
+        let a = &mut self.game.audio;
+        a.lb.unwant_banks(0x14);
+        a.lb.want_banks(4, sfx);
+        self.load_announcer();
+        self.game.bonuses_off();
+    }
+
+    /// `onExitResults1`: the music stopped, and the Result Test again with L held on the
+    /// first controller, else the first page.
+    #[doc(alias = "onExitResults1")]
+    pub fn debug_mode_exit_results1(&mut self) {
+        self.lb_audio_music_stop();
+        let next = if self.game.pads.copy[0].button & 0x40 != 0 {
+            11
+        } else {
+            0
+        };
+        self.set_next_game_mode_state_id(next);
+    }
+
+    /// `onEnterDebugVs` (`gmvsmode.c`): debug VS's match, Link and Mario on Final
+    /// Destination, two humans, a timed match with no time limit, no items, and the
+    /// announcer's bank.
+    #[doc(alias = "onEnterDebugVs")]
+    pub fn debug_vs_enter_vs(&mut self) {
+        use crate::game::gm::vs_mode::{player_defaults, rules_defaults};
+        let start = &mut self.game.vs_melee.start;
+        start.rules = rules_defaults();
+        start.rules.stkind = 0x20;
+        start.rules.item_freq = -1;
+        start.rules.sd_penalty = -1;
+        start.rules.match_kind = 0;
+        for p in &mut start.players {
+            *p = player_defaults();
+            p.stocks = 0;
+            p.cpu_kind = 4;
+        }
+        for (p, ckind) in start.players.iter_mut().zip([6, 8, 6, 6]) {
+            p.ckind = ckind;
+        }
+        for (p, kind) in start.players.iter_mut().zip([0, 0, 3, 3]) {
+            p.slot_type = kind;
+        }
+        for p in &mut start.players[..4] {
+            p.rumble_enabled = false;
+        }
+        self.load_announcer();
     }
 
     /// `onEnterMenu2`: the Mode Team Test page, back to the first page.

@@ -310,6 +310,9 @@ impl Running<'_> {
                     );
                     let at = base.wrapping_add(self.data.u32(e.at(4)));
                     self.game.ft.data.demo_x14[kind as usize][i] = at;
+                    // The original writes it into the character's data (the heap's image
+                    // holds it where the scene loaded the data into its heap).
+                    crate::hsd::heap::with(|h| h.image.file_word(e.at(0x14), at));
                 }
             }
             self.game.ft.data.demo_anims[kind as usize] = 0;

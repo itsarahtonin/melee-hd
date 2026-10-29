@@ -573,7 +573,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1A2C`, Sudden Death's exit.
-    // Ports `gm_801B1A2C`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B1A2C")]
     pub fn tou_exit_sudden_death(&mut self) {
         // `gm_801629B4`: the Sudden Death's seconds added to the save's (`x1A44`).
         let secs = self.game.tou.sd_exit.match_end.frame_count / 60;

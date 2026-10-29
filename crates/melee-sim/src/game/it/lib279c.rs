@@ -2,6 +2,7 @@
 
 use super::item::is_fighter;
 use super::{item, item_mut};
+use crate::game::leftovers::RenderOf;
 use crate::game::state::{Game, Running};
 use crate::game::structs::{Item, SpawnItem};
 use crate::hsd::gobj::GObjId;
@@ -39,6 +40,19 @@ pub fn copy_fighter_attack(game: &mut Game, gobj: GObjId, fighter: GObjId) {
     ip.xD9C = x2074.x207C;
     ip.xDA4_word = u32::from_be_bytes(x2074.x10);
     ip.xDA8_short = x2074.x2088;
+    let i = super::item_of(game, gobj);
+    carry_record(game, RenderOf::Fighter(f), i);
+}
+
+/// The attack record's flags word (`x2074.x10`, the item's `xDA4`) keeps below its read
+/// bits what its first block held, which a copy carries (docs/engine.md, "Uninitialized
+/// values").
+fn carry_record(game: &mut Game, from: RenderOf, to: crate::game::handles::ItemId) {
+    let off = match from {
+        RenderOf::Fighter(_) => 0x2084,
+        RenderOf::Item(_) => 0xDA4,
+    };
+    crate::game::leftovers::carry_render(game, from, off, RenderOf::Item(to), 0xDA4, 4);
 }
 
 /// Sets which attack a new item's hits count as, `it_8027B0C4`: its fighter's, the item that
@@ -69,6 +83,11 @@ pub fn track_spawn(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
             ip.xD9C = x9c;
             ip.xDA4_word = xa4;
             ip.xDA8_short = xa8;
+            let (from, to) = (
+                super::item_of(game, p2.unwrap()),
+                super::item_of(game, gobj),
+            );
+            carry_record(game, RenderOf::Item(from), to);
         }
     } else {
         let ip = item_mut(game, gobj);
@@ -97,6 +116,8 @@ pub fn restart_attack(game: &mut Game, gobj: GObjId) {
         ip.xD94 = rec.x2074_vec;
         ip.xD9C = rec.x207C;
         ip.xDA4_word = u32::from_be_bytes(rec.x10);
+        let i = super::item_of(game, gobj);
+        carry_record(game, RenderOf::Fighter(f), i);
         return;
     }
     clear_attack_record(item_mut(game, gobj));

@@ -28,6 +28,9 @@ pub struct Lay {
     /// layout doesn't lay out ([`Lay::forget_as`]), or what the block held before, which its
     /// owner never writes ([`Lay::leftover`]). Empty until one is set.
     owners: Vec<Option<&'static str>>,
+    /// The bytes that still hold the GPU's pixels the block held when its object was made
+    /// ([`Lay::keep_render_target`]). Empty until one is set.
+    pixels: Vec<bool>,
 }
 
 impl Lay {
@@ -38,6 +41,31 @@ impl Lay {
             known: vec![false; len as usize],
             bits: vec![0; len as usize],
             owners: Vec::new(),
+            pixels: Vec::new(),
+        }
+    }
+
+    /// An object made over the GPU's pixels (`runs`, offsets into it, as its creation found
+    /// them, [`crate::hsd::image::Src::RenderTarget`]) keeps them where it holds the image's
+    /// `fill` that its creation gave it: a byte laid as the fill, or one the layout leaves
+    /// unknown, goes back as the pixels rather than as the object's (docs/engine.md,
+    /// "Uninitialized values"). A bitfield's byte keeps them where every bit laid is the
+    /// fill's.
+    pub fn keep_render_target(&mut self, runs: &[(u32, u32)], fill: u8) {
+        for &(a, b) in runs {
+            for o in a..b.min(self.bytes.len() as u32) {
+                let i = o as usize;
+                let mask = if self.known[i] { 0xFF } else { self.bits[i] };
+                if (self.bytes[i] ^ fill) & mask != 0 {
+                    continue;
+                }
+                if self.pixels.is_empty() {
+                    self.pixels = vec![false; self.bytes.len()];
+                }
+                self.pixels[i] = true;
+                self.known[i] = false;
+                self.bits[i] = 0;
+            }
         }
     }
 
@@ -125,6 +153,7 @@ impl Lay {
             known,
             bits,
             owners: Vec::new(),
+            pixels: Vec::new(),
         }
     }
 
@@ -140,6 +169,34 @@ impl Lay {
             l.owners[a as usize..b as usize].fill(Some(owner));
         }
         l
+    }
+
+    /// What the layout holds at `[a, a + len)` now (over what the block held, [`Lay::over`]),
+    /// to lay again with [`Lay::restore`] where the object turns out not to have written it.
+    pub fn kept(&self, a: u32, len: u32) -> Kept {
+        let o = (a - self.at) as usize;
+        let r = o..o + len as usize;
+        Kept {
+            a,
+            bytes: self.bytes[r.clone()].to_vec(),
+            known: self.known[r.clone()].to_vec(),
+            bits: self.bits[r.clone()].to_vec(),
+            owners: self.owners.get(r).map(<[_]>::to_vec),
+        }
+    }
+
+    /// Lays again what [`Lay::kept`] took.
+    pub fn restore(&mut self, k: Kept) {
+        let o = (k.a - self.at) as usize;
+        let r = o..o + k.bytes.len();
+        self.bytes[r.clone()].copy_from_slice(&k.bytes);
+        self.known[r.clone()].copy_from_slice(&k.known);
+        self.bits[r.clone()].copy_from_slice(&k.bits);
+        if let Some(owners) = k.owners {
+            self.owners[r].copy_from_slice(&owners);
+        } else if !self.owners.is_empty() {
+            self.owners[r].fill(None);
+        }
     }
 
     /// A bitfield of `bits` bits, `bit` bits from the struct at `at`, the first bit the top
@@ -198,16 +255,33 @@ impl Lay {
     /// Writes the known bytes into the image, run by run, and the members it doesn't lay out
     /// as theirs ([`Lay::forget_as`]).
     pub fn put(self, img: &mut Image) {
+        let pixel = |i: usize| self.pixels.get(i).copied().unwrap_or(false);
         let mut i = 0;
         while i < self.owners.len() {
-            let Some(owner) = self.owners[i].filter(|_| !self.known[i]) else {
+            let Some(owner) = self.owners[i].filter(|_| !self.known[i] && !pixel(i)) else {
                 i += 1;
                 continue;
             };
             let j = (i..self.owners.len())
-                .find(|&j| self.known[j] || self.owners[j] != Some(owner))
+                .find(|&j| self.known[j] || pixel(j) || self.owners[j] != Some(owner))
                 .unwrap_or(self.owners.len());
             img.claim(self.at + i as u32, self.at + j as u32, owner);
+            i = j;
+        }
+        let mut i = 0;
+        while i < self.pixels.len() {
+            if !self.pixels[i] {
+                i += 1;
+                continue;
+            }
+            let j = (i..self.pixels.len())
+                .find(|&j| !self.pixels[j])
+                .unwrap_or(self.pixels.len());
+            img.hold(
+                self.at + i as u32,
+                self.at + j as u32,
+                super::image::Src::RenderTarget,
+            );
             i = j;
         }
         let mut i = 0;
@@ -223,6 +297,15 @@ impl Lay {
             i = j;
         }
     }
+}
+
+/// A layout's bytes as [`Lay::kept`] took them.
+pub struct Kept {
+    a: u32,
+    bytes: Vec<u8>,
+    known: Vec<bool>,
+    bits: Vec<u8>,
+    owners: Option<Vec<Option<&'static str>>>,
 }
 
 /// The address of a place in loaded data, where the image knows the file's.
@@ -402,7 +485,6 @@ pub fn mobj(objs: &Objects, img: &mut Image, m: MObjId) {
 /// A material's compiled TEV, the blocks it keeps: its stages (`HSD_TExpTevDesc`, 0x78) in
 /// their list's order, and the constants its expression list keeps (`HSD_TECnst`, 0x18).
 pub fn mobj_tev(objs: &Objects, img: &mut Image, m: MObjId) {
-    use super::texp::Cnst;
     let o = &objs.mobjs[m];
     let Some(tev) = &o.tev else { return };
     let h = &o.heap;
@@ -459,33 +541,40 @@ pub fn mobj_tev(objs: &Objects, img: &mut Image, m: MObjId) {
         l.put(img);
     }
     let n = usize::from(h.n_cnsts).min(tev.cnsts.len());
-    let mat = if o.mat.is_some() { o.heap.mat } else { 0 };
-    let tev_of = |t: super::tobj::TObjId| objs.tobjs[t].tev_addr;
     for (k, c) in tev.cnsts[..n].iter().enumerate() {
         let mut l = Lay::new(h.cnsts[k], 0x18);
         l.u32(0, u32::from(super::texp::TY_CNST));
         l.u32(4, if k + 1 < n { h.cnsts[k + 1] } else { 0 });
-        let ta = |t: super::tobj::TObjId| objs.tobjs.pool.addr(t.0);
-        let val = match c.val {
-            Cnst::MatDiffuse(_) => mat + 4,
-            Cnst::MatSpecular(_) => mat + 8,
-            Cnst::MatAlpha(_) => mat + 0xC,
-            Cnst::TObjBlending(t) => ta(t) + 0x50,
-            Cnst::TObjKonst(t) | Cnst::TObjKonstR(t) => tev_of(t) + 0x10,
-            Cnst::TObjKonstG(t) => tev_of(t) + 0x11,
-            Cnst::TObjKonstB(t) => tev_of(t) + 0x12,
-            Cnst::TObjKonstA(t) => tev_of(t) + 0x13,
-            Cnst::TObjTev0(t) => tev_of(t) + 0x14,
-            Cnst::TObjTev0A(t) => tev_of(t) + 0x17,
-            Cnst::TObjTev1(t) => tev_of(t) + 0x18,
-            Cnst::TObjTev1A(t) => tev_of(t) + 0x1B,
-        };
-        l.u32(8, val);
+        l.u32(8, cnst_val(objs, m, c.val));
         l.u32(0xC, u32::from(c.comp));
         l.u32(0x10, cnst_type(c.val));
         l.u8(0x14, c.reg);
         l.u8(0x15, c.idx);
         l.put(img);
+    }
+}
+
+/// Where a constant of material `m` reads its value (`HSD_TECnst::val`): a field of the
+/// material's color block or of a texture's or its TEV block.
+fn cnst_val(objs: &Objects, m: MObjId, c: super::texp::Cnst) -> u32 {
+    use super::texp::Cnst;
+    let o = &objs.mobjs[m];
+    let mat = if o.mat.is_some() { o.heap.mat } else { 0 };
+    let tev_of = |t: super::tobj::TObjId| objs.tobjs[t].tev_addr;
+    let ta = |t: super::tobj::TObjId| objs.tobjs.pool.addr(t.0);
+    match c {
+        Cnst::MatDiffuse(_) => mat + 4,
+        Cnst::MatSpecular(_) => mat + 8,
+        Cnst::MatAlpha(_) => mat + 0xC,
+        Cnst::TObjBlending(t) => ta(t) + 0x50,
+        Cnst::TObjKonst(t) | Cnst::TObjKonstR(t) => tev_of(t) + 0x10,
+        Cnst::TObjKonstG(t) => tev_of(t) + 0x11,
+        Cnst::TObjKonstB(t) => tev_of(t) + 0x12,
+        Cnst::TObjKonstA(t) => tev_of(t) + 0x13,
+        Cnst::TObjTev0(t) => tev_of(t) + 0x14,
+        Cnst::TObjTev0A(t) => tev_of(t) + 0x17,
+        Cnst::TObjTev1(t) => tev_of(t) + 0x18,
+        Cnst::TObjTev1A(t) => tev_of(t) + 0x1B,
     }
 }
 
@@ -503,7 +592,13 @@ fn cnst_type(c: super::texp::Cnst) -> u32 {
 /// `HSD_TECnst`s, 0x18), as each goes: the list runs newest first, each made on its front;
 /// the first pass takes every operation out, the second every constant no stage reads, and
 /// a node taken out keeps the link it had then (its first word becomes the free list's).
-pub fn freed_texps(objs: &Objects, img: &mut Image, list: &super::texp::TExpList, addrs: &[u32]) {
+pub fn freed_texps(
+    objs: &Objects,
+    img: &mut Image,
+    m: MObjId,
+    list: &super::texp::TExpList,
+    addrs: &[u32],
+) {
     use super::texp::{Exp, Node};
     let n = list.nodes.len().min(addrs.len());
     // `next[i]`: the node after node `i` in the list (older), as the passes leave it.
@@ -576,6 +671,7 @@ pub fn freed_texps(objs: &Objects, img: &mut Image, list: &super::texp::TExpList
             Node::Cnst(c) => {
                 let mut l = Lay::new(addrs[i], 0x18);
                 l.u32(4, addr(at_free[i]));
+                l.u32(8, cnst_val(objs, m, c.val));
                 l.u32(0xC, u32::from(c.comp));
                 l.u32(0x10, cnst_type(c.val));
                 l.bytes(0x14, &[c.reg, c.idx, c.ref_]);

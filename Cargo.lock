@@ -1658,6 +1658,7 @@ dependencies = [
  "melee-gx",
  "melee-input",
  "melee-render",
+ "melee-save",
  "melee-sim",
  "melee-slippi",
  "png",

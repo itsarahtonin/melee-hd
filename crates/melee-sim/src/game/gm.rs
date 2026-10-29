@@ -105,6 +105,8 @@ pub struct Globals {
     /// Whether the trophies' data archive is loaded (`_Toy_sbss_804D6ED0` isn't null): the
     /// first stage load of a session loads it.
     pub trophy_data: bool,
+    /// Whether that archive is the Japanese one (`getDataiDatFilename` with Japanese saved).
+    pub trophy_data_jp: bool,
     /// Whether the standings' bonuses are off (`lbl_804D65A0.x0`): the results screen
     /// turns them on as it ends (`fn_801701AC`).
     pub bonuses_off: u8,
@@ -132,8 +134,24 @@ impl super::state::Running<'_> {
     /// `loadTrophyMetadata`).
     pub fn load_trophy_data(&mut self) {
         if !self.game.gm.trophy_data {
-            self.disc_load(TROPHY_DATA_FILE, super::ft::data::MAIN_MEMORY);
+            // A replay's match has no save: its files take English names.
+            let jp = !self.files_us();
+            self.game.gm.trophy_data_jp = jp;
+            let name = self.game.trophy_data_file();
+            self.disc_load(name, super::ft::data::MAIN_MEMORY);
             self.game.gm.trophy_data = true;
+        }
+    }
+}
+
+impl Game {
+    /// The trophies' data archive loaded (`TyDatai.dat` when the saved language was Japanese
+    /// as it loaded, else [`TROPHY_DATA_FILE`]).
+    pub fn trophy_data_file(&self) -> &'static str {
+        if self.gm.trophy_data_jp {
+            "TyDatai.dat"
+        } else {
+            TROPHY_DATA_FILE
         }
     }
 }
@@ -149,17 +167,6 @@ pub fn is_1p_mode(game: &Game) -> bool {
         game.game_mode,
         0x03 | 0x04 | 0x05 | 0x0F | 0x1C | 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x2B
     )
-}
-
-impl Game {
-    /// The debug code is off on a retail disc; reaching a path that needs it stops.
-    pub(crate) fn assert_retail(&self) {
-        assert!(
-            self.gm.db_level < DB_DEBUG_ROM,
-            "debug level {}: the debug paths aren't ported",
-            self.gm.db_level
-        );
-    }
 }
 
 /// Whether the game is in training mode, `gm_8018841C`.
