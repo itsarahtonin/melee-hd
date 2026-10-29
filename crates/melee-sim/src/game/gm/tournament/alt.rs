@@ -692,7 +692,7 @@ impl Running<'_> {
     /// each place's own value (not its seat) names the entrant whose handicap moves, and the
     /// sound banks are the match-up's icons' rather than their characters'
     /// (docs/melee-bugs.md).
-    // Ports `gm_8019E634`; aliased once a check reaches it.
+    #[doc(alias = "gm_8019E634")]
     pub fn tou_next_match_up(&mut self) {
         let hmn_cpu = self.game.tou.tm.hmn_cpu_count();
         let n = i32::from(self.game.tou.tm.x30);
