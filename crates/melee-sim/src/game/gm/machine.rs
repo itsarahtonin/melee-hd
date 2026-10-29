@@ -942,8 +942,7 @@ impl Running<'_> {
                     true
                 }
                 Hook::VsExitSuddenDeath => {
-                    // VS mode's (`gmVsMelee_ExitSuddenDeath`).
-                    self.vs_mode_exit_sudden_death();
+                    self.special_exit_sudden_death(m);
                     true
                 }
                 Hook::VsExitResults => {

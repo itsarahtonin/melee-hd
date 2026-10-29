@@ -67,6 +67,16 @@ impl Special {
             Special::Stamina => unreachable!("Stamina Mode's match has its own entry"),
         }
     }
+
+    /// Its callbacks for Sudden Death's start data (`gmVsMelee_EnterSuddenDeath`'s): the
+    /// match's, but Super Sudden Death's entry (`gm_801B8CC4`) passes none, so its players'
+    /// 300% (`fn_801B8C5C`) isn't applied there.
+    pub fn sudden_death_callbacks(self) -> (Option<StartCallback>, Option<PlayerCallback>) {
+        match self {
+            Special::SuperSuddenDeath => (None, None),
+            _ => self.callbacks(),
+        }
+    }
 }
 
 /// `lbAudioAx_80026EBC` of the stage select's forced stage, as Stamina Mode's exit takes it:
@@ -189,20 +199,46 @@ impl Running<'_> {
     }
 
     /// A mode's Sudden Death's entry: VS mode's (`gmVsMelee_EnterSuddenDeath`) on its table
-    /// entry with its callbacks (`gm_801B8CC4`, `gm_801B8ED0`, `gm_801B90E0`, `gm_801BA024`,
-    /// `gm_801BA224`, `gm_801BA61C`, `gm_801BA814` and Invisible's `onEnterSuddenDeath`, held
-    /// unaliased until a session reaches a mode's Sudden Death).
+    /// entry with its callbacks, but Super Sudden Death's, which passes none
+    /// ([`Special::sudden_death_callbacks`]).
+    #[doc(alias = "gm_801B8CC4")]
+    #[doc(alias = "gm_801B8ED0")]
+    #[doc(alias = "gm_801B90E0")]
+    #[doc(alias = "gm_801BA024")]
+    #[doc(alias = "gm_801BA224")]
+    #[doc(alias = "gm_801BA61C")]
+    #[doc(alias = "gm_801BA814")]
+    #[doc(alias = "onEnterSuddenDeath@801BA424")]
     pub fn special_enter_sudden_death(&mut self, mode: u8) {
         let m = special(mode);
-        let (start_cb, player_cb) = m.callbacks();
+        let (start_cb, player_cb) = m.sudden_death_callbacks();
         self.vs_melee_enter_sudden_death(m.table(), start_cb, player_cb);
+    }
+
+    /// A mode's Sudden Death's exit: VS mode's (`gmVsMelee_ExitSuddenDeath`).
+    #[doc(alias = "gm_801B8CF4")]
+    #[doc(alias = "gm_801B8F04")]
+    #[doc(alias = "gm_801B9114")]
+    #[doc(alias = "gm_801BA058")]
+    #[doc(alias = "gm_801BA258")]
+    #[doc(alias = "gm_801BA650")]
+    #[doc(alias = "gm_801BA848")]
+    #[doc(alias = "onExitSuddenDeath@801BA458")]
+    pub fn special_exit_sudden_death(&mut self, _mode: u8) {
+        self.vs_mode_exit_sudden_death();
     }
 
     /// A mode's results' exit: VS mode's (`gmVsMelee_ExitResults`) on its table entry, the
     /// character select next; unlike VS mode's own, the match's statistics aren't added to
-    /// the save (`gm_801B8D34`, `gm_801B8F44`, `gm_801B9154`, `gm_801BA098`, `gm_801BA298`,
-    /// `gm_801BA690`, `gm_801BA888` and Invisible's `onExitResults`, held unaliased until a
-    /// session leaves a mode's results).
+    /// the save.
+    #[doc(alias = "gm_801B8D34")]
+    #[doc(alias = "gm_801B8F44")]
+    #[doc(alias = "gm_801B9154")]
+    #[doc(alias = "gm_801BA098")]
+    #[doc(alias = "gm_801BA298")]
+    #[doc(alias = "gm_801BA690")]
+    #[doc(alias = "gm_801BA888")]
+    #[doc(alias = "onExitResults@801BA498")]
     pub fn special_exit_results(&mut self, mode: u8, next_terminates: bool) {
         let table = special(mode).table();
         self.vs_mode_exit_results(next_terminates, super::results_exit::VS_STATE_CSS, table);
