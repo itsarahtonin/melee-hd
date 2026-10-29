@@ -259,6 +259,12 @@ pub struct Clock {
     /// power-on, as the hardware does; only what the code computes from `OSGetTime` (the
     /// alarms' grid, the clock's seconds) sees it.
     pub tb_power_on: u64,
+    /// The VI's retrace count (`retraceCount`): the retrace handlers run since `VIInit`.
+    pub retraces: u32,
+    /// The count the scene loop's last flush (`HSD_VIWaitXFBFlush`) began its last
+    /// `VIWaitForRetrace` with, which `OSSleepThread` saved on the stack (its `r30`); none
+    /// when the flush didn't wait.
+    pub flush_count: Option<u32>,
 }
 
 /// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
@@ -700,6 +706,7 @@ impl Clock {
             } else if self.vi_pending {
                 self.vi_pending = false;
                 self.now += VI_HANDLER;
+                self.retraces = self.retraces.wrapping_add(1);
                 self.woken = true;
                 // `HSD_VIPostRetraceCB`: the next copied frame shows, freeing the one shown.
                 if self.xfb_pending > 0 {
@@ -876,11 +883,13 @@ impl Clock {
         self.game_code(f);
         self.lb_wait(f);
         self.woken = false;
+        let before = self.retraces;
         while !self.woken {
             let next = self.next_at();
             self.now = self.now.max(next);
             self.service(f);
         }
+        self.note_flush(before);
         // The copy shows; nothing waits.
         self.xfb_pending = 0;
         self.xfb_shown = true;
@@ -897,11 +906,19 @@ impl Clock {
             self.xfb_pending += 1;
         }
         self.woken = false;
+        let before = self.retraces;
         while self.xfb_pending > 0 {
             let next = self.next_at();
             self.now = self.now.max(next);
             self.service(f);
         }
+        self.note_flush(before);
+    }
+
+    /// The flush's last `VIWaitForRetrace` began one retrace before the one that ended it
+    /// (it waits for the count to change), when it waited at all.
+    fn note_flush(&mut self, before: u32) {
+        self.flush_count = (self.retraces != before).then(|| self.retraces.wrapping_sub(1));
     }
 
     /// A round's display pass is about to run (a session's, whose pass can read the clock
