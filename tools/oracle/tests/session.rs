@@ -964,6 +964,48 @@ fn records_at_their_largest() {
     );
 }
 
+/// Dr. Mario's second results pose on a card that has him unlocked: his two pills (each a
+/// random color combination, held in states 5 and 4), to the trace's end, the card after it
+/// the original's.
+#[test]
+fn dr_marios_pills_in_his_results_pose() {
+    let card = ssbm_rs_local("lockstep/results-sessions/pills-run.card");
+    let Some(out) = results_session("pills", &["--all", "--heap", "--card-after", &card]) else {
+        return;
+    };
+    assert!(
+        out.contains("3748 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
+        "{out}"
+    );
+}
+
+/// The name entry opened from the character select (a door's name box, New): the keyboard
+/// over the screen for that port, a name typed and saved, the screen built again with the
+/// name on the door, and a match with the name over the fighter, to the trace's end, the card
+/// after it the original's; and `2026-10-10_13-05-00`, which opens it in its last character
+/// select (tick 14223), to its trace's end.
+#[test]
+fn a_name_from_the_character_select() {
+    let card = ssbm_rs_local("lockstep/results-sessions/name-css-run.card");
+    let Some(out) = results_session("name-css", &["--all", "--heap", "--card-after", &card]) else {
+        return;
+    };
+    assert!(
+        out.contains("4336 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
+        "{out}"
+    );
+    let Some(out) = session_at(
+        "traces/session/2026-10-10_13-05-00.trc",
+        "lockstep/recordings/2026-10-10_13-05-00.inputs",
+        &["--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("18315 ticks compared, no difference"), "{out}");
+}
+
 /// The selects left by L, R and Start (the character select's exit reading its freed coins)
 /// and by B from the stage select, to the main menu again.
 #[test]
