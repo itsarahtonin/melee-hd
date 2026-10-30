@@ -145,6 +145,9 @@ pub struct Run {
     pub free_bytes: i32,
     pub free_files: i32,
     pub layer: Layer,
+    /// Each copy the HSD layer made into the buffers (`Layer::puts`), with how many of
+    /// `steps` came before it.
+    pub puts: Vec<(usize, crate::hsd::Ptr, Vec<u8>)>,
 }
 
 impl Run {
@@ -166,6 +169,7 @@ impl Run {
             free_bytes: 0,
             free_files: 0,
             layer: Layer::new(0),
+            puts: Vec::new(),
         }
     }
 
@@ -334,6 +338,13 @@ impl Run {
     /// (`fn_8001A0B0`).
     fn request(&mut self, m: &mut Mounted, req: Request, mut saved: i32) -> i32 {
         let calls = self.layer.request(m, &mut self.bufs, req);
+        let base = self.steps.len();
+        self.puts.extend(
+            self.layer
+                .puts
+                .drain(..)
+                .map(|(at, p, bytes)| (base + at, p, bytes)),
+        );
         self.steps.append(&mut self.layer.log);
         for (arg, r) in calls {
             self.steps.push(b'k');

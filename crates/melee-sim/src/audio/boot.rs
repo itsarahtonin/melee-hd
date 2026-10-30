@@ -109,6 +109,16 @@ pub fn console_boot_delay(power_on: u64) -> u64 {
 pub const CONSOLE_RESET_EXTRA: u64 =
     2 * (crate::lb::save::EXI_READ + crate::lb::save::TIME_READ) + crate::lb::save::EXI_READ;
 
+/// What a card in slot B adds to [`CONSOLE_RESET_EXTRA`]: `lbSnap_8001E290`'s probe of slot B
+/// finds it in and settled, and reads the time base too (`__EXIProbe`).
+pub fn console_reset_slot_b(card_b: bool) -> u64 {
+    if card_b {
+        crate::lb::save::TIME_READ
+    } else {
+        0
+    }
+}
+
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
 pub struct Aram {
     next: u32,

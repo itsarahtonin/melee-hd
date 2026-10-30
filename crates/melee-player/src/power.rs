@@ -142,6 +142,8 @@ pub fn setup(card: Vec<u8>, power_on: u64, debug_level: i32) -> Setup {
         dtv: false,
         sram_flags: session::SRAM_FLAGS_DEFAULT,
         card_pull: None,
+        card_b: None,
+        card_b_pull: None,
         develop: (debug_level != 0).then_some(melee_sim::game::session::Develop {
             level: debug_level,
             ini: false,

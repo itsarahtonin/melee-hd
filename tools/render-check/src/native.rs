@@ -118,6 +118,8 @@ fn drive_session(
         dtv: rec.dtv,
         sram_flags: rec.sram_flags,
         card_pull: None,
+        card_b: None,
+        card_b_pull: None,
         develop: rec.developer(),
     };
     let mut console = SessionConsole {

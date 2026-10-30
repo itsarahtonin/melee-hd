@@ -54,6 +54,8 @@ fn a_played_session_records_its_reads_again() {
                 dtv: rec.dtv,
                 sram_flags: rec.sram_flags,
                 card_pull: None,
+                card_b: None,
+                card_b_pull: None,
                 develop: rec.developer(),
             });
             let d = melee_data::disc::Disc::open(&disc).unwrap();

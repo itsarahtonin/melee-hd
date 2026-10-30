@@ -61,13 +61,9 @@ impl Running<'_> {
 
     /// `lb_8001BFD8`'s list on slot `chan`: the mount, check and open (no name) of the native
     /// save's card, then `taskListSnapshots`, which writes the free blocks and files and the
-    /// list, newest first, every entry past the last marked with file -1. Slot B never has a
-    /// card (`session::Setup`'s console has one slot).
+    /// list, newest first, every entry past the last marked with file -1.
     fn snap_list_card(&mut self, chan: usize) -> i32 {
-        if chan != 0 {
-            return self.run_card_list_slot_b(&lists::list_snapshots());
-        }
-        let (r, run) = self.run_card_list(&lists::list_snapshots(), CardTime::Mount, false);
+        let (r, run) = self.run_card_list(chan, &lists::list_snapshots(), CardTime::Mount, false);
         // The task runs only when the open got that far (its mask takes the null name's
         // result); its nodes come from the scene's heap and go back.
         let listed = run
