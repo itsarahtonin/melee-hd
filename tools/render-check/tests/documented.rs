@@ -167,9 +167,12 @@ frames!(DATA_BONUS;
     data_bonus_1250 1250,
     data_bonus_1900 1900,
 );
+// `count`'s 2000 is the main list again after the Records lists, whose light loads light 1
+// as the approach's screen does (below).
 frames!(DATA_COUNT;
     data_count_1300 1300,
     data_count_1700 1700,
+    data_count_2000 2000,
 );
 frames!(DATA_DIAGRAM;
     data_diagram_1250 1250,
@@ -284,79 +287,32 @@ frames!(SOUND_JP;
     sound_jp_1620 1620,
 );
 // The challenger approach's screen (`unlock-sessions/time`): coming in (2720) and waiting
-// for A with Mewtwo's silhouette (2870). The images are identical; the transform unit's
-// memory holds light 1's direction, which no draw reads, as melee-render writes it
-// (docs/player.md's open issues).
-macro_rules! approach_frames {
-    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
-        $(
-            #[test]
-            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
-            fn $name() {
-                compare(
-                    &$game,
-                    $frame,
-                    Group::Standard,
-                    Expect::SameImages {
-                        same: [1, 1],
-                        why: common::why::LIGHT_1,
-                    },
-                );
-            }
-        )*
-    };
-}
-approach_frames!(UNLOCK_TIME;
+// for A with Mewtwo's silhouette (2870). Light 1 is the scene's infinite light's specular
+// object, whose half vector no joint drawn under its set sets: the transform unit's memory
+// holds the zeros `hsdNew` left, not the half vector of the light an earlier scene had there.
+frames!(UNLOCK_TIME;
     unlock_time_2720 2720,
     unlock_time_2870 2870,
 );
 // The approach's screen for Mr. Game & Watch (`unlock-sessions/gw`), the name texture's first
 // frame, waiting for A (2890).
-approach_frames!(UNLOCK_GW;
+frames!(UNLOCK_GW;
     unlock_gw_2890 2890,
 );
 // Tournament mode (`tournament-sessions`): the setup's options with the bracket of 64 shown
 // (1300) and the bracket as it comes in (1600); the entrants' list with the character grid
 // (1400) and the name tags (1700), and a match's players' screen (2700); winner-out's
-// match-up screen (1900).
-/// A Tournament frame whose images are identical but for light 1's direction in the transform
-/// unit's memory, which no draw reads ([`common::why::LIGHT_1`]).
-fn tou_frame(game: &Game, frame: u32) {
-    compare_in(
-        game,
-        frame,
-        Group::Standard,
-        Expect::SameImages {
-            same: [1, 1],
-            why: common::why::LIGHT_1,
-        },
-        Capture::Headless,
-    );
-}
-
-macro_rules! tou_frames {
-    ($game:expr; $($name:ident $frame:literal),* $(,)?) => {
-        $(
-            #[test]
-            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
-            fn $name() {
-                tou_frame(&$game, $frame);
-            }
-        )*
-    };
-}
-tou_frames!(TOU_BRACKET64;
+// match-up screen (1900). Their lights load light 1 as the approach's do.
+frames!(TOU_BRACKET64;
     tou_bracket64_1300 1300,
     tou_bracket64_1600 1600,
 );
-tou_frames!(TOU_LIST;
+frames!(TOU_LIST;
     tou_list_1400 1400,
     tou_list_1700 1700,
-);
-frames!(TOU_LIST;
     tou_list_2700 2700,
 );
-tou_frames!(TOU_WINNER;
+frames!(TOU_WINNER;
     tou_winner_1900 1900,
 );
 
