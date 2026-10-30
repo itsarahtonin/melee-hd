@@ -75,10 +75,12 @@ pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
     } else {
         0
     };
-    // A raised debug level, as ssbm-rs's `--develop` marks the file (level + 1, 0 for none).
+    // A raised debug level, as ssbm-rs marks the file (level + 1, 0 for none), raised alone
+    // (`DBLEVEL=N`) when no `/develop.ini` counts as found.
     let develop = setup.develop.map_or(0, |d| {
-        ((d.level + 1) as u8) << melee_sim::game::inputs::DEVELOP_SHIFT
-            & melee_sim::game::inputs::DEVELOP_MASK
+        use melee_sim::game::inputs::{DEVELOP_MASK, DEVELOP_SHIFT, LEVEL_ALONE};
+        (((d.level + 1) as u8) << DEVELOP_SHIFT & DEVELOP_MASK)
+            | if d.ini { 0 } else { LEVEL_ALONE }
     });
     h.push(sound | if card { CARD } else { 0 } | develop);
     h.extend_from_slice(&setup.power_on.to_le_bytes());
@@ -240,5 +242,25 @@ mod tests {
             (0x0123_4567_89AB, false, 0x2C)
         );
         assert_eq!(rec.reads, reads);
+    }
+
+    /// The developer setting's level is marked as raised alone (`DBLEVEL`, no
+    /// `/develop.ini`), as ssbm-rs's main from 1158d12 reads and writes it: level 3 with sound is 0x49.
+    #[test]
+    fn a_debug_level_is_marked_alone() {
+        use melee_sim::game::session::Develop;
+        let mut setup = crate::power::setup(Vec::new(), 0, 3);
+        setup.card = None;
+        let bytes = header(&setup, false);
+        assert_eq!(bytes[20], 0x49);
+        let rec = Recording::parse(&bytes, Path::new("d.inputs")).unwrap();
+        assert_eq!(
+            rec.developer(),
+            Some(Develop {
+                level: 3,
+                ini: false
+            })
+        );
+        assert_eq!(crate::power::setup(Vec::new(), 0, 0).develop, None);
     }
 }

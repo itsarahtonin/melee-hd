@@ -705,6 +705,15 @@ pub const DEBUG_VS_TOOLS: Game = Game {
     replay: Replay::Session("debug-vs-tools"),
 };
 
+/// The develop tools' collision bubbles (`debug-sessions/vs-bubbles`): Link and Mario on Final
+/// Destination, their hurt capsules and hits, a shield's bubble, alone and over the models.
+pub const DEBUG_VS_BUBBLES: Game = Game {
+    stage: "Final Destination",
+    name: "debug-vs-bubbles",
+    players: "Link vs Mario, the debug VS match's collision bubbles (session debug-sessions/vs-bubbles)",
+    replay: Replay::Session("debug-vs-bubbles"),
+};
+
 /// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.
 pub const SOUND_SONGS: Game = Game {
     stage: "Main menu",

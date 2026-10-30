@@ -129,8 +129,11 @@ pub(crate) fn days_since_2000(y: u32, m: u32, d: u32) -> u64 {
 }
 
 /// The console the player's sessions run on: a drive's pace, the DSP mixing, the card, the
-/// clock at power-on, no component cable and the SRAM's stereo setting (ssbm-rs's defaults).
-pub fn setup(card: Vec<u8>, power_on: u64) -> Setup {
+/// clock at power-on, no component cable and the SRAM's stereo setting (ssbm-rs's defaults),
+/// and the developer setting's debug level (0 for retail's): `DbLevel` raised alone, as an
+/// Action Replay code raises it, with no `/develop.ini` (Sarah, 2026-10-29: no debug
+/// unlock-all written to the player's save).
+pub fn setup(card: Vec<u8>, power_on: u64, debug_level: i32) -> Setup {
     Setup {
         disc: DiscSpeed::Drive,
         dsp: DspModel::Samples,
@@ -139,8 +142,10 @@ pub fn setup(card: Vec<u8>, power_on: u64) -> Setup {
         dtv: false,
         sram_flags: session::SRAM_FLAGS_DEFAULT,
         card_pull: None,
-        // Retail's debug level: the developer setting (milestone 5's task 19) isn't offered yet.
-        develop: None,
+        develop: (debug_level != 0).then_some(melee_sim::game::session::Develop {
+            level: debug_level,
+            ini: false,
+        }),
     }
 }
 

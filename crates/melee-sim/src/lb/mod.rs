@@ -6,6 +6,7 @@ pub mod bgflash;
 pub mod cardgame;
 pub mod cobj;
 pub mod colanim;
+pub mod coll_draw;
 pub mod collision;
 pub mod command;
 pub mod dvd;

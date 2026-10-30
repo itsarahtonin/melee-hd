@@ -21,7 +21,7 @@ use std::process::ExitCode;
 use std::time::Instant;
 
 use melee_data::disc::Disc;
-use melee_sim::game::session::{Develop, Session, Setup};
+use melee_sim::game::session::{Session, Setup};
 use melee_sim::game::state::Game;
 use melee_sim::game::vs_match::Frame;
 use melee_sim::lb::save::CardDevice;
@@ -139,7 +139,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             dtv: rec.dtv,
             sram_flags: rec.sram_flags,
             card_pull,
-            develop: Develop::from_recording(rec.develop),
+            develop: rec.developer(),
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");
