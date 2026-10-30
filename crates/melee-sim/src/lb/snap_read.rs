@@ -5,7 +5,7 @@
 //! (`lbSnap_8001D7B0`, `lb_8001C0F4`), and the buffer's image decoded (`lbSnap_8001DE8C`).
 //!
 //! The album steps each list itself (`lbCardNew_CompleteNextTask`) in the tick that starts
-//! it: the list runs on the lent card at its start ([`super::save::start_list`]), its steps'
+//! it: the list runs on the lent card at its start ([`super::save::start_list_run`]), its steps'
 //! time passing at each call ([`Running::snap_task_step`]), and a read's bytes reach the
 //! buffers at its end. A rename's stamps take the clock at their steps, so the swap runs on a
 //! copy of the card first and on the card at its end, as the snapshot's save does.
@@ -430,7 +430,24 @@ impl Running<'_> {
         for (f, e) in results {
             self.game.card_tasks.file_errors[f] = e;
         }
-        self.game.audio.clock_card_work(self.data, work);
+        let chan = self.game.snap_read.list.as_ref().map_or(0, |l| l.chan);
+        self.game.audio.clock_card_work(
+            self.data,
+            crate::audio::clock::CardWork {
+                step: work.step,
+                ..Default::default()
+            },
+        );
+        if super::save::lost(chan) {
+            return self.snap_task_lost(work);
+        }
+        self.game.audio.clock_card_work(
+            self.data,
+            crate::audio::clock::CardWork {
+                step: false,
+                ..work
+            },
+        );
         // A read's bytes reach their buffers in the step whose read brings them.
         let into = match self.game.snap_read.list.as_mut() {
             Some(AlbumList {
@@ -499,6 +516,31 @@ impl Running<'_> {
                 assert_eq!(written, r, "the swap's list ended otherwise on the card");
             }
         }
+        r
+    }
+
+    /// The album's list's step after its card was pulled out (`work` the step's work but its
+    /// wait point): a read's step, whose `CARDFastOpen` finds no card, its callback
+    /// (`fn_8001A0B0`) giving file 0 (the header's and the data's requests are file 0's) and
+    /// the list the result (15); the list's end task's `CARDUnmount` finds no card either, so
+    /// nothing more takes time, and the steps' reads after bring nothing. A pull before
+    /// another step (the open's, a delete's or a rename's) isn't ported, as no session
+    /// reaches one.
+    fn snap_task_lost(&mut self, work: CardWork) -> i32 {
+        let l = self.game.snap_read.list.take().expect("the album's list");
+        let k = l.next - 1;
+        if !matches!(
+            (&l.end, work.chain),
+            (ListEnd::Read { .. }, Some(CardChain::Read { .. }))
+        ) {
+            unported_call(&format!(
+                "the album's list with its card pulled out before its step {k}, not a read's"
+            ));
+        }
+        let r = melee_save::tasks::from_sdk(melee_save::card::CardError::NoCard.code());
+        self.game.card_tasks.file_errors[0] = r;
+        super::save::detach_slot(l.chan);
+        self.game.card_tasks.saved_error = r;
         r
     }
 
