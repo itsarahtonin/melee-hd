@@ -104,6 +104,9 @@ pub struct Globals {
     /// The character items' articles (`it_804D6D38`): an array in `ItCo.dat` that the
     /// characters fill as they load (`it_8026B3F8`), so it is state.
     pub char_articles: Vec<Option<DataRef>>,
+    /// Where that array is (`ItCo.dat`'s `itPublicData` `x8`), whose entries the heap's image
+    /// takes as `it_8026B3F8` writes them.
+    pub char_table: Option<DataRef>,
     /// The enemies' and Pokémon's common data (`it_804D6D40`), in `ItCo.dat`: their knockback
     /// speed (`x4`) among others.
     pub zako: Option<DataRef>,
