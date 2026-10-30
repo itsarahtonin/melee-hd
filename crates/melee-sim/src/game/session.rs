@@ -20,7 +20,7 @@ use crate::audio::clock::{DiscSpeed, TB_HZ};
 use crate::audio::dsp::DspModel;
 use crate::input::controller::PadData;
 use crate::input::pad::{ERR_NONE, ERR_NOT_READY, ERR_TRANSFER};
-use crate::lb::save::{CardDevice, CardLent};
+use crate::lb::save::{CardDevice, CardLent, CardSlot};
 
 /// What a session starts with besides its controllers: the console's setup.
 #[derive(Clone, Debug)]
@@ -52,6 +52,10 @@ pub struct Setup {
     /// The card pulled out of slot A at the start of a video field and put back at the
     /// start of another, or never (ssbm-rs's `CARD_REMOVE=F[,G]`).
     pub card_pull: Option<(u64, Option<u64>)>,
+    /// The memory card in slot B as the session found it (ssbm-rs's `--card-b`), or none.
+    pub card_b: Option<Vec<u8>>,
+    /// The card pulled out of slot B and put back (ssbm-rs's `CARD_REMOVE_B=F[,G]`).
+    pub card_b_pull: Option<(u64, Option<u64>)>,
     /// The developer setting that raises the debug level (milestone 5's task 19), none on a
     /// retail disc's console, the default. A session's own input, never a replay's.
     pub develop: Option<Develop>,
@@ -91,6 +95,8 @@ impl Default for Setup {
             dtv: false,
             sram_flags: SRAM_FLAGS_DEFAULT,
             card_pull: None,
+            card_b: None,
+            card_b_pull: None,
             develop: None,
         }
     }
@@ -100,27 +106,39 @@ impl Default for Setup {
 /// probes at boot.
 fn card_device(setup: &Setup) -> CardDevice {
     // The tenth of a second the OS's first probe at boot (`OSInit`'s `EXIInit`, at the boot's
-    // start: `audio::boot::console_boot_delay`) saw the card at, as `__EXIProbe` counts them
+    // start: `audio::boot::console_boot_delay`) saw a card at, as `__EXIProbe` counts them
     // on the code's time base.
-    let seen = setup
-        .card
-        .as_ref()
-        .map_or(0, |_| crate::lb::save::probe_tenths(0, setup.power_on));
-    CardDevice {
-        card: setup.card.as_ref().map(|image| {
+    let slot = |image: &Option<Vec<u8>>, pull: Option<(u64, Option<u64>)>, b: bool| {
+        let card = image.as_ref().map(|image| {
             melee_save::Card::from_image(image.clone()).expect("a 59-block card's image")
-        }),
-        console: melee_save::Console::ssbm_rs(),
-        waits: setup.card.is_some(),
-        pull: setup
-            .card_pull
-            .map(|(out, back)| (field_start(out), back.map(field_start))),
-        probe_start: seen,
+        });
+        let seen = card
+            .as_ref()
+            .map_or(0, |_| crate::lb::save::probe_tenths(0, setup.power_on));
+        // ssbm-rs's console: slot A keeps Dolphin's flash ID; slot B takes the one that
+        // formatted its card, as Dolphin's `SetCardFlashID` does.
+        let console = match card.as_ref() {
+            Some(c) if b => melee_save::Console::ssbm_rs_slot_b(c),
+            _ => melee_save::Console::ssbm_rs(),
+        };
+        CardSlot {
+            card,
+            console,
+            pull: pull.map(|(out, back)| (field_start(out), back.map(field_start))),
+            probe_start: seen,
+            attached: false,
+            // The OS's probes at boot read the card's ID as it settled.
+            id_time: seen,
+            extint_seen: 0,
+        }
+    };
+    CardDevice {
+        slots: [
+            slot(&setup.card, setup.card_pull, false),
+            slot(&setup.card_b, setup.card_b_pull, true),
+        ],
+        waits: setup.card.is_some() || setup.card_b.is_some(),
         time_offset: setup.power_on,
-        attached: false,
-        // The OS's probes at boot read the card's ID as it settled.
-        id_time: seen,
-        extint_seen: 0,
         // Nothing before the first mount asks for the font encoding.
         font_encode_known: false,
     }
@@ -209,8 +227,8 @@ pub struct Session {
     pub game: Game,
     pub data: Archives,
     pub setup: Setup,
-    /// The memory card in slot A and the console's card library's setting (its flash ID):
-    /// the console's, lent to each step.
+    /// The memory cards in slots A and B and the console's card library's settings (each
+    /// slot's flash ID): the console's, lent to each step.
     pub card: Option<CardDevice>,
 }
 
@@ -581,7 +599,11 @@ impl Session {
         let g = &mut self.game;
         // `*HSD_RandSeedPtr = OSGetTick()`: the time base's low word, on the code's time base
         // (the clock at power-on and the time since).
-        let card_in = self.card.as_ref().is_some_and(|c| c.card.is_some());
+        let card_in = self.card.as_ref().is_some_and(|c| c.card().is_some());
+        let card_b_in = self
+            .card
+            .as_ref()
+            .is_some_and(|c| c.slots[1].card.is_some());
         let delay = if card_in {
             console_boot_delay(self.setup.power_on)
         } else {
@@ -603,7 +625,7 @@ impl Session {
         let develop = self.setup.develop;
         r.boot_main(
             &bank,
-            card_in,
+            [card_in, card_b_in],
             (self.setup.dtv, progressive),
             develop,
             console,
@@ -798,7 +820,7 @@ impl Running<'_> {
     fn boot_main(
         &mut self,
         bank: &crate::lb::audio::SoundBank,
-        card_in: bool,
+        [card_in, card_b_in]: [bool; 2],
         (dtv, progressive): (bool, bool),
         develop: Option<Develop>,
         console: &mut dyn Console,
@@ -826,7 +848,7 @@ impl Running<'_> {
         // `lbArq_80014D2C`: the ARAM request queue, which the timeline's ARAM loads stand for.
         self.game.card_tasks.init();
         self.game.card_game.init(card_in);
-        self.game.snap.init([card_in, false]);
+        self.game.snap.init([card_in, card_b_in]);
         self.init_main_lib();
         self.game.audio.movie.init();
         // `HSD_SisLib_803A6048(0xC000)`: the boot's text heap, in HSD's boot heap, which the
