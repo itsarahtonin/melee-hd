@@ -225,6 +225,10 @@ impl Audio {
             // `VIInit` comes after the boot's card probes: one retrace's handler has run
             // since, with or without a card (every session's tick 0).
             retraces: 1,
+            // HSD's frame rate count took that retrace, with a new frame (the boot's first
+            // copy): `vr_count` and `renew_count` are 1 (ssbm-rs's perf-monitor session).
+            vr_count: 1,
+            renew_count: 1,
             ..Clock::default()
         };
         clock.schedule((now / FIELD + 1) * FIELD, EventKind::Field);

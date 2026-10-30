@@ -243,6 +243,7 @@ fn op_target(op: Op) -> usize {
 fn logged(d: &Draw) -> Logged {
     let color = |c: [u8; 4]| u32::from_be_bytes(c);
     match *d {
+        Draw::Line { .. } => unreachable!("a debug text screen draws no lines"),
         Draw::TextScale { x, y, line_width } => Logged {
             addr: sym("hsd_80391A04"),
             gpr: vec![line_width as u32],

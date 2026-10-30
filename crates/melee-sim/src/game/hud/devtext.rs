@@ -150,6 +150,13 @@ pub enum Draw {
         y: f64,
         color: [u8; 4],
     },
+    /// A line from `a` to `b` in one colour (`GXBegin(GX_LINES, 0, 2)` with the debug
+    /// drawings' setup: `hsd_80391E18`'s runs, `hsd_80391F28`'s bars and marks).
+    Line {
+        a: [f32; 2],
+        b: [f32; 2],
+        color: [u8; 4],
+    },
 }
 
 impl DevTexts {

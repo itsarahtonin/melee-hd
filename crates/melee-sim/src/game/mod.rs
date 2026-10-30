@@ -27,6 +27,7 @@ pub mod mirror;
 mod mirror_gen;
 pub mod mn;
 pub mod mp_draw;
+pub mod perf;
 pub mod pl;
 pub mod playback;
 pub mod player_codes;
