@@ -12,6 +12,7 @@ use crate::game::handles::FighterId;
 use crate::hsd::display::{self, FighterFlags, FighterMaterial};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
+use crate::hsd::lobj;
 use crate::mtx::Mtx34;
 
 /// The pickup ranges' colours: light items on the ground (`ftDrawCommon_804D3A88`), heavy
@@ -62,11 +63,8 @@ impl Running<'_> {
     /// Whether the fighter draws this time, `ftLib_UpdateScreenVisibility`: through the game
     /// camera, a fighter whose camera box's bone is off its screen (the screen position kept
     /// in `x2188`) is marked off screen (`x221F_b0`) and draws only if the box's sphere still
-    /// reaches the screen, or always with [`Cosmetic::draw_offscreen_fighters`] (Slippi's
-    /// widescreen code); through any other camera, or a fighter the camera ignores, it's on
-    /// screen.
-    ///
-    /// [`Cosmetic::draw_offscreen_fighters`]: crate::game::state::Cosmetic::draw_offscreen_fighters
+    /// reaches the screen; through any other camera, or a fighter the camera ignores, it's on
+    /// screen. [`Running::render_fighter`] adds the cosmetic toggle.
     #[doc(alias = "ftLib_UpdateScreenVisibility")]
     pub fn update_screen_visibility(&mut self, g: GObjId) -> bool {
         let f = self.game.fighter_id(g);
@@ -95,8 +93,7 @@ impl Running<'_> {
                     return true;
                 }
                 self.game.fighters[f.0].x221F_b0 = true;
-                let reaches = camera::box_on_screen(self.game, self.data, b, 15.0);
-                return reaches || self.game.cosmetic.draw_offscreen_fighters;
+                return camera::box_on_screen(self.game, self.data, b, 15.0);
             }
         }
         self.game.fighters[f.0].x221F_b0 = false;
@@ -572,11 +569,32 @@ impl Running<'_> {
     /// A fighter's render callback, `ftDrawCommon_80080E18`: a sleeping fighter or one off
     /// screen doesn't draw; in the camera's pass 1 a fighter with an outline draws it, itself
     /// and the outline again; in pass 0 it draws itself (its models only without an outline).
+    ///
+    /// With [`Cosmetic::draw_offscreen_fighters`] (Slippi's widescreen code) a fighter off
+    /// screen draws too, and leaves the lights as it found them: the original never makes that
+    /// draw, so what it writes of them (a specular joint's half vector) stays the presentation's.
+    ///
+    /// [`Cosmetic::draw_offscreen_fighters`]: crate::game::state::Cosmetic::draw_offscreen_fighters
     #[doc(alias = "ftDrawCommon_80080E18")]
     pub fn render_fighter(&mut self, g: GObjId, pass: i32) {
-        if self.game.fighter(g).is_sleeping || !self.update_screen_visibility(g) {
+        if self.game.fighter(g).is_sleeping {
             return;
         }
+        let cosmetic = !self.update_screen_visibility(g);
+        if cosmetic && !self.game.cosmetic.draw_offscreen_fighters {
+            return;
+        }
+        if cosmetic {
+            lobj::save_drawn(&self.game.objs.lobjs);
+        }
+        self.draw_fighter_passes(g, pass);
+        if cosmetic {
+            lobj::restore_drawn(&mut self.game.objs.lobjs);
+        }
+    }
+
+    /// [`Running::render_fighter`]'s drawing, for a fighter that draws.
+    fn draw_fighter_passes(&mut self, g: GObjId, pass: i32) {
         let f = self.game.fighter_id(g);
         match camera::pass(&self.game.camera.cam) {
             1 => {
