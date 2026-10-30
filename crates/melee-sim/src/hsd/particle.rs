@@ -468,6 +468,8 @@ pub fn locate_in_image(data: &Archives, cmd: DataRef, tex: DataRef) {
 pub fn init(objs: &mut Objects) {
     crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Particle]);
     objs.particles = Particles::default();
+    // The display pass's cached particles now name freed ones (`particle_list` is left).
+    objs.psdisp.stale = [true; LINKS];
 }
 
 /// What `psGenerateParticle0` takes for a new particle.

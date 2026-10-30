@@ -391,7 +391,10 @@ impl Running<'_> {
     #[doc(alias = "gm_801B2AF8")]
     pub fn camera_exit_vs(&mut self) {
         let me = self.game.vs_melee.exit.match_end.clone();
-        self.results_handicaps(&me);
+        self.results_handicaps(
+            &me,
+            super::results_tie::TieStack::Other("Camera Mode's match exit (gm_801B2AF8)"),
+        );
         self.results_draw_winner(&me, TABLE);
         self.results_add_coins(super::results_exit::human_kos(&me));
         super::results_exit::update_ko_counts(&mut self.game.vs_melee.ko_counts, &me);
