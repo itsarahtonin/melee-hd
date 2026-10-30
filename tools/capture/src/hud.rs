@@ -600,6 +600,70 @@ impl Comparer<'_> {
             ),
         );
         self.compare_gobj("db_804D6B7C", db.sound_gobj, mem.w(sym("db_804D6B7C")));
+        // The performance monitor (`gm_804D6728`, `hsd_804D7850`'s list, `hsd_392A.c`'s
+        // statics), and while it's up the last frame's times and the frame rate it draws.
+        let perf = &game.perf;
+        self.compare_gobj("gm_804D6728", perf.gobj, mem.w(sym("gm_804D6728")));
+        let mut theirs = Vec::new();
+        let mut node = mem.w(sym("hsd_804D7850"));
+        while node != 0 && theirs.len() < 8 {
+            let data = mem.w(node + 4);
+            theirs.push((mem.w(data), mem.w(data + 4), data, node));
+            node = mem.w(node);
+        }
+        let ours: Vec<(u32, u32, u32, u32)> = perf
+            .events
+            .iter()
+            .map(|e| (e.item.code(), 0x80, e.block, e.node))
+            .collect();
+        self.check("perf list", "callback, priority, block, node", ours, theirs);
+        let w = |a: u32| mem.w(a);
+        let st = &perf.stats;
+        self.check(
+            "perf stats",
+            "now, peaks, holds, best",
+            (
+                st.now.map(f32::to_bits),
+                st.peak.map(f32::to_bits),
+                st.hold,
+                st.best.map(f32::to_bits),
+            ),
+            (
+                [w(0x804D_7858), w(0x804D_785C), w(0x804D_7860)],
+                [w(0x804D_7864), w(0x804D_7868), w(0x804D_786C)],
+                [
+                    w(0x804D_7870) as i32,
+                    w(0x804D_7874) as i32,
+                    w(0x804D_7878) as i32,
+                ],
+                [w(0x804D_787C), w(0x804D_7880), w(0x804D_7884)],
+            ),
+        );
+        if perf.gobj.is_some()
+            && let Some(c) = game.audio.clock.as_ref()
+        {
+            let last = sym("HSD_PerfLastStat");
+            self.check(
+                "perf times",
+                "HSD_PerfLastStat (cpu, draw, total), vr_count, renew_count, frame_renew",
+                (c.perf_last, c.vr_count, c.renew_count, c.frame_renew),
+                (
+                    [w(last), w(last + 4), w(last + 8)],
+                    w(0x804D_76D8) as i32,
+                    w(0x804D_76DC) as i32,
+                    w(sym("HSD_VIData") + 0x1F0) as i32,
+                ),
+            );
+        }
+        self.check(
+            "db screenshot",
+            "pending, number",
+            (db.screenshot_pending, db.screenshot_number),
+            (
+                mem.w(sym("db_ScreenshotPending")) != 0,
+                mem.w(sym("db_ScreenshotNumber")) as i32,
+            ),
+        );
         self.check(
             "db stage and camera",
             "stage visuals, camera timer, camera shown, display step",

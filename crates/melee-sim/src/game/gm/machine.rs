@@ -978,6 +978,7 @@ impl Running<'_> {
         // `HSD_SObjLib_804D7960`'s kind registered again and the sprites' pool made anew
         // (`HSD_SObjLib_803A44A4`); `gm_804D6724` cleared.
         self.game.objs.sobjs = Default::default();
+        self.game.perf_scene_setup();
         self.game.opening.perf_display = false;
         self.load_rumble_data();
     }

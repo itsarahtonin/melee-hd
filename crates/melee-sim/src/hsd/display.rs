@@ -160,6 +160,9 @@ pub enum Draw {
     Debug(Box<crate::lb::coll_draw::DebugDraw>),
     /// Debug text: a screen's rectangles and glyphs (`DevText_Draw`).
     Text(Box<crate::game::hud::devtext::Draw>),
+    /// The performance monitor's strip (`fn_803982E4`), laid out by the presentation with
+    /// the times it shows ([`crate::game::perf::layout`]).
+    Perf(Box<crate::game::perf::PerfDraw>),
     /// An app-SRT's view matrix and screen scales, as drawing a particle of it in the current
     /// camera brings them up to date (`psDispSubAppSRT`, `psDispSubAPPSRTPoint`) for the
     /// particles drawn after: each camera that draws them in a display frame makes them

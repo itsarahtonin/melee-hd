@@ -75,6 +75,7 @@ impl Ctx<'_> {
             Draw::TextScale { x, y, line_width } => self.text_scale(x, y, line_width),
             Draw::Rect { x, y, w, h, color } => self.text_rect(x, y, w, h, color),
             Draw::Ascii { chr, x, y, color } => self.text_ascii(chr, x, y, color),
+            Draw::Line { a, b, color } => self.text_line(a, b, color),
             // The camera and the fog are the display pass's own draws.
             Draw::NoFog | Draw::Camera(_) => unreachable!("a screen's camera or fog as text"),
         }
@@ -86,6 +87,25 @@ impl Ctx<'_> {
     fn text_scale(&mut self, x: f64, y: f64, line_width: i32) {
         self.hsd.text_scale = (fp::frsp(x), fp::frsp(y));
         self.debug_draw_setup_width(line_width as u8);
+    }
+
+    /// A line in one colour (`hsd_80391E18`'s and `hsd_80391F28`'s).
+    fn text_line(&mut self, a: [f32; 2], b: [f32; 2], [r, g, bl, al]: [u8; 4]) {
+        self.gx.begin(GX_LINES, GX_VTXFMT0, 2);
+        for p in [a, b] {
+            self.gx.position2f32(p[0], p[1]);
+            self.gx.color4u8(r, g, bl, al);
+        }
+        self.gx.end();
+    }
+
+    /// The performance monitor's strip (`Draw::Perf`): laid out with the host's times when
+    /// the player gives them, else the timeline's.
+    pub fn perf(&mut self, d: &melee_sim::game::perf::PerfDraw) {
+        let shown = perf_shown(self.hsd.perf_host.as_mut(), d);
+        for t in melee_sim::game::perf::layout(d, &shown) {
+            self.devtext(&t);
+        }
     }
 
     /// `DrawRectangle`: a flat quad from (`x`, `y`), `w` by `h`, its corners clockwise.
@@ -154,5 +174,24 @@ impl Ctx<'_> {
             }
             self.gx.end();
         }
+    }
+}
+
+/// What the monitor's strip shows: the host's times, its drawn statics brought up to date
+/// with them (`fn_80392934` on the host's copy), when the player gives them; else the
+/// timeline's, as the simulation drew them.
+pub fn perf_shown(
+    host: Option<&mut super::PerfHost>,
+    d: &melee_sim::game::perf::PerfDraw,
+) -> melee_sim::game::perf::Shown {
+    match host {
+        Some(h) => {
+            h.stats.update(h.times);
+            melee_sim::game::perf::Shown {
+                stats: h.stats,
+                frame_renew: h.frame_renew,
+            }
+        }
+        None => d.timeline(),
     }
 }

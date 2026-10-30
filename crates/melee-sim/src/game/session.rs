@@ -856,8 +856,9 @@ impl Running<'_> {
         self.game.sis.init(0xC000);
         self.reset_game_data(bank);
         // The USB host check reads the level `gmMain_8015FDA4` set (retail's: no host), and
-        // `db_InitScreenshot` clears the screenshot's state, which nothing has set. A developer
-        // setting raises the level from here, where ssbm-rs's runner does.
+        // `db_InitScreenshot` clears the screenshot's state. A developer setting raises the
+        // level from here, where ssbm-rs's runner does.
+        self.game.db_init_screenshot();
         if let Some(d) = develop {
             assert!(
                 (0..=4).contains(&d.level),
