@@ -233,6 +233,9 @@ struct Args {
     /// sessions folder; none with `--no-session-record`.
     record_session: Option<String>,
     session_record: bool,
+    /// The developer setting's debug level for the console's next power-on (0 off, 3 Debug
+    /// ROM, 4 Develop): the settings panel's, never a recorded session's or a replay's.
+    debug_level: i32,
     /// The saves folder the console's card comes from (`--saves DIR`), else the settings
     /// folder's.
     saves: Option<String>,
@@ -262,7 +265,7 @@ fn usage() -> String {
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
          replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
-         developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match\n\
+         developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
          saves: [--import-save FILE.gci|.raw] [--export-save FILE.gci|.raw] [--unlock-all], each with [--saves DIR], then quit\n\
          with no --p1..--p4, --stage, --replay or --inputs, Melee boots from power-on with the native save; Esc opens the settings\n\
@@ -330,6 +333,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         inputs: None,
         record_session: None,
         session_record: true,
+        debug_level: 0,
         saves: None,
         holds: None,
         import_save: None,
@@ -483,6 +487,15 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 chosen = true;
             }
             "--record-session" => a.record_session = Some(value()?),
+            "--debug-level" => {
+                a.debug_level = match value()?.as_str() {
+                    "off" => 0,
+                    "debug-rom" => 3,
+                    "develop" => 4,
+                    _ => return Err("--debug-level off|debug-rom|develop".into()),
+                };
+                a.given.debug_level = true;
+            }
             "--no-session-record" => {
                 a.session_record = false;
                 a.given.record_sessions = true;
@@ -774,7 +787,7 @@ impl Session {
                     dtv: r.dtv,
                     sram_flags: r.sram_flags,
                     card_pull: None,
-                    develop: melee_sim::game::session::Develop::from_recording(r.develop),
+                    develop: r.developer(),
                 };
                 (setup, None, Some((r.reads, 0)))
             }
@@ -786,7 +799,11 @@ impl Session {
                     }
                     None => (saves::card_of(&Default::default()).0.into_image(), None),
                 };
-                (power::setup(card, power::power_on_clock()), kept, None)
+                (
+                    power::setup(card, power::power_on_clock(), args.debug_level),
+                    kept,
+                    None,
+                )
             }
         };
         let rec = match rec {
@@ -1952,6 +1969,7 @@ impl App {
         if let Some(f) = &self.front {
             let s = &f.panel.settings;
             args.session_record = s.record_sessions;
+            args.debug_level = s.debug_level;
             args.record = s.record;
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
         }
@@ -2728,6 +2746,9 @@ fn settings_of(args: &Args) -> front::Settings {
     let mut s = front::Settings::default();
     s.load(&args.given);
     let g = &args.given;
+    if g.debug_level {
+        s.debug_level = args.debug_level;
+    }
     if g.aspect {
         s.aspect = args.aspect;
     }
@@ -2781,6 +2802,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.record = s.record;
     a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
     a.session_record = s.record_sessions;
+    a.debug_level = s.debug_level;
     a
 }
 
