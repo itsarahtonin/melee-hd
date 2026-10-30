@@ -459,6 +459,10 @@ impl Ctx<'_> {
                 self.afterimage(*f);
                 1
             }
+            Draw::Debug(d) => {
+                self.debug_draw(d);
+                1
+            }
             other => {
                 let name = format!("{other:?}");
                 let name = name.split(['(', ' ', '{']).next().unwrap_or("?").to_owned();

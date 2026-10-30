@@ -12,6 +12,11 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 use melee_data::archive::DataRef;
 
+/// `It_Kind_Unk4`, whose debug range is drawn as a coin's (`it_266F`'s).
+const UNK4_KIND: i32 = 4;
+/// An item's pickup range's colour (`it_804D5168`).
+const PICKUP_RANGE: [u8; 4] = [0xFF, 0x40, 0x80, 0x80];
+
 impl Running<'_> {
     /// Whether the fighter shows the item it holds or the two it keeps, `ftLib_IsItemVisible`.
     #[doc(alias = "ftLib_IsItemVisible")]
@@ -78,10 +83,70 @@ impl Running<'_> {
     /// An item's render callback, `it_8026EECC`: an item that draws (`xDAA` bit 7), unless
     /// a fighter holding it hides it, takes the fighter's shake, then in the camera's pass 0
     /// draws its tree; an item with outline models (Mr. Game & Watch's) draws in pass 1
-    /// instead, its outline twice around it. The debug drawings after (`it_8026ECE0`: hit and hurt capsules and the
-    /// like) only draw.
+    /// instead, its outline twice around it. Then the debug drawings, drawn or not
+    /// (`it_8026ECE0`), and HAL's state reset after any.
     #[doc(alias = "it_8026EECC")]
     pub fn render_item(&mut self, gobj: GObjId, pass: i32) {
+        self.render_item_model(gobj, pass);
+        if self.item_debug_drawings(gobj, pass) {
+            crate::lb::coll_draw::push(
+                &mut self.game.objs,
+                crate::lb::coll_draw::DebugDraw::ItemEnd,
+            );
+        }
+    }
+
+    /// An item's debug drawings, `it_8026ECE0`, by its display flags (`xDAA`, set by the
+    /// develop tools): with `b6` its hits' bubbles (`b2`) and, unless held, its hurt
+    /// capsules' (`b1`, coloured by its invincibility `xD0C`); its pickup range (`b4`, for an
+    /// item that can be picked up). An enemy's stomp range (`b3`) and a coin's range (`b0`)
+    /// aren't ported.
+    #[doc(alias = "it_8026ECE0")]
+    fn item_debug_drawings(&mut self, gobj: GObjId, pass: i32) -> bool {
+        use crate::lb::coll_draw;
+        let data = self.data;
+        let i = super::item_of(self.game, gobj);
+        let game = &mut *self.game;
+        let ip = &mut game.items[i.0];
+        let objs = &mut game.objs;
+        let mut drew = false;
+        if ip.kind == UNK4_KIND {
+            if flag(ip.xDAA, 0) {
+                crate::game::code::unported_call("item kind 4's debug range (lbColl_8000A10C)");
+            }
+            return false;
+        }
+        if flag(ip.xDAA, 6) {
+            if flag(ip.xDAA, 2) {
+                for h in &ip.x5D4_hitboxes {
+                    drew |= coll_draw::hit(objs, &h.hit, pass, ip.scl);
+                }
+            }
+            if !ip.xDC8_word.flags.x13 && flag(ip.xDAA, 1) {
+                let n = usize::from(ip.xAC8_hurtboxNum);
+                let state = (ip.xD0C != 0).then_some(ip.xD0C as u32);
+                for h in &mut ip.xACC_itemHurtbox[..n] {
+                    drew |= coll_draw::hurt(objs, data, h, state, pass, None, 0.0);
+                }
+            }
+        }
+        if flag(ip.xDAA, 4) && ip.xDC8_word.flags.x15 {
+            let range = crate::quat::Quat {
+                x: ip.xBCC_unk.x,
+                y: ip.xBCC_unk.y,
+                z: ip.xBD4_grabRange.x,
+                w: ip.xBD4_grabRange.y,
+            };
+            drew |= coll_draw::range(objs, range, ip.pos, PICKUP_RANGE, pass, ip.facing_dir);
+        }
+        if flag(ip.xDAA, 3) && flag(ip.xDD0_flag, 0) && pass == 0 {
+            crate::game::code::unported_call("an enemy's debug stomp range (lb_800149E0)");
+        }
+        drew
+    }
+
+    /// The model part of `it_8026EECC`.
+    fn render_item_model(&mut self, gobj: GObjId, pass: i32) {
         let ip = item(self.game, gobj);
         if !flag(ip.xDAA, 7) {
             return;
