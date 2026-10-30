@@ -721,13 +721,8 @@ impl Running<'_> {
                 *h = self.game.tou.tm.x37[j].x2;
             }
             let end = (*self.game.tou.match_end).clone();
-            super::super::results_exit::move_handicaps(
-                &end,
-                &mut hbuf,
-                super::super::results_tie::TieStack::Other(
-                    "Tournament's next match-up (gm_8019E634)",
-                ),
-            );
+            let mut stack = self.shallow_exit_stack("Tournament's next match-up (gm_8019E634)");
+            super::super::results_exit::move_handicaps(&end, &mut hbuf, &mut stack);
             for (i, &h) in hbuf.iter().enumerate().take(n as usize) {
                 let j = self.alt_entrant_kept(results[i]);
                 self.game.tou.tm.x37[j].x2 = h;
