@@ -221,6 +221,9 @@ pub struct Clock {
     pub ai_pending: bool,
     pub di_pending: bool,
     pub aram_pending: u32,
+    /// A memory card's insertion interrupt raised and not yet taken: its handler's time
+    /// ([`Frames::card_ext`]).
+    pub ext_pending: u64,
     /// A memory card transfer's interrupts still to deliver ([`Clock::card_chain`]), the next
     /// one last. The chain always ends before the call that starts it returns, so it's never
     /// state between the clock's calls.
@@ -321,8 +324,19 @@ pub trait Frames {
         let _ = now;
         None
     }
+    /// The save's writer's step [`Frames::game_wait`] gave ran, ending at `now`.
+    fn game_wait_done(&mut self, now: u64) {
+        let _ = now;
+    }
     /// The save's list unmounted the card ([`CardWork::unmount`]), detaching slot A's channel.
     fn card_unmounted(&mut self) {}
+    /// A video field starts at `now`: a card pulled out or put back there raises the
+    /// insertion interrupt of a channel a list has attached. Its handler's time, none when
+    /// none is raised (`transfer`: a card transfer's chain is running).
+    fn card_ext(&mut self, now: u64, transfer: bool) -> u64 {
+        let _ = (now, transfer);
+        0
+    }
 }
 
 /// The save's writer's card work at one of the game's waits ([`Frames::game_wait`]), in
@@ -702,6 +716,7 @@ impl Clock {
                 match e.kind {
                     EventKind::Field => {
                         self.vi_pending = true;
+                        self.ext_pending += f.card_ext(e.at, !self.exi_chain.is_empty());
                         self.schedule(e.at + FIELD, EventKind::Field);
                     }
                     EventKind::PadAlarm => {
@@ -777,6 +792,9 @@ impl Clock {
                 // A card transfer's interrupt (EXI0's): its handler starts the next transfer,
                 // which raises the next interrupt as it ends, or ends the chain.
                 self.now += irq.ticks;
+            } else if self.ext_pending != 0 {
+                // A card's insertion interrupt (EXI0's or EXI1's EXT, 11 or 14).
+                self.now += std::mem::take(&mut self.ext_pending);
             } else if self.di_pending {
                 self.di_pending = false;
                 self.disc_interrupt(f);
@@ -855,6 +873,7 @@ impl Clock {
         self.wait(WAIT_STEP, f);
         if let Some(work) = f.game_wait(self.now) {
             self.card_work(work, f);
+            f.game_wait_done(self.now);
         }
     }
 

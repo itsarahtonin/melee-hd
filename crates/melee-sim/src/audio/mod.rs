@@ -310,6 +310,14 @@ impl clock::Frames for Running<'_> {
         self.audio.card_writer.wait(now)
     }
 
+    fn game_wait_done(&mut self, now: u64) {
+        self.audio.card_writer.step_done(now);
+    }
+
+    fn card_ext(&mut self, now: u64, transfer: bool) -> u64 {
+        crate::lb::save::card_ext(now, transfer)
+    }
+
     fn card_unmounted(&mut self) {
         crate::lb::save::detach();
     }

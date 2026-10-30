@@ -52,6 +52,11 @@ pub struct Layer {
     /// many log entries came before it: a read's bytes reach its buffers at the read that
     /// brings them.
     pub puts: Vec<(usize, Ptr, Vec<u8>)>,
+    /// The transfers (`r`, `w`, `s` and `c` in [`Layer::log`]) the card answers before it's
+    /// pulled out of the slot, none for a card left in: once they're made, `__CARDExtHandler`
+    /// has detached the card, and each call of the CARD library fails with no card
+    /// (`__CARDGetControlBlock`).
+    pub budget: Option<usize>,
 }
 
 /// A callback's arguments: the file index (or 0) and the result.
@@ -67,6 +72,23 @@ impl Layer {
             result: 0,
             log: Vec::new(),
             puts: Vec::new(),
+            budget: None,
+        }
+    }
+
+    /// Whether the card is still in the slot ([`Layer::budget`]): no card once it's gone.
+    fn card_in(&self) -> Result<(), CardError> {
+        match self.budget {
+            Some(0) => Err(CardError::NoCard),
+            _ => Ok(()),
+        }
+    }
+
+    /// A transfer logged: one fewer before the card goes.
+    fn transfer(&mut self, kind: u8) {
+        self.log.push(kind);
+        if let Some(b) = &mut self.budget {
+            *b -= 1;
         }
     }
 
@@ -229,15 +251,17 @@ impl Layer {
     /// Reads the sector at the file's `offset` into the sector buffer.
     fn load(&mut self, card: &Mounted, offset: i32) -> Result<(), CardError> {
         let no = self.state.file_no();
+        self.card_in()?;
         card.fast_open(no)?;
-        self.log.push(b'r');
+        self.transfer(b'r');
         card.read(no, offset as u32, &mut self.sector)
     }
 
     fn store(&mut self, card: &mut Mounted, offset: i32) -> Result<(), CardError> {
         let no = self.state.file_no();
+        self.card_in()?;
         card.fast_open(no)?;
-        self.log.push(b'w');
+        self.transfer(b'w');
         let sector = self.sector.clone();
         card.write(no, offset as u32, &sector)
     }
@@ -451,7 +475,10 @@ impl Layer {
             Cmd::CreateFile { filename, size } => {
                 let name = self.bytes(bufs, filename).to_vec();
                 let name = &name[..name.iter().position(|&c| c == 0).unwrap_or(name.len())];
-                self.log.push(b'c');
+                if let Err(e) = self.card_in() {
+                    return self.fail(e);
+                }
+                self.transfer(b'c');
                 match card.create(name, size as u32) {
                     Ok(no) => self.state.set_file_no(no),
                     Err(e) => self.fail(e),
@@ -462,6 +489,9 @@ impl Layer {
                     return;
                 }
                 let no = self.state.file_no();
+                if let Err(e) = self.card_in() {
+                    return self.fail(e);
+                }
                 let mut stat = match card.get_status(no) {
                     Ok(s) => s,
                     Err(e) => return self.fail(e),
@@ -485,7 +515,7 @@ impl Layer {
                 }
                 stat.set_icon_format(format as u16);
                 stat.set_icon_speed(speed as u16);
-                self.log.push(b's');
+                self.transfer(b's');
                 let r = card.set_status(no, &mut stat);
                 self.state.stat_mut().copy_from_slice(&stat.0);
                 if let Err(e) = r {
@@ -511,6 +541,9 @@ impl Layer {
             }
             Cmd::GetStatus { file_no } => {
                 self.state.set_file_no(file_no);
+                if let Err(e) = self.card_in() {
+                    return self.fail(e);
+                }
                 match card.get_status(file_no) {
                     Err(e) => self.fail(e),
                     Ok(stat) => {
@@ -544,6 +577,7 @@ impl Layer {
     }
 
     fn state_fast_open(&self, card: &Mounted) -> Result<(), CardError> {
+        self.card_in()?;
         card.fast_open(self.state.file_no())
     }
 
