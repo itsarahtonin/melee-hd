@@ -4,6 +4,7 @@
 pub mod afterimage;
 pub mod album;
 pub mod camera;
+pub mod colldraw;
 pub mod devtext;
 pub mod draw;
 pub mod lobj;
