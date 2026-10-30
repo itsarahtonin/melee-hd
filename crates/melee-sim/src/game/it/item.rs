@@ -229,6 +229,18 @@ pub fn at_limit(game: &mut Game, hold_kind: i32) -> bool {
 #[doc(alias = "it_8026B3F8")]
 pub fn set_char_article(game: &mut Game, article: Option<DataRef>, kind: i32) {
     game.it.char_articles[(kind - KURIBOH) as usize] = article;
+    // The entry is a word of `ItCo.dat`'s data, which the heap's image takes where it holds
+    // the file (the preload cache's copy a later scene's heap reuses).
+    if let Some(t) = game.it.char_table
+        && crate::hsd::heap::image_on()
+    {
+        crate::hsd::heap::with(|h| {
+            let w = article.map_or(Some(0), |a| h.image.data_addr(a));
+            if let Some(w) = w {
+                h.image.file_word(t.at(4 * (kind - KURIBOH) as u32), w);
+            }
+        });
+    }
 }
 
 /// An item kind's article (`it_804D6D24` and friends, by `Item_80267978`'s split).
@@ -1974,6 +1986,7 @@ pub fn load_common_data(
     it.common = data.ptr(public);
     it.common_articles = data.ptr(public.at(4));
     let table = data.ptr(public.at(8));
+    it.char_table = table;
     let kept = kept && it.char_articles.len() == super::CHAR_ARTICLES;
     if !kept {
         it.char_articles = match table {

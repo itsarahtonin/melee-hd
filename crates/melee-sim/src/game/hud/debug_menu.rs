@@ -1052,8 +1052,18 @@ impl Running<'_> {
             // `DevText_Remove(&menu->x4)`: the menu's own pointer stands for the list link,
             // so a screen first in the draw list stays its head ([`Link::Held`]).
             let text = self.menu(a).text.expect("a menu's screen");
+            // What that write leaves in the menu's `x4`, which the heap's image lays out as
+            // the menu goes back: the screen, or the next one (or null) where it was first.
+            let held = {
+                let t = &self.game.hud.devtext.pool[usize::from(text)];
+                if t.prev.is_some() { Some(text) } else { t.next }
+            };
             self.game.hud.devtext.remove(Link::Held(text));
             let prev = self.menu(a).prev;
+            let (g, data) = (&*self.game, self.data);
+            crate::hsd::export::with_image(|img| {
+                crate::game::export::debug_menu(g, data, img, a, held);
+            });
             let pool = self
                 .game
                 .hud
