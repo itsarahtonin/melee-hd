@@ -1,13 +1,7 @@
 # Debug-gated, deferred (Sarah, 2026-10-23). Code a retail boot never runs, because only DbLevel above retail's (a /develop.ini on the disc, or a code raising DbLevel) or the debug menu reaches it. It is reachable with a code and useful for debugging, so it is not listed dead: milestone 5's debug-mode task ports it as an explicit developer setting. The ledger tool doesn't read this file, so these functions count as unaccounted until ported.
 # One per line: NAME<TAB>gate and evidence. "Named only by" lists every symbol in the executable that names the function (the decomp's asm listings), each gated for the reason in parentheses.
-lbMemory_80014F7C	Named only by lbHeap_80015DF8 (the scene loop's debug report: see gm_801A4970).
-lbHeap_80015DF8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 ftZd_Init_801395C8	Called only by ftCo_800DEBD0 (the side taunt), only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_80164A0C	Named only by gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
-fn_801652D8	Named only by gm_80165388 (the scene loop's debug report: see gm_801A4970).
-gm_80165388	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-gm_801653C8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-gm_801A4970	The scene loop's debug report (D-pad right with X: object counts, threads, leaks), called only by gm_801A4D34 inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 onExitPrize@801B0B24	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterIntroEasy	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 onEnterIntroAllstar	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
@@ -17,15 +11,11 @@ gm_801BEDA8	Named only by gm_Mode_HanyuCss_States (the Hanyu select modes, 8 and
 gm_801BF040	Named only by fn_8030110C (the debug menu mode, 6: see onExitIntro).
 onEnterCutsceneLuigi	A callback of the debug cutscene mode's states (gm_Mode_DebugCutscene_States, mode 0x19), which a retail boot never enters: mode 0x19 is made pending only by un_803013B0, an item of the debug menu (un_803FCE4C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 onExitRegendCongrats	Named only by gm_Mode_DebugCutscene_States (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
-db_PrintEntityCounts	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-db_PrintThreadInfo	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 fn_80225A54	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 db_DisableItemSpawns	Called only by main, only inside `if (gmMain_804D6594)` right after main stores false to gmMain_804D6594.
 fn_ToggleItemCollisionBubbles	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80225E6C	Named only by fn_CheckAnimationInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80227EB0	Named only by fn_80228124 (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-db_CheckScreenshot	Called only by the scene loop gm_801A4D34, only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-fn_802289F8	Writes a screenshot to the USB host; called only by db_TakeScreenshotIfPending when db_ScreenshotPending is nonzero, which only db_CheckScreenshot sets (db_InitScreenshot and the call itself clear it), and the scene loop calls db_CheckScreenshot only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 fn_UpdateObjAllocLimiter	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 un_80300D78	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300E74	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
@@ -71,53 +61,27 @@ un_8031E110	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: s
 un_8031F980	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
 un_803204B0	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
 HIOEnumDevices	Named only by MCCEnumDevices (the boot's USB host setup: see hsd_803931A4).
-MCCStreamClose	Named only by fioPacketResultWrite (the debug screenshot: see fn_802289F8).
-MCCStreamWrite	Named only by fioPacketResultWrite (the debug screenshot: see fn_802289F8).
-WaitAMinute	Named only by MCCStreamWrite (the debug screenshot: see fn_802289F8).
+MCCStreamClose	Named only by fioPacketResultWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+MCCStreamWrite	Named only by fioPacketResultWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+WaitAMinute	Named only by MCCStreamWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
 MCCEnumDevices	Named only by hsd_803931A4 (the boot's USB host setup: see hsd_803931A4).
-MCCSetChannelEventMask	Named only by fioPacketReceiveResult, fioPacketResultWrite, fioPacketSendPacket (the debug screenshot: see fn_802289F8).
-FIOQuery	Named only by hsd_80393A04 (the boot's USB host setup: see hsd_803931A4); and hsd_80393A5C (the debug screenshot: see fn_802289F8).
-FIOFopen	Named only by hsd_80393A5C (the debug screenshot: see fn_802289F8).
-FIOFclose	Named only by hsd_80393A5C (the debug screenshot: see fn_802289F8).
-FIOFwrite	Named only by hsd_80393A5C (the debug screenshot: see fn_802289F8).
-fioPacketMakeHeader	Named only by FIOFclose, FIOFopen (the debug screenshot: see fn_802289F8).
-fioPacketSendPacket	Named only by FIOFclose, FIOFopen, fioPacketWrite (the debug screenshot: see fn_802289F8).
-fioPacketReceiveResult	Named only by FIOFclose, FIOFopen, fioPacketResultWrite (the debug screenshot: see fn_802289F8).
-fioPacketReceiveDone	Named only by fioPacketReceiveResult (the debug screenshot: see fn_802289F8).
-fioPacketWrite	Named only by FIOFwrite (the debug screenshot: see fn_802289F8).
-fioPacketResultWrite	Named only by fioPacketWrite (the debug screenshot: see fn_802289F8).
+MCCSetChannelEventMask	Named only by fioPacketReceiveResult, fioPacketResultWrite, fioPacketSendPacket (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+FIOQuery	Named only by hsd_80393A04 (the boot's USB host setup: see hsd_803931A4); and hsd_80393A5C (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+FIOFopen	Named only by hsd_80393A5C (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+FIOFclose	Named only by hsd_80393A5C (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+FIOFwrite	Named only by hsd_80393A5C (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketMakeHeader	Named only by FIOFclose, FIOFopen (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketSendPacket	Named only by FIOFclose, FIOFopen, fioPacketWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketReceiveResult	Named only by FIOFclose, FIOFopen, fioPacketResultWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketReceiveDone	Named only by fioPacketReceiveResult (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketWrite	Named only by FIOFwrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
+fioPacketResultWrite	Named only by fioPacketWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
 __OSCheckMutex	Named only by __OSCheckMutexes (the scene loop's thread check: see OSCheckActiveThreads).
 __OSCheckDeadLock	Named only by OSCheckActiveThreads (the scene loop's thread check: see OSCheckActiveThreads).
 __OSCheckMutexes	Named only by OSCheckActiveThreads (the scene loop's thread check: see OSCheckActiveThreads).
 CheckThreadQueue	Named only by OSCheckActiveThreads (the scene loop's thread check: see OSCheckActiveThreads).
 OSCheckActiveThreads	Called only by the scene loop gm_801A4D34, only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-HSD_RenderGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_TevRegGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_ChanGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_FObjGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_ObjDumpStat	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-HSD_VecGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_MtxGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_RObjGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_RvalueObjGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_IDGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_SListGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_DListGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-HSD_ShadowGetAllocData	Named only by HSD_ObjDumpStat (the scene loop's debug report: see gm_801A4970).
-OSReport_PrintSpaces	Named only by hsdDumpClassStat (the scene loop's debug report: see gm_801A4970).
-hsdDumpClassStat	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-HSD_Leak_80387DF8	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
-hsd_80391AC8	Named only by hsd_8039254C (the scene loop's debug report: see gm_801A4970).
-hsd_80391E18	Named only by hsd_8039254C (the scene loop's debug report: see gm_801A4970).
-hsd_80391F28	Named only by hsd_8039254C (the scene loop's debug report: see gm_801A4970).
-hsd_8039254C	Named only by fn_803982E4 (the scene loop's debug report: see gm_801A4970).
-fn_80392934	Named only by fn_803982E4 (the scene loop's debug report: see gm_801A4970).
-fn_80392A08	Named only by hsd_80398310 (the scene loop's debug report: see gm_801A4970).
-fn_80392A3C	Named only by hsd_80398310 (the scene loop's debug report: see gm_801A4970).
 fn_80392CCC	Named only by hsd_803931A4 (the boot's USB host setup: see hsd_803931A4).
 hsd_803931A4	The boot's USB host setup, called only by main inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`, and by nothing else: holding R at power-on does nothing on a retail disc; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 hsd_80393A04	Called only by main, only inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 hsd_80393A54	Named only by main, only inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`; and hsd_803931A4 (the boot's USB host setup: see hsd_803931A4).
-hsd_80393A5C	Named only by fn_802289F8 (the debug screenshot: see fn_802289F8).
-fn_803982E4	Named only by hsd_80398310 (the scene loop's debug report: see gm_801A4970).
-hsd_80398310	Named only by gm_80165388 (the scene loop's debug report: see gm_801A4970).

@@ -75,9 +75,6 @@ lbDvd_80018A2C	gated	Event Match's match entry (gmevent's onEnterVs): the single
 lbDvd_80018C2C	gated	Event Match's match entry (gmevent's onEnterVs): the single-player modes', which only the 1P list's gated entries lead to
 lbCardGame_SetCardStatus	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 lb_8001CC4C	unreached	the memory card scene's erase of a damaged save: the player's card never holds one (saves::Kept::open moves a save the game wouldn't load whole aside at power-on, docs/player.md); sessions with such a card stop here
-lbMthp_8001F5D4	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
-lbMthp_8001F5E4	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
-lbMthp_8001F5F4	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
 lbAudioAx_8002438C	gated	Master Hand's and Crazy Hand's sounds: the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
@@ -302,8 +299,6 @@ gm_Mode_AdventureGOver_OnLoad	gated	the single-player game overs: the single-pla
 gm_Mode_AllstarGOver_OnLoad	gated	the single-player game overs: the single-player modes', which only the 1P list's gated entries lead to
 gm_Mode_Opening_OnLoad	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Mode_Vs_OnUnload	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-fn_801A9FCC	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
-fn_801AA0E8	unreached	the opening scene's debug performance display (fn_801AA0E8 hooks fn_801A9FCC, which reads the movie player's counts): drawn only at a debug level (game/gm/opening.rs)
 gm_Scene_HowTo_OnEnter	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_Omake15_OnEnter	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it

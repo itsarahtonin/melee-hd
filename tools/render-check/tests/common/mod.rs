@@ -733,6 +733,15 @@ pub const DEBUG_VS_STAGE: Game = Game {
     replay: Replay::Session("debug-vs-stage"),
 };
 
+/// The scene loop's performance monitor (`debug-sessions/perf-monitor`): in the opening movie
+/// with its lines, then in a debug VS match on Battlefield, Link and Mario.
+pub const DEBUG_PERF_MONITOR: Game = Game {
+    stage: "Battlefield",
+    name: "debug-perf-monitor",
+    players: "the performance monitor in the opening movie and a debug VS match (session debug-sessions/perf-monitor)",
+    replay: Replay::Session("debug-perf-monitor"),
+};
+
 /// The coins' displays (`debug-sessions/vs-coins`): a Coin Mode debug VS match, Link and Mario
 /// on Final Destination, the fighters' coin capsules and the coins' ranges.
 pub const DEBUG_VS_COINS: Game = Game {
