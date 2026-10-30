@@ -52,6 +52,10 @@ pub struct CardSlot {
     /// When a probe of the channel unattached last looked at its insertion interrupt
     /// (EXTINT), which pulling the card out or putting it back raises, on the time base.
     pub extint_seen: u64,
+    /// The card was pulled out while a list had the channel attached: the insertion
+    /// interrupt's handler (`EXTIntrruptHandler`, `__CARDExtHandler`) detached it, and the
+    /// list's next call of the CARD library finds no card ([`card_ext`]).
+    pub lost: bool,
 }
 
 /// The console's memory card slots (A, then B), and what the card library keeps across them:
@@ -132,6 +136,14 @@ impl CardSlot {
         (answers, time)
     }
 
+    /// Whether the card is pulled out or put back at `now`.
+    fn edge_at(&self, now: u64) -> bool {
+        self.card.is_some()
+            && self
+                .pull
+                .is_some_and(|(out, back)| out == now || back == Some(now))
+    }
+
     /// Whether the card was pulled out or put back since the channel's insertion interrupt
     /// was last looked at.
     fn extint(&self, now: u64) -> bool {
@@ -188,6 +200,55 @@ impl CardDevice {
 /// the word it keeps (`__EXIProbeStartTime`).
 pub fn probe_tenths(now: u64, time_offset: u64) -> u32 {
     (((now + time_offset) / (TB_HZ / 1000) / 100) as u32).wrapping_add(1)
+}
+
+/// The insertion interrupt's handler (`EXTIntrruptHandler` with `__CARDExtHandler`) on slot
+/// A's channel (OS interrupt 11) and slot B's (14): the channel's three interrupts masked (a
+/// register read), its status register written, and the card library's callback cleared
+/// (`EXISetExiCallback`), which on slot A masks the third channel's interrupt too (a second
+/// register read), as ssbm-rs's probe of slot B's pull logs it
+/// (`local/research/card-chain/slotb-pull-saveb.log`: 8 ticks).
+pub const EXT_HANDLER: [u64; 2] = [2 * EXI_READ, EXI_READ];
+
+/// A video field's start at `now`, where a card is pulled out or put back (ssbm-rs's
+/// `CARD_REMOVE`, at a field's start): a channel a list has attached raises its insertion
+/// interrupt (`EXIAttach` unmasks it), whose handler detaches the channel and the card
+/// ([`CardSlot::lost`]). Its handler's time, delivered after the transfers' interrupts and
+/// before the disc's and the retrace's; none when no attached slot's card comes or goes.
+/// `transfer`: a card transfer's chain is running, which the handler would end with no card
+/// (`__CARDExtHandler`'s callback): not ported, as no session pulls a card mid-transfer.
+pub fn card_ext(now: u64, transfer: bool) -> u64 {
+    LENT.with(|l| {
+        let mut l = l.borrow_mut();
+        let Some(dev) = l.as_mut() else {
+            return 0;
+        };
+        let mut time = 0;
+        for (chan, slot) in dev.slots.iter_mut().enumerate() {
+            if !(slot.attached && slot.edge_at(now)) {
+                continue;
+            }
+            if transfer {
+                unported_call(&format!(
+                    "slot {chan}'s card pulled out or put back in the middle of a transfer"
+                ));
+            }
+            slot.attached = false;
+            slot.lost = true;
+            time += EXT_HANDLER[chan];
+        }
+        time
+    })
+}
+
+/// A list the game waits on whole, or the save's writer, whose card went in the middle:
+/// not ported (no session pulls the card there).
+pub(crate) fn refuse_lost(chan: usize, what: &str) {
+    if with_device(|dev| dev.slots[chan].lost) {
+        unported_call(&format!(
+            "slot {chan}'s card pulled out in the middle of {what}"
+        ));
+    }
 }
 
 /// The pad alarm's handler's card probes at `now` (`fn_800195FC`'s `lb_8001C600` and
@@ -523,7 +584,7 @@ fn save_steps(chan: usize, run: &Run) -> (Vec<CardWork>, Vec<(usize, usize, i32)
     (steps, results)
 }
 
-/// A task list the game steps through itself, started on the lent card ([`start_list`]).
+/// A task list the game steps through itself, started on the lent card ([`start_list_run`], [`start_list_dry`]).
 #[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct CardList {
     /// The list's start, run at once: the mount's probe (`CARDProbeEx`: the slot's and its
@@ -541,19 +602,8 @@ pub struct CardList {
 /// Starts `tasks` on the lent card at `now` with `run`'s files, the library's clock at
 /// `seconds`: the list writes what it writes at once, and its steps' time is left for the calls
 /// of `lbCardNew_CompleteNextTask` after ([`save_steps`]). A list whose mount finds no card
-/// fails there, with no step.
-pub(crate) fn start_list(
-    chan: usize,
-    run: Run,
-    tasks: &[(Task, u32)],
-    now: u64,
-    seconds: u32,
-) -> CardList {
-    start_list_on(chan, run, tasks, now, seconds, false).0
-}
-
-/// [`start_list`], with the run as the list left it (what its reads wrote into its buffers,
-/// each task's result, the HSD layer's log).
+/// fails there, with no step. The run as the list left it (what its reads wrote into its
+/// buffers, each task's result, the HSD layer's log).
 pub(crate) fn start_list_run(
     chan: usize,
     run: Run,
@@ -565,7 +615,7 @@ pub(crate) fn start_list_run(
     (list, run)
 }
 
-/// [`start_list`] on a copy of the card, which stays as it was: for a list whose writes the
+/// [`start_list_run`] on a copy of the card, which stays as it was: for a list whose writes the
 /// caller makes at its end ([`finish_list`]), with each of the library's clock reads at the
 /// time its step comes to. Also the steps that read the clock (a create's, each sector
 /// written and a status set stamp the file's directory entry), in order.
@@ -597,18 +647,30 @@ pub(crate) fn start_list_dry_run(
 /// end.
 pub(crate) fn finish_list(
     chan: usize,
-    mut run: Run,
+    run: Run,
     tasks: &[(Task, u32)],
     seconds: u32,
     times: &[u32],
 ) -> i32 {
-    with_device(|dev| {
+    finish_list_run(chan, run, tasks, seconds, times).0
+}
+
+/// [`finish_list`], with the run as the list left it.
+pub(crate) fn finish_list_run(
+    chan: usize,
+    mut run: Run,
+    tasks: &[(Task, u32)],
+    seconds: u32,
+    times: &[u32],
+) -> (i32, Run) {
+    let r = with_device(|dev| {
         let mut clock = Clock::at(seconds);
         clock.script = times.iter().copied().collect();
         let slot = &mut dev.slots[chan];
         let console = slot.console.clone();
         run.execute(slot.card.as_mut(), &console, &mut clock, tasks)
-    })
+    });
+    (r, run)
 }
 
 fn start_list_on(
@@ -725,6 +787,14 @@ pub struct Writer {
     pub results: Vec<(usize, usize, i32)>,
     /// Whether the results changed since the game last took them.
     pub errors_due: bool,
+    /// The list's files and comment, which the card takes at the list's last step, its
+    /// directory stamped with the times the steps that stamp it (`stamps`) came to (`times`),
+    /// the library's clock at `seconds` before the first.
+    pub request: Option<SaveRequest>,
+    pub request_comment: Vec<u8>,
+    pub seconds: u32,
+    pub stamps: Vec<usize>,
+    pub times: Vec<u32>,
 }
 
 impl Writer {
@@ -741,6 +811,7 @@ impl Writer {
             return Some(self.begin(req, now));
         }
         if self.next < self.steps.len() {
+            refuse_lost(0, "the save's writer's list");
             let w = self.steps[self.next];
             for &(at, file, e) in &self.results {
                 if at == self.next {
@@ -763,25 +834,26 @@ impl Writer {
         let seconds = ((now + offset) / TB_HZ) as u32;
         let comment = melee_save::melee::comment(seconds, false);
         self.comment = Some(comment);
-        let mut bufs = melee_save::exec::Bufs::default();
-        for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {
-            *f = req.data[file_span(i).0..].to_vec();
-        }
-        bufs.banner = req.banner;
-        bufs.icons = req.icons;
-        let mut run = Run::new(melee_save::melee::manifest(), bufs);
-        run.comment = comment;
+        let run = save_run(&req, comment);
         // `resetState`: no file has a result yet.
         self.file_errors = [result::START; 9];
         self.errors_due = true;
         self.next = 0;
-        let list = start_list(
+        // The card takes the list's writes at its end, each directory stamp the time of the
+        // step that writes it (`__CARDUpdateDir` from the write's callback), not the list's
+        // start's.
+        let (list, stamps) = start_list_dry(
             0,
             run,
             &lists::save(melee_save::melee::FILENAME),
             now + TIME_READ,
             seconds,
         );
+        self.request = list.card_in.then_some(req);
+        self.request_comment = comment.to_vec();
+        self.seconds = seconds;
+        self.stamps = stamps;
+        self.times = Vec::new();
         // The comment's `OSGetTime` (`lb_8001C658`), before the list starts.
         assert_eq!(
             list.start.len(),
@@ -796,6 +868,41 @@ impl Writer {
         work
     }
 
+    /// The step [`Writer::wait`] last gave ran, ending at `now`: a step that stamps the
+    /// directory takes the clock's second as its transfers end (a fraction of a millisecond
+    /// past its stamp), and after the last the card takes the list's writes with those times.
+    pub fn step_done(&mut self, now: u64) {
+        if self.request.is_none() || self.next == 0 {
+            return;
+        }
+        if self.stamps.contains(&(self.next - 1)) {
+            let offset = with_device(|dev| dev.time_offset);
+            self.times.push(((now + offset) / TB_HZ) as u32);
+        }
+        if self.next < self.steps.len() {
+            return;
+        }
+        let req = self.request.take().expect("the save's request");
+        let written = finish_list(
+            0,
+            save_run(
+                &req,
+                self.request_comment
+                    .as_slice()
+                    .try_into()
+                    .expect("a comment"),
+            ),
+            &lists::save(melee_save::melee::FILENAME),
+            self.seconds,
+            &self.times,
+        );
+        assert_eq!(
+            Some(written),
+            self.done.map(|d| d.0),
+            "the save's list ended otherwise on the card"
+        );
+    }
+
     /// The list's end, once its last step ran: its result and whether its mount found the
     /// card.
     pub fn take_done(&mut self) -> Option<(i32, bool)> {
@@ -804,6 +911,19 @@ impl Writer {
         }
         self.done.take()
     }
+}
+
+/// The save's list's run over the request's files, with its comment.
+fn save_run(req: &SaveRequest, comment: [u8; 0x40]) -> Run {
+    let mut bufs = melee_save::exec::Bufs::default();
+    for (i, f) in bufs.files.iter_mut().enumerate().skip(1) {
+        *f = req.data[file_span(i).0..].to_vec();
+    }
+    bufs.banner = req.banner.clone();
+    bufs.icons = req.icons.clone();
+    let mut run = Run::new(melee_save::melee::manifest(), bufs);
+    run.comment = comment;
+    run
 }
 
 impl CardTasks {
@@ -858,13 +978,24 @@ pub fn detach() {
     with_device(|dev| {
         for slot in &mut dev.slots {
             slot.attached = false;
+            slot.lost = false;
         }
     });
 }
 
 /// A list's end unmounts slot `chan`'s card, detaching its channel.
 pub(crate) fn detach_slot(chan: usize) {
-    with_device(|dev| dev.slots[chan].attached = false);
+    with_device(|dev| {
+        let slot = &mut dev.slots[chan];
+        slot.attached = false;
+        slot.lost = false;
+    });
+}
+
+/// Whether slot `chan`'s card was pulled out while the list under way had it attached
+/// ([`CardSlot::lost`]).
+pub(crate) fn lost(chan: usize) -> bool {
+    with_device(|dev| dev.slots[chan].lost)
 }
 
 /// The create's step that writes the seventh bank's block (physical block 8): its steps are the
@@ -1044,6 +1175,7 @@ impl Running<'_> {
             }
             a.clock_read(self.data, unmount_time(chan));
         }
+        refuse_lost(chan, "a list the game waits on");
         // The list's end unmounts the card, detaching the channel.
         detach_slot(chan);
         self.card_alarm_probes();
@@ -1138,6 +1270,7 @@ impl Running<'_> {
                 times.push(self.session_seconds());
             }
         }
+        refuse_lost(0, "the save's create");
         let written = finish_list(0, run, &tasks, seconds, &times);
         assert_eq!(written, r, "the save's create ended otherwise on the card");
         detach_slot(0);

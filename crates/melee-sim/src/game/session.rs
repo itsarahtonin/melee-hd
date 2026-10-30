@@ -130,6 +130,7 @@ fn card_device(setup: &Setup) -> CardDevice {
             // The OS's probes at boot read the card's ID as it settled.
             id_time: seen,
             extint_seen: 0,
+            lost: false,
         }
     };
     CardDevice {

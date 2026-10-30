@@ -468,7 +468,26 @@ impl Running<'_> {
         for (f, e) in results {
             self.game.card_tasks.file_errors[f] = e;
         }
-        self.game.audio.clock_card_work(self.data, work);
+        let chan = save.chan;
+        // The step's wait point, where a card pulled out meanwhile is taken from the list
+        // (its insertion interrupt, [`super::save::card_ext`]).
+        self.game.audio.clock_card_work(
+            self.data,
+            crate::audio::clock::CardWork {
+                step: work.step,
+                ..Default::default()
+            },
+        );
+        if super::save::lost(chan) {
+            return self.snap_save_lost(work);
+        }
+        self.game.audio.clock_card_work(
+            self.data,
+            crate::audio::clock::CardWork {
+                step: false,
+                ..work
+            },
+        );
         // A step that stamps the directory reads the clock in its transfers' chain, which
         // its end is a fraction of a millisecond past.
         let k = self.game.snap_write.save.as_ref().map_or(0, |s| s.next - 1);
@@ -506,6 +525,56 @@ impl Running<'_> {
             return r;
         }
         result::BUSY
+    }
+
+    /// The snapshot's save's step after its card was pulled out (`work` the step's work but
+    /// its wait point): the step's `CARDFastOpen` for its sector's write finds no card, and
+    /// its callback (`fn_8001A0B0`) gives file 0 and the list the result (15); the list's end
+    /// task's `CARDUnmount` finds no card either, so nothing more takes time. The card keeps
+    /// the transfers of the steps before, as ssbm-rs's probe of a pull between two of a
+    /// save's writes logs it (`local/research/card-chain/slotb-pull-saveb.log`). A pull
+    /// before another step (the open's, the create's or the unmount's) isn't ported, as no
+    /// session reaches one.
+    fn snap_save_lost(&mut self, work: crate::audio::clock::CardWork) -> i32 {
+        let save = self
+            .game
+            .snap_write
+            .save
+            .take()
+            .expect("the snapshot's save");
+        let k = save.next - 1;
+        if !matches!(
+            work.chain,
+            Some(crate::audio::clock::CardChain::Write { sectors: 2, .. })
+        ) {
+            crate::game::code::unported_call(&format!(
+                "the snapshot's save with its card pulled out before its step {k}, not a sector's write"
+            ));
+        }
+        // The transfers made: one a step before this one.
+        let made = save.list.steps[..k]
+            .iter()
+            .filter(|w| w.chain.is_some())
+            .count();
+        let mut run = save.request.run();
+        run.pull_after = Some(made);
+        let (r, run) = super::save::finish_list_run(
+            save.chan,
+            run,
+            &save.request.tasks(),
+            save.seconds,
+            &save.times,
+        );
+        let &(file, h) = run.callbacks.last().expect("the failed write's callback");
+        assert_eq!(
+            (file, melee_save::tasks::from_hsd(h), r),
+            (0, result::DEVICE_ERROR, result::DEVICE_ERROR),
+            "the snapshot's save ended otherwise with its card pulled out"
+        );
+        self.game.card_tasks.file_errors[0] = r;
+        super::save::detach_slot(save.chan);
+        self.game.card_tasks.saved_error = r;
+        r
     }
 }
 
