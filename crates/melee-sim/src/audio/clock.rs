@@ -265,6 +265,23 @@ pub struct Clock {
     /// `VIWaitForRetrace` with, which `OSSleepThread` saved on the stack (its `r30`); none
     /// when the flush didn't wait.
     pub flush_count: Option<u32>,
+    /// The perf timer (`perf.c`): the time its last tick started (`start_time`, on the
+    /// timeline), the round's times so far and the last rendered frame's
+    /// (`HSD_PerfCurrentStat`, `HSD_PerfLastStat`: CPU, draw and total, in 60ths of a second
+    /// from the tick's start), which only the performance monitor draws
+    /// ([`crate::game::perf`]); the times as their bits.
+    pub perf_start: u64,
+    pub perf_current: [u32; 3],
+    pub perf_last: [u32; 3],
+    /// HSD's frame rate count (`HSD_VIPreRetraceCB`'s `vr_count` and `renew_count`, and
+    /// `HSD_VIData.perf.frame_renew`): retraces counted to 60, the new frames shown among
+    /// them, and the last 60's new frames.
+    pub vr_count: i32,
+    pub renew_count: i32,
+    pub frame_renew: i32,
+    /// The round's frame took a debug screenshot (`db_ScreenshotPending` at its end): the
+    /// next round's start waits for its copy to show ([`Clock::screenshot_flush`]).
+    pub screenshot: bool,
 }
 
 /// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
@@ -709,10 +726,12 @@ impl Clock {
                 self.retraces = self.retraces.wrapping_add(1);
                 self.woken = true;
                 // `HSD_VIPostRetraceCB`: the next copied frame shows, freeing the one shown.
-                if self.xfb_pending > 0 {
+                let renew = self.xfb_pending > 0;
+                if renew {
                     self.xfb_pending -= 1;
                     self.xfb_shown = true;
                 }
+                self.count_renew(renew);
             } else {
                 break;
             }
@@ -831,27 +850,30 @@ impl Clock {
             if !std::mem::take(&mut self.render_started) && start < 2 {
                 self.lb_wait(f);
             }
+            let mut copied = false;
             if start < 2 && self.xfb_free() == 0 {
                 // The sleep until a retrace frees a frame buffer (`HSD_VIWaitXFBDrawEnable`).
-                self.read(BEFORE_SLEEP, f);
+                self.draw_time_read(f);
                 while self.xfb_free() == 0 {
                     let next = self.next_at();
                     self.now = self.now.max(next);
                     self.service(f);
                 }
                 self.read(GX_FINISH, f);
-                self.read(TOTAL_TIME_READ, f);
+                copied = self.screenshot_flush(f);
+                self.total_time_read(f);
             } else if start < 2 {
                 // A buffer is free: the draw time's read, then the frame's GX finish
                 // interrupt and the total time's read before the pad check, as after a sleep's
                 // wake.
-                self.read(BEFORE_SLEEP, f);
+                self.draw_time_read(f);
                 self.read(GX_FINISH, f);
-                self.read(TOTAL_TIME_READ, f);
+                copied = self.screenshot_flush(f);
+                self.total_time_read(f);
             }
             // The frame's copy.
             self.woken = false;
-            if start < 2 {
+            if start < 2 && !copied {
                 self.xfb_pending += 1;
             }
             // The pad check (`lb_80019894`) takes up a new tick length first: the alarm is
@@ -871,6 +893,8 @@ impl Clock {
         }
         self.ticks_left -= 1;
         self.pads -= 1;
+        // `HSD_PerfSetStartTime`.
+        self.perf_start = self.now;
         self.read(TICK_READ, f);
     }
 
@@ -902,7 +926,10 @@ impl Clock {
         if !std::mem::take(&mut self.render_started) {
             self.lb_wait(f);
         }
+        // The last frame's times, whose reads the timeline leaves out here: the monitor of a
+        // scene's first frames draws them.
         if copied {
+            self.perf_current[1] = self.perf_time();
             self.xfb_pending += 1;
         }
         self.woken = false;
@@ -912,7 +939,17 @@ impl Clock {
             self.now = self.now.max(next);
             self.service(f);
         }
-        self.note_flush(before);
+        // A screenshot's flush (`db_TakeScreenshotIfPending`) did the waiting, a frame deeper:
+        // the loop's own found nothing to wait for.
+        if std::mem::take(&mut self.screenshot) {
+            self.flush_count = None;
+        } else {
+            self.note_flush(before);
+        }
+        if copied {
+            self.perf_current[2] = self.perf_time();
+            self.perf_init_stat();
+        }
     }
 
     /// The flush's last `VIWaitForRetrace` began one retrace before the one that ended it
@@ -931,6 +968,69 @@ impl Clock {
             self.lb_wait(f);
             self.render_started = true;
         }
+    }
+
+    /// `HSD_VIPreRetraceCB`'s frame rate count: a retrace that shows a new frame counts it,
+    /// and every 60th (NTSC's `frame_period`) sets `frame_renew` and starts again.
+    fn count_renew(&mut self, renew: bool) {
+        if renew {
+            self.renew_count += 1;
+        }
+        self.vr_count += 1;
+        if self.vr_count >= 60 {
+            self.frame_renew = self.renew_count;
+            self.vr_count = 0;
+            self.renew_count = 0;
+        }
+    }
+
+    /// A perf timer's time (`HSD_PerfSetCPUTime`, `SetDrawTime`, `SetTotalTime`): the time base
+    /// as its read finds it, since the tick's start, in 60ths of a second
+    /// (`OSSecondsToTicks(1) / 60` as a single).
+    fn perf_time(&self) -> u32 {
+        let ticks = self.now.wrapping_sub(self.perf_start) as i64;
+        crate::fpu::mem(gekko_fp::fdivs(f64::from(ticks as f32), 675_000.0)).to_bits()
+    }
+
+    /// The last frame's times (`HSD_PerfLastStat`'s CPU, draw and total).
+    pub fn perf_last(&self) -> [f32; 3] {
+        self.perf_last.map(f32::from_bits)
+    }
+
+    /// `HSD_PerfInitStat`, after a frame's total time: the frame's times become the last.
+    fn perf_init_stat(&mut self) {
+        self.perf_last = std::mem::take(&mut self.perf_current);
+    }
+
+    /// The draw time's read and what passes there.
+    fn draw_time_read(&mut self, f: &mut dyn Frames) {
+        self.perf_current[1] = self.perf_time();
+        self.read(BEFORE_SLEEP, f);
+    }
+
+    /// The total time's read, then the frame's times kept.
+    fn total_time_read(&mut self, f: &mut dyn Frames) {
+        self.perf_current[2] = self.perf_time();
+        self.read(TOTAL_TIME_READ, f);
+        self.perf_init_stat();
+    }
+
+    /// The debug screenshot's wait (`db_TakeScreenshotIfPending`, after the frame's copy
+    /// and before the total time's read): `HSD_VIWaitXFBFlush` sleeps through retraces until
+    /// the copied frame shows. Its `VIWaitForRetrace` runs a frame deeper than the scene
+    /// loop's own flush, so [`Clock::flush_count`] stays as it was. Returns whether it ran,
+    /// counting the copy.
+    fn screenshot_flush(&mut self, f: &mut dyn Frames) -> bool {
+        if !std::mem::take(&mut self.screenshot) {
+            return false;
+        }
+        self.xfb_pending += 1;
+        while self.xfb_pending > 0 {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+        true
     }
 
     /// Frame buffers neither showing nor waiting to.
@@ -1078,6 +1178,8 @@ impl Clock {
     /// The perf timer's read at the end of a tick.
     pub fn tick_end(&mut self, f: &mut dyn Frames) {
         self.game_code(f);
+        // `HSD_PerfSetCPUTime`.
+        self.perf_current[0] = self.perf_time();
         self.read(TICK_READ, f);
     }
 }

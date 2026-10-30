@@ -32,6 +32,8 @@ const VI_XFB: u32 = 0x58;
 const VI_XFB_SIZE: u32 = 0x60;
 const VI_XFB_MAX: u32 = 3;
 const VI_NB_XFB: u32 = 0x1D4;
+/// `HSD_VIInfo.perf`: `frame_period`, then `frame_renew`.
+const VI_PERF: u32 = 0x1EC;
 const XFB_WAITDONE: u32 = 4;
 const XFB_DRAWDONE: u32 = 5;
 const XFB_NEXT: u32 = 6;
@@ -1004,6 +1006,15 @@ pub fn import_clock_on(mem1: &[u8], tb: u64, disc: DiscSpeed, power_on: u64) -> 
     }
     c.xfb_pending = pending;
     c.xfb_shown = shown;
+    // The perf timer's (`start_time` on the code's time base) and HSD's frame rate count
+    // (`HSD_VIPreRetraceCB`'s statics at 0x804D76D8 and 0x804D76DC, `HSD_VIData.perf`).
+    c.perf_start = m.u64(sym("start_time")).wrapping_sub(power_on);
+    let stat = |at: u32| [m.u32(at), m.u32(at + 4), m.u32(at + 8)];
+    c.perf_current = stat(sym("HSD_PerfCurrentStat"));
+    c.perf_last = stat(sym("HSD_PerfLastStat"));
+    c.vr_count = m.u32(0x804D_76D8) as i32;
+    c.renew_count = m.u32(0x804D_76DC) as i32;
+    c.frame_renew = m.u32(vi + VI_PERF + 4) as i32;
     c.dsp_ready = m.u32(sym("__AXOutDspReady")) == 1;
     if !c.dsp_ready {
         c.schedule(

@@ -403,15 +403,7 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "the scene loop's debug report (gm_801A4970)",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
         "unported(\"debug pause predicate\"",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
-        "the debug screenshot (db_CheckScreenshot)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (

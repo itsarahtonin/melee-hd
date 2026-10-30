@@ -73,6 +73,7 @@ mod gates;
 mod holds;
 mod jit;
 mod latency;
+mod monitor;
 mod paced;
 #[cfg(test)]
 mod paced_tests;
@@ -1153,6 +1154,8 @@ struct App {
     /// The menus' gate note's painter, once it's shown.
     note_painter: Option<ui::Painter>,
     frames: Frames,
+    /// The host's times for the debug performance monitor.
+    host_times: monitor::HostTimes,
     gpu: present::Gpu,
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
@@ -1395,6 +1398,7 @@ impl App {
             }
         };
         let simulated = start.elapsed();
+        self.host_times.sim(simulated);
         // The pad library's motor commands this tick, to the controllers.
         if f.pads.motors.iter().any(Option::is_some) {
             for (on, m) in self.motors.iter_mut().zip(f.pads.motors) {
@@ -1724,6 +1728,8 @@ impl App {
             }
         }
         let m = self.session.as_ref().expect("a match");
+        let last = self.frames.hsd.perf_host.take();
+        self.frames.hsd.perf_host = Some(self.host_times.host(last));
         let fifo = self.frames.frame_blended(m.game(), m.data(), draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
@@ -1817,6 +1823,11 @@ impl App {
             self.capture_next = Some(dir.join("after"));
         }
         let presented = presented?;
+        self.host_times.frame(
+            built - entered,
+            presented.presented.saturating_duration_since(start),
+            presented.presented,
+        );
         self.live.frame(presented.presented);
         self.measure(
             presented.presented,
@@ -2873,6 +2884,7 @@ fn run(args: Args) -> ExitCode {
         last_image: None,
         note_painter: None,
         frames,
+        host_times: monitor::HostTimes::default(),
         gpu,
         renderer: None,
         shown: None,
