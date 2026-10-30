@@ -1414,6 +1414,66 @@ fn the_challenger_and_stage_sessions_end_with_their_cards() {
     }
 }
 
+/// The heap's image's checks at `ticks` in a session's output: each ran and found no byte it
+/// knows differing from memory.
+fn assert_image_clean(out: &str, ticks: &[u32]) {
+    for t in ticks {
+        let line = out
+            .lines()
+            .find(|l| l.starts_with(&format!("tick {t}: the heap's image against memory")))
+            .unwrap_or_else(|| panic!("no image check at tick {t}: {out}"));
+        assert!(!line.contains("\"different\""), "{line}");
+    }
+}
+
+/// Donkey Kong (port 1), Peach and Yoshi (ports 2 and 3, walking off) in a VS match one short
+/// of Dr. Mario's (feat/m5-layouts-4), then the challenger approach's match (preload class 2),
+/// whose free memory holds the VS match's cached files with what the three creations wrote
+/// into their attributes: the heap's image matches memory there at the match's first and last
+/// ticks and the next scene's first, and the session compares clean to its end.
+#[test]
+fn a_match_with_dk_peach_and_yoshi_leaves_their_written_attributes() {
+    let card = ssbm_rs_local("lockstep/layout-sessions/dk-pe-ys-run.card");
+    let Some(out) = scripted_session(
+        "layout-sessions",
+        "dk-pe-ys",
+        &[
+            "--all",
+            "--heap",
+            "--card-after",
+            &card,
+            "--image",
+            "2394,3127,4116,4118",
+        ],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("4660 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
+        "{out}"
+    );
+    assert_image_clean(&out, &[2394, 3127, 4116, 4118]);
+}
+
+/// The debug menus' objects (`un_804A2688`'s pool) laid out as they go back and with their
+/// scene: the heap's image matches memory at each debug menu scene's last tick and the next
+/// scene's first in `debug-sessions/menu-sub`, its submenus opened and closed.
+#[test]
+fn the_debug_menus_go_back_laid_out() {
+    let ticks = [2502, 2504, 5423, 5425, 5862, 5864, 7063, 7065, 7182, 7184];
+    let list = ticks.map(|t| t.to_string()).join(",");
+    let Some(out) = scripted_session(
+        "debug-sessions",
+        "menu-sub",
+        &["--all", "--heap", "--image", &list],
+    ) else {
+        return;
+    };
+    assert!(out.contains("7426 ticks compared, no difference"), "{out}");
+    assert_image_clean(&out, &ticks);
+}
+
 /// The approach's match rolls back as any match does, and the launcher's shortcut leaves it
 /// unchecked: it isn't a match the launcher makes.
 #[test]

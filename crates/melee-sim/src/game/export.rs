@@ -239,6 +239,14 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
             sound_obj(game, Some(data), img, super::handles::SoundObjId(slot));
         }
     }
+    let kind = std::any::type_name::<crate::game::hud::debug_menu::DebugMenu>();
+    if let Some(menus) = &game.hud.devtext.menus {
+        for (slot, m) in menus.iter() {
+            if img.in_scene(kind, slot) {
+                debug_menu(game, data, img, slot, m.text);
+            }
+        }
+    }
     let kind = std::any::type_name::<crate::hsd::sobj::SObj>();
     for (slot, _) in game.objs.sobjs.iter() {
         if img.in_scene(kind, slot) {
@@ -275,6 +283,44 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
             anim_buf(game, img, slot);
         }
     }
+}
+
+/// `devtext_pool` (0x34 a screen), whose screens a debug menu's `x4` names.
+const DEVTEXT_POOL: u32 = 0x804A_1FD8;
+const DEVTEXT_SIZE: u32 = 0x34;
+
+/// A debug menu (`un_80304138_objalloc_t`, 0x20, from `un_804A2688`'s pool), as it goes back
+/// (`un_80304344`'s `HSD_ObjFree`, whose link then takes its first word) or with its scene's
+/// heap: the fields `un_80303FD4`, `un_80304168` and `un_80304210` write; its padding and a
+/// submenu's `x14`, which nothing writes, what the block held. `text` is its `x4` as it goes:
+/// `DevText_Remove(&menu->x4)` writes the list's link through it, leaving the next screen (or
+/// null) where the screen was first in its list.
+pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text: Option<u8>) {
+    let Some(pool) = &game.hud.devtext.menus else {
+        return;
+    };
+    let at = pool.addr(slot);
+    if at == 0 {
+        return;
+    }
+    let o = &pool[slot];
+    let mut l = Lay::leftover(img, data, at, 0x20);
+    let menu = |m: Option<u32>| m.map_or(0, |m| pool.addr(m));
+    l.u8(0, o.cursor);
+    l.u8(1, o.flags);
+    l.u32(
+        4,
+        text.map_or(0, |t| DEVTEXT_POOL + DEVTEXT_SIZE * u32::from(t)),
+    );
+    l.u32(8, o.table);
+    l.u32(0xC, o.cb);
+    l.u32(0x10, o.gobj.map_or(0, |g| game.world.gobjs.addr(g.0)));
+    if let Some(p) = o.proc {
+        l.u32(0x14, game.world.procs.addr(p.0));
+    }
+    l.u32(0x18, menu(o.prev));
+    l.u32(0x1C, menu(o.next));
+    l.put(img);
 }
 
 /// The stage's vertices and lines (`groundCollVtx`, 0x18 each, and `groundCollLine`, 8 each),
@@ -550,14 +596,12 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             | Kind::ItemLink
             | Kind::SList
             | Kind::Rvalue
-            | Kind::AudioUserData => continue,
+            | Kind::AudioUserData
+            | Kind::DebugMenu => continue,
             Kind::Player => "a pool the game allocates nothing from (`Player_AllocData`)",
-            Kind::DList
-            | Kind::TevReg
-            | Kind::Chan
-            | Kind::Render
-            | Kind::ZList
-            | Kind::DebugMenu => "a pool melee-sim's model allocates nothing from",
+            Kind::DList | Kind::TevReg | Kind::Chan | Kind::Render | Kind::ZList => {
+                "a pool melee-sim's model allocates nothing from"
+            }
             Kind::SObj => continue,
         };
         v.push((k.name().to_owned(), why));

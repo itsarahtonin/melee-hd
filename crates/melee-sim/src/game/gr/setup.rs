@@ -1218,6 +1218,7 @@ pub fn setup(r: &mut Running, grkind: i32) {
         while let Some(script) = data.ptr(yaku.at(4 * i)) {
             game.gr.yaku_scripts.retain(|&(k, _)| u32::from(k) != i);
             game.gr.yaku_scripts.push((i as u8, script));
+            image_yaku_script(game, data, i, script);
             i += 1;
         }
     }
@@ -1451,6 +1452,31 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
         crate::hsd::particle::load_data_bank(&mut r.game.objs, data, 0x40, ptcl, texg, None, None);
     }
     mark_materials(r.game, data, map_head);
+}
+
+/// `Ground_801C0800`'s write of the stage's hurtbox script `i` into the random article's
+/// state description `i` (`it_804D6D38[It_PKind_Random - It_Kind_Kuriboh]->xC_itemStates`),
+/// in `ItCo.dat`'s data: the heap's image takes it where it holds the file (the preload
+/// cache's copy a later scene's heap reuses).
+fn image_yaku_script(game: &Game, data: &Archives, i: u32, script: DataRef) {
+    use crate::game::it::kinds::{KURIBOH, PKIND_RANDOM};
+    if !crate::hsd::heap::image_on() {
+        return;
+    }
+    let article = game
+        .it
+        .char_articles
+        .get((PKIND_RANDOM - KURIBOH) as usize)
+        .copied()
+        .flatten();
+    let Some(states) = article.and_then(|a| data.ptr(a.at(0xC))) else {
+        return;
+    };
+    crate::hsd::heap::with(|h| {
+        if let Some(w) = h.image.data_addr(script) {
+            h.image.file_word(states.at(0x10 * i + 0xC), w);
+        }
+    });
 }
 
 /// Where an address in the executable's data the archive of [`super::exe_data`] holds is
