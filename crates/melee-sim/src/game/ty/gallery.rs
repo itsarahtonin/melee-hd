@@ -246,6 +246,15 @@ pub struct Gallery {
     /// `_Toy_sbss_804D6EA1`: set by `Toy_80311680` (a debug unlock); `_Toy_sbss_804D6EA0`.
     pub xa1: u8,
     pub xa0: u8,
+    /// `_Toy_sbss_804D6E50`, `_Toy_sbss_804D6EA2`: the debug views L and Z held at the entry
+    /// ask for (from the debug ROM's level).
+    pub debug_l: i8,
+    pub debug_z: i8,
+    /// `_Toy_sbss_804D6E98`: the unlock editor's text; `_Toy_sbss_804D6E9C` the Z view's.
+    pub editor_text: Option<u8>,
+    pub debug_text: Option<u8>,
+    /// `_Toy_sbss_804D6E5C`: the unlock editor (R held at the entry).
+    pub editor: Option<super::debug::Editor>,
 }
 
 impl Gallery {
@@ -410,10 +419,14 @@ impl Running<'_> {
         g.xa1 = 0;
         // From the debug ROM's level, the buttons held as it enters: L the debug view
         // (`_Toy_sbss_804D6E50`), Z the fog's (`_Toy_sbss_804D6EA2`), Start and R the
-        // parameters' editor's step (`_Toy_sbss_804D6EA0`).
+        // unlock editor's step (`_Toy_sbss_804D6EA0`, which runs the editor at 1).
+        g.debug_l = 0;
+        g.debug_z = 0;
         if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM {
-            let debug_view = self.toy_held() & 0x40 != 0;
-            let fog_view = self.toy_held() & 0x10 != 0;
+            let l = i8::from(self.toy_held() & 0x40 != 0);
+            self.game.toys.gallery.debug_l = l;
+            let z = i8::from(self.toy_held() & 0x10 != 0);
+            self.game.toys.gallery.debug_z = z;
             if self.toy_held() & 0x1000 != 0 {
                 self.game.toys.gallery.xa0 = 0;
             }
@@ -424,9 +437,9 @@ impl Running<'_> {
             if self.toy_held() & 0x20 != 0 {
                 self.game.toys.gallery.xa0 = 1;
             }
-            if debug_view || fog_view || self.game.toys.gallery.xa0 != 0 {
+            if l != 0 || z != 0 {
                 crate::game::code::unported_call(
-                    "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2, 804D6EA0)",
+                    "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2)",
                 );
             }
         }
@@ -456,6 +469,11 @@ impl Running<'_> {
             dist_step: self.game.toys.gallery.dist_step,
             pitch_step: self.game.toys.gallery.pitch_step,
             xa0: self.game.toys.gallery.xa0,
+            debug_l: self.game.toys.gallery.debug_l,
+            debug_z: self.game.toys.gallery.debug_z,
+            editor_text: self.game.toys.gallery.editor_text,
+            debug_text: self.game.toys.gallery.debug_text,
+            editor: self.game.toys.gallery.editor,
             ..Gallery::default()
         };
         self.toy_scene_prepare();
@@ -478,6 +496,11 @@ impl Running<'_> {
             self.load_font_named(0, "SdToy.dat", "SIS_ToyData");
             self.load_font_named(3, "SdToyExp.dat", "SIS_ToyDataExp");
         }
+        // R held: the unlock editor first, which sets the gallery up when it's done.
+        if self.game.toys.gallery.xa0 == 1 {
+            self.toy_editor();
+            return;
+        }
         let song = self.game.game_data.x1850.unk_14;
         if song != -1 {
             self.lb_play_music(song);
@@ -495,6 +518,7 @@ impl Running<'_> {
             let g = &mut self.game.toys.gallery;
             g.view_archive = None;
             g.panel = None;
+            self.toy_debug_leave();
             self.game.end_scene();
         }
     }
