@@ -402,6 +402,14 @@ pub const STOPS: &[(&str, &str)] = &[
         "the debug screenshot (db_CheckScreenshot)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
+    (
+        "the trophy collection's debug view (_tyDisplay_8031C1D0)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2, 804D6EA0)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
 ];
 
 #[cfg(test)]

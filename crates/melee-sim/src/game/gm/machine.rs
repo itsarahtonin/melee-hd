@@ -1200,8 +1200,7 @@ impl Running<'_> {
             Hook::DebugBackToMenu => self.debug_mode_back_to_menu(),
             Hook::DebugEnterVs => self.debug_mode_enter_vs(),
             Hook::DebugEnterResults0 => self.debug_mode_enter_results0(),
-            // `onExitResults0`: the first page.
-            Hook::DebugExitResults0 => self.set_next_game_mode_state_id(0),
+            Hook::DebugExitResults0 => self.debug_mode_exit_results0(),
             Hook::DebugVsEnterVs => self.debug_vs_enter_vs(),
             Hook::DebugEnterResults1 => self.debug_mode_enter_results1(),
             Hook::DebugExitResults1 => self.debug_mode_exit_results1(),
@@ -1209,6 +1208,13 @@ impl Running<'_> {
             Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;
+    }
+
+    /// `onExitResults0`: the debug mode's results state goes back to the debug menu's first
+    /// page.
+    #[doc(alias = "onExitResults0")]
+    fn debug_mode_exit_results0(&mut self) {
+        self.set_next_game_mode_state_id(0);
     }
 
     /// `gm_SetGameModeStateId`.

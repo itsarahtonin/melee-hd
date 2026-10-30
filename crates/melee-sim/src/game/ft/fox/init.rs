@@ -123,17 +123,9 @@ impl Running<'_> {
     /// character's copied into the fighter's backup block, which becomes its attributes.
     #[doc(alias = "ftFx_Init_OnLoadForFalco")]
     pub fn fox_on_load_for_falco(&mut self, f: super::super::super::handles::FighterId) {
-        let d = self.game.fighters[f.0]
-            .ft_data
-            .expect("a fighter without data");
-        let ext_attr = self.data.ptr(d.at(4)).expect("ftData::ext_attr");
-        let bytes = self.data.get(ext_attr.archive).data();
-        let src = bytes[ext_attr.offset as usize..][..attr::SIZE].to_vec();
-        let backup = self.game.fighters[f.0]
-            .dat_attrs_backup
-            .expect("a fighter without an attribute block");
-        self.game.fighter_attrs[backup.0][..attr::SIZE].copy_from_slice(&src);
-        self.game.fighters[f.0].dat_attrs = Some(backup);
+        // As `PUSH_ATTRS` everywhere: the block's bytes past the attributes are the heap's,
+        // never read (`push_attrs`).
+        self.push_attrs(f, attr::SIZE);
     }
 
     /// Entering knockback, `ftFx_Init_OnKnockbackEnter`: the eyes' and mouth's hurt textures
