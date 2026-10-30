@@ -40,6 +40,10 @@ pub const ABSORB: ([u8; 4], [u8; 4]) = ([0x00, 0x80, 0xFF, 0x80], [0x00, 0x40, 0
 const THROWN: ([u8; 4], [u8; 4]) = ([0xFF, 0xFF, 0xFF, 0x80], [0x80, 0x80, 0x80, 0x80]);
 /// The fighter's `x1614` capsules (`lbColl_804D36F0`, `804D36F4`).
 const X1614: ([u8; 4], [u8; 4]) = ([0xFF, 0xFF, 0x00, 0x80], [0x80, 0x80, 0x00, 0x80]);
+/// The fighter's ledge points (`x1670`: `lbColl_804D36E0`, `804D36E4`).
+const LEDGE: ([u8; 4], [u8; 4]) = ([0xFF, 0x80, 0x00, 0x80], [0x80, 0x40, 0x00, 0x80]);
+/// A coin's range (`lbColl_804D36F8`, `804D36FC`).
+const COIN: ([u8; 4], [u8; 4]) = ([0xFF, 0x00, 0x00, 0x80], [0x80, 0x00, 0x00, 0x80]);
 
 /// `HitElement_Catch` and `HitElement_Inert`.
 const ELEMENT_CATCH: u32 = 8;
@@ -70,6 +74,26 @@ pub enum DebugDraw {
         amb: [u8; 4],
         size: f32,
     },
+    /// A capsule from `a` to `b` in a matrix's space, drawn through it (`lbColl_800096B4`
+    /// called directly: the ledge points', the computer player's target).
+    Local {
+        mtx: Mtx34,
+        a: Vec3,
+        b: Vec3,
+        color: [u8; 4],
+        amb: [u8; 4],
+        size: f32,
+    },
+    /// A quad in the world's z = `a.z` plane from `a` to `b`'s x and y, `lbColl_80009DD4`.
+    Quad { a: Vec3, b: Vec3, color: [u8; 4] },
+    /// A line strip through the points, each with its colour, twelve wide: a dynamics chain's
+    /// joints (`lb_800117F4`); `count` the vertices its `GXBegin` names.
+    Lines {
+        count: u16,
+        pts: Vec<(Vec3, [u8; 4])>,
+    },
+    /// An enemy's stomp range, `lb_800149E0`: a yellow line from (`x0`, `y`) to (`x1`, `y`).
+    Stomp { x0: f32, x1: f32, y: f32 },
     /// A pickup range's box around `pos` (`lbGx_8001E2F8`): `range` its offset (x, along
     /// `facing`), its half width and half height.
     Range {
@@ -80,6 +104,8 @@ pub enum DebugDraw {
     },
     /// A fighter's damage line (`lb_80014770`, its two points).
     Damage([Vec3; 2]),
+    /// A step of the stage's debug drawings ([`crate::game::mp_draw`]).
+    Map(crate::game::mp_draw::MapDraw),
     /// The end of an item's debug drawings: HAL's state caches out of date, the TEV reset and
     /// the vertex description cleared (`it_8026EECC`'s tail).
     ItemEnd,
@@ -119,8 +145,7 @@ pub fn hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> boo
 }
 
 /// A thrown fighter's hit's bubble, `lbColl_8000A044`.
-// Ports `lbColl_8000A044`; aliased once a check reaches it (the fighters' displays past their bubbles
-// are behind `b5`'s, which isn't ported).
+#[doc(alias = "lbColl_8000A044")]
 pub fn thrown_hit(objs: &mut Objects, hit: &HitCapsule, pass: i32, scale_y: f32) -> bool {
     if hit.state == 0 || hit.x43_b2 {
         return false;
@@ -160,9 +185,8 @@ fn hit_capsule(
 }
 
 /// One of the fighter's `x1614` capsules, `lbColl_8000A1A8`: from `x14` to `x8`, `x0` times
-/// `scale_y` wide.
-// Ports `lbColl_8000A1A8`; aliased once a check reaches it (the fighters' displays past their bubbles
-// are behind `b5`'s, which isn't ported).
+/// `scale_y` wide: the coins it picks up, in a coin match.
+#[doc(alias = "lbColl_8000A1A8")]
 pub fn x1614(
     objs: &mut Objects,
     c: &crate::game::structs::Fighter_x1614_t,
@@ -196,7 +220,7 @@ pub fn x1614(
 /// depth `z` for a fighter drawn with a depth scale, `mtx`), then drawn in the bone's
 /// space.
 #[doc(alias = "lbColl_8000A244")]
-// Ports `lbColl_8000A584` too; aliased once a session draws an invincible fighter's bubbles.
+#[doc(alias = "lbColl_8000A584")]
 pub fn hurt(
     objs: &mut Objects,
     data: &Archives,
@@ -244,8 +268,8 @@ pub fn hurt(
 /// `8000A95C` and `8000AB2C`): its place brought up to date once, then drawn in its bone's
 /// space.
 #[doc(alias = "lbColl_8000A78C")]
-// Ports `lbColl_8000A95C` and `lbColl_8000AB2C` too; aliased once a session draws a
-// reflector's or an absorber's bubble.
+#[doc(alias = "lbColl_8000A95C")]
+#[doc(alias = "lbColl_8000AB2C")]
 pub fn hit_result(
     objs: &mut Objects,
     data: &Archives,
@@ -313,5 +337,112 @@ pub fn damage(objs: &mut Objects, pts: [Vec3; 2], pass: i32) -> bool {
         return false;
     }
     push(objs, DebugDraw::Damage(pts));
+    true
+}
+
+/// A ledge point's bubble, `lbColl_8000A460`: a sphere at `v1` in its joint's space (the
+/// joint's matrix brought up to date), `v2` wide.
+#[doc(alias = "lbColl_8000A460")]
+pub fn ledge(
+    objs: &mut Objects,
+    data: &Archives,
+    p: &crate::game::structs::Fighter_x1670_t,
+    pass: i32,
+) -> bool {
+    let (color, amb) = LEDGE;
+    if pass_of(color) != pass {
+        return false;
+    }
+    let mtx = joint_mtx(objs, data, p.jobj);
+    push(
+        objs,
+        DebugDraw::Local {
+            mtx,
+            a: p.v1,
+            b: p.v1,
+            color,
+            amb,
+            size: p.v2,
+        },
+    );
+    true
+}
+
+/// A dynamics chain's line, `lb_800117F4`: in the pass `color`'s alpha picks, each joint's
+/// matrix marked dirty and brought up to date, the line through their places, the first
+/// `dark` in half the colour.
+#[doc(alias = "lb_800117F4")]
+pub fn dynamics_line(
+    objs: &mut Objects,
+    data: &Archives,
+    joints: &[Option<JObjId>],
+    count: u32,
+    color: [u8; 4],
+    dark: i32,
+    pass: i32,
+) -> bool {
+    if pass != pass_of(color) {
+        return false;
+    }
+    let mut pts = Vec::with_capacity(joints.len());
+    for (i, &j) in joints.iter().enumerate() {
+        // `HSD_JObjSetMtxDirtyInline`, `HSD_JObjSetupMatrix`.
+        jobj::set_mtx_dirty(&mut objs.jobjs, j);
+        jobj::setup_matrix(objs, data, j);
+        let m = &objs.jobjs[j.expect("a dynamic bone without a joint")].mtx.m;
+        let at = Vec3::new(m[0][3], m[1][3], m[2][3]);
+        let c = if (i as i32) < dark {
+            [color[0] / 2, color[1] / 2, color[2] / 2, color[3]]
+        } else {
+            color
+        };
+        pts.push((at, c));
+    }
+    push(
+        objs,
+        DebugDraw::Lines {
+            count: count as u16,
+            pts,
+        },
+    );
+    true
+}
+
+/// A coin's range, `lbColl_8000A10C`: from `x14` to `x8`, `x0` times the coin's scale wide.
+#[doc(alias = "lbColl_8000A10C")]
+pub fn coin_range(objs: &mut Objects, a: Vec3, b: Vec3, x0: f32, scale: f32, pass: i32) -> bool {
+    let (color, amb) = COIN;
+    if pass_of(color) != pass {
+        return false;
+    }
+    let size = crate::fpu::mem(gekko_fp::fmuls(crate::fpu::reg(x0), crate::fpu::reg(scale)));
+    push(
+        objs,
+        DebugDraw::Capsule {
+            a,
+            b,
+            color,
+            amb,
+            size,
+        },
+    );
+    true
+}
+
+/// An enemy's stomp range, `lb_800149E0`: in the opaque pass, a line across its span
+/// (`xB54`'s words 2 and 3) at its height (word 4).
+#[doc(alias = "lb_800149E0")]
+pub fn stomp(objs: &mut Objects, r: &crate::game::structs::lb_80014638_arg1_t, pass: i32) -> bool {
+    if pass != 0 {
+        return false;
+    }
+    push(
+        objs,
+        DebugDraw::Stomp {
+            x0: r.x8.x,
+            x1: r.x8.y,
+            y: r.x8.z,
+        },
+    );
     true
 }

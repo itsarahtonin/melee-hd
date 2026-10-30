@@ -511,8 +511,7 @@ impl Running<'_> {
 
     /// `fn_ToggleMiscFighterVisuals`: the fighters' next display (one bit, shifted along the
     /// six), and the items' stomp, pickup and coin ranges with its second, fourth and sixth.
-    // Ports `fn_ToggleMiscFighterVisuals`; aliased once a check reaches it (the displays it
-    // turns on draw with the debug drawings, which aren't ported).
+    #[doc(alias = "fn_ToggleMiscFighterVisuals")]
     fn db_toggle_fighter_visuals(&mut self) {
         let v = &mut self.game.db.fighter_visuals;
         *v = if *v != 0 { (*v << 1) & 0x3F } else { 1 };
@@ -1265,8 +1264,12 @@ impl Running<'_> {
 
     /// The items' range displays on or off (`which`: 0 the enemies' stomp range, 1 the
     /// pickup range, 2 the coins'): `fn_EnableShowEnemyStompRange` and the five others.
-    // Ports `fn_EnableShowEnemyStompRange` and the five others; aliased once a check reaches
-    // them (only the fighters' displays, which draw with the debug drawings, call them).
+    #[doc(alias = "fn_EnableShowEnemyStompRange")]
+    #[doc(alias = "fn_DisableShowEnemyStompRange")]
+    #[doc(alias = "fn_EnableShowItemPickupRange")]
+    #[doc(alias = "fn_DisableShowItemPickupRange")]
+    #[doc(alias = "fn_EnableShowCoinPickupRange")]
+    #[doc(alias = "fn_DisableShowCoinPickupRange")]
     fn db_set_item_ranges(&mut self, which: u8, on: bool) {
         for g in self.game.link_gobjs(P_LINK_ITEM) {
             let ip = super::it::item_mut(self.game, g);
@@ -1304,8 +1307,7 @@ impl Running<'_> {
     }
 
     /// `fn_ToggleItemCollisionBubbles`: the items' next bubbles (1 to 3), for every item.
-    // Ports `fn_ToggleItemCollisionBubbles`; aliased once a check reaches it (the bubbles
-    // draw with the debug drawings).
+    #[doc(alias = "fn_ToggleItemCollisionBubbles")]
     fn db_toggle_item_bubbles(&mut self) {
         let b = &mut self.game.it.db_bubbles;
         *b += 1;
