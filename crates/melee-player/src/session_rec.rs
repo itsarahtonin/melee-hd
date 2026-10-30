@@ -216,6 +216,8 @@ mod tests {
             dtv: false,
             sram_flags: 0x2C,
             card_pull: None,
+            card_b: None,
+            card_b_pull: None,
             develop: None,
         };
         let mut bytes = header(&setup, true);

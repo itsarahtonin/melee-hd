@@ -48,6 +48,10 @@ pub struct Layer {
     /// up while the layer is idle, `r` a sector read, `w` a sector written, `s` a file's
     /// status set, `c` a file created.
     pub log: Vec<u8>,
+    /// Each copy into the request's buffers (all but the sector buffer), in order, with how
+    /// many log entries came before it: a read's bytes reach its buffers at the read that
+    /// brings them.
+    pub puts: Vec<(usize, Ptr, Vec<u8>)>,
 }
 
 /// A callback's arguments: the file index (or 0) and the result.
@@ -62,6 +66,7 @@ impl Layer {
             ring: Ring::default(),
             result: 0,
             log: Vec::new(),
+            puts: Vec::new(),
         }
     }
 
@@ -93,6 +98,9 @@ impl Layer {
             b.resize(off + src.len(), 0);
         }
         b[off..off + src.len()].copy_from_slice(src);
+        if p.buf != Buf::SectorBuf {
+            self.puts.push((self.log.len(), p, src.to_vec()));
+        }
     }
 
     /// `n` bytes at `p`, zeros past the buffer's end.

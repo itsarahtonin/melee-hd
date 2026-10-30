@@ -90,6 +90,14 @@ pub const CARD_SEGMENT: u64 = 160;
 /// (`TCIntrruptHandler`). Both come after ARAM's (6) and before the disc's (21).
 pub const EXI0_EXI: u8 = 9;
 pub const EXI0_TC: u8 = 10;
+/// Slot B's channel's (EXI1): after slot A's, still between ARAM's and the disc's.
+pub const EXI1_EXI: u8 = 12;
+pub const EXI1_TC: u8 = 13;
+/// What each of the EXI library's interrupt mask updates (`SetExiInterruptMask`, from
+/// `EXILock`, `EXIUnlock` and `EXISetExiCallback`) takes less on slot B's channel: slot A's
+/// masks its own interrupt with the third channel's (EXI2's, which shares its handler), two
+/// registers read and written, slot B's its own alone.
+pub const SLOT_B_MASK: u64 = 8;
 /// A memory card sector's erase (`__CARDEraseSector`), with interrupts off: `EXILock`'s mask
 /// (16), the select (16), the 3-byte command waited for (16), the deselect with its unmask and
 /// probe (24) and `EXIUnlock`'s mask (16), as ssbm-rs's probe of a save's writes logs every
@@ -267,12 +275,13 @@ pub struct Clock {
     pub flush_count: Option<u32>,
 }
 
-/// A firing of the pad alarm: when, and whether its handler's probe of slot A found a card
-/// that answers (`CARDProbe(0)`, [`Frames::pad_alarm`]).
+/// A firing of the pad alarm: when, and whether its handler's probes of slots A and B found a
+/// card that answers (`CARDProbe(0)` and `CARDProbe(1)`, [`Frames::pad_alarm`]).
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AlarmProbe {
     pub at: u64,
     pub card: bool,
+    pub card_b: bool,
 }
 
 /// What the timeline asks of its owner. Each handler starts its time log at `base`, the time
@@ -300,9 +309,9 @@ pub trait Frames {
     /// its controllers' poll: the time its probes take, and whether slot A's card answered.
     /// On ssbm-rs's console without a card at power-on the CARD library is stood in for, and
     /// they take none.
-    fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
+    fn pad_alarm(&mut self, now: u64) -> (u64, [bool; 2]) {
         let _ = now;
-        (0, false)
+        (0, [false; 2])
     }
     /// Whether what the game waits for has happened.
     fn done(&mut self, w: Wait) -> bool;
@@ -350,6 +359,7 @@ pub enum CardChain {
         first: u64,
         segments: u32,
         tail: u64,
+        slot_b: bool,
     },
     /// A write of `sectors` sectors, each erased and then programmed a page at a time: `first`
     /// ticks up to and through the first sector's erase ([`CARD_ERASE`]); then for each sector
@@ -363,13 +373,17 @@ pub enum CardChain {
     /// directory's; a status set (`CARDSetStatusAsync`) the directory's alone. ssbm-rs's
     /// probe of a save's writes (`local/research/card-chain/write-*.log`) logs every one of
     /// the 258 interrupts of each of a save's writes, each page 312 ticks.
-    Write { first: u64, sectors: u32 },
+    Write {
+        first: u64,
+        sectors: u32,
+        slot_b: bool,
+    },
     /// A file deleted (`CARDDeleteAsync`, with interrupts off): the directory's sector erased
     /// and programmed (`__CARDUpdateDir`), then from its callback the file's blocks freed
     /// (`__CARDFreeBlock`) and the allocation table's sector erased and programmed
     /// (`__CARDUpdateFatBlock`), with no stamp between: [`CardChain::Write`]'s two sectors
     /// less the stamp. `first` as a write's.
-    Delete { first: u64 },
+    Delete { first: u64, slot_b: bool },
 }
 
 impl CardChain {
@@ -378,41 +392,100 @@ impl CardChain {
         match self {
             CardChain::Read { first, .. }
             | CardChain::Write { first, .. }
-            | CardChain::Delete { first } => first,
+            | CardChain::Delete { first, .. } => first,
+        }
+    }
+
+    /// Whether it runs on slot B's channel.
+    pub fn slot_b(self) -> bool {
+        match self {
+            CardChain::Read { slot_b, .. }
+            | CardChain::Write { slot_b, .. }
+            | CardChain::Delete { slot_b, .. } => slot_b,
+        }
+    }
+
+    /// The chain on slot `chan`'s channel: slot A's as it is; slot B's with each interrupt
+    /// mask update [`SLOT_B_MASK`] shorter (`first`'s own are the caller's) and its
+    /// interrupts EXI1's.
+    pub fn on(self, chan: usize) -> CardChain {
+        let b = chan == 1;
+        match self {
+            CardChain::Read {
+                first,
+                segments,
+                tail,
+                ..
+            } => CardChain::Read {
+                // The first segment's lock.
+                first: if b { first - SLOT_B_MASK } else { first },
+                segments,
+                tail,
+                slot_b: b,
+            },
+            // The first erase's lock and unlock.
+            CardChain::Write { first, sectors, .. } => CardChain::Write {
+                first: if b { first - 2 * SLOT_B_MASK } else { first },
+                sectors,
+                slot_b: b,
+            },
+            CardChain::Delete { first, .. } => CardChain::Delete {
+                first: if b { first - 2 * SLOT_B_MASK } else { first },
+                slot_b: b,
+            },
         }
     }
 
     /// The chain's interrupts, in the order they come, into `out`.
     pub fn irqs(self, out: &mut Vec<ExiIrq>) {
-        let tc = |ticks| ExiIrq {
-            irq: EXI0_TC,
-            ticks,
+        let b = self.slot_b();
+        let (tc_irq, exi_irq) = if b {
+            (EXI1_TC, EXI1_EXI)
+        } else {
+            (EXI0_TC, EXI0_EXI)
         };
+        // The time of a part that updates the interrupt mask `masks` times.
+        let at = |ticks: u64, masks: u64| {
+            if b {
+                ticks - masks * SLOT_B_MASK
+            } else {
+                ticks
+            }
+        };
+        let tc = |ticks| ExiIrq { irq: tc_irq, ticks };
         let exi = |ticks| ExiIrq {
-            irq: EXI0_EXI,
+            irq: exi_irq,
             ticks,
         };
         match self {
             CardChain::Read { segments, tail, .. } => {
                 assert!(segments > 0, "a card read of no segments");
-                out.extend(std::iter::repeat_n(tc(CARD_SEGMENT), segments as usize - 1));
-                out.push(tc(tail));
+                // Each segment's handler unlocks the channel and the next segment locks it;
+                // the last one's unlocks.
+                out.extend(std::iter::repeat_n(
+                    tc(at(CARD_SEGMENT, 2)),
+                    segments as usize - 1,
+                ));
+                out.push(tc(at(tail, 1)));
             }
             CardChain::Write { .. } | CardChain::Delete { .. } => {
                 let (sectors, between) = match self {
-                    CardChain::Write { sectors, .. } => (sectors, CARD_STAMP + CARD_ERASE),
-                    _ => (2, CARD_ERASE),
+                    CardChain::Write { sectors, .. } => (sectors, CARD_STAMP + at(CARD_ERASE, 2)),
+                    _ => (2, at(CARD_ERASE, 2)),
                 };
                 assert!(sectors > 0, "a card write of no sectors");
+                // The status's lock and unlock, the page's lock, and the page's end's unlock.
+                let (status, page, done) =
+                    (at(CARD_STATUS, 2), at(CARD_PAGE, 1), at(CARD_PAGE_DONE, 1));
                 for s in 0..sectors {
-                    out.push(exi(CARD_STATUS + CARD_PAGE));
+                    out.push(exi(status + page));
                     for _ in 1..CARD_PAGES {
-                        out.push(tc(CARD_PAGE_DONE));
-                        out.push(exi(CARD_STATUS + CARD_PAGE));
+                        out.push(tc(done));
+                        out.push(exi(status + page));
                     }
-                    out.push(tc(CARD_PAGE_DONE));
+                    out.push(tc(done));
                     let next = if s + 1 < sectors { between } else { 0 };
-                    out.push(exi(CARD_STATUS + next));
+                    out.push(exi(status + next));
                 }
             }
         }
@@ -633,10 +706,14 @@ impl Clock {
                     }
                     EventKind::PadAlarm => {
                         self.now += ALARM_HANDLER;
-                        let (probes, card) = f.pad_alarm(self.now);
+                        let (probes, [card, card_b]) = f.pad_alarm(self.now);
                         self.now += probes;
                         if let Some(t) = &mut self.alarm_times {
-                            t.push(AlarmProbe { at: e.at, card });
+                            t.push(AlarmProbe {
+                                at: e.at,
+                                card,
+                                card_b,
+                            });
                         }
                         self.pads += 1;
                         self.schedule(e.at + self.alarm_period, EventKind::PadAlarm);
@@ -1234,8 +1311,8 @@ mod tests {
         fn done(&mut self, _: Wait) -> bool {
             true
         }
-        fn pad_alarm(&mut self, _: u64) -> (u64, bool) {
-            (56, true)
+        fn pad_alarm(&mut self, _: u64) -> (u64, [bool; 2]) {
+            (56, [true, false])
         }
     }
 
@@ -1249,7 +1326,8 @@ mod tests {
             c.alarm_times,
             Some(vec![AlarmProbe {
                 at: 1_000,
-                card: true
+                card: true,
+                card_b: false,
             }])
         );
     }
@@ -1259,6 +1337,7 @@ mod tests {
         first: 96,
         segments: 16,
         tail: 64,
+        slot_b: false,
     };
 
     #[test]
@@ -1301,6 +1380,7 @@ mod tests {
         let write = CardChain::Write {
             first: CARD_ERASE,
             sectors: 2,
+            slot_b: false,
         };
         let start = 277_485_778;
         let mut irqs = Vec::new();
