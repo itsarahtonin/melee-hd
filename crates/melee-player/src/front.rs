@@ -43,6 +43,7 @@ pub struct Given {
     pub record: bool,
     pub replays: bool,
     pub record_sessions: bool,
+    pub debug_level: bool,
 }
 
 /// The player's settings.
@@ -68,6 +69,42 @@ pub struct Settings {
     pub replays: String,
     /// Records each session from power-on (`session_rec`).
     pub record_sessions: bool,
+    /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
+    /// ([`DEBUG_LEVELS`]), 0 for retail's.
+    pub debug_level: i32,
+}
+
+/// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
+/// `DbLKind`, its name and what it turns on. Levels 1 and 2 only add the title's build date and
+/// the disc cache's assertions, which can only stop the game.
+pub const DEBUG_LEVELS: [(i32, &str, &str); 3] = [
+    (0, "Off", "Melee as sold."),
+    (
+        3,
+        "Debug ROM",
+        "HAL's debug menu (Y at the title), debug VS (A) and the sound test's debug mode (X); in matches, the develop tools, the debug pause and the frame step.",
+    ),
+    (
+        4,
+        "Develop",
+        "Debug ROM's tools and the develop level's extras: the effect-pool limits and the item counts' reset.",
+    ),
+];
+
+/// The developer setting's help line.
+pub const DEBUG_HELP: &str = "Raises Melee's debug level, as an Action Replay code does. Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
+/// The warning while the debug level isn't Off.
+pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Some debug tools aren't in melee-hd yet and stop the game.";
+/// The "Save replays" setting's help line (Sarah, 2026-10-29).
+pub const REPLAYS_HELP: &str =
+    "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
+
+/// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
+fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
+    DEBUG_LEVELS
+        .into_iter()
+        .find(|l| l.0 == level)
+        .unwrap_or(DEBUG_LEVELS[0])
 }
 
 impl Default for Settings {
@@ -85,6 +122,7 @@ impl Default for Settings {
             record: true,
             replays: String::new(),
             record_sessions: true,
+            debug_level: 0,
         }
     }
 }
@@ -108,7 +146,7 @@ impl Settings {
         };
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
-            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\n",
+            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
             self.high_refresh.key(),
@@ -118,6 +156,11 @@ impl Settings {
             on(self.record),
             self.replays,
             on(self.record_sessions),
+            match self.debug_level {
+                3 => "debug-rom",
+                4 => "develop",
+                _ => "off",
+            },
         )
     }
 
@@ -193,6 +236,12 @@ impl Settings {
                         self.record_sessions = b;
                     }
                 }
+                "debug-level" if !given.debug_level => match v {
+                    "off" => self.debug_level = 0,
+                    "debug-rom" => self.debug_level = 3,
+                    "develop" => self.debug_level = 4,
+                    _ => {}
+                },
                 _ => {}
             }
         }
@@ -479,6 +528,7 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.record, "Save replays");
                 ui.end_row();
+                help(ui, REPLAYS_HELP);
                 ui.label("Replays folder");
                 ui.add_enabled(
                     s.record,
@@ -495,7 +545,31 @@ impl Panel {
                     "Keeps a recording of each session from power-on, to report a bug.",
                 );
             });
-        // The developer setting (milestone 5's task 19) goes here once its shape is decided.
+        section(ui, "Developer");
+        egui::Grid::new("developer")
+            .num_columns(2)
+            .spacing([16.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Debug level");
+                let level = &mut s.debug_level;
+                egui::ComboBox::from_id_salt("debug-level")
+                    .selected_text(debug_level(*level).1)
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        for (l, name, _) in DEBUG_LEVELS {
+                            ui.selectable_value(level, l, name);
+                        }
+                    });
+                ui.end_row();
+                help(ui, debug_level(*level).2);
+                help(ui, DEBUG_HELP);
+                if *level != 0 {
+                    ui.label("");
+                    let warn = ui.visuals().warn_fg_color;
+                    ui.colored_label(warn, DEBUG_WARNING);
+                    ui.end_row();
+                }
+            });
         section(ui, "Disc");
         ui.label(&self.disc);
         if ui.button("Change disc\u{2026}").clicked() {
@@ -609,6 +683,7 @@ mod tests {
             record: false,
             replays: "D:/Slippi/melee-hd".to_owned(),
             record_sessions: false,
+            debug_level: 4,
         }
     }
 
@@ -667,6 +742,24 @@ mod tests {
             (s.scale, s.msaa, s.present, s.record),
             (4, true, Present::Fifo, false)
         );
+    }
+
+    /// The developer setting keeps its level, off by default, and nothing else reads as one.
+    #[test]
+    fn the_debug_level_is_kept() {
+        assert_eq!(Settings::default().debug_level, 0);
+        for level in [0, 3, 4] {
+            let s = Settings {
+                debug_level: level,
+                ..Settings::default()
+            };
+            let mut back = Settings::default();
+            back.restore(&s.save(), &Given::default());
+            assert_eq!(back, s);
+        }
+        let mut s = Settings::default();
+        s.restore("debug-level = 2\n", &Given::default());
+        assert_eq!(s.debug_level, 0);
     }
 
     #[test]

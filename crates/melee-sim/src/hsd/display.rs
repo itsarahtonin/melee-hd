@@ -156,6 +156,8 @@ pub enum Draw {
     Offscreen(bool),
     /// A shadow camera's volume drawn into its texture (`lbShadow_8000F214`).
     ShadowVolume(super::shadow::ShadowId),
+    /// A collision bubble's or range's debug drawing ([`crate::lb::coll_draw`]).
+    Debug(Box<crate::lb::coll_draw::DebugDraw>),
     /// Debug text: a screen's rectangles and glyphs (`DevText_Draw`).
     Text(Box<crate::game::hud::devtext::Draw>),
     /// An app-SRT's view matrix and screen scales, as drawing a particle of it in the current

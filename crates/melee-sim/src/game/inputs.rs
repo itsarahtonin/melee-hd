@@ -17,14 +17,17 @@ pub const CARD: u8 = 2;
 /// one, 0 for none.
 pub const DEVELOP_SHIFT: u8 = 4;
 pub const DEVELOP_MASK: u8 = 0x70;
+/// The flags' bit 3: the level was raised alone, with no `/develop.ini` (ssbm-rs's
+/// `DBLEVEL=N` from its main 1158d12, melee-hd's developer setting).
+pub const LEVEL_ALONE: u8 = 0x08;
 const PAD_BYTES: usize = 11;
 
 /// A session ssbm-rs recorded: the settings its course depends on, and the controllers of
 /// every `PADRead`, in order.
 ///
 /// The file is `SSBMINP1`, a version (u32), the disc rate in bytes a second (u64, 0 for none)
-/// and flags (u8: 1 sound mixed, 2 a card beside it, and in bits 4 to 6 the debug level ssbm-rs's
-/// `--develop` set plus one, 0 for none), all little-endian. Version 2 adds the
+/// and flags (u8: 1 sound mixed, 2 a card beside it, 8 the debug level raised alone, and in
+/// bits 4 to 6 the debug level plus one, 0 for none), all little-endian. Version 2 adds the
 /// console's settings the boot reads: the clock at power-on (u64, time base ticks from
 /// 2000-01-01), the VI's DTV status (u8, 1 a component cable) and the SRAM's language and
 /// flags (u8 each); a version 1 file has ssbm-rs's defaults (0, 0, 0 and 0x2C). Then a byte per
@@ -47,9 +50,11 @@ pub struct Recording {
     pub sram_language: u8,
     /// The SRAM's flags (0x04 stereo, 0x80 progressive scan).
     pub sram_flags: u8,
-    /// The debug level the session ran at as from a disc with `/develop.ini` (ssbm-rs's
-    /// `--develop N`, 0 to 4), none for a retail disc's.
+    /// The debug level the session ran at (0 to 4), none for a retail disc's: as from a disc
+    /// with `/develop.ini` (ssbm-rs's `--develop N`), or raised alone ([`LEVEL_ALONE`],
+    /// `develop_ini` false: ssbm-rs's `DBLEVEL=N`, the player's developer setting).
     pub develop: Option<i32>,
+    pub develop_ini: bool,
     pub reads: Vec<PadData>,
 }
 
@@ -120,7 +125,16 @@ impl Recording {
                 0 => None,
                 n => Some(i32::from(n) - 1),
             },
+            develop_ini: flags & LEVEL_ALONE == 0,
             reads,
+        })
+    }
+
+    /// The developer setting the session ran with, as its flags mark it.
+    pub fn developer(&self) -> Option<super::session::Develop> {
+        self.develop.map(|level| super::session::Develop {
+            level,
+            ini: self.develop_ini,
         })
     }
 
@@ -234,6 +248,22 @@ mod tests {
             let rec = Recording::parse(&data, Path::new("develop.inputs")).unwrap();
             assert_eq!(rec.develop, Some(i32::from(level)));
             assert!(rec.sound && rec.card.is_some());
+            assert_eq!(
+                rec.developer(),
+                Some(super::super::session::Develop {
+                    level: i32::from(level),
+                    ini: true
+                })
+            );
+            data[20] |= LEVEL_ALONE;
+            let rec = Recording::parse(&data, Path::new("level.inputs")).unwrap();
+            assert_eq!(
+                rec.developer(),
+                Some(super::super::session::Develop {
+                    level: i32::from(level),
+                    ini: false
+                })
+            );
         }
     }
 

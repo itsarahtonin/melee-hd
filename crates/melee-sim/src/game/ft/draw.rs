@@ -14,6 +14,12 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::mtx::Mtx34;
 
+/// The pickup ranges' colours: light items on the ground (`ftDrawCommon_804D3A88`), heavy
+/// ones (`804D3A90`) and in the air (`804D3A8C`).
+const LIGHT_RANGE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0x80];
+const HEAVY_RANGE: [u8; 4] = [0x80, 0x80, 0x80, 0x80];
+const AIR_RANGE: [u8; 4] = [0x80, 0x80, 0xFF, 0x80];
+
 /// `HSD_GOBJ_PLINK_FIGHTER`.
 const P_LINK_FIGHTER: u8 = 8;
 
@@ -196,7 +202,7 @@ impl Running<'_> {
     fn draw_fighter(&mut self, g: GObjId, pass: i32, main: bool) {
         let f = self.game.fighter_id(g);
         if self.game.fighters[f.0].x21FC_flag[0] & 0xFE != 0 {
-            code::unported_call("ftDrawCommon_800805C8's debug drawings");
+            self.fighter_debug_drawings(g, pass);
         }
         if self.game.fighters[f.0].x21FC_flag[0] & 1 == 0 {
             return;
@@ -230,6 +236,111 @@ impl Running<'_> {
             self.draw_fighter_tree(f, Some(a), None, pass);
         }
         self.draw_afterimage(f, pass);
+    }
+
+    /// The debug drawings of `ftDrawCommon_800805C8`, by the fighter's display flags
+    /// (`x21FC_flag`, set by the develop tools): its hits' and hurt capsules' bubbles with its
+    /// reflector, absorber and shield (`b6`), its pickup ranges (`b2`), its damage line
+    /// (`b4`), its thrown hit (`b1`) and its `x1614` capsules (`b0`); HAL's state caches out
+    /// of date after any. The ledge and the dynamics' displays (`b5`) and the computer
+    /// player's (`b3`) aren't ported.
+    fn fighter_debug_drawings(&mut self, g: GObjId, pass: i32) {
+        use crate::lb::coll_draw;
+        let f = self.game.fighter_id(g);
+        let flags = self.game.fighters[f.0].x21FC_flag[0];
+        let mut drew = false;
+        let data = self.data;
+        let game = &mut *self.game;
+        let fp = &mut game.fighters[f.0];
+        let objs = &mut game.objs;
+        let scale_y = fp.x34_scale.y;
+        // `ftCommon_8007F804`: the fighter's depth-scale matrix when it has one.
+        let mtx = (reg(fp.x34_scale.z) != 1.0).then_some(Mtx34 { m: fp.x44_mtx });
+        let z = fp.cur_pos.z;
+        if flags & 0x02 != 0 {
+            for h in &fp.x914 {
+                drew |= coll_draw::hit(objs, h, pass, scale_y);
+            }
+            let n = usize::from(fp.hurt_capsules_len);
+            let state = if fp.x221D_b6 {
+                Some(1)
+            } else if fp.x1988 == 0 && fp.x198C == 0 {
+                None
+            } else if fp.x198C == 2 || fp.x1988 == 2 {
+                Some(2)
+            } else {
+                Some(1)
+            };
+            for h in &mut fp.hurt_capsules[..n] {
+                drew |= coll_draw::hurt(objs, data, &mut h.capsule, state, pass, mtx.as_ref(), z);
+            }
+            if fp.reflecting {
+                drew |= coll_draw::hit_result(
+                    objs,
+                    data,
+                    &mut fp.reflect_hit,
+                    coll_draw::REFLECT,
+                    pass,
+                    mtx.as_ref(),
+                    z,
+                );
+            }
+            if fp.x2218_b6 {
+                drew |= coll_draw::hit_result(
+                    objs,
+                    data,
+                    &mut fp.absorb_hit,
+                    coll_draw::ABSORB,
+                    pass,
+                    mtx.as_ref(),
+                    z,
+                );
+            }
+            if fp.x221B.x221B_b0 {
+                drew |= coll_draw::hit_result(
+                    objs,
+                    data,
+                    &mut fp.shield_hit,
+                    coll_draw::SHIELD,
+                    pass,
+                    mtx.as_ref(),
+                    z,
+                );
+            }
+        }
+        if flags & 0x04 != 0 {
+            code::unported_call("ftDrawCommon_800805C8's ledge and dynamics displays");
+        }
+        if flags & 0x10 != 0 {
+            code::unported_call("the computer player's debug drawing (ftCo_800B395C)");
+        }
+        if flags & 0x08 != 0
+            && fp.x2223_b5
+            && coll_draw::damage(objs, [fp.dmg.x1930.x0, fp.dmg.x1930.xC], pass)
+        {
+            drew = true;
+        }
+        if flags & 0x20 != 0 {
+            let p = &fp.x294_itPickup;
+            let (pos, facing) = (fp.cur_pos, fp.facing_dir);
+            if fp.ground_or_air == 0 {
+                drew |= coll_draw::range(objs, p.gr_light_offset, pos, LIGHT_RANGE, pass, facing);
+                drew |= coll_draw::range(objs, p.gr_heavy_offset, pos, HEAVY_RANGE, pass, facing);
+            } else {
+                drew |= coll_draw::range(objs, p.air_light_offset, pos, AIR_RANGE, pass, facing);
+            }
+        }
+        if flags & 0x40 != 0 && !fp.x2227_b2 {
+            drew |= coll_draw::thrown_hit(objs, &fp.x1064_thrownHitbox, pass, scale_y);
+        }
+        if flags & 0x80 != 0 && !fp.x2229_b4 {
+            for c in &fp.x1614 {
+                drew |= coll_draw::x1614(objs, c, pass, scale_y);
+            }
+        }
+        if drew {
+            display::state_invalidate(objs, u32::MAX);
+        }
     }
 
     /// A refracted fighter's drawing ended, `ftCo_800C8AF0`: refraction's material setup
