@@ -1595,3 +1595,19 @@ fn slot_b_sessions() {
         );
     }
 }
+
+/// Camera Mode on a broken card (garbage directories): each offer's listing of slot A fails,
+/// and A says why (the camera menu's state 5), B goes back; the card after is the original's.
+#[test]
+fn camera_mode_on_a_broken_card() {
+    let dir = "cardb-sessions";
+    let after = ssbm_rs_local(&format!("traces/{dir}/camera-broken-play.card"));
+    let Some(out) = scripted_session(
+        dir,
+        "camera-broken",
+        &["--card-after", &after, "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("4291 ticks compared, no difference"), "{out}");
+}
