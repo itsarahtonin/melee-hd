@@ -488,7 +488,13 @@ impl Running<'_> {
             let (entrynum, len) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
             // Without `lbDvd_8001819C`'s check: a file a match loads with `loadArchive`
             // (`lbArchive_LoadSymbols`, `lbArchive_80016DBC`) never asks the cache.
+            // Its bytes are the disc's unless an earlier scene took it, which leaves what code
+            // wrote into them since.
+            let kept = self.cached_set_up(entrynum);
             if let Some((addr, file)) = self.take_cached_blocks_unchecked(entrynum) {
+                if !kept && let Some(id) = id {
+                    self.game.it.file_read(self.data, id);
+                }
                 // Where its data is, for a pointer into it a block of the scene's heap keeps
                 // once freed (docs/engine.md, a session's heap leftovers).
                 if file != 0
@@ -502,6 +508,10 @@ impl Running<'_> {
             return 0;
         }
         let (entrynum, len) = self.game.ft.data.files.entry(name);
+        // Read from the disc: the file's own bytes.
+        if let Some(id) = id {
+            self.game.it.file_read(self.data, id);
+        }
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let (file, archive) = if dest == MAIN_MEMORY {
             crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0))

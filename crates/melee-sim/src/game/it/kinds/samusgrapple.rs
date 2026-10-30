@@ -13,7 +13,8 @@
 //! toward the tip through `prev` and toward the hand through `next`.
 //!
 //! The beam's spawn writes its lengths for her height into its attributes in the character's
-//! loaded data (`x34` to `x58`); they're state ([`Globals::grapple_lengths`]).
+//! loaded data (`x34` to `x58`); they're state ([`Globals::grapple_lengths`]) until the file
+//! is read from the disc again ([`Globals::file_read`]).
 
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -99,6 +100,7 @@ mod attr {
     pub const X2C: u32 = 0x2C;
     pub const FRICTION: u32 = 0x30;
     /// The derived lengths the spawn writes (state, [`super::Lengths`]).
+    pub const N: u32 = 0x34;
     pub const LINK: u32 = 0x38;
     pub const LINK_MIN: u32 = 0x3C;
     pub const SHOT_SPEED: u32 = 0x40;
@@ -124,6 +126,31 @@ pub struct Lengths {
     pub attrs: Option<DataRef>,
     pub n: i32,
     pub words: [f32; 9],
+}
+
+impl Lengths {
+    /// The file's own words where `attrs` is: what a fresh read of it holds until a spawn
+    /// writes over them.
+    pub fn from_file(data: &melee_data::archive::Archives, attrs: DataRef) -> Lengths {
+        Lengths {
+            attrs: Some(attrs),
+            n: data.u32(attrs.at(attr::N)) as i32,
+            words: core::array::from_fn(|i| data.f32(attrs.at(attr::LINK + 4 * i as u32))),
+        }
+    }
+}
+
+/// A tether's lengths written over its attributes from `at` (the count, then the words) into
+/// the heap's image where it holds the file (docs/engine.md, the loaded files' in-place edits).
+pub(super) fn image_lengths(at: DataRef, n: i32, words: &[f32]) {
+    if !crate::hsd::heap::image_on() {
+        return;
+    }
+    let mut bytes = (n as u32).to_be_bytes().to_vec();
+    for w in words {
+        bytes.extend(w.to_bits().to_be_bytes());
+    }
+    crate::hsd::heap::with(|h| h.image.file_bytes(at, &bytes));
 }
 
 /// `ftCo_MS_Catch`, `ftCo_MS_CatchDash` and `ftSs_MS_SpecialAirLw`'s slot `0x165`, the air
@@ -382,6 +409,7 @@ pub fn make_links(
         n,
         words: w,
     };
+    image_lengths(a.0.at(attr::N), n, &w);
     item_mut(r.game, gobj)
         .xDD4_itemVar
         .samus_grapple()

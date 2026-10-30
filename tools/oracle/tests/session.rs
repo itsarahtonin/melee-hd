@@ -1556,3 +1556,25 @@ fn a_debug_level_opens_the_debug_menu() {
     };
     assert!(out.contains("DbLevel: ours 0, theirs 3"), "{out}");
 }
+
+/// Link's hookshot's lengths live in his loaded file (feat/m5-hookshot), each from power-on to
+/// its trace's end: `hookshot-sessions/air-grab`, a VS match of his air grabs (a short hop's,
+/// landing in it, a full jump's, a ground grab, the last an air grab's), the results screen
+/// taking his file from the preload cache with the air grab's lengths in it, and the next
+/// match reading it from the disc again with the archive's own (the ground's at height 1);
+/// and `debug-sessions/vs-stage`, whose debug results screen reads it again after an air grab.
+#[test]
+fn the_hookshot_lengths_live_in_their_file() {
+    let card = ssbm_rs_local("lockstep/hookshot-sessions/air-grab-run.card");
+    let args = ["--all", "--heap", "--card-after", &card];
+    if let Some(out) = scripted_session("hookshot-sessions", "air-grab", &args) {
+        assert!(
+            out.contains("5160 ticks compared, no difference")
+                && out.contains("the card after the session: the original's, 524288 bytes"),
+            "{out}"
+        );
+    }
+    if let Some(out) = scripted_session("debug-sessions", "vs-stage", &["--all", "--heap"]) {
+        assert!(out.contains("5883 ticks compared, no difference"), "{out}");
+    }
+}
