@@ -72,6 +72,8 @@ impl SnapHeader {
 /// it (`stamps`) came to (`times`); the list is made of `request`.
 #[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct SnapSave {
+    /// The slot it saves to.
+    pub chan: usize,
     pub list: CardList,
     pub next: usize,
     pub request: SnapRequest,
@@ -377,10 +379,6 @@ impl Running<'_> {
             return r;
         }
         s.slots[chan].card_result = 8;
-        assert_eq!(
-            chan, 0,
-            "a snapshot saved to slot B (no card is ever in it)"
-        );
         let name = self.snap_name(chan);
         let size = self.snap_file_size();
         let snap = self.game.snap.snap.expect("the snapshot's buffer");
@@ -418,10 +416,12 @@ impl Running<'_> {
             banner,
             icons,
         };
+        // `resetState`: no file has a result yet.
+        self.game.card_tasks.file_errors = [result::START; 9];
         let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
         let seconds = self.session_seconds();
         let (list, stamps) =
-            super::save::start_list_dry(request.run(), &request.tasks(), now, seconds);
+            super::save::start_list_dry(chan, request.run(), &request.tasks(), now, seconds);
         let done = !list.card_in;
         let r = list.result;
         for &w in &list.start {
@@ -433,9 +433,11 @@ impl Running<'_> {
         );
         if done {
             // Nothing written: the list failed at its mount.
+            self.game.card_tasks.saved_error = r;
             return r;
         }
         self.game.snap_write.save = Some(SnapSave {
+            chan,
             list,
             next: 0,
             request,
@@ -448,7 +450,7 @@ impl Running<'_> {
 
     /// The snapshot's save's next step (`lbCardNew_CompleteNextTask`): its wait point and
     /// transfers; busy until its last, which returns the list's result.
-    pub fn snap_save_step(&mut self) -> i32 {
+    pub(crate) fn snap_save_step(&mut self) -> i32 {
         let Some(save) = self.game.snap_write.save.as_mut() else {
             crate::game::code::unported_call("lbCardNew_CompleteNextTask with no list")
         };
@@ -490,6 +492,7 @@ impl Running<'_> {
                 .take()
                 .expect("the snapshot's save");
             let written = super::save::finish_list(
+                save.chan,
                 save.request.run(),
                 &save.request.tasks(),
                 save.seconds,
@@ -499,6 +502,7 @@ impl Running<'_> {
                 written, r,
                 "the snapshot's save's list ended otherwise on the card"
             );
+            self.game.card_tasks.saved_error = r;
             return r;
         }
         result::BUSY

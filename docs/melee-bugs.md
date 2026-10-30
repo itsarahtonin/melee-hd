@@ -1652,6 +1652,36 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none.
 - **Source:** `textlib_1.c` (`un_80304344`), `textdraw.c` (`DevText_Remove`).
 
+### The computer player's debug drawing ignores the pass
+
+- **Where:** `ftCo_800B395C` (the fighters' display `b3`, from `ftDrawCommon_800805C8`), `crates/melee-sim/src/game/ft/draw.rs` (`cpu_debug_drawing`).
+- **Defect:** it never tests the pass it's called for (`arg1`), as every other debug drawing does (`lbColl_80009F54` and the rest draw only in the pass their colour's alpha picks).
+- **Effect:** a computer player's target bubble and reach boxes draw once in each of the fighter's render passes, the translucent ones blended over themselves, so they show darker and more opaque than their colours say.
+- **melee-hd:** modeled: the drawing pushes its draws in every pass it's called for.
+- **Fix:** return false unless `arg1` is the pass the colour's alpha picks.
+- **Fix impact:** presentation only, at the develop tools' level.
+- **Source:** `ftCo_0A01.c`, `ftCo_0A01.s`.
+
+### A dynamics chain's line reads its blend slot as a count
+
+- **Where:** `lb_800117F4` (the fighters' display `b5`), called with `dynamic_bone_sets[i].bone_id`, `crates/melee-sim/src/game/ft/draw.rs` (`fighter_debug_drawings`).
+- **Defect:** the chain's links before the count draw in half the colour, the count read from the slot `ftCo_8009CB40` writes: a bone count, 0x100 while the chain's physics is off, or the figatree an animation's blend slot gives it, an address the signed compare reads as negative.
+- **Effect:** with physics off every link of a chain shorter than 256 draws dark; with a figatree in the slot none does. Presentation only.
+- **melee-hd:** modeled: a figatree reads as `i32::MIN`.
+- **Fix:** pass the count of links the animation drives.
+- **Fix impact:** presentation only, at the develop tools' level.
+- **Source:** `lb_00F9.c`, `ftdrawcommon.c`.
+
+### The collision lines' drawing returns nothing
+
+- **Where:** `mpLib_DrawMatchingLines` (`mpLib_80059E60`'s terrain and ledge steps), `crates/melee-sim/src/game/mp_draw.rs` (`map_matching_lines`).
+- **Defect:** declared to return an `int`, it returns nothing (the decompilation spells its type `UNINITIALIZED(int)`): `r3` holds what the last call left.
+- **Effect:** none observable: no caller reads it.
+- **melee-hd:** returns nothing.
+- **Fix:** declare it `void`.
+- **Fix impact:** none.
+- **Source:** `mplib.c`, `mplib.s`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

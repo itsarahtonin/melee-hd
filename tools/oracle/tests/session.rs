@@ -1616,3 +1616,58 @@ fn a_debug_level_opens_the_debug_menu() {
     };
     assert!(out.contains("DbLevel: ours 0, theirs 3"), "{out}");
 }
+
+/// Slot B (`cardb-sessions`, recorded with ssbm-rs's `--card-b`, which a recording doesn't
+/// keep): Camera Mode with a card in each slot, its card check listing both and its snapshot
+/// saved to slot B, which has room; and the album copying a snapshot from slot A to slot B
+/// (states 15 and 16: the read on A, a step a frame, then the save on B), showing slot B and
+/// deleting the copy there. Each card after the session is the original's, both slots.
+#[test]
+fn slot_b_sessions() {
+    for (name, want) in [("camera-slotb", 3583), ("album-slotb", 3131)] {
+        let dir = "cardb-sessions";
+        let card_b = ssbm_rs_local(&format!("lockstep/{dir}/{name}.cardb"));
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let after_b = ssbm_rs_local(&format!("traces/{dir}/{name}-play.cardb"));
+        let Some(out) = scripted_session(
+            dir,
+            name,
+            &[
+                "--card-b",
+                &card_b,
+                "--card-after",
+                &after,
+                "--card-b-after",
+                &after_b,
+                "--all",
+                "--heap",
+            ],
+        ) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{out}"
+        );
+        assert!(
+            out.contains("the card in slot B after the session: the original's"),
+            "{out}"
+        );
+    }
+}
+
+/// Camera Mode on a broken card (garbage directories): each offer's listing of slot A fails,
+/// and A says why (the camera menu's state 5), B goes back; the card after is the original's.
+#[test]
+fn camera_mode_on_a_broken_card() {
+    let dir = "cardb-sessions";
+    let after = ssbm_rs_local(&format!("traces/{dir}/camera-broken-play.card"));
+    let Some(out) = scripted_session(
+        dir,
+        "camera-broken",
+        &["--card-after", &after, "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("4291 ticks compared, no difference"), "{out}");
+}

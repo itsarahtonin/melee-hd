@@ -46,6 +46,8 @@ Function pointers in the original (process functions, render callbacks, user-dat
 
 Render callbacks that only decide what to draw (the HUD's, `game::hud`, and the debug text's, `game::hud::devtext`) are functions returning that decision (`hud::Draw`, `devtext::Draw`), checked against the draw calls the original makes; the name tags' camera (`fn_802FCAC4`) also moves the names as it decides, so it takes the state mutably.
 
+The develop tools' drawings (`lb::coll_draw`, `game::mp_draw`, task 19) compute every vertex and colour in the display pass and push them as `Draw::Debug`; what they change in the state changes there too: a hurt capsule's or a shield's place brought up to date, a dynamics chain's joints' matrices (`lb_800117F4` marks each dirty and sets it up), the lights `mpLib_80059E60` and `mpLib_DrawZones` set up, a camera box's framing timer (`Camera_8002928C`, which `mpLib_DrawZones` asks), and the stage joints' matrices the special points' lookup sets up (`Ground_801C2D24`). Two of `mplib.c`'s statics aren't modeled, each by its own proof: `mpLib_80458888`, the special points' buffer, which `mpLib_DrawCrosses` fills and reads back within the one call and nothing else reads, and `mpLib_804D64D0`, the flag that keeps `mpLib_8005A2DC`'s report of the geometry's counts to one `OSReport`, which shows nothing. Neither reaches gameplay or what players see and hear.
+
 ## Uninitialized values
 
 A few original functions read memory or registers they never set, and plain data can't hold what was there. Each case is probed in ssbm-rs to see what the word is in play, then modeled explicitly where it can reach gameplay or presentation, or given the simplest stand-in with the proof that it can't ([what must be exact](porting.md#what-must-be-exact)):
