@@ -307,16 +307,16 @@ pub const STOPS: &[(&str, &str)] = &[
         "the results screen's scene ends after its rounds, each of which copies a frame, so the flush at its loop's end always waits for the copy to show (only a scene that ends at once, `unk_C` 2, doesn't)",
     ),
     (
-        "whose stack isn't modelled",
-        "Open: a tie for a place under the automatic handicap in Tournament's next match-up, Camera Mode's match exit or a Special Melee mode's results' exit reads the stack above fn_80169000's handicaps, whose frames are modelled only for VS mode's results' exit (docs/melee-bugs.md, the automatic handicaps after a tie)",
+        "from Camera Mode's match exit, whose places all differ",
+        "Camera Mode has no Sudden Death (gm_Mode_Camera_States), and gm_80166378's places break every tie by x30, whose low nibble is 6 - port, so every place is taken (results_tie's notes)",
     ),
     (
         "fn_80169000 moving handicaps",
-        "Open: a tie whose unset place's byte indexes a zero byte of a register the exit's callers restore (runGameMode's r25 to r27, gm_801A4510's r27, r28 and r31) moves it by one or two, which what the callers then do isn't modelled for (docs/melee-bugs.md, the automatic handicaps after a tie)",
+        "only the last place's entry can be unset (place 0 is Sudden Death's one winner, so place 1 is taken), it moves only up and only from 8 or less, and every live cell's bytes are above 8 (results_tie's no_live_byte_can_move); main's kept registers move as modelled (MainRegs)",
     ),
     (
-        "after a boot at midnight",
-        "Open: a tie whose unset place's byte reads the boot's calendar (handicaps[0xF4] to [0xFB]) on a console powered on within three seconds of midnight, where the day the boot's report saw isn't known",
+        "with no boot's report",
+        "every session and the player boot from power-on, which reads the report's clock (game::session's boot); a replay's match has no results' exit",
     ),
     (
         "a name tag's name running past its block",

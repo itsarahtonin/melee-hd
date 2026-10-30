@@ -132,10 +132,11 @@ fn smallest_loser(end: &MatchEnd) -> usize {
 /// The automatic handicaps moved by the places, `fn_80169000`: the first place's down and
 /// the last's up, by one or two within 1 and 9 (with three or more players, the second's
 /// down too at the ends of the range). A place no player took (after a tie) indexes the
-/// handicaps by a byte the stack held, which `stack` says ([`TieStack`]); the next state's
-/// id when that moved a byte of it (`gmVsMelee_ExitResults`'s saved `r28`).
+/// handicaps by a byte the stack held, which `stack` says ([`TieStack`]), and moving it moves
+/// what `stack` keeps (`main`'s registers); the next state's id when that moved a byte of it
+/// (`gmVsMelee_ExitResults`'s saved `r28`).
 #[doc(alias = "fn_80169000")]
-pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4], stack: TieStack) -> Option<u8> {
+pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4], stack: &mut TieStack) -> Option<u8> {
     let mut count = 0usize;
     // `positions`, a stack array: a place no player took stays as the stack held it.
     let mut positions: [Option<u8>; 4] = [None; 4];
@@ -148,7 +149,7 @@ pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4], stack: TieStack) -
             }) = Some(i as u8);
         }
     }
-    let mut f = TieFrame::new(*h, stack);
+    let mut f = TieFrame::new(*h, *stack);
     let pos = |f: &TieFrame, n: usize| positions[n].unwrap_or_else(|| f.unset_place(n));
     // `handicaps[positions[n]]`, read and written as the original's branches do.
     let get = |f: &TieFrame, n: usize| f.get(pos(f, n));
@@ -179,6 +180,7 @@ pub(crate) fn move_handicaps(end: &MatchEnd, h: &mut [u8; 4], stack: TieStack) -
         }
     }
     *h = f.handicaps;
+    *stack = f.stack;
     f.next_state
 }
 
@@ -199,7 +201,7 @@ impl Running<'_> {
     /// `gm_80168638`: under the automatic handicap, each port's moved by the places
     /// (`fn_80169000`) and put back where a player played.
     #[doc(alias = "gm_80168638")]
-    pub(super) fn results_handicaps(&mut self, end: &MatchEnd, stack: TieStack) -> Option<u8> {
+    pub(super) fn results_handicaps(&mut self, end: &MatchEnd, mut stack: TieStack) -> Option<u8> {
         if self.game.game_data.x1850.handicap != 1 {
             return None;
         }
@@ -207,7 +209,10 @@ impl Running<'_> {
         for (i, v) in h.iter_mut().enumerate() {
             *v = *self.auto_handicap(i, end.player_standings[i].x4) as u8;
         }
-        let next_state = move_handicaps(end, &mut h, stack);
+        let next_state = move_handicaps(end, &mut h, &mut stack);
+        if let Some(regs) = stack.regs() {
+            self.game.gm.main_regs = regs;
+        }
         for (i, &v) in h.iter().enumerate() {
             if end.player_standings[i].pkind != PKIND_NA {
                 *self.auto_handicap(i, end.player_standings[i].x4) = v as i8;
@@ -217,17 +222,29 @@ impl Running<'_> {
     }
 
     /// VS mode's results' exit's stack as `fn_80169000` sees it ([`TieStack::VsMelee`]): the
-    /// retrace count the scene loop's last flush waited from, and the day of the boot's
-    /// report of the date, `main`'s `gm_801692E8(lbTime_GetTimeInSeconds())` about a second
-    /// after the audio's setup (none when midnight may fall within three seconds of that).
+    /// retrace count the scene loop's last flush waited from, the day of the boot's report of
+    /// the date (`main`'s `gm_801692E8(lbTime_GetTimeInSeconds())`, the clock's seconds as
+    /// the session's boot read them), and `main`'s kept registers.
     pub(crate) fn vs_exit_stack(&self) -> TieStack {
-        let a = &self.game.audio;
-        let flush = a.clock.as_ref().and_then(|c| c.flush_count);
-        let at = a.power_on + crate::audio::boot::BootTimes::INIT + a.boot_delay;
-        let day = |tb: u64| tb / crate::audio::clock::TB_HZ / 86_400;
-        let tb_hz = crate::audio::clock::TB_HZ;
-        let boot_days = (day(at) == day(at + 3 * tb_hz)).then(|| day(at) as u32);
-        TieStack::VsMelee { flush, boot_days }
+        TieStack::VsMelee {
+            flush: self.flush_count(),
+            boot_days: self.game.gm.boot_report_secs.map(|s| s / 86_400),
+            regs: self.game.gm.main_regs,
+        }
+    }
+
+    /// The stack under a Special Melee mode's results' exit or Tournament's next match-up
+    /// ([`TieStack::Shallow`]).
+    pub(crate) fn shallow_exit_stack(&self, who: &'static str) -> TieStack {
+        TieStack::Shallow {
+            waited: self.flush_count().is_some(),
+            who,
+        }
+    }
+
+    /// The retrace count the scene loop's last flush began its last wait with.
+    fn flush_count(&self) -> Option<u32> {
+        self.game.audio.clock.as_ref().and_then(|c| c.flush_count)
     }
 
     /// `gm_80168710`: the winner of the mode's table entry `table`, drawn among the humans
@@ -413,7 +430,7 @@ impl Running<'_> {
             let stack = if table == 0 {
                 self.vs_exit_stack()
             } else {
-                TieStack::Other("a Special Melee mode's results' exit")
+                self.shallow_exit_stack("a Special Melee mode's results' exit")
             };
             // A tie's handicaps can move the low byte of the saved `r28`, the next state.
             if let Some(s) = self.results_handicaps(&me, stack) {
