@@ -1414,6 +1414,66 @@ fn the_challenger_and_stage_sessions_end_with_their_cards() {
     }
 }
 
+/// The heap's image's checks at `ticks` in a session's output: each ran and found no byte it
+/// knows differing from memory.
+fn assert_image_clean(out: &str, ticks: &[u32]) {
+    for t in ticks {
+        let line = out
+            .lines()
+            .find(|l| l.starts_with(&format!("tick {t}: the heap's image against memory")))
+            .unwrap_or_else(|| panic!("no image check at tick {t}: {out}"));
+        assert!(!line.contains("\"different\""), "{line}");
+    }
+}
+
+/// Donkey Kong (port 1), Peach and Yoshi (ports 2 and 3, walking off) in a VS match one short
+/// of Dr. Mario's (feat/m5-layouts-4), then the challenger approach's match (preload class 2),
+/// whose free memory holds the VS match's cached files with what the three creations wrote
+/// into their attributes: the heap's image matches memory there at the match's first and last
+/// ticks and the next scene's first, and the session compares clean to its end.
+#[test]
+fn a_match_with_dk_peach_and_yoshi_leaves_their_written_attributes() {
+    let card = ssbm_rs_local("lockstep/layout-sessions/dk-pe-ys-run.card");
+    let Some(out) = scripted_session(
+        "layout-sessions",
+        "dk-pe-ys",
+        &[
+            "--all",
+            "--heap",
+            "--card-after",
+            &card,
+            "--image",
+            "2394,3127,4116,4118",
+        ],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("4660 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
+        "{out}"
+    );
+    assert_image_clean(&out, &[2394, 3127, 4116, 4118]);
+}
+
+/// The debug menus' objects (`un_804A2688`'s pool) laid out as they go back and with their
+/// scene: the heap's image matches memory at each debug menu scene's last tick and the next
+/// scene's first in `debug-sessions/menu-sub`, its submenus opened and closed.
+#[test]
+fn the_debug_menus_go_back_laid_out() {
+    let ticks = [2502, 2504, 5423, 5425, 5862, 5864, 7063, 7065, 7182, 7184];
+    let list = ticks.map(|t| t.to_string()).join(",");
+    let Some(out) = scripted_session(
+        "debug-sessions",
+        "menu-sub",
+        &["--all", "--heap", "--image", &list],
+    ) else {
+        return;
+    };
+    assert!(out.contains("7426 ticks compared, no difference"), "{out}");
+    assert_image_clean(&out, &ticks);
+}
+
 /// The approach's match rolls back as any match does, and the launcher's shortcut leaves it
 /// unchecked: it isn't a match the launcher makes.
 #[test]
@@ -1555,4 +1615,117 @@ fn a_debug_level_opens_the_debug_menu() {
         return;
     };
     assert!(out.contains("DbLevel: ours 0, theirs 3"), "{out}");
+}
+
+/// Slot B (`cardb-sessions`, recorded with ssbm-rs's `--card-b`, which a recording doesn't
+/// keep): Camera Mode with a card in each slot, its card check listing both and its snapshot
+/// saved to slot B, which has room; and the album copying a snapshot from slot A to slot B
+/// (states 15 and 16: the read on A, a step a frame, then the save on B), showing slot B and
+/// deleting the copy there. Each card after the session is the original's, both slots.
+#[test]
+fn slot_b_sessions() {
+    for (name, want) in [("camera-slotb", 3583), ("album-slotb", 3131)] {
+        let dir = "cardb-sessions";
+        let card_b = ssbm_rs_local(&format!("lockstep/{dir}/{name}.cardb"));
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let after_b = ssbm_rs_local(&format!("traces/{dir}/{name}-play.cardb"));
+        let Some(out) = scripted_session(
+            dir,
+            name,
+            &[
+                "--card-b",
+                &card_b,
+                "--card-after",
+                &after,
+                "--card-b-after",
+                &after_b,
+                "--all",
+                "--heap",
+            ],
+        ) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{out}"
+        );
+        assert!(
+            out.contains("the card in slot B after the session: the original's"),
+            "{out}"
+        );
+    }
+}
+
+/// Camera Mode on a broken card (garbage directories): each offer's listing of slot A fails,
+/// and A says why (the camera menu's state 5), B goes back; the card after is the original's.
+#[test]
+fn camera_mode_on_a_broken_card() {
+    let dir = "cardb-sessions";
+    let after = ssbm_rs_local(&format!("traces/{dir}/camera-broken-play.card"));
+    let Some(out) = scripted_session(
+        dir,
+        "camera-broken",
+        &["--card-after", &after, "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("4291 ticks compared, no difference"), "{out}");
+}
+
+/// A card pulled out in the middle of a list (`cardb-sessions`): the snapshot's save to slot B
+/// fails (Camera Mode's state 8), also with the pad alarm between the pull and the save's next
+/// step, and on slot A; the album's copy fails in its save to slot B and in its read on slot
+/// A. Each compares to its trace's end, every card after the original's.
+#[test]
+fn cards_pulled_out_mid_list() {
+    let dir = "cardb-sessions";
+    for (name, pull, want) in [
+        ("camera-pull-saveb", "--card-b-pull=3440,3600", 3688),
+        ("camera-pull-saveb-late", "--card-b-pull=3985,4200", 4238),
+        ("camera-pull-savea", "--card-pull=3440,3600", 3688),
+        ("album-pull-saveb", "--card-b-pull=1269,1400", 3138),
+        ("album-pull-read", "--card-pull=1262,1400", 3136),
+    ] {
+        let (flag, at) = pull.split_once('=').unwrap();
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let card_b = ssbm_rs_local(&format!("lockstep/{dir}/{name}.cardb"));
+        let after_b = ssbm_rs_local(&format!("traces/{dir}/{name}-play.cardb"));
+        let mut args: Vec<&str> = vec![flag, at, "--card-after", &after, "--all", "--heap"];
+        if std::path::Path::new(&card_b).exists() {
+            args.extend([
+                "--card-b",
+                card_b.as_str(),
+                "--card-b-after",
+                after_b.as_str(),
+            ]);
+        }
+        let Some(out) = scripted_session(dir, name, &args) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The save's writer stamping the directory at its steps (`stamp-sessions/menu-second`, the
+/// main menu's save starting in one second and stamping in the next): the card after is the
+/// original's.
+#[test]
+fn a_save_across_a_second_stamps_the_next() {
+    let dir = "stamp-sessions";
+    let after = ssbm_rs_local(&format!("traces/{dir}/menu-second-play.card"));
+    let Some(out) = scripted_session(
+        dir,
+        "menu-second",
+        &["--card-after", &after, "--all", "--heap"],
+    ) else {
+        return;
+    };
+    assert!(out.contains("861 ticks compared, no difference"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
 }

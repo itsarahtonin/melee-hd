@@ -152,7 +152,6 @@ const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blu
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
 const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
 const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
-const DEBUG_DRAW: &str = "the computer player's debug drawing (ftDrawCommon_800805C8 with x21FC_flag.b3), which only the debug menu turns on";
 
 /// Functions and stops no match with computer players from the player reaches (VS mode, the
 /// roster's characters, the offered stages), each with why.
@@ -193,7 +192,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("a register left by ftCo_800B0CA8", NANA_ITEM),
     ("a register left by ftCo_800B2790", FIGHTER_ADDRESS),
     ("ftCo_800AC434 at level 10", BARREL_LEVEL),
-    ("ftCo_800B395C", DEBUG_DRAW),
 ];
 
 /// Ported code computer players reach whose ledger alias waits for a check (a `// Ports`

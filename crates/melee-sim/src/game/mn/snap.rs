@@ -270,7 +270,7 @@ impl Running<'_> {
     /// its image and its thumbnail showing it (or marked damaged), and the next read started.
     #[doc(alias = "mnSnap_8025329C")]
     fn album_read_step(&mut self) {
-        let r = self.snap_task_step();
+        let r = self.card_next_task();
         if r == result::BUSY {
             return;
         }
@@ -759,7 +759,7 @@ impl Running<'_> {
             true
         } else {
             let r = loop {
-                let r = self.snap_task_step();
+                let r = self.card_next_task();
                 if r != result::BUSY {
                     break r;
                 }
@@ -861,7 +861,7 @@ impl Running<'_> {
             let a = self.album();
             if a.card_status[a.active_slot as usize] != 1 {
                 if a.state == 15 || a.state == 16 {
-                    crate::game::code::unported_call("a copy's list waited for as the card goes");
+                    while self.card_next_task() == result::BUSY {}
                 }
                 self.album_reset();
                 return;
@@ -956,9 +956,8 @@ impl Running<'_> {
                     }
                 }
             }
-            15 | 16 => crate::game::code::unported_call(
-                "a snapshot copied to the other slot (slot B never has a card)",
-            ),
+            15 => self.album_copy_read(),
+            16 => self.album_copy_save(),
             17 => {
                 if self.album().timer != 0 {
                     self.album_mut().timer -= 1;
@@ -1272,7 +1271,7 @@ impl Running<'_> {
                 let (slot, cursor, mi) = (a.active_slot, a.cursor_idx, a.move_idx);
                 let r = self.snap_swap(slot as usize, cursor, mi);
                 if r != 8 {
-                    while self.snap_task_step() == result::BUSY {}
+                    while self.card_next_task() == result::BUSY {}
                     let slot = self.album().active_slot as usize;
                     self.album_list(slot);
                 }
@@ -1314,6 +1313,82 @@ impl Running<'_> {
         }
     }
 
+    /// State 12's yes with room in the other slot: the copy started (state 15), the dialog's
+    /// progress bar at its start with its buttons hidden, and the snapshot's read from the
+    /// slot shown (`lbSnap_8001E058`); back to choosing a slot when it doesn't start.
+    fn album_copy_start(&mut self) {
+        self.album_sfx(SFX_FORWARD);
+        self.album_mut().state = 0xF;
+        let a = self.album();
+        let (r, progress, yes, no) = (a.dlg_btn_r, a.progress_jobj, a.yes_jobj, a.no_jobj);
+        self.album_hidden(r, false);
+        common::set_tx(self, progress, -6.9);
+        self.album_hidden(yes, true);
+        self.album_hidden(no, true);
+        let a = self.album();
+        let (slot, cursor) = (a.active_slot, a.cursor_idx);
+        let r = self.snap_read(slot as usize, cursor);
+        self.album_mut().card_result = r;
+        if r != result::BUSY {
+            self.album_reset();
+        }
+    }
+
+    /// State 15, the copy's read: a step of it; done, the snapshot's save to the other slot
+    /// started (`lbSnap_8001DF6C`, state 16, the progress bar a third along), or back to
+    /// choosing a slot when either failed.
+    fn album_copy_read(&mut self) {
+        if self.card_next_task() == result::BUSY {
+            return;
+        }
+        if self.card_next_task() != 0 {
+            self.album_reset();
+            return;
+        }
+        let other = (self.album().active_slot ^ 1) as usize;
+        if self.snap_save(other) != result::BUSY {
+            self.album_reset();
+            return;
+        }
+        self.album_mut().state = 0x10;
+        let progress = self.album().progress_jobj;
+        common::set_tx(self, progress, -3.0);
+        self.album_mut().timer = 0x50;
+    }
+
+    /// State 16, the copy's save: every 100 frames (the first after 80) the progress bar a
+    /// step on, up to its end; a step of the save; done, the other slot listed again, the
+    /// texts, the copy's message (0x14F) and state 17 for 30 frames, the bar at its end, or
+    /// back to choosing a slot when it failed.
+    fn album_copy_save(&mut self) {
+        self.album_mut().timer -= 1;
+        if self.album().timer == 0 {
+            self.album_mut().timer = 0x64;
+            let progress = self.album().progress_jobj;
+            let t = common::tx(self, progress);
+            if t < 3.0 {
+                let t = crate::fpu::mem(gekko_fp::fadds(crate::fpu::reg(t), 3.0));
+                common::set_tx(self, progress, t);
+            }
+        }
+        if self.card_next_task() == result::BUSY {
+            return;
+        }
+        if self.card_next_task() != 0 {
+            self.album_reset();
+            return;
+        }
+        let other = (self.album().active_slot ^ 1) as usize;
+        self.album_list(other);
+        self.album_texts();
+        self.album_message(0x14F);
+        let a = self.album_mut();
+        a.state = 0x11;
+        a.timer = 0x1E;
+        let progress = a.progress_jobj;
+        common::set_tx(self, progress, 5.0);
+    }
+
     /// State 12, the copy's question: yes looks at the other slot (listed again when its card
     /// changed): the copy's start when there's room, else why not; no back to the menu.
     fn album_state_copy(&mut self) {
@@ -1324,9 +1399,10 @@ impl Running<'_> {
                 let a = self.album();
                 let r = self.album_check_copy(a.active_slot, a.cursor_idx);
                 let (m, state) = match r {
-                    0 => crate::game::code::unported_call(
-                        "a snapshot copied to the other slot (slot B never has a card)",
-                    ),
+                    0 => {
+                        self.album_copy_start();
+                        return;
+                    }
                     2 => (self.album_by_slot(0x148, 0x147), 0xD),
                     1 => (self.album_by_slot(0x146, 0x145), 0xE),
                     3 => (self.album_by_slot(0x14C, 0x14B), 0xE),

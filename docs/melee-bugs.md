@@ -1647,10 +1647,90 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Where:** `un_80304344`'s `DevText_Remove(&arg0->x4)`, `crates/melee-sim/src/game/hud/debug_menu.rs` (`menu_close`, `devtext::Link::Held`).
 - **Defect:** `DevText_Remove` takes the link that points to the screen; the menu passes its own field, not the draw list's link, so for a screen first in the draw list the draw list keeps pointing to it after it goes back on the free list, and the menu's freed block takes the next screen's address.
 - **Effect:** none observed: a menu's screen is never first in the draw list in the debug menus (the first menu's screen comes first, and only submenus close), and the freed block's word is never read.
-- **melee-hd:** modeled (the write through the menu's pointer goes nowhere: the menu is freed right after).
+- **melee-hd:** modeled (the write through the menu's pointer goes nowhere in the game's state: the menu is freed right after; the heap's image lays the freed block's `x4` out as the write leaves it, `game::export::debug_menu`).
 - **Fix:** pass the draw list.
 - **Fix impact:** none.
 - **Source:** `textlib_1.c` (`un_80304344`), `textdraw.c` (`DevText_Remove`).
+
+### The computer player's debug drawing ignores the pass
+
+- **Where:** `ftCo_800B395C` (the fighters' display `b3`, from `ftDrawCommon_800805C8`), `crates/melee-sim/src/game/ft/draw.rs` (`cpu_debug_drawing`).
+- **Defect:** it never tests the pass it's called for (`arg1`), as every other debug drawing does (`lbColl_80009F54` and the rest draw only in the pass their colour's alpha picks).
+- **Effect:** a computer player's target bubble and reach boxes draw once in each of the fighter's render passes, the translucent ones blended over themselves, so they show darker and more opaque than their colours say.
+- **melee-hd:** modeled: the drawing pushes its draws in every pass it's called for.
+- **Fix:** return false unless `arg1` is the pass the colour's alpha picks.
+- **Fix impact:** presentation only, at the develop tools' level.
+- **Source:** `ftCo_0A01.c`, `ftCo_0A01.s`.
+
+### A dynamics chain's line reads its blend slot as a count
+
+- **Where:** `lb_800117F4` (the fighters' display `b5`), called with `dynamic_bone_sets[i].bone_id`, `crates/melee-sim/src/game/ft/draw.rs` (`fighter_debug_drawings`).
+- **Defect:** the chain's links before the count draw in half the colour, the count read from the slot `ftCo_8009CB40` writes: a bone count, 0x100 while the chain's physics is off, or the figatree an animation's blend slot gives it, an address the signed compare reads as negative.
+- **Effect:** with physics off every link of a chain shorter than 256 draws dark; with a figatree in the slot none does. Presentation only.
+- **melee-hd:** modeled: a figatree reads as `i32::MIN`.
+- **Fix:** pass the count of links the animation drives.
+- **Fix impact:** presentation only, at the develop tools' level.
+- **Source:** `lb_00F9.c`, `ftdrawcommon.c`.
+
+### The collision lines' drawing returns nothing
+
+- **Where:** `mpLib_DrawMatchingLines` (`mpLib_80059E60`'s terrain and ledge steps), `crates/melee-sim/src/game/mp_draw.rs` (`map_matching_lines`).
+- **Defect:** declared to return an `int`, it returns nothing (the decompilation spells its type `UNINITIALIZED(int)`): `r3` holds what the last call left.
+- **Effect:** none observable: no caller reads it.
+- **melee-hd:** returns nothing.
+- **Fix:** declare it `void`.
+- **Fix impact:** none.
+- **Source:** `mplib.c`, `mplib.s`.
+
+### The debug text's colour codes read decimal digits as 0
+
+- **Where:** `hsd_80391AC8` (its inline hex digit, `hexval`), from the performance monitor's lines (`hsd_8039254C`), `crates/melee-sim/src/game/perf.rs` (`hexval`).
+- **Defect:** a `\cRRGGBB` code's digit is tested against 10 (`ch < 0x0A`) rather than `ch - '0'`, so `'0'` to `'9'` fall to the "not a digit" case and read as 0; only `A` to `F` and `a` to `f` read their value.
+- **Effect:** none observable: every code the monitor's lines use (`00ff00`, `ffffff`, `00ffff`, `ffff00`, `e0e0ff`) has only 0 among its decimal digits.
+- **melee-hd:** modeled: the port reads the digits as the original does.
+- **Fix:** test `ch - '0' < 10`.
+- **Fix impact:** none for the lines the game draws.
+- **Source:** `hsd_3915.c` (`hexval`), ssbm-rs's `inl_hexval_unfused`.
+
+### The performance monitor's frame rate line's second type from `.bss`
+
+- **Where:** `fn_801652D8` (the scene loop's monitor line), `crates/melee-sim/src/game/perf.rs` (`scene_items`).
+- **Defect:** it sets its first line's type (`lines[0].unk_04 = 0`) but never its second's, which keeps what `lbl_8046B378` held: `.bss` zero, which nothing else writes.
+- **Effect:** none observable: zero is a text line, as meant.
+- **melee-hd:** modeled: the line is text.
+- **Fix:** set `lines[1].unk_04 = 0`.
+- **Fix impact:** none.
+- **Source:** `gm_1601.c`.
+
+### The performance monitor's list outlives its blocks
+
+- **Where:** `hsd_80392474` (each scene's setup, `gm_801A4BD4`) and `gm_801653C8` (the monitor off), `crates/melee-sim/src/game/perf.rs` (`perf_scene_setup`, `perf_free`).
+- **Defect:** turning the monitor off frees its GObj but leaves its callbacks listed, and each scene's setup drops the list without freeing its event blocks (`HSD_MemAlloc`) or its list nodes.
+- **Effect:** none observable in play: each scene that turned the monitor on loses two or three 8-byte heap blocks (the scene's heap is made anew anyway) and keeps as many list nodes counted as in use in HSD's list pool.
+- **melee-hd:** modeled: the blocks and nodes are allocated in the allocator model and never given back.
+- **Fix:** free the list's entries at the scene's setup.
+- **Fix impact:** the list pool's counts and free list from then on, which reach no gameplay.
+- **Source:** `hsd_3924.c`, `gm_1601.c`, `gmscene.c`.
+
+### The screenshot sends an unset frame buffer when none was drawn
+
+- **Where:** `db_TakeScreenshotIfPending`, `crates/melee-sim/src/game/gm/scene.rs` (`db_take_screenshot_if_pending`).
+- **Defect:** when `HSD_VIGetXFBLastDrawDone` finds no frame buffer it reports "cant find xfb!" and goes on, handing the write a pointer (`xfb`) it never set.
+- **Effect:** none observable: after the frame's copy and the flush's wait a buffer always shows, and the write returns before reading it without a USB host, which a console here never has.
+- **melee-hd:** the buffer isn't modeled; the write returns -5.
+- **Fix:** return when no buffer is found.
+- **Fix impact:** none.
+- **Source:** `dbscreenshot.c`.
+
+### The bars' marks aren't perpendicular to a slanted bar
+
+- **Where:** `hsd_80391F28`, `crates/melee-sim/src/game/perf.rs` (`bar_draws`).
+- **Defect:** the marks' direction is (`-dy`, `-dx`) over the length, which is perpendicular to the bar only when it's level or upright; a perpendicular is (`-dy`, `dx`).
+- **Effect:** none observable: the monitor's bars are level.
+- **melee-hd:** modeled.
+- **Fix:** take (`-dy`, `dx`).
+- **Fix impact:** a level bar's marks would point the other way.
+- **Source:** `hsd_3915.c`.
 
 ## Gameplay that reads the display pass
 
@@ -1778,6 +1858,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | `expf` and `powf` on large or NaN inputs | `expf`, `math.rs` | The series never settles for NaN or where the terms overflow (\|x\| about 12.7 to 14.7), and loops forever | `tools/leaf-check/tests/math.rs:154` |
 | Kongo Jungle N64's barrel holding no one | `stageGObj1_GObjProc` (groldkongo.c), `game/gr/oldkongo.rs` | A hold (state 1) with no fighter clears the state but falls into the shot's start all the same (no `break`), and eleven ticks later reads the null fighter's `p_link`; nothing leaves a held barrel without its fighter (`grOldKongo_802105C8` clears both together) | `crates/melee-sim/src/game/gr/oldkongo.rs` (`proc_barrel`) |
 | Kongo Jungle's barrel holding nothing | `grKongo_801D577C` (grkongo.c), `game/gr/kongo.rs` | The same fall-through as Kongo Jungle N64's: a hold (state 1) with nothing held clears the state, falls into the shot and reads the null object's `p_link` in the same tick; nothing leaves a held barrel empty (`grKongo_801D828C` clears both together, and a held Klap Trap can't be hit) | `crates/melee-sim/src/game/gr/kongo.rs` (`proc_barrel`) |
+| A results pose's fighter writes its lengths into the shared attributes | `ftDk_Init_OnLoad`, `ftPe_Init_OnLoad` from `ftDemo_CreateFighter`, `game/ft/donkey/init.rs`, `game/ft/peach/init.rs` | A demo fighter's `x58C` is its demo animations' count (`ftData_80085B98`), so `ftData_80085E50` finds none of Donkey Kong's cargo walks (296 to 298) or Peach's float falls (18, 19) and the lengths come out 0.0, which the creation writes over the character's loaded attributes: the preload cache's copy the next match takes. Every creation writes them again before copying, and a pose never enters those states | `crates/melee-sim/src/game/ft/donkey/init.rs` (`dk_anim_frames`); `layout-sessions/dk-pe-ys`, tick 2395 on |
 | A parasol state without an animation | `it_8028B08C`, `game/it/kinds/parasol.rs` | Indexes its lengths by the state's animation, -1 for states 0 and 3, and reads the word before the table; its callers ask only for the held states, 4 to 10 | `crates/melee-sim/src/game/it/kinds/parasol.rs` (`anim_frames`) |
 | A sticking item's slope with no surface touched | `it_8027649C`, `game/it/maplib.rs` | Takes its angle from a stack vector it never set when the item touches no surface (`it_80276408` writes nothing then); the motion-sensor bomb sticks only after touching one | `crates/melee-sim/src/game/it/maplib.rs:291` |
 | The Flipper's spin past π | `itFlipper_UpdateSpin`, `game/it/kinds/flipper.rs` | Brings the spin's speed, not the paddle's angle, back within ±π by a whole turn; the attributes cap the speed at 0.873 radians a frame | `crates/melee-sim/src/game/it/kinds/flipper.rs:175` |

@@ -1300,6 +1300,16 @@ impl Image {
             .collect()
     }
 
+    /// The files melee-sim knows memory no block of the scene's heap holds now (the preload
+    /// cache's, as read and as code edited them), for the oracle's check against memory.
+    pub fn held_file_runs(&self) -> Vec<(u32, u32)> {
+        self.overlay
+            .iter()
+            .filter(|(_, s)| matches!(s.src, Src::File { .. } | Src::Edit { .. }))
+            .map(|(k, s)| (k, s.end))
+            .collect()
+    }
+
     /// The runs the image holds, for the oracle's check against memory: each run's range and
     /// whether its bytes are known.
     pub fn runs(&self) -> Vec<(u32, u32, &'static str)> {

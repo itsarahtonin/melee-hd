@@ -17,18 +17,19 @@ mod common;
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
     DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_TOOLS, Expect,
-    FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
-    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group,
-    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
-    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC,
-    MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR,
-    PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION,
-    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW, UNLOCK_TIME, VENOM,
-    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
+    DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES,
+    DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE, DEBUG_VS_TOOLS, Expect, FLAT_ZONE, FOUR_FD,
+    FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD,
+    FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
+    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
+    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
+    why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -248,6 +249,95 @@ fn debug_vs_bubbles_2790() {
         Capture::Rendered,
     );
 }
+// The fighters' displays (vs-displays): Ness's absorber (2800), an intangible fighter (2830),
+// the ledge points and dynamics chains (3100), the damage line and a green shell's stomp
+// range (3500), Fox's reflector (3763, 4331), the computer player's aims over the fighters'
+// hits (3870), the pickup ranges (4100) and the thrown hits (4400).
+rendered_frames!(DEBUG_VS_DISPLAYS;
+    debug_vs_displays_2800 2800,
+    debug_vs_displays_2830 2830,
+    debug_vs_displays_3100 3100,
+    debug_vs_displays_3500 3500,
+    debug_vs_displays_3763 3763,
+    debug_vs_displays_3870 3870,
+    debug_vs_displays_4100 4100,
+    debug_vs_displays_4331 4331,
+    debug_vs_displays_4400 4400,
+);
+// The coins' displays (vs-coins): the coins' ranges and the fighters' coin capsules over the
+// models. A fighter's shadow falls on the floor: its draws differ only in the shadow textures'
+// hashes, and the images are identical.
+fn debug_vs_coins(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &DEBUG_VS_COINS,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_vs_coins_1600() {
+    debug_vs_coins(1600, [1342, 1339]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_vs_coins_1700() {
+    debug_vs_coins(1700, [1339, 1332]);
+}
+// The scene loop's performance monitor (perf-monitor, X and D-pad right): in the opening movie
+// with its lines (200), in the match (1100, 1300), and on again after a screenshot's wait
+// (1700), its times the timeline's. In the match the fighters' shadows fall on the floor: the
+// draws differ only in the shadow textures' hashes, and the images are identical.
+rendered_frames!(DEBUG_PERF_MONITOR;
+    debug_perf_monitor_200 200,
+);
+fn debug_perf_monitor(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &DEBUG_PERF_MONITOR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1100() {
+    debug_perf_monitor(1100, [1392, 1396]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1300() {
+    debug_perf_monitor(1300, [1396, 1395]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1700() {
+    debug_perf_monitor(1700, [1040, 1037]);
+}
+// The stage's displays (vs-stage, R and D-pad down): the blast zones, camera bounds, camera
+// boxes and special points (2300), the fighters' ECBs, a hookshot's and the collision lines by
+// kind (2600), by terrain (2900) and by ledge and platform (3200), drawn as `mplib.c` draws
+// them.
+rendered_frames!(DEBUG_VS_STAGE;
+    debug_vs_stage_2300 2300,
+    debug_vs_stage_2600 2600,
+    debug_vs_stage_2900 2900,
+    debug_vs_stage_3200 3200,
+);
 fn debug_vs_tools(frame: u32, same: [usize; 2]) {
     compare_in(
         &DEBUG_VS_TOOLS,

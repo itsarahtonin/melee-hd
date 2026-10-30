@@ -73,6 +73,7 @@ mod gates;
 mod holds;
 mod jit;
 mod latency;
+mod monitor;
 mod paced;
 #[cfg(test)]
 mod paced_tests;
@@ -684,10 +685,7 @@ impl Platform {
         self.feed = feed;
         self.after(next);
         self.replay(&mut s.game);
-        if let (Some(k), Some(card)) = (
-            &mut self.kept,
-            s.card.as_ref().and_then(|c| c.card.as_ref()),
-        ) {
+        if let (Some(k), Some(card)) = (&mut self.kept, s.card.as_ref().and_then(|c| c.card())) {
             for name in k.update(card.image()) {
                 eprintln!("saved {name}");
             }
@@ -727,7 +725,7 @@ impl Drop for Session {
         }
         if let (Some(p), power::Run::Console(s)) = (&self.console, &self.run)
             && let Some(path) = &p.card_after
-            && let Some(card) = s.card.as_ref().and_then(|c| c.card.as_ref())
+            && let Some(card) = s.card.as_ref().and_then(|c| c.card())
         {
             match std::fs::write(path, card.image()) {
                 Ok(()) => eprintln!("the card after the session: {}", path.display()),
@@ -787,6 +785,8 @@ impl Session {
                     dtv: r.dtv,
                     sram_flags: r.sram_flags,
                     card_pull: None,
+                    card_b: None,
+                    card_b_pull: None,
                     develop: r.developer(),
                 };
                 (setup, None, Some((r.reads, 0)))
@@ -1153,6 +1153,8 @@ struct App {
     /// The menus' gate note's painter, once it's shown.
     note_painter: Option<ui::Painter>,
     frames: Frames,
+    /// The host's times for the debug performance monitor.
+    host_times: monitor::HostTimes,
     gpu: present::Gpu,
     renderer: Option<Gpu>,
     shown: Option<present::Shown>,
@@ -1395,6 +1397,7 @@ impl App {
             }
         };
         let simulated = start.elapsed();
+        self.host_times.sim(simulated);
         // The pad library's motor commands this tick, to the controllers.
         if f.pads.motors.iter().any(Option::is_some) {
             for (on, m) in self.motors.iter_mut().zip(f.pads.motors) {
@@ -1724,6 +1727,8 @@ impl App {
             }
         }
         let m = self.session.as_ref().expect("a match");
+        let last = self.frames.hsd.perf_host.take();
+        self.frames.hsd.perf_host = Some(self.host_times.host(last));
         let fifo = self.frames.frame_blended(m.game(), m.data(), draws, blend);
         let gpu = self.renderer.get_or_insert_with(|| {
             gpu_for(
@@ -1817,6 +1822,11 @@ impl App {
             self.capture_next = Some(dir.join("after"));
         }
         let presented = presented?;
+        self.host_times.frame(
+            built - entered,
+            presented.presented.saturating_duration_since(start),
+            presented.presented,
+        );
         self.live.frame(presented.presented);
         self.measure(
             presented.presented,
@@ -2873,6 +2883,7 @@ fn run(args: Args) -> ExitCode {
         last_image: None,
         note_painter: None,
         frames,
+        host_times: monitor::HostTimes::default(),
         gpu,
         renderer: None,
         shown: None,

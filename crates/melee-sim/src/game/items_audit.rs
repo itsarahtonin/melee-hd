@@ -362,7 +362,6 @@ const BONUS: &str =
 const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fighters spawn";
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
-const DEBUG: &str = "the debug menu's item spawn and the items' debug ranges (an enemy's stomp range, kind 4's), which only the develop tools turn on";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper, food, Home-Run Bat or bob-omb (it_8026BE84): the bob-omb rain of a sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms make only the five kinds ported)";
@@ -463,8 +462,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("itFlipper_Spawn", DROP_BY_KIND),
     ("it_80283AE4", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
-    ("lbColl_8000A10C", DEBUG),
-    ("lb_800149E0", DEBUG),
     ("it_8026C1E8", ZAKO),
     ("it_802EA9FC", ZAKO),
     ("it_802DC4BC", ZAKO),

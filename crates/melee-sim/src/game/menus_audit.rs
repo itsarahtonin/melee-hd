@@ -167,14 +167,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the Multi-Man list, behind the Multi-Man Melee gate",
     ),
     (
-        "a copy's list waited for as the card goes",
-        "the album's copy states (15, 16) start only with a card in the other slot, and the player's console has slot B empty (melee-player's power::setup)",
-    ),
-    (
-        "a snapshot copied to the other slot",
-        "a copy needs a card in the other slot, and the player's console has slot B empty (melee-player's power::setup)",
-    ),
-    (
         "the slot's image pointing at an album image",
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
@@ -403,15 +395,7 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "the scene loop's debug report (gm_801A4970)",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
         "unported(\"debug pause predicate\"",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
-        "the debug screenshot (db_CheckScreenshot)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (

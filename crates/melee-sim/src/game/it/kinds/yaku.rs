@@ -246,6 +246,14 @@ pub fn spawn(
     }
     s.x40 = 0;
     r.game.it.yaku_attr = true;
+    // `it_804D6D38[It_PKind_Random - It_Kind_Kuriboh]->x0_common_attr = &it_803F8C08`: the
+    // table's last entry, an article in `ItCo.dat`'s data, which the heap's image takes where
+    // it holds the file.
+    if let Some(a) = r.game.it.char_articles[(KIND - super::KURIBOH) as usize]
+        && crate::hsd::heap::image_on()
+    {
+        crate::hsd::heap::with(|h| h.image.file_word(a, 0x803F_8C08));
+    }
     let gobj = super::super::item::spawn_air(r, &mut s)?;
     let v = vars(r.game, gobj);
     if joint.is_some() {
