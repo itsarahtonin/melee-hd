@@ -94,6 +94,21 @@ pub struct Hsd {
     pub refract_maps: Vec<(DataRef, u8)>,
     /// `lbl_804D6070`, `lbl_804D6074`: the debug text's glyph scale, as the last screen set it.
     pub text_scale: (f64, f64),
+    /// The host's times for the performance monitor, which the player sets before each frame
+    /// in place of the timeline's (`PerfHost`); none in checks.
+    pub perf_host: Option<PerfHost>,
+}
+
+/// The performance monitor's times as the host measures them, in 60ths of a second, and its
+/// own copy of the drawn times' statics (`fn_80392934`'s), which they update each time the
+/// monitor draws. They reach only the drawing, never the simulation.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct PerfHost {
+    /// The last frame's CPU, draw and total time.
+    pub times: [f32; 3],
+    /// Frames shown over the last second.
+    pub frame_renew: i32,
+    pub stats: melee_sim::game::perf::Stats,
 }
 
 /// `ft_jobj_scale`: the matrix that undoes a flat fighter's joint scale in view space, and
