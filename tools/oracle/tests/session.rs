@@ -1383,6 +1383,37 @@ fn the_unlock_sessions_end_with_their_cards() {
     }
 }
 
+/// The other VS challengers and stage unlocks (feat/m5-challengers), each one VS match short
+/// of its condition, with the card it leaves: Roy (on Hyrule Temple) and Mr. Game & Watch (on
+/// Flat Zone, the last character: every one unlocked) won through VS mode's prize screen, its
+/// trophy notices among them; Jigglypuff, Falco, Young Link, Ganondorf and Luigi lost, each on
+/// its own stage; Fourside, Big Blue and Poké Floats unlocked through the prize screen.
+#[test]
+fn the_challenger_and_stage_sessions_end_with_their_cards() {
+    for (name, ticks) in [
+        ("roy", "9156"),
+        ("gw", "5877"),
+        ("jiggly", "4436"),
+        ("falco", "4444"),
+        ("ylink", "4415"),
+        ("ganon", "4420"),
+        ("luigi", "4453"),
+        ("fourside", "3939"),
+        ("bigblue", "3939"),
+        ("pokefloats", "3939"),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/unlock-sessions/{name}-run.card"));
+        let Some(out) = unlock_session(name, &["--all", "--heap", "--card-after", &card]) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference"))
+                && out.contains("the card after the session: the original's, 524288 bytes"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// The approach's match rolls back as any match does, and the launcher's shortcut leaves it
 /// unchecked: it isn't a match the launcher makes.
 #[test]

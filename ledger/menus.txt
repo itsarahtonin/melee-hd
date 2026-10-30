@@ -101,7 +101,6 @@ gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its ca
 gmMainLib_8015CF5C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF70	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015D06C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D084	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D0C0	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D0F4	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
@@ -118,9 +117,7 @@ gmMainLib_8015D3FC	gated	named only by the single-player modes' code (gm_8017CBA
 gmMainLib_8015D418	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D438	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D450	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gmMainLib_8015D48C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D4A8	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D4E8	gated	named only by the single-player modes' code (fn_80300ED0, gmClassic_801B3B40, gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D5DC	gated	named only by the single-player modes' code (gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D640	gated	named only by the single-player modes' code (gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D6A4	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
@@ -183,7 +180,6 @@ gm_GetEndlessTotalHighscore	gated	the one-door character select's records (mnCha
 gm_GetCruelHighscore	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gm_GetCruelTotalHighscore	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_80164504	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_80164600	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_801647F8	gated	named only by the single-player modes' code (gmClassic_801B3500, gmClassic_801B3A34, gm_801B6428): the single-player modes', which only the 1P list's gated entries lead to
 fn_801650E8	gated	named only by the single-player modes' code (fn_801891F4): the single-player modes', which only the 1P list's gated entries lead to
@@ -313,7 +309,6 @@ gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm
 gm_Scene_Omake15_OnEnter	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_Omake15_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExit	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-onEnterDebugVs	unreached	debug VS's entry from the title, made pending only at a debug level
 gm_801B174C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_801B1788	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 onExitTitle	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
