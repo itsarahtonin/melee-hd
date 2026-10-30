@@ -621,14 +621,20 @@ impl Host<GameKinds> for Running<'_> {
                 self.game.charsel.left_tags[usize::from(i)] = addr;
             }
             UserData::SssName(addr) => {
+                let game = &*self.game;
+                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.names.remove(&addr);
             }
             UserData::SssPreview(addr) => {
+                let game = &*self.game;
+                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.previews.remove(&addr);
             }
             UserData::SssHover(addr) => {
+                let game = &*self.game;
+                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.hovers.remove(&addr);
             }
