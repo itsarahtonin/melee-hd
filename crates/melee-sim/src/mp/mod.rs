@@ -206,6 +206,12 @@ pub struct Geometry<K: Kinds> {
     /// `joints_addr` (0 without).
     pub vertices_addr: u32,
     pub lines_addr: u32,
+    /// The stage data's line descriptors (`MapCollData::lines`), which the load's pruning and
+    /// the joints' linking edit in place: the heap's image takes each edit
+    /// ([`Geometry::image_lines`]). Where the stage's data is, which its `coll_data` names, not
+    /// state of its own: a captured state has none to compare.
+    #[state_eq(skip)]
+    pub lines_data: Option<DataRef>,
     /// The joints whose stamp the load left where the array's block held the GPU's pixels (a
     /// render target's, `hsd::image::Src::RenderTarget`), until the stage code stamps them:
     /// the comparer leaves such a stamp out, and reading one stops (docs/engine.md,
@@ -425,6 +431,7 @@ impl<K: Kinds> Geometry<K> {
                 user_data: None,
             })
             .collect();
+        let read = lines.clone();
         if grkind != GR_KIND_PURA {
             prune_empty_lines(&verts, &mut lines);
         }
@@ -480,12 +487,46 @@ impl<K: Kinds> Geometry<K> {
             joints_addr,
             vertices_addr,
             lines_addr,
+            lines_data: coll_data.and_then(|c| data.ptr(c.at(8))),
             render_stamps,
             debug_rom: false,
         };
+        // The lines the pruning changed (the loaded flags aren't the data's).
+        let data_of = |l: &Line| Line { flags: 0, ..*l };
+        g.image_lines((0..read.len()).filter(|&i| data_of(&read[i]) != data_of(&g.lines[i])));
         g.build_islands();
         g.uncheck_bounding();
         g
+    }
+
+    /// The line descriptors `lines` as the load's pruning and the joints' linking left them in
+    /// the stage's file (`mpPruneEmptyLines`, `mpLib_800581DC`), into the heap's image where it
+    /// holds the file (a file read into the scene's heap, or the preload cache's).
+    pub fn image_lines(&self, lines: impl Iterator<Item = usize>) {
+        let Some(at) = self.lines_data else { return };
+        if !crate::hsd::heap::image_on() {
+            return;
+        }
+        crate::hsd::heap::with(|h| {
+            for i in lines {
+                let l = &self.lines[i];
+                let mut b = [0u8; 0x10];
+                let words = [
+                    l.v0,
+                    l.v1,
+                    l.prev as u16,
+                    l.next as u16,
+                    l.prev_link as u16,
+                    l.next_link as u16,
+                    l.hi_flags,
+                    l.lo_flags,
+                ];
+                for (k, w) in words.into_iter().enumerate() {
+                    b[2 * k..2 * k + 2].copy_from_slice(&w.to_be_bytes());
+                }
+                h.image.file_bytes(at.at(0x10 * i as u32), &b);
+            }
+        });
     }
 
     pub fn line(&self, line_id: i32) -> &Line {

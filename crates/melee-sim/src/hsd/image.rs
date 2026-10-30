@@ -69,6 +69,13 @@ pub enum Src {
     Raw { archive: ArchiveId, offset: u32 },
     /// Bytes an object laid out as the game keeps it, from `offset` of `bytes`.
     Bytes { bytes: Arc<[u8]>, offset: u32 },
+    /// Bytes code wrote into `archive`'s file where it was loaded ([`Image::file_bytes`]),
+    /// from `offset` of `bytes`: still the file's place, so a later edit writes over them.
+    Edit {
+        archive: ArchiveId,
+        bytes: Arc<[u8]>,
+        offset: u32,
+    },
     /// Pixels the GPU copied into a buffer (`GXCopyTex`: the magnifier's bubbles): the
     /// renderer's output, which isn't simulation state and never reaches it. Unknown as bytes;
     /// a new object over them takes the image's fill there ([`Image::render_fill`]), and
@@ -99,6 +106,15 @@ impl Src {
                 bytes: bytes.clone(),
                 offset: offset + n,
             },
+            Src::Edit {
+                archive,
+                bytes,
+                offset,
+            } => Src::Edit {
+                archive: *archive,
+                bytes: bytes.clone(),
+                offset: offset + n,
+            },
         }
     }
 
@@ -119,7 +135,9 @@ impl Src {
             &Src::Raw { archive, offset } => {
                 data.get(archive).data().get((offset + i) as usize).copied()
             }
-            Src::Bytes { bytes, offset } => bytes.get((offset + i) as usize).copied(),
+            Src::Bytes { bytes, offset } | Src::Edit { bytes, offset, .. } => {
+                bytes.get((offset + i) as usize).copied()
+            }
         }
     }
 }
@@ -138,9 +156,10 @@ fn extern_slots(data: &Archives, archive: ArchiveId) -> Vec<u32> {
     slots
 }
 
-/// A word of zeros, as an object's bytes.
-fn zero_word() -> Src {
-    Src::Bytes {
+/// A null word code wrote into `archive`'s file.
+fn null_edit(archive: ArchiveId) -> Src {
+    Src::Edit {
+        archive,
         bytes: Arc::from(&[0u8; 4][..]),
         offset: 0,
     }
@@ -524,6 +543,14 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
                 h.bytes(bytes);
             }
             Src::RenderTarget => h.word(4 << 48),
+            Src::Edit {
+                archive,
+                bytes,
+                offset,
+            } => {
+                h.word(5 << 48 | u64::from(archive.0) << 32 | u64::from(*offset));
+                h.bytes(bytes);
+            }
         }
     }
 }
@@ -889,6 +916,23 @@ impl Image {
             return;
         }
         let base = file + 0x20;
+        // The cache's copy taken again, as its parse and the code since left it: memory there
+        // still holds the archive parsed at its newest place (a read since would hold it
+        // unparsed).
+        let newest = self.places().iter().rev().find(|&&(_, _, a)| a == archive);
+        if newest == Some(&(base, len.saturating_sub(0x20), archive))
+            && self.unheld_all(file, file + len, |s| match s.src {
+                Src::File {
+                    archive: a,
+                    base: b,
+                    ..
+                } => a == archive && b == base,
+                Src::Edit { archive: a, .. } => a == archive,
+                _ => false,
+            })
+        {
+            return;
+        }
         self.place(base, len.saturating_sub(0x20), archive);
         self.write(
             file,
@@ -900,7 +944,7 @@ impl Image {
             },
         );
         for at in extern_slots(data, archive) {
-            self.write(base + at, base + at + 4, zero_word());
+            self.write(base + at, base + at + 4, null_edit(archive));
         }
     }
 
@@ -911,7 +955,8 @@ impl Image {
             return;
         }
         for at in extern_slots(data, archive) {
-            self.put(file + 0x20 + at, &[0; 4]);
+            let at = file + 0x20 + at;
+            write(&mut self.live, at, at + 4, null_edit(archive));
         }
     }
 
@@ -1099,9 +1144,9 @@ impl Image {
     }
 
     /// [`Image::file_word`] for any run of bytes: all of them replace the file's where the
-    /// image holds the file over the whole run, none elsewhere. A run written before holds
-    /// what the code wrote, which the game writes again the same where it runs again (a shape
-    /// loaded for a second fighter), so it's left as it is.
+    /// image holds the file over the whole run (as read or as code edited it since), none
+    /// elsewhere: in a block now allocated (a file the scene read into its heap) or in memory
+    /// no block of the scene's heap holds (a file the preload cache holds).
     pub fn file_bytes(&mut self, d: melee_data::archive::DataRef, bytes: &[u8]) {
         if !self.on || bytes.is_empty() {
             return;
@@ -1110,17 +1155,48 @@ impl Image {
             return;
         };
         let hi = at + bytes.len() as u32;
-        let mut covered = at;
-        for (k, s) in self.live.range(at, hi) {
-            let file = matches!(s.src, Src::File { archive, .. } if archive == d.archive);
-            if !file || k > covered {
-                return;
+        let edit = Src::Edit {
+            archive: d.archive,
+            bytes: bytes.into(),
+            offset: 0,
+        };
+        let file = |s: &Span| matches!(s.src, Src::File { archive, .. } | Src::Edit { archive, .. } if archive == d.archive);
+        if self.live.range(at, hi).next().is_some() {
+            let mut covered = at;
+            for (k, s) in self.live.range(at, hi) {
+                if !file(s) || k > covered {
+                    return;
+                }
+                covered = covered.max(s.end);
             }
-            covered = covered.max(s.end);
+            if covered >= hi {
+                write(&mut self.live, at, hi, edit);
+            }
+            return;
         }
-        if covered >= hi {
-            self.put(at, bytes);
+        if self.unheld_all(at, hi, file) {
+            write(&mut self.overlay, at, hi, edit);
         }
+    }
+
+    /// Whether every byte of `[lo, hi)`, in memory no block holds, has a run `ok` takes, as
+    /// the overlay has it, else the base.
+    fn unheld_all(&self, lo: u32, hi: u32, ok: impl Fn(&Span) -> bool) -> bool {
+        let mut a = lo;
+        while a < hi {
+            a = match self.overlay.range(a, a + 1).next() {
+                Some((_, s)) if ok(s) => s.end,
+                Some(_) => return false,
+                None => {
+                    let next = self.overlay.range(a, hi).next().map_or(hi, |(k, _)| k);
+                    match self.base().range(a, a + 1).next() {
+                        Some((_, s)) if ok(s) => s.end.min(next),
+                        _ => return false,
+                    }
+                }
+            };
+        }
+        true
     }
 
     /// The block `[lo, hi)` goes back to its heap (`OSFreeToHeap`): it holds what its owner
@@ -1239,7 +1315,7 @@ impl Image {
                     s.end,
                     match s.src {
                         Src::Unknown(_) => "unknown",
-                        Src::File { .. } => "file",
+                        Src::File { .. } | Src::Edit { .. } => "file",
                         Src::Raw { .. } => "raw file",
                         Src::Bytes { .. } => "object",
                         Src::RenderTarget => "render target",

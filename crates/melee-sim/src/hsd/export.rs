@@ -755,6 +755,11 @@ pub fn pobj(objs: &Objects, img: &mut Image, p: PObjId) {
     }
 }
 
+/// lbrefract.c's `imagedesc0`, `loddesc0` and `loddesc1`, in the executable's data.
+const REFRACT_IMAGEDESC0: u32 = 0x803B_B0F8;
+const REFRACT_LODDESC0: u32 = 0x803B_B110;
+const REFRACT_LODDESC1: u32 = 0x803B_B194;
+
 /// `HSD_TObj` (0xAC). `hsdNew` clears a class's object, and a texture's reference counts and
 /// rotation's `w` no code sets.
 pub fn tobj(objs: &Objects, img: &mut Image, t: super::tobj::TObjId) {
@@ -785,11 +790,20 @@ pub fn tobj(objs: &Objects, img: &mut Image, t: super::tobj::TObjId) {
         Some(ImageRef::Data(d)) => img.data_addr(d),
         Some(ImageRef::Static(a)) => Some(a),
         Some(ImageRef::Shadow(s)) => Some(objs.shadows[s.0].imagedesc_addr),
+        // Refraction's screen copy: lbrefract.c's static `imagedesc0`.
+        Some(ImageRef::RefractFrame) => Some(REFRACT_IMAGEDESC0),
         Some(_) => None,
     };
     l.word(0x58, image);
     l.u32(0x5C, if o.tlut.is_some() { o.tlut_addr } else { 0 });
-    l.word(0x60, data_addr(img, o.lod));
+    // Refraction's TObjs come from lbrefract.c's static descriptors, whose level-of-detail
+    // descriptors (`loddesc0`, `loddesc1`) melee-sim doesn't keep: they only set GX's filtering.
+    let lod = match o.imagedesc {
+        Some(ImageRef::RefractFrame) => Some(REFRACT_LODDESC0),
+        Some(ImageRef::Refract(_)) => Some(REFRACT_LODDESC1),
+        _ => data_addr(img, o.lod),
+    };
+    l.word(0x60, lod);
     l.u32(0x64, addr_of(o.aobj, |x| objs.aobjs.pool.addr(x.0)));
     l.word(0x68, data_addr(img, o.imagetbl));
     l.u32(

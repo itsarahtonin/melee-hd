@@ -716,6 +716,7 @@ impl Importer<'_> {
             joints_addr: joints,
             vertices_addr: vtx,
             lines_addr,
+            lines_data: None,
         })
     }
 
