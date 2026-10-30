@@ -1682,6 +1682,56 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none.
 - **Source:** `mplib.c`, `mplib.s`.
 
+### The debug text's colour codes read decimal digits as 0
+
+- **Where:** `hsd_80391AC8` (its inline hex digit, `hexval`), from the performance monitor's lines (`hsd_8039254C`), `crates/melee-sim/src/game/perf.rs` (`hexval`).
+- **Defect:** a `\cRRGGBB` code's digit is tested against 10 (`ch < 0x0A`) rather than `ch - '0'`, so `'0'` to `'9'` fall to the "not a digit" case and read as 0; only `A` to `F` and `a` to `f` read their value.
+- **Effect:** none observable: every code the monitor's lines use (`00ff00`, `ffffff`, `00ffff`, `ffff00`, `e0e0ff`) has only 0 among its decimal digits.
+- **melee-hd:** modeled: the port reads the digits as the original does.
+- **Fix:** test `ch - '0' < 10`.
+- **Fix impact:** none for the lines the game draws.
+- **Source:** `hsd_3915.c` (`hexval`), ssbm-rs's `inl_hexval_unfused`.
+
+### The performance monitor's frame rate line's second type from `.bss`
+
+- **Where:** `fn_801652D8` (the scene loop's monitor line), `crates/melee-sim/src/game/perf.rs` (`scene_items`).
+- **Defect:** it sets its first line's type (`lines[0].unk_04 = 0`) but never its second's, which keeps what `lbl_8046B378` held: `.bss` zero, which nothing else writes.
+- **Effect:** none observable: zero is a text line, as meant.
+- **melee-hd:** modeled: the line is text.
+- **Fix:** set `lines[1].unk_04 = 0`.
+- **Fix impact:** none.
+- **Source:** `gm_1601.c`.
+
+### The performance monitor's list outlives its blocks
+
+- **Where:** `hsd_80392474` (each scene's setup, `gm_801A4BD4`) and `gm_801653C8` (the monitor off), `crates/melee-sim/src/game/perf.rs` (`perf_scene_setup`, `perf_free`).
+- **Defect:** turning the monitor off frees its GObj but leaves its callbacks listed, and each scene's setup drops the list without freeing its event blocks (`HSD_MemAlloc`) or its list nodes.
+- **Effect:** none observable in play: each scene that turned the monitor on loses two or three 8-byte heap blocks (the scene's heap is made anew anyway) and keeps as many list nodes counted as in use in HSD's list pool.
+- **melee-hd:** modeled: the blocks and nodes are allocated in the allocator model and never given back.
+- **Fix:** free the list's entries at the scene's setup.
+- **Fix impact:** the list pool's counts and free list from then on, which reach no gameplay.
+- **Source:** `hsd_3924.c`, `gm_1601.c`, `gmscene.c`.
+
+### The screenshot sends an unset frame buffer when none was drawn
+
+- **Where:** `db_TakeScreenshotIfPending`, `crates/melee-sim/src/game/gm/scene.rs` (`db_take_screenshot_if_pending`).
+- **Defect:** when `HSD_VIGetXFBLastDrawDone` finds no frame buffer it reports "cant find xfb!" and goes on, handing the write a pointer (`xfb`) it never set.
+- **Effect:** none observable: after the frame's copy and the flush's wait a buffer always shows, and the write returns before reading it without a USB host, which a console here never has.
+- **melee-hd:** the buffer isn't modeled; the write returns -5.
+- **Fix:** return when no buffer is found.
+- **Fix impact:** none.
+- **Source:** `dbscreenshot.c`.
+
+### The bars' marks aren't perpendicular to a slanted bar
+
+- **Where:** `hsd_80391F28`, `crates/melee-sim/src/game/perf.rs` (`bar_draws`).
+- **Defect:** the marks' direction is (`-dy`, `-dx`) over the length, which is perpendicular to the bar only when it's level or upright; a perpendicular is (`-dy`, `dx`).
+- **Effect:** none observable: the monitor's bars are level.
+- **melee-hd:** modeled.
+- **Fix:** take (`-dy`, `dx`).
+- **Fix impact:** a level bar's marks would point the other way.
+- **Source:** `hsd_3915.c`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

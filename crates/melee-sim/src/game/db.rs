@@ -108,6 +108,10 @@ pub struct Db {
     pub misc_effects: i32,
     /// `lbaudio_ax.c`'s `debug_enabled` (`lbAudioAx_80025098`), which nothing reads.
     pub audio_debug: bool,
+    /// `db_ScreenshotPending`, `db_ScreenshotNumber`: a screenshot asked for this frame, and
+    /// the next one's number.
+    pub screenshot_pending: bool,
+    pub screenshot_number: i32,
 }
 
 /// `db_TextColors`: the bonus screens' background and text colours.
