@@ -79,18 +79,11 @@ impl Game {
         h.check_framestep = super::super::mirror::code(step);
     }
 
-    /// The scene loop's debug buttons at the debug ROM's level, `gm_801A4970`: D-pad right
-    /// with X held for the memory report, then the scene's debug pause buttons, which pause
-    /// or go on and, while paused, step a frame.
-    // Ports `gm_801A4970` but its memory report; aliased once the report is ported.
+    /// The scene loop's debug buttons at the debug ROM's level, `gm_801A4970`, after its
+    /// report ([`Running::db_scene_report`](crate::game::state::Running::db_scene_report)):
+    /// the scene's debug pause buttons, which pause or go on and, while paused, step a frame.
+    #[doc(alias = "gm_801A4970")]
     pub fn db_scene_input(&mut self) {
-        use crate::input::pad::{BUTTON_RIGHT, BUTTON_X};
-        let report = self.pads.master.iter().any(|p| {
-            p.trigger & u32::from(BUTTON_RIGHT) != 0 && p.button & u32::from(BUTTON_X) != 0
-        });
-        if report {
-            super::super::code::unported_call("the scene loop's debug report (gm_801A4970)");
-        }
         let (pause, step) = (
             self.scene.unk_10.db_input.check_pause,
             self.scene.unk_10.db_input.check_framestep,
@@ -131,7 +124,7 @@ impl Game {
     }
 
     /// `db_CheckScreenshot`: Y held and D-pad up on a controller asks for a screenshot.
-    // Ports `db_CheckScreenshot`'s test; aliased once the screenshot it asks for is ported.
+    #[doc(alias = "db_CheckScreenshot")]
     pub fn db_check_screenshot(&mut self) {
         use crate::input::pad::{BUTTON_UP, BUTTON_Y};
         if self
@@ -140,8 +133,34 @@ impl Game {
             .iter()
             .any(|p| p.button & u32::from(BUTTON_Y) != 0 && p.trigger & u32::from(BUTTON_UP) != 0)
         {
-            super::super::code::unported_call("the debug screenshot (db_CheckScreenshot)");
+            self.db.screenshot_pending = true;
         }
+    }
+
+    /// `db_InitScreenshot`, at the boot.
+    #[doc(alias = "db_InitScreenshot")]
+    pub fn db_init_screenshot(&mut self) {
+        self.db.screenshot_number = 0;
+        self.db.screenshot_pending = false;
+    }
+
+    /// `db_TakeScreenshotIfPending`, after the frame's copy: with one asked for, the wait for
+    /// the copy to show (`HSD_VIWaitXFBFlush`, on the timeline: [`crate::audio::clock::Clock::screenshot`]),
+    /// the next number taken, and the frame buffer sent to the USB host
+    /// (`USB:shot/screenshot%02d.frb`), which is never there ([`usb_write`]). The name is
+    /// formatted on the stack, which nothing reads after.
+    #[doc(alias = "db_TakeScreenshotIfPending")]
+    pub fn db_take_screenshot_if_pending(&mut self) {
+        if !self.db.screenshot_pending {
+            return;
+        }
+        if let Some(c) = self.audio.clock.as_mut() {
+            c.screenshot = true;
+        }
+        // `HSD_VIGetXFBLastDrawDone` finds the copy, shown after the wait.
+        self.db.screenshot_number = self.db.screenshot_number.wrapping_add(1);
+        let _ = usb_write(b"USB:shot/screenshot");
+        self.db.screenshot_pending = false;
     }
 
     /// The debug pause buttons every scene starts with, `gm_801A4B1C`.
@@ -294,11 +313,12 @@ fn queue_alarm_polls(r: &mut Running, taking: u32, polls: &mut dyn FnMut() -> Pa
 /// The tick's first part: the oldest poll into the master statuses and, when the game
 /// clock comes due, the game and copy statuses.
 pub fn begin_tick(r: &mut Running) {
-    let g = &mut *r.game;
-    g.pads.renew_master();
-    if g.gm.db_level >= super::DB_DEBUG_ROM {
-        g.db_scene_input();
+    r.game.pads.renew_master();
+    if r.game.gm.db_level >= super::DB_DEBUG_ROM {
+        r.db_scene_report();
+        r.game.db_scene_input();
     }
+    let g = &mut *r.game;
     let run = g.db_frame_step(0) || !g.db_pause_flag(0);
     g.scene.unk_10.unk_38_0 = run;
     if run {
@@ -470,6 +490,17 @@ fn step_tick_polls(
     (Tick { pads, ended }, r.game.scene.unk_C != 2 && round_over)
 }
 
+/// `fn_802289F8`: a file write to the USB host for a name starting `USB:`
+/// (`hsd_80393A5C`), else -1. The host is never there: `hsd_804D78A0`, its flag, is set only
+/// by the boot's setup for one (`hsd_80393A04`), which `main` runs only below a debug level
+/// other than retail's with R held at power-on, and melee-hd's developer setting raises the
+/// level after that point, as ssbm-rs's runner does. So the write returns -5 at once.
+#[doc(alias = "fn_802289F8")]
+#[doc(alias = "hsd_80393A5C")]
+pub fn usb_write(name: &[u8]) -> i32 {
+    if name.starts_with(b"USB:") { -5 } else { -1 }
+}
+
 /// The frame's display pass on the screen (`HSD_StartRender(HSD_RP_SCREEN)`), which counts
 /// the frame as rendered.
 pub fn render_screen(r: &mut Running) {
@@ -480,4 +511,5 @@ pub fn render_screen(r: &mut Running) {
     if sc.unk_4 != u32::MAX - 1 {
         sc.unk_4 = sc.unk_4.wrapping_add(1);
     }
+    r.game.db_take_screenshot_if_pending();
 }
