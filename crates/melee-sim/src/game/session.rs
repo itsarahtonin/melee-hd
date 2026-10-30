@@ -873,6 +873,7 @@ impl Running<'_> {
         // (`lbTime_GetTimeInSeconds`); `db_EnableItemSpawns` (`gmMain_804D6594` is false on
         // a retail disc), `db_ClearFPUExceptions`.
         self.game.audio.clock_read(self.data, TB_READ);
+        self.game.gm.boot_report_secs = Some(self.session_seconds());
         self.game.it.db_menu.ItemSpawnsEnabled = 1;
         self.start_modes(dtv, progressive);
         self.next_scene();
