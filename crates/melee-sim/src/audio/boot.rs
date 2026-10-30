@@ -222,6 +222,9 @@ impl Audio {
             alarm_period: PAD_ALARM_PERIOD,
             dsp_ready: true,
             tb_power_on: self.power_on,
+            // `VIInit` comes after the boot's card probes: one retrace's handler has run
+            // since, with or without a card (every session's tick 0).
+            retraces: 1,
             ..Clock::default()
         };
         clock.schedule((now / FIELD + 1) * FIELD, EventKind::Field);
