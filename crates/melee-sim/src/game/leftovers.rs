@@ -14,6 +14,7 @@ use crate::hsd::image::Image;
 /// The importer's side of a leftover block: words become leftover handles and data places.
 struct ImageCx<'a> {
     image: &'a mut Image,
+    data: &'a Archives,
 }
 
 impl Cx for ImageCx<'_> {
@@ -27,7 +28,12 @@ impl Cx for ImageCx<'_> {
     }
 
     fn import_data(&mut self, addr: u32) -> Option<DataRef> {
-        self.image.data_at(addr)
+        // A word past a file's data (its tables and names) names no place a data reference
+        // can stand for: it stays a word, compared and laid out as itself (a pointer the
+        // block kept from before the file was read there).
+        self.image
+            .data_at(addr)
+            .filter(|d| (d.offset as usize) < self.data.get(d.archive).data().len())
     }
 
     fn compare_handle(&mut self, _: &str, _: &'static str, _: Option<u32>, _: u32) {
@@ -79,6 +85,7 @@ pub fn import<T: Mirror>(data: &Archives, addr: u32, fresh: bool) -> Option<T> {
         };
         let mut cx = ImageCx {
             image: &mut h.image,
+            data,
         };
         Some(T::import(&m, addr, &mut cx))
     })
