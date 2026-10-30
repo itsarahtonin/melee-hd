@@ -17,11 +17,11 @@ mod common;
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
     DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS,
-    DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE, DEBUG_VS_TOOLS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
-    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES,
+    DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE, DEBUG_VS_TOOLS, Expect, FLAT_ZONE, FOUR_FD,
+    FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD,
+    FOX_SHEIK_YS, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
     KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
@@ -290,6 +290,43 @@ fn debug_vs_coins_1600() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn debug_vs_coins_1700() {
     debug_vs_coins(1700, [1339, 1332]);
+}
+// The scene loop's performance monitor (perf-monitor, X and D-pad right): in the opening movie
+// with its lines (200), in the match (1100, 1300), and on again after a screenshot's wait
+// (1700), its times the timeline's. In the match the fighters' shadows fall on the floor: the
+// draws differ only in the shadow textures' hashes, and the images are identical.
+rendered_frames!(DEBUG_PERF_MONITOR;
+    debug_perf_monitor_200 200,
+);
+fn debug_perf_monitor(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &DEBUG_PERF_MONITOR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1100() {
+    debug_perf_monitor(1100, [1392, 1396]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1300() {
+    debug_perf_monitor(1300, [1396, 1395]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn debug_perf_monitor_1700() {
+    debug_perf_monitor(1700, [1040, 1037]);
 }
 // The stage's displays (vs-stage, R and D-pad down): the blast zones, camera bounds, camera
 // boxes and special points (2300), the fighters' ECBs, a hookshot's and the collision lines by
