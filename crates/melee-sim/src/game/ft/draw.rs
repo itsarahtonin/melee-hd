@@ -20,6 +20,9 @@ const LIGHT_RANGE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0x80];
 const HEAVY_RANGE: [u8; 4] = [0x80, 0x80, 0x80, 0x80];
 const AIR_RANGE: [u8; 4] = [0x80, 0x80, 0xFF, 0x80];
 
+/// A dynamics chain's line's colour (`ftDrawCommon_804D836C`; its second, `804D8370`, unused).
+const DYNAMICS_LINE: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xFE];
+
 /// `HSD_GOBJ_PLINK_FIGHTER`.
 const P_LINK_FIGHTER: u8 = 8;
 
@@ -240,10 +243,10 @@ impl Running<'_> {
 
     /// The debug drawings of `ftDrawCommon_800805C8`, by the fighter's display flags
     /// (`x21FC_flag`, set by the develop tools): its hits' and hurt capsules' bubbles with its
-    /// reflector, absorber and shield (`b6`), its pickup ranges (`b2`), its damage line
-    /// (`b4`), its thrown hit (`b1`) and its `x1614` capsules (`b0`); HAL's state caches out
-    /// of date after any. The ledge and the dynamics' displays (`b5`) and the computer
-    /// player's (`b3`) aren't ported.
+    /// reflector, absorber and shield (`b6`), its ledge points and dynamics chains (`b5`), a
+    /// computer player's aims (`b3`), its damage line (`b4`), its pickup ranges (`b2`), its
+    /// thrown hit (`b1`) and its coin capsules (`x1614`, `b0`); HAL's state caches out of date
+    /// after any.
     fn fighter_debug_drawings(&mut self, g: GObjId, pass: i32) {
         use crate::lb::coll_draw;
         let f = self.game.fighter_id(g);
@@ -309,11 +312,40 @@ impl Running<'_> {
             }
         }
         if flags & 0x04 != 0 {
-            code::unported_call("ftDrawCommon_800805C8's ledge and dynamics displays");
+            let n = usize::from(fp.x166C);
+            for p in &fp.x1670[..n] {
+                drew |= coll_draw::ledge(objs, data, p, pass);
+            }
+            for i in 0..fp.dynamics_num.max(0) as usize {
+                let set = &fp.dynamic_bone_sets[i];
+                let mut joints = Vec::new();
+                let mut link = set.dyn_desc.data;
+                while let Some(d) = link {
+                    joints.push(game.fighter_dynamics[d.0].desc.jobj);
+                    link = game.fighter_dynamics[d.0].next;
+                }
+                // The chain's bone id slot, read as a count: a figatree's address is negative.
+                let dark = match set.bone_id {
+                    super::dynamics::BoneSlot::Id(n) => n,
+                    super::dynamics::BoneSlot::Tree(_) => i32::MIN,
+                };
+                drew |= coll_draw::dynamics_line(
+                    objs,
+                    data,
+                    &joints,
+                    set.dyn_desc.count,
+                    DYNAMICS_LINE,
+                    dark,
+                    pass,
+                );
+            }
         }
-        if flags & 0x10 != 0 {
-            code::unported_call("the computer player's debug drawing (ftCo_800B395C)");
+        if flags & 0x10 != 0 && self.cpu_debug_drawing(g) {
+            drew = true;
         }
+        let game = &mut *self.game;
+        let fp = &mut game.fighters[f.0];
+        let objs = &mut game.objs;
         if flags & 0x08 != 0
             && fp.x2223_b5
             && coll_draw::damage(objs, [fp.dmg.x1930.x0, fp.dmg.x1930.xC], pass)
@@ -341,6 +373,101 @@ impl Running<'_> {
         if drew {
             display::state_invalidate(objs, u32::MAX);
         }
+    }
+
+    /// A computer player's debug drawing, `ftCo_800B395C`, in every pass it's called for: its
+    /// target (`cpu.x54`) as a bubble coloured by its plan (`cpu.x18`), its reach box
+    /// (`x55C`, `x560`, `x568`; flashing while `xF8_b7`), and with plan 2 its attack box.
+    /// Nothing for a human's fighter.
+    #[doc(alias = "ftCo_800B395C")]
+    fn cpu_debug_drawing(&mut self, g: GObjId) -> bool {
+        use crate::lb::coll_draw::{self, DebugDraw};
+        use crate::vec::Vec3;
+        let f = self.game.fighter_id(g);
+        let fp = &self.game.fighters[f.0];
+        let kind = self
+            .game
+            .player_kind(i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+        if kind != crate::game::pl::player::PKIND_CPU {
+            return false;
+        }
+        let cpu = &fp.cpu;
+        let c = match cpu.x18 {
+            2 | 3 => [0xFF, 0, 0, 0x60],
+            7 => [0, 0, 0xFF, 0x60],
+            4 => [0xFF, 0xFF, 0xFF, 0xFF],
+            10 => [0xFF, 0, 0xFF, 0x60],
+            1 => [0, 0xFF, 0, 0x60],
+            18 => [0, 0, 0, 0x60],
+            _ => [0xFF, 0xFF, 0, 0x60],
+        };
+        let target = Vec3::new(cpu.x54.x, cpu.x54.y, 0.0);
+        let (pos, facing) = (fp.cur_pos, fp.facing_dir);
+        let (x55c, x560, x568) = (reg(cpu.x55C), reg(cpu.x560), reg(cpu.x568));
+        let (x6c, x74) = (cpu.x6C.clone(), cpu.x74.clone());
+        let (flash, x7c, plan) = (cpu.xF8_b7, cpu.x7C, cpu.x18);
+        let (px, py) = (reg(pos.x), reg(pos.y));
+        let objs = &mut self.game.objs;
+        coll_draw::push(
+            objs,
+            DebugDraw::Local {
+                mtx: Mtx34::IDENTITY,
+                a: target,
+                b: target,
+                color: c,
+                amb: c,
+                size: 5.0,
+            },
+        );
+        let (back, front) = if reg(facing) > 0.0 {
+            (x560, x55c)
+        } else {
+            (x55c, x560)
+        };
+        let a = Vec3::new(mem(fp::fsubs(px, back)), mem(fp::fadds(py, x568)), pos.z);
+        let b = Vec3::new(mem(fp::fadds(px, front)), pos.y, pos.z);
+        let color = if flash {
+            match x7c % 3 {
+                1 => [0xFF, 0xFF, 0, 0xFF],
+                2 => [0, 0, 0, 0],
+                _ => [0xFF, 0xFF, 0xFF, 0xFF],
+            }
+        } else {
+            [0xFF, 0xFF, 0, 0x60]
+        };
+        coll_draw::push(objs, DebugDraw::Quad { a, b, color });
+        if plan == 2 {
+            let (a, b) = if reg(facing) > 0.0 {
+                (
+                    Vec3::new(
+                        mem(fp::fadds(px, reg(x6c.x))),
+                        mem(fp::fadds(py, reg(x74.y))),
+                        pos.z,
+                    ),
+                    Vec3::new(
+                        mem(fp::fadds(px, reg(x74.x))),
+                        mem(fp::fadds(py, reg(x6c.y))),
+                        pos.z,
+                    ),
+                )
+            } else {
+                (
+                    Vec3::new(
+                        mem(fp::fsubs(px, reg(x74.x))),
+                        mem(fp::fadds(py, reg(x74.y))),
+                        pos.z,
+                    ),
+                    Vec3::new(
+                        mem(fp::fsubs(px, reg(x6c.x))),
+                        mem(fp::fadds(py, reg(x6c.y))),
+                        pos.z,
+                    ),
+                )
+            };
+            let color = [0xFF, 0, 0, 0x60];
+            coll_draw::push(objs, DebugDraw::Quad { a, b, color });
+        }
+        true
     }
 
     /// A refracted fighter's drawing ended, `ftCo_800C8AF0`: refraction's material setup

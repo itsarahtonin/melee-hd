@@ -20,16 +20,9 @@ onExitRegendCongrats	Named only by gm_Mode_DebugCutscene_States (the debug cutsc
 db_PrintEntityCounts	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 db_PrintThreadInfo	Named only by gm_801A4970 (the scene loop's debug report: see gm_801A4970).
 fn_80225A54	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_EnableShowCoinPickupRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_DisableShowCoinPickupRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_EnableShowEnemyStompRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_DisableShowEnemyStompRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_EnableShowItemPickupRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_DisableShowItemPickupRange	Named only by fn_ToggleMiscFighterVisuals (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 db_DisableItemSpawns	Called only by main, only inside `if (gmMain_804D6594)` right after main stores false to gmMain_804D6594.
 fn_ToggleItemCollisionBubbles	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80225E6C	Named only by fn_CheckAnimationInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_ToggleMiscFighterVisuals	Named only by fn_CheckAnimationInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80227EB0	Named only by fn_80228124 (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 db_CheckScreenshot	Called only by the scene loop gm_801A4D34, only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 fn_802289F8	Writes a screenshot to the USB host; called only by db_TakeScreenshotIfPending when db_ScreenshotPending is nonzero, which only db_CheckScreenshot sets (db_InitScreenshot and the call itself clear it), and the scene loop calls db_CheckScreenshot only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).

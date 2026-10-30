@@ -101,6 +101,20 @@ impl Console {
     }
 }
 
+impl Console {
+    /// Slot B of ssbm-rs's console with `card` in it: slot A's settings, with the flash ID of
+    /// the slot that formatted the card, which ssbm-rs's runner puts in the SRAM for slot B
+    /// as Dolphin's `SetCardFlashID` does (`os::os_init_sram`), so that a card formatted in
+    /// slot A mounts in B; a card whose ID fails its checksum (a blank one) keeps Dolphin's
+    /// `DOLPHINSLOTB`.
+    pub fn ssbm_rs_slot_b(card: &Card) -> Self {
+        Self {
+            flash_id: card.formatting_flash_id().unwrap_or(*b"DOLPHINSLOTB"),
+            ..Self::ssbm_rs()
+        }
+    }
+}
+
 impl Default for Console {
     fn default() -> Self {
         Self::ssbm_rs()
@@ -416,6 +430,25 @@ impl Card {
     }
 
     /// The card's bytes.
+    /// The flash ID of the console slot that formatted the card, from the serial its ID
+    /// block carries (`CARDFormat`'s, keyed by the format's time, undone as Dolphin's
+    /// `SetCardFlashID` does); none when the ID fails its checksum.
+    pub fn formatting_flash_id(&self) -> Option<[u8; 12]> {
+        let id = &self.image()[..0x200];
+        let word = |at: usize| u16::from_be_bytes([id[at], id[at + 1]]);
+        if checksum(&id[..0x1FC]) != (word(0x1FC), word(0x1FE)) {
+            return None;
+        }
+        let mut flash = [0u8; 12];
+        let mut rand = i64::from_be_bytes(id[12..20].try_into().unwrap());
+        for (i, f) in flash.iter_mut().enumerate() {
+            rand = rand.wrapping_mul(1_103_515_245).wrapping_add(12345) >> 16;
+            *f = id[i].wrapping_sub(rand as u8);
+            rand = (rand.wrapping_mul(1_103_515_245).wrapping_add(12345) >> 16) & 0x7FFF;
+        }
+        Some(flash)
+    }
+
     pub fn image(&self) -> &[u8] {
         &self.image
     }
@@ -1256,5 +1289,28 @@ impl Mounted<'_> {
     /// The console the card is in.
     pub fn console(&self) -> &Console {
         self.console
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A formatted card gives back the flash ID of the slot that formatted it, whatever the
+    /// format's time; a blank one, none.
+    #[test]
+    fn a_formatted_card_gives_back_its_slots_flash_id() {
+        let console = Console::ssbm_rs();
+        for ticks in [0, 1, 40_500_000 * 3600 * 24 * 365 + 12_345] {
+            let mut card = Card::blank();
+            card.format(&console, ticks);
+            assert_eq!(card.formatting_flash_id(), Some(*b"DOLPHINSLOTA"));
+            assert_eq!(&Console::ssbm_rs_slot_b(&card).flash_id, b"DOLPHINSLOTA");
+        }
+        assert_eq!(Card::blank().formatting_flash_id(), None);
+        assert_eq!(
+            &Console::ssbm_rs_slot_b(&Card::blank()).flash_id,
+            b"DOLPHINSLOTB"
+        );
     }
 }
