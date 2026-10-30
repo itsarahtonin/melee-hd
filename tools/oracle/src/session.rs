@@ -440,8 +440,9 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
     (compared, diffs)
 }
 
-/// The heap's image against memory at a tick's end: in every free block past its header and in
-/// every file the scene holds, the bytes the image knows, by where they come from.
+/// The heap's image against memory at a tick's end: in every free block past its header, in
+/// every file the scene holds and in every file the preload cache holds, the bytes the image
+/// knows, by where they come from.
 fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem: &[u8]) {
     let heap = &game.objs.heap;
     let img = &heap.image;
@@ -452,7 +453,17 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
         .map(|&(c, size)| (c + melee_sim::hsd::heap::HEADER, c + size))
         .collect();
     ranges.extend(img.live_runs());
+    ranges.extend(img.held_file_runs());
     ranges.sort_unstable();
+    // The held files can lie in a free cell: each byte once.
+    let mut merged: Vec<(u32, u32)> = Vec::new();
+    for (lo, hi) in ranges {
+        match merged.last_mut() {
+            Some(m) if lo <= m.1 => m.1 = m.1.max(hi),
+            _ => merged.push((lo, hi)),
+        }
+    }
+    let ranges = merged;
     let runs = img.runs();
     let kind_at = |a: u32| {
         let i = runs.partition_point(|r| r.1 <= a);
