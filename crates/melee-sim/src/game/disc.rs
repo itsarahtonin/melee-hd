@@ -241,7 +241,7 @@ impl Running<'_> {
                 && file != 0
                 && let Some(id) = self.game.ft.data.files.archive_id(name)
             {
-                crate::hsd::heap::with(|h| h.image.place_held(file, len, id));
+                crate::hsd::heap::with(|h| h.image.place_held(self.data, file, len, id));
             }
         }
         kept

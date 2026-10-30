@@ -40,6 +40,28 @@ impl<'a> Running<'a> {
         &bytes[ext.offset as usize..ext.offset as usize + size]
     }
 
+    /// The words at `offs` a character's creation writes over its loaded attributes
+    /// (`ftData::ext_attr`) before copying them, as the fighter's copy holds them: the heap's
+    /// image takes them where the scene read the character's file into its heap (a debug VS
+    /// match's, docs/engine.md).
+    pub(crate) fn image_ext_attrs(&self, f: FighterId, offs: &[usize]) {
+        if !crate::hsd::heap::image_on() {
+            return;
+        }
+        let fp = &self.game.fighters[f.0];
+        let ext = self
+            .data
+            .ptr(fp.ft_data.expect("a fighter without data").at(4))
+            .expect("ftData::ext_attr");
+        let a = &self.game.fighter_attrs[fp.dat_attrs.expect("a fighter without attributes").0];
+        crate::hsd::heap::with(|h| {
+            for &off in offs {
+                let w = u32::from_be_bytes(a[off..off + 4].try_into().expect("a word"));
+                h.image.file_word(ext.at(off as u32), w);
+            }
+        });
+    }
+
     /// Copies the character's attributes into the fighter's backup block and makes that its
     /// attributes (`PUSH_ATTRS`).
     pub(crate) fn push_attrs(&mut self, f: FighterId, size: usize) {

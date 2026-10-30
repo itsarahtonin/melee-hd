@@ -269,6 +269,12 @@ pub struct ActiveLight {
     pub shininess: f32,
     /// A specular light's position or direction in view space.
     pub lvec: crate::vec::Vec3,
+    /// The light's GX objects as the setup loaded them (`lightobj`, `spec_lightobj`): what
+    /// the setup doesn't write (a point light's direction, a specular object's half vector
+    /// before a joint sets it) is what the light's memory held, which a reused slot's renderer
+    /// state doesn't know.
+    pub light: lobj::GxLight,
+    pub spec: lobj::GxLight,
 }
 
 /// The lights of a [`Draw::Lights`]: the active table, the light masks and the view they
@@ -982,6 +988,8 @@ fn push_light_set(objs: &mut Objects, c: CObjId, after_render_mode: bool) {
                 spec_id: o.spec_id,
                 shininess: o.shininess,
                 lvec: o.lvec,
+                light: o.light,
+                spec: o.spec,
             }
         });
     }
