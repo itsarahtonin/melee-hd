@@ -773,7 +773,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             dtv: rec.dtv,
             sram_flags: rec.sram_flags,
             card_pull,
-            develop: Develop::from_recording(rec.develop),
+            develop: rec.developer(),
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");

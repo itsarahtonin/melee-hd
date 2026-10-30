@@ -71,13 +71,6 @@ pub struct Develop {
     pub ini: bool,
 }
 
-impl Develop {
-    /// A recording's level (`SSBMINP1`'s flags, ssbm-rs's `--develop`), which marks the file.
-    pub fn from_recording(level: Option<i32>) -> Option<Develop> {
-        level.map(|level| Develop { level, ini: true })
-    }
-}
-
 /// The SRAM flags of ssbm-rs's console, as Dolphin initializes them: stereo, setup done,
 /// bit 5 (`SSBMINP1` version 1's).
 pub const SRAM_FLAGS_DEFAULT: u8 = 0x2C;
