@@ -26,8 +26,8 @@ use common::{
     RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
     SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
     SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION,
-    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
+    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW, UNLOCK_TIME, VENOM,
+    YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -283,6 +283,11 @@ macro_rules! approach_frames {
 approach_frames!(UNLOCK_TIME;
     unlock_time_2720 2720,
     unlock_time_2870 2870,
+);
+// The approach's screen for Mr. Game & Watch (`unlock-sessions/gw`), the name texture's first
+// frame, waiting for A (2890).
+approach_frames!(UNLOCK_GW;
+    unlock_gw_2890 2890,
 );
 // Tournament mode (`tournament-sessions`): the setup's options with the bracket of 64 shown
 // (1300) and the bracket as it comes in (1600); the entrants' list with the character grid
