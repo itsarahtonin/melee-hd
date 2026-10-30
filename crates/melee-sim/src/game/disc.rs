@@ -249,7 +249,7 @@ impl Running<'_> {
 
     /// Whether the preload cache holds disc entry `entry_num` set up already (taken by an
     /// earlier scene since its read).
-    fn cached_set_up(&mut self, entry_num: i32) -> bool {
+    pub(crate) fn cached_set_up(&mut self, entry_num: i32) -> bool {
         self.dvd_mut().cache.entries.iter().any(|e| {
             e.state != 0
                 && e.load_score > 0
@@ -345,8 +345,12 @@ impl Running<'_> {
     ) -> (melee_data::archive::ArchiveId, u32, u32) {
         let (entrynum, len) = self.game.ft.data.files.entry(name);
         let (file, archive) = crate::hsd::heap::with(|h| h.archive_alloc(len)).unwrap_or((0, 0));
+        let id = self.game.ft.data.files.archive_id(name);
+        if let Some(id) = id {
+            self.game.it.file_read(self.data, id);
+        }
         if file != 0
-            && let Some(id) = self.game.ft.data.files.archive_id(name)
+            && let Some(id) = id
         {
             crate::hsd::heap::with(|h| h.hold_archive(self.data, file, len, archive, id));
         }
