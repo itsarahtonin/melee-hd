@@ -4,8 +4,9 @@
 //! (L, R or Start on any port leave for the main menu). Held at the entry, L lays the
 //! trophies in rows, R in rings without jitter, Y in a triangle; else in jittered rings.
 //!
-//! The debug view (one trophy at a time, its place edited, with a developer text: Z held at
-//! the entry with `DbLevel` at the debug ROM's or above) is deferred (`ledger/deferred.txt`).
+//! The debug view (Z held at the entry with `DbLevel` at the debug ROM's or above): one trophy
+//! at a time with its place in a debug text and the gallery's model beside it, its place
+//! moved and written into `TyDatai`'s display table.
 //! The display table's lookups the single-player modes use (`tyDisplay_8031C354` to
 //! `tyDisplay_8031C8B8`) come with them in milestone 6.
 
@@ -30,6 +31,8 @@ pub const ON_ENTER: CodeRef = CodeRef(0x8031_B460);
 pub const ON_FRAME: CodeRef = CodeRef(0x8031_B9A4);
 /// `_tyDisplay_8031A4EC`: the camera's process.
 pub const PROC_CAMERA: u32 = 0x8031_A4EC;
+/// `_tyDisplay_8031A94C`: the debug view's camera process.
+pub const PROC_DEBUG_CAMERA: u32 = 0x8031_A94C;
 /// `Toy_80306930`: the fog's render (`HSD_FogSet`).
 #[doc(alias = "Toy_80306930")]
 pub const RENDER_FOG: u32 = 0x8030_6930;
@@ -208,14 +211,32 @@ pub struct Collection {
     pub archives: Vec<Option<Loaded>>,
     pub x104: i16,
     /// `_tyDisplay_804D6F20`: the debug view (0 on a retail console); `_tyDisplay_804D6F28`
-    /// its B's frames.
+    /// its B's frames, which no entry resets.
     pub debug: i32,
     pub debug_b: i32,
+    /// `_tyDisplay_804D6F24`: the debug view's text, its trophy's place.
+    pub text: Option<u8>,
+    /// `_tyDisplay_804D6F2C`: the debug view's trophy as the gallery shows it, beside the
+    /// display model.
+    pub model: Option<GObjId>,
+    /// `_tyDisplay_804A2DD0` (`.bss`, kept from scene to scene): that trophy's model file
+    /// (`x8`, `xC`), the trophy (`x10`) and its archive (`x14`).
+    pub holder: Holder,
+}
+
+/// `_tyDisplay_804A2DD0` (a `ToyListEntry` without its links).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct Holder {
+    pub file: Option<DataRef>,
+    pub trophy: i16,
+    pub archive: Option<Loaded>,
 }
 
 /// `TyDspEntry`: a trophy's place in the display table (`tyDisplayModelTbl`).
 #[derive(Clone, Copy, Debug)]
 pub struct DspEntry {
+    /// Where it is in `TyDatai`.
+    pub at: DataRef,
     pub id: i32,
     pub category: u8,
     pub frame: u8,
@@ -279,11 +300,12 @@ impl Running<'_> {
         }
         let at = at.unwrap_or_else(|| find("tyDisplayModelTbl").0);
         DspEntry {
+            at,
             id: self.data.u32(at) as i32,
             category: self.data.u8(at.at(4)),
             frame: self.data.u8(at.at(5)),
-            x: self.data.f32(at.at(8)),
-            z: self.data.f32(at.at(0xC)),
+            x: f32::from_bits(self.datai_u32(at.at(8))),
+            z: f32::from_bits(self.datai_u32(at.at(0xC))),
         }
     }
 
@@ -717,18 +739,8 @@ impl Running<'_> {
         let _ = cobj::interest(o, data, c);
         let _ = cobj::eye_position(o, data, c);
         let mut fov = cobj::fov(&o.cobjs, Some(c));
-        let sx = self.toy_stick_x();
-        self.coll().stick[0] = sx;
-        let sy = self.toy_axis(1);
-        self.coll().stick[1] = sy;
+        self.coll_sticks();
         let col = self.coll();
-        col.stick = [dead_zone(col.stick[0]), dead_zone(col.stick[1])];
-        let cx = self.toy_axis(2);
-        self.coll().cstick[0] = cx;
-        let cy = self.toy_axis(3);
-        self.coll().cstick[1] = cy;
-        let col = self.coll();
-        col.cstick = [dead_zone(col.cstick[0]), dead_zone(col.cstick[1])];
         if col.wait != 0 {
             col.wait -= 1;
             return;
@@ -744,6 +756,31 @@ impl Running<'_> {
             self.game.toys.table.exit = 1;
             return;
         }
+        self.coll_turn(fov);
+        self.coll_zoom(c, &mut fov, 0x424, 0x848, 0x100);
+        self.coll_follow_turn();
+    }
+
+    /// The camera processes' sticks: the control stick (`x20`, `x24`) and the C stick
+    /// (`x30`, `x34`), each past its dead zone.
+    fn coll_sticks(&mut self) {
+        let sx = self.toy_stick_x();
+        self.coll().stick[0] = sx;
+        let sy = self.toy_axis(1);
+        self.coll().stick[1] = sy;
+        let col = self.coll();
+        col.stick = [dead_zone(col.stick[0]), dead_zone(col.stick[1])];
+        let cx = self.toy_axis(2);
+        self.coll().cstick[0] = cx;
+        let cy = self.toy_axis(3);
+        self.coll().cstick[1] = cy;
+        let col = self.coll();
+        col.cstick = [dead_zone(col.cstick[0]), dead_zone(col.cstick[1])];
+    }
+
+    /// The camera processes' turn: the stick's x turns the yaw, its y the pitch, faster
+    /// zoomed out, each within its bound.
+    fn coll_turn(&mut self, fov: f32) {
         let col = self.coll();
         let s = col.stick[0];
         if reg(s) != 0.0 {
@@ -773,23 +810,29 @@ impl Running<'_> {
                 col.pitch = col.pitch_max;
             }
         }
-        if self.toy_held() & 0x424 != 0 {
+    }
+
+    /// The camera processes' zoom: the field of view widened a step while `wider` is held
+    /// (to its bound), narrowed while `narrower` is, and the camera put back when `reset` is
+    /// pressed.
+    fn coll_zoom(&mut self, c: cobj::CObjId, fov: &mut f32, wider: u32, narrower: u32, reset: u32) {
+        if self.toy_held() & wider != 0 {
             let col = &self.game.toys.collection;
-            fov = mem(fp::fadds(reg(fov), reg(col.zoom_step)));
-            if reg(fov) > reg(col.fov_max) {
-                fov = col.fov_max;
+            *fov = mem(fp::fadds(reg(*fov), reg(col.zoom_step)));
+            if reg(*fov) > reg(col.fov_max) {
+                *fov = col.fov_max;
             }
-            cobj::set_fov(&mut self.game.objs.cobjs, Some(c), fov);
+            cobj::set_fov(&mut self.game.objs.cobjs, Some(c), *fov);
         }
-        if self.toy_held() & 0x848 != 0 {
+        if self.toy_held() & narrower != 0 {
             let col = &self.game.toys.collection;
-            fov = mem(fp::fsubs(reg(fov), reg(col.zoom_step)));
-            if reg(fov) < reg(col.fov_min) {
-                fov = col.fov_min;
+            *fov = mem(fp::fsubs(reg(*fov), reg(col.zoom_step)));
+            if reg(*fov) < reg(col.fov_min) {
+                *fov = col.fov_min;
             }
-            cobj::set_fov(&mut self.game.objs.cobjs, Some(c), fov);
+            cobj::set_fov(&mut self.game.objs.cobjs, Some(c), *fov);
         }
-        if self.toy_triggered() & 0x100 != 0 {
+        if self.toy_triggered() & reset != 0 {
             let col = &self.game.toys.collection;
             let (i, e, f) = (col.interest, col.eye, col.fov);
             let o = &mut self.game.objs;
@@ -800,6 +843,12 @@ impl Running<'_> {
             col.pitch = 0.0;
             cobj::set_eye_position(&mut self.game.objs, c, e);
         }
+    }
+
+    /// The camera processes' end: the camera's interest at the turn's angles from the eye's
+    /// x, 500 ahead, at the resting interest's depth.
+    fn coll_follow_turn(&mut self) {
+        let data = self.data;
         let cam = self.game.toys.collection.camera.expect("the camera");
         let Some(Obj::CObj(c2)) = self.game.world.gobj(cam).obj else {
             panic!("the collection's camera has no CObj");
@@ -865,6 +914,13 @@ impl Running<'_> {
                 w.set_obj(g, OBJ_LIGHT, Obj::LObj(l));
             }
             w.setup_gx_link(g, CodeRef(LOBJ_CALLBACK), 0x34, 0);
+            // The debug view's grey light (`_tyDisplay_color_C8C8C8FF`) on the list's first.
+            if self.game.toys.collection.debug != 0
+                && let Some(l) = l
+            {
+                let grey = [0xC8, 0xC8, 0xC8, 0xFF];
+                crate::hsd::lobj::set_color(&mut self.game.objs.lobjs, l, grey);
+            }
         }
         if let Some(desc) = self.coll_sym(a.id, "ScMenDisplay_fog") {
             let g = self.game.world.create(3, 4, 0);
@@ -925,7 +981,13 @@ impl Running<'_> {
         let cfg_block = alloc(0x80);
         let bg_block = alloc(0x108);
         let light_block = alloc(0xE4);
+        let (debug_b, holder) = (
+            self.game.toys.collection.debug_b,
+            self.game.toys.collection.holder,
+        );
         self.game.toys.collection = Collection {
+            debug_b,
+            holder,
             jobjs_block,
             jobjs: vec![None; JOBJS],
             grid_block,
@@ -947,16 +1009,19 @@ impl Running<'_> {
             0
         };
         self.coll().mode = mode;
-        // From the debug ROM's level, Z held: the debug view (`_tyDisplay_804D6F20`).
+        // From the debug ROM's level, Z held: the debug view (`_tyDisplay_804D6F20`), from
+        // the first trophy.
         if self.game.gm.db_level >= crate::game::gm::DB_DEBUG_ROM && self.toy_held() & 0x10 != 0 {
-            crate::game::code::unported_call(
-                "the trophy collection's debug view (_tyDisplay_8031C1D0)",
-            );
+            self.coll().debug = 1;
         }
         self.toy_scene_prepare();
         self.gal_reset_lights_block(light_block);
         let total = self.toy_total();
         self.coll().count = total;
+        if self.game.toys.collection.debug != 0 {
+            self.coll().count = 1;
+            self.coll_debug_text();
+        }
         self.coll_grid_size();
         let name = if self.saved_us() {
             "TyMnDisp.usd"
@@ -983,10 +1048,23 @@ impl Running<'_> {
         w.set_obj(g, OBJ_CAMERA, Obj::CObj(c));
         w.setup_gx_link_max(g, CodeRef(super::gallery::RENDER_CAMERA), 0, false);
         w.gobj_mut(g).gxlink_prios = 0x1230_0000_0000_0000;
-        w.setup_proc(g, CodeRef(PROC_CAMERA), 0);
+        let proc = if self.game.toys.collection.debug != 0 {
+            PROC_DEBUG_CAMERA
+        } else {
+            PROC_CAMERA
+        };
+        w.setup_proc(g, CodeRef(proc), 0);
         w.mark_ran(g);
         self.coll_lights();
         self.coll_table();
+        if self.game.toys.collection.debug != 0 {
+            self.coll_clear_grid();
+            let id = self.game.toys.collection.x7c;
+            let g = self.coll_trophy(id);
+            self.coll().last = Some(g);
+            self.coll_frame();
+            return;
+        }
         match mode {
             0 | 1 => self.coll_rings(mode),
             2 => {
@@ -1035,7 +1113,225 @@ impl Running<'_> {
         let stand = self.coll_sym(archive(self, 41), JOINTS[41]);
         let s = jobj::load_joint(&mut self.game.objs, data, stand);
         jobj::add_child(&mut self.game.objs.jobjs, Some(root), s);
+        // The debug view: the entry's place in its text, and the trophy as the gallery shows
+        // it beside.
+        if self.game.toys.collection.text.is_some() {
+            self.coll_debug_print(e.x, e.z);
+            self.coll_debug_model(id);
+        }
         g
+    }
+
+    /// The debug view's text: erased, then `X  %3.2f` and `Z  %3.2f` of a place.
+    fn coll_debug_print(&mut self, x: f32, z: f32) {
+        use crate::msl::Arg;
+        let t = self
+            .game
+            .toys
+            .collection
+            .text
+            .expect("the debug view's text");
+        let s = crate::msl::vsprintf(
+            b"X  %3.2f\nZ  %3.2f",
+            &[Arg::Float(f64::from(x)), Arg::Float(f64::from(z))],
+        );
+        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        text.erase();
+        text.set_cursor_xy(0, 0);
+        text.print(&s);
+    }
+
+    /// `_tyDisplay_8031C1D0`: the debug view's text (id 1, at 40, 40, 9 by 3 cells): shown
+    /// without a cursor or wrapping, blue, its cells 12 by 18, light grey `X  0.00` and
+    /// `Z  0.00`.
+    #[doc(alias = "_tyDisplay_8031C1D0")]
+    fn coll_debug_text(&mut self) {
+        use crate::msl::Arg;
+        let t = self.game.hud.devtext.create(1, 40, 40, 9, 3);
+        self.coll().text = t;
+        let Some(t) = t else {
+            return;
+        };
+        self.game.hud.devtext.show(t);
+        let text = &mut self.game.hud.devtext.pool[usize::from(t)];
+        text.hide_cursor();
+        text.no_wrap();
+        text.set_bg_color([0x40, 0x80, 0xD0, 0x60]);
+        text.set_scale(12.0, 18.0);
+        text.erase();
+        text.set_cursor_xy(0, 0);
+        text.store_color_index(0);
+        text.set_text_color([0xE2, 0xE2, 0xE2, 0xFF]);
+        let s = crate::msl::vsprintf(b"X  %3.2f\nZ  %3.2f", &[Arg::Float(0.0), Arg::Float(0.0)]);
+        text.print(&s);
+    }
+
+    /// `_tyDisplay_8031BA78(id, axis, v)`: a trophy's display entry's x (`axis` 0) or z (2)
+    /// set to `v`, written into `TyDatai`, and the debug view's text.
+    #[doc(alias = "_tyDisplay_8031BA78")]
+    fn coll_debug_place(&mut self, id: i32, axis: i32, v: f32) {
+        let at = self.coll_entry(id).at;
+        match axis {
+            0 => self.datai_write(at.at(8), v.to_bits()),
+            2 => self.datai_write(at.at(0xC), v.to_bits()),
+            _ => {}
+        }
+        if self.game.toys.collection.text.is_some() {
+            let e = self.coll_entry(id);
+            self.coll_debug_print(e.x, e.z);
+        }
+    }
+
+    /// `_tyDisplay_8031BF34(id)`: the trophy as the gallery shows it: the last one's archive
+    /// let go, its model file into `_tyDisplay_804A2DD0` and loaded (`Toy_80308250`), shown
+    /// (`Toy_803087F4`) on its first stand, at six tenths and 12 to the right.
+    #[doc(alias = "_tyDisplay_8031BF34")]
+    fn coll_debug_model(&mut self, id: i32) {
+        if self.game.toys.collection.model.is_some()
+            && let Some(a) = self.coll().holder.archive.take()
+        {
+            self.toy_free(a);
+        }
+        // `Toy_80308250(holder, id, 0)`.
+        let trophy = id as i16;
+        let file = self.toy_model_file(i32::from(trophy));
+        if let Some(a) = self.coll().holder.archive.take() {
+            self.toy_free(a);
+        }
+        let name = self.toy_file_name(file);
+        let l = self.toy_load(&name);
+        self.coll().holder = Holder {
+            file: Some(file),
+            trophy,
+            archive: Some(l),
+        };
+        let (g, a) = self.toy_show(file, trophy, Some(l));
+        self.coll().holder.archive = Some(a);
+        self.coll().model = Some(g);
+        let an = self.game.toys.anim;
+        let jobjs = &mut self.game.objs.jobjs;
+        jobj::clear_flags_all(jobjs, an.jobj[0], jobj::HIDDEN);
+        jobj::set_flags_all(jobjs, an.jobj[1], jobj::HIDDEN);
+        jobj::clear_flags_all(jobjs, an.jobj[0], jobj::HIDDEN);
+        let Some(Obj::JObj(j)) = self.game.world.gobj(g).obj else {
+            panic!("the debug view's trophy has no joint");
+        };
+        jobj::set_srt(jobjs, j, |o| o.scale.x = 0.6);
+        jobj::set_srt(jobjs, j, |o| o.scale.y = 0.6);
+        jobj::set_srt(jobjs, j, |o| o.scale.z = 0.6);
+        jobj::set_srt(jobjs, j, |o| {
+            o.translate.x = mem(fp::fadds(reg(o.translate.x), reg(12.0)));
+        });
+    }
+
+    /// The debug view's trophy's model (`GET_JOBJ(x78)->child`).
+    fn coll_debug_child(&self) -> JObjId {
+        let last = self
+            .game
+            .toys
+            .collection
+            .last
+            .expect("the debug view's trophy");
+        let Some(Obj::JObj(root)) = self.game.world.gobj(last).obj else {
+            panic!("the debug view's trophy has no joint");
+        };
+        self.game.objs.jobjs[root]
+            .child
+            .expect("the trophy's model")
+    }
+
+    /// `_tyDisplay_8031A94C`, the debug view's camera process: the sticks past their dead
+    /// zones; B held two seconds leaves; A with the stick past 0.8, or the D-pad, moves the
+    /// trophy a hundredth in its entry; R and L show the next and the last trophy; else the
+    /// stick turns the camera (without A), the C stick's y raises or lowers the eye, X and Y
+    /// zoom, Start puts it back; the interest follows the turn.
+    #[doc(alias = "_tyDisplay_8031A94C")]
+    pub fn coll_debug_camera_proc(&mut self, gobj: GObjId) {
+        let data = self.data;
+        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
+            panic!("the collection's camera has no CObj");
+        };
+        let o = &mut self.game.objs;
+        let _ = cobj::interest(o, data, c);
+        let mut eye = cobj::eye_position(o, data, c).expect("the camera's eye");
+        let mut fov = cobj::fov(&o.cobjs, Some(c));
+        self.coll_sticks();
+        let col = self.coll();
+        if col.wait != 0 {
+            col.wait -= 1;
+            return;
+        }
+        if self.toy_held() & 0x200 != 0 {
+            self.coll().debug_b += 1;
+            if self.game.toys.collection.debug_b > 0x78 {
+                self.lb_audio_call(0);
+                self.game.toys.table.exit = 1;
+            }
+            return;
+        }
+        self.coll().debug_b = 0;
+        // Left, right, back and forward: A with the stick past 0.8, or the D-pad pressed.
+        let stick = self.game.toys.collection.stick;
+        for (axis, step, past, pad) in [
+            (0, -0.01, reg(stick[0]) < reg(-0.8), 1),
+            (0, 0.01, reg(stick[0]) > reg(0.8), 2),
+            (2, -0.01, reg(stick[1]) > reg(0.8), 8),
+            (2, 0.01, reg(stick[1]) < reg(-0.8), 4),
+        ] {
+            if (self.toy_held() & 0x100 != 0 && past) || self.toy_triggered() & pad != 0 {
+                let j = self.coll_debug_child();
+                let jobjs = &mut self.game.objs.jobjs;
+                let v = if axis == 0 {
+                    jobj::set_srt(jobjs, j, |o| {
+                        o.translate.x = mem(fp::fadds(reg(o.translate.x), reg(step)));
+                    });
+                    jobjs[j].translate.x
+                } else {
+                    jobj::set_srt(jobjs, j, |o| {
+                        o.translate.z = mem(fp::fadds(reg(o.translate.z), reg(step)));
+                    });
+                    jobjs[j].translate.z
+                };
+                let id = self.game.toys.collection.x7c;
+                self.coll_debug_place(id, axis, v);
+            }
+        }
+        for (pad, next) in [(0x20, true), (0x40, false)] {
+            if self.toy_triggered() & pad != 0 {
+                let last = self.coll().last.take().expect("the debug view's trophy");
+                gobj::free(self, last);
+                let col = self.coll();
+                col.x7c = if next {
+                    if col.x7c + 1 >= super::TROPHY_COUNT as i32 {
+                        0
+                    } else {
+                        col.x7c + 1
+                    }
+                } else if col.x7c - 1 < 0 {
+                    0x124
+                } else {
+                    col.x7c - 1
+                };
+                let id = col.x7c;
+                let g = self.coll_trophy(id);
+                self.coll().last = Some(g);
+                return;
+            }
+        }
+        if self.toy_held() & 0x100 == 0 {
+            self.coll_turn(fov);
+        }
+        let cy = self.game.toys.collection.cstick[1];
+        if reg(cy) > reg(0.8) {
+            eye.y = mem(fp::fadds(reg(eye.y), reg(1.0)));
+            cobj::set_eye_position(&mut self.game.objs, c, eye);
+        }
+        if reg(cy) < reg(-0.8) {
+            eye.y = mem(fp::fsubs(reg(eye.y), reg(1.0)));
+            cobj::set_eye_position(&mut self.game.objs, c, eye);
+        }
+        self.coll_zoom(c, &mut fov, 0x400, 0x800, 0x1000);
+        self.coll_follow_turn();
     }
 
     /// `tyDisplay_Scene_OnFrame`: once the table says so, the collection let go
@@ -1061,6 +1357,19 @@ impl Running<'_> {
         g.fog = None;
         if let Some(c) = self.coll().camera.take() {
             self.game.world.remove_all_procs(c);
+        }
+        // The debug view's trophy and text. `DevText_Remove(&_tyDisplay_804D6F24)`: the
+        // static stands for the list's link, so a screen first in the draw list stays its
+        // head ([`Link::Held`](crate::game::hud::devtext::Link::Held)).
+        if let Some(m) = self.coll().model.take() {
+            if let Some(a) = self.coll().holder.archive.take() {
+                self.toy_free(a);
+            }
+            gobj::free(self, m);
+        }
+        if let Some(t) = self.coll().text.take() {
+            use crate::game::hud::devtext::Link;
+            self.game.hud.devtext.remove(Link::Held(t));
         }
         self.game.end_scene();
     }
