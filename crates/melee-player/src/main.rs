@@ -684,10 +684,7 @@ impl Platform {
         self.feed = feed;
         self.after(next);
         self.replay(&mut s.game);
-        if let (Some(k), Some(card)) = (
-            &mut self.kept,
-            s.card.as_ref().and_then(|c| c.card.as_ref()),
-        ) {
+        if let (Some(k), Some(card)) = (&mut self.kept, s.card.as_ref().and_then(|c| c.card())) {
             for name in k.update(card.image()) {
                 eprintln!("saved {name}");
             }
@@ -727,7 +724,7 @@ impl Drop for Session {
         }
         if let (Some(p), power::Run::Console(s)) = (&self.console, &self.run)
             && let Some(path) = &p.card_after
-            && let Some(card) = s.card.as_ref().and_then(|c| c.card.as_ref())
+            && let Some(card) = s.card.as_ref().and_then(|c| c.card())
         {
             match std::fs::write(path, card.image()) {
                 Ok(()) => eprintln!("the card after the session: {}", path.display()),
@@ -787,6 +784,8 @@ impl Session {
                     dtv: r.dtv,
                     sram_flags: r.sram_flags,
                     card_pull: None,
+                    card_b: None,
+                    card_b_pull: None,
                     develop: r.developer(),
                 };
                 (setup, None, Some((r.reads, 0)))

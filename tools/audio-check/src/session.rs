@@ -104,6 +104,8 @@ pub fn run(args: &[String]) -> Result<bool, String> {
         dtv: rec.dtv,
         sram_flags: rec.sram_flags,
         card_pull: None,
+        card_b: None,
+        card_b_pull: None,
         develop: rec.developer(),
     };
     let disc_path = std::env::var("SSBM_DISC").map_err(|_| "SSBM_DISC names the disc")?;

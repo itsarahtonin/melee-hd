@@ -29,9 +29,10 @@ pub const IMAGE_SIZE: u32 = 0x96000;
 pub enum ListEnd {
     #[default]
     Nothing,
-    /// A read: the file's data, comment, banner and icons as it wrote them, into the
-    /// snapshot's buffer, `lbSnap_80433380.filename` and `LbMcSnap`'s icon data.
-    Read(ReadInto),
+    /// A read: the file's data, comment, banner and icons as it writes them, into the
+    /// snapshot's buffer, `lbSnap_80433380.filename` and `LbMcSnap`'s icon data, each part at
+    /// the step whose read brings it (`puts`), `into` what the steps so far wrote.
+    Read { into: ReadInto, puts: Vec<ReadPut> },
     /// A swap's renames, run on the card now with the times its stamps took.
     Swap {
         tasks: Vec<Vec<u8>>,
@@ -50,9 +51,51 @@ pub struct ReadInto {
     pub icons: Vec<u8>,
 }
 
-/// A list the album started and steps through: its steps, the next, and its end.
+/// A copy a read's step makes into its buffers: the step, the buffer (0 the file's data,
+/// 1 the comment, 2 the banner, 3 the icons), where in it, and the bytes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct ReadPut {
+    pub step: usize,
+    pub buf: u8,
+    pub off: u32,
+    pub bytes: Vec<u8>,
+}
+
+/// The step of a list's steps (as `save_steps` makes them) each entry of the HSD layer's log
+/// falls in: a transfer's own, else the last transfer's (0, the list's first, before any).
+fn log_steps(log: &[u8]) -> Vec<usize> {
+    let mut out = Vec::with_capacity(log.len());
+    let mut idx = 1usize;
+    let mut cur = 0usize;
+    let mut tasks = 0;
+    let mut transfers = false;
+    for &c in log {
+        match c {
+            b't' => {
+                if tasks > 0 && transfers {
+                    cur = idx;
+                    idx += 1;
+                }
+                tasks += 1;
+                transfers = false;
+            }
+            b'r' | b'w' | b's' | b'c' => {
+                transfers = true;
+                cur = idx;
+                idx += 1;
+            }
+            _ => {}
+        }
+        out.push(cur);
+    }
+    out
+}
+
+/// A list the album started and steps through on slot `chan`: its steps, the next, and its
+/// end.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AlbumList {
+    pub chan: usize,
     pub list: CardList,
     pub next: usize,
     pub end: ListEnd,
@@ -229,13 +272,12 @@ impl Running<'_> {
     /// Starts one of the album's lists on slot `chan`: the mount at once, the steps left for
     /// [`Running::snap_task_step`]. Busy, or the mount's failure.
     fn snap_list_start(&mut self, chan: usize, tasks: Vec<(Task, u32)>, kind: ListKind) -> i32 {
-        if chan != 0 {
-            return self.run_card_list_slot_b(&tasks);
-        }
         if self.game.snap_read.list.is_some() {
             unported_call("an album list started while another runs");
         }
         self.card_alarm_probes();
+        // `resetState`: no file has a result yet.
+        self.game.card_tasks.file_errors = [result::START; 9];
         let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
         let seconds = self.session_seconds();
         let run = Run::new(
@@ -243,13 +285,14 @@ impl Running<'_> {
             melee_save::exec::Bufs::default(),
         );
         let (mut list, run) = match kind {
-            ListKind::Swap => super::save::start_list_dry_run(run, &tasks, now, seconds),
-            _ => super::save::start_list_run(run, &tasks, now, seconds),
+            ListKind::Swap => super::save::start_list_dry_run(chan, run, &tasks, now, seconds),
+            _ => super::save::start_list_run(chan, run, &tasks, now, seconds),
         };
         for &w in &list.start {
             self.game.audio.clock_card_work(self.data, w);
         }
         if !list.card_in {
+            self.game.card_tasks.saved_error = list.result;
             return list.result;
         }
         // The CARD library's own tasks (a delete, the renames) transfer from the call that
@@ -267,8 +310,12 @@ impl Running<'_> {
         let mut added = 0;
         for (k, t) in ran.iter().enumerate() {
             let chain = match t {
-                Task::Delete(_) => CardChain::Delete { first: CARD_ERASE },
-                _ => STATUS_SET,
+                Task::Delete(_) => CardChain::Delete {
+                    first: CARD_ERASE,
+                    slot_b: false,
+                }
+                .on(chan),
+                _ => STATUS_SET.on(chan),
             };
             // The open after this task (a swap's): the step that starts it, else the
             // list's end.
@@ -299,12 +346,32 @@ impl Running<'_> {
             }
         }
         let end = match kind {
-            ListKind::Read => ListEnd::Read(ReadInto {
-                data: run.bufs.files[0].clone(),
-                comment: run.bufs.comment.clone(),
-                banner: run.bufs.banner.clone(),
-                icons: run.bufs.icons.clone(),
-            }),
+            ListKind::Read => {
+                let at = log_steps(&run.steps);
+                let puts = run
+                    .puts
+                    .iter()
+                    .filter_map(|(n, p, bytes)| {
+                        let buf = match p.buf {
+                            melee_save::hsd::Buf::File(0) => 0,
+                            melee_save::hsd::Buf::Comment => 1,
+                            melee_save::hsd::Buf::Banner => 2,
+                            melee_save::hsd::Buf::Icons => 3,
+                            _ => return None,
+                        };
+                        Some(ReadPut {
+                            step: n.checked_sub(1).map_or(0, |i| at[i]),
+                            buf,
+                            off: p.off,
+                            bytes: bytes.clone(),
+                        })
+                    })
+                    .collect();
+                ListEnd::Read {
+                    into: ReadInto::default(),
+                    puts,
+                }
+            }
             ListKind::Swap => ListEnd::Swap {
                 tasks: tasks
                     .iter()
@@ -319,14 +386,33 @@ impl Running<'_> {
             },
             ListKind::Delete => ListEnd::Nothing,
         };
-        self.game.snap_read.list = Some(AlbumList { list, next: 0, end });
+        self.game.snap_read.list = Some(AlbumList {
+            chan,
+            list,
+            next: 0,
+            end,
+        });
         result::BUSY
+    }
+
+    /// `lbCardNew_CompleteNextTask` from the album and Camera Mode: a step of the list under
+    /// way (the album's read, delete or swap, or a snapshot's save), busy until its last; with
+    /// none, its wait point and the last list's result (`saved_error`).
+    pub fn card_next_task(&mut self) -> i32 {
+        if self.game.snap_read.list.is_some() {
+            return self.snap_task_step();
+        }
+        if self.game.snap_write.save.is_some() {
+            return self.snap_save_step();
+        }
+        self.card_complete_all_tasks();
+        self.game.card_tasks.saved_error
     }
 
     /// `lbCardNew_CompleteNextTask` for the album's list: its wait point and the next step's
     /// transfers; busy until its last step, which returns the list's result and, for a read,
-    /// hands its bytes to the buffers. With no list it returns the last list's result.
-    pub fn snap_task_step(&mut self) -> i32 {
+    /// hands its bytes to the buffers.
+    fn snap_task_step(&mut self) -> i32 {
         let Some(l) = self.game.snap_read.list.as_mut() else {
             unported_call("lbCardNew_CompleteNextTask with no album list")
         };
@@ -345,6 +431,32 @@ impl Running<'_> {
             self.game.card_tasks.file_errors[f] = e;
         }
         self.game.audio.clock_card_work(self.data, work);
+        // A read's bytes reach their buffers in the step whose read brings them.
+        let into = match self.game.snap_read.list.as_mut() {
+            Some(AlbumList {
+                end: ListEnd::Read { into, puts },
+                ..
+            }) if puts.iter().any(|p| p.step == k) => {
+                for p in puts.iter().filter(|p| p.step == k) {
+                    let b = match p.buf {
+                        0 => &mut into.data,
+                        1 => &mut into.comment,
+                        2 => &mut into.banner,
+                        _ => &mut into.icons,
+                    };
+                    let (lo, hi) = (p.off as usize, p.off as usize + p.bytes.len());
+                    if b.len() < hi {
+                        b.resize(hi, 0);
+                    }
+                    b[lo..hi].copy_from_slice(&p.bytes);
+                }
+                Some(into.clone())
+            }
+            _ => None,
+        };
+        if let Some(into) = into {
+            self.snap_read_into(into);
+        }
         let stamped = matches!(&self.game.snap_read.list, Some(AlbumList { end: ListEnd::Swap { stamps, .. }, .. }) if stamps.contains(&k));
         if stamped {
             let now = self.session_seconds();
@@ -361,9 +473,9 @@ impl Running<'_> {
         }
         let l = self.game.snap_read.list.take().expect("the album's list");
         let r = l.list.result;
+        self.game.card_tasks.saved_error = r;
         match l.end {
-            ListEnd::Nothing => {}
-            ListEnd::Read(read) => self.snap_read_into(read),
+            ListEnd::Nothing | ListEnd::Read { .. } => {}
             ListEnd::Swap {
                 tasks,
                 seconds,
@@ -377,8 +489,13 @@ impl Running<'_> {
                     melee_save::melee::snapshot_manifest(0),
                     melee_save::exec::Bufs::default(),
                 );
-                let written =
-                    super::save::finish_list(run, &lists::swap(&a, &b, &c), seconds, &times);
+                let written = super::save::finish_list(
+                    l.chan,
+                    run,
+                    &lists::swap(&a, &b, &c),
+                    seconds,
+                    &times,
+                );
                 assert_eq!(written, r, "the swap's list ended otherwise on the card");
             }
         }

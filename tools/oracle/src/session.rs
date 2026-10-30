@@ -638,6 +638,9 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut card_path: Option<PathBuf> = None;
     let mut card_after: Option<PathBuf> = None;
     let mut card_pull: Option<(u64, Option<u64>)> = None;
+    let mut card_b_path: Option<PathBuf> = None;
+    let mut card_b_after: Option<PathBuf> = None;
+    let mut card_b_pull: Option<(u64, Option<u64>)> = None;
     let mut dblevel: Option<i32> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
@@ -652,14 +655,12 @@ pub fn session(args: &[&str]) -> ExitCode {
             // The card as the original's run left it: the session's card at the trace's end
             // must equal it, byte for byte (the saves the session wrote).
             "--card-after" => card_after = Some(it.next().expect("--card-after FILE").into()),
-            "--card-pull" => {
-                let mut f = it
-                    .next()
-                    .expect("--card-pull FIELD[,FIELD]")
-                    .split(',')
-                    .map(|f| f.parse::<u64>().expect("--card-pull FIELD[,FIELD]"));
-                card_pull = Some((f.next().unwrap(), f.next()));
-            }
+            "--card-pull" => card_pull = Some(pull_arg(it.next(), "--card-pull")),
+            // A card in slot B (ssbm-rs's `--card-b`, which recordings don't keep), the card
+            // the original's run left there, and its pull (`CARD_REMOVE_B`).
+            "--card-b" => card_b_path = Some(it.next().expect("--card-b FILE").into()),
+            "--card-b-after" => card_b_after = Some(it.next().expect("--card-b-after FILE").into()),
+            "--card-b-pull" => card_b_pull = Some(pull_arg(it.next(), "--card-b-pull")),
             // The debug level alone, as ssbm-rs's `DBLEVEL=N` raises it for a run whose
             // recording doesn't keep it (no `/develop.ini` found).
             "--dblevel" => {
@@ -742,7 +743,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--dblevel N] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
@@ -771,6 +772,14 @@ pub fn session(args: &[&str]) -> ExitCode {
         },
         None => None,
     };
+    let card_b = match card_b_path.map(|p| std::fs::read(&p).map_err(|e| (p, e))) {
+        Some(Ok(b)) => Some(b),
+        Some(Err((p, e))) => {
+            eprintln!("the memory card {}: {e}", p.display());
+            return ExitCode::from(2);
+        }
+        None => None,
+    };
     let mut setup = match rec.disc() {
         Ok(disc) => Setup {
             disc,
@@ -783,6 +792,8 @@ pub fn session(args: &[&str]) -> ExitCode {
             dtv: rec.dtv,
             sram_flags: rec.sram_flags,
             card_pull,
+            card_b,
+            card_b_pull,
             develop: rec.developer(),
         },
         Err(e) => {
@@ -866,7 +877,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         heap_log,
         image_ticks,
         snapshot_ticks,
-        card_after,
+        card_after: [card_after, card_b_after],
     };
     run.play(setup)
 }
@@ -927,10 +938,10 @@ struct Run<'a> {
     image_ticks: Vec<u32>,
     /// The ticks to measure a snapshot at.
     snapshot_ticks: Vec<u32>,
-    /// The card as ssbm-rs's run left it (its recording's `NAME-run.card`), to check the
-    /// card melee-hd's run leaves against at the trace's end: the saves it wrote, byte for
-    /// byte.
-    card_after: Option<PathBuf>,
+    /// The cards in slots A and B as ssbm-rs's run left them (its recording's `NAME-run.card`),
+    /// to check the cards melee-hd's run leaves against at the trace's end: the saves it
+    /// wrote, byte for byte.
+    card_after: [Option<PathBuf>; 2],
 }
 
 impl Run<'_> {
@@ -1235,20 +1246,23 @@ impl Run<'_> {
                 println!("leftover {l}");
             }
         }
-        if stop.is_none()
-            && let Some(path) = &self.card_after
-        {
+        for (chan, path) in self.card_after.iter().enumerate() {
+            let Some(path) = path.as_ref().filter(|_| stop.is_none()) else {
+                continue;
+            };
+            // Slot A's lines as they were; slot B's say so.
+            let slot = ["", " in slot B"][chan];
             let want = std::fs::read(path)
                 .unwrap_or_else(|e| panic!("the card after {}: {e}", path.display()));
             let have = s
                 .card
                 .as_ref()
-                .and_then(|d| d.card.as_ref())
+                .and_then(|d| d.slots[chan].card.as_ref())
                 .map(|c| c.image());
             match have {
                 Some(h) if h == &want[..] => {
                     println!(
-                        "the card after the session: the original's, {} bytes",
+                        "the card{slot} after the session: the original's, {} bytes",
                         h.len()
                     )
                 }
@@ -1257,14 +1271,14 @@ impl Run<'_> {
                         .filter(|&i| h[i] != want[i])
                         .collect();
                     println!(
-                        "{compared} ticks compared; the card after the session differs in {} bytes, first at {:#x}",
+                        "{compared} ticks compared; the card{slot} after the session differs in {} bytes, first at {:#x}",
                         diffs.len(),
                         diffs.first().copied().unwrap_or(0)
                     );
                     return ExitCode::FAILURE;
                 }
                 None => {
-                    println!("{compared} ticks compared; the session has no card to compare");
+                    println!("{compared} ticks compared; the session has no card{slot} to compare");
                     return ExitCode::FAILURE;
                 }
             }
@@ -1295,4 +1309,16 @@ impl Run<'_> {
             }
         }
     }
+}
+
+/// A card pull's fields, `F[,G]`: out at video field F, back at G (or never).
+pub fn pull_arg(arg: Option<&&str>, flag: &str) -> (u64, Option<u64>) {
+    let mut f = arg
+        .unwrap_or_else(|| panic!("{flag} FIELD[,FIELD]"))
+        .split(',')
+        .map(|f| {
+            f.parse::<u64>()
+                .unwrap_or_else(|_| panic!("{flag} FIELD[,FIELD]"))
+        });
+    (f.next().unwrap(), f.next())
 }

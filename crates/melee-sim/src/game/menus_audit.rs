@@ -167,14 +167,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the Multi-Man list, behind the Multi-Man Melee gate",
     ),
     (
-        "a copy's list waited for as the card goes",
-        "the album's copy states (15, 16) start only with a card in the other slot, and the player's console has slot B empty (melee-player's power::setup)",
-    ),
-    (
-        "a snapshot copied to the other slot",
-        "a copy needs a card in the other slot, and the player's console has slot B empty (melee-player's power::setup)",
-    ),
-    (
         "the slot's image pointing at an album image",
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
