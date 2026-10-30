@@ -393,8 +393,38 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
     {
         let display = pobjs[p].display.expect("a shape without a display list");
         pobjs.refract_patches.insert(display, patch);
+        if super::heap::image_on() {
+            let list = refract_list(data, display, pobjs[p].n_display, patch);
+            super::heap::with(|h| h.image.file_bytes(display, &list));
+        }
     }
     Some(p)
+}
+
+/// The display list `lbRefract_PObjLoad` leaves in the loaded file, for the heap's image where
+/// the scene loaded the file into its heap (a debug VS match's fighters): each vertex's last
+/// texture-matrix index a copy of its position-matrix index, through every primitive until
+/// the list's end or a command without one (`(cmd & 0xF8) == 0`).
+fn refract_list(data: &Archives, display: DataRef, n_display: u16, patch: (u8, u8, u8)) -> Vec<u8> {
+    let (stride, pnmtx, last) = (patch.0 as usize, patch.1 as usize, patch.2 as usize);
+    let total = usize::from(n_display) << 5;
+    let a = data.get(display.archive).data();
+    let mut list = a[display.offset as usize..][..total].to_vec();
+    let mut at = 0;
+    while at < total {
+        let cmd = list[at];
+        at += 1;
+        if cmd & 0xF8 == 0 {
+            break;
+        }
+        let count = usize::from(u16::from_be_bytes([list[at], list[at + 1]]));
+        at += 2;
+        for _ in 0..count {
+            list[at + last] = list[at + pnmtx];
+            at += stride;
+        }
+    }
+    list
 }
 
 /// `lbRefract_PObjLoad`'s part after HAL's loader: for a shape flagged 0x2000 with a

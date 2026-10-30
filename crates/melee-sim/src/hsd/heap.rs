@@ -1308,6 +1308,7 @@ impl Heap {
                 base: file + 0x20,
             },
         );
+        self.image.hold_externs(data, file, archive);
         if header != 0 {
             super::export::archive(&mut self.image, data, header, file, len, archive);
         }

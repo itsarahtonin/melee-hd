@@ -34,6 +34,8 @@ impl Running<'_> {
         }
         self.push_attrs(f, attr::SIZE);
         self.dk_patch_cargo_walk_frames(f);
+        let c = attr::CARGO_WALK_FRAMES;
+        self.image_ext_attrs(f, &[c, c + 4, c + 8]);
         let fp = &mut self.game.fighters[f.0];
         fp.x2222_b0 = true;
         fp.x2CC = fp.dat_attrs;

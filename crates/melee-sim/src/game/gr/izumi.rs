@@ -675,15 +675,36 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
         Some(b) => b,
         None => crate::hsd::heap::mem_alloc(buffer_len),
     };
+    let desc = super::stadium::screen_image(w, h, 4);
+    image_reflection_desc(image.expect("the mirror image desc"), &desc, buffer);
     r.game.gr.izumi.reflection = Some(Reflection {
         texture_matrix: None,
         image,
-        desc: super::stadium::screen_image(w, h, 4),
+        desc,
         addr,
         buffer,
         buffer_len,
     });
     gobj
+}
+
+/// The reflection's descriptor as the stage writes it over the archive's (`memzero`, then
+/// `lb_800121FC`), into the heap's image where it holds the stage's file: the buffer's
+/// address where the model gives it, the size and format, the rest zero.
+fn image_reflection_desc(at: DataRef, desc: &crate::game::structs::HSD_ImageDesc, buffer: u32) {
+    if !crate::hsd::heap::image_on() {
+        return;
+    }
+    let mut b = [0u8; 0x18];
+    b[4..6].copy_from_slice(&desc.width.to_be_bytes());
+    b[6..8].copy_from_slice(&desc.height.to_be_bytes());
+    b[8..12].copy_from_slice(&desc.format.to_be_bytes());
+    crate::hsd::heap::with(|h| {
+        h.image.file_bytes(at.at(4), &b[4..]);
+        if buffer != 0 {
+            h.image.file_word(at, buffer);
+        }
+    });
 }
 
 /// The reflection camera's render callback, `grIzumi_801CCEA0`: the fighters drawn with the
