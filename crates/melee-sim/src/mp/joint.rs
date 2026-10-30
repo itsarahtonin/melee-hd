@@ -640,6 +640,8 @@ impl<K: Kinds> Geometry<K> {
                 }
             }
         }
+        let groups = (0..5).flat_map(|g| self.group(j0, g).chain(self.group(j1, g)));
+        self.image_lines(groups);
     }
 
     /// Links every pair of enabled, shown joints, `mpLib_80058560`.
