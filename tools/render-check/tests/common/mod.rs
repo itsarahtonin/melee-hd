@@ -91,6 +91,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("unlock-") {
                     return ssbm_rs_local(&format!("lockstep/unlock-sessions/{o}.inputs")).into();
                 }
+                if name.starts_with("tie") {
+                    return ssbm_rs_local(&format!("lockstep/tie-sessions/{name}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("tou-") {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
                         .into();
@@ -817,6 +820,25 @@ pub const RESULTS_PILLS: Game = Game {
     name: "results-pills",
     players: "Dr. Mario's results pose with his pills (session results-sessions/pills)",
     replay: Replay::Session("results-pills"),
+};
+
+/// The character select after a three-way tie for second under the automatic handicap
+/// (`tie-sessions/tie3-time`): the winner's handicap moved by a stack byte the retrace count
+/// indexes.
+pub const TIE3_TIME: Game = Game {
+    stage: "Character select",
+    name: "tie-tie3-time",
+    players: "the handicaps after a tie for second (session tie-sessions/tie3-time)",
+    replay: Replay::Session("tie3-time"),
+};
+
+/// The character select after a tie for second of three under the automatic handicap
+/// (`tie-sessions/tie4-stock`): the winner's and port 3's handicaps moved.
+pub const TIE4_STOCK: Game = Game {
+    stage: "Character select",
+    name: "tie-tie4-stock",
+    players: "the handicaps after a three-way tie for second (session tie-sessions/tie4-stock)",
+    replay: Replay::Session("tie4-stock"),
 };
 
 /// The challenger approach's screen (`unlock-sessions/time`): "A new foe has appeared!" with

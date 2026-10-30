@@ -303,8 +303,20 @@ pub const STOPS: &[(&str, &str)] = &[
         "only the Slippi recorder's copy of the results scores outside a tick, and the player records no Bonus match (melee-player's Platform::replay drops its recorder at the match's first frame)",
     ),
     (
-        "fn_80169000 reading place",
-        "Open: reachable under the automatic handicap with three or more players and a tie for a place; Melee reads a stack word it never set there (docs/melee-bugs.md, the automatic handicaps after a tie), which melee-hd doesn't model",
+        "after a flush that didn't wait",
+        "the results screen's scene ends after its rounds, each of which copies a frame, so the flush at its loop's end always waits for the copy to show (only a scene that ends at once, `unk_C` 2, doesn't)",
+    ),
+    (
+        "whose stack isn't modelled",
+        "Open: a tie for a place under the automatic handicap in Tournament's next match-up, Camera Mode's match exit or a Special Melee mode's results' exit reads the stack above fn_80169000's handicaps, whose frames are modelled only for VS mode's results' exit (docs/melee-bugs.md, the automatic handicaps after a tie)",
+    ),
+    (
+        "fn_80169000 moving handicaps",
+        "Open: a tie whose unset place's byte indexes a zero byte of a register the exit's callers restore (runGameMode's r25 to r27, gm_801A4510's r27, r28 and r31) moves it by one or two, which what the callers then do isn't modelled for (docs/melee-bugs.md, the automatic handicaps after a tie)",
+    ),
+    (
+        "after a boot at midnight",
+        "Open: a tie whose unset place's byte reads the boot's calendar (handicaps[0xF4] to [0xFB]) on a console powered on within three seconds of midnight, where the day the boot's report saw isn't known",
     ),
     (
         "a name tag's name running past its block",

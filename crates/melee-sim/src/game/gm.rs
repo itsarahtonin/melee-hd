@@ -28,6 +28,7 @@ pub mod results_panel;
 pub mod results_player;
 pub mod results_scene;
 pub mod results_stats;
+pub mod results_tie;
 pub mod scene;
 pub mod setup_players;
 pub mod special;

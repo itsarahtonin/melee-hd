@@ -988,6 +988,8 @@ pub fn import_clock_on(mem1: &[u8], tb: u64, disc: DiscSpeed, power_on: u64) -> 
     let period = m.u64(alarm + 0x18);
     let mut c = Clock::new(tb, last_frame + AUDIO_FRAME, next_alarm, period);
     c.tb_power_on = power_on;
+    // The VI's `retraceCount` (a local symbol of vi.c).
+    c.retraces = m.u32(0x804D_7420);
     // HSD's frame buffers (`HSD_VIData.xfb`, `HSD_VIXFBDrawDispStatus`): copied frames waiting
     // to show, and the one showing. A tick's end comes before its round's copy, so a buffer
     // can be free.
