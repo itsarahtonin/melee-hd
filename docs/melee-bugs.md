@@ -1732,6 +1732,36 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** a level bar's marks would point the other way.
 - **Source:** `hsd_3915.c`.
 
+### The trophy unlock editor's cursor goes one past its last class
+
+- **Where:** `_Toy_80310B48`, `crates/melee-sim/src/game/ty/debug.rs` (`toy_editor_proc`, `editor_slot`).
+- **Defect:** the editor (R held into the gallery at the debug ROM's level) lets its cursor reach 9, though it has nine classes (0 to 8): a count changed there reads and writes `values[9]`, the halfword past the editor's 0x18-byte heap block (the next block's header), and bounds it by `Toy_80304B94(9)`, whose `switch` has no case for 9 and returns the register it never set.
+- **Effect:** with Y, X, the D-pad or the stick's x on the tenth line, the heap's next header is overwritten; its line is never printed, so nothing shows the count.
+- **melee-hd:** the cursor goes to 9 as on a console; a count changed there stops the port (`unported`, `game::menus_audit`'s stops). The `gal-editor` session takes the cursor there and back without changing it.
+- **Fix:** bound the cursor at 8.
+- **Fix impact:** none in play: debug code.
+- **Source:** `toy.c` (`_Toy_80310B48`, `Toy_80304B94`).
+
+### The trophy screens' debug texts are removed through their statics
+
+- **Where:** `_tyDisplay_8031B850`'s `DevText_Remove(&_tyDisplay_804D6F24)` and `_Toy_80311F5C`'s `DevText_Remove(&_Toy_sbss_804D6E98)` and `(&_Toy_sbss_804D6E9C)`, `crates/melee-sim/src/game/ty/collection.rs` (`coll_on_frame`), `ty/debug.rs` (`toy_debug_leave`).
+- **Defect:** as [a closing menu's screen](#a-closing-menus-screen-removed-through-the-menus-own-pointer): `DevText_Remove` takes the link that points to the screen, and these pass the static that holds it, so the draw list keeps pointing to a screen first in it after it goes back on the free list.
+- **Effect:** none observed: each is the scene's only screen, so the draw list's head names a free screen until the next scene sets the screens up again (`DevText_InitPool`), and the scene ends in the same tick.
+- **melee-hd:** modeled (`devtext::Link::Held`); `coll-debug`, `gal-editor` and `gal-editor-start` compare the pool and both lists every tick.
+- **Fix:** pass the draw list.
+- **Fix impact:** none.
+- **Source:** `tydisplay.c` (`_tyDisplay_8031B850`), `toy.c` (`_Toy_80311F5C`), `textdraw.c` (`DevText_Remove`).
+
+### The collection's debug view frees a trophy's archive before its model
+
+- **Where:** `_tyDisplay_8031BF34`, `crates/melee-sim/src/game/ty/collection.rs` (`coll_debug_model`).
+- **Defect:** showing the next trophy, it gives the last one's archive back to the heap (`lbArchive_80016EFC`) and loads the next one's before `Toy_803087F4` frees the GObj whose model was loaded from the first: for that moment the model's joints point into freed blocks, which the new archive can take.
+- **Effect:** none observed: freeing the GObj releases the joints and their objects without reading the archive's data, and nothing draws in between. `coll-debug` compares clean through each change with `--heap`.
+- **melee-hd:** the same order.
+- **Fix:** free the GObj first.
+- **Fix impact:** none.
+- **Source:** `tydisplay.c` (`_tyDisplay_8031BF34`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

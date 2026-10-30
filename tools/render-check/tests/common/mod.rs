@@ -742,6 +742,15 @@ pub const DEBUG_PERF_MONITOR: Game = Game {
     replay: Replay::Session("debug-perf-monitor"),
 };
 
+/// The trophy collection's debug view (`debug-sessions/coll-debug`): one trophy at a time with
+/// its place in a debug text and the gallery's model beside it.
+pub const DEBUG_COLL: Game = Game {
+    stage: "Trophies",
+    name: "debug-coll-debug",
+    players: "the trophy collection's debug view (session debug-sessions/coll-debug)",
+    replay: Replay::Session("debug-coll-debug"),
+};
+
 /// The coins' displays (`debug-sessions/vs-coins`): a Coin Mode debug VS match, Link and Mario
 /// on Final Destination, the fighters' coin capsules and the coins' ranges.
 pub const DEBUG_VS_COINS: Game = Game {

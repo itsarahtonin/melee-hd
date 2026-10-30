@@ -42,19 +42,11 @@ un_80301B48	Named only by un_803013EC, un_803FD58C (the debug menu mode, 6: see 
 un_80301BA8	Named only by onEnterIntroEasy (the debug menu mode, 6: see onExitIntro).
 un_80301C64	Named only by onEnterIntroAllstar (the debug menu mode, 6: see onExitIntro).
 un_80301D7C	Named only by un_803FDAF8 (the debug menu mode, 6: see onExitIntro).
-_tyDisplay_8031A94C	Called only by tyDisplay_Scene_OnEnter, only when _tyDisplay_804D6F20 is set, which it sets only inside `if (DbLevel >= DbLKind_DebugRom && Toy_80305C44() & 0x10)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-_tyDisplay_8031BA78	Named only by _tyDisplay_8031A94C (the trophy collection's debug view: see _tyDisplay_8031C1D0).
-_tyDisplay_8031C1D0	Named only by tyDisplay_Scene_OnEnter, behind _tyDisplay_804D6F20, which it sets only inside `if (DbLevel >= DbLKind_DebugRom && Toy_80305C44() & 0x10)` (the collection's debug view); DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 _Toy_8030B530	Named only by _Toy_8030FA50, which sets it up as the gallery camera's process only when _Toy_sbss_804D6EA2 is set; Toy_Scene_OnEnter sets that only inside `if (DbLevel >= DbLKind_DebugRom)` (Z held: the gallery's debug view); DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 _Toy_8030E110	Named only by _Toy_8030FA50, which sets it up as the gallery camera's process only when _Toy_sbss_804D6E50 is set; Toy_Scene_OnEnter sets that only inside `if (DbLevel >= DbLKind_DebugRom)` (L held: the gallery's fog view); DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 _Toy_803062EC	Called only by _Toy_8030B530 (the gallery's debug view: see _Toy_8030B530).
 _Toy_80306A0C	Named only by _Toy_80307018, only inside `if (_Toy_sbss_804D6E50 != 0)` (the gallery's fog view: see _Toy_8030E110).
 _Toy_80311788	Called only by Toy_Scene_OnEnter, only when _Toy_sbss_804D6EA2 is set (the gallery's debug view: see _Toy_8030B530).
-_Toy_803114E8	Called only by Toy_Scene_OnEnter, only when _Toy_sbss_804D6EA0 is 1, which it sets only inside `if (DbLevel >= DbLKind_DebugRom)` (Start held: the trophy parameters' editor); DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
-_Toy_80310B48	Called only by _Toy_803114E8 (the trophy parameters' editor: see _Toy_803114E8).
-_Toy_803109A0	Called only by _Toy_80310B48 and _Toy_803114E8 (the trophy parameters' editor: see _Toy_803114E8).
-_Toy_803053C4	Called only by _Toy_80310B48 (the trophy parameters' editor: see _Toy_803114E8).
-_tyDisplay_8031BF34	Called only by _tyDisplay_8031BC54, only when _tyDisplay_804D6F24 (the debug view's text) is set, which only _tyDisplay_8031C1D0 sets (the trophy collection's debug view: see _tyDisplay_8031C1D0).
 vi0401_8031D020	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
 un_8031D9E4	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
 un_8031E110	Named only by onEnterCutsceneLuigi (the debug cutscene mode, 0x19: see onEnterCutsceneLuigi).
