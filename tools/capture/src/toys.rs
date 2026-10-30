@@ -109,19 +109,21 @@ impl Comparer<'_> {
             }
         }
         let g = &t.gallery;
+        let pool = sym("devtext_pool");
+        let text_at = |t: Option<u8>| t.map_or(0, |t| pool + 0x34 * u32::from(t));
         self.check(
             "toy.c .sbss",
             "debug flags, fog, base shown, editor, debug words",
             (
-                0u8,
+                g.debug_l as u8,
                 g.fog_on,
                 g.base_shown,
-                0u32,
+                g.editor.map_or(0, |e| e.block),
                 g.xa0,
                 g.xa1,
-                0u8,
-                0u32,
-                0u32,
+                g.debug_z as u8,
+                text_at(g.editor_text),
+                text_at(g.debug_text),
             ),
             (
                 self.u8(sym("_Toy_sbss_804D6E50")),
@@ -135,6 +137,18 @@ impl Comparer<'_> {
                 self.u32(sym("_Toy_sbss_804D6E9C")),
             ),
         );
+        // The unlock editor's block (`ToyParamEditor`).
+        if let Some(e) = g.editor {
+            let b = e.block;
+            self.toy_gobj("ToyParamEditor.gobj", e.gobj, b);
+            let theirs: Vec<i16> = (0..9).map(|i| self.u16(b + 6 + 2 * i) as i16).collect();
+            self.check(
+                "ToyParamEditor",
+                "cursor, delay, counts",
+                (e.slot, e.delay, e.values.to_vec()),
+                (self.u8(b + 4), self.u8(b + 5), theirs),
+            );
+        }
         let canv: Vec<i32> = ["E70", "E74", "E78", "E7C"]
             .iter()
             .map(|n| self.u32(sym(&format!("_Toy_sbss_804D6{n}"))) as i32)
@@ -182,24 +196,69 @@ impl Comparer<'_> {
         ] {
             self.check(name, "block", ours, self.u32(sym(name)));
         }
+        let pool = sym("devtext_pool");
         self.check(
             "tydisplay.c .sbss",
-            "debug view, its text, its B's frames, its trophy",
-            (c.debug, 0u32, c.debug_b, 0u32),
+            "debug view, its text, its B's frames",
+            (
+                c.debug,
+                c.text.map_or(0, |t| pool + 0x34 * u32::from(t)),
+                c.debug_b,
+            ),
             (
                 self.u32(sym("_tyDisplay_804D6F20")) as i32,
                 self.u32(sym("_tyDisplay_804D6F24")),
                 self.u32(sym("_tyDisplay_804D6F28")) as i32,
-                self.u32(sym("_tyDisplay_804D6F2C")),
             ),
         );
+        self.toy_gobj("_tyDisplay_804D6F2C", c.model, sym("_tyDisplay_804D6F2C"));
+        // The debug view's trophy's model file, kept from scene to scene.
+        let h = sym("_tyDisplay_804A2DD0");
+        let holder = c.holder;
+        self.compare_data(
+            "_tyDisplay_804A2DD0.x8",
+            holder.file.map(|f| f.at(4)),
+            self.u32(h + 8),
+        );
+        self.compare_data(
+            "_tyDisplay_804A2DD0.xC",
+            holder.file.map(|f| f.at(0x24)),
+            self.u32(h + 0xC),
+        );
+        self.check(
+            "_tyDisplay_804A2DD0",
+            "trophy",
+            holder.trophy,
+            self.u16(h + 0x10) as i16,
+        );
+        self.toy_archive("_tyDisplay_804A2DD0.x14", holder.archive, h + 0x14);
+        // What the debug views wrote into `TyDatai`.
+        if game.gm.trophy_data {
+            let datai = game.ft.data.files.archive(game.trophy_data_file());
+            for &(offset, w) in &game.toys.datai_edits {
+                let d = DataRef {
+                    archive: datai,
+                    offset,
+                };
+                if let Some(at) = self.data.try_addr(d) {
+                    self.check(
+                        &format!("TyDatai +{offset:#x}"),
+                        "a debug view's edit",
+                        w,
+                        self.u32(at),
+                    );
+                }
+            }
+        }
     }
 
     /// The collection's four blocks (`tydisplay.c`) and the lights' block.
     fn toy_collection(&mut self) {
         let c = &self.game.toys.collection;
         let j = c.jobjs_block;
-        for i in 0..c.count.max(0) as usize {
+        // The words the layouts write: none in the debug view, which places no trophy there.
+        let placed = if c.debug != 0 { 0 } else { c.count.max(0) };
+        for i in 0..placed as usize {
             self.toy_jobj(
                 &format!("_tyDisplay_804D6F10[{i}]"),
                 c.jobjs[i],

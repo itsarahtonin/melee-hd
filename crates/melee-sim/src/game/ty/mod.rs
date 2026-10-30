@@ -5,6 +5,7 @@
 //! [`super::gm::trophies`].
 
 pub mod collection;
+pub mod debug;
 pub mod gallery;
 pub mod list;
 pub mod lottery;
@@ -145,6 +146,10 @@ pub struct Toys {
     pub lottery: lottery::Lottery,
     /// The collection's (`tydisplay.c`).
     pub collection: collection::Collection,
+    /// The words the debug views wrote into `TyDatai`'s tables (the display table's places,
+    /// the models' parameters), by offset in its data: they last as long as the file, which
+    /// a new game mode loads afresh.
+    pub datai_edits: Vec<(u32, u32)>,
 }
 
 impl Toys {
@@ -155,6 +160,7 @@ impl Toys {
         self.dataf = None;
         self.stand = None;
         self.anim = AnimState::default();
+        self.datai_edits.clear();
     }
 }
 
@@ -245,7 +251,28 @@ impl Running<'_> {
             || (super::gm::language_setting_is_us() && !self.saved_us());
         let (us_at, _) = find(us);
         let at = if other && found_jp { jp_at } else { us_at };
-        f32::from_bits(self.data.u32(at.at(8 + 4 * field)))
+        f32::from_bits(self.datai_u32(at.at(8 + 4 * field)))
+    }
+
+    /// A word of `TyDatai` as code left it: the debug views' edits over the file's.
+    pub fn datai_u32(&self, at: DataRef) -> u32 {
+        self.game
+            .toys
+            .datai_edits
+            .iter()
+            .find(|e| e.0 == at.offset)
+            .map_or_else(|| self.data.u32(at), |e| e.1)
+    }
+
+    /// Code writes a word into `TyDatai` (a debug view's edit), which the heap's image takes
+    /// where it holds the file.
+    pub fn datai_write(&mut self, at: DataRef, w: u32) {
+        let edits = &mut self.game.toys.datai_edits;
+        match edits.iter_mut().find(|e| e.0 == at.offset) {
+            Some(e) => e.1 = w,
+            None => edits.push((at.offset, w)),
+        }
+        crate::hsd::heap::with(|h| h.image.file_word(at, w));
     }
 
     /// `Toy_803060BC(trophy, 6)`, `(7)` and `(8)`: the English entry's class, `x21` and

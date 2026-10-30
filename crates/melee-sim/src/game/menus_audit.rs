@@ -399,11 +399,11 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "the trophy collection's debug view (_tyDisplay_8031C1D0)",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+        "the trophy unlock editor's count past its last class (_Toy_80310B48)",
+        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise; the original reads past the editor's block there (docs/melee-bugs.md)",
     ),
     (
-        "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2, 804D6EA0)",
+        "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
 ];
