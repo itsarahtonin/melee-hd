@@ -127,6 +127,7 @@ impl Running<'_> {
         self.ys_stop_shield_anim(f, xc[1], &mut length);
         self.push_attrs(f, attr::SIZE);
         self.ys_patch_shield_length(f, length);
+        self.image_ext_attrs(f, &[attr::XC]);
         let d = self.game.fighters[f.0]
             .ft_data
             .expect("a fighter without data");

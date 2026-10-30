@@ -1181,11 +1181,5 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
-    /// The menus' scenes' second light: three words of the transform unit's light memory
-    /// (`XF 061D`, light 1's direction) differ from ssbm-rs's log while no draw reads that
-    /// light, and the images are identical (docs/player.md's open issues; the Data menu's
-    /// `count` 2000 shows it too).
-    pub const LIGHT_1: &str =
-        "light 1's direction in the transform unit's memory (XF 061D), read by no draw";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

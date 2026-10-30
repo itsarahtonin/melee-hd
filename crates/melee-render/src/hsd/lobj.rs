@@ -48,6 +48,18 @@ fn color(c: [u8; 4]) -> Color {
     Color::new(c[0], c[1], c[2], c[3])
 }
 
+/// A light's GX object as melee-sim keeps it (`__GXLightObjInt_struct`, reserved words zero).
+fn light_obj(g: &lobj::GxLight) -> LightObj {
+    LightObj {
+        reserved: [0; 3],
+        color: u32::from_be_bytes(g.color),
+        a: g.a,
+        k: g.k,
+        lpos: g.lpos,
+        ldir: g.ldir,
+    }
+}
+
 fn param(o: &lobj::LObj, i: usize) -> f32 {
     f32::from_bits(o.params[i])
 }
@@ -79,8 +91,19 @@ impl LightState {
         for a in set.active.iter().flatten() {
             let o = &objs.lobjs[a.lobj];
             let ty = o.flags & lobj::TYPE_MASK;
+            // The objects start as the light's memory has them, not as the renderer last
+            // left this slot: a slot a scene freed and another took is a new light.
             let g = self.lights.entry(a.lobj).or_default();
-            g.id = a.id;
+            *g = LightGx {
+                light: light_obj(&a.light),
+                spec: light_obj(&a.spec),
+                hw_color: color(a.light.color),
+                dirty: 0,
+                shininess: a.shininess,
+                spec_id: a.spec_id,
+                id: a.id,
+                lvec: a.lvec,
+            };
             match ty {
                 lobj::INFINITE => setup_infinite(gx, objs, a.lobj, &vmtx, g),
                 lobj::POINT => setup_point(gx, objs, a.lobj, &vmtx, g),
@@ -93,14 +116,12 @@ impl LightState {
                 g.hw_color = color(o.color);
                 g.dirty |= LOBJ_DIFF_DIRTY;
             }
-            g.spec_id = a.spec_id;
             if a.spec_id != 0 {
                 // `setup_spec_lightobj`.
                 gx.init_light_color(&mut g.spec, color(o.color));
                 g.shininess = 50.0;
                 let x = 50.0f32 * 0.5;
                 gx.init_light_attn(&mut g.spec, 0.0, 0.0, 1.0, x, 0.0, 1.0 - x);
-                g.lvec = a.lvec;
                 g.dirty |= LOBJ_SPEC_DIRTY;
             }
         }

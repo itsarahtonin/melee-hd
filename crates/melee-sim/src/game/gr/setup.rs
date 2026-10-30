@@ -945,7 +945,7 @@ fn overridden_lights(data: &Archives, head: MapHead, lights: DataRef) -> Vec<(Da
         .iter()
         .any(|&e| find(data.ptr(e)).is_some_and(|bits| bits != 0));
     let mut out = Vec::new();
-    for e in entries {
+    for &e in &entries {
         let desc = data.ptr(e).expect("a light list entry without a light");
         let mut flags = data.u16(desc.at(8));
         if matched && flags & 3 != 0 {
@@ -967,7 +967,37 @@ fn overridden_lights(data: &Archives, head: MapHead, lights: DataRef) -> Vec<(Da
         }
         out.push((e, flags));
     }
+    if matched {
+        image_light_edit(data, lights, entries.len(), &out);
+    }
     out
+}
+
+/// `Ground_801C20E0`'s edit in the loaded file, which the heap's image holds where the scene
+/// read the stage's file into its heap (a debug VS match's): the list's slots the lights it
+/// keeps, in order, then null up to its old end, and each kept light's flags as it leaves
+/// them (those it doesn't touch, without a diffuse or specular bit, as they were).
+fn image_light_edit(data: &Archives, list: DataRef, n: usize, kept: &[(DataRef, u16)]) {
+    if !crate::hsd::heap::image_on() {
+        return;
+    }
+    crate::hsd::heap::with(|h| {
+        let img = &mut h.image;
+        let addrs: Option<Vec<u32>> = kept.iter().map(|&(e, _)| img.data_addr(e)).collect();
+        let Some(addrs) = addrs else { return };
+        if kept.len() < n {
+            for i in 0..n {
+                let w = addrs.get(i).copied().unwrap_or(0);
+                img.file_word(list.at(4 * i as u32), w);
+            }
+        }
+        for &(e, flags) in kept {
+            let desc = data.ptr(e).expect("a light list entry without a light");
+            if data.u16(desc.at(8)) & 3 != 0 {
+                img.file_bytes(desc.at(8), &flags.to_be_bytes());
+            }
+        }
+    });
 }
 
 /// Applies the archive's light overrides to a light list, `Ground_801C20E0`: the list as it
@@ -1414,6 +1444,10 @@ pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bo
     i.quake_model_set = public("quake_model_set");
     r.game.gr.param = i.param.map(|p| read_ground_param(data, p));
     if let (Some(ptcl), Some(texg)) = (i.map_ptcl, i.map_texg) {
+        // `psInitDataBank` for a file read into the scene's heap, whose banks it locates
+        // there, which only the heap's image holds; `psInitDataBankLoad` for one the preload
+        // located as it landed, which the image doesn't hold, so it writes nothing.
+        crate::hsd::particle::locate_in_image(data, ptcl, texg);
         crate::hsd::particle::load_data_bank(&mut r.game.objs, data, 0x40, ptcl, texg, None, None);
     }
     mark_materials(r.game, data, map_head);
@@ -1442,7 +1476,12 @@ pub fn mark_materials(game: &mut Game, data: &Archives, map_head: Option<DataRef
     };
     for k in 0..n.max(0) as u32 {
         if let Some(d) = data.ptr(list.at(4 * k)) {
-            *game.objs.rendermode_patches.entry(d).or_default() |= 1 << 26;
+            let marks = game.objs.rendermode_patches.entry(d).or_default();
+            *marks |= 1 << 26;
+            // The descriptor's `rendermode` in the file, which the heap's image holds where
+            // the scene read the file into its heap.
+            let word = data.u32(d.at(4)) | *marks;
+            crate::hsd::heap::with(|h| h.image.file_word(d.at(4), word));
         }
     }
 }

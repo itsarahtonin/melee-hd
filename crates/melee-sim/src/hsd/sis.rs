@@ -329,6 +329,23 @@ impl SisLib {
 
     /// Points font `font`'s table's entry `index` at `p`.
     pub fn set_table_entry(&mut self, font: usize, index: i32, p: SisPtr) {
+        // The table is loaded data (Pokémon Stadium's `SIS_GrPStadiumData`): the heap's image
+        // takes the word where it holds the file.
+        if let Some(table) = self.font_tables[font]
+            && super::heap::image_on()
+        {
+            super::heap::with(|h| {
+                let w = match p {
+                    SisPtr::Static(a) => Some(a),
+                    SisPtr::Data(d) => h.image.data_addr(d),
+                    // No caller does; the arena's address isn't modeled.
+                    SisPtr::Arena(_) => panic!("a string table's entry set to an arena string"),
+                };
+                if let Some(w) = w {
+                    h.image.file_word(table.at(4 * index as u32), w);
+                }
+            });
+        }
         self.table_overrides
             .retain(|&(f, i, _)| !(usize::from(f) == font && i == index as u32));
         self.table_overrides.push((font as u8, index as u32, p));

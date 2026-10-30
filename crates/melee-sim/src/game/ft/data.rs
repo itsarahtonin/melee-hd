@@ -494,7 +494,7 @@ impl Running<'_> {
                 if file != 0
                     && let Some(id) = id
                 {
-                    crate::hsd::heap::with(|h| h.image.place_held(file, len, id));
+                    crate::hsd::heap::with(|h| h.image.place_held(self.data, file, len, id));
                 }
                 return addr;
             }
