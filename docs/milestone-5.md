@@ -226,6 +226,7 @@ The critical path is 1, 4, 5, 6, 7, 9, then 17 and 18: the boot is serial, and e
 ### Not in this sequence
 
 - **Single-player modes, their stages and bosses** (milestone 6): Classic, Adventure, All-Star, Events, Target Test, Home-Run Contest, the Multi-Man modes, Training, their intros, game overs, cutscenes (`vi*`, 84), ending movies, the staff roll and their bonuses (`plbonus*`); their stages (885 functions, [milestone 4](milestone-4.md#whats-left-to-port)), Master Hand (263), Crazy Hand (257), Giga Bowser, the Wire Frames, Sandbag, the adventure enemies and items, Ditto, the single-player CPU kinds, and the main menu's gates that task 18 adds, which milestone 6 removes.
+- **The develop level's allocation limiter** (milestone 6, Sarah, 2026-10-30): task 19's last piece, `fn_UpdateObjAllocLimiter` at `DbLevel` 4, needs number limits on the effect, particle and app-SRT pools, which melee-hd doesn't model yet. Until then, its buttons at level 4 (B or A with up on the D-pad, in a match) stop the port.
 - **The player's polish** (milestone 7): the title as the default front door, remapping, three-OS builds.
 
 ## Before the tasks start
