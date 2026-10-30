@@ -11,7 +11,8 @@
 //! The spawn writes its lengths for his height, and whether it's the air grab's, into its
 //! attributes in the character's loaded data (`x2C` to `x48`): Link's in his archive, Young
 //! Link's in his, each shared by every fighter of that character. They're state, one entry per
-//! character ([`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths)).
+//! character ([`Globals::hookshot_lengths`](super::super::Globals::hookshot_lengths)), until
+//! the file is read from the disc again ([`Globals::file_read`](super::super::Globals::file_read)).
 
 // The original's comparisons are kept as written: a NaN fails them.
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
@@ -95,6 +96,18 @@ pub struct Lengths {
     pub n: i32,
     /// `x30` to `x48`.
     pub words: [f32; 7],
+}
+
+impl Lengths {
+    /// The file's own words where `attrs` is: what a fresh read of it holds until a spawn
+    /// writes over them.
+    pub fn from_file(data: &melee_data::archive::Archives, attrs: DataRef) -> Lengths {
+        Lengths {
+            attrs: Some(attrs),
+            n: data.u32(attrs.at(attr::N)) as i32,
+            words: core::array::from_fn(|i| data.f32(attrs.at(attr::LINK + 4 * i as u32))),
+        }
+    }
 }
 
 /// The hookshots' item kinds, Link's and Young Link's: each has its own article, its
@@ -378,6 +391,7 @@ fn make_links(
         n,
         words: w,
     };
+    super::samusgrapple::image_lengths(a.0.at(attr::N), n, &w);
     let mut prev_link: Option<ItemLinkId> = None;
     let (mut head, mut tail, mut result) = (None, None, None);
     for i in 0..n {

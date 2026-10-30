@@ -148,6 +148,27 @@ pub struct Globals {
     pub hookshot_lengths: [kinds::linkhookshot::Lengths; 2],
 }
 
+impl Globals {
+    /// The file whose archive is `archive` read from the disc again (not a preload cache's
+    /// file an earlier scene took, whose bytes keep what code wrote): the lengths Link's and
+    /// Young Link's hookshots' and Samus's grapple beam's spawns wrote over their attributes
+    /// in it are gone, the file's own words in their place until the next spawn.
+    pub fn file_read(
+        &mut self,
+        data: &melee_data::archive::Archives,
+        archive: melee_data::archive::ArchiveId,
+    ) {
+        for l in &mut self.hookshot_lengths {
+            if let Some(a) = l.attrs.filter(|a| a.archive == archive) {
+                *l = kinds::linkhookshot::Lengths::from_file(data, a);
+            }
+        }
+        if let Some(a) = self.grapple_lengths.attrs.filter(|a| a.archive == archive) {
+            self.grapple_lengths = kinds::samusgrapple::Lengths::from_file(data, a);
+        }
+    }
+}
+
 /// An item's ignore id (`Item::xAC4_ignoreItemID`): the items sharing one share their
 /// hitboxes' victims. It comes from the spawn's `x40`, which the grapple beam's spawn
 /// (`it_802B7C18`) never sets, leaving a stack word: that id is stale (None), the comparer
