@@ -111,6 +111,14 @@ pub struct Globals {
     /// Whether the standings' bonuses are off (`lbl_804D65A0.x0`): the results screen
     /// turns them on as it ends (`fn_801701AC`).
     pub bonuses_off: u8,
+    /// The clock's seconds the boot's report read (`main`'s
+    /// `gm_801692E8(lbTime_GetTimeInSeconds())`), whose calendar's `wday` and `yday` stay on
+    /// the main stack where a tie's automatic handicaps can read them
+    /// (`gm::results_tie`); none until a session's boot reads it.
+    pub boot_report_secs: Option<u32>,
+    /// The registers `main`'s frames keep through the modes' loop, which a tie's automatic
+    /// handicaps can move (`gm::results_tie::MainRegs`).
+    pub main_regs: results_tie::MainRegs,
 }
 
 /// The trophies' data (`TyDatai.usd`, the English one: `getDataiDatFilename` takes
