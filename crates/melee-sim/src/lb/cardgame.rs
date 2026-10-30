@@ -261,7 +261,11 @@ impl Running<'_> {
             }
             let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
             match self.game.audio.card_writer.wait(now) {
-                Some(work) => self.game.audio.clock_card_work(self.data, work),
+                Some(work) => {
+                    self.game.audio.clock_card_work(self.data, work);
+                    let now = self.game.audio.clock.as_ref().map_or(0, |c| c.now);
+                    self.game.audio.card_writer.step_done(now);
+                }
                 None => unreachable!("a save writer with nothing to run"),
             }
         }

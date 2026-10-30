@@ -179,12 +179,7 @@ impl Running<'_> {
         self.camera_pass(gobj, prio80, 7);
         camera::set_layer(&mut self.game.camera.cam, 3);
         self.camera_pass(gobj, prio8, 7);
-        let cam = &self.game.camera.cam;
-        if camera::stage_visible(cam)
-            && (camera::draw_collisions(cam) || cam.x399_b4 || camera::draw_special_points(cam))
-        {
-            crate::game::code::unported_call("mpLib_8005A2DC");
-        }
+        self.stage_debug_drawings();
         display::camera_end(&mut self.game.objs);
     }
 
@@ -496,6 +491,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
             r.render_hud(d);
         }
         super::hud::devtext::DRAW_ALL => r.render_devtext(pass),
+        super::perf::RENDER => r.render_perf(gobj),
         _ => return false,
     }
     true

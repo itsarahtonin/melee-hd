@@ -302,12 +302,20 @@ impl clock::Frames for Running<'_> {
         std::mem::take(&mut self.audio.hw)
     }
 
-    fn pad_alarm(&mut self, now: u64) -> (u64, bool) {
+    fn pad_alarm(&mut self, now: u64) -> (u64, [bool; 2]) {
         crate::lb::save::alarm_card_probes(now)
     }
 
     fn game_wait(&mut self, now: u64) -> Option<clock::CardWork> {
         self.audio.card_writer.wait(now)
+    }
+
+    fn game_wait_done(&mut self, now: u64) {
+        self.audio.card_writer.step_done(now);
+    }
+
+    fn card_ext(&mut self, now: u64, transfer: bool) -> u64 {
+        crate::lb::save::card_ext(now, transfer)
     }
 
     fn card_unmounted(&mut self) {

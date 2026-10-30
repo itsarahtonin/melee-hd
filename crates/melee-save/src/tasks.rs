@@ -145,6 +145,18 @@ pub struct Run {
     pub free_bytes: i32,
     pub free_files: i32,
     pub layer: Layer,
+    /// Each copy the HSD layer made into the buffers (`Layer::puts`), with how many of
+    /// `steps` came before it.
+    pub puts: Vec<(usize, crate::hsd::Ptr, Vec<u8>)>,
+    /// The HSD layer's transfers the card answers before it's pulled out of the slot
+    /// ([`Layer::budget`]), none for a card left in.
+    pub pull_after: Option<usize>,
+}
+
+/// Whether a log entry of the HSD layer's ([`Run::steps`]) is a transfer: a sector read or
+/// written, a status set or a file created.
+pub fn is_transfer(c: u8) -> bool {
+    matches!(c, b'r' | b'w' | b's' | b'c')
 }
 
 impl Run {
@@ -166,6 +178,8 @@ impl Run {
             free_bytes: 0,
             free_files: 0,
             layer: Layer::new(0),
+            puts: Vec::new(),
+            pull_after: None,
         }
     }
 
@@ -333,7 +347,16 @@ impl Run {
     /// Runs one HSD request; each callback's error becomes the task's result
     /// (`fn_8001A0B0`).
     fn request(&mut self, m: &mut Mounted, req: Request, mut saved: i32) -> i32 {
+        let made = self.steps.iter().filter(|&&c| is_transfer(c)).count();
+        self.layer.budget = self.pull_after.map(|n| n.saturating_sub(made));
         let calls = self.layer.request(m, &mut self.bufs, req);
+        let base = self.steps.len();
+        self.puts.extend(
+            self.layer
+                .puts
+                .drain(..)
+                .map(|(at, p, bytes)| (base + at, p, bytes)),
+        );
         self.steps.append(&mut self.layer.log);
         for (arg, r) in calls {
             self.steps.push(b'k');
@@ -562,5 +585,67 @@ pub mod lists {
             1 << lb::NULL_FILENAME,
         ));
         v
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A snapshot's create on a formatted card, the card pulled out after `pull` of the HSD
+    /// layer's transfers: the list's result, file 0's, and the card it leaves.
+    fn snapshot_pulled(pull: Option<usize>) -> (i32, i32, Run, Card) {
+        let console = Console::ssbm_rs();
+        let mut card = Card::blank();
+        card.format(&console, 0);
+        let size = 0x38 + 248_093;
+        let mut bufs = Bufs::default();
+        bufs.files[0] = (0..size as usize + 0x2000)
+            .map(|i| (i * 7 + i / 300) as u8)
+            .collect();
+        bufs.banner = vec![0x11; 0x1800];
+        bufs.icons = vec![0x22; 0x600];
+        let mut run = Run::new(crate::melee::snapshot_manifest(size), bufs);
+        run.pull_after = pull;
+        let r = run.execute(
+            Some(&mut card),
+            &console,
+            &mut Clock::at(1000),
+            &lists::create(b"1000"),
+        );
+        let file = from_hsd(run.file_results[0]);
+        (r, file, run, card)
+    }
+
+    /// A card pulled out between a save's transfers: the transfers before stay on the card, the
+    /// next write's open finds no card, and file 0 and the list end on it (15), as ssbm-rs's
+    /// probe of slot B pulled mid-save logs (the create, then 11 of the 32 sectors).
+    #[test]
+    fn a_card_pulled_out_mid_save_keeps_the_transfers_before() {
+        let (r, file, whole, full) = snapshot_pulled(None);
+        assert_eq!((r, file), (lb::READY, lb::READY));
+        // The create, the header's sector written and read back, the 32 sectors and the
+        // status.
+        assert_eq!(whole.steps.iter().filter(|&&c| is_transfer(c)).count(), 36);
+        let (r, file, run, card) = snapshot_pulled(Some(12));
+        assert_eq!((r, file), (lb::DEVICE_ERROR, lb::DEVICE_ERROR));
+        assert_eq!(run.callbacks.last(), Some(&(0, CardError::NoCard.code())));
+        assert_eq!(run.steps.iter().filter(|&&c| is_transfer(c)).count(), 12);
+        let blank = {
+            let mut c = Card::blank();
+            c.format(&Console::ssbm_rs(), 0);
+            c
+        };
+        let block = |c: &Card, b: usize| c.image()[b * 0x2000..(b + 1) * 0x2000].to_vec();
+        // The file's blocks from 5: the first nine (its ten sectors' writes reach them) as the
+        // whole save's, the rest as the formatted card left them.
+        assert_eq!(run.steps.iter().filter(|&&c| c == b'w').count(), 10);
+        assert!((5..14).all(|b| block(&card, b) == block(&full, b)));
+        assert!((14..37).all(|b| block(&card, b) == block(&blank, b)));
+        assert!((5..37).all(|b| block(&full, b) != block(&blank, b)));
+        // Pulled before the create: nothing written.
+        let (r, _, _, card) = snapshot_pulled(Some(0));
+        assert_eq!(r, lb::DEVICE_ERROR);
+        assert_eq!(card.image(), blank.image());
     }
 }

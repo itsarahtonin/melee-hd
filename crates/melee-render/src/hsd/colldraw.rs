@@ -4,12 +4,15 @@
 //! by its ambient colour alone.
 
 use gekko_fp as fp;
+use melee_sim::game::mp_draw::{MapDraw, Prim};
+use melee_sim::hsd::texp::tev::{HsdTevDesc, TevConf};
 use melee_sim::lb::coll_draw::DebugDraw;
 use melee_sim::mtx::Mtx34;
 use melee_sim::vec::Vec3;
 
 use super::draw::Ctx;
 use super::state::STATE_ALL;
+use super::tev::{Chan, setup_tev_stage};
 use crate::gx::Color;
 use crate::gx::enums::*;
 
@@ -79,6 +82,18 @@ impl Ctx<'_> {
                 let (a, b) = (inv.transform(*a), inv.transform(*b));
                 self.capsule(Some(mtx), a, b, *color, *amb, *size);
             }
+            DebugDraw::Local {
+                mtx,
+                a,
+                b,
+                color,
+                amb,
+                size,
+            } => self.capsule(Some(mtx), *a, *b, *color, *amb, *size),
+            DebugDraw::Quad { a, b, color } => self.quad(*a, *b, *color),
+            DebugDraw::Map(m) => self.map_draw(m),
+            DebugDraw::Lines { count, pts } => self.dynamics_line(*count, pts),
+            DebugDraw::Stomp { x0, x1, y } => self.stomp(*x0, *x1, *y),
             DebugDraw::Range {
                 range,
                 pos,
@@ -162,7 +177,7 @@ impl Ctx<'_> {
     /// between, `lbColl_80008FC8` in the world, `lbColl_800096B4` through `space` (`a` and
     /// `b` in its space).
     #[doc(alias = "lbColl_800096B4")]
-    // Ports `lbColl_80008FC8` too; aliased once a frames check draws a hit's bubble.
+    #[doc(alias = "lbColl_80008FC8")]
     fn capsule(
         &mut self,
         space: Option<&Mtx34>,
@@ -258,7 +273,7 @@ impl Ctx<'_> {
     /// A pickup range, `lbGx_8001E2F8`: a strip of five vertices around `pos`, its centre
     /// `range.x` ahead along `facing` and `range.y` up, `range.z` and `range.w` its half
     /// width and height.
-    // Ports `lbGx_8001E2F8`; aliased once a frames check draws one (the pickup ranges are behind the fighters' `b5` display).
+    #[doc(alias = "lbGx_8001E2F8")]
     fn range(&mut self, r: melee_sim::quat::Quat, pos: Vec3, c: [u8; 4], facing: f32) {
         let view = self.hsd.view_mtx();
         let gx = &mut *self.gx;
@@ -314,7 +329,7 @@ impl Ctx<'_> {
 
     /// A fighter's damage line, `lb_80014770`: a strip between its two points' (y, z) and
     /// (x, z), the nearer opaque red, the farther translucent.
-    // Ports `lb_80014770`; aliased once a frames check draws one (the damage line is behind the fighters' `b5` display).
+    #[doc(alias = "lb_80014770")]
     fn damage_line(&mut self, pts: &[Vec3; 2]) {
         const RED: [u8; 4] = [0xFF, 0, 0, 0xFF];
         const RED_XLU: [u8; 4] = [0xFF, 0, 0, 0x40];
@@ -366,5 +381,147 @@ impl Ctx<'_> {
             gx.color4u8(r, g, b, a);
         }
         gx.end();
+    }
+
+    /// A quad from `a` to `b`'s corners in `a`'s depth, `lbColl_80009DD4`: set up as a bubble
+    /// whose ambient colour is its colour, the vertices coloured directly.
+    #[doc(alias = "lbColl_80009DD4")]
+    fn quad(&mut self, a: Vec3, b: Vec3, c: [u8; 4]) {
+        self.invalidate(STATE_ALL);
+        self.hsd.tev.init_tev();
+        self.bubble_setup(c, c);
+        self.clear_vtx_desc();
+        let view = self.hsd.view_mtx();
+        let gx = &mut *self.gx;
+        gx.set_vtx_attr_fmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+        gx.set_vtx_attr_fmt(GX_VTXFMT0, GX_VA_CLR0, GX_CLR_RGBA, GX_RGBA8, 0);
+        gx.set_vtx_desc(GX_VA_POS, GX_DIRECT);
+        gx.set_vtx_desc(GX_VA_CLR0, GX_DIRECT);
+        gx.set_current_mtx(0);
+        gx.set_cull_mode(GX_CULL_NONE);
+        gx.load_pos_mtx_imm(&view.m, 0);
+        gx.begin(GX_QUADS, GX_VTXFMT0, 4);
+        let [r, g, bl, al] = c;
+        for (x, y) in [(a.x, a.y), (b.x, a.y), (b.x, b.y), (a.x, b.y)] {
+            gx.position3f32(x, y, a.z);
+            gx.color4u8(r, g, bl, al);
+        }
+        gx.end();
+        self.invalidate(STATE_ALL);
+        self.hsd.tev.init_tev();
+    }
+
+    /// A dynamics chain's line, `lb_800117F4`: HAL's direct-colour state (render mode 2),
+    /// the view matrix, a line strip twelve wide set in GX directly.
+    // Its pass test and joints are the simulation's (`melee_sim::lb::coll_draw::dynamics_line`).
+    fn dynamics_line(&mut self, count: u16, pts: &[(Vec3, [u8; 4])]) {
+        self.state_init_direct(GX_VTXFMT0, 2);
+        let view = self.hsd.view_mtx();
+        self.gx.load_pos_mtx_imm(&view.m, 0);
+        self.gx.set_line_width(12, GX_TO_ONE);
+        self.gx.begin(GX_LINESTRIP, GX_VTXFMT0, count);
+        for (p, [r, g, b, a]) in pts {
+            self.gx.position3f32(p.x, p.y, p.z);
+            self.gx.color4u8(*r, *g, *b, *a);
+        }
+        self.gx.end();
+    }
+
+    /// An enemy's stomp range, `lb_800149E0`: a yellow line strip twelve wide at z 0.
+    // Its pass test is the simulation's (`melee_sim::lb::coll_draw::stomp`).
+    fn stomp(&mut self, x0: f32, x1: f32, y: f32) {
+        const YELLOW: [u8; 4] = [0xFF, 0xFF, 0, 0xFF];
+        self.state_init_direct(GX_VTXFMT0, 2);
+        let view = self.hsd.view_mtx();
+        self.gx.load_pos_mtx_imm(&view.m, 0);
+        self.gx.set_line_width(12, GX_TO_ONE);
+        self.gx.begin(GX_LINESTRIP, GX_VTXFMT0, 2);
+        let [r, g, b, a] = YELLOW;
+        for x in [x0, x1] {
+            self.gx.position3f32(x, y, 0.0);
+            self.gx.color4u8(r, g, b, a);
+        }
+        self.gx.end();
+    }
+
+    /// A step of the stage's debug drawings (`mplib.c`; [`melee_sim::game::mp_draw`]).
+    fn map_draw(&mut self, m: &MapDraw) {
+        match m {
+            MapDraw::Setup { hsd } => {
+                if *hsd {
+                    self.hsd.state.set_cull_mode(self.gx, GX_CULL_NONE);
+                } else {
+                    self.gx.set_cull_mode(GX_CULL_NONE);
+                }
+                let view = self.hsd.view_mtx();
+                let gx = &mut *self.gx;
+                gx.clear_vtx_desc();
+                gx.set_vtx_desc(GX_VA_POS, GX_DIRECT);
+                gx.set_vtx_attr_fmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+                gx.set_current_mtx(0);
+                gx.load_pos_mtx_imm(&view.m, 0);
+            }
+            MapDraw::Color(c) => self.map_setup_draw(*c),
+            MapDraw::ZMode { enable, func } => {
+                self.gx.set_z_mode(u8::from(*enable), u32::from(*func), 0);
+                self.gx.set_line_width(0x10, GX_TO_ZERO);
+            }
+            MapDraw::Prims { prim, count, verts } => {
+                let prim = match prim {
+                    Prim::Quads => GX_QUADS,
+                    Prim::Lines => GX_LINES,
+                    Prim::LineStrip => GX_LINESTRIP,
+                };
+                self.gx.begin(prim, GX_VTXFMT0, *count);
+                for v in verts {
+                    self.gx.position3f32(v.x, v.y, v.z);
+                }
+                self.gx.end();
+            }
+            MapDraw::Invalidate => self.invalidate(STATE_ALL),
+        }
+    }
+
+    /// `mpLib_SetupDraw`: one TEV stage passing the channel's colour, HAL's blending for an
+    /// opaque or translucent colour, the channel unlit with `c` its material colour
+    /// (`mpLib_803BF540`).
+    #[doc(alias = "mpLib_SetupDraw")]
+    fn map_setup_draw(&mut self, c: [u8; 4]) {
+        self.hsd.tev.init_tev();
+        let stage = self.hsd.tev.assign_tev();
+        let tev = HsdTevDesc {
+            flags: 0,
+            stage,
+            coord: 0xFF,
+            map: 0xFF,
+            color: GX_COLOR0A0,
+            conf: TevConf {
+                clr_op: GX_PASSCLR,
+                ..TevConf::default()
+            },
+        };
+        setup_tev_stage(self.gx, &tev);
+        super::state::States {
+            state: &mut self.hsd.state,
+            tev: &mut self.hsd.tev,
+        }
+        .setup_pe_mode(self.gx, 1, None);
+        self.hsd.tev.set_tev_reg_all(self.gx);
+        self.hsd.tev.set_num_tev_stages(self.gx);
+        self.hsd.tev.set_num_tex_gens(self.gx);
+        self.hsd.tev.set_num_chans(self.gx, 1);
+        let ch = Chan {
+            chan: GX_COLOR0A0,
+            flags: 0,
+            amb_color: Color::new(0, 0, 0, 0),
+            mat_color: color(c),
+            enable: 0,
+            amb_src: GX_SRC_REG,
+            mat_src: GX_SRC_REG,
+            light_mask: GX_LIGHT_NULL,
+            diff_fn: GX_DF_CLAMP,
+            attn_fn: GX_AF_NONE,
+        };
+        self.hsd.tev.setup_channel(self.gx, &ch);
     }
 }

@@ -392,6 +392,8 @@ pub struct Game {
     pub debug_mode: super::hud::debug_menu::DebugMode,
     /// The match's develop tools' statics (`melee/db`).
     pub db: super::db::Db,
+    /// The scene loop's performance monitor (`gm_804D6728`, `hsd_392A.c`, `hsd_3924.c`).
+    pub perf: super::perf::Monitor,
     /// Refraction's textures and users (`lbrefract.c`).
     pub refract: crate::lb::refract::Refract,
     /// The background flash (`lbbgflash.c`, `lb_0219.c`).

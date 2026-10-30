@@ -175,6 +175,7 @@ impl Running<'_> {
             crate::audio::boot::BootTimes::RESET
                 + self.game.audio.boot_delay
                 + crate::audio::boot::CONSOLE_RESET_EXTRA
+                + crate::audio::boot::console_reset_slot_b(self.game.snap.card_state[1] != 0)
         } else {
             crate::audio::boot::BootTimes::RESET
         };

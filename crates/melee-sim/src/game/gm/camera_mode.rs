@@ -927,7 +927,7 @@ impl Running<'_> {
     /// or on a failure the failure's sound and its message.
     #[doc(alias = "gmCamera_801A2FFC")]
     fn cam_save_update(&mut self) {
-        let r = self.snap_save_step();
+        let r = self.card_next_task();
         if r != crate::lb::save::result::BUSY {
             if r == 0 {
                 self.camera_set_state(0);
