@@ -49,22 +49,6 @@ const DISPLAY_ONLY: &[&str] = &[
     ".objs.jobjs.pool.slots[].mtx.m[][]",
     ".objs.tobjs.pool.slots[].flags",
     ".objs.tobjs.pool.slots[].mtx.m[][]",
-    // A specular material loads every active light with its shininess (`HSD_SetupChannelMode`).
-    ".objs.lobjs.pool.slots[].flags",
-    ".objs.lobjs.pool.slots[].shininess",
-    // The GX light objects the setup makes (`lightobj`, `spec_lightobj`), which only GX reads.
-    ".objs.lobjs.pool.slots[].light.color[]",
-    ".objs.lobjs.pool.slots[].light.a[]",
-    ".objs.lobjs.pool.slots[].light.k[]",
-    ".objs.lobjs.pool.slots[].light.lpos[]",
-    ".objs.lobjs.pool.slots[].light.ldir[]",
-    ".objs.lobjs.pool.slots[].light.stale_pos",
-    ".objs.lobjs.pool.slots[].spec.color[]",
-    ".objs.lobjs.pool.slots[].spec.a[]",
-    ".objs.lobjs.pool.slots[].spec.k[]",
-    ".objs.lobjs.pool.slots[].spec.lpos[]",
-    ".objs.lobjs.pool.slots[].spec.ldir[]",
-    ".objs.lobjs.pool.slots[].spec.stale_pos",
 ];
 
 /// What a hat's dynamics may differ in: Kirby's and Jigglypuff's hats take their bone's matrix

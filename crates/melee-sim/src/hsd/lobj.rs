@@ -270,6 +270,95 @@ impl std::ops::IndexMut<LObjId> for LObjs {
     }
 }
 
+/// What drawing writes of one light (`HSD_LObjSetupInit`, `HSD_LObjSetup`,
+/// `HSD_LObjSetupSpecularInit`, an overlay's alpha flag): its flags, the values its setup
+/// keeps and its GX objects.
+#[derive(Clone, Copy)]
+struct Drawn {
+    flags: u16,
+    hw_color: [u8; 4],
+    shininess: f32,
+    lvec: Vec3,
+    id: u32,
+    spec_id: u32,
+    light: GxLight,
+    spec: GxLight,
+}
+
+/// The lights as a draw the original never makes found them ([`save_drawn`]): every slot's
+/// [`Drawn`], the active table and the light masks.
+#[derive(Default)]
+struct Saved {
+    taken: bool,
+    lights: Vec<Drawn>,
+    active: [Option<LObjId>; MAX_GXLIGHT],
+    active_left: [u32; MAX_GXLIGHT],
+    nb_active: i32,
+    masks: [u32; 4],
+}
+
+thread_local! {
+    /// [`save_drawn`]'s copy, its storage reused from draw to draw.
+    static SAVED: std::cell::RefCell<Saved> = std::cell::RefCell::new(Saved::default());
+}
+
+/// Keeps what drawing writes of the lights, for [`restore_drawn`] to put back: a cosmetic
+/// toggle's draw (a fighter the original leaves out) leaves the lights as it found them, so
+/// nothing of it reaches the state the original's draws leave (docs/architecture.md).
+pub fn save_drawn(lobjs: &LObjs) {
+    SAVED.with_borrow_mut(|s| {
+        assert!(!s.taken, "the lights saved twice");
+        s.taken = true;
+        s.lights.clear();
+        s.lights.extend(lobjs.pool.slots().iter().map(|o| Drawn {
+            flags: o.flags,
+            hw_color: o.hw_color,
+            shininess: o.shininess,
+            lvec: o.lvec,
+            id: o.id,
+            spec_id: o.spec_id,
+            light: o.light,
+            spec: o.spec,
+        }));
+        s.active = lobjs.active;
+        s.active_left = lobjs.active_left;
+        s.nb_active = lobjs.nb_active;
+        s.masks = [
+            lobjs.lightmask_diffuse,
+            lobjs.lightmask_specular,
+            lobjs.lightmask_attnfunc,
+            lobjs.lightmask_alpha,
+        ];
+    });
+}
+
+/// Puts back what [`save_drawn`] kept.
+pub fn restore_drawn(lobjs: &mut LObjs) {
+    SAVED.with_borrow_mut(|s| {
+        assert!(s.taken, "the lights restored unsaved");
+        s.taken = false;
+        for (o, d) in lobjs.pool.slots_mut().iter_mut().zip(&s.lights) {
+            o.flags = d.flags;
+            o.hw_color = d.hw_color;
+            o.shininess = d.shininess;
+            o.lvec = d.lvec;
+            o.id = d.id;
+            o.spec_id = d.spec_id;
+            o.light = d.light;
+            o.spec = d.spec;
+        }
+        lobjs.active = s.active;
+        lobjs.active_left = s.active_left;
+        lobjs.nb_active = s.nb_active;
+        [
+            lobjs.lightmask_diffuse,
+            lobjs.lightmask_specular,
+            lobjs.lightmask_attnfunc,
+            lobjs.lightmask_alpha,
+        ] = s.masks;
+    });
+}
+
 /// `HSD_LObjGetFlags`.
 #[doc(alias = "HSD_LObjGetFlags")]
 pub fn flags(lobjs: &LObjs, l: Option<LObjId>) -> u32 {
