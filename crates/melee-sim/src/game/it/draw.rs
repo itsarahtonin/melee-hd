@@ -12,8 +12,6 @@ use crate::mtx::Mtx34;
 use crate::vec::Vec3;
 use melee_data::archive::DataRef;
 
-/// `It_Kind_Unk4`, whose debug range is drawn as a coin's (`it_266F`'s).
-const UNK4_KIND: i32 = 4;
 /// An item's pickup range's colour (`it_804D5168`).
 const PICKUP_RANGE: [u8; 4] = [0xFF, 0x40, 0x80, 0x80];
 
@@ -99,8 +97,8 @@ impl Running<'_> {
     /// An item's debug drawings, `it_8026ECE0`, by its display flags (`xDAA`, set by the
     /// develop tools): with `b6` its hits' bubbles (`b2`) and, unless held, its hurt
     /// capsules' (`b1`, coloured by its invincibility `xD0C`); its pickup range (`b4`, for an
-    /// item that can be picked up). An enemy's stomp range (`b3`) and a coin's range (`b0`)
-    /// aren't ported.
+    /// item that can be picked up), an enemy's stomp range (`b3`); a coin only its range
+    /// (`b0`).
     #[doc(alias = "it_8026ECE0")]
     fn item_debug_drawings(&mut self, gobj: GObjId, pass: i32) -> bool {
         use crate::lb::coll_draw;
@@ -110,9 +108,14 @@ impl Running<'_> {
         let ip = &mut game.items[i.0];
         let objs = &mut game.objs;
         let mut drew = false;
-        if ip.kind == UNK4_KIND {
-            if flag(ip.xDAA, 0) {
-                crate::game::code::unported_call("item kind 4's debug range (lbColl_8000A10C)");
+        if ip.kind == super::kinds::UNK4 {
+            // The coin (`It_Kind_Unk4`): its range while it can be picked up.
+            let v = ip.xDD4_itemVar.coin();
+            let f = v.x18.get();
+            if flag(ip.xDAA, 0) && (f.others || f.owner) {
+                let sub = &mut v.sub;
+                let (a, b, x0) = (sub.x14.get(), sub.x8.get(), sub.x0.get());
+                return coll_draw::coin_range(objs, a, b, x0, ip.scl, pass);
             }
             return false;
         }
@@ -139,8 +142,8 @@ impl Running<'_> {
             };
             drew |= coll_draw::range(objs, range, ip.pos, PICKUP_RANGE, pass, ip.facing_dir);
         }
-        if flag(ip.xDAA, 3) && flag(ip.xDD0_flag, 0) && pass == 0 {
-            crate::game::code::unported_call("an enemy's debug stomp range (lb_800149E0)");
+        if flag(ip.xDAA, 3) && flag(ip.xDD0_flag, 0) && coll_draw::stomp(objs, &ip.xB54, pass) {
+            drew = true;
         }
         drew
     }

@@ -714,6 +714,34 @@ pub const DEBUG_VS_BUBBLES: Game = Game {
     replay: Replay::Session("debug-vs-bubbles"),
 };
 
+/// The develop tools' fighter displays (`debug-sessions/vs-displays`): Fox, Ness and a
+/// computer's Link on Final Destination, their bubbles alone and each display R and D-pad left
+/// steps to.
+pub const DEBUG_VS_DISPLAYS: Game = Game {
+    stage: "Final Destination",
+    name: "debug-vs-displays",
+    players: "Fox vs Ness vs a computer's Link, the debug VS match's fighter displays (session debug-sessions/vs-displays)",
+    replay: Replay::Session("debug-vs-displays"),
+};
+
+/// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
+/// camera boxes and special points, the collisions by kind, by terrain and by ledge.
+pub const DEBUG_VS_STAGE: Game = Game {
+    stage: "Battlefield",
+    name: "debug-vs-stage",
+    players: "Link vs Mario, the debug VS match's stage displays (session debug-sessions/vs-stage)",
+    replay: Replay::Session("debug-vs-stage"),
+};
+
+/// The coins' displays (`debug-sessions/vs-coins`): a Coin Mode debug VS match, Link and Mario
+/// on Final Destination, the fighters' coin capsules and the coins' ranges.
+pub const DEBUG_VS_COINS: Game = Game {
+    stage: "Final Destination",
+    name: "debug-vs-coins",
+    players: "Link vs Mario in Coin Mode, the coins' displays (session debug-sessions/vs-coins)",
+    replay: Replay::Session("debug-vs-coins"),
+};
+
 /// The sound test's songs (`sound-sessions/songs`): a song playing, its name and number.
 pub const SOUND_SONGS: Game = Game {
     stage: "Main menu",
