@@ -1524,9 +1524,29 @@ impl Running<'_> {
         if self.game.db_combo(port, TRIGGER_R, BUTTON_UP) {
             self.db_toggle_item_bubbles();
         }
-        if self.game.gm.db_level == DEVELOP && self.game.db_combo(port, BUTTON_B, BUTTON_RIGHT) {
-            crate::game::code::unported_call("the item counts' peaks reset (fn_80225A54)");
+        self.db_reset_item_peaks(port);
+    }
+
+    /// `fn_80225A54`: at the develop level, B and D-pad right set each of the items' kinds'
+    /// peak counts back to its live count.
+    #[doc(alias = "fn_80225A54")]
+    fn db_reset_item_peaks(&mut self, port: i32) {
+        if self.game.gm.db_level != DEVELOP || !self.game.db_combo(port, BUTTON_B, BUTTON_RIGHT) {
+            return;
         }
+        let c = &mut self.game.it.counts;
+        c.x4 = c.x0;
+        c.xC = c.x8;
+        c.x14 = c.x10;
+        c.x20 = c.x1C;
+        c.x28 = c.x24;
+        c.x30 = c.x2C;
+        c.x38 = c.x34;
+        c.x44 = c.x40;
+        c.x4C = c.x48;
+        c.x54 = c.x50;
+        c.x5C = c.x58;
+        c.x64 = c.x60;
     }
 
     /// `fn_UpdateObjAllocLimiter`: at the develop level, B and D-pad up cap the effects'
