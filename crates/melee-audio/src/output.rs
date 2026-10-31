@@ -241,15 +241,20 @@ impl Resampler {
         let w = ring.head.load(Ordering::Acquire);
         let keep = ring.keep.load(Ordering::Acquire);
         let mut r = ring.tail.load(Ordering::Relaxed);
-        let step = self.step * (1.0 + self.nudge);
+        // A long tick's samples (before `keep`) play whole, at the nominal rate, so they last
+        // the time the player waits for them: a backlog is a stall's catch-up only once
+        // they've played.
+        let held = r < keep;
+        let step = if held {
+            self.step
+        } else {
+            self.step * (1.0 + self.nudge)
+        };
         // What this callback takes, and what the ring needs to start playing: that, the
         // margin, and a tick's worth, so it lasts until the next tick's samples.
         let need = (frames as f64 * step).ceil() as usize + 1;
         self.need = need;
         let start = need + self.margin + TICK;
-        // A long tick's samples (before `keep`) play whole: a backlog is a stall's catch-up
-        // only once they've played.
-        let held = r < keep;
         if !held && w - r > start + TOO_LONG {
             meters.dropped.fetch_add(w - start - r, Ordering::Relaxed);
             r = w - start;
@@ -444,9 +449,9 @@ impl Simulated {
         self.ring.push(samples, true);
     }
 
-    /// The device's callback, for `frames` device samples.
-    pub fn fill(&mut self, frames: usize) {
-        self.resampler.fill(frames, |_| {});
+    /// The device's callback, for `frames` device samples, each handed to `put`.
+    pub fn fill(&mut self, frames: usize, put: impl FnMut([f32; 2])) {
+        self.resampler.fill(frames, put);
     }
 
     /// The samples pushed and the samples played or dropped so far.
@@ -713,15 +718,24 @@ mod tests {
         let mut r = Resampler::new(ring.clone(), 48_000);
         let mut pushed = 0;
         ticks(&ring, &mut r, &mut pushed, 60);
-        let before = r.nudge;
+        // The rate nudged as far as it goes: the long tick plays at the nominal rate anyway.
+        r.nudge = MAX_NUDGE;
         let long = 57_600;
         ring.push(&tone(long, pushed), true);
         pushed += long;
+        r.fill(128, |_| {});
+        let from = ring.tail.load(Ordering::Relaxed);
         // Its length less the tick it's in, at 48 kHz: 1.8 s less a tick.
-        for _ in 0..(long - TICK) * 3 / 2 / 128 {
+        let calls = (long - TICK) * 3 / 2 / 128;
+        for _ in 0..calls {
             r.fill(128, |_| {});
         }
-        assert_eq!(r.nudge, before, "the rate nudged by the long tick");
+        let read = ring.tail.load(Ordering::Relaxed) - from;
+        assert!(
+            read.abs_diff(calls * 128 * 2 / 3) <= 1,
+            "{read} samples played in {calls} callbacks"
+        );
+        assert_eq!(r.nudge, MAX_NUDGE, "the rate nudged by the long tick");
         ticks(&ring, &mut r, &mut pushed, 120);
         let s = ring.stats();
         assert_eq!((s.underruns, s.skips), (0, 0));
