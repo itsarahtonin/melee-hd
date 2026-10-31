@@ -113,12 +113,13 @@ impl Comparer<'_> {
         let text_at = |t: Option<u8>| t.map_or(0, |t| pool + 0x34 * u32::from(t));
         self.check(
             "toy.c .sbss",
-            "debug flags, fog, base shown, editor, debug words",
+            "debug flags, fog, base shown, editor, Z view's switch, debug words",
             (
                 g.debug_l as u8,
                 g.fog_on,
                 g.base_shown,
                 g.editor.map_or(0, |e| e.block),
+                g.z_switch,
                 g.xa0,
                 g.xa1,
                 g.debug_z as u8,
@@ -130,6 +131,7 @@ impl Comparer<'_> {
                 self.u32(sym("_Toy_sbss_804D6E54")) as i32,
                 self.u32(sym("_Toy_sbss_804D6E58")) as i32,
                 self.u32(sym("_Toy_sbss_804D6E5C")),
+                self.u32(sym("_Toy_sbss_804D6E60")) as i32,
                 self.u8(sym("_Toy_sbss_804D6EA0")),
                 self.u8(sym("_Toy_sbss_804D6EA1")),
                 self.u8(sym("_Toy_sbss_804D6EA2")),

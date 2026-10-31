@@ -85,6 +85,21 @@ pub fn load_desc(fogs: &mut Fogs, data: &Archives, desc: DataRef) -> FogId {
     f
 }
 
+/// [`load_desc`] of a descriptor in the executable's data rather than a file's (its type,
+/// distances and color; no range adjustment).
+pub fn load_values(fogs: &mut Fogs, ty: u32, start: f32, end: f32, color: [u8; 4]) -> FogId {
+    let f = FogId(fogs.fogs.alloc(Fog::default()));
+    let addr = super::heap::class_alloc(super::heap::Class::Fog);
+    fogs.fogs.set_addr(f.0, addr);
+    let o = &mut fogs[f];
+    o.ty = ty;
+    o.start = start;
+    o.end = end;
+    o.color = color;
+    o.stale_alpha = false;
+    f
+}
+
 /// Sets a fog's type, distances and color from a descriptor, `HSD_FogInit`. Without a
 /// descriptor the original reads the GX viewport instead; nothing passes none.
 #[doc(alias = "HSD_FogInit")]

@@ -25,7 +25,7 @@ const PAD_Y: u32 = 0x800;
 const PAD_START: u32 = 0x1000;
 
 /// `(f32) n` of an `s32`, as the code converts it (exact for the counts it converts).
-fn int_f(n: i32) -> f64 {
+pub(super) fn int_f(n: i32) -> f64 {
     fp::frsp(f64::from(n))
 }
 
@@ -129,7 +129,7 @@ impl Running<'_> {
 
     /// `_Toy_803102C4`: whether the close-up's axes hide.
     #[doc(alias = "_Toy_803102C4")]
-    fn toy_axes_hidden(&mut self, hidden: i8) {
+    pub(super) fn toy_axes_hidden(&mut self, hidden: i8) {
         self.game.toys.gallery.axes_hidden = hidden;
     }
 
@@ -137,7 +137,7 @@ impl Running<'_> {
     /// close up, else the second), and below ten degrees which of the two stands shows (the
     /// second when the eye is below the floor or higher than ten degrees).
     #[doc(alias = "_Toy_80308DC8")]
-    fn toy_stand_by_view(&mut self, c: cobj::CObjId) {
+    pub(super) fn toy_stand_by_view(&mut self, c: cobj::CObjId) {
         let data = self.data;
         let o = &mut self.game.objs;
         let _ = cobj::interest(o, data, c);
@@ -164,7 +164,7 @@ impl Running<'_> {
     }
 
     /// The info board's sprites hidden (9) or shown (8).
-    fn toy_info_flags(&mut self, flags: u32) {
+    pub(super) fn toy_info_flags(&mut self, flags: u32) {
         let info = self.game.toys.gallery.info.expect("the info board");
         let mut s = match self.game.world.gobj(info).obj {
             Some(super::super::state::Obj::SObj(s)) => s,
@@ -178,7 +178,7 @@ impl Running<'_> {
 
     /// The frustum kept for a transition (`HSD_CObjGetTop` to `GetLeft` into
     /// `_Toy_sbss_804D6E80` to `E8C`).
-    fn toy_keep_frustum(&mut self, c: cobj::CObjId) {
+    pub(super) fn toy_keep_frustum(&mut self, c: cobj::CObjId) {
         let cobjs = &self.game.objs.cobjs;
         let f = [
             cobj::top(cobjs, Some(c)),
@@ -190,7 +190,7 @@ impl Running<'_> {
     }
 
     /// The three cameras' links (`gxlink_prios`) for the close-up or the view.
-    fn toy_close_links(&mut self, close: bool) {
+    pub(super) fn toy_close_links(&mut self, close: bool) {
         let g = &self.game.toys.gallery;
         let (main, text, light) = (
             g.cams[0].expect("the main camera"),
@@ -215,7 +215,7 @@ impl Running<'_> {
     /// distance, pitch and interest stepping back, the stand's look, the frustum widening,
     /// then the view (state 0) put back.
     #[doc(alias = "_Toy_80308F04")]
-    fn toy_transition(&mut self, c: cobj::CObjId) {
+    pub(super) fn toy_transition(&mut self, c: cobj::CObjId) {
         let cobjs = &self.game.objs.cobjs;
         let (top, bottom, right, left) = (
             cobj::top(cobjs, Some(c)),
@@ -597,9 +597,33 @@ impl Running<'_> {
         {
             return;
         }
-        let total = self.toy_total();
         if reg(sx) < 0.0 || self.toy_triggered() & 0x441 != 0 {
-            self.lb_audio_call(2);
+            self.toy_ring_step(true);
+        } else if reg(sx) > 0.0 || self.toy_triggered() & 0x822 != 0 {
+            self.toy_ring_step(false);
+        } else {
+            return;
+        }
+        self.toy_view_reset(false);
+        self.toy_view_place(0.0, 0.0);
+        self.game.toys.gallery.idle = 0x95E;
+        let e = self.game.toys.gallery.selected_entry;
+        self.toy_show_entry(e);
+        self.toy_clear_new();
+        let t = self.game.toys.gallery.entries[usize::from(e)].trophy;
+        self.toy_panel_texts(i32::from(t));
+        let mark = self.game.toys.gallery.panel_parts[8];
+        self.toy_mark(mark, i32::from(t));
+        self.game.toys.gallery.cooldown = 0x14;
+    }
+
+    /// The selection one back (`back`) or on, round at either end, with the move's sound;
+    /// beyond three trophies the ring of loaded models turned with it: the entry past its new
+    /// end set to the trophy there and loaded, the one past its other end let go.
+    pub(super) fn toy_ring_step(&mut self, back: bool) {
+        let total = self.toy_total();
+        self.lb_audio_call(2);
+        if back {
             let g = &mut self.game.toys.gallery;
             g.selected -= 1;
             if g.selected < 0 {
@@ -631,53 +655,39 @@ impl Running<'_> {
                 let g = &mut self.game.toys.gallery;
                 g.selected_entry = g.entries[usize::from(g.selected_entry)].prev;
             }
-        } else if reg(sx) > 0.0 || self.toy_triggered() & 0x822 != 0 {
-            self.lb_audio_call(2);
-            let g = &mut self.game.toys.gallery;
-            g.selected += 1;
-            if i32::from(g.selected) >= total {
-                g.selected = 0;
-            }
-            if total > 3 {
-                let g = &self.game.toys.gallery;
-                let sel = i32::from(g.selected);
-                let t = if sel + 1 >= total {
-                    g.order[(sel - total + 1) as usize]
-                } else {
-                    g.order[(sel + 1) as usize]
-                };
-                let e = g.entries[usize::from(g.last)].next;
-                self.toy_entry_set(e, t);
-                self.toy_entry_load(e);
-                let first = self.game.toys.gallery.first;
-                if let Some(a) = self.game.toys.gallery.entries[usize::from(first)]
-                    .archive
-                    .take()
-                {
-                    self.toy_free(a);
-                }
-                let g = &mut self.game.toys.gallery;
-                g.selected_entry = g.entries[usize::from(g.selected_entry)].next;
-                g.first = g.entries[usize::from(g.first)].next;
-                g.last = g.entries[usize::from(g.last)].next;
-            } else {
-                let g = &mut self.game.toys.gallery;
-                g.selected_entry = g.entries[usize::from(g.selected_entry)].next;
-            }
-        } else {
             return;
         }
-        self.toy_view_reset(false);
-        self.toy_view_place(0.0, 0.0);
-        self.game.toys.gallery.idle = 0x95E;
-        let e = self.game.toys.gallery.selected_entry;
-        self.toy_show_entry(e);
-        self.toy_clear_new();
-        let t = self.game.toys.gallery.entries[usize::from(e)].trophy;
-        self.toy_panel_texts(i32::from(t));
-        let mark = self.game.toys.gallery.panel_parts[8];
-        self.toy_mark(mark, i32::from(t));
-        self.game.toys.gallery.cooldown = 0x14;
+        let g = &mut self.game.toys.gallery;
+        g.selected += 1;
+        if i32::from(g.selected) >= total {
+            g.selected = 0;
+        }
+        if total > 3 {
+            let g = &self.game.toys.gallery;
+            let sel = i32::from(g.selected);
+            let t = if sel + 1 >= total {
+                g.order[(sel - total + 1) as usize]
+            } else {
+                g.order[(sel + 1) as usize]
+            };
+            let e = g.entries[usize::from(g.last)].next;
+            self.toy_entry_set(e, t);
+            self.toy_entry_load(e);
+            let first = self.game.toys.gallery.first;
+            if let Some(a) = self.game.toys.gallery.entries[usize::from(first)]
+                .archive
+                .take()
+            {
+                self.toy_free(a);
+            }
+            let g = &mut self.game.toys.gallery;
+            g.selected_entry = g.entries[usize::from(g.selected_entry)].next;
+            g.first = g.entries[usize::from(g.first)].next;
+            g.last = g.entries[usize::from(g.last)].next;
+        } else {
+            let g = &mut self.game.toys.gallery;
+            g.selected_entry = g.entries[usize::from(g.selected_entry)].next;
+        }
     }
 }
 
