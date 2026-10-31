@@ -9,7 +9,17 @@
 //! tick that comes a callback later still finds samples, measured over each quarter second;
 //! running dry anyway (an underrun, counted in [`OutputStats`]) adds a millisecond to the
 //! margin, unless it was a stall that no margin would cover, and a minute without takes one
-//! back. The device's own buffer is as small as the
+//! back.
+//!
+//! **Decision: a long tick's samples play whole.** A tick that loads a scene runs the load's
+//! whole length on Melee's timeline, up to two seconds of music at once ([`Output::push_long`]);
+//! the player then waits that long before its next tick, as a console plays on through the
+//! load. Those samples are never dropped as a stall's catch-up, and while they play the rate
+//! isn't nudged by the slack they bring. A stall's catch-up (the host late, not the tick long)
+//! is still dropped. How long the ring had been dry when a long tick's samples came (its load
+//! took the host longer than the ring held) is reported ([`OutputStats::dry`]), so the player
+//! moves Melee's clock on by it rather than drop that much of the song later. The device's own
+//! buffer is as small as the
 //! backend allows: on Windows the player talks to WASAPI directly ([`wasapi`]), asking for the
 //! audio engine's smallest period (`IAudioClient3`, often 2 to 3 ms where the driver allows it,
 //! else the standard 10 ms), or with [`OutputOptions::exclusive`] the device itself in exclusive
@@ -27,8 +37,9 @@ mod wasapi;
 
 /// The mixer's rate.
 pub const RATE: u32 = 32_000;
-/// The ring's size in stereo samples (about a second).
-const CAPACITY: usize = 1 << 15;
+/// The ring's size in stereo samples (about 8 s): room for the longest scene load's samples
+/// (under 2 s from the menus) pushed at once.
+const CAPACITY: usize = 1 << 18;
 /// About what a tick pushes at once.
 const TICK: usize = (RATE / 60) as usize;
 /// The slack the ring keeps at its lowest to start with, and the most the underruns can raise
@@ -66,6 +77,9 @@ pub struct OutputStats {
     /// Callbacks that ran out of samples while playing (each one a gap), and backlogs dropped.
     pub underruns: u32,
     pub skips: u32,
+    /// How long the ring had been dry, having run out while playing, when the last tick's
+    /// samples were pushed: zero unless they came late.
+    pub dry: Duration,
 }
 
 impl OutputStats {
@@ -83,6 +97,13 @@ struct Meters {
     callback_frames: AtomicU32,
     underruns: AtomicU32,
     skips: AtomicU32,
+    /// Source samples' worth of silence the callback played since the ring ran dry while
+    /// playing (zero while it plays), and that as the last push found it.
+    silent: AtomicU32,
+    dry_at_push: AtomicU32,
+    /// Samples dropped as a stall's backlog, and pushed with no room for them.
+    dropped: AtomicUsize,
+    overflowed: AtomicUsize,
 }
 
 impl Meters {
@@ -98,6 +119,9 @@ struct Ring {
     /// Samples written and read since the start.
     head: AtomicUsize,
     tail: AtomicUsize,
+    /// Where the last long tick's samples end: the samples before it play whole, never dropped
+    /// as a stall's backlog.
+    keep: AtomicUsize,
     meters: Meters,
 }
 
@@ -107,21 +131,29 @@ impl Ring {
             buf: (0..CAPACITY).map(|_| AtomicU32::new(0)).collect(),
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
+            keep: AtomicUsize::new(0),
             meters: Meters::default(),
         }
     }
 
-    /// Appends what fits; the rest is dropped.
-    fn push(&self, samples: &[[i16; 2]]) {
+    /// Appends what fits; the rest is dropped. A long tick's samples (`whole`) are kept from
+    /// the stall rule's drop.
+    fn push(&self, samples: &[[i16; 2]], whole: bool) {
         let w = self.head.load(Ordering::Relaxed);
         let r = self.tail.load(Ordering::Acquire);
-        self.meters
-            .ring_at_push
-            .store((w - r) as u32, Ordering::Relaxed);
+        let m = &self.meters;
+        m.ring_at_push.store((w - r) as u32, Ordering::Relaxed);
+        m.dry_at_push
+            .store(m.silent.load(Ordering::Relaxed), Ordering::Relaxed);
         let n = samples.len().min(CAPACITY - (w - r));
+        m.overflowed.fetch_add(samples.len() - n, Ordering::Relaxed);
         for (i, s) in samples[..n].iter().enumerate() {
             let word = u32::from(s[0] as u16) | (u32::from(s[1] as u16) << 16);
             self.buf[(w + i) % CAPACITY].store(word, Ordering::Relaxed);
+        }
+        // The mark before the samples, so a callback that sees them sees it.
+        if whole {
+            self.keep.store(w + n, Ordering::Release);
         }
         self.head.store(w + n, Ordering::Release);
     }
@@ -136,6 +168,9 @@ impl Ring {
             callback_frames: m.callback_frames.load(Ordering::Relaxed),
             underruns: m.underruns.load(Ordering::Relaxed),
             skips: m.skips.load(Ordering::Relaxed),
+            dry: Duration::from_secs_f64(
+                f64::from(m.dry_at_push.load(Ordering::Relaxed)) / f64::from(RATE),
+            ),
         }
     }
 
@@ -163,6 +198,8 @@ struct Resampler {
     /// dry spell of more than two ticks was a stall (a window being dragged, the first frame's
     /// pipelines), which no margin covers, so the margin goes back down.
     dry: Option<usize>,
+    /// Source samples' worth of silence played since the ring ran dry while playing.
+    silent: f64,
     /// The least slack a callback found, over the current window, and what the last callback
     /// took.
     low: usize,
@@ -185,6 +222,7 @@ impl Resampler {
             margin: MARGIN,
             calm: 0,
             dry: None,
+            silent: 0.0,
             low: usize::MAX,
             need: 0,
             window_left: window,
@@ -201,6 +239,7 @@ impl Resampler {
             .callback_frames
             .store(frames as u32, Ordering::Relaxed);
         let w = ring.head.load(Ordering::Acquire);
+        let keep = ring.keep.load(Ordering::Acquire);
         let mut r = ring.tail.load(Ordering::Relaxed);
         let step = self.step * (1.0 + self.nudge);
         // What this callback takes, and what the ring needs to start playing: that, the
@@ -208,25 +247,35 @@ impl Resampler {
         let need = (frames as f64 * step).ceil() as usize + 1;
         self.need = need;
         let start = need + self.margin + TICK;
-        if w - r > start + TOO_LONG {
+        // A long tick's samples (before `keep`) play whole: a backlog is a stall's catch-up
+        // only once they've played.
+        let held = r < keep;
+        if !held && w - r > start + TOO_LONG {
+            meters.dropped.fetch_add(w - start - r, Ordering::Relaxed);
             r = w - start;
             meters.skips.fetch_add(1, Ordering::Relaxed);
         }
         if !self.primed && w - r >= start {
-            // Two ticks' worth of device samples (a window is a quarter second).
+            // Two ticks' worth of device samples (a window is a quarter second), or a long
+            // tick's samples that came late because its load took the host that long: a stall,
+            // not a margin too small.
             if self
                 .dry
                 .take()
-                .is_some_and(|d| d > self.window * 4 * 2 / 60)
+                .is_some_and(|d| held || d > self.window * 4 * 2 / 60)
             {
                 self.margin = (self.margin - MARGIN_STEP).max(MARGIN);
             }
             self.primed = true;
+            self.silent = 0.0;
+            meters.silent.store(0, Ordering::Relaxed);
             self.low = usize::MAX;
             self.window_left = self.window;
         }
         if let (false, Some(d)) = (self.primed, &mut self.dry) {
             *d += frames;
+            self.silent += frames as f64 * step;
+            meters.silent.store(self.silent as u32, Ordering::Relaxed);
         }
         let playing = self.primed;
         // How much more than this callback takes the ring holds: the next callback runs dry
@@ -260,7 +309,11 @@ impl Resampler {
                 self.margin = (self.margin - MARGIN_STEP).max(MARGIN);
                 self.calm = 0;
             }
-            self.low = self.low.min(slack);
+            // A long tick's samples aren't the slack the ticks leave: the rate isn't nudged by
+            // them.
+            if !held {
+                self.low = self.low.min(slack);
+            }
             self.window_left = self.window_left.saturating_sub(frames);
             if self.window_left == 0 {
                 self.adjust();
@@ -276,6 +329,10 @@ impl Resampler {
     /// so the slack settles a fraction of a millisecond above that, on the safe side.
     fn adjust(&mut self) {
         self.window_left = self.window;
+        if self.low == usize::MAX {
+            // A long tick's samples played through the whole window: nothing measured.
+            return;
+        }
         let target = self.need + self.margin;
         let err = (self.low as f64 - target as f64) / f64::from(RATE);
         self.low = usize::MAX;
@@ -344,10 +401,73 @@ impl Output {
 
     /// Queues 32 kHz stereo samples; never waits (what doesn't fit is dropped).
     pub fn push(&self, samples: &[[i16; 2]]) {
-        self.ring.push(samples);
+        self.ring.push(samples, false);
+    }
+
+    /// Queues a long tick's samples (a scene's load: more than a tick of Melee's time), which
+    /// play whole however long they last, never dropped as a stall's catch-up: the player waits
+    /// their length before its next tick.
+    pub fn push_long(&self, samples: &[[i16; 2]]) {
+        self.ring.push(samples, true);
     }
 
     /// What the output has measured.
+    pub fn stats(&self) -> OutputStats {
+        self.ring.stats()
+    }
+}
+
+/// An output with no device, whose callback the caller runs: the ring and the resampler as the
+/// device's thread runs them, for checking what a player's pushes play (its tests).
+pub struct Simulated {
+    ring: Arc<Ring>,
+    resampler: Resampler,
+}
+
+impl Simulated {
+    /// An output whose device plays at `device_rate`.
+    pub fn new(device_rate: u32) -> Simulated {
+        let ring = Arc::new(Ring::new());
+        Simulated {
+            resampler: Resampler::new(ring.clone(), device_rate),
+            ring,
+        }
+    }
+
+    /// As [`Output::push`].
+    pub fn push(&self, samples: &[[i16; 2]]) {
+        self.ring.push(samples, false);
+    }
+
+    /// As [`Output::push_long`].
+    pub fn push_long(&self, samples: &[[i16; 2]]) {
+        self.ring.push(samples, true);
+    }
+
+    /// The device's callback, for `frames` device samples.
+    pub fn fill(&mut self, frames: usize) {
+        self.resampler.fill(frames, |_| {});
+    }
+
+    /// The samples pushed and the samples played or dropped so far.
+    pub fn pushed(&self) -> usize {
+        self.ring.head.load(Ordering::Relaxed)
+    }
+
+    pub fn taken(&self) -> usize {
+        self.ring.tail.load(Ordering::Relaxed)
+    }
+
+    /// The samples dropped as a stall's backlog, and those pushed with no room for them.
+    pub fn dropped(&self) -> usize {
+        self.ring.meters.dropped.load(Ordering::Relaxed)
+    }
+
+    pub fn overflowed(&self) -> usize {
+        self.ring.meters.overflowed.load(Ordering::Relaxed)
+    }
+
+    /// As [`Output::stats`].
     pub fn stats(&self) -> OutputStats {
         self.ring.stats()
     }
@@ -454,14 +574,14 @@ mod tests {
         let ring = Arc::new(Ring::new());
         let mut r = Resampler::new(ring.clone(), 48_000);
         let src = tone(2 * TICK, 0);
-        ring.push(&src[..TICK / 2]);
+        ring.push(&src[..TICK / 2], false);
         let mut out = Vec::new();
         r.fill(480, |s| out.push(s));
         assert!(
             out.iter().all(|s| *s == [0.0; 2]),
             "plays before it can last"
         );
-        ring.push(&src[TICK / 2..]);
+        ring.push(&src[TICK / 2..], false);
         out.clear();
         r.fill(480, |s| out.push(s));
         assert!(r.primed);
@@ -501,7 +621,7 @@ mod tests {
         while tick_at < seconds * 1_000_000 {
             if tick_at <= call_at {
                 let k = ((pushed + per_tick) as usize) - pushed as usize;
-                ring.push(&tone(k, pushed as usize));
+                ring.push(&tone(k, pushed as usize), false);
                 pushed += per_tick;
                 if tick_at > seconds * 500_000 {
                     sum += ring.stats().ring.as_secs_f64();
@@ -543,7 +663,7 @@ mod tests {
         let mut pushed = 0;
         let mut push = |ticks: usize| {
             for _ in 0..ticks {
-                ring.push(&tone(TICK, pushed));
+                ring.push(&tone(TICK, pushed), false);
                 pushed += TICK;
             }
         };
@@ -570,6 +690,109 @@ mod tests {
         assert_eq!(s.underruns, 1);
         assert_eq!(s.skips, 1);
         assert_eq!(r.margin, MARGIN);
+    }
+
+    /// A second of ticks against 128-sample callbacks at 48 kHz (six or seven a tick), as
+    /// [`a_stall_leaves_the_margin`] plays them.
+    fn ticks(ring: &Ring, r: &mut Resampler, pushed: &mut usize, n: usize) {
+        for t in 0..n {
+            ring.push(&tone(TICK, *pushed), false);
+            *pushed += TICK;
+            for _ in 0..if t % 4 == 0 { 7 } else { 6 } {
+                r.fill(128, |_| {});
+            }
+        }
+    }
+
+    /// A long tick (a scene's load: 1.8 s of Melee's time pushed at once) plays whole while the
+    /// player waits its length, and the ticks go on after it as before: nothing dropped, no
+    /// gap, the margin and the rate as they were.
+    #[test]
+    fn a_long_tick_plays_whole() {
+        let ring = Arc::new(Ring::new());
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        let mut pushed = 0;
+        ticks(&ring, &mut r, &mut pushed, 60);
+        let before = r.nudge;
+        let long = 57_600;
+        ring.push(&tone(long, pushed), true);
+        pushed += long;
+        // Its length less the tick it's in, at 48 kHz: 1.8 s less a tick.
+        for _ in 0..(long - TICK) * 3 / 2 / 128 {
+            r.fill(128, |_| {});
+        }
+        assert_eq!(r.nudge, before, "the rate nudged by the long tick");
+        ticks(&ring, &mut r, &mut pushed, 120);
+        let s = ring.stats();
+        assert_eq!((s.underruns, s.skips), (0, 0));
+        assert_eq!(r.margin, MARGIN);
+        let queued = pushed - ring.tail.load(Ordering::Relaxed);
+        assert!(
+            queued < 2 * TICK,
+            "{queued} samples queued after it: none dropped, none left over"
+        );
+    }
+
+    /// The same long tick with the old rule (pushed as a tick's samples): its samples past
+    /// two ticks are dropped as a stall's backlog, which is what made the menus' music skip
+    /// ahead at every scene's load.
+    #[test]
+    fn a_long_tick_pushed_as_a_tick_is_dropped() {
+        let ring = Arc::new(Ring::new());
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        let mut pushed = 0;
+        ticks(&ring, &mut r, &mut pushed, 60);
+        ring.push(&tone(57_600, pushed), false);
+        r.fill(128, |_| {});
+        assert_eq!(ring.stats().skips, 1);
+    }
+
+    /// A stall in the middle of a long tick's samples (the player's ticks late after its wait)
+    /// still has its catch-up dropped once the long tick's samples have played.
+    #[test]
+    fn a_stall_after_a_long_tick_still_drops_its_catch_up() {
+        let ring = Arc::new(Ring::new());
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        let mut pushed = 0;
+        ticks(&ring, &mut r, &mut pushed, 60);
+        ring.push(&tone(16_000, pushed), true);
+        pushed += 16_000;
+        // Ten ticks' catch-up pushed at once while the long tick's samples play.
+        for _ in 0..10 {
+            ring.push(&tone(TICK, pushed), false);
+            pushed += TICK;
+        }
+        r.fill(128, |_| {});
+        assert_eq!(ring.stats().skips, 0, "the long tick's samples kept");
+        for _ in 0..(16_000 + 2 * TICK) * 3 / 2 / 128 {
+            r.fill(128, |_| {});
+        }
+        assert_eq!(ring.stats().skips, 1, "the catch-up after them dropped");
+    }
+
+    /// A long tick whose samples come after the ring ran dry (its load took the host longer
+    /// than the ring held): the dry spell is reported for the player's clock, and it's a
+    /// stall, which leaves the margin as it was.
+    #[test]
+    fn a_late_long_tick_reports_the_dry_spell() {
+        let ring = Arc::new(Ring::new());
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        let mut pushed = 0;
+        ticks(&ring, &mut r, &mut pushed, 60);
+        // 60 ms of callbacks without a push.
+        for _ in 0..22 {
+            r.fill(128, |_| {});
+        }
+        ring.push(&tone(9_600, pushed), true);
+        let s = ring.stats();
+        assert_eq!(s.underruns, 1);
+        let dry = s.dry.as_secs_f64() * 1000.0;
+        assert!((40.0..60.0).contains(&dry), "dry {dry:.2} ms");
+        r.fill(128, |_| {});
+        assert!(r.primed);
+        assert_eq!(r.margin, MARGIN);
+        ring.push(&tone(TICK, pushed), false);
+        assert_eq!(ring.stats().dry, Duration::ZERO, "playing again");
     }
 
     /// Ticks up to 6 ms late: the ring settles deeper, as deep as their lateness needs.

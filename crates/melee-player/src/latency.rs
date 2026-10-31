@@ -62,6 +62,10 @@ pub struct Tick {
     pub sim: Duration,
     pub frame: Option<FrameTimes>,
     pub audio: Option<OutputStats>,
+    /// How much of Melee's time the tick ran (its timeline's), and the samples it mixed: a
+    /// scene's load runs its whole length in one tick.
+    pub length: Option<Duration>,
+    pub samples: Option<usize>,
 }
 
 /// The log: the CSV file and every tick's row, for the summary.
@@ -78,7 +82,7 @@ pub struct Log {
     pub counts: crate::jit::Counts,
 }
 
-const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,ready_ms,target_ms,shown_ms,missed,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips";
+const HEADER: &str = "tick,time_ms,late_ms,adapter_age_ms,keyboard_age_ms,gamepad_age_ms,adapter_reports,sim_ms,frame,rendered_ms,acquire_ms,presented_ms,ready_ms,target_ms,shown_ms,missed,audio_ring_ms,audio_device_ms,audio_total_ms,audio_callback_frames,audio_underruns,audio_skips,emulated_ms,audio_samples,audio_dry_ms";
 
 fn ms(d: Duration) -> f64 {
     d.as_secs_f64() * 1000.0
@@ -112,7 +116,7 @@ impl Log {
         let f = t.frame;
         let a = t.audio;
         let row = format!(
-            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
+            "{},{:.3},{:.3},{},{},{},{},{:.3},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}",
             self.rows.len(),
             ms(at.saturating_duration_since(start)),
             ms(t.late),
@@ -136,6 +140,9 @@ impl Log {
             a.map_or(String::new(), |a| a.callback_frames.to_string()),
             a.map_or(String::new(), |a| a.underruns.to_string()),
             a.map_or(String::new(), |a| a.skips.to_string()),
+            opt_ms(t.length),
+            t.samples.map_or(String::new(), |n| n.to_string()),
+            opt_ms(a.map(|a| a.dry)),
         );
         if let Err(e) = writeln!(self.out, "{row}") {
             eprintln!("{}: {e}", self.path);
@@ -241,6 +248,14 @@ impl Log {
             );
         }
         let c = self.counts;
+        if c.long > 0 {
+            s += &format!(
+                "  long ticks (scene loads): {}, waited {:.3} s in all
+",
+                c.long,
+                c.long_time.as_secs_f64()
+            );
+        }
         if c.targeted > 0 || c.unshown > 0 || c.stalls > 0 {
             s += &format!(
                 "  refreshes missed: {} of {} frames meant for one; ticks without a frame of their own: {}; stalls: {}\n",
@@ -530,6 +545,8 @@ mod tests {
                     missed: Some(i == 10),
                 }),
                 audio: None,
+                length: Some(Duration::from_micros(16_683)),
+                samples: Some(533),
             });
         }
         let mut live = Live::default();

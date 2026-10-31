@@ -73,6 +73,8 @@ mod gates;
 mod holds;
 mod jit;
 mod latency;
+#[cfg(test)]
+mod load_tests;
 mod monitor;
 mod paced;
 #[cfg(test)]
@@ -108,7 +110,7 @@ use melee_render::blend::{Blend, Capture};
 use melee_render::frame::Frames;
 use melee_render::gpu::Gpu;
 use melee_render::predict::{Cost, Predictor};
-use melee_sim::audio::clock::DiscSpeed;
+use melee_sim::audio::clock::{DiscSpeed, TB_HZ};
 use melee_sim::game::gm::vs_mode::{GamePrefs, GameRules, Special};
 use melee_sim::game::roster;
 use melee_sim::game::special_audit;
@@ -567,6 +569,9 @@ struct Session {
     replay: Option<Replay>,
     ended: bool,
     sound: Option<sound::Sound>,
+    /// How much of Melee's time the last tick ran (its timeline's, when it has one): a tick
+    /// that loads a scene runs the load's whole length ([`jit::Scheduler::took`]).
+    length: Option<Duration>,
     /// Where the match's recording goes when the session ends, when it's recorded.
     recording: Option<recording::Recording>,
     /// The console's platform from power-on: the disc, the saves, the session's recording and
@@ -849,6 +854,7 @@ impl Session {
             replay: None,
             ended: false,
             sound,
+            length: None,
             recording: None,
             console: Some(platform),
         };
@@ -856,7 +862,7 @@ impl Session {
             let power::Run::Console(s) = &mut session.run else {
                 unreachable!()
             };
-            snd.mix(&mut s.game.audio, &s.data);
+            snd.mix(&mut s.game.audio, &s.data, false);
         }
         Ok(session)
     }
@@ -976,27 +982,33 @@ impl Session {
             replay,
             ended: false,
             sound,
+            length: None,
             recording: None,
             console: None,
         })
     }
 
-    /// One engine tick with these controllers; the frame's draws if it renders.
+    /// Where Melee's timeline is, when the game has one.
+    fn timeline(&self) -> Option<u64> {
+        self.game().audio.clock.as_ref().map(|c| c.now)
+    }
+
+    /// One engine tick with these controllers; the frame's draws if it renders. Its length on
+    /// Melee's timeline is kept, and a long tick's samples play whole.
     fn tick(
         &mut self,
         pads: [melee_sim::input::pad::PadStatus; 4],
     ) -> melee_sim::game::vs_match::Frame {
+        let before = self.timeline();
+        let tick = engine_tick(self.game());
         let f = match (&mut self.run, &mut self.console) {
             (power::Run::Console(s), Some(p)) => {
                 let f = p.step(s, pads);
-                if let Some(snd) = &mut self.sound {
-                    snd.mix(&mut s.game.audio, &s.data);
-                }
                 // A scene's end isn't the session's; a played-back session's is its last read.
                 if p.feed.as_ref().is_some_and(|(r, n)| *n >= r.len()) {
                     self.ended = true;
                 }
-                return f;
+                f
             }
             (power::Run::Match(m), _) => match &self.replay {
                 Some(r) => m.step_replay(&mut melee_slippi::Device(r)),
@@ -1004,10 +1016,20 @@ impl Session {
             },
             (power::Run::Console(_), None) => unreachable!("a console without its platform"),
         };
-        if let (Some(snd), power::Run::Match(m)) = (&mut self.sound, &mut self.run) {
-            snd.mix(&mut m.game.audio, &m.data);
+        self.length = before.zip(self.timeline()).map(|(b, a)| {
+            Duration::from_nanos(((a - b) as u128 * 1_000_000_000 / u128::from(TB_HZ)) as u64)
+        });
+        let long = self.length.is_some_and(|l| jit::is_long(l, tick));
+        if let Some(snd) = &mut self.sound {
+            let (game, data) = match &mut self.run {
+                power::Run::Console(s) => (&mut s.game, &s.data),
+                power::Run::Match(m) => (&mut m.game, &m.data),
+            };
+            snd.mix(&mut game.audio, data, long);
         }
-        self.ended |= f.ended;
+        if matches!(self.run, power::Run::Match(_)) {
+            self.ended |= f.ended;
+        }
         f
     }
 
@@ -1408,10 +1430,17 @@ impl App {
             self.inputs.rumble(self.motors);
         }
         let audio = session.sound.as_ref().and_then(sound::Sound::stats);
+        let samples = session.sound.as_ref().map(|s| s.samples().len());
+        let length = session.length;
         let tick = engine_tick(session.game());
         self.give_snapshot(&f.draws);
         let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
+        // A long tick (a scene's load) holds the next tick back by its length on Melee's
+        // timeline, as a console plays on through the load.
+        let later = length.map_or(Duration::ZERO, |l| {
+            self.jit.took(l, audio.map_or(Duration::ZERO, |a| a.dry))
+        });
         self.stats.ticks += 1;
         self.ticks += 1;
         if self.max_ticks.is_some_and(|n| self.ticks >= n) {
@@ -1432,7 +1461,14 @@ impl App {
             // tick draws again, rather than draw the last tick's draws on the new state
             // ([`paced`]).
             let session = self.session.as_mut().expect("a match");
-            if let Some(old) = self.paced.ran(self.mode, session.game(), f, plan.due) {
+            // After a long tick Extrapolate holds the tick's own frame through the wait, moving
+            // toward the prediction only in the tick before the next (Interpolate's frames
+            // reach the tick at once and hold it).
+            let due = match self.mode {
+                pacing::Mode::Extrapolate => plan.due + later,
+                _ => plan.due,
+            };
+            if let Some(old) = self.paced.ran(self.mode, session.game(), f, due) {
                 session.recycle(old);
             }
             if self.mode == pacing::Mode::Extrapolate {
@@ -1458,6 +1494,8 @@ impl App {
             sim: simulated,
             frame,
             audio,
+            length,
+            samples,
         };
         if self.mode.paced() {
             // Logged with the first frame drawn after it.
@@ -1664,13 +1702,15 @@ impl App {
         )
     }
 
-    /// Starts Melee's clock at the next tick, now, with the timing and margin chosen.
+    /// Starts Melee's clock at the next tick, now, with the timing and margin chosen; a long
+    /// tick's wait still to run (the settings panel opened and closed during a scene's load)
+    /// is kept, as its sound plays on.
     fn start_clock(&mut self) {
         self.display_refresh();
         self.jit = jit::Scheduler::new(
             Duration::from_secs_f64(1.0 / TICK_RATE),
             self.margin,
-            Instant::now(),
+            self.jit.due().max(Instant::now()),
         );
         self.frame_lead = jit::Lead::new(self.margin, self.jit.tick() / 2);
         self.policy = None;
