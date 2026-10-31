@@ -4,16 +4,16 @@
 //! base), Start changes the light, Z puts the camera back, B opens the list ([`super::list`]).
 //! The lottery shows its trophies with the same models ([`Running::toy_show`]).
 //!
-//! The debug views (`_Toy_8030B530`, `_Toy_8030E110`, the parameters' editor and their
-//! texts) are reached only with `DbLevel` at the debug ROM's or above: deferred
-//! (`ledger/deferred.txt`).
+//! The debug views (L held at the entry: [`super::debug_view`]'s fog view, Z: its
+//! parameters' view, R: [`super::debug`]'s unlock editor) are reached only with `DbLevel` at
+//! the debug ROM's or above.
 
 use gekko_fp as fp;
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::super::handles::CodeRef;
 use super::super::render::{CAMERA_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
-use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
+use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running, UserData};
 use super::{Loaded, TROPHY_COUNT};
 use crate::fpu::{mem, reg};
 use crate::hsd::cobj::{self, CObjId};
@@ -35,6 +35,8 @@ pub const PROC_STAND: u32 = 0x8030_7E84;
 pub const PROC_LIGHTS: u32 = 0x8030_6C5C;
 /// `Toy_80306954`: the main camera's (the light's erase color, then links 0 to 2).
 pub const RENDER_MAIN: u32 = 0x8030_6954;
+/// `_Toy_80306A0C`: the L view's fog, set while it's on.
+pub const RENDER_FOG: u32 = 0x8030_6A0C;
 /// `Toy_803068E0`: a camera's links, its fog let go after.
 pub const RENDER_CAMERA: u32 = 0x8030_68E0;
 /// `_Toy_80312050`: the close-up's axes.
@@ -255,6 +257,8 @@ pub struct Gallery {
     pub debug_text: Option<u8>,
     /// `_Toy_sbss_804D6E5C`: the unlock editor (R held at the entry).
     pub editor: Option<super::debug::Editor>,
+    /// `_Toy_sbss_804D6E60`: the Z view's switch, which only its setup writes (0).
+    pub z_switch: i32,
 }
 
 impl Gallery {
@@ -437,11 +441,6 @@ impl Running<'_> {
             if self.toy_held() & 0x20 != 0 {
                 self.game.toys.gallery.xa0 = 1;
             }
-            if l != 0 || z != 0 {
-                crate::game::code::unported_call(
-                    "the trophy gallery's debug views (_Toy_sbss_804D6E50, 804D6EA2)",
-                );
-            }
         }
         let alloc = |size: u32| crate::hsd::heap::mem_alloc(size);
         let cam_block = alloc(0x64);
@@ -474,6 +473,7 @@ impl Running<'_> {
             editor_text: self.game.toys.gallery.editor_text,
             debug_text: self.game.toys.gallery.debug_text,
             editor: self.game.toys.gallery.editor,
+            z_switch: self.game.toys.gallery.z_switch,
             ..Gallery::default()
         };
         self.toy_scene_prepare();
@@ -496,7 +496,11 @@ impl Running<'_> {
             self.load_font_named(0, "SdToy.dat", "SIS_ToyData");
             self.load_font_named(3, "SdToyExp.dat", "SIS_ToyDataExp");
         }
-        // R held: the unlock editor first, which sets the gallery up when it's done.
+        // Z held: the parameters' text; R held: the unlock editor first, which sets the
+        // gallery up when it's done.
+        if self.game.toys.gallery.debug_z != 0 {
+            self.toy_z_text();
+        }
         if self.game.toys.gallery.xa0 == 1 {
             self.toy_editor();
             return;
@@ -1079,6 +1083,10 @@ impl Running<'_> {
         jobj::set_srt(j, model, |o| o.scale.y = s);
         jobj::set_srt(j, model, |o| o.scale.z = s);
         jobj::set_rotation_y(j, model, r);
+        if self.game.toys.gallery.debug_text.is_some() {
+            let v = [0, 1, 2, 3, 4, 5].map(|f| self.toy_param(t, f));
+            self.toy_z_print(v);
+        }
         let second = self.toy_stand(root, trophy);
         jobj::set_flags_all(&mut self.game.objs.jobjs, Some(second), jobj::HIDDEN);
         self.game.toys.anim.x0e = 0;
@@ -1101,13 +1109,14 @@ impl Running<'_> {
     }
 
     /// `Toy_80306954`, the main camera's render: the light's erase color where it erases
-    /// (`HSD_CObjEraseScreen(cobj, 1, 0, 0)`), its links, and the fog let go.
+    /// (`HSD_CObjEraseScreen(cobj, 1, 0, 0)`) but in the L view, its links, and the fog let
+    /// go.
     #[doc(alias = "Toy_80306954")]
     pub fn toy_main_render(&mut self, gobj: GObjId) {
         let c = self.toy_cobj_of(gobj);
         if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             let (_, rgba, erases) = LIGHTS[self.game.toys.gallery.light as usize];
-            if erases {
+            if erases && self.game.toys.gallery.debug_l == 0 {
                 let d = &mut self.game.objs.display.draws;
                 d.push(crate::hsd::display::Draw::EraseColor(rgba));
                 d.push(crate::hsd::display::Draw::Erase);
@@ -1127,6 +1136,18 @@ impl Running<'_> {
             crate::hsd::display::camera_end(&mut self.game.objs);
             crate::hsd::display::fog_set(&mut self.game.objs, None);
         }
+    }
+
+    /// `_Toy_80306A0C`, the L view's fog's render: its fog while `_Toy_sbss_804D6E54` says
+    /// it's on, else none.
+    #[doc(alias = "_Toy_80306A0C")]
+    pub fn toy_fog_render(&mut self, gobj: GObjId) {
+        let f = match self.game.world.gobj(gobj).obj {
+            Some(Obj::Fog(f)) => f,
+            _ => panic!("the gallery's fog has no HSD_Fog"),
+        };
+        let on = self.game.toys.gallery.fog_on != 0;
+        crate::hsd::display::fog_set(&mut self.game.objs, on.then_some(f));
     }
 
     /// `_Toy_80312050`, the close-up's axes while they show: 3.25 units each way of the
@@ -1267,7 +1288,8 @@ impl Running<'_> {
     }
 
     /// `_Toy_80307018`: the scene's own lights (`TyMnView`'s `ScMenFigure_scene_lights`) on
-    /// a GObj (class 2, link 3, drawn on link 0x36).
+    /// a GObj (class 2, link 3, drawn on link 0x36); in the L view also a white linear fog
+    /// from 0 to 1 (`_Toy_803B8844`) on a GObj (class 3, link 4, drawn on link 0x35).
     #[doc(alias = "_Toy_80307018")]
     fn toy_scene_lights(&mut self) {
         let a = self
@@ -1295,6 +1317,16 @@ impl Running<'_> {
             w.set_obj(gobj, OBJ_LIGHT, Obj::LObj(l));
         }
         w.setup_gx_link(gobj, CodeRef(LOBJ_CALLBACK), 0x36, 0);
+        if self.game.toys.gallery.debug_l != 0 {
+            // `GX_FOG_LIN`, no range adjustment.
+            let fogs = &mut self.game.objs.fogs;
+            let f = crate::hsd::fog::load_values(fogs, 2, 0.0, 1.0, [0xFF; 4]);
+            let g = self.game.world.create(3, 4, 0);
+            self.gal().fog = Some(g);
+            let w = &mut self.game.world;
+            w.set_obj(g, OBJ_FOG, Obj::Fog(f));
+            w.setup_gx_link(g, CodeRef(RENDER_FOG), 0x35, 0);
+        }
     }
 
     /// `Toy_80307470(panel)`: the panel (`TyMnView`'s `ToyFigurePanel_Top`) on a GObj
@@ -1530,7 +1562,24 @@ impl Running<'_> {
         w.set_obj(frustum, OBJ_CAMERA, Obj::CObj(c));
         w.setup_gx_link_max(frustum, CodeRef(RENDER_CAMERA), 0, false);
         w.gobj_mut(frustum).gxlink_prios = 0x0E80_0000_0000_0000;
-        w.setup_proc(frustum, CodeRef(PROC_VIEW), 0);
+        let g = &self.game.toys.gallery;
+        let proc = if g.debug_z != 0 {
+            self.gal().z_switch = 0;
+            let t = self
+                .game
+                .toys
+                .gallery
+                .debug_text
+                .expect("the Z view's text");
+            self.game.hud.devtext.pool[usize::from(t)].set_xy(0x21C, 0x82);
+            super::debug_view::PROC_Z_VIEW
+        } else if g.debug_l != 0 {
+            super::debug_view::PROC_L_VIEW
+        } else {
+            PROC_VIEW
+        };
+        let w = &mut self.game.world;
+        w.setup_proc(frustum, CodeRef(proc), 0);
         w.mark_ran(frustum);
         let g = self.gal();
         g.cams[2] = Some(frustum);
@@ -1570,6 +1619,17 @@ impl Running<'_> {
         for (i, link) in [(1usize, 0xC), (2, 0xD), (3, 0xE)] {
             let n = self.add_canvas(3, Some(light), link, 0xB, 0, 0x3E, 0, 0);
             self.gal().canvases[i] = n;
+        }
+        // The L view: the frustum camera alone draws, the trophy (0x39), its light (0x37)
+        // and the fog (0x35).
+        if self.game.toys.gallery.debug_l != 0 {
+            let g = &self.game.toys.gallery;
+            let cams = [g.cams[0], g.cams[1], g.cams[3], g.cams[4], g.cams[5]];
+            let frustum = g.cams[2].expect("the frustum camera");
+            for c in cams.into_iter().flatten() {
+                self.game.world.gobj_mut(c).gxlink_prios = 0;
+            }
+            self.game.world.gobj_mut(frustum).gxlink_prios = 0x02A0_0000_0000_0000;
         }
     }
 
@@ -1861,6 +1921,8 @@ impl Running<'_> {
         }
         if let Some(g) = self.game.toys.gallery.scene_lights.take() {
             gobj::free(self, g);
+            // `ty28->x10 = NULL`: the light chosen goes back to the first with them.
+            self.gal().light = 0;
         }
         if let Some(g) = self.game.toys.gallery.lights.take() {
             self.game.world.remove_all_procs(g);
