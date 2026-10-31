@@ -1456,6 +1456,52 @@ fn a_match_with_dk_peach_and_yoshi_leaves_their_written_attributes() {
     assert_image_clean(&out, &[2394, 3127, 4116, 4118]);
 }
 
+/// Tournament's tie for second (feat/m5-tie-2's `tou-tie3`): the match's first fighter lies
+/// over the stage select's freed preview, whose stage word the heap's image lays out
+/// (feat/m5-layouts-5), and the session compares clean to its end, the tie's model in the next
+/// match-up included.
+#[test]
+fn a_tournament_tie_runs_over_the_stage_selects_preview() {
+    let card = ssbm_rs_local("lockstep/tie-sessions/tou-tie3-run.card");
+    let Some(out) = scripted_session(
+        "tie-sessions",
+        "tou-tie3",
+        &["--all", "--heap", "--card-after", &card, "--image", "2584"],
+    ) else {
+        return;
+    };
+    assert!(
+        out.contains("10638 ticks compared, no difference")
+            && out.contains("the card after the session: the original's, 524288 bytes"),
+        "{out}"
+    );
+    assert_image_clean(&out, &[2584]);
+}
+
+/// Peach's Castle's setup's and switches' scale joints keyed at the depths the sessions show
+/// (`gr::setup::init_frame`), and Pikachu's thunder jolts' collision flags copied whole: the
+/// heap's image matches memory over `tournament-sessions/bracket64`'s freed match at the
+/// results screen's first ticks (feat/m5-layouts-5).
+#[test]
+fn a_tournament_match_on_peachs_castle_goes_back_laid_out() {
+    let Some(out) = scripted_session(
+        "tournament-sessions",
+        "bracket64",
+        &[
+            "--all",
+            "--heap",
+            "--image",
+            "9113,9115,9697",
+            "--ticks",
+            "9698",
+        ],
+    ) else {
+        return;
+    };
+    assert!(out.contains("9698 ticks compared, no difference"), "{out}");
+    assert_image_clean(&out, &[9113, 9115, 9697]);
+}
+
 /// The debug menus' objects (`un_804A2688`'s pool) laid out as they go back and with their
 /// scene: the heap's image matches memory at each debug menu scene's last tick and the next
 /// scene's first in `debug-sessions/menu-sub`, its submenus opened and closed.
