@@ -403,6 +403,7 @@ Refused: `C2 8006B80C`, two codes at `Fighter_procInput`'s end that test `r24`'s
 - `Ground_801C20E0` edits a stage's light list in place when its light overrides set flags: it drops the lights no override names and sets the others' flags. The edit leaves the list the same when it runs again, so the fighters' light (`gr::setup::load_fighter_lights`) loads the list as the edit leaves it, computed from the archive.
 
 - The trophy collection's debug view (`_tyDisplay_8031BA78`) writes a trophy's place, as the D-pad or A with the stick moves it, into its entry in `TyDatai`'s display table (`tyDisplayModelUsTbl` or `tyDisplayModelTbl`, the entry `tyDisplay_8031B9DC` finds). The display models read their places from there, so `Toys::datai_edits` keeps each word written by its offset in the file and every read of the table goes through it (`Running::datai_u32`); the heap's image takes the words too. They last as long as the file, which a new game mode loads afresh (`Toys::forget`), and the comparer checks each against memory.
+- The trophy gallery's Z view (`_Toy_803062EC`) writes a trophy's model parameters (its place, scale, stands' scale and turn, as the buttons held change them) into its entry in `TyDatai`'s English model table (`tyInitModelTbl`), which `Toy_803060BC` reads when the trophy shows again: the same `datai_write`, and `toy_param` reads through it.
 
 ## Hangs
 
