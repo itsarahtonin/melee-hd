@@ -1702,6 +1702,43 @@ fn slot_b_sessions() {
     }
 }
 
+/// The boot's probe of slot B (`bootb-sessions`, a card in each slot, nothing pressed): it
+/// reads the time base and slot B's card's ID, 168 ticks, which most clocks' boots absorb;
+/// `boot-clock` (a drive's pace) and `boot-clock-fast` (the fast disc speed) have their
+/// recordings' clocks set where they don't (0.00945303 s and 0.01117587 s past 2000-01-01):
+/// the probe without the ID read differs in the first, without the time base read in the
+/// second. Each compares to its trace's end, both cards after the original's.
+#[test]
+fn the_boots_probe_of_slot_b() {
+    let dir = "bootb-sessions";
+    for (name, want) in [
+        ("boot-clock", 736),
+        ("boot-clock-fast", 834),
+        ("boot-fast", 653),
+        ("boot-drive", 463),
+    ] {
+        let card_b = ssbm_rs_local(&format!("lockstep/{dir}/{name}.cardb"));
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let after_b = ssbm_rs_local(&format!("traces/{dir}/{name}-play.cardb"));
+        let mut args = vec!["--card-b", card_b.as_str(), "--all", "--heap"];
+        if std::path::Path::new(&after).exists() {
+            args.extend([
+                "--card-after",
+                after.as_str(),
+                "--card-b-after",
+                after_b.as_str(),
+            ]);
+        }
+        let Some(out) = scripted_session(dir, name, &args) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Camera Mode on a broken card (garbage directories): each offer's listing of slot A fails,
 /// and A says why (the camera menu's state 5), B goes back; the card after is the original's.
 #[test]
@@ -1750,6 +1787,35 @@ fn cards_pulled_out_mid_list() {
         };
         assert!(
             out.contains(&format!("{want} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The memory card scene's format and delete (`format-sessions`): a broken card formatted
+/// (yes), then the save created on it; the same card's format refused (no), the warning's no
+/// asking again, then going on without saving; a save whose header fails its digest deleted
+/// (yes), then created again. Each goes on to the title, the main menu (its save) and back,
+/// compared to its trace's end with the card after the original's.
+#[test]
+fn the_card_scene_formats_and_deletes() {
+    let dir = "format-sessions";
+    for (name, want) in [
+        ("format-yes", 1630),
+        ("format-no", 1282),
+        ("delete-yes", 1332),
+    ] {
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let Some(out) = scripted_session(dir, name, &["--card-after", &after, "--all", "--heap"])
+        else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains("the card after the session: the original's"),
             "{name}: {out}"
         );
     }
