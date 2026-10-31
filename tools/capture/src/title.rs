@@ -83,6 +83,12 @@ impl Comparer<'_> {
                     self.compare_data(&format!("{p} image"), Some(d_image(self, d)), theirs);
                 }
                 Image::Movie { .. } => self.check(&p, "image", 0, self.u32(at + 0x5C)),
+                Image::Buffer { addr, .. } => self.check(
+                    &p,
+                    "image",
+                    (addr >> 5) & 0x01FF_FFFF,
+                    self.u32(at + 0x5C) & 0x01FF_FFFF,
+                ),
                 Image::None => {}
             }
             prev = at;

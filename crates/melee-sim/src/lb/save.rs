@@ -322,6 +322,16 @@ pub fn lent_save_gci() -> Option<Vec<u8>> {
     })
 }
 
+/// `OSGetFontEncode` outside a mount: the time of its read of the video interface's register
+/// the first time (it keeps the answer), none after.
+pub(crate) fn font_encode_read() -> u64 {
+    with_device(|dev| {
+        let read = !dev.font_encode_known;
+        dev.font_encode_known = true;
+        if read { EXI_READ } else { 0 }
+    })
+}
+
 /// The lent device, if a step has it: what `f` makes of it.
 fn with_device<R>(f: impl FnOnce(&mut CardDevice) -> R) -> R {
     LENT.with(|l| {
@@ -717,7 +727,25 @@ fn start_list_on(
     // a card's ID gets that far.
     let font = with_device(|dev| dev.attach(chan));
     start.chain = Some(mount_read(chan, font).on(chan));
-    let (steps, results) = save_steps(chan, &run);
+    let (mut steps, mut results) = save_steps(chan, &run);
+    // A list that makes no transfer and runs none of the CARD library's own tasks (a create
+    // whose open finds no room, a delete whose open finds no file) ends in its first call,
+    // which unmounts the card there.
+    let made = run.steps.iter().any(|&c| melee_save::tasks::is_transfer(c));
+    let sdk = run.results.iter().any(|(t, _)| {
+        matches!(
+            t,
+            Task::Delete(_) | Task::Rename { .. } | Task::Format { .. }
+        )
+    });
+    if !made && !sdk && steps.len() == 2 {
+        let end = steps.pop().expect("the list's end");
+        steps[0].ticks += end.ticks;
+        steps[0].unmount = true;
+        for r in &mut results {
+            r.0 = 0;
+        }
+    }
     // The steps that stamp the directory: those of the log's creates, writes and status sets.
     let mut stamps = Vec::new();
     {
