@@ -205,11 +205,11 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 /// The frames the stage's objects are made from (the stack address of the scale joint's
 /// descriptor, [`setup::create_from_callbacks`]): the setup's own; the climb's setup's, through
 /// `stageGObj9_OnInit` and `grIceMt_801FA0BC` (0x88 below, with `setupStageCallbacks`' 0x20);
-/// and the climb's process's, 0xD8 below the process loop's 0x804EEA38 (its own frame 0x20,
-/// `grIceMt_801F9ACC`'s 0x98 and `setupStageCallbacks`' 0x20), as Green Greens' blocks' are.
+/// and the climb's process's, 0xD8 below the process loop's (`corneria::PROC_LOOP`; its own
+/// frame 0x20, `grIceMt_801F9ACC`'s 0x98 and `setupStageCallbacks`' 0x20).
 pub const SETUP_FRAME: u32 = setup::SETUP_FRAME;
 pub const CLIMB_INIT_FRAME: u32 = SETUP_FRAME - 0x88;
-pub const CLIMB_PROC_FRAME: u32 = 0x804E_EA38 - 0xD8;
+pub const CLIMB_PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0xD8;
 
 /// Icicle Mountain's setup, `grIceMt_801F686C`: its parameters; the scenery and the background;
 /// the six fields' collision off; in VS mode the climb (the adventure's three first fields and

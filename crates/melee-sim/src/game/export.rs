@@ -173,7 +173,44 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     for (slot, _) in game.world.procs.slots().iter().enumerate() {
         proc(game, data, img, ProcId(slot as u32));
     }
+    for (_, o) in game.world.gobjs.iter() {
+        if let Some(ud) = &o.user_data {
+            menu_block(game, img, ud);
+        }
+    }
     bg_flash(game, img);
+}
+
+/// A menu's `HSD_MemAlloc` user data block melee-sim lays out, as it goes back through its
+/// remover (`HSD_Free`) or with its scene's heap: the stage select's name
+/// (`StageSelUserData`: the stage, the state, the frames), preview (`StagePreviewUserData`:
+/// the stage, the frames) and hover frame (its frames), each written whole by its creation.
+pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
+    let sel = &game.stagesel;
+    let l = match *ud {
+        UserData::SssName(a) => sel.names.get(&a).map(|d| {
+            let mut l = Lay::new(a, 8);
+            l.u16(0, d.stage);
+            l.u16(2, d.state);
+            l.u32(4, d.frames as u32);
+            l
+        }),
+        UserData::SssPreview(a) => sel.previews.get(&a).map(|&(stage, frames)| {
+            let mut l = Lay::new(a, 8);
+            l.u32(0, stage);
+            l.u32(4, frames);
+            l
+        }),
+        UserData::SssHover(a) => sel.hovers.get(&a).map(|&frames| {
+            let mut l = Lay::new(a, 4);
+            l.u32(0, frames as u32);
+            l
+        }),
+        _ => None,
+    };
+    if let Some(l) = l {
+        l.put(img);
+    }
 }
 
 /// Which of the scene's blocks that outlive their owners' state are this scene's, so
