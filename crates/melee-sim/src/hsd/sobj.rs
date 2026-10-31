@@ -41,6 +41,15 @@ pub enum Image {
         width: u16,
         height: u16,
     },
+    /// An `HSD_ImageDesc` in the executable whose image is a heap block the game decodes into
+    /// (the Yoshiki Test's snapshot, `un_803FD274`): the block's address, the image's size and
+    /// format.
+    Buffer {
+        addr: u32,
+        width: u16,
+        height: u16,
+        format: u32,
+    },
 }
 
 /// The image's texture as `GXInitTexObj` sets it up: its size and format, and the wrap modes.
@@ -287,6 +296,24 @@ pub fn create(
                 height,
                 // `GX_TF_RGBA8`, as the descriptor says; the movie's planes replace it.
                 format: 6,
+                mipmap: 0,
+                wrap_s: wrap.0,
+                wrap_t: wrap.1,
+                tlut: None,
+            },
+        ),
+        Image::Buffer {
+            width,
+            height,
+            format,
+            ..
+        } => (
+            width,
+            height,
+            Tex {
+                width,
+                height,
+                format,
                 mipmap: 0,
                 wrap_s: wrap.0,
                 wrap_t: wrap.1,

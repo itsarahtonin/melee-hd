@@ -119,6 +119,9 @@ const CARD_PAGE: u64 = 80;
 const CARD_PAGE_DONE: u64 = 56;
 /// A sector's pages of 128 bytes (`__CARDWrite` of 0x2000 bytes).
 const CARD_PAGES: u32 = 64;
+/// The system sectors a format erases and writes (`CARD_NUM_SYSTEM_BLOCK`): the ID, two
+/// directories and two allocation tables.
+const FORMAT_SECTORS: u32 = 5;
 /// A file's directory entry stamped with the time (`OSGetTime`): `CARDWrite`'s `WriteCallback`
 /// before the directory's update, and `CARDSetStatusAsync`.
 pub const CARD_STAMP: u64 = 16;
@@ -415,6 +418,12 @@ pub enum CardChain {
     /// (`__CARDUpdateFatBlock`), with no stamp between: [`CardChain::Write`]'s two sectors
     /// less the stamp. `first` as a write's.
     Delete { first: u64, slot_b: bool },
+    /// A card formatted (`CARDFormatAsync`, with interrupts off): `first` ticks up to and
+    /// through the first system sector's erase; then `FormatCallback` from each erase's
+    /// interrupt erases the next of the five, and from the fifth's and each sector's last
+    /// page's writes the next sector of the new ID, directories and tables (`__CARDWrite`, 64
+    /// pages, no stamp and no directory update), the last one's calling back at once.
+    Format { first: u64, slot_b: bool },
 }
 
 impl CardChain {
@@ -423,7 +432,8 @@ impl CardChain {
         match self {
             CardChain::Read { first, .. }
             | CardChain::Write { first, .. }
-            | CardChain::Delete { first, .. } => first,
+            | CardChain::Delete { first, .. }
+            | CardChain::Format { first, .. } => first,
         }
     }
 
@@ -432,7 +442,8 @@ impl CardChain {
         match self {
             CardChain::Read { slot_b, .. }
             | CardChain::Write { slot_b, .. }
-            | CardChain::Delete { slot_b, .. } => slot_b,
+            | CardChain::Delete { slot_b, .. }
+            | CardChain::Format { slot_b, .. } => slot_b,
         }
     }
 
@@ -461,6 +472,10 @@ impl CardChain {
                 slot_b: b,
             },
             CardChain::Delete { first, .. } => CardChain::Delete {
+                first: if b { first - 2 * SLOT_B_MASK } else { first },
+                slot_b: b,
+            },
+            CardChain::Format { first, .. } => CardChain::Format {
                 first: if b { first - 2 * SLOT_B_MASK } else { first },
                 slot_b: b,
             },
@@ -498,6 +513,25 @@ impl CardChain {
                     segments as usize - 1,
                 ));
                 out.push(tc(at(tail, 1)));
+            }
+            CardChain::Format { .. } => {
+                let (status, page, done) =
+                    (at(CARD_STATUS, 2), at(CARD_PAGE, 1), at(CARD_PAGE_DONE, 1));
+                // Each erase's interrupt erases the next system sector; the fifth's starts the
+                // first sector's write.
+                for _ in 1..FORMAT_SECTORS {
+                    out.push(exi(status + at(CARD_ERASE, 2)));
+                }
+                out.push(exi(status + page));
+                for s in 0..FORMAT_SECTORS {
+                    for _ in 1..CARD_PAGES {
+                        out.push(tc(done));
+                        out.push(exi(status + page));
+                    }
+                    out.push(tc(done));
+                    let next = if s + 1 < FORMAT_SECTORS { page } else { 0 };
+                    out.push(exi(status + next));
+                }
             }
             CardChain::Write { .. } | CardChain::Delete { .. } => {
                 let (sectors, between) = match self {

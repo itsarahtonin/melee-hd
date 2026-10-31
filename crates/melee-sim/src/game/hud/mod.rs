@@ -7,6 +7,7 @@
 
 pub mod all;
 pub mod announce;
+pub mod debug_card;
 pub mod debug_items;
 pub mod debug_menu;
 pub mod debug_sound;
