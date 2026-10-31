@@ -278,3 +278,171 @@ impl Lights for ChannelLights<'_> {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use melee_data::archive::Archives;
+    use melee_sim::hsd::{cobj, display};
+
+    use super::*;
+
+    /// A light to set up: flags, color, position, interest and parameters.
+    struct Light {
+        flags: u16,
+        color: [u8; 4],
+        pos: Vec3,
+        interest: Option<Vec3>,
+        /// A spot's cutoff and `GXSpotFn`, if it has them.
+        spot: Option<(f32, i32)>,
+        /// Distance attenuation: reference distance and brightness, `GXDistAttnFn`.
+        dist: Option<(f32, f32, i32)>,
+        /// Raw attenuation (`LOBJ_RAW_PARAM`): a and k.
+        raw: Option<([f32; 3], [f32; 3])>,
+    }
+
+    const DIFF_SPEC: u16 = lobj::DIFFUSE | lobj::SPECULAR;
+    const RAW: u16 = 1 << 6;
+
+    /// Sets `lights` up with melee-sim's `HSD_LObjSetupInit` for one view, then with
+    /// melee-render's from the light set it names, its objects cleared first so that the
+    /// renderer computes every word the setup writes; each active light's objects must then be
+    /// melee-sim's, bit for bit.
+    fn check(lights: &[Light]) {
+        let data = Archives::default();
+        let mut objs = Objects::default();
+        let c = cobj::alloc(&mut objs);
+        // A view turned about two axes and moved, as a camera's.
+        objs.cobjs[c].view_mtx = Mtx34 {
+            m: [
+                [0.866_025_4, 0.0, -0.5, 12.5],
+                [0.171_010_07, 0.939_692_6, 0.296_198_13, -40.25],
+                [0.469_846_3, -0.342_020_15, 0.813_798_3, -310.0],
+            ],
+        };
+        for d in lights {
+            let l = lobj::alloc(&mut objs.lobjs);
+            lobj::set_flags(&mut objs.lobjs, Some(l), u32::from(d.flags));
+            lobj::set_color(&mut objs.lobjs, l, d.color);
+            lobj::set_position(&mut objs, l, d.pos);
+            if let Some(i) = d.interest {
+                lobj::set_interest(&mut objs, l, i);
+            }
+            if let Some((cutoff, func)) = d.spot {
+                lobj::set_spot(&mut objs.lobjs, Some(l), cutoff, func);
+            }
+            if let Some((dist, br, func)) = d.dist {
+                lobj::set_dist_attn(&mut objs.lobjs, Some(l), dist, br, func);
+            }
+            if let Some((a, k)) = d.raw {
+                lobj::set_attn_a(&mut objs.lobjs, Some(l), a);
+                lobj::set_attn_k(&mut objs.lobjs, Some(l), k);
+            }
+            lobj::add_current(&mut objs, Some(l));
+        }
+        display::lobj_setup_init(&mut objs, &data, c);
+        let mut set = *objs.display.light_sets.last().expect("a light set");
+        for a in set.active.iter_mut().flatten() {
+            a.light = lobj::GxLight::default();
+            a.spec = lobj::GxLight::default();
+        }
+        let (mut state, mut gx) = (LightState::default(), Gx::new());
+        state.setup_init(&mut gx, &objs, &set);
+        let mut checked = 0;
+        for a in set.active.iter().flatten() {
+            let o = &objs.lobjs[a.lobj];
+            if o.flags & lobj::TYPE_MASK == lobj::AMBIENT {
+                continue;
+            }
+            let g = &state.lights[&a.lobj];
+            let ty = o.flags & lobj::TYPE_MASK;
+            assert_eq!(g.light, light_obj(&o.light), "type {ty}'s light object");
+            assert_eq!(g.spec, light_obj(&o.spec), "type {ty}'s specular object");
+            checked += 1;
+        }
+        assert_eq!(
+            checked,
+            lights.len() - 1,
+            "every light but the ambient one checked"
+        );
+    }
+
+    fn ambient() -> Light {
+        Light {
+            flags: lobj::AMBIENT | lobj::DIFFUSE,
+            color: [0x40, 0x40, 0xB3, 0xFF],
+            pos: Vec3::ZERO,
+            interest: None,
+            spot: None,
+            dist: None,
+            raw: None,
+        }
+    }
+
+    /// melee-render recomputes each light's objects (with the blended view when high refresh
+    /// blends) rather than taking melee-sim's. No scene milestone 5 reaches has a spot light
+    /// (`hsd::lobj`'s disc audit), so no checked frame holds the renderer's spot path, and
+    /// this does: every light type with each attenuation, the spot with every `GXSpotFn` and
+    /// `GXDistAttnFn` (the disc's spot lights' values among them: a 30 or 45 degree cosine
+    /// squared cutoff, steep distance attenuation at 10,000 or 600).
+    #[test]
+    fn setup_matches_melee_sim() {
+        let spot = |flags, cutoff, spot_func, dist, dist_func| Light {
+            flags: lobj::SPOT | flags,
+            color: [0xFF, 0xFF, 0xCC, 0xFF],
+            pos: Vec3::new(0.0, -30.0, 50.0),
+            interest: Some(Vec3::new(4.0, 680.0, -20.0)),
+            spot: Some((cutoff, spot_func)),
+            dist: Some((dist, 0.99, dist_func)),
+            raw: None,
+        };
+        for spot_func in 0..=6 {
+            for dist_func in 0..=3 {
+                check(&[
+                    spot(DIFF_SPEC, 30.0, spot_func, 10_000.0, dist_func),
+                    spot(lobj::DIFFUSE, 45.0, spot_func, 600.0, dist_func),
+                    spot(lobj::SPECULAR, 12.5, spot_func, 75.0, dist_func),
+                    ambient(),
+                ]);
+            }
+        }
+        check(&[
+            Light {
+                flags: lobj::INFINITE | DIFF_SPEC,
+                color: [0xFF; 4],
+                pos: Vec3::new(0.57, 0.57, 0.57),
+                interest: None,
+                spot: None,
+                dist: None,
+                raw: None,
+            },
+            Light {
+                flags: lobj::POINT | DIFF_SPEC,
+                color: [0xB3, 0xB3, 0xB3, 0xFF],
+                pos: Vec3::new(0.0, -58.6, -71.1),
+                interest: None,
+                spot: None,
+                dist: Some((30.0, 0.99, 3)),
+                raw: None,
+            },
+            Light {
+                flags: lobj::POINT | lobj::DIFFUSE | RAW,
+                color: [0xCC, 0xCC, 0xCC, 0xFF],
+                pos: Vec3::new(-6.39, 18.75, 65.25),
+                interest: None,
+                spot: None,
+                dist: None,
+                raw: Some(([1.0, 0.0, 0.0], [0.5, 0.02, 0.001])),
+            },
+            Light {
+                flags: lobj::SPOT | DIFF_SPEC | RAW,
+                color: [0x80, 0xFF, 0x40, 0xFF],
+                pos: Vec3::new(10.0, 79.4, 104.21),
+                interest: Some(Vec3::ZERO),
+                spot: None,
+                dist: None,
+                raw: Some(([-3.2, 0.0, 4.2], [1.0, 0.003, 0.0001])),
+            },
+            ambient(),
+        ]);
+    }
+}
