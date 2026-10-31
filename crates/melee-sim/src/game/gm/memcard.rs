@@ -243,7 +243,13 @@ impl Running<'_> {
             }
             4 => {
                 if !self.memcard_watch() {
-                    super::super::code::unported_call("lb_8001CC4C (deleting the damaged save)");
+                    if self.card_delete_save() == 0 {
+                        self.show_message(0, 0xB);
+                        self.game.memcard.decision = 6;
+                    } else {
+                        self.show_message(0, 0xD);
+                        self.game.memcard.decision = 8;
+                    }
                 }
             }
             5 => {
@@ -285,7 +291,14 @@ impl Running<'_> {
             11 => {
                 if !self.memcard_watch() && self.memcard_confirmed() {
                     if self.game.memcard.cursor == 0 {
-                        super::super::code::unported_call("lb_8001B8C8 (formatting the card)");
+                        let chan = usize::from(self.game.memcard.chan);
+                        if self.card_format(chan) == 0 {
+                            self.show_message(0, 0x11);
+                            self.game.memcard.decision = 0xC;
+                        } else {
+                            self.show_message(0, 0x12);
+                            self.game.memcard.decision = 0xD;
+                        }
                     } else {
                         self.memcard_continue_without_saving();
                     }
