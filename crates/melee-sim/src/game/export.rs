@@ -923,6 +923,7 @@ pub fn sobj(
     let (image_ptr, tlut) = match o.image {
         SImage::Data(d) => (cx.data(data.ptr(d)), tx.tlut),
         SImage::Movie { .. } => (Some(0), None),
+        SImage::Buffer { addr, .. } => (Some(addr), None),
         SImage::None => (None, None),
     };
     let mut t = gx_init_tex_obj(

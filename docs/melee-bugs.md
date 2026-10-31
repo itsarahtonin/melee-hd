@@ -1762,6 +1762,46 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none.
 - **Source:** `tydisplay.c` (`_tyDisplay_8031BF34`).
 
+### The Yoshiki Test's Init runs on every call and leaks what it made
+
+- **Where:** `un_80301634`, `crates/melee-sim/src/game/hud/debug_card.rs` (`yoshiki_init`).
+- **Defect:** Init is the page's first entry's callback and never tests what it's told, so it runs when the page is made (every entry is told so), and again on A, B or Start with the cursor on it. Each run allocates a new block for the slots' lists, a snapshot buffer (0x3E840 bytes), a 640 by 480 image (0x96000) and a sprite camera GObj from the scene's heap, and sets `un_804D6E08` to null without freeing the snapshot's sprite it named. Closing the page frees none of it either.
+- **Effect:** each opening of the page, and each A, B or Start on Init, takes about 1.3 MB of the debug menu scene's heap until the scene ends; enough of them exhaust it and halt on `HSD_MemAlloc`'s assertion. The last snapshot's sprite stays drawn over the menus after the page closes or Init runs again, and the next SnapLoad0 draws a second one without freeing the first; every live sprite camera draws the sprites again. `yoshiki-basic` runs Init four times (the page made twice, A, and B closing the page) and shows two sprites at once.
+- **melee-hd:** modeled; the six `yoshiki-*` sessions compare the heap with `--heap`.
+- **Fix:** run Init only when the page is made, free the last sprite before forgetting it, and free the buffers, image and camera when the page closes.
+- **Fix impact:** none in play: debug code.
+- **Source:** `if_3004.c` (`un_80301634`, `un_803FD310`).
+
+### The Yoshiki Test's snapshot entries trust their index
+
+- **Where:** `un_80301964`, `un_80301A64` and `un_80301AD4`, `crates/melee-sim/src/lb/snap_read.rs` (`snap_entry_name`).
+- **Defect:** SnapLoad0, SnapDelete0 and SnapSwap0 hand their index (0 to 127, set with left and right) to `lbSnap_8001E058`, `8001D5FC` and `8001D7B0` without comparing it with the snapshots SnapMount0 listed.
+- **Effect:** an index past the last listed snapshot (any index on a card with none) halts the console on `lbsnap.c`'s assertion (`index < _p(slot)[chan].num`, line 410), as ssbm-rs's run of a full card shows. Before any listing the slot's result (8) refuses the entry harmlessly.
+- **melee-hd:** the same assertion stops the port (a panic). No session asks past the listing.
+- **Fix:** compare the index with `lbSnap_8001D394`'s count first.
+- **Fix impact:** none in play: debug code.
+- **Source:** `if_3004.c`, `lbsnap.c` (`lbSnap_FormatTime`).
+
+### The Yoshiki Test's Load resets the save when the load is refused or fails
+
+- **Where:** `un_80301840`, `crates/melee-sim/src/game/hud/debug_card.rs` (`yoshiki_entry`).
+- **Defect:** Load hands `gmMainLib_8015FA34` whatever `lb_8001CBBC` answered, which resets every logical file of the save in memory unless the answer is 0 or 2: `lb_8001CBBC` refuses with 13 whenever the card's status isn't 0 (after Delete, with no card, on a full or broken card the memory card scene went on without, or once the card was swapped), and a load that fails answers its error.
+- **Effect:** the records, trophies (a new first trophy drawn from the seed), name tags and options go back to a new save's, which the next save writes over the card's. At the debug ROM's level with `/develop.ini` each Load also runs HAL's debug unlock-all again, its special messages stamped with the time. `yoshiki-erase`, `-nocard`, `-full` and `-broken` each reset the save this way.
+- **melee-hd:** modeled.
+- **Fix:** reset only when the load ran and failed, or not at all from a debug entry.
+- **Fix impact:** none in play: debug code.
+- **Source:** `if_3004.c` (`un_80301840`), `gmmain_lib.c` (`gmMainLib_8015FA34`).
+
+### The Yoshiki Test's Delete takes the card as gone
+
+- **Where:** `un_803018BC`, `crates/melee-sim/src/game/hud/debug_card.rs` (`yoshiki_entry`).
+- **Defect:** after deleting the save (`lb_8001CC4C`) Delete sets the card's status to 4 (no card) whatever the delete answered and with the card still in.
+- **Effect:** until Create or a Load that reads the save sets it back, the game takes the card as gone: the save's writer drops every save (`lb_8001CC84` skips a status other than 0) and Load refuses and resets the save. `yoshiki-erase` shows both.
+- **melee-hd:** modeled.
+- **Fix:** set status 3 (going on without saving with a card in) when the delete went well, and leave it otherwise.
+- **Fix impact:** none in play: debug code.
+- **Source:** `if_3004.c` (`un_803018BC`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

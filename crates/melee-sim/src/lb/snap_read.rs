@@ -40,6 +40,10 @@ pub enum ListEnd {
         stamps: Vec<usize>,
         times: Vec<u32>,
     },
+    /// A format, run on the card now with the time its step's `OSGetTime` read (`ticks`, on
+    /// the code's time base), which the new ID's serial takes; `step` the step that starts
+    /// it.
+    Format { step: usize, ticks: Option<u64> },
 }
 
 /// What a read wrote into its buffers: each the bytes from its start.
@@ -269,6 +273,38 @@ impl Running<'_> {
         self.snap_list_start(chan, lists::read_with_header(&name), ListKind::Read)
     }
 
+    /// `lb_8001CC4C`: the save's file deleted from slot A's card (`lb_8001BA44` with the save's
+    /// name and the card game's status), the game spinning on the list's steps
+    /// (`lbCardNew_CompleteNextTask`) until it ends. Its result.
+    #[doc(alias = "lb_8001CC4C")]
+    #[doc(alias = "lb_8001BA44")]
+    pub fn card_delete_save(&mut self) -> i32 {
+        let r = self.snap_list_start(
+            0,
+            lists::delete(melee_save::melee::FILENAME),
+            ListKind::DeleteSave,
+        );
+        self.card_spin(r)
+    }
+
+    /// `lb_8001B8C8`: slot `chan`'s card formatted (its mount, check and `CARDFormatAsync`),
+    /// the game spinning on the list's steps until it ends. Its result.
+    #[doc(alias = "lb_8001B8C8")]
+    pub fn card_format(&mut self, chan: usize) -> i32 {
+        let r = self.snap_list_start(chan, lists::format(0), ListKind::Format);
+        self.card_spin(r)
+    }
+
+    /// The game spinning on a list started with `r` until it ends (`lbCardNew_CompleteNextTask`
+    /// while busy, the Yoshiki Test's `waitCardTasks`). Its result.
+    pub fn card_spin(&mut self, r: i32) -> i32 {
+        let mut r = r;
+        while r == result::BUSY {
+            r = self.card_next_task();
+        }
+        r
+    }
+
     /// Starts one of the album's lists on slot `chan`: the mount at once, the steps left for
     /// [`Running::snap_task_step`]. Busy, or the mount's failure.
     fn snap_list_start(&mut self, chan: usize, tasks: Vec<(Task, u32)>, kind: ListKind) -> i32 {
@@ -285,7 +321,9 @@ impl Running<'_> {
             melee_save::exec::Bufs::default(),
         );
         let (mut list, run) = match kind {
-            ListKind::Swap => super::save::start_list_dry_run(chan, run, &tasks, now, seconds),
+            ListKind::Swap | ListKind::Format => {
+                super::save::start_list_dry_run(chan, run, &tasks, now, seconds)
+            }
             _ => super::save::start_list_run(chan, run, &tasks, now, seconds),
         };
         for &w in &list.start {
@@ -295,10 +333,28 @@ impl Running<'_> {
             self.game.card_tasks.saved_error = list.result;
             return list.result;
         }
+        // The mount's probe found the card: a list that takes the card game's status clears
+        // it (`*_p(status) = 0`).
+        if kind == ListKind::DeleteSave {
+            self.game.card_game.unk_status = false;
+        }
+        let mut format_step = None;
+        // `OSGetFontEncode` reads the video interface's register for a format when no mount
+        // read it before (a broken card's doesn't get that far).
+        let format_font = if kind == ListKind::Format {
+            super::save::font_encode_read()
+        } else {
+            0
+        };
         // The CARD library's own tasks (a delete, the renames) transfer from the call that
         // starts them: the one that sees the open before them done, after which another
         // call starts the next task (`executeNextTask`), or ends the list.
-        let sdk = |t: &Task| matches!(t, Task::Delete(_) | Task::Rename { .. });
+        let sdk = |t: &Task| {
+            matches!(
+                t,
+                Task::Delete(_) | Task::Rename { .. } | Task::Format { .. }
+            )
+        };
         let ran: Vec<&Task> = run
             .results
             .iter()
@@ -315,8 +371,21 @@ impl Running<'_> {
                     slot_b: false,
                 }
                 .on(chan),
+                Task::Format { .. } => CardChain::Format {
+                    first: format_font + FORMAT_FIRST,
+                    slot_b: false,
+                }
+                .on(chan),
                 _ => STATUS_SET.on(chan),
             };
+            if matches!(t, Task::Format { .. }) {
+                // A format follows the check with no open between: the call that sees the
+                // mount done runs the check (from what the mount read) and goes on to start
+                // it.
+                list.steps[0].chain = Some(chain);
+                format_step = Some(0);
+                continue;
+            }
             // The open after this task (a swap's): the step that starts it, else the
             // list's end.
             let at = match starts.get(k).copied().flatten() {
@@ -384,7 +453,11 @@ impl Running<'_> {
                 stamps,
                 times: Vec::new(),
             },
-            ListKind::Delete => ListEnd::Nothing,
+            ListKind::Delete | ListKind::DeleteSave => ListEnd::Nothing,
+            ListKind::Format => match format_step {
+                Some(step) => ListEnd::Format { step, ticks: None },
+                None => ListEnd::Nothing,
+            },
         };
         self.game.snap_read.list = Some(AlbumList {
             chan,
@@ -441,6 +514,20 @@ impl Running<'_> {
         if super::save::lost(chan) {
             return self.snap_task_lost(work);
         }
+        let time_at = match work.chain {
+            Some(CardChain::Format { first, .. }) => first - FORMAT_FIRST + FORMAT_TIME_AT,
+            _ => 0,
+        };
+        if let Some(AlbumList {
+            end: ListEnd::Format { step, ticks },
+            ..
+        }) = self.game.snap_read.list.as_mut()
+            && *step == k
+        {
+            // `__CARDFormatRegionAsync`'s `OSGetTime`, after the video interface's register.
+            let c = self.game.audio.clock.as_ref().expect("the timeline");
+            *ticks = Some(c.code_time() + time_at);
+        }
         self.game.audio.clock_card_work(
             self.data,
             crate::audio::clock::CardWork {
@@ -493,6 +580,15 @@ impl Running<'_> {
         self.game.card_tasks.saved_error = r;
         match l.end {
             ListEnd::Nothing | ListEnd::Read { .. } => {}
+            ListEnd::Format { ticks, .. } => {
+                let run = Run::new(
+                    melee_save::melee::snapshot_manifest(0),
+                    melee_save::exec::Bufs::default(),
+                );
+                let ticks = ticks.expect("the format's time");
+                let written = super::save::finish_list(l.chan, run, &lists::format(ticks), 0, &[]);
+                assert_eq!(written, r, "the format's list ended otherwise on the card");
+            }
             ListEnd::Swap {
                 tasks,
                 seconds,
@@ -673,10 +769,21 @@ impl Running<'_> {
     }
 }
 
-/// The album's lists, by what their end does.
+/// The album's lists, by what their end does, and the Yoshiki Test's that the game waits on
+/// in a spin (`lb_8001BA44`'s delete of the save, which takes the card game's status, and
+/// `lb_8001B8C8`'s format).
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum ListKind {
     Read,
     Delete,
     Swap,
+    DeleteSave,
+    Format,
 }
+
+/// A format's part from its step's call to its first erase's end, with interrupts off, past
+/// `OSGetFontEncode`'s read when it makes one: `__CARDFormatRegionAsync`'s read of the video
+/// interface's register (8), its `OSGetTime` (16), then the erase.
+const FORMAT_FIRST: u64 = super::save::EXI_READ + super::save::TIME_READ + CARD_ERASE;
+/// Where in the step its `OSGetTime` reads the time base: after the register.
+const FORMAT_TIME_AT: u64 = super::save::EXI_READ;
