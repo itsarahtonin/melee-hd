@@ -4,8 +4,9 @@
 //! (`lbSnap_8001D4A4`) and its save to a card (`lbSnap_8001DF6C`, `lb_8001BB48`).
 //!
 //! The frame's copy (`cmsnap.c`'s `lb_800122C8`) is the console's: its pixels are the
-//! renderer's, an input the frontend hands the simulation ([`give_frame`]). A console without
-//! a renderer (ssbm-rs, whose traces the oracle compares with) copies nothing, so the buffer
+//! renderer's, an input the frontend hands the simulation ([`give_frame`]) after each copy,
+//! having said from the start that it will ([`will_give_frames`]). A console without a
+//! renderer (ssbm-rs, whose traces the oracle compares with) copies nothing, so the buffer
 //! keeps what it held; that is what a session without a frame takes ([`Running::cm_snap_copy`]).
 
 use std::cell::RefCell;
@@ -161,10 +162,36 @@ pub fn give_frame(pixels: Vec<u8>) {
     FRAME.with(|f| *f.borrow_mut() = (true, Some(pixels), 0));
 }
 
+/// The frontend renders and gives each snapshot's frame ([`give_frame`]) from now on, so a copy
+/// never takes what the buffer held, not even the first, which comes before any frame given.
+pub fn will_give_frames() {
+    FRAME.with(|f| f.borrow_mut().0 = true);
+}
+
 /// A new console: no frame copied, and none the frontend gives until it says so
-/// ([`give_frame`]).
+/// ([`will_give_frames`], [`give_frame`]).
 pub fn forget_frame() {
     FRAME.with(|f| *f.borrow_mut() = (false, None, 0));
+}
+
+/// The copy into the snapshot's image at `at`: with a renderer, the frame is the one the
+/// frontend gives after this copy (none until then, so an earlier copy's is never taken);
+/// without, what the buffer held (`held`, read only before the buffer's first copy, whose bytes
+/// are the GPU's after it). The first byte `held` doesn't know, if any.
+fn frame_copied(at: u32, held: impl FnOnce() -> (Vec<u8>, Vec<bool>)) -> Option<usize> {
+    let (renders, kept) = FRAME.with(|f| {
+        let f = f.borrow();
+        (f.0, f.1.is_some() && f.2 == at)
+    });
+    if renders {
+        FRAME.with(|f| f.borrow_mut().1 = None);
+    } else if !kept {
+        // Without a renderer, a buffer copied into before still holds what it held then.
+        let (bytes, known) = held();
+        FRAME.with(|f| *f.borrow_mut() = (false, Some(bytes), at));
+        return known.iter().position(|k| !k);
+    }
+    None
 }
 
 /// The frame the copy left in the snapshot's image.
@@ -184,22 +211,15 @@ impl Running<'_> {
             .display
             .draws
             .push(crate::hsd::display::Draw::SnapCopy);
-        let (renders, kept) = FRAME.with(|f| {
-            let f = f.borrow();
-            (f.0, f.1.is_some() && f.2 == at)
+        let data = self.data;
+        let unknown = frame_copied(at, || {
+            heap::with(|h| h.image.bytes(data, at, IMAGE_SIZE)).expect("the heap's image")
         });
-        // Without a renderer, a buffer copied into before still holds what it held then.
-        if !renders && !kept {
-            let data = self.data;
-            let held = heap::with(|h| h.image.bytes(data, at, IMAGE_SIZE));
-            let (bytes, known) = held.expect("the heap's image");
-            if let Some(i) = known.iter().position(|k| !k) {
-                crate::game::code::unported_call(&format!(
-                    "the snapshot's frame at {:#010x}: the heap's image doesn't know its byte {i:#x}",
-                    at
-                ));
-            }
-            FRAME.with(|f| *f.borrow_mut() = (false, Some(bytes), at));
+        if let Some(i) = unknown {
+            crate::game::code::unported_call(&format!(
+                "the snapshot's frame at {:#010x}: the heap's image doesn't know its byte {i:#x}",
+                at
+            ));
         }
         heap::with(|h| h.image.hold(at, at + IMAGE_SIZE, Src::RenderTarget));
     }
@@ -596,4 +616,109 @@ pub fn snapshot_comment(seconds: u32, japanese: bool) -> [u8; 0x40] {
     let n = text.len().min(0x3F);
     out[..n].copy_from_slice(&text[..n]);
     out
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn frame(b: u8) -> Vec<u8> {
+        vec![b; IMAGE_SIZE as usize]
+    }
+
+    #[test]
+    fn a_rendering_frontend_s_copies_never_take_the_buffer() {
+        forget_frame();
+        will_give_frames();
+        // Not even the first copy, before any frame given, reads what the buffer held.
+        let unknown = frame_copied(0x8100_0000, || panic!("the buffer read"));
+        assert_eq!(unknown, None);
+        assert_eq!(take_frame(), None);
+        give_frame(frame(1));
+        assert_eq!(take_frame(), Some(frame(1)));
+        // The next copy waits for its own frame: the last one given isn't taken again.
+        assert_eq!(
+            frame_copied(0x8100_0000, || panic!("the buffer read")),
+            None
+        );
+        assert_eq!(take_frame(), None);
+        give_frame(frame(2));
+        assert_eq!(take_frame(), Some(frame(2)));
+    }
+
+    #[test]
+    fn a_console_without_a_renderer_compresses_what_the_buffer_held() {
+        forget_frame();
+        let mut known = vec![true; IMAGE_SIZE as usize];
+        known[5] = false;
+        let unknown = frame_copied(0x8100_0000, || (frame(3), known.clone()));
+        assert_eq!(unknown, Some(5));
+        assert_eq!(take_frame(), Some(frame(3)));
+        // Copied into again, the buffer still holds what it did (its image then the GPU's).
+        assert_eq!(
+            frame_copied(0x8100_0000, || panic!("the buffer read")),
+            None
+        );
+        assert_eq!(take_frame(), Some(frame(3)));
+        // Another buffer's bytes are its own.
+        assert_eq!(
+            frame_copied(0x8200_0000, || (frame(4), vec![true; IMAGE_SIZE as usize])),
+            None
+        );
+        assert_eq!(take_frame(), Some(frame(4)));
+    }
+
+    /// The snapshot's buffer: the first block of Camera Mode's game cache, at the same place in
+    /// every session (docs/saves.md, "A snapshot that doesn't fit").
+    const BUFFER: u32 = 0x811A_D6C0;
+
+    /// A headless console's snapshot never overflows (docs/saves.md): its buffer holds the
+    /// main menu's archive's bytes (`MnMaAll`, relocated where it was loaded), which lies at
+    /// most as high as each language puts it and lower only when blocks before it are carried
+    /// or already taken (the card's work areas and the pools' chunks, `0xC7C0` bytes); every
+    /// such place, 32 bytes apart, compresses into the room. Reads `SSBM_DISC`; about a minute.
+    #[test]
+    #[ignore]
+    fn the_headless_snapshot_fits_wherever_the_main_menu_lies() {
+        let Ok(path) = std::env::var("SSBM_DISC") else {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        };
+        let disc = melee_data::disc::Disc::open(&path).expect("the disc");
+        // The file's highest place (header first) in each language, and what it compresses to.
+        for (name, top, at_top) in [
+            ("MnMaAll.usd", 0x810F_8BA0u32, 248_093),
+            ("MnMaAll.dat", 0x810F_8C60, 244_176),
+        ] {
+            let file = disc.read_file(name).expect("the main menu's archive");
+            let archive = melee_data::archive::Archive::parse(&file).expect("an archive");
+            let mut max = 0;
+            for down in (0..=0xC7C0u32).step_by(0x20) {
+                let at = top - down;
+                // The file as `HSD_ArchiveParse` leaves it at `at`: each pointer word with the
+                // data block's address added.
+                let mut mem = file.clone();
+                for &r in archive.relocs() {
+                    let o = 0x20 + r as usize;
+                    let w = u32::from_be_bytes(mem[o..o + 4].try_into().unwrap());
+                    mem[o..o + 4].copy_from_slice(&w.wrapping_add(at + 0x20).to_be_bytes());
+                }
+                let from = (BUFFER - at) as usize;
+                let window = &mem[from..from + IMAGE_SIZE as usize];
+                let (size, _) = crate::hsd::jpeg::encode(
+                    window,
+                    i32::from(WIDTH),
+                    i32::from(HEIGHT),
+                    ROOM as usize,
+                    crate::hsd::jpeg::quality(3),
+                );
+                assert_ne!(size, 0, "{name} {down:#x} lower: the snapshot doesn't fit");
+                if down == 0 {
+                    assert_eq!(size, at_top, "{name} where it lies");
+                }
+                max = max.max(size);
+            }
+            eprintln!("{name}: at most {max} bytes");
+        }
+    }
 }

@@ -1042,7 +1042,6 @@ impl Running<'_> {
         } else {
             ("MnSlChr.usd", "MnExtAll.usd", "SdSlChr.usd")
         };
-        assert!(!jp, "the Japanese select screen's files aren't loaded");
         let a = self.load_archive_blocks(slchr);
         let b = self.load_archive_blocks(extall);
         self.game.charsel.archives = [Some(a), Some(b)];

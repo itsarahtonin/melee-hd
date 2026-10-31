@@ -365,6 +365,11 @@ pub const FILES: &[&str] = &[
     "GmTou4p.usd",
     "TmBox.dat",
     "SdTou.usd",
+    // The selects in Japanese, the saved language they take.
+    "MnSlChr.dat",
+    "MnExtAll.dat",
+    "SdSlChr.dat",
+    "MnSlMap.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound

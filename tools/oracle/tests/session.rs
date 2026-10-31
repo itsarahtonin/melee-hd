@@ -1183,6 +1183,23 @@ fn special_melee_sessions() {
     assert!(out.contains("2896 ticks compared, no difference"), "{out}");
 }
 
+/// Camera Mode in Japanese: the language set from the options, then `camera-snaps`' script, so
+/// the selects load their Japanese files and a headless console's snapshots compress what the
+/// Japanese main menu's archive left in the buffer (`MnMaAll.dat`, docs/saves.md, "A snapshot
+/// that doesn't fit"), to the trace's end with the card the run leaves the console's.
+#[test]
+fn camera_mode_in_japanese() {
+    let card = ssbm_rs_local("lockstep/special-sessions/camera-jp-run.card");
+    let Some(out) = scripted_session(
+        "special-sessions",
+        "camera-jp",
+        &["--all", "--heap", "--card-after", &card],
+    ) else {
+        return;
+    };
+    assert!(out.contains("4432 ticks compared, no difference"), "{out}");
+}
+
 /// The modes' exits: Super Sudden Death's tied match into its Sudden Death (whose entry passes
 /// no callbacks), its results and their exit back to the mode's character select, and Camera
 /// Mode's match quit back to its character select, each to the trace's end with the card the
