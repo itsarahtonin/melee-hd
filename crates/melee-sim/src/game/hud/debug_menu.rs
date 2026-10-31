@@ -133,6 +133,8 @@ pub struct DebugVars {
     pub settings: [u8; 0x190],
     /// [`WORDS`]' values, in its order.
     pub words: [u32; WORDS.len()],
+    /// The Yoshiki Test page's statics.
+    pub yoshiki: super::debug_card::Yoshiki,
 }
 
 /// `un_803FA258`'s address.
@@ -147,6 +149,7 @@ impl Default for DebugVars {
         DebugVars {
             settings: SETTINGS_INIT,
             words: WORDS.map(|(_, v)| v),
+            yoshiki: super::debug_card::Yoshiki::default(),
         }
     }
 }
@@ -1139,9 +1142,12 @@ impl Running<'_> {
             0x8030_0248 => self.debug_publicity(arg),
             other => match self.debug_item(other, arg) {
                 Some(r) => r,
-                None => match self.sound_test_item(other, arg) {
+                None => match self.yoshiki_item(other, arg) {
                     Some(r) => r,
-                    None => super::super::code::unported("debug menu callback", other),
+                    None => match self.sound_test_item(other, arg) {
+                        Some(r) => r,
+                        None => super::super::code::unported("debug menu callback", other),
+                    },
                 },
             },
         }

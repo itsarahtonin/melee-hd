@@ -806,6 +806,17 @@ impl Comparer<'_> {
                 mem.w(a),
             );
         }
+        // The Yoshiki Test's statics: Init's image, the snapshot's sprite (dangling once its
+        // scene ends, as the original's word does) and the image SnapLoad0 wrote into the
+        // sprite's descriptor in `.data`.
+        let y = v.yoshiki;
+        self.check(
+            "un_804D6E04, un_803FD274",
+            "image, descriptor's image",
+            (y.image, y.desc_image),
+            (mem.w(0x804D_6E04), mem.w(0x803F_D274)),
+        );
+        self.compare_gobj("un_804D6E08", y.sprite, mem.w(0x804D_6E08));
         // The sound test's table as its mode wrote it (`un_802FF7DC`, `un_802FF9DC`): the
         // bounds always, the name lists while their archive is loaded.
         {

@@ -410,11 +410,9 @@ impl Running<'_> {
                 }
                 0
             }
-            // The single-player modes' and their game overs' entries (milestone 6's), the
-            // Yoshiki test's card tests and the others acting only on A, not ported yet.
-            0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1280 | 0x8030_12D4 | 0x8030_1D7C
-            | 0x8030_16D8 | 0x8030_1734 | 0x8030_178C | 0x8030_1800 | 0x8030_1840 | 0x8030_18BC
-            | 0x8030_191C | 0x8030_1964 | 0x8030_1A64 | 0x8030_1AD4 => {
+            // The single-player modes' and their game overs' entries (milestone 6's), acting
+            // only on A, not ported yet.
+            0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1280 | 0x8030_12D4 | 0x8030_1D7C => {
                 if arg == CB_SELECT {
                     super::super::code::unported_call(&format!(
                         "the debug menu entry callback {cb:#010x}"

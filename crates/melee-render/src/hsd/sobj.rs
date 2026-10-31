@@ -149,6 +149,7 @@ impl Ctx<'_> {
         let data = self.data;
         let image = match o.image {
             Image::Data(d) => data.ptr(d).map_or(0, |p| self.space.addr(data, p)),
+            Image::Buffer { addr, .. } => self.decoded_image(addr).unwrap_or(0),
             _ => 0,
         };
         let mut texobj = TexObj::default();

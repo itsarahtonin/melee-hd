@@ -102,7 +102,7 @@ impl CardGame {
     }
 
     /// `lbCardGame_SetCardStatus`.
-    // Ports `lbCardGame_SetCardStatus`; aliased once a check reaches it.
+    #[doc(alias = "lbCardGame_SetCardStatus")]
     pub fn set_card_status(&mut self, status: i32) {
         self.card_status = status;
     }

@@ -1751,3 +1751,45 @@ fn the_hookshot_lengths_live_in_their_file() {
         assert!(out.contains("5883 ticks compared, no difference"), "{out}");
     }
 }
+
+/// The debug menu's Yoshiki Test page (`debug-sessions/yoshiki-*`, recorded with ssbm-rs's
+/// `--develop 3`), each from power-on to its trace's end with the card it leaves: Init as the
+/// page opens and again on A and B; Accessable, Create, Save, Load and SnapMount0 with the
+/// save, SnapLoad0's snapshot shown as a sprite and a second one after Init left the first
+/// (`basic`); snapshots read, swapped and deleted on seven, each list spun inside the callback
+/// (`snaps`); the save deleted, refused and reset, created again, the card formatted, its new
+/// ID stamped with the format's time (`erase`); every entry with no card (`nocard`), on a full
+/// card formatted to make room (`full`) and on a broken one formatted whole (`broken`).
+#[test]
+fn the_yoshiki_test_page() {
+    for (name, want) in [
+        ("yoshiki-basic", 4525),
+        ("yoshiki-snaps", 4406),
+        ("yoshiki-erase", 4767),
+        ("yoshiki-nocard", 4499),
+        ("yoshiki-full", 5387),
+        ("yoshiki-broken", 5228),
+    ] {
+        let dir = "debug-sessions";
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("traces/{dir}/{name}-play.card"));
+        let mut args = vec!["--all", "--heap"];
+        let with_card = std::path::Path::new(&card).exists();
+        if with_card {
+            args.extend(["--card-after", after.as_str()]);
+        }
+        let Some(out) = scripted_session(dir, name, &args) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{want} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        if with_card {
+            assert!(
+                out.contains("the card after the session: the original's"),
+                "{name}: {out}"
+            );
+        }
+    }
+}

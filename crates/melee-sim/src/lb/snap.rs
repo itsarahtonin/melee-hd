@@ -87,6 +87,13 @@ impl crate::game::state::Running<'_> {
     #[doc(alias = "lbSnap_8001E218")]
     pub fn snap_set_buffers(&mut self, snap: u32, slot: u32) {
         let s = &mut self.game.snap;
+        if s.snap.is_some_and(|old| old != snap) {
+            // A new buffer while the last one lives (the Yoshiki Test's Init again): what the
+            // last one held isn't in it.
+            self.game.snap_write.header = None;
+            self.game.snap_write.image = Vec::new();
+        }
+        let s = &mut self.game.snap;
         s.snap = Some(snap);
         s.slot = Some(slot);
         if s.slots_at != slot {
