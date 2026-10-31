@@ -47,7 +47,7 @@ The rules are `.githooks/path-guard.conf`, shared with `tools/path-guard`, which
 ## Commands
 
 - Build: `cargo build --locked --release`.
-- Build the player to play: `cargo run --locked -p dist -- [--channel stable|dev]`, stable into `dist/` (main after a full verify), dev into `dist-dev/` (staging after a smoke check, with its own settings folders); the player names its channel and commit ([build channels](docs/player.md#playing-it)).
+- Build the player to play: `cargo run --locked -p dist -- [--channel stable|dev]`, stable into `dist/` (main after each push), dev into `dist-dev/` (retired 2026-10-31 and built only on request, with its own settings folders); the player names its channel and commit ([build channels](docs/player.md#playing-it)).
 - Check leaf functions against ssbm-rs: `SSBM_DISC=... SSBM_RS_LOCAL=... cargo test --locked --release -p leaf-check`.
 - Regenerate the port ledger (`docs/port-ledger.md`): `cargo run --release -p ledger -- --check`. Mark a port with `#[doc(alias = "NAME")]` on its Rust item; list replaced and dead functions, and system-level checks, in `ledger/`.
 - Compare a recording with a replay: `target/release/melee-oracle compare ORIGINAL.slp OURS.slp` (`.exe` on Windows).
