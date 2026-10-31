@@ -6,6 +6,7 @@
 
 pub mod collection;
 pub mod debug;
+pub mod debug_view;
 pub mod gallery;
 pub mod list;
 pub mod lottery;
