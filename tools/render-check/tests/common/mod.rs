@@ -751,6 +751,24 @@ pub const DEBUG_COLL: Game = Game {
     replay: Replay::Session("debug-coll-debug"),
 };
 
+/// The trophy gallery's Z view (`debug-sessions/gal-z`): the trophy its buttons move, turn
+/// and scale, with its six parameters in a debug text.
+pub const DEBUG_GAL_Z: Game = Game {
+    stage: "Trophies",
+    name: "debug-gal-z",
+    players: "the trophy gallery's Z view (session debug-sessions/gal-z)",
+    replay: Replay::Session("debug-gal-z"),
+};
+
+/// The trophy gallery's L view (`debug-sessions/gal-l`): the trophy without its stands, its
+/// light, no erase, and the white fog Y turns on.
+pub const DEBUG_GAL_L: Game = Game {
+    stage: "Trophies",
+    name: "debug-gal-l",
+    players: "the trophy gallery's L view (session debug-sessions/gal-l)",
+    replay: Replay::Session("debug-gal-l"),
+};
+
 /// The coins' displays (`debug-sessions/vs-coins`): a Coin Mode debug VS match, Link and Mario
 /// on Final Destination, the fighters' coin capsules and the coins' ranges.
 pub const DEBUG_VS_COINS: Game = Game {
