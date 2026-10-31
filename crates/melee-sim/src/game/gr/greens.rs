@@ -50,11 +50,11 @@ const START_HOOK: u32 = 0x8021_4658;
 /// stack: the stage's setup, as deep as Dream Land's (0x10 below `setup::SETUP_FRAME`, its
 /// frame being 0x18 bytes); the blocks' setup through `grGreens_80214FA8` and
 /// `grGreens_80215358` (0x100 below that); and the blocks' process through
-/// `grGreens_802166C4` and `grGreens_80215358` (0x118 below the process loop's 0x804EEA38, as
-/// Kongo Jungle's events are 0x58 below it).
+/// `grGreens_802166C4` and `grGreens_80215358` (0x118 below the process loop's,
+/// `corneria::PROC_LOOP`).
 pub const SETUP_FRAME: u32 = 0x804E_E9F0;
 pub const SETUP_BLOCK_FRAME: u32 = 0x804E_E8F0;
-pub const PROC_BLOCK_FRAME: u32 = 0x804E_E920;
+pub const PROC_BLOCK_FRAME: u32 = super::corneria::PROC_LOOP - 0x118;
 
 /// The blocks' joints in the stage's model (`grGr_803E7840`) and their collision joints
 /// (`grGr_803E787C`), by block number.
