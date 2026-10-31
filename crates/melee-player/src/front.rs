@@ -94,7 +94,7 @@ pub const DEBUG_LEVELS: [(i32, &str, &str); 3] = [
 /// The developer setting's help line.
 pub const DEBUG_HELP: &str = "Raises Melee's debug level, as an Action Replay code does. Applies from Melee's next start (Restart Melee\u{2026}), and never to a replay.";
 /// The warning while the debug level isn't Off.
-pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Some debug tools aren't in melee-hd yet and stop the game.";
+pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to Japanese as it opens (Melee's own bug), and its entries can change unlocks and records, which Melee saves to your card. Its Yoshiki Test page can erase your save and your Camera Mode snapshots; melee-hd keeps a copy of each in the backups folder. Some debug tools aren't in melee-hd yet and stop the game.";
 /// The "Save replays" setting's help line (Sarah, 2026-10-29).
 pub const REPLAYS_HELP: &str =
     "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
