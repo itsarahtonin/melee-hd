@@ -57,16 +57,20 @@ const BLOCK_TOUCHED: [u32; 5] = [
 const START_STAGE: u32 = 0x801C_D610;
 const START_LIFTS: u32 = 0x801C_D9B4;
 
-/// The stack addresses of the scale joint's descriptor (`setup::SETUP_FRAME`'s) for the objects
+/// The stack address of the scale joint's descriptor for the objects the castle's setup makes
+/// (`grCastle_801CD37C`, a 0x20-byte frame).
+const INIT_FRAME: u32 = setup::init_frame(0x20);
+
+/// The stack addresses of the scale joint's descriptor (`INIT_FRAME`'s) for the objects
 /// made after the setup, each by how much deeper its create runs than the setup's: the
 /// switches from the castle's start hook (0x60), their blocks from the switches' setup (0xA8),
 /// a Bullet Bill from the castle's process (as deep as the setup), its blaster and blast from
 /// its own (0x20).
-const SWITCH_FRAME: u32 = setup::SETUP_FRAME - 0x60;
-const BLOCKS_FRAME: u32 = setup::SETUP_FRAME - 0xA8;
-const BILL_FRAME: u32 = setup::SETUP_FRAME;
-const BLASTER_FRAME: u32 = setup::SETUP_FRAME - 0x20;
-const BLAST_FRAME: u32 = setup::SETUP_FRAME - 0x20;
+const SWITCH_FRAME: u32 = INIT_FRAME - 0x60;
+const BLOCKS_FRAME: u32 = INIT_FRAME - 0xA8;
+const BILL_FRAME: u32 = INIT_FRAME;
+const BLASTER_FRAME: u32 = INIT_FRAME - 0x20;
+const BLAST_FRAME: u32 = INIT_FRAME - 0x20;
 
 /// The flags' chains: the part each hangs from, and its description (`grCs_803B7EA8`, all
 /// `dynamicsdata_flag6`).
@@ -241,7 +245,7 @@ pub fn on_init(r: &mut Running) {
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
     for map_id in [0, 4, 3, 6] {
-        create(r, map_id, setup::SETUP_FRAME);
+        create(r, map_id, INIT_FRAME);
     }
     for joint in [0, 1, 2, 6, 7, 8, 9, 10, 11, 12, 13, 14] {
         r.game.geometry_mut().disable_joint(joint);

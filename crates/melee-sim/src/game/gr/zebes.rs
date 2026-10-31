@@ -57,12 +57,12 @@ pub const ISLAND_BUBBLES: u32 = 0x801D_CBB0;
 /// from the stage's setup (0x60 below it: the stage's setup's frame and its create call's);
 /// the platform's first bubbles through `grZebes_801DC9DC`, `grZebes_801DC744` and
 /// `grZebes_801DAE70` (0x1C0 below); bubbles growing back from the stage's process through
-/// `grZebes_801DC408` (0x1D0 below the process loop's 0x804EEA38, as Kongo Jungle's events are
-/// 0x58 below it) or directly (0x160 below); a splash from the lava's device.
+/// `grZebes_801DC408` (0x1D0 below the process loop's, `corneria::PROC_LOOP`) or directly (0x160
+/// below); a splash from the lava's device.
 pub const ISLAND_FRAME: u32 = setup::SETUP_FRAME - 0x60;
 pub const SETUP_BUBBLE_FRAME: u32 = setup::SETUP_FRAME - 0x1C0;
-pub const GROW_BUBBLE_FRAME: u32 = 0x804E_E868;
-pub const REGROW_BUBBLE_FRAME: u32 = 0x804E_E8D8;
+pub const GROW_BUBBLE_FRAME: u32 = super::corneria::PROC_LOOP - 0x1D0;
+pub const REGROW_BUBBLE_FRAME: u32 = super::corneria::PROC_LOOP - 0x160;
 pub const SPLASH_FRAME: u32 = 0x804E_E7C0;
 
 /// The fields of `grZe_YakumonoParam`, by offset.

@@ -66,6 +66,10 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
     &SHRINE_CALLBACKS[map_id as usize]
 }
 
+/// The stack address of the scale joint's descriptor for the objects the temple's setup makes
+/// (`grShrine_80201C64`, a 0x20-byte frame).
+const INIT_FRAME: u32 = setup::init_frame(0x20);
+
 /// Hyrule Temple's setup, `grShrine_80201C64`: its parameters (which nothing reads), maps 0 to
 /// 2, camera limits and blast zones, and a gentle push over the whole stage that sways
 /// jointed parts.
@@ -73,7 +77,7 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 pub fn on_init(r: &mut Running) {
     r.game.gr.shrine_yakumono = super::ground::yakumono_param(r.game);
     for map_id in 0..3 {
-        create(r, map_id, setup::SETUP_FRAME);
+        create(r, map_id, INIT_FRAME);
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
