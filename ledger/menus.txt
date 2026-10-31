@@ -73,8 +73,6 @@ lbArchiveRelocate	unchecked	the disc's file layer: the frontend reads each file 
 lbDvd_GetPreloadCacheScene	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline (lb::dvd)
 lbDvd_80018A2C	gated	Event Match's match entry (gmevent's onEnterVs): the single-player modes', which only the 1P list's gated entries lead to
 lbDvd_80018C2C	gated	Event Match's match entry (gmevent's onEnterVs): the single-player modes', which only the 1P list's gated entries lead to
-lbCardGame_SetCardStatus	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-lb_8001CC4C	unreached	the memory card scene's erase of a damaged save: the player's card never holds one (saves::Kept::open moves a save the game wouldn't load whole aside at power-on, docs/player.md); sessions with such a card stop here
 lbAudioAx_8002438C	gated	Master Hand's and Crazy Hand's sounds: the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it

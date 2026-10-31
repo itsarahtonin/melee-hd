@@ -751,6 +751,25 @@ pub const DEBUG_COLL: Game = Game {
     replay: Replay::Session("debug-coll-debug"),
 };
 
+/// The debug menu's Yoshiki Test page (`debug-sessions/yoshiki-basic`): the save's card's
+/// snapshot (a headless Camera Mode run's, so the memory its copy found) shown as a sprite over
+/// the menus, left by Init, and a second one.
+pub const DEBUG_YOSHIKI_BASIC: Game = Game {
+    stage: "Debug menu",
+    name: "debug-yoshiki-basic",
+    players: "the Yoshiki Test's snapshot sprites (session debug-sessions/yoshiki-basic)",
+    replay: Replay::Session("debug-yoshiki-basic"),
+};
+
+/// The Yoshiki Test's snapshots (`debug-sessions/yoshiki-snaps`): seven pictures read, swapped
+/// and deleted, each shown as a sprite.
+pub const DEBUG_YOSHIKI_SNAPS: Game = Game {
+    stage: "Debug menu",
+    name: "debug-yoshiki-snaps",
+    players: "the Yoshiki Test's snapshots read, swapped and deleted (session debug-sessions/yoshiki-snaps)",
+    replay: Replay::Session("debug-yoshiki-snaps"),
+};
+
 /// The coins' displays (`debug-sessions/vs-coins`): a Coin Mode debug VS match, Link and Mario
 /// on Final Destination, the fighters' coin capsules and the coins' ranges.
 pub const DEBUG_VS_COINS: Game = Game {
