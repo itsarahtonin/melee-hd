@@ -20,6 +20,15 @@
 //! then, and the tick's state shows in the next frame. A frame the GPU finishes after its
 //! refresh shows a refresh late; the next tick's frame takes a later refresh, never the same.
 //!
+//! **Long ticks.** A tick that loads a scene runs the load's whole length on Melee's timeline
+//! (melee-sim's: the game loop blocked in the load while the music plays on from interrupts,
+//! up to two seconds from the menus), and plays all of it at once. The next tick waits that
+//! long, as on a console, by moving Melee's clock on by what the tick ran beyond a tick
+//! ([`Scheduler::took`]): the screen holds its last frame and the sound plays the load's music
+//! whole. The few ticks right after a load that run less than a tick (the scene loop's first
+//! frames catching up to the retrace) come that much sooner, so the clock keeps Melee's
+//! timeline. A real stall (the host late, not the tick long) keeps the rule above.
+//!
 //! **Cadence** (a variable-refresh display, which waits for frames, or presenting immediately,
 //! or no refresh times known): ticks start at their due times, precisely, and frames are
 //! presented as soon as they're ready.
@@ -333,10 +342,21 @@ pub struct Counts {
     pub unshown: u64,
     /// Times Melee's clock was put back on now after a stall.
     pub stalls: u64,
+    /// Long ticks (scene loads) waited for, and the time they added.
+    pub long: u64,
+    pub long_time: Duration,
 }
 
 /// A stall longer than this many ticks puts Melee's clock back on now.
 const STALL_TICKS: u32 = 4;
+
+/// Whether a tick that ran `length` of Melee's time, its ticks `tick` long, is a long one (a
+/// scene's load): more than a tick and a half. A tick's length otherwise strays from a tick
+/// by a fraction of a millisecond (the video's 59.94 Hz fields against the 60 Hz pad alarm),
+/// and the ticks around a two-field one (33 ms) balance it.
+pub fn is_long(length: Duration, tick: Duration) -> bool {
+    length > tick + tick / 2
+}
 
 /// Places ticks on Melee's clock, just in time for their refreshes.
 #[derive(Clone, Debug)]
@@ -350,6 +370,8 @@ pub struct Scheduler {
     pub lead: Lead,
     /// The refresh the last frame shows at (or is meant to), so the next takes a later one.
     last_slot: Option<Instant>,
+    /// The last tick was long, or one of the short ticks right after a long one.
+    after_long: bool,
     pub counts: Counts,
 }
 
@@ -363,6 +385,7 @@ impl Scheduler {
             n: 0,
             lead: Lead::new(margin, tick / 2),
             last_slot: None,
+            after_long: false,
             counts: Counts::default(),
         }
     }
@@ -488,6 +511,30 @@ impl Scheduler {
         {
             self.last_slot = Some(self.last_slot.map_or(t, |s| s.max(t)));
         }
+    }
+
+    /// The tick that ran took `length` of Melee's time, and its samples came `dry` after the
+    /// sound ran out: a long tick (a scene's load) moves Melee's clock on by what it ran
+    /// beyond a tick, and by the dry spell (the load took the host longer than the sound
+    /// queued held, and the song paused that long; moving on by it plays the song on from there
+    /// rather than drop as much of it later); the ticks right after it that run less than a
+    /// tick come sooner by what they lack. Returns how much later the next tick is due.
+    pub fn took(&mut self, length: Duration, dry: Duration) -> Duration {
+        if is_long(length, self.tick) {
+            let later = length - self.tick + dry;
+            self.anchor += later;
+            self.after_long = true;
+            self.counts.long += 1;
+            self.counts.long_time += later;
+            return later;
+        }
+        if self.after_long && length < self.tick {
+            let sooner = self.tick - length;
+            self.anchor = self.anchor.checked_sub(sooner).unwrap_or(self.anchor);
+        } else {
+            self.after_long = false;
+        }
+        Duration::ZERO
     }
 
     /// A tick that started at `start`, its frame meant for `target`, had the frame finished by
@@ -945,6 +992,77 @@ mod tests {
         assert_eq!(r.counts.missed, 0);
         let settled = &r.shown[100..];
         assert!(settled.iter().all(|(i, d)| secs(*i, *d) < 0.0065));
+    }
+
+    /// Runs the next tick as planned at `now` (cadence) and has it take `length` of Melee's
+    /// time: when it started.
+    fn run(s: &mut Scheduler, now: Instant, length: f64) -> Instant {
+        let p = s.plan(now, Policy::Cadence, None);
+        s.ran(&p);
+        s.took(ms(length), Duration::ZERO);
+        p.start
+    }
+
+    /// A tick that loads a scene (1.8 s of Melee's time, then the scene loop's first frames
+    /// catching up to the retrace in less than a tick each, as the trophy gallery's loads run)
+    /// holds the next tick back by its length, and the ticks after keep Melee's timeline.
+    #[test]
+    fn a_long_tick_waits_its_length() {
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(TICK, DEFAULT_MARGIN, t0);
+        assert_eq!(run(&mut s, t0, 16.683), t0);
+        assert_eq!(
+            s.due(),
+            t0 + TICK,
+            "a tick's length strays: nothing changes"
+        );
+        run(&mut s, t0 + TICK, 1800.0);
+        // The load's tick started a tick in: the next tick comes 1.8 s after it.
+        assert_eq!(s.due(), t0 + TICK + ms(1800.0));
+        assert_eq!(s.counts.long, 1);
+        let mut at = s.due();
+        for short in [2.0, 0.001, 0.001] {
+            assert_eq!(run(&mut s, at, short), at);
+            at += ms(short);
+            assert_eq!(s.due(), at, "a short tick after it comes sooner");
+        }
+        assert_eq!(run(&mut s, at, 16.683), at);
+        at += TICK;
+        // A short tick away from a load (the 59.94 Hz fields' every thousandth) changes
+        // nothing, as before.
+        assert_eq!(run(&mut s, at, 0.251), at);
+        assert_eq!(s.due(), at + TICK);
+        assert_eq!(s.counts.stalls, 0);
+    }
+
+    /// A long tick whose samples came after the sound ran dry (its load took the host that
+    /// long) moves Melee's clock on by the dry spell too.
+    #[test]
+    fn a_late_long_tick_moves_the_clock_by_its_dry_spell() {
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(TICK, DEFAULT_MARGIN, t0);
+        let p = s.plan(t0, Policy::Timer, None);
+        s.ran(&p);
+        assert_eq!(s.took(ms(600.0), ms(40.0)), ms(600.0) - TICK + ms(40.0));
+        assert_eq!(s.due(), t0 + ms(640.0));
+        // A tick's length with a dry spell is a stall's, which the clock doesn't follow.
+        let p = s.plan(t0 + ms(640.0), Policy::Timer, None);
+        s.ran(&p);
+        assert_eq!(s.took(ms(16.683), ms(30.0)), Duration::ZERO);
+        assert_eq!(s.due(), t0 + ms(640.0) + TICK);
+    }
+
+    /// A stall after a long tick's wait (the host later still) puts Melee's clock back on now
+    /// as before.
+    #[test]
+    fn a_stall_after_a_long_tick_puts_the_clock_on_now() {
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(TICK, DEFAULT_MARGIN, t0);
+        run(&mut s, t0, 500.0);
+        let late = t0 + ms(500.0) + ms(200.0);
+        let p = s.plan(late, Policy::Cadence, None);
+        assert_eq!(p.due, late);
+        assert_eq!(s.counts.stalls, 1);
     }
 
     #[test]

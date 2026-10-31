@@ -13,4 +13,4 @@ pub mod output;
 
 pub use fx::BootMemory;
 pub use mixer::{FRAME_SAMPLES, Mixer};
-pub use output::{Output, OutputOptions, OutputStats};
+pub use output::{Output, OutputOptions, OutputStats, Simulated};

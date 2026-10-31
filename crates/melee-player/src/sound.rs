@@ -1,6 +1,8 @@
 //! The match's sound: the match starts with the boot's audio setup (melee-sim's `game::boot`),
 //! which the mixer sees from its first frame; each tick's audio frames are then mixed
-//! (`melee_audio::Mixer`) and queued on the output device.
+//! (`melee_audio::Mixer`) and queued on the output device. A long tick's (a scene's load, which
+//! runs the load's whole length on Melee's timeline) are queued to play whole, as the player
+//! waits that long before its next tick (`jit::Scheduler::took`).
 
 use std::sync::Mutex;
 
@@ -25,17 +27,19 @@ pub struct Sound {
 }
 
 impl Sound {
-    /// Mixes the frames the tick ran and queues them; never waits.
-    pub fn mix(&mut self, audio: &mut melee_sim::audio::Audio, data: &Archives) {
+    /// Mixes the frames the tick ran and queues them, to play whole when the tick was `long`;
+    /// never waits.
+    pub fn mix(&mut self, audio: &mut melee_sim::audio::Audio, data: &Archives, long: bool) {
         self.samples.clear();
         self.mixer.mix(audio, data, &mut self.samples);
-        if let Some(out) = &self.output {
-            out.push(&self.samples);
+        match &self.output {
+            Some(out) if long => out.push_long(&self.samples),
+            Some(out) => out.push(&self.samples),
+            None => {}
         }
     }
 
     /// The samples the last tick mixed.
-    #[cfg(test)]
     pub fn samples(&self) -> &[[i16; 2]] {
         &self.samples
     }
