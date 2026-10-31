@@ -499,10 +499,12 @@ impl CardTime {
                     _ => Step::Block,
                 })
                 .collect(),
-            (CardTime::Mount, _) if reads > 0 => std::iter::once(Step::Idle)
-                .chain(std::iter::repeat_n(Step::Block, reads))
-                .chain(std::iter::once(Step::Idle))
-                .collect(),
+            (CardTime::Mount, _) | (CardTime::Load, result::BAD_FILE) if reads > 0 => {
+                std::iter::once(Step::Idle)
+                    .chain(std::iter::repeat_n(Step::Block, reads))
+                    .chain(std::iter::once(Step::Idle))
+                    .collect()
+            }
             (CardTime::Load, result::NO_FILE | result::MALFORMED) | (CardTime::Mount, _) => {
                 vec![Step::Idle]
             }
@@ -1359,6 +1361,21 @@ impl Running<'_> {
 
     fn clock_now(&self) -> u64 {
         self.game.audio.clock.as_ref().map_or(0, |c| c.now)
+    }
+
+    /// `lbSnap_8001E290`'s probe of slot B on a console's boot with a card in slot A
+    /// (`CARDProbe(1)`, interrupts off), at its place before the save data's reset
+    /// ([`crate::audio::boot::console_probe_slot_b`]): whether the card answers, the
+    /// timeline past the probe (its status read included). ssbm-rs's traces of
+    /// `bootb-sessions/boot-clock` and `boot-clock-fast` (clocks that put the boot's slack
+    /// within reach) have it read the time base and the card's ID: 168 ticks more.
+    pub(crate) fn boot_probe_slot_b(&mut self) -> bool {
+        let at = crate::audio::boot::console_probe_slot_b(self.game.audio.boot_delay);
+        self.game.audio.clock_catch_up(self.data, at);
+        let now = self.clock_now();
+        let (card, time) = with_device(|dev| dev.exi_probe_timed(1, now));
+        self.game.audio.clock_read(self.data, time);
+        card
     }
 
     /// The pad alarm's card probes since the last look, at the times each alarm fired:

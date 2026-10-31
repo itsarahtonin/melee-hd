@@ -279,14 +279,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "lb_8001CC4C (deleting the damaged save)",
-        "the player's card never holds a save the game wouldn't load whole: melee-player's saves::Kept::open moves one to the backups at power-on",
-    ),
-    (
-        "lb_8001B8C8 (formatting the card)",
-        "the player's card is always formatted (melee-player's saves::card_of)",
-    ),
-    (
         "gm_SetupHumanResultsScreen for match kind",
         "a VS match's kind is its rules' mode, 0 to 3 (mn_803EC7DC's bounds)",
     ),

@@ -170,12 +170,12 @@ impl Running<'_> {
     pub fn reset_game_data(&mut self, bank: &crate::lb::audio::SoundBank) {
         self.reset_game_data_fields();
         // Where ssbm-rs's clock has the boot reach the audio reset: a console's boot with a
-        // card (the one with a boot delay) or without.
+        // card (the one with a boot delay) or without. A card in slot B made the boot's probe
+        // of it run past it (`Running::boot_probe_slot_b`).
         let at = if self.game.audio.boot_delay != 0 {
             crate::audio::boot::BootTimes::RESET
                 + self.game.audio.boot_delay
                 + crate::audio::boot::CONSOLE_RESET_EXTRA
-                + crate::audio::boot::console_reset_slot_b(self.game.snap.card_state[1] != 0)
         } else {
             crate::audio::boot::BootTimes::RESET
         };
