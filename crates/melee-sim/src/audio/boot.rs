@@ -109,14 +109,16 @@ pub fn console_boot_delay(power_on: u64) -> u64 {
 pub const CONSOLE_RESET_EXTRA: u64 =
     2 * (crate::lb::save::EXI_READ + crate::lb::save::TIME_READ) + crate::lb::save::EXI_READ;
 
-/// What a card in slot B adds to [`CONSOLE_RESET_EXTRA`]: `lbSnap_8001E290`'s probe of slot B
-/// finds it in and settled, and reads the time base too (`__EXIProbe`).
-pub fn console_reset_slot_b(card_b: bool) -> u64 {
-    if card_b {
-        crate::lb::save::TIME_READ
-    } else {
-        0
-    }
+/// Where `lbSnap_8001E290`'s probe of slot B starts on a console's boot with a card in slot A
+/// ([`BootTimes::RESET`] past the boot's delay, before the probe's own status read, the last
+/// of [`CONSOLE_RESET_EXTRA`]'s). With a card in slot B the probe takes longer than the
+/// register read counted there: the card is in and settled (the OS's first probe at the boot's
+/// start saw it, three tenths and more before), so `__EXIProbe` reads the time base too, and
+/// `EXIProbe` reads the card's ID (`EXIGetID`), which nothing read before: the OS's probes at
+/// boot read only slot A's, and the pad alarm's probes, which run from the audio setup, read
+/// it only when the alarm comes due before this one (`lb::save::CardSlot::exi_probe_timed`).
+pub fn console_probe_slot_b(boot_delay: u64) -> u64 {
+    BootTimes::RESET + boot_delay + CONSOLE_RESET_EXTRA - crate::lb::save::EXI_READ
 }
 
 /// ARAM's allocator (`ARInit`'s stack): each allocation goes after the last.
