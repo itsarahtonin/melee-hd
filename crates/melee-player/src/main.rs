@@ -1262,7 +1262,9 @@ fn give_snapshot(
     use melee_sim::game::gm::camera_mode::GM_CAMERA_MODE;
     use melee_sim::game::gm::machine::Phase;
     use melee_sim::hsd::display::Draw;
-    use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame};
+    use melee_sim::lb::snap_write::{IMAGE_SIZE, give_frame, will_give_frames};
+    // Every snapshot's frame is this view's, the first too: no copy takes the buffer's bytes.
+    will_give_frames();
     let camera =
         matches!(s.game().machine.phase, Phase::Scene { mode, .. } if mode == GM_CAMERA_MODE);
     if !camera {

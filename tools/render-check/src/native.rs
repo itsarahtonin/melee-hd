@@ -302,6 +302,9 @@ impl Drawer {
         if !self.loaded {
             self.frames.space.load_dol(t.dol);
             self.loaded = true;
+            if self.snapshots {
+                melee_sim::lb::snap_write::will_give_frames();
+            }
         }
         let fifo = self.frames.frame(t.game, t.data, t.draws);
         let snapshot = self.snapshots && t.game.camera_mode.snap.image != 0;
