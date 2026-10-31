@@ -196,10 +196,14 @@ fn explore() {
             return;
         };
         let holds = Holds::parse(&std::env::var("LOAD_HOLDS").unwrap_or_default()).unwrap();
-        let ticks: u64 = std::env::var("LOAD_TICKS")
+        // Without a length it would play forever, so `--include-ignored` runs skip it.
+        let Some(ticks) = std::env::var("LOAD_TICKS")
             .ok()
-            .and_then(|v| v.parse().ok())
-            .unwrap_or(u64::MAX);
+            .and_then(|v| v.parse::<u64>().ok())
+        else {
+            eprintln!("skipped: LOAD_TICKS isn't set");
+            return;
+        };
         let mut last = now(&s);
         let mut phase = format!("{:?}", s.game().machine.phase);
         for t in 0..ticks {
