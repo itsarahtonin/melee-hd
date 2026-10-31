@@ -127,8 +127,9 @@ fn card_device(setup: &Setup) -> CardDevice {
             pull: pull.map(|(out, back)| (field_start(out), back.map(field_start))),
             probe_start: seen,
             attached: false,
-            // The OS's probes at boot read the card's ID as it settled.
-            id_time: seen,
+            // The OS's probes at boot read slot A's card's ID as it settled; nothing reads
+            // slot B's before the game's first probe of it that finds it settled.
+            id_time: if b { 0 } else { seen },
             extint_seen: 0,
             lost: false,
         }
@@ -854,7 +855,12 @@ impl Running<'_> {
         // `lbArq_80014D2C`: the ARAM request queue, which the timeline's ARAM loads stand for.
         self.game.card_tasks.init();
         self.game.card_game.init(card_in);
-        self.game.snap.init([card_in, card_b_in]);
+        let card_b = if card_b_in && self.game.audio.boot_delay != 0 {
+            self.boot_probe_slot_b()
+        } else {
+            card_b_in
+        };
+        self.game.snap.init([card_in, card_b]);
         self.init_main_lib();
         self.game.audio.movie.init();
         // `HSD_SisLib_803A6048(0xC000)`: the boot's text heap, in HSD's boot heap, which the

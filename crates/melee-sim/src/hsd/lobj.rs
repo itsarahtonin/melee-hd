@@ -6,9 +6,9 @@
 //! The current list is changed from display callbacks, and holds a reference on each light,
 //! so it decides when lights are destroyed. Filling the active table and the light masks, and
 //! everything that builds GX light objects (`HSD_LObjSetupInit`, `HSD_LObjSetup`,
-//! `HSD_LObjSetupSpecularInit` and their `setup_*` helpers), belongs to the display pass and
-//! isn't ported yet. The fields only it writes (`hw_color`, `shininess`, `lvec`, `id`,
-//! `spec_id`) are kept for it; the GX light objects themselves will be draw commands.
+//! `HSD_LObjSetupSpecularInit` and their `setup_*` helpers), belongs to the display pass
+//! (`hsd::display`), which keeps the objects here for the heap's image and names them to the
+//! renderer in each light set.
 
 use melee_data::archive::{Archives, DataRef};
 
@@ -940,5 +940,168 @@ pub fn add_anim_all(objs: &mut Objects, data: &Archives, l: Option<LObjId>, anim
         add_anim(objs, data, Some(c), la);
         lp = objs.lobjs[c].next;
         la = la.and_then(|a| data.ptr(a));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    //! The lights on the disc (`SSBM_DISC`), for melee-render's light setup (docs/player.md,
+    //! **Light objects**) and the latent light without a position (docs/melee-bugs.md).
+
+    use std::collections::BTreeSet;
+
+    use melee_data::archive::Archive;
+    use melee_data::disc::Disc;
+
+    use super::*;
+
+    /// The archives holding a spot light, none of them loaded by a scene milestone 5 reaches:
+    /// the single-player game overs' (`GmGo*`, `gm_19EF`), the trophy fall's after a 1P
+    /// ending and the trophy's stand (`GmRegEnd`, `GmRgStnd`: `gmregtyfall`, `gm_19EF`,
+    /// `vi1201v1`, `vi1201v2`, `vi1202`), two backgrounds no code names (`GmRgEBG2`,
+    /// `GmRgEBG3`: only the disc's file table has their names), and Adventure's Underground
+    /// Maze's and Brinstar escape's fighters' lights (`map_plit`).
+    const SPOT_ARCHIVES: &[&str] = &[
+        "GmGoAnim.dat",
+        "GmGoCoin.dat",
+        "GmGover.dat",
+        "GmRegEnd.dat",
+        "GmRegEnd.usd",
+        "GmRgEBG2.dat",
+        "GmRgEBG3.dat",
+        "GmRgStnd.dat",
+        "GrNSr.dat",
+        "GrNZr.dat",
+    ];
+
+    fn ptr_or_null(a: &Archive, at: u32) -> bool {
+        a.is_pointer(at) || a.u32(at) == 0
+    }
+
+    /// An `HSD_WObjDesc` by its shape: a class name or none, a position, an `RObjDesc` or none.
+    fn wobj_desc(a: &Archive, p: u32) -> bool {
+        p as usize + 0x14 <= a.data().len()
+            && ptr_or_null(a, p)
+            && ptr_or_null(a, p + 0x10)
+            && (0..3).all(|i| !a.is_pointer(p + 4 + 4 * i) && a.f32(p + 4 + 4 * i).is_finite())
+    }
+
+    /// An `HSD_LightDesc` by its shape: pointers or nulls where it has pointers (class name,
+    /// next, position and interest descs, the attenuation parameters a point or spot light
+    /// needs), flags within `LOBJ_*`'s and `attnflags` a `LOBJ_LIGHT_ATTN*`.
+    fn light_desc(a: &Archive, t: u32) -> bool {
+        if !t.is_multiple_of(4) || t as usize + 0x1C > a.data().len() {
+            return false;
+        }
+        let (flags, attn) = (a.u16(t + 8), a.u16(t + 0xA));
+        [0, 4, 0x10, 0x14, 0x18]
+            .iter()
+            .all(|&o| ptr_or_null(a, t + o))
+            && flags & !0x7FF == 0
+            && attn <= 3
+            && (flags & TYPE_MASK < POINT || a.is_pointer(t + 0x18))
+            && [0x10, 0x14]
+                .iter()
+                .all(|&o| a.ptr(t + o).is_none_or(|p| wobj_desc(a, p)))
+    }
+
+    /// Every light descriptor in every archive on the disc, found by shape at every pointer's
+    /// target and every public symbol (the scene descs', `*_scene_lights`', the map heads',
+    /// `map_plit`'s and the selects' data tables' lights among them): a spot light only in
+    /// [`SPOT_ARCHIVES`], so no scene milestone 5 reaches loads one, and every infinite, point
+    /// and spot light with a position WObj, so the setup's stack vector
+    /// (`GxLight::stale_pos`) is never what a light's objects take.
+    #[test]
+    fn lights_on_the_disc() {
+        let Ok(path) = std::env::var("SSBM_DISC") else {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        };
+        let disc = Disc::open(&path).expect("the disc");
+        let (mut spots, mut count) = (BTreeSet::new(), [0usize; 4]);
+        let mut no_position = Vec::new();
+        for f in disc.files().expect("the file system") {
+            let lower = f.to_lowercase();
+            if !(lower.ends_with(".dat") || lower.ends_with(".usd")) {
+                continue;
+            }
+            // The fighters' animation banks (`Pl*AJ.dat`) are figatrees end to end, no
+            // archive.
+            let Ok(a) = Archive::parse(&disc.read_file(&f).expect("a file")) else {
+                assert!(lower.ends_with("aj.dat"), "{f} isn't an archive");
+                continue;
+            };
+            let targets: BTreeSet<u32> = a
+                .relocs()
+                .iter()
+                .filter_map(|&r| a.ptr(r))
+                .chain(a.publics().map(|(_, o)| o))
+                .collect();
+            for t in targets.into_iter().filter(|&t| light_desc(&a, t)) {
+                let ty = a.u16(t + 8) & TYPE_MASK;
+                count[ty as usize] += 1;
+                if ty == SPOT {
+                    spots.insert(f.trim_start_matches('/').to_string());
+                }
+                if ty != AMBIENT && a.ptr(t + 0x10).is_none() {
+                    no_position.push(format!("{f} {t:#x}"));
+                }
+            }
+        }
+        assert_eq!(
+            spots,
+            SPOT_ARCHIVES.iter().map(|s| s.to_string()).collect(),
+            "the archives with a spot light"
+        );
+        assert!(
+            no_position.is_empty(),
+            "lights without a position: {no_position:?}"
+        );
+        // What the scan finds on the disc (USA, revision 2): infinite, point and spot lights.
+        assert_eq!(count[1..], [509, 328, 20], "the light descriptors by type");
+    }
+
+    /// The light descriptors in the executable that milestone 5's scenes load (the decomp's
+    /// `HSD_LObjLoadDesc` and `lb_80011AC4` callers on static data): the fighters' light
+    /// (`ftCo_09F4.c`'s `node0`) and the stages' defaults (`Ground_803E0680`, `Ground_803E06AC`)
+    /// have a position or are ambient; the debug menu's infinite light (`if_2FF2.c`'s
+    /// `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes
+    /// it over before any setup. (The static point lights without one, `grPushOn_803E7B74`,
+    /// `grPushOn_803E7B90` and `grshrineroute.c`'s two, are Adventure's stages', and
+    /// `HSD_LObjSetPosition` gives each a position right after loading it.)
+    #[test]
+    fn executable_lights() {
+        let Ok(path) = std::env::var("SSBM_DISC") else {
+            eprintln!("no SSBM_DISC: skipping");
+            return;
+        };
+        let dol = Disc::open(&path)
+            .expect("the disc")
+            .dol()
+            .expect("main.dol");
+        let w = |o: usize| u32::from_be_bytes(dol[o..o + 4].try_into().unwrap());
+        let word = |a: u32| -> u32 {
+            let o = (0..18)
+                .find_map(|i| {
+                    let (off, addr, size) = (w(4 * i), w(72 + 4 * i), w(144 + 4 * i));
+                    (addr <= a && a < addr + size).then(|| (off + a - addr) as usize)
+                })
+                .unwrap_or_else(|| panic!("{a:#x} outside main.dol"));
+            w(o)
+        };
+        // (descriptor, flags, has a position)
+        for (desc, flags, pos) in [
+            (0x803C_5794, 0x5, true),
+            (0x803E_0680, 0xD, true),
+            (0x803E_06AC, 0x4, false),
+            (0x803F_9ED4, 0x1, false),
+            (0x803F_9EB8, 0x8, true),
+        ] {
+            assert_eq!(word(desc + 8) >> 16, flags, "{desc:#x}'s flags");
+            assert_eq!(word(desc + 0x10) != 0, pos, "{desc:#x}'s position");
+            let f = flags as u16;
+            let set_up = f & TYPE_MASK != AMBIENT && f & (DIFFUSE | SPECULAR) != 0;
+            assert!(!set_up || pos, "{desc:#x} is set up without a position");
+        }
     }
 }
