@@ -74,6 +74,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::ty::collection::PROC_CAMERA => game.coll_camera_proc(gobj),
         super::ty::collection::PROC_DEBUG_CAMERA => game.coll_debug_camera_proc(gobj),
         super::ty::debug::PROC_EDITOR => game.toy_editor_proc(gobj),
+        super::ty::debug_view::PROC_Z_VIEW => game.toy_z_view_proc(gobj),
+        super::ty::debug_view::PROC_L_VIEW => game.toy_l_view_proc(gobj),
         // fn_801A4BD0: the scene GObj's first process, empty.
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),

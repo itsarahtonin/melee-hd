@@ -1802,6 +1802,36 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none in play: debug code.
 - **Source:** `if_3004.c` (`un_803018BC`).
 
+### The gallery's Z view comes back from the close-up without its setup
+
+- **Where:** `_Toy_8030B530`'s X in the close-up (state 2), `crates/melee-sim/src/game/ty/debug_view.rs` (`toy_z_view_proc`).
+- **Defect:** the view's own way back (`_Toy_80309404`'s B) sets the return's steps (the interest's into `_Toy_804A26B8`, the distance's and pitch's into `_Toy_sbss_804D6E90` and `E94`) and hides the info board before it starts the return (state 3); the Z view's X starts it with neither, after putting the view back (`_Toy_80307828`). The ten frames of `_Toy_80308F04` then step the distance, pitch and interest by whatever the last return left (zero since power-on if none), and the info board the close-up showed stays up.
+- **Effect:** the camera doesn't glide back from the close-up but jumps (or drifts by an older return's steps), and the info board's sprites stay over the view until the gallery is left (the Z view has nothing that hides them).
+- **melee-hd:** modeled: the steps and the info board are state, kept from scene to scene. `gal-z` comes back once, with the steps at zero.
+- **Fix:** set the steps and hide the info board as the view's B does.
+- **Fix impact:** none in play: debug code.
+- **Source:** `toy.c` (`_Toy_8030B530`, `_Toy_80309404`, `_Toy_80308F04`).
+
+### The gallery's Z view edits the English table whatever table shows
+
+- **Where:** `_Toy_803062EC`, `crates/melee-sim/src/game/ty/debug_view.rs` (`toy_param_edit`).
+- **Defect:** the Z view writes each change into the English model table (`tyInitModelTbl`, `_Toy_sbss_804D6EC4`) and prints that entry, but the trophy is shown from the Japanese one (`tyInitModelDTbl`) where the language setting and the saved language differ and it has the trophy (`Toy_803060BC`).
+- **Effect:** with the two languages differing, the text after a change shows the English entry while the model moved from the Japanese one's place, and the next time the trophy shows (`Toy_803087F4`) it and its text are back at the Japanese table's values, unedited. With them the same (as in every session), none.
+- **melee-hd:** modeled (`datai_write` on the English entry, `toy_param` reading as the original).
+- **Fix:** write the entry `Toy_803060BC` reads.
+- **Fix impact:** none in play: debug code.
+- **Source:** `toy.c` (`_Toy_803062EC`, `Toy_803060BC`).
+
+### Z and R held into the gallery leave it with nothing to run
+
+- **Where:** `Toy_Scene_OnEnter`, `_Toy_80311788` and `_Toy_803114E8`, `crates/melee-sim/src/game/ty/gallery.rs` (`toy_on_enter`), `ty/debug_view.rs` (`toy_z_text`), `ty/debug.rs` (`toy_editor`).
+- **Defect:** both debug texts are screen 1: with Z and R held at the debug ROM's level, the Z view's text is made first, so the unlock editor's `DevText_Create(1, ...)` finds the id shown and fails; the editor then reports `*** Couldn't Open Debug Window2!` and returns without its GObj or process, and the gallery, which the editor opens when it's done, never starts.
+- **Effect:** the scene has nothing that can end it: no gallery, no editor, no input read. The console has to be reset.
+- **melee-hd:** modeled: the editor's block is allocated and nothing more runs; the scene idles as on a console. No session holds both.
+- **Fix:** give the two texts different ids, or open the gallery when the editor's text fails.
+- **Fix impact:** none in play: debug code.
+- **Source:** `toy.c` (`Toy_Scene_OnEnter`, `_Toy_80311788`, `_Toy_803114E8`), `textdraw.c` (`DevText_Create`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.

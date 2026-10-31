@@ -17,14 +17,14 @@ mod common;
 use common::{
     BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
     DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    DEBUG_COLL, DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR, DEBUG_SOUND,
-    DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE, DEBUG_VS_TOOLS,
-    DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD,
-    FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, GALLERY,
-    GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE,
-    ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE,
-    KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR,
+    DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE,
+    DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
+    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
+    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
+    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
     SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
     SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
@@ -357,6 +357,33 @@ rendered_frames!(DEBUG_YOSHIKI_SNAPS;
     debug_yoshiki_snaps_2150 2150,
     debug_yoshiki_snaps_3150 3150,
     debug_yoshiki_snaps_3800 3800,
+);
+
+// The trophy gallery's Z view (gal-z, Z held at the entry; log frames run about 290 ahead of
+// the holds' fields here): the trophy and its parameters' text (1000), moved with A held
+// (1220), scaled with B held and the light changed (1470), the close-up with its info board
+// and the performance monitor X and the D-pad's right turned on (1670), back in the view with
+// the info board left up and port 2's frustum moved (1900), and the view again after the list
+// (2230).
+rendered_frames!(DEBUG_GAL_Z;
+    debug_gal_z_1000 1000,
+    debug_gal_z_1220 1220,
+    debug_gal_z_1470 1470,
+    debug_gal_z_1670 1670,
+    debug_gal_z_1900 1900,
+    debug_gal_z_2230 2230,
+);
+// The trophy gallery's L view (gal-l, L held at the entry): the trophy alone, unerased, its
+// stands hidden (1000), another trophy after L and R (1265), the close-up with the fog on
+// (1610), the fog off (1840), on again in a close-up (1990), and the view again after the
+// list, the fog still on (2250).
+rendered_frames!(DEBUG_GAL_L;
+    debug_gal_l_1000 1000,
+    debug_gal_l_1265 1265,
+    debug_gal_l_1610 1610,
+    debug_gal_l_1840 1840,
+    debug_gal_l_1990 1990,
+    debug_gal_l_2250 2250,
 );
 // The stage's displays (vs-stage, R and D-pad down): the blast zones, camera bounds, camera
 // boxes and special points (2300), the fighters' ECBs, a hookshot's and the collision lines by
