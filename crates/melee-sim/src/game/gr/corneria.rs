@@ -564,6 +564,10 @@ pub fn on_demo_init(r: &mut Running) {
     super::super::code::unported_call("gm_8017E7E0");
 }
 
+/// The stack address of the scale joint's descriptor for the objects Corneria's setup makes
+/// (`grCorneria_801DD350`, a 0x30-byte frame).
+pub const INIT_FRAME: u32 = setup::init_frame(0x30);
+
 /// Corneria's setup, `grCorneria_801DD350`: its parameters, the sky (map 7), the Great Fox (map
 /// 3), the Arwing slots, the city's three parts waiting (maps 8, 9 and 4), map 11, camera limits
 /// and blast zones, a wind source, the Arwings held, and the Arwings' collision joints off.
@@ -572,18 +576,18 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.corneria_yakumono = super::ground::yakumono_param(r.game);
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
-    create(r, 7, setup::SETUP_FRAME);
-    create(r, 3, setup::SETUP_FRAME);
+    create(r, 7, INIT_FRAME);
+    create(r, 3, INIT_FRAME);
     reset_arwings(r);
-    let gobj = create(r, 8, setup::SETUP_FRAME).expect("grcorneria.c: map 8");
+    let gobj = create(r, 8, INIT_FRAME).expect("grcorneria.c: map 8");
     let gid = ground_of(r.game, gobj);
     r.game.grounds[gid.0].u.corneria_city8().xC4 = 1;
     for map in [9, 4] {
-        let gobj = create(r, map, setup::SETUP_FRAME).expect("grcorneria.c: the city");
+        let gobj = create(r, map, INIT_FRAME).expect("grcorneria.c: the city");
         let gid = ground_of(r.game, gobj);
         r.game.grounds[gid.0].u.corneria_city().xC4 = 1;
     }
-    create(r, 0xB, setup::SETUP_FRAME);
+    create(r, 0xB, INIT_FRAME);
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
     let _ = crate::lb::wind::push(
@@ -620,9 +624,10 @@ pub fn on_load(r: &mut Running) {
     r.stage_sound(0x55737);
 }
 
-/// The stack address of the scale joint's descriptor for the city part the load hook makes:
-/// the setup's, its frame 0x28 bytes smaller (0x8 against 0x30).
-pub const LOAD_FRAME: u32 = setup::SETUP_FRAME + 0x28;
+/// The stack address of the scale joint's descriptor for the city part the load hook makes,
+/// which runs outside the setup (its key doesn't follow the setup's frame, [`INIT_FRAME`]), as
+/// the sessions' traces show it (`select-sessions/stage-corneria`).
+pub const LOAD_FRAME: u32 = setup::SETUP_FRAME + 0x58;
 
 /// Corneria's start, `grCorneria_801DD508`: the enemy spawner, without enemies.
 #[doc(alias = "grCorneria_801DD508")]
@@ -631,8 +636,11 @@ pub fn on_start(r: &mut Running) {
 }
 
 /// Where a stage object's process runs (`HSD_GObj_RunProcs`' frame): the stack addresses below
-/// it key the scale joints the processes' objects make in the ID table.
-pub const PROC_LOOP: u32 = 0x804E_EA38;
+/// it key the scale joints the processes' objects make in the ID table. The sessions' traces
+/// show the Arwings', their planes' and the city parts' keys 0x18 above what 0x804EEA38 gave
+/// (`select-sessions/stage-corneria`), as Battlefield's background's and Kongo Jungle's events'
+/// frames have it.
+pub const PROC_LOOP: u32 = 0x804E_EA50;
 
 /// The stack address of the scale joint's descriptor for a flight path (map 1): below the
 /// process loop by the Great Fox's process's frame (0x30), the Arwings' (0x60) and the create
@@ -766,7 +774,7 @@ pub fn init_ship(r: &mut Running, gobj: GObjId) {
 
 /// The stack address of the copy's scale joint's descriptor: the stage's setup's, less the
 /// create function's frame (0x20) and the Great Fox's setup's (0x30).
-pub const COPY_FRAME: u32 = setup::SETUP_FRAME - 0x50;
+pub const COPY_FRAME: u32 = INIT_FRAME - 0x50;
 
 /// The Great Fox's process (map 3), `grCorneria_801DD9A8`: once the match has started, its
 /// drift, its sinking, its splashes where its hull meets the sea, its guns, the debugging
@@ -1530,7 +1538,7 @@ pub const WINDOW_FRAME: u32 = PROC_LOOP - 0x20 - 0x20;
 /// The key of the talk's scale joint, which a fighter's taunt makes (`grCorneria_801E2B80`'s frame):
 /// distinct from every live one by the time it is made, which the setup's, its objects gone with
 /// the load hook, stands in for.
-pub const TALK_FRAME: u32 = setup::SETUP_FRAME;
+pub const TALK_FRAME: u32 = INIT_FRAME;
 
 /// Lays the city out for the demo, `grCorneria_801E0678`: map 11 goes, and the three parts
 /// stand still side by side.
@@ -1661,7 +1669,7 @@ pub fn debug_talk(r: &mut Running) {
         c.talk = 0x13;
     }
     crate::game::code::os_report();
-    let w = create(r, 0xC, setup::SETUP_FRAME).expect("grcorneria.c: the talk");
+    let w = create(r, 0xC, TALK_FRAME).expect("grcorneria.c: the talk");
     let talk = g(r.game).talk;
     set_talk(r, w, talk);
 }

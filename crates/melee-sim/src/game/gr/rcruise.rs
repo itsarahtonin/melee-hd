@@ -188,6 +188,10 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
     &RCRUISE_CALLBACKS[map_id as usize]
 }
 
+/// The stack address of the scale joint's descriptor for the objects Rainbow Cruise's setup
+/// makes (`grRCruise_801FF168`, a 0x30-byte frame).
+const INIT_FRAME: u32 = setup::init_frame(0x30);
+
 /// Rainbow Cruise's setup, `grRCruise_801FF168`: its parameters; the course twice, the first
 /// copy frozen and hidden and leading the second; the scenery, the ship, the flag and the
 /// blocks; camera limits and blast zones; the course's first step; the ship's, flag's and
@@ -197,20 +201,20 @@ pub fn on_init(r: &mut Running) {
     r.game.gr.rcruise_yakumono = super::ground::yakumono_param(r.game);
     r.game.stage_info.unk8C.b4 = true;
     r.game.stage_info.unk8C.b5 = false;
-    let lead = create(r, 3, setup::SETUP_FRAME).expect("grrcruise.c: the course");
+    let lead = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
     let g = ground_of(r.game, lead);
     r.game.grounds[g.0].u.scroll().xC4 |= 0x80;
     let j = jobj_of(r.game, lead);
     jobj::set_flags_all(&mut r.game.objs.jobjs, j, jobj::HIDDEN);
-    let course = create(r, 3, setup::SETUP_FRAME).expect("grrcruise.c: the course");
+    let course = create(r, 3, INIT_FRAME).expect("grrcruise.c: the course");
     let g = ground_of(r.game, course);
     r.game.grounds[g.0].u.scroll().anim_gobj = Some(lead);
-    create(r, 0, setup::SETUP_FRAME);
-    create(r, 2, setup::SETUP_FRAME);
-    create(r, 5, setup::SETUP_FRAME);
-    let ship = create(r, 1, setup::SETUP_FRAME).expect("grrcruise.c: the ship");
-    let flag = create(r, 6, setup::SETUP_FRAME).expect("grrcruise.c: the flag");
-    let blocks = create(r, 4, setup::SETUP_FRAME).expect("grrcruise.c: the blocks");
+    create(r, 0, INIT_FRAME);
+    create(r, 2, INIT_FRAME);
+    create(r, 5, INIT_FRAME);
+    let ship = create(r, 1, INIT_FRAME).expect("grrcruise.c: the ship");
+    let flag = create(r, 6, INIT_FRAME).expect("grrcruise.c: the flag");
+    let blocks = create(r, 4, INIT_FRAME).expect("grrcruise.c: the blocks");
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
     proc_course(r, course);

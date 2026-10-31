@@ -555,9 +555,19 @@ pub fn set_apart(game: &mut Game, j: JObjId) {
 
 /// Where `Ground_GetStageGObj` keeps the descriptor of a stage object's scale joint on the
 /// stack ([`scale_joint`]) when a stage's setup makes its objects, through the stage's own
-/// create function: the stack address is the joint's ID table key. Other callers have deeper
-/// frames, given at their calls.
+/// create function: the stack address is the joint's ID table key. This is a setup with an
+/// 8-byte frame's (Fountain of Dreams', Pokémon Stadium's and most stages'); a deeper setup's
+/// is [`init_frame`]'s, and other callers have deeper frames, given at their calls.
 pub const SETUP_FRAME: u32 = 0x804E_EA00;
+
+/// [`SETUP_FRAME`] for a stage's setup (`StageData::on_init`, which `Ground_801C0800` calls)
+/// whose own frame is `frame` bytes: deeper by what that frame has over 8. The sessions'
+/// traces show it, from power-on through the menus (docs/engine.md, "Uninitialized values"):
+/// Peach's Castle's and Hyrule Temple's setups (0x20) 0x18 below, Corneria's and Rainbow
+/// Cruise's (0x30) 0x28 below.
+pub const fn init_frame(frame: u32) -> u32 {
+    SETUP_FRAME + 8 - frame
+}
 /// How much lower the descriptor of the scale joint of an object past the archive's maps
 /// sits (the inline's second copy in `Ground_GetStageGObj`).
 const EMPTY_MAP_SLOT: u32 = 0x44;
