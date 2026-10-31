@@ -129,19 +129,25 @@ impl Mirror for X34Flags {
 
 /// `CollData::x35_flags`, of whose byte code writes and reads only the top bit (`b0`:
 /// `mpColl_80041EE4` sets it, `mpLib`'s floor checks read it). The other seven bits keep what
-/// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone: a
-/// link of Sheik's chain new from the heap held 0x7F there on Corneria (docs/engine.md).
+/// the block held, which no code reads, so the comparer checks the top bit alone: a link of
+/// Sheik's chain new from the heap held 0x7F there on Corneria (docs/engine.md). They're kept
+/// (`rest`, as the leftovers gave them) for the heap's image: a collision copied whole (Pikachu's
+/// thunder jolt's, `it_802B3F88`) brings its source's, and the block holds them as it goes.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct X35Flags {
     pub b0: bool,
+    /// The low seven bits.
+    pub rest: u8,
 }
 
 impl Mirror for X35Flags {
     const SIZE: u32 = 1;
 
     fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        let b = m.bytes::<1>(at)[0];
         X35Flags {
-            b0: m.bytes::<1>(at)[0] & 0x80 != 0,
+            b0: b & 0x80 != 0,
+            rest: b & 0x7F,
         }
     }
 
@@ -279,9 +285,12 @@ impl crate::game::mirror::LayOut for X34Flags {
 }
 
 impl crate::game::mirror::LayOut for X35Flags {
-    /// The top bit: the rest of the byte stays unknown.
+    /// The whole byte: the low seven bits as the block held them where the collision was made,
+    /// or as its source's were where it was copied whole, as melee-sim imported them (as
+    /// `X34Flags`' `b5`).
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
         l.put_bits(at, 0, 1, u32::from(self.b0));
+        l.put_bits(at, 1, 7, u32::from(self.rest));
     }
 }
 
