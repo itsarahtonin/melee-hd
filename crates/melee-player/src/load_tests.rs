@@ -59,13 +59,14 @@ fn vs_entry(s: &Session, t: u64, menu: &mut Option<u64>) -> melee_sim::input::co
 /// than the sound queued holds), and pushes its samples as the player does; the device's
 /// 128-sample callbacks at 48 kHz run as time passes. `rule` false plays it as the player did
 /// before long ticks: every push a tick's, no wait. What came of it: the samples mixed, those
-/// dropped, the long ticks and the VS mode's character select reached.
+/// dropped, the long ticks, the VS mode's character select reached and what the device played.
 struct Played {
     mixed: usize,
     dropped: usize,
     skips: u32,
     long: Vec<(u64, Duration, usize)>,
     reached_vs: bool,
+    heard: Vec<[f32; 2]>,
 }
 
 fn play(rule: bool, ticks: u64) -> Option<Played> {
@@ -83,6 +84,7 @@ fn play(rule: bool, ticks: u64) -> Option<Played> {
         skips: 0,
         long: Vec::new(),
         reached_vs: false,
+        heard: Vec::new(),
     };
     for t in 0..ticks {
         let plan = jit.plan(clock, jit::Policy::Timer, None);
@@ -96,7 +98,7 @@ fn play(rule: bool, ticks: u64) -> Option<Played> {
         // The host's time for the tick, the device playing meanwhile.
         clock += Duration::from_millis(if long { 60 } else { 1 });
         while device + callback <= clock {
-            out.fill(128);
+            out.fill(128, |x| played.heard.push(x));
             device += callback;
         }
         let samples = s.sound.as_ref().expect("the sound").samples();
@@ -147,7 +149,38 @@ fn vs_mode_entry_plays_every_sample_it_mixes() {
             before.dropped, before.mixed, before.skips
         );
         assert!(before.skips >= 4);
+        // `LOAD_WAV=DIR` writes what the device played, before and after, to listen to.
+        if let Ok(dir) = std::env::var("LOAD_WAV") {
+            for (name, p) in [
+                ("vs-entry-before.wav", &before),
+                ("vs-entry-after.wav", &now),
+            ] {
+                let path = std::path::Path::new(&dir).join(name);
+                std::fs::write(&path, wav(&p.heard)).unwrap();
+                eprintln!("wrote {}", path.display());
+            }
+        }
     });
+}
+
+/// 48 kHz stereo 16-bit WAV bytes.
+fn wav(samples: &[[f32; 2]]) -> Vec<u8> {
+    let data = samples.len() as u32 * 4;
+    let mut b = Vec::with_capacity(44 + data as usize);
+    b.extend_from_slice(b"RIFF");
+    b.extend_from_slice(&(36 + data).to_le_bytes());
+    b.extend_from_slice(b"WAVEfmt ");
+    for v in [16u32, 0x0002_0001, 48_000, 48_000 * 4, 0x0010_0004] {
+        b.extend_from_slice(&v.to_le_bytes());
+    }
+    b.extend_from_slice(b"data");
+    b.extend_from_slice(&data.to_le_bytes());
+    for s in samples {
+        for c in s {
+            b.extend_from_slice(&((c.clamp(-1.0, 1.0) * 32767.0) as i16).to_le_bytes());
+        }
+    }
+    b
 }
 
 /// Exploration: `LOAD_HOLDS` (or the recorded session `LOAD_INPUTS`) played for `LOAD_TICKS`

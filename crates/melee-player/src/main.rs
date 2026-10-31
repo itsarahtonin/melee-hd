@@ -1437,10 +1437,10 @@ impl App {
         let session = self.session.as_mut().expect("a match");
         self.jit.ran(&plan);
         // A long tick (a scene's load) holds the next tick back by its length on Melee's
-        // timeline, as a console plays on through the load.
-        let later = length.map_or(Duration::ZERO, |l| {
-            self.jit.took(l, audio.map_or(Duration::ZERO, |a| a.dry))
-        });
+        // timeline, as a console plays on through the load, and by the dry spell its own
+        // computing caused (a longer one is a stall's, the host late before the tick).
+        let dry = audio.map_or(Duration::ZERO, |a| a.dry.min(simulated));
+        let later = length.map_or(Duration::ZERO, |l| self.jit.took(l, dry));
         self.stats.ticks += 1;
         self.ticks += 1;
         if self.max_ticks.is_some_and(|n| self.ticks >= n) {
