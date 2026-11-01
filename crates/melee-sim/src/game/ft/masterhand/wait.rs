@@ -130,6 +130,8 @@ impl Running<'_> {
     /// Hovering, `ftMh_Wait1_0_Anim`: a human's buttons choose the next attack; a computer's
     /// timer runs out and draws one from the table (or joins Crazy Hand's tag attack).
     #[doc(alias = "ftMh_Wait1_0_Anim")]
+    // NaN takes the original's branch (`--x223C < 0` fails).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub fn mh_wait_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let slot = i32::from(self.game.fighters[f.0].player_idx);
