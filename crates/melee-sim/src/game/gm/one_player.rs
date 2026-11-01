@@ -4,6 +4,10 @@
 //! shared data the loads set up (`gm_17C0`, `gm_17DB`, `gm_17E4`, `gm_17EB`). The modes'
 //! other states (their intros, matches, game overs) are their own tasks', and stop by name.
 
+// The stage list's and the players' loops run by index, as the original's do, over tables
+// indexed alongside.
+#![allow(clippy::needless_range_loop)]
+
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 use super::super::structs::{StartMeleeData, VsModeData};
@@ -598,7 +602,9 @@ impl Running<'_> {
             .iter()
             .position(|s| s.x0 == 0xD)
             .expect("the list's end");
-        let passes: [(fn(u8) -> bool, usize); 4] = [
+        // Which stages each pass picks for, and from which table.
+        type Pass = (fn(u8) -> bool, usize);
+        let passes: [Pass; 4] = [
             (|f| f & 8 != 0, 4),
             (|f| f & 2 != 0 && f & 0x20 == 0, 3),
             (|f| f & 0x10 != 0 && f & 0x20 == 0, 2),
