@@ -172,7 +172,8 @@ fn full_name(name: &str) -> String {
 }
 
 /// Every file a game cache can preload ([`Dvd::want_game_cache`]): each fighter kind's data,
-/// costume, effect and animation files, each stage select stage's file, and Kirby's copies.
+/// costume, effect and animation files, each stage select stage's file and the Home-Run
+/// Contest's, and Kirby's copies.
 pub fn game_cache_files() -> Vec<String> {
     use crate::game::ft::data::kind_tables;
     let mut out: Vec<String> = Vec::new();
@@ -221,6 +222,12 @@ pub fn game_cache_files() -> Vec<String> {
             if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
                 add(n);
             }
+        }
+    }
+    // The Home-Run Contest's stage, which its select's game cache names.
+    for us in [true, false] {
+        if let Some(n) = crate::game::gr::data::stage_file(0x43, us) {
+            add(n);
         }
     }
     out

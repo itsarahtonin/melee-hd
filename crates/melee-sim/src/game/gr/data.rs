@@ -1305,11 +1305,19 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
     GrJoint { x: 7, y: 18, z: 0 },
 ];
 
-/// A stage's file as the game names it (`lbFileGetFullName`): the four stages whose table
-/// gives no extension (Pokémon Stadium's, Onett's, Corneria's and Venom's) take the saved
+/// A stage's file as the game names it (`lbFileGetFullName`): the five stages whose table
+/// gives no extension (Pokémon Stadium's, Onett's, Corneria's, Venom's and the Home-Run
+/// Contest's) take the saved
 /// language's, `.dat` with Japanese saved.
 pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
-    let f = stage_data(grkind).file?;
+    // The Home-Run Contest's (`grHr_StageData`'s `/GrHr`, no extension), which its select's
+    // game cache preloads before its stage is ported.
+    const GR_KIND_HOMERUN: i32 = 0x43;
+    let f = if grkind == GR_KIND_HOMERUN {
+        "/GrHr.usd"
+    } else {
+        stage_data(grkind).file?
+    };
     Some(if saved_us {
         f
     } else {
@@ -1318,6 +1326,7 @@ pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
             "/GrOt.usd" => "/GrOt.dat",
             "/GrCn.usd" => "/GrCn.dat",
             "/GrVe.usd" => "/GrVe.dat",
+            "/GrHr.usd" => "/GrHr.dat",
             f => f,
         }
     })
