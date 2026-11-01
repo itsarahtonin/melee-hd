@@ -127,7 +127,8 @@ impl Running<'_> {
         fp.set_u_i32(u::X64, 0);
         let slot = i32::from(fp.player_idx);
         if self.game.player_flags_bit1(slot) && self.game.player_unk4d(slot) != KIND_KIRBY {
-            unported_call("ftKb_SpecialN_800F1BAC (a copy carried over)");
+            let kind = self.game.player_unk4d(slot);
+            self.kb_copy(gobj, kind, false);
         }
     }
 

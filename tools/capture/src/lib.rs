@@ -34,6 +34,7 @@ pub mod tev;
 pub mod title;
 pub mod tournament;
 pub mod toys;
+pub mod vi;
 pub mod vs;
 
 use std::collections::HashMap;
@@ -208,6 +209,32 @@ fn index_files(files: impl Iterator<Item = (String, Vec<u8>)>) -> DiscIndex {
                     .or_default()
                     .push((format!("{name}@{off:#x}"), bytes[off..off + size].to_vec()));
                 off = (off + size).next_multiple_of(32);
+            }
+        }
+        if (name.starts_with("Vi") || name.contains("DViWait")) && name.ends_with(".dat") {
+            // A cutscene's file or a character's cutscene waits: each cutscene motion symbol
+            // (`ftDemoVi...MotionFile...`) heads a run of archives, one per animation, each
+            // at a 32-byte boundary, which `ftDemo_SetArchiveData` copies into a fighter's
+            // buffer on its own. Named by their offset in the file, as melee-sim names them.
+            if let Ok(a) = Archive::parse(&bytes) {
+                let end = (0x20 + w(4) as usize).min(bytes.len());
+                for (sym, at) in a.publics() {
+                    if !sym.starts_with("ftDemoVi") {
+                        continue;
+                    }
+                    let mut off = 0x20 + at as usize;
+                    while off + 0x20 <= end {
+                        let size = w(off) as usize;
+                        if size < 0x20 || off + size > end {
+                            break;
+                        }
+                        by_header
+                            .entry([w(off), w(off + 4), w(off + 8)])
+                            .or_default()
+                            .push((format!("{name}@{off:#x}"), bytes[off..off + size].to_vec()));
+                        off = (off + size).next_multiple_of(32);
+                    }
+                }
             }
         }
         by_header

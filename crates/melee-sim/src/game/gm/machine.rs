@@ -188,6 +188,10 @@ enum Hook {
     DebugVsEnterVs,
     /// `onEnterResults` (`gmvsmode.c`'s, VS mode's) in debug VS.
     DebugVsEnterResults,
+    /// `onEnterCutsceneLuigi`, `onExitRegendCongrats` (`gmopeningmode.c`), the debug
+    /// cutscene mode's.
+    CutsceneLuigiEnter,
+    RegendCongratsExit,
     DebugUnported(&'static str),
 }
 
@@ -604,6 +608,26 @@ fn states(mode: u8) -> &'static [StateDesc] {
         GS_CSS,
     )];
     const HANYU_SSS: [StateDesc; 1] = [debug(0, Some(Hook::HanyuSssEnter), None, GS_SSS)];
+    // `gm_Mode_DebugCutscene_States`: the eleven cutscenes in turn, then congratulations.
+    const DEBUG_CUTSCENE: [StateDesc; 12] = [
+        debug(0, Some(Hook::CutsceneLuigiEnter), None, 0x11),
+        debug(1, None, None, 0x12),
+        debug(2, None, None, 0x13),
+        debug(3, None, None, 0x14),
+        debug(4, None, None, 0x15),
+        debug(5, None, None, 0x16),
+        debug(6, None, None, 0x17),
+        debug(7, None, None, 0x18),
+        debug(8, None, None, 0x19),
+        debug(9, None, None, 0x1A),
+        debug(10, None, None, 0x1B),
+        debug(
+            11,
+            None,
+            Some(Hook::RegendCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
         crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
@@ -626,6 +650,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         super::GM_DEBUG_SOUND_TEST => &SOUND_TEST,
         super::GM_HANYU_CSS => &HANYU_CSS,
         super::GM_HANYU_SSS => &HANYU_SSS,
+        crate::game::vi::GM_DEBUG_CUTSCENE => &DEBUG_CUTSCENE,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -657,7 +682,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         | super::GM_DEBUG_VS
         | super::GM_DEBUG_SOUND_TEST
         | super::GM_HANYU_CSS
-        | super::GM_HANYU_SSS => (false, None, None),
+        | super::GM_HANYU_SSS
+        | crate::game::vi::GM_DEBUG_CUTSCENE => (false, None, None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -807,8 +833,9 @@ impl Running<'_> {
         };
         // The VS scene loads its match's files, the Result Test's results screen its players'
         // (with no match before it): the frontend reads them first.
-        self.game.machine.files_wanted =
-            s.scene == GS_VS || (scene_mode == super::GM_DEBUG && s.id == 11);
+        self.game.machine.files_wanted = s.scene == GS_VS
+            || (scene_mode == super::GM_DEBUG && s.id == 11)
+            || crate::game::vi::scene_handlers(s.scene).is_some();
     }
 
     /// The players whose files the scene about to enter loads, and whether it's a match (else
@@ -833,6 +860,17 @@ impl Running<'_> {
             return (d, false);
         }
         (self.scene_start_data().clone(), true)
+    }
+
+    /// The scene about to enter, if one is.
+    pub fn entering_scene(&self) -> Option<u8> {
+        let Phase::Entering {
+            scene_mode, state, ..
+        } = self.game.machine.phase
+        else {
+            return None;
+        };
+        Some(states(scene_mode)[usize::from(state)].scene)
     }
 
     /// The match the VS scene about to enter starts: its mode state's enter data.
@@ -918,6 +956,9 @@ impl Running<'_> {
             ),
             // No frame function: the menus' process runs the scene.
             GS_DEBUG_MENU => (crate::game::hud::debug_menu::ON_ENTER, CodeRef(0)),
+            k if crate::game::vi::scene_handlers(k).is_some() => {
+                crate::game::vi::scene_handlers(k).unwrap()
+            }
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -952,7 +993,7 @@ impl Running<'_> {
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
             crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
-            _ => unreachable!(),
+            _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
     }
@@ -1030,6 +1071,8 @@ impl Running<'_> {
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
+            // The cutscenes have no exit of their own.
+            k if crate::game::vi::scene_handlers(k).is_some() => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -1206,6 +1249,8 @@ impl Running<'_> {
             Hook::DebugEnterResults1 => self.debug_mode_enter_results1(),
             Hook::DebugExitResults1 => self.debug_mode_exit_results1(),
             Hook::DebugVsEnterResults => self.vs_mode_enter_results(),
+            Hook::CutsceneLuigiEnter => self.debug_cutscene_enter(),
+            Hook::RegendCongratsExit => self.debug_cutscene_exit(),
             Hook::DebugUnported(name) => unported_call(name),
         }
         let _ = state;

@@ -2206,10 +2206,13 @@ pub struct ArwingPathVars {
 /// 10): `xC4`'s bit 0x80, its slot (`xC8`), `xD4`, its collision object (`xDC`), its articles
 /// (`xE0` to `xEC`, none), its ticks flown (`xF0`), its roll's state (`xF4`) and wait (`xF8`),
 /// whether it fires (`xFC`) and which gun fires next (`x100`, which map 10's setup leaves as the
-/// block held it: unknown until written).
+/// block held it: unknown until written). `disabled`: an Arwing of no type (the Star Fox
+/// cutscene's, `Ground_DisableStarFoxArwingGObjs`), whose first two articles are -1 and whose
+/// collision object the setup leaves as the block held it.
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ArwingVars {
     pub b0: bool,
+    pub disabled: bool,
     pub xC8: i32,
     pub xD4: i32,
     pub xDC: Option<GObjId>,
@@ -3319,10 +3322,18 @@ impl GroundVars {
             }),
             VarsKind::Arwing => GroundVars::Arwing(ArwingVars {
                 b0: m.u8(at) & 0x80 != 0,
+                disabled: m.u32(at + 0x1C) == u32::MAX,
                 xC8: m.u32(at + 4) as i32,
                 xD4: m.u32(at + 0x10) as i32,
                 xDC: gobj(cx, at + 0x18),
-                xE0: std::array::from_fn(|i| gobj(cx, at + 0x1C + 4 * i as u32)),
+                xE0: std::array::from_fn(|i| {
+                    let a = at + 0x1C + 4 * i as u32;
+                    if m.u32(a) == u32::MAX {
+                        None
+                    } else {
+                        gobj(cx, a)
+                    }
+                }),
                 xF0: m.u32(at + 0x2C) as i32,
                 xF4: m.u32(at + 0x30) as i32,
                 xF8: m.u32(at + 0x34) as i32,
@@ -4938,6 +4949,7 @@ impl GroundVars {
             let b = Bytes(b);
             *self = GroundVars::Arwing(ArwingVars {
                 b0: b.u32(0) >> 31 != 0,
+                disabled: false,
                 xC8: b.u32(4) as i32,
                 xD4: b.u32(0x10) as i32,
                 xDC: b.null(0x18),
@@ -6428,12 +6440,14 @@ impl Mirror for GroundVars {
                 );
                 for (k, g) in v.xE0.iter().enumerate() {
                     let q = format!("{p}.xE0[{k}]");
-                    cx.compare_handle(
-                        &q,
-                        "GObjId",
-                        g.map(|g| g.0),
-                        m.u32(at + 0x1C + 4 * k as u32),
-                    );
+                    let theirs = m.u32(at + 0x1C + 4 * k as u32);
+                    if v.disabled && k < 2 {
+                        if theirs != u32::MAX {
+                            cx.mismatch(&q, "-1".into(), format!("{theirs:#x}"));
+                        }
+                        continue;
+                    }
+                    cx.compare_handle(&q, "GObjId", g.map(|g| g.0), theirs);
                 }
             }
             GroundVars::ArwingColl(v) => {

@@ -21,6 +21,22 @@ use gekko_fp as fp;
 /// `FtPart_RThumbNb`: the joint a pose's item is held at.
 const PART_R_THUMB_NB: i32 = 49;
 
+/// `Ft_Kind_Mario`, `Ft_Kind_Kirby`, `Ft_Kind_Luigi`, `Ft_Kind_GKoopa`.
+const KIND_MARIO: i32 = 0;
+const KIND_KIRBY: i32 = 4;
+const KIND_LUIGI: i32 = 0x11;
+const KIND_GKOOPA: i32 = 0x1F;
+
+/// The cutscene states' physics callbacks (`ftCo_800C7158`, `ftCo_800C7200`, `ftCo_800C737C`,
+/// `ftCo_800C7414`, `ftCo_800C74AC`), each `ft_8008521C`.
+pub const CUTSCENE_PHYS: [u32; 5] = [
+    0x800C_7158,
+    0x800C_7200,
+    0x800C_737C,
+    0x800C_7414,
+    0x800C_74AC,
+];
+
 /// `It_Kind_DrMario_Vitamin`.
 const IT_KIND_DRMARIO_VITAMIN: i32 = 49;
 
@@ -93,9 +109,77 @@ const RESULT_NAMES: [&str; 27] = [
 
 /// A kind's results animations' symbol.
 pub fn result_symbol(kind: i32) -> Option<String> {
+    demo_symbol(kind, 0)
+}
+
+/// A kind's demo animations' symbol in the file `Player_80036E20` hands it with `idx`
+/// (`ftDemo_SetArchiveData`): from `ftData_803C2468[kind]` below 4 (the results', intro's,
+/// ending's and cutscenes' wait animations), else the cutscene's own, by the motion
+/// `{9, 10, 11, 14, 15}[idx - 4]` (`ftDemo_GetMotionFileString`).
+pub fn demo_symbol(kind: i32, idx: i32) -> Option<String> {
+    if idx >= 4 {
+        let arg = [9, 10, 11, 14, 15][(idx - 4) as usize];
+        return Some(motion_symbol(kind, arg).to_owned());
+    }
+    // Nana's cutscene waits are Popo's (`ftNn_Init_803CDD00`).
+    if (kind, idx) == (11, 3) {
+        return Some("ftDemoViWaitMotionFilePopo".to_owned());
+    }
+    let what = ["Result", "Intro", "Ending", "ViWait"][idx as usize];
     RESULT_NAMES
         .get(kind as usize)
-        .map(|n| format!("ftDemoResultMotionFile{n}"))
+        .map(|n| format!("ftDemo{what}MotionFile{n}"))
+}
+
+/// A cutscene's own animations' symbol for a kind and motion, `ftDemo_GetMotionFileString`
+/// through the kind's `ftData_803C24EC` entry: Mario's and Luigi's for motions 9 and 10
+/// (`vi0102`'s, `vi1101`'s), Kirby's for 11 and 14 (`vi0501`'s, `vi0502`'s), Giga Bowser's
+/// for 15. Their switches leave the table's index unset for any other motion, which no
+/// caller passes ([Melee's bugs](../../../../docs/melee-bugs.md), latent defects); a kind
+/// without an entry fails the original's assertion.
+#[doc(alias = "ftDemo_GetMotionFileString")]
+#[doc(alias = "ftMr_Init_GetMotionFileString")]
+#[doc(alias = "ftLg_Init_GetMotionFileString")]
+#[doc(alias = "ftKb_Init_GetMotionFileString")]
+#[doc(alias = "ftGk_Init_GetMotionFileString")]
+pub fn motion_symbol(kind: i32, arg: i32) -> &'static str {
+    match (kind, arg) {
+        (0, 9) => "ftDemoVi0102MotionFileMario",
+        (0, 10) => "ftDemoVi1101MotionFileMario",
+        (0x11, 9) => "ftDemoVi0102MotionFileLuigi",
+        (0x11, 10) => "ftDemoVi1101MotionFileLuigi",
+        (4, 11) => "ftDemoVi0501MotionFileKirby",
+        (4, 14) => "ftDemoVi0502MotionFileKirby",
+        (0x1F, 15) => "ftDemoVi1201V2MotionFileGkoopa",
+        (0 | 0x11 | 4 | 0x1F, _) => {
+            panic!("a cutscene's motion file string for motion {arg} reads an unset index")
+        }
+        _ => panic!("the original's assertion failed: no demo vi anim! {arg}"),
+    }
+}
+
+/// The demo animations a kind's pose from 9 on takes (`ftData_UnkDemoCallbacks0`): Mario's
+/// and Luigi's poses 9 and 10, Kirby's 11 to 14, Giga Bowser's 15. Their other poses leave
+/// the range unset, which `ftDemo_CreateFighter` then reads ([Melee's
+/// bugs](../../../../docs/melee-bugs.md), latent defects); no caller makes one.
+#[doc(alias = "ftMr_Init_UnkDemoCallbacks0")]
+#[doc(alias = "ftLg_Init_UnkDemoCallbacks0")]
+#[doc(alias = "ftKb_Init_UnkDemoCallbacks0")]
+#[doc(alias = "ftGk_Init_UnkDemoCallbacks0")]
+pub fn cutscene_anims(kind: i32, pose: i32) -> (usize, usize) {
+    match (kind, pose) {
+        (0 | 0x11, 9) => (14, 14),
+        (0 | 0x11, 10) => (15, 15),
+        (4, 11..=13) => (14, 16),
+        (4, 14) => (17, 17),
+        (0x1F, 15) => (14, 14),
+        (0 | 0x11 | 4 | 0x1F, _) => {
+            panic!("a demo fighter's pose {pose} reads a range its kind's callback never set")
+        }
+        _ => super::super::code::unported_call(&format!(
+            "ftDemo_CreateFighter's pose {pose} for kind {kind} (no ftData_UnkDemoCallbacks0 entry)"
+        )),
+    }
 }
 
 /// A kind's demo animations, as the results file holds them: where the symbol's data is in
@@ -122,27 +206,39 @@ impl Running<'_> {
     /// transformation (Nana's).
     #[doc(alias = "Player_80036E20")]
     pub fn player_set_demo_archive(&mut self, ckind: i32, archive: ArchiveId, file: u32) {
+        self.player_set_demo_archive_idx(ckind, archive, file, 0);
+    }
+
+    /// [`Running::player_set_demo_archive`] with the file's kind of demo animations `idx`
+    /// ([`demo_symbol`]): 0 the results', 3 the cutscenes' waits, 4 on a cutscene's own.
+    pub fn player_set_demo_archive_idx(
+        &mut self,
+        ckind: i32,
+        archive: ArchiveId,
+        file: u32,
+        idx: i32,
+    ) {
         let m = mapping(ckind);
-        self.demo_set_archive(i32::from(m.internal_id), archive, file);
+        self.demo_set_archive(i32::from(m.internal_id), archive, file, idx);
         if m.extra_internal_id != -1 && m.has_transformation == 0 {
-            self.demo_set_archive(i32::from(m.extra_internal_id), archive, file);
+            self.demo_set_archive(i32::from(m.extra_internal_id), archive, file, idx);
         }
     }
 
     /// A kind's demo animations' place, unless it has one, `ftDemo_SetArchiveData` (the
     /// results' table, `ftData_803C2468[kind][0]`).
     #[doc(alias = "ftDemo_SetArchiveData")]
-    fn demo_set_archive(&mut self, kind: i32, archive: ArchiveId, file: u32) {
+    fn demo_set_archive(&mut self, kind: i32, archive: ArchiveId, file: u32, idx: i32) {
         let k = kind as usize;
         if self.game.ft.data.demo_anims[k] != 0 {
             return;
         }
-        let sym = result_symbol(kind).expect("a kind without demo animations");
+        let sym = demo_symbol(kind, idx).expect("a kind without demo animations");
         let off = self
             .data
             .get(archive)
             .public(&sym)
-            .unwrap_or_else(|| panic!("{sym} isn't in its results file"));
+            .unwrap_or_else(|| panic!("{sym} isn't in its demo animations' file"));
         // `HSD_ArchiveGetPublicAddress`: the data after the file's 0x20-byte header.
         self.game.ft.data.demo_anims[k] = file.wrapping_add(0x20).wrapping_add(off);
         self.game.ft.data.demo_files[k] = Some((archive, off));
@@ -245,9 +341,7 @@ impl Running<'_> {
         }
         self.load_costume_joint(gobj);
         let (lo, hi) = match a.pose {
-            p if p >= 9 => super::super::code::unported_call(&format!(
-                "ftDemo_CreateFighter's pose {p} (ftData_UnkDemoCallbacks0)"
-            )),
+            p if p >= 9 => cutscene_anims(kind, p),
             8 => (13, 13),
             7 => (12, 12),
             5 | 6 => (10, 11),
@@ -335,10 +429,76 @@ impl Running<'_> {
                 fp.x2219_b2 = true;
                 fp.x2219_b1 = true;
             }
+            8 => self.demo_cutscene_wait(gobj),
+            9 | 10 => {
+                let kind = self.game.fighter(gobj).kind;
+                if kind == KIND_MARIO || kind == KIND_LUIGI {
+                    self.demo_cutscene_state(gobj, if pose == 9 { 14 } else { 15 });
+                } else {
+                    self.demo_cutscene_wait(gobj);
+                }
+            }
+            11..=14 => {
+                if self.game.fighter(gobj).kind == KIND_KIRBY {
+                    self.demo_cutscene_state(gobj, pose + 3);
+                } else {
+                    self.demo_cutscene_wait(gobj);
+                }
+            }
+            15 => {
+                if self.game.fighter(gobj).kind == KIND_GKOOPA {
+                    self.demo_cutscene_state(gobj, 0xE);
+                } else {
+                    self.demo_cutscene_wait(gobj);
+                }
+            }
             p => super::super::code::unported_call(&format!(
                 "ftDemo_CreateFighter's pose {p}'s first state (on_create_fighter)"
             )),
         }
+    }
+
+    /// A cutscene fighter's first state (`on_create_fighter`'s poses 9 to 15): Mario's and
+    /// Luigi's waiting (9) and walking slowly (10), the Kirbys' waiting and walking slowly,
+    /// at a middle pace and fast (11 to 14), Giga Bowser's own (15), each its kind's demo
+    /// state, with the pose's flags; any other kind waits as pose 8's.
+    #[doc(alias = "ftCo_800C70D0")]
+    #[doc(alias = "ftCo_800C7178")]
+    #[doc(alias = "ftCo_800C7220")]
+    #[doc(alias = "ftCo_800C7294")]
+    #[doc(alias = "ftCo_800C7308")]
+    #[doc(alias = "ftCo_800C739C")]
+    #[doc(alias = "ftCo_800C7434")]
+    fn demo_cutscene_state(&mut self, gobj: GObjId, msid: i32) {
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2219_b2 = true;
+        fp.x2219_b1 = true;
+    }
+
+    /// Pose 8's first state, the cutscenes' wait (`ftCo_800C7070`): `ftCo_MS_RebirthWait`,
+    /// the demo table's state 13, with the pose's flags.
+    #[doc(alias = "ftCo_800C7070")]
+    fn demo_cutscene_wait(&mut self, gobj: GObjId) {
+        self.demo_cutscene_state(gobj, 13);
+    }
+
+    /// The cutscene states' physics (`ft_8008521C`, through `ftCo_800C7158` and its kin): the
+    /// fighter's own velocity the distance from its place to its root joint's, so the root's
+    /// animation moves it.
+    #[doc(alias = "ft_8008521C")]
+    #[doc(alias = "ftCo_800C7158")]
+    #[doc(alias = "ftCo_800C7200")]
+    #[doc(alias = "ftCo_800C737C")]
+    #[doc(alias = "ftCo_800C7414")]
+    #[doc(alias = "ftCo_800C74AC")]
+    pub fn demo_follow_root(&mut self, gobj: GObjId) {
+        let root = self.root_jobj(gobj);
+        let pos = self.game.objs.jobjs[root].translate;
+        let fp = self.game.fighter_mut(gobj);
+        fp.self_vel.x = mem(fp::fsubs(reg(pos.x), reg(fp.cur_pos.x)));
+        fp.self_vel.y = mem(fp::fsubs(reg(pos.y), reg(fp.cur_pos.y)));
+        fp.self_vel.z = mem(fp::fsubs(reg(pos.z), reg(fp.cur_pos.z)));
     }
 
     /// A winner's pose: its state, the pose's flags (`setupInitialState`), and what the
