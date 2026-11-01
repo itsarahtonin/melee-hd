@@ -6,10 +6,10 @@ use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_CASTLE, GR_KIND_CORNERIA, GR_KIND_FLATZONE,
     GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT,
-    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST,
-    GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT,
-    GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM,
-    GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
+    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
+    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1687,6 +1687,37 @@ pub const BIGBLUE: StageData = StageData {
     joints: &BIGBLUE_JOINTS,
 };
 
+/// `grNKr_StageCallbacks`. Map 3 is the route, map 2 the background, map 1 the backdrop and
+/// map 0 the pieces that follow the first fighter.
+pub const KINOKOROUTE_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0x8020_7634, 0x8020_78E8, 0x8020_78F0, 0x8020_7A94, 0),
+    cb(0x8020_7ADC, 0x8020_7B20, 0x8020_7B28, 0x8020_7B2C, 0),
+    cb(0x8020_7A98, 0x8020_7ACC, 0x8020_7AD4, 0x8020_7AD8, 0),
+    cb(
+        0x8020_7B5C,
+        0x8020_7C80,
+        0x8020_7C88,
+        0x8020_8368,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grNKr_StageData`.
+pub const KINOKOROUTE: StageData = StageData {
+    grkind: GR_KIND_KINOKOROUTE,
+    callbacks: &KINOKOROUTE_CALLBACKS,
+    file: Some("/GrNKr.dat"),
+    on_init: 0x8020_7420,
+    on_demo_init: 0x8020_741C,
+    on_load: 0x8020_7490,
+    on_start: 0x8020_74D8,
+    callback4: 0x8020_7544,
+    on_touch_line: 0x8020_8754,
+    on_check_shadow_render: 0x8020_875C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1719,6 +1750,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_CASTLE => &CASTLE,
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
+        GR_KIND_KINOKOROUTE => &KINOKOROUTE,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

@@ -178,6 +178,18 @@ pub fn is_1p_mode(game: &Game) -> bool {
     )
 }
 
+/// A stage's event for the match (`gm_801674C4`, the adventure route's arena): not ported yet.
+pub fn start_stage_event(
+    _r: &mut crate::game::state::Running,
+    _a: i32,
+    _b: i32,
+    _c: i32,
+    _d: i32,
+    _cb: crate::game::handles::CodeRef,
+) {
+    crate::game::code::unported_call("gm_801674C4 (a stage's match event)")
+}
+
 /// Whether the game is in training mode, `gm_8018841C`.
 #[doc(alias = "gm_8018841C")]
 pub fn is_training(game: &Game) -> bool {

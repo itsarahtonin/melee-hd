@@ -266,7 +266,7 @@ fn eye_floor(game: &Game) -> f64 {
         14 => super::gr::corneria::camera_floor(game),
         8 => reg(super::gr::zebes::camera_floor(s)),
         5 => reg(super::gr::garden::camera_floor()),
-        31 => unported("grKinokoRoute_802087B0"),
+        31 => reg(super::gr::kinokoroute::camera_floor()),
         67 => unported("grHomeRun_8021EF10"),
         _ => fp::fneg(f64::from(f32::MAX)),
     }

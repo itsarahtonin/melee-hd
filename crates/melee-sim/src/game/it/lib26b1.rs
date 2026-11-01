@@ -14,6 +14,13 @@ use crate::vec::Vec3;
 
 /// How many items of `kind` are out, `it_8026B3C0`.
 #[doc(alias = "it_8026B3C0")]
+/// Whether no one holds the item and it grabbed no one, `it_8026C1E8`.
+// Ports it_8026C1E8; aliased once a check reaches it.
+pub fn free_to_take(game: &Game, gobj: GObjId) -> bool {
+    let ip = super::item(game, gobj);
+    !(ip.grab_victim.is_some() || ip.xDC8_word.flags.x13 && ip.owner.is_some())
+}
+
 pub fn count_kind(game: &Game, kind: i32) -> i32 {
     let mut n = 0;
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
