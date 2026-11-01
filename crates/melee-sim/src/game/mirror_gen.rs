@@ -18056,6 +18056,83 @@ impl Mirror for itClimbersString_ItemVars {
     }
 }
 
+impl Mirror for itMasterHandLaser_ItemVars {
+    const SIZE: u32 = 0x10;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itMasterHandLaser_ItemVars {
+            x0: Var::new(m.u32(at + 0x0) as i32),
+            x4: Var::new(m.u32(at + 0x4) as i32),
+            x8: Var::new(m.u32(at + 0x8) as i32),
+            x10: Var::new(cx.import_handle("JObjId", m.u32(at + 0xc)).map(JObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()) != m.u32(at + 0x0) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", m.u32(at + 0x0) as i32),
+                );
+            }
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            if (*self.x4.peek()) != m.u32(at + 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x4"),
+                    format!("{:?}", (*self.x4.peek())),
+                    format!("{:?}", m.u32(at + 0x4) as i32),
+                );
+            }
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            if (*self.x8.peek()) != m.u32(at + 0x8) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x8"),
+                    format!("{:?}", (*self.x8.peek())),
+                    format!("{:?}", m.u32(at + 0x8) as i32),
+                );
+            }
+        }
+        if self.x10.live(&format!("{path}.x10"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x10"),
+                "JObjId",
+                (*self.x10.peek()).map(|h| h.0),
+                m.u32(at + 0xc),
+            );
+        }
+    }
+}
+
+impl Mirror for itMasterHandBullet_ItemVars {
+    const SIZE: u32 = 0x4;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itMasterHandBullet_ItemVars {
+            x0: Var::new(f32::from_bits(m.u32(at + 0x0))),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()).to_bits() != m.u32(at + 0x0) {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x0))),
+                );
+            }
+        }
+    }
+}
+
 impl Mirror for itPeachTurnip_ItemVars {
     const SIZE: u32 = 0x18;
 
@@ -28818,6 +28895,36 @@ impl LayOut for itClimbersString_ItemVars {
                 at + 0x14,
                 cx.handle("JObjId", (*self.x14.peek()).map(|h| h.0)),
             );
+        }
+    }
+}
+
+impl LayOut for itMasterHandLaser_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()) as u32);
+        }
+        if self.x10.is_live() {
+            l.put_word(
+                at + 0xc,
+                cx.handle("JObjId", (*self.x10.peek()).map(|h| h.0)),
+            );
+        }
+    }
+}
+
+impl LayOut for itMasterHandBullet_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()).to_bits());
         }
     }
 }

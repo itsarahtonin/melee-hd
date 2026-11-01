@@ -2805,8 +2805,18 @@ fn union_s16(b: &[u8], at: usize) -> i16 {
     i16::from_be_bytes(b[at..at + 2].try_into().unwrap())
 }
 
-/// A callback's point (`x344.cb`, `x35C.cb`): none of the game's is ported.
-fn script_point(cb: u32) -> Option<Vec3> {
+/// A callback's point (`x344.cb`, `x35C.cb`): Master Hand's waist
+/// (`ftMh_MS_343_80151428`); the others aren't ported.
+fn script_point(r: &mut Running, cb: u32) -> Option<Vec3> {
+    match cb {
+        0 => None,
+        super::ft::masterhand::addr::MS_343_80151428 => r.mh_waist_point(),
+        _ => unported(&format!("the cutscene camera's callback {cb:#010x}")),
+    }
+}
+
+/// The eye's callback point: none of the game's eye callbacks is ported.
+fn script_eye_point(cb: u32) -> Option<Vec3> {
     if cb == 0 {
         return None;
     }
@@ -2814,7 +2824,9 @@ fn script_point(cb: u32) -> Option<Vec3> {
 }
 
 /// The cutscene interest's target, by its kind (`x341_b1_b2`).
-fn script_interest(game: &mut Game) {
+/// Whether the interest's callback ran (kind 3 with a callback).
+fn script_interest(r: &mut Running) -> bool {
+    let game = &mut *r.game;
     let c = &game.camera.cam;
     match c.x341_b1_b2 {
         1 => {
@@ -2825,12 +2837,15 @@ fn script_interest(game: &mut Game) {
         }
         2 => game.camera.cam.transform.target_interest = union_vec(&c.x344),
         3 => {
-            if let Some(p) = script_point(union_word(&c.x344)) {
-                game.camera.cam.transform.target_interest = p;
+            let cb = union_word(&c.x344);
+            if let Some(p) = script_point(r, cb) {
+                r.game.camera.cam.transform.target_interest = p;
             }
+            return cb != 0;
         }
         _ => {}
     }
+    false
 }
 
 /// The cutscene eye's target, by its kind (`x341_b3_b4`): a point or a callback's.
@@ -2838,7 +2853,7 @@ fn script_eye(c: &mut Camera) {
     match c.x341_b3_b4 {
         1 => c.transform.target_position = union_vec(&c.x35C),
         3 => {
-            if let Some(p) = script_point(union_word(&c.x35C)) {
+            if let Some(p) = script_eye_point(union_word(&c.x35C)) {
                 c.transform.target_position = p;
             }
         }
@@ -2901,15 +2916,64 @@ fn orbit_point(interest: Vec3, pitch: f32, yaw: f32, distance: f64) -> Vec3 {
     scaled(v, distance) + interest
 }
 
+/// Who called `Camera_8002E234`, and whether the cutscene interest's callback ran in the same
+/// call (`script_interest`): what decides the stack words an orbit's unset parts read.
+#[derive(Clone, Copy, Debug)]
+pub enum OrbitCaller {
+    /// The cutscene camera's frame, `Camera_8002E490` (its `Camera_8002E234` frame at
+    /// `804EEA40`).
+    Frame { callback: bool },
+    /// The jump to the targets, `Camera_8002EF14` (its frame at `804EE958`).
+    Jump { callback: bool },
+}
+
+/// The orbit's parts, by the stack word each reads when its script didn't set it.
+#[derive(Clone, Copy, Debug)]
+enum OrbitWord {
+    /// `sp+0x8`, the distance (`x35C` bit 0x80).
+    Distance,
+    /// `sp+0xC`, the yaw (bit 0x20).
+    Yaw,
+    /// `sp+0x10`, the pitch (bit 0x40).
+    Pitch,
+}
+
+/// The word an orbit's unset part reads, `Camera_8002E234`'s `sp+0x8`, `sp+0xC` or `sp+0x10`:
+/// nothing in the function writes it, so it holds what earlier calls at the same stack depth
+/// left in the tick (docs/melee-bugs.md). ssbm-rs's probe of Master Hand's entrance
+/// (`research/m6-master-hand`, the debug VS session `m6-oracle/mh-fd`) found each writer:
+/// - the frame's pitch: `ftBossLib_GetFighterGObj`'s back chain (`804EEA70`) when the
+///   interest's callback (`ftMh_MS_343_80151428`) ran, else `HSD_JObjReqAnimByFlags`'s
+///   (`804EEA78`, from an animated model's `HSD_JObjReqAnimAll` earlier in the tick);
+/// - the jump's pitch: `ftBossLib_GetFighterGObj`'s back chain (`804EE988`) after the
+///   callback, else the collision's register save (`mpColl_80046904`, 2: the entrance's first
+///   frame, the match's first tick);
+/// - the jump's distance: the high word of `mpColl_8004ACE4`'s integer conversion
+///   (`0x43300000`, 176.0).
+///
+/// Any other unset part stops by name: the probe saw none.
+fn orbit_leftover(caller: OrbitCaller, word: OrbitWord) -> f32 {
+    let bits = match (caller, word) {
+        (OrbitCaller::Frame { callback: true }, OrbitWord::Pitch) => 0x804E_EA70,
+        (OrbitCaller::Frame { callback: false }, OrbitWord::Pitch) => 0x804E_EA78,
+        (OrbitCaller::Jump { callback: true }, OrbitWord::Pitch) => 0x804E_E988,
+        (OrbitCaller::Jump { callback: false }, OrbitWord::Pitch) => 0x0000_0002,
+        (OrbitCaller::Jump { .. }, OrbitWord::Distance) => 0x4330_0000,
+        _ => unported(&format!(
+            "the cutscene camera's unset orbit {word:?} from {caller:?}, a stack word no probe has seen"
+        )),
+    };
+    f32::from_bits(bits)
+}
+
 /// The cutscene eye's step: toward its point, or (an orbit) its pitch, yaw and distance each
 /// toward theirs, `Camera_8002E234`; whether it is there.
 ///
 /// An orbit eases only the parts its script set (`x35C`'s bits); the original reads the others
-/// from stack slots it never wrote, which plain data can't give, so the port panics there.
-/// Master Hand's and Crazy Hand's entrances set orbits that way; they await a probe of what
-/// those slots hold in play (`docs/engine.md`).
+/// from stack words it never wrote ([`orbit_leftover`]). Master Hand's entrance sets orbits
+/// that way.
 #[doc(alias = "Camera_8002E234")]
-pub fn script_eye_step(c: &mut Camera) -> bool {
+pub fn script_eye_step(c: &mut Camera, caller: OrbitCaller) -> bool {
     match c.x341_b3_b4 {
         0 | 1 | 3 => {
             let (start, end) = (union_vec(&c.x368), c.transform.target_position);
@@ -2921,22 +2985,34 @@ pub fn script_eye_step(c: &mut Camera) -> bool {
         2 => {
             let flags = c.x35C[0];
             let (b0, b1, b2) = (flags & 0x80 != 0, flags & 0x40 != 0, flags & 0x20 != 0);
-            if !(b0 && b1 && b2) {
-                panic!("the cutscene camera's partial orbit reads stack it never wrote");
-            }
             let mut done = true;
-            let (pitch, d1) =
-                script_lerp_value(c, reg(union_f32(&c.x368, 4)), reg(union_f32(&c.x35C, 4)));
-            done &= d1;
-            let (yaw, d2) =
-                script_lerp_value(c, reg(union_f32(&c.x368, 8)), reg(union_f32(&c.x35C, 8)));
-            done &= d2;
-            let (dist, d3) = script_lerp_value(
-                c,
-                fp::frsp(f64::from(union_s16(&c.x368, 0))),
-                fp::frsp(f64::from(union_s16(&c.x35C, 2))),
-            );
-            done &= d3;
+            let pitch = if b1 {
+                let (v, d) =
+                    script_lerp_value(c, reg(union_f32(&c.x368, 4)), reg(union_f32(&c.x35C, 4)));
+                done &= d;
+                v
+            } else {
+                orbit_leftover(caller, OrbitWord::Pitch)
+            };
+            let yaw = if b2 {
+                let (v, d) =
+                    script_lerp_value(c, reg(union_f32(&c.x368, 8)), reg(union_f32(&c.x35C, 8)));
+                done &= d;
+                v
+            } else {
+                orbit_leftover(caller, OrbitWord::Yaw)
+            };
+            let dist = if b0 {
+                let (v, d) = script_lerp_value(
+                    c,
+                    fp::frsp(f64::from(union_s16(&c.x368, 0))),
+                    fp::frsp(f64::from(union_s16(&c.x35C, 2))),
+                );
+                done &= d;
+                v
+            } else {
+                orbit_leftover(caller, OrbitWord::Distance)
+            };
             let interest = c.transform.interest;
             let full = fp::frsp(f64::from(union_s16(&c.x35C, 2)));
             c.transform.target_position =
@@ -2951,10 +3027,9 @@ pub fn script_eye_step(c: &mut Camera) -> bool {
 /// The cutscene camera's frame, `Camera_8002E490`.
 #[doc(alias = "Camera_8002E490")]
 pub fn update_script(r: &mut Running) {
-    let game = &mut *r.game;
-    clear_translation(&mut game.camera.cam);
-    script_interest(game);
-    let c = &mut game.camera.cam;
+    clear_translation(&mut r.game.camera.cam);
+    let callback = script_interest(r);
+    let c = &mut r.game.camera.cam;
     script_eye(c);
     let mut done = false;
     if c.x341_b1_b2 <= 3 {
@@ -2963,7 +3038,7 @@ pub fn update_script(r: &mut Running) {
         done = script_lerp(c, start, end, &mut out);
         c.transform.interest = out;
     }
-    done &= script_eye_step(c);
+    done &= script_eye_step(c, OrbitCaller::Frame { callback });
     let (fov, d) = script_lerp_value(c, reg(c.x374), reg(c.transform.target_fov));
     c.transform.fov = fov;
     done &= d;
@@ -3013,32 +3088,32 @@ fn enter_script(c: &mut Camera) {
 
 /// The cutscene interest follows a player's bone, `Camera_8002E6FC`.
 #[doc(alias = "Camera_8002E6FC")]
-pub fn script_look_at_player(game: &mut Game, slot: i32) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at_player(r: &mut Running, slot: i32) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 1;
     c.x344[0..4].copy_from_slice(&slot.to_be_bytes());
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene interest goes to a point, `Camera_8002E818`.
 #[doc(alias = "Camera_8002E818")]
-pub fn script_look_at(game: &mut Game, pos: Vec3) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at(r: &mut Running, pos: Vec3) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 2;
     set_union_vec(&mut c.x344, pos);
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene interest follows a callback's point, `Camera_8002E948`.
 #[doc(alias = "Camera_8002E948")]
-pub fn script_look_at_callback(game: &mut Game, cb: CodeRef) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at_callback(r: &mut Running, cb: CodeRef) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 3;
     c.x344[0..4].copy_from_slice(&cb.0.to_be_bytes());
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene eye goes to a point, `Camera_8002EA64`.
@@ -3093,11 +3168,11 @@ pub fn script_fov(c: &mut Camera, fov: f32) {
 
 /// Jumps the cutscene camera to its targets at once, `Camera_8002EF14`.
 #[doc(alias = "Camera_8002EF14")]
-pub fn script_jump(game: &mut Game) {
-    enter_script(&mut game.camera.cam);
-    game.camera.cam.x341_b5_b6 = 0;
-    script_interest(game);
-    let c = &mut game.camera.cam;
+pub fn script_jump(r: &mut Running) {
+    enter_script(&mut r.game.camera.cam);
+    r.game.camera.cam.x341_b5_b6 = 0;
+    let callback = script_interest(r);
+    let c = &mut r.game.camera.cam;
     if c.x341_b1_b2 <= 3 {
         let (start, end) = (c.x350, c.transform.target_interest);
         let mut out = c.transform.interest;
@@ -3105,7 +3180,7 @@ pub fn script_jump(game: &mut Game) {
         c.transform.interest = out;
     }
     script_eye(c);
-    script_eye_step(c);
+    script_eye_step(c, OrbitCaller::Jump { callback });
     c.transform.fov = copy(c.transform.target_fov);
 }
 

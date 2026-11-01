@@ -83,6 +83,8 @@ pub mod maril;
 pub mod mariocape;
 pub mod mariofireball;
 pub mod marumine;
+pub mod masterhandbullet;
+pub mod masterhandlaser;
 pub mod matadogas;
 pub mod mball;
 pub mod metalb;
@@ -188,6 +190,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || kirbyspitstar::run_event(r, gobj, addr)
         || kirbygamewatchchefpan::run_event(r, gobj, addr)
         || climbersice::run_event(r, gobj, addr)
+        || masterhandlaser::run_event(r, gobj, addr)
+        || masterhandbullet::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
@@ -347,6 +351,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| kirbyspitstar::run_pred(r, gobj, addr))
         .or_else(|| kirbygamewatchchefpan::run_pred(r, gobj, addr))
         .or_else(|| climbersice::run_pred(r, gobj, addr))
+        .or_else(|| masterhandlaser::run_pred(r, gobj, addr))
+        .or_else(|| masterhandbullet::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
@@ -577,6 +583,9 @@ pub const FOX_ILLUSION: i32 = 56;
 pub const FALCO_PHANTASM: i32 = 57;
 /// `It_Kind_IceClimber_Ice` and `It_Kind_IceClimber_Blizzard`.
 pub const ICE_CLIMBER_ICE: i32 = 106;
+/// `It_Kind_MasterHand_Laser` and `_Bullet`.
+pub const MASTERHAND_LASER: i32 = 125;
+pub const MASTERHAND_BULLET: i32 = 126;
 pub const ICE_CLIMBER_BLIZZARD: i32 = 107;
 /// `It_Kind_IceClimber_GumStrings`, the up special's string.
 pub const ICE_CLIMBER_STRING: i32 = 113;

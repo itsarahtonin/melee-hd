@@ -37,9 +37,15 @@ impl Running<'_> {
     fn stamina_ko(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if kind == KIND_MASTER_HAND || kind == KIND_CRAZY_HAND {
-            // `ftMh_MS_343_80151484` and `ftCh_GrabUnk1_8015ADD0`: the hands play only in
-            // the single-player modes.
-            unported_call("fn_800C8E74 (a hand's stamina knockout)");
+            if kind == KIND_MASTER_HAND {
+                self.mh_beaten(gobj);
+            } else {
+                unported_call("ftCh_GrabUnk1_8015ADD0");
+            }
+            let fp = self.game.fighter(gobj);
+            let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
+            self.game.fighter_lost(slot, sub);
+            return;
         }
         let fp = self.game.fighter_mut(gobj);
         fp.x2224_b3 = true;
