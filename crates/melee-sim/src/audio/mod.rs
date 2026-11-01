@@ -334,6 +334,7 @@ impl clock::Frames for Running<'_> {
             clock::Wait::PreloadFile(e) => self.dvd().file_state(e) != 1,
             clock::Wait::HeapReleased(h) => !self.dvd().release_heap(h),
             clock::Wait::StaleReleased(h) => !self.dvd().release_stale(h),
+            clock::Wait::ClassLoaded(m) => self.dvd().class_pending(m) != 1,
             clock::Wait::MovieIdle => self.audio.movie.in_flight == 0,
             clock::Wait::BanksMoved => b.moving == 0,
         }

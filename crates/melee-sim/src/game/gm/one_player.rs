@@ -535,7 +535,7 @@ impl Running<'_> {
     /// `gmClassic_801B3E44`: back to the menu, or the choices saved and given to the run, the
     /// stages' matchups picked (`gmClassic_801B2D54`), the first stage next, and the
     /// announcer's bank (`gm_80168F88`).
-    #[doc(alias = "gmClassic_801B3E44")]
+    // Ports `gmClassic_801B3E44`; aliased once a check reaches it.
     pub fn classic_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -581,7 +581,7 @@ impl Running<'_> {
     }
 
     /// `gm_80168F88`: the announcer's bank (bank 2's 0x10) wanted and waited for.
-    #[doc(alias = "gm_80168F88")]
+    // Ports `gm_80168F88`; aliased once a check reaches it.
     pub fn load_announcer_bank(&mut self) {
         self.game.audio.lb.unwant_banks(0x12);
         self.game.audio.lb.want_banks(2, 0x10);
@@ -592,7 +592,7 @@ impl Running<'_> {
     /// `gmClassic_801B2D54`: each Classic stage's matchup, picked from its table's order
     /// (`gmClassic_801B2BA4`): the hordes', the giants' and the teams' (but the last stage's),
     /// the one-opponent stages', then the bonus stages' and the last stage's own.
-    #[doc(alias = "gmClassic_801B2D54")]
+    // Ports `gmClassic_801B2D54`; aliased once a check reaches it.
     fn classic_pick_matchups(&mut self) {
         let n = CLASSIC_STAGES
             .iter()
@@ -630,7 +630,7 @@ impl Running<'_> {
     /// stage allows (its stage unlocked, each opponent unlocked, not the player's character,
     /// none already picked for another stage) and whose stage's ground no other pick shares;
     /// else the first that only shares a ground.
-    #[doc(alias = "gmClassic_801B2BA4")]
+    // Ports `gmClassic_801B2BA4`; aliased once a check reaches it.
     fn classic_pick(&self, table: usize) -> Option<MatchupRef> {
         let (off, t, at) = CLASSIC_TABLES[table];
         let me = i32::from(self.game.game_data.vs.unk_51C.c_kind);
@@ -709,7 +709,7 @@ impl Running<'_> {
 
     /// `gm_801B4350`: back to the menu, or the choices saved and given to the run, the first
     /// stage next and the announcer's bank.
-    #[doc(alias = "gm_801B4350")]
+    // Ports `gm_801B4350`; aliased once a check reaches it.
     pub fn adventure_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -772,7 +772,7 @@ impl Running<'_> {
 
     /// `gm_801B5FB4`: back to the menu, or the choices saved and given to the run, the first
     /// round next, the announcer's bank and the round's setup (`gm_801B5324`).
-    #[doc(alias = "gm_801B5FB4")]
+    // Ports `gm_801B5FB4`; aliased once a check reaches it.
     pub fn allstar_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -781,7 +781,77 @@ impl Running<'_> {
         let x5 = self.save_one_player_choice(GM_ALLSTAR);
         self.set_next_game_mode_state_id(x5.wrapping_mul(8) & 0xF8);
         self.load_announcer_bank();
-        crate::game::code::unported_call("gm_801B5324 (All-Star's round setup)");
+        let round = self.game.game_data.vs.unk_528.x5;
+        self.allstar_round_setup(usize::from(round));
+    }
+
+    /// A 1P run's `u8` getter (`Unk1PData::x48` to `x60`) for a round, level and index:
+    /// All-Star's opponents' costumes (`gm_8018A25C`).
+    fn one_player_getter_u8(&self, getter: Option<CodeRef>, round: u8, level: u8, i: u8) -> u8 {
+        match getter {
+            Some(CodeRef(0x8018_A25C)) => allstar_level(round, level).3[usize::from(i) * 3 + 1],
+            other => crate::game::code::unported_call(&format!(
+                "a 1P run's getter {:#010x}",
+                other.map_or(0, |c| c.0)
+            )),
+        }
+    }
+
+    /// `gm_801B5324`: All-Star's round: its opponents (from the shuffled table), their
+    /// costumes kept apart from the player's (`gmRegSetupEnemyColorTable`; the last round's
+    /// Mr. Game & Watches in the table's), the game cache's player first and waited for, then
+    /// the opponents and the stage, and their sound banks.
+    // Ports `gm_801B5324`; aliased once a check reaches it.
+    pub fn allstar_round_setup(&mut self, round: usize) {
+        let (start, count) = ALLSTAR_ROUNDS[round];
+        let opponents = self.game.one_player.allstar_opponents;
+        let mut chars = [CHKIND_NONE; 3];
+        for i in 0..count {
+            chars[i] = opponents[start + i][3] as i8;
+        }
+        let run = self.game.one_player.allstar.base;
+        let mut colors = [0u8; 3];
+        for (i, c) in colors.iter_mut().enumerate() {
+            *c = self.one_player_getter_u8(
+                run.getters[3],
+                round as u8,
+                run.player.cpu_level,
+                i as u8,
+            );
+        }
+        enemy_color_table(run.player.ckind, run.player.color, &chars, &mut colors);
+        let last = round == 0xC;
+        if last {
+            chars = [CKIND_GAMEWATCH; 3];
+            colors = [0; 3];
+        }
+        self.dvd_mut().keep_class();
+        let gc = &mut self.dvd_mut().cache.scene.game_cache;
+        gc.entries[0].char_id = i32::from(run.player.ckind);
+        gc.entries[0].color = run.player.color;
+        self.preload_refresh();
+        self.wait_preload_class(0xC7);
+        self.wait_preload_stale_released(4);
+        let stage = opponents[start][2];
+        let gc = &mut self.dvd_mut().cache.scene.game_cache;
+        let mut slot = 1;
+        for i in 0..3 {
+            if chars[i] != CHKIND_NONE {
+                gc.entries[slot].char_id = i32::from(chars[i]);
+                gc.entries[slot].color = if last { 0xFF } else { colors[i] };
+                slot += 1;
+            }
+        }
+        gc.stkind = i32::from(stage);
+        self.preload_refresh();
+        let mut mask = crate::lb::audio::character_banks(i32::from(run.player.ckind));
+        for c in chars {
+            mask |= crate::lb::audio::character_banks(i32::from(c));
+        }
+        mask |= crate::lb::audio::stage_banks(i32::from(stage));
+        self.game.audio.lb.unwant_banks(0x1C);
+        self.game.audio.lb.want_banks(0xC, mask);
+        self.game.audio.lb_start_bank_loads(self.data);
     }
 
     /// `gm_Mode_TargetTest_OnLoad`.
@@ -819,7 +889,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B63C4`: back to the menu, or the choice saved and the announcer's bank.
-    #[doc(alias = "gm_801B63C4")]
+    // Ports `gm_801B63C4`; aliased once a check reaches it.
     pub fn target_exit_css(&mut self) {
         let css = &self.game.one_player.target_css;
         if css.pending_scene_change == 2 {
@@ -880,7 +950,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B999C`: back to the menu, or the player from the select and Sandbag.
-    #[doc(alias = "gm_801B999C")]
+    // Ports `gm_801B999C`; aliased once a check reaches it.
     pub fn homerun_exit_css(&mut self) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -1022,7 +1092,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1EEC`: back to the select, or the stage kept for the match and its banks.
-    #[doc(alias = "gm_801B1EEC")]
+    // Ports `gm_801B1EEC`; aliased once a check reaches it.
     pub fn training_exit_sss(&mut self) {
         let sss = &self.game.one_player.training_sss;
         if sss.start_game == 0 {
@@ -1038,6 +1108,134 @@ impl Running<'_> {
             .lb
             .want_banks(8, crate::lb::audio::stage_banks(i32::from(stkind)));
         self.game.audio.lb_start_bank_loads(self.data);
+    }
+}
+
+/// `CKind_GameWatch`.
+const CKIND_GAMEWATCH: i8 = 3;
+
+/// `gm_803DEC4C`: each All-Star round's first opponent in the shuffled table and their count.
+const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
+    (0, 1),
+    (1, 1),
+    (2, 1),
+    (3, 1),
+    (4, 2),
+    (6, 2),
+    (8, 2),
+    (10, 2),
+    (12, 3),
+    (15, 3),
+    (18, 3),
+    (21, 3),
+    (24, 1),
+];
+
+/// `gmTraining_ClassicStages` (`gm_18A1`): All-Star's rounds at each level (round x 5 +
+/// level): a stage kind, two scales in hundredths, and three opponents' bytes (their
+/// costumes the second of each three).
+const ALLSTAR_LEVELS: [(u8, u16, u16, [u8; 10]); 65] = [
+    (4, 50, 170, [0, 1, 23, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 70, 140, [1, 1, 23, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 80, 120, [3, 1, 23, 0, 0, 0, 0, 0, 0, 0]),
+    (2, 90, 100, [5, 1, 23, 0, 0, 0, 0, 0, 0, 0]),
+    (1, 100, 95, [7, 1, 23, 0, 0, 0, 0, 0, 0, 0]),
+    (4, 50, 170, [1, 2, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 70, 140, [3, 2, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 80, 115, [4, 2, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (2, 90, 100, [6, 2, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (1, 100, 95, [8, 2, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (4, 50, 170, [2, 3, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 70, 140, [4, 3, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 80, 110, [5, 3, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (2, 90, 100, [7, 3, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (1, 100, 95, [9, 3, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (4, 50, 170, [3, 1, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 70, 140, [5, 1, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 80, 120, [6, 1, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (2, 90, 105, [8, 1, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (1, 100, 95, [9, 1, 4, 0, 0, 0, 0, 0, 0, 0]),
+    (4, 50, 170, [0, 2, 23, 0, 2, 23, 0, 0, 0, 0]),
+    (3, 67, 140, [2, 2, 23, 2, 2, 23, 0, 0, 0, 0]),
+    (3, 78, 120, [3, 2, 23, 3, 2, 23, 0, 0, 0, 0]),
+    (2, 90, 105, [5, 2, 4, 4, 2, 4, 0, 0, 0, 0]),
+    (1, 100, 100, [6, 2, 4, 6, 2, 4, 0, 0, 0, 0]),
+    (4, 50, 170, [1, 3, 23, 1, 3, 23, 0, 0, 0, 0]),
+    (3, 67, 140, [3, 3, 4, 3, 3, 23, 0, 0, 0, 0]),
+    (3, 78, 120, [4, 3, 4, 3, 3, 4, 0, 0, 0, 0]),
+    (2, 90, 105, [5, 3, 4, 5, 3, 4, 0, 0, 0, 0]),
+    (1, 100, 100, [7, 3, 4, 7, 3, 4, 0, 0, 0, 0]),
+    (4, 50, 170, [2, 1, 23, 1, 1, 23, 0, 0, 0, 0]),
+    (3, 70, 140, [3, 1, 4, 3, 1, 4, 0, 0, 0, 0]),
+    (3, 78, 120, [4, 1, 4, 4, 1, 4, 0, 0, 0, 0]),
+    (2, 90, 105, [6, 1, 4, 5, 1, 4, 0, 0, 0, 0]),
+    (1, 102, 100, [8, 1, 4, 7, 1, 4, 0, 0, 0, 0]),
+    (4, 50, 170, [2, 2, 4, 2, 2, 4, 0, 0, 0, 0]),
+    (3, 70, 130, [3, 2, 4, 3, 2, 4, 0, 0, 0, 0]),
+    (3, 80, 110, [5, 2, 4, 4, 2, 4, 0, 0, 0, 0]),
+    (2, 90, 105, [7, 2, 4, 5, 2, 4, 0, 0, 0, 0]),
+    (1, 105, 100, [9, 2, 4, 8, 2, 4, 0, 0, 0, 0]),
+    (4, 50, 170, [0, 3, 23, 0, 3, 23, 0, 3, 23, 0]),
+    (3, 67, 130, [2, 3, 23, 2, 3, 23, 1, 3, 23, 0]),
+    (3, 78, 110, [3, 3, 23, 3, 3, 23, 3, 3, 23, 0]),
+    (2, 89, 100, [4, 3, 4, 4, 3, 23, 4, 3, 23, 0]),
+    (1, 100, 100, [6, 3, 4, 6, 3, 4, 6, 3, 23, 0]),
+    (4, 50, 170, [1, 1, 23, 1, 1, 23, 1, 1, 23, 0]),
+    (3, 69, 125, [2, 1, 23, 2, 1, 23, 2, 1, 23, 0]),
+    (3, 75, 110, [4, 1, 17, 4, 1, 23, 3, 1, 23, 0]),
+    (2, 89, 100, [5, 1, 4, 4, 1, 17, 4, 1, 23, 0]),
+    (1, 100, 100, [7, 1, 4, 7, 1, 4, 7, 1, 17, 0]),
+    (4, 50, 170, [1, 2, 23, 1, 2, 23, 1, 2, 23, 0]),
+    (3, 70, 125, [3, 2, 17, 3, 2, 23, 3, 2, 23, 0]),
+    (3, 79, 112, [4, 2, 4, 4, 2, 17, 4, 2, 23, 0]),
+    (2, 90, 100, [5, 2, 4, 5, 2, 4, 4, 2, 17, 0]),
+    (1, 100, 100, [8, 2, 4, 8, 2, 4, 7, 2, 4, 0]),
+    (4, 50, 170, [2, 3, 23, 2, 3, 23, 1, 3, 23, 0]),
+    (3, 70, 125, [4, 3, 17, 4, 3, 4, 3, 3, 23, 0]),
+    (3, 80, 110, [5, 3, 4, 4, 3, 17, 4, 3, 23, 0]),
+    (2, 92, 100, [6, 3, 4, 5, 3, 4, 5, 3, 17, 0]),
+    (1, 105, 96, [9, 3, 4, 8, 3, 4, 8, 3, 17, 0]),
+    (4, 20, 360, [1, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 30, 320, [2, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    (3, 40, 300, [3, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    (2, 48, 240, [5, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+    (1, 55, 200, [7, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
+];
+
+fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
+    ALLSTAR_LEVELS[usize::from(level) + usize::from(round) * 5]
+}
+
+/// `gmRegSetupEnemyColorTable`: an opponent in the player's character and costume gets the
+/// first other costume no other opponent wears; a console halts on an assertion if none is
+/// left.
+// Ports `gmRegSetupEnemyColorTable`; aliased once a check reaches it.
+// Ports `gm_8018A25C`; aliased once a check reaches it.
+pub fn enemy_color_table(ckind: i8, color: u8, ckinds: &[i8; 3], colors: &mut [u8; 3]) {
+    let n = crate::game::playback::costume_count(ckind as u8);
+    for i in 0..3 {
+        if ckinds[i] != CHKIND_NONE && ckind == ckinds[i] && color == colors[i] {
+            colors[i] = 0xFF;
+        }
+    }
+    for i in 0..3 {
+        if ckinds[i] == CHKIND_NONE || colors[i] != 0xFF {
+            continue;
+        }
+        for j in 0..n {
+            if color == j {
+                continue;
+            }
+            let free = (0..3).all(|k| i == k || ckinds[k] == CHKIND_NONE || colors[k] != j);
+            if free {
+                colors[i] = j;
+                break;
+            }
+        }
+        assert!(
+            colors[i] != 0xFF,
+            "gmRegSetupEnemyColorTable found no costume: a console halts on its assertion"
+        );
     }
 }
 
