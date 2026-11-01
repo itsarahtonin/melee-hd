@@ -15,7 +15,7 @@ The milestone is done when:
 
 - **Verified:** the full verify (`FULL=1`) of `f3338c83` is clean: 651 whole-replay and session diffs, 371 rollback sync tests (4,124,663 ticks), 399 crate tests, 1,390 leaf checks and 294 frame and audio checks, with CI green on Windows, Linux and macOS.
 - **Tasks:** every task below is done or moved. Task 19's allocation limiter is milestone 6's ([Not in this sequence](#not-in-this-sequence)).
-- **Ledger:** 14,583 of the 19,827 functions ported and checked, 438 replaced and 253 dead ([port ledger](port-ledger.md)). What's left is mostly milestone 6's: the single-player modes, their stages and their bosses.
+- **Ledger:** 14,583 of the 19,827 functions ported and checked, 438 replaced and 253 dead ([port ledger](port-ledger.md)). What's left is mostly [milestone 6](milestone-6.md)'s: the single-player modes, their stages and their bosses.
 - **Open:** a Camera Mode snapshot of a drawn frame isn't proven to fit the card's 256,000-byte room. A snapshot without a renderer always fits (`snap_write::tests::the_headless_snapshot_fits_wherever_the_main_menu_lies`). The busiest drawn frame measured is 83,162 bytes ([saves](saves.md)).
 
 ## Scope
@@ -236,7 +236,7 @@ The critical path is 1, 4, 5, 6, 7, 9, then 17 and 18: the boot is serial, and e
 
 ### Not in this sequence
 
-- **Single-player modes, their stages and bosses** (milestone 6): Classic, Adventure, All-Star, Events, Target Test, Home-Run Contest, the Multi-Man modes, Training, their intros, game overs, cutscenes (`vi*`, 84), ending movies, the staff roll and their bonuses (`plbonus*`); their stages (885 functions, [milestone 4](milestone-4.md#whats-left-to-port)), Master Hand (263), Crazy Hand (257), Giga Bowser, the Wire Frames, Sandbag, the adventure enemies and items, Ditto, the single-player CPU kinds, and the main menu's gates that task 18 adds, which milestone 6 removes.
+- **Single-player modes, their stages and bosses** ([milestone 6](milestone-6.md)): Classic, Adventure, All-Star, Events, Target Test, Home-Run Contest, the Multi-Man modes, Training, their intros, game overs, cutscenes (`vi*`, 84), ending movies, the staff roll and their bonuses (`plbonus*`); their stages (885 functions, [milestone 4](milestone-4.md#whats-left-to-port)), Master Hand (263), Crazy Hand (257), Giga Bowser, the Wire Frames, Sandbag, the adventure enemies and items, Ditto, the single-player CPU kinds, and the main menu's gates that task 18 adds, which milestone 6 removes.
 - **The develop level's allocation limiter** (milestone 6, Sarah, 2026-10-30): task 19's last piece, `fn_UpdateObjAllocLimiter` at `DbLevel` 4, needs number limits on the effect, particle and app-SRT pools, which melee-hd doesn't model yet. Until then, its buttons at level 4 (B or A with up on the D-pad, in a match) stop the port.
 - **The player's polish** (milestone 7): the title as the default front door, remapping, three-OS builds.
 
