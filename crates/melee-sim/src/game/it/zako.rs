@@ -188,7 +188,11 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         kinds::KYASARIN => of!(vars.kyasarin()),
         kinds::KYASARIN_EGG => of!(vars.kyasarin_egg()),
         kinds::GREATFOX_LASER => of!(vars.greatfox_laser()),
-        kinds::KURIBOH..=kinds::OCTAROCK_STONE => CommonVars::Bytes(vars.zako()),
+        kinds::KURIBOH..=kinds::OCTAROCK_STONE
+        | kinds::NOKONOKO
+        | kinds::PATAPATA
+        | kinds::ZGSHELL
+        | kinds::ZRSHELL => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
     }
 }
@@ -221,12 +225,20 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
-        code::unported_call("grZakoGenerator_801CAC14 (an enemy from a spawner slot)");
+        let slot = &mut r
+            .game
+            .gr
+            .zako
+            .slots
+            .as_mut()
+            .expect("grzakogenerator.c: slots")[idx as usize];
+        slot.item = None;
+        slot.timer = 2;
     }
 }
 
-/// `It_Kind_Coin`.
-const COIN: i32 = 0xDB;
+/// `It_Kind_Coin`, the single-player coin.
+const COIN: i32 = super::kinds::COIN;
 
 /// The knockback's launch angle (the inline `it_8027B798_CalcAngle`): the hit's own, or for
 /// the Sakurai angle (361) `ftCommonData`'s in the air and on the ground a slope from 0.
@@ -687,7 +699,15 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
-        code::unported_call("grZakoGenerator_801CACB8 (an enemy from a spawner slot)");
+        let z = &mut r.game.gr.zako;
+        let slots = z.slots.as_mut().expect("grzakogenerator.c: slots");
+        let off = u32::from((slots[idx as usize].point - 0x20) as u16);
+        slots[idx as usize].item = None;
+        let spawns = z.spawns.expect("grzakogenerator.c: an enemy table");
+        let respawn = r.data.u8(spawns.at(4 * off + 3));
+        r.game.gr.zako.slots.as_mut().unwrap()[idx as usize].timer =
+            if respawn == 1 { 0x708 } else { -1 };
+        common(r.game, gobj).set_idx(-1);
     }
 }
 

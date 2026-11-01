@@ -26,6 +26,7 @@ pub mod icemt;
 pub mod inishie1;
 pub mod inishie2;
 pub mod izumi;
+pub mod kinokoroute;
 pub mod kongo;
 pub mod kraid;
 pub mod last;
@@ -116,6 +117,8 @@ pub const GR_KIND_VENOM: i32 = 15;
 pub const GR_KIND_MUTECITY: i32 = 18;
 /// `Gr_Kind_BigBlue`, Big Blue.
 pub const GR_KIND_BIGBLUE: i32 = 19;
+/// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
+pub const GR_KIND_KINOKOROUTE: i32 = 31;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -247,6 +250,9 @@ pub struct Globals {
     pub greatbay_yakumono: Option<DataRef>,
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
+    /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
+    /// slot's odds and the enemy spawner's table.
+    pub kinokoroute_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -479,6 +485,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
         (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
+        (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
+        (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
@@ -519,6 +527,7 @@ pub fn yaku_received(
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
+        kinokoroute::BLOCK_HIT => kinokoroute::block_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
         corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
         castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),

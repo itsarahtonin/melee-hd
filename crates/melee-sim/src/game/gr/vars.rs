@@ -118,6 +118,8 @@ pub enum VarsKind {
     BigBlueRoad,
     BigBlueFlyer,
     BigBlueRelay,
+    KinokoRoute,
+    KinokoRoute2,
 }
 
 /// `union GroundVars`.
@@ -237,6 +239,10 @@ pub enum GroundVars {
     BigBlueFlyer(BigBlueFlyerVars),
     /// `grBigBlue_PlatformVars`: the relay platform (map 36).
     BigBlueRelay(BigBlueRelayVars),
+    /// `grKinokoRoute_GroundVars`: Mushroom Kingdom's route's followers (map 0).
+    KinokoRoute(KinokoRouteVars),
+    /// `grKinokoRoute_GroundVars2`: Mushroom Kingdom's route (map 3).
+    KinokoRoute2(KinokoRoute2Vars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1706,6 +1712,37 @@ pub struct BigBlueRelayVars {
     pub xEC: f32,
 }
 
+/// A follower of Mushroom Kingdom's route (`grKinokoRoute_GroundVars_Entry`): its place from the
+/// first fighter (`pos`, written only when its joint is found) and its joint.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KinokoRouteEntry {
+    pub pos: crate::vec::Vec3,
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grKinokoRoute_GroundVars`: the four followers.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KinokoRouteVars {
+    pub entries: [KinokoRouteEntry; 4],
+}
+
+/// `grKinokoRoute_GroundVars2`: whether the route's collision links on the next tick
+/// (`flags_0`, the first byte's top bit; the byte's other bits and the padding are the block's,
+/// never written), the phase (2 in the arena), the watched point reached (`spawn_idx`, -1
+/// none), the zone, the camera's easing timer and where the arena's respawn point stands.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct KinokoRoute2Vars {
+    pub flags_0: bool,
+    pub x0_rest: u8,
+    pub pad_01: u8,
+    pub phase: i16,
+    pub spawn_idx: i16,
+    pub zone_idx: i16,
+    pub cam_timer: i16,
+    pub pad_0a: [u8; 2],
+    pub reb0_pos: crate::vec::Vec3,
+}
+
 impl BigBlueRelayVars {
     /// Its state (`x0_s.x0`).
     pub fn state(&self) -> i8 {
@@ -2390,6 +2427,8 @@ impl GroundVars {
             GroundVars::BigBlueRoad(_) => "BigBlueRoadVars",
             GroundVars::BigBlueFlyer(_) => "BigBlueFlyerVars",
             GroundVars::BigBlueRelay(_) => "BigBlueRelayVars",
+            GroundVars::KinokoRoute(_) => "KinokoRouteVars",
+            GroundVars::KinokoRoute2(_) => "KinokoRoute2Vars",
             GroundVars::Kraid(_) => "KraidVars",
             GroundVars::Kraid2(_) => "Kraid2Vars",
             GroundVars::Flatzone(_) => "FlatzoneVars",
@@ -2489,6 +2528,8 @@ impl GroundVars {
         "BigBlueRoadVars",
         "BigBlueFlyerVars",
         "BigBlueRelayVars",
+        "KinokoRouteVars",
+        "KinokoRoute2Vars",
         "KraidVars",
         "Kraid2Vars",
         "FlatzoneVars",
@@ -3596,6 +3637,28 @@ impl GroundVars {
                 xD0: f(at + 0xC),
                 xD4: f(at + 0x10),
                 xD8: f(at + 0x14),
+            }),
+            VarsKind::KinokoRoute => GroundVars::KinokoRoute(KinokoRouteVars {
+                entries: std::array::from_fn(|i| {
+                    let e = at + 0x10 * i as u32;
+                    KinokoRouteEntry {
+                        pos: crate::vec::Vec3::new(f(e), f(e + 4), f(e + 8)),
+                        jobj: cx
+                            .import_handle("JObjId", m.u32(e + 0xC))
+                            .map(crate::hsd::jobj::JObjId),
+                    }
+                }),
+            }),
+            VarsKind::KinokoRoute2 => GroundVars::KinokoRoute2(KinokoRoute2Vars {
+                flags_0: m.u8(at) & 0x80 != 0,
+                x0_rest: m.u8(at) & 0x7F,
+                pad_01: m.u8(at + 1),
+                phase: m.u16(at + 2) as i16,
+                spawn_idx: m.u16(at + 4) as i16,
+                zone_idx: m.u16(at + 6) as i16,
+                cam_timer: m.u16(at + 8) as i16,
+                pad_0a: [m.u8(at + 0xA), m.u8(at + 0xB)],
+                reb0_pos: crate::vec::Vec3::new(f(at + 0xC), f(at + 0x10), f(at + 0x14)),
             }),
             VarsKind::BigBlueRelay => GroundVars::BigBlueRelay(BigBlueRelayVars {
                 xC4: m.u32(at),
@@ -5402,6 +5465,57 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grKinokoRoute_GroundVars`, likewise: a block holding a pointer
+    /// converts only if it is null.
+    pub fn kinokoroute(&mut self) -> &mut KinokoRouteVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::KinokoRoute(KinokoRouteVars {
+                entries: std::array::from_fn(|i| {
+                    let e = 0x10 * i;
+                    KinokoRouteEntry {
+                        pos: crate::vec::Vec3::new(b.f32(e), b.f32(e + 4), b.f32(e + 8)),
+                        jobj: b.null_of(e + 0xC),
+                    }
+                }),
+            });
+        }
+        match self {
+            GroundVars::KinokoRoute(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grKinokoRoute_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as `grKinokoRoute_GroundVars2`, likewise.
+    pub fn kinokoroute2(&mut self) -> &mut KinokoRoute2Vars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |at: usize| u16::from_be_bytes([b[at], b[at + 1]]) as i16;
+            let v = KinokoRoute2Vars {
+                flags_0: b[0] & 0x80 != 0,
+                x0_rest: b[0] & 0x7F,
+                pad_01: b[1],
+                phase: h(2),
+                spawn_idx: h(4),
+                zone_idx: h(6),
+                cam_timer: h(8),
+                pad_0a: [b[0xA], b[0xB]],
+                reb0_pos: {
+                    let b = Bytes(b);
+                    crate::vec::Vec3::new(b.f32(0xC), b.f32(0x10), b.f32(0x14))
+                },
+            };
+            *self = GroundVars::KinokoRoute2(v);
+        }
+        match self {
+            GroundVars::KinokoRoute2(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grKinokoRoute_GroundVars2")
+            }
+        }
+    }
+
     /// The variables as Big Blue's relay platform's (`grBigBlue_PlatformVars`), likewise.
     pub fn bigblue_relay(&mut self) -> &mut BigBlueRelayVars {
         if let GroundVars::Bytes(b) = self {
@@ -6969,6 +7083,48 @@ impl Mirror for GroundVars {
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.bigblue.flyer"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::KinokoRoute(v) => {
+                for (i, e) in v.entries.iter().enumerate() {
+                    let b = at + 0x10 * i as u32;
+                    // A place is written only with its joint found; without one nothing reads
+                    // it, and it holds what the block held.
+                    if e.jobj.is_some() {
+                        let theirs = [m.u32(b), m.u32(b + 4), m.u32(b + 8)];
+                        if v3_bits(&e.pos) != theirs {
+                            cx.mismatch(
+                                &format!("{path}.kinokoroute.entries[{i}].pos"),
+                                format!("{:x?}", v3_bits(&e.pos)),
+                                format!("{theirs:x?}"),
+                            );
+                        }
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.kinokoroute.entries[{i}].jobj"),
+                        "JObjId",
+                        e.jobj.map(|j| j.0),
+                        m.u32(b + 0xC),
+                    );
+                }
+            }
+            GroundVars::KinokoRoute2(v) => {
+                let ours = (
+                    v.flags_0,
+                    [v.phase, v.spawn_idx, v.zone_idx, v.cam_timer],
+                    v3_bits(&v.reb0_pos),
+                );
+                let theirs = (
+                    m.u8(at) & 0x80 != 0,
+                    [2, 4, 6, 8].map(|o| m.u16(at + o) as i16),
+                    [m.u32(at + 0xC), m.u32(at + 0x10), m.u32(at + 0x14)],
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.kinokoroute2"),
                         format!("{ours:x?}"),
                         format!("{theirs:x?}"),
                     );

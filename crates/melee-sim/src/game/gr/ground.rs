@@ -407,8 +407,29 @@ pub fn proc_callback(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "Ground_801C0C2C")]
 pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
     let info = &r.game.stage_info;
-    if info.unk8C.b6 || info.unk8C.b7 {
-        unimplemented!("Ground_801C0C2C's point search needs the fighters (Player_GetEntity)");
+    if (info.unk8C.b6 || info.unk8C.b7)
+        && let Some(gobj) = p1_fighter(r.game)
+        && !r.game.ft_is_sleeping(gobj)
+    {
+        let pos = r.game.ft_pos(gobj);
+        if r.game.stage_info.unk8C.b6 {
+            let (w, h, cb) = {
+                let i = &r.game.stage_info;
+                (i.x70C, i.x710, i.x90)
+            };
+            let found = search_points(r, pos, 0x99..0xB3, w, h, cb);
+            r.game.stage_info.x714 = found;
+            r.game.stage_info.unk8C.b6 = false;
+        }
+        if r.game.stage_info.unk8C.b7 {
+            let (w, h, cb) = {
+                let i = &r.game.stage_info;
+                (i.x718, i.x71C, i.x94)
+            };
+            let found = search_points(r, pos, 0xBD..0xC7, w, h, cb);
+            r.game.stage_info.x720 = found;
+            r.game.stage_info.unk8C.b7 = false;
+        }
     }
     // `gm_8016B238`: the rules' bob-omb rain, a bomb every 30 frames after the first 1200.
     if r.game.vs_x6() != 0 {
@@ -424,6 +445,37 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
             }
         }
     }
+}
+
+/// The first of `points` the stage has whose box (`w` and `h` each way) holds `pos`, and that
+/// the stage's check (`cb`, none in the ported stages) takes; -1 for none (the watcher's two
+/// searches in `Ground_801C0C2C`).
+fn search_points(
+    r: &mut Running,
+    pos: Vec3,
+    points: std::ops::Range<i32>,
+    w: f32,
+    h: f32,
+    cb: Option<CodeRef>,
+) -> i32 {
+    for i in points {
+        let Some(p) = point(r.game, r.data, i) else {
+            continue;
+        };
+        let x = fp::fsubs(reg(pos.x), reg(p.x));
+        let y = fp::fsubs(reg(pos.y), reg(p.y));
+        let (w, h) = (reg(w), reg(h));
+        let in_x = x > fp::fneg(w) && x < w;
+        let above = in_x && y > fp::fneg(h);
+        let inside = above && y < h;
+        if inside {
+            if let Some(cb) = cb {
+                super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0));
+            }
+            return i;
+        }
+    }
+    -1
 }
 
 /// Animates a light list, keeping moved positions in the stage's scale, `Ground_801C445C`. The
@@ -1013,6 +1065,35 @@ pub fn x6e0(game: &Game, _arg: i32) -> f32 {
 pub fn x6e4_drawn(game: &mut Game) -> i32 {
     let i = game.objs.rng.below(1);
     game.stage_info.x6E4[i as usize]
+}
+
+/// A trophy point of the stage at random, `Ground_801C5940`: the first 32 of the main
+/// archive's point lists' ids from 220 to 251, one drawn (`HSD_Randi`); -1 with none, without
+/// a draw.
+#[doc(alias = "Ground_801C5940")]
+pub fn trophy_point(game: &mut Game, data: &Archives) -> i32 {
+    let (tables, n) = super::datfiles::main_head(game).index_tables(data);
+    if n == 0 {
+        return -1;
+    }
+    let tables = tables.expect("ground.c: a point list");
+    let mut vals = Vec::new();
+    for i in 0..n as u32 {
+        let e = tables.at(12 * i);
+        let max = data.u32(e.at(8)) as i32;
+        for j in 0..max.max(0) as u32 {
+            let p = data.ptr(e.at(4)).expect("ground.c: a point list's ids");
+            let val = i32::from(data.u16(p.at(4 * j + 2)) as i16);
+            if (220..252).contains(&val) && vals.len() < 32 {
+                vals.push(val);
+            }
+        }
+    }
+    if vals.is_empty() {
+        return -1;
+    }
+    let i = game.objs.rng.below(vals.len() as i32);
+    vals[i as usize]
 }
 
 /// Sets `x98`, `Ground_801C5A84`.

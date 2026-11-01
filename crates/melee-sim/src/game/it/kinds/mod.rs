@@ -98,11 +98,13 @@ pub mod nesspkflashexplode;
 pub mod nesspkthunder;
 pub mod nesspkthundertrail;
 pub mod nessyoyo;
+pub mod nokonoko;
 pub mod octarock;
 pub mod octarockstone;
 pub mod oldkuri;
 pub mod oldottosea;
 pub mod parasol;
+pub mod patapata;
 pub mod peachexplode;
 pub mod peachparasol;
 pub mod peachtoad;
@@ -152,6 +154,8 @@ pub mod yoshistar;
 pub mod yoshitongue;
 pub mod zeldadinfire;
 pub mod zeldadinfireexplode;
+pub mod zgshell;
+pub mod zrshell;
 
 use super::item::{attr_of, common_data};
 use super::{data, item, lib2725};
@@ -252,6 +256,8 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || arwinglaser::run_event(r, gobj, addr)
         || greatfoxlaser::run_event(r, gobj, addr)
         || oldkuri::run_event(r, gobj, addr)
+        || nokonoko::run_event(r, gobj, addr)
+        || zgshell::run_event(r, gobj, addr)
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
         || oldottosea::run_event(r, gobj, addr)
@@ -407,6 +413,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| arwinglaser::run_pred(r, gobj, addr))
         .or_else(|| greatfoxlaser::run_pred(r, gobj, addr))
         .or_else(|| oldkuri::run_pred(r, gobj, addr))
+        .or_else(|| nokonoko::run_pred(r, gobj, addr))
+        .or_else(|| zgshell::run_pred(r, gobj, addr))
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
         .or_else(|| oldottosea::run_pred(r, gobj, addr))
@@ -695,6 +703,17 @@ pub const HINOARASHI_FLAME: i32 = 0xCE;
 pub const POKEMON_UNK: i32 = 207;
 /// `It_Kind_Old_Kuri`: the first stage item, and the last group of tables.
 pub const OLD_KURI: i32 = 208;
+/// `It_Kind_Nokonoko` and `It_Kind_Patapata`, the adventure's Koopa Troopa and Koopa Paratroopa;
+/// `It_Kind_Likelike`, the Like Like; `It_Kind_Whitebea`, the Polar Bear.
+pub const NOKONOKO: i32 = 211;
+pub const PATAPATA: i32 = 212;
+pub const LIKELIKE: i32 = 213;
+pub const WHITEBEA: i32 = 217;
+/// `It_Kind_ZGShell` and `It_Kind_ZRShell`, the Koopas' green and red shells.
+pub const ZGSHELL: i32 = 219;
+pub const ZRSHELL: i32 = 220;
+/// `It_Kind_Coin`, the single-player coin (`itcoin.c`).
+pub const COIN: i32 = 159;
 /// `It_Kind_Klap`, Kongo Jungle's Klap Trap.
 pub const KLAP: i32 = 218;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.

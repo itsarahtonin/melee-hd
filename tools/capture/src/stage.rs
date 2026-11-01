@@ -40,6 +40,8 @@ pub const GRFOURSIDE_YAKUMONO: u32 = 0x804D_69D8;
 pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 /// groldkongo.c's (`ssbm_types::tu::melee__gr__groldkongo::yakumono_param`).
 pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
+/// grkinokoroute.c's (`ssbm_types::tu::melee__gr__grkinokoroute::yakumono_param`).
+pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -376,6 +378,8 @@ impl Importer<'_> {
         self.game.gr.greatbay_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GROLDKONGO_YAKUMONO);
         self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
+        self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -1089,6 +1093,11 @@ impl Comparer<'_> {
                 game.gr.oldkongo_yakumono,
             ),
             (
+                "grKinokoRoute yakumono_param",
+                GRKINOKOROUTE_YAKUMONO,
+                game.gr.kinokoroute_yakumono,
+            ),
+            (
                 "grShrine yakumono_param",
                 GRSHRINE_YAKUMONO,
                 game.gr.shrine_yakumono,
@@ -1383,23 +1392,13 @@ impl Comparer<'_> {
         }
         let z = sym("lbl_8049F030");
         let zk = &game.gr.zako;
-        let spawns = self.u32(z);
-        self.check(
-            "zako",
-            "spawns, cursor and flags",
-            (zk.spawns, zk.cursor, zk.flags),
-            (
-                (spawns != 0).then(|| self.data.get(spawns)).flatten(),
-                self.u16(z + 8) as i16,
-                self.u8(z + 0xA),
-            ),
-        );
-        let slots = self.u32(z + 4);
         // Past the match scene whose heap held the slots (the results screen's, and the next
         // match's until its stage's start sets them again, `grZakoGenerator_801CAE04` from the
         // stage's `OnStart` some 84 ticks in), the pointer names freed memory, ours the last
         // match's slots, which nothing reads until then: the slots are this scene's while the
-        // spawner's process (`fn_801CADBC`, made with them) lives.
+        // spawner's process (`fn_801CADBC`, made with them) lives. The enemy table's pointer
+        // (`x0`, into the stage's file) is the same: the file goes with the scene, and the
+        // next stage's start writes the pointer before anything reads it.
         let in_match = matches!(
             scene_kind(game.machine.scene_info),
             Some(GS_VS | GS_SUDDEN_DEATH)
@@ -1409,6 +1408,19 @@ impl Comparer<'_> {
             .procs
             .iter()
             .any(|(_, p)| p.on_invoke == CodeRef(0x801C_ADBC));
+        let spawns = self.u32(z);
+        let live = in_match && started || zk.slots.is_none();
+        self.check(
+            "zako",
+            "spawns, cursor and flags",
+            (live.then_some(zk.spawns), zk.cursor, zk.flags),
+            (
+                live.then(|| (spawns != 0).then(|| self.data.get(spawns)).flatten()),
+                self.u16(z + 8) as i16,
+                self.u8(z + 0xA),
+            ),
+        );
+        let slots = self.u32(z + 4);
         match (&zk.slots, slots) {
             _ if !(in_match && started) && zk.slots.is_some() => {}
             (None, 0) => {}
