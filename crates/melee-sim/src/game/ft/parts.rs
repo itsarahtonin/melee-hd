@@ -176,10 +176,50 @@ impl Running<'_> {
             (idx(TRANS_N), 4),
             (idx(0x35), 4),
         ];
-        let bones = &mut self.game.fighter_parts[parts.0];
         for (i, bit) in marked {
-            set_bone_bit(&mut bones[i], 0, bit, true);
+            if i < n as usize {
+                set_bone_bit(&mut self.game.fighter_parts[parts.0][i], 0, bit, true);
+            } else {
+                self.stray_bone_bit(parts, i, bit);
+            }
         }
+    }
+
+    /// A marked bone the character's parts table doesn't have (`part_to_joint`'s 0xFF: the
+    /// hands' tables lack `TransN` and others): the original sets the bit `i` bones into its
+    /// parts block all the same, past the block's end (docs/melee-bugs.md). Another fighter's
+    /// parts block there takes the bit on its bone; free memory takes it in the heap's image.
+    fn stray_bone_bit(&mut self, parts: PartsId, i: usize, bit: u32) {
+        const BONE: u32 = 0x10;
+        let base = self.game.fighter_parts.addr(parts.0);
+        if base == 0 {
+            // A replay's fresh heap: no address, and nothing reads the byte.
+            return;
+        }
+        let at = base + i as u32 * BONE + 8;
+        let owner = self.game.fighter_parts.iter().find_map(|(s, bones)| {
+            let a = self.game.fighter_parts.addr(s);
+            (a != 0 && (a..a + bones.len() as u32 * BONE).contains(&at))
+                .then_some((s, ((at - a) / BONE) as usize))
+        });
+        if let Some((s, b)) = owner {
+            set_bone_bit(&mut self.game.fighter_parts[s][b], 0, bit, true);
+            return;
+        }
+        let data = self.data;
+        crate::hsd::heap::with(|h| {
+            if let Some(old) = h.image.byte_at(data, at) {
+                let v = old | (0x80u8 >> bit);
+                h.image.write(
+                    at,
+                    at + 1,
+                    crate::hsd::image::Src::Bytes {
+                        bytes: vec![v].into(),
+                        offset: 0,
+                    },
+                );
+            }
+        });
     }
 
     /// Fills the fighter's parts from its model's joints, depth first, and lists its DObjs

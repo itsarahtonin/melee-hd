@@ -236,7 +236,7 @@ impl Running<'_> {
         self.fighter_spawn(gobj);
         match kind {
             // ftMh_MS_341_8014FE10, ftCh_Init_80155FCC: the hands' entrances.
-            0x1B => unported_call("ftMh_MS_341_8014FE10"),
+            0x1B => self.mh_start(gobj),
             0x1C => unported_call("ftCh_Init_80155FCC"),
             _ if info.transformation => self.sleep(gobj),
             _ if self.game.player_flags_bit3(i32::from(info.slot)) => self.enter_entry(gobj),

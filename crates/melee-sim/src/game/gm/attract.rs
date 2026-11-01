@@ -116,9 +116,9 @@ impl Running<'_> {
     /// The camera turned to slot `slot`'s fighter: a 60 degree field of view, 30 units off,
     /// a random yaw (-35 to 35 degrees) and pitch (0 to 15).
     fn attract_look_at(&mut self, slot: i32) {
+        camera::script_fov(&mut self.game.camera.cam, 60.0);
+        camera::script_look_at_player(self, slot);
         let g = &mut *self.game;
-        camera::script_fov(&mut g.camera.cam, 60.0);
-        camera::script_look_at_player(g, slot);
         camera::script_orbit_distance(&mut g.camera.cam, 30.0);
         let yaw = g.objs.rng.below(0x47) - 0x23;
         camera::script_orbit_yaw(

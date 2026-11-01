@@ -372,6 +372,7 @@ impl Running<'_> {
             0x8014_F124 => self.fe_on_load(gobj),
             0x8011_EF3C => self.popo_on_load(gobj),
             0x8012_2EDC => self.nana_on_load(gobj),
+            super::masterhand::addr::INIT_ON_LOAD => self.mh_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -407,6 +408,7 @@ impl Running<'_> {
             0x8014_EEF8 => self.fe_on_death(gobj),
             0x8011_EFE8 => self.popo_on_death(gobj),
             0x8012_2F28 => self.nana_on_death(gobj),
+            super::masterhand::addr::INIT_ON_DEATH => self.mh_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -440,6 +442,7 @@ impl Running<'_> {
             0x8010_DA74 => self.dk_load_special_attrs(gobj),
             0x8014_F148 => self.fe_load_special_attrs(gobj),
             0x8011_F0A4 | 0x8012_2FCC => self.popo_load_special_attrs(gobj),
+            super::masterhand::addr::INIT_LOAD_SPECIAL_ATTRS => self.mh_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }
