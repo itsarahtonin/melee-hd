@@ -135,6 +135,14 @@ pub const MODULES: &[&str] = &["gm/", "mn/", "ty/", "vi/", "hud/", "pl/"];
 /// marks one a player can reach, with what's left to do.
 pub const STOPS: &[(&str, &str)] = &[
     (
+        "the cutscene scene",
+        "the cutscenes after the F-Zero one (vi1101 to vi1202), which only the debug cutscene mode reaches past vi0801's stage (the developer setting's, whose panel warns some debug tools stop the game) and Adventure, behind GATES",
+    ),
+    (
+        "grBigBlueRoute_8020DAB4",
+        "the F-Zero cutscene's cars, past its stage (the F-Zero race's, unported), which only the debug cutscene mode (the developer setting's) and Adventure, behind GATES, reach",
+    ),
+    (
         "gm_801720B4 in a single-player run",
         "the single-player modes', which only the entries behind GATES lead to",
     ),
@@ -171,28 +179,20 @@ pub const STOPS: &[(&str, &str)] = &[
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
     (
-        "mnCharSel_802640A0's one-door screen",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "Hook::Unported1P(name)",
+        "the single-player modes', which only the entries behind GATES lead to: each mode's states past its select (gm::one_player), its own task's",
     ),
     (
-        "the Stadium modes' options model",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "the one-door screen's panel for match type",
+        "the timed and endless Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
     ),
     (
-        "Training's door model",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "mnCharSel_8025C020's records for match type",
+        "the Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
     ),
     (
-        "fn_8025F0E0's CPU level slider (the 1P modes'",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "fn_8025F0E0's one-door costume",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "fn_80262F44's one-door screen",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "a 1P run's getter",
+        "only All-Star's round setup (gm_801B5324, behind the All-Star gate) asks a getter, its costumes' (gm_8018A25C)",
     ),
     (
         "reading a freed coin's block the heap gave out again",

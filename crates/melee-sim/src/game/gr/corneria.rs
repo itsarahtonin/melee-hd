@@ -553,7 +553,7 @@ fn demo_arwing(r: &mut Running, count: usize, type_id: i32) {
 
 /// The demo's setup (`grCorneria_801DD2C0`), which only the Star Fox cutscene (`vi0601`)
 /// runs: the Great Fox hidden, the city laid out, and the talk object playing one of the
-/// first four talks at random, or of the next four when Adventure's player last lost there
+/// first four talks at random, or of the next four when Adventure's data's `x7C` is 0x14
 /// (`gm_8017E7E0`); the Arwings hold still.
 #[doc(alias = "grCorneria_801DD2C0")]
 pub fn on_demo_init(r: &mut Running) {

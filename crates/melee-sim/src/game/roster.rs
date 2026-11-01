@@ -301,24 +301,12 @@ pub const STAGES: &[Stage] = &[
             unreached: &[
                 YAKU_UNANCHORED,
                 (
-                    "grCorneria_801DD2C0",
-                    "the demo's setup, which only the title screen's demo runs",
-                ),
-                (
-                    "gm_8017E7E0",
-                    "the demo's scene code, which only the title screen's demo runs",
-                ),
-                (
                     "grCorneria_801E1060",
                     "map 11's process: the stage's load hook destroys map 11 before its first tick",
                 ),
                 (
                     "gm_801883C0",
                     "map 11's process: the stage's load hook destroys map 11 before its first tick",
-                ),
-                (
-                    "grCorneria_801E1BF0",
-                    "the opening movie's Arwing (vi0601.c)",
                 ),
                 (
                     "grCorneria_801E2E50",

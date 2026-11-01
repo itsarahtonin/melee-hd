@@ -1922,3 +1922,19 @@ fn the_yoshiki_test_page() {
         }
     }
 }
+
+/// Milestone 6's cutscenes (docs/oracle.md, "The cutscenes"): task 1's `m6-oracle/cutscene`,
+/// the debug menu's cutscene entry at debug level 3, plays the debug cutscene mode (0x19)
+/// untouched: Luigi's, Brinstar's, the explosion, the three Kirbys, the giant Kirby and Star
+/// Fox's cutscenes, each to its camera's last frame, clean from power-on with `--all --heap`
+/// to the F-Zero cutscene, whose stage (the F-Zero race's, ground kind 34) isn't ported.
+#[test]
+fn the_debug_cutscenes() {
+    let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) else {
+        return;
+    };
+    let want = "3102 ticks compared, no difference; stopped in tick 3102: not implemented: \
+                stage kind 34 isn't ported";
+    assert!(out.contains(want), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
+}
