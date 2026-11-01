@@ -202,6 +202,12 @@ pub fn bytes(game: &mut Game, gobj: GObjId) -> &mut PokemonVars {
     item_mut(game, gobj).xDD4_itemVar.zako()
 }
 
+/// `it_80275210`.
+#[doc(alias = "it_80275210")]
+pub fn set_x1c(game: &mut Game, gobj: GObjId) {
+    item_mut(game, gobj).xDC8_word.flags.x1C = true;
+}
+
 /// `it_80275228`.
 #[doc(alias = "it_80275228")]
 pub fn clear_x1c(game: &mut Game, gobj: GObjId) {
@@ -737,8 +743,14 @@ impl Running<'_> {
             kinds::LEADEAD => 0xD1,
             kinds::OCTAROCK => 0xD3,
             kinds::OTTOSEA => 0xD4,
+            kinds::NOKONOKO => 0xCF,
+            kinds::PATAPATA => 0xD0,
             // No bonus (the switch's default).
-            kinds::KLAP | kinds::KYASARIN | kinds::KYASARIN_EGG => return,
+            kinds::KLAP
+            | kinds::KYASARIN
+            | kinds::KYASARIN_EGG
+            | kinds::ZGSHELL
+            | kinds::ZRSHELL => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);
