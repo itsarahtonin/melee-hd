@@ -17,6 +17,7 @@ pub mod memcard;
 pub mod menu;
 pub mod mode_init;
 pub mod names;
+pub mod one_player;
 pub mod opening;
 pub mod pause;
 pub mod progressive;

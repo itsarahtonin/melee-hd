@@ -655,12 +655,14 @@ impl Running<'_> {
     }
 
     /// The stage select's enter and exit data (`gm_GetGameModeStateEnterData`): Tournament
-    /// mode's own (`gm_8048BD20`), else VS mode's (the modes kept with it share it).
+    /// mode's own (`gm_8048BD20`), Training's (`sss_data`), else VS mode's (the modes kept with it share it).
     fn sss_data(&self) -> &super::super::gm::vs_melee::SssData {
         if super::common::game_mode(self) == super::common::GM_TOURNAMENT {
             &self.game.tou.sss
         } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
             &self.game.debug_mode.hanyu_sss
+        } else if super::common::game_mode(self) == crate::game::gm::one_player::GM_TRAINING {
+            &self.game.one_player.training_sss
         } else {
             &self.game.vs_melee.sss
         }
@@ -671,6 +673,8 @@ impl Running<'_> {
             &mut self.game.tou.sss
         } else if super::common::game_mode(self) == crate::game::gm::GM_HANYU_SSS {
             &mut self.game.debug_mode.hanyu_sss
+        } else if super::common::game_mode(self) == crate::game::gm::one_player::GM_TRAINING {
+            &mut self.game.one_player.training_sss
         } else {
             &mut self.game.vs_melee.sss
         }
