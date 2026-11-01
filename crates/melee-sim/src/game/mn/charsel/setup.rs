@@ -40,27 +40,46 @@ impl Running<'_> {
             t.default_fitting = 1;
             t.default_alignment = 1;
             t.font_size = [0.058, 0.055];
-            assert!(
-                self.game.charsel.doors_used != 1,
-                "the 1P modes' name tag (milestone 6)"
-            );
-            let j = self.menu_node(TAGS[i].name_joint);
-            self.css_req(j, JOBJ_MASK, 2.0);
-            self.css_anim_all(j);
-            self.css_stop(j, JOBJ_MASK);
-            let p = self.css_world(j);
-            let t = self.game.sis.text_mut(text);
-            t.pos = Vec3::new(
-                mem(fp::fadds(reg(0.5), reg(p.x))),
-                mem(fp::fsubs(reg(-0.4), reg(p.y))),
-                p.z,
-            );
-            t.box_size = [160.0, 32.0];
-            self.game.sis.add_string(text, 80.0, 0.0, Some(DOTS4));
-            let j = self.menu_node(TAGS[i].list_joint);
-            if i == 3 {
-                self.css_translate_x(j, 16.7);
+            if self.game.charsel.doors_used == 1 {
+                // The one-door screen's tag beside its door, the partner's (Training's CPU)
+                // at the right.
+                if i != 0 {
+                    self.game.sis.text_mut(text).pos = Vec3::new(15.6, 20.2, 0.0);
+                } else {
+                    let j = self.menu_node(one_door::TAG_BOX_JOINT);
+                    self.css_req(j, JOBJ_MASK, 2.0);
+                    self.css_anim_all(j);
+                    self.css_stop(j, JOBJ_MASK);
+                    let p = self.css_world(j);
+                    self.game.sis.text_mut(text).pos =
+                        Vec3::new(mem(fp::fsubs(reg(p.x), reg(0.1))), 20.2, 0.0);
+                }
+                self.game.sis.text_mut(text).box_size = [200.0, 32.0];
+                self.game.sis.add_string(text, 100.0, 0.0, Some(DOTS4));
+            } else {
+                let j = self.menu_node(TAGS[i].name_joint);
+                self.css_req(j, JOBJ_MASK, 2.0);
+                self.css_anim_all(j);
+                self.css_stop(j, JOBJ_MASK);
+                let p = self.css_world(j);
+                let t = self.game.sis.text_mut(text);
+                t.pos = Vec3::new(
+                    mem(fp::fadds(reg(0.5), reg(p.x))),
+                    mem(fp::fsubs(reg(-0.4), reg(p.y))),
+                    p.z,
+                );
+                t.box_size = [160.0, 32.0];
+                self.game.sis.add_string(text, 80.0, 0.0, Some(DOTS4));
             }
+            let j = if self.game.charsel.doors_used == 1 {
+                self.menu_node(one_door::NAME_LIST_JOINT)
+            } else {
+                let j = self.menu_node(TAGS[i].list_joint);
+                if i == 3 {
+                    self.css_translate_x(j, 16.7);
+                }
+                j
+            };
             let p = self.css_world(j);
             let list = self.create_text_buffer(0, ctx);
             let s = &mut self.game.sis;
@@ -173,6 +192,32 @@ impl Running<'_> {
     /// CPU level put them.
     pub(super) fn charsel_doors_from_players(&mut self) {
         self.game.charsel.ready = 0;
+        if self.game.charsel.doors_used == 1 {
+            // Only the screen's port plays; Training's partner is the CPU.
+            let (port0, port1) = (
+                self.game.charsel.port0 as usize,
+                self.game.charsel.port1 as usize,
+            );
+            for p in &mut self.css_start().players[..4] {
+                p.slot_type = PKIND_NONE;
+            }
+            self.css_start().players[port0].slot_type = PKIND_HUMAN;
+            let color = self.css().vs.start.players[port0].color;
+            let d = &mut self.game.charsel.doors[0];
+            d.p_kind = PKIND_HUMAN;
+            d.costume = color;
+            d.sel_icon_prev = d.sel_icon;
+            if self.css().match_type != TRAINING_MODE {
+                return;
+            }
+            self.css_start().players[port1].slot_type = PKIND_CPU;
+            let color = self.css().vs.start.players[port1].color;
+            let d = &mut self.game.charsel.doors[1];
+            d.p_kind = PKIND_CPU;
+            d.costume = color;
+            d.sel_icon_prev = d.sel_icon;
+            return;
+        }
         for i in 0..usize::from(self.game.charsel.doors_used) {
             let p = &self.css().vs.start.players[i];
             let (kind, color) = (p.slot_type, p.color);
@@ -209,13 +254,22 @@ impl Running<'_> {
     #[doc(alias = "mnCharSel_8025EE8C")]
     pub(super) fn charsel_mode_texture(&mut self, match_type: u8) {
         let info = MODE_INFO[usize::from(match_type)];
-        let frame = if self.css().vs.start.rules.is_teams != 0 {
+        let one = self.game.charsel.doors_used == 1;
+        let frame = if !one && self.css().vs.start.rules.is_teams != 0 {
             info.1
         } else {
             info.0
         };
         let menu = self.game.charsel.menu;
         self.css_animate(menu, 0x24, TOBJ_MASK, f32::from(frame));
+        if one {
+            // The one door, and Training's partner's.
+            self.charsel_door(0);
+            if self.css().match_type == TRAINING_MODE {
+                self.charsel_door(1);
+            }
+            return;
+        }
         for i in 0..self.game.charsel.doors_used {
             self.charsel_door(i);
         }
@@ -225,11 +279,27 @@ impl Running<'_> {
     /// `mnCharSel_8025D5AC`.
     #[doc(alias = "mnCharSel_8025D5AC")]
     pub(super) fn charsel_door_icon(&mut self, door: usize, frame: i32, hidden: bool) {
-        assert!(
-            self.game.charsel.doors_used != 1,
-            "the 1P modes' door icons (milestone 6)"
-        );
         let menu = self.game.charsel.menu;
+        if self.game.charsel.doors_used == 1 {
+            if door != 0 {
+                let dm = self.game.charsel.door_model;
+                for joint in [4, 6] {
+                    let j = self.css_animate(dm, joint, TOBJ_MASK, frame as f32);
+                    self.set_hidden(j, hidden);
+                }
+                return;
+            }
+            for joint in [0x2B, 0x2D] {
+                let j = self.css_animate(menu, joint, TOBJ_MASK, frame as f32);
+                self.set_hidden(j, hidden);
+            }
+            let frame = if hidden { 0xB9 } else { frame };
+            for joint in [0x35, 0x39, 0x36, 0x38, 0x37] {
+                self.css_animate(menu, joint, TOBJ_MASK, frame as f32);
+            }
+            self.charsel_records(hidden);
+            return;
+        }
         let j = self.css_animate(menu, DOORS[door].costume, TOBJ_MASK, frame as f32);
         self.set_hidden(j, hidden);
         let j = self.css_animate(menu, DOORS[door].emblem, TOBJ_MASK, frame as f32);
@@ -244,7 +314,7 @@ impl Running<'_> {
     pub(super) fn charsel_door(&mut self, door: u8) {
         let d = usize::from(door);
         let sel_icon = self.game.charsel.doors[d].sel_icon;
-        let mut hud = i32::from(ICONS[usize::from(sel_icon)].hud);
+        let hud = i32::from(ICONS[usize::from(sel_icon)].hud);
         self.charsel_door_icon(d, 0, true);
         let tag = self.game.charsel.tags[d].expect("a door's tag");
         if tag.use_tag == 0 && sel_icon < NO_ICON {
@@ -264,11 +334,23 @@ impl Running<'_> {
                 self.lb_audio_call(2);
             }
         }
-        assert!(
-            self.game.charsel.doors_used != 1,
-            "the 1P modes' door (milestone 6)"
-        );
         let menu = self.game.charsel.menu;
+        if self.game.charsel.doors_used == 1 {
+            // The one door's and Training's partner's port colors.
+            let (root, frame, joints) = if d != 0 {
+                (self.game.charsel.door_model, PORT_FRAME[1], [2, 4])
+            } else {
+                let port0 = self.game.charsel.port0 as usize;
+                (menu, PORT_FRAME[port0], [0x29, 0x2B])
+            };
+            self.css_animate(root, joints[0], TOBJ_MASK, f32::from(frame));
+            self.css_animate(root, joints[1], MOBJ_MASK, f32::from(frame));
+            let tag = self.game.charsel.tags[d].expect("a door's tag");
+            let hide = tag.use_tag == 0 && self.game.charsel.doors[d].sel_icon >= NO_ICON;
+            self.game.sis.text_mut(tag.text).hidden = u8::from(hide);
+            self.charsel_door_costume(door, hud);
+            return;
+        }
         let j = self.menu_node(DOORS[d].door);
         let door_state = self.game.charsel.doors[d];
         let pending = self.game.charsel.pending;
@@ -367,6 +449,13 @@ impl Running<'_> {
         let tag = self.game.charsel.tags[d].expect("a door's tag");
         let hide = ds.p_kind == PKIND_NONE || (tag.use_tag == 0 && ds.sel_icon >= NO_ICON);
         self.game.sis.text_mut(tag.text).hidden = u8::from(hide);
+        self.charsel_door_costume(door, hud);
+    }
+
+    /// The door's costume given to its player and its picture shown (`mnCharSel_8025DB34`'s
+    /// end).
+    fn charsel_door_costume(&mut self, door: u8, mut hud: i32) {
+        let d = usize::from(door);
         let ds = self.game.charsel.doors[d];
         if ds.sel_icon < NO_ICON {
             let color =

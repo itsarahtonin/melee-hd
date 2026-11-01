@@ -88,15 +88,18 @@ impl Running<'_> {
     /// being out, which ends the process.
     fn cursor_input(&mut self, me: usize, j: Option<JObjId>, n_doors: usize) -> bool {
         self.cursor_mut(me).hover = 0;
-        assert!(
-            self.game.charsel.doors_used != 1,
-            "the 1P modes' hand (milestone 6)"
-        );
+        let one = self.game.charsel.doors_used == 1;
         let port = usize::from(self.cursor(me).port);
-        let trigger = self.game.pads.copy[port].trigger;
-        let buttons = self.game.pads.copy[port].button;
-        let (dx, dy) = self.stick_delta(port);
-        if self.game.pads.copy[port].err != 0 {
+        // The one-door screen's hand follows the screen's port's controller, unplugged or not.
+        let pad = if one {
+            usize::from(self.game.charsel.port0 as u8)
+        } else {
+            port
+        };
+        let trigger = self.game.pads.copy[pad].trigger;
+        let buttons = self.game.pads.copy[pad].button;
+        let (dx, dy) = self.stick_delta(pad);
+        if !one && self.game.pads.copy[port].err != 0 {
             self.cursor_unplugged(me, port);
             let c = self.cursor_mut(me);
             c.state = 3;
@@ -132,7 +135,7 @@ impl Running<'_> {
             .scroll_amt = 0.0;
         let tag = self.game.charsel.tags[port].expect("a tag");
         if tag.state != 0 {
-            let lj = self.menu_node(TAGS[port].list_joint);
+            let lj = self.tag_list_node(port);
             let p = self.css_world(lj);
             let c = self.cursor_mut(me);
             let top = fp::fadds(reg(0.8), reg(p.y));
@@ -195,6 +198,15 @@ impl Running<'_> {
             }
         }
         let match_type = self.css().match_type;
+        if self.game.charsel.doors_used == 1 {
+            if self.game.charsel.tokens[me].expect("a coin").held_by == 0 {
+                self.charsel_costume_change(0, trigger);
+            }
+            if !self.cursor_one_door_buttons(me, trigger, match_type) {
+                self.cursor_clicks(me, trigger, n_doors);
+            }
+            return true;
+        }
         if match_type != VS_STAMINA {
             let c = self.cursor(me);
             if reg(c.x) > reg(-17.0) && reg(c.x) < reg(15.0) && reg(c.y) > reg(22.0) {
@@ -462,7 +474,13 @@ impl Running<'_> {
         let a = trigger & PAD_A != 0;
         let match_type = self.css().match_type;
         if a {
-            for door in 0..usize::from(self.game.charsel.doors_used) {
+            // The one-door screen has no door buttons.
+            let doors = if self.game.charsel.doors_used == 1 {
+                0
+            } else {
+                usize::from(self.game.charsel.doors_used)
+            };
+            for door in 0..doors {
                 if door == 3 && match_type == VS_CAMERA {
                     continue;
                 }
@@ -558,7 +576,7 @@ impl Running<'_> {
             if (port != 3 || match_type != VS_CAMERA)
                 && self.game.charsel.doors[port].p_kind == PKIND_HUMAN
             {
-                let nj = self.menu_node(TAGS[port].name_joint);
+                let nj = self.tag_box_node(port);
                 let p = self.css_world(nj);
                 let c = self.cursor(me);
                 let (cx, cy) = (reg(c.x), reg(c.y));
@@ -567,7 +585,7 @@ impl Running<'_> {
                     && cy < fp::fadds(reg(2.0), reg(p.y))
                     && cy > fp::fsubs(reg(p.y), reg(1.0))
                 {
-                    let lj = self.menu_node(TAGS[port].list_joint);
+                    let lj = self.tag_list_node(port);
                     let p = self.css_world(lj);
                     let c = self.cursor_mut(me);
                     c.x = p.x;
@@ -711,5 +729,60 @@ impl Running<'_> {
         self.css_translate_y(j, c.y);
         self.css_translate_z(j, 0.0);
         self.css_anim_all(j);
+    }
+
+    /// The one-door screen's stock count (Classic's and Adventure's) and CPU level (theirs
+    /// and All-Star's) under the hand: hovered, and A one down or up within 1 to 5 and very
+    /// easy to very hard. False when the hand is on neither, or A changed nothing, which
+    /// goes on to the screen's other buttons.
+    fn cursor_one_door_buttons(&mut self, me: usize, trigger: u32, match_type: u8) -> bool {
+        let a = trigger & PAD_A != 0;
+        let port0 = self.game.charsel.port0 as usize;
+        let c = self.cursor(me);
+        let (cx, cy) = (reg(c.x), reg(c.y));
+        if match_type < 0xD && cy < reg(-12.4) && cy > reg(-16.6) {
+            let step = if cx > reg(-2.2) && cx < reg(3.7) {
+                Some(false)
+            } else if cx > reg(13.7) && cx < reg(19.3) {
+                Some(true)
+            } else {
+                None
+            };
+            if let Some(up) = step {
+                self.cursor_mut(me).hover = 1;
+                let stocks = self.game.charsel.stocks;
+                if a && if up { stocks < 5 } else { stocks > 1 } {
+                    let stocks = if up { stocks + 1 } else { stocks - 1 };
+                    self.game.charsel.stocks = stocks;
+                    self.charsel_stock_icons();
+                    self.css_start().players[port0].stocks = stocks as i8;
+                    self.lb_audio_call(2);
+                    return true;
+                }
+            }
+        }
+        if match_type <= 0xD && cy < reg(-6.8) && cy > reg(-12.1) {
+            let step = if cx > reg(-10.9) && cx < reg(-4.2) {
+                Some(false)
+            } else if cx > reg(12.5) && cx < reg(19.6) {
+                Some(true)
+            } else {
+                None
+            };
+            if let Some(up) = step {
+                self.cursor_mut(me).hover = 1;
+                let level = self.game.charsel.cpu_level;
+                if a && if up { level < 4 } else { level != 0 } {
+                    let level = if up { level + 1 } else { level - 1 };
+                    let c = &mut self.game.charsel;
+                    c.cpu_level = level;
+                    c.cpu_scroll = 1;
+                    self.css_start().players[port0].cpu_level = level;
+                    self.lb_audio_call(2);
+                    return true;
+                }
+            }
+        }
+        false
     }
 }

@@ -20,6 +20,7 @@ pub mod leftovers;
 pub mod links;
 pub mod mainmenu;
 pub mod menus;
+pub mod one_player;
 pub mod options;
 pub mod pack;
 pub mod playback;

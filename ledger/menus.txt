@@ -89,28 +89,21 @@ gmMainLib_GetTrophyFlags	unchecked	a getter or setter of the game's data, which 
 gmMainLib_GetTrophyCategoryFlags	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetTrophyCount	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CD80	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015CDC8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015CDD4	gated	Adventure's and All-Star's save data: the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015CDE0	gated	Adventure's and All-Star's save data: the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF5C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF70	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015D084	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D0C0	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D0F4	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D134	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D1E8	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D21C	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D25C	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D2F0	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D310	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D344	gated	named only by the single-player modes' code (gm_8017CA38, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D384	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D3FC	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D418	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D438	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D450	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D4A8	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D5DC	gated	named only by the single-player modes' code (gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
@@ -125,7 +118,6 @@ gmMainLib_8015D780	gated	named only by the single-player modes' code (gm_801B802
 gmMainLib_8015D7A4	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D7BC	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015D7D4	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gmMainLib_8015D7EC	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gmMainLib_8015DB00	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB0C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB18	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -139,25 +131,10 @@ fn_801609E0	unchecked	a getter or setter of the game's data, which its callers' 
 fn_80160DE8	gated	named only by the single-player modes' code (fn_80184AB8): the single-player modes', which only the 1P list's gated entries lead to
 fn_80160F58	gated	named only by the single-player modes' code (fn_80184AB8): the single-player modes', which only the 1P list's gated entries lead to
 gm_801629B4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_80162BD8	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_80162BFC	gated	named only by the single-player modes' code (gm_8017CA38, gm_8017CBAC, gm_8017D7AC): the single-player modes', which only the 1P list's gated entries lead to
-gm_80162C48	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80162D6C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80162DD4	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_80162DF8	gated	named only by the single-player modes' code (gm_8017CA38, gm_8017CBAC, gm_8017D7AC): the single-player modes', which only the 1P list's gated entries lead to
-gm_80162E44	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80162F68	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80162FD0	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_80162FF4	gated	named only by the single-player modes' code (gm_8017CA38, gm_8017CBAC, gm_8017D7AC): the single-player modes', which only the 1P list's gated entries lead to
-gm_80163040	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80163164	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_801631CC	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_801631F0	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80163274	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gm_80163298	gated	named only by the single-player modes' code (gm_801B2204): the single-player modes', which only the 1P list's gated entries lead to
-gm_8016332C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_80163374	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
-gm_801634D4	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gm_8016365C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gm_80163690	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 gm_801636D8	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
@@ -184,7 +161,6 @@ fn_801652B0	gated	named only by the single-player modes' code (fn_801891F4): the
 fn_80166A8C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80166CBC	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_801674C4	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
-gm_801677F0	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_80168940	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801689E4	gated	named only by the single-player modes' code (fn_801803FC): the single-player modes', which only the 1P list's gated entries lead to
 fn_80168A6C	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
@@ -313,7 +289,6 @@ memcardOnLoad	unchecked	ported (a `// Ports` comment in melee-sim), aliased once
 onExitVs	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 mnName_8023749C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-mnCharSel_8025C020	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_8025FB2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 Toy_803049F4	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
