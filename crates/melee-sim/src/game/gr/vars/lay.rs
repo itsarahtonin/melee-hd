@@ -330,7 +330,11 @@ impl GroundVars {
                 l.put_u32(a + 0x10, v.xD4 as u32);
                 gobj(l, cx, a + 0x18, v.xDC);
                 for (k, &g) in v.xE0.iter().enumerate() {
-                    gobj(l, cx, a + 0x1C + 4 * k as u32, g);
+                    if v.disabled && k < 2 {
+                        l.put_u32(a + 0x1C + 4 * k as u32, u32::MAX);
+                    } else {
+                        gobj(l, cx, a + 0x1C + 4 * k as u32, g);
+                    }
                 }
                 w32(l, a + 0x2C, &[v.xF0, v.xF4, v.xF8, v.xFC]);
                 if let Some(x100) = v.x100 {

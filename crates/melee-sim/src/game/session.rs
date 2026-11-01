@@ -688,26 +688,22 @@ impl Session {
         });
         lent.give_back(&mut self.game.objs.heap);
         if std::mem::take(&mut self.game.machine.files_wanted) {
-            let (start, is_match) = Running {
+            let cutscene = Running {
                 game: &mut self.game,
                 data: &self.data,
             }
-            .scene_files_data();
-            if is_match {
-                self.read_match_files(&start, console);
+            .vi_scene_files();
+            if let Some(files) = cutscene {
+                let console = std::cell::RefCell::new(&mut *console);
+                super::vi::load_scene_files(
+                    &mut self.game,
+                    &mut self.data,
+                    &files,
+                    &mut |n| console.borrow_mut().file(n),
+                    &mut |n| console.borrow_mut().file_after(n),
+                );
             } else {
-                super::vs_match::load_fighter_files(
-                    &mut self.game,
-                    &mut self.data,
-                    &start,
-                    &mut |n| console.file(n),
-                );
-                super::vs_match::load_results_files(
-                    &mut self.game,
-                    &mut self.data,
-                    &start,
-                    &mut |n| console.file(n),
-                );
+                self.read_scene_files(console);
             }
             let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
             with_feed(console, |_| {
@@ -729,6 +725,26 @@ impl Session {
         with_feed(console, |read| r.take_alarm_reads(read));
         r.begin_scene_loop();
         lent.give_back(&mut self.game.objs.heap);
+    }
+
+    /// Reads the files the VS scene about to enter loads, or the Result Test's results
+    /// screen's.
+    fn read_scene_files(&mut self, console: &mut dyn Console) {
+        let (start, is_match) = Running {
+            game: &mut self.game,
+            data: &self.data,
+        }
+        .scene_files_data();
+        if is_match {
+            self.read_match_files(&start, console);
+        } else {
+            super::vs_match::load_fighter_files(&mut self.game, &mut self.data, &start, &mut |n| {
+                console.file(n)
+            });
+            super::vs_match::load_results_files(&mut self.game, &mut self.data, &start, &mut |n| {
+                console.file(n)
+            });
+        }
     }
 
     /// Reads the files a match's scene loads (`files_wanted`): its fighters' (`PlCo.dat`, each
