@@ -9,7 +9,7 @@ use super::maplib::{
     start_skid, touched_ceiling, touched_wall, unstick, with_stage_coll,
 };
 use super::{item, item_mut};
-use crate::fpu::reg;
+use crate::fpu::{mem, reg};
 use crate::game::state::{Game, Running};
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
@@ -154,6 +154,25 @@ pub fn air_stay(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_8026DF34")]
 pub fn air(r: &mut Running, gobj: GObjId) -> bool {
     pass(r, gobj, false, 6, 0, true)
+}
+
+/// The airborne pass from 10 above the item to 10 below it, which takes where the pass leaves
+/// it: whether it found a floor (`it_802DDA84`, the Koopa Troopa's and the shells' drop to the
+/// floor at their spawn).
+#[doc(alias = "it_802DDA84")]
+pub fn snap_down(r: &mut Running, gobj: GObjId) -> bool {
+    let ip = item_mut(r.game, gobj);
+    ip.x378_itemColl.cur_pos = ip.pos;
+    ip.x378_itemColl.last_pos = ip.x378_itemColl.cur_pos;
+    let c = &mut ip.x378_itemColl;
+    c.last_pos.y = mem(fp::fadds(reg(c.last_pos.y), 10.0));
+    c.cur_pos.y = mem(fp::fsubs(reg(c.cur_pos.y), 10.0));
+    let mut cd = c.clone();
+    let hit = with_stage_coll(r.game, r.data, |s| s.air_frame(&mut cd, 6, 0));
+    let ip = item_mut(r.game, gobj);
+    ip.x378_itemColl = cd;
+    ip.pos = ip.x378_itemColl.cur_pos;
+    hit
 }
 
 /// The airborne pass, leaving the item where it was, `it_8026DA70`.

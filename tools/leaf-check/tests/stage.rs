@@ -2350,7 +2350,7 @@ fn ground_settings_and_queries() {
     set!(
         "grZakoGenerator_801CADE0",
         |c: &Ctx, _: &Maps| fns::grZakoGenerator_801CADE0(c),
-        |r: &mut Running, _: &Maps| zako::scan_anywhere(r.game, r.data)
+        |r: &mut Running, _: &Maps| zako::scan_anywhere(r)
     );
     set!(
         "grMaterial_801C8A04",

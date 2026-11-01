@@ -2009,6 +2009,10 @@ impl Running<'_> {
                 Some(super::super::gr::zebes::LAVA_DEVICE) => {
                     super::super::gr::zebes::lava_device(self, gobj)
                 }
+                Some(super::super::gr::kinokoroute::WATER_DEVICE) => {
+                    super::super::gr::kinokoroute::water_device(self, gobj);
+                    None
+                }
                 Some(other) => {
                     unported_call(&format!("a collision device's callback {other:#010x}"))
                 }
@@ -2172,6 +2176,7 @@ impl Running<'_> {
                     || f.0 == 0x801F_680C
                     || f.0 == 0x8021_0780
                     || f.0 == 0x8020_1F44
+                    || f.0 == 0x8020_8754
                     || f.0 == 0x8020_2B5C
                     || f.0 == 0x8020_35C8
                     || f.0 == 0x801D_8444
