@@ -175,6 +175,14 @@ impl Running<'_> {
         self.game.bgflash.user = None;
     }
 
+    /// `lbDvd_80018C2C`: waits until the files preload classes `mask` asked for are in.
+    // Ports `lbDvd_80018C2C`; aliased once a check reaches it.
+    pub fn wait_preload_class(&mut self, mask: u8) {
+        self.game
+            .audio
+            .with_clock(self.data, |c, f| c.wait_until(f, Wait::ClassLoaded(mask)));
+    }
+
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
     #[doc(alias = "lbDvd_80017700")]
     pub fn wait_preload_stale_released(&mut self, heap: i32) {
