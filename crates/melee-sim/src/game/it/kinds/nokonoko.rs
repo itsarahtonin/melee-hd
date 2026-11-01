@@ -209,7 +209,7 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// Takes a hit, `itNokonoko_Logic3_DmgReceived`: its facing kept, the hit's element adds to
 /// the damage; thrown (10) it ends as a KO, past its health it leaves its shell, else it's
 /// knocked back.
-// Ports itNokonoko_Logic3_DmgReceived; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_Logic3_DmgReceived")]
 pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.init_facing_dir = ip.facing_dir;
@@ -385,7 +385,7 @@ pub fn coll_falling(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Knocked back, `it_802DCCCC`: no countdown, its hit records cleared, along its knockback (up
 /// at least 0.2), in the air, its facing as it was hit, state 7.
-// Ports it_802DCCCC; aliased once a check reaches it.
+#[doc(alias = "it_802DCCCC")]
 pub fn knock_back(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     hitbox::clear_hit_ids(r.game, gobj);
@@ -403,7 +403,7 @@ pub fn knock_back(r: &mut Running, gobj: GObjId) {
 }
 
 /// Knocked back's animation, `itNokonoko_UnkMotion8_Anim` (states 7 and 8): looped.
-// Ports itNokonoko_UnkMotion8_Anim; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_UnkMotion8_Anim")]
 pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) {
         enter(r, gobj, 7, change::ANIM_UPDATE);
@@ -413,7 +413,7 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Knocked back's physics, `itNokonoko_UnkMotion7_Phys`: in the air its fall speed off the
 /// vertical velocity.
-// Ports itNokonoko_UnkMotion7_Phys; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_UnkMotion7_Phys")]
 pub fn phys7(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         gravity(r, gobj);
@@ -427,15 +427,15 @@ fn gravity(r: &mut Running, gobj: GObjId) {
 }
 
 /// Knocked back's collision, `itNokonoko_UnkMotion8_Coll`: landing, it recovers.
-// Ports itNokonoko_UnkMotion8_Coll; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
     ground::fall_to_floor(r, gobj, recover);
     zako::answers_false(r, gobj)
 }
 
-/// `it_802DCE00`: in the air, a 10-frame countdown, blinking, the kept knockback, state 8.
-/// Nothing calls it.
-// Ports it_802DCE00; aliased once a check reaches it.
+/// Knocked out of a Paratroopa, `it_802DCE00`: in the air, a 10-frame countdown, blinking, the
+/// kept knockback (the Paratroopa's, [`super::patapata::spawn_koopa`]), state 8.
+#[doc(alias = "it_802DCE00")]
 pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
     maplib::enter_air(item_mut(r.game, gobj));
     set(r, gobj, off::TIMER, 10);
@@ -451,7 +451,7 @@ pub fn knock_back_kept(r: &mut Running, gobj: GObjId) {
 
 /// State 8's physics, `itNokonoko_UnkMotion8_Phys`: gravity, and its blink ends with its
 /// countdown.
-// Ports itNokonoko_UnkMotion8_Phys; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_UnkMotion8_Phys")]
 pub fn phys8(r: &mut Running, gobj: GObjId) {
     gravity(r, gobj);
     let t = get(r, gobj, off::TIMER);
@@ -464,7 +464,7 @@ pub fn phys8(r: &mut Running, gobj: GObjId) {
 
 /// Recovers from a knockback, `it_802DCEC4`: no countdown or blink; hit from behind it turns,
 /// else it walks.
-// Ports it_802DCEC4; aliased once a check reaches it.
+#[doc(alias = "it_802DCEC4")]
 pub fn recover(r: &mut Running, gobj: GObjId) {
     set(r, gobj, off::TIMER, 0);
     hitbox::end_blink(r.game, gobj);
@@ -504,7 +504,7 @@ pub fn unshell(r: &mut Running, gobj: GObjId) {
 /// Out of its shell's animation, `itNokonoko_UnkMotion5_Anim`: when it ends on the ground, its
 /// shell (green for `x40` under 2, else red) just above it facing as its model turns, taking
 /// over its spawner slot; the Koopa goes.
-// Ports itNokonoko_UnkMotion5_Anim; aliased once a check reaches it.
+#[doc(alias = "itNokonoko_UnkMotion5_Anim")]
 pub fn anim5(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) && item(r.game, gobj).ground_or_air == GA_GROUND {
         let j = jobj_of(r.game, gobj).expect("a Koopa Troopa without a model");
