@@ -188,6 +188,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Bowser's up special landing; breaks replay and Slippi compatibility.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 89); `crates/melee-sim/src/game/ft/koopa/special_hi.rs:195`.
 
+### Master Hand: creation marks bones past his parts block
+
+- **Where:** `ftParts_80074E58` (`ftparts.c`), from `Fighter_Create` for Master Hand (and Crazy Hand); `crates/melee-sim/src/game/ft/parts.rs` (`init_parts`, `stray_bone_bit`).
+- **Defect:** the function sets flag bits on the bones of `TransN`, `XRotN`, `YRotN`, `HipN`, `TransN2` and part 0x35 by `ftParts_GetBoneIndex`, unchecked. The hands' parts table has no joint for some of them (`part_to_joint` holds 0xFF), so it sets bit 3 (and bit 4 for `TransN`) of byte 8 of "bone" 255, 0xFF8 bytes into a parts block of 0x8C0.
+- **Effect:** a stray bit 0x738 bytes past the block's end: in the next block of the fighters' parts pool (another fighter's bone 115, which no character has, so nothing reads it) or in free memory. None observable in the debug VS matches traced (`m6-oracle/mh-fd` compares clean through creation).
+- **melee-hd:** modeled: the bit goes to the fighter's parts block that holds that address, or into the heap's image where none does.
+- **Fix:** skip a part the table lacks (0xFF).
+- **Fix impact:** none on gameplay.
+- **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
@@ -1436,6 +1446,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Source:** `gmcamera.c`'s `gmCamera_801A31FC` and `gmCamera_801A26C0`; `crates/melee-sim/src/game/gm/camera_mode.rs`.
 
 ## Results and records
+
+### A boss winning a debug VS match crashes the results screen
+
+- **Where:** `fn_80176F60` and `fn_80176BF0` (`gmresult.c`), the results screen's flames and winner's emblem; `crates/melee-sim/src/game/gm/results_scene.rs` (`results_flames`).
+- **Defect:** the emblem is looked up by the winner's character (`fn_80176BF0_inline`); a boss (Master Hand, Crazy Hand and the others the debug menu's Versus page can field) has none, so the lookup returns no joint, and `fn_80176F60` reads its DObj (`data->x20->u.dobj`) through null.
+- **Effect:** after a debug VS match the hand wins (every human out of stocks), the results screen faults reading address 0x18 as it opens (ssbm-rs: an unmapped read in `fn_80176F60`, `m6-master-hand/mh-1p` and the other five Master Hand sessions). A no-contest shows the eleventh emblem and doesn't crash (`m6-oracle/mh-fd`).
+- **melee-hd:** stops by name where the original faults ("Melee crashes: the results' winner (character 26) has no emblem", design call 7).
+- **Fix:** skip the emblem, or take the no-contest one, for a winner without one.
+- **Fix impact:** none on gameplay; only debug matches reach it (a single-player match with a boss ends in its own scenes).
+- **Source:** `gmresult.c` (`fn_80176F60`, `fn_80176BF0`).
 
 ### A results pose's fighter takes an unset byte of its allocation info
 

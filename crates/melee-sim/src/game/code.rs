@@ -279,6 +279,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::clink::run(g, gobj, addr) => {}
         addr if super::ft::yoshi::run(g, gobj, addr) => {}
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
+        addr if super::ft::masterhand::run(g, gobj, addr) => {}
         addr if super::ft::koopa::run(g, gobj, addr) => {}
         addr if super::ft::gamewatch::run(g, gobj, addr) => {}
         addr if super::ft::kirby::run(g, gobj, addr) => {}
@@ -550,6 +551,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::mewtwo::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::masterhand::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::koopa::call(r, f, args) {

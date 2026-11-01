@@ -2805,8 +2805,18 @@ fn union_s16(b: &[u8], at: usize) -> i16 {
     i16::from_be_bytes(b[at..at + 2].try_into().unwrap())
 }
 
-/// A callback's point (`x344.cb`, `x35C.cb`): none of the game's is ported.
-fn script_point(cb: u32) -> Option<Vec3> {
+/// A callback's point (`x344.cb`, `x35C.cb`): Master Hand's waist
+/// (`ftMh_MS_343_80151428`); the others aren't ported.
+fn script_point(r: &mut Running, cb: u32) -> Option<Vec3> {
+    match cb {
+        0 => None,
+        super::ft::masterhand::addr::MS_343_80151428 => r.mh_waist_point(),
+        _ => unported(&format!("the cutscene camera's callback {cb:#010x}")),
+    }
+}
+
+/// The eye's callback point: none of the game's eye callbacks is ported.
+fn script_eye_point(cb: u32) -> Option<Vec3> {
     if cb == 0 {
         return None;
     }
@@ -2814,7 +2824,8 @@ fn script_point(cb: u32) -> Option<Vec3> {
 }
 
 /// The cutscene interest's target, by its kind (`x341_b1_b2`).
-fn script_interest(game: &mut Game) {
+fn script_interest(r: &mut Running) {
+    let game = &mut *r.game;
     let c = &game.camera.cam;
     match c.x341_b1_b2 {
         1 => {
@@ -2825,8 +2836,9 @@ fn script_interest(game: &mut Game) {
         }
         2 => game.camera.cam.transform.target_interest = union_vec(&c.x344),
         3 => {
-            if let Some(p) = script_point(union_word(&c.x344)) {
-                game.camera.cam.transform.target_interest = p;
+            let cb = union_word(&c.x344);
+            if let Some(p) = script_point(r, cb) {
+                r.game.camera.cam.transform.target_interest = p;
             }
         }
         _ => {}
@@ -2838,7 +2850,7 @@ fn script_eye(c: &mut Camera) {
     match c.x341_b3_b4 {
         1 => c.transform.target_position = union_vec(&c.x35C),
         3 => {
-            if let Some(p) = script_point(union_word(&c.x35C)) {
+            if let Some(p) = script_eye_point(union_word(&c.x35C)) {
                 c.transform.target_position = p;
             }
         }
@@ -2951,10 +2963,9 @@ pub fn script_eye_step(c: &mut Camera) -> bool {
 /// The cutscene camera's frame, `Camera_8002E490`.
 #[doc(alias = "Camera_8002E490")]
 pub fn update_script(r: &mut Running) {
-    let game = &mut *r.game;
-    clear_translation(&mut game.camera.cam);
-    script_interest(game);
-    let c = &mut game.camera.cam;
+    clear_translation(&mut r.game.camera.cam);
+    script_interest(r);
+    let c = &mut r.game.camera.cam;
     script_eye(c);
     let mut done = false;
     if c.x341_b1_b2 <= 3 {
@@ -3013,32 +3024,32 @@ fn enter_script(c: &mut Camera) {
 
 /// The cutscene interest follows a player's bone, `Camera_8002E6FC`.
 #[doc(alias = "Camera_8002E6FC")]
-pub fn script_look_at_player(game: &mut Game, slot: i32) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at_player(r: &mut Running, slot: i32) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 1;
     c.x344[0..4].copy_from_slice(&slot.to_be_bytes());
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene interest goes to a point, `Camera_8002E818`.
 #[doc(alias = "Camera_8002E818")]
-pub fn script_look_at(game: &mut Game, pos: Vec3) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at(r: &mut Running, pos: Vec3) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 2;
     set_union_vec(&mut c.x344, pos);
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene interest follows a callback's point, `Camera_8002E948`.
 #[doc(alias = "Camera_8002E948")]
-pub fn script_look_at_callback(game: &mut Game, cb: CodeRef) {
-    let c = &mut game.camera.cam;
+pub fn script_look_at_callback(r: &mut Running, cb: CodeRef) {
+    let c = &mut r.game.camera.cam;
     enter_script(c);
     c.x341_b1_b2 = 3;
     c.x344[0..4].copy_from_slice(&cb.0.to_be_bytes());
-    script_interest(game);
+    script_interest(r);
 }
 
 /// The cutscene eye goes to a point, `Camera_8002EA64`.
@@ -3093,11 +3104,11 @@ pub fn script_fov(c: &mut Camera, fov: f32) {
 
 /// Jumps the cutscene camera to its targets at once, `Camera_8002EF14`.
 #[doc(alias = "Camera_8002EF14")]
-pub fn script_jump(game: &mut Game) {
-    enter_script(&mut game.camera.cam);
-    game.camera.cam.x341_b5_b6 = 0;
-    script_interest(game);
-    let c = &mut game.camera.cam;
+pub fn script_jump(r: &mut Running) {
+    enter_script(&mut r.game.camera.cam);
+    r.game.camera.cam.x341_b5_b6 = 0;
+    script_interest(r);
+    let c = &mut r.game.camera.cam;
     if c.x341_b1_b2 <= 3 {
         let (start, end) = (c.x350, c.transform.target_interest);
         let mut out = c.transform.interest;
