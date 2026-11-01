@@ -8,6 +8,8 @@ use crate::hsd::gobj::GObjId;
 impl Running<'_> {
     /// A human-played hand has nothing to do (`ftBossLib_8015BD20`), a computer's nothing either: the states' input callbacks.
     #[doc(alias = "ftMh_Poke1_IASA")]
+    #[doc(alias = "ftMh_BackDisappear_IASA")]
+    #[doc(alias = "ftMh_Grab_IASA")]
     #[doc(alias = "ftMh_BackAirplane1_IASA")]
     #[doc(alias = "ftMh_BackAirplane2_IASA")]
     #[doc(alias = "ftMh_BackAirplane3_IASA")]

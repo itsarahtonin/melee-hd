@@ -350,10 +350,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grlast"],
             modules: &["gr/last"],
-            unreached: &[(
-                "gm_8016ECE8",
-                "the boss stages' cycle, which only the single-player boss stages run",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },
