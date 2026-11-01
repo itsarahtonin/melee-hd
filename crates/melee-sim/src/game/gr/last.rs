@@ -233,7 +233,7 @@ const CKIND_CRAZY_HAND: i32 = 30;
 
 /// The hands' health, `gm_8016ECE8`: each hand's HP left over its stamina, averaged (0 with
 /// no hand).
-#[doc(alias = "gm_8016ECE8")]
+// Ports `gm_8016ECE8`; aliased once a check reaches it.
 pub fn boss_health(game: &crate::game::state::Game) -> f64 {
     let mut sum = 0.0;
     let mut count = 0;

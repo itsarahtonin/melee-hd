@@ -32,7 +32,7 @@ const PKIND_BOSS: i32 = 4;
 
 impl Running<'_> {
     /// Nothing, `ftBossLib_8015BD20`: a human-played hand's input callback.
-    #[doc(alias = "ftBossLib_8015BD20")]
+    // Ports `ftBossLib_8015BD20`; aliased once a check reaches it.
     pub fn boss_nop(&mut self, _gobj: GObjId) {}
 
     /// The frames until a hand's next attack, `ftBossLib_8015BD24`: `(base / level +
@@ -197,47 +197,47 @@ impl Running<'_> {
     }
 
     /// Whether Master Hand is making his entrance, `ftBossLib_IsMasterHandEntry`.
-    #[doc(alias = "ftBossLib_IsMasterHandEntry")]
+    // Ports `ftBossLib_IsMasterHandEntry`; aliased once a check reaches it.
     pub fn boss_mh_entering(&self) -> bool {
         self.boss_motion_id(KIND_MASTER_HAND) == MH_MS_ENTRY
     }
 
     /// Whether Crazy Hand is in his state 0x183, `ftBossLib_8015C2A8`.
-    #[doc(alias = "ftBossLib_8015C2A8")]
+    // Ports `ftBossLib_8015C2A8`; aliased once a check reaches it.
     pub fn boss_ch_in_183(&self) -> bool {
         self.boss_motion_id(KIND_CRAZY_HAND) == CH_MS_183
     }
 
     /// Whether Master Hand is beaten (`ftMh_MS_Damage`, `Damage2`), `ftBossLib_8015C2E0`.
-    #[doc(alias = "ftBossLib_8015C2E0")]
+    // Ports `ftBossLib_8015C2E0`; aliased once a check reaches it.
     pub fn boss_mh_beaten(&self) -> bool {
         let ms = self.boss_motion_id(KIND_MASTER_HAND);
         ms == MH_MS_DAMAGE || ms == MH_MS_DAMAGE2
     }
 
     /// Whether Crazy Hand is beaten, `ftBossLib_8015C31C`.
-    #[doc(alias = "ftBossLib_8015C31C")]
+    // Ports `ftBossLib_8015C31C`; aliased once a check reaches it.
     pub fn boss_ch_beaten(&self) -> bool {
         let ms = self.boss_motion_id(KIND_CRAZY_HAND);
         ms == CH_MS_181 || ms == CH_MS_182
     }
 
     /// Whether Master Hand is out (sleeping), `ftBossLib_8015C358`.
-    #[doc(alias = "ftBossLib_8015C358")]
+    // Ports `ftBossLib_8015C358`; aliased once a check reaches it.
     pub fn boss_mh_sleeping(&self) -> bool {
         self.boss_gobj(KIND_MASTER_HAND)
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Whether Crazy Hand is out, `ftBossLib_8015C3A0`.
-    #[doc(alias = "ftBossLib_8015C3A0")]
+    // Ports `ftBossLib_8015C3A0`; aliased once a check reaches it.
     pub fn boss_ch_sleeping(&self) -> bool {
         self.boss_gobj(KIND_CRAZY_HAND)
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Crazy Hand's next attack (`u.mh.x2250`, 0 with no Crazy Hand), `ftBossLib_8015C4C4`.
-    #[doc(alias = "ftBossLib_8015C4C4")]
+    // Ports `ftBossLib_8015C4C4`; aliased once a check reaches it.
     pub fn boss_ch_next(&self) -> i32 {
         match self.boss_gobj(KIND_CRAZY_HAND) {
             Some(g) => self
@@ -250,7 +250,7 @@ impl Running<'_> {
 
     /// Master Hand's attributes' word for a computer level (`x0` to `x14`; 0 with no Master
     /// Hand), `ftBossLib_8015C530`.
-    #[doc(alias = "ftBossLib_8015C530")]
+    // Ports `ftBossLib_8015C530`; aliased once a check reaches it.
     pub fn boss_level_word(&self, level: i32) -> i32 {
         let Some(g) = self.boss_gobj(KIND_MASTER_HAND) else {
             return 0;
@@ -274,7 +274,7 @@ impl Running<'_> {
     }
 
     /// Master Hand's attributes (`ftData::ext_attr`), if he's there, `ftBossLib_8015C6BC`.
-    #[doc(alias = "ftBossLib_8015C6BC")]
+    // Ports `ftBossLib_8015C6BC`; aliased once a check reaches it.
     pub fn boss_mh_attrs(&self) -> Option<super::super::handles::FighterId> {
         self.boss_gobj(KIND_MASTER_HAND)
             .map(|g| self.game.fighter_id(g))
@@ -283,11 +283,11 @@ impl Running<'_> {
     /// Master Hand's attribute word at `off` (-1 with no Master Hand): `ftBossLib_8015C74C`
     /// (`x164`), `8015C7EC` (`x168`), `8015C88C` (`x16C`), `8015C92C` (`x170`) and
     /// `8015C9CC` (`x174`).
-    #[doc(alias = "ftBossLib_8015C74C")]
-    #[doc(alias = "ftBossLib_8015C7EC")]
-    #[doc(alias = "ftBossLib_8015C88C")]
-    #[doc(alias = "ftBossLib_8015C92C")]
-    #[doc(alias = "ftBossLib_8015C9CC")]
+    // Ports `ftBossLib_8015C74C`; aliased once a check reaches it.
+    // Ports `ftBossLib_8015C7EC`; aliased once a check reaches it.
+    // Ports `ftBossLib_8015C88C`; aliased once a check reaches it.
+    // Ports `ftBossLib_8015C92C`; aliased once a check reaches it.
+    // Ports `ftBossLib_8015C9CC`; aliased once a check reaches it.
     pub fn boss_mh_word(&self, off: usize) -> i32 {
         match self.boss_mh_attrs() {
             Some(f) => self.mh_da_i32(f, off),
@@ -297,7 +297,7 @@ impl Running<'_> {
 
     /// The match slowed or sped for the hands' knockout, `ftBossLib_8015CA6C`: the first
     /// player's, each hand's and the items' rates.
-    #[doc(alias = "ftBossLib_8015CA6C")]
+    // Ports `ftBossLib_8015CA6C`; aliased once a check reaches it.
     pub fn boss_set_rate(&mut self, rate: i32) {
         let v = mem(fp::frsp(f64::from(rate)));
         self.player_80036790(0, v);
@@ -310,14 +310,14 @@ impl Running<'_> {
     }
 
     /// `ftBossLib_8015CB7C`: the items' rates back (`it_8026C42C`).
-    #[doc(alias = "ftBossLib_8015CB7C")]
+    // Ports `ftBossLib_8015CB7C`; aliased once a check reaches it.
     pub fn boss_reset_item_rate(&mut self) {
         super::super::code::unported_call("it_8026C42C");
     }
 
     /// The cutscene camera looks at a player from `x178` in front, over 10 frames,
     /// `ftBossLib_8015CB9C`.
-    #[doc(alias = "ftBossLib_8015CB9C")]
+    // Ports `ftBossLib_8015CB9C`; aliased once a check reaches it.
     pub fn boss_camera_on_player(&mut self, slot: i32) {
         let mut v = self.game.player_pos(slot);
         camera::script_look_at(self, v);
@@ -331,7 +331,7 @@ impl Running<'_> {
     }
 
     /// The match's camera again, `ftBossLib_8015CC14`.
-    #[doc(alias = "ftBossLib_8015CC14")]
+    // Ports `ftBossLib_8015CC14`; aliased once a check reaches it.
     pub fn boss_camera_standard(&mut self) {
         camera::set_standard(&mut self.game.camera.cam);
     }
