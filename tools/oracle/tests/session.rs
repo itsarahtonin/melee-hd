@@ -1938,3 +1938,26 @@ fn the_debug_cutscenes() {
     assert!(out.contains(want), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+
+/// Master Hand in the debug menu's Versus page (milestone 6's task 3), from power-on with the
+/// heap: `m6-oracle/mh-fd` (task 1's route: his entrance with the cutscene camera's orbit
+/// reading its unset stack words, his attacks, the debug pause's no-contest, the results) to
+/// its trace's end; and `m6-master-hand/mh-1p-lose`, whose human loses his one stock, so the
+/// hand wins and the results screen faults on his missing emblem: the trace ends before the
+/// fault, and melee-hd stops there by name on the next tick (`--past`).
+#[test]
+fn master_hand_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-oracle", "mh-fd", &["--all", "--heap"]) {
+        assert!(out.contains("7178 ticks compared, no difference"), "{out}");
+    }
+    let args = ["--all", "--heap", "--past", "300"];
+    if let Some(out) = scripted_session("m6-master-hand", "mh-1p-lose", &args) {
+        assert!(
+            out.contains("3855 ticks compared, no difference")
+                && out.contains(
+                    "past the trace's end, stopped in tick 3855: Melee crashes: the results' winner (character 26) has no emblem"
+                ),
+            "{out}"
+        );
+    }
+}

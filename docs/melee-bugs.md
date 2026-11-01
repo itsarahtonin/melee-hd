@@ -188,6 +188,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Bowser's up special landing; breaks replay and Slippi compatibility.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 89); `crates/melee-sim/src/game/ft/koopa/special_hi.rs:195`.
 
+### Master Hand: creation marks bones past his parts block
+
+- **Where:** `ftParts_80074E58` (`ftparts.c`), from `Fighter_Create` for Master Hand (and Crazy Hand); `crates/melee-sim/src/game/ft/parts.rs` (`init_parts`, `stray_bone_bit`).
+- **Defect:** the function sets flag bits on the bones of `TransN`, `XRotN`, `YRotN`, `HipN`, `TransN2` and part 0x35 by `ftParts_GetBoneIndex`, unchecked. The hands' parts table has no joint for some of them (`part_to_joint` holds 0xFF), so it sets bit 3 (and bit 4 for `TransN`) of byte 8 of "bone" 255, 0xFF8 bytes into a parts block of 0x8C0.
+- **Effect:** a stray bit 0x738 bytes past the block's end: in the next block of the fighters' parts pool (another fighter's bone 115, which no character has, so nothing reads it) or in free memory. None observable in the debug VS matches traced (`m6-oracle/mh-fd` compares clean through creation).
+- **melee-hd:** modeled: the bit goes to the fighter's parts block that holds that address, or into the heap's image where none does.
+- **Fix:** skip a part the table lacks (0xFF).
+- **Fix impact:** none on gameplay.
+- **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
@@ -978,13 +988,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The cutscene camera's orbit reads unwritten stack slots
 
-- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), `crates/melee-sim/src/game/camera.rs`.
-- **Defect:** it eases only the parts of the orbit its script set and reads the others (pitch, yaw or distance) from stack slots it never wrote. Master Hand's and Crazy Hand's entrances set orbits that way.
-- **Effect:** not recorded.
-- **melee-hd:** stops, until a probe of those slots in play decides the model.
+- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), from `Camera_8002E490` (its frame) and `Camera_8002EF14` (its jump); `crates/melee-sim/src/game/camera.rs` (`script_eye_step`, `orbit_leftover`).
+- **Defect:** it eases only the parts of the orbit its script set (`x35C`'s bits 0x80 distance, 0x40 pitch, 0x20 yaw) and reads the others from its stack words `sp+0x8`, `sp+0x10` and `sp+0xC`, which nothing in it writes. Master Hand's entrance sets orbits that way (a distance and yaw without a pitch, then a yaw alone before a jump); Crazy Hand's does too.
+- **Effect:** the words hold what earlier calls at the same stack depth left in the tick. ssbm-rs's probe of the entrance (`research/m6-master-hand`, `m6-oracle/mh-fd`): on the frame's path the pitch reads a back chain, `804EEA78` (`HSD_JObjReqAnimByFlags`'s) or `804EEA70` (`ftBossLib_GetFighterGObj`'s, once the interest follows Master Hand's waist through `ftMh_MS_343_80151428`), tiny negative denormals as angles; on the jump's path the pitch reads 2 (the collision's register save, `mpColl_80046904`) or `804EE988`, and an unset distance reads `0x43300000` (176.0, `mpColl_8004ACE4`'s integer conversion), so the eye jumps to 176 units away for a frame. The eye's place reaches the fighters' offscreen flags and screen positions and the lights' view vectors.
+- **melee-hd:** modeled for the writers the probe found, by caller and by whether the interest's callback ran (`orbit_leftover`); any other unset part stops by name.
 - **Fix:** keep the parts the script didn't set from the camera's current orbit.
-- **Fix impact:** cutscene camera only; not recorded whether gameplay reads it.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 54); `crates/melee-sim/src/game/camera.rs:2920`.
+- **Fix impact:** the cutscene camera and what reads its place (the offscreen flags); no replay reaches a cutscene camera.
+- **Source:** ssbm-rs's `local/research/m6-master-hand/README.md`; `crates/melee-sim/src/game/camera.rs` (`orbit_leftover`).
 
 ### The background color's alpha is unset
 
@@ -1436,6 +1446,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Source:** `gmcamera.c`'s `gmCamera_801A31FC` and `gmCamera_801A26C0`; `crates/melee-sim/src/game/gm/camera_mode.rs`.
 
 ## Results and records
+
+### A boss winning a debug VS match crashes the results screen
+
+- **Where:** `fn_80176F60` and `fn_80176BF0` (`gmresult.c`), the results screen's flames and winner's emblem; `crates/melee-sim/src/game/gm/results_scene.rs` (`results_flames`).
+- **Defect:** the emblem is looked up by the winner's character (`fn_80176BF0_inline`); a boss (Master Hand, Crazy Hand and the others the debug menu's Versus page can field) has none, so the lookup returns no joint, and `fn_80176F60` reads its DObj (`data->x20->u.dobj`) through null.
+- **Effect:** after a debug VS match the hand wins (every human out of stocks), the results screen faults reading address 0x18 as it opens (ssbm-rs: an unmapped read in `fn_80176F60`, `m6-master-hand/mh-1p` and the other five Master Hand sessions). A no-contest shows the eleventh emblem and doesn't crash (`m6-oracle/mh-fd`).
+- **melee-hd:** stops by name where the original faults ("Melee crashes: the results' winner (character 26) has no emblem", design call 7).
+- **Fix:** skip the emblem, or take the no-contest one, for a winner without one.
+- **Fix impact:** none on gameplay; only debug matches reach it (a single-player match with a boss ends in its own scenes).
+- **Source:** `gmresult.c` (`fn_80176F60`, `fn_80176BF0`).
 
 ### A results pose's fighter takes an unset byte of its allocation info
 
@@ -2005,6 +2025,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 
 ## Unsure
 
+- **Master Hand's grab takes its escape time from the hand.** A fighter caught by Master Hand (`ftMh_MS_388_80155A58`) gets its mash timer from `ftCo_800DA824` of the grabber, so it grows with his damage, rank and handicap rather than the victim's, as every other grab's does; it may be intended (the more he's hurt, the longer he holds). melee-hd models it (`mh_capture_enter`). Source: ssbm-rs's `ftMh_MS_388_80155A58` (`ftCommon_InitGrab(ft_1, 0, ftCo_800DA824(ft_2))`); `crates/melee-sim/src/game/ft/masterhand/grab.rs`.
 - **The size classes' old array goes back as a piece.** When the memory pieces' size classes outgrow their array, `GetMemoryEntry` (class.c) copies it into a new `HSD_MemAlloc` block and gives the old one back with `hsdFreeMemPiece`, its size rounded down to 32, not `HSD_Free`: a block of the main heap joins a size class's free list (and the class counts one more allocated, so its books balance), and the heap never gets it back. It may be intended, recycling the array's memory as a piece. melee-hd models it (`Heap::memory_entry`), and the heap's image lays the old array out as it goes (the classes' addresses). Source: the decompilation's `GetMemoryEntry`; `crates/melee-sim/src/hsd/heap.rs` (`memory_entry`).
 - **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).
 - **Popo's hammer holder.** Squall Hammer's hammer joint lean and visibility (`ftPp_SpecialS_8011F720`) runs only with a holder (`specials.x8`) that the entries clear and nothing sets, so it never runs. It may be code HAL left disabled on purpose. Source: `crates/melee-sim/src/game/ft/popo/special_s.rs:149`.

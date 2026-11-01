@@ -500,7 +500,12 @@ impl Running<'_> {
         let ckind = me.player_standings[usize::from(x6)].ckind as u8;
         let emblem = self.results_emblem(root, ckind, canceled(me.outcome));
         self.game.results.data.emblem = emblem;
-        let e = emblem.expect("the winner's emblem");
+        // A winner with no emblem (Master Hand, Crazy Hand and the other bosses a debug VS
+        // match can field) leaves none, and the original reads its DObj through null
+        // (address 0x18): Melee crashes here (docs/melee-bugs.md).
+        let e = emblem.unwrap_or_else(|| {
+            panic!("Melee crashes: the results' winner (character {ckind}) has no emblem, and fn_80176F60 reads its DObj at address 0x18")
+        });
         let g = &mut *self.game;
         let dobj = g.objs.jobjs[e].dobj();
         let mobj = dobj.and_then(|d| g.objs.dobjs.pool[d.0].mobj);

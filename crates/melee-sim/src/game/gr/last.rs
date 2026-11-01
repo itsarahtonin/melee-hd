@@ -227,6 +227,31 @@ pub fn proc_main(r: &mut Running, gobj: GObjId) {
     ground::quake_list_tick(r.game);
 }
 
+/// `CKind_MasterH` and `CKind_CrezyH`.
+const CKIND_MASTER_HAND: i32 = 26;
+const CKIND_CRAZY_HAND: i32 = 30;
+
+/// The hands' health, `gm_8016ECE8`: each hand's HP left over its stamina, averaged (0 with
+/// no hand).
+// Ports `gm_8016ECE8`; aliased once a check reaches it.
+pub fn boss_health(game: &crate::game::state::Game) -> f64 {
+    let mut sum = 0.0;
+    let mut count = 0;
+    for i in 0..6 {
+        let kind = game.player_ckind(i);
+        if kind == CKIND_MASTER_HAND || kind == CKIND_CRAZY_HAND {
+            let stamina = fp::frsp(f64::from(game.player_stamina(i)));
+            let left = fp::frsp(f64::from(game.player_remaining_hp(i)));
+            sum = fp::fadds(sum, fp::fdivs(left, stamina));
+            count += 1;
+        }
+    }
+    if count > 0 {
+        sum = fp::fdivs(sum, fp::frsp(f64::from(count)));
+    }
+    sum
+}
+
 /// Times the scene, `grLast_8021B2E8`: the 30-second wait in phase 1 (in the boss stages, the
 /// boss's health instead), the swaying piece fading in and out, the closing scene's random
 /// fog colors, and the fog blend.
@@ -235,12 +260,31 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     let stkind = r.game.gr.stkind;
     if stkind == 0xB0 || stkind == 0xFB {
-        unimplemented!("the boss stages' cycle needs gm_8016ECE8 (the boss's health)");
+        // The boss stages (Classic's Master Hand, Event 50): the next phase as the hands'
+        // health falls past each phase's mark.
+        let health = boss_health(r.game);
+        let v = r.game.grounds[g.0].u.map();
+        let mark = match v.phase {
+            1 => Some(0.7),
+            3 => Some(0.6),
+            5 => Some(0.5),
+            7 => Some(0.4),
+            9 => Some(0.3),
+            12 => Some(0.2),
+            _ => None,
+        };
+        if let Some(m) = mark
+            && health < fp::frsp(m)
+        {
+            v.b26 = true;
+        }
+    } else {
+        let v = r.game.grounds[g.0].u.map();
+        if reg(v.xC8) > 1800.0 {
+            v.b26 = true;
+        }
     }
     let v = r.game.grounds[g.0].u.map();
-    if reg(v.xC8) > 1800.0 {
-        v.b26 = true;
-    }
     v.xC8 = mem(fp::fadds(reg(v.xC8), 1.0));
     let phase = v.phase;
     let lv3 = v.lv_gobj[3];

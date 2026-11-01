@@ -8364,6 +8364,62 @@ impl itClimbersString_ItemVars {
     }
 }
 
+/// `itMasterHandLaser_ItemVars`, 0x10 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itMasterHandLaser_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<i32>,
+    /// +0xc
+    pub x10: Var<Option<JObjId>>,
+}
+
+impl Default for itMasterHandLaser_ItemVars {
+    fn default() -> Self {
+        itMasterHandLaser_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itMasterHandLaser_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.x10.mark_stale();
+    }
+}
+
+/// `itMasterHandBullet_ItemVars`, 0x4 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itMasterHandBullet_ItemVars {
+    /// +0x0
+    pub x0: Var<f32>,
+}
+
+impl Default for itMasterHandBullet_ItemVars {
+    fn default() -> Self {
+        itMasterHandBullet_ItemVars {
+            x0: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itMasterHandBullet_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+    }
+}
+
 /// `itPeachTurnip_ItemVars`, 0x18 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itPeachTurnip_ItemVars {
