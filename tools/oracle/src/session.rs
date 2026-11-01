@@ -645,6 +645,7 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
 
 pub fn session(args: &[&str]) -> ExitCode {
     let (mut from, mut limit, mut all, mut scenes) = (None, u32::MAX, false, false);
+    let mut past_end = 0u32;
     let (mut survey, mut leftovers_report) = (false, false);
     let mut card_path: Option<PathBuf> = None;
     let mut card_after: Option<PathBuf> = None;
@@ -690,6 +691,9 @@ pub fn session(args: &[&str]) -> ExitCode {
                 )
             }
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
+            // Ticks run past the trace's end, uncompared, to see where melee-hd stops when the
+            // original's run ended in a fault (a Melee crash the trace can't hold).
+            "--past" => past_end = it.next().and_then(|t| t.parse().ok()).expect("--past N"),
             "--all" => all = true,
             "--heap" => crate::diff::COMPARE_HEAP.with(|c| c.set(true)),
             "--scenes" => scenes = true,
@@ -881,6 +885,7 @@ pub fn session(args: &[&str]) -> ExitCode {
         plan: &plan,
         from,
         limit,
+        past_end,
         all,
         ignore: &ignore,
         mutation,
@@ -938,6 +943,8 @@ struct Run<'a> {
     plan: &'a Plan,
     from: Option<u32>,
     limit: u32,
+    /// Ticks to run uncompared past the trace's end (`--past`).
+    past_end: u32,
     all: bool,
     ignore: &'a [String],
     mutation: Option<Mutation>,
@@ -1115,6 +1122,25 @@ impl Run<'_> {
                     Some(t) => t,
                     None => {
                         println!("the trace ends after tick {}", next - 1);
+                        for k in 0..self.past_end {
+                            let stepped = catch_unwind(AssertUnwindSafe(|| {
+                                if render_due {
+                                    s.render();
+                                }
+                                s.step_tick(&mut console)
+                            }));
+                            match stepped {
+                                Ok((_, due)) => render_due = due,
+                                Err(p) => {
+                                    println!(
+                                        "past the trace's end, stopped in tick {}: {}",
+                                        next + k,
+                                        panic_text(&p)
+                                    );
+                                    break;
+                                }
+                            }
+                        }
                         break None;
                     }
                 }

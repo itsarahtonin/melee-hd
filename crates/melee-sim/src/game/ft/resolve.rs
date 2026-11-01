@@ -90,40 +90,46 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             run_fighter_cb(g, gobj, cb);
         }
         if g.game.fighters[f.0].no_kb {
-            unported_call(
-                "a hand's hit without knockback (ftMh_MS_341_8014FE58, ftCh_Init_80156014)",
-            );
-        }
-        match g.game.fighters[f.0].x1828 {
-            0 => g.damage_pick_reaction(gobj),
-            1 => {
-                g.damage_hooks(gobj);
-                g.damage_reaction(gobj, 0.0);
+            // A hand takes no reaction: its kind's hook (Master Hand's is empty), then
+            // `ftCo_8008E9D0`; the original asserts on any other kind.
+            match g.game.fighters[f.0].kind {
+                super::masterhand::KIND_MASTER_HAND => g.mh_nop(gobj),
+                super::masterhand::KIND_CRAZY_HAND => unported_call("ftCh_Init_80156014"),
+                _ => panic!("the original's assertion failed: ellegal flag fp->no_reaction_always"),
             }
-            2 => {
-                g.damage_hooks(gobj);
-                g.damage_no_reaction(gobj);
-            }
-            3 => {
-                g.damage_hooks(gobj);
-                // `ftCo_8008EB58`.
-                if g.hit_too_light(f) {
+            g.damage_no_reaction(gobj);
+        } else {
+            match g.game.fighters[f.0].x1828 {
+                0 => g.damage_pick_reaction(gobj),
+                1 => {
+                    g.damage_hooks(gobj);
+                    g.damage_reaction(gobj, 0.0);
+                }
+                2 => {
+                    g.damage_hooks(gobj);
                     g.damage_no_reaction(gobj);
                 }
+                3 => {
+                    g.damage_hooks(gobj);
+                    // `ftCo_8008EB58`.
+                    if g.hit_too_light(f) {
+                        g.damage_no_reaction(gobj);
+                    }
+                }
+                _ => {}
             }
-            _ => {}
+            let fp = &g.game.fighters[f.0];
+            let (element, applied, mul) = (
+                fp.dmg.x1860_element,
+                fp.dmg.x183C_applied,
+                fp.x1960_vibrateMult,
+            );
+            knocked = true;
+            g.start_hit_shake(f, element, applied, msid, ga, mul);
+            let dmg = fp::fctiwz(reg(g.game.fighters[f.0].dmg.x1838_percentTemp));
+            g.damage_rumble(f, dmg);
+            strength = applied;
         }
-        let fp = &g.game.fighters[f.0];
-        let (element, applied, mul) = (
-            fp.dmg.x1860_element,
-            fp.dmg.x183C_applied,
-            fp.x1960_vibrateMult,
-        );
-        knocked = true;
-        g.start_hit_shake(f, element, applied, msid, ga, mul);
-        let dmg = fp::fctiwz(reg(g.game.fighters[f.0].dmg.x1838_percentTemp));
-        g.damage_rumble(f, dmg);
-        strength = applied;
     } else if reg(fp.dmg.x18a0) != 0.0 {
         strength = fp.dmg.x1840;
         tip = true;
