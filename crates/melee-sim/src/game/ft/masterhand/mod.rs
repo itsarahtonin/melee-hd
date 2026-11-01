@@ -11,9 +11,11 @@
 //!
 //! Crazy Hand's tag attacks with him (`ftmasterhandtag*.c`) wait for task 12.
 
+pub mod airplane;
 pub mod common;
 pub mod crush;
 pub mod entry;
+pub mod grab;
 pub mod init;
 pub mod sweep;
 pub mod wait;
@@ -522,12 +524,18 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || entry::run(g, gobj, addr)
         || sweep::run(g, gobj, addr)
         || crush::run(g, gobj, addr)
+        || airplane::run(g, gobj, addr)
+        || grab::run(g, gobj, addr)
 }
 
 /// Runs one of his functions that takes his GObj and a callback (`ftMh_MS_371_801541C8`),
 /// if `addr` is one.
-pub fn run_with(_g: &mut Running, _gobj: GObjId, _addr: u32, _cb: u32) -> bool {
-    false
+pub fn run_with(g: &mut Running, gobj: GObjId, addr: u32, cb: u32) -> bool {
+    match addr {
+        addr::MS_371_801541C8 => g.mh_back_disappear_enter(gobj, cb),
+        _ => return false,
+    }
+    true
 }
 
 /// Master Hand's functions other code calls by address (`code::call`).

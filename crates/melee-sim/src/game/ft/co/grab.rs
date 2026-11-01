@@ -597,6 +597,25 @@ impl Running<'_> {
         }
     }
 
+    /// The frames a fighter mashes to break a grab, `ftCo_800DA824`: from its damage, rank and
+    /// handicap (`ftCommonData` x354 to x368).
+    #[doc(alias = "ftCo_800DA824")]
+    pub fn grab_escape_time(&mut self, gobj: GObjId) -> f64 {
+        let slot = i32::from(self.game.fighter(gobj).player_idx);
+        let c = self.common();
+        let rank = self.player_rank(slot).wrapping_add(1);
+        let v = fp::fmuls(
+            reg(c.f32(0x360)),
+            fp::fsubs(reg(c.f32(0x364)), fp::frsp(f64::from(rank))),
+        );
+        let handicap = self.game.player_handicap(slot);
+        let mut s3 = fp::fsubs(reg(c.f32(0x35C)), fp::frsp(f64::from(handicap)));
+        s3 = fp::fmadds(reg(c.f32(0x358)), s3, reg(c.f32(0x354)));
+        s3 = fp::fadds(s3, v);
+        let fp = self.game.fighter(gobj);
+        fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x368)), s3)
+    }
+
     /// The victim moved to the hold point, `fn_800DAD18`: whether it was pulled up off the
     /// ground (`ftCommonData` x3C4 times its size).
     #[doc(alias = "fn_800DAD18")]
@@ -618,7 +637,6 @@ impl Running<'_> {
     /// ground, moved to the hold point, and its collision run.
     #[doc(alias = "fn_800DAADC")]
     #[doc(alias = "fn_800DA8E4")]
-    #[doc(alias = "ftCo_800DA824")]
     pub fn enter_capture_pulled(&mut self, victim: GObjId, grabber: GObjId) {
         let msid = if self.game.fighter(victim).ground_or_air == GA_GROUND {
             ms::CAPTURE_PULLED_LW
@@ -636,19 +654,8 @@ impl Running<'_> {
         fp.x221B.x221B_b5 = false;
         fp.x221B.x221B_b7 = false;
         fp.facing_dir = mem(fp::fneg(reg(gf)));
-        let slot = i32::from(fp.player_idx);
-        let c = self.common();
-        let rank = self.player_rank(slot).wrapping_add(1);
-        let v = fp::fmuls(
-            reg(c.f32(0x360)),
-            fp::fsubs(reg(c.f32(0x364)), fp::frsp(f64::from(rank))),
-        );
-        let handicap = self.game.player_handicap(slot);
-        let mut s3 = fp::fsubs(reg(c.f32(0x35C)), fp::frsp(f64::from(handicap)));
-        s3 = fp::fmadds(reg(c.f32(0x358)), s3, reg(c.f32(0x354)));
-        s3 = fp::fadds(s3, v);
+        let timer = self.grab_escape_time(victim);
         let fp = self.game.fighter_mut(victim);
-        let timer = fp::fmadds(reg(fp.dmg.x1830_percent), reg(c.f32(0x368)), s3);
         // `ftCommon_InitGrab(fp, 0, timer)`.
         fp.grab_timer = mem(timer);
         fp.x1A51 = 0;
