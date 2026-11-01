@@ -1527,6 +1527,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** the records' values past the largest word.
 - **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
 
+### The select's 1P totals wrap where the code means to hold them
+
+- **Where:** `gm_80162C48`, `gm_80162E44` and `gm_80163040` (Classic's, Adventure's and All-Star's high scores summed over the 25 characters), `gm_801631F0` (the Home-Run Contest's distances), `gm_801634D4` (Target Test's times), which the one-door select shows (`mnCharSel_8025C020`); `crates/melee-sim/src/game/gm/one_player.rs` (`high_score_1p_total`, `homerun_record_total`, `target_time_total`).
+- **Defect:** each running sum is tested against `0xFFFFFFFF` (`(u32) (sum + score) > -1U`) to hold it there; an unsigned word is never over the largest one, so the sums wrap, and the scores' total is then printed as a signed `int` (`"%09d"`), negative past 2^31. Target Test's adds its times with no test at all.
+- **Effect:** none in play: 25 high scores can't reach two billion. Only an edited save shows a wrapped or negative total.
+- **melee-hd:** modeled: the sums wrap and the scores' total prints as signed.
+- **Fix:** add in 64 bits and hold the total at the largest value.
+- **Fix impact:** the select's totals for edited saves.
+- **Source:** `gm_1601.c`'s `gm_80162C48`, `gm_80162E44`, `gm_80163040`, `gm_801631F0`, `gm_801634D4`.
+
 ### The challenger approach's screen counts its ticks in 16 bits
 
 - **Where:** `gm_Scene_Approach_OnFrame` (`gmapproach.c`), `crates/melee-sim/src/game/gm/approach.rs` (`approach_on_frame`).
