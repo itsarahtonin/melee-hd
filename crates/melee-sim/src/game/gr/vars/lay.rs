@@ -613,6 +613,20 @@ impl GroundVars {
                 l.put_u32(a + 4, v.xC8 as u32);
                 fs(l, a + 8, &[v.xCC, v.xD0, v.xD4, v.xD8]);
             }
+            GroundVars::KinokoRoute(v) => {
+                for (i, e) in v.entries.iter().enumerate() {
+                    let b = a + 0x10 * i as u32;
+                    v3(l, b, &e.pos);
+                    jobj(l, cx, b + 0xC, e.jobj);
+                }
+            }
+            GroundVars::KinokoRoute2(v) => {
+                l.put_u8(a, u8::from(v.flags_0) << 7 | v.x0_rest);
+                l.put_u8(a + 1, v.pad_01);
+                h16(l, a + 2, &[v.phase, v.spawn_idx, v.zone_idx, v.cam_timer]);
+                l.put_bytes(a + 0xA, &v.pad_0a);
+                v3(l, a + 0xC, &v.reb0_pos);
+            }
             GroundVars::BigBlueRelay(v) => {
                 l.put_u32(a, v.xC4);
                 w32(l, a + 4, &[v.xC8_timer, v.xCC_timer, v.xD0_timer]);

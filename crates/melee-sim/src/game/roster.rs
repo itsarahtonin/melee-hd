@@ -798,8 +798,8 @@ pub(crate) mod tests {
             "each roster stage's shadow check is wired (every_roster_stage_plays)",
         ),
         (
-            "Ground_801C0C2C",
-            "the point search, which single-player modes ask for",
+            "a stage's point check",
+            "a stage's own check of a watched point (stage_info.x90 and x94): the only stage that watches points, Mushroom Kingdom's adventure route, gives none",
         ),
         (
             "grMaterial_804D456C",
@@ -809,9 +809,16 @@ pub(crate) mod tests {
             "a stage item's",
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
-        ("the spawner's trophies", "trophy stages"),
         (
-            "the spawner's enemies",
+            "a 1P trophy at a spawner slot",
+            "a single-player mode's trophy slot (stage_info.x6E4 is -1 outside one)",
+        ),
+        (
+            "a spawner's ReDead",
+            "enemy spawners, which no roster stage configures",
+        ),
+        (
+            "a spawner's Like Like",
             "enemy spawners, which no roster stage configures",
         ),
         (
