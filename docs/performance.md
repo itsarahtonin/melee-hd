@@ -66,6 +66,15 @@ Pokémon Stadium allocated in every tick, straight or replayed: its screens' tex
 
 Size, clone and restore are well inside their targets. A restore reuses the target's storage: the state's types derive `melee_derive::CloneFrom`, a `Clone` whose `clone_from` copies field by field (each field's own `clone_from`, so vectors, boxes and pools keep their capacity), and the few containers that would build anew (maps, file lists of strings) are copied only when they differ. A snapshot (`clone`) still allocates, since it makes a new copy. Restore and 8 ticks was at the 4 ms target then, over it on some states: the ticks are the cost (see the profile below). After the speed work below it is 2 to 3 ms on the whole match.
 
+**After milestone 5 (2026-11-01, melee-hd `77ff15aa`, quiet machine).** `fox-fox-fd`, every 5,000 ticks:
+- **Size:** 1.40, 1.45 and 1.45 MB, with 2,505 to 2,534 allocations.
+- **Clone:** 134 to 138 µs.
+- **Restore:** 37 to 38 µs, with no allocations.
+- **Restore and 8 ticks:** 1.25 to 1.80 ms.
+- **Allocations per tick:** 1, the text draw's box.
+
+The state has grown about a quarter since 2026-10-15 (items, audio, the HUD), and the clone and restore with it. Both are still well inside the targets.
+
 **A session's snapshots (2026-10-24).** A session from power-on also carries the heap's image ([the engine notes](engine.md#uninitialized-values), a session's heap leftovers): its runs are kept by 64 KiB page, each shared between snapshots until something writes it, so a snapshot copies the lists of pages and a few vectors, not the runs. `melee-oracle session --snapshot TICK,...` measures a session's state as `snapshot-match` measures a match's (melee-hd `feat/m5-heap`, while two sessions ran beside it):
 
 | Session, tick | Snapshot | Clone | Restore | The image's part | Its clone | Its restore |
@@ -104,6 +113,20 @@ After the speed work below (2026-10-09, melee-hd `86dc9ab`, the same machine, qu
 | `fox-fox-fd` | `dist` | 7,174 (7,194, 7,174, 7,235, 6,794, 6,851) | 18.1× |
 
 Speed work is parked here until more of the game is ported, since new content changes the profile; profile-guided optimization (an estimated 10 to 15%) is the next step when it resumes.
+
+**After milestone 5 (2026-11-01, melee-hd `a8615a75`, which only made `melee-bench` run its commands on a 512 MB stack: they overflowed the main thread's as they started).** This is the same machine, with no builds, agents or verify running; the CPU was 7 to 11% busy before each step. Each figure is the median of 5 runs, every run in sync. Dolphin was measured again the same day on the same build and calibrations, with `ganon-captain-fd` newly calibrated. `ics-peach-ps` leaves its replay at frame 10,139 natively, as always (the heap layout, [Dolphin](#dolphin)), so it gives no melee-hd figure:
+
+| match | melee-hd release, median frames/s (runs) | melee-hd `dist` | Dolphin | release ratio | `dist` ratio |
+| --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 5,251 (5,213, 5,280, 5,251, 5,262, 5,197) | 5,620 | 388 | 13.5× | 14.5× |
+| `fox-marth-bf` | 5,107 (5,015, 5,107, 5,062, 5,257, 5,147) | 5,476 | 365 | 14.0× | 15.0× |
+| `fox-marth-fd` | 4,936 (4,936, 4,738, 4,964, 4,732, 5,003) | 5,234 | 389 | 12.7× | 13.5× |
+| `fox-marth-ps` | 4,525 (4,462, 4,522, 4,571, 4,567, 4,525) | 4,800 | 337 | 13.4× | 14.2× |
+| `ganon-captain-fd` | 5,017 (5,111, 4,977, 5,018, 5,017, 4,977) | 5,327 | 391 | 12.8× | 13.6× |
+
+The `dist` runs came first, on the machine as quiet as the release runs (CPU 8% before them). An earlier pass of the release runs was taken while another agent was finishing its work (CPU 20% busy): it was 4,412 to 5,167 frames/s and is left out. Dolphin's figures are within 2% of 2026-10-09's (397 on `fox-fox-fd`).
+
+The Fox ditto has gone from 6,637 frames/s (2026-10-09) through 5,350 (2026-10-24, on an otherwise idle machine, [the snapshots](#snapshots-2026-10-07)) to 5,251. The simulation now does more each tick: the items, the audio's timeline and mix, and more of the HUD's and stages' display, all of which the match runs whether or not it shows them. No profile has been taken since 2026-10-09, so where the time went is unmeasured. The same holds for whether the 20× target is still in reach with profile-guided optimization alone.
 
 This round's speed work (below) is measured provisionally, on a loaded machine, against main built the same way: on the whole match about 4,340 frames per second in release and 4,680 in the `dist` profile (`cargo build --profile dist -p melee-bench`), median of five alternating runs each, against 2,340 for main before it (a28bb77), so about 1.85× and 2.0×. Dolphin's side, the baseline, is below.
 
