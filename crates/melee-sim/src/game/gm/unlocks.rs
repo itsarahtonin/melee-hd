@@ -47,7 +47,7 @@ const SEAK: u8 = 0x13;
 
 /// `gm_80160474`: a character's trophy for clearing a mode (Classic, Adventure, or All-Star).
 #[doc(alias = "gm_80160474")]
-fn mode_trophy(ckind: u8, mode: u8) -> i32 {
+pub(crate) fn mode_trophy(ckind: u8, mode: u8) -> i32 {
     let t = match mode {
         0x15 | GM_CLASSIC => &CLASSIC,
         0x16 | GM_ADVENTURE => &ADVENTURE,

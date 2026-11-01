@@ -82,6 +82,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
         super::gm::approach::PROC => game.approach_proc(gobj),
+        super::gm::endings::game_over::PROC_SCREEN => game.game_over_screen_proc(),
+        super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
+        super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
