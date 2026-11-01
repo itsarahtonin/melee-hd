@@ -86,29 +86,38 @@ impl Running<'_> {
                 }
             }
         } else {
-            super::super::super::code::unported_call(
-                "fn_8025F0E0's CPU level slider (the 1P modes', milestone 6)",
-            );
+            self.charsel_cpu_slider();
         }
         if one {
-            super::super::super::code::unported_call(
-                "fn_8025F0E0's one-door costume (the 1P modes', milestone 6)",
-            );
-        }
-        for i in 0..usize::from(self.game.charsel.doors_used) {
-            let n = self.menu_node(DOORS[i].costume);
-            let held = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
-            let m = crate::hsd::jobj::get_dobj(&self.game.objs.jobjs, n)
-                .and_then(|d| self.game.objs.dobjs[d].mobj);
-            if let Some(m) = m {
-                crate::hsd::mobj::set_alpha(
-                    &mut self.game.objs.mobjs,
-                    m,
-                    if held { 0.5 } else { 1.0 },
-                );
+            // The one door's costume picture, and Training's partner's, dim while its coin
+            // is held.
+            let mut doors = vec![(self.menu_node(0x2D), 0)];
+            if self.css().match_type == TRAINING_MODE {
+                doors.push((self.css_node(self.game.charsel.door_model, 6), 1));
+            }
+            for (n, i) in doors {
+                let held = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
+                self.charsel_set_alpha(n, held);
             }
         }
+        for i in 0..usize::from(self.game.charsel.doors_used) {
+            if one {
+                break;
+            }
+            let n = self.menu_node(DOORS[i].costume);
+            let held = self.game.charsel.tokens[i].expect("a coin").held_by != 0;
+            self.charsel_set_alpha(n, held);
+        }
         self.css_anim_all(j);
+    }
+
+    /// A costume picture's material half see-through while its coin is held, else opaque.
+    fn charsel_set_alpha(&mut self, n: Option<JObjId>, held: bool) {
+        let m = crate::hsd::jobj::get_dobj(&self.game.objs.jobjs, n)
+            .and_then(|d| self.game.objs.dobjs[d].mobj);
+        if let Some(m) = m {
+            crate::hsd::mobj::set_alpha(&mut self.game.objs.mobjs, m, if held { 0.5 } else { 1.0 });
+        }
     }
 
     /// A door's sliders' name and positions as its kind and the handicap rule leave them
@@ -498,9 +507,13 @@ impl Running<'_> {
             jobj::set_flags_all(&mut self.game.objs.jobjs, child, HIDDEN);
         }
         if self.game.charsel.doors_used == 1 {
-            super::super::super::code::unported_call(
-                "fn_80262F44's one-door screen (the 1P modes', milestone 6)",
-            );
+            // Ready once the door has a character and the hand holds no coin; the banner
+            // stays hidden.
+            let held = self.game.charsel.cursors[0].expect("a hand").state == 1;
+            let none = self.game.charsel.doors[0].sel_icon >= NO_ICON;
+            self.game.charsel.ready = u8::from(!(held || none));
+            jobj::set_flags_all(&mut self.game.objs.jobjs, j, HIDDEN);
+            return self.charsel_start_press();
         }
         let n = usize::from(self.game.charsel.doors_used);
         let d = self.game.charsel.doors;
@@ -562,10 +575,16 @@ impl Running<'_> {
 
     /// Start pressed on any connected hand's controller, once the wait is over.
     fn charsel_start_press(&mut self) {
+        let one = self.game.charsel.doors_used == 1;
+        let port0 = usize::from(self.game.charsel.port0 as u8);
         let mut trigger = 0u32;
-        for i in 0..usize::from(self.game.charsel.doors_used) {
-            if self.game.charsel.cursors[i].expect("a hand").state != 3 {
-                trigger |= self.game.pads.copy[i].trigger;
+        if one {
+            trigger = self.game.pads.copy[port0].trigger;
+        } else {
+            for i in 0..usize::from(self.game.charsel.doors_used) {
+                if self.game.charsel.cursors[i].expect("a hand").state != 3 {
+                    trigger |= self.game.pads.copy[i].trigger;
+                }
             }
         }
         if self.game.charsel.start_wait != 0 || trigger & PAD_START == 0 {
@@ -575,6 +594,13 @@ impl Running<'_> {
             let c = &mut self.game.charsel;
             c.pending = 1;
             c.start_wait = 0xFF;
+            if one {
+                let tag = self.css().vs.start.players[port0].nametag;
+                if self.rumble_enabled_for(port0, tag) {
+                    self.rumble_start(port0 as u8, 0, 0xB, 0x1E);
+                }
+                return;
+            }
             for i in 0..usize::from(c.doors_used) {
                 let tag = self.css().vs.start.players[i].nametag;
                 if self.game.charsel.doors[i].p_kind == PKIND_HUMAN
@@ -603,14 +629,18 @@ impl Running<'_> {
         };
         let me = usize::from(me);
         let tag = self.game.charsel.tags[me].expect("a tag");
-        assert!(
-            self.game.charsel.doors_used != 1,
-            "the 1P modes' name tag (milestone 6)"
-        );
         let port = usize::from(tag.port);
         let num_entries = i32::from(tag.next_tag) - if tag.next_tag > NO_TAG { 8 } else { 7 };
-        let list = self.menu_node(TAGS[port].list);
-        let trigger = self.game.pads.copy[port].trigger;
+        // The one-door screen's list, and its port's controller.
+        let (list, trigger) = if self.game.charsel.doors_used == 1 {
+            let port0 = usize::from(self.game.charsel.port0 as u8);
+            (self.menu_node(0x4A), self.game.pads.copy[port0].trigger)
+        } else {
+            (
+                self.menu_node(TAGS[port].list),
+                self.game.pads.copy[port].trigger,
+            )
+        };
         match tag.state {
             1 => {
                 self.charsel_ko_stars(port, 1);
@@ -675,7 +705,8 @@ impl Running<'_> {
     fn charsel_tag_list(&mut self, me: usize, num_entries: i32, trigger: u32) {
         let tag = self.game.charsel.tags[me].expect("a tag");
         let port = usize::from(tag.port);
-        let player = port;
+        let player = self.door_player(tag.port);
+        let one = self.game.charsel.doors_used == 1;
         let vel = reg(tag.scroll_amt);
         if vel != 0.0 {
             let t = self.game.charsel.tags[me].as_mut().expect("a tag");
@@ -710,9 +741,9 @@ impl Running<'_> {
             }
         }
         let tag = self.game.charsel.tags[me].expect("a tag");
-        let up = self.menu_node(TAGS[port].arrow_up);
+        let up = self.menu_node(if one { 0x4C } else { TAGS[port].arrow_up });
         self.set_hidden(up, reg(tag.scroll) == 0.0);
-        let down = self.menu_node(TAGS[port].arrow_down);
+        let down = self.menu_node(if one { 0x4B } else { TAGS[port].arrow_down });
         if tag.next_tag > 7 {
             let bottom = fp::fmuls(fp::fneg(32.0), fp::frsp(f64::from(num_entries)));
             self.set_hidden(down, reg(tag.scroll) == bottom);
@@ -744,7 +775,7 @@ impl Running<'_> {
                     .sis
                     .set_color(self.data, tag.name_list, j + 2, WHITE);
                 for p2 in 0..usize::from(self.game.charsel.doors_used) {
-                    if p2 != port && i32::from(self.css().vs.start.players[p2].nametag) == row {
+                    if p2 != player && i32::from(self.css().vs.start.players[p2].nametag) == row {
                         self.game
                             .sis
                             .set_color(self.data, tag.name_list, j + 2, GRAY);
@@ -762,7 +793,7 @@ impl Running<'_> {
                 .set_position(self.data, tag.name_list, j + 2, 10.0, y);
         }
         if trigger & PAD_A != 0 {
-            let origin = self.menu_node(TAGS[port].list_joint);
+            let origin = self.tag_list_node(port);
             let o = self.css_world(origin);
             let hand_y = self.game.charsel.cursors[port].expect("a hand").y;
             let cursor_row = fp::fmsubs(
@@ -858,8 +889,28 @@ impl Running<'_> {
     pub fn charsel_on_frame(&mut self) {
         let c = &mut self.game.charsel;
         c.frame = c.frame.wrapping_add(1);
-        if c.pending <= 1 {
-            assert!(c.doors_used != 1, "the 1P modes' game cache (milestone 6)");
+        if c.pending <= 1 && c.doors_used == 1 {
+            // The screen's port's character, and Training's partner's (a door whose player
+            // isn't in play leaves its entry as it was).
+            let (port0, port1) = (c.port0 as usize, c.port1 as usize);
+            for (i, port) in [(0, port0), (1, port1)] {
+                let p = &self.css().vs.start.players[port];
+                let (slot, ckind, color) = (p.slot_type, p.ckind, p.color);
+                let in_play = slot == PKIND_HUMAN || slot == PKIND_CPU;
+                if i == 1 && !in_play {
+                    continue;
+                }
+                let up = in_play && self.game.charsel.tokens[i].expect("a coin").held_by != 0;
+                let e = &mut self.dvd_mut().cache.scene.game_cache.entries[i];
+                if in_play && !up {
+                    e.char_id = i32::from(ckind);
+                    e.color = color;
+                } else {
+                    e.char_id = i32::from(CHKIND_NONE);
+                }
+            }
+            self.preload_refresh();
+        } else if c.pending <= 1 {
             let n = if self.css().match_type == VS_CAMERA {
                 3
             } else {
@@ -955,21 +1006,19 @@ impl Running<'_> {
         if pending != 0 {
             return;
         }
-        assert!(
-            self.game.charsel.doors_used != 1,
-            "the 1P modes' banks (milestone 6)"
-        );
-        let n = if self.css().match_type == VS_CAMERA {
-            3
+        let doors: Vec<(usize, usize)> = if self.game.charsel.doors_used == 1 {
+            let c = &self.game.charsel;
+            vec![(0, c.port0 as usize), (1, c.port1 as usize)]
+        } else if self.css().match_type == VS_CAMERA {
+            (0..3).map(|i| (i, i)).collect()
         } else {
-            4
+            (0..4).map(|i| (i, i)).collect()
         };
         let mut mask = 0u64;
-        for i in 0..n {
-            let p = &self.css().vs.start.players[i];
+        for (i, port) in doors {
+            let p = &self.css().vs.start.players[port];
             let (slot, ckind) = (p.slot_type, p.ckind);
-            let up = self.charsel_exit_coin_up(i);
-            if (slot == PKIND_HUMAN || slot == PKIND_CPU) && !up {
+            if (slot == PKIND_HUMAN || slot == PKIND_CPU) && !self.charsel_exit_coin_up(i) {
                 mask |= crate::lb::audio::character_banks(i32::from(ckind));
             }
         }
