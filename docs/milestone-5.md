@@ -11,6 +11,13 @@ The milestone is done when:
 - The player offers the real menus as [the player's front door](#the-player-and-the-menus) decides, and offers only what can't stop.
 - Every function of the milestone's units is ported with a check, replaced (the card stack, most of the SDK the boot reaches) or proven dead, in the port ledger.
 
+## Status (2026-11-01, `main` at `f3338c83`): done
+
+- **Verified:** the full verify (`FULL=1`) of `f3338c83` is clean: 651 whole-replay and session diffs, 371 rollback sync tests (4,124,663 ticks), 399 crate tests, 1,390 leaf checks and 294 frame and audio checks, with CI green on Windows, Linux and macOS.
+- **Tasks:** every task below is done or moved. Task 19's allocation limiter is milestone 6's ([Not in this sequence](#not-in-this-sequence)).
+- **Ledger:** 14,583 of the 19,827 functions ported and checked, 438 replaced and 253 dead ([port ledger](port-ledger.md)). What's left is mostly milestone 6's: the single-player modes, their stages and their bosses.
+- **Open:** a Camera Mode snapshot of a drawn frame isn't proven to fit the card's 256,000-byte room. A snapshot without a renderer always fits (`snap_write::tests::the_headless_snapshot_fits_wherever_the_main_menu_lies`). The busiest drawn frame measured is 83,162 bytes ([saves](saves.md)).
+
 ## Scope
 
 The game's modes (`GameModeKind`, `src/melee/gm/forward.h`) and scenes (`GameSceneKind`, the table in `gmscdata.c`) split between this milestone and the next by what reaches them: a power-on, the main menu and VS mode belong here; what only the single-player modes reach is milestone 6's.
