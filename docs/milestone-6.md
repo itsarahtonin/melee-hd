@@ -231,6 +231,8 @@ The critical paths are 2, 16, 17, then 24, 26 and 27; and 3, 12, then 22. Waves 
 
 ## Design calls
 
+**Decided (Sarah, 2026-11-01, "Accept all eight"):** every recommendation below is taken as written. That includes the Event list's note, "This event isn't in melee-hd yet.", and the trace campaign's first two waves, about 40 GB. Room for wave 3 is still to decide before it starts.
+
 | # | Call | Recommendation | Who |
 | --- | --- | --- | --- |
 | 1 | Which modes the player offers as each lands | Lift each gate as soon as its mode's single-player audit passes, test-enforced as the stages' and the menus' are, rather than all at the end. The expected order is Training, Home-Run Contest, Target Test, Multi-Man Melee, Event Match, then Classic, All-Star and Adventure. | Sarah: it changes what the player offers |
@@ -247,7 +249,7 @@ The critical paths are 2, 16, 17, then 24, 26 and 27; and 3, 12, then 22. Waves 
 
 ## Before the tasks start
 
-- **Sarah's design calls**: 1 to 8 above. Tasks 1 to 11 and 16 to 20 can start before they're answered: none of them offers anything to players, and the oracle routes they use (scripted and debug-level sessions) need no new format.
-- **The trace campaign's first batches** (design call 4): task 1's and wave 1's sessions, about 20 GB.
+- **Sarah's design calls**: 1 to 8 above, all taken on 2026-11-01. Wave 1 (tasks 1, 2, 3 and 16) started the same day from `integrate/m6-batch1`.
+- **The trace campaign's first batches** (design call 4, approved for waves 1 and 2): task 1's and wave 1's sessions, about 20 GB. Room for wave 3 is to be made before it starts.
 - **Sarah's play** (design call 3): a Classic run and an All-Star run, any time before wave 3.
 - **The probe's files** in ssbm-rs's `local/`: `lockstep/m6-probe/` (the Target Test probe's recording, its card as found and the card after) and `traces/m6-probe/` (its trace, 82 MB). Task 1 can keep or replace them.
