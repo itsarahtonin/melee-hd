@@ -31,10 +31,11 @@ pub const GM_TOURNAMENT: u8 = 0x1B;
 /// `lbl_80473AB8`, the bracket's boxes' address (their GObjs' user data).
 pub const BRACKET_ADDR: u32 = 0x8047_3AB8;
 
-/// `GS_TOU_SETUP`, `GS_TOU_BRACKET`, `GS_TOU_ALT`.
-pub const GS_TOU_SETUP: u8 = 0x18;
-pub const GS_TOU_BRACKET: u8 = 0x19;
-pub const GS_TOU_ALT: u8 = 0x1A;
+/// `GS_TOU_SETUP`, `GS_TOU_BRACKET`, `GS_TOU_ALT` (36 to 38 in `GameSceneKind`; 0x18 to 0x1B
+/// are the last four cutscenes').
+pub const GS_TOU_SETUP: u8 = 0x24;
+pub const GS_TOU_BRACKET: u8 = 0x25;
+pub const GS_TOU_ALT: u8 = 0x26;
 
 /// The three scenes' frame functions and entries.
 pub const SETUP_ON_FRAME: CodeRef = CodeRef(0x8019_628C);
