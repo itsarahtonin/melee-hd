@@ -537,7 +537,7 @@ pub fn arena_event(game: &mut Game, arg: i32) -> bool {
 
 /// A brick block's item hit, `grKinokoRoute_802084B4`: its joint hidden, the route's collision
 /// linked again next tick, an effect at the joint, a small quake, a sound and the item gone.
-// Ports grKinokoRoute_802084B4; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_802084B4")]
 pub fn block_hit(r: &mut Running, item: GObjId, _g: GroundId) {
     let joint = match super::super::it::kinds::yaku::vars(r.game, item)
         .anchor
@@ -591,7 +591,7 @@ pub fn water_device(r: &mut Running, fighter: GObjId) {
 }
 
 /// A splash at `pos`, `grKinokoRoute_802086EC`: the stage's effect 0x7530, scaled by `size`.
-// Ports grKinokoRoute_802086EC; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_802086EC")]
 pub fn splash(r: &mut Running, pos: Vec3, size: f32) {
     let Some(g) = super::grlib::generator_at(r.game, r.data, 0x7530, 0x1E, pos) else {
         return;

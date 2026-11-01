@@ -1642,6 +1642,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none on gameplay; the debug menus' language changes.
 - **Source:** `if_2FFC.c` (`un_80300218`), `textlib_1.c` (`un_80303FD4`'s `initEntries`).
 
+### Go to Kinoko's arena brings its opponents in at scale 0
+
+- **Where:** `gm_801674C4` (`gm_1601.c`, the adventure route's arena: the single-player setup `lbl_8046B488` for the opponents who join), then `fn_8016A4C8` (`gm_16A2.c`, each joining opponent's player block, its model scale from `lbl_8046B488.x1C`) and `ftCo_CalcYScaledKnockback` (`ftchangeparam.c`); in melee-hd `crate::game::gm::start_stage_event` (not ported) and `ft::coll::scaled_by_height`.
+- **Defect:** `gm_801674C4` fills the setup's counts, kinds and costumes but not its model scale or its attack and defense ratios (`x1C`, `x14`, `x18`); the single-player modes' own setups write them first (`gm_8016A22C`'s 1.0, `gm_8016A414`), but the debug menu's Otoguro test (its Go to Kinoko: debug VS on stage 59) runs no such setup, so in a session that played no single-player match before they hold the static's zeros.
+- **Effect:** when Fox reaches the route's arena, its first opponent joins with model scale 0, and `Fighter_Create`'s attributes at that scale (`ftCo_800D105C`, `ftCo_800CF6E8`) fail `scale != 0.0F` (`ftchangeparam.c`, line 30): the game halts. Recorded in ssbm-rs as `m6-mk-route/mk-run` (the assertion at field 4634, from `fn_8016A4C8` under `gm_Scene_Vs_OnFrame`). Debug only: on a retail disc the arena is reached only from Adventure, whose setup writes the scale.
+- **melee-hd:** stops before it: `gm_801674C4`'s horde setup isn't ported (milestone 6's task 2 ports the single-player setups); `scaled_by_height` asserts as the original does, so once it is, the session stops where the console halts.
+- **Fix:** set `x1C`, `x14` and `x18` (1.0) in `gm_801674C4`, or in the Otoguro test's setup.
+- **Fix impact:** none on gameplay; the debug test's arena would play.
+- **Source:** `gm_1601.c:3529` (`gm_801674C4`), `gm_16A2.c:641` and `:679` (the writes of `x1C`), `gm_16A2.c:836` (`Player_SetModelScale(spawn_slot, gp->x1C)`); ssbm-rs's log of `mk-run`'s recording ("assertion "scale != 0.0F" failed in ftchangeparam.c on line 30", stack `ftCo_800CF6E8`, `ftCo_800D105C`, `Fighter_Spawn`, `Fighter_Create`, `Player_80031AD0`, `fn_8016A4C8`).
+
 ### The Hanyu character select reads KO counts through a null pointer
 
 - **Where:** `gm_801BED3C` (the Hanyu select's entry, `gmhanyucss.c`), then `mnCharSel_8025D1C4` (a door's KO stars) and the name tags' resets in `mncharsel.c`; `crates/melee-sim/src/game/mn/charsel/mod.rs` (`css_ko_counts`).
