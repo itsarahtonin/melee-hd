@@ -988,13 +988,13 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The cutscene camera's orbit reads unwritten stack slots
 
-- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), `crates/melee-sim/src/game/camera.rs`.
-- **Defect:** it eases only the parts of the orbit its script set and reads the others (pitch, yaw or distance) from stack slots it never wrote. Master Hand's and Crazy Hand's entrances set orbits that way.
-- **Effect:** not recorded.
-- **melee-hd:** stops, until a probe of those slots in play decides the model.
+- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), from `Camera_8002E490` (its frame) and `Camera_8002EF14` (its jump); `crates/melee-sim/src/game/camera.rs` (`script_eye_step`, `orbit_leftover`).
+- **Defect:** it eases only the parts of the orbit its script set (`x35C`'s bits 0x80 distance, 0x40 pitch, 0x20 yaw) and reads the others from its stack words `sp+0x8`, `sp+0x10` and `sp+0xC`, which nothing in it writes. Master Hand's entrance sets orbits that way (a distance and yaw without a pitch, then a yaw alone before a jump); Crazy Hand's does too.
+- **Effect:** the words hold what earlier calls at the same stack depth left in the tick. ssbm-rs's probe of the entrance (`research/m6-master-hand`, `m6-oracle/mh-fd`): on the frame's path the pitch reads a back chain, `804EEA78` (`HSD_JObjReqAnimByFlags`'s) or `804EEA70` (`ftBossLib_GetFighterGObj`'s, once the interest follows Master Hand's waist through `ftMh_MS_343_80151428`), tiny negative denormals as angles; on the jump's path the pitch reads 2 (the collision's register save, `mpColl_80046904`) or `804EE988`, and an unset distance reads `0x43300000` (176.0, `mpColl_8004ACE4`'s integer conversion), so the eye jumps to 176 units away for a frame. The eye's place reaches the fighters' offscreen flags and screen positions and the lights' view vectors.
+- **melee-hd:** modeled for the writers the probe found, by caller and by whether the interest's callback ran (`orbit_leftover`); any other unset part stops by name.
 - **Fix:** keep the parts the script didn't set from the camera's current orbit.
-- **Fix impact:** cutscene camera only; not recorded whether gameplay reads it.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 54); `crates/melee-sim/src/game/camera.rs:2920`.
+- **Fix impact:** the cutscene camera and what reads its place (the offscreen flags); no replay reaches a cutscene camera.
+- **Source:** ssbm-rs's `local/research/m6-master-hand/README.md`; `crates/melee-sim/src/game/camera.rs` (`orbit_leftover`).
 
 ### The background color's alpha is unset
 
@@ -2003,6 +2003,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 
 ## Unsure
 
+- **Master Hand's grab takes its escape time from the hand.** A fighter caught by Master Hand (`ftMh_MS_388_80155A58`) gets its mash timer from `ftCo_800DA824` of the grabber, so it grows with his damage, rank and handicap rather than the victim's, as every other grab's does; it may be intended (the more he's hurt, the longer he holds). melee-hd models it (`mh_capture_enter`). Source: ssbm-rs's `ftMh_MS_388_80155A58` (`ftCommon_InitGrab(ft_1, 0, ftCo_800DA824(ft_2))`); `crates/melee-sim/src/game/ft/masterhand/grab.rs`.
 - **The size classes' old array goes back as a piece.** When the memory pieces' size classes outgrow their array, `GetMemoryEntry` (class.c) copies it into a new `HSD_MemAlloc` block and gives the old one back with `hsdFreeMemPiece`, its size rounded down to 32, not `HSD_Free`: a block of the main heap joins a size class's free list (and the class counts one more allocated, so its books balance), and the heap never gets it back. It may be intended, recycling the array's memory as a piece. melee-hd models it (`Heap::memory_entry`), and the heap's image lays the old array out as it goes (the classes' addresses). Source: the decompilation's `GetMemoryEntry`; `crates/melee-sim/src/hsd/heap.rs` (`memory_entry`).
 - **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).
 - **Popo's hammer holder.** Squall Hammer's hammer joint lean and visibility (`ftPp_SpecialS_8011F720`) runs only with a holder (`specials.x8`) that the entries clear and nothing sets, so it never runs. It may be code HAL left disabled on purpose. Source: `crates/melee-sim/src/game/ft/popo/special_s.rs:149`.

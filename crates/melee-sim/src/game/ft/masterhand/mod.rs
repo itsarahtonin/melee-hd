@@ -362,8 +362,6 @@ pub mod ms {
 pub(crate) mod u {
     /// The nearest opponent when created (`x222C`).
     pub const TARGET: usize = 0x0;
-    pub const X2230: usize = 0x4;
-    pub const X2234: usize = 0x8;
     /// The attack timer's speed (`x2238`) and the frames to the next attack (`x223C`).
     pub const TIMER_SPEED: usize = 0xC;
     pub const TIMER: usize = 0x10;
@@ -399,9 +397,6 @@ pub(crate) mod mv {
     pub const X38: usize = 0x38;
     pub const X3C: usize = 0x3C;
     pub const X40: usize = 0x40;
-    pub const X44: usize = 0x44;
-    pub const X48: usize = 0x48;
-    pub const X4C: usize = 0x4C;
     pub const X50: usize = 0x50;
     pub const X54: usize = 0x54;
     pub const X58: usize = 0x58;
@@ -414,12 +409,6 @@ pub(crate) mod mv {
 /// `ftMasterHand_SpecialAttrs`' offsets (0x17C bytes).
 pub(crate) mod attr {
     pub const SIZE: usize = 0x17C;
-    pub const X0: usize = 0x0;
-    pub const X4: usize = 0x4;
-    pub const X8: usize = 0x8;
-    pub const XC: usize = 0xC;
-    pub const X10: usize = 0x10;
-    pub const X14: usize = 0x14;
     pub const X18: usize = 0x18;
     pub const X1C: usize = 0x1C;
     pub const X20: usize = 0x20;
@@ -479,7 +468,6 @@ pub(crate) mod attr {
     pub const X124: usize = 0x124;
     pub const X12C: usize = 0x12C;
     pub const X134: usize = 0x134;
-    pub const X13C: usize = 0x13C;
     pub const X144: usize = 0x144;
     pub const X148: usize = 0x148;
     pub const X14C: usize = 0x14C;
@@ -487,13 +475,6 @@ pub(crate) mod attr {
     pub const X154: usize = 0x154;
     pub const X158: usize = 0x158;
     pub const X15C: usize = 0x15C;
-    pub const X160: usize = 0x160;
-    pub const X164: usize = 0x164;
-    pub const X168: usize = 0x168;
-    pub const X16C: usize = 0x16C;
-    pub const X170: usize = 0x170;
-    pub const X174: usize = 0x174;
-    pub const X178: usize = 0x178;
     /// The camera's distance in front of a player (`x178`).
     pub const CAMERA_Z: usize = 0x178;
 }

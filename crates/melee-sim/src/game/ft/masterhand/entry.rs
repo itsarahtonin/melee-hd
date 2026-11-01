@@ -139,11 +139,9 @@ impl Running<'_> {
                 camera::script_hold_eye(&mut self.game.camera.cam);
                 set(self, 9);
             }
-            9 => {
-                if wait_done(self) {
-                    camera::set_standard(&mut self.game.camera.cam);
-                    set(self, 10);
-                }
+            9 if wait_done(self) => {
+                camera::set_standard(&mut self.game.camera.cam);
+                set(self, 10);
             }
             _ => {}
         }

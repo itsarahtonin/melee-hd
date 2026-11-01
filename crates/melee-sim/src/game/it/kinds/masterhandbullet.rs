@@ -102,7 +102,10 @@ pub fn start(r: &mut Running, gobj: GObjId, state: i32) {
     ip.xDD4_itemVar.masterhand_bullet().x0.set(life);
     lib2725::uncount_hits(r.game, gobj);
     let facing = item(r.game, gobj).facing_dir;
-    let y = mem(fp::frsp(fp::fmul(1.570_796_326_794_896_6, reg(facing))));
+    let y = mem(fp::frsp(fp::fmul(
+        core::f64::consts::FRAC_PI_2,
+        reg(facing),
+    )));
     let j = jobj_of(r.game, gobj).expect("a bullet without its model");
     let q = Quat {
         x: 0.0,

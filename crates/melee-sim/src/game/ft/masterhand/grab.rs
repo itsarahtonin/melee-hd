@@ -62,6 +62,8 @@ impl Running<'_> {
 
     /// Chasing a point `off` off the nearest opponent at `x28` of the distance a frame (all
     /// of it within `x2C`).
+    // NaN takes the original's branch (`len < x2C` fails).
+    #[allow(clippy::neg_cmp_op_on_partial_ord)]
     pub(crate) fn mh_chase(&mut self, gobj: GObjId, off_x: usize, off_y: usize) {
         let f = self.game.fighter_id(gobj);
         let mut pos = self.boss_nearest_pos(gobj);

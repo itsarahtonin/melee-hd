@@ -6,7 +6,7 @@ use gekko_fp as fp;
 
 use super::super::super::state::Running;
 use super::{addr, attr, ms, mv};
-use crate::fpu::{mem, reg};
+use crate::fpu::reg;
 use crate::hsd::gobj::GObjId;
 
 /// The poke's sound.
@@ -136,27 +136,7 @@ impl Running<'_> {
         if reg(self.game.fighters[f.0].mv_f32(mv::X4)) == 0.0 {
             return;
         }
-        let mut pos = self.boss_nearest_pos(gobj);
-        pos.x = mem(fp::fadds(reg(pos.x), reg(self.mh_da_f32(f, attr::X98))));
-        pos.y = mem(fp::fadds(reg(pos.y), reg(self.mh_da_f32(f, attr::X9C))));
-        pos.z = 0.0;
-        let (near, rate) = (self.mh_da_f32(f, attr::X2C), self.mh_da_f32(f, attr::X28));
-        let fp = &mut self.game.fighters[f.0];
-        let mut vel = pos - fp.cur_pos;
-        let (x, y, z) = (reg(vel.x), reg(vel.y), reg(vel.z));
-        let len = crate::math::sqrt_reg(fp::fadds(
-            fp::fmuls(z, z),
-            fp::fadds(fp::fmuls(x, x), fp::fmuls(y, y)),
-        ));
-        if !(len < reg(near)) {
-            vel.normalize();
-            let speed = fp::fmuls(len, reg(rate));
-            vel.x = mem(fp::fmuls(reg(vel.x), speed));
-            vel.y = mem(fp::fmuls(reg(vel.y), speed));
-            vel.z = mem(fp::fmuls(reg(vel.z), speed));
-        }
-        fp.self_vel.x = vel.x;
-        fp.self_vel.y = vel.y;
+        self.mh_chase(gobj, attr::X98, attr::X9C);
     }
 }
 
