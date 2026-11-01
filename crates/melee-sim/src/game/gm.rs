@@ -7,6 +7,7 @@ pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
 pub mod decisions;
+pub mod endings;
 pub mod erase;
 pub mod howto;
 pub mod input;

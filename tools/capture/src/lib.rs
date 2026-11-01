@@ -11,6 +11,7 @@ pub mod corpus;
 pub mod data;
 pub mod display;
 pub mod effects;
+pub mod endings;
 pub mod heap;
 pub mod hud;
 pub mod import;

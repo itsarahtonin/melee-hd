@@ -468,6 +468,7 @@ pub struct Game {
     pub approach: super::gm::approach::Approach,
     /// The cutscenes' statics and enter data (`melee/vi`).
     pub vi: super::vi::Cutscenes,
+    pub endings: super::gm::endings::Endings,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).

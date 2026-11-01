@@ -38,14 +38,6 @@ impl Comparer<'_> {
             let theirs: [u8; 8] = std::array::from_fn(|k| self.u8(at + k as u32));
             self.check(name, "enter data", d, theirs);
         }
-        let at = sym("gm_8049C178");
-        let theirs = [self.u8(at), self.u8(at + 1)];
-        self.check(
-            "gm_8049C178",
-            "congratulations' character and value",
-            v.gover,
-            theirs,
-        );
         // `vi0102.c`.
         self.compare_data("un_804D6F30", v.v0102.scene, self.u32(sym("un_804D6F30")));
         self.vi_archive("un_804D6F38", v.v0102.archive);
