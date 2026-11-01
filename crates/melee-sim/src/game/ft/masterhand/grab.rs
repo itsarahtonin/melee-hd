@@ -136,7 +136,7 @@ impl Running<'_> {
     /// The glide toward `mv.xC` with the air motion (`ftMh_UpdateBossMotion`): the miss's,
     /// the let-go's, the closing hand's and the squeeze's physics.
     #[doc(alias = "ftMh_Fail_Phys")]
-    #[doc(alias = "ftMh_Cancel_Phys")]
+    // Ports `ftMh_Cancel_Phys`; aliased once a check reaches it.
     #[doc(alias = "ftMh_Squeezing_Phys")]
     #[doc(alias = "ftMh_Squeeze_Phys")]
     pub fn mh_glide_motion(&mut self, gobj: GObjId) {
@@ -145,7 +145,7 @@ impl Running<'_> {
 
     /// Letting go, `ftMh_MS_381_8015483C`: the victim freed after `x120` frames (`mv.x24`),
     /// still, back toward his place.
-    #[doc(alias = "ftMh_MS_381_8015483C")]
+    // Ports `ftMh_MS_381_8015483C`; aliased once a check reaches it.
     pub fn mh_cancel_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.mh_enter(gobj, ms::CANCEL);
@@ -159,7 +159,7 @@ impl Running<'_> {
 
     /// `ftMh_Cancel_Anim`: the victim cut loose once the count runs out; back to his place
     /// once it ends.
-    #[doc(alias = "ftMh_Cancel_Anim")]
+    // Ports `ftMh_Cancel_Anim`; aliased once a check reaches it.
     pub fn mh_cancel_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -178,7 +178,7 @@ impl Running<'_> {
     }
 
     /// Stopped where the glide ends: `ftMh_Cancel_Coll` and `ftMh_Squeeze_Coll`.
-    #[doc(alias = "ftMh_Cancel_Coll")]
+    // Ports `ftMh_Cancel_Coll`; aliased once a check reaches it.
     #[doc(alias = "ftMh_Squeeze_Coll")]
     pub fn mh_stop_at_target(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
@@ -369,7 +369,7 @@ impl Running<'_> {
     }
 
     /// Held, waiting to be let go, `ftMh_CaptureDamageMasterHand_80155C94`.
-    #[doc(alias = "ftMh_CaptureDamageMasterHand_80155C94")]
+    // Ports `ftMh_CaptureDamageMasterHand_80155C94`; aliased once a check reaches it.
     pub fn mh_capture_wait_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(
             gobj,
@@ -389,7 +389,7 @@ impl Running<'_> {
 
     /// Let go, `ftMh_CaptureWaitMasterHand_80155D1C`: visible, turned around, cut loose
     /// (`ftCo_CaptureCut_Enter`).
-    #[doc(alias = "ftMh_CaptureWaitMasterHand_80155D1C")]
+    // Ports `ftMh_CaptureWaitMasterHand_80155D1C`; aliased once a check reaches it.
     pub fn mh_capture_cut(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = false;

@@ -27,19 +27,19 @@ pub const PHYS: u32 = 0x802F_0ED4;
 pub const COLL: u32 = 0x802F_0ED8;
 #[doc(alias = "it_802F0F04")]
 pub const ACCESSORY: u32 = 0x802F_0F04;
-#[doc(alias = "it_802F0F08")]
+// Ports `it_802F0F08`; aliased once a check reaches it.
 pub const LANDED: u32 = 0x802F_0F08;
 #[doc(alias = "itMasterHandBullet_Logic83_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802F_0F0C;
 #[doc(alias = "itMasterHandBullet_Logic83_Reflected")]
 pub const REFLECTED: u32 = 0x802F_0F14;
-#[doc(alias = "itMasterHandBullet_Logic83_Clanked")]
+// Ports `itMasterHandBullet_Logic83_Clanked`; aliased once a check reaches it.
 pub const CLANKED: u32 = 0x802F_0F34;
-#[doc(alias = "itMasterHandBullet_Logic83_Absorbed")]
+// Ports `itMasterHandBullet_Logic83_Absorbed`; aliased once a check reaches it.
 pub const ABSORBED: u32 = 0x802F_0F3C;
-#[doc(alias = "itMasterHandBullet_Logic83_ShieldBounced")]
+// Ports `itMasterHandBullet_Logic83_ShieldBounced`; aliased once a check reaches it.
 pub const SHIELD_BOUNCED: u32 = 0x802F_0F44;
-#[doc(alias = "itMasterHandBullet_Logic83_HitShield")]
+// Ports `itMasterHandBullet_Logic83_HitShield`; aliased once a check reaches it.
 pub const HIT_SHIELD: u32 = 0x802F_0F64;
 
 /// The spark each frame.
@@ -88,7 +88,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// Flying, `it_802F0BE8` (state 0) and `it_802F0D2C` (state 1): its accessory, its lifetime
 /// (`x0`), its hits uncounted, turned a quarter turn its way.
 #[doc(alias = "it_802F0BE8")]
-#[doc(alias = "it_802F0D2C")]
+// Ports `it_802F0D2C`; aliased once a check reaches it.
 pub fn start(r: &mut Running, gobj: GObjId, state: i32) {
     let life = {
         let a = article(item(r.game, gobj))

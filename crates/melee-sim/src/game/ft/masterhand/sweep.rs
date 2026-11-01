@@ -33,7 +33,7 @@ impl Running<'_> {
     }
 
     /// `ftMh_Damage_Phys`: the beaten hand falls away (`x150`, `x158` each frame).
-    #[doc(alias = "ftMh_Damage_Phys")]
+    // Ports `ftMh_Damage_Phys`; aliased once a check reaches it.
     pub fn mh_damage_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (dy, dz) = (self.mh_da_f32(f, attr::X150), self.mh_da_f32(f, attr::X158));

@@ -18,7 +18,7 @@ impl Running<'_> {
     /// Beaten, `ftMh_MS_343_80151484` (`fn_800C8E74`'s for him): still, his lasers ended, the
     /// beams' hums stopped, a held fighter let go, falling (`x14C`, `x154`) for `x15C` frames,
     /// the cries.
-    #[doc(alias = "ftMh_MS_343_80151484")]
+    // Ports `ftMh_MS_343_80151484`; aliased once a check reaches it.
     pub fn mh_beaten(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -67,8 +67,8 @@ impl Running<'_> {
 
     /// Falling beaten, `ftMh_Damage_Anim` and `ftMh_MS_345_Anim`: a cheer on the script's
     /// flag, the second fall once the first ends, knocked out once the frames run out.
-    #[doc(alias = "ftMh_Damage_Anim")]
-    #[doc(alias = "ftMh_MS_345_Anim")]
+    // Ports `ftMh_Damage_Anim`; aliased once a check reaches it.
+    // Ports `ftMh_MS_345_Anim`; aliased once a check reaches it.
     pub fn mh_damage_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
