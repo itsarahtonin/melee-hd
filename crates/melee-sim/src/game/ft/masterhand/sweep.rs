@@ -26,6 +26,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_MS_354_80152370")]
     #[doc(alias = "ftMh_MS_355_8015247C")]
     #[doc(alias = "ftMh_MS_366_80153820")]
+    #[doc(alias = "ftMh_MS_365_80153730")]
     pub fn mh_enter(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);

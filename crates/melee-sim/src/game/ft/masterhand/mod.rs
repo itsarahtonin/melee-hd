@@ -15,6 +15,7 @@ pub mod airplane;
 pub mod common;
 pub mod crush;
 pub mod entry;
+pub mod finger;
 pub mod grab;
 pub mod init;
 pub mod sweep;
@@ -526,6 +527,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || crush::run(g, gobj, addr)
         || airplane::run(g, gobj, addr)
         || grab::run(g, gobj, addr)
+        || finger::run(g, gobj, addr)
 }
 
 /// Runs one of his functions that takes his GObj and a callback (`ftMh_MS_371_801541C8`),
