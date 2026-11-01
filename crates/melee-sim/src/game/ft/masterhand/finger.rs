@@ -128,10 +128,14 @@ impl Running<'_> {
     pub fn mh_gun_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.mh_enter(gobj, ms::FINGER_GUN1);
-        let (hi, lo) = (self.mh_da_i32(f, attr::XE8), self.mh_da_i32(f, attr::XE4));
-        let r = self.game.objs.rng.below(hi.wrapping_sub(lo));
+        let (hi, lo) = (self.mh_da_f32(f, attr::XE8), self.mh_da_f32(f, attr::XE4));
+        let r = self
+            .game
+            .objs
+            .rng
+            .below(fp::fctiwz(fp::fsubs(reg(hi), reg(lo))));
         let fp = &mut self.game.fighters[f.0];
-        fp.set_mv_f32(mv::X50, fp::frsp(f64::from(lo.wrapping_add(r))));
+        fp.set_mv_f32(mv::X50, fp::fadds(reg(lo), fp::frsp(f64::from(r))));
         fp.cmd_vars[0] = 0;
         fp.cmd_vars[1] = 0;
         fp.cmd_vars[2] = 0;
