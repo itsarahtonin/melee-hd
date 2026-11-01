@@ -98,6 +98,9 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
                         .into();
                 }
+                if name.starts_with("mk-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
+                }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
                         .into();
@@ -722,6 +725,32 @@ pub const DEBUG_VS_DISPLAYS: Game = Game {
     name: "debug-vs-displays",
     players: "Fox vs Ness vs a computer's Link, the debug VS match's fighter displays (session debug-sessions/vs-displays)",
     replay: Replay::Session("debug-vs-displays"),
+};
+
+/// Mushroom Kingdom's adventure route (`m6-mk-route/mk-enemies`, debug VS at debug level 3,
+/// Fox alone): the debug item menu's Koopas, Paratroopa and shells at the route's start.
+pub const MK_ENEMIES: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-enemies",
+    players: "Fox alone, the debug item menu's Koopas and shells (session m6-mk-route/mk-enemies)",
+    replay: Replay::Session("mk-enemies"),
+};
+
+/// The route walked (`m6-mk-route/mk-route`): brick blocks broken, a Paratroopa knocked out of
+/// its Koopa.
+pub const MK_ROUTE: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-route",
+    players: "Fox alone along the route (session m6-mk-route/mk-route)",
+    replay: Replay::Session("mk-route"),
+};
+
+/// A fall into the route's water (`m6-mk-route/mk-fall2`): the splash.
+pub const MK_FALL: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-fall2",
+    players: "Fox alone, into a pit's water (session m6-mk-route/mk-fall2)",
+    replay: Replay::Session("mk-fall2"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
