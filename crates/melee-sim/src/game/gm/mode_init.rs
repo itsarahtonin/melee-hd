@@ -11,6 +11,8 @@ use super::vs_mode::{player_defaults, start_defaults};
 pub struct ModeStatics {
     /// `gm_80473814.saved_players`: the training mode's players.
     pub training_players: [PlayerInitData; 4],
+    /// `gm_80473814.stage_id`: the training mode's stage.
+    pub training_stage: i16,
     /// `gmHomeRun_VsModeData`.
     pub homerun: VsModeData,
 }
@@ -19,6 +21,7 @@ impl Default for ModeStatics {
     fn default() -> Self {
         ModeStatics {
             training_players: core::array::from_fn(|_| PlayerInitData::default()),
+            training_stage: 0,
             homerun: VsModeData::default(),
         }
     }

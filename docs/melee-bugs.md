@@ -990,8 +990,8 @@ When porting shows that the original game does something wrong, keep the behavio
 
 - **Where:** `Camera_GetBackgroundColor`, `crates/melee-sim/src/game/camera.rs` (`background_color`).
 - **Defect:** it returns red, green and blue and leaves alpha unset.
-- **Effect:** none observable in the checks (only red, green and blue are compared).
-- **melee-hd:** returns the three channels.
+- **Effect:** the Star Fox cutscene keeps the whole color as its erase color (`erase_colors_vi0601`), alpha included: a stack byte, 48 in `m6-oracle/cutscene`. It never reaches the screen: the erase (`HSD_EraseRect`, color and depth on, alpha update off, a logic-op copy) writes no alpha.
+- **melee-hd:** returns the three channels; the cutscene's alpha is 0, and the comparer leaves it out with that proof ([engine notes](engine.md#uninitialized-values)).
 - **Fix:** set the alpha.
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/camera.rs:1453`; `tools/leaf-check/tests/camera.rs:1322`.
@@ -1527,6 +1527,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** the records' values past the largest word.
 - **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
 
+### The select's 1P totals wrap where the code means to hold them
+
+- **Where:** `gm_80162C48`, `gm_80162E44` and `gm_80163040` (Classic's, Adventure's and All-Star's high scores summed over the 25 characters), `gm_801631F0` (the Home-Run Contest's distances), `gm_801634D4` (Target Test's times), which the one-door select shows (`mnCharSel_8025C020`); `crates/melee-sim/src/game/gm/one_player.rs` (`high_score_1p_total`, `homerun_record_total`, `target_time_total`).
+- **Defect:** each running sum is tested against `0xFFFFFFFF` (`(u32) (sum + score) > -1U`) to hold it there; an unsigned word is never over the largest one, so the sums wrap, and the scores' total is then printed as a signed `int` (`"%09d"`), negative past 2^31. Target Test's adds its times with no test at all.
+- **Effect:** none in play: 25 high scores can't reach two billion. Only an edited save shows a wrapped or negative total.
+- **melee-hd:** modeled: the sums wrap and the scores' total prints as signed.
+- **Fix:** add in 64 bits and hold the total at the largest value.
+- **Fix impact:** the select's totals for edited saves.
+- **Source:** `gm_1601.c`'s `gm_80162C48`, `gm_80162E44`, `gm_80163040`, `gm_801631F0`, `gm_801634D4`.
+
 ### The challenger approach's screen counts its ticks in 16 bits
 
 - **Where:** `gm_Scene_Approach_OnFrame` (`gmapproach.c`), `crates/melee-sim/src/game/gm/approach.rs` (`approach_on_frame`).
@@ -1905,6 +1915,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position. The lights the game sets up have one: every infinite, point and spot light descriptor in every archive on the disc has a position WObj (509, 328 and 20 of them); of the executable's own descriptors that milestone 5's scenes load, the debug menu's infinite light (`if_2FF2.c`'s `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes it over before any setup; Adventure's static point lights (`grPushOn_803E7B74`, `grPushOn_803E7B90`, `grshrineroute.c`'s two) get one from `HSD_LObjSetPosition` right after loading; and no code takes a light's position WObj away. melee-render puts such a light at the origin rather than at what melee-sim left: neither is the stack's word, and nothing reaches it | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown); `hsd::lobj`'s tests `lights_on_the_disc` and `executable_lights` (the proof, against the disc); [the player](player.md), **Spot lights** |
 | A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
+| A cutscene motion file another motion names | `ftMr_Init_GetMotionFileString`, `ftLg_Init_GetMotionFileString`, `ftKb_Init_GetMotionFileString`, `ftGk_Init_GetMotionFileString`, `game/ft/demo.rs` (`motion_symbol`) | Their switches set the table's index only for their cutscenes' motions (9 and 10, 11 and 14, 15), and index the table with the unset register otherwise; `ftDemo_SetArchiveData` asks only for those (`Player_80036E20`'s 4 to 8) | `crates/melee-sim/src/game/ft/demo.rs` (`motion_symbol` panics) |
+| A demo pose a kind's callback doesn't know | `ftMr_Init_UnkDemoCallbacks0`, `ftLg_Init_UnkDemoCallbacks0`, `ftKb_Init_UnkDemoCallbacks0`, `ftGk_Init_UnkDemoCallbacks0`, `game/ft/demo.rs` (`cutscene_anims`) | Each sets the demo animations' range only for its cutscene poses, and `ftDemo_CreateFighter` reads the range from its unset stack slots otherwise; the cutscenes make each kind only in its poses | `crates/melee-sim/src/game/ft/demo.rs` (`cutscene_anims` panics) |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
 | The rumble screen's name rows on an empty slot | `mnVibration_CreateNameRow`, `game/mn/vibration.rs` | A row's slot is the scroll plus the row, not the row's name: with a gap among the save's names, `GetNameText` hands `HSD_SisLib_803A6B98` a null format. The game keeps names packed (`DeleteName` moves them up), so only an edited save could leave a gap | `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_name_row`) |

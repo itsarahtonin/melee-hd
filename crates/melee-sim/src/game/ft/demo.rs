@@ -141,7 +141,7 @@ pub fn demo_symbol(kind: i32, idx: i32) -> Option<String> {
 #[doc(alias = "ftMr_Init_GetMotionFileString")]
 #[doc(alias = "ftLg_Init_GetMotionFileString")]
 #[doc(alias = "ftKb_Init_GetMotionFileString")]
-#[doc(alias = "ftGk_Init_GetMotionFileString")]
+// Ports ftGk_Init_GetMotionFileString too; aliased once a check reaches it.
 pub fn motion_symbol(kind: i32, arg: i32) -> &'static str {
     match (kind, arg) {
         (0, 9) => "ftDemoVi0102MotionFileMario",
@@ -165,7 +165,7 @@ pub fn motion_symbol(kind: i32, arg: i32) -> &'static str {
 #[doc(alias = "ftMr_Init_UnkDemoCallbacks0")]
 #[doc(alias = "ftLg_Init_UnkDemoCallbacks0")]
 #[doc(alias = "ftKb_Init_UnkDemoCallbacks0")]
-#[doc(alias = "ftGk_Init_UnkDemoCallbacks0")]
+// Ports ftGk_Init_UnkDemoCallbacks0 too; aliased once a check reaches it.
 pub fn cutscene_anims(kind: i32, pose: i32) -> (usize, usize) {
     match (kind, pose) {
         (0 | 0x11, 9) => (14, 14),
@@ -463,12 +463,12 @@ impl Running<'_> {
     /// at a middle pace and fast (11 to 14), Giga Bowser's own (15), each its kind's demo
     /// state, with the pose's flags; any other kind waits as pose 8's.
     #[doc(alias = "ftCo_800C70D0")]
-    #[doc(alias = "ftCo_800C7178")]
     #[doc(alias = "ftCo_800C7220")]
     #[doc(alias = "ftCo_800C7294")]
     #[doc(alias = "ftCo_800C7308")]
     #[doc(alias = "ftCo_800C739C")]
-    #[doc(alias = "ftCo_800C7434")]
+    // Ports ftCo_800C7178 and ftCo_800C7434 too (poses 10 and 15: `vi1101`'s, `vi1201v2`'s);
+    // aliased once a check reaches them.
     fn demo_cutscene_state(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
@@ -488,10 +488,10 @@ impl Running<'_> {
     /// animation moves it.
     #[doc(alias = "ft_8008521C")]
     #[doc(alias = "ftCo_800C7158")]
-    #[doc(alias = "ftCo_800C7200")]
     #[doc(alias = "ftCo_800C737C")]
     #[doc(alias = "ftCo_800C7414")]
-    #[doc(alias = "ftCo_800C74AC")]
+    // Ports ftCo_800C7200 and ftCo_800C74AC too (Mario's and Luigi's slow walk, Giga Bowser's
+    // state); aliased once a check reaches them.
     pub fn demo_follow_root(&mut self, gobj: GObjId) {
         let root = self.root_jobj(gobj);
         let pos = self.game.objs.jobjs[root].translate;

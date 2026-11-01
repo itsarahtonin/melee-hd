@@ -256,6 +256,7 @@ impl<'a> Comparer<'a> {
         }
         self.charsel_statics();
         self.stagesel_statics();
+        self.one_player();
         // The Hanyu selects' own data (`gm_8049BEE8`, `gm_8049C030`), the debug mode's.
         let d = &game.debug_mode;
         let (hc, hs) = (0x8049_BEE8, 0x8049_C030);
@@ -318,7 +319,15 @@ impl<'a> Comparer<'a> {
         let c = &self.game.charsel;
         let css = self.u32(sym("mnCharSel_804D6CB0"));
         if c.entered {
-            self.check("mnCharSel_804D6CB0", "the CSSData", CSS_DATA, css);
+            // A single-player mode's own select data (`melee_sim::game::gm::one_player`).
+            let ours = match c.entered_mode {
+                0x03..=0x05 => 0x8047_0708,
+                0x0F => 0x8049_0960,
+                0x1C => 0x8048_E230,
+                melee_sim::game::gm::GM_HANYU_CSS => 0x8049_BEE8,
+                _ => CSS_DATA,
+            };
+            self.check("mnCharSel_804D6CB0", "the CSSData", ours, css);
         }
         let theirs = self.u32(sym("css_data_table"));
         self.compare_data("css_data_table", c.table, theirs);

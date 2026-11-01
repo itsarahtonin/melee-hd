@@ -286,10 +286,11 @@ impl Running<'_> {
         g.objs.fogs[f].color
     }
 
-    /// Whether Adventure's player last lost on Corneria (`gm_8017E7E0`: Adventure's data's
-    /// `x7C` is 0x14), which picks the Star Fox cutscene's talks.
+    /// Whether Adventure's run stands at its 0x14th stage (`gm_8017E7E0`: Adventure's data's
+    /// `x7C`), which picks the Star Fox cutscene's later talks.
+    #[doc(alias = "gm_8017E7E0")]
     pub(crate) fn adventure_starfox_lost(&self) -> bool {
-        panic!("gm_8017E7E0: Adventure's data (lbl_80472C30) waits for task 2's AdventureData")
+        self.game.one_player.adventure.x7c == 0x14
     }
 
     /// The current and last frames of a camera's eye's animation.
@@ -383,15 +384,21 @@ impl Running<'_> {
         }
     }
 
-    /// Adventure's player's slot (`gm_8017E430`), whose Start skips a cutscene. Adventure's
-    /// data (`lbl_80472C30`) isn't in melee-sim yet.
+    /// Adventure's player's slot (`gm_8017E430`), whose Start skips a cutscene.
+    #[doc(alias = "gm_8017E430")]
     fn adventure_slot(&self) -> u8 {
-        panic!("gm_8017E430: Adventure's data (lbl_80472C30) waits for task 2's AdventureData")
+        self.game.one_player.adventure.base.player.slot
     }
 
     /// Adventure's player's port when its rumble is on, else 4 (`gm_8017E440`).
+    #[doc(alias = "gm_8017E440")]
     fn adventure_rumble_port(&mut self) -> u8 {
-        panic!("gm_8017E440: Adventure's data (lbl_80472C30) waits for task 2's AdventureData")
+        let p = self.game.one_player.adventure.base.player;
+        if self.rumble_enabled_for(usize::from(p.slot), p.nametag) {
+            p.slot
+        } else {
+            4
+        }
     }
 
     /// A camera's passes as the cutscenes draw them, `vi_8031CA04`: the game camera's layers
@@ -428,6 +435,11 @@ impl Running<'_> {
     /// Start on Adventure's player's port ends the cutscene, `vi_8031CAAC`: the music and
     /// sounds stopped, the rumble too.
     #[doc(alias = "vi_8031CAAC")]
+    #[doc(alias = "vi0102_Scene_OnFrame")]
+    #[doc(alias = "vi0402_Scene_OnFrame")]
+    #[doc(alias = "vi0501_Scene_OnFrame")]
+    #[doc(alias = "vi0502_Scene_OnFrame")]
+    #[doc(alias = "vi0601_Scene_OnFrame")]
     fn vi_skip(&mut self) {
         let slot = self.adventure_slot();
         let input = self.game.buttons_triggered(slot);
@@ -471,7 +483,7 @@ impl Running<'_> {
     }
 
     /// The debug cutscene mode's last state's exit, `onExitRegendCongrats`: the title next.
-    #[doc(alias = "onExitRegendCongrats")]
+    // Ports onExitRegendCongrats; aliased once a check reaches it (congratulations, task 5).
     pub fn debug_cutscene_exit(&mut self) {
         self.set_pending_game_mode(super::gm::machine::GM_TITLE);
         self.set_new_game_mode_pending();

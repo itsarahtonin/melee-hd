@@ -57,7 +57,7 @@ pub struct Vi0801 {
 impl Running<'_> {
     /// The camera's render callback, `vi0801_8031ED70`: as Star Fox's
     /// ([`Running::vi0601_camera_render`]) with the fog's color.
-    #[doc(alias = "vi0801_8031ED70")]
+    // Ports vi0801_8031ED70; aliased once a check reaches it (the stage stops the scene first).
     pub fn vi0801_camera_render(&mut self, gobj: GObjId) {
         let erase = self.game.vi.v0801.erase;
         self.vi_run_camera_layers(gobj, erase);
@@ -65,8 +65,8 @@ impl Running<'_> {
 
     /// The scene's models and sound banks, `vi0801_8031EE84`: each model's joints the cars
     /// follow kept (`lb_80011E24`).
-    #[doc(alias = "vi0801_8031EE84")]
-    #[doc(alias = "vi0801_8031EE60")]
+    // Ports vi0801_8031EE84; aliased once a check reaches it (the stage stops the scene first).
+    // Ports vi0801_8031EE60; aliased once a check reaches it (the stage stops the scene first).
     fn vi0801_models(&mut self, scene: DataRef) {
         self.vi_models(scene, 0xB, JOBJ_PROC, |r, i, j| {
             for (k, &(model, index)) in CAR_JOINTS.iter().enumerate() {
@@ -86,7 +86,7 @@ impl Running<'_> {
 
     /// The camera's process, `vi0801_8031EFE4`: its animation; rumbles at frames 75, 160
     /// and 120, and at its last frame the scene's end.
-    #[doc(alias = "vi0801_8031EFE4")]
+    // Ports vi0801_8031EFE4; aliased once a check reaches it (the stage stops the scene first).
     pub fn vi0801_camera_proc(&mut self, gobj: GObjId) {
         let c = self.vi_cobj(gobj);
         crate::hsd::cobj::anim(&mut self.game.objs, self.data, Some(c));
@@ -107,7 +107,7 @@ impl Running<'_> {
     /// song (0x5B) with the audio paused, `Vi0801.dat`, the camera, the models, the F-Zero
     /// race's stage, the fog and the lights, the cars on the models' joints, the players
     /// reset.
-    #[doc(alias = "vi0801_Scene_OnEnter")]
+    // Ports vi0801_Scene_OnEnter; aliased once a check reaches it (the stage stops the scene first).
     pub fn vi0801_on_enter(&mut self) {
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);

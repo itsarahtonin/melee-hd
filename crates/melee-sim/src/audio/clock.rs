@@ -581,6 +581,9 @@ pub enum Wait {
     /// The preload cache let go of this heap's unwanted entries already set up
     /// (`lbDvd_80017700`'s spin on `lbDvd_80017644`).
     StaleReleased(i32),
+    /// The files these preload classes asked for are no longer coming (`lbDvd_80018C2C`'s
+    /// spin on `lbDvd_80018A2C`).
+    ClassLoaded(u8),
     /// The movie player has no read in flight (`lbMthp_8001F800`'s spin on `fn_8001F294`).
     MovieIdle,
     /// No sound group's move in ARAM pending (`HSD_SynthSFXBankDeflagSync`'s spin).
