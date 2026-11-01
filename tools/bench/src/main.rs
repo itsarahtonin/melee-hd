@@ -219,6 +219,17 @@ fn set_names() -> String {
 
 fn main() -> std::process::ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
+    // The simulation recurses as the original does (joint trees), and the commands keep the game's
+    // state on the stack: a deep stack, as the oracle's.
+    std::thread::Builder::new()
+        .stack_size(512 << 20)
+        .spawn(move || run(args))
+        .unwrap()
+        .join()
+        .unwrap()
+}
+
+fn run(args: Vec<String>) -> std::process::ExitCode {
     match args.first().map(String::as_str) {
         Some("oracle-sets") if args.len() >= 2 => return oracle_sets(&args[1], &args[2..]),
         Some("snapshot") => snapshot(&args[1..]),
