@@ -1270,6 +1270,27 @@ pub fn take_stomper(game: &mut Game, gobj: GObjId) -> Option<GObjId> {
     owner
 }
 
+/// Sets hurtbox `index`'s capsule (its offsets and scale), for a kind with hurtbox bones,
+/// `it_80271534`.
+#[doc(alias = "it_80271534")]
+pub fn set_hurt_capsule(
+    game: &mut Game,
+    data: &Archives,
+    gobj: GObjId,
+    index: usize,
+    a: Vec3,
+    b: Vec3,
+    scale: f32,
+) {
+    let ip = item_mut(game, gobj);
+    if article(ip).hurtbones(data).is_some() {
+        let h = &mut ip.xACC_itemHurtbox[index];
+        h.a_offset = a;
+        h.b_offset = b;
+        h.scale = scale;
+    }
+}
+
 /// Hurtbox `index`'s capsule (its offsets and scale), or a point at the origin for a kind
 /// without hurtbox bones, `it_80271590`.
 #[doc(alias = "it_80271590")]
