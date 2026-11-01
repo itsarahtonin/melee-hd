@@ -79,6 +79,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-select/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("special-") {
                     return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
                 }
@@ -859,6 +862,48 @@ pub const SELECT_RANDOM: Game = Game {
     name: "select-random",
     players: "the character and stage selects (session select-sessions/random)",
     replay: Replay::Session("select-random"),
+};
+
+/// Classic's one-door select (`m6-select/classic`): the records of the character picked
+/// (1200) and the CPU level's names scrolling (1470).
+pub const M6_CLASSIC: Game = Game {
+    stage: "Main menu",
+    name: "m6-classic",
+    players: "Classic's select (session m6-select/classic)",
+    replay: Replay::Session("m6-classic"),
+};
+
+/// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
+pub const M6_TARGET: Game = Game {
+    stage: "Main menu",
+    name: "m6-target",
+    players: "Target Test's select (session m6-select/target)",
+    replay: Replay::Session("m6-target"),
+};
+
+/// Training's select (`m6-select/training`): the CPU's door.
+pub const M6_TRAINING: Game = Game {
+    stage: "Main menu",
+    name: "m6-training",
+    players: "Training's select (session m6-select/training)",
+    replay: Replay::Session("m6-training"),
+};
+
+/// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.
+pub const M6_HOMERUN: Game = Game {
+    stage: "Main menu",
+    name: "m6-homerun",
+    players: "the Home-Run Contest's select (session m6-select/homerun)",
+    replay: Replay::Session("m6-homerun"),
+};
+
+/// Classic's select on a card every character has cleared everything on
+/// (`m6-select/tour-cleared`): the clear marks.
+pub const M6_TOUR_CLEARED: Game = Game {
+    stage: "Main menu",
+    name: "m6-tour-cleared",
+    players: "Classic's select with every 1P mode cleared (session m6-select/tour-cleared)",
+    replay: Replay::Session("m6-tour-cleared"),
 };
 
 /// Three computer players' levels set on their sliders (`select-sessions/cpus`).
