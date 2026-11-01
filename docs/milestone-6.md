@@ -1,0 +1,253 @@
+# Milestone 6: the single-player modes
+
+A survey of what milestone 6 needs and a plan for splitting it into small agent tasks, each checkable on its own. Surveyed on 2026-11-01 from `main` at `8a260a5c`, the day milestone 5's full verify came back clean; the counts are that day's.
+
+The milestone is done when:
+
+- Every entry of the main menu leads where a console's does: Classic, Adventure and All-Star with their intros, matches, bonus rounds, cutscenes, game overs, trophy fall, ending movies, staff roll and congratulations; Event Match's 51 events; Target Test, Home-Run Contest and the six Multi-Man modes; Training.
+- Every session the oracle has ([What the oracle can use](#what-the-oracle-can-use)) compares clean tick by tick from power-on with ssbm-rs's trace of the same session, no stale read, `--heap` included, the single-player modes' sessions among them.
+- The debug mode's milestone 6 states (the intro, the All-Star intro, coming soon, game over, the staff roll), the debug cutscene mode (0x19) and the develop level's allocation limiter (`fn_UpdateObjAllocLimiter`) are ported behind the developer setting.
+- The player lifts each of the main menu's gates once nothing its entry reaches can stop, held to the ledger by a test, and offers every mode by the milestone's end.
+- Every function of the milestone's units is ported with a check, replaced or proven dead, in the port ledger.
+
+## Status (2026-11-01, `main` at `8a260a5c`): planned
+
+Nothing started. The design calls below wait for Sarah.
+
+## Scope
+
+The modes and scenes milestone 5 left to this milestone ([milestone 5](milestone-5.md#scope)):
+
+| Modes (hex) | Scenes | Content |
+| --- | --- | --- |
+| Classic (3), Adventure (4), All-Star (5), their game overs (15 to 17), Target Test (F), Training (1C), Home-Run Contest (20), the six Multi-Man modes (21 to 26), Event (2B) | training, the three 1P intros (`gm_1832` Classic's, `gm_1879` Adventure's, `gm_186E` All-Star's), the trophy fall (`gmregtyfall`) and congratulations (`gm_1A9B`), the twelve cutscenes (`vi*`), the ending movies (`MvEnd*.mth`, `gmmovieend.c`), game over and coming soon (`gm_19EF`), the staff roll (`gmstaffroll`) | the single-player stages, Master Hand, Crazy Hand, Giga Bowser, the Wire Frames, Sandbag, the adventure enemies and items, Ditto, the single-player computer kinds (allies, hordes, event behaviors), the 1P bonuses and records |
+| Debug only, behind the developer setting: the debug mode's states for the above (6), the debug cutscene (19) | the debug menu's entries into the intros, game over, coming soon, staff roll and cutscenes | the develop level's allocation limiter (Sarah, 2026-10-30) |
+
+Already decided: the player boots straight into Melee from power-on with a settings-only front end (Sarah, 2026-10-28), and the main menu's single-player entries stay gated until this milestone ports them. Milestone 7 is the player's polish.
+
+Where the code lives, since the decomp's unit names don't say: `gmmultiman.c` holds Target Test's mode as well as the six Multi-Man modes; `gm_180A` is Home-Run's (its match start and records), `gm_181A` Multi-Man's, `gm_1884` Training's, `gm_17E4` Adventure's states and tables, `gm_17EB` All-Star's, `gm_17C0` the 1P matches' stage setups (the bosses' and the bonus rounds'), `gm_17DB` the 1P trophies, `gm_16A2`'s `lbl_8046B488` the single-player matches' setup (Event Match, Multi-Man, Classic's and Adventure's teams and hordes), `gmregclear` and `gmregcommon` the 1P matches' clear screens, `gmregenddisp` and `gm_1A7A` the ending's displays.
+
+## Inherited from milestone 5
+
+- **The allocation limiter** (task 19's last piece, moved here by Sarah on 2026-10-30): `fn_UpdateObjAllocLimiter` at `DbLevel` 4 needs number limits on the effect, particle and app-SRT pools, which melee-hd doesn't model yet; its buttons at level 4 stop the port until then.
+- **The debug mode's milestone 6 states** (`onEnterIntroEasy`, `onEnterIntroAllstar`, `onEnterGameOver`, `un_80301BA8`, `un_80301C64`) and **the debug cutscene** (`onEnterCutsceneLuigi`, `onExitRegendCongrats`, `vi0401_8031D020`, `un_8031D9E4` to `un_803204B0`), 18 functions in `ledger/deferred.txt`.
+- **The 1P unlocks and challengers** (task 17's left): characters by a 1P mode's clear (`fn_80173098` through `gm_80173224`), by events (`gm_801732D8`) and by Multi-Man Melee (`gm_801733D8`, `gm_80173460`); stages by every event, Multi-Man, 15-Minute Melee, Home-Run, a 1P game (Flat Zone), All-Star (Battlefield) and Birdo's trophy; the challenger approach and its match from the single-player modes, and the challenger mode's own match exit (`onExitVs@801BFBA8`, ported unaliased); `gm_1736.c`'s 1P trophy checks.
+- **The trophy display's 1P lookups** (task 15's left: `tyDisplay_8031C2EC` to `tyDisplay_8031C8B8`, `Toy_803049F4`, `Toy_80304A58`).
+- **Dr. Mario's pill pickup** (`itDrMarioPill_PickedUp`, state 6), ported but reached only by the sleeping demo pose (`ftCo_800BF108`, `ftDemo_CreateFighter`'s pose 6) on the single-player screens, and the blaster's demo states 9 and 10.
+- **The modes' songs** (task 14's left: `lbAudioAx_8002438C`, `80028B6C`, `80028B90`).
+- **The stage's scale writer** (`Ground_801C0498`, read by Adventure's intro `gm_1879` and Big Blue): the one file writer the heap image's fourth round couldn't check, since no player reaches it before the 1P modes ([the engine notes](engine.md#uninitialized-values)).
+- **Spot lights.** The disc's 20 spot lights are all in the single-player game over's, trophy fall's and stand's files and two Adventure stages' fighter lights ([the player](player.md), "Spot lights"); melee-render's spot path is held to melee-sim's by a unit test until this milestone's frames check it.
+- **The cutscene camera's orbit** (`Camera_8002E234`) reads stack slots it never wrote when a script sets only part of an orbit; Master Hand's and Crazy Hand's entrances do. The port panics there until a probe of those slots decides the model ([Melee's bugs](melee-bugs.md#the-cutscene-cameras-orbit-reads-unwritten-stack-slots)).
+- **The menus audit's single-player stops**: 26 entries of `game::menus_audit::STOPS` (the Event and Multi-Man lists, the one-door character select's screen, costume and CPU level slider, the Stadium options model, Training's door, the 1P stock and Multi-Man counter in `ifstock`, the modes' and scenes' dispatch, the VS scene's enter data and a match's exit data in another mode, `gm_801720B4`, `gm_80172140`, `fn_80169444`, `fn_8016C46C`'s 1P results, `fn_8017F294`, `fn_80171A88`, `gm_8016AC44` and `fn_802FAC34` with a challenger's record, `gm_80167320` for a leaving slot, the 1P match setup) and the 703 `gated` lines of `ledger/menus.txt`.
+
+## What the oracle can use
+
+A session is still the oracle: every controller read from power-on, the card it started with and the console's setup ([the oracle](oracle.md#sessions)). Nothing in the format is mode-specific, so the single-player modes need no new harness, only sessions that reach them.
+
+### What ssbm-rs's runner does in the single-player modes
+
+- **`--record` and `--inputs` work through them.** They record and play back `PADRead`s, whatever the mode. Two of the thirteen recordings (both of 2026-10-06) already reach single-player modes and are traced: `2026-10-06_12-04-48` plays Adventure whole (`MODES=1` logs modes 0x04, 0x16 and 0x14: the intro, the matches, the cutscenes, the trophy fall, the staff roll, the ending movie, congratulations and a challenger; 55,022 ticks, 2.3 GB) and `2026-10-06_16-58-24` plays eleven events (mode 0x2B eleven times, two challengers; 35,868 ticks, 1.7 GB). melee-hd compares them clean through the main menu to their first unported mode today.
+- **`MODES=1` traces them.** A probe on 2026-11-01 (`$SSBM_RS_LOCAL/lockstep/m6-probe/target.inputs`, a copy of `2026-10-06_17-44-10`'s card, at a drive's pace with sound, `MONKEY_HOLD` scripted: Start, Start, A into 1P, down twice to Stadium, A, A on Target Test, the hand moved, A, Start) recorded 2,384 reads in 26 seconds and traced them in 17 (`$SSBM_RS_LOCAL/traces/m6-probe/target.trc`, 82 MB for 2,106 ticks, about 2.3 MB a second of play). The trace's scenes: the main menu from tick 381, Target Test's character select (mode 0xF, `mnCharSel_Scene_OnFrame`) from 666, its match (`gm_Scene_Vs_OnFrame`) from 977. `melee-oracle session` compares it clean from power-on with `--all --heap` for 666 ticks and stops at `game mode 0xf's loading isn't ported`, as expected.
+- **Its shortcuts don't reach a session.** `--mode KIND` starts the console in a mode, and `CLASSIC_STAGE=N`, `ADVENTURE_STAGE=N`, `EVENT=N` with `EVENT_FIGHTER`, `MATCH_FIGHTERS`, `MATCH_CPU_KIND` and `CPU_PLAYERS` steer a run through hooks that write memory. A recording carries reads only, so a session recorded with them doesn't play back as it ran. The save setups (`UNLOCK_ALL`, `RECORDS_1P=SEED`, `SAVE_POKE`) are different: as in milestone 5, a run lets the game save them, and the session is recorded from the card it leaves. melee-save's unlock-all (every character, stage, trophy and event) makes the cards the modes need: All-Star, every Target Test, every event.
+- **The debug menu reaches the content directly.** At a raised debug level (`--develop N`, carried in the recording's flags; melee-hd's `session::Develop`), the debug menu's Versus Mode page sets the stage by number up to 86 kinds and each player's character up to 34 (`hud::debug_tables`, from `main.dol`), so a session of reads alone can put Master Hand, Crazy Hand, Giga Bowser, the Wire Frames or Sandbag on any single-player stage (task 1 confirms the menu's numbering reaches each); its other pages start the debug cutscene (0x19) and the debug mode's intro, All-Star intro, coming soon, game over and staff roll states. melee-hd ports the debug menu and its VS start already (milestone 5's task 19), so such a session compares from power-on to the first unported function like any other.
+
+ssbm-rs is trustworthy here: its round rf verified 93.9% of all blocks by lockstep against the original, 2,481 of 2,596 functions of `melee/gr`, 1,486 of 1,625 of `melee/gm` and 80 of 84 of `melee/vi` (`local/lockstep/report-rf-final.txt`). A difference melee-hd finds in the rest may be ssbm-rs's; the porting guide says to stop and ask.
+
+### What ssbm-rs's local data has
+
+- **Recordings**: the two above. No Classic, All-Star, Target Test, Home-Run, Multi-Man or Training session exists but the probe.
+- **Recipes**: `local/lockstep/jobs-modes.txt` and `jobs-modes-cpu.txt` (42 `--mode` runs each across the modes 01 to 2C, with a monkey), `jobs-bosses.txt` and `jobs-bosses2.txt` (16 debug VS runs cycling the fighters 26 to 31, the bosses among them), and `recipes.md`'s single-player lines (Classic's intro at `CLASSIC_STAGE` 4, 7, 8 and 9 and in Japanese, Classic's game over with no coins and with 9,999, the Multi-Man survival ends, the Event list's unlocked counts, the Underground Maze by `ADVENTURE_STAGE` or debug VS stage 63, Master Hand and Crazy Hand as humans, which needs a runner option). They were lockstep runs, not sessions: each one's script can be run again with `--record` where it uses no hook.
+- **Cards**: the 1,155-image corpus from milestone 5. The runs with `RECORDS_1P` left cards with 1P records; none is known to hold every event or All-Star unlocked, which melee-save's unlock-all writes.
+- **Traces**: `local/traces` holds 228 GB, 183 GB of it `v5-mixed` (the replays' traces every full verify diffs). The disk had about 85 GB free on 2026-11-01, and the project keeps 20 GB free.
+
+### Oracle per area
+
+- **The one-door character select and the 1P matches' setup**: scripted sessions into every mode's select (the probe's script, extended), and their first matches.
+- **Training, Home-Run, Target Test, Multi-Man**: scripted sessions; their matches are short and a script can lose or idle through them. Target Test's 26 stages are one session or a few, the select taken again after each run.
+- **Events**: sessions from an unlock-all card, an event each, entered, played to its end or a loss, back to the list. `16-58-24`'s eleven events in context.
+- **Classic, All-Star**: scripted sessions for the intro, the first matches, a loss, the continue and the game over (coins or none); a human's run for the rest (a script can't win through twelve stages and a boss). Adventure has `12-04-48`; scripted sessions add its losses and continues.
+- **Bosses, Giga Bowser, the Wire Frames, Sandbag, the single-player stages, the adventure enemies**: debug-level sessions through the debug menu's Versus page (each boss against a human; each stage with its enemies' spawner), then the modes' sessions in context.
+- **Cutscenes, intros, game over, coming soon, staff roll, trophy fall, endings, congratulations**: the debug cutscene and the debug mode's states at a raised debug level, `12-04-48` in context, and frames against ssbm-rs's renderer (`melee-render-check`), the spot lights' first.
+- **Unlocks and challengers**: sessions from cards one clear short of each condition, as milestone 5's challenger sessions.
+- **Ditto**: Training's Poké Ball draws (Ditto's weight in the random table is 0: only an event's list, training or the debug menu picks it).
+
+### What needs recording
+
+At about 2.2 MB a second of play (1.8 for the menus, 2.3 for matches), with ssbm-rs taking about a second of one core per second of play to record and trace (the probe: 0.65 and 0.45), one at a time:
+
+| Task (below) | Sessions | Minutes of play | Traces |
+| --- | --- | --- | --- |
+| 1 (first stops per mode) | 10 | 20 | 2.6 GB |
+| 2 (selects, 1P setups) | 8 | 25 | 3.3 GB |
+| 3, 12, 7 (bosses, Giga Bowser, Wire Frames) | 14 | 42 | 5.5 GB |
+| 4, 5 (cutscenes, game overs, endings, staff roll) | 20 | 45 | 6 GB |
+| 6 (Target Test) | 4 | 30 | 4 GB |
+| 9, 10, 16 to 20 (single-player stages, enemies) | 20 | 55 | 7 GB |
+| 13, 14, 15 (Training, Home-Run, Multi-Man) | 17 | 48 | 6.3 GB |
+| 21 (events) | 10 | 40 | 5.3 GB |
+| 22, 23, 24 (Classic, All-Star, Adventure; scripted) | 16 | 60 | 8 GB |
+| Sarah's play (Classic to Master Hand, All-Star; see the design calls) | 2 or 3 | 45 to 60 | 6 to 8 GB |
+| 25, 26, 27 (CPU kinds, unlocks, the player) | 25 | 70 | 9 GB |
+| 8 (the allocation limiter) | 2 | 4 | 0.5 GB |
+| **All** | about 150 | about 8 hours | about 65 GB |
+
+That's more than the disk has above its 20 GB floor (65 GB on 2026-11-01, before anything else grows), and milestone 5's campaign came to about twice its estimate (20 GB planned, about 45 GB of session traces kept). The campaign runs in batches as each task needs them; how to make room for the later waves is a design call.
+
+## What these modes share with the rest
+
+- **The match setup from a mode.** Every 1P match starts from `gm_16A2`'s single-player setups (Event Match, Multi-Man, Classic's and Adventure's teams and hordes) and `gm_17C0`'s stage setups, whose branches VS mode's ports refuse today (`game/gm/vs.rs`), and from the one-door character select (`mnCharSel_8025D5AC` and `mnCharSel_8025C020` with one door, the CPU level slider, the Stadium options model). A horde's players leave their slots during the match (`gm_80167320` for a leaving slot), which no VS match does.
+- **The stage loads.** The single-player stages are stage kinds past VS's, through the same `Stage`/`Ground` code: the zako generator configured (stage enemies), stage objects with their own cameras and lights, the boss stages' cycle (`gm_8016ECE8`), Icicle Mountain's adventure climb (map 10, stage kind 76), the trophy slots that `Ground_801C5840` draws for (a draw that's always 0, [Melee's bugs](melee-bugs.md#a-random-pick-between-two-entries-draws-below-one)). `Stage_80224E64` and `fn_80167638` read a spawn point `Ground_801C2D24` leaves unwritten when a stage lacks it; every VS stage has the points, and the ports stop there until a single-player stage shows what's read.
+- **The items and fighters.** Bosses (fighters 26 to 31: the hands share `ftbosslib`), the adventure enemies (item kinds 0xD0 to 0xDC), the single-player coin (`itcoin`, a beaten enemy's or a trophy stage's), the event Yoshi egg, Ditto, the targets (`itmato`), a beaten enemy's trophy (`it_8027CC88` under `gm_IsCurrently1PMode`); the Like Like's capture states (`ftCo_800C78B0`), the hands' grabs and throws; Kirby's copies of Giga Bowser. The computer kinds other than VS's 4 and Nana's 6: training's 0, the Home-Run Contest's 15, the events', the allies' and the hordes' (`ftCo_800B2AFC`'s other cases).
+- **The save's 1P records and unlocks.** `gmmain_lib`'s and `gm_1601`'s 1P getters and setters (Classic, Adventure and All-Star scores and clears per character, Target Test times, Home-Run distances, Multi-Man records, each event's clear and score, the 1P play time), the trophies a mode awards (`gm_17DB`, the trophy fall), and the unlocks listed above, all in the save's own file: nothing changes in the format, and `melee-save`'s round trip already covers every byte.
+- **The heap's leftovers.** Sarah's rule for milestone 5, "Model the leftover heap bytes exactly for vanilla matches from the menus", reaches every 1P match: each starts in a heap the mode's own scenes used before it (the one-door select, the intro, the previous match and its clear and bonus screens, a cutscene, the trophy fall), so the fields a match's creation leaves unwritten hold those scenes' bytes on a console. The heap image ([the engine notes](engine.md#uninitialized-values)) takes them as it takes the menus': each scene's objects laid out as they go, and a new object over bytes no layout knows stops the session by name (`unknown leftover bytes of a freed OWNER under NEW: its layout isn't ported`). So each task lays out the objects its scenes free, as the layout campaigns did for the menus: the 1P scenes' user data (main-heap blocks with no type yet), the single-player stages' tables, the bosses' and enemies' blocks. The debug-level sessions follow the same rule: a debug VS match from the debug menu is a match from the menus.
+- **Melee's bugs ahead.** [Melee's bugs](melee-bugs.md) already lists those that name the single-player modes: Kirby's Giga Bowser copy reads a copy file nothing loads (address 0x18, which faults on a console), refills its breath while breathing, and lands from the aerial breath's start into its loop (with Bowser's copy); the adventure routes' trophy slots draw below one; the cutscene camera's orbit reads unwritten stack slots (and its fourth transition kind, in the latent table); deleting a name moves the Multi-Man players' names twice; the results' 32-bit records wrap, the single-player time among them; the play time's cap (latent); and the Nagasima test's callback, which goes to a 1P game over (debug).
+
+## The player and the single-player modes
+
+`game::menus_audit::GATES` holds eight entries, and the player holds back A and Start on every port while the main menu's cursor is on one (`melee-player`'s `gates.rs`), so the game runs as a console's on which nobody confirmed there: Classic, Adventure and All-Star (the Regular Match list's 0, 1 and 2), Event Match and Training (the 1P list's 1 and 4), Target Test, Home-Run Contest and Multi-Man Melee (the Stadium list's 0, 1 and 2). A refused confirm shows "Classic isn't in melee-hd yet. The single-player modes come in a later version." Each gate's `covers` names what it keeps out: `gmclassic`, `gmadventure`, `gmallstar`, `mnevent` with `gmevent`, `gmhomerun`, `mnhyaku` with `gmmultiman`, `gmtrainingmode`, and nothing for Target Test (its mode is in `gmmultiman.c`).
+
+Lifting a gate means deleting its entry, which `menus_reach_nothing_unaccounted` allows only when nothing it covered is still unaccounted: every `gated` line of `ledger/menus.txt` its entry leads to gone (ported, or `unreached` with why) and every `STOPS` entry citing the gates resolved. That audit holds only the menus' units (`melee/gm`, `melee/mn`, `melee/ty`, `melee/vi` and the libraries they call); a mode's matches also reach stages, fighters, items and computer kinds the other audits hold for VS. So each mode needs a single-player audit too, as each stage has one: a test that names the units and modules its paths reach (its stages, fighters, items, computer kinds) and fails while any is unaccounted or stops without a reason (task 1 builds it, each mode's task fills its entry). Lifting a gate:
+
+| Gate | Needs, besides its own mode |
+| --- | --- |
+| Training | the one-door select, Training's scene, its item menu and Pokémon draws (Ditto), computer kind 0; VS stages only |
+| Home-Run Contest | the select, its stage (`grhomerun`), Sandbag, computer kind 15, the bat |
+| Target Test | the select, the 26 target stages and the targets |
+| Multi-Man Melee | the select, the hordes' setup, the Wire Frames, the Multi-Man counter, the hordes' computer kinds |
+| Event Match | the event list, each event's setup, items and computer kinds; some events reach bosses, Giga Bowser and the events' trophy stages ([design calls](#design-calls): offer the list whole or event by event) |
+| Classic | the select, the intro, the clear and bonus screens, the bonus rounds (a target stage, Snag the Trophies, the race), Master Hand and Crazy Hand, the game over and continue, the endings, the staff roll, the trophy fall |
+| All-Star | the select, the intro, the rest area (`grheal`), every character on its stage, the game over |
+| Adventure | the select, the intro, the cutscenes, the adventure stages and their enemies, Giga Bowser, the Wire Frames, the game over, the endings, the staff roll, the trophy fall |
+
+The developer setting's debug menu reaches the milestone's debug states today and stops on them, as its warning says ("Some debug tools aren't in melee-hd yet and stop the game."); task 5 removes those stops.
+
+## What's left to port
+
+From the port ledger (`docs/port-ledger.csv`, regenerated by `cargo run --release -p ledger -- --check`): 14,583 of 19,827 functions ported with a check, 438 replaced, 253 dead and 4,553 unaccounted. Each unaccounted function is grouped by the reason an audit gives for it (`ledger/menus.txt`'s `gated` lines, `items_audit::UNREACHED`, `cpu_audit::UNREACHED`, `fighter_audit`'s and the stage audits' unreached lists, `ledger/deferred.txt`) or, with none, by its unit. Ported functions held back by a `// Ports X; aliased once a check reaches it` comment count apart.
+
+| Area | Units | Unaccounted |
+| --- | --- | --- |
+| Classic (`gmclassic`, its intro `gm_1832`) | 2 | 40 |
+| Adventure (`gmadventure`, `gm_17E4`, its intro `gm_1879`) | 3 | 55 |
+| All-Star (`gmallstar`, `gm_17EB`, its intro `gm_186E`) | 3 | 34 |
+| Event Match (`gmevent`, `mnevent`) | 2 | 61 |
+| Multi-Man Melee and Target Test's mode (`gmmultiman`, `mnhyaku`, `gm_181A`) | 3 | 54 |
+| Home-Run Contest (`gmhomerun`, `gm_180A`) | 2 | 15 |
+| Training (`gmtrainingmode`, `gm_1884`) | 2 | 22 |
+| Game overs, coming soon, endings, trophy fall, staff roll, congratulations (`gmgover`, `gm_19EF`, `gmmovieend`, `lb_01F8`, `gmstaffroll`, `gmregtyfall`, `gmregenddisp`, `gm_1A7A`, `gm_1A9B`) | 9 | 79 |
+| Shared single-player code (`gm_16A2` 37, `gm_1601` 50, `gmmain_lib` 32, `gm_17AD` 30, `gm_17DB` 15, `gm_16F1` 14, `gm_17C0` 14, `gmregclear` 15, `gm_18A1` 9, `gm_1736` 6, `gmvs` 17, the one-door select, `ifstock`'s 1P displays, `tydisplay` and `toy`, the demo poses, `lbaudio_ax`, `lbdvd`, `lbfile`, `lbtime`) | 29 | 274 |
+| Cutscenes (`vi`, `vi0102` to `vi1202`) | 12 | 79 |
+| Target Test's stages (`grt*`, 26 copies of one 160-line template) | 26 | 525 |
+| The other single-player stages: Home-Run (`grhomerun` 61), the All-Star rest area (`grheal` 32), the race (`grpushon` 28), Snag the Trophies (`grfigureget` 19), the events' trophy stages (`grfigure1` to `3`, 60), Adventure's Mushroom Kingdom (`grkinokoroute` 32), Underground Maze (`grshrineroute` 44), Brinstar escape (`grzebesroute` 22) and F-Zero race (`grbigblueroute` 39) | 11 | 337 |
+| Single-player paths in VS stages and modes (Icicle Mountain's climb 8, Corneria 4, Pokémon Stadium's 1P count 1, Final Destination's boss cycle and two `gm` hooks 3) | 6 | 16 |
+| Master Hand (`ftmasterhand*`, 34 units) and his items | 36 | 287 |
+| Crazy Hand (`ftcrazyhand*`, 35 units) and his bomb | 36 | 272 |
+| `ftbosslib`, Giga Bowser (`ftgkoopa` and his callback), the Wire Frames (`ftboy`, `ftgirl`), Sandbag (`ftsandbag`) | 6 | 70 |
+| Adventure enemies: Like Like (`itlikelike` 90, its capture states 10), Koopa Troopa and Paratroopa (`itnokonoko` 45, `itpatapata` 32) and their shells (`itzgshell` 57, `itzrshell` 13), the Polar Bear (`itwhitebea` 51), ReDead's last 1 | 9 | 299 |
+| Single-player items: the 1P coin (`itcoin` 30), the event Yoshi egg (`itevyoshiegg` 30), Ditto (`itmetamon` 14), the targets (`itmato` 6), and the item engine's 1P paths (enemy trophies, drops by kind, event slots, training's draws) | 14 | 91 |
+| Single-player computer kinds (`ftCo_0A01`'s other decisions, behaviors 11 and 12, kind 16) | 2 | 24 |
+| The 1P HUD (`ifstock`'s counters, `ifall`, `ifstatus`, `ifmagnify`, `ifhazard`, `if_2FF2`) | 6 | 16 |
+| Shared stage code the single-player stages may reach (`ground` 11, `granime` 4, `grmaterial` 4, `grdatfiles` 3, `grzakogenerator` 1; to triage) | 5 | 23 |
+| The debug mode's milestone 6 states, the debug cutscene and the allocation limiter (`ledger/deferred.txt`) | 10 | 18 |
+| **Milestone 6** | | **2,691** |
+
+Function counts understate some of it and overstate other parts. The target stages are a template (4,739 lines of C for 525 functions), so they're one task's work; the hands are big (Master Hand's 34 units are one or two states each, with `ftbosslib`'s shared moves and the two hands' tag attacks); `gm_1601` is 4,383 lines and `gmevent` 2,368 with 51 events' data; the cutscenes and the staff roll are scenes with their own models, cameras and lights.
+
+### Outside every milestone
+
+1,862 unaccounted functions belong to no milestone's scope. None is something a player meets missing; they're the ledger's own bookkeeping:
+
+| What | Unaccounted | Why |
+| --- | --- | --- |
+| Ported, awaiting a check (`// Ports X; aliased once a check reaches it`, `items_audit::UNCHECKED`, `cpu_audit::UNCHECKED`) | 361 | Many on paths every VS session reaches: the pummel (`ftCo_CatchAttack_*`), the broken-shield bonus (`pl_8003E0E8`), Popo's and the common states' per-state callbacks. The holds are stale; a sweep would alias them with the sessions and replays that reach them. |
+| The SDK and runtime (`dolphin/os` 166, `dolphin/gx` 30, `dolphin/mcc` 28, `dolphin/ax`, `axfx`, `ai`, `dsp`, `ar` and the rest, MSL, `Runtime`) | 402 | Hardware layers melee-hd replaces (threads, interrupts, EXI, caches, the GX FIFO, the DSP) that `ledger/replaced.txt` doesn't list yet. |
+| The HSD library (`debugconsole_main` 48, `state` 19, `pobj` 18, `video` 18, `class` 17, `initialize` 15 and others) | 263 | Mostly replaced in substance by melee-render and the plain-data state, unlisted; `debugconsole_main` is the crash screen's console. |
+| Fighters' and items' functions no audit names | 490 + 62 | Per-state callbacks that dispatch to a shared port without an alias (Ness's specials, Jigglypuff's Sing victim `ftCo_DamageSong_*`, Kirby's copies' leftovers), and items' `evt_unk`, clank and absorb callbacks the fighter and items audits prove unreached in any mode. |
+| Other game libraries (`lbcommand`'s script commands, `lbrefract`, `lbspdisplay`, `lb_00B0`, `lb_0195`, the crash handler `db_SetupCrashHandler` and `fn_OSErrorHandler`, three `camera`, one `mplib`) | 63 | Unaudited; the crash handler is reachable on a retail console (a fault), which design call 7 asks about. |
+| The player library (`plbonuslib` 41, `player` 9, `pl_040D` 3, `plbonus` 2, `pltrick` 1) | 56 | Mostly the bonus counters' and statistics' getters and setters, which every VS match's damage and results call and the ports read inline (`gm_1601`'s standings read `pl_80040A04` to `pl_80040CD8`); the rest, if any, go with the 1P bonus screens (task 2). |
+| Debug code task 19 left (the boot's USB host, the scene loop's thread check, the Hanyu character select, which crashes on a console, the sound test debug mode's leftovers) | 40 | `ledger/deferred.txt`, outside this milestone's debug states. |
+| The Test stage (`grtest`) | 21 | Reached only by a replay's or the debug menu's stage number. |
+| The menus' units' `unchecked` and `unreached` lines (`ledger/menus.txt`: 50 getters and setters ported inline, 12 of the disc's file layer, 4 of the ARAM queue, 26 held until a session reaches them, 5 unreached) | 104 | See the gaps below. |
+
+### Milestone 5's gaps
+
+What the survey found that milestone 5's scope should have covered:
+
+- **The attract loop's How to Play and Special Movie scenes.** `gm_Scene_HowTo_OnEnter` and `OnFrame`, `gm_Scene_Omake15_OnEnter` and `OnFrame`, the opening movie mode's exits (`onExitTitle`, `onExitMovie`, `onExitHowto`, `onExitOmake15`, `gm_801BF718`), `gm_Mode_Opening_OnLoad` and the boot's `memcardOnLoad` are ported but held unaliased in `ledger/menus.txt` until a session reaches them, and none does: `menu-attract` and `attract` run the title's loop through its matches and the opening movie, not its How to Play or Special Movie turns. The milestone's first done-when names How to Play in the attract loop. A longer idle session at the title would check them.
+- **Stale holds.** `ledger/menus.txt`'s 66 inline getters, file-layer and ARAM-queue lines are replacements in substance, and the 361 awaiting a check above include paths VS sessions reach every match; neither is behavior missing, but the ledger understates what's checked.
+- **Stale reasons.** `menus_audit::STOPS`' debug entries say the player doesn't raise the debug level, which it can since `feat/m5-debug-3` (the panel warns that some debug tools stop the game). `roster.rs` gives `grCorneria_801DD2C0` and `gm_8017E7E0` the reason "the demo's setup, which only the title screen's demo runs"; a stage's `on_demo_init` is called only from `Stage_8022532C`, which only the cutscenes `vi0102`, `vi0401`, `vi0501` and `vi0502` call, so they're this milestone's.
+- **Open from milestone 5**, unchanged: a Camera Mode snapshot of a drawn frame isn't proven to fit the card's room, and a menus match's replay doesn't play back exactly in Slippi Dolphin (decided, with the panel's note).
+
+## Proposed tasks
+
+Twenty-seven tasks in four waves. Sizes count functions to port or check: S under 100 (or tooling), M 100 to 300, L over 300. Every porting task follows the porting guide: each function gets a leaf-check or a line in `ledger/checks.txt`, the sessions it names compare clean from power-on with no stale read and with `--all --heap`, `session-sync --rollback 7` passes on the matches it reaches, each new check is mutation-tested, frames of each new screen compare with ssbm-rs's renderer, a defect of the original goes in [Melee's own bugs](melee-bugs.md), and the heap image lays out every object the task's scenes free. Each task adds its units' statics to the comparer and records the sessions it needs in ssbm-rs's `local/lockstep/m6-*` folders, traced into `local/traces/`. A mode's task lifts its own gate when its single-player audit passes.
+
+**Wave 1** (six at once; tasks 7 to 11 fill a slot as one frees, needing nothing)
+
+1. **The oracle for the single-player modes.** Scripted sessions into each mode and the debug menu's routes (its Versus page with each boss and on each single-player stage, the debug cutscene, the debug mode's states), each mode's first stops listed, the cards the modes need (unlock-all, one clear short of each unlock), and the single-player audit (`game::single_player_audit`: per mode, the units, modules and stops its paths reach, failing while any is unaccounted). Oracle: its own sessions. Size: S (tooling). Depends on nothing. Touches: `tools/oracle`'s session tests, `docs/oracle.md`, the new audit module.
+2. **The one-door select and the 1P matches.** `mncharsel`'s one-door screen (the records, the CPU level slider, Training's door, the Stadium options model), `gm_16A2`'s single-player setups (teams, hordes, a leaving slot), `gm_17C0`'s stage setups, `gm_17AD`, `gm_17BA` and `gm_18A1`, `gm_1601`'s and `gmmain_lib`'s 1P records, the 1P matches' clear screens and bonus tally (`gmregclear`, `gmregcommon`), the 1P stock HUD. Oracle: sessions into every mode's select and through its first match's end. Size: M (about 230). Depends on nothing (task 1's scripts help). Owns: `mn/charsel`, the 1P branches of `game/gm/vs.rs`, the 1P getters of `gmmain_lib`, the single-player rows of the scene table (`game/gm/machine.rs`).
+3. **Master Hand.** His 34 units and items (`itmasterhandbullet`, `itmasterhandlaser`), `ftbosslib`, the boss stage's cycle (`gm_8016ECE8`), the hands' grabs and throws on fighters, and the cutscene camera's orbit for his entrance once task 4's probe settles it. Oracle: debug-level sessions (the Versus page: Master Hand against a human on Final Destination, two to four of them), later Classic's. Size: L (318). Depends on nothing. Owns `ft/bosslib`.
+4. **Cutscenes.** The twelve `vi*` scenes with their models, cameras and lights, the debug cutscene mode (0x19) and its five deferred functions, the stages' `on_demo_init` callbacks they call (Peach's Castle, Brinstar, Green Greens; Corneria's), the cutscene fighters' motions, and the cutscene camera's orbit (a probe in ssbm-rs of the unwritten slots, then the model). Oracle: debug-level sessions through the debug cutscene, `12-04-48`'s in context, frames. Size: M (84, heavy per function). Depends on nothing. Owns the cutscene camera in `game/camera.rs`.
+5. **The 1P endings.** Game over and coming soon (`gm_19EF`, `gmgover`, the continue and its coins), the trophy fall (`gmregtyfall`, `gmregenddisp`, `gm_1A7A`), congratulations (`gm_1A9B`), the ending movies (`gmmovieend`, `lb_01F8`, through the THP decoder already ported), the staff roll (`gmstaffroll`), the debug mode's five milestone 6 states, the sleeping demo pose and the blaster's demo states. The first spot lights in frames. Oracle: debug-level sessions through the debug mode's states, `12-04-48`, frames. Size: M (about 100). Depends on nothing. Owns `lb/mthp`'s end movies.
+6. **Target Test.** The 26 target stages (one template), the targets (`itmato`) and Target Test's mode in `gmmultiman.c` (its states, records, the clear). Oracle: debug-level sessions on the stages first, then sessions through the mode (an unlock-all card for every character's stage). Size: M (531 by count, one template). Depends on task 2 for the mode, not the stages. Touches `gr/data.rs`'s stage table.
+7. **Giga Bowser and the Wire Frames.** `ftgkoopa` and his motion table's callback, `ftboy`, `ftgirl`, Kirby's Giga Bowser copy (with its fault, design call 7). Oracle: debug-level sessions. Size: S (27). Depends on nothing.
+8. **The allocation limiter.** `fn_UpdateObjAllocLimiter` at `DbLevel` 4: number limits on the effect, particle and app-SRT pools, modeled exactly. Oracle: develop-level sessions pressing its buttons. Size: S. Depends on nothing. Touches `hsd::pool`.
+9. **Icicle Mountain's climb and the Polar Bear.** Map 10's process (the climb's speed, next field, end), stage kind 76's setup, `itwhitebea`, the Polar Bear's landing. Oracle: debug-level sessions on the adventure's Icicle Mountain. Size: S (60). Depends on nothing; `grzakogenerator`'s owner is task 16 (coordinate the spawner).
+10. **The events' trophy stages.** `grfigure1` to `grfigure3`, three near copies. Oracle: debug-level sessions. Size: S (60). Depends on nothing.
+11. **The ledger's stale holds** (outside the milestone, optional). Alias the ported functions sessions and replays already reach, list the SDK's and HSD's replacements in `ledger/replaced.txt`, so an unaccounted row means unported. Oracle: the existing sessions and replays, leaf-check. Size: S (bookkeeping, about 1,800 rows to classify). Depends on nothing; best merged before wave 2 branches. Touches `ledger/` and aliases across the code (mechanical).
+
+**Wave 2** (after task 2 unless noted)
+
+12. **Crazy Hand.** His 35 units and bomb, the two hands' tag attacks with Master Hand. Oracle: debug-level sessions (Crazy Hand alone, both hands). Size: M (272). Depends on task 3's `ftbosslib`.
+13. **Training.** `gmtrainingmode`, `gm_1884`, Training's scene in `gmvs`, its item menu and the Pokémon draws (`it_8027A780`, `it_8027AB64`), Ditto (`itmetamon`), computer kind 0. Lifts the Training gate. Oracle: scripted sessions (every menu option, every item spawned, Ditto out of a ball). Size: S (about 60). Depends on task 2.
+14. **Home-Run Contest.** `gmhomerun`, `gm_180A`, `grhomerun`, Sandbag, computer kind 15, the drops by kind, its records. Lifts its gate. Oracle: scripted sessions (a hit, a miss, the records). Size: S (about 90). Depends on task 2.
+15. **Multi-Man Melee.** `gmmultiman`'s six modes, `mnhyaku`, `gm_181A`, the hordes, the Multi-Man counter (`ifStock_802FAEC4`), the names' deletion bug. Lifts its gate. Oracle: scripted sessions in each mode (a loss in each, a 10-Man win if a script can). Size: M (about 70 and the hordes). Depends on tasks 2 and 7.
+16. **Mushroom Kingdom's adventure route and the Koopas.** `grkinokoroute`, `itnokonoko`, `itpatapata`, both shells, the 1P coin (`itcoin`), a beaten enemy's trophy (`it_8027CC88`), the zako generator's single-player paths and the shared stage code they reach (`ground`, `granime`, `grmaterial`, `grdatfiles`). Oracle: debug-level sessions on the stage. Size: M (about 230). Depends on nothing (can start in wave 1). Owns `grzakogenerator`, `gr/ground.rs`'s single-player paths, the item spawner's enemy tables.
+17. **The Underground Maze and the Like Like.** `grshrineroute`, `itlikelike`, the capture states (`ftCo_800C78B0`, `ftCo_800C7590`), the stage's lights. Oracle: debug-level sessions. Size: M (144). Depends on task 16's spawner.
+18. **Brinstar's escape** (`grzebesroute`). Size: S (22). Oracle: debug-level sessions. Depends on nothing.
+19. **The F-Zero race** (`grbigblueroute`). Size: S (39). Oracle: debug-level sessions. Depends on nothing; it calls the F-Zero car Big Blue already ports (`grFZeroCar_801CAFBC`).
+20. **The race** (`grpushon`). Size: S (28). Oracle: debug-level sessions. Depends on nothing.
+21. **Event Match.** `gmevent`'s 51 events, `mnevent`, the event Yoshi egg, the events' item slots and Pokémon draws, the events' computer kinds as each event needs them. Lifts the gate as design call 2 decides. Oracle: sessions from an unlock-all card, an event each (about 30 covering every setup and callback), `16-58-24`. Size: M (about 120 and the events' data). Depends on task 2; events with bosses or trophy stages wait for tasks 3, 7 and 10.
+
+**Wave 3**
+
+22. **Classic.** `gmclassic`, its intro (`gm_1832`), its stage list and bonus rounds (a target stage, Snag the Trophies `grfigureget`, the race), the continue. Lifts its gate. Oracle: scripted sessions (the intro, the first matches, a loss, the continue, the game over), Sarah's run to Master Hand, `CLASSIC_STAGE` recipes re-recorded where a script can reach them. Size: M (about 60, and the integration). Depends on tasks 2, 3, 5, 6, 20; on 12 for the harder difficulties.
+23. **All-Star.** `gmallstar`, `gm_17EB`, its intro (`gm_186E`), the rest area (`grheal`, its hearts), its game over. Lifts its gate. Oracle: scripted sessions (the intro, the rest area, a loss), Sarah's run. Size: M (about 70, and every character's stage in turn). Depends on tasks 2 and 5.
+24. **Adventure.** `gmadventure`, `gm_17E4`, its intro (`gm_1879`, the stage's scale writer), its stage sequence and teams (the Yoshi and Kirby teams, the Wire Frames, Giga Bowser). Lifts its gate. Oracle: `12-04-48`, scripted sessions (losses, the continue, the game over). Size: M (about 70, and the integration). Depends on tasks 2, 4, 5, 7, 9, 16 to 19.
+25. **The single-player computer kinds.** The 22 other decisions of `ftCo_800B2AFC`, behaviors 11 and 12, kind 16, and the 52 CPU functions awaiting a check. Oracle: the modes' sessions with allies, hordes and events (tasks 15, 21, 22, 24). Size: M (76). Depends on the sessions of tasks 15 and 21. Owns `ft/cpu_*`.
+
+**Wave 4**
+
+26. **Unlocks, records and challengers.** The 1P decisions after a clear (`gmregclear`'s, the events', Multi-Man's, Home-Run's, Training's: `gm_16F1`), `gm_1736`'s trophy checks, `gm_17DB`'s trophies, every unlock milestone 5's task 17 left, the challenger approach from the modes, the trophy display's 1P lookups. Oracle: sessions from cards one clear short of each condition, the cards after the console's byte for byte. Size: M (about 50 functions and about 25 sessions). Depends on the modes' tasks.
+27. **The player on the single-player modes.** The last gates lifted, the gate code's per-event filter if design call 2 takes it, the single-player audit clean for every mode, player-recorded sessions through each mode compared from power-on. Size: S (player code). Depends on everything above.
+
+The critical paths are 2, 16, 17, then 24, 26 and 27; and 3, 12, then 22. Waves overlap: tasks 7 to 11, 16 and 18 to 20 need neither task 2 nor each other, so the coordinator can keep six slots busy from the start. Stage and boss tasks are one per agent but where they share code (the two hands' `ftbosslib` and tag attacks, the target stages' template, the three trophy stages, a route with its own enemies). Shared files where parallel tasks meet, with their owners: the scene table (task 2; others add rows), `game/gm/vs.rs`'s single-player branches and `gmmain_lib`'s records (task 2), `gm_16F1`'s decisions (task 26), `ft/bosslib` (task 3), the cutscene camera (task 4), `grzakogenerator`, `gr/ground.rs` and the item spawner's enemy tables (task 16), the CPU AI (task 25), the 1P HUD (task 2; the Multi-Man counter task 15). The heap image's layouts (`hsd::image`, `game::export`, `game::leftovers`), the comparer's mirrors (`tools/capture`), `ledger/menus.txt`, `menus_audit.rs` and the single-player audit take every task's additions; their merges stay mechanical.
+
+### Not in this sequence
+
+- **The Slippi ruleset** (Sarah, 2026-10-29: planned as the future default, its milestone to be decided when planning this one): [design call 6](#design-calls).
+- **The player's polish** (milestone 7).
+- **The ledger's bookkeeping outside every milestone** ([above](#outside-every-milestone)) but for task 11's optional sweep.
+
+## Design calls
+
+| # | Call | Recommendation | Who |
+| --- | --- | --- | --- |
+| 1 | Which modes the player offers as each lands | Lift each gate as soon as its mode's single-player audit passes, test-enforced as the stages' and the menus' are, rather than all at the end. The expected order is Training, Home-Run Contest, Target Test, Multi-Man Melee, Event Match, then Classic, All-Star and Adventure. | Sarah: it changes what the player offers |
+| 2 | Event Match: the list whole or event by event | Event by event: offer an event once everything its match reaches is ported, holding back A and Start on the others in the Event list as the main menu's gates do (the gate reads the list's cursor; no game code changes), with a note such as "This event isn't in melee-hd yet." Most events are VS content and could come early. The alternative, one gate for the whole list until the last event (the ones with the hands and Giga Bowser) is ported, is simpler and slower. | Sarah: what the player offers, and the note's wording |
+| 3 | How the oracle reaches content a script can't play to | Debug-level sessions through the debug menu (any boss on any stage, the debug cutscene, the debug mode's states: reads alone, no new format), plus about an hour of Sarah's play: a Classic run to Master Hand (Crazy Hand too if the run meets his condition) and an All-Star run, played in ssbm-rs's runner with `--record` as the 2026-10-06 recordings were (the player's gates keep the modes closed until they lift). Adventure already has `12-04-48`. Two fallbacks, if a path is still out of reach: carry ssbm-rs's stage skips (`CLASSIC_STAGE`, `ADVENTURE_STAGE`, `EVENT`) in the session format as explicit setup both sides apply (an `SSBMINP` change in ssbm-rs), or take a session up at a 1P match from its trace (`--from`, which needs the importer to carry the mode's state). | Sarah: her time, and the fallbacks change ssbm-rs's format |
+| 4 | The trace campaign | About 150 sessions, 8 hours of play, 65 GB of traces at about 2.2 MB a second, recorded and traced one at a time (about 9 CPU-hours), in batches as each task needs them. The disk had about 85 GB free on 2026-11-01, so with the 20 GB floor the first two waves fit and the third (Classic, All-Star, Adventure and Sarah's runs, the biggest) needs room made first: moving `$SSBM_RS_LOCAL/traces` (or its older sets) to another drive, or compressed traces (a change to ssbm-rs's writer and melee-oracle's reader). Approve the first two waves' batches now; decide the room before wave 3. | Sarah: disk and CPU time |
+| 5 | The single-player modes' ruleset | Always vanilla Melee: the save's unlocks, no Slippi gameplay code, whatever ruleset VS matches use. Slippi's gameplay codes are VS and netplay rules, and Slippi's playback runs every recording as a debug VS match (scene 14.1), which can't recreate a single-player mode's setup, so there's no Slippi behavior there to match. | Sarah: it's gameplay, and it binds the future Slippi ruleset |
+| 6 | Where the Slippi ruleset goes | A milestone of its own after this one (before or beside the netplay follow-on), not milestone 6: it ports Slippi's boot and menu codes, changes every session's boot and heap, and changes the player's default, while this milestone stays vanilla and exact. Vanilla's heap modelling stays until it exists and Sarah says vanilla's exactness may relax. | Sarah: she asked to place it when planning milestone 6 |
+| 7 | When Melee itself would crash | Kirby swallowing Giga Bowser reads address 0x18, which faults on a console ([Melee's bugs](melee-bugs.md#kirby-giga-bowsers-copy-reads-a-copy-file-nothing-loads)), and the single-player modes may hold others. Recommendation: the simulation stops at the fault with its name, as a console's game stops there, and the player opens its panel with "Melee crashed: …" and Restart; nothing past the fault is played, and the session recording shows how it got there. Porting the console's crash screen (`db_SetupCrashHandler`, `fn_OSErrorHandler`, the debug console) is milestone 7's polish; a gameplay toggle that fixes the crash would be a ruleset change for later. | Sarah: what players see |
+| 8 | Replays of the single-player modes | None: the player saves no `.slp` for a single-player mode's match (as for the attract match and Bonus matches today), since Slippi Dolphin plays every replay back as a debug VS match and can't recreate the mode's setup, its teams, hordes or boss. The session recording covers them, a bug report's whole evidence. | Sarah: `.slp` compatibility |
+| 9 | The 1P records in the save | The save's own file, written as the console's: no new format, and `melee-save` already round trips every byte. | Decided here |
+| 10 | The allocation limiter's pools | Number limits on the effect, particle and app-SRT pools modeled as the original's (the limiter reads their counts), on the develop level only, never in a replay. | Decided here (Sarah moved the limiter here on 2026-10-30) |
+| 11 | The single-player audit | One entry per mode in a test over the ledger and the modes' modules, as the stages' audits are, which the gate's removal needs to pass. | Decided here |
+
+## Before the tasks start
+
+- **Sarah's design calls**: 1 to 8 above. Tasks 1 to 11 and 16 to 20 can start before they're answered: none of them offers anything to players, and the oracle routes they use (scripted and debug-level sessions) need no new format.
+- **The trace campaign's first batches** (design call 4): task 1's and wave 1's sessions, about 20 GB.
+- **Sarah's play** (design call 3): a Classic run and an All-Star run, any time before wave 3.
+- **The probe's files** in ssbm-rs's `local/`: `lockstep/m6-probe/` (the Target Test probe's recording, its card as found and the card after) and `traces/m6-probe/` (its trace, 82 MB). Task 1 can keep or replace them.
