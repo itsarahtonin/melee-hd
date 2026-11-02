@@ -47,6 +47,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         crate::lb::cardgame::INDICATOR_PROC => game.card_indicator_proc(gobj),
         super::gm::memcard::WINDOWS_PROC => game.windows_proc(),
         super::gm::title::BG_PROC => game.title_bg_proc(gobj),
+        f if super::vi::run_proc(game, gobj, f) => {}
         super::gm::title::LOGO_PROC => game.title_logo_proc(gobj),
         super::gm::title::LOGO_STILL_PROC => game.title_logo_still_proc(gobj),
         super::gm::title::FOG_PROC => game.title_fog_proc(gobj),
@@ -81,6 +82,9 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
         super::gm::approach::PROC => game.approach_proc(gobj),
+        super::gm::endings::game_over::PROC_SCREEN => game.game_over_screen_proc(),
+        super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
+        super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -95,6 +99,11 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::greatbay::run(game, gobj, addr) => {}
         addr if super::gr::oldkongo::run(game, gobj, addr) => {}
         addr if super::gr::shrine::run(game, gobj, addr) => {}
+        addr if super::gr::kinokoroute::run(game, gobj, addr) => {}
+        addr if super::gr::bigblueroute::run(game, gobj, addr) => {}
+        addr if super::gr::pushon::run(game, gobj, addr) => {}
+        addr if super::gr::zebesroute::run(game, gobj, addr) => {}
+        addr if super::gr::figure::run(game, gobj, addr) => {}
         addr if super::gr::yorster::run(game, gobj, addr) => {}
         addr if super::gr::garden::run(game, gobj, addr) => {}
         addr if super::gr::kongo::run(game, gobj, addr) => {}
@@ -176,6 +185,11 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::greatbay::run_event(game, f) => {}
         f if super::gr::oldkongo::run_event(game, f) => {}
         f if super::gr::shrine::run_event(game, f) => {}
+        f if super::gr::kinokoroute::run_event(game, f) => {}
+        f if super::gr::bigblueroute::run_event(game, f) => {}
+        f if super::gr::pushon::run_event(game, f) => {}
+        f if super::gr::zebesroute::run_event(game, f) => {}
+        f if super::gr::figure::run_event(game, f) => {}
         f if super::gr::yorster::run_event(game, f) => {}
         f if super::gr::garden::run_event(game, f) => {}
         f if super::gr::kongo::run_event(game, f) => {}
@@ -195,6 +209,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::bigblue::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
+        f if super::vi::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),
@@ -236,6 +251,11 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x801F_423C => greatbay::on_demo_init(game),
         0x8020_F468 => oldkongo::on_demo_init(game),
         0x8020_1C60 => shrine::on_demo_init(game),
+        0x8020_741C => super::gr::kinokoroute::on_demo_init(game),
+        0x8020_B864 => super::gr::bigblueroute::on_demo_init(game),
+        0x8021_82C4 => super::gr::pushon::on_demo_init(game),
+        0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
+        f if super::gr::figure::ON_DEMO_INIT.contains(&f) => super::gr::figure::on_demo_init(game),
         0x8020_1FA0 => yorster::on_demo_init(game),
         0x8020_2B6C => garden::on_demo_init(game),
         0x801D_5238 => kongo::on_demo_init(game),
@@ -279,7 +299,10 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::clink::run(g, gobj, addr) => {}
         addr if super::ft::yoshi::run(g, gobj, addr) => {}
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
+        addr if super::ft::masterhand::run(g, gobj, addr) => {}
         addr if super::ft::koopa::run(g, gobj, addr) => {}
+        addr if super::ft::gkoopa::run(g, gobj, addr) => {}
+        addr if super::ft::zako::run(g, gobj, addr) => {}
         addr if super::ft::gamewatch::run(g, gobj, addr) => {}
         addr if super::ft::kirby::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
@@ -432,6 +455,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         super::ft::demo::DEMO_ANIM_2
         | super::ft::demo::DEMO_ANIM_3
         | super::ft::demo::DEMO_ANIM_5 => super::ft::demo::demo_anim(),
+        c if super::ft::demo::CUTSCENE_PHYS.contains(&c) => g.demo_follow_root(gobj),
         EF_PAUSE_ALL => super::ef::pause_all(g.game, Some(gobj)),
         // efLib_ResumeAll, a state's hook for hitlag's end.
         EF_RESUME_ALL => super::ef::resume_all(g.game, Some(gobj)),
@@ -552,7 +576,16 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(v) = super::ft::mewtwo::call(r, f, args) {
         return v;
     }
+    if let Some(v) = super::ft::masterhand::call(r, f, args) {
+        return v;
+    }
     if let Some(v) = super::ft::koopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::gkoopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::zako::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::gamewatch::call(r, f, args) {

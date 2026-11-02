@@ -21,16 +21,18 @@ use common::{
     DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE,
     DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
-    KONGO_JUNGLE, KONGO_JUNGLE_64, MENU_TOUR, METAL_CLOAK_RC, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY, GREEN_GREENS, Game, Group,
+    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6E_GAMEOVER, MENU_TOUR, METAL_CLOAK_RC, MK_ENEMIES,
+    MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT,
+    OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
     RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
     SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
     SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
     TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
-    why,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -143,6 +145,33 @@ frames!(NAMES;
 frames!(NAMES_KANA;
     names_kana_1300 1300,
     names_kana_1760 1760,
+);
+// The single-player modes' one-door select (`m6-select`): Classic's records (1200) and its CPU
+// level's names scrolling (1470), the Stadium panels (Target Test's 1000, the Home-Run
+// Contest's 1050), Training's CPU door (1300), and the clear marks (1250).
+frames!(M6_CLASSIC;
+    m6_classic_1200 1200,
+    m6_classic_1470 1470,
+);
+frames!(M6_TARGET;
+    m6_target_1000 1000,
+);
+frames!(M6_HOMERUN;
+    m6_homerun_1050 1050,
+);
+frames!(M6_TRAINING;
+    m6_training_1300 1300,
+);
+frames!(M6_TOUR_CLEARED;
+    m6_tour_cleared_1250 1250,
+);
+// The debug mode's game over (`m6-endings/gameover2`): the question with the trophy on its
+// stand (1420), the continue's coins paid and the score counting down (1620), and "no"'s end
+// (2830).
+frames!(M6E_GAMEOVER;
+    m6e_gameover_1420 1420,
+    m6e_gameover_1620 1620,
+    m6e_gameover_2830 2830,
 );
 // The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
 // Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase
@@ -1049,3 +1078,107 @@ frames!(TROPHY_COLLECTION;
 frames!(TROPHY_COLLECTION_ROWS;
     trophy_collection_rows_1300 1300,
 );
+// Mushroom Kingdom's adventure route (milestone 6's task 16, debug VS at debug level 3, Fox
+// alone): the debug item menu's Koopas, a Paratroopa and a green shell falling at the route's
+// start (mk-enemies 3000), brick blocks and the route's cliffs (mk-route 2950), a Paratroopa's
+// wings and Koopas over the water (mk-route 3721), the water's splash as Fox drops into a pit
+// (mk-fall2 3621) and his respawn platform (mk-fall2 3858).
+frames!(MK_ENEMIES;
+    mk_enemies_3000 3000,
+);
+frames!(MK_ROUTE;
+    mk_route_2950 2950,
+    mk_route_3721 3721,
+);
+frames!(MK_FALL;
+    mk_fall_3621 3621,
+    mk_fall_3858 3858,
+);
+// The F-Zero race (milestone 6's task 19, debug VS at debug level 3, Link running): the hazard
+// sign as the first car nears (fz-run 2201), the cars driving past (3401) and one hitting Link
+// (4201); the F-Zero cutscene's racers on the race's track (fz-cutscene 3131 and 3191).
+frames!(FZ_RUN;
+    fz_run_2201 2201,
+    fz_run_3401 3401,
+    fz_run_4201 4201,
+);
+frames!(FZ_CUTSCENE;
+    fz_cutscene_3131 3131,
+    fz_cutscene_3191 3191,
+);
+
+// The race (milestone 6's task 20, debug VS at debug level 3): Link and Mario at the start
+// under the course's lights (race-look 2060) and Mario's KO as the blast zones follow Link
+// (race-look 2460); Fox in the first spike pit (race-spikes 4600) and against a pillar
+// (race-pillar 4510).
+frames!(RACE_LOOK;
+    race_look_2060 2060,
+    race_look_2460 2460,
+);
+frames!(RACE_SPIKES;
+    race_spikes_4600 4600,
+);
+frames!(RACE_PILLAR;
+    race_pillar_4510 4510,
+);
+
+// Brinstar's escape (milestone 6's task 18, debug VS at debug level 3): Link and Mario at the
+// shaft's foot under the stage's lights (ze-look 2300), Fox's Firefox past the lower point light
+// (ze-climb 2900), the shaft's upper part shaking once the camera's timer has run out (ze-climb
+// 3500), the way out with Mario back from a KO below the camera (ze-climb 3800) and the match's
+// end on it (ze-climb 4000).
+frames!(ZE_LOOK;
+    ze_look_2300 2300,
+);
+frames!(ZE_CLIMB;
+    ze_climb_2900 2900,
+    ze_climb_3500 3500,
+    ze_climb_3800 3800,
+    ze_climb_4000 4000,
+);
+// Giga Bowser and the Wire Frames (`m6-giga-bowser`), against captures made with ssbm-rs's
+// renderer running (Final Destination's floor samples the reflection copied the frame before):
+// identical images, the floor's two draws that sample the fighters' shadows differing by their
+// textures' hashes alone, as the debug VS match's.
+fn giga_bowser(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5060() {
+    giga_bowser(&GB_GK, 5060, [1269, 1269]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5230() {
+    giga_bowser(&GB_GK, 5230, [1218, 1218]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5330() {
+    giga_bowser(&GB_GK, 5330, [1253, 1249]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_boy_3545() {
+    giga_bowser(&GB_BOY, 3545, [895, 888]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_girl_3557() {
+    giga_bowser(&GB_GIRL, 3557, [904, 906]);
+}

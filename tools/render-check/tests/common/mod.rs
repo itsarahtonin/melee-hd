@@ -48,7 +48,8 @@ pub enum Replay {
     /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
-    /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
+    /// `ze-NAME` `lockstep/m6-brinstar-escape/` (ssbm-rs's `SSBMINP1`), played in the
     /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -79,6 +80,12 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6e-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-select/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("special-") {
                     return ssbm_rs_local(&format!("lockstep/special-sessions/{o}.inputs")).into();
                 }
@@ -96,6 +103,24 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("tou-") {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
+                        .into();
+                }
+                if name.starts_with("race-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
+                }
+
+                if let Some(o) = name.strip_prefix("gb-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
+                }
+                if name.starts_with("mk-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
+                }
+                if name.starts_with("fz-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
+                }
+
+                if name.starts_with("ze-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
                         .into();
                 }
                 if name.starts_with("celebi") {
@@ -724,6 +749,112 @@ pub const DEBUG_VS_DISPLAYS: Game = Game {
     replay: Replay::Session("debug-vs-displays"),
 };
 
+/// Mushroom Kingdom's adventure route (`m6-mk-route/mk-enemies`, debug VS at debug level 3,
+/// Fox alone): the debug item menu's Koopas, Paratroopa and shells at the route's start.
+pub const MK_ENEMIES: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-enemies",
+    players: "Fox alone, the debug item menu's Koopas and shells (session m6-mk-route/mk-enemies)",
+    replay: Replay::Session("mk-enemies"),
+};
+
+/// The route walked (`m6-mk-route/mk-route`): brick blocks broken, a Paratroopa knocked out of
+/// its Koopa.
+pub const MK_ROUTE: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-route",
+    players: "Fox alone along the route (session m6-mk-route/mk-route)",
+    replay: Replay::Session("mk-route"),
+};
+
+/// A fall into the route's water (`m6-mk-route/mk-fall2`): the splash.
+pub const MK_FALL: Game = Game {
+    stage: "Mushroom Kingdom (adventure route)",
+    name: "mk-fall2",
+    players: "Fox alone, into a pit's water (session m6-mk-route/mk-fall2)",
+    replay: Replay::Session("mk-fall2"),
+};
+
+/// The F-Zero race (`m6-fzero-race/fz-run`, debug VS at debug level 3): Link running along the
+/// track, the hazard sign, the cars driving past and hitting him.
+pub const FZ_RUN: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-run",
+    players: "Link running along the track, Mario left at the start (session m6-fzero-race/fz-run)",
+    replay: Replay::Session("fz-run"),
+};
+
+/// The F-Zero cutscene (`m6-fzero-race/fz-cutscene`, the debug cutscene mode at debug level 3):
+/// the race's cars on the cutscene's racers.
+pub const FZ_CUTSCENE: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-cutscene",
+    players: "the F-Zero cutscene's racers (session m6-fzero-race/fz-cutscene)",
+    replay: Replay::Session("fz-cutscene"),
+};
+
+pub const RACE_LOOK: Game = Game {
+    stage: "the race",
+    name: "race-look",
+    players: "Link vs Mario, Link running to the second door (session m6-race/race-look)",
+    replay: Replay::Session("race-look"),
+};
+
+pub const RACE_SPIKES: Game = Game {
+    stage: "the race",
+    name: "race-spikes",
+    players: "Fox alone, down the course into the spikes (session m6-race/race-spikes)",
+    replay: Replay::Session("race-spikes"),
+};
+
+pub const RACE_PILLAR: Game = Game {
+    stage: "the race",
+    name: "race-pillar",
+    players: "Fox alone, into the pillars and to door 0xA3 (session m6-race/race-pillar)",
+    replay: Replay::Session("race-pillar"),
+};
+
+/// Brinstar's escape at rest (`m6-brinstar-escape/ze-look`): Link and Mario at the shaft's foot.
+pub const ZE_LOOK: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-look",
+    players: "Link and Mario standing (session m6-brinstar-escape/ze-look)",
+    replay: Replay::Session("ze-look"),
+};
+
+/// Brinstar's escape climbed (`m6-brinstar-escape/ze-climb`): Fox up the shaft to the way out.
+pub const ZE_CLIMB: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-climb",
+    players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
+    replay: Replay::Session("ze-climb"),
+};
+
+/// Giga Bowser (`m6-giga-bowser/gk`, debug VS at debug level 3): a human's Giga Bowser
+/// through his moveset against Mario on Final Destination, his fire breath and Koopa Klaw.
+pub const GB_GK: Game = Game {
+    stage: "Final Destination",
+    name: "gb-gk",
+    players: "Giga Bowser vs Mario, his specials (session m6-giga-bowser/gk)",
+    replay: Replay::Session("gb-gk"),
+};
+
+/// The male Wire Frame (`m6-giga-bowser/boy`): a forward smash against Mario.
+pub const GB_BOY: Game = Game {
+    stage: "Final Destination",
+    name: "gb-boy",
+    players: "the male Wire Frame vs Mario (session m6-giga-bowser/boy)",
+    replay: Replay::Session("gb-boy"),
+};
+
+/// The female Wire Frame (`m6-giga-bowser/girl`): a forward smash against Mario.
+pub const GB_GIRL: Game = Game {
+    stage: "Final Destination",
+    name: "gb-girl",
+    players: "the female Wire Frame vs Mario (session m6-giga-bowser/girl)",
+    replay: Replay::Session("gb-girl"),
+};
+
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
 /// camera boxes and special points, the collisions by kind, by terrain and by ledge.
 pub const DEBUG_VS_STAGE: Game = Game {
@@ -859,6 +990,57 @@ pub const SELECT_RANDOM: Game = Game {
     name: "select-random",
     players: "the character and stage selects (session select-sessions/random)",
     replay: Replay::Session("select-random"),
+};
+
+/// Classic's one-door select (`m6-select/classic`): the records of the character picked
+/// (1200) and the CPU level's names scrolling (1470).
+pub const M6_CLASSIC: Game = Game {
+    stage: "Main menu",
+    name: "m6-classic",
+    players: "Classic's select (session m6-select/classic)",
+    replay: Replay::Session("m6-classic"),
+};
+
+/// The debug mode's game over (`m6-endings/gameover2`): the trophy on its stand and the
+/// question, the continue's coins paid and the score counting down, and "no"'s end.
+pub const M6E_GAMEOVER: Game = Game {
+    stage: "Debug menu",
+    name: "m6e-gameover2",
+    players: "the debug mode's game over (session m6-endings/gameover2)",
+    replay: Replay::Session("m6e-gameover2"),
+};
+
+/// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
+pub const M6_TARGET: Game = Game {
+    stage: "Main menu",
+    name: "m6-target",
+    players: "Target Test's select (session m6-select/target)",
+    replay: Replay::Session("m6-target"),
+};
+
+/// Training's select (`m6-select/training`): the CPU's door.
+pub const M6_TRAINING: Game = Game {
+    stage: "Main menu",
+    name: "m6-training",
+    players: "Training's select (session m6-select/training)",
+    replay: Replay::Session("m6-training"),
+};
+
+/// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.
+pub const M6_HOMERUN: Game = Game {
+    stage: "Main menu",
+    name: "m6-homerun",
+    players: "the Home-Run Contest's select (session m6-select/homerun)",
+    replay: Replay::Session("m6-homerun"),
+};
+
+/// Classic's select on a card every character has cleared everything on
+/// (`m6-select/tour-cleared`): the clear marks.
+pub const M6_TOUR_CLEARED: Game = Game {
+    stage: "Main menu",
+    name: "m6-tour-cleared",
+    players: "Classic's select with every 1P mode cleared (session m6-select/tour-cleared)",
+    replay: Replay::Session("m6-tour-cleared"),
 };
 
 /// Three computer players' levels set on their sliders (`select-sessions/cpus`).

@@ -466,6 +466,9 @@ pub struct Game {
     /// The challenger approach's screen's statics and its data (`gmapproach.c`'s
     /// `gm_80480D98`, `gmVsMelee_ApproachData`).
     pub approach: super::gm::approach::Approach,
+    /// The cutscenes' statics and enter data (`melee/vi`).
+    pub vi: super::vi::Cutscenes,
+    pub endings: super::gm::endings::Endings,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).
@@ -484,6 +487,9 @@ pub struct Game {
     /// players (`gm_80473814`), the Home-Run Contest's (`gmHomeRun_VsModeData`) and the
     /// trophy gallery's (`Toy_804A284C`, in [`Game::toys`]).
     pub modes: super::gm::mode_init::ModeStatics,
+    /// The single-player modes' statics: their selects' data and the 1P runs' state
+    /// (`gm::one_player`).
+    pub one_player: super::gm::one_player::OnePlayer,
     /// The trophies' statics (`toy.c`, `tylist.c`).
     pub toys: super::ty::Toys,
     /// Tournament mode's statics (`gmtoumode.c`, `gmtoulib.c`, `gmtou_0.c` to `gmtou_2.c`).

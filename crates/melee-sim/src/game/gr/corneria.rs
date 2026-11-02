@@ -551,8 +551,11 @@ fn demo_arwing(r: &mut Running, count: usize, type_id: i32) {
     c.arwings[c.slot as usize] = a;
 }
 
-/// The demo's setup (`grCorneria_801DD2C0`): the Great Fox hidden, the city laid out, and a talk,
-/// up to the demo's own scene code, which only the title screen's demo runs.
+/// The demo's setup (`grCorneria_801DD2C0`), which only the Star Fox cutscene (`vi0601`)
+/// runs: the Great Fox hidden, the city laid out, and the talk object playing one of the
+/// first four talks at random, or of the next four when Adventure's data's `x7C` is 0x14
+/// (`gm_8017E7E0`); the Arwings hold still.
+#[doc(alias = "grCorneria_801DD2C0")]
 pub fn on_demo_init(r: &mut Running) {
     if let Some(ship) = map_gobj(r.game, 3)
         && let Some(j) = jobj_of(r.game, ship)
@@ -560,8 +563,33 @@ pub fn on_demo_init(r: &mut Running) {
         jobj::set_flags_all(&mut r.game.objs.jobjs, Some(j), jobj::HIDDEN);
     }
     demo_city(r);
-    let _ = create(r, 12, setup::SETUP_FRAME);
-    super::super::code::unported_call("gm_8017E7E0");
+    let talk = create(r, 12, setup::SETUP_FRAME);
+    let n = if r.adventure_starfox_lost() {
+        r.game.objs.rng.below(4) + 4
+    } else {
+        r.game.objs.rng.below(4)
+    };
+    set_talk(r, talk.expect("grcorneria.c: the talk"), n);
+    g(r.game).frozen = true;
+}
+
+/// A close group's Arwing for the Star Fox cutscene, `grCorneria_801E1BF0`: map 2's object at
+/// rest at the origin, its animations gone, and held still by the cutscene (`xC4.b0`).
+#[doc(alias = "grCorneria_801E1BF0")]
+pub fn cutscene_arwing(r: &mut Running) -> GObjId {
+    let gobj = create(r, 2, setup::SETUP_FRAME)
+        .expect("the original's assertion failed: grcorneria.c:3184");
+    let gid = ground_of(r.game, gobj);
+    let j = jobj_of(r.game, gobj).expect("the original's assertion failed: grcorneria.c:3186");
+    jobj::remove_anim_all(&mut r.game.objs, Some(j));
+    let jobjs = &mut r.game.objs.jobjs;
+    jobj::set_translate(jobjs, j, Vec3::ZERO);
+    jobj::set_rotation_x(jobjs, j, 0.0);
+    jobj::set_rotation_y(jobjs, j, 0.0);
+    jobj::set_rotation_z(jobjs, j, 0.0);
+    jobj::set_scale(jobjs, j, Vec3::new(1.0, 1.0, 1.0));
+    r.game.grounds[gid.0].u.arwing().b0 = true;
+    gobj
 }
 
 /// The stack address of the scale joint's descriptor for the objects Corneria's setup makes
@@ -1133,8 +1161,8 @@ fn init_flying(r: &mut Running, gobj: GObjId, with_background: bool) {
             crate::lb::anim::attach(&mut r.game.objs, a, b);
             r.game.grounds[gid.0].u.arwing().xDC = None;
         }
-        // `Ground_DisableStarFoxArwingGObjs`: no type reaches it.
-        other => unreachable!("an Arwing of type {other}"),
+        // `Ground_DisableStarFoxArwingGObjs`: the Star Fox cutscene's Arwings, of no type.
+        _ => r.game.grounds[gid.0].u.arwing().disabled = true,
     }
     let k = reg(param(r.game).f(r.data, p::ARWING_SCALE));
     let v = mem(fp::fmuls(s, k));

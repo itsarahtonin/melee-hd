@@ -4,12 +4,13 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_CASTLE, GR_KIND_CORNERIA, GR_KIND_FLATZONE,
-    GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT,
-    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST,
-    GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT,
-    GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM,
-    GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
+    GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FLATZONE, GR_KIND_FOURSIDE,
+    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1,
+    GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO, GR_KIND_KRAID,
+    GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
+    GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON, GR_KIND_RCRUISE, GR_KIND_SHRINE,
+    GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1305,11 +1306,19 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
     GrJoint { x: 7, y: 18, z: 0 },
 ];
 
-/// A stage's file as the game names it (`lbFileGetFullName`): the four stages whose table
-/// gives no extension (Pokémon Stadium's, Onett's, Corneria's and Venom's) take the saved
+/// A stage's file as the game names it (`lbFileGetFullName`): the five stages whose table
+/// gives no extension (Pokémon Stadium's, Onett's, Corneria's, Venom's and the Home-Run
+/// Contest's) take the saved
 /// language's, `.dat` with Japanese saved.
 pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
-    let f = stage_data(grkind).file?;
+    // The Home-Run Contest's (`grHr_StageData`'s `/GrHr`, no extension), which its select's
+    // game cache preloads before its stage is ported.
+    const GR_KIND_HOMERUN: i32 = 0x43;
+    let f = if grkind == GR_KIND_HOMERUN {
+        "/GrHr.usd"
+    } else {
+        stage_data(grkind).file?
+    };
     Some(if saved_us {
         f
     } else {
@@ -1318,6 +1327,7 @@ pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
             "/GrOt.usd" => "/GrOt.dat",
             "/GrCn.usd" => "/GrCn.dat",
             "/GrVe.usd" => "/GrVe.dat",
+            "/GrHr.usd" => "/GrHr.dat",
             f => f,
         }
     })
@@ -1687,6 +1697,226 @@ pub const BIGBLUE: StageData = StageData {
     joints: &BIGBLUE_JOINTS,
 };
 
+/// `grNKr_StageCallbacks`. Map 3 is the route, map 2 the background, map 1 the backdrop and
+/// map 0 the pieces that follow the first fighter.
+pub const KINOKOROUTE_CALLBACKS: [StageCallbacks; 4] = [
+    cb(0x8020_7634, 0x8020_78E8, 0x8020_78F0, 0x8020_7A94, 0),
+    cb(0x8020_7ADC, 0x8020_7B20, 0x8020_7B28, 0x8020_7B2C, 0),
+    cb(0x8020_7A98, 0x8020_7ACC, 0x8020_7AD4, 0x8020_7AD8, 0),
+    cb(
+        0x8020_7B5C,
+        0x8020_7C80,
+        0x8020_7C88,
+        0x8020_8368,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grNKr_StageData`.
+pub const KINOKOROUTE: StageData = StageData {
+    grkind: GR_KIND_KINOKOROUTE,
+    callbacks: &KINOKOROUTE_CALLBACKS,
+    file: Some("/GrNKr.dat"),
+    on_init: 0x8020_7420,
+    on_demo_init: 0x8020_741C,
+    on_load: 0x8020_7490,
+    on_start: 0x8020_74D8,
+    callback4: 0x8020_7544,
+    on_touch_line: 0x8020_8754,
+    on_check_shadow_render: 0x8020_875C,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grBb_Route_StageCallbacks`. Map 0 is the backdrop, 1 the demo's object, 4 the cars (made
+/// at the match's start), 31 the track and 32 the far background.
+pub const BIGBLUEROUTE_CALLBACKS: [StageCallbacks; 38] = {
+    let mut c = [cb(0, 0, 0, 0, 0); 38];
+    c[0] = cb(0x8020_BABC, 0x8020_BB00, 0x8020_BB08, 0x8020_BB0C, 0);
+    c[1] = cb(0x8020_BB68, 0x8020_BC24, 0x8020_BC2C, 0x8020_BC30, 0);
+    c[4] = cb(
+        0x8020_C140,
+        0x8020_C1D4,
+        0x8020_C1DC,
+        0x8020_C210,
+        StageCallbacks::LIGHTS,
+    );
+    c[31] = cb(
+        0x8020_BC68,
+        0x8020_BF30,
+        0x8020_BF38,
+        0x8020_C13C,
+        StageCallbacks::FOG,
+    );
+    c[32] = cb(0x8020_BB10, 0x8020_BB58, 0x8020_BB60, 0x8020_BB64, 0);
+    c
+};
+
+/// `grBb_Route_StageData`.
+pub const BIGBLUEROUTE: StageData = StageData {
+    grkind: GR_KIND_BIGBLUEROUTE,
+    callbacks: &BIGBLUEROUTE_CALLBACKS,
+    file: Some("/GrNBr.dat"),
+    on_init: 0x8020_B89C,
+    on_demo_init: 0x8020_B864,
+    on_load: 0x8020_B920,
+    on_start: 0x8020_B95C,
+    callback4: 0x8020_B9CC,
+    on_touch_line: 0x8020_DF78,
+    on_check_shadow_render: 0x8020_DF80,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grPushOn_StageCallbacks`. Map 0 is the backdrop, map 1 the course and map 2 the lights.
+pub const PUSHON_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8021_84CC, 0x8021_8590, 0x8021_8598, 0x8021_859C, 0),
+    cb(
+        0x8021_85A0,
+        0x8021_8670,
+        0x8021_86C8,
+        0x8021_87A4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8021_87A8, 0x8021_8880, 0x8021_8888, 0x8021_8ED0, 0),
+];
+
+/// `grPushOn_StageData`.
+pub const PUSHON: StageData = StageData {
+    grkind: GR_KIND_PUSHON,
+    callbacks: &PUSHON_CALLBACKS,
+    file: Some("/GrNPo.dat"),
+    on_init: 0x8021_82C8,
+    on_demo_init: 0x8021_82C4,
+    on_load: 0x8021_8330,
+    on_start: 0x8021_8378,
+    callback4: 0x8021_83DC,
+    on_touch_line: 0x8021_9458,
+    on_check_shadow_render: 0x8021_9528,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grZe_Route_StageCallbacks`. Map 1 is the shaft (with the stage's lights and fog), maps 0
+/// and 2 animated models.
+pub const ZEBESROUTE_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_B348, 0x8020_B374, 0x8020_B37C, 0x8020_B380, 0),
+    cb(
+        0x8020_B3C0,
+        0x8020_B424,
+        0x8020_B42C,
+        0x8020_B4D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_B384, 0x8020_B3B0, 0x8020_B3B8, 0x8020_B3BC, 0),
+];
+
+/// `grZe_Route_StageData`.
+pub const ZEBESROUTE: StageData = StageData {
+    grkind: GR_KIND_ZEBESROUTE,
+    callbacks: &ZEBESROUTE_CALLBACKS,
+    file: Some("/GrNZr.dat"),
+    on_init: 0x8020_B164,
+    on_demo_init: 0x8020_B160,
+    on_load: 0x8020_B1D4,
+    on_start: 0x8020_B1F4,
+    callback4: 0x8020_B258,
+    on_touch_line: 0x8020_B854,
+    on_check_shadow_render: 0x8020_B85C,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grEF1_StageCallbacks`. Map 0 is an animated model, map 1 the collision (with the stage's
+/// lights and fog), map 2 a model with its own collision.
+pub const FIGURE1_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E168, 0x8020_E194, 0x8020_E19C, 0x8020_E1A0, 0),
+    cb(
+        0x8020_E1A4,
+        0x8020_E1D0,
+        0x8020_E1D8,
+        0x8020_E1FC,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E200, 0x8020_E250, 0x8020_E258, 0x8020_E25C, 0),
+];
+
+/// `grEF1_StageData`, the first event trophy stage.
+pub const FIGURE1: StageData = StageData {
+    grkind: GR_KIND_FIGURE1,
+    callbacks: &FIGURE1_CALLBACKS,
+    file: Some("/GrEF1.dat"),
+    on_init: 0x8020_DFE0,
+    on_demo_init: 0x8020_DFDC,
+    on_load: 0x8020_E050,
+    on_start: 0x8020_E054,
+    callback4: 0x8020_E078,
+    on_touch_line: 0x8020_E260,
+    on_check_shadow_render: 0x8020_E268,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grEF2_StageCallbacks` (grfigure2.c's), laid out as the first trophy stage's.
+pub const FIGURE2_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E3FC, 0x8020_E428, 0x8020_E430, 0x8020_E434, 0),
+    cb(
+        0x8020_E438,
+        0x8020_E464,
+        0x8020_E46C,
+        0x8020_E490,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E494, 0x8020_E4E4, 0x8020_E4EC, 0x8020_E4F0, 0),
+];
+
+/// `grEF2_StageData`, the second event trophy stage; its demo setup is grfigure1.c's
+/// `grFigure1_8020E270`.
+pub const FIGURE2: StageData = StageData {
+    grkind: GR_KIND_FIGURE2,
+    callbacks: &FIGURE2_CALLBACKS,
+    file: Some("/GrEF2.dat"),
+    on_init: 0x8020_E274,
+    on_demo_init: 0x8020_E270,
+    on_load: 0x8020_E2E4,
+    on_start: 0x8020_E2E8,
+    callback4: 0x8020_E30C,
+    on_touch_line: 0x8020_E4F4,
+    on_check_shadow_render: 0x8020_E4FC,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grEF2_StageCallbacks` (grfigure3.c's own, under the same name), laid out as the first
+/// trophy stage's.
+pub const FIGURE3_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E690, 0x8020_E6BC, 0x8020_E6C4, 0x8020_E6C8, 0),
+    cb(
+        0x8020_E6CC,
+        0x8020_E6F8,
+        0x8020_E700,
+        0x8020_E724,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E728, 0x8020_E778, 0x8020_E780, 0x8020_E784, 0),
+];
+
+/// `grEF3_StageData`, the third event trophy stage.
+pub const FIGURE3: StageData = StageData {
+    grkind: GR_KIND_FIGURE3,
+    callbacks: &FIGURE3_CALLBACKS,
+    file: Some("/GrEF3.dat"),
+    on_init: 0x8020_E508,
+    on_demo_init: 0x8020_E504,
+    on_load: 0x8020_E578,
+    on_start: 0x8020_E57C,
+    callback4: 0x8020_E5A0,
+    on_touch_line: 0x8020_E788,
+    on_check_shadow_render: 0x8020_E790,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1719,6 +1949,13 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_CASTLE => &CASTLE,
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
+        GR_KIND_KINOKOROUTE => &KINOKOROUTE,
+        GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
+        GR_KIND_PUSHON => &PUSHON,
+        GR_KIND_ZEBESROUTE => &ZEBESROUTE,
+        GR_KIND_FIGURE1 => &FIGURE1,
+        GR_KIND_FIGURE2 => &FIGURE2,
+        GR_KIND_FIGURE3 => &FIGURE3,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

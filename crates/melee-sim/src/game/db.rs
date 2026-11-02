@@ -1491,10 +1491,11 @@ impl Running<'_> {
             // "couldn't get Item struct.(CZako)"
             return;
         }
-        if (IT_OLD_KURI..IT_ARWING_LASER).contains(&kind) {
-            crate::game::code::unported_call(
-                "the debug item spawn of an adventure enemy (it_804A0F60)",
-            );
+        // An adventure enemy only when the stage loaded its article (`it_804A0F60`).
+        if (IT_OLD_KURI..IT_ARWING_LASER).contains(&kind)
+            && self.game.gr.stage_articles[(kind - IT_OLD_KURI) as usize].is_none()
+        {
+            return;
         }
         if kind == IT_M_BALL && super::it::spawn::poke_balls_full(self.game) {
             return;

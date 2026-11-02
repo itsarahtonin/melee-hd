@@ -188,7 +188,39 @@ enum Hook {
     DebugVsEnterVs,
     /// `onEnterResults` (`gmvsmode.c`'s, VS mode's) in debug VS.
     DebugVsEnterResults,
-    DebugUnported(&'static str),
+    /// `onEnterCutsceneLuigi`, `onExitRegendCongrats` (`gmopeningmode.c`), the debug
+    /// cutscene mode's.
+    CutsceneLuigiEnter,
+    RegendCongratsExit,
+    /// `onEnterIntroEasy`, `onEnterIntroAllstar`, `onEnterGameOver` (`gmdebugmode.c`).
+    DebugEnterIntroEasy,
+    DebugEnterIntroAllstar,
+    DebugEnterGameOver,
+    /// `gm_801BEE9C` (`gmgover.c`), congratulations' exit.
+    GOverCongratsExit,
+    /// The single-player modes' loads and selects ([`super::one_player`]).
+    ClassicOnLoad,
+    ClassicEnterCss,
+    ClassicExitCss,
+    AdventureOnLoad,
+    AdventureEnterCss,
+    AdventureExitCss,
+    AllStarOnLoad,
+    AllStarEnterCss,
+    AllStarExitCss,
+    TargetOnLoad,
+    TargetEnterCss,
+    TargetExitCss,
+    HomeRunOnLoad,
+    HomeRunEnterCss,
+    HomeRunExitCss,
+    TrainingOnLoad,
+    TrainingEnterCss,
+    TrainingExitCss,
+    TrainingEnterSss,
+    TrainingExitSss,
+    /// A single-player mode's state's handler that isn't ported: the mode's own task's.
+    Unported1P(&'static str),
 }
 
 /// Whether `mode` is a Special Melee mode with VS mode's states (`gmsupersudden.c` and the
@@ -208,6 +240,7 @@ pub fn uses_vs_melee(mode: u8) -> bool {
 }
 
 /// A mode state (`GameModeState`): its id, preload class, handlers and scene.
+#[derive(Clone, Copy)]
 struct StateDesc {
     id: u8,
     preload: i32,
@@ -550,20 +583,20 @@ fn states(mode: u8) -> &'static [StateDesc] {
         ),
         debug(
             6,
-            Some(Hook::DebugUnported("onEnterIntroEasy")),
+            Some(Hook::DebugEnterIntroEasy),
             Some(Hook::DebugBackToMenu),
             0x20,
         ),
         debug(
             7,
-            Some(Hook::DebugUnported("onEnterIntroAllstar")),
+            Some(Hook::DebugEnterIntroAllstar),
             Some(Hook::DebugBackToMenu),
             0x21,
         ),
         debug(8, None, Some(Hook::DebugBackToMenu), 0x23),
         debug(
             9,
-            Some(Hook::DebugUnported("onEnterGameOver")),
+            Some(Hook::DebugEnterGameOver),
             Some(Hook::DebugBackToMenu),
             0x22,
         ),
@@ -604,6 +637,39 @@ fn states(mode: u8) -> &'static [StateDesc] {
         GS_CSS,
     )];
     const HANYU_SSS: [StateDesc; 1] = [debug(0, Some(Hook::HanyuSssEnter), None, GS_SSS)];
+    // `gm_Mode_DebugCutscene_States`: the eleven cutscenes in turn, then congratulations.
+    const DEBUG_CUTSCENE: [StateDesc; 12] = [
+        debug(0, Some(Hook::CutsceneLuigiEnter), None, 0x11),
+        debug(1, None, None, 0x12),
+        debug(2, None, None, 0x13),
+        debug(3, None, None, 0x14),
+        debug(4, None, None, 0x15),
+        debug(5, None, None, 0x16),
+        debug(6, None, None, 0x17),
+        debug(7, None, None, 0x18),
+        debug(8, None, None, 0x19),
+        debug(9, None, None, 0x1A),
+        debug(10, None, None, 0x1B),
+        debug(
+            11,
+            None,
+            Some(Hook::RegendCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
+    // `gm_Mode_DebugGOver_States` (`gmgover.c`): the trophy fall, then congratulations.
+    const DEBUG_GOVER: [StateDesc; 2] = [
+        debug(0, None, None, super::endings::GS_REGEND_TOYFALL),
+        debug(
+            1,
+            None,
+            Some(Hook::GOverCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
+    if let Some(list) = one_player_states(mode) {
+        return list;
+    }
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
         crate::game::ty::GM_TOY_GALLERY => &TOY_GALLERY,
@@ -626,6 +692,8 @@ fn states(mode: u8) -> &'static [StateDesc] {
         super::GM_DEBUG_SOUND_TEST => &SOUND_TEST,
         super::GM_HANYU_CSS => &HANYU_CSS,
         super::GM_HANYU_SSS => &HANYU_SSS,
+        crate::game::vi::GM_DEBUG_CUTSCENE => &DEBUG_CUTSCENE,
+        super::endings::GM_DEBUG_GOVER => &DEBUG_GOVER,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -657,7 +725,15 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         | super::GM_DEBUG_VS
         | super::GM_DEBUG_SOUND_TEST
         | super::GM_HANYU_CSS
-        | super::GM_HANYU_SSS => (false, None, None),
+        | super::GM_HANYU_SSS
+        | crate::game::vi::GM_DEBUG_CUTSCENE
+        | super::endings::GM_DEBUG_GOVER => (false, None, None),
+        super::one_player::GM_CLASSIC => (true, Some(Hook::ClassicOnLoad), None),
+        super::one_player::GM_ADVENTURE => (false, Some(Hook::AdventureOnLoad), None),
+        super::one_player::GM_ALLSTAR => (true, Some(Hook::AllStarOnLoad), None),
+        super::one_player::GM_TARGET_TEST => (true, Some(Hook::TargetOnLoad), None),
+        super::one_player::GM_TRAINING => (true, Some(Hook::TrainingOnLoad), None),
+        super::one_player::GM_HOME_RUN => (true, Some(Hook::HomeRunOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -807,8 +883,9 @@ impl Running<'_> {
         };
         // The VS scene loads its match's files, the Result Test's results screen its players'
         // (with no match before it): the frontend reads them first.
-        self.game.machine.files_wanted =
-            s.scene == GS_VS || (scene_mode == super::GM_DEBUG && s.id == 11);
+        self.game.machine.files_wanted = s.scene == GS_VS
+            || (scene_mode == super::GM_DEBUG && s.id == 11)
+            || crate::game::vi::scene_handlers(s.scene).is_some();
     }
 
     /// The players whose files the scene about to enter loads, and whether it's a match (else
@@ -833,6 +910,17 @@ impl Running<'_> {
             return (d, false);
         }
         (self.scene_start_data().clone(), true)
+    }
+
+    /// The scene about to enter, if one is.
+    pub fn entering_scene(&self) -> Option<u8> {
+        let Phase::Entering {
+            scene_mode, state, ..
+        } = self.game.machine.phase
+        else {
+            return None;
+        };
+        Some(states(scene_mode)[usize::from(state)].scene)
     }
 
     /// The match the VS scene about to enter starts: its mode state's enter data.
@@ -918,6 +1006,14 @@ impl Running<'_> {
             ),
             // No frame function: the menus' process runs the scene.
             GS_DEBUG_MENU => (crate::game::hud::debug_menu::ON_ENTER, CodeRef(0)),
+            // No frame functions: the models' processes run the screens.
+            super::endings::GS_GAMEOVER => (super::endings::game_over::ON_ENTER, CodeRef(0)),
+            super::endings::GS_COMING_SOON => {
+                (super::endings::game_over::SOON_ON_ENTER, CodeRef(0))
+            }
+            k if crate::game::vi::scene_handlers(k).is_some() => {
+                crate::game::vi::scene_handlers(k).unwrap()
+            }
             k => unported_call(&format!("game scene {k:#x}")),
         };
         // `gm_FindGameSceneHandler`, `gm_801A4BD4`, `gm_801A4B88`.
@@ -952,7 +1048,9 @@ impl Running<'_> {
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
             crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
-            _ => unreachable!(),
+            super::endings::game_over::ON_ENTER => self.game_over_on_enter(),
+            super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
+            _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
     }
@@ -1027,9 +1125,13 @@ impl Running<'_> {
             // `ifPrize_Scene_OnExit` does nothing; the debug menu has no exit.
             GS_PRIZE | GS_DEBUG_MENU => {}
             GS_APPROACH => self.approach_on_exit(),
+            super::endings::GS_GAMEOVER => self.game_over_on_exit(),
+            super::endings::GS_COMING_SOON => self.coming_soon_on_exit(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
+            // The cutscenes have no exit of their own.
+            k if crate::game::vi::scene_handlers(k).is_some() => {}
             k => unported_call(&format!("game scene {k:#x}'s exit")),
         }
         if let Some(h) = s.on_exit {
@@ -1206,7 +1308,33 @@ impl Running<'_> {
             Hook::DebugEnterResults1 => self.debug_mode_enter_results1(),
             Hook::DebugExitResults1 => self.debug_mode_exit_results1(),
             Hook::DebugVsEnterResults => self.vs_mode_enter_results(),
-            Hook::DebugUnported(name) => unported_call(name),
+            Hook::CutsceneLuigiEnter => self.debug_cutscene_enter(),
+            Hook::RegendCongratsExit => self.debug_cutscene_exit(),
+            Hook::DebugEnterIntroEasy => self.debug_enter_intro_easy(),
+            Hook::DebugEnterIntroAllstar => self.debug_enter_intro_allstar(),
+            Hook::DebugEnterGameOver => self.debug_enter_game_over(),
+            Hook::GOverCongratsExit => unported_call("gm_801BEE9C (congratulations' exit)"),
+            Hook::ClassicOnLoad => self.classic_on_load(),
+            Hook::ClassicEnterCss => self.classic_enter_css(),
+            Hook::ClassicExitCss => self.classic_exit_css(),
+            Hook::AdventureOnLoad => self.adventure_on_load(),
+            Hook::AdventureEnterCss => self.adventure_enter_css(),
+            Hook::AdventureExitCss => self.adventure_exit_css(),
+            Hook::AllStarOnLoad => self.allstar_on_load(),
+            Hook::AllStarEnterCss => self.allstar_enter_css(),
+            Hook::AllStarExitCss => self.allstar_exit_css(),
+            Hook::TargetOnLoad => self.target_on_load(),
+            Hook::TargetEnterCss => self.target_enter_css(),
+            Hook::TargetExitCss => self.target_exit_css(),
+            Hook::HomeRunOnLoad => self.homerun_on_load(),
+            Hook::HomeRunEnterCss => self.homerun_enter_css(),
+            Hook::HomeRunExitCss => self.homerun_exit_css(),
+            Hook::TrainingOnLoad => self.training_on_load(),
+            Hook::TrainingEnterCss => self.training_enter_css(),
+            Hook::TrainingExitCss => self.training_exit_css(),
+            Hook::TrainingEnterSss => self.training_enter_sss(),
+            Hook::TrainingExitSss => self.training_exit_sss(),
+            Hook::Unported1P(name) => unported_call(name),
         }
         let _ = state;
     }
@@ -1299,4 +1427,165 @@ fn next_state(states: &[StateDesc], cur: u8) -> u8 {
 // Ports `gm_GetCurrentGameMode`; aliased once a check reaches it.
 pub fn current_mode(m: &Machine) -> u8 {
     m.routing.curr_mode
+}
+
+/// The single-player modes' states (`gm_Mode_Classic_States`, `gm_Mode_Adventure_States`,
+/// `gm_Mode_AllStar_States`, `gm_Mode_TargetTest_States`, `gm_Mode_Training_States`,
+/// `gm_Mode_Homerun_States`): the selects' handlers ported, the rest stopping by name.
+fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
+    use super::one_player::{
+        GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC, GM_HOME_RUN, GM_TARGET_TEST, GM_TRAINING,
+    };
+    const fn st(
+        id: u8,
+        preload: i32,
+        on_enter: Option<Hook>,
+        on_exit: Option<Hook>,
+        scene: u8,
+    ) -> StateDesc {
+        StateDesc {
+            id,
+            preload,
+            on_enter,
+            on_exit,
+            scene,
+        }
+    }
+    const fn u(name: &'static str) -> Option<Hook> {
+        Some(Hook::Unported1P(name))
+    }
+    const GS_TRAINING: u8 = 0x04;
+    const GS_INTRO_EASY: u8 = 0x20;
+    const GS_INTRO_NORMAL: u8 = 0x21;
+    const GS_GAMEOVER: u8 = 0x22;
+    const GS_COMING_SOON: u8 = 0x23;
+    // Eleven rounds of an intro and a match, ids 8 apart.
+    const CLASSIC: [StateDesc; 25] = {
+        let mut out = [st(0, 0, None, None, 0); 25];
+        let mut r = 0;
+        while r < 11 {
+            let id = 8 * r as u8;
+            out[2 * r] = st(id, 3, u("gmClassic_801B3500"), None, GS_INTRO_EASY);
+            out[2 * r + 1] = st(
+                id + 1,
+                3,
+                u("gmClassic_801B3A34"),
+                u("gmClassic_801B3B40"),
+                GS_VS,
+            );
+            r += 1;
+        }
+        out[22] = st(104, 3, None, u("gmClassic_801B3F18"), GS_COMING_SOON);
+        out[23] = st(
+            105,
+            3,
+            u("gmClassic_801B3D44"),
+            u("gmClassic_801B3D84"),
+            GS_GAMEOVER,
+        );
+        out[24] = st(
+            112,
+            3,
+            Some(Hook::ClassicEnterCss),
+            Some(Hook::ClassicExitCss),
+            GS_CSS,
+        );
+        out
+    };
+    // By their ids (`ADVENTURE_*`): the stages' intros, matches and cutscenes, coming soon,
+    // the game over and the select. Every handler but the select's is the mode's own.
+    const ADVENTURE: [StateDesc; 48] = {
+        let ids: [u8; 48] = [
+            0x00, 0x01, 0x02, 0x03, 0x08, 0x09, 0x0A, 0x10, 0x11, 0x12, 0x18, 0x19, 0x1A, 0x1B,
+            0x1C, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x28, 0x29, 0x2A, 0x2B, 0x30, 0x31, 0x38,
+            0x39, 0x3A, 0x3B, 0x40, 0x41, 0x48, 0x49, 0x50, 0x51, 0x52, 0x53, 0x58, 0x59, 0x5A,
+            0x5B, 0x5C, 0x5D, 0x68, 0x69, 0x70,
+        ];
+        let mut out = [st(0, 2, u("gmadventure's stage states"), None, GS_VS); 48];
+        let mut i = 0;
+        while i < 48 {
+            out[i].id = ids[i];
+            i += 1;
+        }
+        out[0] = st(0, 2, u("gm_801B3F40"), None, GS_INTRO_NORMAL);
+        out[45] = st(0x68, 2, None, u("gm_801B4408"), GS_COMING_SOON);
+        out[46] = st(0x69, 2, u("gm_801B4254"), u("gm_801B4294"), GS_GAMEOVER);
+        out[47] = st(
+            0x70,
+            2,
+            Some(Hook::AdventureEnterCss),
+            Some(Hook::AdventureExitCss),
+            GS_CSS,
+        );
+        out
+    };
+    // Thirteen rounds of a match and (but the last) the rest area, ids 8 apart.
+    const ALLSTAR: [StateDesc; 28] = {
+        let mut out = [st(0, 0, None, None, 0); 28];
+        let mut r = 0;
+        while r < 13 {
+            let id = 8 * r as u8;
+            out[2 * r] = st(id, 3, u("gm_801B5624"), u("gm_801B59AC"), GS_VS);
+            if r < 12 {
+                out[2 * r + 1] = st(id + 1, 3, u("gm_801B5ACC"), u("gm_801B5E7C"), GS_VS);
+            }
+            r += 1;
+        }
+        out[25] = st(0x68, 3, None, u("gm_801B607C"), GS_COMING_SOON);
+        out[26] = st(0x69, 3, u("gm_801B5EB4"), u("gm_801B5EE4"), GS_GAMEOVER);
+        out[27] = st(
+            0x70,
+            3,
+            Some(Hook::AllStarEnterCss),
+            Some(Hook::AllStarExitCss),
+            GS_CSS,
+        );
+        out
+    };
+    const TARGET: [StateDesc; 2] = [
+        st(
+            0,
+            3,
+            Some(Hook::TargetEnterCss),
+            Some(Hook::TargetExitCss),
+            GS_CSS,
+        ),
+        st(1, 3, u("gm_801B6428"), u("gm_801B65D4"), GS_VS),
+    ];
+    const TRAINING: [StateDesc; 3] = [
+        st(
+            0,
+            3,
+            Some(Hook::TrainingEnterCss),
+            Some(Hook::TrainingExitCss),
+            GS_CSS,
+        ),
+        st(
+            1,
+            3,
+            Some(Hook::TrainingEnterSss),
+            Some(Hook::TrainingExitSss),
+            GS_SSS,
+        ),
+        st(2, 3, u("gm_801B1F70"), u("gm_801B2204"), GS_TRAINING),
+    ];
+    const HOME_RUN: [StateDesc; 2] = [
+        st(
+            0,
+            3,
+            Some(Hook::HomeRunEnterCss),
+            Some(Hook::HomeRunExitCss),
+            GS_CSS,
+        ),
+        st(1, 3, u("gm_801B9A3C"), u("gm_801B9DD8"), GS_VS),
+    ];
+    Some(match mode {
+        GM_CLASSIC => &CLASSIC,
+        GM_ADVENTURE => &ADVENTURE,
+        GM_ALLSTAR => &ALLSTAR,
+        GM_TARGET_TEST => &TARGET,
+        GM_TRAINING => &TRAINING,
+        GM_HOME_RUN => &HOME_RUN,
+        _ => return None,
+    })
 }

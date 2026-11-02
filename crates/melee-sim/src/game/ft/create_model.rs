@@ -372,6 +372,11 @@ impl Running<'_> {
             0x8014_F124 => self.fe_on_load(gobj),
             0x8011_EF3C => self.popo_on_load(gobj),
             0x8012_2EDC => self.nana_on_load(gobj),
+            super::masterhand::addr::INIT_ON_LOAD => self.mh_on_load(gobj),
+            super::gkoopa::addr::ON_LOAD => self.gk_on_load(gobj),
+            super::zako::addr::BOY_ON_LOAD | super::zako::addr::GIRL_ON_LOAD => {
+                self.zako_on_load(gobj)
+            }
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -407,6 +412,11 @@ impl Running<'_> {
             0x8014_EEF8 => self.fe_on_death(gobj),
             0x8011_EFE8 => self.popo_on_death(gobj),
             0x8012_2F28 => self.nana_on_death(gobj),
+            super::masterhand::addr::INIT_ON_DEATH => self.mh_on_death(gobj),
+            super::gkoopa::addr::ON_DEATH => self.gk_on_death(gobj),
+            super::zako::addr::BOY_ON_DEATH | super::zako::addr::GIRL_ON_DEATH => {
+                self.zako_on_death(gobj)
+            }
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -440,6 +450,10 @@ impl Running<'_> {
             0x8010_DA74 => self.dk_load_special_attrs(gobj),
             0x8014_F148 => self.fe_load_special_attrs(gobj),
             0x8011_F0A4 | 0x8012_2FCC => self.popo_load_special_attrs(gobj),
+            super::masterhand::addr::INIT_LOAD_SPECIAL_ATTRS => self.mh_load_special_attrs(gobj),
+            super::gkoopa::addr::LOAD_SPECIAL_ATTRS => self.gk_load_special_attrs(gobj),
+            super::zako::addr::BOY_LOAD_SPECIAL_ATTRS
+            | super::zako::addr::GIRL_LOAD_SPECIAL_ATTRS => self.zako_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

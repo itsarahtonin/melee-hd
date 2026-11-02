@@ -301,24 +301,12 @@ pub const STAGES: &[Stage] = &[
             unreached: &[
                 YAKU_UNANCHORED,
                 (
-                    "grCorneria_801DD2C0",
-                    "the demo's setup, which only the title screen's demo runs",
-                ),
-                (
-                    "gm_8017E7E0",
-                    "the demo's scene code, which only the title screen's demo runs",
-                ),
-                (
                     "grCorneria_801E1060",
                     "map 11's process: the stage's load hook destroys map 11 before its first tick",
                 ),
                 (
                     "gm_801883C0",
                     "map 11's process: the stage's load hook destroys map 11 before its first tick",
-                ),
-                (
-                    "grCorneria_801E1BF0",
-                    "the opening movie's Arwing (vi0601.c)",
                 ),
                 (
                     "grCorneria_801E2E50",
@@ -350,10 +338,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grlast"],
             modules: &["gr/last"],
-            unreached: &[(
-                "gm_8016ECE8",
-                "the boss stages' cycle, which only the single-player boss stages run",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },
@@ -798,8 +783,8 @@ pub(crate) mod tests {
             "each roster stage's shadow check is wired (every_roster_stage_plays)",
         ),
         (
-            "Ground_801C0C2C",
-            "the point search, which single-player modes ask for",
+            "a stage's point check",
+            "a stage's own check of a watched point (stage_info.x90 and x94): of the two stages that watch points, Mushroom Kingdom's adventure route gives none and the race's (fn_80218678) is ported",
         ),
         (
             "grMaterial_804D456C",
@@ -809,9 +794,16 @@ pub(crate) mod tests {
             "a stage item's",
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
-        ("the spawner's trophies", "trophy stages"),
         (
-            "the spawner's enemies",
+            "a 1P trophy at a spawner slot",
+            "a single-player mode's trophy slot (stage_info.x6E4 is -1 outside one)",
+        ),
+        (
+            "a spawner's ReDead",
+            "enemy spawners, which no roster stage configures",
+        ),
+        (
+            "a spawner's Like Like",
             "enemy spawners, which no roster stage configures",
         ),
         (

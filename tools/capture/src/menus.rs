@@ -121,6 +121,14 @@ impl<'a> Comparer<'a> {
                 melee_sim::game::gm::GM_DEBUG_SOUND_TEST => sym("gm_Mode_DebugMenu_States"),
                 melee_sim::game::gm::GM_HANYU_CSS => sym("gm_Mode_HanyuCss_States"),
                 melee_sim::game::gm::GM_HANYU_SSS => sym("gm_Mode_HanyuSss_States"),
+                melee_sim::game::vi::GM_DEBUG_CUTSCENE => sym("gm_Mode_DebugCutscene_States"),
+                melee_sim::game::gm::endings::GM_DEBUG_GOVER => sym("gm_Mode_DebugGOver_States"),
+                0x03 => sym("gm_Mode_Classic_States"),
+                0x04 => sym("gm_Mode_Adventure_States"),
+                0x05 => sym("gm_Mode_AllStar_States"),
+                0x0F => sym("gm_Mode_TargetTest_States"),
+                0x1C => sym("gm_Mode_Training_States"),
+                0x20 => sym("gm_Mode_Homerun_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC

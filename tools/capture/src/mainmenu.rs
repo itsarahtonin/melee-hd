@@ -233,6 +233,8 @@ impl Comparer<'_> {
             ),
         );
         self.approach();
+        self.cutscenes();
+        self.endings();
     }
 
     /// The challenger approach's screen's statics (`gm_80480D98`) and its enter data

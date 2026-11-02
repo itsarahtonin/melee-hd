@@ -172,7 +172,8 @@ fn full_name(name: &str) -> String {
 }
 
 /// Every file a game cache can preload ([`Dvd::want_game_cache`]): each fighter kind's data,
-/// costume, effect and animation files, each stage select stage's file, and Kirby's copies.
+/// costume, effect and animation files, each stage select stage's file and the Home-Run
+/// Contest's, and Kirby's copies.
 pub fn game_cache_files() -> Vec<String> {
     use crate::game::ft::data::kind_tables;
     let mut out: Vec<String> = Vec::new();
@@ -221,6 +222,12 @@ pub fn game_cache_files() -> Vec<String> {
             if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
                 add(n);
             }
+        }
+    }
+    // The Home-Run Contest's stage, which its select's game cache names.
+    for us in [true, false] {
+        if let Some(n) = crate::game::gr::data::stage_file(0x43, us) {
+            add(n);
         }
     }
     out
@@ -498,6 +505,50 @@ impl Dvd {
             }
         }
         busy
+    }
+
+    /// `lbDvd_80018A2C`: whether the files preload classes `mask` asked for are still coming
+    /// (1), all in (2, each marked kept: state 4, the top score) or none asked (0). One in the
+    /// persistent heap, or being read, is coming; one read waits while its heap has both an
+    /// entry being read and an unwanted one in.
+    // Ports `lbDvd_80018A2C`; aliased once a check reaches it.
+    pub fn class_pending(&mut self, mask: u8) -> i32 {
+        let mut result = 0;
+        for i in 0..ENTRIES {
+            let e = self.cache.entries[i];
+            if e.state == 0 || e.load_score <= 0 || e.class & mask == 0 {
+                continue;
+            }
+            if i32::from(e.heap) == self.cache.persistent_heap {
+                return 1;
+            }
+            match e.state {
+                1 | 2 => return 1,
+                3 => {
+                    let same = |o: &PreloadEntry| o.heap == e.heap;
+                    let pending = self
+                        .cache
+                        .entries
+                        .iter()
+                        .any(|o| o.state == 1 && same(o) && o.load_score > 0);
+                    let stale = self
+                        .cache
+                        .entries
+                        .iter()
+                        .any(|o| (o.state == 2 || o.state == 3) && same(o) && o.load_score < 0);
+                    if pending && stale {
+                        return 1;
+                    }
+                    let e = &mut self.cache.entries[i];
+                    e.state = 4;
+                    e.load_score = 0x270F;
+                    result = 2;
+                }
+                4 => result = 2,
+                _ => {}
+            }
+        }
+        result
     }
 
     /// `lbDvd_80017644`: lets go of `heap`'s unwanted entries that are in and set up, unless

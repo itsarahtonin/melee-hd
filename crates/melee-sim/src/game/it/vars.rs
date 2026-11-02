@@ -204,11 +204,13 @@ members! {
     Klap, klap, KlapVars, [KLAP];
     Kyasarin, kyasarin, KyasarinVars, [KYASARIN];
     KyasarinEgg, kyasarin_egg, KyasarinEggVars, [KYASARIN_EGG];
-    Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE];
+    Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE, NOKONOKO, PATAPATA, ZGSHELL, ZRSHELL];
     KirbySpitStar, kirby_spit_star, PokemonVars, [KIRBY_UNK2];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
     ClimbersIce, climbers_ice, itClimbersIce_ItemVars, [ICE_CLIMBER_ICE, KIRBY_ICE_CLIMBER_ICE];
+    MasterHandLaser, masterhand_laser, itMasterHandLaser_ItemVars, [MASTERHAND_LASER];
+    MasterHandBullet, masterhand_bullet, itMasterHandBullet_ItemVars, [MASTERHAND_BULLET];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
     ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
     Egg, egg, itEgg_ItemVars, [EGG];

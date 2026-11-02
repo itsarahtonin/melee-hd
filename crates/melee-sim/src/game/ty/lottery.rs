@@ -628,7 +628,7 @@ impl Running<'_> {
     /// (`gm_80167858` without a name tag).
     #[doc(alias = "gm_801678F8")]
     #[doc(alias = "gm_80167858")]
-    fn lot_rumble(&mut self, port: u8, kind: i32, frames: i32) {
+    pub(crate) fn lot_rumble(&mut self, port: u8, kind: i32, frames: i32) {
         if self.port_rumble(usize::from(port)) != 0 {
             self.rumble_start(port, 3, kind, frames);
         }
