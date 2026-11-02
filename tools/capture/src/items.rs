@@ -529,6 +529,18 @@ impl Comparer<'_> {
             .compare(&m, sym("Item_804A0E24"), "Item_804A0E24", self);
         let x6d00 = self.mem[(sym("it_804D6D00") - MEM1) as usize] as i8;
         self.check("it_804D6D00", "value", g.x6d00, x6d00);
+        // The last Ditto, which nothing reads: compared while it's out (past its end both
+        // name its freed GObj, whose slot the next object can take).
+        if let Some(d) = g.last_metamon
+            && !self.game.world.gobjs.is_free(d.0)
+            && matches!(
+                self.game.world.gobjs[d.0].user_data,
+                Some(melee_sim::game::state::UserData::Item(_))
+            )
+        {
+            let theirs = self.u32(sym("it_804D6D50"));
+            self.compare_handle("it_804D6D50", "GObjId", Some(d.0), theirs);
+        }
         let spawned = self.u32(sym("it_804D6D0C")) as i32;
         self.check("it_804D6D0C", "value", g.spawned, spawned);
         let x6d08 = self.u32(sym("it_804D6D08")) as i32;

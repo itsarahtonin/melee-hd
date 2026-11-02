@@ -201,6 +201,18 @@ impl Game {
         }
     }
 
+    /// How many fighters are out, `ftLib_CountFighters`.
+    #[doc(alias = "ftLib_CountFighters")]
+    pub fn ft_count(&self) -> i32 {
+        let mut n = 0;
+        let mut cur = self.world.first_in(super::common::FIGHTER_P_LINK);
+        while let Some(g) = cur {
+            n += 1;
+            cur = self.world.gobjs[g.0].next;
+        }
+        n
+    }
+
     #[doc(alias = "ftLib_80086A4C")]
     pub fn ft_80086a4c(&mut self, gobj: GObjId, v: f32) {
         self.fighter_mut(gobj).dmg.x1958 = v;

@@ -81,6 +81,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
+        super::gm::training::INPUT_PROC => game.training_input_proc(),
+        super::gm::training::MODEL_PROC => game.training_model_proc(gobj),
         super::gm::approach::PROC => game.approach_proc(gobj),
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
@@ -197,6 +199,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::mutecity::run_event(game, f) => {}
         f if super::gr::bigblue::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
+        f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
         f if super::vi::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),

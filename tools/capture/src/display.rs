@@ -291,12 +291,8 @@ impl Comparer<'_> {
         // which nothing reads until a match's setup sets them again: the users' count is 0,
         // which `lbRefract_8002247C` and `lbRefract_80022560` check, and only a refracting
         // material's setup (`lbRefract_80022998`) reads the chains.
-        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
-        let live = r.data.is_none()
-            || matches!(
-                scene_kind(self.game.machine.scene_info),
-                Some(GS_VS | GS_SUDDEN_DEATH)
-            );
+        use melee_sim::game::gm::machine::{is_match_scene, scene_kind};
+        let live = r.data.is_none() || is_match_scene(scene_kind(self.game.machine.scene_info));
         if live {
             let data = self.u32(sym("refract_data"));
             let theirs = self.data_ref(data);

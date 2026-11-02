@@ -36,6 +36,7 @@ pub mod special;
 pub mod stamina;
 pub mod title;
 pub mod tournament;
+pub mod training;
 pub mod trophies;
 pub mod unlocks;
 pub mod vs;
@@ -475,6 +476,8 @@ pub fn call(
             r.attract_match_start();
             Some(super::code::Val::None)
         }
+        // `fn_801B1F6C`, Training's pause hook, does nothing.
+        training::ON_PAUSE => Some(super::code::Val::None),
         _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),
     }
 }
