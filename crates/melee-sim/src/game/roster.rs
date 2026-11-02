@@ -314,7 +314,7 @@ pub const STAGES: &[Stage] = &[
                 ),
                 (
                     "it_802EB5A8",
-                    "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload at the scene's end",
+                    "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload, which no VS match does",
                 ),
             ],
             missing: &[],
@@ -651,8 +651,9 @@ pub const STAGES: &[Stage] = &[
 ];
 
 /// Why the items' `evt_unk` (`it_8026B894`'s wrappers) is unreached: only `it_8026B7F8` calls
-/// it, from the fighter's unload when the match's scene ends.
-const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload at the scene's end runs";
+/// it, from a fighter's unload, which no VS match does (a scene's end makes its heap anew
+/// without freeing its GObjs).
+const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload runs: a player leaving a match in progress, which no VS match does";
 const EVT_UNK_TINGLE: (&str, &str) = ("it_802EC850", EVT_UNK);
 const YAKU_UNANCHORED: (&str, &str) = (
     "it_2E6A_UnkMotion19_Phys",

@@ -520,8 +520,19 @@ impl Host<GameKinds> for Running<'_> {
         super::code::run_proc(self, gobj, proc);
     }
 
-    fn remove_user_data(&mut self, _gobj: GObjId, _kind: u8, data: UserData) {
+    fn remove_user_data(&mut self, gobj: GObjId, kind: u8, data: UserData) {
         match data {
+            // `Fighter_Unload_8006DABC` runs while the GObj still holds its fighter
+            // (`GObj_RemoveUserData` clears the word after the remover returns).
+            UserData::Fighter(f) => {
+                let o = &mut self.game.world.gobjs[gobj.0];
+                o.user_data_kind = kind;
+                o.user_data = Some(data);
+                self.fighter_unload(gobj, f);
+                let o = &mut self.game.world.gobjs[gobj.0];
+                o.user_data_kind = 0xFF;
+                o.user_data = None;
+            }
             // `mem_free`: the block goes back to the heap.
             UserData::Ground(g) => {
                 let (game, data) = (&*self.game, self.data);
