@@ -10,8 +10,8 @@ use super::{
     GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
     GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
     GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON,
-    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
-    GR_KIND_ZEBESROUTE,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_SHRINEROUTE, GR_KIND_STORY, GR_KIND_VENOM,
+    GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1722,6 +1722,41 @@ pub const KINOKOROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grShrineRoute`'s `stage_callbacks`. Map 4 is the maze, map 2 its background, map 0 the
+/// backdrop, maps 1 and 3 the symbols and the way out, map 5 an arena's portal and map 6 the
+/// lights.
+pub const SHRINEROUTE_CALLBACKS: [StageCallbacks; 7] = [
+    cb(0x8020_89AC, 0x8020_89D8, 0x8020_89E0, 0x8020_89E4, 0),
+    cb(0x8020_A868, 0x8020_A894, 0x8020_A89C, 0x8020_A8A0, 0),
+    cb(0x8020_89E8, 0x8020_8A28, 0x8020_8A30, 0x8020_8A34, 0),
+    cb(0x8020_A868, 0x8020_A894, 0x8020_A89C, 0x8020_A8A0, 0),
+    cb(
+        0x8020_8D14,
+        0x8020_8F0C,
+        0x8020_8F70,
+        0x8020_9AEC,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_9AF0, 0x8020_9BE4, 0x8020_9BEC, 0x8020_A100, 0),
+    cb(0x8020_A104, 0x8020_A214, 0x8020_A21C, 0x8020_A864, 0),
+];
+
+/// `grSh_Route_StageData`.
+pub const SHRINEROUTE: StageData = StageData {
+    grkind: GR_KIND_SHRINEROUTE,
+    callbacks: &SHRINEROUTE_CALLBACKS,
+    file: Some("/GrNSr.dat"),
+    on_init: 0x8020_87BC,
+    on_demo_init: 0x8020_87B8,
+    on_load: 0x8020_882C,
+    on_start: 0x8020_8850,
+    callback4: 0x8020_88B8,
+    on_touch_line: 0x8020_B104,
+    on_check_shadow_render: 0x8020_B10C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// `grBb_Route_StageCallbacks`. Map 0 is the backdrop, 1 the demo's object, 4 the cars (made
 /// at the match's start), 31 the track and 32 the far background.
 pub const BIGBLUEROUTE_CALLBACKS: [StageCallbacks; 38] = {
@@ -1987,6 +2022,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
         GR_KIND_KINOKOROUTE => &KINOKOROUTE,
+        GR_KIND_SHRINEROUTE => &SHRINEROUTE,
         GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
         GR_KIND_PUSHON => &PUSHON,
         GR_KIND_ZEBESROUTE => &ZEBESROUTE,

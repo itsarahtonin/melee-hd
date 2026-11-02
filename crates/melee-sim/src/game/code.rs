@@ -103,6 +103,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::oldkongo::run(game, gobj, addr) => {}
         addr if super::gr::shrine::run(game, gobj, addr) => {}
         addr if super::gr::kinokoroute::run(game, gobj, addr) => {}
+        addr if super::gr::shrineroute::run(game, gobj, addr) => {}
         addr if super::gr::bigblueroute::run(game, gobj, addr) => {}
         addr if super::gr::pushon::run(game, gobj, addr) => {}
         addr if super::gr::zebesroute::run(game, gobj, addr) => {}
@@ -191,6 +192,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::oldkongo::run_event(game, f) => {}
         f if super::gr::shrine::run_event(game, f) => {}
         f if super::gr::kinokoroute::run_event(game, f) => {}
+        f if super::gr::shrineroute::run_event(game, f) => {}
         f if super::gr::bigblueroute::run_event(game, f) => {}
         f if super::gr::pushon::run_event(game, f) => {}
         f if super::gr::zebesroute::run_event(game, f) => {}
@@ -260,6 +262,7 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8020_F468 => oldkongo::on_demo_init(game),
         0x8020_1C60 => shrine::on_demo_init(game),
         0x8020_741C => super::gr::kinokoroute::on_demo_init(game),
+        0x8020_87B8 => super::gr::shrineroute::on_demo_init(game),
         0x8020_B864 => super::gr::bigblueroute::on_demo_init(game),
         0x8021_82C4 => super::gr::pushon::on_demo_init(game),
         0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
@@ -357,6 +360,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::co::capture_koopa::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_kirby::run(g, gobj, addr) => {}
         addr if super::ft::co::capture_leadead::run(g, gobj, addr) => {}
+        addr if super::ft::co::capture_likelike::run(g, gobj, addr) => {}
         addr if super::ft::co::item_get::run(g, gobj, addr) => {}
         addr if super::ft::co::lift::run(g, gobj, addr) => {}
         addr if super::ft::co::barrel::run(g, gobj, addr) => {}
