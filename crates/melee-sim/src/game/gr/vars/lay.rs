@@ -631,6 +631,31 @@ impl GroundVars {
                 l.put_bytes(a + 0xA, &v.pad_0a);
                 v3(l, a + 0xC, &v.reb0_pos);
             }
+            GroundVars::BigBlueRoute(v) => {
+                gobj(l, cx, a, v.cars);
+                h16(l, a + 4, &[v.zone]);
+                l.put_bytes(a + 6, &v.pad_ca);
+                v3(l, a + 8, &v.reb0_pos);
+                for (i, t) in v.tracks.iter().enumerate() {
+                    let e = a + 0x14 + 0x10 * i as u32;
+                    if t.jobj.is_some() {
+                        v3(l, e, &t.offset);
+                    }
+                    jobj(l, cx, e + 0xC, t.jobj);
+                }
+            }
+            GroundVars::BigBlueRouteCars(v) => {
+                l.put_u32(a, v.xC4);
+                addr(l, a + 4, v.cars_addr);
+                data(l, cx, a + 8, v.air);
+                data(l, cx, a + 0xC, v.left);
+                data(l, cx, a + 0x10, v.right);
+                v3(l, a + 0x14, &v.air_start);
+                v3(l, a + 0x20, &v.air_end);
+                v3(l, a + 0x2C, &v.road_start);
+                v3(l, a + 0x38, &v.road_end);
+                h16(l, a + 0x44, &[v.out, v.wait]);
+            }
             GroundVars::BigBlueRelay(v) => {
                 l.put_u32(a, v.xC4);
                 w32(l, a + 4, &[v.xC8_timer, v.xCC_timer, v.xD0_timer]);
@@ -895,6 +920,20 @@ impl GroundVars {
                     }
                     lays.push(l);
                 }
+            }
+            GroundVars::BigBlueRouteCars(v) if v.cars_addr != 0 => {
+                let mut l = Lay::new(v.cars_addr, 0x2C * v.cars.len() as u32);
+                for (i, c) in v.cars.iter().enumerate() {
+                    let b = v.cars_addr + 0x2C * i as u32;
+                    l.put_bytes(b, &[c.flags, 0, 0, 0]);
+                    fs(
+                        &mut l,
+                        b + 4,
+                        &[c.x4, c.x8, c.xC, c.x10, c.x14, c.x18, c.x1C, c.x20, c.x24],
+                    );
+                    gobj(&mut l, cx, b + 0x28, c.item);
+                }
+                lays.push(l);
             }
             GroundVars::BigBlueCars(v) => {
                 if v.collision_jobjs_addr != 0 {

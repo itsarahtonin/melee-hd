@@ -7,6 +7,7 @@
 pub mod anime;
 pub mod battle;
 pub mod bigblue;
+pub mod bigblueroute;
 pub mod castle;
 pub mod corneria;
 pub mod data;
@@ -119,6 +120,8 @@ pub const GR_KIND_MUTECITY: i32 = 18;
 pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_BigBlueRoute`, the F-Zero race.
+pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -253,6 +256,9 @@ pub struct Globals {
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
+    /// The F-Zero race's `yakumono_param` (`grBigBlueRoute_YakumonoParam`): the trophy slot's
+    /// odds, the cars' scale, speeds, count and waits.
+    pub bigblueroute_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -487,6 +493,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
+        (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
@@ -505,6 +513,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
         castle::BILL_DEALT | castle::BLAST_DEALT => castle::item_nothing(r, item, g),
         mutecity::CAR_DEALT => mutecity::car_dealt(r),
+        bigblueroute::CAR_DEALT => bigblueroute::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
