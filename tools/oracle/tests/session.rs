@@ -1963,8 +1963,8 @@ fn master_hand_in_debug_vs() {
 }
 
 /// The Home-Run Contest (milestone 6's task 14), from power-on with the heap, each run's card
-/// after it the original's: `m6-homerun/hr-long` (Fox takes the bat and sends Sandbag 112.4
-/// feet, a new record, saved as the select comes back) and `hr-trophy` (the trophy gallery
+/// after it the original's: `m6-homerun/hr-long` (Fox takes the bat and sends Sandbag 112.4 m,
+/// a new record, saved as the select comes back) and `hr-trophy` (the trophy gallery
 /// first, so the stage's trophy display draws a trophy and loads its archives; no contest).
 #[test]
 fn the_home_run_contest() {
