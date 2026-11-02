@@ -141,7 +141,7 @@ pub fn demo_symbol(kind: i32, idx: i32) -> Option<String> {
 #[doc(alias = "ftMr_Init_GetMotionFileString")]
 #[doc(alias = "ftLg_Init_GetMotionFileString")]
 #[doc(alias = "ftKb_Init_GetMotionFileString")]
-// Ports ftGk_Init_GetMotionFileString too; aliased once a check reaches it.
+#[doc(alias = "ftGk_Init_GetMotionFileString")]
 pub fn motion_symbol(kind: i32, arg: i32) -> &'static str {
     match (kind, arg) {
         (0, 9) => "ftDemoVi0102MotionFileMario",
@@ -165,7 +165,7 @@ pub fn motion_symbol(kind: i32, arg: i32) -> &'static str {
 #[doc(alias = "ftMr_Init_UnkDemoCallbacks0")]
 #[doc(alias = "ftLg_Init_UnkDemoCallbacks0")]
 #[doc(alias = "ftKb_Init_UnkDemoCallbacks0")]
-// Ports ftGk_Init_UnkDemoCallbacks0 too; aliased once a check reaches it.
+#[doc(alias = "ftGk_Init_UnkDemoCallbacks0")]
 pub fn cutscene_anims(kind: i32, pose: i32) -> (usize, usize) {
     match (kind, pose) {
         (0 | 0x11, 9) => (14, 14),
@@ -269,6 +269,41 @@ impl Running<'_> {
                 self.set_scale_y(g, scale);
             }
         }
+    }
+
+    /// A slot's fighter's size over its model scale, `Player_80032BB0`: its x scale times its
+    /// kind's model scaling (`ftLib_800869F8`), over the slot's model scale.
+    #[doc(alias = "Player_80032BB0")]
+    #[doc(alias = "ftLib_800869F8")]
+    pub fn player_scale_ratio(&self, slot: i32) -> f32 {
+        let p = self.game.player(slot);
+        let g = p.player_entity[p.entity_index(0)].expect("Player_80032BB0: a fighter");
+        let fp = self.game.fighter(g);
+        let size = fp::fmuls(reg(fp.x34_scale.x), reg(fp.co_attrs.model_scaling));
+        mem(fp::fdivs(size, reg(p.model_scale)))
+    }
+
+    /// A slot's facing, and both its demo fighters turned to it,
+    /// `Player_SetPlayerAndEntityFacingDirection`.
+    #[doc(alias = "Player_SetPlayerAndEntityFacingDirection")]
+    pub fn player_set_facing_all(&mut self, slot: i32, facing: f32) {
+        for i in 0..2 {
+            self.game.set_player_facing(slot, facing);
+            let p = self.game.player(slot);
+            if let Some(g) = p.player_entity[p.entity_index(i)] {
+                self.demo_set_facing(g, facing);
+            }
+        }
+    }
+
+    /// A demo fighter's facing and its top joint turned to it, `ftDemo_SetFacingDirection`.
+    #[doc(alias = "ftDemo_SetFacingDirection")]
+    pub fn demo_set_facing(&mut self, gobj: GObjId, facing: f32) {
+        let f = self.game.fighter_id(gobj);
+        self.game.fighters[f.0].facing_dir = facing;
+        let facing = reg(self.game.fighters[f.0].facing_dir);
+        let rot = mem(fp::frsp(fp::fmul(std::f64::consts::FRAC_PI_2, facing)));
+        self.game.part_set_rot_y(f, 0, rot);
     }
 
     /// A slot's demo fighters in pose `pose`, `Player_80036F34`: its character's, and its
@@ -467,8 +502,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C7294")]
     #[doc(alias = "ftCo_800C7308")]
     #[doc(alias = "ftCo_800C739C")]
-    // Ports ftCo_800C7178 and ftCo_800C7434 too (poses 10 and 15: `vi1101`'s, `vi1201v2`'s);
-    // aliased once a check reaches them.
+    #[doc(alias = "ftCo_800C7178")]
+    #[doc(alias = "ftCo_800C7434")]
     fn demo_cutscene_state(&mut self, gobj: GObjId, msid: i32) {
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
@@ -490,8 +525,8 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800C7158")]
     #[doc(alias = "ftCo_800C737C")]
     #[doc(alias = "ftCo_800C7414")]
-    // Ports ftCo_800C7200 and ftCo_800C74AC too (Mario's and Luigi's slow walk, Giga Bowser's
-    // state); aliased once a check reaches them.
+    #[doc(alias = "ftCo_800C7200")]
+    #[doc(alias = "ftCo_800C74AC")]
     pub fn demo_follow_root(&mut self, gobj: GObjId) {
         let root = self.root_jobj(gobj);
         let pos = self.game.objs.jobjs[root].translate;
