@@ -253,3 +253,37 @@ fn_803ACD58	The HSD card layer's synchronous paths alone call it (async 0); ever
 fn_803ACFC0	The HSD card layer's synchronous paths alone call it (async 0); every request starts from fn_803AA790, which passes async 1 to fn_803ADF90, fn_803AE7F8, fn_803AF3F0 and fn_803B0120, and fn_803B1F78 and fn_803B21E8 call fn_803B0E9C and fn_803B1338 with async 1.
 mnVibration_OnAnimComplete	Set up only by mnVibration_Think when mn_804A04F0.cur_menu is not 19 (the rumble screen). Think runs on the screen's GObj (mnVibration_804D6C28, its intro process swapped for it); the screen's one way out, B in mnVibration_HandleInput, changes cur_menu (mn_80229894) and frees that GObj with its processes in the same pass, and the menu's restart (L, R and Start) ends the scene, so no pass runs Think off the rumble screen.
 _tyFigupon_8031638C	No code names it: the decomp's asm listings name it only in its own switch's jump table (tyfigupon.s), and no data table holds its address.
+ftMh_TagGrab_Anim	The callback of Master Hand's state 385 (ftMh_MS_TagGrab), which no code enters: his tag attacks enter only 382, 383 and 384 (ftMh_MS_380_80155194, ftMh_MS_382_801552F8, ftMh_MS_383_80155484), no other code in ftMasterHand or elsewhere changes to 385 to 388 by name or number, and no code sets his motion_id to them.
+ftMh_TagGrab_IASA	The callback of Master Hand's state 385, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagGrab_Phys	The callback of Master Hand's state 385, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagGrab_Coll	The callback of Master Hand's state 385, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_MS_386_80155818	Called only from ftMh_TagGrab_Anim, the callback of Master Hand's state 385, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagSqueeze_Anim	The callback of Master Hand's state 386, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagSqueeze_IASA	The callback of Master Hand's state 386, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagSqueeze_Phys	The callback of Master Hand's state 386, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagSqueeze_Coll	The callback of Master Hand's state 386, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagFail_Anim	The callback of Master Hand's state 387, which no code enters but ftMh_MS_386_80155818, called only from the dead ftMh_TagGrab_Anim (see ftMh_TagGrab_Anim).
+ftMh_TagFail_IASA	The callback of Master Hand's state 387, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagFail_Phys	The callback of Master Hand's state 387, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagFail_Coll	The callback of Master Hand's state 387, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagCancel_Anim	The callback of Master Hand's state 388, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagCancel_IASA	The callback of Master Hand's state 388, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagCancel_Phys	The callback of Master Hand's state 388, which no code enters (see ftMh_TagGrab_Anim).
+ftMh_TagCancel_Coll	The callback of Master Hand's state 388, which no code enters (see ftMh_TagGrab_Anim).
+ftCh_Slam_Anim	The callback of Crazy Hand's state 0x17C (ftMh_MS_Slam in his table), which no code enters: his code changes state only to 0x155 to 0x17B, 0x17E (from ftCh_Slam_Anim alone), 0x180 to 0x185 and the capture states (ftcrazyhand*.c), nothing outside his units names his states, and no code sets his motion_id to 0x17C, 0x17D or 0x17F.
+ftCh_Slam_IASA	The callback of Crazy Hand's state 0x17C, which no code enters (see ftCh_Slam_Anim).
+ftCh_Slam_Phys	The callback of Crazy Hand's state 0x17C, which no code enters (see ftCh_Slam_Anim).
+ftCh_Slam_Coll	The callback of Crazy Hand's state 0x17C, which no code enters (see ftCh_Slam_Anim).
+ftCh_Fail_Anim	The callback of Crazy Hand's state 0x17D, which no code enters (see ftCh_Slam_Anim).
+ftCh_Fail_IASA	The callback of Crazy Hand's state 0x17D, which no code enters (see ftCh_Slam_Anim).
+ftCh_Fail_Phys	The callback of Crazy Hand's state 0x17D, which no code enters (see ftCh_Slam_Anim).
+ftCh_Fail_Coll	The callback of Crazy Hand's state 0x17D, which no code enters (see ftCh_Slam_Anim).
+ftCh_GrabUnk1_8015A888	Enters Crazy Hand's state 0x17E; called only from ftCh_Slam_Anim, the callback of his state 0x17C, which no code enters (see ftCh_Slam_Anim).
+ftCh_TagCrush_Anim	The callback of Crazy Hand's state 0x17E, which only the dead ftCh_GrabUnk1_8015A888 enters (see ftCh_Slam_Anim).
+ftCh_TagCrush_IASA	The callback of Crazy Hand's state 0x17E, which only the dead ftCh_GrabUnk1_8015A888 enters (see ftCh_Slam_Anim).
+ftCh_TagCrush_Phys	The callback of Crazy Hand's state 0x17E, which only the dead ftCh_GrabUnk1_8015A888 enters (see ftCh_Slam_Anim).
+ftCh_TagCrush_Coll	The callback of Crazy Hand's state 0x17E, which only the dead ftCh_GrabUnk1_8015A888 enters (see ftCh_Slam_Anim).
+ftCh_TagApplaud_Anim	The callback of Crazy Hand's state 0x17F, which no code enters (see ftCh_Slam_Anim).
+ftCh_TagApplaud_IASA	The callback of Crazy Hand's state 0x17F, which no code enters (see ftCh_Slam_Anim).
+ftCh_TagApplaud_Phys	The callback of Crazy Hand's state 0x17F, which no code enters (see ftCh_Slam_Anim).
+ftCh_TagApplaud_Coll	The callback of Crazy Hand's state 0x17F, which no code enters (see ftCh_Slam_Anim).
