@@ -198,6 +198,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
 
+### Crazy Hand: the poke makes Master Hand's lasers
+
+- **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+- **Defect:** the poke's four lasers are made as `It_Kind_MasterHand_Laser` (125, `li r7, 0x7D` in the machine code), not his own laser (127), whose article his creation registers (`ftCh_Init_OnLoad`) and nothing makes. Only Master Hand's creation registers kind 125's article.
+- **Effect:** with Master Hand in the match (the single-player modes always field them together) the lasers are Master Hand's, with his laser's attributes. Without him (a debug VS match with Crazy Hand alone) kind 125's article is null and the first laser's creation reads it at address 0x10, which faults: ssbm-rs stops with an unmapped read in `Item_80267AA8` (`m6-crazy-hand/ch-alone-1` at field 5145, and `ch-alone-3`).
+- **melee-hd:** modeled with Master Hand there; without him it stops by name, as the console's game stops there ([design call 7](milestone-6.md#design-calls)): `Melee crashes: Crazy Hand's poke makes Master Hand's laser (item kind 125), whose article no Master Hand registered…`.
+- **Fix:** make kind 127.
+- **Fix impact:** changes the lasers' attributes in the single-player modes where his laser's differ from Master Hand's, so it changes gameplay there; debug VS matches stop crashing.
+- **Source:** the decompilation's `fn_80158534` and its listing (`ftcrazyhandpoke.s`); `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
@@ -1872,6 +1882,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none in play: debug code.
 - **Source:** `toy.c` (`Toy_Scene_OnEnter`, `_Toy_80311788`, `_Toy_803114E8`), `textdraw.c` (`DevText_Create`).
 
+### Crazy Hand alone waits for Master Hand for good
+
+- **Where:** `ftCh_TagRockPaper_Anim` (`ftcrazyhandtagrockpaper.c`), after his attack table's tag attacks (`ftCh_Wait1_0_Anim`'s `Squeezing1`, `Squeeze` and `Throw`, then `fn_8015AAC8`); `crates/melee-sim/src/game/ft/crazyhand/tag.rs` (`ch_tag_wait_anim`).
+- **Defect:** at a tag attack's point he waits (state 0x180) until Master Hand starts the attack (`ftMh_Wait1_0_Anim`, once Master Hand's attack timer runs out with Crazy Hand waiting) or Master Hand is beaten (`ftBossLib_8015C2E0`) or out (`ftBossLib_8015C358`). With no Master Hand in the match neither test holds, and nothing else ends the wait.
+- **Effect:** in a debug VS match with Crazy Hand and no Master Hand his table draws a tag attack in about one draw of five (its last row), and from then on he hovers at its point looping the wait for the rest of the match, attacking no more (`m6-crazy-hand/ch-probe` from field 4954, `ch-1p`). The single-player modes always field him with Master Hand.
+- **melee-hd:** modeled.
+- **Fix:** end the wait when there's no Master Hand (`ftBossLib_GetFighterGObj(Ft_Kind_MasterH)` null), or leave the tag attacks out of his draws then.
+- **Fix impact:** changes debug VS matches with Crazy Hand alone; none in the single-player modes.
+- **Source:** the decompilation's `ftCh_TagRockPaper_Anim`, `ftBossLib_8015C2E0` and `ftBossLib_8015C358`; `crates/melee-sim/src/game/ft/crazyhand/tag.rs`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1942,6 +1962,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 
 | Defect | Where | What goes wrong | Source |
 | --- | --- | --- | --- |
+| A human Crazy Hand's slam tag | `ftCh_Init_80156AD8` (`ftcrazyhandwait10.c`), `game/ft/crazyhand/wait.rs` (`ch_human_attack`) | Y and left on port 4's pad set his next attack to `ftMh_MS_Slam` and glide him to its point to wait for Master Hand (`fn_8015AAC8`), but Master Hand's tag switch (`ftMh_Wait1_0_Anim`, `ftMh_MS_341_80150894`) only sets a point for the slam and starts nothing, so he waits for good though Master Hand is there; only a human-played Crazy Hand reaches it, which no setup makes (the hands are bosses or computers) | `crates/melee-sim/src/game/ft/crazyhand/wait.rs` (`ch_human_attack`); `crates/melee-sim/src/game/ft/masterhand/wait.rs` (`mh_tag_attack`) |
 | A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position. The lights the game sets up have one: every infinite, point and spot light descriptor in every archive on the disc has a position WObj (509, 328 and 20 of them); of the executable's own descriptors that milestone 5's scenes load, the debug menu's infinite light (`if_2FF2.c`'s `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes it over before any setup; Adventure's static point lights (`grPushOn_803E7B74`, `grPushOn_803E7B90`, `grshrineroute.c`'s two) get one from `HSD_LObjSetPosition` right after loading; and no code takes a light's position WObj away. melee-render puts such a light at the origin rather than at what melee-sim left: neither is the stack's word, and nothing reaches it | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown); `hsd::lobj`'s tests `lights_on_the_disc` and `executable_lights` (the proof, against the disc); [the player](player.md), **Spot lights** |
 | A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
