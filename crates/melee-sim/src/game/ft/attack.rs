@@ -2167,6 +2167,9 @@ impl Running<'_> {
             Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
                 super::super::gr::pushon::line_hazard(self.game, self.data, line)
             }
+            Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
+                super::super::gr::figure::on_touch_line(line)
+            }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
             Some(f)
