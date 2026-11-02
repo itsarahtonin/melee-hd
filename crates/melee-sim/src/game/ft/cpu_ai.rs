@@ -412,9 +412,8 @@ impl Running<'_> {
             let dy = fp::fsubs(reg(me.y), reg(them.y));
             let dx = fp::fsubs(reg(me.x), reg(them.x));
             let dist = crate::math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy))));
-            if !(reg(dist) > 50.0)
-                && let Some((x, y)) = self.cpu_far_island_end(f, them.x, them.y)
-            {
+            let far = reg(dist) > 50.0;
+            if !far && let Some((x, y)) = self.cpu_far_island_end(f, them.x, them.y) {
                 self.cpu_set_destination(f, x, y, 5.0);
             }
         }
