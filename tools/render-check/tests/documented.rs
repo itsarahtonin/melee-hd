@@ -21,8 +21,8 @@ use common::{
     DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE,
     DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    FZ_CUTSCENE, FZ_RUN, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE,
-    ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY, GREEN_GREENS, Game, Group,
+    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
     METAL_CLOAK_RC, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
@@ -1217,3 +1217,49 @@ frames!(ZE_CLIMB;
     ze_climb_3800 3800,
     ze_climb_4000 4000,
 );
+// Giga Bowser and the Wire Frames (`m6-giga-bowser`), against captures made with ssbm-rs's
+// renderer running (Final Destination's floor samples the reflection copied the frame before):
+// identical images, the floor's two draws that sample the fighters' shadows differing by their
+// textures' hashes alone, as the debug VS match's.
+fn giga_bowser(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5060() {
+    giga_bowser(&GB_GK, 5060, [1269, 1269]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5230() {
+    giga_bowser(&GB_GK, 5230, [1218, 1218]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5330() {
+    giga_bowser(&GB_GK, 5330, [1253, 1249]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_boy_3545() {
+    giga_bowser(&GB_BOY, 3545, [895, 888]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_girl_3557() {
+    giga_bowser(&GB_GIRL, 3557, [904, 906]);
+}

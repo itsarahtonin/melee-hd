@@ -2051,3 +2051,17 @@ fn brinstar_escape_in_debug_vs() {
     assert!(out.contains("6089 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+/// Giga Bowser in the debug menu's Versus page (milestone 6's task 7), from power-on with the
+/// heap: `m6-giga-bowser/gk` (a human's Giga Bowser through his moveset, Bowser's specials
+/// with his animations, against Mario) and `kb-gk` (Kirby's inhale over Giga Bowser again and
+/// again, nothing caught, since his creation makes him ungrabbable), each to its trace's end.
+#[test]
+fn giga_bowser_in_debug_vs() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-giga-bowser", "gk", &args) {
+        assert!(out.contains("11172 ticks compared, no difference"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-giga-bowser", "kb-gk", &args) {
+        assert!(out.contains("6950 ticks compared, no difference"), "{out}");
+    }
+}

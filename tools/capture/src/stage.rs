@@ -48,6 +48,9 @@ pub const GRBIGBLUEROUTE_YAKUMONO: u32 = 0x804D_6A68;
 pub const GRPUSHON_YAKUMONO: u32 = 0x804D_6AB8;
 /// grzebesroute.c's (`ssbm_types::tu::melee__gr__grzebesroute::yakumono_param`).
 pub const GRZEBESROUTE_YAKUMONO: u32 = 0x804D_6A60;
+/// grfigure1.c's to grfigure3.c's (`ssbm_types::tu::melee__gr__grfigure1::yakumono_param` and
+/// the others').
+pub const GRFIGURE_YAKUMONO: [u32; 3] = [0x804D_6A70, 0x804D_6A78, 0x804D_6A80];
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -392,6 +395,10 @@ impl Importer<'_> {
         self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
         self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
+        for (i, addr) in GRFIGURE_YAKUMONO.into_iter().enumerate() {
+            let yaku = cap.u32(addr);
+            self.game.gr.figure_yakumono[i] = self.data_or_unhandled(yaku);
+        }
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -1123,6 +1130,21 @@ impl Comparer<'_> {
                 "grZebesRoute yakumono_param",
                 GRZEBESROUTE_YAKUMONO,
                 game.gr.zebesroute_yakumono,
+            ),
+            (
+                "grFigure1 yakumono_param",
+                GRFIGURE_YAKUMONO[0],
+                game.gr.figure_yakumono[0],
+            ),
+            (
+                "grFigure2 yakumono_param",
+                GRFIGURE_YAKUMONO[1],
+                game.gr.figure_yakumono[1],
+            ),
+            (
+                "grFigure3 yakumono_param",
+                GRFIGURE_YAKUMONO[2],
+                game.gr.figure_yakumono[2],
             ),
             (
                 "grShrine yakumono_param",

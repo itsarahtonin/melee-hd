@@ -103,6 +103,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::bigblueroute::run(game, gobj, addr) => {}
         addr if super::gr::pushon::run(game, gobj, addr) => {}
         addr if super::gr::zebesroute::run(game, gobj, addr) => {}
+        addr if super::gr::figure::run(game, gobj, addr) => {}
         addr if super::gr::yorster::run(game, gobj, addr) => {}
         addr if super::gr::garden::run(game, gobj, addr) => {}
         addr if super::gr::kongo::run(game, gobj, addr) => {}
@@ -188,6 +189,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::bigblueroute::run_event(game, f) => {}
         f if super::gr::pushon::run_event(game, f) => {}
         f if super::gr::zebesroute::run_event(game, f) => {}
+        f if super::gr::figure::run_event(game, f) => {}
         f if super::gr::yorster::run_event(game, f) => {}
         f if super::gr::garden::run_event(game, f) => {}
         f if super::gr::kongo::run_event(game, f) => {}
@@ -253,6 +255,7 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8020_B864 => super::gr::bigblueroute::on_demo_init(game),
         0x8021_82C4 => super::gr::pushon::on_demo_init(game),
         0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
+        f if super::gr::figure::ON_DEMO_INIT.contains(&f) => super::gr::figure::on_demo_init(game),
         0x8020_1FA0 => yorster::on_demo_init(game),
         0x8020_2B6C => garden::on_demo_init(game),
         0x801D_5238 => kongo::on_demo_init(game),
@@ -298,6 +301,8 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
         addr if super::ft::masterhand::run(g, gobj, addr) => {}
         addr if super::ft::koopa::run(g, gobj, addr) => {}
+        addr if super::ft::gkoopa::run(g, gobj, addr) => {}
+        addr if super::ft::zako::run(g, gobj, addr) => {}
         addr if super::ft::gamewatch::run(g, gobj, addr) => {}
         addr if super::ft::kirby::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
@@ -575,6 +580,12 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::koopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::gkoopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::zako::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::gamewatch::call(r, f, args) {

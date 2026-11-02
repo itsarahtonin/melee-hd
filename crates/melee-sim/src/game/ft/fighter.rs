@@ -324,7 +324,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     match fp.kind {
         super::koopa::KIND_KOOPA => g.kp_unk_motion_states3(gobj),
         super::kirby::KIND_KIRBY => g.kb_unk_motion_states3(gobj),
-        31 => unported_call("ftData_UnkMotionStates3"),
+        super::koopa::KIND_GKOOPA => g.gk_unk_motion_states3(gobj),
         _ => {}
     }
     let fp = &mut g.game.fighters[f.0];

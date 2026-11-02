@@ -108,6 +108,10 @@ impl Replay {
                 if name.starts_with("race-") {
                     return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
                 }
+
+                if let Some(o) = name.strip_prefix("gb-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
@@ -836,6 +840,31 @@ pub const ZE_CLIMB: Game = Game {
     name: "ze-climb",
     players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
     replay: Replay::Session("ze-climb"),
+};
+
+/// Giga Bowser (`m6-giga-bowser/gk`, debug VS at debug level 3): a human's Giga Bowser
+/// through his moveset against Mario on Final Destination, his fire breath and Koopa Klaw.
+pub const GB_GK: Game = Game {
+    stage: "Final Destination",
+    name: "gb-gk",
+    players: "Giga Bowser vs Mario, his specials (session m6-giga-bowser/gk)",
+    replay: Replay::Session("gb-gk"),
+};
+
+/// The male Wire Frame (`m6-giga-bowser/boy`): a forward smash against Mario.
+pub const GB_BOY: Game = Game {
+    stage: "Final Destination",
+    name: "gb-boy",
+    players: "the male Wire Frame vs Mario (session m6-giga-bowser/boy)",
+    replay: Replay::Session("gb-boy"),
+};
+
+/// The female Wire Frame (`m6-giga-bowser/girl`): a forward smash against Mario.
+pub const GB_GIRL: Game = Game {
+    stage: "Final Destination",
+    name: "gb-girl",
+    players: "the female Wire Frame vs Mario (session m6-giga-bowser/girl)",
+    replay: Replay::Session("gb-girl"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
