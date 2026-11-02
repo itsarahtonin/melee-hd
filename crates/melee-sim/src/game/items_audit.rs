@@ -384,8 +384,6 @@ const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster s
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
-const GIGA_BOWSER: &str =
-    "Giga Bowser's motion table's callback (ftgkoopa.c), a fighter no VS roster has";
 const LIKE_LIKE: &str = "the Like Like's held fighter's death callback, which only its capture (ftCo_800C78B0) sets: an adventure enemy";
 const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor found under the item, one whose span holds the item's x, which mpLib_8004DD90_Floor then finds at that x and writes the height of";
 const ONE_PLAYER_TROPHY: &str = "a beaten enemy's trophy, which it_8027CC88 rolls only when gm_IsCurrently1PMode says a single-player mode is on";
@@ -496,8 +494,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
         "it_8027CC88 (a 1P mode's trophy from an enemy)",
         ONE_PLAYER_TROPHY,
     ),
-    ("ftCo_800C7434", DEMO),
-    ("ftCo_800C74AC", GIGA_BOWSER),
     ("fn_800C7890", LIKE_LIKE),
     (
         "it_802759DC (a height the floor probe left unwritten)",

@@ -73,7 +73,7 @@ impl Running<'_> {
     /// Giga Bowser's entrance, `un_803205F4`: the scene's second model at its frame 251, and
     /// Giga Bowser facing left in his cutscene's state (pose 15), scaled to his size over his
     /// model's; the scene's sound banks.
-    // Ports un_803205F4; aliased once a check reaches it (Giga Bowser's entrance: task 7's fighter).
+    #[doc(alias = "un_803205F4")]
     fn vi1201v2_giga_bowser(&mut self) {
         let scene = self.game.vi.v1201v2.scene.expect("the scene");
         let m = super::scene_model(self, scene, 1).expect("the scene's second model");
@@ -103,7 +103,7 @@ impl Running<'_> {
 
     /// The first model's process, `un_8032074C`: its animation, and at its frame 251 the
     /// trophy and the stand freed and Giga Bowser's entrance.
-    // Ports un_8032074C; aliased once a check reaches it (Giga Bowser's entrance: task 7's fighter).
+    #[doc(alias = "un_8032074C")]
     pub fn vi1201v2_first_proc(&mut self, gobj: GObjId) {
         let Some(Obj::JObj(j)) = self.game.world.gobj(gobj).obj else {
             panic!("a cutscene model holds no JObj");
