@@ -16,8 +16,10 @@ use crate::hsd::gobj::GObjId;
 const P_LINK_ITEM: u8 = 9;
 
 /// Every item lets the fighter `fighter` go, `it_8026B7F8`: its kind's `evt_unk`, then the
-/// item destroyed if it's a fighter's own (`x13`) that fighter owned before the callback.
-/// The next item is the freed GObj's next, as the original reads it after the destroy.
+/// item destroyed if a fighter has it (`x13`) and its owner was `fighter` before the
+/// callback.
+/// The next item is the freed GObj's next, as the original reads it after the destroy
+/// (docs/melee-bugs.md).
 #[doc(alias = "it_8026B7F8")]
 pub fn fighter_unloaded(r: &mut Running, fighter: GObjId) {
     let mut cur = r.game.world.first_in(P_LINK_ITEM);

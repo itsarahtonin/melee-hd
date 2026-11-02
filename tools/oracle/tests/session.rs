@@ -1983,3 +1983,21 @@ fn training_from_its_select() {
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
+
+/// Training's computer players unloaded mid-match (`Fighter_Unload_8006DABC`), from power-on
+/// with the heap: `m6-fighter-unload/un-reset` (two and then three computer players fighting
+/// with damage set and items dropped, each time reset) and `un-held` (the third player leaving
+/// and joining again twenty times among dropped items, each new fighter made over the block
+/// the last one freed), each to its trace's end.
+#[test]
+fn training_unloads_its_computer_players() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-reset", &args) {
+        assert!(out.contains("9045 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-held", &args) {
+        assert!(out.contains("13162 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
