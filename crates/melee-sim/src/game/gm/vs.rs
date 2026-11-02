@@ -1397,7 +1397,7 @@ impl Running<'_> {
     }
 
     /// A slot's spawn point: the one it was given, or its own (the inline `getSpawnPoint`).
-    fn slot_spawn_point(&mut self, slot: i32) -> Vec3 {
+    pub(super) fn slot_spawn_point(&mut self, slot: i32) -> Vec3 {
         let given = self.game.vs.state.fighters[slot as usize].spawn_point;
         self.spawn_point(if given == -1 { slot } else { i32::from(given) })
     }

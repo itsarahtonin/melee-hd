@@ -688,8 +688,7 @@ pub fn airborne_coll(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Forgets a GObj the Flipper points to, `itFlipper_EvtUnk` (`it_8026B894`).
-// Ports `itFlipper_EvtUnk`; aliased once a check reaches it (nothing dispatches the items'
-// `evt_unk` yet).
+#[doc(alias = "itFlipper_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

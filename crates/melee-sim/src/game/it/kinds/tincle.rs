@@ -972,7 +972,8 @@ pub fn destroy(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj Tingle points to, `it_802EC850` (`it_8026B894`). Ports `it_802EC850`;
-/// aliased once a check reaches it (nothing dispatches the items' `evt_unk` yet).
+/// aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(game: &mut Game, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(game, gobj, other);
 }

@@ -879,7 +879,7 @@ impl Running<'_> {
     /// `fn_80188550`: the computer players' count changed to `n`: the ones it adds join
     /// (`gm_8016EDDC`) in the next free slots, as the match started them; the ones it takes
     /// leave from the last (`fn_8016EF98`).
-    // Ports `fn_80188550`; aliased once a check reaches it (a player joining or leaving).
+    #[doc(alias = "fn_80188550")]
     fn training_set_count(&mut self, n: i32) {
         let current = self.game.training.count;
         if n == current {
@@ -920,7 +920,7 @@ impl Running<'_> {
     /// `fn_80188644`, the menu's reset: one computer player, the human facing right at the
     /// first spawn point with no damage, the first computer player back as it started, and
     /// every option at its first value but the speed's.
-    // Ports `fn_80188644`; aliased once a check reaches it (a player joining or leaving).
+    #[doc(alias = "fn_80188644")]
     fn training_reset(&mut self) {
         let saved = self.game.training.count;
         self.game.training.count = 1;
@@ -948,21 +948,61 @@ impl Running<'_> {
     /// in slot `slot` if it's empty: its slot set up from `p`, placed at its spawn point
     /// facing the stage's centre, its fighters made and entered, its damage display and
     /// name tag shown. Whether it joined.
+    #[doc(alias = "gm_8016EDDC")]
     pub fn vs_add_player(&mut self, slot: i32, p: &PlayerInitData) -> bool {
-        let _ = (slot, p);
-        crate::game::code::unported_call("gm_8016EDDC (a player joining a match)")
+        let g = &*self.game;
+        if g.vs.state.is_singleplayer != 0
+            || g.player_pkind(slot) != i32::from(PKIND_NA)
+            || g.player_entity(slot).is_some()
+        {
+            return false;
+        }
+        self.game.replace_player(slot);
+        self.game.init_vs_player(slot, p);
+        let pos = self.slot_spawn_point(slot);
+        let g = &mut *self.game;
+        if g.player_facing(slot) == 0.0 {
+            let stage = i32::from(g.vs.start.stkind);
+            let dir = if super::super::gr::stage::is_special_target_stage(stage) {
+                1.0
+            } else if pos.x >= 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+            g.set_player_facing(slot, dir);
+        }
+        g.set_player_pos(slot, pos);
+        // The inline `setPlayerUnk45`.
+        let teams = u8::from(g.vs.start.is_teams == 1);
+        let color = super::vs::player_color(
+            g.player_port(slot) as u8,
+            g.player_team(slot) as u8,
+            teams,
+            g.player_pkind(slot) as u8,
+        );
+        g.set_player_unk45(slot, i32::from(super::vs::cap_color(color as u8)));
+        self.player_create_fighters(slot);
+        if self.game.vs.state.fighters[slot as usize].x4[0] & 0x08 != 0 {
+            self.sfx_play(0x41F4E, 0x7F, 0x40);
+        }
+        self.kirby_costumes();
+        self.player_enable_input(slot);
+        self.show_damage_display(slot);
+        self.refresh_nametag(slot);
+        true
     }
 
     /// `fn_8016EF98`: a player leaves the match in progress (not in a single-player match):
     /// its damage display, its fighters, its slot emptied. Whether it left.
+    #[doc(alias = "fn_8016EF98")]
     pub fn vs_remove_player(&mut self, slot: i32) -> bool {
-        let _ = slot;
-        crate::game::code::unported_call("fn_8016EF98 (a player leaving a match)")
-    }
-
-    /// `Player_800328D4`: the slot's fighters moved to `pos` and reset there.
-    fn player_move_to(&mut self, slot: i32, pos: Vec3) {
-        let _ = (slot, pos);
-        crate::game::code::unported_call("Player_800328D4 (the training menu's reset)")
+        if self.game.vs.state.is_singleplayer != 0 || self.game.player_entity(slot).is_none() {
+            return false;
+        }
+        self.free_damage_display(slot as u8);
+        self.player_free_fighters(slot);
+        self.game.set_player_pkind(slot, i32::from(PKIND_NA));
+        true
     }
 }

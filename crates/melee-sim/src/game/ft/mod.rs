@@ -75,6 +75,7 @@ pub mod second;
 pub mod sound;
 pub mod spawn;
 pub mod transform;
+pub mod unload;
 pub mod vars;
 pub mod yoshi;
 pub mod zelda;
