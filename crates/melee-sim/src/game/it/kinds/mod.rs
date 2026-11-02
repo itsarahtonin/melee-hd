@@ -12,6 +12,7 @@ pub mod climbersstring;
 pub mod clinkmilk;
 pub mod coin;
 pub mod crate_box;
+pub mod crazyhandbomb;
 pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
@@ -192,6 +193,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || climbersice::run_event(r, gobj, addr)
         || masterhandlaser::run_event(r, gobj, addr)
         || masterhandbullet::run_event(r, gobj, addr)
+        || crazyhandbomb::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
@@ -353,6 +355,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| masterhandlaser::run_pred(r, gobj, addr))
         .or_else(|| masterhandbullet::run_pred(r, gobj, addr))
+        .or_else(|| crazyhandbomb::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
