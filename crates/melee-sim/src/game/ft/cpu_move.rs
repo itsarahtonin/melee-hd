@@ -1313,6 +1313,56 @@ impl Running<'_> {
         if best >= 0.0 { found } else { None }
     }
 
+    /// Training's jump in place (behavior 11, computer kind 3), `ftCo_800AD42C`: away from
+    /// its spot back to its usual behavior; in the air, the stick let go; else a tap of Y,
+    /// held past the tap jump's window.
+    #[doc(alias = "ftCo_800AD42C")]
+    pub(super) fn cpu_hop(&mut self, f: FighterId) {
+        if !self.cpu_at_destination(f, 1.0) {
+            self.cpu_back_to_usual(f);
+        } else if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            self.cpu_finish_neutral(f);
+        } else {
+            let window = self.common().i32(0x74);
+            self.cpu_neutral_stick(f);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 1);
+            self.cpu_cmd(f, cmd::PRESS_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, (window + 1) as u8);
+            self.cpu_cmd(f, cmd::RELEASE_Y);
+            self.cpu_cmd1(f, cmd::WAIT_FOR, 5);
+            self.cpu_cmd(f, cmd::DONE);
+        }
+    }
+
+    /// Training's walk (behavior 12, computer kind 1), `ftCo_800AD54C`: in the air, the
+    /// stick forward at its walk speed; at an edge, a turn; at a wall, half the time a jump
+    /// forward, else a turn; on an island's floor, a walk forward.
+    #[doc(alias = "ftCo_800AD54C")]
+    pub(super) fn cpu_pace(&mut self, f: FighterId) {
+        let (stick, clamp) = self.cpu_walk_speed(f);
+        if self.game.fighters[f.0].ground_or_air == GA_AIR {
+            self.cpu_cmd2(f, cmd::LSTICK_FORWARD_CLAMPED, stick as u8, clamp as u8);
+            self.cpu_finish_neutral_y(f);
+        } else if self.cpu_near_edge(f, 1.0) {
+            self.cpu_turn_around(f);
+        } else if self.cpu_against_wall(f) {
+            if self.randf() < 0.5 {
+                self.cpu_jump_forward(f);
+            } else {
+                self.cpu_turn_around(f);
+            }
+        } else {
+            let line = self.game.fighters[f.0].coll_data.floor.index;
+            let geo = self.game.geometry.as_ref().expect("no collision geometry");
+            if geo.island_of_line(line).is_some() {
+                self.cpu_cmd1(f, cmd::SET_LSTICK_Y, 0);
+                self.cpu_cmd2(f, cmd::LSTICK_FORWARD_CLAMPED, stick as u8, clamp as u8);
+                self.cpu_cmd(f, cmd::DONE);
+            }
+        }
+    }
+
     /// Back to the fighter's usual behavior (`ftCo_CpuReturnToPreviousBehavior`).
     pub(super) fn cpu_back_to_usual(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;

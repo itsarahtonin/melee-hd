@@ -227,6 +227,8 @@ enum Hook {
     EventExitCss,
     EventEnterVs,
     EventExitVs,
+    TrainingEnterVs,
+    TrainingExitVs,
     /// A single-player mode's state's handler that isn't ported: the mode's own task's.
     Unported1P(&'static str),
 }
@@ -264,6 +266,15 @@ struct StateDesc {
 pub fn scene_kind(info: Option<(u8, u8)>) -> Option<u8> {
     let (mode, state) = info?;
     states(mode).get(usize::from(state)).map(|s| s.scene)
+}
+
+/// Whether a scene is a match's (`fn_8016E730`'s): the VS scene's, Sudden Death's or
+/// Training's.
+pub fn is_match_scene(kind: Option<u8>) -> bool {
+    matches!(
+        kind,
+        Some(GS_VS | GS_SUDDEN_DEATH | super::training::GS_TRAINING)
+    )
 }
 
 fn states(mode: u8) -> &'static [StateDesc] {
@@ -916,6 +927,7 @@ impl Running<'_> {
         // The VS scene loads its match's files, the Result Test's results screen its players'
         // (with no match before it): the frontend reads them first.
         self.game.machine.files_wanted = s.scene == GS_VS
+            || s.scene == super::training::GS_TRAINING
             || (scene_mode == super::GM_DEBUG && s.id == 11)
             || crate::game::vi::scene_handlers(s.scene).is_some();
     }
@@ -966,6 +978,7 @@ impl Running<'_> {
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             super::GM_DEBUG => &self.game.debug_mode.vs_enter,
             super::event::GM_EVENT => &self.game.event.start,
+            super::one_player::GM_TRAINING => &self.game.training.enter,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -995,6 +1008,7 @@ impl Running<'_> {
             ),
             GS_VS => (super::vs::SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
             GS_SUDDEN_DEATH => (super::vs::SD_SCENE_ON_ENTER, CodeRef(super::vs::ON_FRAME)),
+            super::training::GS_TRAINING => (super::training::ON_ENTER, super::training::ON_FRAME),
             GS_CSS => (
                 crate::game::mn::charsel::ON_ENTER,
                 crate::game::mn::charsel::ON_FRAME,
@@ -1066,6 +1080,7 @@ impl Running<'_> {
             crate::game::mn::main::ON_ENTER => self.menu_on_enter(),
             super::vs::SCENE_ON_ENTER => self.vs_scene_on_enter(scene_mode),
             super::vs::SD_SCENE_ON_ENTER => self.sudden_death_scene_on_enter(scene_mode),
+            super::training::ON_ENTER => self.training_on_enter(),
             crate::game::mn::charsel::ON_ENTER => self.charsel_on_enter(),
             crate::game::mn::stagesel::ON_ENTER => self.stagesel_on_enter(),
             super::howto::HOWTO_ON_ENTER => self.howto_on_enter(),
@@ -1146,7 +1161,9 @@ impl Running<'_> {
             // No exit of their own.
             GS_MOVIE_OPENING | GS_TITLE | GS_MENU | GS_MOVIE_HOWTO | GS_MOVIE_OMAKE15 => {}
             super::camera_mode::GS_CAMERA_VS => self.camera_check_on_exit(),
-            GS_VS | GS_SUDDEN_DEATH => self.vs_scene_on_exit(scene_mode, state),
+            GS_VS | GS_SUDDEN_DEATH | super::training::GS_TRAINING => {
+                self.vs_scene_on_exit(scene_mode, state)
+            }
             GS_CSS => self.charsel_on_exit(),
             GS_SSS => self.stagesel_on_exit(),
             GS_PROG_SCAN => self.prog_scan_on_exit(),
@@ -1374,6 +1391,8 @@ impl Running<'_> {
             Hook::EventExitCss => self.event_exit_css(),
             Hook::EventEnterVs => self.event_enter_vs(),
             Hook::EventExitVs => self.event_exit_vs(),
+            Hook::TrainingEnterVs => self.training_enter_vs(),
+            Hook::TrainingExitVs => self.training_exit_vs(),
             Hook::Unported1P(name) => unported_call(name),
         }
         let _ = state;
@@ -1607,7 +1626,13 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             Some(Hook::TrainingExitSss),
             GS_SSS,
         ),
-        st(2, 3, u("gm_801B1F70"), u("gm_801B2204"), GS_TRAINING),
+        st(
+            2,
+            3,
+            Some(Hook::TrainingEnterVs),
+            Some(Hook::TrainingExitVs),
+            GS_TRAINING,
+        ),
     ];
     const HOME_RUN: [StateDesc; 2] = [
         st(

@@ -13,15 +13,21 @@ pub mod v0501;
 pub mod v0502;
 pub mod v0601;
 pub mod v0801;
+pub mod v1101;
+pub mod v1201v1;
+pub mod v1201v2;
+pub mod v1202;
 
 use melee_data::archive::{ArchiveId, DataRef};
 
 use super::handles::CodeRef;
 use super::render::{FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
 use super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
+use crate::fpu::{mem, reg};
 use crate::hsd::fog;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
+use gekko_fp as fp;
 
 /// `GM_DEBUG_CUTSCENE`.
 pub const GM_DEBUG_CUTSCENE: u8 = 0x19;
@@ -125,6 +131,10 @@ pub struct Cutscenes {
     pub v0502: v0502::Vi0502,
     pub v0601: v0601::Vi0601,
     pub v0801: v0801::Vi0801,
+    pub v1101: v1101::Vi1101,
+    pub v1201v1: v1201v1::Vi1201v1,
+    pub v1201v2: v1201v2::Vi1201v2,
+    pub v1202: v1202::Vi1202,
 }
 
 /// A scene's `SceneDesc` from its archive's symbol.
@@ -243,11 +253,22 @@ impl Running<'_> {
         scene: DataRef,
         link: u8,
         proc: u32,
+        each: impl FnMut(&mut Self, u32, JObjId),
+    ) {
+        self.vi_models_at(scene, link, (proc, 0x17), each);
+    }
+
+    /// [`Running::vi_models`] with the process's priority.
+    fn vi_models_at(
+        &mut self,
+        scene: DataRef,
+        link: u8,
+        proc: (u32, u8),
         mut each: impl FnMut(&mut Self, u32, JObjId),
     ) {
         let mut i = 0;
         while let Some(m) = scene_model(self, scene, i) {
-            let j = self.vi_model(m, link, proc);
+            let j = self.vi_model_at(m, link, proc);
             each(self, i, j);
             i += 1;
         }
@@ -257,6 +278,11 @@ impl Running<'_> {
     /// render link `link`, its first animations added (`gm_8016895C`), started at frame 0 and
     /// run once, and its process `proc` (priority 0x17).
     fn vi_model(&mut self, m: DataRef, link: u8, proc: u32) -> JObjId {
+        self.vi_model_at(m, link, (proc, 0x17))
+    }
+
+    /// [`Running::vi_model`] with the process's priority.
+    fn vi_model_at(&mut self, m: DataRef, link: u8, proc: (u32, u8)) -> JObjId {
         let data = self.data;
         let g = &mut *self.game;
         let gobj = g.world.create(CLASS_UI, 15, 0);
@@ -266,13 +292,93 @@ impl Running<'_> {
         super::gm::vs::add_model_anim(&mut g.objs, data, Some(j), m, 0);
         jobj::req_anim_all(&mut g.objs, Some(j), 0.0);
         self.anim_all(j);
-        self.game.world.setup_proc(gobj, CodeRef(proc), 0x17);
+        self.game.world.setup_proc(gobj, CodeRef(proc.0), proc.1);
         j
+    }
+
+    /// A model GObj (class 0xE, p-link 15) of `joint` drawn on render link 0xB with process
+    /// `proc` at `priority` (none for 0), as the Bowser cutscenes make their trophy and stand.
+    fn vi_jobj_gobj(&mut self, joint: DataRef, proc: Option<(u32, u8)>) -> (GObjId, JObjId) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(CLASS_UI, 15, 0);
+        let j = jobj::load_joint(&mut g.objs, data, Some(joint)).expect("a cutscene model");
+        g.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(j));
+        g.world.setup_gx_link(gobj, CodeRef(JOBJ_CALLBACK), 0xB, 0);
+        if let Some((f, prio)) = proc {
+            g.world.setup_proc(gobj, CodeRef(f), prio);
+        }
+        (gobj, j)
+    }
+
+    /// Bowser's trophy (`TyKoopa.dat`'s or `TyKoopaR.dat`'s model) at `scale`, following
+    /// `target`'s place and orientation (`lb_8000C1C0`, `lb_8000C290`), with its process.
+    fn vi_trophy(
+        &mut self,
+        joint: DataRef,
+        scale: f32,
+        target: Option<JObjId>,
+        proc: (u32, u8),
+    ) -> GObjId {
+        let (gobj, j) = self.vi_jobj_gobj(joint, None);
+        let jobjs = &mut self.game.objs.jobjs;
+        jobj::set_srt(jobjs, j, |o| o.scale.x = scale);
+        jobj::set_srt(jobjs, j, |o| o.scale.y = scale);
+        jobj::set_srt(jobjs, j, |o| o.scale.z = scale);
+        self.vi_follow(j, target);
+        self.game.world.setup_proc(gobj, CodeRef(proc.0), proc.1);
+        gobj
+    }
+
+    /// The trophies' stand (`GmRgStnd.dat`'s `standScene`'s first model) with its process: its
+    /// child placed, turned and scaled for trophy `trophy` (`Toy_803060BC`'s fields 0 to 5,
+    /// each negated but the scales, the scale `factor` times the trophy's stand size over its
+    /// size), following `target` as the trophy does. The GObj.
+    fn vi_stand(
+        &mut self,
+        stand: DataRef,
+        trophy: i32,
+        factor: f32,
+        target: Option<JObjId>,
+        proc: (u32, u8),
+    ) -> GObjId {
+        let joint = scene_model(self, stand, 0).and_then(|m| self.data.ptr(m));
+        let (gobj, j) = self.vi_jobj_gobj(joint.expect("the stand"), Some(proc));
+        let child = self.game.objs.jobjs[j].child.expect("the stand's child");
+        let neg = |r: &Self, f: u32| mem(fp::fneg(reg(r.toy_param(trophy, f))));
+        let (x, y, z) = (neg(self, 0), neg(self, 1), neg(self, 2));
+        let jobjs = &mut self.game.objs.jobjs;
+        jobj::set_srt(jobjs, child, |o| o.translate.x = x);
+        jobj::set_srt(jobjs, child, |o| o.translate.y = y);
+        jobj::set_srt(jobjs, child, |o| o.translate.z = z);
+        let turn = neg(self, 5);
+        jobj::set_rotation_y(&mut self.game.objs.jobjs, child, turn);
+        let inv = fp::fdivs(1.0, reg(self.toy_param(trophy, 3)));
+        let s = fp::fmuls(reg(self.toy_param(trophy, 4)), inv);
+        let s = mem(fp::fmuls(reg(factor), s));
+        let jobjs = &mut self.game.objs.jobjs;
+        jobj::set_srt(jobjs, child, |o| o.scale.x = s);
+        jobj::set_srt(jobjs, child, |o| o.scale.y = s);
+        jobj::set_srt(jobjs, child, |o| o.scale.z = s);
+        self.vi_follow(j, target);
+        gobj
+    }
+
+    /// `j` follows `target`'s place and orientation (`lb_8000C1C0`, `lb_8000C290`).
+    fn vi_follow(&mut self, j: JObjId, target: Option<JObjId>) {
+        let target = target.expect("a cutscene's constraint joint");
+        super::ef::constrain(&mut self.game.objs, j, target, 0x9000_0001);
+        super::ef::constrain(&mut self.game.objs, j, target, 0x9000_0004);
     }
 
     /// The scene's fog (`HSD_FogLoadDesc` on a GObj of class `class`, p-link 3), whose color
     /// the camera erases the screen to.
     fn vi_fog_with(&mut self, scene: DataRef, class: u16) -> [u8; 4] {
+        self.vi_fog_gobj(scene, class).1
+    }
+
+    /// [`Running::vi_fog_with`], with the fog's GObj.
+    fn vi_fog_gobj(&mut self, scene: DataRef, class: u16) -> (GObjId, [u8; 4]) {
         let desc = scene_fog(self, scene);
         let data = self.data;
         let g = &mut *self.game;
@@ -280,6 +386,27 @@ impl Running<'_> {
         let f = fog::load_desc(&mut g.objs.fogs, data, desc);
         g.world.set_obj(gobj, OBJ_FOG, Obj::Fog(f));
         g.world.setup_gx_link(gobj, CodeRef(FOG_CALLBACK), 0, 0);
+        (gobj, g.objs.fogs[f].color)
+    }
+
+    /// The scene's fog on a GObj of class 0xB with its first animation added, started and run
+    /// once (`HSD_Fog_8037DE7C`, `HSD_FogReqAnim`, `HSD_FogInterpretAnim`), and its process
+    /// `proc` (priority 0x17): its color then.
+    fn vi_fog_animated(&mut self, scene: DataRef, proc: u32) -> [u8; 4] {
+        let desc = scene_fog(self, scene);
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(CLASS_LIGHT, 3, 0);
+        let f = fog::load_desc(&mut g.objs.fogs, data, desc);
+        g.world.set_obj(gobj, OBJ_FOG, Obj::Fog(f));
+        g.world.setup_gx_link(gobj, CodeRef(FOG_CALLBACK), 0, 0);
+        let fogs = data.ptr(scene.at(0xC)).expect("the scene's fogs");
+        let anims = data.ptr(fogs.at(4)).expect("the fog's animations");
+        let anim = data.ptr(anims).and_then(|a| data.ptr(a));
+        fog::add_anim(&mut g.objs, data, Some(f), anim);
+        fog::req_anim(&mut g.objs, Some(f), 0.0);
+        fog::interpret_anim(&mut g.objs, data, Some(f));
+        g.world.setup_proc(gobj, CodeRef(proc), 0x17);
         g.objs.fogs[f].color
     }
 
@@ -316,6 +443,11 @@ impl Running<'_> {
     /// (`Item_80266FA8`, `Item_80266FCC`); `before_setup` runs before the stage's setup
     /// (`Stage_8022524C`), then its demo setup (`Stage_8022532C`).
     fn vi_stage(&mut self, stkind: i32, before_setup: impl FnOnce(&mut Self)) {
+        self.vi_stage_demo(stkind, 0, before_setup);
+    }
+
+    /// [`Running::vi_stage`] with the demo setup's argument.
+    fn vi_stage_demo(&mut self, stkind: i32, demo: i32, before_setup: impl FnOnce(&mut Self)) {
         super::camera::init(&mut self.game.camera, 6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
@@ -337,7 +469,7 @@ impl Running<'_> {
         before_setup(self);
         let grkind = self.game.stage_info.grkind;
         super::gr::setup::setup(self, grkind);
-        super::gr::stage::demo_init(self, stkind, 0);
+        super::gr::stage::demo_init(self, stkind, demo);
     }
 
     /// A demo player as the cutscenes set one up: its character's cutscene animations from
@@ -372,9 +504,12 @@ impl Running<'_> {
     }
 
     /// The cutscenes' rumble on Adventure's player's port, `vi_8031C9B4`: none when its
-    /// rumble is off (`gm_8017E440`'s 4).
+    /// rumble is off (`gm_8017E440`'s 4). The pad alarm's firings so far in the tick run
+    /// their frames of rumble first, as the original's handlers ran each in its time: Giga
+    /// Bowser's file loads in `vi1201v2` take 16 of them just before its long rumble.
     #[doc(alias = "vi_8031C9B4")]
     fn vi_rumble(&mut self, kind: i32, frames: i32) {
+        self.alarm_rumble_catch_up();
         let port = self.adventure_rumble_port();
         if port != 4 {
             self.lot_rumble(port, kind, frames);
@@ -437,6 +572,7 @@ impl Running<'_> {
     #[doc(alias = "vi0501_Scene_OnFrame")]
     #[doc(alias = "vi0502_Scene_OnFrame")]
     #[doc(alias = "vi0601_Scene_OnFrame")]
+    #[doc(alias = "vi0801_Scene_OnFrame")]
     fn vi_skip(&mut self) {
         let slot = self.adventure_slot();
         let input = self.game.buttons_triggered(slot);
@@ -475,6 +611,10 @@ impl Running<'_> {
             0x15 => self.vi0502_on_enter(),
             0x16 => self.vi0601_on_enter(),
             0x17 => self.vi0801_on_enter(),
+            0x18 => self.vi1101_on_enter(),
+            0x19 => self.vi1201v1_on_enter(),
+            0x1A => self.vi1201v2_on_enter(),
+            0x1B => self.vi1202_on_enter(),
             s => super::code::unported_call(&format!("the cutscene scene {s:#x}'s entry")),
         }
     }
@@ -556,6 +696,18 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
         v0601::CAMERA_PROC => r.vi0601_camera_proc(gobj),
         v0801::JOBJ_PROC => r.vi_anim_proc(gobj),
         v0801::CAMERA_PROC => r.vi0801_camera_proc(gobj),
+        v1101::JOBJ_PROC => r.vi_anim_proc(gobj),
+        v1101::CAMERA_PROC => r.vi1101_camera_proc(gobj),
+        v1201v1::STAND_PROC | v1201v1::TROPHY_PROC => r.vi_anim_proc(gobj),
+        v1201v1::JOBJ_PROC => r.vi1201v1_model_proc(gobj),
+        v1201v1::CAMERA_PROC => r.vi1201v1_camera_proc(gobj),
+        v1201v1::FOG_PROC => r.vi1201v1_fog_proc(gobj),
+        v1201v2::STAND_PROC | v1201v2::TROPHY_PROC => r.vi_anim_proc(gobj),
+        v1201v2::FIRST_PROC => r.vi1201v2_first_proc(gobj),
+        v1201v2::CAMERA_PROC => r.vi1201v2_camera_proc(gobj),
+        v1201v2::FOG_PROC => r.vi1201v2_fog_proc(gobj),
+        v1202::STAND_PROC | v1202::TROPHY_PROC | v1202::JOBJ_PROC => r.vi_anim_proc(gobj),
+        v1202::CAMERA_PROC => r.vi1202_camera_proc(gobj),
         _ => return false,
     }
     true
@@ -564,9 +716,8 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
 /// Runs a cutscene's frame function, if `f` is one.
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
-        0x8031_D000 | 0x8031_D9C4 | 0x8031_E0F0 | 0x8031_E6CC | 0x8031_ED50 | 0x8031_F274 => {
-            r.vi_skip()
-        }
+        0x8031_D000 | 0x8031_D9C4 | 0x8031_E0F0 | 0x8031_E6CC | 0x8031_ED50 | 0x8031_F274
+        | 0x8031_F960 | 0x8032_0490 | 0x8032_10EC | 0x8032_18E0 => r.vi_skip(),
         v0401::ON_FRAME => r.vi0401_on_frame(),
         _ => return false,
     }
@@ -580,6 +731,9 @@ pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, _pass: i32) -> bool {
         v0401::CAMERA_RENDER => r.vi0401_camera_render(gobj),
         v0601::CAMERA_RENDER => r.vi0601_camera_render(gobj),
         v0801::CAMERA_RENDER => r.vi0801_camera_render(gobj),
+        v1101::CAMERA_RENDER => r.vi1101_camera_render(gobj),
+        v1201v1::CAMERA_RENDER => r.vi1201v1_camera_render(gobj),
+        v1201v2::CAMERA_RENDER => r.vi1201v2_camera_render(gobj),
         v0501::CAMERA_RENDER => {
             r.shadow_render(false);
             let erase = r.game.vi.v0501.erase;
@@ -630,10 +784,20 @@ impl SceneFiles {
             let (lo, hi) = match pose {
                 p if p >= 9 => super::ft::demo::cutscene_anims(kind, p),
                 8 => (13, 13),
+                0..=4 => (0, 9),
                 p => panic!("a cutscene's pose {p}"),
             };
             self.anims.push((file.to_owned(), kind, idx, lo, hi));
         }
+    }
+}
+
+/// The trophies' data the scene's `Toy_803124BC` loads: the saved language's.
+fn trophy_data(us: bool) -> &'static str {
+    if us {
+        super::gm::TROPHY_DATA_FILE
+    } else {
+        "TyDatai.dat"
     }
 }
 
@@ -707,6 +871,52 @@ impl Running<'_> {
                 f.names.push("Vi0801.dat".into());
                 f.songs.push(0x5B);
                 stage(&mut f, 73);
+            }
+            0x18 => {
+                let (ck, waits) = (i32::from(v.desc_1101[0]), wait_file(v.desc_1101[0]));
+                f.names.extend(["Vi1101.dat", waits].map(String::from));
+                f.songs.push(0x55);
+                stage(&mut f, 0x1F);
+                f.player(0, ck, v.desc_1101[1]);
+                f.anims(waits, ck, 3, 8);
+                f.player(1, 8, 0);
+                f.anims("Vi1101.dat", 8, 5, 10);
+                if self.game.gm.unlocks.ckind_unlocked(7) {
+                    f.player(2, 7, 0);
+                    f.anims("Vi1101.dat", 7, 5, 10);
+                }
+            }
+            0x19 => {
+                let ck = i32::from(v.desc_1201v1[0]);
+                let results = super::gm::results_stats::results_file(ck)
+                    .expect("the character's results animations");
+                f.names
+                    .extend(["Vi1201v1.dat", "TyKoopa.dat", "GmRgStnd.dat"].map(String::from));
+                f.names.push(trophy_data(us).into());
+                f.names.push(results.into());
+                f.songs.push(0x59);
+                stage(&mut f, 0x20);
+                f.player(0, ck, v.desc_1201v1[1]);
+                f.anims(results, ck, 0, 1);
+            }
+            0x1A => {
+                let (ck, waits) = (i32::from(v.desc_1201v2[0]), wait_file(v.desc_1201v2[0]));
+                f.names
+                    .extend(["Vi1201v2.dat", "TyKoopa.dat", "GmRgStnd.dat"].map(String::from));
+                f.names.push(trophy_data(us).into());
+                f.names.push(waits.into());
+                f.songs.push(0x5C);
+                stage(&mut f, 0x20);
+                f.player(0, ck, v.desc_1201v2[1]);
+                f.anims(waits, ck, 3, 8);
+                f.player(1, 0x1D, 0);
+                f.anims("Vi1201v2.dat", 0x1D, 8, 15);
+            }
+            0x1B => {
+                f.names
+                    .extend(["Vi1202.dat", "TyKoopaR.dat", "GmRgStnd.dat"].map(String::from));
+                f.names.push(trophy_data(us).into());
+                f.songs.push(0x5A);
             }
             s => super::code::unported_call(&format!("the cutscene scene {s:#x}'s files")),
         }

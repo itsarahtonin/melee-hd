@@ -198,6 +198,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
 
+### Crazy Hand: the poke makes Master Hand's lasers
+
+- **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+- **Defect:** the poke's four lasers are made as `It_Kind_MasterHand_Laser` (125, `li r7, 0x7D` in the machine code), not his own laser (127), whose article his creation registers (`ftCh_Init_OnLoad`) and nothing makes. Only Master Hand's creation registers kind 125's article.
+- **Effect:** with Master Hand in the match (the single-player modes always field them together) the lasers are Master Hand's, with his laser's attributes. Without him (a debug VS match with Crazy Hand alone) kind 125's article is null and the first laser's creation reads it at address 0x10, which faults: ssbm-rs stops with an unmapped read in `Item_80267AA8` (`m6-crazy-hand/ch-alone-1` at field 5145, and `ch-alone-3`).
+- **melee-hd:** modeled with Master Hand there; without him it stops by name, as the console's game stops there ([design call 7](milestone-6.md#design-calls)): `Melee crashes: Crazy Hand's poke makes Master Hand's laser (item kind 125), whose article no Master Hand registered…`.
+- **Fix:** make kind 127.
+- **Fix impact:** changes the lasers' attributes in the single-player modes where his laser's differ from Master Hand's, so it changes gameplay there; debug VS matches stop crashing.
+- **Source:** the decompilation's `fn_80158534` and its listing (`ftcrazyhandpoke.s`); `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
@@ -531,6 +541,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** record the rare Pokémon and mark it out only once `Item_80268B18` returns an item.
 - **Fix impact:** none in play; a save could no longer note a rare Pokémon never seen.
 - **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`rare`, `release`); the decomp's `it_279C.c`.
+
+### Training's Pokémon list names Ditto, whom its draw can't pick
+
+- **Where:** `it_8027A780` (a draw from a list of Pokémon) with `common_pokemon`, the list `it_8027AB64` takes in Training (`gm_8018841C`), `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`, `COMMON_POKEMON`).
+- **Defect:** the list names Ditto (`It_PKind_Metamon`), but the draw weighs each entry by the Poké Ball's table, where Ditto's weight is 0 (`ItCo.usd`), and takes the first entry whose running total passes the draw strictly (`rand_int < accum`), so an entry of weight 0 never comes out. Ditto's entry is dead; an event's list, drawn the same way (`it_8027A9B8`), can't pick it either, so only the debug menu's Pokémon brings Ditto out of a ball.
+- **Effect:** Training's Poké Balls never let Ditto out, though its list offers it.
+- **melee-hd:** modeled: the draw runs over the list as the original does.
+- **Fix:** give Ditto a weight in the table, or drop it from the list.
+- **Fix impact:** a weight changes every VS match's Pokémon draws (gameplay, replays and Slippi peers desync); dropping the entry changes Training's draws only.
+- **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`); the decomp's `it_279C.c`; the items audit's `DITTO` reason.
 
 ### Item creation clears one coordinate three times
 
@@ -983,6 +1003,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** give each descriptor an `HSD_LightPointDesc` (or set its `attnflags` with raw coefficients), and the shininess where it was meant.
 - **Fix impact:** none on gameplay; the race's lighting could change with a real falloff.
 - **Source:** `grpushon.c:180` and `:516` (the descriptors), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4930 to 0x804D4950; `crates/melee-sim/src/game/gr/pushon.rs` (`AddedLight`).
+
+### Icicle Mountain: the adventure's climb's end tests a result its braking skips
+
+- **Where:** `stageGObj10_GObjProc` (`gricemt.c`, the adventure's Icicle Mountain's climb, map 10), `crates/melee-sim/src/game/gr/icemt.rs` (`proc_climb10`).
+- **Defect:** the climb's end is tested as `var_r30 != 0 && x1A == xA6`, where `var_r30` is the speed step's answer (`grIceMt_801FA364`, whether no speed change is under way); the process takes the step only while climbing, so once the fields' list has run out (`x14_b2`, braking) the test reads a variable its C never set: the machine code compares r30 as the process loop left it (ssbm-rs transliterates the function for it).
+- **Effect:** none observed. The braking takes no speed step, so the speeds' cursor (`x1A`) stops where it was; r30 decides only when that cursor is at `xA6` with the end not yet reached, which needs the fields to run out within the last speed's change (the 60 ticks after the speeds' list's eleventh entry, about 2,900 ticks into the climb, with all 13 fields after the first two passed). Otherwise the test fails whatever r30 holds, and a climb that runs out of fields before its last speed never ends.
+- **melee-hd:** modeled where the result doesn't depend on r30; stops (a stale read, named) where it would.
+- **Fix:** start `var_r30` at 0, or test the end only while climbing.
+- **Fix impact:** none on gameplay unless the fields run out in that window; then the arena's start would be decided.
+- **Source:** `gricemt.c:796` (`stageGObj10_GObjProc`); ssbm-rs's `melee__gr__gricemt.rs` (`asm_stageGObj10_GObjProc`, the `unset_read` at `0x801F7CEC`, `cmpwi r30, 0x0`).
 
 ## Camera
 
@@ -1676,7 +1706,7 @@ The developers' menus and tools, reached only above retail's debug level (milest
 
 - **Where:** `gm_801674C4` (`gm_1601.c`, the adventure route's arena: the single-player setup `lbl_8046B488` for the opponents who join), then `fn_8016A4C8` (`gm_16A2.c`, each joining opponent's player block, its model scale from `lbl_8046B488.x1C`) and `ftCo_CalcYScaledKnockback` (`ftchangeparam.c`); in melee-hd `crate::game::gm::start_stage_event` (not ported) and `ft::coll::scaled_by_height`.
 - **Defect:** `gm_801674C4` fills the setup's counts, kinds and costumes but not its model scale or its attack and defense ratios (`x1C`, `x14`, `x18`); the single-player modes' own setups write them first (`gm_8016A22C`'s 1.0, `gm_8016A414`), but the debug menu's Otoguro test (its Go to Kinoko: debug VS on stage 59) runs no such setup, so in a session that played no single-player match before they hold the static's zeros.
-- **Effect:** when Fox reaches the route's arena, its first opponent joins with model scale 0, and `Fighter_Create`'s attributes at that scale (`ftCo_800D105C`, `ftCo_800CF6E8`) fail `scale != 0.0F` (`ftchangeparam.c`, line 30): the game halts. Recorded in ssbm-rs as `m6-mk-route/mk-run` (the assertion at field 4634, from `fn_8016A4C8` under `gm_Scene_Vs_OnFrame`). Debug only: on a retail disc the arena is reached only from Adventure, whose setup writes the scale.
+- **Effect:** when Fox reaches the route's arena, its first opponent joins with model scale 0, and `Fighter_Create`'s attributes at that scale (`ftCo_800D105C`, `ftCo_800CF6E8`) fail `scale != 0.0F` (`ftchangeparam.c`, line 30): the game halts. Recorded in ssbm-rs as `m6-mk-route/mk-run` (the assertion at field 4634, from `fn_8016A4C8` under `gm_Scene_Vs_OnFrame`). The adventure's Icicle Mountain's climb ends the same way (`stageGObj10_GObjProc`'s `gm_801674C4(14, 2, 2, 0, fn_801FA4CC)` once its speeds' list is spent): a debug VS match on stage 76 halts on the same assertion about 52 seconds in (`m6-icicle-climb/im-end`, field 5159). Debug only: on a retail disc the arenas are reached only from Adventure, whose setup writes the scale.
 - **melee-hd:** stops before it: `gm_801674C4`'s horde setup isn't ported (milestone 6's task 2 ports the single-player setups); `scaled_by_height` asserts as the original does, so once it is, the session stops where the console halts.
 - **Fix:** set `x1C`, `x14` and `x18` (1.0) in `gm_801674C4`, or in the Otoguro test's setup.
 - **Fix impact:** none on gameplay; the debug test's arena would play.
@@ -1691,6 +1721,26 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix:** point `x4` at VS mode's KO counts in the entry.
 - **Fix impact:** none on gameplay; the debug select would open.
 - **Source:** `gmhanyucss.c`, `mncharsel.s` (`mnCharSel_8025D1C4+0x68`, `lbzx r29, r4, r3` with `r4` the null pointer).
+
+### The debug menu's stage 77 halts on a missing stage parameter
+
+- **Where:** the debug menu's Versus page (`un_803FB168`'s Stage entry, `un_803FA258.x8`), then `gm_Scene_Vs_OnEnter`, `Stage_802251E8`, `Ground_801C0754` and `Ground_801C28CC` (`ground.c`); `crates/melee-sim/src/game/gr/setup.rs` (`item_frequencies`).
+- **Defect:** the Stage entry offers every stage kind up to 85, and its "10-2" (stage kind 77) is Icicle Mountain's ground (kind 22) like "10-1" (76), whose parameters list no entry for stage kind 77. `Ground_801C28CC` finds none for the stage being set up and fails its assert (`ground.c:2310: not found stage param in DAT(grkind=22 stkind=77,num=9)`), and the console halts.
+- **Effect:** a debug VS match on stage 77 hangs as its scene starts (ssbm-rs: stuck at `Ground_801C28CC+0x1E0`, from `Ground_801C0754+0x7C`, in the `m6-oracle/stages-1p` recording's run after "10-2" was picked), so the debug menu's stage 77 can't be played on a console.
+- **melee-hd:** stops (`item_frequencies` panics naming the stage and the parameters' count, design call 7's stop at the fault).
+- **Fix:** leave stage 77 out of the entry, or give Icicle Mountain's parameters an entry for it.
+- **Fix impact:** none on gameplay; the debug menu's stage 77 would play.
+- **Source:** `ground.c` (`Ground_801C28CC`'s missing-parameter report and panic); `$SSBM_RS_LOCAL/lockstep/m6-oracle/stages-1p.record.log`.
+
+### Snag the Trophies in a debug VS match fails HSD's joint assert
+
+- **Where:** the debug menu's Versus page, stage 83 ("figureget", Snag the Trophies), then the stage's process `grFigureGet_80219898` (`grfigureget.c`), which spawns a trophy through `it_802F2094` (`itcoin.c`, with `tyDisplay_8031C5E4`); not ported in melee-hd yet.
+- **Defect:** in a debug VS match the trophy `it_802F2094` makes gets a null joint, and HSD's `jobj` assert (`jobj.h`, line 776) fails. Why the joint is null there (likely the trophy data a single-player mode loads for the stage) isn't probed yet.
+- **Effect:** the console halts in the match's first seconds (ssbm-rs: `assertion "jobj" failed in jobj.h on line 776`, from `it_802F2094+0x1B4` under `grFigureGet_80219898+0x168`, in the `m6-oracle/stages-1p-b` recording's run), so the debug menu's stage 83 can't be played on a console.
+- **melee-hd:** stops (the stage's kind isn't ported yet; its port stops at the fault by name, design call 7).
+- **Fix:** leave the bonus stages out of the debug menu's stage entry, or load the trophies' data for a debug match on them.
+- **Fix impact:** none on gameplay; the debug menu's stage 83 would play.
+- **Source:** `$SSBM_RS_LOCAL/lockstep/m6-oracle/stages-1p-b.record.log` (the assert and its stack).
 
 ### A closing menu's screen removed through the menu's own pointer
 
@@ -1882,6 +1932,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none in play: debug code.
 - **Source:** `toy.c` (`Toy_Scene_OnEnter`, `_Toy_80311788`, `_Toy_803114E8`), `textdraw.c` (`DevText_Create`).
 
+### Crazy Hand alone waits for Master Hand for good
+
+- **Where:** `ftCh_TagRockPaper_Anim` (`ftcrazyhandtagrockpaper.c`), after his attack table's tag attacks (`ftCh_Wait1_0_Anim`'s `Squeezing1`, `Squeeze` and `Throw`, then `fn_8015AAC8`); `crates/melee-sim/src/game/ft/crazyhand/tag.rs` (`ch_tag_wait_anim`).
+- **Defect:** at a tag attack's point he waits (state 0x180) until Master Hand starts the attack (`ftMh_Wait1_0_Anim`, once Master Hand's attack timer runs out with Crazy Hand waiting) or Master Hand is beaten (`ftBossLib_8015C2E0`) or out (`ftBossLib_8015C358`). With no Master Hand in the match neither test holds, and nothing else ends the wait.
+- **Effect:** in a debug VS match with Crazy Hand and no Master Hand his table draws a tag attack in about one draw of five (its last row), and from then on he hovers at its point looping the wait for the rest of the match, attacking no more (`m6-crazy-hand/ch-probe` from field 4954, `ch-1p`). The single-player modes always field him with Master Hand.
+- **melee-hd:** modeled.
+- **Fix:** end the wait when there's no Master Hand (`ftBossLib_GetFighterGObj(Ft_Kind_MasterH)` null), or leave the tag attacks out of his draws then.
+- **Fix impact:** changes debug VS matches with Crazy Hand alone; none in the single-player modes.
+- **Source:** the decompilation's `ftCh_TagRockPaper_Anim`, `ftBossLib_8015C2E0` and `ftBossLib_8015C358`; `crates/melee-sim/src/game/ft/crazyhand/tag.rs`.
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
@@ -1952,6 +2012,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 
 | Defect | Where | What goes wrong | Source |
 | --- | --- | --- | --- |
+| A human Crazy Hand's slam tag | `ftCh_Init_80156AD8` (`ftcrazyhandwait10.c`), `game/ft/crazyhand/wait.rs` (`ch_human_attack`) | Y and left on port 4's pad set his next attack to `ftMh_MS_Slam` and glide him to its point to wait for Master Hand (`fn_8015AAC8`), but Master Hand's tag switch (`ftMh_Wait1_0_Anim`, `ftMh_MS_341_80150894`) only sets a point for the slam and starts nothing, so he waits for good though Master Hand is there; only a human-played Crazy Hand reaches it, which no setup makes (the hands are bosses or computers) | `crates/melee-sim/src/game/ft/crazyhand/wait.rs` (`ch_human_attack`); `crates/melee-sim/src/game/ft/masterhand/wait.rs` (`mh_tag_attack`) |
 | A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position. The lights the game sets up have one: every infinite, point and spot light descriptor in every archive on the disc has a position WObj (509, 328 and 20 of them); of the executable's own descriptors that milestone 5's scenes load, the debug menu's infinite light (`if_2FF2.c`'s `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes it over before any setup; Adventure's static point lights (`grPushOn_803E7B74`, `grPushOn_803E7B90`, `grshrineroute.c`'s two) get one from `HSD_LObjSetPosition` right after loading; and no code takes a light's position WObj away. melee-render puts such a light at the origin rather than at what melee-sim left: neither is the stack's word, and nothing reaches it | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown); `hsd::lobj`'s tests `lights_on_the_disc` and `executable_lights` (the proof, against the disc); [the player](player.md), **Spot lights** |
 | A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
@@ -1959,6 +2020,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A demo pose a kind's callback doesn't know | `ftMr_Init_UnkDemoCallbacks0`, `ftLg_Init_UnkDemoCallbacks0`, `ftKb_Init_UnkDemoCallbacks0`, `ftGk_Init_UnkDemoCallbacks0`, `game/ft/demo.rs` (`cutscene_anims`) | Each sets the demo animations' range only for its cutscene poses, and `ftDemo_CreateFighter` reads the range from its unset stack slots otherwise; the cutscenes make each kind only in its poses | `crates/melee-sim/src/game/ft/demo.rs` (`cutscene_anims` panics) |
 | The race's lights without a position, or fewer than three | `grPushOn_80218888`, `gr/pushon.rs` (`proc_lights`) | Measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The race's fighter lights all have positions, and there are ten | `crates/melee-sim/src/game/gr/pushon.rs` (`position_of`, the count's assertion) |
 | The Home-Run Contest's labels' camera off a non-perspective game camera | `fn_8021EB10` (grhomerun.c), `game/gr/homerun.rs` (`homerun_text_camera_render`) | Copies the game camera's field of view and aspect with `HSD_CObjGetPerspective`, which writes nothing for a camera of another projection, then sets its own perspective from the two stack floats it never set; the game camera is always a perspective | `crates/melee-sim/src/game/gr/homerun.rs` (`homerun_text_camera_render` stops) |
+| A trophy field past the last | `Toy_803060BC` (toy.c), `game/ty/mod.rs` (`toy_param`), `game/gm/trophies.rs` | Its switch on the field has no default, so a field past 8 returns whatever its caller left in `f1`; every caller passes 0 to 8 (the Bowser cutscenes and the game over 0 to 5 for the stand's placement, the trophy screens 6 to 8) | `crates/melee-sim/src/game/ty/mod.rs` (`toy_param` asserts its fields); ssbm-rs ports the cutscenes' entries (`vi1201v1_Scene_OnEnter`, `vi1201v2_Scene_OnEnter`, `vi1202_Scene_OnEnter`) from their machine code for it |
+| The adventure's Icicle Mountain's fields' ids and indices | `grIceMt_801F686C`, `gr/icemt.rs` (`on_init`, `field_id_at`) | The setup picks the three fields after its list's first two by comparing the list's entries, which are indices into `icemt_field`, with the table's map ids, and then indexes `icemt_field` with the ids it picked; an id of 6 would read past the table into `grIm_803E40B0`. With the disc's list (indices 0 to 4 in turn) the picks are ids 2, 3 and 4, which index the table within it and happen to give the heights of the fields the list puts third to fifth | `crates/melee-sim/src/game/gr/icemt.rs` (`field_id_at` panics past the table) |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
 | The rumble screen's name rows on an empty slot | `mnVibration_CreateNameRow`, `game/mn/vibration.rs` | A row's slot is the scroll plus the row, not the row's name: with a gap among the save's names, `GetNameText` hands `HSD_SisLib_803A6B98` a null format. The game keeps names packed (`DeleteName` moves them up), so only an edited save could leave a gap | `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_name_row`) |

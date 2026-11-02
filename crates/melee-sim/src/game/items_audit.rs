@@ -271,8 +271,10 @@ pub const MODULES: &[&str] = &[
     "it/kinds/matadogas",
     "it/kinds/mball",
     "it/kinds/metalb",
+    "it/kinds/metamon",
     "it/kinds/mew",
     "it/kinds/mewtwodisable",
+    "it/kinds/crazyhandbomb",
     "it/kinds/masterhandbullet",
     "it/kinds/masterhandlaser",
     "it/kinds/mewtwoshadowball",
@@ -334,6 +336,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/tosakinto",
     "it/kinds/unknown",
     "it/kinds/whispyapple",
+    "it/kinds/whitebea",
     "it/kinds/wstar",
     "it/kinds/yaku",
     "it/kinds/yoshiegglay",
@@ -369,7 +372,7 @@ const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fig
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
-const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
+const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload at the scene's end); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE84): the All-Star rest area's (Big Blue's flying platforms make only the five kinds ported, the Home-Run Contest's stage the bat, and a sudden death's bob-omb rain only bob-ombs)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
@@ -384,8 +387,6 @@ const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster s
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
-const GIGA_BOWSER: &str =
-    "Giga Bowser's motion table's callback (ftgkoopa.c), a fighter no VS roster has";
 const LIKE_LIKE: &str = "the Like Like's held fighter's death callback, which only its capture (ftCo_800C78B0) sets: an adventure enemy";
 const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor found under the item, one whose span holds the item's x, which mpLib_8004DD90_Floor then finds at that x and writes the height of";
 const ONE_PLAYER_TROPHY: &str = "a beaten enemy's trophy, which it_8027CC88 rolls only when gm_IsCurrently1PMode says a single-player mode is on";
@@ -474,11 +475,9 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
     ("melee/ft/ft_0BF0", DEMO),
     ("it_8027A9B8 (an event", POKEMON_MODES),
-    ("it_8027A780 (training", POKEMON_MODES),
     ("fn_8017DF28", ONE_PLAYER),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
-    ("ftLib_CountFighters (Ditto's check)", DITTO),
     ("grZakoGenerator_801CAC14 (a coin)", COINS),
     ("grZakoGenerator_801CACB8 (a coin)", COINS),
     ("ftLib_GetTeam on an item", ATTACKER),
@@ -495,8 +494,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
         "it_8027CC88 (a 1P mode's trophy from an enemy)",
         ONE_PLAYER_TROPHY,
     ),
-    ("ftCo_800C7434", DEMO),
-    ("ftCo_800C74AC", GIGA_BOWSER),
     ("fn_800C7890", LIKE_LIKE),
     (
         "it_802759DC (a height the floor probe left unwritten)",

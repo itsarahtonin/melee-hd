@@ -1596,6 +1596,37 @@ const CKIND_CLINK: u8 = 0x15;
 /// `BGM_Undefined`.
 const BGM_UNDEFINED: i32 = -1;
 
+/// The songs a stage's file can play for `stkind` ([`music`]'s choices: the usual and the
+/// alternate song, and the last stock's two), for a frontend that reads songs ahead.
+pub fn stage_songs(data: &Archives, archive: ArchiveId, stkind: i32) -> Vec<i32> {
+    let Some(at) = data.get(archive).public("grGroundParam") else {
+        return Vec::new();
+    };
+    let p = read_ground_param(
+        data,
+        DataRef {
+            archive,
+            offset: at,
+        },
+    );
+    let mut out = Vec::new();
+    for i in 0..p.stage_param_count.max(0) as u32 {
+        let Some(e) = p.stage_params.map(|s| s.at(0x64 * i)) else {
+            break;
+        };
+        if data.u32(e) as i32 != stkind {
+            continue;
+        }
+        for o in [4, 8, 0xC, 0x10] {
+            let bgm = data.u32(e.at(o)) as i32;
+            if (0..0x62).contains(&bgm) && !out.contains(&bgm) {
+                out.push(bgm);
+            }
+        }
+    }
+    out
+}
+
 /// The stage's music by `flags`, `Ground_801C28AC` (`Ground_801C24F8`): the stage kind's
 /// parameters pick its usual or its alternate song (bits 1 and 2; with bit 4 they choose, the
 /// alternate by chance or unlock, bit 0x40 forcing it), from its sudden death's (bit 0x10),

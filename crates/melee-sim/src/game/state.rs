@@ -499,6 +499,8 @@ pub struct Game {
     pub one_player: super::gm::one_player::OnePlayer,
     /// The Home-Run Contest's statics (`gm_180A.c`).
     pub home_run: super::gm::home_run::HomeRun,
+    /// Training's match and menu (`gm_1884.c`, `gmtrainingmode.c`'s match states).
+    pub training: super::gm::training::Training,
     /// The trophies' statics (`toy.c`, `tylist.c`).
     pub toys: super::ty::Toys,
     /// Tournament mode's statics (`gmtoumode.c`, `gmtoulib.c`, `gmtou_0.c` to `gmtou_2.c`).

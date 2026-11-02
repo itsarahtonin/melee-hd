@@ -116,16 +116,34 @@ impl Replay {
                 if name.starts_with("hr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
                 }
+
+                if name.starts_with("tr-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-training/{name}.inputs")).into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6c-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-cutscenes-2/{o}.inputs")).into();
                 }
                 if name.starts_with("fz-") {
                     return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
                 }
 
+                if name.starts_with("im-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-icicle-climb/{name}.inputs"))
+                        .into();
+                }
                 if name.starts_with("ze-") {
                     return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
                         .into();
+                }
+
+                if name.starts_with("ch-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-crazy-hand/{name}.inputs")).into();
+                }
+                if name.starts_with("mh-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-master-hand/{name}.inputs")).into();
                 }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
@@ -797,6 +815,15 @@ pub const FZ_CUTSCENE: Game = Game {
     replay: Replay::Session("fz-cutscene"),
 };
 
+/// The debug cutscene mode whole (`m6-cutscenes-2/cutscenes`, debug level 3): every cutscene
+/// in turn.
+pub const M6C_CUTSCENES: Game = Game {
+    stage: "the cutscenes",
+    name: "m6c-cutscenes",
+    players: "the debug cutscene mode's eleven cutscenes (session m6-cutscenes-2/cutscenes)",
+    replay: Replay::Session("m6c-cutscenes"),
+};
+
 pub const RACE_LOOK: Game = Game {
     stage: "the race",
     name: "race-look",
@@ -857,6 +884,58 @@ pub const GB_GIRL: Game = Game {
     name: "gb-girl",
     players: "the female Wire Frame vs Mario (session m6-giga-bowser/girl)",
     replay: Replay::Session("gb-girl"),
+};
+
+/// Master Hand (`m6-master-hand/mh-1p`, debug VS at debug level 3, Link against him on Final
+/// Destination).
+pub const MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "mh-1p",
+    players: "Link vs Master Hand (session m6-master-hand/mh-1p)",
+    replay: Replay::Session("mh-1p"),
+};
+
+/// Crazy Hand alone (`m6-crazy-hand/ch-probe`, debug VS at debug level 3, Link against him on
+/// Final Destination).
+pub const CH_PROBE: Game = Game {
+    stage: "Final Destination",
+    name: "ch-probe",
+    players: "Link vs Crazy Hand (session m6-crazy-hand/ch-probe)",
+    replay: Replay::Session("ch-probe"),
+};
+
+/// Both hands (`m6-crazy-hand/ch-mh-1p`): Crazy Hand's entrance, his grab, the tag attacks.
+pub const CH_MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "ch-mh-1p",
+    players: "Link vs Master Hand and Crazy Hand (session m6-crazy-hand/ch-mh-1p)",
+    replay: Replay::Session("ch-mh-1p"),
+};
+
+/// The adventure's Icicle Mountain at rest (`m6-icicle-climb/im-look`): Link and Mario standing
+/// as the fields climb.
+pub const IM_LOOK: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-look",
+    players: "Link and Mario standing (session m6-icicle-climb/im-look)",
+    replay: Replay::Session("im-look"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears jumping (`m6-icicle-climb/im-jump`): the debug
+/// item menu's bears above Fox.
+pub const IM_JUMP: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-jump",
+    players: "Fox and two Polar Bears, Mario standing (session m6-icicle-climb/im-jump)",
+    replay: Replay::Session("im-jump"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears beaten (`m6-icicle-climb/im-bears`).
+pub const IM_BEARS: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-bears",
+    players: "Fox smashing two Polar Bears, Mario standing (session m6-icicle-climb/im-bears)",
+    replay: Replay::Session("im-bears"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
@@ -1028,6 +1107,24 @@ pub const M6_TRAINING: Game = Game {
     name: "m6-training",
     players: "Training's select (session m6-select/training)",
     replay: Replay::Session("m6-training"),
+};
+
+/// Training's menu over its match (`m6-training/tr-items`): the item option on the Poké
+/// Ball, its name, the counters.
+pub const TR_ITEMS: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "tr-items",
+    players: "Training's menu, the item option (session m6-training/tr-items)",
+    replay: Replay::Session("tr-items"),
+};
+
+/// Training's menu over its match (`m6-training/tr-cpu`): the computer player's behavior set
+/// to walk.
+pub const TR_CPU: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "tr-cpu",
+    players: "Training's menu, the behavior option (session m6-training/tr-cpu)",
+    replay: Replay::Session("tr-cpu"),
 };
 
 /// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.
@@ -1467,5 +1564,9 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
+    /// Star Fox's cutscene erases the screen to the background color, whose alpha
+    /// `Camera_GetBackgroundColor` leaves a stack byte; the erase writes color and depth only,
+    /// so the alpha reaches no pixel (docs/engine.md, uninitialized values).
+    pub const ERASE_ALPHA: &str = "Star Fox's cutscene's erase: the background color's unset alpha, which the erase never writes";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

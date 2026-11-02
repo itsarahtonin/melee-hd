@@ -9,7 +9,8 @@
 //! read at the decomp's offsets; his code reads his attributes from his data
 //! (`ftData::ext_attr`, `ftMasterHand_SpecialAttrs`) rather than the fighter's copy.
 //!
-//! Crazy Hand's tag attacks with him (`ftmasterhandtag*.c`) wait for task 12.
+//! His tag attacks with Crazy Hand (`ftmasterhandtag*.c`) are in `tag`; Crazy Hand's half is
+//! `ft::crazyhand::tag`.
 
 pub mod airplane;
 pub mod common;
@@ -20,6 +21,7 @@ pub mod finger;
 pub mod grab;
 pub mod init;
 pub mod sweep;
+pub mod tag;
 pub mod wait;
 
 use super::super::code::Val;
@@ -511,6 +513,7 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || grab::run(g, gobj, addr)
         || finger::run(g, gobj, addr)
         || damage::run(g, gobj, addr)
+        || tag::run(g, gobj, addr)
 }
 
 /// Runs one of his functions that takes his GObj and a callback (`ftMh_MS_371_801541C8`),

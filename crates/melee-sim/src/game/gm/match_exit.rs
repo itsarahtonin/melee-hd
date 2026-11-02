@@ -66,6 +66,9 @@ impl Game {
             (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_SUDDEN_DEATH) => {
                 &mut self.tou.sd_exit
             }
+            (super::one_player::GM_TRAINING, _) if scene == Some(super::training::GS_TRAINING) => {
+                &mut self.training.exit
+            }
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"
             )),
