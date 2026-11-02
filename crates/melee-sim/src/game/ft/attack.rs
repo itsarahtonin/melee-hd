@@ -2016,6 +2016,10 @@ impl Running<'_> {
                 Some(super::super::gr::pushon::SPIKES_DEVICE) => {
                     super::super::gr::pushon::spikes_device(self, gobj)
                 }
+                Some(super::super::gr::target::MARIO_WATER) => {
+                    super::super::gr::target::mario_water(self, gobj);
+                    None
+                }
                 Some(other) => {
                     unported_call(&format!("a collision device's callback {other:#010x}"))
                 }
@@ -2167,6 +2171,10 @@ impl Running<'_> {
             Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
                 super::super::gr::pushon::line_hazard(self.game, self.data, line)
             }
+            Some(f) if super::super::gr::target::is_on_touch_line(f.0) => {
+                super::super::gr::target::line_hazard(self.game, self.data, line)
+            }
+
             Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
                 super::super::gr::figure::on_touch_line(line)
             }

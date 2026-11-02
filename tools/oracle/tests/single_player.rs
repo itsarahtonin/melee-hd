@@ -80,7 +80,7 @@ fn each_mode_runs_to_its_first_stop() {
             592,
             "mnEvent_8024E838 (the Event list) isn't ported",
         ),
-        ("target", 856, "gm_801B6428 isn't ported"),
+        ("target", 3496, ""),
         ("homerun", 3399, ""),
         (
             "multiman",
@@ -125,11 +125,7 @@ fn the_debug_routes_run_to_their_first_stops() {
 fn the_versus_page_tours_run_to_their_first_stops() {
     first_stops(&[
         ("bosses", 13377, ""),
-        (
-            "targets",
-            1121,
-            "not implemented: stage kind 40 isn't ported",
-        ),
+        ("targets", 47425, ""),
         (
             "stages-1p",
             3409,

@@ -47,6 +47,7 @@ pub mod shrine;
 pub mod stadium;
 pub mod stage;
 pub mod story;
+pub mod target;
 pub mod vars;
 pub mod venom;
 pub mod yorster;
@@ -128,6 +129,8 @@ pub const GR_KIND_KINOKOROUTE: i32 = 31;
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_ZebesRoute`, Brinstar's escape.
 pub const GR_KIND_ZEBESROUTE: i32 = 33;
+/// `Gr_Kind_TMario`, the first of the 26 target stages (Target Test's, `gr::target`).
+pub const GR_KIND_TMARIO: i32 = 40;
 /// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
 pub const GR_KIND_FIGURE1: i32 = 68;
 pub const GR_KIND_FIGURE2: i32 = 69;
@@ -281,6 +284,10 @@ pub struct Globals {
     /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
     /// timer and the trophy slot's odds.
     pub zebesroute_yakumono: Option<DataRef>,
+    /// The `yakumono_param` statics of the five target stages that read theirs (Falco's,
+    /// Fox's, Mewtwo's, Jigglypuff's and Ganondorf's, `target::YAKUMONO_STATICS`): their
+    /// lines' hits.
+    pub target_yakumono: [Option<DataRef>; 5],
     /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
     /// nothing reads.
     pub figure_yakumono: [Option<DataRef>; 3],
@@ -569,6 +576,7 @@ pub fn yaku_received(
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
         kinokoroute::BLOCK_HIT => kinokoroute::block_hit(r, item, g),
+        target::ICE_HIT => target::ice_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
         corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
         castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),

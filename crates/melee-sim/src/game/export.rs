@@ -237,6 +237,7 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
     }
     if live.dynamics {
         dynamics_links(game, data, img);
+        wind_sources(game, data, img);
     }
     // The scene's own objects (an earlier scene's slots name blocks of its freed heap).
     let fighters = std::any::type_name::<super::structs::Fighter>();
@@ -400,6 +401,40 @@ fn coll_arrays(game: &Game, data: &Archives, img: &mut Image) {
         }
         l.put(img);
     }
+    // The islands (`mp_UnkStruct0`, a block of 0x2C each), each written whole as it's made or
+    // reused but `x2A`, which keeps what the block held.
+    let isl = &g.islands;
+    for (i, island) in isl.arena.iter().enumerate() {
+        let at = isl.addrs.get(i).copied().unwrap_or(0);
+        if at == 0 {
+            continue;
+        }
+        let mut l = Lay::leftover(img, data, at, 0x2C);
+        let addr = |id: Option<crate::mp::IslandId>| {
+            id.map_or(0, |n| isl.addrs.get(n.0 as usize).copied().unwrap_or(0))
+        };
+        l.put_u32(at, addr(island.next));
+        l.put_u16(at + 4, island.left_vtx);
+        l.put_u16(at + 6, island.right_vtx);
+        for (k, f) in [
+            island.left.x,
+            island.left.y,
+            island.left.z,
+            island.right.x,
+            island.right.y,
+            island.right.z,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            l.put_u32(at + 8 + 4 * k as u32, f.to_bits());
+        }
+        l.put_u32(at + 0x20, island.flags as u32);
+        l.put_u16(at + 0x24, island.first_line as u16);
+        l.put_u16(at + 0x26, island.last_line as u16);
+        l.put_u16(at + 0x28, island.joint as u16);
+        l.put(img);
+    }
 }
 
 /// The enemy spawner's slots (`grZakoGenerator_Data`, 81 of 12 bytes), as their block goes
@@ -437,6 +472,40 @@ fn dynamics_links(game: &Game, data: &Archives, img: &mut Image) {
     let cx = Addrs { game, img };
     for (k, link) in game.fighter_dynamics.iter() {
         link.lay(&mut l, block + 0x98 * k, &cx);
+    }
+    l.put(img);
+}
+
+/// The wind sources (`lb_8000FCDC`'s second block, 8 sources of 0x38), as their block goes back
+/// with its scene's heap with the dynamics' links: each source's kind and link, which the reset
+/// writes, and the fields `lb_800100B0` writes of a source added since the block was made; the
+/// rest, and every source's `x2` and `x3`, which nothing writes, what the block held.
+fn wind_sources(game: &Game, data: &Archives, img: &mut Image) {
+    let block = game.ft.winds_block;
+    if block == 0 {
+        return;
+    }
+    let w = &game.gr.winds;
+    let mut l = Lay::leftover(img, data, block, 8 * 0x38);
+    for (i, e) in w.entries.iter().enumerate() {
+        let at = 0x38 * i as u32;
+        l.u8(at, e.kind);
+        if w.written & (1 << i) != 0 {
+            l.u8(at + 1, e.priority);
+            l.f32s(
+                at + 4,
+                &[
+                    e.pos.x, e.pos.y, e.pos.z, e.x10, e.x14, e.x18, e.x1c, e.scale, e.decay,
+                ],
+            );
+            l.u32(at + 0x28, e.frames as u32);
+            l.f32(at + 0x2C, e.angle_step);
+            l.u32(at + 0x30, e.age as u32);
+        }
+        l.u32(
+            at + 0x34,
+            w.next[i].map_or(0, |n| block + 0x38 * u32::from(n)),
+        );
     }
     l.put(img);
 }
@@ -799,6 +868,11 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     o.lay(&mut l, at, &cx);
     if o.xD0_itemStateDesc.is_none() {
         l.restore(state_desc);
+    }
+    // A stage's hurtbox item's attributes are the executable's (`it_803F8C08`), which the
+    // mirror holds as none.
+    if o.kind == super::it::kinds::PKIND_RANDOM && o.xCC_item_attr.is_none() {
+        l.put_u32(at + 0xCC, 0x803F_8C08);
     }
     let n = o.x374_dynamicBonesNum.max(0) as usize;
     o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);
