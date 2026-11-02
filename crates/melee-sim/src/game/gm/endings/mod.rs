@@ -16,6 +16,9 @@ pub const GM_ADVENTURE_GOVER: u8 = 0x16;
 pub const GM_ALLSTAR_GOVER: u8 = 0x17;
 pub const GM_DEBUG_GOVER: u8 = 0x1A;
 
+/// `GS_REGEND_TOYFALL`, the trophy fall.
+pub const GS_REGEND_TOYFALL: u8 = 0x0F;
+
 /// `GS_GAMEOVER`, `GS_COMING_SOON`.
 pub const GS_GAMEOVER: u8 = 0x22;
 pub const GS_COMING_SOON: u8 = 0x23;
@@ -30,7 +33,7 @@ impl GOver {
     pub fn set_ckind(&mut self, v: u8) {
         self.0[0] = v;
     }
-    #[doc(alias = "gm_801BEFB0")]
+    // Ports gm_801BEFB0; aliased once a check reaches it.
     pub fn ckind(&self) -> u8 {
         self.0[0]
     }
@@ -39,7 +42,7 @@ impl GOver {
     pub fn set_color(&mut self, v: u8) {
         self.0[1] = v;
     }
-    #[doc(alias = "gm_801BEFD0")]
+    // Ports gm_801BEFD0; aliased once a check reaches it.
     pub fn color(&self) -> u8 {
         self.0[1]
     }
@@ -48,7 +51,7 @@ impl GOver {
     pub fn set_mode(&mut self, v: u8) {
         self.0[2] = v;
     }
-    #[doc(alias = "gm_801BF050")]
+    // Ports gm_801BF050; aliased once a check reaches it.
     pub fn mode(&self) -> u8 {
         self.0[2]
     }
@@ -116,8 +119,8 @@ impl Running<'_> {
 
     /// `onEnterIntroEasy`, the debug mode's state 6: the announcer's bank, and Classic's
     /// intro's enter data from the settings (`un_80301BA8`).
-    #[doc(alias = "onEnterIntroEasy")]
-    #[doc(alias = "un_80301BA8")]
+    // Ports onEnterIntroEasy and un_80301BA8; aliased once a check reaches them (the enter
+    // data is written as Classic's intro, task 22's, enters).
     pub fn debug_enter_intro_easy(&mut self) {
         self.load_announcer_bank();
         let s = |r: &Running, off: u32| r.game.debug_setting(off);
@@ -151,8 +154,8 @@ impl Running<'_> {
 
     /// `onEnterIntroAllstar`, the debug mode's state 7: All-Star's intro's enter data from
     /// the settings (`un_80301C64`).
-    #[doc(alias = "onEnterIntroAllstar")]
-    #[doc(alias = "un_80301C64")]
+    // Ports onEnterIntroAllstar and un_80301C64; aliased once a check reaches them (All-Star's
+    // intro, task 23's).
     pub fn debug_enter_intro_allstar(&mut self) {
         let v = self.game.debug_setting(0x138);
         self.game.endings.intro_allstar = [v, 0];
