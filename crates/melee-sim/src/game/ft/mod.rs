@@ -44,6 +44,7 @@ pub mod fighter;
 pub mod fox;
 pub mod ftlib;
 pub mod gamewatch;
+pub mod gkoopa;
 pub mod ik;
 pub mod input;
 mod kind_tables;
@@ -77,6 +78,7 @@ pub mod spawn;
 pub mod transform;
 pub mod vars;
 pub mod yoshi;
+pub mod zako;
 pub mod zelda;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
