@@ -105,6 +105,12 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
                         .into();
                 }
+                if let Some(o) = name.strip_prefix("o6-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-oracle/{o}.inputs")).into();
+                }
+                if name.starts_with("tt-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-target-test/{name}.inputs")).into();
+                }
                 if name.starts_with("race-") {
                     return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
                 }
@@ -822,6 +828,22 @@ pub const M6C_CUTSCENES: Game = Game {
     name: "m6c-cutscenes",
     players: "the debug cutscene mode's eleven cutscenes (session m6-cutscenes-2/cutscenes)",
     replay: Replay::Session("m6c-cutscenes"),
+};
+
+/// The 26 target stages at debug level 3 (`m6-oracle/targets`): Mario's and the Ice Climbers'.
+pub const TT_TARGETS: Game = Game {
+    stage: "the target stages",
+    name: "o6-targets",
+    players: "Link and Mario on each target stage in turn (session m6-oracle/targets)",
+    replay: Replay::Session("o6-targets"),
+};
+
+/// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
+pub const TT_DK_QUIT: Game = Game {
+    stage: "Donkey Kong's target stage",
+    name: "tt-dk-quit",
+    players: "Donkey Kong alone, jabbing at the targets by the start (session m6-target-test/tt-dk-quit)",
+    replay: Replay::Session("tt-dk-quit"),
 };
 
 pub const RACE_LOOK: Game = Game {

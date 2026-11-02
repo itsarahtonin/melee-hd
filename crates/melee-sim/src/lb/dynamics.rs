@@ -102,13 +102,13 @@ impl Game {
         // The links' block, then the wind sources', from the scene's heap: a fresh heap's are
         // zero (engine.md), after the menus each link holds what the scenes before left there,
         // the reset's writes over it.
-        let links = crate::hsd::heap::with(|h| {
+        let (links, winds) = crate::hsd::heap::with(|h| {
             let links = h.mem_alloc(LINKS * 0x98);
-            h.mem_alloc(0x1C0);
-            links
+            (links, h.mem_alloc(0x1C0))
         })
-        .unwrap_or(0);
+        .unwrap_or((0, 0));
         self.ft.dynamics_block = links;
+        self.ft.winds_block = winds;
         self.fighter_dynamics = Pool::default();
         for k in 0..LINKS {
             let left =

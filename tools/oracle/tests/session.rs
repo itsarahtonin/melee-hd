@@ -2052,6 +2052,30 @@ fn brinstar_escape_in_debug_vs() {
     assert!(out.contains("6089 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+
+/// Target Test from the main menu (milestone 6's task 6), from power-on with the heap:
+/// `m6-target-test/tt-dk-quit`, on the unlock-all card, Donkey Kong's target stage, a target
+/// broken beside the start, the pause's quit, the record of targets broken, the select again
+/// (the save written) and B back to the menu, clean to its trace's end with the card after the
+/// run's byte for byte.
+#[test]
+fn target_test_from_the_menu() {
+    let card = ssbm_rs_local("lockstep/m6-target-test/tt-dk-quit-run.card");
+    let Some(out) = scripted_session(
+        "m6-target-test",
+        "tt-dk-quit",
+        &["--all", "--heap", "--card-after", &card],
+    ) else {
+        return;
+    };
+    assert!(out.contains("1963 ticks compared, no difference"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Giga Bowser in the debug menu's Versus page (milestone 6's task 7), from power-on with the
 /// heap: `m6-giga-bowser/gk` (a human's Giga Bowser through his moveset, Bowser's specials
 /// with his animations, against Mario) and `kb-gk` (Kirby's inhale over Giga Bowser again and

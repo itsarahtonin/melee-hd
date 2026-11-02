@@ -208,14 +208,13 @@ pub const PATHS: &[Paths] = &[
             "hud/stock",
             "pl/tally",
             "gm/decisions",
-            "ft/co/hit",
             "ft/co/dead",
         ],
         unreached: HOME_RUN_UNREACHED,
     },
     Paths {
         mode: TT,
-        units: &["melee/gm/gmmultiman", "melee/it/kinds/itmato"],
+        units: &["melee/it/kinds/itmato"],
         modules: &[],
         unreached: &[],
     },
@@ -510,12 +509,12 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "Classic's, Adventure's and All-Star's runs (is_1p_run)",
     ),
     (
-        "gm_8016B014 with x4_2",
-        "the rules' x4_2, which the contest's entry clears (gm_801B9A3C)",
-    ),
-    (
         "gm_801693BC for a slot that leaves",
         "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "Target Test's match entry alone asks a character's target stage",
     ),
     (
         "itBat_Logic11_EvtUnk",
@@ -591,7 +590,6 @@ pub const MISSING: &[Gap] = &[
             "fn_80169444 (a single-player mode's last stock)",
             "fn_8016C46C's single-player results",
             "fn_8017F294 (a single-player run's exit value)",
-            "gm_8016B014 with x4_2",
         ],
         modes: NOT_HOME_RUN,
     },
@@ -704,18 +702,13 @@ pub const MISSING: &[Gap] = &[
         modes: &[TR, EV],
     },
     Gap {
-        what: "Target Test's and the Multi-Man modes' mode (gmmultiman.c)",
+        what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
         covers: &["melee/gm/gmmultiman"],
-        modes: &[TT, MM],
+        modes: &[MM],
     },
     Gap {
-        what: "the target stages",
+        what: "the target stages' objects' destroy callbacks, demo setups and shadow checks, held until a session reaches them",
         covers: TARGET_STAGES,
-        modes: &[TT, CL, DB],
-    },
-    Gap {
-        what: "the targets",
-        covers: &["melee/it/kinds/itmato"],
         modes: &[TT, CL, DB],
     },
     Gap {

@@ -1990,6 +1990,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
         GR_KIND_PUSHON => &PUSHON,
         GR_KIND_ZEBESROUTE => &ZEBESROUTE,
+        k if super::target::is_target(k) => super::target::stage_data(k),
         GR_KIND_FIGURE1 => &FIGURE1,
         GR_KIND_FIGURE2 => &FIGURE2,
         GR_KIND_FIGURE3 => &FIGURE3,

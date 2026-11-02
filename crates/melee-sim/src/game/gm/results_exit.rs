@@ -365,7 +365,15 @@ impl Running<'_> {
 
     /// `gm_InitChallengerData`.
     #[doc(alias = "gm_InitChallengerData")]
-    fn init_challenger(&mut self, ckind: u8, color: u8, slot: u8, nametag: u8, cpu: u8, mode: u8) {
+    pub(super) fn init_challenger(
+        &mut self,
+        ckind: u8,
+        color: u8,
+        slot: u8,
+        nametag: u8,
+        cpu: u8,
+        mode: u8,
+    ) {
         self.game.gm.challenger = ChallengerData {
             human_ckind: ckind,
             human_color: color,
