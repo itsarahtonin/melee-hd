@@ -10,7 +10,6 @@ melee/gm/gm_17BA	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gm_17C0	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17DB	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17E4	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_180A	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_181A	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_186E	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -25,7 +24,6 @@ melee/gm/gmallstar	gated	the single-player modes', which only the 1P list's gate
 melee/gm/gmclassic	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmgover	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmhomerun	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmmovieend	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmmultiman	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregclear	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -42,7 +40,6 @@ melee/vi/vi1201v1	gated	the single-player modes', which only the 1P list's gated
 melee/vi/vi1201v2	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/vi/vi1202	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-lbTime_8000AEE4	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbArq_80014AC4	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbArq_80014BD0	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
@@ -85,7 +82,6 @@ gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its ca
 gmMainLib_8015CF5C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF70	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015D084	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D0F4	gated	named only by the single-player modes' code (gm_8017CA38, gm_801B65D4, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D134	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
@@ -158,7 +154,6 @@ fn_801689E4	gated	named only by the single-player modes' code (fn_801803FC): the
 fn_80168A6C	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
 fn_80168F2C	gated	named only by the single-player modes' code (fn_8017FF1C, fn_8019F810): the single-player modes', which only the 1P list's gated entries lead to
 fn_80168F7C	gated	named only by the single-player modes' code (fn_80180630, fn_8019F9C4): the single-player modes', which only the 1P list's gated entries lead to
-gm_80168F88	gated	Event Match's match entry (gmevent's onEnterVs): the single-player modes', which only the 1P list's gated entries lead to
 gm_1601_GetUnkData	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169370	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169384	gated	named only by the single-player modes' code (gm_801BC754, gm_801BD658): the single-player modes', which only the 1P list's gated entries lead to
@@ -202,7 +197,6 @@ gm_GetStartMeleeRules	unchecked	a getter or setter of the game's data, which its
 fn_8016AE60	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016AEA4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016AEB8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_8016AEFC	gated	named only by the single-player modes' code (fn_80180C60, fn_80181E18, gm_801BC670): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016B014	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016B138	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016B350	gated	named only by the single-player modes' code (fn_8017C7A0, fn_80182B5C, gm_801BC4F4): the single-player modes', which only the 1P list's gated entries lead to
@@ -239,11 +233,9 @@ gm_801733D8	gated	named only by the single-player modes' code (gm_801B65D4): the
 gm_8017341C	gated	named only by the single-player modes' code (gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173460	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173498	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
-gm_801734D0	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 fn_80173834	gated	named only by the single-player modes' code (gm_8017CA38, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gm_8017390C	gated	named only by the single-player modes' code (gm_8017CA38, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173AA4	gated	named only by the single-player modes' code (gm_801B65D4): the single-player modes', which only the 1P list's gated entries lead to
-gm_80173B30	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173BC4	gated	named only by the single-player modes' code (gm_801B2204): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173C70	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173D3C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -287,9 +279,7 @@ Toy_803049F4	gated	the trophy stages' and the adventure enemies' trophy lookups 
 Toy_80304A58	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031BB34	gated	named only by the single-player modes' code (gm_801A9094): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031BB94	gated	named only by the single-player modes' code (gm_801A9094): the single-player modes', which only the 1P list's gated entries lead to
-tyDisplay_8031C2EC	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031C354	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
-tyDisplay_8031C454	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031C5E4	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031C8B8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs

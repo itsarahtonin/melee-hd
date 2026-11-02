@@ -489,6 +489,8 @@ pub struct Game {
     /// The single-player modes' statics: their selects' data and the 1P runs' state
     /// (`gm::one_player`).
     pub one_player: super::gm::one_player::OnePlayer,
+    /// The Home-Run Contest's statics (`gm_180A.c`).
+    pub home_run: super::gm::home_run::HomeRun,
     /// The trophies' statics (`toy.c`, `tylist.c`).
     pub toys: super::ty::Toys,
     /// Tournament mode's statics (`gmtoumode.c`, `gmtoulib.c`, `gmtou_0.c` to `gmtou_2.c`).

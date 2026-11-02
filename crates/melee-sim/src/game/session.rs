@@ -371,6 +371,11 @@ pub const FILES: &[&str] = &[
     "MnExtAll.dat",
     "SdSlChr.dat",
     "MnSlMap.dat",
+    // The Home-Run Contest's "no contest" sign and distance counter, in either language.
+    "IfHrNoCn.usd",
+    "IfHrReco.usd",
+    "IfHrNoCn.dat",
+    "IfHrReco.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound

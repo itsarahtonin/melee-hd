@@ -22,6 +22,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod homerun;
 pub mod icemt;
 pub mod inishie1;
 pub mod inishie2;
@@ -119,6 +120,8 @@ pub const GR_KIND_MUTECITY: i32 = 18;
 pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_Homerun`, the Home-Run Contest's stage.
+pub const GR_KIND_HOMERUN: i32 = 0x43;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -250,6 +253,8 @@ pub struct Globals {
     pub greatbay_yakumono: Option<DataRef>,
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
+    /// The Home-Run Contest's stage's statics (`grhomerun.c`).
+    pub homerun: homerun::Globals,
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
@@ -487,6 +492,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,
+        (GR_KIND_HOMERUN, 1 | 4 | 6 | 8) => VarsKind::HomeRunPart,
+        (GR_KIND_HOMERUN, 2 | 5 | 7 | 9) => VarsKind::HomeRunLabel,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,

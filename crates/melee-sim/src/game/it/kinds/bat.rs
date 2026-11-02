@@ -77,6 +77,31 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     fell(r, gobj);
 }
 
+/// Drops a bat at `pos` (on the stage's plane), landed, `it_80284854` (the Home-Run Contest's
+/// stage's drop by kind).
+#[doc(alias = "it_80284854")]
+pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
+    // `Item_InitSpawnPosition`, the caller's z cleared first.
+    let at = Vec3::new(pos.x, pos.y, 0.0);
+    let mut spawn = crate::game::structs::SpawnItem {
+        kind: super::BAT,
+        pos: at,
+        prev_pos: at,
+        ..Default::default()
+    };
+    // `Item_InitSpawnCommonFields`, with a first collision.
+    spawn.facing_dir = -1.0;
+    spawn.x3C_damage = 0;
+    spawn.vel = Vec3::new(0.0, 0.0, 0.0);
+    spawn.x0_parent_gobj = None;
+    spawn.x4_parent_gobj2 = None;
+    spawn.x44_flag[0] |= 0x80;
+    spawn.x40 = 0;
+    let gobj = super::super::item::spawn_ground(r, &mut spawn)?;
+    landed(r, gobj);
+    Some(gobj)
+}
+
 /// Lands, stopped, `it_80284974`.
 #[doc(alias = "it_80284974")]
 pub fn landed(r: &mut Running, gobj: GObjId) {

@@ -102,6 +102,10 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::kinokoroute::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x8021_EEBC => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::homerun::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x8020_1F4C => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::shrine::check_shadow_render(self.game, self.data, pos, Some(j))

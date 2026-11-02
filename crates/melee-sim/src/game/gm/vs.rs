@@ -132,6 +132,12 @@ impl Game {
         self.vs.state.timer_seconds
     }
 
+    /// The timer's frames within its second (`state.unk_2C`), `gm_8016AEFC`.
+    #[doc(alias = "gm_8016AEFC")]
+    pub fn vs_timer_frames(&self) -> u16 {
+        self.vs.state.unk_2C
+    }
+
     /// The match's time, `GetMatchTimer`: with the timer on, the seconds left (gone, for a
     /// timer that counts up, from the limit), else none.
     #[doc(alias = "GetMatchTimer")]

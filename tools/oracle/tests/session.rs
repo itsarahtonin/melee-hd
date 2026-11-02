@@ -1961,3 +1961,22 @@ fn master_hand_in_debug_vs() {
         );
     }
 }
+
+/// The Home-Run Contest (milestone 6's task 14), from power-on with the heap, each run's card
+/// after it the original's: `m6-homerun/hr-long` (Fox takes the bat and sends Sandbag 112.4
+/// feet, a new record, saved as the select comes back) and `hr-trophy` (the trophy gallery
+/// first, so the stage's trophy display draws a trophy and loads its archives; no contest).
+#[test]
+fn the_home_run_contest() {
+    for (name, ticks) in [("hr-long", 3237), ("hr-trophy", 3679)] {
+        let after = ssbm_rs_local(&format!("lockstep/m6-homerun/{name}-run.card"));
+        let args = ["--all", "--heap", "--card-after", &after];
+        if let Some(out) = scripted_session("m6-homerun", name, &args) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference"))
+                    && out.contains("the card after the session: the original's"),
+                "{out}"
+            );
+        }
+    }
+}
