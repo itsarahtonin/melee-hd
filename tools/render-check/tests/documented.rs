@@ -30,8 +30,8 @@ use common::{
     SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
     SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
     TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
-    why,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -1084,4 +1084,18 @@ frames!(MK_ROUTE;
 frames!(MK_FALL;
     mk_fall_3621 3621,
     mk_fall_3858 3858,
+);
+// Brinstar's escape (milestone 6's task 18, debug VS at debug level 3): Link and Mario at the
+// shaft's foot under the stage's lights (ze-look 2300), Fox's Firefox past the lower point light
+// (ze-climb 2900), the shaft's upper part shaking once the camera's timer has run out (ze-climb
+// 3500), the way out with Mario back from a KO below the camera (ze-climb 3800) and the match's
+// end on it (ze-climb 4000).
+frames!(ZE_LOOK;
+    ze_look_2300 2300,
+);
+frames!(ZE_CLIMB;
+    ze_climb_2900 2900,
+    ze_climb_3500 3500,
+    ze_climb_3800 3800,
+    ze_climb_4000 4000,
 );

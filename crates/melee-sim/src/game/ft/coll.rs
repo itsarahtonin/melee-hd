@@ -63,6 +63,8 @@ pub struct ObjCollHooks<'a> {
     pub kicks: crate::game::gr::kongo::Kicks,
     /// The brick blocks Mushroom Kingdom's ceilings' touches broke.
     pub bumps: crate::game::gr::inishie1::Bumps,
+    /// Whose collision touched Brinstar's escape's way out.
+    pub escape: crate::game::gr::zebesroute::EndTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -349,6 +351,12 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::zebesroute::END_TOUCHED => super::super::gr::zebesroute::end_touched(
+                &mut self.escape,
+                coll.x34_flags.b1234,
+                coll.x0_gobj,
+                kind,
+            ),
             super::super::gr::mutecity::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll
@@ -490,6 +498,7 @@ impl Running<'_> {
             landing,
             kicks: Default::default(),
             bumps: Default::default(),
+            escape: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
             filter,
@@ -509,9 +518,11 @@ impl Running<'_> {
         let landing = hooks.landing;
         let kicks = std::mem::take(&mut hooks.kicks);
         let bumps = std::mem::take(&mut hooks.bumps);
+        let escape = std::mem::take(&mut hooks.escape);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
+        escape.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,

@@ -48,6 +48,7 @@ pub mod venom;
 pub mod yorster;
 pub mod zako;
 pub mod zebes;
+pub mod zebesroute;
 
 pub use vars::{
     BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
@@ -119,6 +120,8 @@ pub const GR_KIND_MUTECITY: i32 = 18;
 pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_ZebesRoute`, Brinstar's escape.
+pub const GR_KIND_ZEBESROUTE: i32 = 33;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
@@ -253,6 +256,9 @@ pub struct Globals {
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
+    /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
+    /// timer and the trophy slot's odds.
+    pub zebesroute_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -487,6 +493,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
