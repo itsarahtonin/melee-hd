@@ -299,6 +299,11 @@ pub const FILES: &[&str] = &[
     "IfVsCam.usd",
     "SdVsCam.dat",
     "IfVsCam.dat",
+    // Training's: its strings and its menu's models.
+    "SdTrain.usd",
+    "GmTrain.usd",
+    "SdTrain.dat",
+    "GmTrain.dat",
     // The trophy screens' (the trophies' own models, which `TyDataf.dat` names, after).
     "TyDatai.dat",
     "TyDataf.dat",
@@ -800,6 +805,32 @@ impl Session {
         if grkind == super::gr::GR_KIND_PSTADIUM {
             for (i, name) in super::gr::stadium::FILES.iter().enumerate() {
                 self.game.gr.stadium.files[i] = Some(self.game.ft.data.files.archive(name));
+            }
+        }
+        // Training's entry loads its menu's files after the stage's song starts, so the
+        // stream reads the song inside the entry: its candidates are read ahead.
+        let training = Running {
+            game: &mut self.game,
+            data: &self.data,
+        }
+        .entering_scene()
+            == Some(super::gm::training::GS_TRAINING);
+        if training && let Some(name) = super::gr::data::stage_file(grkind, us) {
+            let archive = self
+                .game
+                .ft
+                .data
+                .files
+                .archive(name.trim_start_matches('/'));
+            let stkind = i32::from(start.rules.stkind);
+            for bgm in super::gr::setup::stage_songs(&self.data, archive, stkind) {
+                let path = format!("audio/{}", crate::lb::audio::HPS_NAMES[bgm as usize]);
+                let file = console.file(&path);
+                let files = &self.game.audio.devcom.files;
+                if !files.iter().any(|f| f.0 == file.entrynum) {
+                    let id = self.data.add(Archive::raw(&file.bytes));
+                    self.game.audio.devcom.files.push((file.entrynum, id));
+                }
             }
         }
     }

@@ -131,6 +131,8 @@ pub struct Globals {
     pub pokemon: PokemonSelectionState,
     /// `it_804D6D00`, set to -1 for each match.
     pub x6d00: i8,
+    /// The last Ditto out of a ball (`it_804D6D50`), never read.
+    pub last_metamon: Option<crate::hsd::gobj::GObjId>,
     /// Items that appeared on their own (`it_804D6D0C`) and `it_804D6D08`, counted for the
     /// match's records.
     pub spawned: i32,

@@ -38,6 +38,7 @@ pub mod special;
 pub mod stamina;
 pub mod title;
 pub mod tournament;
+pub mod training;
 pub mod trophies;
 pub mod unlocks;
 pub mod vs;
@@ -527,6 +528,11 @@ pub fn call(
         }
         home_run::ON_MATCH_START => {
             r.homerun_match_start();
+            Some(super::code::Val::None)
+        }
+
+        training::ON_PAUSE => {
+            training::on_pause();
             Some(super::code::Val::None)
         }
         _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),

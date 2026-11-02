@@ -116,6 +116,10 @@ impl Replay {
                 if name.starts_with("hr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
                 }
+
+                if name.starts_with("tr-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-training/{name}.inputs")).into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
@@ -1040,6 +1044,24 @@ pub const M6_TRAINING: Game = Game {
     name: "m6-training",
     players: "Training's select (session m6-select/training)",
     replay: Replay::Session("m6-training"),
+};
+
+/// Training's menu over its match (`m6-training/tr-items`): the item option on the Poké
+/// Ball, its name, the counters.
+pub const TR_ITEMS: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "tr-items",
+    players: "Training's menu, the item option (session m6-training/tr-items)",
+    replay: Replay::Session("tr-items"),
+};
+
+/// Training's menu over its match (`m6-training/tr-cpu`): the computer player's behavior set
+/// to walk.
+pub const TR_CPU: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "tr-cpu",
+    players: "Training's menu, the behavior option (session m6-training/tr-cpu)",
+    replay: Replay::Session("tr-cpu"),
 };
 
 /// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.
