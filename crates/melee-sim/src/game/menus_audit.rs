@@ -163,8 +163,32 @@ pub const STOPS: &[(&str, &str)] = &[
         "drawn only at a debug level (ledger/deferred.txt, milestone 5's task 19)",
     ),
     (
-        "mnEvent_8024E838 (the Event list)",
-        "the Event list, behind the Event Match gate",
+        "(an event's series of rounds)",
+        "Event Match's rounds' events, behind the Event Match gate",
+    ),
+    (
+        "(an event's crowd)",
+        "Event Match's crowd events, behind the Event Match gate",
+    ),
+    (
+        "gm_801BC00C for event",
+        "Event Match's rounds' events, behind the Event Match gate",
+    ),
+    (
+        "the event process",
+        "Event Match's events whose process isn't ported, behind the Event Match gate",
+    ),
+    (
+        "(an event's time match's winner)",
+        "Event Match's time events, behind the Event Match gate",
+    ),
+    (
+        "(event 32's falls)",
+        "Event Match's event 32, behind the Event Match gate",
+    ),
+    (
+        "an event's random fifth player",
+        "no event's fifth player has a random character (GmEvent.dat's table: only the first four do)",
     ),
     (
         "mnHyaku_8024CD64 (the Multi-Man list)",

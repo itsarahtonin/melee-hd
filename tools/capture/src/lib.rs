@@ -12,6 +12,7 @@ pub mod data;
 pub mod display;
 pub mod effects;
 pub mod endings;
+pub mod event;
 pub mod heap;
 pub mod home_run;
 pub mod hud;

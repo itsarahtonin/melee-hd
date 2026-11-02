@@ -9,6 +9,7 @@ pub mod challenger;
 pub mod decisions;
 pub mod endings;
 pub mod erase;
+pub mod event;
 pub mod home_run;
 pub mod howto;
 pub mod input;
@@ -527,6 +528,10 @@ pub fn call(
         }
         home_run::ON_MATCH_START => {
             r.homerun_match_start();
+            Some(super::code::Val::None)
+        }
+        event::ON_MATCH_START => {
+            r.event_match_start();
             Some(super::code::Val::None)
         }
         _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),

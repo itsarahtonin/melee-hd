@@ -78,8 +78,8 @@ const IN_L: u32 = 1 << 6;
 const IN_R: u32 = 1 << 7;
 pub(crate) const IN_START: u32 = 1 << 8;
 pub(crate) const IN_A: u32 = 1 << 9;
-const IN_X: u32 = 1 << 10;
-const IN_Y: u32 = 1 << 11;
+pub(crate) const IN_X: u32 = 1 << 10;
+pub(crate) const IN_Y: u32 = 1 << 11;
 
 /// The button maps' merged bits (`PAD_CONFIRM` and the rest).
 pub const PAD_CONFIRM: u64 = 1 << 32;
@@ -1494,7 +1494,7 @@ impl Running<'_> {
     /// kept for the 1P modes (`gm_801677E8`).
     #[doc(alias = "mn_802295AC")]
     #[doc(alias = "gm_801677E8")]
-    fn note_confirm_port(&mut self) {
+    pub(crate) fn note_confirm_port(&mut self) {
         let port = (0..4)
             .find(|&i| self.game.buttons_triggered(i) & PAD_CONFIRM != 0)
             .unwrap_or(0);
@@ -1547,7 +1547,11 @@ impl Running<'_> {
                     self.lb_audio_call(1);
                     self.go_to_list(STADIUM, 0, ENTER_TO);
                 }
-                1 => super::super::code::unported_call("mnEvent_8024E838 (the Event list)"),
+                1 => {
+                    self.lb_audio_call(1);
+                    self.event_list_open(0, true);
+                    gobj::free(self, gobj);
+                }
                 4 => {
                     self.lb_audio_call(1);
                     self.menu_exit_to(0x1C);
@@ -1854,7 +1858,8 @@ impl Running<'_> {
                 return self.run_rules_proc(gobj, f)
                     || self.options_proc(gobj, f)
                     || self.data_menus_proc(gobj, f)
-                    || self.sound_test_proc(gobj, f);
+                    || self.sound_test_proc(gobj, f)
+                    || self.event_list_proc(gobj, f);
             }
         }
         true
@@ -1916,7 +1921,10 @@ impl Running<'_> {
         self.menu_back();
         self.menu_panel();
         match e.menu_kind {
-            EVENT => super::super::code::unported_call("mnEvent_8024E838 (the Event list)"),
+            EVENT => {
+                let e = self.event();
+                self.event_list_open(e, false);
+            }
             MULTI_VS => super::super::code::unported_call("mnHyaku_8024CD64 (the Multi-Man list)"),
             _ => {
                 let t = think_of(self.game.menu.flow.cur_menu).unwrap_or(THINK_MAIN);
@@ -2023,6 +2031,7 @@ impl Running<'_> {
         let a = self.load_archive("GmEvent.dat");
         let at = self.data.get(a).public("sqEventInitDataLevelTbl");
         self.game.menu.event_levels = at.map(|offset| DataRef { archive: a, offset });
+        self.game.event.table_at = 0;
         let a = self.load_archive("LbAd.dat");
         let at = self.data.get(a).public("lbAudioLoadData");
         self.game.menu.audio_load_data = at.map(|offset| DataRef { archive: a, offset });

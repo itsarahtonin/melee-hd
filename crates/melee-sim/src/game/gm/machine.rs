@@ -221,6 +221,12 @@ enum Hook {
     TrainingExitCss,
     TrainingEnterSss,
     TrainingExitSss,
+    /// Event Match's ([`super::event`]).
+    EventOnLoad,
+    EventEnterCss,
+    EventExitCss,
+    EventEnterVs,
+    EventExitVs,
     /// A single-player mode's state's handler that isn't ported: the mode's own task's.
     Unported1P(&'static str),
 }
@@ -671,8 +677,28 @@ fn states(mode: u8) -> &'static [StateDesc] {
             crate::game::vi::GS_REGEND_CONGRATS,
         ),
     ];
+    // `gm_Mode_Event_States`: the select, then the match.
+    const EVENT: [StateDesc; 2] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::EventEnterCss),
+            on_exit: Some(Hook::EventExitCss),
+            scene: GS_CSS,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: Some(Hook::EventEnterVs),
+            on_exit: Some(Hook::EventExitVs),
+            scene: GS_VS,
+        },
+    ];
     if let Some(list) = one_player_states(mode) {
         return list;
+    }
+    if mode == super::event::GM_EVENT {
+        return &EVENT;
     }
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
@@ -738,6 +764,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         super::one_player::GM_TARGET_TEST => (true, Some(Hook::TargetOnLoad), None),
         super::one_player::GM_TRAINING => (true, Some(Hook::TrainingOnLoad), None),
         super::one_player::GM_HOME_RUN => (true, Some(Hook::HomeRunOnLoad), None),
+        // `gm_Mode_Event_OnUnload` does nothing.
+        super::event::GM_EVENT => (true, Some(Hook::EventOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -937,6 +965,7 @@ impl Running<'_> {
             m if uses_vs_melee(m) => &self.game.vs_melee.start,
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             super::GM_DEBUG => &self.game.debug_mode.vs_enter,
+            super::event::GM_EVENT => &self.game.event.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -1340,6 +1369,11 @@ impl Running<'_> {
             Hook::TrainingExitCss => self.training_exit_css(),
             Hook::TrainingEnterSss => self.training_enter_sss(),
             Hook::TrainingExitSss => self.training_exit_sss(),
+            Hook::EventOnLoad => self.event_on_load(),
+            Hook::EventEnterCss => self.event_enter_css(),
+            Hook::EventExitCss => self.event_exit_css(),
+            Hook::EventEnterVs => self.event_enter_vs(),
+            Hook::EventExitVs => self.event_exit_vs(),
             Hook::Unported1P(name) => unported_call(name),
         }
         let _ = state;

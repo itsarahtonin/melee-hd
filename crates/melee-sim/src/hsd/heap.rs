@@ -648,6 +648,9 @@ impl Layout {
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Heap {
     pub active: bool,
+    /// Where the last archive loaded into the main heap went: its file's block and its
+    /// `HSD_Archive`'s ([`Heap::archive_alloc`]).
+    pub last_archive: (u32, u32),
     /// Whether the heap's memory is fresh, zero as the boot left it: not after the menus,
     /// whose scenes leave their bytes in it.
     pub fresh: bool,
@@ -699,6 +702,7 @@ impl Heap {
         let os = OsHeap::new(layout.index, layout.lo, layout.hi);
         Heap {
             active: true,
+            last_archive: (0, 0),
             fresh: !layout.from_menus,
             obj_heap: ObjHeap {
                 top: 0,
@@ -1201,13 +1205,14 @@ impl Heap {
     /// `lbHeap_80015BD0`): the file's bytes, rounded up to 32, then its `HSD_Archive`.
     /// Where the file and the archive went.
     pub fn archive_alloc(&mut self, len: u32) -> (u32, u32) {
-        log(|| format!("LA {:#x}", len.next_multiple_of(32)));
         let file = self.mem_alloc_raw(len.next_multiple_of(32));
+        log(|| format!("LA {:#x} -> {file:#x}", len.next_multiple_of(32)));
         // The read brings the disc's next bytes up to 32 (the file's own, the holder says).
         self.image
             .claim(file + len, file + len.next_multiple_of(32), FILE_TAIL);
-        log(|| "LA 0x44".to_owned());
         let archive = self.mem_alloc_raw(0x44);
+        log(|| format!("LA 0x44 -> {archive:#x}"));
+        self.last_archive = (file, archive);
         self.image.claim(archive, archive + 0x44, "HSD_Archive");
         (file, archive)
     }
