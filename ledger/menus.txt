@@ -34,11 +34,6 @@ melee/gm/gmstaffroll	gated	the single-player modes', which only the 1P list's ga
 melee/gm/gmtrainingmode	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnhyaku	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi0801	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1101	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1201v1	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1201v2	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1202	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbArq_80014AC4	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
@@ -70,7 +65,6 @@ fn_800259A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 lbAudioAx_80027DBC	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 lbAudioAx_80028B6C	gated	named only by the single-player modes' code (fn_8017C1A4, fn_801AB200, gm_801BE638): the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80028B90	gated	named only by the single-player modes' code (fn_8017C1A4, gm_801BC4F4, gm_801BC670): the single-player modes', which only the 1P list's gated entries lead to
-ftDemo_SetFacingDirection	gated	the cutscenes' (vi) fighters' motions: the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_GetCardData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetNameTagDataBanks	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetGamePrefs	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline

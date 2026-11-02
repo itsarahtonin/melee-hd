@@ -136,7 +136,7 @@ pub const MODULES: &[&str] = &["gm/", "mn/", "ty/", "vi/", "hud/", "pl/"];
 pub const STOPS: &[(&str, &str)] = &[
     (
         "the cutscene scene",
-        "the cutscenes after the F-Zero one (vi1101 to vi1202), which only the debug cutscene mode reaches past vi0801's stage (the developer setting's, whose panel warns some debug tools stop the game) and Adventure, behind GATES",
+        "a cutscene scene past the eleven (0x11 to 0x1B, all ported): the scene table names no other",
     ),
     (
         "gm_801720B4 in a single-player run",
