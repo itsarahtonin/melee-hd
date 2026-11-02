@@ -140,7 +140,6 @@ const OTHER_KINDS: &str =
     "only the decisions of computer kinds VS doesn't use call it (ftCo_800B2AFC's other cases)";
 const HOME_RUN: &str = "computer kind 15, the Home-Run Contest's (gmhomerun.c), stands still";
 const NANA_ALONE: &str = "Nana's decision without Popo: she sleeps whenever he does (ftCo_800BFD9C takes her out with him, ftCo_800D4F24) and wakes with him (Player_80032070), so ftCo_800A589C always finds him";
-const KIND_16: &str = "computer kind 16's jump rule; VS uses kind 4";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
@@ -175,7 +174,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800A8940", OTHER_KINDS),
     ("ftCo_800AEA8C", OTHER_KINDS),
     ("ftCo_800AEFB8", NANA_ALONE),
-    ("ftCo_800B7638", KIND_16),
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800BA080", NESS_SPAN),
     ("ftCo_800AA320 at a level past 9", LEVELS),

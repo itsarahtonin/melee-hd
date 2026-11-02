@@ -1934,7 +1934,7 @@ impl Running<'_> {
             return 0;
         }
         if self.game.fighters[f.0].cpu.kind == 0x10 {
-            unported_call("ftCo_800B7638");
+            return self.cpu_jump_attack_16(f, t);
         }
         if !self.cpu_facing_destination(f) {
             return 0;
@@ -1970,6 +1970,46 @@ impl Running<'_> {
         }
         if reg(self.game.objs.rng.draw_f32()) > 0.1 {
             return 0;
+        }
+        let d = self.cpu_distance(f, t);
+        let a = angle();
+        if d > 30.0 && d < 40.0 && a > -0.087_266_461_923_718_45 && a < 0.087_266_461_923_718_45 {
+            2
+        } else {
+            0
+        }
+    }
+
+    /// Computer kind 16's jump at its target, `ftCo_800B7638`: none in the air with no jump
+    /// left or still rising, nor at a target below; 1 at an airborne target steeply above in
+    /// clear view, 2 at a grounded one 30 to 40 away nearly level.
+    #[doc(alias = "ftCo_800B7638")]
+    fn cpu_jump_attack_16(&mut self, f: FighterId, t: FighterId) -> i32 {
+        let fpp = &self.game.fighters[f.0];
+        if fpp.ground_or_air == GA_AIR {
+            if fpp.co_attrs.max_jumps <= i32::from(fpp.x1968_jumpsUsed) {
+                return 0;
+            }
+            if reg(fpp.pos_delta.y) > 0.0 {
+                return 0;
+            }
+        }
+        let (me, tp) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
+        if fp::fsubs(reg(tp.y), reg(me.y)) < 0.0 {
+            return 0;
+        }
+        let angle = || {
+            let dy = fp::fsubs(reg(tp.y), reg(me.y));
+            let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
+            super::co::guard::stick_angle(dy, dx)
+        };
+        if self.game.fighters[t.0].ground_or_air == GA_AIR {
+            let geo = self.game.geometry.as_mut().expect("no collision geometry");
+            if geo.check_ceiling(me.x, me.y, tp.x, tp.y, -1, -1).is_some() {
+                return 0;
+            }
+            let _ = self.cpu_distance(f, t);
+            return i32::from(angle() > 0.785_398_157_313_466_1);
         }
         let d = self.cpu_distance(f, t);
         let a = angle();

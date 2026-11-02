@@ -75,11 +75,7 @@ fn each_mode_runs_to_its_first_stop() {
         ("classic", 796, "gmClassic_801B3500 isn't ported"),
         ("adventure2", 826, "gm_801B3F40 isn't ported"),
         ("allstar", 856, "gm_801B5624 isn't ported"),
-        (
-            "event",
-            592,
-            "mnEvent_8024E838 (the Event list) isn't ported",
-        ),
+        ("event", 3546, ""),
         ("target", 856, "gm_801B6428 isn't ported"),
         ("homerun", 868, "gm_801B9A3C isn't ported"),
         (

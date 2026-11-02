@@ -224,6 +224,15 @@ pub fn game_cache_files() -> Vec<String> {
             }
         }
     }
+    // The events' stages (stage kinds 202 to 273), which Event Match's game cache names.
+    for st in 0xCA..=0x111 {
+        let gr = crate::lb::audio::ground_kind(st) as i32;
+        for us in [true, false] {
+            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+                add(n);
+            }
+        }
+    }
     // The Home-Run Contest's stage, which its select's game cache names.
     for us in [true, false] {
         if let Some(n) = crate::game::gr::data::stage_file(0x43, us) {
