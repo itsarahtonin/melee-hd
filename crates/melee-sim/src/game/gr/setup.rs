@@ -1382,10 +1382,14 @@ pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId
     let code = |a: u32| (a != 0).then_some(CodeRef(a));
     r.game.stage_info.on_touch_line = code(stage.on_touch_line);
     r.game.stage_info.on_check_shadow_render = code(stage.on_check_shadow_render);
-    // `Ground_801C5878`: `tyDisplay_8031C2CC`, then, outside the single-player modes, no
-    // single-player display.
+    // `Ground_801C5878`: `tyDisplay_8031C2CC`, then the single-player modes' trophy display,
+    // or none outside them.
     r.stage_trophies();
-    if !super::super::gm::is_1p_mode(r.game) {
+    if super::super::gm::is_1p_mode(r.game) {
+        let id = r.trophy_display_pick();
+        r.trophy_display_load(id);
+        r.game.stage_info.x6E4[0] = id;
+    } else {
         r.game.stage_info.x6E4[0] = -1;
     }
 }

@@ -10,7 +10,7 @@
 use gekko_fp as fp;
 
 use super::super::super::camera;
-use super::super::super::code::{run_fighter_cb, unported_call};
+use super::super::super::code::run_fighter_cb;
 use super::super::super::ef;
 use super::super::super::handles::{CodeRef, FighterId};
 use super::super::super::it::lib26b1;
@@ -393,8 +393,9 @@ impl Running<'_> {
         self.heavy_hit_flash(gobj, element as i32, mem(kb));
         self.change_motion_state(gobj, msid, 0x40, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        if self.game.vs_x4_2() {
-            unported_call("gm_8016B014 with x4_2 (gm_8016A1F8, ftColl_8007B6A0)");
+        if self.game.single_player_alone() {
+            self.warp_star_intangible(gobj);
+            self.game.fighters[f.0].x2221_b1 = true;
         }
         let fp = &mut self.game.fighters[f.0];
         let collide = !(kb <= reg(c.f32(0x12C)));

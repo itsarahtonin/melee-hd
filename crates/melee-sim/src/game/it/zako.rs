@@ -192,7 +192,8 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         | kinds::NOKONOKO
         | kinds::PATAPATA
         | kinds::ZGSHELL
-        | kinds::ZRSHELL => CommonVars::Bytes(vars.zako()),
+        | kinds::ZRSHELL
+        | kinds::MATO => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
     }
 }

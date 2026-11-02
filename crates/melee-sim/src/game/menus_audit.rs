@@ -231,6 +231,10 @@ pub const STOPS: &[(&str, &str)] = &[
         "no scene the menus reach makes two canvases of one font in a row (the sessions from power-on free every font's canvases with no stop)",
     ),
     (
+        "gm_801647F8 reading past lbl_803D5168",
+        "the one-door selects offer only the 25 characters the table lists (the Ice Climbers as Popo), which every caller passes",
+    ),
+    (
         "the VS scene's enter data in game mode",
         "a VS scene runs in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the other modes with one are the single-player modes behind GATES",
     ),

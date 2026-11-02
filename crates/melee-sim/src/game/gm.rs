@@ -141,6 +141,29 @@ impl super::state::Running<'_> {
         }
     }
 
+    /// A single-player stage's trophy display, `tyDisplay_8031C2EC`: while class 5's category
+    /// is open, half the time (`HSD_Randi(2)`) one of its trophies at 65 percent new, else one
+    /// of class 0's at 60 (`Toy_80305058` with class 2's marked ones too); -1 for none.
+    #[doc(alias = "tyDisplay_8031C2EC")]
+    pub fn trophy_display_pick(&mut self) -> i32 {
+        if self.toy_class_open(5) && self.game.objs.rng.below(2) == 0 {
+            return self.toy_draw(2, 5, 1, 65.0);
+        }
+        self.toy_draw(2, 0, 1, 60.0)
+    }
+
+    /// The trophy display's archives, `tyDisplay_8031C454`: the trophies' marks again
+    /// (`Toy_803124BC`), and for a display its trophy's archive and the stand's two. Only a
+    /// display that's none is ported.
+    #[doc(alias = "tyDisplay_8031C454")]
+    pub fn trophy_display_load(&mut self, id: i32) -> i32 {
+        self.stage_trophies();
+        if id == -1 {
+            return -1;
+        }
+        crate::game::code::unported_call("tyDisplay_8031C454's archives for a trophy display")
+    }
+
     /// The trophies' data archive loaded from the disc if it isn't (the inline
     /// `loadTrophyMetadata`).
     pub fn load_trophy_data(&mut self) {
