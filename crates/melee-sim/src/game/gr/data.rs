@@ -10,6 +10,7 @@ use super::{
     GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
     GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
     GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1727,6 +1728,36 @@ pub const KINOKOROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grZe_Route_StageCallbacks`. Map 1 is the shaft (with the stage's lights and fog), maps 0
+/// and 2 animated models.
+pub const ZEBESROUTE_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_B348, 0x8020_B374, 0x8020_B37C, 0x8020_B380, 0),
+    cb(
+        0x8020_B3C0,
+        0x8020_B424,
+        0x8020_B42C,
+        0x8020_B4D4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_B384, 0x8020_B3B0, 0x8020_B3B8, 0x8020_B3BC, 0),
+];
+
+/// `grZe_Route_StageData`.
+pub const ZEBESROUTE: StageData = StageData {
+    grkind: GR_KIND_ZEBESROUTE,
+    callbacks: &ZEBESROUTE_CALLBACKS,
+    file: Some("/GrNZr.dat"),
+    on_init: 0x8020_B164,
+    on_demo_init: 0x8020_B160,
+    on_load: 0x8020_B1D4,
+    on_start: 0x8020_B1F4,
+    callback4: 0x8020_B258,
+    on_touch_line: 0x8020_B854,
+    on_check_shadow_render: 0x8020_B85C,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1760,6 +1791,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
         GR_KIND_KINOKOROUTE => &KINOKOROUTE,
+        GR_KIND_ZEBESROUTE => &ZEBESROUTE,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

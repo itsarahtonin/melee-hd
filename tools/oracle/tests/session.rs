@@ -1961,3 +1961,16 @@ fn master_hand_in_debug_vs() {
         );
     }
 }
+
+/// Brinstar's escape in the debug menu's Versus page (milestone 6's task 18), from power-on with
+/// the heap: `m6-brinstar-escape/ze-climb`, Fox up the shaft past the camera's timer (the screen
+/// shaking every tick) to the way out, whose floor ends the match as a bonus stage's end, and
+/// the results, clean to its trace's end.
+#[test]
+fn brinstar_escape_in_debug_vs() {
+    let Some(out) = scripted_session("m6-brinstar-escape", "ze-climb", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("6089 ticks compared, no difference"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
+}

@@ -42,6 +42,8 @@ pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 /// grkinokoroute.c's (`ssbm_types::tu::melee__gr__grkinokoroute::yakumono_param`).
 pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
+/// grzebesroute.c's (`ssbm_types::tu::melee__gr__grzebesroute::yakumono_param`).
+pub const GRZEBESROUTE_YAKUMONO: u32 = 0x804D_6A60;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -380,6 +382,8 @@ impl Importer<'_> {
         self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
         self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
+        self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -1096,6 +1100,11 @@ impl Comparer<'_> {
                 "grKinokoRoute yakumono_param",
                 GRKINOKOROUTE_YAKUMONO,
                 game.gr.kinokoroute_yakumono,
+            ),
+            (
+                "grZebesRoute yakumono_param",
+                GRZEBESROUTE_YAKUMONO,
+                game.gr.zebesroute_yakumono,
             ),
             (
                 "grShrine yakumono_param",
