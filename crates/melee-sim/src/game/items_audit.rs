@@ -370,7 +370,7 @@ const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
-const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper, food, Home-Run Bat or bob-omb (it_8026BE84): the bob-omb rain of a sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms make only the five kinds ported)";
+const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE84): the All-Star rest area's (Big Blue's flying platforms make only the five kinds ported, the Home-Run Contest's stage the bat, and a sudden death's bob-omb rain only bob-ombs)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const EVT_UNK: &str =
@@ -460,7 +460,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itcoin", COINS),
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
-    ("it_80284854", DROP_BY_KIND),
     ("itFlipper_Spawn", DROP_BY_KIND),
     ("it_80283AE4", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),

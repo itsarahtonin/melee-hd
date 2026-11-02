@@ -99,6 +99,11 @@ fn matanim(cat: usize) -> String {
     format!("{stem}_matanim_joint")
 }
 
+/// The display's archive of category `cat` (`_tyDisplay_803B8AE0`).
+pub fn archive_file(cat: usize) -> &'static str {
+    FILES[cat]
+}
+
 /// `_tyDisplay_803B8AE0`: each category's archive (`_tyDisplay_8031BBF4`).
 #[doc(alias = "_tyDisplay_8031BBF4")]
 const FILES: [&str; 43] = [

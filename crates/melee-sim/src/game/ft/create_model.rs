@@ -377,6 +377,7 @@ impl Running<'_> {
             super::zako::addr::BOY_ON_LOAD | super::zako::addr::GIRL_ON_LOAD => {
                 self.zako_on_load(gobj)
             }
+            super::sandbag::addr::ON_LOAD => self.sb_on_load(gobj),
             other => unported_call(&format!("fighter OnLoad {other:#010x}")),
         }
     }
@@ -417,6 +418,7 @@ impl Running<'_> {
             super::zako::addr::BOY_ON_DEATH | super::zako::addr::GIRL_ON_DEATH => {
                 self.zako_on_death(gobj)
             }
+            super::sandbag::addr::ON_DEATH => self.sb_on_death(gobj),
             other => unported_call(&format!("fighter OnDeath {other:#010x}")),
         }
     }
@@ -454,6 +456,7 @@ impl Running<'_> {
             super::gkoopa::addr::LOAD_SPECIAL_ATTRS => self.gk_load_special_attrs(gobj),
             super::zako::addr::BOY_LOAD_SPECIAL_ATTRS
             | super::zako::addr::GIRL_LOAD_SPECIAL_ATTRS => self.zako_load_special_attrs(gobj),
+            super::sandbag::addr::LOAD_SPECIAL_ATTRS => self.sb_load_special_attrs(gobj),
             other => unported_call(&format!("fighter LoadSpecialAttrs {other:#010x}")),
         }
     }

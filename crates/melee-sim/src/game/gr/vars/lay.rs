@@ -668,6 +668,30 @@ impl GroundVars {
                 l.put_word(a + 0xA8, cx.handle("LObjId", v.point_light.map(|o| o.0)));
                 l.put_word(a + 0xAC, cx.handle("LObjId", v.spot_light.map(|o| o.0)));
             }
+
+            GroundVars::HomeRun(v) => {
+                addr(l, a, v.parts_addr);
+                addr(l, a + 4, v.back_addr);
+                l.put_word(a + 8, cx.handle("TextId", v.text.map(|t| t.0)));
+                jobj(l, cx, a + 0xC, v.jobj);
+                gobj(l, cx, a + 0x10, v.text_gobj);
+                for (i, &g) in v.bg.iter().enumerate() {
+                    gobj(l, cx, a + 0x14 + 4 * i as u32, g);
+                }
+                l.put_u8(a + 0x24, u8::from(v.landed) << 7 | v.xe8_rest);
+            }
+            GroundVars::HomeRunPart(v) => {
+                l.put_u16(a, v.index);
+                l.put_u16(a + 2, v.label);
+                f(l, a + 0xC, v.x);
+            }
+            GroundVars::HomeRunLabel(v) => {
+                l.put_u16(a, v.index);
+                l.put_u16(a + 2, v.label);
+                l.put_word(a + 4, cx.handle("TextId", v.text.map(|t| t.0)));
+                jobj(l, cx, a + 8, v.jobj);
+                f(l, a + 0xC, v.x);
+            }
             GroundVars::BigBlueRelay(v) => {
                 l.put_u32(a, v.xC4);
                 w32(l, a + 4, &[v.xC8_timer, v.xCC_timer, v.xD0_timer]);
@@ -895,6 +919,17 @@ impl GroundVars {
                         jobj(&mut l, cx, b + 4, e.jobj);
                     }
                     lays.push(l);
+                }
+            }
+            GroundVars::HomeRun(v) => {
+                for (list, at) in [(&v.parts, v.parts_addr), (&v.back, v.back_addr)] {
+                    if at != 0 {
+                        let mut l = Lay::new(at, 4 * list.len() as u32);
+                        for (i, &g) in list.iter().enumerate() {
+                            gobj(&mut l, cx, at + 4 * i as u32, g);
+                        }
+                        lays.push(l);
+                    }
                 }
             }
             GroundVars::Inishie1(v) if v.blocks_addr != 0 => {
