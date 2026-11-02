@@ -29,6 +29,7 @@ pub mod cpu_move;
 pub mod cpu_recover;
 pub mod cpu_script;
 pub mod cpu_vs;
+pub mod crazyhand;
 pub mod create;
 pub mod create_model;
 pub mod data;
