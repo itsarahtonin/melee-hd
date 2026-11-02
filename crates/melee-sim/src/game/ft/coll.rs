@@ -349,6 +349,15 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::pushon::GOAL_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::pushon::goal_touched(
+                        &mut self.grounds[g.0],
+                        coll.x34_flags.b1234.into(),
+                        kind,
+                    );
+                }
+            }
             super::super::gr::mutecity::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll
