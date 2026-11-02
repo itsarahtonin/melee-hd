@@ -476,10 +476,12 @@ fn search_points(
 }
 
 /// A stage's check of a point the watcher found the first fighter in (`stage_info.x90` and
-/// `x94`, called with the fighter's position and the point): the race's goal check.
+/// `x94`, called with the fighter's position and the point): the race's goal check and the
+/// Underground Maze's symbol check.
 fn point_check(r: &mut Running, cb: CodeRef, _pos: Vec3, _point: i32) -> bool {
     match cb.0 {
         super::pushon::GOAL_CHECK => super::pushon::goal_check(r.game),
+        super::shrineroute::SYMBOL_CHECK => super::shrineroute::symbol_check(r.game),
         _ => super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0)),
     }
 }

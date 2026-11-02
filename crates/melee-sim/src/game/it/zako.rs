@@ -191,6 +191,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         kinds::KURIBOH..=kinds::OCTAROCK_STONE
         | kinds::NOKONOKO
         | kinds::PATAPATA
+        | kinds::LIKELIKE
         | kinds::WHITEBEA
         | kinds::ZGSHELL
         | kinds::ZRSHELL
@@ -747,6 +748,7 @@ impl Running<'_> {
             kinds::OTTOSEA => 0xD4,
             kinds::NOKONOKO => 0xCF,
             kinds::PATAPATA => 0xD0,
+            kinds::LIKELIKE => 0xD2,
             kinds::WHITEBEA => 0xD5,
             // No bonus (the switch's default).
             kinds::KLAP

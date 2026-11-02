@@ -69,6 +69,7 @@ pub mod leadead;
 pub mod lgun;
 pub mod lgunbeam;
 pub mod lgunray;
+pub mod likelike;
 pub mod linkarrow;
 pub mod linkbomb;
 pub mod linkboomerang;
@@ -273,6 +274,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || octarock::run_event(r, gobj, addr)
         || oldottosea::run_event(r, gobj, addr)
         || whitebea::run_event(r, gobj, addr)
+        || likelike::run_event(r, gobj, addr)
         || octarockstone::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
@@ -437,6 +439,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| octarock::run_pred(r, gobj, addr))
         .or_else(|| oldottosea::run_pred(r, gobj, addr))
         .or_else(|| whitebea::run_pred(r, gobj, addr))
+        .or_else(|| likelike::run_pred(r, gobj, addr))
         .or_else(|| octarockstone::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
