@@ -132,6 +132,12 @@ impl Game {
         self.vs.state.timer_seconds
     }
 
+    /// The timer's frames within its second (`state.unk_2C`), `gm_8016AEFC`.
+    #[doc(alias = "gm_8016AEFC")]
+    pub fn vs_timer_frames(&self) -> u16 {
+        self.vs.state.unk_2C
+    }
+
     /// The match's time, `GetMatchTimer`: with the timer on, the seconds left (gone, for a
     /// timer that counts up, from the limit), else none.
     #[doc(alias = "GetMatchTimer")]
@@ -672,7 +678,7 @@ impl Game {
 
     /// Counts down the platforms' respawn timers, the inline head of `fn_8016CFE0`: the
     /// players whose timers ran out, to respawn in slot order.
-    fn respawns_due(&mut self) -> Vec<(i32, i32)> {
+    pub(super) fn respawns_due(&mut self) -> Vec<(i32, i32)> {
         let mut due = Vec::new();
         for (i, f) in self.vs.state.fighters.iter_mut().enumerate() {
             if f.respawn_timer != 0 {
@@ -945,6 +951,7 @@ impl Running<'_> {
     /// `gmMainLib_8015D438`, `gmMainLib_8015D48C`) marks the match a new record (`unk_10`
     /// 0x9C41, its message 0x145) with a rumble on the player's port (`gm_80167858`); a stage
     /// left with targets takes message 0x149 for 40 frames.
+    #[doc(alias = "gm_801B6320")]
     fn target_test_score(&mut self) {
         let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
         let sel = super::match_exit::selkind(ckind);

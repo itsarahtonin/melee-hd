@@ -267,7 +267,7 @@ fn eye_floor(game: &Game) -> f64 {
         8 => reg(super::gr::zebes::camera_floor(s)),
         5 => reg(super::gr::garden::camera_floor()),
         31 => reg(super::gr::kinokoroute::camera_floor()),
-        67 => unported("grHomeRun_8021EF10"),
+        67 => super::gr::homerun::camera_floor(game),
         _ => fp::fneg(f64::from(f32::MAX)),
     }
 }
@@ -2805,12 +2805,13 @@ fn union_s16(b: &[u8], at: usize) -> i16 {
     i16::from_be_bytes(b[at..at + 2].try_into().unwrap())
 }
 
-/// A callback's point (`x344.cb`, `x35C.cb`): Master Hand's waist
-/// (`ftMh_MS_343_80151428`); the others aren't ported.
+/// A callback's point (`x344.cb`, `x35C.cb`): Master Hand's waist (`ftMh_MS_343_80151428`)
+/// or Crazy Hand's (`fn_8015B4EC`); the others aren't ported.
 fn script_point(r: &mut Running, cb: u32) -> Option<Vec3> {
     match cb {
         0 => None,
         super::ft::masterhand::addr::MS_343_80151428 => r.mh_waist_point(),
+        super::ft::crazyhand::addr::FN_8015B4EC => r.ch_waist_point(),
         _ => unported(&format!("the cutscene camera's callback {cb:#010x}")),
     }
 }

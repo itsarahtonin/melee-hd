@@ -385,6 +385,7 @@ impl Running<'_> {
             super::super::masterhand::addr::MS_388_80155A58 => {
                 self.mh_capture_enter(victim, grabber)
             }
+            super::super::crazyhand::addr::FN_8015B548 => self.ch_capture_enter(victim, grabber),
             cb if super::capture_koopa::run_grabbed(self, victim, grabber, cb) => {}
             cb if super::capture_kirby::run_grabbed(self, victim, grabber, cb) => {}
             other => unported_call(&format!("grabbed callback {other:#010x}")),

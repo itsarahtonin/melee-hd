@@ -90,7 +90,7 @@ pub(super) fn spin_box() -> ftCollisionBox {
 
 impl Running<'_> {
     /// `Fighter_UnkSetFlag_8006CFBC`'s body: a frozen fighter thaws.
-    pub(super) fn ic_thaw(&mut self, gobj: GObjId) {
+    pub(crate) fn ic_thaw(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.x2219_b7 {
             fp.x221A_b1 = true;

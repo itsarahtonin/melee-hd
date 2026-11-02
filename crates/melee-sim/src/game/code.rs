@@ -81,10 +81,13 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
+        super::gm::training::INPUT_PROC => game.training_input_proc(),
+        super::gm::training::MODEL_PROC => game.training_model_proc(gobj),
         super::gm::approach::PROC => game.approach_proc(gobj),
         super::gm::endings::game_over::PROC_SCREEN => game.game_over_screen_proc(),
         super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
         super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
+        addr if super::gm::home_run::run_proc(game, gobj, addr) => {}
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}
@@ -104,6 +107,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::pushon::run(game, gobj, addr) => {}
         addr if super::gr::zebesroute::run(game, gobj, addr) => {}
         addr if super::gr::target::run(game, gobj, addr) => {}
+        addr if super::gr::figure::run(game, gobj, addr) => {}
+        addr if super::gr::homerun::run(game, gobj, addr) => {}
         addr if super::gr::yorster::run(game, gobj, addr) => {}
         addr if super::gr::garden::run(game, gobj, addr) => {}
         addr if super::gr::kongo::run(game, gobj, addr) => {}
@@ -190,6 +195,8 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::pushon::run_event(game, f) => {}
         f if super::gr::zebesroute::run_event(game, f) => {}
         f if super::gr::target::run_event(game, f) => {}
+        f if super::gr::figure::run_event(game, f) => {}
+        f if super::gr::homerun::run_event(game, f) => {}
         f if super::gr::yorster::run_event(game, f) => {}
         f if super::gr::garden::run_event(game, f) => {}
         f if super::gr::kongo::run_event(game, f) => {}
@@ -208,6 +215,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::mutecity::run_event(game, f) => {}
         f if super::gr::bigblue::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
+        f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
         f if super::vi::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
@@ -256,6 +264,8 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8021_82C4 => super::gr::pushon::on_demo_init(game),
         0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
         f if super::gr::target::is_demo_init(f) => super::gr::target::on_demo_init(game),
+        f if super::gr::figure::ON_DEMO_INIT.contains(&f) => super::gr::figure::on_demo_init(game),
+        0x8021_C750 => super::gr::homerun::on_demo_init(game),
         0x8020_1FA0 => yorster::on_demo_init(game),
         0x8020_2B6C => garden::on_demo_init(game),
         0x801D_5238 => kongo::on_demo_init(game),
@@ -300,7 +310,11 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::yoshi::run(g, gobj, addr) => {}
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
         addr if super::ft::masterhand::run(g, gobj, addr) => {}
+        addr if super::ft::sandbag::run(g, gobj, addr) => {}
+        addr if super::ft::crazyhand::run(g, gobj, addr) => {}
         addr if super::ft::koopa::run(g, gobj, addr) => {}
+        addr if super::ft::gkoopa::run(g, gobj, addr) => {}
+        addr if super::ft::zako::run(g, gobj, addr) => {}
         addr if super::ft::gamewatch::run(g, gobj, addr) => {}
         addr if super::ft::kirby::run(g, gobj, addr) => {}
         super::it::kinds::samusgrapple::FT_DEATH => {
@@ -577,7 +591,16 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
     if let Some(v) = super::ft::masterhand::call(r, f, args) {
         return v;
     }
+    if let Some(v) = super::ft::crazyhand::call(r, f, args) {
+        return v;
+    }
     if let Some(v) = super::ft::koopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::gkoopa::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::zako::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::gamewatch::call(r, f, args) {

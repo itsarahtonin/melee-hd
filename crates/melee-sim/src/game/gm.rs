@@ -9,6 +9,7 @@ pub mod challenger;
 pub mod decisions;
 pub mod endings;
 pub mod erase;
+pub mod home_run;
 pub mod howto;
 pub mod input;
 pub mod machine;
@@ -37,6 +38,7 @@ pub mod special;
 pub mod stamina;
 pub mod title;
 pub mod tournament;
+pub mod training;
 pub mod trophies;
 pub mod unlocks;
 pub mod vs;
@@ -141,27 +143,52 @@ impl super::state::Running<'_> {
         }
     }
 
-    /// A single-player stage's trophy display, `tyDisplay_8031C2EC`: while class 5's category
-    /// is open, half the time (`HSD_Randi(2)`) one of its trophies at 65 percent new, else one
-    /// of class 0's at 60 (`Toy_80305058` with class 2's marked ones too); -1 for none.
+    /// The trophy a single-player stage's display shows, `tyDisplay_8031C2EC`: with class 5's
+    /// trophies open, half the time (`HSD_Randi(2)`) one of class 2 or of class 5 marked (65%
+    /// a new one), else one of class 2 marked (60%); -1 for none.
     #[doc(alias = "tyDisplay_8031C2EC")]
-    pub fn trophy_display_pick(&mut self) -> i32 {
+    pub fn stage_trophy_draw(&mut self) -> i32 {
         if self.toy_class_open(5) && self.game.objs.rng.below(2) == 0 {
             return self.toy_draw(2, 5, 1, 65.0);
         }
         self.toy_draw(2, 0, 1, 60.0)
     }
 
-    /// The trophy display's archives, `tyDisplay_8031C454`: the trophies' marks again
-    /// (`Toy_803124BC`), and for a display its trophy's archive and the stand's two. Only a
-    /// display that's none is ported.
+    /// The display's trophy loaded, `tyDisplay_8031C454`: the class marks (`Toy_803124BC`),
+    /// then for a trophy the display's archives its model needs (its category's, the question
+    /// mark's and the stand's, `_tyDisplay_804A2DE8`), each unless loaded; whether its
+    /// category's was. -1 for none.
     #[doc(alias = "tyDisplay_8031C454")]
-    pub fn trophy_display_load(&mut self, id: i32) -> i32 {
-        self.stage_trophies();
+    pub fn stage_trophy_load(&mut self, id: i32) -> i32 {
+        if self.game.audio.dvd.is_some() {
+            self.mark_class_two_trophies();
+        }
         if id == -1 {
             return -1;
         }
-        crate::game::code::unported_call("tyDisplay_8031C454's archives for a trophy display")
+        let cat = usize::from(self.coll_entry(id).category);
+        assert!(
+            cat < 43,
+            "a trophy's display category {cat}, past the archives' table"
+        );
+        let a = &mut self.game.toys.collection.archives;
+        if a.is_empty() {
+            a.resize(43, None);
+        }
+        let mut result = 0;
+        if self.game.toys.collection.archives[cat].is_none() {
+            let l = self.toy_load(super::ty::collection::archive_file(cat));
+            self.game.toys.collection.archives[cat] = Some(l);
+        } else {
+            result = 1;
+        }
+        for i in [42, 41] {
+            if self.game.toys.collection.archives[i].is_none() {
+                let l = self.toy_load(super::ty::collection::archive_file(i));
+                self.game.toys.collection.archives[i] = Some(l);
+            }
+        }
+        result
     }
 
     /// The trophies' data archive loaded from the disc if it isn't (the inline
@@ -497,6 +524,15 @@ pub fn call(
         }
         attract::ON_MATCH_START => {
             r.attract_match_start();
+            Some(super::code::Val::None)
+        }
+        home_run::ON_MATCH_START => {
+            r.homerun_match_start();
+            Some(super::code::Val::None)
+        }
+
+        training::ON_PAUSE => {
+            training::on_pause();
             Some(super::code::Val::None)
         }
         _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),

@@ -1927,19 +1927,22 @@ fn the_yoshiki_test_page() {
 /// the debug menu's cutscene entry at debug level 3, plays the debug cutscene mode (0x19)
 /// untouched: Luigi's, Brinstar's, the explosion, the three Kirbys, the giant Kirby, Star Fox's
 /// and the F-Zero cutscene (on the F-Zero race's stage, its cars on the racers), each to its
-/// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 19's
-/// longer `m6-fzero-race/fz-cutscene` to the cutscene after it (`vi1101`), whose scene isn't
-/// ported.
+/// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 4's
+/// `m6-cutscenes-2/cutscenes`, the same script run through the whole mode (Start in
+/// congratulations), on through the metal cutscene (`vi1101`), Bowser's trophy (`vi1201v1`),
+/// Giga Bowser's transformation (`vi1201v2`) and his defeat (`vi1202`) to congratulations,
+/// task 5's scene.
 #[test]
 fn the_debug_cutscenes() {
     if let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) {
         assert!(out.contains("3282 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
-    if let Some(out) = scripted_session("m6-fzero-race", "fz-cutscene", &["--all", "--heap"]) {
-        let want = "3282 ticks compared, no difference; stopped in tick 3282: \
-                    the cutscene scene 0x18's files isn't ported";
+    if let Some(out) = scripted_session("m6-cutscenes-2", "cutscenes", &["--all", "--heap"]) {
+        let want = "4874 ticks compared, no difference; stopped in tick 4874: \
+                    game scene 0x10 isn't ported";
         assert!(out.contains(want), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }
 
@@ -2071,4 +2074,105 @@ fn target_test_from_the_menu() {
         out.contains("the card after the session: the original's"),
         "{out}"
     );
+}
+
+/// Giga Bowser in the debug menu's Versus page (milestone 6's task 7), from power-on with the
+/// heap: `m6-giga-bowser/gk` (a human's Giga Bowser through his moveset, Bowser's specials
+/// with his animations, against Mario) and `kb-gk` (Kirby's inhale over Giga Bowser again and
+/// again, nothing caught, since his creation makes him ungrabbable), each to its trace's end.
+#[test]
+fn giga_bowser_in_debug_vs() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-giga-bowser", "gk", &args) {
+        assert!(out.contains("11172 ticks compared, no difference"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-giga-bowser", "kb-gk", &args) {
+        assert!(out.contains("6950 ticks compared, no difference"), "{out}");
+    }
+}
+
+/// The Home-Run Contest (milestone 6's task 14), from power-on with the heap, each run's card
+/// after it the original's: `m6-homerun/hr-long` (Fox takes the bat and sends Sandbag 112.4 m,
+/// a new record, saved as the select comes back) and `hr-trophy` (the trophy gallery
+/// first, so the stage's trophy display draws a trophy and loads its archives; no contest).
+#[test]
+fn the_home_run_contest() {
+    for (name, ticks) in [("hr-long", 3237), ("hr-trophy", 3679)] {
+        let after = ssbm_rs_local(&format!("lockstep/m6-homerun/{name}-run.card"));
+        let args = ["--all", "--heap", "--card-after", &after];
+        if let Some(out) = scripted_session("m6-homerun", name, &args) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference"))
+                    && out.contains("the card after the session: the original's"),
+                "{out}"
+            );
+        }
+    }
+}
+
+/// Training (milestone 6's task 13), from power-on with the heap: task 1's
+/// `m6-oracle/training` (the select, the stage select, the match with some play) and
+/// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
+/// Pokémon drawn from Training's list, then each other item dropped), each to its trace's
+/// end; and `m6-training/tr-count`, which stops where the first computer player joins the
+/// match (`gm_8016EDDC`, not ported).
+#[test]
+fn training_from_its_select() {
+    if let Some(out) = scripted_session("m6-oracle", "training", &["--all", "--heap"]) {
+        assert!(out.contains("3748 ticks compared, no difference"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-training", "tr-items", &["--all", "--heap"]) {
+        assert!(out.contains("6776 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-training", "tr-count", &["--all", "--heap"]) {
+        let want = "1853 ticks compared, no difference; stopped in tick 1853: \
+                    gm_8016EDDC (a player joining a match) isn't ported";
+        assert!(out.contains(want), "{out}");
+    }
+}
+
+/// Crazy Hand in the debug menu's Versus page (milestone 6's task 12), from power-on with the
+/// heap: `m6-crazy-hand/ch-mh-1p`, both hands against one human (Crazy Hand's attacks, his
+/// grab and throw, two of the tag attacks, the no-contest) to its trace's end; and
+/// `ch-alone-1`, Crazy Hand alone, whose poke makes Master Hand's lasers with no Master Hand to
+/// have registered them, so the game faults: the trace ends before the fault, and melee-hd
+/// stops there by name on the next tick (`--past`).
+#[test]
+fn crazy_hand_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-crazy-hand", "ch-mh-1p", &["--all", "--heap"]) {
+        assert!(out.contains("19578 ticks compared, no difference"), "{out}");
+    }
+    let args = ["--all", "--heap", "--past", "300"];
+    if let Some(out) = scripted_session("m6-crazy-hand", "ch-alone-1", &args) {
+        assert!(
+            out.contains("4983 ticks compared, no difference")
+                && out.contains(
+                    "past the trace's end, stopped in tick 4983: Melee crashes: Crazy Hand's poke makes Master Hand's laser"
+                ),
+            "{out}"
+        );
+    }
+}
+
+/// The adventure's Icicle Mountain in the debug menu's Versus page (milestone 6's task 9), from
+/// power-on with the heap: `m6-icicle-climb/im-bears`, the climb (its speeds' list, its fields
+/// from its list) with the debug item menu's Polar Bears above Fox, knocked back and one beaten
+/// and flung away, the pause's no-contest before the climb's end and the results, clean to its
+/// trace's end; and `im-end`, the climb run to its end, which starts the arena's opponents
+/// (`gm_801674C4`, unported: on a console they come in at scale 0 and the game halts).
+#[test]
+fn icicle_mountain_climb_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-icicle-climb", "im-bears", &["--all", "--heap"]) {
+        assert!(out.contains("7072 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-icicle-climb", "im-end", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's match event) isn't ported"
+            ),
+            "{out}"
+        );
+    }
 }

@@ -5,7 +5,8 @@ use melee_sim::game::gm::one_player::{
     self as op, AllStarData, ClassicStage, MatchupRef, Unk1PData,
 };
 use melee_sim::game::gm::vs_melee::{CssData, SssData};
-use melee_sim::game::mirror::Mirror;
+use melee_sim::game::mirror::{Cx, Mirror};
+use melee_sim::game::structs::PlayerInitData;
 
 use crate::compare::Comparer;
 
@@ -34,6 +35,14 @@ const CLASSIC_TABLES: u32 = 0x803D_DEC8;
 const CLASSIC_BONUS: [u32; 3] = [0x804D_4318, 0x804D_4320, 0x804D_4328];
 /// `gm_80473814.stage_id`.
 const TRAINING_STAGE: u32 = 0x8047_3814 + 6;
+/// Training's `lbl_80473700` and `gm_80473814`, its menu's archive and models
+/// (`lbl_804D6628`, `lbl_804D662C`), and its match state's enter and exit data.
+const TRAINING_STATE: u32 = 0x8047_3700;
+const TRAINING_SUB: u32 = 0x8047_3814;
+const TRAINING_ARCHIVE: u32 = 0x804D_6628;
+const TRAINING_MODELS: u32 = 0x804D_662C;
+const TRAINING_ENTER: u32 = 0x8048_E4C0;
+const TRAINING_EXIT: u32 = 0x8048_E5F8;
 /// The ports and entries: Target Test's, the Home-Run Contest's, Training's.
 const BYTES: [(u32, &str); 6] = [
     (0x804D_68E8, "gm_804D68E8"),
@@ -219,5 +228,83 @@ impl Comparer<'_> {
             self.game.modes.training_stage as u16,
             self.u16(TRAINING_STAGE),
         );
+        self.training();
+    }
+
+    /// Training's statics (`melee_sim::game::gm::training`): `lbl_80473700`, the menu's part
+    /// of `gm_80473814`, the menu's archive and the match state's enter and exit data.
+    fn training(&mut self) {
+        let t = &self.game.training;
+        let a = TRAINING_STATE;
+        self.check(
+            "lbl_80473700",
+            "count, mode",
+            (t.count, t.mode),
+            (self.u32(a) as i32, self.u32(a + 4) as i32),
+        );
+        let theirs: [i32; 27] = core::array::from_fn(|i| self.u32(a + 8 + 4 * i as u32) as i32);
+        self.check("lbl_80473700", "char_data", t.char_data, theirs);
+        let m = self.mem_view();
+        for (i, p) in t.players.iter().enumerate() {
+            p.compare(
+                &m,
+                a + 0x74 + PlayerInitData::SIZE * i as u32,
+                &format!("lbl_80473700.players[{i}]"),
+                self,
+            );
+        }
+        let theirs: [i32; 4] = core::array::from_fn(|i| self.u32(a + 0x104 + 4 * i as u32) as i32);
+        self.check("lbl_80473700", "result_cache", t.result_cache, theirs);
+        let s = TRAINING_SUB;
+        self.check(
+            "gm_80473814",
+            "cursor, open, behavior",
+            (t.cursor, t.open, t.cpu_type),
+            (self.u8(s), self.u8(s + 1), self.u8(s + 3)),
+        );
+        let theirs: [i32; 39] = core::array::from_fn(|i| self.u32(s + 0x144 + 4 * i as u32) as i32);
+        self.check("gm_80473814", "anim_frames", t.anim_frames, theirs);
+        let theirs: [i32; 7] = core::array::from_fn(|i| self.u32(s + 0x1E0 + 4 * i as u32) as i32);
+        self.check("gm_80473814", "menu_values", t.menu_values, theirs);
+        // The menu's objects and archive live with Training's scene: past it the words name
+        // its freed heap in both, which nothing reads until the next match's menu sets them
+        // again (`fn_8018A000`, `fn_80189B88`).
+        let live = melee_sim::game::gm::machine::scene_kind(self.game.machine.scene_info)
+            == Some(melee_sim::game::gm::training::GS_TRAINING);
+        if live {
+            self.compare_handle(
+                "gm_80473814.gobj",
+                "GObjId",
+                t.gobj.map(|g| g.0),
+                self.u32(s + 0xA4),
+            );
+            for (i, j) in t.jobjs.iter().enumerate() {
+                let theirs = self.u32(s + 0xA8 + 4 * i as u32);
+                self.compare_handle(
+                    &format!("gm_80473814.jobjs[{i}]"),
+                    "JObjId",
+                    j.map(|j| j.0),
+                    theirs,
+                );
+            }
+            self.compare_handle(
+                "gm_80473814.text",
+                "TextId",
+                t.text.map(|t| t.0),
+                self.u32(s + 0x1FC),
+            );
+            let archive = self.u32(TRAINING_ARCHIVE);
+            let theirs = (archive != 0)
+                .then(|| self.data_ref(self.u32(archive + 0x20)).map(|d| d.archive))
+                .flatten();
+            self.check("lbl_804D6628", "GmTrain", t.archive, theirs);
+            let models = self.data_ref(self.u32(TRAINING_MODELS));
+            self.check("lbl_804D662C", "scene models", t.models, models);
+        }
+        let m = self.mem_view();
+        t.enter
+            .compare(&m, TRAINING_ENTER, "training_enter_data", self);
+        let e = &self.game.training.exit;
+        self.match_exit_info("training_exit_data", e, TRAINING_EXIT);
     }
 }

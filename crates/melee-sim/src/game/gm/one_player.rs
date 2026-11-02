@@ -1221,7 +1221,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B999C`: back to the menu, or the player from the select and Sandbag.
-    // Ports `gm_801B999C`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B999C")]
     pub fn homerun_exit_css(&mut self) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -1363,7 +1363,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1EEC`: back to the select, or the stage kept for the match and its banks.
-    // Ports `gm_801B1EEC`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B1EEC")]
     pub fn training_exit_sss(&mut self) {
         let sss = &self.game.one_player.training_sss;
         if sss.start_game == 0 {
