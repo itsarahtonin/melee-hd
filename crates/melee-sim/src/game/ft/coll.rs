@@ -65,6 +65,8 @@ pub struct ObjCollHooks<'a> {
     pub bumps: crate::game::gr::inishie1::Bumps,
     /// Whose collision touched Brinstar's escape's way out.
     pub escape: crate::game::gr::zebesroute::EndTouch,
+    /// Whose collision touched Icicle Mountain's lines, for the adventure's climb.
+    pub climb: crate::game::gr::icemt::ClimbTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -354,7 +356,6 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         .stage_maps
                         .gobj(map)
                         .and_then(|go| self.stage_maps.jobj(go));
-                    let climb = self.stage_maps.ground(10);
                     super::super::gr::icemt::ice_touched(
                         self.objs,
                         self.grounds,
@@ -362,10 +363,11 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         g,
                         callback.0,
                         coll,
-                        climb,
                     );
                 }
+                self.climb.touched(coll.x0_gobj);
             }
+            super::super::gr::icemt::ON_JOINT => self.climb.touched(coll.x0_gobj),
             super::super::gr::pushon::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::pushon::goal_touched(
@@ -523,6 +525,7 @@ impl Running<'_> {
             kicks: Default::default(),
             bumps: Default::default(),
             escape: Default::default(),
+            climb: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
@@ -543,10 +546,12 @@ impl Running<'_> {
         let kicks = std::mem::take(&mut hooks.kicks);
         let bumps = std::mem::take(&mut hooks.bumps);
         let escape = std::mem::take(&mut hooks.escape);
+        let climb = std::mem::take(&mut hooks.climb);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
         escape.apply(game);
+        climb.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,
