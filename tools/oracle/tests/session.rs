@@ -2049,3 +2049,25 @@ fn brinstar_escape_in_debug_vs() {
     assert!(out.contains("6089 ticks compared, no difference"), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+
+/// The adventure's Icicle Mountain in the debug menu's Versus page (milestone 6's task 9), from
+/// power-on with the heap: `m6-icicle-climb/im-bears`, the climb (its speeds' list, its fields
+/// from its list) with the debug item menu's Polar Bears above Fox, knocked back and one beaten
+/// and flung away, the pause's no-contest before the climb's end and the results, clean to its
+/// trace's end; and `im-end`, the climb run to its end, which starts the arena's opponents
+/// (`gm_801674C4`, unported: on a console they come in at scale 0 and the game halts).
+#[test]
+fn icicle_mountain_climb_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-icicle-climb", "im-bears", &["--all", "--heap"]) {
+        assert!(out.contains("7072 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-icicle-climb", "im-end", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's                  match event) isn't ported"
+            ),
+            "{out}"
+        );
+    }
+}

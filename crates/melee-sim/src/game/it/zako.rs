@@ -191,6 +191,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         kinds::KURIBOH..=kinds::OCTAROCK_STONE
         | kinds::NOKONOKO
         | kinds::PATAPATA
+        | kinds::WHITEBEA
         | kinds::ZGSHELL
         | kinds::ZRSHELL => CommonVars::Bytes(vars.zako()),
         k => code::unported_call(&format!("it_8027B5B0 (an enemy of kind {k})")),
@@ -745,6 +746,7 @@ impl Running<'_> {
             kinds::OTTOSEA => 0xD4,
             kinds::NOKONOKO => 0xCF,
             kinds::PATAPATA => 0xD0,
+            kinds::WHITEBEA => 0xD5,
             // No bonus (the switch's default).
             kinds::KLAP
             | kinds::KYASARIN

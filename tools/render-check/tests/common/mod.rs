@@ -115,6 +115,10 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
                 }
 
+                if name.starts_with("im-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-icicle-climb/{name}.inputs"))
+                        .into();
+                }
                 if name.starts_with("ze-") {
                     return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
                         .into();
@@ -824,6 +828,32 @@ pub const ZE_CLIMB: Game = Game {
     name: "ze-climb",
     players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
     replay: Replay::Session("ze-climb"),
+};
+
+/// The adventure's Icicle Mountain at rest (`m6-icicle-climb/im-look`): Link and Mario standing
+/// as the fields climb.
+pub const IM_LOOK: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-look",
+    players: "Link and Mario standing (session m6-icicle-climb/im-look)",
+    replay: Replay::Session("im-look"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears jumping (`m6-icicle-climb/im-jump`): the debug
+/// item menu's bears above Fox.
+pub const IM_JUMP: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-jump",
+    players: "Fox and two Polar Bears, Mario standing (session m6-icicle-climb/im-jump)",
+    replay: Replay::Session("im-jump"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears beaten (`m6-icicle-climb/im-bears`).
+pub const IM_BEARS: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-bears",
+    players: "Fox smashing two Polar Bears, Mario standing (session m6-icicle-climb/im-bears)",
+    replay: Replay::Session("im-bears"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,

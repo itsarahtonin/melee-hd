@@ -8203,7 +8203,10 @@ fn icemt_touches() {
             .and_then(|go| melee_sim::game::gr::ground::jobj_of(r.game, go));
         let cd = coll_arg(r, maps, call);
         let (objs, grounds) = (&mut r.game.objs, &mut r.game.grounds);
-        icemt::ice_touched(objs, grounds, root, g, cb, &cd, None);
+        icemt::ice_touched(objs, grounds, root, g, cb, &cd);
+        let mut touch = icemt::ClimbTouch::default();
+        touch.touched(cd.x0_gobj);
+        touch.apply(r.game);
         Ret::Nothing
     };
     for f in ["fn_801F9338", "fn_801F9448", "fn_801F9558"] {
@@ -8226,8 +8229,11 @@ fn icemt_touches() {
             check_calls_with(&d, f, 0, p, &touched);
         }
     }
-    let adventure = |_: &mut Running, _: &Maps, _: &Call| {
-        icemt::adventure_touch(None);
+    let adventure = |r: &mut Running, maps: &Maps, call: &Call| {
+        let cd = coll_arg(r, maps, call);
+        let mut touch = icemt::ClimbTouch::default();
+        touch.touched(cd.x0_gobj);
+        touch.apply(r.game);
         Ret::Nothing
     };
     check_calls_with(&d, "onJointCollision", 1, &as_saved, &adventure);

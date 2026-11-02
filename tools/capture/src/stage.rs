@@ -1784,6 +1784,16 @@ impl Comparer<'_> {
                 ("user data", joint.user_data, 0x30),
             ] {
                 let t = self.u32(a + off);
+                // A stage object destroyed since (one of the adventure's Icicle Mountain's
+                // first fields, whose falling ice's joint keeps its callback) dangles, compared
+                // by the address its block had.
+                if let Some(CollUser::Ground(g)) = ours
+                    && self.game.grounds.is_free(g.0)
+                {
+                    let addr = self.game.grounds.addr(g.0);
+                    self.check(&path, &format!("{name} (freed)"), addr, t);
+                    continue;
+                }
                 let theirs = (t != 0).then(|| {
                     self.maps
                         .gobjs
