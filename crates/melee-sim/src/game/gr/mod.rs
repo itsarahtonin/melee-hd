@@ -491,6 +491,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
         (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
         (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
+        (GR_KIND_ICEMT, 10) => VarsKind::IceMtClimb,
         (GR_KIND_CORNERIA, 3) => VarsKind::Corneria,
         (GR_KIND_CORNERIA, 4 | 9) => VarsKind::CorneriaCity,
         (GR_KIND_CORNERIA, 8) => VarsKind::CorneriaCity8,
