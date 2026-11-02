@@ -91,6 +91,7 @@ pub enum VarsKind {
     Inishie2Birdo,
     Inishie2Pidgit,
     IceMtScroll,
+    IceMtClimb,
     IceMtField(u8),
     IceMtBg,
     Corneria,
@@ -221,6 +222,9 @@ pub enum GroundVars {
     Inishie2Pidgit(Inishie2PidgitVars),
     /// `grIceMt_GObj9_GroundVars`: Icicle Mountain's climb in VS mode (map 9).
     IceMtScroll(IceMtScrollVars),
+    /// `grIceMt_GObj10_GroundVars`: Icicle Mountain's climb in the adventure (map 10, stage
+    /// kind 76).
+    IceMtClimb(IceMtClimbVars),
     /// `grIceMt_GObj1_GroundVars` with `grIceMt_GroundVars`' animation slots: one of Icicle
     /// Mountain's six fields (maps 1 to 6).
     IceMtField(IceMtFieldVars),
@@ -1365,6 +1369,42 @@ pub struct IceMtScrollVars {
     pub x16: i16,
     pub x18: [i16; 12],
     pub x30: [i16; 10],
+}
+
+/// `grIceMt_GObj10_GroundVars`: the adventure's climb. As the VS climb's, the two fields shown
+/// (`x0.ids`) and the climb's speed (`x0.state`); then its flags (`x14`: `b0` waiting for the
+/// match's start, `b1` the first fighter's push under way, `b2` the fields run out and the climb
+/// braking, `b3` the climb's end reached, `b4` the first fighter touched the stage's lines this
+/// tick; the byte's last three bits nothing writes, so they hold what the block held), the push's
+/// ticks left (`x16`), `x18`, the speeds' list's cursor (`x1A`), the fields' list's (`x1C`) and
+/// the push's speed (`x20`). The halfword past `idx` and the bytes past `x14` and `x1C` nothing
+/// writes or reads.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct IceMtClimbVars {
+    pub under: i16,
+    pub upper: i16,
+    pub phase: i16,
+    pub delay: i16,
+    pub lerp_count: i16,
+    pub burst_count: i16,
+    pub idx: i16,
+    pub cur: f32,
+    pub x14: u8,
+    pub x16: i16,
+    pub x18: i16,
+    pub x1A: i16,
+    pub x1C: i16,
+    pub x20: f32,
+}
+
+impl IceMtClimbVars {
+    pub const B0: u8 = 0x80;
+    pub const B1: u8 = 0x40;
+    pub const B2: u8 = 0x20;
+    pub const B3: u8 = 0x10;
+    pub const B4: u8 = 0x08;
+    /// The bits of `x14` the code writes.
+    pub const WRITTEN: u8 = 0xF8;
 }
 
 /// A field's falling ice (`grIceMt_801F91EC`'s seven words): whether it runs, its tick, the
@@ -2577,6 +2617,7 @@ impl GroundVars {
             GroundVars::Inishie2Birdo(_) => "Inishie2BirdoVars",
             GroundVars::Inishie2Pidgit(_) => "Inishie2PidgitVars",
             GroundVars::IceMtScroll(_) => "IceMtScrollVars",
+            GroundVars::IceMtClimb(_) => "IceMtClimbVars",
             GroundVars::IceMtField(_) => "IceMtFieldVars",
             GroundVars::IceMtBg(_) => "IceMtBgVars",
             GroundVars::MuteCity(_) => "MuteCityVars",
@@ -2681,6 +2722,7 @@ impl GroundVars {
         "Inishie2BirdoVars",
         "Inishie2PidgitVars",
         "IceMtScrollVars",
+        "IceMtClimbVars",
         "IceMtFieldVars",
         "IceMtBgVars",
         "MuteCityVars",
@@ -3666,6 +3708,25 @@ impl GroundVars {
                     x16: h(0x16),
                     x18: std::array::from_fn(|k| h(0x18 + 2 * k as u32)),
                     x30: std::array::from_fn(|k| h(0x30 + 2 * k as u32)),
+                })
+            }
+            VarsKind::IceMtClimb => {
+                let h = |a: u32| m.u16(at + a) as i16;
+                GroundVars::IceMtClimb(IceMtClimbVars {
+                    under: h(0),
+                    upper: h(2),
+                    phase: h(4),
+                    delay: h(6),
+                    lerp_count: h(8),
+                    burst_count: h(0xA),
+                    idx: h(0xC),
+                    cur: f(at + 0x10),
+                    x14: m.u8(at + 0x14),
+                    x16: h(0x16),
+                    x18: h(0x18),
+                    x1A: h(0x1A),
+                    x1C: h(0x1C),
+                    x20: f(at + 0x20),
                 })
             }
             VarsKind::IceMtField(map) => {
@@ -5439,6 +5500,36 @@ impl GroundVars {
         }
     }
 
+    /// The variables as the adventure's climb's (`grIceMt_GObj10_GroundVars`), likewise.
+    pub fn icemt_climb(&mut self) -> &mut IceMtClimbVars {
+        if let GroundVars::Bytes(b) = self {
+            let h = |a: usize| u16::from_be_bytes([b[a], b[a + 1]]) as i16;
+            let v = IceMtClimbVars {
+                under: h(0),
+                upper: h(2),
+                phase: h(4),
+                delay: h(6),
+                lerp_count: h(8),
+                burst_count: h(0xA),
+                idx: h(0xC),
+                cur: Bytes(b).f32(0x10),
+                x14: b[0x14],
+                x16: h(0x16),
+                x18: h(0x18),
+                x1A: h(0x1A),
+                x1C: h(0x1C),
+                x20: Bytes(b).f32(0x20),
+            };
+            *self = GroundVars::IceMtClimb(v);
+        }
+        match self {
+            GroundVars::IceMtClimb(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grIceMt_GObj10_GroundVars")
+            }
+        }
+    }
+
     /// The variables as one of Icicle Mountain's fields' (map `map`), likewise: its pointers
     /// carry over only if null.
     pub fn icemt_field(&mut self, map: u8) -> &mut IceMtFieldVars {
@@ -7054,6 +7145,39 @@ impl Mirror for GroundVars {
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.icemt9"),
+                        format!("{ours:x?}"),
+                        format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::IceMtClimb(v) => {
+                let ours = (
+                    [
+                        v.under,
+                        v.upper,
+                        v.phase,
+                        v.delay,
+                        v.lerp_count,
+                        v.burst_count,
+                        v.idx,
+                    ],
+                    v.cur.to_bits(),
+                    v.x14 & IceMtClimbVars::WRITTEN,
+                    [v.x16, v.x18, v.x1A, v.x1C],
+                    v.x20.to_bits(),
+                );
+                let h = |a: u32| m.u16(at + a) as i16;
+                // The flags' byte's last three bits nothing writes or reads.
+                let theirs = (
+                    [h(0), h(2), h(4), h(6), h(8), h(0xA), h(0xC)],
+                    m.u32(at + 0x10),
+                    m.u8(at + 0x14) & IceMtClimbVars::WRITTEN,
+                    [h(0x16), h(0x18), h(0x1A), h(0x1C)],
+                    m.u32(at + 0x20),
+                );
+                if ours != theirs {
+                    cx.mismatch(
+                        &format!("{path}.icemt10"),
                         format!("{ours:x?}"),
                         format!("{theirs:x?}"),
                     );
