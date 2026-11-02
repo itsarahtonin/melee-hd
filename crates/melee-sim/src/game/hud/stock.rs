@@ -526,7 +526,7 @@ impl Running<'_> {
     #[doc(alias = "fn_802FA6C4")]
     pub fn stock_tally_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
-        if g.vs_is_singleplayer() && g.gm.spawn_flags & 0x40 != 0 {
+        if g.vs_is_singleplayer() && g.gm.opponents.joining() {
             code::unported_call("fn_802FA6C4 in a single-player mode");
         }
         if g.hud.stock_1774.x0 == 1 {
@@ -643,13 +643,13 @@ impl Running<'_> {
         let o = g.world.create(14, 15, 0);
         g.world.setup_proc(o, CodeRef(PROC_TALLY_2), 17);
         g.hud.stock_1acc.x108 = Some(o);
-        if g.gm.spawn_flags & 0x10 == 0 {
+        if !g.gm.opponents.counted() {
             g.hud.stock_1774.x10C[0] = None;
             g.hud.stock_1774.x0 = 0;
             let o = g.world.create(14, 15, 0);
             g.world.setup_proc(o, CodeRef(PROC_TALLY), 17);
             g.hud.stock_1774.x10C[0] = Some(o);
-        } else if g.gm.spawn_flags & 0x40 != 0 {
+        } else if g.gm.opponents.joining() {
             code::unported_call("ifStock_802FA5BC");
         }
         for i in 0..16 {

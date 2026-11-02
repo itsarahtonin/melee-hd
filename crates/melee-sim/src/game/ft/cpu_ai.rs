@@ -326,11 +326,45 @@ impl Running<'_> {
             // jump and the walk the behavior pick's.
             k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
             2 => self.cpu_decide_evade(f),
+            23 => self.cpu_decide_enemy(f),
             k @ (7..=10 | 13 | 14 | 17..=29) => {
                 unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
             }
             _ => self.cpu_decide_vs(f),
         }
+    }
+
+    /// The single-player opponents' computer kind 23 (`ftCo_800B2AFC`'s case): its target the
+    /// nearest enemy (`ftCo_CpuInitEnemyTarget`, the fear flags but two off), the destination
+    /// timer stopped when the behavior changed, and unless it's being hit (behavior 4), toward
+    /// the target; then the behavior pick, whose r5 it leaves.
+    fn cpu_decide_enemy(&mut self, f: FighterId) -> Leftover {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = false;
+        c.xF9_b2 = true;
+        c.xF9_b4 = true;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = false;
+        let (target, lr) = self.cpu_find_target_lr(f);
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.x44 = target;
+        if c.x18 != c.x20 && c.x18 != c.x1C {
+            c.x60 = 0;
+        }
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
+        if c.x18 != 4 {
+            c.xFA_b2 = false;
+            // `ftCo_800A75DC`'s vector at `r1 + 0x18` as `ftCo_800A4BEC`'s frame left it, as
+            // in the VS decision: the back chain (this frame's stack pointer) and the word its
+            // link register slot holds.
+            let unset = lr.map(|y| (f32::from_bits(sp), f32::from_bits(y)));
+            let t = self.game.fighters[f.0].cpu.x44;
+            self.cpu_toward(f, t, unset);
+        }
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
 
     /// Training's computer kinds 0, 1 and 3 (`ftCo_800B2AFC`'s cases): no target, the

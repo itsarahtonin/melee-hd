@@ -41,6 +41,13 @@ const TRAINING_ARCHIVE: u32 = 0x804D_6628;
 const TRAINING_MODELS: u32 = 0x804D_662C;
 const TRAINING_ENTER: u32 = 0x8048_E4C0;
 const TRAINING_EXIT: u32 = 0x8048_E5F8;
+/// `gmClassic_80472AF8`, `gmClassic_8047086C`: the 1P runs' matches' enter and exit data;
+/// `lbl_804706D8`, the match's won trophies.
+const MATCH_START: u32 = 0x8047_2AF8;
+const MATCH_EXIT: u32 = 0x8047_086C;
+const MATCH_TROPHIES: u32 = 0x8047_06D8;
+/// `lbl_80472D28`, the clear screen's state (`gmregclear.c`).
+const CLEAR_STATE: u32 = 0x8047_2D28;
 /// The ports and entries: Target Test's, the Home-Run Contest's, Training's.
 const BYTES: [(u32, &str); 6] = [
     (0x804D_68E8, "gm_804D68E8"),
@@ -226,6 +233,23 @@ impl Comparer<'_> {
             self.u16(TRAINING_STAGE),
         );
         self.training();
+        let o = &self.game.one_player;
+        let m = self.mem_view();
+        o.match_start
+            .compare(&m, MATCH_START, "gmClassic_80472AF8", self);
+        self.match_exit_info("gmClassic_8047086C", &o.match_exit, MATCH_EXIT);
+        let theirs: [(i16, u8, u8); 12] = core::array::from_fn(|i| {
+            let a = MATCH_TROPHIES + 4 * i as u32;
+            (self.u16(a) as i16, self.u8(a + 2), self.u8(a + 3))
+        });
+        self.check("lbl_804706D8", "won trophies", o.match_trophies, theirs);
+        let theirs = self.u32(CLEAR_STATE + 0x104) as i32;
+        self.check(
+            "lbl_80472D28",
+            "x104 (the clear's score)",
+            o.clear_score,
+            theirs,
+        );
     }
 
     /// Training's statics (`melee_sim::game::gm::training`): `lbl_80473700`, the menu's part

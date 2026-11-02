@@ -35,27 +35,31 @@ impl Comparer<'_> {
             e.tick_wait,
             theirs,
         );
-        // The debug mode's states' enter data.
-        let d = e.debug_game_over;
-        let at = sym("game_over_data");
-        self.check(
-            "game_over_data",
-            "score, x4, x8, result, character, slot, tag, cost, coins",
-            (
-                d.score, d.x4, d.x8, d.result, d.ckind, d.slot, d.tag, d.cost, d.coins,
-            ),
-            (
-                self.u32(at),
-                self.u32(at + 4) as i32,
-                self.u32(at + 8),
-                self.u32(at + 0xC) as i32,
-                self.u32(at + 0x10),
-                self.u8(at + 0x14),
-                self.u8(at + 0x15),
-                self.u16(at + 0x16),
-                self.u16(at + 0x18),
-            ),
-        );
+        // The debug mode's states' enter data, and Classic's and All-Star's game over's.
+        let one = self.game.one_player.game_over;
+        for (name, d, at) in [
+            ("game_over_data", e.debug_game_over, sym("game_over_data")),
+            ("gmClassic_80470850", one, 0x8047_0850),
+        ] {
+            self.check(
+                name,
+                "score, x4, x8, result, character, slot, tag, cost, coins",
+                (
+                    d.score, d.x4, d.x8, d.result, d.ckind, d.slot, d.tag, d.cost, d.coins,
+                ),
+                (
+                    self.u32(at),
+                    self.u32(at + 4) as i32,
+                    self.u32(at + 8),
+                    self.u32(at + 0xC) as i32,
+                    self.u32(at + 0x10),
+                    self.u8(at + 0x14),
+                    self.u8(at + 0x15),
+                    self.u16(at + 0x16),
+                    self.u16(at + 0x18),
+                ),
+            );
+        }
         self.endings_bytes(
             "intro_easy_enter_data",
             "Classic's intro's enter data",

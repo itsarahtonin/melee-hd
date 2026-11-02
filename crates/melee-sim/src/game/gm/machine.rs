@@ -208,6 +208,9 @@ enum Hook {
     AllStarOnLoad,
     AllStarEnterCss,
     AllStarExitCss,
+    AllStarEnterVs,
+    AllStarExitVs,
+    AllStarEnterGameOver,
     TargetOnLoad,
     TargetEnterCss,
     TargetExitCss,
@@ -950,6 +953,9 @@ impl Running<'_> {
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             super::GM_DEBUG => &self.game.debug_mode.vs_enter,
             super::one_player::GM_TRAINING => &self.game.training.enter,
+            super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR => {
+                &self.game.one_player.match_start
+            }
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -1344,6 +1350,9 @@ impl Running<'_> {
             Hook::AllStarOnLoad => self.allstar_on_load(),
             Hook::AllStarEnterCss => self.allstar_enter_css(),
             Hook::AllStarExitCss => self.allstar_exit_css(),
+            Hook::AllStarEnterVs => self.allstar_enter_vs(),
+            Hook::AllStarExitVs => self.allstar_exit_vs(),
+            Hook::AllStarEnterGameOver => self.allstar_enter_game_over(),
             Hook::TargetOnLoad => self.target_on_load(),
             Hook::TargetEnterCss => self.target_enter_css(),
             Hook::TargetExitCss => self.target_exit_css(),
@@ -1550,14 +1559,26 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         let mut r = 0;
         while r < 13 {
             let id = 8 * r as u8;
-            out[2 * r] = st(id, 3, u("gm_801B5624"), u("gm_801B59AC"), GS_VS);
+            out[2 * r] = st(
+                id,
+                3,
+                Some(Hook::AllStarEnterVs),
+                Some(Hook::AllStarExitVs),
+                GS_VS,
+            );
             if r < 12 {
                 out[2 * r + 1] = st(id + 1, 3, u("gm_801B5ACC"), u("gm_801B5E7C"), GS_VS);
             }
             r += 1;
         }
         out[25] = st(0x68, 3, None, u("gm_801B607C"), GS_COMING_SOON);
-        out[26] = st(0x69, 3, u("gm_801B5EB4"), u("gm_801B5EE4"), GS_GAMEOVER);
+        out[26] = st(
+            0x69,
+            3,
+            Some(Hook::AllStarEnterGameOver),
+            u("gm_801B5EE4"),
+            GS_GAMEOVER,
+        );
         out[27] = st(
             0x70,
             3,

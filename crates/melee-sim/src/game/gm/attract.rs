@@ -265,6 +265,9 @@ impl Running<'_> {
             super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
             super::GM_DEBUG => self.game.debug_mode.vs_enter.clone(),
             super::one_player::GM_TRAINING => self.game.training.enter.clone(),
+            super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR => {
+                self.game.one_player.match_start.clone()
+            }
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

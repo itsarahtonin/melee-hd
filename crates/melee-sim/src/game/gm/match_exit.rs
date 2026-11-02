@@ -68,6 +68,11 @@ impl Game {
             (super::one_player::GM_TRAINING, _) if scene == Some(super::training::GS_TRAINING) => {
                 &mut self.training.exit
             }
+            (super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR, _)
+                if scene == Some(GS_VS) =>
+            {
+                &mut self.one_player.match_exit
+            }
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"
             )),
@@ -92,6 +97,7 @@ impl Running<'_> {
     /// stage flag, and in VS mode (and the modes kept with it) each human's character
     /// marked played.
     #[doc(alias = "gm_Scene_Vs_OnExit")]
+    #[doc(alias = "fn_8017F294")]
     pub fn vs_scene_on_exit(&mut self, scene_mode: u8, state: u8) {
         let mut r = self.game.vs.state.x24C.clone();
         if self.game.vs.state.match_over == 0 {
@@ -106,7 +112,8 @@ impl Running<'_> {
             self.game.vs.state.match_over = 1;
         }
         let x0 = if self.game.vs.start.x4_4 {
-            super::super::code::unported_call("fn_8017F294 (a single-player run's exit value)")
+            // `fn_8017F294`.
+            self.game.one_player.clear_score as u32
         } else {
             self.game.vs.start.x18
         };
