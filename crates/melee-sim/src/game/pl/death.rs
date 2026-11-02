@@ -56,7 +56,7 @@ impl Running<'_> {
     /// last KO'd player `ko` (not itself or a teammate), the KO by a meteor (0x2A) or the
     /// spike's (7, one less of 6).
     #[doc(alias = "pl_80040688")]
-    #[doc(alias = "pl_80038898")]
+    // Ports pl_80038898 (the spike's one less); aliased once a check reaches it.
     pub fn stage_bonuses(&mut self, slot: i32, ko: i32, rival_bonuses: bool) {
         if self.game.vs.state.frame_count <= self.bonus_param(0xEC) {
             self.set_point(slot, 0x5F, 1);

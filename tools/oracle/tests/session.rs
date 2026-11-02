@@ -2136,19 +2136,46 @@ fn crazy_hand_in_debug_vs() {
 /// from its list) with the debug item menu's Polar Bears above Fox, knocked back and one beaten
 /// and flung away, the pause's no-contest before the climb's end and the results, clean to its
 /// trace's end; and `im-end`, the climb run to its end, which starts the arena's opponents
-/// (`gm_801674C4`, unported: on a console they come in at scale 0 and the game halts).
+/// (`gm_801674C4`): on a console they come in at scale 0 and the game halts, where the trace
+/// ends, and run on past it melee-hd stops by name in the same creation.
 #[test]
 fn icicle_mountain_climb_in_debug_vs() {
     if let Some(out) = scripted_session("m6-icicle-climb", "im-bears", &["--all", "--heap"]) {
         assert!(out.contains("7072 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
-    if let Some(out) = scripted_session("m6-icicle-climb", "im-end", &["--all", "--heap"]) {
+    if let Some(out) = scripted_session(
+        "m6-icicle-climb",
+        "im-end",
+        &["--all", "--heap", "--past", "2"],
+    ) {
+        assert!(out.contains("4825 ticks compared, no difference"), "{out}");
         assert!(
-            out.contains(
-                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's match event) isn't ported"
-            ),
+            out.contains("past the trace's end, stopped in tick 4825: a joiner's character files read mid-match (PlPp.dat"),
             "{out}"
         );
+    }
+}
+
+/// The single-player matches' setups (milestone 6's task 2): `m6-mk-route/mk-run`, Mushroom
+/// Kingdom's route to its arena, whose event (`gm_801674C4`) fills the joining opponents'
+/// setup (compared whole) to the trace's end, where the console halts on the first joiner's
+/// scale of 0 and melee-hd stops by name in the same creation; and task 2's
+/// `m6-select/allstar`, All-Star's select, its first match lost, the match's exit and the
+/// game over to the trace's end.
+#[test]
+fn single_player_setups() {
+    if let Some(out) =
+        scripted_session("m6-mk-route", "mk-run", &["--all", "--heap", "--past", "2"])
+    {
+        assert!(out.contains("4382 ticks compared, no difference"), "{out}");
+        assert!(
+            out.contains("past the trace's end, stopped in tick 4382: a joiner's character files read mid-match (PlYs.dat"),
+            "{out}"
+        );
+    }
+    if let Some(out) = scripted_session("m6-select", "allstar", &["--all", "--heap"]) {
+        assert!(out.contains("2444 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }

@@ -74,7 +74,7 @@ fn each_mode_runs_to_its_first_stop() {
     first_stops(&[
         ("classic", 796, "gmClassic_801B3500 isn't ported"),
         ("adventure2", 826, "gm_801B3F40 isn't ported"),
-        ("allstar", 856, "gm_801B5624 isn't ported"),
+        ("allstar", 3884, ""),
         (
             "event",
             592,
