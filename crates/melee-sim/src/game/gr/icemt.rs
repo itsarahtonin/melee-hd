@@ -6,7 +6,12 @@
 //! blocks a hit breaks (stage hurtbox items), and fields 2 and 4 have ice that falls when a
 //! fighter lands on it. The climb's speed is the wind the stage blows on airborne items.
 //!
-//! The adventure's climb (map 10, the stage kind 76 setup) isn't ported: VS mode never makes it.
+//! The adventure's Icicle Mountain (stage kind 76) climbs instead with map 10: fields 1 to 5
+//! from its parameters' list in turn, at speeds from another list with their waits, faster while
+//! the first fighter stands high (`ft_max_y`); with the fields' list run out it brakes to a stop
+//! under the last field. When the speeds' list reaches its end the climb's end starts the
+//! arena's opponents (`gm_801674C4`). A Polar Bear landing from its jump speeds the climb up
+//! for a while (`grIceMt_801FA6D8`).
 
 use gekko_fp as fp;
 use melee_data::archive::{Archives, DataRef};
@@ -16,7 +21,7 @@ use super::super::state::{Game, Running};
 use super::super::structs::CollData;
 use super::data::{ICEMT_CALLBACKS, StageCallbacks};
 use super::ground::{ground_of, jobj_of, map_gobj, nth_joint, set_point_joint, update_map_coll};
-use super::vars::IceMtFieldVars;
+use super::vars::{IceMtClimbVars, IceMtFieldVars};
 use super::{CollUser, anime, datfiles, material, setup, zako};
 use crate::fpu::{mem, reg};
 use crate::hsd::Objects;
@@ -34,6 +39,13 @@ pub const ICE_B_TOUCHED: u32 = 0x801F_9448;
 pub const ICE_C_TOUCHED: u32 = 0x801F_9558;
 /// `fn_801F75EC`, the climb's start hook.
 const START_HOOK: u32 = 0x801F_75EC;
+/// `stageGObj10_UnkGroundCallback`, the adventure's climb's start hook.
+const CLIMB10_START_HOOK: u32 = 0x801F_77B0;
+/// `onJointCollision`, the callback the adventure's climb gives each collision joint without
+/// one (`mpJointSetCb1`).
+pub const ON_JOINT: u32 = 0x801F_A7F0;
+/// `fn_801FA4CC`, the callback the climb's end hands the arena's event.
+const END_EVENT: u32 = 0x801F_A4CC;
 
 /// The stage kind of the adventure's Icicle Mountain, whose setup makes the adventure's climb.
 const ADVENTURE: i32 = 76;
@@ -124,6 +136,26 @@ mod p {
     pub const BURST: u32 = 0x3C;
     /// The gap between two fields (`x40`).
     pub const GAP: u32 = 0x40;
+    /// A Polar Bear's landing's burst's ticks (`x3A`).
+    pub const BEAR_BURST: u32 = 0x3A;
+    /// The height above which the first fighter pushes the adventure's climb (`ft_max_y`, a
+    /// halfword at `x98`), the push's top speed (`x9C`), its step and the braking's (`xA0`), its
+    /// ticks (`xA4`), the speeds' list's index that ends the climb (`xA6`) and the height the
+    /// last field brakes to (`xA8`).
+    pub const FT_MAX_Y: u32 = 0x98;
+    pub const PUSH_MAX: u32 = 0x9C;
+    pub const PUSH_STEP: u32 = 0xA0;
+    pub const PUSH_TICKS: u32 = 0xA4;
+    pub const END_IDX: u32 = 0xA6;
+    pub const BRAKE_Y: u32 = 0xA8;
+    /// The adventure's lists (pointers, each ending with -1): the fields' indices (`field_ixs`),
+    /// the speeds' indices (`xB0`) and their waits (`xB4`).
+    pub const FIELD_IXS: u32 = 0xAC;
+    pub const SPEED_IXS: u32 = 0xB0;
+    pub const SPEED_WAITS: u32 = 0xB4;
+    /// The trophy slot's odds (`xB8`) and the enemy spawner's table (`xBC`, inline).
+    pub const TROPHY_ODDS: u32 = 0xB8;
+    pub const SPAWNS: u32 = 0xBC;
 }
 
 #[derive(Clone, Copy)]
@@ -136,6 +168,113 @@ impl Param {
     fn h(self, data: &Archives, off: u32) -> i16 {
         data.u16(self.0.at(off)) as i16
     }
+    /// Entry `k` of the list the pointer at `off` names.
+    fn list(self, data: &Archives, off: u32, k: i32) -> i32 {
+        let p = data.ptr(self.0.at(off)).expect("gricemt.c: a list");
+        i32::from(data.u16(p.at((2 * k) as u32)) as i16)
+    }
+}
+
+/// The map id of `icemt_field[i]`: the adventure's code indexes the table with its lists'
+/// entries, and its setup with ids too, which with the disc's lists stay within it.
+fn field_id_at(i: i32) -> i32 {
+    match FIELDS.get(i as usize) {
+        Some(f) => f.0,
+        None => panic!("gricemt.c: icemt_field[{i}] reads past the table"),
+    }
+}
+
+/// Which climb a stage object runs: VS mode's (map 9) or the adventure's (map 10), which share
+/// the speed, the fields' moves and their changes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Climb {
+    Vs,
+    Adventure,
+}
+
+/// The climb's speed (`grIceMt_FA364_State`).
+#[derive(Clone, Copy)]
+struct Speed {
+    phase: i16,
+    delay: i16,
+    lerp_count: i16,
+    burst_count: i16,
+    idx: i16,
+    cur: f32,
+}
+
+fn speed(game: &mut Game, g: GroundId, c: Climb) -> Speed {
+    match c {
+        Climb::Vs => {
+            let v = game.grounds[g.0].u.icemt_scroll();
+            Speed {
+                phase: v.phase,
+                delay: v.delay,
+                lerp_count: v.lerp_count,
+                burst_count: v.burst_count,
+                idx: v.idx,
+                cur: v.cur,
+            }
+        }
+        Climb::Adventure => {
+            let v = game.grounds[g.0].u.icemt_climb();
+            Speed {
+                phase: v.phase,
+                delay: v.delay,
+                lerp_count: v.lerp_count,
+                burst_count: v.burst_count,
+                idx: v.idx,
+                cur: v.cur,
+            }
+        }
+    }
+}
+
+fn put_speed(game: &mut Game, g: GroundId, c: Climb, s: Speed) {
+    macro_rules! put {
+        ($v:expr) => {{
+            let v = $v;
+            v.phase = s.phase;
+            v.delay = s.delay;
+            v.lerp_count = s.lerp_count;
+            v.burst_count = s.burst_count;
+            v.idx = s.idx;
+            v.cur = s.cur;
+        }};
+    }
+    match c {
+        Climb::Vs => put!(game.grounds[g.0].u.icemt_scroll()),
+        Climb::Adventure => put!(game.grounds[g.0].u.icemt_climb()),
+    }
+}
+
+fn climb_ids(game: &mut Game, g: GroundId, c: Climb) -> (i16, i16) {
+    match c {
+        Climb::Vs => ids(game, g),
+        Climb::Adventure => {
+            let v = game.grounds[g.0].u.icemt_climb();
+            (v.under, v.upper)
+        }
+    }
+}
+
+fn set_ids(game: &mut Game, g: GroundId, c: Climb, under: i16, upper: i16) {
+    match c {
+        Climb::Vs => {
+            let v = game.grounds[g.0].u.icemt_scroll();
+            v.under = under;
+            v.upper = upper;
+        }
+        Climb::Adventure => {
+            let v = game.grounds[g.0].u.icemt_climb();
+            v.under = under;
+            v.upper = upper;
+        }
+    }
+}
+
+fn climb10(game: &mut Game, g: GroundId) -> &mut IceMtClimbVars {
+    game.grounds[g.0].u.icemt_climb()
 }
 
 fn param(game: &Game) -> Param {
@@ -150,6 +289,10 @@ pub fn run(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         START_HOOK => on_climb_start(r, gobj),
         0x801F_75FC => init_climb(r, gobj),
         0x801F_7728 => proc_climb(r, gobj),
+        0x801F_7D90 => empty(r, gobj),
+        0x801F_785C => init_climb10(r, gobj),
+        CLIMB10_START_HOOK => on_climb10_start(r, gobj),
+        0x801F_7A2C => proc_climb10(r, gobj),
         0x801F_7D94 => init_field(r, gobj, 1),
         0x801F_7F70 => init_field(r, gobj, 2),
         0x801F_8208 => init_field(r, gobj, 3),
@@ -183,12 +326,13 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
     true
 }
 
-/// The objects' processes and destroy callbacks that do nothing: the scenery's, the climb's
-/// destroy callback and the background's.
+/// The objects' processes and destroy callbacks that do nothing: the scenery's, the climbs'
+/// destroy callbacks and the background's.
 #[doc(alias = "stageGObj0_GObjProc@801F75E4")]
 #[doc(alias = "stageGObj0_Callback3@801F75E8")]
 #[doc(alias = "stageGObj9_Callback3")]
 #[doc(alias = "stageGObj8_Callback3")]
+// Ports stageGObj10_Callback3; aliased once a check reaches it.
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Creates one of the stage's objects and sets it up, `setupStageCallbacks`.
@@ -210,10 +354,17 @@ pub fn callbacks(map_id: i32) -> &'static StageCallbacks {
 pub const SETUP_FRAME: u32 = setup::SETUP_FRAME;
 pub const CLIMB_INIT_FRAME: u32 = SETUP_FRAME - 0x88;
 pub const CLIMB_PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0xD8;
+/// The adventure's climb's: through `stageGObj10_OnInit` (0x18), `grIceMt_801FA0BC` (0x40) and
+/// `setupStageCallbacks` (0x20), 0x78 below the setup's; and its process's (0x50, with
+/// `grIceMt_801F9ACC`'s 0x98 and `setupStageCallbacks`' 0x20), 0x108 below the process loop's.
+pub const CLIMB10_INIT_FRAME: u32 = SETUP_FRAME - 0x78;
+pub const CLIMB10_PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0x108;
 
 /// Icicle Mountain's setup, `grIceMt_801F686C`: its parameters; the scenery and the background;
-/// the six fields' collision off; in VS mode the climb (the adventure's three first fields and
-/// its own climb otherwise); camera limits and blast zones.
+/// the six fields' collision off; in VS mode the climb; in the adventure (stage kind 76) the
+/// fields its list puts third to fifth, each a field's height above the last over the first two
+/// (whose ids it compares with the list's indices, and then indexes the fields' table with), and
+/// its own climb; camera limits and blast zones over them all.
 #[doc(alias = "grIceMt_801F686C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.icemt_yakumono = super::ground::yakumono_param(r.game);
@@ -225,12 +376,45 @@ pub fn on_init(r: &mut Running) {
         setup::switch_off(r.game, r.data, m);
     }
     if super::stage::stkind(r.game) == ADVENTURE {
-        super::super::code::unported_call(
-            "the adventure's fields (grIceMt_801F686C, stage kind 76)",
-        );
+        let prm = param(r.game);
+        let data = r.data;
+        let ixs = |k: i32| prm.list(data, p::FIELD_IXS, k);
+        let pick = |skip: &[i32], line: u32| {
+            for f in FIELDS {
+                let id = f.0;
+                if ixs(0) == id || ixs(1) == id || skip.contains(&id) {
+                    continue;
+                }
+                return id;
+            }
+            panic!("gricemt.c: {line}: i<ICEMT_FIELD_MAX")
+        };
+        let f30 = pick(&[], 600);
+        let f29 = pick(&[f30], 609);
+        let f28 = pick(&[f30, f29], 619);
+        let s = reg(super::ground::scale(r.game));
+        let gap = |a: i32, b: i32| reg(field_gap(r.game, data, field_id_at(a), field_id_at(b)));
+        let y = fp::fadds(fp::fmuls(fp::fneg(20.0), s), gap(ixs(0), ixs(1)));
+        let y2 = fp::fadds(y, gap(ixs(1), f30));
+        let y3 = fp::fadds(y2, gap(f30, f29));
+        let y4 = fp::fadds(y3, gap(f29, f28));
+        let mut fields = [None; 3];
+        for (k, (y, line)) in [(y2, 636), (y3, 641), (y4, 646)].into_iter().enumerate() {
+            let gobj = create(r, field_id_at(ixs(2 + k as i32)), SETUP_FRAME);
+            assert!(gobj.is_some(), "gricemt.c: {line}: gobj");
+            let j = jobj_of(r.game, gobj.unwrap());
+            assert!(j.is_some(), "gricemt.c: {}: jobj", line + 1);
+            jobj::set_srt(&mut r.game.objs.jobjs, j.unwrap(), |o| {
+                o.translate.y = mem(y)
+            });
+            fields[k] = gobj;
+        }
+        r.game.gr.icemt_fields = fields;
+        create(r, 10, SETUP_FRAME);
+    } else {
+        create(r, 9, SETUP_FRAME);
+        r.game.gr.icemt_fields = [None; 3];
     }
-    create(r, 9, SETUP_FRAME);
-    r.game.gr.icemt_fields = [None; 3];
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
 }
@@ -240,8 +424,9 @@ pub fn on_init(r: &mut Running) {
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// Icicle Mountain's load, `grIceMt_801F7080`: the adventure's first fields gone, the fields'
-/// collision where their models stand, the enemy spawner (with no enemies in VS mode), and the
-/// stage's effect 0x7530 of bank 30.
+/// collision where their models stand, the enemy spawner (with no enemies in VS mode; in the
+/// adventure with its table, a trophy slot by the parameters' odds, and a first scan that spawns
+/// on camera too), and the stage's effect 0x7530 of bank 30.
 #[doc(alias = "grIceMt_801F7080")]
 pub fn on_load(r: &mut Running) {
     for g in r.game.gr.icemt_fields {
@@ -255,11 +440,20 @@ pub fn on_load(r: &mut Running) {
         }
     }
     if super::stage::stkind(r.game) == ADVENTURE {
-        super::super::code::unported_call(
-            "the adventure's spawner (grIceMt_801F7080, stage kind 76)",
-        );
+        let prm = param(r.game);
+        zako::start(r.game, Some(prm.0.at(p::SPAWNS)));
+        let n = i32::from(prm.h(r.data, p::TROPHY_ODDS));
+        let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };
+        if val == 0 {
+            // The point is drawn before the trophy, as the call's arguments are evaluated.
+            let point = super::ground::trophy_point(r.game, r.data);
+            let trophy = super::ground::x6e4_drawn(r.game);
+            zako::set_trophy_slot(r.game, trophy, point);
+        }
+        zako::scan_anywhere(r);
+    } else {
+        zako::start(r.game, None);
     }
-    zako::start(r.game, None);
     super::grlib::generator_at(r.game, r.data, 0x7530, 0x1E, Vec3::ZERO);
 }
 
@@ -358,53 +552,95 @@ fn ids(game: &mut Game, g: GroundId) -> (i16, i16) {
 /// The climb's speed this tick, `grIceMt_801FA364`: at rest, its wait counts down and, past 0,
 /// the next speed is drawn (`fn_801F8E58`) with its wait, and the change begins; changing, the
 /// speed closes on the new one by its distance over the ticks left, and takes it on the last.
-/// A burst overrides it while it lasts. Whether no change was under way.
-#[doc(alias = "grIceMt_801FA364")]
+/// A burst overrides it while it lasts. Whether no change was under way. VS mode's climb's
+/// ([`climb_speed`]).
 pub fn speed_step(r: &mut Running, g: GroundId) -> (f32, bool) {
+    climb_speed(r, g, Climb::Vs)
+}
+
+/// [`speed_step`] for either climb, `grIceMt_801FA364`: VS mode's draws its next speed with
+/// `fn_801F8E58`, the adventure's takes the next of its list with `fn_801F9150`.
+#[doc(alias = "grIceMt_801FA364")]
+pub fn climb_speed(r: &mut Running, g: GroundId, c: Climb) -> (f32, bool) {
     let prm = param(r.game);
     let mut ret = true;
-    match r.game.grounds[g.0].u.icemt_scroll().phase {
+    let mut st = speed(r.game, g, c);
+    match st.phase {
         0 => {
-            let v = r.game.grounds[g.0].u.icemt_scroll();
-            let tmp = v.delay;
-            v.delay = tmp.wrapping_sub(1);
+            let tmp = st.delay;
+            st.delay = tmp.wrapping_sub(1);
             if tmp < 0 {
-                let (idx, next) = draw_speed(r, g);
-                let lerp = prm.h(r.data, p::LERP);
-                let v = r.game.grounds[g.0].u.icemt_scroll();
-                v.idx = idx as i16;
-                v.delay = next as i16;
-                v.phase = 1;
-                v.lerp_count = lerp;
+                // The draws write their own words, never the speed's.
+                put_speed(r.game, g, c, st);
+                let (idx, next) = match c {
+                    Climb::Vs => draw_speed(r, g),
+                    Climb::Adventure => next_speed(r, g),
+                };
+                st.idx = idx as i16;
+                st.delay = next as i16;
+                st.phase = 1;
+                st.lerp_count = prm.h(r.data, p::LERP);
             }
         }
         1 => {
-            let v = r.game.grounds[g.0].u.icemt_scroll();
-            v.lerp_count = v.lerp_count.wrapping_sub(1);
-            let tmp = v.lerp_count;
-            let idx = v.idx;
-            let to = prm.f(r.data, p::SPEEDS + 4 * idx as i32 as u32);
-            let v = r.game.grounds[g.0].u.icemt_scroll();
+            st.lerp_count = st.lerp_count.wrapping_sub(1);
+            let tmp = st.lerp_count;
+            let to = prm.f(r.data, p::SPEEDS + 4 * i32::from(st.idx) as u32);
             if tmp != 0 {
-                let d = fp::fdivs(fp::fsubs(reg(to), reg(v.cur)), fp::frsp(f64::from(tmp)));
-                v.cur = mem(fp::fadds(reg(v.cur), d));
+                let d = fp::fdivs(fp::fsubs(reg(to), reg(st.cur)), fp::frsp(f64::from(tmp)));
+                st.cur = mem(fp::fadds(reg(st.cur), d));
                 ret = false;
             } else {
-                v.phase = 0;
-                v.cur = to;
+                st.phase = 0;
+                st.cur = to;
             }
         }
         _ => {}
     }
     let s = super::ground::scale(r.game);
     let burst = prm.f(r.data, p::BURST);
-    let v = r.game.grounds[g.0].u.icemt_scroll();
-    let mut result = v.cur;
-    if v.burst_count != 0 {
+    let mut result = st.cur;
+    if st.burst_count != 0 {
         result = mem(fp::fmuls(reg(burst), reg(s)));
-        v.burst_count = v.burst_count.wrapping_sub(1);
+        st.burst_count = st.burst_count.wrapping_sub(1);
     }
+    put_speed(r.game, g, c, st);
     (result, ret)
+}
+
+/// The adventure's climb's next speed, `fn_801F9150`: the speeds' list's entry at the cursor
+/// with its wait, the cursor moved on; at the list's end (-1 in either) the cursor goes back to
+/// its start.
+#[doc(alias = "fn_801F9150")]
+pub fn next_speed(r: &mut Running, g: GroundId) -> (i32, i32) {
+    let prm = param(r.game);
+    loop {
+        let k = i32::from(climb10(r.game, g).x1A);
+        let a = prm.list(r.data, p::SPEED_IXS, k);
+        let out = prm.list(r.data, p::SPEED_WAITS, k);
+        if a != -1 && out != -1 {
+            let v = climb10(r.game, g);
+            v.x1A = v.x1A.wrapping_add(1);
+            return (a, out);
+        }
+        climb10(r.game, g).x1A = 0;
+    }
+}
+
+/// The adventure's climb's next field, `fn_801F91A8`: the fields' list's entry at its cursor
+/// as a map id (moving the cursor on), or -1 at the list's end.
+#[doc(alias = "fn_801F91A8")]
+pub fn next_climb_field(r: &mut Running, g: GroundId) -> i32 {
+    let prm = param(r.game);
+    let k = i32::from(climb10(r.game, g).x1C);
+    let index = prm.list(r.data, p::FIELD_IXS, k);
+    if index == -1 {
+        return -1;
+    }
+    let id = field_id_at(index);
+    let v = climb10(r.game, g);
+    v.x1C = v.x1C.wrapping_add(1);
+    id
 }
 
 /// Draws the climb's next speed, `fn_801F8E58`: one at random of those whose rest count is 0
@@ -541,8 +777,12 @@ fn field_vars(game: &mut Game, g: GroundId) -> &mut IceMtFieldVars {
 
 /// Sets up a new field at the height `y`: in place, its collision on and settled where it
 /// stands (`grIceMt_801F9ACC`'s order).
-fn bring_field(r: &mut Running, id: i16, y: f32) {
-    let gobj = create(r, i32::from(id), CLIMB_PROC_FRAME);
+fn bring_field(r: &mut Running, id: i16, y: f32, c: Climb) {
+    let frame = match c {
+        Climb::Vs => CLIMB_PROC_FRAME,
+        Climb::Adventure => CLIMB10_PROC_FRAME,
+    };
+    let gobj = create(r, i32::from(id), frame);
     assert!(gobj.is_some(), "gricemt.c: mgobj");
     let gobj = gobj.unwrap();
     let j = jobj_of(r.game, gobj).expect("gricemt.c: jobj");
@@ -566,10 +806,22 @@ fn points_now(game: &mut Game, id: i16) {
 /// argument unused): the field nearer its place gets its points of interest due, the field
 /// whose half is past the middle stands as the climb's; past the upper one's place the lower
 /// one goes and the next field (`fn_801F9038`) comes above, past the lower one's the upper one
-/// goes and the next comes below, and the scenery's points follow.
-#[doc(alias = "grIceMt_801F9ACC")]
+/// goes and the next comes below, and the scenery's points follow. VS mode's climb's
+/// ([`change_climb_field`]).
 pub fn change_field(r: &mut Running, g: GroundId) -> bool {
-    let (under, upper) = ids(r.game, g);
+    change_climb_field(r, g, Climb::Vs)
+}
+
+/// [`change_field`] for either climb, `grIceMt_801F9ACC`: the next field VS mode's draws
+/// (`fn_801F9038`) or the adventure's list gives (`fn_801F91A8`, -1 at its end, when no field
+/// comes).
+#[doc(alias = "grIceMt_801F9ACC")]
+pub fn change_climb_field(r: &mut Running, g: GroundId, c: Climb) -> bool {
+    let next = |r: &mut Running| match c {
+        Climb::Vs => next_field(r, g),
+        Climb::Adventure => next_climb_field(r, g),
+    };
+    let (under, upper) = climb_ids(r.game, g, c);
     if under == -1 || upper == -1 {
         return false;
     }
@@ -614,12 +866,12 @@ pub fn change_field(r: &mut Running, g: GroundId) -> bool {
             assert!(gone.is_some(), "gricemt.c: 2803: mgobj");
             setup::destroy(r, gone);
         }
-        r.game.grounds[g.0].u.icemt_scroll().under = upper;
-        let new = next_field(r, g);
-        r.game.grounds[g.0].u.icemt_scroll().upper = new as i16;
+        set_ids(r.game, g, c, upper, upper);
+        let new = next(r);
+        set_ids(r.game, g, c, upper, new as i16);
         if new != -1 {
             let y1 = reg(field_gap(r.game, r.data, i32::from(upper), new));
-            bring_field(r, new as i16, mem(fp::fsubs(cur, y1)));
+            bring_field(r, new as i16, mem(fp::fsubs(cur, y1)), c);
         }
         points_now(r.game, upper);
         result = true;
@@ -629,12 +881,12 @@ pub fn change_field(r: &mut Running, g: GroundId) -> bool {
             assert!(gone.is_some(), "gricemt.c: 2835: mgobj");
             setup::destroy(r, gone);
         }
-        r.game.grounds[g.0].u.icemt_scroll().upper = under;
-        let new = next_field(r, g);
-        r.game.grounds[g.0].u.icemt_scroll().under = new as i16;
+        set_ids(r.game, g, c, under, under);
+        let new = next(r);
+        set_ids(r.game, g, c, new as i16, under);
         if new != -1 {
             let y1 = reg(field_gap(r.game, r.data, new, i32::from(under)));
-            bring_field(r, new as i16, mem(fp::fadds(y1, fp::fadds(cur, y0))));
+            bring_field(r, new as i16, mem(fp::fadds(y1, fp::fadds(cur, y0))), c);
         }
         points_now(r.game, under);
         result = true;
@@ -648,10 +900,19 @@ pub fn change_field(r: &mut Running, g: GroundId) -> bool {
 /// Sets up the climb's first two fields in place, `grIceMt_801FA0BC`: the lower one a field's
 /// height below the upper one, both 20 below the middle (times the stage's scale), their
 /// collision on and settled, the upper one standing as the climb's with its points of interest,
-/// and the scenery's points.
-#[doc(alias = "grIceMt_801FA0BC")]
+/// and the scenery's points. VS mode's climb's ([`place_climb_fields`]).
 pub fn place_fields(r: &mut Running, g: GroundId) {
-    let (under, upper) = ids(r.game, g);
+    place_climb_fields(r, g, Climb::Vs);
+}
+
+/// [`place_fields`] for either climb, `grIceMt_801FA0BC`.
+#[doc(alias = "grIceMt_801FA0BC")]
+pub fn place_climb_fields(r: &mut Running, g: GroundId, c: Climb) {
+    let frame_at = match c {
+        Climb::Vs => CLIMB_INIT_FRAME,
+        Climb::Adventure => CLIMB10_INIT_FRAME,
+    };
+    let (under, upper) = climb_ids(r.game, g, c);
     let frame = reg(field_gap(
         r.game,
         r.data,
@@ -660,7 +921,7 @@ pub fn place_fields(r: &mut Running, g: GroundId) {
     ));
     let s = reg(super::ground::scale(r.game));
     if under != -1 {
-        let gobj = create(r, i32::from(under), CLIMB_INIT_FRAME);
+        let gobj = create(r, i32::from(under), frame_at);
         assert!(gobj.is_some(), "gricemt.c: 2884: mgobj");
         let gobj = gobj.unwrap();
         let j = jobj_of(r.game, gobj).expect("gricemt.c: 2886: jobj");
@@ -671,7 +932,7 @@ pub fn place_fields(r: &mut Running, g: GroundId) {
         setup::settle_map_coll(r.game, r.data, i32::from(under));
     }
     if upper != -1 {
-        let gobj = create(r, i32::from(upper), CLIMB_INIT_FRAME);
+        let gobj = create(r, i32::from(upper), frame_at);
         assert!(gobj.is_some(), "gricemt.c: 2896: mgobj");
         let gobj = gobj.unwrap();
         let j = jobj_of(r.game, gobj).expect("gricemt.c: 2898: jobj");
@@ -896,7 +1157,7 @@ pub fn run_ice(r: &mut Running, gobj: GObjId, slot: usize) {
 /// Field 2's and field 4's falling ice landed on (`fn_801F9338`, `fn_801F9448` for field 2's two
 /// and `fn_801F9558` for field 4's): a fighter landing (`x34_flags.b1234` 1) starts it if it's
 /// still, its parts' animations run once from their start; then the adventure's touch
-/// (`onJointCollision`).
+/// (`onJointCollision`), which the caller records ([`ClimbTouch`]).
 #[doc(alias = "fn_801F9338")]
 #[doc(alias = "fn_801F9448")]
 #[doc(alias = "fn_801F9558")]
@@ -907,7 +1168,6 @@ pub fn ice_touched(
     g: GroundId,
     cb: u32,
     coll: &CollData,
-    adventure_climb: Option<GroundId>,
 ) {
     let slot = usize::from(cb == ICE_B_TOUCHED);
     let map = grounds[g.0].map_id as u8;
@@ -926,16 +1186,222 @@ pub fn ice_touched(
             anime::clear_loop_below(objs, map_root, part, 7, true);
         }
     }
-    adventure_touch(adventure_climb);
 }
 
-/// `onJointCollision`: player 1's fighter touching (`Ground_GetP1Fighter` against the
-/// collision's GObj) tells the adventure's climb (map 10), which VS mode never makes; without
-/// it, both queries change nothing.
-#[doc(alias = "onJointCollision@801FA7F0")]
-pub fn adventure_touch(climb: Option<GroundId>) {
-    if climb.is_some() {
-        super::super::code::unported_call("onJointCollision with the adventure's climb");
+/// The adventure's touch in a collision pass, applied once mpcoll returns (the joint callback
+/// has no access to the players): the touching collision's owner. Its only effect is a flag
+/// nothing in a pass reads, so it happens in the original's order.
+#[derive(Debug, Default)]
+pub struct ClimbTouch(Option<Option<GObjId>>);
+
+impl ClimbTouch {
+    /// A collision joint's touch by the collision of `owner` (`onJointCollision`'s call).
+    pub fn touched(&mut self, owner: Option<GObjId>) {
+        self.0 = Some(owner);
+    }
+
+    /// `onJointCollision`: player 1's fighter touching (`Ground_GetP1Fighter` against the
+    /// collision's GObj) marks the adventure's climb (map 10) touched this tick (`x14_b4`);
+    /// without that climb (VS mode's), nothing.
+    #[doc(alias = "onJointCollision@801FA7F0")]
+    pub fn apply(self, game: &mut Game) {
+        let Some(owner) = self.0 else { return };
+        if super::ground::p1_fighter(game) != owner {
+            return;
+        }
+        if let Some(gobj) = map_gobj(game, 10) {
+            let g = ground_of(game, gobj);
+            climb10(game, g).x14 |= IceMtClimbVars::B4;
+        }
+    }
+}
+
+/// The adventure's climb's setup (map 10), `stageGObj10_OnInit`: the list's first two fields
+/// (the second below, the first above) set up in place, the lists' cursors at the fields' third
+/// and the speeds' first, no push, braking or end, the speed at rest, and held until the
+/// match starts.
+#[doc(alias = "stageGObj10_OnInit")]
+pub fn init_climb10(r: &mut Running, gobj: GObjId) {
+    let g = ground_of(r.game, gobj);
+    let prm = param(r.game);
+    let under = field_id_at(prm.list(r.data, p::FIELD_IXS, 1)) as i16;
+    let upper = field_id_at(prm.list(r.data, p::FIELD_IXS, 0)) as i16;
+    set_ids(r.game, g, Climb::Adventure, under, upper);
+    place_climb_fields(r, g, Climb::Adventure);
+    let v = climb10(r.game, g);
+    v.x18 = 0;
+    v.x1C = 2;
+    v.x1A = 0;
+    v.x14 &= !(IceMtClimbVars::B1 | IceMtClimbVars::B2 | IceMtClimbVars::B3 | IceMtClimbVars::B4);
+    v.x16 = 0;
+    v.x20 = 0.0;
+    v.phase = 0;
+    v.burst_count = 0;
+    v.delay = 0;
+    v.lerp_count = 0;
+    v.idx = -1;
+    v.cur = 0.0;
+    v.x14 |= IceMtClimbVars::B0;
+    setup::add_start_hook(r.game, gobj, CodeRef(CLIMB10_START_HOOK));
+}
+
+/// The adventure's climb's start hook, `stageGObj10_UnkGroundCallback`: the climb starts, and
+/// every collision joint of the stage's 217 without a callback tells it when touched
+/// (`onJointCollision`).
+#[doc(alias = "stageGObj10_UnkGroundCallback")]
+pub fn on_climb10_start(r: &mut Running, gobj: GObjId) {
+    let g = ground_of(r.game, gobj);
+    climb10(r.game, g).x14 &= !IceMtClimbVars::B0;
+    let geometry = r.game.geometry_mut();
+    for joint in 0..217 {
+        if geometry.ledge_callback(joint).0.is_none() {
+            geometry.set_ledge_callback(joint, Some(CollUser::Ground(g)), Some(CodeRef(ON_JOINT)));
+        }
+    }
+}
+
+/// The adventure's climb's process, `stageGObj10_GObjProc`, once the match has started.
+///
+/// Climbing, the speed's step comes from the speeds' list ([`climb_speed`]); the first fighter
+/// touching the stage this tick above `ft_max_y`, out of hitstun, starts a push of `xA4` ticks,
+/// which adds speed by `xA0` a tick up to `x9C` (and takes it off again by as much once it's
+/// over). Braking (the fields' list run out), the speed eases off by `xA0` while the stopping
+/// distance at that rate passes the upper field's height over `xA8` (never below `xA0`), and is
+/// 0 once it's there. Both fields move by it, change, and tell the background; with no field
+/// below left, the braking starts. The tick a speed change ends with the speeds' list's cursor
+/// at `xA6`, the climb's end: the stage's `x6D8` cleared, the arena's opponents (14, 2 of them,
+/// `gm_801674C4`) and the spawner stopped; after it, the arena's end (`x6D8` 1) sets the stage's
+/// flag 0x10.
+///
+/// Braking, the end's test reads the speed step's result, which the braking skips: the machine
+/// code compares a register (`r30`) its C never set (docs/melee-bugs.md). It
+/// matters only when the cursor is at `xA6`, which braking begins with only if the fields ran out
+/// within the last speed's change; that stops here by name.
+#[doc(alias = "stageGObj10_GObjProc")]
+#[allow(clippy::neg_cmp_op_on_partial_ord)]
+pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
+    let g = ground_of(r.game, gobj);
+    let prm = param(r.game);
+    let data = r.data;
+    if climb10(r.game, g).x14 & IceMtClimbVars::B0 != 0 {
+        return;
+    }
+    let mut done: Option<bool> = None;
+    let y = if climb10(r.game, g).x14 & IceMtClimbVars::B2 == 0 {
+        let (step, ret) = climb_speed(r, g, Climb::Adventure);
+        done = Some(ret);
+        if climb10(r.game, g).x14 & IceMtClimbVars::B4 != 0
+            && let Some(f) = super::ground::p1_fighter(r.game)
+        {
+            let pos = r.game.ft_pos(f);
+            let max_y = fp::frsp(f64::from(prm.h(data, p::FT_MAX_Y)));
+            if climb10(r.game, g).x14 & IceMtClimbVars::B1 == 0
+                && !r.game.ft_is_in_hitstun(f)
+                && !(reg(pos.y) <= max_y)
+            {
+                let ticks = prm.h(data, p::PUSH_TICKS);
+                let v = climb10(r.game, g);
+                v.x14 |= IceMtClimbVars::B1;
+                v.x16 = ticks;
+            }
+        }
+        let push_step = reg(prm.f(data, p::PUSH_STEP));
+        if climb10(r.game, g).x14 & IceMtClimbVars::B1 != 0 {
+            let max = prm.f(data, p::PUSH_MAX);
+            let v = climb10(r.game, g);
+            v.x20 = mem(fp::fadds(reg(v.x20), push_step));
+            if !(reg(v.x20) <= reg(max)) {
+                v.x20 = max;
+            }
+            v.x16 = v.x16.wrapping_sub(1);
+            if v.x16 == 0 {
+                v.x14 &= !IceMtClimbVars::B1;
+            }
+        } else {
+            let v = climb10(r.game, g);
+            v.x20 = mem(fp::fsubs(reg(v.x20), push_step));
+            if !(reg(v.x20) >= 0.0) {
+                v.x20 = 0.0;
+            }
+        }
+        mem(fp::fadds(reg(step), reg(climb10(r.game, g).x20)))
+    } else {
+        let upper = climb10(r.game, g).upper;
+        let mgobj = map_gobj(r.game, i32::from(upper));
+        assert!(mgobj.is_some(), "gricemt.c: 1219: mgobj");
+        let j = jobj_of(r.game, mgobj.unwrap());
+        assert!(j.is_some(), "gricemt.c: 1221: jobj");
+        let ty = reg(r.game.objs.jobjs[j.unwrap()].translate.y);
+        let dist = fp::fsubs(ty, fp::frsp(f64::from(prm.h(data, p::BRAKE_Y))));
+        let step = reg(prm.f(data, p::PUSH_STEP));
+        let v = climb10(r.game, g);
+        if !(dist >= 0.0) {
+            v.cur = 0.0;
+        } else {
+            let cur = reg(v.cur);
+            let ratio = fp::fdivs(cur, step);
+            let half = fp::fmuls(fp::fmuls(0.5, step), ratio);
+            let stop = fp::fmsubs(cur, ratio, fp::fmuls(ratio, half));
+            if !(stop <= dist) {
+                v.cur = mem(fp::fsubs(cur, step));
+                if !(reg(v.cur) >= step) {
+                    v.cur = mem(step);
+                }
+            }
+        }
+        v.cur
+    };
+    let (under, upper) = climb_ids(r.game, g, Climb::Adventure);
+    move_fields(r, under, upper, mem(fp::fneg(reg(y))));
+    change_climb_field(r, g, Climb::Adventure);
+    tell_bg(r.game, y);
+    if climb10(r.game, g).under == -1 {
+        climb10(r.game, g).x14 |= IceMtClimbVars::B2;
+    }
+    if climb10(r.game, g).x14 & IceMtClimbVars::B3 == 0 {
+        let at_end = climb10(r.game, g).x1A == prm.h(data, p::END_IDX);
+        let done = match done {
+            Some(d) => d,
+            None if at_end => panic!(
+                "stale read: the adventure's climb's end (stageGObj10_GObjProc) tests r30, which                  its C never set while braking: the fields ran out within the last speed's change"
+            ),
+            None => false,
+        };
+        if done && at_end {
+            climb10(r.game, g).x14 |= IceMtClimbVars::B3;
+            super::ground::clear_x6d8(r.game);
+            super::super::gm::start_stage_event(r, 14, 2, 2, 0, CodeRef(END_EVENT));
+            zako::clear_enemies(r);
+        }
+    } else if super::ground::x6d8(r.game) == 1 {
+        super::ground::set_flags(r.game, 0x10);
+    }
+    climb10(r.game, g).x14 &= !IceMtClimbVars::B4;
+}
+
+/// The climb's end's callback for the arena's event, `fn_801FA4CC`: on 1, the stage's `x6D8`
+/// set to 1, and 1; else 0.
+// Ports fn_801FA4CC; aliased once a check reaches it.
+pub fn end_event(game: &mut Game, num: i32) -> i32 {
+    if num == 1 {
+        super::ground::set_x6d8(game, num);
+        1
+    } else {
+        0
+    }
+}
+
+/// A Polar Bear's landing from its jump, `grIceMt_801FA6D8`: in the adventure, the climb's
+/// burst for the parameters' `x3A` ticks.
+#[doc(alias = "grIceMt_801FA6D8")]
+pub fn bear_landed(game: &mut Game, data: &Archives) {
+    if super::stage::stkind(game) != ADVENTURE {
+        return;
+    }
+    if let Some(gobj) = map_gobj(game, 10) {
+        let ticks = param(game).h(data, p::BEAR_BURST);
+        let g = ground_of(game, gobj);
+        climb10(game, g).burst_count = ticks;
     }
 }
 
@@ -1032,6 +1498,7 @@ pub fn wind(game: &Game) -> Vec3 {
     };
     let cur = match &game.grounds[ground_of(game, gobj).0].u {
         super::GroundVars::IceMtScroll(v) => v.cur,
+        super::GroundVars::IceMtClimb(v) => v.cur,
         super::GroundVars::Bytes(b) => {
             f32::from_bits(u32::from_be_bytes([b[0x10], b[0x11], b[0x12], b[0x13]]))
         }
