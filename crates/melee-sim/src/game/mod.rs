@@ -36,6 +36,7 @@ pub mod render;
 pub mod roster;
 pub mod session;
 pub mod sfx;
+pub mod single_player_audit;
 pub mod slippi;
 pub mod special_audit;
 pub mod state;
