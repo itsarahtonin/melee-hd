@@ -2013,6 +2013,9 @@ impl Running<'_> {
                     super::super::gr::kinokoroute::water_device(self, gobj);
                     None
                 }
+                Some(super::super::gr::pushon::SPIKES_DEVICE) => {
+                    super::super::gr::pushon::spikes_device(self, gobj)
+                }
                 Some(other) => {
                     unported_call(&format!("a collision device's callback {other:#010x}"))
                 }
@@ -2160,6 +2163,9 @@ impl Running<'_> {
             None => None,
             Some(f) if f.0 == 0x801F_2BBC => {
                 super::super::gr::mutecity::line_hazard(self.game, self.data, line)
+            }
+            Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
+                super::super::gr::pushon::line_hazard(self.game, self.data, line)
             }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
