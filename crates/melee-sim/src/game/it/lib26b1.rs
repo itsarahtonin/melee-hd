@@ -489,6 +489,26 @@ pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option
     Some(gobj)
 }
 
+/// [`drop_by_kind`]'s Flipper (`it_8026BE84` with kind 20): a Flipper fixed to the stage's joint
+/// `jobj` (`BobOmbRain::x4`, `itFlipper_Spawn`), as the target stages make theirs; none in a
+/// sudden death; with `hold` holding its flags ([`hold_flags_on`]). Unlike the other kinds it
+/// isn't held still.
+pub fn drop_flipper(
+    r: &mut Running,
+    kind: i32,
+    jobj: crate::hsd::jobj::JObjId,
+    hold: bool,
+) -> Option<GObjId> {
+    if r.game.vs_x6() != 0 && kind != 6 {
+        return None;
+    }
+    let gobj = super::kinds::flipper::spawn(r, Some(jobj))?;
+    if hold {
+        hold_flags_on(r.game, gobj);
+    }
+    Some(gobj)
+}
+
 /// Makes the item keep clear of others (`xDC8_word.x1A`), `it_8026BD9C`.
 #[doc(alias = "it_8026BD9C")]
 pub fn keep_clear(game: &mut Game, gobj: GObjId) {

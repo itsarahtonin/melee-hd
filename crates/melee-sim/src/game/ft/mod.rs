@@ -104,6 +104,9 @@ pub struct Globals {
     pub dynamics_free: Option<super::handles::DynamicsId>,
     /// The links' block in the scene's heap (`lb_8000FCDC`'s), 0 for none modeled.
     pub dynamics_block: u32,
+    /// The wind sources' block in the scene's heap (`lb_8000FCDC`'s second), 0 for none
+    /// modeled.
+    pub winds_block: u32,
     /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
     pub lobj0: Option<crate::hsd::lobj::LObjId>,
     pub lobj1: Option<crate::hsd::lobj::LObjId>,

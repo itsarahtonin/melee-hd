@@ -392,6 +392,10 @@ impl Importer<'_> {
         self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
         self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
+        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+            let yaku = cap.u32(at);
+            self.game.gr.target_yakumono[i] = self.data_or_unhandled(yaku);
+        }
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -759,6 +763,7 @@ impl Importer<'_> {
         ] = heads_out;
         Islands {
             arena: isl.arena,
+            addrs: isl.addrs,
             floors,
             ceilings,
             floors_end,
@@ -792,6 +797,7 @@ fn island_id(
         let id = IslandId(isl.arena.len() as u32);
         ids.insert(cur, id);
         let f = |o| imp.f32_at(cur + o);
+        isl.addrs.push(cur);
         isl.arena.push(Island {
             next: None,
             left_vtx: imp.u16_at(cur + 4),
@@ -1218,6 +1224,11 @@ impl Comparer<'_> {
             // A stage's parameters stay set past its match, into its freed file.
             use melee_sim::game::mirror::Cx;
             self.compare_data(&format!("{name} data"), ours, self.u32(at));
+        }
+        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+            use melee_sim::game::mirror::Cx;
+            let ours = game.gr.target_yakumono[i];
+            self.compare_data(&format!("grT yakumono_param {i} data"), ours, self.u32(at));
         }
         // A stage's own statics compare on that stage: past its match they name its freed
         // heap, ours as well, and only its code reads them.

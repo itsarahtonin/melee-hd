@@ -1863,6 +1863,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
         GR_KIND_PUSHON => &PUSHON,
         GR_KIND_ZEBESROUTE => &ZEBESROUTE,
+        k if super::target::is_target(k) => super::target::stage_data(k),
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

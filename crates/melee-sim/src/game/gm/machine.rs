@@ -211,6 +211,8 @@ enum Hook {
     TargetOnLoad,
     TargetEnterCss,
     TargetExitCss,
+    TargetEnterMatch,
+    TargetExitMatch,
     HomeRunOnLoad,
     HomeRunEnterCss,
     HomeRunExitCss,
@@ -933,6 +935,7 @@ impl Running<'_> {
             m if uses_vs_melee(m) => &self.game.vs_melee.start,
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             super::GM_DEBUG => &self.game.debug_mode.vs_enter,
+            super::one_player::GM_TARGET_TEST => &self.game.one_player.target_start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -1326,6 +1329,8 @@ impl Running<'_> {
             Hook::TargetOnLoad => self.target_on_load(),
             Hook::TargetEnterCss => self.target_enter_css(),
             Hook::TargetExitCss => self.target_exit_css(),
+            Hook::TargetEnterMatch => self.target_enter_match(),
+            Hook::TargetExitMatch => self.target_exit_match(),
             Hook::HomeRunOnLoad => self.homerun_on_load(),
             Hook::HomeRunEnterCss => self.homerun_enter_css(),
             Hook::HomeRunExitCss => self.homerun_exit_css(),
@@ -1550,7 +1555,13 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             Some(Hook::TargetExitCss),
             GS_CSS,
         ),
-        st(1, 3, u("gm_801B6428"), u("gm_801B65D4"), GS_VS),
+        st(
+            1,
+            3,
+            Some(Hook::TargetEnterMatch),
+            Some(Hook::TargetExitMatch),
+            GS_VS,
+        ),
     ];
     const TRAINING: [StateDesc; 3] = [
         st(
