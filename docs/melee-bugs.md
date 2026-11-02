@@ -281,12 +281,12 @@ When porting shows that the original game does something wrong, keep the behavio
 ### Kirby: Giga Bowser's copy reads a copy file nothing loads
 
 - **Where:** `ftKb_SpecialN_800F16D0` (the copy's items registered, `case Ft_Kind_GKoops`), from `ftKb_SpecialN_800F1BAC`; `crates/melee-sim/src/game/ft/kirby/copy.rs` (`kb_register_copy_items`).
-- **Defect:** Giga Bowser has no copy file (`ftKb_Init_803CA9D0[31]` is empty), so the copy loading at the match's start (`ftKb_SpecialN_800EED50`) leaves his copy's data null; taking his copy then registers its flame from that data (`hats[30]->hat_dynamics[0]`), reading through the null pointer. His hat is Bowser's (`ftKb_SpecialN_800EFD64`), whose data is loaded only when Bowser is in the match.
-- **Effect:** a Kirby who swallows Giga Bowser reads address 0x18, which faults on the console. VS can't put Giga Bowser in a match.
-- **melee-hd:** stops (the port panics, a copy without its data), where the original faults.
+- **Defect:** Giga Bowser has no copy file (`ftKb_Init_803CA9D0[31]` is empty), so the copy loading at the match's start (`ftKb_SpecialN_800EED50`) leaves his copy's data null (`ft_80459B88`'s slot 31, at 0x7C); taking his copy then registers its flame from that data's first article, reading the word at address 0xC through the null pointer (`lwz r3, 0x7c(r5)`, `lwz r3, 0xc(r3)`). His hat is Bowser's (`ftKb_SpecialN_800EFD64`), whose data is loaded only when Bowser is in the match.
+- **Effect:** a Kirby given Giga Bowser's copy reads address 0xC, which faults on the console. No swallow gives it: Giga Bowser's creation (`ftGk_Init_OnLoad`) sets `x222A_b0`, which every grab box skips (`ftColl_80078A2C`), so Kirby's inhale passes over him; task 7's `kb-gk` session has Kirby's inhale box on Giga Bowser's grabbable hurtboxes and nothing caught ([the oracle](oracle.md#sessions)). The read is left to a Kirby that starts a match with the copy, which only a single-player setup gives (`gm_16A2`'s `Player_SetUnk4D` from the setup's fighter list, and the cutscene `vi0501`'s Kirbys); whether any setup lists Giga Bowser there is for the single-player modes' tasks to find. VS can't put Giga Bowser in a match.
+- **melee-hd:** stops by name (`Melee crashes: Kirby's copy of Giga Bowser has no copy data…`), as a console's game stops there (design call 7).
 - **Fix:** give Giga Bowser's copy Bowser's copy data, or load a copy file for him.
 - **Fix impact:** changes only the single-player modes, where he appears.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/copy.rs:131`.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/copy.rs:131`; the assembly listing of `ftKb_SpecialN_800F16D0` (`build/GALE01/asm/melee/ft/kinds/ftKirby/ftkirby.s`).
 
 ### Kirby: Jigglypuff's copy keeps the roll's look when hit
 
