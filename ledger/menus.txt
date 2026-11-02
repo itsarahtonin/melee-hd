@@ -15,7 +15,6 @@ melee/gm/gm_181A	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_186E	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1879	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_1884	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_18A1	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1A7A	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -33,7 +32,6 @@ melee/gm/gmregcommon	gated	the single-player modes', which only the 1P list's ga
 melee/gm/gmregenddisp	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregtyfall	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmstaffroll	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmtrainingmode	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnhyaku	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/vi/vi0801	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -215,9 +213,7 @@ fn_8016B738	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Even
 gm_AnyControllerPressedStart	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_AnyControllerPressedZ	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016C75C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_Scene_Training_OnFrame	gated	Training's scene: the single-player modes', which only the 1P list's gated entries lead to
 fn_8016D538	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
-gm_Scene_Training_OnEnter	gated	Training's scene: the single-player modes', which only the 1P list's gated entries lead to
 gm_8016ECE8	gated	the boss stages' cycle (Final Destination's, a boss's health): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016EDDC	gated	named only by the single-player modes' code (fn_8017C0C8, fn_80181C80, fn_80188550): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016EF98	gated	named only by the single-player modes' code (fn_80181C80, fn_80188550, fn_80188644): the single-player modes', which only the 1P list's gated entries lead to

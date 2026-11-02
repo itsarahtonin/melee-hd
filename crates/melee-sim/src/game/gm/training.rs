@@ -31,6 +31,10 @@ pub const ON_PAUSE: u32 = 0x801B_1F6C;
 pub const INPUT_PROC: u32 = 0x8018_91F4;
 pub const MODEL_PROC: u32 = 0x8018_8EE8;
 
+/// Training's pause hook, `fn_801B1F6C`: nothing (the menu's own process opens the menu).
+#[doc(alias = "fn_801B1F6C")]
+pub fn on_pause() {}
+
 /// `GmVsMode_Training`, Training's entry of the modes table.
 const TABLE: usize = 6;
 /// `Gm_PKind_Cpu`, `Gm_PKind_NA`.
@@ -237,8 +241,8 @@ impl Running<'_> {
         self.lb_audio_call(SFX_FORWARD);
     }
 
-    /// `gm_80162968`: seconds added to the single-player time, held at the largest word.
-    #[doc(alias = "gm_80162968")]
+    /// `gm_80162968` (aliased with the challenger approach's exit): seconds added to the
+    /// single-player time, held at the largest word.
     pub fn add_1p_time(&mut self, seconds: u32) {
         let s = &mut self.game.game_data.thing.save_data;
         let t = s.x1A3C as u32;
@@ -881,7 +885,7 @@ impl Running<'_> {
     /// `fn_80188550`: the computer players' count changed to `n`: the ones it adds join
     /// (`gm_8016EDDC`) in the next free slots, as the match started them; the ones it takes
     /// leave from the last (`fn_8016EF98`).
-    #[doc(alias = "fn_80188550")]
+    // Ports `fn_80188550`; aliased once a check reaches it (a player joining or leaving).
     fn training_set_count(&mut self, n: i32) {
         let current = self.game.training.count;
         if n == current {
@@ -922,7 +926,7 @@ impl Running<'_> {
     /// `fn_80188644`, the menu's reset: one computer player, the human facing right at the
     /// first spawn point with no damage, the first computer player back as it started, and
     /// every option at its first value but the speed's.
-    #[doc(alias = "fn_80188644")]
+    // Ports `fn_80188644`; aliased once a check reaches it (a player joining or leaving).
     fn training_reset(&mut self) {
         let saved = self.game.training.count;
         self.game.training.count = 1;
@@ -950,7 +954,6 @@ impl Running<'_> {
     /// in slot `slot` if it's empty: its slot set up from `p`, placed at its spawn point
     /// facing the stage's centre, its fighters made and entered, its damage display and
     /// name tag shown. Whether it joined.
-    #[doc(alias = "gm_8016EDDC")]
     pub fn vs_add_player(&mut self, slot: i32, p: &PlayerInitData) -> bool {
         let _ = (slot, p);
         crate::game::code::unported_call("gm_8016EDDC (a player joining a match)")
@@ -958,14 +961,12 @@ impl Running<'_> {
 
     /// `fn_8016EF98`: a player leaves the match in progress (not in a single-player match):
     /// its damage display, its fighters, its slot emptied. Whether it left.
-    #[doc(alias = "fn_8016EF98")]
     pub fn vs_remove_player(&mut self, slot: i32) -> bool {
         let _ = slot;
         crate::game::code::unported_call("fn_8016EF98 (a player leaving a match)")
     }
 
     /// `Player_800328D4`: the slot's fighters moved to `pos` and reset there.
-    #[doc(alias = "Player_800328D4")]
     fn player_move_to(&mut self, slot: i32, pos: Vec3) {
         let _ = (slot, pos);
         crate::game::code::unported_call("Player_800328D4 (the training menu's reset)")

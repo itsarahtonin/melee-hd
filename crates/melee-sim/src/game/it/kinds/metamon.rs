@@ -65,11 +65,11 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 }
 
 /// `it_802D306C`: nothing (its landing in its first two states).
-#[doc(alias = "it_802D306C")]
+// Ports `it_802D306C`; aliased once a check reaches it (Ditto landing again).
 pub fn landed_nothing(_r: &mut Running, _gobj: GObjId) {}
 
 /// Forgets a GObj going away, `itMetamon_Logic19_EvtUnk` (`it_8026B894`).
-#[doc(alias = "itMetamon_Logic19_EvtUnk")]
+// Ports `itMetamon_Logic19_EvtUnk`; aliased once a check reaches it (a fighter's unload).
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
@@ -100,17 +100,17 @@ pub fn coll0(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itMetamon_UnkMotion1_Anim`: as its first state's.
-#[doc(alias = "itMetamon_UnkMotion1_Anim")]
+// Ports `itMetamon_UnkMotion1_Anim`; aliased once a check reaches it (nothing enters state 1).
 pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
     !lib2725::is_animating(r.game, gobj)
 }
 
 /// `itMetamon_UnkMotion1_Phys`: nothing.
-#[doc(alias = "itMetamon_UnkMotion1_Phys")]
+// Ports `itMetamon_UnkMotion1_Phys`; aliased once a check reaches it (nothing enters state 1).
 pub fn phys1(_r: &mut Running, _gobj: GObjId) {}
 
 /// `itMetamon_UnkMotion1_Coll`: as its first state's.
-#[doc(alias = "itMetamon_UnkMotion1_Coll")]
+// Ports `itMetamon_UnkMotion1_Coll`; aliased once a check reaches it (nothing enters state 1).
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
     ground::fall(r, gobj, landed_nothing);
     false

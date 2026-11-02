@@ -531,10 +531,12 @@ impl Comparer<'_> {
         self.check("it_804D6D00", "value", g.x6d00, x6d00);
         // The last Ditto, which nothing reads: compared while it's out (past its end both
         // name its freed GObj, whose slot the next object can take).
+        let slots = self.game.world.gobjs.slots();
         if let Some(d) = g.last_metamon
+            && (d.0 as usize) < slots.len()
             && !self.game.world.gobjs.is_free(d.0)
             && matches!(
-                self.game.world.gobjs[d.0].user_data,
+                slots[d.0 as usize].user_data,
                 Some(melee_sim::game::state::UserData::Item(_))
             )
         {

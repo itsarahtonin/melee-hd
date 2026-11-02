@@ -476,8 +476,10 @@ pub fn call(
             r.attract_match_start();
             Some(super::code::Val::None)
         }
-        // `fn_801B1F6C`, Training's pause hook, does nothing.
-        training::ON_PAUSE => Some(super::code::Val::None),
+        training::ON_PAUSE => {
+            training::on_pause();
+            Some(super::code::Val::None)
+        }
         _ => camera_mode::call(r, f, args).or_else(|| stamina::call(r, f, args)),
     }
 }

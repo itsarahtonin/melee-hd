@@ -1098,7 +1098,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B1EEC`: back to the select, or the stage kept for the match and its banks.
-    // Ports `gm_801B1EEC`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B1EEC")]
     pub fn training_exit_sss(&mut self) {
         let sss = &self.game.one_player.training_sss;
         if sss.start_game == 0 {

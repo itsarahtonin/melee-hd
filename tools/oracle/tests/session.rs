@@ -1961,3 +1961,25 @@ fn master_hand_in_debug_vs() {
         );
     }
 }
+
+/// Training (milestone 6's task 13), from power-on with the heap: task 1's
+/// `m6-oracle/training` (the select, the stage select, the match with some play) and
+/// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
+/// Pokémon drawn from Training's list, then each other item dropped), each to its trace's
+/// end; and `m6-training/tr-count`, which stops where the first computer player joins the
+/// match (`gm_8016EDDC`, not ported).
+#[test]
+fn training_from_its_select() {
+    if let Some(out) = scripted_session("m6-oracle", "training", &["--all", "--heap"]) {
+        assert!(out.contains("3748 ticks compared, no difference"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-training", "tr-items", &["--all", "--heap"]) {
+        assert!(out.contains("6776 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-training", "tr-count", &["--all", "--heap"]) {
+        let want = "1853 ticks compared, no difference; stopped in tick 1853: \
+                    gm_8016EDDC (a player joining a match) isn't ported";
+        assert!(out.contains(want), "{out}");
+    }
+}

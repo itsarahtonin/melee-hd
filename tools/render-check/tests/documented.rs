@@ -29,9 +29,9 @@ use common::{
     RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
     SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
     SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in, reflection, scaled,
-    why,
+    TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY,
+    UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -163,6 +163,14 @@ frames!(M6_TRAINING;
 );
 frames!(M6_TOUR_CLEARED;
     m6_tour_cleared_1250 1250,
+);
+// Training's menu over its match (`m6-training`): the item option on the Poké Ball with its
+// name (`tr-items` 2250) and the computer player's behavior set to walk (`tr-cpu` 2230).
+frames!(TR_ITEMS;
+    tr_items_2250 2250,
+);
+frames!(TR_CPU;
+    tr_cpu_2230 2230,
 );
 // The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
 // Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase

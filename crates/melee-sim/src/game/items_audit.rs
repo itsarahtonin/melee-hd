@@ -369,7 +369,7 @@ const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fig
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
-const DITTO: &str = "Ditto, whose weight in the Poke Ball's table is 0 (ItCo.usd): only an event list, training or the debug menu picks it";
+const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload at the scene's end); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper, food, Home-Run Bat or bob-omb (it_8026BE84): the bob-omb rain of a sudden death, which the player doesn't play, Home-Run and the All-Star rest area (Big Blue's flying platforms make only the five kinds ported)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
@@ -475,11 +475,9 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
     ("melee/ft/ft_0BF0", DEMO),
     ("it_8027A9B8 (an event", POKEMON_MODES),
-    ("it_8027A780 (training", POKEMON_MODES),
     ("fn_8017DF28", ONE_PLAYER),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
-    ("ftLib_CountFighters (Ditto's check)", DITTO),
     ("grZakoGenerator_801CAC14 (a coin)", COINS),
     ("grZakoGenerator_801CACB8 (a coin)", COINS),
     ("ftLib_GetTeam on an item", ATTACKER),
