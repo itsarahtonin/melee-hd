@@ -109,6 +109,7 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::bigblueroute::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == 0x8020_B85C => super::zebesroute::check_shadow_render(),
             Some(f) if f.0 == 0x8020_1F4C => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::shrine::check_shadow_render(self.game, self.data, pos, Some(j))

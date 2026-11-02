@@ -50,6 +50,7 @@ pub mod venom;
 pub mod yorster;
 pub mod zako;
 pub mod zebes;
+pub mod zebesroute;
 
 pub use vars::{
     BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
@@ -123,6 +124,8 @@ pub const GR_KIND_BIGBLUE: i32 = 19;
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
 /// `Gr_Kind_BigBlueRoute`, the F-Zero race.
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
+/// `Gr_Kind_ZebesRoute`, Brinstar's escape.
+pub const GR_KIND_ZEBESROUTE: i32 = 33;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
@@ -265,6 +268,9 @@ pub struct Globals {
     /// The race's `yakumono_param` (`grpushon.c`): the spikes' and lines' hits, the trophy
     /// slot's odds, the goals' scores and the race's times.
     pub pushon_yakumono: Option<DataRef>,
+    /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
+    /// timer and the trophy slot's odds.
+    pub zebesroute_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -503,6 +509,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
         (GR_KIND_PUSHON, 1) => VarsKind::Map,
         (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
+        (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
