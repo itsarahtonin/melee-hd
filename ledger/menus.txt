@@ -36,11 +36,6 @@ melee/gm/gmstaffroll	gated	the single-player modes', which only the 1P list's ga
 melee/gm/gmtrainingmode	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/mn/mnhyaku	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi0801	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1101	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1201v1	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1201v2	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/vi/vi1202	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 lbTime_8000AEE4	gated	named only by the single-player modes' code (gm_801B9DD8): the single-player modes', which only the 1P list's gated entries lead to
 lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
