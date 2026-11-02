@@ -75,6 +75,8 @@ pub(super) const CPU_FRAME_SP: u32 = 0x804E_EAB0;
 /// The frame sizes of `ftCo_800B3900` and `ftCo_800B2AFC`, the decision by computer kind.
 pub(super) const CPU_FRAME: u32 = 0x20;
 pub(super) const DECIDE_FRAME: u32 = 0xC8;
+/// The frame size of `ftCo_800B04DC`, training's computer kind 2.
+const EVADE_FRAME: u32 = 0x58;
 
 /// `Fighter_x1A88_xFC_t`'s size and how many the history holds.
 const INPUT_SIZE: u32 = 0x1C;
@@ -115,7 +117,7 @@ impl Running<'_> {
     }
 
     /// A random float (`HSD_Randf`) as a register holds it.
-    fn randf(&mut self) -> f64 {
+    pub(super) fn randf(&mut self) -> f64 {
         reg(self.game.objs.rng.draw_f32())
     }
 
@@ -320,11 +322,104 @@ impl Running<'_> {
                 self.game.fighters[f.0].cpu.x18 = 0;
                 Leftover::Unknown("ftCo_800B2AFC")
             }
-            k @ (0..=3 | 7..=10 | 13 | 14 | 17..=29) => {
+            // Training's: stop where it stands (0), walk to its spot (1) or jump (3), the
+            // jump and the walk the behavior pick's.
+            k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
+            2 => self.cpu_decide_evade(f),
+            k @ (7..=10 | 13 | 14 | 17..=29) => {
                 unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
             }
             _ => self.cpu_decide_vs(f),
         }
+    }
+
+    /// Training's computer kinds 0, 1 and 3 (`ftCo_800B2AFC`'s cases): no target, the
+    /// destination timer stopped when the behavior changed, and unless it's being hit
+    /// (behavior 4), its destination the floor under it (kind 1: under its spot, `x98`, or
+    /// where it is when there's none), then the behavior pick, whose r5 it leaves.
+    fn cpu_decide_training(&mut self, f: FighterId, walk: bool) -> Leftover {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = false;
+        // `ftCo_CpuClearTargetModes`.
+        c.xF9_b2 = false;
+        c.xF9_b4 = false;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = false;
+        if c.x18 != c.x20 && c.x18 != c.x1C {
+            c.x60 = 0;
+        }
+        if c.x18 != 4 {
+            c.xFA_b2 = false;
+            let fpp = &self.game.fighters[f.0];
+            let at = if walk { fpp.cpu.x98 } else { fpp.cur_pos };
+            let below = mem(fp::fsubs(reg(at.y), 1000.0));
+            let above = mem(fp::fadds(10.0, reg(at.y)));
+            match self.cpu_floor(at.x, above, at.x, below) {
+                Some(p) => self.cpu_set_destination(f, p.x, p.y, 5.0),
+                None if walk => {
+                    let pos = self.game.fighters[f.0].cur_pos;
+                    self.cpu_set_destination(f, pos.x, pos.y, 5.0);
+                }
+                None => {}
+            }
+        }
+        // The pick reads r31, here the fighter's pointer, as its DI switch.
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
+    }
+
+    /// Training's computer kind 2, `ftCo_800B04DC`: its target the nearest enemy, a
+    /// healing item to go for unless it holds another or is entering, a stage enemy, and
+    /// when it may act on the ground within 50 of its target, the island end farthest from
+    /// it as its destination; then the behavior pick, whose r5 it leaves.
+    #[doc(alias = "ftCo_800B04DC")]
+    fn cpu_decide_evade(&mut self, f: FighterId) -> Leftover {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = true;
+        c.xF9_b2 = false;
+        c.xF9_b4 = false;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = true;
+        let target = self.cpu_find_target(f);
+        self.game.fighters[f.0].cpu.x44 = target;
+        let fpp = &self.game.fighters[f.0];
+        let holds_other = fpp.item_gobj.is_some_and(|g| {
+            let it = super::super::it::item_of(self.game, g);
+            !self.cpu_item_heals(it)
+        });
+        let item = if holds_other || fpp.x2168 != 0 {
+            None
+        } else {
+            self.cpu_healing_item_target(f)
+        };
+        self.game.fighters[f.0].cpu.x4C = item;
+        let x50 = self.cpu_enemy_item_target(f);
+        self.game.fighters[f.0].cpu.x50 = x50;
+        if self.cpu_should_act(f)
+            && let Some(t) = self.game.fighters[f.0].cpu.x44
+            && self.game.fighters[f.0].ground_or_air != GA_AIR
+        {
+            let (me, them) = (
+                self.game.fighters[f.0].cur_pos,
+                self.game.fighters[t.0].cur_pos,
+            );
+            let dy = fp::fsubs(reg(me.y), reg(them.y));
+            let dx = fp::fsubs(reg(me.x), reg(them.x));
+            let dist = crate::math::sqrt(mem(fp::fmadds(dx, dx, fp::fmuls(dy, dy))));
+            let far = reg(dist) > 50.0;
+            if !far && let Some((x, y)) = self.cpu_far_island_end(f, them.x, them.y) {
+                self.cpu_set_destination(f, x, y, 5.0);
+            }
+        }
+        // The pick reads r31, here the computer data's pointer, as its DI switch.
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - EVADE_FRAME;
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
 
     /// Nana's decision, `ftCo_800B101C`: with Popo gone she acts alone; else she records his
@@ -660,8 +755,8 @@ impl Running<'_> {
             8 => self.cpu_jump_at_target(f),
             9 => self.cpu_hold(f),
             10 => self.cpu_stand(f),
-            11 => unported_call("ftCo_800AD42C"),
-            12 => unported_call("ftCo_800AD54C"),
+            11 => self.cpu_hop(f),
+            12 => self.cpu_pace(f),
             13 => {
                 if self.game.fighters[f.0].item_gobj.is_some() {
                     let c = &mut self.game.fighters[f.0].cpu;

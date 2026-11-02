@@ -532,6 +532,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none in play; a save could no longer note a rare Pokémon never seen.
 - **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`rare`, `release`); the decomp's `it_279C.c`.
 
+### Training's Pokémon list names Ditto, whom its draw can't pick
+
+- **Where:** `it_8027A780` (a draw from a list of Pokémon) with `common_pokemon`, the list `it_8027AB64` takes in Training (`gm_8018841C`), `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`, `COMMON_POKEMON`).
+- **Defect:** the list names Ditto (`It_PKind_Metamon`), but the draw weighs each entry by the Poké Ball's table, where Ditto's weight is 0 (`ItCo.usd`), and takes the first entry whose running total passes the draw strictly (`rand_int < accum`), so an entry of weight 0 never comes out. Ditto's entry is dead; an event's list, drawn the same way (`it_8027A9B8`), can't pick it either, so only the debug menu's Pokémon brings Ditto out of a ball.
+- **Effect:** Training's Poké Balls never let Ditto out, though its list offers it.
+- **melee-hd:** modeled: the draw runs over the list as the original does.
+- **Fix:** give Ditto a weight in the table, or drop it from the list.
+- **Fix impact:** a weight changes every VS match's Pokémon draws (gameplay, replays and Slippi peers desync); dropping the entry changes Training's draws only.
+- **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`); the decomp's `it_279C.c`; the items audit's `DITTO` reason.
+
 ### Item creation clears one coordinate three times
 
 - **Where:** `Item_80267AA8` (a new item's variables), `crates/melee-sim/src/game/it/item.rs` (`init_vars`).

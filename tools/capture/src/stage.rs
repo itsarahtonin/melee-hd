@@ -955,7 +955,7 @@ impl Comparer<'_> {
         if !self.match_statics_live() {
             return;
         }
-        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        use melee_sim::game::gm::machine::{is_match_scene, scene_kind};
         let m = mem(self.mem);
         let info = sym("stage_info");
         game.stage_info.compare(&m, info, "stage_info", self);
@@ -1482,10 +1482,7 @@ impl Comparer<'_> {
         // spawner's process (`fn_801CADBC`, made with them) lives. The enemy table's pointer
         // (`x0`, into the stage's file) is the same: the file goes with the scene, and the
         // next stage's start writes the pointer before anything reads it.
-        let in_match = matches!(
-            scene_kind(game.machine.scene_info),
-            Some(GS_VS | GS_SUDDEN_DEATH)
-        );
+        let in_match = is_match_scene(scene_kind(game.machine.scene_info));
         let started = game
             .world
             .procs
