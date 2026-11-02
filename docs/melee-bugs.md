@@ -188,6 +188,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes Bowser's up special landing; breaks replay and Slippi compatibility.
 - **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 89); `crates/melee-sim/src/game/ft/koopa/special_hi.rs:195`.
 
+### Master Hand: creation marks bones past his parts block
+
+- **Where:** `ftParts_80074E58` (`ftparts.c`), from `Fighter_Create` for Master Hand (and Crazy Hand); `crates/melee-sim/src/game/ft/parts.rs` (`init_parts`, `stray_bone_bit`).
+- **Defect:** the function sets flag bits on the bones of `TransN`, `XRotN`, `YRotN`, `HipN`, `TransN2` and part 0x35 by `ftParts_GetBoneIndex`, unchecked. The hands' parts table has no joint for some of them (`part_to_joint` holds 0xFF), so it sets bit 3 (and bit 4 for `TransN`) of byte 8 of "bone" 255, 0xFF8 bytes into a parts block of 0x8C0.
+- **Effect:** a stray bit 0x738 bytes past the block's end: in the next block of the fighters' parts pool (another fighter's bone 115, which no character has, so nothing reads it) or in free memory. None observable in the debug VS matches traced (`m6-oracle/mh-fd` compares clean through creation).
+- **melee-hd:** modeled: the bit goes to the fighter's parts block that holds that address, or into the heap's image where none does.
+- **Fix:** skip a part the table lacks (0xFF).
+- **Fix impact:** none on gameplay.
+- **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.
@@ -271,12 +281,12 @@ When porting shows that the original game does something wrong, keep the behavio
 ### Kirby: Giga Bowser's copy reads a copy file nothing loads
 
 - **Where:** `ftKb_SpecialN_800F16D0` (the copy's items registered, `case Ft_Kind_GKoops`), from `ftKb_SpecialN_800F1BAC`; `crates/melee-sim/src/game/ft/kirby/copy.rs` (`kb_register_copy_items`).
-- **Defect:** Giga Bowser has no copy file (`ftKb_Init_803CA9D0[31]` is empty), so the copy loading at the match's start (`ftKb_SpecialN_800EED50`) leaves his copy's data null; taking his copy then registers its flame from that data (`hats[30]->hat_dynamics[0]`), reading through the null pointer. His hat is Bowser's (`ftKb_SpecialN_800EFD64`), whose data is loaded only when Bowser is in the match.
-- **Effect:** a Kirby who swallows Giga Bowser reads address 0x18, which faults on the console. VS can't put Giga Bowser in a match.
-- **melee-hd:** stops (the port panics, a copy without its data), where the original faults.
+- **Defect:** Giga Bowser has no copy file (`ftKb_Init_803CA9D0[31]` is empty), so the copy loading at the match's start (`ftKb_SpecialN_800EED50`) leaves his copy's data null (`ft_80459B88`'s slot 31, at 0x7C); taking his copy then registers its flame from that data's first article, reading the word at address 0xC through the null pointer (`lwz r3, 0x7c(r5)`, `lwz r3, 0xc(r3)`). His hat is Bowser's (`ftKb_SpecialN_800EFD64`), whose data is loaded only when Bowser is in the match.
+- **Effect:** a Kirby given Giga Bowser's copy reads address 0xC, which faults on the console. No swallow gives it: Giga Bowser's creation (`ftGk_Init_OnLoad`) sets `x222A_b0`, which every grab box skips (`ftColl_80078A2C`), so Kirby's inhale passes over him; task 7's `kb-gk` session has Kirby's inhale box on Giga Bowser's grabbable hurtboxes and nothing caught ([the oracle](oracle.md#sessions)). The read is left to a Kirby that starts a match with the copy, which only a single-player setup gives (`gm_16A2`'s `Player_SetUnk4D` from the setup's fighter list, and the cutscene `vi0501`'s Kirbys); whether any setup lists Giga Bowser there is for the single-player modes' tasks to find. VS can't put Giga Bowser in a match.
+- **melee-hd:** stops by name (`Melee crashes: Kirby's copy of Giga Bowser has no copy data…`), as a console's game stops there (design call 7).
 - **Fix:** give Giga Bowser's copy Bowser's copy data, or load a copy file for him.
 - **Fix impact:** changes only the single-player modes, where he appears.
-- **Source:** `crates/melee-sim/src/game/ft/kirby/copy.rs:131`.
+- **Source:** `crates/melee-sim/src/game/ft/kirby/copy.rs:131`; the assembly listing of `ftKb_SpecialN_800F16D0` (`build/GALE01/asm/melee/ft/kinds/ftKirby/ftkirby.s`).
 
 ### Kirby: Jigglypuff's copy keeps the roll's look when hit
 
@@ -964,6 +974,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none unless a leftover matched.
 - **Source:** [engine notes, a session's heap leftovers](engine.md#uninitialized-values).
 
+### The race's added lights read their falloff past a lone float
+
+- **Where:** `grPushOn_80218ED4` and `grPushOn_80218FC0` (`grpushon.c`), loading `grPushOn_803E7B74` and `grPushOn_803E7B90` through `HSD_LObjLoadDesc` (`LObjLoad`'s point case); in melee-hd `gr::pushon::add_light` (`FOLLOWER`, `SECOND`) and `hsd::lobj::load_static_point`.
+- **Defect:** each descriptor is a point light (flags 6 and 0xA) whose parameters point at one float, 16 (`grPushOn_804D4934`, `grPushOn_804D4948`, a value a shininess would take), but `LObjLoad` reads a point light's parameters as an `HSD_LightPointDesc` there: the float as the reference brightness, then the next two words of the small data as the reference distance and the distance function. Those words are the assertion strings that follow: the hidden follower gets the distance 0x6C6F626A (`"lobj"`, about 1.2e27) and the function 0x2E680000 (`".h"`), the specular light the distance 0 and the function 0x6A6F626A (`"jobj"`).
+- **Effect:** none observable: `GXInitLightDistAttn` turns distance attenuation off for a reference brightness of 1 or more, so both lights have none whatever the other two words hold, and the follower is never shown ([Unsure](#unsure)). The specular light keeps its allocation's shininess.
+- **melee-hd:** modeled: the two lights load the words the original reads (`AddedLight`), and the session comparer checks each light's parameters.
+- **Fix:** give each descriptor an `HSD_LightPointDesc` (or set its `attnflags` with raw coefficients), and the shininess where it was meant.
+- **Fix impact:** none on gameplay; the race's lighting could change with a real falloff.
+- **Source:** `grpushon.c:180` and `:516` (the descriptors), `lobj.c:961` (`LObjLoad`'s point case), the executable's small data at 0x804D4930 to 0x804D4950; `crates/melee-sim/src/game/gr/pushon.rs` (`AddedLight`).
+
 ## Camera
 
 ### Brinstar's bubbles play their sound through the stage's object as if it were its `Ground`
@@ -978,20 +998,20 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ### The cutscene camera's orbit reads unwritten stack slots
 
-- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), `crates/melee-sim/src/game/camera.rs`.
-- **Defect:** it eases only the parts of the orbit its script set and reads the others (pitch, yaw or distance) from stack slots it never wrote. Master Hand's and Crazy Hand's entrances set orbits that way.
-- **Effect:** not recorded.
-- **melee-hd:** stops, until a probe of those slots in play decides the model.
+- **Where:** `Camera_8002E234` (the cutscene camera's orbiting eye), from `Camera_8002E490` (its frame) and `Camera_8002EF14` (its jump); `crates/melee-sim/src/game/camera.rs` (`script_eye_step`, `orbit_leftover`).
+- **Defect:** it eases only the parts of the orbit its script set (`x35C`'s bits 0x80 distance, 0x40 pitch, 0x20 yaw) and reads the others from its stack words `sp+0x8`, `sp+0x10` and `sp+0xC`, which nothing in it writes. Master Hand's entrance sets orbits that way (a distance and yaw without a pitch, then a yaw alone before a jump); Crazy Hand's does too.
+- **Effect:** the words hold what earlier calls at the same stack depth left in the tick. ssbm-rs's probe of the entrance (`research/m6-master-hand`, `m6-oracle/mh-fd`): on the frame's path the pitch reads a back chain, `804EEA78` (`HSD_JObjReqAnimByFlags`'s) or `804EEA70` (`ftBossLib_GetFighterGObj`'s, once the interest follows Master Hand's waist through `ftMh_MS_343_80151428`), tiny negative denormals as angles; on the jump's path the pitch reads 2 (the collision's register save, `mpColl_80046904`) or `804EE988`, and an unset distance reads `0x43300000` (176.0, `mpColl_8004ACE4`'s integer conversion), so the eye jumps to 176 units away for a frame. The eye's place reaches the fighters' offscreen flags and screen positions and the lights' view vectors.
+- **melee-hd:** modeled for the writers the probe found, by caller and by whether the interest's callback ran (`orbit_leftover`); any other unset part stops by name.
 - **Fix:** keep the parts the script didn't set from the camera's current orbit.
-- **Fix impact:** cutscene camera only; not recorded whether gameplay reads it.
-- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values) (line 54); `crates/melee-sim/src/game/camera.rs:2920`.
+- **Fix impact:** the cutscene camera and what reads its place (the offscreen flags); no replay reaches a cutscene camera.
+- **Source:** ssbm-rs's `local/research/m6-master-hand/README.md`; `crates/melee-sim/src/game/camera.rs` (`orbit_leftover`).
 
 ### The background color's alpha is unset
 
 - **Where:** `Camera_GetBackgroundColor`, `crates/melee-sim/src/game/camera.rs` (`background_color`).
 - **Defect:** it returns red, green and blue and leaves alpha unset.
-- **Effect:** none observable in the checks (only red, green and blue are compared).
-- **melee-hd:** returns the three channels.
+- **Effect:** the Star Fox cutscene keeps the whole color as its erase color (`erase_colors_vi0601`), alpha included: a stack byte, 48 in `m6-oracle/cutscene`. It never reaches the screen: the erase (`HSD_EraseRect`, color and depth on, alpha update off, a logic-op copy) writes no alpha.
+- **melee-hd:** returns the three channels; the cutscene's alpha is 0, and the comparer leaves it out with that proof ([engine notes](engine.md#uninitialized-values)).
 - **Fix:** set the alpha.
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/camera.rs:1453`; `tools/leaf-check/tests/camera.rs:1322`.
@@ -1437,6 +1457,16 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ## Results and records
 
+### A boss winning a debug VS match crashes the results screen
+
+- **Where:** `fn_80176F60` and `fn_80176BF0` (`gmresult.c`), the results screen's flames and winner's emblem; `crates/melee-sim/src/game/gm/results_scene.rs` (`results_flames`).
+- **Defect:** the emblem is looked up by the winner's character (`fn_80176BF0_inline`); a boss (Master Hand, Crazy Hand and the others the debug menu's Versus page can field) has none, so the lookup returns no joint, and `fn_80176F60` reads its DObj (`data->x20->u.dobj`) through null.
+- **Effect:** after a debug VS match the hand wins (every human out of stocks), the results screen faults reading address 0x18 as it opens (ssbm-rs: an unmapped read in `fn_80176F60`, `m6-master-hand/mh-1p` and the other five Master Hand sessions). A no-contest shows the eleventh emblem and doesn't crash (`m6-oracle/mh-fd`).
+- **melee-hd:** stops by name where the original faults ("Melee crashes: the results' winner (character 26) has no emblem", design call 7).
+- **Fix:** skip the emblem, or take the no-contest one, for a winner without one.
+- **Fix impact:** none on gameplay; only debug matches reach it (a single-player match with a boss ends in its own scenes).
+- **Source:** `gmresult.c` (`fn_80176F60`, `fn_80176BF0`).
+
 ### A results pose's fighter takes an unset byte of its allocation info
 
 - **Where:** `ftDemo_CreateFighter` (with `initFighter`'s `plAllocInfo` inlined), `crates/melee-sim/src/game/ft/demo.rs`.
@@ -1526,6 +1556,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** add in 64 bits, or test before adding.
 - **Fix impact:** the records' values past the largest word.
 - **Source:** `gm_1601.c`'s `fn_80161C90` and `gm_8016247C`; `results-sessions/ko-max`, whose card after compares.
+
+### The select's 1P totals wrap where the code means to hold them
+
+- **Where:** `gm_80162C48`, `gm_80162E44` and `gm_80163040` (Classic's, Adventure's and All-Star's high scores summed over the 25 characters), `gm_801631F0` (the Home-Run Contest's distances), `gm_801634D4` (Target Test's times), which the one-door select shows (`mnCharSel_8025C020`); `crates/melee-sim/src/game/gm/one_player.rs` (`high_score_1p_total`, `homerun_record_total`, `target_time_total`).
+- **Defect:** each running sum is tested against `0xFFFFFFFF` (`(u32) (sum + score) > -1U`) to hold it there; an unsigned word is never over the largest one, so the sums wrap, and the scores' total is then printed as a signed `int` (`"%09d"`), negative past 2^31. Target Test's adds its times with no test at all.
+- **Effect:** none in play: 25 high scores can't reach two billion. Only an edited save shows a wrapped or negative total.
+- **melee-hd:** modeled: the sums wrap and the scores' total prints as signed.
+- **Fix:** add in 64 bits and hold the total at the largest value.
+- **Fix impact:** the select's totals for edited saves.
+- **Source:** `gm_1601.c`'s `gm_80162C48`, `gm_80162E44`, `gm_80163040`, `gm_801631F0`, `gm_801634D4`.
 
 ### The challenger approach's screen counts its ticks in 16 bits
 
@@ -1631,6 +1671,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix:** act only on left and right, or start the entry from the save.
 - **Fix impact:** none on gameplay; the debug menus' language changes.
 - **Source:** `if_2FFC.c` (`un_80300218`), `textlib_1.c` (`un_80303FD4`'s `initEntries`).
+
+### Go to Kinoko's arena brings its opponents in at scale 0
+
+- **Where:** `gm_801674C4` (`gm_1601.c`, the adventure route's arena: the single-player setup `lbl_8046B488` for the opponents who join), then `fn_8016A4C8` (`gm_16A2.c`, each joining opponent's player block, its model scale from `lbl_8046B488.x1C`) and `ftCo_CalcYScaledKnockback` (`ftchangeparam.c`); in melee-hd `crate::game::gm::start_stage_event` (not ported) and `ft::coll::scaled_by_height`.
+- **Defect:** `gm_801674C4` fills the setup's counts, kinds and costumes but not its model scale or its attack and defense ratios (`x1C`, `x14`, `x18`); the single-player modes' own setups write them first (`gm_8016A22C`'s 1.0, `gm_8016A414`), but the debug menu's Otoguro test (its Go to Kinoko: debug VS on stage 59) runs no such setup, so in a session that played no single-player match before they hold the static's zeros.
+- **Effect:** when Fox reaches the route's arena, its first opponent joins with model scale 0, and `Fighter_Create`'s attributes at that scale (`ftCo_800D105C`, `ftCo_800CF6E8`) fail `scale != 0.0F` (`ftchangeparam.c`, line 30): the game halts. Recorded in ssbm-rs as `m6-mk-route/mk-run` (the assertion at field 4634, from `fn_8016A4C8` under `gm_Scene_Vs_OnFrame`). Debug only: on a retail disc the arena is reached only from Adventure, whose setup writes the scale.
+- **melee-hd:** stops before it: `gm_801674C4`'s horde setup isn't ported (milestone 6's task 2 ports the single-player setups); `scaled_by_height` asserts as the original does, so once it is, the session stops where the console halts.
+- **Fix:** set `x1C`, `x14` and `x18` (1.0) in `gm_801674C4`, or in the Otoguro test's setup.
+- **Fix impact:** none on gameplay; the debug test's arena would play.
+- **Source:** `gm_1601.c:3529` (`gm_801674C4`), `gm_16A2.c:641` and `:679` (the writes of `x1C`), `gm_16A2.c:836` (`Player_SetModelScale(spawn_slot, gp->x1C)`); ssbm-rs's log of `mk-run`'s recording ("assertion "scale != 0.0F" failed in ftchangeparam.c on line 30", stack `ftCo_800CF6E8`, `ftCo_800D105C`, `Fighter_Spawn`, `Fighter_Create`, `Player_80031AD0`, `fn_8016A4C8`).
 
 ### The Hanyu character select reads KO counts through a null pointer
 
@@ -1915,6 +1965,9 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position. The lights the game sets up have one: every infinite, point and spot light descriptor in every archive on the disc has a position WObj (509, 328 and 20 of them); of the executable's own descriptors that milestone 5's scenes load, the debug menu's infinite light (`if_2FF2.c`'s `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes it over before any setup; Adventure's static point lights (`grPushOn_803E7B74`, `grPushOn_803E7B90`, `grshrineroute.c`'s two) get one from `HSD_LObjSetPosition` right after loading; and no code takes a light's position WObj away. melee-render puts such a light at the origin rather than at what melee-sim left: neither is the stack's word, and nothing reaches it | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown); `hsd::lobj`'s tests `lights_on_the_disc` and `executable_lights` (the proof, against the disc); [the player](player.md), **Spot lights** |
 | A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
 | IK with the effector on the chain's root | `resolveIKJoint1`, `hsd/jobj.rs` | Reads two registers and two stack vectors it never set; no joint on the disc has an IK role | [engine notes](engine.md#uninitialized-values) (line 52); `crates/melee-sim/src/hsd/jobj.rs:1573` |
+| A cutscene motion file another motion names | `ftMr_Init_GetMotionFileString`, `ftLg_Init_GetMotionFileString`, `ftKb_Init_GetMotionFileString`, `ftGk_Init_GetMotionFileString`, `game/ft/demo.rs` (`motion_symbol`) | Their switches set the table's index only for their cutscenes' motions (9 and 10, 11 and 14, 15), and index the table with the unset register otherwise; `ftDemo_SetArchiveData` asks only for those (`Player_80036E20`'s 4 to 8) | `crates/melee-sim/src/game/ft/demo.rs` (`motion_symbol` panics) |
+| A demo pose a kind's callback doesn't know | `ftMr_Init_UnkDemoCallbacks0`, `ftLg_Init_UnkDemoCallbacks0`, `ftKb_Init_UnkDemoCallbacks0`, `ftGk_Init_UnkDemoCallbacks0`, `game/ft/demo.rs` (`cutscene_anims`) | Each sets the demo animations' range only for its cutscene poses, and `ftDemo_CreateFighter` reads the range from its unset stack slots otherwise; the cutscenes make each kind only in its poses | `crates/melee-sim/src/game/ft/demo.rs` (`cutscene_anims` panics) |
+| The race's lights without a position, or fewer than three | `grPushOn_80218888`, `gr/pushon.rs` (`proc_lights`) | Measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The race's fighter lights all have positions, and there are ten | `crates/melee-sim/src/game/gr/pushon.rs` (`position_of`, the count's assertion) |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
 | The rumble screen's name rows on an empty slot | `mnVibration_CreateNameRow`, `game/mn/vibration.rs` | A row's slot is the scroll plus the row, not the row's name: with a gap among the save's names, `GetNameText` hands `HSD_SisLib_803A6B98` a null format. The game keeps names packed (`DeleteName` moves them up), so only an edited save could leave a gap | `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_name_row`) |
@@ -1990,9 +2043,12 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A swap that fails as it starts | `fn_802545C4` (`mnsnap.c`, state 11), `game/mn/snap.rs` (`album_state_moving`) | Tests the swap's start for 8 instead of busy, so a list that fails at its start with another result (a mount that finds no card, the card pulled since the pad alarm's last probe) is still stepped until it isn't busy, the queue's next call running none; nothing pulls a card between the alarm's probe and the move's A in any session (melee-hd stops) | `crates/melee-sim/src/lb/snap_read.rs` (`snap_task_step`) |
 | A broken snapshot's stream | `hsd_803B5EA0`, `hsd_803B5D70`, `hsd_803B5C4C`, `hsd_803B6BE4` (`hsd_3B5C.c`), `hsd/jpeg_decode.rs` | A run of zeros past a block's end writes coefficients past its 64, taking places from the DC tables that follow the zigzag order: into the last DCs, then past the work area; a value size of 0 (no code in 16 bits) reads bits until the stream ends; the bit reader looks at the byte after a 0xFF, and the markers' scan at the halfword on the stream's last byte, before testing the stream's end. The card's checksums keep a snapshot's bytes as HAL's encoder wrote them, so only a hand-made file reaches it (melee-hd models the DCs and stops past them) | `crates/melee-sim/src/hsd/jpeg_decode.rs` (`set_coef`, `bits`); `tools/leaf-check/tests/jpeg_decode.rs` |
 | The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
+| A race car out with all thirty out | `grBigBlueRoute_8020C530` and `grBigBlueRoute_8020C85C`'s inline `grBigBlueRoute_SpawnRoute`, `game/gr/bigblueroute.rs` (`spawn_due`) | The pick returns -1 when every one of the thirty cars is out, and the spawn then clears a flag of entry -1, writes its speeds, lane and roll into the 44 bytes before the cars' heap block, and shows the first car with a second hurtbox item; the parameters' count (`x40`) lets out 30 after the sign's car, exactly the thirty, so the pick always finds one (melee-hd stops) | `grbigblueroute.c` (`grBigBlueRoute_SpawnRoute`'s `route_idx != -1` test comes after the flag's write); `m6-fzero-race/fz-run`'s 30 picks |
 
 ## Unsure
 
+- **The race's follower light is hidden for good.** `grPushOn_80218ED4` adds a diffuse point light hidden (`HSD_LObjSetFlags(new_lobj, 0x20)`), and the lights' process (`grPushOn_80218888`) moves it 20 from the first fighter toward the nearer lights, points it at him and sets 0x400 every frame, but nothing clears its hidden flag, so it never lights anything; it may be a light HAL turned off on purpose. melee-hd models it (`gr::pushon::proc_lights`). Source: `grpushon.c:447` and `:509`.
+- **Master Hand's grab takes its escape time from the hand.** A fighter caught by Master Hand (`ftMh_MS_388_80155A58`) gets its mash timer from `ftCo_800DA824` of the grabber, so it grows with his damage, rank and handicap rather than the victim's, as every other grab's does; it may be intended (the more he's hurt, the longer he holds). melee-hd models it (`mh_capture_enter`). Source: ssbm-rs's `ftMh_MS_388_80155A58` (`ftCommon_InitGrab(ft_1, 0, ftCo_800DA824(ft_2))`); `crates/melee-sim/src/game/ft/masterhand/grab.rs`.
 - **The size classes' old array goes back as a piece.** When the memory pieces' size classes outgrow their array, `GetMemoryEntry` (class.c) copies it into a new `HSD_MemAlloc` block and gives the old one back with `hsdFreeMemPiece`, its size rounded down to 32, not `HSD_Free`: a block of the main heap joins a size class's free list (and the class counts one more allocated, so its books balance), and the heap never gets it back. It may be intended, recycling the array's memory as a piece. melee-hd models it (`Heap::memory_entry`), and the heap's image lays the old array out as it goes (the classes' addresses). Source: the decompilation's `GetMemoryEntry`; `crates/melee-sim/src/hsd/heap.rs` (`memory_entry`).
 - **Yoshi's egg and Koopa Klaw's union words.** Yoshi's egg (`ftCo_800BBED4`) sets its shrink's frames left from `mv.co.walk.fast_anim_frame`, the same word as the frames it just set, and clears the Captain's up special's `vel.y`, the same word as its mash timer; Koopa Klaw's victim tests its struggle's frames as the Captain's `vel.y` and Whirling Fortress counts frames in a word its start clears under another name. These may be the decompilation's union names for the same intended fields rather than slips in the game's code. Source: [engine notes](engine.md#uninitialized-values) (lines 87 and 88).
 - **Popo's hammer holder.** Squall Hammer's hammer joint lean and visibility (`ftPp_SpecialS_8011F720`) runs only with a holder (`specials.x8`) that the entries clear and nothing sets, so it never runs. It may be code HAL left disabled on purpose. Source: `crates/melee-sim/src/game/ft/popo/special_s.rs:149`.

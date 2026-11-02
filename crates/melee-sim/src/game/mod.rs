@@ -43,4 +43,5 @@ pub mod state;
 pub mod structs;
 pub mod ty;
 pub mod ucf;
+pub mod vi;
 pub mod vs_match;

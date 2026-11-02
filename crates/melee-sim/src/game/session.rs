@@ -371,17 +371,24 @@ pub const FILES: &[&str] = &[
     "MnExtAll.dat",
     "SdSlChr.dat",
     "MnSlMap.dat",
+    // The single-player endings': game over's (its coin counter, turning stand and the
+    // trophy's stand) and coming soon's.
+    "GmGover.dat",
+    "GmGoCoin.dat",
+    "GmGoAnim.dat",
+    "GmRgStnd.dat",
+    "IfComSn.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
 /// test's, which [`Session::read_song`] reads as the stage or the test starts them: the
 /// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, the
 /// special messages' three, the results screen's fanfares (`ff_dk.hps` to `ff_yoshi.hps`,
-/// each character's), which the screen's entry starts, Tournament's bracket's two and the
-/// challenger approach's.
+/// each character's), which the screen's entry starts, Tournament's bracket's two, the
+/// challenger approach's, and game over's two.
 pub const SONGS: &[usize] = &[
     0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x13, 0x14,
-    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48,
+    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20,
 ];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
@@ -688,26 +695,22 @@ impl Session {
         });
         lent.give_back(&mut self.game.objs.heap);
         if std::mem::take(&mut self.game.machine.files_wanted) {
-            let (start, is_match) = Running {
+            let cutscene = Running {
                 game: &mut self.game,
                 data: &self.data,
             }
-            .scene_files_data();
-            if is_match {
-                self.read_match_files(&start, console);
+            .vi_scene_files();
+            if let Some(files) = cutscene {
+                let console = std::cell::RefCell::new(&mut *console);
+                super::vi::load_scene_files(
+                    &mut self.game,
+                    &mut self.data,
+                    &files,
+                    &mut |n| console.borrow_mut().file(n),
+                    &mut |n| console.borrow_mut().file_after(n),
+                );
             } else {
-                super::vs_match::load_fighter_files(
-                    &mut self.game,
-                    &mut self.data,
-                    &start,
-                    &mut |n| console.file(n),
-                );
-                super::vs_match::load_results_files(
-                    &mut self.game,
-                    &mut self.data,
-                    &start,
-                    &mut |n| console.file(n),
-                );
+                self.read_scene_files(console);
             }
             let lent = crate::hsd::heap::Lent::take(&mut self.game.objs.heap);
             with_feed(console, |_| {
@@ -729,6 +732,26 @@ impl Session {
         with_feed(console, |read| r.take_alarm_reads(read));
         r.begin_scene_loop();
         lent.give_back(&mut self.game.objs.heap);
+    }
+
+    /// Reads the files the VS scene about to enter loads, or the Result Test's results
+    /// screen's.
+    fn read_scene_files(&mut self, console: &mut dyn Console) {
+        let (start, is_match) = Running {
+            game: &mut self.game,
+            data: &self.data,
+        }
+        .scene_files_data();
+        if is_match {
+            self.read_match_files(&start, console);
+        } else {
+            super::vs_match::load_fighter_files(&mut self.game, &mut self.data, &start, &mut |n| {
+                console.file(n)
+            });
+            super::vs_match::load_results_files(&mut self.game, &mut self.data, &start, &mut |n| {
+                console.file(n)
+            });
+        }
     }
 
     /// Reads the files a match's scene loads (`files_wanted`): its fighters' (`PlCo.dat`, each

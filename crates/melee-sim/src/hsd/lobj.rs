@@ -892,6 +892,35 @@ pub fn load_static(objs: &mut Objects, desc: &StaticLightDesc) -> LObjId {
     l
 }
 
+/// A point light loaded from a descriptor in the executable's data without a position, its
+/// `HSD_LightPointDesc` words (`ref_br`, `ref_dist`, `dist_func`) as the descriptor's pointer
+/// finds them, `HSD_LObjLoadDesc` and `LObjLoad` on it.
+pub fn load_static_point(
+    objs: &mut Objects,
+    flags: u16,
+    color: [u8; 4],
+    point: [u32; 3],
+) -> LObjId {
+    assert!(
+        flags & TYPE_MASK == POINT,
+        "a static point light of type {}",
+        flags & TYPE_MASK
+    );
+    let l = alloc(&mut objs.lobjs);
+    set_color(&mut objs.lobjs, l, color);
+    set_flags(&mut objs.lobjs, Some(l), u32::from(flags));
+    set_position_wobj(objs, Some(l), None);
+    let [ref_br, ref_dist, func] = point;
+    set_dist_attn(
+        &mut objs.lobjs,
+        Some(l),
+        f32::from_bits(ref_dist),
+        f32::from_bits(ref_br),
+        func as i32,
+    );
+    l
+}
+
 /// A chain of lights loaded from a chain of descriptors, `HSD_LObjLoadDesc`. Each light is
 /// allocated and loaded before the next. A descriptor naming a class panics: melee-sim has
 /// no class registry, and nothing in the game names one.

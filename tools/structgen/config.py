@@ -56,6 +56,9 @@ ROOTS = [
     "itClimbersIce_ItemVars",
     "itClimbersBlizzard_ItemVars",
     "itClimbersString_ItemVars",
+    # Master Hand's lasers and bullets.
+    "itMasterHandLaser_ItemVars",
+    "itMasterHandBullet_ItemVars",
     # Peach's vegetables.
     "itPeachTurnip_ItemVars",
     # Link's bomb, boomerang and hookshot.

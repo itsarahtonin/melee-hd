@@ -16,6 +16,7 @@
 #![allow(clippy::needless_range_loop)]
 
 mod cursor;
+mod one_door;
 mod procs;
 
 use melee_data::archive::{ArchiveId, DataRef};
@@ -666,9 +667,11 @@ pub struct Token {
 /// The screen's statics and the tables it writes.
 #[derive(Clone, Debug, PartialEq, melee_derive::StateEq)]
 pub struct CharSel {
-    /// Whose `CSSData` the screen edits (`mnCharSel_804D6CB0`): the VS mode's, until a
-    /// Special Melee mode's screen is ported.
+    /// Whether the screen has been entered, and the game mode it was entered in, whose
+    /// `CSSData` it edits (`mnCharSel_804D6CB0`): VS mode's, the Hanyu select's or a
+    /// single-player mode's.
     pub entered: bool,
+    pub entered_mode: u8,
     /// `mnCharSel_804D6CB4`, `css_data_table`'s place, and its pieces.
     pub table: Option<DataRef>,
     pub cam: Option<DataRef>,
@@ -744,6 +747,7 @@ impl Default for CharSel {
     fn default() -> Self {
         CharSel {
             entered: false,
+            entered_mode: 0,
             table: None,
             cam: None,
             lights: [None; 2],
@@ -800,21 +804,31 @@ const MENU: usize = 3;
 const PRESS_START: usize = 4;
 const DEBUG_CAMERA: usize = 5;
 const REGEND_MENU: usize = 6;
+const REGEND_OPTIONS: usize = 7;
+const DOOR_MODEL: usize = 8;
 
 impl Running<'_> {
     /// The `CSSData` the screen edits (`mnCharSel_804D6CB0`).
     /// The Hanyu select's own (`gm_8049BEE8`) in its debug mode.
+    /// A single-player mode's own (`gm::one_player`).
     pub(crate) fn css(&self) -> &super::super::gm::vs_melee::CssData {
-        if super::common::game_mode(self) == crate::game::gm::GM_HANYU_CSS {
+        let mode = super::common::game_mode(self);
+        if mode == crate::game::gm::GM_HANYU_CSS {
             &self.game.debug_mode.hanyu_css
+        } else if let Some(c) = self.one_player_css(mode) {
+            c
         } else {
             &self.game.vs_melee.css
         }
     }
 
     pub(crate) fn css_mut(&mut self) -> &mut super::super::gm::vs_melee::CssData {
-        if super::common::game_mode(self) == crate::game::gm::GM_HANYU_CSS {
+        let mode = super::common::game_mode(self);
+        if mode == crate::game::gm::GM_HANYU_CSS {
             &mut self.game.debug_mode.hanyu_css
+        } else if self.one_player_css(mode).is_some() {
+            self.one_player_css_mut(mode)
+                .expect("a 1P mode's select data")
         } else {
             &mut self.game.vs_melee.css
         }
@@ -833,7 +847,7 @@ impl Running<'_> {
     }
 
     fn css_start(&mut self) -> &mut StartMeleeData {
-        &mut self.game.vs_melee.css.vs.start
+        &mut self.css_mut().vs.start
     }
 
     /// Stops a branch's animations of the types `mask` names, delivering nothing
@@ -1017,6 +1031,7 @@ impl Running<'_> {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
         self.game.charsel.entered = true;
+        self.game.charsel.entered_mode = super::common::game_mode(self);
         let first = self.css().unk_0x0;
         self.game.charsel.port0 = first.wrapping_sub(1) as i8;
         let mut n = 0u8;
@@ -1129,11 +1144,6 @@ impl Running<'_> {
             c.port0 = 0;
         }
         c.port1 = if c.port0 == 0 { 1 } else { 0 };
-        if c.doors_used == 1 {
-            super::super::code::unported_call(
-                "mnCharSel_802640A0's one-door screen (the 1P modes', milestone 6)",
-            );
-        }
         if c.reset_handicaps != 0 {
             c.reset_handicaps = 0;
             for i in 0..num_players {
@@ -1147,10 +1157,10 @@ impl Running<'_> {
         self.charsel_menu();
         self.charsel_icons();
         if (0xF..=0x16).contains(&match_type) {
-            super::super::code::unported_call("the Stadium modes' options model (milestone 6)");
+            self.charsel_options_model();
         }
         if match_type == TRAINING_MODE {
-            super::super::code::unported_call("Training's door model (milestone 6)");
+            self.charsel_training_door();
         }
         if match_type == VS_CAMERA {
             self.charsel_debug_camera();
@@ -1158,7 +1168,11 @@ impl Running<'_> {
         self.charsel_hands();
         self.charsel_tokens(num_players);
         self.charsel_tags(num_players, ctx);
-        self.charsel_rules_line(ctx);
+        if self.game.charsel.doors_used == 1 {
+            self.charsel_one_door_panel(ctx);
+        } else {
+            self.charsel_rules_line(ctx);
+        }
         self.charsel_press_start();
         self.charsel_doors_from_players();
         self.charsel_mode_texture(match_type);
@@ -1323,6 +1337,41 @@ impl Running<'_> {
             } else {
                 self.game.charsel.icons[i].state = 2;
             }
+        }
+    }
+
+    /// The Stadium modes' records panel (`css_models->regend_options`), its animations held
+    /// at their start.
+    fn charsel_options_model(&mut self) {
+        let (_, j) = self.charsel_model(REGEND_OPTIONS, 1, ANIM_PROC, 4);
+        self.game.charsel.options = Some(j);
+        jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
+        self.css_stop(Some(j), ALL_MASK);
+    }
+
+    /// Training's CPU door (`css_models->door`), its animations held at their start; a CPU
+    /// character the screen can't show (none, or locked) becomes a random shown one in a
+    /// random costume.
+    fn charsel_training_door(&mut self) {
+        let (_, j) = self.charsel_model(DOOR_MODEL, 1, ANIM_PROC, 4);
+        self.game.charsel.door_model = Some(j);
+        jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
+        self.css_stop(Some(j), ALL_MASK);
+        let port1 = self.game.charsel.port1 as usize;
+        let ck = self.css().vs.start.players[port1].ckind;
+        if ck >= CKIND_PLAYABLE || !self.game.gm.unlocks.ckind_unlocked(ck as u8) {
+            let i = loop {
+                let i = self.game.objs.rng.below(0x19) as usize;
+                if self.game.charsel.icons[i].state != 0 {
+                    break i;
+                }
+            };
+            let ckind = ICONS[i].ckind;
+            let n = crate::game::playback::costume_count(ckind);
+            let color = self.game.objs.rng.below(i32::from(n)) as u8;
+            let p = &mut self.css_start().players[port1];
+            p.ckind = ckind as i8;
+            p.color = color;
         }
     }
 

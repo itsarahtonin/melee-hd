@@ -54,11 +54,12 @@ impl Running<'_> {
         self.game.fighters[f.0].frame_speed_mul = rate;
     }
 
-    /// Back to waiting, `ft_8008A2BC`: Master Hand's and Crazy Hand's own idles aren't ported.
+    /// Back to waiting, `ft_8008A2BC`: Master Hand returns to his place; Crazy Hand's own
+    /// idle isn't ported.
     #[doc(alias = "ft_8008A2BC")]
     pub fn enter_wait(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
-            KIND_MASTER_HAND => unported_call("ftMh_MS_389_80151018"),
+            KIND_MASTER_HAND => self.mh_return(gobj),
             KIND_CRAZY_HAND => unported_call("ftCh_GrabUnk1_8015BC88"),
             _ => self.enter_wait_blend(gobj, 0.0),
         }
@@ -113,14 +114,18 @@ impl Running<'_> {
         }
     }
 
-    /// Falling, `ftCo_Fall_Enter`: Master Hand and Crazy Hand have their own; a stamina loss
+    /// Falling, `ftCo_Fall_Enter`: Master Hand returns to his place (Crazy Hand's isn't
+    /// ported); a stamina loss
     /// and the hammer aren't ported.
     #[doc(alias = "ftCo_Fall_Enter")]
     pub fn enter_fall(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
         match fp.kind {
-            KIND_MASTER_HAND => unported_call("ftMh_MS_389_80151018"),
+            KIND_MASTER_HAND => {
+                self.mh_return(gobj);
+                return;
+            }
             KIND_CRAZY_HAND => unported_call("ftCh_GrabUnk1_8015BC88"),
             _ => {}
         }

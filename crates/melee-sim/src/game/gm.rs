@@ -7,6 +7,7 @@ pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
 pub mod decisions;
+pub mod endings;
 pub mod erase;
 pub mod howto;
 pub mod input;
@@ -17,6 +18,7 @@ pub mod memcard;
 pub mod menu;
 pub mod mode_init;
 pub mod names;
+pub mod one_player;
 pub mod opening;
 pub mod pause;
 pub mod progressive;
@@ -176,6 +178,18 @@ pub fn is_1p_mode(game: &Game) -> bool {
         game.game_mode,
         0x03 | 0x04 | 0x05 | 0x0F | 0x1C | 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x2B
     )
+}
+
+/// A stage's event for the match (`gm_801674C4`, the adventure route's arena): not ported yet.
+pub fn start_stage_event(
+    _r: &mut crate::game::state::Running,
+    _a: i32,
+    _b: i32,
+    _c: i32,
+    _d: i32,
+    _cb: crate::game::handles::CodeRef,
+) {
+    crate::game::code::unported_call("gm_801674C4 (a stage's match event)")
 }
 
 /// Whether the game is in training mode, `gm_8018841C`.

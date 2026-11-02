@@ -1785,10 +1785,10 @@ fn cutscene_camera() {
             let fv = |i| f32::from_bits(leaf_check::bits(a.f(i)));
             let p = point(&a.cap.call.regs);
             match g(3) {
-                0 => camera::script_look_at(r.game, p),
-                1 => camera::script_look_at_player(r.game, (g(7) % 2) as i32),
-                // A callback the script leaves null: none of the game's are ported.
-                _ => camera::script_look_at_callback(r.game, CodeRef(0)),
+                0 => camera::script_look_at(r, p),
+                1 => camera::script_look_at_player(r, (g(7) % 2) as i32),
+                // A callback the script leaves null.
+                _ => camera::script_look_at_callback(r, CodeRef(0)),
             }
             let c = &mut r.game.camera.cam;
             match g(4) {
@@ -1810,7 +1810,7 @@ fn cutscene_camera() {
             our_frames(r, g(6));
             let done = camera::script_done(&r.game.camera.cam);
             match g(5) {
-                0 => camera::script_jump(r.game),
+                0 => camera::script_jump(r),
                 1 => camera::snap(r),
                 _ => {}
             }

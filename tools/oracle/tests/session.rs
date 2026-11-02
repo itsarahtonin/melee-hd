@@ -1922,3 +1922,144 @@ fn the_yoshiki_test_page() {
         }
     }
 }
+
+/// Milestone 6's cutscenes (docs/oracle.md, "The cutscenes"): task 1's `m6-oracle/cutscene`,
+/// the debug menu's cutscene entry at debug level 3, plays the debug cutscene mode (0x19)
+/// untouched: Luigi's, Brinstar's, the explosion, the three Kirbys, the giant Kirby, Star Fox's
+/// and the F-Zero cutscene (on the F-Zero race's stage, its cars on the racers), each to its
+/// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 19's
+/// longer `m6-fzero-race/fz-cutscene` to the cutscene after it (`vi1101`), whose scene isn't
+/// ported.
+#[test]
+fn the_debug_cutscenes() {
+    if let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) {
+        assert!(out.contains("3282 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fzero-race", "fz-cutscene", &["--all", "--heap"]) {
+        let want = "3282 ticks compared, no difference; stopped in tick 3282: \
+                    the cutscene scene 0x18's files isn't ported";
+        assert!(out.contains(want), "{out}");
+    }
+}
+
+/// The F-Zero race in the debug menu's Versus page (milestone 6's task 19, docs/oracle.md, "The
+/// F-Zero race"): `m6-fzero-race/fz-run`, Link running along the track while the cars come round
+/// and hit him, the debug pause's no-contest and the results, clean from power-on with
+/// `--all --heap` to its trace's end.
+#[test]
+fn the_fzero_race_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-fzero-race", "fz-run", &["--all", "--heap"]) {
+        assert!(out.contains("10347 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Master Hand in the debug menu's Versus page (milestone 6's task 3), from power-on with the
+/// heap: `m6-oracle/mh-fd` (task 1's route: his entrance with the cutscene camera's orbit
+/// reading its unset stack words, his attacks, the debug pause's no-contest, the results) to
+/// its trace's end; and `m6-master-hand/mh-1p-lose`, whose human loses his one stock, so the
+/// hand wins and the results screen faults on his missing emblem: the trace ends before the
+/// fault, and melee-hd stops there by name on the next tick (`--past`).
+#[test]
+fn master_hand_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-oracle", "mh-fd", &["--all", "--heap"]) {
+        assert!(out.contains("7178 ticks compared, no difference"), "{out}");
+    }
+    let args = ["--all", "--heap", "--past", "300"];
+    if let Some(out) = scripted_session("m6-master-hand", "mh-1p-lose", &args) {
+        assert!(
+            out.contains("3855 ticks compared, no difference")
+                && out.contains(
+                    "past the trace's end, stopped in tick 3855: Melee crashes: the results' winner (character 26) has no emblem"
+                ),
+            "{out}"
+        );
+    }
+}
+
+/// Milestone 6's task 5's debug-level sessions (docs/oracle.md, the single-player endings),
+/// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
+/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy` and
+/// `intro-allstar` (to Classic's and All-Star's intros, tasks 22's and 23's) and `ending-test`
+/// (the RegularEnding Test's debug game over mode, to its trophy fall); task 5's
+/// `m6-endings/gameover2` (the game over twice: a continue paid in coins, then "no").
+#[test]
+fn the_debug_endings() {
+    for (dir, name, want) in [
+        (
+            "m6-oracle",
+            "gameover",
+            "3157 ticks compared, no difference",
+        ),
+        (
+            "m6-oracle",
+            "intro-easy",
+            "1362 ticks compared, no difference; stopped in tick 1362: game scene 0x20 isn't ported",
+        ),
+        (
+            "m6-oracle",
+            "intro-allstar",
+            "1332 ticks compared, no difference; stopped in tick 1332: game scene 0x21 isn't ported",
+        ),
+        (
+            "m6-oracle",
+            "ending-test",
+            "1232 ticks compared, no difference; stopped in tick 1232: game scene 0xf isn't ported",
+        ),
+        (
+            "m6-endings",
+            "gameover2",
+            "3192 ticks compared, no difference",
+        ),
+    ] {
+        let Some(out) = scripted_session(dir, name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+    }
+}
+
+/// The race (milestone 6's task 20) from the debug menu's Versus page, from power-on with the
+/// heap: `m6-race/race-look` (Link running from the start to door 0x9A, whose landing ends the
+/// race, the camera and blast zones following him while Mario, left behind, is KO'd; the
+/// course's lights following Link; the results) to its trace's end.
+#[test]
+fn race_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-race", "race-look", &["--all", "--heap"]) {
+        assert!(out.contains("6417 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Brinstar's escape in the debug menu's Versus page (milestone 6's task 18), from power-on with
+/// the heap: `m6-brinstar-escape/ze-climb`, Fox up the shaft past the camera's timer (the screen
+/// shaking every tick) to the way out, whose floor ends the match as a bonus stage's end, and
+/// the results, clean to its trace's end.
+#[test]
+fn brinstar_escape_in_debug_vs() {
+    let Some(out) = scripted_session("m6-brinstar-escape", "ze-climb", &["--all", "--heap"]) else {
+        return;
+    };
+    assert!(out.contains("6089 ticks compared, no difference"), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
+}
+/// Giga Bowser in the debug menu's Versus page (milestone 6's task 7), from power-on with the
+/// heap: `m6-giga-bowser/gk` (a human's Giga Bowser through his moveset, Bowser's specials
+/// with his animations, against Mario) and `kb-gk` (Kirby's inhale over Giga Bowser again and
+/// again, nothing caught, since his creation makes him ungrabbable), each to its trace's end.
+#[test]
+fn giga_bowser_in_debug_vs() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-giga-bowser", "gk", &args) {
+        assert!(out.contains("11172 ticks compared, no difference"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-giga-bowser", "kb-gk", &args) {
+        assert!(out.contains("6950 ticks compared, no difference"), "{out}");
+    }
+}

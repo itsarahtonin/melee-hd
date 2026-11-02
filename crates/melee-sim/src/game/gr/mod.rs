@@ -7,6 +7,7 @@
 pub mod anime;
 pub mod battle;
 pub mod bigblue;
+pub mod bigblueroute;
 pub mod castle;
 pub mod corneria;
 pub mod data;
@@ -14,6 +15,7 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod exe_data;
+pub mod figure;
 pub mod flatzone;
 pub mod fourside;
 pub mod fzerocar;
@@ -26,6 +28,7 @@ pub mod icemt;
 pub mod inishie1;
 pub mod inishie2;
 pub mod izumi;
+pub mod kinokoroute;
 pub mod kongo;
 pub mod kraid;
 pub mod last;
@@ -36,6 +39,7 @@ pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod onett;
 pub mod pura;
+pub mod pushon;
 pub mod rcruise;
 pub mod setup;
 pub mod shrine;
@@ -47,6 +51,7 @@ pub mod venom;
 pub mod yorster;
 pub mod zako;
 pub mod zebes;
+pub mod zebesroute;
 
 pub use vars::{
     BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
@@ -116,8 +121,20 @@ pub const GR_KIND_VENOM: i32 = 15;
 pub const GR_KIND_MUTECITY: i32 = 18;
 /// `Gr_Kind_BigBlue`, Big Blue.
 pub const GR_KIND_BIGBLUE: i32 = 19;
+/// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
+pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_BigBlueRoute`, the F-Zero race.
+pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
+/// `Gr_Kind_ZebesRoute`, Brinstar's escape.
+pub const GR_KIND_ZEBESROUTE: i32 = 33;
+/// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
+pub const GR_KIND_FIGURE1: i32 = 68;
+pub const GR_KIND_FIGURE2: i32 = 69;
+pub const GR_KIND_FIGURE3: i32 = 70;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
+/// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
+pub const GR_KIND_PUSHON: i32 = 39;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
 pub const GR_KIND_ICEMT: i32 = 22;
 /// `Gr_Kind_Last`, Final Destination.
@@ -247,6 +264,21 @@ pub struct Globals {
     pub greatbay_yakumono: Option<DataRef>,
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
+    /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
+    /// slot's odds and the enemy spawner's table.
+    pub kinokoroute_yakumono: Option<DataRef>,
+    /// The F-Zero race's `yakumono_param` (`grBigBlueRoute_YakumonoParam`): the trophy slot's
+    /// odds, the cars' scale, speeds, count and waits.
+    pub bigblueroute_yakumono: Option<DataRef>,
+    /// The race's `yakumono_param` (`grpushon.c`): the spikes' and lines' hits, the trophy
+    /// slot's odds, the goals' scores and the race's times.
+    pub pushon_yakumono: Option<DataRef>,
+    /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
+    /// timer and the trophy slot's odds.
+    pub zebesroute_yakumono: Option<DataRef>,
+    /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
+    /// nothing reads.
+    pub figure_yakumono: [Option<DataRef>; 3],
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -479,6 +511,13 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 30) => VarsKind::MuteCity,
         (GR_KIND_MUTECITY, 29) => VarsKind::MuteCity2,
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
+        (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
+        (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
+        (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
+        (GR_KIND_PUSHON, 1) => VarsKind::Map,
+        (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
+        (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,
@@ -497,6 +536,7 @@ pub fn yaku_dealt(r: &mut super::state::Running, cb: CodeRef, item: GObjId, g: G
         corneria::GUN_DEALT => corneria::gun_dealt(r, item, g),
         castle::BILL_DEALT | castle::BLAST_DEALT => castle::item_nothing(r, item, g),
         mutecity::CAR_DEALT => mutecity::car_dealt(r),
+        bigblueroute::CAR_DEALT => bigblueroute::car_dealt(r),
         other => super::code::unported_call(&format!("a stage item's hit callback {other:#010x}")),
     }
 }
@@ -519,6 +559,7 @@ pub fn yaku_received(
         zebes::ISLAND_HIT => zebes::island_hit(r, g, dir, damage),
         zebes::BUBBLES_HIT => zebes::bubbles_hit(r),
         inishie1::BLOCK_HIT => inishie1::block_hit(r, item, g),
+        kinokoroute::BLOCK_HIT => kinokoroute::block_hit(r, item, g),
         icemt::BLOCK_HIT => icemt::block_hit(r, item, g),
         corneria::GUN_HIT => corneria::gun_hit(r, g, damage),
         castle::SWITCH_HIT => castle::switch_hit(r, item, g, dir, fighter),

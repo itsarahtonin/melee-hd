@@ -7,7 +7,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
-use melee_data::archive::{Archives, DataRef};
+use melee_data::archive::DataRef;
 
 use super::super::state::{Game, Running};
 use super::stage;
@@ -87,7 +87,7 @@ pub fn start(game: &mut Game, spawns: Option<DataRef>) -> GObjId {
 /// The spawner's process, `fn_801CADBC`: a scan that spawns only off camera.
 #[doc(alias = "fn_801CADBC")]
 pub fn proc(r: &mut Running, _gobj: GObjId) {
-    scan(r.game, r.data, false);
+    scan(r, false);
 }
 
 /// Scans the slots once around from the cursor, `grZakoGenerator_801CA8B4`: free slots of
@@ -95,7 +95,9 @@ pub fn proc(r: &mut Running, _gobj: GObjId) {
 /// inside the blast zones and, unless `anywhere`, outside the area between the blast zones
 /// and the camera limits' midpoints.
 #[doc(alias = "grZakoGenerator_801CA8B4")]
-pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
+pub fn scan(r: &mut Running, anywhere: bool) {
+    let data = r.data;
+    let game = &mut *r.game;
     if game.gr.zako.slots.is_none() || !game.gr.zako.active() {
         return;
     }
@@ -111,6 +113,7 @@ pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
     let start = i32::from(game.gr.zako.cursor);
     let mut idx = start;
     for _ in 0..0xFF {
+        let game = &mut *r.game;
         let slot = &game.gr.zako.slots.as_ref().unwrap()[idx as usize];
         if slot.point != -1 && slot.item.is_none() && slot.timer != -1 {
             if slot.timer > 0 {
@@ -121,15 +124,24 @@ pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
                     !(cam_left < x) || !(x < cam_right) || !(cam_bottom < y) || !(y < cam_top);
                 if left < x && x < right && bottom < y && y < top && (anywhere || off_camera) {
                     let slot = &game.gr.zako.slots.as_ref().unwrap()[idx as usize];
-                    if (0xDC..=0xFB).contains(&slot.point) {
+                    let k = slot.point;
+                    if (0xDC..=0xFB).contains(&k) {
                         let trophy = slot
                             .x8
                             .expect("stale read: a spawner slot's trophy (x8) before it's written");
                         if trophy != -1 {
-                            unimplemented!("the spawner's trophies need the items");
+                            crate::game::code::unported_call(
+                                "Ground_801C58E0 (a 1P trophy at a spawner slot)",
+                            );
                         }
-                    } else if game.gr.zako.spawns.is_some() {
-                        unimplemented!("the spawner's enemies need the items");
+                    } else if let Some(spawns) = game.gr.zako.spawns {
+                        let desc = spawns.at(4 * u32::from((k - 0x20) as u16));
+                        let kind = i32::from(data.u16(desc));
+                        let x2 = i32::from(data.u8(desc.at(2)));
+                        if let Some(item) = spawn_enemy(r, kind, x2, pos) {
+                            r.game.gr.zako.slots.as_mut().unwrap()[idx as usize].item = Some(item);
+                            crate::game::it::zako::common(r.game, item).set_idx(idx);
+                        }
                     }
                 }
             }
@@ -142,13 +154,29 @@ pub fn scan(game: &mut Game, data: &Archives, anywhere: bool) {
             break;
         }
     }
-    game.gr.zako.cursor = idx as i16;
+    r.game.gr.zako.cursor = idx as i16;
+}
+
+/// One of the spawner's enemies at `pos`, by its table's kind and number (`x2`), as
+/// `grZakoGenerator_801CA8B4` spawns them: none for a kind the switch doesn't name.
+fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Option<GObjId> {
+    use crate::game::it::{kinds, zako as itzako};
+    match kind {
+        kinds::KURIBOH | kinds::OCTAROCK | kinds::OTTOSEA | kinds::WHITEBEA => {
+            itzako::spawn(r, kind, Some(pos), None, None, true)
+        }
+        kinds::LEADEAD => crate::game::code::unported_call("it_802EA9FC (a spawner's ReDead)"),
+        kinds::NOKONOKO => kinds::nokonoko::spawn(r, x2, pos, None, -1),
+        kinds::PATAPATA => kinds::patapata::spawn(r, x2, pos, -1),
+        kinds::LIKELIKE => crate::game::code::unported_call("it_802DC4BC (a spawner's Like Like)"),
+        _ => None,
+    }
 }
 
 /// A scan that spawns on camera too, `grZakoGenerator_801CADE0`.
 #[doc(alias = "grZakoGenerator_801CADE0")]
-pub fn scan_anywhere(game: &mut Game, data: &Archives) {
-    scan(game, data, true);
+pub fn scan_anywhere(r: &mut Running) {
+    scan(r, true);
 }
 
 /// Gives the free slot past the points' (slot 80, while free) a point of interest and a
@@ -167,6 +195,27 @@ pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
             slot.x8 = Some(trophy);
             slot.item = None;
         }
+    }
+}
+
+/// Stops the spawner and clears its enemies, `grZakoGenerator_801CAF08`: scanning off, every
+/// containers' monster and adventure enemy no one holds or grabbed destroyed (kinds 0x2B to
+/// 0x2F and 0xD0 to 0xE7), and every coin.
+// Ports grZakoGenerator_801CAF08; aliased once a check reaches it.
+pub fn clear_enemies(r: &mut Running) {
+    r.game.gr.zako.flags &= !0x80;
+    let mut cur = r.game.world.first_in(crate::game::it::P_LINK_ITEM);
+    while let Some(c) = cur {
+        let next = r.game.world.gobj(c).next;
+        let kind = crate::game::it::item(r.game, c).kind;
+        if (0x2B..0x30).contains(&kind) || (0xD0..0xE8).contains(&kind) {
+            if crate::game::it::lib26b1::free_to_take(r.game, c) {
+                crate::game::it::item::destroy(r, c);
+            }
+        } else if kind == crate::game::it::kinds::COIN {
+            crate::game::it::item::destroy(r, c);
+        }
+        cur = next;
     }
 }
 

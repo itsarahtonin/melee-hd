@@ -412,11 +412,40 @@ impl Running<'_> {
             }
             // The single-player modes' and their game overs' entries (milestone 6's), acting
             // only on A, not ported yet.
-            0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1280 | 0x8030_12D4 | 0x8030_1D7C => {
+            0x8030_1028 | 0x8030_1074 | 0x8030_10C0 | 0x8030_1D7C => {
                 if arg == CB_SELECT {
                     super::super::code::unported_call(&format!(
                         "the debug menu entry callback {cb:#010x}"
                     ));
+                }
+                0
+            }
+            // `un_80301280` (RegularEnding Real) and `un_803012D4` (RegularEnding Test): on
+            // A, the ending test's submenu (its character, costume and mode), its own
+            // callback `fn_803011EC` or `fn_8030110C`, after a forward sound of their own.
+            0x8030_1280 | 0x8030_12D4 => {
+                if arg == CB_SELECT {
+                    self.lb_audio_call(1);
+                    let own = if cb == 0x8030_1280 {
+                        0x8030_11EC
+                    } else {
+                        0x8030_110C
+                    };
+                    self.debug_submenu(arg, 0x803F_CD34, own);
+                }
+                0
+            }
+            0x8030_110C | 0x8030_11EC => {
+                match arg {
+                    CB_BACK => {
+                        self.sfx_back();
+                        self.menu_close_current();
+                    }
+                    CB_START => {
+                        self.sfx_forward();
+                        self.debug_ending_test(cb == 0x8030_11EC);
+                    }
+                    _ => {}
                 }
                 0
             }
@@ -529,6 +558,41 @@ impl Running<'_> {
     fn debug_sub(&mut self, arg: i32, table: u32) -> i32 {
         self.debug_submenu(arg, table, SUBMENU_BACK);
         0
+    }
+
+    /// The ending test's Start (`fn_8030110C`, `real` for `fn_803011EC`): the submenu's
+    /// character and costume for the ending and the mode's run (Classic's), then the
+    /// debug game over mode standing for the submenu's mode, or Classic's game over.
+    #[doc(alias = "fn_8030110C")]
+    #[doc(alias = "un_803012D4")]
+    // Ports fn_803011EC and un_80301280 (RegularEnding Real) too; aliased once a check reaches
+    // them (Classic's game over mode, starting with the trophy fall).
+    fn debug_ending_test(&mut self, real: bool) {
+        use crate::game::gm::endings::{GM_CLASSIC_GOVER, GM_DEBUG_GOVER};
+        let d = &self.game.hud.debug;
+        let (ckind, color, mode) = (
+            d.word(0x804D_6DF8),
+            d.word(0x804D_6DFC),
+            d.word(0x804D_6E00),
+        );
+        let g = &mut self.game.endings.gover;
+        g.set_ckind(ckind as u8);
+        g.set_color(color as u8);
+        if real {
+            let p = &mut self.game.one_player.classic.base.player;
+            p.ckind = ckind as i8;
+            p.color = color as u8;
+            self.change_game_mode_after_scene(GM_CLASSIC_GOVER);
+        } else {
+            let s = &mut self.game.game_data.vs.unk_51C;
+            s.c_kind = ckind as _;
+            s.color = color as u8;
+            if mode <= 2 {
+                self.change_game_mode_after_scene(GM_DEBUG_GOVER);
+                self.game.endings.gover.set_mode(0x15 + mode as u8);
+            }
+        }
+        self.game.end_scene();
     }
 
     /// An entry whose A goes to the debug mode's state `state`.
