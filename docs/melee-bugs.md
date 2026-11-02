@@ -1642,6 +1642,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none on gameplay; the debug select would open.
 - **Source:** `gmhanyucss.c`, `mncharsel.s` (`mnCharSel_8025D1C4+0x68`, `lbzx r29, r4, r3` with `r4` the null pointer).
 
+### The debug menu's stage 77 halts on a missing stage parameter
+
+- **Where:** the debug menu's Versus page (`un_803FB168`'s Stage entry, `un_803FA258.x8`), then `gm_Scene_Vs_OnEnter`, `Stage_802251E8`, `Ground_801C0754` and `Ground_801C28CC` (`ground.c`); `crates/melee-sim/src/game/gr/setup.rs` (`item_frequencies`).
+- **Defect:** the Stage entry offers every stage kind up to 85, and its "10-2" (stage kind 77) is Icicle Mountain's ground (kind 22) like "10-1" (76), whose parameters list no entry for stage kind 77. `Ground_801C28CC` finds none for the stage being set up and fails its assert (`ground.c:2310: not found stage param in DAT(grkind=22 stkind=77,num=9)`), and the console halts.
+- **Effect:** a debug VS match on stage 77 hangs as its scene starts (ssbm-rs: stuck at `Ground_801C28CC+0x1E0`, from `Ground_801C0754+0x7C`, in the `m6-oracle/stages-1p` recording's run after "10-2" was picked), so the debug menu's stage 77 can't be played on a console.
+- **melee-hd:** stops (`item_frequencies` panics naming the stage and the parameters' count, design call 7's stop at the fault).
+- **Fix:** leave stage 77 out of the entry, or give Icicle Mountain's parameters an entry for it.
+- **Fix impact:** none on gameplay; the debug menu's stage 77 would play.
+- **Source:** `ground.c` (`Ground_801C28CC`'s missing-parameter report and panic); `$SSBM_RS_LOCAL/lockstep/m6-oracle/stages-1p.record.log`.
+
 ### A closing menu's screen removed through the menu's own pointer
 
 - **Where:** `un_80304344`'s `DevText_Remove(&arg0->x4)`, `crates/melee-sim/src/game/hud/debug_menu.rs` (`menu_close`, `devtext::Link::Held`).
