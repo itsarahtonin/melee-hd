@@ -15,25 +15,25 @@
 mod common;
 
 use common::{
-    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
-    DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR,
-    DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE,
-    DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
-    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY, GREEN_GREENS, Game, Group,
-    HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF,
-    ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC,
-    M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
-    METAL_CLOAK_RC, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK,
-    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES,
-    RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD,
-    SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK,
-    TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION,
-    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW, UNLOCK_TIME, VENOM,
-    YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled,
-    why,
+    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CH_MH_1P, CH_PROBE,
+    CORNERIA, Capture, DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
+    DATA_INFO, DATA_PRIZE, DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB,
+    DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS,
+    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE,
+    FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
+    FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY,
+    GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
+    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
+    KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING,
+    M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE,
+    MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR,
+    PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE,
+    RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
+    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
+    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -1212,6 +1212,29 @@ fn m6c_shadowed(frame: u32, same: [usize; 2]) {
     );
 }
 
+// The hands (milestone 6's tasks 3 and 12, debug VS at debug level 3, Link against them on
+// Final Destination): Master Hand alone (mh-1p 3420), Crazy Hand alone pointing over Link
+// (ch-probe 3180), and both hands (ch-mh-1p): Crazy Hand's entrance under the cutscene camera
+// (3150, which a mutation of its interest fails), Link held (4100), a hand flat over the
+// stage in a tag attack's stretch (4800), and a hand's sparks over the stage's boss backdrop
+// with Link in a magnifier bubble (11080). Against captures with ssbm-rs's renderer running
+// (each first frame samples copies of the frame before): identical images, every draw the
+// same but the two that sample the fighters' shadows' copy.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn mh_1p_3420() {
+    compare_in(
+        &MH_1P,
+        3420,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1118, 1126],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
 macro_rules! m6c_shadowed {
     ($($name:ident $frame:literal $same:expr),* $(,)?) => {
         $(
@@ -1312,6 +1335,21 @@ fn giga_bowser(game: &Game, frame: u32, same: [usize; 2]) {
 
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_probe_3180() {
+    compare_in(
+        &CH_PROBE,
+        3180,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1070, 1076],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn gb_gk_5060() {
     giga_bowser(&GB_GK, 5060, [1269, 1269]);
 }
@@ -1338,4 +1376,61 @@ fn gb_boy_3545() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn gb_girl_3557() {
     giga_bowser(&GB_GIRL, 3557, [904, 906]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_3150() {
+    compare_in(
+        &CH_MH_1P,
+        3150,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1400, 1400],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_4100() {
+    compare_in(
+        &CH_MH_1P,
+        4100,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1356, 1359],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_4800() {
+    compare_in(
+        &CH_MH_1P,
+        4800,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1315, 1346],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_11080() {
+    compare_in(
+        &CH_MH_1P,
+        11080,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1101, 1101],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
 }

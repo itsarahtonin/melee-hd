@@ -9,7 +9,7 @@
 
 use gekko_fp as fp;
 
-use super::super::code::{run_fighter_cb, unported_call};
+use super::super::code::run_fighter_cb;
 use super::super::handles::FighterId;
 use super::super::state::Running;
 use crate::fpu::{mem, reg};
@@ -94,7 +94,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
             // `ftCo_8008E9D0`; the original asserts on any other kind.
             match g.game.fighters[f.0].kind {
                 super::masterhand::KIND_MASTER_HAND => g.mh_nop(gobj),
-                super::masterhand::KIND_CRAZY_HAND => unported_call("ftCh_Init_80156014"),
+                super::masterhand::KIND_CRAZY_HAND => g.ch_hit_nop(gobj),
                 _ => panic!("the original's assertion failed: ellegal flag fp->no_reaction_always"),
             }
             g.damage_no_reaction(gobj);
