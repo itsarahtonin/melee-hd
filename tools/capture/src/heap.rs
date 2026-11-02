@@ -206,6 +206,7 @@ pub fn read_past(m: &[u8], carried: &[bool]) -> Heap {
         .collect();
     Heap {
         active: true,
+        last_archive: (0, 0),
         // What a captured heap's free memory holds isn't known.
         fresh: false,
         os,

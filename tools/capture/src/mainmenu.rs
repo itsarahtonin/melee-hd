@@ -177,6 +177,13 @@ impl Comparer<'_> {
             ("lbl_804D6454", m.audio_load_data),
         ] {
             let theirs = self.u32(sym(name));
+            // Event Match's own copy of its table, by where the mode loaded it.
+            let at = self.game.event.table_at;
+            if name == "gm_804D6900" && at != 0 {
+                let ours = d.map_or(0, |d| at + d.offset);
+                self.check(name, "the event table's address", ours, theirs);
+                continue;
+            }
             self.compare_data(name, d, theirs);
         }
         for (desc, name) in m.models.iter().zip(MODELS) {

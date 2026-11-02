@@ -278,7 +278,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8016247C")]
     #[doc(alias = "gmMainLib_8015CCF0")]
     #[doc(alias = "gmMainLib_8015CCFC")]
-    pub(super) fn results_add_coins(&mut self, n: i32) -> i32 {
+    pub(crate) fn results_add_coins(&mut self, n: i32) -> i32 {
         let s = &mut self.game.game_data.thing.save_data;
         let current = s.x1A48 as i32;
         // The original's test (`total > (u32)-1`) can never hold: the sums wrap.
@@ -365,7 +365,15 @@ impl Running<'_> {
 
     /// `gm_InitChallengerData`.
     #[doc(alias = "gm_InitChallengerData")]
-    fn init_challenger(&mut self, ckind: u8, color: u8, slot: u8, nametag: u8, cpu: u8, mode: u8) {
+    pub(crate) fn init_challenger(
+        &mut self,
+        ckind: u8,
+        color: u8,
+        slot: u8,
+        nametag: u8,
+        cpu: u8,
+        mode: u8,
+    ) {
         self.game.gm.challenger = ChallengerData {
             human_ckind: ckind,
             human_color: color,
