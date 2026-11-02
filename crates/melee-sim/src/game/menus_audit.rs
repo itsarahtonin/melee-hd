@@ -50,7 +50,7 @@ pub const GATES: &[Gate] = &[
         list: ONE_P,
         entry: 1,
         what: "Event Match",
-        covers: &["mnEvent_8024E838", "melee/mn/mnevent", "melee/gm/gmevent"],
+        covers: &["melee/gm/gmevent"],
     },
     Gate {
         list: STADIUM,

@@ -7491,8 +7491,12 @@ impl Mirror for GroundVars {
                         m.u32(at + 0x10 + 4 * k as u32),
                     );
                 }
-                let p = format!("{path}.bigblue.manager.event_extra");
-                cx.compare_handle(&p, "JObjId", v.event_extra.map(|j| j.0), m.u32(at + 0x1C));
+                // Written only with a joint and read by nothing (docs/engine.md, uninitialized
+                // values): before its first event it holds the block's leftover bytes.
+                if let Some(j) = v.event_extra {
+                    let p = format!("{path}.bigblue.manager.event_extra");
+                    cx.compare_handle(&p, "JObjId", Some(j.0), m.u32(at + 0x1C));
+                }
                 for (k, d) in v.data.iter().enumerate() {
                     let b = at + 0x20 + 0x54 * k as u32;
                     let ours = (

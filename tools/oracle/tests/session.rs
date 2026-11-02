@@ -581,7 +581,8 @@ fn a_save_ends_attached_until_its_unmount() {
 
 /// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
 /// directory sector, runs as a page's card interrupt returns, and goes ahead of the next
-/// page's (tick 152), to the Event list.
+/// page's (tick 152), to the Event list, and on through four events (the first cleared
+/// with a new best, a challenger after the third) to the fourth's computer kind 9.
 #[test]
 fn a_save_written_through_an_audio_frame() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_16-58-24.trc");
@@ -595,7 +596,9 @@ fn a_save_written_through_an_audio_frame() {
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
     assert!(
-        out.contains("336 ticks compared, no difference; stopped in tick 336: mnEvent_8024E838"),
+        out.contains(
+            "8217 ticks compared, no difference; stopped in tick 8217: ftCo_800B2AFC for computer kind 9"
+        ),
         "{out}"
     );
 }

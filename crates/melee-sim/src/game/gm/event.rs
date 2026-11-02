@@ -269,7 +269,7 @@ impl Running<'_> {
 
     /// `onEnterCss`: the event's select for its first player, the screen's port the 1P
     /// lists' entry's; with its first player to choose, the other players in the cache.
-    #[doc(alias = "onEnterCss")]
+    #[doc(alias = "onEnterCss@801BAA60")]
     pub fn event_enter_css(&mut self) {
         let e = self.game.game_data.vs.unk_530.clone();
         super::setup_players::css_one_player(
@@ -289,7 +289,7 @@ impl Running<'_> {
 
     /// `onExitCss`: back to the menu, or the character chosen (the random opponents drawn
     /// again).
-    #[doc(alias = "onExitCss")]
+    #[doc(alias = "onExitCss@801BAAD0")]
     pub fn event_exit_css(&mut self) {
         if self.game.event.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(super::machine::GM_MENU);
@@ -507,7 +507,7 @@ impl Running<'_> {
     /// open, the random opponents kept for the event's retries, costumes kept apart from the
     /// first player's); a crowd's setup; the files as the event loads them (`gm_801BA938`),
     /// the rumble and the announcer's bank.
-    #[doc(alias = "onEnterVs")]
+    #[doc(alias = "onEnterVs@801BAD70")]
     pub fn event_enter_vs(&mut self) {
         self.event_load_table();
         let level = self.event();
@@ -730,7 +730,7 @@ impl Running<'_> {
     /// coins and time added up, a series' next round, the event's best kept with its clear,
     /// the coins, the play time, the unlocks by the event (a character, the stage after every
     /// event, its trophy), the trophies and messages, and a challenger or the menu.
-    #[doc(alias = "onExitVs")]
+    #[doc(alias = "onExitVs@801BB758")]
     #[doc(alias = "gm_80168940")]
     #[doc(alias = "gm_801732D8")]
     #[doc(alias = "gm_8017335C")]
@@ -1054,7 +1054,6 @@ impl Running<'_> {
 
     /// `gm_801BC488`: the team that won the match alone so far (`gm_80166378` on a copy of
     /// the match's end), else 4.
-    #[doc(alias = "gm_801BC488")]
     fn event_winning_team(&mut self) -> u32 {
         let _ = self;
         super::super::code::unported_call("gm_801BC488 (an event's time match's winner)");
@@ -1077,7 +1076,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BCF40`: survive to the time's end: failed with no stock left.
-    #[doc(alias = "gm_801BCF40")]
+    // Ports `gm_801BCF40`; aliased once a check reaches it.
     fn event_survive_proc(&mut self, gobj: GObjId) {
         if self.game.player_p1_stocks() <= 0 {
             self.event_fail(gobj);
@@ -1090,7 +1089,7 @@ impl Running<'_> {
 
     /// `gm_801BD164`: once the third player is out, cleared if the first player KO'd it
     /// more than the second did, else failed; failed with no stock left or at the time's end.
-    #[doc(alias = "gm_801BD164")]
+    // Ports `gm_801BD164`; aliased once a check reaches it.
     fn event_kos_of_3_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(2) <= 0 {
             let theirs = self.game.player_kos(1, 2) as i32;
@@ -1110,7 +1109,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BD30C`: keep the second player in to the time's end.
-    #[doc(alias = "gm_801BD30C")]
+    // Ports `gm_801BD30C`; aliased once a check reaches it.
     fn event_keep_2_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(1) <= 0 || self.game.player_p1_stocks() <= 0 {
             self.event_fail(gobj);
@@ -1122,7 +1121,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BD7FC`: KO the second player before the time's end.
-    #[doc(alias = "gm_801BD7FC")]
+    // Ports `gm_801BD7FC`; aliased once a check reaches it.
     fn event_ko_2_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(1) <= 0 {
             self.event_success(gobj);
@@ -1161,7 +1160,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BDD44`: KO the third and fourth players.
-    #[doc(alias = "gm_801BDD44")]
+    // Ports `gm_801BDD44`; aliased once a check reaches it.
     fn event_ko_3_4_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(2) <= 0 && self.game.player_stocks(3) <= 0 {
             self.event_success(gobj);
