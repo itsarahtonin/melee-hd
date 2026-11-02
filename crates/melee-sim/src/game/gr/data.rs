@@ -8,8 +8,8 @@ use super::{
     GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT,
     GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
     GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1727,6 +1727,35 @@ pub const KINOKOROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grPushOn_StageCallbacks`. Map 0 is the backdrop, map 1 the course and map 2 the lights.
+pub const PUSHON_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8021_84CC, 0x8021_8590, 0x8021_8598, 0x8021_859C, 0),
+    cb(
+        0x8021_85A0,
+        0x8021_8670,
+        0x8021_86C8,
+        0x8021_87A4,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8021_87A8, 0x8021_8880, 0x8021_8888, 0x8021_8ED0, 0),
+];
+
+/// `grPushOn_StageData`.
+pub const PUSHON: StageData = StageData {
+    grkind: GR_KIND_PUSHON,
+    callbacks: &PUSHON_CALLBACKS,
+    file: Some("/GrNPo.dat"),
+    on_init: 0x8021_82C8,
+    on_demo_init: 0x8021_82C4,
+    on_load: 0x8021_8330,
+    on_start: 0x8021_8378,
+    callback4: 0x8021_83DC,
+    on_touch_line: 0x8021_9458,
+    on_check_shadow_render: 0x8021_9528,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1760,6 +1789,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
         GR_KIND_KINOKOROUTE => &KINOKOROUTE,
+        GR_KIND_PUSHON => &PUSHON,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

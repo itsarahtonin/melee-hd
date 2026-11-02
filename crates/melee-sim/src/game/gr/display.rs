@@ -58,6 +58,9 @@ impl Running<'_> {
             Some(f) if f.0 == 0x801F_CBB8 => super::inishie1::check_shadow_render(),
             Some(f) if f.0 == 0x801F_DFF0 => super::inishie2::check_shadow_render(),
             Some(f) if f.0 == 0x801F_A900 => super::icemt::check_shadow_render(),
+            Some(f) if f.0 == super::pushon::CHECK_SHADOW_RENDER => {
+                super::pushon::check_shadow_render()
+            }
             Some(f) if f.0 == 0x801E_2EEC => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::corneria::check_shadow_render(self.game, self.data, pos, Some(j))

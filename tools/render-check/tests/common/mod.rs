@@ -101,6 +101,9 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
                         .into();
                 }
+                if name.starts_with("race-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
@@ -754,6 +757,27 @@ pub const MK_FALL: Game = Game {
     name: "mk-fall2",
     players: "Fox alone, into a pit's water (session m6-mk-route/mk-fall2)",
     replay: Replay::Session("mk-fall2"),
+};
+
+pub const RACE_LOOK: Game = Game {
+    stage: "the race",
+    name: "race-look",
+    players: "Link vs Mario, Link running to the second door (session m6-race/race-look)",
+    replay: Replay::Session("race-look"),
+};
+
+pub const RACE_SPIKES: Game = Game {
+    stage: "the race",
+    name: "race-spikes",
+    players: "Fox alone, down the course into the spikes (session m6-race/race-spikes)",
+    replay: Replay::Session("race-spikes"),
+};
+
+pub const RACE_PILLAR: Game = Game {
+    stage: "the race",
+    name: "race-pillar",
+    players: "Fox alone, into the pillars and to door 0xA3 (session m6-race/race-pillar)",
+    replay: Replay::Session("race-pillar"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,

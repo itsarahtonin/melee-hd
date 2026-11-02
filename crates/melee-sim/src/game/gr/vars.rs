@@ -120,6 +120,7 @@ pub enum VarsKind {
     BigBlueRelay,
     KinokoRoute,
     KinokoRoute2,
+    PushOn,
 }
 
 /// `union GroundVars`.
@@ -243,6 +244,8 @@ pub enum GroundVars {
     KinokoRoute(KinokoRouteVars),
     /// `grKinokoRoute_GroundVars2`: Mushroom Kingdom's route (map 3).
     KinokoRoute2(KinokoRoute2Vars),
+    /// `grPushOn_GroundVars`: the race's lights (map 2).
+    PushOn(PushOnVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1743,6 +1746,20 @@ pub struct KinokoRoute2Vars {
     pub reb0_pos: crate::vec::Vec3,
 }
 
+/// `grPushOn_GroundVars`: the fighters' lights' object (`gobj`, render link 4's first), its
+/// lights (`lobjs`, the first `count`) and their flags as the setup found them, the hidden light
+/// that follows the first fighter (`point_light`) and the specular one (`spot_light`). The
+/// entries past `count` nothing writes: they hold what the block held, and nothing reads them.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct PushOnVars {
+    pub gobj: Option<GObjId>,
+    pub lobjs: [Option<crate::hsd::lobj::LObjId>; 20],
+    pub lobj_flags: [u32; 20],
+    pub count: i32,
+    pub point_light: Option<crate::hsd::lobj::LObjId>,
+    pub spot_light: Option<crate::hsd::lobj::LObjId>,
+}
+
 impl BigBlueRelayVars {
     /// Its state (`x0_s.x0`).
     pub fn state(&self) -> i8 {
@@ -2432,6 +2449,7 @@ impl GroundVars {
             GroundVars::BigBlueRelay(_) => "BigBlueRelayVars",
             GroundVars::KinokoRoute(_) => "KinokoRouteVars",
             GroundVars::KinokoRoute2(_) => "KinokoRoute2Vars",
+            GroundVars::PushOn(_) => "PushOnVars",
             GroundVars::Kraid(_) => "KraidVars",
             GroundVars::Kraid2(_) => "Kraid2Vars",
             GroundVars::Flatzone(_) => "FlatzoneVars",
@@ -2533,6 +2551,7 @@ impl GroundVars {
         "BigBlueRelayVars",
         "KinokoRouteVars",
         "KinokoRoute2Vars",
+        "PushOnVars",
         "KraidVars",
         "Kraid2Vars",
         "FlatzoneVars",
@@ -3671,6 +3690,25 @@ impl GroundVars {
                 pad_0a: [m.u8(at + 0xA), m.u8(at + 0xB)],
                 reb0_pos: crate::vec::Vec3::new(f(at + 0xC), f(at + 0x10), f(at + 0x14)),
             }),
+            VarsKind::PushOn => {
+                let lobj = |cx: &mut dyn Cx, a: u32| {
+                    cx.import_handle("LObjId", m.u32(a))
+                        .map(crate::hsd::lobj::LObjId)
+                };
+                let count = m.u32(at + 0xA4) as i32;
+                let mut v = PushOnVars {
+                    gobj: cx.import_handle("GObjId", m.u32(at)).map(GObjId),
+                    count,
+                    point_light: lobj(cx, at + 0xA8),
+                    spot_light: lobj(cx, at + 0xAC),
+                    ..PushOnVars::default()
+                };
+                for i in 0..count.clamp(0, 20) as u32 {
+                    v.lobjs[i as usize] = lobj(cx, at + 4 + 4 * i);
+                    v.lobj_flags[i as usize] = m.u32(at + 0x54 + 4 * i);
+                }
+                GroundVars::PushOn(v)
+            }
             VarsKind::BigBlueRelay => GroundVars::BigBlueRelay(BigBlueRelayVars {
                 xC4: m.u32(at),
                 xC8_timer: m.u32(at + 4) as i32,
@@ -5500,6 +5538,18 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grPushOn_GroundVars`, likewise: the setup writes every field it reads
+    /// before reading it, so the block's bytes are left behind.
+    pub fn pushon(&mut self) -> &mut PushOnVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::PushOn(PushOnVars::default());
+        }
+        match self {
+            GroundVars::PushOn(v) => v,
+            other => panic!("a stage object's variables are {other:?}, not grPushOn_GroundVars"),
+        }
+    }
+
     /// The variables as `grKinokoRoute_GroundVars2`, likewise.
     pub fn kinokoroute2(&mut self) -> &mut KinokoRoute2Vars {
         if let GroundVars::Bytes(b) = self {
@@ -7143,6 +7193,52 @@ impl Mirror for GroundVars {
                         format!("{theirs:x?}"),
                     );
                 }
+            }
+            GroundVars::PushOn(v) => {
+                let p = format!("{path}.pushon");
+                cx.compare_handle(
+                    &format!("{p}.gobj"),
+                    "GObjId",
+                    v.gobj.map(|g| g.0),
+                    m.u32(at),
+                );
+                let count = m.u32(at + 0xA4) as i32;
+                if v.count != count {
+                    cx.mismatch(
+                        &format!("{p}.count"),
+                        v.count.to_string(),
+                        count.to_string(),
+                    );
+                }
+                // Past the count the entries hold the block's bytes, which nothing reads.
+                for i in 0..v.count.clamp(0, 20) as usize {
+                    let a = at + 4 * i as u32;
+                    cx.compare_handle(
+                        &format!("{p}.lobjs[{i}]"),
+                        "LObjId",
+                        v.lobjs[i].map(|l| l.0),
+                        m.u32(a + 4),
+                    );
+                    if v.lobj_flags[i] != m.u32(a + 0x54) {
+                        cx.mismatch(
+                            &format!("{p}.lobj_flags[{i}]"),
+                            format!("{:#x}", v.lobj_flags[i]),
+                            format!("{:#x}", m.u32(a + 0x54)),
+                        );
+                    }
+                }
+                cx.compare_handle(
+                    &format!("{p}.point_light"),
+                    "LObjId",
+                    v.point_light.map(|l| l.0),
+                    m.u32(at + 0xA8),
+                );
+                cx.compare_handle(
+                    &format!("{p}.spot_light"),
+                    "LObjId",
+                    v.spot_light.map(|l| l.0),
+                    m.u32(at + 0xAC),
+                );
             }
             GroundVars::BigBlueRelay(v) => {
                 let ours = (

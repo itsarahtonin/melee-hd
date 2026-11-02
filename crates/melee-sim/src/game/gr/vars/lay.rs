@@ -631,6 +631,17 @@ impl GroundVars {
                 l.put_bytes(a + 0xA, &v.pad_0a);
                 v3(l, a + 0xC, &v.reb0_pos);
             }
+            GroundVars::PushOn(v) => {
+                gobj(l, cx, a, v.gobj);
+                for i in 0..v.count.clamp(0, 20) as usize {
+                    let at = a + 4 * i as u32;
+                    l.put_word(at + 4, cx.handle("LObjId", v.lobjs[i].map(|o| o.0)));
+                    l.put_u32(at + 0x54, v.lobj_flags[i]);
+                }
+                l.put_u32(a + 0xA4, v.count as u32);
+                l.put_word(a + 0xA8, cx.handle("LObjId", v.point_light.map(|o| o.0)));
+                l.put_word(a + 0xAC, cx.handle("LObjId", v.spot_light.map(|o| o.0)));
+            }
             GroundVars::BigBlueRelay(v) => {
                 l.put_u32(a, v.xC4);
                 w32(l, a + 4, &[v.xC8_timer, v.xCC_timer, v.xD0_timer]);
