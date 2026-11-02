@@ -246,7 +246,7 @@ impl Running<'_> {
     pub fn add_1p_time(&mut self, seconds: u32) {
         let s = &mut self.game.game_data.thing.save_data;
         let t = s.x1A3C as u32;
-        s.x1A3C = t.checked_add(seconds).unwrap_or(u32::MAX) as i32;
+        s.x1A3C = t.saturating_add(seconds) as i32;
     }
 
     /// `gm_80188454`: a character's best combo this visit.
@@ -820,17 +820,11 @@ impl Running<'_> {
                         self.training_camera();
                     }
                 }
-                7 => {
-                    if buttons & PAD_A != 0 {
-                        self.lb_audio_call(SFX_FORWARD);
-                        self.training_reset();
-                    }
+                7 if buttons & PAD_A != 0 => {
+                    self.lb_audio_call(SFX_FORWARD);
+                    self.training_reset();
                 }
-                8 => {
-                    if buttons & PAD_A != 0 {
-                        self.game.vs_terminate();
-                    }
-                }
+                8 if buttons & PAD_A != 0 => self.game.vs_terminate(),
                 _ => {}
             }
         } else {
