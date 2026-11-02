@@ -38,6 +38,7 @@ pub fn with_stage_coll<R>(
         landing,
         kicks: Default::default(),
         bumps: Default::default(),
+        escape: Default::default(),
         grounds: &mut game.grounds,
         stage_maps: super::super::ft::coll::StageMaps::of_parts(
             &game.world,
@@ -55,8 +56,10 @@ pub fn with_stage_coll<R>(
     let landing = hooks.landing;
     let kicks = std::mem::take(&mut hooks.kicks);
     let bumps = std::mem::take(&mut hooks.bumps);
+    let escape = std::mem::take(&mut hooks.escape);
     landing.apply(game);
     kicks.apply(game, data);
+    escape.apply(game);
     bumps.apply(&mut Running { game, data });
     out
 }

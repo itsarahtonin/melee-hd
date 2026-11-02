@@ -46,6 +46,8 @@ pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
 pub const GRBIGBLUEROUTE_YAKUMONO: u32 = 0x804D_6A68;
 /// grpushon.c's (`ssbm_types::tu::melee__gr__grpushon::yakumono_param`).
 pub const GRPUSHON_YAKUMONO: u32 = 0x804D_6AB8;
+/// grzebesroute.c's (`ssbm_types::tu::melee__gr__grzebesroute::yakumono_param`).
+pub const GRZEBESROUTE_YAKUMONO: u32 = 0x804D_6A60;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -388,6 +390,8 @@ impl Importer<'_> {
         self.game.gr.bigblueroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPUSHON_YAKUMONO);
         self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
+        self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -1114,6 +1118,11 @@ impl Comparer<'_> {
                 "grPushOn yakumono_param",
                 GRPUSHON_YAKUMONO,
                 game.gr.pushon_yakumono,
+            ),
+            (
+                "grZebesRoute yakumono_param",
+                GRZEBESROUTE_YAKUMONO,
+                game.gr.zebesroute_yakumono,
             ),
             (
                 "grShrine yakumono_param",

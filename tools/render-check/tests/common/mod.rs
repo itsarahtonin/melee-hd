@@ -48,7 +48,8 @@ pub enum Replay {
     /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
-    /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
+    /// `ze-NAME` `lockstep/m6-brinstar-escape/` (ssbm-rs's `SSBMINP1`), played in the
     /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -112,6 +113,11 @@ impl Replay {
                 }
                 if name.starts_with("fz-") {
                     return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
+                }
+
+                if name.starts_with("ze-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
+                        .into();
                 }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
@@ -802,6 +808,22 @@ pub const RACE_PILLAR: Game = Game {
     name: "race-pillar",
     players: "Fox alone, into the pillars and to door 0xA3 (session m6-race/race-pillar)",
     replay: Replay::Session("race-pillar"),
+};
+
+/// Brinstar's escape at rest (`m6-brinstar-escape/ze-look`): Link and Mario at the shaft's foot.
+pub const ZE_LOOK: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-look",
+    players: "Link and Mario standing (session m6-brinstar-escape/ze-look)",
+    replay: Replay::Session("ze-look"),
+};
+
+/// Brinstar's escape climbed (`m6-brinstar-escape/ze-climb`): Fox up the shaft to the way out.
+pub const ZE_CLIMB: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-climb",
+    players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
+    replay: Replay::Session("ze-climb"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
