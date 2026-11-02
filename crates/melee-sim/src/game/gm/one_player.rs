@@ -585,7 +585,7 @@ impl Running<'_> {
     }
 
     /// `gm_80168F88`: the announcer's bank (bank 2's 0x10) wanted and waited for.
-    #[doc(alias = "gm_80168F88")]
+    // Ports `gm_80168F88`; aliased once a check reaches it.
     pub fn load_announcer_bank(&mut self) {
         self.game.audio.lb.unwant_banks(0x12);
         self.game.audio.lb.want_banks(2, 0x10);

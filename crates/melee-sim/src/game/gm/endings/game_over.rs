@@ -78,9 +78,10 @@ pub struct GameOver {
     /// `lbl_804D66B0` to `lbl_804D66E8`: the backdrop's loop, the trophy, "no", "yes", the
     /// end's animation, joint 1, the turning stand's model and the stand.
     pub nodes: [Node; 8],
-    /// `lbl_804D66F0` to `lbl_804D66F8`: coming soon's archive (its `HSD_Archive` block), its
-    /// joint 1 and its frame.
+    /// `lbl_804D66F0` to `lbl_804D66F8`: coming soon's archive (its two blocks), its joint 1
+    /// and its frame.
     pub soon_archive: Option<ArchiveId>,
+    pub soon_file: u32,
     pub soon_block: u32,
     pub soon_jobj: Option<JObjId>,
     pub soon_frame: u32,
@@ -390,7 +391,7 @@ impl Running<'_> {
                 self.game.endings.game_over.result = 0;
             }
         }
-        self.game_over_question(trigger as u32);
+        self.game_over_question(trigger);
         self.game_over_score_text();
     }
 
@@ -648,7 +649,7 @@ impl Running<'_> {
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until
     /// A or Start on any port, and the scene's end with the animation's.
-    #[doc(alias = "fn_801A0B60")]
+    // Ports fn_801A0B60; aliased once a check reaches it.
     pub fn coming_soon_proc(&mut self, gobj: GObjId) {
         let j = match self.game.world.gobj(gobj).obj {
             Some(Obj::JObj(j)) => j,
@@ -686,9 +687,10 @@ impl Running<'_> {
     // modes' coming soon states, Classic's, Adventure's and All-Star's).
     pub fn coming_soon_on_enter(&mut self) {
         self.game.endings.game_over.soon_frame = 0;
-        let (a, scene, (_, block)) = self.endings_scene("IfComSn.dat", "ScComSoon_scene_data");
+        let (a, scene, (file, block)) = self.endings_scene("IfComSn.dat", "ScComSoon_scene_data");
         let g = &mut self.game.endings.game_over;
         g.soon_archive = Some(a);
+        g.soon_file = file;
         g.soon_block = block;
         let data = self.data;
         let gm = &mut *self.game;
@@ -720,12 +722,12 @@ impl Running<'_> {
             super::super::pause::tree_nodes(&gm.objs.jobjs, Some(j), &[1])[0];
     }
 
-    /// `gm_Scene_ComingSoon_OnExit`: the archive let go (its `HSD_Archive` block; the
-    /// bytes' block stays the scene's), the music stopped.
+    /// `gm_Scene_ComingSoon_OnExit`: the archive let go, the music stopped.
     // Ports gm_Scene_ComingSoon_OnExit; aliased once a check reaches it.
     pub fn coming_soon_on_exit(&mut self) {
-        let block = self.game.endings.game_over.soon_block;
-        crate::hsd::heap::with(|h| h.mem_free(block));
+        let g = &self.game.endings.game_over;
+        let (file, block) = (g.soon_file, g.soon_block);
+        self.free_archive_blocks(file, block);
         self.lb_audio_music_stop();
     }
 }

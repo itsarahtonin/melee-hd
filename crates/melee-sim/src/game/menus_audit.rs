@@ -383,8 +383,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "Hook::DebugUnported(name)",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+        "gm_801BEE9C (congratulations' exit)",
+        "the game over modes' congratulations (milestone 6's task 5): the single-player modes' endings, which only the 1P list's gated entries lead to, and the debug menu's ending test at a raised debug level",
     ),
     (
         "unported(\"debug pause predicate\"",

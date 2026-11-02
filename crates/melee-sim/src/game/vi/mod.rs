@@ -495,8 +495,6 @@ impl Running<'_> {
     #[doc(alias = "un_8031E110")]
     #[doc(alias = "un_8031F980")]
     #[doc(alias = "un_803204B0")]
-    #[doc(alias = "gm_801BEFA4")]
-    #[doc(alias = "gm_801BEFC0")]
     pub fn debug_cutscene_enter(&mut self) {
         const ICS: u8 = 0xE;
         let rand = |r: &mut Self, n: i32| r.game.objs.rng.below(n) as u8;

@@ -196,6 +196,8 @@ enum Hook {
     DebugEnterIntroEasy,
     DebugEnterIntroAllstar,
     DebugEnterGameOver,
+    /// `gm_801BEE9C` (`gmgover.c`), congratulations' exit.
+    GOverCongratsExit,
     /// The single-player modes' loads and selects ([`super::one_player`]).
     ClassicOnLoad,
     ClassicEnterCss,
@@ -655,6 +657,16 @@ fn states(mode: u8) -> &'static [StateDesc] {
             crate::game::vi::GS_REGEND_CONGRATS,
         ),
     ];
+    // `gm_Mode_DebugGOver_States` (`gmgover.c`): the trophy fall, then congratulations.
+    const DEBUG_GOVER: [StateDesc; 2] = [
+        debug(0, None, None, super::endings::GS_REGEND_TOYFALL),
+        debug(
+            1,
+            None,
+            Some(Hook::GOverCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
     if let Some(list) = one_player_states(mode) {
         return list;
     }
@@ -681,6 +693,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         super::GM_HANYU_CSS => &HANYU_CSS,
         super::GM_HANYU_SSS => &HANYU_SSS,
         crate::game::vi::GM_DEBUG_CUTSCENE => &DEBUG_CUTSCENE,
+        super::endings::GM_DEBUG_GOVER => &DEBUG_GOVER,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -713,7 +726,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         | super::GM_DEBUG_SOUND_TEST
         | super::GM_HANYU_CSS
         | super::GM_HANYU_SSS
-        | crate::game::vi::GM_DEBUG_CUTSCENE => (false, None, None),
+        | crate::game::vi::GM_DEBUG_CUTSCENE
+        | super::endings::GM_DEBUG_GOVER => (false, None, None),
         super::one_player::GM_CLASSIC => (true, Some(Hook::ClassicOnLoad), None),
         super::one_player::GM_ADVENTURE => (false, Some(Hook::AdventureOnLoad), None),
         super::one_player::GM_ALLSTAR => (true, Some(Hook::AllStarOnLoad), None),
@@ -1299,6 +1313,7 @@ impl Running<'_> {
             Hook::DebugEnterIntroEasy => self.debug_enter_intro_easy(),
             Hook::DebugEnterIntroAllstar => self.debug_enter_intro_allstar(),
             Hook::DebugEnterGameOver => self.debug_enter_game_over(),
+            Hook::GOverCongratsExit => unported_call("gm_801BEE9C (congratulations' exit)"),
             Hook::ClassicOnLoad => self.classic_on_load(),
             Hook::ClassicEnterCss => self.classic_enter_css(),
             Hook::ClassicExitCss => self.classic_exit_css(),

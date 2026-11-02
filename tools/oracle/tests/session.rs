@@ -1938,3 +1938,50 @@ fn the_debug_cutscenes() {
     assert!(out.contains(want), "{out}");
     assert!(out.contains("no stale reads"), "{out}");
 }
+
+/// Milestone 6's task 5's debug-level sessions (docs/oracle.md, the single-player endings),
+/// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
+/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy` and
+/// `intro-allstar` (to Classic's and All-Star's intros, tasks 22's and 23's) and `ending-test`
+/// (the RegularEnding Test's debug game over mode, to its trophy fall); task 5's
+/// `m6-endings/gameover2` (the game over twice: a continue paid in coins, then "no").
+#[test]
+fn the_debug_endings() {
+    for (dir, name, want) in [
+        (
+            "m6-oracle",
+            "gameover",
+            "3157 ticks compared, no difference",
+        ),
+        (
+            "m6-oracle",
+            "intro-easy",
+            "1362 ticks compared, no difference; stopped in tick 1362: game scene 0x20 isn't ported",
+        ),
+        (
+            "m6-oracle",
+            "intro-allstar",
+            "1332 ticks compared, no difference; stopped in tick 1332: game scene 0x21 isn't ported",
+        ),
+        (
+            "m6-oracle",
+            "ending-test",
+            "1232 ticks compared, no difference; stopped in tick 1232: game scene 0xf isn't ported",
+        ),
+        (
+            "m6-endings",
+            "gameover2",
+            "3192 ticks compared, no difference",
+        ),
+    ] {
+        let Some(out) = scripted_session(dir, name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+    }
+}
