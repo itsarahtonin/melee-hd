@@ -192,7 +192,12 @@ enum Hook {
     /// cutscene mode's.
     CutsceneLuigiEnter,
     RegendCongratsExit,
-    DebugUnported(&'static str),
+    /// `onEnterIntroEasy`, `onEnterIntroAllstar`, `onEnterGameOver` (`gmdebugmode.c`).
+    DebugEnterIntroEasy,
+    DebugEnterIntroAllstar,
+    DebugEnterGameOver,
+    /// `gm_801BEE9C` (`gmgover.c`), congratulations' exit.
+    GOverCongratsExit,
     /// The single-player modes' loads and selects ([`super::one_player`]).
     ClassicOnLoad,
     ClassicEnterCss,
@@ -578,20 +583,20 @@ fn states(mode: u8) -> &'static [StateDesc] {
         ),
         debug(
             6,
-            Some(Hook::DebugUnported("onEnterIntroEasy")),
+            Some(Hook::DebugEnterIntroEasy),
             Some(Hook::DebugBackToMenu),
             0x20,
         ),
         debug(
             7,
-            Some(Hook::DebugUnported("onEnterIntroAllstar")),
+            Some(Hook::DebugEnterIntroAllstar),
             Some(Hook::DebugBackToMenu),
             0x21,
         ),
         debug(8, None, Some(Hook::DebugBackToMenu), 0x23),
         debug(
             9,
-            Some(Hook::DebugUnported("onEnterGameOver")),
+            Some(Hook::DebugEnterGameOver),
             Some(Hook::DebugBackToMenu),
             0x22,
         ),
@@ -652,6 +657,16 @@ fn states(mode: u8) -> &'static [StateDesc] {
             crate::game::vi::GS_REGEND_CONGRATS,
         ),
     ];
+    // `gm_Mode_DebugGOver_States` (`gmgover.c`): the trophy fall, then congratulations.
+    const DEBUG_GOVER: [StateDesc; 2] = [
+        debug(0, None, None, super::endings::GS_REGEND_TOYFALL),
+        debug(
+            1,
+            None,
+            Some(Hook::GOverCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
     if let Some(list) = one_player_states(mode) {
         return list;
     }
@@ -678,6 +693,7 @@ fn states(mode: u8) -> &'static [StateDesc] {
         super::GM_HANYU_CSS => &HANYU_CSS,
         super::GM_HANYU_SSS => &HANYU_SSS,
         crate::game::vi::GM_DEBUG_CUTSCENE => &DEBUG_CUTSCENE,
+        super::endings::GM_DEBUG_GOVER => &DEBUG_GOVER,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -710,7 +726,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         | super::GM_DEBUG_SOUND_TEST
         | super::GM_HANYU_CSS
         | super::GM_HANYU_SSS
-        | crate::game::vi::GM_DEBUG_CUTSCENE => (false, None, None),
+        | crate::game::vi::GM_DEBUG_CUTSCENE
+        | super::endings::GM_DEBUG_GOVER => (false, None, None),
         super::one_player::GM_CLASSIC => (true, Some(Hook::ClassicOnLoad), None),
         super::one_player::GM_ADVENTURE => (false, Some(Hook::AdventureOnLoad), None),
         super::one_player::GM_ALLSTAR => (true, Some(Hook::AllStarOnLoad), None),
@@ -989,6 +1006,11 @@ impl Running<'_> {
             ),
             // No frame function: the menus' process runs the scene.
             GS_DEBUG_MENU => (crate::game::hud::debug_menu::ON_ENTER, CodeRef(0)),
+            // No frame functions: the models' processes run the screens.
+            super::endings::GS_GAMEOVER => (super::endings::game_over::ON_ENTER, CodeRef(0)),
+            super::endings::GS_COMING_SOON => {
+                (super::endings::game_over::SOON_ON_ENTER, CodeRef(0))
+            }
             k if crate::game::vi::scene_handlers(k).is_some() => {
                 crate::game::vi::scene_handlers(k).unwrap()
             }
@@ -1026,6 +1048,8 @@ impl Running<'_> {
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
             crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
+            super::endings::game_over::ON_ENTER => self.game_over_on_enter(),
+            super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
             _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -1101,6 +1125,8 @@ impl Running<'_> {
             // `ifPrize_Scene_OnExit` does nothing; the debug menu has no exit.
             GS_PRIZE | GS_DEBUG_MENU => {}
             GS_APPROACH => self.approach_on_exit(),
+            super::endings::GS_GAMEOVER => self.game_over_on_exit(),
+            super::endings::GS_COMING_SOON => self.coming_soon_on_exit(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
@@ -1284,7 +1310,10 @@ impl Running<'_> {
             Hook::DebugVsEnterResults => self.vs_mode_enter_results(),
             Hook::CutsceneLuigiEnter => self.debug_cutscene_enter(),
             Hook::RegendCongratsExit => self.debug_cutscene_exit(),
-            Hook::DebugUnported(name) => unported_call(name),
+            Hook::DebugEnterIntroEasy => self.debug_enter_intro_easy(),
+            Hook::DebugEnterIntroAllstar => self.debug_enter_intro_allstar(),
+            Hook::DebugEnterGameOver => self.debug_enter_game_over(),
+            Hook::GOverCongratsExit => unported_call("gm_801BEE9C (congratulations' exit)"),
             Hook::ClassicOnLoad => self.classic_on_load(),
             Hook::ClassicEnterCss => self.classic_enter_css(),
             Hook::ClassicExitCss => self.classic_exit_css(),

@@ -371,17 +371,24 @@ pub const FILES: &[&str] = &[
     "MnExtAll.dat",
     "SdSlChr.dat",
     "MnSlMap.dat",
+    // The single-player endings': game over's (its coin counter, turning stand and the
+    // trophy's stand) and coming soon's.
+    "GmGover.dat",
+    "GmGoCoin.dat",
+    "GmGoAnim.dat",
+    "GmRgStnd.dat",
+    "IfComSn.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
 /// test's, which [`Session::read_song`] reads as the stage or the test starts them: the
 /// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, the
 /// special messages' three, the results screen's fanfares (`ff_dk.hps` to `ff_yoshi.hps`,
-/// each character's), which the screen's entry starts, Tournament's bracket's two and the
-/// challenger approach's.
+/// each character's), which the screen's entry starts, Tournament's bracket's two, the
+/// challenger approach's, and game over's two.
 pub const SONGS: &[usize] = &[
     0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x13, 0x14,
-    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48,
+    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20,
 ];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.

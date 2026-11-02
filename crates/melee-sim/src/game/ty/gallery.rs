@@ -614,7 +614,7 @@ impl Running<'_> {
     /// `Toy_8030813C`: a trophy's model file (`TyDataf`): the English table's five first
     /// where the setting is English, else the main table's.
     #[doc(alias = "Toy_8030813C")]
-    pub(super) fn toy_model_file(&self, trophy: i32) -> DataRef {
+    pub(crate) fn toy_model_file(&self, trophy: i32) -> DataRef {
         if super::super::gm::language_setting_is_us() {
             let at = self.dataf_sym("tyModelFileUsTbl");
             for i in 0..5 {
@@ -632,7 +632,7 @@ impl Running<'_> {
     }
 
     /// A model file's name (`ToyModelFile.archive_name`).
-    pub(super) fn toy_file_name(&self, file: DataRef) -> String {
+    pub(crate) fn toy_file_name(&self, file: DataRef) -> String {
         self.toy_cstr(file.at(4))
     }
 
@@ -644,7 +644,7 @@ impl Running<'_> {
     }
 
     /// A model file's symbol (`ToyModelFile.symbol_name`).
-    fn toy_file_symbol(&self, file: DataRef) -> String {
+    pub(crate) fn toy_file_symbol(&self, file: DataRef) -> String {
         self.toy_cstr(file.at(0x24))
     }
 
