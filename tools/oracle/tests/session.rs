@@ -2065,7 +2065,7 @@ fn icicle_mountain_climb_in_debug_vs() {
     if let Some(out) = scripted_session("m6-icicle-climb", "im-end", &["--all", "--heap"]) {
         assert!(
             out.contains(
-                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's                  match event) isn't ported"
+                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's match event) isn't ported"
             ),
             "{out}"
         );
