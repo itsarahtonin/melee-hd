@@ -493,6 +493,27 @@ impl GroundVars {
                 h16(l, a + 0x18, &v.x18);
                 h16(l, a + 0x30, &v.x30);
             }
+            GroundVars::IceMtClimb(v) => {
+                h16(
+                    l,
+                    a,
+                    &[
+                        v.under,
+                        v.upper,
+                        v.phase,
+                        v.delay,
+                        v.lerp_count,
+                        v.burst_count,
+                        v.idx,
+                    ],
+                );
+                f(l, a + 0x10, v.cur);
+                for k in 0..5 {
+                    l.put_bits(a + 0x14, k, 1, u32::from(v.x14 & (0x80 >> k) != 0));
+                }
+                h16(l, a + 0x16, &[v.x16, v.x18, v.x1A, v.x1C]);
+                f(l, a + 0x20, v.x20);
+            }
             GroundVars::IceMtField(v) => {
                 let (n, slots) = icemt_field_layout(v.map);
                 l.put_bits(a, 0, 1, u32::from(v.flags & IceMtFieldVars::B0 != 0));
