@@ -1927,19 +1927,21 @@ fn the_yoshiki_test_page() {
 /// the debug menu's cutscene entry at debug level 3, plays the debug cutscene mode (0x19)
 /// untouched: Luigi's, Brinstar's, the explosion, the three Kirbys, the giant Kirby, Star Fox's
 /// and the F-Zero cutscene (on the F-Zero race's stage, its cars on the racers), each to its
-/// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 19's
-/// longer `m6-fzero-race/fz-cutscene` to the cutscene after it (`vi1101`), whose scene isn't
-/// ported.
+/// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 4's
+/// `m6-cutscenes-2/cutscenes`, the same script run through the whole mode (Start in
+/// congratulations), on through the metal cutscene (`vi1101`) and Bowser's trophy (`vi1201v1`)
+/// into Giga Bowser's transformation (`vi1201v2`), to Giga Bowser's fighter, task 7's.
 #[test]
 fn the_debug_cutscenes() {
     if let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) {
         assert!(out.contains("3282 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
-    if let Some(out) = scripted_session("m6-fzero-race", "fz-cutscene", &["--all", "--heap"]) {
-        let want = "3282 ticks compared, no difference; stopped in tick 3282: \
-                    the cutscene scene 0x18's files isn't ported";
+    if let Some(out) = scripted_session("m6-cutscenes-2", "cutscenes", &["--all", "--heap"]) {
+        let want = "4364 ticks compared, no difference; stopped in tick 4364: \
+                    fighter OnLoad 0x8014f6b8 (ftGk_Init_OnLoad) isn't ported";
         assert!(out.contains(want), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }
 

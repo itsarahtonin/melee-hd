@@ -24,15 +24,15 @@ use common::{
     FZ_CUTSCENE, FZ_RUN, GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE,
     ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
-    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6E_GAMEOVER, MENU_TOUR, METAL_CLOAK_RC, MK_ENEMIES,
-    MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT,
-    OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
-    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
-    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
+    METAL_CLOAK_RC, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
+    NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK,
+    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES,
+    RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD,
+    SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK,
+    TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
+    TROPHY_LOTTERY, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB,
+    ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -1106,6 +1106,87 @@ frames!(FZ_CUTSCENE;
     fz_cutscene_3131 3131,
     fz_cutscene_3191 3191,
 );
+
+// The cutscenes (milestone 6's task 4, the debug cutscene mode at debug level 3), two frames
+// each: Luigi at Peach's Castle (1150, 1300), Brinstar's warning (1500, 1650) and the planet's
+// explosion (1800, 2000), identical.
+frames!(M6C_CUTSCENES;
+    m6c_luigi_1150 1150,
+    m6c_luigi_1300 1300,
+    m6c_brinstar_1500 1500,
+    m6c_brinstar_1650 1650,
+    m6c_explosion_1800 1800,
+    m6c_explosion_2000 2000,
+);
+
+/// A cutscene frame with the fighters' shadows (and, on Final Destination, its floor's
+/// reflection), against a capture made with ssbm-rs's renderer running: the three Kirbys and
+/// the giant Kirby on Green Greens (2200, 2250; 2320, 2380), metal Mario and Luigi on
+/// Battlefield (3500, 3700), Bowser's trophy falling and the character posing on Final
+/// Destination (3850, 4000), Bowser's trophy before Giga Bowser's transformation (4200, 4300).
+fn m6c_shadowed(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6C_CUTSCENES,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! m6c_shadowed {
+    ($($name:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                m6c_shadowed($frame, $same);
+            }
+        )*
+    };
+}
+
+m6c_shadowed!(
+    m6c_kirbys_2200 2200 [0, 0],
+    m6c_kirbys_2250 2250 [0, 0],
+    m6c_giant_kirby_2320 2320 [0, 0],
+    m6c_giant_kirby_2380 2380 [0, 0],
+    m6c_metal_3500 3500 [0, 0],
+    m6c_metal_3700 3700 [0, 0],
+    m6c_trophy_3850 3850 [0, 0],
+    m6c_trophy_4000 4000 [0, 0],
+    m6c_giga_4200 4200 [0, 0],
+    m6c_giga_4300 4300 [0, 0],
+);
+
+/// Star Fox's cutscene (2450, 2900): the screen's erase takes the background color whose alpha
+/// `Camera_GetBackgroundColor` never writes, which the erase doesn't write to the screen.
+fn m6c_starfox(frame: u32, same: [usize; 2]) {
+    compare(
+        &M6C_CUTSCENES,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::ERASE_ALPHA,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6c_starfox_2450() {
+    m6c_starfox(2450, [1078, 1080]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6c_starfox_2900() {
+    m6c_starfox(2900, [1102, 1102]);
+}
 
 // The race (milestone 6's task 20, debug VS at debug level 3): Link and Mario at the start
 // under the course's lights (race-look 2060) and Mario's KO as the blast zones follow Link

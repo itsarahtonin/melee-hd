@@ -111,6 +111,9 @@ impl Replay {
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6c-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-cutscenes-2/{o}.inputs")).into();
+                }
                 if name.starts_with("fz-") {
                     return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
                 }
@@ -789,6 +792,15 @@ pub const FZ_CUTSCENE: Game = Game {
     replay: Replay::Session("fz-cutscene"),
 };
 
+/// The debug cutscene mode whole (`m6-cutscenes-2/cutscenes`, debug level 3): every cutscene
+/// in turn.
+pub const M6C_CUTSCENES: Game = Game {
+    stage: "the cutscenes",
+    name: "m6c-cutscenes",
+    players: "the debug cutscene mode's eleven cutscenes (session m6-cutscenes-2/cutscenes)",
+    replay: Replay::Session("m6c-cutscenes"),
+};
+
 pub const RACE_LOOK: Game = Game {
     stage: "the race",
     name: "race-look",
@@ -1417,5 +1429,9 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
+    /// Star Fox's cutscene erases the screen to the background color, whose alpha
+    /// `Camera_GetBackgroundColor` leaves a stack byte; the erase writes color and depth only,
+    /// so the alpha reaches no pixel (docs/engine.md, uninitialized values).
+    pub const ERASE_ALPHA: &str = "Star Fox's cutscene's erase: the background color's unset alpha, which the erase never writes";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }
