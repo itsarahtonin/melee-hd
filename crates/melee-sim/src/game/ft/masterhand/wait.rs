@@ -148,7 +148,7 @@ impl Running<'_> {
             return;
         }
         self.mh_reset_timer(gobj);
-        if self.boss_motion_id(KIND_CRAZY_HAND) == ms::TAG_ROCK_PAPER {
+        if self.boss_motion_id(KIND_CRAZY_HAND) == super::super::crazyhand::ms::TAG_ROCK_PAPER {
             self.mh_tag_attack(gobj);
             return;
         }
@@ -273,10 +273,11 @@ impl Running<'_> {
     /// Crazy Hand's tag attack's part for him, from Crazy Hand's next attack.
     fn mh_tag_attack(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
+        use super::super::crazyhand::ms as ch_ms;
         let (cb, off) = match self.boss_ch_next() {
-            ms::SQUEEZING1 => (addr::MS_380_80155194, attr::X124),
-            ms::SQUEEZE => (addr::MS_382_801552F8, attr::X12C),
-            ms::THROW => (addr::MS_383_80155484, attr::X134),
+            ch_ms::SQUEEZING1 => (addr::MS_380_80155194, attr::X124),
+            ch_ms::SQUEEZE => (addr::MS_382_801552F8, attr::X12C),
+            ch_ms::THROW => (addr::MS_383_80155484, attr::X134),
             // The original sets the point for `Slam` and starts nothing.
             _ => return,
         };

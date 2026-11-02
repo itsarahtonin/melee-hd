@@ -134,6 +134,13 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
                         .into();
                 }
+
+                if name.starts_with("ch-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-crazy-hand/{name}.inputs")).into();
+                }
+                if name.starts_with("mh-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-master-hand/{name}.inputs")).into();
+                }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
                         .into();
@@ -873,6 +880,32 @@ pub const GB_GIRL: Game = Game {
     name: "gb-girl",
     players: "the female Wire Frame vs Mario (session m6-giga-bowser/girl)",
     replay: Replay::Session("gb-girl"),
+};
+
+/// Master Hand (`m6-master-hand/mh-1p`, debug VS at debug level 3, Link against him on Final
+/// Destination).
+pub const MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "mh-1p",
+    players: "Link vs Master Hand (session m6-master-hand/mh-1p)",
+    replay: Replay::Session("mh-1p"),
+};
+
+/// Crazy Hand alone (`m6-crazy-hand/ch-probe`, debug VS at debug level 3, Link against him on
+/// Final Destination).
+pub const CH_PROBE: Game = Game {
+    stage: "Final Destination",
+    name: "ch-probe",
+    players: "Link vs Crazy Hand (session m6-crazy-hand/ch-probe)",
+    replay: Replay::Session("ch-probe"),
+};
+
+/// Both hands (`m6-crazy-hand/ch-mh-1p`): Crazy Hand's entrance, his grab, the tag attacks.
+pub const CH_MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "ch-mh-1p",
+    players: "Link vs Master Hand and Crazy Hand (session m6-crazy-hand/ch-mh-1p)",
+    replay: Replay::Session("ch-mh-1p"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,

@@ -2107,3 +2107,26 @@ fn training_from_its_select() {
         assert!(out.contains(want), "{out}");
     }
 }
+
+/// Crazy Hand in the debug menu's Versus page (milestone 6's task 12), from power-on with the
+/// heap: `m6-crazy-hand/ch-mh-1p`, both hands against one human (Crazy Hand's attacks, his
+/// grab and throw, two of the tag attacks, the no-contest) to its trace's end; and
+/// `ch-alone-1`, Crazy Hand alone, whose poke makes Master Hand's lasers with no Master Hand to
+/// have registered them, so the game faults: the trace ends before the fault, and melee-hd
+/// stops there by name on the next tick (`--past`).
+#[test]
+fn crazy_hand_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-crazy-hand", "ch-mh-1p", &["--all", "--heap"]) {
+        assert!(out.contains("19578 ticks compared, no difference"), "{out}");
+    }
+    let args = ["--all", "--heap", "--past", "300"];
+    if let Some(out) = scripted_session("m6-crazy-hand", "ch-alone-1", &args) {
+        assert!(
+            out.contains("4983 ticks compared, no difference")
+                && out.contains(
+                    "past the trace's end, stopped in tick 4983: Melee crashes: Crazy Hand's poke makes Master Hand's laser"
+                ),
+            "{out}"
+        );
+    }
+}

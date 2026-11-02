@@ -2,7 +2,6 @@
 //! runs out takes no more input, flashes, cries out and lies down (or tumbles) where it is,
 //! and the game mode hears it lost (`gm_80167470`).
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::super::common::GA_AIR;
 use crate::hsd::gobj::GObjId;
@@ -40,7 +39,7 @@ impl Running<'_> {
             if kind == KIND_MASTER_HAND {
                 self.mh_beaten(gobj);
             } else {
-                unported_call("ftCh_GrabUnk1_8015ADD0");
+                self.ch_beaten(gobj);
             }
             let fp = self.game.fighter(gobj);
             let (slot, sub) = (i32::from(fp.player_idx), i32::from(fp.is_sub_fighter));
