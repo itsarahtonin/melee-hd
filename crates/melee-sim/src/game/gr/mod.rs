@@ -15,6 +15,7 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod exe_data;
+pub mod figure;
 pub mod flatzone;
 pub mod fourside;
 pub mod fzerocar;
@@ -126,6 +127,10 @@ pub const GR_KIND_KINOKOROUTE: i32 = 31;
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_ZebesRoute`, Brinstar's escape.
 pub const GR_KIND_ZEBESROUTE: i32 = 33;
+/// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
+pub const GR_KIND_FIGURE1: i32 = 68;
+pub const GR_KIND_FIGURE2: i32 = 69;
+pub const GR_KIND_FIGURE3: i32 = 70;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
@@ -271,6 +276,9 @@ pub struct Globals {
     /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
     /// timer and the trophy slot's odds.
     pub zebesroute_yakumono: Option<DataRef>,
+    /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
+    /// nothing reads.
+    pub figure_yakumono: [Option<DataRef>; 3],
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
