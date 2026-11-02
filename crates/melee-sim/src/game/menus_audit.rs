@@ -187,10 +187,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Training's menu's reset, behind the Training gate",
     ),
     (
-        "tyDisplay_8031C454 (a single-player stage's trophy)",
-        "a single-player match's stage when the trophies' tables offer one (Training's draw found none in every Training session, on the unlock-all card), behind the gates",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the single-player modes', which only the entries behind GATES lead to: each mode's states past its select (gm::one_player), its own task's",
     ),
