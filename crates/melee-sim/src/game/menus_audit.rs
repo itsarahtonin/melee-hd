@@ -60,12 +60,6 @@ pub const GATES: &[Gate] = &[
     },
     Gate {
         list: STADIUM,
-        entry: 1,
-        what: "Home-Run Contest",
-        covers: &["melee/gm/gmhomerun"],
-    },
-    Gate {
-        list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
         covers: &[
