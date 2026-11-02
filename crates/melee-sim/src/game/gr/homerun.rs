@@ -108,36 +108,26 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 #[doc(alias = "grHomeRun_8021E4F8")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
-/// The destroy callbacks that do nothing (the platform's, the field's, the plain stretches'
-/// and the backgrounds'): only `Ground_801C4A08` runs them, for a stretch the field's process
-/// leaves behind, past about 2,600 units of the camera's travel.
-// Ports grHomeRun_8021CB1C; aliased once a check reaches it.
-// Ports grHomeRun_8021DEB0; aliased once a check reaches it.
-// Ports grHomeRun_8021DEEC; aliased once a check reaches it.
-// Ports grHomeRun_8021E070; aliased once a check reaches it.
-// Ports grHomeRun_8021E1F4; aliased once a check reaches it.
-// Ports grHomeRun_8021E378; aliased once a check reaches it.
-// Ports grHomeRun_8021E4FC; aliased once a check reaches it.
+/// The plain stretches' destroy callbacks (maps 4, 1, 6 and 8), which do nothing: only
+/// `Ground_801C4A08` runs them, for a stretch the field's process leaves behind as the
+/// camera's interest moves on (a stretch's length past 2,400 ahead or behind it). The
+/// platform's, the field's and the backgrounds' (`grHomeRun_8021CB1C`, `grHomeRun_8021DEB0`,
+/// `grHomeRun_8021E4FC`) are dead: nothing destroys those objects that way (ledger/dead.txt).
+#[doc(alias = "grHomeRun_8021DEEC")]
+#[doc(alias = "grHomeRun_8021E070")]
+#[doc(alias = "grHomeRun_8021E1F4")]
+#[doc(alias = "grHomeRun_8021E378")]
 pub fn destroyed(_r: &mut Running, _gobj: GObjId) {}
 
-/// The objects' predicates (`callback1`), which nothing calls and answer false.
-// Ports grHomeRun_8021CB10; aliased once a check reaches it.
-// Ports grHomeRun_8021D678; aliased once a check reaches it.
-// Ports grHomeRun_8021DEE0; aliased once a check reaches it.
-// Ports grHomeRun_8021DF48; aliased once a check reaches it.
-// Ports grHomeRun_8021E064; aliased once a check reaches it.
-// Ports grHomeRun_8021E0CC; aliased once a check reaches it.
-// Ports grHomeRun_8021E1E8; aliased once a check reaches it.
-// Ports grHomeRun_8021E250; aliased once a check reaches it.
-// Ports grHomeRun_8021E36C; aliased once a check reaches it.
-// Ports grHomeRun_8021E3D4; aliased once a check reaches it.
-// Ports grHomeRun_8021E4F0; aliased once a check reaches it.
+/// The objects' predicates (`callback1`: `grHomeRun_8021CB10`, `D678`, `DEE0`, `DF48`, `E064`,
+/// `E0CC`, `E1E8`, `E250`, `E36C`, `E3D4`, `E4F0`), which answer false and nothing calls: dead
+/// (ledger/dead.txt).
 pub fn answers_false(_gobj: GObjId) -> bool {
     false
 }
 
-/// The stage's `callback4`, `grHomeRun_8021C824`: false.
-// Ports grHomeRun_8021C824; aliased once a check reaches it.
+/// The stage's `callback4`, `grHomeRun_8021C824`: false, and nothing calls it: dead
+/// (ledger/dead.txt).
 pub fn callback4() -> bool {
     false
 }
@@ -227,8 +217,8 @@ pub fn on_init(r: &mut Running) {
     set_blast_right(r.game, blast);
 }
 
-/// `grHomeRun_8021C750` does nothing (only a demo runs it).
-// Ports grHomeRun_8021C750; aliased once a check reaches it.
+/// `grHomeRun_8021C750` does nothing, and only a cutscene on the Home-Run stage would run it,
+/// which none is: dead (ledger/dead.txt).
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// The stage's load, `grHomeRun_8021C7FC`: nothing.
@@ -550,10 +540,10 @@ pub fn proc_label(r: &mut Running, gobj: GObjId) {
 }
 
 /// A labelled stretch's destruction, `grHomeRun_8021E008` and its copies: its text with it.
-// Ports grHomeRun_8021E008; aliased once a check reaches it.
-// Ports grHomeRun_8021E18C; aliased once a check reaches it.
-// Ports grHomeRun_8021E310; aliased once a check reaches it.
-// Ports grHomeRun_8021E494; aliased once a check reaches it.
+#[doc(alias = "grHomeRun_8021E008")]
+#[doc(alias = "grHomeRun_8021E18C")]
+#[doc(alias = "grHomeRun_8021E310")]
+#[doc(alias = "grHomeRun_8021E494")]
 pub fn destroy_label(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     if let Some(t) = r.game.grounds[g.0].u.homerun_label().text {
