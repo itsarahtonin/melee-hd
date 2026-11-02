@@ -504,9 +504,12 @@ impl Running<'_> {
     }
 
     /// The cutscenes' rumble on Adventure's player's port, `vi_8031C9B4`: none when its
-    /// rumble is off (`gm_8017E440`'s 4).
+    /// rumble is off (`gm_8017E440`'s 4). The pad alarm's firings so far in the tick run
+    /// their frames of rumble first, as the original's handlers ran each in its time: Giga
+    /// Bowser's file loads in `vi1201v2` take 16 of them just before its long rumble.
     #[doc(alias = "vi_8031C9B4")]
     fn vi_rumble(&mut self, kind: i32, frames: i32) {
+        self.alarm_rumble_catch_up();
         let port = self.adventure_rumble_port();
         if port != 4 {
             self.lot_rumble(port, kind, frames);

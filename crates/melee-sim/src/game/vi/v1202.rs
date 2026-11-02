@@ -34,7 +34,7 @@ pub struct Vi1202 {
 impl Running<'_> {
     /// The camera's process, `vi1202_RunFrame`: its animation; at frame 100 a rumble, at its
     /// last frame the scene's end.
-    // Ports vi1202_RunFrame; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
+    #[doc(alias = "vi1202_RunFrame")]
     pub fn vi1202_camera_proc(&mut self, gobj: GObjId) {
         let c = self.vi_cobj(gobj);
         crate::hsd::cobj::anim(&mut self.game.objs, self.data, Some(c));
@@ -52,12 +52,12 @@ impl Running<'_> {
     /// stand (the region's class 2 trophies marked, `Toy_803124BC`), the lights, the camera
     /// (render links 0, 3, 5, 7 and 11), the models and the scene's sound banks
     /// (`un_80321178`), the trophy and its stand.
-    // Ports vi1202_Scene_OnEnter; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
-    // Ports un_80321178; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
-    // Ports un_8032110C; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
-    // Ports un_80321130; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
-    // Ports un_80321154; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
-    // Ports vi1202_Scene_OnFrame; aliased once a check reaches it (after `vi1201v2`'s Giga Bowser).
+    #[doc(alias = "vi1202_Scene_OnEnter")]
+    #[doc(alias = "un_80321178")]
+    #[doc(alias = "un_8032110C")]
+    #[doc(alias = "un_80321130")]
+    #[doc(alias = "un_80321154")]
+    #[doc(alias = "vi1202_Scene_OnFrame")]
     pub fn vi1202_on_enter(&mut self) {
         self.sfx_stop_all();
         self.lb_audio_music_stop();
