@@ -32,7 +32,7 @@ pub const WATER_DEVICE: u32 = 0x8020_8660;
 /// `grKinokoRoute_802084B4`, a brick block's hit.
 pub const BLOCK_HIT: u32 = 0x8020_84B4;
 /// `grKinokoRoute_80208480`, the arena's event callback.
-const ARENA_EVENT: u32 = 0x8020_8480;
+pub const ARENA_EVENT: u32 = 0x8020_8480;
 
 /// The route's map id.
 const MAP_ROUTE: i32 = 3;
@@ -385,7 +385,7 @@ pub fn proc_route(r: &mut Running, gobj: GObjId) {
                 v.phase = 2;
                 v.cam_timer = 0x3C;
                 super::ground::clear_x6d8(r.game);
-                super::super::gm::start_stage_event(r, 0x11, 0xA, 3, 0xB3, CodeRef(ARENA_EVENT));
+                r.start_stage_event(0x11, 0xA, 3, 0xB3_u8 as i8, CodeRef(ARENA_EVENT));
                 r.game.grounds[g.0].u.kinokoroute2().zone_idx = 2;
                 rebuild(r, [0, 2], PROC_FRAME);
                 set_cam_offset(r.game, cam_target.x, cam_target.y);

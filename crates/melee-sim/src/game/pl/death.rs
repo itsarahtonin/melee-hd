@@ -51,6 +51,32 @@ impl Running<'_> {
         other == NO_SLOT || other == slot || self.same_team(slot, other)
     }
 
+    /// A 1P stage's own bonuses at its end, `pl_80040688`: the speedy clear (0x5F) when it
+    /// ended within the common data's frames, and when `rival_bonuses`, for the rival who
+    /// last KO'd player `ko` (not itself or a teammate), the KO by a meteor (0x2A) or the
+    /// spike's (7, one less of 6).
+    #[doc(alias = "pl_80040688")]
+    #[doc(alias = "pl_80038898")]
+    pub fn stage_bonuses(&mut self, slot: i32, ko: i32, rival_bonuses: bool) {
+        if self.game.vs.state.frame_count <= self.bonus_param(0xEC) {
+            self.set_point(slot, 0x5F, 1);
+        }
+        if rival_bonuses && ko != NO_SLOT {
+            let t = &self.game.player(ko).stale_moves;
+            let (rival, bits, spike) = (t.xCB8, t.xCBC, t.xCC0.x10_b0);
+            if !self.no_rival(ko, rival) {
+                if (0x33..=0x3D).contains(&bits[3]) {
+                    self.set_point(rival, 0x2A, 1);
+                }
+                if spike {
+                    self.set_point(rival, 7, 1);
+                    let p = &mut self.game.player_mut(rival).stale_moves.x904[6];
+                    *p = p.saturating_sub(1);
+                }
+            }
+        }
+    }
+
     /// A player's point bonus set (`pl_80038788`, `setPointValue`).
     #[doc(alias = "pl_80038788")]
     pub(crate) fn set_point(&mut self, slot: i32, kind: usize, v: u32) {

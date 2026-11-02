@@ -503,12 +503,13 @@ impl Game {
     /// them, a 1P run's (`fn_8017E0E4`), 1 in the other single-player modes (where
     /// `fn_8017DF28` has no run, -1).
     #[doc(alias = "fn_80171A88")]
+    #[doc(alias = "fn_8017E0E4")]
     pub fn single_player_progress(&self) -> i32 {
         if !super::is_1p_mode(self) {
             return 0;
         }
-        if self.is_1p_run() {
-            super::super::code::unported_call("fn_80171A88 in a 1P run (fn_8017E0E4)");
+        if let Some(run) = self.one_player_run() {
+            return i32::from(run.xc[0]);
         }
         1
     }

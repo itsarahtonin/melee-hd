@@ -906,9 +906,10 @@ impl Game {
     /// Whether the bonuses count teams, `gm_801720B4` (a single-player run's own rule
     /// otherwise, `fn_8017E160`).
     #[doc(alias = "gm_801720B4")]
+    #[doc(alias = "fn_8017E160")]
     pub fn bonus_teams(&self) -> bool {
-        if self.is_1p_run() {
-            super::super::code::unported_call("gm_801720B4 in a single-player run (fn_8017E160)");
+        if let Some(run) = self.one_player_run() {
+            return run.opponents.iter().any(|a| a.ckind != 0x21);
         }
         self.vs.start.is_teams == 1
     }
@@ -926,10 +927,20 @@ impl Game {
     /// Classic's, Adventure's and All-Star's, none in another mode).
     #[doc(alias = "gm_80172140")]
     pub fn one_player_falls(&self) -> i32 {
-        if self.is_1p_run() {
-            super::super::code::unported_call("gm_80172140 in a 1P run (fn_8017DF28)");
+        self.one_player_run().map_or(0, |run| i32::from(run.xc[4]))
+    }
+
+    /// The running 1P run's state, `fn_8017DF28`: Classic's, Adventure's or All-Star's.
+    #[doc(alias = "fn_8017DF28")]
+    pub fn one_player_run(&self) -> Option<&super::super::gm::one_player::Unk1PData> {
+        use super::super::gm::{GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC};
+        let o = &self.one_player;
+        match self.game_mode {
+            GM_CLASSIC => Some(&o.classic.base),
+            GM_ADVENTURE => Some(&o.adventure.base),
+            GM_ALLSTAR => Some(&o.allstar.base),
+            _ => None,
         }
-        0
     }
 }
 

@@ -176,7 +176,7 @@ impl Running<'_> {
     }
 
     /// `lbDvd_80018C2C`: waits until the files preload classes `mask` asked for are in.
-    // Ports `lbDvd_80018C2C`; aliased once a check reaches it.
+    #[doc(alias = "lbDvd_80018C2C")]
     pub fn wait_preload_class(&mut self, mask: u8) {
         self.game
             .audio

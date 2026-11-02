@@ -632,6 +632,9 @@ impl Running<'_> {
     /// The game over scene's enter and exit data: the debug mode's (`game_over_data`), or a
     /// single-player mode's (its own task's).
     fn game_over_data(&self) -> GameOverData {
+        if self.one_player_game_over() {
+            return self.game.one_player.game_over;
+        }
         assert!(
             self.debug_mode_scene(),
             "a single-player mode's game over data isn't ported"
@@ -640,11 +643,22 @@ impl Running<'_> {
     }
 
     fn game_over_data_mut(&mut self) -> &mut GameOverData {
+        if self.one_player_game_over() {
+            return &mut self.game.one_player.game_over;
+        }
         assert!(
             self.debug_mode_scene(),
             "a single-player mode's game over data isn't ported"
         );
         &mut self.game.endings.debug_game_over
+    }
+
+    /// Whether the game over is Classic's or All-Star's (`gmClassic_80470850`).
+    fn one_player_game_over(&self) -> bool {
+        matches!(
+            self.game.game_mode,
+            super::super::one_player::GM_CLASSIC | super::super::one_player::GM_ALLSTAR
+        )
     }
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until

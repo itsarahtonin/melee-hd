@@ -149,6 +149,17 @@ pub struct OnePlayer {
     pub allstar: AllStarData,
     pub allstar_x940: [u8; 25],
     pub allstar_opponents: [[u8; 4]; 25],
+    /// `gmClassic_80472AF8` and `gmClassic_8047086C`: Classic's and All-Star's matches'
+    /// enter and exit data.
+    pub match_start: StartMeleeData,
+    pub match_exit: super::match_exit::MatchExitInfo,
+    /// `lbl_804706D8`: the match's won trophies (a trophy, -1 for none, and its count).
+    pub match_trophies: [(i16, u8, u8); 12],
+    /// `lbl_80472D28.x104`: the clear screen's score (`gmregclear.c`'s total, which a 1P
+    /// run's match hands back as its exit value).
+    pub clear_score: i32,
+    /// `gmClassic_80470850`: Classic's and All-Star's game over's enter and exit data.
+    pub game_over: super::endings::game_over::GameOverData,
 }
 
 /// `ARRAY_SIZE(gm_803DE650)`, Adventure's stages.
@@ -182,6 +193,11 @@ impl Default for OnePlayer {
             allstar: AllStarData::default(),
             allstar_x940: [0; 25],
             allstar_opponents: ALLSTAR_OPPONENTS,
+            match_start: StartMeleeData::default(),
+            match_exit: Default::default(),
+            match_trophies: [(0, 0, 0); 12],
+            clear_score: 0,
+            game_over: Default::default(),
         }
     }
 }
@@ -778,7 +794,7 @@ impl Running<'_> {
 
     /// `gm_801B5FB4`: back to the menu, or the choices saved and given to the run, the first
     /// round next, the announcer's bank and the round's setup (`gm_801B5324`).
-    // Ports `gm_801B5FB4`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5FB4")]
     pub fn allstar_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -807,7 +823,7 @@ impl Running<'_> {
     /// costumes kept apart from the player's (`gmRegSetupEnemyColorTable`; the last round's
     /// Mr. Game & Watches in the table's), the game cache's player first and waited for, then
     /// the opponents and the stage, and their sound banks.
-    // Ports `gm_801B5324`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5324")]
     pub fn allstar_round_setup(&mut self, round: usize) {
         let (start, count) = ALLSTAR_ROUNDS[round];
         let opponents = self.game.one_player.allstar_opponents;
@@ -1121,7 +1137,7 @@ impl Running<'_> {
 const CKIND_GAMEWATCH: i8 = 3;
 
 /// `gm_803DEC4C`: each All-Star round's first opponent in the shuffled table and their count.
-const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
+pub(super) const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
     (0, 1),
     (1, 1),
     (2, 1),
@@ -1208,15 +1224,15 @@ const ALLSTAR_LEVELS: [(u8, u16, u16, [u8; 10]); 65] = [
     (1, 55, 200, [7, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 ];
 
-fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
+pub(super) fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
     ALLSTAR_LEVELS[usize::from(level) + usize::from(round) * 5]
 }
 
 /// `gmRegSetupEnemyColorTable`: an opponent in the player's character and costume gets the
 /// first other costume no other opponent wears; a console halts on an assertion if none is
 /// left.
-// Ports `gmRegSetupEnemyColorTable`; aliased once a check reaches it.
-// Ports `gm_8018A25C`; aliased once a check reaches it.
+#[doc(alias = "gmRegSetupEnemyColorTable")]
+#[doc(alias = "gm_8018A25C")]
 pub fn enemy_color_table(ckind: i8, color: u8, ckinds: &[i8; 3], colors: &mut [u8; 3]) {
     let n = crate::game::playback::costume_count(ckind as u8);
     for i in 0..3 {

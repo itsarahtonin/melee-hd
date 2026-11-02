@@ -182,6 +182,15 @@ impl Game {
         self.vs.start.x4_2
     }
 
+    /// Whether a 1P run's match has no opponent left in play, `gm_8016B014`: in a 1P run
+    /// without joining opponents, every slot after the first without a fighter.
+    #[doc(alias = "gm_8016B014")]
+    pub fn last_opponent_gone(&self) -> bool {
+        self.vs.start.x4_2
+            && !self.gm.opponents.joining()
+            && (1..6).all(|i| self.player_state(i) == 0)
+    }
+
     #[doc(alias = "gm_8016B0FC")]
     pub fn vs_single_button(&self) -> bool {
         self.vs.start.single_button
@@ -914,10 +923,12 @@ impl Running<'_> {
         self.lb_audio_reset();
         self.free_countdown();
         let g = &*self.game;
-        assert!(
-            !(g.vs.state.match_result == OUTCOME_1P_GAME_OVER && g.vs.start.x4_3),
-            "single-player game over (gm_80167858) isn't ported"
-        );
+        if g.vs.state.match_result == OUTCOME_1P_GAME_OVER && g.vs.start.x4_3 {
+            let (port, tag) = (g.player_port(0), g.player_nametag(0));
+            self.tou_rumble(port as usize, tag, 0xD, 0);
+            super::super::camera::request_quake(self, 4, None);
+        }
+        let g = &*self.game;
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         assert!(
@@ -1061,10 +1072,11 @@ impl Running<'_> {
         if wait <= self.game.vs.start.xD {
             return;
         }
-        assert!(
-            !self.game.is_1p_run(),
-            "single-player stage bonuses (pl_80040688) aren't ported"
-        );
+        if self.game.is_1p_run() {
+            let ko = i32::from(self.game.vs.state.unk_D);
+            let rivals = self.stage_rival_bonuses();
+            self.stage_bonuses(0, ko, rivals);
+        }
         self.game.default_db_pause_handlers();
         let g = &*self.game;
         let s = &g.vs;
@@ -1075,6 +1087,35 @@ impl Running<'_> {
             "single-player stage clears (fn_80180630) aren't ported"
         );
         self.game.vs.state.unk_0 = 3;
+    }
+
+    /// Whether a 1P stage's end counts its rivals' bonuses, `fn_8016D538`: yes but in a run's
+    /// match whose joining opponents go on or that has no opponents (`x5_1`), Adventure's
+    /// scene 0x49 counting anyway, and never in a Classic run with its `x8` 0x20.
+    #[doc(alias = "fn_8016D538")]
+    #[doc(alias = "fn_8017DF90")]
+    #[doc(alias = "fn_8017DEC8")]
+    fn stage_rival_bonuses(&self) -> bool {
+        let g = &*self.game;
+        let mut result = true;
+        if g.is_1p_run() {
+            let run = match g.game_mode {
+                GM_CLASSIC => 1,
+                GM_ADVENTURE => 0,
+                _ => 2,
+            };
+            if !(run == 0 && g.gm.scene_index == 0x49) {
+                if g.vs_is_singleplayer() && g.gm.opponents.goes_on() {
+                    result = false;
+                } else if g.vs.start.x5_1 {
+                    result = false;
+                }
+            }
+            if run == 1 && g.one_player.classic.base.x8[0] & 0x20 != 0 {
+                result = false;
+            }
+        }
+        result
     }
 
     /// The VS scene's frame function, `gm_Scene_Vs_OnFrame`.
@@ -1098,15 +1139,6 @@ impl Running<'_> {
         if let Some(f) = self.game.vs.start.on_frame_end {
             code::call(self, f.0, &[]);
         }
-    }
-
-    /// Opponents joining mid-match (multi-man and some events), `fn_8016A4C8`: off in VS.
-    #[doc(alias = "fn_8016A4C8")]
-    pub fn spawn_opponents(&mut self) {
-        assert!(
-            self.game.gm.spawn_flags & 0x40 == 0,
-            "multi-man spawning isn't ported"
-        );
     }
 
     /// In a team match, a player out of stocks takes one from a teammate by pressing Start,
@@ -1187,7 +1219,6 @@ impl Running<'_> {
     /// out of the match with no stock left, a single-player mode's ending and a slot that
     /// leaves aren't ported.
     #[doc(alias = "gm_80167320")]
-    #[doc(alias = "gm_8016A1F8")]
     pub fn fighter_out_of_play(&mut self, slot: i32, sub: bool) {
         if self.game.player_flags_bit1(slot) {
             if !sub {
@@ -1197,8 +1228,10 @@ impl Running<'_> {
             }
             return;
         }
-        if self.game.gm.spawn_flags & 0x40 != 0 && slot == 0 {
-            super::super::code::unported_call("fn_80169444 (a single-player mode's last stock)");
+        if self.game.gm.opponents.joining() && slot == 0 && self.opponents_end(2) {
+            super::super::code::unported_call(
+                "gm_80167320's joiners' leaving (Player_80031EBC) as the first player falls",
+            );
         }
         if (self.game.vs_is_stock() || self.game.vs_x4_2()) && self.game.player_stocks(slot) == 0 {
             let (ckind, costume) = (self.game.player_ckind(slot), self.game.player_costume(slot));
