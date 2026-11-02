@@ -1094,7 +1094,7 @@ impl Running<'_> {
     /// scene 0x49 counting anyway, and never in a Classic run with its `x8` 0x20.
     #[doc(alias = "fn_8016D538")]
     #[doc(alias = "fn_8017DF90")]
-    #[doc(alias = "fn_8017DEC8")]
+    // Ports fn_8017DEC8 (Classic's run); aliased once a check reaches it.
     fn stage_rival_bonuses(&self) -> bool {
         let g = &*self.game;
         let mut result = true;
@@ -1104,12 +1104,10 @@ impl Running<'_> {
                 GM_ADVENTURE => 0,
                 _ => 2,
             };
-            if !(run == 0 && g.gm.scene_index == 0x49) {
-                if g.vs_is_singleplayer() && g.gm.opponents.goes_on() {
-                    result = false;
-                } else if g.vs.start.x5_1 {
-                    result = false;
-                }
+            if !(run == 0 && g.gm.scene_index == 0x49)
+                && ((g.vs_is_singleplayer() && g.gm.opponents.goes_on()) || g.vs.start.x5_1)
+            {
+                result = false;
             }
             if run == 1 && g.one_player.classic.base.x8[0] & 0x20 != 0 {
                 result = false;

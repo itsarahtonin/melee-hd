@@ -139,14 +139,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "a cutscene scene past the eleven (0x11 to 0x1B, all ported): the scene table names no other",
     ),
     (
-        "gm_801720B4 in a single-player run",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_80172140 in a 1P run",
-        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
-    ),
-    (
         "mnDiagram2_GetStatValue for statistic",
         "the records' statistics are 0 to 23 (`stat`), every one handled: the pages list no other",
     ),
@@ -271,20 +263,12 @@ pub const STOPS: &[(&str, &str)] = &[
         "the player's card holds Melee's files alone (melee-player's saves::read_dir), so the boot finds no Pikmin save",
     ),
     (
-        "fn_80171A88 in a 1P run",
-        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
-    ),
-    (
         "controller map hook",
         "the map's hook is the repeat (gm_801A3A74), which its reset installs before any evaluation; nothing installs another",
     ),
     (
         "a match's exit data in game mode",
         "a match exits in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the rest are the single-player modes'",
-    ),
-    (
-        "fn_8017F294 (a single-player run's exit value)",
-        "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "fn_8016C46C's single-player results",
@@ -331,8 +315,28 @@ pub const STOPS: &[(&str, &str)] = &[
         "a slot leaves only in the single-player modes' hordes (gm_16A2's fn_8016A09C) and a cutscene",
     ),
     (
-        "fn_80169444 (a single-player mode's last stock)",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "gm_80167320's joiners' leaving",
+        "a horde's first player falling with joiners in play: the single-player modes' hordes and the debug menu's arenas (the console halts first there), which only the entries behind GATES and the debug level lead to",
+    ),
+    (
+        "a single-player route's callback",
+        "the single-player modes' end callbacks but the arenas' two: the entries behind GATES lead to them",
+    ),
+    (
+        "a 1P run's ratio getter",
+        "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "a 1P run's team color getter",
+        "Classic's and Adventure's team stages: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017D7AC's records after a no contest",
+        "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (All-Star's clear)",
+        "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8016AC44 with a challenger's record",
