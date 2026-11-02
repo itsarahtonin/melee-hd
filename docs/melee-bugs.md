@@ -198,6 +198,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
 
+### Sandbag: an animation that follows TransN reads part 0x35 past its parts
+
+- **Where:** `ftAnim_8006EBA4` (`ftanim.c`), for an animation with `x594` bit 0 (one that moves TransN, a dash's); `crates/melee-sim/src/game/ft/anim.rs` (`part_35_joint`).
+- **Defect:** it hands `ftAnim_8006E054` the joint of part 0x35 by `ftParts_GetBoneIndex`, unchecked. Sandbag's parts table has no joint for it (0xFF), so the original reads `parts[255].joint`, 0xFF0 bytes into a parts block of 0x370 (55 bones): a heap word the fighter never set.
+- **Effect:** none: `ftAnim_8006E054` compares that joint with the tree's only when `x594` bit 5 is set, so the word is never used otherwise. Reached when Sandbag dashes, which only a computer player of the VS kind does (task 1's `m6-oracle/bosses`, Sandbag on the debug menu's Versus page, tick 11448); the Home-Run Contest's Sandbag (computer kind 15) stands still.
+- **melee-hd:** modeled: without bit 5 the joint counts as none; with it melee-sim stops by name.
+- **Fix:** skip a part the table lacks (0xFF).
+- **Fix impact:** none on gameplay.
+- **Source:** `ftanim.c` (`ftAnim_8006EBA4`, `ftAnim_8006E054`); `crates/melee-sim/src/game/ft/anim.rs`.
+
 ### Crazy Hand: the poke makes Master Hand's lasers
 
 - **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
