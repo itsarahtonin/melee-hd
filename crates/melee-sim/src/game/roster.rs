@@ -422,28 +422,12 @@ pub const STAGES: &[Stage] = &[
             unreached: &[
                 YAKU_UNANCHORED,
                 (
-                    "stageGObj10_",
-                    "the adventure's climb (map 10), which only the adventure's Icicle Mountain (stage kind 76) sets up",
-                ),
-                (
-                    "fn_801F9150",
-                    "the adventure's climb's speed (map 10's process)",
-                ),
-                (
-                    "fn_801F91A8",
-                    "the adventure's climb's next field (map 10's process)",
+                    "stageGObj10_Callback3",
+                    "the adventure's climb's destroy callback: nothing destroys map 10 before the scene's heap goes",
                 ),
                 (
                     "fn_801FA4CC",
-                    "the adventure's climb's end (map 10's process)",
-                ),
-                (
-                    "grIceMt_801FA6D8",
-                    "the Polar Bear's landing (it_802E4558), an adventure enemy no VS match spawns",
-                ),
-                (
-                    "the adventure's",
-                    "the adventure's fields, spawner and climb, which only the stage kind 76 sets up",
+                    "the adventure's climb's end's callback, which only the arena's event (gm_801674C4, unported) takes",
                 ),
             ],
             missing: &[],

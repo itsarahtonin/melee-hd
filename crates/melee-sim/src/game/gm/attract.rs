@@ -252,7 +252,7 @@ impl Running<'_> {
 
     /// The start data and the files a VS scene's match takes, from its mode's state's enter
     /// data and the preload cache.
-    fn vs_scene_files(
+    pub(super) fn vs_scene_files(
         &mut self,
         scene_mode: u8,
     ) -> (
@@ -265,6 +265,7 @@ impl Running<'_> {
             super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
             super::GM_DEBUG => self.game.debug_mode.vs_enter.clone(),
             super::event::GM_EVENT => self.game.event.start.clone(),
+            super::one_player::GM_TRAINING => self.game.training.enter.clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

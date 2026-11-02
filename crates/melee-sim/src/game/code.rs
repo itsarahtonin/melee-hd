@@ -81,6 +81,8 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::vs::SCENE_PROC => {}
         super::gm::pause::PROC => super::gm::pause::proc(game, gobj),
         super::gm::camera_mode::MODEL_PROC => game.camera_model_proc(gobj),
+        super::gm::training::INPUT_PROC => game.training_input_proc(),
+        super::gm::training::MODEL_PROC => game.training_model_proc(gobj),
         super::gm::approach::PROC => game.approach_proc(gobj),
         super::gm::endings::game_over::PROC_SCREEN => game.game_over_screen_proc(),
         super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
@@ -212,6 +214,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::mutecity::run_event(game, f) => {}
         f if super::gr::bigblue::run_event(game, f) => {}
         super::gm::vs::ON_FRAME => game.vs_on_frame(),
+        f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
         f if super::vi::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
@@ -306,6 +309,7 @@ pub fn run_fighter_cb(g: &mut Running, gobj: GObjId, cb: CodeRef) {
         addr if super::ft::mewtwo::run(g, gobj, addr) => {}
         addr if super::ft::masterhand::run(g, gobj, addr) => {}
         addr if super::ft::sandbag::run(g, gobj, addr) => {}
+        addr if super::ft::crazyhand::run(g, gobj, addr) => {}
         addr if super::ft::koopa::run(g, gobj, addr) => {}
         addr if super::ft::gkoopa::run(g, gobj, addr) => {}
         addr if super::ft::zako::run(g, gobj, addr) => {}
@@ -583,6 +587,9 @@ pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Val {
         return v;
     }
     if let Some(v) = super::ft::masterhand::call(r, f, args) {
+        return v;
+    }
+    if let Some(v) = super::ft::crazyhand::call(r, f, args) {
         return v;
     }
     if let Some(v) = super::ft::koopa::call(r, f, args) {

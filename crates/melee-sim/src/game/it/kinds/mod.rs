@@ -12,6 +12,7 @@ pub mod climbersstring;
 pub mod clinkmilk;
 pub mod coin;
 pub mod crate_box;
+pub mod crazyhandbomb;
 pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
@@ -88,6 +89,7 @@ pub mod masterhandlaser;
 pub mod matadogas;
 pub mod mball;
 pub mod metalb;
+pub mod metamon;
 pub mod mew;
 pub mod mewtwodisable;
 pub mod mewtwoshadowball;
@@ -148,6 +150,7 @@ pub mod tools;
 pub mod tosakinto;
 pub mod unknown;
 pub mod whispyapple;
+pub mod whitebea;
 pub mod wstar;
 pub mod yaku;
 pub mod yoshiegglay;
@@ -192,6 +195,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || climbersice::run_event(r, gobj, addr)
         || masterhandlaser::run_event(r, gobj, addr)
         || masterhandbullet::run_event(r, gobj, addr)
+        || crazyhandbomb::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
@@ -266,6 +270,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
         || oldottosea::run_event(r, gobj, addr)
+        || whitebea::run_event(r, gobj, addr)
         || octarockstone::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
@@ -337,6 +342,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pippi::run_event(r, gobj, addr)
         || porygon2::run_event(r, gobj, addr)
         || mew::run_event(r, gobj, addr)
+        || metamon::run_event(r, gobj, addr)
         || cerebi::run_event(r, gobj, addr)
         || hitodeman::run_event(r, gobj, addr)
         || super::pokemon::run_event(r, gobj, addr)
@@ -353,6 +359,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| masterhandlaser::run_pred(r, gobj, addr))
         .or_else(|| masterhandbullet::run_pred(r, gobj, addr))
+        .or_else(|| crazyhandbomb::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
@@ -426,6 +433,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
         .or_else(|| oldottosea::run_pred(r, gobj, addr))
+        .or_else(|| whitebea::run_pred(r, gobj, addr))
         .or_else(|| octarockstone::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
@@ -495,6 +503,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pippi::run_pred(r, gobj, addr))
         .or_else(|| porygon2::run_pred(r, gobj, addr))
         .or_else(|| mew::run_pred(r, gobj, addr))
+        .or_else(|| metamon::run_pred(r, gobj, addr))
         .or_else(|| cerebi::run_pred(r, gobj, addr))
         .or_else(|| hitodeman::run_pred(r, gobj, addr))
         .or_else(|| yaku::run_pred(r, gobj, addr))
