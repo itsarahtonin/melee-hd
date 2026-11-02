@@ -38,6 +38,7 @@ pub mod oldpupupu;
 pub mod oldyoshi;
 pub mod onett;
 pub mod pura;
+pub mod pushon;
 pub mod rcruise;
 pub mod setup;
 pub mod shrine;
@@ -124,6 +125,8 @@ pub const GR_KIND_KINOKOROUTE: i32 = 31;
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
+/// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
+pub const GR_KIND_PUSHON: i32 = 39;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
 pub const GR_KIND_ICEMT: i32 = 22;
 /// `Gr_Kind_Last`, Final Destination.
@@ -259,6 +262,9 @@ pub struct Globals {
     /// The F-Zero race's `yakumono_param` (`grBigBlueRoute_YakumonoParam`): the trophy slot's
     /// odds, the cars' scale, speeds, count and waits.
     pub bigblueroute_yakumono: Option<DataRef>,
+    /// The race's `yakumono_param` (`grpushon.c`): the spikes' and lines' hits, the trophy
+    /// slot's odds, the goals' scores and the race's times.
+    pub pushon_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -495,6 +501,8 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
         (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
         (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
+        (GR_KIND_PUSHON, 1) => VarsKind::Map,
+        (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,

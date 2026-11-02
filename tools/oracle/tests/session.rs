@@ -2024,3 +2024,15 @@ fn the_debug_endings() {
         assert!(out.contains("no stale reads"), "{name}: {out}");
     }
 }
+
+/// The race (milestone 6's task 20) from the debug menu's Versus page, from power-on with the
+/// heap: `m6-race/race-look` (Link running from the start to door 0x9A, whose landing ends the
+/// race, the camera and blast zones following him while Mario, left behind, is KO'd; the
+/// course's lights following Link; the results) to its trace's end.
+#[test]
+fn race_in_debug_vs() {
+    if let Some(out) = scripted_session("m6-race", "race-look", &["--all", "--heap"]) {
+        assert!(out.contains("6417 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
