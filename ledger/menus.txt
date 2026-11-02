@@ -117,8 +117,6 @@ gmMainLib_8015ED5C	unchecked	a getter or setter of the game's data, which its ca
 gmMainLib_GetUnlockedCharactersBitmaskPtr	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015EDD4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015FC74	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_801604DC	gated	named only by the single-player modes' code (fn_8019F9C4, gm_801A6EE4): the single-player modes', which only the 1P list's gated entries lead to
-gm_80160564	gated	named only by the single-player modes' code (fn_8019F9C4, gm_801A6EE4): the single-player modes', which only the 1P list's gated entries lead to
 fn_801609E0	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80160DE8	gated	named only by the single-player modes' code (fn_80184AB8): the single-player modes', which only the 1P list's gated entries lead to
 fn_80160F58	gated	named only by the single-player modes' code (fn_80184AB8): the single-player modes', which only the 1P list's gated entries lead to
@@ -156,8 +154,6 @@ gm_801674C4	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Even
 gm_80168940	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801689E4	gated	named only by the single-player modes' code (fn_801803FC): the single-player modes', which only the 1P list's gated entries lead to
 fn_80168A6C	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
-fn_80168F2C	gated	named only by the single-player modes' code (fn_8017FF1C, fn_8019F810): the single-player modes', which only the 1P list's gated entries lead to
-fn_80168F7C	gated	named only by the single-player modes' code (fn_80180630, fn_8019F9C4): the single-player modes', which only the 1P list's gated entries lead to
 gm_80168F88	gated	Event Match's match entry (gmevent's onEnterVs): the single-player modes', which only the 1P list's gated entries lead to
 gm_1601_GetUnkData	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169370	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to

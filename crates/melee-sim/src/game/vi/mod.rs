@@ -118,9 +118,6 @@ pub struct Cutscenes {
     pub desc_1101: [u8; 8],
     pub desc_1201v1: [u8; 8],
     pub desc_1201v2: [u8; 8],
-    /// `gm_8049C178` (`gmgover.c`), its first two bytes: the character and the second value
-    /// the debug cutscene mode leaves for congratulations (`gm_801BEFA4`, `gm_801BEFC0`).
-    pub gover: [u8; 2],
     pub v0102: v0102::Vi0102,
     pub v0401: v0401::Vi0401,
     pub v0402: v0402::Vi0402,
@@ -498,8 +495,6 @@ impl Running<'_> {
     #[doc(alias = "un_8031E110")]
     #[doc(alias = "un_8031F980")]
     #[doc(alias = "un_803204B0")]
-    #[doc(alias = "gm_801BEFA4")]
-    #[doc(alias = "gm_801BEFC0")]
     pub fn debug_cutscene_enter(&mut self) {
         const ICS: u8 = 0xE;
         let rand = |r: &mut Self, n: i32| r.game.objs.rng.below(n) as u8;
@@ -539,9 +534,9 @@ impl Running<'_> {
         let v = &mut self.game.vi;
         v.desc_1201v2[0] = ICS;
         v.desc_1201v2[1] = c;
-        v.gover[0] = 8;
+        self.game.endings.gover.set_ckind(8);
         let c = rand(self, 4);
-        self.game.vi.gover[1] = c;
+        self.game.endings.gover.set_color(c);
     }
 }
 

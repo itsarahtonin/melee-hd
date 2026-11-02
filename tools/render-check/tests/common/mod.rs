@@ -79,6 +79,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6e-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6-") {
                     return ssbm_rs_local(&format!("lockstep/m6-select/{o}.inputs")).into();
                 }
@@ -900,6 +903,15 @@ pub const M6_CLASSIC: Game = Game {
     name: "m6-classic",
     players: "Classic's select (session m6-select/classic)",
     replay: Replay::Session("m6-classic"),
+};
+
+/// The debug mode's game over (`m6-endings/gameover2`): the trophy on its stand and the
+/// question, the continue's coins paid and the score counting down, and "no"'s end.
+pub const M6E_GAMEOVER: Game = Game {
+    stage: "Debug menu",
+    name: "m6e-gameover2",
+    players: "the debug mode's game over (session m6-endings/gameover2)",
+    replay: Replay::Session("m6e-gameover2"),
 };
 
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
