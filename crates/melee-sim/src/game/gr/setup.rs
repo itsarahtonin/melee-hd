@@ -1382,12 +1382,12 @@ pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId
     let code = |a: u32| (a != 0).then_some(CodeRef(a));
     r.game.stage_info.on_touch_line = code(stage.on_touch_line);
     r.game.stage_info.on_check_shadow_render = code(stage.on_check_shadow_render);
-    // `Ground_801C5878`: `tyDisplay_8031C2CC`, then the single-player modes' trophy display,
-    // or none outside them.
+    // `Ground_801C5878`: `tyDisplay_8031C2CC`, then in a single-player mode the trophy its
+    // display shows (`tyDisplay_8031C2EC`, loaded by `tyDisplay_8031C454`), else none.
     r.stage_trophies();
     if super::super::gm::is_1p_mode(r.game) {
-        let id = r.trophy_display_pick();
-        r.trophy_display_load(id);
+        let id = r.stage_trophy_draw();
+        r.stage_trophy_load(id);
         r.game.stage_info.x6E4[0] = id;
     } else {
         r.game.stage_info.x6E4[0] = -1;
@@ -1595,6 +1595,37 @@ const CKIND_CLINK: u8 = 0x15;
 
 /// `BGM_Undefined`.
 const BGM_UNDEFINED: i32 = -1;
+
+/// The songs a stage's file can play for `stkind` ([`music`]'s choices: the usual and the
+/// alternate song, and the last stock's two), for a frontend that reads songs ahead.
+pub fn stage_songs(data: &Archives, archive: ArchiveId, stkind: i32) -> Vec<i32> {
+    let Some(at) = data.get(archive).public("grGroundParam") else {
+        return Vec::new();
+    };
+    let p = read_ground_param(
+        data,
+        DataRef {
+            archive,
+            offset: at,
+        },
+    );
+    let mut out = Vec::new();
+    for i in 0..p.stage_param_count.max(0) as u32 {
+        let Some(e) = p.stage_params.map(|s| s.at(0x64 * i)) else {
+            break;
+        };
+        if data.u32(e) as i32 != stkind {
+            continue;
+        }
+        for o in [4, 8, 0xC, 0x10] {
+            let bgm = data.u32(e.at(o)) as i32;
+            if (0..0x62).contains(&bgm) && !out.contains(&bgm) {
+                out.push(bgm);
+            }
+        }
+    }
+    out
+}
 
 /// The stage's music by `flags`, `Ground_801C28AC` (`Ground_801C24F8`): the stage kind's
 /// parameters pick its usual or its alternate song (bits 1 and 2; with bit 4 they choose, the

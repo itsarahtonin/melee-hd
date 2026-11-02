@@ -103,5 +103,64 @@ impl Comparer<'_> {
             [e[0], e[1], e[2]],
             theirs,
         );
+        self.cutscenes_bowser();
+    }
+
+    /// A GObj handle a cutscene keeps.
+    fn vi_gobj(&mut self, path: &str, at: u32, g: Option<melee_sim::hsd::gobj::GObjId>) {
+        let theirs = self.u32(at);
+        self.compare_handle(path, "GObjId", g.map(|g| g.0), theirs);
+    }
+
+    /// A JObj handle a cutscene keeps.
+    fn vi_jobj(&mut self, name: &str, j: Option<melee_sim::hsd::jobj::JObjId>) {
+        let theirs = self.u32(sym(name));
+        self.compare_handle(name, "JObjId", j.map(|j| j.0), theirs);
+    }
+
+    /// The statics of the metal cutscene and Bowser's three (`vi1101.c` to `vi1202.c`).
+    fn cutscenes_bowser(&mut self) {
+        let v = self.game.vi;
+        // `vi1101.c`.
+        let a = v.v1101;
+        self.compare_data("un_804D6FC0", a.scene, self.u32(sym("un_804D6FC0")));
+        self.compare_data("un_804D6FC4", a.scene_cam2, self.u32(sym("un_804D6FC4")));
+        self.vi_archive("un_804D6FC8", a.waits);
+        self.vi_archive("un_804D6FCC", a.archive);
+        let at = sym("un_804D6FD0");
+        self.vi_gobj("un_804D6FD0.unk0", at, a.metal[0]);
+        self.vi_gobj("un_804D6FD0.unk4", at + 4, a.metal[1]);
+        // `vi1201v1.c`.
+        let a = v.v1201v1;
+        self.compare_data("un_804D6FE0", a.scene, self.u32(sym("un_804D6FE0")));
+        self.compare_data("un_804D6FE4", a.stand, self.u32(sym("un_804D6FE4")));
+        self.vi_archive("un_804D6FE8", a.archive);
+        self.compare_data("un_804D6FEC", a.trophy, self.u32(sym("un_804D6FEC")));
+        self.vi_jobj("un_804D6FF0", a.anchor);
+        self.vi_color("un_804D6FF4", a.erase);
+        let theirs = self.u32(sym("un_804D6FF8")) as i32;
+        self.check("un_804D6FF8", "the fog's ticks", a.fog_ticks, theirs);
+        let theirs = [self.u8(sym("un_804D6FFC")), self.u8(sym("un_804D6FFD"))];
+        self.check("un_804D6FFC", "character", [a.ckind, a.costume], theirs);
+        self.vi_gobj("un_804D7000", sym("un_804D7000"), a.fighter);
+        // `vi1201v2.c`.
+        let a = v.v1201v2;
+        self.compare_data("un_804D7010", a.scene, self.u32(sym("un_804D7010")));
+        self.compare_data("un_804D7014", a.stand, self.u32(sym("un_804D7014")));
+        self.vi_archive("un_804D7018", a.waits);
+        self.vi_archive("un_804D701C", a.archive);
+        self.compare_data("un_804D7020", a.trophy, self.u32(sym("un_804D7020")));
+        self.vi_jobj("un_804D7024", a.anchor);
+        self.vi_color("un_804D7028", a.erase);
+        let theirs = self.u32(sym("un_804D702C")) as i32;
+        self.check("un_804D702C", "word", a.x2c, theirs);
+        self.vi_gobj("un_804D7030", sym("un_804D7030"), a.trophy_gobj);
+        self.vi_gobj("un_804D7034", sym("un_804D7034"), a.stand_gobj);
+        // `vi1202.c`.
+        let a = v.v1202;
+        self.compare_data("un_804D7040", a.scene, self.u32(sym("un_804D7040")));
+        self.compare_data("un_804D7044", a.stand, self.u32(sym("un_804D7044")));
+        self.compare_data("un_804D7048", a.trophy, self.u32(sym("un_804D7048")));
+        self.vi_jobj("un_804D704C", a.anchor);
     }
 }

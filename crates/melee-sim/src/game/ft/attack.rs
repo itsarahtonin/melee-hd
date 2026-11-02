@@ -2174,6 +2174,10 @@ impl Running<'_> {
             Some(f) if super::super::gr::target::is_on_touch_line(f.0) => {
                 super::super::gr::target::line_hazard(self.game, self.data, line)
             }
+
+            Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
+                super::super::gr::figure::on_touch_line(line)
+            }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
             Some(f)
@@ -2192,6 +2196,7 @@ impl Running<'_> {
                     || f.0 == 0x8020_8754
                     || f.0 == 0x8020_DF78
                     || f.0 == 0x8020_B854
+                    || f.0 == 0x8021_EEB4
                     || f.0 == 0x8020_2B5C
                     || f.0 == 0x8020_35C8
                     || f.0 == 0x801D_8444

@@ -48,6 +48,12 @@ pub const GRBIGBLUEROUTE_YAKUMONO: u32 = 0x804D_6A68;
 pub const GRPUSHON_YAKUMONO: u32 = 0x804D_6AB8;
 /// grzebesroute.c's (`ssbm_types::tu::melee__gr__grzebesroute::yakumono_param`).
 pub const GRZEBESROUTE_YAKUMONO: u32 = 0x804D_6A60;
+/// grfigure1.c's to grfigure3.c's (`ssbm_types::tu::melee__gr__grfigure1::yakumono_param` and
+/// the others').
+pub const GRFIGURE_YAKUMONO: [u32; 3] = [0x804D_6A70, 0x804D_6A78, 0x804D_6A80];
+/// `grHr_804D6AD8` to `grHr_804D6AE4` and the Home-Run Contest's stage's `yakumono_param`.
+pub const GRHOMERUN_STATICS: u32 = 0x804D_6AD8;
+pub const GRHOMERUN_YAKUMONO: u32 = 0x804D_6AE8;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -396,6 +402,17 @@ impl Importer<'_> {
             let yaku = cap.u32(at);
             self.game.gr.target_yakumono[i] = self.data_or_unhandled(yaku);
         }
+        for (i, addr) in GRFIGURE_YAKUMONO.into_iter().enumerate() {
+            let yaku = cap.u32(addr);
+            self.game.gr.figure_yakumono[i] = self.data_or_unhandled(yaku);
+        }
+        let yaku = cap.u32(GRHOMERUN_YAKUMONO);
+        let h = &mut self.game.gr.homerun;
+        h.scale = f32::from_bits(cap.u32(GRHOMERUN_STATICS));
+        h.ticks = cap.u32(GRHOMERUN_STATICS + 4) as i32;
+        h.max_dist = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 8));
+        h.ratio = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 0xC));
+        self.game.gr.homerun.yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -944,7 +961,7 @@ impl Comparer<'_> {
         if !self.match_statics_live() {
             return;
         }
-        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        use melee_sim::game::gm::machine::{is_match_scene, scene_kind};
         let m = mem(self.mem);
         let info = sym("stage_info");
         game.stage_info.compare(&m, info, "stage_info", self);
@@ -1131,6 +1148,26 @@ impl Comparer<'_> {
                 game.gr.zebesroute_yakumono,
             ),
             (
+                "grFigure1 yakumono_param",
+                GRFIGURE_YAKUMONO[0],
+                game.gr.figure_yakumono[0],
+            ),
+            (
+                "grFigure2 yakumono_param",
+                GRFIGURE_YAKUMONO[1],
+                game.gr.figure_yakumono[1],
+            ),
+            (
+                "grFigure3 yakumono_param",
+                GRFIGURE_YAKUMONO[2],
+                game.gr.figure_yakumono[2],
+            ),
+            (
+                "grHomeRun yakumono_param",
+                GRHOMERUN_YAKUMONO,
+                game.gr.homerun.yakumono,
+            ),
+            (
                 "grShrine yakumono_param",
                 GRSHRINE_YAKUMONO,
                 game.gr.shrine_yakumono,
@@ -1251,6 +1288,25 @@ impl Comparer<'_> {
         }
         if on(gr::GR_KIND_CORNERIA) {
             self.compare_corneria();
+        }
+        if on(gr::GR_KIND_HOMERUN) {
+            let h = &game.gr.homerun;
+            self.check(
+                "grHr_804D6AD8",
+                "scale, ticks, max_dist, ratio",
+                (
+                    h.scale.to_bits(),
+                    h.ticks,
+                    h.max_dist.to_bits(),
+                    h.ratio.to_bits(),
+                ),
+                (
+                    self.u32(GRHOMERUN_STATICS),
+                    self.u32(GRHOMERUN_STATICS + 4) as i32,
+                    self.u32(GRHOMERUN_STATICS + 8),
+                    self.u32(GRHOMERUN_STATICS + 0xC),
+                ),
+            );
         }
         if on(gr::GR_KIND_VENOM) {
             self.compare_venom();
@@ -1437,10 +1493,7 @@ impl Comparer<'_> {
         // spawner's process (`fn_801CADBC`, made with them) lives. The enemy table's pointer
         // (`x0`, into the stage's file) is the same: the file goes with the scene, and the
         // next stage's start writes the pointer before anything reads it.
-        let in_match = matches!(
-            scene_kind(game.machine.scene_info),
-            Some(GS_VS | GS_SUDDEN_DEATH)
-        );
+        let in_match = is_match_scene(scene_kind(game.machine.scene_info));
         let started = game
             .world
             .procs
@@ -1795,6 +1848,16 @@ impl Comparer<'_> {
                 ("user data", joint.user_data, 0x30),
             ] {
                 let t = self.u32(a + off);
+                // A stage object destroyed since (one of the adventure's Icicle Mountain's
+                // first fields, whose falling ice's joint keeps its callback) dangles, compared
+                // by the address its block had.
+                if let Some(CollUser::Ground(g)) = ours
+                    && self.game.grounds.is_free(g.0)
+                {
+                    let addr = self.game.grounds.addr(g.0);
+                    self.check(&path, &format!("{name} (freed)"), addr, t);
+                    continue;
+                }
                 let theirs = (t != 0).then(|| {
                     self.maps
                         .gobjs

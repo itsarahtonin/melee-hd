@@ -53,10 +53,8 @@ pub const UNITS: &[&str] = &[
 /// of whose stops the audit names.
 pub const MODULES: &[&str] = &["gm/stamina", "ft/co/stamina", "gm/special"];
 
-const HANDS: &str = "Crazy Hand plays only in the single-player modes";
-
 /// What of the units no match from the launcher reaches, and why.
-pub const UNREACHED: &[(&str, &str)] = &[("ftCh_GrabUnk1_8015ADD0", HANDS)];
+pub const UNREACHED: &[(&str, &str)] = &[];
 
 /// What a mode's match reaches that isn't ported.
 pub const MISSING: &[ModeGap] = &[];

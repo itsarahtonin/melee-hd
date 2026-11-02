@@ -5,12 +5,13 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
-    GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
-    GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE,
-    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
-    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
-    GR_KIND_PUSHON, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER,
-    GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
+    GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FLATZONE, GR_KIND_FOURSIDE,
+    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_HOMERUN, GR_KIND_ICEMT,
+    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
+    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1311,14 +1312,7 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
 /// Contest's) take the saved
 /// language's, `.dat` with Japanese saved.
 pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
-    // The Home-Run Contest's (`grHr_StageData`'s `/GrHr`, no extension), which its select's
-    // game cache preloads before its stage is ported.
-    const GR_KIND_HOMERUN: i32 = 0x43;
-    let f = if grkind == GR_KIND_HOMERUN {
-        "/GrHr.usd"
-    } else {
-        stage_data(grkind).file?
-    };
+    let f = stage_data(grkind).file?;
     Some(if saved_us {
         f
     } else {
@@ -1827,6 +1821,139 @@ pub const ZEBESROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grEF1_StageCallbacks`. Map 0 is an animated model, map 1 the collision (with the stage's
+/// lights and fog), map 2 a model with its own collision.
+pub const FIGURE1_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E168, 0x8020_E194, 0x8020_E19C, 0x8020_E1A0, 0),
+    cb(
+        0x8020_E1A4,
+        0x8020_E1D0,
+        0x8020_E1D8,
+        0x8020_E1FC,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E200, 0x8020_E250, 0x8020_E258, 0x8020_E25C, 0),
+];
+
+/// `grEF1_StageData`, the first event trophy stage.
+pub const FIGURE1: StageData = StageData {
+    grkind: GR_KIND_FIGURE1,
+    callbacks: &FIGURE1_CALLBACKS,
+    file: Some("/GrEF1.dat"),
+    on_init: 0x8020_DFE0,
+    on_demo_init: 0x8020_DFDC,
+    on_load: 0x8020_E050,
+    on_start: 0x8020_E054,
+    callback4: 0x8020_E078,
+    on_touch_line: 0x8020_E260,
+    on_check_shadow_render: 0x8020_E268,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grEF2_StageCallbacks` (grfigure2.c's), laid out as the first trophy stage's.
+pub const FIGURE2_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E3FC, 0x8020_E428, 0x8020_E430, 0x8020_E434, 0),
+    cb(
+        0x8020_E438,
+        0x8020_E464,
+        0x8020_E46C,
+        0x8020_E490,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E494, 0x8020_E4E4, 0x8020_E4EC, 0x8020_E4F0, 0),
+];
+
+/// `grEF2_StageData`, the second event trophy stage; its demo setup is grfigure1.c's
+/// `grFigure1_8020E270`.
+pub const FIGURE2: StageData = StageData {
+    grkind: GR_KIND_FIGURE2,
+    callbacks: &FIGURE2_CALLBACKS,
+    file: Some("/GrEF2.dat"),
+    on_init: 0x8020_E274,
+    on_demo_init: 0x8020_E270,
+    on_load: 0x8020_E2E4,
+    on_start: 0x8020_E2E8,
+    callback4: 0x8020_E30C,
+    on_touch_line: 0x8020_E4F4,
+    on_check_shadow_render: 0x8020_E4FC,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grEF2_StageCallbacks` (grfigure3.c's own, under the same name), laid out as the first
+/// trophy stage's.
+pub const FIGURE3_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_E690, 0x8020_E6BC, 0x8020_E6C4, 0x8020_E6C8, 0),
+    cb(
+        0x8020_E6CC,
+        0x8020_E6F8,
+        0x8020_E700,
+        0x8020_E724,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+    cb(0x8020_E728, 0x8020_E778, 0x8020_E780, 0x8020_E784, 0),
+];
+
+/// `grEF3_StageData`, the third event trophy stage.
+pub const FIGURE3: StageData = StageData {
+    grkind: GR_KIND_FIGURE3,
+    callbacks: &FIGURE3_CALLBACKS,
+    file: Some("/GrEF3.dat"),
+    on_init: 0x8020_E508,
+    on_demo_init: 0x8020_E504,
+    on_load: 0x8020_E578,
+    on_start: 0x8020_E57C,
+    callback4: 0x8020_E5A0,
+    on_touch_line: 0x8020_E788,
+    on_check_shadow_render: 0x8020_E790,
+    flags2: 1,
+    joints: &[],
+};
+
+/// `grHr_StageCallbacks`. Map 0 is the platform, map 10 the field, maps 1, 2 and 4 to 9 its
+/// stretches (2, 5, 7 and 9 labelled), map 4 the backdrop's pieces too and map 3 the
+/// backgrounds.
+pub const HOMERUN_CALLBACKS: [StageCallbacks; 11] = [
+    cb(0x8021_C914, 0x8021_CB10, 0x8021_CB18, 0x8021_CB1C, 0),
+    cb(0x8021_E038, 0x8021_E064, 0x8021_E06C, 0x8021_E070, 0),
+    cb(0x8021_E074, 0x8021_E0CC, 0x8021_E0D4, 0x8021_E18C, 0),
+    cb(0x8021_E4C4, 0x8021_E4F0, 0x8021_E4F8, 0x8021_E4FC, 0),
+    cb(0x8021_DEB4, 0x8021_DEE0, 0x8021_DEE8, 0x8021_DEEC, 0),
+    cb(0x8021_DEF0, 0x8021_DF48, 0x8021_DF50, 0x8021_E008, 0),
+    cb(0x8021_E1BC, 0x8021_E1E8, 0x8021_E1F0, 0x8021_E1F4, 0),
+    cb(0x8021_E1F8, 0x8021_E250, 0x8021_E258, 0x8021_E310, 0),
+    cb(0x8021_E340, 0x8021_E36C, 0x8021_E374, 0x8021_E378, 0),
+    cb(0x8021_E37C, 0x8021_E3D4, 0x8021_E3DC, 0x8021_E494, 0),
+    cb(
+        0x8021_CB20,
+        0x8021_D678,
+        0x8021_D680,
+        0x8021_DEB0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grHr_804D4998`: the field's collision joint (map 10's first).
+pub const HOMERUN_JOINTS: [GrJoint; 1] = [GrJoint { x: 0, y: 10, z: 0 }];
+
+/// `grHr_StageData`. Its file has no extension: the saved language's
+/// (`lbFileGetFullName`, [`stage_file`]).
+pub const HOMERUN: StageData = StageData {
+    grkind: GR_KIND_HOMERUN,
+    callbacks: &HOMERUN_CALLBACKS,
+    file: Some("/GrHr.usd"),
+    on_init: 0x8021_C754,
+    on_demo_init: 0x8021_C750,
+    on_load: 0x8021_C7FC,
+    on_start: 0x8021_C800,
+    callback4: 0x8021_C824,
+    on_touch_line: 0x8021_EEB4,
+    on_check_shadow_render: 0x8021_EEBC,
+    flags2: 1,
+    joints: &HOMERUN_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1864,6 +1991,10 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_PUSHON => &PUSHON,
         GR_KIND_ZEBESROUTE => &ZEBESROUTE,
         k if super::target::is_target(k) => super::target::stage_data(k),
+        GR_KIND_FIGURE1 => &FIGURE1,
+        GR_KIND_FIGURE2 => &FIGURE2,
+        GR_KIND_FIGURE3 => &FIGURE3,
+        GR_KIND_HOMERUN => &HOMERUN,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

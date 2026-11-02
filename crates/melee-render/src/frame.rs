@@ -243,13 +243,14 @@ impl Ctx<'_> {
                     self.particles_rendering(g);
                 }
                 self.hsd.rendering = *g;
-                self.hsd.rendering_fighter = g.and_then(|g| {
-                    let game = self.game;
-                    game.fighters
-                        .iter()
-                        .find(|(_, f)| f.gobj == Some(g))
-                        .map(|(i, _)| melee_sim::game::handles::FighterId(i))
-                });
+                // The GObj's own fighter: the fighters' pool keeps a scene's fighters past its
+                // end (the next scene's setup makes the original's pool anew), whose GObjs the
+                // next scene's take again, so a search by GObj can find an earlier scene's.
+                self.hsd.rendering_fighter =
+                    g.and_then(|g| match self.game.world.gobj(g).user_data {
+                        Some(melee_sim::game::state::UserData::Fighter(f)) => Some(f),
+                        _ => None,
+                    });
                 1
             }
             Draw::Shadows { start, len } => {

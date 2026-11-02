@@ -426,6 +426,47 @@ impl Running<'_> {
         closest.map(|(it, _)| it)
     }
 
+    /// The healing item the fighter goes for, `ftCo_800A61D8`: a grabbable heart, tomato or
+    /// food in reach and worth at least its threshold (`x2C`), the nearest of the most worth
+    /// (`ftCo_803C5A68`); the first found keeps a tie.
+    #[doc(alias = "ftCo_800A61D8")]
+    pub(super) fn cpu_healing_item_target(&mut self, f: FighterId) -> Option<ItemId> {
+        let mut closest: Option<(ItemId, f64)> = None;
+        let mut cur = self.game.world.first_in(P_LINK_ITEM);
+        while let Some(g) = cur {
+            cur = self.game.world.gobjs[g.0].next;
+            if !super::super::it::item::is_grabbable(self.game, g) {
+                continue;
+            }
+            let it = super::super::it::item_of(self.game, g);
+            if !self.cpu_item_heals(it) {
+                continue;
+            }
+            let ip = &self.game.items[it.0];
+            if self.cpu_out_of_bounds(f, ip.pos.x, ip.pos.y) || ip.kind >= IT_KIND_L_GUN_RAY {
+                continue;
+            }
+            let worth = ITEM_WORTH[ip.kind as usize];
+            if worth < self.game.fighters[f.0].cpu.x2C {
+                continue;
+            }
+            match closest {
+                None => closest = Some((it, self.cpu_item_distance(f, it))),
+                Some((best, d)) => {
+                    let kind = self.game.items[best.0].kind;
+                    if worth < ITEM_WORTH[kind as usize] {
+                        continue;
+                    }
+                    let dist = self.cpu_item_distance(f, it);
+                    if d > dist {
+                        closest = Some((it, dist));
+                    }
+                }
+            }
+        }
+        closest.map(|(it, _)| it)
+    }
+
     /// The distance from the fighter to an item, `ftCo_GetItemDistance` (inlined), left in a
     /// register.
     fn cpu_item_distance(&self, f: FighterId, it: ItemId) -> f64 {

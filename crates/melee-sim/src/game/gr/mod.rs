@@ -15,6 +15,7 @@ pub mod datfiles;
 pub mod display;
 pub mod dynamic_attr;
 pub mod exe_data;
+pub mod figure;
 pub mod flatzone;
 pub mod fourside;
 pub mod fzerocar;
@@ -23,6 +24,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod homerun;
 pub mod icemt;
 pub mod inishie1;
 pub mod inishie2;
@@ -129,6 +131,12 @@ pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 pub const GR_KIND_ZEBESROUTE: i32 = 33;
 /// `Gr_Kind_TMario`, the first of the 26 target stages (Target Test's, `gr::target`).
 pub const GR_KIND_TMARIO: i32 = 40;
+/// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
+pub const GR_KIND_FIGURE1: i32 = 68;
+pub const GR_KIND_FIGURE2: i32 = 69;
+pub const GR_KIND_FIGURE3: i32 = 70;
+/// `Gr_Kind_Homerun`, the Home-Run Contest's stage.
+pub const GR_KIND_HOMERUN: i32 = 0x43;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
@@ -262,6 +270,8 @@ pub struct Globals {
     pub greatbay_yakumono: Option<DataRef>,
     /// Kongo Jungle N64's `yakumono_param` (`grOldKongo_YakumonoParam`).
     pub oldkongo_yakumono: Option<DataRef>,
+    /// The Home-Run Contest's stage's statics (`grhomerun.c`).
+    pub homerun: homerun::Globals,
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
@@ -278,6 +288,9 @@ pub struct Globals {
     /// Fox's, Mewtwo's, Jigglypuff's and Ganondorf's, `target::YAKUMONO_STATICS`): their
     /// lines' hits.
     pub target_yakumono: [Option<DataRef>; 5],
+    /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
+    /// nothing reads.
+    pub figure_yakumono: [Option<DataRef>; 3],
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -485,6 +498,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_ICEMT, 1..=6) => VarsKind::IceMtField(map_id as u8),
         (GR_KIND_ICEMT, 8) => VarsKind::IceMtBg,
         (GR_KIND_ICEMT, 9) => VarsKind::IceMtScroll,
+        (GR_KIND_ICEMT, 10) => VarsKind::IceMtClimb,
         (GR_KIND_CORNERIA, 3) => VarsKind::Corneria,
         (GR_KIND_CORNERIA, 4 | 9) => VarsKind::CorneriaCity,
         (GR_KIND_CORNERIA, 8) => VarsKind::CorneriaCity8,
@@ -517,6 +531,9 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PUSHON, 1) => VarsKind::Map,
         (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
         (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
+        (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,
+        (GR_KIND_HOMERUN, 1 | 4 | 6 | 8) => VarsKind::HomeRunPart,
+        (GR_KIND_HOMERUN, 2 | 5 | 7 | 9) => VarsKind::HomeRunLabel,
         (GR_KIND_BIGBLUE, 32) => VarsKind::BigBlueManager,
         (GR_KIND_BIGBLUE, 33) => VarsKind::BigBlueCars,
         (GR_KIND_BIGBLUE, 34) => VarsKind::BigBlueRoad,

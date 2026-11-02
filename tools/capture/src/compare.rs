@@ -239,16 +239,15 @@ impl<'a> Comparer<'a> {
     /// files, ours the scene's last ones, until the next such scene sets them again, and
     /// nothing reads them (docs/engine.md, "A scene's statics past its heap").
     pub(crate) fn match_statics_live(&self) -> bool {
-        use melee_sim::game::gm::machine::{GS_RESULTS, GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        use melee_sim::game::gm::machine::{GS_RESULTS, is_match_scene, scene_kind};
         let g = self.game;
         // With no modes' machine (a replay's match, a state taken up from a trace tick) the
         // state is a match's.
+        let kind = scene_kind(g.machine.scene_info);
         g.gr.param.is_none()
             || g.machine.scene_info.is_none()
-            || matches!(
-                scene_kind(g.machine.scene_info),
-                Some(GS_VS | GS_SUDDEN_DEATH | GS_RESULTS)
-            )
+            || is_match_scene(kind)
+            || kind == Some(GS_RESULTS)
     }
 
     pub(crate) fn u32(&self, a: u32) -> u32 {
@@ -414,12 +413,9 @@ impl<'a> Comparer<'a> {
         // the next scenes' blocks write over, ours the match's last CObj, and nothing reads it
         // until the next match makes it again (its one reader, `Camera_800310B8`, places a
         // fighter KO'd up into the screen as the fighters' draw runs, `x2220_b7`).
-        use melee_sim::game::gm::machine::{GS_SUDDEN_DEATH, GS_VS, scene_kind};
+        use melee_sim::game::gm::machine::{is_match_scene, scene_kind};
         let in_match = game.machine.scene_info.is_none()
-            || matches!(
-                scene_kind(game.machine.scene_info),
-                Some(GS_VS | GS_SUDDEN_DEATH)
-            );
+            || is_match_scene(scene_kind(game.machine.scene_info));
         match c.cobj_copy {
             Some(_) if !in_match => {}
             Some(o) => self.cobj("camera cobj copy", o, copy),
