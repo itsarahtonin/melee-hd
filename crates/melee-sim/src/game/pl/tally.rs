@@ -922,12 +922,12 @@ impl Game {
         self.vs.start.match_kind == 1
     }
 
-    /// The single-player modes' falls the bonuses add, `gm_80172140` (`fn_8017DF28`'s data,
-    /// none outside them).
+    /// The single-player runs' falls the bonuses add, `gm_80172140` (`fn_8017DF28`'s data:
+    /// Classic's, Adventure's and All-Star's run, none in any other mode).
     #[doc(alias = "gm_80172140")]
     pub fn one_player_falls(&self) -> i32 {
-        if super::super::gm::is_1p_mode(self) {
-            super::super::code::unported_call("gm_80172140 in a single-player mode (fn_8017DF28)");
+        if self.is_1p_run() {
+            super::super::code::unported_call("gm_80172140 in a single-player run (fn_8017DF28)");
         }
         0
     }
