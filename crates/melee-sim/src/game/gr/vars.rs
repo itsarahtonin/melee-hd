@@ -120,6 +120,8 @@ pub enum VarsKind {
     BigBlueRelay,
     KinokoRoute,
     KinokoRoute2,
+    BigBlueRoute,
+    BigBlueRouteCars,
 }
 
 /// `union GroundVars`.
@@ -243,6 +245,10 @@ pub enum GroundVars {
     KinokoRoute(KinokoRouteVars),
     /// `grKinokoRoute_GroundVars2`: Mushroom Kingdom's route (map 3).
     KinokoRoute2(KinokoRoute2Vars),
+    /// `grBigBlueRoute_GroundVars2`: the F-Zero race's track (map 31).
+    BigBlueRoute(BigBlueRouteVars),
+    /// `grBigBlueRoute_GroundVars`: the F-Zero race's cars (map 4).
+    BigBlueRouteCars(BigBlueRouteCarsVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1726,6 +1732,140 @@ pub struct KinokoRouteVars {
     pub entries: [KinokoRouteEntry; 4],
 }
 
+/// A backdrop piece of the F-Zero race that follows the first fighter
+/// (`grBigBlueRoute_Track`): its place from point 0x94 (written only when its joint is found)
+/// and its joint.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRouteTrack {
+    pub offset: crate::vec::Vec3,
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grBigBlueRoute_GroundVars2`, the F-Zero race's track (map 31): the cars' object (`xC4`), the
+/// checkpoints passed (`zone`, `xC8`), two bytes nothing writes, where point 4's joint stands
+/// (`xCC`), and the four backdrop pieces.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRouteVars {
+    pub cars: Option<GObjId>,
+    pub zone: i16,
+    pub pad_ca: [u8; 2],
+    pub reb0_pos: crate::vec::Vec3,
+    pub tracks: [BigBlueRouteTrack; 4],
+}
+
+/// A car of the F-Zero race (`RouteEntry`, in the cars' block from the heap): its flags
+/// (`flags`: 0x80 out, 0x40 the sign's car, 0x3C its phase, 0x02 it roared, 0x01 nothing
+/// writes), its place along the road and its speed there (`x4`, `x8`), its lane and the lane it
+/// eases toward (`xC`, `x10`), its place along the air line and its speed there (`x14`, `x18`),
+/// its roll and the roll it turns toward (`x1C`, `x20`), where its last change of line began
+/// (`x24`) and its hurtbox item (`x28`). The three bytes after the flags nothing writes (the
+/// block is zeroed).
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRouteCar {
+    pub flags: u8,
+    pub x4: f32,
+    pub x8: f32,
+    pub xC: f32,
+    pub x10: f32,
+    pub x14: f32,
+    pub x18: f32,
+    pub x1C: f32,
+    pub x20: f32,
+    pub x24: f32,
+    pub item: Option<GObjId>,
+}
+
+impl BigBlueRouteCar {
+    pub fn out(&self) -> bool {
+        self.flags & 0x80 != 0
+    }
+    pub fn set_out(&mut self, on: bool) {
+        self.flags = self.flags & !0x80 | u8::from(on) << 7;
+    }
+    pub fn sign(&self) -> bool {
+        self.flags & 0x40 != 0
+    }
+    pub fn set_sign(&mut self, on: bool) {
+        self.flags = self.flags & !0x40 | u8::from(on) << 6;
+    }
+    pub fn phase(&self) -> u8 {
+        self.flags >> 2 & 0xF
+    }
+    pub fn set_phase(&mut self, v: u8) {
+        self.flags = self.flags & !0x3C | (v & 0xF) << 2;
+    }
+    pub fn roared(&self) -> bool {
+        self.flags & 0x02 != 0
+    }
+    pub fn set_roared(&mut self, on: bool) {
+        self.flags = self.flags & !0x02 | u8::from(on) << 1;
+    }
+}
+
+/// `grBigBlueRoute_GroundVars`, the F-Zero race's cars (map 4): its first word's top two bits
+/// (`xC4`, a GObj pointer's word the code uses as flags: 0x8000_0000 the hazard sign shown,
+/// 0x4000_0000 the approach sound played; its other bits nothing writes), the cars' block from
+/// the heap with its address (`car_info`, 31 entries), map 33's three splines (`xCC` the air
+/// line, `xD0` and `xD4` the road's edges), the ends of the air line (`xD8`, `xE4`) and of the
+/// road's middle (`xF0`, `xFC`), the cars out (`x108`) and the wait before the next (`x10A`).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct BigBlueRouteCarsVars {
+    pub xC4: u32,
+    pub cars: Vec<BigBlueRouteCar>,
+    pub cars_addr: u32,
+    pub air: Option<melee_data::archive::DataRef>,
+    pub left: Option<melee_data::archive::DataRef>,
+    pub right: Option<melee_data::archive::DataRef>,
+    pub air_start: crate::vec::Vec3,
+    pub air_end: crate::vec::Vec3,
+    pub road_start: crate::vec::Vec3,
+    pub road_end: crate::vec::Vec3,
+    pub out: i16,
+    pub wait: i16,
+}
+
+impl BigBlueRouteCarsVars {
+    pub fn sign_shown(&self) -> bool {
+        self.xC4 & 0x8000_0000 != 0
+    }
+    pub fn set_sign_shown(&mut self, on: bool) {
+        self.xC4 = self.xC4 & !0x8000_0000 | u32::from(on) << 31;
+    }
+    pub fn approached(&self) -> bool {
+        self.xC4 & 0x4000_0000 != 0
+    }
+    pub fn set_approached(&mut self, on: bool) {
+        self.xC4 = self.xC4 & !0x4000_0000 | u32::from(on) << 30;
+    }
+}
+
+/// An F-Zero race car read from memory at `b`.
+fn bigblueroute_car(m: &Mem, b: u32, cx: &mut dyn Cx) -> BigBlueRouteCar {
+    let f = |a: u32| f32::from_bits(m.u32(a));
+    BigBlueRouteCar {
+        flags: m.u8(b),
+        x4: f(b + 4),
+        x8: f(b + 8),
+        xC: f(b + 0xC),
+        x10: f(b + 0x10),
+        x14: f(b + 0x14),
+        x18: f(b + 0x18),
+        x1C: f(b + 0x1C),
+        x20: f(b + 0x20),
+        x24: f(b + 0x24),
+        item: cx.import_handle("GObjId", m.u32(b + 0x28)).map(GObjId),
+    }
+}
+
+impl BigBlueRouteCar {
+    fn float_bits(&self) -> [u32; 9] {
+        [
+            self.x4, self.x8, self.xC, self.x10, self.x14, self.x18, self.x1C, self.x20, self.x24,
+        ]
+        .map(f32::to_bits)
+    }
+}
+
 /// `grKinokoRoute_GroundVars2`: whether the route's collision links on the next tick
 /// (`flags_0`, the first byte's top bit; the byte's other bits and the padding are the block's,
 /// never written), the phase (2 in the arena), the watched point reached (`spawn_idx`, -1
@@ -2432,6 +2572,8 @@ impl GroundVars {
             GroundVars::BigBlueRelay(_) => "BigBlueRelayVars",
             GroundVars::KinokoRoute(_) => "KinokoRouteVars",
             GroundVars::KinokoRoute2(_) => "KinokoRoute2Vars",
+            GroundVars::BigBlueRoute(_) => "BigBlueRouteVars",
+            GroundVars::BigBlueRouteCars(_) => "BigBlueRouteCarsVars",
             GroundVars::Kraid(_) => "KraidVars",
             GroundVars::Kraid2(_) => "Kraid2Vars",
             GroundVars::Flatzone(_) => "FlatzoneVars",
@@ -2533,6 +2675,8 @@ impl GroundVars {
         "BigBlueRelayVars",
         "KinokoRouteVars",
         "KinokoRoute2Vars",
+        "BigBlueRouteVars",
+        "BigBlueRouteCarsVars",
         "KraidVars",
         "Kraid2Vars",
         "FlatzoneVars",
@@ -3671,6 +3815,46 @@ impl GroundVars {
                 pad_0a: [m.u8(at + 0xA), m.u8(at + 0xB)],
                 reb0_pos: crate::vec::Vec3::new(f(at + 0xC), f(at + 0x10), f(at + 0x14)),
             }),
+            VarsKind::BigBlueRoute => GroundVars::BigBlueRoute(BigBlueRouteVars {
+                cars: gobj(cx, at),
+                zone: m.u16(at + 4) as i16,
+                pad_ca: [m.u8(at + 6), m.u8(at + 7)],
+                reb0_pos: crate::vec::Vec3::new(f(at + 8), f(at + 0xC), f(at + 0x10)),
+                tracks: std::array::from_fn(|i| {
+                    let e = at + 0x14 + 0x10 * i as u32;
+                    BigBlueRouteTrack {
+                        offset: crate::vec::Vec3::new(f(e), f(e + 4), f(e + 8)),
+                        jobj: cx
+                            .import_handle("JObjId", m.u32(e + 0xC))
+                            .map(crate::hsd::jobj::JObjId),
+                    }
+                }),
+            }),
+            VarsKind::BigBlueRouteCars => {
+                let a = m.u32(at + 4);
+                let cars = if a == 0 {
+                    Vec::new()
+                } else {
+                    (0..31u32)
+                        .map(|i| bigblueroute_car(m, a + 0x2C * i, cx))
+                        .collect()
+                };
+                let v3 = |a: u32| crate::vec::Vec3::new(f(a), f(a + 4), f(a + 8));
+                GroundVars::BigBlueRouteCars(BigBlueRouteCarsVars {
+                    xC4: m.u32(at),
+                    cars,
+                    cars_addr: a,
+                    air: cx.import_data(m.u32(at + 8)),
+                    left: cx.import_data(m.u32(at + 0xC)),
+                    right: cx.import_data(m.u32(at + 0x10)),
+                    air_start: v3(at + 0x14),
+                    air_end: v3(at + 0x20),
+                    road_start: v3(at + 0x2C),
+                    road_end: v3(at + 0x38),
+                    out: m.u16(at + 0x44) as i16,
+                    wait: m.u16(at + 0x46) as i16,
+                })
+            }
             VarsKind::BigBlueRelay => GroundVars::BigBlueRelay(BigBlueRelayVars {
                 xC4: m.u32(at),
                 xC8_timer: m.u32(at + 4) as i32,
@@ -5528,6 +5712,52 @@ impl GroundVars {
         }
     }
 
+    /// The variables as the F-Zero race's track's (`grBigBlueRoute_GroundVars2`), likewise: a
+    /// block holding a pointer converts only if it is null.
+    pub fn bigblueroute(&mut self) -> &mut BigBlueRouteVars {
+        if let GroundVars::Bytes(b) = self {
+            let pad_ca = [b[6], b[7]];
+            let b = Bytes(b);
+            *self = GroundVars::BigBlueRoute(BigBlueRouteVars {
+                cars: b.null(0),
+                zone: (b.u32(4) >> 16) as i16,
+                pad_ca,
+                reb0_pos: crate::vec::Vec3::new(b.f32(8), b.f32(0xC), b.f32(0x10)),
+                tracks: std::array::from_fn(|i| {
+                    let e = 0x14 + 0x10 * i;
+                    BigBlueRouteTrack {
+                        offset: crate::vec::Vec3::new(b.f32(e), b.f32(e + 4), b.f32(e + 8)),
+                        jobj: b.null_of(e + 0xC),
+                    }
+                }),
+            });
+        }
+        match self {
+            GroundVars::BigBlueRoute(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grBigBlueRoute_GroundVars2")
+            }
+        }
+    }
+
+    /// The variables as the F-Zero race's cars' (`grBigBlueRoute_GroundVars`), likewise. The
+    /// first word keeps what the block held but the two flags the code writes.
+    pub fn bigblueroute_cars(&mut self) -> &mut BigBlueRouteCarsVars {
+        if let GroundVars::Bytes(b) = self {
+            let b = Bytes(b);
+            *self = GroundVars::BigBlueRouteCars(BigBlueRouteCarsVars {
+                xC4: b.u32(0),
+                ..Default::default()
+            });
+        }
+        match self {
+            GroundVars::BigBlueRouteCars(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grBigBlueRoute_GroundVars")
+            }
+        }
+    }
+
     /// The variables as Big Blue's relay platform's (`grBigBlue_PlatformVars`), likewise.
     pub fn bigblue_relay(&mut self) -> &mut BigBlueRelayVars {
         if let GroundVars::Bytes(b) = self {
@@ -7141,6 +7371,113 @@ impl Mirror for GroundVars {
                         &format!("{path}.kinokoroute2"),
                         format!("{ours:x?}"),
                         format!("{theirs:x?}"),
+                    );
+                }
+            }
+            GroundVars::BigBlueRoute(v) => {
+                let path = format!("{path}.bigblueroute");
+                cx.compare_handle(
+                    &format!("{path}.xC4"),
+                    "GObjId",
+                    v.cars.map(|g| g.0),
+                    m.u32(at),
+                );
+                let ours = (v.zone, v3_bits(&v.reb0_pos));
+                let theirs = (
+                    m.u16(at + 4) as i16,
+                    [m.u32(at + 8), m.u32(at + 0xC), m.u32(at + 0x10)],
+                );
+                if ours != theirs {
+                    cx.mismatch(&path, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                for (i, t) in v.tracks.iter().enumerate() {
+                    let b = at + 0x14 + 0x10 * i as u32;
+                    // A place is written only with its joint found; without one nothing reads
+                    // it, and it holds what the block held.
+                    if t.jobj.is_some() {
+                        let theirs = [m.u32(b), m.u32(b + 4), m.u32(b + 8)];
+                        if v3_bits(&t.offset) != theirs {
+                            cx.mismatch(
+                                &format!("{path}.tracks[{i}].offset"),
+                                format!("{:x?}", v3_bits(&t.offset)),
+                                format!("{theirs:x?}"),
+                            );
+                        }
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.tracks[{i}].jobj"),
+                        "JObjId",
+                        t.jobj.map(|j| j.0),
+                        m.u32(b + 0xC),
+                    );
+                }
+            }
+            GroundVars::BigBlueRouteCars(v) => {
+                let path = format!("{path}.bigblueroute_car");
+                // The first word's other bits nothing writes or reads (a GObj pointer's word the
+                // code uses for two flags): they hold what the block held.
+                let t3 = |a: u32| [m.u32(a), m.u32(a + 4), m.u32(a + 8)];
+                let ours = (
+                    v.xC4 >> 30,
+                    [
+                        v3_bits(&v.air_start),
+                        v3_bits(&v.air_end),
+                        v3_bits(&v.road_start),
+                        v3_bits(&v.road_end),
+                    ],
+                    [v.out, v.wait],
+                );
+                let theirs = (
+                    m.u32(at) >> 30,
+                    [t3(at + 0x14), t3(at + 0x20), t3(at + 0x2C), t3(at + 0x38)],
+                    [m.u16(at + 0x44) as i16, m.u16(at + 0x46) as i16],
+                );
+                if ours != theirs {
+                    cx.mismatch(&path, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                cx.compare_data(&format!("{path}.xCC"), v.air, m.u32(at + 8));
+                cx.compare_data(&format!("{path}.xD0"), v.left, m.u32(at + 0xC));
+                cx.compare_data(&format!("{path}.xD4"), v.right, m.u32(at + 0x10));
+                // The block's address is 0 where no allocator model runs (a leaf check): its
+                // contents compare at the original's.
+                let a = m.u32(at + 4);
+                if v.cars_addr != 0 && v.cars_addr != a {
+                    cx.mismatch(
+                        &format!("{path}.car_info"),
+                        format!("{:#x}", v.cars_addr),
+                        format!("{a:#x}"),
+                    );
+                }
+                if v.cars.is_empty() != (a == 0) {
+                    cx.mismatch(
+                        &format!("{path}.car_info"),
+                        format!("{} entries", v.cars.len()),
+                        format!("{a:#x}"),
+                    );
+                    return;
+                }
+                for (k, c) in v.cars.iter().enumerate() {
+                    let b = a + 0x2C * k as u32;
+                    let theirs_flags = m.u8(b);
+                    let theirs: [u32; 9] = std::array::from_fn(|n| m.u32(b + 4 + 4 * n as u32));
+                    if (c.flags, c.float_bits(), [0u8; 3])
+                        != (
+                            theirs_flags,
+                            theirs,
+                            [m.u8(b + 1), m.u8(b + 2), m.u8(b + 3)],
+                        )
+                    {
+                        cx.mismatch(
+                            &format!("{path}.car_info[{k}]"),
+                            format!("{:x?}", (c.flags, c.float_bits())),
+                            format!("{:x?}", (theirs_flags, theirs)),
+                        );
+                    }
+                    cx.compare_handle(
+                        &format!("{path}.car_info[{k}].x28"),
+                        "GObjId",
+                        c.item.map(|g| g.0),
+                        m.u32(b + 0x28),
                     );
                 }
             }
