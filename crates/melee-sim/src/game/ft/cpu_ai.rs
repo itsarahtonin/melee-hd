@@ -320,11 +320,52 @@ impl Running<'_> {
                 self.game.fighters[f.0].cpu.x18 = 0;
                 Leftover::Unknown("ftCo_800B2AFC")
             }
-            k @ (0..=3 | 7..=10 | 13 | 14 | 17..=29) => {
+            // Training's: stop where it stands (0), walk to its spot (1) or jump (3), the
+            // jump and the walk the behavior pick's.
+            k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
+            k @ (2 | 7..=10 | 13 | 14 | 17..=29) => {
                 unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
             }
             _ => self.cpu_decide_vs(f),
         }
+    }
+
+    /// Training's computer kinds 0, 1 and 3 (`ftCo_800B2AFC`'s cases): no target, the
+    /// destination timer stopped when the behavior changed, and unless it's being hit
+    /// (behavior 4), its destination the floor under it (kind 1: under its spot, `x98`, or
+    /// where it is when there's none), then the behavior pick, whose r5 it leaves.
+    fn cpu_decide_training(&mut self, f: FighterId, walk: bool) -> Leftover {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = false;
+        // `ftCo_CpuClearTargetModes`.
+        c.xF9_b2 = false;
+        c.xF9_b4 = false;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = false;
+        if c.x18 != c.x20 && c.x18 != c.x1C {
+            c.x60 = 0;
+        }
+        if c.x18 != 4 {
+            c.xFA_b2 = false;
+            let fpp = &self.game.fighters[f.0];
+            let at = if walk { fpp.cpu.x98 } else { fpp.cur_pos };
+            let below = mem(fp::fsubs(reg(at.y), 1000.0));
+            let above = mem(fp::fadds(10.0, reg(at.y)));
+            match self.cpu_floor(at.x, above, at.x, below) {
+                Some(p) => self.cpu_set_destination(f, p.x, p.y, 5.0),
+                None if walk => {
+                    let pos = self.game.fighters[f.0].cur_pos;
+                    self.cpu_set_destination(f, pos.x, pos.y, 5.0);
+                }
+                None => {}
+            }
+        }
+        // The pick reads r31, here the fighter's pointer, as its DI switch.
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
 
     /// Nana's decision, `ftCo_800B101C`: with Popo gone she acts alone; else she records his

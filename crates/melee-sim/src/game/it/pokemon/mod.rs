@@ -31,6 +31,8 @@ use super::kinds::{PKIND_START, PKIND_TERMINATE};
 
 /// `It_PKind_Marumine`, Electrode, which grows with no gravity.
 const PKIND_MARUMINE: i32 = 0xB1;
+/// `It_PKind_Sonans`, Wobbuffet, the list draw's answer when nothing passes it.
+const PKIND_SONANS: i32 = 0xAA;
 /// `It_PKind_Metamon`, Ditto.
 const PKIND_METAMON: i32 = 0xB4;
 /// `It_PKind_Mew` and `It_PKind_Cerebi`, the rare ones.
@@ -143,6 +145,45 @@ fn draw_weighted(r: &mut Running, ball: GObjId) -> i32 {
     0
 }
 
+/// `common_pokemon`: the Pokémon Training's balls let out (Ditto among them; no legendary
+/// or rare one).
+const COMMON_POKEMON: [i32; 20] = [
+    0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0xA6, 0xAA, 0xAB, 0xAC, 0xB0, 0xB1, 0xB4, 0xB5, 0xB6, 0xB9, 0xBA,
+    0xBB, 0xBC, 0xBD, 0xBE,
+];
+
+/// A Pokémon from `list` by the ball's weights, never the last two, `it_8027A780`: drawn
+/// below their total, the first whose running total passes the draw (Wobbuffet if none
+/// does); from Goldeen's 0.
+#[doc(alias = "it_8027A780")]
+fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
+    let p = r.game.it.pokemon.clone();
+    let mut entries = [(0i32, 0i32); 30];
+    let (mut n, mut total) = (0usize, 0i32);
+    for &kind in list.iter().take(30) {
+        if p.last_kind != kind && p.previous_kind != kind {
+            let w = r.data.u32(ball_attr(r, ball, weight_off(kind))) as i32;
+            entries[n] = (kind, w);
+            n += 1;
+            total = total.wrapping_add(w);
+        }
+    }
+    let roll = r.game.objs.rng.below(total);
+    let mut accum = 0i32;
+    let mut result = PKIND_SONANS;
+    for &(kind, w) in &entries[..n] {
+        accum = accum.wrapping_add(w);
+        if roll < accum {
+            result = kind;
+            break;
+        }
+    }
+    let p = &mut r.game.it.pokemon;
+    p.previous_kind = p.last_kind;
+    p.last_kind = result;
+    result - PKIND_START
+}
+
 /// A random Pokémon for a match, `it_8027A4D4`: a rare one, or one by weight.
 #[doc(alias = "it_8027A4D4")]
 pub fn draw(r: &mut Running, ball: GObjId) -> i32 {
@@ -162,7 +203,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
         return forced.wrapping_sub(PKIND_START);
     }
     if crate::game::gm::is_training(r.game) {
-        code::unported_call("it_8027A780 (training's Pokémon)");
+        return draw_from_list(r, ball, &COMMON_POKEMON);
     }
     if r.game.game_mode == crate::game::gm::machine::GM_OPENING_MV {
         return draw_weighted(r, ball);
@@ -173,8 +214,10 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
     } else {
         kind -= 1;
     }
-    if kind == POKEMON_ID_METAMON {
-        code::unported_call("ftLib_CountFighters (Ditto's check)");
+    if kind == POKEMON_ID_METAMON
+        && (lib26b1::count_kind(r.game, PKIND_METAMON) != 0 || r.game.ft_count() == 4)
+    {
+        kind = POKEMON_ID_TOSAKINTO;
     }
     kind
 }

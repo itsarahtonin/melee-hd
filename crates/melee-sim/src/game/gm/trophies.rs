@@ -173,6 +173,29 @@ impl Running<'_> {
         self.game.toys.table.categories |= 4;
     }
 
+    /// A single-player stage's trophy to display, `tyDisplay_8031C2EC`: with class 5 open,
+    /// half the time one of class 2 or of class 5 marked (65% new), else one of class 2 (60%
+    /// new); -1 if there are none.
+    #[doc(alias = "tyDisplay_8031C2EC")]
+    pub fn stage_display_trophy(&mut self) -> i32 {
+        if self.toy_class_open(5) && self.game.objs.rng.below(2) == 0 {
+            return self.toy_draw(2, 5, 1, 65.0);
+        }
+        self.toy_draw(2, 0, 1, 60.0)
+    }
+
+    /// `tyDisplay_8031C454` for the display's trophy `t`: class 2's trophies marked again
+    /// (`Toy_803124BC`), and for a trophy, its archive and the display's two loaded.
+    // Ports `tyDisplay_8031C454`'s path without a trophy; aliased once the archives' loads are.
+    pub fn stage_display_load(&mut self, t: i32) {
+        if self.game.audio.dvd.is_some() {
+            self.mark_class_two_trophies();
+        }
+        if t != -1 {
+            crate::game::code::unported_call("tyDisplay_8031C454 (a single-player stage's trophy)");
+        }
+    }
+
     /// `Toy_80305058(class, 0x63, 0, 100.0)`: one trophy of `class`, a new one if the class
     /// has any (the save's first gift).
     pub fn draw_trophy_of_class(&mut self, class: i32) -> i32 {

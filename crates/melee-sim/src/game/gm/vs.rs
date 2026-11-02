@@ -662,7 +662,7 @@ impl Game {
 
     /// Counts down the platforms' respawn timers, the inline head of `fn_8016CFE0`: the
     /// players whose timers ran out, to respawn in slot order.
-    fn respawns_due(&mut self) -> Vec<(i32, i32)> {
+    pub(super) fn respawns_due(&mut self) -> Vec<(i32, i32)> {
         let mut due = Vec::new();
         for (i, f) in self.vs.state.fighters.iter_mut().enumerate() {
             if f.respawn_timer != 0 {
