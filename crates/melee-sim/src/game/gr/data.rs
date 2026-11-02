@@ -4,12 +4,12 @@
 
 use super::datfiles::GrJoint;
 use super::{
-    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_CASTLE, GR_KIND_CORNERIA, GR_KIND_FLATZONE,
-    GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT,
-    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
-    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_RCRUISE,
-    GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
+    GR_KIND_FLATZONE, GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS,
+    GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE,
+    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1727,6 +1727,46 @@ pub const KINOKOROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grBb_Route_StageCallbacks`. Map 0 is the backdrop, 1 the demo's object, 4 the cars (made
+/// at the match's start), 31 the track and 32 the far background.
+pub const BIGBLUEROUTE_CALLBACKS: [StageCallbacks; 38] = {
+    let mut c = [cb(0, 0, 0, 0, 0); 38];
+    c[0] = cb(0x8020_BABC, 0x8020_BB00, 0x8020_BB08, 0x8020_BB0C, 0);
+    c[1] = cb(0x8020_BB68, 0x8020_BC24, 0x8020_BC2C, 0x8020_BC30, 0);
+    c[4] = cb(
+        0x8020_C140,
+        0x8020_C1D4,
+        0x8020_C1DC,
+        0x8020_C210,
+        StageCallbacks::LIGHTS,
+    );
+    c[31] = cb(
+        0x8020_BC68,
+        0x8020_BF30,
+        0x8020_BF38,
+        0x8020_C13C,
+        StageCallbacks::FOG,
+    );
+    c[32] = cb(0x8020_BB10, 0x8020_BB58, 0x8020_BB60, 0x8020_BB64, 0);
+    c
+};
+
+/// `grBb_Route_StageData`.
+pub const BIGBLUEROUTE: StageData = StageData {
+    grkind: GR_KIND_BIGBLUEROUTE,
+    callbacks: &BIGBLUEROUTE_CALLBACKS,
+    file: Some("/GrNBr.dat"),
+    on_init: 0x8020_B89C,
+    on_demo_init: 0x8020_B864,
+    on_load: 0x8020_B920,
+    on_start: 0x8020_B95C,
+    callback4: 0x8020_B9CC,
+    on_touch_line: 0x8020_DF78,
+    on_check_shadow_render: 0x8020_DF80,
+    flags2: 1,
+    joints: &[],
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1760,6 +1800,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_MUTECITY => &MUTECITY,
         GR_KIND_BIGBLUE => &BIGBLUE,
         GR_KIND_KINOKOROUTE => &KINOKOROUTE,
+        GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

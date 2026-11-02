@@ -107,6 +107,9 @@ impl Replay {
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
+                if name.starts_with("fz-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
+                }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
                         .into();
@@ -757,6 +760,24 @@ pub const MK_FALL: Game = Game {
     name: "mk-fall2",
     players: "Fox alone, into a pit's water (session m6-mk-route/mk-fall2)",
     replay: Replay::Session("mk-fall2"),
+};
+
+/// The F-Zero race (`m6-fzero-race/fz-run`, debug VS at debug level 3): Link running along the
+/// track, the hazard sign, the cars driving past and hitting him.
+pub const FZ_RUN: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-run",
+    players: "Link running along the track, Mario left at the start (session m6-fzero-race/fz-run)",
+    replay: Replay::Session("fz-run"),
+};
+
+/// The F-Zero cutscene (`m6-fzero-race/fz-cutscene`, the debug cutscene mode at debug level 3):
+/// the race's cars on the cutscene's racers.
+pub const FZ_CUTSCENE: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-cutscene",
+    players: "the F-Zero cutscene's racers (session m6-fzero-race/fz-cutscene)",
+    replay: Replay::Session("fz-cutscene"),
 };
 
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,

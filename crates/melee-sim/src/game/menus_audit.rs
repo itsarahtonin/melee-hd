@@ -139,10 +139,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the cutscenes after the F-Zero one (vi1101 to vi1202), which only the debug cutscene mode reaches past vi0801's stage (the developer setting's, whose panel warns some debug tools stop the game) and Adventure, behind GATES",
     ),
     (
-        "grBigBlueRoute_8020DAB4",
-        "the F-Zero cutscene's cars, past its stage (the F-Zero race's, unported), which only the debug cutscene mode (the developer setting's) and Adventure, behind GATES, reach",
-    ),
-    (
         "gm_801720B4 in a single-player run",
         "the single-player modes', which only the entries behind GATES lead to",
     ),
