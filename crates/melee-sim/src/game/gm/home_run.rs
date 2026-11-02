@@ -34,7 +34,7 @@ const NO_STAGE: u16 = 0x148;
 /// the last frame's, the best this try and how long it hasn't moved), the archive and models
 /// the start loads (`lbl_804D65C8` to `D0`), the record's fanfare played (`D4`) and the end's
 /// timer (`D8`).
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct HomeRun {
     /// `x0`'s two-bit fields: the swing's end (`b76`, the time up or the bag landed), the bag
     /// landed (`b54`), the distance settled (`b32`), and "no contest" (`b10`: 1 shown, 2 its
@@ -59,28 +59,6 @@ pub struct HomeRun {
     pub counter: Option<DataRef>,
     pub fanfare: i32,
     pub end_timer: i32,
-}
-
-impl Default for HomeRun {
-    fn default() -> Self {
-        HomeRun {
-            b76: 0,
-            b54: 0,
-            b32: 0,
-            b10: 0,
-            ckind: 0,
-            nametag: 0,
-            wait: 0,
-            port: 0,
-            records: [0; 0x1B],
-            dist: [0; 4],
-            archive: None,
-            no_contest: None,
-            counter: None,
-            fanfare: 0,
-            end_timer: 0,
-        }
-    }
 }
 
 /// Sandbag's fighter (player 2's), `gm_80180AF4`.
