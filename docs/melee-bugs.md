@@ -1702,6 +1702,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none on gameplay; the debug menu's stage 77 would play.
 - **Source:** `ground.c` (`Ground_801C28CC`'s missing-parameter report and panic); `$SSBM_RS_LOCAL/lockstep/m6-oracle/stages-1p.record.log`.
 
+### Snag the Trophies in a debug VS match fails HSD's joint assert
+
+- **Where:** the debug menu's Versus page, stage 83 ("figureget", Snag the Trophies), then the stage's process `grFigureGet_80219898` (`grfigureget.c`), which spawns a trophy through `it_802F2094` (`itcoin.c`, with `tyDisplay_8031C5E4`); not ported in melee-hd yet.
+- **Defect:** in a debug VS match the trophy `it_802F2094` makes gets a null joint, and HSD's `jobj` assert (`jobj.h`, line 776) fails. Why the joint is null there (likely the trophy data a single-player mode loads for the stage) isn't probed yet.
+- **Effect:** the console halts in the match's first seconds (ssbm-rs: `assertion "jobj" failed in jobj.h on line 776`, from `it_802F2094+0x1B4` under `grFigureGet_80219898+0x168`, in the `m6-oracle/stages-1p-b` recording's run), so the debug menu's stage 83 can't be played on a console.
+- **melee-hd:** stops (the stage's kind isn't ported yet; its port stops at the fault by name, design call 7).
+- **Fix:** leave the bonus stages out of the debug menu's stage entry, or load the trophies' data for a debug match on them.
+- **Fix impact:** none on gameplay; the debug menu's stage 83 would play.
+- **Source:** `$SSBM_RS_LOCAL/lockstep/m6-oracle/stages-1p-b.record.log` (the assert and its stack).
+
 ### A closing menu's screen removed through the menu's own pointer
 
 - **Where:** `un_80304344`'s `DevText_Remove(&arg0->x4)`, `crates/melee-sim/src/game/hud/debug_menu.rs` (`menu_close`, `devtext::Link::Held`).

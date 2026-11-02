@@ -39,49 +39,115 @@ fn session(name: &str, args: &[&str]) -> Option<String> {
 }
 
 /// Each session compares clean from power-on, `--all --heap`, to its first stop in tick
-/// `tick`, the mode's first tick or its loading: (name, tick, the stop).
+/// `tick`: (name, tick, the stop), the stop empty for a session clean to its trace's end
+/// (`tick` its ticks), or "tick N: ..." for one that stops in the tick it compares last.
 fn first_stops(list: &[(&str, u32, &str)]) {
     for (name, tick, stop) in list {
         let Some(out) = session(name, &["--all", "--heap"]) else {
             return;
         };
-        let want = format!("{tick} ticks compared, no difference; stopped in tick {tick}: {stop}");
-        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        let want = if stop.is_empty() {
+            format!(
+                "{tick} ticks compared, no difference
+"
+            )
+        } else if stop.starts_with("tick ") {
+            format!("{tick} ticks compared, no difference; stopped in {stop}")
+        } else {
+            format!("{tick} ticks compared, no difference; stopped in tick {tick}: {stop}")
+        };
+        assert!(
+            out.contains(&want),
+            "{name}: wants {want:?}
+{out}"
+        );
         assert!(out.contains("no stale reads"), "{name}: {out}");
     }
 }
 
 /// Each mode from the main menu's 1P list on the unlock-all card: its entry, its select (or
-/// list), a character, and its first match.
+/// list), Fox, and its first match: Classic's and Adventure's intros, the matches of All-Star,
+/// Target Test, the Home-Run Contest and Training (Fountain of Dreams, on
+/// `2026-10-06_17-44-10`'s card), the Event list's first event and Multi-Man Melee's list.
 #[test]
 fn each_mode_runs_to_its_first_stop() {
     first_stops(&[
-        ("classic", 623, "game mode 0x3's loading isn't ported"),
-        ("adventure2", 653, "game mode 0x4's loading isn't ported"),
-        ("allstar", 683, "game mode 0x5's loading isn't ported"),
-        ("event", 592, "mnEvent_8024E838 (the Event list) isn't ported"),
-        ("target", 683, "game mode 0xf's loading isn't ported"),
-        ("homerun", 713, "game mode 0x20's loading isn't ported"),
-        ("multiman", 742, "mnHyaku_8024CD64 (the Multi-Man list) isn't ported"),
-        ("training", 656, "game mode 0x1c's loading isn't ported"),
+        ("classic", 796, "gmClassic_801B3500 isn't ported"),
+        ("adventure2", 826, "gm_801B3F40 isn't ported"),
+        ("allstar", 856, "gm_801B5624 isn't ported"),
+        (
+            "event",
+            592,
+            "mnEvent_8024E838 (the Event list) isn't ported",
+        ),
+        ("target", 856, "gm_801B6428 isn't ported"),
+        ("homerun", 868, "gm_801B9A3C isn't ported"),
+        (
+            "multiman",
+            742,
+            "mnHyaku_8024CD64 (the Multi-Man list) isn't ported",
+        ),
+        ("training", 1278, "gm_801B1F70 isn't ported"),
     ]);
 }
 
-/// The debug menu's Versus page with Master Hand (a computer player) against Link on Final
-/// Destination, and the Otoguro test's Go to Kinoko (Fox alone on the Mushroom Kingdom
-/// adventure route, stage 59).
+/// The debug menu's routes at the debug ROM's level: the Versus page with Master Hand against
+/// Link on Final Destination (a computer player, `mh-fd`, and a human, `mh-human`), the
+/// Otoguro test's Go to Kinoko and Go to Meikyu (the Mushroom Kingdom and Underground Maze
+/// adventure routes), the debug mode's milestone 6 states (Intro Easy, AllStar Enemy, EasyEnd's
+/// game over, the staff roll), the debug cutscene (mode 0x19) and the regular ending test (mode
+/// 0x1A: the trophy fall and congratulations).
 #[test]
 fn the_debug_routes_run_to_their_first_stops() {
     first_stops(&[
+        ("mh-fd", 7178, ""),
+        ("mh-human", 7188, ""),
+        ("kinoko", 6493, ""),
         (
-            "mh-fd",
-            1441,
-            "index out of bounds: the len is 31 but the index is 255",
+            "meikyu",
+            1242,
+            "not implemented: stage kind 32 isn't ported",
+        ),
+        ("intro-easy", 1362, "game scene 0x20 isn't ported"),
+        ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
+        ("gameover", 3157, ""),
+        ("staffroll", 1232, "game scene 0x2b isn't ported"),
+        ("cutscene", 3282, ""),
+        ("ending-test", 1232, "game scene 0xf isn't ported"),
+    ]);
+}
+
+/// The Versus page's tours: the other bosses on Final Destination (Crazy Hand, Giga Bowser,
+/// the Wire Frames, Sandbag), the 26 target stages (33 to 58) and the single-player stages
+/// (59 to 77, where the original halts; 78 to 83, where it fails an assert; 84 and 85), each
+/// a short match, its no-contest and its results.
+#[test]
+fn the_versus_page_tours_run_to_their_first_stops() {
+    first_stops(&[
+        (
+            "bosses",
+            1461,
+            "fighter OnLoad 0x80155e1c (ftCh_Init_OnLoad) isn't ported",
         ),
         (
-            "kinoko",
-            1272,
-            "not implemented: stage kind 31 isn't ported",
+            "targets",
+            1121,
+            "not implemented: stage kind 40 isn't ported",
+        ),
+        (
+            "stages-1p",
+            3409,
+            "tick 3408: unknown leftover bytes of a freed Item under Fighter: its layout isn't ported",
+        ),
+        (
+            "stages-1p-b",
+            10941,
+            "not implemented: stage kind 38 isn't ported",
+        ),
+        (
+            "stages-1p-c",
+            2142,
+            "not implemented: stage kind 67 isn't ported",
         ),
     ]);
 }
@@ -92,8 +158,16 @@ fn the_debug_routes_run_to_their_first_stops() {
 #[test]
 fn the_sessions_catch_an_added_press() {
     for (name, read, want) in [
-        ("classic", "read=700", "501 ticks compared; tick 500 differs"),
-        ("kinoko", "read=1000", "879 ticks compared; tick 878 differs"),
+        (
+            "classic",
+            "read=700",
+            "501 ticks compared; tick 500 differs",
+        ),
+        (
+            "kinoko",
+            "read=1000",
+            "879 ticks compared; tick 878 differs",
+        ),
     ] {
         let Some(out) = session(name, &["--all", "--heap", "--mutate", read]) else {
             return;
