@@ -70,6 +70,7 @@ pub mod powerup;
 pub mod purin;
 pub mod resolve;
 pub mod samus;
+pub mod sandbag;
 pub mod seak;
 pub mod second;
 pub mod sound;

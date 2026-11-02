@@ -81,6 +81,8 @@ pub struct StageMaps<'a> {
     /// The stage code's globals (the dynamic attribute areas, the stage archives, the stages'
     /// parameters), which the collision joints' callbacks read.
     pub gr: &'a super::super::gr::Globals,
+    /// The players' blocks (`Player_GetEntity`), for the Home-Run Contest's field.
+    players: &'a [super::super::structs::_StaticPlayer; 6],
 }
 
 impl<'a> StageMaps<'a> {
@@ -88,8 +90,14 @@ impl<'a> StageMaps<'a> {
         world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
         info: &'a super::super::structs::StageInfo,
         gr: &'a super::super::gr::Globals,
+        players: &'a [super::super::structs::_StaticPlayer; 6],
     ) -> Self {
-        StageMaps { world, info, gr }
+        StageMaps {
+            world,
+            info,
+            gr,
+            players,
+        }
     }
 
     /// The stage's kind (`stage_info.grkind`).
@@ -187,6 +195,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::homerun::FIELD_TOUCHED => super::super::gr::homerun::field_touched(
+                self.grounds,
+                self.stage_maps.ground(10),
+                coll,
+                kind,
+                self.stage_maps.players[1].entity(0),
+            ),
             super::super::gr::fourside::ROOF_TOUCHED => super::super::gr::fourside::touch(
                 self.grounds,
                 self.stage_maps.ground(5),
@@ -491,7 +506,7 @@ impl Running<'_> {
             kicks: Default::default(),
             bumps: Default::default(),
             grounds: &mut game.grounds,
-            stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
+            stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
         };
         let mut coll = Coll {

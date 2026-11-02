@@ -42,6 +42,9 @@ pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 /// grkinokoroute.c's (`ssbm_types::tu::melee__gr__grkinokoroute::yakumono_param`).
 pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
+/// `grHr_804D6AD8` to `grHr_804D6AE4` and the Home-Run Contest's stage's `yakumono_param`.
+pub const GRHOMERUN_STATICS: u32 = 0x804D_6AD8;
+pub const GRHOMERUN_YAKUMONO: u32 = 0x804D_6AE8;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -380,6 +383,13 @@ impl Importer<'_> {
         self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
         self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRHOMERUN_YAKUMONO);
+        let h = &mut self.game.gr.homerun;
+        h.scale = f32::from_bits(cap.u32(GRHOMERUN_STATICS));
+        h.ticks = cap.u32(GRHOMERUN_STATICS + 4) as i32;
+        h.max_dist = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 8));
+        h.ratio = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 0xC));
+        self.game.gr.homerun.yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -1098,6 +1108,11 @@ impl Comparer<'_> {
                 game.gr.kinokoroute_yakumono,
             ),
             (
+                "grHomeRun yakumono_param",
+                GRHOMERUN_YAKUMONO,
+                game.gr.homerun.yakumono,
+            ),
+            (
                 "grShrine yakumono_param",
                 GRSHRINE_YAKUMONO,
                 game.gr.shrine_yakumono,
@@ -1213,6 +1228,25 @@ impl Comparer<'_> {
         }
         if on(gr::GR_KIND_CORNERIA) {
             self.compare_corneria();
+        }
+        if on(gr::GR_KIND_HOMERUN) {
+            let h = &game.gr.homerun;
+            self.check(
+                "grHr_804D6AD8",
+                "scale, ticks, max_dist, ratio",
+                (
+                    h.scale.to_bits(),
+                    h.ticks,
+                    h.max_dist.to_bits(),
+                    h.ratio.to_bits(),
+                ),
+                (
+                    self.u32(GRHOMERUN_STATICS),
+                    self.u32(GRHOMERUN_STATICS + 4) as i32,
+                    self.u32(GRHOMERUN_STATICS + 8),
+                    self.u32(GRHOMERUN_STATICS + 0xC),
+                ),
+            );
         }
         if on(gr::GR_KIND_VENOM) {
             self.compare_venom();

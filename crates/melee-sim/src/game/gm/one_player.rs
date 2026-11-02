@@ -585,7 +585,7 @@ impl Running<'_> {
     }
 
     /// `gm_80168F88`: the announcer's bank (bank 2's 0x10) wanted and waited for.
-    // Ports `gm_80168F88`; aliased once a check reaches it.
+    #[doc(alias = "gm_80168F88")]
     pub fn load_announcer_bank(&mut self) {
         self.game.audio.lb.unwant_banks(0x12);
         self.game.audio.lb.want_banks(2, 0x10);
@@ -956,7 +956,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B999C`: back to the menu, or the player from the select and Sandbag.
-    // Ports `gm_801B999C`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B999C")]
     pub fn homerun_exit_css(&mut self) {
         if self.game.vs_melee.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);

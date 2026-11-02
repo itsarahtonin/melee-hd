@@ -209,6 +209,8 @@ enum Hook {
     HomeRunOnLoad,
     HomeRunEnterCss,
     HomeRunExitCss,
+    HomeRunEnterVs,
+    HomeRunExitVs,
     TrainingOnLoad,
     TrainingEnterCss,
     TrainingExitCss,
@@ -226,10 +228,12 @@ fn vs_like(mode: u8) -> bool {
 }
 
 /// Whether the mode's match scenes take VS mode's enter and exit data (`gmVsMelee_StartData`,
-/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes, Camera Mode and debug VS.
+/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes, Camera Mode, debug VS and the
+/// Home-Run Contest.
 pub fn uses_vs_melee(mode: u8) -> bool {
     mode == GM_VS
         || mode == GM_CAMERA_MODE
+        || mode == super::one_player::GM_HOME_RUN
         || mode == super::GM_DEBUG_VS
         || super::vs_mode::Special::from_game_mode(mode).is_some()
 }
@@ -1300,6 +1304,8 @@ impl Running<'_> {
             Hook::HomeRunOnLoad => self.homerun_on_load(),
             Hook::HomeRunEnterCss => self.homerun_enter_css(),
             Hook::HomeRunExitCss => self.homerun_exit_css(),
+            Hook::HomeRunEnterVs => self.homerun_enter_vs(),
+            Hook::HomeRunExitVs => self.homerun_exit_vs(),
             Hook::TrainingOnLoad => self.training_on_load(),
             Hook::TrainingEnterCss => self.training_enter_css(),
             Hook::TrainingExitCss => self.training_exit_css(),
@@ -1548,7 +1554,13 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             Some(Hook::HomeRunExitCss),
             GS_CSS,
         ),
-        st(1, 3, u("gm_801B9A3C"), u("gm_801B9DD8"), GS_VS),
+        st(
+            1,
+            3,
+            Some(Hook::HomeRunEnterVs),
+            Some(Hook::HomeRunExitVs),
+            GS_VS,
+        ),
     ];
     Some(match mode {
         GM_CLASSIC => &CLASSIC,
