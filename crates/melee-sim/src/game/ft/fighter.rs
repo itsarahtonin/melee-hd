@@ -402,21 +402,26 @@ pub fn proc_update(g: &mut Running, gobj: GObjId) {
         } else {
             1.0
         };
+        let sandbag = g.game.fighters[f.0]
+            .is_sandbag
+            .then(|| g.sb_kb_deaccel(gobj));
         let fp = &mut g.game.fighters[f.0];
         let kb_x = fp.x8c_kb_vel.x;
         if kb_x != 0.0 || fp.x8c_kb_vel.y != 0.0 {
             if fp.ground_or_air == GA_AIR {
                 let (x, y) = (fp.x8c_kb_vel.x, fp.x8c_kb_vel.y);
-                if fp.is_sandbag {
-                    unported_call("ftCommon_SandbagKnockbackDeaccel");
-                }
-                let angle = math::atan2(y, x);
-                if sqrt_reg(fp::fmadds(reg(x), reg(x), fp::fmuls(reg(y), reg(y)))) < kb_decay {
-                    fp.x8c_kb_vel.y = 0.0;
-                    fp.x8c_kb_vel.x = 0.0;
+                if let Some((dx, dy)) = sandbag {
+                    fp.x8c_kb_vel.x = super::sandbag::kb_deaccel(x, dx);
+                    fp.x8c_kb_vel.y = super::sandbag::kb_deaccel(y, dy);
                 } else {
-                    fp.x8c_kb_vel.x = mem(fp::fnmsubs(kb_decay, reg(math::cos(angle)), reg(x)));
-                    fp.x8c_kb_vel.y = mem(fp::fnmsubs(kb_decay, reg(math::sin(angle)), reg(y)));
+                    let angle = math::atan2(y, x);
+                    if sqrt_reg(fp::fmadds(reg(x), reg(x), fp::fmuls(reg(y), reg(y)))) < kb_decay {
+                        fp.x8c_kb_vel.y = 0.0;
+                        fp.x8c_kb_vel.x = 0.0;
+                    } else {
+                        fp.x8c_kb_vel.x = mem(fp::fnmsubs(kb_decay, reg(math::cos(angle)), reg(x)));
+                        fp.x8c_kb_vel.y = mem(fp::fnmsubs(kb_decay, reg(math::sin(angle)), reg(y)));
+                    }
                 }
                 fp.xF0_ground_kb_vel = 0.0;
             } else {

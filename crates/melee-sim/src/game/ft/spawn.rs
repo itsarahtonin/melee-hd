@@ -522,7 +522,12 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             grounds: &mut game.grounds,
-            stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
+            stage_maps: super::coll::StageMaps::of_parts(
+                &game.world,
+                &game.stage_info,
+                &game.gr,
+                &game.players,
+            ),
             filter: None,
         };
         let mut coll = Coll {
@@ -570,7 +575,12 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             grounds: &mut game.grounds,
-            stage_maps: super::coll::StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
+            stage_maps: super::coll::StageMaps::of_parts(
+                &game.world,
+                &game.stage_info,
+                &game.gr,
+                &game.players,
+            ),
             filter: None,
         };
         let mut coll = Coll {

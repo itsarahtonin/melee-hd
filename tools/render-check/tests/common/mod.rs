@@ -112,6 +112,10 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("gb-") {
                     return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
                 }
+
+                if name.starts_with("hr-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
@@ -1032,6 +1036,23 @@ pub const M6_HOMERUN: Game = Game {
     name: "m6-homerun",
     players: "the Home-Run Contest's select (session m6-select/homerun)",
     replay: Replay::Session("m6-homerun"),
+};
+
+/// The Home-Run Contest with the bat (`m6-homerun/hr-long`): the platform and the bat, Sandbag
+/// in flight over the field's stretches, the labels' texts, the counter and its new record.
+pub const HR_LONG: Game = Game {
+    stage: "Home-Run Contest",
+    name: "hr-long",
+    players: "Fox and Sandbag, the bat (session m6-homerun/hr-long)",
+    replay: Replay::Session("hr-long"),
+};
+
+/// The Home-Run Contest with no hit (`m6-homerun/hr-miss`): the "no distance" sign.
+pub const HR_MISS: Game = Game {
+    stage: "Home-Run Contest",
+    name: "hr-miss",
+    players: "Fox and Sandbag, no hit (session m6-homerun/hr-miss)",
+    replay: Replay::Session("hr-miss"),
 };
 
 /// Classic's select on a card every character has cleared everything on

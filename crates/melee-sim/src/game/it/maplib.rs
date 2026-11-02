@@ -44,6 +44,7 @@ pub fn with_stage_coll<R>(
             &game.world,
             &game.stage_info,
             &game.gr,
+            &game.players,
         ),
         filter: None,
     };

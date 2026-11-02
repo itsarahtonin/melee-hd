@@ -6,11 +6,12 @@ use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
     GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FLATZONE, GR_KIND_FOURSIDE,
-    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_ICEMT, GR_KIND_INISHIE1,
-    GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO, GR_KIND_KRAID,
-    GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI,
-    GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON, GR_KIND_RCRUISE, GR_KIND_SHRINE,
-    GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
+    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_HOMERUN, GR_KIND_ICEMT,
+    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
+    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
+    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON,
+    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_STORY, GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES,
+    GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1311,14 +1312,7 @@ pub const CORNERIA_JOINTS: [GrJoint; 8] = [
 /// Contest's) take the saved
 /// language's, `.dat` with Japanese saved.
 pub fn stage_file(grkind: i32, saved_us: bool) -> Option<&'static str> {
-    // The Home-Run Contest's (`grHr_StageData`'s `/GrHr`, no extension), which its select's
-    // game cache preloads before its stage is ported.
-    const GR_KIND_HOMERUN: i32 = 0x43;
-    let f = if grkind == GR_KIND_HOMERUN {
-        "/GrHr.usd"
-    } else {
-        stage_data(grkind).file?
-    };
+    let f = stage_data(grkind).file?;
     Some(if saved_us {
         f
     } else {
@@ -1917,6 +1911,49 @@ pub const FIGURE3: StageData = StageData {
     joints: &[],
 };
 
+/// `grHr_StageCallbacks`. Map 0 is the platform, map 10 the field, maps 1, 2 and 4 to 9 its
+/// stretches (2, 5, 7 and 9 labelled), map 4 the backdrop's pieces too and map 3 the
+/// backgrounds.
+pub const HOMERUN_CALLBACKS: [StageCallbacks; 11] = [
+    cb(0x8021_C914, 0x8021_CB10, 0x8021_CB18, 0x8021_CB1C, 0),
+    cb(0x8021_E038, 0x8021_E064, 0x8021_E06C, 0x8021_E070, 0),
+    cb(0x8021_E074, 0x8021_E0CC, 0x8021_E0D4, 0x8021_E18C, 0),
+    cb(0x8021_E4C4, 0x8021_E4F0, 0x8021_E4F8, 0x8021_E4FC, 0),
+    cb(0x8021_DEB4, 0x8021_DEE0, 0x8021_DEE8, 0x8021_DEEC, 0),
+    cb(0x8021_DEF0, 0x8021_DF48, 0x8021_DF50, 0x8021_E008, 0),
+    cb(0x8021_E1BC, 0x8021_E1E8, 0x8021_E1F0, 0x8021_E1F4, 0),
+    cb(0x8021_E1F8, 0x8021_E250, 0x8021_E258, 0x8021_E310, 0),
+    cb(0x8021_E340, 0x8021_E36C, 0x8021_E374, 0x8021_E378, 0),
+    cb(0x8021_E37C, 0x8021_E3D4, 0x8021_E3DC, 0x8021_E494, 0),
+    cb(
+        0x8021_CB20,
+        0x8021_D678,
+        0x8021_D680,
+        0x8021_DEB0,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grHr_804D4998`: the field's collision joint (map 10's first).
+pub const HOMERUN_JOINTS: [GrJoint; 1] = [GrJoint { x: 0, y: 10, z: 0 }];
+
+/// `grHr_StageData`. Its file has no extension: the saved language's
+/// (`lbFileGetFullName`, [`stage_file`]).
+pub const HOMERUN: StageData = StageData {
+    grkind: GR_KIND_HOMERUN,
+    callbacks: &HOMERUN_CALLBACKS,
+    file: Some("/GrHr.usd"),
+    on_init: 0x8021_C754,
+    on_demo_init: 0x8021_C750,
+    on_load: 0x8021_C7FC,
+    on_start: 0x8021_C800,
+    callback4: 0x8021_C824,
+    on_touch_line: 0x8021_EEB4,
+    on_check_shadow_render: 0x8021_EEBC,
+    flags2: 1,
+    joints: &HOMERUN_JOINTS,
+};
+
 /// The stage data for a stage kind (`stage_datas[grkind]`).
 pub fn stage_data(grkind: i32) -> &'static StageData {
     match grkind {
@@ -1956,6 +1993,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_FIGURE1 => &FIGURE1,
         GR_KIND_FIGURE2 => &FIGURE2,
         GR_KIND_FIGURE3 => &FIGURE3,
+        GR_KIND_HOMERUN => &HOMERUN,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

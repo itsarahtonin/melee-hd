@@ -22,17 +22,17 @@ use common::{
     DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
     FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
     FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY, GREEN_GREENS, Game, Group,
-    HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
-    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
-    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6E_GAMEOVER, MENU_TOUR, METAL_CLOAK_RC, MK_ENEMIES,
-    MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES, NAMES_KANA, ONETT,
-    OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
-    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
-    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, ITEMS_POWERUPS_BF,
+    ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC,
+    M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6E_GAMEOVER, MENU_TOUR, METAL_CLOAK_RC,
+    MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, NAMES,
+    NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK,
+    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES,
+    RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD,
+    SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK,
+    TOU_BRACKET64, TOU_LIST, TOU_WINNER, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY,
+    TROPHY_LOTTERY, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB,
+    ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -1077,6 +1077,47 @@ frames!(TROPHY_COLLECTION;
 );
 frames!(TROPHY_COLLECTION_ROWS;
     trophy_collection_rows_1300 1300,
+);
+// The Home-Run Contest (milestone 6's task 14): the platform, the bat and the start's label
+// (hr-long 1000), Sandbag in flight with the counter running (1240), the field's labels past
+// 300 feet (1420), the counter's new record (1540), and no hit's sign (hr-miss 1850).
+// Against captures made with ssbm-rs's renderer running (headless, the log's first frame
+// samples textures the frames before it copied). Fox's and Sandbag's shadows fall on the
+// stage: their draws differ only in the shadow textures' hashes, and the images are
+// identical.
+fn home_run(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! home_run_frames {
+    ($game:expr; $($name:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                home_run(&$game, $frame, $same);
+            }
+        )*
+    };
+}
+
+home_run_frames!(HR_LONG;
+    hr_long_1000 1000 [1754, 1758],
+    hr_long_1240 1240 [1503, 1502],
+    hr_long_1420 1420 [1635, 1635],
+    hr_long_1540 1540 [1637, 1637],
+);
+home_run_frames!(HR_MISS;
+    hr_miss_1850 1850 [1725, 1725],
 );
 // Mushroom Kingdom's adventure route (milestone 6's task 16, debug VS at debug level 3, Fox
 // alone): the debug item menu's Koopas, a Paratroopa and a green shell falling at the route's

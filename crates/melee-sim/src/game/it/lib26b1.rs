@@ -452,8 +452,9 @@ pub fn hold_flags_on(game: &mut Game, gobj: GObjId) {
 /// stages that drop items by kind do: in a sudden death only the bob-omb rain's; the Party
 /// Ball (while the rules have it on), Beam Sword, Super Scope, Fire Flower and Bunny Hood
 /// standing, holding still for their animation, and with `hold` (`x1C.b0`) holding their
-/// flags too ([`hold_flags_on`]). Big Blue's flying platforms make only those five; the box,
-/// Flipper, foods, Home-Run Bat and bob-omb are other modes' (`items_audit`).
+/// flags too ([`hold_flags_on`]). Big Blue's flying platforms make only those five, and the
+/// Home-Run Contest's stage its bat; the box, Flipper and foods are the All-Star rest area's
+/// (`items_audit`).
 #[doc(alias = "it_8026BE84")]
 pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option<GObjId> {
     use super::kinds::{fflower, kusudama, rabbitc, sscope, sword};
@@ -477,9 +478,8 @@ pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option
             super::kinds::bombhei::spawn_at(r, pos);
             return None;
         }
-        1 | 20 | 8 | 9 | 11 => {
-            crate::game::code::unported_call("it_8026BE84 (a box, Flipper, food or bat)")
-        }
+        11 => super::kinds::bat::spawn_at(r, pos),
+        1 | 20 | 8 | 9 => crate::game::code::unported_call("it_8026BE84 (a box, Flipper or food)"),
         _ => None,
     }?;
     hold_still(r.game, gobj);

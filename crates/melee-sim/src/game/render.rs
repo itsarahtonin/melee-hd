@@ -429,6 +429,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::ef::eflib::RENDER => r.render_particles(gobj, pass),
         0x8003_01D0 => r.render_game_camera(gobj),
         0x801C_5DB0 => r.render_stage_object(gobj, pass),
+        super::gr::homerun::TEXT_CAMERA_RENDER => r.homerun_text_camera_render(gobj),
         super::gr::display::STAGE_CAMERA_RENDER => r.render_stage_camera(gobj),
         c if super::gr::stadium::run_render(r, gobj, c, pass) => {}
         c if super::gr::izumi::run_render(r, gobj, c, pass) => {}

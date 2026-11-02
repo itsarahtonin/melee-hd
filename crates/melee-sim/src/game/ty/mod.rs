@@ -162,6 +162,8 @@ impl Toys {
         self.stand = None;
         self.anim = AnimState::default();
         self.datai_edits.clear();
+        // `tyDisplay_8031C8B8`: the display's archives forgotten.
+        self.collection.archives.fill(None);
     }
 }
 

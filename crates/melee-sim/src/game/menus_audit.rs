@@ -143,8 +143,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_80172140 in a single-player mode",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "gm_80172140 in a 1P run",
+        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
     ),
     (
         "mnDiagram2_GetStatValue for statistic",
@@ -255,8 +255,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "the player's card holds Melee's files alone (melee-player's saves::read_dir), so the boot finds no Pikmin save",
     ),
     (
-        "fn_80171A88 in a single-player mode",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "fn_80171A88 in a 1P run",
+        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
     ),
     (
         "controller map hook",
