@@ -842,6 +842,14 @@ pub const TT_TARGETS: Game = Game {
     replay: Replay::Session("o6-targets"),
 };
 
+/// Target Test cleared from the main menu (`m6-target-test/tt-clear`): Samus's stage.
+pub const TT_CLEAR: Game = Game {
+    stage: "Samus's target stage",
+    name: "tt-clear",
+    players: "Samus alone, breaking every target (session m6-target-test/tt-clear)",
+    replay: Replay::Session("tt-clear"),
+};
+
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
 pub const TT_DK_QUIT: Game = Game {
     stage: "Donkey Kong's target stage",
