@@ -2161,7 +2161,8 @@ fn crazy_hand_in_debug_vs() {
 /// and flung away, the pause's no-contest before the climb's end and the results, clean to its
 /// trace's end; and `im-end`, the climb run to its end, which starts the arena's opponents
 /// (`gm_801674C4`): on a console they come in at scale 0 and the game halts, where the trace
-/// ends, and run on past it melee-hd stops by name in the same creation.
+/// ends, and run on past it melee-hd reads the joiner's files mid-match and halts on the same
+/// assertion.
 #[test]
 fn icicle_mountain_climb_in_debug_vs() {
     if let Some(out) = scripted_session("m6-icicle-climb", "im-bears", &["--all", "--heap"]) {
@@ -2175,7 +2176,7 @@ fn icicle_mountain_climb_in_debug_vs() {
     ) {
         assert!(out.contains("4825 ticks compared, no difference"), "{out}");
         assert!(
-            out.contains("past the trace's end, stopped in tick 4825: a joiner's character files read mid-match (PlPp.dat"),
+            out.contains("past the trace's end, stopped in tick 4825: the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"),
             "{out}"
         );
     }
@@ -2184,9 +2185,11 @@ fn icicle_mountain_climb_in_debug_vs() {
 /// The single-player matches' setups (milestone 6's task 2): `m6-mk-route/mk-run`, Mushroom
 /// Kingdom's route to its arena, whose event (`gm_801674C4`) fills the joining opponents'
 /// setup (compared whole) to the trace's end, where the console halts on the first joiner's
-/// scale of 0 and melee-hd stops by name in the same creation; and task 2's
+/// scale of 0, and past it melee-hd reads the joiner's files and halts on the same assertion;
+/// and task 2's
 /// `m6-select/allstar`, All-Star's select, its first match lost, the match's exit and the
-/// game over to the trace's end.
+/// game over to the trace's end; and `m6-1p-setups/as-win`, All-Star's first match won, to
+/// the clear screen.
 #[test]
 fn single_player_setups() {
     if let Some(out) =
@@ -2194,12 +2197,20 @@ fn single_player_setups() {
     {
         assert!(out.contains("4382 ticks compared, no difference"), "{out}");
         assert!(
-            out.contains("past the trace's end, stopped in tick 4382: a joiner's character files read mid-match (PlYs.dat"),
+            out.contains("past the trace's end, stopped in tick 4382: the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"),
             "{out}"
         );
     }
     if let Some(out) = scripted_session("m6-select", "allstar", &["--all", "--heap"]) {
         assert!(out.contains("2444 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    // All-Star's first match won (Peach knocked out on Peach's Castle) to its clear screen.
+    if let Some(out) = scripted_session("m6-1p-setups", "as-win", &["--all", "--heap"]) {
+        assert!(
+            out.contains("6115 ticks compared, no difference; stopped in tick 6115: single-player stage clears (fn_80180630) aren't ported"),
+            "{out}"
+        );
         assert!(out.contains("no stale reads"), "{out}");
     }
 }

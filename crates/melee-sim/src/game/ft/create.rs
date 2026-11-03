@@ -133,6 +133,7 @@ impl Running<'_> {
             .world
             .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
         if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
+            self.check_preloaded(file);
             self.disc_load(file, super::data::MAIN_MEMORY);
         }
         self.fighter_create_rest(gobj, f, info)
@@ -190,6 +191,7 @@ impl Running<'_> {
         );
         let costume = i32::from(self.game.fighters[f.0].costume_id);
         if let Some(file) = self.game.load_costume(self.data, kind, costume) {
+            self.check_preloaded(&file);
             self.disc_load(&file, super::data::MAIN_MEMORY);
         }
         self.load_costume_joint(gobj);

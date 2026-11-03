@@ -935,32 +935,175 @@ pub fn load_fighter_files(
     }
     let mut aram = ARAM_ANIM_BASE;
     for name in anims {
-        let DiscFile { entrynum, bytes } = load(name);
-        files
-            .entries
-            .push((name.to_owned(), entrynum, bytes.len() as u32));
-        let mut file = super::ft::AnimFile {
-            aram,
-            anims: Vec::new(),
-        };
-        // One archive per animation, each starting at a 32-byte boundary.
-        let mut off = 0usize;
-        let word = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap()) as usize;
-        while off + 0x20 <= bytes.len() {
-            let size = word(off);
-            if size < 0x20 || off + size > bytes.len() {
-                break;
-            }
-            // The copy into a fighter's buffer takes the size rounded up to 32 bytes
-            // (`lbArq_80014BD0`), so the file's next bytes come along.
-            let after = &bytes[off + size..(off + size).next_multiple_of(32).min(bytes.len())];
-            let a = Archive::parse_in(&bytes[off..off + size], after)
-                .unwrap_or_else(|e| panic!("{name}@{off:#x}: {e:?}"));
-            file.anims.push((off as u32, data.add(a)));
-            off = (off + size).next_multiple_of(32);
+        aram += read_anim_file(files, data, name, aram, load);
+    }
+}
+
+/// Reads animation file `name` for ARAM at `aram`, one archive per animation: its size in
+/// ARAM.
+fn read_anim_file(
+    files: &mut super::ft::data::LoadedFiles,
+    data: &mut Archives,
+    name: &str,
+    aram: u32,
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) -> u32 {
+    let DiscFile { entrynum, bytes } = load(name);
+    files
+        .entries
+        .push((name.to_owned(), entrynum, bytes.len() as u32));
+    let mut file = super::ft::AnimFile {
+        aram,
+        anims: Vec::new(),
+    };
+    // One archive per animation, each starting at a 32-byte boundary.
+    let mut off = 0usize;
+    let word = |i: usize| u32::from_be_bytes(bytes[i..i + 4].try_into().unwrap()) as usize;
+    while off + 0x20 <= bytes.len() {
+        let size = word(off);
+        if size < 0x20 || off + size > bytes.len() {
+            break;
         }
-        aram += (bytes.len() as u32).next_multiple_of(32);
-        files.anim_files.push((name.to_owned(), file));
+        // The copy into a fighter's buffer takes the size rounded up to 32 bytes
+        // (`lbArq_80014BD0`), so the file's next bytes come along.
+        let after = &bytes[off + size..(off + size).next_multiple_of(32).min(bytes.len())];
+        let a = Archive::parse_in(&bytes[off..off + size], after)
+            .unwrap_or_else(|e| panic!("{name}@{off:#x}: {e:?}"));
+        file.anims.push((off as u32, data.add(a)));
+        off = (off + size).next_multiple_of(32);
+    }
+    files.anim_files.push((name.to_owned(), file));
+    (bytes.len() as u32).next_multiple_of(32)
+}
+
+/// The files a session's frontend read for opponents joining mid-match
+/// ([`load_joiner_files`]), outside the game's state: a tick played again after a rollback
+/// takes the same archives rather than reading them again.
+#[derive(Clone, Debug, Default)]
+pub struct JoinerFiles {
+    /// Each file by name: its disc entry and size, and its archive or, for an animation file,
+    /// its animations.
+    pub files: Vec<(String, i32, u32, JoinerFile)>,
+}
+
+#[derive(Clone, Debug)]
+pub enum JoinerFile {
+    Archive(ArchiveId),
+    Anims(Vec<(u32, ArchiveId)>),
+}
+
+/// Gives the match the files of the opponents still to join a single-player match
+/// (`game::gm::opponents`) that it didn't load: each one's characters' data and animation
+/// files and its costume's file, which `Fighter_Create` reads from the disc mid-tick when it
+/// joins (`ftData_8008572C`'s and `ftData_80085820`'s `lbArchive_80017040`,
+/// `ftData_80085A14`'s `lbFile_800168A0` into ARAM). The frontend reads them once the setup
+/// names them, between ticks (into `read`, once a session); the simulation's loads then time
+/// each read and place each block. An animation file's ARAM address is the ARAM heap's block
+/// (`Running::init_anim_buffers`), not this one.
+pub fn load_joiner_files(
+    game: &mut Game,
+    data: &mut Archives,
+    read: &mut JoinerFiles,
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) {
+    use super::ft::data::kind_tables;
+    use super::gm::opponents::{END, JOINING, LIST_LEN, NONE};
+    let o = &game.gm.opponents;
+    if o.flags & JOINING == 0 || o.left == 0 {
+        return;
+    }
+    let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
+    for i in 0..LIST_LEN {
+        let (ckind, color) = (o.characters[i], o.costumes[i]);
+        if ckind == END || color == END {
+            break;
+        }
+        if !(0..NONE).contains(&ckind) {
+            continue;
+        }
+        let m = super::pl::player::mapping(i32::from(ckind));
+        for kind in [m.internal_id, m.extra_internal_id] {
+            if kind < 0 {
+                continue;
+            }
+            let t = kind_tables(i32::from(kind));
+            let c = usize::try_from(color).unwrap_or(0);
+            let c = if c >= usize::from(t.costume_count) {
+                0
+            } else {
+                c
+            };
+            for name in [
+                (
+                    std::borrow::Cow::Borrowed(
+                        t.dat_file.expect("a fighter kind without a data file"),
+                    ),
+                    false,
+                ),
+                (
+                    t.costumes[c].disc_file().expect("a costume without a file"),
+                    false,
+                ),
+                (
+                    std::borrow::Cow::Borrowed(
+                        t.anim_file.expect("a fighter kind without animations"),
+                    ),
+                    true,
+                ),
+            ] {
+                if !names.contains(&name) {
+                    names.push(name);
+                }
+            }
+        }
+    }
+    let files = &mut game.ft.data.files;
+    for (name, anim) in names {
+        let have = if anim {
+            files.anim_files.iter().any(|(n, _)| *n == *name)
+        } else {
+            files.archive_id(&name).is_some()
+        };
+        if have {
+            continue;
+        }
+        if !read.files.iter().any(|f| *f.0 == *name) {
+            let mut scratch = super::ft::data::LoadedFiles::default();
+            let (entrynum, len, file) = if anim {
+                read_anim_file(&mut scratch, data, &name, 0, load);
+                let (_, f) = scratch
+                    .anim_files
+                    .pop()
+                    .expect("the animation file just read");
+                let (_, e, len) = scratch.entries[0];
+                (e, len, JoinerFile::Anims(f.anims))
+            } else {
+                let f = load(&name);
+                let a = Archive::parse(&f.bytes).unwrap_or_else(|e| panic!("{name}: {e:?}"));
+                (
+                    f.entrynum,
+                    f.bytes.len() as u32,
+                    JoinerFile::Archive(data.add(a)),
+                )
+            };
+            read.files.push((name.to_string(), entrynum, len, file));
+        }
+        let (n, entrynum, len, file) = read
+            .files
+            .iter()
+            .find(|f| *f.0 == *name)
+            .expect("the file just read");
+        files.entries.push((n.clone(), *entrynum, *len));
+        match file {
+            JoinerFile::Archive(id) => files.archives.push((n.clone(), *id)),
+            JoinerFile::Anims(anims) => files.anim_files.push((
+                n.clone(),
+                super::ft::AnimFile {
+                    aram: 0,
+                    anims: anims.clone(),
+                },
+            )),
+        }
     }
 }
 

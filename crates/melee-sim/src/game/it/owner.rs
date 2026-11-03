@@ -68,7 +68,10 @@ pub fn dec_fighter_refs(game: &mut Game, kind: i32) {
 /// Scales knockback or damage by a fighter's height scale, `ftCo_CalcYScaledKnockback`.
 #[doc(alias = "ftCo_CalcYScaledKnockback")]
 pub fn y_scaled(arg0: f64, scale: f64, arg2: f64) -> f64 {
-    assert!(scale != 0.0, "scale != 0.0F");
+    assert!(
+        scale != 0.0,
+        "the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"
+    );
     if arg2 == 0.0 {
         return arg0;
     }
