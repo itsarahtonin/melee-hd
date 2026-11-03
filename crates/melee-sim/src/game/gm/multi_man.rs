@@ -492,7 +492,6 @@ impl Running<'_> {
     #[doc(alias = "gm_801B8AF8")]
     #[doc(alias = "gmMainLib_8015D6D8")]
     #[doc(alias = "gmMainLib_8015D72C")]
-    #[doc(alias = "gmMainLib_8015D780")]
     pub fn multi_man_exit_match(&mut self, mode: u8) {
         let end = self.game.multi_man.exit.match_end.clone();
         if end.outcome == super::match_exit::OUTCOME_RETRY {
@@ -525,6 +524,8 @@ impl Running<'_> {
                 } else {
                     rec.xA2 = v;
                     if r.won() {
+                        // `gmMainLib_8015D780`; aliased once a check reaches it (a won
+                        // 15-Minute Melee).
                         rec.b3 = true;
                     }
                 }
@@ -550,21 +551,24 @@ impl Running<'_> {
     #[doc(alias = "gm_80181A14")]
     #[doc(alias = "gm_80181A24")]
     #[doc(alias = "gm_80181A34")]
-    #[doc(alias = "gm_80173498")]
-    #[doc(alias = "gm_80173460")]
     fn multi_man_unlocks(&mut self, mode: u8) -> bool {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
         self.card_game_save_changes();
         let rec = self.game.multi_man.record;
         let won = rec.x0 != 0;
-        if won && mode == GM_15MIN && !self.stage_unlocked(0x1E) {
-            self.unlock_stage(0x1E);
+        if won && mode == GM_15MIN {
+            let stage = self.multi_man_15min_stage();
+            if stage != 0x148 {
+                self.unlock_stage(stage);
+            }
         }
         let p = self.multi_man_data().start.players[0].clone();
         self.multi_man_trophies(mode, u32::from(rec.x2), rec.x4 as u32, won);
         self.trophy_unlocks();
         self.special_unlocks(0x20);
+        // `gm_80173460` (Falco while he's locked); aliased once a check reaches it (a won
+        // 100-Man Melee).
         self.game.sync_unlocks();
         if won && mode == GM_100MAN && !self.game.gm.unlocks.ckind_unlocked(CKIND_FALCO) {
             let slot = self.game.multi_man.slot;
@@ -574,6 +578,17 @@ impl Running<'_> {
         }
         let slot = self.game.multi_man.slot;
         self.challenger_check(mode, slot)
+    }
+
+    /// `gm_80173498`: the stage a won 15-Minute Melee unlocks (0x1E) while it's locked, else
+    /// none (0x148).
+    // Ports gm_80173498; aliased once a check reaches it (a won 15-Minute Melee).
+    fn multi_man_15min_stage(&self) -> u16 {
+        if !self.stage_unlocked(0x1E) {
+            0x1E
+        } else {
+            0x148
+        }
     }
 
     /// `gm_80173C70`: the modes' trophies: a won 15-Minute Melee's (0x50, given twice), a
