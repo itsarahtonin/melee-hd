@@ -27,12 +27,12 @@ use common::{
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
     METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR,
+    PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE,
+    RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
+    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
+    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
     ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
@@ -1316,6 +1316,24 @@ frames!(ZE_CLIMB;
     ze_climb_3500 3500,
     ze_climb_3800 3800,
     ze_climb_4000 4000,
+);
+// The Underground Maze (milestone 6's task 17, debug VS at debug level 3): Fox's Firefox up the
+// maze under the fighters' lights it moves with him, a ReDead on a ledge (mz-exit 2400) and the
+// match's end at the way out (mz-exit 2650); an arena opened, its portal swaying in
+// (mz-arena 2870); a Like Like chewing Fox inside it (mz-capture 3000); a beaten Like Like
+// flung toward the screen (mz-kill 3480).
+frames!(MZ_EXIT;
+    mz_exit_2400 2400,
+    mz_exit_2650 2650,
+);
+frames!(MZ_ARENA;
+    mz_arena_2870 2870,
+);
+frames!(MZ_CAPTURE;
+    mz_capture_3000 3000,
+);
+frames!(MZ_KILL;
+    mz_kill_3480 3480,
 );
 // Giga Bowser and the Wire Frames (`m6-giga-bowser`), against captures made with ssbm-rs's
 // renderer running (Final Destination's floor samples the reflection copied the frame before):

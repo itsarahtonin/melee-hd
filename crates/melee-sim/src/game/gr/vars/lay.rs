@@ -652,6 +652,38 @@ impl GroundVars {
                 l.put_bytes(a + 0xA, &v.pad_0a);
                 v3(l, a + 0xC, &v.reb0_pos);
             }
+            GroundVars::ShrineRoute(v) => {
+                let hs = [
+                    v.state,
+                    v.taken,
+                    v.point,
+                    v.touched,
+                    v.both_touched,
+                    v.cam_timer,
+                ];
+                h16(l, a, &hs.map(|x| x as i16));
+                if let Some(x) = v.xd0 {
+                    l.put_u16(a + 0xC, x);
+                }
+                gobj(l, cx, a + 0x10, v.portal);
+                for (i, p) in v.platforms.iter().enumerate() {
+                    let e = a + 0x14 + 0x10 * i as u32;
+                    if p.jobj.is_some() {
+                        v3(l, e, &p.offset);
+                    }
+                    jobj(l, cx, e + 0xC, p.jobj);
+                }
+                for (i, &s) in v.symbols.iter().enumerate() {
+                    gobj(l, cx, a + 0x44 + 4 * i as u32, s);
+                }
+            }
+            GroundVars::ShrineRoute3(v) => {
+                jobj(l, cx, a, v.spin);
+                fs(l, a + 4, &[v.sway_x, v.sway_y, v.push_x, v.push_y]);
+                if v.spin.is_some() {
+                    fs(l, a + 0x14, &[v.spin_x, v.spin_y]);
+                }
+            }
             GroundVars::BigBlueRoute(v) => {
                 gobj(l, cx, a, v.cars);
                 h16(l, a + 4, &[v.zone]);
