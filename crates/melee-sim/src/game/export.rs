@@ -1171,7 +1171,8 @@ pub fn queued(game: &Game, img: &mut Image, q: super::ef::QueuedId) {
 
 /// A fighter's animation buffer (`fighter_x59C_alloc_data`, 0x8000): the archives its loads
 /// copied there, each relocated to the buffer, the newest over the older ones' longer runs
-/// (`ft::anim_buf`); what the buffer held before them stays as the image had it.
+/// (`ft::anim_buf`), and the free list's link over the first word of a block taken again
+/// before its first load; what the buffer held before them stays as the image had it.
 pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
     let at = game.fighter_anim_bufs.addr(slot);
     if at == 0 {
@@ -1187,6 +1188,10 @@ pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
                 base: at + super::ft::anim_buf::ARCHIVE_HEADER,
             },
         );
+    }
+    // A block freed and taken again before a load: the free list's link (`HSD_ObjFree`).
+    if let Some(link) = game.fighter_anim_bufs[slot].link() {
+        img.word(at, link);
     }
 }
 
