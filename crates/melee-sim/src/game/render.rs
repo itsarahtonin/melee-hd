@@ -449,6 +449,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         super::it::kinds::linkarrow::RENDER => r.render_link_arrow(gobj, pass),
         super::it::kinds::sword::BAT_RENDER => r.render_bat(gobj, pass),
         crate::lb::bgflash::RENDER => r.render_bg_flash(),
+        crate::lb::blur::RENDER => r.blur_render(gobj),
         crate::hsd::sis::TEXT_RENDER => r.render_text(gobj, pass),
         super::hud::magnify::CAMERA_RENDER => r.render_magnifier(gobj),
         super::hud::magnify::BUBBLE_RENDER => r.render_bubble(gobj, pass),

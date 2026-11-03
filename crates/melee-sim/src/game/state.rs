@@ -103,6 +103,8 @@ pub enum UserData {
     SoundTest(u32),
     /// The background flash's overlay ([`crate::lb::bgflash::BgFlash::user`]).
     BgFlash,
+    /// The blurred copy of the frame's data ([`Game::blur`], freed with `HSD_Free`).
+    Blur,
     /// A trophy screen's block (0x58 bytes of `HSD_MemAlloc`, freed with `HSD_Free`), by its
     /// address ([`super::ty::lottery::Lottery::user`]).
     Toy(u32),
@@ -203,6 +205,7 @@ impl Kinds for GameKinds {
             UserData::Effect(_) => 0x8005_BB40,
             UserData::Sound(_) => 0x8002_63B4,
             UserData::BgFlash => 0x8002_19E4,
+            UserData::Blur => crate::lb::blur::REMOVE,
             // The menus' and two stages' blocks, freed with `HSD_Free` (their
             // `GObj_InitUserData` calls).
             UserData::CssCursor(_)
@@ -398,6 +401,9 @@ pub struct Game {
     pub refract: crate::lb::refract::Refract,
     /// The background flash (`lbbgflash.c`, `lb_0219.c`).
     pub bgflash: crate::lb::bgflash::BgFlash,
+    /// The blurred copy of the frame (`lbspdisplay.c`'s `CameraBlurData`), while its GObj
+    /// has it.
+    pub blur: Option<crate::lb::blur::Blur>,
     /// What the tick asked of the audio and pad drivers since the frontend last took them.
     pub events: Vec<Event>,
     /// Slippi replay playback's state, in a match a replay drives (`playback`).
@@ -657,6 +663,8 @@ impl Host<GameKinds> for Running<'_> {
                 let r = self.game.gr.izumi.reflection.as_ref();
                 crate::hsd::heap::mem_free(r.map_or(0, |r| r.addr));
             }
+            // `fn_800138AC`: `HSD_Free`.
+            UserData::Blur => self.blur_free(),
             UserData::RulesList(_)
             | UserData::RulePlusList(_)
             | UserData::ItemSwitch(_)

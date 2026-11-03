@@ -191,6 +191,40 @@ impl Running<'_> {
         self.init_scores();
     }
 
+    /// Frees the HUD's parts after a single-player stage's end, `ifAll_802F3A64`: the arrows,
+    /// the stock tallies, the magnifier's bubbles, the KO marks, the timers, the damage
+    /// displays and the announcements, the HUD's camera and light (their pointers kept, as
+    /// the original leaves them), the name tags, the hazard sign, the arrows again, the coin
+    /// counter's run and the scores.
+    #[doc(alias = "ifAll_802F3A64")]
+    #[doc(alias = "ifMagnify_802FC750")]
+    pub fn free_hud(&mut self) {
+        self.free_arrows();
+        self.free_stock_tally();
+        self.free_stock_bonus_icons();
+        self.free_stock_tally_2();
+        for i in 0..6 {
+            if let Some(g) = self.game.magnify.player[i].gobj.take() {
+                gobj::free(self, g);
+            }
+        }
+        self.free_ko_marks();
+        self.free_timers();
+        self.free_damage_displays();
+        self.free_announcements();
+        for g in [self.game.hud.all.gobj, self.game.hud.all.gobj_2]
+            .into_iter()
+            .flatten()
+        {
+            gobj::free(self, g);
+        }
+        self.free_nametags();
+        self.game.free_hazard();
+        self.free_arrows();
+        self.game.stop_coin_counter();
+        self.free_scores();
+    }
+
     /// Hides the HUD's parts while a player pauses, `ifAll_802F3394`.
     #[doc(alias = "ifAll_802F3394")]
     pub fn hide_hud_parts(&mut self) {

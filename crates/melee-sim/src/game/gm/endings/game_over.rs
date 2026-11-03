@@ -338,7 +338,6 @@ impl Running<'_> {
     /// there), the end's animation for "no" to its frame 690, then the question and the
     /// score's text.
     #[doc(alias = "fn_8019F810")]
-    #[doc(alias = "fn_80168F2C")]
     pub fn game_over_screen_proc(&mut self) {
         let slot = usize::from(self.game.endings.game_over.slot);
         let trigger = self.game.pads.copy[slot].trigger;
@@ -362,14 +361,7 @@ impl Running<'_> {
                     g.result = 1;
                 }
             } else {
-                // `fn_80168F2C`: the count-down's tick, each fourth.
-                let w = &mut self.game.endings.tick_wait;
-                if *w == 0 {
-                    *w = 3;
-                    self.sfx_play_track(0x7E, 0x7F, 0x40, 1);
-                } else {
-                    *w -= 1;
-                }
+                self.count_tick();
                 let g = &mut self.game.endings.game_over;
                 let down = (g.score as u32).wrapping_sub(g.step);
                 g.score = if down < g.half as u32 {

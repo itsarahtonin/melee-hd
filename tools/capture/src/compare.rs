@@ -612,6 +612,7 @@ impl<'a> Comparer<'a> {
                 crate::stadium::compare_screen(self, path, which, t)
             }
             Some(UserData::IzumiReflection) => crate::izumi::compare_reflection(self, path, t),
+            Some(UserData::Blur) => self.blur_data(path, t),
             Some(UserData::MainMenuList(a)) => self.main_menu_list(path, a, t),
             Some(UserData::MainMenuPanel(a)) => self.main_menu_panel(path, a, t),
             Some(UserData::GalleryList(a)) => self.gallery_list(path, a, t),

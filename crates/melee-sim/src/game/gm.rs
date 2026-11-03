@@ -6,6 +6,7 @@ pub mod attract;
 pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
+pub mod clear;
 pub mod decisions;
 pub mod endings;
 pub mod erase;
