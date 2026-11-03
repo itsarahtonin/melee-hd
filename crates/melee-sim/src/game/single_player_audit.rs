@@ -172,6 +172,15 @@ const CRAZY_HAND: &[&str] = &[
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
 /// them; the units every mode shares (`gm_16A2` and the rest) are [`MISSING`]'s alone.
 pub const PATHS: &[Paths] = &[
+    // Training's computer players' count and reset (`game/gm/training.rs`) make and free
+    // fighters mid-match, each function checked by a session from power-on (ledger/checks.txt,
+    // docs/oracle.md's sessions): the count, `fn_80188550`, with a player joining,
+    // `gm_8016EDDC`, and leaving, `fn_8016EF98`, which frees its fighter
+    // (`Player_80031EBC`, `Fighter_Unload_8006DABC` in `game/ft/unload.rs`, every item's
+    // `evt_unk` in `game/it/evt_unk.rs`), in `m6-training/tr-count` and
+    // `m6-fighter-unload/un-churn` and `un-held`; the reset, `fn_80188644`, putting each
+    // slot back (`Player_800328D4`, `ftLib_80087140`), in `m6-fighter-unload/un-reset`. Their
+    // modules are the mode's, so a stop added to them has to say why Training can't reach it.
     Paths {
         mode: TR,
         units: &[
@@ -179,7 +188,7 @@ pub const PATHS: &[Paths] = &[
             "melee/gm/gm_1884",
             "melee/it/kinds/itmetamon",
         ],
-        modules: &[],
+        modules: &["gm/training", "ft/unload", "it/evt_unk"],
         unreached: &[],
     },
     Paths {
