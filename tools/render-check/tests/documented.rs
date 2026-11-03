@@ -33,8 +33,8 @@ use common::{
     SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
     TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
     TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
-    TT_DK_QUIT, TT_TARGETS, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
-    ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
+    TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -203,6 +203,14 @@ fn tr_items_2250() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn tr_cpu_2230() {
     training(&TR_CPU, 2230, [4338, 4340]);
+}
+
+// Training's match after a computer player left and joined twenty times (`un-held` 11000):
+// the fighters made over the freed fighters' blocks, drawn as ssbm-rs's renderer draws them.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn un_held_11000() {
+    training(&UN_HELD, 11000, [4045, 4045]);
 }
 // The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
 // Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase

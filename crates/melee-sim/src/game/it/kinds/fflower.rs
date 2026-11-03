@@ -174,8 +174,7 @@ pub fn spawn_at(r: &mut Running, pos: crate::vec::Vec3) -> Option<GObjId> {
 }
 
 /// Forgets a GObj the flower points to, `itFFlower_Logic25_EvtUnk` (`it_8026B894`).
-// Ports `itFFlower_Logic25_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+#[doc(alias = "itFFlower_Logic25_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
