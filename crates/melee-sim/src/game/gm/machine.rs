@@ -240,11 +240,13 @@ fn vs_like(mode: u8) -> bool {
 }
 
 /// Whether the mode's match scenes take VS mode's enter and exit data (`gmVsMelee_StartData`,
-/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes, Camera Mode, debug VS and the
-/// Home-Run Contest.
+/// `gmVsMelee_VsExitInfo`): VS mode, the Special Melee modes, Camera Mode, debug VS, the
+/// Home-Run Contest and the challenger approach mode's match (a single-player mode's
+/// challenger, `gm_Mode_ChallengerApproach_States`' VS state).
 pub fn uses_vs_melee(mode: u8) -> bool {
     mode == GM_VS
         || mode == GM_CAMERA_MODE
+        || mode == GM_CHALLENGER_APPROACH
         || mode == super::one_player::GM_HOME_RUN
         || mode == super::GM_DEBUG_VS
         || super::vs_mode::Special::from_game_mode(mode).is_some()

@@ -54,12 +54,6 @@ pub const GATES: &[Gate] = &[
     },
     Gate {
         list: STADIUM,
-        entry: 0,
-        what: "Target Test",
-        covers: &[],
-    },
-    Gate {
-        list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
         covers: &[
