@@ -232,6 +232,8 @@ pub struct Session {
     /// The memory cards in slots A and B and the console's card library's settings (each
     /// slot's flash ID): the console's, lent to each step.
     pub card: Option<CardDevice>,
+    /// The files read for opponents joining mid-match, which a rollback's replay takes again.
+    pub joiner_files: super::vs_match::JoinerFiles,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -438,6 +440,7 @@ impl Session {
             data: Archives::default(),
             setup,
             card,
+            joiner_files: Default::default(),
         }
     }
 
@@ -455,6 +458,7 @@ impl Session {
             data,
             setup,
             card,
+            joiner_files: Default::default(),
         }
     }
 
@@ -683,6 +687,13 @@ impl Session {
         card.give_back(&mut self.card);
         // A song a scene started mid-scene (the sound test's): its reads come after the tick.
         self.read_song(console);
+        // The files of opponents a single-player match's setup named in the tick.
+        super::vs_match::load_joiner_files(
+            &mut self.game,
+            &mut self.data,
+            &mut self.joiner_files,
+            &mut |n| console.file(n),
+        );
         let out = Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,

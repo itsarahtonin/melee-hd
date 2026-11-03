@@ -681,35 +681,9 @@ impl Running<'_> {
         }
         self.game
             .set_player_struct_func(slot, Some(CodeRef(ON_JOINED)));
-        self.check_joiner_files(slot);
         self.player_create_fighters(slot);
         self.show_damage_display(slot);
         self.refresh_nametag(slot);
-    }
-
-    /// A joiner whose character the match's setup didn't load: `Fighter_Create` reads its
-    /// files from the disc mid-tick (`ftData_8008572C`'s `lbArchive_80017040`, its animations
-    /// into ARAM), which only the debug menu's arenas reach (the modes load their joiners'
-    /// characters with the match), and stops by name. There the setup's model scale is 0, so
-    /// the console halts later in the same creation (`ftchangeparam.c:30`).
-    fn check_joiner_files(&self, slot: i32) {
-        let m = super::super::pl::player::mapping(self.game.player_ckind(slot));
-        for kind in [m.internal_id, m.extra_internal_id] {
-            if kind < 0 {
-                continue;
-            }
-            let file = super::super::ft::data::kind_tables(i32::from(kind))
-                .dat_file
-                .expect("a fighter kind without a data file");
-            if self.game.ft.data.files.archive_id(file).is_none() {
-                let scale = self.game.player_model_scale(slot);
-                panic!(
-                    "a joiner's character files read mid-match ({file}, lbArchive_80017040) \
-                     aren't ported; with model scale {scale} the console halts in this \
-                     Fighter_Create (scale != 0.0F, ftchangeparam.c:30)"
-                );
-            }
-        }
     }
 
     /// A joiner's fighters made, `fn_8016A488`: they read their controllers once the HUD is on.

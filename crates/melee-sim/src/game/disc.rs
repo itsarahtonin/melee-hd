@@ -277,6 +277,28 @@ impl Running<'_> {
         }
     }
 
+    /// `lbDvd_8001819C`'s check, for a file a match's loads ask the preload cache for
+    /// (`lbArchive_80017040`, `lbFile_800168A0`) before reading it from the disc: above
+    /// retail's level, a mode expecting its files preloaded must find it there. Only a
+    /// single-player match's joiner (`game::gm::opponents`) reads its files mid-match.
+    pub fn check_preloaded(&mut self, name: &str) {
+        if !self.game.ft.data.files.from_cache {
+            return;
+        }
+        let (entry_num, _) = self.game.ft.data.files.entry(name.trim_start_matches('/'));
+        let level = self.game.gm.db_level;
+        let d = self.dvd_mut();
+        let held = d
+            .cache
+            .entries
+            .iter()
+            .any(|e| e.state != 0 && e.load_score > 0 && i32::from(e.entry_num) == entry_num);
+        assert!(
+            held || !(level != 0 && d.cache.preloaded),
+            "the original's assertion failed: lbdvd.c:948 (entry {entry_num} is not PRELOADed)"
+        );
+    }
+
     fn take_preloaded_entry(&mut self, entry_num: i32, check: bool) -> Option<usize> {
         let level = self.game.gm.db_level;
         let d = self.dvd_mut();

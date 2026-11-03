@@ -1352,7 +1352,10 @@ impl Running<'_> {
 /// (or, shrunk with `k` above 1, the scale over `k`).
 #[doc(alias = "ftCo_CalcYScaledKnockback")]
 pub fn scaled_by_height(v: f64, scale: f64, k: f64) -> f64 {
-    assert!(scale != 0.0, "ftchangeparam.c:30: scale != 0.0F");
+    assert!(
+        scale != 0.0,
+        "the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"
+    );
     if k == 0.0 {
         return v;
     }

@@ -13,7 +13,8 @@
 //! bit for bit, its card device too, and each replayed tick's output (sounds, rumble, draws)
 //! the straight run's. Menu ticks play once: a rollback reaches back only within one match's
 //! scene, since a scene's entry reads files into the archives (`Session::data`), which a
-//! tick otherwise only reads.
+//! tick otherwise only reads; the files the frontend reads between a match's ticks for its
+//! joining opponents (`Session::joiner_files`) the rollbacks' session takes along.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
@@ -260,8 +261,12 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         }
         // A rollback restores a state from within the scene, the scene's first tick's after.
         if now_match && in_scene > rollback as u64 {
-            if in_scene == rollback as u64 + 1 {
+            // The files read for opponents joining mid-match come along too.
+            if in_scene == rollback as u64 + 1
+                || work.joiner_files.files.len() != s.joiner_files.files.len()
+            {
                 work.data = s.data.clone();
+                work.joiner_files = s.joiner_files.clone();
             }
             let from = tick - rollback as u64;
             let saved = &ring[(from % len as u64) as usize];
