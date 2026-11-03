@@ -49,8 +49,8 @@ pub enum Replay {
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
     /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
-    /// `ze-NAME` `lockstep/m6-brinstar-escape/` (ssbm-rs's `SSBMINP1`), played in the
-    /// console's float mode.
+    /// `ze-NAME` `lockstep/m6-brinstar-escape/` and for `mz-NAME` `lockstep/m6-underground-maze/`
+    /// (ssbm-rs's `SSBMINP1`), played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -142,6 +142,10 @@ impl Replay {
                 }
                 if name.starts_with("ze-") {
                     return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
+                        .into();
+                }
+                if name.starts_with("mz-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-underground-maze/{name}.inputs"))
                         .into();
                 }
 
@@ -881,6 +885,38 @@ pub const ZE_CLIMB: Game = Game {
     name: "ze-climb",
     players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
     replay: Replay::Session("ze-climb"),
+};
+
+/// The Underground Maze walked (`m6-underground-maze/mz-exit`): Fox from the start to the way out.
+pub const MZ_EXIT: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-exit",
+    players: "Fox to the way out, Mario standing (session m6-underground-maze/mz-exit)",
+    replay: Replay::Session("mz-exit"),
+};
+
+/// The Underground Maze's arena opened (`m6-underground-maze/mz-arena`): its portal.
+pub const MZ_ARENA: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-arena",
+    players: "Fox to an arena's symbol, Mario standing (session m6-underground-maze/mz-arena)",
+    replay: Replay::Session("mz-arena"),
+};
+
+/// A Like Like's capture (`m6-underground-maze/mz-capture`): Fox swallowed and chewed.
+pub const MZ_CAPTURE: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-capture",
+    players: "Fox swallowed by a Like Like, Mario standing (session m6-underground-maze/mz-capture)",
+    replay: Replay::Session("mz-capture"),
+};
+
+/// Like Likes beaten (`m6-underground-maze/mz-kill`): one flung toward the screen.
+pub const MZ_KILL: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-kill",
+    players: "Fox's down tilts at Like Likes, Mario standing (session m6-underground-maze/mz-kill)",
+    replay: Replay::Session("mz-kill"),
 };
 
 /// Giga Bowser (`m6-giga-bowser/gk`, debug VS at debug level 3): a human's Giga Bowser
