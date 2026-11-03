@@ -26,8 +26,10 @@ pub struct Options {
     pub deflicker: super::deflicker::Deflicker,
     pub language: super::language::Language,
     pub datadel: super::datadel::DataDel,
-    /// The sound, screen and language screens' user data (`Menu`), by their blocks'
-    /// addresses.
+    /// The Multi-Man list's, whose user data is a `Menu` block too.
+    pub hyaku: super::hyaku::Hyaku,
+    /// The sound, screen and language screens' and the Multi-Man list's user data (`Menu`),
+    /// by their blocks' addresses.
     pub menus: BTreeMap<u32, OptionMenu>,
 }
 

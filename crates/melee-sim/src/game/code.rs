@@ -57,6 +57,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if game.results_run(gobj, addr) => {}
         addr if game.tou_run(gobj, addr) => {}
         super::gm::attract::PROC => game.attract_proc(gobj),
+        super::gm::multi_man::PROC => game.multi_man_proc(gobj),
         super::ty::gallery::PROC_VIEW => game.toy_view_proc(gobj),
         super::ty::gallery::PROC_ANIM => game.toy_anim_proc(gobj),
         super::ty::gallery::PROC_STAND => game.toy_stand_proc(gobj),

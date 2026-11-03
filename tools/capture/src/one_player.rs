@@ -63,7 +63,7 @@ const BYTES: [(u32, &str); 6] = [
 impl Comparer<'_> {
     /// A select's data (`CSSData`) at `at`: its port, match type and pending change, its KO
     /// counts' pointer (null: no single-player mode's entry sets it), and its VS data.
-    fn one_player_css(&mut self, name: &str, css: &CssData, at: u32) {
+    pub(crate) fn one_player_css(&mut self, name: &str, css: &CssData, at: u32) {
         self.check(
             name,
             "port, match type, pending, KO counts' pointer",

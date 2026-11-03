@@ -191,9 +191,20 @@ impl Running<'_> {
                 let t = self.charsel_record_text(ctx, p, 10.0, None, [0.13, 0.055], true);
                 self.game.charsel.texts[0] = Some(t);
             }
+            0x13..=0x16 => {
+                // 3-Minute, 15-Minute, Endless and Cruel Melee's KOs (`STADIUM_3_MIN_MELEE` to
+                // `STADIUM_CRUEL_MELEE`).
+                let opts = self.game.charsel.options;
+                let p = self.css_world(self.css_node(opts, 4));
+                let t = self.charsel_record_text(ctx, p, 16.0, None, [0.07, 0.055], true);
+                self.game.charsel.texts[0] = Some(t);
+                let p = self.css_world(self.css_node(opts, 5));
+                let t = self.charsel_record_text(ctx, p, 16.0, None, [0.07, 0.055], true);
+                self.game.charsel.texts[2] = Some(t);
+            }
             EVENT_MATCH => {}
             other => crate::game::code::unported_call(&format!(
-                "the one-door screen's panel for match type {other:#x} (Multi-Man Melee's timed and endless modes)"
+                "the one-door screen's panel for match type {other:#x}"
             )),
         }
         for joint in [0x2E, 0x34, 0x3A, 0x44] {
@@ -247,6 +258,17 @@ impl Running<'_> {
             self.charsel_record(x, b"99:59:59", &[]);
             self.charsel_record(y, b"99", &[]);
         }
+    }
+
+    /// A count of KOs (the inline `show_kos`): `"%d KOs"` in the save's language.
+    fn charsel_kos(&mut self, text: Option<TextId>, n: i32) {
+        let fmt: &[u8] =
+            if self.game.game_data.saved_language() == super::super::super::gm::main_lib::LANG_JP {
+                b"%d \x90\x6c\x94\xb2\x82\xab"
+            } else {
+                b"%d \x82\x6a\x82\x6e\x82\x93"
+            };
+        self.charsel_record(text, fmt, &[FmtArg::Int(n)]);
     }
 
     /// A rank mark of the menu's (the inline `inline3`): joint `joint`'s material animation
@@ -350,9 +372,42 @@ impl Running<'_> {
                     self.charsel_record(texts[0], b"%d", &[FmtArg::Int(combo)]);
                 }
             }
+            0x11 | 0x12 => {
+                // 10-Man's and 100-Man's: the character's KOs, or its best time once won; the
+                // total time once every character has won.
+                let hundred = match_type == 0x12;
+                if !hidden {
+                    if !g.multi_man_won(hundred, hud) {
+                        let kos = g.multi_man_best(hundred, hud);
+                        self.charsel_kos(texts[0], kos);
+                    } else {
+                        let t = self.game.multi_man_time(hundred, hud);
+                        self.charsel_time_record(0, 1, t);
+                    }
+                }
+                let j = self.css_node(self.game.charsel.options, 3);
+                if let Some(t) = self.game.multi_man_time_total(hundred) {
+                    self.charsel_time_record(2, 3, t);
+                    jobj::clear_flags_all(&mut self.game.objs.jobjs, j, HIDDEN);
+                } else {
+                    self.charsel_record_clear(texts[2]);
+                    self.charsel_record_clear(texts[3]);
+                    jobj::set_flags_all(&mut self.game.objs.jobjs, j, HIDDEN);
+                }
+            }
+            0x13..=0x16 => {
+                // The timed, Endless and Cruel Melee's best KOs and their total.
+                let mode = match_type - 0x13;
+                if !hidden {
+                    let kos = g.multi_man_kos(mode, hud);
+                    self.charsel_kos(texts[0], kos);
+                }
+                let total = self.game.multi_man_kos_total(mode);
+                self.charsel_kos(texts[2], total);
+            }
             EVENT_MATCH => {}
             other => crate::game::code::unported_call(&format!(
-                "mnCharSel_8025C020's records for match type {other:#x} (Multi-Man Melee's)"
+                "mnCharSel_8025C020's records for match type {other:#x}"
             )),
         }
     }

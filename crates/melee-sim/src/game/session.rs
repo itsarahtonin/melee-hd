@@ -390,6 +390,8 @@ pub const FILES: &[&str] = &[
     "IfHrReco.usd",
     "IfHrNoCn.dat",
     "IfHrReco.dat",
+    // Multi-Man Melee's hordes' tables (`gm_80182174`).
+    "GmKumite.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
@@ -835,6 +837,30 @@ impl Session {
                 if (0..0x21).contains(&p.ckind) {
                     p.slot_type = 1;
                 }
+            }
+            super::vs_match::load_fighter_files(
+                &mut self.game,
+                &mut self.data,
+                &joining,
+                &mut |n| console.file(n),
+            );
+        }
+        // Multi-Man Melee's Wire Frames join from the mode's table as the match goes
+        // (`fn_80181C80`): both of their fighters' files, in their first costume.
+        let multi_man = super::gm::multi_man::is_multi_man(self.game.game_mode)
+            && Running {
+                game: &mut self.game,
+                data: &self.data,
+            }
+            .entering_scene()
+                == Some(super::gm::machine::GS_VS);
+        if multi_man {
+            let mut joining = start.clone();
+            for (i, ck) in [(1, 0x1B), (2, 0x1C)] {
+                let p = &mut joining.players[i];
+                p.ckind = ck;
+                p.color = 0;
+                p.slot_type = 1;
             }
             super::vs_match::load_fighter_files(
                 &mut self.game,
