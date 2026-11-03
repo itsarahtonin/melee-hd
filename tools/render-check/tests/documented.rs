@@ -25,7 +25,7 @@ use common::{
     GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
-    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6P_AS_WIN, MENU_TOUR,
     METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
     RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
@@ -175,6 +175,41 @@ frames!(M6E_GAMEOVER;
     m6e_gameover_1620 1620,
     m6e_gameover_2830 2830,
 );
+// All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
+// the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
+// over the tinted copy (7500). The images are identical; the draws that differ only sample
+// the fighters' shadows, as the debug VS coins'; the
+// references are captured with ssbm-rs's renderer running, so the copies are drawn.
+fn as_win(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6P_AS_WIN,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_6150() {
+    as_win(6150, [1720, 1720]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_6250() {
+    as_win(6250, [1719, 1719]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_7500() {
+    as_win(7500, [1699, 1699]);
+}
 // Training's menu over its match on Fountain of Dreams (`m6-training`): the item option on
 // the Poké Ball with its name (`tr-items` 2250) and the computer player's behavior set to walk
 // (`tr-cpu` 2230). As Celebi's, the first logged frame's water samples the reflection copied

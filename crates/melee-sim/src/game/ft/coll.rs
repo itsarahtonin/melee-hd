@@ -368,6 +368,15 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                 self.climb.touched(coll.x0_gobj);
             }
             super::super::gr::icemt::ON_JOINT => self.climb.touched(coll.x0_gobj),
+            super::super::gr::heal::ON_JOINT => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::heal::portal_touched(
+                        &mut self.grounds[g.0],
+                        coll.x34_flags.b1234.into(),
+                        kind,
+                    );
+                }
+            }
             super::super::gr::pushon::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::pushon::goal_touched(

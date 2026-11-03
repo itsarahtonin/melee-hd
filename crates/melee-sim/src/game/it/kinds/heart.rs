@@ -7,7 +7,6 @@ use super::super::ground::{fall, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change_state};
 use super::super::{TurnipFlag, item, item_mut, jobj_of, lib26b1, lib2725};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
@@ -100,7 +99,9 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
         .get()
         .picked_up
     {
-        code::unported_call("gm_80473A18 (an event's heart slots)");
+        // All-Star's rest area's heart: its slot taken.
+        let slot = item_mut(r.game, gobj).xDD4_itemVar.heart().xDDC.get();
+        r.game.one_player.allstar.x90[slot as usize] = 0;
     }
 }
 

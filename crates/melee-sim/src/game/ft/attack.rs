@@ -2178,6 +2178,9 @@ impl Running<'_> {
             Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
                 super::super::gr::figure::on_touch_line(line)
             }
+            Some(f) if f.0 == super::super::gr::heal::ON_TOUCH_LINE => {
+                super::super::gr::heal::on_touch_line(line)
+            }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
             Some(f)

@@ -328,11 +328,7 @@ impl Running<'_> {
         self.clear_mut().points = Some(t);
         let x_end = fp::fadds(281.0, reg(x));
         for i in 0..7 {
-            let row_y = fp::fmadds(
-                reg(0.6),
-                fp::fmuls(32.0, fp::frsp(f64::from(i as i32))),
-                reg(y),
-            );
+            let row_y = fp::fmadds(reg(0.6), fp::fmuls(32.0, fp::frsp(f64::from(i))), reg(y));
             let row = self.create_text(3, 0, Vec3::new(x, mem(row_y), 0.0), 2.0, 2.0);
             let rx = self.game.sis.text_mut(row);
             rx.x34 = [0.56, 0.6];
@@ -641,7 +637,7 @@ impl Running<'_> {
             let above = self.bonus_before(&r, first, mask, 0) < 0;
             self.clear_mut().x11E = u8::from(above);
             let c = self.clear();
-            if c.x110 % 30 == 0 && c.moved == 0 {
+            if c.x110.is_multiple_of(30) && c.moved == 0 {
                 if self.bonuses_from(&r, c.first, mask, 0) > 7 {
                     self.clear_mut().first = c.first.wrapping_add(1);
                 } else {
