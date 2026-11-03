@@ -273,33 +273,8 @@ pub fn create(r: &mut Running, stage: usize, map_id: i32) -> Option<GObjId> {
     setup::create_from_callbacks(r, map_id, cb, setup::SETUP_FRAME)
 }
 
-/// The stages' demo setups, which do nothing (only a cutscene's demo would run one).
-// Ports grTMario_8021F840; aliased once a check reaches it.
-// Ports grTCaptain_OnDemoInit; aliased once a check reaches it.
-// Ports grTCLink_8021FF44; aliased once a check reaches it.
-// Ports grTDonkey_80220228; aliased once a check reaches it.
-// Ports grtDrMario_8022050C; aliased once a check reaches it.
-// Ports grTFalco_802207F0; aliased once a check reaches it.
-// Ports grTFox_80220B80; aliased once a check reaches it.
-// Ports grTIceClimber_80220F10; aliased once a check reaches it.
-// Ports grTKirby_80221364; aliased once a check reaches it.
-// Ports grTKoopa_80221648; aliased once a check reaches it.
-// Ports grTLink_8022192C; aliased once a check reaches it.
-// Ports grTLuigi_80221C10; aliased once a check reaches it.
-// Ports grTMars_80221EF4; aliased once a check reaches it.
-// Ports grTMewtwo_802221D8; aliased once a check reaches it.
-// Ports grTNess_802225D0; aliased once a check reaches it.
-// Ports grTPeach_802228B4; aliased once a check reaches it.
-// Ports grTPichu_80222B98; aliased once a check reaches it.
-// Ports grTPikachu_80222E7C; aliased once a check reaches it.
-// Ports grTPurin_80223160; aliased once a check reaches it.
-// Ports grTSamus_OnDemoInit; aliased once a check reaches it.
-// Ports grTSeak_OnDemoInit; aliased once a check reaches it.
-// Ports grTYoshi_OnDemoInit; aliased once a check reaches it.
-// Ports grTZelda_OnDemoInit; aliased once a check reaches it.
-// Ports grTGameWatch_80224110; aliased once a check reaches it.
-// Ports grTRoy_802243F4; aliased once a check reaches it.
-// Ports grTGanon_802246D8; aliased once a check reaches it.
+/// The stages' demo setups, which do nothing and are dead: only a cutscene runs a stage's demo
+/// setup, on its own stage, and none loads a target stage (ledger/dead.txt).
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// The stages' loads, which do nothing.
@@ -580,9 +555,9 @@ pub fn ice_hit(r: &mut Running, item: GObjId, _g: GroundId) {
     material::destroy_item(r, item);
 }
 
-/// Map 0's process and the objects' destroy callbacks (`Ground::x1C_callback`), which do
-/// nothing; a destroy callback runs only when a stage destroys its own object
-/// (`Ground_801C4A08`), which none of these does.
+/// Map 0's process, which does nothing. The objects' destroy callbacks (`Ground::x1C_callback`,
+/// the tables' `callback3`) do nothing too and are dead: one runs only when a stage destroys
+/// its own object (`Ground_801C4A08`), which no target stage does (ledger/dead.txt).
 #[doc(alias = "grTMario_8021FA00")]
 #[doc(alias = "grTCaptain_8021FE20")]
 #[doc(alias = "grTCLink_80220104")]
@@ -609,84 +584,6 @@ pub fn ice_hit(r: &mut Running, item: GObjId, _g: GroundId) {
 #[doc(alias = "grTGameWatch_802242D0")]
 #[doc(alias = "grTRoy_802245B4")]
 #[doc(alias = "grTGanon_802248A0")]
-// Ports grTMario_8021FA04; aliased once a check reaches it.
-// Ports grTMario_8021FB4C; aliased once a check reaches it.
-// Ports grTMario_8021FAD0; aliased once a check reaches it.
-// Ports grTCaptain_8021FE24; aliased once a check reaches it.
-// Ports grTCaptain_8021FF30; aliased once a check reaches it.
-// Ports grTCaptain_8021FEB4; aliased once a check reaches it.
-// Ports grTCLink_80220108; aliased once a check reaches it.
-// Ports grTCLink_80220214; aliased once a check reaches it.
-// Ports grTCLink_80220198; aliased once a check reaches it.
-// Ports grTDonkey_802203EC; aliased once a check reaches it.
-// Ports grTDonkey_802204F8; aliased once a check reaches it.
-// Ports grTDonkey_8022047C; aliased once a check reaches it.
-// Ports grtDrMario_802206D0; aliased once a check reaches it.
-// Ports grtDrMario_802207DC; aliased once a check reaches it.
-// Ports grtDrMario_80220760; aliased once a check reaches it.
-// Ports stageGObj0_Callback3@802209BC; aliased once a check reaches it.
-// Ports stageGObj1_Callback3@80220AC8; aliased once a check reaches it.
-// Ports stageGObj2_Callback3@80220A4C; aliased once a check reaches it.
-// Ports grTFox_80220D4C; aliased once a check reaches it.
-// Ports grTFox_80220E58; aliased once a check reaches it.
-// Ports grTFox_80220DDC; aliased once a check reaches it.
-// Ports stageGObj0_Callback3@802210D4; aliased once a check reaches it.
-// Ports stageGObj1_Callback3@80221204; aliased once a check reaches it.
-// Ports stageGObj2_Callback3@80221188; aliased once a check reaches it.
-// Ports grTKirby_80221528; aliased once a check reaches it.
-// Ports grTKirby_80221634; aliased once a check reaches it.
-// Ports grTKirby_802215B8; aliased once a check reaches it.
-// Ports grTKoopa_8022180C; aliased once a check reaches it.
-// Ports grTKoopa_80221918; aliased once a check reaches it.
-// Ports grTKoopa_8022189C; aliased once a check reaches it.
-// Ports grTLink_80221AF0; aliased once a check reaches it.
-// Ports grTLink_80221BFC; aliased once a check reaches it.
-// Ports grTLink_80221B80; aliased once a check reaches it.
-// Ports grTLuigi_80221DD4; aliased once a check reaches it.
-// Ports grTLuigi_80221EE0; aliased once a check reaches it.
-// Ports grTLuigi_80221E64; aliased once a check reaches it.
-// Ports stageGObj0_Callback3@802220B8; aliased once a check reaches it.
-// Ports stageGObj1_Callback3@802221C4; aliased once a check reaches it.
-// Ports stageGObj2_Callback3@80222148; aliased once a check reaches it.
-// Ports grTMewtwo_802223A4; aliased once a check reaches it.
-// Ports grTMewtwo_802224B0; aliased once a check reaches it.
-// Ports grTMewtwo_80222434; aliased once a check reaches it.
-// Ports grTNess_80222794; aliased once a check reaches it.
-// Ports grTNess_802228A0; aliased once a check reaches it.
-// Ports grTNess_80222824; aliased once a check reaches it.
-// Ports grTPeach_80222A78; aliased once a check reaches it.
-// Ports grTPeach_80222B84; aliased once a check reaches it.
-// Ports grTPeach_80222B08; aliased once a check reaches it.
-// Ports grTPichu_80222D5C; aliased once a check reaches it.
-// Ports grTPichu_80222E68; aliased once a check reaches it.
-// Ports grTPichu_80222DEC; aliased once a check reaches it.
-// Ports grTPikachu_80223040; aliased once a check reaches it.
-// Ports grTPikachu_8022314C; aliased once a check reaches it.
-// Ports grTPikachu_802230D0; aliased once a check reaches it.
-// Ports grTPurin_8022332C; aliased once a check reaches it.
-// Ports grTPurin_802234F4; aliased once a check reaches it.
-// Ports grTPurin_80223478; aliased once a check reaches it.
-// Ports grTSamus_80223744; aliased once a check reaches it.
-// Ports grTSamus_80223850; aliased once a check reaches it.
-// Ports grTSamus_802237D4; aliased once a check reaches it.
-// Ports grTSeak_80223A28; aliased once a check reaches it.
-// Ports grTSeak_80223B34; aliased once a check reaches it.
-// Ports grTSeak_80223AB8; aliased once a check reaches it.
-// Ports grTYoshi_80223D0C; aliased once a check reaches it.
-// Ports grTYoshi_80223E18; aliased once a check reaches it.
-// Ports grTYoshi_80223D9C; aliased once a check reaches it.
-// Ports grTZelda_80223FF0; aliased once a check reaches it.
-// Ports grTZelda_802240FC; aliased once a check reaches it.
-// Ports grTZelda_80224080; aliased once a check reaches it.
-// Ports grTGameWatch_802242D4; aliased once a check reaches it.
-// Ports grTGameWatch_802243E0; aliased once a check reaches it.
-// Ports grTGameWatch_80224364; aliased once a check reaches it.
-// Ports grTRoy_802245B8; aliased once a check reaches it.
-// Ports grTRoy_802246C4; aliased once a check reaches it.
-// Ports grTRoy_80224648; aliased once a check reaches it.
-// Ports grTGanon_802248A4; aliased once a check reaches it.
-// Ports grTGanon_802249B0; aliased once a check reaches it.
-// Ports grTGanon_80224934; aliased once a check reaches it.
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// Map 1's process, `stageGObj1_GObjProc`: its collision follows its model.
@@ -847,33 +744,8 @@ pub fn line_hazard(game: &Game, data: &Archives, line: i32) -> Option<DataRef> {
 }
 
 /// The stages' shadow checks (`grTMario_8021FC58` and the others): every joint receives
-/// shadows.
-// Ports grTMario_8021FC58; aliased once a check reaches it.
-// Ports grTCaptain_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grTCLink_80220220; aliased once a check reaches it.
-// Ports grTDonkey_80220504; aliased once a check reaches it.
-// Ports grtDrMario_802207E8; aliased once a check reaches it.
-// Ports grTFalco_80220B78; aliased once a check reaches it.
-// Ports grTFox_80220F08; aliased once a check reaches it.
-// Ports grTIceClimber_8022135C; aliased once a check reaches it.
-// Ports grTKirby_80221640; aliased once a check reaches it.
-// Ports grTKoopa_80221924; aliased once a check reaches it.
-// Ports grTLink_80221C08; aliased once a check reaches it.
-// Ports grTLuigi_80221EEC; aliased once a check reaches it.
-// Ports grTMars_802221D0; aliased once a check reaches it.
-// Ports grTMewtwo_802225C8; aliased once a check reaches it.
-// Ports grTNess_802228AC; aliased once a check reaches it.
-// Ports grTPeach_80222B90; aliased once a check reaches it.
-// Ports grTPichu_80222E74; aliased once a check reaches it.
-// Ports grTPikachu_80223158; aliased once a check reaches it.
-// Ports grTPurin_80223578; aliased once a check reaches it.
-// Ports grTSamus_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grTSeak_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grTYoshi_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grTZelda_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grTGameWatch_802243EC; aliased once a check reaches it.
-// Ports grTRoy_802246D0; aliased once a check reaches it.
-// Ports grTGanon_80224A4C; aliased once a check reaches it.
+/// shadows. Dead: the check is asked only for a stage object that receives shadows
+/// (`Ground::x10_flags.b5`), which no target stage's object does (ledger/dead.txt).
 pub fn check_shadow_render() -> bool {
     true
 }
