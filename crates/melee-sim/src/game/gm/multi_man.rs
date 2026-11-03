@@ -837,18 +837,16 @@ impl Running<'_> {
             self.game.multi_man.x8 += 1;
         }
         match mode {
-            GM_3MIN | GM_15MIN => {
-                if self.game.vs_timer_seconds() == 0 && self.game.vs_timer_frames() == 0x3B {
-                    self.game.multi_man.record.x0 = 1;
-                    self.game.vs_set_end_kind(7);
-                    self.game.vs_terminate();
-                }
+            GM_3MIN | GM_15MIN
+                if self.game.vs_timer_seconds() == 0 && self.game.vs_timer_frames() == 0x3B =>
+            {
+                self.game.multi_man.record.x0 = 1;
+                self.game.vs_set_end_kind(7);
+                self.game.vs_terminate();
             }
-            GM_ENDLESS | GM_CRUEL => {
-                if self.game.player_falls(0) != 0 {
-                    self.game.vs_set_end_kind(5);
-                    self.game.vs_terminate();
-                }
+            GM_ENDLESS | GM_CRUEL if self.game.player_falls(0) != 0 => {
+                self.game.vs_set_end_kind(5);
+                self.game.vs_terminate();
             }
             _ => {}
         }
