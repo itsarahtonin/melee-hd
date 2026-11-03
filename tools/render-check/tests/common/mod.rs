@@ -119,6 +119,10 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
                 }
 
+                if name.starts_with("mm-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
+                }
+
                 if name.starts_with("hr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
                 }
@@ -856,6 +860,24 @@ pub const TT_DK_QUIT: Game = Game {
     name: "tt-dk-quit",
     players: "Donkey Kong alone, jabbing at the targets by the start (session m6-target-test/tt-dk-quit)",
     replay: Replay::Session("tt-dk-quit"),
+};
+
+/// 10-Man Melee won from the main menu (`m6-multiman/mm-10-win`): the list, the select, the
+/// Multi-Man stage with the Wire Frames and the counter, the clear.
+pub const MM_10_WIN: Game = Game {
+    stage: "the Multi-Man stage",
+    name: "mm-10-win",
+    players: "Fox against 10-Man Melee's Wire Frames (session m6-multiman/mm-10-win)",
+    replay: Replay::Session("mm-10-win"),
+};
+
+/// 15-Minute Melee from the main menu (`m6-multiman/mm-15min`): the timer counting down and
+/// the counter's KOs.
+pub const MM_15MIN: Game = Game {
+    stage: "the Multi-Man stage",
+    name: "mm-15min",
+    players: "Fox against 15-Minute Melee's Wire Frames (session m6-multiman/mm-15min)",
+    replay: Replay::Session("mm-15min"),
 };
 
 pub const RACE_LOOK: Game = Game {
