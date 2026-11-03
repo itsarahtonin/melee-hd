@@ -128,8 +128,8 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         ("targets", 47425, ""),
         (
             "stages-1p",
-            3409,
-            "tick 3408: unknown leftover bytes of a freed Item under Fighter: its layout isn't ported",
+            3883,
+            "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
         ),
         (
             "stages-1p-b",
