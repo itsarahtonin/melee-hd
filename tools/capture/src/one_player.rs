@@ -15,6 +15,8 @@ use crate::compare::Comparer;
 const CLASSIC_CSS: u32 = 0x8047_0708;
 const TARGET_CSS: u32 = 0x8049_0960;
 const TARGET_START: u32 = 0x8049_0AA8;
+/// `gm_80490BE0`, Target Test's match's exit data.
+const TARGET_EXIT: u32 = 0x8049_0BE0;
 const TRAINING_CSS: u32 = 0x8048_E230;
 const TRAINING_SSS: u32 = 0x8048_E378;
 /// The 1P runs: `lbl_80472CB0` (Classic's), `lbl_80472C30` (Adventure's), `gm_80473A18`
@@ -175,6 +177,7 @@ impl Comparer<'_> {
         let m = self.mem_view();
         o.target_start
             .compare(&m, TARGET_START, "gm_80490AA8", self);
+        self.match_exit_info("gm_80490BE0", &o.target_exit, TARGET_EXIT);
         let ours = [
             o.target_slot,
             o.target_entries,

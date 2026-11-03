@@ -182,10 +182,11 @@ impl Game {
         self.vs.start.x4_2
     }
 
-    /// Whether a 1P run's match has no opponent left in play, `gm_8016B014`: in a 1P run
-    /// without joining opponents, every slot after the first without a fighter.
+    /// `gm_8016B014`: in a match with the rules' `x4_2` (a single-player run's or Target
+    /// Test's) where no opponents join (`gm_8016A1F8`), whether the first player is alone (no
+    /// other slot in play).
     #[doc(alias = "gm_8016B014")]
-    pub fn last_opponent_gone(&self) -> bool {
+    pub fn single_player_alone(&self) -> bool {
         self.vs.start.x4_2
             && !self.gm.opponents.joining()
             && (1..6).all(|i| self.player_state(i) == 0)
@@ -932,16 +933,46 @@ impl Running<'_> {
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
         assert!(
-            !(mode == super::GM_TARGET_TEST
-                || (mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind))),
-            "target test scoring isn't ported"
+            !(mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind)),
+            "Classic's target stage scoring isn't ported"
         );
+        if mode == super::GM_TARGET_TEST {
+            self.target_test_score();
+        }
         assert!(
-            !(mode == super::GM_EVENT && g.vs.state.unk_10 == 0x9C41),
+            !(mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41),
             "event rumble (gm_80167858) isn't ported"
         );
         if (super::GM_10MAN_VS..=super::GM_CRUEL_VS).contains(&mode) {
             code::call(self, addr::FN_80182B5C, &[]);
+        }
+    }
+
+    /// `fn_8016C7F0`'s Target Test scoring (Classic's target stage is scored the same, from
+    /// its run's character): a first clear or a better time than the record (the record's
+    /// `gmMainLib_8015D438`, `gmMainLib_8015D48C`) marks the match a new record (`unk_10`
+    /// 0x9C41, its message 0x145) with a rumble on the player's port (`gm_80167858`); a stage
+    /// left with targets takes message 0x149 for 40 frames.
+    #[doc(alias = "gm_801B6320")]
+    fn target_test_score(&mut self) {
+        let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
+        let sel = super::match_exit::selkind(ckind);
+        let r = self.game.record_1p(sel);
+        let (cleared, best) = (r.b0, r.x94);
+        let left = i32::from(self.game.stage_info.x6D4);
+        let new = if !cleared {
+            left == 0
+        } else {
+            left == 0 && best > self.game.vs.state.frame_count
+        };
+        if new {
+            self.game.vs.state.unk_10 = 0x9C41;
+            self.game.vs.state.unk_14 = 0x145;
+            let (port, tag) = (self.game.player_port(0), self.game.player_nametag(0));
+            self.tou_rumble(port as usize, tag, 13, 90);
+        } else if left > 0 {
+            self.game.vs.state.unk_14 = 0x149;
+            self.game.vs.state.unk_18 = 40;
         }
     }
 
