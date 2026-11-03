@@ -56,6 +56,24 @@ impl Running<'_> {
         self.bones(f)[i as usize].clone()
     }
 
+    /// Part 0x35's joint, which `ftAnim_8006EBA4` hands `ftAnim_8006E054` for an animation that
+    /// follows TransN (`x594` bit 0). A character without the part (Sandbag: its table's 0xFF)
+    /// has the original read `parts[255]`, past its parts block (docs/melee-bugs.md);
+    /// `ftAnim_8006E054` compares that joint only with
+    /// `x594` bit 5 set, so without it the word is never read on and the joint counts as none.
+    fn part_35_joint(&self, f: FighterId) -> Option<JObjId> {
+        let fp = &self.game.fighters[f.0];
+        let i = self.bone_index(fp, PART_35) as usize;
+        match self.bones(f).get(i) {
+            Some(b) => b.joint,
+            None if !x594_bit(fp, 5) => None,
+            None => crate::game::code::unported_call(&format!(
+                "ftAnim_8006EBA4's part 0x35 past the parts of fighter kind {} (parts[{i}], compared with x594 bit 5)",
+                fp.kind
+            )),
+        }
+    }
+
     fn parts_num(&self, f: FighterId) -> u32 {
         self.parts_table(self.game.fighters[f.0].kind).len()
     }
@@ -84,7 +102,7 @@ impl Running<'_> {
             jobj::clear_flags_all(&mut self.game.objs.jobjs, Some(root), USE_QUATERNION);
             if x594_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
-                let p35 = self.bone(f, self.bone_index(fp, PART_35)).joint;
+                let p35 = self.part_35_joint(f);
                 let trans = self.bone(f, self.bone_index(fp, TRANS_N)).joint;
                 self.anim_tree_trans(f, Some(root), trans, p35);
             } else {
@@ -108,7 +126,7 @@ impl Running<'_> {
             self.anim_part_tree(f, 0);
             if x594_bit(&self.game.fighters[f.0], 0) {
                 let fp = &self.game.fighters[f.0];
-                let p35 = self.bone(f, self.bone_index(fp, PART_35)).joint;
+                let p35 = self.part_35_joint(f);
                 let trans = self.bone(f, self.bone_index(fp, TRANS_N)).x4_jobj2;
                 self.anim_tree_trans(f, skel, trans, p35);
             } else {

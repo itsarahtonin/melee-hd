@@ -60,12 +60,6 @@ pub const GATES: &[Gate] = &[
     },
     Gate {
         list: STADIUM,
-        entry: 1,
-        what: "Home-Run Contest",
-        covers: &["melee/gm/gmhomerun"],
-    },
-    Gate {
-        list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
         covers: &[
@@ -185,10 +179,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "Player_800328D4 (the training menu's reset)",
         "Training's menu's reset, behind the Training gate",
-    ),
-    (
-        "tyDisplay_8031C454 (a single-player stage's trophy)",
-        "a single-player match's stage when the trophies' tables offer one (Training's draw found none in every Training session, on the unlock-all card), behind the gates",
     ),
     (
         "Hook::Unported1P(name)",
