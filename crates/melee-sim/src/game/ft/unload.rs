@@ -172,6 +172,18 @@ impl Running<'_> {
         for b in [b1, b2].into_iter().flatten() {
             let g = &*self.game;
             crate::hsd::export::with_image(|img| super::super::export::anim_buf(g, img, b.0));
+            // `HSD_ObjFree` links the buffer in by its first word: `x59C` goes first, so
+            // `x5A0`'s holds `x59C`'s address and `x59C`'s the head before it.
+            let head = crate::hsd::heap::with(|h| {
+                h.allocs[Kind::FighterX59C as usize]
+                    .free
+                    .last()
+                    .copied()
+                    .unwrap_or(0)
+            });
+            if let Some(head) = head {
+                self.game.fighter_anim_bufs[b.0].freed(head);
+            }
             self.game.fighter_anim_bufs.free(b.0);
         }
         if let Some(p) = parts {
