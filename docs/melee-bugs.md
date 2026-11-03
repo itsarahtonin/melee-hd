@@ -1108,6 +1108,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none audible; the stopped voice's end address changes.
 - **Source:** `synth.c`'s `HSD_SynthPStreamMasterClockCallback`; the Data session `prize`'s tick 560, and the results' fanfares (`rules-match`'s results screen, tick 8208).
 
+### The characters-left tally copies 130 bytes from lists of 28
+
+- **Where:** `fn_802FAC34` (`ifstock.c`, the tally of the characters a challenger's record or All-Star's rest area lists), `crates/melee-sim/src/game/hud/stock.rs` (`stock_tally_proc_2`).
+- **Defect:** the first frame copies 130 bytes from each of `lbl_8046B668`'s two 28-byte arrays (`gm_8016A97C`'s and `gm_8016A98C()->arr1`) into `ifStock_804A1ACC.x83` and `x1`, so the copies run past the struct into the VS scene's `controller` (its start rules) at `0x8046B6A0`; the icons are made only up to the lists' -2, and the per-frame placement (`fn_802FA8C0`) stops at the first missing icon, so the bytes copied past the end are never read.
+- **Effect:** none observable; the tally's arrays hold the scene's rules' bytes past the list.
+- **melee-hd:** stops by name (`fn_802FAC34 with a challenger's record isn't ported`); All-Star's rest area reaches it (`m6-1p-setups/as-win`, tick 8969).
+- **Fix:** copy up to the arrays' size.
+- **Fix impact:** none in play.
+- **Source:** `ifstock.c` `fn_802FAC34`.
+
 ## Engine and HSD
 
 ### The expression argument buffer outlives its heap
@@ -1209,6 +1219,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** compare `t0->lut` with `t1->lut`.
 - **Fix impact:** picture only, in such a material; no gameplay, replay or Slippi compatibility change (a palette's name in a freed block is a leftover no match reads).
 - **Source:** the decompilation's `DifferentTluts` (`MUST_MATCH`); `crates/melee-sim/src/hsd/export.rs` (`tlut_names`).
+
+### The blurred copy's TEV colors take unset stack bytes
+
+- **Where:** `setTevAlpha` and `lb_800122F0` (`lbspdisplay.c`, the single-player clear screen's blurred copy of the frame), `crates/melee-render/src/hsd/blur.rs`.
+- **Defect:** `setTevAlpha` sets only the alpha of a stack `GXColor` and loads it into `GX_TEVREG0`, its red, green and blue the stack's unset bytes; `lb_800122F0` loads three konst colors whose alpha it never sets. No active stage reads those components (the first stage's alpha takes `A0`, the colors `KONST`'s red, green and blue).
+- **Effect:** none observable.
+- **melee-hd:** melee-render sends 0 there and marks the components unset (`Gx::unset`), so a draw that read them would be noted; none does.
+- **Fix:** set the whole colors.
+- **Fix impact:** none.
+- **Source:** `lbspdisplay.c` `setTevAlpha`, `lb_800122F0`.
 
 ## Saves and the memory card
 
@@ -2120,6 +2140,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
 | A race car out with all thirty out | `grBigBlueRoute_8020C530` and `grBigBlueRoute_8020C85C`'s inline `grBigBlueRoute_SpawnRoute`, `game/gr/bigblueroute.rs` (`spawn_due`) | The pick returns -1 when every one of the thirty cars is out, and the spawn then clears a flag of entry -1, writes its speeds, lane and roll into the 44 bytes before the cars' heap block, and shows the first car with a second hurtbox item; the parameters' count (`x40`) lets out 30 after the sign's car, exactly the thirty, so the pick always finds one (melee-hd stops) | `grbigblueroute.c` (`grBigBlueRoute_SpawnRoute`'s `route_idx != -1` test comes after the flag's write); `m6-fzero-race/fz-run`'s 30 picks |
 | A character's target stage past its table | `gm_801647F8` (gm_1601.c), `gm::one_player::target_stage` | The lookup's end test compares the table's stage kinds, bytes, with 0x148, which no byte equals: a character the table lacks would read past `lbl_803D5168` into the data after it. Every caller passes a character the one-door select offers, all of which the table lists (the Ice Climbers as Popo, turned back into 0xE first), so the loop always finds one | `crates/melee-sim/src/game/gm/one_player.rs` (stops by name past the table; `menus_audit::STOPS`) |
+| The characters-left tally's placement hides one icon | `fn_802FA8C0` (`ifstock.c`) | Past the list's -2, the loop meant to push each later icon off the screen indexes `x10C[i]` (the -2's own slot, which has no icon) instead of `x10C[j]`, so it moves nothing; no later icon exists either (the first frame makes them only up to the -2) | `ifstock.c` `fn_802FA8C0` (ported with `fn_802FAC34`, not yet) |
+| The HUD's camera and light freed, their pointers kept | `ifAll_802F3A64` (`ifall.c`), `game/hud/all.rs` (`free_hud`) | Frees `ifAll_804A0FD8.gobj` and `gobj_2` without clearing them, so `ifAll_GetHUDGObj` would answer a freed GObj; nothing asks after a single-player stage's end frees the HUD (the clear screen, then the scene's end) | `crates/melee-sim/src/game/hud/all.rs` (`free_hud` keeps the handles, as the comparer's dangling-pointer check sees) |
 
 ## Unsure
 
