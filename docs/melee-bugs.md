@@ -1872,6 +1872,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** none.
 - **Source:** `tydisplay.c` (`_tyDisplay_8031BF34`).
 
+### An effect the limiter refuses is counted all the same
+
+- **Where:** `efLib_Create` (`eflib.c`), with `efLib_RemoveLast`; `crates/melee-sim/src/game/ef/eflib.rs` (`create`, `remove_last`).
+- **Defect:** a counted effect (the spawns `efSync_Spawn`, `efAsync_Spawn` and `efAlt_Spawn` make below 0x4BA) adds itself to `efLib_EffectCount` before `HSD_ObjAlloc` gives it a block, and when the allocation returns null the count isn't taken back. The count comes down only as counted effects are destroyed, so each refused effect stays counted until the scene's next `efLib_Init`. Only the develop level's allocation limiter (`fn_UpdateObjAllocLimiter`, B and D-pad up) makes the allocation fail.
+- **Effect:** with the effects' cap on, the count creeps up by one for each effect refused. Once it reaches 64, each counted spawn first destroys the oldest counted effects until fewer than 64 are counted (`efLib_RemoveLast`), so the match keeps fewer effects than its 64 from then on: in `m6-alloc-limiter/limiter-halt` Fox's blaster flashes are refused 63 times at a cap of two, after which 22 counted spawns find the count at 64 and destroy the oldest counted effect first, which leaves the new one room, so none is refused again. Were the count to reach 64 with no counted effect left to destroy (a refusal while uncounted effects fill the cap), `efLib_RemoveLast`'s assert ("can't remove no force effect!") would halt the console.
+- **melee-hd:** modeled (`create` counts before its block's `try_alloc_stale`; `remove_last`'s assert stops by name, design call 7).
+- **Fix:** count the effect after its block is allocated, or take the count back on null.
+- **Fix impact:** develop level only; none on gameplay at the retail level, where no pool has a limit.
+- **Source:** ssbm-rs's `efLib_Create` (`melee__ef__eflib.rs`); the `m6-alloc-limiter` sessions ([the oracle](oracle.md#sessions)).
+
 ### The Yoshiki Test's Init runs on every call and leaks what it made
 
 - **Where:** `un_80301634`, `crates/melee-sim/src/game/hud/debug_card.rs` (`yoshiki_init`).

@@ -13,7 +13,6 @@ db_DisableItemSpawns	Called only by main, only inside `if (gmMain_804D6594)` rig
 fn_ToggleItemCollisionBubbles	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80225E6C	Named only by fn_CheckAnimationInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80227EB0	Named only by fn_80228124 (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-fn_UpdateObjAllocLimiter	Called only by db_RunEveryFrame, only after its `if (DbLevel < DbLKind_DebugRom) return;`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 un_80300D78	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300E74	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300F3C	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
