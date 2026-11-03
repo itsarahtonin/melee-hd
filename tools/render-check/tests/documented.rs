@@ -32,7 +32,7 @@ use common::{
     RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
     SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
     SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
-    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY,
+    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
     ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
@@ -1476,6 +1476,44 @@ frames!(IM_BEARS;
 frames!(TT_TARGETS;
     tt_targets_14900 14900,
 );
+// Samus's stage cleared from the mode (tt-clear): mid-run with six targets left in the
+// counter (2000) and the clear's "Complete!" over the stage (2990), against captures made with
+// ssbm-rs's renderer running (headless, each log's first frame samples a copy made before the
+// log): the images identical, the draws that sample Samus's shadow different only in the
+// shadow textures' hashes; and the select again with the new record as the high score (3100).
+frames!(TT_CLEAR;
+    tt_clear_3100 3100,
+);
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn tt_clear_2000() {
+    compare_in(
+        &TT_CLEAR,
+        2000,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1063, 1063],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn tt_clear_2990() {
+    compare_in(
+        &TT_CLEAR,
+        2990,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1059, 1059],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
 
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
