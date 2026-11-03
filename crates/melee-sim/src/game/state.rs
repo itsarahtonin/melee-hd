@@ -468,6 +468,7 @@ pub struct Game {
     pub approach: super::gm::approach::Approach,
     /// The cutscenes' statics and enter data (`melee/vi`).
     pub vi: super::vi::Cutscenes,
+    pub endings: super::gm::endings::Endings,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).
@@ -489,6 +490,8 @@ pub struct Game {
     /// The single-player modes' statics: their selects' data and the 1P runs' state
     /// (`gm::one_player`).
     pub one_player: super::gm::one_player::OnePlayer,
+    /// The Home-Run Contest's statics (`gm_180A.c`).
+    pub home_run: super::gm::home_run::HomeRun,
     /// Training's match and menu (`gm_1884.c`, `gmtrainingmode.c`'s match states).
     pub training: super::gm::training::Training,
     /// The trophies' statics (`toy.c`, `tylist.c`).

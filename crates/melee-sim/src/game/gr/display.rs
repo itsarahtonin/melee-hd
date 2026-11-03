@@ -58,6 +58,9 @@ impl Running<'_> {
             Some(f) if f.0 == 0x801F_CBB8 => super::inishie1::check_shadow_render(),
             Some(f) if f.0 == 0x801F_DFF0 => super::inishie2::check_shadow_render(),
             Some(f) if f.0 == 0x801F_A900 => super::icemt::check_shadow_render(),
+            Some(f) if f.0 == super::pushon::CHECK_SHADOW_RENDER => {
+                super::pushon::check_shadow_render()
+            }
             Some(f) if f.0 == 0x801E_2EEC => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::corneria::check_shadow_render(self.game, self.data, pos, Some(j))
@@ -101,6 +104,23 @@ impl Running<'_> {
             Some(f) if f.0 == 0x8020_875C => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::kinokoroute::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_DF80 => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::bigblueroute::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
+            Some(f) if f.0 == 0x8020_B85C => super::zebesroute::check_shadow_render(),
+            Some(f) if super::target::is_check_shadow_render(f.0) => {
+                super::target::check_shadow_render()
+            }
+
+            Some(f) if super::figure::CHECK_SHADOW_RENDER.contains(&f.0) => {
+                super::figure::check_shadow_render()
+            }
+
+            Some(f) if f.0 == 0x8021_EEBC => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::homerun::check_shadow_render(self.game, self.data, pos, Some(j))
             }
             Some(f) if f.0 == 0x8020_1F4C => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;

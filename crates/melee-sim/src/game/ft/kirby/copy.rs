@@ -129,8 +129,17 @@ impl Running<'_> {
             return;
         }
         // Giga Bowser has no copy file, so his copy's data is null and the original reads
-        // through it here (docs/melee-bugs.md).
-        let copy = self.game.ft.kirby.copies[kind as usize].expect("a copy without its data");
+        // through it here, a fault on a console (docs/melee-bugs.md, design call 7).
+        let Some(copy) = self.game.ft.kirby.copies[kind as usize] else {
+            assert_eq!(
+                kind,
+                super::super::koopa::KIND_GKOOPA,
+                "a copy without its data"
+            );
+            panic!(
+                "Melee crashes: Kirby's copy of Giga Bowser has no copy data, and ftKb_SpecialN_800F16D0 reads its flame's article at address 0x18"
+            );
+        };
         for &(i, item) in items {
             let article = self.data.ptr(copy.at(0xC + 4 * i));
             super::super::super::it::item::set_char_article(self.game, article, item);

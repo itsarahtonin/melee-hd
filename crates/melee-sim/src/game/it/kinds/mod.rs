@@ -12,6 +12,7 @@ pub mod climbersstring;
 pub mod clinkmilk;
 pub mod coin;
 pub mod crate_box;
+pub mod crazyhandbomb;
 pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
@@ -86,6 +87,7 @@ pub mod marumine;
 pub mod masterhandbullet;
 pub mod masterhandlaser;
 pub mod matadogas;
+pub mod mato;
 pub mod mball;
 pub mod metalb;
 pub mod metamon;
@@ -149,6 +151,7 @@ pub mod tools;
 pub mod tosakinto;
 pub mod unknown;
 pub mod whispyapple;
+pub mod whitebea;
 pub mod wstar;
 pub mod yaku;
 pub mod yoshiegglay;
@@ -193,6 +196,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || climbersice::run_event(r, gobj, addr)
         || masterhandlaser::run_event(r, gobj, addr)
         || masterhandbullet::run_event(r, gobj, addr)
+        || crazyhandbomb::run_event(r, gobj, addr)
         || climbersblizzard::run_event(r, gobj, addr)
         || climbersstring::run_event(r, gobj, addr)
         || foxblaster::run_event(r, gobj, addr)
@@ -254,6 +258,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || mato::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
         || klap::run_event(r, gobj, addr)
         || kyasarin::run_event(r, gobj, addr)
@@ -267,6 +272,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || leadead::run_event(r, gobj, addr)
         || octarock::run_event(r, gobj, addr)
         || oldottosea::run_event(r, gobj, addr)
+        || whitebea::run_event(r, gobj, addr)
         || octarockstone::run_event(r, gobj, addr)
         || koopaflame::run_event(r, gobj, addr)
         || gamewatchgreenhouse::run_event(r, gobj, addr)
@@ -355,6 +361,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| climbersice::run_pred(r, gobj, addr))
         .or_else(|| masterhandlaser::run_pred(r, gobj, addr))
         .or_else(|| masterhandbullet::run_pred(r, gobj, addr))
+        .or_else(|| crazyhandbomb::run_pred(r, gobj, addr))
         .or_else(|| climbersblizzard::run_pred(r, gobj, addr))
         .or_else(|| climbersstring::run_pred(r, gobj, addr))
         .or_else(|| foxblaster::run_pred(r, gobj, addr))
@@ -415,6 +422,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| mato::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| klap::run_pred(r, gobj, addr))
         .or_else(|| kyasarin::run_pred(r, gobj, addr))
@@ -428,6 +436,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| leadead::run_pred(r, gobj, addr))
         .or_else(|| octarock::run_pred(r, gobj, addr))
         .or_else(|| oldottosea::run_pred(r, gobj, addr))
+        .or_else(|| whitebea::run_pred(r, gobj, addr))
         .or_else(|| octarockstone::run_pred(r, gobj, addr))
         .or_else(|| koopaflame::run_pred(r, gobj, addr))
         .or_else(|| gamewatchgreenhouse::run_pred(r, gobj, addr))
@@ -730,6 +739,8 @@ pub const ZRSHELL: i32 = 220;
 pub const COIN: i32 = 159;
 /// `It_Kind_Klap`, Kongo Jungle's Klap Trap.
 pub const KLAP: i32 = 218;
+/// `It_Kind_Mato`, Target Test's targets.
+pub const MATO: i32 = 209;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
 pub const HEIHO: i32 = 210;
 /// `It_Kind_Tincle`, Great Bay's Tingle.

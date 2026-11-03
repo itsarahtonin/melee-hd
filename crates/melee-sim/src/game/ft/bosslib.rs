@@ -1,16 +1,17 @@
 //! The hands' shared code (`ftbosslib.c`): their attack timer, their glide toward a point,
 //! the nearest opponent's position, facing, the stage's floor as a bound, which hand is
-//! where, their attributes' tables, and the cutscene camera's look at a player.
+//! where, their attributes' tables, and the cutscene camera's look at a player; and the
+//! entrance's camera script both hands run.
 //!
-//! Master Hand (`ft::masterhand`) and Crazy Hand (task 12's, not ported) both call it; the
-//! functions that read Crazy Hand find no Crazy Hand while he isn't ported.
+//! Master Hand (`ft::masterhand`) and Crazy Hand (`ft::crazyhand`) both call it.
 
 use gekko_fp as fp;
 
 use super::super::camera;
+use super::super::handles::CodeRef;
 use super::super::it::owner::P_LINK_FIGHTER;
 use super::super::state::Running;
-use super::masterhand::{KIND_CRAZY_HAND, KIND_MASTER_HAND, attr};
+use super::masterhand::{KIND_CRAZY_HAND, KIND_MASTER_HAND, attr, mv as hand_mv};
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
 use crate::quat::Quat;
@@ -209,35 +210,35 @@ impl Running<'_> {
     }
 
     /// Whether Master Hand is beaten (`ftMh_MS_Damage`, `Damage2`), `ftBossLib_8015C2E0`.
-    // Ports `ftBossLib_8015C2E0`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C2E0")]
     pub fn boss_mh_beaten(&self) -> bool {
         let ms = self.boss_motion_id(KIND_MASTER_HAND);
         ms == MH_MS_DAMAGE || ms == MH_MS_DAMAGE2
     }
 
     /// Whether Crazy Hand is beaten, `ftBossLib_8015C31C`.
-    // Ports `ftBossLib_8015C31C`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C31C")]
     pub fn boss_ch_beaten(&self) -> bool {
         let ms = self.boss_motion_id(KIND_CRAZY_HAND);
         ms == CH_MS_181 || ms == CH_MS_182
     }
 
     /// Whether Master Hand is out (sleeping), `ftBossLib_8015C358`.
-    // Ports `ftBossLib_8015C358`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C358")]
     pub fn boss_mh_sleeping(&self) -> bool {
         self.boss_gobj(KIND_MASTER_HAND)
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Whether Crazy Hand is out, `ftBossLib_8015C3A0`.
-    // Ports `ftBossLib_8015C3A0`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C3A0")]
     pub fn boss_ch_sleeping(&self) -> bool {
         self.boss_gobj(KIND_CRAZY_HAND)
             .is_some_and(|g| self.game.fighter(g).is_sleeping)
     }
 
     /// Crazy Hand's next attack (`u.mh.x2250`, 0 with no Crazy Hand), `ftBossLib_8015C4C4`.
-    // Ports `ftBossLib_8015C4C4`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C4C4")]
     pub fn boss_ch_next(&self) -> i32 {
         match self.boss_gobj(KIND_CRAZY_HAND) {
             Some(g) => self
@@ -334,5 +335,109 @@ impl Running<'_> {
     // Ports `ftBossLib_8015CC14`; aliased once a check reaches it.
     pub fn boss_camera_standard(&mut self) {
         camera::set_standard(&mut self.game.camera.cam);
+    }
+
+    /// A hand's entrance camera script, a step a frame (`mv.x0`, waits in `mv.x8`), its
+    /// interest following the hand's waist through `waist_cb` from the second step: Master
+    /// Hand's `ftMh_MS_343_801511FC` and Crazy Hand's `fn_8015B2C0`, the same script.
+    pub(crate) fn boss_entry_camera(&mut self, gobj: GObjId, waist_cb: u32) {
+        use core::f64::consts::PI;
+        let pi = |k: f64| crate::fpu::mem(gekko_fp::frsp(k));
+        let f = self.game.fighter_id(gobj);
+        let step = self.game.fighters[f.0].mv_i32(hand_mv::X0);
+        let wait_done = |r: &mut Self| {
+            let fp = &mut r.game.fighters[f.0];
+            let n = fp.mv_i32(hand_mv::X8).wrapping_sub(1);
+            fp.set_mv_i32(hand_mv::X8, n);
+            n == 0
+        };
+        let set = |r: &mut Self, next: i32| r.game.fighters[f.0].set_mv_i32(hand_mv::X0, next);
+        match step {
+            0 => {
+                let pos = self.game.fighters[f.0].cur_pos;
+                let enemy = self.boss_nearest(gobj, pos);
+                let slot = enemy.map_or(0, |g| i32::from(self.game.fighter(g).player_idx));
+                camera::script_look_at_player(self, slot);
+                let c = &mut self.game.camera.cam;
+                camera::script_orbit_distance(c, 40.0);
+                camera::script_fov(c, 45.0);
+                camera::script_orbit_yaw(c, pi(-PI));
+                camera::script_jump(self);
+                let c = &mut self.game.camera.cam;
+                camera::script_orbit_yaw(c, 0.0);
+                camera::script_transition(c, 120);
+                set(self, 1);
+            }
+            1 => {
+                if camera::script_done(&self.game.camera.cam) {
+                    camera::script_look_at_callback(self, CodeRef(waist_cb));
+                    let c = &mut self.game.camera.cam;
+                    camera::script_orbit_distance(c, 120.0);
+                    camera::script_transition(c, 20);
+                    set(self, 2);
+                }
+            }
+            2 => {
+                let c = &mut self.game.camera.cam;
+                if camera::script_done(c) {
+                    camera::script_orbit_yaw(c, pi(PI / 2.0));
+                    camera::script_transition(c, 60);
+                    set(self, 3);
+                }
+            }
+            3 => {
+                if camera::script_done(&self.game.camera.cam) {
+                    let c = &mut self.game.camera.cam;
+                    camera::script_orbit_distance(c, 90.0);
+                    camera::script_orbit_yaw(c, pi(-PI / 9.0));
+                    camera::script_orbit_pitch(c, pi(-PI / 12.0));
+                    camera::script_jump(self);
+                    set(self, 4);
+                }
+            }
+            4 => {
+                camera::script_hold_eye(&mut self.game.camera.cam);
+                self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 120);
+                set(self, 5);
+            }
+            5 => {
+                if wait_done(self) {
+                    let c = &mut self.game.camera.cam;
+                    camera::script_orbit_yaw(c, pi(-PI / 9.0));
+                    camera::script_jump(self);
+                    camera::script_orbit_distance(&mut self.game.camera.cam, 120.0);
+                    self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 30);
+                    set(self, 6);
+                }
+            }
+            6 => {
+                if wait_done(self) {
+                    camera::script_orbit_yaw(&mut self.game.camera.cam, pi(PI / 9.0));
+                    camera::script_jump(self);
+                    self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 30);
+                    set(self, 7);
+                }
+            }
+            7 => {
+                if wait_done(self) {
+                    let c = &mut self.game.camera.cam;
+                    camera::script_orbit_distance(c, 180.0);
+                    camera::script_orbit_yaw(c, pi(-PI / 2.0));
+                    camera::script_orbit_pitch(c, pi(-PI / 9.0));
+                    camera::script_jump(self);
+                    self.game.fighters[f.0].set_mv_i32(hand_mv::X8, 50);
+                    set(self, 8);
+                }
+            }
+            8 => {
+                camera::script_hold_eye(&mut self.game.camera.cam);
+                set(self, 9);
+            }
+            9 if wait_done(self) => {
+                camera::set_standard(&mut self.game.camera.cam);
+                set(self, 10);
+            }
+            _ => {}
+        }
     }
 }

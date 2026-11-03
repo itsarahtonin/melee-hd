@@ -60,12 +60,6 @@ pub const GATES: &[Gate] = &[
     },
     Gate {
         list: STADIUM,
-        entry: 1,
-        what: "Home-Run Contest",
-        covers: &["melee/gm/gmhomerun"],
-    },
-    Gate {
-        list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
         covers: &[
@@ -136,19 +130,15 @@ pub const MODULES: &[&str] = &["gm/", "mn/", "ty/", "vi/", "hud/", "pl/"];
 pub const STOPS: &[(&str, &str)] = &[
     (
         "the cutscene scene",
-        "the cutscenes after the F-Zero one (vi1101 to vi1202), which only the debug cutscene mode reaches past vi0801's stage (the developer setting's, whose panel warns some debug tools stop the game) and Adventure, behind GATES",
-    ),
-    (
-        "grBigBlueRoute_8020DAB4",
-        "the F-Zero cutscene's cars, past its stage (the F-Zero race's, unported), which only the debug cutscene mode (the developer setting's) and Adventure, behind GATES, reach",
+        "a cutscene scene past the eleven (0x11 to 0x1B, all ported): the scene table names no other",
     ),
     (
         "gm_801720B4 in a single-player run",
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_80172140 in a single-player run",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "gm_80172140 in a 1P run",
+        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
     ),
     (
         "mnDiagram2_GetStatValue for statistic",
@@ -177,10 +167,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "the slot's image pointing at an album image",
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
-    ),
-    (
-        "tyDisplay_8031C454 (a single-player stage's trophy)",
-        "a single-player match's stage when the trophies' tables offer one (Training's draw found none in every Training session, on the unlock-all card), behind the gates",
     ),
     (
         "Hook::Unported1P(name)",
@@ -239,6 +225,10 @@ pub const STOPS: &[(&str, &str)] = &[
         "no scene the menus reach makes two canvases of one font in a row (the sessions from power-on free every font's canvases with no stop)",
     ),
     (
+        "gm_801647F8 reading past lbl_803D5168",
+        "the one-door selects offer only the 25 characters the table lists (the Ice Climbers as Popo), which every caller passes",
+    ),
+    (
         "the VS scene's enter data in game mode",
         "a VS scene runs in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the other modes with one are the single-player modes behind GATES",
     ),
@@ -263,8 +253,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "the player's card holds Melee's files alone (melee-player's saves::read_dir), so the boot finds no Pikmin save",
     ),
     (
-        "fn_80171A88 in a single-player run",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "fn_80171A88 in a 1P run",
+        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
     ),
     (
         "controller map hook",
@@ -387,8 +377,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "Hook::DebugUnported(name)",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+        "gm_801BEE9C (congratulations' exit)",
+        "the game over modes' congratulations (milestone 6's task 5): the single-player modes' endings, which only the 1P list's gated entries lead to, and the debug menu's ending test at a raised debug level",
     ),
     (
         "unported(\"debug pause predicate\"",

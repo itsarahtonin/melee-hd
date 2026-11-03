@@ -2,7 +2,6 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::unported_call;
 use super::super::super::handles::FighterId;
 use super::super::super::state::Running;
 use super::super::common::GA_GROUND;
@@ -54,13 +53,12 @@ impl Running<'_> {
         self.game.fighters[f.0].frame_speed_mul = rate;
     }
 
-    /// Back to waiting, `ft_8008A2BC`: Master Hand returns to his place; Crazy Hand's own
-    /// idle isn't ported.
+    /// Back to waiting, `ft_8008A2BC`: the hands return to their places.
     #[doc(alias = "ft_8008A2BC")]
     pub fn enter_wait(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_MASTER_HAND => self.mh_return(gobj),
-            KIND_CRAZY_HAND => unported_call("ftCh_GrabUnk1_8015BC88"),
+            KIND_CRAZY_HAND => self.ch_return(gobj),
             _ => self.enter_wait_blend(gobj, 0.0),
         }
     }
@@ -114,9 +112,8 @@ impl Running<'_> {
         }
     }
 
-    /// Falling, `ftCo_Fall_Enter`: Master Hand returns to his place (Crazy Hand's isn't
-    /// ported); a stamina loss
-    /// and the hammer aren't ported.
+    /// Falling, `ftCo_Fall_Enter`: the hands return to their places; a stamina loss and the
+    /// hammer aren't ported.
     #[doc(alias = "ftCo_Fall_Enter")]
     pub fn enter_fall(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -126,7 +123,10 @@ impl Running<'_> {
                 self.mh_return(gobj);
                 return;
             }
-            KIND_CRAZY_HAND => unported_call("ftCh_GrabUnk1_8015BC88"),
+            KIND_CRAZY_HAND => {
+                self.ch_return(gobj);
+                return;
+            }
             _ => {}
         }
         // `ftCo_Fall_inline`.

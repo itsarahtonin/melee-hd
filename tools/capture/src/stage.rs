@@ -42,6 +42,18 @@ pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 /// grkinokoroute.c's (`ssbm_types::tu::melee__gr__grkinokoroute::yakumono_param`).
 pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
+/// grbigblueroute.c's (`ssbm_types::tu::melee__gr__grbigblueroute::yakumono_param`).
+pub const GRBIGBLUEROUTE_YAKUMONO: u32 = 0x804D_6A68;
+/// grpushon.c's (`ssbm_types::tu::melee__gr__grpushon::yakumono_param`).
+pub const GRPUSHON_YAKUMONO: u32 = 0x804D_6AB8;
+/// grzebesroute.c's (`ssbm_types::tu::melee__gr__grzebesroute::yakumono_param`).
+pub const GRZEBESROUTE_YAKUMONO: u32 = 0x804D_6A60;
+/// grfigure1.c's to grfigure3.c's (`ssbm_types::tu::melee__gr__grfigure1::yakumono_param` and
+/// the others').
+pub const GRFIGURE_YAKUMONO: [u32; 3] = [0x804D_6A70, 0x804D_6A78, 0x804D_6A80];
+/// `grHr_804D6AD8` to `grHr_804D6AE4` and the Home-Run Contest's stage's `yakumono_param`.
+pub const GRHOMERUN_STATICS: u32 = 0x804D_6AD8;
+pub const GRHOMERUN_YAKUMONO: u32 = 0x804D_6AE8;
 /// grshrine.c's (`ssbm_types::tu::melee__gr__grshrine::yakumono_param`).
 pub const GRSHRINE_YAKUMONO: u32 = 0x804D_6A18;
 /// gryorster.c's (`grYt_804D6A20.x0`).
@@ -380,6 +392,27 @@ impl Importer<'_> {
         self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
         self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRBIGBLUEROUTE_YAKUMONO);
+        self.game.gr.bigblueroute_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRPUSHON_YAKUMONO);
+        self.game.gr.pushon_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRZEBESROUTE_YAKUMONO);
+        self.game.gr.zebesroute_yakumono = self.data_or_unhandled(yaku);
+        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+            let yaku = cap.u32(at);
+            self.game.gr.target_yakumono[i] = self.data_or_unhandled(yaku);
+        }
+        for (i, addr) in GRFIGURE_YAKUMONO.into_iter().enumerate() {
+            let yaku = cap.u32(addr);
+            self.game.gr.figure_yakumono[i] = self.data_or_unhandled(yaku);
+        }
+        let yaku = cap.u32(GRHOMERUN_YAKUMONO);
+        let h = &mut self.game.gr.homerun;
+        h.scale = f32::from_bits(cap.u32(GRHOMERUN_STATICS));
+        h.ticks = cap.u32(GRHOMERUN_STATICS + 4) as i32;
+        h.max_dist = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 8));
+        h.ratio = f32::from_bits(cap.u32(GRHOMERUN_STATICS + 0xC));
+        self.game.gr.homerun.yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRSHRINE_YAKUMONO);
         self.game.gr.shrine_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRYORSTER_YAKUMONO);
@@ -747,6 +780,7 @@ impl Importer<'_> {
         ] = heads_out;
         Islands {
             arena: isl.arena,
+            addrs: isl.addrs,
             floors,
             ceilings,
             floors_end,
@@ -780,6 +814,7 @@ fn island_id(
         let id = IslandId(isl.arena.len() as u32);
         ids.insert(cur, id);
         let f = |o| imp.f32_at(cur + o);
+        isl.addrs.push(cur);
         isl.arena.push(Island {
             next: None,
             left_vtx: imp.u16_at(cur + 4),
@@ -1098,6 +1133,41 @@ impl Comparer<'_> {
                 game.gr.kinokoroute_yakumono,
             ),
             (
+                "grBigBlueRoute yakumono_param",
+                GRBIGBLUEROUTE_YAKUMONO,
+                game.gr.bigblueroute_yakumono,
+            ),
+            (
+                "grPushOn yakumono_param",
+                GRPUSHON_YAKUMONO,
+                game.gr.pushon_yakumono,
+            ),
+            (
+                "grZebesRoute yakumono_param",
+                GRZEBESROUTE_YAKUMONO,
+                game.gr.zebesroute_yakumono,
+            ),
+            (
+                "grFigure1 yakumono_param",
+                GRFIGURE_YAKUMONO[0],
+                game.gr.figure_yakumono[0],
+            ),
+            (
+                "grFigure2 yakumono_param",
+                GRFIGURE_YAKUMONO[1],
+                game.gr.figure_yakumono[1],
+            ),
+            (
+                "grFigure3 yakumono_param",
+                GRFIGURE_YAKUMONO[2],
+                game.gr.figure_yakumono[2],
+            ),
+            (
+                "grHomeRun yakumono_param",
+                GRHOMERUN_YAKUMONO,
+                game.gr.homerun.yakumono,
+            ),
+            (
                 "grShrine yakumono_param",
                 GRSHRINE_YAKUMONO,
                 game.gr.shrine_yakumono,
@@ -1192,6 +1262,11 @@ impl Comparer<'_> {
             use melee_sim::game::mirror::Cx;
             self.compare_data(&format!("{name} data"), ours, self.u32(at));
         }
+        for (i, at) in gr::target::YAKUMONO_STATICS.into_iter().enumerate() {
+            use melee_sim::game::mirror::Cx;
+            let ours = game.gr.target_yakumono[i];
+            self.compare_data(&format!("grT yakumono_param {i} data"), ours, self.u32(at));
+        }
         // A stage's own statics compare on that stage: past its match they name its freed
         // heap, ours as well, and only its code reads them.
         let on = |k: i32| game.stage_info.grkind == k;
@@ -1213,6 +1288,25 @@ impl Comparer<'_> {
         }
         if on(gr::GR_KIND_CORNERIA) {
             self.compare_corneria();
+        }
+        if on(gr::GR_KIND_HOMERUN) {
+            let h = &game.gr.homerun;
+            self.check(
+                "grHr_804D6AD8",
+                "scale, ticks, max_dist, ratio",
+                (
+                    h.scale.to_bits(),
+                    h.ticks,
+                    h.max_dist.to_bits(),
+                    h.ratio.to_bits(),
+                ),
+                (
+                    self.u32(GRHOMERUN_STATICS),
+                    self.u32(GRHOMERUN_STATICS + 4) as i32,
+                    self.u32(GRHOMERUN_STATICS + 8),
+                    self.u32(GRHOMERUN_STATICS + 0xC),
+                ),
+            );
         }
         if on(gr::GR_KIND_VENOM) {
             self.compare_venom();
@@ -1754,6 +1848,16 @@ impl Comparer<'_> {
                 ("user data", joint.user_data, 0x30),
             ] {
                 let t = self.u32(a + off);
+                // A stage object destroyed since (one of the adventure's Icicle Mountain's
+                // first fields, whose falling ice's joint keeps its callback) dangles, compared
+                // by the address its block had.
+                if let Some(CollUser::Ground(g)) = ours
+                    && self.game.grounds.is_free(g.0)
+                {
+                    let addr = self.game.grounds.addr(g.0);
+                    self.check(&path, &format!("{name} (freed)"), addr, t);
+                    continue;
+                }
                 let theirs = (t != 0).then(|| {
                     self.maps
                         .gobjs

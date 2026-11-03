@@ -448,7 +448,7 @@ pub fn proc_watch(r: &mut Running, _gobj: GObjId) {
 }
 
 /// The first of `points` the stage has whose box (`w` and `h` each way) holds `pos`, and that
-/// the stage's check (`cb`, none in the ported stages) takes; -1 for none (the watcher's two
+/// the stage's check (`cb`) takes; -1 for none (the watcher's two
 /// searches in `Ground_801C0C2C`).
 fn search_points(
     r: &mut Running,
@@ -468,14 +468,20 @@ fn search_points(
         let in_x = x > fp::fneg(w) && x < w;
         let above = in_x && y > fp::fneg(h);
         let inside = above && y < h;
-        if inside {
-            if let Some(cb) = cb {
-                super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0));
-            }
+        if inside && cb.is_none_or(|cb| point_check(r, cb, pos, i)) {
             return i;
         }
     }
     -1
+}
+
+/// A stage's check of a point the watcher found the first fighter in (`stage_info.x90` and
+/// `x94`, called with the fighter's position and the point): the race's goal check.
+fn point_check(r: &mut Running, cb: CodeRef, _pos: Vec3, _point: i32) -> bool {
+    match cb.0 {
+        super::pushon::GOAL_CHECK => super::pushon::goal_check(r.game),
+        _ => super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0)),
+    }
 }
 
 /// Animates a light list, keeping moved positions in the stage's scale, `Ground_801C445C`. The

@@ -13,6 +13,11 @@ pub const CAMERA_RENDER: u32 = 0x8031_ED70;
 pub const JOBJ_PROC: u32 = 0x8031_EE60;
 pub const CAMERA_PROC: u32 = 0x8031_EFE4;
 
+/// Where the scene's entry makes the race's cars' object (`grBigBlueRoute_8020DAB4`): its scale
+/// joint's descriptor on the stack, an ID table key that only has to be one no other build uses
+/// ([`START_FRAME`](super::super::gr::bigblueroute::START_FRAME)).
+const CARS_FRAME: u32 = super::super::gr::setup::SETUP_FRAME - 0x40;
+
 /// `St_Kind_BigBlueRoute`.
 const ST_KIND_BIG_BLUE_ROUTE: i32 = 73;
 
@@ -57,7 +62,7 @@ pub struct Vi0801 {
 impl Running<'_> {
     /// The camera's render callback, `vi0801_8031ED70`: as Star Fox's
     /// ([`Running::vi0601_camera_render`]) with the fog's color.
-    // Ports vi0801_8031ED70; aliased once a check reaches it (the stage stops the scene first).
+    #[doc(alias = "vi0801_8031ED70")]
     pub fn vi0801_camera_render(&mut self, gobj: GObjId) {
         let erase = self.game.vi.v0801.erase;
         self.vi_run_camera_layers(gobj, erase);
@@ -65,8 +70,8 @@ impl Running<'_> {
 
     /// The scene's models and sound banks, `vi0801_8031EE84`: each model's joints the cars
     /// follow kept (`lb_80011E24`).
-    // Ports vi0801_8031EE84; aliased once a check reaches it (the stage stops the scene first).
-    // Ports vi0801_8031EE60; aliased once a check reaches it (the stage stops the scene first).
+    #[doc(alias = "vi0801_8031EE84")]
+    #[doc(alias = "vi0801_8031EE60")]
     fn vi0801_models(&mut self, scene: DataRef) {
         self.vi_models(scene, 0xB, JOBJ_PROC, |r, i, j| {
             for (k, &(model, index)) in CAR_JOINTS.iter().enumerate() {
@@ -86,7 +91,7 @@ impl Running<'_> {
 
     /// The camera's process, `vi0801_8031EFE4`: its animation; rumbles at frames 75, 160
     /// and 120, and at its last frame the scene's end.
-    // Ports vi0801_8031EFE4; aliased once a check reaches it (the stage stops the scene first).
+    #[doc(alias = "vi0801_8031EFE4")]
     pub fn vi0801_camera_proc(&mut self, gobj: GObjId) {
         let c = self.vi_cobj(gobj);
         crate::hsd::cobj::anim(&mut self.game.objs, self.data, Some(c));
@@ -107,7 +112,7 @@ impl Running<'_> {
     /// song (0x5B) with the audio paused, `Vi0801.dat`, the camera, the models, the F-Zero
     /// race's stage, the fog and the lights, the cars on the models' joints, the players
     /// reset.
-    // Ports vi0801_Scene_OnEnter; aliased once a check reaches it (the stage stops the scene first).
+    #[doc(alias = "vi0801_Scene_OnEnter")]
     pub fn vi0801_on_enter(&mut self) {
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
@@ -128,6 +133,9 @@ impl Running<'_> {
         let erase = self.vi_fog_with(scene, 0xB);
         self.game.vi.v0801.erase = erase;
         self.vi_lights(scene);
-        super::super::code::unported_call("grBigBlueRoute_8020DAB4 (the F-Zero race's cars)");
+        let cars = self.game.vi.v0801.cars;
+        super::super::gr::bigblueroute::cars_on_joints(self, &cars, 0.5, 0x17, CARS_FRAME);
+        self.game.init_all_players();
+        self.lb_audio_pause(false);
     }
 }

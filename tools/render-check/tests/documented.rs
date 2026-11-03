@@ -15,23 +15,26 @@
 mod common;
 
 use common::{
-    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CORNERIA, Capture,
-    DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM, DATA_INFO, DATA_PRIZE,
-    DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB, DEBUG_PERF_MONITOR,
-    DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS, DEBUG_VS_STAGE,
-    DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE,
-    FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS,
-    GALLERY, GREAT_BAY, GREEN_GREENS, Game, Group, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES,
-    KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING,
-    MENU_TOUR, METAL_CLOAK_RC, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
+    BIG_BLUE, BRINSTAR, BRINSTAR_DEPTHS, CAMERA_NOCARD, CAMERA_SNAPS, CELEBI1, CH_MH_1P, CH_PROBE,
+    CORNERIA, Capture, DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
+    DATA_INFO, DATA_PRIZE, DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB,
+    DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS,
+    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE,
+    FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
+    FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY,
+    GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
+    IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
+    METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
-    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
-    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
-    TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY,
-    UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, compare, compare_in,
-    reflection, scaled, why,
+    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
+    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
+    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_DK_QUIT,
+    TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB,
+    ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -163,6 +166,14 @@ frames!(M6_TRAINING;
 );
 frames!(M6_TOUR_CLEARED;
     m6_tour_cleared_1250 1250,
+);
+// The debug mode's game over (`m6-endings/gameover2`): the question with the trophy on its
+// stand (1420), the continue's coins paid and the score counting down (1620), and "no"'s end
+// (2830).
+frames!(M6E_GAMEOVER;
+    m6e_gameover_1420 1420,
+    m6e_gameover_1620 1620,
+    m6e_gameover_2830 2830,
 );
 // Training's menu over its match on Fountain of Dreams (`m6-training`): the item option on
 // the Poké Ball with its name (`tr-items` 2250) and the computer player's behavior set to walk
@@ -1106,6 +1117,47 @@ frames!(TROPHY_COLLECTION;
 frames!(TROPHY_COLLECTION_ROWS;
     trophy_collection_rows_1300 1300,
 );
+// The Home-Run Contest (milestone 6's task 14): the platform, the bat and the start's label
+// (hr-long 1000), Sandbag in flight with the counter running (1240), the field's labels past
+// 300 feet (1420), the counter's new record (1540), and no hit's sign (hr-miss 1850).
+// Against captures made with ssbm-rs's renderer running (headless, the log's first frame
+// samples textures the frames before it copied). Fox's and Sandbag's shadows fall on the
+// stage: their draws differ only in the shadow textures' hashes, and the images are
+// identical.
+fn home_run(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! home_run_frames {
+    ($game:expr; $($name:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                home_run(&$game, $frame, $same);
+            }
+        )*
+    };
+}
+
+home_run_frames!(HR_LONG;
+    hr_long_1000 1000 [1754, 1758],
+    hr_long_1240 1240 [1503, 1502],
+    hr_long_1420 1420 [1635, 1635],
+    hr_long_1540 1540 [1637, 1637],
+);
+home_run_frames!(HR_MISS;
+    hr_miss_1850 1850 [1725, 1725],
+);
 // Mushroom Kingdom's adventure route (milestone 6's task 16, debug VS at debug level 3, Fox
 // alone): the debug item menu's Koopas, a Paratroopa and a green shell falling at the route's
 // start (mk-enemies 3000), brick blocks and the route's cliffs (mk-route 2950), a Paratroopa's
@@ -1121,4 +1173,315 @@ frames!(MK_ROUTE;
 frames!(MK_FALL;
     mk_fall_3621 3621,
     mk_fall_3858 3858,
+);
+// The F-Zero race (milestone 6's task 19, debug VS at debug level 3, Link running): the hazard
+// sign as the first car nears (fz-run 2201), the cars driving past (3401) and one hitting Link
+// (4201); the F-Zero cutscene's racers on the race's track (fz-cutscene 3131 and 3191).
+frames!(FZ_RUN;
+    fz_run_2201 2201,
+    fz_run_3401 3401,
+    fz_run_4201 4201,
+);
+frames!(FZ_CUTSCENE;
+    fz_cutscene_3131 3131,
+    fz_cutscene_3191 3191,
+);
+
+// The cutscenes (milestone 6's task 4, the debug cutscene mode at debug level 3), two frames
+// each: Luigi at Peach's Castle (1150, 1300), Brinstar's warning (1500, 1650) and the planet's
+// explosion (1800, 2000) and Giga Bowser defeated, his trophy fallen on its stand (4700, 4800),
+// identical.
+frames!(M6C_CUTSCENES;
+    m6c_luigi_1150 1150,
+    m6c_luigi_1300 1300,
+    m6c_brinstar_1500 1500,
+    m6c_brinstar_1650 1650,
+    m6c_explosion_1800 1800,
+    m6c_explosion_2000 2000,
+    m6c_defeat_4700 4700,
+    m6c_defeat_4800 4800,
+);
+
+/// A cutscene frame with the fighters' shadows (and, on Final Destination, its floor's
+/// reflection), against a capture made with ssbm-rs's renderer running: the three Kirbys and
+/// the giant Kirby on Green Greens (2200, 2250; 2320, 2380), metal Mario and Luigi on
+/// Battlefield (3500, 3700), Bowser's trophy falling and the character posing on Final
+/// Destination (3850, 4000), Bowser's trophy before Giga Bowser's transformation (4200, 4300)
+/// and Giga Bowser come out of it (4500).
+fn m6c_shadowed(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6C_CUTSCENES,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+// The hands (milestone 6's tasks 3 and 12, debug VS at debug level 3, Link against them on
+// Final Destination): Master Hand alone (mh-1p 3420), Crazy Hand alone pointing over Link
+// (ch-probe 3180), and both hands (ch-mh-1p): Crazy Hand's entrance under the cutscene camera
+// (3150, which a mutation of its interest fails), Link held (4100), a hand flat over the
+// stage in a tag attack's stretch (4800), and a hand's sparks over the stage's boss backdrop
+// with Link in a magnifier bubble (11080). Against captures with ssbm-rs's renderer running
+// (each first frame samples copies of the frame before): identical images, every draw the
+// same but the two that sample the fighters' shadows' copy.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn mh_1p_3420() {
+    compare_in(
+        &MH_1P,
+        3420,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1118, 1126],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! m6c_shadowed {
+    ($($name:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                m6c_shadowed($frame, $same);
+            }
+        )*
+    };
+}
+
+m6c_shadowed!(
+    m6c_kirbys_2200 2200 [2286, 2286],
+    m6c_kirbys_2250 2250 [2395, 2398],
+    m6c_giant_kirby_2320 2320 [1952, 1952],
+    m6c_giant_kirby_2380 2380 [1952, 1952],
+    m6c_metal_3500 3500 [1310, 1310],
+    m6c_metal_3700 3700 [1324, 1328],
+    m6c_trophy_3850 3850 [1193, 1195],
+    m6c_trophy_4000 4000 [1168, 1167],
+    m6c_giga_4200 4200 [1125, 1125],
+    m6c_giga_4300 4300 [1149, 1157],
+    m6c_giga_4500 4500 [2035, 2049],
+);
+
+/// Star Fox's cutscene (2450, 2900): the screen's erase takes the background color whose alpha
+/// `Camera_GetBackgroundColor` never writes, which the erase doesn't write to the screen.
+fn m6c_starfox(frame: u32, same: [usize; 2]) {
+    compare(
+        &M6C_CUTSCENES,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::ERASE_ALPHA,
+        },
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6c_starfox_2450() {
+    m6c_starfox(2450, [1078, 1080]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6c_starfox_2900() {
+    m6c_starfox(2900, [1102, 1102]);
+}
+
+// The race (milestone 6's task 20, debug VS at debug level 3): Link and Mario at the start
+// under the course's lights (race-look 2060) and Mario's KO as the blast zones follow Link
+// (race-look 2460); Fox in the first spike pit (race-spikes 4600) and against a pillar
+// (race-pillar 4510).
+frames!(RACE_LOOK;
+    race_look_2060 2060,
+    race_look_2460 2460,
+);
+frames!(RACE_SPIKES;
+    race_spikes_4600 4600,
+);
+frames!(RACE_PILLAR;
+    race_pillar_4510 4510,
+);
+
+// Brinstar's escape (milestone 6's task 18, debug VS at debug level 3): Link and Mario at the
+// shaft's foot under the stage's lights (ze-look 2300), Fox's Firefox past the lower point light
+// (ze-climb 2900), the shaft's upper part shaking once the camera's timer has run out (ze-climb
+// 3500), the way out with Mario back from a KO below the camera (ze-climb 3800) and the match's
+// end on it (ze-climb 4000).
+frames!(ZE_LOOK;
+    ze_look_2300 2300,
+);
+frames!(ZE_CLIMB;
+    ze_climb_2900 2900,
+    ze_climb_3500 3500,
+    ze_climb_3800 3800,
+    ze_climb_4000 4000,
+);
+// Giga Bowser and the Wire Frames (`m6-giga-bowser`), against captures made with ssbm-rs's
+// renderer running (Final Destination's floor samples the reflection copied the frame before):
+// identical images, the floor's two draws that sample the fighters' shadows differing by their
+// textures' hashes alone, as the debug VS match's.
+fn giga_bowser(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_probe_3180() {
+    compare_in(
+        &CH_PROBE,
+        3180,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1070, 1076],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5060() {
+    giga_bowser(&GB_GK, 5060, [1269, 1269]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5230() {
+    giga_bowser(&GB_GK, 5230, [1218, 1218]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_gk_5330() {
+    giga_bowser(&GB_GK, 5330, [1253, 1249]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_boy_3545() {
+    giga_bowser(&GB_BOY, 3545, [895, 888]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn gb_girl_3557() {
+    giga_bowser(&GB_GIRL, 3557, [904, 906]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_3150() {
+    compare_in(
+        &CH_MH_1P,
+        3150,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1400, 1400],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_4100() {
+    compare_in(
+        &CH_MH_1P,
+        4100,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1356, 1359],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_4800() {
+    compare_in(
+        &CH_MH_1P,
+        4800,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1315, 1346],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ch_mh_1p_11080() {
+    compare_in(
+        &CH_MH_1P,
+        11080,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1101, 1101],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+// The adventure's Icicle Mountain (milestone 6's task 9, debug VS at debug level 3): Link and
+// Mario on the climb's first fields (im-look 2300) and a Polar Bear walking down a field with the
+// spawner's Topis (im-look 4300); the debug item menu's Polar Bears around Fox (im-jump 2950) and
+// knocked about by his smashes (im-bears 3500).
+frames!(IM_LOOK;
+    im_look_2300 2300,
+    im_look_4300 4300,
+);
+frames!(IM_JUMP;
+    im_jump_2950 2950,
+);
+frames!(IM_BEARS;
+    im_bears_3500 3500,
+);
+// Target Test (milestone 6's task 6): Mario's target stage in the debug VS tour (o6-targets
+// 1500) and the Ice Climbers' with its blocks (14900); Donkey Kong's from the mode, its targets'
+// counter and timer (tt-dk-quit 1300, and 1420 after the jabs). At 1500 a fighter's shadow
+// falls on the floor (against a capture made with ssbm-rs's renderer running): its draws differ
+// only in the shadow textures' hashes, and the images are identical.
+frames!(TT_TARGETS;
+    tt_targets_14900 14900,
+);
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn tt_targets_1500() {
+    compare_in(
+        &TT_TARGETS,
+        1500,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1238, 1238],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+frames!(TT_DK_QUIT;
+    tt_dk_quit_1300 1300,
+    tt_dk_quit_1420 1420,
 );

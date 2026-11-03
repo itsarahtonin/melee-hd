@@ -493,6 +493,27 @@ impl GroundVars {
                 h16(l, a + 0x18, &v.x18);
                 h16(l, a + 0x30, &v.x30);
             }
+            GroundVars::IceMtClimb(v) => {
+                h16(
+                    l,
+                    a,
+                    &[
+                        v.under,
+                        v.upper,
+                        v.phase,
+                        v.delay,
+                        v.lerp_count,
+                        v.burst_count,
+                        v.idx,
+                    ],
+                );
+                f(l, a + 0x10, v.cur);
+                for k in 0..5 {
+                    l.put_bits(a + 0x14, k, 1, u32::from(v.x14 & (0x80 >> k) != 0));
+                }
+                h16(l, a + 0x16, &[v.x16, v.x18, v.x1A, v.x1C]);
+                f(l, a + 0x20, v.x20);
+            }
             GroundVars::IceMtField(v) => {
                 let (n, slots) = icemt_field_layout(v.map);
                 l.put_bits(a, 0, 1, u32::from(v.flags & IceMtFieldVars::B0 != 0));
@@ -630,6 +651,67 @@ impl GroundVars {
                 h16(l, a + 2, &[v.phase, v.spawn_idx, v.zone_idx, v.cam_timer]);
                 l.put_bytes(a + 0xA, &v.pad_0a);
                 v3(l, a + 0xC, &v.reb0_pos);
+            }
+            GroundVars::BigBlueRoute(v) => {
+                gobj(l, cx, a, v.cars);
+                h16(l, a + 4, &[v.zone]);
+                l.put_bytes(a + 6, &v.pad_ca);
+                v3(l, a + 8, &v.reb0_pos);
+                for (i, t) in v.tracks.iter().enumerate() {
+                    let e = a + 0x14 + 0x10 * i as u32;
+                    if t.jobj.is_some() {
+                        v3(l, e, &t.offset);
+                    }
+                    jobj(l, cx, e + 0xC, t.jobj);
+                }
+            }
+            GroundVars::BigBlueRouteCars(v) => {
+                l.put_u32(a, v.xC4);
+                addr(l, a + 4, v.cars_addr);
+                data(l, cx, a + 8, v.air);
+                data(l, cx, a + 0xC, v.left);
+                data(l, cx, a + 0x10, v.right);
+                v3(l, a + 0x14, &v.air_start);
+                v3(l, a + 0x20, &v.air_end);
+                v3(l, a + 0x2C, &v.road_start);
+                v3(l, a + 0x38, &v.road_end);
+                h16(l, a + 0x44, &[v.out, v.wait]);
+            }
+
+            GroundVars::PushOn(v) => {
+                gobj(l, cx, a, v.gobj);
+                for i in 0..v.count.clamp(0, 20) as usize {
+                    let at = a + 4 * i as u32;
+                    l.put_word(at + 4, cx.handle("LObjId", v.lobjs[i].map(|o| o.0)));
+                    l.put_u32(at + 0x54, v.lobj_flags[i]);
+                }
+                l.put_u32(a + 0xA4, v.count as u32);
+                l.put_word(a + 0xA8, cx.handle("LObjId", v.point_light.map(|o| o.0)));
+                l.put_word(a + 0xAC, cx.handle("LObjId", v.spot_light.map(|o| o.0)));
+            }
+
+            GroundVars::HomeRun(v) => {
+                addr(l, a, v.parts_addr);
+                addr(l, a + 4, v.back_addr);
+                l.put_word(a + 8, cx.handle("TextId", v.text.map(|t| t.0)));
+                jobj(l, cx, a + 0xC, v.jobj);
+                gobj(l, cx, a + 0x10, v.text_gobj);
+                for (i, &g) in v.bg.iter().enumerate() {
+                    gobj(l, cx, a + 0x14 + 4 * i as u32, g);
+                }
+                l.put_u8(a + 0x24, u8::from(v.landed) << 7 | v.xe8_rest);
+            }
+            GroundVars::HomeRunPart(v) => {
+                l.put_u16(a, v.index);
+                l.put_u16(a + 2, v.label);
+                f(l, a + 0xC, v.x);
+            }
+            GroundVars::HomeRunLabel(v) => {
+                l.put_u16(a, v.index);
+                l.put_u16(a + 2, v.label);
+                l.put_word(a + 4, cx.handle("TextId", v.text.map(|t| t.0)));
+                jobj(l, cx, a + 8, v.jobj);
+                f(l, a + 0xC, v.x);
             }
             GroundVars::BigBlueRelay(v) => {
                 l.put_u32(a, v.xC4);
@@ -860,6 +942,17 @@ impl GroundVars {
                     lays.push(l);
                 }
             }
+            GroundVars::HomeRun(v) => {
+                for (list, at) in [(&v.parts, v.parts_addr), (&v.back, v.back_addr)] {
+                    if at != 0 {
+                        let mut l = Lay::new(at, 4 * list.len() as u32);
+                        for (i, &g) in list.iter().enumerate() {
+                            gobj(&mut l, cx, at + 4 * i as u32, g);
+                        }
+                        lays.push(l);
+                    }
+                }
+            }
             GroundVars::Inishie1(v) if v.blocks_addr != 0 => {
                 let mut l = Lay::new(v.blocks_addr, 0x24 * v.blocks.len() as u32);
                 for (i, e) in v.blocks.iter().enumerate() {
@@ -895,6 +988,20 @@ impl GroundVars {
                     }
                     lays.push(l);
                 }
+            }
+            GroundVars::BigBlueRouteCars(v) if v.cars_addr != 0 => {
+                let mut l = Lay::new(v.cars_addr, 0x2C * v.cars.len() as u32);
+                for (i, c) in v.cars.iter().enumerate() {
+                    let b = v.cars_addr + 0x2C * i as u32;
+                    l.put_bytes(b, &[c.flags, 0, 0, 0]);
+                    fs(
+                        &mut l,
+                        b + 4,
+                        &[c.x4, c.x8, c.xC, c.x10, c.x14, c.x18, c.x1C, c.x20, c.x24],
+                    );
+                    gobj(&mut l, cx, b + 0x28, c.item);
+                }
+                lays.push(l);
             }
             GroundVars::BigBlueCars(v) => {
                 if v.collision_jobjs_addr != 0 {

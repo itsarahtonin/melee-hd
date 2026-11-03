@@ -29,6 +29,7 @@ pub mod cpu_move;
 pub mod cpu_recover;
 pub mod cpu_script;
 pub mod cpu_vs;
+pub mod crazyhand;
 pub mod create;
 pub mod create_model;
 pub mod data;
@@ -44,6 +45,7 @@ pub mod fighter;
 pub mod fox;
 pub mod ftlib;
 pub mod gamewatch;
+pub mod gkoopa;
 pub mod ik;
 pub mod input;
 mod kind_tables;
@@ -70,6 +72,7 @@ pub mod powerup;
 pub mod purin;
 pub mod resolve;
 pub mod samus;
+pub mod sandbag;
 pub mod seak;
 pub mod second;
 pub mod sound;
@@ -78,6 +81,7 @@ pub mod transform;
 pub mod unload;
 pub mod vars;
 pub mod yoshi;
+pub mod zako;
 pub mod zelda;
 
 use melee_data::archive::{ArchiveId, Archives, DataRef};
@@ -105,6 +109,9 @@ pub struct Globals {
     pub dynamics_free: Option<super::handles::DynamicsId>,
     /// The links' block in the scene's heap (`lb_8000FCDC`'s), 0 for none modeled.
     pub dynamics_block: u32,
+    /// The wind sources' block in the scene's heap (`lb_8000FCDC`'s second), 0 for none
+    /// modeled.
+    pub winds_block: u32,
     /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
     pub lobj0: Option<crate::hsd::lobj::LObjId>,
     pub lobj1: Option<crate::hsd::lobj::LObjId>,

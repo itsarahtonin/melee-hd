@@ -39,12 +39,9 @@ impl Running<'_> {
     #[doc(alias = "ftMh_WaitSweep_IASA")]
     #[doc(alias = "ftMh_SweepLoop_IASA")]
     #[doc(alias = "ftMh_SweepWait_IASA")]
-    // Ports `ftMh_TagApplaud_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_TagRockPaper_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_TagGrab_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_TagSqueeze_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_TagFail_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_TagCancel_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_TagCrush_IASA")]
+    #[doc(alias = "ftMh_TagApplaud_IASA")]
+    #[doc(alias = "ftMh_TagRockPaper_IASA")]
     #[doc(alias = "ftMh_Throw_IASA")]
     #[doc(alias = "ftMh_Wait1_0_IASA")]
     #[doc(alias = "ftMh_WalkShoot_IASA")]
@@ -74,12 +71,9 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Slap_Phys")]
     #[doc(alias = "ftMh_WaitSweep_Phys")]
     #[doc(alias = "ftMh_SweepWait_Phys")]
-    // Ports `ftMh_TagApplaud_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_TagCrush_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_TagRockPaper_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_TagGrab_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_TagSqueeze_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_TagFail_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_TagApplaud_Phys")]
+    #[doc(alias = "ftMh_TagCrush_Phys")]
+    #[doc(alias = "ftMh_TagRockPaper_Phys")]
     #[doc(alias = "ftMh_Throw_Phys")]
     #[doc(alias = "ftMh_Wait1_0_Phys")]
     #[doc(alias = "ftMh_WalkShoot_Phys")]
@@ -127,12 +121,9 @@ impl Running<'_> {
     #[doc(alias = "ftMh_WaitSweep_Coll")]
     #[doc(alias = "ftMh_SweepLoop_Coll")]
     #[doc(alias = "ftMh_SweepWait_Coll")]
-    // Ports `ftMh_TagApplaud_Coll`; aliased once a check reaches it.
-    // Ports `ftMh_TagCrush_Coll`; aliased once a check reaches it.
-    // Ports `ftMh_TagRockPaper_Coll`; aliased once a check reaches it.
-    // Ports `ftMh_TagGrab_Coll`; aliased once a check reaches it.
-    // Ports `ftMh_TagSqueeze_Coll`; aliased once a check reaches it.
-    // Ports `ftMh_TagFail_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_TagApplaud_Coll")]
+    #[doc(alias = "ftMh_TagCrush_Coll")]
+    #[doc(alias = "ftMh_TagRockPaper_Coll")]
     #[doc(alias = "ftMh_Throw_Coll")]
     // Ports `ftMh_CaptureWaitMasterHand_Anim`; aliased once a check reaches it.
     // Ports `ftMh_CaptureWaitMasterHand_IASA`; aliased once a check reaches it.
@@ -159,7 +150,6 @@ impl Running<'_> {
     #[doc(alias = "ftMh_PaperCrush_Anim")]
     #[doc(alias = "ftMh_Slap_Anim")]
     #[doc(alias = "ftMh_SweepWait_Anim")]
-    // Ports `ftMh_TagFail_Anim`; aliased once a check reaches it.
     #[doc(alias = "ftMh_WalkShoot_Anim")]
     pub fn mh_anim_return(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
@@ -199,12 +189,9 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::WAIT_SWEEP_IASA
         | addr::SWEEP_LOOP_IASA
         | addr::SWEEP_WAIT_IASA
+        | addr::TAG_CRUSH_IASA
         | addr::TAG_APPLAUD_IASA
         | addr::TAG_ROCK_PAPER_IASA
-        | addr::TAG_GRAB_IASA
-        | addr::TAG_SQUEEZE_IASA
-        | addr::TAG_FAIL_IASA
-        | addr::TAG_CANCEL_IASA
         | addr::THROW_IASA
         | addr::WAIT1_0_IASA
         | addr::WALK_SHOOT_IASA
@@ -229,9 +216,6 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::TAG_APPLAUD_PHYS
         | addr::TAG_CRUSH_PHYS
         | addr::TAG_ROCK_PAPER_PHYS
-        | addr::TAG_GRAB_PHYS
-        | addr::TAG_SQUEEZE_PHYS
-        | addr::TAG_FAIL_PHYS
         | addr::THROW_PHYS
         | addr::WAIT1_0_PHYS
         | addr::WALK_SHOOT_PHYS
@@ -277,9 +261,6 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::TAG_APPLAUD_COLL
         | addr::TAG_CRUSH_COLL
         | addr::TAG_ROCK_PAPER_COLL
-        | addr::TAG_GRAB_COLL
-        | addr::TAG_SQUEEZE_COLL
-        | addr::TAG_FAIL_COLL
         | addr::THROW_COLL
         | addr::CAPTURE_WAIT_MASTER_HAND_ANIM
         | addr::CAPTURE_WAIT_MASTER_HAND_IASA
@@ -303,7 +284,6 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         | addr::PAPER_CRUSH_ANIM
         | addr::SLAP_ANIM
         | addr::SWEEP_WAIT_ANIM
-        | addr::TAG_FAIL_ANIM
         | addr::WALK_SHOOT_ANIM => g.mh_anim_return(gobj),
         _ => return false,
     }

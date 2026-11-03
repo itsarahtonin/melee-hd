@@ -63,6 +63,10 @@ pub struct ObjCollHooks<'a> {
     pub kicks: crate::game::gr::kongo::Kicks,
     /// The brick blocks Mushroom Kingdom's ceilings' touches broke.
     pub bumps: crate::game::gr::inishie1::Bumps,
+    /// Whose collision touched Brinstar's escape's way out.
+    pub escape: crate::game::gr::zebesroute::EndTouch,
+    /// Whose collision touched Icicle Mountain's lines, for the adventure's climb.
+    pub climb: crate::game::gr::icemt::ClimbTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -81,6 +85,8 @@ pub struct StageMaps<'a> {
     /// The stage code's globals (the dynamic attribute areas, the stage archives, the stages'
     /// parameters), which the collision joints' callbacks read.
     pub gr: &'a super::super::gr::Globals,
+    /// The players' blocks (`Player_GetEntity`), for the Home-Run Contest's field.
+    players: &'a [super::super::structs::_StaticPlayer; 6],
 }
 
 impl<'a> StageMaps<'a> {
@@ -88,8 +94,14 @@ impl<'a> StageMaps<'a> {
         world: &'a crate::hsd::gobj::World<super::super::state::GameKinds>,
         info: &'a super::super::structs::StageInfo,
         gr: &'a super::super::gr::Globals,
+        players: &'a [super::super::structs::_StaticPlayer; 6],
     ) -> Self {
-        StageMaps { world, info, gr }
+        StageMaps {
+            world,
+            info,
+            gr,
+            players,
+        }
     }
 
     /// The stage's kind (`stage_info.grkind`).
@@ -187,6 +199,13 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::homerun::FIELD_TOUCHED => super::super::gr::homerun::field_touched(
+                self.grounds,
+                self.stage_maps.ground(10),
+                coll,
+                kind,
+                self.stage_maps.players[1].entity(0),
+            ),
             super::super::gr::fourside::ROOF_TOUCHED => super::super::gr::fourside::touch(
                 self.grounds,
                 self.stage_maps.ground(5),
@@ -337,7 +356,6 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         .stage_maps
                         .gobj(map)
                         .and_then(|go| self.stage_maps.jobj(go));
-                    let climb = self.stage_maps.ground(10);
                     super::super::gr::icemt::ice_touched(
                         self.objs,
                         self.grounds,
@@ -345,10 +363,26 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         g,
                         callback.0,
                         coll,
-                        climb,
+                    );
+                }
+                self.climb.touched(coll.x0_gobj);
+            }
+            super::super::gr::icemt::ON_JOINT => self.climb.touched(coll.x0_gobj),
+            super::super::gr::pushon::GOAL_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::pushon::goal_touched(
+                        &mut self.grounds[g.0],
+                        coll.x34_flags.b1234.into(),
+                        kind,
                     );
                 }
             }
+            super::super::gr::zebesroute::END_TOUCHED => super::super::gr::zebesroute::end_touched(
+                &mut self.escape,
+                coll.x34_flags.b1234,
+                coll.x0_gobj,
+                kind,
+            ),
             super::super::gr::mutecity::TRACK_TOUCHED => {
                 let live = self.stage_maps.gr.mutecity.track_live;
                 let item = coll
@@ -490,8 +524,10 @@ impl Running<'_> {
             landing,
             kicks: Default::default(),
             bumps: Default::default(),
+            escape: Default::default(),
+            climb: Default::default(),
             grounds: &mut game.grounds,
-            stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr),
+            stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
         };
         let mut coll = Coll {
@@ -509,9 +545,13 @@ impl Running<'_> {
         let landing = hooks.landing;
         let kicks = std::mem::take(&mut hooks.kicks);
         let bumps = std::mem::take(&mut hooks.bumps);
+        let escape = std::mem::take(&mut hooks.escape);
+        let climb = std::mem::take(&mut hooks.climb);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
+        escape.apply(game);
+        climb.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,

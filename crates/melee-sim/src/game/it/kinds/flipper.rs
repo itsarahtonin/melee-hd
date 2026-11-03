@@ -129,7 +129,7 @@ fn attr_i(r: &Running, gobj: GObjId, off: u32) -> i32 {
 }
 
 /// A Flipper fixed to a stage's joint, `itFlipper_Spawn`.
-// Ports `itFlipper_Spawn`; aliased once a check reaches it.
+#[doc(alias = "itFlipper_Spawn")]
 pub fn spawn(r: &mut Running, jobj: Option<JObjId>) -> Option<GObjId> {
     let j = jobj?;
     let pos = world_position(&mut r.game.objs, r.data, Some(j), None);
