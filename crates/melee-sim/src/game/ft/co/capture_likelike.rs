@@ -91,8 +91,8 @@ impl Running<'_> {
 
     /// The held fighter hit or KO'd, `ftCo_800C7A30` and `fn_800C7890`: the Like Like lets go
     /// (`it_802DBA68`).
-    #[doc(alias = "ftCo_800C7A30")]
-    #[doc(alias = "fn_800C7890")]
+    // Ports ftCo_800C7A30; aliased once a check reaches it.
+    // Ports fn_800C7890; aliased once a check reaches it.
     pub fn capture_likelike_hit(&mut self, gobj: GObjId) {
         let ll = self.likelike_of(gobj);
         likelike::let_go(self, ll);

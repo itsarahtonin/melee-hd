@@ -119,14 +119,15 @@ pub fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     setup::create_from_callbacks(r, map_id, callbacks(map_id), frame)
 }
 
-/// The scale joint's descriptor of the lights' object, which the load hook (an 8-byte frame,
-/// as Corneria's) makes.
-const LOAD_FRAME: u32 = super::corneria::LOAD_FRAME;
-/// The symbols' scale joints' descriptors: below the match's start (`Ground_801C0FB8`, which
-/// runs the start hooks) by the hook's frame (0x50) and the create function's (0x20).
-const HOOK_FRAME: u32 = START_HOOKS_FRAME - 0x50 - 0x20;
-/// Where `Ground_801C0FB8` runs the start hooks, as the sessions' traces show it.
-const START_HOOKS_FRAME: u32 = 0x804E_EA28;
+/// The scale joint's descriptor of the lights' object, which the load hook makes, as the
+/// sessions' traces show it: the ID table's entry under it holds the lights' scale joint
+/// (`m6-oracle/meikyu`, `m6-underground-maze/mz-arena`).
+const LOAD_FRAME: u32 = 0x804E_EA14;
+/// The symbols' scale joints' descriptors (the start hook's), as the traces show it: the ID
+/// table's entry under it holds the last symbol's scale joint, and the portal's build from the
+/// maze's process (`PROC_FRAME`) lands on the same address, so it takes that entry over
+/// rather than a new one (`m6-underground-maze/mz-arena`, tick 2824).
+const HOOK_FRAME: u32 = 0x804E_E970;
 /// The portal's scale joint's descriptor: below the process loop by the maze's process's frame
 /// (0xC0) and the create function's (0x20).
 const PROC_FRAME: u32 = super::corneria::PROC_LOOP - 0xC0 - 0x20;
@@ -666,7 +667,8 @@ const SWAY_MIN: f64 = 1.7453292457503267e-05;
 const SWAY_MAX: f64 = 0.0008726646192371845;
 const TILT_X: f64 = 0.2617993950843811;
 const TILT_Y: f64 = 0.1745329201221466;
-const TAU: f64 = 6.283185307179586;
+/// A turn (`6.283185307179586`).
+const TAU: f64 = std::f64::consts::TAU;
 
 /// The absolute value as the original's `ABS`.
 fn abs(v: f64) -> f64 {
@@ -736,9 +738,9 @@ pub fn proc_portal(r: &mut Running, gobj: GObjId) {
         let (sx, sy) = (v.spin_x, v.spin_y);
         let wrap = |rot: f64| {
             if rot > TAU {
-                fp::frsp(rot - TAU)
+                fp::frsp(fp::fsub(rot, TAU))
             } else if rot < fp::fneg(TAU) {
-                fp::frsp(rot + TAU)
+                fp::frsp(fp::fadd(rot, TAU))
             } else {
                 rot
             }
@@ -1303,7 +1305,7 @@ pub fn lines_off(game: &mut Game) {
 
 /// The stage's shadow check, `grShrineRoute_OnCheckShadowRender`: a fighter casts on a joint
 /// below its feet.
-#[doc(alias = "grShrineRoute_OnCheckShadowRender")]
+// Ports grShrineRoute_OnCheckShadowRender; aliased once a check reaches it.
 pub fn check_shadow_render(game: &mut Game, data: &Archives, pos: Vec3, j: Option<JObjId>) -> bool {
     let b = world_position(&mut game.objs, data, j, None);
     pos.y > b.y
