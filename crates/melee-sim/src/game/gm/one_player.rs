@@ -1672,9 +1672,9 @@ impl super::super::state::Game {
     }
 
     /// A won 10-Man's (or 100-Man's) best time (`gm_801636D8`, `gm_80163A3C`; called only
-    /// for a win, whose outputs they write).
+    /// for a win, whose outputs they write). `gm_80163A3C`, 100-Man's, is aliased once a check
+    /// reaches it (a select after a won 100-Man Melee).
     #[doc(alias = "gm_801636D8")]
-    #[doc(alias = "gm_80163A3C")]
     pub fn multi_man_time(&self, hundred: bool, hud: u8) -> [u8; 4] {
         assert!(
             self.multi_man_won(hundred, hud),
