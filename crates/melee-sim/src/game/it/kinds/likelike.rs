@@ -277,7 +277,7 @@ pub fn in_reach(r: &mut Running, gobj: GObjId) -> i32 {
 
 /// Turns back at its speed (the inline `itSwapVelocity`, and `it_802D9B78`, the ledge's
 /// callback).
-#[doc(alias = "it_802D9B78")]
+// Ports it_802D9B78; aliased once a check reaches it.
 pub fn turn_back(r: &mut Running, gobj: GObjId) {
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
@@ -941,7 +941,7 @@ fn arm(r: &mut Running, gobj: GObjId) {
 
 /// Swallows falling, `it_802DB398`: facing its target, no target, its swallow's sound (0x139),
 /// its collision no longer an enemy's, state 11 (facing right) or 12, armed.
-#[doc(alias = "it_802DB398")]
+// Ports it_802DB398; aliased once a check reaches it.
 pub fn swallow_falling(r: &mut Running, gobj: GObjId) {
     let aim = get(r, gobj, off::AIM);
     item_mut(r.game, gobj).facing_dir = mem(fp::frsp(f64::from(aim)));
@@ -958,7 +958,7 @@ pub fn swallow_falling(r: &mut Running, gobj: GObjId) {
 
 /// The swallows' end (`itLikelike_UnkMotion12_Anim`, `_9_Anim`, `_10_Anim`): when the animation
 /// ends, with a fighter inside it chews, else it waits.
-#[doc(alias = "itLikelike_UnkMotion12_Anim")]
+// Ports itLikelike_UnkMotion12_Anim; aliased once a check reaches it.
 #[doc(alias = "itLikelike_UnkMotion9_Anim")]
 #[doc(alias = "itLikelike_UnkMotion10_Anim")]
 pub fn anim_swallow(r: &mut Running, gobj: GObjId) -> bool {
@@ -975,7 +975,7 @@ pub fn anim_swallow(r: &mut Running, gobj: GObjId) -> bool {
 
 /// The falling swallow's physics, `itLikelike_UnkMotion12_Phys`: in the air gravity, on the
 /// ground along the floor.
-#[doc(alias = "itLikelike_UnkMotion12_Phys")]
+// Ports itLikelike_UnkMotion12_Phys; aliased once a check reaches it.
 pub fn phys12(r: &mut Running, gobj: GObjId) {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         phys19(r, gobj);
@@ -986,7 +986,7 @@ pub fn phys12(r: &mut Running, gobj: GObjId) {
 
 /// The falling swallow's collision, `itLikelike_UnkMotion12_Coll`: in the air, landing it stops
 /// on the ground; on the ground, off it it lets go and falls.
-#[doc(alias = "itLikelike_UnkMotion12_Coll")]
+// Ports itLikelike_UnkMotion12_Coll; aliased once a check reaches it.
 pub fn coll12(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         if ground::air(r, gobj) {
@@ -1085,7 +1085,7 @@ pub fn spit(r: &mut Running, gobj: GObjId) {
 
 /// Lets go of its fighter (hit or KO'd), `it_802DBA68`: stopped, its fighter spat out straight,
 /// a 120-frame countdown, and it waits.
-#[doc(alias = "it_802DBA68")]
+// Ports it_802DBA68; aliased once a check reaches it.
 pub fn let_go(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     release(r, gobj, 0, true);

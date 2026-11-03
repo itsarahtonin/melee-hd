@@ -832,7 +832,6 @@ pub const MISSING: &[Gap] = &[
             "melee/it/kinds/itcoin",
             "melee/ft/ftCo_800C78B0",
             "fn_800C7890",
-            "it_802EA9FC",
             "grZakoGenerator_801CAF08",
             "it_8027B5B0 (an enemy of kind",
             "grZakoGenerator_801CAC14",
