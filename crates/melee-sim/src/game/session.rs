@@ -826,6 +826,23 @@ impl Session {
         }
         .entering_scene()
             == Some(super::gm::training::GS_TRAINING);
+        // Training's computer players join mid-match as its menu's count asks
+        // (`gm_8016EDDC`): the fighters' files of every slot the match may make.
+        if training {
+            let mut joining = start.clone();
+            for p in joining.players.iter_mut().take(4).skip(1) {
+                // The 33 character kinds; past them a slot names no one.
+                if (0..0x21).contains(&p.ckind) {
+                    p.slot_type = 1;
+                }
+            }
+            super::vs_match::load_fighter_files(
+                &mut self.game,
+                &mut self.data,
+                &joining,
+                &mut |n| console.file(n),
+            );
+        }
         if training && let Some(name) = super::gr::data::stage_file(grkind, us) {
             let archive = self
                 .game

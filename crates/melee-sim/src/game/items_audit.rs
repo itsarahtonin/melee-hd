@@ -182,6 +182,7 @@ pub const MODULES: &[&str] = &[
     "it/draw",
     "it/drop",
     "it/effect",
+    "it/evt_unk",
     "it/ground",
     "it/hitbox",
     "it/item",
@@ -373,12 +374,11 @@ const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fig
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
-const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload at the scene's end); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
+const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload, which no session reaches with Ditto out); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE84): the All-Star rest area's (Big Blue's flying platforms make only the five kinds ported, the Home-Run Contest's stage the bat, and a sudden death's bob-omb rain only bob-ombs)";
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
-const EVT_UNK: &str =
-    "an item's evt_unk, which only a fighter's unload at the scene's end runs (it_8026B7F8)";
+const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload runs (it_8026B7F8, game::it::evt_unk dispatches each): a player leaving a match in progress, which Training's computer players' count and reset and the single-player modes do and no VS match does";
 const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
 const POKEMON_MODES: &str =
     "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
@@ -398,44 +398,32 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
-    ("it_8026B7F8", EVT_UNK),
     ("it_2E5A_Logic115_EvtUnk", EVT_UNK),
     ("it_802F2BDC", EVT_UNK),
-    ("itBat_Logic11_EvtUnk", EVT_UNK),
     ("itCapsule_Logic0_EvtUnk", EVT_UNK),
     ("it_802D3F4C", EVT_UNK),
     ("itCoin_Logic116_EvtUnk", EVT_UNK),
     ("itCrazyHandBomb_Logic86_EvtUnk", EVT_UNK),
     ("itEgg_Logic3_EvtUnk", EVT_UNK),
     ("itEvYoshiEgg_Logic42_EvtUnk", EVT_UNK),
-    ("itFFlower_Logic25_EvtUnk", EVT_UNK),
     ("itFFlowerFlame_Logic41_EvtUnk", EVT_UNK),
-    ("itFlipper_EvtUnk", EVT_UNK),
     ("itFoods_Logic18_EvtUnk", EVT_UNK),
     ("itFreeze_Logic17_EvtUnk", EVT_UNK),
     ("it_802EB5A8", EVT_UNK),
-    ("itHarisen_Logic24_EvtUnk", EVT_UNK),
-    ("itHeart_Logic8_EvtUnk", EVT_UNK),
     ("it_802D9A0C", EVT_UNK),
     ("it_802EE1E0", EVT_UNK),
     ("it_802F0320", EVT_UNK),
-    ("itLGun_Logic16_EvtUnk", EVT_UNK),
     ("itLGunBeam_Logic39_EvtUnk", EVT_UNK),
     ("itLGunRay_Logic35_EvtUnk", EVT_UNK),
-    ("itLipstick_Logic23_EvtUnk", EVT_UNK),
     ("itLipstickSpore_Logic37_EvtUnk", EVT_UNK),
     ("itLucky_Logic44_EvtUnk", EVT_UNK),
     ("itMasterHandBullet_Logic85_EvtUnk", EVT_UNK),
     ("itMasterHandLaser_Logic84_EvtUnk", EVT_UNK),
     ("itMball_EvtUnk", EVT_UNK),
     ("itMetamon_Logic19_EvtUnk", EVT_UNK),
-    ("itMSBomb_Logic19_EvtUnk", EVT_UNK),
     ("it_802DD7D0", EVT_UNK),
-    ("itParasol_Logic13_EvtUnk", EVT_UNK),
     ("it_802E16D8", EVT_UNK),
-    ("itSScope_Logic21_EvtUnk", EVT_UNK),
     ("itSScopeBeam_Logic38_EvtUnk", EVT_UNK),
-    ("itStarRod_Logic22_EvtUnk", EVT_UNK),
     ("itStarRodStar_Logic36_EvtUnk", EVT_UNK),
     ("itTaruCann_Logic5_EvtUnk", EVT_UNK),
     ("it_802EC850", EVT_UNK),
@@ -443,7 +431,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802F0320", EVT_UNK),
     ("itTomato_Logic9_EvtUnk", EVT_UNK),
     ("it_802E4A24", EVT_UNK),
-    ("itWStar_Logic30_EvtUnk", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
     ("it_802E0468", EVT_UNK),
     ("melee/it/kinds/itlikelike", ADVENTURE),

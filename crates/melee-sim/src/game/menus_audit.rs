@@ -155,18 +155,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
     (
-        "gm_8016EDDC (a player joining a match)",
-        "Training's menu's computer players' count and reset, behind the Training gate (a fighter's unload and a fighter made mid-match aren't ported)",
-    ),
-    (
-        "fn_8016EF98 (a player leaving a match)",
-        "Training's menu's computer players' count and reset, behind the Training gate",
-    ),
-    (
-        "Player_800328D4 (the training menu's reset)",
-        "Training's menu's reset, behind the Training gate",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the single-player modes', which only the entries behind GATES lead to: each mode's states past its select (gm::one_player), its own task's",
     ),

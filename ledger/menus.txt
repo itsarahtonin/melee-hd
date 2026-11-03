@@ -172,8 +172,6 @@ gm_AnyControllerPressedStart	unchecked	a getter or setter of the game's data, wh
 gm_AnyControllerPressedZ	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016C75C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_8016ECE8	gated	the boss stages' cycle (Final Destination's, a boss's health): the single-player modes', which only the 1P list's gated entries lead to
-gm_8016EDDC	gated	named only by the single-player modes' code (fn_8017C0C8, fn_80181C80, fn_80188550): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016EF98	gated	named only by the single-player modes' code (fn_80181C80, fn_80188550, fn_80188644): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016F280	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8016F344	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
@@ -242,5 +240,3 @@ onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmo
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 fn_80197FD8	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 gm_8019A828	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
-fn_80188550	unchecked	Training's computer players' count: ported, held until a session compares a player joining or leaving the match (gm_8016EDDC and fn_8016EF98 aren't ported)
-fn_80188644	unchecked	Training's menu's reset: ported, held until a session compares a player joining or leaving the match (gm_8016EDDC and fn_8016EF98 aren't ported)

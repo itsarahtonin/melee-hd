@@ -572,6 +572,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** a weight changes every VS match's Pokémon draws (gameplay, replays and Slippi peers desync); dropping the entry changes Training's draws only.
 - **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`); the decomp's `it_279C.c`; the items audit's `DITTO` reason.
 
+### A fighter's unload reads the next item from an item it destroyed
+
+- **Where:** `it_8026B7F8` (every item lets a fighter going away go, from `Fighter_Unload_8006DABC`), `crates/melee-sim/src/game/it/evt_unk.rs` (`fighter_unloaded`).
+- **Defect:** the walk over the items' process link destroys an item a fighter has (`xDC8_word.flags.x13`) whose owner, before its `evt_unk` ran, was the fighter going away (`Item_8026A8EC`, which frees its GObj), then steps to `cur->next`, a word of the freed GObj. `HSD_GObjFree` unlinks the GObj without clearing its `next` and `HSD_ObjFree` writes only its first word, so the word still names the item after it.
+- **Effect:** none observable: the GObj's free is the destroy's last call, so nothing takes its block before the walk reads it. (The fighter unload's sessions reach no such destroy: no computer player left holding an item.)
+- **melee-hd:** modeled: the walk reads the freed GObj's `next` from its pool's slot, which keeps it as the original's block does.
+- **Fix:** read `cur->next` before the callback and the destroy.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/game/it/evt_unk.rs` (`fighter_unloaded`); the decomp's `it_26B1.c`.
+
 ### Item creation clears one coordinate three times
 
 - **Where:** `Item_80267AA8` (a new item's variables), `crates/melee-sim/src/game/it/item.rs` (`init_vars`).
