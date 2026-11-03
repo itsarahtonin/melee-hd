@@ -2147,6 +2147,42 @@ fn the_home_run_contest() {
     }
 }
 
+/// Multi-Man Melee (milestone 6's task 15), from power-on with the heap, each run's card after
+/// it the original's: a loss in each of the six modes (`m6-multiman/mm-10` to `mm-cruel`: some
+/// play, then Fox runs off the stage, the select again), 10-Man Melee won (`mm-10-win`, port 1
+/// played by a bot from melee-hd's state, ssbm-rs's run of its reads the reference; the select
+/// again shows the time), and the list turned and left (`mm-menu`: into 100-Man's select and
+/// back, the list again on 100-Man, back to the Stadium list).
+#[test]
+fn multi_man_melee() {
+    for (name, ticks) in [
+        ("mm-10", 4157),
+        ("mm-100", 4197),
+        ("mm-3min", 4235),
+        ("mm-15min", 4277),
+        ("mm-endless", 4316),
+        ("mm-cruel", 3865),
+        ("mm-10-win", 3740),
+        ("mm-menu", 1983),
+    ] {
+        let run = ssbm_rs_local(&format!("lockstep/m6-multiman/{name}-run.card"));
+        let after = if std::path::Path::new(&run).exists() {
+            run
+        } else {
+            ssbm_rs_local(&format!("traces/m6-multiman/{name}-play.card"))
+        };
+        let args = ["--all", "--heap", "--card-after", &after];
+        if let Some(out) = scripted_session("m6-multiman", name, &args) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference"))
+                    && out.contains("no stale reads")
+                    && out.contains("the card after the session: the original's"),
+                "{name}: {out}"
+            );
+        }
+    }
+}
+
 /// Training (milestone 6's task 13), from power-on with the heap: task 1's
 /// `m6-oracle/training` (the select, the stage select, the match with some play) and
 /// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
