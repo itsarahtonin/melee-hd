@@ -26,7 +26,7 @@ fn mem(r: f64) -> f32 {
 
 /// The sprites' camera's channels (`lbl_8040C418`, `lbl_8040C448`): the color and the alpha
 /// from registers, unlit.
-fn channels() -> [Chan; 2] {
+pub(crate) fn channels() -> [Chan; 2] {
     let chan = |chan, amb_color, mat_color| Chan {
         chan,
         flags: 0,
