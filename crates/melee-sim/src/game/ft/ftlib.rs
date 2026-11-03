@@ -58,6 +58,12 @@ impl Game {
         self.fighter(gobj).is_sleeping
     }
 
+    /// Whether the fighter is in hitstun (`x221C_b6`), `ftLib_IsInHitstun`.
+    #[doc(alias = "ftLib_IsInHitstun")]
+    pub fn ft_is_in_hitstun(&self, gobj: GObjId) -> bool {
+        self.fighter(gobj).x221C_b6
+    }
+
     /// Whether the fighter is on its respawn platform, `ftLib_IsRebirth`.
     #[doc(alias = "ftLib_IsRebirth")]
     pub fn ft_is_rebirth(&self, gobj: GObjId) -> bool {

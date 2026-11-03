@@ -257,6 +257,7 @@ impl<'a> Comparer<'a> {
         self.charsel_statics();
         self.stagesel_statics();
         self.one_player();
+        self.home_run();
         // The Hanyu selects' own data (`gm_8049BEE8`, `gm_8049C030`), the debug mode's.
         let d = &game.debug_mode;
         let (hc, hs) = (0x8049_BEE8, 0x8049_C030);

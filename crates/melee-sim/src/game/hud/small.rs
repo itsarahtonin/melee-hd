@@ -244,6 +244,12 @@ impl Running<'_> {
         self.create_hazard(desc, 1);
     }
 
+    /// The F-Zero race's car sign, unmoved, `un_802FD8E8`.
+    #[doc(alias = "un_802FD8E8")]
+    pub fn create_route_hazard(&mut self, desc: DataRef) {
+        self.create_hazard(desc, 2);
+    }
+
     /// The coin counter's process, `fn_802FED14`: hidden when not running; otherwise it
     /// counts a coin every few frames with a sound (another every tenth), placed and posed
     /// on its count.

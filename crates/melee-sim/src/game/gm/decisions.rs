@@ -500,15 +500,15 @@ impl Game {
     }
 
     /// The single-player modes' progress the bonuses ask about, `fn_80171A88`: 0 outside
-    /// them; in them `fn_8017E0E4`'s, the run's (Classic's, Adventure's, All-Star's), or for
-    /// the modes without a run its -1 taken as 1.
+    /// them, a 1P run's (`fn_8017E0E4`), 1 in the other single-player modes (where
+    /// `fn_8017DF28` has no run, -1).
     #[doc(alias = "fn_80171A88")]
     pub fn single_player_progress(&self) -> i32 {
         if !super::is_1p_mode(self) {
             return 0;
         }
         if self.is_1p_run() {
-            super::super::code::unported_call("fn_80171A88 in a single-player run (fn_8017E0E4)");
+            super::super::code::unported_call("fn_80171A88 in a 1P run (fn_8017E0E4)");
         }
         1
     }

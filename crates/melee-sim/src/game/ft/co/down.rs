@@ -5,7 +5,6 @@
 use gekko_fp as fp;
 
 use super::super::super::camera;
-use super::super::super::code::unported_call;
 use super::super::super::ef;
 use super::super::super::state::Running;
 use super::super::common::{GA_AIR, GA_GROUND};
@@ -167,9 +166,62 @@ impl Running<'_> {
     #[doc(alias = "ftCo_80097D88")]
     pub fn enter_down_bound_keep(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).is_sandbag {
-            unported_call("ftCo_80097AF4");
+            self.sandbag_down_bound(gobj);
+        } else {
+            self.down_bound(gobj);
         }
-        self.down_bound(gobj);
+    }
+
+    /// Sandbag's bounce, `ftCo_80097AF4`: by its hip joint's matrix (its z column, as it lies
+    /// on that axis), standing on end bounces as anyone's does; lying flat raises the dust and
+    /// a large quake, then it waits facing its way or lies face down (`ftSb_Init_8014FBA4`).
+    #[doc(alias = "ftCo_80097AF4")]
+    pub fn sandbag_down_bound(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        let part = self.bone_index(&self.game.fighters[f.0], HIP_N);
+        let j = self.bones(f)[part as usize].joint;
+        jobj::setup_matrix(&mut self.game.objs, self.data, j);
+        let m = &self.game.objs.jobjs[j.expect("a hip joint")].mtx.m;
+        let col = if self.game.fighters[f.0].x2226_b0 {
+            2
+        } else {
+            1
+        };
+        let (rot0, rot1) = (m[0][col], m[1][col]);
+        if abs(reg(rot0)) < abs(reg(rot1)) {
+            if self.is_airborne(gobj) {
+                self.land(gobj);
+            }
+            let mut up = self.hips_up(gobj);
+            if self.game.fighter(gobj).x2226_b1 {
+                up = !up;
+            }
+            let msid = if up {
+                ms::DOWN_BOUND_U
+            } else {
+                ms::DOWN_BOUND_D
+            };
+            self.change_motion_state(gobj, msid, DOWN_FLAGS, 0.0, 1.0, 0.0, None);
+            self.knockdown_dust(gobj);
+            let max = reg(self.common().f32(0x164));
+            let fp = self.game.fighter_mut(gobj);
+            fp.x67C = 255;
+            fp.x67D = 255;
+            fp.x1A6A = 511;
+            Self::grounded_knockback_if_landed(fp, max);
+        } else {
+            self.knockdown_dust(gobj);
+            let pos = self.game.fighters[f.0].cur_pos;
+            camera::request_quake(self, QUAKE_LARGE, Some(pos));
+            let facing = self.game.fighters[f.0].facing_dir;
+            if fp::fmuls(reg(facing), reg(rot0)) > 0.0 {
+                self.enter_wait(gobj);
+            } else {
+                self.sb_enter_wait_reverse(gobj);
+            }
+            let max = reg(self.common().f32(0x164));
+            Self::grounded_knockback_if_landed(self.game.fighter_mut(gobj), max);
+        }
     }
 
     /// The bounce, `ftCo_8009794C`: face up or down as the hips land, the dust, and the

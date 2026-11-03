@@ -48,7 +48,8 @@ pub enum Replay {
     /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
-    /// `lockstep/celebi-sessions/celebiN.inputs` (ssbm-rs's `SSBMINP1`), played in the
+    /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
+    /// `ze-NAME` `lockstep/m6-brinstar-escape/` (ssbm-rs's `SSBMINP1`), played in the
     /// console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
@@ -79,6 +80,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6e-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6-") {
                     return ssbm_rs_local(&format!("lockstep/m6-select/{o}.inputs")).into();
                 }
@@ -101,6 +105,24 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/tournament-sessions/{o}.inputs"))
                         .into();
                 }
+                if let Some(o) = name.strip_prefix("o6-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-oracle/{o}.inputs")).into();
+                }
+                if name.starts_with("tt-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-target-test/{name}.inputs")).into();
+                }
+                if name.starts_with("race-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
+                }
+
+                if let Some(o) = name.strip_prefix("gb-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
+                }
+
+                if name.starts_with("hr-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
+                }
+
                 if name.starts_with("tr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-training/{name}.inputs")).into();
                 }
@@ -110,6 +132,28 @@ impl Replay {
                 }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6c-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-cutscenes-2/{o}.inputs")).into();
+                }
+                if name.starts_with("fz-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-fzero-race/{name}.inputs")).into();
+                }
+
+                if name.starts_with("im-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-icicle-climb/{name}.inputs"))
+                        .into();
+                }
+                if name.starts_with("ze-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
+                        .into();
+                }
+
+                if name.starts_with("ch-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-crazy-hand/{name}.inputs")).into();
+                }
+                if name.starts_with("mh-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-master-hand/{name}.inputs")).into();
                 }
                 if name.starts_with("celebi") {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
@@ -763,6 +807,163 @@ pub const MK_FALL: Game = Game {
     replay: Replay::Session("mk-fall2"),
 };
 
+/// The F-Zero race (`m6-fzero-race/fz-run`, debug VS at debug level 3): Link running along the
+/// track, the hazard sign, the cars driving past and hitting him.
+pub const FZ_RUN: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-run",
+    players: "Link running along the track, Mario left at the start (session m6-fzero-race/fz-run)",
+    replay: Replay::Session("fz-run"),
+};
+
+/// The F-Zero cutscene (`m6-fzero-race/fz-cutscene`, the debug cutscene mode at debug level 3):
+/// the race's cars on the cutscene's racers.
+pub const FZ_CUTSCENE: Game = Game {
+    stage: "F-Zero race",
+    name: "fz-cutscene",
+    players: "the F-Zero cutscene's racers (session m6-fzero-race/fz-cutscene)",
+    replay: Replay::Session("fz-cutscene"),
+};
+
+/// The debug cutscene mode whole (`m6-cutscenes-2/cutscenes`, debug level 3): every cutscene
+/// in turn.
+pub const M6C_CUTSCENES: Game = Game {
+    stage: "the cutscenes",
+    name: "m6c-cutscenes",
+    players: "the debug cutscene mode's eleven cutscenes (session m6-cutscenes-2/cutscenes)",
+    replay: Replay::Session("m6c-cutscenes"),
+};
+
+/// The 26 target stages at debug level 3 (`m6-oracle/targets`): Mario's and the Ice Climbers'.
+pub const TT_TARGETS: Game = Game {
+    stage: "the target stages",
+    name: "o6-targets",
+    players: "Link and Mario on each target stage in turn (session m6-oracle/targets)",
+    replay: Replay::Session("o6-targets"),
+};
+
+/// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
+pub const TT_DK_QUIT: Game = Game {
+    stage: "Donkey Kong's target stage",
+    name: "tt-dk-quit",
+    players: "Donkey Kong alone, jabbing at the targets by the start (session m6-target-test/tt-dk-quit)",
+    replay: Replay::Session("tt-dk-quit"),
+};
+
+pub const RACE_LOOK: Game = Game {
+    stage: "the race",
+    name: "race-look",
+    players: "Link vs Mario, Link running to the second door (session m6-race/race-look)",
+    replay: Replay::Session("race-look"),
+};
+
+pub const RACE_SPIKES: Game = Game {
+    stage: "the race",
+    name: "race-spikes",
+    players: "Fox alone, down the course into the spikes (session m6-race/race-spikes)",
+    replay: Replay::Session("race-spikes"),
+};
+
+pub const RACE_PILLAR: Game = Game {
+    stage: "the race",
+    name: "race-pillar",
+    players: "Fox alone, into the pillars and to door 0xA3 (session m6-race/race-pillar)",
+    replay: Replay::Session("race-pillar"),
+};
+
+/// Brinstar's escape at rest (`m6-brinstar-escape/ze-look`): Link and Mario at the shaft's foot.
+pub const ZE_LOOK: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-look",
+    players: "Link and Mario standing (session m6-brinstar-escape/ze-look)",
+    replay: Replay::Session("ze-look"),
+};
+
+/// Brinstar's escape climbed (`m6-brinstar-escape/ze-climb`): Fox up the shaft to the way out.
+pub const ZE_CLIMB: Game = Game {
+    stage: "Brinstar escape",
+    name: "ze-climb",
+    players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
+    replay: Replay::Session("ze-climb"),
+};
+
+/// Giga Bowser (`m6-giga-bowser/gk`, debug VS at debug level 3): a human's Giga Bowser
+/// through his moveset against Mario on Final Destination, his fire breath and Koopa Klaw.
+pub const GB_GK: Game = Game {
+    stage: "Final Destination",
+    name: "gb-gk",
+    players: "Giga Bowser vs Mario, his specials (session m6-giga-bowser/gk)",
+    replay: Replay::Session("gb-gk"),
+};
+
+/// The male Wire Frame (`m6-giga-bowser/boy`): a forward smash against Mario.
+pub const GB_BOY: Game = Game {
+    stage: "Final Destination",
+    name: "gb-boy",
+    players: "the male Wire Frame vs Mario (session m6-giga-bowser/boy)",
+    replay: Replay::Session("gb-boy"),
+};
+
+/// The female Wire Frame (`m6-giga-bowser/girl`): a forward smash against Mario.
+pub const GB_GIRL: Game = Game {
+    stage: "Final Destination",
+    name: "gb-girl",
+    players: "the female Wire Frame vs Mario (session m6-giga-bowser/girl)",
+    replay: Replay::Session("gb-girl"),
+};
+
+/// Master Hand (`m6-master-hand/mh-1p`, debug VS at debug level 3, Link against him on Final
+/// Destination).
+pub const MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "mh-1p",
+    players: "Link vs Master Hand (session m6-master-hand/mh-1p)",
+    replay: Replay::Session("mh-1p"),
+};
+
+/// Crazy Hand alone (`m6-crazy-hand/ch-probe`, debug VS at debug level 3, Link against him on
+/// Final Destination).
+pub const CH_PROBE: Game = Game {
+    stage: "Final Destination",
+    name: "ch-probe",
+    players: "Link vs Crazy Hand (session m6-crazy-hand/ch-probe)",
+    replay: Replay::Session("ch-probe"),
+};
+
+/// Both hands (`m6-crazy-hand/ch-mh-1p`): Crazy Hand's entrance, his grab, the tag attacks.
+pub const CH_MH_1P: Game = Game {
+    stage: "Final Destination",
+    name: "ch-mh-1p",
+    players: "Link vs Master Hand and Crazy Hand (session m6-crazy-hand/ch-mh-1p)",
+    replay: Replay::Session("ch-mh-1p"),
+};
+
+/// The adventure's Icicle Mountain at rest (`m6-icicle-climb/im-look`): Link and Mario standing
+/// as the fields climb.
+pub const IM_LOOK: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-look",
+    players: "Link and Mario standing (session m6-icicle-climb/im-look)",
+    replay: Replay::Session("im-look"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears jumping (`m6-icicle-climb/im-jump`): the debug
+/// item menu's bears above Fox.
+pub const IM_JUMP: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-jump",
+    players: "Fox and two Polar Bears, Mario standing (session m6-icicle-climb/im-jump)",
+    replay: Replay::Session("im-jump"),
+};
+
+/// The adventure's Icicle Mountain's Polar Bears beaten (`m6-icicle-climb/im-bears`).
+pub const IM_BEARS: Game = Game {
+    stage: "the adventure's Icicle Mountain",
+    name: "im-bears",
+    players: "Fox smashing two Polar Bears, Mario standing (session m6-icicle-climb/im-bears)",
+    replay: Replay::Session("im-bears"),
+};
+
 /// The stage's displays (`debug-sessions/vs-stage`): Link and Mario on Battlefield, the zones,
 /// camera boxes and special points, the collisions by kind, by terrain and by ledge.
 pub const DEBUG_VS_STAGE: Game = Game {
@@ -909,6 +1110,15 @@ pub const M6_CLASSIC: Game = Game {
     replay: Replay::Session("m6-classic"),
 };
 
+/// The debug mode's game over (`m6-endings/gameover2`): the trophy on its stand and the
+/// question, the continue's coins paid and the score counting down, and "no"'s end.
+pub const M6E_GAMEOVER: Game = Game {
+    stage: "Debug menu",
+    name: "m6e-gameover2",
+    players: "the debug mode's game over (session m6-endings/gameover2)",
+    replay: Replay::Session("m6e-gameover2"),
+};
+
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
 pub const M6_TARGET: Game = Game {
     stage: "Main menu",
@@ -959,6 +1169,23 @@ pub const M6_HOMERUN: Game = Game {
     name: "m6-homerun",
     players: "the Home-Run Contest's select (session m6-select/homerun)",
     replay: Replay::Session("m6-homerun"),
+};
+
+/// The Home-Run Contest with the bat (`m6-homerun/hr-long`): the platform and the bat, Sandbag
+/// in flight over the field's stretches, the labels' texts, the counter and its new record.
+pub const HR_LONG: Game = Game {
+    stage: "Home-Run Contest",
+    name: "hr-long",
+    players: "Fox and Sandbag, the bat (session m6-homerun/hr-long)",
+    replay: Replay::Session("hr-long"),
+};
+
+/// The Home-Run Contest with no hit (`m6-homerun/hr-miss`): the "no distance" sign.
+pub const HR_MISS: Game = Game {
+    stage: "Home-Run Contest",
+    name: "hr-miss",
+    players: "Fox and Sandbag, no hit (session m6-homerun/hr-miss)",
+    replay: Replay::Session("hr-miss"),
 };
 
 /// Classic's select on a card every character has cleared everything on
@@ -1373,5 +1600,9 @@ pub mod why {
     /// an archive's header no layout covers): the draws sample the copies, and the images
     /// are identical.
     pub const RESULTS_COPY: &str = "the results' images: copies kept on the GPU, compared by         memory holding their blocks' leftovers, a few bytes of which the heap's image doesn't know";
+    /// Star Fox's cutscene erases the screen to the background color, whose alpha
+    /// `Camera_GetBackgroundColor` leaves a stack byte; the erase writes color and depth only,
+    /// so the alpha reaches no pixel (docs/engine.md, uninitialized values).
+    pub const ERASE_ALPHA: &str = "Star Fox's cutscene's erase: the background color's unset alpha, which the erase never writes";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }
