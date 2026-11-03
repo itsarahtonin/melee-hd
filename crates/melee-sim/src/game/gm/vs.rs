@@ -185,7 +185,7 @@ impl Game {
     /// `gm_8016B014`: in a match with the rules' `x4_2` (Target Test's) where the
     /// single-player setup's `unk_10_b1` is off (`gm_8016A1F8`), whether the first player is
     /// alone (no other slot in play).
-    // Ports gm_8016B014; aliased once a check reaches it.
+    #[doc(alias = "gm_8016B014")]
     pub fn single_player_alone(&self) -> bool {
         self.vs.start.x4_2
             && self.gm.spawn_flags & 0x40 == 0

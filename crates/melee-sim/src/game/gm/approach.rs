@@ -197,8 +197,7 @@ impl Running<'_> {
 
     /// `onExitVs` (the challenger approach mode's): as VS mode's, but the mode the challenger
     /// came from next.
-    // Ports `onExitVs@801BFBA8`; aliased once a check reaches it (the single-player modes'
-    // challengers, milestone 6).
+    #[doc(alias = "onExitVs@801BFBA8")]
     pub fn challenger_approach_vs_on_exit(&mut self) {
         let mode = self.game.gm.challenger.curr_mode;
         self.approach_vs_exit(Some(mode));
