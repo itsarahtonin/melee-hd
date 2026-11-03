@@ -103,11 +103,7 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("mh-fd", 7178, ""),
         ("mh-human", 7188, ""),
         ("kinoko", 6493, ""),
-        (
-            "meikyu",
-            1242,
-            "not implemented: stage kind 32 isn't ported",
-        ),
+        ("meikyu", 5902, ""),
         ("intro-easy", 1362, "game scene 0x20 isn't ported"),
         ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
         ("gameover", 3157, ""),

@@ -67,6 +67,8 @@ pub struct ObjCollHooks<'a> {
     pub escape: crate::game::gr::zebesroute::EndTouch,
     /// Whose collision touched Icicle Mountain's lines, for the adventure's climb.
     pub climb: crate::game::gr::icemt::ClimbTouch,
+    /// Whose collisions stood on the Underground Maze's symbols' floors.
+    pub maze: crate::game::gr::shrineroute::SymbolTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -377,6 +379,12 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::shrineroute::SYMBOL_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    self.maze
+                        .touched(g, coll.x34_flags.b1234, coll.x0_gobj, kind);
+                }
+            }
             super::super::gr::zebesroute::END_TOUCHED => super::super::gr::zebesroute::end_touched(
                 &mut self.escape,
                 coll.x34_flags.b1234,
@@ -526,6 +534,7 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             climb: Default::default(),
+            maze: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
@@ -547,11 +556,13 @@ impl Running<'_> {
         let bumps = std::mem::take(&mut hooks.bumps);
         let escape = std::mem::take(&mut hooks.escape);
         let climb = std::mem::take(&mut hooks.climb);
+        let maze = std::mem::take(&mut hooks.maze);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
         escape.apply(game);
         climb.apply(game);
+        maze.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,

@@ -44,6 +44,7 @@ pub mod pushon;
 pub mod rcruise;
 pub mod setup;
 pub mod shrine;
+pub mod shrineroute;
 pub mod stadium;
 pub mod stage;
 pub mod story;
@@ -125,6 +126,8 @@ pub const GR_KIND_MUTECITY: i32 = 18;
 pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_ShrineRoute`, the Underground Maze.
+pub const GR_KIND_SHRINEROUTE: i32 = 32;
 /// `Gr_Kind_BigBlueRoute`, the F-Zero race.
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_ZebesRoute`, Brinstar's escape.
@@ -275,6 +278,10 @@ pub struct Globals {
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
+    /// The Underground Maze's `yakumono_param` (`grShrineRoute_YakumonoParam`): its color
+    /// scripts, the pit's hit, the symbols' scales, the symbols' boxes, the trophy slot's odds
+    /// and the enemy spawner's table.
+    pub shrineroute_yakumono: Option<DataRef>,
     /// The F-Zero race's `yakumono_param` (`grBigBlueRoute_YakumonoParam`): the trophy slot's
     /// odds, the cars' scale, speeds, count and waits.
     pub bigblueroute_yakumono: Option<DataRef>,
@@ -526,6 +533,10 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_SHRINEROUTE, 4) => VarsKind::ShrineRoute,
+        (GR_KIND_SHRINEROUTE, 5) => VarsKind::ShrineRoute3,
+        // The maze's lights' variables have the race's lights' layout.
+        (GR_KIND_SHRINEROUTE, 6) => VarsKind::PushOn,
         (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
         (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
         (GR_KIND_PUSHON, 1) => VarsKind::Map,

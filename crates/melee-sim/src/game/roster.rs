@@ -783,14 +783,6 @@ pub(crate) mod tests {
             "a single-player mode's trophy slot (stage_info.x6E4 is -1 outside one)",
         ),
         (
-            "a spawner's ReDead",
-            "enemy spawners, which no roster stage configures",
-        ),
-        (
-            "a spawner's Like Like",
-            "enemy spawners, which no roster stage configures",
-        ),
-        (
             "a spawn configuration that keeps its generator",
             "spawn configurations with a negative chance, which no roster stage makes (Brinstar's draw theirs at 1)",
         ),

@@ -2013,6 +2013,9 @@ impl Running<'_> {
                     super::super::gr::kinokoroute::water_device(self, gobj);
                     None
                 }
+                Some(super::super::gr::shrineroute::PIT_DEVICE) => {
+                    super::super::gr::shrineroute::pit_device(self, gobj)
+                }
                 Some(super::super::gr::pushon::SPIKES_DEVICE) => {
                     super::super::gr::pushon::spikes_device(self, gobj)
                 }
@@ -2194,6 +2197,7 @@ impl Running<'_> {
                     || f.0 == 0x8021_0780
                     || f.0 == 0x8020_1F44
                     || f.0 == 0x8020_8754
+                    || f.0 == 0x8020_B104
                     || f.0 == 0x8020_DF78
                     || f.0 == 0x8020_B854
                     || f.0 == 0x8021_EEB4

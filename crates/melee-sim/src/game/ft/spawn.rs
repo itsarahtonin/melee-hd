@@ -522,6 +522,7 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             climb: Default::default(),
+            maze: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(
                 &game.world,
@@ -576,6 +577,7 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             climb: Default::default(),
+            maze: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(
                 &game.world,
@@ -604,9 +606,11 @@ impl Running<'_> {
         let bumps = std::mem::take(&mut hooks.bumps);
         let escape = std::mem::take(&mut hooks.escape);
         let climb = std::mem::take(&mut hooks.climb);
+        let maze = std::mem::take(&mut hooks.maze);
         kicks.apply(game, self.data);
         escape.apply(game);
         climb.apply(game);
+        maze.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,
