@@ -179,6 +179,10 @@ pub const STOPS: &[(&str, &str)] = &[
         "the Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
     ),
     (
+        "the race's clear",
+        "a stage clear of the third kind (the start data's x9 3) is the race to the finish's, a Classic bonus stage behind Classic's gate (gm_17C0)",
+    ),
+    (
         "a 1P run's getter",
         "only All-Star's round setup (gm_801B5324, behind the All-Star gate) asks a getter, its costumes' (gm_8018A25C)",
     ),

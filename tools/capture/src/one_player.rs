@@ -335,6 +335,17 @@ impl Comparer<'_> {
         self.check(name, "x114 to x11F (the screen's flags)", ours, theirs);
         let theirs = self.u32(sym("lbl_804D65C0")) as i32;
         self.check("lbl_804D65C0", "the score's step", c.step, theirs);
+        let l = self.game.gm.left;
+        let at = melee_sim::game::gm::one_player_match::LEFT_LIST;
+        let theirs: [[i8; 0x1C]; 2] = core::array::from_fn(|k| {
+            core::array::from_fn(|i| self.u8(at + 0x1C * k as u32 + i as u32) as i8)
+        });
+        self.check(
+            "lbl_8046B668",
+            "the characters left",
+            [l.arr1, l.arr2],
+            theirs,
+        );
     }
 
     /// The blurred copy's user data (`CameraBlurData`), the GObj at `t`.
