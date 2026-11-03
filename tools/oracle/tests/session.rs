@@ -2076,6 +2076,43 @@ fn target_test_from_the_menu() {
     );
 }
 
+/// Target Test's clears and a hit (milestone 6's task 6), from power-on with the heap, each to
+/// its trace's end with the card after the run's byte for byte: `tt-clear` (Samus's stage
+/// cleared on a card without Mr. Game & Watch: the first clear's records, the new record's
+/// rumble, the unlock checks, the select again with its save), `tt-short` (the same clear on
+/// a card one clear short of Target Test's unlocks: Mr. Game & Watch's challenge, the stage
+/// 0x1C and the record trophies, the challenger's match lost, the notices and back to the
+/// select), `tt-gw` (on a card one clear short of the challenge alone: the challenger's match
+/// lost and straight back to the select) and `tt-flipper` (Luigi bounced by a Flipper, a hit
+/// with him alone).
+#[test]
+fn target_test_cleared() {
+    for (name, ticks) in [
+        ("tt-clear", 3723),
+        ("tt-short", 7019),
+        ("tt-gw", 6022),
+        ("tt-flipper", 2179),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-target-test/{name}-run.card"));
+        let Some(out) = scripted_session(
+            "m6-target-test",
+            name,
+            &["--all", "--heap", "--card-after", &card],
+        ) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Giga Bowser in the debug menu's Versus page (milestone 6's task 7), from power-on with the
 /// heap: `m6-giga-bowser/gk` (a human's Giga Bowser through his moveset, Bowser's specials
 /// with his animations, against Mario) and `kb-gk` (Kirby's inhale over Giga Bowser again and
