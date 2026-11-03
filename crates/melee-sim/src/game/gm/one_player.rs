@@ -33,6 +33,74 @@ pub const TRAINING_MODE: u8 = 0x17;
 
 /// `ChKind_None`, `ChKind_Sandbag`, `CKind_Boy`, `CKind_Girl`, `CKind_GameWatch`.
 const CHKIND_NONE: i8 = 0x21;
+
+/// `lbl_803D5168`: each character's target stage (its stage kind, the character), ending in
+/// a row of zeros.
+const TARGET_STAGES: [(u8, u8); 28] = [
+    (0x22, 0x00),
+    (0x24, 0x01),
+    (0x27, 0x02),
+    (0x38, 0x03),
+    (0x29, 0x04),
+    (0x2A, 0x05),
+    (0x2B, 0x06),
+    (0x2C, 0x07),
+    (0x21, 0x08),
+    (0x2D, 0x09),
+    (0x2E, 0x0A),
+    (0x2F, 0x0B),
+    (0x30, 0x0C),
+    (0x32, 0x0D),
+    (0x28, 0x0E),
+    (0x33, 0x0F),
+    (0x34, 0x10),
+    (0x36, 0x11),
+    (0x37, 0x12),
+    (0x35, 0x13),
+    (0x26, 0x14),
+    (0x23, 0x15),
+    (0x25, 0x16),
+    (0x39, 0x17),
+    (0x31, 0x18),
+    (0x3A, 0x19),
+    (0x48, 0x00),
+    (0x00, 0x00),
+];
+
+/// A character's target stage, `gm_801647F8`: Popo's as the Ice Climbers'. The table's
+/// stage kinds are bytes, so its end test (0x148) never holds: a character the table lacks
+/// would read past it, which no select allows.
+#[doc(alias = "gm_801647F8")]
+pub fn target_stage(ckind: u8) -> u16 {
+    let ckind = if ckind == 0x20 { 0xE } else { ckind };
+    match TARGET_STAGES.iter().find(|e| e.1 == ckind) {
+        Some(e) => u16::from(e.0),
+        None => crate::game::code::unported_call(&format!(
+            "gm_801647F8 reading past lbl_803D5168 for character {ckind:#x}"
+        )),
+    }
+}
+
+/// A character's best time in the session's records (`gmMainLib_8015D450`, `x4C[selkind]`),
+/// whose last 21 entries the decomp's type calls padding.
+fn target_best(rec: &crate::game::structs::gmm_retval_EDBC, sel: u8) -> i32 {
+    let i = usize::from(sel);
+    if i < 4 {
+        return rec.x4C[i];
+    }
+    let o = 4 * (i - 4);
+    i32::from_be_bytes(rec.padding_x4C[o..o + 4].try_into().expect("four bytes"))
+}
+
+fn set_target_best(rec: &mut crate::game::structs::gmm_retval_EDBC, sel: u8, v: i32) {
+    let i = usize::from(sel);
+    if i < 4 {
+        rec.x4C[i] = v;
+        return;
+    }
+    let o = 4 * (i - 4);
+    rec.padding_x4C[o..o + 4].copy_from_slice(&v.to_be_bytes());
+}
 const CHKIND_SANDBAG: i32 = 0x1F;
 
 /// `gmPlayerData`: a 1P run's player.
@@ -119,9 +187,11 @@ pub enum MatchupRef {
 pub struct OnePlayer {
     /// `gmClassic_80470708`: Classic's, Adventure's and All-Star's select data.
     pub css: CssData,
-    /// `gm_80490960`: Target Test's select data, and its match's start (`gm_80490AA8`).
+    /// `gm_80490960`: Target Test's select data, its match's start (`gm_80490AA8`) and its
+    /// match's exit data (`gm_80490BE0`).
     pub target_css: CssData,
     pub target_start: StartMeleeData,
+    pub target_exit: super::match_exit::MatchExitInfo,
     /// `css_data`, `sss_data` (`gmtrainingmode.c`): Training's selects' data.
     pub training_css: CssData,
     pub training_sss: SssData,
@@ -176,6 +246,7 @@ impl Default for OnePlayer {
             css: css.clone(),
             target_css: css.clone(),
             target_start: StartMeleeData::default(),
+            target_exit: Default::default(),
             training_css: css,
             training_sss: SssData::default(),
             target_slot: 0,
@@ -911,7 +982,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B63C4`: back to the menu, or the choice saved and the announcer's bank.
-    // Ports `gm_801B63C4`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B63C4")]
     pub fn target_exit_css(&mut self) {
         let css = &self.game.one_player.target_css;
         if css.pending_scene_change == 2 {
@@ -924,6 +995,200 @@ impl Running<'_> {
         t.unk_585 = color;
         t.unk_586 = nametag;
         self.load_announcer_bank();
+    }
+
+    /// `gm_801B6428`: Target Test's match, from the select's rules with the mode's own: a
+    /// timed match without a limit whose timer counts up and shows hours, the pause's
+    /// single-player handler (`gm_80165290`), no items; the player alone at the mode's port
+    /// with its saved character (Popo for the Ice Climbers), costume and name tag, one stock;
+    /// the character's target stage, in the game cache too; and the rumble setting.
+    #[doc(alias = "gm_801B6428")]
+    pub fn target_enter_match(&mut self) {
+        let t = self.game.game_data.vs.unk_530.unk_584.clone();
+        let slot = self.game.one_player.target_slot;
+        let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
+        let tags = self.nametag_rumbles();
+        let o = &mut self.game.one_player;
+        let s = &mut o.target_start;
+        s.rules.clone_from(&o.target_css.vs.start.rules);
+        let r = &mut s.rules;
+        r.match_kind = 1;
+        r.is_teams = 0;
+        r.timer_enabled = true;
+        r.time_limit = 0;
+        r.timer_counts_up = true;
+        r.timer_shows_hours = true;
+        r.x4_2 = true;
+        r.x2_5 = false;
+        r.x5_1 = true;
+        r.x4_3 = true;
+        r.x4_4 = false;
+        r.x3_1 = false;
+        r.x3_3 = true;
+        r.x3_2 = true;
+        r.sd_penalty = -1;
+        r.x18 = 0;
+        r.x20 = 0;
+        r.x3_7 = true;
+        r.x9 = 1;
+        r.item_freq = -1;
+        r.on_pause_override = Some(CodeRef(0x8016_5290));
+        super::vs_mode::all_player_defaults(&mut s.players);
+        let ckind = if t.unk_584 == 14 {
+            0x20
+        } else {
+            t.unk_584 as u8
+        };
+        super::setup_players::setup_human(&mut s.players[0], ckind, t.unk_585, 1, slot);
+        s.players[0].nametag = t.unk_586;
+        s.players[0].xC_b1 = false;
+        let stkind = target_stage(s.players[0].ckind as u8);
+        s.rules.stkind = stkind;
+        self.dvd_mut().cache.scene.game_cache.stkind = i32::from(stkind);
+        self.preload_refresh();
+        let s = &mut self.game.one_player.target_start;
+        super::vs_mode::load_rumble_enabled_with(s, &prefs, &tags);
+    }
+
+    /// `gm_801B65D4`: Target Test's match over. The match's seconds to the single-player time
+    /// and its coins (`gm_80162968`, `gm_8016247C`); a retry plays the stage again. A cleared
+    /// stage (no target left) takes the character's best time in the session's records and
+    /// marks it cleared there; the save's record is the best time once cleared, else the most
+    /// targets broken, and the first clear or a better time earns what it unlocks: Mr. Game &
+    /// Watch, the stage 0x1C, the record trophies, the trophies and special messages. Then the
+    /// challenger approach for a new challenger, else for a notice waiting, else the select.
+    #[doc(alias = "gm_801B65D4")]
+    pub fn target_exit_match(&mut self) {
+        let end = self.game.one_player.target_exit.match_end.clone();
+        let t = self.game.game_data.vs.unk_530.unk_584.clone();
+        let slot = self.game.one_player.target_slot;
+        let s = &mut self.game.game_data.thing.save_data;
+        s.x1A3C = (s.x1A3C as u32).wrapping_add(end.frame_count / 60) as i32;
+        self.results_add_coins(i32::from(end.player_standings[0].xE));
+        if end.outcome == super::match_exit::OUTCOME_RETRY {
+            self.set_next_game_mode_state_id(1);
+            return;
+        }
+        let sel = super::match_exit::selkind(t.unk_584 as u8);
+        let (left, total) = (
+            i32::from(self.game.stage_info.x6D4),
+            i32::from(self.game.stage_info.x6D2),
+        );
+        let frames = end.frame_count;
+        if left == 0 {
+            let bit = 1i32 << sel;
+            let rec = &mut self.game.game_data.thing.save_data.unk_30;
+            if rec.x8 & bit == 0 {
+                set_target_best(rec, sel, frames as i32);
+                rec.x8 |= bit;
+            } else if target_best(rec, sel) as u32 > frames {
+                set_target_best(rec, sel, frames as i32);
+            }
+            self.game.game_data.thing.save_data.unk_8.x1C |= bit;
+            self.game.game_data.thing.save_data.unk_28.x4 |= bit;
+        }
+        let mut improved = false;
+        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+        if !x7c.b0 {
+            if left == 0 {
+                x7c.b0 = true;
+                improved = true;
+                x7c.x94 = frames;
+            } else if x7c.x94 < total.wrapping_sub(left) as u32 {
+                x7c.x94 = total.wrapping_sub(left) as u32;
+            }
+        } else if left == 0 {
+            if x7c.x94 > frames {
+                x7c.x94 = frames;
+            }
+            improved = true;
+        }
+        if improved {
+            let challenger = self.target_challenger();
+            let stage = self.target_stage_unlock();
+            if stage != 0x148 {
+                self.unlock_stage(stage);
+            }
+            self.target_trophies();
+            self.trophy_unlocks();
+            self.special_unlocks(0x80);
+            if challenger != CHKIND_NONE as u8 {
+                self.init_challenger(
+                    t.unk_584 as u8,
+                    t.unk_585,
+                    slot,
+                    t.unk_586,
+                    challenger,
+                    GM_TARGET_TEST,
+                );
+                self.set_pending_game_mode(super::machine::GM_CHALLENGER_APPROACH);
+                self.set_new_game_mode_pending();
+                return;
+            }
+        }
+        if !self.challenger_check(GM_TARGET_TEST, slot) {
+            self.set_next_game_mode_state_id(0);
+        }
+    }
+
+    /// `gm_801733D8`: Mr. Game & Watch, while he's locked, once every other character has
+    /// cleared one of the session's records' three modes ([`Self::all_cleared_one_mode`]).
+    // Ports gm_801733D8; aliased once a check reaches it.
+    fn target_challenger(&mut self) -> u8 {
+        self.game.sync_unlocks();
+        if !self.game.gm.unlocks.ckind_unlocked(CKIND_GAMEWATCH as u8)
+            && self.all_cleared_one_mode()
+        {
+            return CKIND_GAMEWATCH as u8;
+        }
+        CHKIND_NONE as u8
+    }
+
+    /// `fn_80172FAC`: whether every character but Mr. Game & Watch is marked in one of the
+    /// session's records' three masks (`gmMainLib_8015D4A8`'s `x1C`, then `gmMainLib_8015D0F4`'s
+    /// `x10`, then `gmMainLib_8015D21C`'s `x14`).
+    // Ports fn_80172FAC; aliased once a check reaches it.
+    // Ports gmMainLib_8015D4A8; aliased once a check reaches it.
+    // Ports gmMainLib_8015D0F4; aliased once a check reaches it.
+    // Ports gmMainLib_8015D21C; aliased once a check reaches it.
+    fn all_cleared_one_mode(&self) -> bool {
+        let r = &self.game.game_data.thing.save_data.unk_8;
+        [r.x1C, r.x10, r.x14]
+            .into_iter()
+            .any(|w| (0..0x19).all(|i| i == 3 || w & (1 << i) != 0))
+    }
+
+    /// `gm_8017341C`: the stage 0x1C, once every character's stage has been cleared
+    /// (`gmMainLib_8015D5DC`) and while it's locked; 0x148 for none.
+    // Ports gm_8017341C; aliased once a check reaches it.
+    // Ports gmMainLib_8015D5DC; aliased once a check reaches it.
+    fn target_stage_unlock(&self) -> u16 {
+        let w = self.game.game_data.thing.save_data.unk_28.x4;
+        if (0..0x19).all(|i| w & (1 << i) != 0) && !self.stage_unlocked(0x1C) {
+            return 0x1C;
+        }
+        0x148
+    }
+
+    /// `gm_80173AA4`: once every character's stage has a best time in the session's records
+    /// (`gmMainLib_8015D640`), trophy 0xBC, and by their sum 0x9B (under 0x15F90 frames) and
+    /// 0x122 (under 0xAFC8).
+    // Ports gm_80173AA4; aliased once a check reaches it.
+    // Ports gmMainLib_8015D640; aliased once a check reaches it.
+    // Ports gmMainLib_8015D450; aliased once a check reaches it.
+    fn target_trophies(&mut self) {
+        let rec = &self.game.game_data.thing.save_data.unk_30;
+        if !(0..0x19).all(|i| rec.x8 & (1 << i) != 0) {
+            return;
+        }
+        let sum = (0..0x19u8).fold(0u32, |a, i| a.wrapping_add(target_best(rec, i) as u32));
+        self.give_record_trophy(0xBC);
+        if sum < 0x15F90 {
+            self.give_record_trophy(0x9B);
+        }
+        if sum < 0xAFC8 {
+            self.give_record_trophy(0x122);
+        }
     }
 
     /// The save written after a run, as a Stadium mode's select's entry does

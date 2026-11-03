@@ -230,6 +230,14 @@ pub fn game_cache_files() -> Vec<String> {
             add(n);
         }
     }
+    // Target Test's stages, which its match's game cache names.
+    for gr in crate::game::gr::GR_KIND_TMARIO..crate::game::gr::GR_KIND_TMARIO + 26 {
+        for us in [true, false] {
+            if let Some(n) = crate::game::gr::data::stage_file(gr, us) {
+                add(n);
+            }
+        }
+    }
     out
 }
 

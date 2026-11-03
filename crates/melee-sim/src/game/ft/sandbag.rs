@@ -140,7 +140,7 @@ impl Running<'_> {
     }
 
     /// Lying face down after a knockdown, `ftSb_Init_8014FBA4`: landed, its own wait.
-    // Ports ftSb_Init_8014FBA4; aliased once a check reaches it.
+    #[doc(alias = "ftSb_Init_8014FBA4")]
     pub fn sb_enter_wait_reverse(&mut self, gobj: GObjId) {
         if self.is_airborne(gobj) {
             self.land(gobj);
@@ -187,13 +187,13 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 
 impl Running<'_> {
     /// `ftSb_WaitReverse_Phys`: the ground's friction (`ft_80084F3C`).
-    // Ports ftSb_WaitReverse_Phys; aliased once a check reaches it.
+    #[doc(alias = "ftSb_WaitReverse_Phys")]
     fn sb_wait_reverse_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }
 
     /// `ftSb_WaitReverse_Coll`: kept on the ground, falling off its edge (`ft_80083F88`).
-    // Ports ftSb_WaitReverse_Coll; aliased once a check reaches it.
+    #[doc(alias = "ftSb_WaitReverse_Coll")]
     fn sb_wait_reverse_coll(&mut self, gobj: GObjId) {
         self.ground_coll_fall_off(gobj);
     }
@@ -206,6 +206,6 @@ impl Running<'_> {
 pub fn nothing() {}
 
 /// `ftSb_WaitReverse_Anim` and `ftSb_WaitReverse_IASA` do nothing either.
-// Ports ftSb_WaitReverse_Anim; aliased once a check reaches it.
-// Ports ftSb_WaitReverse_IASA; aliased once a check reaches it.
+#[doc(alias = "ftSb_WaitReverse_Anim")]
+#[doc(alias = "ftSb_WaitReverse_IASA")]
 pub fn nothing_lying() {}

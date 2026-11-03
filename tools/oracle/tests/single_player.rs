@@ -80,14 +80,14 @@ fn each_mode_runs_to_its_first_stop() {
             592,
             "mnEvent_8024E838 (the Event list) isn't ported",
         ),
-        ("target", 856, "gm_801B6428 isn't ported"),
-        ("homerun", 868, "gm_801B9A3C isn't ported"),
+        ("target", 3496, ""),
+        ("homerun", 3399, ""),
         (
             "multiman",
             742,
             "mnHyaku_8024CD64 (the Multi-Man list) isn't ported",
         ),
-        ("training", 1278, "gm_801B1F70 isn't ported"),
+        ("training", 3748, ""),
     ]);
 }
 
@@ -124,20 +124,12 @@ fn the_debug_routes_run_to_their_first_stops() {
 #[test]
 fn the_versus_page_tours_run_to_their_first_stops() {
     first_stops(&[
-        (
-            "bosses",
-            1461,
-            "fighter OnLoad 0x80155e1c (ftCh_Init_OnLoad) isn't ported",
-        ),
-        (
-            "targets",
-            1121,
-            "not implemented: stage kind 40 isn't ported",
-        ),
+        ("bosses", 13377, ""),
+        ("targets", 47425, ""),
         (
             "stages-1p",
-            3409,
-            "tick 3408: unknown leftover bytes of a freed Item under Fighter: its layout isn't ported",
+            3883,
+            "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
         ),
         (
             "stages-1p-b",
@@ -146,8 +138,8 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         ),
         (
             "stages-1p-c",
-            2142,
-            "not implemented: stage kind 67 isn't ported",
+            3925,
+            "not implemented: stage kind 66 isn't ported",
         ),
     ]);
 }

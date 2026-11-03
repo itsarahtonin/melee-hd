@@ -393,7 +393,7 @@ impl Running<'_> {
         self.heavy_hit_flash(gobj, element as i32, mem(kb));
         self.change_motion_state(gobj, msid, 0x40, 0.0, 1.0, 0.0, None);
         self.anim_update(gobj);
-        if self.game.last_opponent_gone() {
+        if self.game.single_player_alone() {
             self.warp_star_intangible(gobj);
             self.game.fighters[f.0].x2221_b1 = true;
         }

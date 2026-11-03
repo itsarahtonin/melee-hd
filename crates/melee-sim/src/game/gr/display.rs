@@ -110,6 +110,10 @@ impl Running<'_> {
                 super::bigblueroute::check_shadow_render(self.game, self.data, pos, Some(j))
             }
             Some(f) if f.0 == 0x8020_B85C => super::zebesroute::check_shadow_render(),
+            Some(f) if super::target::is_check_shadow_render(f.0) => {
+                super::target::check_shadow_render()
+            }
+
             Some(f) if super::figure::CHECK_SHADOW_RENDER.contains(&f.0) => {
                 super::figure::check_shadow_render()
             }
