@@ -35,6 +35,40 @@ pub struct Pool<T, const K: u8 = 0> {
     /// Each slot's object's address in the original, when the allocator model knows it
     /// (else 0).
     addrs: Vec<u32>,
+    limit: NumLimit,
+}
+
+/// `HSD_ObjAllocData`'s number limit: `num_limit`, which allocations stop at while
+/// `num_limit_flag` is set. Only the develop level's limiter sets one
+/// (`fn_UpdateObjAllocLimiter`).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct NumLimit {
+    pub num_limit: u32,
+    pub num_limit_flag: bool,
+}
+
+impl Default for NumLimit {
+    /// As `HSD_ObjAllocInit` leaves it.
+    fn default() -> Self {
+        NumLimit {
+            num_limit: u32::MAX,
+            num_limit_flag: false,
+        }
+    }
+}
+
+impl crate::state_eq::StateEq for NumLimit {
+    fn state_diff(&self, other: &Self) -> Option<crate::state_eq::Diff> {
+        (self.num_limit, self.num_limit_flag).state_diff(&(other.num_limit, other.num_limit_flag))
+    }
+
+    /// Nothing for a pool as its init leaves it, which every pool is but at the develop level,
+    /// so a state's hash is the one it had before the limits were modelled.
+    fn state_hash(&self, h: &mut crate::state_eq::StateHasher) {
+        if *self != NumLimit::default() {
+            (self.num_limit, self.num_limit_flag).state_hash(h);
+        }
+    }
 }
 
 impl<T, const K: u8> Default for Pool<T, K> {
@@ -47,6 +81,7 @@ impl<T, const K: u8> Default for Pool<T, K> {
             peak: 0,
             ever_freed: Vec::new(),
             addrs: Vec::new(),
+            limit: NumLimit::default(),
         }
     }
 }
@@ -58,8 +93,9 @@ pub const fn kind(kind: heap::Kind) -> u8 {
 
 impl<T, const K: u8> Pool<T, K> {
     /// A slot for `value`, `HSD_ObjAlloc`: the most recently freed, else the heap's next block
-    /// (a fresh slot, else a new one).
+    /// (a fresh slot, else a new one). Only [`Pool::try_alloc`]'s callers may meet a limit.
     pub fn alloc(&mut self, value: T) -> u32 {
+        self.check_limit();
         let slot = if let Some(slot) = self.free.pop().or_else(|| self.fresh.pop()) {
             self.slots[slot as usize] = value;
             slot
@@ -85,6 +121,7 @@ impl<T, const K: u8> Pool<T, K> {
     /// A slot as `HSD_ObjAlloc` hands it out uncleared: the most recently freed keeps its last
     /// contents and a fresh slot the heap's, else a new one holds `fresh`.
     pub fn alloc_stale(&mut self, fresh: T) -> u32 {
+        self.check_limit();
         match self.free.pop().or_else(|| self.fresh.pop()) {
             Some(slot) => {
                 self.used += 1;
@@ -93,6 +130,55 @@ impl<T, const K: u8> Pool<T, K> {
                 slot
             }
             None => self.alloc(fresh),
+        }
+    }
+
+    /// [`Pool::alloc`], or none at the number limit, as `HSD_ObjAlloc` returns null there.
+    pub fn try_alloc(&mut self, value: T) -> Option<u32> {
+        (!self.at_limit()).then(|| self.alloc(value))
+    }
+
+    /// [`Pool::alloc_stale`], or none at the number limit.
+    pub fn try_alloc_stale(&mut self, fresh: T) -> Option<u32> {
+        (!self.at_limit()).then(|| self.alloc_stale(fresh))
+    }
+
+    /// Whether `HSD_ObjAlloc` refuses the next object: the number limit is on and reached.
+    pub fn at_limit(&self) -> bool {
+        self.limit.num_limit_flag && self.used >= self.limit.num_limit
+    }
+
+    /// An allocation whose caller doesn't take `HSD_ObjAlloc`'s null.
+    #[track_caller]
+    fn check_limit(&self) {
+        assert!(
+            !self.at_limit(),
+            "HSD_ObjAlloc returned null at {}'s number limit, which this caller doesn't take",
+            std::any::type_name::<T>()
+        );
+    }
+
+    /// Sets the number limit (`HSD_ObjAllocSetNumLimit`).
+    pub fn set_num_limit(&mut self, limit: u32) {
+        self.limit.num_limit = limit;
+        self.mirror_limit();
+    }
+
+    /// Turns the number limit on or off (`HSD_ObjAllocEnableNumLimit`,
+    /// `HSD_ObjAllocDisableNumLimit`).
+    pub fn set_num_limit_flag(&mut self, on: bool) {
+        self.limit.num_limit_flag = on;
+        self.mirror_limit();
+    }
+
+    /// The allocator model's copy of the pool's allocation data takes the limit too.
+    fn mirror_limit(&self) {
+        if K != 0 {
+            let NumLimit {
+                num_limit: limit,
+                num_limit_flag: on,
+            } = self.limit;
+            heap::with(|h| h.set_num_limit(heap::Kind::ALL[K as usize - 1], limit, on));
         }
     }
 
@@ -155,6 +241,7 @@ impl<T, const K: u8> Pool<T, K> {
         self.used
     }
 
+    /// The most objects out at once since the pool was made (`HSD_ObjAllocGetPeak`).
     pub fn peak(&self) -> u32 {
         self.peak
     }
@@ -192,6 +279,7 @@ impl<T, const K: u8> Pool<T, K> {
         self.addrs.clone_from(&other.addrs);
         self.used = other.used;
         self.peak = other.peak;
+        self.limit = other.limit;
     }
 }
 
@@ -255,5 +343,37 @@ mod tests {
         assert_eq!(p[f1], 6);
         assert_eq!(p.alloc(7), 4);
         assert_eq!(p.used(), 5);
+    }
+
+    #[test]
+    fn the_number_limit_refuses_from_its_count_until_lifted() {
+        let mut p: Pool<u32> = Pool::default();
+        let (a, _) = (p.alloc(1), p.alloc(2));
+        p.free(a);
+        p.set_num_limit(p.peak());
+        assert!(!p.at_limit());
+        p.set_num_limit_flag(true);
+        assert_eq!(p.try_alloc(3), Some(a));
+        assert!(p.at_limit());
+        assert_eq!(p.try_alloc(4), None);
+        assert_eq!(p.try_alloc_stale(4), None);
+        assert_eq!(p.used(), 2);
+        p.set_num_limit_flag(false);
+        assert_eq!(p.try_alloc(5), Some(2));
+        // Back on with the old limit, now under the count.
+        p.set_num_limit_flag(true);
+        assert!(p.at_limit());
+        let mut q: Pool<u32> = Pool::default();
+        q.restore_from(&p);
+        assert!(q.at_limit());
+    }
+
+    #[test]
+    #[should_panic(expected = "number limit")]
+    fn an_allocation_that_cant_take_the_null_stops_at_the_limit() {
+        let mut p: Pool<u32> = Pool::default();
+        p.set_num_limit(0);
+        p.set_num_limit_flag(true);
+        p.alloc(1);
     }
 }

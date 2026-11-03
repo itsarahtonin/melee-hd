@@ -1123,13 +1123,18 @@ impl Heap {
     }
 
     /// `HSD_ObjAlloc`: the pool's last freed object, growing the pool by one when none is
-    /// free. Pools with limits aren't modelled (none of Melee's has one set).
+    /// free. A pool's number limit is its owner's to keep (`pool::Pool::try_alloc`, which
+    /// asks no object past it); heap limits aren't modelled (none of Melee's has one set).
     pub fn obj_alloc(&mut self, kind: Kind) -> u32 {
         log(|| format!("OA {kind:?}"));
         let d = &self.allocs[kind as usize];
         assert!(
-            !d.num_limit_flag && !d.heap_limit_flag,
-            "{kind:?}'s pool has limits, which the model doesn't follow"
+            !d.heap_limit_flag,
+            "{kind:?}'s pool has a heap limit, which the model doesn't follow"
+        );
+        assert!(
+            !(d.num_limit_flag && d.used >= d.num_limit),
+            "{kind:?}'s pool asked past its number limit, which the model says it reached"
         );
         let grew = d.free.is_empty();
         if grew {
@@ -1148,6 +1153,14 @@ impl Heap {
         self.image.claim_piece(p, size, kind.name());
         self.image.taken(p, link);
         p
+    }
+
+    /// `HSD_ObjAllocSetNumLimit` and `HSD_ObjAllocEnableNumLimit` or
+    /// `HSD_ObjAllocDisableNumLimit` on `kind`'s pool.
+    pub fn set_num_limit(&mut self, kind: Kind, limit: u32, on: bool) {
+        let d = &mut self.allocs[kind as usize];
+        d.num_limit = limit;
+        d.num_limit_flag = on;
     }
 
     /// `HSD_ObjFree`.

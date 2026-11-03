@@ -378,10 +378,10 @@ pub fn orient_to_jobj(objs: &mut Objects, data: &Archives, g: GeneratorId) {
 }
 
 /// A new generator, linked in after the cursor's successor (or the head), with a new
-/// family id, `hsd_8039D9C8`.
+/// family id, `hsd_8039D9C8`. None when the pool is at the develop level's limit.
 #[doc(alias = "hsd_8039D9C8")]
-pub fn alloc(objs: &mut Objects) -> GeneratorId {
-    let g = GeneratorId(objs.generators.pool.alloc(Generator::default()));
+pub fn alloc(objs: &mut Objects) -> Option<GeneratorId> {
+    let g = GeneratorId(objs.generators.pool.try_alloc(Generator::default())?);
     let gs = &mut objs.generators;
     gs.live = gs.live.wrapping_add(1);
     if gs.live > gs.peak {
@@ -408,7 +408,7 @@ pub fn alloc(objs: &mut Objects) -> GeneratorId {
     o.idnum = idnum;
     o.appsrt = None;
     o.userfunc = None;
-    g
+    Some(g)
 }
 
 /// An integer converted to single precision as MWCC does it, through the 2^52 bias.
@@ -994,7 +994,7 @@ pub fn spawn(
         return None;
     }
     let cl = b.cmd_list(data, idx)?;
-    let g = alloc(objs);
+    let g = alloc(objs)?;
     let f = |at| copy(cl.f32(data, at));
     let o = &mut objs.generators[g];
     o.ty = cl.ty(data);
@@ -1096,9 +1096,10 @@ pub fn spawn(
     }
     if objs.generators[g].kind & 0x20000 != 0 {
         objs.generators[g].ty |= JOINT_APP_TRANSLATE;
-        let s = appsrt::add_to_generator(objs, g, 0);
-        objs.app_srts[s].xa2 = 1;
-        objs.app_srts[s].gp = Some(g);
+        if let Some(s) = appsrt::add_to_generator(objs, g, 0) {
+            objs.app_srts[s].xa2 = 1;
+            objs.app_srts[s].gp = Some(g);
+        }
     }
     if let Some(h) = objs.generators.on_create {
         hooks.generator_created(objs, data, h, g);

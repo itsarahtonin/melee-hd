@@ -1250,7 +1250,12 @@ pub fn car_generator(r: &mut Running, idx: i32, j: Option<JObjId>) -> bool {
     let objs = &mut r.game.objs;
     let s = match objs.generators[g].appsrt {
         Some(s) => s,
-        None => crate::hsd::appsrt::add_to_generator(objs, g, 0),
+        None => match crate::hsd::appsrt::add_to_generator(objs, g, 0) {
+            Some(s) => s,
+            // None left (the develop level's limit): the generator stays without one, and
+            // r3 holds the null.
+            None => return false,
+        },
     };
     r.game.objs.app_srts[s].xa2 = 0;
     let k = super::ground::scale(r.game);
