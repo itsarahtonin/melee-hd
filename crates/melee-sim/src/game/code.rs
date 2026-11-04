@@ -48,6 +48,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::memcard::WINDOWS_PROC => game.windows_proc(),
         super::gm::title::BG_PROC => game.title_bg_proc(gobj),
         f if super::vi::run_proc(game, gobj, f) => {}
+        f if super::gm::intro::run_proc(game, gobj, f) => {}
         super::gm::title::LOGO_PROC => game.title_logo_proc(gobj),
         super::gm::title::LOGO_STILL_PROC => game.title_logo_still_proc(gobj),
         super::gm::title::FOG_PROC => game.title_fog_proc(gobj),
@@ -224,6 +225,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
         f if super::vi::run_frame(game, f) => {}
+        f if super::gm::intro::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),

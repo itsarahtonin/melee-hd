@@ -2316,3 +2316,22 @@ fn single_player_setups() {
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
+
+/// Classic's intro and first match (milestone 6's task 2, the intros): `m6-intros/classic-win`
+/// from power-on on the unlock-all card, Classic on Normal with Fox, the first stage's intro
+/// (`gm_1832.c`: the screen's model and map, Fox frozen in a KO toward the screen with his
+/// blaster and the opponent asleep at their places, the names, the announcer's call), the
+/// match won by a bot, its clear screen, and the second stage's intro to its team's allies
+/// drawn (`fn_8017D9C0`), which aren't ported.
+#[test]
+fn single_player_intros() {
+    if let Some(out) = scripted_session("m6-intros", "classic-win", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "4572 ticks compared, no difference; stopped in tick 4572: Classic's allies drawn (fn_8017D9C0) isn't ported"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}

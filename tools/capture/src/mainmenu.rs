@@ -234,6 +234,7 @@ impl Comparer<'_> {
         );
         self.approach();
         self.cutscenes();
+        self.intros();
         self.endings();
     }
 
