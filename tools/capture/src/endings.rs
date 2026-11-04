@@ -426,7 +426,10 @@ impl Comparer<'_> {
         self.check("staffInfo", "the names' blocks", [info, sort], theirs);
         let theirs = self.u32(0x804D_6800) as i32;
         self.check("gm_804D6800", "names shown", shown, theirs);
-        if info != 0 && theirs == shown {
+        // The blocks are the staff roll scene's heap's, gone with it.
+        let live = self.game.gm.on_frame
+            == Some(melee_sim::game::gm::endings::staff_roll::ON_FRAME);
+        if live && info != 0 && theirs == shown {
             for i in 0..NAMES {
                 let n = self.game.endings.staff_roll.names[i];
                 let at = info + 12 * i as u32;
