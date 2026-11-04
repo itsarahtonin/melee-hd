@@ -302,7 +302,7 @@ const ENTRIES: [Entry; NAMES] = [
 const ENTRY_23: (Check, i32) = (Feature, 2972);
 
 /// `gm_803DBFD8_extra.x_positions`: the details' columns' x.
-const COLUMNS: [f32; 4] = [-1.0, -1.79, -2.579_999_9, -3.579_999_9];
+const COLUMNS: [f32; 4] = [-1.0, -1.79, -2.58, -3.58];
 
 /// `gm_803DBFD8_extra.sfx_cues`: the roll's sounds by tick, to the end's mark.
 const CUES: [(i32, i32); 45] = [
@@ -364,7 +364,7 @@ const DETAILS_CAMERA: crate::hsd::cobj::StaticDesc = crate::hsd::cobj::StaticDes
     roll: 0.0,
     near: 1.0,
     far: 10000.0,
-    projection: [80.0, 1.216_667_1, 0.0, 0.0],
+    projection: [80.0, 1.216_667, 0.0, 0.0],
 };
 
 /// The colors: `gm_804D42B8` (clear), `gm_804D42BC` (black at 0x3C), `gm_804D42C0` (black),
@@ -870,7 +870,7 @@ impl Running<'_> {
             for i in 0..self.game.endings.staff_roll.shown as usize {
                 let s = &self.game.endings.staff_roll;
                 let (e, cursor) = (s.sorted[i], s.cursor);
-                if !(reg(e.mtx.m[2][3]) < reg(-1.0)) {
+                if reg(e.mtx.m[2][3]) >= reg(-1.0) || reg(e.mtx.m[2][3]).is_nan() {
                     continue;
                 }
                 let idx = e.index as usize;

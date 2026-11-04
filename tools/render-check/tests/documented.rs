@@ -26,16 +26,17 @@ use common::{
     IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6E2_REGEND_ADV,
-    M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE,
-    MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE,
-    MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE,
-    POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
-    TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
-    YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
+    M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC,
+    MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
+    MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
+    ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR,
+    RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
+    RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP,
+    SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64,
+    TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS,
+    TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -185,6 +186,23 @@ rendered_frames!(M6E2_REGEND_ADV;
     m6e2_regend_adv_2030 2030,
     m6e2_regend_adv_2300 2300,
     m6e2_regend_adv_2600 2600,
+);
+// The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
+// renderer running: the names flying past with shots fired at rest (1400) and the stick to the
+// right (1600), the roll paused on B (2200), at Start's six times speed with the background
+// dimmed (2550), and the hits' result (3200).
+rendered_frames!(M6E3_STAFFROLL_PLAY;
+    m6e3_staffroll_play_1400 1400,
+    m6e3_staffroll_play_1600 1600,
+    m6e3_staffroll_play_2200 2200,
+    m6e3_staffroll_play_2550 2550,
+    m6e3_staffroll_play_3200 3200,
+);
+// Classic's game over mode (`m6-endings-3/regend-movie`): the staff roll at Start's speed
+// (1700) and the ending movie (2700).
+rendered_frames!(M6E3_REGEND_MOVIE;
+    m6e3_regend_movie_1700 1700,
+    m6e3_regend_movie_2700 2700,
 );
 // Classic's first stage's intro (`m6-intros/classic-win`): the stage's number and the map
 // coming in with Fox and his opponent posed (900), their names written in (950), and the
