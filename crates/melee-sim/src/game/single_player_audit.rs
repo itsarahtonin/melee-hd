@@ -877,14 +877,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[MM],
     },
     Gap {
-        what: "the Wire Frames",
-        covers: &[
-            "melee/ft/kinds/ftZakoBoy/ftboy",
-            "melee/ft/kinds/ftZakoGirl/ftgirl",
-        ],
-        modes: &[MM, AD, EV, DB],
-    },
-    Gap {
         what: "Event Match's list, events and egg",
         covers: &[
             "melee/gm/gmevent",
