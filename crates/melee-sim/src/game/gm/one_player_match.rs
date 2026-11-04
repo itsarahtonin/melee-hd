@@ -128,6 +128,9 @@ impl Running<'_> {
     #[doc(alias = "gm_8018A228")]
     #[doc(alias = "gm_8018A290")]
     pub fn one_player_getter(getter: Option<CodeRef>, round: u8, level: u8, i: u8) -> u8 {
+        if let Some(v) = getter.and_then(|g| super::classic::getter(g, round, level, i)) {
+            return v;
+        }
         let (kind, _, _, t) = getter_entry(round, level);
         let i = usize::from(i) * 3;
         match getter {
@@ -150,6 +153,9 @@ impl Running<'_> {
     #[doc(alias = "gm_8018A2C4")]
     #[doc(alias = "gm_8018A314")]
     pub fn one_player_ratio(getter: Option<CodeRef>, round: u8, level: u8) -> f32 {
+        if let Some(pct) = getter.and_then(|g| super::classic::ratio_percent(g, round, level)) {
+            return mem(fp::fdivs(f64::from(pct), 100.0));
+        }
         let (_, attack, defense, _) = getter_entry(round, level);
         let pct = match getter {
             Some(CodeRef(0x8018_A188 | 0x8018_A2C4)) => attack,
@@ -279,8 +285,10 @@ impl Running<'_> {
         );
         start.players[0].nametag = run.player.nametag;
         start.players[0].spawn_dir = run.x8[2] as i8;
+        // The team color (`x58`, Classic's `gm_8017ECA0`), which `fn_8017DD7C` takes and never
+        // reads: the getter only reads its table.
         if run.getters[4].is_some() {
-            crate::game::code::unported_call("a 1P run's team color getter (Unk1PData::x58)");
+            let _ = Self::one_player_getter(run.getters[4], count, level, 0);
         }
         // `fn_8017DD7C`: the run's allies after the human, on its team.
         let mut idx = 1;
