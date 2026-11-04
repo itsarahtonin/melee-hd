@@ -1494,7 +1494,7 @@ impl Running<'_> {
     /// kept for the 1P modes (`gm_801677E8`).
     #[doc(alias = "mn_802295AC")]
     #[doc(alias = "gm_801677E8")]
-    fn note_confirm_port(&mut self) {
+    pub(crate) fn note_confirm_port(&mut self) {
         let port = (0..4)
             .find(|&i| self.game.buttons_triggered(i) & PAD_CONFIRM != 0)
             .unwrap_or(0);
@@ -1586,9 +1586,9 @@ impl Running<'_> {
     }
 
     /// `mn_8022C7CC`, the Stadium list's think: Target Test and the Home-Run Contest end
-    /// the scene; Multi-Man's list isn't this menu's.
+    /// the scene; Multi-Man opens its list.
     #[doc(alias = "mn_8022C7CC")]
-    pub fn think_stadium(&mut self, _gobj: GObjId) {
+    pub fn think_stadium(&mut self, gobj: GObjId) {
         let b = self.list_inputs();
         if b & IN_CONFIRM != 0 {
             self.game.menu.cooldown = 5;
@@ -1604,7 +1604,11 @@ impl Running<'_> {
                     self.note_confirm_port();
                     self.menu_exit_to(0x20);
                 }
-                2 => super::super::code::unported_call("mnHyaku_8024CD64 (the Multi-Man list)"),
+                2 => {
+                    self.lb_audio_call(1);
+                    self.hyaku_open(0);
+                    gobj::free(self, gobj);
+                }
                 _ => {}
             }
         } else if b & IN_BACK != 0 {
@@ -1853,6 +1857,7 @@ impl Running<'_> {
             _ => {
                 return self.run_rules_proc(gobj, f)
                     || self.options_proc(gobj, f)
+                    || self.hyaku_proc(gobj, f)
                     || self.data_menus_proc(gobj, f)
                     || self.sound_test_proc(gobj, f);
             }
@@ -1917,7 +1922,7 @@ impl Running<'_> {
         self.menu_panel();
         match e.menu_kind {
             EVENT => super::super::code::unported_call("mnEvent_8024E838 (the Event list)"),
-            MULTI_VS => super::super::code::unported_call("mnHyaku_8024CD64 (the Multi-Man list)"),
+            MULTI_VS => self.hyaku_open(e.hovered_selection),
             _ => {
                 let t = think_of(self.game.menu.flow.cur_menu).unwrap_or(THINK_MAIN);
                 let w = &mut self.game.world;

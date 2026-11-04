@@ -140,7 +140,6 @@ const OTHER_KINDS: &str =
     "only the decisions of computer kinds VS doesn't use call it (ftCo_800B2AFC's other cases)";
 const HOME_RUN: &str = "computer kind 15, the Home-Run Contest's (gmhomerun.c), stands still";
 const NANA_ALONE: &str = "Nana's decision without Popo: she sleeps whenever he does (ftCo_800BFD9C takes her out with him, ftCo_800D4F24) and wakes with him (Player_80032070), so ftCo_800A589C always finds him";
-const KIND_16: &str = "computer kind 16's jump rule; VS uses kind 4";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
@@ -150,6 +149,7 @@ const NANA_REGROUP: &str = "only Nana's way back runs the behavior pick without 
 const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blue, Mushroom Kingdom, Corneria and Venom; Big Blue's check leaves 1 or 0 by the floor's joint, Corneria's its third flag, Mushroom Kingdom's and Venom's the joints' array's address, which the allocator model gives (on in every match with a computer player)";
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
 const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
+const ISLAND_PICK: &str = "computer kind 24's island pick (Multi-Man's): its second pass takes every island its first did (it skips only ftCo_800A2718's test), so its running sum over the first's total reaches 1 by its last island, above every draw (HSD_Randf is under 1 - 2^-16)";
 const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
 
 /// Functions and stops no match with computer players from the player reaches (VS mode, the
@@ -167,15 +167,12 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800B1478", OTHER_KINDS),
     ("ftCo_800B17D0", OTHER_KINDS),
     ("ftCo_800B1AB8", OTHER_KINDS),
-    ("ftCo_800B1DA0", OTHER_KINDS),
     ("ftCo_800B1EF0", OTHER_KINDS),
     ("ftCo_800B21C8", OTHER_KINDS),
     ("ftCo_800A50D4", OTHER_KINDS),
     ("ftCo_800A5294", OTHER_KINDS),
-    ("ftCo_800A8940", OTHER_KINDS),
     ("ftCo_800AEA8C", OTHER_KINDS),
     ("ftCo_800AEFB8", NANA_ALONE),
-    ("ftCo_800B7638", KIND_16),
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800BA080", NESS_SPAN),
     ("ftCo_800AA320 at a level past 9", LEVELS),
@@ -187,11 +184,13 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("a register left by ftCo_800B0CA8", NANA_ITEM),
     ("a register left by ftCo_800B2790", FIGHTER_ADDRESS),
     ("ftCo_800AC434 at level 10", BARREL_LEVEL),
+    ("ftCo_800A8940 with no island picked", ISLAND_PICK),
 ];
 
 /// Ported code computer players reach whose ledger alias waits for a check (a `// Ports`
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
+    "ftCo_800B7638",
     "ftCo_800A0384",
     "ftCo_800A0C8C",
     "ftCo_800A0CB0",

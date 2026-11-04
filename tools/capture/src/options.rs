@@ -1,5 +1,6 @@
 //! The Options menus' statics (`mnvibration.c`, `mnsound.c`, `mndeflicker.c`,
-//! `mnlanguage.c`, `mndatadel.c`) and their screens' user data, compared with memory.
+//! `mnlanguage.c`, `mndatadel.c`), the Multi-Man list's (`mnhyaku.c`) and their screens' user
+//! data, compared with memory.
 
 use melee_sim::game::gm::title::ModelDesc;
 use melee_sim::game::mirror::Cx;
@@ -22,6 +23,8 @@ const LANGUAGE_GOBJ: u32 = 0x804D_6C50;
 const DATADEL_MODELS: u32 = 0x804A_0918;
 const DATADEL_GOBJ: u32 = 0x804D_6C68;
 const DATADEL_TEXT: u32 = 0x804D_6C6C;
+const HYAKU_MODEL: u32 = 0x804A_08E8;
+const HYAKU_GOBJ: u32 = 0x804D_6C58;
 
 impl Comparer<'_> {
     /// The user data block at `t + 0x2C` with `HSD_Free` as its release: its address, or
@@ -198,5 +201,8 @@ impl Comparer<'_> {
         self.options_gobj("mnDataDel_804D6C68", ddg, DATADEL_GOBJ);
         let theirs = self.u32(DATADEL_TEXT);
         self.compare_handle("mnDataDel_804D6C6C", "TextId", ddt.map(|t| t.0), theirs);
+        let hy = self.game.options.hyaku;
+        self.options_model("mnHyaku_804A08E8", hy.model, HYAKU_MODEL);
+        self.options_gobj("mnHyaku_804D6C58", hy.gobj, HYAKU_GOBJ);
     }
 }
