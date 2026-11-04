@@ -152,8 +152,9 @@ impl Running<'_> {
             return;
         }
         match self.game.game_mode {
-            3 | 4 => super::super::code::unported_call(
-                "fn_8016C46C's single-player results (fn_8017EE40, fn_8017E8A4)",
+            3 => self.classic_results(r),
+            4 => super::super::code::unported_call(
+                "fn_8016C46C's single-player results (fn_8017E8A4, Adventure's)",
             ),
             5 => self.allstar_results(r),
             _ => {}
@@ -210,6 +211,62 @@ impl Running<'_> {
         }
         if r.player_standings[0].stocks as i32 == i32::from(g.game_data.vs.unk_528.stocks) {
             r._x448[1] |= 0x04;
+        }
+    }
+
+    /// Classic's results for its match's bonuses, `fn_8017EE40` (`x448`'s flags): the
+    /// trophies won; in a run's match (`x4_5`), the run's own: played through, at the
+    /// hardest level, its time under 4 or 6 minutes, no damage taken, the run's two flags,
+    /// and the stage's flag or else no stock lost; and a computer Crazy Hand met.
+    #[doc(alias = "fn_8017EE40")]
+    fn classic_results(&mut self, r: &mut MatchEnd) {
+        let g = &*self.game;
+        let trophies: i32 = g
+            .one_player
+            .match_trophies
+            .iter()
+            .filter(|t| t.0 != -1)
+            .map(|t| i32::from(t.1))
+            .sum();
+        if trophies > 0 {
+            r._x448[2] |= 0x08;
+        }
+        if g.vs.start.x4_5 {
+            let a = &g.one_player.classic.base;
+            let total = a.x20.wrapping_add(g.vs_frame_count());
+            r._x448[0] |= 0x80;
+            if a.player.cpu_level == 4 {
+                r._x448[0] |= 0x10;
+            }
+            if total < 0x3840 {
+                r._x448[2] |= 0x40;
+            } else if total < 0x5460 {
+                r._x448[2] |= 0x80;
+            }
+            if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+                r._x448[1] |= 0x02;
+            }
+            if a.xc[2] != 0 {
+                r._x448[2] |= 0x20;
+            }
+            if a.xc[3] != 0 {
+                r._x448[2] |= 0x10;
+            }
+            if a.xc[1] != 0 {
+                r._x448[1] |= 0x01;
+            } else if r.player_standings[0].stocks as i32
+                == i32::from(g.game_data.vs.unk_51C.stocks)
+            {
+                r._x448[1] |= 0x04;
+            }
+        }
+        for i in 0..6 {
+            if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
+                && self.game.player_ckind(i) == 0x1B
+            {
+                r._x448[0] |= 0x01;
+                return;
+            }
         }
     }
 

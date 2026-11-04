@@ -464,6 +464,8 @@ impl Running<'_> {
                 fp.x2219_b2 = true;
                 fp.x2219_b1 = true;
             }
+            5 => self.demo_intro_pose(gobj, super::co::ids::ms::DEAD_UP_FALL_HIT_CAMERA_ICE),
+            6 => self.demo_intro_pose(gobj, super::co::ids::ms::SLEEP),
             8 => self.demo_cutscene_wait(gobj),
             9 | 10 => {
                 let kind = self.game.fighter(gobj).kind;
@@ -490,6 +492,54 @@ impl Running<'_> {
             p => super::super::code::unported_call(&format!(
                 "ftDemo_CreateFighter's pose {p}'s first state (on_create_fighter)"
             )),
+        }
+    }
+
+    /// Classic's intro's poses (`on_create_fighter`'s 5 and 6, `ftCo_800BF034` and
+    /// `ftCo_800BF108`): the player's frozen in a KO toward the screen, the opponents' asleep,
+    /// each with the flags the winners' take; Fox holds his blaster and Ness his bat at the
+    /// right thumb, and an asleep Dr. Mario a pill of a random color combination (held state
+    /// 6), none of them rescaled.
+    #[doc(alias = "ftCo_800BF034")]
+    #[doc(alias = "ftCo_800BF108")]
+    fn demo_intro_pose(&mut self, gobj: GObjId, msid: i32) {
+        self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
+        let fp = self.game.fighter_mut(gobj);
+        fp.x2219_b2 = true;
+        fp.x2219_b1 = true;
+        let kind = fp.kind;
+        let f = self.game.fighter_id(gobj);
+        match kind {
+            1 => {
+                let fp = &self.game.fighters[f.0];
+                let part = self.bone_index(fp, PART_R_THUMB_NB);
+                let kind = self.fox_attr_i32(f, super::fox::attr::BLASTER_GUN_ITKIND);
+                let item = super::super::it::kinds::foxblaster::spawn_demo(self, gobj, part, kind);
+                self.game.fighters[f.0].item_gobj = item;
+            }
+            8 => {
+                let fp = &self.game.fighters[f.0];
+                let part = self.bone_index(fp, PART_R_THUMB_NB);
+                let item = super::super::it::kinds::nessbat::spawn_demo(self, gobj, part);
+                self.game.fighters[f.0].item_gobj = item;
+            }
+            0x15 if msid == super::co::ids::ms::SLEEP => {
+                let fp = &self.game.fighters[f.0];
+                let part = self.bone_index(fp, PART_R_THUMB_NB);
+                let color = self.mr_special_n_vitamin_random(gobj);
+                let facing = self.game.fighters[f.0].facing_dir;
+                let pill = super::super::it::kinds::drmariopill::spawn_demo(
+                    self,
+                    gobj,
+                    color,
+                    IT_KIND_DRMARIO_VITAMIN,
+                    2,
+                    part,
+                    facing,
+                );
+                self.game.fighters[f.0].item_gobj = pill;
+            }
+            _ => {}
         }
     }
 

@@ -327,6 +327,8 @@ pub const PATHS: &[Paths] = &[
             "melee/ft/ftbosslib",
         ],
         modules: &[
+            "gm/classic",
+            "gm/intro",
             "gm/endings/mod",
             "gm/endings/game_over",
             "gr/pushon",
@@ -714,10 +716,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
@@ -782,7 +780,6 @@ pub const MISSING: &[Gap] = &[
             "a match's exit data in game mode",
             "gm_8016AC44 with a challenger's record",
             "a 1P run's ratio getter",
-            "a 1P run's team color getter",
             "gm_8017D7AC's records after a no contest",
             "gm_8017CBAC (All-Star's clear)",
             "a single-player route's callback",
@@ -829,7 +826,6 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
-            "fn_80160DE8",
             "fn_80160F58",
             "fn_80162BFC",
             "fn_80162DF8",
@@ -899,6 +895,10 @@ pub const MISSING: &[Gap] = &[
         what: "Classic's mode, its intro and its bonus rounds",
         covers: &[
             "the race's clear",
+            "Classic's allies drawn",
+            "gm_8017CBAC (Classic's clear)",
+            "gmClassic_801B3B40's target stage records",
+            "Classic's horde stage's",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
             "melee/gr/grfigureget",
@@ -947,8 +947,9 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmadventure",
             "melee/gm/gm_17E4",
             "melee/gm/gm_1879",
+            "(Adventure's intro)",
         ],
-        modes: &[AD],
+        modes: &[AD, CL],
     },
     Gap {
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",

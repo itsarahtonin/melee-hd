@@ -958,7 +958,13 @@ impl<'a> Comparer<'a> {
                 && theirs != 0
                 && d.0 < melee_sim::hsd::pool::UNKNOWN
             {
-                let link = self.game.fighter_dynamics[d.0].clone();
+                let mut link = self.game.fighter_dynamics[d.0].clone();
+                // A chain's last link's dominant axis (`desc.unk_54`) is never written and
+                // never read (docs/engine.md, uninitialized values): its block's leftover,
+                // which can be the CARD library's work area the heap's image doesn't lay out.
+                if link.next.is_none() {
+                    link.desc.unk_54 = self.u32(theirs + 0x54) as i32;
+                }
                 link.compare(
                     &mem,
                     theirs,

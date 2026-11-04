@@ -374,7 +374,6 @@ const BONUS: &str =
 const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fighters spawn";
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
-const DEMO: &str = "the demo fighters' items and states (ftDemo_CreateFighter's motion table): results and intros, never a match";
 const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload, which no session reaches with Ditto out); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE84): the All-Star rest area's (Big Blue's flying platforms make only the five kinds ported, the Home-Run Contest's stage the bat, and a sudden death's bob-omb rain only bob-ombs)";
 const EVENT: &str =
@@ -457,7 +456,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026B7D8", BONUS),
     ("it_8026B7E0", BONUS),
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
-    ("melee/ft/ft_0BF0", DEMO),
     ("it_8027A9B8 (an event", POKEMON_MODES),
     ("fn_8017DF28", ONE_PLAYER),
     ("gm_80473A18", EVENT),

@@ -83,6 +83,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6p-") {
                     return ssbm_rs_local(&format!("lockstep/m6-1p-setups/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6i-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-intros/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6e-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
                 }
@@ -1195,6 +1198,15 @@ pub const M6P_AS_WIN: Game = Game {
     name: "m6p-as-win",
     players: "All-Star's first match won, its clear screen (session m6-1p-setups/as-win)",
     replay: Replay::Session("m6p-as-win"),
+};
+
+/// Classic's first stage won (`m6-intros/classic-win`): its intro, Fox against the stage's
+/// opponent.
+pub const M6I_CLASSIC_WIN: Game = Game {
+    stage: "Classic's intro",
+    name: "m6i-classic-win",
+    players: "Classic's first stage's intro and match (session m6-intros/classic-win)",
+    replay: Replay::Session("m6i-classic-win"),
 };
 
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
