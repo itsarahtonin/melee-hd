@@ -87,6 +87,7 @@ pub mod marumine;
 pub mod masterhandbullet;
 pub mod masterhandlaser;
 pub mod matadogas;
+pub mod mato;
 pub mod mball;
 pub mod metalb;
 pub mod metamon;
@@ -257,6 +258,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || pikachutjoltground::run_event(r, gobj, addr)
         || pikachutjoltair::run_event(r, gobj, addr)
         || heiho::run_event(r, gobj, addr)
+        || mato::run_event(r, gobj, addr)
         || tincle::run_event(r, gobj, addr)
         || klap::run_event(r, gobj, addr)
         || kyasarin::run_event(r, gobj, addr)
@@ -420,6 +422,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| pikachutjoltground::run_pred(r, gobj, addr))
         .or_else(|| pikachutjoltair::run_pred(r, gobj, addr))
         .or_else(|| heiho::run_pred(r, gobj, addr))
+        .or_else(|| mato::run_pred(r, gobj, addr))
         .or_else(|| tincle::run_pred(r, gobj, addr))
         .or_else(|| klap::run_pred(r, gobj, addr))
         .or_else(|| kyasarin::run_pred(r, gobj, addr))
@@ -736,6 +739,8 @@ pub const ZRSHELL: i32 = 220;
 pub const COIN: i32 = 159;
 /// `It_Kind_Klap`, Kongo Jungle's Klap Trap.
 pub const KLAP: i32 = 218;
+/// `It_Kind_Mato`, Target Test's targets.
+pub const MATO: i32 = 209;
 /// `It_Kind_Heiho`, Yoshi's Story's Shy Guys.
 pub const HEIHO: i32 = 210;
 /// `It_Kind_Tincle`, Great Bay's Tingle.

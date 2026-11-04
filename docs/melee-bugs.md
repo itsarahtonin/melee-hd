@@ -198,6 +198,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none on gameplay.
 - **Source:** `ftparts.c` (`ftParts_80074E58`); `crates/melee-sim/src/game/ft/parts.rs` (`stray_bone_bit`).
 
+### Sandbag: an animation that follows TransN reads part 0x35 past its parts
+
+- **Where:** `ftAnim_8006EBA4` (`ftanim.c`), for an animation with `x594` bit 0 (one that moves TransN, a dash's); `crates/melee-sim/src/game/ft/anim.rs` (`part_35_joint`).
+- **Defect:** it hands `ftAnim_8006E054` the joint of part 0x35 by `ftParts_GetBoneIndex`, unchecked. Sandbag's parts table has no joint for it (0xFF), so the original reads `parts[255].joint`, 0xFF0 bytes into a parts block of 0x370 (55 bones): a heap word the fighter never set.
+- **Effect:** none: `ftAnim_8006E054` compares that joint with the tree's only when `x594` bit 5 is set, so the word is never used otherwise. Reached when Sandbag dashes, which only a computer player of the VS kind does (task 1's `m6-oracle/bosses`, Sandbag on the debug menu's Versus page, tick 11448); the Home-Run Contest's Sandbag (computer kind 15) stands still.
+- **melee-hd:** modeled: without bit 5 the joint counts as none; with it melee-sim stops by name.
+- **Fix:** skip a part the table lacks (0xFF).
+- **Fix impact:** none on gameplay.
+- **Source:** `ftanim.c` (`ftAnim_8006EBA4`, `ftAnim_8006E054`); `crates/melee-sim/src/game/ft/anim.rs`.
+
 ### Crazy Hand: the poke makes Master Hand's lasers
 
 - **Where:** `fn_80158534` (`ftcrazyhandpoke.c`, the poke's accessory), through `it_802F0340`, `Item_80268B18` and `Item_8026862C` to `Item_80267AA8`; `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
@@ -2100,6 +2110,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A broken snapshot's stream | `hsd_803B5EA0`, `hsd_803B5D70`, `hsd_803B5C4C`, `hsd_803B6BE4` (`hsd_3B5C.c`), `hsd/jpeg_decode.rs` | A run of zeros past a block's end writes coefficients past its 64, taking places from the DC tables that follow the zigzag order: into the last DCs, then past the work area; a value size of 0 (no code in 16 bits) reads bits until the stream ends; the bit reader looks at the byte after a 0xFF, and the markers' scan at the halfword on the stream's last byte, before testing the stream's end. The card's checksums keep a snapshot's bytes as HAL's encoder wrote them, so only a hand-made file reaches it (melee-hd models the DCs and stops past them) | `crates/melee-sim/src/hsd/jpeg_decode.rs` (`set_coef`, `bits`); `tools/leaf-check/tests/jpeg_decode.rs` |
 | The results' places in a match neither free for all nor team | `fn_80177748`, `game/gm/results_panel.rs` (`results_rows`) | Takes a player's place picture from `r24`, which only the free for all's and the team battle's branches set, so another `is_teams` carries the caller's register over; `is_teams` is always 0 or 1 (melee-hd stops) | `crates/melee-sim/src/game/gm/results_panel.rs` (`results_rows`) |
 | A race car out with all thirty out | `grBigBlueRoute_8020C530` and `grBigBlueRoute_8020C85C`'s inline `grBigBlueRoute_SpawnRoute`, `game/gr/bigblueroute.rs` (`spawn_due`) | The pick returns -1 when every one of the thirty cars is out, and the spawn then clears a flag of entry -1, writes its speeds, lane and roll into the 44 bytes before the cars' heap block, and shows the first car with a second hurtbox item; the parameters' count (`x40`) lets out 30 after the sign's car, exactly the thirty, so the pick always finds one (melee-hd stops) | `grbigblueroute.c` (`grBigBlueRoute_SpawnRoute`'s `route_idx != -1` test comes after the flag's write); `m6-fzero-race/fz-run`'s 30 picks |
+| A character's target stage past its table | `gm_801647F8` (gm_1601.c), `gm::one_player::target_stage` | The lookup's end test compares the table's stage kinds, bytes, with 0x148, which no byte equals: a character the table lacks would read past `lbl_803D5168` into the data after it. Every caller passes a character the one-door select offers, all of which the table lists (the Ice Climbers as Popo, turned back into 0xE first), so the loop always finds one | `crates/melee-sim/src/game/gm/one_player.rs` (stops by name past the table; `menus_audit::STOPS`) |
 
 ## Unsure
 

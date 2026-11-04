@@ -60,12 +60,6 @@ pub const GATES: &[Gate] = &[
     },
     Gate {
         list: STADIUM,
-        entry: 1,
-        what: "Home-Run Contest",
-        covers: &["melee/gm/gmhomerun"],
-    },
-    Gate {
-        list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
         covers: &[
@@ -211,10 +205,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Training's menu's reset, behind the Training gate",
     ),
     (
-        "tyDisplay_8031C454 (a single-player stage's trophy)",
-        "a single-player match's stage when the trophies' tables offer one (Training's draw found none in every Training session, on the unlock-all card), behind the gates",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the single-player modes', which only the entries behind GATES lead to: each mode's states past its select (gm::one_player), its own task's",
     ),
@@ -269,6 +259,10 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "two canvases of font {font} in a row",
         "no scene the menus reach makes two canvases of one font in a row (the sessions from power-on free every font's canvases with no stop)",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "the one-door selects offer only the 25 characters the table lists (the Ice Climbers as Popo), which every caller passes",
     ),
     (
         "the VS scene's enter data in game mode",

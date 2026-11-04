@@ -41,6 +41,10 @@ pub struct Winds {
     pub next: [Option<u8>; 8],
     pub free: Option<u8>,
     pub active: Option<u8>,
+    /// A bit per source that [`add`] has written since the pool's block was made: a source's
+    /// fields but `x2` and `x3` (and its kind and link, which the reset writes) keep what the
+    /// block held until then, which the heap's image lays out (`game::export`).
+    pub written: u8,
 }
 
 impl Default for Winds {
@@ -51,6 +55,7 @@ impl Default for Winds {
             next: std::array::from_fn(|i| (i < 7).then_some(i as u8 + 1)),
             free: Some(0),
             active: None,
+            written: 0,
         }
     }
 }
@@ -81,6 +86,7 @@ pub fn add(w: &mut Winds, src: &Wind) -> Option<u8> {
         }
         ret
     };
+    w.written |= 1 << i;
     let e = &mut w.entries[i as usize];
     let (x2, x3) = (e.x2, e.x3);
     *e = Wind {

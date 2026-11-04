@@ -107,6 +107,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         addr if super::gr::bigblueroute::run(game, gobj, addr) => {}
         addr if super::gr::pushon::run(game, gobj, addr) => {}
         addr if super::gr::zebesroute::run(game, gobj, addr) => {}
+        addr if super::gr::target::run(game, gobj, addr) => {}
         addr if super::gr::figure::run(game, gobj, addr) => {}
         addr if super::gr::homerun::run(game, gobj, addr) => {}
         addr if super::gr::yorster::run(game, gobj, addr) => {}
@@ -194,6 +195,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if super::gr::bigblueroute::run_event(game, f) => {}
         f if super::gr::pushon::run_event(game, f) => {}
         f if super::gr::zebesroute::run_event(game, f) => {}
+        f if super::gr::target::run_event(game, f) => {}
         f if super::gr::figure::run_event(game, f) => {}
         f if super::gr::homerun::run_event(game, f) => {}
         f if super::gr::yorster::run_event(game, f) => {}
@@ -262,6 +264,7 @@ pub fn run_demo_init(game: &mut Running, f: u32, arg: i32) {
         0x8020_B864 => super::gr::bigblueroute::on_demo_init(game),
         0x8021_82C4 => super::gr::pushon::on_demo_init(game),
         0x8020_B160 => super::gr::zebesroute::on_demo_init(game),
+        f if super::gr::target::is_demo_init(f) => super::gr::target::on_demo_init(game),
         f if super::gr::figure::ON_DEMO_INIT.contains(&f) => super::gr::figure::on_demo_init(game),
         0x8021_C750 => super::gr::homerun::on_demo_init(game),
         0x8020_1FA0 => yorster::on_demo_init(game),

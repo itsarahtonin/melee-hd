@@ -75,6 +75,10 @@ pub struct Paths {
     pub units: &'static [&'static str],
     /// melee-sim's modules (`game/<module>.rs`), each of whose stops a gap of the mode covers.
     pub modules: &'static [&'static str],
+    /// What the mode's units and modules hold that the mode can't reach, each by a piece of
+    /// its name or its stop's text, with why: an unported function or a stop only another
+    /// mode's path reaches.
+    pub unreached: &'static [(&'static str, &'static str)],
 }
 
 /// Something a mode reaches that no port covers.
@@ -103,10 +107,10 @@ use Mode::{
     MultiMan as MM, TargetTest as TT, Training as TR,
 };
 
-/// Every single-player mode (the debug routes not among them).
-const MODES: &[Mode] = &[TR, HR, TT, MM, EV, CL, AS, AD];
-/// The modes with a one-door character select.
-const ONE_DOOR: &[Mode] = &[TR, HR, TT, MM, EV, CL, AS, AD];
+/// The single-player modes but the Home-Run Contest, whose paths its own entry holds to the
+/// code ([`PATHS`]' unreached): its match is set up by its own entry, not the single-player
+/// setups, it keeps no stocks, has no results or clear screens, and its records are its own.
+const NOT_HOME_RUN: &[Mode] = &[TR, TT, MM, EV, CL, AS, AD];
 /// The modes that end with a game over, the endings, the staff roll and the trophy fall.
 const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
@@ -145,11 +149,7 @@ const MASTER_HAND: &[&str] = &[
     "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
     "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhanddamage0",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandslam",
     "melee/ft/kinds/ftMasterHand/ftmasterhandsweep",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandtagapplaud",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandtagcrush",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandtagrockpaper",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
@@ -159,51 +159,14 @@ const MASTER_HAND: &[&str] = &[
 
 /// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
 const CRAZY_HAND: &[&str] = &[
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandbackairplane1",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandbackairplane2",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandbackairplane3",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandbackcrush",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandbackdisappear",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturecrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturedamagecrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhanddamage0",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhanddrill",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandentry",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam0",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingergun2",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandgrab",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandgrabunk1b174",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandpoke",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandrockcrush0",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandrockcrush1",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandslam",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandsqueeze",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandsqueezing0",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandsqueezing1",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandsweep",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandsweepwait",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtaggrab",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagrockpaper",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrow",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait11",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandwalk",
     "melee/it/kinds/itcrazyhandbomb",
-];
-
-/// The twelve cutscenes' units and the cutscene scene's own.
-const CUTSCENES: &[&str] = &[
-    "melee/vi/vi0801",
-    "melee/vi/vi1101",
-    "melee/vi/vi1201v1",
-    "melee/vi/vi1201v2",
-    "melee/vi/vi1202",
 ];
 
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
@@ -217,6 +180,7 @@ pub const PATHS: &[Paths] = &[
             "melee/it/kinds/itmetamon",
         ],
         modules: &[],
+        unreached: &[],
     },
     Paths {
         mode: HR,
@@ -225,13 +189,34 @@ pub const PATHS: &[Paths] = &[
             "melee/gm/gm_180A",
             "melee/gr/grhomerun",
             "melee/ft/kinds/ftSandbag/ftsandbag",
+            "melee/it/kinds/itbat",
         ],
-        modules: &[],
+        // The contest's own code, and the code its path from the main menu to the contest and
+        // back runs whose stops name the other single-player modes: its mode's states, the
+        // one-door select, the VS scene's match with the contest's rules and its exit, the HUD
+        // and the bonuses.
+        modules: &[
+            "gm/home_run",
+            "gr/homerun",
+            "ft/sandbag",
+            "gm/one_player",
+            "gm/machine",
+            "mn/charsel/one_door",
+            "gm/vs",
+            "gm/match_exit",
+            "gm",
+            "hud/stock",
+            "pl/tally",
+            "gm/decisions",
+            "ft/co/dead",
+        ],
+        unreached: HOME_RUN_UNREACHED,
     },
     Paths {
         mode: TT,
-        units: &["melee/gm/gmmultiman", "melee/it/kinds/itmato"],
+        units: &["melee/it/kinds/itmato"],
         modules: &[],
+        unreached: &[],
     },
     Paths {
         mode: MM,
@@ -243,6 +228,7 @@ pub const PATHS: &[Paths] = &[
             "melee/ft/kinds/ftZakoGirl/ftgirl",
         ],
         modules: &["ft/zako"],
+        unreached: &[],
     },
     Paths {
         mode: EV,
@@ -276,6 +262,7 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/masterhandbullet",
             "it/kinds/masterhandlaser",
         ],
+        unreached: &[],
     },
     Paths {
         mode: CL,
@@ -306,6 +293,7 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/masterhandbullet",
             "it/kinds/masterhandlaser",
         ],
+        unreached: &[],
     },
     Paths {
         mode: AS,
@@ -316,6 +304,7 @@ pub const PATHS: &[Paths] = &[
             "melee/gr/grheal",
         ],
         modules: &["gm/endings/mod", "gm/endings/game_over"],
+        unreached: &[],
     },
     Paths {
         mode: AD,
@@ -347,10 +336,12 @@ pub const PATHS: &[Paths] = &[
             "gr/bigblueroute",
             "gr/kinokoroute",
             "gr/zebesroute",
+            "gr/icemt",
             "it/kinds/nokonoko",
             "it/kinds/patapata",
             "it/kinds/zgshell",
             "it/kinds/zrshell",
+            "it/kinds/whitebea",
             "vi/mod",
             "vi/v0102",
             "vi/v0401",
@@ -360,6 +351,7 @@ pub const PATHS: &[Paths] = &[
             "vi/v0601",
             "vi/v0801",
         ],
+        unreached: &[],
     },
     Paths {
         mode: DB,
@@ -388,10 +380,12 @@ pub const PATHS: &[Paths] = &[
             "gr/bigblueroute",
             "gr/kinokoroute",
             "gr/zebesroute",
+            "gr/icemt",
             "it/kinds/nokonoko",
             "it/kinds/patapata",
             "it/kinds/zgshell",
             "it/kinds/zrshell",
+            "it/kinds/whitebea",
             "vi/mod",
             "vi/v0102",
             "vi/v0401",
@@ -401,7 +395,133 @@ pub const PATHS: &[Paths] = &[
             "vi/v0601",
             "vi/v0801",
         ],
+        unreached: &[],
     },
+];
+
+/// Why the Home-Run Contest reaches nothing its paths' units and modules hold unported. Its
+/// match is a VS scene the contest's own entry sets up (`gm_801B9A3C`: VS mode's rules with
+/// the contest's, not `gm_16A2`'s single-player setups), so the single-player setups' fields
+/// stay as VS leaves them: nothing ported writes the rules' horde setup (`x54`) or
+/// challenger's record (`x58`), the spawn flags (`gm.spawn_flags`) or a player's leaving flag
+/// but a cutscene, and the contest's entry clears `x4_2` and `x4_4`.
+const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
+    (
+        "game mode {m:#x}'s states",
+        "the contest's states (gm_Mode_Homerun_States: the select, the match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode's notices (0x14, after a trophy the distance earns: gm_80173754 with no challenger), which go back to it (onExitPrize)",
+    ),
+    (
+        "game mode {m:#x}'s loading",
+        "the contest's load (gm_Mode_Homerun_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
+    ),
+    (
+        "the mode override",
+        "the game installs one override, the boot's card check, ported",
+    ),
+    (
+        "the VS scene's enter data in game mode",
+        "the contest's match enters with VS mode's start data (uses_vs_melee)",
+    ),
+    (
+        "game scene {k:#x}",
+        "the contest's scenes are the one-door select and the VS scene, and the notices' prize scene, each in the scene machine",
+    ),
+    (
+        "gm_801BEE9C (congratulations' exit)",
+        "the game over modes' congratulations: the contest has no ending",
+    ),
+    (
+        "Hook::Unported1P(name)",
+        "the contest's states hook its select's and its match's entries and exits (HomeRunEnterCss, HomeRunExitCss, HomeRunEnterVs, HomeRunExitVs), none unported",
+    ),
+    (
+        "a 1P run's getter",
+        "only All-Star's round setup asks a getter",
+    ),
+    (
+        "the one-door screen's panel for match type",
+        "the contest's select is the Stadium's Home-Run match type (0x10, which gm_801B98E8 sets), whose panel is ported",
+    ),
+    (
+        "mnCharSel_8025C020's records for match type",
+        "the contest's select shows the Home-Run records (match type 0x10), ported",
+    ),
+    (
+        "gm_80167320 for a leaving slot",
+        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "fn_80169444 (a single-player mode's last stock)",
+        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
+    ),
+    (
+        "gm_8016AC44 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "HUD colour {c} past the table",
+        "no caller passes a colour past the table's nine",
+    ),
+    (
+        "single-player match setup",
+        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "a match's exit data in game mode",
+        "the contest's match exits into VS mode's exit data (uses_vs_melee)",
+    ),
+    (
+        "fn_8017F294 (a single-player run's exit value)",
+        "the rules' x4_4, which the contest's entry clears (gm_801B9A3C)",
+    ),
+    (
+        "fn_8016C46C's single-player results",
+        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
+    ),
+    (
+        "gm_801674C4 (a stage's match event)",
+        "only the adventure routes' stages start one (Mushroom Kingdom's, the Underground Maze's, Icicle Mountain's climb)",
+    ),
+    (
+        "fn_802FA6C4 in a single-player mode",
+        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
+    ),
+    (
+        "fn_802FAC34 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "ifStock_802FA5BC",
+        "the spawn flags' 0x10 and 0x40, which only gm_16A2's single-player setups set",
+    ),
+    (
+        "the multi-man counter of ifStock_802FAEC4",
+        "the Multi-Man modes' (game modes 0x21 to 0x26)",
+    ),
+    (
+        "gm_801720B4 in a single-player run",
+        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
+    ),
+    (
+        "gm_80172140 in a 1P run",
+        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
+    ),
+    (
+        "fn_80171A88 in a 1P run",
+        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
+    ),
+    (
+        "gm_801693BC for a slot that leaves",
+        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "Target Test's match entry alone asks a character's target stage",
+    ),
+    (
+        "itBat_Logic11_EvtUnk",
+        "an item's evt_unk runs only from it_8026B7F8, in a fighter's unload (Fighter_Unload_8006DABC): mid-match only through Player_80031EBC, whose callers are Training's count (fn_8016EF98), a leaving slot (gm_80167320) and the trophy fall, none in the contest; at the scene's end as in VS (items_audit's EVT_UNK)",
+    ),
 ];
 
 /// What the single-player modes reach that isn't ported, each with the modes that reach it.
@@ -415,12 +535,12 @@ pub const MISSING: &[Gap] = &[
             "game mode {m:#x}'s loading",
             "game scene {k:#x}",
         ],
-        modes: &[TR, HR, TT, MM, EV, CL, AS, AD, DB],
+        modes: &[TR, TT, MM, EV, CL, AS, AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
-        modes: ONE_DOOR,
+        modes: NOT_HOME_RUN,
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -436,7 +556,7 @@ pub const MISSING: &[Gap] = &[
             "gm_8016AC44 with a challenger's record",
             "fn_802FAC34 with a challenger's record",
         ],
-        modes: MODES,
+        modes: NOT_HOME_RUN,
     },
     Gap {
         what: "a horde's players leaving their slots",
@@ -452,7 +572,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmregclear",
             "melee/gm/gmregcommon",
             "fn_8016AE60",
-            "gm_8016AEFC",
             "gm_8016B014",
             "gm_8016B350",
             "gm_8016B364",
@@ -472,20 +591,17 @@ pub const MISSING: &[Gap] = &[
             "fn_80169444 (a single-player mode's last stock)",
             "fn_8016C46C's single-player results",
             "fn_8017F294 (a single-player run's exit value)",
-            "fn_80171A88 in a single-player mode",
-            "gm_8016B014 with x4_2",
         ],
-        modes: MODES,
+        modes: NOT_HOME_RUN,
     },
     Gap {
         what: "the 1P HUD (the stocks and counters)",
         covers: &["ifStock_802FA5BC", "fn_802FA6C4 in a single-player mode"],
-        modes: MODES,
+        modes: NOT_HOME_RUN,
     },
     Gap {
         what: "the 1P records and saves",
         covers: &[
-            "gmMainLib_8015D084",
             "gmMainLib_8015D0F4",
             "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
@@ -515,7 +631,6 @@ pub const MISSING: &[Gap] = &[
             "fn_80162BFC",
             "fn_80162DF8",
             "fn_80162FF4",
-            "gm_80163298",
             "gm_8016365C",
             "gm_80163690",
             "gm_801636D8",
@@ -533,19 +648,13 @@ pub const MISSING: &[Gap] = &[
             "gm_GetCruelHighscore",
             "gm_GetCruelTotalHighscore",
             "gm_801647F8",
-            "fn_801650E8",
-            "fn_80165190",
-            "fn_801651FC",
-            "fn_801652B0",
             "gm_801674C4",
             "fn_801689E4",
             "fn_80168A6C",
-            "lbTime_8000AEE4",
             "gm_801720B4 in a single-player run",
-            "gm_80172140 in a single-player mode",
             "fn_8017DF28 (a single-player mode's record)",
         ],
-        modes: MODES,
+        modes: NOT_HOME_RUN,
     },
     Gap {
         what: "the unlocks, trophies and challengers after a mode",
@@ -564,25 +673,27 @@ pub const MISSING: &[Gap] = &[
             "gm_8017341C",
             "gm_80173460",
             "gm_80173498",
-            "gm_801734D0",
             "fn_80173834",
             "gm_8017390C",
             "gm_80173AA4",
-            "gm_80173B30",
-            "gm_80173BC4",
             "gm_80173C70",
         ],
-        modes: MODES,
+        modes: NOT_HOME_RUN,
+    },
+    Gap {
+        what: "the 1P runs' falls and progress the bonuses ask about",
+        covers: &["gm_80172140 in a 1P run", "fn_80171A88 in a 1P run"],
+        modes: &[CL, AS, AD],
     },
     // The modes' own code.
     Gap {
-        what: "Training's mode, its scene and its item menu",
+        what: "Training's computer players' count and reset (a fighter made and unloaded mid-match)",
         covers: &[
-            "melee/gm/gmtrainingmode",
-            "melee/gm/gm_1884",
-            "gm_Scene_Training_OnEnter",
-            "gm_Scene_Training_OnFrame",
-            "it_8027A780 (training's Pok",
+            "gm_8016EDDC (a player joining a match)",
+            "fn_8016EF98 (a player leaving a match)",
+            "Player_800328D4 (the training menu's reset)",
+            "fn_80188550",
+            "fn_80188644",
         ],
         modes: &[TR],
     },
@@ -592,28 +703,13 @@ pub const MISSING: &[Gap] = &[
         modes: &[TR, EV],
     },
     Gap {
-        what: "the Home-Run Contest's mode, its stage and Sandbag",
-        covers: &[
-            "melee/gm/gmhomerun",
-            "melee/gm/gm_180A",
-            "melee/gr/grhomerun",
-            "melee/ft/kinds/ftSandbag/ftsandbag",
-        ],
-        modes: &[HR, DB],
-    },
-    Gap {
-        what: "Target Test's and the Multi-Man modes' mode (gmmultiman.c)",
+        what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
         covers: &["melee/gm/gmmultiman"],
-        modes: &[TT, MM],
+        modes: &[MM],
     },
     Gap {
-        what: "the target stages",
+        what: "the target stages' objects' destroy callbacks, demo setups and shadow checks, held until a session reaches them",
         covers: TARGET_STAGES,
-        modes: &[TT, CL, DB],
-    },
-    Gap {
-        what: "the targets",
-        covers: &["melee/it/kinds/itmato"],
         modes: &[TT, CL, DB],
     },
     Gap {
@@ -693,7 +789,6 @@ pub const MISSING: &[Gap] = &[
             "melee/ft/ftbosslib",
             "lbAudioAx_8002438C",
             "gm_8016ECE8",
-            "ftCh_GrabUnk1_8015BC88",
         ],
         modes: &[CL, EV, DB],
     },
@@ -725,16 +820,8 @@ pub const MISSING: &[Gap] = &[
             "melee/gr/grshrineroute",
             "melee/gr/grzebesroute",
             "melee/gr/grbigblueroute",
-            "stageGObj10_UnkGroundCallback",
-            "stageGObj10_OnInit",
-            "stageGObj10_GObjProc",
             "stageGObj10_Callback3",
-            "fn_801F9150",
-            "fn_801F91A8",
             "fn_801FA4CC",
-            "grIceMt_801FA6D8",
-            "the adventure's fields (grIceMt_801F686C, stage kind 76)",
-            "the adventure's spawner (grIceMt_801F7080, stage kind 76)",
             "stage kind {grkind}",
         ],
         modes: &[AD, DB],
@@ -766,22 +853,10 @@ pub const MISSING: &[Gap] = &[
             "it_8027CC88 (a 1P mode's trophy from an enemy)",
             "Toy_803049F4",
             "Toy_80304A58",
-            "tyDisplay_8031C2EC",
             "tyDisplay_8031C354",
-            "tyDisplay_8031C454",
             "tyDisplay_8031C5E4",
         ],
         modes: &[AD, CL, DB],
-    },
-    Gap {
-        what: "Giga Bowser",
-        covers: &["melee/ft/kinds/ftGigaKoopa/ftgkoopa"],
-        modes: &[AD, EV, DB],
-    },
-    Gap {
-        what: "the cutscenes",
-        covers: CUTSCENES,
-        modes: &[AD, DB],
     },
     Gap {
         what: "the cutscenes after the F-Zero one",
@@ -790,11 +865,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the cutscenes' fighters and stages",
-        covers: &[
-            "ftDemo_SetFacingDirection",
-            "demo setup",
-            "ftDemo_CreateFighter's pose",
-        ],
+        covers: &["demo setup", "ftDemo_CreateFighter's pose"],
         modes: &[AD, CL, AS, DB],
     },
     // The ends of a run.
@@ -907,8 +978,16 @@ mod tests {
 
         for p in PATHS {
             let gaps = missing(p.mode);
-            let covered = |text: &str, unit: Option<&str>| {
-                gaps.iter().any(|g| {
+            let mut used = vec![false; p.unreached.len()];
+            let mut covered = |text: &str, unit: Option<&str>| {
+                let mut hit = false;
+                for (i, (k, _)) in p.unreached.iter().enumerate() {
+                    if text.contains(k) {
+                        used[i] = true;
+                        hit = true;
+                    }
+                }
+                hit || gaps.iter().any(|g| {
                     g.covers
                         .iter()
                         .any(|c| text.contains(c) || unit.is_some_and(|u| u == *c))
@@ -939,6 +1018,20 @@ mod tests {
                             p.mode.name()
                         ));
                     }
+                }
+            }
+            for ((k, why), used) in p.unreached.iter().zip(used) {
+                if !used {
+                    out.push(format!(
+                        "{}: its unreached {k:?} names nothing unported in its units or a stop in its modules",
+                        p.mode.name()
+                    ));
+                }
+                if why.is_empty() {
+                    out.push(format!(
+                        "{}: its unreached {k:?} says no why",
+                        p.mode.name()
+                    ));
                 }
             }
         }
@@ -994,7 +1087,9 @@ mod tests {
         assert!(out.is_empty(), "{}\n{} problems", out.join("\n"), out.len());
     }
 
-    /// Every mode has its paths once and every gate its mode; the debug routes have no gate.
+    /// Every mode has its paths once and every gate its mode; the debug routes have no gate,
+    /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest,
+    /// docs/player.md).
     #[test]
     fn modes_match_the_gates() {
         for m in Mode::ALL {
@@ -1004,7 +1099,8 @@ mod tests {
                 "{}",
                 m.name()
             );
-            assert_eq!(m.gate().is_none(), m == Mode::Debug, "{}", m.name());
+            let lifted = matches!(m, Mode::Debug | Mode::HomeRun);
+            assert_eq!(m.gate().is_none(), lifted, "{}", m.name());
         }
         for g in crate::game::menus_audit::GATES {
             assert!(
