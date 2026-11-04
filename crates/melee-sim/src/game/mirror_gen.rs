@@ -20,6 +20,7 @@ use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::hud::stock::StockJObj;
 use crate::game::it::Var;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
@@ -20459,7 +20460,7 @@ impl Mirror for ifStock_804A1378 {
             }),
             gobj: cx.import_handle("GObjId", m.u32(at + 0x1e8)).map(GObjId),
             jobj: cx.import_handle("JObjId", m.u32(at + 0x1ec)).map(JObjId),
-            pad1F0: core::array::from_fn(|i0| m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
+            jobj_1: StockJObj::import(m, at + 0x1f0, cx),
             jobj_a: cx.import_handle("JObjId", m.u32(at + 0x1f4)).map(JObjId),
             jobj_b: cx.import_handle("JObjId", m.u32(at + 0x1f8)).map(JObjId),
             jobj_c: cx.import_handle("JObjId", m.u32(at + 0x1fc)).map(JObjId),
@@ -20491,15 +20492,8 @@ impl Mirror for ifStock_804A1378 {
             self.jobj.map(|h| h.0),
             m.u32(at + 0x1ec),
         );
-        for i0 in 0..4 {
-            if self.pad1F0[i0] != m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8 {
-                cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad1F0"), i0),
-                    format!("{:?}", self.pad1F0[i0]),
-                    format!("{:?}", m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
-                );
-            }
-        }
+        self.jobj_1
+            .compare(m, at + 0x1f0, &format!("{path}.jobj_1"), cx);
         cx.compare_handle(
             &format!("{path}.jobj_a"),
             "JObjId",

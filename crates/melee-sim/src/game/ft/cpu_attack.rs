@@ -1934,7 +1934,7 @@ impl Running<'_> {
             return 0;
         }
         if self.game.fighters[f.0].cpu.kind == 0x10 {
-            unported_call("ftCo_800B7638");
+            return self.cpu_jump_attack_16(f);
         }
         if !self.cpu_facing_destination(f) {
             return 0;
@@ -1978,6 +1978,51 @@ impl Running<'_> {
         } else {
             0
         }
+    }
+
+    /// Computer kind 16's jump at its target, `ftCo_800B7638` (Multi-Man's Wire Frames): in
+    /// the air only with a jump left while not rising; at a target not below it, 1 at one in
+    /// the air steeply above in clear view, 2 at one on the ground 30 to 40 away nearly level.
+    // Ports ftCo_800B7638; aliased once a check reaches it (100-Man Melee's table has kind 16
+    // from its 70th entry).
+    fn cpu_jump_attack_16(&mut self, f: FighterId) -> i32 {
+        let fpp = &self.game.fighters[f.0];
+        let Some(t) = fpp.cpu.x44 else { return 0 };
+        if fpp.ground_or_air == GA_AIR {
+            if fpp.co_attrs.max_jumps <= i32::from(fpp.x1968_jumpsUsed) {
+                return 0;
+            }
+            if fpp.pos_delta.y > 0.0 {
+                return 0;
+            }
+        }
+        let (me, tp) = (fpp.cur_pos, self.game.fighters[t.0].cur_pos);
+        if fp::fsubs(reg(tp.y), reg(me.y)) < 0.0 {
+            return 0;
+        }
+        let angle = || {
+            let dy = fp::fsubs(reg(tp.y), reg(me.y));
+            let dx = abs(fp::fsubs(reg(tp.x), reg(me.x)));
+            super::co::guard::stick_angle(dy, dx)
+        };
+        if self.game.fighters[t.0].ground_or_air == GA_AIR {
+            let geo = self.game.geometry.as_mut().expect("no collision geometry");
+            if geo.check_ceiling(me.x, me.y, tp.x, tp.y, -1, -1).is_some() {
+                return 0;
+            }
+            let _ = self.cpu_distance(f, t);
+            if angle() > 0.785_398_157_313_466_1 {
+                return 1;
+            }
+        } else {
+            let d = self.cpu_distance(f, t);
+            let a = angle();
+            if d > 30.0 && d < 40.0 && a > -0.087_266_461_923_718_45 && a < 0.087_266_461_923_718_45
+            {
+                return 2;
+            }
+        }
+        0
     }
 
     /// Holding a grabbed fighter, `ftCo_800B683C` (behavior 9): with no victim it drops
