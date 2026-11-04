@@ -19,6 +19,7 @@ pub mod match_exit;
 pub mod memcard;
 pub mod menu;
 pub mod mode_init;
+pub mod multi_man;
 pub mod names;
 pub mod one_player;
 pub mod one_player_match;
@@ -520,6 +521,14 @@ pub fn call(
         }
         home_run::ON_MATCH_START => {
             r.homerun_match_start();
+            Some(super::code::Val::None)
+        }
+        multi_man::ON_MATCH_START => {
+            r.multi_man_match_start();
+            Some(super::code::Val::None)
+        }
+        multi_man::ON_MATCH_END => {
+            r.multi_man_match_end();
             Some(super::code::Val::None)
         }
 

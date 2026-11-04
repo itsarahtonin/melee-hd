@@ -56,10 +56,12 @@ pub const GATES: &[Gate] = &[
         list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
+        // Ported but for what no session reaches yet (game::single_player_audit's gaps).
         covers: &[
-            "mnHyaku_8024CD64",
-            "melee/mn/mnhyaku",
-            "melee/gm/gmmultiman",
+            "melee/ft/kinds/ftZakoBoy/ftboy",
+            "melee/ft/kinds/ftZakoGirl/ftgirl",
+            "gm_80173460",
+            "gm_80173498",
         ],
     },
     Gate {
@@ -147,10 +149,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the Event list, behind the Event Match gate",
     ),
     (
-        "mnHyaku_8024CD64 (the Multi-Man list)",
-        "the Multi-Man list, behind the Multi-Man Melee gate",
-    ),
-    (
         "the slot's image pointing at an album image",
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
     ),
@@ -160,11 +158,11 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "the one-door screen's panel for match type",
-        "the timed and endless Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
+        "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its panel",
     ),
     (
         "mnCharSel_8025C020's records for match type",
-        "the Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
+        "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its records",
     ),
     (
         "the race's clear",
@@ -197,10 +195,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "fn_802FA6C4 in a single-player mode",
         "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "the multi-man counter of ifStock_802FAEC4",
-        "Multi-Man Melee's, behind its gate",
     ),
     (
         "a text on canvas {context} of font {font}, past the last",
