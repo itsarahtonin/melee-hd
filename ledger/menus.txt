@@ -217,12 +217,11 @@ mnName_8023749C	unchecked	a getter or setter of the game's data, which its calle
 mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_8025FB2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-Toy_803049F4	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
+Toy_803049F4	unchecked	the 1P coin's trophy lookups and model (game/ty/collection.rs), ported with the coin (it_802F2094) and a beaten enemy's roll (it_8027CC88): Adventure's and Classic's, which only the 1P list's gated entries lead to (Training never makes the coin: single_player_audit's TRAINING_NO_TROPHY)
 Toy_80304A58	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031BB34	gated	named only by the single-player modes' code (gm_801A9094): the single-player modes', which only the 1P list's gated entries lead to
 tyDisplay_8031BB94	gated	named only by the single-player modes' code (gm_801A9094): the single-player modes', which only the 1P list's gated entries lead to
-tyDisplay_8031C354	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
-tyDisplay_8031C5E4	gated	the trophy stages' and the adventure enemies' trophy lookups (it_8027CC88 under gm_IsCurrently1PMode, the zako generator, Ground_801C0754's trophy): the single-player modes', which only the 1P list's gated entries lead to
+tyDisplay_8031C354	unchecked	the 1P coin's trophy lookups and model (game/ty/collection.rs), ported with the coin (it_802F2094) and a beaten enemy's roll (it_8027CC88): Adventure's and Classic's, which only the 1P list's gated entries lead to (Training never makes the coin: single_player_audit's TRAINING_NO_TROPHY)
 tyDisplay_8031C8B8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
 fn_801A47E4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs

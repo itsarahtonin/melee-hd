@@ -227,6 +227,7 @@ members! {
     Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
     LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
     Coin, coin, it_2E5A_ItemVars, [UNK4];
+    TrophyCoin, trophy_coin, itCoin_ItemVars, [COIN];
     Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
     Yaku, yaku, YakuVars, [PKIND_RANDOM];
 }

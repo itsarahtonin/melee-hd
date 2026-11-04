@@ -196,8 +196,8 @@ pub const PATHS: &[Paths] = &[
         // runs whose stops name the other single-player modes: its mode's states, the one-door
         // select, the stage select, the VS scene's match with Training's rules and its exit,
         // the notices after a trophy, the HUD and the bonuses; the Pokémon its balls let out,
-        // Pokémon Stadium's screen in Training, and the enemies' common code a beaten Birdo
-        // runs on Mushroom Kingdom II.
+        // Pokémon Stadium's screen in Training, the enemies' common code a beaten Birdo runs on
+        // Mushroom Kingdom II, and the 1P coin, which Training never makes.
         modules: &[
             "gm/training",
             "ft/unload",
@@ -218,6 +218,7 @@ pub const PATHS: &[Paths] = &[
             "it/pokemon/mod",
             "gr/stadium",
             "it/zako",
+            "it/kinds/trophycoin",
         ],
         unreached: TRAINING_UNREACHED,
     },
@@ -769,10 +770,38 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "grStadium_801D384C",
         "Pokémon Stadium's names screen (mode 1), which Training's screen never shows: the screen's mode set turns 1 into the stage feed (7) in Training (gm_8018841C, grpstadium.c)",
     ),
+    ("grFigureGet_80219C", TRAINING_NO_TROPHY),
+    (
+        "it_8027B5B0 (an enemy of kind",
+        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+    ),
+    (
+        "pl_8004049C (an enemy of kind",
+        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+    ),
     ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
     ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
     ("it_802D306C", TRAINING_NO_DITTO),
 ];
+
+/// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
+/// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
+/// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
+/// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
+/// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
+/// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
+/// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
+/// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
+/// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
+/// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
+/// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
+/// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
+/// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
+/// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
+/// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
+/// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
+/// (docs/oracle.md, "Training's trophy roll").
+const TRAINING_NO_TROPHY: &str = "Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88), needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over every launch angle, facing and place she's hit at (five short)";
 
 /// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
 /// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
@@ -921,32 +950,6 @@ pub const MISSING: &[Gap] = &[
         covers: &["melee/it/kinds/itmetamon"],
         modes: &[EV],
     },
-    // Training is a single-player mode to `gm_IsCurrently1PMode`, so an enemy beaten there
-    // rolls for a trophy (`it_8027CC88`: one draw in 16, the enemies' common data's `x14`),
-    // which VS never does. Training's matches have one enemy: Mushroom Kingdom II's Birdo
-    // (`itkyasarin`, no item setting needed), knocked out to bounce away (state 10,
-    // `it_8027C79C`). On a hit the stage's trophy (`stage_info.x6E4`, which Training's stage
-    // load draws, `tyDisplay_8031C2EC`) picks one of its kind (`tyDisplay_8031C354`, whose
-    // two calls of up to ten each fill one ten-entry stack buffer) and drops it as the 1P coin
-    // (`it_802F2094`, `itcoin.c`, its model `tyDisplay_8031C5E4`), whose pickup counts it
-    // (`gm_8017E280`) and runs the enemies' KO (the zako generator's and the KO bonus's coin
-    // cases). Containers' monsters can't come out in Training: its item menu offers no
-    // container (kinds 5 to 0x22) and its rules have no random items (`item_freq` -1).
-    Gap {
-        what: "a trophy from Birdo knocked out in Training (it_8027CC88's single-player roll, the 1P coin and its trophy lookups)",
-        covers: &[
-            "it_8027CC88 (a 1P mode's trophy from an enemy)",
-            "melee/it/kinds/itcoin",
-            "tyDisplay_8031C354",
-            "tyDisplay_8031C5E4",
-            "gm_8017E280",
-            "grZakoGenerator_801CAC14 (a coin)",
-            "grZakoGenerator_801CACB8 (a coin)",
-            "pl_8004049C (an enemy of kind",
-            "it_8027B5B0 (an enemy of kind",
-        ],
-        modes: &[TR],
-    },
     Gap {
         what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
         covers: &["melee/gm/gmmultiman"],
@@ -1061,7 +1064,7 @@ pub const MISSING: &[Gap] = &[
         modes: &[AD, DB],
     },
     Gap {
-        what: "the adventure enemies, their spawner and the 1P coin",
+        what: "the adventure enemies and their spawner",
         covers: &[
             "melee/it/kinds/itlikelike",
             "melee/it/kinds/itnokonoko",
@@ -1069,13 +1072,10 @@ pub const MISSING: &[Gap] = &[
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
             "melee/it/kinds/itwhitebea",
-            "melee/it/kinds/itcoin",
             "melee/ft/ftCo_800C78B0",
             "fn_800C7890",
             "grZakoGenerator_801CAF08",
             "it_8027B5B0 (an enemy of kind",
-            "grZakoGenerator_801CAC14",
-            "grZakoGenerator_801CACB8",
             "pl_8004049C (an enemy of kind",
         ],
         modes: &[AD, DB],
@@ -1083,11 +1083,9 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "a beaten enemy's or a trophy stage's trophy",
         covers: &[
-            "it_8027CC88 (a 1P mode's trophy from an enemy)",
             "Toy_803049F4",
             "Toy_80304A58",
             "tyDisplay_8031C354",
-            "tyDisplay_8031C5E4",
         ],
         modes: &[AD, CL, DB],
     },
@@ -1321,8 +1319,8 @@ mod tests {
     }
 
     /// Every mode has its paths once and every gate its mode; the debug routes have no gate,
-    /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest
-    /// and Target Test, docs/player.md).
+    /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest,
+    /// Target Test and Training, docs/player.md).
     #[test]
     fn modes_match_the_gates() {
         for m in Mode::ALL {
@@ -1332,7 +1330,10 @@ mod tests {
                 "{}",
                 m.name()
             );
-            let lifted = matches!(m, Mode::Debug | Mode::HomeRun | Mode::TargetTest);
+            let lifted = matches!(
+                m,
+                Mode::Debug | Mode::HomeRun | Mode::TargetTest | Mode::Training
+            );
             assert_eq!(m.gate().is_none(), lifted, "{}", m.name());
         }
         for g in crate::game::menus_audit::GATES {
