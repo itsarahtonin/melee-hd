@@ -1981,15 +1981,16 @@ fn master_hand_in_debug_vs() {
 
 /// Milestone 6's task 5's debug-level sessions (docs/oracle.md, the single-player endings),
 /// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
-/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy` and
-/// `intro-allstar` (to Classic's and All-Star's intros, tasks 22's and 23's) and `ending-test`
-/// (the RegularEnding Test's debug game over mode: the trophy fall, congratulations idle to the
-/// trace's end); task 5's `m6-endings/gameover2` (the game over twice: a continue paid in
-/// coins, then "no"), and `m6-endings-2`'s `regend-adv` (Zelda's Adventure ending whole,
-/// congratulations' A and the exit's unlocks to a challenger), `regend-gw` (Mr. Game & Watch's
-/// All-Star ending, the trophy fall cut short by Start), `regend-all` (Captain Falcon's Classic
-/// ending from the unlock-all card: cut 3 lays out every Classic trophy) and `regend-real` (RegularEnding Real:
-/// Classic's game over mode, its load and the trophy fall, to the staff roll).
+/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy`
+/// (Classic's intro, to the trace's end) and `intro-allstar` (to All-Star's intro, task 23's)
+/// and `ending-test` (the RegularEnding Test's debug game over mode: the trophy fall,
+/// congratulations idle to the trace's end); task 5's `m6-endings/gameover2` (the game over
+/// twice: a continue paid in coins, then "no"), and `m6-endings-2`'s `regend-adv` (Zelda's
+/// Adventure ending whole, congratulations' A and the exit's unlocks to a challenger),
+/// `regend-gw` (Mr. Game & Watch's All-Star ending, the trophy fall cut short by Start),
+/// `regend-all` (Captain Falcon's Classic ending from the unlock-all card: cut 3 lays out every
+/// Classic trophy) and `regend-real` (RegularEnding Real: Classic's game over mode, its load
+/// and the trophy fall, to the staff roll).
 #[test]
 fn the_debug_endings() {
     for (dir, name, want) in [
@@ -2001,7 +2002,7 @@ fn the_debug_endings() {
         (
             "m6-oracle",
             "intro-easy",
-            "1362 ticks compared, no difference; stopped in tick 1362: game scene 0x20 isn't ported",
+            "3292 ticks compared, no difference",
         ),
         (
             "m6-oracle",
@@ -2336,6 +2337,25 @@ fn single_player_setups() {
     // over with too few coins ending the run back to the main menu.
     if let Some(out) = scripted_session("m6-1p-setups", "as-over", &["--all", "--heap"]) {
         assert!(out.contains("4532 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Classic's intro and first match (milestone 6's task 2, the intros): `m6-intros/classic-win`
+/// from power-on on the unlock-all card, Classic on Normal with Fox, the first stage's intro
+/// (`gm_1832.c`: the screen's model and map, Fox frozen in a KO toward the screen with his
+/// blaster and the opponent asleep at their places, the names, the announcer's call), the
+/// match won by a bot, its clear screen, and the second stage's intro to its team's allies
+/// drawn (`fn_8017D9C0`), which aren't ported.
+#[test]
+fn single_player_intros() {
+    if let Some(out) = scripted_session("m6-intros", "classic-win", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "4572 ticks compared, no difference; stopped in tick 4572: Classic's allies drawn (fn_8017D9C0) isn't ported"
+            ),
+            "{out}"
+        );
         assert!(out.contains("no stale reads"), "{out}");
     }
 }

@@ -16,6 +16,7 @@ pub mod heap;
 pub mod home_run;
 pub mod hud;
 pub mod import;
+pub mod intros;
 pub mod items;
 pub mod izumi;
 pub mod leftovers;
@@ -216,18 +217,24 @@ fn index_files(files: impl Iterator<Item = (String, Vec<u8>)>) -> DiscIndex {
             }
         }
         let endings = name.starts_with("GmRegEnd");
+        let intro = name.starts_with("Ir") && (name.ends_with(".dat") || name.ends_with(".usd"));
         if ((name.starts_with("Vi") || name.contains("DViWait")) && name.ends_with(".dat"))
             || endings
+            || intro
         {
-            // A cutscene's file, a character's cutscene waits or the trophy fall's ending
-            // animations: each demo motion symbol (`ftDemoVi...MotionFile...`,
-            // `ftDemoEndingMotionFile...`) heads a run of archives, one per animation, each
+            // A cutscene's file, a character's cutscene waits, the trophy fall's ending
+            // animations or a single-player intro's file: each demo motion symbol
+            // (`ftDemoVi...MotionFile...`, `ftDemoEndingMotionFile...`, the intros'
+            // `ftDemoIntroMotionFile...`) heads a run of archives, one per animation, each
             // at a 32-byte boundary, which `ftDemo_SetArchiveData` copies into a fighter's
             // buffer on its own. Named by their offset in the file, as melee-sim names them.
             if let Ok(a) = Archive::parse(&bytes) {
                 let end = (0x20 + w(4) as usize).min(bytes.len());
                 for (sym, at) in a.publics() {
-                    if !sym.starts_with("ftDemoVi") && !sym.starts_with("ftDemoEnding") {
+                    if !sym.starts_with("ftDemoVi")
+                        && !sym.starts_with("ftDemoEnding")
+                        && !sym.starts_with("ftDemoIntro")
+                    {
                         continue;
                     }
                     let mut off = 0x20 + at as usize;

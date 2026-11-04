@@ -297,8 +297,24 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "a 1P run's team color getter",
-        "Classic's and Adventure's team stages: the single-player modes', which only the entries behind GATES lead to",
+        "Classic's allies drawn",
+        "Classic's team and giant stages (its second stage on): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (Classic's clear)",
+        "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gmClassic_801B3B40's target stage records",
+        "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "Classic's horde stage's",
+        "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "(Adventure's intro)",
+        "Adventure's intro, past its state's unported entry (gm_801B3F40): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8017D7AC's records after a no contest",
