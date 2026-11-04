@@ -577,10 +577,20 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `it_8027CC88` (a single-player mode's trophy from a beaten enemy, `itzako.c`) with `tyDisplay_8031C354`, `crates/melee-sim/src/game/it/zako.rs` (`trophy_roll`).
 - **Defect:** the roll lists the trophies like the stage's (`stage_info.x6E4`) into a ten-entry stack buffer (`sp1C`, at `r1+0x1C`) in two calls, each of up to ten: the second writes from the first's count on, so up to twenty entries land in ten slots, the last ten over the frame's words above it (`r1+0x44` to `0x6C`: the position buffer `it_8026BB88` fills next, and unused words), below the saved registers.
 - **Effect:** none observable: the draw (`HSD_Randi` of both counts) reads only entries the calls wrote, before `it_8026BB88` overwrites the position words, and nothing else reads the overwritten words.
-- **melee-hd:** not ported yet: the roll's single-player branch stops by name (Training reaches it with Mushroom Kingdom II's Birdo, docs/milestone-6.md's task 13); a port keeps the twenty-entry list.
+- **melee-hd:** modeled: the roll keeps a twenty-entry list, the second call writing from the first's count (`trophy_roll`, held unaliased until a session or check reaches a hit; Training never rolls, docs/milestone-6.md's task 13).
 - **Fix:** size the buffer for twenty, or bound the second call by what's left.
 - **Fix impact:** none on gameplay (the trophy drawn is the same).
 - **Source:** ssbm-rs's `it_8027CC88` (`crates/game/src/tu/melee__it__itzako.rs`, transliterated from the machine code: `addi r4, r1, 0x1c`, the second call's `add r4, r4, r0`, `addi r4, r1, 0x44`); the decomp's `itzako.c` (`s32 sp1C[10]`) and `tydisplay.c` (`count >= max`).
+
+### A hit trophy falls at speeds its block's last item left
+
+- **Where:** `itCoin_Logic116_DmgReceived` and `itCoin_UnkMotion3_Phys` (the single-player coin, `itcoin.c`), `crates/melee-sim/src/game/it/kinds/trophycoin.rs` (`damaged`, `phys3`).
+- **Defect:** only Snag the Trophies' coins (kinds 2 and 3) get their fall speeds (`xDD4_itemVar.coin.x8`, `xC`) at the spawn (`it_802F2094`); a trophy's coin (kind 0) falls at its attributes' speeds instead and never writes them. Hit, every coin adds its kind's speed to `x8` (a trophy's `attr->x8`) and flies off in state 3, whose physics falls at `x8` and `xC`: for a trophy, the item block's words from its last item (`HSD_ObjAlloc` doesn't clear them, nor does item creation).
+- **Effect:** a trophy dropped in Adventure (a stage's trophy point or a beaten enemy's roll) and hit before it's picked up falls at whatever its block's last item kept at those offsets, plus `attr->x8`: its flight depends on which item used the block before.
+- **melee-hd:** the port reads the item's variables as the block left them (`it::Var`: a stale read, which the oracle reports); held unaliased until a session reaches it, which then shows what to model.
+- **Fix:** set a trophy's `x8` and `xC` from its attributes' fall speeds at the spawn, as the other kinds' are.
+- **Fix impact:** changes a hit trophy's flight in Adventure and Classic's bonus stage; replays of those modes would differ only where a dropped trophy is hit.
+- **Source:** the decomp's `itcoin.c` (`it_802F2094`'s `x4` branch, `itCoin_Logic116_DmgReceived`'s `switch`, `itCoin_UnkMotion3_Phys`); ssbm-rs's `melee__it__kinds__itcoin.rs`.
 
 ### A fighter's unload reads the next item from an item it destroyed
 

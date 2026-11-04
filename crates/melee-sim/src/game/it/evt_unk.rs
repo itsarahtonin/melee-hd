@@ -67,8 +67,10 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
 
 /// The GObj forgotten as every item does (`it_8026B894`): the `evt_unk` of each kind in
 /// [`FORGET_ONLY`]; those aliased here are the ones the fighter unload's sessions reach
-/// (docs/oracle.md, sessions), the rest held until a check reaches them.
+/// (docs/oracle.md, sessions) and the 1P coin's (leaf-check's `items_coin`), the rest held
+/// until a check reaches them.
 #[doc(alias = "itHeart_Logic8_EvtUnk")]
+#[doc(alias = "itCoin_Logic116_EvtUnk")]
 #[doc(alias = "itBat_Logic11_EvtUnk")]
 #[doc(alias = "itParasol_Logic13_EvtUnk")]
 #[doc(alias = "itLGun_Logic16_EvtUnk")]

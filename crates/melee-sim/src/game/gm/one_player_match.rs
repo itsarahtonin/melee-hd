@@ -481,6 +481,29 @@ impl Running<'_> {
         let _ = GM_ALLSTAR;
     }
 
+    /// Counts `n` more of a trophy the match won, `gm_8017E280`: its entry's count, or the
+    /// first free entry's (-1) taken for it; the count after (as a signed byte), or -1 with
+    /// no entry free. The trophy compares as a halfword's zero extension with the entries'
+    /// sign extension.
+    #[doc(alias = "gm_8017E280")]
+    pub fn count_match_trophy(&mut self, trophy: u16, n: u32) -> i8 {
+        let t = &mut self.game.one_player.match_trophies;
+        for e in t.iter_mut() {
+            if i32::from(trophy) == i32::from(e.0) {
+                e.1 = e.1.wrapping_add(n as u8);
+                return e.1 as i8;
+            }
+        }
+        for e in t.iter_mut() {
+            if e.0 == -1 {
+                e.0 = trophy as i16;
+                e.1 = n as u8;
+                return n as u8 as i8;
+            }
+        }
+        -1
+    }
+
     /// The match's won trophies given, `fn_8017E3C8` (`Toy_SetUnlockState` each).
     #[doc(alias = "fn_8017E3C8")]
     pub fn give_match_trophies(&mut self) {
