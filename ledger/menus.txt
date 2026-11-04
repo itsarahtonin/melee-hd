@@ -8,7 +8,6 @@
 melee/gm/gm_17AD	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17BA	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17C0	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_17DB	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17E4	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_186E	gated	the single-player modes', which only the 1P list's gated entries lead to
