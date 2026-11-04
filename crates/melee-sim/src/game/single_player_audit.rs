@@ -658,10 +658,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
     ),
     (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations: Multi-Man Melee has no ending",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the modes' states hook their selects' and matches' entries and exits (MultiManEnterCss, MultiManExitCss, MultiManEnterMatch, MultiManExitMatch), none unported",
     ),
@@ -704,10 +700,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
         "fn_802FA6C4 in a single-player mode",
         "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "ifStock_802FA5BC",
