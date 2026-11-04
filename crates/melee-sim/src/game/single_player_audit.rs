@@ -107,11 +107,12 @@ use Mode::{
     MultiMan as MM, TargetTest as TT, Training as TR,
 };
 
-/// The single-player modes but the Stadium's Home-Run Contest and Target Test, whose paths
-/// their own entries hold to the code ([`PATHS`]' unreached): each match is set up by its
-/// mode's own entry, not the single-player setups, and has no results or clear screens; the
-/// contest keeps no stocks, and their records are their own, ported.
-const NOT_STADIUM: &[Mode] = &[TR, MM, EV, CL, AS, AD];
+/// The single-player modes whose matches `gm_16A2`'s single-player setups make: all but
+/// Training, the Home-Run Contest and Target Test, whose paths their own entries hold to the
+/// code ([`PATHS`]' unreached): each of those matches is set up by its mode's own entry, not
+/// the single-player setups, and has no results or clear screens; the contest and Training
+/// keep no stocks, and their records are their own, ported.
+const SETUP_MODES: &[Mode] = &[MM, EV, CL, AS, AD];
 /// The modes that end with a game over, the endings, the staff roll and the trophy fall.
 const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
@@ -189,9 +190,36 @@ pub const PATHS: &[Paths] = &[
             "melee/gm/gmtrainingmode",
             "melee/gm/gm_1884",
             "melee/it/kinds/itmetamon",
+            "melee/it/kinds/itcoin",
         ],
-        modules: &["gm/training", "ft/unload", "it/evt_unk"],
-        unreached: &[],
+        // The mode's own code, and the code its path from the main menu to its match and back
+        // runs whose stops name the other single-player modes: its mode's states, the one-door
+        // select, the stage select, the VS scene's match with Training's rules and its exit,
+        // the notices after a trophy, the HUD and the bonuses; the Pokémon its balls let out,
+        // Pokémon Stadium's screen in Training, and the enemies' common code a beaten Birdo
+        // runs on Mushroom Kingdom II.
+        modules: &[
+            "gm/training",
+            "ft/unload",
+            "it/evt_unk",
+            "gm/one_player",
+            "gm/machine",
+            "mn/charsel/one_door",
+            "mn/stagesel",
+            "gm/vs",
+            "gm/match_exit",
+            "gm/approach",
+            "gm/challenger",
+            "gm",
+            "hud/stock",
+            "pl/tally",
+            "gm/decisions",
+            "ft/co/dead",
+            "it/pokemon/mod",
+            "gr/stadium",
+            "it/zako",
+        ],
+        unreached: TRAINING_UNREACHED,
     },
     Paths {
         mode: HR,
@@ -629,6 +657,132 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     ),
 ];
 
+/// Why Training reaches nothing its paths' units and modules hold unported but its gaps. Its
+/// match is a VS scene on Training's own scene that the mode's own entry sets up
+/// (`gm_801B1F70`: Training's entry of the modes table, `GmVsMode_Training`, which only
+/// `gm_InitVsMode`'s defaults and Training's select write, with Training's flags and
+/// `gm_80189CDC`'s rules; not `gm_16A2`'s single-player setups), so the single-player setups'
+/// fields stay as VS leaves them: nothing ported writes the rules' horde setup (`x54`, so
+/// `is_singleplayer` is 0), challenger's record (`x58`) or event Pokémon (`x28`), the joining
+/// opponents' setup (`gm.opponents`) or a player's leaving flag but those setups and a
+/// cutscene. Its match has no results screen (`gmresult`'s 1P lines, `gm_17AD`, `gm_17BA`)
+/// and is no 1P run (game modes 3 to 5): its exit (`gm_801B2204`) goes back to the select or
+/// to the notices.
+const TRAINING_UNREACHED: &[(&str, &str)] = &[
+    (
+        "game mode {m:#x}'s states",
+        "Training's states (gm_Mode_Training_States: the select, the stage select, the match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode's notices (0x14, after a trophy its exit gives: gm_801B2204's gm_80173754 with no challenger), which go back to it (onExitPrize)",
+    ),
+    (
+        "game mode {m:#x}'s loading",
+        "Training's load (gm_Mode_Training_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
+    ),
+    (
+        "the mode override",
+        "the game installs one override, the boot's card check, ported",
+    ),
+    (
+        "the VS scene's enter data in game mode",
+        "Training's match enters with its own start data (gm_801B1F70's), in the scene machine",
+    ),
+    (
+        "game scene {k:#x}",
+        "Training's scenes are the one-door select, the stage select, its own match scene (GS_TRAINING) and the notices' prize scene, each in the scene machine with its exit",
+    ),
+    (
+        "gm_801BEE9C (congratulations' exit)",
+        "the game over modes' congratulations: Training has no ending",
+    ),
+    (
+        "Hook::Unported1P(name)",
+        "Training's states hook its select's, stage select's and match's entries and exits (TrainingEnterCss to TrainingExitVs), none unported",
+    ),
+    (
+        "a 1P run's getter",
+        "only All-Star's round setup asks a getter",
+    ),
+    (
+        "the one-door screen's panel for match type",
+        "Training's select is match type 0x17 (gm_801B1B74), whose panel is ported",
+    ),
+    (
+        "mnCharSel_8025C020's records for match type",
+        "Training's select shows the best combo (match type 0x17), ported",
+    ),
+    (
+        "gm_80167320 for a leaving slot",
+        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) and the joining opponents' setup (gm_16A2's) set; Training's count takes a computer player out through fn_8016EF98 (Player_80031EBC), which leaves it clear",
+    ),
+    (
+        "gm_8016AC44 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "HUD colour {c} past the table",
+        "no caller passes a colour past the table's nine",
+    ),
+    (
+        "single-player match setup",
+        "the rules' horde setup (x54), which only gm_16A2's single-player setups set; Training's rules are its modes table entry's",
+    ),
+    (
+        "a match's exit data in game mode",
+        "Training's match exits into its own exit data (match_exit_data's Training arm); the notices have no match",
+    ),
+    (
+        "fn_8016C46C's single-player results",
+        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
+    ),
+    (
+        "fn_802FA6C4 in a single-player mode",
+        "the rules' horde setup (x54) and the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "fn_802FAC34 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "ifStock_802FA5BC",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "the multi-man counter of ifStock_802FAEC4",
+        "the Multi-Man modes' (game modes 0x21 to 0x26)",
+    ),
+    (
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
+    ),
+    (
+        "gm_801693BC for a slot that leaves",
+        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) and the joining opponents' setup set",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "Target Test's match entry alone asks a character's target stage",
+    ),
+    (
+        "it_8027A9B8 (an event's Pokémon list)",
+        "the rules' event Pokémon (x28, gm_8016AEB8), which only an event's setup sets; Training's balls draw from Training's list (it_8027A780)",
+    ),
+    (
+        "grStadium_801D384C",
+        "Pokémon Stadium's names screen (mode 1), which Training's screen never shows: the screen's mode set turns 1 into the stage feed (7) in Training (gm_8018841C, grpstadium.c)",
+    ),
+    ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
+    ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
+    ("it_802D306C", TRAINING_NO_DITTO),
+];
+
+/// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
+/// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
+/// when the rules name one (`x28`, an event's), and in Training (`gm_8018841C`) draws from
+/// Training's list (`common_pokemon`, `it_8027A780`) before the debug menu's choice is asked;
+/// that draw takes the first entry whose running total passes the roll strictly, so Ditto's
+/// weight of 0 in the ball's table (`ItCo.usd`) never comes out (docs/melee-bugs.md,
+/// "Training's Pokémon list names Ditto, whom its draw can't pick").
+const TRAINING_NO_DITTO: &str = "Ditto, whom Training's balls never let out: they draw from Training's list (it_8027AB64 under gm_8018841C, it_8027A780), where Ditto's weight of 0 (ItCo.usd) never passes the roll, and the item menu offers no Pokémon";
+
 /// What the single-player modes reach that isn't ported, each with the modes that reach it.
 pub const MISSING: &[Gap] = &[
     // The way in: the main menu's modes, their scenes and the matches' setup.
@@ -640,12 +794,12 @@ pub const MISSING: &[Gap] = &[
             "game mode {m:#x}'s loading",
             "game scene {k:#x}",
         ],
-        modes: &[TR, MM, EV, CL, AS, AD, DB],
+        modes: &[MM, EV, CL, AS, AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -666,7 +820,7 @@ pub const MISSING: &[Gap] = &[
             "gm_8017CBAC (All-Star's clear)",
             "a single-player route's callback",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "a horde's players leaving their slots",
@@ -693,12 +847,12 @@ pub const MISSING: &[Gap] = &[
             "lbAudioAx_80028B90",
             "fn_8016C46C's single-player results",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the 1P HUD (the stocks and counters)",
         covers: &["ifStock_802FA5BC", "fn_802FA6C4 in a single-player mode"],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the 1P records and saves",
@@ -745,7 +899,7 @@ pub const MISSING: &[Gap] = &[
             "gm_801647F8",
             "fn_8017DF28 (a single-player mode's record)",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the unlocks, trophies and challengers after a mode",
@@ -759,13 +913,39 @@ pub const MISSING: &[Gap] = &[
             "gm_8017390C",
             "gm_80173C70",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     // The modes' own code.
     Gap {
         what: "Ditto",
         covers: &["melee/it/kinds/itmetamon"],
-        modes: &[TR, EV],
+        modes: &[EV],
+    },
+    // Training is a single-player mode to `gm_IsCurrently1PMode`, so an enemy beaten there
+    // rolls for a trophy (`it_8027CC88`: one draw in 16, the enemies' common data's `x14`),
+    // which VS never does. Training's matches have one enemy: Mushroom Kingdom II's Birdo
+    // (`itkyasarin`, no item setting needed), knocked out to bounce away (state 10,
+    // `it_8027C79C`). On a hit the stage's trophy (`stage_info.x6E4`, which Training's stage
+    // load draws, `tyDisplay_8031C2EC`) picks one of its kind (`tyDisplay_8031C354`, whose
+    // two calls of up to ten each fill one ten-entry stack buffer) and drops it as the 1P coin
+    // (`it_802F2094`, `itcoin.c`, its model `tyDisplay_8031C5E4`), whose pickup counts it
+    // (`gm_8017E280`) and runs the enemies' KO (the zako generator's and the KO bonus's coin
+    // cases). Containers' monsters can't come out in Training: its item menu offers no
+    // container (kinds 5 to 0x22) and its rules have no random items (`item_freq` -1).
+    Gap {
+        what: "a trophy from Birdo knocked out in Training (it_8027CC88's single-player roll, the 1P coin and its trophy lookups)",
+        covers: &[
+            "it_8027CC88 (a 1P mode's trophy from an enemy)",
+            "melee/it/kinds/itcoin",
+            "tyDisplay_8031C354",
+            "tyDisplay_8031C5E4",
+            "gm_8017E280",
+            "grZakoGenerator_801CAC14 (a coin)",
+            "grZakoGenerator_801CACB8 (a coin)",
+            "pl_8004049C (an enemy of kind",
+            "it_8027B5B0 (an enemy of kind",
+        ],
+        modes: &[TR],
     },
     Gap {
         what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
