@@ -1086,6 +1086,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/camera.rs:1453`; `tools/leaf-check/tests/camera.rs:1322`.
 
+### The trophy fall's second cut's camera ends on clipping planes it never set
+
+- **Where:** `fn_801A7A8C` (`gm_1A7A.c`) over `GmRegEnd`'s `cut2CanimScene` camera animation, through `HSD_CObjAnim` and `FObjUpdateAnim`; `crates/melee-sim/src/hsd/cobj.rs` (`update`, `CObj::stale_planes`).
+- **Defect:** the animation's near and far channels end right after their first key, so at the camera's last frame `FObjUpdateAnim` hands `CObjUpdateFunc` whatever its stack holds (a RAM address) for both planes.
+- **Effect:** none observable: the same process frees the camera at that frame, before anything draws through it.
+- **melee-hd:** stale: the planes take an address's value and are marked (`stale_planes`); a stale read is counted only if the camera draws with them, and the heap's image leaves their words unknown.
+- **Fix:** end the channels with a second key.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/hsd/cobj.rs`; `m6-oracle/ending-test`'s tick 1599.
+
 ## HUD and audio
 
 ### An announcement tests its first line twice
@@ -1249,6 +1259,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** set the whole colors.
 - **Fix impact:** none.
 - **Source:** `lbspdisplay.c` `setTevAlpha`, `lb_800122F0`.
+
+### A freed fighter's parts stay in the ID table
+
+- **Where:** the fighters' part joints keyed by their skeleton's descriptors (`ftParts`' `HSD_IDInsertToTable`, `crates/melee-sim/src/game/ft/create_model.rs`; Kirby's hat's, `game/ft/kirby/hat.rs`) and `JObjRelease` (`jobj.c`, `hsd/jobj.rs`'s `delete`).
+- **Defect:** a joint's release removes only its own descriptor's entry (`jobj->id`, the costume's), and only when that entry names it, so the skeleton's entries keep pointing at the part joints once a fighter is freed mid-scene (`Fighter_Unload_8006DABC`, then its model's release).
+- **Effect:** none observable: nothing looks a skeleton's descriptor up until a fighter of the kind is made again, which inserts it anew. The memory the pointers name goes to the next objects (in `m6-oracle/ending-test`, the trophy fall's second cut's trophy takes Captain Falcon's hip's).
+- **melee-hd:** modeled: as a joint the table names by another key goes (`JObj::named`), those entries name its address (`jobj::DANGLING`), which the comparer checks against memory's pointer.
+- **Fix:** remove the part entries as the fighter goes.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/hsd/jobj.rs` (`delete`, `DANGLING`); `tools/capture/src/stage.rs` (`ids`).
 
 ## Saves and the memory card
 
@@ -1675,6 +1695,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** skip players whose team is outside the table (or not a team match).
 - **Fix impact:** not recorded (none if the words are never read).
 - **Source:** `gm_1601.c`'s `fn_80165E7C`; session `2026-10-06_12-42-06` at its match's end.
+
+### The endings' exit hands the challenger approach the costume as the human's slot
+
+- **Where:** `gm_801BEE9C` (the game over modes' congratulations' exit, `gmgover.c`), `crates/melee-sim/src/game/gm/endings/congrats.rs` (`gover_congrats_exit`).
+- **Defect:** with no character unlocked, it asks for the challenger approach for a waiting notice with `gm_80173754(1, gm_801BEFD0())`: the second argument is the human's slot, and it passes the ending's costume (`gm_801BEFD0`) where the port (`gm_801BF010`) was meant.
+- **Effect:** the challenger approach's data (`challenger_data.human_slot`) holds the costume. The approach for a notice has no fighter, and nothing in it was seen to read the slot: `m6-endings-2/regend-adv` (costume 1) and `regend-gw` (costume 0) go to the approach for their notices and compare clean.
+- **melee-hd:** modeled (`challenger_check(1, color)`).
+- **Fix:** pass `gm_801BF010()`.
+- **Fix impact:** none known.
+- **Source:** `gmgover.c`; `crates/melee-sim/src/game/gm/endings/congrats.rs` (`gover_congrats_exit`).
 
 ## Tournament
 

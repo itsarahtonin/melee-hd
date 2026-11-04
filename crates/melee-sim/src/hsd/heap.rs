@@ -1299,6 +1299,25 @@ impl Heap {
     /// An archive loaded into the block at `file` (`len` bytes), its `HSD_Archive` at
     /// `header`: the image knows its bytes, relocated to the block, and the header block as
     /// the parse leaves it (`HSD_ArchiveParse`, [`super::export::archive`]).
+    /// A file read whole into the main heap (`lbFile_80016760`'s `lbHeap_80015BD0(0, …)`):
+    /// a block of its length rounded up to 32, holding the file's bytes (archive `id`, raw)
+    /// and the read's next ones. Where it went.
+    pub fn raw_file_alloc(&mut self, len: u32, id: melee_data::archive::ArchiveId) -> u32 {
+        log(|| format!("LF {:#x}", len.next_multiple_of(32)));
+        let file = self.mem_alloc_raw(len.next_multiple_of(32));
+        self.image.hold(
+            file,
+            file + len,
+            super::image::Src::Raw {
+                archive: id,
+                offset: 0,
+            },
+        );
+        self.image
+            .claim(file + len, file + len.next_multiple_of(32), FILE_TAIL);
+        file
+    }
+
     pub fn hold_archive(
         &mut self,
         data: &melee_data::archive::Archives,
@@ -1353,7 +1372,7 @@ pub fn with<R>(f: impl FnOnce(&mut Heap) -> R) -> Option<R> {
 }
 
 /// How many bytes a texture's image takes, `GXGetTexBufferSize` without mipmaps: the format's
-/// tiles of 32 bytes (64 for RGBA8) covering the image.
+/// tiles of 32 bytes (64 for RGBA8 and Z24X8) covering the image.
 #[doc(alias = "GXGetTexBufferSize")]
 pub fn tex_buffer_size(width: u32, height: u32, format: u32) -> u32 {
     let (bw, bh) = match format {
@@ -1363,7 +1382,11 @@ pub fn tex_buffer_size(width: u32, height: u32, format: u32) -> u32 {
         1 | 2 | 9 => (8, 4),
         _ => (4, 4),
     };
-    let tile = if format == 6 { 64 } else { 32 };
+    let tile = if format == 6 || format == 0x16 {
+        64
+    } else {
+        32
+    };
     width.div_ceil(bw) * height.div_ceil(bh) * tile
 }
 

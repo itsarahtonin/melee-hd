@@ -83,6 +83,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6p-") {
                     return ssbm_rs_local(&format!("lockstep/m6-1p-setups/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6e2-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings-2/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6e-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
                 }
@@ -1186,6 +1189,15 @@ pub const M6E_GAMEOVER: Game = Game {
     name: "m6e-gameover2",
     players: "the debug mode's game over (session m6-endings/gameover2)",
     replay: Replay::Session("m6e-gameover2"),
+};
+
+/// Zelda's Adventure ending (`m6-endings-2/regend-adv`): the trophy fall's cuts and
+/// congratulations.
+pub const M6E2_REGEND_ADV: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-adv",
+    players: "the debug game over mode's trophy fall and congratulations (session m6-endings-2/regend-adv)",
+    replay: Replay::Session("m6e2-regend-adv"),
 };
 
 /// All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen over the

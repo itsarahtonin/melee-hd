@@ -998,6 +998,11 @@ pub fn cobj(objs: &Objects, img: &mut Image, c: super::cobj::CObjId) {
     l.u32(0x24, wa(o.eyepos));
     l.u32(0x28, wa(o.interest));
     l.f32s(0x2C, &[o.up.x, o.up.y, o.up.z, o.near, o.far]);
+    for (bit, off) in [(1, 0x38), (2, 0x3C)] {
+        if o.stale_planes & bit != 0 {
+            l.forget(at + off, 4);
+        }
+    }
     l.f32s(0x40, &o.projection);
     l.u8(0x50, o.projection_type);
     l.f32s(0x54, o.view_mtx.m.as_flattened());
@@ -1189,7 +1194,7 @@ pub fn id_entry_freed(objs: &Objects, img: &mut Image, key: DataRef) {
     };
     let mut l = Lay::new(at, 0xC);
     l.word(4, id_word(img, key));
-    l.u32(8, objs.jobjs.pool.addr(j.0));
+    l.u32(8, super::jobj::id_value_addr(&objs.jobjs, j));
     l.put(img);
 }
 
@@ -1198,7 +1203,10 @@ pub fn id_entry_freed(objs: &Objects, img: &mut Image, key: DataRef) {
 pub fn id_table(objs: &Objects, img: &mut Image) {
     let mut by_addr = std::collections::HashMap::new();
     for (k, j, at) in objs.ids.entries() {
-        by_addr.insert(at, (id_word(img, k), objs.jobjs.pool.addr(j.0)));
+        by_addr.insert(
+            at,
+            (id_word(img, k), super::jobj::id_value_addr(&objs.jobjs, j)),
+        );
     }
     let order = img.id_order().to_vec();
     let mut heads: std::collections::HashMap<u32, u32> = Default::default();

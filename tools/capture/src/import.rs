@@ -1280,6 +1280,7 @@ impl Importer<'_> {
             aobj,
             robj,
             id: self.data(self.u32(a + 0x84)),
+            named: false,
             class: crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::JObj),
             scl_addr: scl,
             envelopemtx_addr: env,
@@ -1509,6 +1510,7 @@ impl Importer<'_> {
             aobj,
             inv_view_mtx: (pm != 0).then(|| self.mtx(pm)),
             inv_view_mtx_addr: pm,
+            stale_planes: 0,
         };
         id
     }

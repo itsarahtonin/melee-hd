@@ -74,6 +74,15 @@ impl Comparer<'_> {
             theirs,
         );
         self.game_over_statics();
+        self.toy_fall_statics();
+        self.congrats_statics();
+        let theirs = self.u8(sym("regend_congrats_exit_data"));
+        self.check(
+            "regend_congrats_exit_data",
+            "the debug cutscene's congratulations' exit",
+            e.congrats_exit[0],
+            theirs,
+        );
     }
 
     /// Game over's and coming soon's statics (`gm_19EF.c`).
@@ -181,5 +190,226 @@ impl Comparer<'_> {
                 self.u32(at + 0x70) as i32,
             ),
         );
+    }
+}
+
+impl Comparer<'_> {
+    /// A GObj static.
+    fn endings_gobj(&mut self, name: &str, ours: Option<melee_sim::hsd::gobj::GObjId>) {
+        let theirs = self.u32(sym(name));
+        self.compare_handle(name, "GObjId", ours.map(|g| g.0), theirs);
+    }
+
+    /// The trophy fall's statics (`gmregtyfall.c`, `gm_1A7A.c`, `gmregenddisp.c`).
+    fn toy_fall_statics(&mut self) {
+        use melee_sim::game::gm::endings::toy_fall::IMAGES;
+        let t = self.game.endings.toy_fall;
+        let theirs = self.u8(sym("gm_804D6740"));
+        self.check("gm_804D6740", "Start's wait", t.wait, theirs);
+        for (name, block) in [
+            ("gm_804D6744", t.archive.block),
+            ("gm_804D679C", t.stands.block),
+        ] {
+            let theirs = self.u32(sym(name));
+            self.check(name, "archive", block, theirs);
+        }
+        for (name, d) in [
+            ("gm_804D6748", t.scenes[0]),
+            ("gm_804D67A8", t.scenes[1]),
+            ("gm_804D67A4", t.scenes[2]),
+            ("gm_804D67A0", t.scenes[3]),
+            ("gm_804D67AC", t.stand_scene),
+            ("gm_804D6798", t.trophy),
+        ] {
+            let theirs = self.u32(sym(name));
+            self.compare_data(name, d, theirs);
+        }
+        for (name, g) in [
+            ("gm_804D674C", t.fighter),
+            ("gm_804D6754", t.copy_gobj),
+            ("gm_804D6768", t.main),
+            ("gm_804D676C", t.spare),
+            ("gm_804D6778", t.stand),
+            ("gm_804D677C", t.frame_gobj),
+            ("gm_804D67B0", t.cut2[0]),
+            ("gm_804D67B4", t.cut2[1]),
+            ("gm_804D67B8", t.cut3[0]),
+            ("gm_804D67BC", t.cut3[1]),
+            ("gm_804D67C0", t.cut3[2]),
+        ] {
+            self.endings_gobj(name, g);
+        }
+        let theirs = [
+            "gm_804D6750",
+            "gm_804D6758",
+            "gm_804D675C",
+            "gm_804D6770",
+            "gm_804D6774",
+            "gm_804D6780",
+            "gm_804D6784",
+            "gm_804D6790",
+            "gm_804D6794",
+            "gm_804D67C4",
+        ]
+        .map(|n| self.u32(sym(n)) as i32);
+        self.check(
+            "gm_804D6750",
+            "the fighter's copy's fade, copied, index; x6770, x6774; the frame's copied, \
+             index, wait, alpha; cut 3's wait",
+            [
+                t.fade,
+                t.copied,
+                t.copy_index,
+                t.x6770,
+                t.x6774,
+                t.framed,
+                t.frame_index,
+                t.frame_wait,
+                t.frame_alpha,
+                t.end_wait,
+            ],
+            theirs,
+        );
+        // The sprites' descriptors' images: an `HSD_ImageDesc` of `gm_804808F8`,
+        // `gm_804809D0` or `gm_80480964` (0x18 bytes each), never a palette.
+        let image_at = |n: u8| {
+            let n = u32::from(n);
+            if n < 4 {
+                sym("gm_804808F8") + 0x18 * n
+            } else if n < 6 {
+                sym("gm_804809D0") + 0x18 * (n - 4)
+            } else {
+                sym("gm_80480964") + 0x18 * (n - 6)
+            }
+        };
+        for (name, img) in [
+            ("gm_804D6760", t.copy_image),
+            ("gm_804D6788", t.frame_image),
+        ] {
+            let at = sym(name);
+            let theirs = (self.u32(at), self.u32(at + 4));
+            let ours = (img.map_or(theirs.0, image_at), 0);
+            self.check(name, "image, palette", ours, theirs);
+        }
+        for n in 0..IMAGES {
+            let at = image_at(n as u8);
+            let f = t.images[n];
+            // Before the scene's first entry the descriptors hold nothing.
+            if f.addr == 0 {
+                continue;
+            }
+            self.check(
+                &format!("the trophy fall's image {n}"),
+                "pixels, width, height, format, mipmap",
+                (f.addr, f.width, f.height, f.format, 0u8),
+                (
+                    self.u32(at),
+                    self.u16(at + 4),
+                    self.u16(at + 6),
+                    self.u32(at + 8),
+                    self.u8(at + 0xC),
+                ),
+            );
+        }
+        for (k, g) in t.shown.iter().enumerate() {
+            let theirs = self.u32(sym("gm_80480A00") + 4 * k as u32);
+            self.compare_handle(
+                &format!("gm_80480A00[{k}]"),
+                "GObjId",
+                g.map(|g| g.0),
+                theirs,
+            );
+        }
+        let at = sym("gm_80480AD0");
+        let theirs: [i32; 26] = std::array::from_fn(|k| self.u32(at + 4 * k as u32) as i32);
+        self.check("gm_80480AD0", "cut 3's draws", t.draws, theirs);
+    }
+
+    /// Congratulations' statics (`gm_1A9B.c`) and its still's (`lb_01F8.c`'s `lbl_804335B8`).
+    fn congrats_statics(&mut self) {
+        let c = self.game.endings.congrats;
+        let theirs = (
+            self.u8(sym("gmRegend_InputDelayTimer")),
+            self.u8(sym("gmRegend_ExitTimer")),
+        );
+        self.check(
+            "gmRegend_InputDelayTimer",
+            "input wait, exit wait",
+            (c.input_wait, c.exit_wait),
+            theirs,
+        );
+        let s = c.still;
+        let at = sym("lbl_804335B8");
+        if s.file == 0 {
+            return;
+        }
+        self.check(
+            "lbl_804335B8",
+            "planes, width, height, file, size",
+            (s.planes, s.width, s.height, s.file, s.size),
+            (
+                [
+                    self.u32(at + 0x20),
+                    self.u32(at + 0x44),
+                    self.u32(at + 0x68),
+                ],
+                self.u16(at + 0x6C),
+                self.u16(at + 0x6E),
+                self.u32(at + 0x94),
+                self.u32(at + 0x98),
+            ),
+        );
+        let theirs = self.u32(at + 0x90);
+        let ours = s.sobj_addr;
+        self.check("lbl_804335B8.x90", "the sprite's address", ours, theirs);
+        // The sprite's descriptor (`x70`, its image none, RGBA8) and `x88` naming it.
+        self.check(
+            "lbl_804335B8.x70",
+            "image, width, height, format, mipmap; x88's image and palette",
+            (0u32, s.width, s.height, 6u32, 0u8, at + 0x70, 0u32),
+            (
+                self.u32(at + 0x70),
+                self.u16(at + 0x74),
+                self.u16(at + 0x76),
+                self.u32(at + 0x78),
+                self.u8(at + 0x7C),
+                self.u32(at + 0x88),
+                self.u32(at + 0x8C),
+            ),
+        );
+        if let Some(tex) = s.tex {
+            for (i, t) in tex.iter().enumerate() {
+                let o = at + 0x24 * i as u32;
+                self.check(
+                    &format!("lbl_804335B8.tex{i}"),
+                    "mode0, mode1, image0, image3, user data, format, palette, load count, \
+                     load format, flags",
+                    (
+                        t.mode0,
+                        t.mode1,
+                        t.image0,
+                        t.image3,
+                        t.user_data,
+                        t.fmt,
+                        t.tlut_name,
+                        t.load_cnt,
+                        t.load_fmt,
+                        t.flags,
+                    ),
+                    (
+                        self.u32(o),
+                        self.u32(o + 4),
+                        self.u32(o + 8),
+                        self.u32(o + 0xC),
+                        self.u32(o + 0x10),
+                        self.u32(o + 0x14),
+                        self.u32(o + 0x18),
+                        self.u16(o + 0x1C),
+                        self.u8(o + 0x1E),
+                        self.u8(o + 0x1F),
+                    ),
+                );
+            }
+        }
     }
 }

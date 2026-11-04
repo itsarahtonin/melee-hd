@@ -215,15 +215,19 @@ fn index_files(files: impl Iterator<Item = (String, Vec<u8>)>) -> DiscIndex {
                 off = (off + size).next_multiple_of(32);
             }
         }
-        if (name.starts_with("Vi") || name.contains("DViWait")) && name.ends_with(".dat") {
-            // A cutscene's file or a character's cutscene waits: each cutscene motion symbol
-            // (`ftDemoVi...MotionFile...`) heads a run of archives, one per animation, each
+        let endings = name.starts_with("GmRegEnd");
+        if ((name.starts_with("Vi") || name.contains("DViWait")) && name.ends_with(".dat"))
+            || endings
+        {
+            // A cutscene's file, a character's cutscene waits or the trophy fall's ending
+            // animations: each demo motion symbol (`ftDemoVi...MotionFile...`,
+            // `ftDemoEndingMotionFile...`) heads a run of archives, one per animation, each
             // at a 32-byte boundary, which `ftDemo_SetArchiveData` copies into a fighter's
             // buffer on its own. Named by their offset in the file, as melee-sim names them.
             if let Ok(a) = Archive::parse(&bytes) {
                 let end = (0x20 + w(4) as usize).min(bytes.len());
                 for (sym, at) in a.publics() {
-                    if !sym.starts_with("ftDemoVi") {
+                    if !sym.starts_with("ftDemoVi") && !sym.starts_with("ftDemoEnding") {
                         continue;
                     }
                     let mut off = 0x20 + at as usize;
