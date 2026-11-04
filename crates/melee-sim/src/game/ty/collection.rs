@@ -43,7 +43,7 @@ const GRID: usize = 301;
 
 /// `_tyDisplay_803B8988`: each category's model in its archive (the question mark's, then
 /// the classes' five each, the stand, the question mark again).
-const JOINTS: [&str; 43] = [
+pub(crate) const JOINTS: [&str; 43] = [
     "ToyDspQues_Top_joint",
     "ToyDspMycharaCmA_Top_joint",
     "ToyDspMycharaCmB_Top_joint",
@@ -91,12 +91,18 @@ const JOINTS: [&str; 43] = [
 
 /// `_tyDisplay_803B8A34`'s names: each category model's material animation, `_Top_matanim_joint`
 /// after the joint's stem (none for the question marks and the stand).
-fn matanim(cat: usize) -> String {
+pub(crate) fn matanim(cat: usize) -> String {
     if cat == 0 || cat >= 41 {
         return String::new();
     }
     let stem = JOINTS[cat].trim_end_matches("_joint");
     format!("{stem}_matanim_joint")
+}
+
+/// A category's index into the display's tables (`tyDisplay_8031BB34`, `tyDisplay_8031BB94`):
+/// -1 takes the first.
+pub(crate) fn category_index(cat: i8) -> usize {
+    if cat == -1 { 0 } else { cat as usize }
 }
 
 /// The display's archive of category `cat` (`_tyDisplay_803B8AE0`).

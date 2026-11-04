@@ -105,7 +105,7 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("gameover", 3157, ""),
         ("staffroll", 1232, "game scene 0x2b isn't ported"),
         ("cutscene", 3282, ""),
-        ("ending-test", 1232, "game scene 0xf isn't ported"),
+        ("ending-test", 3726, ""),
     ]);
 }
 

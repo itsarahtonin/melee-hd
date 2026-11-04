@@ -464,6 +464,7 @@ impl Running<'_> {
                 fp.x2219_b2 = true;
                 fp.x2219_b1 = true;
             }
+            7 => self.demo_rebirth(gobj),
             8 => self.demo_cutscene_wait(gobj),
             9 | 10 => {
                 let kind = self.game.fighter(gobj).kind;
@@ -509,6 +510,13 @@ impl Running<'_> {
         let fp = self.game.fighter_mut(gobj);
         fp.x2219_b2 = true;
         fp.x2219_b1 = true;
+    }
+
+    /// Pose 7's first state, the trophy fall's (`ftCo_800C6150`): `ftCo_MS_Rebirth`, the demo
+    /// table's state 12, with the pose's flags.
+    #[doc(alias = "ftCo_800C6150")]
+    fn demo_rebirth(&mut self, gobj: GObjId) {
+        self.demo_cutscene_state(gobj, 12);
     }
 
     /// Pose 8's first state, the cutscenes' wait (`ftCo_800C7070`): `ftCo_MS_RebirthWait`,

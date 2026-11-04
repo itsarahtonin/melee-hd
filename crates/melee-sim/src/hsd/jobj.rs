@@ -97,6 +97,20 @@ impl Default for Contents {
     }
 }
 
+/// An ID table value at or past this (below [`super::pool::UNKNOWN`]) names a freed joint by
+/// its address: an entry another key held for it ([`JObj::named`]), which the original keeps
+/// pointing at the freed memory.
+pub const DANGLING: u32 = 0x8000_0000;
+
+/// The address an ID table value names: a live joint's, or a freed one's ([`DANGLING`]).
+pub fn id_value_addr(jobjs: &JObjs, j: JObjId) -> u32 {
+    if (DANGLING..super::pool::UNKNOWN).contains(&j.0) {
+        j.0
+    } else {
+        jobjs.pool.addr(j.0)
+    }
+}
+
 /// `HSD_JObj`.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct JObj {
@@ -125,6 +139,10 @@ pub struct JObj {
     pub robj: Option<RObjId>,
     /// The joint descriptor it was loaded from, its ID table key.
     pub id: Option<DataRef>,
+    /// The ID table names it by keys other than its own (a fighter's part joints, which
+    /// `ftParts` keys by the skeleton's descriptors): as it goes, those entries name its
+    /// address ([`DANGLING`]), as the original's keep the freed pointer.
+    pub named: bool,
     /// Its class (`hsdJObj`, or the fighters' `ftJObj` and `ftIntpJObj`), and where the
     /// original's allocators put its `scl` and `envelopemtx` (`docs/engine.md`).
     pub class: heap::Class,
@@ -153,6 +171,7 @@ impl Default for JObj {
             aobj: None,
             robj: None,
             id: None,
+            named: false,
             class: heap::Class::JObj,
             scl_addr: 0,
             envelopemtx_addr: 0,
@@ -1122,6 +1141,18 @@ fn delete(objs: &mut Objects, j: JObjId) {
     {
         super::export::with_image(|img| super::export::id_entry_freed(objs, img, id));
         objs.ids.remove(id);
+    }
+    if objs.jobjs[j].named {
+        let addr = objs.jobjs.pool.addr(j.0);
+        let keys: Vec<DataRef> = objs
+            .ids
+            .entries()
+            .filter(|e| e.1 == j)
+            .map(|e| e.0)
+            .collect();
+        for k in keys {
+            objs.ids.insert(k, JObjId(DANGLING | addr));
+        }
     }
     // What the joint's block holds as it goes, for a session's leftovers.
     super::export::with_image(|img| super::export::jobj(objs, img, j));

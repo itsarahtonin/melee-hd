@@ -1930,8 +1930,8 @@ fn the_yoshiki_test_page() {
 /// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 4's
 /// `m6-cutscenes-2/cutscenes`, the same script run through the whole mode (Start in
 /// congratulations), on through the metal cutscene (`vi1101`), Bowser's trophy (`vi1201v1`),
-/// Giga Bowser's transformation (`vi1201v2`) and his defeat (`vi1202`) to congratulations,
-/// task 5's scene.
+/// Giga Bowser's transformation (`vi1201v2`) and his defeat (`vi1202`), then congratulations,
+/// its Start and the mode's exit to the title, to the trace's end.
 #[test]
 fn the_debug_cutscenes() {
     if let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) {
@@ -1939,9 +1939,7 @@ fn the_debug_cutscenes() {
         assert!(out.contains("no stale reads"), "{out}");
     }
     if let Some(out) = scripted_session("m6-cutscenes-2", "cutscenes", &["--all", "--heap"]) {
-        let want = "4874 ticks compared, no difference; stopped in tick 4874: \
-                    game scene 0x10 isn't ported";
-        assert!(out.contains(want), "{out}");
+        assert!(out.contains("6030 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
@@ -1985,8 +1983,13 @@ fn master_hand_in_debug_vs() {
 /// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
 /// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy` and
 /// `intro-allstar` (to Classic's and All-Star's intros, tasks 22's and 23's) and `ending-test`
-/// (the RegularEnding Test's debug game over mode, to its trophy fall); task 5's
-/// `m6-endings/gameover2` (the game over twice: a continue paid in coins, then "no").
+/// (the RegularEnding Test's debug game over mode: the trophy fall, congratulations idle to the
+/// trace's end); task 5's `m6-endings/gameover2` (the game over twice: a continue paid in
+/// coins, then "no"), and `m6-endings-2`'s `regend-adv` (Zelda's Adventure ending whole,
+/// congratulations' A and the exit's unlocks to a challenger), `regend-gw` (Mr. Game & Watch's
+/// All-Star ending, the trophy fall cut short by Start), `regend-all` (Captain Falcon's Classic
+/// ending from the unlock-all card: cut 3 lays out every Classic trophy) and `regend-real` (RegularEnding Real:
+/// Classic's game over mode, its load and the trophy fall, to the staff roll).
 #[test]
 fn the_debug_endings() {
     for (dir, name, want) in [
@@ -2008,12 +2011,32 @@ fn the_debug_endings() {
         (
             "m6-oracle",
             "ending-test",
-            "1232 ticks compared, no difference; stopped in tick 1232: game scene 0xf isn't ported",
+            "3726 ticks compared, no difference",
         ),
         (
             "m6-endings",
             "gameover2",
             "3192 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-adv",
+            "3496 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-gw",
+            "2605 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-all",
+            "3082 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-real",
+            "2029 ticks compared, no difference; stopped in tick 2029: game scene 0x2b isn't ported",
         ),
     ] {
         let Some(out) = scripted_session(dir, name, &["--all", "--heap"]) else {
