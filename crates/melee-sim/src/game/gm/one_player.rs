@@ -83,6 +83,7 @@ pub fn target_stage(ckind: u8) -> u16 {
 
 /// A character's best time in the session's records (`gmMainLib_8015D450`, `x4C[selkind]`),
 /// whose last 21 entries the decomp's type calls padding.
+#[doc(alias = "gmMainLib_8015D450")]
 fn target_best(rec: &crate::game::structs::gmm_retval_EDBC, sel: u8) -> i32 {
     let i = usize::from(sel);
     if i < 4 {
@@ -1119,7 +1120,7 @@ impl Running<'_> {
 
     /// `gm_801733D8`: Mr. Game & Watch, while he's locked, once every other character has
     /// cleared one of the session's records' three modes ([`Self::all_cleared_one_mode`]).
-    // Ports gm_801733D8; aliased once a check reaches it.
+    #[doc(alias = "gm_801733D8")]
     fn target_challenger(&mut self) -> u8 {
         self.game.sync_unlocks();
         if !self.game.gm.unlocks.ckind_unlocked(CKIND_GAMEWATCH as u8)
@@ -1133,10 +1134,10 @@ impl Running<'_> {
     /// `fn_80172FAC`: whether every character but Mr. Game & Watch is marked in one of the
     /// session's records' three masks (`gmMainLib_8015D4A8`'s `x1C`, then `gmMainLib_8015D0F4`'s
     /// `x10`, then `gmMainLib_8015D21C`'s `x14`).
-    // Ports fn_80172FAC; aliased once a check reaches it.
-    // Ports gmMainLib_8015D4A8; aliased once a check reaches it.
-    // Ports gmMainLib_8015D0F4; aliased once a check reaches it.
-    // Ports gmMainLib_8015D21C; aliased once a check reaches it.
+    #[doc(alias = "fn_80172FAC")]
+    #[doc(alias = "gmMainLib_8015D4A8")]
+    #[doc(alias = "gmMainLib_8015D0F4")]
+    #[doc(alias = "gmMainLib_8015D21C")]
     fn all_cleared_one_mode(&self) -> bool {
         let r = &self.game.game_data.thing.save_data.unk_8;
         [r.x1C, r.x10, r.x14]
@@ -1146,8 +1147,8 @@ impl Running<'_> {
 
     /// `gm_8017341C`: the stage 0x1C, once every character's stage has been cleared
     /// (`gmMainLib_8015D5DC`) and while it's locked; 0x148 for none.
-    // Ports gm_8017341C; aliased once a check reaches it.
-    // Ports gmMainLib_8015D5DC; aliased once a check reaches it.
+    #[doc(alias = "gm_8017341C")]
+    #[doc(alias = "gmMainLib_8015D5DC")]
     fn target_stage_unlock(&self) -> u16 {
         let w = self.game.game_data.thing.save_data.unk_28.x4;
         if (0..0x19).all(|i| w & (1 << i) != 0) && !self.stage_unlocked(0x1C) {
@@ -1159,9 +1160,8 @@ impl Running<'_> {
     /// `gm_80173AA4`: once every character's stage has a best time in the session's records
     /// (`gmMainLib_8015D640`), trophy 0xBC, and by their sum 0x9B (under 0x15F90 frames) and
     /// 0x122 (under 0xAFC8).
-    // Ports gm_80173AA4; aliased once a check reaches it.
-    // Ports gmMainLib_8015D640; aliased once a check reaches it.
-    // Ports gmMainLib_8015D450; aliased once a check reaches it.
+    #[doc(alias = "gm_80173AA4")]
+    #[doc(alias = "gmMainLib_8015D640")]
     fn target_trophies(&mut self) {
         let rec = &self.game.game_data.thing.save_data.unk_30;
         if !(0..0x19).all(|i| rec.x8 & (1 << i) != 0) {
