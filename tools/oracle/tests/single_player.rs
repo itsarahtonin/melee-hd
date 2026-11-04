@@ -135,7 +135,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         (
             "stages-1p-c",
             3925,
-            "not implemented: stage kind 66 isn't ported",
+            "not implemented: the rest area's coin and trophy (it_802F2094, Toy_80304A58)",
         ),
     ]);
 }
