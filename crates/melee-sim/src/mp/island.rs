@@ -55,6 +55,9 @@ pub struct Islands {
     pub dead_ceilings: Option<IslandId>,
     /// Dynamic islands to reuse (`x20`).
     pub spare: Option<IslandId>,
+    /// Each island's block in the scene's heap, by its slot (0 where none is modeled), which
+    /// the heap's image lays out as the scene goes (`game::export`).
+    pub addrs: Vec<u32>,
 }
 
 impl Islands {
@@ -68,7 +71,8 @@ impl Islands {
 
     /// A new island at the end of the arena (`HSD_MemAlloc`).
     fn alloc(&mut self) -> IslandId {
-        crate::hsd::heap::mem_alloc(0x2C);
+        let addr = crate::hsd::heap::mem_alloc(0x2C);
+        self.addrs.push(addr);
         self.arena.push(Island::default());
         IslandId(self.arena.len() as u32 - 1)
     }
@@ -77,8 +81,10 @@ impl Islands {
     #[doc(alias = "mpIsland_8005A6F8")]
     pub fn clear_lists(&mut self) {
         let arena = std::mem::take(&mut self.arena);
+        let addrs = std::mem::take(&mut self.addrs);
         *self = Islands {
             arena,
+            addrs,
             ..Islands::default()
         };
     }

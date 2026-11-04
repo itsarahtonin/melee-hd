@@ -32,9 +32,9 @@ use common::{
     RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
     SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
     TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_DK_QUIT,
+    TT_TARGETS, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK,
+    compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -1449,4 +1449,31 @@ frames!(IM_JUMP;
 );
 frames!(IM_BEARS;
     im_bears_3500 3500,
+);
+// Target Test (milestone 6's task 6): Mario's target stage in the debug VS tour (o6-targets
+// 1500) and the Ice Climbers' with its blocks (14900); Donkey Kong's from the mode, its targets'
+// counter and timer (tt-dk-quit 1300, and 1420 after the jabs). At 1500 a fighter's shadow
+// falls on the floor (against a capture made with ssbm-rs's renderer running): its draws differ
+// only in the shadow textures' hashes, and the images are identical.
+frames!(TT_TARGETS;
+    tt_targets_14900 14900,
+);
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn tt_targets_1500() {
+    compare_in(
+        &TT_TARGETS,
+        1500,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1238, 1238],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+frames!(TT_DK_QUIT;
+    tt_dk_quit_1300 1300,
+    tt_dk_quit_1420 1420,
 );

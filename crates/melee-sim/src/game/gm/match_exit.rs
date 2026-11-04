@@ -62,6 +62,9 @@ impl Game {
             (GM_OPENING_MV, _) => &mut self.attract.exit,
             (super::event::GM_EVENT, _) if scene == Some(GS_VS) => &mut self.event.exit,
             (super::GM_DEBUG, _) if scene == Some(GS_VS) => &mut self.debug_mode.vs_exit,
+            (super::one_player::GM_TARGET_TEST, _) if scene == Some(GS_VS) => {
+                &mut self.one_player.target_exit
+            }
             (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_VS) => &mut self.tou.exit,
             (super::tournament::GM_TOURNAMENT, _) if scene == Some(GS_SUDDEN_DEATH) => {
                 &mut self.tou.sd_exit

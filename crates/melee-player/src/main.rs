@@ -610,10 +610,20 @@ impl Platform {
                     return;
                 }
                 if self.slp.is_none() && r.last_frame().is_some() {
-                    // The title's attract match plays itself: not the player's.
+                    // The title's attract match plays itself: not the player's. A
+                    // single-player mode's match isn't kept either (design call 8): Slippi
+                    // Dolphin plays every replay back as a debug VS match, which can't set up
+                    // the mode; the session's recording has it.
                     let attract = matches!(g.machine.phase, Phase::Scene { mode, .. }
                         if mode == GM_TITLE || mode == GM_OPENING_MV);
-                    self.slp = Some((recording::Recording::new(dir.as_deref()), !attract));
+                    let single_player = melee_sim::game::gm::is_1p_mode(g);
+                    if single_player {
+                        eprintln!("a single-player mode's match isn't saved as a replay");
+                    }
+                    self.slp = Some((
+                        recording::Recording::new(dir.as_deref()),
+                        !attract && !single_player,
+                    ));
                 }
                 if r.ended() {
                     let r = g.recorder.take().expect("the recorder");
