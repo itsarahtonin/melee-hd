@@ -449,7 +449,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itcoin", COINS),
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
-    ("it_80283AE4", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026C1E8", ZAKO),
     ("melee/it/it_279C", POKEMON_MODES),

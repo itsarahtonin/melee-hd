@@ -25,6 +25,72 @@ pub struct LeftList {
     pub arr2: [i8; 0x1C],
 }
 
+/// How many bytes from `lbl_8046B668` the characters-left tally's copies read: 130 from
+/// `arr2` (`fn_802FAC34`), past the list into the VS scene's state.
+pub const LEFT_LIST_READ: usize = 0x1C + 130;
+
+impl super::super::state::Game {
+    /// Memory from `lbl_8046B668` on as the console holds it: the list (`arr1`, `arr2`), then
+    /// the VS scene's `controller` (at 0x8046B6A0), whose state's first bytes the tally's
+    /// 130-byte copies read past the list's 0x38 (docs/melee-bugs.md).
+    pub fn left_list_memory(&self) -> [i8; LEFT_LIST_READ] {
+        let mut b = [0u8; LEFT_LIST_READ];
+        let list = &self.gm.left;
+        for i in 0..0x1C {
+            b[i] = list.arr1[i] as u8;
+            b[0x1C + i] = list.arr2[i] as u8;
+        }
+        let s = &self.vs.state;
+        let mut st = [0u8; 0x38 + 6 * 0xE];
+        st[..0x10].copy_from_slice(&[
+            s.unk_0,
+            s.pauser as u8,
+            s.pause_timer,
+            s.unk_3,
+            s.unpause_timer,
+            s.hud_enabled,
+            s.terminate_match,
+            s.is_singleplayer,
+            s.match_result,
+            s.unk_9,
+            s.unk_A,
+            s.unk_B,
+            s.unk_C,
+            s.unk_D,
+            s.match_over,
+            s.unk_F,
+        ]);
+        st[0x10..0x14].copy_from_slice(&s.unk_10.to_be_bytes());
+        st[0x14..0x18].copy_from_slice(&s.unk_14.to_be_bytes());
+        st[0x18] = s.unk_18;
+        // 0x19 to 0x1B and 0x31 to 0x33 are padding nothing writes: zero, as the .bss starts.
+        st[0x1C..0x20].copy_from_slice(&s.unk_1C.0.to_be_bytes());
+        st[0x20..0x24].copy_from_slice(&s.unk_20.0.to_be_bytes());
+        st[0x24..0x28].copy_from_slice(&s.frame_count.to_be_bytes());
+        st[0x28..0x2C].copy_from_slice(&s.timer_seconds.to_be_bytes());
+        st[0x2C..0x2E].copy_from_slice(&s.unk_2C.to_be_bytes());
+        st[0x2E..0x30].copy_from_slice(&s.unk_2E.to_be_bytes());
+        st[0x30] = s.unk_30;
+        st[0x34..0x38].copy_from_slice(&s.unk_34.to_bits().to_be_bytes());
+        for (k, f) in s.fighters.iter().enumerate() {
+            let o = 0x38 + k * 0xE;
+            st[o..o + 6].copy_from_slice(&[
+                f.x0,
+                f.x1,
+                f.slot_type,
+                f.spawn_point as u8,
+                f.x4[0],
+                f.x5,
+            ]);
+            st[o + 6..o + 8].copy_from_slice(&f.x6.to_be_bytes());
+            st[o + 8..o + 12].copy_from_slice(&[f.x8, f.x9, f.respawn_timer, f.xB]);
+            st[o + 12..o + 14].copy_from_slice(&f.xC.to_be_bytes());
+        }
+        b[0x38..].copy_from_slice(&st[..LEFT_LIST_READ - 0x38]);
+        b.map(|v| v as i8)
+    }
+}
+
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
 
@@ -589,9 +655,9 @@ impl Running<'_> {
     /// (`x76`), the next round's (`x96`, `x94`), the rules' list of the characters left
     /// (`lbl_8046B668`, `x58`), the next round's setup (`gm_801B5324`) and the fade to black
     /// at the end (`fn_801B5AA8`).
-    // Ports gm_801B5ACC; aliased once a check reaches it.
-    // Ports gm_8016A92C; aliased once a check reaches it.
-    // Ports gm_8016A998; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5ACC")]
+    #[doc(alias = "gm_8016A92C")]
+    #[doc(alias = "gm_8016A998")]
     pub fn allstar_enter_rest(&mut self) {
         use super::one_player::ALLSTAR_ROUNDS;
         let id = self.game.machine.routing.curr_state_id;
@@ -682,6 +748,72 @@ impl Running<'_> {
         let mut run = self.game.one_player.allstar.base;
         self.one_player_match_exit(&mut run, 0x69);
         self.game.one_player.allstar.base = run;
+    }
+
+    /// All-Star's game over's exit, `gm_801B5EE4`: the run's end (`gm_8017CA38`), and on a
+    /// continue the run's damage healed.
+    #[doc(alias = "gm_801B5EE4")]
+    pub fn allstar_exit_game_over(&mut self) {
+        let mut run = self.game.one_player.allstar.base;
+        self.one_player_game_over_exit(&mut run);
+        self.game.one_player.allstar.base = run;
+        if self.game.one_player.game_over.result != 0 {
+            self.game.one_player.allstar.x74 = 0;
+        }
+    }
+
+    /// A 1P run's game over's exit, `gm_8017CA38`: the coins left saved; with no continue, the character's high score, the
+    /// trophies' table back to the save (`Ground_801C5A60`), the mode's trophies, the
+    /// trophies and special messages earned, then Marth's challenge, a notice's challenger
+    /// approach or the menu; with a continue, the score, the stocks of the mode's choices,
+    /// one more continue counted and the run's state again.
+    #[doc(alias = "gm_8017CA38")]
+    #[doc(alias = "Ground_801C5A60")]
+    #[doc(alias = "fn_80162FF4")]
+    pub fn one_player_game_over_exit(&mut self, run: &mut Unk1PData) {
+        let d = self.game.one_player.game_over;
+        run.x14 = d.coins;
+        self.game.game_data.set_score(u32::from(run.x14));
+        if d.result == 0 {
+            // `gm_80173224(mode, 0)`'s path: no mode's own challenger asked (`fn_80173098`,
+            // unported), so Marth's (`gm_80172E74`).
+            let challenger = self.challenger_by_characters();
+            let p = run.player;
+            let sel = super::match_exit::selkind(p.ckind as u8);
+            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            match self.game.game_mode {
+                GM_ALLSTAR => {
+                    // `fn_80162FF4`: the record a word compared unsigned.
+                    if (rec.x90 as u32) < d.x4 as u32 {
+                        rec.x90 = d.x4;
+                    }
+                }
+                m => crate::game::code::unported_call(&format!(
+                    "gm_8017CA38's records in game mode {m:#x} (fn_80162BFC, fn_80162DF8)"
+                )),
+            }
+            self.toy_table_sync(true);
+            // `gm_8017390C(fn_8017DF90(), 0)`'s path: the mode's trophies come only with a
+            // clear (its second argument); Adventure's Luigi trophy isn't ported.
+            if super::one_player::GM_ADVENTURE == self.game.game_mode {
+                crate::game::code::unported_call("gm_8017390C in Adventure");
+            }
+            self.trophy_unlocks();
+            self.special_unlocks(0x40);
+            if challenger == super::opponents::NONE as u8 {
+                if !self.challenger_check(super::machine::GM_MENU, p.slot) {
+                    self.change_game_mode_after_scene(super::machine::GM_MENU);
+                }
+            } else {
+                self.init_challenger(p.ckind as u8, p.color, p.slot, p.nametag, challenger, 1);
+                self.change_game_mode_after_scene(super::machine::GM_CHALLENGER_APPROACH);
+            }
+        } else {
+            run.x18 = super::results_exit::add_u32_saturating(d.x4 as u32, 1) as i32;
+            run.player.stocks = self.game.game_data.vs.unk_528.stocks;
+            run.xc[1] = super::results_exit::add_u8_saturating(u32::from(run.xc[1]), 1) as u8;
+            self.set_next_game_mode_state_id(run.player.mode);
+        }
     }
 
     /// All-Star's game over, `gm_801B5EB4` (`gm_8017C9A8`): the run's score, mode 2, the
