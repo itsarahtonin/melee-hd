@@ -46,6 +46,9 @@ pub enum Dynamic {
     /// One of the album's images, by its place in the state's list
     /// (`melee_sim::lb::snap_read::SnapRead::images`).
     Album(u8),
+    /// One of the trophy fall's images, by `melee_sim::game::gm::endings::toy_fall::IMAGES`'
+    /// index.
+    ToyFall(u8),
     /// The movie player's planes (`MoviePlayer.unk_50`, `unk_54`, `unk_58`): luma, then the
     /// two chroma planes, as the last frame decoded them.
     Movie(u8),

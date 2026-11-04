@@ -88,6 +88,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::clear::PROC => game.clear_proc(gobj),
         super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
         super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
+        addr if super::gm::endings::run_proc(game, gobj, addr) => {}
         addr if super::gm::home_run::run_proc(game, gobj, addr) => {}
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
@@ -223,6 +224,7 @@ pub fn run_event(game: &mut Running, f: u32) {
         f if f == super::gm::training::ON_FRAME.0 => game.training_on_frame(),
         f if f == super::gm::memcard::ON_FRAME.0 => game.memcard_on_frame(),
         f if super::vi::run_frame(game, f) => {}
+        f if super::gm::endings::run_frame(game, f) => {}
         f if f == super::gm::opening::ON_FRAME.0 => game.opening_on_frame(),
         f if f == super::gm::title::ON_FRAME.0 => game.title_on_frame(),
         f if f == super::gm::progressive::ON_FRAME.0 => game.prog_scan_on_frame(),
