@@ -1133,6 +1133,89 @@ impl Running<'_> {
         g
     }
 
+    /// `tyDisplay_8031C5E4(id)`: a trophy's model for the 1P coin, if its category's display
+    /// archive is loaded (`tyDisplay_8031C454`): a root holding the category's model (its
+    /// material animation at the entry's frame, then let go) at the entry's place, the
+    /// question mark and the stand. The root goes on no GObj here.
+    #[doc(alias = "tyDisplay_8031C5E4")]
+    pub fn coin_trophy_model(&mut self, id: i32) -> Option<JObjId> {
+        let e = self.coll_entry(id);
+        let cat = usize::from(e.category);
+        let archive = |r: &Self, i: usize| {
+            r.game
+                .toys
+                .collection
+                .archives
+                .get(i)
+                .copied()
+                .flatten()
+                .map(|l| l.id)
+        };
+        let a = archive(self, cat)?;
+        let root = jobj::alloc(&mut self.game.objs);
+        let name_at = if e.category as i8 == -1 { 0 } else { cat };
+        let data = self.data;
+        let joint = self.coll_sym(a, JOINTS[name_at]);
+        let child = jobj::load_joint(&mut self.game.objs, data, joint);
+        jobj::add_child(&mut self.game.objs.jobjs, Some(root), child);
+        let mat = matanim(name_at);
+        let m = (!mat.is_empty()).then_some(mat.as_str());
+        self.toy_add_anims(child, [None, m, None], a, i32::from(e.frame));
+        jobj::remove_anim_all(&mut self.game.objs, child);
+        let child = child.expect("tydisplay.c: a category's model");
+        let jobjs = &mut self.game.objs.jobjs;
+        jobj::set_srt(jobjs, child, |o| o.translate.x = e.x);
+        jobj::set_srt(jobjs, child, |o| o.translate.z = e.z);
+        for i in [42, 41] {
+            let a = archive(self, i).expect("the question mark's and the stand's archives");
+            let j = self.coll_sym(a, JOINTS[i]);
+            let j = jobj::load_joint(&mut self.game.objs, data, j);
+            jobj::add_child(&mut self.game.objs.jobjs, Some(root), j);
+        }
+        Some(root)
+    }
+
+    /// `tyDisplay_8031C354(id, buf, max, class)`: up to `max` trophies of `id`'s display
+    /// category and of `class` (0x63: `id`'s own, `Toy_803060BC(id, 6)`), each one the region
+    /// can win and marked in the flags in play (`Toy_803049F4`), but `id` itself, written
+    /// into `buf` from its start; how many. None for `id` -1.
+    // Ports `tyDisplay_8031C354`; aliased once a check reaches it.
+    pub fn display_kin(&self, id: i32, buf: &mut [i32], max: i32, class: i32) -> i32 {
+        if id == -1 {
+            return 0;
+        }
+        let cat = self.coll_entry(id).category;
+        let class = if class == 0x63 {
+            self.toy_param_int(id, 6)
+        } else {
+            class
+        };
+        let mut count = 0;
+        for i in 0..super::TROPHY_COUNT as i32 {
+            if i == id || !self.toy_winnable(i) || !self.toy_marked(i) {
+                continue;
+            }
+            let other = self.coll_entry(i).category;
+            let c = self.toy_param_int(i, 6);
+            if other != cat || c != class {
+                continue;
+            }
+            buf[count as usize] = i;
+            count += 1;
+            if count >= max {
+                break;
+            }
+        }
+        count
+    }
+
+    /// Whether a trophy is marked in the flags in play (`0x4000`), `Toy_803049F4`: in the
+    /// single-player modes, one their trophies can be.
+    // Ports `Toy_803049F4`; aliased once a check reaches it.
+    pub fn toy_marked(&self, trophy: i32) -> bool {
+        self.toy_flags()[trophy as usize] & 0x4000 != 0
+    }
+
     /// The debug view's text: erased, then `X  %3.2f` and `Z  %3.2f` of a place.
     fn coll_debug_print(&mut self, x: f32, z: f32) {
         use crate::msl::Arg;
