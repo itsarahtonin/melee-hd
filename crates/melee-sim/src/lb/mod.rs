@@ -3,6 +3,7 @@
 pub mod anim;
 pub mod audio;
 pub mod bgflash;
+pub mod blur;
 pub mod cardgame;
 pub mod cobj;
 pub mod colanim;

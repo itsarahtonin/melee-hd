@@ -54,7 +54,7 @@ pub struct StageData {
     pub joints: &'static [GrJoint],
 }
 
-const fn cb(
+pub(crate) const fn cb(
     on_init: u32,
     callback1: u32,
     gobj_proc: u32,
@@ -1856,6 +1856,22 @@ pub const ZEBESROUTE: StageData = StageData {
     joints: &[],
 };
 
+/// `grHeal_StageData`, All-Star's rest area.
+pub const HEAL: StageData = StageData {
+    grkind: super::GR_KIND_HEAL,
+    callbacks: &super::heal::CALLBACKS,
+    file: Some("/GrHe.dat"),
+    on_init: super::heal::ON_INIT,
+    on_demo_init: super::heal::ON_DEMO_INIT,
+    on_load: super::heal::ON_LOAD,
+    on_start: super::heal::ON_START,
+    callback4: super::heal::CALLBACK4,
+    on_touch_line: super::heal::ON_TOUCH_LINE,
+    on_check_shadow_render: super::heal::CHECK_SHADOW_RENDER,
+    flags2: 1,
+    joints: &[],
+};
+
 /// `grEF1_StageCallbacks`. Map 0 is an animated model, map 1 the collision (with the stage's
 /// lights and fog), map 2 a model with its own collision.
 pub const FIGURE1_CALLBACKS: [StageCallbacks; 3] = [
@@ -2031,6 +2047,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_FIGURE2 => &FIGURE2,
         GR_KIND_FIGURE3 => &FIGURE3,
         GR_KIND_HOMERUN => &HOMERUN,
+        super::GR_KIND_HEAL => &HEAL,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

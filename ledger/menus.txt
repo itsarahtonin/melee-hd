@@ -25,7 +25,6 @@ melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gmgover	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmmovieend	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmmultiman	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmregclear	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregcommon	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregenddisp	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregtyfall	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -125,8 +124,6 @@ gm_80164600	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 fn_80166A8C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80166CBC	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_80168940	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-fn_801689E4	gated	named only by the single-player modes' code (fn_801803FC): the single-player modes', which only the 1P list's gated entries lead to
-fn_80168A6C	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169370	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169384	gated	named only by the single-player modes' code (gm_801BC754, gm_801BD658): the single-player modes', which only the 1P list's gated entries lead to
 fn_801693A8	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
@@ -174,12 +171,6 @@ gm_8016C75C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 gm_8016ECE8	gated	the boss stages' cycle (Final Destination's, a boss's health): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016F280	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-fn_8016F344	gated	named only by the single-player modes' code (fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016F39C	gated	named only by the single-player modes' code (fn_8017F47C): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016F548	gated	named only by the single-player modes' code (fn_8017F47C): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016F740	gated	named only by the single-player modes' code (fn_8017FF1C): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016F870	gated	named only by the single-player modes' code (fn_8017FF1C): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016F9A8	gated	named only by the single-player modes' code (fn_8017FF1C, fn_80180630): the single-player modes', which only the 1P list's gated entries lead to
 fn_80173098	gated	named only by the single-player modes' code (gm_8017CA38, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173224	gated	named only by the single-player modes' code (gm_8017CA38, gm_801BEE9C): the single-player modes', which only the 1P list's gated entries lead to
 gm_801732D8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline

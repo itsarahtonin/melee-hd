@@ -370,6 +370,20 @@ impl Ctx<'_> {
                 self.snap_copy();
                 1
             }
+            Draw::BlurCopy => {
+                self.blur_copy();
+                1
+            }
+            Draw::Blur {
+                pos,
+                scale,
+                alpha,
+                size,
+                tint,
+            } => {
+                self.blur(*pos, *scale, *alpha, *size, *tint);
+                1
+            }
             Draw::EraseWithDepth => {
                 match self.hsd.erase_color.take() {
                     Some(c) => self.erase_screen(c, true),

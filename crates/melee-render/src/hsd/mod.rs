@@ -3,6 +3,7 @@
 
 pub mod afterimage;
 pub mod album;
+pub mod blur;
 pub mod camera;
 pub mod colldraw;
 pub mod devtext;

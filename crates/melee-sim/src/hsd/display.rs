@@ -187,6 +187,19 @@ pub enum Draw {
     /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
     /// (`lb_800122C8`).
     ReflectionCopy,
+    /// The frame copied into the single-player clear screen's image (640 by 480 RGB5A3),
+    /// the frame cleared after it (`lb_800122C8` from `fn_8017FE54`).
+    BlurCopy,
+    /// That image drawn back over the screen through the current camera (`fn_80013614`):
+    /// at `pos` scaled by `scale`, plain at `alpha` (`size` none), or blurred as
+    /// `lb_80012994` draws it, 21 copies up to twice `size` / 64 apart, tinted by `tint`.
+    Blur {
+        pos: [f32; 2],
+        scale: [f32; 2],
+        alpha: u8,
+        size: Option<u8>,
+        tint: f32,
+    },
     /// The point size and its texture offset for later point draws (`HSD_StateSetPointSize`).
     PointSize(u8, u8),
     /// The light vector highlight textures take for what follows, or none without an infinite

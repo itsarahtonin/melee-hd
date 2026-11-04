@@ -24,6 +24,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod heal;
 pub mod homerun;
 pub mod icemt;
 pub mod inishie1;
@@ -139,6 +140,7 @@ pub const GR_KIND_FIGURE1: i32 = 68;
 pub const GR_KIND_FIGURE2: i32 = 69;
 pub const GR_KIND_FIGURE3: i32 = 70;
 /// `Gr_Kind_Homerun`, the Home-Run Contest's stage.
+pub const GR_KIND_HEAL: i32 = 0x42;
 pub const GR_KIND_HOMERUN: i32 = 0x43;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
@@ -298,6 +300,9 @@ pub struct Globals {
     /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
     /// nothing reads.
     pub figure_yakumono: [Option<DataRef>; 3],
+    /// The All-Star rest area's `yakumono_param` (`grHeal_804D6AF0[0]`): its hearts and how
+    /// often a rest has a coin and a trophy.
+    pub heal_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -542,6 +547,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_PUSHON, 1) => VarsKind::Map,
         (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
         (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
+        (GR_KIND_HEAL, 1) => VarsKind::Map,
         (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,
         (GR_KIND_HOMERUN, 1 | 4 | 6 | 8) => VarsKind::HomeRunPart,
         (GR_KIND_HOMERUN, 2 | 5 | 7 | 9) => VarsKind::HomeRunLabel,

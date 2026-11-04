@@ -69,7 +69,6 @@ mod addr {
     pub const FN_8016B7B4: u32 = 0x8016_B7B4;
     pub const FN_8016B7F8: u32 = 0x8016_B7F8;
     pub const FN_80182B5C: u32 = 0x8018_2B5C;
-    pub const FN_80180AC0: u32 = 0x8018_0AC0;
     pub const EFLIB_INIT: u32 = 0x8005_B4B8;
     pub const EFASYNC_LOAD_SYNC: u32 = 0x8006_737C;
     pub const SFX_SETUP_CROWD_SFX: u32 = 0x8032_1900;
@@ -1111,13 +1110,15 @@ impl Running<'_> {
         self.game.default_db_pause_handlers();
         let g = &*self.game;
         let s = &g.vs;
-        assert!(
-            !(s.start.x4_4
-                && s.state.match_result != OUTCOME_TIMEOUT
-                && (s.start.x9 == 1 || g.player_stocks(0) > 0)),
-            "single-player stage clears (fn_80180630) aren't ported"
-        );
-        self.game.vs.state.unk_0 = 3;
+        if s.start.x4_4
+            && s.state.match_result != OUTCOME_TIMEOUT
+            && (s.start.x9 == 1 || g.player_stocks(0) > 0)
+        {
+            self.clear_start();
+            self.game.vs.state.unk_0 = 2;
+        } else {
+            self.game.vs.state.unk_0 = 3;
+        }
     }
 
     /// Whether a 1P stage's end counts its rivals' bonuses, `fn_8016D538`: yes but in a run's
@@ -1157,7 +1158,7 @@ impl Running<'_> {
             0 => self.vs_frame(),
             1 => self.vs_after_end(),
             2 => {
-                if code::call(self, addr::FN_80180AC0, &[]).int() != 0 {
+                if self.clear_done() {
                     self.game.vs.state.unk_0 = 3;
                 }
             }

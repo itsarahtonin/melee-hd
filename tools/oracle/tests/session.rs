@@ -2248,8 +2248,8 @@ fn icicle_mountain_climb_in_debug_vs() {
 /// scale of 0, and past it melee-hd reads the joiner's files and halts on the same assertion;
 /// and task 2's
 /// `m6-select/allstar`, All-Star's select, its first match lost, the match's exit and the
-/// game over to the trace's end; and `m6-1p-setups/as-win`, All-Star's first match won, to
-/// the clear screen.
+/// game over to the trace's end; and `m6-1p-setups/as-win`, All-Star's first match won,
+/// through its clear screen and tally to the rest area's first tick.
 #[test]
 fn single_player_setups() {
     if let Some(out) =
@@ -2265,10 +2265,11 @@ fn single_player_setups() {
         assert!(out.contains("2444 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
-    // All-Star's first match won (Peach knocked out on Peach's Castle) to its clear screen.
+    // All-Star's first match won (Peach knocked out on Peach's Castle), its clear screen and
+    // tally, to the rest area's first tick (its HUD's list of the characters left).
     if let Some(out) = scripted_session("m6-1p-setups", "as-win", &["--all", "--heap"]) {
         assert!(
-            out.contains("6115 ticks compared, no difference; stopped in tick 6115: single-player stage clears (fn_80180630) aren't ported"),
+            out.contains("8969 ticks compared, no difference; stopped in tick 8969: fn_802FAC34 with a challenger's record isn't ported"),
             "{out}"
         );
         assert!(out.contains("no stale reads"), "{out}");

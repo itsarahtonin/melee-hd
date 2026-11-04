@@ -482,6 +482,7 @@ fn point_check(r: &mut Running, cb: CodeRef, _pos: Vec3, _point: i32) -> bool {
     match cb.0 {
         super::pushon::GOAL_CHECK => super::pushon::goal_check(r.game),
         super::shrineroute::SYMBOL_CHECK => super::shrineroute::symbol_check(r.game),
+        super::heal::PORTAL_CHECK => super::heal::portal_check(r.game),
         _ => super::super::code::unported_call(&format!("a stage's point check {:#x}", cb.0)),
     }
 }

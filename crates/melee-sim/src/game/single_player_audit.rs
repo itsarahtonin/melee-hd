@@ -680,7 +680,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "melee/gm/gmregclear",
             "melee/gm/gmregcommon",
             "fn_8016B138",
             "gm_8016B350",
@@ -744,8 +743,6 @@ pub const MISSING: &[Gap] = &[
             "gm_GetCruelHighscore",
             "gm_GetCruelTotalHighscore",
             "gm_801647F8",
-            "fn_801689E4",
-            "fn_80168A6C",
             "fn_8017DF28 (a single-player mode's record)",
         ],
         modes: NOT_STADIUM,
@@ -754,12 +751,6 @@ pub const MISSING: &[Gap] = &[
         what: "the unlocks, trophies and challengers after a mode",
         covers: &[
             "melee/gm/gm_17DB",
-            "fn_8016F344",
-            "fn_8016F39C",
-            "fn_8016F548",
-            "fn_8016F740",
-            "fn_8016F870",
-            "fn_8016F9A8",
             "fn_80173098",
             "gm_80173224",
             "gm_80173460",
@@ -823,6 +814,7 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Classic's mode, its intro and its bonus rounds",
         covers: &[
+            "the race's clear",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
             "melee/gr/grfigureget",
