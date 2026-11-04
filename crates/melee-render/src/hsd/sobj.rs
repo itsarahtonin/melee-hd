@@ -132,6 +132,49 @@ impl Ctx<'_> {
         }
     }
 
+    /// `lbMthp8001F928`'s textures: congratulations' still, its file's single frame (a JPEG
+    /// from the file's start) decoded once into the movie's planes' images, loaded as the
+    /// movie's are.
+    #[doc(alias = "lbMthp8001F928")]
+    pub fn still_planes(&mut self, s: melee_sim::game::gm::endings::congrats::StillFrame) {
+        let (w, h) = (u32::from(s.width), u32::from(s.height));
+        let sizes = [w * h, w * h / 4, w * h / 4];
+        let addrs = [0u8, 1, 2].map(|i| self.space.dynamic(Dynamic::Movie(i), sizes[i as usize]));
+        if self.hsd.movie != Some((s.file, u32::MAX)) {
+            // `decode_frame` takes a record: the frame from its fourth byte.
+            let mut frame = vec![0u8; 4];
+            frame.extend_from_slice(self.data.get(s.file).data());
+            match melee_sim::thp::decode_frame(&frame, s.width, s.height) {
+                Ok(p) => {
+                    for (at, plane) in addrs.iter().zip([&p.y, &p.u, &p.v]) {
+                        self.space.write(*at, plane);
+                    }
+                    self.hsd.movie = Some((s.file, u32::MAX));
+                }
+                Err(_) => {
+                    self.hsd.note_once("a still that doesn't decode");
+                    return;
+                }
+            }
+        }
+        let gx = &mut *self.gx;
+        for (i, (at, map)) in addrs
+            .iter()
+            .zip([GX_TEXMAP0, GX_TEXMAP1, GX_TEXMAP2])
+            .enumerate()
+        {
+            let (tw, th) = if i == 0 {
+                (s.width, s.height)
+            } else {
+                (s.width >> 1, s.height >> 1)
+            };
+            let mut tex = TexObj::default();
+            gx.init_tex_obj(&mut tex, *at, tw, th, GX_TF_I8, GX_CLAMP, GX_CLAMP, 0);
+            gx.init_tex_obj_lod(&mut tex, GX_NEAR, GX_NEAR, 0.0, 0.0, 0.0, 0, 0, GX_ANISO_1);
+            gx.load_tex_obj(&tex, map);
+        }
+    }
+
     /// `HSD_SObjLib_803A4A68`: a sprite's quad, its texture combined by its format (or the
     /// movie's three planes by four stages, YUV to RGB), turned by its rotation about its
     /// center and scaled.
@@ -150,6 +193,7 @@ impl Ctx<'_> {
         let image = match o.image {
             Image::Data(d) => data.ptr(d).map_or(0, |p| self.space.addr(data, p)),
             Image::Buffer { addr, .. } => self.decoded_image(addr).unwrap_or(0),
+            Image::Copy { image, .. } => self.toy_fall_buffer(image).unwrap_or(0),
             _ => 0,
         };
         let mut texobj = TexObj::default();

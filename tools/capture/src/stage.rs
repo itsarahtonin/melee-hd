@@ -1615,6 +1615,18 @@ impl Comparer<'_> {
                 if let Some(k) = self.data.get(key) {
                     theirs += 1;
                     let ours = self.game.objs.ids.get(k);
+                    // An entry another key held for a joint since freed names its address
+                    // (`jobj::DANGLING`), as the original's keeps the freed pointer.
+                    if let Some(o) = ours
+                        && (melee_sim::hsd::jobj::DANGLING..melee_sim::hsd::pool::UNKNOWN)
+                            .contains(&o.0)
+                    {
+                        if o.0 != value {
+                            self.diff(&format!("ID table {k:?}"), "freed joint", o.0, value);
+                        }
+                        e = self.u32(e);
+                        continue;
+                    }
                     // A freed joint the table still names dangles, compared by address: one
                     // the capture held freed, or one freed since (Kirby's copy costume's
                     // parts, which the table names after they're taken down).

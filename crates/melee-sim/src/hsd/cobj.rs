@@ -80,6 +80,11 @@ pub struct CObj {
     pub inv_view_mtx: Option<Mtx34>,
     /// Where the original's pool put `inv_view_mtx` (`proj_mtx`, `docs/engine.md`).
     pub inv_view_mtx_addr: u32,
+    /// The clipping planes an animation channel set from no value (`Value::Stale`, a RAM
+    /// address): bit 0 the near plane, bit 1 the far. A stale read is counted only once the
+    /// camera draws with one (the trophy fall's cut 2 camera's last frame sets both and
+    /// frees the camera before it draws), and the heap's image doesn't know their words.
+    pub stale_planes: u8,
 }
 
 impl CObj {
@@ -290,8 +295,18 @@ pub fn add_anim(objs: &mut Objects, data: &Archives, c: Option<CObjId>, anim: Op
 /// `CObjUpdateFunc`: a channel's value moves the eye or interest, or sets the roll, field of
 /// view or clipping planes. The interest's three channels all set its x, as the original does.
 fn update(objs: &mut Objects, data: &Archives, c: CObjId, ty: u8, value: Value) {
-    if matches!(ty, 1..=3 | 5..=7 | 9..=12) && matches!(value, Value::Stale) {
+    let stale = matches!(value, Value::Stale);
+    if matches!(ty, 1..=3 | 5..=7 | 9 | 10) && stale {
         objs.stale_reads += 1;
+    }
+    if matches!(ty, 11 | 12) {
+        let bit = if ty == 11 { 1 } else { 2 };
+        let o = &mut objs.cobjs[c];
+        o.stale_planes = if stale {
+            o.stale_planes | bit
+        } else {
+            o.stale_planes & !bit
+        };
     }
     let val = || value.or_address();
     match ty {

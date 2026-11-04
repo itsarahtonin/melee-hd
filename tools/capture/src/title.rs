@@ -83,7 +83,7 @@ impl Comparer<'_> {
                     self.compare_data(&format!("{p} image"), Some(d_image(self, d)), theirs);
                 }
                 Image::Movie { .. } => self.check(&p, "image", 0, self.u32(at + 0x5C)),
-                Image::Buffer { addr, .. } => self.check(
+                Image::Buffer { addr, .. } | Image::Copy { addr, .. } => self.check(
                     &p,
                     "image",
                     (addr >> 5) & 0x01FF_FFFF,
