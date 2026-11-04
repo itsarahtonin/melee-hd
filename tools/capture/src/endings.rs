@@ -427,8 +427,8 @@ impl Comparer<'_> {
         let theirs = self.u32(0x804D_6800) as i32;
         self.check("gm_804D6800", "names shown", shown, theirs);
         // The blocks are the staff roll scene's heap's, gone with it.
-        let live = self.game.gm.on_frame
-            == Some(melee_sim::game::gm::endings::staff_roll::ON_FRAME);
+        let live =
+            self.game.gm.on_frame == Some(melee_sim::game::gm::endings::staff_roll::ON_FRAME);
         if live && info != 0 && theirs == shown {
             for i in 0..NAMES {
                 let n = self.game.endings.staff_roll.names[i];
@@ -450,8 +450,9 @@ impl Comparer<'_> {
                 let theirs = self.u32(at + 4);
                 self.compare_handle(&path, "JObjId", e.jobj.map(|j| j.0), theirs);
                 let ours = e.mtx.m.map(|r| r.map(f32::to_bits));
-                let theirs: [[u32; 4]; 3] =
-                    std::array::from_fn(|r| std::array::from_fn(|c| self.u32(at + 8 + 16 * r as u32 + 4 * c as u32)));
+                let theirs: [[u32; 4]; 3] = std::array::from_fn(|r| {
+                    std::array::from_fn(|c| self.u32(at + 8 + 16 * r as u32 + 4 * c as u32))
+                });
                 self.check(&path, "mtx", ours, theirs);
             }
         }

@@ -108,7 +108,7 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("intro-easy", 3292, ""),
         ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
         ("gameover", 3157, ""),
-        ("staffroll", 1232, "game scene 0x2b isn't ported"),
+        ("staffroll", 3717, ""),
         ("cutscene", 3282, ""),
         ("ending-test", 3726, ""),
     ]);

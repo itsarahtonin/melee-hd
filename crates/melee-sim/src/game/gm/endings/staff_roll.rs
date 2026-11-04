@@ -93,47 +93,208 @@ use Check::*;
 /// `gm_803DBFD8`. The first check-holding entry, `gm_801AA644`'s, has no `has_check`: it
 /// changes only the details' pages.
 const ENTRIES: [Entry; NAMES] = [
-    e(2, 80, 80), e(3, 80, 80), e(2, 80, 80), e(2, 80, 80), e(3, 80, 80), e(2, 80, 80),
-    e(2, 80, 80), e(1, 80, 116), e(1, 80, 95), e(1, 80, 102), e(2, 80, 80), e(2, 80, 102),
-    e(1, 80, 95), e(2, 80, 123), e(1, 80, 116), e(1, 96, 116), e(2, 80, 102), e(2, 80, 123),
-    e(2, 80, 123), e(1, 80, 123), e(3, 80, 130), e(1, 112, 102), e(2, 80, 123),
-    Entry { column: 2, check: None, width: [80, 109] },
-    e(1, 80, 123), e(1, 80, 123), e(2, 80, 109), e(1, 80, 123), e(1, 80, 123), e(1, 96, 88),
-    e(1, 80, 102), e(3, 80, 123), e(1, 80, 102), e(1, 80, 109), e(1, 80, 95), e(1, 80, 95),
-    e(1, 80, 116), e(1, 80, 80), e(1, 80, 95), e(1, 80, 95), e(1, 80, 102), e(1, 142, 104),
-    e(2, 80, 88), e(2, 80, 116), e(1, 80, 88), e(1, 96, 81), e(1, 80, 81), e(1, 80, 102),
-    e(1, 96, 102), e(1, 96, 95), e(1, 80, 88), e(1, 80, 88), e(1, 80, 102), e(1, 80, 88),
-    e(1, 80, 109), e(1, 96, 95), e(1, 80, 95), e(1, 96, 95), e(1, 80, 102), e(1, 80, 130),
-    e(1, 80, 102), e(1, 80, 116), e(1, 80, 130), e(1, 80, 80), e(1, 80, 95), e(2, 224, 102),
-    e(1, 80, 95), e(1, 80, 116), e(1, 80, 81), e(1, 80, 102), e(1, 80, 102), e(2, 80, 95),
-    e(2, 80, 102), e(1, 80, 95), e(1, 160, 109), e(1, 176, 116), e(1, 80, 109), e(1, 80, 95),
-    e(1, 96, 95), e(1, 80, 116), e(1, 80, 81), e(1, 80, 88),
-    c(1, Character(15), 2976, 96, 102), e(1, 128, 80), e(1, 80, 88),
-    c(1, Character(9), 2980, 80, 123), c(1, Character(10), 2984, 80, 130), e(1, 80, 109),
-    c(1, Character(23), 2988, 80, 88), c(1, Character(24), 2992, 128, 102),
-    c(1, Character(21), 2996, 96, 109), c(1, Character(25), 3000, 80, 116), e(1, 80, 81),
-    e(1, 80, 88), e(1, 80, 80), e(1, 80, 95), e(1, 96, 80), e(2, 204, 148), e(2, 144, 102),
-    e(2, 128, 83), e(2, 112, 81), e(2, 144, 88), e(2, 128, 81), e(2, 112, 81), e(1, 80, 123),
-    e(3, 80, 80), e(1, 80, 109), e(1, 80, 88), e(3, 80, 109), e(1, 80, 102), e(1, 128, 80),
-    e(1, 80, 80), e(2, 80, 95), e(1, 80, 102), e(1, 80, 109), e(1, 80, 109), e(1, 80, 116),
-    e(2, 80, 81), e(1, 80, 116), e(1, 80, 102), e(3, 80, 116), e(1, 80, 102), e(1, 80, 102),
-    e(2, 80, 81), e(2, 80, 80), e(1, 80, 102), e(1, 80, 102), e(1, 80, 88), e(1, 80, 116),
-    e(1, 80, 95), e(1, 96, 116), e(1, 80, 102), e(1, 80, 88), e(1, 80, 109), e(2, 80, 130),
-    c(1, Character(25), 3004, 80, 116), c(2, MarsOrEmblem, 3008, 80, 102),
-    c(2, MarsOrEmblem, 3012, 80, 116), c(2, MarsOrEmblem, 3016, 80, 123),
-    c(2, MarsOrEmblem, 3020, 80, 95), c(1, MarsOrEmblem, 3024, 96, 123), e(1, 156, 146),
-    e(1, 96, 102), e(1, 80, 130), e(1, 80, 81), e(2, 236, 111), e(1, 80, 88), e(1, 80, 88),
-    e(1, 80, 102), e(1, 80, 109), e(2, 80, 102), e(2, 80, 102), e(2, 80, 95), e(2, 80, 80),
-    e(2, 96, 109), e(2, 80, 102), e(2, 96, 88), e(2, 80, 95), e(3, 176, 130),
-    c(1, Trophy(269), 3028, 80, 88), e(3, 192, 139), e(3, 192, 139), e(1, 192, 139),
-    e(1, 176, 108), e(3, 176, 115), e(2, 176, 115), e(1, 80, 109), e(1, 96, 109),
-    e(1, 80, 109), e(1, 80, 88), e(1, 96, 116), e(2, 80, 109), e(2, 176, 160), e(1, 80, 88),
-    e(2, 80, 102), e(2, 80, 146), e(2, 210, 210), e(1, 80, 95), e(1, 80, 130), e(1, 80, 88),
-    e(3, 80, 116), e(1, 80, 81), e(1, 80, 116), e(0, 38, 88), e(1, 102, 102), e(1, 123, 123),
-    e(1, 80, 80), e(1, 102, 102), c(1, MarsOrEmblem, 3032, 169, 169),
-    c(1, Trophies3, 3036, 110, 110), c(1, Trophy(272), 3040, 146, 146),
-    c(1, Trophies2, 3044, 80, 80), e(1, 80, 80), e(0, 122, 140), e(0, 35, 35), e(0, 98, 148),
-    e(0, 28, 28), c(0, MarsOrEmblem, 3048, 120, 120),
+    e(2, 80, 80),
+    e(3, 80, 80),
+    e(2, 80, 80),
+    e(2, 80, 80),
+    e(3, 80, 80),
+    e(2, 80, 80),
+    e(2, 80, 80),
+    e(1, 80, 116),
+    e(1, 80, 95),
+    e(1, 80, 102),
+    e(2, 80, 80),
+    e(2, 80, 102),
+    e(1, 80, 95),
+    e(2, 80, 123),
+    e(1, 80, 116),
+    e(1, 96, 116),
+    e(2, 80, 102),
+    e(2, 80, 123),
+    e(2, 80, 123),
+    e(1, 80, 123),
+    e(3, 80, 130),
+    e(1, 112, 102),
+    e(2, 80, 123),
+    Entry {
+        column: 2,
+        check: None,
+        width: [80, 109],
+    },
+    e(1, 80, 123),
+    e(1, 80, 123),
+    e(2, 80, 109),
+    e(1, 80, 123),
+    e(1, 80, 123),
+    e(1, 96, 88),
+    e(1, 80, 102),
+    e(3, 80, 123),
+    e(1, 80, 102),
+    e(1, 80, 109),
+    e(1, 80, 95),
+    e(1, 80, 95),
+    e(1, 80, 116),
+    e(1, 80, 80),
+    e(1, 80, 95),
+    e(1, 80, 95),
+    e(1, 80, 102),
+    e(1, 142, 104),
+    e(2, 80, 88),
+    e(2, 80, 116),
+    e(1, 80, 88),
+    e(1, 96, 81),
+    e(1, 80, 81),
+    e(1, 80, 102),
+    e(1, 96, 102),
+    e(1, 96, 95),
+    e(1, 80, 88),
+    e(1, 80, 88),
+    e(1, 80, 102),
+    e(1, 80, 88),
+    e(1, 80, 109),
+    e(1, 96, 95),
+    e(1, 80, 95),
+    e(1, 96, 95),
+    e(1, 80, 102),
+    e(1, 80, 130),
+    e(1, 80, 102),
+    e(1, 80, 116),
+    e(1, 80, 130),
+    e(1, 80, 80),
+    e(1, 80, 95),
+    e(2, 224, 102),
+    e(1, 80, 95),
+    e(1, 80, 116),
+    e(1, 80, 81),
+    e(1, 80, 102),
+    e(1, 80, 102),
+    e(2, 80, 95),
+    e(2, 80, 102),
+    e(1, 80, 95),
+    e(1, 160, 109),
+    e(1, 176, 116),
+    e(1, 80, 109),
+    e(1, 80, 95),
+    e(1, 96, 95),
+    e(1, 80, 116),
+    e(1, 80, 81),
+    e(1, 80, 88),
+    c(1, Character(15), 2976, 96, 102),
+    e(1, 128, 80),
+    e(1, 80, 88),
+    c(1, Character(9), 2980, 80, 123),
+    c(1, Character(10), 2984, 80, 130),
+    e(1, 80, 109),
+    c(1, Character(23), 2988, 80, 88),
+    c(1, Character(24), 2992, 128, 102),
+    c(1, Character(21), 2996, 96, 109),
+    c(1, Character(25), 3000, 80, 116),
+    e(1, 80, 81),
+    e(1, 80, 88),
+    e(1, 80, 80),
+    e(1, 80, 95),
+    e(1, 96, 80),
+    e(2, 204, 148),
+    e(2, 144, 102),
+    e(2, 128, 83),
+    e(2, 112, 81),
+    e(2, 144, 88),
+    e(2, 128, 81),
+    e(2, 112, 81),
+    e(1, 80, 123),
+    e(3, 80, 80),
+    e(1, 80, 109),
+    e(1, 80, 88),
+    e(3, 80, 109),
+    e(1, 80, 102),
+    e(1, 128, 80),
+    e(1, 80, 80),
+    e(2, 80, 95),
+    e(1, 80, 102),
+    e(1, 80, 109),
+    e(1, 80, 109),
+    e(1, 80, 116),
+    e(2, 80, 81),
+    e(1, 80, 116),
+    e(1, 80, 102),
+    e(3, 80, 116),
+    e(1, 80, 102),
+    e(1, 80, 102),
+    e(2, 80, 81),
+    e(2, 80, 80),
+    e(1, 80, 102),
+    e(1, 80, 102),
+    e(1, 80, 88),
+    e(1, 80, 116),
+    e(1, 80, 95),
+    e(1, 96, 116),
+    e(1, 80, 102),
+    e(1, 80, 88),
+    e(1, 80, 109),
+    e(2, 80, 130),
+    c(1, Character(25), 3004, 80, 116),
+    c(2, MarsOrEmblem, 3008, 80, 102),
+    c(2, MarsOrEmblem, 3012, 80, 116),
+    c(2, MarsOrEmblem, 3016, 80, 123),
+    c(2, MarsOrEmblem, 3020, 80, 95),
+    c(1, MarsOrEmblem, 3024, 96, 123),
+    e(1, 156, 146),
+    e(1, 96, 102),
+    e(1, 80, 130),
+    e(1, 80, 81),
+    e(2, 236, 111),
+    e(1, 80, 88),
+    e(1, 80, 88),
+    e(1, 80, 102),
+    e(1, 80, 109),
+    e(2, 80, 102),
+    e(2, 80, 102),
+    e(2, 80, 95),
+    e(2, 80, 80),
+    e(2, 96, 109),
+    e(2, 80, 102),
+    e(2, 96, 88),
+    e(2, 80, 95),
+    e(3, 176, 130),
+    c(1, Trophy(269), 3028, 80, 88),
+    e(3, 192, 139),
+    e(3, 192, 139),
+    e(1, 192, 139),
+    e(1, 176, 108),
+    e(3, 176, 115),
+    e(2, 176, 115),
+    e(1, 80, 109),
+    e(1, 96, 109),
+    e(1, 80, 109),
+    e(1, 80, 88),
+    e(1, 96, 116),
+    e(2, 80, 109),
+    e(2, 176, 160),
+    e(1, 80, 88),
+    e(2, 80, 102),
+    e(2, 80, 146),
+    e(2, 210, 210),
+    e(1, 80, 95),
+    e(1, 80, 130),
+    e(1, 80, 88),
+    e(3, 80, 116),
+    e(1, 80, 81),
+    e(1, 80, 116),
+    e(0, 38, 88),
+    e(1, 102, 102),
+    e(1, 123, 123),
+    e(1, 80, 80),
+    e(1, 102, 102),
+    c(1, MarsOrEmblem, 3032, 169, 169),
+    c(1, Trophies3, 3036, 110, 110),
+    c(1, Trophy(272), 3040, 146, 146),
+    c(1, Trophies2, 3044, 80, 80),
+    e(1, 80, 80),
+    e(0, 122, 140),
+    e(0, 35, 35),
+    e(0, 98, 148),
+    e(0, 28, 28),
+    c(0, MarsOrEmblem, 3048, 120, 120),
 ];
 
 /// Entry 23's check (`gm_801AA644`, the save's feature bit 4) and its page, which only the
@@ -145,15 +306,51 @@ const COLUMNS: [f32; 4] = [-1.0, -1.79, -2.579_999_9, -3.579_999_9];
 
 /// `gm_803DBFD8_extra.sfx_cues`: the roll's sounds by tick, to the end's mark.
 const CUES: [(i32, i32); 45] = [
-    (1, 500015), (2, 500005), (160, 500001), (220, 500005), (240, 500003), (580, 500002),
-    (602, 500004), (660, 500001), (830, 500002), (880, 500003), (1030, 500001), (1050, 500003),
-    (1200, 500004), (1250, 500002), (1380, 500003), (1480, 500004), (1670, 500001),
-    (1900, 500005), (1902, 500001), (1960, 500004), (2000, 500003), (2200, 500004),
-    (2350, 500001), (2000, 500004), (2400, 500002), (2650, 500003), (2730, 500000),
-    (2900, 500000), (3100, 500000), (3300, 500000), (3465, 500002), (3490, 500001),
-    (3500, 500002), (3545, 500002), (3650, 500001), (3680, 500005), (3745, 500001),
-    (3900, 500005), (3950, 500003), (4180, 500008), (4309, 500009), (4517, 500008),
-    (4735, 500009), (4741, 500012), (0x7FFF_FFFF, 0),
+    (1, 500015),
+    (2, 500005),
+    (160, 500001),
+    (220, 500005),
+    (240, 500003),
+    (580, 500002),
+    (602, 500004),
+    (660, 500001),
+    (830, 500002),
+    (880, 500003),
+    (1030, 500001),
+    (1050, 500003),
+    (1200, 500004),
+    (1250, 500002),
+    (1380, 500003),
+    (1480, 500004),
+    (1670, 500001),
+    (1900, 500005),
+    (1902, 500001),
+    (1960, 500004),
+    (2000, 500003),
+    (2200, 500004),
+    (2350, 500001),
+    (2000, 500004),
+    (2400, 500002),
+    (2650, 500003),
+    (2730, 500000),
+    (2900, 500000),
+    (3100, 500000),
+    (3300, 500000),
+    (3465, 500002),
+    (3490, 500001),
+    (3500, 500002),
+    (3545, 500002),
+    (3650, 500001),
+    (3680, 500005),
+    (3745, 500001),
+    (3900, 500005),
+    (3950, 500003),
+    (4180, 500008),
+    (4309, 500009),
+    (4517, 500008),
+    (4735, 500009),
+    (4741, 500012),
+    (0x7FFF_FFFF, 0),
 ];
 
 /// `gm_803DD0F0`: the details' camera, a perspective from (0, 0, 2.9) toward (0, 0, -80).
@@ -336,7 +533,9 @@ impl Running<'_> {
         let obj = self.game.world.gobj(gobj).obj;
         for _ in 0..speed {
             match obj {
-                Some(Obj::CObj(c)) => crate::hsd::cobj::anim(&mut self.game.objs, self.data, Some(c)),
+                Some(Obj::CObj(c)) => {
+                    crate::hsd::cobj::anim(&mut self.game.objs, self.data, Some(c))
+                }
                 Some(Obj::LObj(l)) => {
                     crate::hsd::lobj::anim_all(&mut self.game.objs, self.data, Some(l))
                 }
@@ -360,7 +559,12 @@ impl Running<'_> {
         if !crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
             return;
         }
-        let fog = self.game.endings.staff_roll.fog.expect("the staff roll's fog");
+        let fog = self
+            .game
+            .endings
+            .staff_roll
+            .fog
+            .expect("the staff roll's fog");
         let [r, g, b, _] = self.game.objs.fogs[fog].color;
         let draws = &mut self.game.objs.display.draws;
         draws.push(crate::hsd::display::Draw::EraseColor([r, g, b, 0xFF]));
@@ -469,7 +673,8 @@ impl Running<'_> {
                 .and_then(|x| j[x].child)
                 .expect("a name's leaf joint");
             let hidden = j[leaf].flags & jobj::HIDDEN != 0;
-            let (title_page, jp_page, en_page) = (15 * i as i32 + 2, 15 * i as i32 + 3, 15 * i as i32 + 4);
+            let (title_page, jp_page, en_page) =
+                (15 * i as i32 + 2, 15 * i as i32 + 3, 15 * i as i32 + 4);
             let (chk, has) = self.staff_entry_check(i);
             let passes = !has || chk.is_some_and(|(ok, _)| ok);
             let shows = (passes || i == 0xC5) && (i != 0x5E || jp);
@@ -527,7 +732,12 @@ impl Running<'_> {
             child = self.game.objs.jobjs[ch].next;
             i += 1;
         }
-        let cam = self.game.endings.staff_roll.camera.expect("the names' camera");
+        let cam = self
+            .game
+            .endings
+            .staff_roll
+            .camera
+            .expect("the names' camera");
         crate::hsd::cobj::setup_viewing_mtx(&mut self.game.objs, self.data, cam);
         let view = self.game.objs.cobjs[cam].view_mtx;
         let n = self.game.endings.staff_roll.shown as usize;
@@ -557,11 +767,8 @@ impl Running<'_> {
     fn staff_roll_color(&mut self, idx: usize, color: [u8; 4]) {
         if idx < 7 {
             let bg = self.game.endings.staff_roll.bg;
-            let [j] = super::super::pause::tree_nodes(
-                &self.game.objs.jobjs,
-                bg,
-                &[TITLE_JOINTS[idx]],
-            );
+            let [j] =
+                super::super::pause::tree_nodes(&self.game.objs.jobjs, bg, &[TITLE_JOINTS[idx]]);
             let j = j.expect("a title's joint");
             let jobj::Contents::DObjs(d) = self.game.objs.jobjs[j].u else {
                 panic!("a title joint without display objects");
@@ -573,7 +780,9 @@ impl Running<'_> {
             };
             let mut d = d.expect("a title's display object");
             for _ in 0..skip {
-                d = self.game.objs.dobjs[d].next.expect("a title's display object");
+                d = self.game.objs.dobjs[d]
+                    .next
+                    .expect("a title's display object");
             }
             let m = self.game.objs.dobjs[d].mobj.expect("a title's material");
             crate::hsd::mobj::set_diffuse(&mut self.game.objs.mobjs, m, color);
@@ -741,13 +950,18 @@ impl Running<'_> {
             s.kick_target = 0.0;
         }
         let up = fp::fadds(reg(0.25), reg(s.kick));
-        s.kick = if up < reg(s.kick_target) { mem(up) } else { s.kick_target };
+        s.kick = if up < reg(s.kick_target) {
+            mem(up)
+        } else {
+            s.kick_target
+        };
         let turn = fp::frsp(fp::fsub(fp::fneg(reg(s.kick)), std::f64::consts::FRAC_PI_4));
         let gun_turn = node(self, 0x18);
         jobj::set_rotation_z(&mut self.game.objs.jobjs, gun_turn, mem(turn));
         let gun = node(self, 5);
         self.anim_all(gun);
-        let pair = super::super::pause::tree_nodes(&self.game.objs.jobjs, Some(root), &[0x1C, 0x1A]);
+        let pair =
+            super::super::pause::tree_nodes(&self.game.objs.jobjs, Some(root), &[0x1C, 0x1A]);
         let (paused, speed) = {
             let s = &self.game.endings.staff_roll;
             (s.paused, s.speed)
@@ -893,7 +1107,9 @@ impl Running<'_> {
                     tx.text_color[..3].copy_from_slice(&[0xFF, 0xB4, 0]);
                     let page = if sel == 0x4B && k == 2 {
                         let u = &self.game.gm.unlocks;
-                        0xBEC + i32::from(u.ckind_unlocked(7)) + 2 * i32::from(u.ckind_unlocked(0x16))
+                        0xBEC
+                            + i32::from(u.ckind_unlocked(7))
+                            + 2 * i32::from(u.ckind_unlocked(0x16))
                     } else if k == 2 && failed {
                         if jp { alt + 2 } else { alt + 3 }
                     } else if jp {
@@ -977,7 +1193,9 @@ impl Running<'_> {
         self.game.sis.set_color(self.data, t, line, [0xFF, 0xB4, 0]);
         let jobjs = &mut self.game.objs.jobjs;
         for p in pair {
-            let c = p.and_then(|p| jobjs[p].child).expect("a details' column's child");
+            let c = p
+                .and_then(|p| jobjs[p].child)
+                .expect("a details' column's child");
             jobj::set_srt(jobjs, c, |o| o.translate.y = -0.4);
         }
         self.game.endings.staff_roll.speed = 1;
