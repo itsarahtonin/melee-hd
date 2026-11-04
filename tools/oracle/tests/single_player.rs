@@ -67,8 +67,8 @@ fn first_stops(list: &[(&str, u32, &str)]) {
 
 /// Each mode from the main menu's 1P list on the unlock-all card: its entry, its select (or
 /// list), Fox, and its first match: Classic's and Adventure's intros, the matches of All-Star,
-/// Target Test, the Home-Run Contest and Training (Fountain of Dreams, on
-/// `2026-10-06_17-44-10`'s card), the Event list's first event and Multi-Man Melee's list.
+/// Target Test, the Home-Run Contest, 10-Man Melee (lost, the select again) and Training
+/// (Fountain of Dreams, on `2026-10-06_17-44-10`'s card), and the Event list's first event.
 #[test]
 fn each_mode_runs_to_its_first_stop() {
     first_stops(&[
@@ -82,11 +82,7 @@ fn each_mode_runs_to_its_first_stop() {
         ),
         ("target", 3496, ""),
         ("homerun", 3399, ""),
-        (
-            "multiman",
-            742,
-            "mnHyaku_8024CD64 (the Multi-Man list) isn't ported",
-        ),
+        ("multiman", 3556, ""),
         ("training", 3748, ""),
     ]);
 }
@@ -135,7 +131,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         (
             "stages-1p-c",
             3925,
-            "not implemented: the rest area's coin and trophy (it_802F2094, Toy_80304A58)",
+            "the rest area's coin and trophy (it_802F2094, Toy_80304A58) isn't ported",
         ),
     ]);
 }

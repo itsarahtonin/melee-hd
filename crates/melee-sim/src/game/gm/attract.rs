@@ -269,6 +269,7 @@ impl Running<'_> {
             super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR => {
                 self.game.one_player.match_start.clone()
             }
+            m if super::multi_man::is_multi_man(m) => self.game.multi_man.start.clone(),
             m => crate::game::code::unported_call(&format!(
                 "the VS scene's enter data in game mode {m:#x}"
             )),

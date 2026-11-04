@@ -14,6 +14,7 @@ use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::hud::stock::StockJObj;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
@@ -9637,7 +9638,7 @@ pub struct ifStock_804A1378 {
     /// +0x1ec
     pub jobj: Option<JObjId>,
     /// +0x1f0
-    pub pad1F0: [i8; 4],
+    pub jobj_1: StockJObj,
     /// +0x1f4
     pub jobj_a: Option<JObjId>,
     /// +0x1f8
@@ -9656,7 +9657,7 @@ impl Default for ifStock_804A1378 {
             player: core::array::from_fn(|_| Default::default()),
             gobj: None,
             jobj: None,
-            pad1F0: [0; 4],
+            jobj_1: Default::default(),
             jobj_a: None,
             jobj_b: None,
             jobj_c: None,

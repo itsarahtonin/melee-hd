@@ -325,6 +325,9 @@ SPLICE = {
     # An image's pixels: the magnifier's copies render into buffers from the heap, which only
     # the presentation reads.
     "HSD_ImageDesc": ("image_ptr", 0, 4, "TexBuffer"),
+    # The Multi-Man counter's second joint, which `lb_80011E24`'s list writes over the word
+    # the decomp calls padding (`ifStock_802FA5BC`, `ifStock_802FAEC4`).
+    "ifStock_804A1378": ("jobj_1", 0x1F0, 0x1F4, "StockJObj"),
     # An item's dynamic bones and hurtboxes, likewise set up to a count.
     "Item": [
         ("xD4_dynamicBones", 0xD4, 0x374, "ItemDynamicBones"),
@@ -350,6 +353,7 @@ EXTRA_USES = [
     "use crate::hsd::sis::TextId;",
     "use crate::lb::hitcapsule::{HitJObj, HitOwner, Victim};",
     "use crate::game::hud::magnify::{MagnifyImage, TexBuffer};",
+    "use crate::game::hud::stock::StockJObj;",
 ]
 
 # C types melee-sim already has: fields of these types use the Rust type, and no struct is
@@ -407,6 +411,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
