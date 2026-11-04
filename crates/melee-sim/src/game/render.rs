@@ -440,10 +440,12 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         c if super::gr::castle::run_render(r, gobj, c, pass) => {}
         c if super::vi::run_render(r, gobj, c, pass) => {}
         c if super::gm::endings::run_render(r, gobj, c) => {}
+        c if super::gm::intro::run_render(r, gobj, c) => {}
         c if super::gr::bigblue::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),
         0x8026_EECC => r.render_item(gobj, pass),
+        super::it::kinds::trophycoin::RENDER => r.render_trophy_coin(gobj, pass),
         super::it::link::RENDER => r.render_link(gobj, pass),
         super::it::kinds::foxillusion::RENDER => r.render_fox_illusion(gobj, pass),
         super::it::kinds::linkboomerang::RENDER => r.render_link_boomerang(gobj, pass),

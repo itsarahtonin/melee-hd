@@ -208,6 +208,10 @@ enum Hook {
     ClassicOnLoad,
     ClassicEnterCss,
     ClassicExitCss,
+    /// Classic's stage's intro and match ([`super::classic`]).
+    ClassicEnterIntro,
+    ClassicEnterVs,
+    ClassicExitVs,
     AdventureOnLoad,
     AdventureEnterCss,
     AdventureExitCss,
@@ -952,7 +956,8 @@ impl Running<'_> {
             || s.scene == crate::game::vi::GS_REGEND_CONGRATS
             || s.scene == super::endings::GS_STAFFROLL
             || s.scene == super::endings::GS_MOVIE_END
-            || crate::game::vi::scene_handlers(s.scene).is_some();
+            || crate::game::vi::scene_handlers(s.scene).is_some()
+            || super::intro::is_intro(s.scene);
     }
 
     /// The players whose files the scene about to enter loads, and whether it's a match (else
@@ -1101,6 +1106,12 @@ impl Running<'_> {
             super::endings::GS_COMING_SOON => {
                 (super::endings::game_over::SOON_ON_ENTER, CodeRef(0))
             }
+            super::intro::GS_INTRO_EASY => {
+                (super::intro::EASY_ON_ENTER, super::intro::EASY_ON_FRAME)
+            }
+            super::intro::GS_INTRO_NORMAL => {
+                (super::intro::NORMAL_ON_ENTER, super::intro::NORMAL_ON_FRAME)
+            }
             k if crate::game::vi::scene_handlers(k).is_some() => {
                 crate::game::vi::scene_handlers(k).unwrap()
             }
@@ -1145,6 +1156,8 @@ impl Running<'_> {
             super::endings::movie_end::ON_ENTER => self.movie_end_on_enter(),
             super::endings::game_over::ON_ENTER => self.game_over_on_enter(),
             super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
+            super::intro::EASY_ON_ENTER => self.intro_easy_on_enter(),
+            super::intro::NORMAL_ON_ENTER => self.intro_normal_on_enter(),
             _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -1230,6 +1243,9 @@ impl Running<'_> {
             super::endings::GS_STAFFROLL => self.staff_roll_on_exit(),
             super::endings::GS_GAMEOVER => self.game_over_on_exit(),
             super::endings::GS_COMING_SOON => self.coming_soon_on_exit(),
+            // Classic's intro has no exit of its own.
+            super::intro::GS_INTRO_EASY => {}
+            super::intro::GS_INTRO_NORMAL => self.intro_normal_on_leave(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
@@ -1424,6 +1440,9 @@ impl Running<'_> {
             Hook::ClassicOnLoad => self.classic_on_load(),
             Hook::ClassicEnterCss => self.classic_enter_css(),
             Hook::ClassicExitCss => self.classic_exit_css(),
+            Hook::ClassicEnterIntro => self.classic_enter_intro(),
+            Hook::ClassicEnterVs => self.classic_enter_vs(),
+            Hook::ClassicExitVs => self.classic_exit_vs(),
             Hook::AdventureOnLoad => self.adventure_on_load(),
             Hook::AdventureEnterCss => self.adventure_enter_css(),
             Hook::AdventureExitCss => self.adventure_exit_css(),
@@ -1580,8 +1599,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         Some(Hook::Unported1P(name))
     }
     const GS_TRAINING: u8 = 0x04;
-    const GS_INTRO_EASY: u8 = 0x20;
-    const GS_INTRO_NORMAL: u8 = 0x21;
+    use super::intro::{GS_INTRO_EASY, GS_INTRO_NORMAL};
     const GS_GAMEOVER: u8 = 0x22;
     const GS_COMING_SOON: u8 = 0x23;
     // Eleven rounds of an intro and a match, ids 8 apart.
@@ -1590,12 +1608,12 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         let mut r = 0;
         while r < 11 {
             let id = 8 * r as u8;
-            out[2 * r] = st(id, 3, u("gmClassic_801B3500"), None, GS_INTRO_EASY);
+            out[2 * r] = st(id, 3, Some(Hook::ClassicEnterIntro), None, GS_INTRO_EASY);
             out[2 * r + 1] = st(
                 id + 1,
                 3,
-                u("gmClassic_801B3A34"),
-                u("gmClassic_801B3B40"),
+                Some(Hook::ClassicEnterVs),
+                Some(Hook::ClassicExitVs),
                 GS_VS,
             );
             r += 1;

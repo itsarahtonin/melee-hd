@@ -129,6 +129,8 @@ ROOTS = [
     "itLGunBeam_ItemVars",
     # A coin match's coins.
     "it_2E5A_ItemVars",
+    # The single-player coin: a beaten enemy's trophy, a trophy stage's.
+    "itCoin_ItemVars",
     # The held and swung items' (task 7): the barrel cannon, the star rod's star, the Lip's
     # Stick's spores and the flower they plant on a fighter's head.
     "itTarucann_ItemVars",
