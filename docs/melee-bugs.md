@@ -572,6 +572,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** a weight changes every VS match's Pokémon draws (gameplay, replays and Slippi peers desync); dropping the entry changes Training's draws only.
 - **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`); the decomp's `it_279C.c`; the items audit's `DITTO` reason.
 
+### A beaten enemy's trophy list takes twenty trophies into ten slots
+
+- **Where:** `it_8027CC88` (a single-player mode's trophy from a beaten enemy, `itzako.c`) with `tyDisplay_8031C354`, `crates/melee-sim/src/game/it/zako.rs` (`trophy_roll`).
+- **Defect:** the roll lists the trophies like the stage's (`stage_info.x6E4`) into a ten-entry stack buffer (`sp1C`, at `r1+0x1C`) in two calls, each of up to ten: the second writes from the first's count on, so up to twenty entries land in ten slots, the last ten over the frame's words above it (`r1+0x44` to `0x6C`: the position buffer `it_8026BB88` fills next, and unused words), below the saved registers.
+- **Effect:** none observable: the draw (`HSD_Randi` of both counts) reads only entries the calls wrote, before `it_8026BB88` overwrites the position words, and nothing else reads the overwritten words.
+- **melee-hd:** not ported yet: the roll's single-player branch stops by name (Training reaches it with Mushroom Kingdom II's Birdo, docs/milestone-6.md's task 13); a port keeps the twenty-entry list.
+- **Fix:** size the buffer for twenty, or bound the second call by what's left.
+- **Fix impact:** none on gameplay (the trophy drawn is the same).
+- **Source:** ssbm-rs's `it_8027CC88` (`crates/game/src/tu/melee__it__itzako.rs`, transliterated from the machine code: `addi r4, r1, 0x1c`, the second call's `add r4, r4, r0`, `addi r4, r1, 0x44`); the decomp's `itzako.c` (`s32 sp1C[10]`) and `tydisplay.c` (`count >= max`).
+
 ### A fighter's unload reads the next item from an item it destroyed
 
 - **Where:** `it_8026B7F8` (every item lets a fighter going away go, from `Fighter_Unload_8006DABC`), `crates/melee-sim/src/game/it/evt_unk.rs` (`fighter_unloaded`).
