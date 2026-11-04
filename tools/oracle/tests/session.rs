@@ -2248,8 +2248,9 @@ fn icicle_mountain_climb_in_debug_vs() {
 /// scale of 0, and past it melee-hd reads the joiner's files and halts on the same assertion;
 /// and task 2's
 /// `m6-select/allstar`, All-Star's select, its first match lost, the match's exit and the
-/// game over to the trace's end; and `m6-1p-setups/as-win`, All-Star's first match won,
-/// through its clear screen and tally to the rest area's first tick.
+/// game over to the trace's end; `m6-1p-setups/as-win`, All-Star's first match won, through
+/// its clear screen and the rest area to the trace's end; and `m6-1p-setups/as-over`, two
+/// losses, a continue and the run's end.
 #[test]
 fn single_player_setups() {
     if let Some(out) =
@@ -2266,12 +2267,16 @@ fn single_player_setups() {
         assert!(out.contains("no stale reads"), "{out}");
     }
     // All-Star's first match won (Peach knocked out on Peach's Castle), its clear screen and
-    // tally, to the rest area's first tick (its HUD's list of the characters left).
+    // tally, and the rest area (its hearts, trophies and portal, the HUD's tally of the
+    // characters left) to the trace's end.
     if let Some(out) = scripted_session("m6-1p-setups", "as-win", &["--all", "--heap"]) {
-        assert!(
-            out.contains("8969 ticks compared, no difference; stopped in tick 8969: fn_802FAC34 with a challenger's record isn't ported"),
-            "{out}"
-        );
+        assert!(out.contains("10463 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    // All-Star's first match lost, the game over continued, the match lost again, and the game
+    // over with too few coins ending the run back to the main menu.
+    if let Some(out) = scripted_session("m6-1p-setups", "as-over", &["--all", "--heap"]) {
+        assert!(out.contains("4532 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
