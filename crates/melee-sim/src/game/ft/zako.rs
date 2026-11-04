@@ -64,17 +64,17 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftBo_Init_OnItemInvisible` and `ftGl_Init_OnItemInvisible`.
-    /// Only their knockdowns' scripts (`DownBoundU`, `DownBoundD`) change a held item's
-    /// visibility.
-    // Ports ftBo_Init_OnItemInvisible and ftGl_Init_OnItemInvisible; aliased once a check
-    // reaches them.
+    /// Only the Screw Attack's states' scripts (ItemScrew, ItemScrewAir and DamageScrew's)
+    /// change a held item's visibility.
+    #[doc(alias = "ftBo_Init_OnItemInvisible")]
+    #[doc(alias = "ftGl_Init_OnItemInvisible")]
     pub fn zako_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 0);
     }
 
-    /// Showing the held item again, `ftBo_Init_OnItemVisible` and `ftGl_Init_OnItemVisible`.
-    // Ports ftBo_Init_OnItemVisible and ftGl_Init_OnItemVisible; aliased once a check reaches
-    // them.
+    /// Showing the held item again, `ftBo_Init_OnItemVisible` and `ftGl_Init_OnItemVisible`:
+    /// no script a Wire Frame runs shows a held item (ledger/dead.txt).
+    // Ports ftBo_Init_OnItemVisible and ftGl_Init_OnItemVisible, which nothing reaches.
     pub fn zako_on_item_visible(&mut self, gobj: GObjId) {
         self.item_visible_hand(gobj, 0);
     }
