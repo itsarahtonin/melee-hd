@@ -129,6 +129,12 @@ impl<'a> Comparer<'a> {
                 0x0F => sym("gm_Mode_TargetTest_States"),
                 0x1C => sym("gm_Mode_Training_States"),
                 0x20 => sym("gm_Mode_Homerun_States"),
+                0x21 => sym("gm_Mode_10ManVs_States"),
+                0x22 => sym("gm_Mode_100ManVs_States"),
+                0x23 => sym("gm_Mode_3Min_States"),
+                0x24 => sym("gm_Mode_15Min_States"),
+                0x25 => sym("gm_Mode_EndlessVs_States"),
+                0x26 => sym("gm_Mode_CruelVs_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC

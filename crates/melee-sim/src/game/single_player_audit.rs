@@ -108,11 +108,11 @@ use Mode::{
 };
 
 /// The single-player modes whose matches `gm_16A2`'s single-player setups make: all but
-/// Training, the Home-Run Contest and Target Test, whose paths their own entries hold to the
-/// code ([`PATHS`]' unreached): each of those matches is set up by its mode's own entry, not
-/// the single-player setups, and has no results or clear screens; the contest and Training
-/// keep no stocks, and their records are their own, ported.
-const SETUP_MODES: &[Mode] = &[MM, EV, CL, AS, AD];
+/// Training and the Stadium's Home-Run Contest, Target Test and Multi-Man Melee, whose paths
+/// their own entries hold to the code ([`PATHS`]' unreached): each of those matches is set up
+/// by its mode's own entry, not the single-player setups, and has no results or clear screens;
+/// the contest and Training keep no stocks, and their records are their own, ported.
+const SETUP_MODES: &[Mode] = &[EV, CL, AS, AD];
 /// The modes that end with a game over, the endings, the staff roll and the trophy fall.
 const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
@@ -286,8 +286,32 @@ pub const PATHS: &[Paths] = &[
             "melee/ft/kinds/ftZakoBoy/ftboy",
             "melee/ft/kinds/ftZakoGirl/ftgirl",
         ],
-        modules: &["ft/zako"],
-        unreached: &[],
+        // The modes' own code, and the code their path from the main menu to the matches and
+        // back runs whose stops name the other single-player modes: the list, the modes'
+        // states, the one-door select, the VS scene's match with the modes' rules and its
+        // exit, the Wire Frames joining and leaving (their computer kinds, the unload), the
+        // challenger approach after 100-Man Melee, the HUD and the bonuses.
+        modules: &[
+            "gm/multi_man",
+            "mn/hyaku",
+            "ft/zako",
+            "ft/cpu_ai",
+            "ft/unload",
+            "it/evt_unk",
+            "gm/one_player",
+            "gm/machine",
+            "mn/charsel/one_door",
+            "gm/vs",
+            "gm/match_exit",
+            "gm/approach",
+            "gm/challenger",
+            "gm",
+            "hud/stock",
+            "pl/tally",
+            "gm/decisions",
+            "ft/co/dead",
+        ],
+        unreached: MULTI_MAN_UNREACHED,
     },
     Paths {
         mode: EV,
@@ -540,10 +564,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "the multi-man counter of ifStock_802FAEC4",
-        "the Multi-Man modes' (game modes 0x21 to 0x26)",
-    ),
-    (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
     ),
@@ -641,8 +661,102 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "the multi-man counter of ifStock_802FAEC4",
-        "the Multi-Man modes' (game modes 0x21 to 0x26)",
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
+    ),
+    (
+        "gm_801693BC for a slot that leaves",
+        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "every character the one-door select offers (character kinds 0 to 0x19, the Ice Climbers as Popo) has its entry in the table",
+    ),
+];
+
+/// Why Multi-Man Melee reaches nothing its paths' units and modules hold unported. Its matches
+/// are VS scenes the modes' own entries set up (`gm_801B6BE8` and the others: the mode's
+/// rules with `gm_801B69C0`'s, not `gm_16A2`'s single-player setups), and their opponents join
+/// through VS mode's `gm_8016EDDC` (the match isn't single-player, `is_singleplayer` 0), so
+/// the single-player setups' fields stay as VS leaves them: nothing ported writes the rules'
+/// horde setup (`x54`) or challenger's record (`x58`), the joining opponents' setup
+/// (`gm.opponents`) or a player's leaving flag but a cutscene.
+const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
+    (
+        "game mode {m:#x}'s states",
+        "each mode's states (its select and its match: gm_Mode_10ManVs_States to gm_Mode_CruelVs_States) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode (0x14) after a won 100-Man Melee that earns Falco's challenge or a notice (gm_801B688C), which comes back to it (onExitVs@801BFBA8 after the challenger's match, onExitPrize after the notices)",
+    ),
+    (
+        "game mode {m:#x}'s loading",
+        "the six modes' load (gm_Mode_10ManVs_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
+    ),
+    (
+        "the mode override",
+        "the game installs one override, the boot's card check, ported",
+    ),
+    (
+        "the VS scene's enter data in game mode",
+        "the modes' matches enter with their own start data (gm_80495238), in the scene machine",
+    ),
+    (
+        "game scene {k:#x}",
+        "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
+    ),
+    (
+        "gm_801BEE9C (congratulations' exit)",
+        "the game over modes' congratulations: Multi-Man Melee has no ending",
+    ),
+    (
+        "Hook::Unported1P(name)",
+        "the modes' states hook their selects' and matches' entries and exits (MultiManEnterCss, MultiManExitCss, MultiManEnterMatch, MultiManExitMatch), none unported",
+    ),
+    (
+        "a 1P run's getter",
+        "only All-Star's round setup asks a getter",
+    ),
+    (
+        "the one-door screen's panel for match type",
+        "the modes' selects are the Stadium's Multi-Man match types (0x11 to 0x16), whose panels are ported",
+    ),
+    (
+        "mnCharSel_8025C020's records for match type",
+        "the modes' selects show the Multi-Man records (match types 0x11 to 0x16), ported",
+    ),
+    (
+        "gm_80167320 for a leaving slot",
+        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_8016AC44 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "HUD colour {c} past the table",
+        "no caller passes a colour past the table's nine",
+    ),
+    (
+        "single-player match setup",
+        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "a match's exit data in game mode",
+        "the modes' matches exit into their own exit data (gm_80495370, match_exit_data's Multi-Man arm), and the challenger's match into the challenger approach mode's",
+    ),
+    (
+        "fn_8016C46C's single-player results",
+        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
+    ),
+    (
+        "fn_802FA6C4 in a single-player mode",
+        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "fn_802FAC34 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "ifStock_802FA5BC",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
@@ -654,7 +768,23 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     ),
     (
         "gm_801647F8 reading past lbl_803D5168",
-        "every character the one-door select offers (character kinds 0 to 0x19, the Ice Climbers as Popo) has its entry in the table",
+        "only Target Test's match entry and select ask a character's target stage (gm_801647F8)",
+    ),
+    (
+        "ftCo_800B2AFC for computer kind",
+        "the hordes' computer kinds are GmKumite.dat's tables' 4, 16, 23, 24 and 25 (every table read off the disc), each ported, and the player is human",
+    ),
+    (
+        "ftCo_800A8940 with no island picked",
+        "its second pass takes every island its first did (it skips only ftCo_800A2718's test), so its running sum over the first's total reaches 1 by its last island, above every draw (HSD_Randf is under 1 - 2^-16): an island is always picked",
+    ),
+    (
+        "ftCo_800AEFB8",
+        "Nana's decision without Popo: the hordes are Wire Frames, and the player is human",
+    ),
+    (
+        "ftCo_800AC434 at level 10",
+        "the barrel cannon's coin flip divides by zero only at level 10: the tables' levels are 1 to 9",
     ),
 ];
 
@@ -747,10 +877,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "the multi-man counter of ifStock_802FAEC4",
-        "the Multi-Man modes' (game modes 0x21 to 0x26)",
-    ),
-    (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
     ),
@@ -823,7 +949,7 @@ pub const MISSING: &[Gap] = &[
             "game mode {m:#x}'s loading",
             "game scene {k:#x}",
         ],
-        modes: &[MM, EV, CL, AS, AD, DB],
+        modes: &[EV, CL, AS, AD, DB],
     },
     Gap {
         what: "the one-door character select",
@@ -858,16 +984,13 @@ pub const MISSING: &[Gap] = &[
             "gm_80167320's joiners' leaving",
             "gm_801693BC for a slot that leaves",
         ],
-        modes: &[MM, AD, EV],
+        modes: &[AD, EV],
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
             "melee/gm/gmregcommon",
             "fn_8016B138",
-            "gm_8016B350",
-            "gm_8016B364",
-            "gm_8016B378",
             "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
@@ -894,37 +1017,11 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
-            "gmMainLib_8015D6A4",
-            "gmMainLib_8015D6BC",
-            "gmMainLib_8015D6D8",
-            "gmMainLib_8015D6F8",
-            "gmMainLib_8015D72C",
-            "gmMainLib_8015D74C",
-            "gmMainLib_8015D780",
-            "gmMainLib_8015D7A4",
-            "gmMainLib_8015D7BC",
-            "gmMainLib_8015D7D4",
             "fn_80160DE8",
             "fn_80160F58",
             "fn_80162BFC",
             "fn_80162DF8",
             "fn_80162FF4",
-            "gm_8016365C",
-            "gm_80163690",
-            "gm_801636D8",
-            "gm_80163838",
-            "gm_801639C0",
-            "gm_801639F4",
-            "gm_80163A3C",
-            "gm_80163B9C",
-            "gm_Get3MinMultimanHighscore",
-            "gm_Get3MinMultimanTotalHighscore",
-            "gm_Get15MinMultimanHighscore",
-            "gm_Get15MinMultimanTotalHighscore",
-            "gm_GetEndlessHighscore",
-            "gm_GetEndlessTotalHighscore",
-            "gm_GetCruelHighscore",
-            "gm_GetCruelTotalHighscore",
             "gm_801647F8",
             "fn_8017DF28 (a single-player mode's record)",
         ],
@@ -936,11 +1033,8 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_17DB",
             "fn_80173098",
             "gm_80173224",
-            "gm_80173460",
-            "gm_80173498",
             "fn_80173834",
             "gm_8017390C",
-            "gm_80173C70",
         ],
         modes: SETUP_MODES,
     },
@@ -951,19 +1045,13 @@ pub const MISSING: &[Gap] = &[
         modes: &[EV],
     },
     Gap {
-        what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
-        covers: &["melee/gm/gmmultiman"],
-        modes: &[MM],
-    },
-    Gap {
-        what: "Multi-Man Melee's list, mode and counter, and the Wire Frames",
+        what: "100-Man Melee past its 69th KO and won, a won 15-Minute Melee (ported; no session reaches them yet)",
         covers: &[
-            "the one-door screen's panel for match type",
-            "mnCharSel_8025C020's records for match type",
-            "melee/mn/mnhyaku",
-            "melee/gm/gm_181A",
-            "mnHyaku_8024CD64 (the Multi-Man list)",
-            "the multi-man counter of ifStock_802FAEC4",
+            "ftCo_800B7638",
+            "gm_80173460",
+            "gm_80173498",
+            "gmMainLib_8015D780",
+            "gm_80163A3C",
         ],
         modes: &[MM],
     },
@@ -1082,11 +1170,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "a beaten enemy's or a trophy stage's trophy",
-        covers: &[
-            "Toy_803049F4",
-            "Toy_80304A58",
-            "tyDisplay_8031C354",
-        ],
+        covers: &["Toy_803049F4", "Toy_80304A58", "tyDisplay_8031C354"],
         modes: &[AD, CL, DB],
     },
     Gap {

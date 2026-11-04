@@ -76,6 +76,9 @@ impl Game {
             {
                 &mut self.one_player.match_exit
             }
+            (m, _) if super::multi_man::is_multi_man(m) && scene == Some(GS_VS) => {
+                &mut self.multi_man.exit
+            }
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"
             )),
