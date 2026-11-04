@@ -126,6 +126,10 @@ impl Replay {
                 if name.starts_with("tr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-training/{name}.inputs")).into();
                 }
+                if name.starts_with("un-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-fighter-unload/{name}.inputs"))
+                        .into();
+                }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
                 }
@@ -1191,6 +1195,16 @@ pub const TR_CPU: Game = Game {
     name: "tr-cpu",
     players: "Training's menu, the behavior option (session m6-training/tr-cpu)",
     replay: Replay::Session("tr-cpu"),
+};
+
+/// Training's match after its third computer player left and joined again twenty times
+/// (`m6-fighter-unload/un-held`): three computer players among dropped items, the last made
+/// over the block the last one freed.
+pub const UN_HELD: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "un-held",
+    players: "Training's computer players joined again (session m6-fighter-unload/un-held)",
+    replay: Replay::Session("un-held"),
 };
 
 /// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.

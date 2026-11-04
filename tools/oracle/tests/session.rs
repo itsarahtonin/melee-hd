@@ -2151,8 +2151,9 @@ fn the_home_run_contest() {
 /// `m6-oracle/training` (the select, the stage select, the match with some play) and
 /// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
 /// Pokémon drawn from Training's list, then each other item dropped), each to its trace's
-/// end; and `m6-training/tr-count`, which stops where the first computer player joins the
-/// match (`gm_8016EDDC`, not ported).
+/// end; and `m6-training/tr-count` (the computer players' count changed, players joining
+/// and leaving mid-match, then the reset: `gm_8016EDDC`, `Fighter_Unload_8006DABC`) to its
+/// trace's end too.
 #[test]
 fn training_from_its_select() {
     if let Some(out) = scripted_session("m6-oracle", "training", &["--all", "--heap"]) {
@@ -2163,9 +2164,31 @@ fn training_from_its_select() {
         assert!(out.contains("no stale reads"), "{out}");
     }
     if let Some(out) = scripted_session("m6-training", "tr-count", &["--all", "--heap"]) {
-        let want = "1853 ticks compared, no difference; stopped in tick 1853: \
-                    gm_8016EDDC (a player joining a match) isn't ported";
-        assert!(out.contains(want), "{out}");
+        assert!(out.contains("7956 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Training's computer players unloaded mid-match (`Fighter_Unload_8006DABC`), from power-on
+/// with the heap: `m6-fighter-unload/un-reset` (two and then three computer players fighting
+/// with damage set and items dropped, each time reset) and `un-held` (the third player leaving
+/// and joining again twenty times among dropped items, each new fighter made over the block
+/// the last one freed) and `un-combo` (the second leaving while the human's combo word names
+/// it), each to its trace's end.
+#[test]
+fn training_unloads_its_computer_players() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-reset", &args) {
+        assert!(out.contains("9045 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-held", &args) {
+        assert!(out.contains("13162 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-combo", &args) {
+        assert!(out.contains("3775 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }
 

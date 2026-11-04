@@ -174,6 +174,15 @@ const CRAZY_HAND: &[&str] = &[
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
 /// them; the units every mode shares (`gm_16A2` and the rest) are [`MISSING`]'s alone.
 pub const PATHS: &[Paths] = &[
+    // Training's computer players' count and reset (`game/gm/training.rs`) make and free
+    // fighters mid-match, each function checked by a session from power-on (ledger/checks.txt,
+    // docs/oracle.md's sessions): the count, `fn_80188550`, with a player joining,
+    // `gm_8016EDDC`, and leaving, `fn_8016EF98`, which frees its fighter
+    // (`Player_80031EBC`, `Fighter_Unload_8006DABC` in `game/ft/unload.rs`, every item's
+    // `evt_unk` in `game/it/evt_unk.rs`), in `m6-training/tr-count` and
+    // `m6-fighter-unload/un-churn` and `un-held`; the reset, `fn_80188644`, putting each
+    // slot back (`Player_800328D4`, `ftLib_80087140`), in `m6-fighter-unload/un-reset`. Their
+    // modules are the mode's, so a stop added to them has to say why Training can't reach it.
     Paths {
         mode: TR,
         units: &[
@@ -181,7 +190,7 @@ pub const PATHS: &[Paths] = &[
             "melee/gm/gm_1884",
             "melee/it/kinds/itmetamon",
         ],
-        modules: &[],
+        modules: &["gm/training", "ft/unload", "it/evt_unk"],
         unreached: &[],
     },
     Paths {
@@ -517,10 +526,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    (
-        "itBat_Logic11_EvtUnk",
-        "an item's evt_unk runs only from it_8026B7F8, in a fighter's unload (Fighter_Unload_8006DABC): mid-match only through Player_80031EBC, whose callers are Training's count (fn_8016EF98), a leaving slot (gm_80167320) and the trophy fall, none in the contest; at the scene's end as in VS (items_audit's EVT_UNK)",
-    ),
 ];
 
 /// Why Target Test reaches nothing its paths' units and modules hold unported. Its match is a
@@ -682,8 +687,6 @@ pub const MISSING: &[Gap] = &[
             "gm_8016B364",
             "gm_8016B378",
             "fn_8016B738",
-            "gm_8016EDDC",
-            "fn_8016EF98",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
@@ -768,17 +771,6 @@ pub const MISSING: &[Gap] = &[
         modes: NOT_STADIUM,
     },
     // The modes' own code.
-    Gap {
-        what: "Training's computer players' count and reset (a fighter made and unloaded mid-match)",
-        covers: &[
-            "gm_8016EDDC (a player joining a match)",
-            "fn_8016EF98 (a player leaving a match)",
-            "Player_800328D4 (the training menu's reset)",
-            "fn_80188550",
-            "fn_80188644",
-        ],
-        modes: &[TR],
-    },
     Gap {
         what: "Ditto",
         covers: &["melee/it/kinds/itmetamon"],

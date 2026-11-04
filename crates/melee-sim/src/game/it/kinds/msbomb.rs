@@ -374,8 +374,7 @@ pub fn touched(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Forgets a GObj the bomb points to, `itMSBomb_Logic19_EvtUnk` (`it_8026B894`).
-// Ports `itMSBomb_Logic19_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+#[doc(alias = "itMSBomb_Logic19_EvtUnk")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
