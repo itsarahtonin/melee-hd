@@ -141,7 +141,13 @@ impl Running<'_> {
         let db_level = self.game.gm.db_level;
         let single_button = self.game.vs.start.single_button;
         let no_z = self.game.db_pause_flag(0);
-        let pad = self.game.pads.game[self.game.fighters[f.0].pad_port as usize];
+        // A computer player's port isn't read (a Multi-Man joiner's slot 4 or 5 is past the
+        // four pads), so a human's pad only.
+        let pad = if cpu {
+            Default::default()
+        } else {
+            self.game.pads.game[self.game.fighters[f.0].pad_port as usize]
+        };
         let fp = &mut self.game.fighters[f.0];
         let i = &mut fp.input;
         if !fp.has_prev_input {

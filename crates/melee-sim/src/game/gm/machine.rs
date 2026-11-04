@@ -231,6 +231,12 @@ enum Hook {
     TrainingExitSss,
     TrainingEnterVs,
     TrainingExitVs,
+    /// The six Multi-Man modes' ([`super::multi_man`]), by mode.
+    MultiManOnLoad,
+    MultiManEnterCss(u8),
+    MultiManExitCss,
+    MultiManEnterMatch(u8),
+    MultiManExitMatch(u8),
     /// A single-player mode's state's handler that isn't ported: the mode's own task's.
     Unported1P(&'static str),
 }
@@ -759,6 +765,7 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         super::one_player::GM_TARGET_TEST => (true, Some(Hook::TargetOnLoad), None),
         super::one_player::GM_TRAINING => (true, Some(Hook::TrainingOnLoad), None),
         super::one_player::GM_HOME_RUN => (true, Some(Hook::HomeRunOnLoad), None),
+        m if super::multi_man::is_multi_man(m) => (true, Some(Hook::MultiManOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
 }
@@ -964,6 +971,7 @@ impl Running<'_> {
             super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR => {
                 &self.game.one_player.match_start
             }
+            m if super::multi_man::is_multi_man(m) => &self.game.multi_man.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
     }
@@ -1381,6 +1389,11 @@ impl Running<'_> {
             Hook::TrainingExitSss => self.training_exit_sss(),
             Hook::TrainingEnterVs => self.training_enter_vs(),
             Hook::TrainingExitVs => self.training_exit_vs(),
+            Hook::MultiManOnLoad => self.multi_man_on_load(),
+            Hook::MultiManEnterCss(m) => self.multi_man_enter_css(m),
+            Hook::MultiManExitCss => self.multi_man_exit_css(),
+            Hook::MultiManEnterMatch(m) => self.multi_man_enter_match(m),
+            Hook::MultiManExitMatch(m) => self.multi_man_exit_match(m),
             Hook::Unported1P(name) => unported_call(name),
         }
         let _ = state;
@@ -1478,7 +1491,8 @@ pub fn current_mode(m: &Machine) -> u8 {
 
 /// The single-player modes' states (`gm_Mode_Classic_States`, `gm_Mode_Adventure_States`,
 /// `gm_Mode_AllStar_States`, `gm_Mode_TargetTest_States`, `gm_Mode_Training_States`,
-/// `gm_Mode_Homerun_States`): the selects' handlers ported, the rest stopping by name.
+/// `gm_Mode_Homerun_States`, the six Multi-Man modes'): the selects' handlers ported, the
+/// rest stopping by name.
 fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
     use super::one_player::{
         GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC, GM_HOME_RUN, GM_TARGET_TEST, GM_TRAINING,
@@ -1662,7 +1676,39 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             GS_VS,
         ),
     ];
+    // `gm_Mode_10ManVs_States` to `gm_Mode_CruelVs_States`: the select, then the match.
+    const fn multi(m: u8) -> [StateDesc; 2] {
+        [
+            st(
+                0,
+                3,
+                Some(Hook::MultiManEnterCss(m)),
+                Some(Hook::MultiManExitCss),
+                GS_CSS,
+            ),
+            st(
+                1,
+                3,
+                Some(Hook::MultiManEnterMatch(m)),
+                Some(Hook::MultiManExitMatch(m)),
+                GS_VS,
+            ),
+        ]
+    }
+    use super::multi_man as mm;
+    const M10: [StateDesc; 2] = multi(mm::GM_10MAN);
+    const M100: [StateDesc; 2] = multi(mm::GM_100MAN);
+    const M3: [StateDesc; 2] = multi(mm::GM_3MIN);
+    const M15: [StateDesc; 2] = multi(mm::GM_15MIN);
+    const MEND: [StateDesc; 2] = multi(mm::GM_ENDLESS);
+    const MCRUEL: [StateDesc; 2] = multi(mm::GM_CRUEL);
     Some(match mode {
+        mm::GM_10MAN => &M10,
+        mm::GM_100MAN => &M100,
+        mm::GM_3MIN => &M3,
+        mm::GM_15MIN => &M15,
+        mm::GM_ENDLESS => &MEND,
+        mm::GM_CRUEL => &MCRUEL,
         GM_CLASSIC => &CLASSIC,
         GM_ADVENTURE => &ADVENTURE,
         GM_ALLSTAR => &ALLSTAR,
