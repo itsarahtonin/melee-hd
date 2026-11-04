@@ -197,10 +197,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "fn_802FAC34 with a challenger's record",
-        "only the single-player modes' setups give the rules a challenger's record (`x58`, gm_16A2.c)",
-    ),
-    (
         "a text on canvas {context} of font {font}, past the last",
         "each scene makes its texts on canvases it made first",
     ),
@@ -311,6 +307,14 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_8017CBAC (All-Star's clear)",
         "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CA38's records in game mode",
+        "Classic's and Adventure's game overs: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017390C in Adventure",
+        "Adventure's game over: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8016AC44 with a challenger's record",

@@ -82,70 +82,73 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
     match f {
         ON_INIT => on_init(r),
         ON_LOAD => {}
-        ON_START => {
-            zako::start(r.game, None);
-        }
+        ON_START => on_start(r),
         _ => return false,
     }
     true
 }
 
+/// The stage's start, `grHeal_8021EFC0`: the enemy spawner with no table.
+#[doc(alias = "grHeal_8021EFC0")]
+fn on_start(r: &mut Running) {
+    zako::start(r.game, None);
+}
+
 /// The objects' processes and destroy callbacks that do nothing, the demo setup and the load.
 // Ports grHeal_8021EF38; aliased once a check reaches it.
-// Ports grHeal_8021EFBC; aliased once a check reaches it.
-// Ports stageGObj0_GObjProc@8021F178; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021EFBC")]
+#[doc(alias = "stageGObj0_GObjProc@8021F178")]
 // Ports stageGObj0_Callback3@8021F17C; aliased once a check reaches it.
 // Ports stageGObj1_Callback3@8021F4BC; aliased once a check reaches it.
-// Ports stageGObj2_OnInit@8021F5C8; aliased once a check reaches it.
+#[doc(alias = "stageGObj2_OnInit@8021F5C8")]
 // Ports stageGObj2_GObjProc@8021F5D4; aliased once a check reaches it.
-// Ports stageGObj2_Callback3@8021F5D8; aliased once a check reaches it.
-// Ports stageGObj3_GObjProc@8021F620; aliased once a check reaches it.
+#[doc(alias = "stageGObj2_Callback3@8021F5D8")]
 // Ports stageGObj3_Callback3@8021F624; aliased once a check reaches it.
-// Ports stageGObj4_OnInit@8021F6F8; aliased once a check reaches it.
-// Ports stageGObj4_GObjProc@8021F704; aliased once a check reaches it.
-// Ports stageGObj4_Callback3@8021F708; aliased once a check reaches it.
+#[doc(alias = "stageGObj4_OnInit@8021F6F8")]
+#[doc(alias = "stageGObj4_Callback3@8021F708")]
 pub fn empty() {}
 
 /// The stage's own objects' first callbacks, which answer no (`stageGObjN_Callback1`), and the
-/// fourth hook (`grHeal_8021EFE4`, which nothing calls).
-// Ports stageGObj0_Callback1@8021F170; aliased once a check reaches it.
-// Ports stageGObj1_Callback1@8021F41C; aliased once a check reaches it.
-// Ports stageGObj2_Callback1@8021F5CC; aliased once a check reaches it.
-// Ports stageGObj3_Callback1@8021F618; aliased once a check reaches it.
-// Ports stageGObj4_Callback1@8021F6FC; aliased once a check reaches it.
+/// fourth hook (`grHeal_8021EFE4`): nothing calls either (`ledger/dead.txt`).
 pub fn no() -> bool {
     false
 }
 
 /// The line-touch dynamics: none (`grHeal_8021F830`).
-// Ports grHeal_8021F830; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021F830")]
 pub fn on_touch_line(_line: i32) -> Option<DataRef> {
     None
 }
 
-/// Every shadow is drawn (`grHeal_8021F838`).
-// Ports grHeal_8021F838; aliased once a check reaches it.
+/// Every shadow is drawn (`grHeal_8021F838`), which nothing asks: no object of the stage
+/// receives shadows (`ledger/dead.txt`).
 pub fn check_shadow_render() -> bool {
     true
 }
 
 /// Creates one of the stage's objects, `grHeal_8021EFEC`.
-// Ports grHeal_8021EFEC; aliased once a check reaches it.
-fn create(r: &mut Running, map_id: i32) -> Option<GObjId> {
-    setup::create_from_callbacks(r, map_id, &CALLBACKS[map_id as usize], setup::SETUP_FRAME)
+#[doc(alias = "grHeal_8021EFEC")]
+fn create(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
+    setup::create_from_callbacks(r, map_id, &CALLBACKS[map_id as usize], frame)
 }
+
+/// Where the trophies' scale joints sit (their descriptor on `grHeal_8021EFEC`'s stack, called
+/// from the stand's `stageGObj1_OnInit` through `grHeal_8021F4E8` and `grHeal_8021F628`), the
+/// ID table's key for each: 0x110 below the setup's (`m6-1p-setups/as-win`'s trace, tick 8969).
+/// A trophy's joint keyed as the setup's would take the platform's entry and free it with
+/// the trophy.
+const TROPHY_FRAME: u32 = setup::SETUP_FRAME - 0x110;
 
 /// The stage's setup, `grHeal_8021EF3C`: its parameters, `unk8C` (b4 off, b5 on), maps 0, 1
 /// and 3, the camera limits and blast zones measured, and the blast zone's top twice the
 /// stage's offset.
-// Ports grHeal_8021EF3C; aliased once a check reaches it.
-// Ports grZakoGenerator_801CAE04; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021EF3C")]
 pub fn on_init(r: &mut Running) {
     r.game.gr.heal_yakumono = super::ground::yakumono_param(r.game);
     r.game.stage_info.unk8C.b4 = false;
     r.game.stage_info.unk8C.b5 = true;
     for map_id in [0, 1, 3] {
-        create(r, map_id);
+        create(r, map_id, setup::SETUP_FRAME);
     }
     setup::measure_cam_bounds(r.game, r.data);
     setup::measure_blast_zones(r.game, r.data);
@@ -170,7 +173,7 @@ fn map_id(r: &Running, gobj: GObjId) -> i32 {
 
 /// The platform (map 0), `stageGObj0_OnInit`: its animation, and a heart at each of its
 /// joints the run still has (`x90`).
-// Ports stageGObj0_OnInit@8021F0D8; aliased once a check reaches it.
+#[doc(alias = "stageGObj0_OnInit@8021F0D8")]
 pub fn init_platform(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
@@ -182,7 +185,7 @@ pub fn init_platform(r: &mut Running, gobj: GObjId) {
 }
 
 /// A heart at the platform's joint `joint` for the run's slot `slot`, `grHeal_8021F79C`.
-// Ports grHeal_8021F79C; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021F79C")]
 fn drop_heart(r: &mut Running, kind: i32, joint: i32, slot: i32) {
     let gp = map_gobj(r.game, 0).expect("grheal.c: the platform");
     let j = nth_joint(r.game, gp, joint);
@@ -192,7 +195,7 @@ fn drop_heart(r: &mut Running, kind: i32, joint: i32, slot: i32) {
 
 /// The trophy animation frame of character `ckind` (Sheik's is Zelda's), `grHeal_8021F70C`;
 /// the first for one with none.
-// Ports grHeal_8021F70C; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021F70C")]
 fn trophy_frame(ckind: i32) -> i32 {
     let ckind = if ckind == 19 { 18 } else { ckind };
     FRAME_CHARACTERS
@@ -205,8 +208,8 @@ fn trophy_frame(ckind: i32) -> i32 {
 /// A trophy of map `map_id` at animation frame `frame` moved onto `parent` (shown when
 /// `show`), its own object destroyed: `grHeal_8021F4E8` (map 4, the next round's) and
 /// `grHeal_8021F628` (map 2, one met).
-// Ports grHeal_8021F4E8; aliased once a check reaches it.
-// Ports grHeal_8021F628; aliased once a check reaches it.
+#[doc(alias = "grHeal_8021F4E8")]
+#[doc(alias = "grHeal_8021F628")]
 fn place_trophy(
     r: &mut Running,
     map_id: i32,
@@ -214,7 +217,7 @@ fn place_trophy(
     parent: Option<crate::hsd::jobj::JObjId>,
     show: bool,
 ) {
-    let gobj = create(r, map_id)
+    let gobj = create(r, map_id, TROPHY_FRAME)
         .unwrap_or_else(|| panic!("the original's assertion failed: grheal.c (a trophy's gobj)"));
     anime::start_map(r.game, r.data, gobj, map_id, 0);
     anime::start(r.game, r.data, gobj, 0, 7, 0, frame as f32, 0.0, true);
@@ -230,7 +233,7 @@ fn place_trophy(
 /// The stand (map 1), `stageGObj1_OnInit`: its animation, a coin and a trophy every
 /// parameter-`x4`th rest, the next round's characters' trophies on joints 58 to 60, those met
 /// on the stand's joints, and the portal's collision callback.
-// Ports stageGObj1_OnInit@8021F180; aliased once a check reaches it.
+#[doc(alias = "stageGObj1_OnInit@8021F180")]
 pub fn init_stand(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
     anime::start_map(r.game, r.data, gobj, m, 0);
@@ -273,7 +276,7 @@ pub fn portal_check(game: &mut super::super::state::Game) -> bool {
 /// The stand's process (map 1), `stageGObj1_GObjProc`: the watcher asked for the portal's
 /// point the first fighter stands in (a box of 10 by 20, with [`portal_check`]), the wind,
 /// and the portal's landing forgotten.
-// Ports stageGObj1_GObjProc@8021F474; aliased once a check reaches it.
+#[doc(alias = "stageGObj1_GObjProc@8021F474")]
 pub fn proc_stand(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     super::ground::watch_points(r.game, Some(CodeRef(PORTAL_CHECK)), 10.0, 20.0);
@@ -284,7 +287,7 @@ pub fn proc_stand(r: &mut Running, gobj: GObjId) {
 
 /// The portal's collision callback, `onJointCollision`: a fighter (`x34_flags.b1234` 1)
 /// landing on it or standing on it (ground kinds 1 and 2) marks the landing.
-// Ports onJointCollision@8021F4C0; aliased once a check reaches it.
+#[doc(alias = "onJointCollision@8021F4C0")]
 pub fn portal_touched(gp: &mut super::super::structs::Ground, b1234: u32, kind: i32) {
     if b1234 == 1 && (kind.wrapping_sub(1) as u32) <= 1 {
         gp.u.map().set_word(1);
@@ -293,7 +296,7 @@ pub fn portal_touched(gp: &mut super::super::structs::Ground, b1234: u32, kind: 
 
 /// The background (map 3), `stageGObj3_OnInit`: its flag `x10_flags.b2` off and its
 /// animation.
-// Ports stageGObj3_OnInit@8021F5DC; aliased once a check reaches it.
+#[doc(alias = "stageGObj3_OnInit@8021F5DC")]
 pub fn init_background(r: &mut Running, gobj: GObjId) {
     let g = ground_of(r.game, gobj);
     r.game.grounds[g.0].x10_flags.b2 = false;
