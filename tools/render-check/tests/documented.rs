@@ -210,6 +210,20 @@ fn m6p_as_win_6250() {
 fn m6p_as_win_7500() {
     as_win(7500, [1699, 1699]);
 }
+
+// The rest area after the clear (`m6-1p-setups/as-win`): its first frames with the HUD's tally
+// of the characters left in rows of five (9050), and the walk toward the portal (10300).
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_9050() {
+    as_win(9050, [805, 822]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_10300() {
+    as_win(10300, [804, 821]);
+}
 // Training's menu over its match on Fountain of Dreams (`m6-training`): the item option on
 // the Poké Ball with its name (`tr-items` 2250) and the computer player's behavior set to walk
 // (`tr-cpu` 2230). As Celebi's, the first logged frame's water samples the reflection copied

@@ -503,10 +503,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
@@ -604,10 +600,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
@@ -659,7 +651,6 @@ pub const MISSING: &[Gap] = &[
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "gm_8016AC44 with a challenger's record",
-            "fn_802FAC34 with a challenger's record",
             "a 1P run's ratio getter",
             "a 1P run's team color getter",
             "gm_8017D7AC's records after a no contest",
@@ -725,7 +716,6 @@ pub const MISSING: &[Gap] = &[
             "fn_80160F58",
             "fn_80162BFC",
             "fn_80162DF8",
-            "fn_80162FF4",
             "gm_8016365C",
             "gm_80163690",
             "gm_801636D8",
@@ -744,6 +734,7 @@ pub const MISSING: &[Gap] = &[
             "gm_GetCruelTotalHighscore",
             "gm_801647F8",
             "fn_8017DF28 (a single-player mode's record)",
+            "gm_8017CA38's records in game mode",
         ],
         modes: NOT_STADIUM,
     },
@@ -757,6 +748,7 @@ pub const MISSING: &[Gap] = &[
             "gm_80173498",
             "fn_80173834",
             "gm_8017390C",
+            "gm_8017390C in Adventure",
             "gm_80173C70",
         ],
         modes: NOT_STADIUM,

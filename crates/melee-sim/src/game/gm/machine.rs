@@ -211,6 +211,7 @@ enum Hook {
     AllStarEnterVs,
     AllStarExitVs,
     AllStarEnterGameOver,
+    AllStarExitGameOver,
     AllStarEnterRest,
     AllStarExitRest,
     TargetOnLoad,
@@ -1362,6 +1363,7 @@ impl Running<'_> {
             Hook::AllStarEnterRest => self.allstar_enter_rest(),
             Hook::AllStarExitRest => self.allstar_exit_rest(),
             Hook::AllStarEnterGameOver => self.allstar_enter_game_over(),
+            Hook::AllStarExitGameOver => self.allstar_exit_game_over(),
             Hook::TargetOnLoad => self.target_on_load(),
             Hook::TargetEnterCss => self.target_enter_css(),
             Hook::TargetExitCss => self.target_exit_css(),
@@ -1593,7 +1595,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             0x69,
             3,
             Some(Hook::AllStarEnterGameOver),
-            u("gm_801B5EE4"),
+            Some(Hook::AllStarExitGameOver),
             GS_GAMEOVER,
         );
         out[27] = st(
