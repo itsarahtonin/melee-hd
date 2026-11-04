@@ -112,7 +112,14 @@ pub fn generator_at(
             objs.app_srts[s].xa2 = 0;
             s
         }
-        None => crate::hsd::appsrt::add_to_generator(objs, g, 1),
+        None => match crate::hsd::appsrt::add_to_generator(objs, g, 1) {
+            Some(s) => s,
+            // None left (the develop level's limit): the generator goes.
+            None => {
+                generator::kill(objs, data, &mut hooks, g);
+                return None;
+            }
+        },
     };
     objs.app_srts[s].translate = pos;
     let k = reg(super::ground::scale(game));
