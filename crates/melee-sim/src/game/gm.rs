@@ -6,6 +6,7 @@ pub mod attract;
 pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
+pub mod clear;
 pub mod decisions;
 pub mod endings;
 pub mod erase;
@@ -100,6 +101,8 @@ pub struct Globals {
     pub ranks: vs::Ranks,
     /// The single-player matches' joining opponents (`lbl_8046B488`).
     pub opponents: opponents::Opponents,
+    /// `lbl_8046B668`: All-Star's characters left, which its rest area's rules name.
+    pub left: one_player_match::LeftList,
     /// The pause screen (`gmpause.c`).
     pub pause: pause::PauseScreen,
     /// What the save data has unlocked, which the stage's music choice reads.
@@ -522,6 +525,10 @@ pub fn call(
 
         opponents::ON_JOINED => {
             r.opponent_joined(args[0].int());
+            Some(super::code::Val::None)
+        }
+        one_player_match::REST_MATCH_END => {
+            r.allstar_rest_end();
             Some(super::code::Val::None)
         }
         training::ON_PAUSE => {

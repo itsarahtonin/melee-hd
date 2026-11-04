@@ -21,6 +21,7 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         UserData::ItemLink(l) => known(game.it.links.addr(l.0)),
         UserData::Ground(g) => known(game.grounds.addr(g.0)),
         UserData::BgFlash => known(game.bgflash.user_addr),
+        UserData::Blur => game.blur.as_ref().and_then(|b| known(b.addr)),
         // The magnifier's player entries (`ifMagnify_804A1DE0.player`, 0x10 each from
         // `0x804A1DF4`), in the executable's data.
         UserData::MagnifyPlayer(slot) => Some(0x804A_1DF4 + 0x10 * u32::from(slot)),

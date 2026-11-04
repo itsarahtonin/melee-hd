@@ -11,6 +11,20 @@ use super::super::state::Running;
 use super::super::structs::StartMeleeData;
 use super::one_player::{GM_ALLSTAR, Unk1PData};
 use super::opponents::NONE;
+
+/// `lbl_8046B668`'s address, which the rules' `x58` holds while it's the characters left.
+pub const LEFT_LIST: u32 = 0x8046_B668;
+/// `fn_801B5AA8`, the rest area's end hook.
+pub const REST_MATCH_END: u32 = 0x801B_5AA8;
+
+/// `lbl_8046B668` (`struct lbl_8046B668_t`): a list of characters (`arr1`) with a byte each
+/// (`arr2`, -2 after the last).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct LeftList {
+    pub arr1: [i8; 0x1C],
+    pub arr2: [i8; 0x1C],
+}
+
 use super::vs_mode::{player_defaults, rules_defaults};
 use crate::fpu::mem;
 
@@ -566,6 +580,108 @@ impl Running<'_> {
         if on && id == 0x60 {
             crate::game::code::unported_call("gm_8017CBAC (All-Star's clear)");
         }
+    }
+
+    /// All-Star's rest area's entry, `gm_801B5ACC`: the run's rest marked (`x8`'s top bit),
+    /// the rest area's start data (`gm_8017CE34`, stage 85, no opponents) with a timer
+    /// counting up from the run's time without running out, 120 frames after the end, the
+    /// run's damage, the round's characters put on the stand in slots drawn at random
+    /// (`x76`), the next round's (`x96`, `x94`), the rules' list of the characters left
+    /// (`lbl_8046B668`, `x58`), the next round's setup (`gm_801B5324`) and the fade to black
+    /// at the end (`fn_801B5AA8`).
+    // Ports gm_801B5ACC; aliased once a check reaches it.
+    // Ports gm_8016A92C; aliased once a check reaches it.
+    // Ports gm_8016A998; aliased once a check reaches it.
+    pub fn allstar_enter_rest(&mut self) {
+        use super::one_player::ALLSTAR_ROUNDS;
+        let id = self.game.machine.routing.curr_state_id;
+        let round = usize::from((id >> 3) & 0x1F);
+        let (first, count) = ALLSTAR_ROUNDS[round];
+        let table = self.game.one_player.allstar_opponents;
+        self.game.one_player.allstar.base.x8[0] |= 0x80;
+        let color = self.game.one_player.allstar_x940[first];
+        let mut start = self.game.one_player.match_start.clone();
+        let mut run = self.game.one_player.allstar.base;
+        self.one_player_stage_start(
+            &mut start,
+            &mut run,
+            &[NONE; 3],
+            0,
+            0,
+            0,
+            0,
+            85,
+            0,
+            i32::from(color),
+        );
+        self.game.one_player.allstar.base = run;
+        let a = &self.game.one_player.allstar;
+        let r = &mut start.rules;
+        r.timer_enabled = false;
+        r.timer_counts_up = true;
+        r.x1_0 = true;
+        r.time_limit = (a.x9c as i32 / 60) as u32;
+        r.x14 = (a.x9c as i32 % 60) as u8;
+        r.xD = 120;
+        start.players[0].damage = a.x74;
+        start.players[0].xD_b2 = true;
+        start.rules.x7 = 9;
+        for i in 0..count {
+            let slot = loop {
+                let s = self.game.objs.rng.below(26) as usize;
+                if i32::from(self.game.one_player.allstar.x76[s]) == i32::from(NONE) {
+                    break s;
+                }
+            };
+            self.game.one_player.allstar.x76[slot] = table[first + i][3];
+        }
+        let (next, next_count) = ALLSTAR_ROUNDS[round + 1];
+        let a = &mut self.game.one_player.allstar;
+        for i in 0..next_count {
+            a.x96[i] = table[next + i][3];
+        }
+        a.x94[1] = next_count as u8;
+        a.x94[0] = (round + 1) as u8;
+        start.players[0].xC_b1 = false;
+        start.rules.x1_2 = true;
+        start.rules.x1_3 = true;
+        start.rules.x4_4 = false;
+        let (_, prefs) = super::attract::saved_rules(&self.game.game_data);
+        let tags = self.nametag_rumbles();
+        super::vs_mode::load_rumble_enabled_with(&mut start, &prefs, &tags);
+        // `gm_8016A92C`: the list emptied and given to the rules.
+        let list = &mut self.game.gm.left;
+        list.arr2[0] = -2;
+        start.rules.x58 = super::super::handles::RawPtr(LEFT_LIST);
+        // `gm_801B5ACC_inline1`: every character from the next round on (`gm_8016A998`).
+        for entry in &table[next..] {
+            let list = &mut self.game.gm.left;
+            if let Some(i) = (0..27).find(|&i| list.arr2[i] == -2) {
+                list.arr2[i + 1] = -2;
+                list.arr2[i] = 0;
+                list.arr1[i] = entry[3] as i8;
+            }
+        }
+        self.game.one_player.match_start = start;
+        self.allstar_round_setup(round + 1);
+        self.game.one_player.match_start.rules.on_match_end = Some(CodeRef(REST_MATCH_END));
+    }
+
+    /// The rest area's end, `fn_801B5AA8`: the screen fades to black over 120 frames.
+    // Ports fn_801B5AA8; aliased once a check reaches it.
+    pub fn allstar_rest_end(&mut self) {
+        self.game.bgflash.fade_to_black(0x78);
+    }
+
+    /// All-Star's rest area's exit, `gm_801B5E7C`: the run's damage, then the run's match
+    /// exit (`gm_8017D7AC`).
+    // Ports gm_801B5E7C; aliased once a check reaches it.
+    pub fn allstar_exit_rest(&mut self) {
+        let percent = self.game.one_player.match_exit.match_end.player_standings[0].percent;
+        self.game.one_player.allstar.x74 = percent;
+        let mut run = self.game.one_player.allstar.base;
+        self.one_player_match_exit(&mut run, 0x69);
+        self.game.one_player.allstar.base = run;
     }
 
     /// All-Star's game over, `gm_801B5EB4` (`gm_8017C9A8`): the run's score, mode 2, the

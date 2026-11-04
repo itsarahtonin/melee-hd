@@ -396,7 +396,7 @@ impl Ctx<'_> {
 
     /// `HSD_ImageDescCopyFromEFB(idesc, x, y, clear, true)`: the EFB from (`x`, `y`) copied
     /// into `img`, cleared after it when `clear`.
-    fn copy_from_efb(&mut self, img: &Image, x: u16, y: u16, clear: bool) {
+    pub(crate) fn copy_from_efb(&mut self, img: &Image, x: u16, y: u16, clear: bool) {
         self.gx.set_tex_copy_src(x, y, img.width, img.height);
         self.gx
             .set_tex_copy_dst(img.width, img.height, img.format, u8::from(img.mipmap));

@@ -385,6 +385,12 @@ pub const FILES: &[&str] = &[
     "GmGoAnim.dat",
     "GmRgStnd.dat",
     "IfComSn.dat",
+    // The single-player stage clear screen's scene and its two fonts, in either language.
+    "GmRegClr.dat",
+    "SdClr.usd",
+    "SdClr.dat",
+    "SdDec.usd",
+    "SdDec.dat",
     // The Home-Run Contest's "no contest" sign and distance counter, in either language.
     "IfHrNoCn.usd",
     "IfHrReco.usd",
@@ -397,10 +403,11 @@ pub const FILES: &[&str] = &[
 /// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, the
 /// special messages' three, the results screen's fanfares (`ff_dk.hps` to `ff_yoshi.hps`,
 /// each character's), which the screen's entry starts, Tournament's bracket's two, the
-/// challenger approach's, and game over's two.
+/// challenger approach's, game over's two, and the single-player stage clear's two
+/// (`ff_1p01.hps`, `ff_1p02.hps`).
 pub const SONGS: &[usize] = &[
     0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x13, 0x14,
-    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20,
+    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20, 0x0A, 0x0B,
 ];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
