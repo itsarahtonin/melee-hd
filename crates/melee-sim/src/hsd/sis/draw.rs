@@ -322,6 +322,9 @@ pub struct TextDraw {
     pub glyphs: Vec<Glyph>,
     /// The quads' depth (`pos_z`).
     pub z: f32,
+    /// The view the text is drawn in when the game moved the camera's view matrix for it (the
+    /// staff roll's names, each in its joint's place); else the camera's own.
+    pub view: Option<crate::mtx::Mtx34>,
 }
 
 /// A glyph's quad: its code (below 0x4000 the default font's, else the text's font's), its
@@ -733,6 +736,7 @@ impl SisLib {
             background: None,
             glyphs: Vec::new(),
             z: tx.pos.z,
+            view: None,
         };
         let (px, py) = (reg(tx.pos.x), reg(tx.pos.y));
         let (fx, fy) = (reg(tx.font_size[0]), reg(tx.font_size[1]));

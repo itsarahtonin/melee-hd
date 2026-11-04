@@ -764,6 +764,8 @@ pub struct SceneFiles {
     pub copies: Vec<(usize, usize)>,
     /// Files read whole as they are (`lbFile_80016760`): congratulations' still.
     pub raws: Vec<String>,
+    /// Movies the scene plays (`lbMthp`): the ending movie's.
+    pub movies: Vec<String>,
 }
 
 impl SceneFiles {
@@ -813,6 +815,12 @@ impl Running<'_> {
         }
         if scene == GS_REGEND_CONGRATS {
             return Some(self.congrats_scene_files());
+        }
+        if scene == super::gm::endings::GS_STAFFROLL {
+            return Some(self.staff_roll_scene_files());
+        }
+        if scene == super::gm::endings::GS_MOVIE_END {
+            return Some(self.movie_end_scene_files());
         }
         scene_handlers(scene)?;
         let mut f = SceneFiles::default();
@@ -977,6 +985,20 @@ pub fn load_scene_files(
         let loaded = &mut game.ft.data.files;
         loaded.archives.push((name.clone(), id));
         loaded
+            .entries
+            .push((name.clone(), file.entrynum, file.bytes.len() as u32));
+    }
+    for name in &files.movies {
+        let loaded = &game.ft.data.files;
+        if loaded.entries.iter().any(|a| &a.0 == name) {
+            continue;
+        }
+        let file = load(name);
+        let id = data.add(Archive::raw(&file.bytes));
+        game.audio.devcom.files.push((file.entrynum, id));
+        game.ft
+            .data
+            .files
             .entries
             .push((name.clone(), file.entrynum, file.bytes.len() as u32));
     }

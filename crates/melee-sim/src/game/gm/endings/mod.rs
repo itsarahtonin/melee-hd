@@ -7,6 +7,8 @@
 
 pub mod congrats;
 pub mod game_over;
+pub mod movie_end;
+pub mod staff_roll;
 pub mod toy_fall;
 
 use super::super::state::Running;
@@ -92,7 +94,7 @@ impl GOver {
 }
 
 /// The endings' statics.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Endings {
     pub gover: GOver,
     /// `gm_804D6920`: the game over modes' trophy fall's and congratulations' exit data (its
@@ -113,6 +115,10 @@ pub struct Endings {
     /// `regend_congrats_exit_data` (`gmopeningmode.c`): the debug cutscene mode's
     /// congratulations' exit data (its first byte written).
     pub congrats_exit: [u8; 4],
+    /// The staff roll's statics.
+    pub staff_roll: staff_roll::StaffRoll,
+    /// The ending movie's statics.
+    pub movie_end: movie_end::MovieEnd,
 }
 
 impl Running<'_> {
@@ -195,6 +201,12 @@ pub fn run_proc(r: &mut Running, gobj: crate::hsd::gobj::GObjId, f: u32) -> bool
         PROC_CUT3_LIGHT => r.toy_fall_cut3_light(gobj),
         PROC_CUT3_STAND => r.toy_fall_cut3_stand(gobj),
         PROC_CUT3_CAMERA => r.toy_fall_cut3_camera(gobj),
+        staff_roll::PROC_CAMERA
+        | staff_roll::PROC_LIGHT
+        | staff_roll::PROC_BG
+        | staff_roll::PROC_FOG => r.staff_roll_anim(gobj),
+        staff_roll::PROC_NAMES => r.staff_roll_names(gobj),
+        staff_roll::PROC_MAIN => r.staff_roll_main(gobj),
         _ => return false,
     }
     true
@@ -208,6 +220,8 @@ pub fn run_render(r: &mut Running, gobj: crate::hsd::gobj::GObjId, cb: u32) -> b
         RENDER_FIGHTER => r.toy_fall_fighter_render(gobj),
         RENDER_MODELS => r.toy_fall_models_render(gobj),
         congrats::RENDER => r.congrats_still_render(gobj),
+        staff_roll::RENDER_NAMES => r.staff_roll_names_render(gobj),
+        staff_roll::RENDER_DETAILS => r.staff_roll_details_render(gobj),
         _ => return false,
     }
     true
@@ -218,6 +232,8 @@ pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
         f if f == toy_fall::ON_FRAME.0 => r.toy_fall_on_frame(),
         f if f == congrats::ON_FRAME.0 => r.congrats_on_frame(),
+        f if f == staff_roll::ON_FRAME.0 => r.staff_roll_on_frame(),
+        f if f == movie_end::ON_FRAME.0 => r.movie_end_on_frame(),
         _ => return false,
     }
     true
