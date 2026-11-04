@@ -46,16 +46,22 @@ pub enum Fill {
 }
 
 /// A fighter's animation buffer's contents as plain data: the loads that still show, newest
-/// first, each longer than the one after it, over what the buffer held before them.
+/// first, each longer than the one after it, over what the buffer held before them, and the
+/// free list's link over its first word since the buffer was last freed.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct AnimBuf {
     layers: [Layer; LAYERS],
     count: u8,
     pub fill: Fill,
+    /// `HSD_ObjFree`'s link, written over the buffer's first word when a fighter's unload
+    /// (`Fighter_Unload_8006DABC`) freed it: the pool's free head then, the block freed
+    /// before it or 0. The next load copies its archive over it; until then a fighter made
+    /// over the block shows it.
+    link: Option<u32>,
 }
 
 // What a buffer costs a snapshot (docs/engine.md).
-const _: () = assert!(std::mem::size_of::<AnimBuf>() == 66);
+const _: () = assert!(std::mem::size_of::<AnimBuf>() == 76);
 
 impl Default for AnimBuf {
     fn default() -> Self {
@@ -69,12 +75,25 @@ impl AnimBuf {
             layers: [Layer::default(); LAYERS],
             count: 0,
             fill,
+            link: None,
         }
+    }
+
+    /// The buffer back to its pool (`HSD_ObjFree`), which links it in by its first word: `head`
+    /// is the pool's free head before it.
+    pub fn freed(&mut self, head: u32) {
+        self.link = Some(head);
     }
 
     /// The loads that still show, newest first.
     pub fn layers(&self) -> &[Layer] {
         &self.layers[..self.count as usize]
+    }
+
+    /// The free list's link over the buffer's first word, if no load has covered it since it
+    /// was freed.
+    pub fn link(&self) -> Option<u32> {
+        self.link
     }
 
     /// The archive the last load copied here.
@@ -102,6 +121,8 @@ impl AnimBuf {
             len: len as u16,
         };
         self.count = (keep + 1) as u8;
+        // Every load is longer than the free list's word.
+        self.link = None;
     }
 
     /// The byte at `offset` in the buffer, which is at `addr`: the newest load that reached
@@ -111,6 +132,9 @@ impl AnimBuf {
     pub fn byte(&self, data: &Archives, addr: u32, offset: u32) -> Option<u8> {
         if offset >= SIZE {
             return None;
+        }
+        if let Some(link) = self.link.filter(|_| offset < 4) {
+            return Some(link.to_be_bytes()[offset as usize]);
         }
         let Some(layer) = self.layers().iter().find(|l| offset < l.length()) else {
             return match self.fill {
@@ -171,6 +195,11 @@ impl AnimBuf {
                 for (i, b) in bytes.iter_mut().enumerate() {
                     *b = moved.map(|w| w.to_be_bytes()[i]);
                 }
+            }
+        }
+        if let Some(link) = self.link {
+            for (b, v) in out.iter_mut().zip(link.to_be_bytes()) {
+                *b = Some(v);
             }
         }
         out
@@ -254,6 +283,15 @@ mod tests {
         b.load(ArchiveId(4), 0x1000);
         assert_eq!(lens(&b), [(4, 0x1000)]);
         assert_eq!(b.fill, Fill::Zero);
+    }
+
+    #[test]
+    fn a_free_links_by_the_first_word_until_a_load() {
+        let mut b = AnimBuf::new(Fill::Zero);
+        b.freed(0x80DB_4DC0);
+        assert_eq!(b.link, Some(0x80DB_4DC0));
+        b.load(ArchiveId(1), 0x400);
+        assert_eq!(b.link, None);
     }
 
     #[test]

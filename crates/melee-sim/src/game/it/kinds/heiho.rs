@@ -624,7 +624,8 @@ pub fn blast_zones(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj the Shy Guy points to, `it_802D9A0C` (`it_8026B894`). Ports `it_802D9A0C`;
-/// aliased once a check reaches it (nothing dispatches the items' `evt_unk` yet).
+/// aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

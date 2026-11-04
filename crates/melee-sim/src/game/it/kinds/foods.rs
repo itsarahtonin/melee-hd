@@ -237,8 +237,8 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj the food points to, `itFoods_Logic18_EvtUnk` (`it_8026B894`).
-// Ports `itFoods_Logic18_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+// Ports `itFoods_Logic18_EvtUnk`; aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

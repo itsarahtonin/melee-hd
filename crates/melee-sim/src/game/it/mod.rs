@@ -12,6 +12,7 @@ pub mod data;
 pub mod draw;
 pub mod drop;
 pub mod effect;
+pub mod evt_unk;
 pub mod ground;
 pub mod hitbox;
 pub mod item;
