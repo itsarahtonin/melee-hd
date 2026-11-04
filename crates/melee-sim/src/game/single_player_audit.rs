@@ -799,10 +799,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "Training's scenes are the one-door select, the stage select, its own match scene (GS_TRAINING) and the notices' prize scene, each in the scene machine with its exit",
     ),
     (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations: Training has no ending",
-    ),
-    (
         "Hook::Unported1P(name)",
         "Training's states hook its select's, stage select's and match's entries and exits (TrainingEnterCss to TrainingExitVs), none unported",
     ),
@@ -845,10 +841,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
     (
         "fn_802FA6C4 in a single-player mode",
         "the rules' horde setup (x54) and the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "ifStock_802FA5BC",
@@ -1003,7 +995,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the unlocks, trophies and challengers after a mode",
-        covers: &["melee/gm/gm_17DB", "gm_8017390C in Adventure"],
+        covers: &["gm_8017390C in Adventure"],
         modes: SETUP_MODES,
     },
     // The modes' own code.
