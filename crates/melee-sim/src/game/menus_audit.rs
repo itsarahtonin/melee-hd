@@ -64,12 +64,6 @@ pub const GATES: &[Gate] = &[
             "gm_80173498",
         ],
     },
-    Gate {
-        list: ONE_P,
-        entry: 4,
-        what: "Training",
-        covers: &["melee/gm/gmtrainingmode"],
-    },
 ];
 
 /// The gate the game's state is at: the main menu's scene running with its list's cursor on a
