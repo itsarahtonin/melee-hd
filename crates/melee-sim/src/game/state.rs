@@ -484,6 +484,8 @@ pub struct Game {
     pub endings: super::gm::endings::Endings,
     /// The single-player intros' statics (`gm_1832.c`, `gm_1879.c`).
     pub intros: super::gm::intro::Intros,
+    /// All-Star's intro's statics (`gm_186E.c`).
+    pub intro_allstar: super::gm::intro_allstar::IntroAllstar,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).

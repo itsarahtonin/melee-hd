@@ -177,8 +177,8 @@ impl Running<'_> {
 
     /// `onEnterIntroAllstar`, the debug mode's state 7: All-Star's intro's enter data from
     /// the settings (`un_80301C64`).
-    // Ports onEnterIntroAllstar and un_80301C64; aliased once a check reaches them (All-Star's
-    // intro, task 23's).
+    #[doc(alias = "onEnterIntroAllstar")]
+    #[doc(alias = "un_80301C64")]
     pub fn debug_enter_intro_allstar(&mut self) {
         let v = self.game.debug_setting(0x138);
         self.game.endings.intro_allstar = [v, 0];

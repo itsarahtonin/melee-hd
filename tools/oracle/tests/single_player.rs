@@ -104,7 +104,7 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("kinoko", 6493, ""),
         ("meikyu", 5902, ""),
         ("intro-easy", 3292, ""),
-        ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
+        ("intro-allstar", 3265, ""),
         ("gameover", 3157, ""),
         ("staffroll", 3717, ""),
         ("cutscene", 3282, ""),
