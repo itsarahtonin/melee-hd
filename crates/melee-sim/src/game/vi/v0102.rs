@@ -8,6 +8,9 @@ use super::Loaded;
 use crate::hsd::gobj::GObjId;
 use crate::vec::Vec3;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0102_Scene_OnEnter`'s and `vi0102_8031CB00`'s frames.
+const FRAMES: u32 = 0x28 + 0x18;
+
 /// `vi0102_JObjCallback`, `vi0102_CameraCallback`, `vi0102_RunFrame`.
 pub const JOBJ_PROC: u32 = 0x8031_CC68;
 pub const CAMERA_RENDER: u32 = 0x8031_CC8C;
@@ -37,7 +40,7 @@ impl Running<'_> {
     /// Mario and Luigi in their cutscene's motion (pose 9), and the scene's sound banks.
     #[doc(alias = "vi0102_8031CB00")]
     fn vi0102_setup(&mut self, mario_costume: i32, luigi_costume: i32) {
-        self.vi_stage(ST_KIND_CASTLE, |_| {});
+        self.vi_stage(ST_KIND_CASTLE, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let archive = self.game.vi.v0102.archive;

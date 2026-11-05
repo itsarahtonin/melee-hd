@@ -183,6 +183,23 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     bg_flash(game, img);
 }
 
+/// A stage's start hook (`Ground_801C10B8`'s 0xC bytes: the next hook, the object, the
+/// process), as it goes back (`HSD_Free` once the match starts) or with its scene's heap (a
+/// cutscene's stage never starts).
+pub fn start_hook(game: &Game, img: &mut Image, h: super::handles::StartHookId) {
+    let hooks = &game.gr.start_hooks;
+    let at = hooks.addr(h.0);
+    if at == 0 {
+        return;
+    }
+    let o = &hooks[h.0];
+    let mut l = Lay::new(at, 0xC);
+    l.u32(0, o.next.map_or(0, |n| hooks.addr(n.0)));
+    l.u32(4, o.gobj.map_or(0, |g| game.world.gobjs.addr(g.0)));
+    l.u32(8, o.func.0);
+    l.put(img);
+}
+
 /// A menu's `HSD_MemAlloc` user data block melee-sim lays out, as it goes back through its
 /// remover (`HSD_Free`) or with its scene's heap: the stage select's name
 /// (`StageSelUserData`: the stage, the state, the frames), preview (`StagePreviewUserData`:
@@ -253,6 +270,12 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
     for (slot, _) in game.items.iter() {
         if img.in_scene(items, slot) {
             item(game, data, img, ItemId(slot));
+        }
+    }
+    let kind = std::any::type_name::<super::gr::StartHook>();
+    for (slot, _) in game.gr.start_hooks.iter() {
+        if img.in_scene(kind, slot) {
+            start_hook(game, img, super::handles::StartHookId(slot));
         }
     }
     let kind = std::any::type_name::<super::structs::Ground>();
@@ -872,6 +895,17 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     // mirror holds as none.
     if o.kind == super::it::kinds::PKIND_RANDOM && o.xCC_item_attr.is_none() {
         l.put_u32(at + 0xCC, 0x803F_8C08);
+    }
+    // The command script's cursor is a state's script in the item's file (`Item_80268E5C`)
+    // or null (a state without one, the script's end, `it_26B1.c`'s and `it_2725.c`'s
+    // clears), and the color overlay's
+    // an entry of the items' color animations (`it_804D6D04`, `ItCo.dat`) or null
+    // (`lb_80014498`): none is null, not a place in no file.
+    if o.x524_cmd.script.cursor.is_none() {
+        l.put_u32(at + 0x52C, 0);
+    }
+    if o.x548_colorOverlay.script.cursor.is_none() {
+        l.put_u32(at + 0x550, 0);
     }
     let n = o.x374_dynamicBonesNum.max(0) as usize;
     o.xD4_dynamicBones.lay_counted(&mut l, at + 0xD4, &cx, n);

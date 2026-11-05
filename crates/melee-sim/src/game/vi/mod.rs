@@ -191,6 +191,13 @@ fn scene_fog(r: &Running, scene: DataRef) -> DataRef {
     r.data.ptr(fogs).expect("the scene's fog")
 }
 
+/// How much deeper than a VS match's a cutscene sets its stage up (`gr::setup::setup_at`),
+/// from the frames over `Stage_8022524C` (`frames`: the scene's entry's and its helper's, as
+/// the assembly has them) against a VS match's (`gm_Scene_Vs_OnEnter`'s 0x18 and
+/// `fn_8016E730`'s 0x20); a shallower one wraps, its keys higher.
+const fn stage_frames(frames: u32) -> u32 {
+    frames.wrapping_sub(0x18 + 0x20)
+}
 impl Running<'_> {
     /// An archive into the scene's heap, `lbArchive_LoadSymbols`.
     fn vi_load(&mut self, name: &str) -> Loaded {
@@ -460,13 +467,21 @@ impl Running<'_> {
     /// every cutscene on a stage runs them: the camera's (`Camera_Init(6)`), the dynamics',
     /// collisions' and stage's resets, the stage `stkind` loaded, the common items
     /// (`Item_80266FA8`, `Item_80266FCC`); `before_setup` runs before the stage's setup
-    /// (`Stage_8022524C`), then its demo setup (`Stage_8022532C`).
-    fn vi_stage(&mut self, stkind: i32, before_setup: impl FnOnce(&mut Self)) {
-        self.vi_stage_demo(stkind, 0, before_setup);
+    /// (`Stage_8022524C`), then its demo setup (`Stage_8022532C`). `frames` is what the
+    /// scene's entry and the function under it that calls `Stage_8022524C` take of the stack
+    /// ([`stage_frames`]).
+    fn vi_stage(&mut self, stkind: i32, frames: u32, before_setup: impl FnOnce(&mut Self)) {
+        self.vi_stage_demo(stkind, 0, frames, before_setup);
     }
 
     /// [`Running::vi_stage`] with the demo setup's argument.
-    fn vi_stage_demo(&mut self, stkind: i32, demo: i32, before_setup: impl FnOnce(&mut Self)) {
+    fn vi_stage_demo(
+        &mut self,
+        stkind: i32,
+        demo: i32,
+        frames: u32,
+        before_setup: impl FnOnce(&mut Self),
+    ) {
         super::camera::init(&mut self.game.camera, 6);
         self.game.alloc_dynamics(self.data);
         self.game.coll.reset();
@@ -487,7 +502,7 @@ impl Running<'_> {
         super::it::item::init_globals(self.game, self.data);
         before_setup(self);
         let grkind = self.game.stage_info.grkind;
-        super::gr::setup::setup(self, grkind);
+        super::gr::setup::setup_at(self, grkind, stage_frames(frames));
         super::gr::stage::demo_init(self, stkind, demo);
     }
 

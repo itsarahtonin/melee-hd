@@ -1197,8 +1197,8 @@ impl Running<'_> {
     /// The three Kirbys' cutscene's entry, `gm_801B4974`: the player's character and costume
     /// as `gm_801B4430` gives them, the team Kirby's joiners set up, and the cutscene's
     /// Kirbys: the first joiner's costume and three of their copies.
-    // Ports gm_801B4974; aliased once a check reaches it.
-    // Ports gm_8017BE8C; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4974")]
+    #[doc(alias = "gm_8017BE8C")]
     pub fn adventure_enter_kirbys(&mut self) {
         self.adventure_enter_cutscene();
         let id = self.game.machine.routing.curr_state_id;
@@ -1215,7 +1215,7 @@ impl Running<'_> {
 
     /// The team Kirby's match, `gm_801B4B28`: its joiners set up unless the cutscene did
     /// (`xC.x11`), then the stage's match (`gm_801B4064`).
-    // Ports gm_801B4B28; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4B28")]
     pub fn adventure_enter_team_kirby(&mut self) {
         if self.game.one_player.adventure.base.xc[5] != 1 {
             self.adventure_joiners();
@@ -1225,7 +1225,7 @@ impl Running<'_> {
 
     /// The team Kirby's exit, `gm_801B4C5C`: the stage marked, the run's exit, and past 30
     /// seconds the giant Kirby skipped for Corneria's intro.
-    // Ports gm_801B4C5C; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4C5C")]
     pub fn adventure_exit_team_kirby(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
         self.adventure_mark_stage(id);
@@ -1242,7 +1242,7 @@ impl Running<'_> {
     /// Star Fox's cutscene's entry, `gm_801B4D34`: the next match's opponent (`x7C`), Falco
     /// about a third of the time once he's unlocked (`HSD_Randi(100) <= 33`), else the
     /// stage's.
-    // Ports gm_801B4D34; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4D34")]
     pub fn adventure_enter_star_fox(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
         let first = stage_entry(id).expect("an Adventure state's stage").chars[0];
@@ -1253,7 +1253,7 @@ impl Running<'_> {
 
     /// Fox's and Falco's match, `gm_801B4DAC`: the stage's match (`gm_801B4064`), with Falco
     /// for its opponent when the cutscene drew him, in a costume kept apart from the player's.
-    // Ports gm_801B4DAC; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4DAC")]
     pub fn adventure_enter_fox_falco(&mut self) {
         self.adventure_enter_vs();
         if self.game.one_player.adventure.x7c == CKIND_FALCO {
@@ -1358,7 +1358,7 @@ impl Running<'_> {
 
     /// Kirby's hats for Green Greens, `ftLib_LoadKirbyHats`: every unlocked character's copy
     /// (Zelda's and Sheik's both fighters') in Kirby's costume `costume`.
-    // Ports ftLib_LoadKirbyHats; aliased once a check reaches it.
+    #[doc(alias = "ftLib_LoadKirbyHats")]
     pub fn load_kirby_hats(&mut self, costume: u8) {
         for ckind in kirby_hat_characters(self.game) {
             for sub in 0..hat_fighters(ckind) {
@@ -1370,8 +1370,8 @@ impl Running<'_> {
 
     /// Kirby's kind's data setup, `ftData_800857E0` (`ftKb_Init_UnkMotionStates5`,
     /// `Player_80031DC8`): each playing slot's fighters' copies in Kirby's first costume.
-    // Ports ftData_800857E0; aliased once a check reaches it.
-    // Ports ftKb_Init_UnkMotionStates5; aliased once a check reaches it.
+    #[doc(alias = "ftData_800857E0")]
+    #[doc(alias = "ftKb_Init_UnkMotionStates5")]
     // Ports Player_80031DC8; aliased once a check reaches it.
     fn kirby_data_setup(&mut self) {
         for (kind, extra) in playing_kinds(self.game) {

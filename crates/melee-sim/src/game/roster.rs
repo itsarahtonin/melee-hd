@@ -301,14 +301,6 @@ pub const STAGES: &[Stage] = &[
             unreached: &[
                 YAKU_UNANCHORED,
                 (
-                    "grCorneria_801E1060",
-                    "map 11's process: the stage's load hook destroys map 11 before its first tick",
-                ),
-                (
-                    "gm_801883C0",
-                    "map 11's process: the stage's load hook destroys map 11 before its first tick",
-                ),
-                (
                     "grCorneria_801E2E50",
                     "the computer players' floor check, which the CPU audit holds (cpu_audit)",
                 ),

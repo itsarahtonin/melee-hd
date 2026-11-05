@@ -11,14 +11,12 @@ melee/gm/gm_17C0	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gm_17E4	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_186E	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_1879	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_18A1	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmadventure	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmallstar	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmclassic	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmregcommon	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbArq_80014AC4	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)

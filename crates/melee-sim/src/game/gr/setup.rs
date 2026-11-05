@@ -1274,6 +1274,8 @@ pub fn start(r: &mut Running, grkind: i32) {
         let hook = r.game.gr.start_hooks[h.0].clone();
         cur = hook.next;
         super::super::code::run_proc(r, hook.gobj.expect("a start hook's GObj"), hook.func);
+        let game = &*r.game;
+        crate::hsd::export::with_image(|img| super::super::export::start_hook(game, img, h));
         crate::hsd::heap::mem_free(r.game.gr.start_hooks.addr(h.0));
         r.game.gr.start_hooks.free(h.0);
     }

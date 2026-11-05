@@ -11,7 +11,7 @@ use melee_data::archive::DataRef;
 use super::super::code::ParticleHooks;
 use super::super::handles::CodeRef;
 use super::super::render::{CAMERA_CALLBACK, FOG_CALLBACK, JOBJ_CALLBACK, LOBJ_CALLBACK};
-use super::super::state::{OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
+use super::super::state::{Game, OBJ_CAMERA, OBJ_FOG, OBJ_JOBJ, OBJ_LIGHT, Obj, Running};
 use super::super::vi::Loaded;
 use crate::fpu::{mem, reg};
 use crate::hsd::gobj::GObjId;
@@ -193,6 +193,26 @@ pub struct IntroNormal {
     pub slot: u8,
     /// `lbl_804D6620`: `IrNml`'s archive.
     pub archive: Loaded,
+}
+
+/// The stage's camera's frame in Adventure's intro, `gm_801883C0`: its eye's animation's, else
+/// its interest's, else 0, and 0 without the camera (`lbl_804736C0.x8`).
+#[doc(alias = "gm_801883C0")]
+pub fn stage_camera_frame(game: &Game) -> f32 {
+    let Some(gobj) = game.intros.normal.gobj else {
+        return 0.0;
+    };
+    let Some(Obj::CObj(c)) = game.world.gobj(gobj).obj else {
+        panic!("the intro's camera holds no CObj");
+    };
+    let objs = &game.objs;
+    let cobj = &objs.cobjs[c];
+    let eye = cobj.eyepos.expect("a camera without an eye");
+    let interest = cobj.interest.expect("a camera without an interest");
+    [eye, interest]
+        .into_iter()
+        .find_map(|w| objs.wobjs[w.0].aobj)
+        .map_or(0.0, |a| objs.aobjs[a].curr_frame)
 }
 
 impl IntroNormal {

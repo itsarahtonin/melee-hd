@@ -341,7 +341,8 @@ impl Running<'_> {
             // Kind 25 is kind 23's code again (Multi-Man's Wire Frames).
             23 | 25 => self.cpu_decide_enemy(f),
             24 => self.cpu_decide_wander(f),
-            k @ (26 | 27 | 29) => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
+            27 => self.cpu_decide_unafraid(f),
+            k @ (26 | 29) => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
             _ => self.cpu_decide_vs(f),
         }
     }

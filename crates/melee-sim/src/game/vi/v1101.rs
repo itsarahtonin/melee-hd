@@ -10,6 +10,9 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi1101_Scene_OnEnter`'s and `un_8031F294`'s frames.
+const FRAMES: u32 = 0x28 + 0x48;
+
 /// `fn_8031F548`, `fn_8031F56C`, `fn_8031F600`.
 pub const JOBJ_PROC: u32 = 0x8031_F548;
 pub const CAMERA_RENDER: u32 = 0x8031_F56C;
@@ -58,7 +61,7 @@ impl Running<'_> {
     /// scene's sound banks.
     #[doc(alias = "un_8031F294")]
     fn vi1101_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage(ST_KIND_BATTLE, |_| {});
+        self.vi_stage(ST_KIND_BATTLE, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let v = self.game.vi.v1101;
