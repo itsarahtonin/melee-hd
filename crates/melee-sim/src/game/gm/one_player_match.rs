@@ -100,9 +100,9 @@ const CKIND_ZELDA: i8 = 0x12;
 const CKIND_SEAK: u8 = 0x13;
 const CKIND_POPONANA: i8 = 0x0E;
 const CHKIND_POPO: u8 = 0x0A;
-const CKIND_GKOOPS: i8 = 0x19;
+const CKIND_GKOOPS: i8 = 0x1D;
 const CKIND_MASTERH: i8 = 0x1A;
-const CKIND_CREZYH: i8 = 0x1B;
+const CKIND_CREZYH: i8 = 0x1E;
 const CKIND_GAMEWATCH: i8 = 3;
 const CKIND_KIRBY: i8 = 4;
 const CKIND_NESS: i8 = 0xD;
@@ -131,6 +131,9 @@ impl Running<'_> {
         if let Some(v) = getter.and_then(|g| super::classic::getter(g, round, level, i)) {
             return v;
         }
+        if let Some(v) = getter.and_then(|g| super::adventure::getter(g, round, level, i)) {
+            return v;
+        }
         let (kind, _, _, t) = getter_entry(round, level);
         let i = usize::from(i) * 3;
         match getter {
@@ -154,6 +157,9 @@ impl Running<'_> {
     #[doc(alias = "gm_8018A314")]
     pub fn one_player_ratio(getter: Option<CodeRef>, round: u8, level: u8) -> f32 {
         if let Some(pct) = getter.and_then(|g| super::classic::ratio_percent(g, round, level)) {
+            return mem(fp::fdivs(f64::from(pct), 100.0));
+        }
+        if let Some(pct) = getter.and_then(|g| super::adventure::ratio_percent(g, round, level)) {
             return mem(fp::fdivs(f64::from(pct), 100.0));
         }
         let (_, attack, defense, _) = getter_entry(round, level);

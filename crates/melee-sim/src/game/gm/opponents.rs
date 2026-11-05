@@ -139,6 +139,12 @@ fn at(list: &[i8; LIST_LEN], i: usize) -> i8 {
 }
 
 impl Opponents {
+    /// The setup's byte `i` (`gm_80169370`, as the match's banks read its three characters).
+    #[doc(alias = "gm_80169370")]
+    pub fn kind(&self, i: usize) -> i8 {
+        self.kinds[i]
+    }
+
     /// How many are still to join, `gm_80169384`.
     // Ports gm_80169384; aliased once a check reaches it.
     pub fn left(&self) -> i32 {
@@ -152,13 +158,13 @@ impl Opponents {
     }
 
     /// `fn_801693A8`: whether the match goes on once they're beaten.
-    // Ports fn_801693A8; aliased once a check reaches it.
+    #[doc(alias = "fn_801693A8")]
     pub fn goes_on(&self) -> bool {
         self.flags & GOES_ON != 0
     }
 
     /// `fn_8016A1E4`: whether the last one is beaten.
-    // Ports fn_8016A1E4; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A1E4")]
     pub fn beaten(&self) -> bool {
         self.flags & BEATEN != 0
     }
@@ -264,6 +270,14 @@ impl Opponents {
                 color_i += 1;
             }
             i += 1;
+        }
+        // With no joiners the walk starts past the list's end at entry 0 and reads on through
+        // the setup and the statics after it to the first byte of -2 (Adventure's Mushroom
+        // Kingdom: 0x8049E6CD, 209,445 entries on), swapping a pair only where two
+        // neighbouring bytes 0x82 on are the character: the setup's own bytes never are, and
+        // the statics past it held no such pair in any session (docs/melee-bugs.md).
+        if self.costumes[0] == END {
+            return;
         }
         let mut i = 1;
         while at(&self.costumes, i) != END {

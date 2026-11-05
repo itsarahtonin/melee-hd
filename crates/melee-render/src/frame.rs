@@ -327,6 +327,15 @@ impl Ctx<'_> {
                 self.axes(ends);
                 1
             }
+            Draw::ZModeDirect {
+                compare,
+                func,
+                update,
+            } => {
+                self.gx
+                    .set_z_mode(u8::from(*compare), *func, u8::from(*update));
+                1
+            }
             Draw::EraseColor([r, g, b, a]) => {
                 self.hsd.erase_color = Some(Color::new(*r, *g, *b, *a));
                 1

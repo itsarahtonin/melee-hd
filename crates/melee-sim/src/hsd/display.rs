@@ -109,6 +109,15 @@ pub enum Draw {
     /// for the shapes after, `ftParts_JObjMakePositionMtx`), whether or not any of them draws.
     /// `vmtx` as for [`Draw::Shape`].
     FighterJoint { jobj: JObjId, vmtx: Option<Mtx34> },
+    /// The depth mode set at the hardware past HAL's state cache (`GXSetZMode`, as
+    /// Adventure's intro's map draws over everything, `fn_80187C9C`): the cache still holds
+    /// the mode before, so a material whose mode it matches doesn't send it again until the
+    /// cache is out of date.
+    ZModeDirect {
+        compare: bool,
+        func: u32,
+        update: bool,
+    },
     /// The current camera's viewport erased to the erase color (`HSD_CObjEraseScreen`).
     Erase,
     /// The current camera's viewport erased, color and depth, to the erase color set before

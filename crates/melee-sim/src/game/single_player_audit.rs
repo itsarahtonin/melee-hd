@@ -540,10 +540,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "no caller passes a colour past the table's nine",
     ),
     (
-        "single-player match setup",
-        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
-    ),
-    (
         "a match's exit data in game mode",
         "the contest's match exits into VS mode's exit data (uses_vs_melee)",
     ),
@@ -627,10 +623,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
-    ),
-    (
-        "single-player match setup",
-        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
     ),
     (
         "a match's exit data in game mode",
@@ -717,10 +709,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
-    ),
-    (
-        "single-player match setup",
-        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
     ),
     (
         "a match's exit data in game mode",
@@ -829,10 +817,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "no caller passes a colour past the table's nine",
     ),
     (
-        "single-player match setup",
-        "the rules' horde setup (x54), which only gm_16A2's single-player setups set; Training's rules are its modes table entry's",
-    ),
-    (
         "a match's exit data in game mode",
         "Training's match exits into its own exit data (match_exit_data's Training arm); the notices have no match",
     ),
@@ -936,7 +920,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_17BA",
             "melee/gm/gm_17C0",
             "melee/gm/gm_18A1",
-            "single-player match setup",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "gm_8016AC44 with a challenger's record",
@@ -987,7 +970,6 @@ pub const MISSING: &[Gap] = &[
             "fn_80162BFC",
             "fn_80162DF8",
             "gm_801647F8",
-            "fn_8017DF28 (a single-player mode's record)",
             "gm_8017CA38's records in game mode",
         ],
         modes: SETUP_MODES,
@@ -1048,7 +1030,6 @@ pub const MISSING: &[Gap] = &[
         what: "Classic's mode, its intro and its bonus rounds",
         covers: &[
             "the race's clear",
-            "Classic's allies drawn",
             "gm_8017CBAC (Classic's clear)",
             "gmClassic_801B3B40's target stage records",
             "Classic's horde stage's",
@@ -1100,7 +1081,8 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmadventure",
             "melee/gm/gm_17E4",
             "melee/gm/gm_1879",
-            "(Adventure's intro)",
+            "ftLib_LoadKirbyHats (Adventure's Green Greens)",
+            "ftData_800857E0 (Kirby's copies' setup)",
         ],
         modes: &[AD, CL],
     },
@@ -1137,7 +1119,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "a beaten enemy's or a trophy stage's trophy",
-        covers: &["Toy_803049F4", "Toy_80304A58", "tyDisplay_8031C354"],
+        covers: &["tyDisplay_8031C354"],
         modes: &[AD, CL, DB],
     },
     Gap {
