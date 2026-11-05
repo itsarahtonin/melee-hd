@@ -475,6 +475,8 @@ pub struct Game {
     /// The cutscenes' statics and enter data (`melee/vi`).
     pub vi: super::vi::Cutscenes,
     pub endings: super::gm::endings::Endings,
+    /// The single-player intros' statics (`gm_1832.c`, `gm_1879.c`).
+    pub intros: super::gm::intro::Intros,
     /// The game's side of the memory card (`lbcardgame.c`).
     pub card_game: crate::lb::cardgame::CardGame,
     /// What the game keeps of the card's task lists (`lbcardnew.c`).

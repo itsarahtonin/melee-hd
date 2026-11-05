@@ -99,6 +99,7 @@ impl Running<'_> {
             let part = self.game.fighter_parts[parts][idx as usize].joint;
             if let Some(p) = part {
                 self.game.objs.ids.insert(j, p);
+                self.game.objs.jobjs[p].named = true;
             } else {
                 panic!("HSD_IDInsertToTable with a part that has no joint");
             }

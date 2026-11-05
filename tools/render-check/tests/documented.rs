@@ -25,17 +25,17 @@ use common::{
     GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
     IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
-    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6P_AS_WIN, MENU_TOUR,
-    METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
-    MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
-    ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR,
-    RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
-    RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP,
-    SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64,
-    TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS,
-    TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6E2_REGEND_ADV,
+    M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE,
+    MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE,
+    MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE,
+    POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
+    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
+    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -176,6 +176,24 @@ frames!(M6E_GAMEOVER;
     m6e_gameover_1620 1620,
     m6e_gameover_2830 2830,
 );
+// The trophy fall and congratulations (`m6-endings-2/regend-adv`), against captures made with
+// ssbm-rs's renderer running: the second cut (the trophy alone on its stand, 2030), the third
+// (the trophies laid round, 2300) and congratulations' still (2600). The first cut's frames
+// (the fighter's fading copy and the frame's tinted copy, drawn back from the GPU's copies)
+// don't match yet: see docs/player.md.
+rendered_frames!(M6E2_REGEND_ADV;
+    m6e2_regend_adv_2030 2030,
+    m6e2_regend_adv_2300 2300,
+    m6e2_regend_adv_2600 2600,
+);
+// Classic's first stage's intro (`m6-intros/classic-win`): the stage's number and the map
+// coming in with Fox and his opponent posed (900), their names written in (950), and the
+// screen held before the match (1000).
+frames!(M6I_CLASSIC_WIN;
+    m6i_classic_win_900 900,
+    m6i_classic_win_950 950,
+    m6i_classic_win_1000 1000,
+);
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
 // over the tinted copy (7500). The images are identical; the draws that differ only sample
@@ -210,6 +228,20 @@ fn m6p_as_win_6250() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn m6p_as_win_7500() {
     as_win(7500, [1699, 1699]);
+}
+
+// The rest area after the clear (`m6-1p-setups/as-win`): its first frames with the HUD's tally
+// of the characters left in rows of five (9050), and the walk toward the portal (10300).
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_9050() {
+    as_win(9050, [805, 822]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_10300() {
+    as_win(10300, [804, 821]);
 }
 // Training's menu over its match on Fountain of Dreams (`m6-training`): the item option on
 // the Poké Ball with its name (`tr-items` 2250) and the computer player's behavior set to walk

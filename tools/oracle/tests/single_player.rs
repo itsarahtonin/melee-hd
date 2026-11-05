@@ -66,13 +66,18 @@ fn first_stops(list: &[(&str, u32, &str)]) {
 }
 
 /// Each mode from the main menu's 1P list on the unlock-all card: its entry, its select (or
-/// list), Fox, and its first match: Classic's and Adventure's intros, the matches of All-Star,
+/// list), Fox, and its first match: Classic's intro and match (on Very Easy, whose
+/// opponents' computer kind 9 isn't ported), Adventure's intro, the matches of All-Star,
 /// Target Test, the Home-Run Contest, 10-Man Melee (lost, the select again) and Training
 /// (Fountain of Dreams, on `2026-10-06_17-44-10`'s card), and the Event list's first event.
 #[test]
 fn each_mode_runs_to_its_first_stop() {
     first_stops(&[
-        ("classic", 796, "gmClassic_801B3500 isn't ported"),
+        (
+            "classic",
+            938,
+            "ftCo_800B2AFC for computer kind 9 isn't ported",
+        ),
         ("adventure2", 826, "gm_801B3F40 isn't ported"),
         ("allstar", 3884, ""),
         (
@@ -100,12 +105,12 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("mh-human", 7188, ""),
         ("kinoko", 6493, ""),
         ("meikyu", 5902, ""),
-        ("intro-easy", 1362, "game scene 0x20 isn't ported"),
+        ("intro-easy", 3292, ""),
         ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
         ("gameover", 3157, ""),
         ("staffroll", 1232, "game scene 0x2b isn't ported"),
         ("cutscene", 3282, ""),
-        ("ending-test", 1232, "game scene 0xf isn't ported"),
+        ("ending-test", 3726, ""),
     ]);
 }
 
@@ -131,7 +136,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         (
             "stages-1p-c",
             3925,
-            "not implemented: the rest area's coin and trophy (it_802F2094, Toy_80304A58)",
+            "the rest area's coin and trophy (it_802F2094, Toy_80304A58) isn't ported",
         ),
     ]);
 }

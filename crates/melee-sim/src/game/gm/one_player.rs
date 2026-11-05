@@ -1154,7 +1154,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D4A8")]
     #[doc(alias = "gmMainLib_8015D0F4")]
     #[doc(alias = "gmMainLib_8015D21C")]
-    fn all_cleared_one_mode(&self) -> bool {
+    pub(super) fn all_cleared_one_mode(&self) -> bool {
         let r = &self.game.game_data.thing.save_data.unk_8;
         [r.x1C, r.x10, r.x14]
             .into_iter()

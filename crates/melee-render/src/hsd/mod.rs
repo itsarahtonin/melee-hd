@@ -22,6 +22,7 @@ pub mod texp;
 pub mod texp_make;
 #[cfg(test)]
 mod texp_tests;
+pub mod toy_fall;
 
 use std::collections::BTreeMap;
 

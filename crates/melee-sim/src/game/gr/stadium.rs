@@ -210,10 +210,10 @@ pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// A transformation's stage's process (the fire, grass, default and rock stages, maps 3 to 6):
 /// the collision follows the model.
-#[doc(alias = "stageGObj3_GObjProc")]
-#[doc(alias = "stageGObj4_GObjProc")]
-#[doc(alias = "stageGObj5_GObjProc")]
-#[doc(alias = "stageGObj6_GObjProc")]
+#[doc(alias = "stageGObj3_GObjProc@801D19D8")]
+#[doc(alias = "stageGObj4_GObjProc@801D16DC")]
+#[doc(alias = "stageGObj5_GObjProc@801D1604")]
+#[doc(alias = "stageGObj6_GObjProc@801D17E8")]
 pub fn proc_piece(r: &mut Running, gobj: GObjId) {
     update_map_coll(r.game, r.data, gobj);
 }
