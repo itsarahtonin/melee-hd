@@ -622,6 +622,7 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // left of the GPU's pixels, this one holds still where it doesn't write it.
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
+    r.game.it.stale_last_pos.remove(&id.0);
     // So are its hitboxes' joints, until the script makes each box (`HitJObj`).
     for h in &mut r.game.items[id.0].x5D4_hitboxes {
         h.hit.jobj.mark_unknown();

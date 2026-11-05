@@ -146,7 +146,7 @@ impl Opponents {
     }
 
     /// How many are still to join, `gm_80169384`.
-    #[doc(alias = "gm_80169384")]
+    // Ports gm_80169384; aliased once a check reaches it.
     pub fn left(&self) -> i32 {
         i32::from(self.left)
     }
@@ -717,7 +717,7 @@ impl Running<'_> {
     }
 
     /// A joiner's fighters made, `fn_8016A488`: they read their controllers once the HUD is on.
-    #[doc(alias = "fn_8016A488")]
+    // Ports fn_8016A488; aliased once a check reaches it.
     pub fn opponent_joined(&mut self, slot: i32) {
         if self.game.vs.state.hud_enabled == 1 {
             self.player_enable_input(slot);
