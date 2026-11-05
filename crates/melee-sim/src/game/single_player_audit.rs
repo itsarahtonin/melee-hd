@@ -1005,14 +1005,8 @@ pub const MISSING: &[Gap] = &[
         modes: &[EV],
     },
     Gap {
-        what: "100-Man Melee past its 69th KO and won, a won 15-Minute Melee (ported; no session reaches them yet)",
-        covers: &[
-            "ftCo_800B7638",
-            "gm_80173460",
-            "gm_80173498",
-            "gmMainLib_8015D780",
-            "gm_80163A3C",
-        ],
+        what: "a won 15-Minute Melee (ported; no session reaches it yet)",
+        covers: &["gm_80173498", "gmMainLib_8015D780"],
         modes: &[MM],
     },
     Gap {

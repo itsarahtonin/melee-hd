@@ -2211,6 +2211,26 @@ fn multi_man_melee() {
     }
 }
 
+/// 100-Man Melee won (`m6-multiman/mm-100-win`, port 1 played by a search over melee-hd's
+/// sessions on a card with Falco locked, ssbm-rs's run of its reads the reference), from
+/// power-on with the heap: the hordes' kind 16 from the table's 70th entry
+/// (`ftCo_800B7638`), 100 KOs, Falco's challenge (`gm_80173460`) and its match lost, the
+/// select again with the win's time (`gm_80163A3C`), back to the menu. About 40 minutes.
+#[test]
+#[ignore = "about 40 minutes; run with --ignored"]
+fn multi_man_melee_won() {
+    let after = ssbm_rs_local("traces/m6-multiman/mm-100-win-play.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    if let Some(out) = scripted_session("m6-multiman", "mm-100-win", &args) {
+        assert!(
+            out.contains("61751 ticks compared, no difference")
+                && out.contains("no stale reads")
+                && out.contains("the card after the session: the original's"),
+            "{out}"
+        );
+    }
+}
+
 /// Training (milestone 6's task 13), from power-on with the heap: task 1's
 /// `m6-oracle/training` (the select, the stage select, the match with some play) and
 /// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
