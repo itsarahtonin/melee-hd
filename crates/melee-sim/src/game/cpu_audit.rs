@@ -120,6 +120,7 @@ pub const MODULES: &[&str] = &[
     "ft/cpu_ai",
     "ft/cpu_attack",
     "ft/cpu_decide",
+    "ft/cpu_kinds",
     "ft/cpu_move",
     "ft/cpu_recover",
     "ft/cpu_script",
@@ -150,6 +151,7 @@ const EXCLUDED_FLOORS: &str = "the excluded floors ask the stage only on Big Blu
 const NANA_ITEM: &str = "a player's match with the Ice Climbers runs the allocator model (Settings::vs_with), which gives the item's address";
 const BARREL_LEVEL: &str = "the barrel cannon's coin flip comes every (10 - level) · 5 frames, a division by zero only at level 10: a VS computer player's level is 1 to 9, and Nana's 0 to 9 (Popo's percent / 20, at most 9, ftCo_800B101C)";
 const ISLAND_PICK: &str = "computer kind 24's island pick (Multi-Man's): its second pass takes every island its first did (it skips only ftCo_800A2718's test), so its running sum over the first's total reaches 1 by its last island, above every draw (HSD_Randf is under 1 - 2^-16)";
+const ALLY_ADDRESS: &str = "only computer kind 10 (single-player events) looks for its nearest ally (ftCo_800A50D4), whose calls leave a fighter's and a GObj's address where the island end beside its target goes";
 const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the allocator model (Settings::vs_with, laid out as a console's VS match from the menus), which gives the fighter's address, and replays always do";
 
 /// Functions and stops no match with computer players from the player reaches (VS mode, the
@@ -157,24 +159,16 @@ const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the 
 pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800B2AFC for computer kind", VS_KINDS),
     ("a register left by ftCo_800B2AFC", HOME_RUN),
-    ("ftCo_800AECF0", OTHER_KINDS),
-    ("ftCo_800AF290", OTHER_KINDS),
-    ("ftCo_800AF78C", OTHER_KINDS),
-    ("ftCo_800AFC40", OTHER_KINDS),
-    ("ftCo_800AFE3C", OTHER_KINDS),
-    ("ftCo_800B00F8", OTHER_KINDS),
-    ("ftCo_800B126C", OTHER_KINDS),
-    ("ftCo_800B1478", OTHER_KINDS),
-    ("ftCo_800B17D0", OTHER_KINDS),
     ("ftCo_800B1AB8", OTHER_KINDS),
     ("ftCo_800B1EF0", OTHER_KINDS),
-    ("ftCo_800B21C8", OTHER_KINDS),
-    ("ftCo_800A50D4", OTHER_KINDS),
-    ("ftCo_800A5294", OTHER_KINDS),
-    ("ftCo_800AEA8C", OTHER_KINDS),
     ("ftCo_800AEFB8", NANA_ALONE),
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800BA080", NESS_SPAN),
+    ("ftCo_800AF290", OTHER_KINDS),
+    ("ftCo_800B1478", OTHER_KINDS),
+    ("ftCo_800B17D0", OTHER_KINDS),
+    ("ftCo_800B21C8", OTHER_KINDS),
+    ("ftCo_800AEA8C", OTHER_KINDS),
     ("ftCo_800AA320 at a level past 9", LEVELS),
     ("ftCo_800A4768 with no island end", ISLAND_END),
     ("a register left by ftCo_800A7AAC", NANA_FOLLOWING),
@@ -185,6 +179,7 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("a register left by ftCo_800B2790", FIGHTER_ADDRESS),
     ("ftCo_800AC434 at level 10", BARREL_LEVEL),
     ("ftCo_800A8940 with no island picked", ISLAND_PICK),
+    ("a register left by ftCo_800A50D4", ALLY_ADDRESS),
 ];
 
 /// Ported code computer players reach whose ledger alias waits for a check (a `// Ports`
