@@ -111,6 +111,9 @@ impl Replay {
                 if name.starts_with("tt-") {
                     return ssbm_rs_local(&format!("lockstep/m6-target-test/{name}.inputs")).into();
                 }
+                if name.starts_with("ev") {
+                    return ssbm_rs_local(&format!("lockstep/m6-event/{name}.inputs")).into();
+                }
                 if name.starts_with("race-") {
                     return ssbm_rs_local(&format!("lockstep/m6-race/{name}.inputs")).into();
                 }
@@ -844,6 +847,32 @@ pub const TT_CLEAR: Game = Game {
     name: "tt-clear",
     players: "Samus alone, breaking every target (session m6-target-test/tt-clear)",
     replay: Replay::Session("tt-clear"),
+};
+
+/// The Event list on its second page (`m6-event/ev12`, task 21), the cursor coming down to
+/// Event 12.
+pub const EV12: Game = Game {
+    stage: "the Event list",
+    name: "ev12",
+    players: "the Event list, the cursor to Event 12 (session m6-event/ev12)",
+    replay: Replay::Session("ev12"),
+};
+
+/// Event 43 (`m6-event/ev43`): the list's last page, then Fox against Captain Falcon and
+/// Falco on Big Blue.
+pub const EV43: Game = Game {
+    stage: "Big Blue",
+    name: "ev43",
+    players: "Event 43: Fox vs Captain Falcon and Falco (session m6-event/ev43)",
+    replay: Replay::Session("ev43"),
+};
+
+/// Event 47, Trophy Tussle 3 (`m6-event/ev47`): Fox against three on the third trophy stage.
+pub const EV47: Game = Game {
+    stage: "the third trophy stage",
+    name: "ev47",
+    players: "Event 47: Fox and three computer players (session m6-event/ev47)",
+    replay: Replay::Session("ev47"),
 };
 
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
