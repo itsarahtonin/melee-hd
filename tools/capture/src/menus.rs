@@ -138,6 +138,7 @@ impl<'a> Comparer<'a> {
                 0x24 => sym("gm_Mode_15Min_States"),
                 0x25 => sym("gm_Mode_EndlessVs_States"),
                 0x26 => sym("gm_Mode_CruelVs_States"),
+                0x2B => sym("gm_Mode_Event_States"),
                 m => panic!("game mode {m:#x}'s states"),
             };
             states + 0x18 * u32::from(state) + 0xC
@@ -220,6 +221,7 @@ impl<'a> Comparer<'a> {
         self.options();
         self.toys();
         self.data_menus();
+        self.event_list();
         self.sound_test();
         self.attract();
         self.select_screens();

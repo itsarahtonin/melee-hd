@@ -1980,11 +1980,11 @@ impl Running<'_> {
         }
     }
 
-    /// Computer kind 16's jump at its target, `ftCo_800B7638` (Multi-Man's Wire Frames): in
-    /// the air only with a jump left while not rising; at a target not below it, 1 at one in
-    /// the air steeply above in clear view, 2 at one on the ground 30 to 40 away nearly level.
-    // Ports ftCo_800B7638; aliased once a check reaches it (100-Man Melee's table has kind 16
-    // from its 70th entry).
+    /// Computer kind 16's jump at its target, `ftCo_800B7638` (Event Match's and Multi-Man's
+    /// Wire Frames): in the air only with a jump left while not rising; at a target not below
+    /// it, 1 at one in the air steeply above in clear view, 2 at one on the ground 30 to 40
+    /// away nearly level.
+    #[doc(alias = "ftCo_800B7638")]
     fn cpu_jump_attack_16(&mut self, f: FighterId) -> i32 {
         let fpp = &self.game.fighters[f.0];
         let Some(t) = fpp.cpu.x44 else { return 0 };

@@ -32,7 +32,7 @@ impl Ctx<'_> {
         } else {
             self.hsd.state.set_z_mode(self.gx, false, GX_NEVER, false);
         }
-        let view = self.hsd.view_mtx();
+        let view = d.view.unwrap_or_else(|| self.hsd.view_mtx());
         let gx = &mut *self.gx;
         gx.set_current_mtx(0);
         gx.load_pos_mtx_imm(&view.m, 0);

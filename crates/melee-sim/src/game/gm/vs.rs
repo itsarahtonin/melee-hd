@@ -938,10 +938,12 @@ impl Running<'_> {
         if mode == super::GM_TARGET_TEST {
             self.target_test_score();
         }
-        assert!(
-            !(mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41),
-            "event rumble (gm_80167858) isn't ported"
-        );
+        // An event cleared with a new best: the first player's rumble.
+        if mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41 {
+            let port = self.game.player_port(0) as usize;
+            let tag = self.game.player_nametag(0);
+            self.tou_rumble(port, tag, 0xD, 0x5A);
+        }
         if (super::GM_10MAN_VS..=super::GM_CRUEL_VS).contains(&mode) {
             code::call(self, addr::FN_80182B5C, &[]);
         }

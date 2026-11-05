@@ -126,7 +126,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015DA40")]
     #[doc(alias = "gmMainLib_8015DA68")]
     #[doc(alias = "gmMainLib_8015DA90")]
-    pub(super) fn give_record_trophy(&mut self, n: i32) -> bool {
+    pub(crate) fn give_record_trophy(&mut self, n: i32) -> bool {
         let n = n as u32;
         if bit(&self.game.game_data.thing.save_data.x1B58, &[], n) {
             return false;

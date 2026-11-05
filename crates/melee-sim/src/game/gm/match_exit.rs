@@ -60,6 +60,7 @@ impl Game {
                 &mut self.vs_melee.sd_exit
             }
             (GM_OPENING_MV, _) => &mut self.attract.exit,
+            (super::event::GM_EVENT, _) if scene == Some(GS_VS) => &mut self.event.exit,
             (super::GM_DEBUG, _) if scene == Some(GS_VS) => &mut self.debug_mode.vs_exit,
             (super::one_player::GM_TARGET_TEST, _) if scene == Some(GS_VS) => {
                 &mut self.one_player.target_exit

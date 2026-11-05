@@ -943,7 +943,12 @@ impl Session {
             .iter()
             .any(|f| f.0 == file.entrynum)
         {
-            let id = self.data.add(Archive::raw(&file.bytes));
+            // A song read again after a rollback's restore (`session-sync`) takes the archive
+            // its first read added: the archives are shared, never part of a snapshot.
+            let id = match self.data.find_raw(&file.bytes) {
+                Some(id) => id,
+                None => self.data.add(Archive::raw(&file.bytes)),
+            };
             self.game.audio.devcom.files.push((file.entrynum, id));
         }
     }

@@ -15,6 +15,7 @@ pub mod deflicker;
 pub mod diagram;
 pub mod diagram2;
 pub mod diagram3;
+pub mod event;
 
 pub mod gallery;
 pub mod hyaku;
