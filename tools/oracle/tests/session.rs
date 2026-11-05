@@ -2386,13 +2386,14 @@ fn single_player_setups() {
 /// All-Star (milestone 6's task 23): its intro (`gm_186E.c`) from the debug mode's AllStar
 /// Enemy, `m6-allstar/intro-as-ic`, the Ice Climbers (Nana beside Popo at her own place), to
 /// the trace's end; and the run on Very Easy played by a bot from `m6-1p-setups/as-win`'s
-/// first rest area: `as-r2`, a heart taken, the portal, the second match won and the second
-/// rest area.
+/// first rest area: `as-lose5`, a heart taken, the portals, the second to fourth matches won
+/// with their clear screens and rest areas (two hearts more), the fifth (two opponents) lost,
+/// the game over's continue and the fifth match again, to the trace's end.
 #[test]
 fn all_star() {
     for (name, want) in [
         ("intro-as-ic", "3593 ticks compared, no difference"),
-        ("as-r2", "11922 ticks compared, no difference"),
+        ("as-lose5", "22897 ticks compared, no difference"),
     ] {
         let Some(out) = scripted_session("m6-allstar", name, &["--all", "--heap"]) else {
             return;
