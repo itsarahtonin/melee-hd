@@ -1536,14 +1536,24 @@ impl crate::game::state::Running<'_> {
     /// [`lb_load_match_banks`](Self::lb_load_match_banks)'s choice: the stage's send, and the
     /// banks wanted (lbAudioAx_80026F2C and lbAudioAx_8002702C). Whether any are.
     pub fn lb_choose_match_banks(&mut self) -> bool {
-        assert!(
-            !self.game.vs_is_singleplayer(),
-            "the single-player modes' banks (gm_80169370) aren't ported"
-        );
         let mut result = 0u64;
-        for i in 0..4 {
-            if self.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE {
-                result |= character_banks(self.game.player_ckind(i));
+        if self.game.vs_is_singleplayer() {
+            // The human's and the joining opponents' setup's three characters
+            // (`gm_80169370`), Kirby's copies' with Kirby's.
+            result = character_banks(self.game.player_ckind(0));
+            for k in (0..3).map(|i| self.game.gm.opponents.kind(i)) {
+                if k != 0x21 {
+                    result |= character_banks(i32::from(k));
+                    if k == 4 {
+                        result |= 0x2_0000_4000;
+                    }
+                }
+            }
+        } else {
+            for i in 0..4 {
+                if self.game.player_pkind(i) != crate::game::pl::player::PKIND_NONE {
+                    result |= character_banks(self.game.player_ckind(i));
+                }
             }
         }
         let stkind = crate::game::gr::stage::stkind(self.game);

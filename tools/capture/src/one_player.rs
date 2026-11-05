@@ -30,6 +30,8 @@ const CLASSIC_ORDER: u32 = 0x8049_08A0;
 const ADVENTURE_X910: u32 = 0x8049_0910;
 const ALLSTAR_X940: u32 = 0x8049_0940;
 const ALLSTAR_OPPONENTS: u32 = 0x803D_EBE8;
+const ALLY_POOL: u32 = 0x803D_79F0;
+const ADVENTURE_INTRO: u32 = 0x804D_68E0;
 /// `gmClassic_803DDEC8`, its stage list's entries 16 bytes each (`xC` the matchup), and the
 /// bonus stages' matchups.
 const CLASSIC_TABLES: u32 = 0x803D_DEC8;
@@ -213,10 +215,19 @@ impl Comparer<'_> {
             ("gm_804908A0", CLASSIC_ORDER, &o.classic_order[..]),
             ("gm_80490910", ADVENTURE_X910, &o.adventure_x910[..]),
             ("gm_80490940", ALLSTAR_X940, &o.allstar_x940[..]),
+            ("lbl_803D79F0", ALLY_POOL, &o.ally_pool[..]),
         ] {
             let theirs: Vec<u8> = (0..ours.len() as u32).map(|i| self.u8(at + i)).collect();
             self.check(name, "bytes", ours.to_vec(), theirs);
         }
+        let ai = &o.adventure_intro;
+        let ours = (ai.slot, ai.stage, ai.stkind);
+        let theirs = (
+            self.u8(ADVENTURE_INTRO),
+            self.u8(ADVENTURE_INTRO + 1),
+            self.u16(ADVENTURE_INTRO + 2),
+        );
+        self.check("gm_804D68E0", "the intro's enter data", ours, theirs);
         let ours: Vec<u8> = o.allstar_opponents.iter().flatten().copied().collect();
         let theirs: Vec<u8> = (0..100).map(|i| self.u8(ALLSTAR_OPPONENTS + i)).collect();
         self.check("gm_803DEBE8", "the opponents", ours, theirs);

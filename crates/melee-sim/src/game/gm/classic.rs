@@ -4,7 +4,7 @@
 
 use super::super::handles::CodeRef;
 use super::super::state::Running;
-use super::one_player::{CLASSIC_STAGES, Unk1PData, matchup};
+use super::one_player::{CLASSIC_STAGES, Opponent, Unk1PData, matchup};
 
 /// `ChKind_None`, `CKind_Zelda`, `CKind_Seak`, `CKind_Kirby`.
 const NONE: i8 = 0x21;
@@ -615,7 +615,8 @@ fn level(stage: u8, difficulty: u8) -> &'static Level {
 #[doc(alias = "gm_8017EB98")]
 #[doc(alias = "gm_8017EBCC")]
 #[doc(alias = "gm_8017ECA0")]
-// Ports gm_8017ECD4 and gm_8017ED08 (the allies'); aliased once a check reaches them.
+#[doc(alias = "gm_8017ECD4")]
+#[doc(alias = "gm_8017ED08")]
 pub fn getter(getter: CodeRef, stage: u8, difficulty: u8, i: u8) -> Option<u8> {
     let e = level(stage, difficulty);
     let i = usize::from(i) * 3;
@@ -636,7 +637,8 @@ pub fn getter(getter: CodeRef, stage: u8, difficulty: u8, i: u8) -> Option<u8> {
 /// `gm_8017EC50`); `None` for another getter.
 #[doc(alias = "gm_8017ED3C")]
 #[doc(alias = "gm_8017ED8C")]
-// Ports gm_8017EC00 and gm_8017EC50 (the allies'); aliased once a check reaches them.
+#[doc(alias = "gm_8017EC00")]
+#[doc(alias = "gm_8017EC50")]
 pub fn ratio_percent(getter: CodeRef, stage: u8, difficulty: u8) -> Option<u16> {
     let e = level(stage, difficulty);
     Some(match getter.0 {
@@ -683,13 +685,72 @@ pub mod intro_data {
 }
 
 impl Running<'_> {
+    /// An ally's character, `fn_8017D9C0`: the pool (`lbl_803D79F0`, ended by none) shuffled
+    /// in place, one `HSD_Randi` a place, then the first unlocked character in it that is
+    /// neither among `used` (the player and the allies drawn) nor among the stage's
+    /// opponents; none if every one is.
+    #[doc(alias = "fn_8017D9C0")]
+    fn draw_ally(&mut self, used: &[u8; 4], opponents: &[i8; 3]) -> u8 {
+        let mut pool = self.game.one_player.ally_pool;
+        let count = pool
+            .iter()
+            .position(|&c| c == NONE as u8)
+            .unwrap_or(pool.len());
+        for j in 0..count {
+            let k = self.game.objs.rng.below(count as i32) as usize;
+            pool.swap(j, k);
+        }
+        self.game.one_player.ally_pool = pool;
+        pool[..count]
+            .iter()
+            .copied()
+            .find(|&c| {
+                self.game.gm.unlocks.ckind_unlocked(c)
+                    && !used.iter().any(|&u| u as i8 == c as i8)
+                    && !opponents.contains(&(c as i8))
+            })
+            .unwrap_or(NONE as u8)
+    }
+
     /// The allies of a stage with them, `gm_8017DB88`: `count` of them (`fn_8017DE54`) into
-    /// the run's (`x24`), each a character drawn at random, the rest none.
+    /// the run's (`x24`), each a character drawn (`fn_8017D9C0`) apart from the player
+    /// (`player`, Sheik for a Zelda who changed) and those drawn before, with its costume,
+    /// level, computer kind and ratios from the run's getters (`x60`, `x58`, `x5C`, `x6C`,
+    /// `x70`) for the round and the player's level; the rest none.
     #[doc(alias = "gm_8017DB88")]
-    fn classic_allies(&mut self, run: &mut Unk1PData, flags: u8, chars: &[i8; 3]) {
+    fn classic_allies(
+        &mut self,
+        run: &mut Unk1PData,
+        flags: u8,
+        chars: &[i8; 3],
+        round: u8,
+        player: u8,
+    ) {
         let count = ally_count(flags, chars);
-        if count != 0 {
-            crate::game::code::unported_call("Classic's allies drawn (fn_8017D9C0)");
+        let mut used = [NONE as u8; 4];
+        used[0] = player;
+        let level = run.player.cpu_level;
+        let g = run.getters;
+        let get = |i: usize, k: u8| match g[i] {
+            Some(_) => Self::one_player_getter(g[i], round, level, k),
+            None => 0,
+        };
+        let ratio = |i: usize| match g[i] {
+            Some(_) => Self::one_player_ratio(g[i], round, level),
+            None => 0.0,
+        };
+        for i in 0..count {
+            let c = self.draw_ally(&used, chars);
+            used[i + 1] = c;
+            let k = i as u8;
+            run.opponents[i] = Opponent {
+                ckind: c as i8,
+                color: get(6, k),
+                cpu_level: get(4, k),
+                cpu_kind: get(5, k),
+                attack_ratio: ratio(9),
+                defense_ratio: ratio(10),
+            };
         }
         for a in run.opponents.iter_mut().skip(count) {
             a.ckind = NONE;
@@ -776,7 +837,7 @@ impl Running<'_> {
             ckind as u8
         };
         sd[d::ALLY_COLORS] = run.player.color;
-        self.classic_allies(&mut run, entry.x1, &chars);
+        self.classic_allies(&mut run, entry.x1, &chars, round as u8, sd[d::ALLY_KINDS]);
         let mut allies = 1;
         for i in 1..3 {
             sd[d::ALLY_KINDS + i] = run.opponents[i - 1].ckind as u8;
