@@ -86,15 +86,21 @@ impl Mirror for ActionTree {
     }
 
     /// By its offset in the main buffer where it's there: another copy of its archive (a
-    /// buffer of a scene gone, the other climber's) can hold the same bytes.
+    /// buffer of a scene gone, the other climber's) can hold the same bytes. A fighter made
+    /// over a freed one's block keeps the freed one's figatree until its first animation
+    /// loads, a pointer into the freed one's main buffer, which the buffers' pool may give
+    /// back as the new fighter's second (`x5A0`, four words on): by its offset there too.
+    /// Until then only whether it's set is read (`ftData_80085B10` clears `x5A4`, so the first
+    /// animation always loads and writes it).
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let theirs = m.u32(at);
-        let buf = m.u32(at + 0xC);
-        if let Some(t) = self.0
-            && buf != 0
-            && theirs.wrapping_sub(buf) == t.offset.wrapping_add(ARCHIVE_HEADER)
-        {
-            return;
+        if let Some(t) = self.0 {
+            let off = t.offset.wrapping_add(ARCHIVE_HEADER);
+            for buf in [m.u32(at + 0xC), m.u32(at + 0x10)] {
+                if buf != 0 && theirs.wrapping_sub(buf) == off {
+                    return;
+                }
+            }
         }
         cx.compare_data(path, self.0, theirs);
     }
