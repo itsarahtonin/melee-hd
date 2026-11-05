@@ -279,13 +279,13 @@ fn rec_adventure(frame: u32, same: [usize; 2]) {
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn rec_adventure_4100() {
-    rec_adventure(4100, [0, 0]);
+    rec_adventure(4100, [2368, 2364]);
 }
 
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn rec_adventure_6000() {
-    rec_adventure(6000, [0, 0]);
+    rec_adventure(6000, [2162, 2162]);
 }
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
