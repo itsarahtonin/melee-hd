@@ -1612,7 +1612,14 @@ impl Comparer<'_> {
             let mut e = self.u32(table + 4 * b);
             while e != 0 {
                 let (key, value) = (self.u32(e + 4), self.u32(e + 8));
-                if let Some(k) = self.data.get(key) {
+                // A key in a file the original's scene freed while the table still holds it,
+                // where ours holds the same key.
+                let gone = || {
+                    self.past
+                        .and_then(|p| p.gone_ref(key))
+                        .filter(|&k| self.game.objs.ids.get(k).is_some())
+                };
+                if let Some(k) = self.data.get(key).or_else(gone) {
                     theirs += 1;
                     let ours = self.game.objs.ids.get(k);
                     // An entry another key held for a joint since freed names its address

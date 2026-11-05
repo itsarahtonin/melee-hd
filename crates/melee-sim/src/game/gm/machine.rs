@@ -988,7 +988,8 @@ impl Running<'_> {
             || s.scene == super::endings::GS_STAFFROLL
             || s.scene == super::endings::GS_MOVIE_END
             || crate::game::vi::scene_handlers(s.scene).is_some()
-            || super::intro::is_intro(s.scene);
+            || super::intro::is_intro(s.scene)
+            || super::intro_allstar::is_scene(s.scene);
     }
 
     /// The players whose files the scene about to enter loads, and whether it's a match (else
@@ -1144,6 +1145,10 @@ impl Running<'_> {
             super::intro::GS_INTRO_NORMAL => {
                 (super::intro::NORMAL_ON_ENTER, super::intro::NORMAL_ON_FRAME)
             }
+            super::intro_allstar::GS_INTRO_ALLSTAR => (
+                super::intro_allstar::ON_ENTER,
+                super::intro_allstar::ON_FRAME,
+            ),
             k if crate::game::vi::scene_handlers(k).is_some() => {
                 crate::game::vi::scene_handlers(k).unwrap()
             }
@@ -1190,6 +1195,7 @@ impl Running<'_> {
             super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
             super::intro::EASY_ON_ENTER => self.intro_easy_on_enter(),
             super::intro::NORMAL_ON_ENTER => self.intro_normal_on_enter(),
+            super::intro_allstar::ON_ENTER => self.intro_allstar_on_enter(),
             _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -1278,6 +1284,8 @@ impl Running<'_> {
             // Classic's intro has no exit of its own.
             super::intro::GS_INTRO_EASY => {}
             super::intro::GS_INTRO_NORMAL => self.intro_normal_on_leave(),
+            // All-Star's intro has no exit of its own.
+            super::intro_allstar::GS_INTRO_ALLSTAR => {}
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),

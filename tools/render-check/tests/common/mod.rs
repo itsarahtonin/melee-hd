@@ -89,6 +89,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6e2-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings-2/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6a-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-allstar/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6i-") {
                     return ssbm_rs_local(&format!("lockstep/m6-intros/{o}.inputs")).into();
                 }
@@ -1301,6 +1304,23 @@ pub const M6I_ADVENTURE2: Game = Game {
     name: "m6i-adventure2",
     players: "Adventure's first stage's intro (session m6-oracle/adventure2)",
     replay: Replay::Session("m6i-adventure2"),
+};
+
+/// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
+pub const O6_INTRO_ALLSTAR: Game = Game {
+    stage: "All-Star's intro",
+    name: "o6-intro-allstar",
+    players: "All-Star's intro, Captain Falcon (session m6-oracle/intro-allstar)",
+    replay: Replay::Session("o6-intro-allstar"),
+};
+
+/// All-Star's intro from the debug mode (`m6-allstar/intro-as-ic`): the Ice Climbers asleep,
+/// Nana beside Popo.
+pub const M6A_INTRO_AS_IC: Game = Game {
+    stage: "All-Star's intro",
+    name: "m6a-intro-as-ic",
+    players: "All-Star's intro, the Ice Climbers (session m6-allstar/intro-as-ic)",
+    replay: Replay::Session("m6a-intro-as-ic"),
 };
 
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.

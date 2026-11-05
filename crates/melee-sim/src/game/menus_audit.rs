@@ -386,6 +386,10 @@ pub const STOPS: &[(&str, &str)] = &[
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
+        "All-Star's intro's place of character",
+        "the debug menu's AllStar Enemy past its 28th choice (the Female Wire Frame on), whose intro reads past its place table: debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
         "the debug menu entry callback",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),

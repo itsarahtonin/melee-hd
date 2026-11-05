@@ -1985,8 +1985,8 @@ fn master_hand_in_debug_vs() {
 /// Milestone 6's task 5's debug-level sessions (docs/oracle.md, the single-player endings),
 /// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
 /// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy`
-/// (Classic's intro, to the trace's end) and `intro-allstar` (to All-Star's intro, task 23's)
-/// and `ending-test` (the RegularEnding Test's debug game over mode: the trophy fall,
+/// (Classic's intro, to the trace's end), `intro-allstar` (All-Star's intro with Captain
+/// Falcon, to the trace's end) and `ending-test` (the RegularEnding Test's debug game over mode: the trophy fall,
 /// congratulations idle to the trace's end); task 5's `m6-endings/gameover2` (the game over
 /// twice: a continue paid in coins, then "no"), and `m6-endings-2`'s `regend-adv` (Zelda's
 /// Adventure ending whole, congratulations' A and the exit's unlocks to a challenger),
@@ -2010,7 +2010,7 @@ fn the_debug_endings() {
         (
             "m6-oracle",
             "intro-allstar",
-            "1332 ticks compared, no difference; stopped in tick 1332: game scene 0x21 isn't ported",
+            "3265 ticks compared, no difference",
         ),
         (
             "m6-oracle",
@@ -2380,6 +2380,29 @@ fn single_player_setups() {
     if let Some(out) = scripted_session("m6-1p-setups", "as-over", &["--all", "--heap"]) {
         assert!(out.contains("4532 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// All-Star (milestone 6's task 23): its intro (`gm_186E.c`) from the debug mode's AllStar
+/// Enemy, `m6-allstar/intro-as-ic`, the Ice Climbers (Nana beside Popo at her own place), to
+/// the trace's end; and the run on Very Easy played by a bot from `m6-1p-setups/as-win`'s
+/// first rest area: `as-r2`, a heart taken, the portal, the second match won and the second
+/// rest area.
+#[test]
+fn all_star() {
+    for (name, want) in [
+        ("intro-as-ic", "3593 ticks compared, no difference"),
+        ("as-r2", "11922 ticks compared, no difference"),
+    ] {
+        let Some(out) = scripted_session("m6-allstar", name, &["--all", "--heap"]) else {
+            return;
+        };
+        assert!(
+            out.contains(want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
     }
 }
 
