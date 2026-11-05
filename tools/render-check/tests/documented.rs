@@ -19,11 +19,11 @@ use common::{
     CORNERIA, Capture, DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
     DATA_INFO, DATA_PRIZE, DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB,
     DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS,
-    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE,
-    FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
-    FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY,
-    GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, EV12, EV43, EV47,
+    Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
+    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK,
+    GREAT_BAY, GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
     METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
@@ -1510,6 +1510,44 @@ fn tt_targets_1500() {
         },
         Capture::Rendered,
     );
+}
+// Event Match (milestone 6's task 21): the Event list's first page and Event 12's one-door
+// select (ev12 720, 1090), the list's last page on Event 43 (ev43 1050), and two matches:
+// Event 43 on Big Blue (ev43 1750) and Trophy Tussle 3 on the third trophy stage (ev47
+// 2100). In the matches the fighters' shadows sample textures copied the frame before the
+// log, so their references are captured with ssbm-rs's renderer running: the images are
+// identical, and the draws that differ only sample the shadows.
+frames!(EV12;
+    ev12_720 720,
+    ev12_1090 1090,
+);
+frames!(EV43;
+    ev43_1050 1050,
+);
+
+fn event_match(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ev43_1750() {
+    event_match(&EV43, 1750, [2784, 2784]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ev47_2100() {
+    event_match(&EV47, 2100, [1747, 1744]);
 }
 frames!(TT_DK_QUIT;
     tt_dk_quit_1300 1300,
