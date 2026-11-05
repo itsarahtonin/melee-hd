@@ -85,7 +85,7 @@ mod cmd {
 
 impl Running<'_> {
     /// Whether the fighter's target hangs from (1) or holds (2) a ledge, `ftCo_800A3200`.
-    // Ports `ftCo_800A3200`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A3200")]
     pub(super) fn cpu_on_ledge(&self, f: FighterId) -> i32 {
         match self.game.fighters[f.0].motion_id {
             // `ftCo_MS_CliffCatch`, `ftCo_MS_CliffWait`.
@@ -96,7 +96,7 @@ impl Running<'_> {
     }
 
     /// Whether the fighter lies on the ground face up (1) or down (2), `ftCo_800A3134`.
-    // Ports `ftCo_800A3134`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A3134")]
     pub(super) fn cpu_lying(&self, f: FighterId) -> i32 {
         match self.game.fighters[f.0].motion_id {
             191 | 183 => 1,
@@ -442,7 +442,7 @@ impl Running<'_> {
 
     /// Whether the fighter's skill keeps it from attacking now, `ftCo_800B885C`: below level
     /// 5, for a stretch of each period of its script count, longer the lower its level.
-    // Ports `ftCo_800B885C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B885C")]
     fn cpu_holds_back(&self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         let (period, limit) = match c.level {
@@ -565,7 +565,7 @@ impl Running<'_> {
     /// Whether the fighter attacks in the air now, `ftCo_800B89CC`: always against a target
     /// on a ledge; else if it may (`xF9_b4`), at level 4 and up (Bowser only over ground),
     /// not past Kongo Jungle's middle.
-    // Ports `ftCo_800B89CC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B89CC")]
     fn cpu_air_attack_ok(&self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         // Gr_Kind_Kongo.
@@ -1128,7 +1128,7 @@ impl Running<'_> {
     }
 
     /// The pause before an attack by level and a random draw (`ftCo_800B63D8`).
-    // Ports `ftCo_800B63D8`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B63D8")]
     fn cpu_attack_delay(&mut self, f: FighterId) {
         let r = reg(self.game.objs.rng.draw_f32());
         let (scale, add) = match self.game.fighters[f.0].cpu.level {
@@ -2031,7 +2031,7 @@ impl Running<'_> {
     /// Popo, Fox and Captain Falcon above level 4 and Mario below 5 sometimes run their own
     /// throw scripts first. Holding, it pummels (Bowser's koopa klaw bites), more rarely
     /// each time, else near an end throws off it, else throws a random way.
-    // Ports `ftCo_800B683C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B683C")]
     pub(super) fn cpu_hold(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
         let Some(victim) = self.game.fighters[f.0].victim_gobj else {
