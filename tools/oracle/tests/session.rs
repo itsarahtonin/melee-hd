@@ -2037,7 +2037,22 @@ fn the_debug_endings() {
         (
             "m6-endings-2",
             "regend-real",
-            "2029 ticks compared, no difference; stopped in tick 2029: game scene 0x2b isn't ported",
+            "2945 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "staffroll-play",
+            "3746 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "regend-movie",
+            "4067 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "regend-zelda-as",
+            "3498 ticks compared, no difference",
         ),
     ] {
         let Some(out) = scripted_session(dir, name, &["--all", "--heap"]) else {

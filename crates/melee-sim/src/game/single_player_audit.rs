@@ -963,8 +963,6 @@ pub const MISSING: &[Gap] = &[
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
-            "lbAudioAx_80028B6C",
-            "lbAudioAx_80028B90",
             "fn_8016C46C's single-player results",
         ],
         modes: SETUP_MODES,
@@ -1150,12 +1148,9 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs' coming soon, the staff roll, the ending movie and the game over modes' Adventure and All-Star loads",
+        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
         covers: &[
-            "melee/gm/gmgover",
             "melee/gm/gm_19EF",
-            "melee/gm/gmmovieend",
-            "melee/gm/gmstaffroll",
             "gm_Mode_AdventureGOver_OnLoad",
             "gm_Mode_AllstarGOver_OnLoad",
         ],
