@@ -206,7 +206,7 @@ impl Running<'_> {
 
     /// Whether two fighters are on the same side, `ftCo_IsAlly`: the same player, else the
     /// same team in a team match or outside free-for-all.
-    // Ports `ftCo_IsAlly`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_IsAlly")]
     pub(super) fn cpu_is_ally(&self, a: FighterId, b: FighterId) -> bool {
         let (fa, fb) = (&self.game.fighters[a.0], &self.game.fighters[b.0]);
         if fa.player_idx == fb.player_idx {
@@ -224,7 +224,7 @@ impl Running<'_> {
     /// Whether a fighter can't be targeted, `ftCo_800A1C44`: it's out of the match
     /// (`x2219_b1`), held up (`x2164`), entering without its ride (`x2168` with no
     /// `x2338.x`) or asleep.
-    // Ports `ftCo_800A1C44`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A1C44")]
     pub(super) fn cpu_untargetable(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];
         fp.x2219_b1 || fp.x2164 != 0 || (fp.x2168 != 0 && fp.x2338.x == 0) || fp.is_sleeping
@@ -261,7 +261,7 @@ impl Running<'_> {
     }
 
     /// The distance between two fighters, `ftCo_800A1AB4`.
-    // Ports `ftCo_800A1AB4`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A1AB4")]
     pub(super) fn cpu_distance(&self, a: FighterId, b: FighterId) -> f64 {
         let (pa, pb) = (
             self.game.fighters[a.0].cur_pos,
@@ -311,7 +311,7 @@ impl Running<'_> {
     /// The fighter's target, `ftCo_800A4BEC`: its last one while that one lasts (`xF9_b0`),
     /// else the nearest enemy in reach that isn't out of the match, invisible or dead; a new
     /// target gets a fresh timer.
-    // Ports `ftCo_800A4BEC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A4BEC")]
     pub(super) fn cpu_find_target(&mut self, f: FighterId) -> Option<FighterId> {
         self.cpu_find_target_lr(f).0
     }
@@ -379,7 +379,7 @@ impl Running<'_> {
     }
 
     /// Whether an item heals, `ftCo_800A5908`: a heart, a tomato or food.
-    // Ports `ftCo_800A5908`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A5908")]
     pub(super) fn cpu_item_heals(&self, item: ItemId) -> bool {
         // `It_Kind_Heart`, `_Tomato`, `_Foods`.
         matches!(self.game.items[item.0].kind, 8 | 9 | 0x12)
@@ -548,7 +548,7 @@ impl Running<'_> {
     ///
     /// The original never sets the DI switch's flag in the case it means to take it, using
     /// what r31 held in its caller; `di_switch` is that register's truth.
-    // Ports `ftCo_800ADE48`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800ADE48")]
     pub(super) fn cpu_choose_behavior(&mut self, f: FighterId, di_switch: bool) -> bool {
         self.cpu_choose_behavior_r5(f, di_switch, None).0
     }
@@ -795,7 +795,7 @@ impl Running<'_> {
 
     /// Sets the fighter's destination and how near it must get, unless a destination timer
     /// runs (`ftCo_800A1F3C`), then lets the stage move it (`ftCo_800A1CC4`).
-    // Ports `ftCo_800A1F3C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A1F3C")]
     pub(super) fn cpu_set_destination(&mut self, f: FighterId, x: f32, y: f32, reach: f32) {
         let c = &mut self.game.fighters[f.0].cpu;
         if c.x60 == 0 {
@@ -1137,7 +1137,7 @@ impl Running<'_> {
     /// over a floor computer players don't count; in the air falling steeply (not past
     /// Peach's Castle's and Fourside's floors), outside its stage's reach, with neither a
     /// floor nor a wall in reach along its fall.
-    // Ports `ftCo_800A2C80`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A2C80")]
     fn cpu_falling_away(&mut self, f: FighterId) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.cpu.xFA_b6 {
@@ -1206,7 +1206,7 @@ impl Running<'_> {
 
     /// Whether the fighter shields now, `ftCo_800A5ACC`: if it may (`xF9_b6`), more often the
     /// higher its level.
-    // Ports `ftCo_800A5ACC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A5ACC")]
     fn cpu_shield_chance(&self, f: FighterId) -> bool {
         let c = &self.game.fighters[f.0].cpu;
         if !c.xF9_b6 {
@@ -1265,7 +1265,7 @@ impl Running<'_> {
     /// Whether the fighter has reached its destination, `ftCo_800A3554`: on the ground on
     /// the destination's island, within its reach (`x38`) plus `margin`. A destination timer
     /// still running then moves it to the next destination instead.
-    // Ports `ftCo_800A3554`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A3554")]
     pub(super) fn cpu_at_destination(&mut self, f: FighterId, margin: f32) -> bool {
         let fpp = &self.game.fighters[f.0];
         if fpp.ground_or_air == GA_AIR {
