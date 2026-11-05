@@ -1118,7 +1118,7 @@ impl Running<'_> {
 
     /// Kongo Jungle's first match, `gm_801B4768`: the stage's match (`gm_801B4064`) with the
     /// computers at half their size.
-    #[doc(alias = "gm_801B4768")]
+    // Ports gm_801B4768; aliased once a check reaches it (its match stops at its first tick).
     pub fn adventure_enter_tiny(&mut self) {
         self.adventure_enter_vs();
         for p in &mut self.game.one_player.match_start.players[1..4] {
