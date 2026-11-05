@@ -57,12 +57,7 @@ pub const GATES: &[Gate] = &[
         entry: 2,
         what: "Multi-Man Melee",
         // Ported but for what no session reaches yet (game::single_player_audit's gaps).
-        covers: &[
-            "melee/ft/kinds/ftZakoBoy/ftboy",
-            "melee/ft/kinds/ftZakoGirl/ftgirl",
-            "gm_80173460",
-            "gm_80173498",
-        ],
+        covers: &["gm_80173498"],
     },
 ];
 

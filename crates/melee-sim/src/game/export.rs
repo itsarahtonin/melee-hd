@@ -640,11 +640,8 @@ pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::Grou
         0x10,
         msb_bits(&[f.b0, f.b1, f.b2, f.b3, f.b4, f.b5, f.b6, f.b7]),
     );
-    let f = &o.x11_flags;
-    l.u8(
-        0x11,
-        (f.b012 & 7) << 5 | msb_bits(&[false, false, false, f.b3, f.b4, f.b5, f.b6, f.b7]),
-    );
+    // The pass alone: the byte's other bits are unused (`tools/structgen`), unknown.
+    l.put_bits(at + 0x11, 0, 3, u32::from(o.x11_flags.b012 & 7));
     l.u32(0x14, o.map_id as u32);
     l.u32(0x18, ga(o.x18));
     l.u32(0x1C, code(o.x1C_callback));

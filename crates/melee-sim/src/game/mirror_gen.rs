@@ -9366,11 +9366,6 @@ impl Mirror for Ground_x11_flags {
         let _ = (&m, at, &cx);
         Ground_x11_flags {
             b012: m.bits(at, 0, 3) as u8,
-            b3: m.bits(at, 3, 1) != 0,
-            b4: m.bits(at, 4, 1) != 0,
-            b5: m.bits(at, 5, 1) != 0,
-            b6: m.bits(at, 6, 1) != 0,
-            b7: m.bits(at, 7, 1) != 0,
         }
     }
 
@@ -9381,41 +9376,6 @@ impl Mirror for Ground_x11_flags {
                 &format!("{path}.b012"),
                 format!("{:?}", self.b012),
                 format!("{:?}", m.bits(at, 0, 3)),
-            );
-        }
-        if (self.b3 as u32) != m.bits(at, 3, 1) {
-            cx.mismatch(
-                &format!("{path}.b3"),
-                format!("{:?}", self.b3),
-                format!("{:?}", m.bits(at, 3, 1)),
-            );
-        }
-        if (self.b4 as u32) != m.bits(at, 4, 1) {
-            cx.mismatch(
-                &format!("{path}.b4"),
-                format!("{:?}", self.b4),
-                format!("{:?}", m.bits(at, 4, 1)),
-            );
-        }
-        if (self.b5 as u32) != m.bits(at, 5, 1) {
-            cx.mismatch(
-                &format!("{path}.b5"),
-                format!("{:?}", self.b5),
-                format!("{:?}", m.bits(at, 5, 1)),
-            );
-        }
-        if (self.b6 as u32) != m.bits(at, 6, 1) {
-            cx.mismatch(
-                &format!("{path}.b6"),
-                format!("{:?}", self.b6),
-                format!("{:?}", m.bits(at, 6, 1)),
-            );
-        }
-        if (self.b7 as u32) != m.bits(at, 7, 1) {
-            cx.mismatch(
-                &format!("{path}.b7"),
-                format!("{:?}", self.b7),
-                format!("{:?}", m.bits(at, 7, 1)),
             );
         }
     }
