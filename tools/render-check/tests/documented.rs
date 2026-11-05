@@ -26,8 +26,8 @@ use common::{
     IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6E2_REGEND_ADV,
-    M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC,
-    MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
+    M6E2_REGEND_GW, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR,
+    METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
     MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
     ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR,
     RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
@@ -179,14 +179,47 @@ frames!(M6E_GAMEOVER;
 );
 // The trophy fall and congratulations (`m6-endings-2/regend-adv`), against captures made with
 // ssbm-rs's renderer running: the second cut (the trophy alone on its stand, 2030), the third
-// (the trophies laid round, 2300) and congratulations' still (2600). The first cut's frames
-// (the fighter's fading copy and the frame's tinted copy, drawn back from the GPU's copies)
-// don't match yet: see docs/player.md.
+// (the trophies laid round, 2300) and congratulations' still (2600).
 rendered_frames!(M6E2_REGEND_ADV;
     m6e2_regend_adv_2030 2030,
     m6e2_regend_adv_2300 2300,
     m6e2_regend_adv_2600 2600,
 );
+// The trophy fall's first cut, against logs started before its first copy (`RenderedSince`):
+// Zelda falling with her fading copy and the frame's tinted copies (`regend-adv` 1850), the
+// tinted copies fading out after her (1950), and Mr. Game & Watch's All-Star fall
+// (`regend-gw` 1500). Every draw is the same but the copy sprite, which samples a copy both
+// renderers keep on the GPU.
+fn toy_fall(game: &Game, frame: u32, first: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::TOY_FALL_COPY,
+        },
+        Capture::RenderedSince(first),
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1850() {
+    toy_fall(&M6E2_REGEND_ADV, 1850, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1950() {
+    toy_fall(&M6E2_REGEND_ADV, 1950, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_gw_1500() {
+    toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
+}
 // The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
 // renderer running: the names flying past with shots fired at rest (1400) and the stick to the
 // right (1600), the roll paused on B (2200), at Start's six times speed with the background
