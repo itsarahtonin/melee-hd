@@ -329,3 +329,35 @@ fn the_computer_kinds_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Event Match's third round (`m6-event-3` and four of `m6-cpu-kinds`, milestone 6's task 21;
+/// docs/oracle.md, "Sessions"): Event 36's series (its later opponents' costumes loaded at the
+/// start, Kirby's copies set up), Event 50's hands, Trophy Tussle 1, and the processes of
+/// Events 9, 21, 37 (its Pokémon list) and 44, each clean from power-on to its trace's end
+/// with `--all --heap` and the card after the original's.
+#[test]
+fn the_third_rounds_events_run_clean_to_their_cards_after() {
+    for (dir, name, ticks) in [
+        ("m6-event-3", "ev36", 4230),
+        ("m6-event-3", "ev50", 4634),
+        ("m6-event-3", "ev14", 4640),
+        ("m6-cpu-kinds", "ck14-ev09", 3711),
+        ("m6-cpu-kinds", "ck03-ev21", 3879),
+        ("m6-cpu-kinds", "ck28-ev37", 4017),
+        ("m6-cpu-kinds", "ck08-ev44", 4065),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in(dir, name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}

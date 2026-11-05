@@ -154,13 +154,16 @@ const COMMON_POKEMON: [i32; 20] = [
 
 /// A Pokémon from `list` by the ball's weights, never the last two, `it_8027A780`: drawn
 /// below their total, the first whose running total passes the draw (Wobbuffet if none
-/// does); from Goldeen's 0.
+/// does); from Goldeen's 0. The list ends at its 30th or `It_PKind_Terminate`.
 #[doc(alias = "it_8027A780")]
 fn draw_from_list(r: &mut Running, ball: GObjId, list: &[i32]) -> i32 {
     let p = r.game.it.pokemon.clone();
     let mut entries = [(0i32, 0i32); 30];
     let (mut n, mut total) = (0usize, 0i32);
     for &kind in list.iter().take(30) {
+        if kind == PKIND_TERMINATE {
+            break;
+        }
         if p.last_kind != kind && p.previous_kind != kind {
             let w = r.data.u32(ball_attr(r, ball, weight_off(kind))) as i32;
             entries[n] = (kind, w);
@@ -198,7 +201,7 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
     let forced = r.game.vs.start.x28;
     if forced != 0 {
         if forced == 1 {
-            code::unported_call("it_8027A9B8 (an event's Pokémon list)");
+            return event_list(r, ball);
         }
         return forced.wrapping_sub(PKIND_START);
     }
@@ -220,6 +223,29 @@ fn choose(r: &mut Running, ball: GObjId) -> i32 {
         kind = POKEMON_ID_TOSAKINTO;
     }
     kind
+}
+
+/// An event's Pokémon, `it_8027A9B8`: a rare one, or one from the event's list (its `x4`,
+/// `gm_801BEC54`; Wobbuffet's kind as it is, not from Goldeen's 0, for an event without).
+#[doc(alias = "it_8027A9B8")]
+#[doc(alias = "gm_801BEC54")]
+fn event_list(r: &mut Running, ball: GObjId) -> i32 {
+    let ev = r.event();
+    let Some(list) = r.event_entry(ev).and_then(|e| e.x4(r)) else {
+        return PKIND_SONANS;
+    };
+    if let Some(k) = rare(r) {
+        return k;
+    }
+    // Read as far as `it_8027A780` reads: to the terminator or the 30th.
+    let mut kinds = [PKIND_TERMINATE; 30];
+    for (i, k) in kinds.iter_mut().enumerate() {
+        *k = r.data.u32(list.at(4 * i as u32)) as i32;
+        if *k == PKIND_TERMINATE {
+            break;
+        }
+    }
+    draw_from_list(r, ball, &kinds)
 }
 
 /// The ball lets its Pokémon out, `it_8027AB64`: one is chosen, made above the ball facing the
