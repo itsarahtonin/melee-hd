@@ -12,6 +12,9 @@ use crate::hsd::jobj;
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0501_Scene_OnEnter`'s and `un_8031D9F8`'s frames.
+const FRAMES: u32 = 0x28 + 0x78;
+
 /// `vi_8031DC80`, `fn_8031DD14`.
 pub const CAMERA_RENDER: u32 = 0x8031_DC80;
 pub const CAMERA_PROC: u32 = 0x8031_DD14;
@@ -43,7 +46,7 @@ impl Running<'_> {
     /// its root's place at its animation's frame 140 times 1/0.7 the stage's old scale.
     #[doc(alias = "un_8031D9F8")]
     fn vi0501_setup(&mut self, ckind: i32, costume: i32, kirby_costume: i32, counts: [u8; 3]) {
-        self.vi_stage(ST_KIND_GREENS, |r| {
+        self.vi_stage(ST_KIND_GREENS, FRAMES, |r| {
             r.game.vi.v0501.scale = super::super::gr::ground::scale(r.game);
             super::super::gr::ground::set_scale(r.game, 0.7);
         });

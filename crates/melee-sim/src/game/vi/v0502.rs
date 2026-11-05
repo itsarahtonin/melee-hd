@@ -10,6 +10,9 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::vec::Vec3;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0502_Scene_OnEnter`'s and `vi0502_8031E124`'s frames.
+const FRAMES: u32 = 0x28 + 0x58;
+
 /// `vi0502_8031E304`, `vi0502_GObj_OnRender`, `vi0502_GObj_OnProc`.
 pub const JOBJ_PROC: u32 = 0x8031_E304;
 pub const CAMERA_RENDER: u32 = 0x8031_E328;
@@ -49,7 +52,7 @@ impl Running<'_> {
     /// 120.
     #[doc(alias = "vi0502_8031E124")]
     fn vi0502_setup(&mut self, ckind: i32, costume: i32, kirby_costume: i32) {
-        self.vi_stage(ST_KIND_GREENS, |r| {
+        self.vi_stage(ST_KIND_GREENS, FRAMES, |r| {
             super::super::gr::ground::set_scale(r.game, 0.7);
         });
         self.fighter_demo_init();

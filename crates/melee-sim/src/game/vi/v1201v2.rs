@@ -15,6 +15,9 @@ use crate::hsd::jobj::{self, JObjId};
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi1201v2_Scene_OnEnter`'s and `un_80320508`'s frames.
+const FRAMES: u32 = 0x38 + 0x28;
+
 /// `un_803204C0`, `un_803204E4`, `un_8032074C`, `un_803208F0`, `un_80320984`, `fn_80320A1C`.
 pub const STAND_PROC: u32 = 0x8032_04C0;
 pub const TROPHY_PROC: u32 = 0x8032_04E4;
@@ -61,7 +64,7 @@ impl Running<'_> {
     /// 26, the character waiting (pose 8), set to face the camera.
     #[doc(alias = "un_80320508")]
     fn vi1201v2_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage_demo(ST_KIND_LAST, 0x1A, |_| {});
+        self.vi_stage_demo(ST_KIND_LAST, 0x1A, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let waits = self.game.vi.v1201v2.waits;

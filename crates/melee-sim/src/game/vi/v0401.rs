@@ -11,6 +11,9 @@ use super::Loaded;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0401_Scene_OnEnter`'s and `un_8031D030`'s frames.
+const FRAMES: u32 = 0x38 + 0x28;
+
 /// `fn_8031D168`, `vi0401_8031D18C`, `vi0401_8031D1B0`, `vi0401_8031D23C`, the scene's
 /// frame function.
 pub const INFO_PROC: u32 = 0x8031_D168;
@@ -44,7 +47,7 @@ impl Running<'_> {
     /// reverb's send.
     #[doc(alias = "un_8031D030")]
     fn vi0401_setup(&mut self, ckind: i32, costume: i32) {
-        self.vi_stage(ST_KIND_ZEBES, |_| {});
+        self.vi_stage(ST_KIND_ZEBES, FRAMES, |_| {});
         self.fighter_demo_init();
         self.game.init_all_players();
         let waits = self.game.vi.v0401.waits;

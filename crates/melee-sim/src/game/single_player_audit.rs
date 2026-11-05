@@ -874,7 +874,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "melee/gm/gmregcommon",
             "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
@@ -991,7 +990,6 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "melee/gm/gmadventure",
             "melee/gm/gm_17E4",
-            "melee/gm/gm_1879",
             "gm_8017CBAC (Adventure's clear)",
         ],
         modes: &[AD, CL],

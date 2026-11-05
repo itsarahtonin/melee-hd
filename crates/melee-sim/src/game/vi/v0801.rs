@@ -8,6 +8,9 @@ use super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0801_Scene_OnEnter`'s frames.
+const FRAMES: u32 = 0x18;
+
 /// `vi0801_8031ED70`, `vi0801_8031EE60`, `vi0801_8031EFE4`.
 pub const CAMERA_RENDER: u32 = 0x8031_ED70;
 pub const JOBJ_PROC: u32 = 0x8031_EE60;
@@ -129,7 +132,7 @@ impl Running<'_> {
         self.game.vi.v0801.scene = Some(scene);
         self.vi_camera(scene, CAMERA_RENDER, 8, CAMERA_PROC);
         self.vi0801_models(scene);
-        self.vi_stage(ST_KIND_BIG_BLUE_ROUTE, |_| {});
+        self.vi_stage(ST_KIND_BIG_BLUE_ROUTE, FRAMES, |_| {});
         let erase = self.vi_fog_with(scene, 0xB);
         self.game.vi.v0801.erase = erase;
         self.vi_lights(scene);

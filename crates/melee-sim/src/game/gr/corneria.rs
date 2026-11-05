@@ -1781,10 +1781,31 @@ pub fn talk_destroyed(r: &mut Running, _gobj: GObjId) {
     r.show_scores();
 }
 
-/// Map 11's process (`grCorneria_801E1060`): the city laid out by a scene's progress, which only
-/// another mode runs (the stage's load hook destroys map 11 before its first tick).
-pub fn proc_map11(_r: &mut Running, _gobj: GObjId) {
-    super::super::code::unported_call("gm_801883C0");
+/// Map 11's process (`grCorneria_801E1060`): the city's three parts (maps 8, 9 and 4) laid out
+/// along x by Adventure's intro's camera's frame (`gm_801883C0`), which only that intro runs
+/// (in a match the stage's load hook destroys map 11 before its first tick). Its sums follow
+/// the machine code's fused multiply-adds, the halves `* 0.5`.
+#[doc(alias = "grCorneria_801E1060")]
+pub fn proc_map11(r: &mut Running, _gobj: GObjId) {
+    let s = |r: &Running| reg(scale(r.game));
+    let (short, long, span, half) = (reg(3200.0), reg(4800.0), reg(2400.0), reg(0.5));
+    let frame = reg(super::super::gm::intro::stage_camera_frame(r.game));
+    let total = fp::fmuls(short, s(r));
+    let sum = fp::fmadds(fp::fmuls(short, s(r)), half, total);
+    let sum = fp::fmadds(fp::fmuls(long, s(r)), half, sum);
+    let mut pos = fp::fmuls(frame, fp::fdivs(sum, span));
+    let set_x = |r: &mut Running, map: i32, x: f64| {
+        if let Some(j) = map_gobj(r.game, map).and_then(|g| jobj_of(r.game, g)) {
+            jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.x = mem(x));
+        }
+    };
+    set_x(r, 8, pos);
+    let first = fp::fmuls(fp::fmuls(short, s(r)), half);
+    pos = fp::fsubs(pos, fp::fmadds(fp::fmuls(short, s(r)), half, first));
+    set_x(r, 9, pos);
+    let first = fp::fmuls(fp::fmuls(long, s(r)), half);
+    pos = fp::fsubs(pos, fp::fmadds(fp::fmuls(short, s(r)), half, first));
+    set_x(r, 4, pos);
 }
 
 /// The guns' hurtbox items' callback for a hit they deal, `fn_801E12D0`: nothing.

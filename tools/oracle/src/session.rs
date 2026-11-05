@@ -525,6 +525,17 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
                     kind_at(a + row)
                 );
             }
+            // Whose the unknown runs are, and the objects melee-sim has (or had) there.
+            for (lo, hi, owner) in img.leftover_unknown(a, n) {
+                println!("  unknown {:#010x}..{:#010x}: {owner}", a + lo, a + hi);
+            }
+            for o in image_objects(game)
+                .iter()
+                .filter(|o| o.1 < a + n && a < o.1 + o.2)
+            {
+                let freed = if o.4 { " (freed)" } else { "" };
+                println!("  {} {} at {:#010x}{freed}", o.0, o.3, o.1);
+            }
         }
     }
     println!("tick {tick}: the heap's image against memory: {counts:?}");

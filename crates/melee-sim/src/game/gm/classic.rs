@@ -618,16 +618,17 @@ fn level(stage: u8, difficulty: u8) -> &'static Level {
 #[doc(alias = "gm_8017ECD4")]
 #[doc(alias = "gm_8017ED08")]
 pub fn getter(getter: CodeRef, stage: u8, difficulty: u8, i: u8) -> Option<u8> {
-    let e = level(stage, difficulty);
+    // Another mode's getter's stage can lie past Classic's table (Adventure's from 11).
+    let e = || level(stage, difficulty);
     let i = usize::from(i) * 3;
     Some(match getter.0 {
-        0x8017_EB3C => e.items,
-        0x8017_EB64 => e.enemies[i],
-        0x8017_EB98 => e.enemies[i + 1],
-        0x8017_EBCC => e.enemies[i + 2],
-        0x8017_ECA0 => e.allies[i],
-        0x8017_ECD4 => e.allies[i + 1],
-        0x8017_ED08 => e.allies[i + 2],
+        0x8017_EB3C => e().items,
+        0x8017_EB64 => e().enemies[i],
+        0x8017_EB98 => e().enemies[i + 1],
+        0x8017_EBCC => e().enemies[i + 2],
+        0x8017_ECA0 => e().allies[i],
+        0x8017_ECD4 => e().allies[i + 1],
+        0x8017_ED08 => e().allies[i + 2],
         _ => return None,
     })
 }
@@ -640,12 +641,12 @@ pub fn getter(getter: CodeRef, stage: u8, difficulty: u8, i: u8) -> Option<u8> {
 #[doc(alias = "gm_8017EC00")]
 #[doc(alias = "gm_8017EC50")]
 pub fn ratio_percent(getter: CodeRef, stage: u8, difficulty: u8) -> Option<u16> {
-    let e = level(stage, difficulty);
+    let e = || level(stage, difficulty);
     Some(match getter.0 {
-        0x8017_ED3C => e.attack,
-        0x8017_ED8C => e.defense,
-        0x8017_EC00 => e.ally_attack,
-        0x8017_EC50 => e.ally_defense,
+        0x8017_ED3C => e().attack,
+        0x8017_ED8C => e().defense,
+        0x8017_EC00 => e().ally_attack,
+        0x8017_EC50 => e().ally_defense,
         _ => return None,
     })
 }

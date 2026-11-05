@@ -2396,8 +2396,11 @@ fn single_player_setups() {
 /// a human's Adventure run: its intro, Mushroom Kingdom's route (the joiners' tally, their
 /// leaving slots, a spawner slot's trophy, Adventure's results), Peach's Castle, Kongo
 /// Jungle's tiny and giant Donkey Kongs, the Underground Maze, Zelda, Brinstar with its
-/// cutscene and escape, the planet's explosion and Green Greens, to the three Kirbys'
-/// cutscene, whose item lies over a Green Greens item's bytes no layout knows.
+/// cutscene and escape, the planet's explosion, Green Greens, the three Kirbys' cutscene
+/// (its stage set up 0x68 deeper than a match's), the team Kirby, the giant Kirby (computer
+/// kind 27), Corneria's intro (the city's parts by its camera's frame) and match, Star Fox's
+/// cutscene and Fox's match, to the next stage's match, whose fighters' common data lies
+/// elsewhere.
 #[test]
 fn single_player_intros() {
     if let Some(out) = session_at(
@@ -2407,7 +2410,7 @@ fn single_player_intros() {
     ) {
         assert!(
             out.contains(
-                "25229 ticks compared, no difference; stopped in tick 25228: unknown leftover bytes of a freed Item under Item: its layout isn't ported"
+                "29342 ticks compared; tick 29341 differs in 16 places, first: p_link 5 #2 ground.color_overlay.script.timer: ours 0x0, theirs 0x1"
             ),
             "{out}"
         );

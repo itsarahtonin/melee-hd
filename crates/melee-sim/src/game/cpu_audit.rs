@@ -160,7 +160,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800B2AFC for computer kind", VS_KINDS),
     ("a register left by ftCo_800B2AFC", HOME_RUN),
     ("ftCo_800B1AB8", OTHER_KINDS),
-    ("ftCo_800B1EF0", OTHER_KINDS),
     ("ftCo_800AEFB8", NANA_ALONE),
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800BA080", NESS_SPAN),

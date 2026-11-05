@@ -503,4 +503,32 @@ impl Running<'_> {
         }
         self.cpu_choose_behavior_r5(f, false, Some(sp)).1
     }
+
+    /// Computer kind 27, `ftCo_800B1EF0` (Adventure's giant Kirby): the VS decision
+    /// ([`Running::cpu_decide_vs`]) with two fear flags fewer, `xF9_b3` and `xF9_b6` clear when
+    /// no enemy enters (its machine code is the VS decision's but for those two bits, its
+    /// frame the same size); then the behavior pick, whose r5 it leaves.
+    #[doc(alias = "ftCo_800B1EF0")]
+    pub(super) fn cpu_decide_unafraid(&mut self, f: FighterId) -> Leftover {
+        let sp = kind_sp(0x48);
+        if let Some(r5) = self.cpu_decide_start(f, sp) {
+            return r5;
+        }
+        self.cpu_fear_flags(f, false, [true, true, false, true, false, true]);
+        let (target, lr) = self.cpu_find_target_lr(f);
+        self.game.fighters[f.0].cpu.x44 = target;
+        self.cpu_item_targets(f);
+        // `ftCo_CpuActOnNoTarget`.
+        if self.cpu_should_act(f) {
+            if self.game.fighters[f.0].cpu.x4C.is_some() {
+                self.cpu_toward_item(f);
+                return self.cpu_choose_behavior_r5(f, true, Some(sp)).1;
+            }
+            let to = self
+                .cpu_best_human_enemy(f)
+                .or(self.game.fighters[f.0].cpu.x44);
+            self.cpu_toward_from(f, to, sp, lr);
+        }
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
+    }
 }

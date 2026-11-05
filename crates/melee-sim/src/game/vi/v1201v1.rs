@@ -11,6 +11,9 @@ use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;
 use crate::vec::Vec3;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi1201v1_Scene_OnEnter`'s frames.
+const FRAMES: u32 = 0x48;
+
 /// `un_8031F990`, `un_8031F9B4`, `fn_8031FAA8`, `fn_8031FB90`, `fn_8031FC30`, `fn_8031FCBC`.
 pub const STAND_PROC: u32 = 0x8031_F990;
 pub const TROPHY_PROC: u32 = 0x8031_F9B4;
@@ -182,7 +185,7 @@ impl Running<'_> {
             let [n] = super::super::gm::pause::tree_nodes(&r.game.objs.jobjs, Some(j), &[3]);
             r.game.vi.v1201v1.anchor = n;
         });
-        self.vi_stage_demo(ST_KIND_LAST, 0x19, |_| {});
+        self.vi_stage_demo(ST_KIND_LAST, 0x19, FRAMES, |_| {});
         let anchor = self.game.vi.v1201v1.anchor;
         self.vi_trophy(trophy, 0.55, anchor, (TROPHY_PROC, 0));
         self.vi_stand(stand, TROPHY_KOOPA, 0.55, anchor, (STAND_PROC, 0));

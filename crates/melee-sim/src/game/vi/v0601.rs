@@ -11,6 +11,9 @@ use crate::hsd::jobj;
 use crate::vec::Vec3;
 use gekko_fp as fp;
 
+/// The stack the stage's setup (`Stage_8022524C`) runs under: `vi0601_Scene_OnEnter`'s frames.
+const FRAMES: u32 = 0x18;
+
 /// `vi_8031E6EC`, `vi0601_GObj_OnRender`, `fn_8031E800`, `vi0601_RunFrame`.
 pub const JOBJ_PROC: u32 = 0x8031_E6EC;
 pub const CAMERA_RENDER: u32 = 0x8031_E710;
@@ -145,7 +148,7 @@ impl Running<'_> {
         );
         self.game.vi.v0601.scene = Some(scene);
         self.vi_camera(scene, CAMERA_RENDER, 2, CAMERA_PROC);
-        self.vi_stage(ST_KIND_CORNERIA, |_| {});
+        self.vi_stage(ST_KIND_CORNERIA, FRAMES, |_| {});
         let k = &self.game.camera.cam.background_color;
         self.game.vi.v0601.erase = [k.r, k.g, k.b, k.a];
         self.vi0601_models(scene);
