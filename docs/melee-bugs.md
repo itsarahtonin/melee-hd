@@ -1128,6 +1128,16 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ## HUD and audio
 
+### The staff roll's sound cues run out of order
+
+- **Where:** `fn_801AB200` (`gmstaffroll.c`) over its sound cues (`gm_803DBFD8_extra.sfx_cues`); `crates/melee-sim/src/game/gm/endings/staff_roll.rs` (`CUES`, `Running::staff_roll_main`).
+- **Defect:** the table is meant to be in tick order, but its 24th cue (tick 2000, sound 500004) comes after the 23rd (tick 2350), and the roll plays only the next cue, once a tick, once its tick has come. So the 2000 cue waits for the 2350 one and plays the tick after it; at Start's six times speed each cue whose tick a tick passed plays one tick after the last.
+- **Effect:** observable: one of the roll's sounds plays at its tick 2351 instead of 2000 (and late under Start's speed).
+- **melee-hd:** modeled: the table and the one-a-tick test as the original's.
+- **Fix:** sort the table, or play every cue that has come each tick.
+- **Fix impact:** presentation (when one sound plays); gameplay none.
+- **Source:** `crates/melee-sim/src/game/gm/endings/staff_roll.rs`; `m6-endings-3/staffroll-play`, `m6-oracle/staffroll`.
+
 ### An announcement tests its first line twice
 
 - **Where:** `ifStatus_802F6EA4` (showing an announcement, kind 8), `crates/melee-sim/src/game/hud/announce.rs` (`announce`).
@@ -2168,6 +2178,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | The Home-Run Contest's labels' camera off a non-perspective game camera | `fn_8021EB10` (grhomerun.c), `game/gr/homerun.rs` (`homerun_text_camera_render`) | Copies the game camera's field of view and aspect with `HSD_CObjGetPerspective`, which writes nothing for a camera of another projection, then sets its own perspective from the two stack floats it never set; the game camera is always a perspective | `crates/melee-sim/src/game/gr/homerun.rs` (`homerun_text_camera_render` stops) |
 | A trophy field past the last | `Toy_803060BC` (toy.c), `game/ty/mod.rs` (`toy_param`), `game/gm/trophies.rs` | Its switch on the field has no default, so a field past 8 returns whatever its caller left in `f1`; every caller passes 0 to 8 (the Bowser cutscenes and the game over 0 to 5 for the stand's placement, the trophy screens 6 to 8) | `crates/melee-sim/src/game/ty/mod.rs` (`toy_param` asserts its fields); ssbm-rs ports the cutscenes' entries (`vi1201v1_Scene_OnEnter`, `vi1201v2_Scene_OnEnter`, `vi1202_Scene_OnEnter`) from their machine code for it |
 | The adventure's Icicle Mountain's fields' ids and indices | `grIceMt_801F686C`, `gr/icemt.rs` (`on_init`, `field_id_at`) | The setup picks the three fields after its list's first two by comparing the list's entries, which are indices into `icemt_field`, with the table's map ids, and then indexes `icemt_field` with the ids it picked; an id of 6 would read past the table into `grIm_803E40B0`. With the disc's list (indices 0 to 4 in turn) the picks are ids 2, 3 and 4, which index the table within it and happen to give the heights of the fields the list puts third to fifth | `crates/melee-sim/src/game/gr/icemt.rs` (`field_id_at` panics past the table) |
+| Event 21's sleeping count with a partner gone | `gm_801BD46C` (gmevent.c), `game/gm/event.rs` (`run_proc`, which stops by name on it: the process isn't ported) | Counts the two computer Ice Climbers asleep by each one's second fighter (`Player_GetEntityAtIndex(i, 1)`) and tests `ftLib_IsSleeping_8008731C`'s answer only where there is one, but adds to the count by the answer's register (`var_r30`) either way: with Nana gone for the first, it reads what the register held before the loop; with her gone for the second, the first's answer counts again | `gmevent.c`'s `gm_801BD46C`; melee-hd stops at the process by name |
+| A score cap that can't apply | `gm_801BC4F4` (gmevent.c), `game/gm/event.rs` (`event_success`) | Caps a KO event's score with `if (score > -1) score = -1`, an unsigned compare with 0xFFFFFFFF that never holds, so the cap does nothing; the count is at most the KOs of five players | `crates/melee-sim/src/game/gm/event.rs` (`event_success`), the cap left out with this comment |
 | Quakes of another kind | `Camera_RequestQuake`, `game/camera.rs` | Never sets the length and stores the epicenter argument's register (its address); no caller passes such a kind | [engine notes](engine.md#uninitialized-values) (line 53); `crates/melee-sim/src/game/camera.rs:1382` |
 | The cutscene camera's fourth transition kind | `script_progress`, `game/camera.rs` | Leaves the ratio unset (a register its caller left); no code sets the kind | `crates/melee-sim/src/game/camera.rs:2865` |
 | The rumble screen's name rows on an empty slot | `mnVibration_CreateNameRow`, `game/mn/vibration.rs` | A row's slot is the scroll plus the row, not the row's name: with a gap among the save's names, `GetNameText` hands `HSD_SisLib_803A6B98` a null format. The game keeps names packed (`DeleteName` moves them up), so only an edited save could leave a gap | `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_name_row`) |

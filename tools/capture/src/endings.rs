@@ -76,6 +76,8 @@ impl Comparer<'_> {
         self.game_over_statics();
         self.toy_fall_statics();
         self.congrats_statics();
+        self.staff_roll_statics();
+        self.movie_end_statics();
         let theirs = self.u8(sym("regend_congrats_exit_data"));
         self.check(
             "regend_congrats_exit_data",
@@ -411,5 +413,111 @@ impl Comparer<'_> {
                 );
             }
         }
+    }
+
+    /// The staff roll's statics (`gmstaffroll.c`): the names' state and depth order in their
+    /// heap blocks (the order's entries up to the count shown; `x38` is never written), the
+    /// counters, the texts, the cameras and the background, and the hit test's corners.
+    fn staff_roll_statics(&mut self) {
+        use melee_sim::game::gm::endings::staff_roll::NAMES;
+        let s = &self.game.endings.staff_roll;
+        let (info, sort, shown) = (s.info_addr, s.sort_addr, s.shown);
+        let theirs = [0x804D_67F8, 0x804D_67FC].map(|a| self.u32(a));
+        self.check("staffInfo", "the names' blocks", [info, sort], theirs);
+        let theirs = self.u32(0x804D_6800) as i32;
+        self.check("gm_804D6800", "names shown", shown, theirs);
+        // The blocks are the staff roll scene's heap's, gone with it.
+        let live =
+            self.game.gm.on_frame == Some(melee_sim::game::gm::endings::staff_roll::ON_FRAME);
+        if live && info != 0 && theirs == shown {
+            for i in 0..NAMES {
+                let n = self.game.endings.staff_roll.names[i];
+                let at = info + 12 * i as u32;
+                for (k, w) in n.win.iter().enumerate() {
+                    let theirs = self.u32(at + 4 * k as u32);
+                    let path = format!("staffInfo[{i}].win[{k}]");
+                    self.compare_handle(&path, "TextId", w.map(|t| t.0), theirs);
+                }
+                let theirs = self.u32(at + 8) as i32;
+                self.check(&format!("staffInfo[{i}].x8"), "hits", n.hits, theirs);
+            }
+            for i in 0..shown.max(0) as usize {
+                let e = self.game.endings.staff_roll.sorted[i];
+                let at = sort + 0x3C * i as u32;
+                let path = format!("staffInfoSortBuf[{i}]");
+                let theirs = self.u32(at) as i32;
+                self.check(&path, "index", e.index, theirs);
+                let theirs = self.u32(at + 4);
+                self.compare_handle(&path, "JObjId", e.jobj.map(|j| j.0), theirs);
+                let ours = e.mtx.m.map(|r| r.map(f32::to_bits));
+                let theirs: [[u32; 4]; 3] = std::array::from_fn(|r| {
+                    std::array::from_fn(|c| self.u32(at + 8 + 16 * r as u32 + 4 * c as u32))
+                });
+                self.check(&path, "mtx", ours, theirs);
+            }
+        }
+        let s = &self.game.endings.staff_roll;
+        let ours = (
+            s.cursor.map(f32::to_bits),
+            s.column,
+            s.tick,
+            s.paused,
+            s.speed,
+            s.resume_wait,
+            s.kick.to_bits(),
+            s.kick_target.to_bits(),
+            s.dimmed,
+            s.cue,
+        );
+        let theirs = (
+            [self.u32(0x804D_6804), self.u32(0x804D_6808)],
+            self.u32(0x804D_6810) as i32,
+            self.u32(0x804D_6814) as i32,
+            self.u32(0x804D_6818) as i32,
+            self.u32(0x804D_681C) as i32,
+            self.u32(0x804D_6820) as i32,
+            self.u32(0x804D_6824),
+            self.u32(0x804D_6828),
+            self.u32(0x804D_6848) as i32,
+            self.u32(0x804D_684C) as i32,
+        );
+        self.check(
+            "gm_804D6804",
+            "cursor, column, tick, paused, speed, resume wait, kick, kick's target, dimmed, cue",
+            ours,
+            theirs,
+        );
+        let s = &self.game.endings.staff_roll;
+        let (tally, details, bg, cams, half) = (
+            s.tally,
+            s.details,
+            s.bg,
+            [s.camera, s.details_camera],
+            s.half_width,
+        );
+        let theirs = self.u32(0x804D_680C);
+        self.compare_handle("gm_804D680C", "TextId", tally.map(|t| t.0), theirs);
+        for (k, t) in details.iter().enumerate() {
+            let theirs = self.u32(0x8048_0D58 + 4 * k as u32);
+            let path = format!("gm_80480D58[{k}]");
+            self.compare_handle(&path, "TextId", t.map(|t| t.0), theirs);
+        }
+        let theirs = self.u32(0x804D_682C);
+        self.compare_handle("gm_804D682C", "JObjId", bg.map(|j| j.0), theirs);
+        for (c, a) in cams.iter().zip([0x804D_6830, 0x804D_6834]) {
+            let theirs = self.u32(a);
+            self.compare_handle(&format!("{a:#x}"), "CObjId", c.map(|c| c.0), theirs);
+        }
+        let h = half.to_bits();
+        let ours = [h ^ 0x8000_0000, h ^ 0x8000_0000, h, h];
+        let theirs = [0, 1, 2, 3].map(|k| self.u32(0x803D_D1E4 + 12 * k));
+        self.check("gm_803DD1E4", "the corners' x", ours, theirs);
+    }
+
+    /// The ending movie's statics (`gmmovieend.c`).
+    fn movie_end_statics(&mut self) {
+        let m = self.game.endings.movie_end;
+        let theirs = (self.u32(0x804D_6738), self.u8(0x804D_673C));
+        self.check("gm_804D6738", "frames, wait", (m.frames, m.wait), theirs);
     }
 }

@@ -325,6 +325,8 @@ pub const PATHS: &[Paths] = &[
             "melee/gr/grfigure3",
         ],
         modules: &[
+            "gm/event",
+            "mn/event",
             "ft/zako",
             "ft/gkoopa",
             "gr/figure",
@@ -941,13 +943,10 @@ pub const MISSING: &[Gap] = &[
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
             "melee/gm/gmregcommon",
-            "fn_8016B138",
             "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
-            "lbAudioAx_80028B6C",
-            "lbAudioAx_80028B90",
             "fn_8016C46C's single-player results",
         ],
         modes: SETUP_MODES,
@@ -989,7 +988,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "100-Man Melee past its 69th KO and won, a won 15-Minute Melee (ported; no session reaches them yet)",
         covers: &[
-            "ftCo_800B7638",
             "gm_80173460",
             "gm_80173498",
             "gmMainLib_8015D780",
@@ -1009,9 +1007,13 @@ pub const MISSING: &[Gap] = &[
         what: "Event Match's list, events and egg",
         covers: &[
             "melee/gm/gmevent",
-            "melee/mn/mnevent",
             "melee/it/kinds/itevyoshiegg",
-            "mnEvent_8024E838 (the Event list)",
+            "(an event's series of rounds)",
+            "(an event's crowd)",
+            "gm_801BC00C for event",
+            "the event process",
+            "(event 32's falls)",
+            "an event's random fifth player",
         ],
         modes: &[EV],
     },
@@ -1132,12 +1134,9 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs' coming soon, the staff roll, the ending movie and the game over modes' Adventure and All-Star loads",
+        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
         covers: &[
-            "melee/gm/gmgover",
             "melee/gm/gm_19EF",
-            "melee/gm/gmmovieend",
-            "melee/gm/gmstaffroll",
             "gm_Mode_AdventureGOver_OnLoad",
             "gm_Mode_AllstarGOver_OnLoad",
         ],

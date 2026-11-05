@@ -92,6 +92,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
         addr if super::gm::endings::run_proc(game, gobj, addr) => {}
         addr if super::gm::home_run::run_proc(game, gobj, addr) => {}
+        addr if super::gm::event::run_proc(game, gobj, addr) => {}
         addr if super::hud::run_proc(game, gobj, addr) => {}
         super::sfx::addr::PROC => game.crowd_proc(),
         addr if last::run(game, gobj, addr) => {}

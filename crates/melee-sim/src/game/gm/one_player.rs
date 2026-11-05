@@ -552,6 +552,7 @@ impl Running<'_> {
             GM_TARGET_TEST => Some(&o.target_css),
             GM_TRAINING => Some(&o.training_css),
             GM_HOME_RUN => Some(&self.game.vs_melee.css),
+            super::event::GM_EVENT => Some(&self.game.event.css),
             m if super::multi_man::is_multi_man(m) => Some(&self.game.multi_man.css),
             _ => None,
         }
@@ -563,6 +564,7 @@ impl Running<'_> {
             GM_TARGET_TEST => Some(&mut self.game.one_player.target_css),
             GM_TRAINING => Some(&mut self.game.one_player.training_css),
             GM_HOME_RUN => Some(&mut self.game.vs_melee.css),
+            super::event::GM_EVENT => Some(&mut self.game.event.css),
             m if super::multi_man::is_multi_man(m) => Some(&mut self.game.multi_man.css),
             _ => None,
         }

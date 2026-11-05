@@ -242,6 +242,12 @@ enum Hook {
     TrainingExitCss,
     TrainingEnterSss,
     TrainingExitSss,
+    /// Event Match's ([`super::event`]).
+    EventOnLoad,
+    EventEnterCss,
+    EventExitCss,
+    EventEnterVs,
+    EventExitVs,
     TrainingEnterVs,
     TrainingExitVs,
     /// The six Multi-Man modes' ([`super::multi_man`]), by mode.
@@ -711,6 +717,23 @@ fn states(mode: u8) -> &'static [StateDesc] {
             crate::game::vi::GS_REGEND_CONGRATS,
         ),
     ];
+    // `gm_Mode_Event_States`: the select, then the match.
+    const EVENT: [StateDesc; 2] = [
+        StateDesc {
+            id: 0,
+            preload: 3,
+            on_enter: Some(Hook::EventEnterCss),
+            on_exit: Some(Hook::EventExitCss),
+            scene: GS_CSS,
+        },
+        StateDesc {
+            id: 1,
+            preload: 3,
+            on_enter: Some(Hook::EventEnterVs),
+            on_exit: Some(Hook::EventExitVs),
+            scene: GS_VS,
+        },
+    ];
     // `gm_Mode_GOver_States` (`gmgover.c`): the trophy fall, the staff roll, the ending movie
     // and congratulations, the three game over modes'.
     const GOVER: [StateDesc; 4] = [
@@ -731,6 +754,9 @@ fn states(mode: u8) -> &'static [StateDesc] {
     ];
     if let Some(list) = one_player_states(mode) {
         return list;
+    }
+    if mode == super::event::GM_EVENT {
+        return &EVENT;
     }
     match mode {
         super::tournament::GM_TOURNAMENT => &TOURNAMENT,
@@ -802,6 +828,8 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         super::one_player::GM_TARGET_TEST => (true, Some(Hook::TargetOnLoad), None),
         super::one_player::GM_TRAINING => (true, Some(Hook::TrainingOnLoad), None),
         super::one_player::GM_HOME_RUN => (true, Some(Hook::HomeRunOnLoad), None),
+        // `gm_Mode_Event_OnUnload` does nothing.
+        super::event::GM_EVENT => (true, Some(Hook::EventOnLoad), None),
         m if super::multi_man::is_multi_man(m) => (true, Some(Hook::MultiManOnLoad), None),
         m => unported_call(&format!("game mode {m:#x}'s loading")),
     }
@@ -957,6 +985,8 @@ impl Running<'_> {
             || (scene_mode == super::GM_DEBUG && s.id == 11)
             || s.scene == super::endings::GS_REGEND_TOYFALL
             || s.scene == crate::game::vi::GS_REGEND_CONGRATS
+            || s.scene == super::endings::GS_STAFFROLL
+            || s.scene == super::endings::GS_MOVIE_END
             || crate::game::vi::scene_handlers(s.scene).is_some()
             || super::intro::is_intro(s.scene);
     }
@@ -1006,6 +1036,7 @@ impl Running<'_> {
             m if uses_vs_melee(m) => &self.game.vs_melee.start,
             super::tournament::GM_TOURNAMENT => &self.game.tou.start,
             super::GM_DEBUG => &self.game.debug_mode.vs_enter,
+            super::event::GM_EVENT => &self.game.event.start,
             super::one_player::GM_TARGET_TEST => &self.game.one_player.target_start,
             super::one_player::GM_TRAINING => &self.game.training.enter,
             super::one_player::GM_CLASSIC
@@ -1094,6 +1125,14 @@ impl Running<'_> {
                 super::endings::congrats::ON_ENTER,
                 super::endings::congrats::ON_FRAME,
             ),
+            super::endings::GS_STAFFROLL => (
+                super::endings::staff_roll::ON_ENTER,
+                super::endings::staff_roll::ON_FRAME,
+            ),
+            super::endings::GS_MOVIE_END => (
+                super::endings::movie_end::ON_ENTER,
+                super::endings::movie_end::ON_FRAME,
+            ),
             // No frame functions: the models' processes run the screens.
             super::endings::GS_GAMEOVER => (super::endings::game_over::ON_ENTER, CodeRef(0)),
             super::endings::GS_COMING_SOON => {
@@ -1145,6 +1184,8 @@ impl Running<'_> {
             crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
             super::endings::toy_fall::ON_ENTER => self.toy_fall_on_enter(),
             super::endings::congrats::ON_ENTER => self.congrats_on_enter(),
+            super::endings::staff_roll::ON_ENTER => self.staff_roll_on_enter(),
+            super::endings::movie_end::ON_ENTER => self.movie_end_on_enter(),
             super::endings::game_over::ON_ENTER => self.game_over_on_enter(),
             super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
             super::intro::EASY_ON_ENTER => self.intro_easy_on_enter(),
@@ -1226,8 +1267,12 @@ impl Running<'_> {
             // `ifPrize_Scene_OnExit` does nothing; the debug menu has no exit.
             GS_PRIZE | GS_DEBUG_MENU => {}
             GS_APPROACH => self.approach_on_exit(),
-            // The trophy fall and congratulations have no exits of their own.
-            super::endings::GS_REGEND_TOYFALL | crate::game::vi::GS_REGEND_CONGRATS => {}
+            // The trophy fall, congratulations and the ending movie have no exits of their own;
+            // the staff roll's (`gm_Scene_StaffRoll_OnExit`) does nothing.
+            super::endings::GS_REGEND_TOYFALL
+            | crate::game::vi::GS_REGEND_CONGRATS
+            | super::endings::GS_MOVIE_END => {}
+            super::endings::GS_STAFFROLL => self.staff_roll_on_exit(),
             super::endings::GS_GAMEOVER => self.game_over_on_exit(),
             super::endings::GS_COMING_SOON => self.coming_soon_on_exit(),
             // Classic's intro has no exit of its own.
@@ -1423,7 +1468,7 @@ impl Running<'_> {
             Hook::ClassicGOverOnLoad => self.gover_on_load(1),
             Hook::AdventureGOverOnLoad => self.gover_on_load(0),
             Hook::AllStarGOverOnLoad => self.gover_on_load(2),
-            Hook::GOverMovieExit => self.mthp_release(),
+            Hook::GOverMovieExit => self.movie_end_exit(),
             Hook::ClassicOnLoad => self.classic_on_load(),
             Hook::ClassicEnterCss => self.classic_enter_css(),
             Hook::ClassicExitCss => self.classic_exit_css(),
@@ -1460,6 +1505,11 @@ impl Running<'_> {
             Hook::TrainingExitCss => self.training_exit_css(),
             Hook::TrainingEnterSss => self.training_enter_sss(),
             Hook::TrainingExitSss => self.training_exit_sss(),
+            Hook::EventOnLoad => self.event_on_load(),
+            Hook::EventEnterCss => self.event_enter_css(),
+            Hook::EventExitCss => self.event_exit_css(),
+            Hook::EventEnterVs => self.event_enter_vs(),
+            Hook::EventExitVs => self.event_exit_vs(),
             Hook::TrainingEnterVs => self.training_enter_vs(),
             Hook::TrainingExitVs => self.training_exit_vs(),
             Hook::MultiManOnLoad => self.multi_man_on_load(),

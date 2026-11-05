@@ -341,25 +341,27 @@ impl Drawer {
 /// the feed's pixels different at frame 9000, `fox_marth_ps_9000`), and eight leave margin.
 const WARM_UP: u32 = 8;
 
-/// Whether frame `n` is drawn for a frame `at` wanted: it is `at` or one of the
-/// [`WARM_UP`] frames before.
-fn drawn_for(n: u32, at: u32) -> bool {
-    n <= at && n + WARM_UP >= at
+/// Whether frame `n` is drawn for a frame `at` wanted: it is `at` or one of the `warm_up`
+/// frames before.
+fn drawn_for(n: u32, at: u32, warm_up: u32) -> bool {
+    n <= at && n + warm_up >= at
 }
 
 /// The replay's match, drawing each frame from `from` on to `to` (match frames, counted from
-/// its first rendered frame, 0), and calling `each` with each.
+/// its first rendered frame, 0), and calling `each` with each. The [`WARM_UP`] frames before
+/// `from` are drawn, and `more` before those: frames whose copies the GPU keeps that far.
 pub fn play(
     disc_path: &str,
     replay_path: &str,
     from: u32,
     to: u32,
+    more: u32,
     mut each: impl FnMut(u32, Drawn) -> bool,
 ) {
     let mut drawer = Drawer::new(renderer(), None);
     drive(disc_path, replay_path, to, Cosmetic::default(), |t| {
         if t.n < from {
-            drawer.frame(t, drawn_for(t.n, from), None);
+            drawer.frame(t, drawn_for(t.n, from, WARM_UP + more), None);
             return true;
         }
         let rec = Recorder::default();
@@ -388,7 +390,7 @@ pub fn record(disc_path: &str, replay_path: &str, at: u32, view: View) -> (Drawn
     let mut out = None;
     drive(disc_path, replay_path, at, cosmetic, |t| {
         if t.n < at {
-            drawer.frame(t, drawn_for(t.n, at), None);
+            drawer.frame(t, drawn_for(t.n, at, WARM_UP), None);
             return true;
         }
         let rec = Recorder::default();
@@ -481,7 +483,7 @@ pub fn draw_views(
         draw_offscreen_fighters: views.iter().any(|v| v.widescreen.is_some()),
     };
     drive(disc_path, replay_path, last, cosmetic, |t| {
-        let draw = at.iter().any(|&a| drawn_for(t.n, a));
+        let draw = at.iter().any(|&a| drawn_for(t.n, a, WARM_UP));
         let images: Vec<Option<Frame>> = drawers
             .iter_mut()
             .map(|d| d.frame(t, draw, None).0.into_iter().last())

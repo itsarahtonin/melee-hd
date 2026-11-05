@@ -19,21 +19,22 @@ use common::{
     CORNERIA, Capture, DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
     DATA_INFO, DATA_PRIZE, DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB,
     DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS,
-    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, Expect, FLAT_ZONE,
-    FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS, FOX_SHEIK_DL,
-    FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK, GREAT_BAY,
-    GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN, IDLE_MOVIE,
-    IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
+    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, EV12, EV43, EV47,
+    Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD, FOX_MARTH_PS,
+    FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY, GB_GIRL, GB_GK,
+    GREAT_BAY, GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
+    IDLE_MOVIE, IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
     M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6E2_REGEND_ADV,
-    M6I_ADVENTURE2, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES,
-    MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE,
-    PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS,
-    RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO,
-    SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
-    SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
-    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    M6E2_REGEND_GW, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY, M6I_ADVENTURE2, M6I_CLASSIC_WIN,
+    M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN,
+    MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT,
+    MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
+    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
+    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
+    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
@@ -178,13 +179,63 @@ frames!(M6E_GAMEOVER;
 );
 // The trophy fall and congratulations (`m6-endings-2/regend-adv`), against captures made with
 // ssbm-rs's renderer running: the second cut (the trophy alone on its stand, 2030), the third
-// (the trophies laid round, 2300) and congratulations' still (2600). The first cut's frames
-// (the fighter's fading copy and the frame's tinted copy, drawn back from the GPU's copies)
-// don't match yet: see docs/player.md.
+// (the trophies laid round, 2300) and congratulations' still (2600).
 rendered_frames!(M6E2_REGEND_ADV;
     m6e2_regend_adv_2030 2030,
     m6e2_regend_adv_2300 2300,
     m6e2_regend_adv_2600 2600,
+);
+// The trophy fall's first cut, against logs started before its first copy (`RenderedSince`):
+// Zelda falling with her fading copy and the frame's tinted copies (`regend-adv` 1850), the
+// tinted copies fading out after her (1950), and Mr. Game & Watch's All-Star fall
+// (`regend-gw` 1500). Every draw is the same but the copy sprite, which samples a copy both
+// renderers keep on the GPU.
+fn toy_fall(game: &Game, frame: u32, first: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::TOY_FALL_COPY,
+        },
+        Capture::RenderedSince(first),
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1850() {
+    toy_fall(&M6E2_REGEND_ADV, 1850, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1950() {
+    toy_fall(&M6E2_REGEND_ADV, 1950, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_gw_1500() {
+    toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
+}
+// The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
+// renderer running: the names flying past with shots fired at rest (1400) and the stick to the
+// right (1600), the roll paused on B (2200), at Start's six times speed with the background
+// dimmed (2550), and the hits' result (3200).
+rendered_frames!(M6E3_STAFFROLL_PLAY;
+    m6e3_staffroll_play_1400 1400,
+    m6e3_staffroll_play_1600 1600,
+    m6e3_staffroll_play_2200 2200,
+    m6e3_staffroll_play_2550 2550,
+    m6e3_staffroll_play_3200 3200,
+);
+// Classic's game over mode (`m6-endings-3/regend-movie`): the staff roll at Start's speed
+// (1700) and the ending movie (2700).
+rendered_frames!(M6E3_REGEND_MOVIE;
+    m6e3_regend_movie_1700 1700,
+    m6e3_regend_movie_2700 2700,
 );
 // Classic's first stage's intro (`m6-intros/classic-win`): the stage's number and the map
 // coming in with Fox and his opponent posed (900), their names written in (950), and the
@@ -1658,6 +1709,44 @@ fn mm_10_win_2760() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn mm_15min_1800() {
     mm_rendered(&MM_15MIN, 1800, [1434, 1460]);
+}
+// Event Match (milestone 6's task 21): the Event list's first page and Event 12's one-door
+// select (ev12 720, 1090), the list's last page on Event 43 (ev43 1050), and two matches:
+// Event 43 on Big Blue (ev43 1750) and Trophy Tussle 3 on the third trophy stage (ev47
+// 2100). In the matches the fighters' shadows sample textures copied the frame before the
+// log, so their references are captured with ssbm-rs's renderer running: the images are
+// identical, and the draws that differ only sample the shadows.
+frames!(EV12;
+    ev12_720 720,
+    ev12_1090 1090,
+);
+frames!(EV43;
+    ev43_1050 1050,
+);
+
+fn event_match(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ev43_1750() {
+    event_match(&EV43, 1750, [2784, 2784]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn ev47_2100() {
+    event_match(&EV47, 2100, [1747, 1744]);
 }
 frames!(TT_DK_QUIT;
     tt_dk_quit_1300 1300,
