@@ -25,6 +25,7 @@ pub mod cpu;
 pub mod cpu_ai;
 pub mod cpu_attack;
 pub mod cpu_decide;
+pub mod cpu_kinds;
 pub mod cpu_move;
 pub mod cpu_recover;
 pub mod cpu_script;

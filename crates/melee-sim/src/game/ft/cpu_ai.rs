@@ -98,7 +98,7 @@ pub(super) enum Leftover {
 impl Running<'_> {
     /// The other fighter of the same player (Nana's Popo, Popo's Nana), `ftCo_800A589C`: the
     /// first in the fighters' list, or none if that one is asleep or there is none.
-    // Ports `ftCo_800A589C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A589C")]
     pub fn cpu_partner(&self, f: FighterId) -> Option<FighterId> {
         let fp = &self.game.fighters[f.0];
         let mut cur = self.game.world.first_in(P_LINK_FIGHTER);
@@ -154,7 +154,7 @@ impl Running<'_> {
     /// ground inside the blast zones, how long it has stood still, its target's timer, its
     /// destination carried along with moving floors, its recovery scales and whether it's
     /// under Corneria's ceiling.
-    // Ports `ftCo_800B33B0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B33B0")]
     fn cpu_read_stage(&mut self, f: FighterId) {
         let timer = self.game.fighters[f.0].cpu.x7C;
         if timer % 300 == 0 {
@@ -292,7 +292,7 @@ impl Running<'_> {
 
     /// Every 600 frames, how far the fighter reaches (`x56C`) by its kind and a random draw,
     /// `ftCo_800A0CB0`.
-    // Ports `ftCo_800A0CB0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A0CB0")]
     fn cpu_reach_scale(&mut self, f: FighterId) {
         if self.game.fighters[f.0].cpu.x7C % 600 != 0 {
             return;
@@ -310,7 +310,8 @@ impl Running<'_> {
     }
 
     /// The fighter's decision by its computer kind, `ftCo_800B2AFC`: Nana's, the VS kind's
-    /// ([`Running::cpu_decide_vs`]) and kind 15's are ported. It returns the r5 the decision
+    /// ([`Running::cpu_decide_vs`]), training's, the single-player modes'
+    /// ([`super::cpu_kinds`]) and kind 15's are ported. It returns the r5 the decision
     /// leaves, which `ftCo_800B2AFC` passes on unchanged.
     #[doc(alias = "ftCo_800B2AFC")]
     fn cpu_decide(&mut self, f: FighterId) -> Leftover {
@@ -326,12 +327,21 @@ impl Running<'_> {
             // jump and the walk the behavior pick's.
             k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
             2 => self.cpu_decide_evade(f),
+            // The single-player modes' kinds (`super::cpu_kinds`).
+            7 => self.cpu_decide_keep_away(f, true),
+            8 => self.cpu_decide_no_human(f, CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME),
+            9 => self.cpu_decide_wanderer(f),
+            10 => self.cpu_decide_follower(f),
+            13 => self.cpu_decide_roamer(f),
+            14 => self.cpu_decide_bold(f),
+            17 => self.cpu_decide_collector(f),
+            18 => self.cpu_decide_keep_away(f, false),
+            k @ 19..=22 => self.cpu_decide_player(f, k - 19),
+            28 => self.cpu_decide_fighter(f),
             // Kind 25 is kind 23's code again (Multi-Man's Wire Frames).
             23 | 25 => self.cpu_decide_enemy(f),
             24 => self.cpu_decide_wander(f),
-            k @ (7..=10 | 13 | 14 | 17..=22 | 26..=29) => {
-                unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
-            }
+            k @ (26 | 27 | 29) => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
             _ => self.cpu_decide_vs(f),
         }
     }
@@ -414,7 +424,7 @@ impl Running<'_> {
     /// 1 - 2^-16) always picks one, so the island the original keeps in r31 (its caller's r31
     /// when none is picked) is always written ([Melee's bugs](docs/melee-bugs.md)).
     #[doc(alias = "ftCo_800A8940")]
-    fn cpu_to_other_island(&mut self, f: FighterId) {
+    pub(super) fn cpu_to_other_island(&mut self, f: FighterId) {
         let rnd = reg(self.game.objs.rng.draw_f32());
         let floor = self.game.fighters[f.0].coll_data.floor.index;
         let geo = self.game.geometry.as_ref().expect("no collision geometry");
@@ -537,19 +547,7 @@ impl Running<'_> {
         c.xF9_b1 = true;
         let target = self.cpu_find_target(f);
         self.game.fighters[f.0].cpu.x44 = target;
-        let fpp = &self.game.fighters[f.0];
-        let holds_other = fpp.item_gobj.is_some_and(|g| {
-            let it = super::super::it::item_of(self.game, g);
-            !self.cpu_item_heals(it)
-        });
-        let item = if holds_other || fpp.x2168 != 0 {
-            None
-        } else {
-            self.cpu_healing_item_target(f)
-        };
-        self.game.fighters[f.0].cpu.x4C = item;
-        let x50 = self.cpu_enemy_item_target(f);
-        self.game.fighters[f.0].cpu.x50 = x50;
+        self.cpu_healing_item_targets(f);
         if self.cpu_should_act(f)
             && let Some(t) = self.game.fighters[f.0].cpu.x44
             && self.game.fighters[f.0].ground_or_air != GA_AIR
@@ -821,7 +819,7 @@ impl Running<'_> {
     /// While Nana follows Popo, his recorded inputs from five frames back become hers,
     /// `ftCo_800B0AF4`, and on the ground she drifts toward where he stood then, facing his
     /// way; she goes into her down special when he's in his.
-    // Ports `ftCo_800B0AF4`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B0AF4")]
     fn nana_follow_inputs(&mut self, f: FighterId) {
         let Some(popo) = self.cpu_partner(f) else {
             return;
@@ -877,7 +875,7 @@ impl Running<'_> {
     /// A new script once the last is done, `ftCo_800B2790`, by what the fighter is doing
     /// (`x18`). `r5` is what its caller left in that register, which the DI reads
     /// ([`Leftover`]); before the DI's call only a charge's release writes it.
-    // Ports `ftCo_800B2790`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B2790")]
     fn cpu_behave(&mut self, f: FighterId, r5: Leftover) {
         let c = &self.game.fighters[f.0].cpu;
         if c.csP.0.is_some() || c.command_duration != 0 {
