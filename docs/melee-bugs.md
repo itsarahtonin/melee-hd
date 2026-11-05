@@ -186,6 +186,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes which copies a Kirby horde's joiners get; gameplay.
 - **Source:** `gm_16A2.c:282-341` (`fn_80169A84`); ssbm-rs's port (`melee__gm__gm_16A2.rs`).
 
+### A setup with no joiners walks its costumes' list from past its end
+
+- **Where:** `fn_801695BC` (`gm_16A2.c`, the joining opponents' costumes shuffled per character, from `gm_8016A22C`), `crates/melee-sim/src/game/gm/opponents.rs` (`Opponents::shuffle_costumes`).
+- **Defect:** the neighbours' swap loop starts at entry 1 and runs to the list's end marker (-2). With no joiners the marker is entry 0, so the loop starts past it and walks on through the setup's other lists and fields and the statics after `lbl_8046B488`, to the first byte of -2 in memory, drawing `HSD_Randi(2)` (and maybe swapping the two bytes) wherever two neighbouring bytes 0x82 further on equal the setup's character. Adventure's Mushroom Kingdom (state 1, the Yoshis' horde, `gm_803DE650`'s `x4` count of 0) sets up the horde this way, three times (Yoshi, Yoshi, Yoshi).
+- **Effect:** none observable in the sessions so far: in `m6-oracle/adventure2` the walk runs 209,445 bytes, to 0x8049E6CD, over the setup's zeros and the single-player modes' statics, and no two neighbouring bytes 0x82 on are Yoshi's character (0x11), so it draws nothing and writes nothing. Another run's statics there (a character select's, a run's) could hold such a pair, and then the walk would draw from the random seed.
+- **melee-hd:** the walk is skipped when the list is empty: the setup's own bytes never hold such a pair, and the statics past it aren't modeled; a draw the walk made would show as a random seed difference in the tick the stage starts.
+- **Fix:** start the loop only when the list has an entry.
+- **Fix impact:** none where no such pair lies in memory; otherwise it removes random draws, gameplay.
+- **Source:** `gm_16A2.c` (`fn_801695BC`); ssbm-rs's port (`melee__gm__gm_16A2.rs`); the memory of `m6-oracle/adventure2`'s trace at tick 1198.
+
 ## Characters
 
 ### Bowser: Whirling Fortress's landing test can't pass

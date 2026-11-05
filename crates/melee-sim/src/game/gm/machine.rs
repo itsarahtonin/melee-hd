@@ -213,6 +213,9 @@ enum Hook {
     ClassicEnterVs,
     ClassicExitVs,
     AdventureOnLoad,
+    AdventureEnterIntro,
+    AdventureEnterVs,
+    AdventureExitVs,
     AdventureEnterCss,
     AdventureExitCss,
     AllStarOnLoad,
@@ -1036,9 +1039,9 @@ impl Running<'_> {
             super::event::GM_EVENT => &self.game.event.start,
             super::one_player::GM_TARGET_TEST => &self.game.one_player.target_start,
             super::one_player::GM_TRAINING => &self.game.training.enter,
-            super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR => {
-                &self.game.one_player.match_start
-            }
+            super::one_player::GM_CLASSIC
+            | super::one_player::GM_ADVENTURE
+            | super::one_player::GM_ALLSTAR => &self.game.one_player.match_start,
             m if super::multi_man::is_multi_man(m) => &self.game.multi_man.start,
             m => unported_call(&format!("the VS scene's enter data in game mode {m:#x}")),
         }
@@ -1473,6 +1476,9 @@ impl Running<'_> {
             Hook::ClassicEnterVs => self.classic_enter_vs(),
             Hook::ClassicExitVs => self.classic_exit_vs(),
             Hook::AdventureOnLoad => self.adventure_on_load(),
+            Hook::AdventureEnterIntro => self.adventure_enter_intro(),
+            Hook::AdventureEnterVs => self.adventure_enter_vs(),
+            Hook::AdventureExitVs => self.adventure_exit_vs(),
             Hook::AdventureEnterCss => self.adventure_enter_css(),
             Hook::AdventureExitCss => self.adventure_exit_css(),
             Hook::AllStarOnLoad => self.allstar_on_load(),
@@ -1684,7 +1690,39 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             out[i].id = ids[i];
             i += 1;
         }
-        out[0] = st(0, 2, u("gm_801B3F40"), None, GS_INTRO_NORMAL);
+        // The stages' intros (`gm_801B3F40`) and the matches `gm_801B4064` starts, with their
+        // exits (`gm_801B44A0` Mushroom Kingdom's, `gm_801B4170` the others', `gm_801B50C4`
+        // Giga Bowser's).
+        let mut i = 0;
+        while i < 48 {
+            match out[i].id {
+                0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x39 | 0x40 | 0x48 | 0x50
+                | 0x58 => {
+                    out[i] = st(
+                        out[i].id,
+                        2,
+                        Some(Hook::AdventureEnterIntro),
+                        None,
+                        GS_INTRO_NORMAL,
+                    );
+                }
+                0x01 => {
+                    out[i].on_enter = Some(Hook::AdventureEnterVs);
+                    out[i].on_exit = Some(Hook::AdventureExitVs);
+                }
+                0x0A | 0x11 | 0x12 | 0x19 | 0x21 | 0x25 | 0x29 | 0x31 | 0x3A | 0x3B | 0x49
+                | 0x51 => {
+                    out[i].on_enter = Some(Hook::AdventureEnterVs);
+                    out[i].on_exit = u("gm_801B4170");
+                }
+                0x5C => {
+                    out[i].on_enter = Some(Hook::AdventureEnterVs);
+                    out[i].on_exit = u("gm_801B50C4");
+                }
+                _ => {}
+            }
+            i += 1;
+        }
         out[45] = st(0x68, 2, None, u("gm_801B4408"), GS_COMING_SOON);
         out[46] = st(0x69, 2, u("gm_801B4254"), u("gm_801B4294"), GS_GAMEOVER);
         out[47] = st(

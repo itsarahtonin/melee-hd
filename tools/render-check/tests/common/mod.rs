@@ -1294,6 +1294,15 @@ pub const M6I_CLASSIC_WIN: Game = Game {
     replay: Replay::Session("m6i-classic-win"),
 };
 
+/// Adventure's first stage's intro (`m6-oracle/adventure2`, a copy in `m6-intros`): the
+/// camera flying over Mushroom Kingdom's route under the map and the title.
+pub const M6I_ADVENTURE2: Game = Game {
+    stage: "Adventure's intro",
+    name: "m6i-adventure2",
+    players: "Adventure's first stage's intro (session m6-oracle/adventure2)",
+    replay: Replay::Session("m6i-adventure2"),
+};
+
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
 pub const M6_TARGET: Game = Game {
     stage: "Main menu",

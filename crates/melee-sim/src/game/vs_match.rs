@@ -1057,6 +1057,51 @@ pub fn load_joiner_files(
             }
         }
     }
+    give_files(game, data, read, names, load);
+}
+
+/// Gives the match every costume's file of fighter kinds `kinds`, with their data and
+/// animation files, that it didn't load: Adventure's matches' start hook loads them all
+/// (`ftLib_LoadFighterAllCostumes`, `gm_8017C838`) in the scene's entry, from the disc as
+/// [`load_joiner_files`]'s.
+pub fn load_kind_files(
+    game: &mut Game,
+    data: &mut Archives,
+    read: &mut JoinerFiles,
+    kinds: &[i32],
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) {
+    use super::ft::data::kind_tables;
+    let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
+    for &kind in kinds {
+        let t = kind_tables(kind);
+        names.push((
+            std::borrow::Cow::Borrowed(t.dat_file.expect("a fighter kind without a data file")),
+            false,
+        ));
+        for c in 0..usize::from(t.costume_count) {
+            names.push((
+                t.costumes[c].disc_file().expect("a costume without a file"),
+                false,
+            ));
+        }
+        names.push((
+            std::borrow::Cow::Borrowed(t.anim_file.expect("a fighter kind without animations")),
+            true,
+        ));
+    }
+    give_files(game, data, read, names, load);
+}
+
+/// The files `names` (animation files flagged) the match hasn't, read once into `read` and
+/// given to it.
+fn give_files(
+    game: &mut Game,
+    data: &mut Archives,
+    read: &mut JoinerFiles,
+    names: Vec<(std::borrow::Cow<'static, str>, bool)>,
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) {
     let files = &mut game.ft.data.files;
     for (name, anim) in names {
         let have = if anim {
