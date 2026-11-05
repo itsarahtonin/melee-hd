@@ -377,6 +377,10 @@ pub struct Globals {
     /// byte there out while it still holds the image's fill.
     #[clone_from(if_changed)]
     pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
+    /// How much deeper than a VS match's (`fn_8016E730`'s) the stage's setup's caller puts its
+    /// stack while the setup runs (`setup::setup_at`), which moves the stack frames its scale
+    /// joints' descriptors key the ID table by; 0 outside a setup.
+    pub setup_deeper: u32,
     /// The items' table of stage item descriptions (`it_804A0F60`, by kind from
     /// `It_Kind_Old_Kuri`), which the stage fills from its `itemdata`: here until items are
     /// ported.

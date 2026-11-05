@@ -310,14 +310,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "ftLib_LoadKirbyHats (Adventure's Green Greens)",
-        "Adventure's Green Greens: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "ftData_800857E0 (Kirby's copies' setup)",
-        "Kirby among Adventure's start hook's fighters (Green Greens): the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gm_8017D7AC's records after a no contest",
         "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
     ),

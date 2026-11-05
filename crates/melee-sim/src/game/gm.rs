@@ -548,6 +548,10 @@ pub fn call(
             r.opponent_joined(args[0].int());
             Some(super::code::Val::None)
         }
+        adventure::ESCAPE_END => {
+            r.adventure_escape_end(args[0].int() as u8);
+            Some(super::code::Val::None)
+        }
         one_player_match::REST_MATCH_END => {
             r.allstar_rest_end();
             Some(super::code::Val::None)

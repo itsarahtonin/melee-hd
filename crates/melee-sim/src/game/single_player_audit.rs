@@ -992,8 +992,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmadventure",
             "melee/gm/gm_17E4",
             "melee/gm/gm_1879",
-            "ftLib_LoadKirbyHats (Adventure's Green Greens)",
-            "ftData_800857E0 (Kirby's copies' setup)",
             "gm_8017CBAC (Adventure's clear)",
         ],
         modes: &[AD, CL],
