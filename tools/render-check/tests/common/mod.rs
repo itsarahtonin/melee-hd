@@ -123,6 +123,9 @@ impl Replay {
                 if name.starts_with("tt-") {
                     return ssbm_rs_local(&format!("lockstep/m6-target-test/{name}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("e3-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-event-3/{o}.inputs")).into();
+                }
                 if name.starts_with("ev") {
                     return ssbm_rs_local(&format!("lockstep/m6-event/{name}.inputs")).into();
                 }
@@ -912,6 +915,24 @@ pub const EV47: Game = Game {
     name: "ev47",
     players: "Event 47: Fox and three computer players (session m6-event/ev47)",
     replay: Replay::Session("ev47"),
+};
+
+/// Event 14, Trophy Tussle 1 (`m6-event-3/ev14`, task 21's third round): Fox against three
+/// on the first trophy stage.
+pub const EV14: Game = Game {
+    stage: "the first trophy stage",
+    name: "e3-ev14",
+    players: "Event 14: Fox and three computer players (session m6-event-3/ev14)",
+    replay: Replay::Session("e3-ev14"),
+};
+
+/// Event 26, Trophy Tussle 2 (`m6-event-3/ev26`): Fox against three on the second trophy
+/// stage.
+pub const EV26: Game = Game {
+    stage: "the second trophy stage",
+    name: "e3-ev26",
+    players: "Event 26: Fox and three computer players (session m6-event-3/ev26)",
+    replay: Replay::Session("e3-ev26"),
 };
 
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
