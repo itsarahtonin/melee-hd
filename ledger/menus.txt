@@ -81,7 +81,6 @@ fn_80160F58	gated	named only by the single-player modes' code (fn_80184AB8): the
 gm_801629B4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80162BFC	gated	named only by the single-player modes' code (gm_8017CA38, gm_8017CBAC, gm_8017D7AC): the single-player modes', which only the 1P list's gated entries lead to
 fn_80162DF8	gated	named only by the single-player modes' code (gm_8017CA38, gm_8017CBAC, gm_8017D7AC): the single-player modes', which only the 1P list's gated entries lead to
-gm_80163A3C	gated	the one-door character select's records (mnCharSel_8025D5AC and mnCharSel_8025C020 with one door, which the port refuses: the single-player modes') and fn_8016C7F0's Target Test and Classic bonus stage branch (refused by its port)
 fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_80164600	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_80166A8C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -131,7 +130,6 @@ gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the
 fn_8016F280	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_801732D8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8017335C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_80173460	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173498	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
 gm_80173D3C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80174338	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
