@@ -234,7 +234,11 @@ fn wire_frames_hide_a_held_item_and_never_show_one() {
         found.dedup();
         found
     };
-    let own: Vec<i32> = common.iter().map(|s| s.anim_id).filter(|&a| a >= 0).collect();
+    let own: Vec<i32> = common
+        .iter()
+        .map(|s| s.anim_id)
+        .filter(|&a| a >= 0)
+        .collect();
     for file in ["PlBo.dat", "PlGl.dat"] {
         let found = walk(file, &mut own.iter().copied());
         let screw = [144, 145, 146, 147].map(|a| (a, 0));
@@ -258,7 +262,8 @@ fn wire_frames_hide_a_held_item_and_never_show_one() {
     let mut files = 0;
     for file in disc.files().expect("the disc's files") {
         let name = file.trim_start_matches('/');
-        if name.len() == 8 && name.starts_with("Pl") && name.ends_with(".dat") && name != "PlCo.dat" {
+        if name.len() == 8 && name.starts_with("Pl") && name.ends_with(".dat") && name != "PlCo.dat"
+        {
             files += 1;
             assert_eq!(walk(name, &mut anims.iter().copied()), [], "{name}");
         }
