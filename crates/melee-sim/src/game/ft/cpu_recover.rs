@@ -83,7 +83,7 @@ impl Running<'_> {
     /// predicted over the frames its air speed takes to get there; with `reachable` it takes
     /// the first end it doesn't fall below, else the nearest. The target is 5 inside the end,
     /// where a floor must be that computer players count.
-    // Ports `ftCo_800A4038`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A4038")]
     #[doc(alias = "ftCo_800A3908")]
     fn cpu_ledge_target(&mut self, f: FighterId, edge: Edge, reachable: bool) -> bool {
         let fpp = &self.game.fighters[f.0];
