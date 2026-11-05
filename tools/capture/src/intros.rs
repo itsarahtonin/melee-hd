@@ -1,6 +1,7 @@
 //! The single-player intros' statics (`melee_sim::game::gm::intro`), compared with memory:
 //! Classic's intro's state (`lbl_804735A8`), its enter data and what it shows
-//! (`lbl_8047368C`), its archives, scenes, table and announcer's call.
+//! (`lbl_8047368C`), its archives, scenes, table and announcer's call; Adventure's intro's
+//! state (`lbl_804736C0`) and archive (`lbl_804D6620`).
 
 use melee_sim::game::mirror::Cx;
 
@@ -53,5 +54,25 @@ impl Comparer<'_> {
         }
         let theirs = self.u32(sym("lbl_804D6608")) as i32;
         self.check("lbl_804D6608", "the call's sound", e.call, theirs);
+        self.intro_normal();
+    }
+
+    /// Adventure's intro's state (`lbl_804736C0`) and archive (`lbl_804D6620`).
+    fn intro_normal(&mut self) {
+        let n = self.game.intros.normal;
+        let at = sym("lbl_804736C0");
+        self.compare_data("lbl_804736C0.x0", n.scene, self.u32(at));
+        self.compare_data("lbl_804736C0.x4", n.camera, self.u32(at + 4));
+        let theirs = self.u32(at + 8);
+        self.compare_handle("lbl_804736C0.x8", "GObjId", n.gobj.map(|g| g.0), theirs);
+        self.check("lbl_804736C0", "x34", n.x34, self.u16(at + 0x34));
+        self.check(
+            "lbl_804736C0",
+            "x36 to x38",
+            [n.bits()[0], n.bits()[1], n.slot],
+            [0x36, 0x37, 0x38].map(|o| self.u8(at + o)),
+        );
+        let theirs = self.u32(sym("lbl_804D6620"));
+        self.check("lbl_804D6620", "archive", n.archive.block, theirs);
     }
 }

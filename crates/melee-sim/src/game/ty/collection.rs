@@ -1211,9 +1211,18 @@ impl Running<'_> {
 
     /// Whether a trophy is marked in the flags in play (`0x4000`), `Toy_803049F4`: in the
     /// single-player modes, one their trophies can be.
-    // Ports `Toy_803049F4`; aliased once a check reaches it.
+    #[doc(alias = "Toy_803049F4")]
     pub fn toy_marked(&self, trophy: i32) -> bool {
         self.toy_flags()[trophy as usize] & 0x4000 != 0
+    }
+
+    /// A marked trophy's mark taken off (`Toy_80304A58`: the flags' 0x4000 toggled when set),
+    /// as the rest area hands out its trophy.
+    #[doc(alias = "Toy_80304A58")]
+    pub fn toy_unmark(&mut self, trophy: i32) {
+        if self.toy_marked(trophy) {
+            self.toy_flags_mut()[trophy as usize] ^= 0x4000;
+        }
     }
 
     /// The debug view's text: erased, then `X  %3.2f` and `Z  %3.2f` of a place.

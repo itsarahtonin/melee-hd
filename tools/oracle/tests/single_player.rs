@@ -72,7 +72,8 @@ fn first_stops(list: &[(&str, u32, &str)]) {
 
 /// Each mode from the main menu's 1P list on the unlock-all card: its entry, its select (or
 /// list), Fox, and its first match: Classic's intro and match (on Very Easy, whose
-/// opponents' computer kind 9 isn't ported), Adventure's intro, the matches of All-Star,
+/// opponents' computer kind 9 isn't ported), Adventure's intro and Mushroom Kingdom's route
+/// to the trace's end, the matches of All-Star,
 /// Target Test, the Home-Run Contest, 10-Man Melee (lost, the select again) and Training
 /// (Fountain of Dreams, on `2026-10-06_17-44-10`'s card), and the Event list's first event.
 #[test]
@@ -83,7 +84,7 @@ fn each_mode_runs_to_its_first_stop() {
             938,
             "ftCo_800B2AFC for computer kind 9 isn't ported",
         ),
-        ("adventure2", 826, "gm_801B3F40 isn't ported"),
+        ("adventure2", 4653, ""),
         ("allstar", 3884, ""),
         ("event", 3546, ""),
         ("target", 3496, ""),
@@ -134,11 +135,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
             10941,
             "not implemented: stage kind 38 isn't ported",
         ),
-        (
-            "stages-1p-c",
-            3925,
-            "the rest area's coin and trophy (it_802F2094, Toy_80304A58) isn't ported",
-        ),
+        ("stages-1p-c", 5404, ""),
     ]);
 }
 

@@ -54,7 +54,7 @@ pub const NORMAL_MODEL_RENDER: u32 = 0x8018_7C9C;
 
 /// `ChKind_None`, `CKind_GKoops`, `CKind_Koopa`, `CKind_MasterHand`.
 const NONE: u8 = 0x21;
-const CKIND_GKOOPS: u8 = 0x19;
+const CKIND_GKOOPS: u8 = 0x1D;
 const CKIND_KOOPA: u8 = 5;
 const CKIND_MASTERH: u8 = 0x1A;
 
@@ -168,16 +168,85 @@ pub struct IntroEasy {
     pub call: i32,
 }
 
+/// Adventure's intro's statics (`gm_1879.c`).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct IntroNormal {
+    /// `lbl_804736C0.x0`, `x4`: the archive's scene and the stage's camera (`mcNN`, a
+    /// `SceneCameraDesc`); `x8`: that camera's GObj.
+    pub scene: Option<DataRef>,
+    pub camera: Option<DataRef>,
+    pub gobj: Option<GObjId>,
+    /// `x34`: set to 2400 once the map's first animation ends, never read.
+    pub x34: u16,
+    /// `x36`'s bits: the stage's number, the scene's end asked for, the flash started, Start
+    /// pressed.
+    pub stage: u8,
+    pub done: bool,
+    pub flash: bool,
+    pub active: bool,
+    /// `x37`'s bits: the camera's stretch (of eight, 300 frames each), the map's animation,
+    /// the title's.
+    pub stretch: u8,
+    pub map_anim: u8,
+    pub title_anim: u8,
+    /// `x38`: the player's port.
+    pub slot: u8,
+    /// `lbl_804D6620`: `IrNml`'s archive.
+    pub archive: Loaded,
+}
+
+impl IntroNormal {
+    /// `x36` and `x37` as memory holds their bits.
+    pub fn bits(&self) -> [u8; 2] {
+        [
+            (self.stage << 3)
+                | (u8::from(self.done) << 2)
+                | (u8::from(self.flash) << 1)
+                | u8::from(self.active),
+            (self.stretch << 4) | (self.map_anim << 2) | self.title_anim,
+        ]
+    }
+}
+
 /// The single-player intros' statics.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Intros {
     pub easy: IntroEasy,
+    pub normal: IntroNormal,
 }
 
 /// Whether `scene` is an intro this module ports.
 pub fn is_intro(scene: u8) -> bool {
-    scene == GS_INTRO_EASY
+    scene == GS_INTRO_EASY || scene == GS_INTRO_NORMAL
 }
+
+/// `gm_1832_NormalArchiveNames`, `gm_1832_NormalBgmIds`, `gm_1832_NormalAudioMasks`: each
+/// Adventure stage's camera's symbol in `IrNml`, its song and its sound banks.
+const NORMAL_CAMERAS: [&str; 12] = [
+    "mc01", "mc02", "mc03", "mc04", "mc05", "mc06", "mc07", "mc08", "mc09", "mc10", "mc11", "mc12",
+];
+const NORMAL_SONGS: [i32; 12] = [
+    0x1C, 0x1C, 0x1C, 0x1C, 0x1C, 0x1C, 0x1C, 0x1C, 0x1C, 0x14, 0x14, 0x1C,
+];
+const NORMAL_BANKS: [u64; 12] = [
+    0x0002_0000_1000_0000,
+    0x0000_0020_0000_0100,
+    0x0002_0000_0001_0000,
+    0x0000_0100_0400_0000,
+    0x0000_0802_0000_4000,
+    0x0000_0008_0000_0C00,
+    0x0001_0000_0100_0000,
+    0x0002_0000_0000_0040,
+    0x0000_0080_0020_0000,
+    0x0000_0000_0000_2000,
+    0x0000_0000_0006_0000,
+    0x0020_0000_0000_9000,
+];
+/// `IrNml`'s archive and its scene's symbol (`gm_1832_NormalSceneDataName`).
+const NORMAL_ARCHIVE: &str = "IrNml";
+const NORMAL_SCENE_SYMBOL: &str = "ScItrNormal_scene_data";
+/// The stage's camera's render callback (`Camera_800304E0`).
+pub const NORMAL_STAGE_CAMERA_RENDER: u32 = 0x8003_04E0;
 
 /// Offsets in `gmIntroEasyTable` (`lbl_804D6604_t`).
 mod table {
@@ -940,14 +1009,389 @@ impl Running<'_> {
 }
 
 impl Running<'_> {
-    /// `gm_Scene_IntroNormal_OnEnter`, Adventure's intro.
+    /// `gm_Scene_IntroNormal_OnEnter`, Adventure's intro: the player's port, the dynamics',
+    /// collisions' and stage's setups with the stage the enter data names (no players), the
+    /// items' and effects', the background flash, the state reset, `IrNml`'s scene and the
+    /// stage's camera, the stage's song's banks, the stage's camera flying (`fn_80187910`),
+    /// the scene's camera, its light, the map (`fn_80187AB4`) and the title (`fn_80187CF4`)
+    /// drawn over everything, and the intro's song.
+    #[doc(alias = "gm_Scene_IntroNormal_OnEnter")]
     pub fn intro_normal_on_enter(&mut self) {
-        super::super::code::unported_call("gm_Scene_IntroNormal_OnEnter (Adventure's intro)");
+        // The scene takes the files the preload cache holds (`lbArchive_80017040`).
+        self.game.ft.data.files.from_cache = true;
+        let e = self.game.one_player.adventure_intro;
+        self.game.intros.normal.slot = e.slot;
+        self.game.alloc_dynamics(self.data);
+        self.game.coll.reset();
+        super::super::gr::setup::prepare(self.game);
+        let stkind = i32::from(e.stkind);
+        let grkind = crate::lb::audio::ground_kind(stkind) as i32;
+        let us = self.files_us();
+        let archive = super::super::gr::data::stage_file(grkind, us).map(|name| {
+            self.game
+                .ft
+                .data
+                .files
+                .archive(name.trim_start_matches('/'))
+        });
+        super::super::gr::setup::select(self, stkind, archive);
+        let kept = self.take_cached_named("ItCo.usd");
+        let it_co = self.game.ft.data.files.archive("ItCo.usd");
+        super::super::it::item::load_common_data(self.game, self.data, it_co, kept);
+        super::super::it::item::init_globals(self.game, self.data);
+        super::super::ef::eflib::init(self);
+        super::super::ef::load_sync(self, 0);
+        super::super::ef::load_sync(self, 0x1F);
+        let grkind = self.game.stage_info.grkind;
+        super::super::gr::setup::setup(self, grkind);
+        self.game.init_all_players();
+        self.bg_flash_create(10);
+        let s = &mut self.game.intros.normal;
+        s.map_anim = 0;
+        s.stretch = 0;
+        s.x34 = 0;
+        s.done = false;
+        s.flash = false;
+        s.stage = e.stage & 0x1F;
+        s.title_anim = 0;
+        s.active = false;
+        let si = usize::from(e.stage);
+        let name = self.intro_file_name(NORMAL_ARCHIVE);
+        let (a, file, block) = self.load_archive_blocks(&name);
+        let sym = |r: &Self, s: &str| {
+            let offset = r
+                .data
+                .get(a)
+                .public(s)
+                .unwrap_or_else(|| panic!("{s} isn't in {name}"));
+            DataRef { archive: a, offset }
+        };
+        let scene = sym(self, NORMAL_SCENE_SYMBOL);
+        let camera = sym(self, NORMAL_CAMERAS[si]);
+        let s = &mut self.game.intros.normal;
+        s.scene = Some(scene);
+        s.camera = Some(camera);
+        s.archive = Loaded {
+            archive: Some(a),
+            file,
+            block,
+        };
+        let song = NORMAL_SONGS[si];
+        let ckind = self.game.player(0).ckind;
+        let mask = crate::lb::audio::character_banks(ckind) | NORMAL_BANKS[si];
+        self.game.audio.lb.unwant_banks(song as u32);
+        self.game.audio.lb.want_banks(song as u32, mask);
+        self.game.audio.lb_start_bank_loads(self.data);
+        self.game.audio.lb_wait_for_banks(self.data);
+        self.intro_normal_cameras(scene, camera);
+        self.intro_normal_light(scene);
+        self.intro_normal_models(scene);
+        self.lb_play_music(0x2E);
     }
 
-    /// `gm_Scene_IntroNormal_OnLeave`.
+    /// The stage's camera (its process `fn_80187910`, drawn by `Camera_800304E0`, its
+    /// animation from frame 0), then the scene's first camera drawing render links 10 and
+    /// 11.
+    fn intro_normal_cameras(&mut self, scene: DataRef, camera: DataRef) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(CLASS_CAMERA, 0x14, 0);
+        g.intros.normal.gobj = Some(gobj);
+        let c = crate::hsd::cobj::load_desc(&mut g.objs, data, data.ptr(camera))
+            .expect("the stage's camera");
+        g.world.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
+        g.world
+            .setup_gx_link_max(gobj, CodeRef(NORMAL_STAGE_CAMERA_RENDER), 8, false);
+        g.world.setup_proc(gobj, CodeRef(NORMAL_CAMERA_PROC), 0);
+        let anim = data.ptr(camera.at(4)).and_then(|a| data.ptr(a));
+        crate::hsd::cobj::add_anim(&mut g.objs, data, Some(c), anim);
+        crate::hsd::cobj::req_anim(&mut g.objs, Some(c), 0.0);
+        let gobj = g.world.create(CLASS_CAMERA, 0x14, 0);
+        let cams = data.ptr(scene.at(4)).expect("the scene's cameras");
+        let c = crate::hsd::cobj::load_desc(&mut g.objs, data, data.ptr(cams))
+            .expect("the scene's camera");
+        g.world.set_obj(gobj, OBJ_CAMERA, Obj::CObj(c));
+        g.world
+            .setup_gx_link_max(gobj, CodeRef(CAMERA_CALLBACK), 8, false);
+        g.world.gobj_mut(gobj).gxlink_prios = 0xC00;
+    }
+
+    /// The scene's lights (`lb_80011AC4`) on a light GObj drawn in render link 10.
+    fn intro_normal_light(&mut self, scene: DataRef) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(CLASS_LIGHT, 3, 0);
+        let lights = data.ptr(scene.at(8)).expect("the scene's lights");
+        let l = super::super::gr::setup::load_light_list(g, data, lights);
+        g.world
+            .set_obj(gobj, OBJ_LIGHT, Obj::LObj(l.expect("a light")));
+        g.world.setup_gx_link(gobj, CodeRef(LOBJ_CALLBACK), 0xA, 0);
+    }
+
+    /// The scene's model `index` on a GObj, its materials' render mode with 0x0800_0000
+    /// (`lb_80011C18`), drawn in render link 11 without the depth test (`fn_80187C9C`).
+    fn intro_normal_model(&mut self, scene: DataRef, index: u32) -> (GObjId, JObjId, DataRef) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let gobj = g.world.create(CLASS_UI, 0xF, 0);
+        let models = data.ptr(scene).expect("the scene's models");
+        let m = data.ptr(models.at(4 * index)).expect("a model");
+        let j = jobj::load_joint(&mut g.objs, data, data.ptr(m)).expect("a model's joint");
+        crate::lb::joint::set_mobj_flags(&mut g.objs, j, 0x0800_0000);
+        g.world.set_obj(gobj, OBJ_JOBJ, Obj::JObj(j));
+        g.world
+            .setup_gx_link(gobj, CodeRef(NORMAL_MODEL_RENDER), 0xB, 0xB);
+        (gobj, j, m)
+    }
+
+    /// The map (the scene's model 11 less the stage's number) at its first animation, and the
+    /// title (model 12) at its, each with its process.
+    fn intro_normal_models(&mut self, scene: DataRef) {
+        let stage = u32::from(self.game.intros.normal.stage);
+        let (gobj, j, m) = self.intro_normal_model(scene, 11 - stage);
+        let k = self.game.intros.normal.map_anim;
+        self.intro_normal_anim(j, m, k);
+        self.game
+            .world
+            .setup_proc(gobj, CodeRef(NORMAL_MAP_PROC), 0);
+        let (gobj, j, m) = self.intro_normal_model(scene, 12);
+        let k = self.game.intros.normal.title_anim;
+        self.intro_normal_title_anim(j, m, k);
+        jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
+        self.anim_all(j);
+        self.game
+            .world
+            .setup_proc(gobj, CodeRef(NORMAL_TITLE_PROC), 0);
+    }
+
+    /// The map's animation `k` started when it has animations and that one
+    /// (`fn_80187AB4_LoadAnim`).
+    fn intro_normal_anim(&mut self, j: JObjId, m: DataRef, k: u8) {
+        if self.data.ptr(m.at(4)).is_some() {
+            self.intro_normal_title_anim(j, m, k);
+        }
+    }
+
+    /// The title's animation `k` started when it has that one (its list is read without a
+    /// check).
+    fn intro_normal_title_anim(&mut self, j: JObjId, m: DataRef, k: u8) {
+        let anims = self.data.ptr(m.at(4)).expect("the model's animations");
+        if self.data.ptr(anims.at(4 * u32::from(k))).is_some() {
+            crate::lb::anim::add_model_anim(
+                &mut self.game.objs,
+                self.data,
+                Some(j),
+                u32::from(k),
+                m,
+            );
+            jobj::req_anim_all(&mut self.game.objs, Some(j), 0.0);
+            self.anim_all(j);
+        }
+    }
+
+    /// `gm_Scene_IntroNormal_OnFrame`: the scene's end once the map asked for it.
+    #[doc(alias = "gm_Scene_IntroNormal_OnFrame")]
+    pub fn intro_normal_on_frame(&mut self) {
+        if self.game.intros.normal.done {
+            self.game.end_scene();
+        }
+    }
+
+    /// `gm_Scene_IntroNormal_OnLeave`: `IrNml`'s blocks back to the scene's heap.
+    #[doc(alias = "gm_Scene_IntroNormal_OnLeave")]
     pub fn intro_normal_on_leave(&mut self) {
-        super::super::code::unported_call("gm_Scene_IntroNormal_OnLeave (Adventure's intro)");
+        let a = self.game.intros.normal.archive;
+        self.free_archive_blocks(a.file, a.block);
+    }
+
+    /// `fn_80187910`, the stage's camera's process: A moves it on to the start of its next
+    /// stretch of 300 frames (of eight); it animates, then its interest and eye scale by the
+    /// stage's scale (`Ground_801C0498`).
+    #[doc(alias = "fn_80187910")]
+    pub fn intro_normal_camera_proc(&mut self, gobj: GObjId) {
+        use crate::hsd::cobj;
+        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
+            panic!("the intro's camera holds no CObj");
+        };
+        let slot = self.game.intros.normal.slot;
+        if self.game.buttons_triggered(slot) & u64::from(crate::input::pad::BUTTON_A) != 0 {
+            let objs = &self.game.objs;
+            let eye = objs.cobjs[c].eyepos.expect("a camera without an eye");
+            let a = objs.wobjs[eye.0].aobj.expect("an eye without an animation");
+            let frame = objs.aobjs[a].curr_frame;
+            let s = &mut self.game.intros.normal;
+            s.stretch = ((fp::fctiwz(reg(frame)) / 300) as u8) & 0xF;
+            s.stretch = (s.stretch + 1) & 0xF;
+            if s.stretch >= 8 {
+                s.stretch = 0;
+            }
+            let frame = i32::from(s.stretch) * 300;
+            let camera = s.camera.expect("the stage's camera");
+            let anim = self.data.ptr(camera.at(4)).and_then(|a| self.data.ptr(a));
+            cobj::remove_anim(&mut self.game.objs, Some(c));
+            cobj::add_anim(&mut self.game.objs, self.data, Some(c), anim);
+            cobj::req_anim(
+                &mut self.game.objs,
+                Some(c),
+                mem(fp::frsp(f64::from(frame))),
+            );
+        }
+        cobj::anim(&mut self.game.objs, self.data, Some(c));
+        let scaled = |v: crate::vec::Vec3, k: f32| {
+            let k = reg(k);
+            crate::vec::Vec3::new(
+                mem(fp::fmuls(reg(v.x), k)),
+                mem(fp::fmuls(reg(v.y), k)),
+                mem(fp::fmuls(reg(v.z), k)),
+            )
+        };
+        let v = cobj::interest(&mut self.game.objs, self.data, c).expect("an interest");
+        let k = super::super::gr::ground::scale(self.game);
+        cobj::set_interest(&mut self.game.objs, c, scaled(v, k));
+        let v = cobj::eye_position(&mut self.game.objs, self.data, c).expect("an eye");
+        let k = super::super::gr::ground::scale(self.game);
+        cobj::set_eye_position(&mut self.game.objs, c, scaled(v, k));
+    }
+
+    /// `fn_80187AB4`, the map's process: its first animation played out, the second
+    /// (repeating) until Start, which fades the screen to black and asks for the scene's
+    /// end; then the third played out, the end asked for again and the map freed.
+    #[doc(alias = "fn_80187AB4")]
+    pub fn intro_normal_map_proc(&mut self, gobj: GObjId) {
+        let Some(Obj::JObj(j)) = self.game.world.gobj(gobj).obj else {
+            panic!("the intro's map holds no JObj");
+        };
+        let scene = self.game.intros.normal.scene.expect("the intro's scene");
+        let stage = u32::from(self.game.intros.normal.stage);
+        let models = self.data.ptr(scene).expect("the scene's models");
+        let m = self.data.ptr(models.at(4 * (11 - stage))).expect("the map");
+        let animated = crate::lb::anim::any_animated(&self.game.objs, Some(j));
+        match self.game.intros.normal.map_anim {
+            0 => {
+                if !animated {
+                    self.game.intros.normal.map_anim = 1;
+                    self.intro_normal_anim(j, m, 1);
+                    self.game.intros.normal.x34 = 0x960;
+                }
+            }
+            1 => {
+                let s = &mut self.game.intros.normal;
+                if s.active {
+                    s.flash = true;
+                }
+                if s.flash {
+                    s.map_anim = 2;
+                    s.done = true;
+                    self.game.bgflash.fade_to_black(1);
+                }
+                if !animated {
+                    let k = self.game.intros.normal.map_anim;
+                    self.intro_normal_anim(j, m, k);
+                }
+            }
+            2 if !animated => {
+                self.game.intros.normal.done = true;
+                crate::hsd::gobj::free(self, gobj);
+            }
+            _ => {}
+        }
+        self.anim_all(j);
+    }
+
+    /// `fn_80187CF4`, the title's process: its first two animations played out, the third
+    /// repeating until Start (the forward sound, the map's flash asked for), then the fourth
+    /// played out and the title freed.
+    #[doc(alias = "fn_80187CF4")]
+    pub fn intro_normal_title_proc(&mut self, gobj: GObjId) {
+        let Some(Obj::JObj(j)) = self.game.world.gobj(gobj).obj else {
+            panic!("the intro's title holds no JObj");
+        };
+        let scene = self.game.intros.normal.scene.expect("the intro's scene");
+        let models = self.data.ptr(scene).expect("the scene's models");
+        let m = self.data.ptr(models.at(4 * 12)).expect("the title");
+        let animated = crate::lb::anim::any_animated(&self.game.objs, Some(j));
+        match self.game.intros.normal.title_anim {
+            k @ (0 | 1) => {
+                if !animated {
+                    self.game.intros.normal.title_anim = k + 1;
+                    self.intro_normal_title_anim(j, m, k + 1);
+                }
+            }
+            2 => {
+                let slot = self.game.intros.normal.slot;
+                let start = u64::from(crate::input::pad::BUTTON_START);
+                if self.game.buttons_triggered(slot) & start != 0 {
+                    self.lb_audio_call(1);
+                    self.game.intros.normal.active = true;
+                    self.game.intros.normal.title_anim = 3;
+                    self.intro_normal_title_anim(j, m, 3);
+                } else if !animated {
+                    self.intro_normal_title_anim(j, m, 2);
+                }
+            }
+            _ => {
+                if !animated {
+                    crate::hsd::gobj::free(self, gobj);
+                }
+            }
+        }
+        self.anim_all(j);
+    }
+
+    /// `fn_80187C9C`, the map's and the title's render callback: the depth test and its
+    /// writes off at the hardware (`GXSetZMode`, past HAL's state cache), the joint tree,
+    /// then the cache's depth mode out of date (`HSD_StateInvalidate(0x40)`).
+    #[doc(alias = "fn_80187C9C")]
+    pub fn intro_normal_model_render(&mut self, gobj: GObjId, pass: i32) {
+        use crate::hsd::display::Draw;
+        self.game.objs.display.draws.push(Draw::ZModeDirect {
+            compare: false,
+            // `GX_NEVER`.
+            func: 0,
+            update: false,
+        });
+        self.render_jobj(gobj, pass);
+        self.game.objs.display.draws.push(Draw::Invalidate(0x40));
+    }
+
+    /// `Camera_800304E0`, the stage's camera's render callback: through the camera, the
+    /// screen erased to the game camera's background color, the stage's fog fitted, the
+    /// current lights dropped, then the game camera's layers 2, 1 and 0 over render links 0
+    /// and 3, links 4 to 6, fog off, and link 7.
+    #[doc(alias = "Camera_800304E0")]
+    pub fn intro_normal_stage_render(&mut self, gobj: GObjId) {
+        use super::super::camera;
+        use crate::hsd::display::{self, Draw};
+        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
+            panic!("the intro's camera holds no CObj");
+        };
+        if !display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
+            return;
+        }
+        // `HSD_SetEraseColor`: the game camera's background color, its alpha 1.
+        let bg = &self.game.camera.cam.background_color;
+        let color = [bg.r, bg.g, bg.b, 1];
+        let draws = &mut self.game.objs.display.draws;
+        draws.push(Draw::EraseColor(color));
+        draws.push(Draw::Erase);
+        self.stage_fog_update(c);
+        crate::hsd::lobj::delete_current_all(&mut self.game.objs, None);
+        let prio8 = |r: &Self| if r.game.camera.cam.x398_b2 { 0 } else { 8 };
+        let prio1 = if self.game.camera.cam.x398_b4 { 0 } else { 1 };
+        camera::set_layer(&mut self.game.camera.cam, 2);
+        self.game.world.gobj_mut(gobj).gxlink_prios = prio1 | prio8(self);
+        self.render_links(gobj, 7);
+        for layer in [1, 0] {
+            camera::set_layer(&mut self.game.camera.cam, layer);
+            self.game.world.gobj_mut(gobj).gxlink_prios = prio8(self);
+            self.render_links(gobj, 7);
+        }
+        self.game.world.gobj_mut(gobj).gxlink_prios = 0x70;
+        self.render_links(gobj, 7);
+        display::fog_set(&mut self.game.objs, None);
+        self.game.world.gobj_mut(gobj).gxlink_prios = 0x80;
+        self.render_links(gobj, 7);
+        display::camera_end(&mut self.game.objs);
     }
 }
 
@@ -961,6 +1405,17 @@ impl Running<'_> {
             return None;
         }
         let mut f = super::super::vi::SceneFiles::default();
+        if scene == GS_INTRO_NORMAL {
+            // Adventure's: `IrNml`, the stage's file and the intro's song.
+            f.names.push(self.intro_file_name(NORMAL_ARCHIVE));
+            let stkind = i32::from(self.game.one_player.adventure_intro.stkind);
+            let grkind = crate::lb::audio::ground_kind(stkind) as i32;
+            if let Some(name) = super::super::gr::data::stage_file(grkind, self.files_us()) {
+                f.names.push(name.trim_start_matches('/').to_owned());
+            }
+            f.songs.push(0x2E);
+            return Some(f);
+        }
         let e = self.intro_easy_enter();
         let mut d = EasyData::default();
         d.copy_enter(&e);
@@ -1032,6 +1487,9 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
     match f {
         EASY_MODEL_PROC => r.intro_easy_model_proc(gobj),
         EASY_MAP_PROC => r.intro_easy_map_proc(),
+        NORMAL_CAMERA_PROC => r.intro_normal_camera_proc(gobj),
+        NORMAL_MAP_PROC => r.intro_normal_map_proc(gobj),
+        NORMAL_TITLE_PROC => r.intro_normal_title_proc(gobj),
         f if EASY_FIGHTER_PROCS.contains(&f) => {
             let i = EASY_FIGHTER_PROCS.iter().position(|&p| p == f).unwrap();
             if i < 3 {
@@ -1049,15 +1507,18 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
 pub fn run_frame(r: &mut Running, f: u32) -> bool {
     match f {
         f if f == EASY_ON_FRAME.0 => r.intro_easy_on_frame(),
+        f if f == NORMAL_ON_FRAME.0 => r.intro_normal_on_frame(),
         _ => return false,
     }
     true
 }
 
 /// Runs an intro's render callback, if `cb` is one.
-pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32) -> bool {
+pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         EASY_CAMERA_RENDER => r.intro_easy_camera_render(gobj),
+        NORMAL_MODEL_RENDER => r.intro_normal_model_render(gobj, pass),
+        NORMAL_STAGE_CAMERA_RENDER => r.intro_normal_stage_render(gobj),
         _ => return false,
     }
     true

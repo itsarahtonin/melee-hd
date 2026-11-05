@@ -306,10 +306,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "Classic's allies drawn",
-        "Classic's team and giant stages (its second stage on): the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gm_8017CBAC (Classic's clear)",
         "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
     ),
@@ -322,8 +318,12 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "(Adventure's intro)",
-        "Adventure's intro, past its state's unported entry (gm_801B3F40): the single-player modes', which only the entries behind GATES lead to",
+        "ftLib_LoadKirbyHats (Adventure's Green Greens)",
+        "Adventure's Green Greens: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "ftData_800857E0 (Kirby's copies' setup)",
+        "Kirby among Adventure's start hook's fighters (Green Greens): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8017D7AC's records after a no contest",
@@ -348,10 +348,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
-    ),
-    (
-        "single-player match setup",
-        "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gmMainLib_8015CE44 (the automatic handicap without a save)",
