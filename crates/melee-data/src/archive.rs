@@ -45,6 +45,19 @@ impl Archives {
         &self.list[id.0 as usize]
     }
 
+    /// The raw file ([`Archive::raw`]) holding exactly `file`, if one was added.
+    pub fn find_raw(&self, file: &[u8]) -> Option<ArchiveId> {
+        self.list
+            .iter()
+            .position(|a| {
+                a.data.len() == file.len()
+                    && a.relocs.is_empty()
+                    && a.header == [0; HEADER]
+                    && *a.data == *file
+            })
+            .map(|i| ArchiveId(i as u16))
+    }
+
     /// The pointer stored at `r`, in the same archive.
     pub fn ptr(&self, r: DataRef) -> Option<DataRef> {
         self.get(r.archive).ptr(r.offset).map(|offset| DataRef {
