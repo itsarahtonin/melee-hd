@@ -529,10 +529,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's select shows the Home-Run records (match type 0x10), ported",
     ),
     (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),
@@ -596,10 +592,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
         "mnCharSel_8025C020's records for match type",
         "the mode's select shows the Target Test records (match type 0xF), ported",
-    ),
-    (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "HUD colour {c} past the table",
@@ -666,10 +658,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
         "mnCharSel_8025C020's records for match type",
         "the modes' selects show the Multi-Man records (match types 0x11 to 0x16), ported",
-    ),
-    (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "HUD colour {c} past the table",
@@ -758,10 +746,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "Training's select shows the best combo (match type 0x17), ported",
     ),
     (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),
@@ -780,10 +764,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
     (
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
-    ),
-    (
-        "it_8027A9B8 (an event's Pokémon list)",
-        "the rules' event Pokémon (x28, gm_8016AEB8), which only an event's setup sets; Training's balls draw from Training's list (it_8027A780)",
     ),
     (
         "grStadium_801D384C",
@@ -859,7 +839,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_18A1",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
-            "gm_8016AC44 with a challenger's record",
             "a 1P run's ratio getter",
             "gm_8017D7AC's records after a no contest",
             "gm_8017CBAC (All-Star's clear)",
@@ -920,12 +899,8 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "melee/gm/gmevent",
             "melee/it/kinds/itevyoshiegg",
-            "(an event's series of rounds)",
-            "(an event's crowd)",
-            "gm_801BC00C for event",
-            "the event process",
-            "(event 32's falls)",
             "an event's random fifth player",
+            "(Event 50's cheer)",
         ],
         modes: &[EV],
     },

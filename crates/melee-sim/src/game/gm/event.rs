@@ -5,6 +5,7 @@
 use melee_data::archive::DataRef;
 
 use super::super::state::Running;
+use super::opponents::NONE;
 use crate::hsd::gobj::{self, GObjId};
 
 /// `GM_EVENT`.
@@ -491,6 +492,119 @@ impl Running<'_> {
         }
     }
 
+    /// `onEnterVs`'s crowd (`evbonus`): the joining opponents set up (`gm_8016A22C`: the
+    /// crowd's character in the second player's costume, or its own kept apart from the
+    /// first player's, Kirby's copies drawn for a Kirby crowd, the level, count, how many at
+    /// once, the first point, joining as slots free, the ratios), their scale
+    /// (`gm_8016A414`), the rules pointed at them (`gm_8016A21C`), the 1P stock display's
+    /// count (`gm_8016A434`), the event's callback for each joiner (`gm_8016A404`) and the
+    /// joiners' flag (`gm_8016A424`).
+    // Ports `gm_8016A414`; aliased once a check reaches it.
+    // Ports `gm_8016A434`; aliased once a check reaches it.
+    // Ports `gm_8016A404`; aliased once a check reaches it.
+    // Ports `gm_8016A424`; aliased once a check reaches it.
+    fn event_crowd(
+        &mut self,
+        start: &mut super::super::structs::StartMeleeData,
+        e: Entry,
+        level: u8,
+    ) {
+        self.game.game_data.vs.unk_530.xB_3 = true;
+        let b = e.evbonus(self).expect("the event's crowd");
+        let d = self.data;
+        let ck = d.u8(b) as i8;
+        let ev = self.game.game_data.vs.unk_530.clone();
+        let own = d.u8(b.at(5)) == 1;
+        if own && ev.x0 as i8 == ck && ev.x1 == d.u8(b.at(6)) {
+            self.game.game_data.vs.unk_530.x50[1] = next_color(d.u8(b.at(6)));
+        }
+        let copies = if ck == 4 { d.u8(b.at(0x17)) } else { 0 };
+        let ev = self.game.game_data.vs.unk_530.clone();
+        self.setup_opponents(
+            &[ck, NONE, NONE],
+            [ev.x50[1] as i8, 0, 0],
+            i32::from(own),
+            0,
+            copies,
+            ev.x0,
+            ev.x1,
+            i32::from(d.u8(b.at(1))),
+            i32::from(d.u8(b.at(2))),
+            i32::from(d.u8(b.at(3))),
+            i32::from(d.u8(b.at(4))),
+            0,
+            1,
+            d.f32(b.at(8)),
+            d.f32(b.at(0xC)),
+        );
+        let o = &mut self.game.gm.opponents;
+        o.model_scale = d.f32(b.at(0x10));
+        super::opponents::point_rules(&mut start.rules);
+        if d.u8(b.at(0x14)) & 0x80 != 0 {
+            self.game.gm.opponents.flags |= super::opponents::COUNTED;
+        }
+        if let Some(f) = JOIN_CALLBACKS
+            .iter()
+            .find(|(l, _)| *l == level)
+            .map(|&(_, f)| f)
+        {
+            self.game.gm.opponents.on_join = Some(super::super::handles::CodeRef(f));
+        }
+        let x15 = d.u8(b.at(0x15));
+        if x15 != 0 {
+            self.game.gm.opponents.more_flag6 = x15;
+        }
+    }
+
+    /// A series' round `k`'s stage (`evstage_table->stage[k]`).
+    fn event_round_stage(&self, e: Entry, k: usize) -> u16 {
+        let s = e.stages(self).expect("the event's rounds");
+        self.data.u16(s.at(2 + 2 * k as u32))
+    }
+
+    /// How many rounds a series has (`evstage_table->count`).
+    fn event_rounds(&self, e: Entry) -> i32 {
+        let s = e.stages(self).expect("the event's rounds");
+        i32::from(self.data.u8(s))
+    }
+
+    /// `onEnterVs`'s round in a series: past the first, the first player's stocks, damage
+    /// and character (Sheik kept) from the last round's end, its entrance skipped; the second
+    /// player the round's opponent, its costume apart from the first player's.
+    fn event_round_opponent(
+        &mut self,
+        start: &mut super::super::structs::StartMeleeData,
+        e: Entry,
+    ) {
+        let ev = self.game.game_data.vs.unk_530.clone();
+        if ev.x20 > 0 {
+            let p = &mut start.players[0];
+            p.stocks = ev.x24 as i8;
+            p.damage = ev.x28 as u16;
+            p.xC_b1 = false;
+            let c = ev.x38 as i8;
+            if c != 0x21 {
+                p.ckind = c;
+                let ev = &mut self.game.game_data.vs.unk_530;
+                ev.x0 = c as u8;
+                ev.x4C[0] = c;
+            }
+        }
+        let src = self.event_round(e, ev.x20 as usize);
+        start.players[1] = self.event_player(src);
+        let (p0, p1) = (start.players[0].clone(), &mut start.players[1]);
+        if p1.ckind == p0.ckind && p1.color == p0.color {
+            p1.color = next_color(p1.color);
+        }
+        if p0.ckind == 0x13 && p1.ckind == 0x12 && p1.color == p0.color {
+            p1.color = next_color(p1.color);
+        }
+        let (c, col) = (p1.ckind, p1.color);
+        let ev = &mut self.game.game_data.vs.unk_530;
+        ev.x4C[1] = c;
+        ev.x50[1] = col;
+    }
+
     /// A series' round `k`'s opponent's setup (`evstage_table->entries[k]`).
     fn event_round(&self, e: Entry, k: usize) -> DataRef {
         let s = e.stages(self).expect("the event's rounds");
@@ -577,7 +691,18 @@ impl Running<'_> {
             ev.x1C = quake;
         }
         if e.kind(self) == 2 {
-            super::super::code::unported_call("gm_8016A92C (an event's series of rounds)");
+            let ev = &mut self.game.game_data.vs.unk_530;
+            ev.xB_4 = true;
+            let round = ev.x20;
+            let stage = self.event_round_stage(e, round as usize);
+            start.rules.stkind = stage;
+            self.game.game_data.vs.unk_530.x48 = i32::from(stage);
+            if round > 0 {
+                start.rules.x1_2 = true;
+                start.rules.x1_3 = true;
+                start.rules.time_limit = self.game.game_data.vs.unk_530.x2C as u32;
+            }
+            self.game.left_list_start(&mut start.rules);
         }
         for p in &mut start.players {
             p.slot_type = 3;
@@ -597,6 +722,9 @@ impl Running<'_> {
             }
             i += 1;
         }
+        if e.kind(self) == 2 {
+            self.event_round_opponent(&mut start, e);
+        }
         if level == 0x2B {
             let ev = &mut self.game.game_data.vs.unk_530;
             if ev.x4C[0] == ev.x4C[2] && ev.x50[0] == ev.x50[2] {
@@ -612,7 +740,7 @@ impl Running<'_> {
             }
         }
         if e.kind(self) == 1 {
-            super::super::code::unported_call("gm_8016A22C (an event's crowd)");
+            self.event_crowd(&mut start, e, level);
         }
         let ev = self.game.game_data.vs.unk_530.clone();
         match ev.x44 {
@@ -877,8 +1005,9 @@ impl Running<'_> {
     }
 
     /// `gm_801BC00C`: the event's run's counters cleared, its rounds' fighters' costumes
-    /// loaded and their timers, the trophies' costumes loaded for the rounds, the flash
-    /// dimmed in event 37, the quake's scale, and the event's process.
+    /// loaded and their timers, the third player's costume for event 44 (with Kirby's copy
+    /// of its special), a series' rounds' opponents put in the characters-left list, the
+    /// flash dimmed in event 37, the quake's scale, and the event's process.
     #[doc(alias = "gm_801BC00C")]
     fn event_match_setup(&mut self) {
         let idx = self.event();
@@ -893,8 +1022,69 @@ impl Running<'_> {
         ) {
             self.event_load_table();
         }
-        if matches!(idx, 9 | 19 | 29 | 35 | 39 | 43 | 48) {
-            super::super::code::unported_call(&format!("gm_801BC00C for event {}", idx + 1));
+        let e = self.event_entry(idx).expect("the event's entry");
+        let ev = self.game.game_data.vs.unk_530.clone();
+        match idx {
+            35 => {
+                let rounds: &[usize] = if ev.x20 == 0 { &[2, 3] } else { &[4] };
+                for &k in rounds {
+                    let p = self.event_round(e, k);
+                    let (c, col) = (self.data.u8(p) as i8, self.data.u8(p.at(3)));
+                    self.load_fighter_costume(
+                        super::super::pl::player::ckind_ftkind(i32::from(c), 0),
+                        col,
+                    );
+                }
+            }
+            43 => {
+                let x4 = e.x4(self).expect("the event's parameters");
+                let p = self.data.ptr(x4.at(4)).expect("the event's third player");
+                let kind =
+                    super::super::pl::player::ckind_ftkind(i32::from(self.data.u8(p) as i8), 0);
+                self.load_fighter_costume(kind, ev.x50[2]);
+                if ev.x0 as i8 == 4 {
+                    self.player_80031da8(kind, i32::from(ev.x1));
+                }
+            }
+            _ => {}
+        }
+        if matches!(idx, 9 | 19 | 29 | 35 | 39 | 48) && ev.x20 > 0 {
+            let st = &mut self.game.vs.state;
+            st.timer_seconds = ev.x2C as u32;
+            st.unk_2C = ev.x30 as u16;
+        }
+        let put = |r: &mut Self, k: usize| {
+            let p = r.event_round(e, k);
+            let (c, col) = (r.data.u8(p), r.data.u8(p.at(3)));
+            let ev = &r.game.game_data.vs.unk_530;
+            let col = if ev.x0 as i8 == c as i8 && ev.x1 == col {
+                next_color(col)
+            } else {
+                col
+            };
+            r.game.left_list_push_front(c, col as i8);
+        };
+        match idx {
+            9 | 19 | 29 | 39 | 48 => {
+                let mut k = ev.x20;
+                while k < self.event_rounds(e) {
+                    put(self, k as usize);
+                    k += 1;
+                }
+            }
+            35 => {
+                if ev.x20 == 0 {
+                    for k in [0, 2, 3] {
+                        put(self, k);
+                    }
+                }
+                if ev.x20 <= 1 {
+                    for k in [1, 4] {
+                        put(self, k);
+                    }
+                }
+            }
+            _ => {}
         }
         if idx == 0x24 {
             self.game.bgflash.set_scale(0.2);
@@ -909,6 +1099,93 @@ impl Running<'_> {
             0x15,
         );
     }
+
+    /// The characters who join an event's match after its start, whose files the session's
+    /// frontend reads with the match's (`Fighter_Create` and the start hook's
+    /// `ftLib_LoadFighterCostume` load them from the disc): Event 36's round's later
+    /// opponents and Event 44's third player in their costumes, and a crowd's character in
+    /// any costume (`None`); with whether a Kirby crowd copies (`x17`), drawn from every
+    /// character.
+    pub fn event_joiners(&self) -> (Vec<(i8, Option<u8>)>, bool) {
+        let idx = self.event();
+        let Some(e) = self.event_entry(idx) else {
+            return (Vec::new(), false);
+        };
+        let d = self.data;
+        let with = |p: DataRef| (d.u8(p) as i8, Some(d.u8(p.at(3))));
+        match idx {
+            35 => {
+                let ks: &[usize] = if self.game.game_data.vs.unk_530.x20 == 0 {
+                    &[2, 3]
+                } else {
+                    &[4]
+                };
+                (
+                    ks.iter().map(|&k| with(self.event_round(e, k))).collect(),
+                    false,
+                )
+            }
+            43 => {
+                let x4 = e.x4(self).expect("the event's parameters");
+                let p = d.ptr(x4.at(4)).expect("the event's third player");
+                (vec![with(p)], false)
+            }
+            _ if e.kind(self) == 1 => {
+                let b = e.evbonus(self).expect("the event's crowd");
+                let ck = d.u8(b) as i8;
+                (vec![(ck, None)], ck == 4 && d.u8(b.at(0x17)) != 0)
+            }
+            _ => (Vec::new(), false),
+        }
+    }
+
+    /// `ftLib_LoadFighterCostume`: a fighter kind's data, its effects' file, one costume and
+    /// its animations loaded unless they are (and Kirby's copies' setup, `ftData_800857E0`).
+    #[doc(alias = "ftLib_LoadFighterCostume")]
+    fn load_fighter_costume(&mut self, kind: i32, costume: u8) {
+        use super::super::ft::data::{MAIN_MEMORY, kind_tables};
+        if let Some(file) = self.game.load_fighter_data(self.data, kind) {
+            self.check_preloaded(file);
+            self.disc_load(file, MAIN_MEMORY);
+        }
+        let t = kind_tables(kind);
+        super::super::ef::load_sync(self, i32::from(t.effect_file));
+        if let Some(file) = self.game.load_costume(self.data, kind, i32::from(costume)) {
+            self.check_preloaded(&file);
+            self.disc_load(&file, MAIN_MEMORY);
+        }
+        self.put_anim_file(kind);
+        // `ftData_800857E0`: Kirby's copies' setup (`ftData_UnkMotionStates5`, Kirby's only).
+        if kind == super::super::ft::kirby::KIND_KIRBY {
+            self.player_80031dc8();
+        }
+    }
+}
+
+impl super::super::state::Game {
+    /// `gm_8016A92C` (as All-Star's rest area inlines it): the characters-left list
+    /// (`lbl_8046B668`) emptied and given to the rules.
+    pub fn left_list_start(&mut self, rules: &mut super::super::structs::StartMeleeRules) {
+        self.gm.left.arr2[0] = -2;
+        rules.x58 = super::super::handles::RawPtr(super::one_player_match::LEFT_LIST);
+    }
+
+    /// `gm_8016A9E8`: a character and costume put first in the characters-left list, the
+    /// rest moved down one; its place counted from 1, or -1 with the list full.
+    #[doc(alias = "gm_8016A9E8")]
+    pub fn left_list_push_front(&mut self, ckind: u8, costume: i8) -> i32 {
+        let list = &mut self.gm.left;
+        let Some(end) = (0..27).find(|&i| list.arr2[i] == -2) else {
+            return -1;
+        };
+        for i in (0..=end).rev() {
+            list.arr2[i + 1] = list.arr2[i];
+            list.arr1[i + 1] = list.arr1[i];
+        }
+        list.arr2[0] = costume;
+        list.arr1[0] = ckind as i8;
+        end as i32 + 1
+    }
 }
 
 /// The processes [`PROCS`] holds.
@@ -921,6 +1198,21 @@ const PROC_KO_2: u32 = 0x801B_D7FC;
 const PROC_KO_3_KEEP_2: u32 = 0x801B_D93C;
 const PROC_GOAL: u32 = 0x801B_DC08;
 const PROC_KO_3_4: u32 = 0x801B_DD44;
+const PROC_SHEIKS: u32 = 0x801B_CAF0;
+const PROC_EGG: u32 = 0x801B_D028;
+const PROC_ASLEEP: u32 = 0x801B_D46C;
+const PROC_KOS_LESS_FALLS: u32 = 0x801B_DAF4;
+const PROC_ROUNDS: [u32; 5] = [
+    0x801B_CF20,
+    0x801B_D44C,
+    0x801B_DAD4,
+    0x801B_E37C,
+    0x801B_E618,
+];
+const PROC_ROUNDS_36: u32 = 0x801B_DE94;
+const PROC_JOINER: u32 = 0x801B_E39C;
+const PROC_CROWD_22: u32 = 0x801B_D658;
+const PROC_HANDS: u32 = 0x801B_E638;
 
 impl Running<'_> {
     /// Whether the match's time ran out (`gm_801BC754`'s and the others' inline): never for
@@ -964,7 +1256,8 @@ impl Running<'_> {
                 }
             }
             if level == 0x1F {
-                super::super::code::unported_call("pl_8003FBFC (event 32's falls)");
+                let falls = self.game.player(0).ext_u32(0xCFC);
+                kos = self.game.player_kos(0, 1).wrapping_sub(falls);
             }
             // `if (var_r27 > -1)`: an unsigned compare with 0xFFFFFFFF, never true.
             self.game.game_data.vs.unk_530.xC = kos as i32;
@@ -1012,8 +1305,9 @@ impl Running<'_> {
                     }
                 }
                 if self.game.game_data.vs.unk_530.xB_3 {
-                    super::super::code::unported_call("gm_80169384 (an event's crowd)");
+                    count += self.game.gm.opponents.left();
                 }
+
                 if count == 0 {
                     self.event_success(gobj);
                     return;
@@ -1067,7 +1361,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BCF40`: survive to the time's end: failed with no stock left.
-    // Ports `gm_801BCF40`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BCF40")]
     fn event_survive_proc(&mut self, gobj: GObjId) {
         if self.game.player_p1_stocks() <= 0 {
             self.event_fail(gobj);
@@ -1080,7 +1374,7 @@ impl Running<'_> {
 
     /// `gm_801BD164`: once the third player is out, cleared if the first player KO'd it
     /// more than the second did, else failed; failed with no stock left or at the time's end.
-    // Ports `gm_801BD164`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BD164")]
     fn event_kos_of_3_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(2) <= 0 {
             let theirs = self.game.player_kos(1, 2) as i32;
@@ -1100,7 +1394,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BD30C`: keep the second player in to the time's end.
-    // Ports `gm_801BD30C`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BD30C")]
     fn event_keep_2_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(1) <= 0 || self.game.player_p1_stocks() <= 0 {
             self.event_fail(gobj);
@@ -1112,7 +1406,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BD7FC`: KO the second player before the time's end.
-    // Ports `gm_801BD7FC`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BD7FC")]
     fn event_ko_2_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(1) <= 0 {
             self.event_success(gobj);
@@ -1151,7 +1445,7 @@ impl Running<'_> {
     }
 
     /// `gm_801BDD44`: KO the third and fourth players.
-    // Ports `gm_801BDD44`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BDD44")]
     fn event_ko_3_4_proc(&mut self, gobj: GObjId) {
         if self.game.player_stocks(2) <= 0 && self.game.player_stocks(3) <= 0 {
             self.event_success(gobj);
@@ -1163,9 +1457,488 @@ impl Running<'_> {
     }
 }
 
+impl Running<'_> {
+    /// `gm_801BCAF0`, Event 9's: a Zelda out of stocks comes back with one (`gm_8016F00C`);
+    /// cleared once both computer players are out as Sheik, failed with no stock left or at
+    /// the time's end.
+    #[doc(alias = "gm_801BCAF0")]
+    // Ports `gm_8016F00C`; aliased once a check reaches it.
+    fn event_sheiks_proc(&mut self, gobj: GObjId) {
+        let mut count = 0;
+        for i in 1..3 {
+            if self.game.player_stocks(i) <= 0
+                && let Some(g) = self.game.player_entity(i)
+            {
+                if self.game.ft_kind(g) == FT_KIND_SEAK {
+                    count += 1;
+                } else {
+                    self.game.set_player_stocks(i, 1);
+                    self.respawn(i, 0);
+                }
+            }
+        }
+        if count == 2 {
+            self.event_success(gobj);
+            return;
+        }
+        if self.game.player_p1_stocks() <= 0 {
+            self.event_fail(gobj);
+            return;
+        }
+        if self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+
+    /// `gm_801BD028`, Event 13's: the event's egg dropped at the start (at the event's `x4`,
+    /// `itEvYoshiEgg_Spawn`); failed once the egg breaks (`x18`), cleared at the time's end.
+    #[doc(alias = "gm_801BD028")]
+    fn event_egg_proc(&mut self, gobj: GObjId) {
+        if self.game.game_data.vs.unk_530.x10 == 0 {
+            let e = self.event_entry(self.event()).expect("the event's entry");
+            let x4 = e.x4(self).expect("the egg's place");
+            let d = self.data;
+            let pos = crate::vec::Vec3::new(d.f32(x4), d.f32(x4.at(4)), d.f32(x4.at(8)));
+            super::super::it::kinds::evyoshiegg::spawn(self, pos);
+            self.game.game_data.vs.unk_530.x10 += 1;
+        }
+        if self.game.game_data.vs.unk_530.x18 != 0 {
+            self.event_fail(gobj);
+            return;
+        }
+        if self.event_time_up() {
+            self.event_success(gobj);
+        }
+    }
+
+    /// `gm_801BD46C`, Event 21's: cleared once both computer Ice Climbers' second fighters
+    /// sleep; failed when either computer player or the first player is out, or at the
+    /// time's end. A slot without a second fighter counts by the last answer's register
+    /// (docs/melee-bugs.md): for the first, what `HSD_GObj_RunProcs` left in r30, the low
+    /// word of the scheduler's skip mask it read at its start.
+    #[doc(alias = "gm_801BD46C")]
+    fn event_asleep_proc(&mut self, gobj: GObjId) {
+        let mut asleep = self.game.world.skip_links as u32;
+        let mut count = 0;
+        for i in 1..3 {
+            if let Some(g) = self.game.player_entity_at(i, 1) {
+                asleep = u32::from(self.game.ft_is_sleeping(g));
+            }
+            if asleep != 0 {
+                count += 1;
+            }
+        }
+        if count == 2 {
+            self.event_success(gobj);
+            return;
+        }
+        for i in 1..3 {
+            if self.game.player_stocks(i) <= 0 {
+                self.event_fail(gobj);
+                return;
+            }
+        }
+        if self.game.player_p1_stocks() <= 0 {
+            self.event_fail(gobj);
+            return;
+        }
+        if self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+
+    /// `gm_801BDAF4`, Event 32's: at the time's end, cleared if the first player's KOs of the
+    /// second less its own falls (`pl_8003FBFC`) beat the second's falls (`pl_8003FC20`).
+    #[doc(alias = "gm_801BDAF4")]
+    // Ports `pl_8003FBFC`; aliased once a check reaches it.
+    // Ports `pl_8003FC20`; aliased once a check reaches it.
+    fn event_kos_less_falls_proc(&mut self, gobj: GObjId) {
+        if !self.event_time_up() {
+            return;
+        }
+        let theirs = self.game.player(1).ext_u32(0xD00) as i32;
+        let kos = self.game.player_kos(0, 1) as i32;
+        let falls = self.game.player(0).ext_u32(0xCFC) as i32;
+        if kos.wrapping_sub(falls) > theirs {
+            self.event_success(gobj);
+            return;
+        }
+        self.event_fail(gobj);
+    }
+
+    /// `gm_801BC670`: a series' round won: the next round's wait (from the first event's
+    /// `x4`), the time left kept (at least that `x4`'s seconds), Sheik kept for the next
+    /// round, the series' time so far, and the match ended as a round's (kind 8).
+    // Ports `gm_801BC670`; aliased once a check reaches it.
+    fn event_round_won(&mut self) {
+        let e0 = self.event_entry(0).expect("the first event's entry");
+        let x4 = e0.x4(self).expect("the first event's parameters");
+        let (min, wait) = (self.data.u32(x4) as i32, self.data.u32(x4.at(4)) as i32);
+        let secs = self.game.vs_timer_seconds() as i32;
+        let frames = i32::from(self.game.vs_timer_frames());
+        let sheik = self.game.player_fighter_kind(0) == FT_KIND_SEAK;
+        let fc = self.game.vs_frame_count() as i32;
+        let ev = &mut self.game.game_data.vs.unk_530;
+        ev.xB_2 = true;
+        ev.x10 = 0x78 - wait;
+        ev.x2C = secs;
+        ev.x30 = frames;
+        if ev.x2C < min {
+            ev.x2C = min;
+            ev.x30 = 0;
+        }
+        ev.x38 = if sheik { 0x13 } else { 0x21 };
+        ev.x34 = ev.x34.wrapping_add(fc);
+        self.player_80036844(0, 1);
+        self.game.audio.lb.master = 0x7F;
+        self.game.set_game_speed(1.0);
+        self.game.vs_set_end_kind(8);
+        self.game.vs_terminate();
+    }
+
+    /// The opponent `src` beaten: struck off the characters-left list in its costume (apart
+    /// from the first player's), `gm_8016AC44`.
+    fn event_strike(&mut self, src: DataRef) {
+        let (c, col) = (self.data.u8(src) as i8, self.data.u8(src.at(3)));
+        let ev = &self.game.game_data.vs.unk_530;
+        let col = if ev.x0 as i8 == c && ev.x1 == col {
+            next_color(col)
+        } else {
+            col
+        };
+        self.out_of_stocks(c, col as i8);
+    }
+
+    /// A round won: once the round's wait (`x10`) runs out, the fade to black (over the
+    /// first event's `x4`'s frames) and the process gone.
+    fn event_round_wait(&mut self, gobj: GObjId) {
+        let ev = &mut self.game.game_data.vs.unk_530;
+        ev.x10 -= 1;
+        if ev.x10 < 0 {
+            let e0 = self.event_entry(0).expect("the first event's entry");
+            let x4 = e0.x4(self).expect("the first event's parameters");
+            let frames = self.data.u32(x4.at(4)) as i32;
+            self.game.bgflash.fade_to_black(frames);
+            gobj::free(self, gobj);
+        }
+    }
+
+    /// `gm_801BCC9C`, a series' process (Events 10, 20, 30, 40 and 49: `gm_801BCF20`,
+    /// `801BD44C`, `801BDAD4`, `801BE37C`, `801BE618`): once the round's opponent is out, it's
+    /// struck off the list and the series cleared at its last round, else failed with no
+    /// stock left or the round won; failed with no stock left or at the time's end.
+    #[doc(alias = "gm_801BCC9C")]
+    #[doc(alias = "gm_801BCF20")]
+    #[doc(alias = "gm_801BD44C")]
+    #[doc(alias = "gm_801BDAD4")]
+    #[doc(alias = "gm_801BE37C")]
+    #[doc(alias = "gm_801BE618")]
+    fn event_rounds_proc(&mut self, gobj: GObjId) {
+        if self.game.game_data.vs.unk_530.xB_2 {
+            self.event_round_wait(gobj);
+            return;
+        }
+        if self.game.player_stocks(1) <= 0 {
+            let e = self.event_entry(self.event()).expect("the event's entry");
+            let round = self.game.game_data.vs.unk_530.x20;
+            let src = self.event_round(e, round as usize);
+            self.event_strike(src);
+            if round >= self.event_rounds(e) - 1 {
+                self.event_success(gobj);
+                return;
+            }
+            if self.game.player_p1_stocks() <= 0 {
+                self.event_fail(gobj);
+                return;
+            }
+            self.event_round_won();
+            return;
+        }
+        if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+
+    /// The announcer's and voices' banks for the characters of `kinds`, once a match
+    /// (`xB_5`): their masks (`lbAudioAx_80026E84`) wanted for the match's groups
+    /// (`lbAudioAx_80026F2C(0x14)`, `lbAudioAx_8002702C(4, ...)`), loaded, and waited for.
+    fn event_voices(&mut self, kinds: &[i32]) {
+        if self.game.game_data.vs.unk_530.xB_5 {
+            return;
+        }
+        self.game.game_data.vs.unk_530.xB_5 = true;
+        let mut mask = 0u64;
+        for &k in kinds {
+            mask |= crate::lb::audio::character_banks(k);
+        }
+        self.game.audio.lb.unwant_banks(0x14);
+        self.game.audio.lb.want_banks(4, mask);
+        self.game.audio.lb_start_bank_loads(self.data);
+        self.game.audio.lb_wait_for_banks(self.data);
+    }
+
+    /// `gm_801BDE94`, Event 36's series: in the first round, each of the round's opponents
+    /// out brings the next in (`gm_8016EDDC`: rounds 2 and 3 into slots 2 and 3), the last
+    /// struck off the list and the round won; in the second, the second out brings round 4
+    /// in, which out clears the series; failed with no stock left or at the time's end.
+    #[doc(alias = "gm_801BDE94")]
+    fn event_rounds_36_proc(&mut self, gobj: GObjId) {
+        let idx = self.event();
+        let e = self.event_entry(idx).expect("the event's entry");
+        let round = self.game.game_data.vs.unk_530.x20;
+        let p0 = e.player(self, 0).expect("the event's first player");
+        let ck = |r: &Self, k: usize| i32::from(r.data.u8(r.event_round(e, k)) as i8);
+        let first = i32::from(self.data.u8(p0) as i8);
+        let kinds = if round == 0 {
+            [first, ck(self, 0), ck(self, 2), ck(self, 3)]
+        } else {
+            [first, ck(self, 1), ck(self, 4), first]
+        };
+        self.event_voices(&kinds);
+        if self.game.game_data.vs.unk_530.xB_2 {
+            self.event_round_wait(gobj);
+            return;
+        }
+        let x18 = self.game.game_data.vs.unk_530.x18;
+        if round == 0 {
+            match x18 {
+                0 if self.game.player_stocks(1) <= 0 => {
+                    self.game.game_data.vs.unk_530.x18 = 1;
+                    let p = self.event_player(self.event_round(e, 2));
+                    self.vs_add_player(2, &p);
+                }
+                1 if self.game.player_stocks(2) <= 0 => {
+                    self.game.game_data.vs.unk_530.x18 = 2;
+                    let p = self.event_player(self.event_round(e, 3));
+                    self.vs_add_player(3, &p);
+                }
+                2 if self.game.player_stocks(3) <= 0 => {
+                    self.event_strike(self.event_round(e, 3));
+                    if self.game.player_p1_stocks() <= 0 {
+                        self.event_fail(gobj);
+                        return;
+                    }
+                    self.event_round_won();
+                    return;
+                }
+                _ => {}
+            }
+        } else {
+            match x18 {
+                0 if self.game.player_stocks(1) <= 0 => {
+                    self.game.game_data.vs.unk_530.x18 = 1;
+                    let p = self.event_player(self.event_round(e, 4));
+                    self.vs_add_player(2, &p);
+                }
+                1 if self.game.player_stocks(2) <= 0 => {
+                    self.event_strike(self.event_round(e, 4));
+                    self.event_success(gobj);
+                    return;
+                }
+                _ => {}
+            }
+        }
+        if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+
+    /// `gm_801BE39C`, Event 44's: once the match's seconds reach the event's `x4`, its third
+    /// player joins (`gm_8016EDDC`, in the costume kept apart, `x50[2]`); cleared once it's
+    /// out, failed when the second player or the first is out, or at the time's end.
+    #[doc(alias = "gm_801BE39C")]
+    fn event_joiner_proc(&mut self, gobj: GObjId) {
+        let idx = self.event();
+        let e = self.event_entry(idx).expect("the event's entry");
+        let x4 = e.x4(self).expect("the event's parameters");
+        let joiner = self.data.ptr(x4.at(4)).expect("the event's third player");
+        let p1 = e.player(self, 1).expect("the event's second player");
+        let kinds = [
+            self.game.player_ckind(0),
+            i32::from(self.data.u8(p1) as i8),
+            i32::from(self.data.u8(joiner) as i8),
+        ];
+        self.event_voices(&kinds);
+        let joined = self.game.game_data.vs.unk_530.x10 != 0;
+        if joined && self.game.player_stocks(2) <= 0 {
+            self.event_success(gobj);
+            return;
+        }
+        if self.game.player_stocks(1) <= 0 || self.game.player_p1_stocks() <= 0 {
+            self.event_fail(gobj);
+            return;
+        }
+        if !joined && self.game.vs_timer_seconds() >= self.data.u32(x4) {
+            self.game.game_data.vs.unk_530.x10 = 1;
+            let mut p = self.event_player(joiner);
+            p.color = self.game.game_data.vs.unk_530.x50[2];
+            self.vs_add_player(2, &p);
+        }
+        if self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+}
+
+impl Running<'_> {
+    /// `gm_801BD658`, Event 22's: as the stock events' (`gm_801BC754`'s stock match), and
+    /// the Multi-Man counter put at 0 when it's cleared.
+    // Ports `gm_801BD658`; aliased once a check reaches it.
+    fn event_crowd_22_proc(&mut self, gobj: GObjId) {
+        let mut count = 0;
+        for i in 1..6 {
+            if self.game.player_pkind(i) != 3 && self.game.player_stocks(i) != 0 {
+                count += 1;
+            }
+        }
+        if self.game.game_data.vs.unk_530.xB_3 {
+            count += self.game.gm.opponents.left();
+        }
+        if count == 0 {
+            self.event_success(gobj);
+            self.set_multi_man_counter(0);
+            return;
+        }
+        if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+}
+
+impl Running<'_> {
+    /// `gm_801BE638`, Event 50's: the hands' knockout from Master Hand's attributes (its
+    /// slowed part `x164`, the rest `x168` for one hand and `x170` for both, the flash's
+    /// length): once one hand's HP is out, the camera on it and the match held; once both
+    /// are, the HUD off, the camera on the second, the first player stopped, the time kept
+    /// and the timer off, quakes and rumbles every 30 ticks, and the event cleared at its
+    /// end; failed with no stock left or at the time's end. The knockout's slowed part starts
+    /// with the crowd's cheer (`lbAudioAx_8002438C`), which isn't ported: the hands' own
+    /// defeat stops on it first.
+    #[doc(alias = "gm_801BE638")]
+    fn event_hands_proc(&mut self, gobj: GObjId) {
+        let slowed = self.boss_mh_word(0x164);
+        let one = self.boss_mh_word(0x168);
+        let both = self.boss_mh_word(0x170);
+        let hp = |r: &Self, s: i32| r.game.player_remaining_hp(s);
+        let (out1, out2) = (hp(self, 1) <= 0, hp(self, 2) <= 0);
+        let ev = &mut self.game.game_data.vs.unk_530;
+        match ev.x20 {
+            0 if out1 || out2 => {
+                ev.x20 = 1;
+                ev.x10 = 0;
+            }
+            1 if out1 && out2 => {
+                ev.x20 = 2;
+                ev.x10 = 0;
+            }
+            _ => {}
+        }
+        if out1 && out2 {
+            let end = slowed.wrapping_add(both);
+            if self.game.game_data.vs.unk_530.x10 == 0 {
+                self.game.vs.state.hud_enabled = 0;
+                let ev = &mut self.game.game_data.vs.unk_530;
+                ev.x18 = if ev.x18 == 1 { 2 } else { 1 };
+                let slot = ev.x18;
+                self.boss_camera_on_player(slot);
+                self.game.set_db_pause_flag(6);
+                self.player_disable_input(0);
+                self.player_80036844(0, 1);
+                self.game.game_data.vs.unk_530.x34 = self.game.vs_frame_count() as i32;
+                self.game.vs.start.timer_enabled = false;
+            }
+            let t = self.game.game_data.vs.unk_530.x10;
+            if t == slowed {
+                super::super::code::unported_call("lbAudioAx_8002438C (Event 50's cheer)");
+            }
+            if t >= end {
+                self.event_success(gobj);
+                return;
+            }
+            if t % 30 == 0 {
+                let port = usize::from(self.game.game_data.vs.unk_530.x6);
+                let tag = self.game.player_nametag(0);
+                self.tou_rumble(port, tag, 2, 0x1E);
+                super::super::camera::request_quake(self, super::super::camera::QUAKE_MEDIUM, None);
+            }
+            let ev = &mut self.game.game_data.vs.unk_530;
+            if ev.x10 <= end {
+                ev.x10 += 1;
+            }
+        } else if out1 || out2 {
+            self.game.game_data.vs.unk_530.x18 = if out1 { 1 } else { 2 };
+            let end = slowed.wrapping_add(one);
+            let t = self.game.game_data.vs.unk_530.x10;
+            if t == 0 {
+                let slot = self.game.game_data.vs.unk_530.x18;
+                self.boss_camera_on_player(slot);
+                self.game.set_db_pause_flag(6);
+            }
+            if t == slowed {
+                super::super::code::unported_call("lbAudioAx_8002438C (Event 50's cheer)");
+            }
+            if t == end {
+                self.game.set_game_speed(1.0);
+            }
+            let ev = &mut self.game.game_data.vs.unk_530;
+            if ev.x10 <= end {
+                ev.x10 += 1;
+            }
+        }
+        if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
+            self.event_fail(gobj);
+        }
+    }
+}
+
+/// `Ft_Kind_Seak`.
+const FT_KIND_SEAK: i32 = 7;
+
+/// The crowds' callbacks for each joiner (`gm_803DF94C`'s `x4`) by the event's place:
+/// Events 16, 22, 24, 28 and 45's.
+const JOIN_CALLBACKS: [(u8, u32); 5] = [
+    (15, 0x801B_EA10),
+    (21, 0x801B_EA4C),
+    (23, 0x801B_EA88),
+    (27, 0x801B_EAF0),
+    (44, 0x801B_EB2C),
+];
+
+/// Whether `f` is a crowd's callback for each joiner.
+pub fn is_join_callback(f: u32) -> bool {
+    JOIN_CALLBACKS.iter().any(|&(_, a)| a == f)
+}
+
+/// Runs a crowd's callback `f` for a joiner in `slot` with `left` still to join: its
+/// computer kind the crowd's (`evbonus->x16`); Event 24's last joiner twice the size.
+// Ports `gm_801BEA10`; aliased once a check reaches it.
+// Ports `gm_801BEA4C`; aliased once a check reaches it.
+// Ports `gm_801BEA88`; aliased once a check reaches it.
+// Ports `gm_801BEAF0`; aliased once a check reaches it.
+// Ports `gm_801BEB2C`; aliased once a check reaches it.
+pub fn run_join_callback(r: &mut Running, f: u32, slot: i32, left: i32) {
+    let e = r.event_entry(r.event()).expect("the event's entry");
+    let b = e.evbonus(r).expect("the event's crowd");
+    let kind = i32::from(r.data.u8(b.at(0x16)));
+    r.set_player_cpu_type(slot, kind);
+    if f == 0x801B_EA88 && left == 0 {
+        r.game.set_player_model_scale(slot, 2.0);
+    }
+}
+
 /// Runs an event's process.
 pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
+        PROC_SHEIKS => r.event_sheiks_proc(gobj),
+        PROC_EGG => r.event_egg_proc(gobj),
+        PROC_ASLEEP => r.event_asleep_proc(gobj),
+        PROC_KOS_LESS_FALLS => r.event_kos_less_falls_proc(gobj),
+        PROC_ROUNDS_36 => r.event_rounds_36_proc(gobj),
+        PROC_JOINER => r.event_joiner_proc(gobj),
+        PROC_CROWD_22 => r.event_crowd_22_proc(gobj),
+        PROC_HANDS => r.event_hands_proc(gobj),
+
+        a if PROC_ROUNDS.contains(&a) => r.event_rounds_proc(gobj),
         PROC_STOCKS => r.event_stocks_proc(gobj),
         PROC_COINS => r.event_coins_proc(gobj),
         PROC_SURVIVE => r.event_survive_proc(gobj),
@@ -1175,9 +1948,6 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         PROC_KO_3_KEEP_2 => r.event_ko_3_keep_2_proc(gobj),
         PROC_GOAL => r.event_goal_proc(gobj),
         PROC_KO_3_4 => r.event_ko_3_4_proc(gobj),
-        a if PROCS.contains(&a) => {
-            super::super::code::unported_call(&format!("the event process {a:#x}"))
-        }
         _ => return false,
     }
     true

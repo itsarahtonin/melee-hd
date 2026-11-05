@@ -934,6 +934,58 @@ impl Session {
                 &mut |n| console.file(n),
             );
         }
+        // An event's players who join after the match's start (a crowd's, Event 36's later
+        // opponents, Event 44's third player): their fighters' files, each costume of a
+        // crowd's (it may shuffle them), and with a Kirby among them his copies' (every
+        // character's for a crowd that copies).
+        if self.game.game_mode == super::gm::event::GM_EVENT {
+            let r = Running {
+                game: &mut self.game,
+                data: &self.data,
+            };
+            if r.entering_scene() == Some(super::gm::machine::GS_VS) {
+                let (joiners, all_copies) = r.event_joiners();
+                let mut sets: Vec<Vec<(i8, u8)>> = Vec::new();
+                for &(ck, color) in &joiners {
+                    match color {
+                        Some(c) => sets.push(vec![(ck, c)]),
+                        None => sets.push((0..5).map(|c| (ck, c)).collect()),
+                    }
+                }
+                if all_copies {
+                    for chunk in (0..0x19i8).collect::<Vec<_>>().chunks(4) {
+                        let mut set: Vec<(i8, u8)> = vec![(4, 0)];
+                        set.extend(chunk.iter().map(|&c| (c, 0)));
+                        sets.push(set);
+                    }
+                }
+                for set in sets {
+                    let mut joining = start.clone();
+                    let free: Vec<usize> = (1..6)
+                        .filter(|&i| {
+                            i32::from(joining.players[i].slot_type) == super::pl::player::PKIND_NONE
+                        })
+                        .collect();
+                    for (&i, &(ck, c)) in free.iter().zip(&set) {
+                        let t = super::ft::data::kind_tables(super::pl::player::ckind_ftkind(
+                            i32::from(ck),
+                            0,
+                        ));
+                        let p = &mut joining.players[i];
+
+                        p.ckind = ck;
+                        p.color = if c < t.costume_count { c } else { 0 };
+                        p.slot_type = 1;
+                    }
+                    super::vs_match::load_fighter_files(
+                        &mut self.game,
+                        &mut self.data,
+                        &joining,
+                        &mut |n| console.file(n),
+                    );
+                }
+            }
+        }
         if training && let Some(name) = super::gr::data::stage_file(grkind, us) {
             let archive = self
                 .game

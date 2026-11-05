@@ -445,7 +445,7 @@ impl Running<'_> {
     /// with a Starman or a hammer to close in on; else the nearest enemy its target, the items
     /// in reach, and while it may act, for the item it goes for or toward the human enemy
     /// standing best; then the behavior pick, whose r5 it leaves.
-    // Ports `ftCo_800B1478`; aliased once a session reaches it (Event 9 stops before).
+    #[doc(alias = "ftCo_800B1478")]
     pub(super) fn cpu_decide_bold(&mut self, f: FighterId) -> Leftover {
         let sp = kind_sp(0x50);
         if let Some(r5) = self.cpu_decide_entering(f, sp) {
@@ -463,7 +463,7 @@ impl Running<'_> {
     /// Computer kind 17, `ftCo_800B17D0` (Event 13): the VS decision with any item worth going
     /// for (`x2C` 1), and only while its hands are free; then the behavior pick, whose r5 it
     /// leaves.
-    // Ports `ftCo_800B17D0`; aliased once a session reaches it (Event 13 stops before).
+    #[doc(alias = "ftCo_800B17D0")]
     pub(super) fn cpu_decide_collector(&mut self, f: FighterId) -> Leftover {
         let sp = kind_sp(0x48);
         if let Some(r5) = self.cpu_decide_start(f, sp) {
@@ -483,7 +483,7 @@ impl Running<'_> {
     /// item (`x4C` kept as it was), whether it's near its target, and while it may act,
     /// toward the human enemy standing best or its target; then the behavior pick, whose r5
     /// it leaves, with 0 in r31 (its DI switch off).
-    // Ports `ftCo_800B21C8`; aliased once a session reaches it (Event 37 stops before).
+    #[doc(alias = "ftCo_800B21C8")]
     pub(super) fn cpu_decide_fighter(&mut self, f: FighterId) -> Leftover {
         let sp = kind_sp(0x40);
         if let Some(r5) = self.cpu_decide_start(f, sp) {
