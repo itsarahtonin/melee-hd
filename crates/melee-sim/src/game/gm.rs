@@ -1,6 +1,7 @@
 //! The game's modes and scenes (`melee/gm`): the scene loop that runs engine ticks, the
 //! scenes' button maps, and the VS match.
 
+pub mod adventure;
 pub mod approach;
 pub mod attract;
 pub mod boot_mode;
@@ -519,6 +520,10 @@ pub fn call(
         }
         attract::ON_MATCH_START => {
             r.attract_match_start();
+            Some(super::code::Val::None)
+        }
+        adventure::ON_MATCH_START => {
+            r.adventure_match_start();
             Some(super::code::Val::None)
         }
         home_run::ON_MATCH_START => {

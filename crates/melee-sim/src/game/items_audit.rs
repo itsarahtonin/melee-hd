@@ -380,7 +380,6 @@ const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload runs (it_8026B7F8, game::it::evt_unk dispatches each): a player leaving a match in progress, which Training's computer players' count and reset and the single-player modes do and no VS match does";
-const ONE_PLAYER: &str = "the single-player modes' records (Classic, Adventure, All-Star)";
 const POKEMON_MODES: &str =
     "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
 const YAKU: &str =
@@ -456,7 +455,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026B7E0", BONUS),
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
     ("it_8027A9B8 (an event", POKEMON_MODES),
-    ("fn_8017DF28", ONE_PLAYER),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
     ("ftLib_GetTeam on an item", ATTACKER),

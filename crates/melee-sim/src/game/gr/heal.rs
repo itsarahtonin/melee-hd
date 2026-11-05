@@ -239,9 +239,14 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
     anime::start_map(r.game, r.data, gobj, m, 0);
     let a = r.game.one_player.allstar;
     if i32::from(a.x94[0]) % param(r, 4) == 0 {
-        super::super::code::unported_call(
-            "the rest area's coin and trophy (it_802F2094, Toy_80304A58)",
-        );
+        // The coin at stage point 220 (else 40 up), holding the stage's trophy.
+        let pos = super::ground::point(r.game, r.data, 220)
+            .unwrap_or(crate::vec::Vec3::new(0.0, 40.0, 0.0));
+        let trophy = super::ground::x6e4_drawn(r.game);
+        if trophy != -1 {
+            let _ = super::super::it::kinds::trophycoin::spawn(r, None, pos, trophy, 0);
+            r.toy_unmark(trophy);
+        }
     }
     let next = usize::from(a.x94[1]);
     let joints = [58, 59, 60].map(|d| nth_joint(r.game, gobj, d));

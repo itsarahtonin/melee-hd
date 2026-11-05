@@ -440,7 +440,7 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
         c if super::gr::castle::run_render(r, gobj, c, pass) => {}
         c if super::vi::run_render(r, gobj, c, pass) => {}
         c if super::gm::endings::run_render(r, gobj, c) => {}
-        c if super::gm::intro::run_render(r, gobj, c) => {}
+        c if super::gm::intro::run_render(r, gobj, c, pass) => {}
         c if super::gr::bigblue::run_render(r, gobj, c, pass) => {}
         0x8008_0E18 => r.render_fighter(gobj, pass),
         0x8008_0C28 => r.draw_magnified(gobj, pass),

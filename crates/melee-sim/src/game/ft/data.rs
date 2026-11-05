@@ -347,6 +347,12 @@ impl Running<'_> {
         fp.x5A8 = 0;
         let kind = fp.kind;
         fp.x58C = kind_tables(kind).anim_count;
+        self.put_anim_file(kind);
+    }
+
+    /// A kind's animation file put in ARAM unless it's there (`ftData_80085A14`, as
+    /// `ftData_80085B10` and `ftLib_LoadFighterAllCostumes` call it).
+    pub fn put_anim_file(&mut self, kind: i32) {
         if let Some((name, mut aram)) = self.game.load_anim_file(kind) {
             // `lbFile_800168A0`: a file the preload cache doesn't hold (a match whose mode
             // state preloads nothing, as the challenger approach's) goes into a block of the

@@ -71,11 +71,12 @@ impl Game {
             (super::one_player::GM_TRAINING, _) if scene == Some(super::training::GS_TRAINING) => {
                 &mut self.training.exit
             }
-            (super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR, _)
-                if scene == Some(GS_VS) =>
-            {
-                &mut self.one_player.match_exit
-            }
+            (
+                super::one_player::GM_CLASSIC
+                | super::one_player::GM_ADVENTURE
+                | super::one_player::GM_ALLSTAR,
+                _,
+            ) if scene == Some(GS_VS) => &mut self.one_player.match_exit,
             (m, _) if super::multi_man::is_multi_man(m) && scene == Some(GS_VS) => {
                 &mut self.multi_man.exit
             }

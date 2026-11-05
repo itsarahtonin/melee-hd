@@ -860,6 +860,26 @@ impl Session {
                 &mut |n| console.file(n),
             );
         }
+        // Adventure's matches' start hook loads its joining opponents' fighters whole.
+        if start.rules.on_match_start
+            == Some(super::handles::CodeRef(
+                super::gm::adventure::ON_MATCH_START,
+            ))
+        {
+            let kinds: Vec<i32> =
+                super::gm::adventure::match_start_kinds(&self.game, start.rules.stkind)
+                    .iter()
+                    .filter(|&&k| k != 0x21)
+                    .map(|&k| i32::from(k))
+                    .collect();
+            super::vs_match::load_kind_files(
+                &mut self.game,
+                &mut self.data,
+                &mut self.joiner_files,
+                &kinds,
+                &mut |n| console.file(n),
+            );
+        }
         // Multi-Man Melee's Wire Frames join from the mode's table as the match goes
         // (`fn_80181C80`): both of their fighters' files, in their first costume.
         let multi_man = super::gm::multi_man::is_multi_man(self.game.game_mode)

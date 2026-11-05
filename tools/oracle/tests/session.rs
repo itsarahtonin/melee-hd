@@ -2345,14 +2345,26 @@ fn single_player_setups() {
 /// from power-on on the unlock-all card, Classic on Normal with Fox, the first stage's intro
 /// (`gm_1832.c`: the screen's model and map, Fox frozen in a KO toward the screen with his
 /// blaster and the opponent asleep at their places, the names, the announcer's call), the
-/// match won by a bot, its clear screen, and the second stage's intro to its team's allies
-/// drawn (`fn_8017D9C0`), which aren't ported.
+/// match won by a bot, its clear screen, and the second stage's intro with its team's ally
+/// drawn (`fn_8017D9C0`) into the team match, to the trace's end; and
+/// `m6-intros/classic-easy`, Classic on Easy, the first stage won, the second's team match
+/// lost to Classic's game over, which isn't ported.
 #[test]
 fn single_player_intros() {
     if let Some(out) = scripted_session("m6-intros", "classic-win", &["--all", "--heap"]) {
         assert!(
             out.contains(
-                "4572 ticks compared, no difference; stopped in tick 4572: Classic's allies drawn (fn_8017D9C0) isn't ported"
+                "6593 ticks compared, no difference
+"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-intros", "classic-easy", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "11026 ticks compared, no difference; stopped in tick 11026: gmClassic_801B3D44 isn't ported"
             ),
             "{out}"
         );
