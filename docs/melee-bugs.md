@@ -1118,6 +1118,16 @@ When porting shows that the original game does something wrong, keep the behavio
 
 ## HUD and audio
 
+### The staff roll's sound cues run out of order
+
+- **Where:** `fn_801AB200` (`gmstaffroll.c`) over its sound cues (`gm_803DBFD8_extra.sfx_cues`); `crates/melee-sim/src/game/gm/endings/staff_roll.rs` (`CUES`, `Running::staff_roll_main`).
+- **Defect:** the table is meant to be in tick order, but its 24th cue (tick 2000, sound 500004) comes after the 23rd (tick 2350), and the roll plays only the next cue, once a tick, once its tick has come. So the 2000 cue waits for the 2350 one and plays the tick after it; at Start's six times speed each cue whose tick a tick passed plays one tick after the last.
+- **Effect:** observable: one of the roll's sounds plays at its tick 2351 instead of 2000 (and late under Start's speed).
+- **melee-hd:** modeled: the table and the one-a-tick test as the original's.
+- **Fix:** sort the table, or play every cue that has come each tick.
+- **Fix impact:** presentation (when one sound plays); gameplay none.
+- **Source:** `crates/melee-sim/src/game/gm/endings/staff_roll.rs`; `m6-endings-3/staffroll-play`, `m6-oracle/staffroll`.
+
 ### An announcement tests its first line twice
 
 - **Where:** `ifStatus_802F6EA4` (showing an announcement, kind 8), `crates/melee-sim/src/game/hud/announce.rs` (`announce`).
