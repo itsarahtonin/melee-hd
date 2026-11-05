@@ -32,6 +32,8 @@ const ALLSTAR_X940: u32 = 0x8049_0940;
 const ALLSTAR_OPPONENTS: u32 = 0x803D_EBE8;
 const ALLY_POOL: u32 = 0x803D_79F0;
 const ADVENTURE_INTRO: u32 = 0x804D_68E0;
+/// `gm_804D68D8`: Adventure's cutscenes' enter data.
+const ADVENTURE_CUTSCENE: u32 = 0x804D_68D8;
 /// `gmClassic_803DDEC8`, its stage list's entries 16 bytes each (`xC` the matchup), and the
 /// bonus stages' matchups.
 const CLASSIC_TABLES: u32 = 0x803D_DEC8;
@@ -216,6 +218,7 @@ impl Comparer<'_> {
             ("gm_80490910", ADVENTURE_X910, &o.adventure_x910[..]),
             ("gm_80490940", ALLSTAR_X940, &o.allstar_x940[..]),
             ("lbl_803D79F0", ALLY_POOL, &o.ally_pool[..]),
+            ("gm_804D68D8", ADVENTURE_CUTSCENE, &o.adventure_cutscene[..]),
         ] {
             let theirs: Vec<u8> = (0..ours.len() as u32).map(|i| self.u8(at + i)).collect();
             self.check(name, "bytes", ours.to_vec(), theirs);

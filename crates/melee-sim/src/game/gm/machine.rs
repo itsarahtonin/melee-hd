@@ -218,6 +218,14 @@ enum Hook {
     AdventureExitVs,
     AdventureEnterCss,
     AdventureExitCss,
+    AdventureExitStage,
+    AdventureEnterLuigi,
+    AdventureEnterPeach,
+    AdventureExitPeach,
+    AdventureEnterTiny,
+    AdventureEnterCutscene,
+    AdventureEnterGameOver,
+    AdventureExitGameOver,
     AllStarOnLoad,
     AllStarEnterCss,
     AllStarExitCss,
@@ -225,6 +233,8 @@ enum Hook {
     AllStarExitVs,
     AllStarEnterGameOver,
     AllStarExitGameOver,
+    ClassicEnterGameOver,
+    ClassicExitGameOver,
     AllStarEnterRest,
     AllStarExitRest,
     TargetOnLoad,
@@ -1481,6 +1491,14 @@ impl Running<'_> {
             Hook::AdventureExitVs => self.adventure_exit_vs(),
             Hook::AdventureEnterCss => self.adventure_enter_css(),
             Hook::AdventureExitCss => self.adventure_exit_css(),
+            Hook::AdventureExitStage => self.adventure_exit_stage(),
+            Hook::AdventureEnterLuigi => self.adventure_enter_luigi(),
+            Hook::AdventureEnterPeach => self.adventure_enter_peach(),
+            Hook::AdventureExitPeach => self.adventure_exit_peach(),
+            Hook::AdventureEnterTiny => self.adventure_enter_tiny(),
+            Hook::AdventureEnterCutscene => self.adventure_enter_cutscene(),
+            Hook::AdventureEnterGameOver => self.adventure_enter_game_over(),
+            Hook::AdventureExitGameOver => self.adventure_exit_game_over(),
             Hook::AllStarOnLoad => self.allstar_on_load(),
             Hook::AllStarEnterCss => self.allstar_enter_css(),
             Hook::AllStarExitCss => self.allstar_exit_css(),
@@ -1490,6 +1508,8 @@ impl Running<'_> {
             Hook::AllStarExitRest => self.allstar_exit_rest(),
             Hook::AllStarEnterGameOver => self.allstar_enter_game_over(),
             Hook::AllStarExitGameOver => self.allstar_exit_game_over(),
+            Hook::ClassicEnterGameOver => self.classic_enter_game_over(),
+            Hook::ClassicExitGameOver => self.classic_exit_game_over(),
             Hook::TargetOnLoad => self.target_on_load(),
             Hook::TargetEnterCss => self.target_enter_css(),
             Hook::TargetExitCss => self.target_exit_css(),
@@ -1662,8 +1682,8 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         out[23] = st(
             105,
             3,
-            u("gmClassic_801B3D44"),
-            u("gmClassic_801B3D84"),
+            Some(Hook::ClassicEnterGameOver),
+            Some(Hook::ClassicExitGameOver),
             GS_GAMEOVER,
         );
         out[24] = st(
@@ -1675,65 +1695,317 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         );
         out
     };
-    // By their ids (`ADVENTURE_*`): the stages' intros, matches and cutscenes, coming soon,
-    // the game over and the select. Every handler but the select's is the mode's own.
-    const ADVENTURE: [StateDesc; 48] = {
-        let ids: [u8; 48] = [
-            0x00, 0x01, 0x02, 0x03, 0x08, 0x09, 0x0A, 0x10, 0x11, 0x12, 0x18, 0x19, 0x1A, 0x1B,
-            0x1C, 0x20, 0x21, 0x22, 0x23, 0x24, 0x25, 0x28, 0x29, 0x2A, 0x2B, 0x30, 0x31, 0x38,
-            0x39, 0x3A, 0x3B, 0x40, 0x41, 0x48, 0x49, 0x50, 0x51, 0x52, 0x53, 0x58, 0x59, 0x5A,
-            0x5B, 0x5C, 0x5D, 0x68, 0x69, 0x70,
-        ];
-        let mut out = [st(0, 2, u("gmadventure's stage states"), None, GS_VS); 48];
-        let mut i = 0;
-        while i < 48 {
-            out[i].id = ids[i];
-            i += 1;
-        }
-        // The stages' intros (`gm_801B3F40`) and the matches `gm_801B4064` starts, with their
-        // exits (`gm_801B44A0` Mushroom Kingdom's, `gm_801B4170` the others', `gm_801B50C4`
-        // Giga Bowser's).
-        let mut i = 0;
-        while i < 48 {
-            match out[i].id {
-                0x00 | 0x08 | 0x10 | 0x18 | 0x20 | 0x28 | 0x30 | 0x39 | 0x40 | 0x48 | 0x50
-                | 0x58 => {
-                    out[i] = st(
-                        out[i].id,
-                        2,
-                        Some(Hook::AdventureEnterIntro),
-                        None,
-                        GS_INTRO_NORMAL,
-                    );
-                }
-                0x01 => {
-                    out[i].on_enter = Some(Hook::AdventureEnterVs);
-                    out[i].on_exit = Some(Hook::AdventureExitVs);
-                }
-                0x0A | 0x11 | 0x12 | 0x19 | 0x21 | 0x25 | 0x29 | 0x31 | 0x3A | 0x3B | 0x49
-                | 0x51 => {
-                    out[i].on_enter = Some(Hook::AdventureEnterVs);
-                    out[i].on_exit = u("gm_801B4170");
-                }
-                0x5C => {
-                    out[i].on_enter = Some(Hook::AdventureEnterVs);
-                    out[i].on_exit = u("gm_801B50C4");
-                }
-                _ => {}
-            }
-            i += 1;
-        }
-        out[45] = st(0x68, 2, None, u("gm_801B4408"), GS_COMING_SOON);
-        out[46] = st(0x69, 2, u("gm_801B4254"), u("gm_801B4294"), GS_GAMEOVER);
-        out[47] = st(
+    // `gm_Mode_Adventure_States`, by their ids: the stages' intros, matches and cutscenes,
+    // coming soon, the game over and the select. Every handler but the select's is the mode's
+    // own; the unported ones stop by name.
+    const ADVENTURE: [StateDesc; 48] = [
+        // ADVENTURE_INTRO
+        st(
+            0x00,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_MUSHROOM_KINGDOM
+        st(
+            0x01,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitVs),
+            GS_VS,
+        ),
+        // ADVENTURE_LUIGI_CUTSCENE
+        st(0x02, 2, Some(Hook::AdventureEnterLuigi), None, 0x11),
+        // ADVENTURE_MARIO_PEACH_FIGHT
+        st(
+            0x03,
+            2,
+            Some(Hook::AdventureEnterPeach),
+            Some(Hook::AdventureExitPeach),
+            GS_VS,
+        ),
+        // ADVENTURE_KONGO_INTRO
+        st(
+            0x08,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_TINYDK_FIGHT
+        st(
+            0x09,
+            2,
+            Some(Hook::AdventureEnterTiny),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_GIANTDK_FIGHT
+        st(
+            0x0a,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_MAZE_INTRO
+        st(
+            0x10,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_UNDERGROUND_MAZE
+        st(
+            0x11,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_ZELDA_FIGHT
+        st(
+            0x12,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_BRINSTAR_INTRO
+        st(
+            0x18,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_SAMUS_FIGHT
+        st(
+            0x19,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_BRINSTAR_CUTSCENE
+        st(0x1a, 2, Some(Hook::AdventureEnterCutscene), None, 0x12),
+        // ADVENTURE_ESCAPE_FROM_BRINSTAR
+        st(0x1b, 2, u("gm_801B47FC"), u("gm_801B4860"), GS_VS),
+        // ADVENTURE_EXPLOSION_CUTSCENE
+        st(0x1c, 2, None, None, 0x13),
+        // ADVENTURE_KIRBY_INTRO
+        st(
+            0x20,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_KIRBY_FIGHT
+        st(
+            0x21,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_TEAMKIRBY_INTRO
+        st(0x22, 2, u("gm_801B4974"), None, 0x14),
+        // ADVENTURE_TEAMKIRBY_FIGHT
+        st(0x23, 2, u("gm_801B4B28"), u("gm_801B4C5C"), GS_VS),
+        // ADVENTURE_GIANTKIRBY_INTRO
+        st(0x24, 2, Some(Hook::AdventureEnterCutscene), None, 0x15),
+        // ADVENTURE_GIANTKIRBY_FIGHT
+        st(
+            0x25,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_CORNERIA_INTRO
+        st(
+            0x28,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_FOX_FIGHT
+        st(
+            0x29,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_STARFOX_CUTSCENE
+        st(0x2a, 2, u("gm_801B4D34"), None, 0x16),
+        // ADVENTURE_FOX_FALCO_FIGHT
+        st(
+            0x2b,
+            2,
+            u("gm_801B4DAC"),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_POKEMON_INTRO
+        st(
+            0x30,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_POKEMON_FIGHT
+        st(
+            0x31,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_FZERO_CUTSCENE
+        st(0x38, 2, None, None, 0x17),
+        // ADVENTURE_FZERO_INTRO
+        st(
+            0x39,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_FZERO_GRAND_PRIX
+        st(
+            0x3a,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_CAPTAIN_FALCON_FIGHT
+        st(
+            0x3b,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_ONETT_INTRO
+        st(
+            0x40,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_NESS_FIGHT
+        st(
+            0x41,
+            2,
+            u("gm_801B4E58"),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_ICICLE_INTRO
+        st(
+            0x48,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_ICICLE_MOUNTAIN
+        st(
+            0x49,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_BATTLEFIELD_INTRO
+        st(
+            0x50,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_WIREFRAME_FIGHT
+        st(
+            0x51,
+            2,
+            Some(Hook::AdventureEnterVs),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_METAL_CUTSCENE
+        st(0x52, 2, Some(Hook::AdventureEnterCutscene), None, 0x18),
+        // ADVENTURE_METAL_MARIO_FIGHT
+        st(
+            0x53,
+            2,
+            u("gm_801B4EB8"),
+            Some(Hook::AdventureExitStage),
+            GS_VS,
+        ),
+        // ADVENTURE_FINAL_DESTINATION_INTRO
+        st(
+            0x58,
+            2,
+            Some(Hook::AdventureEnterIntro),
+            None,
+            GS_INTRO_NORMAL,
+        ),
+        // ADVENTURE_BOWSER_FIGHT
+        st(0x59, 2, u("gm_801B4F44"), u("gm_801B4FCC"), GS_VS),
+        // ADVENTURE_BOWSERTOY_CUTSCENE
+        st(
+            0x5a,
+            2,
+            Some(Hook::AdventureEnterCutscene),
+            u("gm_801B5078"),
+            0x19,
+        ),
+        // ADVENTURE_GIGATRANSFORM_CUTSCENE
+        st(0x5b, 2, Some(Hook::AdventureEnterCutscene), None, 0x1A),
+        // ADVENTURE_GIGABOWSER_FIGHT
+        st(
+            0x5c,
+            2,
+            Some(Hook::AdventureEnterVs),
+            u("gm_801B50C4"),
+            GS_VS,
+        ),
+        // ADVENTURE_GIGADEFEATED_CUTSCENE
+        st(
+            0x5d,
+            2,
+            Some(Hook::AdventureEnterCutscene),
+            u("gm_801B518C"),
+            0x1B,
+        ),
+        // ADVENTURE_COMING_SOON
+        st(0x68, 2, None, u("gm_801B4408"), GS_COMING_SOON),
+        // ADVENTURE_GAME_OVER
+        st(
+            0x69,
+            2,
+            Some(Hook::AdventureEnterGameOver),
+            Some(Hook::AdventureExitGameOver),
+            GS_GAMEOVER,
+        ),
+        // ADVENTURE_BACK_TO_CSS
+        st(
             0x70,
             2,
             Some(Hook::AdventureEnterCss),
             Some(Hook::AdventureExitCss),
             GS_CSS,
-        );
-        out
-    };
+        ),
+    ];
     // Thirteen rounds of a match and (but the last) the rest area, ids 8 apart.
     const ALLSTAR: [StateDesc; 28] = {
         let mut out = [st(0, 0, None, None, 0); 28];

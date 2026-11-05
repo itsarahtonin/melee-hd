@@ -169,7 +169,7 @@ impl Running<'_> {
     #[doc(alias = "un_803204E4")]
     #[doc(alias = "vi1201v2_Scene_OnFrame")]
     pub fn vi1201v2_on_enter(&mut self) {
-        let desc = self.game.vi.desc_1201v2;
+        let desc = super::enter_desc(self.game, 0x1a);
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);
         self.lb_play_music(0x5C);

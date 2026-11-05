@@ -528,10 +528,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's select shows the Home-Run records (match type 0x10), ported",
     ),
     (
-        "gm_80167320 for a leaving slot",
-        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -544,24 +540,12 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's match exits into VS mode's exit data (uses_vs_melee)",
     ),
     (
-        "fn_8016C46C's single-player results",
-        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
-    ),
-    (
-        "fn_802FA6C4 in a single-player mode",
-        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
-    ),
-    (
-        "gm_801693BC for a slot that leaves",
-        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
         "gm_801647F8 reading past lbl_803D5168",
@@ -613,10 +597,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the mode's select shows the Target Test records (match type 0xF), ported",
     ),
     (
-        "gm_80167320 for a leaving slot",
-        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -629,24 +609,12 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the mode's match exits into its own exit data (match_exit_data's Target Test arm), and the challenger's match into the challenger approach mode's",
     ),
     (
-        "fn_8016C46C's single-player results",
-        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
-    ),
-    (
-        "fn_802FA6C4 in a single-player mode",
-        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
-    ),
-    (
-        "gm_801693BC for a slot that leaves",
-        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
         "gm_801647F8 reading past lbl_803D5168",
@@ -699,10 +667,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "the modes' selects show the Multi-Man records (match types 0x11 to 0x16), ported",
     ),
     (
-        "gm_80167320 for a leaving slot",
-        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -715,24 +679,12 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "the modes' matches exit into their own exit data (gm_80495370, match_exit_data's Multi-Man arm), and the challenger's match into the challenger approach mode's",
     ),
     (
-        "fn_8016C46C's single-player results",
-        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
-    ),
-    (
-        "fn_802FA6C4 in a single-player mode",
-        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
-    ),
-    (
-        "gm_801693BC for a slot that leaves",
-        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
         "gm_801647F8 reading past lbl_803D5168",
@@ -805,10 +757,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "Training's select shows the best combo (match type 0x17), ported",
     ),
     (
-        "gm_80167320 for a leaving slot",
-        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) and the joining opponents' setup (gm_16A2's) set; Training's count takes a computer player out through fn_8016EF98 (Player_80031EBC), which leaves it clear",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -821,24 +769,12 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "Training's match exits into its own exit data (match_exit_data's Training arm); the notices have no match",
     ),
     (
-        "fn_8016C46C's single-player results",
-        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
-    ),
-    (
-        "fn_802FA6C4 in a single-player mode",
-        "the rules' horde setup (x54) and the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
         "ifStock_802FA5BC",
         "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
-    ),
-    (
-        "gm_801693BC for a slot that leaves",
-        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) and the joining opponents' setup set",
     ),
     (
         "gm_801647F8 reading past lbl_803D5168",
@@ -932,11 +868,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "a horde's players leaving their slots",
-        covers: &[
-            "gm_80167320 for a leaving slot",
-            "gm_80167320's joiners' leaving",
-            "gm_801693BC for a slot that leaves",
-        ],
+        covers: &["gm_80167320's joiners' leaving"],
         modes: &[AD, EV],
     },
     Gap {
@@ -947,13 +879,12 @@ pub const MISSING: &[Gap] = &[
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
-            "fn_8016C46C's single-player results",
         ],
         modes: SETUP_MODES,
     },
     Gap {
         what: "the 1P HUD (the stocks and counters)",
-        covers: &["ifStock_802FA5BC", "fn_802FA6C4 in a single-player mode"],
+        covers: &["ifStock_802FA5BC"],
         modes: SETUP_MODES,
     },
     Gap {
@@ -967,16 +898,9 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
             "fn_80160F58",
-            "fn_80162BFC",
             "fn_80162DF8",
             "gm_801647F8",
-            "gm_8017CA38's records in game mode",
         ],
-        modes: SETUP_MODES,
-    },
-    Gap {
-        what: "the unlocks, trophies and challengers after a mode",
-        covers: &["gm_8017390C in Adventure"],
         modes: SETUP_MODES,
     },
     // The modes' own code.
@@ -1083,6 +1007,7 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_1879",
             "ftLib_LoadKirbyHats (Adventure's Green Greens)",
             "ftData_800857E0 (Kirby's copies' setup)",
+            "gm_8017CBAC (Adventure's clear)",
         ],
         modes: &[AD, CL],
     },

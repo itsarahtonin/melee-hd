@@ -792,11 +792,32 @@ impl Running<'_> {
     #[doc(alias = "gm_801B5EE4")]
     pub fn allstar_exit_game_over(&mut self) {
         let mut run = self.game.one_player.allstar.base;
-        self.one_player_game_over_exit(&mut run);
+        let stocks = self.game.game_data.vs.unk_528.stocks;
+        self.one_player_game_over_exit(&mut run, stocks);
         self.game.one_player.allstar.base = run;
         if self.game.one_player.game_over.result != 0 {
             self.game.one_player.allstar.x74 = 0;
         }
+    }
+
+    /// Classic's game over's exit, `gmClassic_801B3D84`: the run's end (`gm_8017CA38`) with
+    /// Classic's stocks (`gmMainLib_8015CDC8`).
+    #[doc(alias = "gmClassic_801B3D84")]
+    pub fn classic_exit_game_over(&mut self) {
+        let mut run = self.game.one_player.classic.base;
+        let stocks = self.game.game_data.vs.unk_51C.stocks;
+        self.one_player_game_over_exit(&mut run, stocks);
+        self.game.one_player.classic.base = run;
+    }
+
+    /// Adventure's game over's exit, `gm_801B4294`: the run's end (`gm_8017CA38`) with
+    /// Adventure's stocks (`gmMainLib_8015CDD4`).
+    // Ports gm_801B4294; aliased once a check reaches it.
+    pub fn adventure_exit_game_over(&mut self) {
+        let mut run = self.game.one_player.adventure.base;
+        let stocks = self.game.game_data.vs.unk_522.stocks;
+        self.one_player_game_over_exit(&mut run, stocks);
+        self.game.one_player.adventure.base = run;
     }
 
     /// A 1P run's game over's exit, `gm_8017CA38`: the coins left saved; with no continue, the character's high score, the
@@ -806,8 +827,9 @@ impl Running<'_> {
     /// one more continue counted and the run's state again.
     #[doc(alias = "gm_8017CA38")]
     #[doc(alias = "Ground_801C5A60")]
+    #[doc(alias = "fn_80162BFC")]
     #[doc(alias = "fn_80162FF4")]
-    pub fn one_player_game_over_exit(&mut self, run: &mut Unk1PData) {
+    pub fn one_player_game_over_exit(&mut self, run: &mut Unk1PData, stocks: u8) {
         let d = self.game.one_player.game_over;
         run.x14 = d.coins;
         self.game.game_data.set_score(u32::from(run.x14));
@@ -818,22 +840,24 @@ impl Running<'_> {
             let p = run.player;
             let sel = super::match_exit::selkind(p.ckind as u8);
             let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
-            match self.game.game_mode {
-                GM_ALLSTAR => {
-                    // `fn_80162FF4`: the record a word compared unsigned.
-                    if (rec.x90 as u32) < d.x4 as u32 {
-                        rec.x90 = d.x4;
-                    }
-                }
-                m => crate::game::code::unported_call(&format!(
-                    "gm_8017CA38's records in game mode {m:#x} (fn_80162BFC, fn_80162DF8)"
-                )),
+            // `fn_80162BFC`, `fn_80162DF8`, `fn_80162FF4`: the mode's high score, a word
+            // compared unsigned.
+            let best = match self.game.game_mode {
+                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
+                // Ports fn_80162DF8; aliased once a check reaches it.
+                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
+                GM_ALLSTAR => Some(&mut rec.x90),
+                _ => None,
+            };
+            if let Some(best) = best
+                && (*best as u32) < d.x4 as u32
+            {
+                *best = d.x4;
             }
             self.toy_table_sync(true);
-            // `gm_8017390C(fn_8017DF90(), 0)`'s path: the mode's trophies come only with a
-            // clear (its second argument); Adventure's Luigi trophy isn't ported.
+            // `gm_8017390C(fn_8017DF90(), 0)`: without a clear only Adventure's Luigi trophy.
             if super::one_player::GM_ADVENTURE == self.game.game_mode {
-                crate::game::code::unported_call("gm_8017390C in Adventure");
+                self.clear_trophies(0, false);
             }
             self.trophy_unlocks();
             self.special_unlocks(0x40);
@@ -847,28 +871,48 @@ impl Running<'_> {
             }
         } else {
             run.x18 = super::results_exit::add_u32_saturating(d.x4 as u32, 1) as i32;
-            run.player.stocks = self.game.game_data.vs.unk_528.stocks;
+            run.player.stocks = stocks;
             run.xc[1] = super::results_exit::add_u8_saturating(u32::from(run.xc[1]), 1) as u8;
             self.set_next_game_mode_state_id(run.player.mode);
         }
     }
 
-    /// All-Star's game over, `gm_801B5EB4` (`gm_8017C9A8`): the run's score, mode 2, the
-    /// character, slot and name tag, the coins held and a continue's cost by the level.
+    /// All-Star's game over, `gm_801B5EB4`.
     #[doc(alias = "gm_801B5EB4")]
-    #[doc(alias = "gm_8017C9A8")]
     pub fn allstar_enter_game_over(&mut self) {
-        const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         let run = self.game.one_player.allstar.base;
+        self.one_player_enter_game_over(&run, 2);
+    }
+
+    /// Adventure's game over, `gm_801B4254`.
+    // Ports gm_801B4254; aliased once a check reaches it.
+    pub fn adventure_enter_game_over(&mut self) {
+        let run = self.game.one_player.adventure.base;
+        self.one_player_enter_game_over(&run, 0);
+    }
+
+    /// Classic's game over, `gmClassic_801B3D44`.
+    #[doc(alias = "gmClassic_801B3D44")]
+    pub fn classic_enter_game_over(&mut self) {
+        let run = self.game.one_player.classic.base;
+        self.one_player_enter_game_over(&run, 1);
+    }
+
+    /// A 1P run's game over's enter data, `gm_8017C9A8`: the run's score, the mode's kind,
+    /// the character, slot and name tag, the coins held and a continue's cost by the kind and
+    /// level (`lbl_803B7C08`).
+    #[doc(alias = "gm_8017C9A8")]
+    fn one_player_enter_game_over(&mut self, run: &Unk1PData, kind: u8) {
+        const COSTS: [[u16; 5]; 3] = [[1, 2, 3, 5, 10], [1, 2, 3, 5, 10], [10; 5]];
         // `gm_801623D8`: the save's coins.
         let coins = self.game.game_data.thing.save_data.x1A48 as u16;
         let d = &mut self.game.one_player.game_over;
         d.score = run.x18 as u32;
-        d.x8 = 2;
+        d.x8 = u32::from(kind);
         d.ckind = run.player.ckind as u32;
         d.slot = run.player.slot;
         d.tag = run.player.nametag;
         d.coins = coins;
-        d.cost = COSTS[2][usize::from(run.player.cpu_level)];
+        d.cost = COSTS[usize::from(kind)][usize::from(run.player.cpu_level)];
     }
 }

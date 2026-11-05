@@ -87,7 +87,7 @@ impl Running<'_> {
     #[doc(alias = "vi0102_Scene_OnEnter")]
     #[doc(alias = "vi0102_JObjCallback")]
     pub fn vi0102_on_enter(&mut self) {
-        let desc = self.game.vi.desc_0102;
+        let desc = super::enter_desc(self.game, 0x11);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

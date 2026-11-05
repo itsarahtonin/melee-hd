@@ -207,10 +207,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "fn_802FA6C4 in a single-player mode",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "a text on canvas {context} of font {font}, past the last",
         "each scene makes its texts on canvases it made first",
     ),
@@ -255,10 +251,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "a match exits in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the rest are the single-player modes'",
     ),
     (
-        "fn_8016C46C's single-player results",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gm_SetupHumanResultsScreen for match kind",
         "a VS match's kind is its rules' mode, 0 to 3 (mn_803EC7DC's bounds)",
     ),
@@ -295,10 +287,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "every getter the statistics pages list is handled (results_panel's pages)",
     ),
     (
-        "gm_80167320 for a leaving slot",
-        "a slot leaves only in the single-player modes' hordes (gm_16A2's fn_8016A09C) and a cutscene",
-    ),
-    (
         "gm_80167320's joiners' leaving",
         "a horde's first player falling with joiners in play: the single-player modes' hordes and the debug menu's arenas (the console halts first there), which only the entries behind GATES and the debug level lead to",
     ),
@@ -313,6 +301,10 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_8017CBAC (Classic's clear)",
         "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (Adventure's clear)",
+        "Adventure's last stage won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gmClassic_801B3B40's target stage records",
@@ -337,14 +329,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_8017CBAC (All-Star's clear)",
         "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_8017CA38's records in game mode",
-        "Classic's and Adventure's game overs: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_8017390C in Adventure",
-        "Adventure's game over: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8016AC44 with a challenger's record",

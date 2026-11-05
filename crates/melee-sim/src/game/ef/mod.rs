@@ -194,12 +194,16 @@ pub enum Held {
 /// What an effect's block held where `efLib_Create` doesn't write (docs/engine.md, a session's
 /// heap leftovers): `user_data`'s word until a spawn sets it, which of `params`' words were
 /// unknown (their bits zero until written: a written word that is still zero is unknown too,
-/// which only ever hides a zero), and `x2A` and `x2B`, which nothing writes.
+/// which only ever hides a zero), and `x2A` and `x2B`, which nothing writes. `pixels` marks
+/// the unknown ones the block held from a render target (the GPU's pixels): bit 0
+/// `user_data`, bits 1 to 3 `params`' words, bits 4 and 5 `x2A` and `x2B`, which go back as
+/// the pixels they were.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct EffectLeft {
     pub user_data: Held,
     pub params_unknown: u8,
     pub x2a: [Option<u8>; 2],
+    pub pixels: u8,
 }
 
 impl Default for EffectLeft {
@@ -208,6 +212,7 @@ impl Default for EffectLeft {
             user_data: Held::Unknown,
             params_unknown: 7,
             x2a: [None; 2],
+            pixels: 0,
         }
     }
 }
@@ -217,6 +222,27 @@ impl Effect {
     pub fn param_known(&self, i: usize) -> bool {
         let p = [self.params.x, self.params.y, self.params.z];
         self.left.params_unknown & 1 << i == 0 || p[i].to_bits() != 0
+    }
+
+    /// The unknown words' and bytes' runs, as offsets from the effect, that its block held
+    /// from a render target ([`EffectLeft::pixels`]).
+    pub fn pixel_runs(&self) -> Vec<(u32, u32)> {
+        let px = self.left.pixels;
+        let mut out = Vec::new();
+        if px & 1 != 0 && self.left.user_data == Held::Unknown {
+            out.push((0x14, 0x18));
+        }
+        for i in 0..3 {
+            if px & 2 << i != 0 && !self.param_known(i) {
+                out.push((0x18 + 4 * i as u32, 0x1C + 4 * i as u32));
+            }
+        }
+        for i in 0..2 {
+            if px & 0x10 << i != 0 && self.left.x2a[i].is_none() {
+                out.push((0x2A + i as u32, 0x2B + i as u32));
+            }
+        }
+        out
     }
 }
 

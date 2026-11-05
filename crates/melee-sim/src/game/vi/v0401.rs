@@ -91,7 +91,7 @@ impl Running<'_> {
     #[doc(alias = "fn_8031D168")]
     #[doc(alias = "vi0401_8031D18C")]
     pub fn vi0401_on_enter(&mut self) {
-        let desc = self.game.vi.desc_0401;
+        let desc = super::enter_desc(self.game, 0x12);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

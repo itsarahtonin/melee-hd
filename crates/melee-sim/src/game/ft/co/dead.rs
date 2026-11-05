@@ -2,7 +2,7 @@
 
 use gekko_fp as fp;
 
-use super::super::super::code::{run_fighter_cb, unported_call};
+use super::super::super::code::run_fighter_cb;
 use super::super::super::ef::Arg;
 use super::super::super::gr::stage;
 use super::super::super::it::item;
@@ -575,11 +575,9 @@ impl Running<'_> {
             (b(0) << 16) | (b(1) << 8) | b(2)
         };
         let (rgb1, rgb2) = (rgb(self, 0x48), rgb(self, 0x4C));
-        if self.game.player_flags_bit1(slot) {
-            unported_call("gm_801693BC for a slot that leaves");
-        }
-        let ckind = self.game.player_ckind(slot);
-        let wireframe = (CKIND_BOY..=CKIND_GIRL).contains(&ckind);
+        // `gm_801693BC`: a joiner's slot of a setup that has several, or a wireframe.
+        let wireframe = (self.game.player_flags_bit1(slot) && self.game.gm.opponents.total > 1)
+            || (CKIND_BOY..=CKIND_GIRL).contains(&self.game.player_ckind(slot));
         let kind = if wireframe { 0x42C } else { 0x42B };
         let scale = self.common().f32(0x4F4);
         super::super::super::ef::spawn(

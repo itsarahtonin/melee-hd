@@ -30,11 +30,11 @@ use common::{
     M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN,
     MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT,
     MZ_KILL, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, REC_ADVENTURE, RESULTS_PILLS,
+    RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO,
+    SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
+    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
@@ -254,6 +254,39 @@ frames!(M6I_ADVENTURE2;
     m6i_adventure2_1000 1000,
     m6i_adventure2_1150 1150,
 );
+// A human's Adventure run (`2026-10-06_12-04-48`): Kongo Jungle's intro (7470); and with the
+// fighters' shadows, as All-Star's match's, against references captured with ssbm-rs's
+// renderer running, Mushroom Kingdom's route's arena with the joiners' tally (`fn_802FA6C4`,
+// its icons' render callback `fn_802F95E8`) (4100) and Peach's Castle against Mario and Peach
+// (6000).
+frames!(REC_ADVENTURE;
+    rec_adventure_7470 7470,
+);
+
+fn rec_adventure(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &REC_ADVENTURE,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_adventure_4100() {
+    rec_adventure(4100, [0, 0]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_adventure_6000() {
+    rec_adventure(6000, [0, 0]);
+}
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
 // over the tinted copy (7500). The images are identical; the draws that differ only sample

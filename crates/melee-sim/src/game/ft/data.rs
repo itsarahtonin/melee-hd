@@ -440,11 +440,35 @@ impl Running<'_> {
         };
         let bufs = &mut self.game.fighter_anim_bufs;
         let mut alloc = || {
+            // The free slots' addresses before the allocation gives one a new address.
+            let before: Vec<(u32, u32)> = bufs
+                .free_slots()
+                .iter()
+                .map(|&s| (s, bufs.addr(s)))
+                .collect();
             let id = bufs.alloc_stale(AnimBuf::new(fill));
+            let at = bufs.addr(id);
+            if at != 0 && crate::game::leftovers::pool_grew() {
+                // A block new from the heap holds what the buffer last there left, not what
+                // the slot's last buffer did: the slots freed mid-match (a joiner's unload)
+                // go back in another order than the heap gives their blocks again.
+                let last_there = before
+                    .iter()
+                    .rev()
+                    .find(|&&(_, a)| a == at)
+                    .map(|&(s, _)| s);
+                match last_there {
+                    Some(s) if s == id => {}
+                    Some(s) => {
+                        let b = bufs[s];
+                        bufs[id] = b;
+                    }
+                    None => bufs[id] = AnimBuf::new(fill),
+                }
+            }
             // Only its loads write the buffer (`lbArq_80014BD0`, laid out with its scene,
             // `game::export::anim_buf`): for the heap's image, past them it keeps what the
             // block held.
-            let at = bufs.addr(id);
             if at != 0 {
                 // The pool's size: 0xB000 for the results screen's (`ftDemo_ObjAllocInit`).
                 crate::hsd::heap::with(|h| {

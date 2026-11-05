@@ -505,6 +505,10 @@ pub fn run(r: &mut Running, gobj: GObjId, cb: CodeRef, pass: i32) -> bool {
             let d = r.game.tally_icons_render(gobj, pass);
             r.render_hud(d);
         }
+        super::hud::stock::RENDER_JOINERS => {
+            let d = r.game.joiner_icons_render(gobj, pass);
+            r.render_hud(d);
+        }
         super::hud::devtext::DRAW_ALL => r.render_devtext(pass),
         super::perf::RENDER => r.render_perf(gobj),
         _ => return false,

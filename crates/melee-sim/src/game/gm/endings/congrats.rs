@@ -519,7 +519,7 @@ impl Running<'_> {
     /// continue at level 3, 0x11A under 0x4650 frames), All-Star's (its character's, 0xBE,
     /// 0xCC without a continue, 0x86 at level 3).
     #[doc(alias = "gm_8017390C")]
-    fn clear_trophies(&mut self, n: u8, clear: bool) {
+    pub(crate) fn clear_trophies(&mut self, n: u8, clear: bool) {
         match n {
             0 => {
                 let a = self.game.one_player.adventure;

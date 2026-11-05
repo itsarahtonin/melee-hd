@@ -746,7 +746,9 @@ impl Running<'_> {
         }
     }
 
-    /// A statistics getter's value (`StatsEntry::check`).
+    /// A statistics getter's value (`StatsEntry::check`): `gm_17BA.c`'s two clamped here.
+    // Ports fn_8017BACC; aliased once a check reaches it.
+    // Ports fn_8017BB30; aliased once a check reaches it.
     fn stats_check(&self, getter: u32, slot: usize) -> i32 {
         let me = self.results_end();
         match getter {

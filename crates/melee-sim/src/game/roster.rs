@@ -780,10 +780,6 @@ pub(crate) mod tests {
             "each stage dispatches its hurtbox items' own callbacks, which are ported",
         ),
         (
-            "a 1P trophy at a spawner slot",
-            "a single-player mode's trophy slot (stage_info.x6E4 is -1 outside one)",
-        ),
-        (
             "a spawn configuration that keeps its generator",
             "spawn configurations with a negative chance, which no roster stage makes (Brinstar's draw theirs at 1)",
         ),

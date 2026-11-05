@@ -129,10 +129,10 @@ pub fn scan(r: &mut Running, anywhere: bool) {
                         let trophy = slot
                             .x8
                             .expect("stale read: a spawner slot's trophy (x8) before it's written");
-                        if trophy != -1 {
-                            crate::game::code::unported_call(
-                                "Ground_801C58E0 (a 1P trophy at a spawner slot)",
-                            );
+                        if trophy != -1
+                            && let Some(item) = trophy_at_point(r, trophy, k.into())
+                        {
+                            r.game.gr.zako.slots.as_mut().unwrap()[idx as usize].item = Some(item);
                         }
                     } else if let Some(spawns) = game.gr.zako.spawns {
                         let desc = spawns.at(4 * u32::from((k - 0x20) as u16));
@@ -155,6 +155,18 @@ pub fn scan(r: &mut Running, anywhere: bool) {
         }
     }
     r.game.gr.zako.cursor = idx as i16;
+}
+
+/// A trophy's coin at a stage point, `Ground_801C58E0`: the point's place
+/// (`Ground_801C2D24`), the coin holding the trophy (`it_802F2094`) and the trophy's mark
+/// taken off (`Toy_80304A58`).
+#[doc(alias = "Ground_801C58E0")]
+fn trophy_at_point(r: &mut Running, trophy: i32, point: i32) -> Option<GObjId> {
+    let pos = super::ground::point(r.game, r.data, point)
+        .expect("stale read: Ground_801C58E0's point before it's written");
+    let item = super::super::it::kinds::trophycoin::spawn(r, None, pos, trophy, 0);
+    r.toy_unmark(trophy);
+    item
 }
 
 /// One of the spawner's enemies at `pos`, by its table's kind and number (`x2`), as

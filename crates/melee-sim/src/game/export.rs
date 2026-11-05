@@ -1136,6 +1136,7 @@ pub fn effect(game: &Game, img: &mut Image, e: super::ef::EffectId) {
             l.u8(0x2A + i as u32, b);
         }
     }
+    l.keep_render_target(&o.pixel_runs(), img.render_fill);
     l.put(img);
 }
 

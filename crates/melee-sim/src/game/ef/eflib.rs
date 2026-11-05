@@ -444,6 +444,26 @@ fn new_effect(r: &mut Running) -> Option<EffectId> {
             }
             ef.params = crate::vec::Vec3::new(p[0], p[1], p[2]);
             ef.left.x2a = [0x16, 0x17].map(|i| k[i].then_some(b[i]));
+            // The GPU's pixels the block held there go back as pixels (docs/engine.md).
+            let rt = crate::game::leftovers::render_target_runs(addr + 0x14, 0x18);
+            let pixel = |lo: u32, hi: u32| rt.iter().any(|&(a, b)| a < hi && lo < b);
+            let mut px = 0;
+            for (bit, (lo, hi)) in [
+                (0, 4),
+                (4, 8),
+                (8, 0xC),
+                (0xC, 0x10),
+                (0x16, 0x17),
+                (0x17, 0x18),
+            ]
+            .into_iter()
+            .enumerate()
+            {
+                if pixel(lo, hi) {
+                    px |= 1 << bit;
+                }
+            }
+            ef.left.pixels = px;
         }
     } else {
         let g = &*r.game;

@@ -96,7 +96,7 @@ impl Running<'_> {
     #[doc(alias = "vi0502_GObj_OnRender")]
     #[doc(alias = "vi0502_8031E304")]
     pub fn vi0502_on_enter(&mut self) {
-        let desc = self.game.vi.desc_0502;
+        let desc = super::enter_desc(self.game, 0x15);
         self.lb_audio_music_stop();
         super::super::ef::eflib::init(self);
         super::super::ef::load_sync(self, 0);

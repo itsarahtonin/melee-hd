@@ -89,6 +89,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6e2-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings-2/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("rec-") {
+                    return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6i-") {
                     return ssbm_rs_local(&format!("lockstep/m6-intros/{o}.inputs")).into();
                 }
@@ -1301,6 +1304,15 @@ pub const M6I_ADVENTURE2: Game = Game {
     name: "m6i-adventure2",
     players: "Adventure's first stage's intro (session m6-oracle/adventure2)",
     replay: Replay::Session("m6i-adventure2"),
+};
+
+/// A human's Adventure run (`recordings/2026-10-06_12-04-48`): Mushroom Kingdom's route with
+/// its joiners' tally, Peach's Castle, Kongo Jungle's intro.
+pub const REC_ADVENTURE: Game = Game {
+    stage: "Mushroom Kingdom's route",
+    name: "rec-2026-10-06_12-04-48",
+    players: "Adventure's first stages (recording 2026-10-06_12-04-48)",
+    replay: Replay::Session("rec-2026-10-06_12-04-48"),
 };
 
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.

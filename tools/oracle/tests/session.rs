@@ -2366,9 +2366,28 @@ fn single_player_setups() {
 /// match won by a bot, its clear screen, and the second stage's intro with its team's ally
 /// drawn (`fn_8017D9C0`) into the team match, to the trace's end; and
 /// `m6-intros/classic-easy`, Classic on Easy, the first stage won, the second's team match
-/// lost to Classic's game over, which isn't ported.
+/// lost to Classic's game over, a continue paid, the team match lost again and the game over
+/// to the trace's end; and `m6-intros/classic-no`, the same but no to the second continue:
+/// the run's end, its high score saved and back to the main menu. And `2026-10-06_12-04-48`,
+/// a human's Adventure run: its intro, Mushroom Kingdom's route (the joiners' tally, their
+/// leaving slots, a spawner slot's trophy, Adventure's results), Peach's Castle and Kongo
+/// Jungle's intro to tiny Donkey Kong's match, whose opponents play computer kind 8 (task
+/// 25's).
 #[test]
 fn single_player_intros() {
+    if let Some(out) = session_at(
+        "traces/session/2026-10-06_12-04-48.trc",
+        "lockstep/recordings/2026-10-06_12-04-48.inputs",
+        &["--all", "--heap"],
+    ) {
+        assert!(
+            out.contains(
+                "7517 ticks compared, no difference; stopped in tick 7517: ftCo_800B2AFC for computer kind 8 isn't ported"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
     if let Some(out) = scripted_session("m6-intros", "classic-win", &["--all", "--heap"]) {
         assert!(
             out.contains(
@@ -2382,7 +2401,18 @@ fn single_player_intros() {
     if let Some(out) = scripted_session("m6-intros", "classic-easy", &["--all", "--heap"]) {
         assert!(
             out.contains(
-                "11026 ticks compared, no difference; stopped in tick 11026: gmClassic_801B3D44 isn't ported"
+                "22186 ticks compared, no difference
+"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-intros", "classic-no", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "18945 ticks compared, no difference
+"
             ),
             "{out}"
         );
