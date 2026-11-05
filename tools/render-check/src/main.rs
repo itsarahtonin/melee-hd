@@ -89,12 +89,16 @@ impl Memory for LogPlayer {
 
 /// Each frame's events of a FIFO log.
 fn play_log(path: &str) -> Vec<Vec<Event>> {
-    play_log_drawing(path, None).0
+    play_log_drawing(path, None, 0).0
 }
 
-/// Each frame's events of a FIFO log, and with `out` the frames melee-gpu draws of it, saved
-/// there as frame_N.png.
-fn play_log_drawing(path: &str, out: Option<&std::path::Path>) -> (Vec<Vec<Event>>, usize) {
+/// Each frame's events of a FIFO log (none kept for its first `skip`), and with `out` the
+/// frames melee-gpu draws of it, saved there as frame_N.png.
+fn play_log_drawing(
+    path: &str,
+    out: Option<&std::path::Path>,
+    skip: usize,
+) -> (Vec<Vec<Event>>, usize) {
     let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{path}: {e}"));
     let log = File::read(&bytes).unwrap_or_else(|e| panic!("{path}: {e}"));
     let player = LogPlayer {
@@ -128,7 +132,12 @@ fn play_log_drawing(path: &str, out: Option<&std::path::Path>) -> (Vec<Vec<Event
         }
         state.feed(&player, &frame.fifo[at..], &mut produced, false);
         produced.clear();
-        frames.push(std::mem::take(&mut *player.recorder.events.borrow_mut()));
+        let events = std::mem::take(&mut *player.recorder.events.borrow_mut());
+        frames.push(if frames.len() < skip {
+            Vec::new()
+        } else {
+            events
+        });
         if let (Some(r), Some(dir)) = (&player.renderer, out) {
             for f in r.borrow_mut().take_frames() {
                 saved += 1;
@@ -167,7 +176,7 @@ fn run(args: &[String]) -> ExitCode {
         Some("play") if args.len() >= 3 => {
             let dir = std::path::PathBuf::from(&args[2]);
             std::fs::create_dir_all(&dir).expect("making the output directory");
-            let (_, n) = play_log_drawing(&args[1], Some(&dir));
+            let (_, n) = play_log_drawing(&args[1], Some(&dir), 0);
             println!("{n} frames drawn into {}", dir.display());
             ExitCode::SUCCESS
         }
@@ -176,7 +185,7 @@ fn run(args: &[String]) -> ExitCode {
             let from: u32 = args[4].parse().expect("FROM");
             let to: u32 = args[5].parse().expect("TO");
             let mut best = (f64::MAX, 0u32, 0i32);
-            native::play(&args[1], &args[2], from, to, |n, d| {
+            native::play(&args[1], &args[2], from, to, 0, |n, d| {
                 let (dist, matched) = native::distance(&d.events, &reference[0]);
                 let score = dist;
                 println!(
@@ -335,7 +344,13 @@ fn save_rgba(path: &std::path::Path, w: u32, h: u32, rgba: &[u8]) {
 }
 
 fn compare(args: &[String]) -> ExitCode {
-    let reference = play_log(&args[3]);
+    // `CHECK_FROM=K` compares the log's frames from its Kth on: the frames before are drawn on
+    // the native side only for the copies they leave on the GPU (a log started before the
+    // copies its last frames sample were made, `Capture::RenderedSince` in the tests).
+    let skip: usize = std::env::var("CHECK_FROM")
+        .ok()
+        .map_or(0, |v| v.parse().expect("CHECK_FROM=K"));
+    let reference = play_log_drawing(&args[3], None, skip).0;
     let ref_dir = std::path::PathBuf::from(&args[4]);
     let first: u32 = args[5].parse().expect("FRAME");
     let out = args.get(6).map(std::path::PathBuf::from);
@@ -351,17 +366,19 @@ fn compare(args: &[String]) -> ExitCode {
     let search = std::env::var("CHECK_SEARCH")
         .ok()
         .map_or(16, |v| v.parse().expect("CHECK_SEARCH=N"));
-    let from = first.saturating_sub(search);
+    assert!(skip < reference.len(), "CHECK_FROM past the log's frames");
+    let wanted = reference.len() - skip;
+    let from = first.saturating_sub(search) + skip as u32;
     let last = first + search + reference.len() as u32 - 1;
     let mut drawn: Vec<(u32, native::Drawn)> = Vec::new();
-    native::play(&args[1], &args[2], from, last, |n, d| {
+    native::play(&args[1], &args[2], from, last, skip as u32, |n, d| {
         drawn.push((n, d));
         true
     });
     let best = (0..drawn.len())
-        .filter(|&i| i + reference.len() <= drawn.len())
+        .filter(|&i| i + wanted <= drawn.len())
         .map(|i| {
-            let (dist, matched) = native::distance(&drawn[i].1.events, &reference[0]);
+            let (dist, matched) = native::distance(&drawn[i].1.events, &reference[skip]);
             (i, dist, matched)
         })
         .filter(|x| x.2 > 0)
@@ -372,16 +389,12 @@ fn compare(args: &[String]) -> ExitCode {
     };
     println!(
         "the log's first frame is native frame {} ({apart:.3} apart)",
-        drawn[start].0
+        drawn[start].0 - skip as u32
     );
     let results = results::Results::from_env();
     let mut failed = false;
-    for (k, (n, d)) in drawn
-        .into_iter()
-        .skip(start)
-        .take(reference.len())
-        .enumerate()
-    {
+    for (i, (n, d)) in drawn.into_iter().skip(start).take(wanted).enumerate() {
+        let k = skip + i;
         let theirs = &reference[k];
         println!(
             "== frame {n} (replay frame {}) against the log's frame {k}",
