@@ -1053,10 +1053,16 @@ impl Running<'_> {
     }
 
     /// `gm_801BC488`: the team that won the match alone so far (`gm_80166378` on a copy of
-    /// the match's end), else 4.
+    /// the match's end, `gm_8016B774`'s, on the stack), else 4.
+    #[doc(alias = "gm_801BC488")]
     fn event_winning_team(&mut self) -> u32 {
-        let _ = self;
-        super::super::code::unported_call("gm_801BC488 (an event's time match's winner)");
+        let mut r = self.game.vs_results().clone();
+        self.compile_results_into(&mut r);
+        if r.n_team_winners == 1 {
+            u32::from(r.team_winners[0])
+        } else {
+            4
+        }
     }
 
     /// `gm_801BC9E8`, the coin event's: cleared at the event's coins, failed when the time
