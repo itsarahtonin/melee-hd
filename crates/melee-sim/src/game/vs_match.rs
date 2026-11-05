@@ -1093,6 +1093,48 @@ pub fn load_kind_files(
     give_files(game, data, read, names, load);
 }
 
+/// Gives the match the copy files Kirby's hats on Green Greens load (`ftLib_LoadKirbyHats`, in
+/// Kirby's costume `costume`) and Kirby's data setup does (`ftData_800857E0`: the playing
+/// slots' copies, first costume), in the scene's entry, as [`load_kind_files`]'s.
+pub fn load_kirby_copy_files(
+    game: &mut Game,
+    data: &mut Archives,
+    read: &mut JoinerFiles,
+    costume: usize,
+    playing: &[(i32, i32)],
+    load: &mut dyn FnMut(&str) -> DiscFile,
+) {
+    use super::ft::kirby::init::{COPY_FILES, copy_costume_files};
+    use super::gm::adventure::{hat_fighters, kirby_hat_characters};
+    let mut kinds: Vec<(i32, usize)> = Vec::new();
+    for ckind in kirby_hat_characters(game) {
+        for sub in 0..hat_fighters(ckind) {
+            kinds.push((
+                super::pl::player::ckind_ftkind(i32::from(ckind), sub),
+                costume,
+            ));
+        }
+    }
+    for &(kind, extra) in playing {
+        kinds.push((kind, 0));
+        kinds.push((extra, 0));
+    }
+    let mut names: Vec<(std::borrow::Cow<'static, str>, bool)> = Vec::new();
+    for (kind, c) in kinds {
+        if kind < 0 || kind == super::ft::kirby::KIND_KIRBY {
+            continue;
+        }
+        if let Some((file, _)) = COPY_FILES[kind as usize] {
+            names.push((std::borrow::Cow::Borrowed(file), false));
+        }
+        if let Some((file, _, _)) = copy_costume_files(kind as usize, c) {
+            names.push((std::borrow::Cow::Owned(file), false));
+        }
+    }
+    names.dedup();
+    give_files(game, data, read, names, load);
+}
+
 /// The files `names` (animation files flagged) the match hasn't, read once into `read` and
 /// given to it.
 fn give_files(

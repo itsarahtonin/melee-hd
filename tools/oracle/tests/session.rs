@@ -2394,9 +2394,10 @@ fn single_player_setups() {
 /// to the trace's end; and `m6-intros/classic-no`, the same but no to the second continue:
 /// the run's end, its high score saved and back to the main menu. And `2026-10-06_12-04-48`,
 /// a human's Adventure run: its intro, Mushroom Kingdom's route (the joiners' tally, their
-/// leaving slots, a spawner slot's trophy, Adventure's results), Peach's Castle and Kongo
-/// Jungle's intro to tiny Donkey Kong's match, whose opponents play computer kind 8 (task
-/// 25's).
+/// leaving slots, a spawner slot's trophy, Adventure's results), Peach's Castle, Kongo
+/// Jungle's tiny and giant Donkey Kongs, the Underground Maze, Zelda, Brinstar with its
+/// cutscene and escape, the planet's explosion and Green Greens, to the three Kirbys'
+/// cutscene, whose item lies over a Green Greens item's bytes no layout knows.
 #[test]
 fn single_player_intros() {
     if let Some(out) = session_at(
@@ -2406,7 +2407,7 @@ fn single_player_intros() {
     ) {
         assert!(
             out.contains(
-                "7517 ticks compared, no difference; stopped in tick 7517: ftCo_800B2AFC for computer kind 8 isn't ported"
+                "25229 ticks compared, no difference; stopped in tick 25228: unknown leftover bytes of a freed Item under Item: its layout isn't ported"
             ),
             "{out}"
         );

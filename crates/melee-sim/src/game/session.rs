@@ -879,6 +879,28 @@ impl Session {
                 &kinds,
                 &mut |n| console.file(n),
             );
+            // Kirby's hats on Green Greens, and Kirby's data setup's copies.
+            if kinds.contains(&super::ft::kirby::KIND_KIRBY) {
+                let a = self.game.one_player.adventure.base.player;
+                let costume = usize::from(a.ckind == 4 && a.color == 0);
+                let playing: Vec<(i32, i32)> = start
+                    .players
+                    .iter()
+                    .filter(|p| i32::from(p.slot_type) != super::pl::player::PKIND_NONE)
+                    .map(|p| {
+                        let m = super::pl::player::mapping(i32::from(p.ckind));
+                        (i32::from(m.internal_id), i32::from(m.extra_internal_id))
+                    })
+                    .collect();
+                super::vs_match::load_kirby_copy_files(
+                    &mut self.game,
+                    &mut self.data,
+                    &mut self.joiner_files,
+                    costume,
+                    &playing,
+                    &mut |n| console.file(n),
+                );
+            }
         }
         // Multi-Man Melee's Wire Frames join from the mode's table as the match goes
         // (`fn_80181C80`): both of their fighters' files, in their first costume.

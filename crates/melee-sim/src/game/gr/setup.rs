@@ -578,7 +578,7 @@ const EMPTY_MAP_SLOT: u32 = 0x44;
 /// but which takes an entry ([`crate::hsd::id::stack_key`]).
 fn scale_joint(game: &mut Game, s: f32, frame: u32) -> JObjId {
     let j = jobj::alloc(&mut game.objs);
-    let key = crate::hsd::id::stack_key(frame);
+    let key = crate::hsd::id::stack_key(frame.wrapping_sub(game.gr.setup_deeper));
     game.objs.ids.insert(key, j);
     game.objs.jobjs[j].id = Some(key);
     let o = &mut game.objs.jobjs[j];
@@ -1195,6 +1195,20 @@ pub fn create_collision_gobj(game: &mut Game) {
 #[doc(alias = "Ground_801C0800")]
 #[doc(alias = "Stage_8022524C")]
 pub fn setup(r: &mut Running, grkind: i32) {
+    setup_at(r, grkind, 0);
+}
+
+/// [`setup`] from a caller whose stack is `deeper` bytes deeper than a VS match's
+/// (`gm_Scene_Vs_OnEnter`'s 0x18 and `fn_8016E730`'s 0x20): Adventure's intro's entry
+/// (0x48) 0x10, Classic's intro's (0x18 and `fn_80186634`'s 0x48) 0x28. The stage's objects'
+/// scale joints made in the setup take their ID entries' stack keys that much lower.
+pub fn setup_at(r: &mut Running, grkind: i32, deeper: u32) {
+    r.game.gr.setup_deeper = deeper;
+    setup_inner(r, grkind);
+    r.game.gr.setup_deeper = 0;
+}
+
+fn setup_inner(r: &mut Running, grkind: i32) {
     let (game, data) = (&mut *r.game, r.data);
     let p = game.gr.param.clone().expect("stage_info.param is null");
     let f = |x: i32| mem(fp::frsp(f64::from(x)));

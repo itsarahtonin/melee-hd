@@ -46,7 +46,7 @@ pub const SYMBOL_TOUCHED: u32 = 0x8020_AD58;
 /// `grShrineRoute_8020AE08`, the pit's fighter device.
 pub const PIT_DEVICE: u32 = 0x8020_AE08;
 /// `grShrineRoute_8020AD24`, an arena's event callback.
-const ARENA_EVENT: u32 = 0x8020_AD24;
+pub const ARENA_EVENT: u32 = 0x8020_AD24;
 /// `grShrineRoute_OnCheckShadowRender`, the stage's shadow check.
 pub const CHECK_SHADOW_RENDER: u32 = 0x8020_B10C;
 
@@ -1154,7 +1154,7 @@ pub fn proc_lights(r: &mut Running, gobj: GObjId) {
 
 /// An arena's event callback, `grShrineRoute_8020AD24`: on 1, the stage's `x6D8` set to 1,
 /// answering true.
-// Ports grShrineRoute_8020AD24; aliased once a check reaches it.
+#[doc(alias = "grShrineRoute_8020AD24")]
 pub fn arena_event(game: &mut Game, arg: i32) -> bool {
     if arg == 1 {
         super::ground::set_x6d8(game, arg);

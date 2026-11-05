@@ -716,6 +716,9 @@ fn run_route_callback(r: &mut Running, f: CodeRef, arg: i32) -> i32 {
         a if a == super::super::gr::kinokoroute::ARENA_EVENT => {
             i32::from(super::super::gr::kinokoroute::arena_event(r.game, arg))
         }
+        a if a == super::super::gr::shrineroute::ARENA_EVENT => {
+            i32::from(super::super::gr::shrineroute::arena_event(r.game, arg))
+        }
         a if a == super::super::gr::icemt::END_EVENT => {
             super::super::gr::icemt::end_event(r.game, arg)
         }

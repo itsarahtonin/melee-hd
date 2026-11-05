@@ -225,6 +225,13 @@ enum Hook {
     AdventureEnterTiny,
     AdventureEnterCutscene,
     AdventureEnterGameOver,
+    AdventureEnterEscape,
+    AdventureEnterKirbys,
+    AdventureEnterStarFox,
+    AdventureEnterFoxFalco,
+    AdventureEnterTeamKirby,
+    AdventureExitTeamKirby,
+    AdventureExitEscape,
     AdventureExitGameOver,
     AllStarOnLoad,
     AllStarEnterCss,
@@ -1498,6 +1505,13 @@ impl Running<'_> {
             Hook::AdventureEnterTiny => self.adventure_enter_tiny(),
             Hook::AdventureEnterCutscene => self.adventure_enter_cutscene(),
             Hook::AdventureEnterGameOver => self.adventure_enter_game_over(),
+            Hook::AdventureEnterEscape => self.adventure_enter_escape(),
+            Hook::AdventureEnterKirbys => self.adventure_enter_kirbys(),
+            Hook::AdventureEnterStarFox => self.adventure_enter_star_fox(),
+            Hook::AdventureEnterFoxFalco => self.adventure_enter_fox_falco(),
+            Hook::AdventureEnterTeamKirby => self.adventure_enter_team_kirby(),
+            Hook::AdventureExitTeamKirby => self.adventure_exit_team_kirby(),
+            Hook::AdventureExitEscape => self.adventure_exit_escape(),
             Hook::AdventureExitGameOver => self.adventure_exit_game_over(),
             Hook::AllStarOnLoad => self.allstar_on_load(),
             Hook::AllStarEnterCss => self.allstar_enter_css(),
@@ -1792,7 +1806,13 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         // ADVENTURE_BRINSTAR_CUTSCENE
         st(0x1a, 2, Some(Hook::AdventureEnterCutscene), None, 0x12),
         // ADVENTURE_ESCAPE_FROM_BRINSTAR
-        st(0x1b, 2, u("gm_801B47FC"), u("gm_801B4860"), GS_VS),
+        st(
+            0x1b,
+            2,
+            Some(Hook::AdventureEnterEscape),
+            Some(Hook::AdventureExitEscape),
+            GS_VS,
+        ),
         // ADVENTURE_EXPLOSION_CUTSCENE
         st(0x1c, 2, None, None, 0x13),
         // ADVENTURE_KIRBY_INTRO
@@ -1812,9 +1832,15 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             GS_VS,
         ),
         // ADVENTURE_TEAMKIRBY_INTRO
-        st(0x22, 2, u("gm_801B4974"), None, 0x14),
+        st(0x22, 2, Some(Hook::AdventureEnterKirbys), None, 0x14),
         // ADVENTURE_TEAMKIRBY_FIGHT
-        st(0x23, 2, u("gm_801B4B28"), u("gm_801B4C5C"), GS_VS),
+        st(
+            0x23,
+            2,
+            Some(Hook::AdventureEnterTeamKirby),
+            Some(Hook::AdventureExitTeamKirby),
+            GS_VS,
+        ),
         // ADVENTURE_GIANTKIRBY_INTRO
         st(0x24, 2, Some(Hook::AdventureEnterCutscene), None, 0x15),
         // ADVENTURE_GIANTKIRBY_FIGHT
@@ -1842,12 +1868,12 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             GS_VS,
         ),
         // ADVENTURE_STARFOX_CUTSCENE
-        st(0x2a, 2, u("gm_801B4D34"), None, 0x16),
+        st(0x2a, 2, Some(Hook::AdventureEnterStarFox), None, 0x16),
         // ADVENTURE_FOX_FALCO_FIGHT
         st(
             0x2b,
             2,
-            u("gm_801B4DAC"),
+            Some(Hook::AdventureEnterFoxFalco),
             Some(Hook::AdventureExitStage),
             GS_VS,
         ),
