@@ -71,19 +71,15 @@ fn first_stops(list: &[(&str, u32, &str)]) {
 }
 
 /// Each mode from the main menu's 1P list on the unlock-all card: its entry, its select (or
-/// list), Fox, and its first match: Classic's intro and match (on Very Easy, whose
-/// opponents' computer kind 9 isn't ported), Adventure's intro and Mushroom Kingdom's route
+/// list), Fox, and its first match: Classic's intro and match (on Very Easy, its opponent of
+/// computer kind 9), Adventure's intro and Mushroom Kingdom's route
 /// to the trace's end, the matches of All-Star,
 /// Target Test, the Home-Run Contest, 10-Man Melee (lost, the select again) and Training
 /// (Fountain of Dreams, on `2026-10-06_17-44-10`'s card), and the Event list's first event.
 #[test]
 fn each_mode_runs_to_its_first_stop() {
     first_stops(&[
-        (
-            "classic",
-            938,
-            "ftCo_800B2AFC for computer kind 9 isn't ported",
-        ),
+        ("classic", 3893, ""),
         ("adventure2", 4653, ""),
         ("allstar", 3884, ""),
         ("event", 3546, ""),
@@ -285,6 +281,47 @@ fn the_events_run_clean_to_their_cards_after() {
         };
         let want = format!("{ticks} ticks compared, no difference\n");
         assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// The single-player computer kinds' sessions (`m6-cpu-kinds`, milestone 6's task 25;
+/// docs/oracle.md, "Sessions"): an event each from power-on on the unlock-all card, its
+/// computer players of kinds 8 (Event 46), 10 (15 and 48), 13 (7), 18 (6), 19 to 21 (17,
+/// 19 and 25) and 9 (4) deciding until the event is lost or the session ends, each clean to
+/// its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_computer_kinds_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("ck08-ev46", 4127),
+        ("ck09-ev04", 3722),
+        ("ck10-ev15", 3733),
+        ("ck10-ev48", 4095),
+        ("ck13-ev07", 3689),
+        ("ck18-ev06", 3738),
+        ("ck19-ev17", 3619),
+        ("ck19-ev25", 3623),
+        ("ck20-ev19", 3610),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-cpu-kinds/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-cpu-kinds/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-cpu-kinds", name, &args) else {
+            return;
+        };
+        let want = format!(
+            "{ticks} ticks compared, no difference
+"
+        );
+        assert!(
+            out.contains(&want),
+            "{name}: wants {want:?}
+{out}"
+        );
         assert!(out.contains("no stale reads"), "{name}: {out}");
         assert!(
             out.contains("the card after the session: the original's"),

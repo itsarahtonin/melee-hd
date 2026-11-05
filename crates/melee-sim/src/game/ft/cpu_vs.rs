@@ -46,27 +46,8 @@ impl Running<'_> {
     /// switch, and every path ends in that call, so the r5 it leaves is that call's.
     #[doc(alias = "ftCo_800B24B8")]
     pub(super) fn cpu_decide_vs(&mut self, f: FighterId) -> Leftover {
-        if let Some((cmd, at)) = self.cpu_off_screen(f) {
-            return self.cpu_back_on_screen(f, at, cmd);
-        }
-        let target = self.cpu_entering_enemy(f);
-        self.game.fighters[f.0].cpu.x44 = target;
-        if target.is_some() {
-            // `ftCo_CpuSetTargetFlags`, then `ftCo_CpuTargetAct`.
-            let c = &mut self.game.fighters[f.0].cpu;
-            c.xF8_b0 = true;
-            c.xF9_b2 = false;
-            c.xF9_b4 = false;
-            c.xF9_b3 = false;
-            c.xF9_b5 = false;
-            c.xF9_b6 = false;
-            c.xF9_b7 = false;
-            c.xF9_b1 = true;
-            self.cpu_near_target(f);
-            if self.cpu_should_act(f) {
-                self.cpu_beside_target(f);
-            }
-            return self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1;
+        if let Some(r5) = self.cpu_decide_start(f, VS_SP) {
+            return r5;
         }
         // `ftCo_CpuInitNoTarget` with the fear flags set.
         let c = &mut self.game.fighters[f.0].cpu;
@@ -99,6 +80,42 @@ impl Running<'_> {
             self.cpu_toward(f, target, unset);
         }
         self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1
+    }
+
+    /// The start the VS decision shares with most computer kinds' (`ftCo_800AECF0`,
+    /// `ftCo_800B00F8` and the others, each its own copy): off camera or at the stage's edge,
+    /// back on (`ftCo_800AE7AC`); else an enemy with a Starman or a hammer its target to
+    /// close in on (`ftCo_CpuSetTargetFlags`, then `ftCo_CpuTargetAct`). `sp` is the deciding
+    /// function's stack pointer, whose r31 (its `CpuFighter` pointer) the behavior pick reads
+    /// as its DI switch. The r5 the pick leaves, or none when neither applies, with no target
+    /// (`x44`) set.
+    pub(super) fn cpu_decide_start(&mut self, f: FighterId, sp: u32) -> Option<Leftover> {
+        if let Some((cmd, at)) = self.cpu_off_screen(f) {
+            return Some(self.cpu_back_on_screen(f, at, cmd, sp));
+        }
+        self.cpu_decide_entering(f, sp)
+    }
+
+    /// [`Running::cpu_decide_start`] but the way back on (computer kind 14's start): an enemy
+    /// with a Starman or a hammer its target to close in on.
+    pub(super) fn cpu_decide_entering(&mut self, f: FighterId, sp: u32) -> Option<Leftover> {
+        let target = self.cpu_entering_enemy(f);
+        self.game.fighters[f.0].cpu.x44 = target;
+        target?;
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = true;
+        c.xF9_b2 = false;
+        c.xF9_b4 = false;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = true;
+        self.cpu_near_target(f);
+        if self.cpu_should_act(f) {
+            self.cpu_beside_target(f);
+        }
+        Some(self.cpu_choose_behavior_r5(f, true, Some(sp)).1)
     }
 
     /// Whether the fighter is somewhere the stage or camera sends it back from, and where it
@@ -231,9 +248,9 @@ impl Running<'_> {
     /// the nearest enemy and the items in reach; from the stage's cases it heads for safe
     /// ground (`ftCo_800A8210`); off camera on the ground it heads toward the blast zones'
     /// middle, or for its target. Its call to the behavior runs with `cmd` in r31, never 0,
-    /// as the DI switch.
+    /// as the DI switch. `sp` is its caller's stack pointer.
     #[doc(alias = "ftCo_800AE7AC")]
-    fn cpu_back_on_screen(&mut self, f: FighterId, at: Vec3, cmd: i32) -> Leftover {
+    fn cpu_back_on_screen(&mut self, f: FighterId, at: Vec3, cmd: i32, sp: u32) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF8_b0 = true;
         c.xF9_b3 = false;
@@ -276,7 +293,7 @@ impl Running<'_> {
                 }
             }
         }
-        self.cpu_choose_behavior_r5(f, cmd != 0, Some(VS_SP - BACK_ON_SCREEN_FRAME))
+        self.cpu_choose_behavior_r5(f, cmd != 0, Some(sp - BACK_ON_SCREEN_FRAME))
             .1
     }
 
@@ -595,7 +612,7 @@ impl Running<'_> {
     /// (`xFA_b34`), the best standing human enemy in reach, the nearer of a tie; else (or
     /// with none) the best standing enemy of any kind.
     #[doc(alias = "ftCo_800A53DC")]
-    fn cpu_best_human_enemy(&mut self, f: FighterId) -> Option<FighterId> {
+    pub(super) fn cpu_best_human_enemy(&mut self, f: FighterId) -> Option<FighterId> {
         if self.game.fighters[f.0].cpu.xFA_b34 != 0
             && let Some(o) = self.cpu_best_enemy(f, true)
         {
@@ -765,7 +782,7 @@ impl Running<'_> {
     /// the item's island safe, for the floor under the item, then onto that island's near end
     /// from below when the fighter stands elsewhere.
     #[doc(alias = "ftCo_800A866C")]
-    fn cpu_toward_item(&mut self, f: FighterId) {
+    pub(super) fn cpu_toward_item(&mut self, f: FighterId) {
         let Some(item) = self.game.fighters[f.0].cpu.x4C else {
             return;
         };
