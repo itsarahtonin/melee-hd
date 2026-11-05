@@ -352,6 +352,7 @@ impl Running<'_> {
             // state preloads nothing, as the challenger approach's) goes into a block of the
             // ARAM heap (`lbHeap_80015BD0(1, ...)`), best fit, where the console puts it.
             if self.game.ft.data.files.from_cache && !self.anim_file_cached(name) {
+                self.check_preloaded(name);
                 let (_, len) = self.game.ft.data.files.entry(name);
                 let d = self.dvd_mut();
                 let e = d

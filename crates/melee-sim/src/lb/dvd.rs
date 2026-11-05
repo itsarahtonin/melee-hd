@@ -528,7 +528,7 @@ impl Dvd {
     /// (1), all in (2, each marked kept: state 4, the top score) or none asked (0). One in the
     /// persistent heap, or being read, is coming; one read waits while its heap has both an
     /// entry being read and an unwanted one in.
-    // Ports `lbDvd_80018A2C`; aliased once a check reaches it.
+    #[doc(alias = "lbDvd_80018A2C")]
     pub fn class_pending(&mut self, mask: u8) -> i32 {
         let mut result = 0;
         for i in 0..ENTRIES {

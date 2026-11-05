@@ -326,10 +326,159 @@ impl Running<'_> {
             // jump and the walk the behavior pick's.
             k @ (0 | 1 | 3) => self.cpu_decide_training(f, k == 1),
             2 => self.cpu_decide_evade(f),
-            k @ (7..=10 | 13 | 14 | 17..=29) => {
+            // Kind 25 is kind 23's code again (Multi-Man's Wire Frames).
+            23 | 25 => self.cpu_decide_enemy(f),
+            24 => self.cpu_decide_wander(f),
+            k @ (7..=10 | 13 | 14 | 17..=22 | 26..=29) => {
                 unported_call(&format!("ftCo_800B2AFC for computer kind {k}"))
             }
             _ => self.cpu_decide_vs(f),
+        }
+    }
+
+    /// The single-player opponents' computer kind 23 (`ftCo_800B2AFC`'s case): its target the
+    /// nearest enemy (`ftCo_CpuInitEnemyTarget`, the fear flags but two off), the destination
+    /// timer stopped when the behavior changed, and unless it's being hit (behavior 4), toward
+    /// the target; then the behavior pick, whose r5 it leaves.
+    fn cpu_decide_enemy(&mut self, f: FighterId) -> Leftover {
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = false;
+        c.xF9_b2 = true;
+        c.xF9_b4 = true;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = false;
+        let (target, lr) = self.cpu_find_target_lr(f);
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.x44 = target;
+        if c.x18 != c.x20 && c.x18 != c.x1C {
+            c.x60 = 0;
+        }
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME;
+        if c.x18 != 4 {
+            c.xFA_b2 = false;
+            // `ftCo_800A75DC`'s vector at `r1 + 0x18` as `ftCo_800A4BEC`'s frame left it, as
+            // in the VS decision: the back chain (this frame's stack pointer) and the word its
+            // link register slot holds.
+            let unset = lr.map(|y| (f32::from_bits(sp), f32::from_bits(y)));
+            let t = self.game.fighters[f.0].cpu.x44;
+            self.cpu_toward(f, t, unset);
+        }
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
+    }
+
+    /// Computer kind 24 (`ftCo_800B1DA0`, Multi-Man's Wire Frames): its target the nearest
+    /// enemy as kind 23's, and once a second while it may act, on a coin flip, a destination
+    /// on another island (`ftCo_800A8940`); then the behavior pick, whose r5 it leaves.
+    #[doc(alias = "ftCo_800B1DA0")]
+    fn cpu_decide_wander(&mut self, f: FighterId) -> Leftover {
+        /// `ftCo_800B1DA0`'s frame, below the decision's.
+        const WANDER_FRAME: u32 = 0x38;
+        let c = &mut self.game.fighters[f.0].cpu;
+        c.xF8_b0 = false;
+        c.xF9_b2 = true;
+        c.xF9_b4 = true;
+        c.xF9_b3 = false;
+        c.xF9_b5 = false;
+        c.xF9_b6 = false;
+        c.xF9_b7 = false;
+        c.xF9_b1 = false;
+        let (target, _) = self.cpu_find_target_lr(f);
+        self.game.fighters[f.0].cpu.x44 = target;
+        if self.cpu_should_act(f)
+            && self.game.fighters[f.0]
+                .cpu
+                .x7C
+                .wrapping_rem(60)
+                .wrapping_mul(5)
+                == 0
+            && reg(self.game.objs.rng.draw_f32()) < 0.5
+        {
+            self.cpu_to_other_island(f);
+        }
+        let sp = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - WANDER_FRAME;
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
+    }
+
+    /// `ftCo_800A8940`: a destination on another live island picked at random, weighted by
+    /// width: of the islands other than the fighter's whose ends are inside the blast zones,
+    /// the safe ones' widths summed (none: no destination); then a draw over the same
+    /// islands but the safety test, a second draw for the spot along the island picked (5 in
+    /// from its ends when it's wider than 10), and the floor under it, if inside the blast
+    /// zones, the destination with a reach of 5.
+    ///
+    /// The second pass skips `ftCo_800A2718`'s test, so its islands are the first pass's and
+    /// maybe more, and its sum over the first's reaches 1 before its last island: a draw (under
+    /// 1 - 2^-16) always picks one, so the island the original keeps in r31 (its caller's r31
+    /// when none is picked) is always written ([Melee's bugs](docs/melee-bugs.md)).
+    #[doc(alias = "ftCo_800A8940")]
+    fn cpu_to_other_island(&mut self, f: FighterId) {
+        let rnd = reg(self.game.objs.rng.draw_f32());
+        let floor = self.game.fighters[f.0].coll_data.floor.index;
+        let geo = self.game.geometry.as_ref().expect("no collision geometry");
+        let cur = geo.island_of_line(floor);
+        let first = geo.islands.floors;
+        let island = |r: &Self, id| *r.game.geometry.as_ref().expect("geometry").islands.get(id);
+        let inside = |r: &Self, isl: &crate::mp::Island| {
+            !r.cpu_out_of_bounds(f, isl.right.x, isl.right.y)
+                && !r.cpu_out_of_bounds(f, isl.left.x, isl.left.y)
+        };
+        let mut total = reg(0.0);
+        let mut it = first;
+        while let Some(id) = it {
+            let isl = island(self, id);
+            it = isl.next;
+            if cur != Some(id) && !self.cpu_island_unsafe(Some(id)) && inside(self, &isl) {
+                total = fp::fadds(total, fp::fsubs(reg(isl.right.x), reg(isl.left.x)));
+            }
+        }
+        if total < reg(0.00001) && total > reg(-0.00001) {
+            return;
+        }
+        let total = fp::frsp(fp::fdiv(1.0, total));
+        let mut accum = reg(0.0);
+        let mut chosen = None;
+        let mut it = first;
+        while let Some(id) = it {
+            let isl = island(self, id);
+            it = isl.next;
+            if cur != Some(id) && inside(self, &isl) {
+                accum = fp::fadds(accum, fp::fsubs(reg(isl.right.x), reg(isl.left.x)));
+                if rnd < fp::fmuls(accum, total) {
+                    chosen = Some(isl);
+                    break;
+                }
+            }
+        }
+        let Some(isl) = chosen else {
+            unported_call("ftCo_800A8940 with no island picked (its r31 and r27 unwritten)")
+        };
+        let rnd2 = reg(self.game.objs.rng.draw_f32());
+        let width = fp::fsubs(reg(isl.right.x), reg(isl.left.x));
+        let px = if width > 10.0 {
+            fp::frsp(fp::fmadd(
+                fp::fsub(width, 10.0),
+                rnd2,
+                fp::fadd(5.0, reg(isl.left.x)),
+            ))
+        } else {
+            fp::fmadds(width, rnd2, reg(isl.left.x))
+        };
+        let py = fp::fmadds(
+            rnd2,
+            fp::fsubs(reg(isl.right.y), reg(isl.left.y)),
+            reg(isl.left.y),
+        );
+        let top = mem(fp::fadds(5.0, py));
+        let bottom = mem(fp::fsubs(py, reg(100.0)));
+        let px = mem(px);
+        let Some(pos) = self.cpu_floor(px, top, px, bottom) else {
+            return;
+        };
+        if !self.cpu_out_of_bounds(f, pos.x, pos.y) {
+            self.cpu_set_destination(f, pos.x, pos.y, 5.0);
         }
     }
 

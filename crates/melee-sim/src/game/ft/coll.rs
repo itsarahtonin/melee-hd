@@ -67,6 +67,8 @@ pub struct ObjCollHooks<'a> {
     pub escape: crate::game::gr::zebesroute::EndTouch,
     /// Whose collision touched Icicle Mountain's lines, for the adventure's climb.
     pub climb: crate::game::gr::icemt::ClimbTouch,
+    /// Whose collisions stood on the Underground Maze's symbols' floors.
+    pub maze: crate::game::gr::shrineroute::SymbolTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -368,6 +370,15 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                 self.climb.touched(coll.x0_gobj);
             }
             super::super::gr::icemt::ON_JOINT => self.climb.touched(coll.x0_gobj),
+            super::super::gr::heal::ON_JOINT => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    super::super::gr::heal::portal_touched(
+                        &mut self.grounds[g.0],
+                        coll.x34_flags.b1234.into(),
+                        kind,
+                    );
+                }
+            }
             super::super::gr::pushon::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::pushon::goal_touched(
@@ -375,6 +386,12 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                         coll.x34_flags.b1234.into(),
                         kind,
                     );
+                }
+            }
+            super::super::gr::shrineroute::SYMBOL_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    self.maze
+                        .touched(g, coll.x34_flags.b1234, coll.x0_gobj, kind);
                 }
             }
             super::super::gr::zebesroute::END_TOUCHED => super::super::gr::zebesroute::end_touched(
@@ -526,6 +543,7 @@ impl Running<'_> {
             bumps: Default::default(),
             escape: Default::default(),
             climb: Default::default(),
+            maze: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
@@ -547,11 +565,13 @@ impl Running<'_> {
         let bumps = std::mem::take(&mut hooks.bumps);
         let escape = std::mem::take(&mut hooks.escape);
         let climb = std::mem::take(&mut hooks.climb);
+        let maze = std::mem::take(&mut hooks.maze);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
         escape.apply(game);
         climb.apply(game);
+        maze.apply(game);
         bumps.apply(&mut Running {
             game,
             data: self.data,
@@ -1352,7 +1372,10 @@ impl Running<'_> {
 /// (or, shrunk with `k` above 1, the scale over `k`).
 #[doc(alias = "ftCo_CalcYScaledKnockback")]
 pub fn scaled_by_height(v: f64, scale: f64, k: f64) -> f64 {
-    assert!(scale != 0.0, "ftchangeparam.c:30: scale != 0.0F");
+    assert!(
+        scale != 0.0,
+        "the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"
+    );
     if k == 0.0 {
         return v;
     }

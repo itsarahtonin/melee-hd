@@ -82,37 +82,40 @@ pub fn init(objs: &mut Objects, _num: i32, size: i32) -> i32 {
     0
 }
 
-/// A new app-SRT with an identity transform, `psAddGeneratorAppSRT`.
+/// A new app-SRT with an identity transform, `psAddGeneratorAppSRT`. None when the pool is
+/// at the develop level's limit.
 #[doc(alias = "psAddGeneratorAppSRT")]
-pub fn add(objs: &mut Objects, status: i32, idnum: u16) -> AppSrtId {
+pub fn add(objs: &mut Objects, status: i32, idnum: u16) -> Option<AppSrtId> {
     let s = &mut objs.app_srts;
-    let id = AppSrtId(s.pool.alloc(AppSrt {
+    let id = AppSrtId(s.pool.try_alloc(AppSrt {
         used_count: 1,
         status: status as u8,
         scale: Vec3::new(1.0, 1.0, 1.0),
         idnum,
         ..AppSrt::default()
-    }));
+    })?);
     s.live = s.live.wrapping_add(1);
     if s.live > s.peak {
         s.peak = s.live;
     }
-    id
+    Some(id)
 }
 
-/// Gives a particle a new app-SRT, `psAddParticleAppSRT_begin`.
+/// Gives a particle a new app-SRT, `psAddParticleAppSRT_begin`: none at the limit, which
+/// leaves the particle none.
 #[doc(alias = "psAddParticleAppSRT_begin")]
-pub fn add_to_particle(objs: &mut Objects, p: ParticleId, status: i32) -> AppSrtId {
+pub fn add_to_particle(objs: &mut Objects, p: ParticleId, status: i32) -> Option<AppSrtId> {
     let s = add(objs, status, objs.particles[p].idnum);
-    objs.particles[p].appsrt = Some(s);
+    objs.particles[p].appsrt = s;
     s
 }
 
-/// Gives a generator a new app-SRT, `psAddGeneratorAppSRT_begin`.
+/// Gives a generator a new app-SRT, `psAddGeneratorAppSRT_begin`: none at the limit, which
+/// leaves the generator none.
 #[doc(alias = "psAddGeneratorAppSRT_begin")]
-pub fn add_to_generator(objs: &mut Objects, g: GeneratorId, status: i32) -> AppSrtId {
+pub fn add_to_generator(objs: &mut Objects, g: GeneratorId, status: i32) -> Option<AppSrtId> {
     let s = add(objs, status, objs.generators[g].idnum);
-    objs.generators[g].appsrt = Some(s);
+    objs.generators[g].appsrt = s;
     s
 }
 

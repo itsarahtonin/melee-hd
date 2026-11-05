@@ -337,7 +337,7 @@ impl Running<'_> {
     /// (`gmMainLib_8015CFCC`).
     #[doc(alias = "gm_80172E74")]
     #[doc(alias = "gmMainLib_8015CFCC")]
-    fn challenger_by_characters(&self) -> u8 {
+    pub(super) fn challenger_by_characters(&self) -> u8 {
         let mask = self.game.game_data.thing.save_data.unk_8.xC as u32;
         let count = (0..25u8)
             .filter(|&i| {

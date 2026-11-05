@@ -72,6 +72,14 @@ impl Game {
             (super::one_player::GM_TRAINING, _) if scene == Some(super::training::GS_TRAINING) => {
                 &mut self.training.exit
             }
+            (super::one_player::GM_CLASSIC | super::one_player::GM_ALLSTAR, _)
+                if scene == Some(GS_VS) =>
+            {
+                &mut self.one_player.match_exit
+            }
+            (m, _) if super::multi_man::is_multi_man(m) && scene == Some(GS_VS) => {
+                &mut self.multi_man.exit
+            }
             (m, s) => super::super::code::unported_call(&format!(
                 "a match's exit data in game mode {m:#x} state {s}"
             )),
@@ -96,13 +104,14 @@ impl Running<'_> {
     /// stage flag, and in VS mode (and the modes kept with it) each human's character
     /// marked played.
     #[doc(alias = "gm_Scene_Vs_OnExit")]
+    #[doc(alias = "fn_8017F294")]
     pub fn vs_scene_on_exit(&mut self, scene_mode: u8, state: u8) {
         let mut r = self.game.vs.state.x24C.clone();
         if self.game.vs.state.match_over == 0 {
             r.is_teams = self.game.vs.start.is_teams;
             r.outcome = self.game.vs.state.match_result;
             self.compile_results_into(&mut r);
-            self.single_player_results();
+            self.single_player_results_into(&mut r);
             let o = self.game.vs.state.match_result;
             if o != OUTCOME_NO_CONTEST && o != OUTCOME_RETRY {
                 self.match_bonuses(&mut r);
@@ -110,7 +119,8 @@ impl Running<'_> {
             self.game.vs.state.match_over = 1;
         }
         let x0 = if self.game.vs.start.x4_4 {
-            super::super::code::unported_call("fn_8017F294 (a single-player run's exit value)")
+            // `fn_8017F294`.
+            self.game.one_player.clear.x104 as u32
         } else {
             self.game.vs.start.x18
         };
@@ -138,11 +148,126 @@ impl Running<'_> {
     /// A single-player mode's own results, `fn_8016C46C`: Classic's, Adventure's and
     /// All-Star's, when the match counts for them (`state.unk_9`).
     #[doc(alias = "fn_8016C46C")]
-    fn single_player_results(&mut self) {
-        if self.game.vs.state.unk_9 != 0 && (3..=5).contains(&self.game.game_mode) {
-            super::super::code::unported_call(
-                "fn_8016C46C's single-player results (fn_8017EE40, fn_8017E8A4, fn_8018A364)",
-            );
+    pub(crate) fn single_player_results_into(&mut self, r: &mut MatchEnd) {
+        if self.game.vs.state.unk_9 == 0 {
+            return;
+        }
+        match self.game.game_mode {
+            3 => self.classic_results(r),
+            4 => super::super::code::unported_call(
+                "fn_8016C46C's single-player results (fn_8017E8A4, Adventure's)",
+            ),
+            5 => self.allstar_results(r),
+            _ => {}
+        }
+    }
+
+    /// All-Star's results for its match's bonuses, `fn_8018A364` (`x448`'s flags): the
+    /// trophies won; in a run's match (`x4_5`), the run's own: played through, at the
+    /// hardest level, its time under 7 or 11 minutes, no damage taken, the run's two flags,
+    /// all damage at once, and no stock lost (or the rest area's flag instead).
+    #[doc(alias = "fn_8018A364")]
+    #[doc(alias = "fn_8017E318")]
+    fn allstar_results(&mut self, r: &mut MatchEnd) {
+        let g = &*self.game;
+        let trophies: i32 = g
+            .one_player
+            .match_trophies
+            .iter()
+            .filter(|t| t.0 != -1)
+            .map(|t| i32::from(t.1))
+            .sum();
+        if trophies > 0 {
+            r._x448[2] |= 0x08;
+        }
+        if !g.vs.start.x4_5 {
+            return;
+        }
+        let a = &g.one_player.allstar.base;
+        let total = a.x20.wrapping_add(g.vs_frame_count());
+        r._x448[0] |= 0x20;
+        if a.player.cpu_level == 4 {
+            r._x448[0] |= 0x04;
+        }
+        if total < 0x6270 {
+            r._x448[2] |= 0x40;
+        } else if total < 0x9AB0 {
+            r._x448[2] |= 0x80;
+        }
+        if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+            r._x448[1] |= 0x02;
+        }
+        if a.xc[2] != 0 {
+            r._x448[2] |= 0x20;
+        }
+        if a.xc[3] != 0 {
+            r._x448[2] |= 0x10;
+        }
+        if (a.x1c as u32).wrapping_add(r.player_standings[0].x44) == g.player_damage(0) as u32 {
+            r._x448[0] |= 0x02;
+        }
+        if a.xc[1] != 0 {
+            r._x448[1] |= 0x01;
+            return;
+        }
+        if r.player_standings[0].stocks as i32 == i32::from(g.game_data.vs.unk_528.stocks) {
+            r._x448[1] |= 0x04;
+        }
+    }
+
+    /// Classic's results for its match's bonuses, `fn_8017EE40` (`x448`'s flags): the
+    /// trophies won; in a run's match (`x4_5`), the run's own: played through, at the
+    /// hardest level, its time under 4 or 6 minutes, no damage taken, the run's two flags,
+    /// and the stage's flag or else no stock lost; and a computer Crazy Hand met.
+    #[doc(alias = "fn_8017EE40")]
+    fn classic_results(&mut self, r: &mut MatchEnd) {
+        let g = &*self.game;
+        let trophies: i32 = g
+            .one_player
+            .match_trophies
+            .iter()
+            .filter(|t| t.0 != -1)
+            .map(|t| i32::from(t.1))
+            .sum();
+        if trophies > 0 {
+            r._x448[2] |= 0x08;
+        }
+        if g.vs.start.x4_5 {
+            let a = &g.one_player.classic.base;
+            let total = a.x20.wrapping_add(g.vs_frame_count());
+            r._x448[0] |= 0x80;
+            if a.player.cpu_level == 4 {
+                r._x448[0] |= 0x10;
+            }
+            if total < 0x3840 {
+                r._x448[2] |= 0x40;
+            } else if total < 0x5460 {
+                r._x448[2] |= 0x80;
+            }
+            if a.x1c == 0 && r.player_standings[0].x44 == 0 {
+                r._x448[1] |= 0x02;
+            }
+            if a.xc[2] != 0 {
+                r._x448[2] |= 0x20;
+            }
+            if a.xc[3] != 0 {
+                r._x448[2] |= 0x10;
+            }
+            if a.xc[1] != 0 {
+                r._x448[1] |= 0x01;
+            } else if r.player_standings[0].stocks as i32
+                == i32::from(g.game_data.vs.unk_51C.stocks)
+            {
+                r._x448[1] |= 0x04;
+            }
+        }
+        for i in 0..6 {
+            if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
+                && self.game.player_ckind(i) == 0x1B
+            {
+                r._x448[0] |= 0x01;
+                return;
+            }
         }
     }
 
@@ -150,7 +275,7 @@ impl Running<'_> {
     /// (`pl_80039450`), then for each decision whether the player earned it in a VS match
     /// (mask 2) and its points (`x44C`).
     #[doc(alias = "fn_8016C4F4")]
-    fn match_bonuses(&mut self, r: &mut MatchEnd) {
+    pub(crate) fn match_bonuses(&mut self, r: &mut MatchEnd) {
         for i in 0..6 {
             if r.player_standings[i].pkind == PKIND_NA {
                 continue;

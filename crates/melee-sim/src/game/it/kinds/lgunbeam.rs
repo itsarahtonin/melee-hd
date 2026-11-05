@@ -333,8 +333,8 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Forgets a GObj the flame points to, `itLGunBeam_Logic39_EvtUnk` (`it_8026B894`).
-// Ports `itLGunBeam_Logic39_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+// Ports `itLGunBeam_Logic39_EvtUnk`; aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

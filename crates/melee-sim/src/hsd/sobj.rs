@@ -50,6 +50,16 @@ pub enum Image {
         height: u16,
         format: u32,
     },
+    /// One of the trophy fall's copies of the frame (`game::gm::endings::toy_fall::IMAGES`'
+    /// index), an `HSD_ImageDesc` in the executable over a heap block the GPU copies into: the
+    /// block's address (0 without the heap's model), the image's size and format.
+    Copy {
+        image: u8,
+        addr: u32,
+        width: u16,
+        height: u16,
+        format: u32,
+    },
 }
 
 /// The image's texture as `GXInitTexObj` sets it up: its size and format, and the wrap modes.
@@ -303,6 +313,12 @@ pub fn create(
             },
         ),
         Image::Buffer {
+            width,
+            height,
+            format,
+            ..
+        }
+        | Image::Copy {
             width,
             height,
             format,

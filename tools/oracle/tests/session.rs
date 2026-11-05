@@ -1933,8 +1933,8 @@ fn the_yoshiki_test_page() {
 /// camera's last frame, clean from power-on with `--all --heap` to the trace's end; and task 4's
 /// `m6-cutscenes-2/cutscenes`, the same script run through the whole mode (Start in
 /// congratulations), on through the metal cutscene (`vi1101`), Bowser's trophy (`vi1201v1`),
-/// Giga Bowser's transformation (`vi1201v2`) and his defeat (`vi1202`) to congratulations,
-/// task 5's scene.
+/// Giga Bowser's transformation (`vi1201v2`) and his defeat (`vi1202`), then congratulations,
+/// its Start and the mode's exit to the title, to the trace's end.
 #[test]
 fn the_debug_cutscenes() {
     if let Some(out) = scripted_session("m6-oracle", "cutscene", &["--all", "--heap"]) {
@@ -1942,9 +1942,7 @@ fn the_debug_cutscenes() {
         assert!(out.contains("no stale reads"), "{out}");
     }
     if let Some(out) = scripted_session("m6-cutscenes-2", "cutscenes", &["--all", "--heap"]) {
-        let want = "4874 ticks compared, no difference; stopped in tick 4874: \
-                    game scene 0x10 isn't ported";
-        assert!(out.contains(want), "{out}");
+        assert!(out.contains("6030 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
@@ -1986,10 +1984,16 @@ fn master_hand_in_debug_vs() {
 
 /// Milestone 6's task 5's debug-level sessions (docs/oracle.md, the single-player endings),
 /// each clean from power-on with `--all --heap` to its trace's end or its first stop: task 1's
-/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy` and
-/// `intro-allstar` (to Classic's and All-Star's intros, tasks 22's and 23's) and `ending-test`
-/// (the RegularEnding Test's debug game over mode, to its trophy fall); task 5's
-/// `m6-endings/gameover2` (the game over twice: a continue paid in coins, then "no").
+/// `m6-oracle/gameover` (the debug mode's game over, idle at its question), `intro-easy`
+/// (Classic's intro, to the trace's end) and `intro-allstar` (to All-Star's intro, task 23's)
+/// and `ending-test` (the RegularEnding Test's debug game over mode: the trophy fall,
+/// congratulations idle to the trace's end); task 5's `m6-endings/gameover2` (the game over
+/// twice: a continue paid in coins, then "no"), and `m6-endings-2`'s `regend-adv` (Zelda's
+/// Adventure ending whole, congratulations' A and the exit's unlocks to a challenger),
+/// `regend-gw` (Mr. Game & Watch's All-Star ending, the trophy fall cut short by Start),
+/// `regend-all` (Captain Falcon's Classic ending from the unlock-all card: cut 3 lays out every
+/// Classic trophy) and `regend-real` (RegularEnding Real: Classic's game over mode, its load
+/// and the trophy fall, to the staff roll).
 #[test]
 fn the_debug_endings() {
     for (dir, name, want) in [
@@ -2001,7 +2005,7 @@ fn the_debug_endings() {
         (
             "m6-oracle",
             "intro-easy",
-            "1362 ticks compared, no difference; stopped in tick 1362: game scene 0x20 isn't ported",
+            "3292 ticks compared, no difference",
         ),
         (
             "m6-oracle",
@@ -2011,12 +2015,47 @@ fn the_debug_endings() {
         (
             "m6-oracle",
             "ending-test",
-            "1232 ticks compared, no difference; stopped in tick 1232: game scene 0xf isn't ported",
+            "3726 ticks compared, no difference",
         ),
         (
             "m6-endings",
             "gameover2",
             "3192 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-adv",
+            "3496 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-gw",
+            "2605 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-all",
+            "3082 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-2",
+            "regend-real",
+            "2945 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "staffroll-play",
+            "3746 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "regend-movie",
+            "4067 ticks compared, no difference",
+        ),
+        (
+            "m6-endings-3",
+            "regend-zelda-as",
+            "3498 ticks compared, no difference",
         ),
     ] {
         let Some(out) = scripted_session(dir, name, &["--all", "--heap"]) else {
@@ -2150,12 +2189,49 @@ fn the_home_run_contest() {
     }
 }
 
+/// Multi-Man Melee (milestone 6's task 15), from power-on with the heap, each run's card after
+/// it the original's: a loss in each of the six modes (`m6-multiman/mm-10` to `mm-cruel`: some
+/// play, then Fox runs off the stage, the select again), 10-Man Melee won (`mm-10-win`, port 1
+/// played by a bot from melee-hd's state, ssbm-rs's run of its reads the reference; the select
+/// again shows the time), and the list turned and left (`mm-menu`: into 100-Man's select and
+/// back, the list again on 100-Man, back to the Stadium list).
+#[test]
+fn multi_man_melee() {
+    for (name, ticks) in [
+        ("mm-10", 4157),
+        ("mm-100", 4197),
+        ("mm-3min", 4235),
+        ("mm-15min", 4277),
+        ("mm-endless", 4316),
+        ("mm-cruel", 3865),
+        ("mm-10-win", 3740),
+        ("mm-menu", 1983),
+    ] {
+        let run = ssbm_rs_local(&format!("lockstep/m6-multiman/{name}-run.card"));
+        let after = if std::path::Path::new(&run).exists() {
+            run
+        } else {
+            ssbm_rs_local(&format!("traces/m6-multiman/{name}-play.card"))
+        };
+        let args = ["--all", "--heap", "--card-after", &after];
+        if let Some(out) = scripted_session("m6-multiman", name, &args) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference"))
+                    && out.contains("no stale reads")
+                    && out.contains("the card after the session: the original's"),
+                "{name}: {out}"
+            );
+        }
+    }
+}
+
 /// Training (milestone 6's task 13), from power-on with the heap: task 1's
 /// `m6-oracle/training` (the select, the stage select, the match with some play) and
 /// `m6-training/tr-items` (the menu's item option: three Poké Balls taken up and thrown, their
 /// Pokémon drawn from Training's list, then each other item dropped), each to its trace's
-/// end; and `m6-training/tr-count`, which stops where the first computer player joins the
-/// match (`gm_8016EDDC`, not ported).
+/// end; and `m6-training/tr-count` (the computer players' count changed, players joining
+/// and leaving mid-match, then the reset: `gm_8016EDDC`, `Fighter_Unload_8006DABC`) to its
+/// trace's end too.
 #[test]
 fn training_from_its_select() {
     if let Some(out) = scripted_session("m6-oracle", "training", &["--all", "--heap"]) {
@@ -2166,9 +2242,31 @@ fn training_from_its_select() {
         assert!(out.contains("no stale reads"), "{out}");
     }
     if let Some(out) = scripted_session("m6-training", "tr-count", &["--all", "--heap"]) {
-        let want = "1853 ticks compared, no difference; stopped in tick 1853: \
-                    gm_8016EDDC (a player joining a match) isn't ported";
-        assert!(out.contains(want), "{out}");
+        assert!(out.contains("7956 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Training's computer players unloaded mid-match (`Fighter_Unload_8006DABC`), from power-on
+/// with the heap: `m6-fighter-unload/un-reset` (two and then three computer players fighting
+/// with damage set and items dropped, each time reset) and `un-held` (the third player leaving
+/// and joining again twenty times among dropped items, each new fighter made over the block
+/// the last one freed) and `un-combo` (the second leaving while the human's combo word names
+/// it), each to its trace's end.
+#[test]
+fn training_unloads_its_computer_players() {
+    let args = ["--all", "--heap"];
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-reset", &args) {
+        assert!(out.contains("9045 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-held", &args) {
+        assert!(out.contains("13162 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    if let Some(out) = scripted_session("m6-fighter-unload", "un-combo", &args) {
+        assert!(out.contains("3775 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }
 
@@ -2200,19 +2298,82 @@ fn crazy_hand_in_debug_vs() {
 /// from its list) with the debug item menu's Polar Bears above Fox, knocked back and one beaten
 /// and flung away, the pause's no-contest before the climb's end and the results, clean to its
 /// trace's end; and `im-end`, the climb run to its end, which starts the arena's opponents
-/// (`gm_801674C4`, unported: on a console they come in at scale 0 and the game halts).
+/// (`gm_801674C4`): on a console they come in at scale 0 and the game halts, where the trace
+/// ends, and run on past it melee-hd reads the joiner's files mid-match and halts on the same
+/// assertion.
 #[test]
 fn icicle_mountain_climb_in_debug_vs() {
     if let Some(out) = scripted_session("m6-icicle-climb", "im-bears", &["--all", "--heap"]) {
         assert!(out.contains("7072 ticks compared, no difference"), "{out}");
         assert!(out.contains("no stale reads"), "{out}");
     }
-    if let Some(out) = scripted_session("m6-icicle-climb", "im-end", &["--all", "--heap"]) {
+    if let Some(out) = scripted_session(
+        "m6-icicle-climb",
+        "im-end",
+        &["--all", "--heap", "--past", "2"],
+    ) {
+        assert!(out.contains("4825 ticks compared, no difference"), "{out}");
+        assert!(
+            out.contains("past the trace's end, stopped in tick 4825: the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"),
+            "{out}"
+        );
+    }
+}
+
+/// The single-player matches' setups (milestone 6's task 2): `m6-mk-route/mk-run`, Mushroom
+/// Kingdom's route to its arena, whose event (`gm_801674C4`) fills the joining opponents'
+/// setup (compared whole) to the trace's end, where the console halts on the first joiner's
+/// scale of 0, and past it melee-hd reads the joiner's files and halts on the same assertion;
+/// and task 2's
+/// `m6-select/allstar`, All-Star's select, its first match lost, the match's exit and the
+/// game over to the trace's end; `m6-1p-setups/as-win`, All-Star's first match won, through
+/// its clear screen and the rest area to the trace's end; and `m6-1p-setups/as-over`, two
+/// losses, a continue and the run's end.
+#[test]
+fn single_player_setups() {
+    if let Some(out) =
+        scripted_session("m6-mk-route", "mk-run", &["--all", "--heap", "--past", "2"])
+    {
+        assert!(out.contains("4382 ticks compared, no difference"), "{out}");
+        assert!(
+            out.contains("past the trace's end, stopped in tick 4382: the original's assertion failed: ftchangeparam.c:30 (scale != 0.0F)"),
+            "{out}"
+        );
+    }
+    if let Some(out) = scripted_session("m6-select", "allstar", &["--all", "--heap"]) {
+        assert!(out.contains("2444 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    // All-Star's first match won (Peach knocked out on Peach's Castle), its clear screen and
+    // tally, and the rest area (its hearts, trophies and portal, the HUD's tally of the
+    // characters left) to the trace's end.
+    if let Some(out) = scripted_session("m6-1p-setups", "as-win", &["--all", "--heap"]) {
+        assert!(out.contains("10463 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+    // All-Star's first match lost, the game over continued, the match lost again, and the game
+    // over with too few coins ending the run back to the main menu.
+    if let Some(out) = scripted_session("m6-1p-setups", "as-over", &["--all", "--heap"]) {
+        assert!(out.contains("4532 ticks compared, no difference"), "{out}");
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Classic's intro and first match (milestone 6's task 2, the intros): `m6-intros/classic-win`
+/// from power-on on the unlock-all card, Classic on Normal with Fox, the first stage's intro
+/// (`gm_1832.c`: the screen's model and map, Fox frozen in a KO toward the screen with his
+/// blaster and the opponent asleep at their places, the names, the announcer's call), the
+/// match won by a bot, its clear screen, and the second stage's intro to its team's allies
+/// drawn (`fn_8017D9C0`), which aren't ported.
+#[test]
+fn single_player_intros() {
+    if let Some(out) = scripted_session("m6-intros", "classic-win", &["--all", "--heap"]) {
         assert!(
             out.contains(
-                "4824 ticks compared, no difference; stopped in tick 4824: gm_801674C4 (a stage's match event) isn't ported"
+                "4572 ticks compared, no difference; stopped in tick 4572: Classic's allies drawn (fn_8017D9C0) isn't ported"
             ),
             "{out}"
         );
+        assert!(out.contains("no stale reads"), "{out}");
     }
 }

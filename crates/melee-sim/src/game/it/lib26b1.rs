@@ -479,10 +479,46 @@ pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option
             return None;
         }
         11 => super::kinds::bat::spawn_at(r, pos),
-        1 | 20 | 8 | 9 => crate::game::code::unported_call("it_8026BE84 (a box, Flipper or food)"),
+        1 | 20 | 8 | 9 => crate::game::code::unported_call(
+            "it_8026BE84 (a box, Flipper or food) without the stage's object",
+        ),
         _ => None,
     }?;
     hold_still(r.game, gobj);
+    if hold {
+        hold_flags_on(r.game, gobj);
+    }
+    Some(gobj)
+}
+
+/// [`drop_by_kind`]'s heart (`it_8026BE84` with kind 8, `BobOmbRain::x0` the stage's object
+/// `owner`, `x18` the slot `slot`): a heart (`it_80283AE4`) falling from `pos` on the plane,
+/// marked as the slot's (its `xDD8.b0` and `xDDC`, which its end clears in All-Star's run),
+/// with no camera box (`Item_80267454`) and the second heal (`it_80283BD4`), with `hold`
+/// (`x1C.b0`) holding its flags ([`hold_flags_on`]); none in a sudden death. Only All-Star's rest area drops one; kind 9's (`it_802841B4`) isn't ported.
+#[doc(alias = "it_80283AE4")]
+pub fn drop_food(
+    r: &mut Running,
+    kind: i32,
+    owner: GObjId,
+    pos: Vec3,
+    slot: i32,
+    hold: bool,
+) -> Option<GObjId> {
+    let _ = owner;
+    if r.game.vs_x6() != 0 && kind != 6 {
+        return None;
+    }
+    if kind != super::kinds::HEART {
+        crate::game::code::unported_call("it_8026BE84's food of kind 9 (it_802841B4)");
+    }
+    let mut spawn = super::item::drop_spawn(super::kinds::HEART, pos, true);
+    let gobj = super::item::spawn_air(r, &mut spawn)?;
+    let v = item_mut(r.game, gobj).xDD4_itemVar.heart();
+    v.xDD8.set(super::TurnipFlag { picked_up: true });
+    v.xDDC.set(slot);
+    super::item::remove_camera_box(r.game, gobj);
+    super::kinds::heart::second_heal(r, gobj);
     if hold {
         hold_flags_on(r.game, gobj);
     }

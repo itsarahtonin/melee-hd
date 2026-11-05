@@ -1141,6 +1141,26 @@ pub fn touches_ahead(r: &mut Running, gobj: GObjId, _dx: f32, _dy: f32) -> i32 {
     ret
 }
 
+/// A ReDead an enemy spawner makes at `pos`, `it_802EA9FC`: facing `facing` (its collision
+/// too), its state 0's animation run once, in the air, falling.
+#[doc(alias = "it_802EA9FC")]
+pub fn spawn(r: &mut Running, pos: Vec3, facing: i32) -> Option<GObjId> {
+    let gobj = zako::spawn(r, super::LEADEAD, Some(pos), None, None, true)?;
+    item_mut(r.game, gobj).facing_dir = mem(fp::frsp(f64::from(facing)));
+    set_coll_facing(r, gobj);
+    change_state(r, gobj, 0, change::ANIM_UPDATE);
+    let j = super::super::jobj_of(r.game, gobj);
+    jobj::anim_all(
+        &mut r.game.objs,
+        r.data,
+        &mut crate::game::code::ParticleHooks,
+        j,
+    );
+    maplib::enter_air(item_mut(r.game, gobj));
+    fall(r, gobj);
+    Some(gobj)
+}
+
 /// Grabs `fighter` by its part `part`, `it_802EAAEC`: the fighter's part 12 in front, no
 /// pickup, stopped, `xDD0`'s bit 4 cleared, holding (state 5) with its arms' bone there, a
 /// grab sound, facing the fighter, on the ground, its bone 0 bound to the part.

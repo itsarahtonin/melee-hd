@@ -347,7 +347,8 @@ pub fn run_update(r: &mut Running, e: EffectId, u: Update) {
 /// Makes effect `gfx_id` for `parent`, `efLib_Create`: its GObj (process link 12 for ids 25
 /// and 26, else 11) with its descriptor's model, animations started at frame 0 (and queued to
 /// run once before the spawn returns), and its lifetime. A counted effect past the 64th
-/// destroys the oldest first.
+/// destroys the oldest first. None when the pool is at the develop level's limit, with the
+/// effect counted all the same (docs/melee-bugs.md).
 #[doc(alias = "efLib_Create")]
 pub fn create(r: &mut Running, gfx_id: i32, parent: Option<GObjId>) -> Option<EffectId> {
     let d = desc(r.game, gfx_id);
@@ -358,7 +359,7 @@ pub fn create(r: &mut Running, gfx_id: i32, parent: Option<GObjId>) -> Option<Ef
         r.game.ef.count = r.game.ef.count.wrapping_add(1);
     }
     let load_kind = r.game.ef.load_kind;
-    let e = new_effect(r);
+    let e = new_effect(r)?;
     {
         // `efLib_Create` writes these; `params`, `user_data`, `x2A` and `x2B` stay the block's.
         let ef = &mut r.game.ef.effects[e.0];
@@ -415,10 +416,11 @@ pub fn create(r: &mut Running, gfx_id: i32, parent: Option<GObjId>) -> Option<Ef
 
 /// An effect's block from efLib's allocator (`HSD_ObjAlloc`), uncleared: a slot freed before
 /// keeps its last effect's words ([`super::EffectLeft`]: its `user_data` as the word it was),
-/// and in a session a block new from the heap holds what the heap's image knows there.
-fn new_effect(r: &mut Running) -> EffectId {
+/// and in a session a block new from the heap holds what the heap's image knows there. None
+/// at the pool's number limit.
+fn new_effect(r: &mut Running) -> Option<EffectId> {
     use super::Held;
-    let e = EffectId(r.game.ef.effects.alloc_stale(Effect::default()));
+    let e = EffectId(r.game.ef.effects.try_alloc_stale(Effect::default())?);
     let addr = r.game.ef.effects.addr(e.0);
     if crate::game::leftovers::pool_grew() {
         let ef = &mut r.game.ef.effects[e.0];
@@ -459,7 +461,7 @@ fn new_effect(r: &mut Running) -> EffectId {
         ef.left.user_data = user_data;
         ef.left.params_unknown = unknown;
     }
-    e
+    Some(e)
 }
 
 /// An effect constrained to a joint's position, starting there, `efLib_Create_Attach`.
@@ -637,13 +639,24 @@ pub fn create_generator(
     Some(g)
 }
 
-/// Gives a generator an app-SRT of `status` if it has none (`psAddGeneratorAppSRT_begin`,
-/// which always finds one here: the original kills the generator when the pool is full).
-fn ensure_appsrt(objs: &mut Objects, g: GeneratorId, status: i32) -> appsrt::AppSrtId {
-    match objs.generators[g].appsrt {
-        Some(s) => s,
+/// Gives a generator an app-SRT of `status` if it has none (`psAddGeneratorAppSRT_begin`);
+/// with none left in the pool (the develop level's limit) the generator is killed
+/// (`hsd_8039D4DC`) and there's none (the inline `eflib_generator_add_appsrt`).
+fn ensure_appsrt(
+    objs: &mut Objects,
+    data: &Archives,
+    hooks: &mut dyn Hooks,
+    g: GeneratorId,
+    status: i32,
+) -> Option<appsrt::AppSrtId> {
+    let s = match objs.generators[g].appsrt {
+        Some(s) => Some(s),
         None => appsrt::add_to_generator(objs, g, status),
+    };
+    if s.is_none() {
+        generator::kill(objs, data, hooks, g);
     }
+    s
 }
 
 /// A generator of effect `gfx_id` on link 0 with an app-SRT, `efLib_CreateGenerator_AddAppSRT`.
@@ -655,7 +668,7 @@ pub fn create_generator_appsrt(
     gfx_id: i32,
 ) -> Option<GeneratorId> {
     let g = generator::spawn(objs, data, hooks, 0, gfx_id / 1000, gfx_id)?;
-    ensure_appsrt(objs, g, 1);
+    ensure_appsrt(objs, data, hooks, g, 1)?;
     Some(g)
 }
 
@@ -711,7 +724,7 @@ pub fn create_generator_attach_appsrt(
     jobj: Option<JObjId>,
 ) -> Option<GeneratorId> {
     let g = generator::spawn_on_jobj(objs, data, hooks, 0, gfx_id / 1000, gfx_id, jobj)?;
-    let s = ensure_appsrt(objs, g, 0);
+    let s = ensure_appsrt(objs, data, hooks, g, 0)?;
     objs.app_srts[s].gp = Some(g);
     let o = &mut objs.generators[g];
     o.ty &= !(generator::JOINT_POSITION | generator::JOINT_ROTATION);
@@ -851,8 +864,9 @@ pub fn spawn_particle_effect(
             return;
         }
         0x16D | 0x16E | 0x16F | 0x170 | 0x7E2 => {
-            if let Some(g) = generator::spawn(objs, data, hooks, 0, gfx_id / 1000, gfx_id) {
-                let s = ensure_appsrt(objs, g, 1);
+            if let Some(g) = generator::spawn(objs, data, hooks, 0, gfx_id / 1000, gfx_id)
+                && let Some(s) = ensure_appsrt(objs, data, hooks, g, 1)
+            {
                 root = root_of(objs, root);
                 objs.app_srts[s].rot.y = copy(objs.jobjs[root].rotate.y);
                 objs.app_srts[s].translate = objs.jobjs[root].translate;
@@ -860,8 +874,9 @@ pub fn spawn_particle_effect(
             return;
         }
         0xD4 | 0x243 => {
-            if let Some(g) = generator::spawn(objs, data, hooks, 2, bank, gfx_id) {
-                let s = ensure_appsrt(objs, g, 1);
+            if let Some(g) = generator::spawn(objs, data, hooks, 2, bank, gfx_id)
+                && let Some(s) = ensure_appsrt(objs, data, hooks, g, 1)
+            {
                 root = root_of(objs, root);
                 objs.app_srts[s].rot.z = copy(objs.jobjs[root].rotate.z);
                 objs.app_srts[s].translate = objs.jobjs[root].translate;
@@ -872,8 +887,9 @@ pub fn spawn_particle_effect(
             return;
         }
         0xE3 => {
-            if let Some(g) = generator::spawn(objs, data, hooks, 0, gfx_id / 1000, gfx_id) {
-                let s = ensure_appsrt(objs, g, 1);
+            if let Some(g) = generator::spawn(objs, data, hooks, 0, gfx_id / 1000, gfx_id)
+                && let Some(s) = ensure_appsrt(objs, data, hooks, g, 1)
+            {
                 let t = crate::lb::joint::world_position(objs, data, Some(jobj), None);
                 objs.app_srts[s].translate = t;
                 root = root_of(objs, root);
@@ -937,11 +953,21 @@ pub fn cb_particle_render(objs: &mut Objects, p: ParticleId) {
     };
     let o = objs.app_srts[s].clone();
     appsrt::remove_from_particle(objs, p);
-    let n = appsrt::add_to_particle(objs, p, 1);
-    let srt = &mut objs.app_srts[n];
-    srt.translate = o.translate;
-    srt.rot = o.rot;
-    srt.scale = o.scale;
+    match appsrt::add_to_particle(objs, p, 1) {
+        Some(n) => {
+            let srt = &mut objs.app_srts[n];
+            srt.translate = o.translate;
+            srt.rot = o.rot;
+            srt.scale = o.scale;
+        }
+        // None left (the develop level's limit): the particle ends at its next step.
+        None => {
+            let pp = &mut objs.particles[p];
+            pp.cmd_wait = 0;
+            pp.size = 0.0;
+            pp.life = 1;
+        }
+    }
 }
 
 /// Gives generators of four common command lists [`PARTICLE_RENDER_FUNCS`],

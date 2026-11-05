@@ -20,6 +20,7 @@ use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::setup::StageCameras;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::hud::stock::StockJObj;
 use crate::game::it::Var;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};
@@ -20459,7 +20460,7 @@ impl Mirror for ifStock_804A1378 {
             }),
             gobj: cx.import_handle("GObjId", m.u32(at + 0x1e8)).map(GObjId),
             jobj: cx.import_handle("JObjId", m.u32(at + 0x1ec)).map(JObjId),
-            pad1F0: core::array::from_fn(|i0| m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
+            jobj_1: StockJObj::import(m, at + 0x1f0, cx),
             jobj_a: cx.import_handle("JObjId", m.u32(at + 0x1f4)).map(JObjId),
             jobj_b: cx.import_handle("JObjId", m.u32(at + 0x1f8)).map(JObjId),
             jobj_c: cx.import_handle("JObjId", m.u32(at + 0x1fc)).map(JObjId),
@@ -20491,15 +20492,8 @@ impl Mirror for ifStock_804A1378 {
             self.jobj.map(|h| h.0),
             m.u32(at + 0x1ec),
         );
-        for i0 in 0..4 {
-            if self.pad1F0[i0] != m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8 {
-                cx.mismatch(
-                    &format!("{}[{}]", format!("{path}.pad1F0"), i0),
-                    format!("{:?}", self.pad1F0[i0]),
-                    format!("{:?}", m.u8(at + 0x1f0 + i0 as u32 * 0x1) as i8),
-                );
-            }
-        }
+        self.jobj_1
+            .compare(m, at + 0x1f0, &format!("{path}.jobj_1"), cx);
         cx.compare_handle(
             &format!("{path}.jobj_a"),
             "JObjId",
@@ -23583,6 +23577,79 @@ impl Mirror for it_2E5A_ItemVars {
                 .compare(m, at + 0x18, &format!("{path}.x18"), cx);
         }
         self.sub.compare(m, at + 0x1c, &format!("{path}.sub"), cx);
+    }
+}
+
+impl Mirror for itCoin_ItemVars {
+    const SIZE: u32 = 0x18;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let _ = (&m, at, &cx);
+        itCoin_ItemVars {
+            x0: Var::new(m.u32(at + 0x0) as i32),
+            x4: Var::new(m.u32(at + 0x4) as i32),
+            x8: Var::new(f32::from_bits(m.u32(at + 0x8))),
+            xC: Var::new(f32::from_bits(m.u32(at + 0xc))),
+            x10: Var::new(m.u32(at + 0x10) as i32),
+            x14: Var::new(cx.import_handle("GObjId", m.u32(at + 0x14)).map(GObjId)),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let _ = (&m, at, path, &cx);
+        if self.x0.live(&format!("{path}.x0"), cx) {
+            if (*self.x0.peek()) != m.u32(at + 0x0) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x0"),
+                    format!("{:?}", (*self.x0.peek())),
+                    format!("{:?}", m.u32(at + 0x0) as i32),
+                );
+            }
+        }
+        if self.x4.live(&format!("{path}.x4"), cx) {
+            if (*self.x4.peek()) != m.u32(at + 0x4) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x4"),
+                    format!("{:?}", (*self.x4.peek())),
+                    format!("{:?}", m.u32(at + 0x4) as i32),
+                );
+            }
+        }
+        if self.x8.live(&format!("{path}.x8"), cx) {
+            if (*self.x8.peek()).to_bits() != m.u32(at + 0x8) {
+                cx.mismatch(
+                    &format!("{path}.x8"),
+                    format!("{:?}", (*self.x8.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0x8))),
+                );
+            }
+        }
+        if self.xC.live(&format!("{path}.xC"), cx) {
+            if (*self.xC.peek()).to_bits() != m.u32(at + 0xc) {
+                cx.mismatch(
+                    &format!("{path}.xC"),
+                    format!("{:?}", (*self.xC.peek())),
+                    format!("{:?}", f32::from_bits(m.u32(at + 0xc))),
+                );
+            }
+        }
+        if self.x10.live(&format!("{path}.x10"), cx) {
+            if (*self.x10.peek()) != m.u32(at + 0x10) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x10"),
+                    format!("{:?}", (*self.x10.peek())),
+                    format!("{:?}", m.u32(at + 0x10) as i32),
+                );
+            }
+        }
+        if self.x14.live(&format!("{path}.x14"), cx) {
+            cx.compare_handle(
+                &format!("{path}.x14"),
+                "GObjId",
+                (*self.x14.peek()).map(|h| h.0),
+                m.u32(at + 0x14),
+            );
+        }
     }
 }
 
@@ -30287,6 +30354,33 @@ impl LayOut for it_2E5A_ItemVars {
             self.x18.peek().lay(l, at + 0x18, cx);
         }
         self.sub.lay(l, at + 0x1c, cx);
+    }
+}
+
+impl LayOut for itCoin_ItemVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        let _ = (&l, at, &cx);
+        if self.x0.is_live() {
+            l.put_u32(at + 0x0, (*self.x0.peek()) as u32);
+        }
+        if self.x4.is_live() {
+            l.put_u32(at + 0x4, (*self.x4.peek()) as u32);
+        }
+        if self.x8.is_live() {
+            l.put_u32(at + 0x8, (*self.x8.peek()).to_bits());
+        }
+        if self.xC.is_live() {
+            l.put_u32(at + 0xc, (*self.xC.peek()).to_bits());
+        }
+        if self.x10.is_live() {
+            l.put_u32(at + 0x10, (*self.x10.peek()) as u32);
+        }
+        if self.x14.is_live() {
+            l.put_word(
+                at + 0x14,
+                cx.handle("GObjId", (*self.x14.peek()).map(|h| h.0)),
+            );
+        }
     }
 }
 

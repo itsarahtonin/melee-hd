@@ -24,6 +24,7 @@ pub mod greatbay;
 pub mod greens;
 pub mod grlib;
 pub mod ground;
+pub mod heal;
 pub mod homerun;
 pub mod icemt;
 pub mod inishie1;
@@ -44,6 +45,7 @@ pub mod pushon;
 pub mod rcruise;
 pub mod setup;
 pub mod shrine;
+pub mod shrineroute;
 pub mod stadium;
 pub mod stage;
 pub mod story;
@@ -125,6 +127,8 @@ pub const GR_KIND_MUTECITY: i32 = 18;
 pub const GR_KIND_BIGBLUE: i32 = 19;
 /// `Gr_Kind_KinokoRoute`, Mushroom Kingdom's adventure route.
 pub const GR_KIND_KINOKOROUTE: i32 = 31;
+/// `Gr_Kind_ShrineRoute`, the Underground Maze.
+pub const GR_KIND_SHRINEROUTE: i32 = 32;
 /// `Gr_Kind_BigBlueRoute`, the F-Zero race.
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_ZebesRoute`, Brinstar's escape.
@@ -136,6 +140,7 @@ pub const GR_KIND_FIGURE1: i32 = 68;
 pub const GR_KIND_FIGURE2: i32 = 69;
 pub const GR_KIND_FIGURE3: i32 = 70;
 /// `Gr_Kind_Homerun`, the Home-Run Contest's stage.
+pub const GR_KIND_HEAL: i32 = 0x42;
 pub const GR_KIND_HOMERUN: i32 = 0x43;
 /// `Gr_Kind_Battle`, Battlefield.
 pub const GR_KIND_BATTLE: i32 = 36;
@@ -275,6 +280,10 @@ pub struct Globals {
     /// Mushroom Kingdom's adventure route's `yakumono_param` (`grkinokoroute.c`): the trophy
     /// slot's odds and the enemy spawner's table.
     pub kinokoroute_yakumono: Option<DataRef>,
+    /// The Underground Maze's `yakumono_param` (`grShrineRoute_YakumonoParam`): its color
+    /// scripts, the pit's hit, the symbols' scales, the symbols' boxes, the trophy slot's odds
+    /// and the enemy spawner's table.
+    pub shrineroute_yakumono: Option<DataRef>,
     /// The F-Zero race's `yakumono_param` (`grBigBlueRoute_YakumonoParam`): the trophy slot's
     /// odds, the cars' scale, speeds, count and waits.
     pub bigblueroute_yakumono: Option<DataRef>,
@@ -291,6 +300,9 @@ pub struct Globals {
     /// The events' trophy stages' `yakumono_param`s (`grfigure1.c` to `grfigure3.c`), which
     /// nothing reads.
     pub figure_yakumono: [Option<DataRef>; 3],
+    /// The All-Star rest area's `yakumono_param` (`grHeal_804D6AF0[0]`): its hearts and how
+    /// often a rest has a coin and a trophy.
+    pub heal_yakumono: Option<DataRef>,
     /// Hyrule Temple's `yakumono_param`, which nothing reads.
     pub shrine_yakumono: Option<DataRef>,
     /// Yoshi's Island's `yakumono_param` (`grYt_804D6A20.x0`, `YorsterParams`).
@@ -526,11 +538,16 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_MUTECITY, 2) => VarsKind::MuteCityCars,
         (GR_KIND_KINOKOROUTE, 0) => VarsKind::KinokoRoute,
         (GR_KIND_KINOKOROUTE, 3) => VarsKind::KinokoRoute2,
+        (GR_KIND_SHRINEROUTE, 4) => VarsKind::ShrineRoute,
+        (GR_KIND_SHRINEROUTE, 5) => VarsKind::ShrineRoute3,
+        // The maze's lights' variables have the race's lights' layout.
+        (GR_KIND_SHRINEROUTE, 6) => VarsKind::PushOn,
         (GR_KIND_BIGBLUEROUTE, 31) => VarsKind::BigBlueRoute,
         (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
         (GR_KIND_PUSHON, 1) => VarsKind::Map,
         (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
         (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
+        (GR_KIND_HEAL, 1) => VarsKind::Map,
         (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,
         (GR_KIND_HOMERUN, 1 | 4 | 6 | 8) => VarsKind::HomeRunPart,
         (GR_KIND_HOMERUN, 2 | 5 | 7 | 9) => VarsKind::HomeRunLabel,

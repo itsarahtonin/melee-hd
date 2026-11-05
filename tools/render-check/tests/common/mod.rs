@@ -49,8 +49,8 @@ pub enum Replay {
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
     /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
-    /// `ze-NAME` `lockstep/m6-brinstar-escape/` (ssbm-rs's `SSBMINP1`), played in the
-    /// console's float mode.
+    /// `ze-NAME` `lockstep/m6-brinstar-escape/` and for `mz-NAME` `lockstep/m6-underground-maze/`
+    /// (ssbm-rs's `SSBMINP1`), played in the console's float mode.
     Session(&'static str),
     /// Another replay in ssbm-rs's `local/` (`$SSBM_RS_LOCAL/PATH`): one of another set's
     /// oracle matches, or a match recorded with the player, played in the console's float
@@ -79,6 +79,18 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6p-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-1p-setups/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6e3-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings-3/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6e2-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-endings-2/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6i-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-intros/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("m6e-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings/{o}.inputs")).into();
@@ -122,12 +134,20 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-giga-bowser/{o}.inputs")).into();
                 }
 
+                if name.starts_with("mm-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
+                }
+
                 if name.starts_with("hr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
                 }
 
                 if name.starts_with("tr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-training/{name}.inputs")).into();
+                }
+                if name.starts_with("un-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-fighter-unload/{name}.inputs"))
+                        .into();
                 }
                 if name.starts_with("mk-") {
                     return ssbm_rs_local(&format!("lockstep/m6-mk-route/{name}.inputs")).into();
@@ -145,6 +165,10 @@ impl Replay {
                 }
                 if name.starts_with("ze-") {
                     return ssbm_rs_local(&format!("lockstep/m6-brinstar-escape/{name}.inputs"))
+                        .into();
+                }
+                if name.starts_with("mz-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-underground-maze/{name}.inputs"))
                         .into();
                 }
 
@@ -309,6 +333,15 @@ pub enum Capture {
     /// ssbm-rs run with its renderer (`GX_RENDER=-`, `ref-GAME/rendered/`), whose copies
     /// write memory as the console's GPU does.
     Rendered,
+    /// As [`Capture::Rendered`], its log started at log frame `first`, before every copy the
+    /// frame samples was made (`ref-GAME/rendered/fN-since-FIRST.dff`, and gxplay's last two
+    /// frames of it in `fN-since-FIRST/`), and only its last two frames compared. ssbm-rs's
+    /// renderer keeps its RGB5A3 and I4 copies on the GPU, never in memory, so a two-frame log
+    /// shows what memory held before them where a frame samples one made before the log (the
+    /// trophy fall's copies of the frame, each holding the tinted copy before it); drawn from
+    /// before the first, gxplay's frames are ssbm-rs's renderer's own, and the native side
+    /// draws the same frames before it compares.
+    RenderedSince(u32),
 }
 
 /// Runs `compare` on the log of the game's frame `frame` (log frame N is native frame N - 3)
@@ -320,11 +353,16 @@ pub fn compare(game: &Game, frame: u32, group: Group, expect: Expect) {
 /// [`compare`] against a log captured as `capture` says.
 pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture: Capture) {
     let mut dir = refs().join("player").join(format!("ref-{}", game.name));
-    if capture == Capture::Rendered {
+    if capture != Capture::Headless {
         dir = dir.join("rendered");
     }
-    let log = dir.join(format!("f{frame}.dff"));
-    let images = dir.join(format!("f{frame}"));
+    // The log's id, the frame it starts at and the log frames before the two compared.
+    let (log_id, start, skip) = match capture {
+        Capture::RenderedSince(first) => (format!("f{frame}-since-{first}"), first, frame - first),
+        _ => (format!("f{frame}"), frame, 0),
+    };
+    let log = dir.join(format!("{log_id}.dff"));
+    let images = dir.join(&log_id);
     let replay = game.replay.path();
     for p in [&replay, &log, &images] {
         assert!(
@@ -334,7 +372,7 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
         );
     }
     let id = format!("{}-f{frame:05}", game.name);
-    let native = frame - game.replay.log_offset();
+    let native = start - game.replay.log_offset();
     let started = Instant::now();
     // The log's first frame is native frame N - 3 for a replay (asserted below), so a search of
     // two frames either way finds it. A session's frames can't be told apart by where their
@@ -349,12 +387,13 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
         // The rendered capture's copies wrote memory, so the native side's are written there too.
         .env(
             "CHECK_COPIES",
-            if capture == Capture::Rendered {
-                "memory"
-            } else {
+            if capture == Capture::Headless {
                 ""
+            } else {
+                "memory"
             },
         )
+        .env("CHECK_FROM", skip.to_string())
         .arg("compare")
         .arg(disc())
         .arg(&replay)
@@ -883,6 +922,24 @@ pub const TT_DK_QUIT: Game = Game {
     replay: Replay::Session("tt-dk-quit"),
 };
 
+/// 10-Man Melee won from the main menu (`m6-multiman/mm-10-win`): the list, the select, the
+/// Multi-Man stage with the Wire Frames and the counter, the clear.
+pub const MM_10_WIN: Game = Game {
+    stage: "the Multi-Man stage",
+    name: "mm-10-win",
+    players: "Fox against 10-Man Melee's Wire Frames (session m6-multiman/mm-10-win)",
+    replay: Replay::Session("mm-10-win"),
+};
+
+/// 15-Minute Melee from the main menu (`m6-multiman/mm-15min`): the timer counting down and
+/// the counter's KOs.
+pub const MM_15MIN: Game = Game {
+    stage: "the Multi-Man stage",
+    name: "mm-15min",
+    players: "Fox against 15-Minute Melee's Wire Frames (session m6-multiman/mm-15min)",
+    replay: Replay::Session("mm-15min"),
+};
+
 pub const RACE_LOOK: Game = Game {
     stage: "the race",
     name: "race-look",
@@ -918,6 +975,38 @@ pub const ZE_CLIMB: Game = Game {
     name: "ze-climb",
     players: "Fox up the shaft, Mario standing (session m6-brinstar-escape/ze-climb)",
     replay: Replay::Session("ze-climb"),
+};
+
+/// The Underground Maze walked (`m6-underground-maze/mz-exit`): Fox from the start to the way out.
+pub const MZ_EXIT: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-exit",
+    players: "Fox to the way out, Mario standing (session m6-underground-maze/mz-exit)",
+    replay: Replay::Session("mz-exit"),
+};
+
+/// The Underground Maze's arena opened (`m6-underground-maze/mz-arena`): its portal.
+pub const MZ_ARENA: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-arena",
+    players: "Fox to an arena's symbol, Mario standing (session m6-underground-maze/mz-arena)",
+    replay: Replay::Session("mz-arena"),
+};
+
+/// A Like Like's capture (`m6-underground-maze/mz-capture`): Fox swallowed and chewed.
+pub const MZ_CAPTURE: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-capture",
+    players: "Fox swallowed by a Like Like, Mario standing (session m6-underground-maze/mz-capture)",
+    replay: Replay::Session("mz-capture"),
+};
+
+/// Like Likes beaten (`m6-underground-maze/mz-kill`): one flung toward the screen.
+pub const MZ_KILL: Game = Game {
+    stage: "Underground Maze",
+    name: "mz-kill",
+    players: "Fox's down tilts at Like Likes, Mario standing (session m6-underground-maze/mz-kill)",
+    replay: Replay::Session("mz-kill"),
 };
 
 /// Giga Bowser (`m6-giga-bowser/gk`, debug VS at debug level 3): a human's Giga Bowser
@@ -1152,6 +1241,59 @@ pub const M6E_GAMEOVER: Game = Game {
     replay: Replay::Session("m6e-gameover2"),
 };
 
+/// Zelda's Adventure ending (`m6-endings-2/regend-adv`): the trophy fall's cuts and
+/// congratulations.
+pub const M6E2_REGEND_ADV: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-adv",
+    players: "the debug game over mode's trophy fall and congratulations (session m6-endings-2/regend-adv)",
+    replay: Replay::Session("m6e2-regend-adv"),
+};
+
+/// Mr. Game & Watch's All-Star ending (`m6-endings-2/regend-gw`): the trophy fall's first cut.
+pub const M6E2_REGEND_GW: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-gw",
+    players: "the debug game over mode's trophy fall (session m6-endings-2/regend-gw)",
+    replay: Replay::Session("m6e2-regend-gw"),
+};
+
+/// The staff roll's shooting game (`m6-endings-3/staffroll-play`): the names flying past, the
+/// cursor, the details, the pause, Start's speed and the hits' result.
+pub const M6E3_STAFFROLL_PLAY: Game = Game {
+    stage: "Debug menu",
+    name: "m6e3-staffroll-play",
+    players: "the debug mode's staff roll with shots (session m6-endings-3/staffroll-play)",
+    replay: Replay::Session("m6e3-staffroll-play"),
+};
+
+/// Captain Falcon's Classic game over mode (`m6-endings-3/regend-movie`): the staff roll at
+/// Start's speed and the ending movie.
+pub const M6E3_REGEND_MOVIE: Game = Game {
+    stage: "Debug menu",
+    name: "m6e3-regend-movie",
+    players: "Classic's game over mode's staff roll and ending movie (session m6-endings-3/regend-movie)",
+    replay: Replay::Session("m6e3-regend-movie"),
+};
+
+/// All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen over the
+/// frozen match's blurred copy.
+pub const M6P_AS_WIN: Game = Game {
+    stage: "Peach's Castle",
+    name: "m6p-as-win",
+    players: "All-Star's first match won, its clear screen (session m6-1p-setups/as-win)",
+    replay: Replay::Session("m6p-as-win"),
+};
+
+/// Classic's first stage won (`m6-intros/classic-win`): its intro, Fox against the stage's
+/// opponent.
+pub const M6I_CLASSIC_WIN: Game = Game {
+    stage: "Classic's intro",
+    name: "m6i-classic-win",
+    players: "Classic's first stage's intro and match (session m6-intros/classic-win)",
+    replay: Replay::Session("m6i-classic-win"),
+};
+
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.
 pub const M6_TARGET: Game = Game {
     stage: "Main menu",
@@ -1184,6 +1326,16 @@ pub const TR_CPU: Game = Game {
     name: "tr-cpu",
     players: "Training's menu, the behavior option (session m6-training/tr-cpu)",
     replay: Replay::Session("tr-cpu"),
+};
+
+/// Training's match after its third computer player left and joined again twenty times
+/// (`m6-fighter-unload/un-held`): three computer players among dropped items, the last made
+/// over the block the last one freed.
+pub const UN_HELD: Game = Game {
+    stage: "Fountain of Dreams",
+    name: "un-held",
+    players: "Training's computer players joined again (session m6-fighter-unload/un-held)",
+    replay: Replay::Session("un-held"),
 };
 
 /// The Home-Run Contest's select (`m6-select/homerun`): its distances in feet.
@@ -1626,6 +1778,12 @@ pub mod why {
     /// Star Fox's cutscene erases the screen to the background color, whose alpha
     /// `Camera_GetBackgroundColor` leaves a stack byte; the erase writes color and depth only,
     /// so the alpha reaches no pixel (docs/engine.md, uninitialized values).
+    /// The trophy fall's first cut: its sprites sample its copies of the fighter and the
+    /// frame (RGB5A3), which both renderers keep on the GPU, so the comparison hashes memory
+    /// neither copy writes: the scene's heap block's old bytes in ssbm-rs's, the image's
+    /// zeros in melee-render's. The images are identical.
+    pub const TOY_FALL_COPY: &str =
+        "the trophy fall's copies: kept on the GPU, compared by memory they never write";
     pub const ERASE_ALPHA: &str = "Star Fox's cutscene's erase: the background color's unset alpha, which the erase never writes";
     pub const REFLECTION_SCALE: &str = "Fountain of Dreams' reflection: an 80 by 60 copy drawn at each scale, magnified over the water";
 }

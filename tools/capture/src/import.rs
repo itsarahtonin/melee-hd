@@ -787,6 +787,41 @@ impl Importer<'_> {
         self.game.coll.floor_filter_gobj = self.import_handle("GObjId", filter_gobj).map(GObjId);
         self.game.vs = VsSceneController::import(&mem, VS_CONTROLLER, self);
         self.gm_and_pads();
+        self.one_player_trophies();
+    }
+
+    /// The single-player match's won trophies (`lbl_804706D8`) and the trophies' display
+    /// archives a stage's trophy loaded (`_tyDisplay_804A2DE8`, each an `HSD_Archive` whose data
+    /// pointer, at `+0x20`, is a loaded file's), which the 1P coin reads.
+    fn one_player_trophies(&mut self) {
+        const MATCH_TROPHIES: u32 = 0x8047_06D8;
+        const DISPLAY_ARCHIVES: u32 = 0x804A_2DE8;
+        for i in 0..12u32 {
+            let a = MATCH_TROPHIES + 4 * i;
+            self.game.one_player.match_trophies[i as usize] = (
+                self.u32(a).wrapping_shr(16) as u16 as i16,
+                (self.u32(a) >> 8) as u8,
+                self.u32(a) as u8,
+            );
+        }
+        let archives: Vec<Option<melee_sim::game::ty::Loaded>> = (0..43u32)
+            .map(|i| {
+                let h = self.u32(DISPLAY_ARCHIVES + 4 * i);
+                if h == 0 {
+                    return None;
+                }
+                let data = self.u32(h + 0x20);
+                let l = self.data.loaded.iter().find(|l| l.data == data)?;
+                Some(melee_sim::game::ty::Loaded {
+                    id: l.id,
+                    file: l.file,
+                    archive: h,
+                })
+            })
+            .collect();
+        if archives.iter().any(Option::is_some) {
+            self.game.toys.collection.archives = archives;
+        }
     }
 
     /// The game's globals the camera reads: the player slots, the game mode and the
@@ -1280,6 +1315,7 @@ impl Importer<'_> {
             aobj,
             robj,
             id: self.data(self.u32(a + 0x84)),
+            named: false,
             class: crate::heap::class_of(self.u32(a), melee_sim::hsd::heap::Class::JObj),
             scl_addr: scl,
             envelopemtx_addr: env,
@@ -1509,6 +1545,7 @@ impl Importer<'_> {
             aobj,
             inv_view_mtx: (pm != 0).then(|| self.mtx(pm)),
             inv_view_mtx_addr: pm,
+            stale_planes: 0,
         };
         id
     }

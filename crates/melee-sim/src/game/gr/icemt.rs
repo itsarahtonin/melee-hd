@@ -45,7 +45,7 @@ const CLIMB10_START_HOOK: u32 = 0x801F_77B0;
 /// one (`mpJointSetCb1`).
 pub const ON_JOINT: u32 = 0x801F_A7F0;
 /// `fn_801FA4CC`, the callback the climb's end hands the arena's event.
-const END_EVENT: u32 = 0x801F_A4CC;
+pub const END_EVENT: u32 = 0x801F_A4CC;
 
 /// The stage kind of the adventure's Icicle Mountain, whose setup makes the adventure's climb.
 const ADVENTURE: i32 = 76;
@@ -1370,7 +1370,7 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
         if done && at_end {
             climb10(r.game, g).x14 |= IceMtClimbVars::B3;
             super::ground::clear_x6d8(r.game);
-            super::super::gm::start_stage_event(r, 14, 2, 2, 0, CodeRef(END_EVENT));
+            r.start_stage_event(14, 2, 2, 0, CodeRef(END_EVENT));
             zako::clear_enemies(r);
         }
     } else if super::ground::x6d8(r.game) == 1 {

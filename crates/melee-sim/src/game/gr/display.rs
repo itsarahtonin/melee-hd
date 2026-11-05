@@ -105,6 +105,10 @@ impl Running<'_> {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::kinokoroute::check_shadow_render(self.game, self.data, pos, Some(j))
             }
+            Some(f) if f.0 == super::shrineroute::CHECK_SHADOW_RENDER => {
+                let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
+                super::shrineroute::check_shadow_render(self.game, self.data, pos, Some(j))
+            }
             Some(f) if f.0 == 0x8020_DF80 => {
                 let pos = self.game.fighters[self.game.fighter_id(g).0].cur_pos;
                 super::bigblueroute::check_shadow_render(self.game, self.data, pos, Some(j))
@@ -116,6 +120,9 @@ impl Running<'_> {
 
             Some(f) if super::figure::CHECK_SHADOW_RENDER.contains(&f.0) => {
                 super::figure::check_shadow_render()
+            }
+            Some(f) if f.0 == super::heal::CHECK_SHADOW_RENDER => {
+                super::heal::check_shadow_render()
             }
 
             Some(f) if f.0 == 0x8021_EEBC => {

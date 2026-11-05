@@ -14,6 +14,7 @@ use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;
 use crate::game::handles::*;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
+use crate::game::hud::stock::StockJObj;
 use crate::game::it::link::LinkX20;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::hsd::dobj::DObjId;
@@ -9637,7 +9638,7 @@ pub struct ifStock_804A1378 {
     /// +0x1ec
     pub jobj: Option<JObjId>,
     /// +0x1f0
-    pub pad1F0: [i8; 4],
+    pub jobj_1: StockJObj,
     /// +0x1f4
     pub jobj_a: Option<JObjId>,
     /// +0x1f8
@@ -9656,7 +9657,7 @@ impl Default for ifStock_804A1378 {
             player: core::array::from_fn(|_| Default::default()),
             gobj: None,
             jobj: None,
-            pad1F0: [0; 4],
+            jobj_1: Default::default(),
             jobj_a: None,
             jobj_b: None,
             jobj_c: None,
@@ -11342,6 +11343,48 @@ impl it_2E5A_ItemVars {
         self.x14.mark_stale();
         self.x18.mark_stale();
         self.sub.mark_stale();
+    }
+}
+
+/// `itCoin_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itCoin_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<i32>,
+    /// +0x14
+    pub x14: Var<Option<GObjId>>,
+}
+
+impl Default for itCoin_ItemVars {
+    fn default() -> Self {
+        itCoin_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itCoin_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
     }
 }
 

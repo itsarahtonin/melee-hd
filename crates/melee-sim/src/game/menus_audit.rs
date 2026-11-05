@@ -56,17 +56,13 @@ pub const GATES: &[Gate] = &[
         list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
+        // Ported but for what no session reaches yet (game::single_player_audit's gaps).
         covers: &[
-            "mnHyaku_8024CD64",
-            "melee/mn/mnhyaku",
-            "melee/gm/gmmultiman",
+            "melee/ft/kinds/ftZakoBoy/ftboy",
+            "melee/ft/kinds/ftZakoGirl/ftgirl",
+            "gm_80173460",
+            "gm_80173498",
         ],
-    },
-    Gate {
-        list: ONE_P,
-        entry: 4,
-        what: "Training",
-        covers: &["melee/gm/gmtrainingmode"],
     },
 ];
 
@@ -127,14 +123,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "a cutscene scene past the eleven (0x11 to 0x1B, all ported): the scene table names no other",
     ),
     (
-        "gm_801720B4 in a single-player run",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_80172140 in a 1P run",
-        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
-    ),
-    (
         "mnDiagram2_GetStatValue for statistic",
         "the records' statistics are 0 to 23 (`stat`), every one handled: the pages list no other",
     ),
@@ -175,24 +163,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "no event's fifth player has a random character (GmEvent.dat's table: only the first four do)",
     ),
     (
-        "mnHyaku_8024CD64 (the Multi-Man list)",
-        "the Multi-Man list, behind the Multi-Man Melee gate",
-    ),
-    (
         "the slot's image pointing at an album image",
         "the album loads its model anew, so slot A's joint's texture is the file's blank image when its setup reads it",
-    ),
-    (
-        "gm_8016EDDC (a player joining a match)",
-        "Training's menu's computer players' count and reset, behind the Training gate (a fighter's unload and a fighter made mid-match aren't ported)",
-    ),
-    (
-        "fn_8016EF98 (a player leaving a match)",
-        "Training's menu's computer players' count and reset, behind the Training gate",
-    ),
-    (
-        "Player_800328D4 (the training menu's reset)",
-        "Training's menu's reset, behind the Training gate",
     ),
     (
         "Hook::Unported1P(name)",
@@ -200,11 +172,15 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "the one-door screen's panel for match type",
-        "the timed and endless Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
+        "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its panel",
     ),
     (
         "mnCharSel_8025C020's records for match type",
-        "the Multi-Man modes' select, behind the Multi-Man Melee gate (its list, mnHyaku_8024CD64, stops first)",
+        "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its records",
+    ),
+    (
+        "the race's clear",
+        "a stage clear of the third kind (the start data's x9 3) is the race to the finish's, a Classic bonus stage behind Classic's gate (gm_17C0)",
     ),
     (
         "a 1P run's getter",
@@ -233,14 +209,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "fn_802FA6C4 in a single-player mode",
         "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "fn_802FAC34 with a challenger's record",
-        "only the single-player modes' setups give the rules a challenger's record (`x58`, gm_16A2.c)",
-    ),
-    (
-        "the multi-man counter of ifStock_802FAEC4",
-        "Multi-Man Melee's, behind its gate",
     ),
     (
         "a text on canvas {context} of font {font}, past the last",
@@ -279,20 +247,12 @@ pub const STOPS: &[(&str, &str)] = &[
         "the player's card holds Melee's files alone (melee-player's saves::read_dir), so the boot finds no Pikmin save",
     ),
     (
-        "fn_80171A88 in a 1P run",
-        "Classic's, Adventure's and All-Star's matches, which only the entries behind GATES lead to",
-    ),
-    (
         "controller map hook",
         "the map's hook is the repeat (gm_801A3A74), which its reset installs before any evaluation; nothing installs another",
     ),
     (
         "a match's exit data in game mode",
         "a match exits in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the rest are the single-player modes'",
-    ),
-    (
-        "fn_8017F294 (a single-player run's exit value)",
-        "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "fn_8016C46C's single-player results",
@@ -339,8 +299,52 @@ pub const STOPS: &[(&str, &str)] = &[
         "a slot leaves only in the single-player modes' hordes (gm_16A2's fn_8016A09C) and a cutscene",
     ),
     (
-        "fn_80169444 (a single-player mode's last stock)",
-        "the single-player modes', which only the entries behind GATES lead to",
+        "gm_80167320's joiners' leaving",
+        "a horde's first player falling with joiners in play: the single-player modes' hordes and the debug menu's arenas (the console halts first there), which only the entries behind GATES and the debug level lead to",
+    ),
+    (
+        "a single-player route's callback",
+        "the single-player modes' end callbacks but the arenas' two: the entries behind GATES lead to them",
+    ),
+    (
+        "a 1P run's ratio getter",
+        "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "Classic's allies drawn",
+        "Classic's team and giant stages (its second stage on): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (Classic's clear)",
+        "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gmClassic_801B3B40's target stage records",
+        "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "Classic's horde stage's",
+        "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "(Adventure's intro)",
+        "Adventure's intro, past its state's unported entry (gm_801B3F40): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017D7AC's records after a no contest",
+        "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (All-Star's clear)",
+        "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CA38's records in game mode",
+        "Classic's and Adventure's game overs: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017390C in Adventure",
+        "Adventure's game over: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8016AC44 with a challenger's record",
@@ -401,10 +405,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_80164A0C (the Hanyu select's odd match types)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations (milestone 6's task 5): the single-player modes' endings, which only the 1P list's gated entries lead to, and the debug menu's ending test at a raised debug level",
     ),
     (
         "unported(\"debug pause predicate\"",

@@ -620,7 +620,7 @@ impl Running<'_> {
     }
 
     /// The debug cutscene mode's last state's exit, `onExitRegendCongrats`: the title next.
-    // Ports onExitRegendCongrats; aliased once a check reaches it (congratulations, task 5).
+    #[doc(alias = "onExitRegendCongrats")]
     pub fn debug_cutscene_exit(&mut self) {
         self.set_pending_game_mode(super::gm::machine::GM_TITLE);
         self.set_new_game_mode_pending();
@@ -762,10 +762,14 @@ pub struct SceneFiles {
     pub songs: Vec<usize>,
     /// The copies Kirbys carry in (`Player_80031DA8`'s kind and costume).
     pub copies: Vec<(usize, usize)>,
+    /// Files read whole as they are (`lbFile_80016760`): congratulations' still.
+    pub raws: Vec<String>,
+    /// Movies the scene plays (`lbMthp`): the ending movie's.
+    pub movies: Vec<String>,
 }
 
 impl SceneFiles {
-    fn player(&mut self, slot: usize, ckind: i32, costume: u8) {
+    pub(crate) fn player(&mut self, slot: usize, ckind: i32, costume: u8) {
         let p = &mut self.players.players[slot];
         p.ckind = ckind as i8;
         p.color = costume;
@@ -774,7 +778,7 @@ impl SceneFiles {
 
     /// A player's demo animations from `file` (`Player_80036E20`'s `idx`) for `pose`: its
     /// character's kinds' (both Ice Climbers).
-    fn anims(&mut self, file: &str, ckind: i32, idx: i32, pose: i32) {
+    pub(crate) fn anims(&mut self, file: &str, ckind: i32, idx: i32, pose: i32) {
         let m = super::pl::player::mapping(ckind);
         for kind in [m.internal_id, m.extra_internal_id] {
             if kind < 0 || (kind == m.extra_internal_id && m.has_transformation != 0) {
@@ -784,6 +788,7 @@ impl SceneFiles {
             let (lo, hi) = match pose {
                 p if p >= 9 => super::ft::demo::cutscene_anims(kind, p),
                 8 => (13, 13),
+                7 => (12, 12),
                 0..=4 => (0, 9),
                 p => panic!("a cutscene's pose {p}"),
             };
@@ -793,7 +798,7 @@ impl SceneFiles {
 }
 
 /// The trophies' data the scene's `Toy_803124BC` loads: the saved language's.
-fn trophy_data(us: bool) -> &'static str {
+pub(crate) fn trophy_data(us: bool) -> &'static str {
     if us {
         super::gm::TROPHY_DATA_FILE
     } else {
@@ -805,6 +810,18 @@ impl Running<'_> {
     /// The files the cutscene scene about to enter reads, none for another scene.
     pub fn vi_scene_files(&self) -> Option<SceneFiles> {
         let scene = self.entering_scene()?;
+        if scene == super::gm::endings::GS_REGEND_TOYFALL {
+            return Some(self.toy_fall_scene_files());
+        }
+        if scene == GS_REGEND_CONGRATS {
+            return Some(self.congrats_scene_files());
+        }
+        if scene == super::gm::endings::GS_STAFFROLL {
+            return Some(self.staff_roll_scene_files());
+        }
+        if scene == super::gm::endings::GS_MOVIE_END {
+            return Some(self.movie_end_scene_files());
+        }
         scene_handlers(scene)?;
         let mut f = SceneFiles::default();
         let us = self.files_us();
@@ -955,6 +972,33 @@ pub fn load_scene_files(
         let loaded = &mut game.ft.data.files;
         loaded.archives.push((name.clone(), id));
         loaded
+            .entries
+            .push((name.clone(), file.entrynum, file.bytes.len() as u32));
+    }
+    for name in &files.raws {
+        let loaded = &game.ft.data.files;
+        if loaded.archives.iter().any(|a| &a.0 == name) {
+            continue;
+        }
+        let file = load(name);
+        let id = data.add(Archive::raw(&file.bytes));
+        let loaded = &mut game.ft.data.files;
+        loaded.archives.push((name.clone(), id));
+        loaded
+            .entries
+            .push((name.clone(), file.entrynum, file.bytes.len() as u32));
+    }
+    for name in &files.movies {
+        let loaded = &game.ft.data.files;
+        if loaded.entries.iter().any(|a| &a.0 == name) {
+            continue;
+        }
+        let file = load(name);
+        let id = data.add(Archive::raw(&file.bytes));
+        game.audio.devcom.files.push((file.entrynum, id));
+        game.ft
+            .data
+            .files
             .entries
             .push((name.clone(), file.entrynum, file.bytes.len() as u32));
     }

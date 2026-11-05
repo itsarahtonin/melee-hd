@@ -3,6 +3,7 @@
 
 pub mod afterimage;
 pub mod album;
+pub mod blur;
 pub mod camera;
 pub mod colldraw;
 pub mod devtext;
@@ -21,6 +22,7 @@ pub mod texp;
 pub mod texp_make;
 #[cfg(test)]
 mod texp_tests;
+pub mod toy_fall;
 
 use std::collections::BTreeMap;
 

@@ -25,9 +25,41 @@ pub const RENDER_ICONS: u32 = 0x802F_94E0;
 /// The tallies' processes (single-player modes').
 pub const PROC_TALLY: u32 = 0x802F_A6C4;
 pub const PROC_TALLY_2: u32 = 0x802F_AC34;
+/// The characters-left tally's placement process and its icons' render callback.
+pub const PROC_TALLY_PLACE: u32 = 0x802F_A8C0;
+pub const RENDER_TALLY: u32 = 0x802F_9680;
 /// The target icons' process and render callback.
 pub const PROC_TARGETS: u32 = 0x802F_916C;
 pub const RENDER_TARGETS: u32 = 0x802F_9548;
+/// The Multi-Man counter's render callback.
+pub const RENDER_COUNTER: u32 = 0x802F_9598;
+
+/// The Multi-Man counter's second joint (`ifStock_804A1378 + 0x1F0`, which the decomp's type
+/// calls padding): `lb_80011E24`'s list of the counter's joints writes it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub struct StockJObj(pub Option<JObjId>);
+
+impl super::super::mirror::Mirror for StockJObj {
+    const SIZE: u32 = 4;
+
+    fn import(
+        m: &super::super::mirror::Mem,
+        at: u32,
+        cx: &mut dyn super::super::mirror::Cx,
+    ) -> Self {
+        StockJObj(cx.import_handle("JObjId", m.u32(at)).map(JObjId))
+    }
+
+    fn compare(
+        &self,
+        m: &super::super::mirror::Mem,
+        at: u32,
+        path: &str,
+        cx: &mut dyn super::super::mirror::Cx,
+    ) {
+        cx.compare_handle(path, "JObjId", self.0.map(|h| h.0), m.u32(at));
+    }
+}
 
 /// The icon joint's first material's first texture.
 fn icon_tobj(objs: &Objects, j: JObjId) -> Option<crate::hsd::tobj::TObjId> {
@@ -69,10 +101,26 @@ impl Game {
         (!hidden).then_some(Draw::JObjs(gobj, pass))
     }
 
+    /// The Multi-Man counter's render callback, `fn_802F9598`: drawn unless player 1's
+    /// digits are hidden.
+    #[doc(alias = "fn_802F9598")]
+    pub fn multi_man_counter_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
+        let hidden = self.hud.status.players[0].flags.hide_all_digits;
+        (!hidden).then_some(Draw::JObjs(gobj, pass))
+    }
+
     /// The target icons' render callback, `fn_802F9548`: drawn unless player 1's digits are
     /// hidden.
     #[doc(alias = "fn_802F9548")]
     pub fn target_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
+        let hidden = self.hud.status.players[0].flags.hide_all_digits;
+        (!hidden).then_some(Draw::JObjs(gobj, pass))
+    }
+
+    /// The characters-left tally's icons' render callback, `fn_802F9680`: drawn unless player
+    /// 1's digits are hidden.
+    #[doc(alias = "fn_802F9680")]
+    pub fn tally_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
         let hidden = self.hud.status.players[0].flags.hide_all_digits;
         (!hidden).then_some(Draw::JObjs(gobj, pass))
     }
@@ -526,7 +574,7 @@ impl Running<'_> {
     #[doc(alias = "fn_802FA6C4")]
     pub fn stock_tally_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
-        if g.vs_is_singleplayer() && g.gm.spawn_flags & 0x40 != 0 {
+        if g.vs_is_singleplayer() && g.gm.opponents.joining() {
             code::unported_call("fn_802FA6C4 in a single-player mode");
         }
         if g.hud.stock_1774.x0 == 1 {
@@ -539,12 +587,43 @@ impl Running<'_> {
         self.game.hud.stock_1774.x0 = 0;
     }
 
-    /// The challenger record's tally's process, `fn_802FAC34`: without a record it only
-    /// frees its icons once.
+    /// The characters-left tally's process, `fn_802FAC34`: with the rules' list (`x58`, All-Star's
+    /// rest area), its first frame copies the list and makes an icon per character, in rows of
+    /// five from the screen's top left, up to the list's end (-2); without it, it frees its
+    /// icons once. The copies take 130 bytes from each 28-byte array, past the list into the
+    /// VS scene's state, as the console does (docs/melee-bugs.md).
     #[doc(alias = "fn_802FAC34")]
     pub fn stock_tally_proc_2(&mut self, _gobj: GObjId) {
         if self.game.vs_has_x58() {
-            code::unported_call("fn_802FAC34 with a challenger's record");
+            if self.game.hud.stock_1acc.x0 != 0 {
+                return;
+            }
+            self.game.hud.stock_1acc.x0 = 1;
+            let mem = self.game.left_list_memory();
+            let t = &mut self.game.hud.stock_1acc;
+            for i in 0..130 {
+                t.x10C[i] = None;
+                t.x83[i] = mem[0x1C + i];
+                t.x1[i] = mem[i];
+            }
+            for n in 0..130 {
+                if let Some(o) = self.game.hud.stock_1acc.x10C[n].take() {
+                    gobj::free(self, o);
+                }
+                let t = &self.game.hud.stock_1acc;
+                let (ch, b) = (t.x1[n], t.x83[n]);
+                if b == -2 || ch == -2 {
+                    return;
+                }
+                let x = fp::fmadds(reg(2.45), fp::frsp(f64::from(n as i32 % 5)), fp::fneg(21.0));
+                let y = fp::fnmsubs(reg(2.45), fp::frsp(f64::from(n as i32 / 5)), 11.0);
+                let o = self.create_tally_icon(i32::from(ch), i32::from(b), x, y);
+                self.game.hud.stock_1acc.x10C[n] = Some(o);
+                if n == 0 {
+                    self.game.world.setup_proc(o, CodeRef(PROC_TALLY_PLACE), 17);
+                }
+            }
+            return;
         }
         if self.game.hud.stock_1acc.x0 == 1 {
             for i in (0..130).rev() {
@@ -554,6 +633,78 @@ impl Running<'_> {
             }
         }
         self.game.hud.stock_1acc.x0 = 0;
+    }
+
+    /// A character's icon in the characters-left tally, `ifStock_802F96D0`: the scene's first
+    /// model at (`x`, `y`), hidden but its icon joint, on character `ch`'s frame for `costume`.
+    #[doc(alias = "ifStock_802F96D0")]
+    fn create_tally_icon(&mut self, ch: i32, costume: i32, x: f64, y: f64) -> GObjId {
+        let data = self.data;
+        let g = &mut *self.game;
+        let o = g.world.create(14, 15, 0);
+        let models = g.hud.stock.x0.expect("the icons' models");
+        let model = data.ptr(models).expect("the tally's model");
+        let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
+        g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
+        g.world.setup_gx_link(o, CodeRef(RENDER_TALLY), 11, 0);
+        super::super::gm::vs::add_model_anim(&mut g.objs, data, Some(root), model, 0);
+        let icon = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(root), &[1])[0]
+            .expect("the tally icon's joint");
+        jobj::set_srt(&mut g.objs.jobjs, root, |j| j.translate.x = mem(x));
+        jobj::set_srt(&mut g.objs.jobjs, root, |j| j.translate.y = mem(y));
+        jobj::set_flags_all(&mut g.objs.jobjs, Some(root), HIDDEN);
+        jobj::clear_flags(&mut g.objs.jobjs, Some(icon), HIDDEN);
+        jobj::req_anim_all(&mut g.objs, Some(root), 0.0);
+        set_icon_frame(&mut g.objs, icon, mem(stock_icon_frame(ch, 0, costume)));
+        jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
+        o
+    }
+
+    /// The characters-left tally's placement, `fn_802FA8C0`, the first icon's process: each
+    /// icon's character and byte copied from the list again, a -1's icon off screen, the rest
+    /// in rows of five from the top left; at the list's end (-2), the rest off screen (the
+    /// original's loop indexes the end's own slot, which has no icon: docs/melee-bugs.md).
+    #[doc(alias = "fn_802FA8C0")]
+    pub fn tally_place_proc(&mut self, _gobj: GObjId) {
+        let mem_ = self.game.left_list_memory();
+        let g = &mut *self.game;
+        let mut k = 0;
+        let (mut x, mut y) = (fp::fneg(21.0), reg(11.0));
+        for i in 0..130 {
+            let Some(o) = g.hud.stock_1acc.x10C[i] else {
+                return;
+            };
+            let Some(Obj::JObj(j)) = g.world.gobj(o).obj else {
+                panic!("a tally icon without its model");
+            };
+            let t = &mut g.hud.stock_1acc;
+            t.x83[i] = mem_[0x1C + i];
+            t.x1[i] = mem_[i];
+            match t.x83[i] {
+                -1 => jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0),
+                -2 => {
+                    for _ in i..130 {
+                        if let Some(o) = g.hud.stock_1acc.x10C[i]
+                            && let Some(Obj::JObj(j)) = g.world.gobj(o).obj
+                        {
+                            jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
+                        }
+                    }
+                    return;
+                }
+                _ => {
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 0.0);
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.x = mem(x));
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.y = mem(y));
+                    k += 1;
+                    x = fp::fadds(x, reg(2.45));
+                    if k % 5 == 0 {
+                        x = fp::fneg(21.0);
+                        y = fp::fsubs(y, reg(2.45));
+                    }
+                }
+            }
+        }
     }
 
     /// One of the sixteen target icons a rule (`gm_8016B1A8`) shows, `ifStock_802FA118`: the
@@ -643,13 +794,13 @@ impl Running<'_> {
         let o = g.world.create(14, 15, 0);
         g.world.setup_proc(o, CodeRef(PROC_TALLY_2), 17);
         g.hud.stock_1acc.x108 = Some(o);
-        if g.gm.spawn_flags & 0x10 == 0 {
+        if !g.gm.opponents.counted() {
             g.hud.stock_1774.x10C[0] = None;
             g.hud.stock_1774.x0 = 0;
             let o = g.world.create(14, 15, 0);
             g.world.setup_proc(o, CodeRef(PROC_TALLY), 17);
             g.hud.stock_1774.x10C[0] = Some(o);
-        } else if g.gm.spawn_flags & 0x40 != 0 {
+        } else if g.gm.opponents.joining() {
             code::unported_call("ifStock_802FA5BC");
         }
         for i in 0..16 {
@@ -659,10 +810,63 @@ impl Running<'_> {
                 self.game.hud.stock_1a8c[i] = Some(o);
             }
         }
-        let g = &mut *self.game;
-        if (super::super::gm::GM_10MAN_VS..=super::super::gm::GM_CRUEL_VS).contains(&g.game_mode) {
-            code::unported_call("the multi-man counter of ifStock_802FAEC4");
+        if super::super::gm::multi_man::is_multi_man(self.game.game_mode) {
+            self.create_multi_man_counter();
         }
+    }
+
+    /// The Multi-Man counter (the inline `ifStock_CreateStockGObjs`'s last part): the scene's
+    /// second model on render link 11, at its frame 10, its six joints kept.
+    fn create_multi_man_counter(&mut self) {
+        let data = self.data;
+        let g = &mut *self.game;
+        let o = g.world.create(14, 15, 0);
+        let model = g.hud.stock.x4.expect("the counter's model");
+        let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
+        g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
+        g.world.setup_gx_link(o, CodeRef(RENDER_COUNTER), 11, 0);
+        super::super::gm::vs::add_model_anim(&mut g.objs, data, Some(root), model, 0);
+        jobj::req_anim_all(&mut g.objs, Some(root), 10.0);
+        jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
+        g.hud.stock.gobj = Some(o);
+        let [j0, j1, ja, jb, jc, jd] =
+            super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(root), &[0, 1, 2, 3, 4, 5]);
+        let s = &mut g.hud.stock;
+        s.jobj = j0;
+        s.jobj_1 = StockJObj(j1);
+        s.jobj_a = ja;
+        s.jobj_b = jb;
+        s.jobj_c = jc;
+        s.jobj_d = jd;
+    }
+
+    /// The Multi-Man counter at `n` (at most 9999), `ifStock_802FA2D0`: the counter's
+    /// model at frame 10 and each digit's joint on its digit's frame, the leading ones left.
+    #[doc(alias = "ifStock_802FA2D0")]
+    pub fn set_multi_man_counter(&mut self, n: i32) {
+        let n = n.clamp(0, 9999);
+        let data = self.data;
+        let g = &mut *self.game;
+        let s = &g.hud.stock;
+        let (root, a, b, c, d) = (s.jobj, s.jobj_a, s.jobj_b, s.jobj_c, s.jobj_d);
+        jobj::req_anim_all(&mut g.objs, root, 10.0);
+        let mut req = |j: Option<JObjId>, v: i32| jobj::req_anim_all(&mut g.objs, j, v as f32);
+        if n >= 1000 {
+            req(a, n % 10);
+            req(b, (n / 10) % 10);
+            req(c, (n / 100) % 10);
+            req(d, n / 1000);
+        } else if n >= 100 {
+            req(b, n % 10);
+            req(c, (n / 10) % 10);
+            req(d, n / 100);
+        } else if n >= 10 {
+            req(c, n % 10);
+            req(d, n / 10);
+        } else {
+            req(d, n);
+        }
+        jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, root);
     }
 
     /// Frees the single-player tally's icons, `ifStock_802FB390`.

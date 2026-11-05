@@ -492,7 +492,7 @@ pub struct Spawn {
 
 /// Makes a particle at the front of its link, or right after `after`, and runs its first
 /// commands if `interpret`, `psGenerateParticle0`. The particle may be gone again once they
-/// have run.
+/// have run. None when the pool is at the develop level's limit.
 #[doc(alias = "psGenerateParticle0")]
 pub fn generate(
     objs: &mut Objects,
@@ -501,8 +501,8 @@ pub fn generate(
     after: Option<ParticleId>,
     s: &Spawn,
     interpret: bool,
-) -> ParticleId {
-    let p = ParticleId(objs.particles.pool.alloc(Particle::default()));
+) -> Option<ParticleId> {
+    let p = ParticleId(objs.particles.pool.try_alloc(Particle::default())?);
     let ps = &mut objs.particles;
     ps.live = ps.live.wrapping_add(1);
     if ps.live > ps.peak {
@@ -573,7 +573,7 @@ pub fn generate(
     if interpret {
         execute(objs, data, hooks, p, None);
     }
-    p
+    Some(p)
 }
 
 /// A generator's particle, run at once, `hsd_80398F0C`.
@@ -802,7 +802,7 @@ fn spawn_child(
         fric: cl.f32(data, 0x10),
         generator: None,
     };
-    Some(generate(objs, data, hooks, Some(parent), &s, false))
+    generate(objs, data, hooks, Some(parent), &s, false)
 }
 
 /// Gives a spawned child its parent's family, transform and place (and velocity, with

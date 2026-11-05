@@ -121,6 +121,8 @@ pub enum VarsKind {
     BigBlueRelay,
     KinokoRoute,
     KinokoRoute2,
+    ShrineRoute,
+    ShrineRoute3,
     HomeRun,
     HomeRunPart,
     HomeRunLabel,
@@ -253,6 +255,10 @@ pub enum GroundVars {
     KinokoRoute(KinokoRouteVars),
     /// `grKinokoRoute_GroundVars2`: Mushroom Kingdom's route (map 3).
     KinokoRoute2(KinokoRoute2Vars),
+    /// `grShrineroute_GroundVars` with `Map_GroundVars`' symbols: the Underground Maze (map 4).
+    ShrineRoute(ShrineRouteVars),
+    /// `grShrineroute_GroundVars3`: the Underground Maze's arena portal (map 5).
+    ShrineRoute3(ShrineRoute3Vars),
     /// `grHomeRun_GroundVars`: the Home-Run Contest's stage (map 10).
     HomeRun(HomeRunVars),
     /// `grHomeRun_GroundVars2`: a stretch of its field (maps 1, 4, 6 and 8).
@@ -1975,6 +1981,49 @@ pub struct KinokoRoute2Vars {
     pub reb0_pos: crate::vec::Vec3,
 }
 
+/// One of the Underground Maze's followers (`grShrineroute_GroundVars_platforms`): its place from
+/// the camera's centre (written only when its joint is found) and its joint.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ShrineRoutePlatform {
+    pub offset: crate::vec::Vec3,
+    pub jobj: Option<crate::hsd::jobj::JObjId>,
+}
+
+/// `grShrineroute_GroundVars` (map 4): the maze's state (`xC4`), the symbols taken (`xC6`, a
+/// bit each), the symbol's point in play (`xC8`), the two climbers' touches of a symbol's floor
+/// this tick (`xCA`, `xCC`), the camera's easing timer (`xCE`), `xD0` (written once, as the way
+/// out is taken, and read by nothing: `None` until then, the block's bytes), the arena's portal
+/// (`xD4`), the three followers and the six symbols (`Map_GroundVars::symbol`, +0x44). The two
+/// bytes at +0xE nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ShrineRouteVars {
+    pub state: u16,
+    pub taken: u16,
+    pub point: u16,
+    pub touched: u16,
+    pub both_touched: u16,
+    pub cam_timer: u16,
+    pub xd0: Option<u16>,
+    pub portal: Option<GObjId>,
+    pub platforms: [ShrineRoutePlatform; 3],
+    pub symbols: [Option<GObjId>; 6],
+}
+
+/// `grShrineroute_GroundVars3` (map 5, the arena's portal): its spinning part (`xC4`), its sway's
+/// speeds (`xC8` about x, `xCC` about y) and pushes (`xD0`, `xD4`), and the spinning part's
+/// speeds (`xD8`, `xDC`, written only with the part found; nothing reads them otherwise).
+/// `xE0` and `xE4` nothing writes.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ShrineRoute3Vars {
+    pub spin: Option<crate::hsd::jobj::JObjId>,
+    pub sway_x: f32,
+    pub sway_y: f32,
+    pub push_x: f32,
+    pub push_y: f32,
+    pub spin_x: f32,
+    pub spin_y: f32,
+}
+
 /// `grPushOn_GroundVars`: the fighters' lights' object (`gobj`, render link 4's first), its
 /// lights (`lobjs`, the first `count`) and their flags as the setup found them, the hidden light
 /// that follows the first fighter (`point_light`) and the specular one (`spot_light`). The
@@ -2679,6 +2728,8 @@ impl GroundVars {
             GroundVars::BigBlueRelay(_) => "BigBlueRelayVars",
             GroundVars::KinokoRoute(_) => "KinokoRouteVars",
             GroundVars::KinokoRoute2(_) => "KinokoRoute2Vars",
+            GroundVars::ShrineRoute(_) => "ShrineRouteVars",
+            GroundVars::ShrineRoute3(_) => "ShrineRoute3Vars",
             GroundVars::HomeRun(_) => "HomeRunVars",
             GroundVars::HomeRunPart(_) => "HomeRunPartVars",
             GroundVars::HomeRunLabel(_) => "HomeRunLabelVars",
@@ -2787,6 +2838,8 @@ impl GroundVars {
         "BigBlueRelayVars",
         "KinokoRouteVars",
         "KinokoRoute2Vars",
+        "ShrineRouteVars",
+        "ShrineRoute3Vars",
         "HomeRunVars",
         "HomeRunPartVars",
         "HomeRunLabelVars",
@@ -4033,6 +4086,44 @@ impl GroundVars {
                 })
             }
 
+            VarsKind::ShrineRoute => {
+                let h = |o: u32| m.u16(at + o);
+                let mut v = ShrineRouteVars {
+                    state: h(0),
+                    taken: h(2),
+                    point: h(4),
+                    touched: h(6),
+                    both_touched: h(8),
+                    cam_timer: h(0xA),
+                    xd0: Some(h(0xC)),
+                    portal: cx.import_handle("GObjId", m.u32(at + 0x10)).map(GObjId),
+                    ..ShrineRouteVars::default()
+                };
+                for (i, p) in v.platforms.iter_mut().enumerate() {
+                    let e = at + 0x14 + 0x10 * i as u32;
+                    p.offset = crate::vec::Vec3::new(f(e), f(e + 4), f(e + 8));
+                    p.jobj = cx
+                        .import_handle("JObjId", m.u32(e + 0xC))
+                        .map(crate::hsd::jobj::JObjId);
+                }
+                for (i, s) in v.symbols.iter_mut().enumerate() {
+                    *s = cx
+                        .import_handle("GObjId", m.u32(at + 0x44 + 4 * i as u32))
+                        .map(GObjId);
+                }
+                GroundVars::ShrineRoute(v)
+            }
+            VarsKind::ShrineRoute3 => GroundVars::ShrineRoute3(ShrineRoute3Vars {
+                spin: cx
+                    .import_handle("JObjId", m.u32(at))
+                    .map(crate::hsd::jobj::JObjId),
+                sway_x: f(at + 4),
+                sway_y: f(at + 8),
+                push_x: f(at + 0xC),
+                push_y: f(at + 0x10),
+                spin_x: f(at + 0x14),
+                spin_y: f(at + 0x18),
+            }),
             VarsKind::PushOn => {
                 let lobj = |cx: &mut dyn Cx, a: u32| {
                     cx.import_handle("LObjId", m.u32(a))
@@ -5995,6 +6086,34 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grShrineroute_GroundVars` (the maze, map 4), likewise: its setup
+    /// writes every field it reads before reading it, so the block's bytes are left behind
+    /// (`xD0` and the followers' places without a joint are never read and stay the block's).
+    pub fn shrineroute(&mut self) -> &mut ShrineRouteVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::ShrineRoute(ShrineRouteVars::default());
+        }
+        match self {
+            GroundVars::ShrineRoute(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grShrineroute_GroundVars")
+            }
+        }
+    }
+
+    /// The variables as `grShrineroute_GroundVars3` (the arena's portal, map 5), likewise.
+    pub fn shrineroute3(&mut self) -> &mut ShrineRoute3Vars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::ShrineRoute3(ShrineRoute3Vars::default());
+        }
+        match self {
+            GroundVars::ShrineRoute3(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grShrineroute_GroundVars3")
+            }
+        }
+    }
+
     /// The variables as the F-Zero race's track's (`grBigBlueRoute_GroundVars2`), likewise: a
     /// block holding a pointer converts only if it is null.
     pub fn bigblueroute(&mut self) -> &mut BigBlueRouteVars {
@@ -7786,6 +7905,84 @@ impl Mirror for GroundVars {
                         format!("{ours:x?}"),
                         format!("{theirs:x?}"),
                     );
+                }
+            }
+            GroundVars::ShrineRoute(v) => {
+                let p = format!("{path}.shrineroute");
+                let ours = [
+                    v.state,
+                    v.taken,
+                    v.point,
+                    v.touched,
+                    v.both_touched,
+                    v.cam_timer,
+                ];
+                let theirs = [0, 2, 4, 6, 8, 0xA].map(|o| m.u16(at + o));
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
+                }
+                // Until the way out is taken `xD0` holds the block's bytes, which nothing reads.
+                if let Some(x) = v.xd0
+                    && x != m.u16(at + 0xC)
+                {
+                    cx.mismatch(
+                        &format!("{p}.xD0"),
+                        format!("{x:#x}"),
+                        format!("{:#x}", m.u16(at + 0xC)),
+                    );
+                }
+                cx.compare_handle(
+                    &format!("{p}.xD4"),
+                    "GObjId",
+                    v.portal.map(|g| g.0),
+                    m.u32(at + 0x10),
+                );
+                for (i, q) in v.platforms.iter().enumerate() {
+                    let e = at + 0x14 + 0x10 * i as u32;
+                    if q.jobj.is_some() {
+                        let theirs = [m.u32(e), m.u32(e + 4), m.u32(e + 8)];
+                        if v3_bits(&q.offset) != theirs {
+                            cx.mismatch(
+                                &format!("{p}.platforms[{i}].offset"),
+                                format!("{:x?}", v3_bits(&q.offset)),
+                                format!("{theirs:x?}"),
+                            );
+                        }
+                    }
+                    cx.compare_handle(
+                        &format!("{p}.platforms[{i}].jobj"),
+                        "JObjId",
+                        q.jobj.map(|j| j.0),
+                        m.u32(e + 0xC),
+                    );
+                }
+                for (i, s) in v.symbols.iter().enumerate() {
+                    cx.compare_handle(
+                        &format!("{p}.symbol[{i}]"),
+                        "GObjId",
+                        s.map(|g| g.0),
+                        m.u32(at + 0x44 + 4 * i as u32),
+                    );
+                }
+            }
+            GroundVars::ShrineRoute3(v) => {
+                let p = format!("{path}.shrineroute3");
+                cx.compare_handle(
+                    &format!("{p}.xC4"),
+                    "JObjId",
+                    v.spin.map(|j| j.0),
+                    m.u32(at),
+                );
+                let mut ours = vec![v.sway_x, v.sway_y, v.push_x, v.push_y];
+                let mut theirs: Vec<u32> = (1..5).map(|i| m.u32(at + 4 * i)).collect();
+                // The spinning part's speeds are written only with the part found.
+                if v.spin.is_some() {
+                    ours.extend([v.spin_x, v.spin_y]);
+                    theirs.extend([m.u32(at + 0x14), m.u32(at + 0x18)]);
+                }
+                let ours: Vec<u32> = ours.iter().map(|x| x.to_bits()).collect();
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:x?}"), format!("{theirs:x?}"));
                 }
             }
             GroundVars::BigBlueRoute(v) => {

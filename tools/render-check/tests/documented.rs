@@ -25,16 +25,18 @@ use common::{
     GREAT_BAY, GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE, ICICLE_MOUNTAIN,
     IDLE_MOVIE, IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF, ITEMS_POWERUPS_FD,
     ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC, M6_HOMERUN,
-    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, MENU_TOUR,
-    METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
-    MUTE_CITY, NAMES, NAMES_KANA, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS,
-    RACE_LOOK, RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
-    TT_DK_QUIT, TT_TARGETS, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64,
-    ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
+    M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6C_CUTSCENES, M6E_GAMEOVER, M6E2_REGEND_ADV,
+    M6E2_REGEND_GW, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR,
+    METAL_CLOAK_RC, MH_1P, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
+    MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
+    ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR,
+    RACE_SPIKES, RAINBOW_CRUISE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
+    RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP,
+    SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64,
+    TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS,
+    TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW,
+    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
+    reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -175,6 +177,123 @@ frames!(M6E_GAMEOVER;
     m6e_gameover_1620 1620,
     m6e_gameover_2830 2830,
 );
+// The trophy fall and congratulations (`m6-endings-2/regend-adv`), against captures made with
+// ssbm-rs's renderer running: the second cut (the trophy alone on its stand, 2030), the third
+// (the trophies laid round, 2300) and congratulations' still (2600).
+rendered_frames!(M6E2_REGEND_ADV;
+    m6e2_regend_adv_2030 2030,
+    m6e2_regend_adv_2300 2300,
+    m6e2_regend_adv_2600 2600,
+);
+// The trophy fall's first cut, against logs started before its first copy (`RenderedSince`):
+// Zelda falling with her fading copy and the frame's tinted copies (`regend-adv` 1850), the
+// tinted copies fading out after her (1950), and Mr. Game & Watch's All-Star fall
+// (`regend-gw` 1500). Every draw is the same but the copy sprite, which samples a copy both
+// renderers keep on the GPU.
+fn toy_fall(game: &Game, frame: u32, first: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::TOY_FALL_COPY,
+        },
+        Capture::RenderedSince(first),
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1850() {
+    toy_fall(&M6E2_REGEND_ADV, 1850, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_adv_1950() {
+    toy_fall(&M6E2_REGEND_ADV, 1950, 1700, [717, 717]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_gw_1500() {
+    toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
+}
+// The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
+// renderer running: the names flying past with shots fired at rest (1400) and the stick to the
+// right (1600), the roll paused on B (2200), at Start's six times speed with the background
+// dimmed (2550), and the hits' result (3200).
+rendered_frames!(M6E3_STAFFROLL_PLAY;
+    m6e3_staffroll_play_1400 1400,
+    m6e3_staffroll_play_1600 1600,
+    m6e3_staffroll_play_2200 2200,
+    m6e3_staffroll_play_2550 2550,
+    m6e3_staffroll_play_3200 3200,
+);
+// Classic's game over mode (`m6-endings-3/regend-movie`): the staff roll at Start's speed
+// (1700) and the ending movie (2700).
+rendered_frames!(M6E3_REGEND_MOVIE;
+    m6e3_regend_movie_1700 1700,
+    m6e3_regend_movie_2700 2700,
+);
+// Classic's first stage's intro (`m6-intros/classic-win`): the stage's number and the map
+// coming in with Fox and his opponent posed (900), their names written in (950), and the
+// screen held before the match (1000).
+frames!(M6I_CLASSIC_WIN;
+    m6i_classic_win_900 900,
+    m6i_classic_win_950 950,
+    m6i_classic_win_1000 1000,
+);
+// All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
+// the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
+// over the tinted copy (7500). The images are identical; the draws that differ only sample
+// the fighters' shadows, as the debug VS coins'; the
+// references are captured with ssbm-rs's renderer running, so the copies are drawn.
+fn as_win(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6P_AS_WIN,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_6150() {
+    as_win(6150, [1720, 1720]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_6250() {
+    as_win(6250, [1719, 1719]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_7500() {
+    as_win(7500, [1699, 1699]);
+}
+
+// The rest area after the clear (`m6-1p-setups/as-win`): its first frames with the HUD's tally
+// of the characters left in rows of five (9050), and the walk toward the portal (10300).
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_9050() {
+    as_win(9050, [805, 822]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6p_as_win_10300() {
+    as_win(10300, [804, 821]);
+}
 // Training's menu over its match on Fountain of Dreams (`m6-training`): the item option on
 // the Poké Ball with its name (`tr-items` 2250) and the computer player's behavior set to walk
 // (`tr-cpu` 2230). As Celebi's, the first logged frame's water samples the reflection copied
@@ -203,6 +322,14 @@ fn tr_items_2250() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn tr_cpu_2230() {
     training(&TR_CPU, 2230, [4338, 4340]);
+}
+
+// Training's match after a computer player left and joined twenty times (`un-held` 11000):
+// the fighters made over the freed fighters' blocks, drawn as ssbm-rs's renderer draws them.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn un_held_11000() {
+    training(&UN_HELD, 11000, [4045, 4045]);
 }
 // The Options menus (`options-sessions/tour`): Rumble with the name rows (1100), Sound (2300),
 // Screen Display with deflicker off (2790), the Options list (2870), Language (3080), Erase
@@ -1317,6 +1444,24 @@ frames!(ZE_CLIMB;
     ze_climb_3800 3800,
     ze_climb_4000 4000,
 );
+// The Underground Maze (milestone 6's task 17, debug VS at debug level 3): Fox's Firefox up the
+// maze under the fighters' lights it moves with him, a ReDead on a ledge (mz-exit 2400) and the
+// match's end at the way out (mz-exit 2650); an arena opened, its portal swaying in
+// (mz-arena 2870); a Like Like chewing Fox inside it (mz-capture 3000); a beaten Like Like
+// flung toward the screen (mz-kill 3480).
+frames!(MZ_EXIT;
+    mz_exit_2400 2400,
+    mz_exit_2650 2650,
+);
+frames!(MZ_ARENA;
+    mz_arena_2870 2870,
+);
+frames!(MZ_CAPTURE;
+    mz_capture_3000 3000,
+);
+frames!(MZ_KILL;
+    mz_kill_3480 3480,
+);
 // Giga Bowser and the Wire Frames (`m6-giga-bowser`), against captures made with ssbm-rs's
 // renderer running (Final Destination's floor samples the reflection copied the frame before):
 // identical images, the floor's two draws that sample the fighters' shadows differing by their
@@ -1510,6 +1655,51 @@ fn tt_targets_1500() {
         },
         Capture::Rendered,
     );
+}
+// Multi-Man Melee (milestone 6's task 15), from the main menu: the list on 10-Man (mm-10-win 780),
+// its select (950), the match with the counter and the Wire Frames joining (1800), the clear's
+// "Complete!" (2760) and the select again with the time as the record (3000); 15-Minute
+// Melee's timer counting down and its counter's KOs (mm-15min 1800).
+// The match's frames against captures made with ssbm-rs's renderer running (ref-*/rendered):
+// the fighters' shadows sample copies kept on the GPU.
+frames!(MM_10_WIN;
+    mm_10_win_780 780,
+    mm_10_win_950 950,
+    mm_10_win_3000 3000,
+);
+
+/// A Multi-Man match's frame against a capture with ssbm-rs's renderer running: identical
+/// images, the draws that sample the fighters' shadows different only in their textures'
+/// hashes.
+fn mm_rendered(game: &common::Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn mm_10_win_1800() {
+    mm_rendered(&MM_10_WIN, 1800, [1693, 1720]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn mm_10_win_2760() {
+    mm_rendered(&MM_10_WIN, 2760, [964, 964]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn mm_15min_1800() {
+    mm_rendered(&MM_15MIN, 1800, [1434, 1460]);
 }
 // Event Match (milestone 6's task 21): the Event list's first page and Event 12's one-door
 // select (ev12 720, 1090), the list's last page on Event 43 (ev43 1050), and two matches:

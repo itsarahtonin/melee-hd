@@ -370,6 +370,24 @@ impl Ctx<'_> {
                 self.snap_copy();
                 1
             }
+            Draw::ToyFallCopy { image, x, y, clear } => {
+                self.toy_fall_copy(*image, *x, *y, *clear);
+                1
+            }
+            Draw::BlurCopy => {
+                self.blur_copy();
+                1
+            }
+            Draw::Blur {
+                pos,
+                scale,
+                alpha,
+                size,
+                tint,
+            } => {
+                self.blur(*pos, *scale, *alpha, *size, *tint);
+                1
+            }
             Draw::EraseWithDepth => {
                 match self.hsd.erase_color.take() {
                     Some(c) => self.erase_screen(c, true),
@@ -387,6 +405,10 @@ impl Ctx<'_> {
             }
             Draw::MoviePlanes(m) => {
                 self.movie_planes(*m);
+                1
+            }
+            Draw::StillPlanes(s) => {
+                self.still_planes(*s);
                 1
             }
             Draw::SpriteEnd => {

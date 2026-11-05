@@ -21,6 +21,7 @@ fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
         UserData::ItemLink(l) => known(game.it.links.addr(l.0)),
         UserData::Ground(g) => known(game.grounds.addr(g.0)),
         UserData::BgFlash => known(game.bgflash.user_addr),
+        UserData::Blur => game.blur.as_ref().and_then(|b| known(b.addr)),
         // The magnifier's player entries (`ifMagnify_804A1DE0.player`, 0x10 each from
         // `0x804A1DF4`), in the executable's data.
         UserData::MagnifyPlayer(slot) => Some(0x804A_1DF4 + 0x10 * u32::from(slot)),
@@ -1035,7 +1036,7 @@ pub fn sobj(
     let (image_ptr, tlut) = match o.image {
         SImage::Data(d) => (cx.data(data.ptr(d)), tx.tlut),
         SImage::Movie { .. } => (Some(0), None),
-        SImage::Buffer { addr, .. } => (Some(addr), None),
+        SImage::Buffer { addr, .. } | SImage::Copy { addr, .. } => (Some(addr), None),
         SImage::None => (None, None),
     };
     let mut t = gx_init_tex_obj(
@@ -1172,7 +1173,8 @@ pub fn queued(game: &Game, img: &mut Image, q: super::ef::QueuedId) {
 
 /// A fighter's animation buffer (`fighter_x59C_alloc_data`, 0x8000): the archives its loads
 /// copied there, each relocated to the buffer, the newest over the older ones' longer runs
-/// (`ft::anim_buf`); what the buffer held before them stays as the image had it.
+/// (`ft::anim_buf`), and the free list's link over the first word of a block taken again
+/// before its first load; what the buffer held before them stays as the image had it.
 pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
     let at = game.fighter_anim_bufs.addr(slot);
     if at == 0 {
@@ -1188,6 +1190,10 @@ pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
                 base: at + super::ft::anim_buf::ARCHIVE_HEADER,
             },
         );
+    }
+    // A block freed and taken again before a load: the free list's link (`HSD_ObjFree`).
+    if let Some(link) = game.fighter_anim_bufs[slot].link() {
+        img.word(at, link);
     }
 }
 

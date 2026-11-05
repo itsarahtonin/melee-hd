@@ -35,6 +35,9 @@ pub enum Dynamic {
     Results(u8),
     /// Camera Mode's snapshot's copy of the frame (`cmsnap_data`'s image).
     Snapshot,
+    /// The single-player clear screen's copy of the frame (`lbl_80472D28.x30`), which its
+    /// blur draws back.
+    ClearCopy,
     /// `HSD_EraseRect`'s depth image: 4 by 4 texels of 0xFF.
     EraseDepth,
     /// Data of the executable the GPU reads, by its address there (the particles' texture
@@ -43,6 +46,9 @@ pub enum Dynamic {
     /// One of the album's images, by its place in the state's list
     /// (`melee_sim::lb::snap_read::SnapRead::images`).
     Album(u8),
+    /// One of the trophy fall's images, by `melee_sim::game::gm::endings::toy_fall::IMAGES`'
+    /// index.
+    ToyFall(u8),
     /// The movie player's planes (`MoviePlayer.unk_50`, `unk_54`, `unk_58`): luma, then the
     /// two chroma planes, as the last frame decoded them.
     Movie(u8),

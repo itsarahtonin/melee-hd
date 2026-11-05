@@ -399,8 +399,8 @@ pub(crate) mod tests {
         v
     }
 
-    /// Every kind's `evt_unk`, which only `it_8026B7F8` calls, from a fighter's unload at the
-    /// scene's end: unreached in a match.
+    /// Every kind's `evt_unk`, which only `it_8026B7F8` calls, from a fighter's unload: a player
+    /// leaving a match in progress, which no VS match does.
     fn evt_unks() -> BTreeSet<u32> {
         (0..4)
             .flat_map(|g| tables::logic_group(g).iter())
@@ -525,7 +525,7 @@ pub(crate) mod tests {
     /// Each character's own items are held to the ledger, the item tables and the code: every
     /// unaccounted function of the units its item kinds' callbacks are in is ported awaiting a
     /// check (a `// Ports` comment, or code dispatching on its address), a kind's `evt_unk`
-    /// (only the scene's end runs those), or named by the entry as unreached, unsure or a gap;
+    /// (only a fighter's unload runs those), or named by the entry as unreached, unsure or a gap;
     /// every callback in its kinds' logic and state tables is dispatched or named; every stop
     /// in the modules whose code names those callbacks is named; and every name still names
     /// something unported or stopping. Every roster character has an entry, and every fighter

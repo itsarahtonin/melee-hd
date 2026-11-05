@@ -137,6 +137,9 @@ pub enum Draw {
     /// The movie's planes loaded as texture maps 0 to 2 (`lbMthp_8001F67C`), with the frame
     /// they hold (none before the first decode: buffers never written).
     MoviePlanes(Option<crate::lb::mthp::MovieFrame>),
+    /// Congratulations' still's planes loaded as texture maps 0 to 2 (`lbMthp8001F928`): the
+    /// single frame of its file, decoded once.
+    StillPlanes(crate::game::gm::endings::congrats::StillFrame),
     /// The sprites' camera's end (`HSD_SObjLib_803A54EC` after its links): HAL's state caches
     /// out of date and depth tested, compared less-or-equal, and written.
     SpriteEnd,
@@ -187,6 +190,28 @@ pub enum Draw {
     /// The render copied into Fountain of Dreams' reflection image, the frame cleared after it
     /// (`lb_800122C8`).
     ReflectionCopy,
+    /// The frame copied into the single-player clear screen's image (640 by 480 RGB5A3),
+    /// the frame cleared after it (`lb_800122C8` from `fn_8017FE54`).
+    BlurCopy,
+    /// The render from (`x`, `y`) copied into one of the trophy fall's images (by
+    /// `game::gm::endings::toy_fall::IMAGES`' index), the frame cleared after it with `clear`
+    /// (`HSD_ImageDescCopyFromEFB`, `fn_801A6ACC`, `fn_801A6A48`).
+    ToyFallCopy {
+        image: u8,
+        x: u16,
+        y: u16,
+        clear: bool,
+    },
+    /// That image drawn back over the screen through the current camera (`fn_80013614`):
+    /// at `pos` scaled by `scale`, plain at `alpha` (`size` none), or blurred as
+    /// `lb_80012994` draws it, 21 copies up to twice `size` / 64 apart, tinted by `tint`.
+    Blur {
+        pos: [f32; 2],
+        scale: [f32; 2],
+        alpha: u8,
+        size: Option<u8>,
+        tint: f32,
+    },
     /// The point size and its texture offset for later point draws (`HSD_StateSetPointSize`).
     PointSize(u8, u8),
     /// The light vector highlight textures take for what follows, or none without an infinite
@@ -341,6 +366,9 @@ pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> b
     };
     objs.cobjs.current = Some(c);
     objs.cobjs.freed_current = 0;
+    if objs.cobjs[c].stale_planes != 0 {
+        objs.stale_reads += 1;
+    }
     super::cobj::setup_viewing_mtx(objs, data, c);
     let o = &objs.cobjs[c];
     let view = CameraView {
