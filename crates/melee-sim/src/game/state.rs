@@ -89,6 +89,8 @@ pub enum UserData {
     DataDel(u32),
     /// The special messages' user data (`MnInfoData`), by its block's address.
     Info(u32),
+    /// The Event list's user data (`MnEventData`), by its block's address.
+    EventList(u32),
     /// The other records' user data (`MnCountData`), by its block's address.
     Count(u32),
     /// The VS records' user data (`Diagram`), by its block's address.
@@ -238,6 +240,7 @@ impl Kinds for GameKinds {
             // `mnDiagram3_FreeUserData`), the magnifier's (`ifMagnify_802FC3BC`), a text's
             // (`HSD_SisLib_803A5A2C`) and a text canvas's camera (`fn_803A60EC`).
             UserData::Info(_)
+            | UserData::EventList(_)
             | UserData::Count(_)
             | UserData::Diagram(_)
             | UserData::SoundTest(_) => 0x8037_F1B0,
@@ -463,6 +466,10 @@ pub struct Game {
     /// The Data menu's screens' statics and user data (`mninfo.c` and the others
     /// [`super::mn::data`] lists).
     pub data_menus: super::mn::data::DataMenus,
+    /// The Event list's statics and user data (`mnevent.c`).
+    pub event_list: super::mn::event::EventList,
+    /// Event Match's mode statics (`gmevent.c`).
+    pub event: super::gm::event::EventMode,
     /// The special messages' interface's statics and its queue of notices (`ifprize.c`,
     /// `if_Scene_Prize_EnterData`, `gm_8049E558`).
     pub prize: super::hud::prize::Prize,
@@ -596,6 +603,10 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Info(addr) => {
                 crate::hsd::heap::mem_free(addr);
                 self.game.data_menus.info.data.remove(&addr);
+            }
+            UserData::EventList(addr) => {
+                crate::hsd::heap::mem_free(addr);
+                self.game.event_list.data.remove(&addr);
             }
             UserData::Count(addr) => {
                 crate::hsd::heap::mem_free(addr);

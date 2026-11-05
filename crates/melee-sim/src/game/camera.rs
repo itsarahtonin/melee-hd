@@ -1083,12 +1083,14 @@ pub fn update_zoom(game: &mut Game) {
     // HSD_PadGetNmlSubStickY(Player_GetPadPort(0)), the port as a u8.
     let port = game.players[0].pad_port as usize;
     let mut stick = reg(game.pads.copy[port].nml_sub_stick_y);
+    // The step starts as the stick's signed value: held past 0.85 either way, it zooms by it.
+    let mut step = stick;
     if stick < 0.0 {
         stick = fp::fneg(stick);
     }
     let c = &mut game.camera.cam;
-    let mut step = 0.0;
     if stick < f64::from(0.85_f32) {
+        step = 0.0;
         if i32::from(c.x2BA) > 0 {
             c.x2BA = c.x2BA.wrapping_sub(1);
         } else {

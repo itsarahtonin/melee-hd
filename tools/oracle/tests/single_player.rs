@@ -19,8 +19,13 @@ const DIR: &str = "m6-oracle";
 /// The oracle's output for `session TRACE INPUTS args` on the session `name`, or `None`
 /// without its files.
 fn session(name: &str, args: &[&str]) -> Option<String> {
-    let trace = ssbm_rs_local(&format!("traces/{DIR}/{name}.trc"));
-    let inputs = ssbm_rs_local(&format!("lockstep/{DIR}/{name}.inputs"));
+    session_in(DIR, name, args)
+}
+
+/// [`session`] on a session of `$SSBM_RS_LOCAL/lockstep/DIR` (traced into `traces/DIR`).
+fn session_in(dir: &str, name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/{dir}/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/{dir}/{name}.inputs"));
     if std::env::var("SSBM_DISC").is_err()
         || !std::path::Path::new(&trace).exists()
         || !std::path::Path::new(&inputs).exists()
@@ -80,11 +85,7 @@ fn each_mode_runs_to_its_first_stop() {
         ),
         ("adventure2", 826, "gm_801B3F40 isn't ported"),
         ("allstar", 3884, ""),
-        (
-            "event",
-            592,
-            "mnEvent_8024E838 (the Event list) isn't ported",
-        ),
+        ("event", 3546, ""),
         ("target", 3496, ""),
         ("homerun", 3399, ""),
         ("multiman", 3556, ""),
@@ -108,7 +109,7 @@ fn the_debug_routes_run_to_their_first_stops() {
         ("intro-easy", 3292, ""),
         ("intro-allstar", 1332, "game scene 0x21 isn't ported"),
         ("gameover", 3157, ""),
-        ("staffroll", 1232, "game scene 0x2b isn't ported"),
+        ("staffroll", 3717, ""),
         ("cutscene", 3282, ""),
         ("ending-test", 3726, ""),
     ]);
@@ -263,4 +264,29 @@ fn wire_frames_hide_a_held_item_and_never_show_one() {
         }
     }
     assert!(files >= 30, "{files} fighters' files");
+}
+
+/// Event Match's sessions (`m6-event`, milestone 6's task 21; docs/oracle.md, "Sessions"),
+/// each on its card and clean from power-on to its trace's end with `--all --heap` and the
+/// card after the original's (`NAME-run.card`). `ev05` stands through the coin event's 80
+/// seconds, the one short session whose event ends at its time (the stock and coin
+/// processes' check, the timer on at frame 59 of second 0): a check one frame early fails it
+/// in tick 5736. `ev12` is lost to a KO with Event 12's seven seconds running.
+#[test]
+fn the_events_run_clean_to_their_cards_after() {
+    for (name, ticks) in [("ev05", 7239), ("ev12", 3156)] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-event/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-event/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-event", name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
 }

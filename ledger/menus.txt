@@ -18,11 +18,7 @@ melee/gm/gmadventure	gated	the single-player modes', which only the 1P list's ga
 melee/gm/gmallstar	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmclassic	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmgover	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmmovieend	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmregcommon	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmstaffroll	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/mn/mnevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbArq_80014AC4	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
@@ -49,8 +45,6 @@ lbAudioAx_80024F08	unreached	the console's reset button and the disc error scree
 fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_800259A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 lbAudioAx_80027DBC	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
-lbAudioAx_80028B6C	gated	named only by the single-player modes' code (fn_8017C1A4, fn_801AB200, gm_801BE638): the single-player modes', which only the 1P list's gated entries lead to
-lbAudioAx_80028B90	gated	named only by the single-player modes' code (fn_8017C1A4, gm_801BC4F4, gm_801BC670): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_GetCardData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetNameTagDataBanks	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetGamePrefs	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -59,8 +53,6 @@ gmMainLib_GetTrophyCategoryFlags	unchecked	a getter or setter of the game's data
 gmMainLib_GetTrophyCount	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CD80	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015CF5C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015CF70	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015D134	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
@@ -85,7 +77,6 @@ fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 gm_80164600	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_80166A8C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80166CBC	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_80168940	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_80169370	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_80169384	gated	named only by the single-player modes' code (gm_801BC754, gm_801BD658): the single-player modes', which only the 1P list's gated entries lead to
 fn_801693A8	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
@@ -100,7 +91,6 @@ fn_80169A84	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Even
 fn_80169C54	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 fn_80169F50	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016A4C8	gated	the joining opponents' spawn (gm_16A2), ported and held until a session compares a joiner: only the single-player modes' hordes and the debug menu's arenas (where the console halts as the first joins) turn joining on, which only the 1P list's gated entries and the debug level lead to
-gm_8016A164	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016A1E4	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016A21C	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016A22C	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
@@ -119,7 +109,6 @@ gmVs_GetSceneState	unchecked	a getter or setter of the game's data, which its ca
 gm_GetStartMeleeRules	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016AEA4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016AEB8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-fn_8016B138	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_IsCurrently1PMode	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8016B738	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_AnyControllerPressedStart	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -128,10 +117,7 @@ gm_8016C75C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 gm_8016ECE8	gated	the boss stages' cycle (Final Destination's, a boss's health): the single-player modes', which only the 1P list's gated entries lead to
 gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the single-player modes', which only the 1P list's gated entries lead to
 fn_8016F280	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_801732D8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_8017335C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_80173498	gated	named only by the single-player modes' code (gm_801B688C): the single-player modes', which only the 1P list's gated entries lead to
-gm_80173D3C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80174338	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8017435C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_80174380	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -162,7 +148,6 @@ onExitMovie	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs
 onExitHowto	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitOmake15	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 memcardOnLoad	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-onExitVs	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 mnName_8023749C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it

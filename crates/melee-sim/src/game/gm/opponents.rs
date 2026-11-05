@@ -540,7 +540,8 @@ impl Running<'_> {
 
     /// The joining opponents put away, `gm_8016A164`: the match no longer a single-player
     /// one's, none left or joining, no teams, and the slots after the first emptied.
-    // Ports gm_8016A164; aliased once a check reaches it.
+    #[doc(alias = "gm_8016A164")]
+    #[doc(alias = "fn_8016B138")]
     pub fn reset_opponents(&mut self) {
         self.game.vs.state.is_singleplayer = 0;
         let o = &mut self.game.gm.opponents;
