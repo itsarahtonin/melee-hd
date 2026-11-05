@@ -1346,6 +1346,7 @@ pub fn proc_grab(r: &mut Running, gobj: GObjId) {
     );
     match cb.0 {
         super::kinds::tarucann::FT_BARREL_ENTER => r.enter_barrel(victim, gobj),
+        super::kinds::likelike::FT_CAPTURE => r.enter_capture_likelike(victim, gobj),
         a => code::unported_call(&format!("{a:#010x} (a grabbed fighter's callback)")),
     }
 }

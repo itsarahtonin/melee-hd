@@ -2013,6 +2013,9 @@ impl Running<'_> {
                     super::super::gr::kinokoroute::water_device(self, gobj);
                     None
                 }
+                Some(super::super::gr::shrineroute::PIT_DEVICE) => {
+                    super::super::gr::shrineroute::pit_device(self, gobj)
+                }
                 Some(super::super::gr::pushon::SPIKES_DEVICE) => {
                     super::super::gr::pushon::spikes_device(self, gobj)
                 }
@@ -2178,6 +2181,9 @@ impl Running<'_> {
             Some(f) if super::super::gr::figure::ON_TOUCH_LINE.contains(&f.0) => {
                 super::super::gr::figure::on_touch_line(line)
             }
+            Some(f) if f.0 == super::super::gr::heal::ON_TOUCH_LINE => {
+                super::super::gr::heal::on_touch_line(line)
+            }
             // grLast_OnTouchLine, grBattle_OnTouchLine, grStadium_OnTouchLine and the others
             // here: `return NULL`.
             Some(f)
@@ -2194,6 +2200,7 @@ impl Running<'_> {
                     || f.0 == 0x8021_0780
                     || f.0 == 0x8020_1F44
                     || f.0 == 0x8020_8754
+                    || f.0 == 0x8020_B104
                     || f.0 == 0x8020_DF78
                     || f.0 == 0x8020_B854
                     || f.0 == 0x8021_EEB4

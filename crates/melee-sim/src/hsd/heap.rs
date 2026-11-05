@@ -1127,13 +1127,18 @@ impl Heap {
     }
 
     /// `HSD_ObjAlloc`: the pool's last freed object, growing the pool by one when none is
-    /// free. Pools with limits aren't modelled (none of Melee's has one set).
+    /// free. A pool's number limit is its owner's to keep (`pool::Pool::try_alloc`, which
+    /// asks no object past it); heap limits aren't modelled (none of Melee's has one set).
     pub fn obj_alloc(&mut self, kind: Kind) -> u32 {
         log(|| format!("OA {kind:?}"));
         let d = &self.allocs[kind as usize];
         assert!(
-            !d.num_limit_flag && !d.heap_limit_flag,
-            "{kind:?}'s pool has limits, which the model doesn't follow"
+            !d.heap_limit_flag,
+            "{kind:?}'s pool has a heap limit, which the model doesn't follow"
+        );
+        assert!(
+            !(d.num_limit_flag && d.used >= d.num_limit),
+            "{kind:?}'s pool asked past its number limit, which the model says it reached"
         );
         let grew = d.free.is_empty();
         if grew {
@@ -1152,6 +1157,14 @@ impl Heap {
         self.image.claim_piece(p, size, kind.name());
         self.image.taken(p, link);
         p
+    }
+
+    /// `HSD_ObjAllocSetNumLimit` and `HSD_ObjAllocEnableNumLimit` or
+    /// `HSD_ObjAllocDisableNumLimit` on `kind`'s pool.
+    pub fn set_num_limit(&mut self, kind: Kind, limit: u32, on: bool) {
+        let d = &mut self.allocs[kind as usize];
+        d.num_limit = limit;
+        d.num_limit_flag = on;
     }
 
     /// `HSD_ObjFree`.
@@ -1291,6 +1304,25 @@ impl Heap {
     /// An archive loaded into the block at `file` (`len` bytes), its `HSD_Archive` at
     /// `header`: the image knows its bytes, relocated to the block, and the header block as
     /// the parse leaves it (`HSD_ArchiveParse`, [`super::export::archive`]).
+    /// A file read whole into the main heap (`lbFile_80016760`'s `lbHeap_80015BD0(0, …)`):
+    /// a block of its length rounded up to 32, holding the file's bytes (archive `id`, raw)
+    /// and the read's next ones. Where it went.
+    pub fn raw_file_alloc(&mut self, len: u32, id: melee_data::archive::ArchiveId) -> u32 {
+        log(|| format!("LF {:#x}", len.next_multiple_of(32)));
+        let file = self.mem_alloc_raw(len.next_multiple_of(32));
+        self.image.hold(
+            file,
+            file + len,
+            super::image::Src::Raw {
+                archive: id,
+                offset: 0,
+            },
+        );
+        self.image
+            .claim(file + len, file + len.next_multiple_of(32), FILE_TAIL);
+        file
+    }
+
     pub fn hold_archive(
         &mut self,
         data: &melee_data::archive::Archives,
@@ -1345,7 +1377,7 @@ pub fn with<R>(f: impl FnOnce(&mut Heap) -> R) -> Option<R> {
 }
 
 /// How many bytes a texture's image takes, `GXGetTexBufferSize` without mipmaps: the format's
-/// tiles of 32 bytes (64 for RGBA8) covering the image.
+/// tiles of 32 bytes (64 for RGBA8 and Z24X8) covering the image.
 #[doc(alias = "GXGetTexBufferSize")]
 pub fn tex_buffer_size(width: u32, height: u32, format: u32) -> u32 {
     let (bw, bh) = match format {
@@ -1355,7 +1387,11 @@ pub fn tex_buffer_size(width: u32, height: u32, format: u32) -> u32 {
         1 | 2 | 9 => (8, 4),
         _ => (4, 4),
     };
-    let tile = if format == 6 { 64 } else { 32 };
+    let tile = if format == 6 || format == 0x16 {
+        64
+    } else {
+        32
+    };
     width.div_ceil(bw) * height.div_ceil(bh) * tile
 }
 

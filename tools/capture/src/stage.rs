@@ -42,6 +42,8 @@ pub const GRGREATBAY_YAKUMONO: u32 = 0x804D_69E0;
 pub const GROLDKONGO_YAKUMONO: u32 = 0x804D_6A90;
 /// grkinokoroute.c's (`ssbm_types::tu::melee__gr__grkinokoroute::yakumono_param`).
 pub const GRKINOKOROUTE_YAKUMONO: u32 = 0x804D_6A50;
+/// grshrineroute.c's (`ssbm_types::tu::melee__gr__grshrineroute::yakumono_param`).
+pub const GRSHRINEROUTE_YAKUMONO: u32 = 0x804D_6A58;
 /// grbigblueroute.c's (`ssbm_types::tu::melee__gr__grbigblueroute::yakumono_param`).
 pub const GRBIGBLUEROUTE_YAKUMONO: u32 = 0x804D_6A68;
 /// grpushon.c's (`ssbm_types::tu::melee__gr__grpushon::yakumono_param`).
@@ -392,6 +394,8 @@ impl Importer<'_> {
         self.game.gr.oldkongo_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRKINOKOROUTE_YAKUMONO);
         self.game.gr.kinokoroute_yakumono = self.data_or_unhandled(yaku);
+        let yaku = cap.u32(GRSHRINEROUTE_YAKUMONO);
+        self.game.gr.shrineroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRBIGBLUEROUTE_YAKUMONO);
         self.game.gr.bigblueroute_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRPUSHON_YAKUMONO);
@@ -1133,6 +1137,11 @@ impl Comparer<'_> {
                 game.gr.kinokoroute_yakumono,
             ),
             (
+                "grShrineRoute yakumono_param",
+                GRSHRINEROUTE_YAKUMONO,
+                game.gr.shrineroute_yakumono,
+            ),
+            (
                 "grBigBlueRoute yakumono_param",
                 GRBIGBLUEROUTE_YAKUMONO,
                 game.gr.bigblueroute_yakumono,
@@ -1606,6 +1615,18 @@ impl Comparer<'_> {
                 if let Some(k) = self.data.get(key) {
                     theirs += 1;
                     let ours = self.game.objs.ids.get(k);
+                    // An entry another key held for a joint since freed names its address
+                    // (`jobj::DANGLING`), as the original's keeps the freed pointer.
+                    if let Some(o) = ours
+                        && (melee_sim::hsd::jobj::DANGLING..melee_sim::hsd::pool::UNKNOWN)
+                            .contains(&o.0)
+                    {
+                        if o.0 != value {
+                            self.diff(&format!("ID table {k:?}"), "freed joint", o.0, value);
+                        }
+                        e = self.u32(e);
+                        continue;
+                    }
                     // A freed joint the table still names dangles, compared by address: one
                     // the capture held freed, or one freed since (Kirby's copy costume's
                     // parts, which the table names after they're taken down).

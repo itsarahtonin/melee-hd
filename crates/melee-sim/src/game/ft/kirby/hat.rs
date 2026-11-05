@@ -452,6 +452,7 @@ impl Running<'_> {
                 .joint
                 .expect("HSD_IDInsertToTable with a part that has no joint");
             self.game.objs.ids.insert(j, p);
+            self.game.objs.jobjs[p].named = true;
             part += 1;
             joint = next_joint(self.data, j, &mut stack);
         }

@@ -737,7 +737,7 @@ impl Running<'_> {
     #[doc(alias = "gm_80173D3C")]
     pub fn event_exit_vs(&mut self) {
         let level = self.event();
-        self.one_player_match_undo();
+        self.reset_opponents();
         let me = self.game.event.exit.match_end.clone();
         if me.outcome == super::vs::OUTCOME_RETRY {
             let ev = &mut self.game.game_data.vs.unk_530;
@@ -866,21 +866,6 @@ impl Running<'_> {
         }
         if !self.challenger_check(1, ev.x6) {
             self.change_game_mode_after_scene(super::machine::GM_MENU);
-        }
-    }
-
-    /// `gm_8016A164`: the single-player match's setup undone: not single-player, the
-    /// crowd's counts and spawning cleared, no teams, and the players past the first
-    /// gone from their slots.
-    #[doc(alias = "gm_8016A164")]
-    #[doc(alias = "fn_8016B138")]
-    pub fn one_player_match_undo(&mut self) {
-        self.game.vs.state.is_singleplayer = 0;
-        self.game.gm.spawn_flags &= !3;
-        self.game.vs.start.is_teams = 0;
-        for i in 1..6 {
-            self.game.set_player_pkind(i, 3);
-            self.game.unset_player_flags_bit1(i);
         }
     }
 

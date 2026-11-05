@@ -649,8 +649,8 @@ pub fn to_pay_out(r: &mut Running, gobj: GObjId) {
 
 /// Forgets a GObj going away, `it_2725_Logic70_EvtUnk`: as every item does, and Popo if it's
 /// him.
-// Ports `it_2725_Logic70_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+// Ports `it_2725_Logic70_EvtUnk`; aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_string();

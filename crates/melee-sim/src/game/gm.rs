@@ -6,6 +6,8 @@ pub mod attract;
 pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
+pub mod classic;
+pub mod clear;
 pub mod decisions;
 pub mod endings;
 pub mod erase;
@@ -13,15 +15,19 @@ pub mod event;
 pub mod home_run;
 pub mod howto;
 pub mod input;
+pub mod intro;
 pub mod machine;
 pub mod main_lib;
 pub mod match_exit;
 pub mod memcard;
 pub mod menu;
 pub mod mode_init;
+pub mod multi_man;
 pub mod names;
 pub mod one_player;
+pub mod one_player_match;
 pub mod opening;
+pub mod opponents;
 pub mod pause;
 pub mod progressive;
 pub mod records;
@@ -97,9 +103,10 @@ pub struct Globals {
     pub scene_index: u8,
     /// The match's live standings (`gm_16F1.c`).
     pub ranks: vs::Ranks,
-    /// The multi-man and event spawning flags (`lbl_8046B488.unk_10`): bit 1 lets new
-    /// opponents spawn, which only single-player modes set.
-    pub spawn_flags: u8,
+    /// The single-player matches' joining opponents (`lbl_8046B488`).
+    pub opponents: opponents::Opponents,
+    /// `lbl_8046B668`: All-Star's characters left, which its rest area's rules name.
+    pub left: one_player_match::LeftList,
     /// The pause screen (`gmpause.c`).
     pub pause: pause::PauseScreen,
     /// What the save data has unlocked, which the stage's music choice reads.
@@ -229,18 +236,6 @@ pub fn is_1p_mode(game: &Game) -> bool {
         game.game_mode,
         0x03 | 0x04 | 0x05 | 0x0F | 0x1C | 0x20 | 0x21 | 0x22 | 0x23 | 0x24 | 0x25 | 0x26 | 0x2B
     )
-}
-
-/// A stage's event for the match (`gm_801674C4`, the adventure route's arena): not ported yet.
-pub fn start_stage_event(
-    _r: &mut crate::game::state::Running,
-    _a: i32,
-    _b: i32,
-    _c: i32,
-    _d: i32,
-    _cb: crate::game::handles::CodeRef,
-) {
-    crate::game::code::unported_call("gm_801674C4 (a stage's match event)")
 }
 
 /// Whether the game is in training mode, `gm_8018841C`.
@@ -533,6 +528,23 @@ pub fn call(
         }
         event::ON_MATCH_START => {
             r.event_match_start();
+            Some(super::code::Val::None)
+        }
+        multi_man::ON_MATCH_START => {
+            r.multi_man_match_start();
+            Some(super::code::Val::None)
+        }
+        multi_man::ON_MATCH_END => {
+            r.multi_man_match_end();
+            Some(super::code::Val::None)
+        }
+
+        opponents::ON_JOINED => {
+            r.opponent_joined(args[0].int());
+            Some(super::code::Val::None)
+        }
+        one_player_match::REST_MATCH_END => {
+            r.allstar_rest_end();
             Some(super::code::Val::None)
         }
         training::ON_PAUSE => {

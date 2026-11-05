@@ -565,8 +565,8 @@ impl Running<'_> {
     /// debug game over mode standing for the submenu's mode, or Classic's game over.
     #[doc(alias = "fn_8030110C")]
     #[doc(alias = "un_803012D4")]
-    // Ports fn_803011EC and un_80301280 (RegularEnding Real) too; aliased once a check reaches
-    // them (Classic's game over mode, starting with the trophy fall).
+    #[doc(alias = "fn_803011EC")]
+    #[doc(alias = "un_80301280")]
     fn debug_ending_test(&mut self, real: bool) {
         use crate::game::gm::endings::{GM_CLASSIC_GOVER, GM_DEBUG_GOVER};
         let d = &self.game.hud.debug;

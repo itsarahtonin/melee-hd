@@ -232,6 +232,8 @@ pub struct Session {
     /// The memory cards in slots A and B and the console's card library's settings (each
     /// slot's flash ID): the console's, lent to each step.
     pub card: Option<CardDevice>,
+    /// The files read for opponents joining mid-match, which a rollback's replay takes again.
+    pub joiner_files: super::vs_match::JoinerFiles,
 }
 
 /// `DbLevel` before `main` sets it: `DbLKind_NoDebugRom`, as the executable's data holds it.
@@ -383,11 +385,19 @@ pub const FILES: &[&str] = &[
     "GmGoAnim.dat",
     "GmRgStnd.dat",
     "IfComSn.dat",
+    // The single-player stage clear screen's scene and its two fonts, in either language.
+    "GmRegClr.dat",
+    "SdClr.usd",
+    "SdClr.dat",
+    "SdDec.usd",
+    "SdDec.dat",
     // The Home-Run Contest's "no contest" sign and distance counter, in either language.
     "IfHrNoCn.usd",
     "IfHrReco.usd",
     "IfHrNoCn.dat",
     "IfHrReco.dat",
+    // Multi-Man Melee's hordes' tables (`gm_80182174`).
+    "GmKumite.dat",
 ];
 
 /// The songs the ported scenes play (`lbAudioAx_80023F28`) but a match's stage's and the sound
@@ -395,10 +405,11 @@ pub const FILES: &[&str] = &[
 /// opening movie's, the menus' two, How to Play's, the Special Movie's and the lottery's, the
 /// special messages' three, the results screen's fanfares (`ff_dk.hps` to `ff_yoshi.hps`,
 /// each character's), which the screen's entry starts, Tournament's bracket's two, the
-/// challenger approach's, and game over's two.
+/// challenger approach's, game over's two, and the single-player stage clear's two
+/// (`ff_1p01.hps`, `ff_1p02.hps`).
 pub const SONGS: &[usize] = &[
     0x3E, 0x34, 0x36, 0x24, 0x52, 0x35, 0x43, 0x44, 0x45, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x13, 0x14,
-    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20,
+    0x15, 0x16, 0x17, 0x18, 0x19, 0x1D, 0x5D, 0x5E, 0x48, 0x05, 0x20, 0x0A, 0x0B,
 ];
 
 /// The movies the ported scenes play (`lbMthp`), read whole before the session starts.
@@ -438,6 +449,7 @@ impl Session {
             data: Archives::default(),
             setup,
             card,
+            joiner_files: Default::default(),
         }
     }
 
@@ -455,6 +467,7 @@ impl Session {
             data,
             setup,
             card,
+            joiner_files: Default::default(),
         }
     }
 
@@ -683,6 +696,13 @@ impl Session {
         card.give_back(&mut self.card);
         // A song a scene started mid-scene (the sound test's): its reads come after the tick.
         self.read_song(console);
+        // The files of opponents a single-player match's setup named in the tick.
+        super::vs_match::load_joiner_files(
+            &mut self.game,
+            &mut self.data,
+            &mut self.joiner_files,
+            &mut |n| console.file(n),
+        );
         let out = Frame {
             events: std::mem::take(&mut self.game.events),
             pads: t.pads,
@@ -710,6 +730,14 @@ impl Session {
                 data: &self.data,
             }
             .vi_scene_files();
+            let cutscene = match cutscene {
+                Some(f) => Some(f),
+                None => Running {
+                    game: &mut self.game,
+                    data: &self.data,
+                }
+                .intro_scene_files(),
+            };
             if let Some(files) = cutscene {
                 let console = std::cell::RefCell::new(&mut *console);
                 super::vi::load_scene_files(
@@ -815,6 +843,47 @@ impl Session {
         }
         .entering_scene()
             == Some(super::gm::training::GS_TRAINING);
+        // Training's computer players join mid-match as its menu's count asks
+        // (`gm_8016EDDC`): the fighters' files of every slot the match may make.
+        if training {
+            let mut joining = start.clone();
+            for p in joining.players.iter_mut().take(4).skip(1) {
+                // The 33 character kinds; past them a slot names no one.
+                if (0..0x21).contains(&p.ckind) {
+                    p.slot_type = 1;
+                }
+            }
+            super::vs_match::load_fighter_files(
+                &mut self.game,
+                &mut self.data,
+                &joining,
+                &mut |n| console.file(n),
+            );
+        }
+        // Multi-Man Melee's Wire Frames join from the mode's table as the match goes
+        // (`fn_80181C80`): both of their fighters' files, in their first costume.
+        let multi_man = super::gm::multi_man::is_multi_man(self.game.game_mode)
+            && Running {
+                game: &mut self.game,
+                data: &self.data,
+            }
+            .entering_scene()
+                == Some(super::gm::machine::GS_VS);
+        if multi_man {
+            let mut joining = start.clone();
+            for (i, ck) in [(1, 0x1B), (2, 0x1C)] {
+                let p = &mut joining.players[i];
+                p.ckind = ck;
+                p.color = 0;
+                p.slot_type = 1;
+            }
+            super::vs_match::load_fighter_files(
+                &mut self.game,
+                &mut self.data,
+                &joining,
+                &mut |n| console.file(n),
+            );
+        }
         if training && let Some(name) = super::gr::data::stage_file(grkind, us) {
             let archive = self
                 .game

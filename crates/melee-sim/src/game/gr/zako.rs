@@ -165,10 +165,10 @@ fn spawn_enemy(r: &mut Running, kind: i32, x2: i32, pos: crate::vec::Vec3) -> Op
         kinds::KURIBOH | kinds::OCTAROCK | kinds::OTTOSEA | kinds::WHITEBEA => {
             itzako::spawn(r, kind, Some(pos), None, None, true)
         }
-        kinds::LEADEAD => crate::game::code::unported_call("it_802EA9FC (a spawner's ReDead)"),
+        kinds::LEADEAD => kinds::leadead::spawn(r, pos, -1),
         kinds::NOKONOKO => kinds::nokonoko::spawn(r, x2, pos, None, -1),
         kinds::PATAPATA => kinds::patapata::spawn(r, x2, pos, -1),
-        kinds::LIKELIKE => crate::game::code::unported_call("it_802DC4BC (a spawner's Like Like)"),
+        kinds::LIKELIKE => kinds::likelike::spawn(r, x2, pos),
         _ => None,
     }
 }

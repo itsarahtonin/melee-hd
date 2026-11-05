@@ -107,11 +107,12 @@ use Mode::{
     MultiMan as MM, TargetTest as TT, Training as TR,
 };
 
-/// The single-player modes but the Stadium's Home-Run Contest and Target Test, whose paths
-/// their own entries hold to the code ([`PATHS`]' unreached): each match is set up by its
-/// mode's own entry, not the single-player setups, and has no results or clear screens; the
-/// contest keeps no stocks, and their records are their own, ported.
-const NOT_STADIUM: &[Mode] = &[TR, MM, EV, CL, AS, AD];
+/// The single-player modes whose matches `gm_16A2`'s single-player setups make: all but
+/// Training and the Stadium's Home-Run Contest, Target Test and Multi-Man Melee, whose paths
+/// their own entries hold to the code ([`PATHS`]' unreached): each of those matches is set up
+/// by its mode's own entry, not the single-player setups, and has no results or clear screens;
+/// the contest and Training keep no stocks, and their records are their own, ported.
+const SETUP_MODES: &[Mode] = &[EV, CL, AS, AD];
 /// The modes that end with a game over, the endings, the staff roll and the trophy fall.
 const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
@@ -174,15 +175,52 @@ const CRAZY_HAND: &[&str] = &[
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
 /// them; the units every mode shares (`gm_16A2` and the rest) are [`MISSING`]'s alone.
 pub const PATHS: &[Paths] = &[
+    // Training's computer players' count and reset (`game/gm/training.rs`) make and free
+    // fighters mid-match, each function checked by a session from power-on (ledger/checks.txt,
+    // docs/oracle.md's sessions): the count, `fn_80188550`, with a player joining,
+    // `gm_8016EDDC`, and leaving, `fn_8016EF98`, which frees its fighter
+    // (`Player_80031EBC`, `Fighter_Unload_8006DABC` in `game/ft/unload.rs`, every item's
+    // `evt_unk` in `game/it/evt_unk.rs`), in `m6-training/tr-count` and
+    // `m6-fighter-unload/un-churn` and `un-held`; the reset, `fn_80188644`, putting each
+    // slot back (`Player_800328D4`, `ftLib_80087140`), in `m6-fighter-unload/un-reset`. Their
+    // modules are the mode's, so a stop added to them has to say why Training can't reach it.
     Paths {
         mode: TR,
         units: &[
             "melee/gm/gmtrainingmode",
             "melee/gm/gm_1884",
             "melee/it/kinds/itmetamon",
+            "melee/it/kinds/itcoin",
         ],
-        modules: &[],
-        unreached: &[],
+        // The mode's own code, and the code its path from the main menu to its match and back
+        // runs whose stops name the other single-player modes: its mode's states, the one-door
+        // select, the stage select, the VS scene's match with Training's rules and its exit,
+        // the notices after a trophy, the HUD and the bonuses; the Pokémon its balls let out,
+        // Pokémon Stadium's screen in Training, the enemies' common code a beaten Birdo runs on
+        // Mushroom Kingdom II, and the 1P coin, which Training never makes.
+        modules: &[
+            "gm/training",
+            "ft/unload",
+            "it/evt_unk",
+            "gm/one_player",
+            "gm/machine",
+            "mn/charsel/one_door",
+            "mn/stagesel",
+            "gm/vs",
+            "gm/match_exit",
+            "gm/approach",
+            "gm/challenger",
+            "gm",
+            "hud/stock",
+            "pl/tally",
+            "gm/decisions",
+            "ft/co/dead",
+            "it/pokemon/mod",
+            "gr/stadium",
+            "it/zako",
+            "it/kinds/trophycoin",
+        ],
+        unreached: TRAINING_UNREACHED,
     },
     Paths {
         mode: HR,
@@ -248,8 +286,32 @@ pub const PATHS: &[Paths] = &[
             "melee/ft/kinds/ftZakoBoy/ftboy",
             "melee/ft/kinds/ftZakoGirl/ftgirl",
         ],
-        modules: &["ft/zako"],
-        unreached: &[],
+        // The modes' own code, and the code their path from the main menu to the matches and
+        // back runs whose stops name the other single-player modes: the list, the modes'
+        // states, the one-door select, the VS scene's match with the modes' rules and its
+        // exit, the Wire Frames joining and leaving (their computer kinds, the unload), the
+        // challenger approach after 100-Man Melee, the HUD and the bonuses.
+        modules: &[
+            "gm/multi_man",
+            "mn/hyaku",
+            "ft/zako",
+            "ft/cpu_ai",
+            "ft/unload",
+            "it/evt_unk",
+            "gm/one_player",
+            "gm/machine",
+            "mn/charsel/one_door",
+            "gm/vs",
+            "gm/match_exit",
+            "gm/approach",
+            "gm/challenger",
+            "gm",
+            "hud/stock",
+            "pl/tally",
+            "gm/decisions",
+            "ft/co/dead",
+        ],
+        unreached: MULTI_MAN_UNREACHED,
     },
     Paths {
         mode: EV,
@@ -296,6 +358,8 @@ pub const PATHS: &[Paths] = &[
             "melee/ft/ftbosslib",
         ],
         modules: &[
+            "gm/classic",
+            "gm/intro",
             "gm/endings/mod",
             "gm/endings/game_over",
             "gr/pushon",
@@ -424,7 +488,7 @@ pub const PATHS: &[Paths] = &[
 /// match is a VS scene the contest's own entry sets up (`gm_801B9A3C`: VS mode's rules with
 /// the contest's, not `gm_16A2`'s single-player setups), so the single-player setups' fields
 /// stay as VS leaves them: nothing ported writes the rules' horde setup (`x54`) or
-/// challenger's record (`x58`), the spawn flags (`gm.spawn_flags`) or a player's leaving flag
+/// challenger's record (`x58`), the joining opponents' setup (`gm.opponents`) or a player's leaving flag
 /// but a cutscene, and the contest's entry clears `x4_2` and `x4_4`.
 const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
     (
@@ -448,10 +512,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's scenes are the one-door select and the VS scene, and the notices' prize scene, each in the scene machine",
     ),
     (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations: the contest has no ending",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the contest's states hook its select's and its match's entries and exits (HomeRunEnterCss, HomeRunExitCss, HomeRunEnterVs, HomeRunExitVs), none unported",
     ),
@@ -472,10 +532,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
-        "fn_80169444 (a single-player mode's last stock)",
-        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -492,44 +548,20 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's match exits into VS mode's exit data (uses_vs_melee)",
     ),
     (
-        "fn_8017F294 (a single-player run's exit value)",
-        "the rules' x4_4, which the contest's entry clears (gm_801B9A3C)",
-    ),
-    (
         "fn_8016C46C's single-player results",
         "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
     ),
     (
-        "gm_801674C4 (a stage's match event)",
-        "only the adventure routes' stages start one (Mushroom Kingdom's, the Underground Maze's, Icicle Mountain's climb)",
-    ),
-    (
         "fn_802FA6C4 in a single-player mode",
-        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
-    ),
-    (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "ifStock_802FA5BC",
-        "the spawn flags' 0x10 and 0x40, which only gm_16A2's single-player setups set",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "the multi-man counter of ifStock_802FAEC4",
-        "the Multi-Man modes' (game modes 0x21 to 0x26)",
-    ),
-    (
-        "gm_801720B4 in a single-player run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
-    ),
-    (
-        "gm_80172140 in a 1P run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
-    ),
-    (
-        "fn_80171A88 in a 1P run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
     ),
     (
         "gm_801693BC for a slot that leaves",
@@ -539,18 +571,14 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    (
-        "itBat_Logic11_EvtUnk",
-        "an item's evt_unk runs only from it_8026B7F8, in a fighter's unload (Fighter_Unload_8006DABC): mid-match only through Player_80031EBC, whose callers are Training's count (fn_8016EF98), a leaving slot (gm_80167320) and the trophy fall, none in the contest; at the scene's end as in VS (items_audit's EVT_UNK)",
-    ),
 ];
 
 /// Why Target Test reaches nothing its paths' units and modules hold unported. Its match is a
 /// VS scene the mode's own entry sets up (`gm_801B6428`: the select's rules with the mode's,
 /// not `gm_16A2`'s single-player setups), so the single-player setups' fields stay as VS leaves
 /// them: nothing ported writes the rules' horde setup (`x54`) or challenger's record (`x58`),
-/// the spawn flags (`gm.spawn_flags`) or a player's leaving flag but a cutscene, and the
-/// mode's entry clears `x4_4`.
+/// the joining opponents' setup (`gm.opponents`) or a player's leaving flag but a cutscene,
+/// and the mode's entry clears `x4_4`.
 const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
         "game mode {m:#x}'s states",
@@ -573,10 +601,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
     ),
     (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations: Target Test has no ending",
-    ),
-    (
         "Hook::Unported1P(name)",
         "the mode's states hook its select's and its match's entries and exits, none unported",
     ),
@@ -597,10 +621,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
-        "fn_80169444 (a single-player mode's last stock)",
-        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
-    ),
-    (
         "gm_8016AC44 with a challenger's record",
         "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
@@ -617,44 +637,20 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "the mode's match exits into its own exit data (match_exit_data's Target Test arm), and the challenger's match into the challenger approach mode's",
     ),
     (
-        "fn_8017F294 (a single-player run's exit value)",
-        "the rules' x4_4, which the mode's entry clears (gm_801B6428)",
-    ),
-    (
         "fn_8016C46C's single-player results",
         "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
     ),
     (
-        "gm_801674C4 (a stage's match event)",
-        "only the adventure routes' stages start one (Mushroom Kingdom's, the Underground Maze's, Icicle Mountain's climb)",
-    ),
-    (
         "fn_802FA6C4 in a single-player mode",
-        "the spawn flags' 0x40, which only gm_16A2's single-player setups set",
-    ),
-    (
-        "fn_802FAC34 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "ifStock_802FA5BC",
-        "the spawn flags' 0x10 and 0x40, which only gm_16A2's single-player setups set",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
-        "the multi-man counter of ifStock_802FAEC4",
-        "the Multi-Man modes' (game modes 0x21 to 0x26)",
-    ),
-    (
-        "gm_801720B4 in a single-player run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
-    ),
-    (
-        "gm_80172140 in a 1P run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
-    ),
-    (
-        "fn_80171A88 in a 1P run",
-        "Classic's, Adventure's and All-Star's runs (is_1p_run)",
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
     ),
     (
         "gm_801693BC for a slot that leaves",
@@ -665,6 +661,254 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
         "every character the one-door select offers (character kinds 0 to 0x19, the Ice Climbers as Popo) has its entry in the table",
     ),
 ];
+
+/// Why Multi-Man Melee reaches nothing its paths' units and modules hold unported. Its matches
+/// are VS scenes the modes' own entries set up (`gm_801B6BE8` and the others: the mode's
+/// rules with `gm_801B69C0`'s, not `gm_16A2`'s single-player setups), and their opponents join
+/// through VS mode's `gm_8016EDDC` (the match isn't single-player, `is_singleplayer` 0), so
+/// the single-player setups' fields stay as VS leaves them: nothing ported writes the rules'
+/// horde setup (`x54`) or challenger's record (`x58`), the joining opponents' setup
+/// (`gm.opponents`) or a player's leaving flag but a cutscene.
+const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
+    (
+        "game mode {m:#x}'s states",
+        "each mode's states (its select and its match: gm_Mode_10ManVs_States to gm_Mode_CruelVs_States) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode (0x14) after a won 100-Man Melee that earns Falco's challenge or a notice (gm_801B688C), which comes back to it (onExitVs@801BFBA8 after the challenger's match, onExitPrize after the notices)",
+    ),
+    (
+        "game mode {m:#x}'s loading",
+        "the six modes' load (gm_Mode_10ManVs_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
+    ),
+    (
+        "the mode override",
+        "the game installs one override, the boot's card check, ported",
+    ),
+    (
+        "the VS scene's enter data in game mode",
+        "the modes' matches enter with their own start data (gm_80495238), in the scene machine",
+    ),
+    (
+        "game scene {k:#x}",
+        "the mode's scenes are the one-door select and the VS scene, and the challenger approach mode's (the approach, the challenger's match, the notices' prize scene), each in the scene machine",
+    ),
+    (
+        "Hook::Unported1P(name)",
+        "the modes' states hook their selects' and matches' entries and exits (MultiManEnterCss, MultiManExitCss, MultiManEnterMatch, MultiManExitMatch), none unported",
+    ),
+    (
+        "a 1P run's getter",
+        "only All-Star's round setup asks a getter",
+    ),
+    (
+        "the one-door screen's panel for match type",
+        "the modes' selects are the Stadium's Multi-Man match types (0x11 to 0x16), whose panels are ported",
+    ),
+    (
+        "mnCharSel_8025C020's records for match type",
+        "the modes' selects show the Multi-Man records (match types 0x11 to 0x16), ported",
+    ),
+    (
+        "gm_80167320 for a leaving slot",
+        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_8016AC44 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "HUD colour {c} past the table",
+        "no caller passes a colour past the table's nine",
+    ),
+    (
+        "single-player match setup",
+        "the rules' horde setup (x54), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "a match's exit data in game mode",
+        "the modes' matches exit into their own exit data (gm_80495370, match_exit_data's Multi-Man arm), and the challenger's match into the challenger approach mode's",
+    ),
+    (
+        "fn_8016C46C's single-player results",
+        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
+    ),
+    (
+        "fn_802FA6C4 in a single-player mode",
+        "the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "ifStock_802FA5BC",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
+    ),
+    (
+        "gm_801693BC for a slot that leaves",
+        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) sets",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "only Target Test's match entry and select ask a character's target stage (gm_801647F8)",
+    ),
+    (
+        "ftCo_800B2AFC for computer kind",
+        "the hordes' computer kinds are GmKumite.dat's tables' 4, 16, 23, 24 and 25 (every table read off the disc), each ported, and the player is human",
+    ),
+    (
+        "ftCo_800A8940 with no island picked",
+        "its second pass takes every island its first did (it skips only ftCo_800A2718's test), so its running sum over the first's total reaches 1 by its last island, above every draw (HSD_Randf is under 1 - 2^-16): an island is always picked",
+    ),
+    (
+        "ftCo_800AEFB8",
+        "Nana's decision without Popo: the hordes are Wire Frames, and the player is human",
+    ),
+    (
+        "ftCo_800AC434 at level 10",
+        "the barrel cannon's coin flip divides by zero only at level 10: the tables' levels are 1 to 9",
+    ),
+];
+
+/// Why Training reaches nothing its paths' units and modules hold unported but its gaps. Its
+/// match is a VS scene on Training's own scene that the mode's own entry sets up
+/// (`gm_801B1F70`: Training's entry of the modes table, `GmVsMode_Training`, which only
+/// `gm_InitVsMode`'s defaults and Training's select write, with Training's flags and
+/// `gm_80189CDC`'s rules; not `gm_16A2`'s single-player setups), so the single-player setups'
+/// fields stay as VS leaves them: nothing ported writes the rules' horde setup (`x54`, so
+/// `is_singleplayer` is 0), challenger's record (`x58`) or event Pokémon (`x28`), the joining
+/// opponents' setup (`gm.opponents`) or a player's leaving flag but those setups and a
+/// cutscene. Its match has no results screen (`gmresult`'s 1P lines, `gm_17AD`, `gm_17BA`)
+/// and is no 1P run (game modes 3 to 5): its exit (`gm_801B2204`) goes back to the select or
+/// to the notices.
+const TRAINING_UNREACHED: &[(&str, &str)] = &[
+    (
+        "game mode {m:#x}'s states",
+        "Training's states (gm_Mode_Training_States: the select, the stage select, the match) are in the scene machine, and it leaves only for them, the main menu (the select's B) or the challenger approach mode's notices (0x14, after a trophy its exit gives: gm_801B2204's gm_80173754 with no challenger), which go back to it (onExitPrize)",
+    ),
+    (
+        "game mode {m:#x}'s loading",
+        "Training's load (gm_Mode_Training_OnLoad) is in the scene machine, and so are the main menu's and the challenger approach mode's",
+    ),
+    (
+        "the mode override",
+        "the game installs one override, the boot's card check, ported",
+    ),
+    (
+        "the VS scene's enter data in game mode",
+        "Training's match enters with its own start data (gm_801B1F70's), in the scene machine",
+    ),
+    (
+        "game scene {k:#x}",
+        "Training's scenes are the one-door select, the stage select, its own match scene (GS_TRAINING) and the notices' prize scene, each in the scene machine with its exit",
+    ),
+    (
+        "Hook::Unported1P(name)",
+        "Training's states hook its select's, stage select's and match's entries and exits (TrainingEnterCss to TrainingExitVs), none unported",
+    ),
+    (
+        "a 1P run's getter",
+        "only All-Star's round setup asks a getter",
+    ),
+    (
+        "the one-door screen's panel for match type",
+        "Training's select is match type 0x17 (gm_801B1B74), whose panel is ported",
+    ),
+    (
+        "mnCharSel_8025C020's records for match type",
+        "Training's select shows the best combo (match type 0x17), ported",
+    ),
+    (
+        "gm_80167320 for a leaving slot",
+        "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) and the joining opponents' setup (gm_16A2's) set; Training's count takes a computer player out through fn_8016EF98 (Player_80031EBC), which leaves it clear",
+    ),
+    (
+        "gm_8016AC44 with a challenger's record",
+        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "HUD colour {c} past the table",
+        "no caller passes a colour past the table's nine",
+    ),
+    (
+        "single-player match setup",
+        "the rules' horde setup (x54), which only gm_16A2's single-player setups set; Training's rules are its modes table entry's",
+    ),
+    (
+        "a match's exit data in game mode",
+        "Training's match exits into its own exit data (match_exit_data's Training arm); the notices have no match",
+    ),
+    (
+        "fn_8016C46C's single-player results",
+        "Classic's, Adventure's and All-Star's results (game modes 3 to 5)",
+    ),
+    (
+        "fn_802FA6C4 in a single-player mode",
+        "the rules' horde setup (x54) and the joining opponents' setup's flag (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "ifStock_802FA5BC",
+        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
+    ),
+    (
+        "gm_80167320's joiners' leaving",
+        "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
+    ),
+    (
+        "gm_801693BC for a slot that leaves",
+        "a player's leaving flag, which only the giant Kirby cutscene (vi0501) and the joining opponents' setup set",
+    ),
+    (
+        "gm_801647F8 reading past lbl_803D5168",
+        "Target Test's match entry alone asks a character's target stage",
+    ),
+    (
+        "it_8027A9B8 (an event's Pokémon list)",
+        "the rules' event Pokémon (x28, gm_8016AEB8), which only an event's setup sets; Training's balls draw from Training's list (it_8027A780)",
+    ),
+    (
+        "grStadium_801D384C",
+        "Pokémon Stadium's names screen (mode 1), which Training's screen never shows: the screen's mode set turns 1 into the stage feed (7) in Training (gm_8018841C, grpstadium.c)",
+    ),
+    ("grFigureGet_80219C", TRAINING_NO_TROPHY),
+    (
+        "it_8027B5B0 (an enemy of kind",
+        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+    ),
+    (
+        "pl_8004049C (an enemy of kind",
+        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+    ),
+    ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
+    ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
+    ("it_802D306C", TRAINING_NO_DITTO),
+];
+
+/// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
+/// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
+/// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
+/// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
+/// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
+/// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
+/// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
+/// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
+/// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
+/// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
+/// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
+/// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
+/// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
+/// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
+/// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
+/// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
+/// (docs/oracle.md, "Training's trophy roll").
+const TRAINING_NO_TROPHY: &str = "Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88), needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over every launch angle, facing and place she's hit at (five short)";
+
+/// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
+/// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
+/// when the rules name one (`x28`, an event's), and in Training (`gm_8018841C`) draws from
+/// Training's list (`common_pokemon`, `it_8027A780`) before the debug menu's choice is asked;
+/// that draw takes the first entry whose running total passes the roll strictly, so Ditto's
+/// weight of 0 in the ball's table (`ItCo.usd`) never comes out (docs/melee-bugs.md,
+/// "Training's Pokémon list names Ditto, whom its draw can't pick").
+const TRAINING_NO_DITTO: &str = "Ditto, whom Training's balls never let out: they draw from Training's list (it_8027AB64 under gm_8018841C, it_8027A780), where Ditto's weight of 0 (ItCo.usd) never passes the roll, and the item menu offers no Pokémon";
 
 /// What the single-player modes reach that isn't ported, each with the modes that reach it.
 pub const MISSING: &[Gap] = &[
@@ -677,12 +921,12 @@ pub const MISSING: &[Gap] = &[
             "game mode {m:#x}'s loading",
             "game scene {k:#x}",
         ],
-        modes: &[TR, MM, EV, CL, AS, AD, DB],
+        modes: &[EV, CL, AS, AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -696,49 +940,38 @@ pub const MISSING: &[Gap] = &[
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "gm_8016AC44 with a challenger's record",
-            "fn_802FAC34 with a challenger's record",
+            "a 1P run's ratio getter",
+            "gm_8017D7AC's records after a no contest",
+            "gm_8017CBAC (All-Star's clear)",
+            "a single-player route's callback",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "a horde's players leaving their slots",
         covers: &[
             "gm_80167320 for a leaving slot",
+            "gm_80167320's joiners' leaving",
             "gm_801693BC for a slot that leaves",
         ],
-        modes: &[MM, AD, EV],
+        modes: &[AD, EV],
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "melee/gm/gmregclear",
             "melee/gm/gmregcommon",
-            "fn_8016AE60",
-            "gm_8016B350",
-            "gm_8016B364",
-            "gm_8016B378",
-            "fn_8016B4BC",
-            "fn_8016B510",
             "fn_8016B738",
-            "fn_8016D538",
-            "gm_8016EDDC",
-            "fn_8016EF98",
             "gm_8016F00C",
-            "fn_8016F030",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
-            "lbAudioAx_80028B6C",
-            "lbAudioAx_80028B90",
-            "fn_80169444 (a single-player mode's last stock)",
             "fn_8016C46C's single-player results",
-            "fn_8017F294 (a single-player run's exit value)",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the 1P HUD (the stocks and counters)",
         covers: &["ifStock_802FA5BC", "fn_802FA6C4 in a single-player mode"],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the 1P records and saves",
@@ -747,106 +980,36 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D1C8",
             "gmMainLib_8015D25C",
             "gmMainLib_8015D2F0",
-            "gmMainLib_8015D344",
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
-            "gmMainLib_8015D6A4",
-            "gmMainLib_8015D6BC",
-            "gmMainLib_8015D6D8",
-            "gmMainLib_8015D6F8",
-            "gmMainLib_8015D72C",
-            "gmMainLib_8015D74C",
-            "gmMainLib_8015D780",
-            "gmMainLib_8015D7A4",
-            "gmMainLib_8015D7BC",
-            "gmMainLib_8015D7D4",
-            "fn_80160DE8",
             "fn_80160F58",
             "fn_80162BFC",
             "fn_80162DF8",
-            "fn_80162FF4",
-            "gm_8016365C",
-            "gm_80163690",
-            "gm_801636D8",
-            "gm_80163838",
-            "gm_801639C0",
-            "gm_801639F4",
-            "gm_80163A3C",
-            "gm_80163B9C",
-            "gm_Get3MinMultimanHighscore",
-            "gm_Get3MinMultimanTotalHighscore",
-            "gm_Get15MinMultimanHighscore",
-            "gm_Get15MinMultimanTotalHighscore",
-            "gm_GetEndlessHighscore",
-            "gm_GetEndlessTotalHighscore",
-            "gm_GetCruelHighscore",
-            "gm_GetCruelTotalHighscore",
             "gm_801647F8",
-            "gm_801674C4",
-            "fn_801689E4",
-            "fn_80168A6C",
-            "gm_801720B4 in a single-player run",
             "fn_8017DF28 (a single-player mode's record)",
+            "gm_8017CA38's records in game mode",
         ],
-        modes: NOT_STADIUM,
+        modes: SETUP_MODES,
     },
     Gap {
         what: "the unlocks, trophies and challengers after a mode",
-        covers: &[
-            "melee/gm/gm_17DB",
-            "fn_8016F344",
-            "fn_8016F39C",
-            "fn_8016F548",
-            "fn_8016F740",
-            "fn_8016F870",
-            "fn_8016F9A8",
-            "fn_80173098",
-            "gm_80173224",
-            "gm_80173460",
-            "gm_80173498",
-            "fn_80173834",
-            "gm_8017390C",
-            "gm_80173C70",
-        ],
-        modes: NOT_STADIUM,
-    },
-    Gap {
-        what: "the 1P runs' falls and progress the bonuses ask about",
-        covers: &["gm_80172140 in a 1P run", "fn_80171A88 in a 1P run"],
-        modes: &[CL, AS, AD],
+        covers: &["gm_8017390C in Adventure"],
+        modes: SETUP_MODES,
     },
     // The modes' own code.
     Gap {
-        what: "Training's computer players' count and reset (a fighter made and unloaded mid-match)",
-        covers: &[
-            "gm_8016EDDC (a player joining a match)",
-            "fn_8016EF98 (a player leaving a match)",
-            "Player_800328D4 (the training menu's reset)",
-            "fn_80188550",
-            "fn_80188644",
-        ],
-        modes: &[TR],
-    },
-    Gap {
         what: "Ditto",
         covers: &["melee/it/kinds/itmetamon"],
-        modes: &[TR, EV],
+        modes: &[EV],
     },
     Gap {
-        what: "the Multi-Man modes' part of gmmultiman.c (Target Test's is ported)",
-        covers: &["melee/gm/gmmultiman"],
-        modes: &[MM],
-    },
-    Gap {
-        what: "Multi-Man Melee's list, mode and counter, and the Wire Frames",
+        what: "100-Man Melee past its 69th KO and won, a won 15-Minute Melee (ported; no session reaches them yet)",
         covers: &[
-            "the one-door screen's panel for match type",
-            "mnCharSel_8025C020's records for match type",
-            "melee/mn/mnhyaku",
-            "melee/gm/gm_181A",
-            "mnHyaku_8024CD64 (the Multi-Man list)",
-            "the multi-man counter of ifStock_802FAEC4",
+            "gm_80173460",
+            "gm_80173498",
+            "gmMainLib_8015D780",
+            "gm_80163A3C",
         ],
         modes: &[MM],
     },
@@ -869,8 +1032,6 @@ pub const MISSING: &[Gap] = &[
             "the event process",
             "(event 32's falls)",
             "an event's random fifth player",
-            "lbDvd_80018A2C",
-            "lbDvd_80018C2C",
         ],
         modes: &[EV],
     },
@@ -886,6 +1047,11 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Classic's mode, its intro and its bonus rounds",
         covers: &[
+            "the race's clear",
+            "Classic's allies drawn",
+            "gm_8017CBAC (Classic's clear)",
+            "gmClassic_801B3B40's target stage records",
+            "Classic's horde stage's",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
             "melee/gr/grfigureget",
@@ -934,8 +1100,9 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmadventure",
             "melee/gm/gm_17E4",
             "melee/gm/gm_1879",
+            "(Adventure's intro)",
         ],
-        modes: &[AD],
+        modes: &[AD, CL],
     },
     Gap {
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
@@ -952,7 +1119,7 @@ pub const MISSING: &[Gap] = &[
         modes: &[AD, DB],
     },
     Gap {
-        what: "the adventure enemies, their spawner and the 1P coin",
+        what: "the adventure enemies and their spawner",
         covers: &[
             "melee/it/kinds/itlikelike",
             "melee/it/kinds/itnokonoko",
@@ -960,27 +1127,17 @@ pub const MISSING: &[Gap] = &[
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
             "melee/it/kinds/itwhitebea",
-            "melee/it/kinds/itcoin",
             "melee/ft/ftCo_800C78B0",
             "fn_800C7890",
-            "it_802EA9FC",
             "grZakoGenerator_801CAF08",
             "it_8027B5B0 (an enemy of kind",
-            "grZakoGenerator_801CAC14",
-            "grZakoGenerator_801CACB8",
             "pl_8004049C (an enemy of kind",
         ],
         modes: &[AD, DB],
     },
     Gap {
         what: "a beaten enemy's or a trophy stage's trophy",
-        covers: &[
-            "it_8027CC88 (a 1P mode's trophy from an enemy)",
-            "Toy_803049F4",
-            "Toy_80304A58",
-            "tyDisplay_8031C354",
-            "tyDisplay_8031C5E4",
-        ],
+        covers: &["Toy_803049F4", "Toy_80304A58", "tyDisplay_8031C354"],
         modes: &[AD, CL, DB],
     },
     Gap {
@@ -995,24 +1152,11 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs, the endings, the staff roll, the trophy fall and congratulations",
+        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
         covers: &[
-            "gm_801BEE9C (congratulations' exit)",
-            "melee/gm/gmgover",
             "melee/gm/gm_19EF",
-            "melee/gm/gmmovieend",
-            "melee/lb/lb_01F8",
-            "melee/gm/gmstaffroll",
-            "melee/gm/gmregtyfall",
-            "melee/gm/gmregenddisp",
-            "melee/gm/gm_1A7A",
-            "melee/gm/gm_1A9B",
-            "gm_Mode_ClassicGOver_OnLoad",
             "gm_Mode_AdventureGOver_OnLoad",
             "gm_Mode_AllstarGOver_OnLoad",
-            "lbFile_80016760",
-            "tyDisplay_8031BB34",
-            "tyDisplay_8031BB94",
         ],
         modes: ENDINGS,
     },
@@ -1025,12 +1169,9 @@ pub const MISSING: &[Gap] = &[
             "un_80301BA8",
             "un_80301C64",
             "un_80301B48",
-            "onExitRegendCongrats",
             "un_80301028",
             "un_80301074",
             "un_803010C0",
-            "un_80301280",
-            "fn_803011EC",
             "un_80301D7C",
         ],
         modes: &[DB],
@@ -1213,8 +1354,8 @@ mod tests {
     }
 
     /// Every mode has its paths once and every gate its mode; the debug routes have no gate,
-    /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest
-    /// and Target Test, docs/player.md).
+    /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest,
+    /// Target Test and Training, docs/player.md).
     #[test]
     fn modes_match_the_gates() {
         for m in Mode::ALL {
@@ -1224,7 +1365,10 @@ mod tests {
                 "{}",
                 m.name()
             );
-            let lifted = matches!(m, Mode::Debug | Mode::HomeRun | Mode::TargetTest);
+            let lifted = matches!(
+                m,
+                Mode::Debug | Mode::HomeRun | Mode::TargetTest | Mode::Training
+            );
             assert_eq!(m.gate().is_none(), lifted, "{}", m.name());
         }
         for g in crate::game::menus_audit::GATES {

@@ -189,6 +189,37 @@ pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>)
     }
 }
 
+/// Destroys a shadow, `HSD_ShadowRemove`: its camera's reference dropped, every joint let go,
+/// its texture off the materials' shadow textures if active, its image's buffer, image
+/// descriptor and texture freed, then the shadow. Each block holds what it held as it goes
+/// back (docs/engine.md, a session's heap leftovers). `lbShadow_8000EE8C` is the same on an
+/// `LbShadow`'s shadow.
+#[doc(alias = "HSD_ShadowRemove")]
+#[doc(alias = "lbShadow_8000EE8C")]
+pub fn remove(objs: &mut Objects, s: Option<ShadowId>) {
+    let Some(s) = s else { return };
+    if let Some(c) = objs.shadows[s.0].camera {
+        cobj::unref(objs, Some(c));
+    }
+    delete_object(objs, Some(s), None);
+    let texture = objs.shadows[s.0].texture;
+    if objs.shadows[s.0].active {
+        mobj::delete_shadow_texture(objs, texture);
+    }
+    let sh = &objs.shadows[s.0];
+    if sh.image.allocated {
+        super::heap::mem_free(sh.image_addr);
+    }
+    // `HSD_ImageDescFree`: `hsdFreeMemPiece`.
+    super::heap::piece_free(sh.imagedesc_addr, 0x18);
+    if let Some(t) = texture {
+        super::export::with_image(|img| super::export::tobj(objs, img, t));
+    }
+    tobj::free(&mut objs.tobjs, texture);
+    super::export::with_image(|img| super::export::shadow(objs, img, s));
+    objs.shadows.free(s.0);
+}
+
 /// Renders the joints the shadow casts from through its camera, `HSD_ShadowStartRender`:
 /// nothing without joints; else the camera current, each joint's tree in the shadow render
 /// mode for the opaque and edge passes, and the camera's end. The texture's clearing and

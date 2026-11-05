@@ -338,7 +338,6 @@ impl Running<'_> {
     /// there), the end's animation for "no" to its frame 690, then the question and the
     /// score's text.
     #[doc(alias = "fn_8019F810")]
-    #[doc(alias = "fn_80168F2C")]
     pub fn game_over_screen_proc(&mut self) {
         let slot = usize::from(self.game.endings.game_over.slot);
         let trigger = self.game.pads.copy[slot].trigger;
@@ -362,14 +361,7 @@ impl Running<'_> {
                     g.result = 1;
                 }
             } else {
-                // `fn_80168F2C`: the count-down's tick, each fourth.
-                let w = &mut self.game.endings.tick_wait;
-                if *w == 0 {
-                    *w = 3;
-                    self.sfx_play_track(0x7E, 0x7F, 0x40, 1);
-                } else {
-                    *w -= 1;
-                }
+                self.count_tick();
                 let g = &mut self.game.endings.game_over;
                 let down = (g.score as u32).wrapping_sub(g.step);
                 g.score = if down < g.half as u32 {
@@ -632,6 +624,9 @@ impl Running<'_> {
     /// The game over scene's enter and exit data: the debug mode's (`game_over_data`), or a
     /// single-player mode's (its own task's).
     fn game_over_data(&self) -> GameOverData {
+        if self.one_player_game_over() {
+            return self.game.one_player.game_over;
+        }
         assert!(
             self.debug_mode_scene(),
             "a single-player mode's game over data isn't ported"
@@ -640,11 +635,22 @@ impl Running<'_> {
     }
 
     fn game_over_data_mut(&mut self) -> &mut GameOverData {
+        if self.one_player_game_over() {
+            return &mut self.game.one_player.game_over;
+        }
         assert!(
             self.debug_mode_scene(),
             "a single-player mode's game over data isn't ported"
         );
         &mut self.game.endings.debug_game_over
+    }
+
+    /// Whether the game over is Classic's or All-Star's (`gmClassic_80470850`).
+    fn one_player_game_over(&self) -> bool {
+        matches!(
+            self.game.game_mode,
+            super::super::one_player::GM_CLASSIC | super::super::one_player::GM_ALLSTAR
+        )
     }
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until

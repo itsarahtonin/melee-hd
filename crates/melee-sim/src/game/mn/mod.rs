@@ -18,6 +18,7 @@ pub mod diagram3;
 pub mod event;
 
 pub mod gallery;
+pub mod hyaku;
 pub mod info;
 pub mod info_bonus;
 pub mod item_switch;

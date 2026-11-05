@@ -1556,18 +1556,43 @@ impl Running<'_> {
         c.x64 = c.x60;
     }
 
-    /// `fn_UpdateObjAllocLimiter`: at the develop level, B and D-pad up cap the effects'
-    /// pool at its peak (or lift it), A and up the particles' and app-SRTs'.
-    // Ports `fn_UpdateObjAllocLimiter`'s level test; aliased once the develop level's limits
-    // are ported.
+    /// `fn_UpdateObjAllocLimiter`: at the develop level, B held and D-pad up caps the effects'
+    /// pool at its peak, or lifts the cap; A held and up does the same for the generators',
+    /// the particles' and the app-SRTs' pools. An allocation at a cap fails as
+    /// `HSD_ObjAlloc`'s null does (`pool::Pool::try_alloc`).
+    #[doc(alias = "fn_UpdateObjAllocLimiter")]
     fn db_alloc_limiter(&mut self, port: i32) {
         if self.game.gm.db_level != DEVELOP {
             return;
         }
-        if self.game.db_combo(port, BUTTON_B, BUTTON_UP)
-            || self.game.db_combo(port, BUTTON_A, BUTTON_UP)
-        {
-            crate::game::code::unported_call("the effect pools' limits (fn_UpdateObjAllocLimiter)");
+        if self.game.db_combo(port, BUTTON_B, BUTTON_UP) {
+            let on = !self.game.db.alloc_limits[0];
+            let effects = &mut self.game.ef.effects;
+            if on {
+                effects.set_num_limit(effects.peak());
+            }
+            effects.set_num_limit_flag(on);
+            self.game.db.alloc_limits[0] = on;
+        }
+        if self.game.db_combo(port, BUTTON_A, BUTTON_UP) {
+            let on = !self.game.db.alloc_limits[1];
+            let objs = &mut self.game.objs;
+            if on {
+                let g = &mut objs.generators.pool;
+                g.set_num_limit(g.peak());
+                g.set_num_limit_flag(true);
+                let p = &mut objs.particles.pool;
+                p.set_num_limit(p.peak());
+                p.set_num_limit_flag(true);
+                let s = &mut objs.app_srts.pool;
+                s.set_num_limit(s.peak());
+                s.set_num_limit_flag(true);
+            } else {
+                objs.generators.pool.set_num_limit_flag(false);
+                objs.particles.pool.set_num_limit_flag(false);
+                objs.app_srts.pool.set_num_limit_flag(false);
+            }
+            self.game.db.alloc_limits[1] = on;
         }
     }
 
@@ -1703,5 +1728,92 @@ impl Running<'_> {
             }
             self.db_print_bonuses(port, 0, 0);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::ef::Effect;
+    use crate::hsd::{appsrt::AppSrt, generator::Generator, particle::Particle};
+    use melee_data::archive::Archives;
+
+    /// A game at `level` whose four limited pools each have a peak of 2 with one object out,
+    /// and port 0 holding B and A as it presses D-pad up.
+    fn game_at(level: i32) -> Game {
+        let mut game = Game::default();
+        game.gm.db_level = level;
+        let e = &mut game.ef.effects;
+        let a = e.alloc(Effect::default());
+        e.alloc(Effect::default());
+        e.free(a);
+        let o = &mut game.objs;
+        let a = o.generators.pool.alloc(Generator::default());
+        o.generators.pool.alloc(Generator::default());
+        o.generators.pool.free(a);
+        let a = o.particles.pool.alloc(Particle::default());
+        o.particles.pool.alloc(Particle::default());
+        o.particles.pool.free(a);
+        let a = o.app_srts.pool.alloc(AppSrt::default());
+        o.app_srts.pool.alloc(AppSrt::default());
+        o.app_srts.pool.free(a);
+        let b = &mut game.db.buttons[0];
+        b.current = u32::from(BUTTON_A | BUTTON_B | BUTTON_UP);
+        b.pressed = u32::from(BUTTON_UP);
+        game
+    }
+
+    fn limiter(game: &mut Game, data: &Archives) {
+        Running { game, data }.db_alloc_limiter(0);
+    }
+
+    fn limited(game: &Game) -> [bool; 4] {
+        let o = &game.objs;
+        [
+            game.ef.effects.at_limit(),
+            o.generators.pool.at_limit(),
+            o.particles.pool.at_limit(),
+            o.app_srts.pool.at_limit(),
+        ]
+    }
+
+    #[test]
+    fn the_limiter_caps_each_pool_at_its_peak_on_the_develop_level_only() {
+        let data = Archives::default();
+        for level in 0..DEVELOP {
+            let mut game = game_at(level);
+            limiter(&mut game, &data);
+            assert_eq!(game.db.alloc_limits, [false; 2], "level {level}");
+            // Past the peak: nothing refuses.
+            let _ = game.ef.effects.alloc(Effect::default());
+            let _ = game.ef.effects.alloc(Effect::default());
+            assert_eq!(limited(&game), [false; 4], "level {level}");
+        }
+        let mut game = game_at(DEVELOP);
+        limiter(&mut game, &data);
+        assert_eq!(game.db.alloc_limits, [true; 2]);
+        // One out of a peak of two: one more each, then none.
+        assert_eq!(limited(&game), [false; 4]);
+        assert!(game.ef.effects.try_alloc(Effect::default()).is_some());
+        let o = &mut game.objs;
+        assert!(o.generators.pool.try_alloc(Generator::default()).is_some());
+        assert!(o.particles.pool.try_alloc(Particle::default()).is_some());
+        assert!(o.app_srts.pool.try_alloc(AppSrt::default()).is_some());
+        assert_eq!(limited(&game), [true; 4]);
+        assert!(game.ef.effects.try_alloc(Effect::default()).is_none());
+        // B and up again lift the effects' cap alone, A and up the others'.
+        game.db.buttons[0].current = u32::from(BUTTON_B | BUTTON_UP);
+        limiter(&mut game, &data);
+        assert_eq!(game.db.alloc_limits, [false, true]);
+        assert_eq!(limited(&game), [false, true, true, true]);
+        game.db.buttons[0].current = u32::from(BUTTON_A | BUTTON_UP);
+        limiter(&mut game, &data);
+        assert_eq!(game.db.alloc_limits, [false; 2]);
+        assert_eq!(limited(&game), [false; 4]);
+        // Up held, not pressed, does nothing.
+        game.db.buttons[0].pressed = 0;
+        game.db.buttons[0].current = u32::from(BUTTON_A | BUTTON_B | BUTTON_UP);
+        limiter(&mut game, &data);
+        assert_eq!(game.db.alloc_limits, [false; 2]);
     }
 }

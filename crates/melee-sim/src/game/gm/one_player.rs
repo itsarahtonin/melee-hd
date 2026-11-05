@@ -220,6 +220,17 @@ pub struct OnePlayer {
     pub allstar: AllStarData,
     pub allstar_x940: [u8; 25],
     pub allstar_opponents: [[u8; 4]; 25],
+    /// `gmClassic_80472AF8` and `gmClassic_8047086C`: Classic's and All-Star's matches'
+    /// enter and exit data.
+    pub match_start: StartMeleeData,
+    pub match_exit: super::match_exit::MatchExitInfo,
+    /// `lbl_804706D8`: the match's won trophies (a trophy, -1 for none, and its count).
+    pub match_trophies: [(i16, u8, u8); 12],
+    /// `lbl_80472D28` and `lbl_804D65C0`: the stage clear screen's state (`gmregclear.c`;
+    /// its `x104`, the new score, a 1P run's match hands back as its exit value).
+    pub clear: super::clear::Clear,
+    /// `gmClassic_80470850`: Classic's and All-Star's game over's enter and exit data.
+    pub game_over: super::endings::game_over::GameOverData,
 }
 
 /// `ARRAY_SIZE(gm_803DE650)`, Adventure's stages.
@@ -254,6 +265,11 @@ impl Default for OnePlayer {
             allstar: AllStarData::default(),
             allstar_x940: [0; 25],
             allstar_opponents: ALLSTAR_OPPONENTS,
+            match_start: StartMeleeData::default(),
+            match_exit: Default::default(),
+            match_trophies: [(0, 0, 0); 12],
+            clear: Default::default(),
+            game_over: Default::default(),
         }
     }
 }
@@ -524,6 +540,7 @@ impl Running<'_> {
             GM_TRAINING => Some(&o.training_css),
             GM_HOME_RUN => Some(&self.game.vs_melee.css),
             super::event::GM_EVENT => Some(&self.game.event.css),
+            m if super::multi_man::is_multi_man(m) => Some(&self.game.multi_man.css),
             _ => None,
         }
     }
@@ -535,6 +552,7 @@ impl Running<'_> {
             GM_TRAINING => Some(&mut self.game.one_player.training_css),
             GM_HOME_RUN => Some(&mut self.game.vs_melee.css),
             super::event::GM_EVENT => Some(&mut self.game.event.css),
+            m if super::multi_man::is_multi_man(m) => Some(&mut self.game.multi_man.css),
             _ => None,
         }
     }
@@ -852,7 +870,7 @@ impl Running<'_> {
 
     /// `gm_801B5FB4`: back to the menu, or the choices saved and given to the run, the first
     /// round next, the announcer's bank and the round's setup (`gm_801B5324`).
-    // Ports `gm_801B5FB4`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5FB4")]
     pub fn allstar_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -881,7 +899,7 @@ impl Running<'_> {
     /// costumes kept apart from the player's (`gmRegSetupEnemyColorTable`; the last round's
     /// Mr. Game & Watches in the table's), the game cache's player first and waited for, then
     /// the opponents and the stage, and their sound banks.
-    // Ports `gm_801B5324`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5324")]
     pub fn allstar_round_setup(&mut self, round: usize) {
         let (start, count) = ALLSTAR_ROUNDS[round];
         let opponents = self.game.one_player.allstar_opponents;
@@ -1138,7 +1156,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D4A8")]
     #[doc(alias = "gmMainLib_8015D0F4")]
     #[doc(alias = "gmMainLib_8015D21C")]
-    fn all_cleared_one_mode(&self) -> bool {
+    pub(super) fn all_cleared_one_mode(&self) -> bool {
         let r = &self.game.game_data.thing.save_data.unk_8;
         [r.x1C, r.x10, r.x14]
             .into_iter()
@@ -1388,7 +1406,7 @@ impl Running<'_> {
 const CKIND_GAMEWATCH: i8 = 3;
 
 /// `gm_803DEC4C`: each All-Star round's first opponent in the shuffled table and their count.
-const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
+pub(super) const ALLSTAR_ROUNDS: [(usize, usize); 13] = [
     (0, 1),
     (1, 1),
     (2, 1),
@@ -1475,15 +1493,15 @@ const ALLSTAR_LEVELS: [(u8, u16, u16, [u8; 10]); 65] = [
     (1, 55, 200, [7, 0, 0, 0, 0, 0, 0, 0, 0, 0]),
 ];
 
-fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
+pub(super) fn allstar_level(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
     ALLSTAR_LEVELS[usize::from(level) + usize::from(round) * 5]
 }
 
 /// `gmRegSetupEnemyColorTable`: an opponent in the player's character and costume gets the
 /// first other costume no other opponent wears; a console halts on an assertion if none is
 /// left.
-// Ports `gmRegSetupEnemyColorTable`; aliased once a check reaches it.
-// Ports `gm_8018A25C`; aliased once a check reaches it.
+#[doc(alias = "gmRegSetupEnemyColorTable")]
+#[doc(alias = "gm_8018A25C")]
 pub fn enemy_color_table(ckind: i8, color: u8, ckinds: &[i8; 3], colors: &mut [u8; 3]) {
     let n = crate::game::playback::costume_count(ckind as u8);
     for i in 0..3 {
@@ -1629,6 +1647,83 @@ impl super::super::state::Game {
     #[doc(alias = "gm_801631F0")]
     pub fn homerun_record_total(&self) -> u32 {
         (0..25u8).fold(0u32, |s, i| s.wrapping_add(self.homerun_record(i)))
+    }
+
+    /// Whether the character has won 10-Man (or 100-Man) Melee (`gm_8016365C`,
+    /// `gm_801639C0`, negated).
+    #[doc(alias = "gm_8016365C")]
+    #[doc(alias = "gm_801639C0")]
+    pub fn multi_man_won(&self, hundred: bool, hud: u8) -> bool {
+        let r = self.record_1p(hud);
+        if hundred { r.b2 } else { r.b1 }
+    }
+
+    /// 10-Man's (or 100-Man's) best KOs without a win, -1 with one (`gm_80163690`,
+    /// `gm_801639F4`).
+    #[doc(alias = "gm_80163690")]
+    #[doc(alias = "gm_801639F4")]
+    pub fn multi_man_best(&self, hundred: bool, hud: u8) -> i32 {
+        let r = self.record_1p(hud);
+        if self.multi_man_won(hundred, hud) {
+            -1
+        } else if hundred {
+            r.x9C
+        } else {
+            r.x98
+        }
+    }
+
+    /// A won 10-Man's (or 100-Man's) best time (`gm_801636D8`, `gm_80163A3C`; called only
+    /// for a win, whose outputs they write). `gm_80163A3C`, 100-Man's, is aliased once a check
+    /// reaches it (a select after a won 100-Man Melee).
+    #[doc(alias = "gm_801636D8")]
+    pub fn multi_man_time(&self, hundred: bool, hud: u8) -> [u8; 4] {
+        assert!(
+            self.multi_man_won(hundred, hud),
+            "gm_801636D8 without a win leaves its outputs unwritten"
+        );
+        let r = self.record_1p(hud);
+        Self::frames_to_time(if hundred { r.x9C } else { r.x98 } as u32)
+    }
+
+    /// Every character's best 10-Man (or 100-Man) times summed, once every one has won
+    /// (`gm_80163838`, `gm_80163B9C`).
+    #[doc(alias = "gm_80163838")]
+    #[doc(alias = "gm_80163B9C")]
+    pub fn multi_man_time_total(&self, hundred: bool) -> Option<[u8; 4]> {
+        let mut total = 0u32;
+        for i in 0..25u8 {
+            if !self.multi_man_won(hundred, i) {
+                return None;
+            }
+            let r = self.record_1p(i);
+            total = total.wrapping_add(if hundred { r.x9C } else { r.x98 } as u32);
+        }
+        Some(Self::frames_to_time(total))
+    }
+
+    /// The best KOs of 3-Minute, 15-Minute, Endless and Cruel Melee (`mode` 0 to 3).
+    #[doc(alias = "gm_Get3MinMultimanHighscore")]
+    #[doc(alias = "gm_Get15MinMultimanHighscore")]
+    #[doc(alias = "gm_GetEndlessHighscore")]
+    #[doc(alias = "gm_GetCruelHighscore")]
+    pub fn multi_man_kos(&self, mode: u8, hud: u8) -> i32 {
+        let r = self.record_1p(hud);
+        match mode {
+            0 => i32::from(r.xA0),
+            1 => i32::from(r.xA2),
+            2 => r.xA4,
+            _ => r.xA8,
+        }
+    }
+
+    /// Every character's best KOs of a mode summed, wrapping.
+    #[doc(alias = "gm_Get3MinMultimanTotalHighscore")]
+    #[doc(alias = "gm_Get15MinMultimanTotalHighscore")]
+    #[doc(alias = "gm_GetEndlessTotalHighscore")]
+    #[doc(alias = "gm_GetCruelTotalHighscore")]
+    pub fn multi_man_kos_total(&self, mode: u8) -> i32 {
+        (0..25u8).fold(0i32, |s, i| s.wrapping_add(self.multi_man_kos(mode, i)))
     }
 
     /// Training's best combo (`gm_80163274`, `gmMainLib_8015D7EC`).

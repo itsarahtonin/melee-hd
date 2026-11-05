@@ -9,6 +9,7 @@ use melee_sim::game::mirror::{Cx, Mirror};
 use melee_sim::game::structs::PlayerInitData;
 
 use crate::compare::Comparer;
+use crate::import::sym;
 
 /// `gmClassic_80470708`, `gm_80490960`, `gm_80490AA8`, and Training's `css_data` and
 /// `sss_data` (`gmtrainingmode.c`'s).
@@ -43,6 +44,13 @@ const TRAINING_ARCHIVE: u32 = 0x804D_6628;
 const TRAINING_MODELS: u32 = 0x804D_662C;
 const TRAINING_ENTER: u32 = 0x8048_E4C0;
 const TRAINING_EXIT: u32 = 0x8048_E5F8;
+/// `gmClassic_80472AF8`, `gmClassic_8047086C`: the 1P runs' matches' enter and exit data;
+/// `lbl_804706D8`, the match's won trophies.
+const MATCH_START: u32 = 0x8047_2AF8;
+const MATCH_EXIT: u32 = 0x8047_086C;
+const MATCH_TROPHIES: u32 = 0x8047_06D8;
+/// `lbl_80472D28`, the clear screen's state (`gmregclear.c`).
+const CLEAR_STATE: u32 = 0x8047_2D28;
 /// The ports and entries: Target Test's, the Home-Run Contest's, Training's.
 const BYTES: [(u32, &str); 6] = [
     (0x804D_68E8, "gm_804D68E8"),
@@ -229,6 +237,156 @@ impl Comparer<'_> {
             self.u16(TRAINING_STAGE),
         );
         self.training();
+        let o = &self.game.one_player;
+        let m = self.mem_view();
+        o.match_start
+            .compare(&m, MATCH_START, "gmClassic_80472AF8", self);
+        self.match_exit_info("gmClassic_8047086C", &o.match_exit, MATCH_EXIT);
+        let theirs: [(i16, u8, u8); 12] = core::array::from_fn(|i| {
+            let a = MATCH_TROPHIES + 4 * i as u32;
+            (self.u16(a) as i16, self.u8(a + 2), self.u8(a + 3))
+        });
+        self.check("lbl_804706D8", "won trophies", o.match_trophies, theirs);
+        self.clear_state();
+    }
+
+    /// The stage clear screen's state, `lbl_80472D28` (`gmregclear.c`), and `lbl_804D65C0`.
+    fn clear_state(&mut self) {
+        let c = self.game.one_player.clear.clone();
+        let a = CLEAR_STATE;
+        let name = "lbl_80472D28";
+        let theirs = self.u32(a);
+        self.compare_handle(&format!("{name}.x0"), "GObjId", c.gobj.map(|g| g.0), theirs);
+        for (k, j) in c.joints.iter().enumerate() {
+            let theirs = self.u32(a + 4 + 4 * k as u32);
+            let path = format!("{name}.joints[{k}]");
+            self.compare_handle(&path, "JObjId", j.map(|j| j.0), theirs);
+        }
+        let theirs = self.u32(a + 0x2C);
+        self.compare_handle(
+            &format!("{name}.x2C"),
+            "GObjId",
+            c.blur.map(|g| g.0),
+            theirs,
+        );
+        let m = self.mem_view();
+        c.image.compare(&m, a + 0x30, &format!("{name}.x30"), self);
+        if c.buffer != 0 {
+            let theirs = self.u32(a + 0x30);
+            self.check(name, "x30's pixels' block", c.buffer, theirs);
+        }
+        let theirs = self.u32(a + 0x48);
+        self.check(name, "x48 (the archive)", c.blocks.1, theirs);
+        let refs = [
+            ("x4C", c.model.joint),
+            ("x50", c.model.anims),
+            ("x54", c.model.matanims),
+            ("x58", c.model.shapeanims),
+            ("x5C", c.lights),
+            ("x60", c.cameras[0]),
+            ("x64", c.cameras[1]),
+            ("x68", c.fog),
+        ];
+        for (k, (f, d)) in refs.into_iter().enumerate() {
+            let theirs = self.u32(a + 0x4C + 4 * k as u32);
+            self.compare_data(&format!("{name}.{f}"), d, theirs);
+        }
+        let texts = c.texts.iter().chain([&c.points]).chain(c.rows.iter());
+        for (k, t) in texts.enumerate() {
+            let theirs = self.u32(a + 0x6C + 4 * k as u32);
+            let path = format!("{name}.x{:X}", 0x6C + 4 * k);
+            self.compare_handle(&path, "TextId", t.map(|t| t.0), theirs);
+        }
+        let theirs: [i32; 7] = core::array::from_fn(|k| self.u32(a + 0xA4 + 4 * k as u32) as i32);
+        self.check(name, "xA4 (the rows' points shown)", c.shown, theirs);
+        self.check(
+            name,
+            "xC0, xC4, xC8 (the list's first row, when it moved, moved)",
+            (c.first, c.moved_at, c.moved),
+            (self.u16(a + 0xC0), self.u32(a + 0xC4), self.u8(a + 0xC8)),
+        );
+        let ours = [
+            c.xCC, c.xD0, c.xD4, c.xD8, c.xDC, c.xE0, c.xE4, c.xE8, c.xEC, c.xF0, c.xF4, c.xF8,
+            c.xFC, c.x100, c.x104,
+        ];
+        let theirs: [i32; 15] = core::array::from_fn(|k| self.u32(a + 0xCC + 4 * k as u32) as i32);
+        self.check(
+            name,
+            "xCC to x104 (the bonuses and the score)",
+            ours,
+            theirs,
+        );
+        self.check(
+            name,
+            "x108, x10A, x10C, x110",
+            (c.x108, c.x10A, c.x10C.to_bits(), c.x110),
+            (
+                self.u16(a + 0x108) as i16,
+                self.u16(a + 0x10A) as i16,
+                self.u32(a + 0x10C),
+                self.u32(a + 0x110),
+            ),
+        );
+        let ours = [
+            c.x114, c.x115, c.x116, c.x117, c.x118, c.x119, c.x11A, c.x11B, c.x11C, c.x11D, c.x11E,
+            c.x11F,
+        ];
+        let theirs: [u8; 12] = core::array::from_fn(|k| self.u8(a + 0x114 + k as u32));
+        self.check(name, "x114 to x11F (the screen's flags)", ours, theirs);
+        let theirs = self.u32(sym("lbl_804D65C0")) as i32;
+        self.check("lbl_804D65C0", "the score's step", c.step, theirs);
+        let l = self.game.gm.left;
+        let at = melee_sim::game::gm::one_player_match::LEFT_LIST;
+        let theirs: [[i8; 0x1C]; 2] = core::array::from_fn(|k| {
+            core::array::from_fn(|i| self.u8(at + 0x1C * k as u32 + i as u32) as i8)
+        });
+        self.check(
+            "lbl_8046B668",
+            "the characters left",
+            [l.arr1, l.arr2],
+            theirs,
+        );
+    }
+
+    /// The blurred copy's user data (`CameraBlurData`), the GObj at `t`.
+    pub(crate) fn blur_data(&mut self, path: &str, t: u32) {
+        let (ud, release) = (self.u32(t + 0x2C), self.u32(t + 0x30));
+        self.check(path, "blur release", melee_sim::lb::blur::REMOVE, release);
+        let Some(b) = self.game.blur else {
+            self.diff(path, "blur user data", "none", format!("{ud:#x}"));
+            return;
+        };
+        self.check(path, "blur address", b.addr, ud);
+        self.check(
+            path,
+            "blur position, scale",
+            (b.pos.map(f32::to_bits), b.scale.map(f32::to_bits)),
+            (
+                [self.u32(ud), self.u32(ud + 4)],
+                [self.u32(ud + 8), self.u32(ud + 0xC)],
+            ),
+        );
+        self.check(
+            path,
+            "blur alpha, size, mode, callback, image",
+            (
+                b.base_alpha,
+                b.blur_size,
+                b.mode,
+                b.callback.map_or(0, |c| c.0),
+                b.image,
+            ),
+            (
+                self.u8(ud + 0x10),
+                self.u8(ud + 0x11),
+                self.u8(ud + 0x12),
+                self.u32(ud + 0x18),
+                self.u32(ud + 0x1C),
+            ),
+        );
+        if let Some(tint) = b.tint {
+            self.check(path, "blur tint", tint.to_bits(), self.u32(ud + 0x20));
+        }
     }
 
     /// Training's statics (`melee_sim::game::gm::training`): `lbl_80473700`, the menu's part

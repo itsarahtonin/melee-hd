@@ -54,6 +54,7 @@ const MS_REBIRTH_WAIT: i32 = 13;
 /// The fields the player blocks and the match read and write.
 impl Game {
     #[doc(alias = "ftLib_IsSleeping")]
+    #[doc(alias = "ftLib_IsSleeping_8008731C")]
     pub fn ft_is_sleeping(&self, gobj: GObjId) -> bool {
         self.fighter(gobj).is_sleeping
     }

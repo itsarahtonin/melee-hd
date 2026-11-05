@@ -204,7 +204,7 @@ members! {
     Klap, klap, KlapVars, [KLAP];
     Kyasarin, kyasarin, KyasarinVars, [KYASARIN];
     KyasarinEgg, kyasarin_egg, KyasarinEggVars, [KYASARIN_EGG];
-    Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE, NOKONOKO, PATAPATA, WHITEBEA, ZGSHELL, ZRSHELL, MATO];
+    Zako, zako, PokemonVars, [KURIBOH, LEADEAD, OCTAROCK, OTTOSEA, OCTAROCK_STONE, NOKONOKO, PATAPATA, WHITEBEA, LIKELIKE, ZGSHELL, ZRSHELL, MATO];
     KirbySpitStar, kirby_spit_star, PokemonVars, [KIRBY_UNK2];
     GameWatch, game_watch, GameWatchVars, [GAME_WATCH_GREENHOUSE, GAME_WATCH_MANHOLE, GAME_WATCH_FIRE, GAME_WATCH_PARACHUTE, GAME_WATCH_TURTLE, GAME_WATCH_BREATH, GAME_WATCH_JUDGE, GAME_WATCH_PANIC, GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF, KIRBY_GAME_WATCH_CHEF_PAN];
     GameWatchRescue, game_watch_rescue, GameWatchRescueVars, [GAME_WATCH_RESCUE];
@@ -227,6 +227,7 @@ members! {
     Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
     LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
     Coin, coin, it_2E5A_ItemVars, [UNK4];
+    TrophyCoin, trophy_coin, itCoin_ItemVars, [COIN];
     Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
     Yaku, yaku, YakuVars, [PKIND_RANDOM];
 }

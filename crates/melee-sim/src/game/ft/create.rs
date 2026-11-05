@@ -133,6 +133,7 @@ impl Running<'_> {
             .world
             .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
         if let Some(file) = self.game.load_fighter_data(self.data, info.kind) {
+            self.check_preloaded(file);
             self.disc_load(file, super::data::MAIN_MEMORY);
         }
         self.fighter_create_rest(gobj, f, info)
@@ -141,9 +142,13 @@ impl Running<'_> {
     /// A fighter's block and its attributes' (`HSD_ObjAlloc` on `fighter_alloc_data` and
     /// `fighter_dat_attrs_alloc_data`): after the menus the block holds what they left.
     pub(super) fn alloc_fighter_block(&mut self) -> FighterId {
-        // `HSD_ObjAlloc` hands the block back uncleared; a fresh heap's is zero (see
-        // `docs/engine.md`).
-        let f = FighterId(self.game.fighters.alloc(Fighter::default()));
+        // `HSD_ObjAlloc` hands the block back uncleared: one a fighter freed this scene holds
+        // what it left (the slot's), a fresh heap's is zero (see `docs/engine.md`).
+        let f = FighterId(self.game.fighters.alloc_stale(Fighter::default()));
+        let fresh = crate::game::leftovers::pool_grew();
+        if self.game.rules.slippi {
+            self.game.fighters[f.0] = Fighter::default();
+        }
         // The allocator model's address (`hsd::heap`), else one the frontend seeded, else 0.
         let seeded = self.game.ft.address_seed.pop_front();
         let address = match self.game.fighters.addr(f.0) {
@@ -153,11 +158,7 @@ impl Running<'_> {
         // After the menus the block holds what they left, where Slippi's Init Player Data
         // (`80068EEC`) doesn't zero it (docs/engine.md, a session's heap leftovers).
         if !self.game.rules.slippi
-            && let Some(left) = crate::game::leftovers::import(
-                self.data,
-                address,
-                crate::game::leftovers::pool_grew(),
-            )
+            && let Some(left) = crate::game::leftovers::import(self.data, address, fresh)
         {
             self.game.fighters[f.0] = left;
             // Where the block held the GPU's pixels, which the comparer leaves out while they
@@ -171,7 +172,11 @@ impl Running<'_> {
             } else {
                 self.game.ft.render_leftovers.insert(f.0, rt);
             }
+        } else if fresh || !crate::hsd::heap::image_on() {
+            self.game.ft.render_leftovers.remove(&f.0);
         }
+        // A slot handed out again keeps its last fighter's record of the GPU's pixels, as
+        // its block keeps them where this one doesn't write.
         self.game.ft.addresses.insert(f.0, address);
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);
@@ -190,6 +195,7 @@ impl Running<'_> {
         );
         let costume = i32::from(self.game.fighters[f.0].costume_id);
         if let Some(file) = self.game.load_costume(self.data, kind, costume) {
+            self.check_preloaded(&file);
             self.disc_load(&file, super::data::MAIN_MEMORY);
         }
         self.load_costume_joint(gobj);

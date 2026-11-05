@@ -332,22 +332,26 @@ impl Comparer<'_> {
             if o != t {
                 self.diff(
                     &format!("{p} pool {k:?}"),
-                    "used, peak, free count, head, size",
+                    "used, peak, free count, head, size, number limit and its flag",
                     format!(
-                        "{} {} {} {:x?} {:#x}",
+                        "{} {} {} {:x?} {:#x} {} {}",
                         o.used,
                         o.peak,
                         o.free.len(),
                         o.free.last(),
-                        o.size
+                        o.size,
+                        o.num_limit,
+                        o.num_limit_flag
                     ),
                     format!(
-                        "{} {} {} {:x?} {:#x}",
+                        "{} {} {} {:x?} {:#x} {} {}",
                         t.used,
                         t.peak,
                         t.free.len(),
                         t.free.last(),
-                        t.size
+                        t.size,
+                        t.num_limit,
+                        t.num_limit_flag
                     ),
                 );
             }

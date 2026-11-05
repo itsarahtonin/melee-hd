@@ -191,6 +191,7 @@ pub fn common(game: &mut Game, gobj: GObjId) -> CommonVars<'_> {
         kinds::KURIBOH..=kinds::OCTAROCK_STONE
         | kinds::NOKONOKO
         | kinds::PATAPATA
+        | kinds::LIKELIKE
         | kinds::WHITEBEA
         | kinds::ZGSHELL
         | kinds::ZRSHELL
@@ -229,7 +230,20 @@ pub fn clear_x1e(game: &mut Game, gobj: GObjId) {
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     if kind == COIN {
-        code::unported_call("grZakoGenerator_801CAC14 (a coin)");
+        // A trophy point's slot (the last) forgets the coin it made.
+        let slots = r
+            .game
+            .gr
+            .zako
+            .slots
+            .as_mut()
+            .expect("grzakogenerator.c: slots");
+        for slot in &mut slots[80..81] {
+            if slot.item == Some(gobj) {
+                slot.item = None;
+            }
+        }
+        return;
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
@@ -667,11 +681,60 @@ pub fn element_damage(r: &Running, gobj: GObjId) -> f32 {
     mem(fp::frsp(f64::from(n)))
 }
 
-/// A 1P mode's chance of a trophy from a beaten enemy, `it_8027CC88`: VS draws nothing.
+/// A 1P mode's chance of a trophy from a beaten enemy, `it_8027CC88`: one draw in the common
+/// data's `x14`; on a hit with `stage_info.x708` at 0, the stage's trophy (`Ground_801C5840`)
+/// or one drawn among those of its display category and of its class or class 2
+/// (`tyDisplay_8031C354` twice) drops from the enemy's middle as the 1P coin, flung sideways
+/// by the items' common data's `x54` and up by its attributes' `x18`, and `x708` becomes 1;
+/// with `x708` set, a hit counts it up to the common data's `x18` and back to 0. VS draws
+/// nothing.
+///
+/// The two lookups write up to ten trophies each into one ten-entry stack buffer (Melee's
+/// bugs, docs/melee-bugs.md): the second's overrun lands on the vector after it and the
+/// frame's padding, which the ECB centre's write takes back only after the draw has read the
+/// list, so the list reads back whole and twenty entries hold it.
 #[doc(alias = "it_8027CC88")]
-pub fn trophy_roll(r: &mut Running, _gobj: GObjId) -> Option<GObjId> {
-    if crate::game::gm::is_1p_mode(r.game) {
-        code::unported_call("it_8027CC88 (a 1P mode's trophy from an enemy)");
+pub fn trophy_roll(r: &mut Running, gobj: GObjId) -> Option<GObjId> {
+    if !crate::game::gm::is_1p_mode(r.game) {
+        return None;
+    }
+    let zako = r.game.it.zako.expect("no enemies' common data");
+    let n = fp::fctiwz(reg(r.data.f32(zako.at(0x14))));
+    if r.game.objs.rng.below(n) != 0 {
+        return None;
+    }
+    use crate::game::gr::grlib;
+    if grlib::x708(r.game) == 0 {
+        let mut id = crate::game::gr::ground::x6e4_drawn(r.game);
+        if id == -1 {
+            return None;
+        }
+        let mut list = [0i32; 20];
+        let a = r.display_kin(id, &mut list, 10, 0x63);
+        let b = r.display_kin(id, &mut list[a as usize..], 10, 2);
+        let total = a.wrapping_add(b);
+        if total != 0 {
+            id = list[r.game.objs.rng.below(total) as usize];
+        }
+        let pos = super::lib26b1::ecb_center(r.game, gobj);
+        let coin = super::kinds::trophycoin::spawn(r, None, pos, id, 0)?;
+        let f = reg(r.game.objs.rng.draw_f32());
+        let x54 = reg(super::item::common_data(r.game).f32(r.data, 0x54));
+        let vx = fp::fmuls(x54, fp::fmuls(2.0, fp::fsubs(f, 0.5)));
+        let vy = super::item::attr_of(item(r.game, coin)).f32(r.data, 0x18);
+        let ip = item_mut(r.game, coin);
+        ip.x40_vel.x = mem(vx);
+        ip.x40_vel.y = vy;
+        ip.x40_vel.z = 0.0;
+        grlib::set_x708(r.game, 1);
+        return Some(coin);
+    }
+    let top = reg(r.data.f32(zako.at(0x18)));
+    let x = grlib::x708(r.game);
+    if fp::frsp(f64::from(x)) >= top {
+        grlib::set_x708(r.game, 0);
+    } else {
+        grlib::set_x708(r.game, x.wrapping_add(1) as i16);
     }
     None
 }
@@ -703,7 +766,21 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
     let kind = item(r.game, gobj).kind;
     ko_bonus(r, gobj);
     if kind == COIN {
-        code::unported_call("grZakoGenerator_801CACB8 (a coin)");
+        // A trophy point's slot (the last) frees, the coin it made taken.
+        let slots = r
+            .game
+            .gr
+            .zako
+            .slots
+            .as_mut()
+            .expect("grzakogenerator.c: slots");
+        for slot in &mut slots[80..81] {
+            if slot.item == Some(gobj) {
+                slot.point = -1;
+                slot.item = None;
+            }
+        }
+        return;
     }
     let idx = common(r.game, gobj).idx();
     if idx != -1 {
@@ -747,13 +824,15 @@ impl Running<'_> {
             kinds::OTTOSEA => 0xD4,
             kinds::NOKONOKO => 0xCF,
             kinds::PATAPATA => 0xD0,
+            kinds::LIKELIKE => 0xD2,
             kinds::WHITEBEA => 0xD5,
             // No bonus (the switch's default).
             kinds::KLAP
             | kinds::KYASARIN
             | kinds::KYASARIN_EGG
             | kinds::ZGSHELL
-            | kinds::ZRSHELL => return,
+            | kinds::ZRSHELL
+            | kinds::COIN => return,
             _ => code::unported_call(&format!("pl_8004049C (an enemy of kind {kind})")),
         };
         let points = bonus_points(bonus);

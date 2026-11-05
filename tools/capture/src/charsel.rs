@@ -259,6 +259,7 @@ impl<'a> Comparer<'a> {
         self.one_player();
         self.home_run();
         self.event_mode();
+        self.multi_man();
         // The Hanyu selects' own data (`gm_8049BEE8`, `gm_8049C030`), the debug mode's.
         let d = &game.debug_mode;
         let (hc, hs) = (0x8049_BEE8, 0x8049_C030);
@@ -325,6 +326,7 @@ impl<'a> Comparer<'a> {
             let ours = match c.entered_mode {
                 0x03..=0x05 => 0x8047_0708,
                 0x0F => 0x8049_0960,
+                0x21..=0x26 => 0x8049_50F0,
                 0x1C => 0x8048_E230,
                 0x2B => 0x8049_7758,
                 melee_sim::game::gm::GM_HANYU_CSS => 0x8049_BEE8,

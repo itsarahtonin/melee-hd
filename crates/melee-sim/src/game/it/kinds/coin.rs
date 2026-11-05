@@ -591,8 +591,8 @@ pub fn worth(r: &mut Running, gobj: GObjId) -> i32 {
 }
 
 /// Forgets a GObj the coin points to, `it_2E5A_Logic115_EvtUnk` (`it_8026B894`).
-// Ports `it_2E5A_Logic115_EvtUnk`; aliased once a check reaches it (nothing dispatches the
-// items' `evt_unk` yet).
+// Ports `it_2E5A_Logic115_EvtUnk`; aliased once a check reaches it (a fighter's unload
+// with the item out).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -2,6 +2,7 @@
 //! statuses) and the button maps, the scene loop's state and frame clocks, the VS match's
 //! controller, the player library's counters and the game-mode layer's globals.
 
+use melee_sim::game::gm::opponents::Opponents;
 use melee_sim::game::gm::pause::PauseScreen;
 use melee_sim::game::gm::vs::Ranks;
 use melee_sim::game::handles::CodeRef;
@@ -243,6 +244,46 @@ impl R<'_> {
         }
     }
 
+    /// The single-player matches' joining opponents, `lbl_8046B488`.
+    fn opponents(&self) -> Opponents {
+        let at = sym("lbl_8046B488");
+        let b = |o: u32| self.u8(at + o);
+        let s = |o: u32| self.u8(at + o) as i8;
+        let code = |o: u32| melee_sim::game::mirror::code(self.u32(at + o));
+        Opponents {
+            kinds: core::array::from_fn(|i| s(i as u32)),
+            colors: core::array::from_fn(|i| s(3 + i as u32)),
+            cpu_level: b(6),
+            left: b(7),
+            total: b(8),
+            at_once: b(9),
+            first_point: b(0xA),
+            costume_mode: b(0xB),
+            costume: b(0xC),
+            kind_mode: b(0xD),
+            copy_mode: b(0xE),
+            more_flag6: b(0xF),
+            flags: b(0x10),
+            x11: core::array::from_fn(|i| b(0x11 + i as u32)),
+            attack_ratio: self.f32(at + 0x14),
+            defense_ratio: self.f32(at + 0x18),
+            model_scale: self.f32(at + 0x1C),
+            costumes: core::array::from_fn(|i| s(0x20 + i as u32)),
+            characters: core::array::from_fn(|i| s(0xA2 + i as u32)),
+            copies: core::array::from_fn(|i| s(0x124 + i as u32)),
+            slot_index: core::array::from_fn(|i| s(0x1A6 + i as u32)),
+            x1ac: b(0x1AC),
+            x1ad: b(0x1AD),
+            x1ae: core::array::from_fn(|i| s(0x1AE + i as u32)),
+            x1b2: b(0x1B2),
+            x1b3: core::array::from_fn(|i| s(0x1B3 + i as u32)),
+            on_end: code(0x1B8),
+            on_join: code(0x1BC),
+            pool: core::array::from_fn(|i| s(0x1C0 + i as u32)),
+            x1db: core::array::from_fn(|i| b(0x1DB + i as u32)),
+        }
+    }
+
     /// The running scene's frame function: `gm_804D6720`'s scene kind's entry in `scenes`.
     fn on_frame(&self) -> Option<CodeRef> {
         let info = self.u32(sym("gm_804D6720"));
@@ -319,7 +360,7 @@ impl<'a> Importer<'a> {
         let attack = r.u16(sym("unk_804D6480"));
         let db_level = r.u32(sym("DbLevel")) as i32;
         let scene_index = r.u8(sym("state_machine") + 3);
-        let spawn_flags = r.u8(sym("lbl_8046B488") + 0x10);
+        let opponents = r.opponents();
         let scene_gobj = r.u32(sym("gm_804D672C"));
         let pause = sym("lbl_80479B10");
         let pause_words: [u32; 5] = core::array::from_fn(|i| r.u32(pause + 4 * i as u32));
@@ -354,7 +395,7 @@ impl<'a> Importer<'a> {
         g.on_frame = on_frame;
         g.scene_index = scene_index;
         g.ranks = ranks;
-        g.spawn_flags = spawn_flags;
+        g.opponents = opponents;
         g.pause = pause;
         self.game.gm.scene_gobj = self.import_handle("GObjId", scene_gobj).map(GObjId);
         // The scheduler reads the scene loop's pause mask through `HSD_GObjLibInitData`.
@@ -365,6 +406,43 @@ impl<'a> Importer<'a> {
 }
 
 impl<'a> Comparer<'a> {
+    /// The joining opponents' setup (`lbl_8046B488`), field by field.
+    fn compare_opponents(&mut self, o: &Opponents, t: &Opponents) {
+        let n = "lbl_8046B488";
+        let head = |o: &Opponents| {
+            (
+                o.kinds,
+                o.colors,
+                [o.cpu_level, o.left, o.total, o.at_once, o.first_point],
+                [
+                    o.costume_mode,
+                    o.costume,
+                    o.kind_mode,
+                    o.copy_mode,
+                    o.more_flag6,
+                ],
+                o.flags,
+                o.x11,
+            )
+        };
+        self.check(n, "kinds to flags", head(o), head(t));
+        let ratios =
+            |o: &Opponents| [o.attack_ratio, o.defense_ratio, o.model_scale].map(f32::to_bits);
+        self.check(n, "the ratios and scale", ratios(o), ratios(t));
+        self.check(n, "costumes", o.costumes.to_vec(), t.costumes.to_vec());
+        self.check(
+            n,
+            "characters",
+            o.characters.to_vec(),
+            t.characters.to_vec(),
+        );
+        self.check(n, "copies", o.copies.to_vec(), t.copies.to_vec());
+        let tail = |o: &Opponents| (o.slot_index, o.x1ac, o.x1ad, o.x1ae, o.x1b2, o.x1b3);
+        self.check(n, "slots to x1B7", tail(o), tail(t));
+        self.check(n, "callbacks", (o.on_end, o.on_join), (t.on_end, t.on_join));
+        self.check(n, "pool", (o.pool, o.x1db), (t.pool, t.x1db));
+    }
+
     fn r(&self) -> R<'a> {
         R { mem: self.mem }
     }
@@ -465,12 +543,7 @@ impl<'a> Comparer<'a> {
                 r.u16(sym("unk_804D6480")),
             ),
         );
-        self.check(
-            "lbl_8046B488",
-            "spawn flags",
-            game.gm.spawn_flags,
-            r.u8(sym("lbl_8046B488") + 0x10),
-        );
+        self.compare_opponents(&game.gm.opponents, &r.opponents());
         let scene = r.u32(sym("gm_804D672C"));
         self.compare_handle(
             "gm_804D672C",
