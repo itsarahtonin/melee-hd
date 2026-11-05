@@ -581,8 +581,9 @@ fn a_save_ends_attached_until_its_unmount() {
 
 /// `2026-10-06_16-58-24`'s save: an audio frame comes due inside the second write's
 /// directory sector, runs as a page's card interrupt returns, and goes ahead of the next
-/// page's (tick 152), to the Event list, and on through events (the first cleared with a
-/// new best, a challenger after the third; computer kinds 9 and 18) to a series of rounds.
+/// page's (tick 152), to the Event list, and on through its eleven events (the first cleared
+/// with a new best, a challenger after the third; computer kinds 9 and 18; a series of
+/// rounds) to the trace's end.
 #[test]
 fn a_save_written_through_an_audio_frame() {
     let trace = ssbm_rs_local("traces/session/2026-10-06_16-58-24.trc");
@@ -595,12 +596,7 @@ fn a_save_written_through_an_audio_frame() {
         return;
     }
     let out = session_with(&trace, &inputs, &["--heap"]);
-    assert!(
-        out.contains(
-            "18309 ticks compared, no difference; stopped in tick 18309: gm_8016A92C (an event's series of rounds) isn't ported"
-        ),
-        "{out}"
-    );
+    assert!(out.contains("35868 ticks compared, no difference"), "{out}");
 }
 
 /// An Options session (`lockstep/options-sessions/NAME.inputs`, on a copy of
