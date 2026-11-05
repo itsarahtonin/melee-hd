@@ -220,6 +220,9 @@ pub struct OnePlayer {
     pub adventure_x910: [u8; ADVENTURE_STAGES],
     /// `gm_804D68E0`: Adventure's intro scene's enter data.
     pub adventure_intro: super::adventure::IntroData,
+    /// `gm_804D68D8`: Adventure's cutscenes' enter data (`CutsceneData`, eight bytes of a
+    /// `ViCharaDesc`).
+    pub adventure_cutscene: [u8; 8],
     /// `gm_80473A18`, All-Star's run, `gm_80490940`, and `gm_803DEBE8`'s opponents as the
     /// load shuffles them (stages, stage, character).
     pub allstar: AllStarData,
@@ -269,6 +272,7 @@ impl Default for OnePlayer {
             adventure: AdventureData::default(),
             adventure_x910: [0; ADVENTURE_STAGES],
             adventure_intro: Default::default(),
+            adventure_cutscene: [0; 8],
             allstar: AllStarData::default(),
             allstar_x940: [0; 25],
             allstar_opponents: ALLSTAR_OPPONENTS,

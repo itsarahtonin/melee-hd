@@ -206,6 +206,11 @@ impl<T, const K: u8> Pool<T, K> {
         self.free.last().copied()
     }
 
+    /// The free list, the slot freed last at its end.
+    pub fn free_slots(&self) -> &[u32] {
+        &self.free
+    }
+
     /// Returns `slot` to the pool, `HSD_ObjFree`.
     pub fn free(&mut self, slot: u32) {
         if K != 0 {

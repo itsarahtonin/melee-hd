@@ -140,7 +140,37 @@ fn kos(me: &MatchEnd, slot: usize, killer: usize, victim: usize) -> i32 {
 
 /// One of the results' statistics a stats page lists, by its getter's address
 /// (`StatsEntry::check`): a count clamped (KOs, falls, self-destructs, damage, distances and
-/// the like), or a player's KOs on another.
+/// the like), or a player's KOs on another (`gm_17AD.c`'s getters).
+#[doc(alias = "fn_8017AE0C")]
+#[doc(alias = "fn_8017AE70")]
+#[doc(alias = "fn_8017AED8")]
+#[doc(alias = "fn_8017AF40")]
+#[doc(alias = "fn_8017AFA8")]
+#[doc(alias = "fn_8017B010")]
+#[doc(alias = "fn_8017B07C")]
+#[doc(alias = "fn_8017B0E4")]
+#[doc(alias = "fn_8017B14C")]
+#[doc(alias = "fn_8017B1B4")]
+#[doc(alias = "fn_8017B21C")]
+#[doc(alias = "fn_8017B280")]
+// Ports fn_8017ADA8; aliased once a check reaches it.
+// Ports fn_8017B2E4; aliased once a check reaches it.
+// Ports fn_8017B348; aliased once a check reaches it.
+// Ports fn_8017B3AC; aliased once a check reaches it.
+// Ports fn_8017B410; aliased once a check reaches it.
+// Ports fn_8017B4D0; aliased once a check reaches it.
+// Ports fn_8017B534; aliased once a check reaches it.
+// Ports fn_8017B598; aliased once a check reaches it.
+// Ports fn_8017B5FC; aliased once a check reaches it.
+// Ports fn_8017B660; aliased once a check reaches it.
+// Ports fn_8017B6C4; aliased once a check reaches it.
+// Ports fn_8017B728; aliased once a check reaches it.
+// Ports fn_8017B78C; aliased once a check reaches it.
+// Ports fn_8017B7F0; aliased once a check reaches it.
+// Ports fn_8017B854; aliased once a check reaches it.
+// Ports fn_8017B8B8; aliased once a check reaches it.
+// Ports fn_8017B91C; aliased once a check reaches it.
+// Ports fn_8017B9F4; aliased once a check reaches it.
 pub fn stat_value(me: &MatchEnd, us: bool, getter: u32, slot: usize) -> i32 {
     let p = &me.player_standings[slot];
     let f = |v: u32| stat(v as i32);

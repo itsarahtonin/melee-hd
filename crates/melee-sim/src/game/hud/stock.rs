@@ -28,6 +28,9 @@ pub const PROC_TALLY_2: u32 = 0x802F_AC34;
 /// The characters-left tally's placement process and its icons' render callback.
 pub const PROC_TALLY_PLACE: u32 = 0x802F_A8C0;
 pub const RENDER_TALLY: u32 = 0x802F_9680;
+/// The joiners' tally's placement process and its icons' render callback.
+pub const PROC_JOINERS_PLACE: u32 = 0x802F_8E08;
+pub const RENDER_JOINERS: u32 = 0x802F_95E8;
 /// The target icons' process and render callback.
 pub const PROC_TARGETS: u32 = 0x802F_916C;
 pub const RENDER_TARGETS: u32 = 0x802F_9548;
@@ -115,6 +118,17 @@ impl Game {
     pub fn target_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
         let hidden = self.hud.status.players[0].flags.hide_all_digits;
         (!hidden).then_some(Draw::JObjs(gobj, pass))
+    }
+
+    /// The joiners' tally's icons' render callback, `fn_802F95E8`: drawn in a single-player
+    /// match opponents join while no player's digits are hidden.
+    #[doc(alias = "fn_802F95E8")]
+    pub fn joiner_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
+        let hidden = self.hud.status.players[..4]
+            .iter()
+            .any(|p| p.flags.hide_all_digits);
+        (self.vs_is_singleplayer() && self.gm.opponents.joining() && !hidden)
+            .then_some(Draw::JObjs(gobj, pass))
     }
 
     /// The characters-left tally's icons' render callback, `fn_802F9680`: drawn unless player
@@ -569,13 +583,38 @@ impl Running<'_> {
         self.stock_proc(o);
     }
 
-    /// The single-player tally's process, `fn_802FA6C4`: outside those modes it only frees
-    /// its icons once.
+    /// The joiners' tally's process, `fn_802FA6C4`: in a single-player match opponents join,
+    /// its first frame copies the joiners' costumes and characters (`gm_80169520`,
+    /// `gm_80169530`) and makes an icon per joiner up to the costumes' end (-2); otherwise it
+    /// frees its icons once.
     #[doc(alias = "fn_802FA6C4")]
+    #[doc(alias = "gm_80169520")]
+    #[doc(alias = "gm_80169530")]
     pub fn stock_tally_proc(&mut self, _gobj: GObjId) {
         let g = &mut *self.game;
         if g.vs_is_singleplayer() && g.gm.opponents.joining() {
-            code::unported_call("fn_802FA6C4 in a single-player mode");
+            if g.hud.stock_1774.x0 != 0 {
+                return;
+            }
+            g.hud.stock_1774.x0 = 1;
+            let (costumes, characters) = (g.gm.opponents.costumes, g.gm.opponents.characters);
+            let t = &mut g.hud.stock_1774;
+            for k in 0..130 {
+                t.x10C[k + 1] = None;
+                t.x1[k] = costumes[k];
+                t.x83[k] = characters[k];
+            }
+            for i in 0..130 {
+                if let Some(o) = self.game.hud.stock_1774.x10C[1 + i].take() {
+                    gobj::free(self, o);
+                }
+                if self.game.hud.stock_1774.x1[i] == -2 {
+                    return;
+                }
+                let o = self.create_joiner_icon(i);
+                self.game.hud.stock_1774.x10C[1 + i] = Some(o);
+            }
+            return;
         }
         if g.hud.stock_1774.x0 == 1 {
             for j in (0..130).rev() {
@@ -585,6 +624,81 @@ impl Running<'_> {
             }
         }
         self.game.hud.stock_1774.x0 = 0;
+    }
+
+    /// A joiner's icon in the joiners' tally, `ifStock_802F9F48`: the scene's first model off
+    /// screen, hidden but its icon joint, on the joiner's character's frame for its costume;
+    /// the first runs the tally's placement.
+    #[doc(alias = "ifStock_802F9F48")]
+    fn create_joiner_icon(&mut self, i: usize) -> GObjId {
+        let data = self.data;
+        let g = &mut *self.game;
+        let o = g.world.create(14, 15, 0);
+        let models = g.hud.stock.x0.expect("the icons' models");
+        let model = data.ptr(models).expect("the tally's model");
+        let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
+        g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
+        g.world.setup_gx_link(o, CodeRef(RENDER_JOINERS), 11, 0);
+        super::super::gm::vs::add_model_anim(&mut g.objs, data, Some(root), model, 0);
+        let icon = super::super::gm::pause::tree_nodes(&g.objs.jobjs, Some(root), &[1])[0]
+            .expect("the tally icon's joint");
+        if i == 0 {
+            g.world.setup_proc(o, CodeRef(PROC_JOINERS_PLACE), 17);
+        }
+        jobj::set_srt(&mut g.objs.jobjs, root, |j| j.translate.z = 10000.0);
+        jobj::set_flags_all(&mut g.objs.jobjs, Some(root), HIDDEN);
+        jobj::clear_flags(&mut g.objs.jobjs, Some(icon), HIDDEN);
+        jobj::req_anim_all(&mut g.objs, Some(root), 0.0);
+        let t = &g.hud.stock_1774;
+        let frame = stock_icon_frame(i32::from(t.x83[i]), 0, i32::from(t.x1[i]));
+        set_icon_frame(&mut g.objs, icon, mem(frame));
+        jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
+        o
+    }
+
+    /// The joiners' tally's placement, `fn_802F8E08`, the first icon's process: each icon's
+    /// costume copied from the list again, a beaten joiner's (-1) off screen, the rest in rows
+    /// of five from the top left; at the list's end (-2), the rest off screen (the original's
+    /// loop indexes the end's own slot, as `fn_802FA8C0`'s: docs/melee-bugs.md).
+    #[doc(alias = "fn_802F8E08")]
+    pub fn joiners_place_proc(&mut self, _gobj: GObjId) {
+        let g = &mut *self.game;
+        let costumes = g.gm.opponents.costumes;
+        let mut counter = 0;
+        let (mut x, mut y) = (reg(-21.0), reg(11.0));
+        for (i, &costume) in costumes.iter().enumerate().take(130) {
+            let Some(o) = g.hud.stock_1774.x10C[i + 1] else {
+                break;
+            };
+            let Some(Obj::JObj(j)) = g.world.gobj(o).obj else {
+                panic!("a tally icon without its model");
+            };
+            g.hud.stock_1774.x1[i] = costume;
+            match g.hud.stock_1774.x1[i] {
+                -1 => jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0),
+                -2 => {
+                    for _ in i..130 {
+                        if let Some(o) = g.hud.stock_1774.x10C[i + 1]
+                            && let Some(Obj::JObj(j)) = g.world.gobj(o).obj
+                        {
+                            jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 10000.0);
+                        }
+                    }
+                    return;
+                }
+                _ => {
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.z = 0.0);
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.x = mem(x));
+                    jobj::set_srt(&mut g.objs.jobjs, j, |o| o.translate.y = mem(y));
+                    counter += 1;
+                    x = fp::fadds(x, reg(2.45));
+                    if counter % 5 == 0 {
+                        x = reg(-21.0);
+                        y = fp::fsubs(y, reg(2.45));
+                    }
+                }
+            }
+        }
     }
 
     /// The characters-left tally's process, `fn_802FAC34`: with the rules' list (`x58`, All-Star's

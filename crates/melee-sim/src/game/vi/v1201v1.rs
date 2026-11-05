@@ -149,7 +149,7 @@ impl Running<'_> {
     #[doc(alias = "un_8031F9B4")]
     #[doc(alias = "vi1201v1_Scene_OnFrame")]
     pub fn vi1201v1_on_enter(&mut self) {
-        let desc = self.game.vi.desc_1201v1;
+        let desc = super::enter_desc(self.game, 0x19);
         let v = &mut self.game.vi.v1201v1;
         v.ckind = desc[0];
         v.costume = desc[1];

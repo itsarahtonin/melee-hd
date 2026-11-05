@@ -56,6 +56,25 @@ pub const SCENES: [(u8, u32, u32); 11] = [
     (0x1B, 0x8032_1300, 0x8032_18E0),
 ];
 
+/// A cutscene scene's enter data (`ViCharaDesc`'s first eight bytes): Adventure's
+/// (`gm_804D68D8`, every cutscene's) in Adventure, else the debug cutscene mode's own.
+pub fn enter_desc(game: &super::state::Game, scene: u8) -> [u8; 8] {
+    if game.game_mode == super::gm::one_player::GM_ADVENTURE {
+        return game.one_player.adventure_cutscene;
+    }
+    let v = &game.vi;
+    match scene {
+        0x11 => v.desc_0102,
+        0x12 => v.desc_0401,
+        0x14 => v.desc_0501,
+        0x15 => v.desc_0502,
+        0x18 => v.desc_1101,
+        0x19 => v.desc_1201v1,
+        0x1A => v.desc_1201v2,
+        _ => [0; 8],
+    }
+}
+
 /// A cutscene scene's entry and frame functions.
 pub fn scene_handlers(scene: u8) -> Option<(CodeRef, CodeRef)> {
     SCENES
@@ -831,23 +850,23 @@ impl Running<'_> {
                 f.names.push(name.trim_start_matches('/').to_owned());
             }
         };
-        let v = &self.game.vi;
+        let d = enter_desc(self.game, scene);
         match scene {
             0x11 => {
                 f.names.push("Vi0102.dat".into());
                 f.songs.push(0x56);
                 stage(&mut f, 4);
-                f.player(0, 8, v.desc_0102[1]);
-                f.player(1, 7, v.desc_0102[3]);
+                f.player(0, 8, d[1]);
+                f.player(1, 7, d[3]);
                 f.anims("Vi0102.dat", 8, 4, 9);
                 f.anims("Vi0102.dat", 7, 4, 9);
             }
             0x12 => {
-                let (ck, waits) = (i32::from(v.desc_0401[0]), wait_file(v.desc_0401[0]));
+                let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi0401.dat", "IfAll.dat", waits].map(String::from));
                 stage(&mut f, 6);
-                f.player(0, ck, v.desc_0401[1]);
+                f.player(0, ck, d[1]);
                 f.anims(waits, ck, 3, 8);
             }
             0x13 => {
@@ -855,27 +874,26 @@ impl Running<'_> {
                 f.songs.push(0x58);
             }
             0x14 => {
-                let (ck, waits) = (i32::from(v.desc_0501[0]), wait_file(v.desc_0501[0]));
+                let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names.extend(["Vi0501.dat", waits].map(String::from));
                 stage(&mut f, 17);
-                f.player(0, ck, v.desc_0501[1]);
+                f.player(0, ck, d[1]);
                 for slot in 1..4 {
-                    f.player(slot, 4, v.desc_0501[3]);
+                    f.player(slot, 4, d[3]);
                 }
                 f.anims(waits, ck, 3, 8);
                 f.anims("Vi0501.dat", 4, 6, 11);
                 for i in 4..7 {
-                    f.copies
-                        .push((usize::from(v.desc_0501[i]), usize::from(v.desc_0501[3])));
+                    f.copies.push((usize::from(d[i]), usize::from(d[3])));
                 }
             }
             0x15 => {
-                let (ck, waits) = (i32::from(v.desc_0502[0]), wait_file(v.desc_0502[0]));
+                let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi0502.dat", waits, "IrAls.dat"].map(String::from));
                 stage(&mut f, 17);
-                f.player(0, ck, v.desc_0502[1]);
-                f.player(1, 4, v.desc_0502[3]);
+                f.player(0, ck, d[1]);
+                f.player(1, 4, d[3]);
                 f.anims(waits, ck, 3, 8);
                 f.anims("Vi0502.dat", 4, 7, 14);
             }
@@ -890,11 +908,11 @@ impl Running<'_> {
                 stage(&mut f, 73);
             }
             0x18 => {
-                let (ck, waits) = (i32::from(v.desc_1101[0]), wait_file(v.desc_1101[0]));
+                let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names.extend(["Vi1101.dat", waits].map(String::from));
                 f.songs.push(0x55);
                 stage(&mut f, 0x1F);
-                f.player(0, ck, v.desc_1101[1]);
+                f.player(0, ck, d[1]);
                 f.anims(waits, ck, 3, 8);
                 f.player(1, 8, 0);
                 f.anims("Vi1101.dat", 8, 5, 10);
@@ -904,7 +922,7 @@ impl Running<'_> {
                 }
             }
             0x19 => {
-                let ck = i32::from(v.desc_1201v1[0]);
+                let ck = i32::from(d[0]);
                 let results = super::gm::results_stats::results_file(ck)
                     .expect("the character's results animations");
                 f.names
@@ -913,18 +931,18 @@ impl Running<'_> {
                 f.names.push(results.into());
                 f.songs.push(0x59);
                 stage(&mut f, 0x20);
-                f.player(0, ck, v.desc_1201v1[1]);
+                f.player(0, ck, d[1]);
                 f.anims(results, ck, 0, 1);
             }
             0x1A => {
-                let (ck, waits) = (i32::from(v.desc_1201v2[0]), wait_file(v.desc_1201v2[0]));
+                let (ck, waits) = (i32::from(d[0]), wait_file(d[0]));
                 f.names
                     .extend(["Vi1201v2.dat", "TyKoopa.dat", "GmRgStnd.dat"].map(String::from));
                 f.names.push(trophy_data(us).into());
                 f.names.push(waits.into());
                 f.songs.push(0x5C);
                 stage(&mut f, 0x20);
-                f.player(0, ck, v.desc_1201v2[1]);
+                f.player(0, ck, d[1]);
                 f.anims(waits, ck, 3, 8);
                 f.player(1, 0x1D, 0);
                 f.anims("Vi1201v2.dat", 0x1D, 8, 15);

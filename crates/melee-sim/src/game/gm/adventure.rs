@@ -4,9 +4,11 @@
 use super::super::handles::CodeRef;
 use super::super::state::Running;
 
-/// `ChKind_None`, `CKind_Kirby`.
+/// `ChKind_None`, `CKind_Kirby`, `CKind_Mario`, `CKind_Luigi`.
 const NONE: u8 = 0x21;
 const CKIND_KIRBY: u8 = 4;
+const CKIND_MARIO: u8 = 8;
+const CKIND_LUIGI: u8 = 7;
 
 /// An entry of `gm_803DE650` (`gm_803DE650_t`, 0x10 bytes): its state's id, the stage's
 /// flags, its time, `x4` (a stage start's flag), the stage kind, `x8` and `x9`, and up to
@@ -1018,6 +1020,112 @@ impl Running<'_> {
                 PEACH_FIGHT
             };
             self.set_next_game_mode_state_id(next);
+        }
+    }
+
+    /// An Adventure stage's match's exit, `gm_801B4170`: the stage marked won (2) or not (1)
+    /// in `gm_80490910`, the run's exit (`gm_8017D7AC`, the game over next at no stock), and
+    /// after the table's last stage Adventure's clear (`gm_8017CBAC`, unported).
+    // Ports gm_801B4170; aliased once a check reaches it.
+    pub fn adventure_exit_stage(&mut self) {
+        let id = self.game.machine.routing.curr_state_id;
+        let index = self.adventure_mark_stage(id);
+        let mut run = self.game.one_player.adventure.base;
+        let on = self.one_player_match_exit(&mut run, GAME_OVER);
+        self.game.one_player.adventure.base = run;
+        if on && ADVENTURE_TABLE[index + 1].id == 0xFF {
+            crate::game::code::unported_call("gm_8017CBAC (Adventure's clear)");
+        }
+    }
+
+    /// `setValUnk`: a stage's mark in `gm_80490910`, 2 won or 1 not, by its state's id; its
+    /// table index.
+    fn adventure_mark_stage(&mut self, id: u8) -> usize {
+        let index = ADVENTURE_TABLE
+            .iter()
+            .position(|e| e.id == id)
+            .expect("an Adventure state's stage");
+        let won = self.game.one_player.match_exit.x8 != 0;
+        self.game.one_player.adventure_x910[index] = if won { 2 } else { 1 };
+        index
+    }
+
+    /// Luigi's cutscene's entry, `gm_801B45A4`: Mario's and Luigi's costumes kept apart from
+    /// the player's (`gmRegSetupEnemyColorTable`) into the cutscenes' enter data.
+    // Ports gm_801B45A4; aliased once a check reaches it.
+    pub fn adventure_enter_luigi(&mut self) {
+        let p = self.game.one_player.adventure.base.player;
+        let mut colors = [0u8; 3];
+        super::one_player::enemy_color_table(
+            p.ckind,
+            p.color,
+            &[CKIND_MARIO as i8, CKIND_LUIGI as i8, NONE as i8],
+            &mut colors,
+        );
+        let d = &mut self.game.one_player.adventure_cutscene;
+        d[1] = colors[0];
+        d[3] = colors[1];
+    }
+
+    /// A cutscene's entry with the player in it, `gm_801B4430`: the player's character (Sheik
+    /// for a Zelda the run marks, `xC.x12`) and Adventure's costume into the cutscenes' enter
+    /// data.
+    // Ports gm_801B4430; aliased once a check reaches it.
+    pub fn adventure_enter_cutscene(&mut self) {
+        const CKIND_ZELDA: u8 = 0x12;
+        const CKIND_SEAK: u8 = 0x13;
+        let run = &self.game.one_player.adventure.base;
+        let ckind = run.player.ckind as u8;
+        let kind = if ckind == CKIND_ZELDA && run.xc[6] != 0 {
+            CKIND_SEAK
+        } else {
+            ckind
+        };
+        let color = self.game.game_data.vs.unk_522.color;
+        let d = &mut self.game.one_player.adventure_cutscene;
+        d[0] = kind;
+        d[1] = color;
+    }
+
+    /// Peach's Castle's match, `gm_801B461C`: the stage's match (`gm_801B4064`), and after
+    /// Luigi's cutscene Luigi in Mario's place in his costume, the run marked (`x74`).
+    #[doc(alias = "gm_801B461C")]
+    pub fn adventure_enter_peach(&mut self) {
+        self.adventure_enter_vs();
+        if self.game.machine.routing.prev_state_id == LUIGI_CUTSCENE {
+            let color = self.game.one_player.adventure_cutscene[3];
+            let p = &mut self.game.one_player.match_start.players[1];
+            p.ckind = CKIND_LUIGI as _;
+            p.color = color;
+            self.game.one_player.adventure.x74[0] = 1;
+        }
+    }
+
+    /// Peach's Castle's match's exit, `gm_801B4684`: the stage marked, the run's exit, and
+    /// Luigi's unlock's condition (`x75`): the match won within a minute.
+    #[doc(alias = "gm_801B4684")]
+    pub fn adventure_exit_peach(&mut self) {
+        let id = self.game.machine.routing.curr_state_id;
+        self.adventure_mark_stage(id);
+        let frames = self.game.one_player.match_exit.match_end.frame_count;
+        let mut run = self.game.one_player.adventure.base;
+        let on = self.one_player_match_exit(&mut run, GAME_OVER);
+        self.game.one_player.adventure.base = run;
+        if on {
+            self.game.one_player.adventure.x74[1] = u8::from(frames / 60 <= 60);
+        }
+    }
+
+    /// Kongo Jungle's first match, `gm_801B4768`: the stage's match (`gm_801B4064`) with the
+    /// computers at half their size.
+    #[doc(alias = "gm_801B4768")]
+    pub fn adventure_enter_tiny(&mut self) {
+        self.adventure_enter_vs();
+        for p in &mut self.game.one_player.match_start.players[1..4] {
+            if p.slot_type == 1 {
+                p.model_scale =
+                    crate::fpu::mem(gekko_fp::fmuls(crate::fpu::reg(p.model_scale), 0.5));
+            }
         }
     }
 
