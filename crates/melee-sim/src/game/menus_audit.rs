@@ -167,10 +167,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Event Match's events whose process isn't ported, behind the Event Match gate",
     ),
     (
-        "(an event's time match's winner)",
-        "Event Match's time events, behind the Event Match gate",
-    ),
-    (
         "(event 32's falls)",
         "Event Match's event 32, behind the Event Match gate",
     ),

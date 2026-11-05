@@ -867,7 +867,6 @@ pub const MISSING: &[Gap] = &[
             "(an event's crowd)",
             "gm_801BC00C for event",
             "the event process",
-            "(an event's time match's winner)",
             "(event 32's falls)",
             "an event's random fifth player",
             "lbDvd_80018A2C",
