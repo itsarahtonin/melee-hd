@@ -17,6 +17,7 @@ pub mod home_run;
 pub mod howto;
 pub mod input;
 pub mod intro;
+pub mod intro_allstar;
 pub mod machine;
 pub mod main_lib;
 pub mod match_exit;

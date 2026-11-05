@@ -738,6 +738,14 @@ impl Session {
                 }
                 .intro_scene_files(),
             };
+            let cutscene = match cutscene {
+                Some(f) => Some(f),
+                None => Running {
+                    game: &mut self.game,
+                    data: &self.data,
+                }
+                .intro_allstar_scene_files(),
+            };
             if let Some(files) = cutscene {
                 let console = std::cell::RefCell::new(&mut *console);
                 super::vi::load_scene_files(

@@ -771,14 +771,14 @@ impl Running<'_> {
     }
 
     /// The rest area's end, `fn_801B5AA8`: the screen fades to black over 120 frames.
-    // Ports fn_801B5AA8; aliased once a check reaches it.
+    #[doc(alias = "fn_801B5AA8")]
     pub fn allstar_rest_end(&mut self) {
         self.game.bgflash.fade_to_black(0x78);
     }
 
     /// All-Star's rest area's exit, `gm_801B5E7C`: the run's damage, then the run's match
     /// exit (`gm_8017D7AC`).
-    // Ports gm_801B5E7C; aliased once a check reaches it.
+    #[doc(alias = "gm_801B5E7C")]
     pub fn allstar_exit_rest(&mut self) {
         let percent = self.game.one_player.match_exit.match_end.player_standings[0].percent;
         self.game.one_player.allstar.x74 = percent;

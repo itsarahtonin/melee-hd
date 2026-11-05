@@ -1386,7 +1386,7 @@ Each half broken on purpose fails: the old model (no read brings the file's word
 | `kinoko` | the Otoguro test's Go to Kinoko: debug VS on stage 59 (Mushroom Kingdom's adventure route, `1-1kinoko`) as Fox alone, running right (1272 to 4155) | clean to the trace's end (6,493 ticks); before task 16, tick 1272 (`stage kind 31`) |
 | `meikyu` | Go to Meikyu: stage 63 (the Underground Maze) as the Ice Climbers alone | clean to the trace's end (5,902 ticks; `session-sync --rollback 7 --shortcut` clean, 4,573 ticks in 4 matches); before task 17, tick 1242 (`stage kind 32 isn't ported`) |
 | `intro-easy` | the Kim test's Intro Easy page, Start: the debug mode's state 6 (Classic's intro, 1362), then the debug menu again (1504) | clean to the trace's end (3,292 ticks; until the intros' task, 2026-11-04, to tick 1362, `game scene 0x20 isn't ported`) |
-| `intro-allstar` | the Kim test's AllStar Enemy: state 7 (All-Star's intro, 1332) | clean to tick 1332: `game scene 0x21 isn't ported` |
+| `intro-allstar` | the Kim test's AllStar Enemy: state 7 (All-Star's intro, 1332), then the debug menu again (1474) | clean to the trace's end (3,265 ticks; until task 23, 2026-11-05, to tick 1332, `game scene 0x21 isn't ported`) |
 | `gameover` | the Kim test's EasyEnd: state 9 (the game over, 1212) | clean to the trace's end (3,157 ticks) |
 | `staffroll` | the Sugano test's STAFFROLL START: state 14 (the staff roll, 1232) | clean to the trace's end (3,717 ticks); tick 1232 until task 5's third round (`game scene 0x2b isn't ported`) |
 | `cutscene` | the Nagasima test's Visual-Scene Start: the debug cutscene mode (0x19) from 1082, its scenes `vi0102` to `vi0801` | clean to the trace's end (3,282 ticks) |
