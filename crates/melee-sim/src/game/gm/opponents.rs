@@ -146,7 +146,7 @@ impl Opponents {
     }
 
     /// How many are still to join, `gm_80169384`.
-    // Ports gm_80169384; aliased once a check reaches it.
+    #[doc(alias = "gm_80169384")]
     pub fn left(&self) -> i32 {
         i32::from(self.left)
     }
@@ -305,7 +305,7 @@ impl Opponents {
     }
     /// Every joiner in one costume, `fn_801697FC`: `costume`, or the next one when the first
     /// player wears it with the same character.
-    // Ports fn_801697FC; aliased once a check reaches it.
+    #[doc(alias = "fn_801697FC")]
     pub fn one_costume(&mut self, ckind: i8, costume: i8, p1_ckind: i8, p1_costume: i8) {
         let n = i32::from(super::super::playback::costume_count(ckind as u8));
         if ckind == NONE {
@@ -335,7 +335,7 @@ impl Opponents {
     /// Each Kirby joiner's copy, `fn_80169A84`: none (mode 0), or (mode 1) the unlocked
     /// characters but Kirby shuffled into the pool (`HSD_Randi(27)` each), the first 16 kept,
     /// dealt in turn as fighter kinds.
-    // Ports fn_80169A84; aliased once a check reaches it.
+    #[doc(alias = "fn_80169A84")]
     pub fn draw_copies(&mut self, unlocks: &super::Unlocks, rng: &mut crate::rng::Rng) {
         match self.copy_mode {
             1 => {
@@ -396,7 +396,7 @@ impl Opponents {
 }
 
 /// A match's rules point at the joining opponents (`x54`), `gm_8016A21C`.
-// Ports gm_8016A21C; aliased once a check reaches it.
+#[doc(alias = "gm_8016A21C")]
 pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
     rules.x54 = super::super::handles::RawPtr(ADDR);
 }
@@ -427,6 +427,21 @@ impl Game {
                 self.set_player_team(j, 4);
             }
         }
+    }
+
+    /// The crowd's count, `gm_801694A0`: those still to join and the joiners' slots playing.
+    #[doc(alias = "gm_801694A0")]
+    pub fn opponents_count(&self) -> i32 {
+        let mut count = i32::from(self.gm.opponents.left);
+        for i in 0..6 {
+            if self.player_pkind(i) != PKIND_NONE
+                && self.player_flags_bit1(i)
+                && self.player_state(i) == 2
+            {
+                count += 1;
+            }
+        }
+        count
     }
 
     /// A joiner's costume already worn by a player of the same character, the inline
@@ -480,7 +495,7 @@ impl Running<'_> {
     /// copies' pool, then the characters, costumes, level, counts (`at_once` at most 5), first
     /// point, flags and ratios given, the scale 1, the characters drawn, the costumes shuffled
     /// (mode 0) or one for all (mode 1), and Kirby's copies.
-    // Ports gm_8016A22C; aliased once a check reaches it.
+    #[doc(alias = "gm_8016A22C")]
     #[allow(clippy::too_many_arguments)]
     pub fn setup_opponents(
         &mut self,
@@ -702,7 +717,7 @@ impl Running<'_> {
     }
 
     /// A joiner's fighters made, `fn_8016A488`: they read their controllers once the HUD is on.
-    // Ports fn_8016A488; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A488")]
     pub fn opponent_joined(&mut self, slot: i32) {
         if self.game.vs.state.hud_enabled == 1 {
             self.player_enable_input(slot);

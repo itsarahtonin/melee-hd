@@ -499,10 +499,10 @@ impl Running<'_> {
     /// (`gm_8016A414`), the rules pointed at them (`gm_8016A21C`), the 1P stock display's
     /// count (`gm_8016A434`), the event's callback for each joiner (`gm_8016A404`) and the
     /// joiners' flag (`gm_8016A424`).
-    // Ports `gm_8016A414`; aliased once a check reaches it.
-    // Ports `gm_8016A434`; aliased once a check reaches it.
-    // Ports `gm_8016A404`; aliased once a check reaches it.
-    // Ports `gm_8016A424`; aliased once a check reaches it.
+    #[doc(alias = "gm_8016A414")]
+    #[doc(alias = "gm_8016A434")]
+    #[doc(alias = "gm_8016A404")]
+    #[doc(alias = "gm_8016A424")]
     fn event_crowd(
         &mut self,
         start: &mut super::super::structs::StartMeleeData,
@@ -1783,7 +1783,7 @@ impl Running<'_> {
 impl Running<'_> {
     /// `gm_801BD658`, Event 22's: as the stock events' (`gm_801BC754`'s stock match), and
     /// the Multi-Man counter put at 0 when it's cleared.
-    // Ports `gm_801BD658`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BD658")]
     fn event_crowd_22_proc(&mut self, gobj: GObjId) {
         let mut count = 0;
         for i in 1..6 {
@@ -1911,11 +1911,11 @@ pub fn is_join_callback(f: u32) -> bool {
 
 /// Runs a crowd's callback `f` for a joiner in `slot` with `left` still to join: its
 /// computer kind the crowd's (`evbonus->x16`); Event 24's last joiner twice the size.
-// Ports `gm_801BEA10`; aliased once a check reaches it.
-// Ports `gm_801BEA4C`; aliased once a check reaches it.
-// Ports `gm_801BEA88`; aliased once a check reaches it.
-// Ports `gm_801BEAF0`; aliased once a check reaches it.
-// Ports `gm_801BEB2C`; aliased once a check reaches it.
+#[doc(alias = "gm_801BEA10")]
+#[doc(alias = "gm_801BEA4C")]
+#[doc(alias = "gm_801BEA88")]
+#[doc(alias = "gm_801BEAF0")]
+#[doc(alias = "gm_801BEB2C")]
 pub fn run_join_callback(r: &mut Running, f: u32, slot: i32, left: i32) {
     let e = r.event_entry(r.event()).expect("the event's entry");
     let b = e.evbonus(r).expect("the event's crowd");
