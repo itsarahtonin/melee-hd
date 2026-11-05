@@ -1406,7 +1406,7 @@ Each half broken on purpose fails: the old model (no read brings the file's word
 | Session | Script | melee-oracle session |
 | --- | --- | --- |
 | `classic` | Classic's select: a character picked, costumes with X and Y, the CPU level's down arrow at very easy (refused), up three and down one, the stocks up two (to five) and down four (the last refused), Start | clean from power-on through the select (from tick 583) to the intro's entry at tick 1562 (`gmClassic_801B3500`) |
-| `adventure` | the same in Adventure's | clean to the intro's entry at tick 1602 (`gm_801B3F40`) |
+| `adventure` | the same in Adventure's | clean to the trace's end, 2,682 ticks, through Adventure's intro and into Mushroom Kingdom's route (to the intro's entry at tick 1602, `gm_801B3F40`, until the intros' second round) |
 | `allstar` | All-Star's (the CPU level alone; its stock count hidden) | clean to the first match's entry at tick 1430 (`gm_801B5624`) |
 | `target` | Target Test's: a pick, Start | clean to the match's entry at tick 1093 (`gm_801B6428`) |
 | `homerun` | the Home-Run Contest's | clean to the match's entry at tick 1114 (`gm_801B9A3C`) |
