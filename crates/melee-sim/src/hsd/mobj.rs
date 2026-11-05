@@ -598,6 +598,13 @@ pub fn set_diffuse_color(mobjs: &mut MObjs, m: MObjId, r: u8, g: u8, b: u8) {
     mat.diffuse.b = b;
 }
 
+/// The material's whole diffuse color word written (the staff roll's titles, which write it
+/// through the display object's material).
+pub fn set_diffuse(mobjs: &mut MObjs, m: MObjId, c: [u8; 4]) {
+    let d = &mut mobjs[m].mat().diffuse;
+    (d.r, d.g, d.b, d.a) = (c[0], c[1], c[2], c[3]);
+}
+
 /// `HSD_MObjSetAlpha`.
 #[doc(alias = "HSD_MObjSetAlpha")]
 pub fn set_alpha(mobjs: &mut MObjs, m: MObjId, alpha: f32) {

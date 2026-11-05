@@ -24,7 +24,7 @@ const DEBUG_PRIZE_ENTER: u32 = 0x8048_542C;
 impl Comparer<'_> {
     /// The user data block at `t + 0x2C` with `HSD_Free` as its release: its address, or
     /// none when it isn't ours.
-    fn data_block(&mut self, path: &str, addr: u32, t: u32) -> Option<u32> {
+    pub(crate) fn data_block(&mut self, path: &str, addr: u32, t: u32) -> Option<u32> {
         let ud = self.u32(t + 0x2C);
         let release = self.u32(t + 0x30);
         self.check(
@@ -36,17 +36,17 @@ impl Comparer<'_> {
         (ud == addr).then_some(ud)
     }
 
-    fn data_text(&mut self, path: &str, name: &str, t: Option<TextId>, at: u32) {
+    pub(crate) fn data_text(&mut self, path: &str, name: &str, t: Option<TextId>, at: u32) {
         let theirs = self.u32(at);
         self.compare_handle(&format!("{path} {name}"), "TextId", t.map(|t| t.0), theirs);
     }
 
-    fn data_gobj(&mut self, name: &str, g: Option<GObjId>, at: u32) {
+    pub(crate) fn data_gobj(&mut self, name: &str, g: Option<GObjId>, at: u32) {
         let theirs = self.u32(at);
         self.compare_handle(name, "GObjId", g.map(|g| g.0), theirs);
     }
 
-    fn data_model(&mut self, name: &str, m: ModelDesc, at: u32) {
+    pub(crate) fn data_model(&mut self, name: &str, m: ModelDesc, at: u32) {
         for (k, d) in [m.joint, m.anim, m.matanim, m.shapeanim]
             .into_iter()
             .enumerate()
