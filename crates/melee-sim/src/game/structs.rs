@@ -4214,28 +4214,11 @@ impl Default for Ground_x10_flags {
 pub struct Ground_x11_flags {
     /// +0x0 (bits 0..+3)
     pub b012: u8,
-    /// +0x0 (bits 3..+1)
-    pub b3: bool,
-    /// +0x0 (bits 4..+1)
-    pub b4: bool,
-    /// +0x0 (bits 5..+1)
-    pub b5: bool,
-    /// +0x0 (bits 6..+1)
-    pub b6: bool,
-    /// +0x0 (bits 7..+1)
-    pub b7: bool,
 }
 
 impl Default for Ground_x11_flags {
     fn default() -> Self {
-        Ground_x11_flags {
-            b012: 0,
-            b3: false,
-            b4: false,
-            b5: false,
-            b6: false,
-            b7: false,
-        }
+        Ground_x11_flags { b012: 0 }
     }
 }
 
