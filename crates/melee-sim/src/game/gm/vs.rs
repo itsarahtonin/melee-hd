@@ -1273,16 +1273,26 @@ impl Running<'_> {
         self.respawn(slot, i32::from(sub));
     }
 
-    /// A player out of stocks, `gm_8016AC44`: with a challenger's record in the rules
-    /// (`x58`), the character and costume come off the record's list (`lbl_8046B668`, not
-    /// ported); a VS match's rules have none, and it does nothing.
+    /// A player out of stocks, `gm_8016AC44`: with the characters-left list in the rules
+    /// (`x58`, `lbl_8046B668`), the last entry of the character in the costume, searched
+    /// back from the list's end, is marked beaten (-1); a VS match's rules have none, and it
+    /// does nothing. Whether one was marked.
     #[doc(alias = "gm_8016AC44")]
-    fn out_of_stocks(&mut self, ckind: i8, costume: i8) {
-        if self.game.vs_has_x58() {
-            super::super::code::unported_call(&format!(
-                "gm_8016AC44 with a challenger's record (character {ckind}, costume {costume})"
-            ));
+    pub fn out_of_stocks(&mut self, ckind: i8, costume: i8) -> bool {
+        if !self.game.vs_has_x58() {
+            return false;
         }
+        let list = &mut self.game.gm.left;
+        let Some(end) = (0..27).find(|&i| list.arr2[i] == -2) else {
+            return false;
+        };
+        for i in (0..=end).rev() {
+            if list.arr2[i] == costume && list.arr1[i] == ckind {
+                list.arr2[i] = -1;
+                return true;
+            }
+        }
+        false
     }
 
     /// Brings a player back on the respawn platform, `fn_8016719C` (`sub` 1 for a partner).

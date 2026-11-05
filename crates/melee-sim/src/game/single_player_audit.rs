@@ -532,10 +532,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
     ),
     (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),
@@ -615,10 +611,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
         "gm_80167320 for a leaving slot",
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
-    ),
-    (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "HUD colour {c} past the table",
@@ -701,10 +693,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
         "gm_80167320 for a leaving slot",
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) sets",
-    ),
-    (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
     ),
     (
         "HUD colour {c} past the table",
@@ -809,10 +797,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "a player's leaving flag (Player_SetFlagsBit1), which only the giant Kirby cutscene (vi0501) and the joining opponents' setup (gm_16A2's) set; Training's count takes a computer player out through fn_8016EF98 (Player_80031EBC), which leaves it clear",
     ),
     (
-        "gm_8016AC44 with a challenger's record",
-        "the rules' challenger's record (x58), which only gm_16A2's single-player setups set",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),
@@ -843,10 +827,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
     (
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
-    ),
-    (
-        "it_8027A9B8 (an event's Pokémon list)",
-        "the rules' event Pokémon (x28, gm_8016AEB8), which only an event's setup sets; Training's balls draw from Training's list (it_8027A780)",
     ),
     (
         "grStadium_801D384C",
@@ -922,7 +902,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_18A1",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
-            "gm_8016AC44 with a challenger's record",
             "a 1P run's ratio getter",
             "gm_8017D7AC's records after a no contest",
             "gm_8017CBAC (All-Star's clear)",
@@ -995,12 +974,8 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "melee/gm/gmevent",
             "melee/it/kinds/itevyoshiegg",
-            "(an event's series of rounds)",
-            "(an event's crowd)",
-            "gm_801BC00C for event",
-            "the event process",
-            "(event 32's falls)",
             "an event's random fifth player",
+            "(Event 50's cheer)",
         ],
         modes: &[EV],
     },
