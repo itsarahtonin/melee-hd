@@ -198,10 +198,20 @@ enum Hook {
     DebugEnterGameOver,
     /// `gm_801BEE9C` (`gmgover.c`), congratulations' exit.
     GOverCongratsExit,
+    /// The game over modes' loads (`gm_Mode_ClassicGOver_OnLoad` and its kin, `gmmenu.c`) and
+    /// the ending movie's exit (`gm_801BEF84`).
+    ClassicGOverOnLoad,
+    AdventureGOverOnLoad,
+    AllStarGOverOnLoad,
+    GOverMovieExit,
     /// The single-player modes' loads and selects ([`super::one_player`]).
     ClassicOnLoad,
     ClassicEnterCss,
     ClassicExitCss,
+    /// Classic's stage's intro and match ([`super::classic`]).
+    ClassicEnterIntro,
+    ClassicEnterVs,
+    ClassicExitVs,
     AdventureOnLoad,
     AdventureEnterCss,
     AdventureExitCss,
@@ -211,6 +221,7 @@ enum Hook {
     AllStarEnterVs,
     AllStarExitVs,
     AllStarEnterGameOver,
+    AllStarExitGameOver,
     AllStarEnterRest,
     AllStarExitRest,
     TargetOnLoad,
@@ -697,6 +708,24 @@ fn states(mode: u8) -> &'static [StateDesc] {
             crate::game::vi::GS_REGEND_CONGRATS,
         ),
     ];
+    // `gm_Mode_GOver_States` (`gmgover.c`): the trophy fall, the staff roll, the ending movie
+    // and congratulations, the three game over modes'.
+    const GOVER: [StateDesc; 4] = [
+        debug(0, None, None, super::endings::GS_REGEND_TOYFALL),
+        debug(1, None, None, super::endings::GS_STAFFROLL),
+        debug(
+            2,
+            None,
+            Some(Hook::GOverMovieExit),
+            super::endings::GS_MOVIE_END,
+        ),
+        debug(
+            3,
+            None,
+            Some(Hook::GOverCongratsExit),
+            crate::game::vi::GS_REGEND_CONGRATS,
+        ),
+    ];
     if let Some(list) = one_player_states(mode) {
         return list;
     }
@@ -724,6 +753,9 @@ fn states(mode: u8) -> &'static [StateDesc] {
         super::GM_HANYU_SSS => &HANYU_SSS,
         crate::game::vi::GM_DEBUG_CUTSCENE => &DEBUG_CUTSCENE,
         super::endings::GM_DEBUG_GOVER => &DEBUG_GOVER,
+        super::endings::GM_CLASSIC_GOVER
+        | super::endings::GM_ADVENTURE_GOVER
+        | super::endings::GM_ALLSTAR_GOVER => &GOVER,
         m => unported_call(&format!("game mode {m:#x}'s states")),
     }
 }
@@ -758,6 +790,9 @@ fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
         | super::GM_HANYU_SSS
         | crate::game::vi::GM_DEBUG_CUTSCENE
         | super::endings::GM_DEBUG_GOVER => (false, None, None),
+        super::endings::GM_CLASSIC_GOVER => (false, Some(Hook::ClassicGOverOnLoad), None),
+        super::endings::GM_ADVENTURE_GOVER => (false, Some(Hook::AdventureGOverOnLoad), None),
+        super::endings::GM_ALLSTAR_GOVER => (false, Some(Hook::AllStarGOverOnLoad), None),
         super::one_player::GM_CLASSIC => (true, Some(Hook::ClassicOnLoad), None),
         super::one_player::GM_ADVENTURE => (false, Some(Hook::AdventureOnLoad), None),
         super::one_player::GM_ALLSTAR => (true, Some(Hook::AllStarOnLoad), None),
@@ -917,7 +952,10 @@ impl Running<'_> {
         self.game.machine.files_wanted = s.scene == GS_VS
             || s.scene == super::training::GS_TRAINING
             || (scene_mode == super::GM_DEBUG && s.id == 11)
-            || crate::game::vi::scene_handlers(s.scene).is_some();
+            || s.scene == super::endings::GS_REGEND_TOYFALL
+            || s.scene == crate::game::vi::GS_REGEND_CONGRATS
+            || crate::game::vi::scene_handlers(s.scene).is_some()
+            || super::intro::is_intro(s.scene);
     }
 
     /// The players whose files the scene about to enter loads, and whether it's a match (else
@@ -1045,10 +1083,24 @@ impl Running<'_> {
             ),
             // No frame function: the menus' process runs the scene.
             GS_DEBUG_MENU => (crate::game::hud::debug_menu::ON_ENTER, CodeRef(0)),
+            super::endings::GS_REGEND_TOYFALL => (
+                super::endings::toy_fall::ON_ENTER,
+                super::endings::toy_fall::ON_FRAME,
+            ),
+            crate::game::vi::GS_REGEND_CONGRATS => (
+                super::endings::congrats::ON_ENTER,
+                super::endings::congrats::ON_FRAME,
+            ),
             // No frame functions: the models' processes run the screens.
             super::endings::GS_GAMEOVER => (super::endings::game_over::ON_ENTER, CodeRef(0)),
             super::endings::GS_COMING_SOON => {
                 (super::endings::game_over::SOON_ON_ENTER, CodeRef(0))
+            }
+            super::intro::GS_INTRO_EASY => {
+                (super::intro::EASY_ON_ENTER, super::intro::EASY_ON_FRAME)
+            }
+            super::intro::GS_INTRO_NORMAL => {
+                (super::intro::NORMAL_ON_ENTER, super::intro::NORMAL_ON_FRAME)
             }
             k if crate::game::vi::scene_handlers(k).is_some() => {
                 crate::game::vi::scene_handlers(k).unwrap()
@@ -1088,8 +1140,12 @@ impl Running<'_> {
             super::tournament::BRACKET_ON_ENTER => self.tou_bracket_on_enter(),
             super::tournament::ALT_ON_ENTER => self.tou_alt_on_enter(),
             crate::game::hud::debug_menu::ON_ENTER => self.debug_menu_on_enter(),
+            super::endings::toy_fall::ON_ENTER => self.toy_fall_on_enter(),
+            super::endings::congrats::ON_ENTER => self.congrats_on_enter(),
             super::endings::game_over::ON_ENTER => self.game_over_on_enter(),
             super::endings::game_over::SOON_ON_ENTER => self.coming_soon_on_enter(),
+            super::intro::EASY_ON_ENTER => self.intro_easy_on_enter(),
+            super::intro::NORMAL_ON_ENTER => self.intro_normal_on_enter(),
             _ => self.vi_on_enter(scene),
         }
         self.game.gm.on_frame = (on_frame.0 != 0).then_some(on_frame);
@@ -1167,8 +1223,13 @@ impl Running<'_> {
             // `ifPrize_Scene_OnExit` does nothing; the debug menu has no exit.
             GS_PRIZE | GS_DEBUG_MENU => {}
             GS_APPROACH => self.approach_on_exit(),
+            // The trophy fall and congratulations have no exits of their own.
+            super::endings::GS_REGEND_TOYFALL | crate::game::vi::GS_REGEND_CONGRATS => {}
             super::endings::GS_GAMEOVER => self.game_over_on_exit(),
             super::endings::GS_COMING_SOON => self.coming_soon_on_exit(),
+            // Classic's intro has no exit of its own.
+            super::intro::GS_INTRO_EASY => {}
+            super::intro::GS_INTRO_NORMAL => self.intro_normal_on_leave(),
             super::tournament::GS_TOU_SETUP => self.tou_setup_on_exit(),
             super::tournament::GS_TOU_BRACKET => self.tou_bracket_on_exit(),
             super::tournament::GS_TOU_ALT => self.tou_alt_on_exit(),
@@ -1355,10 +1416,17 @@ impl Running<'_> {
             Hook::DebugEnterIntroEasy => self.debug_enter_intro_easy(),
             Hook::DebugEnterIntroAllstar => self.debug_enter_intro_allstar(),
             Hook::DebugEnterGameOver => self.debug_enter_game_over(),
-            Hook::GOverCongratsExit => unported_call("gm_801BEE9C (congratulations' exit)"),
+            Hook::GOverCongratsExit => self.gover_congrats_exit(),
+            Hook::ClassicGOverOnLoad => self.gover_on_load(1),
+            Hook::AdventureGOverOnLoad => self.gover_on_load(0),
+            Hook::AllStarGOverOnLoad => self.gover_on_load(2),
+            Hook::GOverMovieExit => self.mthp_release(),
             Hook::ClassicOnLoad => self.classic_on_load(),
             Hook::ClassicEnterCss => self.classic_enter_css(),
             Hook::ClassicExitCss => self.classic_exit_css(),
+            Hook::ClassicEnterIntro => self.classic_enter_intro(),
+            Hook::ClassicEnterVs => self.classic_enter_vs(),
+            Hook::ClassicExitVs => self.classic_exit_vs(),
             Hook::AdventureOnLoad => self.adventure_on_load(),
             Hook::AdventureEnterCss => self.adventure_enter_css(),
             Hook::AdventureExitCss => self.adventure_exit_css(),
@@ -1370,6 +1438,7 @@ impl Running<'_> {
             Hook::AllStarEnterRest => self.allstar_enter_rest(),
             Hook::AllStarExitRest => self.allstar_exit_rest(),
             Hook::AllStarEnterGameOver => self.allstar_enter_game_over(),
+            Hook::AllStarExitGameOver => self.allstar_exit_game_over(),
             Hook::TargetOnLoad => self.target_on_load(),
             Hook::TargetEnterCss => self.target_enter_css(),
             Hook::TargetExitCss => self.target_exit_css(),
@@ -1514,8 +1583,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         Some(Hook::Unported1P(name))
     }
     const GS_TRAINING: u8 = 0x04;
-    const GS_INTRO_EASY: u8 = 0x20;
-    const GS_INTRO_NORMAL: u8 = 0x21;
+    use super::intro::{GS_INTRO_EASY, GS_INTRO_NORMAL};
     const GS_GAMEOVER: u8 = 0x22;
     const GS_COMING_SOON: u8 = 0x23;
     // Eleven rounds of an intro and a match, ids 8 apart.
@@ -1524,12 +1592,12 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         let mut r = 0;
         while r < 11 {
             let id = 8 * r as u8;
-            out[2 * r] = st(id, 3, u("gmClassic_801B3500"), None, GS_INTRO_EASY);
+            out[2 * r] = st(id, 3, Some(Hook::ClassicEnterIntro), None, GS_INTRO_EASY);
             out[2 * r + 1] = st(
                 id + 1,
                 3,
-                u("gmClassic_801B3A34"),
-                u("gmClassic_801B3B40"),
+                Some(Hook::ClassicEnterVs),
+                Some(Hook::ClassicExitVs),
                 GS_VS,
             );
             r += 1;
@@ -1607,7 +1675,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             0x69,
             3,
             Some(Hook::AllStarEnterGameOver),
-            u("gm_801B5EE4"),
+            Some(Hook::AllStarExitGameOver),
             GS_GAMEOVER,
         );
         out[27] = st(

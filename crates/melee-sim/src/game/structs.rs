@@ -11329,6 +11329,48 @@ impl it_2E5A_ItemVars {
     }
 }
 
+/// `itCoin_ItemVars`, 0x18 bytes.
+#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
+pub struct itCoin_ItemVars {
+    /// +0x0
+    pub x0: Var<i32>,
+    /// +0x4
+    pub x4: Var<i32>,
+    /// +0x8
+    pub x8: Var<f32>,
+    /// +0xc
+    pub xC: Var<f32>,
+    /// +0x10
+    pub x10: Var<i32>,
+    /// +0x14
+    pub x14: Var<Option<GObjId>>,
+}
+
+impl Default for itCoin_ItemVars {
+    fn default() -> Self {
+        itCoin_ItemVars {
+            x0: Var::new(Default::default()),
+            x4: Var::new(Default::default()),
+            x8: Var::new(Default::default()),
+            xC: Var::new(Default::default()),
+            x10: Var::new(Default::default()),
+            x14: Var::new(Default::default()),
+        }
+    }
+}
+
+impl itCoin_ItemVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.x0.mark_stale();
+        self.x4.mark_stale();
+        self.x8.mark_stale();
+        self.xC.mark_stale();
+        self.x10.mark_stale();
+        self.x14.mark_stale();
+    }
+}
+
 /// `itTarucann_ItemVars`, 0x2c bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct itTarucann_ItemVars {

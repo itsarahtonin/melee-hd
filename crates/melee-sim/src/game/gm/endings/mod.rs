@@ -5,7 +5,9 @@
 //! single-player states (`gmdebugmode.c`'s intro, All-Star intro and game over) set their
 //! scenes' enter data here too.
 
+pub mod congrats;
 pub mod game_over;
+pub mod toy_fall;
 
 use super::super::state::Running;
 
@@ -18,6 +20,10 @@ pub const GM_DEBUG_GOVER: u8 = 0x1A;
 
 /// `GS_REGEND_TOYFALL`, the trophy fall.
 pub const GS_REGEND_TOYFALL: u8 = 0x0F;
+
+/// `GS_MOVIE_END`, the ending movie; `GS_STAFFROLL`, the staff roll.
+pub const GS_MOVIE_END: u8 = 0x1D;
+pub const GS_STAFFROLL: u8 = 0x2B;
 
 /// `GS_GAMEOVER`, `GS_COMING_SOON`.
 pub const GS_GAMEOVER: u8 = 0x22;
@@ -33,7 +39,7 @@ impl GOver {
     pub fn set_ckind(&mut self, v: u8) {
         self.0[0] = v;
     }
-    // Ports gm_801BEFB0; aliased once a check reaches it.
+    #[doc(alias = "gm_801BEFB0")]
     pub fn ckind(&self) -> u8 {
         self.0[0]
     }
@@ -42,7 +48,7 @@ impl GOver {
     pub fn set_color(&mut self, v: u8) {
         self.0[1] = v;
     }
-    // Ports gm_801BEFD0; aliased once a check reaches it.
+    #[doc(alias = "gm_801BEFD0")]
     pub fn color(&self) -> u8 {
         self.0[1]
     }
@@ -51,31 +57,35 @@ impl GOver {
     pub fn set_mode(&mut self, v: u8) {
         self.0[2] = v;
     }
-    // Ports gm_801BF050; aliased once a check reaches it.
+    #[doc(alias = "gm_801BF050")]
     pub fn mode(&self) -> u8 {
         self.0[2]
     }
-    /// `gm_801BF020`, `gm_801BF030`: the run's slot.
-    // Ports gm_801BF020 and gm_801BF030; aliased once a check reaches them.
+    /// `gm_801BF020`, `gm_801BF030`: the run the ending is for (`fn_8017DEC8`'s: 0
+    /// Adventure's, 1 Classic's, 2 All-Star's).
+    #[doc(alias = "gm_801BF020")]
     pub fn set_slot(&mut self, v: u8) {
         self.0[8] = v;
     }
+    #[doc(alias = "gm_801BF030")]
     pub fn slot(&self) -> u8 {
         self.0[8]
     }
     /// `gm_801BF000`, `gm_801BF010`: the human's port.
-    // Ports gm_801BF000 and gm_801BF010; aliased once a check reaches them.
+    #[doc(alias = "gm_801BF000")]
     pub fn set_port(&mut self, v: u8) {
         self.0[9] = v;
     }
+    #[doc(alias = "gm_801BF010")]
     pub fn port(&self) -> u8 {
         self.0[9]
     }
     /// `gm_801BEFE0`, `gm_801BEFF0`: the human's name tag.
-    // Ports gm_801BEFE0 and gm_801BEFF0; aliased once a check reaches them.
+    #[doc(alias = "gm_801BEFE0")]
     pub fn set_tag(&mut self, v: u8) {
         self.0[0xA] = v;
     }
+    #[doc(alias = "gm_801BEFF0")]
     pub fn tag(&self) -> u8 {
         self.0[0xA]
     }
@@ -96,6 +106,13 @@ pub struct Endings {
     pub debug_game_over: game_over::GameOverData,
     pub intro_easy: [u8; 0x20],
     pub intro_allstar: [u32; 2],
+    /// The trophy fall's statics.
+    pub toy_fall: toy_fall::ToyFall,
+    /// Congratulations' statics.
+    pub congrats: congrats::Congrats,
+    /// `regend_congrats_exit_data` (`gmopeningmode.c`): the debug cutscene mode's
+    /// congratulations' exit data (its first byte written).
+    pub congrats_exit: [u8; 4],
 }
 
 impl Running<'_> {
@@ -159,5 +176,79 @@ impl Running<'_> {
     pub fn debug_enter_intro_allstar(&mut self) {
         let v = self.game.debug_setting(0x138);
         self.game.endings.intro_allstar = [v, 0];
+    }
+}
+
+/// Runs one of the endings' processes, if `f` is one.
+pub fn run_proc(r: &mut Running, gobj: crate::hsd::gobj::GObjId, f: u32) -> bool {
+    use toy_fall::*;
+    match f {
+        PROC_MAIN => r.toy_fall_main_proc(gobj),
+        PROC_STAND | PROC_CUT2_MAIN | PROC_CUT2_STAND | PROC_CUT3_TROPHY | PROC_CUT3_BG => {
+            r.toy_fall_anim(gobj)
+        }
+        PROC_FALL => r.toy_fall_fall(),
+        PROC_CUT1_END => r.toy_fall_cut1_end(gobj),
+        PROC_CAMERA => r.toy_fall_camera_proc(gobj),
+        PROC_CUT2_CAMERA => r.toy_fall_cut2_camera(gobj),
+        PROC_CUT3_FOG => r.toy_fall_cut3_fog(gobj),
+        PROC_CUT3_LIGHT => r.toy_fall_cut3_light(gobj),
+        PROC_CUT3_STAND => r.toy_fall_cut3_stand(gobj),
+        PROC_CUT3_CAMERA => r.toy_fall_cut3_camera(gobj),
+        _ => return false,
+    }
+    true
+}
+
+/// Runs one of the endings' render callbacks, if `cb` is one.
+pub fn run_render(r: &mut Running, gobj: crate::hsd::gobj::GObjId, cb: u32) -> bool {
+    use toy_fall::*;
+    match cb {
+        RENDER_FRAME => r.toy_fall_frame_render(gobj),
+        RENDER_FIGHTER => r.toy_fall_fighter_render(gobj),
+        RENDER_MODELS => r.toy_fall_models_render(gobj),
+        congrats::RENDER => r.congrats_still_render(gobj),
+        _ => return false,
+    }
+    true
+}
+
+/// Runs one of the endings' scenes' frame functions, if `f` is one.
+pub fn run_frame(r: &mut Running, f: u32) -> bool {
+    match f {
+        f if f == toy_fall::ON_FRAME.0 => r.toy_fall_on_frame(),
+        f if f == congrats::ON_FRAME.0 => r.congrats_on_frame(),
+        _ => return false,
+    }
+    true
+}
+
+impl Running<'_> {
+    /// A game over mode's load (`gm_Mode_ClassicGOver_OnLoad`, `gm_Mode_AdventureGOver_OnLoad`,
+    /// `gm_Mode_AllstarGOver_OnLoad`): the ending's character (Sheik for a Zelda run that
+    /// ended as her), costume, port and name tag from run `n`'s player (0 Adventure's, 1
+    /// Classic's, 2 All-Star's), and `n` itself (`gm_801BF020`).
+    #[doc(alias = "gm_Mode_ClassicGOver_OnLoad")]
+    // Ports gm_Mode_AdventureGOver_OnLoad and gm_Mode_AllstarGOver_OnLoad too; aliased once a
+    // check reaches them (Adventure's and All-Star's endings, tasks 24's and 23's).
+    pub fn gover_on_load(&mut self, n: u8) {
+        let o = &self.game.one_player;
+        let run = match n {
+            0 => o.adventure.base,
+            1 => o.classic.base,
+            _ => o.allstar.base,
+        };
+        let p = run.player;
+        let ckind = if p.ckind == 0x12 && run.xc[6] != 0 {
+            0x13
+        } else {
+            p.ckind as u8
+        };
+        let g = &mut self.game.endings.gover;
+        g.set_ckind(ckind);
+        g.set_color(p.color);
+        g.set_port(p.slot);
+        g.set_tag(p.nametag);
+        g.set_slot(n);
     }
 }

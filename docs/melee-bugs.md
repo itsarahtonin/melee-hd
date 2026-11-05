@@ -572,6 +572,26 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** a weight changes every VS match's Pokémon draws (gameplay, replays and Slippi peers desync); dropping the entry changes Training's draws only.
 - **Source:** `crates/melee-sim/src/game/it/pokemon/mod.rs` (`draw_from_list`); the decomp's `it_279C.c`; the items audit's `DITTO` reason.
 
+### A beaten enemy's trophy list takes twenty trophies into ten slots
+
+- **Where:** `it_8027CC88` (a single-player mode's trophy from a beaten enemy, `itzako.c`) with `tyDisplay_8031C354`, `crates/melee-sim/src/game/it/zako.rs` (`trophy_roll`).
+- **Defect:** the roll lists the trophies like the stage's (`stage_info.x6E4`) into a ten-entry stack buffer (`sp1C`, at `r1+0x1C`) in two calls, each of up to ten: the second writes from the first's count on, so up to twenty entries land in ten slots, the last ten over the frame's words above it (`r1+0x44` to `0x6C`: the position buffer `it_8026BB88` fills next, and unused words), below the saved registers.
+- **Effect:** none observable: the draw (`HSD_Randi` of both counts) reads only entries the calls wrote, before `it_8026BB88` overwrites the position words, and nothing else reads the overwritten words.
+- **melee-hd:** modeled: the roll keeps a twenty-entry list, the second call writing from the first's count (`trophy_roll`, held unaliased until a session or check reaches a hit; Training never rolls, docs/milestone-6.md's task 13).
+- **Fix:** size the buffer for twenty, or bound the second call by what's left.
+- **Fix impact:** none on gameplay (the trophy drawn is the same).
+- **Source:** ssbm-rs's `it_8027CC88` (`crates/game/src/tu/melee__it__itzako.rs`, transliterated from the machine code: `addi r4, r1, 0x1c`, the second call's `add r4, r4, r0`, `addi r4, r1, 0x44`); the decomp's `itzako.c` (`s32 sp1C[10]`) and `tydisplay.c` (`count >= max`).
+
+### A hit trophy falls at speeds its block's last item left
+
+- **Where:** `itCoin_Logic116_DmgReceived` and `itCoin_UnkMotion3_Phys` (the single-player coin, `itcoin.c`), `crates/melee-sim/src/game/it/kinds/trophycoin.rs` (`damaged`, `phys3`).
+- **Defect:** only Snag the Trophies' coins (kinds 2 and 3) get their fall speeds (`xDD4_itemVar.coin.x8`, `xC`) at the spawn (`it_802F2094`); a trophy's coin (kind 0) falls at its attributes' speeds instead and never writes them. Hit, every coin adds its kind's speed to `x8` (a trophy's `attr->x8`) and flies off in state 3, whose physics falls at `x8` and `xC`: for a trophy, the item block's words from its last item (`HSD_ObjAlloc` doesn't clear them, nor does item creation).
+- **Effect:** a trophy dropped in Adventure (a stage's trophy point or a beaten enemy's roll) and hit before it's picked up falls at whatever its block's last item kept at those offsets, plus `attr->x8`: its flight depends on which item used the block before.
+- **melee-hd:** the port reads the item's variables as the block left them (`it::Var`: a stale read, which the oracle reports); held unaliased until a session reaches it, which then shows what to model.
+- **Fix:** set a trophy's `x8` and `xC` from its attributes' fall speeds at the spawn, as the other kinds' are.
+- **Fix impact:** changes a hit trophy's flight in Adventure and Classic's bonus stage; replays of those modes would differ only where a dropped trophy is hit.
+- **Source:** the decomp's `itcoin.c` (`it_802F2094`'s `x4` branch, `itCoin_Logic116_DmgReceived`'s `switch`, `itCoin_UnkMotion3_Phys`); ssbm-rs's `melee__it__kinds__itcoin.rs`.
+
 ### A fighter's unload reads the next item from an item it destroyed
 
 - **Where:** `it_8026B7F8` (every item lets a fighter going away go, from `Fighter_Unload_8006DABC`), `crates/melee-sim/src/game/it/evt_unk.rs` (`fighter_unloaded`).
@@ -1086,6 +1106,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/camera.rs:1453`; `tools/leaf-check/tests/camera.rs:1322`.
 
+### The trophy fall's second cut's camera ends on clipping planes it never set
+
+- **Where:** `fn_801A7A8C` (`gm_1A7A.c`) over `GmRegEnd`'s `cut2CanimScene` camera animation, through `HSD_CObjAnim` and `FObjUpdateAnim`; `crates/melee-sim/src/hsd/cobj.rs` (`update`, `CObj::stale_planes`).
+- **Defect:** the animation's near and far channels end right after their first key, so at the camera's last frame `FObjUpdateAnim` hands `CObjUpdateFunc` whatever its stack holds (a RAM address) for both planes.
+- **Effect:** none observable: the same process frees the camera at that frame, before anything draws through it.
+- **melee-hd:** stale: the planes take an address's value and are marked (`stale_planes`); a stale read is counted only if the camera draws with them, and the heap's image leaves their words unknown.
+- **Fix:** end the channels with a second key.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/hsd/cobj.rs`; `m6-oracle/ending-test`'s tick 1599.
+
 ## HUD and audio
 
 ### An announcement tests its first line twice
@@ -1131,9 +1161,9 @@ When porting shows that the original game does something wrong, keep the behavio
 ### The characters-left tally copies 130 bytes from lists of 28
 
 - **Where:** `fn_802FAC34` (`ifstock.c`, the tally of the characters a challenger's record or All-Star's rest area lists), `crates/melee-sim/src/game/hud/stock.rs` (`stock_tally_proc_2`).
-- **Defect:** the first frame copies 130 bytes from each of `lbl_8046B668`'s two 28-byte arrays (`gm_8016A97C`'s and `gm_8016A98C()->arr1`) into `ifStock_804A1ACC.x83` and `x1`, so the copies run past the struct into the VS scene's `controller` (its start rules) at `0x8046B6A0`; the icons are made only up to the lists' -2, and the per-frame placement (`fn_802FA8C0`) stops at the first missing icon, so the bytes copied past the end are never read.
+- **Defect:** the first frame copies 130 bytes from each of `lbl_8046B668`'s two 28-byte arrays (`gm_8016A97C`'s and `gm_8016A98C()->arr1`) into `ifStock_804A1ACC.x83` and `x1`, so the copies read past the list's 0x38 bytes into the VS scene's `controller` at `0x8046B6A0` (its state's first 0x66 bytes: the pause and end flags, the timers, the first fighters' slots); the icons are made only up to the lists' -2, and the per-frame placement (`fn_802FA8C0`) stops at the first missing icon, so the bytes copied past the end are never read.
 - **Effect:** none observable; the tally's arrays hold the scene's rules' bytes past the list.
-- **melee-hd:** stops by name (`fn_802FAC34 with a challenger's record isn't ported`); All-Star's rest area reaches it (`m6-1p-setups/as-win`, tick 8969).
+- **melee-hd:** modeled: the copies read the memory from `lbl_8046B668` on as the console holds it, the list and then the VS scene's state's first 0x66 bytes laid out big-endian from the state's fields, its padding zero as the `.bss` starts (`Game::left_list_memory`), so the tally's arrays hold the console's bytes and the comparer compares them whole; All-Star's rest area reaches it (`m6-1p-setups/as-win`, tick 8969 on).
 - **Fix:** copy up to the arrays' size.
 - **Fix impact:** none in play.
 - **Source:** `ifstock.c` `fn_802FAC34`.
@@ -1249,6 +1279,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** set the whole colors.
 - **Fix impact:** none.
 - **Source:** `lbspdisplay.c` `setTevAlpha`, `lb_800122F0`.
+
+### A freed fighter's parts stay in the ID table
+
+- **Where:** the fighters' part joints keyed by their skeleton's descriptors (`ftParts`' `HSD_IDInsertToTable`, `crates/melee-sim/src/game/ft/create_model.rs`; Kirby's hat's, `game/ft/kirby/hat.rs`) and `JObjRelease` (`jobj.c`, `hsd/jobj.rs`'s `delete`).
+- **Defect:** a joint's release removes only its own descriptor's entry (`jobj->id`, the costume's), and only when that entry names it, so the skeleton's entries keep pointing at the part joints once a fighter is freed mid-scene (`Fighter_Unload_8006DABC`, then its model's release).
+- **Effect:** none observable: nothing looks a skeleton's descriptor up until a fighter of the kind is made again, which inserts it anew. The memory the pointers name goes to the next objects (in `m6-oracle/ending-test`, the trophy fall's second cut's trophy takes Captain Falcon's hip's).
+- **melee-hd:** modeled: as a joint the table names by another key goes (`JObj::named`), those entries name its address (`jobj::DANGLING`), which the comparer checks against memory's pointer.
+- **Fix:** remove the part entries as the fighter goes.
+- **Fix impact:** none.
+- **Source:** `crates/melee-sim/src/hsd/jobj.rs` (`delete`, `DANGLING`); `tools/capture/src/stage.rs` (`ids`).
 
 ## Saves and the memory card
 
@@ -1676,6 +1716,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded (none if the words are never read).
 - **Source:** `gm_1601.c`'s `fn_80165E7C`; session `2026-10-06_12-42-06` at its match's end.
 
+### The endings' exit hands the challenger approach the costume as the human's slot
+
+- **Where:** `gm_801BEE9C` (the game over modes' congratulations' exit, `gmgover.c`), `crates/melee-sim/src/game/gm/endings/congrats.rs` (`gover_congrats_exit`).
+- **Defect:** with no character unlocked, it asks for the challenger approach for a waiting notice with `gm_80173754(1, gm_801BEFD0())`: the second argument is the human's slot, and it passes the ending's costume (`gm_801BEFD0`) where the port (`gm_801BF010`) was meant.
+- **Effect:** the challenger approach's data (`challenger_data.human_slot`) holds the costume. The approach for a notice has no fighter, and nothing in it was seen to read the slot: `m6-endings-2/regend-adv` (costume 1) and `regend-gw` (costume 0) go to the approach for their notices and compare clean.
+- **melee-hd:** modeled (`challenger_check(1, color)`).
+- **Fix:** pass `gm_801BF010()`.
+- **Fix impact:** none known.
+- **Source:** `gmgover.c`; `crates/melee-sim/src/game/gm/endings/congrats.rs` (`gover_congrats_exit`).
+
 ## Tournament
 
 ### Four computers' last two places weigh the wrong seat once
@@ -2076,6 +2126,16 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Fix impact:** none.
 - **Source:** the decompilation's `HSD_SObjLib_803A477C` (sobjlib.c:176); `crates/melee-sim/src/game/export.rs` (`sobj`).
 
+### Classic's first stage takes its color kind from before its table
+
+- **Where:** `gmClassic_801B3A34` and `gmClassic_801B3B40` (`gmclassic.c`, a Classic stage's match and its exit), `crates/melee-sim/src/game/gm/classic.rs` (`classic_enter_vs`, `classic_exit_vs`).
+- **Defect:** both index `gm_804908A0` (the stages' results, 1 lost or 2 won) by the stage's number minus one, so the first stage reads and writes the byte before the table: the last byte of `gmClassicIntroDataBuffer` (`0x8049089F`, the intro's enter data's padding), which nothing else writes.
+- **Effect:** the first stage's match takes that byte as its color kind (`gm_8017CE34`'s last argument: the rules' `xA`, 0, 3 or 2): 0 in a power-on's first run, then whatever the last run's first stage left (1 or 2), so a later Classic run's first match starts with the rules' `xA` at 3 or 2. The intro copies the byte too (`lbl_8047368C`'s padding), which nothing reads.
+- **melee-hd:** modeled: the first stage reads and writes the intro data's last byte (`m6-intros/classic-win`).
+- **Fix:** give the first stage its own entry (or skip the read and write for it).
+- **Fix impact:** a later run's first match's rules' `xA`; gameplay.
+- **Source:** `gmclassic.c` (`gmClassic_801B3A34`: `gm_804908A0[(u16) gm_8017BE84(arg0->id) - 1]`); ssbm-rs's port (`melee__gm__gmclassic.rs`).
+
 ## Latent defects
 
 Defects no game data or code reaches in play. For each, the effect is none observable, the fix is a guard or a defined value, and a fix changes nothing in play. melee-hd stops (panics, or reports an unported case) or counts a stale read where the original would go wrong, so a case that turns out reachable can't pass unnoticed.
@@ -2086,6 +2146,8 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A horde opponent's island pick | `ftCo_800A8940` (`ftCo_0A01.c`), `game/ft/cpu_ai.rs` (`cpu_to_other_island`) | Computer kind 24's pick of another island sums the widths of the islands that pass `ftCo_800A2718`'s safety test, but draws over a second pass that skips the test; the island it keeps (r31) is written only when the draw picks one, so a pass that picked none would take its caller's r31 and the list's end (r27, null) for the spot. The second pass takes every island the first did, so its sum reaches the first's total by its last island and an island is always picked; the unsafe islands only shift the odds (a safe island past them is picked less, an unsafe one sometimes) | `crates/melee-sim/src/game/ft/cpu_ai.rs` (`cpu_to_other_island` stops by name) |
 | 15-Minute Melee's trophy given twice | `gm_80173C70` (`gm_1736.c`), `game/gm/multi_man.rs` (`multi_man_trophies`) | A won 15-Minute Melee gives trophy 0x50 (`fn_80172C78`) twice, once before and once after 100-Man Melee's four-minute check; the second finds it given and does nothing | `crates/melee-sim/src/game/gm/multi_man.rs` (`multi_man_trophies`) |
 | A human Crazy Hand's slam tag | `ftCh_Init_80156AD8` (`ftcrazyhandwait10.c`), `game/ft/crazyhand/wait.rs` (`ch_human_attack`) | Y and left on port 4's pad set his next attack to `ftMh_MS_Slam` and glide him to its point to wait for Master Hand (`fn_8015AAC8`), but Master Hand's tag switch (`ftMh_Wait1_0_Anim`, `ftMh_MS_341_80150894`) only sets a point for the slam and starts nothing, so he waits for good though Master Hand is there; only a human-played Crazy Hand reaches it, which no setup makes (the hands are bosses or computers) | `crates/melee-sim/src/game/ft/crazyhand/wait.rs` (`ch_human_attack`); `crates/melee-sim/src/game/ft/masterhand/wait.rs` (`mh_tag_attack`) |
+| Classic's intro's opponents tested by their teammates' characters | `fn_80185F5C` (`gm_1832.c`), `game/gm/intro.rs` (`intro_easy_enemies`) | Each opponent is made only when the player's side's character in its place (`xF1[i]`) isn't none, not its own (`xF4[i]`); every stage with more opponents than the player has teammates gives the player allies to match (`fn_8017DE54`), so each place tested holds a character | `gm_1832.c` `fn_80185F5C` (ported, the same test) |
+| Classic's intro's opponents' names' first scale | `fn_801861B8` (`gm_1832.c`), `game/gm/intro.rs` (`intro_easy_names`) | Adds 340 to the opponents' names' first width scale as to their x; the names are blank until the screen's sixth tick sets them and their scale again (`fn_80160DE8`), so nothing shows the first | `gm_1832.c` `fn_801861B8` (ported, the 340 kept) |
 | A single-player list read past its end | `fn_801695BC` (`gm_16A2.c`), `game/gm/opponents.rs` (`shuffle_costumes`) | The neighbours' swap starts at the costumes' list's second entry without checking the first, so a setup of no joiners (the list's end at entry 0) reads the bytes after the end until one is -2; every setup passes a count of one or more | `crates/melee-sim/src/game/gm/opponents.rs` (`at` stops past a list) |
 | A light with no position | `setup_infinite_lightobj`, `setup_point_lightobj`, `setup_spot_lightobj` (lobj.c), `hsd/display.rs` | `HSD_LObjGetPosition` writes nothing for a light without a position WObj, and the setup transforms the stack vector it never set into the GX objects' position. The lights the game sets up have one: every infinite, point and spot light descriptor in every archive on the disc has a position WObj (509, 328 and 20 of them); of the executable's own descriptors that milestone 5's scenes load, the debug menu's infinite light (`if_2FF2.c`'s `light1`) has none but is neither diffuse nor specular, so `HSD_LObjSetupInit` passes it over before any setup; Adventure's static point lights (`grPushOn_803E7B74`, `grPushOn_803E7B90`, `grshrineroute.c`'s two) get one from `HSD_LObjSetPosition` right after loading; and no code takes a light's position WObj away. melee-render puts such a light at the origin rather than at what melee-sim left: neither is the stack's word, and nothing reaches it | `crates/melee-sim/src/hsd/display.rs` (`init_pos`, `GxLight::stale_pos`: the heap's image leaves the position unknown); `hsd::lobj`'s tests `lights_on_the_disc` and `executable_lights` (the proof, against the disc); [the player](player.md), **Spot lights** |
 | A singular view's inverse | `HSD_CObjGetInvViewingMtxPtrDirect`, `hsd/cobj.rs` | `PSMTXInverse` leaves the matrix as it was when the view is singular, so a matrix allocated just then keeps its block's bytes; only a view never built (zero) is singular | `crates/melee-sim/src/hsd/cobj.rs` (`inv_viewing_mtx_direct`); `hsd/export.rs` (`cobj`: an all-zero inverse stays unknown in the heap's image) |
@@ -2175,7 +2237,7 @@ Defects no game data or code reaches in play. For each, the effect is none obser
 | A character's target stage past its table | `gm_801647F8` (gm_1601.c), `gm::one_player::target_stage` | The lookup's end test compares the table's stage kinds, bytes, with 0x148, which no byte equals: a character the table lacks would read past `lbl_803D5168` into the data after it. Every caller passes a character the one-door select offers, all of which the table lists (the Ice Climbers as Popo, turned back into 0xE first), so the loop always finds one | `crates/melee-sim/src/game/gm/one_player.rs` (stops by name past the table; `menus_audit::STOPS`) |
 | The Underground Maze's arena ending without its portal | `grShrineRoute_80208F70` (grshrineroute.c, the maze's state 4), `game/gr/shrineroute.rs` (`proc_maze`) | Once the portal's overlay is done, or when there's no portal (`xD4` 0), the state reads the portal's joint (`((HSD_GObj*) xD4)->hsd_obj`) for `grLib_801C9908` before its own null check guards the destroy, so with no portal it reads through a null GObj; the portal (map 5) is made as the arena opens (state 1, `grShrineRoute_80209AF0`) and taken only here, so state 4 always has one | `crates/melee-sim/src/game/gr/shrineroute.rs` (`proc_maze` stops: "Melee crashes: the Underground Maze's arena ends without its portal") |
 | The Underground Maze's lights without a position, or fewer than three | `grShrineRoute_8020A21C` (grshrineroute.c), `gr/shrineroute.rs` (`proc_lights`) | The race's: measures each kept light's distance from `HSD_LObjGetPosition` without its answer, so a non-ambient light without a position WObj would leave the stack vector it never set; and reads the second and third nearest lights whatever the count, past the counted entries with fewer than three. The maze's fighter lights all have positions, and there are fifteen | `crates/melee-sim/src/game/gr/shrineroute.rs` (`position_of`, the count's assertion) |
-| The characters-left tally's placement hides one icon | `fn_802FA8C0` (`ifstock.c`) | Past the list's -2, the loop meant to push each later icon off the screen indexes `x10C[i]` (the -2's own slot, which has no icon) instead of `x10C[j]`, so it moves nothing; no later icon exists either (the first frame makes them only up to the -2) | `ifstock.c` `fn_802FA8C0` (ported with `fn_802FAC34`, not yet) |
+| The characters-left tally's placement hides one icon | `fn_802FA8C0` (`ifstock.c`) | Past the list's -2, the loop meant to push each later icon off the screen indexes `x10C[i]` (the -2's own slot, which has no icon) instead of `x10C[j]`, so it moves nothing; no later icon exists either (the first frame makes them only up to the -2) | `ifstock.c` `fn_802FA8C0` (ported: `stock.rs`'s `tally_place_proc`) |
 | The HUD's camera and light freed, their pointers kept | `ifAll_802F3A64` (`ifall.c`), `game/hud/all.rs` (`free_hud`) | Frees `ifAll_804A0FD8.gobj` and `gobj_2` without clearing them, so `ifAll_GetHUDGObj` would answer a freed GObj; nothing asks after a single-player stage's end frees the HUD (the clear screen, then the scene's end) | `crates/melee-sim/src/game/hud/all.rs` (`free_hud` keeps the handles, as the comparer's dangling-pointer check sees) |
 
 ## Unsure

@@ -17,6 +17,7 @@
 //! `melee-oracle rules REPLAY.slp...` prints the rules each replay's code list makes and the
 //! version of Slippi's code set they come from, or why melee-hd refuses it.
 
+mod birdo_sweep;
 mod boot;
 mod diff;
 mod golden;
@@ -96,6 +97,7 @@ fn run(args: Vec<String>) -> ExitCode {
         ["vs-heap", ref rest @ ..] => vanilla::vs_heap(rest),
         ["session", ref rest @ ..] => session::session(rest),
         ["session-sync", ref rest @ ..] => session_sync::session_sync(rest),
+        ["birdo-sweep", ref rest @ ..] => birdo_sweep::birdo_sweep(rest),
         ["list-unlaid"] => {
             for (t, why) in melee_sim::game::export::unlaid_types() {
                 println!("{t}: {why}");
@@ -128,6 +130,9 @@ fn run(args: Vec<String>) -> ExitCode {
             eprintln!("       melee-oracle trace-watch TRACE ADDR LEN [FROM [TO]]");
             eprintln!("       melee-oracle trace-heap TRACE");
             eprintln!("       melee-oracle list-unlaid");
+            eprintln!(
+                "       melee-oracle birdo-sweep INPUTS [--snaps N] [--dx D] [--mirror] [--angles all|A,...]"
+            );
             eprintln!("       melee-oracle trace-mem TRACE OUT_DIR TICK...");
             eprintln!(
                 "       melee-oracle vs-heap TRACE --stage STKIND --player PORT:CKIND[:LEVEL]... [--item-freq F] [--ticks N]"

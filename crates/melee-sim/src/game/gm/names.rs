@@ -148,3 +148,33 @@ impl Game {
         (0..120u8).filter(|&i| self.name_text(i).is_some()).count() >= 0x78
     }
 }
+
+/// `lbl_803D50E4` and `lbl_803D5060`: the other names of the English and the Japanese game
+/// (`fn_801609E0`'s), Fox's and Samus's.
+fn other_names(us: bool, ckind: u8) -> Option<&'static [u8]> {
+    match (us, ckind) {
+        (true, 2) => Some(b"\x82e\x82\x8f\x82\x98"),
+        (true, 0x10) => Some(b"\x82r\x82\x81\x82\x8d\x82\x95\x82\x93"),
+        (false, 2) => Some(b"\x83t\x83H\x83b\x83N\x83X"),
+        (false, 0x10) => Some(b"\x83T\x83\x80\x83X"),
+        _ => None,
+    }
+}
+
+/// A character kind's other name in the saved language, where it has one (`fn_801609E0`
+/// otherwise falls back to its name, `gm_80160980`).
+pub fn other_name(us: bool, ckind: u8) -> Option<&'static [u8]> {
+    other_names(us, ckind)
+}
+
+/// A name's width scale (`fn_80160F58` and `fn_80160DE8`'s): the other name's (Fox's and
+/// Samus's 1 in either language, `lbl_803B7784`, `lbl_803B7700`) when it's shown, else the
+/// name's (`lbl_803B767C`, `lbl_803B75F8`).
+// Ports fn_80160F58 (the horde stage's name's scale); aliased once a check reaches it.
+pub fn name_width_scale(us: bool, ckind: u8, other: bool) -> f32 {
+    if other && other_names(us, ckind).is_some() {
+        1.0
+    } else {
+        crate::game::mn::count::name_scale(us, ckind)
+    }
+}

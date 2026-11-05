@@ -64,12 +64,6 @@ pub const GATES: &[Gate] = &[
             "gm_80173498",
         ],
     },
-    Gate {
-        list: ONE_P,
-        entry: 4,
-        what: "Training",
-        covers: &["melee/gm/gmtrainingmode"],
-    },
 ];
 
 /// The gate the game's state is at: the main menu's scene running with its list's cursor on a
@@ -197,10 +191,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "fn_802FAC34 with a challenger's record",
-        "only the single-player modes' setups give the rules a challenger's record (`x58`, gm_16A2.c)",
-    ),
-    (
         "a text on canvas {context} of font {font}, past the last",
         "each scene makes its texts on canvases it made first",
     ),
@@ -301,8 +291,24 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "a 1P run's team color getter",
-        "Classic's and Adventure's team stages: the single-player modes', which only the entries behind GATES lead to",
+        "Classic's allies drawn",
+        "Classic's team and giant stages (its second stage on): the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CBAC (Classic's clear)",
+        "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gmClassic_801B3B40's target stage records",
+        "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "Classic's horde stage's",
+        "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "(Adventure's intro)",
+        "Adventure's intro, past its state's unported entry (gm_801B3F40): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8017D7AC's records after a no contest",
@@ -311,6 +317,14 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_8017CBAC (All-Star's clear)",
         "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017CA38's records in game mode",
+        "Classic's and Adventure's game overs: the single-player modes', which only the entries behind GATES lead to",
+    ),
+    (
+        "gm_8017390C in Adventure",
+        "Adventure's game over: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8016AC44 with a challenger's record",
@@ -371,10 +385,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_80164A0C (the Hanyu select's odd match types)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
-        "gm_801BEE9C (congratulations' exit)",
-        "the game over modes' congratulations (milestone 6's task 5): the single-player modes' endings, which only the 1P list's gated entries lead to, and the debug menu's ending test at a raised debug level",
     ),
     (
         "unported(\"debug pause predicate\"",
