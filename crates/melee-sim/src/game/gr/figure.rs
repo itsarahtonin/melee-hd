@@ -63,15 +63,15 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 /// The objects' processes and destroy callbacks that do nothing: the two models' processes,
 /// and the destroy callbacks (`Ground::x1C_callback`), which only a stage's own destroying of an
 /// object runs (`Ground_801C4A08`), as these stages never do.
-// Ports grFigure1_8020E19C; aliased once a check reaches it.
+#[doc(alias = "grFigure1_8020E19C")]
 // Ports grFigure1_8020E1A0; aliased once a check reaches it.
 // Ports grFigure1_8020E1FC; aliased once a check reaches it.
-// Ports grFigure1_8020E258; aliased once a check reaches it.
+#[doc(alias = "grFigure1_8020E258")]
 // Ports grFigure1_8020E25C; aliased once a check reaches it.
-// Ports grFigure2_8020E430; aliased once a check reaches it.
+#[doc(alias = "grFigure2_8020E430")]
 // Ports grFigure2_8020E434; aliased once a check reaches it.
 // Ports grFigure2_8020E490; aliased once a check reaches it.
-// Ports grFigure2_8020E4EC; aliased once a check reaches it.
+#[doc(alias = "grFigure2_8020E4EC")]
 // Ports grFigure2_8020E4F0; aliased once a check reaches it.
 #[doc(alias = "grFigure3_8020E6C4")]
 // Ports grFigure3_8020E6C8; aliased once a check reaches it.
@@ -104,8 +104,8 @@ pub fn on_demo_init(_r: &mut Running) {}
 
 /// Creates one of a stage's objects and sets it up (`grFigure1_8020E080`, `grFigure2_8020E314`,
 /// `grFigure3_8020E5A8`), its scale joint's descriptor at `frame` on the stack.
-// Ports grFigure1_8020E080; aliased once a check reaches it.
-// Ports grFigure2_8020E314; aliased once a check reaches it.
+#[doc(alias = "grFigure1_8020E080")]
+#[doc(alias = "grFigure2_8020E314")]
 #[doc(alias = "grFigure3_8020E5A8")]
 pub fn create(r: &mut Running, stage: usize, map_id: i32, frame: u32) -> Option<GObjId> {
     setup::create_from_callbacks(r, map_id, &CALLBACKS[stage][map_id as usize], frame)
@@ -114,8 +114,8 @@ pub fn create(r: &mut Running, stage: usize, map_id: i32, frame: u32) -> Option<
 /// A stage's setup (`grFigure1_OnInit`, `grFigure2_8020E274`, `grFigure3_8020E508`): its
 /// parameters, the stage's `unk8C` flags (b4 off, b5 on), maps 0, 2 and 1 in that order, then
 /// the camera limits and blast zones measured.
-// Ports grFigure1_OnInit; aliased once a check reaches it.
-// Ports grFigure2_8020E274; aliased once a check reaches it.
+#[doc(alias = "grFigure1_OnInit")]
+#[doc(alias = "grFigure2_8020E274")]
 #[doc(alias = "grFigure3_8020E508")]
 pub fn on_init(r: &mut Running, stage: usize) {
     r.game.gr.figure_yakumono[stage] = super::ground::yakumono_param(r.game);
@@ -129,15 +129,15 @@ pub fn on_init(r: &mut Running, stage: usize) {
 }
 
 /// A stage's load does nothing (`grFigure1_OnLoad`, `grFigure2_OnLoad`, `grFigure3_OnLoad`).
-// Ports grFigure1_OnLoad; aliased once a check reaches it.
-// Ports grFigure2_OnLoad; aliased once a check reaches it.
+#[doc(alias = "grFigure1_OnLoad")]
+#[doc(alias = "grFigure2_OnLoad")]
 #[doc(alias = "grFigure3_OnLoad")]
 pub fn on_load(_r: &mut Running) {}
 
 /// A stage's start (`grFigure1_OnStart`, `grFigure2_OnStart`, `grFigure3_OnStart`): the enemy
 /// spawner, with no table.
-// Ports grFigure1_OnStart; aliased once a check reaches it.
-// Ports grFigure2_OnStart; aliased once a check reaches it.
+#[doc(alias = "grFigure1_OnStart")]
+#[doc(alias = "grFigure2_OnStart")]
 #[doc(alias = "grFigure3_OnStart")]
 pub fn on_start(r: &mut Running) {
     zako::start(r.game, None);
@@ -148,8 +148,8 @@ fn map_id(r: &Running, gobj: GObjId) -> i32 {
 }
 
 /// The model's setup (map 0, each stage's `stageGObj0_OnInit`): its animation.
-// Ports stageGObj0_OnInit@8020E168; aliased once a check reaches it.
-// Ports stageGObj0_OnInit@8020E3FC; aliased once a check reaches it.
+#[doc(alias = "stageGObj0_OnInit@8020E168")]
+#[doc(alias = "stageGObj0_OnInit@8020E3FC")]
 #[doc(alias = "stageGObj0_OnInit@8020E690")]
 pub fn init_model(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
@@ -158,8 +158,8 @@ pub fn init_model(r: &mut Running, gobj: GObjId) {
 
 /// The collision's setup (map 1: `grFigure1_8020E1A4`, `grFigure2_8020E438`,
 /// `grFigure3_8020E6CC`): the map's collision joints bound to its model.
-// Ports grFigure1_8020E1A4; aliased once a check reaches it.
-// Ports grFigure2_8020E438; aliased once a check reaches it.
+#[doc(alias = "grFigure1_8020E1A4")]
+#[doc(alias = "grFigure2_8020E438")]
 #[doc(alias = "grFigure3_8020E6CC")]
 pub fn init_coll(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);
@@ -169,8 +169,8 @@ pub fn init_coll(r: &mut Running, gobj: GObjId) {
 
 /// The collision's process (map 1: `grFigure1_8020E1D8`, `grFigure2_8020E46C`,
 /// `grFigure3_8020E700`): the collision follows the model, and the wind sources age.
-// Ports grFigure1_8020E1D8; aliased once a check reaches it.
-// Ports grFigure2_8020E46C; aliased once a check reaches it.
+#[doc(alias = "grFigure1_8020E1D8")]
+#[doc(alias = "grFigure2_8020E46C")]
 #[doc(alias = "grFigure3_8020E700")]
 pub fn proc_coll(r: &mut Running, gobj: GObjId) {
     update_map_coll(r.game, r.data, gobj);
@@ -179,8 +179,8 @@ pub fn proc_coll(r: &mut Running, gobj: GObjId) {
 
 /// The second model's setup (map 2, each stage's `stageGObj2_OnInit`): its collision and
 /// animation (the inline `Ground_InitMapCollAndAnim`).
-// Ports stageGObj2_OnInit@8020E200; aliased once a check reaches it.
-// Ports stageGObj2_OnInit@8020E494; aliased once a check reaches it.
+#[doc(alias = "stageGObj2_OnInit@8020E200")]
+#[doc(alias = "stageGObj2_OnInit@8020E494")]
 #[doc(alias = "stageGObj2_OnInit@8020E728")]
 pub fn init_coll_and_model(r: &mut Running, gobj: GObjId) {
     let m = map_id(r, gobj);

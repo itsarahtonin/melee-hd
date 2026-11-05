@@ -134,24 +134,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "drawn only at a debug level (ledger/deferred.txt, milestone 5's task 19)",
     ),
     (
-        "(an event's series of rounds)",
-        "Event Match's rounds' events, behind the Event Match gate",
-    ),
-    (
-        "(an event's crowd)",
-        "Event Match's crowd events, behind the Event Match gate",
-    ),
-    (
-        "gm_801BC00C for event",
-        "Event Match's rounds' events, behind the Event Match gate",
-    ),
-    (
-        "the event process",
-        "Event Match's events whose process isn't ported, behind the Event Match gate",
-    ),
-    (
-        "(event 32's falls)",
-        "Event Match's event 32, behind the Event Match gate",
+        "(Event 50's cheer)",
+        "Event Match's Event 50 once a hand is beaten, behind the Event Match gate",
     ),
     (
         "an event's random fifth player",
@@ -318,10 +302,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_8016AC44 with a challenger's record",
-        "only the single-player modes' setups give the rules a challenger's record (`x58`, gm_16A2.c)",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),
@@ -360,6 +340,10 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "the debug menu's Global Data Edit past the card data",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
+    ),
+    (
+        "All-Star's intro's place of character",
+        "the debug menu's AllStar Enemy past its 28th choice (the Female Wire Frame on), whose intro reads past its place table: debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
         "the debug menu entry callback",

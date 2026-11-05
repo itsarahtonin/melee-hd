@@ -213,7 +213,7 @@ members! {
     MasterHandBullet, masterhand_bullet, itMasterHandBullet_ItemVars, [MASTERHAND_BULLET];
     ClimbersBlizzard, climbers_blizzard, itClimbersBlizzard_ItemVars, [ICE_CLIMBER_BLIZZARD];
     ClimbersString, climbers_string, itClimbersString_ItemVars, [ICE_CLIMBER_STRING];
-    Egg, egg, itEgg_ItemVars, [EGG];
+    Egg, egg, itEgg_ItemVars, [EGG, EV_YOSHI_EGG];
     FFlower, fflower, itFFlower_ItemVars, [F_FLOWER];
     Freeze, freeze, itFreeze_ItemVars, [FREEZE];
     LGun, lgun, itLGun_ItemVars, [L_GUN];

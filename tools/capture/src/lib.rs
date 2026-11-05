@@ -17,6 +17,7 @@ pub mod heap;
 pub mod home_run;
 pub mod hud;
 pub mod import;
+pub mod intro_allstar;
 pub mod intros;
 pub mod items;
 pub mod izumi;
