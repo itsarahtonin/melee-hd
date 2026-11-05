@@ -442,6 +442,7 @@ pub const PATHS: &[Paths] = &[
         mode: DB,
         units: &[],
         modules: &[
+            "gm/intro_allstar",
             "gm/endings/mod",
             "gm/endings/game_over",
             "ft/zako",
@@ -981,8 +982,6 @@ pub const MISSING: &[Gap] = &[
             "a 1P run's getter",
             "melee/gm/gmallstar",
             "melee/gm/gm_17EB",
-            "melee/gm/gm_186E",
-            "melee/gr/grheal",
         ],
         modes: &[AS, DB],
     },
@@ -1054,12 +1053,15 @@ pub const MISSING: &[Gap] = &[
     },
     // The developer setting's debug routes.
     Gap {
+        what: "All-Star's intro with a character past its place table (the debug menu's AllStar Enemy past its 28th choice)",
+        covers: &["All-Star's intro's place of character"],
+        modes: &[DB],
+    },
+    Gap {
         what: "the debug mode's milestone 6 states and the debug cutscene",
         covers: &[
             "onEnterIntroEasy",
-            "onEnterIntroAllstar",
             "un_80301BA8",
-            "un_80301C64",
             "un_80301B48",
             "un_80301028",
             "un_80301074",

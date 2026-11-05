@@ -2082,6 +2082,16 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Fix impact:** changes debug VS matches with Crazy Hand alone; none in the single-player modes.
 - **Source:** the decompilation's `ftCh_TagRockPaper_Anim`, `ftBossLib_8015C2E0` and `ftBossLib_8015C358`; `crates/melee-sim/src/game/ft/crazyhand/tag.rs`.
 
+### All-Star's intro reads past its place table for the AllStar Enemy's last choices
+
+- **Where:** `fn_80186F6C` (`gm_186E.c`, the intro's fighter's process), `crates/melee-sim/src/game/gm/intro_allstar.rs` (`intro_allstar_fighter_proc`).
+- **Defect:** the process indexes `lbl_803D9498`, 28 places (an offset and a scale each), by the enter data's character, which the debug mode's AllStar Enemy (`onEnterIntroAllstar`, `un_80301C64`) sets from a choice of 34 (Captain Falcon to `ChKind_None`); its last six (the Female Wire Frame, Giga Bowser, Crazy Hand, Sandbag, Popo and none) read past the table, into the scene's symbol's string and the data after it.
+- **Effect:** none observable in play: only the debug mode's state 7 enters the scene, and All-Star's own states never do. With those choices the fighter would take floats made of the string's bytes as its place and scale.
+- **melee-hd:** stops by name (`All-Star's intro's place of character N`) for a character past the table; the 28 in it are modeled.
+- **Fix:** bound the debug choice to the playable characters.
+- **Fix impact:** none on gameplay (debug only).
+- **Source:** `gm_186E.c` (`lbl_803D9498`'s 28 entries, `fn_80186F6C`), the debug menu's AllStar Enemy entry (`hud::debug_tables`, `max: 34`).
+
 ## Gameplay that reads the display pass
 
 The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so about once every 1,001 frames a round ticks twice and renders once ([the engine notes](engine.md#state-the-render-pass-writes)). State only the display pass writes is then a tick older on the second tick, and where gameplay reads it, the outcome depends on CPU timing rather than on the inputs. Slippi's online codes patch some of these as determinism fixes.
