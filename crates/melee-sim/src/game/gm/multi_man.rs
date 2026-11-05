@@ -551,6 +551,7 @@ impl Running<'_> {
     #[doc(alias = "gm_80181A14")]
     #[doc(alias = "gm_80181A24")]
     #[doc(alias = "gm_80181A34")]
+    #[doc(alias = "gm_80173460")]
     fn multi_man_unlocks(&mut self, mode: u8) -> bool {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
@@ -567,8 +568,7 @@ impl Running<'_> {
         self.multi_man_trophies(mode, u32::from(rec.x2), rec.x4 as u32, won);
         self.trophy_unlocks();
         self.special_unlocks(0x20);
-        // `gm_80173460` (Falco while he's locked); aliased once a check reaches it (a won
-        // 100-Man Melee).
+        // `gm_80173460`: Falco while he's locked.
         self.game.sync_unlocks();
         if won && mode == GM_100MAN && !self.game.gm.unlocks.ckind_unlocked(CKIND_FALCO) {
             let slot = self.game.multi_man.slot;

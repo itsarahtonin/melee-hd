@@ -2194,7 +2194,9 @@ fn the_home_run_contest() {
 /// play, then Fox runs off the stage, the select again), 10-Man Melee won (`mm-10-win`, port 1
 /// played by a bot from melee-hd's state, ssbm-rs's run of its reads the reference; the select
 /// again shows the time), and the list turned and left (`mm-menu`: into 100-Man's select and
-/// back, the list again on 100-Man, back to the Stadium list).
+/// back, the list again on 100-Man, back to the Stadium list). And each Wire Frame jumping with
+/// a Screw Attack held, which its script hides (`wf-screw-boy`, `wf-screw-girl`, debug VS:
+/// `ftBo_Init_OnItemInvisible`, `ftGl_Init_OnItemInvisible`).
 #[test]
 fn multi_man_melee() {
     for (name, ticks) in [
@@ -2206,6 +2208,8 @@ fn multi_man_melee() {
         ("mm-cruel", 3865),
         ("mm-10-win", 3740),
         ("mm-menu", 1983),
+        ("wf-screw-boy", 6548),
+        ("wf-screw-girl", 6544),
     ] {
         let run = ssbm_rs_local(&format!("lockstep/m6-multiman/{name}-run.card"));
         let after = if std::path::Path::new(&run).exists() {
@@ -2222,6 +2226,26 @@ fn multi_man_melee() {
                 "{name}: {out}"
             );
         }
+    }
+}
+
+/// 100-Man Melee won (`m6-multiman/mm-100-win`, port 1 played by a search over melee-hd's
+/// sessions on a card with Falco locked, ssbm-rs's run of its reads the reference), from
+/// power-on with the heap: the hordes' kind 16 from the table's 70th entry
+/// (`ftCo_800B7638`), 100 KOs, Falco's challenge (`gm_80173460`) and its match lost, the
+/// select again with the win's time (`gm_80163A3C`), back to the menu. About 40 minutes.
+#[test]
+#[ignore = "about 40 minutes; run with --ignored"]
+fn multi_man_melee_won() {
+    let after = ssbm_rs_local("traces/m6-multiman/mm-100-win-play.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    if let Some(out) = scripted_session("m6-multiman", "mm-100-win", &args) {
+        assert!(
+            out.contains("61751 ticks compared, no difference")
+                && out.contains("no stale reads")
+                && out.contains("the card after the session: the original's"),
+            "{out}"
+        );
     }
 }
 

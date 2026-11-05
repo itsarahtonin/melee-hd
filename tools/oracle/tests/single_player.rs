@@ -163,6 +163,111 @@ fn the_sessions_catch_an_added_press() {
     }
 }
 
+/// The Wire Frames' held-item hooks (`ftBo_Init_OnItemInvisible`, `ftBo_Init_OnItemVisible`
+/// and the female's, run by the item visibility command, opcode 35, `ftAction_80071F34`,
+/// through `ftCommon_8007F5CC`). A Wire Frame has only the common states, so it runs its own
+/// file's scripts at their animations and, thrown, captured, carried or in an egg, its
+/// holder's file's at those states' (`Fighter_ChangeMotionState` with another fighter). Walked
+/// with the interpreter's lengths (`Command_Execute`'s 0 to 9, `ftAction_803C0870` from 10),
+/// following subroutines and gotos: the Wire Frames' own scripts hide a held item only in the
+/// Screw Attack's states (ItemScrew, ItemScrewAir and the two DamageScrew, animations 144 to
+/// 147) and never show one, and no fighter's script for a held state has the command at all.
+/// So `OnItemInvisible` runs (`m6-multiman/wf-screw-boy`, `wf-screw-girl`) and `OnItemVisible`
+/// can't: the only other callers of `ftCommon_8007F5CC` are Kirby's, Bowser's and Yoshi's own
+/// specials, and `Fighter_ChangeMotionState` shows the item again without the hook.
+#[test]
+fn wire_frames_hide_a_held_item_and_never_show_one() {
+    use melee_data::archive::Archive;
+    use melee_data::disc::Disc;
+    use melee_sim::game::ft::action::COMMAND_WORDS;
+    use melee_sim::game::ft::co::ids::ms;
+
+    let Ok(path) = std::env::var("SSBM_DISC") else {
+        eprintln!("no SSBM_DISC: skipping");
+        return;
+    };
+    let disc = Disc::open(path).expect("the disc");
+    let common = melee_sim::game::ft::motion_table(0x803C_2800);
+    // Each animation's script's item visibility commands' values, in a fighter's file.
+    let walk = |file: &str, anims: &mut dyn Iterator<Item = i32>| -> Vec<(i32, u32)> {
+        let a = Archive::parse(&disc.read_file(file).expect("the file")).expect("an archive");
+        let (_, root) = a
+            .publics()
+            .find(|(n, _)| n.starts_with("ftData"))
+            .expect("the fighter's data");
+        let table = a.ptr(root + 0xC).expect("the animations' table");
+        let mut found = Vec::new();
+        for anim in anims {
+            let Some(start) = a.ptr(table + 0x18 * anim as u32 + 0xC) else {
+                continue;
+            };
+            let (mut todo, mut seen) = (vec![start], std::collections::HashSet::new());
+            while let Some(mut p) = todo.pop() {
+                while seen.insert(p) {
+                    let w = a.u32(p);
+                    match w >> 26 {
+                        0 | 6 => break,
+                        5 => {
+                            todo.push(a.ptr(p + 4).expect("a subroutine"));
+                            p += 8;
+                        }
+                        7 => {
+                            todo.push(a.ptr(p + 4).expect("a goto's target"));
+                            break;
+                        }
+                        1..=4 | 8 | 9 => p += 4,
+                        op => {
+                            if op == 35 {
+                                found.push((anim, w & 1));
+                            }
+                            let words = COMMAND_WORDS[(op - 10) as usize];
+                            p += 4 * u32::from(words);
+                        }
+                    }
+                }
+            }
+        }
+        found.sort_unstable();
+        found.dedup();
+        found
+    };
+    let own: Vec<i32> = common
+        .iter()
+        .map(|s| s.anim_id)
+        .filter(|&a| a >= 0)
+        .collect();
+    for file in ["PlBo.dat", "PlGl.dat"] {
+        let found = walk(file, &mut own.iter().copied());
+        let screw = [144, 145, 146, 147].map(|a| (a, 0));
+        assert_eq!(found, screw, "{file}");
+    }
+    let held = [
+        ms::THROWN_F..=ms::THROWNLW_WOMEN,
+        ms::SHOULDERED_WAIT..=ms::THROWN_F_LW,
+        ms::CAPTURE_YOSHI..=ms::YOSHI_EGG,
+        ms::CAPTURE_KOOPA..=ms::THROWN_KIRBY,
+        ms::CAPTURE_MEWTWO..=ms::THROWN_MEWTWO_AIR,
+        ms::CAPTURE_MASTER_HAND..=ms::KIRBY_YOSHI_EGG,
+        ms::CAPTURE_CRAZY_HAND..=ms::THROWN_CRAZY_HAND,
+    ];
+    let anims: Vec<i32> = held
+        .into_iter()
+        .flatten()
+        .map(|s| common[s as usize].anim_id)
+        .filter(|&a| a >= 0)
+        .collect();
+    let mut files = 0;
+    for file in disc.files().expect("the disc's files") {
+        let name = file.trim_start_matches('/');
+        if name.len() == 8 && name.starts_with("Pl") && name.ends_with(".dat") && name != "PlCo.dat"
+        {
+            files += 1;
+            assert_eq!(walk(name, &mut anims.iter().copied()), [], "{name}");
+        }
+    }
+    assert!(files >= 30, "{files} fighters' files");
+}
+
 /// Event Match's sessions (`m6-event`, milestone 6's task 21; docs/oracle.md, "Sessions"),
 /// each on its card and clean from power-on to its trace's end with `--all --heap` and the
 /// card after the original's (`NAME-run.card`). `ev05` stands through the coin event's 80
