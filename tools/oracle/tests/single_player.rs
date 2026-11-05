@@ -361,3 +361,34 @@ fn the_third_rounds_events_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Event Match's fourth round (`m6-event-3`, milestone 6's task 21; docs/oracle.md,
+/// "Sessions"): the five crowds (Events 16, 22, 24, 28 and 45: the joiners' setup and
+/// callbacks, Event 22's counter, `ifStock_802FA5BC`, and its process) and Event 32 to its
+/// time's end (its far Arwing lasers' stale last positions left out), each clean from
+/// power-on to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_fourth_rounds_events_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("ev16", 4176),
+        ("ev22", 4363),
+        ("ev24", 4389),
+        ("ev28", 4406),
+        ("ev45", 5563),
+        ("ev32", 6313),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-event-3/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-event-3/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-event-3", name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
