@@ -1550,8 +1550,8 @@ impl Running<'_> {
     /// `gm_801BDAF4`, Event 32's: at the time's end, cleared if the first player's KOs of the
     /// second less its own falls (`pl_8003FBFC`) beat the second's falls (`pl_8003FC20`).
     #[doc(alias = "gm_801BDAF4")]
-    // Ports `pl_8003FBFC`; aliased once a check reaches it.
-    // Ports `pl_8003FC20`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003FBFC")]
+    #[doc(alias = "pl_8003FC20")]
     fn event_kos_less_falls_proc(&mut self, gobj: GObjId) {
         if !self.event_time_up() {
             return;

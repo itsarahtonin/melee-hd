@@ -381,9 +381,14 @@ pub fn spawn_straight(
 ///
 /// The original never sets the spawn's own position (`SpawnItem::pos`), so the item's collision
 /// takes a stale stack vector as its last position (and its ECB's motion, `xB54`, which only a
-/// stomp on a stompable item reads). Both callers play the shot's sound (`sfx`) just before,
-/// and its start (`HSD_AudioSFXStartParam`) leaves there the registers its prologue saved and
-/// set: the track (0), the channel (7) and the sound's sample, as bits.
+/// stomp on a stompable item reads). Both callers play the shot's sound (`sfx`) just before:
+/// in Slippi's playback, the code it places in the sound's start (`HSD_AudioSFXStartParam` at
+/// 0x8038D0B0) leaves there the registers it saved, the track (0), the channel (7) and the
+/// sound's sample, as bits. Without it (a session, the player) the start writes none of those
+/// words and they keep what the tick's earlier calls left at that depth (a register an
+/// animation search's arguments spilled, 0 and a back chain), so the last position is stale
+/// (`it::Globals::stale_last_pos`): nothing reads it but the ECB's motion and the debug
+/// display's ECBs (docs/engine.md).
 #[doc(alias = "it_802E7654")]
 #[allow(clippy::too_many_arguments)]
 pub fn spawn_aimed(
@@ -397,10 +402,17 @@ pub fn spawn_aimed(
     sfx: i32,
 ) {
     let at = world_position(&mut r.game.objs, r.data, gun, None);
-    let sample = r.game.audio.sfx_sample(r.data, sfx) as u32;
+    let playback = r.game.playback.is_some();
+    let pos = if playback {
+        let sample = r.game.audio.sfx_sample(r.data, sfx) as u32;
+        Vec3::new(0.0, f32::from_bits(7), f32::from_bits(sample))
+    } else {
+        // What ssbm-rs's probe of Event 32's session found most (docs/engine.md).
+        Vec3::new(f32::from_bits(1), 0.0, f32::from_bits(0x804E_E9F0))
+    };
     let mut spawn = SpawnItem {
         kind: KIND,
-        pos: Vec3::new(0.0, f32::from_bits(7), f32::from_bits(sample)),
+        pos,
         prev_pos: at,
         facing_dir: 0.0,
         x3C_damage: 0,
@@ -413,6 +425,10 @@ pub fn spawn_aimed(
     let Some(gobj) = spawn_air(r, &mut spawn) else {
         return;
     };
+    if !playback {
+        let id = super::super::item_of(r.game, gobj);
+        r.game.it.stale_last_pos.insert(id.0);
+    }
     let j = jobj_of(r.game, gobj).expect("an Arwing's laser without a model");
     lib2725::set_lifetime(r.game, r.data, gobj, 400.0);
     let s = super::super::super::gr::ground::scale(r.game);
