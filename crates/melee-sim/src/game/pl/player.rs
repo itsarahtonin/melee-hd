@@ -1053,6 +1053,24 @@ impl Running<'_> {
         );
     }
 
+    /// Kirby's copies of every playing slot's fighters' neutral specials, `Player_80031DC8`
+    /// with `ftKb_SpecialN_800EED50` (Kirby's `ftData_800857E0`,
+    /// `ftKb_Init_UnkMotionStates5`).
+    #[doc(alias = "Player_80031DC8")]
+    #[doc(alias = "ftKb_Init_UnkMotionStates5")]
+    pub fn player_80031dc8(&mut self) {
+        for slot in 0..6 {
+            if self.game.player_state(slot) == 0 {
+                continue;
+            }
+            let m = mapping(self.game.player_ckind(slot));
+            self.player_80031da8(i32::from(m.internal_id), 0);
+            if m.extra_internal_id != -1 {
+                self.player_80031da8(i32::from(m.extra_internal_id), 0);
+            }
+        }
+    }
+
     /// Brings the slot's fighter back for its next stock, `Player_80032070`.
     #[doc(alias = "Player_80032070")]
     pub fn player_80032070(&mut self, slot: i32, sub: bool) {

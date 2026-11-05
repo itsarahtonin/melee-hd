@@ -95,15 +95,14 @@ fn on_start(r: &mut Running) {
 }
 
 /// The objects' processes and destroy callbacks that do nothing, the demo setup and the load.
-// Ports grHeal_8021EF38; aliased once a check reaches it.
+/// The demo setup, the platform's, stand's and background's destroy callbacks and the
+/// trophies' processes are never run (`ledger/dead.txt`): no cutscene loads the rest area, the
+/// stage destroys only its trophies' objects, and those in their own setup.
 #[doc(alias = "grHeal_8021EFBC")]
 #[doc(alias = "stageGObj0_GObjProc@8021F178")]
-// Ports stageGObj0_Callback3@8021F17C; aliased once a check reaches it.
-// Ports stageGObj1_Callback3@8021F4BC; aliased once a check reaches it.
 #[doc(alias = "stageGObj2_OnInit@8021F5C8")]
-// Ports stageGObj2_GObjProc@8021F5D4; aliased once a check reaches it.
 #[doc(alias = "stageGObj2_Callback3@8021F5D8")]
-// Ports stageGObj3_Callback3@8021F624; aliased once a check reaches it.
+#[doc(alias = "stageGObj3_GObjProc@8021F620")]
 #[doc(alias = "stageGObj4_OnInit@8021F6F8")]
 #[doc(alias = "stageGObj4_Callback3@8021F708")]
 pub fn empty() {}
@@ -269,7 +268,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
 }
 
 /// Whether the portal was landed on since the stand's last process, `fn_8021F424`.
-// Ports fn_8021F424; aliased once a check reaches it.
+#[doc(alias = "fn_8021F424")]
 pub fn portal_check(game: &mut super::super::state::Game) -> bool {
     let Some(gobj) = map_gobj(game, 1) else {
         return false;

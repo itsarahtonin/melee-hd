@@ -61,6 +61,18 @@ impl PastAddrs {
             .map(|g| g.data + d.offset)
     }
 
+    /// The data at `addr` in an archive no longer loaded, by its last place.
+    pub(crate) fn gone_ref(&self, addr: u32) -> Option<DataRef> {
+        self.gone
+            .iter()
+            .rev()
+            .find(|g| (g.data..g.data + g.data_len).contains(&addr))
+            .map(|g| DataRef {
+                archive: g.id,
+                offset: addr - g.data,
+            })
+    }
+
     /// Whether `addr` is where data was in a copy of its archive that is gone, while another
     /// copy of the same file is loaded (the session loads a file by name once, and every copy
     /// of it is that archive).
@@ -280,6 +292,20 @@ impl<'a> Comparer<'a> {
 
     pub(crate) fn data_ref(&self, a: u32) -> Option<DataRef> {
         (a != 0).then(|| self.data.get(a)).flatten()
+    }
+
+    /// [`Self::data_ref`] for a pointer paired with `ours`: where the scan no longer finds the
+    /// archive ours names (the original's scene freed the file while its objects still hold
+    /// it, as All-Star's intro does in its last tick), ours when its data was at `theirs`.
+    pub(crate) fn data_ref_as(&self, ours: Option<DataRef>, theirs: u32) -> Option<DataRef> {
+        let t = self.data_ref(theirs);
+        if t.is_some() || theirs == 0 {
+            return t;
+        }
+        let o = ours?;
+        let gone = !self.data.loaded.iter().any(|l| l.id == o.archive);
+        let at = self.past.and_then(|p| p.gone_addr(o));
+        (gone && at == Some(theirs)).then_some(o)
     }
 
     /// A block's comparison starts: its heap leftovers are known by its kind and address.
@@ -1106,7 +1132,7 @@ impl<'a> Comparer<'a> {
             );
             // A stack descriptor's key is a stack address in memory, which isn't data.
             let id = j.id.filter(|&k| melee_sim::hsd::id::is_data_key(k));
-            self.check(&path, "id", id, self.data_ref(self.u32(t + 0x84)));
+            self.check(&path, "id", id, self.data_ref_as(id, self.u32(t + 0x84)));
             let u = self.u32(t + 0x18);
             match j.u {
                 Contents::Spline(s) => self.check(&path, "contents", s, self.data_ref(u)),
@@ -1177,9 +1203,15 @@ impl<'a> Comparer<'a> {
             };
             self.maps.fobjs.entry(tf).or_insert(of);
             let x = &self.game.objs.fobjs[of.0];
+            let at = |offset| {
+                Some(DataRef {
+                    archive: x.archive,
+                    offset,
+                })
+            };
             let ad = match self.u32(tf + 4) {
                 0 => 0,
-                p => self.data_ref(p).map_or(u32::MAX, |d| d.offset),
+                p => self.data_ref_as(at(x.ad), p).map_or(u32::MAX, |d| d.offset),
             };
             self.check(
                 &fp,
@@ -1187,7 +1219,7 @@ impl<'a> Comparer<'a> {
                 (x.ad, x.ad_head, x.length),
                 (
                     ad,
-                    self.data_ref(self.u32(tf + 8))
+                    self.data_ref_as(at(x.ad_head), self.u32(tf + 8))
                         .map_or(u32::MAX, |d| d.offset),
                     self.u32(tf + 0xC),
                 ),

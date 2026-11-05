@@ -92,6 +92,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6a-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-allstar/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6i-") {
                     return ssbm_rs_local(&format!("lockstep/m6-intros/{o}.inputs")).into();
                 }
@@ -125,6 +128,9 @@ impl Replay {
                 }
                 if name.starts_with("tt-") {
                     return ssbm_rs_local(&format!("lockstep/m6-target-test/{name}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("e3-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-event-3/{o}.inputs")).into();
                 }
                 if name.starts_with("ev") {
                     return ssbm_rs_local(&format!("lockstep/m6-event/{name}.inputs")).into();
@@ -917,6 +923,24 @@ pub const EV47: Game = Game {
     replay: Replay::Session("ev47"),
 };
 
+/// Event 14, Trophy Tussle 1 (`m6-event-3/ev14`, task 21's third round): Fox against three
+/// on the first trophy stage.
+pub const EV14: Game = Game {
+    stage: "the first trophy stage",
+    name: "e3-ev14",
+    players: "Event 14: Fox and three computer players (session m6-event-3/ev14)",
+    replay: Replay::Session("e3-ev14"),
+};
+
+/// Event 26, Trophy Tussle 2 (`m6-event-3/ev26`): Fox against three on the second trophy
+/// stage.
+pub const EV26: Game = Game {
+    stage: "the second trophy stage",
+    name: "e3-ev26",
+    players: "Event 26: Fox and three computer players (session m6-event-3/ev26)",
+    replay: Replay::Session("e3-ev26"),
+};
+
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
 pub const TT_DK_QUIT: Game = Game {
     stage: "Donkey Kong's target stage",
@@ -1313,6 +1337,23 @@ pub const REC_ADVENTURE: Game = Game {
     name: "rec-2026-10-06_12-04-48",
     players: "Adventure's first stages (recording 2026-10-06_12-04-48)",
     replay: Replay::Session("rec-2026-10-06_12-04-48"),
+};
+
+/// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
+pub const O6_INTRO_ALLSTAR: Game = Game {
+    stage: "All-Star's intro",
+    name: "o6-intro-allstar",
+    players: "All-Star's intro, Captain Falcon (session m6-oracle/intro-allstar)",
+    replay: Replay::Session("o6-intro-allstar"),
+};
+
+/// All-Star's intro from the debug mode (`m6-allstar/intro-as-ic`): the Ice Climbers asleep,
+/// Nana beside Popo.
+pub const M6A_INTRO_AS_IC: Game = Game {
+    stage: "All-Star's intro",
+    name: "m6a-intro-as-ic",
+    players: "All-Star's intro, the Ice Climbers (session m6-allstar/intro-as-ic)",
+    replay: Replay::Session("m6a-intro-as-ic"),
 };
 
 /// Target Test's select (`m6-select/target`): the Stadium modes' records panel.

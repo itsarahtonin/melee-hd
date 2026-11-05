@@ -17,6 +17,7 @@ pub mod dosei;
 pub mod drmariopill;
 pub mod egg;
 pub mod entei;
+pub mod evyoshiegg;
 pub mod fflower;
 pub mod fire;
 pub mod flipper;
@@ -292,6 +293,7 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         || fflower::run_event(r, gobj, addr)
         || freeze::run_event(r, gobj, addr)
         || egg::run_event(r, gobj, addr)
+        || evyoshiegg::run_event(r, gobj, addr)
         || sscope::run_event(r, gobj, addr)
         || sscopebeam::run_event(r, gobj, addr)
         || mball::run_event(r, gobj, addr)
@@ -458,6 +460,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         .or_else(|| fflower::run_pred(r, gobj, addr))
         .or_else(|| freeze::run_pred(r, gobj, addr))
         .or_else(|| egg::run_pred(r, gobj, addr))
+        .or_else(|| evyoshiegg::run_pred(r, gobj, addr))
         .or_else(|| sscope::run_pred(r, gobj, addr))
         .or_else(|| sscopebeam::run_pred(r, gobj, addr))
         .or_else(|| mball::run_pred(r, gobj, addr))
@@ -573,6 +576,8 @@ pub const LIPSTICK_SPORE: i32 = 37;
 pub const S_SCOPE_BEAM: i32 = 38;
 /// `It_Kind_F_Flower_Flame`: the flower the Lip's Stick plants on a fighter's head.
 pub const F_FLOWER_FLAME: i32 = 41;
+/// `It_Kind_EvYoshiEgg`: Event 13's egg.
+pub const EV_YOSHI_EGG: i32 = 42;
 /// `It_Kind_Kuriboh`: the first enemy, and the first kind of the second group of tables.
 pub const KURIBOH: i32 = 43;
 /// `It_Kind_Leadead`, `It_Kind_Octarock` and `It_Kind_Ottosea`: the ReDead, Octorok and

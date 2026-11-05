@@ -275,7 +275,7 @@ impl Running<'_> {
     }
 
     /// Master Hand's attributes (`ftData::ext_attr`), if he's there, `ftBossLib_8015C6BC`.
-    // Ports `ftBossLib_8015C6BC`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C6BC")]
     pub fn boss_mh_attrs(&self) -> Option<super::super::handles::FighterId> {
         self.boss_gobj(KIND_MASTER_HAND)
             .map(|g| self.game.fighter_id(g))
@@ -284,10 +284,10 @@ impl Running<'_> {
     /// Master Hand's attribute word at `off` (-1 with no Master Hand): `ftBossLib_8015C74C`
     /// (`x164`), `8015C7EC` (`x168`), `8015C88C` (`x16C`), `8015C92C` (`x170`) and
     /// `8015C9CC` (`x174`).
-    // Ports `ftBossLib_8015C74C`; aliased once a check reaches it.
-    // Ports `ftBossLib_8015C7EC`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015C74C")]
+    #[doc(alias = "ftBossLib_8015C7EC")]
+    #[doc(alias = "ftBossLib_8015C92C")]
     // Ports `ftBossLib_8015C88C`; aliased once a check reaches it.
-    // Ports `ftBossLib_8015C92C`; aliased once a check reaches it.
     // Ports `ftBossLib_8015C9CC`; aliased once a check reaches it.
     pub fn boss_mh_word(&self, off: usize) -> i32 {
         match self.boss_mh_attrs() {

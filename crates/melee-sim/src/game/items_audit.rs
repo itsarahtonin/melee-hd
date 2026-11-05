@@ -201,6 +201,7 @@ pub const MODULES: &[&str] = &[
     "it/kinds/dosei",
     "it/kinds/drmariopill",
     "it/kinds/egg",
+    "it/kinds/evyoshiegg",
     "it/kinds/entei",
     "it/kinds/fflower",
     "it/kinds/fire",
@@ -380,8 +381,6 @@ const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE
 const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload runs (it_8026B7F8, game::it::evt_unk dispatches each): a player leaving a match in progress, which Training's computer players' count and reset and the single-player modes do and no VS match does";
-const POKEMON_MODES: &str =
-    "training's and an event's Pokemon draws, which it_8027AB64 takes only in those modes";
 const YAKU: &str =
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)";
 const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
@@ -448,13 +447,11 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026BE84", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
     ("it_8026C1E8", ZAKO),
-    ("melee/it/it_279C", POKEMON_MODES),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),
     ("it_8026B7D8", BONUS),
     ("it_8026B7E0", BONUS),
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
-    ("it_8027A9B8 (an event", POKEMON_MODES),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
     ("ftLib_GetTeam on an item", ATTACKER),
