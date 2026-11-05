@@ -438,10 +438,10 @@ impl Game {
             if self.player_p1_stocks() == 0 {
                 return OUTCOME_1P_GAME_OVER;
             }
-            assert!(
-                s.state.is_singleplayer != 1,
-                "single-player horde victories (fn_8016A1E4) aren't ported"
-            );
+            let o = &self.gm.opponents;
+            if s.state.is_singleplayer == 1 && o.beaten() && !o.goes_on() {
+                return OUTCOME_1P_HORDE_VICTORY;
+            }
             if s.state.is_singleplayer == 0 && !s.start.x5_1 {
                 let (mut enemy_stocks, mut enemies) = (0, 0);
                 for slot in 0..6 {
@@ -1532,6 +1532,112 @@ impl Running<'_> {
         }
     }
 
+    /// `fn_8016E2BC` in a match the joining opponents fill: the human alone at its spawn
+    /// point, facing as a slot does, its fighters made, then the copies Kirbys carry in among
+    /// the joiners and the human (`fn_80169C54`, `fn_80169F50`).
+    fn place_single_player(&mut self) {
+        let pos = self.slot_spawn_point(0);
+        let g = &mut *self.game;
+        if g.player_facing(0) == 0.0 {
+            let dir =
+                if super::super::gr::stage::is_special_target_stage(i32::from(g.vs.start.stkind)) {
+                    1.0
+                } else if pos.x >= 0.0 {
+                    -1.0
+                } else {
+                    1.0
+                };
+            g.set_player_facing(0, dir);
+        }
+        g.set_player_pos(0, pos);
+        let teams = u8::from(g.vs.start.is_teams == 1);
+        let color = player_color(
+            g.player_port(0) as u8,
+            g.player_team(0) as u8,
+            teams,
+            g.player_pkind(0) as u8,
+        );
+        g.set_player_unk45(0, i32::from(cap_color(color as u8)));
+        self.player_create_fighters(0);
+        if self.game.vs.state.fighters[0].x4[0] & 0x08 != 0 {
+            self.sfx_play(0x41F4E, 0x7F, 0x40);
+        }
+        let (ckind, costume) = (self.game.player_ckind(0), self.game.player_costume(0));
+        self.joiner_kirby_copies(ckind as i8, costume as i8);
+        self.joiner_kirby_costumes(ckind as i8, costume as i8);
+    }
+
+    /// The copies of the joiners' and the human's characters for the Kirbys among them,
+    /// `fn_80169C54`: each of a Kirby joiner's costumes (every Kirby costume, or the one
+    /// costume of mode 1) and a Kirby human's, for each fighter of the setup's other
+    /// characters and of the human's.
+    #[doc(alias = "fn_80169C54")]
+    fn joiner_kirby_copies(&mut self, ckind: i8, costume: i8) {
+        use super::super::pl::player::ckind_ftkind;
+        let o = self.game.gm.opponents;
+        let mut costumes: Vec<i32> = Vec::new();
+        if o.kinds.contains(&4) {
+            if o.costume_mode == 0 {
+                let n = super::super::playback::costume_count(4);
+                costumes.extend(0..i32::from(n));
+            } else {
+                costumes.push(i32::from(o.costume));
+            }
+        }
+        if ckind == 4 {
+            costumes.push(i32::from(costume));
+        }
+        if costumes.is_empty() {
+            return;
+        }
+        let copy = |r: &mut Self, ck: i8| {
+            for sub in 0..2 {
+                let kind = ckind_ftkind(i32::from(ck), sub);
+                if kind != -1 && kind != 4 {
+                    for &c in &costumes {
+                        r.player_80031da8(kind, c);
+                    }
+                }
+            }
+        };
+        for k in o.kinds {
+            if k != 0x21 && k != 4 {
+                copy(self, k);
+            }
+        }
+        if ckind != 4 {
+            copy(self, ckind);
+        }
+    }
+
+    /// The copies Kirby joiners carry in (`fn_80169F50`): with copies drawn (`xE`), each
+    /// Kirby joiner's copy in its costume, and with a Kirby human, each joiner's copy in the
+    /// human's costume.
+    #[doc(alias = "fn_80169F50")]
+    fn joiner_kirby_costumes(&mut self, ckind: i8, costume: i8) {
+        use super::opponents::END;
+        let o = self.game.gm.opponents;
+        if o.kinds.contains(&4) && o.copy_mode != 0 {
+            let mut i = 0;
+            while o.costumes[i] != END {
+                let v = o.costumes[i];
+                if v != -1 && o.characters[i] == 4 && o.copies[i] != -1 {
+                    self.player_80031da8(i32::from(o.copies[i]), i32::from(v));
+                }
+                i += 1;
+            }
+        }
+        if ckind == 4 && o.copy_mode != 0 {
+            let mut i = 0;
+            while o.costumes[i] != END {
+                if o.costumes[i] != -1 && o.copies[i] != -1 {
+                    self.player_80031da8(i32::from(o.copies[i]), i32::from(costume));
+                }
+                i += 1;
+            }
+        }
+    }
+
     /// Lets each Kirby copy the abilities of the costumes in play, `fn_8016E124`.
     #[doc(alias = "fn_8016E124")]
     pub fn kirby_costumes(&mut self) {
@@ -1571,10 +1677,10 @@ impl Running<'_> {
     #[doc(alias = "fn_8016E2BC")]
     pub fn place_players(&mut self) {
         self.player_80036da4();
-        assert!(
-            self.game.vs.state.is_singleplayer != 1,
-            "single-player match setup (fn_80169C54) isn't ported"
-        );
+        if self.game.vs.state.is_singleplayer == 1 {
+            self.place_single_player();
+            return;
+        }
         self.face_opponents(SCENE_F26);
         for i in 0..6 {
             if self.game.player_pkind(i) == PKIND_NONE {
@@ -1744,7 +1850,17 @@ impl Game {
         s.is_singleplayer = u8::from(r.x54.0 != 0);
         self.init_all_players();
         match self.vs.state.is_singleplayer {
-            1 => panic!("single-player match setup isn't ported"),
+            // A match the joining opponents' setup fills (`x54`): the human, the other slots
+            // empty, marked for the joiners when they join as slots free (`fn_8016A09C`).
+            1 => {
+                self.init_vs_player(0, &d.players[0]);
+                for i in 1..6 {
+                    self.set_player_pkind(i, super::super::pl::player::PKIND_NONE);
+                }
+                if self.gm.opponents.flags & super::opponents::JOINING != 0 {
+                    self.mark_opponent_slots();
+                }
+            }
             _ => {
                 for i in 0..6 {
                     self.init_vs_player(i, &d.players[i as usize]);

@@ -212,9 +212,14 @@ pub struct OnePlayer {
     pub classic_order: [u8; 0x70],
     /// `gmClassic_803DDEC8.x00[i].xC`: each Classic stage's matchup.
     pub classic_picks: [MatchupRef; 12],
+    /// `lbl_803D79F0`: the characters Classic's allies are drawn from, ended by none, which
+    /// each draw shuffles in place (`fn_8017D9C0`).
+    pub ally_pool: [u8; 24],
     /// `lbl_80472C30` (`gm_GetAdventureData`) and `gm_80490910`.
     pub adventure: AdventureData,
     pub adventure_x910: [u8; ADVENTURE_STAGES],
+    /// `gm_804D68E0`: Adventure's intro scene's enter data.
+    pub adventure_intro: super::adventure::IntroData,
     /// `gm_80473A18`, All-Star's run, `gm_80490940`, and `gm_803DEBE8`'s opponents as the
     /// load shuffles them (stages, stage, character).
     pub allstar: AllStarData,
@@ -260,8 +265,10 @@ impl Default for OnePlayer {
             classic_intro: [0; 0x20],
             classic_order: [0; 0x70],
             classic_picks: [MatchupRef::None; 12],
+            ally_pool: ALLY_POOL,
             adventure: AdventureData::default(),
             adventure_x910: [0; ADVENTURE_STAGES],
+            adventure_intro: Default::default(),
             allstar: AllStarData::default(),
             allstar_x940: [0; 25],
             allstar_opponents: ALLSTAR_OPPONENTS,
@@ -273,6 +280,12 @@ impl Default for OnePlayer {
         }
     }
 }
+
+/// `lbl_803D79F0` in the executable's data: every character but Zelda, Sheik and Roy, then
+/// none.
+const ALLY_POOL: [u8; 24] = [
+    0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 20, 21, 22, 24, 25, 33,
+];
 
 /// `gm_803DEBE8`: All-Star's opponents in the executable's data (two stages, the stage
 /// drawn, the character).

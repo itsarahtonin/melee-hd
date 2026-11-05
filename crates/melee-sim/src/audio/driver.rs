@@ -895,6 +895,10 @@ impl Audio {
             self.synth_key_off(self.driver.stream_id);
         }
         self.driver.stream_id = self.stream_start(data, entrynum, 0xFF, volume, track);
+        // The stream's first read's issue takes its time at the drive's registers, where an
+        // audio frame that falls due meanwhile runs before the frame is read (Adventure's
+        // intro's song's read goes out 16 ticks before one is due).
+        self.with_clock(data, |c, f| c.reg_reads(0, f));
         self.driver.stream_started = self.driver.frame;
         true
     }

@@ -774,11 +774,9 @@ pub fn init_position(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
 /// Adventure and All-Star.
 #[doc(alias = "gm_8017E068")]
 pub fn one_player_cpu_level(r: &Running) -> i32 {
-    // `fn_8017DF28`: those modes' records.
-    if (3..=5).contains(&r.game.gr.game_mode) {
-        code::unported_call("fn_8017DF28 (a single-player mode's record)");
-    }
-    -1
+    r.game
+        .one_player_run()
+        .map_or(-1, |run| i32::from(run.player.cpu_level))
 }
 
 /// Enemies and stage items take the common data's damage scale for the single-player mode's
