@@ -1163,6 +1163,7 @@ impl Running<'_> {
 
     /// A grounded state's collision (`ft_80084104`): the fighter stays on the ground or falls.
     #[doc(alias = "ft_80084104")]
+    #[doc(alias = "ftCo_AppealS_Coll")]
     pub fn ground_coll(&mut self, gobj: GObjId) {
         if !self.ground_coll_slide(gobj) {
             self.enter_fall(gobj);
@@ -1180,6 +1181,9 @@ impl Running<'_> {
     /// A grounded state's collision that can teeter (`ft_80084280`): the fighter stays on the
     /// ground, stops at a ledge to teeter, or falls.
     #[doc(alias = "ft_80084280")]
+    #[doc(alias = "ftCo_DamageSongRv_Coll")]
+    #[doc(alias = "ftCo_DamageSongWait_Coll")]
+    #[doc(alias = "ftCo_DamageSong_Coll")]
     pub fn ground_coll_teeter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];

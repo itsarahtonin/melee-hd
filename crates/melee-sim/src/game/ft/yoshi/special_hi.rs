@@ -238,6 +238,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftYs_SpecialHi_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::HI_THROW => g.ys_hi_throw(gobj),

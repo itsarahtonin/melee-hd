@@ -259,6 +259,7 @@ impl Running<'_> {
     /// `un_80321AF4`: counts the living fighters near the bottom blast zone; when as many as
     /// the config's count first are, the crowd gasps (at the followed fighter, if it isn't
     /// one of them).
+    #[doc(alias = "ftLib_GetSpawnNum")]
     #[doc(alias = "un_80321AF4")]
     fn crowd_bottom(&mut self) {
         let old = self.game.crowd.near_bottom;
@@ -364,6 +365,9 @@ impl Running<'_> {
 
     /// `un_80321EBC`: the crowd starts following a fighter hit hard at high percent, chanting
     /// its name, once the last cheer is long enough ago, and awards its player bonus 0x5B.
+    #[doc(alias = "ftLib_8008746C")]
+    #[doc(alias = "pl_8003FDA0")]
+    #[doc(alias = "ftLib_FindBySpawnNum")]
     #[doc(alias = "un_80321EBC")]
     fn crowd_follow(&mut self, spawn: u32, kb: f64) -> bool {
         let Some(g) = self.fighter_by_spawn(spawn) else {
@@ -404,6 +408,7 @@ impl Running<'_> {
 
     /// The crowd's chant for a fighter, `ftLib_8008746C`: the Ice Climbers' second and later
     /// costumes have one of their own.
+    #[doc(alias = "ftCommon_80080144")]
     fn fighter_chant(&self, g: GObjId) -> i32 {
         let fp = self.game.fighter(g);
         // `ftCommon_80080144`: Popo or Nana.
@@ -419,6 +424,7 @@ impl Running<'_> {
 
     /// `un_8032201C`: a gasp by category, the chanting ending if it's at the followed
     /// fighter, and a count toward the fighter's player's bonus 0x5C.
+    #[doc(alias = "pl_8003FDC8")]
     #[doc(alias = "un_8032201C")]
     pub fn crowd_react(&mut self, spawn: u32, cat: i32) -> bool {
         match cat {
@@ -493,6 +499,7 @@ impl Running<'_> {
 
     /// `un_8032233C`: `victim` sent flying by `attacker`'s hit: the crowd reacts by how hard
     /// (the harder of a quick second hit's).
+    #[doc(alias = "ftLib_GetCrowdKnockback")]
     #[doc(alias = "un_8032233C")]
     pub fn crowd_knockback(&mut self, victim: u32, attacker: u32) {
         let g = self.fighter_by_spawn(victim);

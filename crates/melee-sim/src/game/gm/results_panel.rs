@@ -924,6 +924,7 @@ impl Running<'_> {
     /// An entry's texts, `fn_80174468`: its label string, or a bonus's name (every other
     /// row of the bonuses' page); its value (dashes for none, a bonus's points signed); its
     /// label (the opponent's name).
+    #[doc(alias = "fn_8016F280")]
     #[doc(alias = "fn_80174468")]
     fn stats_row(&mut self, slot: usize, t: [TextId; 3], list: &StatsList, idx: i32) {
         let data = self.data;
@@ -1037,6 +1038,7 @@ impl Running<'_> {
 
     /// A human's page turned (B or the stick left back, A or the stick right on) or scrolled
     /// (the stick down or up past 0.3), `fn_80177B7C`; whether anything changed.
+    #[doc(alias = "fn_80174380")]
     #[doc(alias = "fn_80177B7C")]
     fn stats_input(&mut self, slot: usize) -> bool {
         let s = self.game.pads.copy[slot];
@@ -1180,6 +1182,7 @@ impl Running<'_> {
     /// scrolls its pages and is done at Start (Start again takes it back), computers page
     /// on their own (with no human, Start on any controller ends the screen), the arrows
     /// follow, and the screen ends once every player is done.
+    #[doc(alias = "fn_80174338")]
     #[doc(alias = "fn_80178050")]
     pub(super) fn results_stats_frame(&mut self, gobj: GObjId) {
         let me = self.results_end().clone();

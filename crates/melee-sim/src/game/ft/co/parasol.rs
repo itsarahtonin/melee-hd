@@ -38,6 +38,7 @@ impl Running<'_> {
     /// Which part of a parasol's opening and closing the held parasol is in, or -1 when the
     /// fighter holds none, `ftGetParasolStatus`: the common parasol's states 7 to 10, 5, 6
     /// and 4 give 0 to 6; Peach's opening (1) gives 4, open or closed (0, 2) 6.
+    #[doc(alias = "itGetMotionId")]
     #[doc(alias = "ftGetParasolStatus")]
     pub fn parasol_status(&self, gobj: GObjId) -> i32 {
         let Some(it) = self.game.fighter(gobj).item_gobj else {

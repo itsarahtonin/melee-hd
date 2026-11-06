@@ -113,7 +113,7 @@ impl Running<'_> {
 
     /// A multi-jumper's next double jump, `ftCo_800D74A4`: its own state and rise, turning
     /// around over the attributes' frames with the stick pulled back.
-    // Ports `ftCo_800D74A4`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800D74A4")]
     pub fn enter_multi_jump(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).cmd_vars[0] = 0;
         let set = self.multi_jump_set(gobj) as u32;
@@ -214,6 +214,7 @@ impl Running<'_> {
 
     /// Gravity or a fast fall, then drift toward the stick past `threshold`, `ft_80084E1C`.
     #[doc(alias = "ft_80084E1C")]
+    #[doc(alias = "ftCommon_FallFast")]
     pub fn air_physics_scaled(&mut self, gobj: GObjId, threshold: f64, drift: f64, target: f64) {
         self.check_fall_fast(gobj);
         let fp = self.game.fighter_mut(gobj);

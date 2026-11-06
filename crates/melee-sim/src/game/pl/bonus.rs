@@ -103,7 +103,7 @@ impl Game {
 
 impl Running<'_> {
     /// A broken shield, bonus 0x40 (Nana's don't count), `pl_8003E0E8`.
-    // Ports `pl_8003E0E8`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003E0E8")]
     pub fn record_shield_break(&mut self, slot: i32, sub: i32) {
         if sub != 0 {
             return;
@@ -126,7 +126,7 @@ impl Running<'_> {
     }
 
     /// A shield dropped at no more than `x84` health, bonus 0x41, `pl_8003E114`.
-    // Ports `pl_8003E114`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003E114")]
     pub fn record_shield_drop(&mut self, slot: i32, health: f32) {
         if reg(health) <= reg(self.bonus_param_f32(0x84)) {
             self.set_flag(slot, Flag::Bonus(0x41), 1);
@@ -148,6 +148,7 @@ impl Running<'_> {
 
     /// A ledge another fighter holds, `pl_8003FFDC`: unless it's the player's own, bonus 0x46
     /// for the holder when the other last caught a different ledge (`ft_80087A98`).
+    #[doc(alias = "ft_80087A98")]
     #[doc(alias = "pl_8003FFDC")]
     pub fn record_ledge_steal(
         &mut self,
@@ -384,6 +385,7 @@ impl Running<'_> {
     /// run, frames in the air and on the ground, on steep slopes, nudged, off screen (and at
     /// which edge), holding a crate, the Screw Attack, Mr. Saturn or another logged item,
     /// and resized; the timers count down.
+    #[doc(alias = "ftLib_GetItem")]
     #[doc(alias = "fn_8003EE2C")]
     fn frame_counters(&mut self, slot: i32, index: i32) {
         let g = self.game.player_entity_at(slot, index);
@@ -491,6 +493,7 @@ impl Running<'_> {
     /// The bonuses decided over frame windows, `fn_8003F294`: attacks of three kinds, hits
     /// landed and taken, attacks made, `xD70`, crates held, `xCD8`, the smash DI's distance,
     /// and A/B presses (whose window also settles the quickest press, `xDD1` bit 5).
+    #[doc(alias = "pl_800386E8")]
     #[doc(alias = "fn_8003F294")]
     fn frame_windows(&mut self, slot: i32, index: i32) {
         if index == 1 {
@@ -548,6 +551,7 @@ impl Running<'_> {
     /// The frame's inputs, `fn_8003F53C`: whether A and B were ever both let go (`xDD0`
     /// bit 1), whether L or R was ever pressed (bit 2), and A/B presses with the quickest
     /// frames between them.
+    #[doc(alias = "ftLib_IsInputDisabled")]
     #[doc(alias = "fn_8003F53C")]
     fn frame_inputs(&mut self, slot: i32, index: i32) {
         let g = self.game.player_entity_at(slot, index);

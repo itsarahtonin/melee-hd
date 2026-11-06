@@ -18,7 +18,7 @@ const TORNADO: Tornado = Tornado {
 
 impl Running<'_> {
     /// `updateRot` (the spin's damage hook): the model upright again.
-    // Ports `updateRot`; aliased once a check reaches it.
+    #[doc(alias = "updateRot")]
     pub fn mr_special_lw_update_rot(&mut self, gobj: GObjId) {
         self.plumber_lw_update_rot(gobj);
     }

@@ -628,6 +628,8 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
 /// from the stage's archive (or an empty joint for a map past the archive's) under a joint
 /// that scales it, its two processes, and its place in `stage_info.map_gobjs`. `frame` is
 /// where its call puts the scale joint's descriptor on the stack ([`SETUP_FRAME`]).
+#[doc(alias = "mem_free")]
+#[doc(alias = "Ground_801C2BBC")]
 #[doc(alias = "Ground_GetStageGObj")]
 pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
@@ -1179,6 +1181,7 @@ pub fn load_collision(game: &mut Game, data: &Archives) {
 }
 
 /// Creates the stage's collision GObj and resets the stage's boxes, `mpLib_80058820`.
+#[doc(alias = "mpLib_800587FC")]
 #[doc(alias = "mpLib_80058820")]
 pub fn create_collision_gobj(game: &mut Game) {
     let gobj = game.world.create(1, 6, 0);
@@ -1192,6 +1195,7 @@ pub fn create_collision_gobj(game: &mut Game) {
 /// Sets the stage up once its archive is loaded, `Ground_801C0800`: the camera from its
 /// parameters, its items' descriptions, its collision, fog and lights, then the stage's own
 /// setup.
+#[doc(alias = "it_8026B40C")]
 #[doc(alias = "Ground_801C0800")]
 #[doc(alias = "Stage_8022524C")]
 pub fn setup(r: &mut Running, grkind: i32) {
@@ -1383,6 +1387,7 @@ pub fn select(r: &mut Running, stkind: i32, archive: Option<ArchiveId>) {
 /// Loads a stage, `Ground_801C0754`: `stage_info` reset, the stage's archive and what it
 /// exports, the stage's item frequencies, its line and shadow callbacks, and the trophies'
 /// bookkeeping.
+#[doc(alias = "Ground_801C5878")]
 #[doc(alias = "Ground_801C0754")]
 pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId>) {
     reset(r.game);
@@ -1414,6 +1419,7 @@ pub fn load(r: &mut Running, grkind: i32, stkind: i32, archive: Option<ArchiveId
 /// its main stage's exports, as every stage's own load does): a disc load unless it was
 /// preloaded, its `map_head`, `stage_info`'s pointers into it, its particle bank (64) and its
 /// marked materials. No archive gives the defaults.
+#[doc(alias = "grDatFiles_801C62B4")]
 #[doc(alias = "grDatFiles_801C6038")]
 pub fn load_dat(r: &mut Running, file: Option<(&str, ArchiveId)>, _from_disc: bool) {
     let slot = r

@@ -1400,6 +1400,7 @@ pub const DUMMY: StageData = StageData {
 };
 
 /// `Ground_OnStart`, empty.
+#[doc(alias = "Ground_OnStart")]
 pub const GROUND_ON_START: u32 = 0x801B_FFA8;
 
 /// `grVe_803E5348.joints`: the platforms' and the Arwings' collision joints the stage binds

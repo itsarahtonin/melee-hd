@@ -86,6 +86,7 @@ fn timer(t: &mut FtInputTimers, which: usize) -> &mut u8 {
 
 impl Running<'_> {
     /// `Fighter_procInput`.
+    #[doc(alias = "ftCo_GetCpuButtons")]
     #[doc(alias = "Fighter_procInput")]
     pub fn proc_input(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -477,6 +478,10 @@ impl Running<'_> {
 
     /// The frames since each special input (`x685`..`x68B`),
     /// `Fighter_UnkIncrementCounters_8006ABEC`.
+    #[doc(alias = "ftCo_SpecialS_HasInput")]
+    #[doc(alias = "ftCo_800D67C4")]
+    #[doc(alias = "ftCo_800D688C")]
+    #[doc(alias = "ftCo_800D6928")]
     #[doc(alias = "Fighter_UnkIncrementCounters_8006ABEC")]
     pub fn count_inputs(&mut self, gobj: GObjId) {
         let jump = self.jump_input(gobj) != 0;

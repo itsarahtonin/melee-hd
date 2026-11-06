@@ -169,6 +169,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftYs_SpecialLwLanding_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::LW_STARS => g.ys_lw_stars(gobj),

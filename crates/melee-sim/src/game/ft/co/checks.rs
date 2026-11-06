@@ -210,6 +210,8 @@ impl Running<'_> {
 
     /// A grab, `ftCo_Catch_CheckInput`: the held item thrown first, else a shoulder and A
     /// (unless Link's hookshot or Samus's grapple is out).
+    #[doc(alias = "fn_800D8E94")]
+    #[doc(alias = "fn_800D952C")]
     #[doc(alias = "ftCo_Catch_CheckInput")]
     pub fn catch_check(&mut self, gobj: GObjId) -> bool {
         if self.item_throw_ground_check(gobj) {
@@ -499,6 +501,9 @@ impl Running<'_> {
     /// Whether the fighter can pick up this item now, `ftpickupitem_80094150`: one it may
     /// take (as [`Running::item_in_reach`], light or heavy alike) whose pickup point lies
     /// within its grab range of the fighter's reach box.
+    #[doc(alias = "it_8026B4F0")]
+    #[doc(alias = "itGetGrabRangeX")]
+    #[doc(alias = "itGetGrabRangeY")]
     #[doc(alias = "ftpickupitem_80094150")]
     pub fn item_pickup_in_reach(&mut self, gobj: GObjId, item: GObjId) -> bool {
         use crate::game::it::{self, kinds, lib26b1};

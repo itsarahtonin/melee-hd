@@ -168,6 +168,7 @@ pub fn set_hitbox_damage(r: &mut Running, gobj: GObjId) {
 }
 
 /// Sets a hitbox's size from the script, `it_802795EC`.
+#[doc(alias = "it_802795EC")]
 pub fn set_hitbox_scale(r: &mut Running, gobj: GObjId) {
     let w = word(r, gobj, 0);
     let idx = field(w, 6, 3) as usize;
@@ -182,6 +183,7 @@ pub fn set_hitbox_scale(r: &mut Running, gobj: GObjId) {
 }
 
 /// A sound command, `it_8027978C`: plays in one of the item's slots, or stops one.
+#[doc(alias = "it_8027978C")]
 pub fn sound(r: &mut Running, gobj: GObjId) {
     let w = word(r, gobj, 0);
     let op = w >> 18 & 0xFF;
@@ -234,6 +236,15 @@ pub fn script_effect(r: &mut Running, gobj: GObjId) {
 }
 
 /// Runs one of the items' own script commands (`it_803F22A8`, by opcode from 10).
+#[doc(alias = "it_80279744")]
+#[doc(alias = "it_80279958")]
+#[doc(alias = "it_8027990C")]
+#[doc(alias = "it_80279888")]
+#[doc(alias = "it_80279768")]
+#[doc(alias = "it_80279720")]
+#[doc(alias = "it_802796FC")]
+#[doc(alias = "it_80279680")]
+#[doc(alias = "it_802796C4")]
 pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
     match opcode {
         10 => script_effect(r, gobj),

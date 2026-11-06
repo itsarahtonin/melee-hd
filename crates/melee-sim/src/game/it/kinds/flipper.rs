@@ -665,6 +665,7 @@ pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Hit, armed, it spins from its attacker and is pushed from what hit it (`xCB4`, `xCE0`),
 /// `itFlipper_DmgReceived`.
+#[doc(alias = "ftLib_GetPosDelta")]
 #[doc(alias = "itFlipper_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     if settled(r, gobj) {

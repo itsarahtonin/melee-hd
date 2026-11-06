@@ -266,6 +266,7 @@ impl Running<'_> {
     /// The effect command, `ftAction_80071028`: an effect on a part at an offset spread by a
     /// range, unless the fighter is invisible (`ftAction_800711DC` steps over it). Five words.
     #[doc(alias = "ftAction_80071028")]
+    #[doc(alias = "ftAction_800711DC")]
     pub(super) fn cmd_effect(&mut self, gobj: GObjId, f: FighterId, which: Option<Overlay>) {
         if self.game.fighters[f.0].invisible {
             self.cmd_script(f, which).skip(5);

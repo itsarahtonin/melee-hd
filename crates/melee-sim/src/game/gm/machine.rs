@@ -821,6 +821,7 @@ const GS_MOVIE_HOWTO: u8 = 0x1E;
 const GS_MOVIE_OMAKE15: u8 = 0x1F;
 
 /// A mode's `on_load` and `on_unload`, and whether its files are expected preloaded.
+#[doc(alias = "gm_Mode_Event_OnUnload")]
 fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
     match mode {
         GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
@@ -1229,6 +1230,8 @@ impl Running<'_> {
     /// pad alarm's reads meanwhile are queued): the debug pause state and the counters
     /// cleared, the pad queue left with its newest poll, the card indicator, and the
     /// timeline's loop start.
+    #[doc(alias = "lb_800198E0")]
+    #[doc(alias = "lb_80019894")]
     #[doc(alias = "gm_801A4D34")]
     pub fn begin_scene_loop(&mut self) {
         self.game.start_scene_loop();
@@ -1238,8 +1241,10 @@ impl Running<'_> {
 
     /// `gm_801A4BD4`, a scene's setup before its entry, with the rumble data it ends on
     /// (`lb_80014534`).
+    #[doc(alias = "fn_801A4BD0")]
     #[doc(alias = "gm_801A4BD4")]
     #[doc(alias = "gm_801A4B88")]
+    #[doc(alias = "gm_GetAllGameScenes")]
     #[doc(alias = "gm_FindGameSceneHandler")]
     fn init_mode_scene(&mut self) {
         super::super::vs_match::init_scene(self);
@@ -1339,6 +1344,9 @@ impl Running<'_> {
     }
 
     /// A mode's or mode state's handler.
+    #[doc(alias = "onExitMovie")]
+    #[doc(alias = "gm_801BF718")]
+    #[doc(alias = "gm_Mode_Opening_OnLoad")]
     fn mode_hook(&mut self, h: Hook, state: Option<(u8, u8)>) {
         // A Special Melee mode's handler for one of VS mode's states, by its mode.
         let special = state.map(|s| s.0).filter(|&m| m != GM_VS);

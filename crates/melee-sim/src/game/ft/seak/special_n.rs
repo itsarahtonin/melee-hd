@@ -281,6 +281,10 @@ impl Running<'_> {
     #[doc(alias = "ftSk_SpecialHi_Phys")]
     #[doc(alias = "ftSk_SpecialLw_Phys")]
     #[doc(alias = "ftSk_SpecialLw2_Phys")]
+    #[doc(alias = "ftZd_SpecialSEnd_Phys")]
+    #[doc(alias = "ftZd_SpecialSLoop_Phys")]
+    #[doc(alias = "ftZd_SpecialLw_Phys")]
+    #[doc(alias = "ftZd_SpecialLw2_Phys")]
     pub fn seak_ground_phys(&mut self, gobj: GObjId) {
         self.ground_friction(gobj);
     }

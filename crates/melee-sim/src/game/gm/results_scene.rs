@@ -193,6 +193,7 @@ impl Running<'_> {
     /// The screen's enter data (`gm_GetGameModeStateEnterData`): Tournament mode's own
     /// (`gm_80489A98`), the debug mode's (`results0_data`), else VS mode's
     /// (`gmVsMelee_ResultsEnterData`, which the modes kept with it share).
+    #[doc(alias = "gm_GetGameModeStateEnterData")]
     pub fn results_enter(&self) -> &ResultsMatchInfo {
         match self.game.machine.routing.curr_mode {
             super::tournament::GM_TOURNAMENT => &self.game.tou.results_enter,
@@ -628,6 +629,7 @@ pub struct ResultsMatchInfo {
 }
 
 /// `fn_8017507C`'s colors: a team's light color, or white outside teams.
+#[doc(alias = "fn_8017507C")]
 pub(super) fn column_color(me: &MatchEnd, slot: usize) -> [u8; 4] {
     if me.is_teams != 1 {
         return [0xFF; 4];

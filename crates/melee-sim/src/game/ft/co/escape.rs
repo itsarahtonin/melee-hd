@@ -33,6 +33,7 @@ impl Running<'_> {
 
     /// A roll out of a shield, `ftCo_8009917C`: the stick or C-stick smashed to the side,
     /// forward or back.
+    #[doc(alias = "ftCo_800DF8B0")]
     #[doc(alias = "ftCo_8009917C")]
     pub fn escape_check(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
@@ -124,6 +125,7 @@ impl Running<'_> {
     }
 
     /// A spot dodge with the stick or C-stick flicked down, `ftCo_8009980C`.
+    #[doc(alias = "ftCo_800DF8E8")]
     #[doc(alias = "ftCo_8009980C")]
     pub fn escape_n_check_any(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
