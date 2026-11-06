@@ -361,6 +361,7 @@ impl Running<'_> {
     /// winner's is taken once, when its pose's frames have run out after the flames went
     /// away, into its second image, which its column shows. A winner's camera stays current
     /// when it takes nothing (its C ends the camera only after a copy).
+    #[doc(alias = "ftLib_IsFramesRemaining")]
     #[doc(alias = "fn_80179990")]
     #[doc(alias = "fn_80179D3C")]
     #[doc(alias = "fn_80179D60")]

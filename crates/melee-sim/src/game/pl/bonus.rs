@@ -103,7 +103,7 @@ impl Game {
 
 impl Running<'_> {
     /// A broken shield, bonus 0x40 (Nana's don't count), `pl_8003E0E8`.
-    // Ports `pl_8003E0E8`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003E0E8")]
     pub fn record_shield_break(&mut self, slot: i32, sub: i32) {
         if sub != 0 {
             return;

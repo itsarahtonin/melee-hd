@@ -720,8 +720,8 @@ impl Running<'_> {
     /// from the same frame, and to the hold point.
     #[doc(alias = "fn_800DAEEC")]
     #[doc(alias = "fn_800DAECC")]
-    // Ports `fn_800DBBF8`; aliased once a check reaches it.
-    // Ports `fn_800DBAC4`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DBBF8")]
+    #[doc(alias = "fn_800DBAC4")]
     fn capture_land(&mut self, gobj: GObjId, msid: i32) {
         self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
@@ -775,7 +775,7 @@ impl Running<'_> {
     /// ECB free, the high state from the same frame, to the hold point, its airborne
     /// collision run, and its model moved there.
     #[doc(alias = "fn_800DB230")]
-    // Ports `fn_800DBED4`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DBED4")]
     fn capture_lift(&mut self, gobj: GObjId, msid: i32) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);

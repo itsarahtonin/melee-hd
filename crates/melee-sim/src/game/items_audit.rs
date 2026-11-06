@@ -371,8 +371,6 @@ pub const MODULES: &[&str] = &[
 ];
 
 const ADVENTURE: &str = "an adventure enemy (kinds 0xD0 to 0xDC), which only a stage's enemy spawner or adventure stage code makes; no roster stage configures one";
-const BONUS: &str =
-    "the bonus match's tally (pl_80039450), which a stock or time match doesn't run";
 const BOSSES: &str = "Master Hand's and Crazy Hand's items, which only those fighters spawn";
 const COINS: &str = "coins: the single-player coin (trophy stages and a 1P enemy's drop, it_8027CC88 checks gm_IsCurrently1PMode) and coin matches' (it_8026F8B4 checks gm_8016B0B4)";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
@@ -448,8 +446,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026C1E8", ZAKO),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),
-    ("it_8026B7D8", BONUS),
-    ("it_8026B7E0", BONUS),
     ("melee/ft/ftCo_800C78B0", ADVENTURE),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
@@ -486,7 +482,6 @@ pub const UNCHECKED: &[&str] = &[
     "melee/it/it_26B1",
     "melee/it/it_2725",
     "melee/it/itanimlist",
-    "it_80275870",
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
@@ -494,7 +489,6 @@ pub const UNCHECKED: &[&str] = &[
     "it_80284E10",
     "melee/it/kinds/ittarucann",
     "melee/ft/kinds/ftCommon/ftCo_Barrel",
-    "melee/ft/kinds/ftCommon/ftCo_WarpStar",
 ];
 
 /// What an items-on match reaches that isn't ported, task by task: nothing left.

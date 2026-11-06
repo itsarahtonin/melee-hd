@@ -61,6 +61,7 @@ impl Running<'_> {
 }
 
 /// Runs one of Pichu's callbacks a fighter holds, if `addr` is one.
+#[doc(alias = "ftPc_Init_LoadSpecialAttrs")]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         // `ftPc_Init_OnItemInvisible` and `_OnItemVisible`: as Pikachu's.

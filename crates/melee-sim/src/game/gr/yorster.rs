@@ -303,6 +303,7 @@ impl Landing {
 /// item or a fighter's item coming down at the parameters' speed or faster gets their hitlag,
 /// and the block counts how fast it came down (a fighter's position's change, otherwise the
 /// height the pass moved).
+#[doc(alias = "ftLib_IsEntry")]
 #[doc(alias = "grYorster_802024F0")]
 #[allow(clippy::too_many_arguments)]
 pub fn block_landed(

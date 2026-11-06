@@ -629,6 +629,7 @@ pub struct ResultsMatchInfo {
 }
 
 /// `fn_8017507C`'s colors: a team's light color, or white outside teams.
+#[doc(alias = "fn_8017507C")]
 pub(super) fn column_color(me: &MatchEnd, slot: usize) -> [u8; 4] {
     if me.is_teams != 1 {
         return [0xFF; 4];

@@ -680,6 +680,8 @@ impl Running<'_> {
     }
 
     /// The items' bonuses, from the item log, `fn_8003C340`.
+    #[doc(alias = "it_8026B7E0")]
+    #[doc(alias = "it_8026B7D8")]
     #[doc(alias = "fn_8003C340")]
     fn tally_items(&mut self, player: i32) {
         let g = &*self.game;
@@ -769,6 +771,8 @@ impl Running<'_> {
 
     /// The bonuses of how the fighter stands as the match ends (on the ledge, taunting,
     /// its damage), `fn_8003CC84`, once the windowed checks' last windows are counted.
+    #[doc(alias = "ft_800879F8")]
+    #[doc(alias = "ft_800879D8")]
     #[doc(alias = "fn_8003CC84")]
     fn tally_ending(&mut self, player: i32) {
         if self.game.vs_in_play() {

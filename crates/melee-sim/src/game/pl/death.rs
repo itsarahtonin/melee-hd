@@ -98,7 +98,7 @@ impl Running<'_> {
     #[doc(alias = "ftLib_IsLastAttackerSubFighter")]
     #[doc(alias = "pl_8003D644")]
     #[doc(alias = "pl_8003FED0")]
-    // Ports `pl_80041744`; aliased once a check reaches it.
+    #[doc(alias = "pl_80041744")]
     #[doc(alias = "pl_80041720")]
     #[doc(alias = "ft_80087858")]
     #[doc(alias = "ft_80087878")]

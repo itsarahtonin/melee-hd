@@ -77,6 +77,7 @@ impl Running<'_> {
 
     /// The down aerial's animation, `lwOnAnim`: after a bounce, its three hitboxes back on
     /// when the countdown runs out before the animation's end, then the aerials' animation.
+    #[doc(alias = "ftColl_8007B064")]
     #[doc(alias = "lwOnAnim")]
     pub fn link_attack_air_lw_on_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);

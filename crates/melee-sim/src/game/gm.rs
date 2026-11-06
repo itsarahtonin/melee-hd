@@ -456,7 +456,7 @@ impl Unlocks {
     }
 
     /// Whether every unlockable stage is unlocked, `gm_80164600`.
-    // Ports `gm_80164600`; aliased once a check reaches it.
+    #[doc(alias = "gm_80164600")]
     pub fn all_stages(&self) -> bool {
         self.all_stages_code || (0..UNLOCKABLE).all(|i| self.stages & (1 << i) != 0)
     }

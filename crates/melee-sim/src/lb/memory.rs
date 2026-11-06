@@ -251,7 +251,7 @@ impl LbMemory {
     }
 
     /// `lbMemFreeToHeap`: the block at `addr` back on the free list.
-    // Ports `lbMemFreeToHeap`; aliased once a check reaches it.
+    #[doc(alias = "lbMemFreeToHeap")]
     pub fn free(&mut self, h: u8, addr: u32) {
         let mut prev: Option<u8> = None;
         let mut b = self.heaps[usize::from(h)].blocks;

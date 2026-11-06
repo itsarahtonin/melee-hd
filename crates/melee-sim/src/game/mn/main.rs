@@ -434,6 +434,7 @@ fn shown(r: &Running, kind: u8, sel: i32) -> bool {
 }
 
 /// `mn_80229938`: whether a list's selection is shown by the save's unlock flags (`x186C`).
+#[doc(alias = "gmMainLib_8015EDD4")]
 #[doc(alias = "mn_80229938")]
 pub fn shown_with(x186c: u8, kind: u8, sel: i32) -> bool {
     match (kind, sel) {

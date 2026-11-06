@@ -781,6 +781,8 @@ impl Running<'_> {
     /// icon's character and byte copied from the list again, a -1's icon off screen, the rest
     /// in rows of five from the top left; at the list's end (-2), the rest off screen (the
     /// original's loop indexes the end's own slot, which has no icon: docs/melee-bugs.md).
+    #[doc(alias = "gm_8016A98C")]
+    #[doc(alias = "gm_8016A97C")]
     #[doc(alias = "fn_802FA8C0")]
     pub fn tally_place_proc(&mut self, _gobj: GObjId) {
         let mem_ = self.game.left_list_memory();

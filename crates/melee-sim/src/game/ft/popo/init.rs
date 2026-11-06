@@ -91,13 +91,13 @@ impl Running<'_> {
 
     /// Picking up an item, `ftPp_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,
     /// 1)`, as Fox's).
-    // Ports `ftPp_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnItemPickup")]
     pub fn popo_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
 
     /// Hiding the held item, `ftPp_Init_OnItemInvisible` (as Fox's).
-    // Ports `ftPp_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnItemInvisible")]
     pub fn popo_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }
@@ -109,7 +109,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftPp_Init_OnItemDrop` (as Fox's).
-    // Ports `ftPp_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnItemDrop")]
     pub fn popo_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }
