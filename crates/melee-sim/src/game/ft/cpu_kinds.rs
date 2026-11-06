@@ -531,4 +531,33 @@ impl Running<'_> {
         }
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
+
+    /// Computer kind 29, `ftCo_800B1AB8` (Adventure's Nesses on Onett): the VS decision
+    /// ([`Running::cpu_decide_vs`]) without `xF9_b5`'s fear, items worth 1 to go for
+    /// (`x2C`), and an item to go for only with its hands free; then the behavior pick, whose
+    /// r5 it leaves. Its frame is the VS decision's size.
+    #[doc(alias = "ftCo_800B1AB8")]
+    pub(super) fn cpu_decide_item_lover(&mut self, f: FighterId) -> Leftover {
+        let sp = kind_sp(0x48);
+        if let Some(r5) = self.cpu_decide_start(f, sp) {
+            return r5;
+        }
+        self.cpu_fear_flags(f, false, [true, true, true, false, true, true]);
+        self.game.fighters[f.0].cpu.x2C = 1;
+        let (target, lr) = self.cpu_find_target_lr(f);
+        self.game.fighters[f.0].cpu.x44 = target;
+        self.cpu_item_targets(f);
+        if self.cpu_should_act(f) {
+            let fpp = &self.game.fighters[f.0];
+            if fpp.cpu.x4C.is_some() && fpp.item_gobj.is_none() {
+                self.cpu_toward_item(f);
+            } else {
+                let to = self
+                    .cpu_best_human_enemy(f)
+                    .or(self.game.fighters[f.0].cpu.x44);
+                self.cpu_toward_from(f, to, sp, lr);
+            }
+        }
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
+    }
 }

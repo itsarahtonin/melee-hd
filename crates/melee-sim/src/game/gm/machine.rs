@@ -229,6 +229,10 @@ enum Hook {
     AdventureEnterKirbys,
     AdventureEnterStarFox,
     AdventureEnterFoxFalco,
+    AdventureEnterNess,
+    AdventureEnterMetal,
+    AdventureEnterBowser,
+    AdventureExitBowser,
     AdventureEnterTeamKirby,
     AdventureExitTeamKirby,
     AdventureExitEscape,
@@ -1517,6 +1521,10 @@ impl Running<'_> {
             Hook::AdventureEnterKirbys => self.adventure_enter_kirbys(),
             Hook::AdventureEnterStarFox => self.adventure_enter_star_fox(),
             Hook::AdventureEnterFoxFalco => self.adventure_enter_fox_falco(),
+            Hook::AdventureEnterNess => self.adventure_enter_ness(),
+            Hook::AdventureEnterMetal => self.adventure_enter_metal(),
+            Hook::AdventureEnterBowser => self.adventure_enter_bowser(),
+            Hook::AdventureExitBowser => self.adventure_exit_bowser(),
             Hook::AdventureEnterTeamKirby => self.adventure_enter_team_kirby(),
             Hook::AdventureExitTeamKirby => self.adventure_exit_team_kirby(),
             Hook::AdventureExitEscape => self.adventure_exit_escape(),
@@ -1939,7 +1947,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         st(
             0x41,
             2,
-            u("gm_801B4E58"),
+            Some(Hook::AdventureEnterNess),
             Some(Hook::AdventureExitStage),
             GS_VS,
         ),
@@ -1981,7 +1989,7 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
         st(
             0x53,
             2,
-            u("gm_801B4EB8"),
+            Some(Hook::AdventureEnterMetal),
             Some(Hook::AdventureExitStage),
             GS_VS,
         ),
@@ -1994,7 +2002,13 @@ fn one_player_states(mode: u8) -> Option<&'static [StateDesc]> {
             GS_INTRO_NORMAL,
         ),
         // ADVENTURE_BOWSER_FIGHT
-        st(0x59, 2, u("gm_801B4F44"), u("gm_801B4FCC"), GS_VS),
+        st(
+            0x59,
+            2,
+            Some(Hook::AdventureEnterBowser),
+            Some(Hook::AdventureExitBowser),
+            GS_VS,
+        ),
         // ADVENTURE_BOWSERTOY_CUTSCENE
         st(
             0x5a,

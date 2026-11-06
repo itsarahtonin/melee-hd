@@ -2467,3 +2467,22 @@ fn single_player_intros() {
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
+
+/// Adventure's game over (milestone 6's task 2, the intros): `m6-intros/adv-no` from power-on,
+/// Adventure with Fox, run right and jumping through Mushroom Kingdom until his last stock goes,
+/// its game over (`gm_801B4254`, the 1P game over's data) and no to the continue: the run's
+/// end (`gm_801B4294`), Adventure's high score (`fn_80162DF8`) and its Luigi trophy check
+/// (`gm_8017390C` without a clear), back to the main menu, to the trace's end.
+#[test]
+fn adventure_game_over() {
+    if let Some(out) = scripted_session("m6-intros", "adv-no", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "8944 ticks compared, no difference
+"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}

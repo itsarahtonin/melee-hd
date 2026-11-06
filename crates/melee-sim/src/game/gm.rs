@@ -553,6 +553,10 @@ pub fn call(
             r.adventure_escape_end(args[0].int() as u8);
             Some(super::code::Val::None)
         }
+        adventure::BOWSER_END => {
+            r.adventure_bowser_end(args[0].int() as u8);
+            Some(super::code::Val::None)
+        }
         f if event::is_join_callback(f) => {
             event::run_join_callback(r, f, args[0].int(), args[1].int());
             Some(super::code::Val::None)

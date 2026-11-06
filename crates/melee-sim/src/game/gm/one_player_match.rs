@@ -812,7 +812,7 @@ impl Running<'_> {
 
     /// Adventure's game over's exit, `gm_801B4294`: the run's end (`gm_8017CA38`) with
     /// Adventure's stocks (`gmMainLib_8015CDD4`).
-    // Ports gm_801B4294; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4294")]
     pub fn adventure_exit_game_over(&mut self) {
         let mut run = self.game.one_player.adventure.base;
         let stocks = self.game.game_data.vs.unk_522.stocks;
@@ -828,6 +828,7 @@ impl Running<'_> {
     #[doc(alias = "gm_8017CA38")]
     #[doc(alias = "Ground_801C5A60")]
     #[doc(alias = "fn_80162BFC")]
+    #[doc(alias = "fn_80162DF8")]
     #[doc(alias = "fn_80162FF4")]
     pub fn one_player_game_over_exit(&mut self, run: &mut Unk1PData, stocks: u8) {
         let d = self.game.one_player.game_over;
@@ -844,7 +845,6 @@ impl Running<'_> {
             // compared unsigned.
             let best = match self.game.game_mode {
                 super::one_player::GM_CLASSIC => Some(&mut rec.x88),
-                // Ports fn_80162DF8; aliased once a check reaches it.
                 super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
                 GM_ALLSTAR => Some(&mut rec.x90),
                 _ => None,
@@ -885,7 +885,7 @@ impl Running<'_> {
     }
 
     /// Adventure's game over, `gm_801B4254`.
-    // Ports gm_801B4254; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4254")]
     pub fn adventure_enter_game_over(&mut self) {
         let run = self.game.one_player.adventure.base;
         self.one_player_enter_game_over(&run, 0);
