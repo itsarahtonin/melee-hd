@@ -36,6 +36,9 @@ impl Running<'_> {
 
     /// Ground friction, `ft_80084F3C`: more above walking speed.
     #[doc(alias = "ft_80084F3C")]
+    #[doc(alias = "ftCo_DamageSongRv_Phys")]
+    #[doc(alias = "ftCo_DamageSongWait_Phys")]
+    #[doc(alias = "ftCo_DamageSong_Phys")]
     pub fn ground_friction(&mut self, gobj: GObjId) {
         let above = reg(self.common().f32(0x6C));
         let fp = self.game.fighter_mut(gobj);
@@ -98,6 +101,7 @@ impl Running<'_> {
 
     /// Gravity or a fast fall, then air drift, `ft_80084DB0`.
     #[doc(alias = "ft_80084DB0")]
+    #[doc(alias = "ftCo_DownReflect_Phys")]
     pub fn air_physics(&mut self, gobj: GObjId) {
         self.check_fall_fast(gobj);
         let fp = self.game.fighter_mut(gobj);
@@ -375,6 +379,7 @@ impl Running<'_> {
 
     /// Ground friction, or the animation's own motion when TransN drives it, `ft_80084FA8`.
     #[doc(alias = "ft_80084FA8")]
+    #[doc(alias = "ftCo_AppealS_Phys")]
     pub fn ground_friction_or_anim(&mut self, gobj: GObjId) {
         let above = reg(self.common().f32(0x6C));
         let fp = self.game.fighter(gobj);
