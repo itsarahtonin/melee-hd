@@ -45,3 +45,48 @@ fn_80392CCC	Named only by hsd_803931A4 (the boot's USB host setup: see hsd_80393
 hsd_803931A4	The boot's USB host setup, called only by main inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`, and by nothing else: holding R at power-on does nothing on a retail disc; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 hsd_80393A04	Called only by main, only inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 hsd_80393A54	Named only by main, only inside `if (DbLevel != DbLKind_Master && db_gameLaunchButtonState & HSD_PAD_R && hsd_803931A4(-1))`; and hsd_803931A4 (the boot's USB host setup: see hsd_803931A4).
+ExtHandler	Named only by HIOInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+ExiHandler	Named only by HIOInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+DbgHandler	Named only by HIOInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+TxHandler	Named only by HIOWriteAsync (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+RxHandler	Named only by HIOReadAsync (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOInit	Named only by MCCInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOReadMailbox	Named only by MCCInit, MailboxCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOWriteMailbox	Named only by NotifyCompulsorily (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIORead	Named only by LoadChannelInfo, MCCInit, MCCRead, mccInitializeCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOWrite	Named only by FlushChannelInfo, MCCInit, MCCWrite, mccInitializeCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOReadAsync	Named only by MCCRead (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOWriteAsync	Named only by MCCWrite (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+HIOReadStatus	Named only by MCCInit, NotifyCompulsorily (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+callbackEventStream	Named only by MCCStreamOpen (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCStreamOpen	Named only by fioPacketResultWrite, hsd_80393440 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+LoadChannelInfo	Named only by MCCCheckAsyncDone, MCCClose, MCCGetChannelInfo, MCCGetFreeBlocks, MCCNotify, MCCOpen, MCCRead, MCCSetChannelEventMask, MCCStreamWrite, MCCWrite, MailboxCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+FlushChannelInfo	Named only by MCCClose, MCCOpen, mccInitializeCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+SetChannelInfoDirty	Named only by FlushChannelInfo, LoadChannelInfo (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MakeMemoryMap	Named only by SearchFreeBlocks (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+SearchFreeBlocks	Named only by MCCGetFreeBlocks, MCCOpen (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+NotifyCompulsorily	Named only by FlushChannelInfo, MCCCheckAsyncDone, MCCClose, MCCInit, MCCNotify, MCCOpen, MCCRead, MCCWrite, MailboxCheck, mccInitializeCheck (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MailboxCheck	Named only by MCCExiCallback (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCExiCallback	Named only by MCCInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCTxCallback	Named only by MCCWrite (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCRxCallback	Named only by MCCRead (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+mccInitializeCheck	Named only by MCCInit (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCInit	Named only by FIOInit, hsd_80392E80, hsd_803931A4 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCExit	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCGetFreeBlocks	Named only by hsd_80393440 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCGetChannelInfo	Named only by MCCGetConnectionStatus, MCCStreamWrite (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCGetConnectionStatus	Named only by MCCNotify, fioPacketResultWrite, hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCNotify	Named only by FIOQuery, MCCStreamWrite, fioPacketSendPacket, hsd_80393328, hsd_80393440, hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCOpen	Named only by FIOInit, MCCStreamOpen, fioPacketResultWrite, hsd_80392E80, hsd_80393440 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCClose	Named only by FIOExit, MCCExit, MCCStreamClose, fioPacketResultWrite, hsd_80393440 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCRead	Named only by fioPacketReceiveResult, hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+MCCWrite	Named only by MCCStreamWrite, fioPacketSendPacket, hsd_80393440 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+MCCCheckAsyncDone	Named only by MCCRead, MCCWrite (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+fioMccChannelEvent	Named only by FIOInit, fioPacketResultWrite (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4).
+FIOInit	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+FIOExit	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+fn_80392E2C	Named only by hsd_80392E80, hsd_803931A4 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+fn_803932D0	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+hsd_80393328	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+hsd_80393440	Named only by hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+hsd_80393840	Named only by hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
