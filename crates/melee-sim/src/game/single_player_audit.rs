@@ -967,7 +967,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gr/grzebesroute",
             "melee/gr/grbigblueroute",
             "stageGObj10_Callback3",
-            "fn_801FA4CC",
             "stage kind {grkind}",
         ],
         modes: &[AD, DB],

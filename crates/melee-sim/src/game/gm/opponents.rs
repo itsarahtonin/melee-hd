@@ -146,7 +146,7 @@ impl Opponents {
     }
 
     /// How many are still to join, `gm_80169384`.
-    // Ports gm_80169384; aliased once a check reaches it.
+    #[doc(alias = "gm_80169384")]
     pub fn left(&self) -> i32 {
         i32::from(self.left)
     }
@@ -305,7 +305,7 @@ impl Opponents {
     }
     /// Every joiner in one costume, `fn_801697FC`: `costume`, or the next one when the first
     /// player wears it with the same character.
-    // Ports fn_801697FC; aliased once a check reaches it.
+    #[doc(alias = "fn_801697FC")]
     pub fn one_costume(&mut self, ckind: i8, costume: i8, p1_ckind: i8, p1_costume: i8) {
         let n = i32::from(super::super::playback::costume_count(ckind as u8));
         if ckind == NONE {
@@ -335,7 +335,7 @@ impl Opponents {
     /// Each Kirby joiner's copy, `fn_80169A84`: none (mode 0), or (mode 1) the unlocked
     /// characters but Kirby shuffled into the pool (`HSD_Randi(27)` each), the first 16 kept,
     /// dealt in turn as fighter kinds.
-    // Ports fn_80169A84; aliased once a check reaches it.
+    #[doc(alias = "fn_80169A84")]
     pub fn draw_copies(&mut self, unlocks: &super::Unlocks, rng: &mut crate::rng::Rng) {
         match self.copy_mode {
             1 => {
@@ -389,14 +389,14 @@ impl Opponents {
     }
 
     /// `fn_8016A46C`: each joiner's `flagsAE` bit 0.
-    // Ports fn_8016A46C; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A46C")]
     pub fn set_flag_ae0(&mut self) {
         self.flags |= FLAG_AE0;
     }
 }
 
 /// A match's rules point at the joining opponents (`x54`), `gm_8016A21C`.
-// Ports gm_8016A21C; aliased once a check reaches it.
+#[doc(alias = "gm_8016A21C")]
 pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
     rules.x54 = super::super::handles::RawPtr(ADDR);
 }
@@ -605,8 +605,7 @@ impl Running<'_> {
     /// player of one stock, the setup's level, ratios and scale) and creates its fighters;
     /// once none is left to join and none plays, the last is beaten and the end's callback is
     /// told 1.
-    // Ports fn_8016A4C8's joining; aliased once a check reaches it (every match runs its
-    // early return).
+    #[doc(alias = "fn_8016A4C8")]
     pub fn spawn_opponents(&mut self) {
         if !self.game.gm.opponents.joining() {
             return;
@@ -718,7 +717,7 @@ impl Running<'_> {
     }
 
     /// A joiner's fighters made, `fn_8016A488`: they read their controllers once the HUD is on.
-    // Ports fn_8016A488; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A488")]
     pub fn opponent_joined(&mut self, slot: i32) {
         if self.game.vs.state.hud_enabled == 1 {
             self.player_enable_input(slot);
