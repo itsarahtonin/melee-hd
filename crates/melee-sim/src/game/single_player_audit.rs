@@ -537,10 +537,6 @@ const HOME_RUN_UNREACHED: &[(&str, &str)] = &[
         "the contest's match exits into VS mode's exit data (uses_vs_melee)",
     ),
     (
-        "ifStock_802FA5BC",
-        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
-    ),
-    (
         "gm_80167320's joiners' leaving",
         "the joining opponents' setup's flag (gm.opponents, gm_8016A1F8), which only gm_16A2's single-player setups and the adventure routes' arenas set",
     ),
@@ -600,10 +596,6 @@ const TARGET_TEST_UNREACHED: &[(&str, &str)] = &[
     (
         "a match's exit data in game mode",
         "the mode's match exits into its own exit data (match_exit_data's Target Test arm), and the challenger's match into the challenger approach mode's",
-    ),
-    (
-        "ifStock_802FA5BC",
-        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
@@ -666,10 +658,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
     (
         "a match's exit data in game mode",
         "the modes' matches exit into their own exit data (gm_80495370, match_exit_data's Multi-Man arm), and the challenger's match into the challenger approach mode's",
-    ),
-    (
-        "ifStock_802FA5BC",
-        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
@@ -752,10 +740,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
     (
         "a match's exit data in game mode",
         "Training's match exits into its own exit data (match_exit_data's Training arm); the notices have no match",
-    ),
-    (
-        "ifStock_802FA5BC",
-        "the joining opponents' setup's flags (gm.opponents), which only gm_16A2's single-player setups set",
     ),
     (
         "gm_80167320's joiners' leaving",
@@ -859,11 +843,6 @@ pub const MISSING: &[Gap] = &[
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
         ],
-        modes: SETUP_MODES,
-    },
-    Gap {
-        what: "the 1P HUD (the stocks and counters)",
-        covers: &["ifStock_802FA5BC"],
         modes: SETUP_MODES,
     },
     Gap {
