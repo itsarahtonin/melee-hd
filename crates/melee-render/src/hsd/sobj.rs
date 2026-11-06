@@ -185,7 +185,7 @@ impl Ctx<'_> {
             return;
         }
         let flags = o.flags;
-        assert!(flags & 4 == 0, "a sprite's depth texture isn't ported");
+        let depth = flags & 4 != 0;
         let movie = flags & 0x10 != 0;
         let tx = o.tex;
         // The image's texture object and palette as `HSD_SObjLib_803A477C` made them.
@@ -194,7 +194,38 @@ impl Ctx<'_> {
             Image::Data(d) => data.ptr(d).map_or(0, |p| self.space.addr(data, p)),
             Image::Buffer { addr, .. } => self.decoded_image(addr).unwrap_or(0),
             Image::Copy { image, .. } => self.toy_fall_buffer(image).unwrap_or(0),
+            Image::IntroCopy { image, .. } => self.intro_horde_buffer(image).unwrap_or(0),
             _ => 0,
+        };
+        // The depth image's texture object (`x7C_texobj`): only the horde intro's copies.
+        let depth_tex = match o.image2_copy {
+            Image::IntroCopy {
+                image,
+                width,
+                height,
+                format,
+                ..
+            } if depth => {
+                let at = self.intro_horde_buffer(image).unwrap_or(0);
+                let mut t = TexObj::default();
+                self.gx.init_tex_obj(
+                    &mut t,
+                    at,
+                    width,
+                    height,
+                    format,
+                    o.tex.wrap_s,
+                    o.tex.wrap_t,
+                    0,
+                );
+                Some(t)
+            }
+            _ if depth => {
+                self.hsd
+                    .note_once("a sprite's depth image from loaded data");
+                None
+            }
+            _ => None,
         };
         let mut texobj = TexObj::default();
         let mut tlutobj = TlutObj::default();
@@ -242,14 +273,21 @@ impl Ctx<'_> {
         };
         let gx = &mut *self.gx;
         gx.clear_vtx_desc();
-        self.hsd.state.set_z_mode(gx, true, GX_ALWAYS, false);
-        gx.set_cull_mode(GX_CULL_BACK);
-        if movie {
-            gx.set_num_tex_gens(2);
-            gx.set_num_tev_stages(4);
-        } else {
+        if depth {
+            gx.set_z_texture(GX_ZT_REPLACE, GX_TF_Z24X8, 0);
+            self.hsd.state.set_z_mode(gx, true, GX_LESS, flags & 8 == 0);
+            self.hsd.state.set_z_comp_loc(gx, false);
+            gx.set_cull_mode(GX_CULL_BACK);
             gx.set_num_tex_gens(1);
-            gx.set_num_tev_stages(1);
+            gx.set_num_tev_stages(2);
+        } else {
+            self.hsd.state.set_z_mode(gx, true, GX_ALWAYS, false);
+            gx.set_cull_mode(GX_CULL_BACK);
+        }
+        if !depth {
+            let (gens, stages) = if movie { (2, 4) } else { (1, 1) };
+            gx.set_num_tex_gens(gens);
+            gx.set_num_tev_stages(stages);
         }
         if matches!(fmt, GX_TF_C4 | GX_TF_C8) {
             gx.load_tlut(&tlutobj, GX_TLUT0);
@@ -265,6 +303,38 @@ impl Ctx<'_> {
         gx.set_alpha_update(GX_DISABLE);
         if movie {
             movie_tev(gx);
+        } else if depth {
+            gx.set_tev_order(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
+            if let Some(t) = &depth_tex {
+                gx.load_tex_obj(t, GX_TEXMAP1);
+            }
+            gx.set_tev_order(GX_TEVSTAGE1, GX_TEXCOORD0, GX_TEXMAP1, GX_COLOR0A0);
+            gx.set_alpha_compare(GX_ALWAYS, 0, GX_AOP_OR, GX_ALWAYS, 0);
+            gx.set_tev_color(GX_TEVREG0, Color::new(c1[0], c1[1], c1[2], c1[3]));
+            for (stage, a, b, c) in [
+                (GX_TEVSTAGE0, GX_CC_TEXC, GX_CC_C0, GX_CC_ZERO),
+                (GX_TEVSTAGE1, GX_CC_ZERO, GX_CC_ZERO, GX_CC_CPREV),
+            ] {
+                gx.set_tev_color_in(stage, GX_CC_ZERO, a, b, c);
+                gx.set_tev_color_op(
+                    stage,
+                    GX_TEV_ADD,
+                    GX_TB_ZERO,
+                    GX_CS_SCALE_1,
+                    GX_TRUE,
+                    GX_TEVPREV,
+                );
+                gx.set_tev_alpha_in(stage, GX_CA_ZERO, GX_CA_ZERO, GX_CA_ZERO, GX_CA_A0);
+                gx.set_tev_alpha_op(
+                    stage,
+                    GX_TEV_ADD,
+                    GX_TB_ZERO,
+                    GX_CS_SCALE_1,
+                    GX_TRUE,
+                    GX_TEVPREV,
+                );
+            }
+            gx.set_blend_mode(GX_BM_BLEND, GX_BL_SRCALPHA, GX_BL_INVSRCALPHA, GX_LO_CLEAR);
         } else {
             gx.set_tev_order(GX_TEVSTAGE0, GX_TEXCOORD0, GX_TEXMAP0, GX_COLOR0A0);
             gx.set_alpha_compare(GX_ALWAYS, 0, GX_AOP_OR, GX_ALWAYS, 0);
@@ -347,6 +417,9 @@ impl Ctx<'_> {
             gx.tex_coord2f32(s, t);
         }
         gx.end();
+        if depth {
+            gx.set_z_texture(GX_ZT_DISABLE, GX_TF_Z24X8, 0);
+        }
         self.invalidate(STATE_ALL);
         self.hsd.tev.init_tev();
         self.clear_vtx_desc();

@@ -55,6 +55,8 @@ pub enum Dynamic {
     /// One of the trophy fall's images, by `melee_sim::game::gm::endings::toy_fall::IMAGES`'
     /// index.
     ToyFall(u8),
+    /// Classic's horde intro's copies of the frame.
+    IntroHorde(u8),
     /// The movie player's planes (`MoviePlayer.unk_50`, `unk_54`, `unk_58`): luma, then the
     /// two chroma planes, as the last frame decoded them.
     Movie(u8),
