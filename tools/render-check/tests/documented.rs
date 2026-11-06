@@ -19,8 +19,8 @@ use common::{
     CORNERIA, Capture, DATA_ALBUM, DATA_ALBUM_DELETE, DATA_BONUS, DATA_COUNT, DATA_DIAGRAM,
     DATA_INFO, DATA_PRIZE, DEBUG_COLL, DEBUG_GAL_L, DEBUG_GAL_Z, DEBUG_MENU_ENTER, DEBUG_MENU_SUB,
     DEBUG_PERF_MONITOR, DEBUG_SOUND, DEBUG_VS_BUBBLES, DEBUG_VS_COINS, DEBUG_VS_DISPLAYS,
-    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, EV12, EV14, EV26,
-    EV43, EV47, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD,
+    DEBUG_VS_STAGE, DEBUG_VS_TOOLS, DEBUG_YOSHIKI_BASIC, DEBUG_YOSHIKI_SNAPS, EV12, EV14, EV22,
+    EV26, EV43, EV47, Expect, FLAT_ZONE, FOUR_FD, FOURSIDE, FOX_FOX_FD, FOX_MARTH_BF, FOX_MARTH_FD,
     FOX_MARTH_PS, FOX_SHEIK_DL, FOX_SHEIK_FD, FOX_SHEIK_YS, FZ_CUTSCENE, FZ_RUN, GALLERY, GB_BOY,
     GB_GIRL, GB_GK, GREAT_BAY, GREEN_GREENS, Game, Group, HR_LONG, HR_MISS, HYRULE_TEMPLE,
     ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF,
@@ -1807,6 +1807,14 @@ fn e3_ev14_2000() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn e3_ev26_2100() {
     event_match(&EV26, 2100, [2440, 2415]);
+}
+
+// Event Match's fourth round: Event 22's crowd and its counter in the 1P HUD (m6-event-3's
+// ev22 2000), captured with ssbm-rs's renderer running.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e4_ev22_2000() {
+    event_match(&EV22, 2000, [1775, 1775]);
 }
 
 frames!(TT_DK_QUIT;

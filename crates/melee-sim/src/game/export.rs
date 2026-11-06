@@ -914,6 +914,10 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     if let Some(runs) = game.it.render_leftovers.get(&i.0) {
         l.keep_render_target(runs, img.render_fill);
     }
+    // A collision's last position its spawn's stack words gave (`it::Globals::stale_last_pos`).
+    if game.it.stale_last_pos.contains(&i.0) {
+        l.forget(at + 0x378 + 0x1C, 12);
+    }
     l.put(img);
 }
 

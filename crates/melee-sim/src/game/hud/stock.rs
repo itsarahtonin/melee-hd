@@ -36,6 +36,8 @@ pub const PROC_TARGETS: u32 = 0x802F_916C;
 pub const RENDER_TARGETS: u32 = 0x802F_9548;
 /// The Multi-Man counter's render callback.
 pub const RENDER_COUNTER: u32 = 0x802F_9598;
+/// The crowd's counter's process.
+pub const PROC_COUNTER: u32 = 0x802F_8DB0;
 
 /// The Multi-Man counter's second joint (`ifStock_804A1378 + 0x1F0`, which the decomp's type
 /// calls padding): `lb_80011E24`'s list of the counter's joints writes it.
@@ -915,7 +917,8 @@ impl Running<'_> {
             g.world.setup_proc(o, CodeRef(PROC_TALLY), 17);
             g.hud.stock_1774.x10C[0] = Some(o);
         } else if g.gm.opponents.joining() {
-            code::unported_call("ifStock_802FA5BC");
+            g.hud.stock_1774.x108 = -1;
+            self.create_counter(true);
         }
         for i in 0..16 {
             self.game.hud.stock_1a8c[i] = None;
@@ -925,13 +928,15 @@ impl Running<'_> {
             }
         }
         if super::super::gm::multi_man::is_multi_man(self.game.game_mode) {
-            self.create_multi_man_counter();
+            self.create_counter(false);
         }
     }
 
-    /// The Multi-Man counter (the inline `ifStock_CreateStockGObjs`'s last part): the scene's
-    /// second model on render link 11, at its frame 10, its six joints kept.
-    fn create_multi_man_counter(&mut self) {
+    /// The counter, the Multi-Man one (the inline `ifStock_CreateStockGObjs`'s last part) or
+    /// a crowd's (`ifStock_802FA5BC`, with its process when `proc`): the scene's second model
+    /// on render link 11, at its frame 10, its six joints kept.
+    #[doc(alias = "ifStock_802FA5BC")]
+    fn create_counter(&mut self, proc: bool) {
         let data = self.data;
         let g = &mut *self.game;
         let o = g.world.create(14, 15, 0);
@@ -939,6 +944,9 @@ impl Running<'_> {
         let root = jobj::load_joint(&mut g.objs, data, data.ptr(model)).expect("a model");
         g.world.set_obj(o, OBJ_JOBJ, Obj::JObj(root));
         g.world.setup_gx_link(o, CodeRef(RENDER_COUNTER), 11, 0);
+        if proc {
+            g.world.setup_proc(o, CodeRef(PROC_COUNTER), 17);
+        }
         super::super::gm::vs::add_model_anim(&mut g.objs, data, Some(root), model, 0);
         jobj::req_anim_all(&mut g.objs, Some(root), 10.0);
         jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, Some(root));
@@ -981,6 +989,17 @@ impl Running<'_> {
             req(d, n);
         }
         jobj::anim_all(&mut g.objs, data, &mut code::ParticleHooks, root);
+    }
+
+    /// The crowd's counter's process, `fn_802F8DB0`: the counter set again when the crowd's
+    /// count (`gm_801694A0`) changes.
+    #[doc(alias = "fn_802F8DB0")]
+    pub fn crowd_counter_proc(&mut self, _gobj: GObjId) {
+        let x = self.game.opponents_count();
+        if x != self.game.hud.stock_1774.x108 {
+            self.set_multi_man_counter(x);
+        }
+        self.game.hud.stock_1774.x108 = x;
     }
 
     /// Frees the single-player tally's icons, `ifStock_802FB390`.

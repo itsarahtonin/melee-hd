@@ -419,6 +419,23 @@ impl Comparer<'_> {
                 item.xACC_itemHurtbox.lay_counted(l, t + 0xACC, cx, n);
             },
         );
+        // A collision's last position its spawn's stack words gave is left out
+        // (`it::Globals::stale_last_pos`, docs/engine.md): ours stands in for theirs.
+        let view = if game.it.stale_last_pos.contains(&o.0) {
+            let mut block = view.unwrap_or_else(|| {
+                let lo = (t - MEM1) as usize;
+                self.mem[lo..lo + <melee_sim::game::structs::Item as Mirror>::SIZE as usize]
+                    .to_vec()
+            });
+            let p = &item.x378_itemColl.last_pos;
+            for (k, v) in [p.x, p.y, p.z].into_iter().enumerate() {
+                let off = 0x378 + 0x1C + 4 * k;
+                block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
+            }
+            Some(block)
+        } else {
+            view
+        };
         match view {
             Some(block) => {
                 let m = Mem {

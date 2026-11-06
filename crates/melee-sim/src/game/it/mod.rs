@@ -85,6 +85,11 @@ pub struct Globals {
     /// as the fighters' (`ft::Globals::render_leftovers`), by slot.
     #[clone_from(if_changed)]
     pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
+    /// The items, by slot, whose collision's last position (`x378_itemColl.last_pos`) is
+    /// still the stack words their spawn found, which the comparer and the heap's image leave
+    /// out: a far Arwing's laser outside Slippi's playback (`kinds::arwinglaser::spawn_aimed`).
+    #[clone_from(if_changed)]
+    pub stale_last_pos: std::collections::BTreeSet<u32>,
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
     pub bone_tables: Pool<BoneTable, { pool_kind(Kind::ItemDynamicBones) }>,
     /// The links of items made of links (`item_link_alloc_data`), each the user data of a GObj

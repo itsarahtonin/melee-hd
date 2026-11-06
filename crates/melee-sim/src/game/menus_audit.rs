@@ -182,10 +182,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the name entry's keyboards have no %, so only an edited save holds a name with one (the player imports saves the game loads whole, which doesn't test names)",
     ),
     (
-        "ifStock_802FA5BC",
-        "the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "a text on canvas {context} of font {font}, past the last",
         "each scene makes its texts on canvases it made first",
     ),
