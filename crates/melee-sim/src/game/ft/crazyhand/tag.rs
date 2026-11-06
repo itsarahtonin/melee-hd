@@ -8,7 +8,6 @@
 //! Alone (a debug VS match without Master Hand) he waits there for good: nothing else ends
 //! the wait but Master Hand beaten or out.
 
-use super::super::super::code::unported_call;
 use super::super::super::it::kinds::masterhandlaser;
 use super::super::super::state::Running;
 use super::{KIND_MASTER_HAND, addr, attr, ms, mv};
@@ -88,7 +87,7 @@ impl Running<'_> {
     /// Beaten, `ftCh_GrabUnk1_8015ADD0` (`fn_800C8E74`'s for him): still, his lasers ended,
     /// the poke's hums stopped, a held fighter let go, falling (`x12C`, `x134`) for `x13C`
     /// frames, the cries.
-    // Ports `ftCh_GrabUnk1_8015ADD0`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_GrabUnk1_8015ADD0")]
     pub fn ch_beaten(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -138,8 +137,8 @@ impl Running<'_> {
     /// Falling beaten, `ftCh_TagGrab_Anim` and `ftCh_TagSqueeze_Anim`: a cheer on the
     /// script's flag, the second fall once the first ends, knocked out once the frames run
     /// out.
-    // Ports `ftCh_TagGrab_Anim`; aliased once a check reaches it.
-    // Ports `ftCh_TagSqueeze_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_Anim")]
+    #[doc(alias = "ftCh_TagSqueeze_Anim")]
     pub fn ch_beaten_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
@@ -148,12 +147,12 @@ impl Running<'_> {
             let n = fp.mv_i32(mv::CHEERS).wrapping_add(1);
             fp.set_mv_i32(mv::CHEERS, n);
             if n <= first {
-                unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER})"));
+                self.sfx_play_cheer(SFX_CHEER);
             } else {
                 let m = fp.mv_i32(mv::CHEERS2).wrapping_add(1);
                 fp.set_mv_i32(mv::CHEERS2, m);
                 if m <= second {
-                    unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER2})"));
+                    self.sfx_play_cheer(SFX_CHEER2);
                 }
             }
             self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -165,12 +164,12 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::X8).wrapping_sub(1);
         fp.set_mv_i32(mv::X8, n);
         if n == 0 {
-            unported_call("ftCo_800D4F24");
+            self.remove_with_partner(gobj, false);
         }
     }
 
     /// `ftCh_TagGrab_Phys`: the beaten hand falls away (`x130`, `x138` each frame).
-    // Ports `ftCh_TagGrab_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_Phys")]
     pub fn ch_beaten_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (dy, dz) = (self.ch_da_f32(f, attr::X130), self.ch_da_f32(f, attr::X138));
