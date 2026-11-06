@@ -116,6 +116,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftNs_AttackS4_Coll")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_S4_ON_REFLECT => g.ness_attack_s4_on_reflect(gobj),

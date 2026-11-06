@@ -173,6 +173,7 @@ pub fn loop_between(game: &mut Game, gobj: GObjId, part: i32, parts: u32, rewind
 /// Loops a stage object's part's animations (`grAnime_801C77FC`, and without its descendants
 /// `grAnime_801C787C`).
 #[doc(alias = "grAnime_801C77FC")]
+#[doc(alias = "fn_801C6F2C")]
 #[doc(alias = "grAnime_801C787C")]
 pub fn set_loop(game: &mut Game, gobj: GObjId, part: i32, parts: u32, recurse: bool) {
     let j = nth_joint(game, gobj, part);
@@ -698,6 +699,7 @@ pub fn start_map(game: &mut Game, data: &Archives, gobj: GObjId, map_id: i32, an
 }
 
 /// The first animation of a stage object's part, `grAnime_801C8318`.
+#[doc(alias = "fn_801C82E8")]
 #[doc(alias = "grAnime_801C8318")]
 pub fn first_anim(game: &mut Game, gobj: GObjId, part: i32, parts: u32) -> Option<AObjId> {
     let j = nth_joint(game, gobj, part)?;

@@ -77,6 +77,30 @@ impl Running<'_> {
 
     /// Fills in the results as they stand, `gm_80166378`: each player's slot, character,
     /// stocks, KOs, falls and statistics, then the scores, the ranks and the teams'.
+    #[doc(alias = "pl_80040900")]
+    #[doc(alias = "pl_80040924")]
+    #[doc(alias = "pl_80040A04")]
+    #[doc(alias = "pl_80040A30")]
+    #[doc(alias = "pl_80040A54")]
+    #[doc(alias = "pl_80040A78")]
+    #[doc(alias = "pl_80040AF0")]
+    #[doc(alias = "pl_80040B18")]
+    #[doc(alias = "pl_80040B3C")]
+    #[doc(alias = "pl_80040B64")]
+    #[doc(alias = "pl_80040BD8")]
+    #[doc(alias = "pl_80040BFC")]
+    #[doc(alias = "pl_80040C24")]
+    #[doc(alias = "pl_80040C48")]
+    #[doc(alias = "pl_80040C6C")]
+    #[doc(alias = "pl_80040C90")]
+    #[doc(alias = "pl_80040CB4")]
+    #[doc(alias = "pl_80040CD8")]
+    #[doc(alias = "pl_80040CFC")]
+    #[doc(alias = "pl_80040D20")]
+    #[doc(alias = "pl_80040D44")]
+    #[doc(alias = "pl_80040D68")]
+    #[doc(alias = "pl_80040DB8")]
+    #[doc(alias = "fn_80166A8C")]
     #[doc(alias = "gm_80166378")]
     pub(crate) fn compile_results(&mut self) {
         let mut r = std::mem::take(&mut self.game.vs.state.x24C);

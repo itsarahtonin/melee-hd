@@ -92,7 +92,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftSs_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 0,
     /// 0)`): the hand's hold pose for the item, unless it is heavy.
-    // Ports `ftSs_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftSs_Init_OnItemPickup")]
     pub fn samus_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         let item = self
             .game
@@ -144,7 +144,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftSs_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 0, 0)`).
-    // Ports `ftSs_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftSs_Init_OnItemDrop")]
     pub fn samus_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.ext(
             ext::FTANIM_80070FB4,

@@ -134,6 +134,8 @@ impl Running<'_> {
     /// (`Toy_80311960`), then each one the region can win held once, the classes past 1 but
     /// 3 and 8 marked unwinnable, every category's bit but 0 and 1, and
     /// `_Toy_sbss_804D6EA1` set.
+    #[doc(alias = "gmMainLib_GetTrophyFlags")]
+    #[doc(alias = "gmMainLib_GetTrophyCategoryFlags")]
     #[doc(alias = "Toy_80311680")]
     pub fn hold_every_trophy(&mut self) {
         let s = &mut self.game.game_data.thing.save_data;

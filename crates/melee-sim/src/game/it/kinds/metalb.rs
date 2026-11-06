@@ -130,6 +130,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 /// `itMetalB_Logic32_DmgReceived`: broken, it turns its breaker metal when that's a fighter
 /// whose hit could open it (`xDCF` bit 6), which counts the item for its player; gone either
 /// way.
+#[doc(alias = "ftLib_IsSubFighter")]
 #[doc(alias = "itMetalB_Logic32_DmgReceived")]
 pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
     let Some(by) = coll::take_attacker(r.game, gobj) else {

@@ -137,6 +137,7 @@ impl Running<'_> {
     }
 
     /// Runs fighter command `index` (opcode `index + 10`, `ftAction_803C06E8`).
+    #[doc(alias = "ftAction_80072B94")]
     pub(super) fn fighter_command(&mut self, gobj: GObjId, index: u32) {
         let f = self.game.fighter_id(gobj);
         let w = self.cmd_word(f, 0);
@@ -243,6 +244,7 @@ impl Running<'_> {
     /// grapple beam's swing, `it_802B7160`): its group's victims, bone, damage, size, offset,
     /// angle, knockback, element, shield damage, sounds and whom it hits, the grabbed-victim-only
     /// bit from the sixth word.
+    #[doc(alias = "ftColl_800768A0")]
     pub(crate) fn fighter_hitbox_from(&mut self, gobj: GObjId, f: FighterId, w: [u32; 6]) {
         let id = bits(w[0], 6, 3) as usize;
         let group = bits(w[0], 9, 3);
@@ -433,12 +435,14 @@ impl Running<'_> {
     }
 
     /// A hitbox's size.
+    #[doc(alias = "ftAction_8007169C")]
     fn cmd_hitbox_scale(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let v = mem(fp::fmuls(reg(FIXED), ufloat(bits(w, 9, 23))));
         self.cmd_hitbox(f, bits(w, 6, 3)).scale = v;
     }
 
     /// A hitbox's flags (`x42_b5`, `x42_b7`).
+    #[doc(alias = "ftAction_80071708")]
     fn cmd_hitbox_flags(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (ty, v) = (bits(w, 30, 1), bits(w, 31, 1) != 0);
         let h = self.cmd_hitbox(f, bits(w, 6, 24));
@@ -449,16 +453,20 @@ impl Running<'_> {
     }
 
     /// Clears one hitbox (`ftColl_8007AFC8`).
+    #[doc(alias = "ftAction_80071784")]
+    #[doc(alias = "ftColl_8007AFC8")]
     fn cmd_clear_hitbox(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.cmd_hitbox(f, bits(w, 6, 26)).state = 0;
     }
 
     /// Clears every hitbox.
+    #[doc(alias = "ftAction_800717D8")]
     fn cmd_clear_hitboxes(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.clear_hitboxes(f);
     }
 
     /// One of the character's smash sounds, at random (`ft_800889F4`).
+    #[doc(alias = "ftAction_80071CCC")]
     fn cmd_smash_sound(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         let fp = &self.game.fighters[f.0];
         let sfx = self
@@ -473,11 +481,13 @@ impl Running<'_> {
     }
 
     /// Sets one of `cmd_vars`.
+    #[doc(alias = "ftAction_80071820")]
     fn cmd_set_var(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].cmd_vars[bits(w, 6, 2) as usize] = bits(w, 8, 24);
     }
 
     /// Throw flag 3 (noting the timer) or 4.
+    #[doc(alias = "ftAction_800718A4")]
     fn cmd_throw_flag_3_4(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         match bits(w, 6, 26) {
@@ -491,6 +501,7 @@ impl Running<'_> {
     }
 
     /// Throw flag 1.
+    #[doc(alias = "ftAction_80071908")]
     fn cmd_throw_flag_1(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.game.fighters[f.0].x2210[0] |= 0x40;
     }
@@ -501,16 +512,19 @@ impl Running<'_> {
     }
 
     /// The action may be interrupted.
+    #[doc(alias = "ftAction_80071950")]
     fn cmd_allow_interrupt(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.game.fighters[f.0].allow_interrupt = true;
     }
 
     /// Throw flag 0.
+    #[doc(alias = "ftAction_80071974")]
     fn cmd_throw_flag_0(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.game.fighters[f.0].x2210[0] |= 0x80;
     }
 
     /// Lands, or leaves the ground as falling or as jumped.
+    #[doc(alias = "ftAction_80071998")]
     fn cmd_airborne(&mut self, gobj: GObjId, f: FighterId, w: u32) {
         match bits(w, 6, 26) {
             0 => self.land(gobj),
@@ -521,21 +535,25 @@ impl Running<'_> {
     }
 
     /// The fighter's hit status.
+    #[doc(alias = "ftAction_80071A14")]
     fn cmd_hit_status(&mut self, gobj: GObjId, _f: FighterId, w: u32) {
         self.set_hit_status(gobj, bits(w, 6, 26) as i32);
     }
 
     /// Every hurtbox's state.
+    #[doc(alias = "ftAction_80071A58")]
     fn cmd_hurtbox_state(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.set_hurtbox_state(f, bits(w, 6, 26) as i32);
     }
 
     /// One bone's hurtbox state.
+    #[doc(alias = "ftAction_80071A9C")]
     fn cmd_bone_hurtbox_state(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.set_bone_hurtbox_state(f, bits(w, 6, 8) as i32, bits(w, 14, 18) as i32);
     }
 
     /// The jab may continue into the next.
+    #[doc(alias = "ftAction_80071AE8")]
     fn cmd_jab_combo(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         if bits(w, 6, 26) == 0 || fp.x197C.is_some() {
@@ -544,11 +562,13 @@ impl Running<'_> {
     }
 
     /// The jab may turn rapid.
+    #[doc(alias = "ftAction_80071B28")]
     fn cmd_jab_rapid(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].x2218_b2 = bits(w, 6, 26) & 1 != 0;
     }
 
     /// Shows one of a model's variants.
+    #[doc(alias = "ftAction_80071D40")]
     fn cmd_model_variant(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (i, v) = (sbits(w, 6, 7), sbits(w, 13, 19));
         self.set_model_variant(f, i as usize, v);
@@ -636,11 +656,13 @@ impl Running<'_> {
     }
 
     /// The character's articles' visibility (`x221E_b4`).
+    #[doc(alias = "ftAction_80071F78")]
     fn cmd_article_visible(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].x221E_b4 = bits(w, 6, 26) & 1 != 0;
     }
 
     /// The fighter's visibility (`x221E_b5`).
+    #[doc(alias = "ftAction_80071FA0")]
     fn cmd_fighter_visible(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].x221E_b5 = bits(w, 6, 26) & 1 != 0;
     }
@@ -669,6 +691,7 @@ impl Running<'_> {
     }
 
     /// Rumbles the fighter's controller, or every fighter's (`ftCommon_8007EC30`).
+    #[doc(alias = "ftAction_800728F8")]
     fn cmd_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (kind, frames) = (bits(w, 7, 12), bits(w, 19, 13));
         if bits(w, 6, 1) != 0 {
@@ -739,6 +762,7 @@ impl Running<'_> {
     }
 
     /// Starts a color animation.
+    #[doc(alias = "ftAction_80072A5C")]
     fn cmd_color_anim(&mut self, gobj: GObjId, _f: FighterId, w: u32) {
         self.start_color_anim(gobj, bits(w, 6, 8) as i32, bits(w, 14, 18) as i32);
     }
@@ -754,6 +778,7 @@ impl Running<'_> {
     }
 
     /// The sword trail's setting (`x2100`, `x2101_bits_8`).
+    #[doc(alias = "ftAction_80072B3C")]
     fn cmd_sword_trail(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         fp.x2100 = sbits(w, 7, 25) as i8;
@@ -761,6 +786,7 @@ impl Running<'_> {
     }
 
     /// Flags `x221C_u16_y`, the root's lean kept unless bit 2 (`ft_8008A1B8`).
+    #[doc(alias = "ft_8008A1B8")]
     #[doc(alias = "ftAction_80072C6C")]
     fn cmd_x221c_flags(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let flags = bits(w, 6, 26);
@@ -771,11 +797,14 @@ impl Running<'_> {
     }
 
     /// Flag `x2225_b2`.
+    #[doc(alias = "ftAction_80072CB0")]
     fn cmd_x2225_b2(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].x2225_b2 = bits(w, 6, 26) & 1 != 0;
     }
 
     /// A smash attack's charge window (`ftCo_800DEE84`): its frames, damage scale and color.
+    #[doc(alias = "ftAction_80073008")]
+    #[doc(alias = "ftCo_800DEE84")]
     fn cmd_smash_charge(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let frames = mem(ufloat(bits(w, 6, 10)));
         let rate = mem(ufloat(bits(w, 16, 16)));
@@ -943,6 +972,7 @@ impl Running<'_> {
 
     /// The sound command, `ftAction_80071B50`: a behavior, then (for a sound) its id and
     /// volume and panning.
+    #[doc(alias = "ftAction_80071B50")]
     fn sound_command(&mut self, f: FighterId, which: Option<Overlay>) {
         // Three words, or two for a behavior that does nothing; a sound's id and volume in
         // the second and third.
@@ -1170,6 +1200,7 @@ impl Running<'_> {
     }
 
     /// Sets the state of the hurtbox on bone `bone`, `ftColl_8007B128`.
+    #[doc(alias = "ftColl_8007B128")]
     pub(crate) fn set_bone_hurtbox_state(&mut self, f: FighterId, bone: i32, state: i32) {
         let fp = &mut self.game.fighters[f.0];
         for i in 0..fp.hurt_capsules_len as usize {

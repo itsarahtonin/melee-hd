@@ -246,6 +246,7 @@ pub fn descend(r: &mut Running, gobj: GObjId) {
 
 /// The item's attack flags `flags`, `it_8027B288`: a new record unless its last byte is the
 /// same nonzero one, and the record of its fighter owner's attack, else a cleared one.
+#[doc(alias = "ft_800898A8")]
 #[doc(alias = "it_8027B288")]
 pub fn set_attack_flags(r: &mut Running, gobj: GObjId, flags: u32) {
     let b = flags.to_be_bytes();

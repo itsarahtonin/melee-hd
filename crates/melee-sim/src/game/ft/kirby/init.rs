@@ -414,6 +414,7 @@ impl Running<'_> {
 
     /// His copy's hat drawn on his head's matrix, `ftKb_UnkMtxFunc0` (his per-kind drawing):
     /// nothing without a hat model or with it hidden (`x2225_b2`).
+    #[doc(alias = "HSD_JObjSetupMatrix")]
     #[doc(alias = "ftKb_UnkMtxFunc0")]
     pub fn kb_draw_hat(&mut self, gobj: GObjId, vmtx: Option<Mtx34>, pass: i32) {
         let f = self.game.fighter_id(gobj);

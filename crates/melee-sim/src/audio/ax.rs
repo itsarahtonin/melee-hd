@@ -415,6 +415,7 @@ impl Ax {
     }
 
     /// `__AXPushFreeStack`.
+    #[doc(alias = "__AXPushFreeStack")]
     fn push_free(&mut self, p: VoiceId) {
         let head = self.stack_head[0];
         let v = self.v(p);
@@ -445,6 +446,7 @@ impl Ax {
 
     /// `__AXRemoveFromStack`: unlinks a voice from its priority's stack. Like the original, a
     /// stack of one forgets its voice whichever voice is passed.
+    #[doc(alias = "__AXRemoveFromStack")]
     fn remove_from_stack(&mut self, p: VoiceId) {
         let i = self.voices[usize::from(p)].priority as usize;
         let (head, tail) = (self.stack_head[i], self.stack_tail[i]);
@@ -513,6 +515,7 @@ impl Ax {
     }
 
     /// `__AXSetPBDefault`.
+    #[doc(alias = "__AXSetPBDefault")]
     fn set_pb_default(&mut self, p: VoiceId) {
         let v = self.v(p);
         v.pb.state = 0;

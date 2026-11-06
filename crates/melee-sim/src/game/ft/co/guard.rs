@@ -736,7 +736,7 @@ impl Running<'_> {
 
     /// The fighter's reflector from a descriptor, its reflections calling `cb`,
     /// `ftColl_CreateReflectHit`.
-    // Ports `ftColl_CreateReflectHit`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_CreateReflectHit")]
     pub fn create_reflect_hit(&mut self, gobj: GObjId, d: &ReflectDesc, cb: Option<CodeRef>) {
         let f = self.game.fighter_id(gobj);
         let joint = self.bones(f)[d.bone as usize].joint;

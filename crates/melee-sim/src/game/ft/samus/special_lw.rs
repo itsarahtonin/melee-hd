@@ -539,6 +539,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftSs_SpecialAirLwBomb_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_LW_ANIM => g.samus_special_lw_anim(gobj),

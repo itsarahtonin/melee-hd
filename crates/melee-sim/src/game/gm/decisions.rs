@@ -575,6 +575,7 @@ impl Running<'_> {
     /// most KOs, falls, self-destructs and damage, the match's own flags (`x448`), and the
     /// few others it reads from the player library. None while the bonuses are off
     /// (`lbl_804D65A0`).
+    #[doc(alias = "pl_80038914")]
     #[doc(alias = "fn_801701C0")]
     #[doc(alias = "fn_80171B64")]
     pub fn standing_decision(&self, r: &MatchEnd, a: i32, kind: i32) -> i32 {

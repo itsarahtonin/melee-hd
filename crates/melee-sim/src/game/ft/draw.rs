@@ -198,6 +198,7 @@ impl Running<'_> {
     /// retail disc), then, if `main`, its model groups for the pass (the low models unless
     /// metal or the like), its light, its tree through the shaken view, and its accessory;
     /// and its afterimage.
+    #[doc(alias = "ftLib_GetShakeOffset")]
     #[doc(alias = "ftDrawCommon_800805C8")]
     fn draw_fighter(&mut self, g: GObjId, pass: i32, main: bool) {
         let f = self.game.fighter_id(g);

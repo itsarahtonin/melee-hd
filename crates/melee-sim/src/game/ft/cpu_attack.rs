@@ -461,6 +461,7 @@ impl Running<'_> {
     /// travel rule out the one that would carry them off the stage or past a wall
     /// ([`Running::cpu_special_blocked`]); Kirby rules out his copy's special unless it's one
     /// that charges, and his inhale at a bigger target.
+    #[doc(alias = "ftCo_800A0FB0")]
     #[doc(alias = "ftCo_800B77E8")]
     fn cpu_character_rules(&mut self, f: FighterId) {
         if self.game.fighters[f.0].cpu.kind == 7 || self.cpu_untargetable(f) {
@@ -1441,6 +1442,7 @@ impl Running<'_> {
     /// steered ([`Running::cpu_follow_up`]); mid-attack it waits; else the command chosen
     /// (or chosen again now, [`Running::cpu_ranged_attack`]), each counted (`x90`); with
     /// none it drops the target.
+    #[doc(alias = "ftCo_800A0C8C")]
     #[doc(alias = "ftCo_800B9020")]
     pub(super) fn cpu_ranged(&mut self, f: FighterId) {
         use super::cpu_script::cmd as c;
@@ -1611,6 +1613,7 @@ impl Running<'_> {
     /// level 9), `ftCo_800BB220`: 2 when it does. Ness above level 3 tells an absorbable
     /// hitbox (3) only in spans of 21 or more, which his level never draws, so his test is
     /// everyone's.
+    #[doc(alias = "ftCo_800A5980")]
     #[doc(alias = "ftCo_800BB220")]
     fn cpu_item_coming(&mut self, f: FighterId, it: ItemId, middle: Vec3, radius: f32) -> u8 {
         let ip = &self.game.items[it.0];

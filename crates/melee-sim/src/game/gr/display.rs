@@ -151,6 +151,8 @@ impl Running<'_> {
     }
 
     /// Updates which fighters' shadows a frame turns on, `lbShadow_8000EEE0` on each fighter.
+    #[doc(alias = "ftLib_CastsShadow")]
+    #[doc(alias = "ftLib_GetShadow")]
     #[doc(alias = "lbShadow_8000EEE0")]
     pub fn shadow_update(&mut self, g: GObjId) {
         let f = self.game.fighter_id(g);

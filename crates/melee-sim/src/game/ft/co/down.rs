@@ -479,6 +479,7 @@ impl Running<'_> {
     }
 
     /// A roll up from the floor, `ftCo_Down_CheckInput`: the C-stick or the stick to the side.
+    #[doc(alias = "ftCo_80098324")]
     #[doc(alias = "ftCo_Down_CheckInput")]
     pub fn down_roll_check(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
@@ -581,6 +582,7 @@ impl Running<'_> {
 
     /// Hit while lying down, `ftCo_8009F0F0`: below `ftCommonData` x428 damage (or out of
     /// stamina) the fighter stays down (`ftCo_8009F184`).
+    #[doc(alias = "ftCo_8009F184")]
     #[doc(alias = "ftCo_8009F0F0")]
     pub fn down_damage_check(&mut self, gobj: GObjId) -> bool {
         let x428 = f64::from(self.common().i32(0x428));
@@ -707,6 +709,7 @@ impl Running<'_> {
     /// A tech roll on landing, `ftCo_80098928`: the stick to the side past `ftCommonData`
     /// x254, forward or back.
     #[doc(alias = "ftCo_80098928")]
+    #[doc(alias = "ftCo_800989D4")]
     pub fn passive_check(&mut self, gobj: GObjId) -> bool {
         if !self.tech_input(gobj) {
             return false;

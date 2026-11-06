@@ -388,6 +388,11 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftYs_GuardOn_0_Coll")]
+#[doc(alias = "ftYs_GuardOn_0_Phys")]
+#[doc(alias = "ftYs_GuardOn_1_Coll")]
+#[doc(alias = "ftYs_GuardOn_1_Phys")]
+#[doc(alias = "ftYs_GuardOn_1_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::GUARD_ON_0_ANIM => g.ys_guard_on_0_anim(gobj),

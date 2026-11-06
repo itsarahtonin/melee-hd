@@ -368,7 +368,7 @@ impl Running<'_> {
     }
 
     /// Landing helpless, `ftCo_LandingFallSpecial_Enter_Basic`.
-    // Ports `ftCo_LandingFallSpecial_Enter_Basic`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_LandingFallSpecial_Enter_Basic")]
     pub fn enter_landing_fall_special_basic(&mut self, gobj: GObjId) {
         if self.holding_hammer(gobj) {
             self.enter_hammer_landing(gobj);
@@ -470,6 +470,7 @@ impl Running<'_> {
     /// Falling helpless, `ftCo_80096900` (and `ftCo_800969D8`, which blends over `blend`
     /// frames and keeps the jumps): `drift` scales the air drift (`mv` mobility),
     /// `landing_lag` the landing's frames.
+    #[doc(alias = "ftCommon_UseAllJumps")]
     #[doc(alias = "ftCo_80096900")]
     #[doc(alias = "ftCo_800969D8")]
     #[allow(clippy::too_many_arguments)]
@@ -630,6 +631,7 @@ const ESCAPE_AIR_VEL: usize = 0x4;
 impl Running<'_> {
     /// An air dodge, `ftCo_80099A9C`: the stick's direction at the dodge's speed (none in its
     /// dead zone), the speed before it kept for an item throw out of it.
+    #[doc(alias = "ftCommon_8007D9D4")]
     #[doc(alias = "ftCo_80099A9C")]
     pub fn enter_escape_air(&mut self, gobj: GObjId, timer: i32) {
         self.air_z_check(gobj);

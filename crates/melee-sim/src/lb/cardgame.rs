@@ -92,6 +92,7 @@ impl CardGame {
 
     /// `lbCardGame_Init` at boot: the probe as it stands, the card as the game knows it,
     /// and the manifest pointed at the card data.
+    #[doc(alias = "gmMainLib_GetNameTagDataBanks")]
     #[doc(alias = "lbCardGame_Init")]
     pub fn init(&mut self, card_in: bool) {
         self.probe_status = card_in;

@@ -647,6 +647,8 @@ pub(crate) fn spin_rate(fp: &crate::game::structs::Fighter) -> f32 {
     f32::from_bits(fp.u_i32(u::X223C) as u32)
 }
 
+#[doc(alias = "ftNs_AttackHi4_Coll")]
+#[doc(alias = "ftNs_AttackHi4_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_HI4_YOYO_UPDATE_HIT_POS => g.ness_yoyo_update_hit_pos(gobj),

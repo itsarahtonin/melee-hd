@@ -106,6 +106,7 @@ impl Running<'_> {
     }
 
     /// `decideAttack11`: Game & Watch's own jab.
+    #[doc(alias = "decideAttack11")]
     fn decide_attack11(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
             self.gw_attack11_enter(gobj);
@@ -141,6 +142,7 @@ impl Running<'_> {
     }
 
     /// `doAttack12`: Pikachu and Pichu jab again from the first.
+    #[doc(alias = "doAttack12")]
     fn do_attack12(&mut self, gobj: GObjId) {
         let kind = self.game.fighter(gobj).kind;
         if kind == KIND_PIKACHU || kind == KIND_PICHU {
@@ -162,6 +164,7 @@ impl Running<'_> {
     }
 
     /// `doAttack13`: Marth and Roy jab again from the first.
+    #[doc(alias = "doAttack13")]
     fn do_attack13(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_MARS {
             self.decide_attack11(gobj);

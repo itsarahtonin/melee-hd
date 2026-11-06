@@ -28,6 +28,8 @@ impl Running<'_> {
 
     /// Steps the fighter's color animations, `ftCo_800C0408`, restarting the defaults of
     /// those that end.
+    #[doc(alias = "ft_800BFF70")]
+    #[doc(alias = "ft_800BFF34")]
     #[doc(alias = "ftCo_800C0408")]
     pub fn color_anim_update(&mut self, gobj: GObjId) {
         while self.color_overlay_step(gobj, Overlay::X508, false) {

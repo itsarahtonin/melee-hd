@@ -252,6 +252,7 @@ pub fn carry_render(
 /// A hitbox's victims copied from another's (`lbColl_CopyHitCapsule`: both lists and their
 /// counts), the hitboxes at `from_hit` of `from` and `to_hit` of `to`: [`carry_render`] over
 /// what the copy takes.
+#[doc(alias = "lbColl_CopyHitCapsule")]
 pub fn carry_victims(
     game: &mut super::state::Game,
     from: RenderOf,

@@ -404,6 +404,11 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftSs_SpecialNCancel_Phys")]
+#[doc(alias = "ftSs_SpecialNHold_Phys")]
+#[doc(alias = "ftSs_SpecialNStart_Phys")]
+#[doc(alias = "ftSs_SpecialNCancel_IASA")]
+#[doc(alias = "ftSs_SpecialNStart_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_N_801291F0 => g.samus_shot_released(gobj),

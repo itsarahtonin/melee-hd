@@ -276,7 +276,7 @@ impl Running<'_> {
     }
 
     /// Whether a floor is Corneria's ceilinged one (joint 4), `grCorneria_801E2E50`.
-    // Ports `grCorneria_801E2E50`; aliased once a check reaches it.
+    #[doc(alias = "grCorneria_801E2E50")]
     pub(super) fn corneria_ceiling_floor(&self, line: i32) -> bool {
         // Gr_Kind_Corneria.
         self.game.stage_info.grkind == 14
@@ -574,7 +574,7 @@ impl Running<'_> {
     /// inputs, takes her level from his percent, and either follows him (until he's out of
     /// reach or doing his up special) or makes her way back to him. It returns the r5 its
     /// last call leaves: on her way back, always [`Running::nana_keeps_up`]'s.
-    // Ports `ftCo_800B101C`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B101C")]
     fn nana_decide(&mut self, f: FighterId) -> Leftover {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF9_b2 = true;
@@ -654,7 +654,7 @@ impl Running<'_> {
     /// isn't recovering (`xFB_b0`) or in her up special, she can act or stands waiting, they
     /// move alike (within his walk speed's midpoint) and she's within 25 of him. The r5 it
     /// leaves is [`Running::nana_keeps_up`]'s, which it calls first.
-    // Ports `ftCo_800B0E98`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B0E98")]
     fn nana_can_follow(&mut self, f: FighterId, popo: FighterId) -> (bool, Leftover) {
         let (keeps_up, r5) = self.nana_keeps_up(f, popo);
         (self.nana_can_follow_from(f, popo, keeps_up), r5)
@@ -778,7 +778,7 @@ impl Running<'_> {
 
     /// Records Popo's controller and position into Nana's input history, `ftCo_800B0918`:
     /// both of its positions step on (the write one five ahead of the read one), wrapping.
-    // Ports `ftCo_800B0918`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B0918")]
     pub fn nana_record_input(&mut self, popo: FighterId, nana: FighterId) {
         let step = |p: Option<u32>| {
             let at = p.expect("Nana's input history without a position") + INPUT_SIZE;

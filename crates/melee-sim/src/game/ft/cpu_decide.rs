@@ -510,7 +510,7 @@ impl Running<'_> {
     /// Nana making her way back to Popo, `ftCo_800B0760`: she targets the nearest enemy and
     /// the items in reach, acts toward her destination (or recovers, `xFB_b0`), and picks a
     /// behavior.
-    // Ports `ftCo_800B0760`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B0760")]
     pub(super) fn nana_regroup(&mut self, f: FighterId) {
         let c = &mut self.game.fighters[f.0].cpu;
         c.xF8_b0 = true;
@@ -894,6 +894,8 @@ impl Running<'_> {
     /// Whether an island is unsafe to stand on, `ftCo_800A2718`: a live bob-omb or shell on
     /// it, or the stage's own hazard: Yoshi's Story's moving cloud, Brinstar's acid, Onett's
     /// cars.
+    #[doc(alias = "it_8026C1B4")]
+    #[doc(alias = "ftCo_800A5944")]
     #[doc(alias = "ftCo_800A2718")]
     pub(super) fn cpu_island_unsafe(&self, island: Option<crate::mp::IslandId>) -> bool {
         let Some(island) = island else { return false };
@@ -947,7 +949,7 @@ impl Running<'_> {
     /// ground when he's in the air, at his feet when on the ground, unless his island is
     /// unsafe; off a ledge's edge when they're on different islands. Its reach is its own
     /// plus half his size.
-    // Ports `ftCo_800A7AAC`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A7AAC")]
     pub(super) fn cpu_toward_partner(&mut self, f: FighterId) {
         let Some(partner) = self.cpu_partner(f) else {
             return;
@@ -1101,7 +1103,7 @@ impl Running<'_> {
 
     /// The player's standing word (`MatchPlayerData::x20`) in the results as they stand,
     /// `gm_8016C75C`: the results brought up to date once a tick.
-    // Ports `gm_8016C75C`; aliased once a check reaches it.
+    #[doc(alias = "gm_8016C75C")]
     pub(super) fn cpu_standing(&mut self, slot: i32) -> u32 {
         let tick = self.game.scene_ticks();
         if self.game.vs.state.x24C.x0 != tick {

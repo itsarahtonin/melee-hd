@@ -128,6 +128,7 @@ fn spawn_desc(p1: Option<GObjId>, p2: Option<GObjId>, pos: Vec3, vel: Vec3) -> S
 
 /// `count` coins scattered from item `from` at `pos` and `vel`, not flying on their own and
 /// to be picked up at once, `it_802E5F00`.
+#[doc(alias = "it_802E614C")]
 #[doc(alias = "it_802E5F00")]
 pub fn scatter(r: &mut Running, from: GObjId, pos: Vec3, vel: Vec3, count: i32) {
     let mut spawn = spawn_desc(None, Some(from), pos, vel);
@@ -248,6 +249,7 @@ pub fn fly_out(r: &mut Running, gobj: GObjId, angle: f32, speed: f32) {
 /// Sets a new coin up from its scatter, `it_802E6380`: the largest tier the count left allows
 /// (and takes it off the count), its flight, lifetime, pickup waits, look, scale and box, and
 /// for a coin to pick up, the bone its pickup follows; the coins left.
+#[doc(alias = "db_ShowCoinPickupRange")]
 #[doc(alias = "it_802E6380")]
 fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     let a = attrs(r, gobj);

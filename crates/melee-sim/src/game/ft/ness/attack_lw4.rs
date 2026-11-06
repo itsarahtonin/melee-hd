@@ -108,6 +108,8 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftNs_AttackLw4_Coll")]
+#[doc(alias = "ftNs_AttackLw4_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_LW4_ENTER => g.ness_attack_lw4_enter(gobj),

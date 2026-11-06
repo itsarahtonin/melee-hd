@@ -98,6 +98,7 @@ pub fn hitlag_end(r: &mut Running, gobj: GObjId) {
 /// its owner. The state it picks reads `ftLib_GetGroundAir` on the cape's own GObj: the word at
 /// the fighter's `ground_or_air` offset (`+0xE0`) is, in an item, its first dynamic bone set's
 /// count, which the cape (with no dynamic bones) leaves as its block held it (docs/engine.md).
+#[doc(alias = "it_80274574")]
 #[doc(alias = "it_2725_Logic41_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);

@@ -1877,6 +1877,7 @@ impl Running<'_> {
 
     /// `Toy_80310660(free)`: the selection kept (the shown trophy's new mark cleared, its
     /// place and trophy in the table); with `free`, everything the gallery made let go.
+    #[doc(alias = "gmMainLib_GetTrophyCount")]
     #[doc(alias = "Toy_80310660")]
     pub fn toy_gallery_leave(&mut self, free: bool) {
         if self.toy_total() != 0 {

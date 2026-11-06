@@ -144,6 +144,7 @@ impl State {
     }
 
     /// `HSD_StateSetBlendMode`.
+    #[doc(alias = "HSD_StateSetBlendMode")]
     pub fn set_blend_mode(&mut self, gx: &mut Gx, ty: u32, src: u32, dst: u32, op: u32) {
         let v = [ty as i32, src as i32, dst as i32, op as i32];
         if self.blend != v {
@@ -153,6 +154,7 @@ impl State {
     }
 
     /// `HSD_StateSetZMode`.
+    #[doc(alias = "HSD_StateSetZMode")]
     pub fn set_z_mode(&mut self, gx: &mut Gx, enable: bool, func: u32, update: bool) {
         let v = (u8::from(enable), func as i32, u8::from(update));
         if self.z != v {
@@ -162,6 +164,7 @@ impl State {
     }
 
     /// `HSD_StateSetAlphaCompare`.
+    #[doc(alias = "HSD_StateSetAlphaCompare")]
     pub fn set_alpha_compare(&mut self, gx: &mut Gx, c0: u32, r0: u8, op: u32, c1: u32, r1: u8) {
         let v = (c0 as i32, r0, op as i32, c1 as i32, r1);
         if self.alpha_compare != v {
@@ -171,6 +174,7 @@ impl State {
     }
 
     /// `HSD_StateSetColorUpdate`.
+    #[doc(alias = "HSD_StateSetColorUpdate")]
     pub fn set_color_update(&mut self, gx: &mut Gx, enable: bool) {
         let v = u8::from(enable);
         if self.color_update != v {
@@ -180,6 +184,7 @@ impl State {
     }
 
     /// `HSD_StateSetAlphaUpdate`.
+    #[doc(alias = "HSD_StateSetAlphaUpdate")]
     pub fn set_alpha_update(&mut self, gx: &mut Gx, enable: bool) {
         let v = u8::from(enable);
         if self.alpha_update != v {
@@ -189,6 +194,7 @@ impl State {
     }
 
     /// `HSD_StateSetDstAlpha`.
+    #[doc(alias = "HSD_StateSetDstAlpha")]
     pub fn set_dst_alpha(&mut self, gx: &mut Gx, enable: bool, alpha: u8) {
         let v = (u8::from(enable), alpha);
         if self.dst_alpha != v {
@@ -198,6 +204,7 @@ impl State {
     }
 
     /// `HSD_StateSetZCompLoc`.
+    #[doc(alias = "HSD_StateSetZCompLoc")]
     pub fn set_z_comp_loc(&mut self, gx: &mut Gx, before_tex: bool) {
         let v = u8::from(before_tex);
         if self.before_tex != v {
@@ -207,6 +214,7 @@ impl State {
     }
 
     /// `HSD_StateSetDither`.
+    #[doc(alias = "HSD_StateSetDither")]
     pub fn set_dither(&mut self, gx: &mut Gx, dither: bool) {
         let v = u8::from(dither);
         if self.dither != v {
@@ -216,6 +224,7 @@ impl State {
     }
 
     /// `_HSD_StateInvalidatePrimitive`.
+    #[doc(alias = "_HSD_StateInvalidatePrimitive")]
     fn invalidate_primitive(&mut self) {
         self.line_width = 0;
         self.point_size = 0;
@@ -223,6 +232,7 @@ impl State {
     }
 
     /// `_HSD_StateInvalidateRenderMode`.
+    #[doc(alias = "_HSD_StateInvalidateRenderMode")]
     fn invalidate_render_mode(&mut self) {
         self.blend = [-1; 4];
         self.z = (0xFF, -1, 0xFF);
@@ -335,6 +345,7 @@ impl States<'_> {
     }
 
     /// `HSD_SetupPEMode`.
+    #[doc(alias = "HSD_SetupPEMode")]
     pub fn setup_pe_mode(&mut self, gx: &mut Gx, flags: u32, pe: Option<&PeDesc>) {
         let s = &mut *self.state;
         if let Some(pe) = pe {
@@ -405,6 +416,7 @@ impl States<'_> {
     }
 
     /// `HSD_SetupRenderModeWithCustomPE`.
+    #[doc(alias = "HSD_SetupRenderModeWithCustomPE")]
     pub fn setup_render_mode(
         &mut self,
         gx: &mut Gx,

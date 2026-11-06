@@ -691,6 +691,7 @@ pub fn create_reflection(r: &mut Running) -> GObjId {
 /// The reflection's descriptor as the stage writes it over the archive's (`memzero`, then
 /// `lb_800121FC`), into the heap's image where it holds the stage's file: the buffer's
 /// address where the model gives it, the size and format, the rest zero.
+#[doc(alias = "memzero")]
 fn image_reflection_desc(at: DataRef, desc: &crate::game::structs::HSD_ImageDesc, buffer: u32) {
     if !crate::hsd::heap::image_on() {
         return;

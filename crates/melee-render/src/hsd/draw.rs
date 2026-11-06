@@ -486,6 +486,7 @@ impl Ctx<'_> {
     }
 
     /// `HSD_TObjSetupTextureCoordGen`.
+    #[doc(alias = "HSD_TObjSetupTextureCoordGen")]
     pub fn tobj_setup_coord_gen(&mut self, chain: &[TObjId]) {
         for &t in chain {
             let o = &self.game.objs.tobjs[t];
@@ -856,6 +857,7 @@ impl Ctx<'_> {
     /// `SetupRigidModelMtx` (its matrix mark never matches: `HSD_PObjSetMtxMark` stores
     /// nothing), or with the fighters' depth scale `z`, `ftPartsSetupRigidMtx`.
     #[doc(alias = "ftPartsSetupRigidMtx")]
+    #[doc(alias = "SetupRigidModelMtx")]
     fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32, z: Option<&Mtx34>) {
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
@@ -907,6 +909,7 @@ impl Ctx<'_> {
     /// `ftPartsSetupEnvelopeMtx`, which takes a weight of 1 for whole (HAL's, 1 less
     /// `FLT_EPSILON`).
     #[doc(alias = "ftPartsSetupEnvelopeMtx")]
+    #[doc(alias = "SetupEnvelopeModelMtx")]
     fn setup_envelope_mtx(
         &mut self,
         j: JObjId,
@@ -992,6 +995,7 @@ impl Ctx<'_> {
     }
 
     /// `setupArrayDesc`: the arrays of a vertex description, unless it was the last one set.
+    #[doc(alias = "setupArrayDesc")]
     fn setup_array_desc(&mut self, verts: DataRef) {
         if self.hsd.prev_array == Some(verts) {
             return;
@@ -1013,6 +1017,7 @@ impl Ctx<'_> {
     }
 
     /// `setupVtxDesc`.
+    #[doc(alias = "setupVtxDesc")]
     fn setup_vtx_desc(&mut self, verts: DataRef) {
         if self.hsd.prev_vtxdesc == Some(verts) {
             return;

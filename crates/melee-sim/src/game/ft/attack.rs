@@ -810,6 +810,7 @@ impl Running<'_> {
     /// unless the fighter already took a hit this frame or is in hitlag; any other logs the
     /// hit, unless the fighter is invincible there, and records it. Returns whether the box
     /// counts as having hit.
+    #[doc(alias = "ftColl_80078488")]
     #[doc(alias = "ftColl_80076ED8")]
     fn take_hit(&mut self, v: FighterId, j: usize, me: FighterId, n: usize) -> bool {
         let mut dmg = self.scaled_damage(v, j, me);
@@ -2847,7 +2848,7 @@ impl Running<'_> {
 
     /// No attacker on the fighter's last hit, `ftColl_800788D4` (`ftColl_8007861C` with no
     /// attacker, attack 0 and kind -10, and no record).
-    // Ports `ftColl_800788D4`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_800788D4")]
     pub(crate) fn clear_attacker(&mut self, gobj: GObjId) {
         let me = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[me.0];

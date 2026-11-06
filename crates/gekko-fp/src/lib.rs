@@ -472,6 +472,7 @@ pub fn fsel(a: f64, c: f64, b: f64) -> f64 {
 }
 
 /// `fabs`
+#[doc(alias = "fabsf__Ff")]
 #[inline]
 pub fn fabs(b: f64) -> f64 {
     f64::from_bits(b.to_bits() & !SIGN)

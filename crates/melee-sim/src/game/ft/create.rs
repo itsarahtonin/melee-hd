@@ -88,6 +88,7 @@ impl Running<'_> {
 
     /// `Fighter_800679B0`.
     #[doc(alias = "Fighter_800679B0")]
+    #[doc(alias = "ftPr_Init_8013C2F8")]
     fn fighter_init_pools(&mut self) {
         {
             use crate::hsd::heap::Kind;

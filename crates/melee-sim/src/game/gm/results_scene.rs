@@ -193,6 +193,7 @@ impl Running<'_> {
     /// The screen's enter data (`gm_GetGameModeStateEnterData`): Tournament mode's own
     /// (`gm_80489A98`), the debug mode's (`results0_data`), else VS mode's
     /// (`gmVsMelee_ResultsEnterData`, which the modes kept with it share).
+    #[doc(alias = "gm_GetGameModeStateEnterData")]
     pub fn results_enter(&self) -> &ResultsMatchInfo {
         match self.game.machine.routing.curr_mode {
             super::tournament::GM_TOURNAMENT => &self.game.tou.results_enter,
