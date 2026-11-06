@@ -210,7 +210,9 @@ pub fn remove(objs: &mut Objects, s: Option<ShadowId>) {
     if sh.image.allocated {
         super::heap::mem_free(sh.image_addr);
     }
-    // `HSD_ImageDescFree`: `hsdFreeMemPiece`.
+    // `HSD_ImageDescFree`: `hsdFreeMemPiece`, over the descriptor as it was.
+    super::export::with_image(|img| super::export::shadow_imagedesc(objs, img, s));
+    let sh = &objs.shadows[s.0];
     super::heap::piece_free(sh.imagedesc_addr, 0x18);
     if let Some(t) = texture {
         super::export::with_image(|img| super::export::tobj(objs, img, t));
