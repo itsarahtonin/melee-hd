@@ -1604,6 +1604,24 @@ pub const M6U_EV37_PICHU: Game = Game {
     replay: Replay::Session("m6u-ev37-pichu"),
 };
 
+/// The notice approach after Training's combo of 23 (Sarah's `recordings/tr-combo20`): the
+/// combos' trophies' notices.
+pub const REC_TR_COMBO20: Game = Game {
+    stage: "Challenger approach",
+    name: "rec-tr-combo20",
+    players: "the notice approach after Training (recording tr-combo20)",
+    replay: Replay::Session("rec-tr-combo20"),
+};
+
+/// Ganondorf's challenge after Event 29 (Sarah's `recordings/ev29`): the approach's screen
+/// and, his match won, the unlock's notice.
+pub const REC_EV29: Game = Game {
+    stage: "Challenger approach",
+    name: "rec-ev29",
+    players: "Ganondorf's approach and unlock after Event Match (recording ev29)",
+    replay: Replay::Session("rec-ev29"),
+};
+
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
 /// camera's info, the snapshot's offer and its question, the save.
 pub const CAMERA_SNAPS: Game = Game {
