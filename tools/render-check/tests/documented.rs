@@ -32,13 +32,13 @@ use common::{
     MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, O6_INTRO_ALLSTAR, ONETT,
     OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, REC_ADVENTURE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
-    RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP,
-    SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64,
-    TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS,
-    TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    RAINBOW_CRUISE, REC_ADVENTURE, REC_ALLSTAR_CLEAR, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS,
+    RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS,
+    SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME,
+    TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION,
+    TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS,
+    UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK,
+    compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -304,6 +304,42 @@ frames!(O6_INTRO_ALLSTAR;
 frames!(M6A_INTRO_AS_IC;
     m6a_intro_as_ic_1640 1640,
     m6a_intro_as_ic_1700 1700,
+);
+// Sarah's All-Star clear (`recordings/allstar-clear`): the first rest area, its hearts and the
+// round's trophy on the stand, with the tally of the characters left (1600), and the last
+// round's Mr. Game & Watches on Flat Zone (20500), against captures made with ssbm-rs's
+// renderer running: identical images, every draw the same but those that sample the fighters'
+// shadows' copies; the ending's trophy fall (22300), staff roll (23300) and congratulations
+// (24500), identical.
+fn rec_allstar_clear(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &REC_ALLSTAR_CLEAR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_allstar_clear_1600() {
+    rec_allstar_clear(1600, [810, 825]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_allstar_clear_20500() {
+    rec_allstar_clear(20500, [1893, 1888]);
+}
+
+frames!(REC_ALLSTAR_CLEAR;
+    rec_allstar_clear_22300 22300,
+    rec_allstar_clear_23300 23300,
+    rec_allstar_clear_24500 24500,
 );
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still

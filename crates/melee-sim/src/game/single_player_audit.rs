@@ -976,10 +976,7 @@ pub const MISSING: &[Gap] = &[
     // The ends of a run.
     Gap {
         what: "the game overs' coming soon and the game over mode's Adventure load",
-        covers: &[
-            "melee/gm/gm_19EF",
-            "gm_Mode_AdventureGOver_OnLoad",
-        ],
+        covers: &["melee/gm/gm_19EF", "gm_Mode_AdventureGOver_OnLoad"],
         modes: ENDINGS,
     },
     // The developer setting's debug routes.
