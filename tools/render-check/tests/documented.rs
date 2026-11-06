@@ -27,17 +27,17 @@ use common::{
     ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC,
     M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6A_INTRO_AS_IC, M6C_CUTSCENES,
     M6E_GAMEOVER, M6E2_REGEND_ADV, M6E2_REGEND_GW, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY,
-    M6I_ADVENTURE2, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MK_ENEMIES,
-    MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2, MUTE_CITY,
-    MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, O6_INTRO_ALLSTAR, ONETT,
-    OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, REC_ADVENTURE, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS,
-    RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP,
-    SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64,
-    TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS,
-    TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW,
-    UNLOCK_TIME, VENOM, YOSHIS_ISLAND, YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in,
-    reflection, scaled, why,
+    M6I_ADVENTURE2, M6I_CLASSIC_WIN, M6P_AS_WIN, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MH_1P_WILD,
+    MH_3P, MH_PROBE, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
+    MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
+    O6_INTRO_ALLSTAR, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK,
+    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, REC_ADVENTURE, RESULTS_PILLS, RESULTS_STOCK,
+    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
+    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
+    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
+    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
 fn identical(game: &Game, frame: u32) {
@@ -255,13 +255,17 @@ frames!(M6I_ADVENTURE2;
     m6i_adventure2_1000 1000,
     m6i_adventure2_1150 1150,
 );
-// A human's Adventure run (`2026-10-06_12-04-48`): Kongo Jungle's intro (7470); and with the
-// fighters' shadows, as All-Star's match's, against references captured with ssbm-rs's
+// A human's Adventure run (`2026-10-06_12-04-48`): Kongo Jungle's intro (7470), and
+// Corneria's, the city's parts that map 11's process lays out (27235, 27260), drawn once the
+// session has drawn more archives than the address space's 32 MB hold (`mem::Space`); and with
+// the fighters' shadows, as All-Star's match's, against references captured with ssbm-rs's
 // renderer running, Mushroom Kingdom's route's arena with the joiners' tally (`fn_802FA6C4`,
 // its icons' render callback `fn_802F95E8`) (4100) and Peach's Castle against Mario and Peach
 // (6000).
 frames!(REC_ADVENTURE;
     rec_adventure_7470 7470,
+    rec_adventure_27235 27235,
+    rec_adventure_27260 27260,
 );
 
 fn rec_adventure(frame: u32, same: [usize; 2]) {
@@ -1417,6 +1421,87 @@ fn mh_1p_3420() {
         Capture::Rendered,
     );
 }
+
+/// Master Hand's attacks (milestone 6's task 3, debug VS at debug level 3, Link against him on
+/// Final Destination), a frame each where it draws something its own, against captures with
+/// ssbm-rs's renderer running, as `mh_1p_3420`: in `mh-1p` the sweep (3150), the poke (3600),
+/// the finger gun's bullets (4045), the ram's dust from behind (4300), the walk's shots (4720),
+/// the crush's clouds (5000), the finger beams (5500), the jet's shadow as he flies over (7050),
+/// the flat slap's dust (7550) and the slap with Link in a magnifier bubble (11350); the drill's
+/// sparks (`mh-1p-wild` 4450); the punch's explosions (`mh-probe` 3750), his squeeze of Link
+/// (5450) and the slam (5600); and the throw (`mh-3p` 3540).
+fn master_hand(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+macro_rules! master_hand {
+    ($($name:ident $game:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                master_hand(&$game, $frame, $same);
+            }
+        )*
+    };
+}
+
+master_hand!(
+    mh_1p_sweep_3150 MH_1P 3150 [1090, 1092],
+    mh_1p_poke_3600 MH_1P 3600 [1109, 1111],
+    mh_1p_gun_4045 MH_1P 4045 [1086, 1086],
+    mh_1p_ram_4300 MH_1P 4300 [1480, 1484],
+    mh_1p_shots_4720 MH_1P 4720 [1147, 1147],
+    mh_1p_crush_5000 MH_1P 5000 [1191, 1193],
+    mh_1p_beams_5500 MH_1P 5500 [1137, 1137],
+    mh_1p_jet_7050 MH_1P 7050 [2243, 2228],
+    mh_1p_flat_slap_7550 MH_1P 7550 [1199, 1199],
+    mh_1p_slap_11350 MH_1P 11350 [1106, 541],
+    mh_1p_wild_drill_4450 MH_1P_WILD 4450 [1247, 1228],
+    mh_probe_punch_3750 MH_PROBE 3750 [1231, 1235],
+    mh_probe_squeeze_5450 MH_PROBE 5450 [564, 564],
+    mh_probe_slam_5600 MH_PROBE 5600 [1122, 1124],
+    mh_3p_throw_3540 MH_3P 3540 [2128, 2129],
+);
+
+/// Crazy Hand's attacks (milestone 6's task 12), as Master Hand's: alone over Link
+/// (`ch-probe`), the poke's dust (2990), a bomb dropped (3600) and the crush's sparks (4450);
+/// with Master Hand (`ch-mh-1p`), an explosion by him (3450), his beam (3880), Link held
+/// (4030), a bomb (5440), his crawl (6150), the sparks after a tag attack (8700) and an
+/// explosion with Link in a magnifier bubble (9600).
+macro_rules! crazy_hand {
+    ($($name:ident $game:ident $frame:literal $same:expr),* $(,)?) => {
+        $(
+            #[test]
+            #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+            fn $name() {
+                master_hand(&$game, $frame, $same);
+            }
+        )*
+    };
+}
+
+crazy_hand!(
+    ch_probe_poke_2990 CH_PROBE 2990 [1133, 1123],
+    ch_probe_bomb_3600 CH_PROBE 3600 [1071, 1071],
+    ch_probe_crush_4450 CH_PROBE 4450 [1543, 1543],
+    ch_mh_1p_explosion_3450 CH_MH_1P 3450 [1699, 1702],
+    ch_mh_1p_beam_3880 CH_MH_1P 3880 [732, 731],
+    ch_mh_1p_held_4030 CH_MH_1P 4030 [1322, 1324],
+    ch_mh_1p_bomb_5440 CH_MH_1P 5440 [2339, 2362],
+    ch_mh_1p_crawl_6150 CH_MH_1P 6150 [1380, 1380],
+    ch_mh_1p_sparks_8700 CH_MH_1P 8700 [1851, 1848],
+    ch_mh_1p_explosion_9600 CH_MH_1P 9600 [1242, 1309],
+);
 
 macro_rules! m6c_shadowed {
     ($($name:ident $frame:literal $same:expr),* $(,)?) => {
