@@ -440,6 +440,30 @@ fn boot_differences(game: &Game, image: &Image) -> (Vec<String>, Vec<String>) {
     (compared, diffs)
 }
 
+/// Where memory holds two copies of one archive the run loaded, the copy at the run's newest
+/// place for it (the heap's image) is the one the comparer's lookups by archive take:
+/// Adventure's Pokémon Stadium match reads `PlCo.dat` again while the intro's copy lies intact
+/// in a block the match's heap gave out unwritten, and the scan finds both.
+fn newest_place_first(data: &mut melee_capture::DataMap, game: &Game) {
+    let img = &game.objs.heap.image;
+    let mut i = 0;
+    while i < data.loaded.len() {
+        let id = data.loaded[i].id;
+        let first = data.loaded.iter().position(|l| l.id == id);
+        if first == Some(i)
+            && data.loaded[i + 1..].iter().any(|l| l.id == id)
+            && let Some(at) = img.data_addr(melee_data::archive::DataRef {
+                archive: id,
+                offset: 0,
+            })
+            && let Some(j) = data.loaded.iter().position(|l| l.id == id && l.data == at)
+        {
+            data.loaded.swap(i, j);
+        }
+        i += 1;
+    }
+}
+
 /// The heap's image against memory at a tick's end: in every free block past its header, in
 /// every file the scene holds and in every file the preload cache holds, the bytes the image
 /// knows, by where they come from.
@@ -1178,7 +1202,8 @@ impl Run<'_> {
                 files.set_statics(&s.game, &s.data);
             }
             let before = files.loaded().to_vec();
-            let data = files.refresh(&mut image, &mut s.data, false);
+            let mut data = files.refresh(&mut image, &mut s.data, false);
+            newest_place_first(&mut data, &s.game);
             past.note_archives(&before, &data.loaded);
             if let Some(d) = files.rescan.disagreements.first() {
                 break Some(Stop::Seam(format!(

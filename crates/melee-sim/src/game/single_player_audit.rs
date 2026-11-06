@@ -749,10 +749,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    (
-        "grStadium_801D384C",
-        "Pokémon Stadium's names screen (mode 1), which Training's screen never shows: the screen's mode set turns 1 into the stage feed (7) in Training (gm_8018841C, grpstadium.c)",
-    ),
     ("grFigureGet_80219C", TRAINING_NO_TROPHY),
     (
         "it_8027B5B0 (an enemy of kind",
@@ -850,13 +846,11 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
-            "gmMainLib_8015D25C",
             "gmMainLib_8015D2F0",
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
             "fn_80160F58",
-            "fn_80162DF8",
             "gm_801647F8",
         ],
         modes: SETUP_MODES,
@@ -940,11 +934,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "Adventure's mode and its intro",
-        covers: &[
-            "melee/gm/gmadventure",
-            "melee/gm/gm_17E4",
-            "gm_8017CBAC (Adventure's clear)",
-        ],
+        covers: &["melee/gm/gmadventure"],
         modes: &[AD, CL],
     },
     Gap {
@@ -956,7 +946,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gr/grzebesroute",
             "melee/gr/grbigblueroute",
             "stageGObj10_Callback3",
-            "fn_801FA4CC",
             "stage kind {grkind}",
         ],
         modes: &[AD, DB],

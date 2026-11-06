@@ -2419,8 +2419,11 @@ fn all_star() {
 /// cutscene and escape, the planet's explosion, Green Greens, the three Kirbys' cutscene
 /// (its stage set up 0x68 deeper than a match's), the team Kirby, the giant Kirby (computer
 /// kind 27), Corneria's intro (the city's parts by its camera's frame) and match, Star Fox's
-/// cutscene and Fox's match, to the next stage's match, whose fighters' common data lies
-/// elsewhere.
+/// cutscene and Fox's match, Pokémon Stadium's (its screen's count; `PlCo.dat` read again
+/// past the intro's copy), the F-Zero cutscene, race and Captain Falcon, Onett's Nesses
+/// (computer kind 29), Icicle Mountain, the Wire Frames, the metal cutscene and Metal Mario,
+/// Bowser on Final Destination, his toy's cutscene, Adventure's clear and the ending, to the
+/// trace's end.
 #[test]
 fn single_player_intros() {
     if let Some(out) = session_at(
@@ -2430,7 +2433,8 @@ fn single_player_intros() {
     ) {
         assert!(
             out.contains(
-                "29342 ticks compared; tick 29341 differs in 16 places, first: p_link 5 #2 ground.color_overlay.script.timer: ours 0x0, theirs 0x1"
+                "55022 ticks compared, no difference
+"
             ),
             "{out}"
         );
@@ -2460,6 +2464,25 @@ fn single_player_intros() {
         assert!(
             out.contains(
                 "18945 ticks compared, no difference
+"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}
+
+/// Adventure's game over (milestone 6's task 2, the intros): `m6-intros/adv-no` from power-on,
+/// Adventure with Fox, run right and jumping through Mushroom Kingdom until his last stock goes,
+/// its game over (`gm_801B4254`, the 1P game over's data) and no to the continue: the run's
+/// end (`gm_801B4294`), Adventure's high score (`fn_80162DF8`) and its Luigi trophy check
+/// (`gm_8017390C` without a clear), back to the main menu, to the trace's end.
+#[test]
+fn adventure_game_over() {
+    if let Some(out) = scripted_session("m6-intros", "adv-no", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "8944 ticks compared, no difference
 "
             ),
             "{out}"
