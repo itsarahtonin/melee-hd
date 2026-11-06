@@ -1315,6 +1315,16 @@ pub const M6E2_REGEND_ADV: Game = Game {
     replay: Replay::Session("m6e2-regend-adv"),
 };
 
+/// Captain Falcon's Classic ending in RegularEnding Real (`m6-endings-2/regend-real`): the
+/// trophy fall, whose fighter copies (RGB5A3 color and Z24X8 depth) run to log frame 2029, then
+/// the staff roll.
+pub const M6E2_REGEND_REAL: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-real",
+    players: "RegularEnding Real's trophy fall and staff roll (session m6-endings-2/regend-real)",
+    replay: Replay::Session("m6e2-regend-real"),
+};
+
 /// Mr. Game & Watch's All-Star ending (`m6-endings-2/regend-gw`): the trophy fall's first cut.
 pub const M6E2_REGEND_GW: Game = Game {
     stage: "Debug menu",
