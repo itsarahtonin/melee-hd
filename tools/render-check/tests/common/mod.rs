@@ -1079,6 +1079,31 @@ pub const MH_1P: Game = Game {
     replay: Replay::Session("mh-1p"),
 };
 
+/// Master Hand against a reckless Link (`m6-master-hand/mh-1p-wild`): his drill.
+pub const MH_1P_WILD: Game = Game {
+    stage: "Final Destination",
+    name: "mh-1p-wild",
+    players: "Link vs Master Hand (session m6-master-hand/mh-1p-wild)",
+    replay: Replay::Session("mh-1p-wild"),
+};
+
+/// Master Hand's probe (`m6-master-hand/mh-probe`): his punch, and his grab's squeeze and
+/// slam.
+pub const MH_PROBE: Game = Game {
+    stage: "Final Destination",
+    name: "mh-probe",
+    players: "Link vs Master Hand (session m6-master-hand/mh-probe)",
+    replay: Replay::Session("mh-probe"),
+};
+
+/// Master Hand against three Links (`m6-master-hand/mh-3p`): his throw.
+pub const MH_3P: Game = Game {
+    stage: "Final Destination",
+    name: "mh-3p",
+    players: "three Links vs Master Hand (session m6-master-hand/mh-3p)",
+    replay: Replay::Session("mh-3p"),
+};
+
 /// Crazy Hand alone (`m6-crazy-hand/ch-probe`, debug VS at debug level 3, Link against him on
 /// Final Destination).
 pub const CH_PROBE: Game = Game {
