@@ -7,7 +7,7 @@
 //! Its variables (`itEvYoshiEgg_ItemVars`: whether it broke, the countdown to gone) are the
 //! egg's first two words, so it shares the egg's member of the union (`x0`, `rand_max`).
 
-use super::super::ground::{air, fall, ground_or_fall, ground_skid};
+use super::super::ground::{air, fall_unbreakable, ground_or_fall, ground_skid};
 use super::super::item::{article, change, change_state, play_sfx, spawn_air};
 use super::super::{hitbox, item, item_mut, jobj_of, lib26b1, lib2725};
 use super::falling_phys;
@@ -132,7 +132,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itEvyoshiegg_UnkMotion2_Anim")]
 #[doc(alias = "itEvyoshiegg_UnkMotion3_Anim")]
 // Ports `itEvyoshiegg_UnkMotion4_Anim`; aliased once a check reaches it.
-// Ports `itEvyoshiegg_UnkMotion5_Coll`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion5_Coll")]
 pub fn still(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -141,7 +141,7 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 #[doc(alias = "itEvyoshiegg_UnkMotion0_Phys")]
 #[doc(alias = "itEvyoshiegg_UnkMotion2_Phys")]
 // Ports `itEvyoshiegg_UnkMotion4_Phys`; aliased once a check reaches it.
-// Ports `itEvyoshiegg_UnkMotion5_Phys`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion5_Phys")]
 pub fn idle(_: &mut Running, _: GObjId) {}
 
 /// `itEvyoshiegg_UnkMotion0_Coll`: falls off ledges.
@@ -163,10 +163,11 @@ pub fn gravity(r: &mut Running, gobj: GObjId) {
     super::gravity(r, gobj);
 }
 
-/// `itEvyoshiegg_UnkMotion1_Coll`: lands.
+/// `itEvyoshiegg_UnkMotion1_Coll`: lands, never breaking on it as the egg can (it calls
+/// `it_8026E32C` where `itegg.c` calls `it_8026E15C`, so no landing draws a number).
 #[doc(alias = "itEvyoshiegg_UnkMotion1_Coll")]
 pub fn coll1(r: &mut Running, gobj: GObjId) -> bool {
-    fall(r, gobj, landed);
+    fall_unbreakable(r, gobj, landed);
     false
 }
 
@@ -201,7 +202,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Broken, counting down to gone: the event failed 20 ticks in (`gm_801BEB68(1)` at 40 of
 /// its 60), `itEvyoshiegg_UnkMotion5_Anim`.
-// Ports `itEvyoshiegg_UnkMotion5_Anim`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion5_Anim")]
 pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj).xDD4_itemVar.egg().rand_max.get() == 40 {
         r.game.game_data.vs.unk_530.x18 = 1;
