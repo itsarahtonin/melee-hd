@@ -89,6 +89,13 @@ impl Running<'_> {
 
     /// A KO's statistics, `pl_8003D644`, for the fighter in `slot` (`sub` for Nana, who
     /// keeps none), which died in state `motion` hit by attack `attack`.
+    #[doc(alias = "ft_8008989C")]
+    #[doc(alias = "ft_80089890")]
+    #[doc(alias = "ftLib_GetLastHitSourceKind")]
+    #[doc(alias = "ftLib_GetLastHitSourceType")]
+    #[doc(alias = "ftLib_IsDeadUpFall")]
+    #[doc(alias = "ftLib_IsDeadUpStar")]
+    #[doc(alias = "ftLib_IsLastAttackerSubFighter")]
     #[doc(alias = "pl_8003D644")]
     #[doc(alias = "pl_8003FED0")]
     // Ports `pl_80041744`; aliased once a check reaches it.
@@ -305,9 +312,10 @@ impl Running<'_> {
     /// A ledge caught after a hit, `pl_80040048`: a strong enough hit counts a recovery
     /// (`xCE8`), and a stronger one with a jump or less used scores bonus 0x48 (Nana's don't
     /// count, nor a fighter no one hit).
+    #[doc(alias = "ft_800898B4")]
     #[doc(alias = "pl_80040048")]
-    // Ports `ft_80087AA4`; aliased once a check reaches it.
-    // Ports `ft_80087AB4`; aliased once a check reaches it.
+    #[doc(alias = "ft_80087AA4")]
+    #[doc(alias = "ft_80087AB4")]
     pub fn record_ledge_catch(&mut self, slot: i32, sub: bool) {
         let gobj = self
             .game
@@ -330,6 +338,7 @@ impl Running<'_> {
 
     /// Where each rival stood at a KO that wasn't off the top, `plBonusLib_8003D514`: every
     /// other player in play notes it saw one, and whether it faced away from the KO.
+    #[doc(alias = "ftLib_IsDeadUp")]
     #[doc(alias = "plBonusLib_8003D514")]
     fn mark_ko_positions(&mut self, slot: i32) {
         let me = self

@@ -52,6 +52,7 @@ pub fn ecb_center(game: &Game, gobj: GObjId) -> Vec3 {
 /// Counts an object in that needs a character's data loaded, `ftLib_IncFighterRefCount`
 /// (`ftData_80085560` with 1).
 #[doc(alias = "ftLib_IncFighterRefCount")]
+#[doc(alias = "ftData_80085560")]
 pub fn inc_fighter_refs(game: &mut Game, kind: i32) {
     let r = &mut game.ft.data.ref_counts[kind as usize];
     *r = r.wrapping_add(1);
@@ -180,6 +181,7 @@ pub fn is_holding(game: &Game, gobj: GObjId, item: GObjId) -> bool {
 
 /// Lets go of an item from a fighter's hand: its held special item (`ftLib_ClearHeldSpecialItem`)
 /// or a held item (`ftLib_ReleaseItem`), whichever the item is (`Item_8026A848`'s choice).
+#[doc(alias = "ftLib_ReleaseItem")]
 pub fn release(r: &mut Running, gobj: GObjId, fighter_gobj: GObjId, special: bool) {
     if special {
         if held_special_item(r.game, fighter_gobj) == Some(gobj) {

@@ -46,7 +46,7 @@ pub fn use_kind(game: &Game, data: &Archives, gobj: GObjId) -> i32 {
 }
 
 /// Whether the item, of kind 16, 21 to 23 or 25, has no uses left (`xD4C`), `it_8026B594`.
-// Ports `it_8026B594`; aliased once a check reaches it.
+#[doc(alias = "it_8026B594")]
 pub fn is_empty_shooter(game: &Game, gobj: GObjId) -> bool {
     let ip = item(game, gobj);
     matches!(ip.kind, 16 | 21 | 22 | 23 | 25) && ip.xD4C <= 0
@@ -97,7 +97,7 @@ pub fn damage_mul(game: &Game, data: &Archives, gobj: GObjId) -> f32 {
 
 /// Where fighters reach for the item, `it_8026B344`: its position plus its grab offset
 /// (`xBCC_unk`) the way it faces.
-// Ports `it_8026B344`; aliased once a check reaches it.
+#[doc(alias = "it_8026B344")]
 pub fn grab_pos(game: &Game, gobj: GObjId) -> Vec3 {
     let ip = item(game, gobj);
     Vec3::new(

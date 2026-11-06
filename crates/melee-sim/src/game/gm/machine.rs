@@ -1222,6 +1222,8 @@ impl Running<'_> {
     /// pad alarm's reads meanwhile are queued): the debug pause state and the counters
     /// cleared, the pad queue left with its newest poll, the card indicator, and the
     /// timeline's loop start.
+    #[doc(alias = "lb_800198E0")]
+    #[doc(alias = "lb_80019894")]
     #[doc(alias = "gm_801A4D34")]
     pub fn begin_scene_loop(&mut self) {
         self.game.start_scene_loop();
@@ -1231,8 +1233,10 @@ impl Running<'_> {
 
     /// `gm_801A4BD4`, a scene's setup before its entry, with the rumble data it ends on
     /// (`lb_80014534`).
+    #[doc(alias = "fn_801A4BD0")]
     #[doc(alias = "gm_801A4BD4")]
     #[doc(alias = "gm_801A4B88")]
+    #[doc(alias = "gm_GetAllGameScenes")]
     #[doc(alias = "gm_FindGameSceneHandler")]
     fn init_mode_scene(&mut self) {
         super::super::vs_match::init_scene(self);

@@ -77,9 +77,9 @@ impl Running<'_> {
     /// its item goes, its effects end, and its state and attack are kept for the stats.
     #[doc(alias = "ftCo_800D331C")]
     // Ports `pl_8004065C`; aliased once a check reaches it.
-    // Ports `ftCo_800DD100`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800DD100")]
     // Ports `pl_8003EA08`; aliased once a check reaches it.
-    // Ports `pl_8003EA74`; aliased once a check reaches it.
+    #[doc(alias = "pl_8003EA74")]
     fn leave_play(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
@@ -243,6 +243,7 @@ impl Running<'_> {
     /// the background's top (a frozen one's block spinning by `ftCommonData` x51C); there it
     /// twinkles and is out of the match; then it sleeps.
     #[doc(alias = "ftCo_DeadUpStar_Anim")]
+    #[doc(alias = "ft_8008805C")]
     pub fn co_dead_up_star_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &self.game.fighters[f.0];
@@ -444,7 +445,7 @@ impl Running<'_> {
     /// `ftCo_800D3BC8` (bottom) and `ftCo_800D3E40` (top, under stamina's or sudden
     /// death's rule): out of play (`enterDead`), its sound, and the KO's blast where it
     /// left, kept within the zones.
-    // Ports `ftCo_800D3680`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800D3680")]
     #[doc(alias = "ftCo_800D3950")]
     #[doc(alias = "ftCo_800D3BC8")]
     // Ports `ftCo_800D3E40`; aliased once a check reaches it.
@@ -596,7 +597,7 @@ impl Running<'_> {
 
     /// `ftCo_DeadLeft_Anim` and the other zones' deaths: when the frames run out, out of
     /// play for now.
-    // Ports `ftCo_DeadLeft_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_DeadLeft_Anim")]
     #[doc(alias = "ftCo_DeadRight_Anim")]
     #[doc(alias = "ftCo_DeadDown_Anim")]
     // Ports `ftCo_DeadUp_Anim`; aliased once a check reaches it.
@@ -609,7 +610,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_DeadLeft_Cam` and the other zones' deaths: nothing.
-    // Ports `ftCo_DeadLeft_Cam`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_DeadLeft_Cam")]
     #[doc(alias = "ftCo_DeadRight_Cam")]
     #[doc(alias = "ftCo_DeadDown_Cam")]
     // Ports `ftCo_DeadUp_Cam`; aliased once a check reaches it.

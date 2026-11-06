@@ -184,7 +184,7 @@ impl Running<'_> {
     }
 
     /// Picking up an item, `ftYs_Init_OnItemPickup` (as Fox's).
-    // Ports `ftYs_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftYs_Init_OnItemPickup")]
     pub fn ys_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
@@ -202,7 +202,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftYs_Init_OnItemDrop` (as Fox's).
-    // Ports `ftYs_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftYs_Init_OnItemDrop")]
     pub fn ys_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

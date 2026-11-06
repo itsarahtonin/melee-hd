@@ -645,6 +645,7 @@ impl Dvd {
     }
 
     /// `lbDvd_GetPreloadCacheScene`'s, as `lbDvd_80018CF4` sets it for a scene.
+    #[doc(alias = "lbDvd_GetPreloadCacheScene")]
     fn set_scene_from_default(&mut self, persistent: [bool; 2], game_cache: bool) {
         let s = &mut self.cache.scene;
         if persistent[0] {

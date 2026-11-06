@@ -336,7 +336,7 @@ impl Running<'_> {
     }
 
     /// Rises by `accel`, up to `max`, `ftCommon_Ascend`.
-    // Ports `ftCommon_Ascend`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_Ascend")]
     pub fn ascend(fp: &mut Fighter, accel: f64, max: f64) {
         fp.self_vel.y = mem(fp::fadds(reg(fp.self_vel.y), accel));
         if reg(fp.self_vel.y) > max {
@@ -443,7 +443,7 @@ impl Running<'_> {
     }
 
     /// `ft_800851C0`: the animation's TransN rise as the vertical velocity.
-    // Ports `ft_800851C0`; aliased once a check reaches it.
+    #[doc(alias = "ft_800851C0")]
     pub fn air_anim_rise(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel.y = fp.x6A4_transNOffset.y;

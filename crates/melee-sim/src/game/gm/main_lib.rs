@@ -223,9 +223,11 @@ impl Running<'_> {
     /// one more power-on, and on a load's reset the trophies' first gift) or a bank of name
     /// tags (2 to 8, each cleared and given its default name, none in this game's table).
     /// `at_boot` is the boot's reset (the original's `arg1`).
+    #[doc(alias = "lbLang_GetLanguageSetting")]
     #[doc(alias = "gmMainLib_8015F600")]
     #[doc(alias = "gmMainLib_8015F150")]
     #[doc(alias = "Toy_80311960")]
+    #[doc(alias = "mnName_8023749C")]
     pub fn reset_card_file(&mut self, file: usize, at_boot: bool) {
         if file == 1 {
             let s = &mut self.game.game_data.thing.save_data;
@@ -286,6 +288,7 @@ impl Running<'_> {
     /// didn't bring reset (as a fresh file, `gmMainLib_8015F600(i, 0)`), the save's power-on
     /// count raised unless after a soft reset, and the sound settings and video mode as the
     /// save says.
+    #[doc(alias = "gmMainLib_GetCardData")]
     #[doc(alias = "gmMainLib_8015FA34")]
     pub fn after_card_load(&mut self, result: i32) {
         for i in 1..9 {

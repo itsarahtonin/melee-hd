@@ -71,13 +71,13 @@ impl Running<'_> {
 
     /// Picking up an item, `ftNs_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,
     /// 1)`, as Fox's).
-    // Ports `ftNs_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftNs_Init_OnItemPickup")]
     pub fn ness_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
 
     /// Hiding the held item, `ftNs_Init_OnItemInvisible` (as Fox's).
-    // Ports `ftNs_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftNs_Init_OnItemInvisible")]
     pub fn ness_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }
@@ -89,7 +89,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftNs_Init_OnItemDrop` (as Fox's).
-    // Ports `ftNs_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftNs_Init_OnItemDrop")]
     pub fn ness_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

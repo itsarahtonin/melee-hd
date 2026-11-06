@@ -157,6 +157,7 @@ impl Toys {
     /// `Toy_803127D4` (with `tyDisplay_8031C8B8`'s): the trophies' archives forgotten with the
     /// scene's heap, and the shown trophy's state cleared.
     #[doc(alias = "Toy_803127D4")]
+    #[doc(alias = "tyDisplay_8031C8B8")]
     pub fn forget(&mut self) {
         self.dataf = None;
         self.stand = None;
@@ -171,6 +172,7 @@ impl Running<'_> {
     /// Whether the trophy table in play is the screens' own (`Toy_804A284C`): in the
     /// single-player modes and the lottery (`gm_IsCurrently1PMode`, `GM_TOY_LOTTERY`); else
     /// the save's.
+    #[doc(alias = "gm_IsCurrently1PMode")]
     pub fn toy_own_table(&self) -> bool {
         super::gm::is_1p_mode(self.game) || self.game.game_mode == GM_TOY_LOTTERY
     }

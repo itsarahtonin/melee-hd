@@ -35,6 +35,7 @@ pub const PROC_REACT: u32 = 0x8026_A294;
 pub const PROC_DYNAMICS: u32 = 0x8026_A788;
 
 /// `Item_OnUserDataRemove`, the items' user data release function.
+#[doc(alias = "Item_OnUserDataRemove")]
 const ON_USER_DATA_REMOVE: u32 = 0x8026_AE10;
 
 /// Runs an item process, if `addr` is one.
@@ -80,6 +81,7 @@ pub fn call_pred(r: &mut Running, gobj: GObjId, f: CodeRef) -> bool {
 }
 
 /// Whether a GObj is a fighter, `ftLib_IsFighter` (its classifier is `HSD_GOBJ_CLASS_FIGHTER`).
+#[doc(alias = "ftLib_IsFighter")]
 pub fn is_fighter(game: &Game, gobj: Option<GObjId>) -> bool {
     gobj.is_some_and(|g| game.world.gobjs[g.0].classifier == 4)
 }
@@ -295,6 +297,8 @@ pub fn common_data(game: &Game) -> Common {
 }
 
 /// Sets a new item's variables, `Item_80267AA8`.
+#[doc(alias = "it_80272D1C")]
+#[doc(alias = "db_ShowItemPickupRange")]
 #[doc(alias = "Item_80267AA8")]
 pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
     let data = r.data;
@@ -797,6 +801,7 @@ fn hold_kind_scale(r: &mut Running, gobj: GObjId) {
 /// (`fn_8022697C`) for its items.
 #[doc(alias = "db_80225DD8")]
 #[doc(alias = "db_80225D64")]
+#[doc(alias = "fn_8022697C")]
 pub fn debug_owner_bubbles(game: &mut Game, gobj: GObjId, owner: Option<GObjId>) {
     let bubbles = game.it.db_bubbles as u8;
     if owner.is_none() || !is_fighter(game, owner) {
@@ -1678,6 +1683,7 @@ pub fn exit_hitlag(r: &mut Running, gobj: GObjId) {
 
 /// Whether a held special item of this kind is the fighter's held special item rather than
 /// a held item (`DestroyItemInline` and `Item_8026A848`).
+#[doc(alias = "Item_8026A848")]
 pub fn is_special_held(ip: &Item) -> bool {
     ip.hold_kind == 8
         && ip.kind != LINK_BOMB
@@ -1694,6 +1700,7 @@ pub fn release_from(r: &mut Running, gobj: GObjId, fighter: GObjId) {
 /// Destroys the item, `Item_8026A8EC`: its hitboxes, count, effects, destroy effect and
 /// sound, the kind's `destroyed` callback, its holder's hand, its camera box, its sounds, and
 /// its GObj.
+#[doc(alias = "ftLib_DecFighterRefCount")]
 #[doc(alias = "Item_8026A8EC")]
 pub fn destroy(r: &mut Running, gobj: GObjId) {
     assert!(

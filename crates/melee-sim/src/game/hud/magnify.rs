@@ -268,6 +268,7 @@ impl Running<'_> {
     /// off screen that it may magnify, aims at the fighter's camera box scaled to its
     /// size, clears, draws the fighter's three passes and copies the render into the
     /// player's bubble, marking the player off screen.
+    #[doc(alias = "ftLib_IsOffscreen")]
     #[doc(alias = "ifMagnify_802FBBDC")]
     pub fn render_magnifier(&mut self, gobj: GObjId) {
         for p in &mut self.game.magnify.player {
@@ -355,6 +356,7 @@ impl Running<'_> {
     /// fighter off screen with the HUD shown, the bubble turns toward the fighter's screen
     /// position, moves to the screen's edge it crosses, and draws; past a side, the
     /// player's arrow shows in their color, else it hides.
+    #[doc(alias = "ftLib_GetScreenPos")]
     #[doc(alias = "ifMagnify_802FB8C0")]
     pub fn render_bubble(&mut self, gobj: GObjId, pass: i32) {
         if pass != 0 {

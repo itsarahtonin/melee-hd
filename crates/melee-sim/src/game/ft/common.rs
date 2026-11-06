@@ -92,6 +92,8 @@ impl Running<'_> {
     /// The player's statistics for an item taken in hand, `pl_8003E17C`: a common item (or
     /// the few kinds that count as one) that's been thrown counts as picked up, and, if no
     /// player has touched it yet, as a fresh one.
+    #[doc(alias = "it_8026B7E8")]
+    #[doc(alias = "it_8026B774")]
     #[doc(alias = "pl_8003E17C")]
     pub fn item_pickup_stat(&mut self, slot: i32, _sub: i32, item: GObjId) {
         use crate::game::it::kinds::{EGG, L_GUN_RAY, LIPSTICK_SPORE, S_SCOPE_BEAM, STARROD_STAR};
@@ -184,6 +186,7 @@ impl Running<'_> {
     /// (`x2226_b4` without `x2226_b3`): the percent (capped at 999) and the metal box's and
     /// `x2038`'s health, its player block's, the player's damage records (`pl_8003EC9C`), and
     /// a stamina fighter's knockout (`ftCo_800C8C84`).
+    #[doc(alias = "pl_8003EC9C")]
     #[doc(alias = "Fighter_TakeDamage_8006CC7C")]
     pub fn take_damage(&mut self, f: FighterId, amount: f64) {
         let fp = &mut self.game.fighters[f.0];
@@ -486,7 +489,7 @@ impl Running<'_> {
 
     /// A second fighter's push, `ftCommon_8007DFD0`: Nana steps back in depth from Popo while
     /// they stand on meeting floors overlapping, then takes the others' pushes.
-    // Ports `ftCommon_8007DFD0`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_8007DFD0")]
     fn nudge_sub(&mut self, gobj: GObjId, v: Vec3) {
         let slot = i32::from(self.game.fighter(gobj).player_idx);
         let leader = self

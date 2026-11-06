@@ -207,6 +207,7 @@ pub fn on_string(r: &mut Running, gobj: GObjId, pos: Vec3, string: Vec3) {
 
 /// An arrow in `owner`'s hand at bone `part`, `it_802A83E0`: of `kind`, at `pos` (on the
 /// plane) facing `facing_dir`, its life, not loosed, no trails, at his size, no line hit.
+#[doc(alias = "ftLib_GetModelScale")]
 #[doc(alias = "it_802A83E0")]
 pub fn spawn(
     r: &mut Running,

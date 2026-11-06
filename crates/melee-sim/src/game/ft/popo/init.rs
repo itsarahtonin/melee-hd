@@ -9,7 +9,7 @@ use crate::hsd::gobj::GObjId;
 impl Running<'_> {
     /// Popo's creation, `ftPp_Init_OnLoad`: `x2222_b5`, his attributes, `x40` from them, and
     /// his ice, Blizzard and strings registered with the items.
-    // Ports `ftPp_Init_OnLoad`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnLoad")]
     pub fn popo_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].x2222_b5 = true;
@@ -30,7 +30,7 @@ impl Running<'_> {
 
     /// Nana's creation, `ftNn_Init_OnLoad`: `x2222_b4`, Popo's attribute layout
     /// (`ftPp_Init_OnLoadForNana`) and `x40` from it.
-    // Ports `ftNn_Init_OnLoad`; aliased once a check reaches it.
+    #[doc(alias = "ftNn_Init_OnLoad")]
     pub fn nana_on_load(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].x2222_b4 = true;
@@ -39,13 +39,13 @@ impl Running<'_> {
     }
 
     /// Nana's attributes, `ftPp_Init_OnLoadForNana` (`PUSH_ATTRS` with Popo's layout).
-    // Ports `ftPp_Init_OnLoadForNana`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnLoadForNana")]
     pub fn popo_on_load_for_nana(&mut self, f: super::super::super::handles::FighterId) {
         self.push_attrs(f, attr::SIZE);
     }
 
     /// Popo's spawn, `ftPp_Init_OnDeath`: his first model variants, and his variables cleared.
-    // Ports `ftPp_Init_OnDeath`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnDeath")]
     pub fn popo_on_death(&mut self, gobj: GObjId) {
         self.game.set_part_vis(gobj, 0, 0);
         self.game.set_part_vis(gobj, 1, 0);
@@ -59,7 +59,7 @@ impl Running<'_> {
     }
 
     /// Nana's spawn, `ftNn_Init_OnDeath`: her armor from her attributes, then as Popo's.
-    // Ports `ftNn_Init_OnDeath`; aliased once a check reaches it.
+    #[doc(alias = "ftNn_Init_OnDeath")]
     pub fn nana_on_death(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].dmg.armor0 = self.ic_attr_f32(f, attr::NANA_ARMOR);
@@ -67,8 +67,8 @@ impl Running<'_> {
     }
 
     /// `ftPp_Init_LoadSpecialAttrs` and `ftNn_Init_LoadSpecialAttrs`.
-    // Ports `ftPp_Init_LoadSpecialAttrs`; aliased once a check reaches it.
-    // Ports `ftNn_Init_LoadSpecialAttrs`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_LoadSpecialAttrs")]
+    #[doc(alias = "ftNn_Init_LoadSpecialAttrs")]
     pub fn popo_load_special_attrs(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.copy_attrs(f, attr::SIZE);
@@ -76,14 +76,14 @@ impl Running<'_> {
 
     /// Entering knockback, `ftPp_Init_OnKnockbackEnter` (`Fighter_OnKnockbackEnter(gobj,
     /// 1)`): the hurt textures.
-    // Ports `ftPp_Init_OnKnockbackEnter`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnKnockbackEnter")]
     pub fn popo_on_knockback_enter(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 3.0);
         self.texture_anim(gobj, 0, 3.0);
     }
 
     /// Leaving knockback, `ftPp_Init_OnKnockbackExit`.
-    // Ports `ftPp_Init_OnKnockbackExit`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnKnockbackExit")]
     pub fn popo_on_knockback_exit(&mut self, gobj: GObjId) {
         self.texture_anim(gobj, 1, 0.0);
         self.texture_anim(gobj, 0, 0.0);
@@ -119,6 +119,7 @@ impl Running<'_> {
     /// Drops what the specials hold when hit or KO'd, `ftPp_Init_8011F060` (the death and
     /// damage hooks a special sets): the ice, the Blizzard's effects, the string, and the
     /// Squall Hammer's bent waist and hold.
+    #[doc(alias = "ftPp_SpecialHi_80122898")]
     #[doc(alias = "ftPp_Init_8011F060")]
     pub fn popo_remove_items(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);

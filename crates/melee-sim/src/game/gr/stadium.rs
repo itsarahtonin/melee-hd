@@ -1945,6 +1945,7 @@ pub fn free_archive(game: &mut Game, slot: Option<u8>) {
 /// original's wait would (`grDatFiles_801C6478`), leaving the mark; its materials go unmarked,
 /// as the code hands `grDatFiles_801C6228` the entry's `map_head` field rather than the
 /// `map_head`.
+#[doc(alias = "grDatFiles_801C6478")]
 pub fn start_load(r: &mut Running, idx: usize) {
     let g = ground_of(
         r.game,

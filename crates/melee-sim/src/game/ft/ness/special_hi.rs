@@ -861,6 +861,18 @@ fn set_mv_vec(fp: &mut crate::game::structs::Fighter, off: usize, v: Vec3) {
     fp.set_mv_f32(off + 8, reg(v.z));
 }
 
+#[doc(alias = "ftNs_SpecialHiEnd_Coll")]
+#[doc(alias = "ftNs_SpecialHiHold_Coll")]
+#[doc(alias = "ftNs_SpecialHiStart_Coll")]
+#[doc(alias = "ftNs_SpecialHiEnd_Phys")]
+#[doc(alias = "ftNs_SpecialHiHold_Phys")]
+#[doc(alias = "ftNs_SpecialHiStart_IASA")]
+#[doc(alias = "ftNs_SpecialAirHiEnd_Coll")]
+#[doc(alias = "ftNs_SpecialAirHiHold_Coll")]
+#[doc(alias = "ftNs_SpecialAirHiStart_Coll")]
+#[doc(alias = "ftNs_SpecialAirHiEnd_Phys")]
+#[doc(alias = "ftNs_SpecialAirHiHold_Phys")]
+#[doc(alias = "ftNs_SpecialAirHiStart_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_START_ENTER => g.ness_special_hi_start_enter(gobj),

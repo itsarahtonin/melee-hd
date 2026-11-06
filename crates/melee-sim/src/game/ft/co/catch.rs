@@ -89,7 +89,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_CatchDash_Phys`: the animation's motion or friction (`ft_80085030`).
-    // Ports `ftCo_CatchDash_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CatchDash_Phys")]
     pub fn co_catch_dash_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         let friction = fp_mul(self.common().f32(0x64), fp.co_attrs.ground_friction);
@@ -208,7 +208,7 @@ impl Running<'_> {
     }
 
     /// Whether a wall stands between two fighters' middles, `ft_80084CE4`.
-    // Ports `ft_80084CE4`; aliased once a check reaches it.
+    #[doc(alias = "ft_80084CE4")]
     fn wall_between(&mut self, a: FighterId, v: FighterId) -> bool {
         let mid = |f: &Fighter| {
             let e = &f.coll_data.ecb;
@@ -350,7 +350,7 @@ impl Running<'_> {
 
     /// A grab counts as the grabber's attack on its victim, `ftColl_80078754`, which then
     /// forgets who last hit it.
-    // Ports `ftColl_80078754`; aliased once a check reaches it.
+    #[doc(alias = "ftColl_80078754")]
     pub fn grab_landed(&mut self, gobj: GObjId, victim: GObjId) {
         let fp = self.game.fighter(gobj);
         let (kind, x2070, instance) = (fp.kind, u32::from_be_bytes(fp.x2070), fp.x2074.x2088);

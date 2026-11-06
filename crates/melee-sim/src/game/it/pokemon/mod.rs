@@ -251,6 +251,9 @@ fn event_list(r: &mut Running, ball: GObjId) -> i32 {
 /// The ball lets its Pokémon out, `it_8027AB64`: one is chosen, made above the ball facing the
 /// ball's owner's opponents, given the release's variables, counted for the owner's player,
 /// and its attack records begun. Whether one came out.
+#[doc(alias = "gm_8016AEB8")]
+#[doc(alias = "db_GetCurrentlySelectedPokemon")]
+#[doc(alias = "it_8026B6A8")]
 #[doc(alias = "it_8027AB64")]
 pub fn release(r: &mut Running, ball: GObjId) -> bool {
     let kind = choose(r, ball);

@@ -69,6 +69,8 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     true
 }
 
+#[doc(alias = "ftCa_Init_OnItemDrop")]
+#[doc(alias = "ftCa_Init_OnItemPickup")]
 pub(super) fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     Some(match f {

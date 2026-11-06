@@ -162,6 +162,7 @@ pub fn pick_kind(game: &mut Game, which: fn(&mut Game) -> &mut PickTable) -> i32
 /// The process that drops random items, `fn_8026C88C`: when its countdown runs out, an item
 /// of a drawn kind somewhere on the stage, then a new countdown from the common data's range
 /// for the item frequency, scaled by the stage's.
+#[doc(alias = "db_AreItemSpawnsEnabled")]
 #[doc(alias = "fn_8026C88C")]
 pub fn proc_spawn(r: &mut Running, _gobj: GObjId) {
     if r.game.it.db_menu.ItemSpawnsEnabled == 0 {
@@ -317,6 +318,7 @@ pub fn stage_counts(game: &Game) -> [i32; 35] {
 
 /// Sets up the match's random items, `it_8026D018`: the tables, and the process with its
 /// first countdown, unless the rules have none (or rain bob-ombs).
+#[doc(alias = "gm_8016AEA4")]
 #[doc(alias = "it_8026D018")]
 pub fn setup(r: &mut Running) {
     let game = &mut *r.game;

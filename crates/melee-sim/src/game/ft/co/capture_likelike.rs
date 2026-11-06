@@ -136,6 +136,7 @@ impl Running<'_> {
     /// (`ftColl_80079EA8`) at `angle` degrees (mirrored for a fighter facing right), its damage
     /// taken, then hitstun.
     #[doc(alias = "ftCo_800C7B0C")]
+    #[doc(alias = "ftColl_80079EA8")]
     pub fn likelike_spat_out(
         &mut self,
         gobj: GObjId,

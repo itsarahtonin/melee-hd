@@ -387,6 +387,7 @@ pub fn enemy_hit_by_item(r: &mut Running, attacker: GObjId, me: GObjId) {
 
 /// A fighter's hit on an enemy counts in its player's statistics as damage dealt to no
 /// player, `it_8027B378`.
+#[doc(alias = "ft_80089884")]
 #[doc(alias = "it_8027B378")]
 pub fn enemy_hit_stats(r: &mut Running, fg: GObjId, me: GObjId, dmg: f64) {
     if !is_enemy(r.game, me) {
@@ -636,7 +637,7 @@ fn boxes_touch(game: &mut Game, a: GObjId, i: usize, b: GObjId, j: usize) -> boo
 /// Two items' boxes clank, `it_8026FE68`: each one whose damage the other's outweighs (by
 /// more than `ItemCommonData` xB4 less) remembers the other, keeps the damage, the other's
 /// kind and position and which way it was pushed, with the clank's effect between them.
-// Ports `it_8026FE68`; aliased once a check reaches it.
+#[doc(alias = "it_8026FE68")]
 fn clank(r: &mut Running, a: GObjId, i: usize, b: GObjId, j: usize) {
     use hitcapsule::Victim;
     let mid = {

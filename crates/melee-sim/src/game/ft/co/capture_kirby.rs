@@ -447,6 +447,7 @@ impl Running<'_> {
 
     /// Popped out of Kirby as a star after he swallows it, `ftCo_800BE000`: no hitboxes, its
     /// box from him at its size.
+    #[doc(alias = "ftCommon_InitGrab")]
     #[doc(alias = "ftCo_800BE000")]
     pub fn enter_thrown_copy_star(&mut self, gobj: GObjId, kirby: GObjId) {
         let scale = self.enter_kirby_star(gobj, kirby, ms::THROWN_COPY_STAR, true);

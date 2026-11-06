@@ -94,6 +94,7 @@ impl Game {
 
     /// The icons' render callback, `fn_802F94E0`: drawn unless the player's display hides
     /// its digits.
+    #[doc(alias = "ifStatus_GetHUDInfo")]
     #[doc(alias = "fn_802F94E0")]
     pub fn stock_icons_render(&self, gobj: GObjId, pass: i32) -> Option<Draw> {
         let Some(UserData::StockIcons(p)) = self.world.gobj(gobj).user_data else {

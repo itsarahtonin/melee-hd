@@ -184,6 +184,7 @@ impl Running<'_> {
     }
 
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
+    #[doc(alias = "lb_800195D0")]
     #[doc(alias = "lbDvd_80017700")]
     pub fn wait_preload_stale_released(&mut self, heap: i32) {
         self.game
