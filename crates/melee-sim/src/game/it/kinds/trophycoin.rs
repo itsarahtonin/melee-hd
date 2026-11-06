@@ -8,8 +8,8 @@
 //! `x48`.
 //!
 //! Its kind (`x4`) is 0 for a trophy; Snag the Trophies' coins (2 and 3, `grfigureget.c`'s,
-//! with their stage object in `x14`) fall at their own speeds and ask the stage whether to
-//! show the question mark, which stops by name until Classic's bonus round is ported.
+//! with their stage object in `x14`) fall at their own speeds and show the question mark
+//! only until the stand's coins are all snagged or gone (`gr::figureget`).
 
 use gekko_fp as fp;
 use melee_data::archive::DataRef;
@@ -18,7 +18,6 @@ use super::super::ground::{fall, fall_to_floor, ground_or_fall, ground_skid};
 use super::super::item::{article, attr_of, change, change_state};
 use super::super::{data, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, maplib, zako};
 use crate::fpu::{mem, reg};
-use crate::game::code;
 use crate::game::state::{OBJ_JOBJ, Obj, Running};
 use crate::game::structs::SpawnItem;
 use crate::hsd::gobj::{GObjId, Host};
@@ -183,7 +182,8 @@ pub fn destroyed(r: &mut Running, gobj: GObjId) {
     let held = ip.xDC8_word.flags.x13;
     let v = ip.xDD4_itemVar.trophy_coin();
     if v.x4.get() != 0 {
-        code::unported_call("grFigureGet_80219C34 (Snag the Trophies' coin gone)");
+        let stand = v.x14.get();
+        crate::game::gr::figureget::coin_gone(r.game, stand);
     } else if held {
         let trophy = v.x0.get();
         r.count_match_trophy(trophy as u16, 1);
@@ -447,7 +447,15 @@ impl Running<'_> {
             .get();
         let j = jobj_of(self.game, gobj).and_then(|j| self.game.objs.jobjs[j].child);
         let mark = if kind != 0 {
-            code::unported_call("grFigureGet_80219C50 (Snag the Trophies' coin drawn)")
+            // The question mark while the stand's coins aren't all snagged or gone.
+            let stand = item_mut(self.game, gobj)
+                .xDD4_itemVar
+                .trophy_coin()
+                .x14
+                .get();
+            let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
+            (self.game.db_pause_flag(1) || zoom < x48)
+                && !crate::game::gr::figureget::done(self.game, stand)
         } else {
             let zoom = reg(crate::game::camera::zoom(&self.game.camera.cam));
             (self.game.db_pause_flag(1) && crate::game::gr::ground::flags(self.game, 0x330) == 0)

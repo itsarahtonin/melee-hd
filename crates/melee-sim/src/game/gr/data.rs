@@ -5,13 +5,13 @@
 use super::datfiles::GrJoint;
 use super::{
     GR_KIND_BATTLE, GR_KIND_BIGBLUE, GR_KIND_BIGBLUEROUTE, GR_KIND_CASTLE, GR_KIND_CORNERIA,
-    GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FLATZONE, GR_KIND_FOURSIDE,
-    GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_HOMERUN, GR_KIND_ICEMT,
-    GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE, GR_KIND_KONGO,
-    GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO, GR_KIND_OLDPUPUPU,
-    GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA, GR_KIND_PUSHON,
-    GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_SHRINEROUTE, GR_KIND_STORY, GR_KIND_VENOM,
-    GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
+    GR_KIND_FIGURE1, GR_KIND_FIGURE2, GR_KIND_FIGURE3, GR_KIND_FIGUREGET, GR_KIND_FLATZONE,
+    GR_KIND_FOURSIDE, GR_KIND_GARDEN, GR_KIND_GREATBAY, GR_KIND_GREENS, GR_KIND_HOMERUN,
+    GR_KIND_ICEMT, GR_KIND_INISHIE1, GR_KIND_INISHIE2, GR_KIND_IZUMI, GR_KIND_KINOKOROUTE,
+    GR_KIND_KONGO, GR_KIND_KRAID, GR_KIND_LAST, GR_KIND_MUTECITY, GR_KIND_OLDKONGO,
+    GR_KIND_OLDPUPUPU, GR_KIND_OLDYOSHI, GR_KIND_ONETT, GR_KIND_PSTADIUM, GR_KIND_PURA,
+    GR_KIND_PUSHON, GR_KIND_RCRUISE, GR_KIND_SHRINE, GR_KIND_SHRINEROUTE, GR_KIND_STORY,
+    GR_KIND_VENOM, GR_KIND_YORSTER, GR_KIND_ZEBES, GR_KIND_ZEBESROUTE,
 };
 
 /// `StageCallbacks`: one stage object's functions, by map id.
@@ -1827,6 +1827,34 @@ pub const PUSHON: StageData = StageData {
     joints: &[],
 };
 
+/// `grFigureGet_StageCallbacks`. Map 0 is the backdrop, map 1 the stand.
+pub const FIGUREGET_CALLBACKS: [StageCallbacks; 2] = [
+    cb(0x8021_96B4, 0x8021_96E0, 0x8021_96E8, 0x8021_96EC, 0),
+    cb(
+        0x8021_96F0,
+        0x8021_9890,
+        0x8021_9898,
+        0x8021_9B0C,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grFigureGet_StageData`.
+pub const FIGUREGET: StageData = StageData {
+    grkind: GR_KIND_FIGUREGET,
+    callbacks: &FIGUREGET_CALLBACKS,
+    file: Some("/GrNFg.dat"),
+    on_init: 0x8021_9534,
+    on_demo_init: 0x8021_9530,
+    on_load: 0x8021_959C,
+    on_start: 0x8021_95A0,
+    callback4: 0x8021_95C4,
+    on_touch_line: 0x8021_9C88,
+    on_check_shadow_render: 0x8021_9C90,
+    flags2: 1,
+    joints: &[],
+};
+
 /// `grZe_Route_StageCallbacks`. Map 1 is the shaft (with the stage's lights and fog), maps 0
 /// and 2 animated models.
 pub const ZEBESROUTE_CALLBACKS: [StageCallbacks; 3] = [
@@ -2042,6 +2070,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_SHRINEROUTE => &SHRINEROUTE,
         GR_KIND_BIGBLUEROUTE => &BIGBLUEROUTE,
         GR_KIND_PUSHON => &PUSHON,
+        GR_KIND_FIGUREGET => &FIGUREGET,
         GR_KIND_ZEBESROUTE => &ZEBESROUTE,
         k if super::target::is_target(k) => super::target::stage_data(k),
         GR_KIND_FIGURE1 => &FIGURE1,

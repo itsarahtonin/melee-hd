@@ -154,10 +154,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its records",
     ),
     (
-        "the race's clear",
-        "a stage clear of the third kind (the start data's x9 3) is the race to the finish's, a Classic bonus stage behind Classic's gate (gm_17C0)",
-    ),
-    (
         "a 1P run's getter",
         "only All-Star's round setup (gm_801B5324, behind the All-Star gate) asks a getter, its costumes' (gm_8018A25C)",
     ),
@@ -274,12 +270,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gmClassic_801B3B40's target stage records",
-        "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "Classic's horde stage's",
-        "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
+        "fn_8017C71C (Classic's boss stage's controller",
+        "Classic's boss stage: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "gm_8017D7AC's records after a no contest",

@@ -931,12 +931,12 @@ impl Running<'_> {
         let g = &*self.game;
         let mode = g.game_mode;
         let stkind = g.vs.start.stkind;
-        assert!(
-            !(mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind)),
-            "Classic's target stage scoring isn't ported"
-        );
         if mode == super::GM_TARGET_TEST {
-            self.target_test_score();
+            let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
+            self.target_test_score(ckind);
+        } else if mode == GM_CLASSIC && (0x21..=0x3A).contains(&stkind) {
+            let ckind = self.game.one_player.classic.base.player.ckind as u8;
+            self.target_test_score(ckind);
         }
         // An event cleared with a new best: the first player's rumble.
         if mode == super::GM_EVENT && self.game.vs.state.unk_10 == 0x9C41 {
@@ -949,14 +949,13 @@ impl Running<'_> {
         }
     }
 
-    /// `fn_8016C7F0`'s Target Test scoring (Classic's target stage is scored the same, from
-    /// its run's character): a first clear or a better time than the record (the record's
+    /// `fn_8016C7F0`'s Target Test scoring of character `ckind` (Target Test's, or on Classic's
+    /// target stage its run's): a first clear or a better time than the record (the record's
     /// `gmMainLib_8015D438`, `gmMainLib_8015D48C`) marks the match a new record (`unk_10`
     /// 0x9C41, its message 0x145) with a rumble on the player's port (`gm_80167858`); a stage
     /// left with targets takes message 0x149 for 40 frames.
     #[doc(alias = "gm_801B6320")]
-    fn target_test_score(&mut self) {
-        let ckind = self.game.game_data.vs.unk_530.unk_584.unk_584 as u8;
+    fn target_test_score(&mut self, ckind: u8) {
         let sel = super::match_exit::selkind(ckind);
         let r = self.game.record_1p(sel);
         let (cleared, best) = (r.b0, r.x94);

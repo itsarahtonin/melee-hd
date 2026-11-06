@@ -2175,6 +2175,9 @@ impl Running<'_> {
             Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
                 super::super::gr::pushon::line_hazard(self.game, self.data, line)
             }
+            Some(f) if f.0 == super::super::gr::figureget::ON_TOUCH_LINE => {
+                super::super::gr::figureget::on_touch_line(line)
+            }
             Some(f) if super::super::gr::target::is_on_touch_line(f.0) => {
                 super::super::gr::target::line_hazard(self.game, self.data, line)
             }
