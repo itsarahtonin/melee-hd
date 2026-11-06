@@ -932,6 +932,15 @@ pub const EV14: Game = Game {
     replay: Replay::Session("e3-ev14"),
 };
 
+/// Event 22's crowd (`m6-event-3/ev22`): Fox against the joining Marios, their counter in
+/// the 1P HUD.
+pub const EV22: Game = Game {
+    stage: "Event 22's stage",
+    name: "e3-ev22",
+    players: "Event 22: Fox against the joining Marios (session m6-event-3/ev22)",
+    replay: Replay::Session("e3-ev22"),
+};
+
 /// Event 26, Trophy Tussle 2 (`m6-event-3/ev26`): Fox against three on the second trophy
 /// stage.
 pub const EV26: Game = Game {
