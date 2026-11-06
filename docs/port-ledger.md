@@ -4,7 +4,7 @@ Every function in ssbm-rs's symbol table and what melee-hd did with it: ported (
 
 | Area | Ported | Ported, unchecked | Replaced | Dead | Unaccounted | Total |
 | --- | --- | --- | --- | --- | --- | --- |
-| **All** | 16696 | 0 | 869 | 603 | 1659 | 19827 |
+| **All** | 16696 | 0 | 909 | 603 | 1619 | 19827 |
 | MSL | 15 | 0 | 35 | 0 | 3 | 53 |
 | MetroTRK | 0 | 0 | 133 | 0 | 0 | 133 |
 | Runtime | 10 | 0 | 12 | 0 | 0 | 22 |
@@ -24,4 +24,4 @@ Every function in ssbm-rs's symbol table and what melee-hd did with it: ported (
 | melee/sfx | 21 | 0 | 0 | 0 | 0 | 21 |
 | melee/ty | 148 | 0 | 0 | 1 | 2 | 151 |
 | melee/vi | 84 | 0 | 0 | 0 | 0 | 84 |
-| sysdolphin | 773 | 0 | 153 | 6 | 146 | 1078 |
+| sysdolphin | 773 | 0 | 193 | 6 | 106 | 1078 |
