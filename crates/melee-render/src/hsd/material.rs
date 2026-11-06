@@ -127,8 +127,6 @@ fn color(c: &_GXColor) -> Color {
 
 /// The overlay color blended over the object's own tint (`ftMaterial_800BF6BC`'s and
 /// `it_80278108`'s): its alpha is how much of the blend replaces the material's color.
-#[doc(alias = "it_80278108")]
-#[doc(alias = "ftMaterial_800BF6BC")]
 fn blend_tint(tint: &_GXColor, hex: &_GXColor) -> Color {
     let temp_alpha = ((0xFF - i32::from(tint.a)) * (0xFF - i32::from(hex.a))) / 255;
     if temp_alpha == 0xFF {
@@ -173,8 +171,6 @@ const SILHOUETTE_PE: PeDesc = PeDesc {
 impl Ctx<'_> {
     /// The light overlay's stage (`ftMaterial_800BF534`, `it_80277F90`): the light color
     /// times the lit alpha added to the color. Returns the register it took.
-    #[doc(alias = "it_80277F90")]
-    #[doc(alias = "ftMaterial_800BF534")]
     fn light_overlay_stage(&mut self, desc: &TevDesc, light: &_GXColor, clamp: u8) -> u8 {
         let reg = free_color_register(0, desc, &[]);
         assert!(reg != -1, "can't find free color register!");
