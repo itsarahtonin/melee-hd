@@ -1927,13 +1927,20 @@ fn e4_ev22_2000() {
     event_match(&EV22, 2000, [1775, 1775]);
 }
 
-// Event Match's sixth round: Event 50 won (Sarah's recording ev50): Crazy Hand beaten, the
-// cutscene camera on him (13200), and both hands out, the match fading to white (13400),
-// captured with ssbm-rs's renderer running.
+// Event Match's sixth round: Event 50 won (Sarah's recording ev50): Crazy Hand hit for the
+// last time, the cutscene camera on him (13200), falling beaten as the match starts fading
+// to white (13350) and further into the fade (13400), captured with ssbm-rs's renderer
+// running.
 #[test]
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn e6_ev50_13200() {
     event_match(&REC_EV50, 13200, [920, 920]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13350() {
+    event_match(&REC_EV50, 13350, [3447, 3447]);
 }
 
 #[test]
