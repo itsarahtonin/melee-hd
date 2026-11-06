@@ -134,10 +134,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "drawn only at a debug level (ledger/deferred.txt, milestone 5's task 19)",
     ),
     (
-        "(Event 50's cheer)",
-        "Event Match's Event 50 once a hand is beaten, behind the Event Match gate",
-    ),
-    (
         "an event's random fifth player",
         "no event's fifth player has a random character (GmEvent.dat's table: only the first four do)",
     ),

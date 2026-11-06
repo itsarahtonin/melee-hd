@@ -35,7 +35,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Slap_IASA")]
     #[doc(alias = "ftMh_Squeeze_IASA")]
     #[doc(alias = "ftMh_Squeezing_IASA")]
-    // Ports `ftMh_Damage_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_Damage_IASA")]
     #[doc(alias = "ftMh_WaitSweep_IASA")]
     #[doc(alias = "ftMh_SweepLoop_IASA")]
     #[doc(alias = "ftMh_SweepWait_IASA")]
@@ -117,7 +117,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_Slam_Coll")]
     #[doc(alias = "ftMh_Slap_Coll")]
     #[doc(alias = "ftMh_Squeezing_Coll")]
-    // Ports `ftMh_Damage_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_Damage_Coll")]
     #[doc(alias = "ftMh_WaitSweep_Coll")]
     #[doc(alias = "ftMh_SweepLoop_Coll")]
     #[doc(alias = "ftMh_SweepWait_Coll")]

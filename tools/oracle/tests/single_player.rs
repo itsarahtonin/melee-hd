@@ -392,3 +392,31 @@ fn the_fourth_rounds_events_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Event Match's fifth round (milestone 6's task 21; docs/oracle.md, "Sessions"): Event 13
+/// (`m6-cpu-kinds/ck17-ev13`, the egg's landings drawing no number) and the egg broken
+/// (`m6-event-5/ev13-egg3`), and Event 50 with Master Hand beaten (`m6-event-5/ev50-ch`: the
+/// crowd's cheer, the slowed knockout, the hand taken out of play), each clean from power-on
+/// to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_fifth_rounds_events_run_clean_to_their_cards_after() {
+    for (dir, name, ticks) in [
+        ("m6-cpu-kinds", "ck17-ev13", 3519),
+        ("m6-event-5", "ev13-egg3", 3209),
+        ("m6-event-5", "ev50-ch", 5832),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in(dir, name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}

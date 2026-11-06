@@ -48,7 +48,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Throw_IASA")]
     #[doc(alias = "ftCh_TagRockPaper_IASA")]
     #[doc(alias = "ftCh_FingerGun2_IASA")]
-    #[doc(alias = "ftCh_TagGrab_IASA")]
+    // Ports `ftCh_TagGrab_IASA`; aliased once a check reaches it.
     #[doc(alias = "ftCh_TagFail_IASA")]
     pub fn ch_human_nop(&mut self, gobj: GObjId) {
         self.mh_human_nop(gobj);
@@ -149,7 +149,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_TagRockPaper_Phys")]
     #[doc(alias = "ftCh_TagRockPaper_Coll")]
     #[doc(alias = "ftCh_FingerGun2_Coll")]
-    #[doc(alias = "ftCh_TagGrab_Coll")]
+    // Ports `ftCh_TagGrab_Coll`; aliased once a check reaches it.
     #[doc(alias = "ftCh_TagFail_Phys")]
     #[doc(alias = "ftCh_TagFail_Coll")]
     #[doc(alias = "ftCo_CaptureCrazyHand_Anim")]
