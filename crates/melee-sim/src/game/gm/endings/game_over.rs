@@ -645,12 +645,10 @@ impl Running<'_> {
         &mut self.game.endings.debug_game_over
     }
 
-    /// Whether the game over is Classic's or All-Star's (`gmClassic_80470850`).
+    /// Whether the game over is Classic's, Adventure's or All-Star's (`gmClassic_80470850`).
     fn one_player_game_over(&self) -> bool {
-        matches!(
-            self.game.game_mode,
-            super::super::one_player::GM_CLASSIC | super::super::one_player::GM_ALLSTAR
-        )
+        use super::super::one_player::{GM_ADVENTURE, GM_ALLSTAR, GM_CLASSIC};
+        matches!(self.game.game_mode, GM_CLASSIC | GM_ADVENTURE | GM_ALLSTAR)
     }
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until

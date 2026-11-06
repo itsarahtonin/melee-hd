@@ -935,6 +935,11 @@ const LUIGI_CUTSCENE: u8 = 0x02;
 const KIRBY_INTRO: u8 = 0x20;
 const OUTCOME_TIMEOUT: u8 = 1;
 pub const ESCAPE_END: u32 = 0x8017_E7A0;
+/// Bowser's match's end hook, `gm_8017E7FC`.
+pub const BOWSER_END: u32 = 0x8017_E7FC;
+/// `GM_ADVENTURE`, `ADVENTURE_BOWSERTOY_CUTSCENE`.
+const GM_ADVENTURE: u8 = 4;
+const BOWSERTOY_CUTSCENE: u8 = 0x5A;
 const PEACH_FIGHT: u8 = 0x03;
 /// The states whose scene is a match (`GS_VS`), in `gm_Mode_Adventure_States`' order.
 const VS_STATES: [u8; 22] = [
@@ -1269,6 +1274,72 @@ impl Running<'_> {
             s.ckind = CKIND_FALCO as _;
             s.color = colors[0];
         }
+    }
+
+    /// Ness's match on Onett, `gm_801B4E58`: the stage's match (`gm_801B4064`) with one item
+    /// kind on (the mask's bit 7) at frequency 4.
+    #[doc(alias = "gm_801B4E58")]
+    pub fn adventure_enter_ness(&mut self) {
+        self.adventure_enter_vs();
+        let rules = &mut self.game.one_player.match_start.rules;
+        rules.x20 = 1 << 7;
+        rules.item_freq = 4;
+    }
+
+    /// Metal Mario's (and Luigi's) match, `gm_801B4EB8`: the stage's match (`gm_801B4064`),
+    /// with Luigi's slots left empty while Luigi is locked.
+    #[doc(alias = "gm_801B4EB8")]
+    pub fn adventure_enter_metal(&mut self) {
+        self.adventure_enter_vs();
+        if !self.game.gm.unlocks.ckind_unlocked(CKIND_LUIGI) {
+            for p in &mut self.game.one_player.match_start.players[1..4] {
+                if p.ckind == CKIND_LUIGI as _ {
+                    p.slot_type = crate::game::pl::player::PKIND_NONE as u8;
+                }
+            }
+        }
+    }
+
+    /// Bowser's match on Final Destination, `gm_801B4F44`: the stage's match (`gm_801B4064`),
+    /// the computers at 1.4 times their size, and its end deciding Giga Bowser
+    /// ([`BOWSER_END`]).
+    #[doc(alias = "gm_801B4F44")]
+    pub fn adventure_enter_bowser(&mut self) {
+        self.adventure_enter_vs();
+        let start = &mut self.game.one_player.match_start;
+        for p in &mut start.players[1..4] {
+            if i32::from(p.slot_type) == crate::game::pl::player::PKIND_CPU {
+                p.model_scale = 1.4;
+            }
+        }
+        start.rules.on_match_end = Some(CodeRef(BOWSER_END));
+    }
+
+    /// Bowser's match's exit, `gm_801B4FCC`: the stage marked and the run's exit, without
+    /// `gm_801B4170`'s clear.
+    #[doc(alias = "gm_801B4FCC")]
+    pub fn adventure_exit_bowser(&mut self) {
+        let id = self.game.machine.routing.curr_state_id;
+        self.adventure_mark_stage(id);
+        let mut run = self.game.one_player.adventure.base;
+        self.one_player_match_exit(&mut run, GAME_OVER);
+        self.game.one_player.adventure.base = run;
+    }
+
+    /// Bowser's match's end, `gm_8017E7FC`: Giga Bowser comes (`x77`) in Adventure on Normal
+    /// or harder with the run's time and the match's under 0xFD20 frames (18 minutes); else
+    /// the run's match ends as played through (`x4_5`). Either way the toy's cutscene is next.
+    #[doc(alias = "gm_8017E7FC")]
+    pub fn adventure_bowser_end(&mut self, _outcome: u8) {
+        let run = &self.game.one_player.adventure;
+        let giga = self.game.machine.routing.curr_mode == GM_ADVENTURE
+            && run.base.player.cpu_level >= 2
+            && run.base.x20.wrapping_add(self.game.vs_frame_count()) < 0xFD20;
+        if !giga {
+            self.game.vs.start.x4_5 = true;
+        }
+        self.game.one_player.adventure.x74[3] = u8::from(giga);
+        self.set_next_game_mode_state_id(BOWSERTOY_CUTSCENE);
     }
 
     /// Peach's Castle's match, `gm_801B461C`: the stage's match (`gm_801B4064`), and after
