@@ -17,7 +17,8 @@ impl Running<'_> {
 
     /// Picking up an item, `ftCa_Init_OnItemPickup` and `ftGn_Init_OnItemPickup`
     /// (`Fighter_OnItemPickup(gobj, flag, 1, 1)`, as Fox's).
-    // Ports `ftCa_Init_OnItemPickup` and `ftGn_Init_OnItemPickup`; aliased once a check reaches them.
+    // Ports `ftCa_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnItemPickup")]
     pub fn ca_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
@@ -37,7 +38,8 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftCa_Init_OnItemDrop` and `ftGn_Init_OnItemDrop` (as Fox's).
-    // Ports `ftCa_Init_OnItemDrop` and `ftGn_Init_OnItemDrop`; aliased once a check reaches them.
+    // Ports `ftCa_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnItemDrop")]
     pub fn ca_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

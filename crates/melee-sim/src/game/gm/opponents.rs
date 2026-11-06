@@ -603,7 +603,7 @@ impl Running<'_> {
 
     /// The end's callback told `arg`, `fn_80169444`: cleared when it answers 1, and whether it
     /// did.
-    // Ports fn_80169444; aliased once a check reaches it.
+    #[doc(alias = "fn_80169444")]
     pub fn opponents_end(&mut self, arg: i32) -> bool {
         let Some(f) = self.game.gm.opponents.on_end else {
             return false;

@@ -448,7 +448,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_800D3680")]
     #[doc(alias = "ftCo_800D3950")]
     #[doc(alias = "ftCo_800D3BC8")]
-    // Ports `ftCo_800D3E40`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800D3E40")]
     fn enter_dead_side(&mut self, gobj: GObjId, side: Side) {
         let (msid, sfx, angle, along_x) = match side {
             Side::Left => (ms::DEAD_LEFT, 0x88, -std::f32::consts::FRAC_PI_2, false),
@@ -600,7 +600,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DeadLeft_Anim")]
     #[doc(alias = "ftCo_DeadRight_Anim")]
     #[doc(alias = "ftCo_DeadDown_Anim")]
-    // Ports `ftCo_DeadUp_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_DeadUp_Anim")]
     pub fn co_dead_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(DEAD_FRAMES, fp.mv_i32(DEAD_FRAMES).wrapping_sub(1));
@@ -613,7 +613,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_DeadLeft_Cam")]
     #[doc(alias = "ftCo_DeadRight_Cam")]
     #[doc(alias = "ftCo_DeadDown_Cam")]
-    // Ports `ftCo_DeadUp_Cam`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_DeadUp_Cam")]
     pub fn co_dead_cam(&mut self, _gobj: GObjId) {}
     /// The screen KO, `ftCo_800D4780`: the fighter falls toward the camera.
     #[doc(alias = "ftCo_800D4780")]
