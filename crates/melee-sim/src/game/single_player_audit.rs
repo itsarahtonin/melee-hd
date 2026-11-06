@@ -387,7 +387,10 @@ pub const PATHS: &[Paths] = &[
             "melee/gr/grheal",
         ],
         modules: &["gm/endings/mod", "gm/endings/game_over"],
-        unreached: &[],
+        unreached: &[(
+            "fn_8017EDDC",
+            "Classic's check for Crazy Hand's round (gm_17C0's boss round, in Classic only): All-Star never calls it",
+        )],
     },
     Paths {
         mode: AD,
@@ -814,12 +817,10 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_17AD",
             "melee/gm/gm_17BA",
             "melee/gm/gm_17C0",
-            "melee/gm/gm_18A1",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "a 1P run's ratio getter",
             "gm_8017D7AC's records after a no contest",
-            "gm_8017CBAC (All-Star's clear)",
             "a single-player route's callback",
         ],
         modes: SETUP_MODES,
@@ -845,8 +846,6 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
             "gmMainLib_8015D2F0",
-            "gmMainLib_8015D384",
-            "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
             "fn_80160F58",
             "gm_801647F8",
@@ -888,6 +887,7 @@ pub const MISSING: &[Gap] = &[
             "the race's clear",
             "gm_8017CBAC (Classic's clear)",
             "gmClassic_801B3B40's target stage records",
+            "fn_8017EDDC",
             "Classic's horde stage's",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
@@ -920,11 +920,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "All-Star's mode, its intro and the rest area",
-        covers: &[
-            "a 1P run's getter",
-            "melee/gm/gmallstar",
-            "melee/gm/gm_17EB",
-        ],
+        covers: &["a 1P run's getter"],
         modes: &[AS, DB],
     },
     Gap {
@@ -979,11 +975,10 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
+        what: "the game overs' coming soon and the game over mode's Adventure load",
         covers: &[
             "melee/gm/gm_19EF",
             "gm_Mode_AdventureGOver_OnLoad",
-            "gm_Mode_AllstarGOver_OnLoad",
         ],
         modes: ENDINGS,
     },
