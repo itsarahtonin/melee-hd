@@ -361,3 +361,33 @@ fn the_third_rounds_events_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// The 1P modes' unlocks and records (`m6-unlocks`, milestone 6's task 26; docs/oracle.md,
+/// "Sessions"): each from power-on on a card one record or clear short of an unlock, the
+/// record made, the mode's decisions after it (`gm_80173BC4`, `gm_80173B30`, the events'
+/// `gm_801732D8`, `gm_8017335C` and `gm_80173D3C`), the notice or challenger approach and
+/// back, each clean to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_unlock_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("tr-combo", 3924),
+        ("hr-total", 4555),
+        ("ev01-fd", 8888),
+        ("ev03-trophy", 5882),
+        ("ev37-pichu", 20124),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-unlocks/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-unlocks/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-unlocks", name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
