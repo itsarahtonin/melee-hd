@@ -123,7 +123,6 @@ mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its c
 fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_8025FB2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 tyDisplay_8031C354	unchecked	the 1P coin's trophy lookups and model (game/ty/collection.rs), ported with the coin (it_802F2094) and a beaten enemy's roll (it_8027CC88): Adventure's and Classic's, which only the 1P list's gated entries lead to (Training never makes the coin: single_player_audit's TRAINING_NO_TROPHY)
-tyDisplay_8031C8B8	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
 fn_801A47E4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
 melee/gm/gm_17EB	gated	All-Star's data (gm_GetAllStarData and its getters), which fn_8016C7F0 reads only in the single-player branch its port refuses: the single-player modes', which only the 1P list's gated entries lead to

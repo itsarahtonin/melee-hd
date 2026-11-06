@@ -157,6 +157,7 @@ impl Toys {
     /// `Toy_803127D4` (with `tyDisplay_8031C8B8`'s): the trophies' archives forgotten with the
     /// scene's heap, and the shown trophy's state cleared.
     #[doc(alias = "Toy_803127D4")]
+    #[doc(alias = "tyDisplay_8031C8B8")]
     pub fn forget(&mut self) {
         self.dataf = None;
         self.stand = None;

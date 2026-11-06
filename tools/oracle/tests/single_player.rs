@@ -450,3 +450,31 @@ fn the_fifth_rounds_events_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Task 26's second round (`m6-unlocks`; docs/oracle.md, "Sessions"): the Home-Run Contest's
+/// 300 m (`gm_80173B30`'s 0xBD, `hr-300`), Training's combo of 10 (`gm_80173BC4`'s 0x6D,
+/// Young Link's 12, `tr-combo10`) and Endless Melee's 100 KOs (`gm_80173C70`'s 0x4F,
+/// `mm-endless-100`, about 6 minutes), each from power-on on its card, the notice approach
+/// and back, clean to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_second_unlock_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("hr-300", 4460),
+        ("tr-combo10", 3660),
+        ("mm-endless-100", 17701),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-unlocks/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-unlocks/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-unlocks", name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
