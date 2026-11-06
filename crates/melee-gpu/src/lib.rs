@@ -14,6 +14,8 @@ mod copy;
 #[cfg(test)]
 mod copy_tests;
 #[cfg(test)]
+mod depth_copy_tests;
+#[cfg(test)]
 mod depth_tests;
 mod encode;
 pub mod gpu_time;
@@ -451,13 +453,18 @@ pub struct Renderer {
     stable_hashes: FxHashMap<(u32, u32), u64>,
     /// Hashes of the ranges a threaded renderer's game thread sent, of the bytes it sent.
     pub(crate) held_hashes: FxHashMap<(u32, u32), u64>,
-    /// What copies from the EFB to textures wrote, by address: memory as the GPU then reads it.
-    copies: Vec<(u32, Vec<u8>)>,
+    /// What copies from the EFB to textures wrote, by address, with each copy's number: memory
+    /// as the GPU then reads it.
+    copies: Vec<(u32, Vec<u8>, u64)>,
+    /// How many copies to textures there have been, which numbers them (copy::Footprints).
+    pub(crate) copies_made: u64,
     /// What copies wrote since the host last took it (`Sink::take_written`).
     written: Vec<(u32, Vec<u8>)>,
     /// Copies from the EFB kept on the GPU instead, by the address they copied to.
     copier: copy::Copier,
     gpu_copies: FxHashMap<u32, copy::Copied>,
+    /// Reads the EFB's depth back for a depth copy, made at the first.
+    depth_reader: Option<copy::DepthReader>,
     /// Where copies went, to forget those the game writes over (copy::Footprints), when this
     /// renderer reads the game's memory itself (`track_copies`); a threaded one is told.
     footprints: copy::Footprints,
@@ -563,7 +570,10 @@ impl EfbTargets {
             sample_count: samples,
             dimension: wgpu::TextureDimension::D2,
             format: DEPTH_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            // Read by a depth copy (`copy::DepthReader`).
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         EfbTargets {
@@ -953,9 +963,11 @@ impl Renderer {
             stable_hashes: FxHashMap::default(),
             held_hashes: FxHashMap::default(),
             copies: Vec::new(),
+            copies_made: 0,
             written: Vec::new(),
             copier,
             gpu_copies: FxHashMap::default(),
+            depth_reader: None,
             footprints: copy::Footprints::default(),
             track_copies: true,
             flush_at: None,
@@ -1193,7 +1205,7 @@ impl Renderer {
         let mut buf = vec![0; len as usize];
         mem.read(address, &mut buf);
         let (start, end) = (address as u64, address as u64 + len as u64);
-        for (at, bytes) in &self.copies {
+        for (at, bytes, _) in &self.copies {
             let (cs, ce) = (*at as u64, *at as u64 + bytes.len() as u64);
             let (from, to) = (start.max(cs), end.min(ce));
             if from < to {
@@ -1208,7 +1220,7 @@ impl Renderer {
     /// range.
     fn copied_over(&self, address: u32, len: u32) -> bool {
         let (start, end) = (u64::from(address), u64::from(address) + u64::from(len));
-        self.copies.iter().any(|(at, bytes)| {
+        self.copies.iter().any(|(at, bytes, _)| {
             let (cs, ce) = (u64::from(*at), u64::from(*at) + bytes.len() as u64);
             start.max(cs) < end.min(ce)
         })
@@ -1242,9 +1254,9 @@ impl Renderer {
         let size = image.size();
         // A copy the game has written over since is gone, even within the frame.
         if self.track_copies
-            && let Some((start, end)) = self.footprints.take_if_overwritten(image.address, mem)
+            && let Some(gone) = self.footprints.take_if_overwritten(image.address, mem)
         {
-            self.forget(start, end);
+            self.forget(gone);
         }
         if let Some(c) = self.gpu_copies.get(&image.address) {
             if (c.format, c.width, c.height, image.levels)
@@ -1948,6 +1960,22 @@ impl Renderer {
         out
     }
 
+    /// The EFB's depth, read back as encode.rs takes it for a depth copy: RGBA rows of 640, each
+    /// pixel its 24-bit z as (z >> 16, z >> 8 & 0xFF, z & 0xFF, 255), from the scaled block's
+    /// middle sample as `read_efb` takes color (the first sample of a multisampled EFB).
+    fn read_efb_depth(&mut self) -> Vec<u8> {
+        let reader = self
+            .depth_reader
+            .get_or_insert_with(|| copy::DepthReader::new(&self.device, self.samples));
+        let texture = reader.read(
+            &self.device,
+            &self.queue,
+            &self.depth_view,
+            (self.scale, self.width),
+        );
+        self.read_texture(&texture, EFB_WIDTH, EFB_HEIGHT)
+    }
+
     /// A texture a copy from the EFB is made into.
     fn copy_texture(&mut self, width: u32, height: u32) -> u32 {
         let texture = self.device.create_texture(&wgpu::TextureDescriptor {
@@ -1995,6 +2023,7 @@ impl Renderer {
             address,
             copy::Copied {
                 id,
+                copy: self.copies_made,
                 format: r.format,
                 width: r.width,
                 height: r.height,
@@ -2028,7 +2057,7 @@ impl Renderer {
             let at = (f.address + row * f.stride) & PHYS_MASK;
             let end = u64::from(at) + u64::from(f.row_bytes);
             self.copies
-                .retain(|(a, b)| !(*a >= at && *a as u64 + b.len() as u64 <= end));
+                .retain(|(a, b, _)| !(*a >= at && *a as u64 + b.len() as u64 <= end));
         }
         if self.copies.len() != before {
             self.hashes.clear();
@@ -2063,8 +2092,8 @@ impl Renderer {
         for (at, row) in copy::encode_texels(&c, &texels) {
             let end = u64::from(at) + row.len() as u64;
             self.copies
-                .retain(|(a, b)| !(*a >= at && *a as u64 + b.len() as u64 <= end));
-            self.copies.push((at, row));
+                .retain(|(a, b, _)| !(*a >= at && *a as u64 + b.len() as u64 <= end));
+            self.copies.push((at, row, c.copy));
         }
         self.hashes.clear();
     }
@@ -2076,16 +2105,20 @@ impl Renderer {
         self.stable_hashes.retain(|k, _| keep(k));
         self.held_hashes.retain(|k, _| keep(k));
         self.footprints.forget(start, end);
-        self.forget(start, end);
+        self.forget(copy::Gone::all(start, end));
     }
 
-    /// Forgets what copies left in `start..end`, which the game has written over since.
-    pub(crate) fn forget(&mut self, start: u32, end: u32) {
-        self.gpu_copies.retain(|&a, _| !(start..end).contains(&a));
+    /// Forgets what the copy `gone` and copies before it left in its span, which the game has
+    /// written over since. Later copies there stay: if the game writes over one of them, its own
+    /// footprint shows it.
+    pub(crate) fn forget(&mut self, gone: copy::Gone) {
+        let (start, end) = (gone.start, gone.end);
+        self.gpu_copies.retain(|&a, c| !gone.takes(a, c.copy));
         self.on_cpu.retain(|a| !(start..end).contains(a));
         let (start, end) = (start & PHYS_MASK, end & PHYS_MASK);
-        self.copies
-            .retain(|(a, b)| *a as usize + b.len() <= start as usize || *a >= end);
+        self.copies.retain(|(a, b, copy)| {
+            *copy > gone.copy || *a as usize + b.len() <= start as usize || *a >= end
+        });
         self.hashes.clear();
     }
 
@@ -2735,8 +2768,8 @@ impl Renderer {
         if bits(value, 14, 1) != 0 {
             // A frame's end: copies the game has since written over are gone.
             if self.track_copies {
-                for (start, end) in self.footprints.take_overwritten(mem) {
-                    self.forget(start, end);
+                for gone in self.footprints.take_overwritten(mem) {
+                    self.forget(gone);
                 }
                 self.footprints.new_frame();
             }
@@ -2798,10 +2831,15 @@ impl Renderer {
                 self.write_back(request.footprint.address);
             }
             if self.track_copies {
-                self.footprints.record(request.footprint, mem);
+                self.footprints
+                    .record(request.footprint, self.copies_made, mem);
             }
         } else {
-            let efb = self.read_efb();
+            let efb = if bits(state.bp[0x43], 0, 3) == 3 {
+                self.read_efb_depth()
+            } else {
+                self.read_efb()
+            };
             match encode::encode(state, value, &efb) {
                 Some(e) => {
                     let end = e.address + e.rows.len() as u32 * e.stride;
@@ -2810,11 +2848,11 @@ impl Renderer {
                     for (i, row) in e.rows.into_iter().enumerate() {
                         let at = (e.address + i as u32 * e.stride) & PHYS_MASK;
                         let end = at as u64 + row.len() as u64;
-                        self.copies.retain(|(a, b)| {
+                        self.copies.retain(|(a, b, _)| {
                             !(*a as u64 >= at as u64 && *a as u64 + b.len() as u64 <= end)
                         });
                         self.written.push((at, row.clone()));
-                        self.copies.push((at, row));
+                        self.copies.push((at, row, self.copies_made));
                     }
                     self.hashes.clear();
                 }
@@ -2823,8 +2861,11 @@ impl Renderer {
             if self.track_copies
                 && let Some(f) = copy::footprint(state, value)
             {
-                self.footprints.record(f, mem);
+                self.footprints.record(f, self.copies_made, mem);
             }
+        }
+        if bits(value, 14, 1) == 0 {
+            self.copies_made += 1;
         }
         if bits(value, 11, 1) != 0 {
             self.clear(
