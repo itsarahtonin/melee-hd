@@ -765,10 +765,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    (
-        "grStadium_801D384C",
-        "Pokémon Stadium's names screen (mode 1), which Training's screen never shows: the screen's mode set turns 1 into the stage feed (7) in Training (gm_8018841C, grpstadium.c)",
-    ),
     ("grFigureGet_80219C", TRAINING_NO_TROPHY),
     (
         "it_8027B5B0 (an enemy of kind",

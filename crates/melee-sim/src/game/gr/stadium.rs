@@ -394,7 +394,9 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
         // (a match the VS mode starts from its menus), placed outside the simulation, so the
         // address the frontend gives; in the match a replay's playback boots into it holds
         // none, and the scene's heap gives the buffer (the allocator model's address, or
-        // without the model the frontend's).
+        // without the model the frontend's), which holds what it held until a
+        // transformation's file is read into it (an Adventure match's next stage object takes
+        // a block there with those leftovers).
         let address = if let Some(a) = r.preloaded_buffer(0x7D5) {
             if a != 0 {
                 a
@@ -402,7 +404,7 @@ pub fn init_main(r: &mut Running, gobj: GObjId) {
                 r.game.gr.stadium.buffer_address
             }
         } else {
-            crate::hsd::heap::with(|h| h.mem_alloc(0x5_0000))
+            crate::hsd::heap::with(|h| h.mem_alloc_unclaimed(0x5_0000))
                 .unwrap_or(r.game.gr.stadium.buffer_address)
         };
         let v = r.game.grounds[g.0].u.stadium();
@@ -1419,11 +1421,35 @@ pub fn text_names_or_count(r: &mut Running, gobj: GObjId) {
     }
     let x_f8_2 = v.xF8_2;
     if r.game.vs_is_singleplayer() || x_f8_2 {
-        super::super::code::unported_call("grStadium_801D384C");
+        text_count(r, gobj);
     } else {
         text_names(r, gobj);
     }
 }
+
+/// The opponents still to come (`gm_801694A0`), `grStadium_801D384C`: the dynamic text
+/// cleared, the static text's string 0xD and the count over it, centered in Japanese.
+#[doc(alias = "grStadium_801D384C")]
+pub fn text_count(r: &mut Running, _gobj: GObjId) {
+    let (st, dy) = texts(r.game);
+    let count = r.game.opponents_remaining();
+    r.game.sis.clear_text(dy);
+    r.game.sis.reset_text(r.data, st, 0xD);
+    let jp = r.game.gm.unlocks.is_jp();
+    let t = r.game.sis.text_mut(dy);
+    t.default_kerning = 0;
+    t.x34 = [1.5, 1.5];
+    t.text_color = [0xC0, 0xC0, 0xFF, 0xFF];
+    if jp {
+        t.default_alignment = 1;
+        print(r, dy, 125.0, 52.0, b"%d", &[FmtArg::Int(count)]);
+    } else {
+        print(r, dy, -3.0, 52.0, b"%3d", &[FmtArg::Int(count)]);
+    }
+}
+
+/// The heap image's name for a transformation's file read into the scene heap's buffer.
+const TRANSFORMATION: &str = "a transformation's file";
 
 /// `grPs_8049F040`, the static buffer the names screen builds its string 5 in.
 const NAMES_STRING: u32 = 0x8049_F040;
@@ -1966,6 +1992,14 @@ pub fn start_load(r: &mut Running, idx: usize) {
             "a transformation's load without the timeline never ends"
         );
         let kind = if buffer >= 0x8000_0000 { 0x21 } else { 0x23 };
+        // The read's bytes, unknown to the image, in a buffer the scene's heap gave.
+        crate::hsd::heap::with(|h| {
+            let cell = buffer.wrapping_sub(crate::hsd::heap::HEADER);
+            if h.os.allocated.iter().any(|&(c, _)| c == cell) {
+                h.image
+                    .claim(buffer, buffer + size.next_multiple_of(32), TRANSFORMATION);
+            }
+        });
         r.game.audio.devcom_request(
             r.data,
             entrynum,

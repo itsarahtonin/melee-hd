@@ -405,6 +405,22 @@ pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
 pub const ADDR: u32 = 0x8046_B488;
 
 impl Game {
+    /// The opponents still to come: those yet to join and the joiners' slots still playing
+    /// (`Player_GetFlagsBit1` and state 2), `gm_801694A0`.
+    #[doc(alias = "gm_801694A0")]
+    pub fn opponents_remaining(&self) -> i32 {
+        let mut count = i32::from(self.gm.opponents.left);
+        for i in 0..6 {
+            if self.player_pkind(i) != PKIND_NONE
+                && self.player_flags_bit1(i)
+                && self.player_state(i) == 2
+            {
+                count += 1;
+            }
+        }
+        count
+    }
+
     /// The joining opponents' slots marked, `fn_8016A09C`: joining on, the first `at_once`
     /// empty slots flagged as joiners' (`Player_SetFlagsBit1`), every joiner's slot on team 4.
     #[doc(alias = "fn_8016A09C")]
