@@ -45,7 +45,8 @@ pub enum Replay {
     /// `select-NAME` `lockstep/select-sessions/NAME.inputs`, for `special-NAME`
     /// `lockstep/special-sessions/NAME.inputs`, for `trophy-NAME`
     /// `lockstep/trophy-sessions/NAME.inputs`, for `sound-NAME` `lockstep/sound-sessions/`,
-    /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `results-NAME`
+    /// for `unlock-NAME` `lockstep/unlock-sessions/`, for `m6u-NAME` `lockstep/m6-unlocks/`,
+    /// for `results-NAME`
     /// `lockstep/results-sessions/NAME.inputs`, for `tou-NAME`
     /// `lockstep/tournament-sessions/NAME.inputs` and for `celebiN`
     /// `lockstep/celebi-sessions/celebiN.inputs`, for `mk-NAME` `lockstep/m6-mk-route/` and for
@@ -82,6 +83,9 @@ impl Replay {
                 }
                 if let Some(o) = name.strip_prefix("m6p-") {
                     return ssbm_rs_local(&format!("lockstep/m6-1p-setups/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("m6u-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-unlocks/{o}.inputs")).into();
                 }
                 if let Some(o) = name.strip_prefix("m6e3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings-3/{o}.inputs")).into();
@@ -1522,6 +1526,48 @@ pub const UNLOCK_GW: Game = Game {
     name: "unlock-gw",
     players: "the challenger approach's screen (session unlock-sessions/gw)",
     replay: Replay::Session("unlock-gw"),
+};
+
+/// The notice approach after Training (`m6-unlocks/tr-combo`): the combos' trophy's notice.
+pub const M6U_TR_COMBO: Game = Game {
+    stage: "Challenger approach",
+    name: "m6u-tr-combo",
+    players: "the notice approach after Training (session m6-unlocks/tr-combo)",
+    replay: Replay::Session("m6u-tr-combo"),
+};
+
+/// The notice approach after the Home-Run Contest (`m6-unlocks/hr-total`): the best distances'
+/// total's trophy's notice.
+pub const M6U_HR_TOTAL: Game = Game {
+    stage: "Challenger approach",
+    name: "m6u-hr-total",
+    players: "the notice approach after the Home-Run Contest (session m6-unlocks/hr-total)",
+    replay: Replay::Session("m6u-hr-total"),
+};
+
+/// The notice approach after Event 1 cleared last (`m6-unlocks/ev01-fd`): Final
+/// Destination's notice.
+pub const M6U_EV01_FD: Game = Game {
+    stage: "Challenger approach",
+    name: "m6u-ev01-fd",
+    players: "the notice approach after Event Match (session m6-unlocks/ev01-fd)",
+    replay: Replay::Session("m6u-ev01-fd"),
+};
+
+/// The notice approach after Event 3 cleared (`m6-unlocks/ev03-trophy`): its trophy's notice.
+pub const M6U_EV03_TROPHY: Game = Game {
+    stage: "Challenger approach",
+    name: "m6u-ev03-trophy",
+    players: "the notice approach after Event 3 (session m6-unlocks/ev03-trophy)",
+    replay: Replay::Session("m6u-ev03-trophy"),
+};
+
+/// Pichu's challenger approach after Event 37 (`m6-unlocks/ev37-pichu`).
+pub const M6U_EV37_PICHU: Game = Game {
+    stage: "Challenger approach",
+    name: "m6u-ev37-pichu",
+    players: "Pichu's approach after Event Match (session m6-unlocks/ev37-pichu)",
+    replay: Replay::Session("m6u-ev37-pichu"),
 };
 
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
