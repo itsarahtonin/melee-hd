@@ -59,6 +59,8 @@ pub mod addr {
 }
 
 /// Runs one of the Warp Star states' callbacks, if `cb` is one.
+#[doc(alias = "ftCo_WarpStarFall_Cam")]
+#[doc(alias = "ftCo_WarpStarJump_Cam")]
 pub fn run(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     use addr::*;
     match cb {

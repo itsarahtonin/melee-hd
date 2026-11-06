@@ -35,6 +35,7 @@ pub struct Attract {
 
 /// The save's VS rules and preferences as `gm_80167BC8` reads them
 /// (`gmMainLib_GetGameRules`, `gmMainLib_GetGamePrefs`, `gmMainLib_8015ED30`).
+#[doc(alias = "gmMainLib_GetGamePrefs")]
 pub fn saved_rules(g: &crate::game::structs::gmm_x0) -> (GameRules, GamePrefs) {
     let r = &g.x1850;
     let p = &g.thing.save_data.x1CB0;
@@ -158,6 +159,7 @@ impl Running<'_> {
     /// camera turns to the first focus player while the others play at level 2, at 640 (or
     /// once that fighter leaves the bounds) to the second, and at 880 (or once it leaves) back
     /// to the standard view with every player at level 9.
+    #[doc(alias = "Player_800368F8")]
     #[doc(alias = "fn_80182F40")]
     pub fn attract_proc(&mut self, _gobj: GObjId) {
         let pressed = self.game.buttons_triggered(4)

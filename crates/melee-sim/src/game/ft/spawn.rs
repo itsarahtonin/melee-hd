@@ -19,6 +19,8 @@ const MS_ENTRY: i32 = 322;
 
 impl Running<'_> {
     /// Spawns the fighter, `Fighter_Spawn`.
+    #[doc(alias = "ft_800890BC")]
+    #[doc(alias = "ftCo_800C0074")]
     #[doc(alias = "Fighter_Spawn")]
     pub fn fighter_spawn(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -71,6 +73,7 @@ impl Running<'_> {
     }
 
     /// Resets the fighter for a spawn at its player's position, `Fighter_UnkInitReset_80067C98`.
+    #[doc(alias = "ftCo_800DEEA8")]
     #[doc(alias = "Fighter_UnkInitReset_80067C98")]
     pub(crate) fn init_reset(&mut self, f: FighterId) {
         let spawn = self.game.new_spawn_number();
@@ -773,6 +776,7 @@ impl Running<'_> {
 
     /// The entry state a match's fighters start in, `ftCo_800C61B0`: hidden, intangible and
     /// still, flattened to the common data's height, for its player's entry delay.
+    #[doc(alias = "ft_80084CB0")]
     #[doc(alias = "ftCo_800C61B0")]
     pub fn enter_entry(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);

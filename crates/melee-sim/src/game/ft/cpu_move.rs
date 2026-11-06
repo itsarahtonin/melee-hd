@@ -94,7 +94,7 @@ impl Running<'_> {
     /// Runs one of the computer players' scripts from `PlCo.dat`, `ftCo_800B4880`: its
     /// commands are written in, each with as many argument bytes as its range says (one past
     /// `CpuCmd_OneArgEnd`'s range checks the argument, as the original does).
-    // Ports `ftCo_800B4880`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800B4880")]
     pub(super) fn cpu_data_script(&mut self, f: FighterId, idx: u32) {
         let data = self.common_ptr(CPU_DATA);
         let scripts = self.data.ptr(data).expect("the computer players' scripts");

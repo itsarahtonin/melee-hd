@@ -36,7 +36,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftPr_Init_OnItemPickup`: the left hand takes the hold pose of the
     /// one-handed and the two-handed swing items, unless the item is heavy.
-    // Ports `ftPr_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_Init_OnItemPickup")]
     pub fn purin_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         let item = self
             .game
@@ -90,7 +90,7 @@ impl Running<'_> {
 
     /// Dropping the item, `ftPr_Init_OnItemDrop`: no hold pose, and the hand lets go of it
     /// when `flag` says so.
-    // Ports `ftPr_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftPr_Init_OnItemDrop")]
     pub fn purin_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.ext(
             ext::FTANIM_80070FB4,

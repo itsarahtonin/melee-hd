@@ -202,7 +202,7 @@ impl LbHeaps {
     }
 
     /// `lbHeap_80015CA8` for a preload heap.
-    // Ports `lbHeap_80015CA8`; aliased once a check reaches it.
+    #[doc(alias = "lbHeap_80015CA8")]
     pub fn free(&self, heap: usize, addr: u32, mem: &mut LbMemory) {
         let h = &self.heaps[heap];
         assert!(h.status == CREATED, "p->status == LbHeapStatus_Create");

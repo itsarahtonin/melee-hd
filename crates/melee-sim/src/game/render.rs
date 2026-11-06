@@ -135,6 +135,8 @@ impl Running<'_> {
     /// link set depends on which of the camera's layers are hidden (`x398`). The debug
     /// drawings (collisions, zones, special points) aren't modeled.
     #[doc(alias = "fn_800301D0")]
+    #[doc(alias = "Camera_800311EC")]
+    #[doc(alias = "Camera_80031328")]
     pub fn render_game_camera(&mut self, gobj: GObjId) {
         use super::camera;
         let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {

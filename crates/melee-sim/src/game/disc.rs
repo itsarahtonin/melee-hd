@@ -184,6 +184,7 @@ impl Running<'_> {
     }
 
     /// `lbDvd_80017700`: waits until the heap's unwanted entries that are set up are let go.
+    #[doc(alias = "lb_800195D0")]
     #[doc(alias = "lbDvd_80017700")]
     pub fn wait_preload_stale_released(&mut self, heap: i32) {
         self.game
@@ -195,6 +196,7 @@ impl Running<'_> {
     /// `entry_num`, waiting for its read if it's coming, and set up as its kind is (an
     /// archive parsed) the first time it's taken. Whether the cache had it.
     #[doc(alias = "lbDvd_8001819C")]
+    #[doc(alias = "grDatFiles_801C5FC0")]
     #[doc(alias = "lbDvd_GetPreloadedArchive")]
     #[doc(alias = "lbDvd_800189EC")]
     pub fn take_preloaded(&mut self, entry_num: i32) -> bool {

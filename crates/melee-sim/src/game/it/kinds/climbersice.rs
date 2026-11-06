@@ -340,6 +340,7 @@ fn tick_lifetime(r: &mut Running, gobj: GObjId) -> bool {
 /// The slide on a floor, `it_802C1854`: the floor's slope speeds it down and slows it up;
 /// slow enough, it stops (pickup back on, `xDCD_b3`, state 0, its effects gone). True once
 /// it stops.
+#[doc(alias = "it_8026BD84")]
 #[doc(alias = "it_802C1854")]
 fn slide(r: &mut Running, gobj: GObjId) -> bool {
     let slope = reg(attr_f32(r, gobj, attr::SLOPE));

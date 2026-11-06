@@ -73,7 +73,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftPk_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 0,
     /// 0)`): the hold pose on hand 0.
-    // Ports `ftPk_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_Init_OnItemPickup")]
     pub fn pk_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.item_pickup_hand(gobj, flag, 0);
     }
@@ -91,7 +91,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftPk_Init_OnItemDrop`.
-    // Ports `ftPk_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_Init_OnItemDrop")]
     pub fn pk_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 0);
     }

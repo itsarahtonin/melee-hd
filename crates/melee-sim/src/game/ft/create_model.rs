@@ -68,6 +68,7 @@ impl Running<'_> {
     /// parts' joints, shapes of the fighters' class, and lists its DObjs, `ftCo_800C884C`
     /// (with `ft_800C85B8`).
     #[doc(alias = "ftCo_800C884C")]
+    #[doc(alias = "lb_8000CE30")]
     #[doc(alias = "ft_800C85B8")]
     pub fn load_second_model(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);

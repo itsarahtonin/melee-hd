@@ -32,6 +32,8 @@ impl Default for Slot {
 
 impl Slot {
     /// The slot as a script address, as `Command_06` and `Command_04` read it.
+    #[doc(alias = "Command_06")]
+    #[doc(alias = "Command_04")]
     pub fn cursor(self) -> Option<DataRef> {
         match self {
             Slot::Data(d) => Some(d),

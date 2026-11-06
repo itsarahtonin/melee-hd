@@ -277,7 +277,7 @@ pub fn spin(game: &mut Game, data: &Archives, gobj: GObjId) {
 
 /// The item's landing dust and sound at `offset` from it, `it_80272AC4`: no more counted
 /// hits.
-// Ports `it_80272AC4`; aliased once a check reaches it.
+#[doc(alias = "it_80272AC4")]
 pub fn landing_dust_at(r: &mut Running, gobj: GObjId, offset: Vec3) {
     let p = item(r.game, gobj).pos;
     let pos = Vec3::new(
@@ -581,6 +581,7 @@ pub fn face_motion(game: &mut Game, gobj: GObjId) {
 
 /// Lets fighters jump on it, `it_80274CAC` (showing the range with the debug menu's
 /// `ShowEnemyStompRange`).
+#[doc(alias = "db_ShowEnemyStompRange")]
 #[doc(alias = "it_80274CAC")]
 pub fn make_stompable(game: &mut Game, gobj: GObjId) {
     let show = game.it.db_menu.ShowEnemyStompRange;

@@ -351,6 +351,7 @@ impl Running<'_> {
 
     /// `ftCo_CliffWait_IASA`: a ledge attack, roll, jump or climb, or letting go when the
     /// hang's time runs out (`ftCo_8009A9AC`).
+    #[doc(alias = "ftCo_8009A9AC")]
     #[doc(alias = "ftCo_CliffWait_IASA")]
     pub fn co_cliff_wait_iasa(&mut self, gobj: GObjId) {
         if self.cliff_attack_check(gobj)

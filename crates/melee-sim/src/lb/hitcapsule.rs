@@ -233,6 +233,7 @@ pub fn disable(hit: &mut HitCapsule) {
 }
 
 /// Turns a hitbox on, `lbColl_80008434`.
+#[doc(alias = "lbColl_80008434")]
 pub fn enable(hit: &mut HitCapsule) {
     hit.state = ENABLED;
 }

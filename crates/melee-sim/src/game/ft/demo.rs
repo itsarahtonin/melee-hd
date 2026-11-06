@@ -451,6 +451,7 @@ impl Running<'_> {
     /// A demo fighter's pose's first state (`ftDemo_CreateFighter`'s `on_create_fighter`):
     /// the three winners' (`ftCo_800BECB0`, `ftCo_800BED88`, `ftCo_800BEF04`), the losers'
     /// (`ftCo_800BEFD4`); the other demos' aren't ported.
+    #[doc(alias = "ftCo_800BEFD4")]
     fn demo_enter(&mut self, gobj: GObjId, pose: i32) {
         match pose {
             0 => self.demo_win(gobj, 0),

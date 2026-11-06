@@ -651,8 +651,8 @@ fn next_anim_joint(
 
 /// The end frame of the first AnimJoint in the tree with an animation, or 0,
 /// `lb_8000BFF0` (`lb_8000BECC` finds it).
-// Ports `lb_8000BFF0`; aliased once a check reaches it.
-// Ports `lb_8000BECC`; aliased once a check reaches it.
+#[doc(alias = "lb_8000BFF0")]
+#[doc(alias = "lb_8000BECC")]
 fn first_end_frame(data: &Archives, aj: Option<DataRef>) -> f32 {
     fn find(data: &Archives, aj: Option<DataRef>) -> Option<DataRef> {
         let aj = aj?;

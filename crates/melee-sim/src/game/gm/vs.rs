@@ -1950,6 +1950,7 @@ impl Running<'_> {
     /// items, the fighters on their spawn points, the camera's first frame, the pause screen,
     /// the HUD, and the match's process on the scene's GObj. Its parts are checked one by
     /// one, and the whole sequence by the sessions' matches from the menus.
+    #[doc(alias = "gm_801A4BC8")]
     #[doc(alias = "fn_8016E730")]
     pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives) {
         self.db_setup();

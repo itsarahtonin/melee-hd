@@ -739,6 +739,7 @@ pub fn bounce_effect(r: &mut Running, gobj: GObjId, touched: i32) {
 }
 
 /// The collision data of a fighter or an item, `it_8026C100`; none for another GObj.
+#[doc(alias = "it_80272D40")]
 #[doc(alias = "it_8026C100")]
 pub fn coll_data_of(game: &Game, gobj: GObjId) -> Option<CollData> {
     if super::item::is_fighter(game, Some(gobj)) {

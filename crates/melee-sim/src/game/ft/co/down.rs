@@ -327,6 +327,7 @@ impl Running<'_> {
     /// by its TransN, the airborne pass, a rumble and intangibility. The fighter is set against
     /// the wall (in x) only off a wall to its left (`RIGHT_WALL_HUG`); off one to its right the
     /// original moves it up by its TransN's y instead.
+    #[doc(alias = "ftCo_80090574")]
     #[doc(alias = "fn_800C7DC4")]
     pub fn down_reflect(&mut self, gobj: GObjId, msid: i32, normal: Vec3, offset: Vec3) {
         let f = self.game.fighter_id(gobj);
@@ -479,6 +480,7 @@ impl Running<'_> {
     }
 
     /// A roll up from the floor, `ftCo_Down_CheckInput`: the C-stick or the stick to the side.
+    #[doc(alias = "ftCo_80098324")]
     #[doc(alias = "ftCo_Down_CheckInput")]
     pub fn down_roll_check(&mut self, gobj: GObjId) -> bool {
         let c = self.common();
@@ -581,6 +583,7 @@ impl Running<'_> {
 
     /// Hit while lying down, `ftCo_8009F0F0`: below `ftCommonData` x428 damage (or out of
     /// stamina) the fighter stays down (`ftCo_8009F184`).
+    #[doc(alias = "ftCo_8009F184")]
     #[doc(alias = "ftCo_8009F0F0")]
     pub fn down_damage_check(&mut self, gobj: GObjId) -> bool {
         let x428 = f64::from(self.common().i32(0x428));
@@ -707,6 +710,7 @@ impl Running<'_> {
     /// A tech roll on landing, `ftCo_80098928`: the stick to the side past `ftCommonData`
     /// x254, forward or back.
     #[doc(alias = "ftCo_80098928")]
+    #[doc(alias = "ftCo_800989D4")]
     pub fn passive_check(&mut self, gobj: GObjId) -> bool {
         if !self.tech_input(gobj) {
             return false;

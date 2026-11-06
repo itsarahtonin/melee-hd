@@ -649,7 +649,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CargoThrowHi_IASA")]
     #[doc(alias = "ftCo_CargoThrowLw_IASA")]
     #[doc(alias = "ftCo_ThrowB_IASA")]
-    // Ports `ftCo_ThrowHi_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_ThrowHi_IASA")]
     #[doc(alias = "ftCo_ThrowLw_IASA")]
     #[doc(alias = "ftCo_ThrownF_IASA")]
     #[doc(alias = "ftCo_ThrownF_Phys")]
@@ -657,9 +657,9 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ThrownB_IASA")]
     #[doc(alias = "ftCo_ThrownB_Phys")]
     #[doc(alias = "ftCo_ThrownB_Coll")]
-    // Ports `ftCo_ThrownHi_IASA`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownHi_Phys`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownHi_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_ThrownHi_IASA")]
+    #[doc(alias = "ftCo_ThrownHi_Phys")]
+    #[doc(alias = "ftCo_ThrownHi_Coll")]
     #[doc(alias = "ftCo_ThrownLw_IASA")]
     #[doc(alias = "ftCo_ThrownLw_Coll")]
     pub fn co_throw_nothing(&mut self, _gobj: GObjId) {}

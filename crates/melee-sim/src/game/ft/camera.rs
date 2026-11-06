@@ -33,6 +33,7 @@ pub fn proc_camera(g: &mut Running, gobj: GObjId) {
 impl Running<'_> {
     /// The frame's model shake (`dmg.x18B8`, `x18BC`), `ftCommon_8008021C`: the hit's shake,
     /// the grab-mash shake while mashing out (`x2224_b5`), and a charging smash's.
+    #[doc(alias = "ftCo_800DEEE8")]
     #[doc(alias = "ftCommon_8008021C")]
     pub fn model_shake(&mut self, f: FighterId) {
         let d = &mut self.game.fighters[f.0].dmg;

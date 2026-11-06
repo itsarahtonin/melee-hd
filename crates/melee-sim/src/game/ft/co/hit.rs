@@ -639,6 +639,7 @@ impl Running<'_> {
     /// in turn, else hitstun. A cape that can't turn the fighter alone keeps its facing for
     /// the reaction and turns it afterwards. A grab's victim's or holder's and a heavy item
     /// holder's stop at their seams.
+    #[doc(alias = "it_8026B2D8")]
     #[doc(alias = "ftCo_8008EC90")]
     pub fn damage_pick_reaction(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
@@ -849,7 +850,7 @@ impl Running<'_> {
     /// `ftCommonData`'s description (`x380`, `lbColl_80008D30`) with no attacker
     /// (`ftColl_800788D4`), from its `TransN2` joint, its knockback and damage taken, then
     /// hitstun.
-    // Ports `ftCo_800DE2F0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800DE2F0")]
     fn holder_knocked_back(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let desc = self.common().at(0x380);
@@ -1035,7 +1036,7 @@ impl Running<'_> {
 
     /// The grab broken, `ftCo_800DCE34`: both let go (`ftCo_800DC920`), and `b`'s model
     /// placed where it is (`a`'s instead when `b` was held, which letting go has cleared).
-    // Ports `ftCo_800DCE34`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800DCE34")]
     fn grab_break(&mut self, a: GObjId, b: GObjId) {
         self.grab_release(a, b);
         let g = if self.game.fighter(b).x221B.x221B_b7 {

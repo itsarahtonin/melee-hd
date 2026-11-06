@@ -1057,6 +1057,7 @@ impl Session {
 
 impl Running<'_> {
     /// `main` from the audio setup to the modes' loop's first scene.
+    #[doc(alias = "db_EnableItemSpawns")]
     #[doc(alias = "main")]
     #[doc(alias = "gmMain_8015FDA0")]
     fn boot_main(

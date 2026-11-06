@@ -86,6 +86,7 @@ impl Pacing {
     /// Takes up a new game clock period and the tick length, `lb_80019628` (which the scene
     /// loop runs each round through `lb_80019894`). Returns the new tick length when it
     /// changed, which sets the polling alarm again at that period.
+    #[doc(alias = "fn_800195FC")]
     #[doc(alias = "lb_80019628")]
     pub fn update(&mut self) -> Option<i64> {
         let new = self.requested as i64;
@@ -118,6 +119,7 @@ impl Pacing {
 
     /// Advances both clocks by a tick, `lb_80019900`'s clocks. Its caller renews the game and
     /// copy pad statuses when the game clock comes due.
+    #[doc(alias = "lb_80019900")]
     pub fn advance(&mut self) {
         let tick = self.tick;
         for c in &mut self.clocks {

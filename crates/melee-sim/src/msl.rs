@@ -665,6 +665,7 @@ fn float2str(num: f64, f: &mut Format) -> Option<Vec<u8>> {
 /// `vsnprintf` with no limit (`vsprintf`, and `DevText_Printf`'s, which passes -1): what
 /// `__pformatter` writes for `format` and `args`, without the terminator.
 #[doc(alias = "vsnprintf")]
+#[doc(alias = "sprintf")]
 #[doc(alias = "__pformatter")]
 #[doc(alias = "parse_format")]
 #[doc(alias = "long2str")]

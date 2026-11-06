@@ -141,6 +141,8 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftPr_SpecialS_Phys")]
+#[doc(alias = "ftPr_SpecialS_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_ENTER => g.purin_special_s_enter(gobj),

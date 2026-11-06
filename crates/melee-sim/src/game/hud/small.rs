@@ -444,6 +444,7 @@ impl Running<'_> {
     }
 
     /// The four arrows, from `IfAll.dat`'s `Stc_rarwmdls`, `un_802FE260`.
+    #[doc(alias = "ifAll_GetArchive")]
     #[doc(alias = "un_802FE260")]
     pub fn create_arrows(&mut self) {
         let data = self.data;

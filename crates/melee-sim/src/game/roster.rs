@@ -301,10 +301,6 @@ pub const STAGES: &[Stage] = &[
             unreached: &[
                 YAKU_UNANCHORED,
                 (
-                    "grCorneria_801E2E50",
-                    "the computer players' floor check, which the CPU audit holds (cpu_audit)",
-                ),
-                (
                     "it_802EB5A8",
                     "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload, which no VS match does",
                 ),
