@@ -336,6 +336,7 @@ impl Gx {
         self.write_ras_reg(self.data.cp_tex_size);
         self.write_ras_reg(self.data.cp_tex_stride);
         let phy_addr = dest & 0x3FFF_FFFF;
+        self.copied_to.push(phy_addr);
         let mut r = 0u32;
         set_field(&mut r, 21, 0, phy_addr >> 5);
         set_field(&mut r, 8, 24, 0x4B);

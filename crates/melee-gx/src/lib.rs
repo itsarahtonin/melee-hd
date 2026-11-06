@@ -75,6 +75,15 @@ pub trait Sink {
     fn take_written(&mut self) -> Vec<Written> {
         Vec::new()
     }
+    /// Memory from `start` to `end` may hold other bytes from now on than the host's
+    /// `Memory::view` held there (its address space gave the range to other data): what was
+    /// kept of it by address (hashes, arrays, copies) goes.
+    fn forget_memory(&mut self, _start: u32, _end: u32) {}
+}
+
+/// Whether `len` bytes at `at` reach into `start..end`.
+pub fn overlaps(at: u32, len: u32, start: u32, end: u32) -> bool {
+    u64::from(at) < u64::from(end) && u64::from(at) + u64::from(len) > u64::from(start)
 }
 
 /// A row a copy from the EFB wrote to memory.

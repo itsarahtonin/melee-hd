@@ -3,6 +3,12 @@
 //! loaded archives (named by [`DataRef`]) and in images the presentation makes (EFB copies),
 //! so each archive gets a range of addresses the first time something of it is drawn, and the
 //! GPU's reads find their bytes through those ranges.
+//!
+//! The archives' ranges are 32 MB in all, less than a long session draws (Adventure's, by its
+//! Corneria intro), so once the space is full, the ranges of the archives the frame being
+//! built hasn't drawn go back: such an archive gets a new range when it's drawn again, and
+//! what the renderers kept of the old range by address goes ([`Space::reclaimed_since`],
+//! `Gpu::run`). Until the space first fills, every archive keeps the range it was given.
 
 use std::cell::RefCell;
 
@@ -54,17 +60,91 @@ pub enum Dynamic {
     Movie(u8),
 }
 
+/// The archives' addresses.
+pub const ARCHIVES: std::ops::Range<u32> = ARCHIVE_BASE..DYNAMIC_BASE;
+
+/// How many of the latest ranges given back [`Space::reclaimed_since`] can name.
+const RECLAIM_LOG: usize = 1024;
+
+/// An archive's range, by the archive.
+#[derive(Clone, Copy)]
+struct Slot {
+    start: u32,
+    /// The last frame that drew something of it ([`Space::begin_frame`]).
+    used: u32,
+    /// Whether a copy from the EFB wrote into it: the copy lives at its addresses (in the
+    /// renderers' memory, as in the console's), so the range stays.
+    pinned: bool,
+}
+
 #[derive(Default)]
 struct Ranges {
     /// Archives with a range: (start, end, archive), by start.
     archives: Vec<(u32, u32, ArchiveId)>,
+    /// Each archive's range, by its id.
+    slots: Vec<Option<Slot>>,
     next: u32,
+    /// The frame being built.
+    frame: u32,
+    /// The latest ranges given back, (start, end), and how many went back in all.
+    reclaimed: std::collections::VecDeque<(u32, u32)>,
+    reclaims: u64,
     /// Images the presentation makes: (start, size, what), with their bytes.
     dynamic: Vec<(u32, u32, Dynamic, Vec<u8>)>,
     next_dynamic: u32,
     /// Images whose bytes start as what their block held (the results screen's): the
     /// leftovers last written into each, and whether a copy has written it since.
     seeds: Vec<(Dynamic, Seed, bool)>,
+}
+
+impl Ranges {
+    /// Gives back the ranges of the archives the frame being built hasn't drawn, but those a
+    /// copy went into, and moves the next range down to just past the highest kept.
+    fn reclaim(&mut self) {
+        let frame = self.frame;
+        let Ranges {
+            archives,
+            slots,
+            reclaimed,
+            reclaims,
+            ..
+        } = self;
+        archives.retain(|&(start, end, archive)| {
+            let i = usize::from(archive.0);
+            let Some(slot) = slots[i] else {
+                return true;
+            };
+            if slot.used == frame || slot.pinned {
+                return true;
+            }
+            slots[i] = None;
+            if reclaimed.len() == RECLAIM_LOG {
+                reclaimed.pop_front();
+            }
+            reclaimed.push_back((start, end));
+            *reclaims += 1;
+            false
+        });
+        self.next = self
+            .archives
+            .iter()
+            .map(|a| (a.1 + 0x3F) & !0x1F)
+            .max()
+            .unwrap_or(ARCHIVE_BASE);
+    }
+
+    /// The lowest start of a gap between the ranges that holds `len` bytes, spaced from the
+    /// range below as a new range is.
+    fn first_fit(&self, len: u32) -> Option<u32> {
+        let mut at = ARCHIVE_BASE;
+        for &(start, end, _) in &self.archives {
+            if u64::from(at) + u64::from(len) <= u64::from(start) {
+                return Some(at);
+            }
+            at = at.max((end + 0x3F) & !0x1F);
+        }
+        (u64::from(at) + u64::from(len) <= u64::from(DYNAMIC_BASE)).then_some(at)
+    }
 }
 
 /// What an image's block held when the game took it.
@@ -141,20 +221,86 @@ impl Space {
             .any(|p| u64::from(p.list.offset) + u64::from(p.len) > u64::from(at))
     }
 
+    /// Starts building a frame: the archives `keep` names (those whose addresses HSD's caches
+    /// hold from the frames before, `prev_array`'s) count as drawn in it.
+    pub fn begin_frame(&self, keep: &[Option<ArchiveId>]) {
+        let mut ranges = self.ranges.borrow_mut();
+        ranges.frame = ranges.frame.wrapping_add(1);
+        let frame = ranges.frame;
+        for a in keep.iter().flatten() {
+            if let Some(Some(slot)) = ranges.slots.get_mut(usize::from(a.0)) {
+                slot.used = frame;
+            }
+        }
+    }
+
     /// The address of a place in an archive, giving the archive its range if it has none.
     pub fn addr(&self, data: &Archives, r: DataRef) -> u32 {
         let mut ranges = self.ranges.borrow_mut();
-        if let Some(&(start, _, _)) = ranges.archives.iter().find(|a| a.2 == r.archive) {
-            return start + r.offset;
+        let frame = ranges.frame;
+        if let Some(Some(slot)) = ranges.slots.get_mut(usize::from(r.archive.0)) {
+            slot.used = frame;
+            return slot.start + r.offset;
         }
         let len = data.get(r.archive).data().len() as u32;
-        let start = ranges.next;
+        let start = match ranges.next.checked_add(len) {
+            Some(end) if end <= DYNAMIC_BASE => ranges.next,
+            _ => {
+                ranges.reclaim();
+                ranges.first_fit(len).unwrap_or_else(|| {
+                    panic!(
+                        "the archives' address space is full: the frame draws more archives \
+                         than its {} MB hold",
+                        (DYNAMIC_BASE - ARCHIVE_BASE) >> 20
+                    )
+                })
+            }
+        };
         let end = start + len;
-        assert!(end <= DYNAMIC_BASE, "the archives' address space is full");
-        ranges.next = (end + 0x3F) & !0x1F;
+        ranges.next = ranges.next.max((end + 0x3F) & !0x1F);
         let at = ranges.archives.partition_point(|a| a.0 < start);
         ranges.archives.insert(at, (start, end, r.archive));
+        let i = usize::from(r.archive.0);
+        if ranges.slots.len() <= i {
+            ranges.slots.resize(i + 1, None);
+        }
+        ranges.slots[i] = Some(Slot {
+            start,
+            used: frame,
+            pinned: false,
+        });
         start + r.offset
+    }
+
+    /// How many ranges have gone back so far.
+    pub fn reclaims(&self) -> u64 {
+        self.ranges.borrow().reclaims
+    }
+
+    /// The ranges (start, end) that went back since there had been `seen` ([`Space::reclaims`]),
+    /// whose addresses may now hold another archive's bytes; `None` when that's more than the
+    /// space remembers, so everything kept by an archive's address must go.
+    pub fn reclaimed_since(&self, seen: u64) -> Option<Vec<(u32, u32)>> {
+        let ranges = self.ranges.borrow();
+        let n = usize::try_from(ranges.reclaims.checked_sub(seen)?).ok()?;
+        let log = &ranges.reclaimed;
+        (n <= log.len()).then(|| log.iter().skip(log.len() - n).copied().collect())
+    }
+
+    /// Keeps the range of the archive holding `phys`, if one does, for good: a copy from the
+    /// EFB went there.
+    pub fn pin_at(&self, phys: u32) {
+        let phys = phys & 0x03FF_FFFF;
+        let mut ranges = self.ranges.borrow_mut();
+        let i = ranges.archives.partition_point(|a| a.0 <= phys);
+        let Some(&(_, end, archive)) = i.checked_sub(1).and_then(|i| ranges.archives.get(i)) else {
+            return;
+        };
+        if phys < end
+            && let Some(Some(slot)) = ranges.slots.get_mut(usize::from(archive.0))
+        {
+            slot.pinned = true;
+        }
     }
 
     /// The address of an image the presentation makes, `size` bytes, making it the first
@@ -220,6 +366,7 @@ impl Space {
     pub fn write(&self, addr: u32, bytes: &[u8]) {
         let addr = addr & 0x03FF_FFFF;
         if addr < DYNAMIC_BASE {
+            self.pin_at(addr);
             let mut o = self.overlay.borrow_mut();
             o.retain(|(a, b)| {
                 !(*a >= addr && *a as usize + b.len() <= addr as usize + bytes.len())
@@ -385,6 +532,7 @@ fn patch_display_list(bytes: &[u8], p: &Patch, at: usize, out: &mut [u8]) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use melee_data::archive::Archive;
 
     /// Finding a rewritten list over a range finds what testing every list does.
     #[test]
@@ -422,6 +570,121 @@ mod tests {
                 });
                 assert_eq!(space.patched(archive, at, end), want);
             }
+        }
+    }
+
+    /// Archives of `n` MB each, every byte of the `i`th `i`.
+    fn archives(count: usize, mb: usize) -> Archives {
+        let mut data = Archives::default();
+        for i in 0..count {
+            data.add(Archive::raw(&vec![i as u8; mb << 20]));
+        }
+        data
+    }
+
+    fn at(archive: usize, offset: u32) -> DataRef {
+        DataRef {
+            archive: ArchiveId(archive as u16),
+            offset,
+        }
+    }
+
+    /// A session drawing 100 archives of 1 MB, two or three a frame, three times the 32 MB the
+    /// archives' ranges hold: ranges go back once the space is full, every address stays in
+    /// the space, each frame's archives keep theirs through the frame and read as their own
+    /// bytes, and until the space first fills, ranges are the ones it always gave.
+    #[test]
+    fn ranges_go_back_once_the_space_is_full() {
+        let data = archives(100, 1);
+        let space = Space::default();
+        let mut first = Vec::new();
+        for frame in 0..400usize {
+            space.begin_frame(&[]);
+            let drawn: Vec<usize> = [frame % 100, (frame * 7 + 3) % 100, (frame / 3) % 100]
+                .into_iter()
+                .take(2 + frame % 2)
+                .collect();
+            let mut starts = Vec::new();
+            for &a in &drawn {
+                let start = space.addr(&data, at(a, 0));
+                if space.reclaims() == 0 && !first.iter().any(|f: &(usize, u32)| f.0 == a) {
+                    first.push((a, start));
+                }
+                starts.push(start);
+            }
+            for (&a, &start) in drawn.iter().zip(&starts) {
+                assert!(ARCHIVES.contains(&start) && start + (1 << 20) <= ARCHIVES.end);
+                // The same range all frame long, and the archive's bytes there.
+                assert_eq!(space.addr(&data, at(a, 0x1234)), start + 0x1234);
+                let mut b = [0xEE; 8];
+                space.read(&data, start + 0x8_0000, &mut b);
+                assert_eq!(b, [a as u8; 8]);
+                assert_eq!(space.view(&data, start, 16), Some(&[a as u8; 16][..]));
+            }
+            for (i, &x) in starts.iter().enumerate() {
+                for (j, &y) in starts.iter().enumerate() {
+                    assert!(
+                        drawn[i] == drawn[j] || x.abs_diff(y) >= 1 << 20,
+                        "frame {frame}: archives {} and {} overlap",
+                        drawn[i],
+                        drawn[j]
+                    );
+                }
+            }
+        }
+        assert!(
+            space.reclaims() > 100,
+            "{} ranges went back",
+            space.reclaims()
+        );
+        // The ranges given before the space filled: one after another, 32 bytes apart.
+        first.sort_by_key(|f| f.1);
+        for (i, f) in first.iter().enumerate() {
+            assert_eq!(f.1, ARCHIVE_BASE + i as u32 * ((1 << 20) + 0x20));
+        }
+        assert_eq!(first.len(), 31);
+    }
+
+    /// Ranges given back are named by [`Space::reclaimed_since`] in order, and a range a copy
+    /// wrote into, or one HSD's caches hold (`begin_frame`'s), stays.
+    #[test]
+    fn copied_and_kept_ranges_stay() {
+        let data = archives(40, 1);
+        let space = Space::default();
+        space.begin_frame(&[]);
+        let copied = space.addr(&data, at(0, 0));
+        space.write(copied + 0x100, &[0xAB; 4]);
+        let kept = space.addr(&data, at(1, 0));
+        let mut gone = Vec::new();
+        for a in 2..40 {
+            space.begin_frame(&[Some(ArchiveId(1))]);
+            let seen = space.reclaims();
+            let start = space.addr(&data, at(a, 0));
+            for (s, e) in space.reclaimed_since(seen).expect("the latest ranges") {
+                assert!(s >= ARCHIVE_BASE && e <= DYNAMIC_BASE && e - s == 1 << 20);
+                assert!(s != copied && s != kept);
+                gone.push(s);
+            }
+            assert!(start != copied && start != kept);
+        }
+        assert!(!gone.is_empty());
+        assert_eq!(space.reclaimed_since(0).map(|r| r.len()), Some(gone.len()));
+        assert_eq!(space.addr(&data, at(0, 0)), copied);
+        assert_eq!(space.addr(&data, at(1, 0)), kept);
+        let mut b = [0; 4];
+        space.read(&data, copied + 0x100, &mut b);
+        assert_eq!(b, [0xAB; 4]);
+    }
+
+    /// A frame that draws more than the space holds stops by name.
+    #[test]
+    #[should_panic(expected = "the archives' address space is full")]
+    fn a_frame_drawing_more_than_the_space_stops() {
+        let data = archives(40, 1);
+        let space = Space::default();
+        space.begin_frame(&[]);
+        for a in 0..40 {
+            space.addr(&data, at(a, 0));
         }
     }
 }
