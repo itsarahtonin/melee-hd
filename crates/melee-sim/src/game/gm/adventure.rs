@@ -952,12 +952,12 @@ const FT_YOSHI: i8 = 0xE;
 const FT_LINK: i8 = 6;
 const FT_KIRBY: i8 = 4;
 const FT_PIKACHU: i8 = 0xC;
-const FT_PICHU: i8 = 0x18;
+const FT_PICHU: i8 = 0x17;
 const FT_PURIN: i8 = 0xF;
 const FT_POPO: i8 = 0xA;
 const FT_NANA: i8 = 0xB;
-const FT_BOY: i8 = 0x1B;
-const FT_GIRL: i8 = 0x1C;
+const FT_BOY: i8 = 0x1D;
+const FT_GIRL: i8 = 0x1E;
 const FT_NONE: i8 = 0x21;
 /// `CKind_Pichu`, `CKind_Purin`.
 const CKIND_PICHU: u8 = 0x18;
@@ -1065,7 +1065,7 @@ impl Running<'_> {
 
     /// An Adventure stage's match's exit, `gm_801B4170`: the stage marked won (2) or not (1)
     /// in `gm_80490910`, the run's exit (`gm_8017D7AC`, the game over next at no stock), and
-    /// after the table's last stage Adventure's clear (`gm_8017CBAC`, unported).
+    /// after the table's last stage Adventure's clear (`gm_8017CBAC`).
     #[doc(alias = "gm_801B4170")]
     pub fn adventure_exit_stage(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
@@ -1074,7 +1074,7 @@ impl Running<'_> {
         let on = self.one_player_match_exit(&mut run, GAME_OVER);
         self.game.one_player.adventure.base = run;
         if on && ADVENTURE_TABLE[index + 1].id == 0xFF {
-            crate::game::code::unported_call("gm_8017CBAC (Adventure's clear)");
+            self.adventure_clear();
         }
     }
 
@@ -1340,6 +1340,45 @@ impl Running<'_> {
         }
         self.game.one_player.adventure.x74[3] = u8::from(giga);
         self.set_next_game_mode_state_id(BOWSERTOY_CUTSCENE);
+    }
+
+    /// Adventure's clear, `gm_8017CBAC` with Adventure's run and stocks (`gmMainLib_8015CDD4`)
+    /// into the ending (mode 0x16).
+    fn adventure_clear(&mut self) {
+        let run = self.game.one_player.adventure.base;
+        let stocks = self.game.game_data.vs.unk_522.stocks;
+        self.one_player_clear(&run, stocks, super::endings::GM_ADVENTURE_GOVER);
+    }
+
+    /// Bowser's toy's cutscene's exit, `gm_801B5078`: without Giga Bowser (`x77`), Adventure's
+    /// clear.
+    #[doc(alias = "gm_801B5078")]
+    pub fn adventure_exit_toy(&mut self) {
+        if self.game.one_player.adventure.x74[3] == 0 {
+            self.adventure_clear();
+        }
+    }
+
+    /// Giga Bowser's match's exit, `gm_801B50C4`: no stock lost in it marked (`x78`), then
+    /// the stage marked and the run's exit.
+    // Ports gm_801B50C4; aliased once a check reaches it.
+    pub fn adventure_exit_giga(&mut self) {
+        let run = &self.game.one_player.adventure.base;
+        let e = &self.game.one_player.match_exit;
+        if i32::from(run.player.stocks) == i32::from(e.match_end.player_standings[0].stocks) {
+            self.game.one_player.adventure.x74[4] = 1;
+        }
+        let id = self.game.machine.routing.curr_state_id;
+        self.adventure_mark_stage(id);
+        let mut run = self.game.one_player.adventure.base;
+        self.one_player_match_exit(&mut run, GAME_OVER);
+        self.game.one_player.adventure.base = run;
+    }
+
+    /// Giga Bowser's defeat's cutscene's exit, `gm_801B518C`: Adventure's clear.
+    // Ports gm_801B518C; aliased once a check reaches it.
+    pub fn adventure_exit_giga_defeated(&mut self) {
+        self.adventure_clear();
     }
 
     /// Peach's Castle's match, `gm_801B461C`: the stage's match (`gm_801B4064`), and after

@@ -867,13 +867,11 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
-            "gmMainLib_8015D25C",
             "gmMainLib_8015D2F0",
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
             "fn_80160F58",
-            "fn_80162DF8",
             "gm_801647F8",
         ],
         modes: SETUP_MODES,
@@ -957,11 +955,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "Adventure's mode and its intro",
-        covers: &[
-            "melee/gm/gmadventure",
-            "melee/gm/gm_17E4",
-            "gm_8017CBAC (Adventure's clear)",
-        ],
+        covers: &["melee/gm/gmadventure"],
         modes: &[AD, CL],
     },
     Gap {
