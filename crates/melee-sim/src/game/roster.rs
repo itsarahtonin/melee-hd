@@ -545,10 +545,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grpstadium"],
             modules: &["gr/stadium"],
-            unreached: &[(
-                "grStadium_801D384C",
-                "the screen's count, which only single-player modes show",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },

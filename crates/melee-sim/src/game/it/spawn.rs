@@ -249,13 +249,17 @@ pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, w
     let n = on(mask).count();
     table.size = n as u8;
     // The kinds' and the weights' arrays, 4 bytes an entry (`HSD_MemAlloc` of nothing
-    // allocates nothing).
-    if n > 0 {
+    // allocates nothing), laid out below.
+    let arrays = if n > 0 {
         crate::hsd::heap::with(|h| {
-            h.mem_alloc(4 * n as u32);
-            h.mem_alloc(4 * n as u32);
-        });
-    }
+            (
+                h.mem_alloc_unclaimed(4 * n as u32),
+                h.mem_alloc_unclaimed(4 * n as u32),
+            )
+        })
+    } else {
+        None
+    };
     let mut kinds = Vec::with_capacity(n);
     let mut weights = Vec::with_capacity(n);
     let mut cumulative = 0i32;
@@ -271,8 +275,21 @@ pub fn build(table: &mut PickTable, counts: &[i32; 35], mask: u64, first: i32, w
             ),
         ));
     }
+    if let Some(at) = arrays {
+        lay_arrays(at, &kinds, &weights);
+    }
     table.kinds = Some(kinds);
     table.weights = Some(weights);
+}
+
+/// What a pick table's code writes into its two arrays, in the heap's image: a byte a kind
+/// and a halfword a weight, the arrays' rest (4 bytes an entry) keeping what the blocks held.
+fn lay_arrays((kinds_at, weights_at): (u32, u32), kinds: &[u8], weights: &[u16]) {
+    let w: Vec<u8> = weights.iter().flat_map(|w| w.to_be_bytes()).collect();
+    crate::hsd::heap::with(|h| {
+        h.image.put(kinds_at, kinds);
+        h.image.put(weights_at, &w);
+    });
 }
 
 /// The monsters' table from the common data's weights, `it_8026CF04`.
@@ -287,18 +304,20 @@ pub fn build_monsters(game: &mut Game, data: &Archives) {
     let t = &mut game.it.spawn.monsters;
     t.total = sum as u16;
     t.size = 4;
-    // The kinds' and the weights' arrays.
-    crate::hsd::heap::with(|h| {
-        h.mem_alloc(4 * 4);
-        h.mem_alloc(4 * 4);
-    });
+    // The kinds' and the weights' arrays, laid out below.
+    let arrays =
+        crate::hsd::heap::with(|h| (h.mem_alloc_unclaimed(4 * 4), h.mem_alloc_unclaimed(4 * 4)));
     let mut cumulative = 0u32;
     let mut weights = Vec::with_capacity(4);
     for &x in &w {
         weights.push(cumulative as u16);
         cumulative = cumulative.wrapping_add(x as u32);
     }
-    t.kinds = Some((0..4).map(|i| KURIBOH as u8 + i).collect());
+    let kinds: Vec<u8> = (0..4).map(|i| KURIBOH as u8 + i).collect();
+    if let Some(at) = arrays {
+        lay_arrays(at, &kinds, &weights);
+    }
+    t.kinds = Some(kinds);
     t.weights = Some(weights);
 }
 
