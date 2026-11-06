@@ -124,6 +124,21 @@ impl Running<'_> {
         }
     }
 
+    /// An attack's record's bytes past its named flags: byte 0x11 (its low three bits count)
+    /// and bytes 0x12 and 0x13, the fighter's `x2074`'s or the item's `xDA4` word's.
+    fn attack_record_pad(&self, r: AttackRecord) -> [u8; 3] {
+        match r {
+            AttackRecord::Fighter(g) => {
+                let x = self.game.fighter(g).x2074.x10;
+                [x[1], x[2], x[3]]
+            }
+            AttackRecord::Item(g) => {
+                let w = super::super::it::item(self.game, g).xDA4_word.to_be_bytes();
+                [w[1], w[2], w[3]]
+            }
+        }
+    }
+
     /// Marks the attack's record as one that landed (`x10_b7`).
     fn mark_record_landed(&mut self, r: AttackRecord) {
         match r {
@@ -515,6 +530,10 @@ impl Running<'_> {
         let d = &mut fp.dmg.x18d8;
         *d = rec;
         d.x4 = fp::fctiwz(reg(fp.dmg.x1830_percent));
+        // The copy is the record's whole 0x14 bytes, its padding too.
+        let pad = self.attack_record_pad(record);
+        let f = self.game.fighter_id(victim);
+        self.game.ft.hit_record_pad.insert(f.0, pad);
         let fp = self.game.fighter_mut(victim);
         fp.dmg.x18d8.x11_b0 = behind;
         if edge != 0 {

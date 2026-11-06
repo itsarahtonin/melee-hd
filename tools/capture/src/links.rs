@@ -92,8 +92,56 @@ impl Comparer<'_> {
         ) {
             return;
         }
-        let m = mem(self.mem);
         let game = self.game;
-        game.it.links[o.0].compare(&m, t, &format!("{path} link"), self);
+        let link = &game.it.links[o.0];
+        let size = <ItemLink as Mirror>::SIZE;
+        let rt = link_render_target_view(game, o, t, self.mem);
+        let view = self.unlaid_view(t, size, rt, |l, cx| {
+            use melee_sim::game::mirror::LayOut;
+            link.lay(l, t, cx);
+        });
+        match view {
+            Some(block) => {
+                let m = Mem {
+                    bytes: &block,
+                    base: t,
+                };
+                link.compare(&m, t, &format!("{path} link"), self);
+            }
+            None => {
+                let m = mem(self.mem);
+                link.compare(&m, t, &format!("{path} link"), self);
+            }
+        }
     }
+}
+
+/// A link's block as `compare`'s `item_render_target_view` makes an item's: where it held the
+/// GPU's pixels when it came new from the heap, each bit ours still holds as the fill's takes
+/// ours. None for a link made over none.
+fn link_render_target_view(
+    game: &melee_sim::game::state::Game,
+    o: ItemLinkId,
+    at: u32,
+    mem: &[u8],
+) -> Option<Vec<u8>> {
+    use melee_sim::game::mirror::LayOut;
+    let runs = game.it.link_render_leftovers.get(&o.0)?;
+    let size = <ItemLink as Mirror>::SIZE;
+    let lo = (at - MEM1) as usize;
+    let fill = game.objs.heap.image.render_fill;
+    let mut l = melee_sim::hsd::export::Lay::new(at, size);
+    let cx = crate::compare::LeftoverWords(&game.objs.heap.image);
+    game.it.links[o.0].lay(&mut l, at, &cx);
+    let mut block = mem[lo..lo + size as usize].to_vec();
+    for &(a, b) in runs {
+        for off in a..b {
+            if let Some((ours, known)) = l.bits_at(at + off) {
+                let same = !(ours ^ fill) & known;
+                let t = &mut block[off as usize];
+                *t = (*t & !same) | (ours & same);
+            }
+        }
+    }
+    Some(block)
 }

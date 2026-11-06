@@ -381,6 +381,35 @@ impl<K: Kinds> Geometry<K> {
             let used = joints_addr + 0x34 * joint_count as u32;
             crate::hsd::heap::with(|h| h.image.unclaim(used, joints_addr + 256 * 0x34));
         }
+        // So do the vertices' and lines' arrays: the stage's vertices, and the lines its
+        // groups hold, are written; the rest keeps what memory held, where a later scene's
+        // joints may fall (allstar-clear, tick 3803: the rest area's after a match's).
+        if vertices_addr != 0 && crate::hsd::heap::image_on() {
+            let used = vertices_addr + 0x18 * verts.len().min(2048) as u32;
+            crate::hsd::heap::with(|h| {
+                h.image.unclaim(used, vertices_addr + 2048 * 0x18);
+                let mut held = vec![true; 1536];
+                for r in &ranges {
+                    for id in r.start as i32..r.start as i32 + r.count as i32 {
+                        if let Some(w) = held.get_mut(id as usize) {
+                            *w = false;
+                        }
+                    }
+                }
+                let mut i = 0;
+                while i < held.len() {
+                    let lo = i;
+                    while i < held.len() && held[i] {
+                        i += 1;
+                    }
+                    if i > lo {
+                        h.image
+                            .unclaim(lines_addr + 8 * lo as u32, lines_addr + 8 * i as u32);
+                    }
+                    i += 1;
+                }
+            });
+        }
         // The stamp the load leaves as the joints' array held it: after the menus, what they
         // left there (docs/engine.md, a session's heap leftovers).
         let left = crate::game::leftovers::bytes(data, joints_addr, 0x34 * joint_count as u32);

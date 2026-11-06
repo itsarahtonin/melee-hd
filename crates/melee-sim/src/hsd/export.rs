@@ -1576,6 +1576,18 @@ pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
     l.bytes(0x20, &[o.intensity, 0, 0, 0]);
     l.u32(0x24, 0);
     l.put(img);
+    // Its texture's `HSD_ImageDesc` (0x18, cleared as it's made, `HSD_ImageDescAlloc`): the
+    // image, its size and format I4 (`HSD_ShadowSetSize`); a later scene's object may be made
+    // over it (allstar-clear, tick 8194: a rest area's item over a match's shadow's).
+    if o.imagedesc_addr != 0 {
+        let mut l = Lay::new(o.imagedesc_addr, 0x18);
+        l.bytes(0, &[0; 0x18]);
+        l.u32(0, if o.image.allocated { o.image_addr } else { 0 });
+        l.u16(4, o.image.width);
+        l.u16(6, o.image.height);
+        l.u32(8, o.image.format);
+        l.put(img);
+    }
     for i in 0..o.object_nodes.len() {
         shadow_node(objs, img, s, i);
     }

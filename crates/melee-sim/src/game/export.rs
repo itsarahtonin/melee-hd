@@ -845,9 +845,12 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
         l.put_bytes(at + 0x110 + 0x181, &pad);
     }
     // A hit's struct copy of its attacker's hit data (`fn_80037F00`'s `fp->dmg.x18d8 = *ev`,
-    // the attacker's `x2074`) brings the attacker's bits past the named ones and its padding,
-    // which melee-sim doesn't keep: unknown.
-    l.forget(at + 0x18E9, 3);
+    // the attacker's `x2074`) brings the attacker's bits past the named ones and its padding
+    // (`ft::Globals::hit_record_pad`); before a hit's copy, what the block held.
+    if let Some(&[low, b2, b3]) = game.ft.hit_record_pad.get(&f.0) {
+        l.put_bits(at + 0x18E9, 5, 3, u32::from(low & 7));
+        l.put_bytes(at + 0x18EA, &[b2, b3]);
+    }
     // The action's figatree (`x590`) is in the main animation buffer, the second one
     // (`x598`) in the main or the second: their places are the buffers', whichever other
     // copies of their archives there are (two fighters' buffers can hold one).
@@ -930,8 +933,21 @@ pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handle
         return;
     }
     let mut l = Lay::leftover(img, data, at, super::structs::ItemLink::SIZE);
+    // A box source's joint member's last two words, which the link never writes: what its
+    // block held, not its claim's (`leftovers::keep_box_tail`).
+    let tail = l.kept(at + 0x30 + 0x104 + 0x18, 8);
     let cx = Addrs { game, img };
-    game.it.links[k.0].lay(&mut l, at, &cx);
+    let link = &game.it.links[k.0];
+    link.lay(&mut l, at, &cx);
+    if matches!(
+        link.coll_data.ecb_source.x4,
+        crate::mp::coll::EcbShape::Box { .. }
+    ) {
+        l.restore(tail);
+    }
+    if let Some(runs) = game.it.link_render_leftovers.get(&k.0) {
+        l.keep_render_target(runs, img.render_fill);
+    }
     l.put(img);
 }
 
@@ -1240,6 +1256,48 @@ pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
 /// past its count).
 pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
     let fp = &game.fighters[f.0];
+    // Past the bones and the DObjs listed the blocks keep what they held, not their claims'
+    // unknown bytes (allstar-clear, tick 10829: a rest area's stage object over a match's
+    // fighter's parts).
+    if let Some(p) = fp.parts {
+        let at = game.fighter_parts.addr(p.0);
+        let n = game.fighter_parts[p.0].len() as u32;
+        let len = crate::hsd::heap::Kind::FighterParts.init().0;
+        if at != 0 {
+            // Each bone's two bytes past its flags (`FighterBone`'s padding) too.
+            for i in 0..n {
+                img.unclaim(at + 0x10 * i + 0xA, at + 0x10 * i + 0xC);
+            }
+            if 0x10 * n < len {
+                img.unclaim(at + 0x10 * n, at + len);
+            }
+        }
+    }
+    if let Some(d) = fp.dobj_list.data {
+        let at = game.fighter_dobj_lists.addr(d.0);
+        let n = (fp.dobj_list.count as usize).min(game.fighter_dobj_lists[d.0].len()) as u32;
+        if at != 0 {
+            img.unclaim(
+                at + 4 * n,
+                at + crate::hsd::heap::Kind::FighterDObjList.init().0,
+            );
+        }
+    }
+    // So does the attributes' block past the character's attributes (`PUSH_ATTRS`), or whole
+    // until they're copied in (allstar-clear, tick 17504: a match's fighter over a rest area's
+    // fighter's attributes).
+    if let Some(a) = fp.dat_attrs_backup {
+        let at = game.fighter_attrs.addr(a.0);
+        let len = crate::hsd::heap::Kind::FighterAttrs.init().0;
+        let written = if fp.dat_attrs == Some(a) {
+            (game.fighter_attrs[a.0].len() as u32).min(len)
+        } else {
+            0
+        };
+        if at != 0 && written < len {
+            img.unclaim(at + written, at + len);
+        }
+    }
     let cx = Addrs { game, img };
     let mut lays = Vec::new();
     if let Some(p) = fp.parts {
@@ -1299,6 +1357,15 @@ pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::ha
     let at = game.fighter_dobj_lists.addr(list.0);
     if at == 0 {
         return;
+    }
+    // The entries it never wrote keep what the block held, not its claim's unknown bytes
+    // (allstar-clear, tick 7097: a rest area's item over a match's list, which the GPU's
+    // pixels were under).
+    let entries = &game.fighter_dobj_lists[list.0];
+    for i in 0..0x20u32 {
+        if entries.get(i as usize).is_none_or(|o| o.is_none()) {
+            img.unclaim(at + 4 * i, at + 4 * i + 4);
+        }
     }
     let mut l = Lay::leftover(img, data, at, crate::hsd::heap::Kind::FighterX2040.init().0);
     let cx = Addrs { game, img };
