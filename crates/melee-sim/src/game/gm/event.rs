@@ -1811,9 +1811,10 @@ impl Running<'_> {
     /// length): once one hand's HP is out, the camera on it and the match held; once both
     /// are, the HUD off, the camera on the second, the first player stopped, the time kept
     /// and the timer off, quakes and rumbles every 30 ticks, and the event cleared at its
-    /// end; failed with no stock left or at the time's end. The knockout's slowed part starts
-    /// with the crowd's cheer (`lbAudioAx_8002438C`), which isn't ported: the hands' own
-    /// defeat stops on it first.
+    /// end; failed with no stock left or at the time's end. The slowed part starts with the
+    /// crowd's cheer, the match's camera back and the match at half speed (with both out, a
+    /// fade to white over `x170` and the effects' master lowered a step each tick from
+    /// there, `lbAudioAx_80028B6C`); one hand's ends at full speed again.
     #[doc(alias = "gm_801BE638")]
     fn event_hands_proc(&mut self, gobj: GObjId) {
         let slowed = self.boss_mh_word(0x164);
@@ -1847,15 +1848,24 @@ impl Running<'_> {
                 self.game.game_data.vs.unk_530.x34 = self.game.vs_frame_count() as i32;
                 self.game.vs.start.timer_enabled = false;
             }
-            let t = self.game.game_data.vs.unk_530.x10;
-            if t == slowed {
-                super::super::code::unported_call("lbAudioAx_8002438C (Event 50's cheer)");
+            if self.game.game_data.vs.unk_530.x10 == slowed {
+                self.hands_out_cheer();
+                self.game.bgflash.fade_to_white(both);
             }
+            let t = self.game.game_data.vs.unk_530.x10;
             if t >= end {
                 self.event_success(gobj);
                 return;
             }
-            if t % 30 == 0 {
+            if t >= slowed {
+                // `lbAudioAx_80028B6C`.
+                let lb = &mut self.game.audio.lb;
+                lb.master -= 1;
+                if lb.master < 0 {
+                    lb.master = 0;
+                }
+            }
+            if self.game.game_data.vs.unk_530.x10 % 30 == 0 {
                 let port = usize::from(self.game.game_data.vs.unk_530.x6);
                 let tag = self.game.player_nametag(0);
                 self.tou_rumble(port, tag, 2, 0x1E);
@@ -1874,10 +1884,10 @@ impl Running<'_> {
                 self.boss_camera_on_player(slot);
                 self.game.set_db_pause_flag(6);
             }
-            if t == slowed {
-                super::super::code::unported_call("lbAudioAx_8002438C (Event 50's cheer)");
+            if self.game.game_data.vs.unk_530.x10 == slowed {
+                self.hands_out_cheer();
             }
-            if t == end {
+            if self.game.game_data.vs.unk_530.x10 == end {
                 self.game.set_game_speed(1.0);
             }
             let ev = &mut self.game.game_data.vs.unk_530;
@@ -1888,6 +1898,15 @@ impl Running<'_> {
         if self.game.player_p1_stocks() <= 0 || self.event_time_up() {
             self.event_fail(gobj);
         }
+    }
+
+    /// Event 50's knockout slowing: the crowd's cheer (320000), the match's camera again
+    /// (`ftBossLib_8015CC14`), the debug pause bit off and the match at half speed.
+    fn hands_out_cheer(&mut self) {
+        self.sfx_play_cheer(0x4E200);
+        self.boss_camera_standard();
+        self.game.clear_db_pause_flag(6);
+        self.game.set_game_speed(0.5);
     }
 }
 

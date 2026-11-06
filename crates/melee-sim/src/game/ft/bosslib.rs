@@ -318,7 +318,7 @@ impl Running<'_> {
 
     /// The cutscene camera looks at a player from `x178` in front, over 10 frames,
     /// `ftBossLib_8015CB9C`.
-    // Ports `ftBossLib_8015CB9C`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015CB9C")]
     pub fn boss_camera_on_player(&mut self, slot: i32) {
         let mut v = self.game.player_pos(slot);
         camera::script_look_at(self, v);
@@ -332,7 +332,7 @@ impl Running<'_> {
     }
 
     /// The match's camera again, `ftBossLib_8015CC14`.
-    // Ports `ftBossLib_8015CC14`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015CC14")]
     pub fn boss_camera_standard(&mut self) {
         camera::set_standard(&mut self.game.camera.cam);
     }
