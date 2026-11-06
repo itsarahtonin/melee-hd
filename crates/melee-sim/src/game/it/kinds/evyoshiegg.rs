@@ -203,6 +203,7 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 /// Broken, counting down to gone: the event failed 20 ticks in (`gm_801BEB68(1)` at 40 of
 /// its 60), `itEvyoshiegg_UnkMotion5_Anim`.
 #[doc(alias = "itEvyoshiegg_UnkMotion5_Anim")]
+#[doc(alias = "gm_801BEB68")]
 pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
     if item_mut(r.game, gobj).xDD4_itemVar.egg().rand_max.get() == 40 {
         r.game.game_data.vs.unk_530.x18 = 1;
