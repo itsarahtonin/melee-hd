@@ -533,3 +533,40 @@ fn sarahs_event_recordings_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Task 26's third round (docs/oracle.md, "Sessions"): Sarah's recordings of 2026-11-06 in
+/// `$SSBM_RS_LOCAL/lockstep/recordings` (each `NAME.inputs` with `NAME.card`, the card it
+/// started from, and `NAME-play.card`, the card her run left), traced into `traces/session`:
+/// a home run of 334.0 m (`gm_80173B30`'s 0xBD, `hr-450`), Training's combo of 23
+/// (`gm_80173BC4`'s 0x5B and 0x6D, `tr-combo20`) and Ganondorf's event cleared, his challenge
+/// and his match won (`gm_801732D8`, `ev29`), each clean from power-on to its trace's end with
+/// `--all --heap` and the card after the original's.
+#[test]
+fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [("hr-450", 2179), ("tr-combo20", 2647), ("ev29", 7233)] {
+        let after = ssbm_rs_local(&format!("lockstep/recordings/{name}-play.card"));
+        let trace = ssbm_rs_local(&format!("traces/session/{name}.trc"));
+        let inputs = ssbm_rs_local(&format!("lockstep/recordings/{name}.inputs"));
+        if std::env::var("SSBM_DISC").is_err()
+            || !std::path::Path::new(&trace).exists()
+            || !std::path::Path::new(&inputs).exists()
+        {
+            eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+            return;
+        }
+        let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+            .args(["session", &trace, &inputs, "--card-after", &after])
+            .args(["--all", "--heap"])
+            .output()
+            .expect("melee-oracle runs");
+        let out = String::from_utf8_lossy(&out.stdout).into_owned();
+        eprintln!("{out}");
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
