@@ -92,10 +92,26 @@ pub fn free(game: &mut Game, data: &melee_data::archive::Archives, l: ItemLinkId
 pub fn alloc(game: &mut Game, data: &melee_data::archive::Archives) -> ItemLinkId {
     let l = ItemLinkId(game.it.links.alloc_stale(ItemLink::default()));
     let addr = game.it.links.addr(l.0);
-    if let Some(left) =
-        crate::game::leftovers::import(data, addr, crate::game::leftovers::pool_grew())
-    {
+    let fresh = crate::game::leftovers::pool_grew();
+    if addr != 0 {
+        crate::game::leftovers::keep_box_tail(addr + 0x30);
+    }
+    if let Some(left) = crate::game::leftovers::import(data, addr, fresh) {
         game.it.links[l.0] = left;
+        // Where the block held the GPU's pixels, which the comparer leaves out while they
+        // hold the image's fill (docs/engine.md, "Uninitialized values"; allstar-clear, tick
+        // 12249: Link's hookshot over a rest area's shadow's image).
+        let rt = crate::game::leftovers::render_target_runs(
+            addr,
+            <ItemLink as crate::game::mirror::Mirror>::SIZE,
+        );
+        if rt.is_empty() {
+            game.it.link_render_leftovers.remove(&l.0);
+        } else {
+            game.it.link_render_leftovers.insert(l.0, rt);
+        }
+    } else if fresh || !crate::hsd::heap::image_on() {
+        game.it.link_render_leftovers.remove(&l.0);
     }
     l
 }

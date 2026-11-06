@@ -162,6 +162,18 @@ pub fn bytes_known(data: &Archives, addr: u32, len: u32) -> Option<(Vec<u8>, Vec
         .flatten()
 }
 
+/// The collision's ECB source's joint member's last two words (`ECBSource` +0x18) in a new
+/// link's block at `coll` (its `CollData`): a link's box source never writes them, so they
+/// keep what the block held rather than the claim's unknown bytes, in a session (allstar-clear,
+/// tick 15339: an item over a freed hookshot's link).
+pub fn keep_box_tail(coll: u32) {
+    if !heap::image_on() || coll == 0 {
+        return;
+    }
+    let at = coll + 0x104 + 0x18;
+    heap::with(|h| h.image.unclaim(at, at + 8));
+}
+
 /// Whether the last object a pool handed out came new from the heap (its pool grew), in a
 /// session.
 pub fn pool_grew() -> bool {
