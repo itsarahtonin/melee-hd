@@ -2,7 +2,6 @@
 //! single-player setups; a debug VS match never sets his stamina) drops what he holds, cries
 //! out and falls away, with the crowd's cheers, until he's knocked out.
 
-use super::super::super::code::unported_call;
 use super::super::super::state::Running;
 use super::{attr, ms, mv};
 use crate::hsd::gobj::GObjId;
@@ -18,7 +17,7 @@ impl Running<'_> {
     /// Beaten, `ftMh_MS_343_80151484` (`fn_800C8E74`'s for him): still, his lasers ended, the
     /// beams' hums stopped, a held fighter let go, falling (`x14C`, `x154`) for `x15C` frames,
     /// the cries.
-    // Ports `ftMh_MS_343_80151484`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_MS_343_80151484")]
     pub fn mh_beaten(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -67,8 +66,8 @@ impl Running<'_> {
 
     /// Falling beaten, `ftMh_Damage_Anim` and `ftMh_MS_345_Anim`: a cheer on the script's
     /// flag, the second fall once the first ends, knocked out once the frames run out.
-    // Ports `ftMh_Damage_Anim`; aliased once a check reaches it.
-    // Ports `ftMh_MS_345_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_Damage_Anim")]
+    #[doc(alias = "ftMh_MS_345_Anim")]
     pub fn mh_damage_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
@@ -77,12 +76,12 @@ impl Running<'_> {
             let n = fp.mv_i32(mv::X74).wrapping_add(1);
             fp.set_mv_i32(mv::X74, n);
             if n <= first {
-                unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER})"));
+                self.sfx_play_cheer(SFX_CHEER);
             } else {
                 let m = fp.mv_i32(mv::X78).wrapping_add(1);
                 fp.set_mv_i32(mv::X78, m);
                 if m <= second {
-                    unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER2})"));
+                    self.sfx_play_cheer(SFX_CHEER2);
                 }
             }
             self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -94,7 +93,7 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::X8).wrapping_sub(1);
         fp.set_mv_i32(mv::X8, n);
         if n == 0 {
-            unported_call("ftCo_800D4F24");
+            self.remove_with_partner(gobj, false);
         }
     }
 }

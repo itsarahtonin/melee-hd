@@ -8,7 +8,6 @@
 //! Alone (a debug VS match without Master Hand) he waits there for good: nothing else ends
 //! the wait but Master Hand beaten or out.
 
-use super::super::super::code::unported_call;
 use super::super::super::it::kinds::masterhandlaser;
 use super::super::super::state::Running;
 use super::{KIND_MASTER_HAND, addr, attr, ms, mv};
@@ -148,12 +147,12 @@ impl Running<'_> {
             let n = fp.mv_i32(mv::CHEERS).wrapping_add(1);
             fp.set_mv_i32(mv::CHEERS, n);
             if n <= first {
-                unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER})"));
+                self.sfx_play_cheer(SFX_CHEER);
             } else {
                 let m = fp.mv_i32(mv::CHEERS2).wrapping_add(1);
                 fp.set_mv_i32(mv::CHEERS2, m);
                 if m <= second {
-                    unported_call(&format!("lbAudioAx_8002438C ({SFX_CHEER2})"));
+                    self.sfx_play_cheer(SFX_CHEER2);
                 }
             }
             self.game.fighters[f.0].cmd_vars[0] = 0;
@@ -165,7 +164,7 @@ impl Running<'_> {
         let n = fp.mv_i32(mv::X8).wrapping_sub(1);
         fp.set_mv_i32(mv::X8, n);
         if n == 0 {
-            unported_call("ftCo_800D4F24");
+            self.remove_with_partner(gobj, false);
         }
     }
 

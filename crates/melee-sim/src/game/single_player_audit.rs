@@ -151,8 +151,6 @@ const TARGET_TEST: &[&str] = &[
 const MASTER_HAND: &[&str] = &[
     "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
     "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
-    "melee/ft/kinds/ftMasterHand/ftmasterhanddamage0",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandsweep",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
@@ -872,7 +870,6 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gmevent",
             "melee/it/kinds/itevyoshiegg",
             "an event's random fifth player",
-            "(Event 50's cheer)",
         ],
         modes: &[EV],
     },
@@ -914,11 +911,9 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "it_8026C3FC",
             "it_8026C42C",
-            "ftCo_800D4F24",
             "ftMh_MS_371_801541C8",
             "Master Hand's function",
             "melee/ft/ftbosslib",
-            "lbAudioAx_8002438C",
             "gm_8016ECE8",
         ],
         modes: &[CL, EV, DB],

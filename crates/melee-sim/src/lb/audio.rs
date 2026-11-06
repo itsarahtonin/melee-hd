@@ -332,6 +332,13 @@ impl Running<'_> {
         self.sfx_start(id, 0x7F, 0x40, 0, channel)
     }
 
+    /// Plays a sound on channel 8, where the crowd's cheers for a beaten boss go,
+    /// `lbAudioAx_8002438C`.
+    #[doc(alias = "lbAudioAx_8002438C")]
+    pub fn sfx_play_cheer(&mut self, id: i32) -> i32 {
+        self.sfx_start(id, 0x7F, 0x40, 0, 8)
+    }
+
     /// Plays a sound at full volume, centered, `lbAudioAx_80024304`: the entrance's
     /// (0x8A-0x8C) as 0x8B on track 0x16, the rest on none.
     #[doc(alias = "lbAudioAx_80024304")]
