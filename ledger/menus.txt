@@ -42,7 +42,6 @@ fn_8016A450	gated	named only by the single-player modes' code (gm_8017CE34): the
 gmVs_GetSceneController	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmVs_GetSceneState	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_GetStartMeleeRules	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-fn_8016B738	gated	the single-player matches' setup (gm_16A2's lbl_8046B488: Event Match, Multi-Man Melee, Classic's and Adventure's teams and hordes), whose branches VS mode's ports refuse (game/gm/vs.rs): the single-player modes', which only the 1P list's gated entries lead to
 gm_AnyControllerPressedStart	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_AnyControllerPressedZ	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the single-player modes', which only the 1P list's gated entries lead to
