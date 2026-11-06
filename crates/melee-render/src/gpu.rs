@@ -18,6 +18,9 @@ pub struct Gpu {
     pub state: State,
     renderer: RefCell<Backend>,
     produced: Vec<Produced>,
+    /// How many of the address space's ranges had gone back when the renderer last forgot
+    /// theirs ([`Space::reclaims`]).
+    reclaims: u64,
 }
 
 /// Where the renderer runs: on the game's thread, or on threads of its own that work on a frame
@@ -142,6 +145,7 @@ impl Gpu {
             state,
             renderer: RefCell::new(Backend::Here(Box::new(renderer))),
             produced: Vec::new(),
+            reclaims: 0,
         }
     }
 
@@ -157,6 +161,7 @@ impl Gpu {
                 renderer,
             )))),
             produced: Vec::new(),
+            reclaims: 0,
         }
     }
 
@@ -203,6 +208,23 @@ impl Gpu {
         }
     }
 
+    /// Has the renderer forget what it kept by address of the ranges the address space gave
+    /// back since it last did: their addresses may hold other archives' bytes now.
+    fn forget_reclaimed(&mut self, space: &Space) {
+        let now = space.reclaims();
+        if now == self.reclaims {
+            return;
+        }
+        let gone = space
+            .reclaimed_since(self.reclaims)
+            .unwrap_or_else(|| vec![(crate::mem::ARCHIVES.start, crate::mem::ARCHIVES.end)]);
+        let sink = self.renderer.get_mut().sink();
+        for (start, end) in gone {
+            sink.forget_memory(start, end);
+        }
+        self.reclaims = now;
+    }
+
     /// Runs a frame's stream; returns the frames it copied to the XFB.
     pub fn run(
         &mut self,
@@ -211,6 +233,7 @@ impl Gpu {
         fifo: &[u8],
         observer: Option<&dyn Observer>,
     ) -> Vec<Frame> {
+        self.forget_reclaimed(space);
         let host = Host {
             space,
             data,

@@ -183,6 +183,8 @@ pub struct Gx {
     pub unset: melee_gx::tev::Usage,
     /// Draws whose active stages read an [`Gx::unset`] component.
     pub unset_reads: u32,
+    /// Where copies from the EFB to textures went since the frame took them.
+    pub copied_to: Vec<u32>,
 }
 
 impl Default for Gx {
@@ -203,6 +205,7 @@ impl Gx {
             display_list: None,
             unset: Default::default(),
             unset_reads: 0,
+            copied_to: Vec::new(),
         }
     }
 

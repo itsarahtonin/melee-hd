@@ -51,6 +51,8 @@ enum Packet {
     Copy(u32),
     /// Memory copies went to that the game has written over since (copy::Footprints).
     Forget(u32, u32),
+    /// Memory that holds other bytes from now on (`Sink::forget_memory`).
+    ForgetMemory(u32, u32),
     /// The EFB made again at a scale and width, and cleared (`Renderer::resize_efb`).
     Resize(u32, u32),
     /// The copy formats also handed back to the host from now on
@@ -424,6 +426,19 @@ impl Sink for Threaded {
         }
     }
 
+    /// Forgets what this thread kept of the range by address, so its bytes are hashed and
+    /// sent again, and has the render thread forget what it kept.
+    fn forget_memory(&mut self, start: u32, end: u32) {
+        let keep = |&(a, len): &(u32, u32)| !melee_gx::overlaps(a, len, start, end);
+        self.stable.retain(|k, _| keep(k));
+        self.hashes.retain(|k, _| keep(k));
+        self.held.retain(|k, _| keep(k));
+        self.arrays
+            .retain(|&a, len| !melee_gx::overlaps(a, *len, start, end));
+        self.footprints.forget(start, end);
+        self.batch.packets.push(Packet::ForgetMemory(start, end));
+    }
+
     /// What the render thread's copies wrote so far, without waiting for it, each with the
     /// memory as its copy found it: the game runs on, up to `AHEAD` frames, before the bytes
     /// land, and what it wrote meanwhile stays (`Written::before`). A copy whose memory this
@@ -655,6 +670,13 @@ fn run(
                     renderer.draw_built(&state, *primitive, b, d, &memory);
                 }
                 Packet::Forget(start, end) => renderer.forget(*start, *end),
+                Packet::ForgetMemory(start, end) => {
+                    let (start, end) = (*start, *end);
+                    memory
+                        .0
+                        .retain(|&(a, len), _| !melee_gx::overlaps(a, len, start, end));
+                    renderer.forget_memory(start, end);
+                }
                 Packet::Resize(scale, width) => {
                     renderer.resize_efb(*scale, *width);
                     renderer.clear_efb(&state);

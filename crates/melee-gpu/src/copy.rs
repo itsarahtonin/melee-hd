@@ -201,6 +201,17 @@ impl Footprints {
         self.0.insert(f.address, (f, hash));
     }
 
+    /// Forgets the copies that reach into `start..end`.
+    pub fn forget(&mut self, start: u32, end: u32) {
+        self.0.retain(|_, (f, _)| {
+            let (s, e) = f.span();
+            let (s, e) = (s & crate::PHYS_MASK, e & crate::PHYS_MASK);
+            !melee_gx::overlaps(s, e.saturating_sub(s), start, end)
+        });
+        self.1
+            .retain(|a| !(start..end).contains(&(a & crate::PHYS_MASK)));
+    }
+
     /// Forgets which copies were found unchanged: the game's memory may have changed since
     /// (between frames; within one, only copies write it).
     pub fn new_frame(&mut self) {

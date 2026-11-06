@@ -121,6 +121,11 @@ impl Frames {
         if blend.is_some() {
             self.hsd.motion.start();
         }
+        // The arrays HSD's caches hold from the frames before keep their addresses.
+        self.space.begin_frame(&[
+            self.hsd.prev_array.map(|d| d.archive),
+            self.hsd.prev_vtxdesc.map(|d| d.archive),
+        ]);
         let mut ctx = Ctx {
             gx: &mut self.gx,
             hsd: &mut self.hsd,
@@ -140,6 +145,9 @@ impl Frames {
             ctx.load_lights(n);
         }
         ctx.copy_xfb();
+        for at in self.gx.copied_to.drain(..) {
+            self.space.pin_at(at);
+        }
         if self.gx.unset_reads != 0 {
             *self.hsd.notes.entry(UNSET_READ.to_owned()).or_default() += self.gx.unset_reads;
             self.gx.unset_reads = 0;

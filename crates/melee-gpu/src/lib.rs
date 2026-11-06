@@ -2069,6 +2069,16 @@ impl Renderer {
         self.hashes.clear();
     }
 
+    /// Forgets what's kept of memory in `start..end` by address, which holds other bytes from
+    /// now on (`Sink::forget_memory`): the hashes of its ranges, and the copies there.
+    pub(crate) fn forget_memory(&mut self, start: u32, end: u32) {
+        let keep = |&(a, len): &(u32, u32)| !melee_gx::overlaps(a, len, start, end);
+        self.stable_hashes.retain(|k, _| keep(k));
+        self.held_hashes.retain(|k, _| keep(k));
+        self.footprints.forget(start, end);
+        self.forget(start, end);
+    }
+
     /// Forgets what copies left in `start..end`, which the game has written over since.
     pub(crate) fn forget(&mut self, start: u32, end: u32) {
         self.gpu_copies.retain(|&a, _| !(start..end).contains(&a));
@@ -2211,6 +2221,10 @@ impl Sink for Renderer {
 
     fn copy(&mut self, state: &State, value: u32, mem: &dyn Memory) {
         self.copy_timed(state, value, mem);
+    }
+
+    fn forget_memory(&mut self, start: u32, end: u32) {
+        Renderer::forget_memory(self, start, end);
     }
 
     fn take_written(&mut self) -> Vec<melee_gx::Written> {
