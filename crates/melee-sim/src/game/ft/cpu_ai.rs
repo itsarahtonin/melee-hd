@@ -342,7 +342,8 @@ impl Running<'_> {
             23 | 25 => self.cpu_decide_enemy(f),
             24 => self.cpu_decide_wander(f),
             27 => self.cpu_decide_unafraid(f),
-            k @ (26 | 29) => unported_call(&format!("ftCo_800B2AFC for computer kind {k}")),
+            29 => self.cpu_decide_item_lover(f),
+            26 => unported_call("ftCo_800B2AFC for computer kind 26"),
             _ => self.cpu_decide_vs(f),
         }
     }

@@ -734,6 +734,14 @@ impl Heap {
         p
     }
 
+    /// `HSD_MemAlloc` of a block whose owner says what it writes there, when it does: the
+    /// image keeps what the block held until then.
+    pub fn mem_alloc_unclaimed(&mut self, size: u32) -> u32 {
+        let p = self.mem_alloc_raw(size);
+        log(|| format!("MA {size:#x} -> {p:#010x}"));
+        p
+    }
+
     fn mem_alloc_raw(&mut self, size: u32) -> u32 {
         assert!(size as i32 > 0, "HSD_MemAlloc of {size:#x} bytes");
         // The free list around the cell it takes, for the links `OSAllocFromHeap` writes.
@@ -1479,12 +1487,7 @@ pub fn mem_alloc_as(size: u32, owner: &'static str) -> u32 {
 /// A block of the lent-out model's heap whose owner says what it writes there (the movie
 /// player's): the image doesn't take it as written whole.
 pub fn mem_alloc_unclaimed(size: u32) -> u32 {
-    with(|h| {
-        let p = h.mem_alloc_raw(size);
-        log(|| format!("MA {size:#x} -> {p:#010x}"));
-        p
-    })
-    .unwrap_or(0)
+    with(|h| h.mem_alloc_unclaimed(size)).unwrap_or(0)
 }
 
 /// A block back to the lent-out model's heap (`HSD_Free`).

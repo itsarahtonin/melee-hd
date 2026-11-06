@@ -1381,7 +1381,7 @@ pub fn proc_climb10(r: &mut Running, gobj: GObjId) {
 
 /// The climb's end's callback for the arena's event, `fn_801FA4CC`: on 1, the stage's `x6D8`
 /// set to 1, and 1; else 0.
-// Ports fn_801FA4CC; aliased once a check reaches it.
+#[doc(alias = "fn_801FA4CC")]
 pub fn end_event(game: &mut Game, num: i32) -> i32 {
     if num == 1 {
         super::ground::set_x6d8(game, num);

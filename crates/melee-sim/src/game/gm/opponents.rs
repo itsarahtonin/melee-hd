@@ -146,7 +146,7 @@ impl Opponents {
     }
 
     /// How many are still to join, `gm_80169384`.
-    // Ports gm_80169384; aliased once a check reaches it.
+    #[doc(alias = "gm_80169384")]
     pub fn left(&self) -> i32 {
         i32::from(self.left)
     }
@@ -389,7 +389,7 @@ impl Opponents {
     }
 
     /// `fn_8016A46C`: each joiner's `flagsAE` bit 0.
-    // Ports fn_8016A46C; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A46C")]
     pub fn set_flag_ae0(&mut self) {
         self.flags |= FLAG_AE0;
     }
@@ -405,6 +405,22 @@ pub fn point_rules(rules: &mut super::super::structs::StartMeleeRules) {
 pub const ADDR: u32 = 0x8046_B488;
 
 impl Game {
+    /// The opponents still to come: those yet to join and the joiners' slots still playing
+    /// (`Player_GetFlagsBit1` and state 2), `gm_801694A0`.
+    #[doc(alias = "gm_801694A0")]
+    pub fn opponents_remaining(&self) -> i32 {
+        let mut count = i32::from(self.gm.opponents.left);
+        for i in 0..6 {
+            if self.player_pkind(i) != PKIND_NONE
+                && self.player_flags_bit1(i)
+                && self.player_state(i) == 2
+            {
+                count += 1;
+            }
+        }
+        count
+    }
+
     /// The joining opponents' slots marked, `fn_8016A09C`: joining on, the first `at_once`
     /// empty slots flagged as joiners' (`Player_SetFlagsBit1`), every joiner's slot on team 4.
     #[doc(alias = "fn_8016A09C")]
@@ -604,8 +620,7 @@ impl Running<'_> {
     /// player of one stock, the setup's level, ratios and scale) and creates its fighters;
     /// once none is left to join and none plays, the last is beaten and the end's callback is
     /// told 1.
-    // Ports fn_8016A4C8's joining; aliased once a check reaches it (every match runs its
-    // early return).
+    #[doc(alias = "fn_8016A4C8")]
     pub fn spawn_opponents(&mut self) {
         if !self.game.gm.opponents.joining() {
             return;
@@ -717,7 +732,7 @@ impl Running<'_> {
     }
 
     /// A joiner's fighters made, `fn_8016A488`: they read their controllers once the HUD is on.
-    // Ports fn_8016A488; aliased once a check reaches it.
+    #[doc(alias = "fn_8016A488")]
     pub fn opponent_joined(&mut self, slot: i32) {
         if self.game.vs.state.hud_enabled == 1 {
             self.player_enable_input(slot);

@@ -417,10 +417,6 @@ pub const STAGES: &[Stage] = &[
                     "stageGObj10_Callback3",
                     "the adventure's climb's destroy callback: nothing destroys map 10 before the scene's heap goes",
                 ),
-                (
-                    "fn_801FA4CC",
-                    "the adventure's climb's end's callback, which only the arena's event (gm_801674C4, unported) takes",
-                ),
             ],
             missing: &[],
         }),
@@ -545,10 +541,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grpstadium"],
             modules: &["gr/stadium"],
-            unreached: &[(
-                "grStadium_801D384C",
-                "the screen's count, which only single-player modes show",
-            )],
+            unreached: &[],
             missing: &[],
         }),
     },
