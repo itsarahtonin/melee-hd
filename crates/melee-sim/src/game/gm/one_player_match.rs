@@ -884,6 +884,47 @@ impl Running<'_> {
         self.one_player_enter_game_over(&run, 2);
     }
 
+    /// A 1P run's clear, `gm_8017CBAC`: the trophies' table back to the save
+    /// (`Ground_801C5A60`), the character's records for the mode (Adventure's: cleared, its
+    /// high score, the highest level cleared and, on Very Hard, the fewest stocks lost), the
+    /// save written and `mode` next (the ending's). Classic's and All-Star's records aren't
+    /// ported.
+    // Ports gm_8017CBAC's Adventure case; aliased once Classic's and All-Star's are.
+    #[doc(alias = "gmMainLib_8015D25C")]
+    // Ports gmMainLib_8015D2F0 (Very Hard's branch); aliased once a check reaches it.
+    pub fn one_player_clear(&mut self, run: &Unk1PData, stocks: u8, mode: u8) {
+        let p = run.player;
+        let sel = super::match_exit::selkind(p.ckind as u8);
+        self.toy_table_sync(true);
+        match mode {
+            super::endings::GM_ADVENTURE_GOVER => {
+                let s = &mut self.game.game_data.thing.save_data;
+                // `gmMainLib_8015D25C`: cleared, and this run's clear in `x14`'s mask.
+                s.x1F2C[usize::from(sel)].x7C.b5 = true;
+                s.unk_8.x14 |= 1 << sel;
+                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                // `fn_80162DF8`: the high score, compared unsigned.
+                if (rec.x8C as u32) < run.x18 as u32 {
+                    rec.x8C = run.x18;
+                }
+                // `gmMainLib_8015D2BC`: the highest level cleared.
+                if rec.x81 < p.cpu_level {
+                    rec.x81 = p.cpu_level;
+                }
+                // `gmMainLib_8015D2D4`, `gmMainLib_8015D2F0`: Very Hard's fewest stocks.
+                let best = rec.b10_to_12;
+                if p.cpu_level == 4 && (best == 0 || stocks < best) {
+                    rec.b10_to_12 = stocks & 7;
+                }
+            }
+            0x15 => crate::game::code::unported_call("gm_8017CBAC (Classic's clear)"),
+            _ => crate::game::code::unported_call("gm_8017CBAC (All-Star's clear)"),
+        }
+        self.save_after_run();
+        self.set_pending_game_mode(mode);
+        self.set_new_game_mode_pending();
+    }
+
     /// Adventure's game over, `gm_801B4254`.
     #[doc(alias = "gm_801B4254")]
     pub fn adventure_enter_game_over(&mut self) {

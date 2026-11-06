@@ -1214,7 +1214,7 @@ impl Running<'_> {
 
     /// The save written after a run, as a Stadium mode's select's entry does
     /// (`lbCardNew_AllocWorkArea`, `lbCardGame_LoadArchive(0)`, `lbCardGame_SaveChanges`).
-    fn save_after_run(&mut self) {
+    pub(super) fn save_after_run(&mut self) {
         self.card_alloc_work_area();
         self.card_game_load_archive(0);
         self.card_game_save_changes();

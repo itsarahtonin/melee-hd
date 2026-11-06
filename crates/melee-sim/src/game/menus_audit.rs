@@ -282,10 +282,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_8017CBAC (Adventure's clear)",
-        "Adventure's last stage won: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gmClassic_801B3B40's target stage records",
         "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
     ),

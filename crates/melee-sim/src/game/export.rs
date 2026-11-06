@@ -806,6 +806,7 @@ impl LayCx for Addrs<'_> {
                 b => b + 0x98 * h,
             },
             "EffectId" => g.ef.effects.addr(h),
+            "ShadowId" => g.objs.shadows.addr(h),
             "QueuedId" => g.ef.queued.addr(h),
             // The items' tables in the executable: the handle is the address.
             "GroundId" => g.grounds.addr(h),
