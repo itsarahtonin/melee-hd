@@ -478,3 +478,58 @@ fn the_second_unlock_sessions_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// [`session_in`] on one of Sarah's recordings (`$SSBM_RS_LOCAL/lockstep/recordings`, each
+/// `NAME.inputs` with the card it started from, `NAME.card`, and the card it left,
+/// `NAME-play.card`), traced into `traces/session`.
+fn recording(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/session/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/recordings/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(["session", &trace, &inputs])
+        .args(args)
+        .output()
+        .expect("melee-oracle runs");
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{text}");
+    Some(text)
+}
+
+/// Event Match's sixth round (docs/oracle.md, "Sessions"): Sarah's recordings of 2026-11-06.
+/// Event 50 won after tries in the same run, both hands beaten (`ev50`: Crazy Hand's beaten
+/// states, the both-hands fade and the clear), Master Hand's grab mashed free of (`mh-mash`),
+/// and Events 14, 26, 45, 47 and 51 won to their trophies (`ev14` to `ev51`), each clean from
+/// power-on to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn sarahs_event_recordings_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("ev50", 14051),
+        ("mh-mash", 1394),
+        ("ev14", 3111),
+        ("ev26", 8209),
+        ("ev45", 3273),
+        ("ev47", 9894),
+        ("ev51", 25663),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/recordings/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/recordings/{name}-play.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = recording(name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}

@@ -149,8 +149,6 @@ const TARGET_TEST: &[&str] = &[
 
 /// Master Hand's units (`ftmasterhand*.c`).
 const MASTER_HAND: &[&str] = &[
-    "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
@@ -164,7 +162,6 @@ const CRAZY_HAND: &[&str] = &[
     "melee/ft/kinds/ftCrazyHand/ftcrazyhanddamage0",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandtaggrab",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
     "melee/it/kinds/itcrazyhandbomb",
@@ -914,7 +911,6 @@ pub const MISSING: &[Gap] = &[
             "ftMh_MS_371_801541C8",
             "Master Hand's function",
             "melee/ft/ftbosslib",
-            "gm_8016ECE8",
         ],
         modes: &[CL, EV, DB],
     },

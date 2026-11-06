@@ -154,7 +154,7 @@ impl Running<'_> {
     }
 
     /// Picking up an item, `ftGw_Init_OnItemPickup` (as Fox's).
-    // Ports `ftGw_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftGw_Init_OnItemPickup")]
     pub fn gw_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_pickup(gobj, flag);
     }
@@ -172,7 +172,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftGw_Init_OnItemDrop` (as Fox's).
-    // Ports `ftGw_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftGw_Init_OnItemDrop")]
     pub fn gw_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.fox_on_item_drop(gobj, flag);
     }

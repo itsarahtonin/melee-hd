@@ -115,7 +115,7 @@ impl Running<'_> {
 
     /// Event 50's start, `ifStage251`: at his place, waiting, his state set to the entrance
     /// first so the wait takes his place.
-    // Ports `ifStage251`; aliased once a check reaches it.
+    #[doc(alias = "ifStage251")]
     pub fn mh_start_in_place(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let pos = self.mh_da_vec2(f, attr::X30);

@@ -152,7 +152,7 @@ impl Running<'_> {
     /// The original tests whether it hit a right wall on a register its caller left: the
     /// right wall hug bit it found facing left, or the left one it found facing right, so the
     /// side follows the facing the caller took, not the collision's flags.
-    // Ports `ftCo_8009EE30`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_8009EE30")]
     pub fn enter_stop_wall(&mut self, gobj: GObjId, right_wall: bool) {
         let fp = self.game.fighter(gobj);
         let ecb = &fp.coll_data.ecb;

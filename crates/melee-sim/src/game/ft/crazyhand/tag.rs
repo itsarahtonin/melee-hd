@@ -87,7 +87,7 @@ impl Running<'_> {
     /// Beaten, `ftCh_GrabUnk1_8015ADD0` (`fn_800C8E74`'s for him): still, his lasers ended,
     /// the poke's hums stopped, a held fighter let go, falling (`x12C`, `x134`) for `x13C`
     /// frames, the cries.
-    // Ports `ftCh_GrabUnk1_8015ADD0`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_GrabUnk1_8015ADD0")]
     pub fn ch_beaten(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -137,8 +137,8 @@ impl Running<'_> {
     /// Falling beaten, `ftCh_TagGrab_Anim` and `ftCh_TagSqueeze_Anim`: a cheer on the
     /// script's flag, the second fall once the first ends, knocked out once the frames run
     /// out.
-    // Ports `ftCh_TagGrab_Anim`; aliased once a check reaches it.
-    // Ports `ftCh_TagSqueeze_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_Anim")]
+    #[doc(alias = "ftCh_TagSqueeze_Anim")]
     pub fn ch_beaten_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].cmd_vars[0] != 0 {
@@ -169,7 +169,7 @@ impl Running<'_> {
     }
 
     /// `ftCh_TagGrab_Phys`: the beaten hand falls away (`x130`, `x138` each frame).
-    // Ports `ftCh_TagGrab_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_Phys")]
     pub fn ch_beaten_phys(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (dy, dz) = (self.ch_da_f32(f, attr::X130), self.ch_da_f32(f, attr::X138));
