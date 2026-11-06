@@ -151,8 +151,6 @@ const TARGET_TEST: &[&str] = &[
 const MASTER_HAND: &[&str] = &[
     "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
     "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
-    "melee/ft/kinds/ftMasterHand/ftmasterhanddamage0",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandsweep",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
