@@ -126,11 +126,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
             3883,
             "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
         ),
-        (
-            "stages-1p-b",
-            10941,
-            "not implemented: stage kind 38 isn't ported",
-        ),
+        ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
     ]);
 }
