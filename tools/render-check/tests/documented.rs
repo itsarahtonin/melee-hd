@@ -26,7 +26,7 @@ use common::{
     ICICLE_MOUNTAIN, IDLE_MOVIE, IDLE_TITLE, IM_BEARS, IM_JUMP, IM_LOOK, ITEMS_POWERUPS_BF,
     ITEMS_POWERUPS_FD, ITEMS_POWERUPS_PS, JUNGLE_JAPES, KONGO_JUNGLE, KONGO_JUNGLE_64, M6_CLASSIC,
     M6_HOMERUN, M6_TARGET, M6_TOUR_CLEARED, M6_TRAINING, M6A_INTRO_AS_IC, M6C_CUTSCENES,
-    M6E_GAMEOVER, M6E2_REGEND_ADV, M6E2_REGEND_GW, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY,
+    M6E_GAMEOVER, M6E2_REGEND_ADV, M6E2_REGEND_GW, M6E2_REGEND_REAL, M6E3_REGEND_MOVIE, M6E3_STAFFROLL_PLAY,
     M6I_ADVENTURE2, M6I_CLASSIC_WIN, M6P_AS_WIN, M6U_EV01_FD, M6U_EV03_TROPHY, M6U_EV37_PICHU,
     M6U_HR_TOTAL, M6U_TR_COMBO, MENU_TOUR, METAL_CLOAK_RC, MH_1P, MH_1P_WILD, MH_3P, MH_PROBE,
     MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
@@ -221,6 +221,22 @@ fn m6e2_regend_adv_1950() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn m6e2_regend_gw_1500() {
     toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
+}
+// The staff roll's first frame right after the trophy fall's last depth copy
+// (`m6-endings-2/regend-real` 2030, the copies to 2029), against a capture made with ssbm-rs's
+// renderer running: what Classic's clear shows with a grey layer there (its log frame 20710)
+// samples memory those copies wrote; this one samples none, so it can't fail without the depth
+// copies, only show that encoding them leaves the next scene's frames as they were.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_real_2030() {
+    compare_in(
+        &M6E2_REGEND_REAL,
+        2030,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
 }
 // The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
 // renderer running: the names flying past with shots fired at rest (1400) and the stick to the
