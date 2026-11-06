@@ -159,7 +159,6 @@ const MASTER_HAND: &[&str] = &[
 /// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
 const CRAZY_HAND: &[&str] = &[
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhanddamage0",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
@@ -829,7 +828,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",

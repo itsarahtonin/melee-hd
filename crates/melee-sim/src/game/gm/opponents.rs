@@ -652,6 +652,7 @@ impl Running<'_> {
     }
 
     /// The next joiner in `slot` (`fn_8016A4C8`'s loop body).
+    #[doc(alias = "fn_8016B738")]
     fn join_opponent(&mut self, slot: i32) {
         {
             let o = &mut self.game.gm.opponents;
