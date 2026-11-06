@@ -17,25 +17,8 @@ melee/gm/gmallstar	gated	the single-player modes', which only the 1P list's gate
 melee/gm/gmclassic	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbLang_GetLanguageSetting	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-lbArq_80014ABC	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
-lbArq_80014AC4	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
-lbArq_80014BD0	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
-lbArq_80014D2C	unchecked	the ARAM request queue: the timeline's ARAM loads stand for it (ft::data, ft::motion, the boot)
 lbMemFreeToHeap	unchecked	ported (lb::memory, lb::heap), awaiting a check
-lbMemory_800154BC	unchecked	the arena's setup at boot, the allocator model's (hsd::heap, lb::dvd's heaps)
 lbHeap_80015CA8	unchecked	ported (lb::memory, lb::heap), awaiting a check
-lbFile_8001615C	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-discIsDone	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFileGetFullName	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFile_8001634C	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFileGetSize	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFile_800164A4	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFile_80016580	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbFile_800168A0	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbArchive_InitializeDAT	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbArchive_80016F80	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbArchive_800171CC	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
-lbArchiveRelocate	unchecked	the disc's file layer: the frontend reads each file (session::Console::file, game::disc) and its callers' ports take the archives, the preload cache and the allocator model standing in where the original goes through it
 lbDvd_GetPreloadCacheScene	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline (lb::dvd)
 lbAudioAx_8002438C	gated	Master Hand's and Crazy Hand's sounds: the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
