@@ -117,7 +117,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftDk_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,
     /// 1)`, as Fox's).
-    // Ports `ftDk_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftDk_Init_OnItemPickup")]
     pub fn dk_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.item_pickup_hand(gobj, flag, 1);
     }
@@ -135,7 +135,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftDk_Init_OnItemDrop`.
-    // Ports `ftDk_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftDk_Init_OnItemDrop")]
     pub fn dk_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 1);
     }

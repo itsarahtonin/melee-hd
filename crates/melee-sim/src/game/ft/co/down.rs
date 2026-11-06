@@ -327,6 +327,7 @@ impl Running<'_> {
     /// by its TransN, the airborne pass, a rumble and intangibility. The fighter is set against
     /// the wall (in x) only off a wall to its left (`RIGHT_WALL_HUG`); off one to its right the
     /// original moves it up by its TransN's y instead.
+    #[doc(alias = "ftCo_80090574")]
     #[doc(alias = "fn_800C7DC4")]
     pub fn down_reflect(&mut self, gobj: GObjId, msid: i32, normal: Vec3, offset: Vec3) {
         let f = self.game.fighter_id(gobj);

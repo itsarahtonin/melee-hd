@@ -894,6 +894,7 @@ impl Running<'_> {
     /// Whether an island is unsafe to stand on, `ftCo_800A2718`: a live bob-omb or shell on
     /// it, or the stage's own hazard: Yoshi's Story's moving cloud, Brinstar's acid, Onett's
     /// cars.
+    #[doc(alias = "it_80275870")]
     #[doc(alias = "it_8026C1B4")]
     #[doc(alias = "ftCo_800A5944")]
     #[doc(alias = "ftCo_800A2718")]

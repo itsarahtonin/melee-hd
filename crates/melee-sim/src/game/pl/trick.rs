@@ -141,6 +141,7 @@ impl Running<'_> {
     /// bonus checks; then the victim's damage result takes the attack's record
     /// (`fn_80037F00`).
     #[doc(alias = "pl_800403FC")]
+    #[doc(alias = "pl_80040D8C")]
     #[doc(alias = "pl_80038144")]
     #[allow(clippy::too_many_arguments)]
     pub fn record_attack(
@@ -434,6 +435,7 @@ impl Running<'_> {
     /// charged smash (`pl_8003FF44`) and the Ray Gun's (`pl_8003EAAC`).
     #[doc(alias = "pl_8003DFF4")]
     #[doc(alias = "pl_8003EAAC")]
+    #[doc(alias = "ft_80087A8C")]
     #[doc(alias = "pl_8003FF44")]
     fn count_best_hit(&mut self, slot: i32, sub: i32, id: i32) {
         self.count_combo_order(slot, sub, id);

@@ -219,7 +219,7 @@ impl Running<'_> {
 
     /// Her air grab, `ftCo_800C3BE8`: in the air, the frame counter at 0, no acceleration, the
     /// air grab, and grab immunity from every kind (`ftCommon_8007E2F4`).
-    // Ports `ftCo_800C3BE8`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C3BE8")]
     pub fn enter_air_catch(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         if fp.ground_or_air != GA_AIR {
@@ -343,7 +343,7 @@ impl Running<'_> {
     /// (none, and she falls helpless); then on `xC0` it's shot (two units out is blocked, and
     /// it's put away and she falls helpless), on `xC4` drawn in, on `xC8` put away; at the
     /// animation's end she falls helpless.
-    // Ports `ftCo_AirCatch_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AirCatch_Anim")]
     pub fn co_air_catch_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].kind != KIND_SAMUS {
@@ -396,7 +396,7 @@ impl Running<'_> {
 
     /// `ftCo_AirCatch_Phys`: a fast fall, or gravity (a fifth of it for the first 20 frames
     /// while falling), and drift.
-    // Ports `ftCo_AirCatch_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AirCatch_Phys")]
     pub fn co_air_catch_phys(&mut self, gobj: GObjId) {
         self.check_fall_fast(gobj);
         let fp = self.game.fighter_mut(gobj);
@@ -422,7 +422,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_AirCatch_Coll`: landing.
-    // Ports `ftCo_AirCatch_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AirCatch_Coll")]
     pub fn co_air_catch_coll(&mut self, gobj: GObjId) {
         if self.air_coll_land(gobj) {
             self.enter_landing(gobj, MS_LANDING, 0, 0, 0.0, 1.0);
@@ -472,6 +472,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftCo_AirCatch_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         ROLL_ANIM => g.samus_roll_anim(gobj),

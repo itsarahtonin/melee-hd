@@ -227,7 +227,7 @@ pub fn hand_over(r: &mut Running, gobj: GObjId, holder: GObjId, part: i32) {
 
 /// The shots or uses left in a shooting or swung item that counts them (`xD4C`: the Super
 /// Scope, Star Rod, Ray Gun and Fire Flower), else -1, `it_8026B924`.
-// Ports `it_8026B924`; aliased once a check reaches it.
+#[doc(alias = "it_8026B924")]
 pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
     let ip = item(game, gobj);
     use super::kinds::{F_FLOWER, L_GUN, S_SCOPE, STARROD};

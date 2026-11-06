@@ -182,9 +182,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
     "ftCo_800A0384",
-    "ftCo_800A59C0",
-    "ftCo_800A5A28",
-    "ftCo_800A5A5C",
 ];
 
 /// What a match with computer players reaches that isn't ported, task by task

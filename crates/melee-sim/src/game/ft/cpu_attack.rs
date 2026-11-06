@@ -137,7 +137,10 @@ impl Running<'_> {
     /// thrown (2), a thrown item up (0xD), down (0xE) or ahead (0xF; a Poké Ball down);
     /// any other but a swung one is thrown ahead (0x2A) at a target more than 30 away
     /// within 15 degrees.
+    #[doc(alias = "ftCo_800A5A5C")]
+    #[doc(alias = "ftCo_800A59C0")]
     #[doc(alias = "ftCo_800B9A04")]
+    #[doc(alias = "ftCo_800A5A28")]
     fn cpu_held_item_attack(&mut self, f: FighterId, it: ItemId, angle: f64, dist: f64) -> bool {
         use super::super::it::kinds as k;
         if self.cpu_item_heals(it) || self.cpu_item_attacking(f) {

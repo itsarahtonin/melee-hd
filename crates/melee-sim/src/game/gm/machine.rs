@@ -814,6 +814,7 @@ const GS_MOVIE_HOWTO: u8 = 0x1E;
 const GS_MOVIE_OMAKE15: u8 = 0x1F;
 
 /// A mode's `on_load` and `on_unload`, and whether its files are expected preloaded.
+#[doc(alias = "gm_Mode_Event_OnUnload")]
 fn mode_hooks(mode: u8) -> (bool, Option<Hook>, Option<Hook>) {
     match mode {
         GM_BOOT | GM_MEMCARD | GM_TITLE | GM_MENU => (true, None, None),
@@ -1336,6 +1337,9 @@ impl Running<'_> {
     }
 
     /// A mode's or mode state's handler.
+    #[doc(alias = "onExitMovie")]
+    #[doc(alias = "gm_801BF718")]
+    #[doc(alias = "gm_Mode_Opening_OnLoad")]
     fn mode_hook(&mut self, h: Hook, state: Option<(u8, u8)>) {
         // A Special Melee mode's handler for one of VS mode's states, by its mode.
         let special = state.map(|s| s.0).filter(|&m| m != GM_VS);

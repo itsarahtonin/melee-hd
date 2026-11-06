@@ -396,6 +396,21 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftNs_SpecialLwEnd_Coll")]
+#[doc(alias = "ftNs_SpecialLwEnd_Phys")]
+#[doc(alias = "ftNs_SpecialLwEnd_IASA")]
+#[doc(alias = "ftNs_SpecialLwEnd_Anim")]
+#[doc(alias = "ftNs_SpecialLwHit_Coll")]
+#[doc(alias = "ftNs_SpecialLwHit_Phys")]
+#[doc(alias = "ftNs_SpecialLwHit_IASA")]
+#[doc(alias = "ftNs_SpecialLwHold_Coll")]
+#[doc(alias = "ftNs_SpecialLwHold_Phys")]
+#[doc(alias = "ftNs_SpecialLwHold_IASA")]
+#[doc(alias = "ftNs_SpecialLwHold_Anim")]
+#[doc(alias = "ftNs_SpecialLwStart_Coll")]
+#[doc(alias = "ftNs_SpecialLwStart_Phys")]
+#[doc(alias = "ftNs_SpecialLwStart_IASA")]
+#[doc(alias = "ftNs_SpecialLwStart_Anim")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_LW_START_ENTER => g.ness_special_lw_start_enter(gobj),
