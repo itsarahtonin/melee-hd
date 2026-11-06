@@ -180,9 +180,7 @@ pub const UNREACHED: &[(&str, &str)] = &[
 
 /// Ported code computer players reach whose ledger alias waits for a check (a `// Ports`
 /// comment, or inline in a port): it doesn't stop a match.
-pub const UNCHECKED: &[&str] = &[
-    "ftCo_800A0384",
-];
+pub const UNCHECKED: &[&str] = &["ftCo_800A0384"];
 
 /// What a match with computer players reaches that isn't ported, task by task
 /// (docs/player.md, "CPU players: what's left").
