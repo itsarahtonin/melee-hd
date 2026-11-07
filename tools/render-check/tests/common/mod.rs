@@ -1386,6 +1386,15 @@ pub const REC_ADVENTURE: Game = Game {
     replay: Replay::Session("rec-2026-10-06_12-04-48"),
 };
 
+/// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros and Snag the
+/// Trophies.
+pub const REC_CLASSIC_STAGES: Game = Game {
+    stage: "Classic's stages",
+    name: "rec-classic-clear",
+    players: "Classic's bonus stages (recording classic-clear)",
+    replay: Replay::Session("rec-classic-clear"),
+};
+
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
 pub const O6_INTRO_ALLSTAR: Game = Game {
     stage: "All-Star's intro",
