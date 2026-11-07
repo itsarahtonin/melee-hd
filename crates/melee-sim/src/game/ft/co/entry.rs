@@ -235,7 +235,7 @@ impl Running<'_> {
     }
 
     /// `fn_800C63BC`: lands (`ftCommon_8007D7FC`).
-    // Ports `fn_800C63BC`; aliased once a check reaches it.
+    #[doc(alias = "fn_800C63BC")]
     pub fn co_entry_land(&mut self, gobj: GObjId) {
         self.land(gobj);
     }

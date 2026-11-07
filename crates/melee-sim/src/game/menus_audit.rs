@@ -56,8 +56,11 @@ pub const GATES: &[Gate] = &[
         list: STADIUM,
         entry: 2,
         what: "Multi-Man Melee",
-        // Ported but for what no session reaches yet (game::single_player_audit's gaps).
-        covers: &["gm_80173498"],
+        // Nothing of the mode's own is missing (game::single_player_audit); kept until Sarah
+        // decides on Master Hand as a player, whom the character select's name entry glitch
+        // reaches in every select (docs/melee-bugs.md): his units are the audit's gaps for
+        // Classic, Event Match and the debug routes.
+        covers: &["Master Hand as a player"],
     },
 ];
 

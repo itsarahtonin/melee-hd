@@ -287,7 +287,7 @@ impl Running<'_> {
 
     /// A human's attack (port 3's master status, a button and a direction),
     /// `ftMh_MS_341_80150894`.
-    // Ports `ftMh_MS_341_80150894`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_MS_341_80150894")]
     pub fn mh_human_attack(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let b = self.game.pads.master[2].button;

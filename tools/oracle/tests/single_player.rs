@@ -478,3 +478,56 @@ fn the_second_unlock_sessions_run_clean_to_their_cards_after() {
         );
     }
 }
+
+/// Master Hand by the character select's name entry glitch (`m6-multiman`, task 15's third
+/// round; docs/oracle.md, "Sessions"; docs/melee-bugs.md): on a card with no last character,
+/// B held with the name list open and A on "NAME ENTRY" the tick after the back request start
+/// 15-Minute Melee as Master Hand (character kind 0x1A). `mh-15min` (unlock-all) stands still
+/// for the fifteen minutes and wins: the clear's record and mark on Mario's
+/// (`gmMainLib_8015D780`), the stage already unlocked (`gm_80173498`), the select again, B to
+/// the menu; `mh-15min-kongo2` the same on a card with that stage locked, port 3's laser early
+/// on: the win unlocks it, the challenger approach's notice, A; `mh-attacks` presses each of
+/// his human attacks from port 3 twice (`ftMh_MS_341_80150894`), then quits from the pause.
+/// Each from power-on, clean to its trace's end with `--all --heap` and the card after the
+/// original's. `mh-15min-kongo` (the Kongo card, no laser) is clean to its stop in tick 22523,
+/// a dropped fan's landing reading the GPU's pixels (docs/melee-bugs.md).
+#[test]
+#[ignore = "about two hours; run with --ignored"]
+fn master_hand_by_the_name_entry_glitch() {
+    for (name, ticks) in [
+        ("mh-attacks", 15546),
+        ("mh-15min", 55896),
+        ("mh-15min-kongo2", 56036),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.card"));
+        let after = ssbm_rs_local(&format!("traces/m6-multiman/{name}-play.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-multiman", name, &args) else {
+            return;
+        };
+        let want = format!(
+            "{ticks} ticks compared, no difference
+"
+        );
+        assert!(
+            out.contains(&want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+    let card = ssbm_rs_local("lockstep/m6-multiman/mh-15min-kongo.card");
+    let args = ["--card", &card, "--all", "--heap"];
+    if let Some(out) = session_in("m6-multiman", "mh-15min-kongo", &args) {
+        assert!(
+            out.contains(
+                "22523 ticks compared, no difference; stopped in tick 22523: a dropped fan's landing"
+            ),
+            "{out}"
+        );
+    }
+}
