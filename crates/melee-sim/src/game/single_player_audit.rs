@@ -869,7 +869,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the 1P records and saves",
         covers: &[
-            "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
             "gmMainLib_8015D2F0",
             "gmMainLib_8015D384",
@@ -938,7 +937,6 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "a 1P run's getter",
             "melee/gm/gmallstar",
-            "melee/gm/gm_17EB",
         ],
         modes: &[AS, DB],
     },

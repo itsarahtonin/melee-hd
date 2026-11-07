@@ -67,7 +67,6 @@ fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 fn_8025FB2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
 fn_801A47E4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
-melee/gm/gm_17EB	gated	All-Star's data (gm_GetAllStarData and its getters), which fn_8016C7F0 reads only in the single-player branch its port refuses: the single-player modes', which only the 1P list's gated entries lead to
 onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmode.c, mode 6), made pending only at a debug level (task 19's); VS mode's is ported
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 fn_80197FD8	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
