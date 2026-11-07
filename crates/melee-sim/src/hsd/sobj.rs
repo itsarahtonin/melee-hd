@@ -60,6 +60,15 @@ pub enum Image {
         height: u16,
         format: u32,
     },
+    /// One of Classic's horde stage's intro's copies of the frame
+    /// (`game::gm::intro_horde`'s images' index: color 0 to 2, depth 3 to 5), as `Copy`.
+    IntroCopy {
+        image: u8,
+        addr: u32,
+        width: u16,
+        height: u16,
+        format: u32,
+    },
 }
 
 /// The image's texture as `GXInitTexObj` sets it up: its size and format, and the wrap modes.
@@ -108,6 +117,9 @@ pub struct SObj {
     pub image: Image,
     pub tex: Tex,
     pub image2: Option<DataRef>,
+    /// The depth image (`HSD_SObjDesc2::image2`) when it's a copy of the frame (the horde
+    /// intro's, [`Image::IntroCopy`]) rather than loaded data.
+    pub image2_copy: Image,
     /// The texture object has been loaded to texture map 0 (`GXLoadTexObj`, which writes the
     /// map's register IDs into the object's top bytes), as the sprite's first draw does.
     pub loaded: bool,
@@ -313,6 +325,12 @@ pub fn create(
             },
         ),
         Image::Buffer {
+            width,
+            height,
+            format,
+            ..
+        }
+        | Image::IntroCopy {
             width,
             height,
             format,

@@ -203,7 +203,10 @@ pub fn start_hook(game: &Game, img: &mut Image, h: super::handles::StartHookId) 
 /// A menu's `HSD_MemAlloc` user data block melee-sim lays out, as it goes back through its
 /// remover (`HSD_Free`) or with its scene's heap: the stage select's name
 /// (`StageSelUserData`: the stage, the state, the frames), preview (`StagePreviewUserData`:
-/// the stage, the frames) and hover frame (its frames), each written whole by its creation.
+/// the stage, the frames) and hover frame (its frames), each written whole by its creation;
+/// and the frame copy's sprite (`CameraBlurData`, 0x24: its place, scale, alpha, blur, mode,
+/// callback, image and, once its owner's callback wrote it, its tint; its padding never
+/// written).
 pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
     let sel = &game.stagesel;
     let l = match *ud {
@@ -223,6 +226,17 @@ pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
         UserData::SssHover(a) => sel.hovers.get(&a).map(|&frames| {
             let mut l = Lay::new(a, 4);
             l.u32(0, frames as u32);
+            l
+        }),
+        UserData::Blur => game.blur.as_ref().filter(|b| b.addr != 0).map(|b| {
+            let mut l = Lay::new(b.addr, 0x24);
+            l.f32s(0, &[b.pos[0], b.pos[1], b.scale[0], b.scale[1]]);
+            l.bytes(0x10, &[b.base_alpha, b.blur_size, b.mode]);
+            l.u32(0x18, b.callback.map_or(0, |c| c.0));
+            l.u32(0x1C, b.image);
+            if let Some(t) = b.tint {
+                l.f32(0x20, t);
+            }
             l
         }),
         _ => None,
@@ -1072,7 +1086,9 @@ pub fn sobj(
     let (image_ptr, tlut) = match o.image {
         SImage::Data(d) => (cx.data(data.ptr(d)), tx.tlut),
         SImage::Movie { .. } => (Some(0), None),
-        SImage::Buffer { addr, .. } | SImage::Copy { addr, .. } => (Some(addr), None),
+        SImage::Buffer { addr, .. }
+        | SImage::Copy { addr, .. }
+        | SImage::IntroCopy { addr, .. } => (Some(addr), None),
         SImage::None => (None, None),
     };
     let mut t = gx_init_tex_obj(
@@ -1121,6 +1137,20 @@ pub fn sobj(
             t2 = t2.loaded(1);
         }
         tex(&mut l, 0x7C, t2, image2);
+    }
+    if let SImage::IntroCopy {
+        addr,
+        width,
+        height,
+        format,
+        ..
+    } = o.image2_copy
+    {
+        let mut t2 = gx_init_tex_obj(addr, width, height, format, tx.wrap_s, tx.wrap_t, 0);
+        if o.loaded && o.flags & 0x14 == 4 {
+            t2 = t2.loaded(1);
+        }
+        tex(&mut l, 0x7C, t2, Some(addr));
     }
     l.put(img);
 }
