@@ -126,11 +126,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
             3883,
             "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
         ),
-        (
-            "stages-1p-b",
-            10941,
-            "not implemented: stage kind 38 isn't ported",
-        ),
+        ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
     ]);
 }
@@ -514,4 +510,31 @@ fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
             "{name}: {out}"
         );
     }
+}
+
+/// Sarah's Classic clear (milestone 6's tasks 22 and 2, the intros' sixth round):
+/// `recordings/classic-clear` from power-on on its card, Classic through its eleven stages:
+/// the team stage, the target stage (Classic's target scoring and records), the giant stage
+/// on Mushroom Kingdom II, Snag the Trophies (`grfigureget.c`: three trophy coins on the
+/// stand), the horde stage's intro (the costumes copied into images and scattered as
+/// sprites over a depth quad) and match, the race (its goal's score and coins on the clear
+/// screen) and the metal stage, to the boss stage, whose controller (`fn_8017C71C`) stops by
+/// name.
+#[test]
+fn classic_clear_runs_to_the_boss_stage() {
+    let trace = ssbm_rs_local("traces/session/classic-clear.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/classic-clear.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+        eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(["session", &trace, &inputs, "--all", "--heap"])
+        .output()
+        .expect("melee-oracle runs");
+    let out = String::from_utf8_lossy(&out.stdout);
+    let want = "16750 ticks compared, no difference; stopped in tick 16750: fn_8017C71C \
+                (Classic's boss stage's controller, fn_8017C1A4) isn't ported";
+    assert!(out.contains(want), "{out}");
+    assert!(out.contains("no stale reads"), "{out}");
 }

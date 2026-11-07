@@ -391,6 +391,19 @@ impl Ctx<'_> {
                 self.toy_fall_copy(*image, *x, *y, *clear);
                 1
             }
+            Draw::IntroCopy { image, x, y, clear } => {
+                self.intro_horde_copy(*image, *x, *y, *clear);
+                1
+            }
+            Draw::DepthQuad {
+                top,
+                bottom,
+                left,
+                right,
+            } => {
+                self.depth_quad(*top, *bottom, *left, *right);
+                1
+            }
             Draw::BlurCopy => {
                 self.blur_copy();
                 1

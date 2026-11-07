@@ -54,7 +54,47 @@ impl Comparer<'_> {
         }
         let theirs = self.u32(sym("lbl_804D6608")) as i32;
         self.check("lbl_804D6608", "the call's sound", e.call, theirs);
+        self.intro_horde();
         self.intro_normal();
+    }
+
+    /// Classic's horde stage's intro's splash (`lbl_804735E8`, `lbl_804D65F0`): its images'
+    /// descriptors (once made: before, they hold nothing), the sprites' order and GObj, the
+    /// costumes shown and the copies made, and the copies' camera.
+    fn intro_horde(&mut self) {
+        let h = self.game.intros.horde;
+        let at = sym("lbl_804735E8");
+        for (n, f) in h.images.iter().enumerate() {
+            if f.addr == 0 {
+                continue;
+            }
+            let a = at + 0x18 * n as u32;
+            self.check(
+                &format!("lbl_804735E8 image {n}"),
+                "pixels, width, height, format, mipmap",
+                (f.addr, f.width, f.height, f.format, 0u8),
+                (
+                    self.u32(a),
+                    self.u16(a + 4),
+                    self.u16(a + 6),
+                    self.u32(a + 8),
+                    self.u8(a + 0xC),
+                ),
+            );
+        }
+        let theirs: Vec<u8> = (0..10).map(|i| self.u8(at + 0x90 + i)).collect();
+        self.check("lbl_804735E8", "xD0", h.order.to_vec(), theirs);
+        let theirs = self.u32(at + 0x9C);
+        self.compare_handle("lbl_804735E8.xDC", "GObjId", h.sprites.map(|g| g.0), theirs);
+        self.check(
+            "lbl_804735E8",
+            "xE0, xE1",
+            (h.count, h.copied),
+            (self.u8(at + 0xA0), self.u8(at + 0xA1)),
+        );
+        let theirs = self.u32(sym("lbl_804D65F0"));
+        let ours = h.copy_camera.map(|g| g.0);
+        self.compare_handle("lbl_804D65F0", "GObjId", ours, theirs);
     }
 
     /// Adventure's intro's state (`lbl_804736C0`) and archive (`lbl_804D6620`).

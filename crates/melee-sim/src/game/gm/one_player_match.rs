@@ -110,9 +110,9 @@ const CKIND_NESS: i8 = 0xD;
 /// `gm_80165290`, the boss stages' pause override; `fn_8017C7EC`, `fn_8017C7A0` and
 /// `fn_8017C71C`, the bonus stages' and the bosses' hooks.
 const FIXED_CAMERA: u32 = 0x8016_5290;
-const BONUS_START: u32 = 0x8017_C7EC;
-const BONUS_END: u32 = 0x8017_C7A0;
-const BOSS_START: u32 = 0x8017_C71C;
+pub const BONUS_START: u32 = 0x8017_C7EC;
+pub const BONUS_END: u32 = 0x8017_C7A0;
+pub const BOSS_START: u32 = 0x8017_C71C;
 
 /// A 1P run's getter's table entry for a round and level (`gmTraining_ClassicStages`, the
 /// All-Star table `allstar_level` holds).
@@ -121,6 +121,26 @@ fn getter_entry(round: u8, level: u8) -> (u8, u16, u16, [u8; 10]) {
 }
 
 impl Running<'_> {
+    /// The race's start, `fn_8017C7EC`: the clock at the race's time for the run's character
+    /// (`grPushOn_80219230`).
+    #[doc(alias = "fn_8017C7EC")]
+    #[doc(alias = "grPushOn_80219230")]
+    pub fn one_player_race_start(&mut self) {
+        let ckind = self.game.one_player_run().map_or(0, |r| r.player.ckind);
+        let t = crate::game::gr::pushon::race_time(self.game, self.data, i32::from(ckind));
+        self.game.vs.state.timer_seconds = t as u32;
+    }
+
+    /// Snag the Trophies' end, `fn_8017C7A0`: a fade to black over 48 frames, and the match's
+    /// message (`gm_8016B350`): 0x7C85F with a trophy snagged (`Ground_801C1DAC`), else
+    /// 0x9C49.
+    #[doc(alias = "fn_8017C7A0")]
+    pub fn one_player_trophies_end(&mut self) {
+        self.game.bgflash.fade_to_black(0x30);
+        let snagged = crate::game::gr::ground::flags(self.game, 0x100) != 0;
+        self.game.vs.state.unk_10 = if snagged { 0x7C85E + 1 } else { 0x9C48 + 1 };
+    }
+
     /// A 1P run's `u8` getter (`Unk1PData::x48` to `x60`) for a round, level and index:
     /// `gm_8018A160` (the item frequency), `gm_8018A228` (the level), `gm_8018A25C` (the
     /// costume), `gm_8018A290` (the computer kind).
