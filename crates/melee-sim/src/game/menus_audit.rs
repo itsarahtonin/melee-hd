@@ -44,7 +44,10 @@ pub const GATES: &[Gate] = &[
         list: REG,
         entry: 2,
         what: "All-Star",
-        covers: &["melee/gm/gmallstar"],
+        // Its own units are accounted for (task 23); what it still reaches unported is the
+        // single-player modes' shared code (game::single_player_audit's gaps): the Very Hard
+        // clear's record among them.
+        covers: &["gmMainLib_8015D418"],
     },
     Gate {
         list: ONE_P,
@@ -276,10 +279,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "gm_8017D7AC's records after a no contest",
         "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_8017CBAC (All-Star's clear)",
-        "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "HUD colour {c} past the table",

@@ -9,10 +9,8 @@ melee/gm/gm_17AD	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gm_17BA	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_17C0	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_18A1	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmadventure	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gmallstar	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmclassic	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmevent	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
@@ -25,8 +23,6 @@ gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its ca
 gmMainLib_8015D134	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D2F0	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D384	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D3FC	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D418	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D780	gated	named only by the single-player modes' code (gm_801B8024): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015DB00	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -51,7 +47,6 @@ gm_GetGameModeStateExitData	unchecked	a getter or setter of the game's data, whi
 gm_GetPreviousSceneIndex	gated	named only by the single-player modes' code (gm_801B461C): the single-player modes', which only the 1P list's gated entries lead to
 gm_GetCurrentSceneEnterData	gated	named only by the single-player modes' code (gm_801A68D8, gm_801A6EE4, gm_801A7B00): the single-player modes', which only the 1P list's gated entries lead to
 gm_Mode_AdventureGOver_OnLoad	gated	the single-player game overs: the single-player modes', which only the 1P list's gated entries lead to
-gm_Mode_AllstarGOver_OnLoad	gated	the single-player game overs: the single-player modes', which only the 1P list's gated entries lead to
 gm_Mode_Vs_OnUnload	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_HowTo_OnEnter	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
@@ -69,7 +64,7 @@ fn_8025FAC0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 fn_8025FB2C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
 fn_801A47E4	unreached	the scene's debug pause handlers' tests (D-pad up with X, Z), which gm_801A4BD4 installs and only a debug level runs
-melee/gm/gm_17EB	gated	All-Star's data (gm_GetAllStarData and its getters), which fn_8016C7F0 reads only in the single-player branch its port refuses: the single-player modes', which only the 1P list's gated entries lead to
+fn_8017EDDC	gated	Classic's check for Crazy Hand's round (gm_17EB's last unported function, which only Classic's boss round calls): the single-player modes', which only the 1P list's gated entries lead to
 onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmode.c, mode 6), made pending only at a debug level (task 19's); VS mode's is ported
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 fn_80197FD8	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
