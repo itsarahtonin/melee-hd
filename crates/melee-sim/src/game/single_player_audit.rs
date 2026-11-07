@@ -341,7 +341,16 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/masterhandbullet",
             "it/kinds/masterhandlaser",
         ],
-        unreached: &[],
+        unreached: &[
+            (
+                "an event's random fifth player",
+                "no event's fifth or sixth player is a random character: onEnterVs runs each of an event's players through gm/event.rs's event_other_player as its match starts, and every one of the 51 events' sessions enters its match without stopping there (docs/oracle.md, sessions)",
+            ),
+            (
+                "itEvYoshiEgg_Logic42_EvtUnk",
+                "the egg's evt_unk runs only from a fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), and Event 13, the one event with the egg, frees no fighter mid-match: it has no joiners and no player leaves, and a match's end frees none (ssbm-rs's CALLS over m6-cpu-kinds/ck17-ev13, the egg kept to the time's end, logs no Fighter_Unload_8006DABC)",
+            ),
+        ],
     },
     Paths {
         mode: CL,
@@ -886,10 +895,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "Event Match's list, events and egg",
-        covers: &[
-            "melee/it/kinds/itevyoshiegg",
-            "an event's random fifth player",
-        ],
+        covers: &["melee/it/kinds/itevyoshiegg"],
         modes: &[EV],
     },
     Gap {
