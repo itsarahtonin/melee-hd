@@ -179,6 +179,16 @@ impl Running<'_> {
         // A slot handed out again keeps its last fighter's record of the GPU's pixels, as
         // its block keeps them where this one doesn't write.
         self.game.ft.addresses.insert(f.0, address);
+        // A new fighter's last hit's record's unnamed part is what its block held (or a reused
+        // slot's last fighter's, which the block keeps) until a hit copies a record in
+        // (`ft::Globals::hit_record_pad`): not the claim's unknown bytes (allstar-clear, tick
+        // 19414).
+        if fresh {
+            self.game.ft.hit_record_pad.remove(&f.0);
+        }
+        if !self.game.rules.slippi && address != 0 && crate::hsd::heap::image_on() {
+            crate::hsd::heap::with(|h| h.image.unclaim(address + 0x18E9, address + 0x18EC));
+        }
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));
         self.game.fighters[f.0].dat_attrs_backup = Some(attrs);
         f

@@ -171,8 +171,8 @@ impl Running<'_> {
     /// A 1P run's float getter (`x64` to `x70`): the attack ratio (`gm_8018A188`,
     /// `gm_8018A2C4`) or the defense ratio (`gm_8018A1D8`, `gm_8018A314`), a hundredth of the
     /// table's percent.
-    // Ports gm_8018A188 and gm_8018A1D8 (All-Star's last round's); aliased once a check
-    // reaches them.
+    #[doc(alias = "gm_8018A188")]
+    #[doc(alias = "gm_8018A1D8")]
     #[doc(alias = "gm_8018A2C4")]
     #[doc(alias = "gm_8018A314")]
     pub fn one_player_ratio(getter: Option<CodeRef>, round: u8, level: u8) -> f32 {
@@ -681,7 +681,7 @@ impl Running<'_> {
 
     /// All-Star's match's exit, `gm_801B59AC`: the round's opponents marked beaten (2) or met
     /// (1) by the stage's flag, the damage and the frames carried, and the run's exit (the
-    /// game over next at no stock); the last round's clear (`gm_8017CBAC`) isn't ported.
+    /// game over next at no stock); the last round won, All-Star's clear (`gm_8017CBAC`).
     #[doc(alias = "gm_801B59AC")]
     pub fn allstar_exit_vs(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
@@ -701,7 +701,10 @@ impl Running<'_> {
         let on = self.one_player_match_exit(&mut run, 0x69);
         self.game.one_player.allstar.base = run;
         if on && id == 0x60 {
-            crate::game::code::unported_call("gm_8017CBAC (All-Star's clear)");
+            // `gm_8017CBAC` with All-Star's run and stocks (`gmMainLib_8015CDE0`).
+            let run = self.game.one_player.allstar.base;
+            let stocks = self.game.game_data.vs.unk_528.stocks;
+            self.one_player_clear(&run, stocks, super::endings::GM_ALLSTAR_GOVER);
         }
     }
 
@@ -907,9 +910,9 @@ impl Running<'_> {
     /// A 1P run's clear, `gm_8017CBAC`: the trophies' table back to the save
     /// (`Ground_801C5A60`), the character's records for the mode (Adventure's: cleared, its
     /// high score, the highest level cleared and, on Very Hard, the fewest stocks lost), the
-    /// save written and `mode` next (the ending's); Classic's the same in its own fields.
-    /// All-Star's records aren't ported.
-    // Ports gm_8017CBAC's Adventure and Classic cases; aliased once All-Star's is.
+    /// save written and `mode` next (the ending's); Classic's the same in its own fields, and
+    /// All-Star's are its own arm ([`Self::allstar_clear_records`]).
+    #[doc(alias = "gm_8017CBAC")]
     #[doc(alias = "gmMainLib_8015D25C")]
     #[doc(alias = "gmMainLib_8015D134")]
     // Ports gmMainLib_8015D1C8 (Very Hard's branch); aliased once a check reaches it.
@@ -959,11 +962,43 @@ impl Running<'_> {
                     rec.b789 = stocks & 7;
                 }
             }
-            _ => crate::game::code::unported_call("gm_8017CBAC (All-Star's clear)"),
+            // All-Star's case (task 23's arm).
+            super::endings::GM_ALLSTAR_GOVER => self.allstar_clear_records(run, sel, stocks),
+            _ => {}
         }
         self.save_after_run();
         self.set_pending_game_mode(mode);
         self.set_new_game_mode_pending();
+    }
+
+    /// `gm_8017CBAC`'s All-Star case: the character's All-Star cleared (`gmMainLib_8015D384`,
+    /// and this run's clear in `x18`'s mask), its high score (`fn_80162FF4`), Final
+    /// Destination unlocked with its message if it isn't yet (`gm_80164430`, `gm_80164504`),
+    /// the highest level cleared (`gmMainLib_8015D3E4`) and, on Very Hard, the fewest stocks
+    /// lost (`gmMainLib_8015D3FC`, `gmMainLib_8015D418`).
+    #[doc(alias = "gmMainLib_8015D384")]
+    #[doc(alias = "gmMainLib_8015D3FC")]
+    // Ports gmMainLib_8015D418 (Very Hard's branch); aliased once a check reaches it.
+    fn allstar_clear_records(&mut self, run: &Unk1PData, sel: u8, stocks: u8) {
+        let p = run.player;
+        let s = &mut self.game.game_data.thing.save_data;
+        s.x1F2C[usize::from(sel)].x7C.b6 = true;
+        s.unk_8.x18 |= 1 << sel;
+        let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+        if (rec.x90 as u32) < run.x18 as u32 {
+            rec.x90 = run.x18;
+        }
+        if !self.stage_unlocked(0x1F) {
+            self.unlock_stage(0x1F);
+        }
+        let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+        if rec.x82 < p.cpu_level {
+            rec.x82 = p.cpu_level;
+        }
+        let best = rec.b13_to_15;
+        if p.cpu_level == 4 && (best == 0 || stocks < best) {
+            rec.b13_to_15 = stocks & 7;
+        }
     }
 
     /// Adventure's game over, `gm_801B4254`.

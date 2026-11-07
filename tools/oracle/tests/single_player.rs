@@ -123,8 +123,8 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         ("targets", 47425, ""),
         (
             "stages-1p",
-            3883,
-            "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
+            26430,
+            "tick 26429: unknown leftover bytes of a freed a main-heap block under Fighter: its layout isn't ported",
         ),
         ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
@@ -634,4 +634,48 @@ fn sarahs_event_recordings_run_clean_to_their_cards_after() {
             "{name}: {out}"
         );
     }
+}
+
+/// Sarah's All-Star clear (milestone 6's task 23, `recordings/allstar-clear`, traced into
+/// `traces/session`): All-Star as Fox on Very Easy from the unlock-all card, its thirteen
+/// rounds on their characters' stages with the rest areas between them, the last round's 25
+/// Mr. Game & Watches on Flat Zone, All-Star's clear (`gm_8017CBAC`: the records, Final
+/// Destination, the save), the ending's trophy fall, staff roll and congratulations, the
+/// challenger approach's notice and the main menu, clean to the trace's end with `--all
+/// --heap` and the card after the original's.
+#[test]
+fn sarahs_all_star_clear_runs_clean_to_its_card_after() {
+    let trace = ssbm_rs_local("traces/session/allstar-clear.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/allstar-clear.inputs");
+    let after = ssbm_rs_local("lockstep/recordings/allstar-clear-play.card");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args([
+            "session",
+            &trace,
+            &inputs,
+            "--all",
+            "--heap",
+            "--card-after",
+            &after,
+        ])
+        .output()
+        .expect("melee-oracle runs");
+    let out = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{out}");
+    assert!(
+        out.contains("25073 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
 }

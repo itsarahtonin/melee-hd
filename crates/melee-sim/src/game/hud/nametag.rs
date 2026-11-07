@@ -306,7 +306,15 @@ impl Running<'_> {
             Some(j),
         );
         // `NameTag_Create`'s user data, a byte of the heap.
-        g.hud.nametags.user_data_addrs[slot as usize] = crate::hsd::heap::mem_alloc(1);
+        let addr = crate::hsd::heap::mem_alloc(1);
+        g.hud.nametags.user_data_addrs[slot as usize] = addr;
+        // It holds the slot, which the block keeps once it goes back (allstar-clear, tick
+        // 7712: a match's item over a rest area's byte).
+        crate::hsd::export::with_image(|img| {
+            let mut l = crate::hsd::export::Lay::new(addr, 1);
+            l.bytes(0, &[slot as u8]);
+            l.put(img);
+        });
         g.world
             .init_user_data(o, 0, UserData::NameTagSlot(slot as u8));
         g.world.setup_proc(o, CodeRef(PROC), 17);
