@@ -588,6 +588,10 @@ impl Ctx<'_> {
         self.tobj_setup(&chain);
         self.tobj_setup_coord_gen(&chain);
         let desc = self.setup_tev(m, &chain, rendermode);
+        // The chain `HSD_TObjSetup` made current, which the shapes' matrix setup asks for its
+        // reflection and highlight textures (`HSD_PObjGetSetupFlags`): the material set up,
+        // which for a metal or clear fighter isn't the display object's own.
+        self.hsd.tobj_chain = chain;
         (desc, rendermode)
     }
 
