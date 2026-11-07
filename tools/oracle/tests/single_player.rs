@@ -447,6 +447,43 @@ fn the_fifth_rounds_events_run_clean_to_their_cards_after() {
     }
 }
 
+/// Event Match's seventh round (milestone 6's task 21; docs/oracle.md, "Sessions"): Event 10's
+/// first round won by a lookahead bot and its second lost (`e10-series`: a series' round won,
+/// `gm_801BC670`), and Event 13 with the egg dropped from a computer player's hand
+/// (`e13-drop`) and thrown onto the slope, where it skids (`e13-slide`: its state 4), each
+/// clean from power-on to its trace's end with `--all --heap` and the card after the
+/// original's.
+#[test]
+fn the_seventh_rounds_events_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("e10-series", 4289),
+        ("e13-slide", 2135),
+        ("e13-drop", 3186),
+    ] {
+        let dir = "m6-event-7";
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in(dir, name, &args) else {
+            return;
+        };
+        let want = format!(
+            "{ticks} ticks compared, no difference
+"
+        );
+        assert!(
+            out.contains(&want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Task 26's second round (`m6-unlocks`; docs/oracle.md, "Sessions"): the Home-Run Contest's
 /// 300 m (`gm_80173B30`'s 0xBD, `hr-300`), Training's combo of 10 (`gm_80173BC4`'s 0x6D,
 /// Young Link's 12, `tr-combo10`) and Endless Melee's 100 KOs (`gm_80173C70`'s 0x4F,
