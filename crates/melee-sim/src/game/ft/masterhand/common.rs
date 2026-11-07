@@ -17,7 +17,7 @@ impl Running<'_> {
     #[doc(alias = "ftMh_BackCrush_IASA")]
     #[doc(alias = "ftMh_Wait1_1_IASA")]
     #[doc(alias = "ftMh_Fail_IASA")]
-    // Ports `ftMh_Cancel_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_Cancel_IASA")]
     #[doc(alias = "ftMh_WalkWait_IASA")]
     #[doc(alias = "ftMh_Drill_IASA")]
     #[doc(alias = "ftMh_Entry_IASA")]
@@ -125,10 +125,10 @@ impl Running<'_> {
     #[doc(alias = "ftMh_TagCrush_Coll")]
     #[doc(alias = "ftMh_TagRockPaper_Coll")]
     #[doc(alias = "ftMh_Throw_Coll")]
-    // Ports `ftMh_CaptureWaitMasterHand_Anim`; aliased once a check reaches it.
-    // Ports `ftMh_CaptureWaitMasterHand_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_CaptureWaitMasterHand_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_CaptureWaitMasterHand_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_CaptureWaitMasterHand_Anim")]
+    #[doc(alias = "ftMh_CaptureWaitMasterHand_IASA")]
+    #[doc(alias = "ftMh_CaptureWaitMasterHand_Phys")]
+    #[doc(alias = "ftMh_CaptureWaitMasterHand_Coll")]
     // Ports `ftMh_ThrownMasterHand_Anim`; aliased once a check reaches it.
     // Ports `ftMh_ThrownMasterHand_IASA`; aliased once a check reaches it.
     // Ports `ftMh_ThrownMasterHand_Phys`; aliased once a check reaches it.

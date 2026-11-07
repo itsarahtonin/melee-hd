@@ -32,11 +32,11 @@ use common::{
     MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, O6_INTRO_ALLSTAR, ONETT,
     OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, REC_ADVENTURE, REC_EV29, REC_TR_COMBO20, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
+    RAINBOW_CRUISE, REC_ADVENTURE, REC_EV29, REC_EV50, REC_TR_COMBO20, RESULTS_PILLS,
+    RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO,
+    SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
+    TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
@@ -1937,6 +1937,28 @@ fn e3_ev26_2100() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn e4_ev22_2000() {
     event_match(&EV22, 2000, [1775, 1775]);
+}
+
+// Event Match's sixth round: Event 50 won (Sarah's recording ev50): Crazy Hand hit for the
+// last time, the cutscene camera on him (13200), falling beaten as the match starts fading
+// to white (13350) and further into the fade (13400), captured with ssbm-rs's renderer
+// running.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13200() {
+    event_match(&REC_EV50, 13200, [920, 920]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13350() {
+    event_match(&REC_EV50, 13350, [3447, 3447]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13400() {
+    event_match(&REC_EV50, 13400, [4577, 4577]);
 }
 
 frames!(TT_DK_QUIT;
