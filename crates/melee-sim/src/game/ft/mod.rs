@@ -135,6 +135,14 @@ pub struct Globals {
     /// any read before a write (docs/engine.md, "Uninitialized values").
     #[clone_from(if_changed)]
     pub render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
+    /// Each fighter's last hit's record's unnamed part (`dmg.x18d8`'s low three bits of byte
+    /// 0x11 and its padding, bytes 0x12 and 0x13, which `ft_800898B4_t` doesn't name), by
+    /// slot, once a hit copied the record whole from its attacker's (`fn_80037F00`): the
+    /// attacker's `x2074` bytes there, or its item's `xDA4` word's. Nothing reads it; the
+    /// heap's image keeps it for what a later object over the fighter's block takes
+    /// (allstar-clear, tick 17097). None until then: what the block held.
+    #[clone_from(if_changed)]
+    pub hit_record_pad: std::collections::BTreeMap<u32, [u8; 3]>,
     /// The addresses the original's allocator gives the next fighters, in creation order,
     /// as the frontend seeds them (from ssbm-rs's trace); a fighter created without one
     /// records 0. An input until an allocator model computes them.
