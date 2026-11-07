@@ -262,6 +262,87 @@ fn rec_classic_clear_11500() {
         Capture::RenderedSince(11425),
     );
 }
+// Classic's metal stage (`recordings/classic-clear` 16000, Fox against metal Marth on
+// Battlefield), Master Hand's entry (16950) and his defeat's flash (19150), against captures
+// made with ssbm-rs's renderer running: identical images, every draw the same but those that
+// sample the fighters' shadows' copies. Metal Marth's sword (a shape of his shared model, its
+// own material not a reflective one) drew its metal reflection through a texture matrix
+// melee-render never loaded, since it asked the display object's material rather than the
+// metal one set up for the reflection (streaks on the sword at 16000; the matrices' leftovers
+// at 16950 and 19150).
+fn classic_shadowed(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_16000() {
+    classic_shadowed(16000, [1417, 1387]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_16950() {
+    classic_shadowed(16950, [693, 690]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_19150() {
+    classic_shadowed(19150, [4020, 4020]);
+}
+
+// Classic's trophy fall before the credits: the character's trophy alone on its stand
+// (`recordings/classic-clear` 20300) and the trophies laid round (20650), against captures
+// made with ssbm-rs's runner at b95cae5 running its renderer, identical.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20300() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20300,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20650() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20650,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+
+// The first Staff Credits frame (`recordings/classic-clear` 20710), against a log started at
+// 20700, before the trophy fall's last depth copies (to 20707), captured with ssbm-rs's runner
+// at b95cae5: identical. melee-hd's frame is the same with the depth copies encoded or not (its
+// copies go to images of their own), so it can't fail without them.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20710() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20710,
+        Group::Standard,
+        Expect::Identical,
+        Capture::RenderedSince(20700),
+    );
+}
 // The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
 // renderer running: the names flying past with shots fired at rest (1400) and the stick to the
 // right (1600), the roll paused on B (2200), at Start's six times speed with the background
