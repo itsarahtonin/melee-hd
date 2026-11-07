@@ -862,20 +862,10 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Event Match's list, events and egg",
         covers: &[
-            "melee/gm/gmevent",
             "melee/it/kinds/itevyoshiegg",
             "an event's random fifth player",
         ],
         modes: &[EV],
-    },
-    Gap {
-        what: "the events' trophy stages",
-        covers: &[
-            "melee/gr/grfigure1",
-            "melee/gr/grfigure2",
-            "melee/gr/grfigure3",
-        ],
-        modes: &[EV, DB],
     },
     Gap {
         what: "Classic's mode, its intro and its bonus rounds",
