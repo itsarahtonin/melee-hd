@@ -7,9 +7,9 @@ use melee_data::archive::DataRef;
 
 use super::Var;
 use super::kinds::{
-    arwinglaser::ArwingLaserVars, gamewatch::GameWatchRescueVars, gamewatch::GameWatchVars,
-    greatfoxlaser::GreatFoxLaserVars, heiho::HeihoVars, klap::KlapVars, kyasarin::KyasarinVars,
-    kyasarinegg::KyasarinEggVars, tincle::TincleVars, tools::ToolsVars,
+    arwinglaser::ArwingLaserVars, coin::CoinVars, gamewatch::GameWatchRescueVars,
+    gamewatch::GameWatchVars, greatfoxlaser::GreatFoxLaserVars, heiho::HeihoVars, klap::KlapVars,
+    kyasarin::KyasarinVars, kyasarinegg::KyasarinEggVars, tincle::TincleVars, tools::ToolsVars,
     whispyapple::WhispyAppleVars, yaku::Anchor, yaku::YakuVars,
 };
 use crate::game::mirror::{LayCx, LayOut};
@@ -132,6 +132,13 @@ impl LayOut for GreatFoxLaserVars {
         i16_(l, at + 0x34, &self.x34);
         i16_(l, at + 0x36, &self.x36);
         i16_(l, at + 0x38, &self.x38);
+    }
+}
+
+impl LayOut for CoinVars {
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        self.vars.lay(l, at, cx);
+        self.contact.lay(l, at + 0x3C, cx);
     }
 }
 
