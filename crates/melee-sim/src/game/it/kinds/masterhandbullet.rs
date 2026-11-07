@@ -33,7 +33,7 @@ pub const LANDED: u32 = 0x802F_0F08;
 pub const DMG_DEALT: u32 = 0x802F_0F0C;
 #[doc(alias = "itMasterHandBullet_Logic83_Reflected")]
 pub const REFLECTED: u32 = 0x802F_0F14;
-// Ports `itMasterHandBullet_Logic83_Clanked`; aliased once a check reaches it.
+// `itMasterHandBullet_Logic83_Clanked`: dead, the bullet's boxes never clank (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802F_0F34;
 // Ports `itMasterHandBullet_Logic83_Absorbed`; aliased once a check reaches it.
 pub const ABSORBED: u32 = 0x802F_0F3C;

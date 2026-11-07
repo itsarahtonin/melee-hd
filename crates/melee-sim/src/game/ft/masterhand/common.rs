@@ -129,10 +129,8 @@ impl Running<'_> {
     #[doc(alias = "ftMh_CaptureWaitMasterHand_IASA")]
     #[doc(alias = "ftMh_CaptureWaitMasterHand_Phys")]
     #[doc(alias = "ftMh_CaptureWaitMasterHand_Coll")]
-    // Ports `ftMh_ThrownMasterHand_Anim`; aliased once a check reaches it.
-    // Ports `ftMh_ThrownMasterHand_IASA`; aliased once a check reaches it.
-    // Ports `ftMh_ThrownMasterHand_Phys`; aliased once a check reaches it.
-    // Ports `ftMh_ThrownMasterHand_Coll`; aliased once a check reaches it.
+    // `ftMh_ThrownMasterHand_*` run here too, but never: the victim leaves the state in the
+    // call that enters it (ledger/dead.txt).
     #[doc(alias = "ftMh_Wait1_0_Coll")]
     #[doc(alias = "ftMh_WalkShoot_Coll")]
     #[doc(alias = "ftMh_Walk2_Coll")]

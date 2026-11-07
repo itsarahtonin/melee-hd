@@ -164,10 +164,8 @@ impl Running<'_> {
     // Ports `ftCo_CaptureWaitCrazyHand_IASA`; aliased once a check reaches it.
     // Ports `ftCo_CaptureWaitCrazyHand_Phys`; aliased once a check reaches it.
     // Ports `ftCo_CaptureWaitCrazyHand_Coll`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownCrazyHand_Anim`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownCrazyHand_IASA`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownCrazyHand_Phys`; aliased once a check reaches it.
-    // Ports `ftCo_ThrownCrazyHand_Coll`; aliased once a check reaches it.
+    // `ftCo_ThrownCrazyHand_*` run here too, but never: the victim leaves the state in the
+    // call that enters it (ledger/dead.txt).
     pub fn ch_nothing(&mut self, _gobj: GObjId) {}
 
     /// Back to his place and the wait once the animation ends (`ftCh_GrabUnk1_8015BC88`).
