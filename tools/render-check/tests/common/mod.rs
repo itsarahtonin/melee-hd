@@ -1387,12 +1387,13 @@ pub const M6I_ADVENTURE2: Game = Game {
     replay: Replay::Session("m6i-adventure2"),
 };
 
-/// Sarah's Classic clear (`recordings/classic-clear`): the versus splash before the Team Mario
-/// stage, its portraits copies of the frame in color and depth.
+/// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros, Snag the
+/// Trophies, and the versus splash before the Team Mario stage, its portraits copies of the
+/// frame in color and depth.
 pub const REC_CLASSIC_CLEAR: Game = Game {
     stage: "Classic",
     name: "rec-classic-clear",
-    players: "Classic's Team Mario splash (recording classic-clear)",
+    players: "Classic's stages and splashes (recording classic-clear)",
     replay: Replay::Session("rec-classic-clear"),
 };
 
@@ -1403,15 +1404,6 @@ pub const REC_ADVENTURE: Game = Game {
     name: "rec-2026-10-06_12-04-48",
     players: "Adventure's first stages (recording 2026-10-06_12-04-48)",
     replay: Replay::Session("rec-2026-10-06_12-04-48"),
-};
-
-/// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros and Snag the
-/// Trophies.
-pub const REC_CLASSIC_STAGES: Game = Game {
-    stage: "Classic's stages",
-    name: "rec-classic-clear",
-    players: "Classic's bonus stages (recording classic-clear)",
-    replay: Replay::Session("rec-classic-clear"),
 };
 
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
