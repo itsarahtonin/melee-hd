@@ -163,9 +163,10 @@ pub fn bytes_known(data: &Archives, addr: u32, len: u32) -> Option<(Vec<u8>, Vec
 }
 
 /// The collision's ECB source's joint member's last two words (`ECBSource` +0x18) in a new
-/// link's block at `coll` (its `CollData`): a link's box source never writes them, so they
-/// keep what the block held rather than the claim's unknown bytes, in a session (allstar-clear,
-/// tick 15339: an item over a freed hookshot's link).
+/// link's block at `coll` (its `CollData`): a box source never writes them, so they keep what
+/// the block held rather than the claim's unknown bytes, in a session (allstar-clear, tick
+/// 15339: an item over a freed hookshot's link), unless the collision's reset zeroes them
+/// (`EcbSource::tail_zeroed`).
 pub fn keep_box_tail(coll: u32) {
     if !heap::image_on() || coll == 0 {
         return;

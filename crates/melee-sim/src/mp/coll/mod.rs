@@ -172,6 +172,12 @@ pub struct EcbSource {
     pub x128: f32,
     /// +0x28: the smallest width fitted around joints.
     pub x12C: f32,
+    /// Whether the joint member's last two words (+0x18) hold the zeros the collision's reset
+    /// left (`mpColl_80041EE4`'s `memzero`), which a box source never writes over: else, since
+    /// a joint source or a block's leftovers, the mirror doesn't keep them. For the heap's
+    /// image only; nothing compares it.
+    #[state_eq(skip)]
+    pub tail_zeroed: bool,
 }
 
 impl Default for EcbSource {
@@ -190,6 +196,7 @@ impl Default for EcbSource {
             x124: 0.0,
             x128: 0.0,
             x12C: 0.0,
+            tail_zeroed: true,
         }
     }
 }
@@ -221,6 +228,7 @@ impl Mirror for EcbSource {
             x124: f(0x20),
             x128: f(0x24),
             x12C: f(0x28),
+            tail_zeroed: false,
         }
     }
 
@@ -298,8 +306,8 @@ impl crate::game::mirror::LayOut for EcbSource {
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
         l.put_u32(at, self.kind as u32);
         match &self.x4 {
-            // A box's five words; the joint member's last two keep what the block held, which
-            // the mirror doesn't keep (nothing compares them), so they're unknown.
+            // A box's five words; the joint member's last two the reset's zeros, or else what
+            // the block held, which the mirror doesn't keep (nothing compares them): unknown.
             EcbShape::Box {
                 up,
                 down,
@@ -310,7 +318,11 @@ impl crate::game::mirror::LayOut for EcbSource {
                 for (i, v) in [up, down, front, back, angle].iter().enumerate() {
                     l.put_u32(at + 4 + 4 * i as u32, v.to_bits());
                 }
-                l.forget(at + 0x18, 8);
+                if self.tail_zeroed {
+                    l.put_u64(at + 0x18, 0);
+                } else {
+                    l.forget(at + 0x18, 8);
+                }
             }
             EcbShape::Joints {
                 x108_joint,
@@ -615,6 +627,7 @@ impl CollData {
         self.ecb_source.x124 = x124;
         self.ecb_source.x128 = 10.0;
         self.ecb_source.x12C = 10.0;
+        self.ecb_source.tail_zeroed = false;
         if self.x34_flags.b0 {
             self.ecb = default_ecb();
             self.prev_ecb = self.ecb.clone();
