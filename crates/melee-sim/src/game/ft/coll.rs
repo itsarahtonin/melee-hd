@@ -69,6 +69,8 @@ pub struct ObjCollHooks<'a> {
     pub climb: crate::game::gr::icemt::ClimbTouch,
     /// Whose collisions stood on the Underground Maze's symbols' floors.
     pub maze: crate::game::gr::shrineroute::SymbolTouch,
+    /// The coins that touched Snag the Trophies' stand.
+    pub coins: crate::game::gr::figureget::CoinTouch,
     /// The stage objects, which the stage's collision joints' callbacks write.
     pub grounds: &'a mut crate::hsd::pool::Pool<super::super::structs::Ground>,
     /// The stage objects by map id (`Ground_GetMapGObj`), for callbacks that write another
@@ -379,6 +381,15 @@ impl CollHooks<StageColl> for ObjCollHooks<'_> {
                     );
                 }
             }
+            super::super::gr::figureget::COIN_TOUCHED => {
+                if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
+                    let item = coll
+                        .x0_gobj
+                        .is_some_and(|o| self.stage_maps.p_link(o) == ITEM_P_LINK);
+                    self.coins
+                        .touched(g, coll.x34_flags.b1234, coll.x0_gobj, item, coll.cur_pos.x);
+                }
+            }
             super::super::gr::pushon::GOAL_TOUCHED => {
                 if let Some(super::super::gr::CollUser::Ground(g)) = user_data {
                     super::super::gr::pushon::goal_touched(
@@ -544,6 +555,7 @@ impl Running<'_> {
             escape: Default::default(),
             climb: Default::default(),
             maze: Default::default(),
+            coins: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: StageMaps::of_parts(&game.world, &game.stage_info, &game.gr, &game.players),
             filter,
@@ -566,16 +578,19 @@ impl Running<'_> {
         let escape = std::mem::take(&mut hooks.escape);
         let climb = std::mem::take(&mut hooks.climb);
         let maze = std::mem::take(&mut hooks.maze);
+        let coins = std::mem::take(&mut hooks.coins);
         game.ft.platforms.clear();
         landing.apply(game);
         kicks.apply(game, self.data);
         escape.apply(game);
         climb.apply(game);
         maze.apply(game);
-        bumps.apply(&mut Running {
+        let mut r = Running {
             game,
             data: self.data,
-        });
+        };
+        bumps.apply(&mut r);
+        coins.apply(&mut r);
         hit
     }
 

@@ -88,7 +88,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// Flying, `it_802F0BE8` (state 0) and `it_802F0D2C` (state 1): its accessory, its lifetime
 /// (`x0`), its hits uncounted, turned a quarter turn its way.
 #[doc(alias = "it_802F0BE8")]
-// Ports `it_802F0D2C`; aliased once a check reaches it.
+#[doc(alias = "it_802F0D2C")]
 pub fn start(r: &mut Running, gobj: GObjId, state: i32) {
     let life = {
         let a = article(item(r.game, gobj))

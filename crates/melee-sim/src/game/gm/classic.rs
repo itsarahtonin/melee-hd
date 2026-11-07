@@ -991,7 +991,48 @@ impl Running<'_> {
             crate::game::code::unported_call("gm_8017CBAC (Classic's clear)");
         }
         if entry.x1 == 0x80 && entry.x2 == 1 {
-            crate::game::code::unported_call("gmClassic_801B3B40's target stage records");
+            self.classic_target_records();
+        }
+    }
+
+    /// The boss stage's start hook, `fn_8017C71C`: its controller (`fn_8017C1A4`, Master Hand's
+    /// entry, Crazy Hand's arrival, the hands' defeats) isn't ported.
+    pub fn classic_boss_start(&mut self) {
+        crate::game::code::unported_call(
+            "fn_8017C71C (Classic's boss stage's controller, fn_8017C1A4)",
+        )
+    }
+
+    /// `gmClassic_801B3B40`'s target stage records, as Target Test's (`gm_801B65D4`) without
+    /// its unlocks: a cleared stage takes the character's best time in the session's records
+    /// and marks it cleared there and in the save's two masks; the save's record is the best
+    /// time once cleared, else the most targets broken (a first clear writes its time and
+    /// stops there).
+    fn classic_target_records(&mut self) {
+        let ckind = self.game.one_player.classic.base.player.ckind as u8;
+        let sel = super::match_exit::selkind(ckind);
+        let frames = self.game.one_player.match_exit.match_end.frame_count;
+        // `Ground_801C1DE4`: the targets left and the stage's targets.
+        let (left, total) = (
+            i32::from(self.game.stage_info.x6D4),
+            i32::from(self.game.stage_info.x6D2),
+        );
+        if left == 0 {
+            super::one_player::record_target_clear(self.game, sel, frames);
+        }
+        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+        if !x7c.b0 {
+            if left == 0 {
+                x7c.b0 = true;
+                x7c.x94 = frames;
+                return;
+            }
+            let broken = total.wrapping_sub(left) as u32;
+            if x7c.x94 < broken {
+                x7c.x94 = broken;
+            }
+        } else if left == 0 && x7c.x94 > frames {
+            x7c.x94 = frames;
         }
     }
 }
