@@ -1285,6 +1285,7 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
             for (i, bone) in bones.iter().enumerate() {
                 bone.lay(&mut l, at + 0x10 * i as u32, &cx);
             }
+            l.keep_pixels_under(img);
             lays.push(l);
         }
     }
@@ -1298,6 +1299,7 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
             for (i, o) in list.iter().take(n).enumerate() {
                 l.put_word(at + 4 * i as u32, cx.handle("DObjId", o.map(|o| o.0)));
             }
+            l.keep_pixels_under(img);
             lays.push(l);
         }
     }
@@ -1341,6 +1343,7 @@ pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::ha
             l.put_word(at + 4 * i as u32, cx.handle("DObjId", Some(o.0)));
         }
     }
+    l.keep_pixels_under(img);
     l.put(img);
 }
 

@@ -69,6 +69,24 @@ impl Lay {
         }
     }
 
+    /// A block whose owner never writes some of its bytes ([`Lay::leftover`]) gives back the
+    /// GPU's pixels it was made over ([`crate::hsd::image::Src::RenderTarget`]) where the
+    /// layout leaves a byte unknown and names no owner for it: a fighter's parts table's
+    /// padding over a copy's image (docs/engine.md, "Uninitialized values").
+    pub fn keep_pixels_under(&mut self, img: &super::image::Image) {
+        let rt = img.render_target(self.at, self.bytes.len() as u32);
+        for (i, &px) in rt.iter().enumerate() {
+            let owned = self.owners.get(i).is_some_and(Option::is_some);
+            if !px || self.known[i] || self.bits[i] != 0 || owned {
+                continue;
+            }
+            if self.pixels.is_empty() {
+                self.pixels = vec![false; self.bytes.len()];
+            }
+            self.pixels[i] = true;
+        }
+    }
+
     /// Bytes at address `a` (the generated layouts', `game::mirror::LayOut`).
     pub fn put_bytes(&mut self, a: u32, b: &[u8]) {
         self.bytes(a - self.at, b);
