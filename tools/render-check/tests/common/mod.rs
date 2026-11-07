@@ -1324,6 +1324,16 @@ pub const M6E2_REGEND_ADV: Game = Game {
     replay: Replay::Session("m6e2-regend-adv"),
 };
 
+/// Captain Falcon's Classic ending in RegularEnding Real (`m6-endings-2/regend-real`): the
+/// trophy fall, whose fighter copies (RGB5A3 color and Z24X8 depth) run to log frame 2029, then
+/// the staff roll.
+pub const M6E2_REGEND_REAL: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-real",
+    players: "RegularEnding Real's trophy fall and staff roll (session m6-endings-2/regend-real)",
+    replay: Replay::Session("m6e2-regend-real"),
+};
+
 /// Mr. Game & Watch's All-Star ending (`m6-endings-2/regend-gw`): the trophy fall's first cut.
 pub const M6E2_REGEND_GW: Game = Game {
     stage: "Debug menu",
@@ -1375,6 +1385,15 @@ pub const M6I_ADVENTURE2: Game = Game {
     name: "m6i-adventure2",
     players: "Adventure's first stage's intro (session m6-oracle/adventure2)",
     replay: Replay::Session("m6i-adventure2"),
+};
+
+/// Sarah's Classic clear (`recordings/classic-clear`): the versus splash before the Team Mario
+/// stage, its portraits copies of the frame in color and depth.
+pub const REC_CLASSIC_CLEAR: Game = Game {
+    stage: "Classic",
+    name: "rec-classic-clear",
+    players: "Classic's Team Mario splash (recording classic-clear)",
+    replay: Replay::Session("rec-classic-clear"),
 };
 
 /// A human's Adventure run (`recordings/2026-10-06_12-04-48`): Mushroom Kingdom's route with
@@ -1928,6 +1947,11 @@ pub const FOUR_FD: Game = Game {
 
 /// The known differences docs/player.md's open issues list, as the dashboard names them.
 pub mod why {
+    /// Classic's Team Mario splash: its portraits sample RGB5A3 copies both renderers keep on
+    /// the GPU (compared by memory they never write), and melee-sim draws the portraits' sprites
+    /// through their camera in three passes where `HSD_SObjLib_803A54EC` draws one (18 more
+    /// draws, off the screen).
+    pub const SPLASH: &str = "Classic's splash: its portraits' color copies kept on the GPU, and the sprites' camera's extra passes (melee-sim)";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
     /// magnified over the water: its blocks legitimately differ between scales.
     /// Pokémon Stadium's screen samples an RGB565 copy melee-gpu keeps on the GPU, which the
