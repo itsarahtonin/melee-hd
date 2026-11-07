@@ -41,6 +41,9 @@ use common::{
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
+// The depth copies' frames (docs/player.md, "Depth copies in frames").
+use common::{M6E2_REGEND_REAL, REC_CLASSIC_CLEAR};
+
 fn identical(game: &Game, frame: u32) {
     compare(game, frame, Group::Standard, Expect::Identical);
 }
@@ -221,6 +224,43 @@ fn m6e2_regend_adv_1950() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn m6e2_regend_gw_1500() {
     toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
+}
+// The staff roll's first frame right after the trophy fall's last depth copy
+// (`m6-endings-2/regend-real` 2030, the copies to 2029), against a capture made with ssbm-rs's
+// renderer running: what Classic's clear shows with a grey layer there (its log frame 20710)
+// samples memory those copies wrote; this one samples none, so it can't fail without the depth
+// copies, only show that encoding them leaves the next scene's frames as they were.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_real_2030() {
+    compare_in(
+        &M6E2_REGEND_REAL,
+        2030,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+// Classic's versus splash before the Team Mario stage (`recordings/classic-clear` 11500, the
+// VS in and every portrait out), against a log started at 11425, before the 640 by 480 copy's
+// last frame and the portraits' copies at 11429 (`Capture::RenderedSince`), captured with
+// ssbm-rs's `ssbm-run-1106.exe` (b95cae5), whose renderer writes the depth copies to memory.
+// Each portrait is a color copy and a depth copy, and the third's color copy lies in memory
+// the 640 by 480 copy held: identical images need both the depth copies and the newer copy
+// kept. The draws are the same but the portraits' (`why::SPLASH`).
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_11500() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        11500,
+        Group::Standard,
+        Expect::SameImages {
+            same: [579, 579],
+            why: common::why::SPLASH,
+        },
+        Capture::RenderedSince(11425),
+    );
 }
 // The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
 // renderer running: the names flying past with shots fired at rest (1400) and the stick to the
