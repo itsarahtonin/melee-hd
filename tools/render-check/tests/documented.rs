@@ -898,8 +898,8 @@ rendered_frames!(RESULTS_TEAMS;
 // Dr. Mario's second pose on the results screen (`results-sessions/pills`), a pill in each
 // hand: as the panel comes in (2701) and on the statistics' page (2901).
 results_frames!(RESULTS_PILLS;
-    results_pills_2701 2701 1532,
-    results_pills_2901 2901 1532,
+    results_pills_2701 2701 1534,
+    results_pills_2901 2901 1534,
 );
 // The character select after a tie under the automatic handicap (`tie-sessions`), captured in
 // ssbm-rs's original code, whose stack leftovers move the handicaps: Fox's handicap at 4
