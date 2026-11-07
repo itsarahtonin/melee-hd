@@ -62,22 +62,14 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 
 /// The objects' processes and destroy callbacks that do nothing: the two models' processes,
 /// and the destroy callbacks (`Ground::x1C_callback`), which only a stage's own destroying of an
-/// object runs (`Ground_801C4A08`), as these stages never do.
+/// object runs (`Ground_801C4A08`), as these stages never do: the nine destroy callbacks are in
+/// `ledger/dead.txt`.
 #[doc(alias = "grFigure1_8020E19C")]
-// Ports grFigure1_8020E1A0; aliased once a check reaches it.
-// Ports grFigure1_8020E1FC; aliased once a check reaches it.
 #[doc(alias = "grFigure1_8020E258")]
-// Ports grFigure1_8020E25C; aliased once a check reaches it.
 #[doc(alias = "grFigure2_8020E430")]
-// Ports grFigure2_8020E434; aliased once a check reaches it.
-// Ports grFigure2_8020E490; aliased once a check reaches it.
 #[doc(alias = "grFigure2_8020E4EC")]
-// Ports grFigure2_8020E4F0; aliased once a check reaches it.
 #[doc(alias = "grFigure3_8020E6C4")]
-// Ports grFigure3_8020E6C8; aliased once a check reaches it.
-// Ports grFigure3_8020E724; aliased once a check reaches it.
 #[doc(alias = "grFigure3_8020E780")]
-// Ports grFigure3_8020E784; aliased once a check reaches it.
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// The stages' line-touch dynamics: none.
@@ -88,18 +80,14 @@ pub fn on_touch_line(_line: i32) -> Option<DataRef> {
     None
 }
 
-/// The stages' shadow checks: every shadow is drawn.
-// Ports grFigure1_OnCheckShadowRender; aliased once a check reaches it.
-// Ports grFigure2_8020E4FC; aliased once a check reaches it.
-// Ports grFigure3_8020E790; aliased once a check reaches it.
+/// The stages' shadow checks: every shadow is drawn. Never asked, since no trophy stage's
+/// object receives shadows (`Ground::x10_flags.b5`): the three are in `ledger/dead.txt`.
 pub fn check_shadow_render() -> bool {
     true
 }
 
-/// The stages' demo setups do nothing (only a cutscene's `Stage_8022532C` runs one).
-// Ports grFigure1_OnDemoInit; aliased once a check reaches it.
-// Ports grFigure1_8020E270; aliased once a check reaches it.
-// Ports grFigure3_8020E504; aliased once a check reaches it.
+/// The stages' demo setups do nothing (only a cutscene's `Stage_8022532C` runs one, and no
+/// cutscene loads a trophy stage): the three are in `ledger/dead.txt`.
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// Creates one of a stage's objects and sets it up (`grFigure1_8020E080`, `grFigure2_8020E314`,
