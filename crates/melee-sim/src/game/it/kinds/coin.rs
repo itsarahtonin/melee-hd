@@ -8,9 +8,10 @@ use super::super::{flag, hitbox, item, item_mut, jobj_of, lib26b1, lib2725, mapl
 use super::foods::set_model;
 use crate::fpu::{mem, reg};
 use crate::game::handles::CodeRef;
-use crate::game::it::CoinFlags;
-use crate::game::state::Running;
-use crate::game::structs::{_itECB, SpawnItem};
+use crate::game::it::{CoinFlags, Var};
+use crate::game::mirror::{Cx, Mem, Mirror};
+use crate::game::state::{Game, Running};
+use crate::game::structs::{_itECB, SpawnItem, it_2E5A_ItemVars};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj;
 use crate::lb::joint::world_position;
@@ -71,6 +72,49 @@ struct Scatter {
     standing: i32,
 }
 
+/// A coin's variables (`it_2E5A_ItemVars`) and the word past them its pickup's test writes:
+/// the pickup (`ft_8007C77C`) passes the coin's `sub` to `lbColl_80007B78` as a fighter's
+/// pickup circle (`Fighter_x1614_t`), whose contact point at `x20` lies past the coin's
+/// member. Only the pickup's sparkle reads it, but it stays in the block when the coin goes,
+/// for whatever the heap gives that block next (a VS results screen's fighter).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct CoinVars {
+    /// `it_2E5A_ItemVars`, the first 0x3C bytes.
+    pub vars: it_2E5A_ItemVars,
+    /// +0x3C: where the pickup's last test met a fighter's circle (`sub`'s `x20`).
+    pub contact: Var<Vec3>,
+}
+
+impl CoinVars {
+    /// Marks every field stale, as a new item finds its variables.
+    pub fn mark_stale(&mut self) {
+        self.vars.mark_stale();
+        self.contact.mark_stale();
+    }
+}
+
+impl Mirror for CoinVars {
+    const SIZE: u32 = 0x48;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        let c = at + 0x3C;
+        CoinVars {
+            vars: it_2E5A_ItemVars::import(m, at, cx),
+            contact: Var::new(Vec3::new(
+                f32::from_bits(m.u32(c)),
+                f32::from_bits(m.u32(c + 4)),
+                f32::from_bits(m.u32(c + 8)),
+            )),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        self.vars.compare(m, at, path, cx);
+        self.contact
+            .compare(m, at + 0x3C, &format!("{path}.contact"), cx);
+    }
+}
+
 /// Runs one of the coin's predicates, if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
@@ -93,6 +137,11 @@ pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+/// The coin's variables.
+pub fn vars(game: &mut Game, gobj: GObjId) -> &mut it_2E5A_ItemVars {
+    &mut item_mut(game, gobj).xDD4_itemVar.coin().vars
 }
 
 fn attrs(r: &Running, gobj: GObjId) -> DataRef {
@@ -259,10 +308,10 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     } else {
         2
     };
-    item_mut(r.game, gobj).xDD4_itemVar.coin().x4.set(t);
+    vars(r.game, gobj).x4.set(t);
     let worth = threshold(t as u32);
     s.left = s.left.wrapping_sub(worth);
-    item_mut(r.game, gobj).xDD4_itemVar.coin().x0.set(worth);
+    vars(r.game, gobj).x0.set(worth);
     if s.flies {
         s.speed = mem(fp::fmuls(reg(s.speed), attr_f(r, gobj, A_X1C)));
         fly_out(r, gobj, s.angle, s.speed);
@@ -284,7 +333,7 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
         left: r.data.f32(e.at(12)),
     };
     let ip = item_mut(r.game, gobj);
-    let v = ip.xDD4_itemVar.coin();
+    let v = &mut ip.xDD4_itemVar.coin().vars;
     v.x10.set(w4);
     v.x14.set(w8);
     v.x8.set(s.pickable);
@@ -296,10 +345,10 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
     let ip = item_mut(r.game, gobj);
     ip.xC0C = ip.xC1C.clone();
     ip.xC1C.bottom = mem(fp::fmuls(reg(ip.xC1C.bottom), reg(ip.scl)));
-    ip.xDD4_itemVar.coin().xC.set(0);
+    ip.xDD4_itemVar.coin().vars.xC.set(0);
     // The inline: not to be picked up yet, and the bone a pickup follows.
-    ip.xDD4_itemVar.coin().x18.set(CoinFlags::default());
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().x8.get() != 0 {
+    ip.xDD4_itemVar.coin().vars.x18.set(CoinFlags::default());
+    if vars(r.game, gobj).x8.get() != 0 {
         let radius = attr_f(r, gobj, A_RADIUS);
         let j = jobj_of(r.game, gobj);
         let ip = item_mut(r.game, gobj);
@@ -307,13 +356,13 @@ fn setup(r: &mut Running, gobj: GObjId, s: &mut Scatter) -> i32 {
             fp::fmuls(0.0039059999398887157, radius),
             reg(ip.scl),
         ));
-        let sub = &mut ip.xDD4_itemVar.coin().sub;
+        let sub = &mut ip.xDD4_itemVar.coin().vars.sub;
         sub.x4.set(j);
         sub.x0.set(r0);
         ip.x3C = r0;
         let p = world_position(&mut r.game.objs, r.data, j, None);
         let ip = item_mut(r.game, gobj);
-        let sub = &mut ip.xDD4_itemVar.coin().sub;
+        let sub = &mut ip.xDD4_itemVar.coin().vars.sub;
         sub.x8.set(p);
         sub.x14.set(p);
         if r.game.it.db_menu.ShowCoinPickupRange {
@@ -332,10 +381,10 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     ip.xD44_lifeTimer = mem(fp::fsubs(t, 1.0));
-    if ip.xDD4_itemVar.coin().x8.get() != 1 {
+    if ip.xDD4_itemVar.coin().vars.x8.get() != 1 {
         return false;
     }
-    let v = ip.xDD4_itemVar.coin();
+    let v = &mut ip.xDD4_itemVar.coin().vars;
     let w = reg(v.x10.get());
     if w <= 0.0 {
         if !v.x18.get().others {
@@ -351,6 +400,7 @@ pub fn tick(r: &mut Running, gobj: GObjId) -> bool {
             item_mut(r.game, gobj)
                 .xDD4_itemVar
                 .coin()
+                .vars
                 .x18
                 .update(|f| CoinFlags { owner: true, ..f });
         }
@@ -389,23 +439,23 @@ fn apply_tier_desc(r: &mut Running, gobj: GObjId, t: i32) {
 /// once) with its bone followed; another falls (state 1).
 #[doc(alias = "it_802E66A0")]
 pub fn start(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().x8.get() == 1 {
+    if vars(r.game, gobj).x8.get() == 1 {
         fly_state(r, gobj);
         return;
     }
     change_state(r, gobj, 1, change::ANIM_UPDATE);
-    let t = item_mut(r.game, gobj).xDD4_itemVar.coin().x4.get();
+    let t = vars(r.game, gobj).x4.get();
     apply_tier_desc(r, gobj, t);
 }
 
 /// State 0, the tier's look the first time, the bone followed.
 fn fly_state(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().xC.get() != 0 {
+    if vars(r.game, gobj).xC.get() != 0 {
         change_state(r, gobj, 0, change::HIT_PRESERVE | 1);
     } else {
         change_state(r, gobj, 0, change::ANIM_UPDATE);
-        item_mut(r.game, gobj).xDD4_itemVar.coin().xC.set(1);
-        let t = item_mut(r.game, gobj).xDD4_itemVar.coin().x4.get();
+        vars(r.game, gobj).xC.set(1);
+        let t = vars(r.game, gobj).x4.get();
         apply_tier_desc(r, gobj, t);
     }
     item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY));
@@ -535,7 +585,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
     ip.x40_vel = Vec3::new(0.0, 0.0, 0.0);
     ip.x5D0_animFrameSpeed = 1.0;
     change_state(r, gobj, 2, change::HIT_PRESERVE | 1);
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().x8.get() == 1 {
+    if vars(r.game, gobj).x8.get() == 1 {
         item_mut(r.game, gobj).on_accessory = Some(CodeRef(ACCESSORY));
     }
 }
@@ -543,7 +593,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 /// `it_2E5A_UnkMotion2_Coll`: a coin to pick up that's lost its floor flies again.
 #[doc(alias = "it_2E5A_UnkMotion2_Coll")]
 pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().x8.get() == 1 && !lands(r, gobj, false) {
+    if vars(r.game, gobj).x8.get() == 1 && !lands(r, gobj, false) {
         start(r, gobj);
     }
     false
@@ -575,21 +625,21 @@ pub fn dmg_dealt(r: &mut Running, _gobj: GObjId) -> bool {
 /// The bone its pickup follows, last frame's and now, `it_802E6A74`.
 #[doc(alias = "it_802E6A74")]
 pub fn follow_bone(r: &mut Running, gobj: GObjId) {
-    if item_mut(r.game, gobj).xDD4_itemVar.coin().x8.get() == 0 {
+    if vars(r.game, gobj).x8.get() == 0 {
         return;
     }
-    let sub = &mut item_mut(r.game, gobj).xDD4_itemVar.coin().sub;
+    let sub = &mut vars(r.game, gobj).sub;
     let now = sub.x8.get();
     sub.x14.set(now);
     let j = sub.x4.get();
     let p = world_position(&mut r.game.objs, r.data, j, None);
-    item_mut(r.game, gobj).xDD4_itemVar.coin().sub.x8.set(p);
+    vars(r.game, gobj).sub.x8.set(p);
 }
 
 /// How many coins the coin is worth, `it_802E5EF4`.
 #[doc(alias = "it_802E5EF4")]
 pub fn worth(r: &mut Running, gobj: GObjId) -> i32 {
-    item_mut(r.game, gobj).xDD4_itemVar.coin().x0.get()
+    vars(r.game, gobj).x0.get()
 }
 
 /// Forgets a GObj the coin points to, `it_2E5A_Logic115_EvtUnk` (`it_8026B894`).

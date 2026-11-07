@@ -751,22 +751,19 @@ pub struct SweptCircle {
 }
 
 /// Tests two swept circles against each other in the XY plane, `lbColl_80007B78`. Each one's
-/// `contact` gets its closest point to the other unless the first rejection skips them.
+/// `contact` gets its closest point to the other unless the first rejection skips them: whether
+/// they touch, or none when skipped (the contacts unwritten).
 #[doc(alias = "lbColl_80007B78")]
 pub fn swept_circles_touch(
     a: &mut SweptCircle,
     b: &mut SweptCircle,
     a_scale: f32,
     b_scale: f32,
-) -> bool {
+) -> Option<bool> {
     let b_radius = fp::fmuls(reg(b.radius), reg(b_scale));
     let a_radius = fp::fmuls(reg(a.radius), reg(a_scale));
-    let Some(points) =
-        capsules_xy_reg((b.prev_pos, b.pos), (a.prev_pos, a.pos), b_radius, a_radius)
-    else {
-        return false;
-    };
+    let points = capsules_xy_reg((b.prev_pos, b.pos), (a.prev_pos, a.pos), b_radius, a_radius)?;
     b.contact = points.on_first;
     a.contact = points.on_second;
-    points.touching
+    Some(points.touching)
 }
