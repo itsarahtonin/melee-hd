@@ -81,9 +81,9 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// The stages' line-touch dynamics: none.
-// Ports grFigure1_OnTouchLine; aliased once a check reaches it.
-// Ports grFigure2_8020E4F4; aliased once a check reaches it.
-// Ports grFigure3_8020E788; aliased once a check reaches it.
+#[doc(alias = "grFigure1_OnTouchLine")]
+#[doc(alias = "grFigure2_8020E4F4")]
+#[doc(alias = "grFigure3_8020E788")]
 pub fn on_touch_line(_line: i32) -> Option<DataRef> {
     None
 }
