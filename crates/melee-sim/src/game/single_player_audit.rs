@@ -152,7 +152,6 @@ const TARGET_TEST: &[&str] = &[
 
 /// Master Hand's units (`ftmasterhand*.c`).
 const MASTER_HAND: &[&str] = &[
-    "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
     "melee/it/kinds/itmasterhandbullet",
@@ -164,7 +163,6 @@ const CRAZY_HAND: &[&str] = &[
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
     "melee/it/kinds/itcrazyhandbomb",
 ];

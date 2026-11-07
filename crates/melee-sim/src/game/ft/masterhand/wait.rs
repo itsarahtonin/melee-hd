@@ -84,8 +84,8 @@ impl Running<'_> {
         self.mh_change_wait(gobj, ms::WAIT1_0, ms::WAIT1_2);
     }
 
-    /// Hovers (`Wait2_0`), `ftMh_MS_341_8014FF1C`.
-    // Ports `ftMh_MS_341_8014FF1C`; aliased once a check reaches it.
+    /// Hovers (`Wait2_0`): `ftMh_MS_341_8014FF1C`'s body, which the original runs only as
+    /// [`Self::mh_enter_wait`]'s inline copy (its own call is dead, ledger/dead.txt).
     pub fn mh_enter_wait2(&mut self, gobj: GObjId) {
         self.mh_wait_pos(gobj);
         self.mh_change_wait(gobj, ms::WAIT2_0, ms::WAIT2_1);
