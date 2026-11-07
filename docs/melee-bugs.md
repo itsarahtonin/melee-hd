@@ -238,6 +238,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** changes the lasers' attributes in the single-player modes where his laser's differ from Master Hand's, so it changes gameplay there; debug VS matches stop crashing.
 - **Source:** the decompilation's `fn_80158534` and its listing (`ftcrazyhandpoke.s`); `crates/melee-sim/src/game/ft/crazyhand/attack.rs` (`ch_poke_lasers`).
 
+### Master Hand and Crazy Hand: the attack timer divides by a computer level of 0
+
+- **Where:** `ftBossLib_8015BD24` (`ftbosslib.c`), from the hands' timer resets (Master Hand's with `x18`, `x20` and `x1C` of his attributes, Crazy Hand's likewise); `crates/melee-sim/src/game/ft/bosslib.rs` (`boss_attack_timer`).
+- **Defect:** the frames until the next attack are `(base / level + rand(hi - lo) + lo) / speed`, the level being the hand's computer level, which a single-player run gives him from its difficulty: 0 on Very Easy. `divw` by zero leaves its result undefined on the PowerPC; the Gekko (as Dolphin and ssbm-rs model it) gives 0 for a nonnegative dividend.
+- **Effect:** on Very Easy the base term is 0, so the hands wait only `rand(hi - lo) + lo` frames between attacks, where Easy's level 1 adds the whole base: they attack more often on the easiest difficulty. Reached by Sarah's Classic clear on Very Easy (`recordings/classic-clear`, Master Hand's first timer at tick 17363).
+- **melee-hd:** modeled (`ppc::divw`).
+- **Fix:** divide by the level clamped to at least 1.
+- **Fix impact:** changes the hands' attack rate on Very Easy (gameplay); sessions of it desync.
+- **Source:** `ftbosslib.c` (`ftBossLib_8015BD24`); ssbm-rs's `div_i32`; `crates/melee-sim/src/game/ft/bosslib.rs`.
+
 ### Mr. Game & Watch: down tilt's interrupt doesn't crouch
 
 - **Where:** `ftGw_AttackLw3_IASA`, `crates/melee-sim/src/game/ft/gamewatch/attack_lw3.rs`.

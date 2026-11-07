@@ -8,6 +8,7 @@ pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
 pub mod classic;
+pub mod classic_boss;
 pub mod clear;
 pub mod decisions;
 pub mod endings;

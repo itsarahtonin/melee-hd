@@ -907,10 +907,12 @@ impl Running<'_> {
     /// A 1P run's clear, `gm_8017CBAC`: the trophies' table back to the save
     /// (`Ground_801C5A60`), the character's records for the mode (Adventure's: cleared, its
     /// high score, the highest level cleared and, on Very Hard, the fewest stocks lost), the
-    /// save written and `mode` next (the ending's). Classic's and All-Star's records aren't
-    /// ported.
-    // Ports gm_8017CBAC's Adventure case; aliased once Classic's and All-Star's are.
+    /// save written and `mode` next (the ending's); Classic's the same in its own fields.
+    /// All-Star's records aren't ported.
+    // Ports gm_8017CBAC's Adventure and Classic cases; aliased once All-Star's is.
     #[doc(alias = "gmMainLib_8015D25C")]
+    #[doc(alias = "gmMainLib_8015D134")]
+    // Ports gmMainLib_8015D1C8 (Very Hard's branch); aliased once a check reaches it.
     // Ports gmMainLib_8015D2F0 (Very Hard's branch); aliased once a check reaches it.
     pub fn one_player_clear(&mut self, run: &Unk1PData, stocks: u8, mode: u8) {
         let p = run.player;
@@ -937,7 +939,26 @@ impl Running<'_> {
                     rec.b10_to_12 = stocks & 7;
                 }
             }
-            0x15 => crate::game::code::unported_call("gm_8017CBAC (Classic's clear)"),
+            super::endings::GM_CLASSIC_GOVER => {
+                let s = &mut self.game.game_data.thing.save_data;
+                // `gmMainLib_8015D134`: cleared, and this run's clear in `x10`'s mask.
+                s.x1F2C[usize::from(sel)].x7C.b4 = true;
+                s.unk_8.x10 |= 1 << sel;
+                let rec = &mut s.x1F2C[usize::from(sel)].x7C;
+                // `fn_80162BFC`: the high score, compared unsigned.
+                if (rec.x88 as u32) < run.x18 as u32 {
+                    rec.x88 = run.x18;
+                }
+                // `gmMainLib_8015D194`: the highest level cleared.
+                if rec.x80 < p.cpu_level {
+                    rec.x80 = p.cpu_level;
+                }
+                // `gmMainLib_8015D1AC`, `gmMainLib_8015D1C8`: Very Hard's fewest stocks.
+                let best = rec.b789;
+                if p.cpu_level == 4 && (best == 0 || stocks < best) {
+                    rec.b789 = stocks & 7;
+                }
+            }
             _ => crate::game::code::unported_call("gm_8017CBAC (All-Star's clear)"),
         }
         self.save_after_run();
