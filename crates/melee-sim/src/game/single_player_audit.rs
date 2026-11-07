@@ -149,8 +149,6 @@ const TARGET_TEST: &[&str] = &[
 
 /// Master Hand's units (`ftmasterhand*.c`).
 const MASTER_HAND: &[&str] = &[
-    "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
@@ -161,10 +159,8 @@ const MASTER_HAND: &[&str] = &[
 /// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
 const CRAZY_HAND: &[&str] = &[
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhanddamage0",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandtaggrab",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
     "melee/it/kinds/itcrazyhandbomb",
@@ -358,9 +354,11 @@ pub const PATHS: &[Paths] = &[
         modules: &[
             "gm/classic",
             "gm/intro",
+            "gm/intro_horde",
             "gm/endings/mod",
             "gm/endings/game_over",
             "gr/pushon",
+            "gr/figureget",
             "ft/bosslib",
             "ft/masterhand/airplane",
             "ft/masterhand/common",
@@ -747,38 +745,40 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    ("grFigureGet_80219C", TRAINING_NO_TROPHY),
     (
         "it_8027B5B0 (an enemy of kind",
-        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
     (
         "pl_8004049C (an enemy of kind",
-        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
     ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
     ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
     ("it_802D306C", TRAINING_NO_DITTO),
 ];
 
-/// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
-/// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
-/// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
-/// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
-/// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
-/// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
-/// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
-/// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
-/// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
-/// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
-/// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
-/// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
-/// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
-/// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
-/// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
-/// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
-/// (docs/oracle.md, "Training's trophy roll").
-const TRAINING_NO_TROPHY: &str = "Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88), needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over every launch angle, facing and place she's hit at (five short)";
+// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
+// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
+// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
+// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
+// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
+// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
+// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
+// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
+// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
+// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
+// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
+// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
+// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
+// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
+// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
+// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
+// (docs/oracle.md, "Training's trophy roll").
+//
+// Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88),
+// needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over
+// every launch angle, facing and place she's hit at (five short)
 
 /// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
 /// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
@@ -832,7 +832,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
@@ -848,7 +847,6 @@ pub const MISSING: &[Gap] = &[
             "gmMainLib_8015D384",
             "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
-            "fn_80160F58",
             "gm_801647F8",
         ],
         modes: SETUP_MODES,
@@ -883,12 +881,11 @@ pub const MISSING: &[Gap] = &[
         modes: &[EV, DB],
     },
     Gap {
-        what: "Classic's mode, its intro and its bonus rounds",
+        what: "Classic's mode past its last stage (the boss stage's controller, the clear)",
         covers: &[
-            "the race's clear",
             "gm_8017CBAC (Classic's clear)",
-            "gmClassic_801B3B40's target stage records",
-            "Classic's horde stage's",
+            "fn_8017C71C (Classic's boss stage's controller",
+            "grFigureGet_80219898 with no coin",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
             "melee/gr/grfigureget",
@@ -914,7 +911,6 @@ pub const MISSING: &[Gap] = &[
             "ftMh_MS_371_801541C8",
             "Master Hand's function",
             "melee/ft/ftbosslib",
-            "gm_8016ECE8",
         ],
         modes: &[CL, EV, DB],
     },
@@ -961,11 +957,6 @@ pub const MISSING: &[Gap] = &[
             "pl_8004049C (an enemy of kind",
         ],
         modes: &[AD, DB],
-    },
-    Gap {
-        what: "a beaten enemy's or a trophy stage's trophy",
-        covers: &["tyDisplay_8031C354"],
-        modes: &[AD, CL, DB],
     },
     Gap {
         what: "the cutscenes after the F-Zero one",

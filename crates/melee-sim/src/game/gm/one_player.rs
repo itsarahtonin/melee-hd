@@ -104,6 +104,23 @@ fn set_target_best(rec: &mut crate::game::structs::gmm_retval_EDBC, sel: u8, v: 
 }
 const CHKIND_SANDBAG: i32 = 0x1F;
 
+/// A cleared target stage in `selkind`'s records (Target Test's `gm_801B65D4`, Classic's
+/// `gmClassic_801B3B40`): the session's best time (`gmMainLib_8015D450`, the first clear's
+/// marked in `gmMainLib_8015EDBC`'s `x8`) and the save's cleared masks (`gmMainLib_8015ED98`'s
+/// `x1C`, `gmMainLib_8015EDB0`'s `x4`).
+pub fn record_target_clear(game: &mut crate::game::state::Game, sel: u8, frames: u32) {
+    let bit = 1i32 << sel;
+    let rec = &mut game.game_data.thing.save_data.unk_30;
+    if rec.x8 & bit == 0 {
+        set_target_best(rec, sel, frames as i32);
+        rec.x8 |= bit;
+    } else if target_best(rec, sel) as u32 > frames {
+        set_target_best(rec, sel, frames as i32);
+    }
+    game.game_data.thing.save_data.unk_8.x1C |= bit;
+    game.game_data.thing.save_data.unk_28.x4 |= bit;
+}
+
 /// `gmPlayerData`: a 1P run's player.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct GmPlayerData {
@@ -1098,16 +1115,7 @@ impl Running<'_> {
         );
         let frames = end.frame_count;
         if left == 0 {
-            let bit = 1i32 << sel;
-            let rec = &mut self.game.game_data.thing.save_data.unk_30;
-            if rec.x8 & bit == 0 {
-                set_target_best(rec, sel, frames as i32);
-                rec.x8 |= bit;
-            } else if target_best(rec, sel) as u32 > frames {
-                set_target_best(rec, sel, frames as i32);
-            }
-            self.game.game_data.thing.save_data.unk_8.x1C |= bit;
-            self.game.game_data.thing.save_data.unk_28.x4 |= bit;
+            record_target_clear(self.game, sel, frames);
         }
         let mut improved = false;
         let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;

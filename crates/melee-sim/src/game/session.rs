@@ -868,6 +868,30 @@ impl Session {
                 &mut |n| console.file(n),
             );
         }
+        // Classic's horde stages' opponents join in the costumes their setup drew, every one
+        // of which the intro's game cache holds (color 0xFF).
+        if self.game.game_mode == super::gm::one_player::GM_CLASSIC
+            && self.game.one_player.classic.base.x8[0] & 8 != 0
+        {
+            let mut kinds: Vec<i32> = Vec::new();
+            for &c in &self.game.gm.opponents.kinds {
+                if (0..0x21).contains(&c) {
+                    let m = super::pl::player::mapping(i32::from(c));
+                    for k in [m.internal_id, m.extra_internal_id] {
+                        if k >= 0 && !kinds.contains(&i32::from(k)) {
+                            kinds.push(i32::from(k));
+                        }
+                    }
+                }
+            }
+            super::vs_match::load_kind_files(
+                &mut self.game,
+                &mut self.data,
+                &mut self.joiner_files,
+                &kinds,
+                &mut |n| console.file(n),
+            );
+        }
         // Adventure's matches' start hook loads its joining opponents' fighters whole.
         if start.rules.on_match_start
             == Some(super::handles::CodeRef(

@@ -48,7 +48,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_Throw_IASA")]
     #[doc(alias = "ftCh_TagRockPaper_IASA")]
     #[doc(alias = "ftCh_FingerGun2_IASA")]
-    // Ports `ftCh_TagGrab_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_IASA")]
     #[doc(alias = "ftCh_TagFail_IASA")]
     pub fn ch_human_nop(&mut self, gobj: GObjId) {
         self.mh_human_nop(gobj);
@@ -88,6 +88,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_BackAirplane1_Phys")]
     #[doc(alias = "ftCh_FingerGun2_Phys")]
     #[doc(alias = "ftCh_TagCancel_Phys")]
+    #[doc(alias = "ftCh_Damage2_Phys")]
     pub fn ch_update_motion(&mut self, gobj: GObjId) {
         self.air_anim_motion(gobj);
         self.ch_glide_step(gobj);
@@ -149,7 +150,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_TagRockPaper_Phys")]
     #[doc(alias = "ftCh_TagRockPaper_Coll")]
     #[doc(alias = "ftCh_FingerGun2_Coll")]
-    // Ports `ftCh_TagGrab_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_TagGrab_Coll")]
     #[doc(alias = "ftCh_TagFail_Phys")]
     #[doc(alias = "ftCh_TagFail_Coll")]
     #[doc(alias = "ftCo_CaptureCrazyHand_Anim")]

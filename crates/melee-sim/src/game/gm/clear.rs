@@ -817,8 +817,8 @@ impl Running<'_> {
     #[doc(alias = "fn_80168A6C")]
     #[doc(alias = "lb_800121FC")]
     pub fn clear_setup(&mut self, score: i32, points: i32, kind: i32, cont: bool) {
-        let special = 0;
-        let coins = self.game.vs.state.x24C.player_standings[0].xE;
+        let mut special = 0;
+        let mut coins = self.game.vs.state.x24C.player_standings[0].xE;
         self.game.one_player.clear = Clear {
             xD4: -1,
             xE0: -1,
@@ -850,9 +850,13 @@ impl Running<'_> {
             3 => {
                 self.clear_mut().x118 = 1;
                 if self.game.vs.state.match_result == OUTCOME_1P_BONUS_STAGE_END {
-                    super::super::code::unported_call(
-                        "the race's clear (grPushOn_80219204's score and coins)",
-                    );
+                    // The goal reached (`Ground_801C1DD4`): its special score and coins.
+                    let point = crate::game::gr::ground::x6d0(self.game);
+                    let (score, n) =
+                        crate::game::gr::pushon::goal_score(self.game, self.data, point);
+                    special = score;
+                    coins = n as u16;
+                    self.clear_mut().x108 = 500;
                 }
             }
             2 => self.clear_mut().x119 = 1,

@@ -211,6 +211,24 @@ pub enum Draw {
         y: u16,
         clear: bool,
     },
+    /// The render from (`x`, `y`) copied into one of Classic's horde intro's images (by
+    /// `game::gm::intro_horde`'s index), the frame cleared after it with `clear`
+    /// (`HSD_ImageDescCopyFromEFB`, `fn_801852FC`).
+    IntroCopy {
+        image: u8,
+        x: u16,
+        y: u16,
+        clear: bool,
+    },
+    /// A quad over the screen's pixels from `left` to `right` and `top` to `bottom` (an
+    /// orthographic 640 by 480 projection) at depth -4932 that writes depth alone
+    /// (`fn_80185408`).
+    DepthQuad {
+        top: f32,
+        bottom: f32,
+        left: f32,
+        right: f32,
+    },
     /// That image drawn back over the screen through the current camera (`fn_80013614`):
     /// at `pos` scaled by `scale`, plain at `alpha` (`size` none), or blurred as
     /// `lb_80012994` draws it, 21 copies up to twice `size` / 64 apart, tinted by `tint`.

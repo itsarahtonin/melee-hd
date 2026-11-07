@@ -954,6 +954,15 @@ pub const EV26: Game = Game {
     replay: Replay::Session("e3-ev26"),
 };
 
+/// Event 50 won (Sarah's recording `ev50`, task 21's sixth round): Fox against both hands on
+/// Final Destination, Crazy Hand beaten last.
+pub const REC_EV50: Game = Game {
+    stage: "Final Destination",
+    name: "rec-ev50",
+    players: "Event 50: Fox beating Master Hand and Crazy Hand (recording ev50)",
+    replay: Replay::Session("rec-ev50"),
+};
+
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
 pub const TT_DK_QUIT: Game = Game {
     stage: "Donkey Kong's target stage",
