@@ -301,19 +301,9 @@ impl Running<'_> {
                 left: 200.0,
                 right: 640.0,
             });
-        // `HSD_SObjLib_803A54EC(gobj, 7)`.
-        let Some(Obj::CObj(c)) = self.game.world.gobj(gobj).obj else {
-            panic!("the splash's sprites' camera holds no CObj");
-        };
-        if crate::hsd::display::camera_begin(&mut self.game.objs, self.data, Some(c)) {
-            self.game
-                .objs
-                .display
-                .draws
-                .push(crate::hsd::display::Draw::SpriteSetup);
-            self.render_links(gobj, 7);
-            crate::hsd::display::camera_end(&mut self.game.objs);
-        }
+        // `HSD_SObjLib_803A54EC(gobj, 7)`: its second argument is unused, and it renders
+        // pass 0 alone (`HSD_GObj_80390ED0(gobj, 1)`), then resets the state.
+        self.render_sprite_camera(gobj);
     }
 
     /// The splash's process, `fn_801857C4`: once the copies are made, the copies' camera
