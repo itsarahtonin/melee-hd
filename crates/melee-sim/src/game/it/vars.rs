@@ -11,6 +11,7 @@
 //! union aren't compared.
 
 use super::kinds::arwinglaser::ArwingLaserVars;
+use super::kinds::coin::CoinVars;
 use super::kinds::gamewatch::{GameWatchRescueVars, GameWatchVars};
 use super::kinds::greatfoxlaser::GreatFoxLaserVars;
 use super::kinds::heiho::HeihoVars;
@@ -226,7 +227,7 @@ members! {
     MsBomb, msbomb, itMsBomb_ItemVars, [MSBOMB];
     Flipper, flipper, itFlipper_ItemVars, [FLIPPER];
     LGunBeam, lgunbeam, itLGunBeam_ItemVars, [L_GUN_BEAM];
-    Coin, coin, it_2E5A_ItemVars, [UNK4];
+    Coin, coin, CoinVars, [UNK4];
     TrophyCoin, trophy_coin, itCoin_ItemVars, [COIN];
     Pokemon, pokemon, PokemonVars, [POKEMON_UNK];
     Yaku, yaku, YakuVars, [PKIND_RANDOM];
