@@ -1406,6 +1406,15 @@ pub const REC_ADVENTURE: Game = Game {
     replay: Replay::Session("rec-2026-10-06_12-04-48"),
 };
 
+/// Sarah's All-Star clear (`recordings/allstar-clear`): its rest areas, the last round's Mr.
+/// Game & Watches and All-Star's ending.
+pub const REC_ALLSTAR_CLEAR: Game = Game {
+    stage: "All-Star",
+    name: "rec-allstar-clear",
+    players: "All-Star cleared as Fox on Very Easy (recording allstar-clear)",
+    replay: Replay::Session("rec-allstar-clear"),
+};
+
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
 pub const O6_INTRO_ALLSTAR: Game = Game {
     stage: "All-Star's intro",

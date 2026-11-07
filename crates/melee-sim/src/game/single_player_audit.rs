@@ -832,12 +832,10 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_17AD",
             "melee/gm/gm_17BA",
             "melee/gm/gm_17C0",
-            "melee/gm/gm_18A1",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "a 1P run's ratio getter",
             "gm_8017D7AC's records after a no contest",
-            "gm_8017CBAC (All-Star's clear)",
             "a single-player route's callback",
         ],
         // Not Event Match: gm_16A2's two left are gm_80169540 (only gmadventure.c calls it)
@@ -871,8 +869,6 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "gmMainLib_8015D1C8",
             "gmMainLib_8015D2F0",
-            "gmMainLib_8015D384",
-            "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
             "gm_801647F8",
         ],
@@ -934,10 +930,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "All-Star's mode, its intro and the rest area",
-        covers: &[
-            "a 1P run's getter",
-            "melee/gm/gmallstar",
-        ],
+        covers: &["a 1P run's getter"],
         modes: &[AS, DB],
     },
     Gap {
@@ -987,12 +980,8 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
-        covers: &[
-            "melee/gm/gm_19EF",
-            "gm_Mode_AdventureGOver_OnLoad",
-            "gm_Mode_AllstarGOver_OnLoad",
-        ],
+        what: "the game overs' coming soon and the game over mode's Adventure load",
+        covers: &["melee/gm/gm_19EF", "gm_Mode_AdventureGOver_OnLoad"],
         modes: ENDINGS,
     },
     // The developer setting's debug routes.
