@@ -140,7 +140,9 @@ pub fn break_open(r: &mut Running, gobj: GObjId) -> bool {
         return true;
     }
     let pos = item(r.game, gobj).pos;
-    if drop::drop_coins(r, gobj, pos, Some(Vec3::new(0.0, 0.0, 0.0))) {
+    // The original zeroes a vector for the coins but passes 0 for using it, so they take the
+    // random pop as every container's do.
+    if drop::drop_coins(r, gobj, pos, None) {
         return false;
     }
     drop::drop_contents(r, gobj, n, false);
