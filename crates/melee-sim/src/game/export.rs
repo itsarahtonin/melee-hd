@@ -953,10 +953,8 @@ pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handle
     let cx = Addrs { game, img };
     let link = &game.it.links[k.0];
     link.lay(&mut l, at, &cx);
-    if matches!(
-        link.coll_data.ecb_source.x4,
-        crate::mp::coll::EcbShape::Box { .. }
-    ) {
+    let s = &link.coll_data.ecb_source;
+    if matches!(s.x4, crate::mp::coll::EcbShape::Box { .. }) && !s.tail_zeroed {
         l.restore(tail);
     }
     if let Some(runs) = game.it.link_render_leftovers.get(&k.0) {
