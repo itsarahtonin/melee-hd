@@ -91,15 +91,65 @@ struct Ranges {
     /// The latest ranges given back, (start, end), and how many went back in all.
     reclaimed: std::collections::VecDeque<(u32, u32)>,
     reclaims: u64,
-    /// Images the presentation makes: (start, size, what), with their bytes.
-    dynamic: Vec<(u32, u32, Dynamic, Vec<u8>)>,
+    /// Images the presentation makes, by start.
+    dynamic: Vec<DynImage>,
     next_dynamic: u32,
     /// Images whose bytes start as what their block held (the results screen's): the
     /// leftovers last written into each, and whether a copy has written it since.
     seeds: Vec<(Dynamic, Seed, bool)>,
 }
 
+/// An image the presentation makes: where, its size, what it is, its bytes, and the last
+/// frame that drew or wrote it.
+struct DynImage {
+    start: u32,
+    size: u32,
+    what: Dynamic,
+    bytes: Vec<u8>,
+    used: u32,
+}
+
 impl Ranges {
+    /// Notes `start..end` given back, for the renderers to forget ([`Space::reclaimed_since`]).
+    fn log_reclaimed(&mut self, start: u32, end: u32) {
+        if self.reclaimed.len() == RECLAIM_LOG {
+            self.reclaimed.pop_front();
+        }
+        self.reclaimed.push_back((start, end));
+        self.reclaims += 1;
+    }
+
+    /// Gives back the images the frame being built hasn't used, but those that start as their
+    /// block's leftovers (`seeds`, the results screen's).
+    fn reclaim_dynamic(&mut self) {
+        let frame = self.frame;
+        let mut gone = Vec::new();
+        let seeds = &self.seeds;
+        self.dynamic.retain(|d| {
+            let keep = d.used == frame || seeds.iter().any(|s| s.0 == d.what);
+            if !keep {
+                gone.push((d.start, d.start + d.size));
+            }
+            keep
+        });
+        for (start, end) in gone {
+            self.log_reclaimed(start, end);
+        }
+    }
+
+    /// The lowest start of a gap between the images that holds `len` bytes, spaced from the
+    /// image below as a new one is.
+    fn first_fit_dynamic(&self, len: u32) -> Option<u32> {
+        let mut at = DYNAMIC_BASE;
+        for d in &self.dynamic {
+            if u64::from(at) + u64::from(len) <= u64::from(d.start) {
+                return Some(at);
+            }
+            at = at.max((d.start + d.size + 0x3F) & !0x1F);
+        }
+        (u64::from(at) + u64::from(len) <= u64::from(DYNAMIC_END)).then_some(at)
+    }
+
     /// Gives back the ranges of the archives the frame being built hasn't drawn, but those a
     /// copy went into, and moves the next range down to just past the highest kept.
     fn reclaim(&mut self) {
@@ -306,24 +356,43 @@ impl Space {
     }
 
     /// The address of an image the presentation makes, `size` bytes, making it the first
-    /// time or when its size changes.
+    /// time or when its size changes. Images take addresses upward from the space's start;
+    /// once it's full, those the frame being built hasn't used go back (but those seeded with
+    /// their block's leftovers), as do the old addresses of images made again larger, and the
+    /// new image takes the lowest gap that holds it.
     pub fn dynamic(&self, what: Dynamic, size: u32) -> u32 {
         let mut ranges = self.ranges.borrow_mut();
-        if let Some(d) = ranges.dynamic.iter().find(|d| d.2 == what)
-            && d.1 >= size
-        {
-            return d.0;
+        let frame = ranges.frame;
+        if let Some(d) = ranges.dynamic.iter_mut().find(|d| d.what == what) {
+            if d.size >= size {
+                d.used = frame;
+                return d.start;
+            }
+            let (start, end) = (d.start, d.start + d.size);
+            ranges.dynamic.retain(|d| d.what != what);
+            ranges.log_reclaimed(start, end);
         }
-        let start = ranges.next_dynamic;
-        assert!(
-            start + size <= DYNAMIC_END,
-            "the images' address space is full"
+        let start = match ranges.next_dynamic.checked_add(size) {
+            Some(end) if end <= DYNAMIC_END => ranges.next_dynamic,
+            _ => {
+                ranges.reclaim_dynamic();
+                ranges
+                    .first_fit_dynamic(size)
+                    .unwrap_or_else(|| panic!("the images' address space is full"))
+            }
+        };
+        ranges.next_dynamic = ranges.next_dynamic.max((start + size + 0x3F) & !0x1F);
+        let at = ranges.dynamic.partition_point(|d| d.start < start);
+        ranges.dynamic.insert(
+            at,
+            DynImage {
+                start,
+                size,
+                what,
+                bytes: vec![0; size as usize],
+                used: frame,
+            },
         );
-        ranges.next_dynamic = (start + size + 0x3F) & !0x1F;
-        ranges.dynamic.retain(|d| d.2 != what);
-        ranges
-            .dynamic
-            .push((start, size, what, vec![0; size as usize]));
         start
     }
 
@@ -377,11 +446,13 @@ impl Space {
             return;
         }
         let mut ranges = self.ranges.borrow_mut();
+        let frame = ranges.frame;
         for d in &mut ranges.dynamic {
-            if addr >= d.0 && addr < d.0 + d.1 {
-                let at = (addr - d.0) as usize;
-                let n = bytes.len().min(d.3.len() - at);
-                d.3[at..at + n].copy_from_slice(&bytes[..n]);
+            if addr >= d.start && addr < d.start + d.size {
+                let at = (addr - d.start) as usize;
+                let n = bytes.len().min(d.bytes.len() - at);
+                d.bytes[at..at + n].copy_from_slice(&bytes[..n]);
+                d.used = frame;
             }
         }
     }
@@ -449,10 +520,10 @@ impl Space {
         let phys = phys & 0x03FF_FFFF;
         if phys >= DYNAMIC_BASE {
             for d in &ranges.dynamic {
-                if phys >= d.0 && phys < d.0 + d.1 {
-                    let at = (phys - d.0) as usize;
-                    let n = out.len().min(d.3.len() - at);
-                    out[..n].copy_from_slice(&d.3[at..at + n]);
+                if phys >= d.start && phys < d.start + d.size {
+                    let at = (phys - d.start) as usize;
+                    let n = out.len().min(d.bytes.len() - at);
+                    out[..n].copy_from_slice(&d.bytes[at..at + n]);
                 }
             }
             return;
@@ -688,5 +759,36 @@ mod tests {
         for a in 0..40 {
             space.addr(&data, at(a, 0));
         }
+    }
+
+    /// Images the presentation makes go back once their space is full, but those the frame
+    /// being built used: Sarah's Classic clear filled it by its trophy fall with its earlier
+    /// stages' shadows, splash copies and clear screen copies, which no later frame draws.
+    #[test]
+    fn images_go_back_once_the_space_is_full() {
+        let space = Space::default();
+        let mb = 1 << 20;
+        space.begin_frame(&[]);
+        let old: Vec<u32> = (0..7)
+            .map(|i| space.dynamic(Dynamic::Shadow(i), mb))
+            .collect();
+        space.write(old[6], &[7]);
+        // A later frame keeps drawing one of them and wants two more.
+        space.begin_frame(&[]);
+        let seen = space.reclaims();
+        let kept = space.dynamic(Dynamic::Shadow(6), mb);
+        let a = space.dynamic(Dynamic::ToyFall(0), mb);
+        let b = space.dynamic(Dynamic::ToyFall(1), mb);
+        assert_eq!(kept, old[6]);
+        // Neither fits above them: the six this frame didn't draw go back, and the two take
+        // the lowest places.
+        assert_eq!((a, b), (old[0], old[1]));
+        let mut byte = [0];
+        space.read(&archives(0, 1), kept, &mut byte);
+        assert_eq!(byte, [7], "a kept image keeps its bytes");
+        let gone = space.reclaimed_since(seen).expect("the ranges given back");
+        assert_eq!(gone.len(), 6);
+        assert!(gone.contains(&(old[0], old[0] + mb)));
+        assert!(!gone.iter().any(|g| g.0 == kept));
     }
 }
