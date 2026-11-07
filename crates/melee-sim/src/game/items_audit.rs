@@ -491,8 +491,18 @@ pub const UNCHECKED: &[&str] = &[
     "melee/ft/kinds/ftCommon/ftCo_Barrel",
 ];
 
-/// What an items-on match reaches that isn't ported, task by task: nothing left.
-pub const MISSING: &[ItemGap] = &[];
+/// What an items-on match reaches that isn't ported, task by task.
+pub const MISSING: &[ItemGap] = &[ItemGap {
+    // docs/melee-bugs.md, "A dropped fan lands or vanishes by a word it never sets": an item
+    // block carved from a freed copy buffer (a results screen's players' images before the
+    // next match, a computer player Training takes out) holds the GPU's pixels, which the
+    // simulation doesn't have. Left for Sarah's call (task 15's third round).
+    what: "a dropped fan whose block held the GPU's pixels",
+    covers: &["a dropped fan's landing reading its unset xD4C over the GPU's pixels"],
+    kinds: &[0x18],
+    with: &[],
+    stages: &[],
+}];
 
 #[cfg(test)]
 mod tests {

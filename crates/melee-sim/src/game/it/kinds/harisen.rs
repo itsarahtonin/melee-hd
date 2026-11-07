@@ -13,6 +13,9 @@ use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
+/// `Item.xD4C`'s offset in the item's block.
+const XD4C: u32 = 0xD4C;
+
 pub const SPAWNED: u32 = 0x8029_285C;
 pub const ANIM0: u32 = 0x8029_28D4;
 pub const PHYS0: u32 = 0x8029_28DC;
@@ -173,10 +176,22 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 8, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
 
-/// `itHarisen_UnkMotion8_Coll`: dropped, with charges left it lands; empty, it falls
-/// through, gone once it's past the stage.
+/// `itHarisen_UnkMotion8_Coll`: dropped, it lands if its `xD4C` (the shooting items' ammo)
+/// is set, else it's gone at the first floor. No fan code writes the word, so it holds what
+/// the item's block held before (docs/melee-bugs.md); where that is the GPU's pixels, which
+/// the simulation doesn't have, it stops by name.
 #[doc(alias = "itHarisen_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
+    let slot = super::super::item_of(r.game, gobj).0;
+    let pixels = r.game.it.render_leftovers.get(&slot).is_some_and(|runs| {
+        runs.iter()
+            .any(|&(off, len)| off < XD4C + 4 && XD4C < off + len)
+    });
+    if pixels {
+        crate::game::code::unported_call(
+            "a dropped fan's landing reading its unset xD4C over the GPU's pixels (a shadow texture's copy)",
+        );
+    }
     if item(r.game, gobj).xD4C != 0 {
         fall(r, gobj, landed);
         return false;
