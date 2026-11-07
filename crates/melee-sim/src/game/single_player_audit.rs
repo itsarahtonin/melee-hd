@@ -881,10 +881,8 @@ pub const MISSING: &[Gap] = &[
         modes: &[EV, DB],
     },
     Gap {
-        what: "Classic's mode past its last stage (the boss stage's controller, the clear)",
+        what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
         covers: &[
-            "gm_8017CBAC (Classic's clear)",
-            "fn_8017C71C (Classic's boss stage's controller",
             "grFigureGet_80219898 with no coin",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",

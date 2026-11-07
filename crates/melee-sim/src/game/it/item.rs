@@ -1601,6 +1601,33 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
     clear_hit_record(item_mut(r.game, gobj));
 }
 
+/// Every item's `xDC8` flag 3 set (`it_8026B724` on each), `it_8026C3FC`: the hands'
+/// slowdown for Crazy Hand's arrival.
+// Ports `it_8026C3FC` (Crazy Hand's arrival); aliased once a check reaches it.
+pub fn flag_all_x3(game: &mut Game) {
+    let mut cur = game.world.first_in(super::P_LINK_ITEM);
+    while let Some(g) = cur {
+        item_mut(game, g).xDC8_word.flags.x3 = true;
+        cur = game.world.gobjs[g.0].next;
+    }
+}
+
+/// Every item's `xDC8` flag 3 cleared, `it_8026C42C`, and flag 5 set where flag 7 is.
+// Ports `it_8026C42C` (Crazy Hand's arrival); aliased once a check reaches it.
+pub fn unflag_all_x3(game: &mut Game) {
+    let mut cur = game.world.first_in(super::P_LINK_ITEM);
+    while let Some(g) = cur {
+        let f = &mut item_mut(game, g).xDC8_word.flags;
+        if f.x7 {
+            f.x5 = true;
+        }
+        if f.x3 {
+            f.x3 = false;
+        }
+        cur = game.world.gobjs[g.0].next;
+    }
+}
+
 /// The item's dynamics process (priority 16), `Item_8026A788`.
 #[doc(alias = "Item_8026A788")]
 pub fn proc_dynamics(r: &mut Running, gobj: GObjId) {

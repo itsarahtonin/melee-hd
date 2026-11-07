@@ -266,14 +266,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_8017CBAC (Classic's clear)",
-        "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "fn_8017C71C (Classic's boss stage's controller",
-        "Classic's boss stage: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gm_8017D7AC's records after a no contest",
         "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
     ),
