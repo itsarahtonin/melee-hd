@@ -131,7 +131,7 @@ pub fn landed(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itEvyoshiegg_UnkMotion0_Anim")]
 #[doc(alias = "itEvyoshiegg_UnkMotion2_Anim")]
 #[doc(alias = "itEvyoshiegg_UnkMotion3_Anim")]
-// Ports `itEvyoshiegg_UnkMotion4_Anim`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion4_Anim")]
 #[doc(alias = "itEvyoshiegg_UnkMotion5_Coll")]
 pub fn still(_: &mut Running, _: GObjId) -> bool {
     false
@@ -140,7 +140,7 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 /// The states that move nothing, `itEvyoshiegg_UnkMotion0_Phys` (2, 4, 5).
 #[doc(alias = "itEvyoshiegg_UnkMotion0_Phys")]
 #[doc(alias = "itEvyoshiegg_UnkMotion2_Phys")]
-// Ports `itEvyoshiegg_UnkMotion4_Phys`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion4_Phys")]
 #[doc(alias = "itEvyoshiegg_UnkMotion5_Phys")]
 pub fn idle(_: &mut Running, _: GObjId) {}
 
@@ -178,7 +178,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 }
 
 /// Let go of or thrown, `itEvYoshiEgg_Logic42_Dropped` and `itEvYoshiEgg_Logic42_Thrown`.
-// Ports `itEvYoshiEgg_Logic42_Dropped`; aliased once a check reaches it.
+#[doc(alias = "itEvYoshiEgg_Logic42_Dropped")]
 #[doc(alias = "itEvYoshiEgg_Logic42_Thrown")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE | change::DROP_UPDATE);
@@ -268,13 +268,13 @@ pub fn damaged(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Skidding off a slope, `itEvYoshiEgg_Logic42_EnteredAir`.
-// Ports `itEvYoshiEgg_Logic42_EnteredAir`; aliased once a check reaches it.
+#[doc(alias = "itEvYoshiEgg_Logic42_EnteredAir")]
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
 /// `itEvyoshiegg_UnkMotion4_Coll`: skidding, it stops or falls.
-// Ports `itEvyoshiegg_UnkMotion4_Coll`; aliased once a check reaches it.
+#[doc(alias = "itEvyoshiegg_UnkMotion4_Coll")]
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, landed, fell);
     false
