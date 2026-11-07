@@ -860,11 +860,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[EV],
     },
     Gap {
-        what: "a won 15-Minute Melee (ported; no session reaches it yet)",
-        covers: &["gm_80173498", "gmMainLib_8015D780"],
-        modes: &[MM],
-    },
-    Gap {
         what: "Event Match's list, events and egg",
         covers: &[
             "melee/gm/gmevent",

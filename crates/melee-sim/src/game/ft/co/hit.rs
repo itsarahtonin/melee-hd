@@ -590,7 +590,7 @@ impl Running<'_> {
     /// A hit that keeps the fighter's state, `ftCo_8008E9D0` (`inlineB2`): a stamina
     /// fighter out falls, a held fighter's struggle (not ported), the color animation,
     /// and the attacker forgotten.
-    // Ports `ftCo_8008E9D0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_8008E9D0")]
     pub fn damage_no_reaction(&mut self, gobj: GObjId) {
         self.damage_no_reaction_at(gobj, false);
     }

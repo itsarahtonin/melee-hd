@@ -238,6 +238,13 @@ impl MultiMan {
     }
 }
 
+/// A won 15-Minute Melee's mark in the character's record, `gmMainLib_8015D780` (its selkind's:
+/// Master Hand's, by the character select's name entry, is Mario's, docs/melee-bugs.md).
+#[doc(alias = "gmMainLib_8015D780")]
+fn set_15min_cleared(rec: &mut crate::game::structs::FighterData_x7C) {
+    rec.b3 = true;
+}
+
 impl Running<'_> {
     fn multi_man_data(&self) -> &crate::game::structs::VsModeData {
         &self.game.game_data.modes.table[VS_MODE]
@@ -524,9 +531,7 @@ impl Running<'_> {
                 } else {
                     rec.xA2 = v;
                     if r.won() {
-                        // `gmMainLib_8015D780`; aliased once a check reaches it (a won
-                        // 15-Minute Melee).
-                        rec.b3 = true;
+                        set_15min_cleared(rec);
                     }
                 }
             }
@@ -582,7 +587,7 @@ impl Running<'_> {
 
     /// `gm_80173498`: the stage a won 15-Minute Melee unlocks (0x1E) while it's locked, else
     /// none (0x148).
-    // Ports gm_80173498; aliased once a check reaches it (a won 15-Minute Melee).
+    #[doc(alias = "gm_80173498")]
     fn multi_man_15min_stage(&self) -> u16 {
         if !self.stage_unlocked(0x1E) {
             0x1E
