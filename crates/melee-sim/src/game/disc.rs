@@ -380,6 +380,7 @@ impl Running<'_> {
         let id = self.game.ft.data.files.archive_id(name);
         if let Some(id) = id {
             self.game.it.file_read(self.data, id);
+            self.game.ft.data.file_read(id);
         }
         if file != 0
             && let Some(id) = id

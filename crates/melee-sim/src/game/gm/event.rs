@@ -1142,7 +1142,7 @@ impl Running<'_> {
     /// `ftLib_LoadFighterCostume`: a fighter kind's data, its effects' file, one costume and
     /// its animations loaded unless they are (and Kirby's copies' setup, `ftData_800857E0`).
     #[doc(alias = "ftLib_LoadFighterCostume")]
-    fn load_fighter_costume(&mut self, kind: i32, costume: u8) {
+    pub(crate) fn load_fighter_costume(&mut self, kind: i32, costume: u8) {
         use super::super::ft::data::{MAIN_MEMORY, kind_tables};
         if let Some(file) = self.game.load_fighter_data(self.data, kind) {
             self.check_preloaded(file);

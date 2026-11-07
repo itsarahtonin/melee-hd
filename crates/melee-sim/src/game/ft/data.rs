@@ -225,6 +225,22 @@ impl Default for DataGlobals {
     }
 }
 
+impl DataGlobals {
+    /// The file whose archive is `archive` read from the disc again (not a preload cache's
+    /// file an earlier scene took): a kind's data file's demo animations' places
+    /// (`ftData::x14[i].x14`) are the file's own zeros again, so a demo fighter's animation
+    /// whose place this scene didn't write loads none.
+    pub fn file_read(&mut self, archive: ArchiveId) {
+        for (kind, t) in KINDS.iter().enumerate().take(KIND_COUNT) {
+            if t.dat_file
+                .is_some_and(|f| self.files.archive_id(f) == Some(archive))
+            {
+                self.demo_x14[kind] = [0; 18];
+            }
+        }
+    }
+}
+
 /// Reads a plain struct (no pointers) out of loaded game data, as a struct copy from it does.
 pub fn copy_from_data<T: Mirror>(data: &Archives, at: DataRef) -> T {
     let mem = Mem {
@@ -525,6 +541,7 @@ impl Running<'_> {
             if let Some((addr, file)) = self.take_cached_blocks_unchecked(entrynum) {
                 if !kept && let Some(id) = id {
                     self.game.it.file_read(self.data, id);
+                    self.game.ft.data.file_read(id);
                 }
                 // Where its data is, for a pointer into it a block of the scene's heap keeps
                 // once freed (docs/engine.md, a session's heap leftovers).
@@ -542,6 +559,7 @@ impl Running<'_> {
         // Read from the disc: the file's own bytes.
         if let Some(id) = id {
             self.game.it.file_read(self.data, id);
+            self.game.ft.data.file_read(id);
         }
         // `lbArchive`'s loads into the scene's heap: the file's bytes, then its archive.
         let (file, archive) = if dest == MAIN_MEMORY {

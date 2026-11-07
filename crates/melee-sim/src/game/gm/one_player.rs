@@ -251,6 +251,8 @@ pub struct OnePlayer {
     pub match_exit: super::match_exit::MatchExitInfo,
     /// `lbl_804706D8`: the match's won trophies (a trophy, -1 for none, and its count).
     pub match_trophies: [(i16, u8, u8); 12],
+    /// `lbl_804706C0`: Classic's boss stage's controller.
+    pub boss: super::classic_boss::BossStage,
     /// `lbl_80472D28` and `lbl_804D65C0`: the stage clear screen's state (`gmregclear.c`;
     /// its `x104`, the new score, a 1P run's match hands back as its exit value).
     pub clear: super::clear::Clear,
@@ -296,6 +298,7 @@ impl Default for OnePlayer {
             match_start: StartMeleeData::default(),
             match_exit: Default::default(),
             match_trophies: [(0, 0, 0); 12],
+            boss: Default::default(),
             clear: Default::default(),
             game_over: Default::default(),
         }

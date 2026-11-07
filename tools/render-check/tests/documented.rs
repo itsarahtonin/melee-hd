@@ -32,9 +32,9 @@ use common::{
     MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM, MUSHROOM_KINGDOM_2,
     MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA, O6_INTRO_ALLSTAR, ONETT,
     OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK, RACE_PILLAR, RACE_SPIKES,
-    RAINBOW_CRUISE, REC_ADVENTURE, REC_EV29, REC_EV50, REC_TR_COMBO20, RESULTS_PILLS,
-    RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO,
-    SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
+    RAINBOW_CRUISE, REC_ADVENTURE, REC_CLASSIC_STAGES, REC_EV29, REC_EV50, REC_TR_COMBO20,
+    RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS,
+    SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS,
     SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU,
     TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
     TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
@@ -333,6 +333,18 @@ fn rec_adventure_4100() {
 fn rec_adventure_6000() {
     rec_adventure(6000, [2162, 2162]);
 }
+// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros, the target
+// stage's (3990), Snag the Trophies' (9360) and the race's (12680); and against a reference
+// captured with ssbm-rs's renderer running, Snag the Trophies with its coins over the stand
+// (9800).
+frames!(REC_CLASSIC_STAGES;
+    rec_classic_clear_3990 3990,
+    rec_classic_clear_9360 9360,
+    rec_classic_clear_12680 12680,
+);
+rendered_frames!(REC_CLASSIC_STAGES;
+    rec_classic_clear_9800 9800,
+);
 // All-Star's intro from the debug mode: Captain Falcon asleep at the screen's place as the
 // model comes in (1340), held (1400) and near its end (1460) (`m6-oracle/intro-allstar`), and
 // the Ice Climbers, Nana beside and behind Popo (1640, 1700; `m6-allstar/intro-as-ic`).

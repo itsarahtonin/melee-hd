@@ -892,6 +892,21 @@ impl Session {
                 &mut |n| console.file(n),
             );
         }
+        // Classic's boss stage's start hook loads Crazy Hand's costume for his arrival
+        // (`fn_8017C71C`'s `ftLib_LoadFighterCostume`).
+        if start.rules.on_match_start
+            == Some(super::handles::CodeRef(
+                super::gm::one_player_match::BOSS_START,
+            ))
+        {
+            super::vs_match::load_kind_files(
+                &mut self.game,
+                &mut self.data,
+                &mut self.joiner_files,
+                &[super::ft::masterhand::KIND_CRAZY_HAND],
+                &mut |n| console.file(n),
+            );
+        }
         // Adventure's matches' start hook loads its joining opponents' fighters whole.
         if start.rules.on_match_start
             == Some(super::handles::CodeRef(
