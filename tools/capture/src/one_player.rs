@@ -53,6 +53,8 @@ const TRAINING_EXIT: u32 = 0x8048_E5F8;
 const MATCH_START: u32 = 0x8047_2AF8;
 const MATCH_EXIT: u32 = 0x8047_086C;
 const MATCH_TROPHIES: u32 = 0x8047_06D8;
+/// `lbl_804706C0`, Classic's boss stage's controller.
+const BOSS_STAGE: u32 = 0x8047_06C0;
 /// `lbl_80472D28`, the clear screen's state (`gmregclear.c`).
 const CLEAR_STATE: u32 = 0x8047_2D28;
 /// The ports and entries: Target Test's, the Home-Run Contest's, Training's.
@@ -261,6 +263,17 @@ impl Comparer<'_> {
             (self.u16(a) as i16, self.u8(a + 2), self.u8(a + 3))
         });
         self.check("lbl_804706D8", "won trophies", o.match_trophies, theirs);
+        let b = o.boss;
+        let theirs: [i32; 6] = core::array::from_fn(|i| self.u32(BOSS_STAGE + 4 * i as u32) as i32);
+        let ours = [
+            b.state,
+            b.focus,
+            b.timer,
+            b.hp,
+            b.player_x1988,
+            b.master_x1988,
+        ];
+        self.check("lbl_804706C0", "the boss stage's controller", ours, theirs);
         self.clear_state();
     }
 

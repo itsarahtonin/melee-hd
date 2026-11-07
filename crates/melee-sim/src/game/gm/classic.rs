@@ -970,7 +970,8 @@ impl Running<'_> {
 
     /// Classic's stage's match's exit, `gmClassic_801B3B40`: the stage marked won (2) or not
     /// (1) in `gm_804908A0`, and the run's exit (`gm_8017D7AC`, the game over next at no
-    /// stock); the last stage's clear and the target stage's records aren't ported.
+    /// stock), Classic's clear (`gm_8017CBAC`) after the last stage, and the target stage's
+    /// records.
     #[doc(alias = "gmClassic_801B3B40")]
     pub fn classic_exit_vs(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
@@ -988,19 +989,13 @@ impl Running<'_> {
         let on = self.one_player_match_exit(&mut run, 0x69);
         self.game.one_player.classic.base = run;
         if on && CLASSIC_STAGES.get(round + 1).is_some_and(|e| e.x0 == 0xD) {
-            crate::game::code::unported_call("gm_8017CBAC (Classic's clear)");
+            // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
+            let stocks = self.game.game_data.vs.unk_51C.stocks;
+            self.one_player_clear(&run, stocks, super::endings::GM_CLASSIC_GOVER);
         }
         if entry.x1 == 0x80 && entry.x2 == 1 {
             self.classic_target_records();
         }
-    }
-
-    /// The boss stage's start hook, `fn_8017C71C`: its controller (`fn_8017C1A4`, Master Hand's
-    /// entry, Crazy Hand's arrival, the hands' defeats) isn't ported.
-    pub fn classic_boss_start(&mut self) {
-        crate::game::code::unported_call(
-            "fn_8017C71C (Classic's boss stage's controller, fn_8017C1A4)",
-        )
     }
 
     /// `gmClassic_801B3B40`'s target stage records, as Target Test's (`gm_801B65D4`) without

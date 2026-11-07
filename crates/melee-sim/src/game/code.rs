@@ -89,6 +89,7 @@ pub fn run_proc(game: &mut Running, gobj: GObjId, proc: CodeRef) {
         super::gm::approach::PROC => game.approach_proc(gobj),
         super::gm::endings::game_over::PROC_SCREEN => game.game_over_screen_proc(),
         super::gm::clear::PROC => game.clear_proc(gobj),
+        super::gm::classic_boss::PROC => game.classic_boss_proc(),
         super::gm::endings::game_over::PROC_TROPHY => game.game_over_trophy_proc(gobj),
         super::gm::endings::game_over::PROC_SOON => game.coming_soon_proc(gobj),
         addr if super::gm::endings::run_proc(game, gobj, addr) => {}

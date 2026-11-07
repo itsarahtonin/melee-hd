@@ -198,6 +198,16 @@ impl Game {
         self.fighter_mut(gobj).input_disabled = false;
     }
 
+    /// No fighter takes input, `ftLib_DisableAllInput` (`ftLib_DisableInput` on each).
+    #[doc(alias = "ftLib_DisableAllInput")]
+    pub fn ft_disable_all_input(&mut self) {
+        let mut cur = self.world.first_in(super::common::FIGHTER_P_LINK);
+        while let Some(g) = cur {
+            self.ft_disable_input(g);
+            cur = self.world.gobjs[g.0].next;
+        }
+    }
+
     /// Every fighter takes input, `ftLib_EnableAllInput`.
     #[doc(alias = "ftLib_EnableAllInput")]
     pub fn ft_enable_all_input(&mut self) {
@@ -229,6 +239,18 @@ impl Game {
     #[doc(alias = "ft_80087AC0")]
     pub fn ft_80087ac0(&mut self, gobj: GObjId, arg: i32) {
         self.fighter_mut(gobj).invisible = arg == 0;
+    }
+
+    /// The fighter's `x1988`, `ft_80087C58`.
+    // Ports `ft_80087C58`; aliased once a check reaches it (Crazy Hand's arrival).
+    pub fn ft_80087c58(&self, gobj: GObjId) -> i32 {
+        self.fighter(gobj).x1988
+    }
+
+    /// Sets the fighter's `x1988`, `ft_80087C64`.
+    // Ports `ft_80087C64`; aliased once a check reaches it (Crazy Hand's arrival).
+    pub fn ft_80087c64(&mut self, gobj: GObjId, v: i32) {
+        self.fighter_mut(gobj).x1988 = v;
     }
 
     #[doc(alias = "ft_80087BAC")]
