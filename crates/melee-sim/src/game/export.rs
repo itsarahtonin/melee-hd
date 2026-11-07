@@ -935,6 +935,8 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     // A collision's last position its spawn's stack words gave (`it::Globals::stale_last_pos`).
     if game.it.stale_last_pos.contains(&i.0) {
         l.forget(at + 0x378 + 0x1C, 12);
+        // And the ECB's motion its first tick took from it.
+        l.forget(at + 0xB54, 8);
     }
     l.put(img);
 }
