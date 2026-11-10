@@ -41,6 +41,9 @@ use common::{
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
+// All-Star's Very Hard clear (docs/player.md, "All-Star's Very Hard clear").
+use common::M6A3_AS_VH_CLEAR;
+
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
 use common::{E5_EV13_EGG3, E8_E24_CROWD, E8_HH_GRABS, REC_MH_MASH};
 use common::{M6E2_REGEND_REAL, REC_CLASSIC_CLEAR};
@@ -474,6 +477,30 @@ frames!(REC_ALLSTAR_CLEAR;
     rec_allstar_clear_22300 22300,
     rec_allstar_clear_23300 23300,
     rec_allstar_clear_24500 24500,
+);
+// All-Star's Very Hard clear from the debug menu (`m6-allstar-3/as-vh-clear`): the clear
+// screen after the last round's no contest (2450: identical images, every draw the same but
+// those that sample the fighters' shadows' copies), the staff roll at six times its speed,
+// dimmed (4000), and the challenger approach after congratulations (5600), against captures
+// made with ssbm-rs's renderer running.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6a3_as_vh_clear_2450() {
+    compare_in(
+        &M6A3_AS_VH_CLEAR,
+        2450,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1499, 1499],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+rendered_frames!(M6A3_AS_VH_CLEAR;
+    m6a3_as_vh_clear_4000 4000,
+    m6a3_as_vh_clear_5600 5600,
 );
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
