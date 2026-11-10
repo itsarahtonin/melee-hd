@@ -242,7 +242,7 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "gm_80167320's joiners' leaving",
-        "a horde's first player falling with joiners in play: the single-player modes' hordes and the debug menu's arenas (the console halts first there), which only the entries behind GATES and the debug level lead to",
+        "never runs: the branch runs only when fn_80169444(2) answers 1, and the only callbacks ever installed (by fn_80169434, whose one caller is gm_801674C4) are grKinokoRoute_80208480, grShrineRoute_8020AD24 and gricemt.c's fn_801FA4CC, each answering 1 only to 1 and 0 to 2 (the decomp and ssbm-rs agree)",
     ),
     (
         "a single-player route's callback",

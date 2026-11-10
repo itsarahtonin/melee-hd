@@ -736,7 +736,7 @@ pub fn ko(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj going away, `it_802E16D8` (`it_8026B894`).
-// Ports it_802E16D8; aliased once a check reaches it.
+#[doc(alias = "it_802E16D8")]
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let _ = lib26b1::forget(r.game, gobj, other);
 }

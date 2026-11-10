@@ -933,7 +933,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015D25C")]
     #[doc(alias = "gmMainLib_8015D134")]
     // Ports gmMainLib_8015D1C8 (Very Hard's branch); aliased once a check reaches it.
-    // Ports gmMainLib_8015D2F0 (Very Hard's branch); aliased once a check reaches it.
+    #[doc(alias = "gmMainLib_8015D2F0")]
     pub fn one_player_clear(&mut self, run: &Unk1PData, stocks: u8, mode: u8) {
         let p = run.player;
         let sel = super::match_exit::selkind(p.ckind as u8);
