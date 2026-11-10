@@ -78,7 +78,7 @@ impl Running<'_> {
     }
 
     /// Hovers (`Wait1_0`), from the wait he was in, `ftMh_MS_341_8014FE5C`.
-    // Ports `ftMh_MS_341_8014FE5C`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_MS_341_8014FE5C")]
     pub fn mh_enter_wait1(&mut self, gobj: GObjId) {
         self.mh_wait_pos(gobj);
         self.mh_change_wait(gobj, ms::WAIT1_0, ms::WAIT1_2);
@@ -287,7 +287,7 @@ impl Running<'_> {
 
     /// A human's attack (port 3's master status, a button and a direction),
     /// `ftMh_MS_341_80150894`.
-    // Ports `ftMh_MS_341_80150894`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_MS_341_80150894")]
     pub fn mh_human_attack(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let b = self.game.pads.master[2].button;
@@ -345,7 +345,7 @@ impl Running<'_> {
     }
 
     /// Glides in the second's (`Wait2_1`), `ftMh_MS_389_80150D28`.
-    // Ports `ftMh_MS_389_80150D28`; aliased once a check reaches it.
+    #[doc(alias = "ftMh_MS_389_80150D28")]
     pub fn mh_enter_glide2(&mut self, gobj: GObjId) {
         self.mh_enter_glide(gobj, ms::WAIT2_1, ms::WAIT2_0);
     }

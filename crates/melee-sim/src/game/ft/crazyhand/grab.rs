@@ -139,7 +139,7 @@ impl Running<'_> {
 
     /// Letting go, `ftCh_Init_80159098`: the victim freed after `xD8` frames (`mv.x24`),
     /// still, back toward his place.
-    // Ports `ftCh_Init_80159098`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_Init_80159098")]
     pub fn ch_let_go_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.ch_enter(gobj, ms::FINGER_GUN1);
@@ -153,7 +153,7 @@ impl Running<'_> {
 
     /// `ftCh_FingerGun1_Anim`: the victim cut loose once the count runs out; back to his place
     /// once it ends.
-    // Ports `ftCh_FingerGun1_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_FingerGun1_Anim")]
     pub fn ch_let_go_anim(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let fp = &mut self.game.fighters[f.0];
@@ -490,7 +490,7 @@ impl Running<'_> {
     }
 
     /// Held, waiting to be let go, `ftCh_GrabUnk1_8015B778`.
-    // Ports `ftCh_GrabUnk1_8015B778`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_GrabUnk1_8015B778")]
     pub fn ch_capture_wait_enter(&mut self, gobj: GObjId) {
         self.change_motion_state(gobj, co_ms::CAPTURE_WAIT_CRAZY_HAND, 0, 0.0, 1.0, 0.0, None);
         let fp = self.game.fighter_mut(gobj);
@@ -502,7 +502,7 @@ impl Running<'_> {
 
     /// Let go, `ftCh_GrabUnk1_8015B800`: visible, turned around, cut loose
     /// (`ftCo_CaptureCut_Enter`).
-    // Ports `ftCh_GrabUnk1_8015B800`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_GrabUnk1_8015B800")]
     pub fn ch_capture_cut(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.invisible = false;
