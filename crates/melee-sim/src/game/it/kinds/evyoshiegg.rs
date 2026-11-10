@@ -217,7 +217,7 @@ pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
 /// Bounces up out of a hit, `it_3F14_Logic42_DmgDealt` (and the clank, shield and
 /// reflection callbacks, each the same code).
 #[doc(alias = "it_3F14_Logic42_DmgDealt")]
-// Ports `it_3F14_Logic42_Clanked`; aliased once a check reaches it.
+#[doc(alias = "it_3F14_Logic42_Clanked")]
 // Ports `it_3F14_Logic42_HitShield`; aliased once a check reaches it.
 // Ports `it_3F14_Logic42_Reflected`; aliased once a check reaches it.
 pub fn bounced(r: &mut Running, gobj: GObjId) -> bool {

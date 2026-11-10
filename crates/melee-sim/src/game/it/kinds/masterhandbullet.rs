@@ -35,11 +35,11 @@ pub const DMG_DEALT: u32 = 0x802F_0F0C;
 pub const REFLECTED: u32 = 0x802F_0F14;
 // `itMasterHandBullet_Logic83_Clanked`: dead, the bullet's boxes never clank (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802F_0F34;
-// Ports `itMasterHandBullet_Logic83_Absorbed`; aliased once a check reaches it.
+#[doc(alias = "itMasterHandBullet_Logic83_Absorbed")]
 pub const ABSORBED: u32 = 0x802F_0F3C;
-// Ports `itMasterHandBullet_Logic83_ShieldBounced`; aliased once a check reaches it.
+#[doc(alias = "itMasterHandBullet_Logic83_ShieldBounced")]
 pub const SHIELD_BOUNCED: u32 = 0x802F_0F44;
-// Ports `itMasterHandBullet_Logic83_HitShield`; aliased once a check reaches it.
+#[doc(alias = "itMasterHandBullet_Logic83_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802F_0F64;
 
 /// The spark each frame.

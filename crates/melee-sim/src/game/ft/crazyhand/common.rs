@@ -33,7 +33,7 @@ impl Running<'_> {
     #[doc(alias = "ftCh_FingerBeamLoop_IASA")]
     #[doc(alias = "ftCh_FingerBeamEnd_IASA")]
     #[doc(alias = "ftCh_BackPunch_IASA")]
-    // Ports `ftCh_FingerGun1_IASA`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_FingerGun1_IASA")]
     #[doc(alias = "ftCh_BackAirplane1_IASA")]
     #[doc(alias = "ftCh_BackAirplane2_IASA")]
     #[doc(alias = "ftCh_BackAirplane3_IASA")]
@@ -84,7 +84,7 @@ impl Running<'_> {
     /// The air motion and the glide toward `mv.xC` (`ftCh_UpdateBossMotion`: `ft_80085134` and
     /// `ftBossLib_8015BE40` with `x14` and `x10`).
     #[doc(alias = "ftCh_BackPunch_Phys")]
-    // Ports `ftCh_FingerGun1_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_FingerGun1_Phys")]
     #[doc(alias = "ftCh_BackAirplane1_Phys")]
     #[doc(alias = "ftCh_FingerGun2_Phys")]
     #[doc(alias = "ftCh_TagCancel_Phys")]
@@ -105,7 +105,7 @@ impl Running<'_> {
     }
 
     /// Stopped where the glide ends: `ftCh_FingerGun1_Coll` and `ftCh_BackAirplane1_Coll`.
-    // Ports `ftCh_FingerGun1_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_FingerGun1_Coll")]
     #[doc(alias = "ftCh_BackAirplane1_Coll")]
     pub fn ch_stop_at_target(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
@@ -160,10 +160,10 @@ impl Running<'_> {
     #[doc(alias = "ftCo_CaptureDamageCrazyHand_IASA")]
     #[doc(alias = "ftCo_CaptureDamageCrazyHand_Phys")]
     #[doc(alias = "ftCo_CaptureDamageCrazyHand_Coll")]
-    // Ports `ftCo_CaptureWaitCrazyHand_Anim`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureWaitCrazyHand_IASA`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureWaitCrazyHand_Phys`; aliased once a check reaches it.
-    // Ports `ftCo_CaptureWaitCrazyHand_Coll`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Anim")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_IASA")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Phys")]
+    #[doc(alias = "ftCo_CaptureWaitCrazyHand_Coll")]
     // `ftCo_ThrownCrazyHand_*` run here too, but never: the victim leaves the state in the
     // call that enters it (ledger/dead.txt).
     pub fn ch_nothing(&mut self, _gobj: GObjId) {}
