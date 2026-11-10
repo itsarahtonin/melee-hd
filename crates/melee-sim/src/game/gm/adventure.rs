@@ -1092,7 +1092,7 @@ impl Running<'_> {
 
     /// Luigi's cutscene's entry, `gm_801B45A4`: Mario's and Luigi's costumes kept apart from
     /// the player's (`gmRegSetupEnemyColorTable`) into the cutscenes' enter data.
-    // Ports gm_801B45A4; aliased once a check reaches it.
+    #[doc(alias = "gm_801B45A4")]
     pub fn adventure_enter_luigi(&mut self) {
         let p = self.game.one_player.adventure.base.player;
         let mut colors = [0u8; 3];
@@ -1386,13 +1386,19 @@ impl Running<'_> {
     #[doc(alias = "gm_801B461C")]
     pub fn adventure_enter_peach(&mut self) {
         self.adventure_enter_vs();
-        if self.game.machine.routing.prev_state_id == LUIGI_CUTSCENE {
+        if self.previous_scene_index() == LUIGI_CUTSCENE {
             let color = self.game.one_player.adventure_cutscene[3];
             let p = &mut self.game.one_player.match_start.players[1];
             p.ckind = CKIND_LUIGI as _;
             p.color = color;
             self.game.one_player.adventure.x74[0] = 1;
         }
+    }
+
+    /// The state the mode's machine left last, `gm_GetPreviousSceneIndex`.
+    #[doc(alias = "gm_GetPreviousSceneIndex")]
+    fn previous_scene_index(&self) -> u8 {
+        self.game.machine.routing.prev_state_id
     }
 
     /// Peach's Castle's match's exit, `gm_801B4684`: the stage marked, the run's exit, and

@@ -116,8 +116,6 @@ const SETUP_MODES: &[Mode] = &[EV, CL, AS, AD];
 /// The 1P runs (Classic, All-Star, Adventure): [`SETUP_MODES`] without Event Match, for the
 /// gaps no event reaches (each gap says why).
 const ONE_P_RUNS: &[Mode] = &[CL, AS, AD];
-/// The modes that end with a game over, the endings, the staff roll and the trophy fall.
-const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
 /// Target Test's units: the targets and the 26 target stages (`grt*.c`, one template).
 const TARGET_TEST: &[&str] = &[
@@ -443,7 +441,10 @@ pub const PATHS: &[Paths] = &[
             "vi/v0601",
             "vi/v0801",
         ],
-        unreached: &[],
+        unreached: &[(
+            "the cutscene scene",
+            "Adventure's states (gm_Mode_Adventure_States, gm/machine.rs's ADVENTURE) name only the cutscene scenes 0x11 to 0x1B, each entered and its files read by vi/mod.rs's own case (vi0102 to vi1202); the stops are for any other scene, which only the debug cutscene mode's numbers could name",
+        )],
     },
     Paths {
         mode: DB,
@@ -828,9 +829,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
         covers: &[
-            "melee/gm/gm_16A2",
-            "melee/gm/gm_17AD",
-            "melee/gm/gm_17BA",
             "melee/gm/gm_17C0",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
@@ -838,14 +836,28 @@ pub const MISSING: &[Gap] = &[
             "gm_8017D7AC's records after a no contest",
             "a single-player route's callback",
         ],
-        // Not Event Match: gm_16A2's two left are gm_80169540 (only gmadventure.c calls it)
-        // and fn_8016A450 (only gm_17C0.c's 1P stage setups); gm_17AD's and gm_17BA's are the
-        // 1P results' bonuses (gmresult.c's tables), gm_17C0's the 1P stage setups' match
-        // hooks and gm_8017CBAC, gm_18A1's All-Star's ratio getters, none an event's (an
-        // event's match takes its rules from gm_801BC00C, its clear is gm_801BC4F4 and no
-        // results screen follows); the stops are the 1P runs' own (gm/one_player_match.rs,
-        // gm/opponents.rs's routes) or a mode's whose enter and exit data Event Match has.
+        // Not Event Match: gm_17C0's left are the 1P stage setups' match hooks and
+        // gm_8017CBAC, gm_18A1's All-Star's ratio getters, none an event's (an event's match
+        // takes its rules from gm_801BC00C, its clear is gm_801BC4F4 and no results screen
+        // follows); the stops are the 1P runs' own (gm/one_player_match.rs, gm/opponents.rs's
+        // routes) or a mode's whose enter and exit data Event Match has.
         modes: ONE_P_RUNS,
+    },
+    Gap {
+        what: "the Kirbys' team's costumes (gm_80169540, read inline)",
+        covers: &["gm_80169540"],
+        // Only gmadventure.c calls it (the three Kirbys' cutscene and team, gm_801B4974 and
+        // gm_801B4B28).
+        modes: &[AD],
+    },
+    Gap {
+        what: "a horde joining metal (fn_8016A450)",
+        covers: &["fn_8016A450"],
+        // Not Classic or Adventure (the intros' eighth round): only gm_8017CE34 calls it, for
+        // a stage whose run flags (x8) hold both the horde's 8 and the metal 4, and no entry
+        // of Classic's stage list (gmClassic_803DDEC8: the horde stage 0x08, the metal stage
+        // 0x04) or Adventure's (gm_803DE650) holds both; All-Star's are its own task's.
+        modes: &[AS],
     },
     Gap {
         what: "a horde's players leaving their slots",
@@ -857,11 +869,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
-        covers: &[
-            "gm_8016F00C",
-            "gm_GetPreviousSceneIndex",
-            "gm_GetCurrentSceneEnterData",
-        ],
+        covers: &["gm_8016F00C", "gm_GetCurrentSceneEnterData"],
         modes: SETUP_MODES,
     },
     Gap {
@@ -898,13 +906,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
-        covers: &[
-            "grFigureGet_80219898 with no coin",
-            "melee/gm/gmclassic",
-            "melee/gm/gm_1832",
-            "melee/gr/grfigureget",
-            "melee/gr/grpushon",
-        ],
+        covers: &["grFigureGet_80219898 with no coin", "melee/gm/gm_1832"],
         modes: &[CL, DB],
     },
     Gap {
@@ -936,7 +938,11 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Adventure's mode and its intro",
         covers: &["melee/gm/gmadventure"],
-        modes: &[AD, CL],
+        // Not Classic (the intros' eighth round): what gmadventure.c holds unported is hooks
+        // of gm_Mode_Adventure_States alone (gm_801B50C4 and gm_801B518C, Giga Bowser's
+        // path), whose only callers are that table, and Classic never enters game mode 4; it
+        // named Classic while Adventure's intro stopped in gm/intro.rs, shared with Classic's.
+        modes: &[AD],
     },
     Gap {
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
@@ -971,7 +977,8 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the cutscenes after the F-Zero one",
         covers: &["the cutscene scene"],
-        modes: &[AD, DB],
+        // Not Adventure (the intros' eighth round): its PATHS entry's unreached says why.
+        modes: &[DB],
     },
     Gap {
         what: "the cutscenes' fighters and stages",
@@ -981,8 +988,13 @@ pub const MISSING: &[Gap] = &[
     // The ends of a run.
     Gap {
         what: "the game overs' coming soon and the game over mode's Adventure load",
-        covers: &["melee/gm/gm_19EF", "gm_Mode_AdventureGOver_OnLoad"],
-        modes: ENDINGS,
+        covers: &["melee/gm/gm_19EF"],
+        // Not Classic or Adventure (the intros' eighth round): gm_19EF's unported functions
+        // are the coming soon scene's (GS_COMING_SOON), which only the modes' coming soon
+        // states enter, Classic's 104 and Adventure's 0x68 (and All-Star's 0x68, and the debug
+        // mode's state 8), and those two are entered only after a last state whose exit always
+        // names the next mode (gmClassic_801B3F18 and gm_801B4408 in ledger/dead.txt say how).
+        modes: &[AS, DB],
     },
     // The developer setting's debug routes.
     Gap {

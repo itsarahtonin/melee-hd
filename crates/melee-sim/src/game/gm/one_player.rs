@@ -668,7 +668,7 @@ impl Running<'_> {
     /// `gmClassic_801B3E44`: back to the menu, or the choices saved and given to the run, the
     /// stages' matchups picked (`gmClassic_801B2D54`), the first stage next, and the
     /// announcer's bank (`gm_80168F88`).
-    // Ports `gmClassic_801B3E44`; aliased once a check reaches it.
+    #[doc(alias = "gmClassic_801B3E44")]
     pub fn classic_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
@@ -725,7 +725,7 @@ impl Running<'_> {
     /// `gmClassic_801B2D54`: each Classic stage's matchup, picked from its table's order
     /// (`gmClassic_801B2BA4`): the hordes', the giants' and the teams' (but the last stage's),
     /// the one-opponent stages', then the bonus stages' and the last stage's own.
-    // Ports `gmClassic_801B2D54`; aliased once a check reaches it.
+    #[doc(alias = "gmClassic_801B2D54")]
     fn classic_pick_matchups(&mut self) {
         let n = CLASSIC_STAGES
             .iter()
@@ -765,7 +765,7 @@ impl Running<'_> {
     /// stage allows (its stage unlocked, each opponent unlocked, not the player's character,
     /// none already picked for another stage) and whose stage's ground no other pick shares;
     /// else the first that only shares a ground.
-    // Ports `gmClassic_801B2BA4`; aliased once a check reaches it.
+    #[doc(alias = "gmClassic_801B2BA4")]
     fn classic_pick(&self, table: usize) -> Option<MatchupRef> {
         let (off, t, at) = CLASSIC_TABLES[table];
         let me = i32::from(self.game.game_data.vs.unk_51C.c_kind);
@@ -844,7 +844,7 @@ impl Running<'_> {
 
     /// `gm_801B4350`: back to the menu, or the choices saved and given to the run, the first
     /// stage next and the announcer's bank.
-    // Ports `gm_801B4350`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B4350")]
     pub fn adventure_exit_css(&mut self) {
         if self.game.one_player.css.pending_scene_change == 2 {
             self.change_game_mode_after_scene(GM_MENU);
