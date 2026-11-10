@@ -96,6 +96,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6a3-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-allstar-3/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6a-") {
                     return ssbm_rs_local(&format!("lockstep/m6-allstar/{o}.inputs")).into();
                 }
@@ -1433,6 +1436,15 @@ pub const REC_ALLSTAR_CLEAR: Game = Game {
     name: "rec-allstar-clear",
     players: "All-Star cleared as Fox on Very Easy (recording allstar-clear)",
     replay: Replay::Session("rec-allstar-clear"),
+};
+
+/// All-Star's Very Hard clear from the debug menu (`m6-allstar-3/as-vh-clear`, debug level 3):
+/// the last round quit from the pause, its clear screen, the staff roll and the approach.
+pub const M6A3_AS_VH_CLEAR: Game = Game {
+    stage: "All-Star",
+    name: "m6a3-as-vh-clear",
+    players: "All-Star's last round as Fox on Very Hard (session m6-allstar-3/as-vh-clear)",
+    replay: Replay::Session("m6a3-as-vh-clear"),
 };
 
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.

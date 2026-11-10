@@ -755,6 +755,31 @@ fn sarahs_all_star_clear_runs_clean_to_its_card_after() {
     );
 }
 
+/// All-Star's Very Hard clear (milestone 6's task 23, third round, `m6-allstar-3/as-vh-clear`
+/// at debug level 3): the Taniguti Test's Reg:Allstar at 13 (`un_803010C0`: the run starts at
+/// its last round), Fox on Very Hard against the 25 Mr. Game & Watches, the match quit from the
+/// debug pause, which `gm_8017D7AC` counts as won above debug level 2, All-Star's clear with
+/// Very Hard's record (`gmMainLib_8015D418`) and the save, the trophy fall, the staff roll at
+/// six times its speed, congratulations and the challenger approach's start, clean to the
+/// trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn all_stars_very_hard_clear_runs_clean_to_its_card_after() {
+    let after = ssbm_rs_local("lockstep/m6-allstar-3/as-vh-clear-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-allstar-3", "as-vh-clear", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("5745 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Master Hand by the character select's name entry glitch (`m6-multiman`, task 15's third
 /// round; docs/oracle.md, "Sessions"; docs/melee-bugs.md): on a card with no last character,
 /// B held with the name list open and A on "NAME ENTRY" the tick after the back request start
