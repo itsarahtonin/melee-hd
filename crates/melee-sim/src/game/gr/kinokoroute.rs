@@ -68,9 +68,9 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 }
 
 /// The objects' processes and destroy callbacks that do nothing.
-// Ports grKinokoRoute_80207A94; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_80207A94")]
 #[doc(alias = "grKinokoRoute_80207AD4")]
-// Ports grKinokoRoute_80207AD8; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_80207AD8")]
 #[doc(alias = "grKinokoRoute_80207B28")]
 // Ports grKinokoRoute_80207B2C; aliased once a check reaches it.
 // Ports grKinokoRoute_80208368; aliased once a check reaches it.
@@ -486,7 +486,7 @@ fn rebuild(r: &mut Running, maps: [i32; 2], frame: u32) {
 /// Shuts the route behind the arena or opens it, `grKinokoRoute_8020836C`: joint 0x53 shown and
 /// collision joints 0x3C, 0x33 and 0xC to 0xF on, the stage items' hurtboxes on, or the
 /// reverse.
-// Ports grKinokoRoute_8020836C; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_8020836C")]
 pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
     let Some(j) = nth_joint(r.game, gobj, 0x53) else {
         return;
@@ -526,7 +526,7 @@ pub fn shut(r: &mut Running, gobj: GObjId, on: bool) {
 
 /// The arena's event callback, `grKinokoRoute_80208480`: on 1, the stage's `x6D8` set to 1,
 /// answering true.
-// Ports grKinokoRoute_80208480; aliased once a check reaches it.
+#[doc(alias = "grKinokoRoute_80208480")]
 pub fn arena_event(game: &mut Game, arg: i32) -> bool {
     if arg == 1 {
         super::ground::set_x6d8(game, arg);

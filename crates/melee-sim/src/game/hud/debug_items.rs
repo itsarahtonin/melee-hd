@@ -411,9 +411,10 @@ impl Running<'_> {
                 0
             }
             0x8030_10C0 => self.debug_allstar_from_round(arg),
+            0x8030_1028 => self.debug_adventure_from_stage(arg),
             // The single-player modes' and their game overs' entries (milestone 6's), acting
             // only on A, not ported yet.
-            0x8030_1028 | 0x8030_1074 | 0x8030_1D7C => {
+            0x8030_1074 | 0x8030_1D7C => {
                 if arg == CB_SELECT {
                     super::super::code::unported_call(&format!(
                         "the debug menu entry callback {cb:#010x}"
@@ -624,6 +625,20 @@ impl Running<'_> {
             self.game.game_data.vs.unk_528.x5 = round as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ALLSTAR);
+        }
+        0
+    }
+
+    /// `un_80301028`, the Taniguti test's Reg:Normal: on A, Adventure's saved choices' stage
+    /// to start from (`gmMainLib_8015CDD4`'s `x5`, whose eighth the select's exit starts the
+    /// run at) the entry's value less one, then Adventure.
+    #[doc(alias = "un_80301028")]
+    fn debug_adventure_from_stage(&mut self, arg: i32) -> i32 {
+        if arg == CB_SELECT {
+            let stage = self.game.hud.debug.word(0x804D_5908).wrapping_sub(1);
+            self.game.game_data.vs.unk_522.x5 = stage as u8;
+            self.sfx_forward();
+            self.debug_to_mode(crate::game::gm::GM_ADVENTURE);
         }
         0
     }

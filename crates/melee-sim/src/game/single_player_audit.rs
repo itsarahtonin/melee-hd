@@ -803,16 +803,24 @@ pub const MISSING: &[Gap] = &[
         // their states, loads and scenes (gm/machine.rs's ALLSTAR, GOVER, CHALLENGER, MENU),
         // checked by its sessions (recordings/allstar-clear, m6-allstar-3/as-vh-clear,
         // m6-1p-setups/as-over), and its one unported hook is its coming soon state's exit
-        // gm_801B607C, which ledger/dead.txt shows never runs.
-        modes: &[CL, AD, DB],
+        // gm_801B607C, which ledger/dead.txt shows never runs. Not Adventure (task 24's debug
+        // route): its modes (0x04 with the one-door select, the stage intros, the VS scene for
+        // its matches, the cutscenes 0x11 to 0x1B and its game over 0x69; 0x16 after a clear,
+        // the trophy fall, staff roll and congratulations; 0x14 after it; the main menu) each
+        // have their states, loads and scenes (gm/machine.rs's ADVENTURE, GOVER, CHALLENGER,
+        // MENU), checked by its sessions (recordings/2026-10-06_12-04-48, m6-intros/adv-*,
+        // m6-adventure-dbg/adv-giga-vh), and its one unported hook is its coming soon state's
+        // exit gm_801B4408, which ledger/dead.txt shows never runs.
+        modes: &[CL, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
         // Not Event Match: the records stop is for match types without a case, and Event
         // Match's (`EVENT_MATCH`, mn/charsel/one_door.rs) has one. Not All-Star either (task
-        // 23's third round): its match type, `REG_ALLSTAR`, has one.
-        modes: &[CL, AD],
+        // 23's third round): its match type, `REG_ALLSTAR`, has one. Nor Adventure (task 24's
+        // debug route): `REG_ADVENTURE` has one, which every Adventure session's select runs.
+        modes: &[CL],
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -832,40 +840,36 @@ pub const MISSING: &[Gap] = &[
         // (fn_8017C1A4, Crazy Hand's arrival); All-Star's mode has its enter and exit data
         // (gm/machine.rs, gm/match_exit.rs), its ratio getters are its own four, ported
         // (gm_8018A188, gm_8018A1D8, gm_8018A2C4, gm_8018A314), and the routes are Adventure's.
-        modes: &[CL, AD],
-    },
-    Gap {
-        what: "the Kirbys' team's costumes (gm_80169540, read inline)",
-        covers: &["gm_80169540"],
-        // Only gmadventure.c calls it (the three Kirbys' cutscene and team, gm_801B4974 and
-        // gm_801B4B28).
-        modes: &[AD],
-    },
-    Gap {
-        what: "a horde's players leaving their slots",
-        covers: &["gm_80167320's joiners' leaving"],
-        // Not Event Match: a joiner leaves only through a crowd's end callback, and an event's
-        // crowd has none (gm_8016A22C clears it; only a stage's arena, gm_801674C4, sets one),
-        // so fn_80169444(2) answers 0 (Sarah's ev45, docs/oracle.md).
-        modes: &[AD],
+        // Not Adventure (task 24's debug route): fn_8017C0C8 is Classic's boss stage's; its
+        // mode's matches have their enter and exit data (gm/machine.rs's scene_start_data,
+        // gm/match_exit.rs); its run's eleven getters (gm_Mode_Adventure_OnLoad's
+        // ADVENTURE_GETTERS) are each answered by gm/adventure.rs's getter and ratio_percent
+        // without the stops; and the routes' crowds install only the three end callbacks
+        // gm/opponents.rs's run_route_callback handles (fn_80169434's one caller,
+        // gm_801674C4, is called only by grkinokoroute.c, grshrineroute.c and gricemt.c, each
+        // with its own).
+        modes: &[CL],
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &["gm_8016F00C"],
         // Not All-Star (task 23's third round): only Event Match's gm_801BCAF0 calls
-        // gm_8016F00C.
-        modes: &[EV, CL, AD],
+        // gm_8016F00C. Nor Adventure (task 24's debug route), for the same reason.
+        modes: &[EV, CL],
     },
     Gap {
         what: "the 1P records and saves",
-        covers: &["gmMainLib_8015D1C8", "gmMainLib_8015D2F0", "gm_801647F8"],
+        covers: &["gmMainLib_8015D1C8", "gm_801647F8"],
         // Not Event Match: the gmMainLib getters are called only by gm_17C0.c's 1P stage
         // setups, fn_80160F58 only by Classic's intro (gm_1832.c), gm_801647F8 only by
         // gmclassic.c and gmmultiman.c; an event keeps its own records (gm_801BC4F4). Not
         // All-Star (task 23's third round): gmMainLib_8015D1C8 and gmMainLib_8015D2F0 are
         // gm_8017CBAC's Classic and Adventure cases' setters, and All-Star's case writes its
-        // own (gmMainLib_8015D418, checked by m6-allstar-3/as-vh-clear).
-        modes: &[CL, AD],
+        // own (gmMainLib_8015D418, checked by m6-allstar-3/as-vh-clear). Not Adventure (task
+        // 24's debug route): gm_8017CBAC's Adventure case writes gmMainLib_8015D2F0 (checked
+        // by m6-adventure-dbg/adv-giga-vh), gmMainLib_8015D1C8 is its Classic case's, and
+        // gm_801647F8 is called only by gmclassic.c and gmmultiman.c.
+        modes: &[CL],
     },
     // The modes' own code.
     Gap {
@@ -920,22 +924,11 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     Gap {
-        what: "Adventure's mode and its intro",
-        covers: &["melee/gm/gmadventure"],
-        // Not Classic (the intros' eighth round): what gmadventure.c holds unported is hooks
-        // of gm_Mode_Adventure_States alone (gm_801B50C4 and gm_801B518C, Giga Bowser's
-        // path), whose only callers are that table, and Classic never enters game mode 4; it
-        // named Classic while Adventure's intro stopped in gm/intro.rs, shared with Classic's.
-        modes: &[AD],
-    },
-    Gap {
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
         covers: &[
             "a car out with all thirty out",
-            "melee/gr/grkinokoroute",
             "melee/gr/grshrineroute",
             "melee/gr/grzebesroute",
-            "melee/gr/grbigblueroute",
             "stageGObj10_Callback3",
             "stage kind {grkind}",
         ],
@@ -946,7 +939,6 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "melee/it/kinds/itlikelike",
             "melee/it/kinds/itnokonoko",
-            "melee/it/kinds/itpatapata",
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
             "melee/it/kinds/itwhitebea",
@@ -969,8 +961,14 @@ pub const MISSING: &[Gap] = &[
         covers: &["demo setup", "ftDemo_CreateFighter's pose"],
         // Not All-Star (task 23's third round): the stage demo setups (Stage_8022532C) and
         // the poses from 9 are the cutscenes' (vi/), which All-Star never enters; its demo
-        // fighters are the trophy fall's pose 7 and the debug intro's 6.
-        modes: &[AD, CL, DB],
+        // fighters are the trophy fall's pose 7 and the debug intro's 6. Not Adventure (task
+        // 24's debug route): its cutscenes (vi/v0102 to v1201v2) set up only Peach's Castle,
+        // Brinstar, Green Greens, Corneria, the F-Zero route, Battlefield and Final
+        // Destination for a demo, each in code.rs's run_demo_init, and make the character in
+        // pose 8 (or 1, a winner's, in v1201v1) and from pose 9 only the kinds
+        // ftData_UnkDemoCallbacks0 names: Mario and Luigi 9 and 10, Kirby 11 to 14, Giga Bowser
+        // 15 (ft/demo.rs's cutscene_anims).
+        modes: &[CL, DB],
     },
     // The ends of a run.
     Gap {
@@ -997,7 +995,6 @@ pub const MISSING: &[Gap] = &[
             "onEnterIntroEasy",
             "un_80301BA8",
             "un_80301B48",
-            "un_80301028",
             "un_80301074",
             "un_80301D7C",
         ],
