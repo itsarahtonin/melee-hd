@@ -151,7 +151,9 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
                 }
 
-                if name.starts_with("mh-") {
+                // Master Hand by the name entry glitch; the boss's own sessions (`mh-1p` and the
+                // rest) are `m6-master-hand`'s, below.
+                if name == "mh-attacks" || name.starts_with("mh-15min") {
                     return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
                 }
 
