@@ -873,6 +873,15 @@ impl super::state::Running<'_> {
 }
 
 impl super::state::Game {
+    /// Whether the GPU's copies from the EFB reach memory. A console's do. Slippi's Dolphin
+    /// keeps them on the GPU ("Store EFB Copies to Texture Only", its default), so memory keeps
+    /// what it held before them: melee-hd follows it under the Slippi ruleset and in a
+    /// replay's playback (Sarah, 2026-11-07), the console elsewhere (docs/engine.md, "The GPU's
+    /// pixels").
+    pub fn copies_reach_memory(&self) -> bool {
+        !(self.rules.slippi || self.playback.is_some())
+    }
+
     /// Off-screen damage from the stage's limits (`Fighter_procAnim+0x520`,
     /// `Online/Core/BrawlOffscreenDamage`), in place of the magnifier's check: a fighter is
     /// off screen past the stage's camera limits, except in the scene 0x0120, while

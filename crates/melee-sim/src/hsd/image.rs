@@ -461,6 +461,10 @@ pub struct Image {
     /// the files loaded into them, the objects laid out as they went, the allocators' words.
     /// A block freed takes its runs to the overlay, and the scene's end all of them.
     live: Spans,
+    /// What memory held where the GPU's copies now are ([`Src::is_render_target`]), as the
+    /// copies found it: what a Dolphin that keeps its copies on the GPU leaves there
+    /// ([`Image::pre_copy_bytes`]). Read only where the image holds a copy now.
+    before: Spans,
     /// Where archives were relocated to (their data blocks' addresses and lengths), newest
     /// last: what a pointer the image holds into one names.
     places: Option<Arc<Vec<(u32, u32, ArchiveId)>>>,
@@ -514,6 +518,7 @@ impl Clone for Image {
         self.base.clone_from(&o.base);
         self.overlay.clone_from(&o.overlay);
         self.live.clone_from(&o.live);
+        self.before.clone_from(&o.before);
         self.places.clone_from(&o.places);
         self.words.clone_from(&o.words);
         self.taken = o.taken;
@@ -535,6 +540,7 @@ impl PartialEq for Image {
                 || (self.base() == other.base()
                     && self.overlay == other.overlay
                     && self.live == other.live
+                    && self.before == other.before
                     && self.places() == other.places()
                     && self.words == other.words
                     && self.taken == other.taken
@@ -610,6 +616,7 @@ impl StateEq for Image {
         hash_spans(self.base(), h);
         hash_spans(&self.overlay, h);
         hash_spans(&self.live, h);
+        hash_spans(&self.before, h);
         h.word(self.places().len() as u64);
         for &(b, len, a) in self.places() {
             h.word(u64::from(b) << 32 | u64::from(len));
@@ -941,6 +948,9 @@ impl Image {
                 archive,
             ));
         }
+        if src.is_render_target() {
+            self.keep_before(lo, hi);
+        }
         write(&mut self.live, lo, hi, src);
     }
 
@@ -978,6 +988,25 @@ impl Image {
         view
     }
 
+    /// Keeps what `[lo, hi)` holds, as a new object's block reads it, as the bytes from before
+    /// a copy from the GPU there ([`Image::before`]); where a copy already is, what was there
+    /// before it stays.
+    fn keep_before(&mut self, lo: u32, hi: u32) {
+        let hi = hi.min(MEM1.end);
+        if lo >= hi || !MEM1.contains(&lo) {
+            return;
+        }
+        for (a, b, src) in self.view(lo, hi) {
+            match src {
+                Some(src) if src.is_render_target() => {}
+                Some(src) => write(&mut self.before, a, b, src),
+                None => {
+                    take(&mut self.before, a, b);
+                }
+            }
+        }
+    }
+
     /// An object giving back the GPU's pixels its block held when it was made
     /// (`Lay::keep_render_target`): each part keeps the copy's kind the image holds under it
     /// ([`Src::Copied`] stays one), a plain render target where none is.
@@ -995,6 +1024,18 @@ impl Image {
                 .unwrap_or(Src::RenderTarget);
             self.hold(a, b, src);
         }
+    }
+
+    /// What `[lo, lo + len)` held before the GPU's copies there, where the image holds one
+    /// ([`Image::before`]): the bytes, and whether each is known. Dolphin with its copies kept
+    /// on the GPU (Slippi's) leaves memory so (docs/engine.md, "The GPU's pixels").
+    pub fn pre_copy_bytes(&self, data: &Archives, lo: u32, len: u32) -> (Vec<u8>, Vec<bool>) {
+        let mut out = vec![0; len as usize];
+        let mut known = vec![true; len as usize];
+        if self.on {
+            read(&self.before, data, lo, &mut out, &mut known);
+        }
+        (out, known)
     }
 
     /// An archive whose data block is at `base` (`len` bytes) outside the heap the image
@@ -1480,6 +1521,36 @@ mod tests {
             ]
         );
         assert_eq!(img.runs().len(), 4);
+    }
+
+    /// A copy from the GPU keeps what memory held before it (Slippi's Dolphin leaves that
+    /// there), through copies again over it, and a shadow's says which bytes it is.
+    #[test]
+    fn a_copy_keeps_the_bytes_before_it() {
+        let data = Archives::default();
+        let mut img = Image::power_on();
+        img.write(0x8040_0400, 0x8040_0408, bytes(&[1, 2, 3, 4, 5, 6, 7, 8]));
+        img.unknown(0x8040_0408, 0x8040_040C);
+        img.end_scene();
+        img.hold(0x8040_0402, 0x8040_040E, Src::Copied(Pixels::Shadow));
+        img.hold(0x8040_0400, 0x8040_0404, Src::RenderTarget);
+        img.hold(0x8040_0402, 0x8040_040E, Src::Copied(Pixels::ShadowVolume));
+        let (b, k) = img.pre_copy_bytes(&data, 0x8040_0400, 16);
+        assert_eq!(b, [1, 2, 3, 4, 5, 6, 7, 8, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let unknown = [false; 4];
+        assert_eq!(k, [&[true; 8][..], &unknown, &[true; 4]].concat());
+        assert_eq!(
+            img.render_target(0x8040_0400, 16),
+            [&[true; 14][..], &[false; 2]].concat()
+        );
+        let sh = img.copied_pixels(0x8040_0400, 16);
+        assert_eq!(sh[..2], [None, None]);
+        assert!(sh[2..14].iter().all(|&z| z == Some(Pixels::ShadowVolume)));
+        // Written over and copied into again, it keeps the new bytes.
+        img.put(0x8040_0400, &[9; 4]);
+        img.hold(0x8040_0400, 0x8040_0404, Src::RenderTarget);
+        let (b, _) = img.pre_copy_bytes(&data, 0x8040_0400, 6);
+        assert_eq!(b, [9, 9, 9, 9, 5, 6]);
     }
 
     /// An object made over a copy's pixels gives them back with the copy's kind; a new copy
