@@ -30,12 +30,6 @@ pub struct Gate {
 pub const GATES: &[Gate] = &[
     Gate {
         list: REG,
-        entry: 0,
-        what: "Classic",
-        covers: &["melee/gm/gmclassic"],
-    },
-    Gate {
-        list: REG,
         entry: 1,
         what: "Adventure",
         covers: &["melee/gm/gmadventure"],

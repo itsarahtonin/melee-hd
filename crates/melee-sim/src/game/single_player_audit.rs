@@ -1165,7 +1165,7 @@ mod tests {
 
     /// Every mode has its paths once and every gate its mode; the debug routes have no gate,
     /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest,
-    /// Target Test, Training, Multi-Man Melee and All-Star, docs/player.md).
+    /// Target Test, Training, Multi-Man Melee, All-Star and Classic, docs/player.md).
     #[test]
     fn modes_match_the_gates() {
         for m in Mode::ALL {
@@ -1183,6 +1183,7 @@ mod tests {
                     | Mode::Training
                     | Mode::MultiMan
                     | Mode::AllStar
+                    | Mode::Classic
             );
             assert_eq!(m.gate().is_none(), lifted, "{}", m.name());
         }
