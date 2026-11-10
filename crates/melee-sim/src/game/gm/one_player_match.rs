@@ -995,7 +995,7 @@ impl Running<'_> {
     /// lost (`gmMainLib_8015D3FC`, `gmMainLib_8015D418`).
     #[doc(alias = "gmMainLib_8015D384")]
     #[doc(alias = "gmMainLib_8015D3FC")]
-    // Ports gmMainLib_8015D418 (Very Hard's branch); aliased once a check reaches it.
+    #[doc(alias = "gmMainLib_8015D418")]
     fn allstar_clear_records(&mut self, run: &Unk1PData, sel: u8, stocks: u8) {
         let p = run.player;
         let s = &mut self.game.game_data.thing.save_data;
