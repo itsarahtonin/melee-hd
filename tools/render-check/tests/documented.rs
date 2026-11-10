@@ -32,14 +32,17 @@ use common::{
     MH_PROBE, MK_ENEMIES, MK_FALL, MK_ROUTE, MM_10_WIN, MM_15MIN, MUSHROOM_KINGDOM,
     MUSHROOM_KINGDOM_2, MUTE_CITY, MZ_ARENA, MZ_CAPTURE, MZ_EXIT, MZ_KILL, NAMES, NAMES_KANA,
     O6_INTRO_ALLSTAR, ONETT, OPTIONS_TOUR, PC_IZUMI_SIZE, PEACHS_CASTLE, POKE_FLOATS, RACE_LOOK,
-    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, REC_ADVENTURE, RESULTS_PILLS, RESULTS_STOCK,
-    RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS, SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM,
-    SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS, SOUND_SOUNDS, SPECIAL_INVISIBLE_YS,
-    TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER, TR_CPU, TR_ITEMS,
-    TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY, TT_CLEAR,
-    TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
+    RACE_PILLAR, RACE_SPIKES, RAINBOW_CRUISE, REC_ADVENTURE, REC_ALLSTAR_CLEAR, REC_EV29, REC_EV50,
+    REC_TR_COMBO20, RESULTS_PILLS, RESULTS_STOCK, RESULTS_TEAMS, RULES, RULES_ITEMS, RULES_PLUS,
+    SELECT_CPUS, SELECT_KONGO, SELECT_RANDOM, SELECT_TEAMS, SHEIK_FOX_FOD, SOUND_JP, SOUND_SONGS,
+    SOUND_SOUNDS, SPECIAL_INVISIBLE_YS, TIE3_TIME, TIE4_STOCK, TOU_BRACKET64, TOU_LIST, TOU_WINNER,
+    TR_CPU, TR_ITEMS, TROPHY_COLLECTION, TROPHY_COLLECTION_ROWS, TROPHY_GALLERY, TROPHY_LOTTERY,
+    TT_CLEAR, TT_DK_QUIT, TT_TARGETS, UN_HELD, UNLOCK_GW, UNLOCK_TIME, VENOM, YOSHIS_ISLAND,
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
+
+// The depth copies' frames (docs/player.md, "Depth copies in frames").
+use common::{M6E2_REGEND_REAL, REC_CLASSIC_CLEAR};
 
 fn identical(game: &Game, frame: u32) {
     compare(game, frame, Group::Standard, Expect::Identical);
@@ -222,6 +225,124 @@ fn m6e2_regend_adv_1950() {
 fn m6e2_regend_gw_1500() {
     toy_fall(&M6E2_REGEND_GW, 1500, 1400, [286, 286]);
 }
+// The staff roll's first frame right after the trophy fall's last depth copy
+// (`m6-endings-2/regend-real` 2030, the copies to 2029), against a capture made with ssbm-rs's
+// renderer running: what Classic's clear shows with a grey layer there (its log frame 20710)
+// samples memory those copies wrote; this one samples none, so it can't fail without the depth
+// copies, only show that encoding them leaves the next scene's frames as they were.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6e2_regend_real_2030() {
+    compare_in(
+        &M6E2_REGEND_REAL,
+        2030,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+// Classic's versus splash before the Team Mario stage (`recordings/classic-clear` 11500, the
+// VS in and every portrait out), against a log started at 11425, before the 640 by 480 copy's
+// last frame and the portraits' copies at 11429 (`Capture::RenderedSince`), captured with
+// ssbm-rs's `ssbm-run-1106.exe` (b95cae5), whose renderer writes the depth copies to memory.
+// Each portrait is a color copy and a depth copy, and the third's color copy lies in memory
+// the 640 by 480 copy held: identical images need both the depth copies and the newer copy
+// kept. The draws are the same but the portraits' (`why::SPLASH`).
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_11500() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        11500,
+        Group::Standard,
+        Expect::SameImages {
+            same: [579, 579],
+            why: common::why::SPLASH,
+        },
+        Capture::RenderedSince(11425),
+    );
+}
+// Classic's metal stage (`recordings/classic-clear` 16000, Fox against metal Marth on
+// Battlefield), Master Hand's entry (16950) and his defeat's flash (19150), against captures
+// made with ssbm-rs's renderer running: identical images, every draw the same but those that
+// sample the fighters' shadows' copies. Metal Marth's sword (a shape of his shared model, its
+// own material not a reflective one) drew its metal reflection through a texture matrix
+// melee-render never loaded, since it asked the display object's material rather than the
+// metal one set up for the reflection (streaks on the sword at 16000; the matrices' leftovers
+// at 16950 and 19150).
+fn classic_shadowed(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_16000() {
+    classic_shadowed(16000, [1417, 1387]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_16950() {
+    classic_shadowed(16950, [693, 690]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_19150() {
+    classic_shadowed(19150, [4020, 4020]);
+}
+
+// Classic's trophy fall before the credits: the character's trophy alone on its stand
+// (`recordings/classic-clear` 20300) and the trophies laid round (20650), against captures
+// made with ssbm-rs's runner at b95cae5 running its renderer, identical.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20300() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20300,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20650() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20650,
+        Group::Standard,
+        Expect::Identical,
+        Capture::Rendered,
+    );
+}
+
+// The first Staff Credits frame (`recordings/classic-clear` 20710), against a log started at
+// 20700, before the trophy fall's last depth copies (to 20707), captured with ssbm-rs's runner
+// at b95cae5: identical. melee-hd's frame is the same with the depth copies encoded or not (its
+// copies go to images of their own), so it can't fail without them.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_20710() {
+    compare_in(
+        &REC_CLASSIC_CLEAR,
+        20710,
+        Group::Standard,
+        Expect::Identical,
+        Capture::RenderedSince(20700),
+    );
+}
 // The staff roll (`m6-endings-3/staffroll-play`), against captures made with ssbm-rs's
 // renderer running: the names flying past with shots fired at rest (1400) and the stick to the
 // right (1600), the roll paused on B (2200), at Start's six times speed with the background
@@ -293,6 +414,18 @@ fn rec_adventure_4100() {
 fn rec_adventure_6000() {
     rec_adventure(6000, [2162, 2162]);
 }
+// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros, the target
+// stage's (3990), Snag the Trophies' (9360) and the race's (12680); and against a reference
+// captured with ssbm-rs's renderer running, Snag the Trophies with its coins over the stand
+// (9800).
+frames!(REC_CLASSIC_CLEAR;
+    rec_classic_clear_3990 3990,
+    rec_classic_clear_9360 9360,
+    rec_classic_clear_12680 12680,
+);
+rendered_frames!(REC_CLASSIC_CLEAR;
+    rec_classic_clear_9800 9800,
+);
 // All-Star's intro from the debug mode: Captain Falcon asleep at the screen's place as the
 // model comes in (1340), held (1400) and near its end (1460) (`m6-oracle/intro-allstar`), and
 // the Ice Climbers, Nana beside and behind Popo (1640, 1700; `m6-allstar/intro-as-ic`).
@@ -304,6 +437,42 @@ frames!(O6_INTRO_ALLSTAR;
 frames!(M6A_INTRO_AS_IC;
     m6a_intro_as_ic_1640 1640,
     m6a_intro_as_ic_1700 1700,
+);
+// Sarah's All-Star clear (`recordings/allstar-clear`): the first rest area, its hearts and the
+// round's trophy on the stand, with the tally of the characters left (1600), and the last
+// round's Mr. Game & Watches on Flat Zone (20500), against captures made with ssbm-rs's
+// renderer running: identical images, every draw the same but those that sample the fighters'
+// shadows' copies; the ending's trophy fall (22300), staff roll (23300) and congratulations
+// (24500), identical.
+fn rec_allstar_clear(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &REC_ALLSTAR_CLEAR,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_allstar_clear_1600() {
+    rec_allstar_clear(1600, [810, 825]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_allstar_clear_20500() {
+    rec_allstar_clear(20500, [1893, 1888]);
+}
+
+frames!(REC_ALLSTAR_CLEAR;
+    rec_allstar_clear_22300 22300,
+    rec_allstar_clear_23300 23300,
+    rec_allstar_clear_24500 24500,
 );
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
@@ -712,6 +881,18 @@ frames!(M6U_EV37_PICHU;
     m6u_ev37_pichu_17500 17500,
     m6u_ev37_pichu_17580 17580,
 );
+// Sarah's recordings (task 26's third round): after Training's combo of 23, the combos'
+// trophies' notices (2380, 2440); after Event 29, Ganondorf's approach (4850, 4960) and, his
+// match won, the unlock's notice (6960).
+frames!(REC_TR_COMBO20;
+    rec_tr_combo20_2380 2380,
+    rec_tr_combo20_2440 2440,
+);
+frames!(REC_EV29;
+    rec_ev29_4850 4850,
+    rec_ev29_4960 4960,
+    rec_ev29_6960 6960,
+);
 // The approach's screen for Mr. Game & Watch (`unlock-sessions/gw`), the name texture's first
 // frame, waiting for A (2890).
 frames!(UNLOCK_GW;
@@ -846,8 +1027,8 @@ rendered_frames!(RESULTS_TEAMS;
 // Dr. Mario's second pose on the results screen (`results-sessions/pills`), a pill in each
 // hand: as the panel comes in (2701) and on the statistics' page (2901).
 results_frames!(RESULTS_PILLS;
-    results_pills_2701 2701 1532,
-    results_pills_2901 2901 1532,
+    results_pills_2701 2701 1534,
+    results_pills_2901 2901 1534,
 );
 // The character select after a tie under the automatic handicap (`tie-sessions`), captured in
 // ssbm-rs's original code, whose stack leftovers move the handicaps: Fox's handicap at 4
@@ -1940,6 +2121,28 @@ fn e3_ev26_2100() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn e4_ev22_2000() {
     event_match(&EV22, 2000, [1775, 1775]);
+}
+
+// Event Match's sixth round: Event 50 won (Sarah's recording ev50): Crazy Hand hit for the
+// last time, the cutscene camera on him (13200), falling beaten as the match starts fading
+// to white (13350) and further into the fade (13400), captured with ssbm-rs's renderer
+// running.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13200() {
+    event_match(&REC_EV50, 13200, [920, 920]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13350() {
+    event_match(&REC_EV50, 13350, [3447, 3447]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e6_ev50_13400() {
+    event_match(&REC_EV50, 13400, [4577, 4577]);
 }
 
 frames!(TT_DK_QUIT;

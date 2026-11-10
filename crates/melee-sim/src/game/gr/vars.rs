@@ -129,6 +129,7 @@ pub enum VarsKind {
     BigBlueRoute,
     BigBlueRouteCars,
     PushOn,
+    FigureGet,
 }
 
 /// `union GroundVars`.
@@ -271,6 +272,8 @@ pub enum GroundVars {
     BigBlueRouteCars(BigBlueRouteCarsVars),
     /// `grPushOn_GroundVars`: the race's lights (map 2).
     PushOn(PushOnVars),
+    /// `grFigureGet_GroundVars`: Snag the Trophies' stand (map 1).
+    FigureGet(FigureGetVars),
     /// `grKraid_GroundVars`: Brinstar Depths' rock (map 3) and Kraid's copy (map 1).
     Kraid(KraidVars),
     /// `grKraid_GroundVars2`: Kraid (map 4).
@@ -1324,7 +1327,8 @@ fn inishie1_block(m: &Mem, b: u32, cx: &mut dyn Cx) -> Inishie1Block {
 
 /// `grInishie2_GroundVars`, Mushroom Kingdom II's stage (map 2): its flags (`xC4`, bit 0x80
 /// the music sped up, 0x40 and 0x20 the two logs' waits running, 0x10 Birdo's, 0x08 Pidgit's;
-/// the others nothing writes) and those waits (`xC6`, `xC8`, `xCA`, `xCC`).
+/// the others nothing writes or reads: they keep what the block held, and aren't compared) and
+/// those waits (`xC6`, `xC8`, `xCA`, `xCC`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2Vars {
     pub xC4: u8,
@@ -1335,7 +1339,8 @@ pub struct Inishie2Vars {
 }
 
 /// `grInishie2_GroundVars` with `grInishie2_GroundVars2::xCC`, a falling log (maps 3 and 4):
-/// its flags (`xC4`, bit 0x80 its collision back), its wait (`xC6`), which log it is (`xC8`)
+/// its flags (`xC4`, bit 0x80 its collision back; the others, never written or read, keep the
+/// block's bytes and aren't compared), its wait (`xC6`), which log it is (`xC8`)
 /// and the stage object that sent it (`xCC`, at +8).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2LogVars {
@@ -2022,6 +2027,22 @@ pub struct ShrineRoute3Vars {
     pub push_y: f32,
     pub spin_x: f32,
     pub spin_y: f32,
+}
+
+/// `grFigureGet_GroundVars`: Snag the Trophies' stand (map 1): the ticks to the next coin
+/// (`x0`), the coins out (`x4`), the coins landed on the stand (`x8`) and gone (`xC`), the
+/// three coins' trophies (`x10`), the landed coins' trophies (`x1C`) and objects (`x28`), and
+/// the coins' objects (`x34`). Its setup writes every field.
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct FigureGetVars {
+    pub x0: i32,
+    pub x4: i32,
+    pub x8: i32,
+    pub xC: i32,
+    pub x10: [i32; 3],
+    pub x1C: [i32; 3],
+    pub x28: [Option<GObjId>; 3],
+    pub x34: [Option<GObjId>; 3],
 }
 
 /// `grPushOn_GroundVars`: the fighters' lights' object (`gobj`, render link 4's first), its
@@ -2736,6 +2757,7 @@ impl GroundVars {
             GroundVars::BigBlueRoute(_) => "BigBlueRouteVars",
             GroundVars::BigBlueRouteCars(_) => "BigBlueRouteCarsVars",
             GroundVars::PushOn(_) => "PushOnVars",
+            GroundVars::FigureGet(_) => "FigureGetVars",
             GroundVars::Kraid(_) => "KraidVars",
             GroundVars::Kraid2(_) => "Kraid2Vars",
             GroundVars::Flatzone(_) => "FlatzoneVars",
@@ -2846,6 +2868,7 @@ impl GroundVars {
         "BigBlueRouteVars",
         "BigBlueRouteCarsVars",
         "PushOnVars",
+        "FigureGetVars",
         "KraidVars",
         "Kraid2Vars",
         "FlatzoneVars",
@@ -4142,6 +4165,24 @@ impl GroundVars {
                     v.lobj_flags[i as usize] = m.u32(at + 0x54 + 4 * i);
                 }
                 GroundVars::PushOn(v)
+            }
+            VarsKind::FigureGet => {
+                let w = |o: u32| m.u32(at + o) as i32;
+                let mut v = FigureGetVars {
+                    x0: w(0),
+                    x4: w(4),
+                    x8: w(8),
+                    xC: w(0xC),
+                    ..FigureGetVars::default()
+                };
+                for i in 0..3 {
+                    let o = 4 * i as u32;
+                    v.x10[i] = w(0x10 + o);
+                    v.x1C[i] = w(0x1C + o);
+                    v.x28[i] = cx.import_handle("GObjId", m.u32(at + 0x28 + o)).map(GObjId);
+                    v.x34[i] = cx.import_handle("GObjId", m.u32(at + 0x34 + o)).map(GObjId);
+                }
+                GroundVars::FigureGet(v)
             }
             VarsKind::BigBlueRelay => GroundVars::BigBlueRelay(BigBlueRelayVars {
                 xC4: m.u32(at),
@@ -6046,6 +6087,19 @@ impl GroundVars {
         }
     }
 
+    /// The variables as `grFigureGet_GroundVars`, likewise: the setup writes every field.
+    pub fn figureget(&mut self) -> &mut FigureGetVars {
+        if let GroundVars::Bytes(_) = self {
+            *self = GroundVars::FigureGet(FigureGetVars::default());
+        }
+        match self {
+            GroundVars::FigureGet(v) => v,
+            other => {
+                panic!("a stage object's variables are {other:?}, not grFigureGet_GroundVars")
+            }
+        }
+    }
+
     /// The variables as `grPushOn_GroundVars`, likewise: the setup writes every field it reads
     /// before reading it, so the block's bytes are left behind.
     pub fn pushon(&mut self) -> &mut PushOnVars {
@@ -7319,10 +7373,12 @@ impl Mirror for GroundVars {
                     m.u32(at),
                 );
             }
+            // Only the flags' bits the code writes: the others hold what the block held
+            // (docs/engine.md, "Uninitialized values").
             GroundVars::Inishie2(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
-                let ours = (v.xC4, [v.xC6, v.xC8, v.xCA, v.xCC]);
-                let theirs = (m.u8(at), [2, 4, 6, 8].map(h));
+                let ours = (v.xC4 & 0xF8, [v.xC6, v.xC8, v.xCA, v.xCC]);
+                let theirs = (m.u8(at) & 0xF8, [2, 4, 6, 8].map(h));
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.inishie2"),
@@ -7333,8 +7389,8 @@ impl Mirror for GroundVars {
             }
             GroundVars::Inishie2Log(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
-                let ours = (v.xC4, [v.xC6, v.xC8]);
-                let theirs = (m.u8(at), [2, 4].map(h));
+                let ours = (v.xC4 & 0x80, [v.xC6, v.xC8]);
+                let theirs = (m.u8(at) & 0x80, [2, 4].map(h));
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.inishie2"),
@@ -8138,6 +8194,37 @@ impl Mirror for GroundVars {
                     v.spot_light.map(|l| l.0),
                     m.u32(at + 0xAC),
                 );
+            }
+            GroundVars::FigureGet(v) => {
+                let p = format!("{path}.figureget");
+                let ours = (v.x0, v.x4, v.x8, v.xC, v.x10, v.x1C);
+                let w = |o: u32| m.u32(at + o) as i32;
+                let theirs = (
+                    w(0),
+                    w(4),
+                    w(8),
+                    w(0xC),
+                    [w(0x10), w(0x14), w(0x18)],
+                    [w(0x1C), w(0x20), w(0x24)],
+                );
+                if ours != theirs {
+                    cx.mismatch(&p, format!("{ours:?}"), format!("{theirs:?}"));
+                }
+                for i in 0..3 {
+                    let o = 4 * i as u32;
+                    cx.compare_handle(
+                        &format!("{p}.x28[{i}]"),
+                        "GObjId",
+                        v.x28[i].map(|g| g.0),
+                        m.u32(at + 0x28 + o),
+                    );
+                    cx.compare_handle(
+                        &format!("{p}.x34[{i}]"),
+                        "GObjId",
+                        v.x34[i].map(|g| g.0),
+                        m.u32(at + 0x34 + o),
+                    );
+                }
             }
             GroundVars::BigBlueRelay(v) => {
                 let ours = (

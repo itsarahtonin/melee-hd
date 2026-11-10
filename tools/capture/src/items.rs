@@ -420,7 +420,9 @@ impl Comparer<'_> {
             },
         );
         // A collision's last position its spawn's stack words gave is left out
-        // (`it::Globals::stale_last_pos`, docs/engine.md): ours stands in for theirs.
+        // (`it::Globals::stale_last_pos`, docs/engine.md): ours stands in for theirs, and for
+        // the ECB's motion its first tick takes from it (`xB54`'s first two words,
+        // `it_80274D04`), which only a stomp on a stompable item reads.
         let view = if game.it.stale_last_pos.contains(&o.0) {
             let mut block = view.unwrap_or_else(|| {
                 let lo = (t - MEM1) as usize;
@@ -430,6 +432,10 @@ impl Comparer<'_> {
             let p = &item.x378_itemColl.last_pos;
             for (k, v) in [p.x, p.y, p.z].into_iter().enumerate() {
                 let off = 0x378 + 0x1C + 4 * k;
+                block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
+            }
+            for (k, v) in [item.xB54.unk_x, item.xB54.unk_y].into_iter().enumerate() {
+                let off = 0xB54 + 4 * k;
                 block[off..off + 4].copy_from_slice(&v.to_bits().to_be_bytes());
             }
             Some(block)

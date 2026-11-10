@@ -970,7 +970,8 @@ impl Running<'_> {
 
     /// Classic's stage's match's exit, `gmClassic_801B3B40`: the stage marked won (2) or not
     /// (1) in `gm_804908A0`, and the run's exit (`gm_8017D7AC`, the game over next at no
-    /// stock); the last stage's clear and the target stage's records aren't ported.
+    /// stock), Classic's clear (`gm_8017CBAC`) after the last stage, and the target stage's
+    /// records.
     #[doc(alias = "gmClassic_801B3B40")]
     pub fn classic_exit_vs(&mut self) {
         let id = self.game.machine.routing.curr_state_id;
@@ -988,10 +989,45 @@ impl Running<'_> {
         let on = self.one_player_match_exit(&mut run, 0x69);
         self.game.one_player.classic.base = run;
         if on && CLASSIC_STAGES.get(round + 1).is_some_and(|e| e.x0 == 0xD) {
-            crate::game::code::unported_call("gm_8017CBAC (Classic's clear)");
+            // `gm_8017CBAC` with Classic's run and stocks (`gmMainLib_8015CDC8`).
+            let stocks = self.game.game_data.vs.unk_51C.stocks;
+            self.one_player_clear(&run, stocks, super::endings::GM_CLASSIC_GOVER);
         }
         if entry.x1 == 0x80 && entry.x2 == 1 {
-            crate::game::code::unported_call("gmClassic_801B3B40's target stage records");
+            self.classic_target_records();
+        }
+    }
+
+    /// `gmClassic_801B3B40`'s target stage records, as Target Test's (`gm_801B65D4`) without
+    /// its unlocks: a cleared stage takes the character's best time in the session's records
+    /// and marks it cleared there and in the save's two masks; the save's record is the best
+    /// time once cleared, else the most targets broken (a first clear writes its time and
+    /// stops there).
+    fn classic_target_records(&mut self) {
+        let ckind = self.game.one_player.classic.base.player.ckind as u8;
+        let sel = super::match_exit::selkind(ckind);
+        let frames = self.game.one_player.match_exit.match_end.frame_count;
+        // `Ground_801C1DE4`: the targets left and the stage's targets.
+        let (left, total) = (
+            i32::from(self.game.stage_info.x6D4),
+            i32::from(self.game.stage_info.x6D2),
+        );
+        if left == 0 {
+            super::one_player::record_target_clear(self.game, sel, frames);
+        }
+        let x7c = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+        if !x7c.b0 {
+            if left == 0 {
+                x7c.b0 = true;
+                x7c.x94 = frames;
+                return;
+            }
+            let broken = total.wrapping_sub(left) as u32;
+            if x7c.x94 < broken {
+                x7c.x94 = broken;
+            }
+        } else if left == 0 && x7c.x94 > frames {
+            x7c.x94 = frames;
         }
     }
 }

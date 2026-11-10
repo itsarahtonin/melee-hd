@@ -1142,7 +1142,7 @@ impl Running<'_> {
     /// `ftLib_LoadFighterCostume`: a fighter kind's data, its effects' file, one costume and
     /// its animations loaded unless they are (and Kirby's copies' setup, `ftData_800857E0`).
     #[doc(alias = "ftLib_LoadFighterCostume")]
-    fn load_fighter_costume(&mut self, kind: i32, costume: u8) {
+    pub(crate) fn load_fighter_costume(&mut self, kind: i32, costume: u8) {
         use super::super::ft::data::{MAIN_MEMORY, kind_tables};
         if let Some(file) = self.game.load_fighter_data(self.data, kind) {
             self.check_preloaded(file);
@@ -1569,7 +1569,7 @@ impl Running<'_> {
     /// `gm_801BC670`: a series' round won: the next round's wait (from the first event's
     /// `x4`), the time left kept (at least that `x4`'s seconds), Sheik kept for the next
     /// round, the series' time so far, and the match ended as a round's (kind 8).
-    // Ports `gm_801BC670`; aliased once a check reaches it.
+    #[doc(alias = "gm_801BC670")]
     fn event_round_won(&mut self) {
         let e0 = self.event_entry(0).expect("the first event's entry");
         let x4 = e0.x4(self).expect("the first event's parameters");

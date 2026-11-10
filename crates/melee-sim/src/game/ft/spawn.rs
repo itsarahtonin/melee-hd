@@ -526,6 +526,8 @@ impl Running<'_> {
             escape: Default::default(),
             climb: Default::default(),
             maze: Default::default(),
+            // A fighter's pass touches no coin (`grFigureGet_80219B10` takes items alone).
+            coins: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(
                 &game.world,
@@ -581,6 +583,8 @@ impl Running<'_> {
             escape: Default::default(),
             climb: Default::default(),
             maze: Default::default(),
+            // A fighter's pass touches no coin (`grFigureGet_80219B10` takes items alone).
+            coins: Default::default(),
             grounds: &mut game.grounds,
             stage_maps: super::coll::StageMaps::of_parts(
                 &game.world,

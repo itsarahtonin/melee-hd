@@ -794,14 +794,12 @@ fn swept_circles_match() {
         let (ha, hb): (Fighter_x1614_t, Fighter_x1614_t) =
             (handle(ctx, SHAPE1), handle(ctx, SHAPE2));
         let hit = fns::lbColl_80007B78(ctx, ha, hb, arg(x), arg(y));
-        let touching = collision::swept_circles_touch(&mut a, &mut b, x, y);
-        outcomes.add(
-            if a.contact == unwritten && b.contact == unwritten && !touching {
-                None
-            } else {
-                Some(touching)
-            },
-        );
+        let outcome = collision::swept_circles_touch(&mut a, &mut b, x, y);
+        let touching = outcome == Some(true);
+        if outcome.is_none() {
+            assert!(a.contact == unwritten && b.contact == unwritten);
+        }
+        outcomes.add(outcome);
         let ctx_ = (&s, x, y, mode);
         assert_eq!(hit, i32::from(touching), "80007B78 {ctx_:?}");
         assert_eq!(

@@ -50,7 +50,7 @@ enum Packet {
     },
     Copy(u32),
     /// Memory copies went to that the game has written over since (copy::Footprints).
-    Forget(u32, u32),
+    Forget(copy::Gone),
     /// Memory that holds other bytes from now on (`Sink::forget_memory`).
     ForgetMemory(u32, u32),
     /// The EFB made again at a scale and width, and cleared (`Renderer::resize_efb`).
@@ -185,6 +185,8 @@ impl Threaded {
 
     fn spawn_ahead(mut renderer: Renderer, ahead: u64) -> Self {
         renderer.track_copies = false;
+        // Both threads number the copies to textures as the renderer does (copy::Gone).
+        let copies = renderer.copies_made;
         renderer.flush_at = std::env::var("MELEE_GPU_FLUSH_AT")
             .ok()
             .and_then(|v| v.parse().ok())
@@ -215,7 +217,7 @@ impl Threaded {
         }
         let render = std::thread::Builder::new()
             .name("render".to_owned())
-            .spawn(move || run(renderer, &rx, &results, &renderer_done))
+            .spawn(move || run(renderer, &rx, &results, &renderer_done, copies))
             .expect("the render thread");
         let n = workers.len();
         Self {
@@ -233,7 +235,7 @@ impl Threaded {
             done,
             frames: 0,
             footprints: copy::Footprints::default(),
-            copies: 0,
+            copies,
             before: VecDeque::new(),
         }
     }
@@ -359,8 +361,8 @@ impl Sink for Threaded {
             let image = sampled_image(state, map);
             let range = (image.address, image.size());
             // A copy there that the game has written over since is gone, even within the frame.
-            if let Some((start, end)) = self.footprints.take_if_overwritten(image.address, mem) {
-                self.batch.packets.push(Packet::Forget(start, end));
+            if let Some(gone) = self.footprints.take_if_overwritten(image.address, mem) {
+                self.batch.packets.push(Packet::Forget(gone));
             }
             // Bytes the host holds as they are never change: hashed once, sent when the render
             // thread doesn't hold them.
@@ -472,8 +474,8 @@ impl Sink for Threaded {
         self.changes(state);
         let frame_end = bits(value, 14, 1) != 0;
         if frame_end {
-            for (start, end) in self.footprints.take_overwritten(mem) {
-                self.batch.packets.push(Packet::Forget(start, end));
+            for gone in self.footprints.take_overwritten(mem) {
+                self.batch.packets.push(Packet::Forget(gone));
             }
             self.footprints.new_frame();
         } else if let Some(f) = copy::footprint(state, value) {
@@ -484,7 +486,7 @@ impl Sink for Threaded {
                 mem.read(start, &mut bytes);
                 self.before.push_back((self.copies, start, bytes));
             }
-            self.footprints.record(f, mem);
+            self.footprints.record(f, self.copies, mem);
         }
         if !frame_end {
             self.copies += 1;
@@ -639,9 +641,9 @@ fn run(
     rx: &mpsc::Receiver<Batch>,
     workers: &[(mpsc::Receiver<Built>, mpsc::Sender<Built>)],
     done: &Done,
+    mut copies: u64,
 ) -> Renderer {
     let mut state = State::new();
-    let mut copies = 0u64;
     let mut memory = Held(HashMap::new());
     let mut built: Vec<Built> = Vec::with_capacity(workers.len());
     let mut next = vec![0usize; workers.len()];
@@ -669,7 +671,7 @@ fn run(
                     next[w] += 1;
                     renderer.draw_built(&state, *primitive, b, d, &memory);
                 }
-                Packet::Forget(start, end) => renderer.forget(*start, *end),
+                Packet::Forget(gone) => renderer.forget(*gone),
                 Packet::ForgetMemory(start, end) => {
                     let (start, end) = (*start, *end);
                     memory

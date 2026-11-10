@@ -95,6 +95,10 @@ pub struct Globals {
     /// The links of items made of links (`item_link_alloc_data`), each the user data of a GObj
     /// of class 7: see [`link`].
     pub links: Pool<ItemLink, { pool_kind(Kind::ItemLink) }>,
+    /// Each link's runs of its block (offsets) that held the GPU's pixels when it came new
+    /// from the heap, as the items' ([`Self::render_leftovers`]), by slot.
+    #[clone_from(if_changed)]
+    pub link_render_leftovers: std::collections::BTreeMap<u32, Vec<(u32, u32)>>,
     /// How many items of each hold kind are out, and the limits (`Item_804A0C64`).
     pub counts: HSD_ObjAllocUnk,
     /// Items made so far (`it_804D6D10`), which numbers each new item (`Item::x1C`).

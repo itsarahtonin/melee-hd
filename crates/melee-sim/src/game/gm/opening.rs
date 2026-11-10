@@ -334,11 +334,11 @@ impl Running<'_> {
         while let Some(s) = cur {
             let o = &mut self.game.objs.sobjs[s.0];
             assert!(o.callback.is_none(), "a sprite's callback isn't ported");
-            // `HSD_SObjLib_803A4A68` loads a shown sprite's own texture, but the movie's.
+            // `HSD_SObjLib_803A4A68` loads a shown sprite's own texture, but the movie's, and
+            // with its depth image (flag 4) that one too, to texture map 1.
             if o.flags & 0x11 == 0 {
                 o.loaded = true;
             }
-            assert!(o.flags & 4 == 0, "a sprite's depth texture isn't ported");
             self.game
                 .objs
                 .display

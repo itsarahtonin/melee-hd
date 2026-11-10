@@ -241,7 +241,7 @@ impl Running<'_> {
     }
 
     /// `fn_800C63E0`: goes airborne (`ftCommon_8007D5D4`).
-    // Ports `fn_800C63E0`; aliased once a check reaches it.
+    #[doc(alias = "fn_800C63E0")]
     pub fn co_entry_airborne(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne(f);

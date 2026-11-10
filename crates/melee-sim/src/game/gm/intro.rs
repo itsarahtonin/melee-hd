@@ -233,6 +233,7 @@ impl IntroNormal {
 pub struct Intros {
     pub easy: IntroEasy,
     pub normal: IntroNormal,
+    pub horde: super::intro_horde::IntroHorde,
 }
 
 /// Whether `scene` is an intro this module ports.
@@ -424,9 +425,12 @@ impl Running<'_> {
                 let next = self.intro_easy_allies();
                 self.intro_easy_enemies(next);
             }
-            4 => super::super::code::unported_call(
-                "Classic's horde stage's intro (fn_80185A0C, its image splash)",
-            ),
+            4 => {
+                self.intro_easy_names();
+                self.intro_easy_demo_files();
+                self.intro_easy_horde();
+                self.intro_easy_allies();
+            }
             _ => {}
         }
         self.lb_play_music(0x2D);
@@ -951,7 +955,31 @@ impl Running<'_> {
             }
             6 => {
                 if d.kind == 4 {
-                    super::super::code::unported_call("Classic's horde stage's name (its count)");
+                    // A horde's title: "Ｔｅａｍ" and its name in English (`lbl_803D9414`),
+                    // its name and "軍団" in Japanese (`lbl_804D40A0`), at 0.8 of its name's
+                    // width scale (`fn_80160F58`) times the single row's.
+                    let us = self.game.game_data.saved_language() == super::main_lib::LANG_US;
+                    let c = d.enemy_kinds[0];
+                    let name = self.game.character_name(c).unwrap_or_default();
+                    let mut s = Vec::new();
+                    if us {
+                        s.extend_from_slice(b"\x82\x73\x82\x85\x82\x81\x82\x8D ");
+                        s.extend_from_slice(name);
+                    } else {
+                        s.extend_from_slice(name);
+                        s.extend_from_slice(b" \x8C\x52\x92\x63");
+                    }
+                    s.push(0);
+                    let t = self.game.intros.easy.texts[4].expect("the horde's title's text");
+                    self.game.sis.replace_string(self.data, t, 0, Some(&s));
+                    let scale = super::names::name_width_scale(us, c, false);
+                    let x = fp::fmuls(
+                        f64::from(0.8_f32),
+                        fp::fmuls(reg(self.easy_row(1, 0x18, 0)), reg(scale)),
+                    );
+                    let y = self.easy_row(1, 0x24, 0);
+                    self.game.sis.set_scale(self.data, t, 0, x, f64::from(y));
+                    return;
                 }
                 for i in 0..usize::from(d.enemies) {
                     let t = self.game.intros.easy.texts[4 + i].expect("a name's text");
@@ -1450,7 +1478,7 @@ impl Running<'_> {
             "SdIntro.dat".to_owned(),
         ];
         f.songs.push(0x2D);
-        if !(0..=2).contains(&d.kind) {
+        if !(0..=4).contains(&d.kind) || d.kind == 3 {
             return Some(f);
         }
         let mut slot = 0;
@@ -1472,6 +1500,14 @@ impl Running<'_> {
             if d.ally_kinds[i] != NONE {
                 add(&mut f, d.ally_kinds[i], d.ally_colors[i]);
             }
+        }
+        if d.kind == 4 {
+            // A horde stage's: its opponent in each of its first costumes, up to three.
+            let c = d.enemy_kinds[0];
+            for i in 0..crate::game::playback::costume_count(c).min(3) {
+                add(&mut f, c, i);
+            }
+            return Some(f);
         }
         for i in 0..usize::from(d.enemies) {
             let c = if d.enemy_kinds[i] == CKIND_GKOOPS {
@@ -1510,6 +1546,8 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, f: u32) -> bool {
         NORMAL_CAMERA_PROC => r.intro_normal_camera_proc(gobj),
         NORMAL_MAP_PROC => r.intro_normal_map_proc(gobj),
         NORMAL_TITLE_PROC => r.intro_normal_title_proc(gobj),
+        super::intro_horde::SPLASH_PROC => r.intro_horde_splash(gobj),
+        super::intro_horde::SPRITES_PROC => r.intro_horde_sprites(gobj),
         f if EASY_FIGHTER_PROCS.contains(&f) => {
             let i = EASY_FIGHTER_PROCS.iter().position(|&p| p == f).unwrap();
             if i < 3 {
@@ -1537,6 +1575,9 @@ pub fn run_frame(r: &mut Running, f: u32) -> bool {
 pub fn run_render(r: &mut Running, gobj: GObjId, cb: u32, pass: i32) -> bool {
     match cb {
         EASY_CAMERA_RENDER => r.intro_easy_camera_render(gobj),
+        EASY_HORDE_CAMERA_RENDER => r.intro_horde_camera_render(gobj),
+        super::intro_horde::COPY_CAMERA_RENDER => r.intro_horde_copy_render(gobj),
+        super::intro_horde::SPRITE_CAMERA_RENDER => r.intro_horde_sprite_render(gobj),
         NORMAL_MODEL_RENDER => r.intro_normal_model_render(gobj, pass),
         NORMAL_STAGE_CAMERA_RENDER => r.intro_normal_stage_render(gobj),
         _ => return false,

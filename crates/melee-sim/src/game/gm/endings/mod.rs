@@ -245,8 +245,10 @@ impl Running<'_> {
     /// ended as her), costume, port and name tag from run `n`'s player (0 Adventure's, 1
     /// Classic's, 2 All-Star's), and `n` itself (`gm_801BF020`).
     #[doc(alias = "gm_Mode_ClassicGOver_OnLoad")]
-    // Ports gm_Mode_AdventureGOver_OnLoad and gm_Mode_AllstarGOver_OnLoad too; aliased once a
-    // check reaches them (Adventure's and All-Star's endings, tasks 24's and 23's).
+    // All-Star's (task 23's alias, allstar-clear's ending).
+    #[doc(alias = "gm_Mode_AllstarGOver_OnLoad")]
+    // Ports gm_Mode_AdventureGOver_OnLoad too; aliased once a check reaches it (Adventure's
+    // ending, task 24's).
     pub fn gover_on_load(&mut self, n: u8) {
         let o = &self.game.one_player;
         let run = match n {

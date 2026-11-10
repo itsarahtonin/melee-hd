@@ -16,6 +16,7 @@ pub mod display;
 pub mod dynamic_attr;
 pub mod exe_data;
 pub mod figure;
+pub mod figureget;
 pub mod flatzone;
 pub mod fourside;
 pub mod fzerocar;
@@ -146,6 +147,8 @@ pub const GR_KIND_HOMERUN: i32 = 0x43;
 pub const GR_KIND_BATTLE: i32 = 36;
 /// `Gr_Kind_Pushon`, the race (Classic's Race to the Finish).
 pub const GR_KIND_PUSHON: i32 = 39;
+/// `Gr_Kind_FigureGet`, Snag the Trophies (Classic's bonus stage).
+pub const GR_KIND_FIGUREGET: i32 = 38;
 /// `Gr_Kind_Icemt`, Icicle Mountain.
 pub const GR_KIND_ICEMT: i32 = 22;
 /// `Gr_Kind_Last`, Final Destination.
@@ -290,6 +293,9 @@ pub struct Globals {
     /// The race's `yakumono_param` (`grpushon.c`): the spikes' and lines' hits, the trophy
     /// slot's odds, the goals' scores and the race's times.
     pub pushon_yakumono: Option<DataRef>,
+    /// Snag the Trophies' `yakumono_param` (`grfigureget.c`): the coins' waits and count, the
+    /// stand's span and the coins' height.
+    pub figureget_yakumono: Option<DataRef>,
     /// Brinstar's escape's `yakumono_param` (`grZebesRoute_YakumonoParam`): the camera's
     /// timer and the trophy slot's odds.
     pub zebesroute_yakumono: Option<DataRef>,
@@ -550,6 +556,7 @@ pub fn vars_kind(grkind: i32, map_id: i32) -> VarsKind {
         (GR_KIND_BIGBLUEROUTE, 4) => VarsKind::BigBlueRouteCars,
         (GR_KIND_PUSHON, 1) => VarsKind::Map,
         (GR_KIND_PUSHON, 2) => VarsKind::PushOn,
+        (GR_KIND_FIGUREGET, 1) => VarsKind::FigureGet,
         (GR_KIND_ZEBESROUTE, 1) => VarsKind::ZebesBack,
         (GR_KIND_HEAL, 1) => VarsKind::Map,
         (GR_KIND_HOMERUN, 10) => VarsKind::HomeRun,

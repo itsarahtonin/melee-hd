@@ -113,6 +113,9 @@ use Mode::{
 /// by its mode's own entry, not the single-player setups, and has no results or clear screens;
 /// the contest and Training keep no stocks, and their records are their own, ported.
 const SETUP_MODES: &[Mode] = &[EV, CL, AS, AD];
+/// The 1P runs (Classic, All-Star, Adventure): [`SETUP_MODES`] without Event Match, for the
+/// gaps no event reaches (each gap says why).
+const ONE_P_RUNS: &[Mode] = &[CL, AS, AD];
 /// The modes that end with a game over, the endings, the staff roll and the trophy fall.
 const ENDINGS: &[Mode] = &[CL, AS, AD, DB];
 
@@ -149,8 +152,6 @@ const TARGET_TEST: &[&str] = &[
 
 /// Master Hand's units (`ftmasterhand*.c`).
 const MASTER_HAND: &[&str] = &[
-    "melee/ft/kinds/ftMasterHand/ftmasterhandbackdisappear",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandcapturedamagemasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
     "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
@@ -161,10 +162,8 @@ const MASTER_HAND: &[&str] = &[
 /// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
 const CRAZY_HAND: &[&str] = &[
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhanddamage0",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandtaggrab",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
     "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
     "melee/it/kinds/itcrazyhandbomb",
@@ -317,7 +316,6 @@ pub const PATHS: &[Paths] = &[
             "melee/gm/gmevent",
             "melee/mn/mnevent",
             "melee/it/kinds/itevyoshiegg",
-            "melee/it/kinds/itmetamon",
             "melee/gr/grfigure1",
             "melee/gr/grfigure2",
             "melee/gr/grfigure3",
@@ -343,7 +341,16 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/masterhandbullet",
             "it/kinds/masterhandlaser",
         ],
-        unreached: &[],
+        unreached: &[
+            (
+                "an event's random fifth player",
+                "no event's fifth or sixth player is a random character: onEnterVs runs each of an event's players through gm/event.rs's event_other_player as its match starts, and every one of the 51 events' sessions enters its match without stopping there (docs/oracle.md, sessions)",
+            ),
+            (
+                "itEvYoshiEgg_Logic42_EvtUnk",
+                "the egg's evt_unk runs only from a fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), and Event 13, the one event with the egg, frees no fighter mid-match: it has no joiners and no player leaves, and a match's end frees none (ssbm-rs's CALLS over m6-cpu-kinds/ck17-ev13, the egg kept to the time's end, logs no Fighter_Unload_8006DABC)",
+            ),
+        ],
     },
     Paths {
         mode: CL,
@@ -358,9 +365,11 @@ pub const PATHS: &[Paths] = &[
         modules: &[
             "gm/classic",
             "gm/intro",
+            "gm/intro_horde",
             "gm/endings/mod",
             "gm/endings/game_over",
             "gr/pushon",
+            "gr/figureget",
             "ft/bosslib",
             "ft/masterhand/airplane",
             "ft/masterhand/common",
@@ -747,38 +756,40 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "gm_801647F8 reading past lbl_803D5168",
         "Target Test's match entry alone asks a character's target stage",
     ),
-    ("grFigureGet_80219C", TRAINING_NO_TROPHY),
     (
         "it_8027B5B0 (an enemy of kind",
-        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+        "Training's enemies are Birdo and her eggs (Mushroom Kingdom II's), whose variables are typed: its menu offers no container, so no container's monster comes out, and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
     (
         "pl_8004049C (an enemy of kind",
-        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (TRAINING_NO_TROPHY)",
+        "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
     ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
     ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
     ("it_802D306C", TRAINING_NO_DITTO),
 ];
 
-/// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
-/// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
-/// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
-/// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
-/// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
-/// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
-/// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
-/// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
-/// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
-/// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
-/// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
-/// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
-/// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
-/// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
-/// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
-/// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
-/// (docs/oracle.md, "Training's trophy roll").
-const TRAINING_NO_TROPHY: &str = "Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88), needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over every launch angle, facing and place she's hit at (five short)";
+// Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
+// beaten enemy's trophy roll (`it_8027CC88`, the rest area's and the trophy points' being other
+// modes'), and Training's one enemy, Mushroom Kingdom II's Birdo, never rolls. The roll runs
+// on her sixth touch of the stage while she bounces away (state 10: `it_8027C79C` past the
+// enemies' common data's `x0`, 5). She's hit only on her walk at her spawn's height
+// (`grInishie2_801FD4F0` puts her beyond a blast zone at y 30.6, and states 0 to 8 keep her
+// vertical speed 0: x -179.4 to -79.8 on the left, the mirror on the right). In state 10 she
+// can't be hit again (her knock-off's `it_802756D0` sets `xD0C` to 2, which the fighters' and
+// the items' hit checks skip; as hold kind 4 she has no appearance blink to end it; kind 233
+// has no reflect, absorb or shield callbacks), and she flies straight at the common data's
+// `x4` (5) with no gravity from the launch (`it_8027B964`): a hitbox's nine-bit angle (361 in
+// the air ftCommonData's `x144`) or a hit with no knockback, either way she faces. melee-oracle's
+// `birdo-sweep` runs that flight through melee-hd's own code on the stage's collision, the
+// logs and the carpet where snapshots of the match have them: every angle 0 to 511 and the
+// no-knockback hit, both facings, both sides, her x every 0.4 for the hits' angles (three
+// snapshots) and every 2 for the rest (two): at most one touch, five short of the roll
+// (docs/oracle.md, "Training's trophy roll").
+//
+// Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88),
+// needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over
+// every launch angle, facing and place she's hit at (five short)
 
 /// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
 /// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
@@ -800,12 +811,19 @@ pub const MISSING: &[Gap] = &[
             "game mode {m:#x}'s loading",
             "game scene {k:#x}",
         ],
-        modes: &[EV, CL, AS, AD, DB],
+        // Not Event Match: the modes it enters (its own 0x2B with the one-door select and the
+        // VS scene; 0x14 after a won event, for a trophy's notice or a challenger and its
+        // match; the main menu) each have their states, loads and scenes (gm/machine.rs's
+        // EVENT, CHALLENGER, MENU), checked by its sessions (docs/oracle.md); the
+        // `Hook::Unported1P` hooks are Classic's, All-Star's and Adventure's coming soon.
+        modes: &[CL, AS, AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
-        modes: SETUP_MODES,
+        // Not Event Match: the records stop is for match types without a case, and Event
+        // Match's (`EVENT_MATCH`, mn/charsel/one_door.rs) has one.
+        modes: ONE_P_RUNS,
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -814,25 +832,32 @@ pub const MISSING: &[Gap] = &[
             "melee/gm/gm_17AD",
             "melee/gm/gm_17BA",
             "melee/gm/gm_17C0",
-            "melee/gm/gm_18A1",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "a 1P run's ratio getter",
             "gm_8017D7AC's records after a no contest",
-            "gm_8017CBAC (All-Star's clear)",
             "a single-player route's callback",
         ],
-        modes: SETUP_MODES,
+        // Not Event Match: gm_16A2's two left are gm_80169540 (only gmadventure.c calls it)
+        // and fn_8016A450 (only gm_17C0.c's 1P stage setups); gm_17AD's and gm_17BA's are the
+        // 1P results' bonuses (gmresult.c's tables), gm_17C0's the 1P stage setups' match
+        // hooks and gm_8017CBAC, gm_18A1's All-Star's ratio getters, none an event's (an
+        // event's match takes its rules from gm_801BC00C, its clear is gm_801BC4F4 and no
+        // results screen follows); the stops are the 1P runs' own (gm/one_player_match.rs,
+        // gm/opponents.rs's routes) or a mode's whose enter and exit data Event Match has.
+        modes: ONE_P_RUNS,
     },
     Gap {
         what: "a horde's players leaving their slots",
         covers: &["gm_80167320's joiners' leaving"],
-        modes: &[AD, EV],
+        // Not Event Match: a joiner leaves only through a crowd's end callback, and an event's
+        // crowd has none (gm_8016A22C clears it; only a stage's arena, gm_801674C4, sets one),
+        // so fn_80169444(2) answers 0 (Sarah's ev45, docs/oracle.md).
+        modes: &[AD],
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &[
-            "fn_8016B738",
             "gm_8016F00C",
             "gm_GetPreviousSceneIndex",
             "gm_GetCurrentSceneEnterData",
@@ -842,48 +867,34 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the 1P records and saves",
         covers: &[
-            "gmMainLib_8015D134",
             "gmMainLib_8015D1C8",
             "gmMainLib_8015D2F0",
-            "gmMainLib_8015D384",
-            "gmMainLib_8015D3FC",
             "gmMainLib_8015D418",
-            "fn_80160F58",
             "gm_801647F8",
         ],
-        modes: SETUP_MODES,
+        // Not Event Match: the gmMainLib getters are called only by gm_17C0.c's 1P stage
+        // setups, fn_80160F58 only by Classic's intro (gm_1832.c), gm_801647F8 only by
+        // gmclassic.c and gmmultiman.c; an event keeps its own records (gm_801BC4F4).
+        modes: ONE_P_RUNS,
     },
     // The modes' own code.
     Gap {
         what: "Ditto",
         covers: &["melee/it/kinds/itmetamon"],
-        modes: &[EV],
+        // Not Event Match: Event 3 forces its Pokémon (0xB1), Event 15's list holds no Ditto
+        // (0xB4), and every other event's balls draw from the weighted table, where Ditto
+        // weighs 0 (ItCo.usd); only the debug menu's Pokémon setting picks him.
+        modes: &[DB],
     },
     Gap {
         what: "Event Match's list, events and egg",
-        covers: &[
-            "melee/gm/gmevent",
-            "melee/it/kinds/itevyoshiegg",
-            "an event's random fifth player",
-        ],
+        covers: &["melee/it/kinds/itevyoshiegg"],
         modes: &[EV],
     },
     Gap {
-        what: "the events' trophy stages",
+        what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
         covers: &[
-            "melee/gr/grfigure1",
-            "melee/gr/grfigure2",
-            "melee/gr/grfigure3",
-        ],
-        modes: &[EV, DB],
-    },
-    Gap {
-        what: "Classic's mode, its intro and its bonus rounds",
-        covers: &[
-            "the race's clear",
-            "gm_8017CBAC (Classic's clear)",
-            "gmClassic_801B3B40's target stage records",
-            "Classic's horde stage's",
+            "grFigureGet_80219898 with no coin",
             "melee/gm/gmclassic",
             "melee/gm/gm_1832",
             "melee/gr/grfigureget",
@@ -909,17 +920,12 @@ pub const MISSING: &[Gap] = &[
             "ftMh_MS_371_801541C8",
             "Master Hand's function",
             "melee/ft/ftbosslib",
-            "gm_8016ECE8",
         ],
         modes: &[CL, EV, DB],
     },
     Gap {
         what: "All-Star's mode, its intro and the rest area",
-        covers: &[
-            "a 1P run's getter",
-            "melee/gm/gmallstar",
-            "melee/gm/gm_17EB",
-        ],
+        covers: &["a 1P run's getter"],
         modes: &[AS, DB],
     },
     Gap {
@@ -958,11 +964,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[AD, DB],
     },
     Gap {
-        what: "a beaten enemy's or a trophy stage's trophy",
-        covers: &["tyDisplay_8031C354"],
-        modes: &[AD, CL, DB],
-    },
-    Gap {
         what: "the cutscenes after the F-Zero one",
         covers: &["the cutscene scene"],
         modes: &[AD, DB],
@@ -974,12 +975,8 @@ pub const MISSING: &[Gap] = &[
     },
     // The ends of a run.
     Gap {
-        what: "the game overs' coming soon and the game over modes' Adventure and All-Star loads",
-        covers: &[
-            "melee/gm/gm_19EF",
-            "gm_Mode_AdventureGOver_OnLoad",
-            "gm_Mode_AllstarGOver_OnLoad",
-        ],
+        what: "the game overs' coming soon and the game over mode's Adventure load",
+        covers: &["melee/gm/gm_19EF", "gm_Mode_AdventureGOver_OnLoad"],
         modes: ENDINGS,
     },
     // The developer setting's debug routes.

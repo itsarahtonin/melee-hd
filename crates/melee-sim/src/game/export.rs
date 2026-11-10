@@ -203,7 +203,10 @@ pub fn start_hook(game: &Game, img: &mut Image, h: super::handles::StartHookId) 
 /// A menu's `HSD_MemAlloc` user data block melee-sim lays out, as it goes back through its
 /// remover (`HSD_Free`) or with its scene's heap: the stage select's name
 /// (`StageSelUserData`: the stage, the state, the frames), preview (`StagePreviewUserData`:
-/// the stage, the frames) and hover frame (its frames), each written whole by its creation.
+/// the stage, the frames) and hover frame (its frames), each written whole by its creation;
+/// and the frame copy's sprite (`CameraBlurData`, 0x24: its place, scale, alpha, blur, mode,
+/// callback, image and, once its owner's callback wrote it, its tint; its padding never
+/// written).
 pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
     let sel = &game.stagesel;
     let l = match *ud {
@@ -223,6 +226,17 @@ pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
         UserData::SssHover(a) => sel.hovers.get(&a).map(|&frames| {
             let mut l = Lay::new(a, 4);
             l.u32(0, frames as u32);
+            l
+        }),
+        UserData::Blur => game.blur.as_ref().filter(|b| b.addr != 0).map(|b| {
+            let mut l = Lay::new(b.addr, 0x24);
+            l.f32s(0, &[b.pos[0], b.pos[1], b.scale[0], b.scale[1]]);
+            l.bytes(0x10, &[b.base_alpha, b.blur_size, b.mode]);
+            l.u32(0x18, b.callback.map_or(0, |c| c.0));
+            l.u32(0x1C, b.image);
+            if let Some(t) = b.tint {
+                l.f32(0x20, t);
+            }
             l
         }),
         _ => None,
@@ -845,9 +859,12 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
         l.put_bytes(at + 0x110 + 0x181, &pad);
     }
     // A hit's struct copy of its attacker's hit data (`fn_80037F00`'s `fp->dmg.x18d8 = *ev`,
-    // the attacker's `x2074`) brings the attacker's bits past the named ones and its padding,
-    // which melee-sim doesn't keep: unknown.
-    l.forget(at + 0x18E9, 3);
+    // the attacker's `x2074`) brings the attacker's bits past the named ones and its padding
+    // (`ft::Globals::hit_record_pad`); before a hit's copy, what the block held.
+    if let Some(&[low, b2, b3]) = game.ft.hit_record_pad.get(&f.0) {
+        l.put_bits(at + 0x18E9, 5, 3, u32::from(low & 7));
+        l.put_bytes(at + 0x18EA, &[b2, b3]);
+    }
     // The action's figatree (`x590`) is in the main animation buffer, the second one
     // (`x598`) in the main or the second: their places are the buffers', whichever other
     // copies of their archives there are (two fighters' buffers can hold one).
@@ -918,6 +935,8 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     // A collision's last position its spawn's stack words gave (`it::Globals::stale_last_pos`).
     if game.it.stale_last_pos.contains(&i.0) {
         l.forget(at + 0x378 + 0x1C, 12);
+        // And the ECB's motion its first tick took from it.
+        l.forget(at + 0xB54, 8);
     }
     l.put(img);
 }
@@ -930,8 +949,19 @@ pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handle
         return;
     }
     let mut l = Lay::leftover(img, data, at, super::structs::ItemLink::SIZE);
+    // A box source's joint member's last two words, which the link never writes: what its
+    // block held, not its claim's (`leftovers::keep_box_tail`).
+    let tail = l.kept(at + 0x30 + 0x104 + 0x18, 8);
     let cx = Addrs { game, img };
-    game.it.links[k.0].lay(&mut l, at, &cx);
+    let link = &game.it.links[k.0];
+    link.lay(&mut l, at, &cx);
+    let s = &link.coll_data.ecb_source;
+    if matches!(s.x4, crate::mp::coll::EcbShape::Box { .. }) && !s.tail_zeroed {
+        l.restore(tail);
+    }
+    if let Some(runs) = game.it.link_render_leftovers.get(&k.0) {
+        l.keep_render_target(runs, img.render_fill);
+    }
     l.put(img);
 }
 
@@ -1072,7 +1102,9 @@ pub fn sobj(
     let (image_ptr, tlut) = match o.image {
         SImage::Data(d) => (cx.data(data.ptr(d)), tx.tlut),
         SImage::Movie { .. } => (Some(0), None),
-        SImage::Buffer { addr, .. } | SImage::Copy { addr, .. } => (Some(addr), None),
+        SImage::Buffer { addr, .. }
+        | SImage::Copy { addr, .. }
+        | SImage::IntroCopy { addr, .. } => (Some(addr), None),
         SImage::None => (None, None),
     };
     let mut t = gx_init_tex_obj(
@@ -1121,6 +1153,20 @@ pub fn sobj(
             t2 = t2.loaded(1);
         }
         tex(&mut l, 0x7C, t2, image2);
+    }
+    if let SImage::IntroCopy {
+        addr,
+        width,
+        height,
+        format,
+        ..
+    } = o.image2_copy
+    {
+        let mut t2 = gx_init_tex_obj(addr, width, height, format, tx.wrap_s, tx.wrap_t, 0);
+        if o.loaded && o.flags & 0x14 == 4 {
+            t2 = t2.loaded(1);
+        }
+        tex(&mut l, 0x7C, t2, Some(addr));
     }
     l.put(img);
 }
@@ -1240,6 +1286,48 @@ pub fn anim_buf(game: &Game, img: &mut Image, slot: u32) {
 /// past its count).
 pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
     let fp = &game.fighters[f.0];
+    // Past the bones and the DObjs listed the blocks keep what they held, not their claims'
+    // unknown bytes (allstar-clear, tick 10829: a rest area's stage object over a match's
+    // fighter's parts).
+    if let Some(p) = fp.parts {
+        let at = game.fighter_parts.addr(p.0);
+        let n = game.fighter_parts[p.0].len() as u32;
+        let len = crate::hsd::heap::Kind::FighterParts.init().0;
+        if at != 0 {
+            // Each bone's two bytes past its flags (`FighterBone`'s padding) too.
+            for i in 0..n {
+                img.unclaim(at + 0x10 * i + 0xA, at + 0x10 * i + 0xC);
+            }
+            if 0x10 * n < len {
+                img.unclaim(at + 0x10 * n, at + len);
+            }
+        }
+    }
+    if let Some(d) = fp.dobj_list.data {
+        let at = game.fighter_dobj_lists.addr(d.0);
+        let n = (fp.dobj_list.count as usize).min(game.fighter_dobj_lists[d.0].len()) as u32;
+        if at != 0 {
+            img.unclaim(
+                at + 4 * n,
+                at + crate::hsd::heap::Kind::FighterDObjList.init().0,
+            );
+        }
+    }
+    // So does the attributes' block past the character's attributes (`PUSH_ATTRS`), or whole
+    // until they're copied in (allstar-clear, tick 17504: a match's fighter over a rest area's
+    // fighter's attributes).
+    if let Some(a) = fp.dat_attrs_backup {
+        let at = game.fighter_attrs.addr(a.0);
+        let len = crate::hsd::heap::Kind::FighterAttrs.init().0;
+        let written = if fp.dat_attrs == Some(a) {
+            (game.fighter_attrs[a.0].len() as u32).min(len)
+        } else {
+            0
+        };
+        if at != 0 && written < len {
+            img.unclaim(at + written, at + len);
+        }
+    }
     let cx = Addrs { game, img };
     let mut lays = Vec::new();
     if let Some(p) = fp.parts {
@@ -1255,6 +1343,7 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
             for (i, bone) in bones.iter().enumerate() {
                 bone.lay(&mut l, at + 0x10 * i as u32, &cx);
             }
+            l.keep_pixels_under(img);
             lays.push(l);
         }
     }
@@ -1268,6 +1357,7 @@ pub fn fighter_parts(game: &Game, data: &Archives, img: &mut Image, f: FighterId
             for (i, o) in list.iter().take(n).enumerate() {
                 l.put_word(at + 4 * i as u32, cx.handle("DObjId", o.map(|o| o.0)));
             }
+            l.keep_pixels_under(img);
             lays.push(l);
         }
     }
@@ -1300,6 +1390,15 @@ pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::ha
     if at == 0 {
         return;
     }
+    // The entries it never wrote keep what the block held, not its claim's unknown bytes
+    // (allstar-clear, tick 7097: a rest area's item over a match's list, which the GPU's
+    // pixels were under).
+    let entries = &game.fighter_dobj_lists[list.0];
+    for i in 0..0x20u32 {
+        if entries.get(i as usize).is_none_or(|o| o.is_none()) {
+            img.unclaim(at + 4 * i, at + 4 * i + 4);
+        }
+    }
     let mut l = Lay::leftover(img, data, at, crate::hsd::heap::Kind::FighterX2040.init().0);
     let cx = Addrs { game, img };
     for (i, o) in game.fighter_dobj_lists[list.0]
@@ -1311,6 +1410,7 @@ pub fn x2040_list(game: &Game, data: &Archives, img: &mut Image, list: super::ha
             l.put_word(at + 4 * i as u32, cx.handle("DObjId", Some(o.0)));
         }
     }
+    l.keep_pixels_under(img);
     l.put(img);
 }
 
