@@ -92,9 +92,9 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 // Ports grShrineRoute_802089E4; aliased once a check reaches it.
 // Ports grShrineRoute_80208A34; aliased once a check reaches it.
 // Ports grShrineRoute_80209AEC; aliased once a check reaches it.
-// Ports grShrineRoute_8020A100; aliased once a check reaches it.
+#[doc(alias = "grShrineRoute_8020A100")]
 // Ports grShrineRoute_8020A864; aliased once a check reaches it.
-// Ports grShrineRoute_8020A8A0; aliased once a check reaches it.
+#[doc(alias = "grShrineRoute_8020A8A0")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
 /// `grShrineRoute_OnDemoInit` does nothing (only a demo runs it).
@@ -1234,7 +1234,7 @@ pub fn pit_device(r: &mut Running, fighter: GObjId) -> Option<DataRef> {
 /// The symbol taken leaves for its arena, `grShrineRoute_8020AF38`: an effect (0x428) at its
 /// point at 0.7 the symbol's scale (`x14`, or the way out's `x18`), the symbol gone and the
 /// first fighter's rumble.
-// Ports grShrineRoute_8020AF38; aliased once a check reaches it.
+#[doc(alias = "grShrineRoute_8020AF38")]
 pub fn take_symbol(r: &mut Running, gobj: GObjId, point: i32) {
     let g = ground_of(r.game, gobj);
     let ix = point.wrapping_sub(FIRST_SYMBOL) as usize;
