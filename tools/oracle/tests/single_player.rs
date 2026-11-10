@@ -626,7 +626,7 @@ fn classic_clear_runs_clean_to_its_card_after() {
 /// in the team stage, `adv-quit2` at Peach's Castle). Each clean from power-on to its trace's
 /// end with `--all --heap` and the card after the original's.
 #[test]
-fn the_eighth_rounds_sessions_run_clean_to_their_cards_after() {
+fn the_intros_eighth_rounds_sessions_run_clean_to_their_cards_after() {
     for (name, ticks) in [
         ("adv-luigi", 8560),
         ("stats-coin", 9280),
