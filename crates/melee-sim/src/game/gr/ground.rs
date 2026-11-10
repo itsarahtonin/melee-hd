@@ -338,6 +338,7 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         return false;
     }
     let mut moved = false;
+    let copies_reach_memory = game.copies_reach_memory();
     game.gr.coll_stamp = game.gr.coll_stamp.wrapping_add(1);
     let stamp = game.gr.coll_stamp;
     let (own, list, n) = coll_joints(game, data, map_id);
@@ -350,7 +351,20 @@ pub fn update_map_coll(game: &mut Game, data: &Archives, gobj: GObjId) -> bool {
         let j = &GrJoint::read(data, list.expect("collision joints").at(6 * i));
         let g = game.geometry.as_mut().unwrap();
         // A stamp the load left over the GPU's pixels: what the console compares here is a
-        // rendered texture's bytes (docs/melee-bugs.md).
+        // rendered texture's bytes (docs/melee-bugs.md). Where the copies don't reach memory
+        // (Slippi's Dolphin), it is what memory held before them.
+        if g.render_stamps.contains(&(j.x as u16)) && !copies_reach_memory {
+            let at = g.joints_addr + 0x34 * u32::from(j.x as u16) + 0xC;
+            let (b, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(data, at, 2))
+                .unwrap_or_else(|| (vec![0; 2], vec![false; 2]));
+            assert!(
+                known.iter().all(|&k| k),
+                "Ground_UpdateMapColl reads joint {}'s stamp, the bytes before the GPU's copy unknown",
+                j.x
+            );
+            g.joints[j.x as usize].stamp = i16::from_be_bytes([b[0], b[1]]);
+            g.render_stamps.retain(|&k| k != j.x as u16);
+        }
         assert!(
             !g.render_stamps.contains(&(j.x as u16)),
             "Ground_UpdateMapColl reads joint {}'s stamp, which the GPU's pixels left",

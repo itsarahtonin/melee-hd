@@ -184,7 +184,8 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
 /// intensity, at least 105, copied to 4 bits a texel) and so is each texel's first byte of the
 /// results screen's RGB5A3 images (opaque: the EFB has no alpha), so the word is; under the
 /// debug display's shadow volumes it is zero, the image's fill (docs/engine.md, "A fan over
-/// the GPU's pixels"). Any other copy's pixels stop by name.
+/// the GPU's pixels"). Any other copy's pixels stop by name. Where the copies don't reach
+/// memory (Slippi's Dolphin), the word is what memory held before them.
 ///
 /// [`Pixels`]: crate::hsd::image::Pixels
 #[doc(alias = "itHarisen_UnkMotion8_Coll")]
@@ -208,6 +209,25 @@ fn landing_word_set(r: &Running, gobj: GObjId) -> bool {
                 .is_some_and(|runs| runs.iter().any(|&(a, b)| a <= o && o < b))
         })
         .collect();
+    if pixels.iter().any(|&p| p) && !r.game.copies_reach_memory() {
+        let at = r.game.items.addr(slot) + XD4C;
+        let (before, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(r.data, at, 4))
+            .unwrap_or_else(|| (vec![0; 4], vec![false; 4]));
+        let ours = item(r.game, gobj).xD4C.to_be_bytes();
+        let mut word = [0; 4];
+        for (i, w) in word.iter_mut().enumerate() {
+            *w = if !pixels[i] {
+                ours[i]
+            } else if known[i] {
+                before[i]
+            } else {
+                crate::game::code::unported_call(
+                    "a dropped fan's landing reading its unset xD4C over the GPU's pixels (unknown bytes before the copy)",
+                );
+            };
+        }
+        return word != [0; 4];
+    }
     if pixels.iter().any(|&p| p) {
         let at = r.game.items.addr(slot) + XD4C;
         let copied = crate::hsd::heap::with(|h| h.image.copied_pixels(at, 4))
