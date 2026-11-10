@@ -927,10 +927,8 @@ pub const MISSING: &[Gap] = &[
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
         covers: &[
             "a car out with all thirty out",
-            "melee/gr/grkinokoroute",
             "melee/gr/grshrineroute",
             "melee/gr/grzebesroute",
-            "melee/gr/grbigblueroute",
             "stageGObj10_Callback3",
             "stage kind {grkind}",
         ],
@@ -941,7 +939,6 @@ pub const MISSING: &[Gap] = &[
         covers: &[
             "melee/it/kinds/itlikelike",
             "melee/it/kinds/itnokonoko",
-            "melee/it/kinds/itpatapata",
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
             "melee/it/kinds/itwhitebea",
