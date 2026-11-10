@@ -603,7 +603,7 @@ impl Running<'_> {
 
     /// The end's callback told `arg`, `fn_80169444`: cleared when it answers 1, and whether it
     /// did.
-    // Ports fn_80169444; aliased once a check reaches it.
+    #[doc(alias = "fn_80169444")]
     pub fn opponents_end(&mut self, arg: i32) -> bool {
         let Some(f) = self.game.gm.opponents.on_end else {
             return false;
@@ -652,6 +652,7 @@ impl Running<'_> {
     }
 
     /// The next joiner in `slot` (`fn_8016A4C8`'s loop body).
+    #[doc(alias = "fn_8016B738")]
     fn join_opponent(&mut self, slot: i32) {
         {
             let o = &mut self.game.gm.opponents;

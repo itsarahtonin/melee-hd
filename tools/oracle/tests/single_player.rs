@@ -123,14 +123,10 @@ fn the_versus_page_tours_run_to_their_first_stops() {
         ("targets", 47425, ""),
         (
             "stages-1p",
-            3883,
-            "tick 3882: unknown leftover bytes of a freed a main-heap block under Item: its layout isn't ported",
+            26430,
+            "tick 26429: unknown leftover bytes of a freed a main-heap block under Fighter: its layout isn't ported",
         ),
-        (
-            "stages-1p-b",
-            10941,
-            "not implemented: stage kind 38 isn't ported",
-        ),
+        ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
     ]);
 }
@@ -451,6 +447,43 @@ fn the_fifth_rounds_events_run_clean_to_their_cards_after() {
     }
 }
 
+/// Event Match's seventh round (milestone 6's task 21; docs/oracle.md, "Sessions"): Event 10's
+/// first round won by a lookahead bot and its second lost (`e10-series`: a series' round won,
+/// `gm_801BC670`), and Event 13 with the egg dropped from a computer player's hand
+/// (`e13-drop`) and thrown onto the slope, where it skids (`e13-slide`: its state 4), each
+/// clean from power-on to its trace's end with `--all --heap` and the card after the
+/// original's.
+#[test]
+fn the_seventh_rounds_events_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("e10-series", 4289),
+        ("e13-slide", 2135),
+        ("e13-drop", 3186),
+    ] {
+        let dir = "m6-event-7";
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in(dir, name, &args) else {
+            return;
+        };
+        let want = format!(
+            "{ticks} ticks compared, no difference
+"
+        );
+        assert!(
+            out.contains(&want),
+            "{name}: wants {want:?}
+{out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Task 26's second round (`m6-unlocks`; docs/oracle.md, "Sessions"): the Home-Run Contest's
 /// 300 m (`gm_80173B30`'s 0xBD, `hr-300`), Training's combo of 10 (`gm_80173BC4`'s 0x6D,
 /// Young Link's 12, `tr-combo10`) and Endless Melee's 100 KOs (`gm_80173C70`'s 0x4F,
@@ -522,4 +555,172 @@ fn master_hand_by_the_name_entry_glitch() {
             "{name}: {out}"
         );
     }
+}
+
+/// Task 26's third round (docs/oracle.md, "Sessions"): Sarah's recordings of 2026-11-06 in
+/// `$SSBM_RS_LOCAL/lockstep/recordings` (each `NAME.inputs` with `NAME.card`, the card it
+/// started from, and `NAME-play.card`, the card her run left), traced into `traces/session`:
+/// a home run of 334.0 m (`gm_80173B30`'s 0xBD, `hr-450`), Training's combo of 23
+/// (`gm_80173BC4`'s 0x5B and 0x6D, `tr-combo20`) and Ganondorf's event cleared, his challenge
+/// and his match won (`gm_801732D8`, `ev29`), each clean from power-on to its trace's end with
+/// `--all --heap` and the card after the original's.
+#[test]
+fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [("hr-450", 2179), ("tr-combo20", 2647), ("ev29", 7233)] {
+        let after = ssbm_rs_local(&format!("lockstep/recordings/{name}-play.card"));
+        let trace = ssbm_rs_local(&format!("traces/session/{name}.trc"));
+        let inputs = ssbm_rs_local(&format!("lockstep/recordings/{name}.inputs"));
+        if std::env::var("SSBM_DISC").is_err()
+            || !std::path::Path::new(&trace).exists()
+            || !std::path::Path::new(&inputs).exists()
+        {
+            eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+            return;
+        }
+        let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+            .args(["session", &trace, &inputs, "--card-after", &after])
+            .args(["--all", "--heap"])
+            .output()
+            .expect("melee-oracle runs");
+        let out = String::from_utf8_lossy(&out.stdout).into_owned();
+        eprintln!("{out}");
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// Sarah's Classic clear on Very Easy (milestone 6's tasks 22 and 2, the intros' sixth and
+/// seventh rounds): `recordings/classic-clear` from power-on on its card, Classic through its
+/// eleven stages: the team stage, the target stage (Classic's target scoring and records),
+/// the giant stage on Mushroom Kingdom II, Snag the Trophies (`grfigureget.c`: three trophy
+/// coins on the stand), the horde stage's intro (the costumes copied into images and
+/// scattered as sprites over a depth quad) and match, the race (its goal's score and coins on
+/// the clear screen), the metal stage and the boss stage (its controller `fn_8017C1A4`:
+/// Master Hand's entry and defeat, the flash and quakes; Crazy Hand doesn't come on Very
+/// Easy), Classic's clear and records, the trophy fall, the staff roll, the ending movie,
+/// congratulations and the main menu, to the trace's end and the card after the original's.
+#[test]
+fn classic_clear_runs_clean_to_its_card_after() {
+    let card = ssbm_rs_local("lockstep/recordings/classic-clear.card");
+    let after = ssbm_rs_local("lockstep/recordings/classic-clear-play.card");
+    let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+    let Some(out) = recording("classic-clear", &args) else {
+        return;
+    };
+    assert!(
+        out.contains(
+            "25501 ticks compared, no difference
+"
+        ),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
+/// [`session_in`] on one of Sarah's recordings (`$SSBM_RS_LOCAL/lockstep/recordings`, each
+/// `NAME.inputs` with the card it started from, `NAME.card`, and the card it left,
+/// `NAME-play.card`), traced into `traces/session`.
+fn recording(name: &str, args: &[&str]) -> Option<String> {
+    let trace = ssbm_rs_local(&format!("traces/session/{name}.trc"));
+    let inputs = ssbm_rs_local(&format!("lockstep/recordings/{name}.inputs"));
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return None;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(["session", &trace, &inputs])
+        .args(args)
+        .output()
+        .expect("melee-oracle runs");
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{text}");
+    Some(text)
+}
+
+/// Event Match's sixth round (docs/oracle.md, "Sessions"): Sarah's recordings of 2026-11-06.
+/// Event 50 won after tries in the same run, both hands beaten (`ev50`: Crazy Hand's beaten
+/// states, the both-hands fade and the clear), Master Hand's grab mashed free of (`mh-mash`),
+/// and Events 14, 26, 45, 47 and 51 won to their trophies (`ev14` to `ev51`), each clean from
+/// power-on to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn sarahs_event_recordings_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("ev50", 14051),
+        ("mh-mash", 1394),
+        ("ev14", 3111),
+        ("ev26", 8209),
+        ("ev45", 3273),
+        ("ev47", 9894),
+        ("ev51", 25663),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/recordings/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/recordings/{name}-play.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = recording(name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// Sarah's All-Star clear (milestone 6's task 23, `recordings/allstar-clear`, traced into
+/// `traces/session`): All-Star as Fox on Very Easy from the unlock-all card, its thirteen
+/// rounds on their characters' stages with the rest areas between them, the last round's 25
+/// Mr. Game & Watches on Flat Zone, All-Star's clear (`gm_8017CBAC`: the records, Final
+/// Destination, the save), the ending's trophy fall, staff roll and congratulations, the
+/// challenger approach's notice and the main menu, clean to the trace's end with `--all
+/// --heap` and the card after the original's.
+#[test]
+fn sarahs_all_star_clear_runs_clean_to_its_card_after() {
+    let trace = ssbm_rs_local("traces/session/allstar-clear.trc");
+    let inputs = ssbm_rs_local("lockstep/recordings/allstar-clear.inputs");
+    let after = ssbm_rs_local("lockstep/recordings/allstar-clear-play.card");
+    if std::env::var("SSBM_DISC").is_err()
+        || !std::path::Path::new(&trace).exists()
+        || !std::path::Path::new(&inputs).exists()
+    {
+        eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args([
+            "session",
+            &trace,
+            &inputs,
+            "--all",
+            "--heap",
+            "--card-after",
+            &after,
+        ])
+        .output()
+        .expect("melee-oracle runs");
+    let out = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{out}");
+    assert!(
+        out.contains("25073 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
 }

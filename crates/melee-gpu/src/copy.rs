@@ -78,11 +78,22 @@ fn copy_format(value: u32) -> (u32, u32) {
     (tp / 2 + (tp & 1) * 8, bits(value, 9, 1))
 }
 
+/// Whether encode.rs encodes a copy from an EFB of pixel format `pixel_format` (BP 0x43) to
+/// texture `format`, `half` scale or not: color from RGB8 and RGBA6, and depth from Z24 only
+/// to Z24X8 (RGBA8's layout) at full scale.
+pub(crate) fn encodes(pixel_format: u32, format: u32, half: u32) -> bool {
+    match pixel_format {
+        0 | 1 => true,
+        3 => format == 6 && half == 0,
+        _ => false,
+    }
+}
+
 /// The memory a copy to a texture (BP 0x52 value `value`) writes, as encode.rs lays it out;
 /// None for one it doesn't encode.
 pub(crate) fn footprint(state: &State, value: u32) -> Option<Footprint> {
     let (format, half) = copy_format(value);
-    if bits(state.bp[0x43], 0, 3) > 1 {
+    if !encodes(bits(state.bp[0x43], 0, 3), format, half) {
         return None;
     }
     let (lw, lh, block) = blocks(format)?;
@@ -176,11 +187,12 @@ pub(crate) fn encode_texels(c: &Copied, texels: &[u8]) -> Vec<(u32, Vec<u8>)> {
         .collect()
 }
 
-/// Where copies from the EFB went, with a hash of the memory under each as the copy was made.
-/// The game never sees what a copy writes (the renderer keeps it), so memory that later hashes
-/// differently was written over by the game, and on hardware the copy would be gone.
+/// Where copies from the EFB went, with each copy's number (counting the copies to textures)
+/// and a hash of the memory under it as the copy was made. The game never sees what a copy
+/// writes (the renderer keeps it), so memory that later hashes differently was written over by
+/// the game, and on hardware the copy would be gone.
 #[derive(Default)]
-pub(crate) struct Footprints(HashMap<u32, (Footprint, u64)>, HashSet<u32>);
+pub(crate) struct Footprints(HashMap<u32, (Footprint, u64, u64)>, HashSet<u32>);
 
 fn hash_footprint(f: &Footprint, mem: &dyn Memory) -> u64 {
     let mut h = 0;
@@ -194,16 +206,16 @@ fn hash_footprint(f: &Footprint, mem: &dyn Memory) -> u64 {
 }
 
 impl Footprints {
-    /// Notes a copy to `f`, with the memory under it as it stands.
-    pub fn record(&mut self, f: Footprint, mem: &dyn Memory) {
+    /// Notes copy number `copy` to `f`, with the memory under it as it stands.
+    pub fn record(&mut self, f: Footprint, copy: u64, mem: &dyn Memory) {
         let hash = hash_footprint(&f, mem);
         self.1.remove(&f.address);
-        self.0.insert(f.address, (f, hash));
+        self.0.insert(f.address, (f, copy, hash));
     }
 
     /// Forgets the copies that reach into `start..end`.
     pub fn forget(&mut self, start: u32, end: u32) {
-        self.0.retain(|_, (f, _)| {
+        self.0.retain(|_, (f, _, _)| {
             let (s, e) = f.span();
             let (s, e) = (s & crate::PHYS_MASK, e & crate::PHYS_MASK);
             !melee_gx::overlaps(s, e.saturating_sub(s), start, end)
@@ -219,9 +231,9 @@ impl Footprints {
     }
 
     /// Forgets the copy at `address` if the game has written its memory since, returning its
-    /// span.
-    pub fn take_if_overwritten(&mut self, address: u32, mem: &dyn Memory) -> Option<(u32, u32)> {
-        let (f, hash) = self.0.get(&address)?;
+    /// span and number.
+    pub fn take_if_overwritten(&mut self, address: u32, mem: &dyn Memory) -> Option<Gone> {
+        let (f, copy, hash) = self.0.get(&address)?;
         if self.1.contains(&address) {
             return None;
         }
@@ -229,18 +241,19 @@ impl Footprints {
             self.1.insert(address);
             return None;
         }
-        let span = f.span();
+        let gone = Gone::of(f, *copy);
         self.0.remove(&address);
-        Some(span)
+        Some(gone)
     }
 
-    /// Forgets the copies whose memory the game has written since, returning their spans.
-    pub fn take_overwritten(&mut self, mem: &dyn Memory) -> Vec<(u32, u32)> {
+    /// Forgets the copies whose memory the game has written since, returning their spans and
+    /// numbers.
+    pub fn take_overwritten(&mut self, mem: &dyn Memory) -> Vec<Gone> {
         let mut gone = Vec::new();
-        self.0.retain(|_, (f, hash)| {
+        self.0.retain(|_, (f, copy, hash)| {
             let same = hash_footprint(f, mem) == *hash;
             if !same {
-                gone.push(f.span());
+                gone.push(Gone::of(f, *copy));
             }
             same
         });
@@ -248,9 +261,42 @@ impl Footprints {
     }
 }
 
+/// A copy the game has written over: its span, and its number. What copies up to that number
+/// left in the span is gone; later copies there have footprints of their own.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) struct Gone {
+    pub start: u32,
+    pub end: u32,
+    pub copy: u64,
+}
+
+impl Gone {
+    fn of(f: &Footprint, copy: u64) -> Self {
+        let (start, end) = f.span();
+        Gone { start, end, copy }
+    }
+
+    /// Every copy that left anything in `start..end`: memory that holds other bytes from now
+    /// on (`Sink::forget_memory`).
+    pub fn all(start: u32, end: u32) -> Self {
+        Gone {
+            start,
+            end,
+            copy: u64::MAX,
+        }
+    }
+
+    /// Whether copy number `copy` to `address` went with it.
+    pub fn takes(&self, address: u32, copy: u64) -> bool {
+        (self.start..self.end).contains(&address) && copy <= self.copy
+    }
+}
+
 /// A texture a copy made, by the address it copied to.
 pub(crate) struct Copied {
     pub id: u32,
+    /// The number of the copy that last wrote it.
+    pub copy: u64,
     pub format: u32,
     pub width: u32,
     pub height: u32,
@@ -414,5 +460,166 @@ impl Copier {
             pass.draw(0..3, 0..1);
         }
         queue.submit([encoder.finish()]);
+    }
+}
+
+/// Reads the EFB's depth back for a depth copy (depth_copy.wgsl): into a texture of the
+/// console's size, each texel a pixel's z as encode.rs takes it.
+pub(crate) struct DepthReader {
+    pipeline: wgpu::RenderPipeline,
+    layout: wgpu::BindGroupLayout,
+    params: wgpu::Buffer,
+    target: wgpu::Texture,
+}
+
+impl DepthReader {
+    /// A reader of an EFB's depth with `samples` samples a pixel.
+    pub fn new(device: &wgpu::Device, samples: u32) -> Self {
+        let multisampled = samples > 1;
+        let source = include_str!("depth_copy.wgsl").replace(
+            "var depth: DEPTH;",
+            if multisampled {
+                "var depth: texture_depth_multisampled_2d;"
+            } else {
+                "var depth: texture_depth_2d;"
+            },
+        );
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("efb depth copy"),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("efb depth copy"),
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Texture {
+                        sample_type: wgpu::TextureSampleType::Depth,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                        multisampled,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ],
+        });
+        let params = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("efb depth copy"),
+            size: 16,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("efb depth copy"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("efb depth copy"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some("vs"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &module,
+                entry_point: Some("fs"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: wgpu::TextureFormat::Rgba8Uint,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            primitive: Default::default(),
+            depth_stencil: None,
+            multisample: Default::default(),
+            multiview_mask: None,
+            cache: None,
+        });
+        let target = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("efb depth copy"),
+            size: wgpu::Extent3d {
+                width: crate::EFB_WIDTH,
+                height: crate::EFB_HEIGHT,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Uint,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        Self {
+            pipeline,
+            layout,
+            params,
+            target,
+        }
+    }
+
+    /// Reads `depth`, the EFB's depth at `(scale, width)`, after everything already submitted;
+    /// returns the texture it read into, to read back.
+    pub fn read(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        depth: &wgpu::TextureView,
+        (scale, width): (u32, u32),
+    ) -> wgpu::Texture {
+        queue.write_buffer(
+            &self.params,
+            0,
+            bytemuck::cast_slice(&[scale, width, 0u32, 0u32]),
+        );
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("efb depth copy"),
+            layout: &self.layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(depth),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: self.params.as_entire_binding(),
+                },
+            ],
+        });
+        let view = self.target.create_view(&Default::default());
+        let mut encoder = device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("efb depth copy"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                ..Default::default()
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &group, &[]);
+            pass.draw(0..3, 0..1);
+        }
+        queue.submit([encoder.finish()]);
+        self.target.clone()
     }
 }

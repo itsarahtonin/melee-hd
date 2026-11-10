@@ -8,6 +8,7 @@ pub mod boot_mode;
 pub mod camera_mode;
 pub mod challenger;
 pub mod classic;
+pub mod classic_boss;
 pub mod clear;
 pub mod decisions;
 pub mod endings;
@@ -18,6 +19,7 @@ pub mod howto;
 pub mod input;
 pub mod intro;
 pub mod intro_allstar;
+pub mod intro_horde;
 pub mod machine;
 pub mod main_lib;
 pub mod match_exit;
@@ -562,6 +564,18 @@ pub fn call(
             Some(super::code::Val::None)
         }
 
+        one_player_match::BONUS_START => {
+            r.one_player_race_start();
+            Some(super::code::Val::None)
+        }
+        one_player_match::BOSS_START => {
+            r.classic_boss_start();
+            Some(super::code::Val::None)
+        }
+        one_player_match::BONUS_END => {
+            r.one_player_trophies_end();
+            Some(super::code::Val::None)
+        }
         one_player_match::REST_MATCH_END => {
             r.allstar_rest_end();
             Some(super::code::Val::None)

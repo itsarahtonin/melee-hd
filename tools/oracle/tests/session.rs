@@ -2490,3 +2490,24 @@ fn adventure_game_over() {
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
+
+/// A VS coin match on Yoshi's Story (`m6-intros/coin-ys`) from power-on: Custom Rules set to
+/// Coin with one minute, Samus against three computer players, the match to its end and the
+/// results screen, to the trace's end. An egg broken in it scatters coins at the random pop
+/// every container's do (`it_8026F8B4`'s vector, which the egg zeroes, is unused: its flag is
+/// 0); and a coin's pickup test writes its contact point past the coin's variables, which a
+/// results fighter's block holds afterwards (`coin::CoinVars`). Until 2026-11-07 tick 4787
+/// differed (the egg's coins fell straight), then tick 6080 (the results' last fighter).
+#[test]
+fn a_vs_coin_match_on_yoshis_story() {
+    if let Some(out) = scripted_session("m6-intros", "coin-ys", &["--all", "--heap"]) {
+        assert!(
+            out.contains(
+                "9275 ticks compared, no difference
+"
+            ),
+            "{out}"
+        );
+        assert!(out.contains("no stale reads"), "{out}");
+    }
+}

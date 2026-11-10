@@ -679,7 +679,7 @@ pub fn check_shadow_render() -> bool {
 
 /// A goal's special score and its kind, `grPushOn_80219204` (Classic's clear screen): the
 /// parameters' entry for goal point `point` (from 0x99).
-// Ports grPushOn_80219204; aliased once a check reaches it.
+#[doc(alias = "grPushOn_80219204")]
 pub fn goal_score(game: &Game, data: &Archives, point: i32) -> (i32, i32) {
     let e = param(game).at(0x1C + 8 * point.wrapping_sub(0x99) as u32);
     (data.u32(e) as i32, i32::from(data.u16(e.at(4)) as i16))
@@ -687,7 +687,6 @@ pub fn goal_score(game: &Game, data: &Archives, point: i32) -> (i32, i32) {
 
 /// The race's time for a character, `grPushOn_80219230` (Classic's race setup): the parameters'
 /// lookup's value for `key`, up to 33 entries or a key of -1; a key not found stops the game.
-// Ports grPushOn_80219230; aliased once a check reaches it.
 pub fn race_time(game: &Game, data: &Archives, key: i32) -> i32 {
     let p = param(game).at(0x10C);
     for i in 0..0x21u32 {

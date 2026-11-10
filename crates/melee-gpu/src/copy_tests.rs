@@ -141,6 +141,7 @@ fn check_case(
         "{label}"
     );
     let c = Copied {
+        copy: 0,
         id: 0,
         format: r.format,
         width: r.width,
@@ -426,4 +427,98 @@ fn footprint_is_what_the_encoder_writes() {
     }
     eprintln!("footprint: {some} copies compared, {none} neither encodes");
     assert!(some > 0 && none > 0);
+}
+
+struct Ram(std::cell::RefCell<Vec<u8>>);
+
+impl melee_gx::Memory for Ram {
+    fn read(&self, phys: u32, out: &mut [u8]) {
+        let at = phys as usize;
+        out.copy_from_slice(&self.0.borrow()[at..at + out.len()]);
+    }
+}
+
+/// When the game reuses the memory under an old copy and a newer copy goes inside it, only the
+/// old copy is gone (Classic's versus splash, Team Mario's second portrait; ssbm-rs a90755e).
+#[test]
+fn a_newer_copy_outlives_an_older_one_written_over() {
+    let ram = Ram(std::cell::RefCell::new(vec![0; 0x3000]));
+    let mut footprints = copy::Footprints::default();
+    let old = copy::Footprint {
+        address: 0x1000,
+        stride: 0x100,
+        row_bytes: 0x100,
+        rows: 16,
+    };
+    footprints.record(old, 0, &ram);
+    // The game takes the old copy's memory back, then copies into part of it.
+    ram.0.borrow_mut()[0x1C10] = 1;
+    let new = copy::Footprint {
+        address: 0x1C00,
+        stride: 0x100,
+        row_bytes: 0x80,
+        rows: 2,
+    };
+    footprints.record(new, 1, &ram);
+    let gone = footprints.take_overwritten(&ram);
+    assert_eq!(
+        gone,
+        [copy::Gone {
+            start: 0x1000,
+            end: 0x2000,
+            copy: 0
+        }]
+    );
+    assert!(gone[0].takes(0x1000, 0));
+    assert!(!gone[0].takes(0x1C00, 1));
+    // The newer copy goes when the game writes over it in turn.
+    footprints.new_frame();
+    assert_eq!(footprints.take_if_overwritten(0x1C00, &ram), None);
+    footprints.new_frame();
+    ram.0.borrow_mut()[0x1D00] = 2;
+    assert_eq!(
+        footprints.take_if_overwritten(0x1C00, &ram),
+        Some(copy::Gone {
+            start: 0x1C00,
+            end: 0x1D80,
+            copy: 1
+        })
+    );
+    // Memory that holds other bytes takes every copy in it, however late.
+    assert!(copy::Gone::all(0x1000, 0x2000).takes(0x1C00, u64::MAX - 1));
+}
+
+/// A depth copy to Z24X8 lays depth out as RGBA8: alpha 255 and z's high byte, then its middle
+/// and low bytes (Dolphin's software encoder); the footprint covers it (ssbm-rs b95cae5).
+#[test]
+fn a_depth_copy_writes_z24x8() {
+    let mut efb = vec![0u8; (EFB_WIDTH * EFB_HEIGHT * 4) as usize];
+    for (i, p) in efb.chunks_mut(4).enumerate() {
+        let z = (i as u32 * 0x1_0101) & 0xFF_FFFF;
+        p.copy_from_slice(&[(z >> 16) as u8, (z >> 8) as u8, z as u8, 255]);
+    }
+    // Z24, 8x4 texels at (4, 2): two RGBA8 blocks wide, one high.
+    let st = state(3, 4, 2, 7, 3, 0x1000, 128);
+    let value = copy_value(6, 0, false);
+    let e = encode::encode(&st, value, &efb).expect("a Z24X8 copy encodes");
+    let f = copy::footprint(&st, value).expect("and has a footprint");
+    assert_eq!((f.address, f.rows, f.row_bytes), (0x1000, 1, 128));
+    assert!(
+        copy::request(&st, value).is_none(),
+        "and isn't kept on the GPU"
+    );
+    assert_eq!(e.rows.len(), 1);
+    let block = &e.rows[0][..64];
+    for i in 0..16u32 {
+        let (s, t) = (4 + i % 4, 2 + i / 4);
+        let z = ((t * EFB_WIDTH + s) * 0x1_0101) & 0xFF_FFFF;
+        let i = i as usize;
+        let (high, low) = ([255, (z >> 16) as u8], [(z >> 8) as u8, z as u8]);
+        assert_eq!(block[2 * i..2 * i + 2], high, "texel {i}");
+        assert_eq!(block[32 + 2 * i..34 + 2 * i], low, "texel {i}");
+    }
+    // Other depth copies still encode nothing.
+    assert!(encode::encode(&st, copy_value(6, 1, false), &efb).is_none());
+    assert!(encode::encode(&st, copy_value(1, 0, false), &efb).is_none());
+    assert!(copy::footprint(&st, copy_value(5, 0, false)).is_none());
 }

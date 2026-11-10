@@ -44,7 +44,10 @@ pub const GATES: &[Gate] = &[
         list: REG,
         entry: 2,
         what: "All-Star",
-        covers: &["melee/gm/gmallstar"],
+        // Its own units are accounted for (task 23); what it still reaches unported is the
+        // single-player modes' shared code (game::single_player_audit's gaps): the Very Hard
+        // clear's record among them.
+        covers: &["gmMainLib_8015D418"],
     },
     Gate {
         list: ONE_P,
@@ -155,10 +158,6 @@ pub const STOPS: &[(&str, &str)] = &[
     (
         "mnCharSel_8025C020's records for match type",
         "every match type a one-door select is entered with (the 1P modes', the Stadium's, Training's and Event Match's) has its records",
-    ),
-    (
-        "the race's clear",
-        "a stage clear of the third kind (the start data's x9 3) is the race to the finish's, a Classic bonus stage behind Classic's gate (gm_17C0)",
     ),
     (
         "a 1P run's getter",
@@ -273,24 +272,8 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_8017CBAC (Classic's clear)",
-        "Classic's last stage won: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gmClassic_801B3B40's target stage records",
-        "Classic's Target Test bonus stage: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "Classic's horde stage's",
-        "Classic's horde stages' intros: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "gm_8017D7AC's records after a no contest",
         "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
-        "gm_8017CBAC (All-Star's clear)",
-        "All-Star's last round won: the single-player modes', which only the entries behind GATES lead to",
     ),
     (
         "HUD colour {c} past the table",

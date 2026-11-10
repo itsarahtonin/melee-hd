@@ -127,7 +127,7 @@ impl Running<'_> {
 
     /// Event 50's start, `ftCh_Init_80156310`: at his place, waiting, his state set to the
     /// entrance first so the wait takes his place.
-    // Ports `ftCh_Init_80156310`; aliased once a check reaches it.
+    #[doc(alias = "ftCh_Init_80156310")]
     pub fn ch_start_in_place(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         let (x, y) = (self.ch_da_f32(f, attr::X18), self.ch_da_f32(f, attr::X1C));

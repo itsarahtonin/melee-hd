@@ -1158,7 +1158,7 @@ impl Running<'_> {
                 continue;
             }
             let owner = it::item(self.game, g).owner;
-            let flags = it::item_mut(self.game, g).xDD4_itemVar.coin().x18.get();
+            let flags = kinds::coin::vars(self.game, g).x18.get();
             let may = if self.is_same_player(Some(gobj), owner) {
                 flags.owner
             } else {
@@ -1169,7 +1169,7 @@ impl Running<'_> {
             }
             let scl = it::item(self.game, g).scl;
             for i in 0..2 {
-                let sub = &mut it::item_mut(self.game, g).xDD4_itemVar.coin().sub;
+                let sub = &mut kinds::coin::vars(self.game, g).sub;
                 let mut coin = SweptCircle {
                     radius: sub.x0.get(),
                     pos: sub.x8.get(),
@@ -1187,7 +1187,12 @@ impl Running<'_> {
                 let scale = fp.x34_scale.y;
                 let touch = swept_circles_touch(&mut coin, &mut mine, scl, scale);
                 self.game.fighters[f.0].x1614[i].x20 = mine.contact;
-                if touch {
+                if touch.is_some() {
+                    // Past the coin's variables (`coin::CoinVars`).
+                    let v = it::item_mut(self.game, g).xDD4_itemVar.coin();
+                    v.contact.set(coin.contact);
+                }
+                if touch == Some(true) {
                     let worth = kinds::coin::worth(self, g);
                     let slot = i32::from(self.game.fighters[f.0].player_idx);
                     let n = worth.wrapping_add(self.game.player_coins(slot));
@@ -1195,8 +1200,7 @@ impl Running<'_> {
                     let n = worth.wrapping_add(self.game.player_total_coins(slot));
                     self.game.set_player_total_coins(slot, n);
                     self.sfx_play_track(147, 127, 64, 26);
-                    // The sparkle at the coin's contact point: a word past its variables'
-                    // member, which the test just wrote and only this reads.
+                    // The sparkle at the coin's contact point, which the test just wrote.
                     crate::game::ef::spawn(
                         self,
                         0x432,
@@ -2174,6 +2178,9 @@ impl Running<'_> {
             }
             Some(f) if f.0 == super::super::gr::pushon::ON_TOUCH_LINE => {
                 super::super::gr::pushon::line_hazard(self.game, self.data, line)
+            }
+            Some(f) if f.0 == super::super::gr::figureget::ON_TOUCH_LINE => {
+                super::super::gr::figureget::on_touch_line(line)
             }
             Some(f) if super::super::gr::target::is_on_touch_line(f.0) => {
                 super::super::gr::target::line_hazard(self.game, self.data, line)

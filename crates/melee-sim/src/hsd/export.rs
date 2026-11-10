@@ -69,6 +69,24 @@ impl Lay {
         }
     }
 
+    /// A block whose owner never writes some of its bytes ([`Lay::leftover`]) gives back the
+    /// GPU's pixels it was made over ([`crate::hsd::image::Src::RenderTarget`]) where the
+    /// layout leaves a byte unknown and names no owner for it: a fighter's parts table's
+    /// padding over a copy's image (docs/engine.md, "Uninitialized values").
+    pub fn keep_pixels_under(&mut self, img: &super::image::Image) {
+        let rt = img.render_target(self.at, self.bytes.len() as u32);
+        for (i, &px) in rt.iter().enumerate() {
+            let owned = self.owners.get(i).is_some_and(Option::is_some);
+            if !px || self.known[i] || self.bits[i] != 0 || owned {
+                continue;
+            }
+            if self.pixels.is_empty() {
+                self.pixels = vec![false; self.bytes.len()];
+            }
+            self.pixels[i] = true;
+        }
+    }
+
     /// Bytes at address `a` (the generated layouts', `game::mirror::LayOut`).
     pub fn put_bytes(&mut self, a: u32, b: &[u8]) {
         self.bytes(a - self.at, b);
@@ -1576,6 +1594,25 @@ pub fn shadow(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
     for i in 0..o.object_nodes.len() {
         shadow_node(objs, img, s, i);
     }
+    shadow_imagedesc(objs, img, s);
+}
+
+/// A shadow's texture's `HSD_ImageDesc` (0x18, a memory piece `HSD_ImageDescAlloc` clears
+/// whole): its image (`HSD_ShadowSetSize`'s block, else null), size and format; no mipmaps or
+/// levels of detail.
+pub fn shadow_imagedesc(objs: &Objects, img: &mut Image, s: super::shadow::ShadowId) {
+    let o = &objs.shadows[s.0];
+    let at = o.imagedesc_addr;
+    if at == 0 {
+        return;
+    }
+    let mut l = Lay::new(at, 0x18);
+    l.bytes(0, &[0; 0x18]);
+    l.u32(0, if o.image.allocated { o.image_addr } else { 0 });
+    l.u16(4, o.image.width);
+    l.u16(6, o.image.height);
+    l.u32(8, o.image.format);
+    l.put(img);
 }
 
 /// `HSD_psAppSRT` (0xA4), cleared whole as it's made (`psAddGeneratorAppSRT`'s `memset`):

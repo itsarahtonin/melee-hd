@@ -2125,7 +2125,7 @@ impl melee_sim::game::mirror::LayCx for Nulls {
 /// [`Nulls`] that also lays a leftover handle as the word it stands for
 /// (`melee_sim::hsd::image::Image::unknown_word`): a field still holding what the block
 /// held, the GPU's pixels among them.
-struct LeftoverWords<'a>(&'a melee_sim::hsd::image::Image);
+pub(crate) struct LeftoverWords<'a>(pub(crate) &'a melee_sim::hsd::image::Image);
 
 impl melee_sim::game::mirror::LayCx for LeftoverWords<'_> {
     fn handle(&self, _: &'static str, h: Option<u32>) -> Option<u32> {

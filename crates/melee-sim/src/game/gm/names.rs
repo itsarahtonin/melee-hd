@@ -170,7 +170,7 @@ pub fn other_name(us: bool, ckind: u8) -> Option<&'static [u8]> {
 /// A name's width scale (`fn_80160F58` and `fn_80160DE8`'s): the other name's (Fox's and
 /// Samus's 1 in either language, `lbl_803B7784`, `lbl_803B7700`) when it's shown, else the
 /// name's (`lbl_803B767C`, `lbl_803B75F8`).
-// Ports fn_80160F58 (the horde stage's name's scale); aliased once a check reaches it.
+#[doc(alias = "fn_80160F58")]
 pub fn name_width_scale(us: bool, ckind: u8, other: bool) -> f32 {
     if other && other_names(us, ckind).is_some() {
         1.0

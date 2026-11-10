@@ -958,6 +958,15 @@ pub const EV26: Game = Game {
     replay: Replay::Session("e3-ev26"),
 };
 
+/// Event 50 won (Sarah's recording `ev50`, task 21's sixth round): Fox against both hands on
+/// Final Destination, Crazy Hand beaten last.
+pub const REC_EV50: Game = Game {
+    stage: "Final Destination",
+    name: "rec-ev50",
+    players: "Event 50: Fox beating Master Hand and Crazy Hand (recording ev50)",
+    replay: Replay::Session("rec-ev50"),
+};
+
 /// Target Test from the main menu (`m6-target-test/tt-dk-quit`): Donkey Kong's stage.
 pub const TT_DK_QUIT: Game = Game {
     stage: "Donkey Kong's target stage",
@@ -1328,6 +1337,16 @@ pub const M6E2_REGEND_ADV: Game = Game {
     replay: Replay::Session("m6e2-regend-adv"),
 };
 
+/// Captain Falcon's Classic ending in RegularEnding Real (`m6-endings-2/regend-real`): the
+/// trophy fall, whose fighter copies (RGB5A3 color and Z24X8 depth) run to log frame 2029, then
+/// the staff roll.
+pub const M6E2_REGEND_REAL: Game = Game {
+    stage: "Debug menu",
+    name: "m6e2-regend-real",
+    players: "RegularEnding Real's trophy fall and staff roll (session m6-endings-2/regend-real)",
+    replay: Replay::Session("m6e2-regend-real"),
+};
+
 /// Mr. Game & Watch's All-Star ending (`m6-endings-2/regend-gw`): the trophy fall's first cut.
 pub const M6E2_REGEND_GW: Game = Game {
     stage: "Debug menu",
@@ -1381,6 +1400,16 @@ pub const M6I_ADVENTURE2: Game = Game {
     replay: Replay::Session("m6i-adventure2"),
 };
 
+/// Sarah's Classic clear (`recordings/classic-clear`): the bonus stages' intros, Snag the
+/// Trophies, and the versus splash before the Team Mario stage, its portraits copies of the
+/// frame in color and depth.
+pub const REC_CLASSIC_CLEAR: Game = Game {
+    stage: "Classic",
+    name: "rec-classic-clear",
+    players: "Classic's stages and splashes (recording classic-clear)",
+    replay: Replay::Session("rec-classic-clear"),
+};
+
 /// A human's Adventure run (`recordings/2026-10-06_12-04-48`): Mushroom Kingdom's route with
 /// its joiners' tally, Peach's Castle, Kongo Jungle's intro.
 pub const REC_ADVENTURE: Game = Game {
@@ -1388,6 +1417,15 @@ pub const REC_ADVENTURE: Game = Game {
     name: "rec-2026-10-06_12-04-48",
     players: "Adventure's first stages (recording 2026-10-06_12-04-48)",
     replay: Replay::Session("rec-2026-10-06_12-04-48"),
+};
+
+/// Sarah's All-Star clear (`recordings/allstar-clear`): its rest areas, the last round's Mr.
+/// Game & Watches and All-Star's ending.
+pub const REC_ALLSTAR_CLEAR: Game = Game {
+    stage: "All-Star",
+    name: "rec-allstar-clear",
+    players: "All-Star cleared as Fox on Very Easy (recording allstar-clear)",
+    replay: Replay::Session("rec-allstar-clear"),
 };
 
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
@@ -1615,6 +1653,24 @@ pub const M6U_EV37_PICHU: Game = Game {
     name: "m6u-ev37-pichu",
     players: "Pichu's approach after Event Match (session m6-unlocks/ev37-pichu)",
     replay: Replay::Session("m6u-ev37-pichu"),
+};
+
+/// The notice approach after Training's combo of 23 (Sarah's `recordings/tr-combo20`): the
+/// combos' trophies' notices.
+pub const REC_TR_COMBO20: Game = Game {
+    stage: "Challenger approach",
+    name: "rec-tr-combo20",
+    players: "the notice approach after Training (recording tr-combo20)",
+    replay: Replay::Session("rec-tr-combo20"),
+};
+
+/// Ganondorf's challenge after Event 29 (Sarah's `recordings/ev29`): the approach's screen
+/// and, his match won, the unlock's notice.
+pub const REC_EV29: Game = Game {
+    stage: "Challenger approach",
+    name: "rec-ev29",
+    players: "Ganondorf's approach and unlock after Event Match (recording ev29)",
+    replay: Replay::Session("rec-ev29"),
 };
 
 /// Camera Mode (`special-sessions/camera-snaps`): the card check, the match with the
@@ -1914,6 +1970,11 @@ pub const FOUR_FD: Game = Game {
 
 /// The known differences docs/player.md's open issues list, as the dashboard names them.
 pub mod why {
+    /// Classic's Team Mario splash: its portraits sample RGB5A3 copies both renderers keep on
+    /// the GPU (compared by memory they never write), and melee-sim draws the portraits' sprites
+    /// through their camera in three passes where `HSD_SObjLib_803A54EC` draws one (18 more
+    /// draws, off the screen).
+    pub const SPLASH: &str = "Classic's splash: its portraits' color copies kept on the GPU, and the sprites' camera's extra passes (melee-sim)";
     /// Fountain of Dreams' reflection, an 80 by 60 copy drawn at the scale and averaged back,
     /// magnified over the water: its blocks legitimately differ between scales.
     /// Pokémon Stadium's screen samples an RGB565 copy melee-gpu keeps on the GPU, which the

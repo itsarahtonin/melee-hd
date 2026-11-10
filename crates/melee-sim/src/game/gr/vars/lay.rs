@@ -454,12 +454,14 @@ impl GroundVars {
                 jobj(l, cx, a, v.xC4);
                 w32(l, a + 4, &[v.xC8, v.xCC]);
             }
+            // The flags' bits the stage writes (0x80 to 0x08) and the log's (0x80); the rest
+            // keep what the block held.
             GroundVars::Inishie2(v) => {
-                l.put_u8(a, v.xC4);
+                l.put_bits(a, 0, 5, u32::from(v.xC4 >> 3));
                 h16(l, a + 2, &[v.xC6, v.xC8, v.xCA, v.xCC]);
             }
             GroundVars::Inishie2Log(v) => {
-                l.put_u8(a, v.xC4);
+                l.put_bits(a, 0, 1, u32::from(v.xC4 >> 7));
                 h16(l, a + 2, &[v.xC6, v.xC8]);
                 gobj(l, cx, a + 8, v.xCC);
             }
@@ -720,6 +722,16 @@ impl GroundVars {
                 l.put_u32(a + 0xA4, v.count as u32);
                 l.put_word(a + 0xA8, cx.handle("LObjId", v.point_light.map(|o| o.0)));
                 l.put_word(a + 0xAC, cx.handle("LObjId", v.spot_light.map(|o| o.0)));
+            }
+
+            GroundVars::FigureGet(v) => {
+                w32(l, a, &[v.x0, v.x4, v.x8, v.xC]);
+                w32(l, a + 0x10, &v.x10);
+                w32(l, a + 0x1C, &v.x1C);
+                for i in 0..3 {
+                    gobj(l, cx, a + 0x28 + 4 * i as u32, v.x28[i]);
+                    gobj(l, cx, a + 0x34 + 4 * i as u32, v.x34[i]);
+                }
             }
 
             GroundVars::HomeRun(v) => {

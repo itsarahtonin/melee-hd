@@ -110,7 +110,7 @@ impl Running<'_> {
         let mut drew = false;
         if ip.kind == super::kinds::UNK4 {
             // The coin (`It_Kind_Unk4`): its range while it can be picked up.
-            let v = ip.xDD4_itemVar.coin();
+            let v = &mut ip.xDD4_itemVar.coin().vars;
             let f = v.x18.get();
             if flag(ip.xDAA, 0) && (f.others || f.owner) {
                 let sub = &mut v.sub;
