@@ -616,9 +616,10 @@ impl Running<'_> {
 
     /// A 1P run's match exit, `gm_8017D7AC`: the coins, the KOs (`x1C`), the play time and
     /// (but a bonus stage's) the run's frames counted, Sheik kept, the bonus stage's ends noted;
-    /// a no contest or a retry back to the menu (its records not ported); else the trophies won
-    /// given, and with no stock left (or the last one lost to the timer) `game_over` next, a
-    /// timeout with stocks left the match again; whether the run goes on.
+    /// a no contest or a retry (a run quit from the pause) its high score kept and back to the
+    /// menu; else the trophies won given, and with no stock left (or the last one lost to the
+    /// timer) `game_over` next, a timeout with stocks left the match again; whether the run
+    /// goes on.
     #[doc(alias = "gm_8017D7AC")]
     #[doc(alias = "fn_8016B510")]
     #[doc(alias = "fn_8016B4BC")]
@@ -647,9 +648,25 @@ impl Running<'_> {
         if (o == super::vs::OUTCOME_NO_CONTEST || o == super::vs::OUTCOME_RETRY)
             && self.game.gm.db_level <= 2
         {
-            crate::game::code::unported_call(
-                "gm_8017D7AC's records after a no contest (fn_80162FF4)",
-            );
+            // A run quit from the pause: the mode's high score (`fn_80162BFC`, `fn_80162DF8`,
+            // `fn_80162FF4`: the run's score over the character's, compared unsigned), then
+            // the menu.
+            let sel = super::match_exit::selkind(run.player.ckind as u8);
+            let mode = self.game.game_mode;
+            let rec = &mut self.game.game_data.thing.save_data.x1F2C[usize::from(sel)].x7C;
+            let best = match mode {
+                super::one_player::GM_CLASSIC => Some(&mut rec.x88),
+                super::one_player::GM_ADVENTURE => Some(&mut rec.x8C),
+                GM_ALLSTAR => Some(&mut rec.x90),
+                _ => None,
+            };
+            if let Some(best) = best
+                && (*best as u32) < run.x18 as u32
+            {
+                *best = run.x18;
+            }
+            self.change_game_mode_after_scene(super::machine::GM_MENU);
+            return false;
         }
         self.give_match_trophies();
         if run.x8[0] & 0x80 == 0 {
