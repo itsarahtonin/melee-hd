@@ -44,9 +44,9 @@ pub const GATES: &[Gate] = &[
         list: REG,
         entry: 2,
         what: "All-Star",
-        // Its own units are accounted for (task 23); what it still reaches unported is the
-        // single-player modes' shared code (game::single_player_audit's gaps): the Very Hard
-        // clear's record among them.
+        // Its own units are accounted for (task 23), and since its third round
+        // (m6-allstar-3/as-vh-clear) the Very Hard clear's record too: the single-player
+        // audit finds nothing left on its path. Kept until the coordinator lifts it.
         covers: &["gmMainLib_8015D418"],
     },
     Gate {
