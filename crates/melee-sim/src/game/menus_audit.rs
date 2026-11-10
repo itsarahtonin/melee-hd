@@ -11,7 +11,7 @@
 //! records is still a console's.
 
 use super::gm::machine::{GM_MENU, Phase};
-use super::mn::main::{ONE_P, REG, STADIUM};
+use super::mn::main::{ONE_P, REG};
 use super::state::Game;
 
 /// A menu entry the player doesn't let a player confirm.
@@ -54,16 +54,6 @@ pub const GATES: &[Gate] = &[
         entry: 1,
         what: "Event Match",
         covers: &["melee/gm/gmevent"],
-    },
-    Gate {
-        list: STADIUM,
-        entry: 2,
-        what: "Multi-Man Melee",
-        // Nothing of the mode's own is missing (game::single_player_audit); kept until Sarah
-        // decides on Master Hand as a player, whom the character select's name entry glitch
-        // reaches in every select (docs/melee-bugs.md): his units are the audit's gaps for
-        // Classic, Event Match and the debug routes.
-        covers: &["Master Hand as a player"],
     },
 ];
 
