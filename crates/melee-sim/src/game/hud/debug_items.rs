@@ -411,9 +411,10 @@ impl Running<'_> {
                 0
             }
             0x8030_10C0 => self.debug_allstar_from_round(arg),
+            0x8030_1074 => self.debug_classic_from_stage(arg),
             // The single-player modes' and their game overs' entries (milestone 6's), acting
             // only on A, not ported yet.
-            0x8030_1028 | 0x8030_1074 | 0x8030_1D7C => {
+            0x8030_1028 | 0x8030_1D7C => {
                 if arg == CB_SELECT {
                     super::super::code::unported_call(&format!(
                         "the debug menu entry callback {cb:#010x}"
@@ -624,6 +625,20 @@ impl Running<'_> {
             self.game.game_data.vs.unk_528.x5 = round as u8;
             self.sfx_forward();
             self.debug_to_mode(crate::game::gm::GM_ALLSTAR);
+        }
+        0
+    }
+
+    /// `un_80301074`, the Taniguti test's Reg:Easy: on A, Classic's saved choices' stage to
+    /// start from (`gmMainLib_8015CDC8`'s `x5`, which the select's exit starts the run at)
+    /// the entry's value less one, then Classic.
+    #[doc(alias = "un_80301074")]
+    fn debug_classic_from_stage(&mut self, arg: i32) -> i32 {
+        if arg == CB_SELECT {
+            let stage = self.game.hud.debug.word(0x804D_590C).wrapping_sub(1);
+            self.game.game_data.vs.unk_51C.x5 = stage as u8;
+            self.sfx_forward();
+            self.debug_to_mode(crate::game::gm::GM_CLASSIC);
         }
         0
     }

@@ -363,7 +363,24 @@ pub const PATHS: &[Paths] = &[
             "it/kinds/masterhandbullet",
             "it/kinds/masterhandlaser",
         ],
-        unreached: &[],
+        unreached: &[
+            (
+                "fn_80184A94",
+                "the intro's third opponent's place process: fn_80185F5C makes it only for a third opponent, and Classic's intros of kinds 0 to 2 show at most two (its single, team, giant and boss matchups name at most two characters); the horde stages' three (kind 4) are the horde intro's sprites, not fighters (task 22's debug round)",
+            ),
+            (
+                "grFigureGet_80219898 with no coin",
+                "Snag the Trophies' coins (hold kind 12) fail only at the coins' limit, 60 (ItCo.dat's common word 0x20), and Classic's stage makes at most the stand's three: no other Classic code makes a coin, and the debug item menu's list skips it (task 22's debug round)",
+            ),
+            (
+                "Master Hand's function",
+                "mh_dispatch is passed only ftMh_MS_358_80152880, 366_80153820, 363_801530A4 and 372_801542E0, each one masterhand::run answers (crush.rs, airplane.rs, finger.rs, grab.rs) (task 22's debug round)",
+            ),
+            (
+                "ftMh_MS_371_801541C8",
+                "mh_back_attack always passes ftMh_MS_371_801541C8, which masterhand::run_with answers (task 22's debug round)",
+            ),
+        ],
     },
     Paths {
         mode: AS,
@@ -804,20 +821,28 @@ pub const MISSING: &[Gap] = &[
         // checked by its sessions (recordings/allstar-clear, m6-allstar-3/as-vh-clear,
         // m6-1p-setups/as-over), and its one unported hook is its coming soon state's exit
         // gm_801B607C, which ledger/dead.txt shows never runs.
-        modes: &[CL, AD, DB],
+        // Not Classic (task 22's debug round): its modes (0x03 with the one-door select, the
+        // intros, the VS scene for its stages and its game over 105; 0x15 after a clear, the
+        // trophy fall, staff roll, ending movie and congratulations; 0x14 after it; the main
+        // menu) each have their states, loads and scenes (gm/machine.rs's CLASSIC, GOVER,
+        // CHALLENGER, MENU), checked by its sessions (recordings/classic-clear,
+        // m6-classic-dbg/cl-vh-ch, m6-intros/classic-easy, classic-no), and its one unported
+        // hook is its coming soon state's exit gmClassic_801B3F18, which ledger/dead.txt shows
+        // never runs.
+        modes: &[AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
         // Not Event Match: the records stop is for match types without a case, and Event
         // Match's (`EVENT_MATCH`, mn/charsel/one_door.rs) has one. Not All-Star either (task
-        // 23's third round): its match type, `REG_ALLSTAR`, has one.
-        modes: &[CL, AD],
+        // 23's third round): its match type, `REG_ALLSTAR`, has one. Nor Classic (task 22's debug
+        // round): its select is entered with `REG_CLASSIC` (gmClassic_801B3DD8), which has one.
+        modes: &[AD],
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
         covers: &[
-            "melee/gm/gm_17C0",
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "a 1P run's ratio getter",
@@ -832,7 +857,13 @@ pub const MISSING: &[Gap] = &[
         // (fn_8017C1A4, Crazy Hand's arrival); All-Star's mode has its enter and exit data
         // (gm/machine.rs, gm/match_exit.rs), its ratio getters are its own four, ported
         // (gm_8018A188, gm_8018A1D8, gm_8018A2C4, gm_8018A314), and the routes are Adventure's.
-        modes: &[CL, AD],
+        // Not Classic (task 22's debug round): gm_17C0 is accounted for (fn_8017C0C8 checked by
+        // m6-classic-dbg/cl-vh-ch); Classic's matches run in game mode 3, whose enter and exit
+        // data both functions answer; its run's getters are the eleven gm_Mode_Classic_OnLoad
+        // sets (CLASSIC_GETTERS), each answered by gm/classic.rs's getter or ratio_percent; and
+        // only gm_801674C4 sets a route callback, which only Adventure's routes and Icicle
+        // Mountain's climb (map 10) call.
+        modes: &[AD],
     },
     Gap {
         what: "the Kirbys' team's costumes (gm_80169540, read inline)",
@@ -853,19 +884,22 @@ pub const MISSING: &[Gap] = &[
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
         covers: &["gm_8016F00C"],
         // Not All-Star (task 23's third round): only Event Match's gm_801BCAF0 calls
-        // gm_8016F00C.
-        modes: &[EV, CL, AD],
+        // gm_8016F00C. Not Classic either (task 22's debug round), for the same reason.
+        modes: &[EV, AD],
     },
     Gap {
         what: "the 1P records and saves",
-        covers: &["gmMainLib_8015D1C8", "gmMainLib_8015D2F0", "gm_801647F8"],
+        covers: &["gmMainLib_8015D2F0", "gm_801647F8"],
         // Not Event Match: the gmMainLib getters are called only by gm_17C0.c's 1P stage
         // setups, fn_80160F58 only by Classic's intro (gm_1832.c), gm_801647F8 only by
         // gmclassic.c and gmmultiman.c; an event keeps its own records (gm_801BC4F4). Not
         // All-Star (task 23's third round): gmMainLib_8015D1C8 and gmMainLib_8015D2F0 are
         // gm_8017CBAC's Classic and Adventure cases' setters, and All-Star's case writes its
-        // own (gmMainLib_8015D418, checked by m6-allstar-3/as-vh-clear).
-        modes: &[CL, AD],
+        // own (gmMainLib_8015D418, checked by m6-allstar-3/as-vh-clear). Not Classic (task 22's
+        // debug round): its case writes gmMainLib_8015D1C8 (checked by m6-classic-dbg/cl-vh-ch),
+        // gmMainLib_8015D2F0 is Adventure's case's, and gm_801647F8 reads past its table only for
+        // a character the one-door select doesn't offer (the menus audit's stop).
+        modes: &[AD],
     },
     // The modes' own code.
     Gap {
@@ -884,12 +918,24 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
         covers: &["grFigureGet_80219898 with no coin", "melee/gm/gm_1832"],
-        modes: &[CL, DB],
+        // Not Classic (task 22's debug round): its PATHS entry's unreached says why.
+        modes: &[DB],
     },
     Gap {
         what: "Master Hand",
         covers: MASTER_HAND,
-        modes: &[CL, EV, DB],
+        // Not Classic (task 22's debug round): the hands' items are made only on its boss
+        // stage. The laser's and the bullet's evt_unk run only from a fighter's unload
+        // (it_8026B7F8 in Fighter_Unload_8006DABC), and nothing frees a fighter in that match
+        // (ssbm-rs's CALLS over m6-classic-dbg/cl-vh-ch logs one Fighter_Unload_8006DABC, the
+        // trophy fall's). The fast bullet's landing callback (it_802F0F08) runs only when
+        // it_8026DC24 settles it on a floor, at or under its stop speed (its attributes' x5C,
+        // 0.05) on both axes: its bounce keep (x58) is 1.2 and it never sets xDCD's b4, it
+        // leaves the gun at (5.3, -0.8) with no gravity, a reflection changes only its x, and
+        // the stage's one floor is flat, so a bounce only turns its y up 1.2 times as fast
+        // (m6-classic-dbg/cl-easy-bullet: a fast bullet touching the floor at x -71 bounces up
+        // at (-6.36, 0.96) and flies on; ssbm-rs's CALLS over it logs no it_802F0F08).
+        modes: &[EV, DB],
     },
     Gap {
         what: "Crazy Hand",
@@ -898,18 +944,18 @@ pub const MISSING: &[Gap] = &[
         // fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), which Event 50 never
         // runs: it has no joiners, no player leaves, and a beaten hand stays loaded (ssbm-rs's
         // CALLS over Sarah's recordings/ev50, both hands beaten, logs no Fighter_Unload_8006DABC).
-        modes: &[CL, DB],
+        // Not Classic (task 22's debug round) for the same reason: Crazy Hand joins Classic's
+        // boss stage (fn_8017C0C8) and nothing frees a fighter in its match (ssbm-rs's CALLS over
+        // m6-classic-dbg/cl-vh-ch logs one Fighter_Unload_8006DABC, the trophy fall's).
+        modes: &[DB],
     },
     Gap {
         what: "the hands' shared moves, sounds and boss stage",
-        covers: &[
-            "it_8026C3FC",
-            "it_8026C42C",
-            "ftMh_MS_371_801541C8",
-            "Master Hand's function",
-            "melee/ft/ftbosslib",
-        ],
-        modes: &[CL, EV, DB],
+        covers: &["ftMh_MS_371_801541C8", "Master Hand's function"],
+        // Not Classic (task 22's debug round): Crazy Hand's arrival (ftbosslib's last three,
+        // it_8026C3FC, it_8026C42C) is checked by m6-classic-dbg/cl-vh-ch, and its PATHS entry's
+        // unreached says why the two stops can't fire.
+        modes: &[EV, DB],
     },
     Gap {
         what: "All-Star's mode, its intro and the rest area",
@@ -969,8 +1015,10 @@ pub const MISSING: &[Gap] = &[
         covers: &["demo setup", "ftDemo_CreateFighter's pose"],
         // Not All-Star (task 23's third round): the stage demo setups (Stage_8022532C) and
         // the poses from 9 are the cutscenes' (vi/), which All-Star never enters; its demo
-        // fighters are the trophy fall's pose 7 and the debug intro's 6.
-        modes: &[AD, CL, DB],
+        // fighters are the trophy fall's pose 7 and the debug intro's 6. Nor Classic (task 22's
+        // debug round): it never enters a cutscene, and its demo fighters are its intros' poses 5
+        // and 6 (gm/intro.rs, gm/intro_horde.rs) and the trophy fall's 7.
+        modes: &[AD, DB],
     },
     // The ends of a run.
     Gap {
@@ -998,7 +1046,6 @@ pub const MISSING: &[Gap] = &[
             "un_80301BA8",
             "un_80301B48",
             "un_80301028",
-            "un_80301074",
             "un_80301D7C",
         ],
         modes: &[DB],

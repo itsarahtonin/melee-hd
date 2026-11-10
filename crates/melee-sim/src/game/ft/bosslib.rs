@@ -205,7 +205,7 @@ impl Running<'_> {
     }
 
     /// Whether Crazy Hand is in his state 0x183, `ftBossLib_8015C2A8`.
-    // Ports `ftBossLib_8015C2A8`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "ftBossLib_8015C2A8")]
     pub fn boss_ch_in_183(&self) -> bool {
         self.boss_motion_id(KIND_CRAZY_HAND) == CH_MS_183
     }
@@ -299,7 +299,7 @@ impl Running<'_> {
 
     /// The match slowed or sped for the hands' knockout, `ftBossLib_8015CA6C`: the first
     /// player's, each hand's and the items' rates.
-    // Ports `ftBossLib_8015CA6C`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "ftBossLib_8015CA6C")]
     pub fn boss_set_rate(&mut self, rate: i32) {
         let v = mem(fp::frsp(f64::from(rate)));
         self.player_80036790(0, v);
@@ -312,7 +312,7 @@ impl Running<'_> {
     }
 
     /// `ftBossLib_8015CB7C`: the items' rates back (`it_8026C42C`).
-    // Ports `ftBossLib_8015CB7C`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "ftBossLib_8015CB7C")]
     pub fn boss_reset_item_rate(&mut self) {
         super::super::it::item::unflag_all_x3(self.game);
     }
