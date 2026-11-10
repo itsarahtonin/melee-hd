@@ -112,6 +112,6 @@ mod tests {
         let mut gates = Gates::default();
         let out = gates.apply(&other, pressing(BUTTON_A));
         assert!(out.iter().all(|p| p.button == BUTTON_A));
-        assert!(note_text(g).starts_with("Classic isn't in melee-hd yet."));
+        assert!(note_text(g).starts_with(&format!("{} isn't in melee-hd yet.", g.what)));
     }
 }
