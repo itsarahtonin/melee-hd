@@ -96,6 +96,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ad-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6a3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-allstar-3/{o}.inputs")).into();
                 }
@@ -1449,6 +1452,14 @@ pub const M6A3_AS_VH_CLEAR: Game = Game {
     replay: Replay::Session("m6a3-as-vh-clear"),
 };
 
+/// Adventure's Giga Bowser path from the debug menu (`m6-adventure-dbg/adv-giga-vh`).
+pub const M6AD_ADV_GIGA_VH: Game = Game {
+    stage: "Adventure",
+    name: "m6ad-adv-giga-vh",
+    players: "Adventure from Final Destination as Fox on Very Hard (session m6-adventure-dbg/adv-giga-vh)",
+    replay: Replay::Session("m6ad-adv-giga-vh"),
+};
+
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.
 pub const O6_INTRO_ALLSTAR: Game = Game {
     stage: "All-Star's intro",
@@ -2041,6 +2052,11 @@ pub mod why {
     /// hashes from memory the copy never writes; ssbm-rs's renderer writes them.
     pub const SHADOW_COPY: &str =
         "the fighters' shadows: copies kept on the GPU, compared by memory they never write";
+    /// Adventure's matches from the debug route (`m6-adventure-dbg/adv-giga-vh`): the
+    /// screen's RGB5A3 copy, drawn back over it in strips, and the fighters' shadows, all
+    /// copies melee-gpu keeps on the GPU, which the comparison hashes from memory the copies
+    /// never write; the images are identical.
+    pub const MATCH_COPY: &str = "the screen's copy drawn back in strips and the fighters' shadows: copies kept on the GPU, compared by memory they never write";
     /// The results screen's images: copies kept on the GPU (RGB5A3, as ssbm-rs keeps them),
     /// which the comparison hashes from memory holding what their blocks held before, a
     /// few of whose bytes the heap's image doesn't know (fields of freed fighters, lights and

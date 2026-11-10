@@ -780,6 +780,33 @@ fn all_stars_very_hard_clear_runs_clean_to_its_card_after() {
     );
 }
 
+/// Adventure's Giga Bowser path from the debug menu (milestone 6's task 24, the debug route,
+/// `m6-adventure-dbg/adv-giga-vh` at debug level 3): the Taniguti Test's Reg:Normal at 12
+/// (`un_80301028`: the run starts at Final Destination's intro), Fox on Very Hard, Bowser's
+/// match quit from the debug pause (a won match above debug level 2) with Giga Bowser's
+/// condition met (`gm_8017E7FC`), the toy's and the transformation's cutscenes, Giga Bowser's
+/// match quit (`gm_801B50C4`), his defeat's cutscene and Adventure's clear (`gm_801B518C`,
+/// `gm_8017CBAC` with Very Hard's record `gmMainLib_8015D2F0` and the save), the trophy fall,
+/// the staff roll at six times its speed, congratulations and the challenger approach's
+/// start, clean to the trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn adventures_giga_bowser_path_runs_clean_to_its_card_after() {
+    let after = ssbm_rs_local("lockstep/m6-adventure-dbg/adv-giga-vh-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adventure-dbg", "adv-giga-vh", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("9177 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Master Hand by the character select's name entry glitch (`m6-multiman`, task 15's third
 /// round; docs/oracle.md, "Sessions"; docs/melee-bugs.md): on a card with no last character,
 /// B held with the name list open and A on "NAME ENTRY" the tick after the back request start

@@ -43,6 +43,7 @@ use common::{
 
 // All-Star's Very Hard clear (docs/player.md, "All-Star's Very Hard clear").
 use common::M6A3_AS_VH_CLEAR;
+use common::M6AD_ADV_GIGA_VH;
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
 use common::{E5_EV13_EGG3, E8_E24_CROWD, E8_HH_GRABS, REC_MH_MASH};
@@ -502,6 +503,45 @@ rendered_frames!(M6A3_AS_VH_CLEAR;
     m6a3_as_vh_clear_4000 4000,
     m6a3_as_vh_clear_5600 5600,
 );
+// Adventure's Giga Bowser path from the debug menu (`m6-adventure-dbg/adv-giga-vh`, task 24),
+// captured with ssbm-rs's renderer running: Final Destination's intro (2100) and the challenger
+// approach after congratulations (9100) are identical; Bowser's clear screen after the no
+// contest (3000), Giga Bowser's arrival in his match (4700) and its clear screen (5300) have
+// identical images, every draw the same but those that sample the copies kept on the GPU.
+rendered_frames!(M6AD_ADV_GIGA_VH;
+    m6ad_adv_giga_vh_2100 2100,
+    m6ad_adv_giga_vh_9100 9100,
+);
+fn adv_giga_vh(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6AD_ADV_GIGA_VH,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::MATCH_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6ad_adv_giga_vh_3000() {
+    adv_giga_vh(3000, [1183, 1183]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6ad_adv_giga_vh_4700() {
+    adv_giga_vh(4700, [1097, 1097]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6ad_adv_giga_vh_5300() {
+    adv_giga_vh(5300, [1182, 1182]);
+}
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still
 // over the tinted copy (7500). The images are identical; the draws that differ only sample
