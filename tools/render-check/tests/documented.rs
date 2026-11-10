@@ -42,6 +42,7 @@ use common::{
 };
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
+use common::{E5_EV13_EGG3, E8_E24_CROWD, E8_HH_GRABS, REC_MH_MASH};
 use common::{M6E2_REGEND_REAL, REC_CLASSIC_CLEAR};
 
 fn identical(game: &Game, frame: u32) {
@@ -2047,6 +2048,73 @@ fn e6_ev50_13350() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn e6_ev50_13400() {
     event_match(&REC_EV50, 13400, [4577, 4577]);
+}
+
+// Event Match's eighth round: Event 13's egg broken by Yoshi's down smashes (m6-event-5's
+// ev13-egg3: its burst, 2390, and the pieces, 2420), Master Hand's grab mashed free of
+// (Sarah's mh-mash: Jigglypuff let go, 1165, and free, 1185), Master Hand beaten (Sarah's
+// ev50's first try: 6120, and Crazy Hand fighting on alone, 6200), Event 24's crowd with its
+// giant last Yoshi (m6-event-8's e24-crowd 5700 and 6000) and the human-played hands in debug
+// VS after Crazy Hand's grab is mashed free of (m6-event-8's hh-grabs 4020 and 4040), each
+// captured with ssbm-rs's renderer running.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_ev13_egg3_2390() {
+    event_match(&E5_EV13_EGG3, 2390, [3301, 3299]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_ev13_egg3_2420() {
+    event_match(&E5_EV13_EGG3, 2420, [3293, 3293]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_mh_mash_1165() {
+    event_match(&REC_MH_MASH, 1165, [980, 977]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_mh_mash_1185() {
+    event_match(&REC_MH_MASH, 1185, [889, 889]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_ev50_6120() {
+    event_match(&REC_EV50, 6120, [4365, 4225]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_ev50_6200() {
+    event_match(&REC_EV50, 6200, [3656, 3646]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_e24_crowd_5700() {
+    event_match(&E8_E24_CROWD, 5700, [1883, 1858]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_e24_crowd_6000() {
+    event_match(&E8_E24_CROWD, 6000, [746, 741]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_hh_grabs_4020() {
+    event_match(&E8_HH_GRABS, 4020, [1199, 1208]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn e8_hh_grabs_4040() {
+    event_match(&E8_HH_GRABS, 4040, [1201, 1201]);
 }
 
 frames!(TT_DK_QUIT;
