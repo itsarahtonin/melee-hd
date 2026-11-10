@@ -404,6 +404,9 @@ impl Running<'_> {
     /// right, its fighters in pose 7 (falling, `ftCo_800C6150`) with their animations at 0.6
     /// their rate, the fall, and its size the character's over its own.
     #[doc(alias = "gm_801A68D8")]
+    // `gm_GetCurrentSceneEnterData`: read here and by the scene's other setups, its answer
+    // discarded.
+    #[doc(alias = "gm_GetCurrentSceneEnterData")]
     fn toy_fall_fighter(&mut self) {
         super::super::super::camera::init(&mut self.game.camera, 6);
         self.game.alloc_dynamics(self.data);
