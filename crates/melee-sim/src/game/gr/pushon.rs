@@ -71,27 +71,20 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 
 /// The backdrop's process and the objects' destroy callbacks, which do nothing.
 #[doc(alias = "grPushOn_80218598")]
-// Ports grPushOn_8021859C; aliased once a check reaches it.
-// Ports grPushOn_802187A4; aliased once a check reaches it.
-// Ports grPushOn_80218ED0; aliased once a check reaches it.
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
-/// The objects' predicates (`callback1`), which nothing calls and answer false.
-// Ports grPushOn_80218590; aliased once a check reaches it.
-// Ports grPushOn_80218670; aliased once a check reaches it.
-// Ports grPushOn_80218880; aliased once a check reaches it.
+/// The objects' predicates (`callback1`), which nothing calls and answer false (dead,
+/// `ledger/dead.txt`).
 pub fn answers_false(_gobj: GObjId) -> bool {
     false
 }
 
 /// The stage's `callback4`, `grPushOn_802183DC`: false.
-// Ports grPushOn_802183DC; aliased once a check reaches it.
 pub fn callback4() -> bool {
     false
 }
 
 /// `grPushOn_802182C4` does nothing (only a demo runs it).
-// Ports grPushOn_802182C4; aliased once a check reaches it.
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// The stage's objects' setup functions and processes, by map id (`grPushOn_StageCallbacks`).
@@ -672,7 +665,6 @@ pub fn line_hazard(game: &Game, data: &Archives, line: i32) -> Option<DataRef> {
 }
 
 /// The stage's shadow check, `grPushOn_80219528`: every joint receives shadows.
-// Ports grPushOn_80219528; aliased once a check reaches it.
 pub fn check_shadow_render() -> bool {
     true
 }

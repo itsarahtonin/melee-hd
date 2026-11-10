@@ -153,24 +153,24 @@ fn kos(me: &MatchEnd, slot: usize, killer: usize, victim: usize) -> i32 {
 #[doc(alias = "fn_8017B1B4")]
 #[doc(alias = "fn_8017B21C")]
 #[doc(alias = "fn_8017B280")]
-// Ports fn_8017ADA8; aliased once a check reaches it.
-// Ports fn_8017B2E4; aliased once a check reaches it.
-// Ports fn_8017B348; aliased once a check reaches it.
-// Ports fn_8017B3AC; aliased once a check reaches it.
-// Ports fn_8017B410; aliased once a check reaches it.
-// Ports fn_8017B4D0; aliased once a check reaches it.
-// Ports fn_8017B534; aliased once a check reaches it.
-// Ports fn_8017B598; aliased once a check reaches it.
-// Ports fn_8017B5FC; aliased once a check reaches it.
-// Ports fn_8017B660; aliased once a check reaches it.
-// Ports fn_8017B6C4; aliased once a check reaches it.
-// Ports fn_8017B728; aliased once a check reaches it.
-// Ports fn_8017B78C; aliased once a check reaches it.
-// Ports fn_8017B7F0; aliased once a check reaches it.
-// Ports fn_8017B854; aliased once a check reaches it.
-// Ports fn_8017B8B8; aliased once a check reaches it.
-// Ports fn_8017B91C; aliased once a check reaches it.
-// Ports fn_8017B9F4; aliased once a check reaches it.
+#[doc(alias = "fn_8017ADA8")]
+#[doc(alias = "fn_8017B2E4")]
+#[doc(alias = "fn_8017B348")]
+#[doc(alias = "fn_8017B3AC")]
+#[doc(alias = "fn_8017B410")]
+#[doc(alias = "fn_8017B4D0")]
+#[doc(alias = "fn_8017B534")]
+#[doc(alias = "fn_8017B598")]
+#[doc(alias = "fn_8017B5FC")]
+#[doc(alias = "fn_8017B660")]
+#[doc(alias = "fn_8017B6C4")]
+#[doc(alias = "fn_8017B728")]
+#[doc(alias = "fn_8017B78C")]
+#[doc(alias = "fn_8017B7F0")]
+#[doc(alias = "fn_8017B854")]
+#[doc(alias = "fn_8017B8B8")]
+#[doc(alias = "fn_8017B91C")]
+#[doc(alias = "fn_8017B9F4")]
 pub fn stat_value(me: &MatchEnd, us: bool, getter: u32, slot: usize) -> i32 {
     let p = &me.player_standings[slot];
     let f = |v: u32| stat(v as i32);

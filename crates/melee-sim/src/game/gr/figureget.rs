@@ -55,37 +55,32 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
     true
 }
 
-/// The backdrop's process and the objects' destroy callbacks, which do nothing.
-// Ports grFigureGet_802196E8; aliased once a check reaches it.
-// Ports grFigureGet_802196EC; aliased once a check reaches it.
-// Ports grFigureGet_80219B0C; aliased once a check reaches it.
+/// The backdrop's process and the objects' destroy callbacks (dead, `ledger/dead.txt`), which
+/// do nothing.
+#[doc(alias = "grFigureGet_802196E8")]
 pub fn empty(_r: &mut Running, _gobj: GObjId) {}
 
-/// The objects' predicates (`callback1`), which nothing calls and answer false.
-// Ports grFigureGet_802196E0; aliased once a check reaches it.
-// Ports grFigureGet_80219890; aliased once a check reaches it.
+/// The objects' predicates (`callback1`), which nothing calls and answer false (dead,
+/// `ledger/dead.txt`).
 pub fn answers_false(_gobj: GObjId) -> bool {
     false
 }
 
 /// The stage's `callback4`, `grFigureGet_802195C4`: false.
-// Ports grFigureGet_802195C4; aliased once a check reaches it.
 pub fn callback4() -> bool {
     false
 }
 
 /// The stage's demo setup does nothing (only a cutscene's `Stage_8022532C` runs one).
-// Ports grFigureGet_OnDemoInit; aliased once a check reaches it.
 pub fn on_demo_init(_r: &mut Running) {}
 
 /// The stage's line-touch dynamics: none.
-// Ports grFigureGet_OnTouchLine; aliased once a check reaches it.
+#[doc(alias = "grFigureGet_OnTouchLine")]
 pub fn on_touch_line(_line: i32) -> Option<DataRef> {
     None
 }
 
 /// The stage's shadow check: every shadow is drawn.
-// Ports grFigureGet_OnCheckShadowRender; aliased once a check reaches it.
 pub fn check_shadow_render() -> bool {
     true
 }
