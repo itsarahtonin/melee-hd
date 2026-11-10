@@ -41,15 +41,6 @@ pub const GATES: &[Gate] = &[
         covers: &["melee/gm/gmadventure"],
     },
     Gate {
-        list: REG,
-        entry: 2,
-        what: "All-Star",
-        // Its own units are accounted for (task 23), and since its third round
-        // (m6-allstar-3/as-vh-clear) the Very Hard clear's record too: the single-player
-        // audit finds nothing left on its path. Kept until the coordinator lifts it.
-        covers: &["gmMainLib_8015D418"],
-    },
-    Gate {
         list: ONE_P,
         entry: 1,
         what: "Event Match",
@@ -151,7 +142,7 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "a 1P run's getter",
-        "only All-Star's round setup (gm_801B5324, behind the All-Star gate) asks a getter, its costumes' (gm_8018A25C)",
+        "only All-Star's round setup (gm_801B5324) asks a getter, its costumes' (gm_8018A25C), which is ported",
     ),
     (
         "reading a freed coin's block the heap gave out again",
