@@ -581,6 +581,48 @@ fn classic_clear_runs_clean_to_its_card_after() {
     );
 }
 
+/// The intros' eighth round (docs/oracle.md, "Sessions"): `m6-intros/adv-luigi`, Sarah's
+/// Adventure run (`recordings/2026-10-06_12-04-48`) with 260 reads of waiting before Mushroom
+/// Kingdom's flagpole, so the stage ends at 342 seconds left and Luigi's cutscene follows
+/// (`gm_801B45A4`), then Luigi and Peach at Peach's Castle (her later reads); and
+/// `m6-intros/stats-coin`, a coin match quit from the pause whose results screen's computer
+/// columns page through every statistic and whose human scrolls the statistics page to its end
+/// (`gm_17AD.c`'s and `gm_17BA.c`'s getters); and Classic and Adventure quit from the pause
+/// (`gm_8017D7AC`'s no contest: the mode's high score, then the menu), in their first stage
+/// (`classic-quit`, `adv-quit`) and after a stage won, with a score to keep (`classic-quit2`
+/// in the team stage, `adv-quit2` at Peach's Castle). Each clean from power-on to its trace's
+/// end with `--all --heap` and the card after the original's.
+#[test]
+fn the_eighth_rounds_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("adv-luigi", 8560),
+        ("stats-coin", 9280),
+        ("classic-quit", 2923),
+        ("adv-quit", 3151),
+        ("classic-quit2", 12284),
+        ("adv-quit2", 7744),
+    ] {
+        let card = ssbm_rs_local(&format!("lockstep/m6-intros/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/m6-intros/{name}-play.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in("m6-intros", name, &args) else {
+            return;
+        };
+        assert!(
+            out.contains(&format!(
+                "{ticks} ticks compared, no difference
+"
+            )),
+            "{name}: {out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// [`session_in`] on one of Sarah's recordings (`$SSBM_RS_LOCAL/lockstep/recordings`, each
 /// `NAME.inputs` with the card it started from, `NAME.card`, and the card it left,
 /// `NAME-play.card`), traced into `traces/session`.
