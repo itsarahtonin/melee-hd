@@ -484,6 +484,39 @@ fn the_seventh_rounds_events_run_clean_to_their_cards_after() {
     }
 }
 
+/// Event Match's eighth round (milestone 6's task 21; docs/oracle.md, "Sessions"): Event 44's
+/// third player joining (`e44-join`), Event 24's crowd cleared to its giant last Yoshi
+/// (`e24-crowd`), the event egg's clank (`e13-clank`), and two debug VS sessions with the hands
+/// played by humans (`hh-grabs`: Crazy Hand's grab mashed free of and his throw; `hn-bullets`:
+/// Master Hand's waits, the walk from his second wait, his bullets absorbed and bounced off a
+/// shield), each clean from power-on to its trace's end with `--all --heap` and the card after
+/// the original's.
+#[test]
+fn the_eighth_rounds_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("e44-join", 4591),
+        ("e24-crowd", 7199),
+        ("e13-clank", 2439),
+        ("hh-grabs", 6260),
+        ("hn-bullets", 5860),
+    ] {
+        let dir = "m6-event-8";
+        let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+        let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+        let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+        let Some(out) = session_in(dir, name, &args) else {
+            return;
+        };
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Task 26's second round (`m6-unlocks`; docs/oracle.md, "Sessions"): the Home-Run Contest's
 /// 300 m (`gm_80173B30`'s 0xBD, `hr-300`), Training's combo of 10 (`gm_80173BC4`'s 0x6D,
 /// Young Link's 12, `tr-combo10`) and Endless Melee's 100 KOs (`gm_80173C70`'s 0x4F,
