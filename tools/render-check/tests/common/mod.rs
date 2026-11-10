@@ -99,6 +99,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6ad-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6cd-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-classic-dbg/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6a3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-allstar-3/{o}.inputs")).into();
                 }
@@ -1458,6 +1461,24 @@ pub const M6AD_ADV_GIGA_VH: Game = Game {
     name: "m6ad-adv-giga-vh",
     players: "Adventure from Final Destination as Fox on Very Hard (session m6-adventure-dbg/adv-giga-vh)",
     replay: Replay::Session("m6ad-adv-giga-vh"),
+};
+
+/// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`,
+/// debug level 3): Crazy Hand's arrival, both hands on the boss stage and the clear screen.
+pub const M6CD_CL_VH_CH: Game = Game {
+    stage: "Classic",
+    name: "m6cd-cl-vh-ch",
+    players: "Classic's boss stage as Fox on Very Hard, Crazy Hand arriving (session m6-classic-dbg/cl-vh-ch)",
+    replay: Replay::Session("m6cd-cl-vh-ch"),
+};
+
+/// Classic's boss stage on Easy from the debug menu (`m6-classic-dbg/cl-easy-bullet`): Master
+/// Hand past 150% with his fast bullets.
+pub const M6CD_CL_EASY_BULLET: Game = Game {
+    stage: "Classic",
+    name: "m6cd-cl-easy-bullet",
+    players: "Classic's boss stage as Fox on Easy, Master Hand's fast bullets (session m6-classic-dbg/cl-easy-bullet)",
+    replay: Replay::Session("m6cd-cl-easy-bullet"),
 };
 
 /// All-Star's intro from the debug mode (`m6-oracle/intro-allstar`): Captain Falcon asleep.

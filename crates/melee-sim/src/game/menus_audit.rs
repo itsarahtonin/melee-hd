@@ -174,7 +174,7 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "the VS scene's enter data in game mode",
-        "a VS scene runs in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the other modes with one are the single-player modes behind GATES",
+        "a VS scene runs in VS mode, the Special Melee modes, Camera Mode, the Home-Run Contest, a challenger's approach, the debug VS mode, Tournament Melee and the attract match; the other modes with one are the 1P modes (Classic, Adventure, All-Star, Event Match, the Target Test, Training, Multi-Man Melee) and the debug menu's, each answered (Classic's and Adventure's since milestone 6's tasks 22 and 24, the debug rounds)",
     ),
     (
         "the mode override",
@@ -202,7 +202,7 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "a match's exit data in game mode",
-        "a match exits in VS mode, the Special Melee modes, Camera Mode, Tournament Melee and the attract match, each ported; the rest are the single-player modes'",
+        "a match exits in VS mode, the Special Melee modes, Camera Mode, the Home-Run Contest, a challenger's approach, the debug VS mode, Tournament Melee and the attract match; the rest are the 1P modes' (Classic, Adventure, All-Star, Event Match, the Target Test, Training, Multi-Man Melee) and the debug menu's, each answered (Classic's and Adventure's since milestone 6's tasks 22 and 24, the debug rounds)",
     ),
     (
         "gm_SetupHumanResultsScreen for match kind",
@@ -246,11 +246,11 @@ pub const STOPS: &[(&str, &str)] = &[
     ),
     (
         "a single-player route's callback",
-        "the single-player modes' end callbacks but the arenas' two: the entries behind GATES lead to them",
+        "never runs: the only route callbacks installed (by fn_80169434, whose one caller gm_801674C4 is called only by grkinokoroute.c, grshrineroute.c and gricemt.c) are grKinokoRoute_80208480, grShrineRoute_8020AD24 and fn_801FA4CC, each answered (milestone 6's task 24, the debug route)",
     ),
     (
         "a 1P run's ratio getter",
-        "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
+        "never runs: the runs that set a ratio getter are Classic's (gm_Mode_Classic_OnLoad's eleven, classic::ratio_percent), Adventure's (gm_Mode_Adventure_OnLoad's eleven, adventure::ratio_percent) and All-Star's four here, each answered (milestone 6's tasks 22 and 24, the debug rounds)",
     ),
     (
         "HUD colour {c} past the table",

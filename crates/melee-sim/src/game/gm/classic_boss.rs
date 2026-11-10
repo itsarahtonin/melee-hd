@@ -12,7 +12,7 @@ pub const PROC: u32 = 0x8017_C1A4;
 
 /// `Gm_PKind_Cpu`, `CKind_CrezyH`.
 const PKIND_CPU: u8 = 1;
-const CKIND_CREZYH: i8 = 0x1E;
+pub(crate) const CKIND_CREZYH: i8 = 0x1E;
 /// Master Hand's and Crazy Hand's slots, and the player's.
 const SLOT_PLAYER: i32 = 0;
 const SLOT_CRAZY: i32 = 1;
@@ -59,7 +59,7 @@ impl Running<'_> {
 
     /// Crazy Hand joins in slot 1, `fn_8017C0C8`: a computer player with Master Hand's
     /// level, kind and ratios, one stock, on team 4, with Master Hand's stamina.
-    // Ports `fn_8017C0C8`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "fn_8017C0C8")]
     fn classic_crazy_hand_joins(&mut self) {
         let mut p = super::vs_mode::player_defaults();
         p.slot_type = PKIND_CPU;

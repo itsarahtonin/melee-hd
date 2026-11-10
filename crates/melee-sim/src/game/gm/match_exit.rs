@@ -14,6 +14,9 @@ pub const OUTCOME_RETRY: u8 = 8;
 /// `Gm_PKind_Human`, `Gm_PKind_NA`.
 const PKIND_HUMAN: i32 = 0;
 const PKIND_NA: u8 = 3;
+/// `CKind_CrezyH` (a character kind: Crazy Hand's fighter kind, `Ft_Kind_CrezyH`, is 0x1C,
+/// and Master Hand's 0x1B), the computer Crazy Hand whose match Classic's results mark.
+const CKIND_CREZYH: i32 = super::classic_boss::CKIND_CREZYH as i32;
 
 /// `MatchExitInfo` (`EndMeleeData`): a match scene's exit data, what the mode's states read
 /// once it ends: the single-player run's value or the rules' `x18`, the timer's seconds,
@@ -338,7 +341,7 @@ impl Running<'_> {
         }
         for i in 0..6 {
             if self.game.player_pkind(i) == super::super::pl::player::PKIND_CPU
-                && self.game.player_ckind(i) == 0x1B
+                && self.game.player_ckind(i) == CKIND_CREZYH
             {
                 r._x448[0] |= 0x01;
                 return;
@@ -367,6 +370,41 @@ impl Running<'_> {
                 d.x0[j as usize] = earned;
                 d.x104[j as usize] = points;
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::pl::player::PKIND_CPU;
+
+    /// The flag `x448[0].b0` Classic's results give a match with a computer Crazy Hand
+    /// (`fn_8017EDDC`'s arrival, `fn_8017C0C8`'s slot 1), by his character kind, and not for
+    /// Master Hand's fighter kind (0x1B), which the port once tested.
+    #[test]
+    fn classic_results_mark_a_computer_crazy_hand() {
+        let data = melee_data::archive::Archives::default();
+        for (ckind, pkind, flag) in [
+            (0x1E, PKIND_CPU, 1),
+            (0x1B, PKIND_CPU, 0),
+            (0x1A, PKIND_CPU, 0),
+            (0x1E, PKIND_HUMAN, 0),
+        ] {
+            let mut game = Game::default();
+            game.players[1].ckind = ckind;
+            game.players[1].pkind = pkind;
+            let mut r = MatchEnd::default();
+            Running {
+                game: &mut game,
+                data: &data,
+            }
+            .classic_results(&mut r);
+            assert_eq!(
+                r._x448[0] & 1,
+                flag,
+                "character kind {ckind:#x}, kind {pkind}"
+            );
         }
     }
 }

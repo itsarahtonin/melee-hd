@@ -1603,7 +1603,7 @@ pub fn proc_react(r: &mut Running, gobj: GObjId) {
 
 /// Every item's `xDC8` flag 3 set (`it_8026B724` on each), `it_8026C3FC`: the hands'
 /// slowdown for Crazy Hand's arrival.
-// Ports `it_8026C3FC` (Crazy Hand's arrival); aliased once a check reaches it.
+#[doc(alias = "it_8026C3FC")]
 pub fn flag_all_x3(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
@@ -1613,7 +1613,7 @@ pub fn flag_all_x3(game: &mut Game) {
 }
 
 /// Every item's `xDC8` flag 3 cleared, `it_8026C42C`, and flag 5 set where flag 7 is.
-// Ports `it_8026C42C` (Crazy Hand's arrival); aliased once a check reaches it.
+#[doc(alias = "it_8026C42C")]
 pub fn unflag_all_x3(game: &mut Game) {
     let mut cur = game.world.first_in(super::P_LINK_ITEM);
     while let Some(g) = cur {
