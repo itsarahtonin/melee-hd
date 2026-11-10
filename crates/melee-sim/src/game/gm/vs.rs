@@ -1249,7 +1249,7 @@ impl Running<'_> {
     /// A fighter out of play, `gm_80167320`: back on the respawn platform for its next stock;
     /// out of the match with no stock left; a joiner's slot leaves (its fighters freed, the
     /// slot empty, its costume in the joiners' list -1, `fn_80169550`). The joiners' leaving
-    /// as the first player falls isn't ported.
+    /// as the first player falls isn't ported: it never runs (`menus_audit::STOPS` says why).
     #[doc(alias = "gm_80167320")]
     #[doc(alias = "fn_80169550")]
     pub fn fighter_out_of_play(&mut self, slot: i32, sub: bool) {

@@ -1201,9 +1201,10 @@ impl Running<'_> {
 
     /// The three Kirbys' cutscene's entry, `gm_801B4974`: the player's character and costume
     /// as `gm_801B4430` gives them, the team Kirby's joiners set up, and the cutscene's
-    /// Kirbys: the first joiner's costume and three of their copies.
+    /// Kirbys: the first joiner's costume and three of their copies (`gm_80169540`'s list).
     #[doc(alias = "gm_801B4974")]
     #[doc(alias = "gm_8017BE8C")]
+    #[doc(alias = "gm_80169540")]
     pub fn adventure_enter_kirbys(&mut self) {
         self.adventure_enter_cutscene();
         let id = self.game.machine.routing.curr_state_id;
@@ -1361,7 +1362,7 @@ impl Running<'_> {
 
     /// Giga Bowser's match's exit, `gm_801B50C4`: no stock lost in it marked (`x78`), then
     /// the stage marked and the run's exit.
-    // Ports gm_801B50C4; aliased once a check reaches it.
+    #[doc(alias = "gm_801B50C4")]
     pub fn adventure_exit_giga(&mut self) {
         let run = &self.game.one_player.adventure.base;
         let e = &self.game.one_player.match_exit;
@@ -1376,7 +1377,7 @@ impl Running<'_> {
     }
 
     /// Giga Bowser's defeat's cutscene's exit, `gm_801B518C`: Adventure's clear.
-    // Ports gm_801B518C; aliased once a check reaches it.
+    #[doc(alias = "gm_801B518C")]
     pub fn adventure_exit_giga_defeated(&mut self) {
         self.adventure_clear();
     }
