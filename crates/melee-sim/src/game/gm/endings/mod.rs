@@ -247,8 +247,8 @@ impl Running<'_> {
     #[doc(alias = "gm_Mode_ClassicGOver_OnLoad")]
     // All-Star's (task 23's alias, allstar-clear's ending).
     #[doc(alias = "gm_Mode_AllstarGOver_OnLoad")]
-    // Ports gm_Mode_AdventureGOver_OnLoad too; aliased once a check reaches it (Adventure's
-    // ending, task 24's).
+    // Adventure's (task 24's, 2026-10-06_12-04-48's ending).
+    #[doc(alias = "gm_Mode_AdventureGOver_OnLoad")]
     pub fn gover_on_load(&mut self, n: u8) {
         let o = &self.game.one_player;
         let run = match n {

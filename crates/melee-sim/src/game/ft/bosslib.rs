@@ -33,7 +33,7 @@ const PKIND_BOSS: i32 = 4;
 
 impl Running<'_> {
     /// Nothing, `ftBossLib_8015BD20`: a human-played hand's input callback.
-    // Ports `ftBossLib_8015BD20`; aliased once a check reaches it.
+    #[doc(alias = "ftBossLib_8015BD20")]
     pub fn boss_nop(&mut self, _gobj: GObjId) {}
 
     /// The frames until a hand's next attack, `ftBossLib_8015BD24`: `(base / level +

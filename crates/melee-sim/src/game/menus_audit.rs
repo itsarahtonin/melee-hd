@@ -269,10 +269,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "Classic's and Adventure's runs' tables (All-Star's are ported): the single-player modes', which only the entries behind GATES lead to",
     ),
     (
-        "gm_8017D7AC's records after a no contest",
-        "a 1P run's match left by the pause's no contest or a retry: the single-player modes', which only the entries behind GATES lead to",
-    ),
-    (
         "HUD colour {c} past the table",
         "no caller passes a colour past the table's nine",
     ),

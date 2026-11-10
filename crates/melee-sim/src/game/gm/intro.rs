@@ -565,7 +565,7 @@ impl Running<'_> {
 
     /// `fn_80186080`: a bonus stage's title, `SdIntro.dat`'s text for its game type and the
     /// saved language.
-    // Ports fn_80186080; aliased once a check reaches it (a bonus stage's intro).
+    #[doc(alias = "fn_80186080")]
     fn intro_easy_title(&mut self) {
         let canvas = self.add_canvas(0, None, 9, 0x14, 0, 0xE, 0, 0x12);
         self.load_font_named(0, "SdIntro.dat", "SIS_IntroData");
@@ -746,8 +746,8 @@ impl Running<'_> {
     /// character's place and the side's count (the giant stage's own tables).
     #[doc(alias = "fn_8018325C")]
     #[doc(alias = "fn_801849E0")]
-    // Ports fn_80184A04 and fn_80184A28 (the second and third places); aliased once a check
-    // reaches them.
+    #[doc(alias = "fn_80184A04")]
+    #[doc(alias = "fn_80184A28")]
     pub fn intro_easy_ally_proc(&mut self, gobj: GObjId, i: usize) {
         let s = self.game.intros.easy;
         let root = self.root_jobj(gobj);
@@ -811,8 +811,9 @@ impl Running<'_> {
     /// place, which moves it too).
     #[doc(alias = "fn_80184138")]
     #[doc(alias = "fn_80184A4C")]
-    // Ports fn_80184A70 and fn_80184A94 (the second and third places); aliased once a check
-    // reaches them.
+    #[doc(alias = "fn_80184A70")]
+    // Ports fn_80184A94 (the third place); aliased once a check reaches it (no Classic intro
+    // in classic-clear shows three opponents).
     pub fn intro_easy_enemy_proc(&mut self, gobj: GObjId, i: usize) {
         let s = self.game.intros.easy;
         let root = self.root_jobj(gobj);
