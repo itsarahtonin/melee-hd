@@ -833,7 +833,6 @@ pub const MISSING: &[Gap] = &[
             "the VS scene's enter data in game mode",
             "a match's exit data in game mode",
             "a 1P run's ratio getter",
-            "gm_8017D7AC's records after a no contest",
             "a single-player route's callback",
         ],
         // Not Event Match: gm_17C0's left are the 1P stage setups' match hooks and
