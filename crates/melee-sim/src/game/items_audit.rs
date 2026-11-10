@@ -488,8 +488,22 @@ pub const UNCHECKED: &[&str] = &[
     "melee/ft/kinds/ftCommon/ftCo_Barrel",
 ];
 
-/// What an items-on match reaches that isn't ported, task by task: nothing left.
-pub const MISSING: &[ItemGap] = &[];
+/// What an items-on match reaches that isn't ported, task by task.
+pub const MISSING: &[ItemGap] = &[ItemGap {
+    // docs/melee-bugs.md, "A dropped fan lands or vanishes by a word it never sets": an item
+    // block carved from a freed copy buffer holds the GPU's pixels, which the simulation
+    // doesn't have. The copies known nonzero are modeled (a fighter's shadow: Training's
+    // computer players, Multi-Man's joiners; the results screen's RGB5A3 images before the
+    // next VS match); the others still stop (the magnifier's bubbles, Fountain of Dreams'
+    // reflection, Pokémon Stadium's screens, the 1P clear screen's and the trophy fall's
+    // copies, Camera Mode's snapshot), as does any copy under the Slippi ruleset whose bytes
+    // from before it the image doesn't know.
+    what: "a dropped fan whose block held the GPU's pixels of a copy not known nonzero",
+    covers: &["a dropped fan's landing reading its unset xD4C over the GPU's pixels"],
+    kinds: &[0x18],
+    with: &[],
+    stages: &[],
+}];
 
 #[cfg(test)]
 mod tests {

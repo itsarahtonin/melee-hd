@@ -13,6 +13,9 @@ use crate::fpu::{mem, reg};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
+/// `Item.xD4C`'s offset in the item's block.
+const XD4C: u32 = 0xD4C;
+
 pub const SPAWNED: u32 = 0x8029_285C;
 pub const ANIM0: u32 = 0x8029_28D4;
 pub const PHYS0: u32 = 0x8029_28DC;
@@ -173,15 +176,74 @@ pub fn dropped(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 8, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
 
-/// `itHarisen_UnkMotion8_Coll`: dropped, with charges left it lands; empty, it falls
-/// through, gone once it's past the stage.
+/// `itHarisen_UnkMotion8_Coll`: dropped, it lands if its `xD4C` (the shooting items' ammo)
+/// is set, else it's gone at the first floor. No fan code writes the word, so it holds what
+/// the item's block held before (docs/melee-bugs.md). Where that is the GPU's pixels, which
+/// the simulation doesn't have, what is known of the copy decides it ([`Pixels`]): every byte
+/// of a fighter's shadow is nonzero (a white background, the fighter in its stage's
+/// intensity, at least 105, copied to 4 bits a texel) and so is each texel's first byte of the
+/// results screen's RGB5A3 images (opaque: the EFB has no alpha), so the word is; under the
+/// debug display's shadow volumes it is zero, the image's fill (docs/engine.md, "A fan over
+/// the GPU's pixels"). Any other copy's pixels stop by name. Where the copies don't reach
+/// memory (Slippi's Dolphin), the word is what memory held before them.
+///
+/// [`Pixels`]: crate::hsd::image::Pixels
 #[doc(alias = "itHarisen_UnkMotion8_Coll")]
 pub fn coll8(r: &mut Running, gobj: GObjId) -> bool {
-    if item(r.game, gobj).xD4C != 0 {
+    if landing_word_set(r, gobj) {
         fall(r, gobj, landed);
         return false;
     }
     air(r, gobj)
+}
+
+/// Whether the dropped fan's `xD4C` is nonzero, as [`coll8`] reads it.
+fn landing_word_set(r: &Running, gobj: GObjId) -> bool {
+    let slot = super::super::item_of(r.game, gobj).0;
+    let pixels: Vec<bool> = (XD4C..XD4C + 4)
+        .map(|o| {
+            r.game
+                .it
+                .render_leftovers
+                .get(&slot)
+                .is_some_and(|runs| runs.iter().any(|&(a, b)| a <= o && o < b))
+        })
+        .collect();
+    if pixels.iter().any(|&p| p) && !r.game.copies_reach_memory() {
+        let at = r.game.items.addr(slot) + XD4C;
+        let (before, known) = crate::hsd::heap::with(|h| h.image.pre_copy_bytes(r.data, at, 4))
+            .unwrap_or_else(|| (vec![0; 4], vec![false; 4]));
+        let ours = item(r.game, gobj).xD4C.to_be_bytes();
+        let mut word = [0; 4];
+        for (i, w) in word.iter_mut().enumerate() {
+            *w = if !pixels[i] {
+                ours[i]
+            } else if known[i] {
+                before[i]
+            } else {
+                crate::game::code::unported_call(
+                    "a dropped fan's landing reading its unset xD4C over the GPU's pixels (unknown bytes before the copy)",
+                );
+            };
+        }
+        return word != [0; 4];
+    }
+    if pixels.iter().any(|&p| p) {
+        let at = r.game.items.addr(slot) + XD4C;
+        let copied = crate::hsd::heap::with(|h| h.image.copied_pixels(at, 4))
+            .unwrap_or_else(|| vec![None; 4]);
+        let known = |i: usize| copied[i].and_then(|p| p.nonzero(at + i as u32));
+        let bytes = || (0..4).filter(|&i| pixels[i]).map(known);
+        if bytes().any(|b| b == Some(true)) {
+            return true;
+        }
+        if bytes().any(|b| b.is_none()) {
+            crate::game::code::unported_call(
+                "a dropped fan's landing reading its unset xD4C over the GPU's pixels (a copy not known nonzero)",
+            );
+        }
+    }
+    item(r.game, gobj).xD4C != 0
 }
 
 /// Thrown, `itHarisen_Logic24_Thrown`.

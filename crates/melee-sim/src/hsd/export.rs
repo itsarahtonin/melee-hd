@@ -295,11 +295,8 @@ impl Lay {
             let j = (i..self.pixels.len())
                 .find(|&j| !self.pixels[j])
                 .unwrap_or(self.pixels.len());
-            img.hold(
-                self.at + i as u32,
-                self.at + j as u32,
-                super::image::Src::RenderTarget,
-            );
+            // The copy's kind the image holds under them stays (a shadow's).
+            img.hold_kept_pixels(self.at + i as u32, self.at + j as u32);
             i = j;
         }
         let mut i = 0;

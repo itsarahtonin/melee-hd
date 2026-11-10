@@ -256,22 +256,34 @@ pub fn start_render(
 
 /// Copies the render into the shadow's texture, allocating its image first if it has none,
 /// and makes the texture's projection from the camera, `HSD_ShadowEndRender` (with the
-/// static `makeMatrix`).
+/// static `makeMatrix`). `volume`: the render drew the shadow camera's volume over it all
+/// (`lbShadow_8000F214`, the debug display's).
 #[doc(alias = "HSD_ShadowEndRender")]
-pub fn end_render(objs: &mut Objects, s: ShadowId) {
+pub fn end_render(objs: &mut Objects, s: ShadowId, volume: bool) {
     let img = objs.shadows[s.0].image;
     if !img.allocated {
         set_size(objs, s, img.width, img.height);
     }
     objs.display.draws.push(super::display::Draw::ShadowCopy(s));
     // The GPU's pixels in the texture's buffer, which the simulation never reads: for the heap's
-    // image, a render target (docs/engine.md, "Uninitialized values").
+    // image, a render target (docs/engine.md, "Uninitialized values"). Each byte is known to be
+    // nonzero, or zero under the volume, once `HSD_ShadowStartRender` drew (its joints) and the
+    // fighter's intensity leaves every texel at least 1 (docs/engine.md, "The GPU's pixels").
     let sh = &objs.shadows[s.0];
     if sh.image_addr != 0 {
         let size =
             super::heap::tex_buffer_size(u32::from(sh.image.width), u32::from(sh.image.height), 0);
         let at = sh.image_addr;
-        super::heap::with(|h| h.image.hold(at, at + size, super::image::Src::RenderTarget));
+        let src = if sh.objects.is_empty() || (!volume && sh.intensity < 0x10) {
+            super::image::Src::RenderTarget
+        } else {
+            super::image::Src::Copied(if volume {
+                super::image::Pixels::ShadowVolume
+            } else {
+                super::image::Pixels::Shadow
+            })
+        };
+        super::heap::with(|h| h.image.hold(at, at + size, src));
     }
     let sh = &objs.shadows[s.0];
     let c = sh.camera.expect("a shadow without a camera");

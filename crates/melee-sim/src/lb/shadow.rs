@@ -181,7 +181,7 @@ impl Running<'_> {
             if draw_volume {
                 self.game.objs.display.draws.push(Draw::ShadowVolume(s));
             }
-            shadow::end_render(&mut self.game.objs, s);
+            shadow::end_render(&mut self.game.objs, s, draw_volume);
         }
         self.show_low_models();
     }
