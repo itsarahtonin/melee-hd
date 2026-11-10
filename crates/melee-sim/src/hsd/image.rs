@@ -955,37 +955,57 @@ impl Image {
     }
 
     /// What `[lo, hi)` holds as a new object's block reads it ([`Image::leftover_bytes`]): the
-    /// runs cut to it, by start, `None` where none is (zero).
+    /// runs cut to it, by start, `None` where none is (zero). The layers fill it from the top
+    /// (the live blocks' writes, the overlay, the base), each only where those above left a
+    /// gap, so a range over many runs (the 1P clear screen's 600 KB copy) costs one pass.
     fn view(&self, lo: u32, hi: u32) -> Vec<(u32, u32, Option<Src>)> {
-        let mut view: Vec<(u32, u32, Option<Src>)> = vec![(lo, hi, None)];
-        let mut paint = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+        let mut out: Vec<(u32, u32, Option<Src>)> = Vec::new();
+        let mut gaps = vec![(lo, hi)];
+        let mut fill = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+            let mut left = Vec::with_capacity(gaps.len());
+            let mut i = 0;
+            let mut cur = gaps.first().copied();
             for (k, s) in runs {
-                let (a, b) = (k.max(lo), s.end.min(hi));
-                if a >= b {
-                    continue;
-                }
-                let mut out = Vec::with_capacity(view.len() + 2);
-                for (x, y, src) in view.drain(..) {
-                    if y <= a || x >= b {
-                        out.push((x, y, src));
+                // The gaps before the run stay gaps; those it covers fill, in part or whole.
+                while let Some((a, b)) = cur {
+                    if b <= k {
+                        left.push((a, b));
+                        i += 1;
+                        cur = gaps.get(i).copied();
                         continue;
                     }
-                    if x < a {
-                        out.push((x, a, src.clone()));
+                    if a >= s.end {
+                        break;
                     }
-                    if y > b {
-                        out.push((b, y, src.map(|v| v.advance(b - x))));
+                    let (x, y) = (a.max(k), b.min(s.end));
+                    if a < x {
+                        left.push((a, x));
                     }
+                    out.push((x, y, Some(s.src.advance(x - k))));
+                    if y < b {
+                        // The run ends inside the gap: the rest waits for the next run.
+                        cur = Some((y, b));
+                        break;
+                    }
+                    i += 1;
+                    cur = gaps.get(i).copied();
                 }
-                out.push((a, b, Some(s.src.advance(a - k))));
-                out.sort_by_key(|p| p.0);
-                view = out;
+                if cur.is_none() {
+                    break;
+                }
             }
+            if let Some(c) = cur {
+                left.push(c);
+                left.extend_from_slice(&gaps[i + 1..]);
+            }
+            gaps = left;
         };
-        paint(&mut self.base.range(lo, hi));
-        paint(&mut self.overlay.range(lo, hi));
-        paint(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
-        view
+        fill(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
+        fill(&mut self.overlay.range(lo, hi));
+        fill(&mut self.base.range(lo, hi));
+        out.extend(gaps.into_iter().map(|(a, b)| (a, b, None)));
+        out.sort_by_key(|p| p.0);
+        out
     }
 
     /// Keeps what `[lo, hi)` holds, as a new object's block reads it, as the bytes from before
