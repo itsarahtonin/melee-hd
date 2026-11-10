@@ -107,16 +107,6 @@ use Mode::{
     MultiMan as MM, TargetTest as TT, Training as TR,
 };
 
-/// The single-player modes whose matches `gm_16A2`'s single-player setups make: all but
-/// Training and the Stadium's Home-Run Contest, Target Test and Multi-Man Melee, whose paths
-/// their own entries hold to the code ([`PATHS`]' unreached): each of those matches is set up
-/// by its mode's own entry, not the single-player setups, and has no results or clear screens;
-/// the contest and Training keep no stocks, and their records are their own, ported.
-const SETUP_MODES: &[Mode] = &[EV, CL, AS, AD];
-/// The 1P runs (Classic, All-Star, Adventure): [`SETUP_MODES`] without Event Match, for the
-/// gaps no event reaches (each gap says why).
-const ONE_P_RUNS: &[Mode] = &[CL, AS, AD];
-
 /// Target Test's units: the targets and the 26 target stages (`grt*.c`, one template).
 const TARGET_TEST: &[&str] = &[
     "melee/it/kinds/itmato",
@@ -806,15 +796,23 @@ pub const MISSING: &[Gap] = &[
         // VS scene; 0x14 after a won event, for a trophy's notice or a challenger and its
         // match; the main menu) each have their states, loads and scenes (gm/machine.rs's
         // EVENT, CHALLENGER, MENU), checked by its sessions (docs/oracle.md); the
-        // `Hook::Unported1P` hooks are Classic's, All-Star's and Adventure's coming soon.
-        modes: &[CL, AS, AD, DB],
+        // `Hook::Unported1P` hooks are Classic's, All-Star's and Adventure's coming soon. Not
+        // All-Star (task 23's third round): its modes (0x05 with the one-door select, the VS
+        // scene for its rounds and rest areas and its game over 0x69; 0x17 after a clear, the
+        // trophy fall, staff roll and congratulations; 0x14 after it; the main menu) each have
+        // their states, loads and scenes (gm/machine.rs's ALLSTAR, GOVER, CHALLENGER, MENU),
+        // checked by its sessions (recordings/allstar-clear, m6-allstar-3/as-vh-clear,
+        // m6-1p-setups/as-over), and its one unported hook is its coming soon state's exit
+        // gm_801B607C, which ledger/dead.txt shows never runs.
+        modes: &[CL, AD, DB],
     },
     Gap {
         what: "the one-door character select",
         covers: &["mnCharSel_8025C020"],
         // Not Event Match: the records stop is for match types without a case, and Event
-        // Match's (`EVENT_MATCH`, mn/charsel/one_door.rs) has one.
-        modes: ONE_P_RUNS,
+        // Match's (`EVENT_MATCH`, mn/charsel/one_door.rs) has one. Not All-Star either (task
+        // 23's third round): its match type, `REG_ALLSTAR`, has one.
+        modes: &[CL, AD],
     },
     Gap {
         what: "the single-player matches' setup (teams, hordes, a leaving slot, the stage setups)",
@@ -829,8 +827,12 @@ pub const MISSING: &[Gap] = &[
         // gm_8017CBAC, gm_18A1's All-Star's ratio getters, none an event's (an event's match
         // takes its rules from gm_801BC00C, its clear is gm_801BC4F4 and no results screen
         // follows); the stops are the 1P runs' own (gm/one_player_match.rs, gm/opponents.rs's
-        // routes) or a mode's whose enter and exit data Event Match has.
-        modes: ONE_P_RUNS,
+        // routes) or a mode's whose enter and exit data Event Match has. Not All-Star (task
+        // 23's third round): gm_17C0's one left, fn_8017C0C8, is Classic's boss stage's
+        // (fn_8017C1A4, Crazy Hand's arrival); All-Star's mode has its enter and exit data
+        // (gm/machine.rs, gm/match_exit.rs), its ratio getters are its own four, ported
+        // (gm_8018A188, gm_8018A1D8, gm_8018A2C4, gm_8018A314), and the routes are Adventure's.
+        modes: &[CL, AD],
     },
     Gap {
         what: "the Kirbys' team's costumes (gm_80169540, read inline)",
@@ -838,15 +840,6 @@ pub const MISSING: &[Gap] = &[
         // Only gmadventure.c calls it (the three Kirbys' cutscene and team, gm_801B4974 and
         // gm_801B4B28).
         modes: &[AD],
-    },
-    Gap {
-        what: "a horde joining metal (fn_8016A450)",
-        covers: &["fn_8016A450"],
-        // Not Classic or Adventure (the intros' eighth round): only gm_8017CE34 calls it, for
-        // a stage whose run flags (x8) hold both the horde's 8 and the metal 4, and no entry
-        // of Classic's stage list (gmClassic_803DDEC8: the horde stage 0x08, the metal stage
-        // 0x04) or Adventure's (gm_803DE650) holds both; All-Star's are its own task's.
-        modes: &[AS],
     },
     Gap {
         what: "a horde's players leaving their slots",
@@ -858,21 +851,21 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
-        covers: &["gm_8016F00C", "gm_GetCurrentSceneEnterData"],
-        modes: SETUP_MODES,
+        covers: &["gm_8016F00C"],
+        // Not All-Star (task 23's third round): only Event Match's gm_801BCAF0 calls
+        // gm_8016F00C.
+        modes: &[EV, CL, AD],
     },
     Gap {
         what: "the 1P records and saves",
-        covers: &[
-            "gmMainLib_8015D1C8",
-            "gmMainLib_8015D2F0",
-            "gmMainLib_8015D418",
-            "gm_801647F8",
-        ],
+        covers: &["gmMainLib_8015D1C8", "gmMainLib_8015D2F0", "gm_801647F8"],
         // Not Event Match: the gmMainLib getters are called only by gm_17C0.c's 1P stage
         // setups, fn_80160F58 only by Classic's intro (gm_1832.c), gm_801647F8 only by
-        // gmclassic.c and gmmultiman.c; an event keeps its own records (gm_801BC4F4).
-        modes: ONE_P_RUNS,
+        // gmclassic.c and gmmultiman.c; an event keeps its own records (gm_801BC4F4). Not
+        // All-Star (task 23's third round): gmMainLib_8015D1C8 and gmMainLib_8015D2F0 are
+        // gm_8017CBAC's Classic and Adventure cases' setters, and All-Star's case writes its
+        // own (gmMainLib_8015D418, checked by m6-allstar-3/as-vh-clear).
+        modes: &[CL, AD],
     },
     // The modes' own code.
     Gap {
@@ -921,7 +914,10 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "All-Star's mode, its intro and the rest area",
         covers: &["a 1P run's getter"],
-        modes: &[AS, DB],
+        // Not All-Star itself (task 23's third round): its run's getters are the seven
+        // gm_Mode_AllStar_OnLoad sets (gm_8018A160, gm_8018A228, gm_8018A290, gm_8018A25C, x58
+        // none, gm_8018A2C4, gm_8018A314), each answered without the stop.
+        modes: &[DB],
     },
     Gap {
         what: "Adventure's mode and its intro",
@@ -971,7 +967,10 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "the cutscenes' fighters and stages",
         covers: &["demo setup", "ftDemo_CreateFighter's pose"],
-        modes: &[AD, CL, AS, DB],
+        // Not All-Star (task 23's third round): the stage demo setups (Stage_8022532C) and
+        // the poses from 9 are the cutscenes' (vi/), which All-Star never enters; its demo
+        // fighters are the trophy fall's pose 7 and the debug intro's 6.
+        modes: &[AD, CL, DB],
     },
     // The ends of a run.
     Gap {
@@ -982,7 +981,9 @@ pub const MISSING: &[Gap] = &[
         // states enter, Classic's 104 and Adventure's 0x68 (and All-Star's 0x68, and the debug
         // mode's state 8), and those two are entered only after a last state whose exit always
         // names the next mode (gmClassic_801B3F18 and gm_801B4408 in ledger/dead.txt say how).
-        modes: &[AS, DB],
+        // Not All-Star (task 23's third round): its 0x68 likewise (gm_801B607C in
+        // ledger/dead.txt).
+        modes: &[DB],
     },
     // The developer setting's debug routes.
     Gap {
@@ -998,7 +999,6 @@ pub const MISSING: &[Gap] = &[
             "un_80301B48",
             "un_80301028",
             "un_80301074",
-            "un_803010C0",
             "un_80301D7C",
         ],
         modes: &[DB],

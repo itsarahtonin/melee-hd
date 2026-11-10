@@ -18,7 +18,6 @@ gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its ca
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D2F0	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
-gmMainLib_8015D418	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015DB00	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB0C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB18	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -27,7 +26,6 @@ gmMainLib_GetUnlockedCharactersBitmaskPtr	unchecked	a getter or setter of the ga
 fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 fn_80166CBC	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_80169540	gated	named only by the single-player modes' code (gm_801B4974, gm_801B4B28): the single-player modes', which only the 1P list's gated entries lead to
-fn_8016A450	gated	named only by the single-player modes' code (gm_8017CE34): the single-player modes', which only the 1P list's gated entries lead to
 gmVs_GetSceneController	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmVs_GetSceneState	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_GetStartMeleeRules	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
@@ -37,7 +35,6 @@ gm_8016F00C	gated	named only by the single-player modes' code (gm_801BCAF0): the
 fn_8017435C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8019D074	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_GetGameModeStateExitData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gm_GetCurrentSceneEnterData	gated	named only by the single-player modes' code (gm_801A68D8, gm_801A6EE4, gm_801A7B00): the single-player modes', which only the 1P list's gated entries lead to
 gm_Mode_Vs_OnUnload	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_HowTo_OnEnter	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it

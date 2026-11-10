@@ -382,8 +382,7 @@ impl Opponents {
         }
     }
 
-    /// `fn_8016A450`: they join metal.
-    // Ports fn_8016A450; aliased once a check reaches it.
+    /// `fn_8016A450`: they join metal. No run reaches it (ledger/dead.txt).
     pub fn set_metal(&mut self) {
         self.flags |= METAL;
     }
