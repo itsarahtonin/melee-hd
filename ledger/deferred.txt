@@ -15,7 +15,6 @@ un_80300D78	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300E74	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80300F3C	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
 un_80301028	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
-un_80301074	Named only by un_803FCC38 (the debug menu mode, 6: see onExitIntro).
 un_80301B48	Named only by un_803013EC, un_803FD58C (the debug menu mode, 6: see onExitIntro).
 un_80301BA8	Named only by onEnterIntroEasy (the debug menu mode, 6: see onExitIntro).
 un_80301D7C	Named only by un_803FDAF8 (the debug menu mode, 6: see onExitIntro).

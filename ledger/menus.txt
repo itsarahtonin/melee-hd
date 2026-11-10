@@ -5,7 +5,6 @@
 # One per line: NAME (or a unit)<TAB>gated|unreached|unchecked<TAB>why. gated: behind the
 # menus' gates (menus_audit::GATES); unreached: no path from power-on reaches it, and why;
 # unchecked: ported, its alias waiting for a check. Debug code is ledger/deferred.txt's.
-melee/gm/gm_17C0	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
 melee/gm/gmadventure	gated	the single-player modes', which only the 1P list's gated entries lead to
@@ -16,7 +15,6 @@ lbAudioAx_80027DBC	unreached	the console's reset button and the disc error scree
 gmMainLib_8015CD80	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015D1C8	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015D2F0	gated	named only by the single-player modes' code (gm_8017CBAC): the single-player modes', which only the 1P list's gated entries lead to
 gmMainLib_8015DB00	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB0C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
