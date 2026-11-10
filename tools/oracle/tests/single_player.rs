@@ -489,8 +489,9 @@ fn the_second_unlock_sessions_run_clean_to_their_cards_after() {
 /// on: the win unlocks it, the challenger approach's notice, A; `mh-attacks` presses each of
 /// his human attacks from port 3 twice (`ftMh_MS_341_80150894`), then quits from the pause.
 /// Each from power-on, clean to its trace's end with `--all --heap` and the card after the
-/// original's. `mh-15min-kongo` (the Kongo card, no laser) is clean to its stop in tick 22523,
-/// a dropped fan's landing reading the GPU's pixels (docs/melee-bugs.md).
+/// original's. `mh-15min-kongo` (the Kongo card, no laser) passes a dropped fan's landing over
+/// a shadow's pixels in tick 22580, a word no fan code sets (docs/melee-bugs.md): every byte of
+/// a shadow's copy is nonzero, so it lands, as ssbm-rs's trace has it.
 #[test]
 #[ignore = "about two hours; run with --ignored"]
 fn master_hand_by_the_name_entry_glitch() {
@@ -498,6 +499,7 @@ fn master_hand_by_the_name_entry_glitch() {
         ("mh-attacks", 15546),
         ("mh-15min", 55896),
         ("mh-15min-kongo2", 56036),
+        ("mh-15min-kongo", 56036),
     ] {
         let card = ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.card"));
         let after = ssbm_rs_local(&format!("traces/m6-multiman/{name}-play.card"));
@@ -518,16 +520,6 @@ fn master_hand_by_the_name_entry_glitch() {
         assert!(
             out.contains("the card after the session: the original's"),
             "{name}: {out}"
-        );
-    }
-    let card = ssbm_rs_local("lockstep/m6-multiman/mh-15min-kongo.card");
-    let args = ["--card", &card, "--all", "--heap"];
-    if let Some(out) = session_in("m6-multiman", "mh-15min-kongo", &args) {
-        assert!(
-            out.contains(
-                "22523 ticks compared, no difference; stopped in tick 22523: a dropped fan's landing"
-            ),
-            "{out}"
         );
     }
 }
