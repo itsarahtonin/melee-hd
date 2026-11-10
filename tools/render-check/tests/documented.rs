@@ -43,7 +43,10 @@ use common::{
 
 // All-Star's Very Hard clear (docs/player.md, "All-Star's Very Hard clear").
 use common::M6A3_AS_VH_CLEAR;
+
+// Adventure's Giga Bowser path and Classic's Very Hard clear with Crazy Hand (docs/player.md).
 use common::M6AD_ADV_GIGA_VH;
+use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
 use common::{E5_EV13_EGG3, E8_E24_CROWD, E8_HH_GRABS, REC_MH_MASH};
@@ -541,6 +544,54 @@ fn m6ad_adv_giga_vh_4700() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn m6ad_adv_giga_vh_5300() {
     adv_giga_vh(5300, [1182, 1182]);
+}
+// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`):
+// Crazy Hand entering the slowed match (6900, 7100), both hands fought (7400) and the clear
+// screen's tally with his bonus (8100); and Master Hand's fast bullets on Easy
+// (`cl-easy-bullet`, 12537), against captures made with ssbm-rs's renderer running: identical
+// images, every draw the same but those that sample the fighters' shadows' copies (and, on the
+// clear screen, its copy of the match's last frame, which holds them, kept on the GPU too).
+fn m6cd(game: &Game, frame: u32, same: [usize; 2]) {
+    compare_in(
+        game,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6cd_cl_vh_ch_6900() {
+    m6cd(&M6CD_CL_VH_CH, 6900, [850, 855]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6cd_cl_vh_ch_7100() {
+    m6cd(&M6CD_CL_VH_CH, 7100, [861, 863]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6cd_cl_vh_ch_7400() {
+    m6cd(&M6CD_CL_VH_CH, 7400, [2362, 2354]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6cd_cl_vh_ch_8100() {
+    m6cd(&M6CD_CL_VH_CH, 8100, [1408, 1408]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6cd_cl_easy_bullet_12537() {
+    m6cd(&M6CD_CL_EASY_BULLET, 12537, [1464, 1460]);
 }
 // All-Star's first match won (`m6-1p-setups/as-win`): the stage clear screen growing over
 // the match's blurred copy (6150), its tally with the bonus list (6250), and the screen still

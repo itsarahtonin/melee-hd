@@ -807,6 +807,33 @@ fn adventures_giga_bowser_path_runs_clean_to_its_card_after() {
     );
 }
 
+/// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
+/// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
+/// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads
+/// fight Master Hand to half his stamina, so Crazy Hand arrives (`fn_8017EDDC`, `fn_8017C1A4`'s
+/// arrival, `fn_8017C0C8`), the two hands are fought for 600 ticks, and the debug pause's quit
+/// counts as won (`gm_8017D7AC` above debug level 2): Classic's clear with the computer Crazy
+/// Hand's bonus (`fn_8017EE40`) and Very Hard's record (`gmMainLib_8015D1C8`), the trophy fall,
+/// the staff roll at six times its speed, the ending movie, congratulations and mode 0x14's
+/// start, clean to the trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn classics_very_hard_clear_with_crazy_hand_runs_clean_to_its_card_after() {
+    let after = ssbm_rs_local("traces/m6-classic-dbg/cl-vh-ch-play.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-classic-dbg", "cl-vh-ch", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("11160 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Master Hand by the character select's name entry glitch (`m6-multiman`, task 15's third
 /// round; docs/oracle.md, "Sessions"; docs/melee-bugs.md): on a card with no last character,
 /// B held with the name list open and A on "NAME ENTRY" the tick after the back request start

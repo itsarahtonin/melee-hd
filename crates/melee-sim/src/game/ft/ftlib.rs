@@ -242,13 +242,13 @@ impl Game {
     }
 
     /// The fighter's `x1988`, `ft_80087C58`.
-    // Ports `ft_80087C58`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "ft_80087C58")]
     pub fn ft_80087c58(&self, gobj: GObjId) -> i32 {
         self.fighter(gobj).x1988
     }
 
     /// Sets the fighter's `x1988`, `ft_80087C64`.
-    // Ports `ft_80087C64`; aliased once a check reaches it (Crazy Hand's arrival).
+    #[doc(alias = "ft_80087C64")]
     pub fn ft_80087c64(&mut self, gobj: GObjId, v: i32) {
         self.fighter_mut(gobj).x1988 = v;
     }
