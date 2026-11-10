@@ -2927,8 +2927,32 @@ pub enum OrbitCaller {
     /// The cutscene camera's frame, `Camera_8002E490` (its `Camera_8002E234` frame at
     /// `804EEA40`).
     Frame { callback: bool },
-    /// The jump to the targets, `Camera_8002EF14` (its frame at `804EE958`).
-    Jump { callback: bool },
+    /// The jump to the targets, `Camera_8002EF14` (its frame at `804EE958`), and what ran
+    /// last at its depth in the tick before it ([`JumpBefore`]).
+    Jump { callback: bool, before: JumpBefore },
+}
+
+/// What ran last at the jump's stack depth before it in the tick, when the interest's callback
+/// didn't (the entrance's first frame, the match's first tick): another fighter's collision
+/// after the hand's animation, or only the hand's animation.
+#[derive(Clone, Copy, Debug)]
+pub enum JumpBefore {
+    /// Another fighter's collision (`mpColl_80043754`'s `mpColl_80046904`, its register save
+    /// 2): another fighter is in the match.
+    Collision,
+    /// The hand's own animation (`HSD_FObjInterpretAnim`): no other fighter is in the match.
+    Animation,
+}
+
+impl JumpBefore {
+    /// From the fighters in the match: the hand alone, or others with it.
+    fn of(game: &Game) -> Self {
+        if game.fighters.iter().count() <= 1 {
+            JumpBefore::Animation
+        } else {
+            JumpBefore::Collision
+        }
+    }
 }
 
 /// The orbit's parts, by the stack word each reads when its script didn't set it.
@@ -2950,8 +2974,12 @@ enum OrbitWord {
 ///   interest's callback (`ftMh_MS_343_80151428`) ran, else `HSD_JObjReqAnimByFlags`'s
 ///   (`804EEA78`, from an animated model's `HSD_JObjReqAnimAll` earlier in the tick);
 /// - the jump's pitch: `ftBossLib_GetFighterGObj`'s back chain (`804EE988`) after the
-///   callback, else the collision's register save (`mpColl_80046904`, 2: the entrance's first
-///   frame, the match's first tick);
+///   callback, else (the entrance's first frame, the match's first tick) the collision's
+///   register save (`mpColl_80046904`, 2) when another fighter is in the match; and with
+///   the hand alone (a human Master Hand in a Multi-Man match, whose joiners come later:
+///   `research/m6-multiman-mh-camera`, `m6-multiman/mh-15min`'s tick 1028) the high word of
+///   his animation's integer conversion (`HSD_FObjInterpretAnim`, `0x43300000`, 176.0 radians,
+///   which turns the eye to the far side);
 /// - the jump's distance: the high word of `mpColl_8004ACE4`'s integer conversion
 ///   (`0x43300000`, 176.0).
 ///
@@ -2960,8 +2988,21 @@ fn orbit_leftover(caller: OrbitCaller, word: OrbitWord) -> f32 {
     let bits = match (caller, word) {
         (OrbitCaller::Frame { callback: true }, OrbitWord::Pitch) => 0x804E_EA70,
         (OrbitCaller::Frame { callback: false }, OrbitWord::Pitch) => 0x804E_EA78,
-        (OrbitCaller::Jump { callback: true }, OrbitWord::Pitch) => 0x804E_E988,
-        (OrbitCaller::Jump { callback: false }, OrbitWord::Pitch) => 0x0000_0002,
+        (OrbitCaller::Jump { callback: true, .. }, OrbitWord::Pitch) => 0x804E_E988,
+        (
+            OrbitCaller::Jump {
+                callback: false,
+                before: JumpBefore::Collision,
+            },
+            OrbitWord::Pitch,
+        ) => 0x0000_0002,
+        (
+            OrbitCaller::Jump {
+                callback: false,
+                before: JumpBefore::Animation,
+            },
+            OrbitWord::Pitch,
+        ) => 0x4330_0000,
         (OrbitCaller::Jump { .. }, OrbitWord::Distance) => 0x4330_0000,
         _ => unported(&format!(
             "the cutscene camera's unset orbit {word:?} from {caller:?}, a stack word no probe has seen"
@@ -3184,7 +3225,9 @@ pub fn script_jump(r: &mut Running) {
         c.transform.interest = out;
     }
     script_eye(c);
-    script_eye_step(c, OrbitCaller::Jump { callback });
+    let before = JumpBefore::of(r.game);
+    let c = &mut r.game.camera.cam;
+    script_eye_step(c, OrbitCaller::Jump { callback, before });
     c.transform.fov = copy(c.transform.target_fov);
 }
 

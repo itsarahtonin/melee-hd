@@ -151,6 +151,10 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
                 }
 
+                if name.starts_with("mh-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-multiman/{name}.inputs")).into();
+                }
+
                 if name.starts_with("hr-") {
                     return ssbm_rs_local(&format!("lockstep/m6-homerun/{name}.inputs")).into();
                 }
@@ -994,6 +998,15 @@ pub const MM_15MIN: Game = Game {
     name: "mm-15min",
     players: "Fox against 15-Minute Melee's Wire Frames (session m6-multiman/mm-15min)",
     replay: Replay::Session("mm-15min"),
+};
+
+/// Master Hand by the name entry glitch in 15-Minute Melee (`m6-multiman/mh-attacks`): his
+/// entrance with the camera behind the stage, the Wire Frames joining, his attacks from port 3.
+pub const MH_ATTACKS: Game = Game {
+    stage: "the Multi-Man stage",
+    name: "mh-attacks",
+    players: "Master Hand against 15-Minute Melee's Wire Frames (session m6-multiman/mh-attacks)",
+    replay: Replay::Session("mh-attacks"),
 };
 
 pub const RACE_LOOK: Game = Game {

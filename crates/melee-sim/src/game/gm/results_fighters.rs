@@ -326,11 +326,16 @@ impl Running<'_> {
                 y,
                 clear,
             });
+        // Every image is RGB5A3 (`results_image_alloc`) and the EFB has no alpha (RGB8: HSD's
+        // `current_pix_fmt` is never set, and no render mode Melee sets antialiases), so the
+        // copy reads alpha 255 and makes every texel opaque, its first byte's bit 7 set: no
+        // aligned word of it is zero (docs/engine.md, "The GPU's pixels").
         let (at, size) = self.game.results.fighters.buffers[usize::from(n)];
         if at != 0 {
+            use crate::hsd::image::{Pixels, Src};
             crate::hsd::heap::with(|h| {
                 h.image
-                    .hold(at, at + size, crate::hsd::image::Src::RenderTarget)
+                    .hold(at, at + size, Src::Copied(Pixels::OpaqueRgb5a3))
             });
         }
     }
