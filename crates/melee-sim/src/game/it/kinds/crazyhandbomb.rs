@@ -35,7 +35,8 @@ pub const COLL_1: u32 = 0x802F_13A8;
 pub const ACCESSORY_1: u32 = 0x802F_13B0;
 #[doc(alias = "itCrazyHandBomb_Logic86_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802F_10B4;
-// Ports `itCrazyHandBomb_Logic86_Reflected`; aliased once a check reaches it.
+// `itCrazyHandBomb_Logic86_Reflected`: dead, the bomb's boxes are never reflected
+// (ledger/dead.txt).
 pub const REFLECTED: u32 = 0x802F_10D8;
 
 /// `itCrazyHandBombAttributes`: the drop's first speed (`x0`), and its fall's acceleration

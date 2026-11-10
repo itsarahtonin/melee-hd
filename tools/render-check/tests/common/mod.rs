@@ -195,6 +195,13 @@ impl Replay {
                     return ssbm_rs_local(&format!("lockstep/celebi-sessions/{name}.inputs"))
                         .into();
                 }
+                // Event Match's fifth and eighth rounds (task 21).
+                if let Some(o) = name.strip_prefix("e5-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-event-5/{o}.inputs")).into();
+                }
+                if let Some(o) = name.strip_prefix("e8-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-event-8/{o}.inputs")).into();
+                }
                 let idle = ssbm_rs_local(&format!("lockstep/idle-sessions/{name}.inputs"));
                 let rules = ssbm_rs_local(&format!("lockstep/rules-sessions/{name}.inputs"));
                 if std::path::Path::new(&idle).exists() {
@@ -1953,6 +1960,41 @@ pub const FOUR_FD: Game = Game {
     name: "4p-fd",
     players: "Fox, Fox, Jigglypuff, Sheik (Slippi, teams)",
     replay: Replay::Slippi("2026-05/Game_20260531T174953.slp", None),
+};
+
+/// Event 13's egg broken by Yoshi's down smashes (`m6-event-5/ev13-egg3`, task 21's fifth
+/// round).
+pub const E5_EV13_EGG3: Game = Game {
+    stage: "Yoshi's Island",
+    name: "e5-ev13-egg3",
+    players: "Event 13: Yoshi breaking the event's egg (session m6-event-5/ev13-egg3)",
+    replay: Replay::Session("e5-ev13-egg3"),
+};
+
+/// Master Hand's grab mashed free of (Sarah's recording `mh-mash`, task 21's sixth round).
+pub const REC_MH_MASH: Game = Game {
+    stage: "Final Destination",
+    name: "rec-mh-mash",
+    players: "Event 50: Fox mashing free of Master Hand's grab (recording mh-mash)",
+    replay: Replay::Session("rec-mh-mash"),
+};
+
+/// Event 24's crowd cleared, its last joiner the giant Yoshi (`m6-event-8/e24-crowd`, task
+/// 21's eighth round).
+pub const E8_E24_CROWD: Game = Game {
+    stage: "Event 24's stage",
+    name: "e8-e24-crowd",
+    players: "Event 24: Ganondorf against the joining Yoshis (session m6-event-8/e24-crowd)",
+    replay: Replay::Session("e8-e24-crowd"),
+};
+
+/// The debug menu's Versus page with both hands played by humans (`m6-event-8/hh-grabs`,
+/// task 21's eighth round): Crazy Hand's grab mashed free of, and his throw.
+pub const E8_HH_GRABS: Game = Game {
+    stage: "Final Destination",
+    name: "e8-hh-grabs",
+    players: "Fox against the human-played hands (session m6-event-8/hh-grabs)",
+    replay: Replay::Session("e8-hh-grabs"),
 };
 
 /// The known differences docs/player.md's open issues list, as the dashboard names them.

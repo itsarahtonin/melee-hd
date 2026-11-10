@@ -152,22 +152,12 @@ const TARGET_TEST: &[&str] = &[
 
 /// Master Hand's units (`ftmasterhand*.c`).
 const MASTER_HAND: &[&str] = &[
-    "melee/ft/kinds/ftMasterHand/ftmasterhandthrownmasterhand",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandwait10",
-    "melee/ft/kinds/ftMasterHand/ftmasterhandwait12",
     "melee/it/kinds/itmasterhandbullet",
     "melee/it/kinds/itmasterhandlaser",
 ];
 
 /// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
-const CRAZY_HAND: &[&str] = &[
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandcapturewaitcrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandfingerbeam",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandtagcancel",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandthrowncrazyhand",
-    "melee/ft/kinds/ftCrazyHand/ftcrazyhandwait10",
-    "melee/it/kinds/itcrazyhandbomb",
-];
+const CRAZY_HAND: &[&str] = &["melee/it/kinds/itcrazyhandbomb"];
 
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
 /// them; the units every mode shares (`gm_16A2` and the rest) are [`MISSING`]'s alone.
@@ -915,7 +905,11 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "Crazy Hand",
         covers: CRAZY_HAND,
-        modes: &[CL, EV, DB],
+        // Not Event Match: the bomb's evt_unk is all that's left, and it runs only from a
+        // fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), which Event 50 never
+        // runs: it has no joiners, no player leaves, and a beaten hand stays loaded (ssbm-rs's
+        // CALLS over Sarah's recordings/ev50, both hands beaten, logs no Fighter_Unload_8006DABC).
+        modes: &[CL, DB],
     },
     Gap {
         what: "the hands' shared moves, sounds and boss stage",
