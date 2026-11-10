@@ -82,13 +82,46 @@ pub enum Src {
     /// the comparer leaves such a byte out while it still holds the fill (docs/engine.md,
     /// "Uninitialized values").
     RenderTarget,
+    /// A copy whose bytes are known well enough to say which are nonzero ([`Pixels`]): a
+    /// render target in every way [`Src::RenderTarget`] is (docs/engine.md, "The GPU's
+    /// pixels").
+    Copied(Pixels),
+}
+
+/// What is known of a copy's bytes ([`Src::Copied`]).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Pixels {
+    /// A fighter's shadow's copy into its texture (`HSD_ShadowEndRender`): every byte nonzero.
+    Shadow,
+    /// A shadow's copy under the debug display's shadow volumes: every byte zero.
+    ShadowVolume,
+    /// An RGB5A3 copy of the EFB, which has no alpha: every texel opaque, its first byte (each
+    /// even address's) with bit 7 set; the second byte unknown.
+    OpaqueRgb5a3,
+}
+
+impl Pixels {
+    /// The byte at `addr`, as far as known: nonzero (`Some(true)`), zero, or unknown.
+    pub fn nonzero(self, addr: u32) -> Option<bool> {
+        match self {
+            Pixels::Shadow => Some(true),
+            Pixels::ShadowVolume => Some(false),
+            Pixels::OpaqueRgb5a3 => addr.is_multiple_of(2).then_some(true),
+        }
+    }
 }
 
 impl Src {
+    /// Whether the bytes are the GPU's pixels ([`Src::RenderTarget`], [`Src::Copied`]).
+    pub fn is_render_target(&self) -> bool {
+        matches!(self, Src::RenderTarget | Src::Copied(_))
+    }
+
     fn advance(&self, n: u32) -> Src {
         match self {
             &Src::Unknown(o) => Src::Unknown(o),
             Src::RenderTarget => Src::RenderTarget,
+            &Src::Copied(p) => Src::Copied(p),
             &Src::File {
                 archive,
                 offset,
@@ -126,7 +159,7 @@ impl Src {
     /// The `i`th byte from the source's place, if known.
     fn byte(&self, data: &Archives, i: u32) -> Option<u8> {
         match self {
-            Src::Unknown(_) | Src::RenderTarget => None,
+            Src::Unknown(_) | Src::RenderTarget | Src::Copied(_) => None,
             &Src::File {
                 archive,
                 offset,
@@ -543,6 +576,7 @@ fn hash_spans(spans: &Spans, h: &mut StateHasher) {
                 h.bytes(bytes);
             }
             Src::RenderTarget => h.word(4 << 48),
+            Src::Copied(p) => h.word(6 << 48 | *p as u64),
             Src::Edit {
                 archive,
                 bytes,
@@ -847,7 +881,31 @@ impl Image {
         let mut mark = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
             for (k, s) in runs {
                 for a in k.max(lo)..s.end.min(hi) {
-                    out[(a - lo) as usize] = s.src == Src::RenderTarget;
+                    out[(a - lo) as usize] = s.src.is_render_target();
+                }
+            }
+        };
+        mark(&mut self.base().range(lo, hi));
+        mark(&mut self.overlay.range(lo, hi));
+        mark(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
+        out
+    }
+
+    /// Which of the bytes `[lo, lo + len)` hold a copy known in part ([`Src::Copied`]), read as
+    /// [`Image::render_target`] reads them, and what is known of each.
+    pub fn copied_pixels(&self, lo: u32, len: u32) -> Vec<Option<Pixels>> {
+        let mut out = vec![None; len as usize];
+        if !self.on {
+            return out;
+        }
+        let hi = lo + len;
+        let mut mark = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+            for (k, s) in runs {
+                for a in k.max(lo)..s.end.min(hi) {
+                    out[(a - lo) as usize] = match s.src {
+                        Src::Copied(p) => Some(p),
+                        _ => None,
+                    };
                 }
             }
         };
@@ -884,6 +942,59 @@ impl Image {
             ));
         }
         write(&mut self.live, lo, hi, src);
+    }
+
+    /// What `[lo, hi)` holds as a new object's block reads it ([`Image::leftover_bytes`]): the
+    /// runs cut to it, by start, `None` where none is (zero).
+    fn view(&self, lo: u32, hi: u32) -> Vec<(u32, u32, Option<Src>)> {
+        let mut view: Vec<(u32, u32, Option<Src>)> = vec![(lo, hi, None)];
+        let mut paint = |runs: &mut dyn Iterator<Item = (u32, &Span)>| {
+            for (k, s) in runs {
+                let (a, b) = (k.max(lo), s.end.min(hi));
+                if a >= b {
+                    continue;
+                }
+                let mut out = Vec::with_capacity(view.len() + 2);
+                for (x, y, src) in view.drain(..) {
+                    if y <= a || x >= b {
+                        out.push((x, y, src));
+                        continue;
+                    }
+                    if x < a {
+                        out.push((x, a, src.clone()));
+                    }
+                    if y > b {
+                        out.push((b, y, src.map(|v| v.advance(b - x))));
+                    }
+                }
+                out.push((a, b, Some(s.src.advance(a - k))));
+                out.sort_by_key(|p| p.0);
+                view = out;
+            }
+        };
+        paint(&mut self.base.range(lo, hi));
+        paint(&mut self.overlay.range(lo, hi));
+        paint(&mut self.live.range(lo, hi).filter(|(_, s)| !s.src.is_unknown()));
+        view
+    }
+
+    /// An object giving back the GPU's pixels its block held when it was made
+    /// (`Lay::keep_render_target`): each part keeps the copy's kind the image holds under it
+    /// ([`Src::Copied`] stays one), a plain render target where none is.
+    pub fn hold_kept_pixels(&mut self, lo: u32, hi: u32) {
+        if !self.on {
+            return;
+        }
+        let hi = hi.min(MEM1.end);
+        if lo >= hi || !MEM1.contains(&lo) {
+            return;
+        }
+        for (a, b, src) in self.view(lo, hi) {
+            let src = src
+                .filter(Src::is_render_target)
+                .unwrap_or(Src::RenderTarget);
+            self.hold(a, b, src);
+        }
     }
 
     /// An archive whose data block is at `base` (`len` bytes) outside the heap the image
@@ -1329,6 +1440,7 @@ impl Image {
                         Src::Raw { .. } => "raw file",
                         Src::Bytes { .. } => "object",
                         Src::RenderTarget => "render target",
+                        Src::Copied(_) => "copied pixels",
                     },
                 )
             })
@@ -1368,6 +1480,27 @@ mod tests {
             ]
         );
         assert_eq!(img.runs().len(), 4);
+    }
+
+    /// An object made over a copy's pixels gives them back with the copy's kind; a new copy
+    /// of no known kind over them takes it away.
+    #[test]
+    fn pixels_given_back_keep_their_copy() {
+        let mut img = Image::power_on();
+        img.hold(0x8040_0500, 0x8040_0520, Src::Copied(Pixels::Shadow));
+        img.release(0x8040_0500, 0x8040_0520);
+        img.claim(0x8040_0500, 0x8040_0520, "a test");
+        img.hold_kept_pixels(0x8040_0508, 0x8040_0510);
+        img.release(0x8040_0500, 0x8040_0520);
+        let c = img.copied_pixels(0x8040_0500, 0x20);
+        assert_eq!(c[..8], [None; 8]);
+        assert_eq!(c[8..16], [Some(Pixels::Shadow); 8]);
+        img.hold(0x8040_0508, 0x8040_050C, Src::RenderTarget);
+        img.hold_kept_pixels(0x8040_0508, 0x8040_050C);
+        let c = img.copied_pixels(0x8040_0508, 8);
+        assert_eq!(c, [[None; 4], [Some(Pixels::Shadow); 4]].concat());
+        assert_eq!(Pixels::OpaqueRgb5a3.nonzero(0x8040_0504), Some(true));
+        assert_eq!(Pixels::OpaqueRgb5a3.nonzero(0x8040_0505), None);
     }
 
     #[test]
