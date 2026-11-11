@@ -923,12 +923,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the debug mode's milestone 6 states and the debug cutscene",
-        covers: &[
-            "onEnterIntroEasy",
-            "un_80301BA8",
-            "un_80301B48",
-            "un_80301D7C",
-        ],
+        covers: &["un_80301D7C"],
         modes: &[DB],
     },
 ];

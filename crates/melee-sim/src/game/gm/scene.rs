@@ -103,6 +103,9 @@ impl Game {
 
     /// A scene's debug pause buttons (`gm_DbPauseInputHandlers`' predicates): whether a
     /// controller with no error pressed them on its master status this frame.
+    #[doc(alias = "fn_801A47E4")]
+    #[doc(alias = "fn_801A46F4")]
+    #[doc(alias = "gm_AnyControllerPressedStart")]
     fn db_pause_predicate(&self, f: u32) -> bool {
         use crate::input::pad::{BUTTON_START, BUTTON_UP, BUTTON_X, TRIGGER_Z};
         let pressed = |held: u16, trigger: u16| {

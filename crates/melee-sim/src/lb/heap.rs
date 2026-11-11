@@ -121,6 +121,8 @@ impl LbHeaps {
     /// the same way, and the kept preload heaps made if they aren't. The main heap's
     /// allocator model starts over from the layout it returns (`HSD_CreateMainHeap`); the
     /// caller keeps the model's fighter size and class sizes.
+    #[doc(alias = "OSDestroyHeap")]
+    #[doc(alias = "OSCreateHeap")]
     #[doc(alias = "lbHeap_80015900")]
     pub fn make_scene_heaps(&mut self, mem: &mut LbMemory) -> Layout {
         for i in SEQ..COUNT {

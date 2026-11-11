@@ -319,6 +319,7 @@ impl Running<'_> {
 
     /// Takes font `font`'s strings from `archive`'s table `symbol`, `HSD_SisLib_803A62A0`;
     /// the archive is loaded by name (`HSD_SisLib_803A945C`) outside the simulation.
+    #[doc(alias = "HSD_SisLib_803A945C")]
     #[doc(alias = "HSD_SisLib_803A62A0")]
     pub fn load_font(&mut self, font: i32, archive: ArchiveId, symbol: &str) {
         let s = &mut self.game.sis;

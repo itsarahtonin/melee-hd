@@ -352,7 +352,7 @@ impl Running<'_> {
     /// `ftCo_RebirthWait_Coll`: the airborne pass with the grounded ECB; landing ends the
     /// wait (`fn_800D5A30`).
     #[doc(alias = "ftCo_RebirthWait_Coll")]
-    // Ports `fn_800D5A30`; aliased once a check reaches it.
+    #[doc(alias = "fn_800D5A30")]
     pub fn co_rebirth_wait_coll(&mut self, gobj: GObjId) {
         self.air_coll_grounded_ecb_then(gobj, |g, gobj| {
             let t = g.common().i32(0x5D8);

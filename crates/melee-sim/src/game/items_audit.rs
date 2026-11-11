@@ -378,7 +378,6 @@ const EVENT: &str =
     "an event match's items (the event Yoshi egg, the events' heart and tomato slots)";
 const YAKU: &str =
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)";
-const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster stage configures";
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
@@ -394,7 +393,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
-    ("it_8026C1E8", ZAKO),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),
     ("gm_80473A18", EVENT),
@@ -433,8 +431,6 @@ pub const UNCHECKED: &[&str] = &[
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
-    "itStar_UnkMotion0_Phys",
-    "it_80284E10",
     "melee/it/kinds/ittarucann",
     "melee/ft/kinds/ftCommon/ftCo_Barrel",
 ];

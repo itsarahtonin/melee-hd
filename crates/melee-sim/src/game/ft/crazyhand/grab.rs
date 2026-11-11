@@ -174,6 +174,7 @@ impl Running<'_> {
     /// The squeeze, `ftCh_Init_801592D4`: the victim's damage state, the throw's angle (511,
     /// `ftCommon_8007E2F4`), still, toward `xD0`, `xD4`.
     #[doc(alias = "ftCh_Init_801592D4")]
+    #[doc(alias = "ftCommon_8007E2F4")]
     pub fn ch_squeeze_enter(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.game.fighters[f.0].cmd_vars[1] = 0;

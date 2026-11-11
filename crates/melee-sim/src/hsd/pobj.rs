@@ -52,6 +52,7 @@ const GX_F32: u32 = 4;
 // reaches a morphing shape with normals.
 #[doc(alias = "drawShapeAnim")]
 #[doc(alias = "get_shape_vertex_xyz")]
+#[doc(alias = "get_shape_normal_xyz")]
 pub fn blend_shape(data: &Archives, set: &ShapeSet) -> (Vec<[f32; 3]>, Vec<[f32; 3]>) {
     use crate::fpu::{mem, reg};
     use gekko_fp as fp;
@@ -477,6 +478,7 @@ fn refract_load(p: &PObj, data: &Archives) -> Option<(u8, u8, u8)> {
 }
 
 /// The static `loadShapeSetDesc`.
+#[doc(alias = "loadShapeSetDesc")]
 fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
     let flags = data.u16(d);
     let nb_shape = data.u16(d.at(2));
@@ -511,6 +513,7 @@ fn load_shape_set(data: &Archives, d: DataRef) -> ShapeSet {
 
 /// The envelopes' weights, joints unresolved, the static `loadEnvelopeDesc`, in freed shapes'
 /// lists where there are spares.
+#[doc(alias = "loadEnvelopeDesc")]
 fn load_envelopes(pobjs: &mut PObjs, data: &Archives, list: Option<DataRef>) -> Vec<Vec<Envelope>> {
     let Some(mut slot) = list else {
         return pobjs.take_list(0);
@@ -598,6 +601,7 @@ pub fn remove_all(objs: &mut Objects, p: Option<PObjId>) {
 
 /// Binds the shape's envelopes or skin to the joints its descriptor names, now loaded,
 /// `HSD_PObjResolveRefs`.
+#[doc(alias = "resolveEnvelope")]
 pub fn resolve_refs(objs: &mut Objects, data: &Archives, p: Option<PObjId>, desc: Option<DataRef>) {
     let (Some(p), Some(desc)) = (p, desc) else {
         return;

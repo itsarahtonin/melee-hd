@@ -58,19 +58,12 @@ pub fn character(kind: u8) -> Option<&'static Character> {
     CHARACTERS.iter().find(|c| c.kind == kind)
 }
 
-const BLASTER_DEMO_STATE: &str = "the blaster's state 10, which its pickup (itFoxBlaster_Logic96_PickedUp) enters only with its command variables set, as only the demo fighters' spawn (it_802AE994) sets them";
 const BLASTER_STATE_9: &str = "the blaster's state 9, which its pickup (itFoxBlaster_Logic96_PickedUp) enters for its owner's actions 1, 2, 4, 5 and 9 (it_803F6E68); the pickup runs only from Item_8026AB54 in the blaster's spawns, and a match's spawn (it_802AE8A8) follows the owner's entry into the neutral special's start on the ground or in the air (ftFx_SpecialN_Enter, ftFx_SpecialAirN_Enter, Kirby's ftKb_SpecialNFx_800FE100 and ftKb_SpecialNFx_800FE240: actions 0 and 3) or comes in ThrowB, ThrowHi or ThrowLw (ftFx_Throw_Anim: 6, 7 and 8); a blaster let go is destroyed, never lies free to be picked up again";
-const BLASTER_STATES: [(&str, &str); 5] = [
+const BLASTER_STATES: [(&str, &str); 3] = [
     ("itFoxblaster_UnkMotion9_Anim", BLASTER_STATE_9),
     ("itFoxblaster_UnkMotion9_Phys", BLASTER_STATE_9),
     ("itFoxblaster_UnkMotion9_Coll", BLASTER_STATE_9),
-    ("itFoxblaster_UnkMotion10_Phys", BLASTER_DEMO_STATE),
-    ("itFoxblaster_UnkMotion10_Coll", BLASTER_DEMO_STATE),
 ];
-const PILL_PICKED_UP: (&str, &str) = (
-    "itDrMarioPill_PickedUp",
-    "the pill's pickup (state 6) runs only from Item_8026AB54 in itDrMarioPill_802C09C4 with msid 2, which only the sleeping demo pose passes (ftCo_800BF108, ftDemo_CreateFighter's pose 6: the single-player modes' screens, never a VS match's results, whose winners take poses 0 to 2 and losers 4); the results' second pose (ftCo_800BED88) passes 1 and 0, and every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up",
-);
 const PK_FLASH_KIND: (&str, &str) = (
     "itNesspkflash_UnkMotion0_Anim on another kind",
     "only PK Flash and Kirby's copy of it (kinds 68 and 145) have the state table that runs it",
@@ -108,13 +101,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 2,
         items: &[54, 56, 74],
-        unreached: &[
-            BLASTER_STATES[0],
-            BLASTER_STATES[1],
-            BLASTER_STATES[2],
-            BLASTER_STATES[3],
-            BLASTER_STATES[4],
-        ],
+        unreached: &[BLASTER_STATES[0], BLASTER_STATES[1], BLASTER_STATES[2]],
         unsure: &[],
         missing: &[],
     },
@@ -141,9 +128,6 @@ pub const CHARACTERS: &[Character] = &[
             BLASTER_STATES[0],
             BLASTER_STATES[1],
             BLASTER_STATES[2],
-            BLASTER_STATES[3],
-            BLASTER_STATES[4],
-            PILL_PICKED_UP,
         ],
         unsure: &[],
         missing: &[],
@@ -271,13 +255,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 20,
         items: &[55, 57, 75],
-        unreached: &[
-            BLASTER_STATES[0],
-            BLASTER_STATES[1],
-            BLASTER_STATES[2],
-            BLASTER_STATES[3],
-            BLASTER_STATES[4],
-        ],
+        unreached: &[BLASTER_STATES[0], BLASTER_STATES[1], BLASTER_STATES[2]],
         unsure: &[],
         missing: &[],
     },
@@ -293,7 +271,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 22,
         items: &[49, 84],
-        unreached: &[PILL_PICKED_UP],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },
