@@ -96,6 +96,10 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ad3-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg-3/{o}.inputs"))
+                        .into();
+                }
                 if let Some(o) = name.strip_prefix("m6ad2-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg-2/{o}.inputs"))
                         .into();
@@ -1475,6 +1479,15 @@ pub const M6AD2_MK_SHELLS: Game = Game {
     name: "m6ad2-mk-shells",
     players: "Go to Kinoko, Fox and the item menu's shells (session m6-adventure-dbg-2/mk-shells)",
     replay: Replay::Session("m6ad2-mk-shells"),
+};
+
+/// Adventure's shells met on Mushroom Kingdom's route (`m6-adventure-dbg-3/mk-meet`, debug
+/// level 3, Fox and Mario): shells off a powershield, clanking with each other and reflected.
+pub const M6AD3_MK_MEET: Game = Game {
+    stage: "Adventure",
+    name: "m6ad3-mk-meet",
+    players: "Debug VS on Mushroom Kingdom's route, Fox and Mario and the item menu's shells (session m6-adventure-dbg-3/mk-meet)",
+    replay: Replay::Session("m6ad3-mk-meet"),
 };
 
 /// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`,

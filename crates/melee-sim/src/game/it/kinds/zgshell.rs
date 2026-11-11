@@ -953,7 +953,7 @@ pub fn dmg_received(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itZGShell_Logic11_Reflected` (the red one's `itZRShell_Logic12_Reflected`).
-// Ports itZGShell_Logic11_Reflected; aliased once a check reaches it.
+#[doc(alias = "itZGShell_Logic11_Reflected")]
 // Ports itZRShell_Logic12_Reflected; aliased once a check reaches it.
 pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
     lib2725::reflected_back(r.game, gobj)
@@ -961,7 +961,7 @@ pub fn reflected(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Clanked, `it_2725_Logic11_Clanked` (the red one's `itZRShell_Logic12_Clanked`): it pops up.
 #[doc(alias = "it_2725_Logic11_Clanked")]
-// Ports itZRShell_Logic12_Clanked; aliased once a check reaches it.
+#[doc(alias = "itZRShell_Logic12_Clanked")]
 pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
     pop_up(r, gobj);
     fell(r, gobj);
@@ -970,8 +970,8 @@ pub fn clanked(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Met a shield, `it_2725_Logic11_HitShield` (the red one's `itZRShell_Logic12_HitShield`): a
 /// thrown or dropped shell bounces off, a sliding one pops up.
-// Ports it_2725_Logic11_HitShield; aliased once a check reaches it.
-// Ports itZRShell_Logic12_HitShield; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic11_HitShield")]
+#[doc(alias = "itZRShell_Logic12_HitShield")]
 pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
     match item(r.game, gobj).msid {
         3 | 4 => lib2725::bounce_off_victim(r.game, r.data, gobj),
@@ -984,8 +984,8 @@ pub fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// `itZGShell_Logic11_ShieldBounced` (the red one's `itZRShell_Logic12_ShieldBounced`).
-// Ports itZGShell_Logic11_ShieldBounced; aliased once a check reaches it.
-// Ports itZRShell_Logic12_ShieldBounced; aliased once a check reaches it.
+#[doc(alias = "itZGShell_Logic11_ShieldBounced")]
+#[doc(alias = "itZRShell_Logic12_ShieldBounced")]
 pub fn shield_bounced(r: &mut Running, gobj: GObjId) -> bool {
     if matches!(item(r.game, gobj).msid, 3 | 4) {
         lib2725::bounce_off_shield(r.game, gobj);

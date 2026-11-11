@@ -899,6 +899,32 @@ fn adventures_shells_on_mushroom_kingdom_run_clean() {
     );
 }
 
+/// Adventure's shells met by a shield, a powershield, a reflector and each other
+/// (`m6-adventure-dbg-3/mk-meet`, task 24's third round; docs/oracle.md, "Sessions"): debug VS on
+/// Mushroom Kingdom's adventure route with Fox and Mario, then a bot's reads: green and red
+/// shells from the item menu thrown at Mario's held shield (`it_2725_Logic11_HitShield`, the
+/// red wrapper) and powershield (`itZGShell_Logic11_ShieldBounced`, the red wrapper), sliding
+/// on until a red one clanks with a green one (`itZRShell_Logic12_Clanked`), and Mario's thrown
+/// green shell reflected by Fox (`itZGShell_Logic11_Reflected`), clean to the trace's end with
+/// `--all --heap` and the card after the original's.
+#[test]
+fn adventures_shells_met_by_shields_a_reflector_and_each_other_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adventure-dbg-3/mk-meet-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adventure-dbg-3", "mk-meet", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("8592 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
 /// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
 /// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads
