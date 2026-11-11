@@ -662,8 +662,11 @@ fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
 /// All-Star (`as-roy`), Dr. Mario by Mario's Classic (`cl-drmario`) and Young Link by a tenth
 /// character's Adventure (`adv-ylink`), each challenger's match won by a bot, and Flat Zone and
 /// Battlefield by Mr. Game & Watch's All-Star (`as-flatzone`), with the modes' trophies; each
-/// clean to its trace's end with `--all --heap` and the card after the original's. (`adv-gw`
-/// and `adv-luigi` stop before their ends on heap leftovers no layout knows; docs/oracle.md.)
+/// clean to its trace's end with `--all --heap` and the card after the original's. Mr. Game &
+/// Watch by Classic's and Adventure's clears (`cl-gw`, `adv-gw`: his match's Flat Zone over the
+/// congratulations' THP decoder's work area) and Luigi by Adventure's (`adv-luigi`: his
+/// cutscene over Zelda's fighter's color overlay's leftover slots, Pokémon Stadium's match over
+/// its intro's feed buffer) since the heap's image lays those out (docs/oracle.md).
 #[test]
 fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
     for (name, ticks) in [
@@ -671,6 +674,9 @@ fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
         ("cl-drmario", 7706),
         ("adv-ylink", 9360),
         ("as-flatzone", 4659),
+        ("cl-gw", 5623),
+        ("adv-gw", 7126),
+        ("adv-luigi", 19933),
     ] {
         let after = ssbm_rs_local(&format!("traces/m6-unlocks/{name}-play.card"));
         let trace = ssbm_rs_local(&format!("traces/m6-unlocks/{name}.trc"));
