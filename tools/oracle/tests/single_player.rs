@@ -974,6 +974,31 @@ fn adventures_shells_met_by_shields_a_reflector_and_each_other_run_clean() {
     );
 }
 
+/// Adventure's Polar Bear flung toward the screen and forgetting a leaving team
+/// (`m6-adv-polarbear/im-polar`, task 24's fourth round; docs/oracle.md, "Sessions"): the
+/// debug level set alone, the Taniguti Test's Reg:Normal at 10 (Adventure's Icicle Mountain
+/// with Fox), then a bot's reads: an item menu's Polar Bear beaten by a hit whose draw sends it
+/// toward the screen (`it_802E4980`, state 11), the climb, and the arena's Ice Climbers fought
+/// until one team leaves with a bear in play (`it_802E4A24` from the fighters' unload), clean to
+/// the trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn adventures_polar_bear_flung_toward_the_screen_and_a_leaving_team_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adv-polarbear/im-polar-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adv-polarbear", "im-polar", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("6071 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
 /// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
 /// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads

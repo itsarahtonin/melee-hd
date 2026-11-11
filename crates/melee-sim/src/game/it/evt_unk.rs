@@ -79,6 +79,7 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
 #[doc(alias = "itLipstick_Logic23_EvtUnk")]
 #[doc(alias = "itHarisen_Logic24_EvtUnk")]
 #[doc(alias = "itWStar_Logic30_EvtUnk")]
+#[doc(alias = "it_802E4A24")]
 fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

@@ -48,6 +48,7 @@ use common::M6A3_AS_VH_CLEAR;
 use common::M6AD_ADV_GIGA_VH;
 use common::M6AD2_MK_SHELLS;
 use common::M6AD3_MK_MEET;
+use common::M6PB_IM_POLAR;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
@@ -565,6 +566,14 @@ rendered_frames!(M6AD3_MK_MEET;
     m6ad3_mk_meet_4321 4321,
     m6ad3_mk_meet_6910 6910,
     m6ad3_mk_meet_8325 8325,
+);
+// Adventure's Polar Bear flung toward the screen (`m6-adv-polarbear/im-polar`, task 24's fourth
+// round), captured with ssbm-rs's renderer running: the bear on its way toward the camera (3756,
+// 3771 and 3786).
+rendered_frames!(M6PB_IM_POLAR;
+    m6pb_im_polar_3756 3756,
+    m6pb_im_polar_3771 3771,
+    m6pb_im_polar_3786 3786,
 );
 // Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`):
 // Crazy Hand entering the slowed match (6900, 7100), both hands fought (7400) and the clear
