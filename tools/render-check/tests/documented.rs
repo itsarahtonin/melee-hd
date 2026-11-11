@@ -47,6 +47,7 @@ use common::M6A3_AS_VH_CLEAR;
 // Adventure's Giga Bowser path and Classic's Very Hard clear with Crazy Hand (docs/player.md).
 use common::M6AD_ADV_GIGA_VH;
 use common::M6AD2_MK_SHELLS;
+use common::M6AD3_MK_MEET;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
@@ -554,6 +555,16 @@ rendered_frames!(M6AD2_MK_SHELLS;
     m6ad2_mk_shells_2170 2170,
     m6ad2_mk_shells_3262 3262,
     m6ad2_mk_shells_5052 5052,
+);
+// Adventure's shells met on Mushroom Kingdom's route (`m6-adventure-dbg-3/mk-meet`, task 24's
+// third round), captured with ssbm-rs's renderer running: a green shell off Mario's powershield
+// (3240), a red one (4321), shells clanking in the pit (6910) and a green shell off Fox's
+// reflector (8325).
+rendered_frames!(M6AD3_MK_MEET;
+    m6ad3_mk_meet_3240 3240,
+    m6ad3_mk_meet_4321 4321,
+    m6ad3_mk_meet_6910 6910,
+    m6ad3_mk_meet_8325 8325,
 );
 // Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`):
 // Crazy Hand entering the slowed match (6900, 7100), both hands fought (7400) and the clear
