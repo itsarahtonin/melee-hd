@@ -218,7 +218,7 @@ pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
 /// reflection callbacks, each the same code).
 #[doc(alias = "it_3F14_Logic42_DmgDealt")]
 #[doc(alias = "it_3F14_Logic42_Clanked")]
-// Ports `it_3F14_Logic42_HitShield`; aliased once a check reaches it.
+#[doc(alias = "it_3F14_Logic42_HitShield")]
 // Ports `it_3F14_Logic42_Reflected`; aliased once a check reaches it.
 pub fn bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);

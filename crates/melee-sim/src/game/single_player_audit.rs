@@ -845,14 +845,6 @@ pub const MISSING: &[Gap] = &[
         // never runs.
         modes: &[DB],
     },
-    Gap {
-        what: "the single-player matches' shared code (the stocks, the results, the clear screens)",
-        covers: &["gm_8016F00C"],
-        // Not All-Star (task 23's third round): only Event Match's gm_801BCAF0 calls
-        // gm_8016F00C. Nor Adventure (task 24's debug route) or Classic (task 22's debug
-        // round), for the same reason.
-        modes: &[EV],
-    },
     // The modes' own code.
     Gap {
         what: "Ditto",
