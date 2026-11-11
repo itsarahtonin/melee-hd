@@ -980,6 +980,31 @@ fn adventures_shells_met_by_shields_a_reflector_and_each_other_run_clean() {
     );
 }
 
+/// Adventure's Like Like (`m6-adv-likelike`, task 24's fourth round; docs/oracle.md,
+/// "Sessions"): `mz-item`'s reads (debug VS on the Underground Maze, Fox and Mario), then a
+/// bot's: a Like Like from the item menu swallows Mario, and Fox jumps onto the platform past
+/// the start's ledge, so the blast zones, which follow him, KO Mario inside it (`fn_800C7890`,
+/// `ftCo_800C7A30`, the Like Like letting go, `it_802DBA68`); a second one on that platform
+/// crawls to its edge and turns back (`it_802D9B78`); clean to the trace's end with `--all
+/// --heap` and the card after the original's.
+#[test]
+fn adventures_like_like_ko_and_ledge_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adv-likelike/ll-edge-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adv-likelike", "ll-edge", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("4298 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
 /// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
 /// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads

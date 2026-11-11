@@ -383,7 +383,6 @@ const ZAKO: &str = "the stage enemy spawner (grZakoGenerator), which no roster s
 const ATTACKER: &str = "an item hit by an item keeps the attacking item's owner (xCF0_itemGObj) only when it's a fighter (it_80270E30's case 2), and nothing else writes it, so it_8027236C takes a fighter's team or none";
 const THROWER: &str = "a thrown fighter's hitbox word is written only by ftColl_8007B8CC, whose callers pass a fighter (Fighter_ChangeMotionState's thrower, Kirby's inhale, the barrel cannon after ftLib_IsFighter), and cleared to none";
 const GRABBERS: &str = "of the items that grab fighters (it_80274F28's callers) a VS match makes only the barrel cannon, whose callback is ftCo_Barrel_Enter (Like Like's are adventure only), and its owner is a fighter or none: it spawns without a parent and only fighters pick it up, throw it, hit it (it_8027236C) or stand on it";
-const LIKE_LIKE: &str = "the Like Like's held fighter's death callback, which only its capture (ftCo_800C78B0) sets: an adventure enemy";
 const PROBE_BELOW: &str = "it_802759DC probes the floor mpLib_8005199C_Floor found under the item, one whose span holds the item's x, which mpLib_8004DD90_Floor then finds at that x and writes the height of";
 const ENEMY_KINDS: &str = "an enemy of another kind: in a VS match only a container (the monsters' table, it_8026CF04: Goomba, ReDead, Octorok, Topi) and the offered stages' own enemies (Shy Guys, Tingle, Klap Traps) spawn one; the rest come from the stage enemy spawner or adventure stages";
 const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001 onto the line it last stood on (mpLib_8004DD90_Floor), so the first line's length to its end is positive unless that lift is lost to rounding (2,048 units or more from the origin) and its sideways distance squares to 0 (closer than 4e-23), which no stage's lines give. A walk reaches its end only on a line neither a wall nor a ceiling, so on a floor (every line has one kind: the data's, or the one mpJointUpdateDynamics gives a dynamic line); the walk of 0 goes back and ends on its first line with positive length: from a floor, there with its normal; from a wall (a dynamic line tilted into one) the wall's length added to f27, 0 there (PROC_F27), passes the walk's limit of 0 and stops it short, as it stops the walk ahead, which then doesn't read the normals";
@@ -425,7 +424,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802E4A24", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
     ("it_802E0468", EVT_UNK),
-    ("melee/it/kinds/itlikelike", ADVENTURE),
     ("melee/it/kinds/itnokonoko", ADVENTURE),
     ("melee/it/kinds/itwhitebea", ADVENTURE),
     ("melee/it/kinds/itzgshell", ADVENTURE),
@@ -435,7 +433,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_8026C1E8", ZAKO),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),
-    ("melee/ft/ftCo_800C78B0", ADVENTURE),
     ("gm_80473A18", EVENT),
     ("it_2E6A_UnkMotion19_Phys", YAKU),
     ("ftLib_GetTeam on an item", ATTACKER),
@@ -448,7 +445,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
         GRABBERS,
     ),
     ("(a grabbed fighter's callback)", GRABBERS),
-    ("fn_800C7890", LIKE_LIKE),
     (
         "it_802759DC (a height the floor probe left unwritten)",
         PROBE_BELOW,
