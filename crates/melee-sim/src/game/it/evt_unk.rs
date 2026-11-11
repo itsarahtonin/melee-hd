@@ -66,9 +66,10 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
 }
 
 /// The GObj forgotten as every item does (`it_8026B894`): the `evt_unk` of each kind in
-/// [`FORGET_ONLY`]; those aliased here are the ones the fighter unload's sessions reach
-/// (docs/oracle.md, sessions) and the 1P coin's (leaf-check's `items_coin`), the rest held
-/// until a check reaches them.
+/// [`FORGET_ONLY`]. Those aliased here are reached by the fighter unload's sessions
+/// (docs/oracle.md, sessions) and the 1P coin's (leaf-check's `items_coin`), or checked by
+/// review (Sarah, 2026-11-11): each is, in the original, the same 8 instructions, a call of
+/// `it_8026B894` alone (ledger/checks.txt; the unit test's `REVIEWED`).
 #[doc(alias = "itHeart_Logic8_EvtUnk")]
 #[doc(alias = "itCoin_Logic116_EvtUnk")]
 #[doc(alias = "itBat_Logic11_EvtUnk")]
@@ -80,6 +81,66 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
 #[doc(alias = "itHarisen_Logic24_EvtUnk")]
 #[doc(alias = "itWStar_Logic30_EvtUnk")]
 #[doc(alias = "it_802E4A24")]
+#[doc(alias = "itCapsule_Logic0_EvtUnk")]
+#[doc(alias = "itTomato_Logic9_EvtUnk")]
+#[doc(alias = "itEgg_Logic3_EvtUnk")]
+#[doc(alias = "itFreeze_Logic17_EvtUnk")]
+#[doc(alias = "itFoods_Logic18_EvtUnk")]
+#[doc(alias = "itTaruCann_Logic5_EvtUnk")]
+#[doc(alias = "itMball_EvtUnk")]
+#[doc(alias = "itLGunRay_Logic35_EvtUnk")]
+#[doc(alias = "itStarRodStar_Logic36_EvtUnk")]
+#[doc(alias = "itSScopeBeam_Logic38_EvtUnk")]
+#[doc(alias = "itLGunBeam_Logic39_EvtUnk")]
+#[doc(alias = "itLipstickSpore_Logic37_EvtUnk")]
+#[doc(alias = "itFFlowerFlame_Logic41_EvtUnk")]
+#[doc(alias = "itEvYoshiEgg_Logic42_EvtUnk")]
+#[doc(alias = "itMarioFireball_Logic87_EvtUnk")]
+#[doc(alias = "it_8029C4B4")]
+#[doc(alias = "it_8029D948")]
+#[doc(alias = "it_802AA474")]
+#[doc(alias = "itNesspkfirepillar_Logic24_EvtUnk")]
+#[doc(alias = "itNesspkflash_Logic102_EvtUnk")]
+#[doc(alias = "it_802AC41C")]
+#[doc(alias = "itNessBat_Logic58_EvtUnk")]
+#[doc(alias = "it_802ADBE4")]
+#[doc(alias = "it_802ADDB0")]
+#[doc(alias = "itNessPKFlashExplode_Logic103_EvtUnk")]
+#[doc(alias = "it_802B2870")]
+#[doc(alias = "itPikachuTJoltGround_Logic106_EvtUnk")]
+#[doc(alias = "itPikachuTJoltAir_Logic107_EvtUnk")]
+#[doc(alias = "itSamusChargeshot_Logic108_EvtUnk")]
+#[doc(alias = "itLuigiFireball_Logic89_EvtUnk")]
+#[doc(alias = "itDrMarioPill_EvtUnk")]
+#[doc(alias = "itClimbersBlizzard_EvtUnk")]
+#[doc(alias = "itGamewatchGreenhouse_EvtUnk")]
+#[doc(alias = "itGameWatchManhole_Logic72_EvtUnk")]
+#[doc(alias = "itGamewatchFire_EvtUnk")]
+#[doc(alias = "itGameWatchParachute_Logic74_EvtUnk")]
+#[doc(alias = "itGameWatchTurtle_Logic75_EvtUnk")]
+#[doc(alias = "itGameWatchBreath_Logic76_EvtUnk")]
+#[doc(alias = "itKirbyGameWatchChefPan_Logic113_EvtUnk")]
+#[doc(alias = "itGameWatchJudge_Logic77_EvtUnk")]
+#[doc(alias = "itGameWatchPanic_Logic78_EvtUnk")]
+#[doc(alias = "itGameWatchRescue_Logic81_EvtUnk")]
+#[doc(alias = "itGameWatchChef_Logic112_EvtUnk")]
+#[doc(alias = "itMetamon_Logic19_EvtUnk")]
+#[doc(alias = "it_802D3F4C")]
+#[doc(alias = "itLucky_Logic44_EvtUnk")]
+#[doc(alias = "it_802D9A0C")]
+#[doc(alias = "it_802DD7D0")]
+#[doc(alias = "it_802DFED4")]
+#[doc(alias = "it_802E0468")]
+#[doc(alias = "it_2E5A_Logic115_EvtUnk")]
+#[doc(alias = "it_802EB5A8")]
+#[doc(alias = "it_802EC850")]
+#[doc(alias = "it_802EE1E0")]
+#[doc(alias = "it_802F0320")]
+#[doc(alias = "itMasterHandLaser_Logic84_EvtUnk")]
+#[doc(alias = "itMasterHandBullet_Logic85_EvtUnk")]
+#[doc(alias = "itCrazyHandBomb_Logic86_EvtUnk")]
+#[doc(alias = "it_802F2BDC")]
+#[doc(alias = "it_27CF_Logic114_EvtUnk")]
 fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }
@@ -139,8 +200,7 @@ fn climbers_ice(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// The kinds whose `evt_unk` only forgets the GObj as every item does (`it_8026B894`), by
 /// address: ssbm-rs's port of each is that call alone (Ness's yo-yo's, `it_2725_Logic59_EvtUnk`,
 /// also reads its owner and does nothing with it).
-// Ports each name here not aliased on `forget` or its kind's own function; aliased once a
-// check reaches it.
+// Each name here is aliased on `forget` or its kind's own function.
 pub const FORGET_ONLY: &[(u32, &str)] = &[
     (0x8027_D650, "itCapsule_Logic0_EvtUnk"),
     (0x8028_1144, "itBombhei_Logic6_EvtUnk"),
@@ -319,6 +379,90 @@ mod tests {
         0x802D_0AB0,
         0x802D_43B0,
     ];
+
+    /// The kinds' `evt_unk`s checked by review (Sarah, 2026-11-11, "Yes, by review"): in the
+    /// asm listings each is `mflr; stw; stwu; bl it_8026B894; lwz; addi; mtlr; blr`, the same
+    /// 8 instructions as the session-checked ones aliased on `forget` (ledger/checks.txt).
+    pub(super) const REVIEWED: &[&str] = &[
+        "itCapsule_Logic0_EvtUnk",
+        "itTomato_Logic9_EvtUnk",
+        "itEgg_Logic3_EvtUnk",
+        "itFreeze_Logic17_EvtUnk",
+        "itFoods_Logic18_EvtUnk",
+        "itTaruCann_Logic5_EvtUnk",
+        "itMball_EvtUnk",
+        "itLGunRay_Logic35_EvtUnk",
+        "itStarRodStar_Logic36_EvtUnk",
+        "itSScopeBeam_Logic38_EvtUnk",
+        "itLGunBeam_Logic39_EvtUnk",
+        "itLipstickSpore_Logic37_EvtUnk",
+        "itFFlowerFlame_Logic41_EvtUnk",
+        "itEvYoshiEgg_Logic42_EvtUnk",
+        "itMarioFireball_Logic87_EvtUnk",
+        "it_8029C4B4",
+        "it_8029D948",
+        "it_802AA474",
+        "itNesspkfirepillar_Logic24_EvtUnk",
+        "itNesspkflash_Logic102_EvtUnk",
+        "it_802AC41C",
+        "itNessBat_Logic58_EvtUnk",
+        "it_802ADBE4",
+        "it_802ADDB0",
+        "itNessPKFlashExplode_Logic103_EvtUnk",
+        "it_802B2870",
+        "itPikachuTJoltGround_Logic106_EvtUnk",
+        "itPikachuTJoltAir_Logic107_EvtUnk",
+        "itSamusChargeshot_Logic108_EvtUnk",
+        "itLuigiFireball_Logic89_EvtUnk",
+        "itDrMarioPill_EvtUnk",
+        "itClimbersBlizzard_EvtUnk",
+        "itGamewatchGreenhouse_EvtUnk",
+        "itGameWatchManhole_Logic72_EvtUnk",
+        "itGamewatchFire_EvtUnk",
+        "itGameWatchParachute_Logic74_EvtUnk",
+        "itGameWatchTurtle_Logic75_EvtUnk",
+        "itGameWatchBreath_Logic76_EvtUnk",
+        "itKirbyGameWatchChefPan_Logic113_EvtUnk",
+        "itGameWatchJudge_Logic77_EvtUnk",
+        "itGameWatchPanic_Logic78_EvtUnk",
+        "itGameWatchRescue_Logic81_EvtUnk",
+        "itGameWatchChef_Logic112_EvtUnk",
+        "itMetamon_Logic19_EvtUnk",
+        "it_802D3F4C",
+        "itLucky_Logic44_EvtUnk",
+        "it_802D9A0C",
+        "it_802DD7D0",
+        "it_802DFED4",
+        "it_802E0468",
+        "it_2E5A_Logic115_EvtUnk",
+        "it_802EB5A8",
+        "it_802EC850",
+        "it_802EE1E0",
+        "it_802F0320",
+        "itMasterHandLaser_Logic84_EvtUnk",
+        "itMasterHandBullet_Logic85_EvtUnk",
+        "itCrazyHandBomb_Logic86_EvtUnk",
+        "it_802F2BDC",
+        "it_27CF_Logic114_EvtUnk",
+    ];
+
+    /// Each reviewed `evt_unk` is a [`FORGET_ONLY`](super::FORGET_ONLY) kind that `run` sends to
+    /// the shared `forget`, not to a kind's own port.
+    #[test]
+    fn the_reviewed_wrappers_share_the_forget() {
+        for name in REVIEWED {
+            let &(a, _) = super::FORGET_ONLY
+                .iter()
+                .find(|(_, n)| n == name)
+                .unwrap_or_else(|| panic!("{name} isn't in FORGET_ONLY"));
+            assert!(!OWN.contains(&a), "{name} ({a:#010x}) has its own port");
+            assert!(
+                ![0x8029_0918, 0x8029_1BC0, 0x8029_3640].contains(&a),
+                "{name}"
+            );
+        }
+        assert_eq!(REVIEWED.len(), 60);
+    }
 
     /// Every item kind's `evt_unk` is dispatched: none falls through `run`.
     #[test]

@@ -5,7 +5,7 @@
 
 use super::super::item::{change, change_state, play_sfx};
 use super::super::pokemon::{self, attr_f32};
-use super::super::{ground, item_mut, lib26b1, lib2725, maplib};
+use super::super::{ground, item_mut, lib2725, maplib};
 use crate::game::state::Running;
 use crate::hsd::gobj::GObjId;
 
@@ -67,13 +67,6 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
 /// `it_802D306C`: nothing (its landing in its first two states).
 // Ports `it_802D306C`; debug only (ledger/deferred.txt): only the debug menu brings Ditto out.
 pub fn landed_nothing(_r: &mut Running, _gobj: GObjId) {}
-
-/// Forgets a GObj going away, `itMetamon_Logic19_EvtUnk` (`it_8026B894`).
-// Ports `itMetamon_Logic19_EvtUnk`; debug only (ledger/deferred.txt): only the debug menu brings
-// Ditto out.
-pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    lib26b1::forget(r.game, gobj, other);
-}
 
 /// Lands out of the ball, `it_802D3090`: stopped, into its animation (`it_802D30C4`).
 #[doc(alias = "it_802D3090")]
