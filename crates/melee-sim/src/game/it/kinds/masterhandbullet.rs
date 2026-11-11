@@ -27,7 +27,10 @@ pub const PHYS: u32 = 0x802F_0ED4;
 pub const COLL: u32 = 0x802F_0ED8;
 #[doc(alias = "it_802F0F04")]
 pub const ACCESSORY: u32 = 0x802F_0F04;
-// Ports `it_802F0F08`; aliased once a check reaches it.
+/// The fast bullet's landing callback, `it_802F0F08`, which `it_8026E15C` runs when it settles
+/// the bullet on a floor: empty in the original (a lone `blr`). No trace reaches it; it counts
+/// as checked by review (Sarah, 2026-11-11, ledger/checks.txt) with the test below.
+#[doc(alias = "it_802F0F08")]
 pub const LANDED: u32 = 0x802F_0F08;
 #[doc(alias = "itMasterHandBullet_Logic83_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802F_0F0C;
@@ -140,8 +143,29 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     })
 }
 
+/// The bullet's event callbacks, each empty in the original (a lone `blr`): the movement's
+/// physics, the accessory and the landing.
+const EMPTY: [u32; 3] = [PHYS, ACCESSORY, LANDED];
+
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     let _ = r;
     let _ = gobj;
-    matches!(addr, PHYS | ACCESSORY | LANDED)
+    EMPTY.contains(&addr)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `it_802F0F08` is the original's 4-byte function at 0x802F0F08 (a lone `blr`, the next
+    /// one, `itMasterHandBullet_Logic83_DmgDealt`, starts at 0x802F0F0C), so its port is to take
+    /// the call and change nothing: `run_event` claims the address and reads nothing.
+    #[test]
+    fn the_fast_bullets_landing_does_nothing() {
+        assert_eq!(LANDED, 0x802F_0F08);
+        assert_eq!(LANDED + 4, DMG_DEALT);
+        assert_eq!(ACCESSORY + 4, LANDED);
+        assert!(EMPTY.contains(&LANDED));
+        assert!(!EMPTY.contains(&DMG_DEALT));
+    }
 }
