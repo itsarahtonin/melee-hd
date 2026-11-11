@@ -1507,6 +1507,11 @@ impl Running<'_> {
     #[doc(alias = "onEnterDebugVs")]
     pub fn debug_vs_enter_vs(&mut self) {
         use crate::game::gm::vs_mode::{player_defaults, rules_defaults};
+        #[cfg(feature = "oracle-hooks")]
+        crate::game::oracle_hooks::reach(
+            self.game,
+            crate::game::oracle_hooks::Entry::OnEnterDebugVs,
+        );
         let start = &mut self.game.vs_melee.start;
         start.rules = rules_defaults();
         start.rules.stkind = 0x20;

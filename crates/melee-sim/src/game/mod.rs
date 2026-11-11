@@ -27,6 +27,8 @@ pub mod mirror;
 mod mirror_gen;
 pub mod mn;
 pub mod mp_draw;
+#[cfg(feature = "oracle-hooks")]
+pub mod oracle_hooks;
 pub mod perf;
 pub mod pl;
 pub mod playback;

@@ -21,3 +21,6 @@ melee-save = { path = "../melee-save" }
 # Lets checks stand a function of the original's in for code no port covers yet, so the code
 # around a `code::call` seam can be compared with ssbm-rs's with the same stand-in on its side.
 stubs = []
+# Lets melee-oracle's sessions start as ssbm-rs's runner hooks start its runs (`--mode`,
+# `--matches`, `CPU_PLAYERS`): entry points the simulation itself never takes (`game::oracle_hooks`).
+oracle-hooks = []

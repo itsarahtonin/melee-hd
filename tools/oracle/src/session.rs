@@ -689,6 +689,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     let mut card_b_after: Option<PathBuf> = None;
     let mut card_b_pull: Option<(u64, Option<u64>)> = None;
     let mut dblevel: Option<i32> = None;
+    let mut hooks: Option<crate::hooks::Hooks> = None;
     let mut ignore: Vec<String> = Vec::new();
     let mut mutation = None;
     let mut heap_log: Option<String> = None;
@@ -718,6 +719,15 @@ pub fn session(args: &[&str]) -> ExitCode {
                         .expect("--dblevel LEVEL (0 to 4)"),
                 )
             }
+            // ssbm-rs's runner hooks the session's job ran with, its own line
+            // (`crate::hooks`).
+            "--hooks" => match crate::hooks::Hooks::parse(it.next().expect("--hooks LINE")) {
+                Ok(h) => hooks = Some(h),
+                Err(e) => {
+                    eprintln!("--hooks: {e}");
+                    return ExitCode::from(2);
+                }
+            },
             "--from" => {
                 from = Some(
                     it.next()
@@ -793,7 +803,7 @@ pub fn session(args: &[&str]) -> ExitCode {
     }
     let [trace_path, inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
+            "usage: melee-oracle session TRACE INPUTS [--card FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-pull F[,G]] [--card-b-after FILE] [--dblevel N] [--hooks LINE] [--from TICK] [--ticks N] [--all] [--heap] [--scenes]"
         );
         eprintln!(
             "                            [--ignore TEXT,...] [--stand-in ADDR[=VALUE]] [--mutate scene-ticks|seed|power-on|read=N]"
@@ -880,6 +890,10 @@ pub fn session(args: &[&str]) -> ExitCode {
             d.level,
             if d.ini { ", /develop.ini found" } else { "" }
         );
+    }
+    if let Some(h) = hooks {
+        println!("ssbm-rs's runner hooks, mirrored: {}", h.describe());
+        crate::hooks::install(h);
     }
     if mutation == Some(Mutation::PowerOn) {
         setup.power_on = 0;
