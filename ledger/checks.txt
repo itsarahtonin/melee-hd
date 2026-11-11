@@ -16306,7 +16306,6 @@ ifMagnify_802FC3BC	melee-oracle session from power-on: rec-classic-clear (sessio
 HSD_ImageDescCopyFromEFB	melee-oracle session from power-on: rec-classic-clear (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
 HSD_DevComStdCallback	melee-oracle session from power-on: rec-classic-clear (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
 ftGw_Init_OnItemInvisible	melee-oracle session from power-on: rec-ev45 (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
-itGameWatchManhole_Logic72_EvtUnk	melee-oracle session from power-on: rec-ev45 (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
 ftAnim_8006F628	melee-oracle session from power-on: rec-ev47 (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
 onEnterIntroEasy	melee-oracle session from power-on: m6o-intro-easy (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
 fn_800DA490	melee-oracle session from power-on: un-churn (session-expect.txt) reaches it, compared clean (ssbm-rs's CALLS on the same inputs)
