@@ -20,6 +20,7 @@ pub const ANIM: u32 = 0x802C_4820;
 pub const PHYS: u32 = 0x802C_4980;
 #[doc(alias = "itZeldadinfireexplode_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802C_4998;
+// `itZeldaDinFireExplode_Logic66_Clanked`: dead, every hitbox its scripts open has the clank bit clear (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802C_49A0;
 #[doc(alias = "itZeldaDinFireExplode_Logic66_Absorbed")]
 pub const ABSORBED: u32 = 0x802C_49A8;

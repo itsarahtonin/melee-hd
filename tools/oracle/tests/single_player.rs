@@ -121,11 +121,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
     first_stops(&[
         ("bosses", 13377, ""),
         ("targets", 47425, ""),
-        (
-            "stages-1p",
-            26430,
-            "tick 26429: unknown leftover bytes of a freed a main-heap block under Fighter: its layout isn't ported",
-        ),
+        ("stages-1p", 33507, ""),
         ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
     ]);
@@ -996,6 +992,31 @@ fn adventures_like_like_ko_and_ledge_run_clean() {
     };
     assert!(
         out.contains("4298 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
+/// Adventure's Polar Bear flung toward the screen and forgetting a leaving team
+/// (`m6-adv-polarbear/im-polar`, task 24's fourth round; docs/oracle.md, "Sessions"): the
+/// debug level set alone, the Taniguti Test's Reg:Normal at 10 (Adventure's Icicle Mountain
+/// with Fox), then a bot's reads: an item menu's Polar Bear beaten by a hit whose draw sends it
+/// toward the screen (`it_802E4980`, state 11), the climb, and the arena's Ice Climbers fought
+/// until one team leaves with a bear in play (`it_802E4A24` from the fighters' unload), clean to
+/// the trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn adventures_polar_bear_flung_toward_the_screen_and_a_leaving_team_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adv-polarbear/im-polar-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adv-polarbear", "im-polar", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("6071 ticks compared, no difference\n"),
         "{out}"
     );
     assert!(out.contains("no stale reads"), "{out}");
