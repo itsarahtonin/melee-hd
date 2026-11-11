@@ -770,7 +770,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "pl_8004049C (an enemy of kind",
         "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
-    ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
     ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
     ("it_802D306C", TRAINING_NO_DITTO),
 ];

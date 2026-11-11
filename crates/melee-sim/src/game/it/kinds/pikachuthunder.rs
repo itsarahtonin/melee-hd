@@ -27,6 +27,7 @@ pub const DESTROYED: u32 = 0x802B_202C;
 pub const DMG_DEALT: u32 = 0x802B_2508;
 #[doc(alias = "itPikachuThunder_Logic39_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802B_2510;
+// `itPikachuThunder_Logic39_Clanked`: dead, every hitbox its scripts open has the clank bit clear (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802B_2518;
 #[doc(alias = "itPikachuThunder_Logic39_Absorbed")]
 pub const ABSORBED: u32 = 0x802B_2520;
