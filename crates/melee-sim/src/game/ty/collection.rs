@@ -1179,7 +1179,7 @@ impl Running<'_> {
     /// category and of `class` (0x63: `id`'s own, `Toy_803060BC(id, 6)`), each one the region
     /// can win and marked in the flags in play (`Toy_803049F4`), but `id` itself, written
     /// into `buf` from its start; how many. None for `id` -1.
-    // Ports `tyDisplay_8031C354`; aliased once a check reaches it.
+    #[doc(alias = "tyDisplay_8031C354")]
     pub fn display_kin(&self, id: i32, buf: &mut [i32], max: i32, class: i32) -> i32 {
         if id == -1 {
             return 0;
