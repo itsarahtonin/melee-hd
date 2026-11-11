@@ -831,6 +831,30 @@ fn adventures_giga_bowser_path_runs_clean_to_its_card_after() {
     );
 }
 
+/// Adventure's shells on Mushroom Kingdom's route (`m6-adventure-dbg-2/mk-shells`, task 24's
+/// next round; docs/oracle.md, "Sessions"): Go to Kinoko at debug level 3, then a bot's reads
+/// for Fox: the item menu's Paratroopa's red Koopa smashed out of its red shell
+/// (`it_802E0488`), red and green shells dropped with Z in the air (state 4), jabbed as they
+/// wake (`it_802DF9F8`, state 10), woken into a Koopa and landing on the route's slope (state
+/// 9), clean to the trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn adventures_shells_on_mushroom_kingdom_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adventure-dbg-2/mk-shells-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adventure-dbg-2", "mk-shells", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("5718 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
 /// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
 /// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads
