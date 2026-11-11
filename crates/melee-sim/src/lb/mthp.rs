@@ -336,18 +336,6 @@ impl MoviePlayer {
         });
     }
 
-    /// The buffer's size, as `fn_8001EBF0` gave it (the ring's table, the slots, the planes,
-    /// the decode's work area and the frame offsets' table).
-    fn buffer_len(&self) -> u32 {
-        let wh = self.width.wrapping_mul(self.height);
-        (self.slots * 4).next_multiple_of(32)
-            + self.buf_size.next_multiple_of(32).wrapping_mul(self.slots)
-            + wh
-            + (wh >> 2) * 2
-            + crate::thp::work_size(&self.desc, self.height as u16) as u32
-            + (self.num_frames * 4).next_multiple_of(32)
-    }
-
     /// The next frame's size, which the frame in slot `i` starts with.
     fn next_size(&self, data: &Archives, i: u32) -> u32 {
         let b = self.slot_bytes(data, i);
