@@ -424,7 +424,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
     ("it_802E4A24", EVT_UNK),
     ("it_802DFED4", EVT_UNK),
     ("it_802E0468", EVT_UNK),
-    ("melee/it/kinds/itnokonoko", ADVENTURE),
     ("melee/it/kinds/itwhitebea", ADVENTURE),
     ("melee/it/kinds/itzgshell", ADVENTURE),
     ("melee/it/kinds/itmetamon", DITTO),
