@@ -71,13 +71,6 @@ const PILL_PICKED_UP: (&str, &str) = (
     "itDrMarioPill_PickedUp",
     "the pill's pickup (state 6) runs only from Item_8026AB54 in itDrMarioPill_802C09C4 with msid 2, which only the sleeping demo pose passes (ftCo_800BF108, ftDemo_CreateFighter's pose 6: the single-player modes' screens, never a VS match's results, whose winners take poses 0 to 2 and losers 4); the results' second pose (ftCo_800BED88) passes 1 and 0, and every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up",
 );
-const NO_HITBOX: &str = "every state's script of the kind opens no hitbox, and no code opens one (only the Flipper's, the red shell's and the hammer's own code turn item hitboxes on outside a script), so nothing absorbs it or clanks with it: the absorb test (ftColl_8007925C) and the clanks (ftColl_80077970, it_8026FE68) meet only live hitboxes";
-const NO_CLANK: &str = "every hitbox the kind's state scripts open has its clank bit (x40_b0) clear, and an item's box clanks with a fighter's (ftColl_8007925C, then ftColl_80077970) or another item's (it_802706D0, then it_8026FE68) only when both boxes have it; its element is never the inert one, whose touches take the other branch";
-const PK_FLASH_HITS: [(&str, &str); 3] = [
-    ("itNesspkflash_Logic102_Absorbed", NO_HITBOX),
-    ("itNesspkflash_Logic102_Clanked", NO_HITBOX),
-    ("itNessPKFlashExplode_Logic103_Clanked", NO_CLANK),
-];
 const PK_FLASH_KIND: (&str, &str) = (
     "itNesspkflash_UnkMotion0_Anim on another kind",
     "only PK Flash and Kirby's copy of it (kinds 68 and 145) have the state table that runs it",
@@ -151,9 +144,6 @@ pub const CHARACTERS: &[Character] = &[
             BLASTER_STATES[3],
             BLASTER_STATES[4],
             PILL_PICKED_UP,
-            PK_FLASH_HITS[0],
-            PK_FLASH_HITS[1],
-            PK_FLASH_HITS[2],
         ],
         unsure: &[],
         missing: &[],
@@ -210,13 +200,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 11,
         items: &[66, 67, 68, 69, 70, 71, 72, 73, 78, 101, 102],
-        unreached: &[
-            PK_FLASH_KIND,
-            PK_FLASH_HITS[0],
-            PK_FLASH_HITS[1],
-            PK_FLASH_HITS[2],
-            ("it_802AC074", NO_CLANK),
-        ],
+        unreached: &[PK_FLASH_KIND],
         unsure: &[],
         missing: &[],
     },
@@ -232,7 +216,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 13,
         items: &[81, 89, 90],
-        unreached: &[("itPikachuThunder_Logic39_Clanked", NO_CLANK)],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },
@@ -240,7 +224,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 14,
         items: &[106, 107, 113],
-        unreached: &[("itClimbersBlizzard_Clanked", NO_CLANK)],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },
@@ -271,11 +255,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 18,
         items: &[108, 109],
-        unreached: &[
-            ("itZeldaDinFire_Logic65_Absorbed", NO_HITBOX),
-            ("itZeldaDinFire_Logic65_Clanked", NO_HITBOX),
-            ("itZeldaDinFireExplode_Logic66_Clanked", NO_CLANK),
-        ],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },
@@ -328,7 +308,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 24,
         items: &[82, 91, 92],
-        unreached: &[("itPikachuThunder_Logic39_Clanked", NO_CLANK)],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },

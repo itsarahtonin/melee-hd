@@ -1,0 +1,12 @@
+[package]
+name = "melee-disc-scan"
+description = "Scans every file on the disc for what its data can make the game run: the evidence behind ledger/dead.txt's disc-data proofs"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[dependencies]
+melee-data.workspace = true
