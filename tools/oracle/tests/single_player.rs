@@ -582,6 +582,50 @@ fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
     }
 }
 
+/// Task 26's fourth round (docs/oracle.md, "Sessions"): the 1P clears' unlocks through the
+/// debug menu's Taniguti Test at debug level 3 set alone (no develop.ini, so the save's load
+/// runs no debug unlock-all), each from power-on on a card one clear short
+/// (`$SSBM_RS_LOCAL/lockstep/m6-unlocks`, traced into `traces/m6-unlocks`): Roy by Marth's
+/// All-Star (`as-roy`), Dr. Mario by Mario's Classic (`cl-drmario`) and Young Link by a tenth
+/// character's Adventure (`adv-ylink`), each challenger's match won by a bot, and Flat Zone and
+/// Battlefield by Mr. Game & Watch's All-Star (`as-flatzone`), with the modes' trophies; each
+/// clean to its trace's end with `--all --heap` and the card after the original's. (`adv-gw`
+/// and `adv-luigi` stop before their ends on heap leftovers no layout knows; docs/oracle.md.)
+#[test]
+fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
+    for (name, ticks) in [
+        ("as-roy", 7628),
+        ("cl-drmario", 7706),
+        ("adv-ylink", 9360),
+        ("as-flatzone", 4659),
+    ] {
+        let after = ssbm_rs_local(&format!("traces/m6-unlocks/{name}-play.card"));
+        let trace = ssbm_rs_local(&format!("traces/m6-unlocks/{name}.trc"));
+        let inputs = ssbm_rs_local(&format!("lockstep/m6-unlocks/{name}.inputs"));
+        if std::env::var("SSBM_DISC").is_err()
+            || !std::path::Path::new(&trace).exists()
+            || !std::path::Path::new(&inputs).exists()
+        {
+            eprintln!("no trace ({trace}), recording ({inputs}) or SSBM_DISC: skipping");
+            return;
+        }
+        let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+            .args(["session", &trace, &inputs, "--card-after", &after])
+            .args(["--all", "--heap"])
+            .output()
+            .expect("melee-oracle runs");
+        let out = String::from_utf8_lossy(&out.stdout).into_owned();
+        eprintln!("{out}");
+        let want = format!("{ticks} ticks compared, no difference\n");
+        assert!(out.contains(&want), "{name}: wants {want:?}\n{out}");
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+        assert!(
+            out.contains("the card after the session: the original's"),
+            "{name}: {out}"
+        );
+    }
+}
+
 /// Sarah's Classic clear on Very Easy (milestone 6's tasks 22 and 2, the intros' sixth and
 /// seventh rounds): `recordings/classic-clear` from power-on on its card, Classic through its
 /// eleven stages: the team stage, the target stage (Classic's target scoring and records),
