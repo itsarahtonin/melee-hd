@@ -305,7 +305,7 @@ impl Running<'_> {
     }
 
     /// The hold's damage hooks clear themselves, `fn_800DA490` (`fn_800DA668`).
-    // Ports `fn_800DA490`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DA490")]
     #[doc(alias = "fn_800DA668")]
     pub fn catch_on_damage(&mut self, gobj: GObjId) {
         self.game.fighter_mut(gobj).take_dmg_cb = None;

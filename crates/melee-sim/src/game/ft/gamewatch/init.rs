@@ -160,7 +160,7 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftGw_Init_OnItemInvisible` (as Fox's).
-    // Ports `ftGw_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftGw_Init_OnItemInvisible")]
     pub fn gw_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }

@@ -264,6 +264,7 @@ impl Audio {
     /// `HSD_SynthInit`: the AX library, the silence the music stream's last box loops to
     /// (cleared in ARAM), the sound banks' and the stream's room in ARAM, the synth's frame
     /// callback, its channels at full volume, and the console's sound mode.
+    #[doc(alias = "AXRegisterCallback")]
     #[doc(alias = "HSD_SynthInit")]
     fn synth_init(&mut self, data: &Archives, aram: &mut Aram, bank_size: u32) {
         self.ax.init();

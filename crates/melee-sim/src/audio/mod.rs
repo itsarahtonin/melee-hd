@@ -90,6 +90,8 @@ impl Audio {
     /// sync (which drops voices past the DSP's budget), the dropped voices' callbacks, the
     /// user callback (the synth's frame, and the driver's in it) and the next command list's
     /// cost. The aux effects' processing and the DSP's mix are presentation.
+    #[doc(alias = "__AXGetNumVoices")]
+    #[doc(alias = "__AXGetCommandListAddress")]
     #[doc(alias = "__AXOutNewFrame")]
     pub fn ax_frame(&mut self, data: &Archives) {
         let pre = self.mix.is_some().then(|| mix::PreSync::of(&self.ax));

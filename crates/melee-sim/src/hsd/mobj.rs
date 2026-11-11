@@ -620,6 +620,7 @@ pub fn tobj(mobjs: &MObjs, m: Option<MObjId>) -> Option<TObjId> {
 /// Frees an MObj with its animation and textures, `HSD_MObjRemove` (releasing through
 /// `MObjRelease`).
 #[doc(alias = "HSD_MObjRemove")]
+#[doc(alias = "HSD_TExpFreeTevDesc")]
 #[doc(alias = "MObjRelease")]
 pub fn remove(objs: &mut Objects, m: Option<MObjId>) {
     let Some(m) = m else { return };

@@ -329,7 +329,8 @@ fn col_mag(m: &Mtx34, col: usize) -> f64 {
 
 /// Points the joint's matrix along `dir` with `up` as its second axis: the static
 /// `set_dirup_matrix`.
-fn set_dirup_matrix(
+#[doc(alias = "set_dirup_matrix")]
+fn dir_up_matrix(
     objs: &mut Objects,
     data: &Archives,
     j: JObjId,
@@ -356,6 +357,7 @@ fn set_dirup_matrix(
 }
 
 /// Aims the joint at its direction constraints' targets, the static `resolveCnsDirUp`.
+#[doc(alias = "resolveCnsDirUp")]
 fn resolve_dir_up(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j: JObjId) {
     let Some(pos) = global_position(objs, data, first, 2) else {
         return;
@@ -373,7 +375,7 @@ fn resolve_dir_up(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j:
         }
     }
     let scale = objs.jobjs[j].scl.unwrap_or(Vec3::new(1.0, 1.0, 1.0));
-    set_dirup_matrix(objs, data, j, pos, up, scale);
+    dir_up_matrix(objs, data, j, pos, up, scale);
 }
 
 /// The channels orientation constraints write, a matrix's columns (`HSD_RObj_80406E74`).
@@ -417,6 +419,7 @@ fn mtx_ptr(objs: &mut Objects, data: &Archives, j: JObjId) -> Mtx34 {
 
 /// Copies its orientation constraint's target's rotation, keeping the joint's own scale, the
 /// static `resolveCnsOrientation`.
+#[doc(alias = "resolveCnsOrientation")]
 fn resolve_orientation(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j: JObjId) {
     // inlined_HSD_RObjGetByType
     let Some(r) = get_by_type(&objs.robjs, first, JOBJ, 4) else {
@@ -468,6 +471,7 @@ fn resolve_orientation(objs: &mut Objects, data: &Archives, first: Option<RObjId
 
 /// Clamps the joint's rotation and translation to its active limits, the static
 /// `resolveLimits`.
+#[doc(alias = "resolveLimits")]
 fn resolve_limits(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j: JObjId) {
     if !each(&objs.robjs, first).any(|r| objs.robjs[r].has_type(LIMIT)) {
         return;
@@ -538,6 +542,7 @@ pub fn update_all(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j:
 }
 
 /// Evaluates an expression and hands its value to the joint, the static `expEvaluate`.
+#[doc(alias = "expEvaluate")]
 fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) {
     let Ref::Exp(mut exp) = objs.robjs[r].u else {
         panic!("expression RObj without an expression")
@@ -721,6 +726,7 @@ pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> 
 
 /// `expLoadDesc` and `bcexpLoadDesc`: both descriptors are a function or bytecode, then an
 /// rvalue list.
+#[doc(alias = "bcexpLoadDesc")]
 fn load_exp(objs: &mut Objects, data: &Archives, desc: Option<DataRef>, bytecode: bool) -> Exp {
     let Some(desc) = desc else {
         return Exp::default();

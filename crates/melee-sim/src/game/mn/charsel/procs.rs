@@ -158,7 +158,7 @@ impl Running<'_> {
     }
 
     /// `fn_8025FB2C`: a model's animations.
-    // Ports `fn_8025FB2C`; aliased once a check reaches it.
+    #[doc(alias = "fn_8025FB2C")]
     pub fn charsel_anim_proc(&mut self, gobj: GObjId) {
         let j = self.css_gobj_jobj(gobj);
         self.css_anim_all(j);

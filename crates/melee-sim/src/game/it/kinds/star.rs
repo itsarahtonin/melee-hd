@@ -26,6 +26,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the Starman's events, if `addr` is one.
+#[doc(alias = "itStar_UnkMotion0_Phys")]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         SPAWNED => spawned(r, gobj),

@@ -585,6 +585,7 @@ impl Running<'_> {
     /// the animation frame to start from, `speed` its rate, `blend` the frames to blend into
     /// it over (0: the animation's own; -1: none); `flags` ([`flags`]) keep effects of the
     /// last state.
+    #[doc(alias = "ft_8007C114")]
     #[doc(alias = "Fighter_ChangeMotionState")]
     #[allow(clippy::too_many_arguments)]
     pub fn change_motion_state(

@@ -112,7 +112,7 @@ pub fn anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Forgets a GObj, `itGameWatchManhole_Logic72_EvtUnk`.
-// Ports `itGameWatchManhole_Logic72_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "itGameWatchManhole_Logic72_EvtUnk")]
 pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

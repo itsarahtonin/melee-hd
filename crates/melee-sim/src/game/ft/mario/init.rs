@@ -78,6 +78,7 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftMr_Init_OnItemInvisible")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_TAKE_DAMAGE => g.mr_on_take_damage(gobj),
