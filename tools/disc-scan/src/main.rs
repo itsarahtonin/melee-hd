@@ -14,8 +14,9 @@
 //! tests read; `item-commands [OPCODE...]` counts every item script command on the disc (every
 //! article's states and the stages' `ALDYakuAll` scripts). `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
 //! `x14`) and names any owner's command (21 and up) in them; `colanims FILE ROOT FIELD` any
-//! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `words FILE OFFSET COUNT` prints
-//! a file's words, pointers marked.
+//! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `robjs` counts
+//! the joints' and camera positions' reference objects by type and lists any expression. `words
+//! FILE OFFSET COUNT` prints a file's words, pointers marked.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
@@ -535,6 +536,108 @@ fn item_commands(disc: &Disc, files: &[String], want: &BTreeSet<u32>) {
     }
 }
 
+/// Every reference object (`HSD_RObjDesc`) on the disc, by type. `HSD_RObjLoadDesc` takes them
+/// only from a joint's descriptor (`HSD_JObjDesc::robjdesc`, +0x3C, in `JObjLoad`) and a camera
+/// position's (`HSD_WObjDesc::robjdesc`, +0x10, in `WObjLoad` and `HSD_WObjInit`), so this
+/// finds every object shaped like either (where something points or a symbol names: +0x3C a
+/// pointer in an object of 0x40 bytes or more with no pointer in its vectors; +0x10 a pointer
+/// in one of 0x14 or more with none in its position) and follows each chain (`next`, +0). An
+/// expression (type 0, `REFTYPE_EXP`) is the only kind `expLoadDesc` gives `dummy_func`, when
+/// its descriptor's function is null, which in a file it always is.
+fn robjs(disc: &Disc, files: &[String]) {
+    const TYPES: [&str; 5] = ["expression", "joint", "limit", "bytecode", "IK hint"];
+    let mut counts = [[0u32; 5]; 2];
+    let (mut joints, mut wobjs, mut bad, mut archives) = (0u32, 0u32, 0u32, 0u32);
+    for path in files {
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        archives += 1;
+        let starts = object_starts(&a);
+        let size = |t: u32| {
+            starts
+                .range(t + 1..)
+                .next()
+                .copied()
+                .unwrap_or(a.data().len() as u32)
+                - t
+        };
+        let null_or_ptr = |o: u32| a.u32(o) == 0 || a.is_pointer(o);
+        let no_ptrs = |from: u32, to: u32| (from..to).step_by(4).all(|o| !a.is_pointer(o));
+        let mut heads = BTreeMap::new();
+        for &s in &starts {
+            if size(s) >= 0x40
+                && a.is_pointer(s + 0x3C)
+                && null_or_ptr(s)
+                && null_or_ptr(s + 8)
+                && null_or_ptr(s + 0xC)
+                && no_ptrs(s + 0x14, s + 0x38)
+            {
+                joints += 1;
+                heads.insert(a.u32(s + 0x3C), 0);
+            } else if size(s) >= 0x14
+                && a.is_pointer(s + 0x10)
+                && null_or_ptr(s)
+                && no_ptrs(s + 4, s + 0x10)
+            {
+                wobjs += 1;
+                heads.entry(a.u32(s + 0x10)).or_insert(1);
+            }
+        }
+        let mut seen = BTreeSet::new();
+        for (h, from) in heads {
+            let mut r = Some(h);
+            while let Some(at) = r {
+                if !seen.insert(at) || at as usize + 0xC > a.data().len() {
+                    break;
+                }
+                let flags = a.u32(at + 4);
+                let ty = ((flags >> 28) & 7) as usize;
+                let u = a.u32(at + 8);
+                let valid = !a.is_pointer(at + 4)
+                    && null_or_ptr(at)
+                    && ty < 5
+                    && (ty == 2) != a.is_pointer(at + 8)
+                    && match ty {
+                        // An expression updates the joint property its low bits name, from
+                        // an `HSD_ExpDesc` (a function, null in a file, and its values).
+                        0 => a.u32(u) == 0 && null_or_ptr(u + 4),
+                        3 => a.is_pointer(u),
+                        _ => true,
+                    };
+                if !valid {
+                    bad += 1;
+                    break;
+                }
+                counts[from][ty] += 1;
+                if ty == 0 {
+                    println!(
+                        "{path} {at:#x} (from a {}): an expression, flags {flags:#010x}, its \
+                         desc {u:#x}, values {:#x}",
+                        ["joint", "camera position"][from],
+                        a.u32(u + 4)
+                    );
+                }
+                r = a.ptr(at);
+            }
+        }
+    }
+    println!(
+        "{archives} archives, {joints} joint descs with a reference list, {wobjs} camera \
+         position descs with one"
+    );
+    for (ty, name) in TYPES.iter().enumerate() {
+        println!(
+            "type {ty} ({name}): {} from joints, {} from camera positions",
+            counts[0][ty], counts[1][ty]
+        );
+    }
+    println!("{bad} chains end in something not shaped like a reference");
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(cmd) = args.first() else {
@@ -598,6 +701,7 @@ fn main() -> ExitCode {
             item_commands(&disc, &files, &want);
         }
         "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
+        "robjs" => robjs(&disc, &files),
         "colanims" => {
             // `colanims FILE ROOT FIELD`: any color animation table.
             let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");

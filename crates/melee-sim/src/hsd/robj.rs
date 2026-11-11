@@ -608,7 +608,7 @@ fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) 
             &args[..exp.nb_args as usize],
         )
     } else {
-        // dummy_func: no C expression in the game's data has a function of its own.
+        // `dummy_func`: dead, no file on the disc holds a C expression (ledger/dead.txt).
         0.0
     };
     if ty.wrapping_sub(1) <= 2 {
