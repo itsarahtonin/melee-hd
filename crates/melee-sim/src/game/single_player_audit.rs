@@ -928,7 +928,6 @@ pub const MISSING: &[Gap] = &[
             "melee/it/kinds/itnokonoko",
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
-            "melee/it/kinds/itwhitebea",
             "it_8027B5B0 (an enemy of kind",
             "pl_8004049C (an enemy of kind",
         ],
