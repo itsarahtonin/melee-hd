@@ -407,13 +407,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/gricemt", "melee/it/kinds/ityaku"],
             modules: &["gr/icemt", "it/kinds/yaku"],
-            unreached: &[
-                YAKU_UNANCHORED,
-                (
-                    "stageGObj10_Callback3",
-                    "the adventure's climb's destroy callback: nothing destroys map 10 before the scene's heap goes",
-                ),
-            ],
+            unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
     },

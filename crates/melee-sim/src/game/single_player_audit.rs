@@ -911,13 +911,9 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
-        covers: &[
-            "a car out with all thirty out",
-            "melee/gr/grshrineroute",
-            "melee/gr/grzebesroute",
-            "stageGObj10_Callback3",
-            "stage kind {grkind}",
-        ],
+        // The Underground Maze's and Brinstar's escape's shadow checks and the climb's map 10's
+        // callback3 are dead (ledger/dead.txt, task 24's next round).
+        covers: &["a car out with all thirty out", "stage kind {grkind}"],
         modes: &[AD, DB],
     },
     Gap {
@@ -930,7 +926,6 @@ pub const MISSING: &[Gap] = &[
             "melee/it/kinds/itwhitebea",
             "melee/ft/ftCo_800C78B0",
             "fn_800C7890",
-            "grZakoGenerator_801CAF08",
             "it_8027B5B0 (an enemy of kind",
             "pl_8004049C (an enemy of kind",
         ],

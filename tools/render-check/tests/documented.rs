@@ -46,6 +46,7 @@ use common::M6A3_AS_VH_CLEAR;
 
 // Adventure's Giga Bowser path and Classic's Very Hard clear with Crazy Hand (docs/player.md).
 use common::M6AD_ADV_GIGA_VH;
+use common::M6AD2_MK_SHELLS;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
@@ -545,6 +546,15 @@ fn m6ad_adv_giga_vh_4700() {
 fn m6ad_adv_giga_vh_5300() {
     adv_giga_vh(5300, [1182, 1182]);
 }
+// Adventure's shells on Mushroom Kingdom's route (`m6-adventure-dbg-2/mk-shells`, task 24's
+// next round), captured with ssbm-rs's renderer running: the red Koopa (2040), its red shell
+// (2170), a shell knocked while waking (3262) and a red shell on the slope (5052).
+rendered_frames!(M6AD2_MK_SHELLS;
+    m6ad2_mk_shells_2040 2040,
+    m6ad2_mk_shells_2170 2170,
+    m6ad2_mk_shells_3262 3262,
+    m6ad2_mk_shells_5052 5052,
+);
 // Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`):
 // Crazy Hand entering the slowed match (6900, 7100), both hands fought (7400) and the clear
 // screen's tally with his bonus (8100); and Master Hand's fast bullets on Easy
