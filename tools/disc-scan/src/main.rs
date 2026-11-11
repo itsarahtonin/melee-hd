@@ -335,7 +335,7 @@ fn fighter_color_command_words(op: u32, w: u32) -> Option<u32> {
 /// 0x14, which `fn_80279B30` runs through `it_804D51C8`) and the fighters' (`PlCo.dat`,
 /// `ftLoadCommonData` 0x18 and the Cloak's 0x1C, run through `ft_800BFF34` and
 /// `ft_800BFF70`).
-fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
+fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: Option<u32>) {
     let words: &dyn Fn(u32, u32) -> Option<u32> = if file.starts_with("Pl") {
         &fighter_color_command_words
     } else {
@@ -355,7 +355,8 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
         let Some(at) = a.public(root) else {
             continue;
         };
-        let Some(t) = a.ptr(at + field) else {
+        // No field: the table is the symbol itself (`LbBf.dat`'s `lbBgFlashColAnimData`).
+        let Some(t) = field.map_or(Some(at), |f| a.ptr(at + f)) else {
             continue;
         };
         let starts = object_starts(&a);
@@ -365,7 +366,7 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
             .copied()
             .unwrap_or(a.data().len() as u32);
         let n = (end - t) / 8;
-        println!("{name} {root} {field:#x}: {n} color animations at {t:#x}");
+        println!("{name} {root} {field:?}: {n} color animations at {t:#x}");
         let mut owner_ops = BTreeSet::new();
         for i in 0..n {
             let Some(script) = a.ptr(t + 8 * i) else {
@@ -763,12 +764,15 @@ fn main() -> ExitCode {
                 .collect();
             item_commands(&disc, &files, &want);
         }
-        "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
+        "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", Some(0x14)),
         "robjs" => robjs(&disc, &files),
         "stage-colanims" => stage_colanims(&disc, &files),
         "colanims" => {
-            // `colanims FILE ROOT FIELD`: any color animation table.
-            let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");
+            // `colanims FILE ROOT [FIELD]`: any color animation table, the word at FIELD of
+            // ROOT or, without one, ROOT itself.
+            let field = args
+                .get(3)
+                .map(|f| u32::from_str_radix(f.trim_start_matches("0x"), 16).expect("a field"));
             colanims(&disc, &files, &args[1], &args[2], field);
         }
         "publics" => {
