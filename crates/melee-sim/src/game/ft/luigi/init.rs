@@ -42,6 +42,7 @@ impl Running<'_> {
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),
+        // `ftLg_Init_OnItemVisible`: dead, nothing shows Luigi's hidden item (ledger/dead.txt).
         addr::ON_ITEM_VISIBLE => g.fox_on_item_visible(gobj),
         addr::ON_KNOCKBACK_ENTER => g.lg_on_knockback_enter(gobj),
         addr::ON_KNOCKBACK_EXIT => g.lg_on_knockback_exit(gobj),

@@ -209,6 +209,7 @@ pub fn proc_anim(g: &mut Running, gobj: GObjId) {
     if fp.x2227_b3 && fp.x2034 != 0 {
         fp.x2034 -= 1;
         if fp.x2034 == 0 || fp.x2038 <= 0 {
+            // `ftCo_800C9034`: dead, nothing sets `x2227_b3` (ledger/dead.txt).
             unported_call("ftCo_800C9034");
         }
     }

@@ -298,13 +298,7 @@ pub const STAGES: &[Stage] = &[
                 "it/kinds/greatfoxlaser",
                 "it/kinds/yaku",
             ],
-            unreached: &[
-                YAKU_UNANCHORED,
-                (
-                    "it_802EB5A8",
-                    "an item's evt_unk, which only it_8026B7F8 calls, from a fighter's unload, which no VS match does",
-                ),
-            ],
+            unreached: &[YAKU_UNANCHORED],
             missing: &[],
         }),
     },
@@ -370,7 +364,7 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grgreatbay", "melee/it/kinds/ittincle"],
             modules: &["gr/greatbay", "it/kinds/tincle"],
-            unreached: &[EVT_UNK_TINGLE],
+            unreached: &[],
             missing: &[],
         }),
     },
@@ -483,7 +477,7 @@ pub const STAGES: &[Stage] = &[
                 "melee/it/kinds/itkyasarinegg",
             ],
             modules: &["gr/inishie2", "it/kinds/kyasarin", "it/kinds/kyasarinegg"],
-            unreached: &[("it_802EE1E0", EVT_UNK), ("it_802F0320", EVT_UNK)],
+            unreached: &[],
             missing: &[],
         }),
     },
@@ -603,17 +597,12 @@ pub const STAGES: &[Stage] = &[
         audit: Some(Audit {
             units: &["melee/gr/grstory", "melee/it/kinds/itheiho"],
             modules: &["gr/story", "it/kinds/heiho"],
-            unreached: &[("it_802D9A0C", EVT_UNK)],
+            unreached: &[],
             missing: &[],
         }),
     },
 ];
 
-/// Why the items' `evt_unk` (`it_8026B894`'s wrappers) is unreached: only `it_8026B7F8` calls
-/// it, from a fighter's unload, which no VS match does (a scene's end makes its heap anew
-/// without freeing its GObjs).
-const EVT_UNK: &str = "an item's evt_unk, which only a fighter's unload runs: a player leaving a match in progress, which no VS match does";
-const EVT_UNK_TINGLE: (&str, &str) = ("it_802EC850", EVT_UNK);
 const YAKU_UNANCHORED: (&str, &str) = (
     "it_2E6A_UnkMotion19_Phys",
     "a stage item on neither a joint nor a point, which no stage makes (the original hangs)",

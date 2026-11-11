@@ -32,7 +32,8 @@ impl Running<'_> {
 
     /// Showing the held item again, `ftCa_Init_OnItemVisible` and `ftGn_Init_OnItemVisible`
     /// (as Fox's).
-    // Ports `ftCa_Init_OnItemVisible` and `ftGn_Init_OnItemVisible`; aliased once a check reaches them.
+    // Ports `ftCa_Init_OnItemVisible`; aliased once a check reaches it. `ftGn_Init_OnItemVisible`
+    // is dead: nothing shows Ganondorf's hidden item (ledger/dead.txt).
     pub fn ca_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }
