@@ -1507,6 +1507,8 @@ impl Running<'_> {
     #[doc(alias = "onEnterDebugVs")]
     pub fn debug_vs_enter_vs(&mut self) {
         use crate::game::gm::vs_mode::{player_defaults, rules_defaults};
+        // The oracle's test hook (`oracle_hooks`): does nothing in the player, which never
+        // installs one.
         #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(
             self.game,
