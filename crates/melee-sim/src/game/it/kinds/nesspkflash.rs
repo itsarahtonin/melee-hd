@@ -44,7 +44,9 @@ pub const COLL_1: u32 = 0x802A_B29C;
 #[doc(alias = "itNesspkflash_UnkMotion2_Coll")]
 pub const COLL_2: u32 = 0x802A_B2A4;
 pub const REFLECTED: u32 = 0x802A_B2AC;
+// `itNesspkflash_Logic102_Clanked`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802A_B3C0;
+// `itNesspkflash_Logic102_Absorbed`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const ABSORBED: u32 = 0x802A_B3C8;
 pub const EVT_UNK: u32 = 0x802A_B3D0;
 

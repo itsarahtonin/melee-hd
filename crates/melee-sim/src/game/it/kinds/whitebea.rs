@@ -16,7 +16,7 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::item::{article, attr_of, change, change_state, play_sfx};
-use super::super::{data, ground, hitbox, item, item_mut, lib26b1, lib2725, maplib, owner, zako};
+use super::super::{data, ground, hitbox, item, item_mut, lib2725, maplib, owner, zako};
 use crate::fpu::{mem, reg};
 use crate::game::camera;
 use crate::game::state::Running;
@@ -392,7 +392,7 @@ pub fn fall(r: &mut Running, gobj: GObjId) {
 /// and `_11_Anim`).
 #[doc(alias = "itWhitebea_UnkMotion3_Anim")]
 #[doc(alias = "itWhitebea_UnkMotion6_Anim")]
-// Ports itWhitebea_UnkMotion11_Anim; aliased once a check reaches it.
+#[doc(alias = "itWhitebea_UnkMotion11_Anim")]
 pub fn answers_false(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -660,7 +660,7 @@ pub fn coll10(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Flung toward the screen, `it_802E4980` (the inline `Item_UpdateZakoVelocity`): state 11.
-// Ports it_802E4980; aliased once a check reaches it.
+#[doc(alias = "it_802E4980")]
 pub fn fling_to_screen(r: &mut Running, gobj: GObjId) {
     maplib::enter_air(item_mut(r.game, gobj));
     let v = zako::toward_camera(r, gobj);
@@ -671,7 +671,7 @@ pub fn fling_to_screen(r: &mut Running, gobj: GObjId) {
 
 /// Flung toward the screen's physics, `itWhitebea_UnkMotion11_Phys` (and the knockback's in the
 /// air): its fall speed off the vertical velocity.
-// Ports itWhitebea_UnkMotion11_Phys; aliased once a check reaches it.
+#[doc(alias = "itWhitebea_UnkMotion11_Phys")]
 pub fn phys11(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
@@ -679,13 +679,7 @@ pub fn phys11(r: &mut Running, gobj: GObjId) {
 }
 
 /// Flung toward the screen's collision, `itWhitebea_UnkMotion11_Coll`: nothing.
-// Ports itWhitebea_UnkMotion11_Coll; aliased once a check reaches it.
+#[doc(alias = "itWhitebea_UnkMotion11_Coll")]
 pub fn coll11(r: &mut Running, gobj: GObjId) -> bool {
     zako::answers_false(r, gobj)
-}
-
-/// Forgets a GObj going away, `it_802E4A24` (`it_8026B894`).
-// Ports it_802E4A24; aliased once a check reaches it.
-pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
-    let _ = lib26b1::forget(r.game, gobj, other);
 }
