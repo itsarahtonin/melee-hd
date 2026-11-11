@@ -1462,7 +1462,7 @@ impl Running<'_> {
     /// cleared once both computer players are out as Sheik, failed with no stock left or at
     /// the time's end.
     #[doc(alias = "gm_801BCAF0")]
-    // Ports `gm_8016F00C`; aliased once a check reaches it.
+    #[doc(alias = "gm_8016F00C")]
     fn event_sheiks_proc(&mut self, gobj: GObjId) {
         let mut count = 0;
         for i in 1..3 {
