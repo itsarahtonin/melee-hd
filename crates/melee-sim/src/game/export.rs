@@ -765,10 +765,6 @@ pub fn unlaid_types() -> Vec<(String, &'static str)> {
             "a memory piece no class or pool names",
         ),
         (
-            "the THP decoder's work area",
-            "the movie player's decode buffer",
-        ),
-        (
             "a GObj's user data remover",
             "the word after a GObj's user data",
         ),
@@ -1478,6 +1474,7 @@ mod tests {
             "Effect",
             "LObj",
             "HSD_Archive",
+            "the THP decoder's work area",
         ] {
             assert!(!list.iter().any(|(n, _)| n == t), "{t}");
         }

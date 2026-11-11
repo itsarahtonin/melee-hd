@@ -893,10 +893,14 @@ fn inverse_dct(block: &[i16; 64], q: &[f32; 64], x: u32, y8: bool, out: &mut [u8
     idct_columns(&ws, out, base, wid as usize);
 }
 
+/// The last MCU's six coefficient blocks, as the decode leaves them in the work area's first
+/// six MCU buffers (`mcuBuffer[0]` to `[5]`, each cleared whole by `dcbz` before its block).
+pub type McuBlocks = [[i16; 64]; 6];
+
 /// `THPDec_80331340` (`width` 640) and `THPDec_803313D0`: the scan decoded MCU row by MCU row
 /// into `planes`, each row written whole through the locked cache's buffers
 /// (`__THPDecompressiMCURow640x480`, `__THPDecompressiMCURowNxN`). `data` is as
-/// [`video_decode`] took it.
+/// [`video_decode`] took it. Returns the last MCU's blocks, if it decoded one.
 #[doc(alias = "THPDec_80331340")]
 #[doc(alias = "THPDec_803313D0")]
 #[doc(alias = "__THPDecompressiMCURow640x480")]
@@ -904,7 +908,12 @@ fn inverse_dct(block: &[i16; 64], q: &[f32; 64], x: u32, y8: bool, out: &mut [u8
 #[doc(alias = "__THPHuffDecodeDCTCompY")]
 #[doc(alias = "__THPHuffDecodeDCTCompU")]
 #[doc(alias = "__THPHuffDecodeDCTCompV")]
-pub fn decompress(info: &mut FileInfo, data: &[u8], width: u32, planes: &mut Planes) {
+pub fn decompress(
+    info: &mut FileInfo,
+    data: &[u8],
+    width: u32,
+    planes: &mut Planes,
+) -> Option<McuBlocks> {
     prep_bit_stream(info, data);
     let (yw, cw) = if width == 640 {
         (640, 320)
@@ -921,8 +930,10 @@ pub fn decompress(info: &mut FileInfo, data: &[u8], width: u32, planes: &mut Pla
     let mut row_u = vec![0u8; 0xA00.max(c_len as usize)];
     let mut row_v = vec![0u8; 0xA00.max(c_len as usize)];
     let mut blocks = [[0i16; 64]; 6];
+    let mut any = false;
     while u32::from(info.x8ee) < u32::from(info.x8ea) + u32::from(info.decompressed_y) {
         for cl in 0..u32::from(info.mcus_per_row) {
+            any = true;
             {
                 let mut s = Scan { info, data };
                 for (b, comp) in blocks.iter_mut().zip([0, 0, 0, 0, 1, 2]) {
@@ -974,6 +985,7 @@ pub fn decompress(info: &mut FileInfo, data: &[u8], width: u32, planes: &mut Pla
         }
         info.x8ee = info.x8ee.wrapping_add(info.x8d4);
     }
+    any.then_some(blocks)
 }
 
 fn ensure(v: &mut Vec<u8>, n: usize) {
@@ -1017,6 +1029,20 @@ fn prep_bit_stream(info: &mut FileInfo, data: &[u8]) {
 /// A frame's planes for an image of `width` by `height` (`fn_8001EF5C`'s decode): `frame` is
 /// the frame's record as the file holds it (its next frame's size, then its data).
 pub fn decode_frame(frame: &[u8], width: u16, height: u16) -> Result<Planes, u8> {
+    decode_frame_work(frame, width, height).map(|d| d.planes)
+}
+
+/// A frame decoded as [`decode_frame`] decodes it, with what the decode leaves in its work
+/// area.
+#[derive(Clone, Debug)]
+pub struct Decoded {
+    pub planes: Planes,
+    pub info: FileInfo,
+    pub blocks: Option<McuBlocks>,
+}
+
+/// [`decode_frame`], keeping the work area.
+pub fn decode_frame_work(frame: &[u8], width: u16, height: u16) -> Result<Decoded, u8> {
     let mut info = video_decode(width, height, frame)?;
     let w = u32::from(width);
     let h = u32::from(height);
@@ -1025,6 +1051,137 @@ pub fn decode_frame(frame: &[u8], width: u16, height: u16) -> Result<Planes, u8>
         u: vec![0; (w * h / 4) as usize],
         v: vec![0; (w * h / 4) as usize],
     };
-    decompress(&mut info, frame, w, &mut planes);
-    Ok(planes)
+    let blocks = decompress(&mut info, frame, w, &mut planes);
+    Ok(Decoded {
+        planes,
+        info,
+        blocks,
+    })
+}
+
+/// Where a decode's memory stands: the work area, the frame's record (the bytes
+/// [`video_decode`] took, offset 0: the frame's data at `rec + 4`) and the three planes.
+#[derive(Clone, Copy, Debug)]
+pub struct Places {
+    pub work: u32,
+    pub rec: u32,
+    pub planes: [u32; 3],
+}
+
+/// The bytes a decode writes into its work area, each run with its address: the header
+/// (`THPFileInfo`, in the 0x920 bytes `THPVideoDecode` clears first) with its pointers at
+/// `at`'s places, the last MCU's six coefficient blocks, and each Huffman table's size and
+/// code tables in the scratch space. Nothing else of the work area is written: the other ten
+/// MCU buffers, the components' rows and the rest keep what the block held.
+pub fn work_area_runs(d: &Decoded, at: Places) -> Vec<(u32, Vec<u8>)> {
+    let info = &d.info;
+    let mut h = vec![0u8; INFO_SIZE as usize];
+    let w32 = |h: &mut Vec<u8>, o: usize, v: u32| h[o..o + 4].copy_from_slice(&v.to_be_bytes());
+    let w16 = |h: &mut Vec<u8>, o: usize, v: u16| h[o..o + 2].copy_from_slice(&v.to_be_bytes());
+    let rec = |o: u32| at.rec.wrapping_add(o);
+    let work = |o: u32| at.work.wrapping_add(o);
+    w32(&mut h, 0x0, rec(info.file));
+    w32(&mut h, 0x4, info.curr_byte);
+    w32(&mut h, 0x8, info.cnt);
+    w32(&mut h, 0xC, rec(4));
+    for (i, &b) in info.mcu_buffer.iter().enumerate() {
+        w32(&mut h, 0x10 + 4 * i, work(b));
+    }
+    w16(&mut h, 0x50, info.x_size);
+    w16(&mut h, 0x52, info.y_size);
+    w32(&mut h, 0x6C, rec(info.scan_start));
+    w16(&mut h, 0x70, info.x_pixel_size);
+    w16(&mut h, 0x72, info.y_pixel_size);
+    w16(&mut h, 0x74, info.x74);
+    w16(&mut h, 0x76, info.decompressed_y);
+    h[0x78] = info.valid_huffman_tabs;
+    h[0x79] = info.valid_quant_tabs;
+    h[0x7A] = info.sampling_h_max;
+    h[0x7B] = info.sampling_v_max;
+    h[0x7C] = info.n_components;
+    h[0x7D] = info.x7d;
+    let mut tables = Vec::new();
+    for (t, tab) in info.huffman_tabs.iter().enumerate() {
+        // A table the frame never defines stays as the clear left it.
+        if info.valid_huffman_tabs & (1 << t) == 0 {
+            continue;
+        }
+        let o = 0x88 + 0xEC * t;
+        h[o..o + 0x20].copy_from_slice(&tab.quick);
+        h[o + 0x20..o + 0x40].copy_from_slice(&tab.increment);
+        w32(&mut h, o + 0x40, rec(tab.vij));
+        for l in 0..18 {
+            w32(&mut h, o + 0x44 + 4 * l, tab.max_code[l] as u32);
+            w32(&mut h, o + 0x8C + 4 * l, tab.val_ptr[l] as u32);
+        }
+        w32(&mut h, o + 0xD8, rec(tab.bits));
+        w32(&mut h, o + 0xDC, work(tab.size_tab));
+        w32(&mut h, o + 0xE0, work(tab.code_tab));
+        w32(&mut h, o + 0xE4, tab.num_codes);
+        w16(&mut h, o + 0xE8, tab.num_vij);
+        let sizes: Vec<u8> = tab.sizes.iter().map(|&s| s as u8).collect();
+        tables.push((work(tab.size_tab), sizes));
+        let codes: Vec<u8> = tab.codes.iter().flat_map(|c| c.to_be_bytes()).collect();
+        if !codes.is_empty() {
+            tables.push((work(tab.code_tab), codes));
+        }
+    }
+    for (q, tab) in info.quant_tabs.0.iter().enumerate() {
+        for (i, v) in tab.iter().enumerate() {
+            w32(&mut h, 0x438 + 4 * (64 * q + i), v.to_bits());
+        }
+    }
+    for (i, c) in info.components.iter().enumerate() {
+        let o = 0x838 + 0x2C * i;
+        h[o] = c.id;
+        h[o + 1] = c.sampling_h;
+        h[o + 2] = c.sampling_v;
+        h[o + 3] = c.quant_selector;
+        h[o + 4] = c.dc_selector;
+        h[o + 5] = c.ac_selector;
+        w16(&mut h, o + 6, c.pred_dc as u16);
+        w32(&mut h, o + 8, c.x08);
+        w32(&mut h, o + 0xC, c.x0c);
+        // The scan header sets a component's rows' place only for the frame's components.
+        if i < usize::from(info.n_components) {
+            w32(&mut h, o + 0x10, work(c.x10));
+        }
+        w32(&mut h, o + 0x14, c.x14 as u32);
+        w32(&mut h, o + 0x18, c.x18 as u32);
+        w32(&mut h, o + 0x1C, c.x1c as u32);
+        w32(&mut h, o + 0x20, c.x20 as u32);
+        w32(&mut h, o + 0x24, c.x24 as u32);
+        w32(&mut h, o + 0x28, c.x28 as u32);
+    }
+    h[0x8BC..0x8CC].copy_from_slice(&info.x8bc);
+    w16(&mut h, 0x8CC, info.mcus_per_row);
+    w16(&mut h, 0x8CE, info.x8ce);
+    w16(&mut h, 0x8D0, info.x8d0);
+    w16(&mut h, 0x8D2, info.x8d2);
+    w16(&mut h, 0x8D4, info.x8d4);
+    w16(&mut h, 0x8E8, info.x8e8);
+    w16(&mut h, 0x8EA, info.x8ea);
+    w16(&mut h, 0x8EC, info.x8ec);
+    w16(&mut h, 0x8EE, info.x8ee);
+    for k in 0..3 {
+        w32(
+            &mut h,
+            0x8F0 + 4 * k,
+            at.planes[k].wrapping_add(info.tile[k]),
+        );
+    }
+    w16(&mut h, 0x8FC, info.n_mcu);
+    w16(&mut h, 0x8FE, info.curr_mcu);
+    h[0x900] = info.rst;
+    w32(&mut h, 0x904, work(info.scratch));
+    let mut runs = vec![(at.work, h)];
+    if let Some(blocks) = &d.blocks {
+        let bytes: Vec<u8> = blocks
+            .iter()
+            .flat_map(|b| b.iter().flat_map(|c| c.to_be_bytes()))
+            .collect();
+        runs.push((work(info.mcu_buffer[0]), bytes));
+    }
+    runs.extend(tables);
+    runs
 }

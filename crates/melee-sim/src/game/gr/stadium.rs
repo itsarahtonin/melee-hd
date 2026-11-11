@@ -103,9 +103,12 @@ fn alloc_screen(r: &mut Running, size: u32, desc: &HSD_ImageDesc, entry: i32) ->
     let addr = crate::hsd::heap::mem_alloc(size);
     let (w, h) = (u32::from(desc.width), u32::from(desc.height));
     let len = crate::hsd::heap::tex_buffer_size(w, h, desc.format as u32).next_multiple_of(32);
+    // Only the GPU's copies write the buffer ([`screen_copied`]): until the first, it keeps
+    // what its block held (Adventure's intro over Pokémon Stadium never asks the feed for one,
+    // and its match's stage parts take the buffer's bytes: `adv-luigi`, tick 11579).
     let buffer = match r.preloaded_buffer(entry) {
         Some(b) => b,
-        None => crate::hsd::heap::mem_alloc(len),
+        None => crate::hsd::heap::mem_alloc_unclaimed(len),
     };
     (addr, buffer, len)
 }
