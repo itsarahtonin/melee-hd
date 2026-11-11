@@ -403,6 +403,9 @@ impl Running<'_> {
         if let Some(u) = stage_unlock(stkind) {
             self.note_special_message(u32::from(u[2]));
             self.game.game_data.thing.save_data.x186A |= 1 << u[0];
+            // The matches' view of the save follows it (All-Star's clear unlocks Battlefield
+            // with no later sync in its tick).
+            self.game.sync_unlocks();
         }
     }
 
