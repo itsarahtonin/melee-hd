@@ -403,8 +403,8 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
 }
 
 /// Every item article on the disc, as (where, its offset): the item common file's tables
-/// (`ItCo`'s `itPublicData`: 0x4 the common items', 0x8 the characters' table, 0xC the
-/// Pokemon's, 0x10 the enemies'), each fighter file's own items (`ftData::x48`) and Kirby's
+/// (`ItCo`'s `itPublicData`: 0x4 the common items', 0x8 the table the kinds 43 to 47 take,
+/// 0xC the Pokemon's; 0x10's words are no articles), each fighter file's own items (`ftData::x48`) and Kirby's
 /// hats' (`hat_dynamics`), and every stage file's `itemdata` list (`{kind, article}` pairs, as
 /// `Ground_801C0800`'s setup reads them).
 fn articles_of(name: &str, a: &Archive) -> Vec<(String, u32)> {
@@ -422,17 +422,12 @@ fn articles_of(name: &str, a: &Archive) -> Vec<(String, u32)> {
             .collect()
     };
     let mut out = Vec::new();
-    if name.starts_with("ItCo") {
-        if let Some(root) = a.public("itPublicData") {
-            for (label, field) in [
-                ("common", 4),
-                ("characters", 8),
-                ("pokemon", 0xC),
-                ("enemies", 0x10),
-            ] {
-                if let Some(t) = a.ptr(root + field) {
-                    out.extend(list(label, t, (bound(t) - t) / 4));
-                }
+    if name.starts_with("ItCo")
+        && let Some(root) = a.public("itPublicData")
+    {
+        for (label, field) in [("common", 4), ("x8", 8), ("pokemon", 0xC), ("x10", 0x10)] {
+            if let Some(t) = a.ptr(root + field) {
+                out.extend(list(label, t, (bound(t) - t) / 4));
             }
         }
     }
