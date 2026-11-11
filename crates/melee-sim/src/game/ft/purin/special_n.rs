@@ -726,6 +726,7 @@ impl Running<'_> {
 
     /// `ftPr_SpecialNStart_Phys` (and the charge's): held in place.
     #[doc(alias = "ftPr_SpecialNStart_Phys")]
+    #[doc(alias = "ftPr_SpecialNFull_Phys")]
     pub fn purin_special_n_start_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.xE4_ground_accel_1 = 0.0;
@@ -858,6 +859,7 @@ impl Running<'_> {
     }
 
     /// Falling at the roll's gravity (`ftCommon_Fall` with the attributes' x3C and x40).
+    #[doc(alias = "ftPr_SpecialAirNChargeFull_Phys")]
     fn purin_roll_fall(&mut self, f: FighterId) {
         let (g, t) = (
             self.pr_f(f, attr::N_AIR_GRAVITY),

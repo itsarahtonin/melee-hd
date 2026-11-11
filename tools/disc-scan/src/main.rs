@@ -11,7 +11,8 @@
 //!
 //! `item-hitboxes` walks the state scripts of every character's own items (each fighter file's
 //! `ftData::x48` articles) and prints each hitbox command with the bits the clank and absorb
-//! tests read. `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
+//! tests read; `item-commands [OPCODE...]` counts every item script command on the disc (every
+//! article's states and the stages' `ALDYakuAll` scripts). `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
 //! `x14`) and names any owner's command (21 and up) in them; `colanims FILE ROOT FIELD` any
 //! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `words FILE OFFSET COUNT` prints
 //! a file's words, pointers marked.
@@ -401,6 +402,144 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
     }
 }
 
+/// Every item article on the disc, as (where, its offset): the item common file's tables
+/// (`ItCo`'s `itPublicData`: 0x4 the common items', 0x8 the characters' table, 0xC the
+/// Pokemon's, 0x10 the enemies'), each fighter file's own items (`ftData::x48`) and Kirby's
+/// hats' (`hat_dynamics`), and every stage file's `itemdata` list (`{kind, article}` pairs, as
+/// `Ground_801C0800`'s setup reads them).
+fn articles_of(name: &str, a: &Archive) -> Vec<(String, u32)> {
+    let starts = object_starts(a);
+    let bound = |t: u32| {
+        starts
+            .range(t + 1..)
+            .next()
+            .copied()
+            .unwrap_or(a.data().len() as u32)
+    };
+    let list = |label: &str, t: u32, n: u32| -> Vec<(String, u32)> {
+        (0..n)
+            .filter_map(|i| a.ptr(t + 4 * i).map(|art| (format!("{label}[{i}]"), art)))
+            .collect()
+    };
+    let mut out = Vec::new();
+    if name.starts_with("ItCo") {
+        if let Some(root) = a.public("itPublicData") {
+            for (label, field) in [
+                ("common", 4),
+                ("characters", 8),
+                ("pokemon", 0xC),
+                ("enemies", 0x10),
+            ] {
+                if let Some(t) = a.ptr(root + field) {
+                    out.extend(list(label, t, (bound(t) - t) / 4));
+                }
+            }
+        }
+    }
+    for (root, at) in a.publics() {
+        if root.starts_with("ftData") && name.starts_with("Pl") {
+            if name.starts_with("PlKbCp") {
+                out.extend(list(&format!("{root} hat_dynamics"), at + 0xC, 5));
+            } else if let Some(t) = a.ptr(at + 0x48) {
+                out.extend(list(&format!("{root} x48"), t, (bound(t) - t) / 4));
+            }
+        }
+        if root == "itemdata" {
+            let mut i = 0;
+            while let Some(pair) = a.ptr(at + 4 * i) {
+                if let Some(art) = a.ptr(pair + 4) {
+                    out.push((format!("itemdata[{i}] kind {}", a.u32(pair)), art));
+                }
+                i += 1;
+            }
+        }
+    }
+    // Only words that look like an article: a state table and a model.
+    out.retain(|&(_, art)| a.ptr(art + 0xC).is_some() && a.ptr(art + 0x10).is_some());
+    out
+}
+
+/// Counts every item command in every item state script on the disc (the articles of
+/// `articles_of`, each state description's script, and the stages' `ALDYakuAll` scripts, which
+/// `Ground_801C0800` puts in the random stage item's descriptions), and lists where the
+/// opcodes in `want` are.
+fn item_commands(disc: &Disc, files: &[String], want: &BTreeSet<u32>) {
+    let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
+    let (mut n_articles, mut n_scripts) = (0, 0);
+    let mut hits = Vec::new();
+    for path in files {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        if !name.ends_with(".dat") && !name.ends_with(".usd") {
+            continue;
+        }
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        let starts = object_starts(&a);
+        let mut scripts: Vec<(String, u32)> = Vec::new();
+        let arts = articles_of(name, &a);
+        if !arts.is_empty() && want.contains(&0) {
+            println!("{name}: {} articles", arts.len());
+        }
+        for (label, art) in arts {
+            n_articles += 1;
+            let states = a.ptr(art + 0xC).expect("checked");
+            let end = starts
+                .range(states + 1..)
+                .next()
+                .copied()
+                .unwrap_or(a.data().len() as u32);
+            for st in 0..(end - states) / 0x10 {
+                if let Some(script) = a.ptr(states + 0x10 * st + 0xC) {
+                    scripts.push((format!("{label} state {st}"), script));
+                }
+            }
+        }
+        if let Some(at) = a.public("ALDYakuAll") {
+            let mut i = 0;
+            while i < 64 {
+                match a.ptr(at + 4 * i) {
+                    Some(script) => scripts.push((format!("ALDYakuAll[{i}]"), script)),
+                    None if i > 0 => break,
+                    None => {}
+                }
+                i += 1;
+            }
+        }
+        for (label, script) in scripts {
+            n_scripts += 1;
+            let w = walk(&a, script, &item_command_words);
+            for (at, op) in w.bad {
+                println!("not decoded: {name} {label}: opcode {op} at {at:#x}");
+            }
+            for (op, off, frame) in w.commands {
+                *counts.entry(op).or_default() += 1;
+                if want.contains(&op) {
+                    hits.push(format!(
+                        "  {op}: {name} {label} at {off:#x} ({:#010x}), frame {frame}",
+                        a.u32(off)
+                    ));
+                }
+            }
+        }
+    }
+    println!("{n_articles} item articles, {n_scripts} scripts (their states' and ALDYakuAll's)");
+    println!("opcode: commands");
+    for op in 10..26 {
+        let n = counts.get(&op).copied().unwrap_or(0);
+        println!(
+            "  {op}: {n}{}",
+            if n == 0 { "  none on the disc" } else { "" }
+        );
+    }
+    for h in hits {
+        println!("{h}");
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(cmd) = args.first() else {
@@ -456,11 +595,34 @@ fn main() -> ExitCode {
             }
         }
         "item-hitboxes" => item_hitboxes(&disc, &files),
+        "item-commands" => {
+            let want: BTreeSet<u32> = args[1..]
+                .iter()
+                .map(|s| s.parse().expect("an opcode"))
+                .collect();
+            item_commands(&disc, &files, &want);
+        }
         "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
         "colanims" => {
             // `colanims FILE ROOT FIELD`: any color animation table.
             let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");
             colanims(&disc, &files, &args[1], &args[2], field);
+        }
+        "publics" => {
+            // `publics PATTERN`: the public symbols containing PATTERN in every file.
+            for path in &files {
+                let Ok(bytes) = disc.read_file(path) else {
+                    continue;
+                };
+                let Ok(a) = Archive::parse(&bytes) else {
+                    continue;
+                };
+                for (n, o) in a.publics() {
+                    if n.contains(args[1].as_str()) {
+                        println!("{path} {n} {o:#x}");
+                    }
+                }
+            }
         }
         "words" => {
             // `words FILE OFFSET COUNT`: a file's data words, pointers marked, for checking a
