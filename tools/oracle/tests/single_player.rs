@@ -541,6 +541,55 @@ fn the_egg_carried_off_the_stage_runs_clean_to_its_card_after() {
     );
 }
 
+/// Event Match's tenth round (milestone 6's task 21; docs/oracle.md, "Sessions"): in Event 9 a
+/// lookahead bot's Fox knocks a computer Zelda out while she is Zelda, and the event's process
+/// brings her back with one stock (`gm_8016F00C`); Fox then falls and the event fails
+/// (`e09-zelda`), clean from power-on to its trace's end with `--all --heap` and the card after
+/// the original's.
+#[test]
+fn a_zelda_knocked_out_as_zelda_runs_clean_to_its_card_after() {
+    let (dir, name) = ("m6-event-10", "e09-zelda");
+    let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+    let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+    let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+    let Some(out) = session_in(dir, name, &args) else {
+        return;
+    };
+    assert!(
+        out.contains("5346 ticks compared, no difference\n"),
+        "{name}: {out}"
+    );
+    assert!(out.contains("no stale reads"), "{name}: {out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{name}: {out}"
+    );
+}
+
+/// Event Match's tenth round (milestone 6's task 21; docs/oracle.md, "Sessions"): in Event 13 a
+/// lookahead bot's Yoshi throws the egg into a computer player's raised shield, where it doesn't
+/// bounce off (`it_3F14_Logic42_HitShield`), and the egg later breaks (`e13-shield`), clean from
+/// power-on to its trace's end with `--all --heap` and the card after the original's.
+#[test]
+fn the_egg_thrown_into_a_shield_runs_clean_to_its_card_after() {
+    let (dir, name) = ("m6-event-10", "e13-shield");
+    let card = ssbm_rs_local(&format!("lockstep/{dir}/{name}.card"));
+    let after = ssbm_rs_local(&format!("lockstep/{dir}/{name}-run.card"));
+    let args = ["--card", &card, "--card-after", &after, "--all", "--heap"];
+    let Some(out) = session_in(dir, name, &args) else {
+        return;
+    };
+    assert!(
+        out.contains("5525 ticks compared, no difference\n"),
+        "{name}: {out}"
+    );
+    assert!(out.contains("no stale reads"), "{name}: {out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{name}: {out}"
+    );
+}
+
 /// Task 26's second round (`m6-unlocks`; docs/oracle.md, "Sessions"): the Home-Run Contest's
 /// 300 m (`gm_80173B30`'s 0xBD, `hr-300`), Training's combo of 10 (`gm_80173BC4`'s 0x6D,
 /// Young Link's 12, `tr-combo10`) and Endless Melee's 100 KOs (`gm_80173C70`'s 0x4F,
