@@ -121,11 +121,7 @@ fn the_versus_page_tours_run_to_their_first_stops() {
     first_stops(&[
         ("bosses", 13377, ""),
         ("targets", 47425, ""),
-        (
-            "stages-1p",
-            26430,
-            "tick 26429: unknown leftover bytes of a freed a main-heap block under Fighter: its layout isn't ported",
-        ),
+        ("stages-1p", 33507, ""),
         ("stages-1p-b", 11325, ""),
         ("stages-1p-c", 5404, ""),
     ]);
