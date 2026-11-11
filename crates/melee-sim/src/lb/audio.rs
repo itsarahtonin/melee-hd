@@ -1514,6 +1514,11 @@ impl crate::game::state::Running<'_> {
     /// timeline the frontend is told instead.
     #[doc(alias = "gm_LoadAnnouncer")]
     pub fn load_announcer(&mut self) {
+        #[cfg(feature = "oracle-hooks")]
+        crate::game::oracle_hooks::reach(
+            self.game,
+            crate::game::oracle_hooks::Entry::LoadAnnouncer,
+        );
         if self.game.audio.clock.is_none() {
             self.game.audio(0x8016_8FC4, [0; 4]);
             return;

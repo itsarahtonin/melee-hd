@@ -21,6 +21,7 @@ mod birdo_sweep;
 mod boot;
 mod diff;
 mod golden;
+mod hooks;
 mod record;
 mod session;
 mod session_sync;

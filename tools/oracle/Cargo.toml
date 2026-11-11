@@ -12,7 +12,7 @@ publish.workspace = true
 melee-capture = { path = "../capture" }
 melee-data.workspace = true
 melee-slippi = { path = "../../crates/melee-slippi" }
-melee-sim = { workspace = true, features = ["stubs"] }
+melee-sim = { workspace = true, features = ["stubs", "oracle-hooks"] }
 ssbm-rt.workspace = true
 ssbm-slippi.workspace = true
 ssbm-types.workspace = true

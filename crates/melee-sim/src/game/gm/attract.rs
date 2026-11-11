@@ -261,22 +261,13 @@ impl Running<'_> {
         crate::game::structs::StartMeleeData,
         super::vs::MatchArchives,
     ) {
-        let start = match scene_mode {
-            super::machine::GM_OPENING_MV => self.game.attract.start.clone(),
-            m if super::machine::uses_vs_melee(m) => self.game.vs_melee.start.clone(),
-            super::tournament::GM_TOURNAMENT => (*self.game.tou.start).clone(),
-            super::GM_DEBUG => self.game.debug_mode.vs_enter.clone(),
-            super::event::GM_EVENT => self.game.event.start.clone(),
-            super::one_player::GM_TARGET_TEST => self.game.one_player.target_start.clone(),
-            super::one_player::GM_TRAINING => self.game.training.enter.clone(),
-            super::one_player::GM_CLASSIC
-            | super::one_player::GM_ADVENTURE
-            | super::one_player::GM_ALLSTAR => self.game.one_player.match_start.clone(),
-            m if super::multi_man::is_multi_man(m) => self.game.multi_man.start.clone(),
-            m => crate::game::code::unported_call(&format!(
-                "the VS scene's enter data in game mode {m:#x}"
-            )),
-        };
+        // `fn_8016E730`'s entry, its argument the enter data.
+        #[cfg(feature = "oracle-hooks")]
+        crate::game::oracle_hooks::reach(
+            self.game,
+            crate::game::oracle_hooks::Entry::MatchStart { scene_mode },
+        );
+        let start = scene_enter_data(self.game, scene_mode).clone();
         let (files, buffers) = crate::game::vs_match::preloaded_files(&start, self.files_us());
         let f = &mut self.game.ft.data.files;
         // The match takes its files from the cache the menus' preloads filled (the selects'
@@ -304,5 +295,28 @@ impl Running<'_> {
             stage,
         };
         (start, files)
+    }
+}
+
+/// The start data a VS scene's match in `scene_mode` takes: its mode's state's enter data.
+pub(crate) fn scene_enter_data(
+    game: &mut crate::game::state::Game,
+    scene_mode: u8,
+) -> &mut crate::game::structs::StartMeleeData {
+    match scene_mode {
+        super::machine::GM_OPENING_MV => &mut game.attract.start,
+        m if super::machine::uses_vs_melee(m) => &mut game.vs_melee.start,
+        super::tournament::GM_TOURNAMENT => &mut *game.tou.start,
+        super::GM_DEBUG => &mut game.debug_mode.vs_enter,
+        super::event::GM_EVENT => &mut game.event.start,
+        super::one_player::GM_TARGET_TEST => &mut game.one_player.target_start,
+        super::one_player::GM_TRAINING => &mut game.training.enter,
+        super::one_player::GM_CLASSIC
+        | super::one_player::GM_ADVENTURE
+        | super::one_player::GM_ALLSTAR => &mut game.one_player.match_start,
+        m if super::multi_man::is_multi_man(m) => &mut game.multi_man.start,
+        m => crate::game::code::unported_call(&format!(
+            "the VS scene's enter data in game mode {m:#x}"
+        )),
     }
 }

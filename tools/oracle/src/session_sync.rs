@@ -93,6 +93,17 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             // `Layout::vanilla_vs`, what the menus leave) checked against the match the menus
             // started: its start data and its heap after its first tick.
             "--shortcut" => shortcut = true,
+            // ssbm-rs's runner hooks the session's job ran with (`crate::hooks`).
+            "--hooks" => match crate::hooks::Hooks::parse(it.next().expect("--hooks LINE")) {
+                Ok(h) => {
+                    println!("ssbm-rs's runner hooks, mirrored: {}", h.describe());
+                    crate::hooks::install(h);
+                }
+                Err(e) => {
+                    eprintln!("--hooks: {e}");
+                    return ExitCode::from(2);
+                }
+            },
             "--card" => card_path = Some(it.next().expect("--card FILE").into()),
             // The memory card's image as the straight run leaves it, written at the end.
             "--card-out" => card_out = Some(it.next().expect("--card-out FILE").into()),
@@ -108,7 +119,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let [inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--rollback N] [--ticks N] [--perturb TICK]"
+            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--hooks LINE] [--rollback N] [--ticks N] [--perturb TICK]"
         );
         return ExitCode::from(2);
     };
