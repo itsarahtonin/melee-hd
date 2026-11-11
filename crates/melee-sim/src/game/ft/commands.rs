@@ -507,6 +507,8 @@ impl Running<'_> {
     }
 
     /// Throw flag 2.
+    /// `ftAction_8007192C`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_throw_flag_2(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.game.fighters[f.0].x2210[0] |= 0x20;
     }
@@ -603,11 +605,15 @@ impl Running<'_> {
     }
 
     /// Shows each model's previous variant.
+    /// `ftAction_80071D94`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_restore_models(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.restore_models(f);
     }
 
     /// Hides every model variant.
+    /// `ftAction_80071DCC`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_hide_models(&mut self, _gobj: GObjId, f: FighterId, _w: u32) {
         self.hide_models(f);
     }
@@ -707,6 +713,8 @@ impl Running<'_> {
     }
 
     /// Stops one kind of the controller's rumble.
+    /// `ftAction_8007297C`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_stop_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.stop_rumble(f, bits(w, 6, 26) as i32);
     }
@@ -768,11 +776,15 @@ impl Running<'_> {
     }
 
     /// Ends a color animation.
+    /// `ftAction_80072ABC`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_end_color_anim(&mut self, gobj: GObjId, _f: FighterId, w: u32) {
         self.end_color_anim(gobj, bits(w, 6, 8) as i32);
     }
 
     /// Flag `x221E_b1`.
+    /// `ftAction_80072B14`: dead, no fighter script on the disc holds its opcode
+    /// (ledger/dead.txt).
     fn cmd_x221e_b1(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         self.game.fighters[f.0].x221E_b1 = bits(w, 6, 26) & 1 != 0;
     }
@@ -879,14 +891,18 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_800716F8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_800716f8(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_80071774`: reached by a state started partway whose script holds a hitbox
+    // flags command (Jigglypuff's Rollout let go mid-charge); aliased once a check reaches it.
     fn skip_80071774(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_800717C8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_800717c8(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
@@ -900,6 +916,7 @@ impl Running<'_> {
         self.cmd_skip(f, 3);
     }
 
+    // `ftAction_80071D30`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_80071d30(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
@@ -908,10 +925,12 @@ impl Running<'_> {
         self.cmd_skip(f, 3);
     }
 
+    // `ftAction_800722C8`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_800722c8(&mut self, f: FighterId) {
         self.cmd_skip(f, 7);
     }
 
+    // `ftAction_800726C0`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_800726c0(&mut self, f: FighterId) {
         self.cmd_skip(f, 4);
     }
@@ -921,10 +940,12 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_800729C4`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
     fn skip_800729c4(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_80072A4C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_80072a4c(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
@@ -934,14 +955,17 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_80072B04`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
     fn skip_80072b04(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_80072B84`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_80072b84(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_80072BE4`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_80072be4(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
@@ -954,18 +978,22 @@ impl Running<'_> {
         self.cmd_skip(f, 3);
     }
 
+    // `ftAction_80072FE0`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_80072fe0(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
 
+    // `ftAction_8007309C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_8007309c(&mut self, f: FighterId) {
         self.cmd_skip(f, 2);
     }
 
+    // `ftAction_80073108`: dead, no fighter script on the disc holds its opcode (ledger/dead.txt).
     fn skip_80073108(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
 
+    // `ftAction_8007320C`: dead, no state a fighter enters partway holds its opcode (ledger/dead.txt).
     fn skip_8007320c(&mut self, f: FighterId) {
         self.cmd_skip(f, 4);
     }

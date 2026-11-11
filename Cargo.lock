@@ -1593,6 +1593,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "melee-disc-scan"
+version = "0.1.0"
+dependencies = [
+ "melee-data",
+]
+
+[[package]]
 name = "melee-gekko-fp"
 version = "0.1.0"
 dependencies = [
