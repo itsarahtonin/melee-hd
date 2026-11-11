@@ -1733,7 +1733,7 @@ impl Running<'_> {
 
     /// A jump forward out from under Corneria's ceiling, `ftCo_800A0384`: as
     /// [`Running::cpu_jump_toward_target`], the stick forward instead of toward the target.
-    // Ports `ftCo_800A0384`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800A0384")]
     fn cpu_jump_forward(&mut self, f: FighterId) {
         let fpp = &self.game.fighters[f.0];
         let top = reg(super::super::gr::stage::blast_top(self.game));

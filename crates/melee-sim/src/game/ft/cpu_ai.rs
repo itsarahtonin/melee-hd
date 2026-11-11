@@ -343,6 +343,8 @@ impl Running<'_> {
             24 => self.cpu_decide_wander(f),
             27 => self.cpu_decide_unafraid(f),
             29 => self.cpu_decide_item_lover(f),
+            // Kind 26 (kind 23's target, training's floor under it): no table, setter or
+            // debug choice gives it (`cpu_audit`'s `KIND_26`).
             26 => unported_call("ftCo_800B2AFC for computer kind 26"),
             _ => self.cpu_decide_vs(f),
         }
