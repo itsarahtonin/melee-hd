@@ -463,7 +463,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
 pub const UNCHECKED: &[&str] = &[
     "melee/it/it_26B1",
     "melee/it/it_2725",
-    "melee/it/itanimlist",
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
