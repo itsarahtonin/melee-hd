@@ -553,6 +553,9 @@ fn image_check(tick: u32, game: &Game, data: &melee_data::archive::Archives, mem
             for (lo, hi, owner) in img.leftover_unknown(a, n) {
                 println!("  unknown {:#010x}..{:#010x}: {owner}", a + lo, a + hi);
             }
+            for (lo, hi, owner) in img.live_unknown(a, n) {
+                println!("  claimed {:#010x}..{:#010x}: {owner}", a + lo, a + hi);
+            }
             for o in image_objects(game)
                 .iter()
                 .filter(|o| o.1 < a + n && a < o.1 + o.2)
