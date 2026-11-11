@@ -305,14 +305,11 @@ impl MoviePlayer {
             if !h.image.on {
                 return;
             }
-            // The player writes only these: the table, the slots' reads, the planes and the
-            // decode's work area, which isn't laid out (with the frame offsets' table after
-            // it); the rest keeps what it held.
-            h.image.claim(
-                self.work,
-                self.ring_table + self.buffer_len(),
-                "the THP decoder's work area",
-            );
+            // The player writes only these: the table, the slots' reads, the planes and what
+            // the last decode left in its work area (every frame of a movie has the same
+            // headers, so each decode writes the same places); the rest keeps what it held,
+            // the frame offsets' table after the work area too, which `fn_8001EBF0` makes room
+            // for and nothing fills ("frame offsets not supported").
             for i in 0..self.slots {
                 h.image.word(self.ring_table + 4 * i, self.slot_addr(i));
             }
@@ -320,12 +317,20 @@ impl MoviePlayer {
                 let bytes = data.get(file).data();
                 let end = (off as usize + len as usize).min(bytes.len());
                 let frame = &bytes[(off as usize).min(end)..end];
-                if let Ok(p) =
-                    crate::thp::decode_frame(frame, self.width as u16, self.height as u16)
+                if let Ok(d) =
+                    crate::thp::decode_frame_work(frame, self.width as u16, self.height as u16)
                 {
-                    h.image.put(self.plane_y, &p.y);
-                    h.image.put(self.plane_u, &p.u);
-                    h.image.put(self.plane_v, &p.v);
+                    h.image.put(self.plane_y, &d.planes.y);
+                    h.image.put(self.plane_u, &d.planes.u);
+                    h.image.put(self.plane_v, &d.planes.v);
+                    let at = crate::thp::Places {
+                        work: self.work,
+                        rec: self.slot_addr(self.decoded_slot as u32),
+                        planes: [self.plane_y, self.plane_u, self.plane_v],
+                    };
+                    for (a, b) in crate::thp::work_area_runs(&d, at) {
+                        h.image.put(a, &b);
+                    }
                 }
             }
         });
