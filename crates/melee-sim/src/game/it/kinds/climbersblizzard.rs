@@ -23,6 +23,7 @@ pub const COLL: u32 = 0x802C_23D4;
 pub const DMG_DEALT: u32 = 0x802C_2424;
 #[doc(alias = "itClimbersBlizzard_Reflected")]
 pub const REFLECTED: u32 = 0x802C_242C;
+// `itClimbersBlizzard_Clanked`: dead, every hitbox its scripts open has the clank bit clear (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802C_244C;
 #[doc(alias = "itClimbersBlizzard_HitShield")]
 pub const HIT_SHIELD: u32 = 0x802C_2454;

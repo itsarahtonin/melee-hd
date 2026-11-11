@@ -358,7 +358,9 @@ pub fn clear_overlay(ip: &mut Item) {
     crate::lb::colanim::clear(&mut ip.x548_colorOverlay);
 }
 
-/// The items' own color script commands (`fn_80279B30`, through `it_804D51C8`).
+/// The items' own color script commands (`fn_80279B30`, through `it_804D51C8`): dead with
+/// both its commands, `it_80279AF0` and `it_80279B10`, since no item color animation on the
+/// disc holds a command past 20 (ledger/dead.txt).
 pub fn overlay_command(_data: &Archives, _co: &mut ColorOverlay, opcode: u32) {
     match opcode {
         21 => code::unported_call("it_80279AF0 (an item color script's effect)"),

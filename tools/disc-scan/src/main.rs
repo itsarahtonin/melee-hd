@@ -8,6 +8,12 @@
 //! from) command by command, through its subroutines and gotos, and counts the scripts that
 //! hold each of the fighter's own opcodes (10 to 58, `ftAction_803C06E8`). With opcodes it
 //! lists each script that holds them and the earliest frame each is reached at.
+//!
+//! `item-hitboxes` walks the state scripts of every character's own items (each fighter file's
+//! `ftData::x48` articles) and prints each hitbox command with the bits the clank and absorb
+//! tests read. `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
+//! `x14`) and names any owner's command (21 and up) in them. `words FILE OFFSET COUNT` prints
+//! a file's words, pointers marked.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
@@ -47,8 +53,9 @@ struct Walk {
 
 /// Walks a command script from `start` through its subroutines and gotos (`Command_Execute`'s
 /// codes 0 to 9), each command once, with the earliest frame the script reaches it at (the
-/// timers before it on the way, loops taken once); `words` gives an owner command's length.
-fn walk(a: &Archive, start: u32, words: &dyn Fn(u32) -> Option<u32>) -> Walk {
+/// timers before it on the way, loops taken once); `words` gives an owner command's length
+/// from its opcode and first word.
+fn walk(a: &Archive, start: u32, words: &dyn Fn(u32, u32) -> Option<u32>) -> Walk {
     let mut out = Walk::default();
     let mut seen = BTreeSet::new();
     let mut todo = vec![(start, 0u32)];
@@ -87,7 +94,7 @@ fn walk(a: &Archive, start: u32, words: &dyn Fn(u32) -> Option<u32>) -> Walk {
                         at = target;
                     }
                 }
-                _ => match words(op) {
+                _ => match words(op, w) {
                     Some(n) => {
                         out.commands.push((op, at, frame));
                         at += 4 * n;
@@ -126,7 +133,7 @@ fn fighter_commands(disc: &Disc, files: &[String]) -> (Vec<Found>, Vec<String>, 
     let mut found = Vec::new();
     let mut problems = Vec::new();
     let mut scripts = 0;
-    let words = |op: u32| {
+    let words = |op: u32, _: u32| {
         op.checked_sub(10)
             .and_then(|i| FIGHTER_COMMAND_WORDS.get(i as usize))
             .copied()
@@ -196,6 +203,174 @@ fn fighter_commands(disc: &Disc, files: &[String]) -> (Vec<Found>, Vec<String>, 
     (found, problems, scripts)
 }
 
+/// An item command's length in words (`it_803F22A8`, opcodes 10 to 25): the effect's 5, the
+/// hitbox's 6, the sound's 3 for a sound played or stopped (`it_8027978C`'s 0 to 2, 10, 11)
+/// and 2 otherwise, 1 for the rest.
+fn item_command_words(op: u32, w: u32) -> Option<u32> {
+    match op {
+        10 => Some(5),
+        11 => Some(6),
+        16 => Some(if matches!((w >> 18) & 0xFF, 0..=2 | 10 | 11) {
+            3
+        } else {
+            2
+        }),
+        12..=25 => Some(1),
+        _ => None,
+    }
+}
+
+/// Every hitbox command (item command 11, `it_802790C0`) in the state scripts of each fighter
+/// file's own items (`ftData::x48`, the articles each character registers on load with
+/// `it_8026B3F8`): its element and the flags the clank and absorb tests read.
+fn item_hitboxes(disc: &Disc, files: &[String]) {
+    for path in files {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        if !(name.starts_with("Pl") && name.ends_with(".dat")) {
+            continue;
+        }
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        let starts = object_starts(&a);
+        let bound = |t: u32| {
+            starts
+                .range(t + 1..)
+                .next()
+                .copied()
+                .unwrap_or(a.data().len() as u32)
+        };
+        let roots: Vec<(String, u32)> = a
+            .publics()
+            .filter(|(n, _)| n.starts_with("ftData"))
+            .map(|(n, o)| (n.to_owned(), o))
+            .collect();
+        for (root, at) in roots {
+            // Kirby's hat files (`PlKbCp*.dat`) are `KirbyHatStruct`s whose five `hat_dynamics`
+            // words, from 0xC, are the copies' articles; a fighter's list is `ftData::x48`.
+            let (list, count) = if name.starts_with("PlKbCp") {
+                (at + 0xC, 5)
+            } else {
+                let Some(list) = a.ptr(at + 0x48) else {
+                    continue;
+                };
+                (list, (bound(list) - list) / 4)
+            };
+            println!(
+                "{name} {root} at {at:#x}: attributes x4 at {:#x}",
+                a.ptr(at + 4).unwrap_or(0)
+            );
+            for i in 0..count {
+                let Some(article) = a.ptr(list + 4 * i) else {
+                    continue;
+                };
+                let Some(states) = a.ptr(article + 0xC) else {
+                    println!("{name} {root} article {i}: no states");
+                    continue;
+                };
+                let n = (bound(states) - states) / 0x10;
+                let mut boxes = 0;
+                for st in 0..n {
+                    let Some(script) = a.ptr(states + 0x10 * st + 0xC) else {
+                        continue;
+                    };
+                    let w = walk(&a, script, &item_command_words);
+                    for (at, op) in w.bad {
+                        println!(
+                            "{name} {root} article {i} state {st}: opcode {op} at {at:#x} isn't a command"
+                        );
+                    }
+                    for (op, off, frame) in w.commands {
+                        if op != 11 {
+                            continue;
+                        }
+                        boxes += 1;
+                        let (w4, w5) = (a.u32(off + 16), a.u32(off + 20));
+                        println!(
+                            "{name} {root} article {i} state {st} frame {frame}: hitbox at {off:#x}, element {}, clank (x40_b0) {}, x41_b7 {}, x42_b0 {}, x42_b4 {} ({w4:#010x} {w5:#010x})",
+                            (w4 >> 18) & 0x1F,
+                            (w4 >> 17) & 1,
+                            (w5 >> 20) & 1,
+                            (w5 >> 19) & 1,
+                            (w5 >> 15) & 1,
+                        );
+                    }
+                }
+                println!("{name} {root} article {i}: {n} states, {boxes} hitbox commands");
+            }
+        }
+    }
+}
+
+/// A color animation command's length in words (`lb_803BA248`, opcodes 11 to 20); 10 ends the
+/// script, and the owner's commands (21 and up) are reported as the walk's undecoded ones.
+fn color_command_words(op: u32, _: u32) -> Option<u32> {
+    match op {
+        11 | 12 | 16 | 17 | 20 => Some(1),
+        13 | 14 | 15 | 18 | 19 => Some(2),
+        _ => None,
+    }
+}
+
+/// Every command of the items' color animations (each item common file's `itPublicData`
+/// `x14` table, 8 bytes an entry: the script and its priority, `it_80279958`'s ids), and the
+/// owner's commands (21 and up, which `fn_80279B30` runs through `it_804D51C8`) among them.
+fn item_colanims(disc: &Disc, files: &[String]) {
+    for path in files {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        if !name.starts_with("ItCo") {
+            continue;
+        }
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        let Some(root) = a.public("itPublicData") else {
+            continue;
+        };
+        let Some(t) = a.ptr(root + 0x14) else {
+            continue;
+        };
+        let starts = object_starts(&a);
+        let end = starts
+            .range(t + 1..)
+            .next()
+            .copied()
+            .unwrap_or(a.data().len() as u32);
+        let n = (end - t) / 8;
+        println!("{name}: {n} item color animations at {t:#x}");
+        for i in 0..n {
+            let Some(script) = a.ptr(t + 8 * i) else {
+                println!("  {i}: no script");
+                continue;
+            };
+            let w = walk(&a, script, &color_command_words);
+            let mut ops: Vec<u32> = w.commands.iter().map(|c| c.0).collect();
+            ops.sort_unstable();
+            ops.dedup();
+            let owner: Vec<String> = w
+                .bad
+                .iter()
+                .filter(|(_, op)| *op != 10)
+                .map(|(at, op)| format!("{op} at {at:#x}"))
+                .collect();
+            println!(
+                "  {i}: script at {script:#x}, commands {ops:?}, owner's or undecoded: {}",
+                if owner.is_empty() {
+                    "none".to_owned()
+                } else {
+                    owner.join(", ")
+                }
+            );
+        }
+    }
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(cmd) = args.first() else {
@@ -250,6 +425,8 @@ fn main() -> ExitCode {
                 }
             }
         }
+        "item-hitboxes" => item_hitboxes(&disc, &files),
+        "item-colanims" => item_colanims(&disc, &files),
         "words" => {
             // `words FILE OFFSET COUNT`: a file's data words, pointers marked, for checking a
             // scan's finding by hand.

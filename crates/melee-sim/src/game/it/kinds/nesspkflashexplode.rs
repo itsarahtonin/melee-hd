@@ -22,6 +22,7 @@ pub const ANIM: u32 = 0x802A_FBA4;
 pub const PHYS: u32 = 0x802A_FD2C;
 #[doc(alias = "itNessPKFlashExplode_UnkMotion0_Coll")]
 pub const COLL: u32 = 0x802A_FD44;
+// `itNessPKFlashExplode_Logic103_Clanked`: dead, every hitbox its scripts open has the clank bit clear (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802A_FD4C;
 #[doc(alias = "itNessPKFlashExplode_Logic103_Absorbed")]
 pub const ABSORBED: u32 = 0x802A_FD54;
