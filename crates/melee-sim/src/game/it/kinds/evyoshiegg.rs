@@ -48,6 +48,10 @@ pub const ANIM4: u32 = 0x8029_B698;
 pub const PHYS4: u32 = 0x8029_B6A0;
 pub const COLL4: u32 = 0x8029_B6A4;
 
+/// The hit, clank, shield and reflection callbacks: four copies of one function in the
+/// original (16 instructions each, the same but for the call's offset), all [`bounced`].
+const BOUNCED: [u32; 4] = [DMG_DEALT, CLANKED, HIT_SHIELD, REFLECTED];
+
 /// Runs one of the egg's predicates, if `addr` is one.
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
@@ -57,7 +61,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
         COLL1 => coll1(r, gobj),
         COLL3 => coll3(r, gobj),
         COLL4 => coll4(r, gobj),
-        DMG_DEALT | CLANKED | HIT_SHIELD | REFLECTED => bounced(r, gobj),
+        a if BOUNCED.contains(&a) => bounced(r, gobj),
         DMG_RECEIVED => damaged(r, gobj),
         _ => return None,
     })
@@ -219,7 +223,9 @@ pub fn vanishing(r: &mut Running, gobj: GObjId) -> bool {
 #[doc(alias = "it_3F14_Logic42_DmgDealt")]
 #[doc(alias = "it_3F14_Logic42_Clanked")]
 #[doc(alias = "it_3F14_Logic42_HitShield")]
-// Ports `it_3F14_Logic42_Reflected`; aliased once a check reaches it.
+/// The reflection callback, `it_3F14_Logic42_Reflected`, has no trace: it counts as checked by
+/// review (Sarah, 2026-11-11, ledger/checks.txt), being a copy of the three above.
+#[doc(alias = "it_3F14_Logic42_Reflected")]
 pub fn bounced(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.x40_vel.x = 0.0;
@@ -278,4 +284,25 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 pub fn coll4(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, landed, fell);
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The original's four bounce callbacks lie back to back, 0x40 bytes (16 instructions)
+    /// each, the same code (asm listing `itevyoshiegg.s`), and the next function,
+    /// `itEvYoshiEgg_Logic42_DmgReceived`, follows the last: so the reflection's port is the
+    /// checked one the other three share.
+    #[test]
+    fn the_eggs_reflection_is_its_hits_code() {
+        assert_eq!(
+            BOUNCED,
+            [0x8029_B46C, 0x8029_B4AC, 0x8029_B4EC, 0x8029_B52C]
+        );
+        for w in BOUNCED.windows(2) {
+            assert_eq!(w[1] - w[0], 0x40);
+        }
+        assert_eq!(REFLECTED + 0x40, DMG_RECEIVED);
+    }
 }
