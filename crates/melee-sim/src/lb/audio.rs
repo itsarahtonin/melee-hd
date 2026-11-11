@@ -1514,6 +1514,8 @@ impl crate::game::state::Running<'_> {
     /// timeline the frontend is told instead.
     #[doc(alias = "gm_LoadAnnouncer")]
     pub fn load_announcer(&mut self) {
+        // The oracle's test hook (`oracle_hooks`): does nothing in the player, which never
+        // installs one.
         #[cfg(feature = "oracle-hooks")]
         crate::game::oracle_hooks::reach(
             self.game,
