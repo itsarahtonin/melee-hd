@@ -855,11 +855,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     Gap {
-        what: "Event Match's list, events and egg",
-        covers: &["melee/it/kinds/itevyoshiegg"],
-        modes: &[EV],
-    },
-    Gap {
         what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
         covers: &["grFigureGet_80219898 with no coin", "melee/gm/gm_1832"],
         // Not Classic (task 22's debug round): its PATHS entry's unreached says why.
@@ -1171,7 +1166,7 @@ mod tests {
 
     /// Every mode has its paths once and every gate its mode; the debug routes have no gate,
     /// and the modes whose gates are lifted are those the player offers (the Home-Run Contest,
-    /// Target Test, Training, Multi-Man Melee, All-Star and Classic, docs/player.md).
+    /// Target Test, Training, Multi-Man Melee, All-Star, Classic and Event Match, docs/player.md).
     #[test]
     fn modes_match_the_gates() {
         for m in Mode::ALL {
@@ -1190,6 +1185,7 @@ mod tests {
                     | Mode::MultiMan
                     | Mode::AllStar
                     | Mode::Classic
+                    | Mode::Event
             );
             assert_eq!(m.gate().is_none(), lifted, "{}", m.name());
         }
