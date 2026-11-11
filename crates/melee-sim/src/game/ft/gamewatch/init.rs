@@ -166,7 +166,8 @@ impl Running<'_> {
     }
 
     /// Showing the held item again, `ftGw_Init_OnItemVisible` (as Fox's).
-    // Ports `ftGw_Init_OnItemVisible`; aliased once a check reaches it.
+    // `ftGw_Init_OnItemVisible`: dead, nothing shows Mr. Game & Watch's hidden item
+    // (ledger/dead.txt).
     pub fn gw_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }

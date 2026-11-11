@@ -33,6 +33,7 @@ pub const PHYS: u32 = 0x802A_BCDC;
 pub const COLL: u32 = 0x802A_C000;
 #[doc(alias = "itNessPKThunderball_Logic26_DmgDealt")]
 pub const DMG_DEALT: u32 = 0x802A_C050;
+// `it_802AC074`: dead, every hitbox its scripts open has the clank bit clear (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802A_C074;
 pub const REFLECTED: u32 = 0x802A_C098;
 #[doc(alias = "it_802AC338")]
