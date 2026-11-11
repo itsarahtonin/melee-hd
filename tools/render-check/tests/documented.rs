@@ -48,6 +48,7 @@ use common::M6A3_AS_VH_CLEAR;
 use common::M6AD_ADV_GIGA_VH;
 use common::M6AD2_MK_SHELLS;
 use common::M6AD3_MK_MEET;
+use common::M6AD4_LL_EDGE;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
@@ -565,6 +566,15 @@ rendered_frames!(M6AD3_MK_MEET;
     m6ad3_mk_meet_4321 4321,
     m6ad3_mk_meet_6910 6910,
     m6ad3_mk_meet_8325 8325,
+);
+// Adventure's Like Like on the Underground Maze (`m6-adv-likelike/ll-edge`, task 24's fourth
+// round), captured with ssbm-rs's renderer running: Mario inside a Like Like as Fox jumps away
+// (2780), Mario KO'd inside it (2830) and Fox back across as a second one turns at the
+// platform's edge (3325).
+rendered_frames!(M6AD4_LL_EDGE;
+    m6ad4_ll_edge_2780 2780,
+    m6ad4_ll_edge_2830 2830,
+    m6ad4_ll_edge_3325 3325,
 );
 // Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`):
 // Crazy Hand entering the slowed match (6900, 7100), both hands fought (7400) and the clear
