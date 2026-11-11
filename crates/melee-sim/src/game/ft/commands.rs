@@ -1157,6 +1157,8 @@ impl Running<'_> {
                 self.cmd_script(f, Some(which)).skip(1);
             }
             (true, 0) => self.cmd_script(f, Some(which)).skip(5),
+            // `ftCo_800BFED4` and `ftCo_800BFF14`: dead, no overlay that runs this way holds
+            // command 22 or 23 (ledger/dead.txt).
             (true, 1) => self.cmd_script(f, Some(which)).skip(3),
             (true, 2) => self.cmd_script(f, Some(which)).skip(1),
             _ => panic!("color overlay command {} doesn't exist", i + 21),

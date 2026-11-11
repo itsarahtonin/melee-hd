@@ -12,7 +12,8 @@
 //! `item-hitboxes` walks the state scripts of every character's own items (each fighter file's
 //! `ftData::x48` articles) and prints each hitbox command with the bits the clank and absorb
 //! tests read. `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
-//! `x14`) and names any owner's command (21 and up) in them. `words FILE OFFSET COUNT` prints
+//! `x14`) and names any owner's command (21 and up) in them; `colanims FILE ROOT FIELD` any
+//! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `words FILE OFFSET COUNT` prints
 //! a file's words, pointers marked.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -306,7 +307,8 @@ fn item_hitboxes(disc: &Disc, files: &[String]) {
 }
 
 /// A color animation command's length in words (`lb_803BA248`, opcodes 11 to 20); 10 ends the
-/// script, and the owner's commands (21 and up) are reported as the walk's undecoded ones.
+/// script. The owner's commands (21 and up) are the fighters' `ftCo_803C6AD0` ones (the
+/// fighter commands 10, 17 and 57: 5, 3 and 1 words); an item's are reported undecoded.
 fn color_command_words(op: u32, _: u32) -> Option<u32> {
     match op {
         11 | 12 | 16 | 17 | 20 => Some(1),
@@ -315,13 +317,30 @@ fn color_command_words(op: u32, _: u32) -> Option<u32> {
     }
 }
 
-/// Every command of the items' color animations (each item common file's `itPublicData`
-/// `x14` table, 8 bytes an entry: the script and its priority, `it_80279958`'s ids), and the
-/// owner's commands (21 and up, which `fn_80279B30` runs through `it_804D51C8`) among them.
-fn item_colanims(disc: &Disc, files: &[String]) {
+fn fighter_color_command_words(op: u32, w: u32) -> Option<u32> {
+    match op {
+        21 => Some(5),
+        22 => Some(3),
+        23 => Some(1),
+        _ => color_command_words(op, w),
+    }
+}
+
+/// Every command of a color animation table (8 bytes an entry: the script, then its priority),
+/// the word at `field` of the public `root` in each disc file named `file` or starting with
+/// it, and the owner's commands (21 and up) among them: the items' (`ItCo`, `itPublicData`
+/// 0x14, which `fn_80279B30` runs through `it_804D51C8`) and the fighters' (`PlCo.dat`,
+/// `ftLoadCommonData` 0x18 and the Cloak's 0x1C, run through `ft_800BFF34` and
+/// `ft_800BFF70`).
+fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
+    let words: &dyn Fn(u32, u32) -> Option<u32> = if file.starts_with("Pl") {
+        &fighter_color_command_words
+    } else {
+        &color_command_words
+    };
     for path in files {
         let name = path.rsplit('/').next().unwrap_or(path);
-        if !name.starts_with("ItCo") {
+        if !name.starts_with(file) {
             continue;
         }
         let Ok(bytes) = disc.read_file(path) else {
@@ -330,10 +349,10 @@ fn item_colanims(disc: &Disc, files: &[String]) {
         let Ok(a) = Archive::parse(&bytes) else {
             continue;
         };
-        let Some(root) = a.public("itPublicData") else {
+        let Some(at) = a.public(root) else {
             continue;
         };
-        let Some(t) = a.ptr(root + 0x14) else {
+        let Some(t) = a.ptr(at + field) else {
             continue;
         };
         let starts = object_starts(&a);
@@ -343,24 +362,34 @@ fn item_colanims(disc: &Disc, files: &[String]) {
             .copied()
             .unwrap_or(a.data().len() as u32);
         let n = (end - t) / 8;
-        println!("{name}: {n} item color animations at {t:#x}");
+        println!("{name} {root} {field:#x}: {n} color animations at {t:#x}");
+        let mut owner_ops = BTreeSet::new();
         for i in 0..n {
             let Some(script) = a.ptr(t + 8 * i) else {
                 println!("  {i}: no script");
                 continue;
             };
-            let w = walk(&a, script, &color_command_words);
+            let w = walk(&a, script, words);
             let mut ops: Vec<u32> = w.commands.iter().map(|c| c.0).collect();
             ops.sort_unstable();
             ops.dedup();
-            let owner: Vec<String> = w
-                .bad
+            let mut owner: Vec<String> = w
+                .commands
                 .iter()
-                .filter(|(_, op)| *op != 10)
-                .map(|(at, op)| format!("{op} at {at:#x}"))
+                .filter(|c| c.0 >= 21)
+                .map(|c| format!("{} at {:#x}", c.0, c.1))
                 .collect();
+            owner.extend(
+                w.bad
+                    .iter()
+                    .filter(|(_, op)| *op != 10)
+                    .map(|(at, op)| format!("{op} at {at:#x} (undecoded)")),
+            );
+            owner_ops.extend(ops.iter().copied().filter(|&o| o >= 21));
+            owner_ops.extend(w.bad.iter().map(|b| b.1).filter(|&o| o != 10));
             println!(
-                "  {i}: script at {script:#x}, commands {ops:?}, owner's or undecoded: {}",
+                "  {i}: script at {script:#x}, flag byte {:#04x}, commands {ops:?}, owner's: {}",
+                a.u8(t + 8 * i + 5),
                 if owner.is_empty() {
                     "none".to_owned()
                 } else {
@@ -368,6 +397,7 @@ fn item_colanims(disc: &Disc, files: &[String]) {
                 }
             );
         }
+        println!("{name}: owner's commands in the table: {owner_ops:?}");
     }
 }
 
@@ -426,7 +456,12 @@ fn main() -> ExitCode {
             }
         }
         "item-hitboxes" => item_hitboxes(&disc, &files),
-        "item-colanims" => item_colanims(&disc, &files),
+        "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
+        "colanims" => {
+            // `colanims FILE ROOT FIELD`: any color animation table.
+            let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");
+            colanims(&disc, &files, &args[1], &args[2], field);
+        }
         "words" => {
             // `words FILE OFFSET COUNT`: a file's data words, pointers marked, for checking a
             // scan's finding by hand.
