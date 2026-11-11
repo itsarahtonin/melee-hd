@@ -15,7 +15,7 @@ use crate::vec::Vec3;
 /// Spawns a red shell, `it_802E0488`: an enemy item at `pos` facing `facing` (its model turned
 /// that way, its collision left facing as it spawned), the Koopa that wakes from it of `kind`,
 /// posed in its state 12 first, then settled as the green one.
-// Ports it_802E0488; aliased once a check reaches it.
+#[doc(alias = "it_802E0488")]
 pub fn spawn(r: &mut Running, kind: i32, pos: Vec3, facing: i32) -> Option<GObjId> {
     let gobj = zako::spawn(
         r,

@@ -213,7 +213,7 @@ pub fn set_trophy_slot(game: &mut Game, trophy: i32, point: i32) {
 /// Stops the spawner and clears its enemies, `grZakoGenerator_801CAF08`: scanning off, every
 /// containers' monster and adventure enemy no one holds or grabbed destroyed (kinds 0x2B to
 /// 0x2F and 0xD0 to 0xE7), and every coin.
-// Ports grZakoGenerator_801CAF08; aliased once a check reaches it.
+#[doc(alias = "grZakoGenerator_801CAF08")]
 pub fn clear_enemies(r: &mut Running) {
     r.game.gr.zako.flags &= !0x80;
     let mut cur = r.game.world.first_in(crate::game::it::P_LINK_ITEM);

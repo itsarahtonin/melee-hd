@@ -452,7 +452,7 @@ fn rest(r: &mut Running, gobj: GObjId, flags: u32, ids2: bool) {
 /// The states that answer false, `itZrshell_UnkMotion0_Anim` (2, 9).
 #[doc(alias = "itZrshell_UnkMotion0_Anim")]
 #[doc(alias = "itZrshell_UnkMotion2_Anim")]
-// Ports itZrshell_UnkMotion9_Anim; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion9_Anim")]
 pub fn still(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -521,7 +521,7 @@ pub fn anim1(r: &mut Running, gobj: GObjId) -> bool {
 /// Gravity from the attributes, `itZrshell_UnkMotion1_Phys` (3, 4, 8).
 #[doc(alias = "itZrshell_UnkMotion1_Phys")]
 #[doc(alias = "itZrshell_UnkMotion3_Phys")]
-// Ports itZrshell_UnkMotion4_Phys; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion4_Phys")]
 #[doc(alias = "itZrshell_UnkMotion8_Phys")]
 pub fn phys_fall(r: &mut Running, gobj: GObjId) {
     let a = attr_of(item(r.game, gobj));
@@ -564,7 +564,7 @@ pub fn anim3(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped's animation, `itZrshell_UnkMotion4_Anim` (thrown's).
-// Ports itZrshell_UnkMotion4_Anim; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion4_Anim")]
 pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     anim3(r, gobj)
 }
@@ -572,7 +572,7 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
 /// Thrown's, dropped's and the air slide's collision (`itZrshell_UnkMotion3_Coll`, 4, 8):
 /// landing, [`landed`].
 #[doc(alias = "itZrshell_UnkMotion3_Coll")]
-// Ports itZrshell_UnkMotion4_Coll; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion4_Coll")]
 #[doc(alias = "itZrshell_UnkMotion8_Coll")]
 pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
     fall_to_floor(r, gobj, landed);
@@ -580,8 +580,8 @@ pub fn coll3(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Dropped, `itZGShell_Logic11_Dropped` (the red one's `itZRShell_Logic12_Dropped`).
-// Ports itZGShell_Logic11_Dropped; aliased once a check reaches it.
-// Ports itZRShell_Logic12_Dropped; aliased once a check reaches it.
+#[doc(alias = "itZGShell_Logic11_Dropped")]
+#[doc(alias = "itZRShell_Logic12_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE | change::DROP_UPDATE);
 }
@@ -701,8 +701,8 @@ pub fn anim8(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Slides off a slope (state 9), `it_2725_Logic11_EnteredAir` (the red one's
 /// `itZRShell_Logic12_EnteredAir`); not while waking (10, 11).
-// Ports it_2725_Logic11_EnteredAir; aliased once a check reaches it.
-// Ports itZRShell_Logic12_EnteredAir; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic11_EnteredAir")]
+#[doc(alias = "itZRShell_Logic12_EnteredAir")]
 pub fn entered_air(r: &mut Running, gobj: GObjId) {
     let msid = item(r.game, gobj).msid;
     if msid == 0xB || msid == 0xA {
@@ -716,7 +716,7 @@ pub fn entered_air(r: &mut Running, gobj: GObjId) {
 
 /// Sliding off a slope's physics, `itZrshell_UnkMotion9_Phys`: under `x30`, or not moved since
 /// last frame, it comes to rest; its position kept.
-// Ports itZrshell_UnkMotion9_Phys; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion9_Phys")]
 pub fn phys9(r: &mut Running, gobj: GObjId) {
     let x30 = attr(r, gobj, 0x30);
     if abs(item(r.game, gobj).x40_vel.x) < reg(x30) {
@@ -888,7 +888,7 @@ pub fn phys11(r: &mut Running, gobj: GObjId) {
 /// Waking's and its knock's collision (`itZrshell_UnkMotion11_Coll`, `_10_Coll`): in the air,
 /// landing on a floor it stops on the ground; on the ground off the floor it falls.
 #[doc(alias = "itZrshell_UnkMotion11_Coll")]
-// Ports itZrshell_UnkMotion10_Coll; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion10_Coll")]
 pub fn coll_waking(r: &mut Running, gobj: GObjId) -> bool {
     if item(r.game, gobj).ground_or_air == GA_AIR {
         if air_touches_walls(r, gobj) & 1 != 0 {
@@ -903,7 +903,7 @@ pub fn coll_waking(r: &mut Running, gobj: GObjId) -> bool {
 
 /// A waking shell knocked into the air (state 10), `it_802DF9F8`: in the air, its hurtbox
 /// back, blinking.
-// Ports it_802DF9F8; aliased once a check reaches it.
+#[doc(alias = "it_802DF9F8")]
 pub fn bounced(r: &mut Running, gobj: GObjId) {
     let ip = item_mut(r.game, gobj);
     maplib::enter_air(ip);
@@ -915,7 +915,7 @@ pub fn bounced(r: &mut Running, gobj: GObjId) {
 
 /// Knocked's animation, `itZrshell_UnkMotion10_Anim`: done animating on the ground, it comes
 /// to rest (or slides off a slope).
-// Ports itZrshell_UnkMotion10_Anim; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion10_Anim")]
 pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
     if !lib2725::is_animating(r.game, gobj) && item(r.game, gobj).ground_or_air == GA_GROUND {
         if !maplib::slides(r.game, r.data, gobj) {
@@ -928,7 +928,7 @@ pub fn anim10(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// Knocked's physics, `itZrshell_UnkMotion10_Phys`: gravity, uncapped.
-// Ports itZrshell_UnkMotion10_Phys; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion10_Phys")]
 pub fn phys10(r: &mut Running, gobj: GObjId) {
     let accel = reg(attr_of(item(r.game, gobj)).f32(r.data, data::attr::FALL_SPEED));
     let ip = item_mut(r.game, gobj);
@@ -1012,7 +1012,7 @@ pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 /// Destroyed, `itZGShell_Logic11_Destroyed` (the red one's `itZRShell_Logic12_Destroyed`):
 /// its spawner slot as an enemy KO (`grZakoGenerator_801CACB8`).
 #[doc(alias = "itZGShell_Logic11_Destroyed")]
-// Ports itZRShell_Logic12_Destroyed; aliased once a check reaches it.
+#[doc(alias = "itZRShell_Logic12_Destroyed")]
 pub fn destroyed(r: &mut Running, gobj: GObjId) {
     zako::ko(r, gobj);
 }

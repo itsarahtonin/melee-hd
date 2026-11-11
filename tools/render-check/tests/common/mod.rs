@@ -96,6 +96,10 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ad2-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg-2/{o}.inputs"))
+                        .into();
+                }
                 if let Some(o) = name.strip_prefix("m6ad-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg/{o}.inputs")).into();
                 }
@@ -1461,6 +1465,16 @@ pub const M6AD_ADV_GIGA_VH: Game = Game {
     name: "m6ad-adv-giga-vh",
     players: "Adventure from Final Destination as Fox on Very Hard (session m6-adventure-dbg/adv-giga-vh)",
     replay: Replay::Session("m6ad-adv-giga-vh"),
+};
+
+/// Adventure's shells on Mushroom Kingdom's route (`m6-adventure-dbg-2/mk-shells`, debug
+/// level 3): the red Koopa and its red shell, shells dropped, knocked while waking and on the
+/// slope.
+pub const M6AD2_MK_SHELLS: Game = Game {
+    stage: "Adventure",
+    name: "m6ad2-mk-shells",
+    players: "Go to Kinoko, Fox and the item menu's shells (session m6-adventure-dbg-2/mk-shells)",
+    replay: Replay::Session("m6ad2-mk-shells"),
 };
 
 /// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`,
