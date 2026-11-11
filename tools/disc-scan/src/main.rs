@@ -15,7 +15,8 @@
 //! article's states and the stages' `ALDYakuAll` scripts). `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
 //! `x14`) and names any owner's command (21 and up) in them; `colanims FILE ROOT FIELD` any
 //! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `robjs` counts
-//! the joints' and camera positions' reference objects by type and lists any expression. `words
+//! the joints' and camera positions' reference objects by type and lists any expression;
+//! `stage-colanims` walks the stages' color animation scripts for owner's commands. `words
 //! FILE OFFSET COUNT` prints a file's words, pointers marked.
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -536,6 +537,68 @@ fn item_commands(disc: &Disc, files: &[String], want: &BTreeSet<u32>) {
     }
 }
 
+/// The stages' color animations: the scripts `grMaterial_801C9604` starts on a stage's
+/// pieces, each a word of the stage file's `yakumono_param` (grbattle.c's
+/// `bg_curr_color_overlay` and `bg_prev_color_overlay`, grcastle.c's `x114`, grcorneria.c's
+/// `x84`, grkongo.c's `unk84`, grlast.c's `x0` to `xC`, grmutecity.c's `x0` and `x4`,
+/// groldkongo.c's `x6C`, grshrineroute.c's `x0` to `xC`, grvenom.c's `x38`), with their
+/// commands and any owner's command (21 and up), which `grMaterial_801C9698` hands to
+/// `fn_801C9664`.
+fn stage_colanims(disc: &Disc, files: &[String]) {
+    const SCRIPTS: [(&str, &[u32]); 9] = [
+        ("GrNBa.dat", &[0x0, 0x4]),
+        ("GrCs.dat", &[0x114]),
+        ("GrCn.dat", &[0x84]),
+        ("GrKg.dat", &[0x84]),
+        ("GrNLa.dat", &[0x0, 0x4, 0x8, 0xC]),
+        ("GrMc.dat", &[0x0, 0x4]),
+        ("GrOk.dat", &[0x6C]),
+        ("GrNSr.dat", &[0x0, 0x4, 0x8, 0xC]),
+        ("GrVe.dat", &[0x38]),
+    ];
+    let mut owner_ops = BTreeSet::new();
+    for (file, fields) in SCRIPTS {
+        let Some(path) = files.iter().find(|p| p.rsplit('/').next() == Some(file)) else {
+            println!("{file}: not on the disc");
+            continue;
+        };
+        let bytes = disc.read_file(path).expect("the stage file");
+        let a = Archive::parse(&bytes).expect("a DAT archive");
+        let Some(root) = a.public("yakumono_param") else {
+            println!("{file}: no yakumono_param");
+            continue;
+        };
+        for &field in fields {
+            let Some(script) = a.ptr(root + field) else {
+                println!("{file} yakumono_param {field:#x}: no script");
+                continue;
+            };
+            let w = walk(&a, script, &color_command_words);
+            let mut ops: Vec<u32> = w.commands.iter().map(|c| c.0).collect();
+            ops.extend(w.bad.iter().map(|b| b.1));
+            ops.sort_unstable();
+            ops.dedup();
+            let owner: Vec<String> = w
+                .bad
+                .iter()
+                .filter(|(_, op)| *op != 10)
+                .map(|(at, op)| format!("{op} at {at:#x}"))
+                .collect();
+            owner_ops.extend(w.bad.iter().map(|b| b.1).filter(|&o| o != 10));
+            println!(
+                "{file} yakumono_param {field:#x}: script at {script:#x}, commands {ops:?} \
+                 (10 ends it), owner's: {}",
+                if owner.is_empty() {
+                    "none".to_owned()
+                } else {
+                    owner.join(", ")
+                }
+            );
+        }
+    }
+    println!("owner's commands in the stages' scripts: {owner_ops:?}");
+}
+
 /// Every reference object (`HSD_RObjDesc`) on the disc, by type. `HSD_RObjLoadDesc` takes them
 /// only from a joint's descriptor (`HSD_JObjDesc::robjdesc`, +0x3C, in `JObjLoad`) and a camera
 /// position's (`HSD_WObjDesc::robjdesc`, +0x10, in `WObjLoad` and `HSD_WObjInit`), so this
@@ -702,6 +765,7 @@ fn main() -> ExitCode {
         }
         "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
         "robjs" => robjs(&disc, &files),
+        "stage-colanims" => stage_colanims(&disc, &files),
         "colanims" => {
             // `colanims FILE ROOT FIELD`: any color animation table.
             let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");

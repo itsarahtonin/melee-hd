@@ -90,7 +90,7 @@ pub fn free_color_register(i0: i32, desc: &TevDesc, extra: &[u8]) -> i32 {
 
 /// `lbGetFreeAlphaRegister` (`lbGetFreeAlphaRegImpl`): as [`free_color_register`] but
 /// counting only the stages' alpha outputs (the original passes the constants and ignores
-/// them).
+/// them). Dead in the original (ledger/dead.txt): only a stage piece with its alpha on asks.
 pub fn free_alpha_register(i0: i32, desc: &TevDesc) -> i32 {
     let mut used = [false; 8];
     for s in &desc.stages {
@@ -111,12 +111,14 @@ pub fn kcsel(i: i32) -> u32 {
     [12, 13, 14, 15][i as usize]
 }
 
-/// The alpha input reading register `i`, `lb_8000CD90` (`lb_803BA000`).
+/// The alpha input reading register `i`, `lb_8000CD90` (`lb_803BA000`). Dead in the original
+/// (ledger/dead.txt): no fighter or item has its alpha byte below 255, no stage piece its alpha on.
 pub fn alpha_arg(i: i32) -> u32 {
     [6, 6, 6, 6, 1, 2, 3, 0][i as usize]
 }
 
-/// The konst alpha selection of konst register `i`, `lb_8000CDA8` (`lb_803BA020`).
+/// The konst alpha selection of konst register `i`, `lb_8000CDA8` (`lb_803BA020`). Dead in
+/// the original, as `lb_8000CD90` (ledger/dead.txt).
 pub fn kasel(i: i32) -> u32 {
     [28, 29, 30, 31][i as usize]
 }
