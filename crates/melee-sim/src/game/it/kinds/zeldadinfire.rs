@@ -27,7 +27,9 @@ pub const COLL_0: u32 = 0x802C_437C;
 #[doc(alias = "itZeldadinfire_UnkMotion1_Coll")]
 pub const COLL_1: u32 = 0x802C_4434;
 pub const REFLECTED: u32 = 0x802C_443C;
+// `itZeldaDinFire_Logic65_Clanked`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const CLANKED: u32 = 0x802C_4550;
+// `itZeldaDinFire_Logic65_Absorbed`: dead, no script of the kind opens a hitbox (ledger/dead.txt).
 pub const ABSORBED: u32 = 0x802C_4558;
 pub const EVT_UNK: u32 = 0x802C_4560;
 

@@ -99,6 +99,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6ad4-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adv-likelike/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6pb-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adv-polarbear/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6ad3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg-3/{o}.inputs"))
                         .into();
@@ -1500,6 +1503,16 @@ pub const M6AD4_LL_EDGE: Game = Game {
     name: "m6ad4-ll-edge",
     players: "Debug VS on the Underground Maze, Fox and Mario and the item menu's Like Likes (session m6-adv-likelike/ll-edge)",
     replay: Replay::Session("m6ad4-ll-edge"),
+};
+
+/// Adventure's Polar Bear flung toward the screen (`m6-adv-polarbear/im-polar`, the debug level
+/// set alone: Adventure's Icicle Mountain from the Taniguti Test's Reg:Normal, Fox and the item
+/// menu's Polar Bears).
+pub const M6PB_IM_POLAR: Game = Game {
+    stage: "Adventure",
+    name: "m6pb-im-polar",
+    players: "Adventure's Icicle Mountain, Fox and the item menu's Polar Bears (session m6-adv-polarbear/im-polar)",
+    replay: Replay::Session("m6pb-im-polar"),
 };
 
 /// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`,

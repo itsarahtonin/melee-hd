@@ -138,15 +138,6 @@ const TARGET_TEST: &[&str] = &[
     "melee/gr/grtzelda",
 ];
 
-/// Master Hand's units (`ftmasterhand*.c`).
-const MASTER_HAND: &[&str] = &[
-    "melee/it/kinds/itmasterhandbullet",
-    "melee/it/kinds/itmasterhandlaser",
-];
-
-/// Crazy Hand's units (`ftcrazyhand*.c`) and his bomb.
-const CRAZY_HAND: &[&str] = &["melee/it/kinds/itcrazyhandbomb"];
-
 /// Each mode's own units and modules. A unit only some modes reach is listed under each of
 /// them; the units every mode shares (`gm_16A2` and the rest) are [`MISSING`]'s alone.
 pub const PATHS: &[Paths] = &[
@@ -323,10 +314,6 @@ pub const PATHS: &[Paths] = &[
             (
                 "an event's random fifth player",
                 "no event's fifth or sixth player is a random character: onEnterVs runs each of an event's players through gm/event.rs's event_other_player as its match starts, and every one of the 51 events' sessions enters its match without stopping there (docs/oracle.md, sessions)",
-            ),
-            (
-                "itEvYoshiEgg_Logic42_EvtUnk",
-                "the egg's evt_unk runs only from a fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), and Event 13, the one event with the egg, frees no fighter mid-match: it has no joiners and no player leaves, and a match's end frees none (ssbm-rs's CALLS over m6-cpu-kinds/ck17-ev13, the egg kept to the time's end, logs no Fighter_Unload_8006DABC)",
             ),
             (
                 "Master Hand's function",
@@ -770,8 +757,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "pl_8004049C (an enemy of kind",
         "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
-    ("itMetamon_UnkMotion1", TRAINING_NO_DITTO),
-    ("itMetamon_Logic19_EvtUnk", TRAINING_NO_DITTO),
     ("it_802D306C", TRAINING_NO_DITTO),
 ];
 
@@ -861,44 +846,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     Gap {
-        what: "Master Hand",
-        covers: MASTER_HAND,
-        // Not Classic (task 22's debug round): the hands' items are made only on its boss
-        // stage. The laser's and the bullet's evt_unk run only from a fighter's unload
-        // (it_8026B7F8 in Fighter_Unload_8006DABC), and nothing frees a fighter in that match
-        // (ssbm-rs's CALLS over m6-classic-dbg/cl-vh-ch logs one Fighter_Unload_8006DABC, the
-        // trophy fall's). The fast bullet's landing callback (it_802F0F08) runs only when
-        // it_8026DC24 settles it on a floor, at or under its stop speed (its attributes' x5C,
-        // 0.05) on both axes: its bounce keep (x58) is 1.2 and it never sets xDCD's b4, it
-        // leaves the gun at (5.3, -0.8) with no gravity, a reflection changes only its x, and
-        // the stage's one floor is flat, so a bounce only turns its y up 1.2 times as fast
-        // (m6-classic-dbg/cl-easy-bullet: a fast bullet touching the floor at x -71 bounces up
-        // at (-6.36, 0.96) and flies on; ssbm-rs's CALLS over it logs no it_802F0F08).
-        // Event Match (task 21's ninth round): Event 50 is on the same stage (its stage kind
-        // 251 is Final Destination's ground, 37), and the laser's and bullet's evt_unk can't
-        // run there either (no fighter is unloaded in Event 50: ssbm-rs's CALLS over Sarah's
-        // recordings/ev50 logs no Fighter_Unload_8006DABC). The landing isn't proven
-        // unreachable there (a shield can slow a bullet: a powershield's reflection keeps 0.7 of
-        // its x speed, PlCo.dat's common 0x2B0, and a shield bounce keeps |2nz^2 - 1| of it at
-        // worst, m6-event-8/hn-bullets tick 5076), but it_802F0F08 is empty in the original (a
-        // lone blr) and counts as checked by review (Sarah, 2026-11-11; ledger/checks.txt and
-        // masterhandbullet.rs's test), so only the evt_unks are left, which the debug mode's
-        // churn can reach.
-        modes: &[DB],
-    },
-    Gap {
-        what: "Crazy Hand",
-        covers: CRAZY_HAND,
-        // Not Event Match: the bomb's evt_unk is all that's left, and it runs only from a
-        // fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), which Event 50 never
-        // runs: it has no joiners, no player leaves, and a beaten hand stays loaded (ssbm-rs's
-        // CALLS over Sarah's recordings/ev50, both hands beaten, logs no Fighter_Unload_8006DABC).
-        // Not Classic (task 22's debug round) for the same reason: Crazy Hand joins Classic's
-        // boss stage (fn_8017C0C8) and nothing frees a fighter in its match (ssbm-rs's CALLS over
-        // m6-classic-dbg/cl-vh-ch logs one Fighter_Unload_8006DABC, the trophy fall's).
-        modes: &[DB],
-    },
-    Gap {
         what: "the hands' shared moves, sounds and boss stage",
         covers: &["ftMh_MS_371_801541C8", "Master Hand's function"],
         // Not Classic (task 22's debug round): Crazy Hand's arrival (ftbosslib's last three,
@@ -924,12 +871,11 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the adventure enemies and their spawner",
-        // The Like Like is done (task 24's fourth round: m6-adv-likelike/ll-edge).
+        // The Like Like and the Polar Bear are done (task 24's fourth round), and the Koopa's and
+        // the red shell's evt_unk are checked by review (Sarah, 2026-11-11: the identical
+        // it_8026B894 wrappers, game/it/evt_unk.rs).
         covers: &[
-            "melee/it/kinds/itnokonoko",
             "melee/it/kinds/itzgshell",
-            "melee/it/kinds/itzrshell",
-            "melee/it/kinds/itwhitebea",
             "it_8027B5B0 (an enemy of kind",
             "pl_8004049C (an enemy of kind",
         ],
