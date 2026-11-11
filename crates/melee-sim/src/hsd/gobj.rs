@@ -207,6 +207,7 @@ pub trait Host<K: Kinds> {
 
 impl<K: Kinds> World<K> {
     /// An empty scheduler, as `HSD_GObjInit` leaves it.
+    #[doc(alias = "HSD_GObj_80391260")]
     #[doc(alias = "HSD_GObjInit")]
     pub fn new() -> Self {
         World {

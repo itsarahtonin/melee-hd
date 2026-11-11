@@ -233,6 +233,7 @@ impl Running<'_> {
     /// Whether a fighter is invisible to computer players for now, `ftCo_800A0F00`: under a
     /// cloaking item's color animation (`ft_80087A18`), always or, flickering, half the time
     /// by its own frame count.
+    #[doc(alias = "ft_80087A80")]
     #[doc(alias = "ftCo_800A0F00")]
     pub(super) fn cpu_cloaked(&self, f: FighterId) -> bool {
         let fp = &self.game.fighters[f.0];

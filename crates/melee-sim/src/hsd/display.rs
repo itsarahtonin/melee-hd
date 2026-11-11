@@ -386,6 +386,7 @@ pub fn pass_trsp(pass: i32) -> u32 {
 
 /// Makes a camera current for drawing, `HSD_CObjSetCurrent` in the screen pass: its view
 /// matrix is brought up to date. False without a camera.
+#[doc(alias = "HSD_GetCurrentRenderPass")]
 #[doc(alias = "HSD_CObjSetCurrent")]
 pub fn camera_begin(objs: &mut Objects, data: &Archives, c: Option<CObjId>) -> bool {
     let Some(c) = c else {
@@ -466,6 +467,7 @@ pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
 }
 
 /// `HSD_CObjEndCurrent`: draws the depth-sorted lists, which Melee never fills.
+#[doc(alias = "_HSD_ZListSort")]
 #[doc(alias = "HSD_CObjEndCurrent")]
 pub fn camera_end(objs: &mut Objects) {
     objs.display.draws.push(Draw::EndCamera);
@@ -1261,6 +1263,7 @@ fn setup_diffuse(objs: &mut Objects, l: LObjId) {
 
 /// `setup_spec_lightobj`: the light's specular slot, and with one, its shininess and its
 /// position (or direction) in view space.
+#[doc(alias = "setup_spec_lightobj")]
 fn setup_spec(objs: &mut Objects, data: &Archives, l: LObjId, vmtx: &Mtx34, spec_id: u32) {
     objs.lobjs[l].spec_id = spec_id;
     if spec_id == 0 {

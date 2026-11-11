@@ -5,6 +5,8 @@ use super::super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
 /// Runs the common state callback at `cb`, if one is ported here.
+#[doc(alias = "ftCo_CaptureDamageHi_IASA")]
+#[doc(alias = "ftCo_CaptureDamageLw_IASA")]
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
         // The swings (`ftCo_SwordSwing_*` and the other items') and their hooks.

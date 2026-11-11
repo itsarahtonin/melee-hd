@@ -3,7 +3,6 @@
 ftZd_Init_801395C8	Called only by ftCo_800DEBD0 (the side taunt), only inside `if (DbLevel >= DbLKind_DebugRom)`; DbLevel is DbLKind_Master, 0, on a retail disc (see onExitIntro).
 gm_80164A0C	Named only by gm_801BED3C (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 onExitPrize@801B0B24	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
-onEnterIntroEasy	Named only by gm_Mode_Debug_States (the debug menu mode, 6: see onExitIntro).
 gm_801BED3C	A callback of the Hanyu character select mode's states (gm_Mode_HanyuCss_States, mode 8), which a retail boot never enters: mode 8 is made pending only by un_80300968 and mode 9 only by un_803009A4, items of the debug menu (un_803FC63C), which never runs on a retail boot (see gm_Scene_DebugMenu_OnEnter).
 gm_801BEDA8	Named only by gm_Mode_HanyuCss_States (the Hanyu select modes, 8 and 9: see gm_801BED3C).
 fn_80225A54	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
@@ -11,11 +10,6 @@ db_DisableItemSpawns	Called only by main, only inside `if (gmMain_804D6594)` rig
 fn_ToggleItemCollisionBubbles	Named only by fn_CheckItemAndPokemonMenu (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80225E6C	Named only by fn_CheckAnimationInfo (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
 fn_80227EB0	Named only by fn_80228124 (the match's debug tools under db_RunEveryFrame: see fn_CheckCpuHandicapInfo).
-un_80300D78	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80300E74	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80300F3C	Named only by un_803FCA40 (the debug menu mode, 6: see onExitIntro).
-un_80301B48	Named only by un_803013EC, un_803FD58C (the debug menu mode, 6: see onExitIntro).
-un_80301BA8	Named only by onEnterIntroEasy (the debug menu mode, 6: see onExitIntro).
 un_80301D7C	Named only by un_803FDAF8 (the debug menu mode, 6: see onExitIntro).
 HIOEnumDevices	Named only by MCCEnumDevices (the boot's USB host setup: see hsd_803931A4).
 MCCStreamClose	Named only by fioPacketResultWrite (the debug screenshot's USB write, which hsd_80393A5C makes only while hsd_804D78A0 is set, which only the boot's USB host setup does: see hsd_803931A4).
@@ -87,3 +81,4 @@ fn_803932D0	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, F
 hsd_80393328	Named only by hsd_80392E80 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80392E80 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
 hsd_80393440	Named only by hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
 hsd_80393840	Named only by hsd_80393844 (the boot's USB host setup and the MCC, FIO and HIO libraries under it: see hsd_803931A4; hsd_80393844 reaches it only on an event from the MCC callbacks that setup registers, replaced.txt).
+ftCo_800AEFB8	Called only by ftCo_800B101C (computer kind 6's decision, the asm listings' only caller), when ftCo_800A589C finds no awake fighter of the same player. Nana, the only fighter a mode gives kind 6 (ftCo_800A101C), never decides alone (cpu_audit's NANA_ALONE); a fighter takes kind 6 otherwise only from the debug menu's Versus page (`CpuType Set`, CpTp_Nana: if_3004), as Popo with Nana gone or any other character, so only a debug-menu match reaches it.

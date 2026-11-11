@@ -734,6 +734,7 @@ impl Running<'_> {
     /// State 1's entry, `gmCamera_801A2800`: the shutter's animation, the match frozen (the
     /// pause screen hidden if a player had paused, else the music, the HUD and rumble), and
     /// the frame's copy asked for.
+    #[doc(alias = "gmVs_GetSceneController")]
     #[doc(alias = "gmCamera_801A2800")]
     fn cam_shoot(&mut self) {
         self.cam().ui.frames = 0;

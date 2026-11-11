@@ -68,6 +68,7 @@ fn make_texture(objs: &mut Objects) -> TObjId {
 }
 
 /// A new shadow with a 256 by 256 texture, `HSD_ShadowAlloc`.
+#[doc(alias = "HSD_ImageDescAlloc")]
 #[doc(alias = "HSD_ShadowAlloc")]
 pub fn alloc(objs: &mut Objects) -> ShadowId {
     let s = ShadowId(objs.shadows.alloc(Shadow::default()));
@@ -194,6 +195,7 @@ pub fn delete_object(objs: &mut Objects, s: Option<ShadowId>, j: Option<JObjId>)
 /// descriptor and texture freed, then the shadow. Each block holds what it held as it goes
 /// back (docs/engine.md, a session's heap leftovers). `lbShadow_8000EE8C` is the same on an
 /// `LbShadow`'s shadow.
+#[doc(alias = "HSD_ImageDescFree")]
 #[doc(alias = "HSD_ShadowRemove")]
 #[doc(alias = "lbShadow_8000EE8C")]
 pub fn remove(objs: &mut Objects, s: Option<ShadowId>) {
@@ -259,6 +261,7 @@ pub fn start_render(
 /// static `makeMatrix`). `volume`: the render drew the shadow camera's volume over it all
 /// (`lbShadow_8000F214`, the debug display's).
 #[doc(alias = "HSD_ShadowEndRender")]
+#[doc(alias = "makeMatrix")]
 pub fn end_render(objs: &mut Objects, s: ShadowId, volume: bool) {
     let img = objs.shadows[s.0].image;
     if !img.allocated {

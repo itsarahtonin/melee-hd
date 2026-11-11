@@ -263,7 +263,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftKb_Init_OnItemPickup`: the second model's hand takes the hold
     /// pose of the item's kind, unless the item is heavy.
-    // Ports `ftKb_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftKb_Init_OnItemPickup")]
     pub fn kb_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         let item = self
             .game
@@ -315,7 +315,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftKb_Init_OnItemDrop` (`Fighter_OnItemDrop(gobj, flag, 1, 1)`).
-    // Ports `ftKb_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftKb_Init_OnItemDrop")]
     pub fn kb_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.ext(
             ext::FTANIM_80070FB4,

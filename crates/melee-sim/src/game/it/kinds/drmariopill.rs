@@ -423,6 +423,7 @@ fn motion2_phys(r: &mut Running, gobj: GObjId) {
 /// `itDrMarioPill_PickedUp`: its lifetime and the held state.
 // Ports `itDrMarioPill_PickedUp`; aliased once a check reaches it (only the sleeping demo
 // pose, `ftCo_800BF108`, spawns a pill picked up).
+#[doc(alias = "itDrMarioPill_PickedUp")]
 fn picked_up(r: &mut Running, gobj: GObjId) {
     let lifetime = attr_f32(r, gobj, attr::LIFETIME);
     lib2725::set_lifetime(r.game, r.data, gobj, lifetime);

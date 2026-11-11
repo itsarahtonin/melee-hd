@@ -143,6 +143,7 @@ impl Running<'_> {
     #[doc(alias = "un_80301454")]
     #[doc(alias = "un_803015BC")]
     #[doc(alias = "un_80301D40")]
+    #[doc(alias = "un_80301B48")]
     #[doc(alias = "un_803013EC")]
     #[doc(alias = "un_80301420")]
     #[doc(alias = "un_80301490")]
@@ -154,6 +155,9 @@ impl Running<'_> {
     #[doc(alias = "un_80301E08")]
     #[doc(alias = "un_80301C80")]
     #[doc(alias = "un_80301CE0")]
+    #[doc(alias = "un_80300F3C")]
+    #[doc(alias = "un_80300E74")]
+    #[doc(alias = "un_80300D78")]
     pub fn debug_item(&mut self, cb: u32, arg: i32) -> Option<i32> {
         let ret = match cb {
             // `fn_802FFE0C`, the DaiRanTou page's own: B closes it, Start starts the match.
