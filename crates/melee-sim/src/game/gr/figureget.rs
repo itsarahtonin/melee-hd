@@ -154,7 +154,6 @@ fn next_wait(r: &mut Running) -> i32 {
 /// the display trophy; each loaded (`tyDisplay_8031C454`). Then the wait to the first coin, the counts
 /// and lists cleared, and joint 0's callback.
 #[doc(alias = "grFigureGet_802196F0")]
-#[doc(alias = "tyDisplay_8031C354")]
 pub fn init_stand(r: &mut Running, gobj: GObjId) {
     let m = map_id(r.game, gobj);
     let g = ground_of(r.game, gobj);
