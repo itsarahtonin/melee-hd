@@ -2,7 +2,7 @@
 //! takes a fighter inside, invisible and following it, which mashes against a timer that grows
 //! with its percent and its player's handicap and standing; the timer out, the Like Like spits
 //! it back out, else it chews on it (its damage a bite at a time) and spits it out when its
-//! chewing ends. A hit on the fighter or its KO makes the Like Like let go.
+//! chewing ends. Its damage hooks or its KO make the Like Like let go.
 
 use gekko_fp as fp;
 
@@ -89,13 +89,18 @@ impl Running<'_> {
         fp.x1A6A = 0x1FF;
     }
 
-    /// The held fighter hit or KO'd, `ftCo_800C7A30` and `fn_800C7890`: the Like Like lets go
-    /// (`it_802DBA68`).
-    // Ports ftCo_800C7A30; aliased once a check reaches it.
-    // Ports fn_800C7890; aliased once a check reaches it.
+    /// The held fighter's damage hooks, `ftCo_800C7A30` (its `take_dmg_cb`): the Like Like lets
+    /// go (`it_802DBA68`).
+    #[doc(alias = "ftCo_800C7A30")]
     pub fn capture_likelike_hit(&mut self, gobj: GObjId) {
         let ll = self.likelike_of(gobj);
         likelike::let_go(self, ll);
+    }
+
+    /// The held fighter KO'd, `fn_800C7890` (its `death2_cb`): as [`Self::capture_likelike_hit`].
+    #[doc(alias = "fn_800C7890")]
+    pub fn capture_likelike_ko(&mut self, gobj: GObjId) {
+        self.capture_likelike_hit(gobj);
     }
 
     /// `ftCo_CaptureLikelike_Anim`: the timer runs down by x758 a frame and by x75C a mash
@@ -185,7 +190,8 @@ pub fn run(g: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         ANIM => g.co_capture_likelike_anim(gobj),
         IASA | PHYS | COLL => g.co_capture_likelike_nothing(gobj),
-        HIT | DEATH => g.capture_likelike_hit(gobj),
+        HIT => g.capture_likelike_hit(gobj),
+        DEATH => g.capture_likelike_ko(gobj),
         FOLLOW => g.capture_likelike_follow(gobj),
         _ => return false,
     }

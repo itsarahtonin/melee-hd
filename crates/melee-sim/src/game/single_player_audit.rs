@@ -931,14 +931,12 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the adventure enemies and their spawner",
+        // The Like Like is done (task 24's fourth round: m6-adv-likelike/ll-edge).
         covers: &[
-            "melee/it/kinds/itlikelike",
             "melee/it/kinds/itnokonoko",
             "melee/it/kinds/itzgshell",
             "melee/it/kinds/itzrshell",
             "melee/it/kinds/itwhitebea",
-            "melee/ft/ftCo_800C78B0",
-            "fn_800C7890",
             "it_8027B5B0 (an enemy of kind",
             "pl_8004049C (an enemy of kind",
         ],
