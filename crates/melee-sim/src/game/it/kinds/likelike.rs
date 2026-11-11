@@ -277,7 +277,7 @@ pub fn in_reach(r: &mut Running, gobj: GObjId) -> i32 {
 
 /// Turns back at its speed (the inline `itSwapVelocity`, and `it_802D9B78`, the ledge's
 /// callback).
-// Ports it_802D9B78; aliased once a check reaches it.
+#[doc(alias = "it_802D9B78")]
 pub fn turn_back(r: &mut Running, gobj: GObjId) {
     let s = reg(speed(r, gobj));
     let ip = item_mut(r.game, gobj);
@@ -1085,7 +1085,7 @@ pub fn spit(r: &mut Running, gobj: GObjId) {
 
 /// Lets go of its fighter (hit or KO'd), `it_802DBA68`: stopped, its fighter spat out straight,
 /// a 120-frame countdown, and it waits.
-// Ports it_802DBA68; aliased once a check reaches it.
+#[doc(alias = "it_802DBA68")]
 pub fn let_go(r: &mut Running, gobj: GObjId) {
     lib2725::clear_velocity(r.game, gobj);
     release(r, gobj, 0, true);
