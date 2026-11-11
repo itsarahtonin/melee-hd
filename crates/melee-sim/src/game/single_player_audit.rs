@@ -328,6 +328,14 @@ pub const PATHS: &[Paths] = &[
                 "itEvYoshiEgg_Logic42_EvtUnk",
                 "the egg's evt_unk runs only from a fighter's unload (it_8026B7F8 in Fighter_Unload_8006DABC), and Event 13, the one event with the egg, frees no fighter mid-match: it has no joiners and no player leaves, and a match's end frees none (ssbm-rs's CALLS over m6-cpu-kinds/ck17-ev13, the egg kept to the time's end, logs no Fighter_Unload_8006DABC)",
             ),
+            (
+                "Master Hand's function",
+                "mh_dispatch is passed only ftMh_MS_358_80152880, 366_80153820, 363_801530A4 and 372_801542E0, each one masterhand::run answers (crush.rs, airplane.rs, finger.rs, grab.rs); Event 50's hands run the same code (task 21's ninth round)",
+            ),
+            (
+                "ftMh_MS_371_801541C8",
+                "mh_back_attack always passes ftMh_MS_371_801541C8, which masterhand::run_with answers; Event 50's hands run the same code (task 21's ninth round)",
+            ),
         ],
     },
     Paths {
@@ -879,6 +887,18 @@ pub const MISSING: &[Gap] = &[
         // the stage's one floor is flat, so a bounce only turns its y up 1.2 times as fast
         // (m6-classic-dbg/cl-easy-bullet: a fast bullet touching the floor at x -71 bounces up
         // at (-6.36, 0.96) and flies on; ssbm-rs's CALLS over it logs no it_802F0F08).
+        // Event Match (task 21's ninth round): Event 50 is on the same stage (its stage kind
+        // 251 is Final Destination's ground, 37), and the laser's and bullet's evt_unk can't
+        // run there either (no fighter is unloaded in Event 50: ssbm-rs's CALLS over Sarah's
+        // recordings/ev50 logs no Fighter_Unload_8006DABC). The landing stays open: a bounce
+        // off the stage only makes a bullet faster (x1.2), but a shield can slow one. A
+        // powershield's reflection keeps 0.7 of its x speed (PlCo.dat's common 0x2B0; every
+        // special reflector keeps 1.0, and the reflector then owns it, so one player reflects it
+        // once), and a shield bounce mirrors its speed about the shield's entry normal, a 3D
+        // unit vector: with the shield's center off the bullet's plane the normal's xy part is
+        // shorter than 1 and the bounce keeps only |2nz^2 - 1| of the speed at worst
+        // (m6-event-8/hn-bullets, tick 5076: nz 0.047, 5.3600 to 5.3547). Settling needs at
+        // most 0.059 (0.05 on both axes after the floor's x1.2) of the 5.36 it's fired at.
         modes: &[EV, DB],
     },
     Gap {
@@ -898,8 +918,9 @@ pub const MISSING: &[Gap] = &[
         covers: &["ftMh_MS_371_801541C8", "Master Hand's function"],
         // Not Classic (task 22's debug round): Crazy Hand's arrival (ftbosslib's last three,
         // it_8026C3FC, it_8026C42C) is checked by m6-classic-dbg/cl-vh-ch, and its PATHS entry's
-        // unreached says why the two stops can't fire.
-        modes: &[EV, DB],
+        // unreached says why the two stops can't fire. Nor Event Match (task 21's ninth round),
+        // for the same reason: its PATHS entry's unreached says so.
+        modes: &[DB],
     },
     Gap {
         what: "All-Star's mode, its intro and the rest area",
