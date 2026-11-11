@@ -882,16 +882,14 @@ pub const MISSING: &[Gap] = &[
         // Event Match (task 21's ninth round): Event 50 is on the same stage (its stage kind
         // 251 is Final Destination's ground, 37), and the laser's and bullet's evt_unk can't
         // run there either (no fighter is unloaded in Event 50: ssbm-rs's CALLS over Sarah's
-        // recordings/ev50 logs no Fighter_Unload_8006DABC). The landing stays open: a bounce
-        // off the stage only makes a bullet faster (x1.2), but a shield can slow one. A
-        // powershield's reflection keeps 0.7 of its x speed (PlCo.dat's common 0x2B0; every
-        // special reflector keeps 1.0, and the reflector then owns it, so one player reflects it
-        // once), and a shield bounce mirrors its speed about the shield's entry normal, a 3D
-        // unit vector: with the shield's center off the bullet's plane the normal's xy part is
-        // shorter than 1 and the bounce keeps only |2nz^2 - 1| of the speed at worst
-        // (m6-event-8/hn-bullets, tick 5076: nz 0.047, 5.3600 to 5.3547). Settling needs at
-        // most 0.059 (0.05 on both axes after the floor's x1.2) of the 5.36 it's fired at.
-        modes: &[EV, DB],
+        // recordings/ev50 logs no Fighter_Unload_8006DABC). The landing isn't proven
+        // unreachable there (a shield can slow a bullet: a powershield's reflection keeps 0.7 of
+        // its x speed, PlCo.dat's common 0x2B0, and a shield bounce keeps |2nz^2 - 1| of it at
+        // worst, m6-event-8/hn-bullets tick 5076), but it_802F0F08 is empty in the original (a
+        // lone blr) and counts as checked by review (Sarah, 2026-11-11; ledger/checks.txt and
+        // masterhandbullet.rs's test), so only the evt_unks are left, which the debug mode's
+        // churn can reach.
+        modes: &[DB],
     },
     Gap {
         what: "Crazy Hand",
