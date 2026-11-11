@@ -106,7 +106,7 @@ pub fn spawn(r: &mut Running, pos: Vec3) {
 }
 
 /// `itEvYoshiEgg_Logic42_Destroyed`: the event failed (`gm_801BEB68(1)`).
-// Ports `itEvYoshiEgg_Logic42_Destroyed`; aliased once a check reaches it.
+#[doc(alias = "itEvYoshiEgg_Logic42_Destroyed")]
 pub fn destroyed(r: &mut Running, _: GObjId) {
     r.game.game_data.vs.unk_530.x18 = 1;
 }
