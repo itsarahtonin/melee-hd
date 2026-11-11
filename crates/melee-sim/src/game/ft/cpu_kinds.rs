@@ -234,15 +234,16 @@ impl Running<'_> {
         self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
 
-    /// Computer kind 18, `ftCo_800AF78C` (Events 6 and 26), and kind 7, `ftCo_800AF290`,
-    /// which stands its ground instead ([`Running::cpu_stand_ground`]) once its target is
-    /// farther than `x40`: the VS decision's start; with a Starman or a hammer, kind 8's
-    /// decision; else the nearest enemy its target with the flags set but `xF9_b3`, the
-    /// items in reach, whether it's near its target, and while it may act, for the item it
-    /// goes for, or on the ground within 50 of its target, the island end farthest from it;
-    /// then the behavior pick, whose r5 it leaves.
+    /// Computer kind 18, `ftCo_800AF78C` (Events 6 and 26), and kind 7, `ftCo_800AF290` (the
+    /// debug menu's `CpTp_Defensive`, in no mode's tables), which stands its ground instead
+    /// ([`Running::cpu_stand_ground`]) once its target is farther than `x40`: the VS
+    /// decision's start; with a Starman or a hammer, kind 8's decision; else the nearest
+    /// enemy its target with the flags set but `xF9_b3`, the items in reach, whether it's
+    /// near its target, and while it may act, for the item it goes for, or on the ground
+    /// within 50 of its target, the island end farthest from it; then the behavior pick,
+    /// whose r5 it leaves.
     #[doc(alias = "ftCo_800AF78C")]
-    // Ports `ftCo_800AF290` too; aliased once a check reaches computer kind 7.
+    #[doc(alias = "ftCo_800AF290")]
     pub(super) fn cpu_decide_keep_away(&mut self, f: FighterId, stand: bool) -> Leftover {
         let sp = kind_sp(if stand { 0x78 } else { 0x70 });
         if let Some(r5) = self.cpu_decide_start(f, sp) {
@@ -288,7 +289,7 @@ impl Running<'_> {
     /// set but `xF8_b0` and `xF9_b3`, the items in reach, and while it may act, the floor
     /// under it as its destination; then the behavior pick, whose r5 it leaves. `caller` is
     /// kind 7's stack pointer.
-    // Ports `ftCo_800AEA8C`; aliased once a check reaches computer kind 7.
+    #[doc(alias = "ftCo_800AEA8C")]
     fn cpu_stand_ground(&mut self, f: FighterId, caller: u32) -> Leftover {
         let sp = caller - 0x68;
         self.cpu_fear_flags(f, false, [true, true, false, true, true, true]);
