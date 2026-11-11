@@ -896,8 +896,8 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
-    // `ftAction_80071774`: reached by a state started partway whose script holds a hitbox
-    // flags command (Jigglypuff's Rollout let go mid-charge); aliased once a check reaches it.
+    // `ftAction_80071774`: dead, the states whose scripts hold command 14 are entered partway
+    // only at a frozen frame 0 (ledger/dead.txt).
     fn skip_80071774(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }

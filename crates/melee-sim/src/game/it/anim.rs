@@ -280,6 +280,8 @@ pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
             skip(r, gobj, 1);
         }
         // it_80279888, it_802798D4 and it_8027990C: rumble (13-bit kind and frames).
+        // `it_802798D4` (22) is dead: no item script on the disc holds command 22
+        // (ledger/dead.txt).
         21..=23 => {
             let w = word(r, gobj, 0);
             let (kind, frames) = ((w >> 13 & 0x1FFF) as i32, (w & 0x1FFF) as i32);
@@ -297,7 +299,8 @@ pub fn run_command(r: &mut Running, gobj: GObjId, opcode: u32) {
             start_colanim(r.game, r.data, gobj, id, frames);
             skip(r, gobj, 1);
         }
-        // it_802799A8: the color animation off.
+        // `it_802799A8`: the color animation off; dead, no item script on the disc holds
+        // command 25 (ledger/dead.txt).
         25 => {
             clear_overlay(item_mut(r.game, gobj));
             skip(r, gobj, 1);
