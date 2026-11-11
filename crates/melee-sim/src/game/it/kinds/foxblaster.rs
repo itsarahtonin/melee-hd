@@ -30,6 +30,7 @@ pub const EVT_UNK: u32 = 0x802A_F184;
 pub const ON_SHOT: u32 = 0x802A_DEF0;
 
 /// Runs one of the blaster's predicates, if `addr` is one.
+#[doc(alias = "itFoxblaster_UnkMotion10_Coll")]
 pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         MOTION8_ANIM => follow_fighter(r, gobj),
@@ -45,6 +46,7 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
 }
 
 /// Runs one of the blaster's events, if `addr` is one.
+#[doc(alias = "itFoxblaster_UnkMotion10_Phys")]
 pub fn run_event(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
     match addr {
         MOTION8_PHYS => {

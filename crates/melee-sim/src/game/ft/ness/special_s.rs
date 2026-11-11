@@ -112,6 +112,7 @@ impl Running<'_> {
 }
 
 #[doc(alias = "ftNs_SpecialS_Phys")]
+#[doc(alias = "ftNs_SpecialAirS_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_ITEM_PKFIRE_SPAWN => g.ness_pkfire_spawn(gobj),

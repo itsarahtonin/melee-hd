@@ -417,6 +417,7 @@ impl Running<'_> {
     /// blocks, the table prepared, the saved selection kept if it's still a trophy's, the
     /// sort back to its first, the fonts (`SdToy`, `SdToyExp`), the menus' song if the sound
     /// test chose one, and the gallery.
+    #[doc(alias = "gmMainLib_8015ED5C")]
     #[doc(alias = "Toy_Scene_OnEnter")]
     pub fn toy_on_enter(&mut self) {
         let g = &mut self.game.toys.gallery;

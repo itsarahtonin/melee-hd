@@ -395,7 +395,7 @@ impl Running<'_> {
 
     /// `ftAnim_8006F628`: [`Self::bind_part_own_figatree`] for a figatree made for another
     /// character, through the parts' remapping.
-    // Ports `ftAnim_8006F628`; aliased once a check reaches it.
+    #[doc(alias = "ftAnim_8006F628")]
     fn bind_part_figatree_remapped(&mut self, f: FighterId, part: i32, blend: bool) {
         let data = self.data;
         let fp = &self.game.fighters[f.0];

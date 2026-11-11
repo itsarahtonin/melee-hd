@@ -315,6 +315,7 @@ impl Running<'_> {
     /// `HSD_ImageDescCopyFromEFB` into image `n` from (`x`, `y`), the frame cleared after it
     /// when `clear`: a draw, and the GPU's pixels in the image's block, which the simulation
     /// never reads.
+    #[doc(alias = "HSD_ImageDescCopyFromEFB")]
     fn results_copy(&mut self, n: u8, x: u16, y: u16, clear: bool) {
         self.game
             .objs

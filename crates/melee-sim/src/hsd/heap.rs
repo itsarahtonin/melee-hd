@@ -572,6 +572,7 @@ pub const ARENA_HI: u32 = 0x817F_8AC0;
 /// the GX FIFO (`OSInitAlloc`'s start in ssbm-rs, on a console's own boot and Slippi's).
 pub const ARENA_LO: u32 = 0x8065_CC00;
 /// `OSInitAlloc`'s descriptor of each heap (`HeapDesc`), which it takes from the arena.
+#[doc(alias = "OSInitAlloc")]
 pub const HEAP_DESC_SIZE: u32 = 0xC;
 /// The heaps `OSInitAlloc` makes room for on a console (`iparam_heap_max_num`).
 pub const CONSOLE_HEAPS: u32 = 4;

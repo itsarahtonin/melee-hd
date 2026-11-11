@@ -432,12 +432,14 @@ impl Ax {
     }
 
     /// `__AXPushCallbackStack`.
+    #[doc(alias = "__AXPushCallbackStack")]
     fn push_callback(&mut self, p: VoiceId) {
         self.v(p).next1 = self.callback_stack;
         self.callback_stack = Some(p);
     }
 
     /// `__AXPopCallbackStack`.
+    #[doc(alias = "__AXPopCallbackStack")]
     fn pop_callback(&mut self) -> Option<VoiceId> {
         let p = self.callback_stack?;
         self.callback_stack = self.voices[usize::from(p)].next1;
@@ -871,6 +873,8 @@ impl Ax {
     }
 
     /// `__AXSyncPBs`: every acquired voice, highest priority first, is serviced while the
+    #[doc(alias = "__AXGetCommandListCycles")]
+    #[doc(alias = "__AXGetStackHead")]
     /// frame's DSP cycles last; a playing voice past them is dropped. Free voices' DSP blocks
     /// stop.
     #[doc(alias = "__AXSyncPBs")]

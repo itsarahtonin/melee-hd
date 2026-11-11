@@ -198,7 +198,8 @@ impl TExpList {
     /// Tries every order of the operations their dependencies allow, keeping the one with the
     /// fewest registers below `min`, `order_dag`.
     #[allow(clippy::too_many_arguments)]
-    fn order_dag(
+    #[doc(alias = "order_dag")]
+    fn best_order(
         &mut self,
         num: usize,
         dep: &[u32],
@@ -231,13 +232,13 @@ impl TExpList {
         let d = &list[idx];
         if d.nb_dep == 1 && ready_set & dep_bits != 0 {
             let next = usize::from(list[d.depend[0]].idx);
-            self.order_dag(
+            self.best_order(
                 num, dep, full_dep, list, depth, next, ready_set, order, min, min_order,
             );
         } else {
             for i in 0..num {
                 if ready_set & (1 << i) != 0 {
-                    self.order_dag(
+                    self.best_order(
                         num, dep, full_dep, list, depth, i, ready_set, order, min, min_order,
                     );
                 }
@@ -260,7 +261,7 @@ impl TExpList {
         let mut min = 5;
         make_dependency_mtx(&list[..num], &mut dep);
         make_full_dependency_mtx(num, &dep, &mut full);
-        self.order_dag(
+        self.best_order(
             num,
             &dep,
             &full,
