@@ -234,14 +234,24 @@ impl Running<'_> {
             if !hp.image.on {
                 return;
             }
-            hp.image
-                .claim(work, work + work_len, "the THP decoder's work area");
+            // The decode reads the file from its start (`THPVideoDecode`'s data), which the
+            // decoder takes as a record past its next frame's size.
             let mut frame = vec![0u8; 4];
             frame.extend_from_slice(bytes);
-            if let Ok(p) = crate::thp::decode_frame(&frame, width, height) {
-                hp.image.put(y, &p.y);
-                hp.image.put(u, &p.u);
-                hp.image.put(v, &p.v);
+            if let Ok(d) = crate::thp::decode_frame_work(&frame, width, height) {
+                hp.image.put(y, &d.planes.y);
+                hp.image.put(u, &d.planes.u);
+                hp.image.put(v, &d.planes.v);
+                // The work area holds what the decode wrote there; the rest of its block
+                // keeps what it held.
+                let at = crate::thp::Places {
+                    work,
+                    rec: file.wrapping_sub(4),
+                    planes: [y, u, v],
+                };
+                for (a, b) in crate::thp::work_area_runs(&d, at) {
+                    hp.image.put(a, &b);
+                }
             }
         });
         crate::hsd::heap::mem_free(ctx);
