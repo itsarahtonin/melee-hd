@@ -256,7 +256,7 @@ fn run(name: &str, file: &[u8], frames: &[(usize, usize)]) {
                 u32::from(w),
             );
         }
-        thp::decompress(&mut info, rec, u32::from(w), &mut planes);
+        let blocks = thp::decompress(&mut info, rec, u32::from(w), &mut planes);
         check_info(&ctx, &info, &format!("{what}, decoded"));
         for (plane, at, ours) in [
             ("Y", PY, &planes.y),
@@ -268,6 +268,41 @@ fn run(name: &str, file: &[u8], frames: &[(usize, usize)]) {
                 panic!(
                     "{what}: {plane} plane differs from byte {i:#x}: ours {:#04x}, theirs {:#04x}",
                     ours[i], theirs[i]
+                );
+            }
+        }
+        // What the heap's image lays out of the work area, byte for byte as the reference's
+        // memory holds it.
+        let decoded = thp::Decoded {
+            planes,
+            info,
+            blocks,
+        };
+        let at = thp::Places {
+            work: WORK,
+            rec: REC,
+            planes: [PY, PU, PV],
+        };
+        let runs = thp::work_area_runs(&decoded, at);
+        // The header and the last MCU's six blocks are among them.
+        assert!(
+            runs.iter()
+                .any(|(a, b)| *a == WORK && b.len() == thp::INFO_SIZE as usize),
+            "{what}: the work area's header"
+        );
+        let first = WORK + decoded.info.mcu_buffer[0];
+        assert!(
+            runs.iter().any(|(a, b)| *a == first && b.len() == 6 * 128),
+            "{what}: the last MCU's blocks"
+        );
+        for (addr, ours) in runs {
+            let theirs = read_bytes(&ctx, addr, ours.len());
+            if let Some(i) = (0..ours.len()).find(|&i| ours[i] != theirs[i]) {
+                panic!(
+                    "{what}: the work area's byte {:#x} differs: ours {:#04x}, theirs {:#04x}",
+                    addr + i as u32 - WORK,
+                    ours[i],
+                    theirs[i]
                 );
             }
         }

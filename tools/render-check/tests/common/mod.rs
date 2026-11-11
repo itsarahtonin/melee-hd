@@ -96,6 +96,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ad4-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adv-likelike/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6ad3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adventure-dbg-3/{o}.inputs"))
                         .into();
@@ -1488,6 +1491,15 @@ pub const M6AD3_MK_MEET: Game = Game {
     name: "m6ad3-mk-meet",
     players: "Debug VS on Mushroom Kingdom's route, Fox and Mario and the item menu's shells (session m6-adventure-dbg-3/mk-meet)",
     replay: Replay::Session("m6ad3-mk-meet"),
+};
+
+/// Adventure's Like Like on the Underground Maze (`m6-adv-likelike/ll-edge`, debug level 3, Fox
+/// and Mario): Mario KO'd inside one, another turning at a platform's edge.
+pub const M6AD4_LL_EDGE: Game = Game {
+    stage: "Adventure",
+    name: "m6ad4-ll-edge",
+    players: "Debug VS on the Underground Maze, Fox and Mario and the item menu's Like Likes (session m6-adv-likelike/ll-edge)",
+    replay: Replay::Session("m6ad4-ll-edge"),
 };
 
 /// Classic's Very Hard clear with Crazy Hand from the debug menu (`m6-classic-dbg/cl-vh-ch`,

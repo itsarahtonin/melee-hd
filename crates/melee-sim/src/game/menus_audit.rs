@@ -11,7 +11,7 @@
 //! records is still a console's.
 
 use super::gm::machine::{GM_MENU, Phase};
-use super::mn::main::{ONE_P, REG};
+use super::mn::main::REG;
 use super::state::Game;
 
 /// A menu entry the player doesn't let a player confirm.
@@ -27,20 +27,12 @@ pub struct Gate {
 }
 
 /// The main menu's gated entries: the single-player modes (milestone 6).
-pub const GATES: &[Gate] = &[
-    Gate {
-        list: REG,
-        entry: 1,
-        what: "Adventure",
-        covers: &["melee/gm/gmadventure"],
-    },
-    Gate {
-        list: ONE_P,
-        entry: 1,
-        what: "Event Match",
-        covers: &["melee/gm/gmevent"],
-    },
-];
+pub const GATES: &[Gate] = &[Gate {
+    list: REG,
+    entry: 1,
+    what: "Adventure",
+    covers: &["melee/gm/gmadventure"],
+}];
 
 /// The gate the game's state is at: the main menu's scene running with its list's cursor on a
 /// gated entry.

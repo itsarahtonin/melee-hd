@@ -184,7 +184,13 @@ impl Mirror for Script {
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let slot = |cx: &mut dyn Cx, w: u32| {
+            // A new object's slots are its block's leftovers, which only a push replaces and
+            // nothing reads before: each stays the word the block held, laid out as itself.
+            // As a place in a file it would be laid at the file's newest place, which moves
+            // when a later scene reads the file again elsewhere (`adv-luigi`: Zelda's
+            // fighter's third color overlay over the cutscene's freed file, tick 8997).
             if w >= 0x8000_0000
+                && !cx.leftover()
                 && let Some(d) = cx.import_data(w)
             {
                 Slot::Data(d)

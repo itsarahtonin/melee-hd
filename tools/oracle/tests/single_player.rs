@@ -662,8 +662,11 @@ fn the_third_unlock_sessions_run_clean_to_their_cards_after() {
 /// All-Star (`as-roy`), Dr. Mario by Mario's Classic (`cl-drmario`) and Young Link by a tenth
 /// character's Adventure (`adv-ylink`), each challenger's match won by a bot, and Flat Zone and
 /// Battlefield by Mr. Game & Watch's All-Star (`as-flatzone`), with the modes' trophies; each
-/// clean to its trace's end with `--all --heap` and the card after the original's. (`adv-gw`
-/// and `adv-luigi` stop before their ends on heap leftovers no layout knows; docs/oracle.md.)
+/// clean to its trace's end with `--all --heap` and the card after the original's. Mr. Game &
+/// Watch by Classic's and Adventure's clears (`cl-gw`, `adv-gw`: his match's Flat Zone over the
+/// congratulations' THP decoder's work area) and Luigi by Adventure's (`adv-luigi`: his
+/// cutscene over Zelda's fighter's color overlay's leftover slots, Pokémon Stadium's match over
+/// its intro's feed buffer) since the heap's image lays those out (docs/oracle.md).
 #[test]
 fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
     for (name, ticks) in [
@@ -671,6 +674,9 @@ fn the_fourth_unlock_sessions_run_clean_to_their_cards_after() {
         ("cl-drmario", 7706),
         ("adv-ylink", 9360),
         ("as-flatzone", 4659),
+        ("cl-gw", 5623),
+        ("adv-gw", 7126),
+        ("adv-luigi", 19933),
     ] {
         let after = ssbm_rs_local(&format!("traces/m6-unlocks/{name}-play.card"));
         let trace = ssbm_rs_local(&format!("traces/m6-unlocks/{name}.trc"));
@@ -965,6 +971,31 @@ fn adventures_shells_met_by_shields_a_reflector_and_each_other_run_clean() {
     };
     assert!(
         out.contains("8592 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
+/// Adventure's Like Like (`m6-adv-likelike`, task 24's fourth round; docs/oracle.md,
+/// "Sessions"): `mz-item`'s reads (debug VS on the Underground Maze, Fox and Mario), then a
+/// bot's: a Like Like from the item menu swallows Mario, and Fox jumps onto the platform past
+/// the start's ledge, so the blast zones, which follow him, KO Mario inside it (`fn_800C7890`,
+/// `ftCo_800C7A30`, the Like Like letting go, `it_802DBA68`); a second one on that platform
+/// crawls to its edge and turns back (`it_802D9B78`); clean to the trace's end with `--all
+/// --heap` and the card after the original's.
+#[test]
+fn adventures_like_like_ko_and_ledge_run_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adv-likelike/ll-edge-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adv-likelike", "ll-edge", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("4298 ticks compared, no difference\n"),
         "{out}"
     );
     assert!(out.contains("no stale reads"), "{out}");

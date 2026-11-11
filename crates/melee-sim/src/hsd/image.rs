@@ -857,6 +857,19 @@ impl Image {
         out
     }
 
+    /// The runs of `[lo, lo + len)` the image holds unknown in the blocks allocated now, each
+    /// with its owner (offsets): the claims their owners haven't laid out yet.
+    pub fn live_unknown(&self, lo: u32, len: u32) -> Vec<(u32, u32, &'static str)> {
+        let hi = lo + len;
+        self.live
+            .range(lo, hi)
+            .filter_map(|(k, s)| match s.src {
+                Src::Unknown(o) => Some((k.max(lo) - lo, s.end.min(hi) - lo, o)),
+                _ => None,
+            })
+            .collect()
+    }
+
     /// An object of type `ty` made at `at` over `len` bytes of its block: where the image
     /// doesn't know what the block held, it notes which bytes and whose they were
     /// ([`Unlaid`]).
