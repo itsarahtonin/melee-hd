@@ -12,6 +12,10 @@
 //! tick that drew (its transforms are kept until another tick draws) to the new one, and
 //! Extrapolate's prediction of a tick that draws nothing is no prediction, so the tick before
 //! it is drawn as it is and held through it, Off's image.
+//!
+//! **A tick that loads holds the image shown too** ([`crate::jit::Hold`]): its frame is the
+//! one drawn after the load, which shows only once the load's length has passed, and it's drawn
+//! as it is then, never blended with the tick before the load.
 
 use std::time::Instant;
 
@@ -54,6 +58,13 @@ impl Paced {
             self.after.fill(game, &f.draws);
         }
         self.latest.replace((f, due)).map(|(old, _)| old)
+    }
+
+    /// The next tick loads (a long tick, [`crate::jit::Hold`]): Interpolate's frames don't blend
+    /// across the load, from the scene before it or the state before it, to what the load
+    /// brought. The next tick that draws is drawn as it is (as Off draws it) until the one after.
+    pub fn loading(&mut self) {
+        self.after.clear();
     }
 
     /// With Extrapolate, after a tick: the next tick predicted by `predict` (`Predictor::predict`

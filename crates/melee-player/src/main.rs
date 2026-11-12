@@ -1026,9 +1026,7 @@ impl Session {
             },
             (power::Run::Console(_), None) => unreachable!("a console without its platform"),
         };
-        self.length = before.zip(self.timeline()).map(|(b, a)| {
-            Duration::from_nanos(((a - b) as u128 * 1_000_000_000 / u128::from(TB_HZ)) as u64)
-        });
+        self.length = before.zip(self.timeline()).map(|(b, a)| melee_time(b, a));
         let long = self.length.is_some_and(|l| jit::is_long(l, tick));
         if let Some(snd) = &mut self.sound {
             let (game, data) = match &mut self.run {
@@ -1060,6 +1058,13 @@ impl Session {
             power::Run::Console(s) => power::step_predicted(s, pads),
         })
     }
+}
+
+/// Melee's time from `before` to `after` on its timeline.
+fn melee_time(before: u64, after: u64) -> Duration {
+    Duration::from_nanos(
+        (after.saturating_sub(before) as u128 * 1_000_000_000 / u128::from(TB_HZ)) as u64,
+    )
 }
 
 fn panic_text(p: &Box<dyn std::any::Any + Send>) -> String {
@@ -1248,6 +1253,9 @@ struct App {
     pacer: Option<pacing::Pacer>,
     /// With Interpolate or Extrapolate: the ticks the frames draw from.
     paced: paced::Paced,
+    /// A scene's load: the screen keeps the frame shown before it until the load's length has
+    /// passed, and Off's frame from after it waits until then.
+    hold: jit::Hold<melee_sim::game::vs_match::Frame>,
     /// With Extrapolate: a prediction stopped, which is said once.
     prediction_failed: bool,
     /// With Interpolate or Extrapolate: a tick's latency measures, waiting for the first frame
@@ -1399,6 +1407,8 @@ impl App {
         loop {
             self.collect_done();
             let now = Instant::now();
+            let held = self.hold.end(now);
+            self.show_held(held);
             let plan = self.plan_tick(now);
             if self.ended() || now < plan.start || !self.run_tick(plan) {
                 return plan.start;
@@ -1406,8 +1416,31 @@ impl App {
         }
     }
 
+    /// Presents Off's frame from after a scene's load, which waited for the load's length
+    /// ([`jit::Hold`]), drawn now as the tick left the state: no tick has run since.
+    fn show_held(&mut self, held: Option<melee_sim::game::vs_match::Frame>) {
+        let Some(f) = held else { return };
+        let start = Instant::now();
+        self.draw_frame(&f.draws, start, None);
+        self.stats.frame(start.elapsed());
+        if let Some(s) = &mut self.session {
+            s.recycle(f);
+        }
+    }
+
+    /// Shows the last frame shown again: the window resized, or the settings panel closed,
+    /// while the screen holds it through a scene's load.
+    fn show_again(&mut self) {
+        if let (Some(shown), Some(image)) = (&mut self.shown, &self.last_image) {
+            let _ = shown.present(&self.gpu, image, None, |_, _, _| {});
+        }
+    }
+
     /// Runs a tick as planned; false when the match stopped.
     fn run_tick(&mut self, plan: jit::Plan) -> bool {
+        // A frame still held (the clock put back on now since) shows before the tick moves on.
+        let held = self.hold.take();
+        self.show_held(held);
         let start = Instant::now();
         let mut pads = self.delay.apply(self.inputs.read());
         if let Some(h) = &self.args.holds {
@@ -1468,25 +1501,34 @@ impl App {
         }
         let mut frame = None;
         let mut id = None;
+        let long = !later.is_zero();
         if self.mode.paced() {
             // A tick that draws nothing is kept too: the frames hold the image shown until a
             // tick draws again, rather than draw the last tick's draws on the new state
             // ([`paced`]).
             let session = self.session.as_mut().expect("a match");
-            // After a long tick Extrapolate holds the tick's own frame through the wait, moving
-            // toward the prediction only in the tick before the next (Interpolate's frames
-            // reach the tick at once and hold it).
-            let due = match self.mode {
-                pacing::Mode::Extrapolate => plan.due + later,
-                _ => plan.due,
-            };
-            if let Some(old) = self.paced.ran(self.mode, session.game(), f, due) {
+            // After a long tick the frames hold the image shown before the load until the
+            // load's length has passed, then draw the tick as it is (Interpolate blends nothing
+            // across the load; Extrapolate's frame then is the tick's own) and move on from
+            // there as the tick's due time then says.
+            if long {
+                self.hold.tick(None, plan.due, later);
+                self.paced.loading();
+            }
+            if let Some(old) = self
+                .paced
+                .ran(self.mode, session.game(), f, plan.due + later)
+            {
                 session.recycle(old);
             }
             if self.mode == pacing::Mode::Extrapolate {
                 self.predict(pads);
             }
             self.jit.tick_done(start, Instant::now(), plan.target);
+        } else if long && !f.draws.is_empty() {
+            // A long tick's frame is the scene's first after the load: it waits until the load's
+            // length has passed, the frame from before the load on screen meanwhile.
+            self.hold.tick(Some(f), plan.due, later);
         } else {
             if !f.draws.is_empty() && plan.render {
                 if let Some((mut times, shown)) = self.draw_frame(&f.draws, start, None) {
@@ -1509,12 +1551,16 @@ impl App {
             length,
             samples,
         };
-        if self.mode.paced() {
+        if self.mode.paced() && !long {
             // Logged with the first frame drawn after it.
             if let Some(p) = self.pending.replace(t) {
                 self.queue_row(None, p);
             }
         } else {
+            // A long tick's frame waits for its load's length on purpose: its row has none.
+            if let Some(p) = self.pending.take() {
+                self.queue_row(None, p);
+            }
             self.queue_row(id, t);
         }
         true
@@ -1615,7 +1661,10 @@ impl App {
     /// With Extrapolate, after a tick that ran with `pads`: the next tick predicted with the
     /// controllers it will see if they're known (an added delay has read them), else `pads`
     /// held. After a tick without a display pass the frames hold the image shown, and nothing
-    /// is predicted.
+    /// is predicted. A predicted tick that loads (a trophy's model: the copy ran long; a new
+    /// scene's isn't predicted at all) is forgotten: its frame is the one after the load, which
+    /// the screen shows only once the load's length has passed, so the frames until the real
+    /// tick draw the latest as it is.
     fn predict(&mut self, pads: [melee_sim::input::pad::PadStatus; 4]) {
         let next = self.delay.next().unwrap_or(pads);
         let session = self.session.as_ref().expect("a match");
@@ -1623,6 +1672,16 @@ impl App {
             Some(Ok(cost)) => {
                 self.stats.predictions += 1;
                 self.stats.predicting += cost.total();
+                let predicted = (self.paced.predictor.predicted())
+                    .and_then(|c| c.game().audio.clock.as_ref().map(|c| c.now));
+                if let Some(length) = session
+                    .timeline()
+                    .zip(predicted)
+                    .map(|(b, a)| melee_time(b, a))
+                    && jit::is_long(length, self.jit.tick())
+                {
+                    self.paced.predictor.forget();
+                }
             }
             Some(Err(why)) if !self.prediction_failed => {
                 eprintln!("the next tick's prediction stopped (frames draw the latest): {why}");
@@ -1665,9 +1724,11 @@ impl App {
         let target = pacer.target();
         let t = pacer.start(now, due);
         let paced = std::mem::take(&mut self.paced);
-        // None after a tick that drew nothing: the refresh shows the image shown before.
+        // None after a tick that drew nothing, or through a scene's load: the refresh shows the
+        // image shown before.
         let drawn = paced
             .frame(self.mode, t)
+            .filter(|_| !self.hold.holds(now))
             .map(|(draws, blend)| self.draw_frame(draws, now, Some(blend)));
         self.paced = paced;
         if drawn.is_some() {
@@ -2069,6 +2130,7 @@ impl App {
     /// Powers the console off: the session ends (its recordings saved), its renderer goes.
     fn power_off(&mut self) {
         self.paced.clear();
+        self.hold = jit::Hold::default();
         self.session = None;
         self.drop_renderer();
         self.console_view = None;
@@ -2098,6 +2160,10 @@ impl App {
         self.apply(&s);
         self.start_clock();
         self.start_pacing(s.high_refresh);
+        if self.hold.holds(Instant::now()) {
+            // Through a scene's load the frame held shows again, not the panel over it.
+            self.show_again();
+        }
     }
 
     /// The settings to the frames, the latency and the recordings.
@@ -2326,6 +2392,9 @@ impl ApplicationHandler for App {
                 self.update_refresh();
                 if paneled && let Some(s) = &self.shown {
                     s.window.request_redraw();
+                } else if !paneled && self.hold.holds(Instant::now()) {
+                    // The swap chain is new: the frame held through the load, at the new size.
+                    self.show_again();
                 }
             }
             WindowEvent::Moved(_) | WindowEvent::ScaleFactorChanged { .. } => self.update_refresh(),
@@ -2420,6 +2489,8 @@ impl ApplicationHandler for App {
                     break;
                 }
                 let next = self.draw_due().map_or(next_tick, |f| f.min(next_tick));
+                // A frame held through a scene's load shows when the load's length has passed.
+                let next = self.hold.until().map_or(next, |h| h.min(next));
                 if self.policy == Some(jit::Policy::Timer) {
                     event_loop.set_control_flow(ControlFlow::WaitUntil(next));
                     return;
@@ -2984,6 +3055,7 @@ fn run(args: Args) -> ExitCode {
         },
         pacer: None,
         paced: paced::Paced::default(),
+        hold: jit::Hold::default(),
         prediction_failed: false,
         pending: None,
         perf: args.perf_report.as_deref().map(perf::Perf::new),
