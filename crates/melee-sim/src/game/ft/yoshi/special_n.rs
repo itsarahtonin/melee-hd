@@ -440,6 +440,10 @@ fn set_n_item(fp: &mut crate::game::structs::Fighter, on: bool) {
 #[doc(alias = "ftYs_SpecialN1_Phys")]
 #[doc(alias = "ftYs_SpecialAirN1_0_Coll")]
 #[doc(alias = "ftYs_SpecialAirN1_0_Phys")]
+#[doc(alias = "ftYs_SpecialAirN1_1_Coll")]
+#[doc(alias = "ftYs_SpecialAirN1_1_Phys")]
+#[doc(alias = "ftYs_SpecialAirN2_0_Coll")]
+#[doc(alias = "ftYs_SpecialAirN2_0_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_N_ENTER => g.ys_special_n_enter(gobj),
