@@ -9,7 +9,6 @@ melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated 
 melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
 lbAudioAx_80024F08	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-fn_800259A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 lbAudioAx_80027DBC	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline

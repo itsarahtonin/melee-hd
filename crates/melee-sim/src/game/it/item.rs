@@ -459,6 +459,7 @@ pub fn init_vars(r: &mut Running, gobj: GObjId, spawn: &SpawnItem) {
             let f = super::owner::fighter_of(r.game, p);
             r.game.fighters[f.0].team
         }
+        // `itGetTeamId`: dead, no spawn parent is ever an item (ledger/dead.txt).
         Some(p) if is_item(r.game, Some(p)) => super::item(r.game, p).x20_team_id,
         Some(_) => u8::MAX,
     };
