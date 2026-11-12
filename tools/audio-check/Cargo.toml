@@ -17,5 +17,9 @@ melee-sim.workspace = true
 ssbm-rt.workspace = true
 zstd = "0.13"
 
+[features]
+# melee-audio's run-time mutations, `MUT=NAME` (docs/player.md, "Checking the mix").
+mutation = ["melee-audio/mutation"]
+
 [dev-dependencies]
 melee-local-data = { path = "../local-data" }

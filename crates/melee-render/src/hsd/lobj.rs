@@ -216,11 +216,15 @@ fn setup_infinite(gx: &mut Gx, objs: &Objects, l: LObjId, vmtx: &Mtx34, g: &mut 
 }
 
 /// `setup_point_lightobj`.
+#[doc(alias = "setup_point_lightobj")]
 fn setup_point(gx: &mut Gx, objs: &Objects, l: LObjId, vmtx: &Mtx34, g: &mut LightGx) {
     let o = &objs.lobjs[l];
     gx.init_light_color(&mut g.light, color(o.color));
     g.hw_color = color(o.color);
-    let lpos = vmtx.transform(position(objs, l));
+    let mut lpos = vmtx.transform(position(objs, l));
+    if crate::mutation::on("setup_point_lightobj") {
+        lpos.x += 1.0;
+    }
     gx.init_light_pos(&mut g.light, lpos.x, lpos.y, lpos.z);
     gx.init_light_pos(&mut g.spec, lpos.x, lpos.y, lpos.z);
     if o.flags & lobj::RAW_PARAM != 0 {
@@ -235,10 +239,14 @@ fn setup_point(gx: &mut Gx, objs: &Objects, l: LObjId, vmtx: &Mtx34, g: &mut Lig
 }
 
 /// `setup_spot_lightobj`.
+#[doc(alias = "setup_spot_lightobj")]
 fn setup_spot(gx: &mut Gx, objs: &Objects, l: LObjId, vmtx: &Mtx34, g: &mut LightGx) {
     let o = &objs.lobjs[l];
     let lpos = vmtx.transform(position(objs, l));
-    let ldir = vmtx.rotate(light_vector(objs, l)).sdk_normalize();
+    let mut ldir = vmtx.rotate(light_vector(objs, l)).sdk_normalize();
+    if crate::mutation::on("setup_spot_lightobj") {
+        ldir.x = -ldir.x;
+    }
     gx.init_light_pos(&mut g.light, lpos.x, lpos.y, lpos.z);
     gx.init_light_pos(&mut g.spec, lpos.x, lpos.y, lpos.z);
     gx.init_light_dir(&mut g.light, ldir.x, ldir.y, ldir.z);

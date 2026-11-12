@@ -90,6 +90,7 @@ impl Ctx<'_> {
     }
 
     /// One copy at (`x`, `y`), the image's size by the scale, `lb_8001271C`.
+    #[doc(alias = "lb_8001271C")]
     fn blur_quad(&mut self, tex: &TexObj, x: f64, y: f64, scale: [f32; 2]) {
         let (tw, th) = (f64::from(WIDTH), f64::from(HEIGHT));
         let t = fp::fdivs(tw, f64::from(self.gx.get_tex_obj_width(tex)));
@@ -97,7 +98,10 @@ impl Ctx<'_> {
         let w = fp::fmuls(tw, reg(scale[0]));
         let h = fp::fmuls(th, reg(scale[1]));
         let y0 = fp::fneg(y);
-        let x1 = fp::fadds(x, w);
+        let mut x1 = fp::fadds(x, w);
+        if crate::mutation::on("lb_8001271C") {
+            x1 = fp::fadds(x1, 1.0);
+        }
         let y1 = fp::fneg(fp::fadds(y, h));
         let gx = &mut *self.gx;
         gx.begin(GX_QUADS, GX_VTXFMT0, 4);
@@ -116,6 +120,7 @@ impl Ctx<'_> {
     /// The image's texture and the TEV for its tint, `lb_800122F0`: with a tint, three
     /// stages adding each channel of the texture (swapped to red, green, blue) by its own
     /// constant color; else the texture's color.
+    #[doc(alias = "lb_800122F0")]
     fn blur_setup(&mut self, img: &Image, tint: f32) -> TexObj {
         let f = reg(tint);
         let k = |c: f32| fp::fmuls(reg(c), f);
@@ -140,13 +145,18 @@ impl Ctx<'_> {
         };
         let mut tex = TexObj::default();
         let gx = &mut *self.gx;
+        let wrap = if crate::mutation::on("lb_800122F0") {
+            GX_REPEAT
+        } else {
+            GX_CLAMP
+        };
         gx.init_tex_obj(
             &mut tex,
             img.ptr,
             img.width,
             img.height,
             img.format,
-            GX_CLAMP,
+            wrap,
             GX_CLAMP,
             u8::from(img.mipmap),
         );
@@ -233,6 +243,7 @@ impl Ctx<'_> {
     /// one texture coordinate, the register channels; plain at `alpha`, or blurred by `size`
     /// and tinted by `tint` (`lb_80012994`), inside the screen's band from line 110 to 400
     /// once tinted.
+    #[doc(alias = "lb_80012994")]
     pub fn blur(&mut self, pos: [f32; 2], scale: [f32; 2], alpha: u8, size: Option<u8>, tint: f32) {
         self.hsd.state.set_z_mode(self.gx, false, GX_ALWAYS, false);
         let view = self.hsd.view_mtx();
@@ -259,7 +270,12 @@ impl Ctx<'_> {
                     self.game_scissor(0, 110, 640, 290);
                 }
                 let off1 = fp::fdivs(fp::frsp(f64::from(size)), 64.0);
-                let off2 = fp::fmuls(2.0, off1);
+                let twice = if crate::mutation::on("lb_80012994") {
+                    3.0
+                } else {
+                    2.0
+                };
+                let off2 = fp::fmuls(twice, off1);
                 let tex = self.blur_setup(&img, tint);
                 let step = |d: i8| match d {
                     1 => off1,

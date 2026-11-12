@@ -118,7 +118,11 @@ impl Default for State {
 
 impl State {
     /// `HSD_StateSetLineWidth`.
-    pub fn set_line_width(&mut self, gx: &mut Gx, width: u8, tex_offsets: u32) {
+    #[doc(alias = "HSD_StateSetLineWidth")]
+    pub fn set_line_width(&mut self, gx: &mut Gx, mut width: u8, tex_offsets: u32) {
+        if crate::mutation::on("HSD_StateSetLineWidth") {
+            width = width.wrapping_add(1);
+        }
         if self.line_width != width || self.line_tex_offsets != tex_offsets {
             gx.set_line_width(width, tex_offsets);
             self.line_width = width;
@@ -127,7 +131,11 @@ impl State {
     }
 
     /// `HSD_StateSetPointSize`.
-    pub fn set_point_size(&mut self, gx: &mut Gx, size: u8, tex_offsets: u32) {
+    #[doc(alias = "HSD_StateSetPointSize")]
+    pub fn set_point_size(&mut self, gx: &mut Gx, mut size: u8, tex_offsets: u32) {
+        if crate::mutation::on("HSD_StateSetPointSize") {
+            size = size.wrapping_add(1);
+        }
         if self.point_size != size || self.point_tex_offsets != tex_offsets {
             gx.set_point_size(size, tex_offsets);
             self.point_size = size;
@@ -136,9 +144,12 @@ impl State {
     }
 
     /// `HSD_StateSetCullMode`.
+    #[doc(alias = "HSD_StateSetCullMode")]
     pub fn set_cull_mode(&mut self, gx: &mut Gx, mode: u32) {
         if self.cull_mode != mode as i32 {
-            gx.set_cull_mode(mode);
+            // Broken: front and back swapped.
+            let broken = crate::mutation::on("HSD_StateSetCullMode") && matches!(mode, 1 | 2);
+            gx.set_cull_mode(if broken { 3 - mode } else { mode });
             self.cull_mode = mode as i32;
         }
     }
@@ -245,6 +256,7 @@ impl State {
     }
 
     /// `HSD_SetMaterialColor`.
+    #[doc(alias = "HSD_SetMaterialColor")]
     pub fn set_material_color(
         &mut self,
         ambient: Color,
@@ -254,14 +266,22 @@ impl State {
     ) {
         self.mat.ambient = ambient;
         self.mat.diffuse = diffuse;
+        if crate::mutation::on("HSD_SetMaterialColor") {
+            self.mat.diffuse.r = diffuse.r ^ 0x10;
+            self.mat.ambient.r = ambient.r ^ 0x10;
+        }
         self.mat.specular = specular;
         // `255.0 * alpha` in double precision, converted to an unsigned byte.
         self.mat.alpha = (255.0 * f64::from(alpha)) as u32 as u8;
     }
 
     /// `HSD_SetMaterialShininess`.
+    #[doc(alias = "HSD_SetMaterialShininess")]
     pub fn set_material_shininess(&mut self, shininess: f32) {
         self.mat.shininess = shininess;
+        if crate::mutation::on("HSD_SetMaterialShininess") {
+            self.mat.shininess = shininess * 2.0;
+        }
     }
 }
 
@@ -277,8 +297,14 @@ pub trait Lights {
 }
 
 /// `HSD_MulColor`: each component multiplied, divided by 255.
-fn mul_color(a: Color, b: Color) -> Color {
-    let m = |x: u8, y: u8| ((u32::from(x) * u32::from(y)) / 255) as u8;
+#[doc(alias = "HSD_MulColor")]
+pub(crate) fn mul_color(a: Color, b: Color) -> Color {
+    let d = if crate::mutation::on("HSD_MulColor") {
+        256
+    } else {
+        255
+    };
+    let m = |x: u8, y: u8| ((u32::from(x) * u32::from(y)) / d) as u8;
     Color::new(m(a.r, b.r), m(a.g, b.g), m(a.b, b.b), m(a.a, b.a))
 }
 

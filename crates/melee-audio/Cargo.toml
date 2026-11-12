@@ -8,6 +8,10 @@ repository.workspace = true
 rust-version.workspace = true
 publish.workspace = true
 
+[features]
+# Run-time mutations for the mix checks (`src/mutation.rs`): `MUT=NAME` breaks a port.
+mutation = []
+
 [dependencies]
 cpal = "0.18"
 melee-data.workspace = true
