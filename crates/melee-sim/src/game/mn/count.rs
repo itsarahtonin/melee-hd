@@ -213,15 +213,13 @@ pub struct CountData {
     pub title: Option<TextId>,
 }
 
-/// `mncount.c`'s statics: the screen's model (`model_desc`), its GObj (`menu_gobj`), the
-/// user data by block, and the last screen's block with the title it left there, which the
-/// next screen reads before writing ([Melee's bugs](docs/melee-bugs.md)).
+/// `mncount.c`'s statics: the screen's model (`model_desc`), its GObj (`menu_gobj`) and the
+/// user data by block.
 #[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Count {
     pub model: ModelDesc,
     pub gobj: Option<GObjId>,
     pub data: BTreeMap<u32, CountData>,
-    pub left: Option<(u32, Option<TextId>)>,
 }
 
 impl Running<'_> {
@@ -733,27 +731,21 @@ impl Running<'_> {
         let gobj = self.game.world.create(6, 7, 0x80);
         self.game.data_menus.count.gobj = Some(gobj);
         let addr = crate::hsd::heap::mem_alloc(0x5C);
-        // The title isn't written before it's read: the block holds the last screen's title
-        // when it's the same block, else no text's address.
-        let left = match self.game.data_menus.count.left {
-            Some((a, t)) if a == addr => t,
-            _ => None,
-        };
+        // The title isn't written before it's read: it's the word the block held, which the
+        // creation frees as a text ([Melee's bugs](docs/melee-bugs.md)).
+        let [left] = self.leftover_text_words::<1>(addr + 0x58);
         let g = &mut *self.game;
         g.data_menus.count.data.insert(
             addr,
             CountData {
                 timer: 10,
-                title: left,
                 ..CountData::default()
             },
         );
         g.world.init_user_data(gobj, 0, UserData::Count(addr));
         let p = g.world.setup_proc(gobj, CodeRef(IN), 0);
         g.world.proc_mut(p).flags_3 = g.world.phase;
-        if let Some(t) = left {
-            self.destroy_text(t);
-        }
+        self.destroy_text_word(left, "the records' count screen's title before it's made");
         let t = self.menu_center_text(1, 0xA6);
         self.count_mut(gobj).title = Some(t);
         self.options_input_proc(INPUT);

@@ -11,6 +11,7 @@ use super::state::{Game, Obj, UserData};
 use crate::hsd::export::{Lay, live_objects};
 use crate::hsd::gobj::{GObjId, ProcId};
 use crate::hsd::image::Image;
+use crate::hsd::sis::TextWord;
 
 /// Where a GObj's user data lives, where melee-sim knows it.
 fn user_data_addr(game: &Game, ud: &UserData) -> Option<u32> {
@@ -177,7 +178,7 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     }
     for (_, o) in game.world.gobjs.iter() {
         if let Some(ud) = &o.user_data {
-            menu_block(game, img, ud);
+            menu_block(game, data, img, ud);
         }
     }
     bg_flash(game, img);
@@ -206,10 +207,153 @@ pub fn start_hook(game: &Game, img: &mut Image, h: super::handles::StartHookId) 
 /// the stage, the frames) and hover frame (its frames), each written whole by its creation;
 /// and the frame copy's sprite (`CameraBlurData`, 0x24: its place, scale, alpha, blur, mode,
 /// callback, image and, once its owner's callback wrote it, its tint; its padding never
-/// written).
-pub fn menu_block(game: &Game, img: &mut Image, ud: &UserData) {
+/// written); the VS rules' list (`struct mn_802307F8_t`, 0x134: its values, state, joints, each
+/// shown option's value joints and description, `x7`, `x8`, `xB` and the joints no option
+/// keeps never written); the records' count screen's and the rumble screen's titles
+/// (`MnCountData`, 0x5C, and `MnVibrationData`, 0x98, their other words left unknown); the
+/// extra rules' list (`MenuRulesPlusData`, 0xE0, the same way, `x7`
+/// and the padding never written); the main menu's lists (`MainMenuData`, 0xB0: the kind, place and state, the
+/// joints and the description, `pad_3` never written); the character select's hands (`CSSCursorData`, 0x14, written whole); and the
+/// item and stage switches' (`MnItemSwData`, 0x48, and `MnStageSwData`,
+/// 0xB4: the places, the state, the joints and the texts, or the words the block held where
+/// the screen went before making them; the padding never written).
+pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) {
     let sel = &game.stagesel;
+    let jobj =
+        |j: Option<crate::hsd::jobj::JObjId>| j.map_or(0, |j| game.objs.jobjs.pool.addr(j.0));
+    let text = |l: &mut Lay, at: u32, t: TextWord| {
+        let w = match t {
+            TextWord::Made(t) => (game.sis.arena_block != 0).then(|| game.sis.arena_block + t.0),
+            TextWord::Left(w) => w,
+        };
+        l.put_word(at, w);
+    };
     let l = match *ud {
+        // The records' count screen and the rumble screen: their titles, which the next
+        // screen made in the block frees before writing.
+        UserData::Count(a) => game.data_menus.count.data.get(&a).map(|d| {
+            let mut l = Lay::new(a, 0x5C);
+            if let Some(t) = d.title {
+                text(&mut l, a + 0x58, TextWord::Made(t));
+            }
+            l
+        }),
+        UserData::Vibration(a) => game.options.vibration.data.get(&a).map(|d| {
+            let mut l = Lay::new(a, 0x98);
+            if let Some(t) = d.title {
+                text(&mut l, a + 0x90, TextWord::Made(t));
+            }
+            l
+        }),
+        UserData::RulesList(a) => game.vs_menus.data.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 0x134);
+            l.bytes(0, &[d.menu_kind, d.hovered]);
+            for (i, v) in d.values.iter().enumerate() {
+                if let Some(v) = *v {
+                    l.u8(2 + i as u32, v);
+                }
+            }
+            l.bytes(9, &[d.stock_count, d.state]);
+            for (i, &j) in d.tree.iter().enumerate() {
+                l.u32(0xC + 4 * i as u32, jobj(j));
+            }
+            // Each shown option's value model's joints, as many as it keeps.
+            for (i, js) in d.value_joints.iter().enumerate().take(5) {
+                if !super::mn::rules::rules_shown(game, i as u8) {
+                    continue;
+                }
+                for (k, &j) in js
+                    .iter()
+                    .enumerate()
+                    .take(super::mn::rules::VALUE_JOINTS[i])
+                {
+                    l.u32(0x34 + 0x24 * i as u32 + 4 * k as u32, jobj(j));
+                }
+            }
+            match d.text {
+                Some(t) => text(&mut l, a + 0x130, TextWord::Made(t)),
+                None => l.u32(0x130, 0),
+            }
+            l
+        }),
+        UserData::RulePlusList(a) => game.vs_menus.plus.data.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 0xE0);
+            l.bytes(0, &[d.menu_kind, d.hovered]);
+            for (i, v) in d.values.iter().enumerate() {
+                if let Some(v) = *v {
+                    l.u8(2 + i as u32, v);
+                }
+            }
+            l.u8(8, d.state);
+            for (i, &j) in d.tree.iter().enumerate() {
+                l.u32(0xC + 4 * i as u32, jobj(j));
+            }
+            for (i, js) in d.value_joints.iter().enumerate() {
+                if !super::mn::rules::rule_plus_shown(game, i as u8) {
+                    continue;
+                }
+                let keeps = super::mn::rule_plus::VALUE_JOINTS[i];
+                for (k, &j) in js.iter().enumerate().take(keeps) {
+                    l.u32(0x34 + 0x1C * i as u32 + 4 * k as u32, jobj(j));
+                }
+            }
+            match d.description {
+                Some(t) => text(&mut l, a + 0xDC, TextWord::Made(t)),
+                None => l.u32(0xDC, 0),
+            }
+            l
+        }),
+        UserData::MainMenuList(a) => game.menu.lists.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 0xB0);
+            l.bytes(0, &[d.menu_kind, d.hovered_selection, d.state]);
+            for (i, &j) in d.tree.iter().enumerate() {
+                l.u32(4 + 4 * i as u32, jobj(j));
+            }
+            match d.description {
+                Some(t) => text(&mut l, a + 0xAC, TextWord::Made(t)),
+                None => l.u32(0xAC, 0),
+            }
+            l
+        }),
+        UserData::CssCursor(i) => game.charsel.cursors[usize::from(i)]
+            .as_ref()
+            .filter(|c| c.addr != 0)
+            .map(|c| {
+                let mut l = Lay::new(c.addr, 0x14);
+                l.u32(0, game.world.gobjs.addr(c.gobj.0));
+                l.bytes(4, &[c.port, c.state, c.held, c.x7]);
+                l.u16(8, c.hover);
+                l.u16(0xA, c.b_timer);
+                l.f32s(0xC, &[c.x, c.y]);
+                l
+            }),
+        UserData::ItemSwitch(a) => game.vs_menus.items.data.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 0x48);
+            l.bytes(0, &[d.menu_kind, d.cursor]);
+            l.bytes(2, &d.items);
+            l.u8(0x21, d.freq);
+            l.u8(0x23, d.state);
+            for (i, &j) in d.jobjs.iter().enumerate() {
+                l.u32(0x24 + 4 * i as u32, jobj(j));
+            }
+            for (i, &t) in d.texts.iter().enumerate() {
+                text(&mut l, a + 0x40 + 4 * i as u32, t);
+            }
+            l
+        }),
+        UserData::StageSwitch(a) => game.vs_menus.stages.data.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 0xB4);
+            l.bytes(0, &[d.menu_kind, d.hovered]);
+            l.bytes(2, &d.stages);
+            l.u8(0x1F, d.state);
+            for (i, &j) in d.jobjs.iter().enumerate() {
+                l.u32(0x20 + 4 * i as u32, jobj(j));
+            }
+            for (i, &t) in d.texts.iter().enumerate() {
+                text(&mut l, a + 0x40 + 4 * i as u32, t);
+            }
+            l
+        }),
         UserData::SssName(a) => sel.names.get(&a).map(|d| {
             let mut l = Lay::new(a, 8);
             l.u16(0, d.stage);

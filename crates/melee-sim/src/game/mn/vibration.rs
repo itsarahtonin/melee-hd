@@ -74,10 +74,6 @@ pub struct Vibration {
     pub models: [ModelDesc; 4],
     pub gobj: Option<GObjId>,
     pub data: std::collections::BTreeMap<u32, VibrationData>,
-    /// The last screen's block and the title text it left in it, which the next screen's
-    /// creation reads before writing (`mnVibration_CreateScreen`'s `title_text`; the
-    /// engine notes, "Uninitialized values").
-    pub left: Option<(u32, Option<TextId>)>,
 }
 
 const CURSOR: usize = 0;
@@ -544,12 +540,9 @@ impl Running<'_> {
         );
         jobj::req_anim_all(&mut g.objs, Some(root), 0.0);
         let addr = crate::hsd::heap::mem_alloc(0x98);
-        // `title_text` isn't written before it's read: the block holds the last screen's
-        // title when it's the same block, else no text's address.
-        let left = match self.game.options.vibration.left {
-            Some((a, t)) if a == addr => t,
-            _ => None,
-        };
+        // `title_text` isn't written before it's read: it's the word the block held, which the
+        // creation frees as a text ([Melee's bugs](docs/melee-bugs.md)).
+        let [left] = self.leftover_text_words::<1>(addr + 0x90);
         let connected = std::array::from_fn(|i| u8::from(self.game.pads.copy[i].err == 0));
         let mut jobjs = [None; 25];
         for (k, j) in jobjs.iter_mut().enumerate() {
@@ -565,7 +558,7 @@ impl Running<'_> {
                 scroll: 0,
                 jobjs,
                 texts: [None; 8],
-                title: left,
+                title: None,
                 cursor: None,
             },
         );
@@ -577,9 +570,7 @@ impl Running<'_> {
         }
         self.game.world.setup_proc(gobj, CodeRef(INTRO), 0);
         self.vibration_make_panels();
-        if let Some(t) = left {
-            self.destroy_text(t);
-        }
+        self.destroy_text_word(left, "the rumble screen's title before it's made");
         let t = self.menu_center_text(1, 0xA7);
         self.vibration_mut().title = Some(t);
     }
