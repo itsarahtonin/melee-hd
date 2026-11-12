@@ -495,7 +495,7 @@ pub fn drop_by_kind(r: &mut Running, kind: i32, pos: Vec3, hold: bool) -> Option
 /// `owner`, `x18` the slot `slot`): a heart (`it_80283AE4`) falling from `pos` on the plane,
 /// marked as the slot's (its `xDD8.b0` and `xDDC`, which its end clears in All-Star's run),
 /// with no camera box (`Item_80267454`) and the second heal (`it_80283BD4`), with `hold`
-/// (`x1C.b0`) holding its flags ([`hold_flags_on`]); none in a sudden death. Only All-Star's rest area drops one; kind 9's (`it_802841B4`) isn't ported.
+/// (`x1C.b0`) holding its flags ([`hold_flags_on`]); none in a sudden death. Only All-Star's rest area drops one; kind 9's (`it_802841B4`) is dead: no caller of `it_8026BE84` passes 9 (`ledger/dead.txt`).
 #[doc(alias = "it_80283AE4")]
 pub fn drop_food(
     r: &mut Running,

@@ -111,8 +111,8 @@ impl Running<'_> {
     /// `OnItemVisible`).
     #[doc(alias = "ftMt_Init_OnItemPickup")]
     #[doc(alias = "ftMt_Init_OnItemDrop")]
-    // Ports `ftMt_Init_OnItemInvisible` and `ftMt_Init_OnItemVisible`; aliased once a check
-    // reaches them.
+    #[doc(alias = "ftMt_Init_OnItemInvisible")]
+    #[doc(alias = "ftMt_Init_OnItemVisible")]
     pub fn mt_item_hook(&mut self, _gobj: GObjId) {}
 }
 

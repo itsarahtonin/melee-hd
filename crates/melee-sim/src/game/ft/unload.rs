@@ -82,8 +82,9 @@ impl Running<'_> {
 
     /// Jigglypuff's user data remover, `ftPr_Init_OnUserDataRemove` (`ftPr_Init_8013C494`):
     /// her hat's model and its DObj list freed, if she wears one.
-    // Ports `ftPr_Init_OnUserDataRemove` and `ftPr_Init_8013C494`; aliased once a check
-    // reaches them (a Jigglypuff in a hat leaving).
+    // Ports `ftPr_Init_8013C494`; aliased once a check reaches it (a Jigglypuff in a hat
+    // leaving).
+    #[doc(alias = "ftPr_Init_OnUserDataRemove")]
     fn purin_on_user_data_remove(&mut self, f: FighterId) {
         use super::purin::u;
         /// `x2240.data`'s offset in `u`.

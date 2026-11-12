@@ -763,7 +763,7 @@ pub fn spin_out(r: &mut Running, gobj: GObjId, vel: Vec3) {
 }
 
 /// Forgets a GObj the yo-yo points to, `it_2725_Logic59_EvtUnk` (`it_8026B894`).
-// Ports `it_2725_Logic59_EvtUnk`; aliased once a check reaches it.
+// `it_2725_Logic59_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
 }

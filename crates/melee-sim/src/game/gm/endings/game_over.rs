@@ -687,8 +687,8 @@ impl Running<'_> {
 
     /// `gm_Scene_ComingSoon_OnEnter`: `IfComSn.dat`'s scene: its camera, light and model
     /// with its process, and the model's joint 1.
-    // Ports gm_Scene_ComingSoon_OnEnter; aliased once a check reaches it (the single-player
-    // modes' coming soon states, Classic's, Adventure's and All-Star's).
+    // Ports gm_Scene_ComingSoon_OnEnter, which is dead (`ledger/dead.txt`: no mode state that
+    // names the scene is ever entered).
     pub fn coming_soon_on_enter(&mut self) {
         self.game.endings.game_over.soon_frame = 0;
         let (a, scene, (file, block)) = self.endings_scene("IfComSn.dat", "ScComSoon_scene_data");
@@ -727,7 +727,7 @@ impl Running<'_> {
     }
 
     /// `gm_Scene_ComingSoon_OnExit`: the archive let go, the music stopped.
-    // Ports gm_Scene_ComingSoon_OnExit; aliased once a check reaches it.
+    // Ports gm_Scene_ComingSoon_OnExit, dead as its entry is.
     pub fn coming_soon_on_exit(&mut self) {
         let g = &self.game.endings.game_over;
         let (file, block) = (g.soon_file, g.soon_block);

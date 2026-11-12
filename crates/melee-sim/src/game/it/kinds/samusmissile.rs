@@ -486,7 +486,7 @@ pub fn burst_super(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj the missile points to, `it_2725_Logic52_EvtUnk`: and its owner, if that.
-// Ports `it_2725_Logic52_EvtUnk`; aliased once a check reaches it.
+// `it_2725_Logic52_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
