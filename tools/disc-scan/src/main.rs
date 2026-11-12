@@ -17,7 +17,8 @@
 //! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `robjs` counts
 //! the joints' and camera positions' reference objects by type and lists any expression;
 //! `stage-colanims` walks the stages' color animation scripts for owner's commands. `words
-//! FILE OFFSET COUNT` prints a file's words, pointers marked.
+//! FILE OFFSET COUNT` prints a file's words, pointers marked. `stage-items` lists each stage
+//! file's item articles.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
@@ -789,6 +790,33 @@ fn main() -> ExitCode {
                         println!("{path} {n} {o:#x}");
                     }
                 }
+            }
+        }
+        "stage-items" => {
+            // `stage-items`: each stage file's item articles (its `itemdata` list, which
+            // `Stage_8022524C` loads as the stage's articles, kinds 0xD0 on), the only stage
+            // items the debug item menu can make there.
+            for path in &files {
+                let name = path.rsplit('/').next().unwrap_or(path);
+                if !name.starts_with("Gr") {
+                    continue;
+                }
+                let Ok(bytes) = disc.read_file(path) else {
+                    continue;
+                };
+                let Ok(a) = Archive::parse(&bytes) else {
+                    continue;
+                };
+                let Some(mut at) = a.public("itemdata") else {
+                    println!("{name}: no itemdata");
+                    continue;
+                };
+                let mut kinds = Vec::new();
+                while let Some(item) = a.ptr(at) {
+                    kinds.push(format!("{:#x}", a.u32(item)));
+                    at += 4;
+                }
+                println!("{name}: {}", kinds.join(" "));
             }
         }
         "words" => {

@@ -1026,6 +1026,31 @@ fn adventures_polar_bear_flung_toward_the_screen_and_a_leaving_team_run_clean() 
     );
 }
 
+/// Adventure's red shell stopped on a slope (`m6-adv-close/mk-slope9`, task 24's fifth round;
+/// docs/oracle.md, "Sessions"): debug VS on Mushroom Kingdom's adventure route with Fox and
+/// Mario, then a bot's reads: the slope's Goombas lasered, and a red shell from the item menu
+/// lasered into the wall at the top of a 16.7-degree floor, so that its bounces and Fox's
+/// lasers (0.81 each) leave it at 0.057, under `x30`: state 9 from its physics on the slope,
+/// and that state's collision (`itZrshell_UnkMotion9_Coll`), clean to the trace's end with
+/// `--all --heap` and the card after the original's.
+#[test]
+fn adventures_red_shell_stopped_on_a_slope_runs_clean() {
+    let after = ssbm_rs_local("lockstep/m6-adv-close/mk-slope9-run.card");
+    let args = ["--all", "--heap", "--card-after", &after];
+    let Some(out) = session_in("m6-adv-close", "mk-slope9", &args) else {
+        return;
+    };
+    assert!(
+        out.contains("3869 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert!(out.contains("no stale reads"), "{out}");
+    assert!(
+        out.contains("the card after the session: the original's"),
+        "{out}"
+    );
+}
+
 /// Classic's Very Hard clear with Crazy Hand (`m6-classic-dbg`, task 22's debug round;
 /// docs/oracle.md, "Sessions"): at debug level 3 the Taniguti Test's Reg:Easy (`un_80301074`)
 /// at 11 starts Classic at its boss stage; Fox on Very Hard with five stocks, a bot's reads

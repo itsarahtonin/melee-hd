@@ -370,7 +370,6 @@ pub const MODULES: &[&str] = &[
     "it/zako",
 ];
 
-const ADVENTURE: &str = "an adventure enemy (kinds 0xD0 to 0xDC), which only a stage's enemy spawner or adventure stage code makes; no roster stage configures one";
 const COLANIM: &str = "the items' own color script commands 21 and 22, which none of ItCo.usd's six item color animations uses";
 const DITTO: &str = "Ditto's parts no ball's Ditto reaches: its second state (nothing enters it), its landing again in its first state, and its evt_unk (a fighter's unload, which no session reaches with Ditto out); its weight in the Poke Ball's table is 0 (ItCo.usd), so no list's draw (it_8027A780) picks it and only the debug menu's Pokemon brings it out";
 const DROP_BY_KIND: &str = "a spawn by kind of a box, Flipper or food (it_8026BE84): the All-Star rest area's (Big Blue's flying platforms make only the five kinds ported, the Home-Run Contest's stage the bat, and a sudden death's bob-omb rain only bob-ombs)";
@@ -389,7 +388,6 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 /// match from the player reaches (VS mode, the roster's characters and offered stages, no
 /// sudden death), each with why.
 pub const UNREACHED: &[(&str, &str)] = &[
-    ("melee/it/kinds/itzgshell", ADVENTURE),
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
     ("it_802841B4", DROP_BY_KIND),
