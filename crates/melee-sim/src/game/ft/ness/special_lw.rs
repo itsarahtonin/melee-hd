@@ -102,6 +102,7 @@ impl Running<'_> {
 
     /// The start's end (`ftNs_SpecialLwStart_Anim`, `ftNs_SpecialAirLwStart_Anim`): the
     /// bubble's effect and holding.
+    #[doc(alias = "ftNs_SpecialAirLwStart_Anim")]
     fn ness_special_lw_start_anim(&mut self, gobj: GObjId) {
         self.ness_special_lw_check_release(gobj);
         if self.anim_frames_remaining(gobj) {
@@ -197,6 +198,7 @@ impl Running<'_> {
 
     /// Holding (`ftNs_SpecialLwHold_Anim`, `ftNs_SpecialAirLwHold_Anim`): the end once B is let
     /// go of and the lag is out, and the hum.
+    #[doc(alias = "ftNs_SpecialAirLwHold_Anim")]
     fn ness_special_lw_hold_anim(&mut self, gobj: GObjId) {
         self.ness_special_lw_check_release(gobj);
         self.ness_special_lw_count_lag(gobj);
@@ -364,6 +366,7 @@ impl Running<'_> {
 
     /// The end's end (`ftNs_SpecialLwEnd_Anim`, `ftNs_SpecialAirLwEnd_Anim`): the effects
     /// cleared, then falling or waiting.
+    #[doc(alias = "ftNs_SpecialAirLwEnd_Anim")]
     fn ness_special_lw_end_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.destroy_effects(gobj);
@@ -411,6 +414,15 @@ impl Running<'_> {
 #[doc(alias = "ftNs_SpecialLwStart_Phys")]
 #[doc(alias = "ftNs_SpecialLwStart_IASA")]
 #[doc(alias = "ftNs_SpecialLwStart_Anim")]
+#[doc(alias = "ftNs_SpecialAirLwEnd_Coll")]
+#[doc(alias = "ftNs_SpecialAirLwEnd_IASA")]
+#[doc(alias = "ftNs_SpecialAirLwEnd_Phys")]
+#[doc(alias = "ftNs_SpecialAirLwHold_Coll")]
+#[doc(alias = "ftNs_SpecialAirLwHold_IASA")]
+#[doc(alias = "ftNs_SpecialAirLwHold_Phys")]
+#[doc(alias = "ftNs_SpecialAirLwStart_Coll")]
+#[doc(alias = "ftNs_SpecialAirLwStart_IASA")]
+#[doc(alias = "ftNs_SpecialAirLwStart_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_LW_START_ENTER => g.ness_special_lw_start_enter(gobj),

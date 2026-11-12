@@ -433,7 +433,6 @@ pub const UNCHECKED: &[&str] = &[
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
-    "itStar_UnkMotion0_Phys",
     "it_80284E10",
     "melee/it/kinds/ittarucann",
     "melee/ft/kinds/ftCommon/ftCo_Barrel",

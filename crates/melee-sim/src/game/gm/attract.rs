@@ -307,7 +307,7 @@ pub(crate) fn scene_enter_data(
     match scene_mode {
         super::machine::GM_OPENING_MV => &mut game.attract.start,
         m if super::machine::uses_vs_melee(m) => &mut game.vs_melee.start,
-        super::tournament::GM_TOURNAMENT => &mut *game.tou.start,
+        super::tournament::GM_TOURNAMENT => &mut game.tou.start,
         super::GM_DEBUG => &mut game.debug_mode.vs_enter,
         super::event::GM_EVENT => &mut game.event.start,
         super::one_player::GM_TARGET_TEST => &mut game.one_player.target_start,
