@@ -372,7 +372,7 @@ impl Mixer {
         }
         self.mem.put_words(STUDIO, &studio);
         // The blocks, with the words only the mix computes carried over from its last output.
-        let base = f.pbs[0].curr & 0x01FF_FFFF;
+        let base = get_pbs(f);
         if self.mem.pb_base != base || self.mem.pbs.is_empty() {
             self.mem.pb_base = base;
             // Room past the last block, which the microcode reads beyond.
@@ -401,7 +401,13 @@ impl Mixer {
             }
             self.mem.put_words(pb.curr, &w);
         }
-        let list = command_list(&f.list, self.aux_write, base);
+        // Broken: the list starts at the last block.
+        let head = if crate::mutation::on("__AXGetPBs") {
+            base + (VOICES as u32 - 1) * PB_BYTES
+        } else {
+            base
+        };
+        let list = command_list(&f.list, self.aux_write, head);
         self.mem.put_words(LIST, &list);
         let mut bus = Bus {
             mem: &mut self.mem,
@@ -480,6 +486,12 @@ fn drifted(sim: &[u16; PB_WORDS], mix: &[u16; PB_WORDS]) -> bool {
             || k >= PAD;
         !mix_only && sim[k] != mix[k]
     })
+}
+
+/// `__AXGetPBs`: the parameter blocks' address, the first block's, as the DSP sees it.
+#[doc(alias = "__AXGetPBs")]
+fn get_pbs(f: &MixFrame) -> u32 {
+    f.pbs[0].curr & 0x01FF_FFFF
 }
 
 /// `__AXNextFrame`'s command list: the studio, the mode's main buses from the surround
