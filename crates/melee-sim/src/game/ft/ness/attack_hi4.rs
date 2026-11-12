@@ -75,7 +75,8 @@ impl Running<'_> {
         }
     }
 
-    /// The charged smash's damage (`ftNs_AttackHi4_YoyoApplyDamage`, inline).
+    /// The charged smash's damage, `ftNs_AttackHi4_YoyoApplyDamage`.
+    #[doc(alias = "ftNs_AttackHi4_YoyoApplyDamage")]
     fn ness_yoyo_apply_damage(&mut self, gobj: GObjId, charge: f32) {
         if charge == 0.0 {
             return;

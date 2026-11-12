@@ -173,6 +173,7 @@ impl Running<'_> {
     /// stop and the scene ends: for the title on a button, else back to the opening movie
     /// (the attract loop's count one more) but every sixth time, when the Special Movie
     /// comes next.
+    #[doc(alias = "gm_Scene_HowTo_OnFrame")]
     pub fn howto_on_frame(&mut self) {
         let Some((reset, pressed)) = self.movie_scene_end() else {
             return;

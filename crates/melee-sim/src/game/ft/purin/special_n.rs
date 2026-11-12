@@ -459,6 +459,8 @@ impl Running<'_> {
     /// states): the charge grows to its top (where the loop turns full, flashing once), the
     /// roll spins as fast as the charge.
     #[doc(alias = "ftPr_SpecialNLoop_Anim")]
+    #[doc(alias = "ftPr_SpecialNFull_Anim")]
+    #[doc(alias = "ftPr_SpecialAirNChargeFull_Anim")]
     fn purin_charge_anim(&mut self, gobj: GObjId, full: Option<i32>) {
         let f = self.game.fighter_id(gobj);
         self.purin_roll_tick(gobj, false);
@@ -670,6 +672,8 @@ impl Running<'_> {
     /// B let go mid-charge (`ftPr_SpecialNLoop_IASA` and the full and air states'): the roll
     /// at the charge's speed past its start.
     #[doc(alias = "ftPr_SpecialNLoop_IASA")]
+    #[doc(alias = "ftPr_SpecialNFull_IASA")]
+    #[doc(alias = "ftPr_SpecialAirNChargeFull_IASA")]
     fn purin_charge_iasa(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].input.held_buttons[0] & 0x200 != 0 {
@@ -952,6 +956,7 @@ impl Running<'_> {
 
     /// Off the ground mid-charge (`ftPr_SpecialNLoop_Coll`, `ftPr_SpecialNFull_Coll`).
     #[doc(alias = "ftPr_SpecialNLoop_Coll")]
+    #[doc(alias = "ftPr_SpecialNFull_Coll")]
     fn purin_charge_coll(&mut self, gobj: GObjId, msid: i32) {
         if self.ground_coll_off_ledges(gobj) {
             return;
@@ -1132,6 +1137,7 @@ impl Running<'_> {
 
     /// Landing mid-charge (`ftPr_SpecialAirNChargeLoop_Coll`, `..ChargeFull_Coll`).
     #[doc(alias = "ftPr_SpecialAirNChargeLoop_Coll")]
+    #[doc(alias = "ftPr_SpecialAirNChargeFull_Coll")]
     fn purin_air_charge_coll(&mut self, gobj: GObjId, msid: i32) {
         if !self.air_coll_land(gobj) {
             return;
