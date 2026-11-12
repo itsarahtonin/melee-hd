@@ -29,8 +29,12 @@ pub struct Gates {
 impl Gates {
     /// The controllers the game is handed in the state `game` is in: with the confirming
     /// buttons held back on a gated entry, and while they stay pressed after.
-    pub fn apply(&mut self, game: &Game, mut pads: PadData) -> PadData {
-        let gate = menus_audit::gate(game);
+    pub fn apply(&mut self, game: &Game, pads: PadData) -> PadData {
+        self.apply_with(menus_audit::gate(game), pads)
+    }
+
+    /// [`Gates::apply`] with the gate the game is at.
+    fn apply_with(&mut self, gate: Option<&'static Gate>, mut pads: PadData) -> PadData {
         for (p, held) in pads.iter_mut().zip(&mut self.held) {
             let pressed = p.button & CONFIRM;
             if pressed == 0 {
@@ -87,30 +91,56 @@ mod tests {
         [p; 4]
     }
 
+    /// A gate for the tests: every mode's gate has been lifted, so `GATES` is empty.
+    static TEST_GATES: &[Gate] = &[Gate {
+        list: melee_sim::game::mn::main::REG,
+        entry: 1,
+        what: "Adventure",
+        covers: &["melee/gm/gmadventure"],
+    }];
+
+    impl Gates {
+        fn apply_test(&mut self, game: &Game, pads: PadData) -> PadData {
+            self.apply_with(menus_audit::gate_in(game, TEST_GATES), pads)
+        }
+    }
+
+    /// No entry is gated any more.
+    #[test]
+    fn every_mode_is_offered() {
+        assert!(menus_audit::GATES.is_empty());
+        let mut gates = Gates::default();
+        let out = gates.apply(
+            &menu(TEST_GATES[0].list, TEST_GATES[0].entry),
+            pressing(BUTTON_A),
+        );
+        assert!(out.iter().all(|p| p.button == BUTTON_A));
+    }
+
     /// A and Start are held back on a gated entry, and stay held back until let go, wherever
     /// the cursor goes; other buttons pass, and an entry that isn't gated takes the press.
     #[test]
     fn a_gated_entry_takes_no_confirm() {
-        let g = &menus_audit::GATES[0];
+        let g = &TEST_GATES[0];
         let gated = menu(g.list, g.entry);
         let open = menu(g.list, 99);
         let mut gates = Gates::default();
         let b = melee_sim::input::pad::BUTTON_B;
-        let out = gates.apply(&gated, pressing(BUTTON_A | b));
+        let out = gates.apply_test(&gated, pressing(BUTTON_A | b));
         assert!(out.iter().all(|p| p.button == b));
         assert_eq!(gates.refused.map(|r| r.0), Some(g));
         // Still held, now elsewhere: still held back.
-        let out = gates.apply(&open, pressing(BUTTON_START));
+        let out = gates.apply_test(&open, pressing(BUTTON_START));
         assert!(out.iter().all(|p| p.button == 0));
         // Let go, then pressed elsewhere: the game takes it.
-        gates.apply(&open, pressing(0));
-        let out = gates.apply(&open, pressing(BUTTON_A));
+        gates.apply_test(&open, pressing(0));
+        let out = gates.apply_test(&open, pressing(BUTTON_A));
         assert!(out.iter().all(|p| p.button == BUTTON_A));
         // Outside the main menu's scene nothing is gated.
         let mut other = gated;
         other.machine.phase = Phase::Boot;
         let mut gates = Gates::default();
-        let out = gates.apply(&other, pressing(BUTTON_A));
+        let out = gates.apply_test(&other, pressing(BUTTON_A));
         assert!(out.iter().all(|p| p.button == BUTTON_A));
         assert!(note_text(g).starts_with(&format!("{} isn't in melee-hd yet.", g.what)));
     }
