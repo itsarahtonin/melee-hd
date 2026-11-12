@@ -422,12 +422,9 @@ pub const UNREACHED: &[(&str, &str)] = &[
 /// Ported code an items-on match reaches whose ledger alias waits for a check (a `// Ports`
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
-    "melee/it/it_26B1",
     "melee/it/itmaterial",
-    "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",
     "melee/it/kinds/ittarucann",
-    "melee/ft/kinds/ftCommon/ftCo_Barrel",
 ];
 
 /// What an items-on match reaches that isn't ported, task by task.

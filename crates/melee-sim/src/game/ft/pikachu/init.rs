@@ -74,6 +74,7 @@ impl Running<'_> {
     /// Picking up an item, `ftPk_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 0,
     /// 0)`): the hold pose on hand 0.
     #[doc(alias = "ftPk_Init_OnItemPickup")]
+    #[doc(alias = "ftPc_Init_OnItemPickup")]
     pub fn pk_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.item_pickup_hand(gobj, flag, 0);
     }

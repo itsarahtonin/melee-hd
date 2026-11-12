@@ -83,7 +83,7 @@ impl Running<'_> {
     }
 
     /// Showing the held item again, `ftNs_Init_OnItemVisible` (as Fox's).
-    // Ports `ftNs_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftNs_Init_OnItemVisible")]
     pub fn ness_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }
