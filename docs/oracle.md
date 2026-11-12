@@ -1772,6 +1772,16 @@ Input-only parts of a line (`--monkey`, `MONKEY_B`, `MONKEY_HOLD`, `--fields`, t
 
 56 functions reached inside the compared ticks got their aliases and a `ledger/checks.txt` line naming the session (8 of them, Dr. Mario's item callbacks, `fn_800D5A30`, `fn_800DA490`, `ftNs_SpecialAirS_Phys`, the Star's physics and the blaster's state 10, also by the ledger's second sweep, whose lines they keep): Jigglypuff's and Ness's neutral and down specials in the air (`ftPr_SpecialN*`, `ftPr_SpecialAirN*`, `ftNs_SpecialAirLw*`, `ftNs_SpecialAirNEnd_*`, `ftNs_SpecialAirS_Phys`, `ftPr_SpecialAirS_IASA`), the Ice Climbers' air Blizzard (`ftPp_SpecialAirLw_*`, `fn_80122B54`), Dr. Mario's item pickup and drop, the grab's and the rebirth's helpers (`fn_800DA490`, `fn_800D5A30`), the Star's physics (`itStar_UnkMotion0_Phys`), Tournament mode's stage select entry and exit and the bracket's players' step (`gm_801B174C`, `gm_801B1788`, `gm_8019A828`), and the blaster's state 10 (`itFoxblaster_UnkMotion10_Phys`, `_Coll`), which the fighter audit held as the demo fighters' alone: a CPU Fox's blaster in `match3` enters it (field 5712). Reached but left: `gm_Mode_Vs_OnUnload` (ported inline as nothing, no item to carry an alias) and the bat's render callback `it_80284E10` (display only).
 
+### Yoshi's powershield flags
+
+`fix/guard-stale` (2026-11-12). Yoshi's egg never clears a powershield's flags, so his next shield stun's timers count down what later states left in `mv` x14 and x18, a grab's hold joint among them ([Melee's bugs](melee-bugs.md#yoshi-the-egg-keeps-a-powershields-flags-and-its-timer-counts-down-a-grabs-address), [the engine notes](engine.md#uninitialized-values)). Two sessions check the read, both in `$SSBM_RS_LOCAL/{lockstep,traces}/m6-guard-stale`:
+
+| Session | Trace | melee-oracle session, `--all --heap` | session-sync `--rollback 7 --shortcut` | Mutation |
+| --- | --- | --- | --- | --- |
+| `match1` (`m6-ssbmrs-replay`'s recording and job, `--hooks "--monkey 1 --matches 1 --mode e --fields 30000"`): its three debug VS matches, the third's Yoshi (the monkey) powershielding, spot dodging out of it, much later grabbing Ness, his forward throw hit by Fox (a damage state's byte in the hold joint's word), then the egg hit | 17,900 fields, 1.1 GB | clean, 17,855 ticks (the read in tick 17785, where the stop was) | 17,767 ticks in 5 matches, clean | an address's bytes read as 1.0's: tick 17785 (`fighter.mv[25]`) |
+| `yoshi-grab` (`DBLEVEL=3`, the unlock-all card; no hooks): the debug menu's DaiRanTou, Yoshi on port 1 and Mario on port 2, both human, on Final Destination; Yoshi walks up, powershields from a press and spot dodges at once, grabs Mario and holds the shield while Mario breaks out, so the raised egg (`ftYs_Init_8012BECC`) keeps the flags and the hold joint; Mario's jab on it is a powershield, and the stun's timer reads the joint's whole address | 5,010 fields, 140 MB | clean, 4,733 ticks (the read in tick 1839) | 3,665 ticks in 4 matches, clean | the same: tick 1839 (`x221C_b2` kept, `mv[24]`, `mv[25]`) |
+
+The planned inputs are `MONKEY_HOLD` scripts (`yoshi-grab.holds.txt` beside the recording), tried in melee-hd first (`session-sync` on the recording) and then recorded and traced with ssbm-rs's runner.
 
 ## Rules
 
