@@ -249,7 +249,7 @@ pub fn fell(r: &mut Running, gobj: GObjId) {
 /// `itLucky_UnkMotion5_Anim`, `_6_Anim`, and the egg's `itLucky_UnkMotion2_Anim`: nothing.
 #[doc(alias = "itLucky_UnkMotion5_Anim")]
 #[doc(alias = "itLucky_UnkMotion6_Anim")]
-// Ports `itLucky_UnkMotion2_Anim`; aliased once a check reaches it.
+#[doc(alias = "itLucky_UnkMotion2_Anim")]
 pub fn still(_: &mut Running, _: GObjId) -> bool {
     false
 }
@@ -258,7 +258,7 @@ pub fn still(_: &mut Running, _: GObjId) -> bool {
 /// its gravity.
 #[doc(alias = "itLucky_UnkMotion5_Phys")]
 #[doc(alias = "itLucky_UnkMotion6_Phys")]
-// Ports `itLucky_UnkMotion3_Phys`; aliased once a check reaches it.
+#[doc(alias = "itLucky_UnkMotion3_Phys")]
 pub fn phys5(r: &mut Running, gobj: GObjId) {
     super::gravity(r, gobj);
 }
@@ -327,7 +327,7 @@ pub fn evt_unk(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 
 /// Lays a Chansey egg from `parent`, `it_802D5710`: at `pos` on the plane, moving at `vel`,
 /// facing `facing`, owned by the parent's owner.
-// Ports `it_802D5710`; aliased once a check reaches it.
+#[doc(alias = "it_802D5710")]
 pub fn spawn_egg(
     r: &mut Running,
     parent: Option<GObjId>,
@@ -354,7 +354,7 @@ pub fn spawn_egg(
 }
 
 /// The egg's `itLucky_Logic44_Spawned`: its life and `x4` from its attributes, falling.
-// Ports `itLucky_Logic44_Spawned`; aliased once a check reaches it.
+#[doc(alias = "itLucky_Logic44_Spawned")]
 pub fn egg_spawned(r: &mut Running, gobj: GObjId) {
     let life = attr_f32(r, gobj, 0);
     lib2725::set_lifetime(r.game, r.data, gobj, life);
@@ -364,7 +364,7 @@ pub fn egg_spawned(r: &mut Running, gobj: GObjId) {
 }
 
 /// The egg lands, `it_802D582C`: pickable, still, lying.
-// Ports `it_802D582C`; aliased once a check reaches it.
+#[doc(alias = "it_802D582C")]
 pub fn egg_landed(r: &mut Running, gobj: GObjId) {
     lib26b1::enable_pickup(r.game, gobj);
     let ip = item_mut(r.game, gobj);
@@ -377,8 +377,8 @@ pub fn egg_landed(r: &mut Running, gobj: GObjId) {
 
 /// The egg's `it_802D5884` (and `itLucky_UnkMotion3_Anim`, `it_802D5A2C`): gone when its life
 /// runs out.
-// Ports `it_802D5884`; aliased once a check reaches it.
-// Ports `itLucky_UnkMotion3_Anim`; aliased once a check reaches it.
+#[doc(alias = "it_802D5884")]
+#[doc(alias = "itLucky_UnkMotion3_Anim")]
 // Ports `it_802D5A2C`; aliased once a check reaches it.
 pub fn egg_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
@@ -387,33 +387,33 @@ pub fn egg_anim(r: &mut Running, gobj: GObjId) -> bool {
 }
 
 /// The egg's `it_802D58BC`, `itLucky_UnkMotion2_Phys` and `it_802D5A64`: nothing.
-// Ports `it_802D58BC`; aliased once a check reaches it.
-// Ports `itLucky_UnkMotion2_Phys`; aliased once a check reaches it.
+#[doc(alias = "it_802D58BC")]
+#[doc(alias = "itLucky_UnkMotion2_Phys")]
 // Ports `it_802D5A64`; aliased once a check reaches it.
 pub fn egg_idle(_: &mut Running, _: GObjId) {}
 
 /// The egg's `it_802D58C0`: falls off the floor.
-// Ports `it_802D58C0`; aliased once a check reaches it.
+#[doc(alias = "it_802D58C0")]
 pub fn egg_coll0(r: &mut Running, gobj: GObjId) -> bool {
     ground_or_fall(r, gobj, egg_fell);
     false
 }
 
 /// The egg falls, `it_802D58EC`.
-// Ports `it_802D58EC`; aliased once a check reaches it.
+#[doc(alias = "it_802D58EC")]
 pub fn egg_fell(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 1, change::ANIM_UPDATE);
 }
 
 /// The egg's `itLucky_UnkMotion3_Coll` (falling or dropped): lands.
-// Ports `itLucky_UnkMotion3_Coll`; aliased once a check reaches it.
+#[doc(alias = "itLucky_UnkMotion3_Coll")]
 pub fn egg_coll1(r: &mut Running, gobj: GObjId) -> bool {
     fall(r, gobj, egg_landed);
     false
 }
 
 /// The egg's `itLucky_Logic44_PickedUp`: held.
-// Ports `itLucky_Logic44_PickedUp`; aliased once a check reaches it.
+#[doc(alias = "itLucky_Logic44_PickedUp")]
 pub fn egg_picked_up(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 2, change::ANIM_UPDATE);
 }

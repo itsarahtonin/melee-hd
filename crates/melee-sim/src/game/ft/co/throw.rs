@@ -558,7 +558,7 @@ impl Running<'_> {
 
     /// The thrown fighter freezes with the thrower, `ftCo_800DE920`: now if it's at the
     /// frame, else when it reaches it.
-    // Ports `ftCo_800DE920`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800DE920")]
     fn thrown_freeze(&mut self, gobj: GObjId, frame: f32) {
         let fp = self.game.fighter_mut(gobj);
         fp.set_mv_i32(THROWN_FROZEN, 1);

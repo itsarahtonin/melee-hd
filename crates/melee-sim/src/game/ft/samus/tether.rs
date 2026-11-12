@@ -241,7 +241,7 @@ impl Running<'_> {
 
     /// The air grab latched on, `ftCo_800C3CC0`: the latch state keeping a fast fall, her drift
     /// within the air's, 20 frames, and airborne from the ground.
-    // Ports `ftCo_800C3CC0`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_800C3CC0")]
     pub fn enter_air_catch_hit(&mut self, gobj: GObjId) {
         match self.game.fighter(gobj).kind {
             KIND_SAMUS => {
@@ -413,7 +413,7 @@ impl Running<'_> {
     }
 
     /// `ftCo_AirCatchHit_Phys`: her motion's own speed, and gravity.
-    // Ports `ftCo_AirCatchHit_Phys`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_AirCatchHit_Phys")]
     pub fn co_air_catch_hit_phys(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         fp.self_vel = fp.pos_delta;
@@ -473,6 +473,8 @@ impl Running<'_> {
 }
 
 #[doc(alias = "ftCo_AirCatch_IASA")]
+#[doc(alias = "ftCo_AirCatchHit_Anim")]
+#[doc(alias = "ftCo_AirCatchHit_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         ROLL_ANIM => g.samus_roll_anim(gobj),
