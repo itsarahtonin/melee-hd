@@ -425,6 +425,8 @@ impl Running<'_> {
 
     /// The start's end into the charge, its animation stopped (`ftPr_SpecialNStart_Anim`,
     /// `ftPr_SpecialAirNStart_Anim`).
+    #[doc(alias = "ftPr_SpecialAirNStart_Anim")]
+    #[doc(alias = "ftPr_SpecialNStart_Anim")]
     fn purin_start_anim(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
@@ -456,6 +458,7 @@ impl Running<'_> {
     /// The charge's frame (`ftPr_SpecialNLoop_Anim`, `ftPr_SpecialNFull_Anim` and their air
     /// states): the charge grows to its top (where the loop turns full, flashing once), the
     /// roll spins as fast as the charge.
+    #[doc(alias = "ftPr_SpecialNLoop_Anim")]
     fn purin_charge_anim(&mut self, gobj: GObjId, full: Option<i32>) {
         let f = self.game.fighter_id(gobj);
         self.purin_roll_tick(gobj, false);
@@ -497,6 +500,8 @@ impl Running<'_> {
     /// The roll's frame (`ftPr_SpecialNRelease_Anim`, `ftPr_SpecialAirNChargeRelease_Anim`):
     /// the squash, the hitbox's group and damage, the roll spun by the charge; once its frames
     /// run out, it ends as it rolls past upright.
+    #[doc(alias = "ftPr_SpecialAirNChargeRelease_Anim")]
+    #[doc(alias = "ftPr_SpecialNRelease_Anim")]
     fn purin_release_anim(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         self.purin_roll_tick(gobj, false);
@@ -593,6 +598,8 @@ impl Running<'_> {
     /// The end's frame, `ftPr_SpecialNEnd_Anim` and `ftPr_SpecialAirNEnd_Anim`: the squash;
     /// at its end the look undone, then waiting, falling or falling helplessly with her
     /// landing lag.
+    #[doc(alias = "ftPr_SpecialAirNEnd_Anim")]
+    #[doc(alias = "ftPr_SpecialNEnd_Anim")]
     fn purin_end_anim(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         self.set_mvf(f, mv::N_FACING_DIR, 0.0);
@@ -662,6 +669,7 @@ impl Running<'_> {
 
     /// B let go mid-charge (`ftPr_SpecialNLoop_IASA` and the full and air states'): the roll
     /// at the charge's speed past its start.
+    #[doc(alias = "ftPr_SpecialNLoop_IASA")]
     fn purin_charge_iasa(&mut self, gobj: GObjId, air: bool) {
         let f = self.game.fighter_id(gobj);
         if self.game.fighters[f.0].input.held_buttons[0] & 0x200 != 0 {
@@ -943,6 +951,7 @@ impl Running<'_> {
     }
 
     /// Off the ground mid-charge (`ftPr_SpecialNLoop_Coll`, `ftPr_SpecialNFull_Coll`).
+    #[doc(alias = "ftPr_SpecialNLoop_Coll")]
     fn purin_charge_coll(&mut self, gobj: GObjId, msid: i32) {
         if self.ground_coll_off_ledges(gobj) {
             return;
@@ -1122,6 +1131,7 @@ impl Running<'_> {
     }
 
     /// Landing mid-charge (`ftPr_SpecialAirNChargeLoop_Coll`, `..ChargeFull_Coll`).
+    #[doc(alias = "ftPr_SpecialAirNChargeLoop_Coll")]
     fn purin_air_charge_coll(&mut self, gobj: GObjId, msid: i32) {
         if !self.air_coll_land(gobj) {
             return;
@@ -1306,6 +1316,19 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftPr_SpecialAirNChargeLoop_Anim")]
+#[doc(alias = "ftPr_SpecialAirNChargeLoop_IASA")]
+#[doc(alias = "ftPr_SpecialAirNChargeLoop_Phys")]
+#[doc(alias = "ftPr_SpecialAirNChargeRelease_IASA")]
+#[doc(alias = "ftPr_SpecialAirNEnd_IASA")]
+#[doc(alias = "ftPr_SpecialAirNEnd_Phys")]
+#[doc(alias = "ftPr_SpecialAirNStart_IASA")]
+#[doc(alias = "ftPr_SpecialAirNStart_Phys")]
+#[doc(alias = "ftPr_SpecialNEnd_IASA")]
+#[doc(alias = "ftPr_SpecialNHit_IASA")]
+#[doc(alias = "ftPr_SpecialNLoop_Phys")]
+#[doc(alias = "ftPr_SpecialNStart_IASA")]
+#[doc(alias = "ftPr_SpecialNTurn_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_8013D658 => g.purin_roll_restore(gobj),

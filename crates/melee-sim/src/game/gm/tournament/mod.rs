@@ -513,7 +513,7 @@ impl Running<'_> {
     }
 
     /// `gm_801B174C`, the stage select's entry: no L, R and Start, no forced stage.
-    // Ports `gm_801B174C`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B174C")]
     pub fn tou_enter_sss(&mut self) {
         let s = &mut self.game.tou.sss;
         s.x1 = 0;
@@ -524,7 +524,7 @@ impl Running<'_> {
 
     /// `gm_801B1788`, the stage select's exit: the match with the stage picked, else back to
     /// the bracket (its players' step again) or the match-up screen.
-    // Ports `gm_801B1788`; aliased once a check reaches it.
+    #[doc(alias = "gm_801B1788")]
     pub fn tou_exit_sss(&mut self) {
         let s = &self.game.tou.sss;
         if s.start_game != 0 {

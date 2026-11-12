@@ -209,6 +209,8 @@ pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
 }
 
 /// Dr. Mario's functions other code calls by address (`code::call`).
+#[doc(alias = "ftDr_Init_OnItemDrop")]
+#[doc(alias = "ftDr_Init_OnItemPickup")]
 pub fn call(r: &mut Running, f: u32, args: &[Val]) -> Option<Val> {
     let gobj = |i: usize| args[i].gobj().expect("a null fighter");
     match f {

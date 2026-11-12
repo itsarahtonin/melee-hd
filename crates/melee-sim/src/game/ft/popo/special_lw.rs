@@ -67,7 +67,7 @@ impl Running<'_> {
     }
 
     /// Blizzard in the air, `ftPp_SpecialAirLw_Enter`.
-    // Ports `ftPp_SpecialAirLw_Enter`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialAirLw_Enter")]
     pub fn popo_special_air_lw_enter(&mut self, gobj: GObjId) {
         self.popo_special_lw_start(gobj, MS_SPECIAL_AIR_LW);
     }
@@ -97,7 +97,7 @@ impl Running<'_> {
     }
 
     /// The air Blizzard's animation, `ftPp_SpecialAirLw_Anim`: at its end it falls.
-    // Ports `ftPp_SpecialAirLw_Anim`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialAirLw_Anim")]
     fn popo_special_air_lw_anim(&mut self, gobj: GObjId) {
         if !self.anim_frames_remaining(gobj) {
             self.popo_blizzard_stop(gobj);
@@ -127,7 +127,7 @@ impl Running<'_> {
     }
 
     /// Landing in the air Blizzard, `fn_80122B54`: the ground one from the same frame.
-    // Ports `fn_80122B54`; aliased once a check reaches it.
+    #[doc(alias = "fn_80122B54")]
     fn popo_special_lw_land(&mut self, gobj: GObjId) {
         self.land(gobj);
         let frame = self.game.fighter(gobj).cur_anim_frame;
@@ -206,6 +206,9 @@ impl Running<'_> {
 
 #[doc(alias = "ftPp_SpecialLw_Phys")]
 #[doc(alias = "ftPp_SpecialLw_IASA")]
+#[doc(alias = "ftPp_SpecialAirLw_Coll")]
+#[doc(alias = "ftPp_SpecialAirLw_IASA")]
+#[doc(alias = "ftPp_SpecialAirLw_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::PP_SPECIAL_LW_ENTER => g.popo_special_lw_enter(gobj),

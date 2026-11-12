@@ -262,6 +262,9 @@ impl Running<'_> {
 #[doc(alias = "ftNs_SpecialAirNStart_IASA")]
 #[doc(alias = "ftNs_SpecialAirNRelease_Anim")]
 #[doc(alias = "ftNs_SpecialAirNStart_Anim")]
+#[doc(alias = "ftNs_SpecialAirNEnd_Coll")]
+#[doc(alias = "ftNs_SpecialAirNEnd_IASA")]
+#[doc(alias = "ftNs_SpecialAirNEnd_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_N_SET_NULL => g.ness_special_n_set_null(gobj),

@@ -35,8 +35,6 @@ gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm
 gm_Scene_Omake15_OnEnter	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_Omake15_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExit	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-gm_801B174C	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-gm_801B1788	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 onExitTitle	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitHowto	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitOmake15	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
@@ -48,4 +46,3 @@ fn_801A46F4	unreached	the scene's debug pause handlers' tests (D-pad up with X, 
 onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmode.c, mode 6), made pending only at a debug level (task 19's); VS mode's is ported
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 fn_80197FD8	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
-gm_8019A828	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
