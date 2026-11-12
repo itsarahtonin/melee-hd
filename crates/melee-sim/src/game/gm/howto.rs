@@ -149,6 +149,7 @@ impl Running<'_> {
 
     /// `gm_Scene_Omake15_OnEnter`: the Special Movie, 448 by 336 at (96, 72), with song 0x52
     /// and no rate table (a frame a 60th).
+    #[doc(alias = "gm_Scene_Omake15_OnEnter")]
     pub fn omake_on_enter(&mut self) {
         let rate = crate::lb::mthp::Rate::default();
         let g = self.movie_scene(OMAKE_MOVIE, rate, 0x52, 0x1C0, 0x150, Some((96.0, 72.0)));
@@ -197,6 +198,7 @@ impl Running<'_> {
     /// `gm_Scene_Omake15_OnFrame`: at the movie's end, or Start or A, the music stops, the
     /// attract loop's count starts over (`gmMainLib_8015DB0C`), and the scene ends for the
     /// title (with the forward sound on a button).
+    #[doc(alias = "gmMainLib_8015DB0C")]
     pub fn omake_on_frame(&mut self) {
         let Some((reset, pressed)) = self.movie_scene_end() else {
             return;
