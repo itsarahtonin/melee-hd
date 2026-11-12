@@ -51,7 +51,7 @@ impl Running<'_> {
 
     /// Picking up an item, `ftKp_Init_OnItemPickup` (`Fighter_OnItemPickup(gobj, flag, 1,
     /// 1)`, as Fox's).
-    // Ports `ftKp_Init_OnItemPickup`; aliased once a check reaches it.
+    #[doc(alias = "ftKp_Init_OnItemPickup")]
     pub fn kp_on_item_pickup(&mut self, gobj: GObjId, flag: bool) {
         self.item_pickup_hand(gobj, flag, 1);
     }
@@ -69,7 +69,7 @@ impl Running<'_> {
     }
 
     /// Dropping the item, `ftKp_Init_OnItemDrop` (as Fox's).
-    // Ports `ftKp_Init_OnItemDrop`; aliased once a check reaches it.
+    #[doc(alias = "ftKp_Init_OnItemDrop")]
     pub fn kp_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 1);
     }

@@ -607,6 +607,7 @@ fn cnst_type(c: super::texp::Cnst) -> u32 {
 /// `HSD_TECnst`s, 0x18), as each goes: the list runs newest first, each made on its front;
 /// the first pass takes every operation out, the second every constant no stage reads, and
 /// a node taken out keeps the link it had then (its first word becomes the free list's).
+#[doc(alias = "HSD_TExpFreeList")]
 pub fn freed_texps(
     objs: &Objects,
     img: &mut Image,

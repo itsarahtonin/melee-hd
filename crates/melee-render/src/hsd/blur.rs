@@ -276,8 +276,8 @@ impl Ctx<'_> {
                     self.blur_quad(&tex, cx, cy, scale);
                 }
             }
-            // `lb_8001285C`'s plain sprite: the clear screen sets the blur before the first
-            // draw, so no frame draws it.
+            // `lb_8001285C`'s plain sprite: dead, the clear screen sets the blur before the
+            // first draw, so no frame draws it (ledger/dead.txt).
             None => self.hsd.note_once("a blur sprite drawn plain"),
         }
         self.invalidate(crate::hsd::state::STATE_VTX_ATTR);

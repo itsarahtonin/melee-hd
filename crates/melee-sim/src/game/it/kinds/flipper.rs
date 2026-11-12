@@ -346,6 +346,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 
 /// Thrown (or let go of), it flies for the attributes' frames, longer for a smash throw,
 /// `itFlipper_Thrown` (and `itFlipper_Dropped`).
+#[doc(alias = "ftLib_80087284")]
 #[doc(alias = "itFlipper_Thrown")]
 #[doc(alias = "itFlipper_Dropped")]
 pub fn thrown(r: &mut Running, gobj: GObjId) {

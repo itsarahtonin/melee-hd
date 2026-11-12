@@ -433,10 +433,13 @@ pub const PATHS: &[Paths] = &[
             "vi/v0601",
             "vi/v0801",
         ],
-        unreached: &[(
-            "the cutscene scene",
-            "Adventure's states (gm_Mode_Adventure_States, gm/machine.rs's ADVENTURE) name only the cutscene scenes 0x11 to 0x1B, each entered and its files read by vi/mod.rs's own case (vi0102 to vi1202); the stops are for any other scene, which only the debug cutscene mode's numbers could name",
-        )],
+        unreached: &[
+            (
+                "the cutscene scene",
+                "Adventure's states (gm_Mode_Adventure_States, gm/machine.rs's ADVENTURE) name only the cutscene scenes 0x11 to 0x1B, each entered and its files read by vi/mod.rs's own case (vi0102 to vi1202); the stops are for any other scene, which only the debug cutscene mode's numbers could name",
+            ),
+            ("a car out with all thirty out", ALL_CARS_OUT),
+        ],
     },
     Paths {
         mode: DB,
@@ -481,9 +484,18 @@ pub const PATHS: &[Paths] = &[
             "vi/v0601",
             "vi/v0801",
         ],
-        unreached: &[],
+        unreached: &[("a car out with all thirty out", ALL_CARS_OUT)],
     },
 ];
+
+/// Why the F-Zero race's car picker (`grBigBlueRoute_8020C530`) never finds every car out
+/// (task 24's fifth round). The cars' block (`grBigBlueRoute_8020C238`, made once in the cars'
+/// setup) starts zeroed with the spawn count `x108` 0, and only a spawn sets a car's out flag
+/// (`flags.b0`, never cleared) and adds one to `x108`. `grBigBlueRoute_8020C85C` spawns only
+/// while `(f32) x108 < 1 + x40`, and `GrNBr.dat`'s `yakumono_param` holds `x40` 30.0 (word
+/// 0x76c88): the first spawn (`x108` 0) is the sign's entry, 30, and the picks are at `x108` 1
+/// to 30, the one at `k` seeing `k - 1` of the thirty cars out, so the last finds one free.
+const ALL_CARS_OUT: &str = "the F-Zero race's spawns stop once 31 are made ((f32) x108 < 1 + x40, GrNBr.dat's yakumono_param x40 30.0 at 0x76c88): the first is the sign's entry and the thirty picks after it each see one car fewer out than the thirty, and nothing clears a car's out flag (ALL_CARS_OUT)";
 
 /// Why the Home-Run Contest reaches nothing its paths' units and modules hold unported. Its
 /// match is a VS scene the contest's own entry sets up (`gm_801B9A3C`: VS mode's rules with
@@ -863,23 +875,49 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     Gap {
-        what: "the adventure routes (Mushroom Kingdom, the Underground Maze, Brinstar's escape, the F-Zero race, Icicle Mountain's climb)",
-        // The Underground Maze's and Brinstar's escape's shadow checks and the climb's map 10's
-        // callback3 are dead (ledger/dead.txt, task 24's next round).
-        covers: &["a car out with all thirty out", "stage kind {grkind}"],
-        modes: &[AD, DB],
+        what: "a stage whose data isn't ported (the test stage, Akaneia)",
+        // The adventure routes are done: the Underground Maze's and Brinstar's escape's shadow
+        // checks and the climb's map 10's callback3 are dead (ledger/dead.txt, task 24's next
+        // round), and the F-Zero race's every-car-out stop can't fire (ALL_CARS_OUT, task 24's
+        // fifth round). Not Adventure (task 24's fifth round): stage_data stops only for ground
+        // kinds 1 (Test), 0x17, 0x1A, 0x23 and past 0x46 (ground.c's stage_datas holds grTe or
+        // NULL there), which Stage_8022519C's table gives only stage kinds 1 and 0x15 (Akaneia).
+        // Adventure's stages are gm_803DE650's stage kinds 0x3B to 0x51 but 0x4D (ground kinds
+        // 0x1F, 2, 4, 5, 0x20, 7, 8, 0x21, 0xD, 0xE, 0x10, 0x22, 0x12, 0x14, 0x16, 0x24, 0x25),
+        // which its intros, matches and the Taniguti Test's start all take from that table; its
+        // cutscenes' stages are stage kinds 4, 6, 7, 17, 0x1F, 0x20 and 73 (vi/mod.rs: ground
+        // kinds 2, 8, 0xE, 0xD, 0x24, 0x25, 0x22); the challenger's match after it is on
+        // gm/approach.rs's CHALLENGER_STAGES (0x112 to 0x11C: ground kinds 0x10, 0x25, 0x19,
+        // 0xC, 0x1B, 2, 6, 0x24, 7); the scenes without a stage select kind 0, the dummy. Each
+        // is ported.
+        covers: &["stage kind {grkind}"],
+        modes: &[DB],
     },
     Gap {
-        what: "the adventure enemies and their spawner",
-        // The Like Like and the Polar Bear are done (task 24's fourth round), and the Koopa's and
-        // the red shell's evt_unk are checked by review (Sarah, 2026-11-11: the identical
-        // it_8026B894 wrappers, game/it/evt_unk.rs).
+        what: "an enemy kind with no typed variables or KO bonus",
+        // The adventure enemies are done: the Like Like and the Polar Bear by task 24's fourth
+        // round, the Koopa's and the red shell's evt_unk checked by review (Sarah, 2026-11-11:
+        // the identical it_8026B894 wrappers, game/it/evt_unk.rs), and the shells' state 9
+        // collision by m6-adv-close/mk-slope9 (task 24's fifth round).
+        // Not Adventure (task 24's fifth round): the two stops are for a kind outside it/zako.rs's
+        // lists, and every enemy Adventure can make is in both. Its stages' spawners
+        // (grZakoGenerator_801CA8B4's switch) make only the Goomba, ReDead, Octorok, Topi, Koopa,
+        // Paratroopa, Like Like and Polar Bear (kinds 0x2B to 0x2E, 0xD3 to 0xD5, 0xD9); the
+        // containers' monsters are kinds 0x2B to 0x2E (it_8026CF04); the enemies' own spawns are
+        // the Koopas and shells (0xD3, 0xDB, 0xDC), the Octorok's stones (0x2F) and Kongo
+        // Jungle's Klap Trap (0xDA, klap.rs), and Corneria's Great Fox laser (0xEB) is typed. The
+        // debug item menu (db_spawn_item, at a debug level) makes kinds 0x2B to 0x2E, and of
+        // 0xD0 to 0xE9 only those whose article the stage loaded: melee-disc-scan stage-items
+        // lists Adventure's stage files' itemdata as GrNKr 0xD3 0xD4 0xDB 0xDC, GrNSr 0xD5,
+        // GrIm 0xD9, GrKg 0xDA, GrGr 0xE1 0xE2 (Whispy's apples, whose code calls none of
+        // it/zako.rs) and GrCn 0xEA 0xEB, the others none. KO'd through it_8027CE44 too are what
+        // Yoshi's tongue and Kirby's inhale catch, only items with xDD0_flag b4 (ftColl_8007BC90),
+        // which only those enemies set (it_80275270, it_8027CAD8).
         covers: &[
-            "melee/it/kinds/itzgshell",
             "it_8027B5B0 (an enemy of kind",
             "pl_8004049C (an enemy of kind",
         ],
-        modes: &[AD, DB],
+        modes: &[DB],
     },
     Gap {
         what: "the cutscenes after the F-Zero one",
@@ -923,12 +961,7 @@ pub const MISSING: &[Gap] = &[
     },
     Gap {
         what: "the debug mode's milestone 6 states and the debug cutscene",
-        covers: &[
-            "onEnterIntroEasy",
-            "un_80301BA8",
-            "un_80301B48",
-            "un_80301D7C",
-        ],
+        covers: &["un_80301D7C"],
         modes: &[DB],
     },
 ];

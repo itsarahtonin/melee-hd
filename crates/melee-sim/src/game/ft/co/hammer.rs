@@ -72,6 +72,12 @@ pub mod addr {
 #[doc(alias = "ftCo_WarpStarFall_Anim")]
 #[doc(alias = "ftCo_WarpStarJump_Coll")]
 #[doc(alias = "ftCo_WarpStarJump_IASA")]
+#[doc(alias = "ftCo_HammerLanding_IASA")]
+#[doc(alias = "ftCo_HammerFall_Phys")]
+#[doc(alias = "ftCo_HammerKneeBend_IASA")]
+#[doc(alias = "ftCo_HammerJump_Phys")]
+#[doc(alias = "ftCo_HammerJump_IASA")]
+#[doc(alias = "ftCo_HammerWalk_Phys")]
 pub fn run(g: &mut Running, gobj: GObjId, cb: u32) -> bool {
     use addr::*;
     match cb {

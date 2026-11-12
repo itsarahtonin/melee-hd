@@ -419,7 +419,8 @@ pub fn egg_picked_up(r: &mut Running, gobj: GObjId) {
 }
 
 /// The egg's `itLucky_Logic44_Dropped`.
-// Ports `itLucky_Logic44_Dropped`; aliased once a check reaches it.
+// `itLucky_Logic44_Dropped`: dead, a fighter eats the egg before anything can drop it
+// (ledger/dead.txt).
 pub fn egg_dropped(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }

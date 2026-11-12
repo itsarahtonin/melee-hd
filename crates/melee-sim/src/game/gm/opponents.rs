@@ -584,6 +584,7 @@ impl Running<'_> {
 
     /// The joining opponents put away, `gm_8016A164`: the match no longer a single-player
     /// one's, none left or joining, no teams, and the slots after the first emptied.
+    #[doc(alias = "gmVs_GetSceneState")]
     #[doc(alias = "gm_8016A164")]
     #[doc(alias = "fn_8016B138")]
     pub fn reset_opponents(&mut self) {

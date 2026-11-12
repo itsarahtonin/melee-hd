@@ -10,6 +10,7 @@ use melee_sim::game::gm::machine::{GM_MENU, GM_VS, Phase};
 use crate::Session;
 use crate::holds::Holds;
 use crate::jit;
+use crate::pacing::Mode;
 
 /// The console from power-on, muted: with a blank card and the controllers given, or playing the
 /// recorded session `inputs` with its card.
@@ -163,6 +164,147 @@ fn vs_mode_entry_plays_every_sample_it_mixes() {
     });
 }
 
+/// A frame presented: when, the tick that drew it, the scene the game was in then (its phase),
+/// the scene loop's rounds drawn since that scene started (`scene.unk_4`, 1 for its first
+/// frame) and whether the tick ended the scene (`scene.unk_C`: 1 after drawing its last frame).
+#[derive(Clone, Debug)]
+struct Presented {
+    at: Instant,
+    tick: u64,
+    scene: String,
+    drawn: u32,
+    ending: i32,
+}
+
+/// The scripted VS mode entry and exit through the player's loop with high refresh off, on a
+/// fake clock (the fixed timer; each tick takes the host no time): the frames presented, and
+/// the long ticks (the tick, when it was due and how much later its load made the next tick).
+/// With it, Interpolate's frames: for each tick that drew, whether its frames blend from a
+/// tick before.
+#[allow(clippy::type_complexity)]
+fn present(
+    ticks: u64,
+) -> Option<(
+    Vec<Presented>,
+    Vec<(u64, Instant, Duration)>,
+    Vec<(u64, bool)>,
+)> {
+    let mut s = console(None)?;
+    let t0 = Instant::now();
+    let tick = Duration::from_secs_f64(1.0 / crate::TICK_RATE);
+    let mut jit = jit::Scheduler::new(tick, jit::DEFAULT_MARGIN, t0);
+    let mut hold = jit::Hold::default();
+    let mut paced = crate::paced::Paced::default();
+    let (mut clock, mut menu) = (t0, None);
+    let (mut shown, mut long, mut blends) = (Vec::new(), Vec::new(), Vec::new());
+    for t in 0..ticks {
+        let plan = jit.plan(clock, jit::Policy::Timer, None);
+        // The event loop wakes for a held frame's time, then for the tick.
+        if let Some(u) = hold.until().filter(|u| *u <= plan.start) {
+            clock = clock.max(u);
+            shown.extend(
+                hold.end(clock)
+                    .map(|p: Presented| Presented { at: clock, ..p }),
+            );
+        }
+        clock = clock.max(plan.start);
+        assert!(hold.take().is_none(), "tick {t}: a frame still held");
+        let pads = vs_entry(&s, t, &mut menu);
+        let f = s.tick(pads);
+        jit.ran(&plan);
+        let later = jit.took(s.length.expect("a timeline"), Duration::ZERO);
+        if !later.is_zero() {
+            long.push((t, plan.due, later));
+            paced.loading();
+        }
+        let drew = (!f.draws.is_empty()).then(|| Presented {
+            at: clock,
+            tick: t,
+            scene: format!("{:?}", s.game().machine.phase),
+            drawn: s.game().scene.unk_4,
+            ending: s.game().scene.unk_C,
+        });
+        shown.extend(hold.tick(drew, plan.due, later));
+        if let Some(old) = paced.ran(Mode::Interpolate, s.game(), f, plan.due) {
+            s.recycle(old);
+        }
+        if let Some((_, b)) = paced.frame(Mode::Interpolate, 0.5) {
+            blends.push((t, b.from.is_filled()));
+        }
+    }
+    Some((shown, long, blends))
+}
+
+/// Through each scene's load the screen keeps the frame shown before it, the old scene's last
+/// (drawn in the tick before the load), and the long tick's frame, the new scene's first,
+/// shows only once the load's length has passed on Melee's clock, a tick before the next tick;
+/// every other tick's frame shows when its tick runs. Interpolate never blends across a load.
+#[test]
+fn a_scene_s_load_holds_the_frame_from_before_it() {
+    crate::on_game_stack(|| {
+        let Some((shown, long, blends)) = present(1700) else {
+            eprintln!("skipped: no disc");
+            return;
+        };
+        let tick = Duration::from_secs_f64(1.0 / crate::TICK_RATE);
+        assert!(long.len() >= 4, "{} long ticks", long.len());
+        for &(t, _, later) in &long {
+            let i = shown
+                .iter()
+                .position(|p| p.tick == t)
+                .expect("the load's frame");
+            let (before, after) = (&shown[i - 1], &shown[i]);
+            eprintln!(
+                "tick {t}: {:.0} ms later; before it tick {} (ending {}) in {}, after it frame {} in {}",
+                later.as_secs_f64() * 1000.0,
+                before.tick,
+                before.ending,
+                before.scene,
+                after.drawn,
+                after.scene
+            );
+        }
+        let mut loads = 0;
+        for &(t, due, later) in &long {
+            let i = shown
+                .iter()
+                .position(|p| p.tick == t)
+                .expect("the load's frame");
+            let (before, after) = (&shown[i - 1], &shown[i]);
+            assert_eq!(
+                before.tick,
+                t - 1,
+                "the old scene's last frame is the tick before's"
+            );
+            if after.drawn == 1 {
+                // A scene's load: the frame before it is the old scene's last.
+                assert_eq!(before.ending, 1, "tick {t}: the old scene's last frame");
+                loads += 1;
+            } else {
+                // A tick that ran long within its scene (the boot's two-field tick).
+                assert_eq!(before.scene, after.scene);
+            }
+            assert!(before.at <= due, "tick {t}: shown when its tick ran");
+            assert_eq!(after.at, due + later, "tick {t}: shown when the load ends");
+            let next = shown.get(i + 1).expect("a frame after");
+            if next.tick == t + 1 {
+                assert_eq!(next.at, after.at + tick, "the next tick a tick later");
+            }
+            let blended = blends.iter().find(|(n, _)| *n == t).expect("its frames");
+            assert!(!blended.1, "tick {t}: Interpolate blends across the load");
+            let then = blends.iter().find(|(n, _)| *n > t).expect("the next's");
+            assert!(then.1, "tick {}: blends from the load's frame", then.0);
+        }
+        // The title's, the main menu's, VS mode's and the main menu's again.
+        assert!(loads >= 4, "{loads} loads");
+        // Every frame drawn shows, in order, the clock never going back.
+        assert_eq!(shown.len(), blends.len());
+        for w in shown.windows(2) {
+            assert!(w[0].tick < w[1].tick && w[0].at < w[1].at, "{w:?}");
+        }
+    });
+}
+
 /// 48 kHz stereo 16-bit WAV bytes.
 fn wav(samples: &[[f32; 2]]) -> Vec<u8> {
     let data = samples.len() as u32 * 4;
@@ -185,7 +327,8 @@ fn wav(samples: &[[f32; 2]]) -> Vec<u8> {
 
 /// Exploration: `LOAD_HOLDS` (or the recorded session `LOAD_INPUTS`) played for `LOAD_TICKS`
 /// ticks, each tick that isn't a field long or changes the scene printed with its length, the
-/// samples it mixed and the host's time for it.
+/// samples it mixed, the host's time for it, whether it drew a frame, and whether the tick
+/// before drew one and ended its scene (`scene.unk_C`: 1 draws the scene's last frame, 2 not).
 #[test]
 #[ignore]
 fn explore() {
@@ -206,6 +349,7 @@ fn explore() {
         };
         let mut last = now(&s);
         let mut phase = format!("{:?}", s.game().machine.phase);
+        let mut before = (false, 0);
         for t in 0..ticks {
             let host = Instant::now();
             let f = s.tick(holds.at(t));
@@ -219,13 +363,16 @@ fn explore() {
             let p = format!("{:?}", s.game().machine.phase);
             if len.abs_diff(melee_sim::audio::clock::FIELD) > TB_HZ / 2000 || p != phase {
                 println!(
-                    "tick {t}: {:.3} ms, {samples} samples ({:.3} ms), host {:.1} ms, drew {drew}, {p}",
+                    "tick {t}: {:.3} ms, {samples} samples ({:.3} ms), host {:.1} ms, drew {drew}                      (before: drew {}, ending {}), {p}",
                     len as f64 * 1000.0 / TB_HZ as f64,
                     samples as f64 / 32.0,
-                    host.as_secs_f64() * 1000.0
+                    host.as_secs_f64() * 1000.0,
+                    before.0,
+                    before.1
                 );
                 phase = p;
             }
+            before = (drew, s.game().scene.unk_C);
             if s.ended {
                 break;
             }

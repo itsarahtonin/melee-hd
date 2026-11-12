@@ -698,6 +698,7 @@ impl Running<'_> {
 
     /// Rumbles the fighter's controller, or every fighter's (`ftCommon_8007EC30`).
     #[doc(alias = "ftAction_800728F8")]
+    #[doc(alias = "ftCommon_8007EC30")]
     fn cmd_rumble(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let (kind, frames) = (bits(w, 7, 12), bits(w, 19, 13));
         if bits(w, 6, 1) != 0 {
@@ -832,6 +833,8 @@ impl Running<'_> {
     }
 
     /// The fighter's vibration (`ftCo_800C8B60`).
+    #[doc(alias = "ftAction_800730B8")]
+    #[doc(alias = "ftCo_800C8B60")]
     fn cmd_vibrate(&mut self, _gobj: GObjId, f: FighterId, w: u32) {
         let fp = &mut self.game.fighters[f.0];
         fp.x2226_b5 = bits(w, 6, 1) != 0;

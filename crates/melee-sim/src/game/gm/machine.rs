@@ -1246,6 +1246,9 @@ impl Running<'_> {
     /// `gm_801A4BD4`, a scene's setup before its entry, with the rumble data it ends on
     /// (`lb_80014534`).
     #[doc(alias = "fn_801A4BD0")]
+    #[doc(alias = "HSD_SObjLib_803A44A4")]
+    #[doc(alias = "HSD_GObjSetInitDefaults")]
+    #[doc(alias = "HSD_GObj_803912A8")]
     #[doc(alias = "gm_801A4BD4")]
     #[doc(alias = "gm_801A4B88")]
     #[doc(alias = "gm_GetAllGameScenes")]

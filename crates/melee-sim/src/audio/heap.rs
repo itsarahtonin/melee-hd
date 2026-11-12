@@ -53,6 +53,7 @@ impl Heap {
     /// `OSFreeToHeap`: the cell back among the free ones, joined with the free cells it
     /// touches.
     #[doc(alias = "OSFreeToHeap")]
+    #[doc(alias = "DLInsert")]
     pub fn free(&mut self, ptr: u32) {
         let at = ptr - HEADER;
         let i = self

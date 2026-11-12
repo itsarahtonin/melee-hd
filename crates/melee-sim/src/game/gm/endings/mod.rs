@@ -142,8 +142,8 @@ impl Running<'_> {
 
     /// `onEnterIntroEasy`, the debug mode's state 6: the announcer's bank, and Classic's
     /// intro's enter data from the settings (`un_80301BA8`).
-    // Ports onEnterIntroEasy and un_80301BA8; aliased once a check reaches them (the enter
-    // data is written as Classic's intro, task 22's, enters).
+    #[doc(alias = "onEnterIntroEasy")]
+    #[doc(alias = "un_80301BA8")]
     pub fn debug_enter_intro_easy(&mut self) {
         self.load_announcer_bank();
         let s = |r: &Running, off: u32| r.game.debug_setting(off);

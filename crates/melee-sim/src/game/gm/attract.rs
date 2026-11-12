@@ -159,6 +159,7 @@ impl Running<'_> {
     /// camera turns to the first focus player while the others play at level 2, at 640 (or
     /// once that fighter leaves the bounds) to the second, and at 880 (or once it leaves) back
     /// to the standard view with every player at level 9.
+    #[doc(alias = "ftLib_IsCameraSubjectInBounds")]
     #[doc(alias = "Player_800368F8")]
     #[doc(alias = "fn_80182F40")]
     pub fn attract_proc(&mut self, _gobj: GObjId) {

@@ -208,6 +208,7 @@ pub fn init_stand(r: &mut Running, gobj: GObjId) {
 /// alone, and the next wait; once all are out and each is snagged or gone
 /// (`grFigureGet_80219C50`), the snagged trophies counted as the match's and the stage's
 /// end flags. Then the wind sources age.
+#[doc(alias = "ftLib_GetCollData")]
 #[doc(alias = "grFigureGet_80219898")]
 pub fn proc_stand(r: &mut Running, gobj: GObjId) {
     let mut at = r.game.world.first_in(P_LINK_FIGHTER);
