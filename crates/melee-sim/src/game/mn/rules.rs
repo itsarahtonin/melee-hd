@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 use super::super::gm::title::AnimLoop;
 use super::super::handles::CodeRef;
 use super::super::render::JOBJ_CALLBACK;
-use super::super::state::{OBJ_JOBJ, Obj, Running, UserData};
+use super::super::state::{Game, OBJ_JOBJ, Obj, Running, UserData};
 use super::common::{
     GM_TOURNAMENT, add_child, al, anim, anim_all, child, frame_of, game_mode, hide, load_model,
     node, req_all, set_frame, set_frame_all, show,
@@ -91,7 +91,7 @@ const LIMITS: [[u8; 2]; 8] = [
 ];
 const STOCK_LIMITS: [u8; 2] = [1, 0x63];
 /// `mn_803EC808`: how many joints each value model keeps.
-const VALUE_JOINTS: [usize; 8] = [2, 9, 2, 4, 2, 0, 0, 0];
+pub(crate) const VALUE_JOINTS: [usize; 8] = [2, 9, 2, 4, 2, 0, 0, 0];
 /// `mn_803EC818`: each option's descriptions, by value; `mn_StockCountTextId`.
 const DESCRIPTIONS: [[u8; 5]; 7] = [
     [0x26, 0x27, 0x28, 0x29, 0x00],
@@ -142,6 +142,25 @@ pub struct RulesData {
     pub value_joints: [[Option<JObjId>; 9]; 7],
     /// `x130`: the hovered option's description.
     pub text: Option<TextId>,
+}
+
+/// Whether the rules' option `i` is shown: all but the stage selection in Tournament mode.
+pub(crate) fn rules_shown(game: &Game, i: u8) -> bool {
+    !(game.machine.routing.curr_mode == GM_TOURNAMENT && i == 4)
+}
+
+/// Whether the extra rules' option `i` is shown: friendly fire but in Tournament mode, the
+/// score display and the random stage switch once unlocked.
+pub(crate) fn rule_plus_shown(game: &Game, i: u8) -> bool {
+    let x186c = game.game_data.thing.save_data.x186C;
+    if game.machine.routing.curr_mode == GM_TOURNAMENT && i == 1 {
+        return false;
+    }
+    match i {
+        3 => x186c & 1 != 0,
+        5 => x186c & 2 != 0,
+        _ => true,
+    }
 }
 
 /// The rules' and names' screens' statics (`mnmainrule.c` to `mnnamenew.c`) and user data.
@@ -240,7 +259,7 @@ impl Running<'_> {
 
     /// Whether an option is shown: all but the stage selection in Tournament mode.
     fn rules_shown(&self, i: u8) -> bool {
-        !(game_mode(self) == GM_TOURNAMENT && i == 4)
+        rules_shown(self.game, i)
     }
 
     fn rules_shown_before(&self, n: u8) -> usize {
@@ -1006,15 +1025,7 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015EE0C")]
     #[doc(alias = "gmMainLib_8015EE44")]
     pub(crate) fn rule_plus_shown(&self, i: u8) -> bool {
-        let x186c = self.game.game_data.thing.save_data.x186C;
-        if game_mode(self) == GM_TOURNAMENT && i == 1 {
-            return false;
-        }
-        match i {
-            3 => x186c & 1 != 0,
-            5 => x186c & 2 != 0,
-            _ => true,
-        }
+        rule_plus_shown(self.game, i)
     }
 
     /// Runs the rules' and names' screens' processes.
@@ -1036,6 +1047,19 @@ impl Running<'_> {
     /// Releases a rules' or names' screen's user data (`HSD_Free`, or `fn_8023D0F8` for a
     /// glyph's variants, which frees their text first).
     pub(crate) fn rules_release(&mut self, data: UserData) -> bool {
+        if matches!(
+            data,
+            UserData::RulesList(_)
+                | UserData::RulePlusList(_)
+                | UserData::ItemSwitch(_)
+                | UserData::StageSwitch(_)
+        ) {
+            // Laid out as they go back, for the blocks made over them (docs/engine.md).
+            let (game, archives) = (&*self.game, self.data);
+            crate::hsd::export::with_image(|img| {
+                super::super::export::menu_block(game, archives, img, &data)
+            });
+        }
         let r = &mut self.game.vs_menus;
         let addr = match data {
             UserData::RulesList(a) => {

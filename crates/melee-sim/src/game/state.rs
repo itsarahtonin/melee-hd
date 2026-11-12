@@ -582,6 +582,10 @@ impl Host<GameKinds> for Running<'_> {
             UserData::BgFlash => self.game.bg_flash_free(),
             // `mn_8022EB04`: `HSD_Free`.
             UserData::MainMenuList(addr) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.menu.lists.remove(&addr);
             }
@@ -611,10 +615,12 @@ impl Host<GameKinds> for Running<'_> {
                 self.game.event_list.data.remove(&addr);
             }
             UserData::Count(addr) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
-                let c = &mut self.game.data_menus.count;
-                let d = c.data.remove(&addr);
-                c.left = Some((addr, d.and_then(|d| d.title)));
+                self.game.data_menus.count.data.remove(&addr);
             }
             UserData::Diagram(addr) => {
                 crate::hsd::heap::mem_free(addr);
@@ -625,10 +631,12 @@ impl Host<GameKinds> for Running<'_> {
             UserData::Diagram3(addr) => self.d3_free(addr),
 
             UserData::Vibration(addr) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
-                let v = &mut self.game.options.vibration;
-                let d = v.data.remove(&addr);
-                v.left = Some((addr, d.and_then(|d| d.title)));
+                self.game.options.vibration.data.remove(&addr);
             }
             UserData::DataDel(addr) => {
                 crate::hsd::heap::mem_free(addr);
@@ -645,6 +653,10 @@ impl Host<GameKinds> for Running<'_> {
             }
             // `HSD_Free`.
             UserData::CssCursor(i) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 let c = &mut self.game.charsel.cursors[usize::from(i)];
                 let addr = c.take().expect("a hand's block").addr;
                 crate::hsd::heap::mem_free(addr);
@@ -664,20 +676,26 @@ impl Host<GameKinds> for Running<'_> {
                 self.game.charsel.left_tags[usize::from(i)] = addr;
             }
             UserData::SssName(addr) => {
-                let game = &*self.game;
-                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.names.remove(&addr);
             }
             UserData::SssPreview(addr) => {
-                let game = &*self.game;
-                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.previews.remove(&addr);
             }
             UserData::SssHover(addr) => {
-                let game = &*self.game;
-                crate::hsd::export::with_image(|img| super::export::menu_block(game, img, &data));
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.stagesel.hovers.remove(&addr);
             }

@@ -87,6 +87,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6u-") {
                     return ssbm_rs_local(&format!("lockstep/m6-unlocks/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ie-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-itemsw-exit/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6e3-") {
                     return ssbm_rs_local(&format!("lockstep/m6-endings-3/{o}.inputs")).into();
                 }
@@ -1745,6 +1748,24 @@ pub const M6U_HR_TOTAL: Game = Game {
     name: "m6u-hr-total",
     players: "the notice approach after the Home-Run Contest (session m6-unlocks/hr-total)",
     replay: Replay::Session("m6u-hr-total"),
+};
+
+/// The item switch left as it came in, a second time in the same block (`m6-itemsw-exit/
+/// itemsw-b`): its block's words free the rules' description, the box below the list empty.
+pub const M6IE_ITEMSW_B: Game = Game {
+    stage: "Main menu",
+    name: "m6ie-itemsw-b",
+    players: "the item switch left as it came in (session m6-itemsw-exit/itemsw-b)",
+    replay: Replay::Session("m6ie-itemsw-b"),
+};
+
+/// The random stage switch left as it came in, a second time in the same block
+/// (`m6-itemsw-exit/stagesw-b`): the extra rules' description freed.
+pub const M6IE_STAGESW_B: Game = Game {
+    stage: "Main menu",
+    name: "m6ie-stagesw-b",
+    players: "the random stage switch left as it came in (session m6-itemsw-exit/stagesw-b)",
+    replay: Replay::Session("m6ie-stagesw-b"),
 };
 
 /// The notice approach after Event 1 cleared last (`m6-unlocks/ev01-fd`): Final

@@ -4,6 +4,7 @@
 use crate::compare::Comparer;
 use crate::import::sym;
 use melee_sim::game::mirror::Cx;
+use melee_sim::hsd::sis::TextWord;
 
 /// `HSD_Free`, the screens' user data release.
 const HSD_FREE: u32 = 0x8037_F1B0;
@@ -49,6 +50,24 @@ impl Comparer<'_> {
             ours.map(|t| t.0),
             theirs,
         );
+    }
+
+    /// A text pointer a screen writes once the text is made: until then the word its block
+    /// held, compared where the heap's image knows it.
+    fn text_word_at(&mut self, path: &str, what: &str, ours: TextWord, at: u32) {
+        match ours {
+            TextWord::Made(t) => self.text_at(path, what, Some(t), at),
+            TextWord::Left(Some(w)) => {
+                let theirs = self.u32(at);
+                self.check(
+                    path,
+                    &format!("{what} (the block's word)"),
+                    format!("{w:#010x}"),
+                    format!("{theirs:#010x}"),
+                );
+            }
+            TextWord::Left(None) => {}
+        }
     }
 
     /// The rules' list's user data (`struct mn_802307F8_t`) at `t`, its block `addr`. Its
@@ -151,7 +170,8 @@ impl Comparer<'_> {
         self.text_at(path, "extra rules' description", d.description, ud + 0xDC);
     }
 
-    /// The item switch's user data (`MnItemSwData`) at `t`. The texts compare once made.
+    /// The item switch's user data (`MnItemSwData`) at `t`. The texts compare once made, the
+    /// words the block held before where known.
     pub(crate) fn item_switch(&mut self, path: &str, addr: u32, t: u32) {
         let Some(ud) = self.ud_head(
             path,
@@ -192,20 +212,18 @@ impl Comparer<'_> {
                 ud + 0x24 + 4 * i as u32,
             );
         }
-        for (i, tx) in d.texts.iter().enumerate() {
-            if tx.is_some() {
-                self.text_at(
-                    path,
-                    &format!("item switch's text {i}"),
-                    *tx,
-                    ud + 0x40 + 4 * i as u32,
-                );
-            }
+        for (i, &tx) in d.texts.iter().enumerate() {
+            self.text_word_at(
+                path,
+                &format!("item switch's text {i}"),
+                tx,
+                ud + 0x40 + 4 * i as u32,
+            );
         }
     }
 
     /// The random stage switch's user data (`MnStageSwData`) at `t`. The names compare once
-    /// made.
+    /// made, the words the block held before where known.
     pub(crate) fn stage_switch(&mut self, path: &str, addr: u32, t: u32) {
         let Some(ud) = self.ud_head(
             path,
@@ -241,15 +259,13 @@ impl Comparer<'_> {
                 ud + 0x20 + 4 * i as u32,
             );
         }
-        for (i, tx) in d.texts.iter().enumerate() {
-            if tx.is_some() {
-                self.text_at(
-                    path,
-                    &format!("stage switch's name {i}"),
-                    *tx,
-                    ud + 0x40 + 4 * i as u32,
-                );
-            }
+        for (i, &tx) in d.texts.iter().enumerate() {
+            self.text_word_at(
+                path,
+                &format!("stage switch's name {i}"),
+                tx,
+                ud + 0x40 + 4 * i as u32,
+            );
         }
     }
 

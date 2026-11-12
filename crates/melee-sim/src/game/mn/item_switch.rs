@@ -19,7 +19,7 @@ use super::main::{IN_A, IN_BACK, IN_START};
 use super::rules::{ITEM_SWITCH, MODEL_CON_IS, MODEL_CURSOR_IS};
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
-use crate::hsd::sis::TextId;
+use crate::hsd::sis::TextWord;
 use crate::vec::Vec3;
 
 /// The processes.
@@ -83,8 +83,9 @@ pub struct ItemSwitchData {
     pub state: u8,
     /// `jobjs[0..7]`: the model's first seven joints.
     pub jobjs: [Option<JObjId>; 7],
-    /// `jobjs[7]`, `jobjs[8]`: the two texts under the columns, once in.
-    pub texts: [Option<TextId>; 2],
+    /// `jobjs[7]`, `jobjs[8]`: the two texts under the columns, once in; until then the
+    /// words the block held (docs/melee-bugs.md).
+    pub texts: [TextWord; 2],
 }
 
 /// `mnitemsw.c`'s statics: the screen (`mnItemSw_804D6BE8`), its inputs held off while it
@@ -459,7 +460,7 @@ impl Running<'_> {
                             200.0,
                             300.0,
                         );
-                        self.items_mut(gobj).texts[0] = Some(t);
+                        self.items_mut(gobj).texts[0] = TextWord::Made(t);
                         let sis = &mut self.game.sis;
                         sis.text_mut(t).font_size = [0.0521, 0.0521];
                         sis.reset_text(self.data, t, 2);
@@ -470,7 +471,7 @@ impl Running<'_> {
                             200.0,
                             300.0,
                         );
-                        self.items_mut(gobj).texts[1] = Some(t);
+                        self.items_mut(gobj).texts[1] = TextWord::Made(t);
                         let us = self.game.game_data.saved_language() == LANG_US;
                         let jp = super::super::gm::language_setting_is_jp();
                         let sis = &mut self.game.sis;
@@ -482,11 +483,13 @@ impl Running<'_> {
                     }
                     _ => {
                         // The texts are read from the user data the free just released, as
-                        // the original reads them (docs/melee-bugs.md).
+                        // the original reads them; left during its way in, the screen never
+                        // wrote them, and the words its block held are freed as texts
+                        // (docs/melee-bugs.md).
                         let texts = self.items_data(gobj).texts;
                         gobj::free(self, gobj);
                         for t in texts {
-                            self.destroy_text(t.expect("an item switch's text"));
+                            self.destroy_text_word(t, "the item switch left as it came in");
                         }
                         return;
                     }
@@ -586,7 +589,7 @@ impl Running<'_> {
                 .wrapping_add(1),
             state,
             jobjs: [None; 7],
-            texts: [None; 2],
+            texts: self.leftover_text_words(addr + 0x40),
         };
         for (on, &item) in d.items.iter_mut().zip(&ORDER) {
             *on = u8::from(self.item_enabled(item));

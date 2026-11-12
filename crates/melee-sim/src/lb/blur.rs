@@ -111,9 +111,9 @@ impl Running<'_> {
     /// Frees the sprite's data (`fn_800138AC`, its GObj's user data release).
     pub fn blur_free(&mut self) {
         if let Some(b) = self.game.blur {
-            let game = &*self.game;
+            let (game, data) = (&*self.game, self.data);
             crate::hsd::export::with_image(|img| {
-                crate::game::export::menu_block(game, img, &UserData::Blur)
+                crate::game::export::menu_block(game, data, img, &UserData::Blur)
             });
             self.game.blur = None;
             crate::hsd::heap::mem_free(b.addr);
