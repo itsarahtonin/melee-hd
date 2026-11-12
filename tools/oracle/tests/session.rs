@@ -2511,3 +2511,22 @@ fn a_vs_coin_match_on_yoshis_story() {
         assert!(out.contains("no stale reads"), "{out}");
     }
 }
+
+/// The item and random stage switches left with B as they come in (`m6-itemsw-exit`), from
+/// power-on: each switch's texts are made only at the end of its way in, so its way out frees
+/// the words its heap block held as texts. `itemsw-b` and `stagesw-b` leave each twice in the
+/// same block, the second time freeing the rules' or the extra rules' description through the
+/// last visit's texts' addresses; `mixed` leaves them over the extra rules' and each other's
+/// blocks. Until 2026-11-12 the first early exit stopped (`an item switch's text`).
+#[test]
+fn the_switches_left_as_they_come_in() {
+    for (name, ticks) in [("itemsw-b", 1787), ("stagesw-b", 1784), ("mixed", 1990)] {
+        if let Some(out) = scripted_session("m6-itemsw-exit", name, &["--all", "--heap"]) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference\n")),
+                "{name}: {out}"
+            );
+            assert!(out.contains("no stale reads"), "{name}: {out}");
+        }
+    }
+}

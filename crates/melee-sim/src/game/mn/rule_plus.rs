@@ -34,7 +34,7 @@ const OPTIONS: u8 = 6;
 /// `mn_803ED1D0`: the list model's joint for each shown option, how many joints each value
 /// model keeps, each option's label (unhovered, hovered), the cursors' loops.
 const OPTION_NODES: [usize; 7] = [3, 4, 5, 6, 7, 8, 9];
-const VALUE_JOINTS: [usize; 6] = [7, 2, 2, 2, 2, 0];
+pub(crate) const VALUE_JOINTS: [usize; 6] = [7, 2, 2, 2, 2, 0];
 const fn label(i: u8, hovered: bool) -> f32 {
     (20 + 2 * i + hovered as u8) as f32
 }
