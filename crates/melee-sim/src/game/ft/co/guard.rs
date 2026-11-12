@@ -849,14 +849,22 @@ impl Running<'_> {
 
     /// The powershield's timers, `ftCo_80093BC0`: its reflector ends (the shield's absorb
     /// shape back), then its window.
+    ///
+    /// Yoshi's egg never clears the flags (`ftYs_Init_8012BECC` doesn't, where the others'
+    /// `ftCo_800924C0` does), so a flag a powershield left can outlive its state, and the timer
+    /// then counts down whatever later states left in its word: a grab's hold joint
+    /// (`fn_800D9CE8`'s and `fn_800DA1D8`'s `mv` x18), in whole or in part (Melee's bugs,
+    /// `docs/melee-bugs.md`). An address reads as a float so small that one less is -1.0
+    /// whatever the address ([`crate::game::ft::vars::Vars::f32_through`]).
     #[doc(alias = "ftCo_80093BC0")]
     pub fn powershield_tick(&mut self, gobj: GObjId) {
+        let less_one = |x: f32| fp::fsubs(reg(x), 1.0);
         let fp = self.game.fighter_mut(gobj);
         if fp.x221C_b3 {
             fp.x221C_b3 = false;
         }
         if fp.x221C_b1 {
-            fp.set_mv_f32(GUARD_X14, fp::fsubs(reg(fp.mv_f32(GUARD_X14)), 1.0));
+            fp.set_mv_f32(GUARD_X14, fp.mv.f32_through(GUARD_X14, less_one));
             if fp.mv_f32(GUARD_X14) < 0.0 {
                 fp.x221C_b1 = false;
                 fp.reflecting = false;
@@ -865,7 +873,7 @@ impl Running<'_> {
         }
         let fp = self.game.fighter_mut(gobj);
         if fp.x221C_b2 {
-            fp.set_mv_f32(GUARD_X18, fp::fsubs(reg(fp.mv_f32(GUARD_X18)), 1.0));
+            fp.set_mv_f32(GUARD_X18, fp.mv.f32_through(GUARD_X18, less_one));
             if fp.mv_f32(GUARD_X18) < 0.0 {
                 fp.x221C_b2 = false;
             }
