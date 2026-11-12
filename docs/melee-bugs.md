@@ -478,6 +478,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix impact:** not recorded.
 - **Source:** `crates/melee-sim/src/game/it/kinds/zeldadinfireexplode.rs:215`.
 
+### Yoshi: the egg keeps a powershield's flags, and its timer counts down a grab's address
+
+- **Where:** `ftYs_Init_8012BECC` (raising the egg) and `ftCo_80093BC0` (the powershield's timers, from `ftYs_GuardOn_1_Anim` and `ftYs_GuardDamage_Anim`), `crates/melee-sim/src/game/ft/yoshi/guard.rs` and `crates/melee-sim/src/game/ft/co/guard.rs` (`powershield_tick`).
+- **Defect:** a powershield sets `x221C_b1` and `b2` (the reflector's window, the powershield's) with their timers in `mv` x14 and x18, and only the timers' own function clears them, run only by the powershield's state and the shield's stun. The others' shield raise (`ftCo_800924C0`) clears both flags and timers, but Yoshi's egg has its own raise, which clears neither. So when Yoshi leaves his powershield before its window ends (a spot dodge, a roll, a grab out of it), the flags stay set through every state after, however long, and his next shield stun counts down whatever later states left in those words: a grab's hold joint (`fn_800D9CE8` and `fn_800DA1D8` store it in `mv` x18), in whole, or in part where a later state wrote a byte into it (the damage states' `x1A`).
+- **Effect:** while `b2` stays set, the next hit on his egg, however late, counts as a powershield (`ftColl_80076808`'s shield hit: no shield damage, the release window, the powershield's flash, sound and statistic; the stun keeps his model), as long as no shield stun has run the timer out; and that stun's timer reads an address as a float: any main-memory address (0x80000000 to 0x817FFFFF) starts with 0x80 or 0x81, which makes the word -0 or a negative float under 2^-123 in size, so one less is -1.0 and both flags clear on the stun's first frame, whatever the address. `b1` surviving makes that frame also take down a reflector that is no longer there and set the shield's absorb shape again. Reached by `m6-ssbmrs-replay/match1`'s third match (a powershield and an immediate spot dodge, much later a grab and a forward throw hit by Fox, then a hit on the egg: tick 17785) and `m6-guard-stale/yoshi-grab` (a powershield, a spot dodge out of it, a grab, Mario breaking out, then his jab on the raised egg: tick 1839).
+- **melee-hd:** modeled: the flags persist as in the original, and the timer's read takes the word as the range an address's bytes allow, which here gives -1.0 whatever the address (`ft::vars::Vars::f32_through`); a read whose result depended on the address would stop.
+- **Fix:** clear the flags and timers in Yoshi's raise as `ftCo_800924C0` does (or clear them on leaving the shield's states).
+- **Fix impact:** changes gameplay: Yoshi's late shield hits stop counting as powershields; breaks replay and Slippi compatibility where it happens.
+- **Source:** [engine notes, uninitialized values](engine.md#uninitialized-values); `crates/melee-sim/src/game/ft/co/guard.rs` (`powershield_tick`).
+
 ## Ice Climbers and the computer player
 
 ### A computer player's DI with no knockback reads two registers it never set
