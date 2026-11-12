@@ -617,8 +617,9 @@ fn swing_links(r: &mut Running, gobj: GObjId, l: ItemLinkId, target: Vec3) {
     }
     let last = fp::fctiwz(fp::fmsubs(0.5, fp::frsp(f64::from(n)), 1.0)) as usize;
     let v = item_mut(r.game, gobj).xDD4_itemVar.seak_chain();
-    // A new chain's first swing finds `x18` as its block's last item left it: it counts as
-    // read only where a link's clank sound looks at it (`link_coll_clank`).
+    // A new chain's first swing finds `x18` as its block's last item left it (the union's
+    // bytes, `ItemVars::left`): it counts as read only where a link's clank sound looks at
+    // it (`link_coll_clank`).
     let coll_clank = *v.x18.peek() != 0;
     let parent_gobj = v.parent_gobj.get().expect("a chain without its fighter");
     // The history moves down a step.

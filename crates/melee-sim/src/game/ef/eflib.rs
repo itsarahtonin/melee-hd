@@ -434,16 +434,16 @@ fn new_effect(r: &mut Running) -> Option<EffectId> {
             } else {
                 Held::Unknown
             };
-            ef.left.params_unknown = 0;
+            let mut unknown = 0;
             let mut p = [0.0f32; 3];
             for (i, v) in p.iter_mut().enumerate() {
                 if known(4 + 4 * i) {
                     *v = f32::from_bits(word(4 + 4 * i));
                 } else {
-                    ef.left.params_unknown |= 1 << i;
+                    unknown |= 1 << i;
                 }
             }
-            ef.params = crate::vec::Vec3::new(p[0], p[1], p[2]);
+            ef.params = super::Params::left(crate::vec::Vec3::new(p[0], p[1], p[2]), unknown);
             ef.left.x2a = [0x16, 0x17].map(|i| k[i].then_some(b[i]));
             // The GPU's pixels the block held there go back as pixels (docs/engine.md).
             let rt = crate::game::leftovers::render_target_runs(addr + 0x14, 0x18);
@@ -477,10 +477,8 @@ fn new_effect(r: &mut Running) -> Option<EffectId> {
             },
             h => h,
         };
-        let unknown = (0..3).fold(0, |m, i| if ef.param_known(i) { m } else { m | 1 << i });
         let ef = &mut r.game.ef.effects[e.0];
         ef.left.user_data = user_data;
-        ef.left.params_unknown = unknown;
     }
     Some(e)
 }
@@ -1108,7 +1106,8 @@ pub fn cb_fall_from_param_y(game: &mut Game, e: EffectId) {
     let (tx, ty, tz) = (reg(o.translate.x), reg(o.translate.y), reg(o.translate.z));
     let (rx, ry) = (reg(o.rotate.x), reg(o.rotate.y));
     let ef = &mut game.ef.effects[e.0];
-    ef.params.y = mem(fp::fsubs(reg(ef.params.y), reg(0.2)));
+    let y = mem(fp::fsubs(reg(ef.params.y), reg(0.2)));
+    ef.params.set_y(y);
     let py = reg(ef.params.y);
     let x = mem(fp::fadds(tx, reg(math::sin(mem(ry)))));
     let jobjs = &mut game.objs.jobjs;
@@ -1127,8 +1126,9 @@ pub fn cb_set_offset_from_params(game: &mut Game, e: EffectId) {
     let o = &game.objs.jobjs[j];
     let (tx, ty, tz) = (reg(o.translate.x), reg(o.translate.y), reg(o.translate.z));
     let ef = &mut game.ef.effects[e.0];
-    ef.params.y = mem(fp::fsubs(reg(ef.params.y), reg(0.1)));
-    let p = ef.params;
+    let y = mem(fp::fsubs(reg(ef.params.y), reg(0.1)));
+    ef.params.set_y(y);
+    let p = *ef.params;
     let jobjs = &mut game.objs.jobjs;
     let x = mem(fp::fadds(tx, reg(p.x)));
     jobj::set_srt(jobjs, j, |o| o.translate.x = x);
@@ -1353,7 +1353,7 @@ pub fn cb_apply_stored_alpha(game: &mut Game, e: EffectId) {
 #[doc(alias = "efLib_Cb_AccumOffset_FromParams")]
 pub fn cb_accum_offset_from_params(r: &mut Running, e: EffectId) {
     let ef = &r.game.ef.effects[e.0];
-    let (attach, p) = (ef.attach_jobj, ef.params);
+    let (attach, p) = (ef.attach_jobj, *ef.params);
     let mut t = crate::lb::joint::world_position(&mut r.game.objs, r.data, attach, None);
     t.x = mem(fp::fadds(reg(t.x), reg(p.x)));
     t.y = mem(fp::fadds(reg(t.y), reg(p.y)));
@@ -1376,7 +1376,7 @@ pub fn create_generator_appsrt_pos(
     let ef = &mut r.game.ef.effects[e.0];
     ef.update = Some(Update::AccumOffsetFromParams);
     ef.attach_jobj = jobj;
-    ef.params = offset;
+    ef.params.set(offset);
     let ej = effect_jobj(r.game, e);
     create_generator_attach_appsrt(&mut r.game.objs, r.data, &mut ParticleHooks, gfx_id, ej);
     Some(e)

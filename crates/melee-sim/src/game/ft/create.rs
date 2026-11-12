@@ -148,7 +148,11 @@ impl Running<'_> {
         let f = FighterId(self.game.fighters.alloc_stale(Fighter::default()));
         let fresh = crate::game::leftovers::pool_grew();
         if self.game.rules.slippi {
-            self.game.fighters[f.0] = Fighter::default();
+            // Slippi's Init Player Data (`80068EEC`) zeroes the whole block.
+            let fp = &mut self.game.fighters[f.0];
+            *fp = Fighter::default();
+            fp.dynamic_bone_sets.1 = crate::game::held::Left::zero();
+            fp.tobj_list.left = crate::game::held::Left::zero();
         }
         // The allocator model's address (`hsd::heap`), else one the frontend seeded, else 0.
         let seeded = self.game.ft.address_seed.pop_front();

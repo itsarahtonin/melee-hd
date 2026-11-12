@@ -19,6 +19,7 @@ use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::setup::StageCameras;
+use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::it::Var;
@@ -8067,12 +8068,16 @@ impl Mirror for Item {
         Item {
             x0: cx.import_handle("ItemId", m.u32(at + 0x0)).map(ItemId),
             entity: cx.import_handle("GObjId", m.u32(at + 0x4)).map(GObjId),
+            x8: Kept(Some(m.u32(at + 0x8) as i32)),
             spawn_kind: m.u32(at + 0xc) as i32,
             kind: m.u32(at + 0x10) as i32,
             hold_kind: m.u32(at + 0x14) as i32,
             x18: m.u32(at + 0x18) as i32,
             x1C: m.u32(at + 0x1c) as i32,
             x20_team_id: m.u8(at + 0x20),
+            x21: Kept(Some(m.u8(at + 0x21))),
+            x22: Kept(Some(m.u8(at + 0x22))),
+            x23: Kept(Some(m.u8(at + 0x23))),
             msid: m.u32(at + 0x24) as i32,
             anim_id: m.u32(at + 0x28) as i32,
             facing_dir: f32::from_bits(m.u32(at + 0x2c)),
@@ -8272,6 +8277,15 @@ impl Mirror for Item {
             self.entity.map(|h| h.0),
             m.u32(at + 0x4),
         );
+        if let Some(v) = self.x8.0 {
+            if v != m.u32(at + 0x8) as i32 {
+                cx.mismatch(
+                    &format!("{path}.x8"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.u32(at + 0x8) as i32),
+                );
+            }
+        }
         if self.spawn_kind != m.u32(at + 0xc) as i32 {
             cx.mismatch(
                 &format!("{path}.spawn_kind"),
@@ -8313,6 +8327,33 @@ impl Mirror for Item {
                 format!("{:?}", self.x20_team_id),
                 format!("{:?}", m.u8(at + 0x20)),
             );
+        }
+        if let Some(v) = self.x21.0 {
+            if v != m.u8(at + 0x21) {
+                cx.mismatch(
+                    &format!("{path}.x21"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.u8(at + 0x21)),
+                );
+            }
+        }
+        if let Some(v) = self.x22.0 {
+            if v != m.u8(at + 0x22) {
+                cx.mismatch(
+                    &format!("{path}.x22"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.u8(at + 0x22)),
+                );
+            }
+        }
+        if let Some(v) = self.x23.0 {
+            if v != m.u8(at + 0x23) {
+                cx.mismatch(
+                    &format!("{path}.x23"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.u8(at + 0x23)),
+                );
+            }
         }
         if self.msid != m.u32(at + 0x24) as i32 {
             cx.mismatch(
@@ -16468,6 +16509,11 @@ impl Mirror for ItemLink {
             x2C_b0: m.bits(at, 352, 1) != 0,
             x2C_b1: m.bits(at, 353, 1) != 0,
             x2C_b2: m.bits(at, 354, 1) != 0,
+            x2C_b3: Kept(Some(m.bits(at, 355, 1) != 0)),
+            x2C_b4: Kept(Some(m.bits(at, 356, 1) != 0)),
+            x2C_b5: Kept(Some(m.bits(at, 357, 1) != 0)),
+            x2C_b6: Kept(Some(m.bits(at, 358, 1) != 0)),
+            x2C_b7: Kept(Some(m.bits(at, 359, 1) != 0)),
             coll_data: CollData::import(m, at + 0x30, cx),
             x1CC: m.u32(at + 0x1cc) as i32,
             gobj: cx.import_handle("GObjId", m.u32(at + 0x1d0)).map(GObjId),
@@ -16512,6 +16558,51 @@ impl Mirror for ItemLink {
                 format!("{:?}", self.x2C_b2),
                 format!("{:?}", m.bits(at, 354, 1)),
             );
+        }
+        if let Some(v) = self.x2C_b3.0 {
+            if (v as u32) != m.bits(at, 355, 1) {
+                cx.mismatch(
+                    &format!("{path}.x2C_b3"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.bits(at, 355, 1)),
+                );
+            }
+        }
+        if let Some(v) = self.x2C_b4.0 {
+            if (v as u32) != m.bits(at, 356, 1) {
+                cx.mismatch(
+                    &format!("{path}.x2C_b4"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.bits(at, 356, 1)),
+                );
+            }
+        }
+        if let Some(v) = self.x2C_b5.0 {
+            if (v as u32) != m.bits(at, 357, 1) {
+                cx.mismatch(
+                    &format!("{path}.x2C_b5"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.bits(at, 357, 1)),
+                );
+            }
+        }
+        if let Some(v) = self.x2C_b6.0 {
+            if (v as u32) != m.bits(at, 358, 1) {
+                cx.mismatch(
+                    &format!("{path}.x2C_b6"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.bits(at, 358, 1)),
+                );
+            }
+        }
+        if let Some(v) = self.x2C_b7.0 {
+            if (v as u32) != m.bits(at, 359, 1) {
+                cx.mismatch(
+                    &format!("{path}.x2C_b7"),
+                    format!("{:?}", v),
+                    format!("{:?}", m.bits(at, 359, 1)),
+                );
+            }
         }
         self.coll_data
             .compare(m, at + 0x30, &format!("{path}.coll_data"), cx);
@@ -27910,12 +28001,24 @@ impl LayOut for Item {
         let _ = (&l, at, &cx);
         l.put_word(at + 0x0, cx.handle("ItemId", (self.x0).map(|h| h.0)));
         l.put_word(at + 0x4, cx.handle("GObjId", self.entity.map(|h| h.0)));
+        if let Some(v) = self.x8.0 {
+            l.put_u32(at + 0x8, v as u32);
+        }
         l.put_u32(at + 0xc, self.spawn_kind as u32);
         l.put_u32(at + 0x10, self.kind as u32);
         l.put_u32(at + 0x14, self.hold_kind as u32);
         l.put_u32(at + 0x18, self.x18 as u32);
         l.put_u32(at + 0x1c, self.x1C as u32);
         l.put_u8(at + 0x20, self.x20_team_id as u8);
+        if let Some(v) = self.x21.0 {
+            l.put_u8(at + 0x21, v as u8);
+        }
+        if let Some(v) = self.x22.0 {
+            l.put_u8(at + 0x22, v as u8);
+        }
+        if let Some(v) = self.x23.0 {
+            l.put_u8(at + 0x23, v as u8);
+        }
         l.put_u32(at + 0x24, self.msid as u32);
         l.put_u32(at + 0x28, self.anim_id as u32);
         l.put_u32(at + 0x2c, self.facing_dir.to_bits());
@@ -28309,6 +28412,21 @@ impl LayOut for ItemLink {
         l.put_bits(at, 352, 1, (self.x2C_b0) as u32);
         l.put_bits(at, 353, 1, (self.x2C_b1) as u32);
         l.put_bits(at, 354, 1, (self.x2C_b2) as u32);
+        if let Some(v) = self.x2C_b3.0 {
+            l.put_bits(at, 355, 1, v as u32);
+        }
+        if let Some(v) = self.x2C_b4.0 {
+            l.put_bits(at, 356, 1, v as u32);
+        }
+        if let Some(v) = self.x2C_b5.0 {
+            l.put_bits(at, 357, 1, v as u32);
+        }
+        if let Some(v) = self.x2C_b6.0 {
+            l.put_bits(at, 358, 1, v as u32);
+        }
+        if let Some(v) = self.x2C_b7.0 {
+            l.put_bits(at, 359, 1, v as u32);
+        }
         self.coll_data.lay(l, at + 0x30, cx);
         l.put_u32(at + 0x1cc, self.x1CC as u32);
         l.put_word(at + 0x1d0, cx.handle("GObjId", self.gobj.map(|h| h.0)));

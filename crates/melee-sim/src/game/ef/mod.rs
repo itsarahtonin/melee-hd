@@ -167,7 +167,7 @@ pub struct Effect {
     /// The fighter whose facing `efLib_Cb_SetRotYAndTransition` reads (`user_data`, which it
     /// reads as a joint's x scale: a fighter's facing is at that offset).
     pub user_data: Option<FighterId>,
-    pub params: Vec3,
+    pub params: Params,
     /// Frames left, counting down to 0 (`lifetime`); 0 lives until destroyed.
     pub lifetime: u16,
     pub expire_flags: i8,
@@ -192,16 +192,14 @@ pub enum Held {
 }
 
 /// What an effect's block held where `efLib_Create` doesn't write (docs/engine.md, a session's
-/// heap leftovers): `user_data`'s word until a spawn sets it, which of `params`' words were
-/// unknown (their bits zero until written: a written word that is still zero is unknown too,
-/// which only ever hides a zero), and `x2A` and `x2B`, which nothing writes. `pixels` marks
+/// heap leftovers): `user_data`'s word until a spawn sets it, and `x2A` and `x2B`, which
+/// nothing writes (`params` knows which of its words are known itself). `pixels` marks
 /// the unknown ones the block held from a render target (the GPU's pixels): bit 0
 /// `user_data`, bits 1 to 3 `params`' words, bits 4 and 5 `x2A` and `x2B`, which go back as
 /// the pixels they were.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
 pub struct EffectLeft {
     pub user_data: Held,
-    pub params_unknown: u8,
     pub x2a: [Option<u8>; 2],
     pub pixels: u8,
 }
@@ -210,18 +208,78 @@ impl Default for EffectLeft {
     fn default() -> Self {
         EffectLeft {
             user_data: Held::Unknown,
-            params_unknown: 7,
             x2a: [None; 2],
             pixels: 0,
         }
     }
 }
 
+/// An effect's `params`, which `efLib_Create` leaves as the block held them: the words, and
+/// which are unknown (a block new from a heap melee-sim doesn't model, or a word the heap's
+/// image doesn't know) until a spawn writes them. Read through [`Params`]'s vector; written
+/// through its setters, which make a word known.
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
+pub struct Params {
+    v: Vec3,
+    /// A bit for each unknown word: x, y, z.
+    unknown: u8,
+}
+
+impl Default for Params {
+    /// Unknown.
+    fn default() -> Self {
+        Params {
+            v: Vec3::new(0.0, 0.0, 0.0),
+            unknown: 7,
+        }
+    }
+}
+
+impl core::ops::Deref for Params {
+    type Target = Vec3;
+
+    fn deref(&self) -> &Vec3 {
+        &self.v
+    }
+}
+
+impl Params {
+    /// The block's words, `unknown` the bits of those it doesn't know (zero).
+    pub fn left(v: Vec3, unknown: u8) -> Self {
+        Params { v, unknown }
+    }
+
+    /// Whether word `i` is known: the block's, or written.
+    pub fn known(&self, i: usize) -> bool {
+        self.unknown & 1 << i == 0
+    }
+
+    /// Writes all three.
+    pub fn set(&mut self, v: Vec3) {
+        self.v = v;
+        self.unknown = 0;
+    }
+
+    pub fn set_x(&mut self, x: f32) {
+        self.v.x = x;
+        self.unknown &= !1;
+    }
+
+    pub fn set_y(&mut self, y: f32) {
+        self.v.y = y;
+        self.unknown &= !2;
+    }
+
+    pub fn set_z(&mut self, z: f32) {
+        self.v.z = z;
+        self.unknown &= !4;
+    }
+}
+
 impl Effect {
     /// Whether `params`' word `i` is known: the block's, or written.
     pub fn param_known(&self, i: usize) -> bool {
-        let p = [self.params.x, self.params.y, self.params.z];
-        self.left.params_unknown & 1 << i == 0 || p[i].to_bits() != 0
+        self.params.known(i)
     }
 
     /// The unknown words' and bytes' runs, as offsets from the effect, that its block held
@@ -668,4 +726,26 @@ pub fn call(r: &mut Running, f: u32, args: &[super::code::Val]) -> Option<super:
         }
         _ => return None,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Params;
+    use crate::vec::Vec3;
+
+    /// A word a spawn writes is known, zero included; the others stay as they were.
+    #[test]
+    fn a_written_zero_is_known() {
+        let mut p = Params::default();
+        assert!(!(0..3).any(|i| p.known(i)));
+        p.set_y(0.0);
+        assert_eq!([p.known(0), p.known(1), p.known(2)], [false, true, false]);
+        p.set(Vec3::new(0.0, 0.0, 0.0));
+        assert!((0..3).all(|i| p.known(i)));
+        let left = Params::left(Vec3::new(1.0, 0.0, 0.0), 0b100);
+        assert_eq!(
+            [left.known(0), left.known(1), left.known(2)],
+            [true, true, false]
+        );
+    }
 }

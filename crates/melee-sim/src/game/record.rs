@@ -688,14 +688,15 @@ fn misc_as(g: &Game, fp: &super::structs::Fighter) -> [u8; 4] {
 /// missile's kind, a turnip's face, and a charge shot's launch and power. The members melee-sim
 /// keeps as types give the fields those bytes end; others' are zero.
 fn item_misc(v: &super::it::ItemVars) -> [u8; 4] {
-    use super::it::ItemVars;
+    use super::it::Member;
     let low = |w: i32| w as u8;
-    match v {
-        ItemVars::Bytes(b) => [b[3], b[7], b[0x17], b[0x1B]],
-        ItemVars::SamusMissile(m) => [low(*m.is_smash_missile.peek()), 0, 0, 0],
-        ItemVars::PeachTurnip(t) => [0, low(*t.xDD8.peek()), 0, 0],
-        ItemVars::SamusChargeshot(c) => [0, 0, low(*c.xDE8.peek()), low(*c.xDEC.peek())],
-        ItemVars::MewtwoShadowball(s) => [0, 0, low(*s.x14.peek()), low(*s.x18.peek())],
+    let b = &v.left.bytes;
+    match &v.member {
+        Member::Bytes => [b[3], b[7], b[0x17], b[0x1B]],
+        Member::SamusMissile(m) => [low(*m.is_smash_missile.peek()), 0, 0, 0],
+        Member::PeachTurnip(t) => [0, low(*t.xDD8.peek()), 0, 0],
+        Member::SamusChargeshot(c) => [0, 0, low(*c.xDE8.peek()), low(*c.xDEC.peek())],
+        Member::MewtwoShadowball(s) => [0, 0, low(*s.x14.peek()), low(*s.x18.peek())],
         _ => [0; 4],
     }
 }

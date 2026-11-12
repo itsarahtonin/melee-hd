@@ -45,6 +45,21 @@ impl Lay {
         }
     }
 
+    /// Starts again at `at` with `len` unknown bytes, keeping the storage (no allocation once
+    /// it's grown to `len`).
+    pub fn reuse(&mut self, at: u32, len: u32) {
+        let n = len as usize;
+        self.at = at;
+        self.bytes.clear();
+        self.bytes.resize(n, 0);
+        self.known.clear();
+        self.known.resize(n, false);
+        self.bits.clear();
+        self.bits.resize(n, 0);
+        self.owners.clear();
+        self.pixels.clear();
+    }
+
     /// An object made over the GPU's pixels (`runs`, offsets into it, as its creation found
     /// them, [`crate::hsd::image::Src::RenderTarget`]) keeps them where it holds the image's
     /// `fill` that its creation gave it: a byte laid as the fill, or one the layout leaves
@@ -219,12 +234,17 @@ impl Lay {
 
     /// A bitfield of `bits` bits, `bit` bits from the struct at `at`, the first bit the top
     /// one (as `game::mirror::Mem::bits` reads it). A byte only some laid bits cover stays
-    /// unknown: its other bits are what the block held.
+    /// unknown, its other bits what the block held, unless the layout knew it already.
     pub fn put_bits(&mut self, at: u32, bit: u32, bits: u32, v: u32) {
         for k in 0..bits {
             let b = bit + k;
             let i = (at + b / 8 - self.at) as usize;
             let mask = 0x80u8 >> (b % 8);
+            // A byte already known (laid whole, or what the block held) stays known: its other
+            // bits are what it held.
+            if self.known[i] {
+                self.bits[i] = 0xFF;
+            }
             if v >> (bits - 1 - k) & 1 != 0 {
                 self.bytes[i] |= mask;
             } else {

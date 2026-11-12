@@ -13,6 +13,7 @@ use crate::game::ft::vars::{FighterVars, MotionVars};
 use crate::game::gr::GroundVars;
 use crate::game::gr::setup::StageCameras;
 use crate::game::handles::*;
+use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::it::link::LinkX20;
@@ -3640,6 +3641,8 @@ pub struct Item {
     pub x0: Option<ItemId>,
     /// +0x4
     pub entity: Option<GObjId>,
+    /// +0x8
+    pub x8: Kept<i32>,
     /// +0xc
     pub spawn_kind: i32,
     /// +0x10
@@ -3652,6 +3655,12 @@ pub struct Item {
     pub x1C: i32,
     /// +0x20
     pub x20_team_id: u8,
+    /// +0x21
+    pub x21: Kept<u8>,
+    /// +0x22
+    pub x22: Kept<u8>,
+    /// +0x23
+    pub x23: Kept<u8>,
     /// +0x24
     pub msid: i32,
     /// +0x28
@@ -3995,12 +4004,16 @@ impl Default for Item {
         Item {
             x0: None,
             entity: None,
+            x8: Kept(None),
             spawn_kind: 0,
             kind: 0,
             hold_kind: 0,
             x18: 0,
             x1C: 0,
             x20_team_id: 0,
+            x21: Kept(None),
+            x22: Kept(None),
+            x23: Kept(None),
             msid: 0,
             anim_id: 0,
             facing_dir: 0.0,
@@ -7467,6 +7480,16 @@ pub struct ItemLink {
     pub x2C_b1: bool,
     /// +0x2c (bits 2..+1)
     pub x2C_b2: bool,
+    /// +0x2c (bits 3..+1)
+    pub x2C_b3: Kept<bool>,
+    /// +0x2c (bits 4..+1)
+    pub x2C_b4: Kept<bool>,
+    /// +0x2c (bits 5..+1)
+    pub x2C_b5: Kept<bool>,
+    /// +0x2c (bits 6..+1)
+    pub x2C_b6: Kept<bool>,
+    /// +0x2c (bits 7..+1)
+    pub x2C_b7: Kept<bool>,
     /// +0x30
     pub coll_data: CollData,
     /// +0x1cc
@@ -7488,6 +7511,11 @@ impl Default for ItemLink {
             x2C_b0: false,
             x2C_b1: false,
             x2C_b2: false,
+            x2C_b3: Kept(None),
+            x2C_b4: Kept(None),
+            x2C_b5: Kept(None),
+            x2C_b6: Kept(None),
+            x2C_b7: Kept(None),
             coll_data: Default::default(),
             x1CC: 0,
             gobj: None,

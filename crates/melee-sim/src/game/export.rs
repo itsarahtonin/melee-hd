@@ -1081,6 +1081,67 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     l.put(img);
 }
 
+/// Runs `f` with the addresses the game's handles name now: the image's in a session, the
+/// pools' alone outside one.
+fn with_addrs<R>(game: &Game, f: impl FnOnce(&Addrs) -> R) -> R {
+    let mut f = Some(f);
+    if crate::hsd::heap::image_on()
+        && let Some(r) = crate::hsd::heap::with(|h| {
+            h.image.on.then(|| {
+                let f = f.take().expect("once");
+                f(&Addrs {
+                    game,
+                    img: &h.image,
+                })
+            })
+        })
+        .flatten()
+    {
+        return r;
+    }
+    let img = Image::default();
+    (f.take().expect("once"))(&Addrs { game, img: &img })
+}
+
+/// An item's block as it goes back, for the next item made in it (`Pool::alloc_stale`): its
+/// variables' member and its counted arrays' entries become the bytes the block keeps, over
+/// what it held, their pointers the addresses they name now (docs/engine.md, "Uninitialized
+/// values").
+pub fn leave_item(game: &mut Game, i: ItemId) {
+    let (vars, bones, hurt) = with_addrs(game, |cx| {
+        let o = &game.items[i.0];
+        let n = o.x374_dynamicBonesNum.max(0) as usize;
+        let h = usize::from(o.xAC8_hurtboxNum);
+        (
+            o.xDD4_itemVar.left_after(cx),
+            o.xD4_dynamicBones.left_after(cx, n),
+            o.xACC_itemHurtbox.left_after(cx, h),
+        )
+    });
+    let o = &mut game.items[i.0];
+    o.xDD4_itemVar.member = super::it::Member::Bytes;
+    o.xDD4_itemVar.left = vars;
+    o.xD4_dynamicBones.1 = bones;
+    o.xACC_itemHurtbox.1 = hurt;
+}
+
+/// A fighter's block as it goes back, for the next fighter made in it: its counted arrays'
+/// entries become the bytes the block keeps, over what it held (docs/engine.md,
+/// "Uninitialized values").
+pub fn leave_fighter(game: &mut Game, f: FighterId) {
+    let (sets, tobjs) = with_addrs(game, |cx| {
+        let o = &game.fighters[f.0];
+        let n = o.dynamics_num.max(0) as usize;
+        (
+            o.dynamic_bone_sets.left_after(cx, n),
+            o.tobj_list.left_after(cx),
+        )
+    });
+    let o = &mut game.fighters[f.0];
+    o.dynamic_bone_sets.1 = sets;
+    o.tobj_list.left = tobjs;
+}
+
 /// `ItemLink` (0x1D8), as its block goes back (`HSD_ObjFree`, or with its scene's heap): the
 /// fields the comparer checks, over what the block held where the link never writes.
 pub fn item_link(game: &Game, data: &Archives, img: &mut Image, k: super::handles::ItemLinkId) {

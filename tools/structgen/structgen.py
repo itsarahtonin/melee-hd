@@ -156,9 +156,13 @@ class Gen:
         out = []
         done = set()
         unused = config.UNUSED.get(rec_name(rid), set())
+        kept = config.KEPT.get(rec_name(rid), set())
         for f in r["fields"]:
             if f["name"] in unused:
                 continue
+            if f["name"] in kept:
+                assert "bits" in f or f["type"]["k"] == "int", f"kept {f['name']} isn't an integer"
+                f = dict(f, kept=True)
             off = f["offset_bits"] // 8
             splice = next((sp for sp in splices if sp[1] <= off < sp[2]), None)
             if splice:
@@ -182,6 +186,8 @@ class Gen:
             if "splice" in f:
                 # In a tracked struct the spliced type is one tracked field.
                 t = f"Var<{f['splice']}>" if self.is_tracked(rid) else f["splice"]
+            elif f.get("kept"):
+                t = f"Kept<{bit_type(f['bits']) if 'bits' in f else self.ty(f['type'])}>"
             elif self.is_tracked(rid):
                 t = self.tracked_ty(rid, f)
             else:
@@ -196,6 +202,8 @@ class Gen:
         for f in self.fields(rid):
             if "splice" in f:
                 d = "Var::new(Default::default())" if self.is_tracked(rid) else "Default::default()"
+            elif f.get("kept"):
+                d = "Kept(None)"
             elif self.is_tracked(rid):
                 d = self.tracked_default(rid, f)
             else:
@@ -407,6 +415,20 @@ class Gen:
                 imp.append(f"            {fname}: {f['splice']}::import(m, {at}, cx),")
                 cmp.append(f"        self.{fname}.compare(m, {at}, &{path}, cx);")
                 continue
+            if f.get("kept"):
+                # Kept as the block held it: compared where known.
+                if "bits" in f:
+                    bt = bit_type(f["bits"])
+                    read = f"m.bits(at, {f['offset_bits']}, {f['bits']})"
+                    imp.append(f"            {fname}: Kept(Some({read} != 0))," if bt == "bool" else f"            {fname}: Kept(Some({read} as {bt})),")
+                    stmts = [f"if (v as u32) != {read} {{ cx.mismatch(&{path}, format!(\"{{:?}}\", v), format!(\"{{:?}}\", {read})); }}"]
+                else:
+                    imp.append(f"            {fname}: Kept(Some({self.import_expr(f['type'], at)})),")
+                    stmts = self.compare_stmts(f["type"], "v", at, path)
+                cmp.append(f"        if let Some(v) = self.{fname}.0 {{")
+                cmp.extend("            " + s for s in stmts)
+                cmp.append("        }")
+                continue
             if "bits" in f:
                 bt = bit_type(f["bits"])
                 read = f"m.bits(at, {f['offset_bits']}, {f['bits']})"
@@ -584,6 +606,12 @@ class Gen:
                 stmts = [f"{ours}.peek().lay(l, {at}, cx);"] if tracked else [f"{ours}.lay(l, {at}, cx);"]
                 if tracked:
                     stmts = [f"if {ours}.is_live() {{", "    " + stmts[0], "}"]
+            elif f.get("kept"):
+                if "bits" in f:
+                    inner = [f"l.put_bits(at, {f['offset_bits']}, {f['bits']}, v as u32);"]
+                else:
+                    inner = self.lay_stmts(f["type"], "v", at)
+                stmts = [f"if let Some(v) = {ours}.0 {{"] + ["    " + s for s in inner] + ["}"]
             elif "bits" in f:
                 v = f"*{ours}.peek()" if tracked else ours
                 stmts = [f"l.put_bits(at, {f['offset_bits']}, {f['bits']}, ({v}) as u32);"]

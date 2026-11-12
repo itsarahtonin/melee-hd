@@ -566,6 +566,8 @@ impl Host<GameKinds> for Running<'_> {
                 // session's heap leftovers).
                 let (game, data) = (&*self.game, self.data);
                 crate::hsd::export::with_image(|img| super::export::item(game, data, img, i));
+                // And the slot keeps those bytes for the next item made there.
+                super::export::leave_item(self.game, i);
                 super::it::item::free_user_data(self.game, i);
             }
             // `it_802A2474`: the link goes back to `item_link_alloc_data`.
