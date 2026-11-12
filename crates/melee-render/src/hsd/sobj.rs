@@ -257,7 +257,8 @@ impl Ctx<'_> {
                 tx.mipmap,
             ),
         }
-        let fmt = tx.format;
+        // `GXGetTexObjFmt`, as the original reads the format back.
+        let fmt = self.gx.get_tex_obj_fmt(&texobj);
         let (x, y, rot, sx, sy) = (o.x, o.y, o.rotation, o.scale_x, o.scale_y);
         let (s0, t0, s1, t1) = (o.s0, o.t0, o.s1, o.t1);
         let (w, h) = (o.width, o.height);

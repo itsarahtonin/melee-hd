@@ -270,7 +270,53 @@ impl<const N: usize> Vars<N> {
         );
     }
 
+    /// The `f32` at `off` (`lfs`) handed to `f`, where the word may hold an address in whole
+    /// or in part (a handle, or the bytes a narrower write left of one), which melee-sim
+    /// doesn't have. A pointer is a word of its own (`off` a multiple of 4), and an address in
+    /// main memory (0x80000000..0x817FFFFF) starts with 0x80 or 0x81, so an address's first
+    /// byte makes the word -0 or a negative float under 2^-123 in size, whatever its other
+    /// bytes. `f`, which must not decrease as its argument grows, runs on the least and the
+    /// greatest float the word's known bytes allow; when they agree, that is the result
+    /// whatever the address. A result that depends on the address stops.
+    pub fn f32_through(&self, off: usize, f: impl Fn(f32) -> f64) -> f64 {
+        assert!(
+            off.is_multiple_of(4),
+            "a float at +{off:#x} across two words"
+        );
+        let (mut lo, mut hi) = (0u32, 0u32);
+        for i in off..off + 4 {
+            let in_address = self.stale.contains(&i)
+                || self.handles.iter().any(|&(o, _)| (o..o + 4).contains(&i));
+            let (l, h) = match (in_address, i % 4) {
+                (false, _) => (self.bytes[i], self.bytes[i]),
+                (true, 0) => (0x80, 0x81),
+                (true, _) => (0x00, 0xFF),
+            };
+            lo = lo << 8 | u32::from(l);
+            hi = hi << 8 | u32::from(h);
+        }
+        // Between two words of one sign whose greater exponent isn't all ones, every word is a
+        // float of that sign, ordered by its bits.
+        let exp = |w: u32| (w >> 23) & 0xFF;
+        assert!(
+            lo >> 31 == hi >> 31 && exp(hi) != 0xFF,
+            "reading a fighter's variables at {off:#x} as a float, where an address's bytes \
+             span {lo:#010x}..={hi:#010x}"
+        );
+        let (a, b) = (f(f32::from_bits(lo)), f(f32::from_bits(hi)));
+        assert!(
+            a.to_bits() == b.to_bits(),
+            "reading a fighter's variables at {off:#x} as a float, where an address's bytes \
+             ({lo:#010x}..={hi:#010x}) give {a} or {b}"
+        );
+        a
+    }
+
     fn set_handle_at(&mut self, off: usize, h: Option<Handle>) {
+        debug_assert!(
+            off.is_multiple_of(4),
+            "a pointer at +{off:#x} across two words"
+        );
         self.write(off, off + 4);
         self.bytes[off..off + 4].fill(0);
         if let Some(h) = h {
@@ -457,5 +503,50 @@ impl<const N: usize> Vars<N> {
         if let Some(h) = cx.import_handle("JObjId", addr) {
             self.set_jobj_at(off, Some(JObjId(h)));
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gekko_fp as fp;
+
+    fn less_one(x: f32) -> f64 {
+        fp::fsubs(crate::fpu::reg(x), 1.0)
+    }
+
+    #[test]
+    fn a_float_over_an_address_counts_down_to_minus_one() {
+        let mut v = MotionVars::default();
+        // Plain bytes read as themselves.
+        v[0x18..0x1C].copy_from_slice(&2.0f32.to_be_bytes());
+        assert_eq!(v.f32_through(0x18, less_one), 1.0);
+        // A whole handle: any address in main memory.
+        v.set_jobj_at(0x18, Some(JObjId(7)));
+        assert_eq!(v.f32_through(0x18, less_one), -1.0);
+        // A byte written into it (the damage states' `x1A`), the rest the address's.
+        v[0x1A] = 0x7F;
+        assert_eq!(v.f32_through(0x18, less_one), -1.0);
+        // Known high bytes leave a denormal whatever the stale low byte.
+        v[0x18] = 0x00;
+        v[0x19] = 0x00;
+        assert_eq!(v.f32_through(0x18, less_one), -1.0);
+    }
+
+    #[test]
+    #[should_panic(expected = "give")]
+    fn a_result_that_depends_on_the_address_stops() {
+        let mut v = MotionVars::default();
+        v.set_jobj_at(0x18, Some(JObjId(7)));
+        let _ = v.f32_through(0x18, f64::from);
+    }
+
+    #[test]
+    #[should_panic(expected = "span")]
+    fn bytes_that_may_make_a_nan_stop() {
+        let mut v = MotionVars::default();
+        v.set_jobj_at(0x18, Some(JObjId(7)));
+        v[0x18] = 0x7F;
+        let _ = v.f32_through(0x18, less_one);
     }
 }

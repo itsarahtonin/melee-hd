@@ -9,6 +9,7 @@
 
 pub mod fx;
 pub mod mixer;
+pub mod mutation;
 pub mod output;
 
 pub use fx::BootMemory;

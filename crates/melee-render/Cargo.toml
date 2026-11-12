@@ -16,5 +16,9 @@ melee-gx = { path = "../melee-gx" }
 melee-gpu = { path = "../melee-gpu" }
 rustc-hash = "2"
 
+[features]
+# Run-time mutations for the frames checks (`src/mutation.rs`): `MUT=NAME` breaks a port.
+mutation = []
+
 [dev-dependencies]
 melee-slippi = { path = "../melee-slippi" }

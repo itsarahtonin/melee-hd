@@ -73,11 +73,15 @@ fn get_tex_tile_shift(fmt: u32) -> (u32, u32) {
 }
 
 /// `__GetImageTileCount`: (row tiles, column tiles, tiles per block).
+#[doc(alias = "__GetImageTileCount")]
 pub fn get_image_tile_count(fmt: u32, wd: u16, ht: u16) -> (u32, u32, u32) {
     let (row_shift, col_shift) = get_tex_tile_shift(fmt);
     let wd = u32::from(wd.max(1));
     let ht = u32::from(ht.max(1));
-    let row_tiles = (wd + (1 << row_shift) - 1) >> row_shift;
+    let mut row_tiles = (wd + (1 << row_shift) - 1) >> row_shift;
+    if crate::mutation::on("__GetImageTileCount") {
+        row_tiles += 1;
+    }
     let col_tiles = (ht + (1 << col_shift) - 1) >> col_shift;
     let cmp_tiles = if fmt == GX_TF_RGBA8 || fmt == GX_TF_Z24X8 {
         2
@@ -267,17 +271,29 @@ impl Gx {
     }
 
     /// `GXGetTexObjWidth`.
+    #[doc(alias = "GXGetTexObjWidth")]
     pub fn get_tex_obj_width(&self, to: &TexObj) -> u16 {
-        (get_field(to.image0, 10, 0) + 1) as u16
+        let broken = u32::from(crate::mutation::on("GXGetTexObjWidth"));
+        (get_field(to.image0, 10, 0) + 1 + broken) as u16
     }
 
     /// `GXGetTexObjHeight`.
+    #[doc(alias = "GXGetTexObjHeight")]
     pub fn get_tex_obj_height(&self, to: &TexObj) -> u16 {
-        (get_field(to.image0, 10, 10) + 1) as u16
+        let broken = u32::from(crate::mutation::on("GXGetTexObjHeight"));
+        (get_field(to.image0, 10, 10) + 1 + broken) as u16
     }
 
     /// `GXGetTexObjFmt`.
+    #[doc(alias = "GXGetTexObjFmt")]
     pub fn get_tex_obj_fmt(&self, to: &TexObj) -> u32 {
+        if crate::mutation::on("GXGetTexObjFmt") {
+            return if to.fmt == GX_TF_RGBA8 {
+                GX_TF_I8
+            } else {
+                GX_TF_RGBA8
+            };
+        }
         to.fmt
     }
 
