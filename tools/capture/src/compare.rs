@@ -725,7 +725,9 @@ impl<'a> Comparer<'a> {
         ] {
             // Ours is a pointer in the loaded `ftLoadCommonData`, which sits in their memory.
             // Past the scene whose heap held `PlCo.dat` (an attract match's), both point into
-            // the freed file until the next match loads it again, and nothing reads them.
+            // the freed file until the next match loads it again, and nothing reads them; a
+            // later scene can write over the freed file (How to Play's movie does), so with
+            // the archives at hand ours is where the pointer led, by our own copy of the file.
             let Some(at) = game
                 .ft
                 .load_common
@@ -733,7 +735,17 @@ impl<'a> Comparer<'a> {
             else {
                 continue;
             };
-            let ours = if at == 0 { 0 } else { self.u32(at) };
+            let led = |c: melee_data::archive::DataRef| {
+                let t = self.archives?.ptr(c.at(offset))?;
+                self.data
+                    .try_addr(t)
+                    .or_else(|| self.past.and_then(|p| p.gone_addr(t)))
+            };
+            let ours = match game.ft.load_common {
+                _ if at == 0 => 0,
+                Some(c) => led(c).unwrap_or_else(|| self.u32(at)),
+                None => self.u32(at),
+            };
             let theirs = self.u32(sym(name));
             self.check("ft", name, ours, theirs);
         }
