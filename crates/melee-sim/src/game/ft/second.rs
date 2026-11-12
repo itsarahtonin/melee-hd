@@ -46,20 +46,38 @@ fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
 /// The second word is a new fighter's leftover word that names no data, kept until the first
 /// animation's load writes the figatree (`ftData_80085CD8`): a fighter that never plays one
 /// (Zelda asleep while Sheik plays, or the reverse) leaves it in its block for the next
-/// object there (`rt-attract`'s eighth demo match).
+/// object there (`rt-attract`'s eighth demo match). The original's tests of the word
+/// (`!= NULL`) find such a word set, as [`ActionTree::is_some`] does; using it as a figatree
+/// stops by name ([`ActionTree::expect`]). Every test found comes after the first load
+/// (docs/engine.md, "Uninitialized values").
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct ActionTree(pub Option<DataRef>, pub Option<u32>);
 
-impl core::ops::Deref for ActionTree {
-    type Target = Option<DataRef>;
-    fn deref(&self) -> &Option<DataRef> {
-        &self.0
+impl ActionTree {
+    /// The original's test of the word, `fp->x590 != NULL`: a figatree, or a leftover word.
+    pub fn is_some(&self) -> bool {
+        self.0.is_some() || self.1.is_some()
     }
-}
 
-impl core::ops::DerefMut for ActionTree {
-    fn deref_mut(&mut self) -> &mut Option<DataRef> {
-        &mut self.0
+    /// The figatree the word names, if it names one (none for a leftover word).
+    pub fn tree(&self) -> Option<DataRef> {
+        self.0
+    }
+
+    /// [`ActionTree::tree`], to move it into another copy of its archive.
+    pub fn tree_mut(&mut self) -> Option<&mut DataRef> {
+        self.0.as_mut()
+    }
+
+    /// The word used as a figatree: a leftover word that names no data stops by name, as
+    /// melee-sim can't follow it where the original would.
+    pub fn expect(&self, msg: &str) -> DataRef {
+        if let (None, Some(w)) = (self.0, self.1) {
+            panic!(
+                "a fighter's action figatree (x590) is a leftover word, {w:#010x}, which the original would use as a figatree: that isn't modeled"
+            );
+        }
+        self.0.expect(msg)
     }
 }
 
@@ -269,7 +287,7 @@ impl Running<'_> {
     /// same offsets.
     pub(super) fn overwrite_main_buffer(&mut self, f: FighterId, archive: ArchiveId) {
         let fp = &mut self.game.fighters[f.0];
-        if let Some(t) = fp.x590.as_mut() {
+        if let Some(t) = fp.x590.tree_mut() {
             t.archive = archive;
         }
         if fp.x598.in_main
@@ -412,5 +430,33 @@ impl Running<'_> {
             i += 1;
             joint = super::bind::next_joint(self.data, desc, &mut stack);
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::ActionTree;
+    use melee_data::archive::{ArchiveId, DataRef};
+
+    /// A leftover word that names no data is set to the original's test, as a figatree is,
+    /// and nothing is not.
+    #[test]
+    fn leftover_word_is_set() {
+        let d = DataRef {
+            archive: ArchiveId(3),
+            offset: 0x40,
+        };
+        assert!(ActionTree(None, Some(0x7C11_3E86)).is_some());
+        assert!(ActionTree(Some(d), None).is_some());
+        assert!(!ActionTree(None, None).is_some());
+        assert_eq!(ActionTree(Some(d), None).expect("a figatree"), d);
+        assert_eq!(ActionTree(None, Some(0x7C11_3E86)).tree(), None);
+    }
+
+    /// Using a leftover word as a figatree stops by name.
+    #[test]
+    #[should_panic(expected = "is a leftover word, 0x7c113e86")]
+    fn leftover_word_as_figatree_stops() {
+        ActionTree(None, Some(0x7C11_3E86)).expect("a figatree");
     }
 }

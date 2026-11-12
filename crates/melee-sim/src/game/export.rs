@@ -1013,8 +1013,8 @@ pub fn fighter(game: &Game, data: &Archives, img: &mut Image, f: FighterId) {
         let base = game.fighter_anim_bufs.addr(b.0);
         (base != 0).then(|| base + super::ft::anim_buf::ARCHIVE_HEADER + t.offset)
     };
-    if o.x590.is_some() {
-        l.put_word(at + 0x590, in_buf(o.x59C, *o.x590));
+    if let Some(t) = o.x590.tree() {
+        l.put_word(at + 0x590, in_buf(o.x59C, Some(t)));
     }
     if o.x598.addr.is_some() {
         l.put_word(at + 0x598, o.x598.addr);
