@@ -1183,6 +1183,7 @@ impl Running<'_> {
     /// on their own (with no human, Start on any controller ends the screen), the arrows
     /// follow, and the screen ends once every player is done.
     #[doc(alias = "fn_80174338")]
+    #[doc(alias = "fn_8017435C")]
     #[doc(alias = "fn_80178050")]
     pub(super) fn results_stats_frame(&mut self, gobj: GObjId) {
         let me = self.results_end().clone();

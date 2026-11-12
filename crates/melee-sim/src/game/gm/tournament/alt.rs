@@ -333,7 +333,7 @@ impl Running<'_> {
     }
 
     /// `fn_8019D074`: a player's handicap.
-    // Ports `fn_8019D074`; aliased once a check reaches it.
+    #[doc(alias = "fn_8019D074")]
     fn alt_handicap_proc(&mut self, gobj: GObjId) {
         let p = self.tou_index(gobj) as usize;
         let j = self.tou_jobj(gobj);

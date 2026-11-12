@@ -357,6 +357,7 @@ impl Running<'_> {
     /// The character's model for something worn on the head (`_func_8007F948_inline`,
     /// `ftData_UnkMotionStates1`): Pikachu's ears hidden (`ftPk_Init_UnkMotionStates1`),
     /// unless it already wears both a Bunny Hood and a flower.
+    #[doc(alias = "ftPk_Init_UnkMotionStates1")]
     pub(super) fn worn_item_on(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {
@@ -370,6 +371,7 @@ impl Running<'_> {
     /// (`ftData_UnkMotionStates2`): Pikachu's ears shown (`ftPk_Init_UnkMotionStates2`),
     /// unless it wears both a Bunny Hood and a flower.
     #[doc(alias = "ftCommon_8007F8E8")]
+    #[doc(alias = "ftPk_Init_UnkMotionStates2")]
     pub fn worn_item_off(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if (fp.x197C.is_none() || fp.x1980.is_none()) && fp.kind == super::pikachu::KIND_PIKACHU {

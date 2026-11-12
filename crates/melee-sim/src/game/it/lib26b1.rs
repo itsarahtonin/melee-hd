@@ -238,7 +238,7 @@ pub fn uses_left(game: &Game, gobj: GObjId) -> i32 {
 }
 
 /// The item's position raised to its collision box's bottom, `it_8026C334`.
-// Ports `it_8026C334`; aliased once a check reaches it.
+#[doc(alias = "it_8026C334")]
 pub fn bottom_pos(game: &Game, gobj: GObjId) -> crate::vec::Vec3 {
     let ip = item(game, gobj);
     let bottom = reg(ip.x378_itemColl.ecb.bottom.y);

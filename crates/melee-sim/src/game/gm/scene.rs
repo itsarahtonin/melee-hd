@@ -106,6 +106,7 @@ impl Game {
     #[doc(alias = "fn_801A47E4")]
     #[doc(alias = "fn_801A46F4")]
     #[doc(alias = "gm_AnyControllerPressedStart")]
+    #[doc(alias = "gm_AnyControllerPressedZ")]
     fn db_pause_predicate(&self, f: u32) -> bool {
         use crate::input::pad::{BUTTON_START, BUTTON_UP, BUTTON_X, TRIGGER_Z};
         let pressed = |held: u16, trigger: u16| {
