@@ -179,7 +179,12 @@ impl<K: Kinds> Geometry<K> {
             {
                 if kind & FLOOR != 0 {
                     line.flags |= LINE_ENABLED | LINE_PLATFORM;
+                    let was = line.lo_flags;
                     line.lo_flags |= LINE_PLATFORM as u16;
+                    // The surface flags are the descriptor's, in the stage's file.
+                    if line.lo_flags != was {
+                        self.image_lines(std::iter::once(l));
+                    }
                 } else {
                     line.flags &= !LINE_ENABLED;
                 }

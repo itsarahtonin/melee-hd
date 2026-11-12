@@ -121,6 +121,33 @@ impl Running<'_> {
             dst.x2338 = src.x2338.clone();
             dst.stamina_dead = src.stamina_dead;
         }
+        // The copies carry the GPU's pixels where the source's block held them unwritten (its
+        // hammer's and parasol's timers, which nothing writes before their items).
+        for (off, len) in [
+            (0x2C, 4),
+            (0x80, 0xC),
+            (0xB0, 0x24),
+            (0xE0, 4),
+            (0xEC, 0x14),
+            (0x67C, 0x10),
+            (0x1830, 4),
+            (0x18C4, 0x10),
+            (0x18EC, 8),
+            (0x1910, 4),
+            (0x1968, 2),
+            (0x1998, 4),
+            (0x2104, 4),
+            (0x232C, 0x14),
+        ] {
+            crate::game::leftovers::carry_render(
+                self.game,
+                crate::game::leftovers::RenderOf::Fighter(src_id),
+                off,
+                crate::game::leftovers::RenderOf::Fighter(dst_id),
+                off,
+                len,
+            );
+        }
         // The rest reads the source as each step finds it: ending its metal recomputes its
         // attributes and collision, which the hood's fit and the collision copy then read.
         let src = &self.game.fighters[src_id.0];

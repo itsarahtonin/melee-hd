@@ -76,7 +76,7 @@ impl Running<'_> {
     /// fighter's holder gets its bonus, the state's death hooks run, a grab ends, it stops,
     /// its item goes, its effects end, and its state and attack are kept for the stats.
     #[doc(alias = "ftCo_800D331C")]
-    // Ports `pl_8004065C`; aliased once a check reaches it.
+    #[doc(alias = "pl_8004065C")]
     #[doc(alias = "ftCo_800DD100")]
     // Ports `pl_8003EA08`; aliased once a check reaches it.
     #[doc(alias = "pl_8003EA74")]

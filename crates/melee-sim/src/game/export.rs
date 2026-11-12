@@ -442,6 +442,13 @@ pub fn scene_game_objects(game: &Game, data: &Archives, img: &mut Image, live: L
             ground(game, data, img, super::handles::GroundId(slot));
         }
     }
+    // Pokémon Stadium's screens, while the scene's GObjs hold them (the stage's globals keep
+    // a past match's).
+    for (_, o) in game.world.gobjs.iter() {
+        if let Some(UserData::StadiumScreen(which)) = o.user_data {
+            stadium_screen(game, data, img, which);
+        }
+    }
     let kind = std::any::type_name::<super::structs::ItemLink>();
     for (slot, _) in game.it.links.iter() {
         if img.in_scene(kind, slot) {
@@ -779,6 +786,49 @@ pub fn bg_flash(game: &Game, img: &mut Image) {
 pub fn bg_flash_fields(img: &Image, l: &mut Lay, u: &super::structs::BgFlashUserData) {
     l.u8(0, u.x0);
     color_overlay(img, l, 4, &u.x4);
+}
+
+/// A Pokémon Stadium screen's user data (`grStadium_801D2BEC`'s `TextWrapper`, 0x20;
+/// `grStadium_801D2D78`'s and `grStadium_801D2E24`'s `ImageDescWrapper`, 0x1C and 0x20), as it
+/// goes back (`HSD_Free`) or with its scene's heap, over what its block held: the image's
+/// descriptor (`memzero` and `lb_800121FC`); the text camera's two texts; a feed's `flag`, the
+/// top bit of its byte 0x18 (the byte's other bits and byte 0x19 never written), and the
+/// zoomed view's copy place (`x1A`, `x1C`, which the stage's setup writes). The feed's block
+/// ends at 0x1C.
+pub fn stadium_screen(game: &Game, data: &Archives, img: &mut Image, which: u8) {
+    use super::gr::stadium::{SCREEN_FEED, SCREEN_TEXT, SCREEN_ZOOM};
+    let Some(s) = &game.gr.stadium.screens[usize::from(which)] else {
+        return;
+    };
+    if s.addr == 0 {
+        return;
+    }
+    let len = if which == SCREEN_FEED { 0x1C } else { 0x20 };
+    let mut l = Lay::leftover(img, data, s.addr, len);
+    let d = &s.desc;
+    l.word(0, (s.buffer != 0).then_some(s.buffer));
+    l.u16(4, d.width);
+    l.u16(6, d.height);
+    l.u32(8, d.format as u32);
+    l.u32(0xC, d.mipmap);
+    l.f32s(0x10, &[d.minLOD, d.maxLOD]);
+    let text = |t: Option<crate::hsd::sis::TextId>| match t {
+        None => Some(0),
+        Some(t) => (game.sis.arena_block != 0).then(|| game.sis.arena_block.wrapping_add(t.0)),
+    };
+    match which {
+        SCREEN_TEXT => {
+            l.word(0x18, text(s.win_static));
+            l.word(0x1C, text(s.win_dynamic));
+        }
+        SCREEN_ZOOM => {
+            l.put_bits(s.addr, 0xC0, 1, u32::from(s.flag));
+            l.u16(0x1A, s.copy_x);
+            l.u16(0x1C, s.copy_y);
+        }
+        _ => l.put_bits(s.addr, 0xC0, 1, u32::from(s.flag)),
+    }
+    l.put(img);
 }
 
 /// `Ground` (0x204), as its block goes back to the heap, over what the block held where the

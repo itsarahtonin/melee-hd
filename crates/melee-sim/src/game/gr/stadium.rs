@@ -2049,7 +2049,21 @@ fn register_archive(
     size: u32,
 ) -> u8 {
     let addr = crate::hsd::heap::mem_alloc(0x44);
-    if addr != 0 {
+    // A buffer of the scene's heap (no preload holds it: a debug VS match) holds the file as
+    // `lbArchive_InitializeDAT` parsed it, and what the stage writes into it since
+    // (`setup::mark_materials`).
+    let held = addr != 0
+        && crate::hsd::heap::image_on()
+        && crate::hsd::heap::with(|h| {
+            let cell = buffer.wrapping_sub(crate::hsd::heap::HEADER);
+            let ours = h.image.on && h.os.allocated.iter().any(|&(c, _)| c == cell);
+            if ours {
+                h.hold_archive(data, buffer, size, addr, archive);
+            }
+            ours
+        })
+        .unwrap_or(false);
+    if addr != 0 && !held {
         crate::hsd::export::with_image(|img| {
             // Where the file's data is, for a pointer into it a freed block keeps. Its bytes
             // aren't held: in memory they differ from the file's once the stage runs (0x1C
