@@ -894,15 +894,11 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     Gap {
-        what: "the adventure enemies and their spawner",
-        // The Like Like and the Polar Bear are done (task 24's fourth round), and the Koopa's and
-        // the red shell's evt_unk are checked by review (Sarah, 2026-11-11: the identical
-        // it_8026B894 wrappers, game/it/evt_unk.rs).
-        covers: &["melee/it/kinds/itzgshell"],
-        modes: &[AD, DB],
-    },
-    Gap {
         what: "an enemy kind with no typed variables or KO bonus",
+        // The adventure enemies are done: the Like Like and the Polar Bear by task 24's fourth
+        // round, the Koopa's and the red shell's evt_unk checked by review (Sarah, 2026-11-11:
+        // the identical it_8026B894 wrappers, game/it/evt_unk.rs), and the shells' state 9
+        // collision by m6-adv-close/mk-slope9 (task 24's fifth round).
         // Not Adventure (task 24's fifth round): the two stops are for a kind outside it/zako.rs's
         // lists, and every enemy Adventure can make is in both. Its stages' spawners
         // (grZakoGenerator_801CA8B4's switch) make only the Goomba, ReDead, Octorok, Topi, Koopa,
