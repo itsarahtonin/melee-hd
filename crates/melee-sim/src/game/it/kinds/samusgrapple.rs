@@ -1839,7 +1839,7 @@ pub fn ft_line_up(r: &mut Running, f: GObjId) {
 
 /// Forgets a GObj the beam points to, `itSamusGrapple_Logic53_EvtUnk` (`it_8026B894`): and its
 /// fighter, if that.
-// Ports `itSamusGrapple_Logic53_EvtUnk`; aliased once a check reaches it.
+// `itSamusGrapple_Logic53_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     super::super::lib26b1::forget(r.game, gobj, other);
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple();

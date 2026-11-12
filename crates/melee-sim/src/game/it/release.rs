@@ -215,7 +215,7 @@ pub fn start_coll(r: &mut Running, gobj: GObjId, thrower: Option<GObjId>) {
 }
 
 /// Let go of and thrown at `vel` by its holder, `it_80274250`.
-// Ports `it_80274250`; aliased once a check reaches it.
+#[doc(alias = "it_80274250")]
 pub fn throw(r: &mut Running, gobj: GObjId, vel: Vec3) {
     let_go_model(r, gobj, vel);
     let ip = item(r.game, gobj);

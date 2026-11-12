@@ -54,7 +54,7 @@ pub fn catch(r: &mut Running, gobj: GObjId, owner: GObjId) {
 }
 
 /// Caught by Kirby's copy's tongue, `it_802F2D98`: the same in its own state table.
-// Ports `it_802F2D98` and `ftKb_SpecialNYs_80109238`; aliased once a check reaches them.
+#[doc(alias = "it_802F2D98")]
 pub fn catch_kirby(r: &mut Running, gobj: GObjId, owner: GObjId) {
     catch_in(r, gobj, owner, KB_STATES);
 }
@@ -84,16 +84,19 @@ fn catch_in(r: &mut Running, gobj: GObjId, owner: GObjId, states: u32) {
 
 /// `it_2F2B_UnkMotion0_Anim` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Anim`).
 #[doc(alias = "it_2F2B_UnkMotion0_Anim")]
+#[doc(alias = "itKirbyyoshispecialn_UnkMotion0_Anim")]
 fn anim() -> bool {
     false
 }
 
-/// `it_2F2B_UnkMotion0_Phys`.
+/// `it_2F2B_UnkMotion0_Phys` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Phys`).
 #[doc(alias = "it_2F2B_UnkMotion0_Phys")]
+#[doc(alias = "itKirbyyoshispecialn_UnkMotion0_Phys")]
 fn phys() {}
 
-/// `it_2F2B_UnkMotion0_Coll`.
+/// `it_2F2B_UnkMotion0_Coll` (and Kirby's copy's `itKirbyyoshispecialn_UnkMotion0_Coll`).
 #[doc(alias = "it_2F2B_UnkMotion0_Coll")]
+#[doc(alias = "itKirbyyoshispecialn_UnkMotion0_Coll")]
 fn coll() -> bool {
     false
 }

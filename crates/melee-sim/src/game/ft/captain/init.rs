@@ -25,7 +25,8 @@ impl Running<'_> {
 
     /// Hiding the held item, `ftCa_Init_OnItemInvisible` and `ftGn_Init_OnItemInvisible` (as
     /// Fox's).
-    // Ports `ftCa_Init_OnItemInvisible` and `ftGn_Init_OnItemInvisible`; aliased once a check reaches them.
+    // Ports `ftCa_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftGn_Init_OnItemInvisible")]
     pub fn ca_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }

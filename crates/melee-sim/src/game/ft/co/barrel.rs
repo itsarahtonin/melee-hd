@@ -94,8 +94,8 @@ impl Running<'_> {
 
     /// The barrel fires the fighter out, its hit and death hook, `ftCo_Barrel_Take_Dmg_Cb`
     /// (and `ftCo_Barrel_Death2_Cb`).
-    // Ports `ftCo_Barrel_Take_Dmg_Cb`; aliased once a check reaches it.
-    // Ports `ftCo_Barrel_Death2_Cb`; aliased once a check reaches it.
+    #[doc(alias = "ftCo_Barrel_Take_Dmg_Cb")]
+    #[doc(alias = "ftCo_Barrel_Death2_Cb")]
     pub fn barrel_fire(&mut self, gobj: GObjId) {
         let barrel = self.barrel_of(gobj);
         tarucann::fire(self, barrel);

@@ -291,7 +291,7 @@ pub fn blast(r: &mut Running, gobj: GObjId) {
 }
 
 /// Forgets a GObj the bomb points to, `itSamusBomb_Logic50_EvtUnk`: and its owner.
-// Ports `itSamusBomb_Logic50_EvtUnk`; aliased once a check reaches it.
+// `itSamusBomb_Logic50_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     item_mut(r.game, gobj)

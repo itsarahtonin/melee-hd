@@ -140,8 +140,7 @@ impl Running<'_> {
     }
 
     /// `gm_Scene_HowTo_OnEnter`: How to Play's movie, full screen, with song 0x24.
-    // Ports `gm_Scene_HowTo_OnEnter`, and the scenes' other functions below theirs; aliased
-    // once a session reaches them (the attract loop's first match's exit stops before).
+    #[doc(alias = "gm_Scene_HowTo_OnEnter")]
     pub fn howto_on_enter(&mut self) {
         let rate = howto_rate();
         let g = self.movie_scene(HOWTO_MOVIE, rate, 0x24, 0x280, 0x1E0, None);
