@@ -44,6 +44,14 @@ const GLYPHS: usize = 287;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, melee_derive::StateEq)]
 pub struct TextId(pub u32);
 
+/// A text pointer in a heap block whose owner writes it only once the text is made: the text,
+/// or until then the word the block held (the heap's image's, `None` where it doesn't know it).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
+pub enum TextWord {
+    Made(TextId),
+    Left(Option<u32>),
+}
+
 /// A canvas (`sislib_UnkAlloc3`): the offset of its block's data.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, melee_derive::StateEq)]
 pub struct CanvasId(pub u32);

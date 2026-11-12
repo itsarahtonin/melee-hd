@@ -1389,7 +1389,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `mnVibration_CreateScreen`, `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_make_screen`).
 - **Defect:** the screen's user data (`MnVibrationData`, 0x98 bytes from `HSD_MemAlloc`) is never cleared, and the creation tests its `title_text` (`+0x90`) and frees the text it names (`HSD_SisLib_803A5CC4`) before writing it, so it frees whatever text the heap block's last occupant left a pointer to there.
 - **Effect:** none observable in the sessions: the block was fresh (zero) memory each time. Were a live text to sit where a freed title was (a text made in its slot of the text arena since), the original would free it, a text another screen still shows.
-- **melee-hd:** modeled where melee-sim knows the word: the last rumble screen's block and its title (`Vibration::left`), freed again when the new block is the same; any other block's word names no text ([the engine notes](engine.md#uninitialized-values)).
+- **melee-hd:** modeled from the heap's image: the creation frees the live text at the word the block held, if any (`Running::destroy_text_word`), the screen's block laid out with its title as it goes back; a word the image doesn't know stops by name while any text is live ([the engine notes](engine.md#uninitialized-values)). Until 2026-11-12 only the last rumble screen's block and title were known (`Vibration::left`), any other block's word taken to name no text.
 - **Fix:** clear `title_text` with the other texts.
 - **Fix impact:** none in play.
 - **Source:** `mnvibration.c`'s `mnVibration_CreateScreen`; `crates/melee-sim/src/game/mn/vibration.rs` (`vibration_make_screen`).
@@ -1462,6 +1462,16 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Fix:** read them before the free.
 - **Fix impact:** none.
 - **Source:** `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`).
+
+### The item and random stage switches left as they come in free their blocks' leftover words as texts
+
+- **Where:** `fn_80234C24` (`mnitemsw.c`) and `fn_80236998` (`mnstagesw.c`), `crates/melee-sim/src/game/mn/item_switch.rs` (`item_switch_proc`) and `stage_switch.rs` (`stage_switch_proc`).
+- **Defect:** each switch makes its texts (the item switch's two under the columns, `jobjs[7]` and `jobjs[8]`; the stage switch's 29 names, `x40`) only when its way in ends, and its user data's setup never clears them, but the end of its way out frees them unconditionally (`HSD_SisLib_803A5CC4`). B is read during the way in (its first 9 frames; the A that opened it holds the inputs off for 5), so a switch left that soon frees the words its heap block held before as texts. The text library only compares each live text's address with the word, so the words are never followed: a word that is a live text's address frees that text.
+- **Effect:** visible when the block is the last switch's (the same screen opened again in the same place, as first fit gives it): its words are the last visit's texts' addresses, whose slots in the text arena the screen behind has since taken, so the rules' description (after the item switch) or the extra rules' description (after the stage switch) is freed and the box under the list stays empty until the cursor moves. Otherwise the words were other menus' pointers (the main menu's list's joints, the rules' list's joints, a character select's hand's GObj) and named no text. Reachable by a player: open the item switch from VS mode's rules and press B at once (`m6-itemsw-exit` sessions; ssbm-rs's lockstep job `mode2c`'s monkey did it in the menus game mode 0x2C starts).
+- **melee-hd:** modeled: the switch's creation keeps the words its block held from the heap's image (`hsd::sis::TextWord::Left`, `Running::leftover_text_words`), its way out frees the live text at that address if any (`Running::destroy_text_word`), and the switches', the rules' lists' and the main menu's lists' blocks are laid out as they go back so the next block over them knows them ([the engine notes](engine.md#uninitialized-values)). A word the image doesn't know stops by name while any text is live.
+- **Fix:** clear the texts in the user data's setup (or free them only once made).
+- **Fix impact:** the description no longer vanishes; nothing else (the menus' state only).
+- **Source:** `mnitemsw.c`'s `fn_80234C24` and `mnItemSw_802351A0`, `mnstagesw.c`'s `fn_80236998` and `mnStageSw_80236CBC`; ssbm-rs's `CALLS` on `HSD_SisLib_803A5CC4` over the sessions (`local/lockstep/m6-itemsw-exit/*.record.log`).
 
 ### New frees the names' description and keeps it
 
@@ -1558,7 +1568,7 @@ When porting shows that the original game does something wrong, keep the behavio
 - **Where:** `mnCount_Create`, `crates/melee-sim/src/game/mn/count.rs` (`count_open`).
 - **Defect:** the screen's user data (`MnCountData`, 0x5C bytes from `HSD_MemAlloc`) has its title (`+0x58`) left out of `mnCount_InitUserData`, and the creation tests it and frees the text it names (`HSD_SisLib_803A5CC4`) before writing it, so it frees whatever text the heap block's last occupant left a pointer to there, as the rumble screen does with its title.
 - **Effect:** none observable in the sessions: the block held no live text's address each time. Were a live text to sit where an earlier screen's freed title was, the original would free it.
-- **melee-hd:** modeled where melee-sim knows the word: the last screen's block and its title (`Count::left`), freed again when the new block is the same; any other block's word names no text, as for the rumble screen.
+- **melee-hd:** modeled from the heap's image, as for the rumble screen (`Running::destroy_text_word`, the screen's block laid out with its title as it goes back); until 2026-11-12 only the last screen's block and title were known (`Count::left`).
 - **Fix:** clear the title with the rows.
 - **Fix impact:** none in play.
 - **Source:** `mncount.c`'s `mnCount_Create` and `mnCount_InitUserData`.

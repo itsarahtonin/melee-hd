@@ -17,7 +17,7 @@ use super::main::{IN_A, IN_BACK, IN_START};
 use super::rules::{MODEL_CON_SS, MODEL_CURSOR_SS, STAGE_SWITCH};
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::jobj::JObjId;
-use crate::hsd::sis::TextId;
+use crate::hsd::sis::TextWord;
 use crate::vec::Vec3;
 
 /// The processes.
@@ -67,8 +67,9 @@ pub struct StageSwitchData {
     pub state: u8,
     /// `x20` to `x34`: the model's first six joints.
     pub jobjs: [Option<JObjId>; 6],
-    /// `x40`: each place's name, once in.
-    pub texts: [Option<TextId>; STAGES],
+    /// `x40`: each place's name, once in; until then the words the block held
+    /// (docs/melee-bugs.md).
+    pub texts: [TextWord; STAGES],
 }
 
 /// `mnstagesw.c`'s statics: the screen (`mnStageSw_804D6BF0`), its inputs held off while it
@@ -160,7 +161,7 @@ impl Running<'_> {
                 .data
                 .get_mut(&addr)
                 .expect("the data")
-                .texts[i] = Some(t);
+                .texts[i] = TextWord::Made(t);
             let unlocked = self.place_unlocked(i);
             let s = &mut self.game.sis;
             let tx_ = s.text_mut(t);
@@ -424,8 +425,10 @@ impl Running<'_> {
                         return;
                     }
                     _ => {
+                        // Left during its way in, the screen never wrote its names, and the
+                        // words its block held are freed as texts (docs/melee-bugs.md).
                         for t in self.stages_data(gobj).texts {
-                            self.destroy_text(t.expect("a stage's name"));
+                            self.destroy_text_word(t, "the stage switch left as it came in");
                         }
                         gobj::free(self, gobj);
                         return;
@@ -484,7 +487,7 @@ impl Running<'_> {
             stages: [0; STAGES],
             state: state as u8,
             jobjs: [None; 6],
-            texts: [None; STAGES],
+            texts: self.leftover_text_words(addr + 0x40),
         };
         for (i, &entry) in ORDER.iter().enumerate() {
             d.stages[i] = if self.place_unlocked(i) {

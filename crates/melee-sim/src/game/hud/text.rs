@@ -9,7 +9,7 @@ use super::super::state::{OBJ_CAMERA, Obj, Running, UserData};
 use crate::hsd::cobj;
 use crate::hsd::gobj::{self, GObjId};
 use crate::hsd::sis::{
-    self, CANVAS_CAMERA, CANVAS_SIZE, Canvas, CanvasId, SisPtr, TEXT_SIZE, Text, TextId,
+    self, CANVAS_CAMERA, CANVAS_SIZE, Canvas, CanvasId, SisPtr, TEXT_SIZE, Text, TextId, TextWord,
 };
 use crate::vec::Vec3;
 
@@ -133,6 +133,46 @@ impl Running<'_> {
             }
             cur = next;
         }
+    }
+
+    /// `HSD_SisLib_803A5CC4` on a text pointer a block may not have written yet: a text made
+    /// is freed; the block's leftover word frees the live text at that address, if any (the
+    /// walk only compares addresses, so the word is never followed). An unknown word stops,
+    /// unless no text is live for it to name.
+    pub fn destroy_text_word(&mut self, w: TextWord, what: &str) {
+        let word = match w {
+            TextWord::Made(t) => return self.destroy_text(t),
+            TextWord::Left(w) => w,
+        };
+        if self.game.sis.first_text.is_none() || word == Some(0) {
+            return;
+        }
+        let base = self.game.sis.arena_block;
+        match word {
+            Some(a) if base != 0 => {
+                if let Some(off) = a.checked_sub(base) {
+                    self.destroy_text(TextId(off));
+                }
+            }
+            _ => panic!(
+                "{what}: a text pointer its heap block left, which the heap's image doesn't know"
+            ),
+        }
+    }
+
+    /// The text pointers a new block at `at` holds before its owner writes them: the words the
+    /// heap's image knows there (docs/engine.md, "Uninitialized values").
+    pub fn leftover_text_words<const N: usize>(&self, at: u32) -> [TextWord; N] {
+        let left = super::super::leftovers::bytes_known(self.data, at, 4 * N as u32);
+        std::array::from_fn(|i| {
+            TextWord::Left(left.as_ref().and_then(|(b, k)| {
+                let r = 4 * i..4 * i + 4;
+                k[r.clone()]
+                    .iter()
+                    .all(|&k| k)
+                    .then(|| u32::from_be_bytes(b[r].try_into().expect("a word")))
+            }))
+        })
     }
 
     fn free_text_or_gobj(&mut self, c: TextId) {

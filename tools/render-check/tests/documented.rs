@@ -41,6 +41,9 @@ use common::{
     YOSHIS_ISLAND_64, ZE_CLIMB, ZE_LOOK, compare, compare_in, reflection, scaled, why,
 };
 
+// The switches left as they came in (docs/player.md, "The switches left as they came in").
+use common::{M6IE_ITEMSW_B, M6IE_STAGESW_B};
+
 // All-Star's Very Hard clear (docs/player.md, "All-Star's Very Hard clear").
 use common::M6A3_AS_VH_CLEAR;
 
@@ -1035,6 +1038,15 @@ frames!(M6U_TR_COMBO;
 frames!(M6U_HR_TOTAL;
     m6u_hr_total_1950 1950,
     m6u_hr_total_2150 2150,
+);
+// The switches left as they came in (`m6-itemsw-exit`), a second time in the same block: the
+// rules' description freed by the item switch's words (1180), the extra rules' by the stage
+// switch's (1300).
+frames!(M6IE_ITEMSW_B;
+    m6ie_itemsw_b_1180 1180,
+);
+frames!(M6IE_STAGESW_B;
+    m6ie_stagesw_b_1300 1300,
 );
 frames!(M6U_EV01_FD;
     m6u_ev01_fd_7250 7250,
