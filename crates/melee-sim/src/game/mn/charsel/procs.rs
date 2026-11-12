@@ -147,7 +147,7 @@ impl Running<'_> {
 
     /// `fn_8025FAC0`, Camera Mode's camera model: its child's animations restarted every
     /// 40 frames.
-    // Ports `fn_8025FAC0`; aliased once a check reaches it.
+    #[doc(alias = "fn_8025FAC0")]
     pub fn charsel_debug_camera_proc(&mut self, gobj: GObjId) {
         let j = self.css_gobj_jobj(gobj);
         if self.game.charsel.frame.is_multiple_of(40) {

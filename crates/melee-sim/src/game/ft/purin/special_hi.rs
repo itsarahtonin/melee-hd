@@ -125,6 +125,10 @@ impl Running<'_> {
     }
 }
 
+#[doc(alias = "ftPr_SpecialAirHi_IASA")]
+#[doc(alias = "ftPr_SpecialAirHi_Phys")]
+#[doc(alias = "ftPr_SpecialHi_IASA")]
+#[doc(alias = "ftPr_SpecialHi_Phys")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_ENTER => g.purin_special_hi_enter(gobj),

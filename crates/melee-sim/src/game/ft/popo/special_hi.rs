@@ -698,12 +698,12 @@ impl Running<'_> {
         self.popo_to_air(gobj, MS_AIR_THROW_1);
     }
 
-    // Ports `ftPp_SpecialHi_8012184C`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_8012184C")]
     fn popo_land_start_0(&mut self, gobj: GObjId) {
         self.popo_land_into(gobj, MS_START_0);
     }
 
-    // Ports `ftPp_SpecialHi_80121D40`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_80121D40")]
     fn popo_land_throw_0(&mut self, gobj: GObjId) {
         self.popo_land_into(gobj, MS_THROW_0);
     }
