@@ -284,10 +284,10 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                 let two = |v: f32| fp::fmuls(2.0, reg(v));
                 let sin_ry = reg(math::sin(ry));
                 let ef = &mut r.game.ef.effects[e.0];
-                ef.params.x = mem(fp::fmuls(two(math::cos(rx)), sin_ry));
-                ef.params.y = mem(two(math::sin(rx)));
+                ef.params.set_x(mem(fp::fmuls(two(math::cos(rx)), sin_ry)));
+                ef.params.set_y(mem(two(math::sin(rx))));
                 let cos_ry = reg(math::cos(ry));
-                ef.params.z = mem(fp::fmuls(two(math::cos(rx)), cos_ry));
+                ef.params.set_z(mem(fp::fmuls(two(math::cos(rx)), cos_ry)));
                 match last {
                     Some(l) if i != 0 => r.game.ef.effects[l.0].next = Some(e),
                     _ => first = Some(e),
@@ -345,8 +345,9 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                 let sy = r.game.objs.jobjs[root].scale.y;
                 let p = va.vec();
                 let ef = &mut r.game.ef.effects[e.0];
-                ef.params = p;
-                ef.params.y = mem(fp::fmuls(reg(ef.params.y), reg(sy)));
+                ef.params.set(p);
+                let y = mem(fp::fmuls(reg(ef.params.y), reg(sy)));
+                ef.params.set_y(y);
             }
             ret_e(e)
         }
@@ -471,7 +472,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
             if let Some(e) = e {
                 let z = copy(va.float());
                 let ef = &mut r.game.ef.effects[e.0];
-                ef.params.z = z;
+                ef.params.set_z(z);
                 ef.update = Some(Update::SetRotYZFromParamZFighterDir);
             }
             ret_e(e)

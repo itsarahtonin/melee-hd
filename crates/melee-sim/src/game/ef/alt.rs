@@ -161,7 +161,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
             if let Some(e) = e {
                 let z = copy(va.float());
                 let ef = &mut r.game.ef.effects[e.0];
-                ef.params.z = z;
+                ef.params.set_z(z);
                 ef.update = Some(Update::SetRotYZFromParamZFighterDir);
             }
             ret_e(e)

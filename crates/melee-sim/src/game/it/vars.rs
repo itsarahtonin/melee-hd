@@ -3,12 +3,15 @@
 //!
 //! Items come from `HSD_ObjAlloc`, which doesn't clear its blocks, and item creation doesn't
 //! clear the variables either: a new item's variables hold the bytes its block's last item left
-//! until its kind's code writes them. Every field of a new item's member starts stale ([`Var`]):
-//! its value is the block's where melee-hd knows it (the same member, or bytes read as the
-//! member, whose pointers become null) and zero where it doesn't (another member's), a write
-//! makes it live, the comparer leaves a stale field out, and a read of a stale field marks it,
-//! which the comparer reports ([`Cx::stale_read`]). The bytes past a member shorter than the
-//! union aren't compared.
+//! until its kind's code writes them. The union keeps those bytes ([`ItemVars::left`]: the
+//! block's last item's as it went back, what the heap's image knows of a block new from the
+//! heap in a session, memory's in a captured state, unknown only in a block new from a heap
+//! melee-sim doesn't model). Every field of a new item's member starts stale ([`Var`]), its
+//! value read out of those bytes (pointers null); a write makes it live. The comparer compares
+//! the member's live fields as themselves and every other known bit of the union as the bytes
+//! the block held, padding and the bytes past a shorter member included, and the heap's image
+//! takes them the same way. A read of a stale field marks it, which the comparer reports
+//! ([`Cx::stale_read`]): its value is the block's, but a pointer among it reads as null.
 
 use super::kinds::arwinglaser::ArwingLaserVars;
 use super::kinds::coin::CoinVars;
@@ -23,8 +26,10 @@ use super::kinds::tools::ToolsVars;
 use super::kinds::whispyapple::WhispyAppleVars;
 use super::kinds::yaku::YakuVars;
 use super::pokemon::PokemonVars;
-use crate::game::mirror::{Cx, Mem, Mirror};
+use crate::game::held::{Left, NoAddrs};
+use crate::game::mirror::{Cx, LayCx, LayOut, Mem, Mirror};
 use crate::game::structs::*;
+use crate::hsd::export::Lay;
 use crate::vec::Vec3;
 
 /// The union's size.
@@ -55,41 +60,47 @@ macro_rules! members {
             VarsKind::Bytes
         }
 
-        /// `union Item_ItemVars`, as big as the original's.
+        /// The member of `union Item_ItemVars` an item's code reads as a type.
         #[allow(clippy::large_enum_variant)]
-        #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-        pub enum ItemVars {
-            /// The union's big-endian bytes, as the original keeps them, for items no port
-            /// reads as a type.
-            Bytes([u8; SIZE]),
+        #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+        pub enum Member {
+            /// None: the union is the bytes its block held ([`ItemVars::left`]), for items
+            /// no port reads as a type and for an item's block once it goes back.
+            #[default]
+            Bytes,
             $($variant($ty),)*
         }
 
         impl ItemVars {
             /// The variables as one member, read from a captured state.
             pub fn import_as(kind: VarsKind, m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-                match kind {
-                    VarsKind::Bytes => ItemVars::Bytes(m.bytes(at)),
-                    $(VarsKind::$variant => ItemVars::$variant($ty::import(m, at, cx)),)*
+                let member = match kind {
+                    VarsKind::Bytes => Member::Bytes,
+                    $(VarsKind::$variant => Member::$variant($ty::import(m, at, cx)),)*
+                };
+                ItemVars {
+                    member,
+                    left: Left::read(m, at),
                 }
             }
 
             $(
-                /// The member. A new item's block holding raw bytes or another member becomes
-                /// this one (see the module's docs), every field stale.
+                /// The member. A new item's union of bytes becomes this one, every field
+                /// stale and read out of the bytes (see the module's docs).
                 pub fn $accessor(&mut self) -> &mut $ty {
-                    // Another member's bytes aren't kept: zeros stand for them.
-                    if !matches!(self, ItemVars::Bytes(_) | ItemVars::$variant(_)) {
-                        *self = ItemVars::Bytes([0; SIZE]);
+                    if !matches!(self.member, Member::Bytes | Member::$variant(_)) {
+                        // Another member, which no ported kind turns into this one: its
+                        // fields become bytes, its pointers unknown.
+                        self.flatten(&NoAddrs);
                     }
-                    if let ItemVars::Bytes(b) = self {
-                        let m = Mem { bytes: &b[..], base: 0 };
+                    if let Member::Bytes = self.member {
+                        let m = Mem { bytes: &self.left.bytes[..], base: 0 };
                         let mut v = $ty::import(&m, 0, &mut Stale);
                         v.mark_stale();
-                        *self = ItemVars::$variant(v);
+                        self.member = Member::$variant(v);
                     }
-                    match self {
-                        ItemVars::$variant(v) => v,
+                    match &mut self.member {
+                        Member::$variant(v) => v,
                         other => panic!(
                             "an item's variables are {other:?}, not {}",
                             stringify!($ty)
@@ -100,43 +111,25 @@ macro_rules! members {
 
             /// Marks the member's fields stale, as a new item finds them in its block.
             pub fn mark_stale(&mut self) {
-                match self {
-                    ItemVars::Bytes(_) => {}
-                    $(ItemVars::$variant(v) => v.mark_stale(),)*
+                match &mut self.member {
+                    Member::Bytes => {}
+                    $(Member::$variant(v) => v.mark_stale(),)*
                 }
             }
-        }
 
-        impl crate::game::mirror::LayOut for ItemVars {
-            fn lay(
-                &self,
-                l: &mut crate::hsd::export::Lay,
-                at: u32,
-                cx: &dyn crate::game::mirror::LayCx,
-            ) {
-                match self {
-                    ItemVars::Bytes(b) => l.put_bytes(at, b),
-                    $(ItemVars::$variant(v) => v.lay(l, at, cx),)*
+            /// Lays out the member's live fields.
+            pub fn lay_member(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+                match &self.member {
+                    Member::Bytes => {}
+                    $(Member::$variant(v) => v.lay(l, at, cx),)*
                 }
             }
-        }
 
-        impl Mirror for ItemVars {
-            const SIZE: u32 = SIZE as u32;
-
-            fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
-                ItemVars::Bytes(m.bytes(at))
-            }
-
-            fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-                match self {
-                    ItemVars::Bytes(b) => {
-                        let theirs: [u8; SIZE] = m.bytes(at);
-                        if *b != theirs {
-                            cx.mismatch(path, format!("{b:02x?}"), format!("{theirs:02x?}"));
-                        }
-                    }
-                    $(ItemVars::$variant(v) => {
+            /// Compares the member's live fields with memory.
+            fn compare_member(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+                match &self.member {
+                    Member::Bytes => {}
+                    $(Member::$variant(v) => {
                         v.compare(m, at, &format!("{path}.{}", stringify!($accessor)), cx)
                     })*
                 }
@@ -233,9 +226,56 @@ members! {
     Yaku, yaku, YakuVars, [PKIND_RANDOM];
 }
 
-impl Default for ItemVars {
-    fn default() -> Self {
-        ItemVars::Bytes([0; SIZE])
+/// `union Item_ItemVars`: the member an item's code reads as a type, over the bytes its block
+/// held (see the module's docs).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct ItemVars {
+    pub member: Member,
+    /// The union's bytes as the block held them where the member hasn't written.
+    pub left: Left<SIZE>,
+}
+
+impl ItemVars {
+    /// The block's bytes as the item leaves them: its member's live fields over what it held,
+    /// its pointers where `cx` gives their addresses (unknown elsewhere). The member goes, so a
+    /// next item in the block reads its own out of the bytes.
+    pub fn flatten(&mut self, cx: &dyn LayCx) {
+        self.left = self.left_after(cx);
+        self.member = Member::Bytes;
+    }
+
+    /// The bytes [`ItemVars::flatten`] leaves.
+    pub fn left_after(&self, cx: &dyn LayCx) -> Left<SIZE> {
+        Left::laid(|l| {
+            self.left.lay(l, 0);
+            self.lay_member(l, 0, cx);
+        })
+    }
+}
+
+impl LayOut for ItemVars {
+    /// The bytes the block held, under the member's live fields.
+    fn lay(&self, l: &mut Lay, at: u32, cx: &dyn LayCx) {
+        self.left.lay(l, at);
+        self.lay_member(l, at, cx);
+    }
+}
+
+impl Mirror for ItemVars {
+    const SIZE: u32 = SIZE as u32;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        ItemVars {
+            member: Member::Bytes,
+            left: Left::read(m, at),
+        }
+    }
+
+    /// The member's live fields, and every other known bit as the bytes the block held.
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        self.compare_member(m, at, path, cx);
+        let cov = crate::game::held::covered(SIZE as u32, at, |l, cx| self.lay_member(l, at, cx));
+        self.left.compare(m, at, path, cx, |i| cov[i]);
     }
 }
 
@@ -277,9 +317,9 @@ const ALL: u8 = 0b111;
 
 /// Peach's turnip's flag byte (`itPeachTurnip_ItemVars::xDD4`, an `UnkFlagStruct`), of which
 /// the turnip reads and writes only the top bit, "picked up before": the other seven keep what
-/// the block held, which melee-hd doesn't model, so the comparer checks the top bit alone
-/// (docs/engine.md). A heart's flag byte (`itHeart_ItemVars::xDD8`) is the same: its top bit
-/// says an event made it.
+/// the block held, which the union's bytes hold and compare ([`ItemVars::left`], docs/engine.md).
+/// A heart's flag byte (`itHeart_ItemVars::xDD8`) is the same: its top bit says an event made
+/// it.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct TurnipFlag {
     /// The top bit.
@@ -306,7 +346,7 @@ impl Mirror for TurnipFlag {
 /// A coin's flag byte (`it_2E5A_ItemVars::x18`, an `UnkFlagStruct`): whether players other than
 /// its owner may pick it up yet (`b0`) and its owner (`b1`), the bits the coin and the pickup
 /// (`ft_8007C77C`) use. The coin's spawn writes both and nothing reads the other six, which keep
-/// what the block held, so the comparer checks the two.
+/// what the block held: the union's bytes hold and compare them ([`ItemVars::left`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct CoinFlags {
     /// The top bit (`b0`): the others may pick it up.
@@ -472,9 +512,9 @@ impl Var<Vec3> {
 /// Link's bomb's flag byte (`itLinkBomb_ItemVars::x0`, an `UnkFlagStruct`): its top bit says
 /// its fuse's last stretch has begun, the next whether it rolls (`it_8029F18C`), the third
 /// whether a hit has knocked it away. Its spawn (`it_8029DD58`) writes the first and third
-/// bits alone, and the rolling bit only when it starts rolling, so the rest keep what the
-/// block's last item left, which melee-hd doesn't model: the comparer checks the first and third
-/// bits, and the rolling bit once written (docs/engine.md).
+/// bits alone, and the rolling bit only when it starts rolling, so the rest, and the rolling bit
+/// until then, keep what the block's last item left, which the union's bytes hold and compare
+/// ([`ItemVars::left`], docs/engine.md).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct LinkBombFlags {
     /// The top bit (`b0`).
@@ -562,3 +602,103 @@ macro_rules! unlaid {
 }
 
 unlaid!();
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Collects the comparer's differences.
+    #[derive(Default)]
+    struct Diffs(Vec<String>);
+
+    impl Cx for Diffs {
+        fn import_handle(&mut self, _: &'static str, a: u32) -> Option<u32> {
+            (a != 0).then_some(a)
+        }
+        fn import_data(&mut self, _: u32) -> Option<melee_data::archive::DataRef> {
+            None
+        }
+        fn compare_handle(&mut self, p: &str, _: &'static str, o: Option<u32>, t: u32) {
+            if o.unwrap_or(0) != t {
+                self.0.push(p.to_owned());
+            }
+        }
+        fn compare_data(&mut self, _: &str, _: Option<melee_data::archive::DataRef>, _: u32) {}
+        fn mismatch(&mut self, p: &str, _: String, _: String) {
+            self.0.push(p.to_owned());
+        }
+    }
+
+    fn block() -> [u8; SIZE] {
+        core::array::from_fn(|i| (i * 7 + 3) as u8)
+    }
+
+    /// A new item's member reads its stale fields out of the block's bytes; the bytes past the
+    /// member and its stale fields compare as the block's, and a live field as itself.
+    #[test]
+    fn the_union_compares_as_the_block_held_it() {
+        let mem = block();
+        let m = Mem {
+            bytes: &mem,
+            base: 0x8000_0000,
+        };
+        let mut v = ItemVars::import(&m, 0x8000_0000, &mut Diffs::default());
+        let laser = v.fox_laser();
+        let held = f32::from_bits(u32::from_be_bytes(mem[4..8].try_into().unwrap()));
+        assert_eq!(laser.angle.peek().to_bits(), held.to_bits());
+        laser.scale.set(f32::from_bits(u32::from_be_bytes(
+            mem[0..4].try_into().unwrap(),
+        )));
+        let mut d = Diffs::default();
+        v.compare(&m, 0x8000_0000, "v", &mut d);
+        assert!(d.0.is_empty(), "{:?}", d.0);
+        // Past the member (0x18 bytes) and in a stale field.
+        for at in [0x100, 0x5] {
+            let mut theirs = mem;
+            theirs[at] ^= 1;
+            let t = Mem {
+                bytes: &theirs,
+                base: 0x8000_0000,
+            };
+            let mut d = Diffs::default();
+            v.compare(&t, 0x8000_0000, "v", &mut d);
+            assert_eq!(d.0, [format!("v+{at:#x} (left)")]);
+        }
+        // A live field compares as itself.
+        v.fox_laser().scale.set(1.0);
+        let mut d = Diffs::default();
+        v.compare(&m, 0x8000_0000, "v", &mut d);
+        assert_eq!(d.0, ["v.fox_laser.scale"]);
+    }
+
+    /// An item going back leaves its member's live fields over the block's bytes, which the
+    /// next item's member reads; another member's numbers carry over too.
+    #[test]
+    fn a_block_keeps_its_last_items_fields() {
+        let mut v = ItemVars::default();
+        v.fox_laser().speed.set(2.5);
+        v.flatten(&crate::game::held::NoAddrs);
+        assert!(matches!(v.member, Member::Bytes));
+        assert!(v.left.known(8, 4));
+        assert!(!v.left.known(0, 4));
+        assert_eq!(v.left.bytes[8..12], 2.5f32.to_bits().to_be_bytes());
+        let mut w = ItemVars::default();
+        w.fox_laser().speed.set(3.0);
+        w.fox_illusion();
+        assert_eq!(w.left.bytes[8..12], 3.0f32.to_bits().to_be_bytes());
+        assert!(w.left.known(8, 4));
+    }
+
+    /// An unknown byte doesn't compare.
+    #[test]
+    fn unknown_bytes_dont_compare() {
+        let mem = block();
+        let m = Mem {
+            bytes: &mem,
+            base: 0,
+        };
+        let mut d = Diffs::default();
+        ItemVars::default().compare(&m, 0, "v", &mut d);
+        assert!(d.0.is_empty());
+    }
+}

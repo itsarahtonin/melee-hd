@@ -62,8 +62,8 @@ fn birdo(g: &Game) -> Option<(melee_sim::hsd::gobj::GObjId, f32, f32, i32, i32)>
         .iter()
         .find(|(_, it)| it.kind == kinds::KYASARIN)
         .map(|(_, it)| {
-            let touches = match &it.xDD4_itemVar {
-                it::ItemVars::Kyasarin(v) => *v.x14[1].peek(),
+            let touches = match &it.xDD4_itemVar.member {
+                it::Member::Kyasarin(v) => *v.x14[1].peek(),
                 _ => -1,
             };
             (

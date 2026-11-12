@@ -200,7 +200,8 @@ impl Importer<'_> {
             attach_jobj: (attach != 0).then(|| self.jobj(attach)),
             update,
             user_data,
-            params: self.vec_at(a + 0x18),
+            // Memory holds all three words.
+            params: melee_sim::game::ef::Params::left(self.vec_at(a + 0x18), 0),
             lifetime: self.h16(a + 0x24),
             expire_flags: self.h8(a + 0x26) as i8,
             scale_flags: self.h8(a + 0x27),

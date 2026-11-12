@@ -9,7 +9,7 @@ use melee_sim::game::it::kinds::linkhookshot::{
 };
 use melee_sim::game::it::kinds::samusgrapple::Lengths as GrappleLengths;
 use melee_sim::game::it::spawn::{PickTable, Spawner, Tables};
-use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, vars_kind};
+use melee_sim::game::it::{BoneTable, CHAR_ARTICLES, ItemVars, Member, vars_kind};
 use melee_sim::game::mirror::{Cx, Mem, Mirror};
 use melee_sim::game::structs::{
     HSD_ObjAllocUnk, Item, Item_FtTrack, PokemonSelectionState, db_ItemAndPokemonMenu_t,
@@ -83,7 +83,7 @@ impl Importer<'_> {
         self.stale = true;
         let mut item = Item::import(&m, a, self);
         item.xDD4_itemVar = ItemVars::import_as(vars_kind(item.kind), &m, a + VARS, self);
-        if let ItemVars::Pokemon(v) | ItemVars::Zako(v) = &mut item.xDD4_itemVar {
+        if let Member::Pokemon(v) | Member::Zako(v) = &mut item.xDD4_itemVar.member {
             v.import_handles(item.kind, &m, a + VARS, self);
         }
         self.stale = false;

@@ -392,7 +392,9 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                 ef.update = Some(Update::FallFromParamY);
                 ef.lifetime = 0x28;
                 let rnd = reg(r.game.objs.rng.draw_f32());
-                r.game.ef.effects[e.0].params.y = mem(fp::fmadds(reg(0.4), rnd, reg(2.8)));
+                r.game.ef.effects[e.0]
+                    .params
+                    .set_y(mem(fp::fmadds(reg(0.4), rnd, reg(2.8))));
                 let rnd = reg(r.game.objs.rng.draw_f32());
                 let turn = mem(fp::frsp(fp::fmul(TAU, rnd)));
                 set_rot_y(r, e, turn);
@@ -478,7 +480,7 @@ fn cases(r: &mut Running, gfx_id: i32, gobj: Option<GObjId>, va: &mut Args) -> S
                 let px = copy(va.float());
                 let ef = &mut r.game.ef.effects[e.0];
                 ef.update = Some(Update::SetScaleFromParamX);
-                ef.params.x = px;
+                ef.params.set_x(px);
             }
             ret_e(e)
         }

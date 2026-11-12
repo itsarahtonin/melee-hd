@@ -253,16 +253,21 @@ FIELD_DATA = {
 # block the pool grows from reused heap holds the heap's old words there (a Fire Flower
 # flame on the items-shoot Battlefield match, tick 5940).
 UNUSED = {
-    "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
-    # An item's `x8` and the three bytes after its team: neither the decomp's code nor ssbm-rs's
-    # ports touch them, so an item block new from the heap keeps what the heap held there (the
-    # items-heavy-ps oracle match's first in tick 2703).
-    "Item": {"x8", "x21", "x22", "x23"},
     # A stage object's flag byte past its pass (`x11_flags`' `b3` to `b7`): neither the decomp's
     # code nor ssbm-rs's ports touch them, so an object in a block a freed one held keeps what
     # the block held there (Battlefield's backgrounds over Multi-Man Melee's six minutes,
     # `m6-multiman/mm-100-win`'s tick 21767).
     "Ground_x11_flags": {"b3", "b4", "b5", "b6", "b7"},
+}
+
+# Fields no code writes, which a new object keeps as its block held them: `game::held::Kept`,
+# none where that's unknown (a block new from a heap melee-sim doesn't model), compared and laid
+# out where known. An item's `x8` and the three bytes after its team, and an item link's last
+# five flag bits: neither the decomp's code nor ssbm-rs's ports touch them (the items-heavy-ps
+# oracle match's item block new from the heap held a pointer and two bytes there in tick 2703).
+KEPT = {
+    "Item": {"x8", "x21", "x22", "x23"},
+    "ItemLink": {"x2C_b3", "x2C_b4", "x2C_b5", "x2C_b6", "x2C_b7"},
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,
@@ -352,6 +357,7 @@ EXTRA_USES = [
     "use crate::game::ft::vars::{FighterVars, MotionVars};",
     "use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag};",
     "use crate::game::it::link::LinkX20;",
+    "use crate::game::held::Kept;",
     "use crate::hsd::lobj::LObjId;",
     "use crate::hsd::shadow::ShadowId;",
     "use crate::lb::command::Script;",
@@ -420,6 +426,7 @@ use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;
 use crate::game::it::{CoinFlags, IgnoreId, ItemVars, LinkBombFlags, TurnipFlag, Var};
 use crate::game::it::link::LinkX20;
+use crate::game::held::Kept;
 use crate::hsd::dobj::DObjId;
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::JObjId;

@@ -625,7 +625,12 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     }
     // A slot handed out again keeps its last item's record (`alloc_stale`): what that item
     // left of the GPU's pixels, this one holds still where it doesn't write it.
-    // The variables the block's last item left are stale until the new kind writes them.
+    // The variables the block's last item left are stale until the new kind writes them: the
+    // bytes it left as it went (`export::leave_item`), or, for a slot that kept an item never
+    // freed, as it leaves them now.
+    if !matches!(r.game.items[id.0].xDD4_itemVar.member, super::Member::Bytes) {
+        crate::game::export::leave_item(r.game, id);
+    }
     r.game.items[id.0].xDD4_itemVar.mark_stale();
     r.game.it.stale_last_pos.remove(&id.0);
     // So are its hitboxes' joints, until the script makes each box (`HitJObj`).
