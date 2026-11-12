@@ -45,6 +45,7 @@ use common::{
 use common::M6A3_AS_VH_CLEAR;
 
 // Adventure's Giga Bowser path and Classic's Very Hard clear with Crazy Hand (docs/player.md).
+use common::M6AC_MK_SLOPE9;
 use common::M6AD_ADV_GIGA_VH;
 use common::M6AD2_MK_SHELLS;
 use common::M6AD3_MK_MEET;
@@ -576,6 +577,13 @@ rendered_frames!(M6AD4_LL_EDGE;
     m6ad4_ll_edge_2780 2780,
     m6ad4_ll_edge_2830 2830,
     m6ad4_ll_edge_3325 3325,
+);
+// Adventure's red shell stopped on Mushroom Kingdom's route's slope (`m6-adv-close/mk-slope9`,
+// task 24's fifth round), captured with ssbm-rs's renderer running: the shell sliding between
+// the wall and Fox's lasers (3600) and still on the slope after state 9 (3740).
+rendered_frames!(M6AC_MK_SLOPE9;
+    m6ac_mk_slope9_3600 3600,
+    m6ac_mk_slope9_3740 3740,
 );
 // Adventure's Polar Bear flung toward the screen (`m6-adv-polarbear/im-polar`, task 24's fourth
 // round), captured with ssbm-rs's renderer running: the bear on its way toward the camera (3756,
