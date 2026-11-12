@@ -539,6 +539,7 @@ impl Running<'_> {
 
     /// The charge's interrupt (`ftNs_AttackHi4Charge_IASA`, `ftNs_AttackLw4Charge_IASA`):
     /// letting go of A releases it.
+    #[doc(alias = "ftNs_AttackHi4Charge_IASA")]
     pub(super) fn ness_yoyo_charge_iasa(&mut self, gobj: GObjId, release: fn(&mut Self, GObjId)) {
         if self.game.fighter(gobj).input.held_buttons[0] & PAD_A == 0 {
             release(self, gobj);
@@ -561,6 +562,7 @@ impl Running<'_> {
     }
 
     /// The releases' frames (`ftNs_AttackHi4Release_Anim`, `ftNs_AttackLw4Release_Anim`).
+    #[doc(alias = "ftNs_AttackHi4Release_Anim")]
     pub(super) fn ness_yoyo_release_anim(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let n = fp.mv_i32(mv::YOYO_CURRENT_FRAME).wrapping_add(1);
@@ -575,6 +577,7 @@ impl Running<'_> {
     }
 
     /// The releases' interrupt (`ftNs_AttackHi4Release_IASA`, `ftNs_AttackLw4Release_IASA`).
+    #[doc(alias = "ftNs_AttackHi4Release_IASA")]
     pub(super) fn ness_yoyo_release_iasa(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).allow_interrupt {
             self.co_wait_iasa(gobj);
@@ -649,6 +652,9 @@ pub(crate) fn spin_rate(fp: &crate::game::structs::Fighter) -> f32 {
 
 #[doc(alias = "ftNs_AttackHi4_Coll")]
 #[doc(alias = "ftNs_AttackHi4_IASA")]
+#[doc(alias = "ftNs_AttackHi4Charge_Coll")]
+#[doc(alias = "ftNs_AttackHi4Charge_Phys")]
+#[doc(alias = "ftNs_AttackHi4Release_Coll")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ATTACK_HI4_YOYO_UPDATE_HIT_POS => g.ness_yoyo_update_hit_pos(gobj),
