@@ -190,13 +190,13 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftYs_Init_OnItemInvisible` (as Fox's).
-    // Ports `ftYs_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftYs_Init_OnItemInvisible")]
     pub fn ys_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
     }
 
     /// Showing the held item again, `ftYs_Init_OnItemVisible` (as Fox's).
-    // Ports `ftYs_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftYs_Init_OnItemVisible")]
     pub fn ys_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }
