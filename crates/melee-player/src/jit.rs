@@ -24,10 +24,13 @@
 //! (melee-sim's: the game loop blocked in the load while the music plays on from interrupts,
 //! up to two seconds from the menus), and plays all of it at once. The next tick waits that
 //! long, as on a console, by moving Melee's clock on by what the tick ran beyond a tick
-//! ([`Scheduler::took`]): the screen holds its last frame and the sound plays the load's music
-//! whole. The few ticks right after a load that run less than a tick (the scene loop's first
-//! frames catching up to the retrace) come that much sooner, so the clock keeps Melee's
-//! timeline. A real stall (the host late, not the tick long) keeps the rule above.
+//! ([`Scheduler::took`]), and the sound plays the load's music whole. The tick's frame is the
+//! one drawn after the load (the scene loop draws the old scene's last frame in the tick
+//! before), so it's held back ([`Hold`]) and the screen keeps the frame from before the load,
+//! as a console's video does, until the load's length has passed on Melee's clock. The few
+//! ticks right after a load that run less than a tick (the scene loop's first frames catching
+//! up to the retrace) come that much sooner, so the clock keeps Melee's timeline. A real stall
+//! (the host late, not the tick long) keeps the rule above.
 //!
 //! **Cadence** (a variable-refresh display, which waits for frames, or presenting immediately,
 //! or no refresh times known): ticks start at their due times, precisely, and frames are
@@ -356,6 +359,69 @@ const STALL_TICKS: u32 = 4;
 /// and the ticks around a two-field one (33 ms) balance it.
 pub fn is_long(length: Duration, tick: Duration) -> bool {
     length > tick + tick / 2
+}
+
+/// A long tick's frame, held back through its load. A console's game loop is blocked in the
+/// load, so its video keeps scanning out the last frame copied before it (the old scene's,
+/// which the scene loop drew in the tick before the load), and the frame drawn after the load
+/// shows only once the load is done. The long tick runs the whole load at once and returns that
+/// frame, so it waits: it shows `later` after the tick's due time (what [`Scheduler::took`]
+/// moved Melee's clock on by), where the load ends on Melee's clock, a tick before the next
+/// tick is due as any frame is; the screen keeps the frame shown before meanwhile.
+#[derive(Debug)]
+pub struct Hold<F> {
+    /// When the held frame shows, while one is held.
+    until: Option<Instant>,
+    /// The frame to present then: Off's; the paced frames draw theirs from then on.
+    frame: Option<F>,
+}
+
+impl<F> Default for Hold<F> {
+    fn default() -> Self {
+        Hold {
+            until: None,
+            frame: None,
+        }
+    }
+}
+
+impl<F> Hold<F> {
+    /// A tick due at `due` drew `frame`, and its load moved the next tick `later` later: the
+    /// frame to present now, or none when it's held.
+    pub fn tick(&mut self, frame: Option<F>, due: Instant, later: Duration) -> Option<F> {
+        if later.is_zero() {
+            return frame;
+        }
+        self.until = Some(due + later);
+        self.frame = frame;
+        None
+    }
+
+    /// When the held frame shows, while one is held.
+    pub fn until(&self) -> Option<Instant> {
+        self.until
+    }
+
+    /// Whether the screen holds the frame shown before a load at `now`.
+    pub fn holds(&self, now: Instant) -> bool {
+        self.until.is_some_and(|u| now < u)
+    }
+
+    /// Ends the hold once `now` reaches its end: the held frame to present, if one was held.
+    pub fn end(&mut self, now: Instant) -> Option<F> {
+        if self.until.is_some_and(|u| now >= u) {
+            self.take()
+        } else {
+            None
+        }
+    }
+
+    /// Ends the hold whenever it was to end (the next tick about to run, the session going):
+    /// the held frame, if one was held.
+    pub fn take(&mut self) -> Option<F> {
+        self.until = None;
+        self.frame.take()
+    }
 }
 
 /// Places ticks on Melee's clock, just in time for their refreshes.
@@ -1033,6 +1099,81 @@ mod tests {
         assert_eq!(run(&mut s, at, 0.251), at);
         assert_eq!(s.due(), at + TICK);
         assert_eq!(s.counts.stalls, 0);
+    }
+
+    /// Runs the next tick as planned at `now` (the fixed timer), which took `length` of Melee's
+    /// time and drew `frame`, through `hold`: when it was due, how much later its load made the
+    /// next tick, and the frame to present now.
+    fn run_held<'a>(
+        s: &mut Scheduler,
+        hold: &mut Hold<&'a str>,
+        now: Instant,
+        length: f64,
+        dry: f64,
+        frame: &'a str,
+    ) -> (Instant, Duration, Option<&'a str>) {
+        let p = s.plan(now, Policy::Timer, None);
+        s.ran(&p);
+        let later = s.took(ms(length), ms(dry));
+        (p.due, later, hold.tick(Some(frame), p.due, later))
+    }
+
+    /// An ordinary tick's frame shows at once. A long tick's (the scene's first, drawn after the
+    /// load) shows when the load ends on Melee's clock, a tick before the next tick is due, and
+    /// the frame from before the load stays on screen until then, as a console's video keeps
+    /// scanning it out.
+    #[test]
+    fn a_long_tick_s_frame_shows_when_its_load_ends() {
+        let t0 = Instant::now();
+        let mut s = Scheduler::new(TICK, DEFAULT_MARGIN, t0);
+        let mut hold = Hold::default();
+        let (_, later, shown) = run_held(&mut s, &mut hold, t0, 16.683, 0.0, "menu");
+        assert_eq!((later, shown), (Duration::ZERO, Some("menu")));
+        assert_eq!(hold.until(), None);
+        let (due, later, shown) = run_held(&mut s, &mut hold, t0 + TICK, 1800.0, 0.0, "select");
+        assert_eq!(shown, None, "the load's frame waits");
+        let shows = due + later;
+        assert_eq!(shows, t0 + TICK + ms(1800.0) - TICK);
+        assert_eq!(hold.until(), Some(shows));
+        assert_eq!(
+            s.due(),
+            shows + TICK,
+            "the next tick a tick after it, as after any frame"
+        );
+        for at in [due, due + ms(900.0), shows - ms(0.001)] {
+            assert!(hold.holds(at));
+            assert_eq!(
+                hold.end(at),
+                None,
+                "the menu stays on screen through the load"
+            );
+        }
+        assert!(!hold.holds(shows));
+        assert_eq!(hold.end(shows), Some("select"));
+        assert_eq!((hold.until(), hold.end(shows + TICK)), (None, None));
+        let next = s.due();
+        let (_, _, shown) = run_held(&mut s, &mut hold, next, 16.683, 0.0, "next");
+        assert_eq!(
+            shown,
+            Some("next"),
+            "an ordinary tick's frame at once again"
+        );
+        // A load whose samples came after the sound ran dry shows that much later, where the
+        // music it plays on from is.
+        let now = s.due();
+        let (due, later, shown) = run_held(&mut s, &mut hold, now, 600.0, 40.0, "match");
+        assert_eq!(shown, None);
+        assert_eq!(hold.until(), Some(due + ms(600.0) - TICK + ms(40.0)));
+        assert_eq!(hold.until().map(|u| u + TICK), Some(s.due()));
+        // The paced frames hold through the load with no frame of Off's.
+        let mut paced = Hold::<&str>::default();
+        assert_eq!(paced.tick(None, due, later), None);
+        assert!(paced.holds(due) && !paced.holds(due + later));
+        assert_eq!(paced.end(due + later), None);
+        assert_eq!(paced.until(), None);
+        // A tick about to run takes a frame still held, to present first.
+        assert_eq!(hold.take(), Some("match"));
+        assert_eq!(hold.until(), None);
     }
 
     /// A long tick whose samples came after the sound ran dry (its load took the host that
