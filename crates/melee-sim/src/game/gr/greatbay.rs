@@ -1008,9 +1008,10 @@ pub fn turtle_out(game: &mut Game) -> bool {
 }
 
 /// The sea's device callback, `grGreatBay_801F6708`: a fighter not hidden off-screen
-/// (`x221D_b7`) crossing y = -5 downward splashes there, by its camera box's depth, with a
-/// sound. It never acts on the fighter.
+/// (`x221D_b7`, `ft_80087838`) crossing y = -5 downward splashes there, by its camera box's
+/// depth, with a sound. It never acts on the fighter.
 #[doc(alias = "grGreatBay_801F6708")]
+#[doc(alias = "ft_80087838")]
 pub fn sea_device(r: &mut Running, fighter: GObjId) -> bool {
     let fp = r.game.fighter(fighter);
     let (cur, prev) = (fp.cur_pos, fp.prev_pos);

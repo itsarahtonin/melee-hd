@@ -106,7 +106,7 @@ fn coll() -> bool {
 /// forgotten, knocked out as an enemy is and gone. Kirby's copy's item lets go the same way
 /// (`it_802F2E7C`).
 #[doc(alias = "it_802F2CE0")]
-// Ports `it_802F2E7C`; aliased once a check reaches it.
+#[doc(alias = "it_802F2E7C")]
 pub fn release(r: &mut Running, gobj: GObjId, clear: bool) {
     let bone = article(super::super::item(r.game, gobj))
         .model(r.data)

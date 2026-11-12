@@ -891,7 +891,7 @@ impl Running<'_> {
     /// high): the hooks, to the hold point; going high also runs the high collision and
     /// moves the model there.
     // Ports `fn_800DC404`; aliased once a check reaches it.
-    // Ports `fn_800DC624`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DC624")]
     fn capture_damage_switch(&mut self, gobj: GObjId, high: bool) {
         let msid = if high {
             ms::CAPTURE_DAMAGE_HI
