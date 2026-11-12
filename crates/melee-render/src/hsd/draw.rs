@@ -91,9 +91,13 @@ pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
 
 /// [`position_mtx`] for a joint with `flags`, world matrix `mtx` and rotation about z
 /// `rotate_z` (blended ones, `crate::blend`).
+#[doc(alias = "HSD_JObjMakePositionMtx")]
 pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> Mtx34 {
     use melee_sim::vec::Vec3;
-    let src = vmtx.concat(mtx);
+    let mut src = vmtx.concat(mtx);
+    if crate::mutation::on("HSD_JObjMakePositionMtx") {
+        src.m[0][3] += 1.0;
+    }
     let field = flags & JOBJ_BILLBOARD_FIELD;
     if field == 0 {
         return src;
@@ -863,6 +867,10 @@ impl Ctx<'_> {
     #[doc(alias = "ftPartsSetupRigidMtx")]
     #[doc(alias = "SetupRigidModelMtx")]
     fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32, z: Option<&Mtx34>) {
+        if self.hsd.mtx_mark == Some(j) {
+            return;
+        }
+        self.set_mtx_mark(j);
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
         let (normal, proj) = self.setup_flags(j, rendermode);
@@ -874,6 +882,15 @@ impl Ctx<'_> {
             if proj {
                 self.gx.load_tex_mtx_imm(&n.m, GX_TEXMTX0, GX_MTX3X4);
             }
+        }
+    }
+
+    /// `HSD_PObjSetMtxMark(0, jobj, HSD_MTX_RIGID)`: stores nothing, since the original's
+    /// test keeps slots 0 and 1 from being written.
+    #[doc(alias = "HSD_PObjSetMtxMark")]
+    fn set_mtx_mark(&mut self, j: JObjId) {
+        if crate::mutation::on("HSD_PObjSetMtxMark") {
+            self.hsd.mtx_mark = Some(j);
         }
     }
 
@@ -893,6 +910,7 @@ impl Ctx<'_> {
         z: Option<&Mtx34>,
     ) {
         let lighting = self.objs().jobjs[j].flags & jobj::LIGHTING != 0;
+        self.set_mtx_mark(j);
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
         let n0 = normal_mtx(pmtx, z);
@@ -907,6 +925,34 @@ impl Ctx<'_> {
             self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
         }
         self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
+    }
+
+    /// `_HSD_mkEnvelopeModelNodeMtx`: for joint `j` under a skeleton, the matrix from its
+    /// skeleton's space to its own.
+    #[doc(alias = "_HSD_mkEnvelopeModelNodeMtx")]
+    fn envelope_model_node_mtx(&self, j: JObjId) -> Mtx34 {
+        let objs = &self.game.objs;
+        let x = std::iter::successors(Some(j), |&x| objs.jobjs[x].parent)
+            .find(|&x| objs.jobjs[x].flags & (jobj::SKELETON | jobj::SKELETON_ROOT) != 0)
+            .expect("an enveloped shape's joint without a skeleton");
+        let xo = &objs.jobjs[x];
+        let mut m = if x == j {
+            xo.envelopemtx
+                .expect("a skeleton without an envelope matrix")
+                .inverse()
+                .unwrap_or_default()
+        } else if xo.flags & jobj::SKELETON_ROOT != 0 {
+            self.jmtx(x).hsd_inverse_concat(&self.jmtx(j))
+        } else {
+            let n = self
+                .jmtx(x)
+                .concat(&xo.envelopemtx.expect("no envelope matrix"));
+            n.hsd_inverse_concat(&self.jmtx(j))
+        };
+        if crate::mutation::on("_HSD_mkEnvelopeModelNodeMtx") {
+            m.m[0][3] += 1.0;
+        }
+        m
     }
 
     /// `SetupEnvelopeModelMtx`, or with the fighters' depth scale `z`,
@@ -927,28 +973,7 @@ impl Ctx<'_> {
         let objs = &self.game.objs;
         let jo = &objs.jobjs[j];
         let lighting = jo.flags & jobj::LIGHTING != 0;
-        // `_HSD_mkEnvelopeModelNodeMtx`.
-        let right = if jo.flags & jobj::SKELETON_ROOT != 0 {
-            None
-        } else {
-            let x = std::iter::successors(Some(j), |&x| objs.jobjs[x].parent)
-                .find(|&x| objs.jobjs[x].flags & (jobj::SKELETON | jobj::SKELETON_ROOT) != 0)
-                .expect("an enveloped shape's joint without a skeleton");
-            let xo = &objs.jobjs[x];
-            Some(if x == j {
-                xo.envelopemtx
-                    .expect("a skeleton without an envelope matrix")
-                    .inverse()
-                    .unwrap_or_default()
-            } else if xo.flags & jobj::SKELETON_ROOT != 0 {
-                self.jmtx(x).hsd_inverse_concat(&self.jmtx(j))
-            } else {
-                let n = self
-                    .jmtx(x)
-                    .concat(&xo.envelopemtx.expect("no envelope matrix"));
-                n.hsd_inverse_concat(&self.jmtx(j))
-            })
-        };
+        let right = (jo.flags & jobj::SKELETON_ROOT == 0).then(|| self.envelope_model_node_mtx(j));
         let Binding::Envelopes(envs) = &objs.pobjs[p].u else {
             return;
         };
@@ -996,6 +1021,8 @@ impl Ctx<'_> {
                 }
             }
         }
+        // `HSD_PObjClearMtxMark(NULL, HSD_MTX_ENVELOPE)`.
+        self.hsd.mtx_mark = None;
     }
 
     /// `setupArrayDesc`: the arrays of a vertex description, unless it was the last one set.
@@ -1050,8 +1077,12 @@ impl Ctx<'_> {
     }
 
     /// `HSD_ClearVtxDesc`.
+    #[doc(alias = "HSD_ClearVtxDesc")]
     pub fn clear_vtx_desc(&mut self) {
         self.gx.clear_vtx_desc();
+        if crate::mutation::on("HSD_ClearVtxDesc") {
+            return;
+        }
         self.hsd.prev_array = None;
         self.hsd.prev_vtxdesc = None;
     }
@@ -1151,6 +1182,8 @@ impl Ctx<'_> {
             _ => vmtx.unwrap_or_else(|| self.hsd.view_mtx()),
         };
         let pmtx = self.joint_position_mtx(j, &vmtx);
+        // `HSD_PObjClearMtxMark(NULL, 0)`.
+        self.hsd.mtx_mark = None;
         let mut i = 0;
         while i < run.len() {
             let Draw::Shape { dobj: d, .. } = run[i] else {

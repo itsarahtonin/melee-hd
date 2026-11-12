@@ -77,7 +77,11 @@ impl Ctx<'_> {
     }
 
     /// `HSD_SetupRenderMode`.
-    fn setup_render_mode(&mut self, rendermode: u32) {
+    #[doc(alias = "HSD_SetupRenderMode")]
+    fn setup_render_mode(&mut self, mut rendermode: u32) {
+        if crate::mutation::on("HSD_SetupRenderMode") {
+            rendermode ^= 0x2000_0000;
+        }
         let objs = &self.game.objs;
         let mut lights = ChannelLights {
             state: &mut self.hsd.lights,
