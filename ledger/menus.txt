@@ -12,26 +12,20 @@ fn_800251EC	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a
 lbAudioAx_80027DBC	unreached	the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14)
 gmMainLib_8015CEB4	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015CF84	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015DB00	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_8015DB0C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
-gmMainLib_8015DB18	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gmMainLib_GetUnlockedCharactersBitmaskPtr	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
-fn_80166CBC	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_AnyControllerPressedZ	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8017435C	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 fn_8019D074	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_GetGameModeStateExitData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_Mode_Vs_OnUnload	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-gm_Scene_HowTo_OnEnter	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_Scene_HowTo_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_Omake15_OnEnter	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 gm_Scene_Omake15_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExit	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitTitle	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-onExitHowto	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitOmake15	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-mnStageSel_8025BC08	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmode.c, mode 6), made pending only at a debug level (task 19's); VS mode's is ported
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
 fn_80197FD8	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)

@@ -194,7 +194,7 @@ impl Running<'_> {
     }
 
     /// The tongue caught an item on the ground, `fn_801095DC`.
-    // Ports `fn_801095DC`; aliased once a check reaches it.
+    #[doc(alias = "fn_801095DC")]
     pub fn kb_ys_grab_item(&mut self, gobj: GObjId) {
         self.kb_ys_caught_item(gobj, ms::YS_SPECIAL_N_CAPTURE1_1);
     }
@@ -206,7 +206,7 @@ impl Running<'_> {
     }
 
     /// The tongue caught an item in the air, `fn_80109714`.
-    // Ports `fn_80109714`; aliased once a check reaches it.
+    #[doc(alias = "fn_80109714")]
     pub fn kb_ys_air_grab_item(&mut self, gobj: GObjId) {
         self.kb_ys_caught_item(gobj, ms::YS_SPECIAL_AIR_N_CAPTURE1_1);
     }

@@ -433,7 +433,7 @@ fn hit_shield(r: &mut Running, gobj: GObjId) -> bool {
 
 /// Forgets a GObj the ice points to, `itClimbersIce_Logic90_EvtUnk`: its owner, then
 /// `it_8026B894`'s.
-// Ports `itClimbersIce_Logic90_EvtUnk`; aliased once a check reaches it.
+// `itClimbersIce_Logic90_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_ice();
     if v.x0.get() == other {
