@@ -1263,8 +1263,10 @@ impl Running<'_> {
         self.load_rumble_data();
     }
 
-    /// `lbMthp_8001F800`; How to Play's scene exit, `onExitHowto`.
+    /// `lbMthp_8001F800`; How to Play's and the Special Movie's scene exits, `onExitHowto` and
+    /// `onExitOmake15`.
     #[doc(alias = "onExitHowto")]
+    #[doc(alias = "onExitOmake15")]
     pub fn mthp_release(&mut self) {
         self.game.audio.mthp_close(self.data);
     }

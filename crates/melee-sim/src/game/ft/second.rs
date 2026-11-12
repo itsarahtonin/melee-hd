@@ -43,8 +43,12 @@ fn main_buffer_offset(m: &Mem, at: u32, addr: u32) -> Option<u32> {
 
 /// The action's figatree (`Fighter::x590`), a pointer into the fighter's main animation buffer
 /// (`x59C`, three words on): as an `Option<DataRef>` it names the archive the buffer holds.
+/// The second word is a new fighter's leftover word that names no data, kept until the first
+/// animation's load writes the figatree (`ftData_80085CD8`): a fighter that never plays one
+/// (Zelda asleep while Sheik plays, or the reverse) leaves it in its block for the next
+/// object there (`rt-attract`'s eighth demo match).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
-pub struct ActionTree(pub Option<DataRef>);
+pub struct ActionTree(pub Option<DataRef>, pub Option<u32>);
 
 impl core::ops::Deref for ActionTree {
     type Target = Option<DataRef>;
@@ -74,7 +78,11 @@ impl crate::game::mirror::LayOut for ActionTree {
     /// Its place is the main buffer's, which the fighter's layout gives
     /// (`game::export::fighter`).
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
-        l.put_word(at, cx.data(self.0));
+        let w = match (self.0, self.1) {
+            (None, Some(w)) => Some(w),
+            (d, _) => cx.data(d),
+        };
+        l.put_word(at, w);
     }
 }
 
@@ -82,7 +90,10 @@ impl Mirror for ActionTree {
     const SIZE: u32 = 4;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        ActionTree(cx.import_data(m.u32(at)))
+        let w = m.u32(at);
+        let tree = cx.import_data(w);
+        let left = (cx.leftover() && tree.is_none() && w != 0).then_some(w);
+        ActionTree(tree, left)
     }
 
     /// By its offset in the main buffer where it's there: another copy of its archive (a
@@ -94,6 +105,12 @@ impl Mirror for ActionTree {
     /// animation always loads and writes it).
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
         let theirs = m.u32(at);
+        if let (None, Some(w)) = (self.0, self.1) {
+            if w != theirs {
+                cx.mismatch(path, format!("{w:#x} (left)"), format!("{theirs:#x}"));
+            }
+            return;
+        }
         if let Some(t) = self.0 {
             let off = t.offset.wrapping_add(ARCHIVE_HEADER);
             for buf in [m.u32(at + 0xC), m.u32(at + 0x10)] {
