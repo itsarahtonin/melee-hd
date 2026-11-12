@@ -95,6 +95,7 @@ impl Ctx<'_> {
         self.erase_screen_with(color, true, true);
     }
 
+    #[doc(alias = "HSD_CObjEraseScreen")]
     fn erase_screen_with(&mut self, color: Color, depth: bool, alpha: bool) {
         let Some(v) = self.hsd.camera else { return };
         let z = (0.5 * f64::from(v.near + v.far)) as f32;
@@ -112,10 +113,16 @@ impl Ctx<'_> {
             }
             _ => (p0, p1, p2, p3),
         };
+        let (top, bottom, left, right) = if crate::mutation::on("HSD_CObjEraseScreen") {
+            (top * 2.0, bottom * 2.0, left * 2.0, right * 2.0)
+        } else {
+            (top, bottom, left, right)
+        };
         self.erase_rect(top, bottom, left, right, -z, color, depth, alpha);
     }
 
     /// `HSD_EraseRect` for color, and depth when `depth`.
+    #[doc(alias = "HSD_EraseRect")]
     #[allow(clippy::too_many_arguments)]
     fn erase_rect(
         &mut self,
@@ -184,6 +191,11 @@ impl Ctx<'_> {
         gx.set_vtx_desc(GX_VA_POS, GX_DIRECT);
         gx.set_vtx_desc(GX_VA_CLR0, GX_DIRECT);
         gx.set_vtx_desc(GX_VA_TEX0, GX_DIRECT);
+        let c = if crate::mutation::on("HSD_EraseRect") {
+            Color::new(c.r ^ 1, c.g, c.b, c.a)
+        } else {
+            c
+        };
         gx.begin(GX_QUADS, GX_VTXFMT0, 4);
         for (x, y, s, t) in [
             (left, top, 0, 0),
@@ -203,13 +215,22 @@ impl Ctx<'_> {
     /// `HSD_StateInvalidate`, the vertex descriptions' cache included.
     pub fn invalidate(&mut self, mask: u32) {
         if mask & super::state::STATE_VTX_ATTR != 0 {
-            self.clear_vtx_desc();
+            self.invalidate_vtx_attr();
         }
         States {
             state: &mut self.hsd.state,
             tev: &mut self.hsd.tev,
         }
         .invalidate(mask);
+    }
+
+    /// `_HSD_StateInvalidateVtxAttr`.
+    #[doc(alias = "_HSD_StateInvalidateVtxAttr")]
+    fn invalidate_vtx_attr(&mut self) {
+        if crate::mutation::on("_HSD_StateInvalidateVtxAttr") {
+            return;
+        }
+        self.clear_vtx_desc();
     }
 
     /// `HSD_FogSet`.
@@ -260,9 +281,11 @@ impl Ctx<'_> {
     }
 
     /// `HSD_ShadowInit`: the copy's source and destination for the shadow's texture.
+    #[doc(alias = "HSD_ShadowInit")]
     pub fn shadow_init(&mut self, s: ShadowId) {
         let img = self.game.objs.shadows[s.0].image;
-        self.gx.set_tex_copy_src(0, 0, img.width, img.height);
+        let left = u16::from(crate::mutation::on("HSD_ShadowInit"));
+        self.gx.set_tex_copy_src(left, 0, img.width, img.height);
         self.gx
             .set_tex_copy_dst(img.width, img.height, 0x20, GX_FALSE);
     }
@@ -345,7 +368,20 @@ impl Ctx<'_> {
         self.hsd.tev.setup_channel_all(self.gx, &[chan]);
         self.gx
             .set_scissor(0, 0, u32::from(img.width), u32::from(img.height));
-        // `drawBackgroundRect`.
+        self.draw_background_rect(co);
+        chan.mat_color = Color::new(intensity, intensity, intensity, 255);
+        self.hsd.tev.setup_channel_all(self.gx, &[chan]);
+        self.gx.set_scissor(
+            2,
+            2,
+            u32::from(img.width).wrapping_sub(4),
+            u32::from(img.height).wrapping_sub(4),
+        );
+    }
+
+    /// `drawBackgroundRect`: a rectangle behind everything the shadow's camera `co` sees.
+    #[doc(alias = "drawBackgroundRect")]
+    fn draw_background_rect(&mut self, co: (f32, f32, f32, f32, f32)) {
         self.gx.load_pos_mtx_imm(&Mtx34::IDENTITY.m, GX_PNMTX0);
         self.gx.set_current_mtx(GX_PNMTX0);
         self.clear_vtx_desc();
@@ -354,7 +390,11 @@ impl Ctx<'_> {
             .set_vtx_attr_fmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
         self.hsd.state.set_cull_mode(self.gx, GX_CULL_BACK);
         // 1.2f and -1.1f as the original's constants hold them.
-        let s12 = f32::from_bits(0x3F99_999A);
+        let s12 = if crate::mutation::on("drawBackgroundRect") {
+            1.5
+        } else {
+            f32::from_bits(0x3F99_999A)
+        };
         let (top, bottom, left, right) = (co.0 * s12, co.1 * s12, co.2 * s12, co.3 * s12);
         let near = co.4 * -f32::from_bits(0x3F8C_CCCD);
         self.gx.begin(GX_QUADS, GX_VTXFMT0, 4);
@@ -365,14 +405,6 @@ impl Ctx<'_> {
         self.gx.position2f32(near, left);
         self.gx.position2f32(bottom, near);
         self.gx.end();
-        chan.mat_color = Color::new(intensity, intensity, intensity, 255);
-        self.hsd.tev.setup_channel_all(self.gx, &[chan]);
-        self.gx.set_scissor(
-            2,
-            2,
-            u32::from(img.width).wrapping_sub(4),
-            u32::from(img.height).wrapping_sub(4),
-        );
     }
 
     /// `HSD_ShadowEndRender`'s copy into the shadow's texture.

@@ -759,13 +759,7 @@ impl<'a> Ctx<'a> {
         match set.active[MAX_GXLIGHT - 1] {
             Some(a) => {
                 let c = objs.lobjs[a.lobj].color;
-                let m = |a: u8, b: u8| ((u32::from(a) * u32::from(b)) / 255) as u8;
-                amb = Color::new(
-                    m(amb.r, c[0]),
-                    m(amb.g, c[1]),
-                    m(amb.b, c[2]),
-                    m(amb.a, c[3]),
-                );
+                amb = super::state::mul_color(amb, Color::new(c[0], c[1], c[2], c[3]));
             }
             None => {
                 amb.r = 0;

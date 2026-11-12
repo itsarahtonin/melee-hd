@@ -1796,6 +1796,17 @@ Input-only parts of a line (`--monkey`, `MONKEY_B`, `MONKEY_HOLD`, `--fields`, t
 16 functions aliased: `memcardOnLoad`, `fn_8025FAC0`, the Ice Climbers' up special's two helpers (`ftPp_SpecialHi_80121D40`, `ftPp_SpecialHi_8012184C`), Jigglypuff's up and down specials' interrupts and physics (`ftPr_SpecialHi_*`, `ftPr_SpecialAirHi_*`, `ftPr_SpecialLw_*`, `ftPr_SpecialAirLw_*`) and Samus's air Charge Shot (`ftSs_SpecialAirNStart_*`, `ftSs_SpecialAirN_*`). `match1`'s recording, played on past its trace (`--past`), stops in tick 17785 in its third match: Yoshi's shield stun (`ftYs_GuardDamage_Anim`'s powershield timer, `powershield_tick`) reads motion variable +0x18 while it holds part of an address, which an ordinary VS match can reach too (reported, not this task's code). `mode2a`'s difference (above) is the movies list's: its process (`fn_802590C4`) works on its own GObj's user data, and melee-sim's on the newest list's (`mnGallery_804D6C88`), so B on the movies list and A on Movies again within the 10 frames it leaves in, two lists alive, steps the new list's frame for the old one (reported).
 
 
+### Yoshi's powershield flags
+
+`fix/guard-stale` (2026-11-12). Yoshi's egg never clears a powershield's flags, so his next shield stun's timers count down what later states left in `mv` x14 and x18, a grab's hold joint among them ([Melee's bugs](melee-bugs.md#yoshi-the-egg-keeps-a-powershields-flags-and-its-timer-counts-down-a-grabs-address), [the engine notes](engine.md#uninitialized-values)). Two sessions check the read, both in `$SSBM_RS_LOCAL/{lockstep,traces}/m6-guard-stale`:
+
+| Session | Trace | melee-oracle session, `--all --heap` | session-sync `--rollback 7 --shortcut` | Mutation |
+| --- | --- | --- | --- | --- |
+| `match1` (`m6-ssbmrs-replay`'s recording and job, `--hooks "--monkey 1 --matches 1 --mode e --fields 30000"`): its three debug VS matches, the third's Yoshi (the monkey) powershielding, spot dodging out of it, much later grabbing Ness, his forward throw hit by Fox (a damage state's byte in the hold joint's word), then the egg hit | 17,900 fields, 1.1 GB | clean, 17,855 ticks (the read in tick 17785, where the stop was) | 17,767 ticks in 5 matches, clean | an address's bytes read as 1.0's: tick 17785 (`fighter.mv[25]`) |
+| `yoshi-grab` (`DBLEVEL=3`, the unlock-all card; no hooks): the debug menu's DaiRanTou, Yoshi on port 1 and Mario on port 2, both human, on Final Destination; Yoshi walks up, powershields from a press and spot dodges at once, grabs Mario and holds the shield while Mario breaks out, so the raised egg (`ftYs_Init_8012BECC`) keeps the flags and the hold joint; Mario's jab on it is a powershield, and the stun's timer reads the joint's whole address | 5,010 fields, 140 MB | clean, 4,733 ticks (the read in tick 1839) | 3,665 ticks in 4 matches, clean | the same: tick 1839 (`x221C_b2` kept, `mv[24]`, `mv[25]`) |
+
+The planned inputs are `MONKEY_HOLD` scripts (`yoshi-grab.holds.txt` beside the recording), tried in melee-hd first (`session-sync` on the recording) and then recorded and traced with ssbm-rs's runner.
+
 ## Rules
 
 - Floats compare by bit pattern. One ULP is a divergence.

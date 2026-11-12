@@ -5,7 +5,8 @@
 //! refracted fighter's setup (`lbRefract_80022998`).
 
 use melee_sim::game::state::UserData;
-use melee_sim::game::structs::{_GXColor, ColorOverlay};
+use melee_sim::game::structs::{_GXColor, ColorOverlay, Fighter, Item};
+use melee_sim::hsd::display::FighterFlags;
 use melee_sim::hsd::mobj::{MObjId, PeDesc};
 use melee_sim::hsd::tobj::TObjId;
 
@@ -241,6 +242,72 @@ impl Ctx<'_> {
         setup_tev_stage(self.gx, &d);
     }
 
+    /// `ftMaterial_800BF534`: the fighter's light overlay's stage, if its overlay lights
+    /// and the material isn't translucent; the register it took.
+    #[doc(alias = "ftMaterial_800BF534")]
+    fn fighter_light_overlay(
+        &mut self,
+        desc: &TevDesc,
+        fp: &Fighter,
+        rendermode: u32,
+        flags: &FighterFlags,
+    ) -> Option<u8> {
+        let overlay = active_overlay_ft(fp);
+        if !overlay.x7C_flag2
+            || !overlay.x7C_light_enable
+            || rendermode & RENDER_XLU != 0
+            || flags.x2223_b2
+        {
+            return None;
+        }
+        let mut light = overlay.x50_light_color.clone();
+        if crate::mutation::on("ftMaterial_800BF534") {
+            light.r ^= 0x10;
+        }
+        Some(self.light_overlay_stage(desc, &light, GX_ENABLE))
+    }
+
+    /// `ftMaterial_800BF6BC`: the fighter's color overlay's stage, its tint the second
+    /// color under `x2223_b2`, else the sub color or the overlay's.
+    #[doc(alias = "ftMaterial_800BF6BC")]
+    fn fighter_color_overlay(
+        &mut self,
+        desc: &TevDesc,
+        fp: &Fighter,
+        light_reg: Option<u8>,
+        flags: &FighterFlags,
+    ) {
+        let overlay = active_overlay_ft(fp);
+        let mut sub = fp.sub_color;
+        if flags.x2228_b0 && fp.x2224_b0 {
+            if fp.is_metal {
+                sub = 4;
+            } else if fp.x2227_b3 {
+                sub = 5;
+            }
+        }
+        let tint = if flags.x2223_b2 {
+            Some(color(&fp.x610_color_rgba[1]))
+        } else if sub != 0 {
+            if overlay.x7C_color_enable {
+                Some(blend_tint(&fp.x610_color_rgba[0], &overlay.x2C_hex))
+            } else {
+                Some(self.sub_color(sub))
+            }
+        } else if overlay.x7C_color_enable {
+            Some(color(&overlay.x2C_hex))
+        } else {
+            None
+        };
+        if let Some(mut tint) = tint {
+            if crate::mutation::on("ftMaterial_800BF6BC") {
+                tint.r ^= 0x10;
+            }
+            let alpha = (fp.x61D != 0xFF).then_some(fp.x61D);
+            self.color_overlay_stage(desc, light_reg, tint, alpha, GX_ENABLE);
+        }
+    }
+
     /// The fighters' material setup, `ftMaterial_800BF2B8`, for the fighter being drawn.
     #[doc(alias = "ftMaterial_800BF2B8")]
     pub fn fighter_mobj_setup(&mut self, m: MObjId) {
@@ -289,46 +356,14 @@ impl Ctx<'_> {
         if fp.x61D != 0xFF {
             rendermode |= RENDER_NO_ZUPDATE | RENDER_XLU;
         }
+        let light_reg = self.fighter_light_overlay(&desc, fp, rendermode, &flags);
+        // `ftCo_8009F75C(fp, false)` when the overlay lights a translucent material or an
+        // outline: melee-sim named those lights before the material (`Draw::Lights`), and the
+        // render mode's channels take them.
         let overlay = active_overlay_ft(fp);
-
-        // `ftMaterial_800BF534`.
-        let mut light_reg = None;
-        // `ftCo_8009F75C(fp, false)` otherwise: melee-sim named those lights before the
-        // material (`Draw::Lights`), and the render mode's channels take them.
-        let without_alpha = overlay.x7C_flag2
-            && overlay.x7C_light_enable
-            && (rendermode & RENDER_XLU != 0 || flags.x2223_b2);
-        if overlay.x7C_flag2 && overlay.x7C_light_enable && !without_alpha {
-            light_reg = Some(self.light_overlay_stage(&desc, &overlay.x50_light_color, GX_ENABLE));
-        }
-
-        // `ftMaterial_800BF6BC`.
+        let without_alpha = overlay.x7C_flag2 && overlay.x7C_light_enable && light_reg.is_none();
         if !flags.x2223_b3 {
-            let mut sub = fp.sub_color;
-            if flags.x2228_b0 && fp.x2224_b0 {
-                if fp.is_metal {
-                    sub = 4;
-                } else if fp.x2227_b3 {
-                    sub = 5;
-                }
-            }
-            let tint = if flags.x2223_b2 {
-                Some(color(&fp.x610_color_rgba[1]))
-            } else if sub != 0 {
-                if overlay.x7C_color_enable {
-                    Some(blend_tint(&fp.x610_color_rgba[0], &overlay.x2C_hex))
-                } else {
-                    Some(self.sub_color(sub))
-                }
-            } else if overlay.x7C_color_enable {
-                Some(color(&overlay.x2C_hex))
-            } else {
-                None
-            };
-            if let Some(tint) = tint {
-                let alpha = (fp.x61D != 0xFF).then_some(fp.x61D);
-                self.color_overlay_stage(&desc, light_reg, tint, alpha, GX_ENABLE);
-            }
+            self.fighter_color_overlay(&desc, fp, light_reg, &flags);
         }
 
         if flags.x2223_b2 && !flags.x2223_b3 {
@@ -448,6 +483,65 @@ impl Ctx<'_> {
         self.mobj_setup_render_mode(rendermode, pe);
     }
 
+    /// `it_80277F90`: the item's light overlay's stage, if its own overlay lights; the
+    /// register it took.
+    // Ports `it_80277F90`; aliased once a frames check draws an item's light overlay (no
+    // documented frame does: its mutation fails none).
+    fn item_light_overlay(&mut self, desc: &TevDesc, ip: &Item) -> Option<u8> {
+        let own = &ip.x548_colorOverlay;
+        if !own.x7C_flag2 || !own.x7C_light_enable {
+            return None;
+        }
+        let mut light = own.x50_light_color.clone();
+        if crate::mutation::on("it_80277F90") {
+            light.r ^= 0x10;
+        }
+        Some(self.light_overlay_stage(desc, &light, GX_ENABLE))
+    }
+
+    /// `it_80278108`: the item's color overlay's stage, its tint the item's second color
+    /// under `b4`, else its own color or the overlay's (its owner's with `b3` and flag
+    /// `x13`).
+    #[doc(alias = "it_80278108")]
+    fn item_color_overlay(
+        &mut self,
+        desc: &TevDesc,
+        ip: &Item,
+        light_reg: Option<u8>,
+        b3: bool,
+        b4: bool,
+    ) {
+        let game = self.game;
+        let mut overlay = &ip.x548_colorOverlay;
+        if b3
+            && ip.xDC8_word.flags.x13
+            && let Some(o) = ip.owner
+            && let Some(UserData::Fighter(f)) = game.world.gobj(o).user_data
+        {
+            overlay = active_overlay_ft(&game.fighters[f.0]);
+        }
+        let tint = if b4 {
+            Some(color(&ip.xBC8.x0_unk))
+        } else if ip.x5C8 != 0 {
+            if overlay.x7C_color_enable {
+                Some(blend_tint(&ip.xBC4, &overlay.x2C_hex))
+            } else {
+                Some(color(&ip.xBC4))
+            }
+        } else if overlay.x7C_color_enable {
+            Some(color(&overlay.x2C_hex))
+        } else {
+            None
+        };
+        if let Some(mut tint) = tint {
+            if crate::mutation::on("it_80278108") {
+                tint.r ^= 0x10;
+            }
+            let alpha = (ip.x5C9 != 0xFF).then_some(ip.x5C9);
+            self.color_overlay_stage(desc, light_reg, tint, alpha, GX_ENABLE);
+        }
+    }
+
     /// The items' material setup, `fn_80277D8C`, for the item being drawn: HAL's with the
     /// item's light and color overlay stages (`it_80277F90`, `it_80278108`).
     #[doc(alias = "fn_80277D8C")]
@@ -468,38 +562,13 @@ impl Ctx<'_> {
         let (b3, b4, b5) = (flag(3), flag(4), flag(5));
         let (desc, mut rendermode) = self.mobj_setup_tev_part(m);
 
-        // `it_80277F90`.
-        let own = &ip.x548_colorOverlay;
-        let light_reg = (!b4 && own.x7C_flag2 && own.x7C_light_enable)
-            .then(|| self.light_overlay_stage(&desc, &own.x50_light_color, GX_ENABLE));
-
-        // `it_80278108`.
+        let light_reg = if b4 {
+            None
+        } else {
+            self.item_light_overlay(&desc, ip)
+        };
         if !b5 {
-            let mut overlay = own;
-            if b3
-                && ip.xDC8_word.flags.x13
-                && let Some(o) = ip.owner
-                && let Some(UserData::Fighter(f)) = game.world.gobj(o).user_data
-            {
-                overlay = active_overlay_ft(&game.fighters[f.0]);
-            }
-            let tint = if b4 {
-                Some(color(&ip.xBC8.x0_unk))
-            } else if ip.x5C8 != 0 {
-                if overlay.x7C_color_enable {
-                    Some(blend_tint(&ip.xBC4, &overlay.x2C_hex))
-                } else {
-                    Some(color(&ip.xBC4))
-                }
-            } else if overlay.x7C_color_enable {
-                Some(color(&overlay.x2C_hex))
-            } else {
-                None
-            };
-            if let Some(tint) = tint {
-                let alpha = (ip.x5C9 != 0xFF).then_some(ip.x5C9);
-                self.color_overlay_stage(&desc, light_reg, tint, alpha, GX_ENABLE);
-            }
+            self.item_color_overlay(&desc, ip, light_reg, b3, b4);
         }
 
         if ip.x5C9 != 0xFF {

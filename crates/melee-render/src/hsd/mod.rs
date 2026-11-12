@@ -48,6 +48,10 @@ pub struct Hsd {
     /// `prev_vtxdesclist_array`, `setupVtxDesc`'s `prev_vtxdesc`).
     pub prev_array: Option<DataRef>,
     pub prev_vtxdesc: Option<DataRef>,
+    /// The rigid setups' matrix mark (`mtx_mark[0]`), which `HSD_PObjSetMtxMark` never
+    /// stores for the slots HAL passes, so it stays as `HSD_PObjClearMtxMark` left it, no
+    /// joint's.
+    pub mtx_mark: Option<melee_sim::hsd::jobj::JObjId>,
     /// The texture chain of the material being drawn (`tobj_head`), and the resources its
     /// setup gave its textures.
     pub tobj_chain: Vec<TObjId>,

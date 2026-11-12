@@ -110,19 +110,34 @@ impl Gx {
     }
 
     /// `WriteMTXPS4x3`: 12 floats, rows in order (`psq_st` keeps their bits).
+    #[doc(alias = "WriteMTXPS4x3")]
     fn write_mtx_ps_4x3(&mut self, mtx: &[[f32; 4]]) {
+        let broken = crate::mutation::on("WriteMTXPS4x3");
         for row in &mtx[..3] {
             for &v in row {
-                self.write_f32(v);
+                self.write_f32(if broken { v * 2.0 } else { v });
             }
         }
     }
 
     /// `WriteMTXPS4x2`: the first two rows.
+    #[doc(alias = "WriteMTXPS4x2")]
     fn write_mtx_ps_4x2(&mut self, mtx: &[[f32; 4]]) {
+        let broken = crate::mutation::on("WriteMTXPS4x2");
         for row in &mtx[..2] {
             for &v in row {
-                self.write_f32(v);
+                self.write_f32(if broken { v * 2.0 } else { v });
+            }
+        }
+    }
+
+    /// `WriteMTXPS3x3from3x4`: the 3x3 part of `mtx`, rows in order.
+    #[doc(alias = "WriteMTXPS3x3from3x4")]
+    fn write_mtx_ps_3x3_from_3x4(&mut self, mtx: &[[f32; 4]; 3]) {
+        let broken = crate::mutation::on("WriteMTXPS3x3from3x4");
+        for row in mtx {
+            for &v in &row[..3] {
+                self.write_f32(if broken { v * 2.0 } else { v });
             }
         }
     }
@@ -151,11 +166,7 @@ impl Gx {
         let addr = id * 3 + 0x400;
         self.write_u8(0x10);
         self.write_u32(addr | 0x80000);
-        for row in mtx {
-            for &v in &row[..3] {
-                self.write_f32(v);
-            }
-        }
+        self.write_mtx_ps_3x3_from_3x4(mtx);
     }
 
     /// `GXLoadNrmMtxImm3x3`.

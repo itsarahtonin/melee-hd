@@ -23,6 +23,8 @@ melee-local-data = { path = "../local-data" }
 [features]
 # The opt-in sweep, tests/sweep.rs.
 sweep = []
+# melee-render's run-time mutations, `MUT=NAME` (docs/player.md, "Checking frames").
+mutation = ["melee-render/mutation"]
 
 [[test]]
 name = "sweep"
