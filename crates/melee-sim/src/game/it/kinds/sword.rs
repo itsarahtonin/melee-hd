@@ -507,8 +507,9 @@ pub fn spawn_at(r: &mut Running, pos: Vec3) -> Option<GObjId> {
 
 impl Running<'_> {
     /// The Home-Run Bat's render callback (`it_80284E10`, though it's in the sword's unit):
-    /// the common one (`it_8026EECC`). Nothing ported makes a bat in a match (only the item
-    /// switch's drops do, `it_8026BE84`), so no check reaches it; aliased once one does.
+    /// the common one (`it_8026EECC`). Only the item switch's drops make a bat
+    /// (`it_8026BE84`).
+    #[doc(alias = "it_80284E10")]
     pub fn render_bat(&mut self, gobj: GObjId, pass: i32) {
         self.render_item(gobj, pass);
     }

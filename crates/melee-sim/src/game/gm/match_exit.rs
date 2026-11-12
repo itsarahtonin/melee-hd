@@ -297,6 +297,7 @@ impl Running<'_> {
     /// trophies won; in a run's match (`x4_5`), the run's own: played through, at the
     /// hardest level, its time under 4 or 6 minutes, no damage taken, the run's two flags,
     /// and the stage's flag or else no stock lost; and a computer Crazy Hand met.
+    #[doc(alias = "gm_GetStartMeleeRules")]
     #[doc(alias = "fn_8017EE40")]
     fn classic_results(&mut self, r: &mut MatchEnd) {
         let g = &*self.game;

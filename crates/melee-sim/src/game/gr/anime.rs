@@ -41,6 +41,8 @@ fn part_mask(parts: u32) -> u32 {
 /// (`grAnime_801C7228`) visit them: the joint's, each display object's (its own, its material's
 /// and textures', its first shape's), the references', then the children's if `recurse`
 /// (not entering instances').
+#[doc(alias = "RObjForeachAnim")]
+#[doc(alias = "TObjForeachAnim")]
 #[doc(alias = "HSD_ForeachAnim")]
 #[doc(alias = "grAnime_801C7228")]
 #[doc(alias = "grAnime_801C70E0")]
@@ -161,6 +163,7 @@ pub fn apply(game: &mut Game, j: Option<JObjId>, recurse: bool, mask: u32, op: A
 }
 
 /// Loops a stage object's part's animations between two frames, `grAnime_801C775C`.
+#[doc(alias = "fn_801C6EE4")]
 #[doc(alias = "grAnime_801C775C")]
 pub fn loop_between(game: &mut Game, gobj: GObjId, part: i32, parts: u32, rewind: f32, end: f32) {
     let Some(j) = nth_joint(game, gobj, part) else {

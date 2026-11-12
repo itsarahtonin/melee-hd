@@ -99,6 +99,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("m6ad4-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adv-likelike/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6ac-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-adv-close/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6pb-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adv-polarbear/{o}.inputs")).into();
                 }
@@ -1503,6 +1506,15 @@ pub const M6AD4_LL_EDGE: Game = Game {
     name: "m6ad4-ll-edge",
     players: "Debug VS on the Underground Maze, Fox and Mario and the item menu's Like Likes (session m6-adv-likelike/ll-edge)",
     replay: Replay::Session("m6ad4-ll-edge"),
+};
+
+/// Adventure's red shell stopped on Mushroom Kingdom's route's slope (`m6-adv-close/mk-slope9`,
+/// debug level 3, Fox and Mario): the shell lasered up the slope, off the wall and still.
+pub const M6AC_MK_SLOPE9: Game = Game {
+    stage: "Adventure",
+    name: "m6ac-mk-slope9",
+    players: "Debug VS on Mushroom Kingdom's route, Fox and Mario and the item menu's red shell (session m6-adv-close/mk-slope9)",
+    replay: Replay::Session("m6ac-mk-slope9"),
 };
 
 /// Adventure's Polar Bear flung toward the screen (`m6-adv-polarbear/im-polar`, the debug level

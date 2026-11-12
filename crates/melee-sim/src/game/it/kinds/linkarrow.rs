@@ -602,6 +602,7 @@ fn stick(r: &mut Running, gobj: GObjId) {
 
 /// `itLinkarrow_UnkMotion2_Anim`: skidding on a shield until the shield goes or its life runs
 /// out.
+#[doc(alias = "ftLib_IsShielding")]
 #[doc(alias = "itLinkarrow_UnkMotion2_Anim")]
 fn anim2(r: &mut Running, gobj: GObjId) -> bool {
     let f = vars(r.game, gobj).xC4.get().expect("an arrow on no shield");

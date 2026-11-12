@@ -386,7 +386,7 @@ impl Running<'_> {
         let data = self.data;
         let co = &mut self.game.bgflash.user.as_mut().expect("user data").x4;
         // `fn_80021C18` takes the owner's commands and does nothing, so the script would
-        // stay on one.
+        // stay on one; dead, no LbBf.dat script holds one (ledger/dead.txt).
         while colanim::step(data, co, &mut |_, op| {
             panic!("LbBf.dat's color command {op:#x} never ends in the original")
         }) {

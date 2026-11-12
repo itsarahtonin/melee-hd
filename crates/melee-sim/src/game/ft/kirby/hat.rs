@@ -1081,6 +1081,7 @@ impl Running<'_> {
 /// The next material animation joint after `joint` in a depth-first walk,
 /// `ftAnim_GetNextMatAnimJointInTree`: its child, else its next sibling, else the nearest
 /// ancestor's next sibling (`HSD_MatAnimJoint`: child, next, animation).
+#[doc(alias = "ftAnim_GetNextMatAnimJointInTree")]
 fn next_matanim_joint(
     data: &melee_data::archive::Archives,
     joint: DataRef,

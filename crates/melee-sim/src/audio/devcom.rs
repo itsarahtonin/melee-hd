@@ -480,6 +480,8 @@ impl Audio {
 
     /// The disc read the queue started is done (its DVD callback): what it read reaches
     /// memory or its relay buffer, and the queue moves on.
+    #[doc(alias = "HSD_DevComDVDCallback")]
+    #[doc(alias = "HSD_DevComDVDMemCallback")]
     pub fn devcom_dvd_done(&mut self, data: &Archives) {
         let dc = self
             .devcom
@@ -635,6 +637,9 @@ impl Audio {
     }
 
     /// A finished ARAM transfer's callback.
+    #[doc(alias = "HSD_DevComDVDARAMEndCallback")]
+    #[doc(alias = "HSD_DevComDVDStdCallback")]
+    #[doc(alias = "HSD_DevComARAMCallback")]
     fn devcom_arq_callback(&mut self, data: &Archives, done: ArqDone) {
         let buf = match done {
             ArqDone::None => return,
@@ -680,6 +685,7 @@ impl Audio {
     }
 
     /// `HSD_DevComStdCallback`: the ARAM is free, and so is the relay buffer.
+    #[doc(alias = "HSD_DevComStdCallback")]
     fn devcom_std_done(&mut self, data: &Archives, buf: u8) {
         self.devcom.aram_busy = 0;
         self.devcom.relay_busy[usize::from(buf)] = 0;

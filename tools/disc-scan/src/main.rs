@@ -14,8 +14,11 @@
 //! tests read; `item-commands [OPCODE...]` counts every item script command on the disc (every
 //! article's states and the stages' `ALDYakuAll` scripts). `item-colanims` walks the items' color animations (`ItCo`'s `itPublicData`
 //! `x14`) and names any owner's command (21 and up) in them; `colanims FILE ROOT FIELD` any
-//! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `words FILE OFFSET COUNT` prints
-//! a file's words, pointers marked.
+//! other table (the fighters': `PlCo.dat ftLoadCommonData 0x18`, and `0x1C`). `robjs` counts
+//! the joints' and camera positions' reference objects by type and lists any expression;
+//! `stage-colanims` walks the stages' color animation scripts for owner's commands. `words
+//! FILE OFFSET COUNT` prints a file's words, pointers marked. `stage-items` lists each stage
+//! file's item articles.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
@@ -333,7 +336,7 @@ fn fighter_color_command_words(op: u32, w: u32) -> Option<u32> {
 /// 0x14, which `fn_80279B30` runs through `it_804D51C8`) and the fighters' (`PlCo.dat`,
 /// `ftLoadCommonData` 0x18 and the Cloak's 0x1C, run through `ft_800BFF34` and
 /// `ft_800BFF70`).
-fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
+fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: Option<u32>) {
     let words: &dyn Fn(u32, u32) -> Option<u32> = if file.starts_with("Pl") {
         &fighter_color_command_words
     } else {
@@ -353,7 +356,8 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
         let Some(at) = a.public(root) else {
             continue;
         };
-        let Some(t) = a.ptr(at + field) else {
+        // No field: the table is the symbol itself (`LbBf.dat`'s `lbBgFlashColAnimData`).
+        let Some(t) = field.map_or(Some(at), |f| a.ptr(at + f)) else {
             continue;
         };
         let starts = object_starts(&a);
@@ -363,7 +367,7 @@ fn colanims(disc: &Disc, files: &[String], file: &str, root: &str, field: u32) {
             .copied()
             .unwrap_or(a.data().len() as u32);
         let n = (end - t) / 8;
-        println!("{name} {root} {field:#x}: {n} color animations at {t:#x}");
+        println!("{name} {root} {field:?}: {n} color animations at {t:#x}");
         let mut owner_ops = BTreeSet::new();
         for i in 0..n {
             let Some(script) = a.ptr(t + 8 * i) else {
@@ -535,6 +539,170 @@ fn item_commands(disc: &Disc, files: &[String], want: &BTreeSet<u32>) {
     }
 }
 
+/// The stages' color animations: the scripts `grMaterial_801C9604` starts on a stage's
+/// pieces, each a word of the stage file's `yakumono_param` (grbattle.c's
+/// `bg_curr_color_overlay` and `bg_prev_color_overlay`, grcastle.c's `x114`, grcorneria.c's
+/// `x84`, grkongo.c's `unk84`, grlast.c's `x0` to `xC`, grmutecity.c's `x0` and `x4`,
+/// groldkongo.c's `x6C`, grshrineroute.c's `x0` to `xC`, grvenom.c's `x38`), with their
+/// commands and any owner's command (21 and up), which `grMaterial_801C9698` hands to
+/// `fn_801C9664`.
+fn stage_colanims(disc: &Disc, files: &[String]) {
+    const SCRIPTS: [(&str, &[u32]); 9] = [
+        ("GrNBa.dat", &[0x0, 0x4]),
+        ("GrCs.dat", &[0x114]),
+        ("GrCn.dat", &[0x84]),
+        ("GrKg.dat", &[0x84]),
+        ("GrNLa.dat", &[0x0, 0x4, 0x8, 0xC]),
+        ("GrMc.dat", &[0x0, 0x4]),
+        ("GrOk.dat", &[0x6C]),
+        ("GrNSr.dat", &[0x0, 0x4, 0x8, 0xC]),
+        ("GrVe.dat", &[0x38]),
+    ];
+    let mut owner_ops = BTreeSet::new();
+    for (file, fields) in SCRIPTS {
+        let Some(path) = files.iter().find(|p| p.rsplit('/').next() == Some(file)) else {
+            println!("{file}: not on the disc");
+            continue;
+        };
+        let bytes = disc.read_file(path).expect("the stage file");
+        let a = Archive::parse(&bytes).expect("a DAT archive");
+        let Some(root) = a.public("yakumono_param") else {
+            println!("{file}: no yakumono_param");
+            continue;
+        };
+        for &field in fields {
+            let Some(script) = a.ptr(root + field) else {
+                println!("{file} yakumono_param {field:#x}: no script");
+                continue;
+            };
+            let w = walk(&a, script, &color_command_words);
+            let mut ops: Vec<u32> = w.commands.iter().map(|c| c.0).collect();
+            ops.extend(w.bad.iter().map(|b| b.1));
+            ops.sort_unstable();
+            ops.dedup();
+            let owner: Vec<String> = w
+                .bad
+                .iter()
+                .filter(|(_, op)| *op != 10)
+                .map(|(at, op)| format!("{op} at {at:#x}"))
+                .collect();
+            owner_ops.extend(w.bad.iter().map(|b| b.1).filter(|&o| o != 10));
+            println!(
+                "{file} yakumono_param {field:#x}: script at {script:#x}, commands {ops:?} \
+                 (10 ends it), owner's: {}",
+                if owner.is_empty() {
+                    "none".to_owned()
+                } else {
+                    owner.join(", ")
+                }
+            );
+        }
+    }
+    println!("owner's commands in the stages' scripts: {owner_ops:?}");
+}
+
+/// Every reference object (`HSD_RObjDesc`) on the disc, by type. `HSD_RObjLoadDesc` takes them
+/// only from a joint's descriptor (`HSD_JObjDesc::robjdesc`, +0x3C, in `JObjLoad`) and a camera
+/// position's (`HSD_WObjDesc::robjdesc`, +0x10, in `WObjLoad` and `HSD_WObjInit`), so this
+/// finds every object shaped like either (where something points or a symbol names: +0x3C a
+/// pointer in an object of 0x40 bytes or more with no pointer in its vectors; +0x10 a pointer
+/// in one of 0x14 or more with none in its position) and follows each chain (`next`, +0). An
+/// expression (type 0, `REFTYPE_EXP`) is the only kind `expLoadDesc` gives `dummy_func`, when
+/// its descriptor's function is null, which in a file it always is.
+fn robjs(disc: &Disc, files: &[String]) {
+    const TYPES: [&str; 5] = ["expression", "joint", "limit", "bytecode", "IK hint"];
+    let mut counts = [[0u32; 5]; 2];
+    let (mut joints, mut wobjs, mut bad, mut archives) = (0u32, 0u32, 0u32, 0u32);
+    for path in files {
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        archives += 1;
+        let starts = object_starts(&a);
+        let size = |t: u32| {
+            starts
+                .range(t + 1..)
+                .next()
+                .copied()
+                .unwrap_or(a.data().len() as u32)
+                - t
+        };
+        let null_or_ptr = |o: u32| a.u32(o) == 0 || a.is_pointer(o);
+        let no_ptrs = |from: u32, to: u32| (from..to).step_by(4).all(|o| !a.is_pointer(o));
+        let mut heads = BTreeMap::new();
+        for &s in &starts {
+            if size(s) >= 0x40
+                && a.is_pointer(s + 0x3C)
+                && null_or_ptr(s)
+                && null_or_ptr(s + 8)
+                && null_or_ptr(s + 0xC)
+                && no_ptrs(s + 0x14, s + 0x38)
+            {
+                joints += 1;
+                heads.insert(a.u32(s + 0x3C), 0);
+            } else if size(s) >= 0x14
+                && a.is_pointer(s + 0x10)
+                && null_or_ptr(s)
+                && no_ptrs(s + 4, s + 0x10)
+            {
+                wobjs += 1;
+                heads.entry(a.u32(s + 0x10)).or_insert(1);
+            }
+        }
+        let mut seen = BTreeSet::new();
+        for (h, from) in heads {
+            let mut r = Some(h);
+            while let Some(at) = r {
+                if !seen.insert(at) || at as usize + 0xC > a.data().len() {
+                    break;
+                }
+                let flags = a.u32(at + 4);
+                let ty = ((flags >> 28) & 7) as usize;
+                let u = a.u32(at + 8);
+                let valid = !a.is_pointer(at + 4)
+                    && null_or_ptr(at)
+                    && ty < 5
+                    && (ty == 2) != a.is_pointer(at + 8)
+                    && match ty {
+                        // An expression updates the joint property its low bits name, from
+                        // an `HSD_ExpDesc` (a function, null in a file, and its values).
+                        0 => a.u32(u) == 0 && null_or_ptr(u + 4),
+                        3 => a.is_pointer(u),
+                        _ => true,
+                    };
+                if !valid {
+                    bad += 1;
+                    break;
+                }
+                counts[from][ty] += 1;
+                if ty == 0 {
+                    println!(
+                        "{path} {at:#x} (from a {}): an expression, flags {flags:#010x}, its \
+                         desc {u:#x}, values {:#x}",
+                        ["joint", "camera position"][from],
+                        a.u32(u + 4)
+                    );
+                }
+                r = a.ptr(at);
+            }
+        }
+    }
+    println!(
+        "{archives} archives, {joints} joint descs with a reference list, {wobjs} camera \
+         position descs with one"
+    );
+    for (ty, name) in TYPES.iter().enumerate() {
+        println!(
+            "type {ty} ({name}): {} from joints, {} from camera positions",
+            counts[0][ty], counts[1][ty]
+        );
+    }
+    println!("{bad} chains end in something not shaped like a reference");
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(cmd) = args.first() else {
@@ -597,10 +765,15 @@ fn main() -> ExitCode {
                 .collect();
             item_commands(&disc, &files, &want);
         }
-        "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", 0x14),
+        "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", Some(0x14)),
+        "robjs" => robjs(&disc, &files),
+        "stage-colanims" => stage_colanims(&disc, &files),
         "colanims" => {
-            // `colanims FILE ROOT FIELD`: any color animation table.
-            let field = u32::from_str_radix(args[3].trim_start_matches("0x"), 16).expect("a field");
+            // `colanims FILE ROOT [FIELD]`: any color animation table, the word at FIELD of
+            // ROOT or, without one, ROOT itself.
+            let field = args
+                .get(3)
+                .map(|f| u32::from_str_radix(f.trim_start_matches("0x"), 16).expect("a field"));
             colanims(&disc, &files, &args[1], &args[2], field);
         }
         "publics" => {
@@ -617,6 +790,33 @@ fn main() -> ExitCode {
                         println!("{path} {n} {o:#x}");
                     }
                 }
+            }
+        }
+        "stage-items" => {
+            // `stage-items`: each stage file's item articles (its `itemdata` list, which
+            // `Stage_8022524C` loads as the stage's articles, kinds 0xD0 on), the only stage
+            // items the debug item menu can make there.
+            for path in &files {
+                let name = path.rsplit('/').next().unwrap_or(path);
+                if !name.starts_with("Gr") {
+                    continue;
+                }
+                let Ok(bytes) = disc.read_file(path) else {
+                    continue;
+                };
+                let Ok(a) = Archive::parse(&bytes) else {
+                    continue;
+                };
+                let Some(mut at) = a.public("itemdata") else {
+                    println!("{name}: no itemdata");
+                    continue;
+                };
+                let mut kinds = Vec::new();
+                while let Some(item) = a.ptr(at) {
+                    kinds.push(format!("{:#x}", a.u32(item)));
+                    at += 4;
+                }
+                println!("{name}: {}", kinds.join(" "));
             }
         }
         "words" => {

@@ -737,7 +737,7 @@ pub fn phys9(r: &mut Running, gobj: GObjId) {
 
 /// Sliding off a slope's collision, `itZrshell_UnkMotion9_Coll`: skids to rest or falls; on the
 /// ground it rolls.
-// Ports itZrshell_UnkMotion9_Coll; aliased once a check reaches it.
+#[doc(alias = "itZrshell_UnkMotion9_Coll")]
 pub fn coll9(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, stopped, fell);
     roll(r, gobj);

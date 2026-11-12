@@ -29,6 +29,7 @@ pub const CAMERA_RENDER: u32 = 0x802F_BBDC;
 /// `ifMagnify_802FB8C0`, a player's bubble's render callback.
 pub const BUBBLE_RENDER: u32 = 0x802F_B8C0;
 /// `ifMagnify_802FC3BC`, the bubbles' user data's release, which does nothing.
+#[doc(alias = "ifMagnify_802FC3BC")]
 pub const BUBBLE_FREE: u32 = 0x802F_C3BC;
 
 /// How far the bubbles sit from the screen's center, horizontally and vertically.

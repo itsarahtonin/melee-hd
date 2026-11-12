@@ -64,10 +64,6 @@ const BLASTER_STATES: [(&str, &str); 3] = [
     ("itFoxblaster_UnkMotion9_Phys", BLASTER_STATE_9),
     ("itFoxblaster_UnkMotion9_Coll", BLASTER_STATE_9),
 ];
-const PILL_PICKED_UP: (&str, &str) = (
-    "itDrMarioPill_PickedUp",
-    "the pill's pickup (state 6) runs only from Item_8026AB54 in itDrMarioPill_802C09C4 with msid 2, which only the sleeping demo pose passes (ftCo_800BF108, ftDemo_CreateFighter's pose 6: the single-player modes' screens, never a VS match's results, whose winners take poses 0 to 2 and losers 4); the results' second pose (ftCo_800BED88) passes 1 and 0, and every other spawn and state of the pill clears its pickup flag (it_8026B3A8), so no fighter picks one up",
-);
 const PK_FLASH_KIND: (&str, &str) = (
     "itNesspkflash_UnkMotion0_Anim on another kind",
     "only PK Flash and Kirby's copy of it (kinds 68 and 145) have the state table that runs it",
@@ -132,7 +128,6 @@ pub const CHARACTERS: &[Character] = &[
             BLASTER_STATES[0],
             BLASTER_STATES[1],
             BLASTER_STATES[2],
-            PILL_PICKED_UP,
         ],
         unsure: &[],
         missing: &[],
@@ -276,7 +271,7 @@ pub const CHARACTERS: &[Character] = &[
     Character {
         kind: 22,
         items: &[49, 84],
-        unreached: &[PILL_PICKED_UP],
+        unreached: &[],
         unsure: &[],
         missing: &[],
     },

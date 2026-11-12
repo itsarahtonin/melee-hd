@@ -78,6 +78,7 @@ fn root_of(objs: &Objects, mut j: JObjId) -> JObjId {
 
 /// Sets up efLib for a scene, `efLib_Init`: empty effect and generator pools, the particle
 /// system emptied, efLib's hooks into it and joints, and the particle system's two GObjs.
+#[doc(alias = "HSD_JObjSetSPtclCallback")]
 #[doc(alias = "efLib_Init")]
 #[doc(alias = "efAsync_QueueInit")]
 pub fn init(r: &mut Running) {

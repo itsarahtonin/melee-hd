@@ -135,6 +135,7 @@ impl Running<'_> {
     /// files, its fog, lights, camera and models (on the main menu's model process), the
     /// stage and players, and two sounds.
     #[doc(alias = "vi0501_Scene_OnEnter")]
+    #[doc(alias = "HSD_SetEraseColor")]
     #[doc(alias = "vi_8031DC80")]
     pub fn vi0501_on_enter(&mut self) {
         let desc = super::enter_desc(self.game, 0x14);

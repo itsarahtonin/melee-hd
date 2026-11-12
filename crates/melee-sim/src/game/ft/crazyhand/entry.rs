@@ -44,6 +44,7 @@ impl Running<'_> {
 
     /// The entrance's camera script, `fn_8015B2C0`: Master Hand's, its interest on Crazy
     /// Hand's waist (`fn_8015B4EC`).
+    #[doc(alias = "ftLib_GetPlayerIndex")]
     #[doc(alias = "fn_8015B2C0")]
     pub fn ch_entry_camera(&mut self, gobj: GObjId) {
         self.boss_entry_camera(gobj, addr::FN_8015B4EC);

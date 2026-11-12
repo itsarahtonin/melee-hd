@@ -432,7 +432,8 @@ impl Running<'_> {
 }
 
 /// A frame of the behaviors that work on the object alone, all but `fn_800251EC` and
-/// `fn_800259A0`, which read the owner's place against the camera: the pan swept by the
+/// `fn_800259A0` (dead: no sound is made with behavior 3, ledger/dead.txt), which read the
+/// owner's place against the camera: the pan swept by the
 /// frames (`fn_800253D8`, `fn_800256BC`; once, `fn_800259EC`, `fn_80025A98`; straight,
 /// `fn_80025B44`; mirrored, `fn_80025CBC`) or the volume faded (`fn_80025E38`). Whether
 /// `update` is one of them.
