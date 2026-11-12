@@ -77,7 +77,9 @@ pub fn heal_amount(game: &mut Game, gobj: GObjId) -> i32 {
         super::kinds::HEART => v.heart().xDD4_heal.get(),
         super::kinds::TOMATO => v.tomato().heal_amount.get(),
         super::kinds::FOODS => v.foods().heal_amount.get() as i32,
-        LUCKY_EGG => v.egg().heal_amount.get(),
+        // The egg is one of the Pokémon's items, whose union member is theirs: its
+        // `itEgg_ItemVars.heal_amount` is the word `itLucky_Logic44_Spawned` wrote at 0x60.
+        LUCKY_EGG => v.pokemon().i32(0x60),
         WHISPY_HEAL_APPLE => v.whispy_apple().heal.get(),
         _ => 0,
     }
