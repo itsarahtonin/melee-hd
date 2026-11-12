@@ -11,7 +11,6 @@
 //! records is still a console's.
 
 use super::gm::machine::{GM_MENU, Phase};
-use super::mn::main::REG;
 use super::state::Game;
 
 /// A menu entry the player doesn't let a player confirm.
@@ -26,17 +25,19 @@ pub struct Gate {
     pub covers: &'static [&'static str],
 }
 
-/// The main menu's gated entries: the single-player modes (milestone 6).
-pub const GATES: &[Gate] = &[Gate {
-    list: REG,
-    entry: 1,
-    what: "Adventure",
-    covers: &["melee/gm/gmadventure"],
-}];
+/// The main menu's gated entries: none since Adventure's gate was lifted (Sarah, 2026-11-11),
+/// the last of milestone 6's single-player modes. The gates stay for a mode a later version
+/// brings in.
+pub const GATES: &[Gate] = &[];
 
 /// The gate the game's state is at: the main menu's scene running with its list's cursor on a
 /// gated entry.
 pub fn gate(game: &Game) -> Option<&'static Gate> {
+    gate_in(game, GATES)
+}
+
+/// [`gate`] against a given list of gates.
+pub fn gate_in(game: &Game, gates: &'static [Gate]) -> Option<&'static Gate> {
     let Phase::Scene { mode, .. } = game.machine.phase else {
         return None;
     };
@@ -44,7 +45,7 @@ pub fn gate(game: &Game) -> Option<&'static Gate> {
         return None;
     }
     let f = &game.menu.flow;
-    GATES
+    gates
         .iter()
         .find(|g| g.list == f.cur_menu && g.entry == f.hovered_selection)
 }
