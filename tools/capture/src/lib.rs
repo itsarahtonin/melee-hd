@@ -457,7 +457,7 @@ pub fn anim_subarchives(index: &DiscIndex, name: &str) -> Vec<(u32, Vec<u8>)> {
 /// header and data claim nothing, so the files loaded since over its range are found. A
 /// scene's heap made anew (`HSD_CreateMainHeap`) leaves the last scene's files there until
 /// they're written over: the progressive scan prompt's `EfCoData.dat` under the memory card
-/// scene's files.
+/// scene's files. The preload heaps' blocks are cells likewise.
 #[derive(Clone, Debug, Default)]
 pub struct Freed {
     heaps: Vec<HeapCells>,
@@ -505,6 +505,32 @@ impl Freed {
             ) else {
                 continue;
             };
+            allocated.sort_unstable();
+            heaps.push(HeapCells { lo, hi, allocated });
+        }
+        // The preload heaps in main memory (`lbHeap_80431FA0`'s made heaps, each an `lbMemory`
+        // handle over its range with its blocks): a file there lies in one of its blocks. A
+        // block the cache gives a raw buffer (Pokémon Stadium's) keeps what the last files left
+        // until it's written, and a stale header there whose file ran on past the block's end
+        // would hide a file read since just past it (`rt-attract`'s sixth demo match: the fifth's
+        // `PlLkNr.dat` under Pokémon Stadium's buffers, running on over the new `PlNs.dat`).
+        let lb_heap = crate::import::sym("lbHeap_80431FA0");
+        for i in 0..6 {
+            let at = lb_heap + 0x10 + 0x1C * i;
+            let (handle, status) = (word(at + 4), word(at + 0x18));
+            if status != 0 || !in_mem(handle + 0xC) {
+                continue;
+            }
+            let (lo, hi) = (word(handle + 4), word(handle + 8));
+            if lo < MEM1 || hi <= lo {
+                continue;
+            }
+            let mut allocated = Vec::new();
+            let mut b = word(handle + 0xC);
+            while b != 0 && in_mem(b + 8) && allocated.len() < 0x100 {
+                allocated.push((word(b + 4), word(b + 8)));
+                b = word(b);
+            }
             allocated.sort_unstable();
             heaps.push(HeapCells { lo, hi, allocated });
         }
