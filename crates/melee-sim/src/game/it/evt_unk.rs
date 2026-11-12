@@ -71,6 +71,7 @@ pub fn run(r: &mut Running, gobj: GObjId, other: Option<GObjId>, f: CodeRef) {
 /// review (Sarah, 2026-11-11): each is, in the original, the same 8 instructions, a call of
 /// `it_8026B894` alone (ledger/checks.txt; the unit test's `REVIEWED`).
 #[doc(alias = "itHeart_Logic8_EvtUnk")]
+#[doc(alias = "it_2725_Logic59_EvtUnk")]
 #[doc(alias = "itCoin_Logic116_EvtUnk")]
 #[doc(alias = "itBat_Logic11_EvtUnk")]
 #[doc(alias = "itParasol_Logic13_EvtUnk")]
@@ -146,7 +147,7 @@ fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 }
 
 /// Pikachu's Thunder forgets its thrower too, `itPikachuThunder_Logic39_EvtUnk`.
-// Ports `itPikachuThunder_Logic39_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "itPikachuThunder_Logic39_EvtUnk")]
 fn pikachu_thunder(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
     if v.x38.get() == other {
@@ -156,7 +157,7 @@ fn pikachu_thunder(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 }
 
 /// Samus's bomb forgets its owner whoever goes, `itSamusBomb_Logic50_EvtUnk`.
-// Ports `itSamusBomb_Logic50_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "itSamusBomb_Logic50_EvtUnk")]
 fn samus_bomb(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     item_mut(r.game, gobj)
@@ -167,7 +168,7 @@ fn samus_bomb(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 }
 
 /// Samus's missile forgets its owner if it's the one going, `it_2725_Logic52_EvtUnk`.
-// Ports `it_2725_Logic52_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "it_2725_Logic52_EvtUnk")]
 fn samus_missile(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_missile();
@@ -178,7 +179,7 @@ fn samus_missile(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 
 /// Samus's grapple beam forgets its fighter if it's the one going,
 /// `itSamusGrapple_Logic53_EvtUnk`.
-// Ports `itSamusGrapple_Logic53_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "itSamusGrapple_Logic53_EvtUnk")]
 fn samus_grapple(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     lib26b1::forget(r.game, gobj, other);
     let v = item_mut(r.game, gobj).xDD4_itemVar.samus_grapple();
@@ -188,7 +189,7 @@ fn samus_grapple(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
 }
 
 /// The Ice Climbers' ice forgets its climber too, `itClimbersIce_Logic90_EvtUnk`.
-// Ports `itClimbersIce_Logic90_EvtUnk`; aliased once a check reaches it.
+#[doc(alias = "itClimbersIce_Logic90_EvtUnk")]
 fn climbers_ice(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.climbers_ice();
     if v.x0.get() == other {

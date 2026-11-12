@@ -456,7 +456,7 @@ impl Running<'_> {
 
     /// `ftCommon_8007F76C`: the ground speed and horizontal velocity turned the way the
     /// fighter faces.
-    // Ports `ftCommon_8007F76C`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_8007F76C")]
     pub fn speed_toward_facing(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let facing = reg(fp.facing_dir);

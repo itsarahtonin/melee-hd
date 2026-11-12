@@ -325,7 +325,7 @@ fn stretch(a: f64, b: f64) -> f64 {
 
 /// `itPikachuThunder_Logic39_EvtUnk`: forgets its owner if that's the GObj that goes, then
 /// any GObj it points to (`it_8026B894`).
-// Ports `itPikachuThunder_Logic39_EvtUnk`; aliased once a check reaches it.
+// `itPikachuThunder_Logic39_EvtUnk`, as game/it/evt_unk.rs runs it (aliased there).
 pub fn forget(r: &mut Running, gobj: GObjId, other: Option<GObjId>) {
     let v = item_mut(r.game, gobj).xDD4_itemVar.pikachu_thunder();
     if v.x38.get() == other {

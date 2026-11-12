@@ -59,7 +59,6 @@ pub fn missing_with_switch(kinds: &[i32], characters: &[u8], stage: u16) -> Vec<
 /// accounted for, and the fighter units only items reach.
 pub const UNITS: &[&str] = &[
     "melee/it/it_26B1",
-    "melee/it/it_2725",
     "melee/it/it_279C",
     "melee/it/itanimlist",
     "melee/it/itcoll",
@@ -390,7 +389,6 @@ const WALK_ENDS: &str = "it_802EA804's walks start from the ReDead lifted 0.0001
 pub const UNREACHED: &[(&str, &str)] = &[
     ("melee/it/kinds/itmetamon", DITTO),
     ("it_8026BE84", DROP_BY_KIND),
-    ("it_802841B4", DROP_BY_KIND),
     ("it_80279AF0", COLANIM),
     ("it_80279B10", COLANIM),
     ("gm_80473A18", EVENT),
@@ -425,7 +423,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
     "melee/it/it_26B1",
-    "melee/it/it_2725",
     "melee/it/itmaterial",
     "melee/it/kinds/itkirbyyoshispecialn",
     "melee/it/kinds/itlucky",

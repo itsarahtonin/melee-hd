@@ -368,6 +368,7 @@ impl Running<'_> {
     /// (`mnStageSel_8025BC08`, `gm_80164430`'s test); rule 0 leaves the cursor to any port,
     /// rule 3 to the next human port in turn after the last, and rule 4 to the port
     /// `gm_80168710` drew after the last match (a random human's before the first).
+    #[doc(alias = "mnStageSel_8025BC08")]
     #[doc(alias = "gm_80167FC4")]
     pub(crate) fn sss_stage_rule(&mut self) {
         let sel = self.game.game_data.x1850.stage_sel;

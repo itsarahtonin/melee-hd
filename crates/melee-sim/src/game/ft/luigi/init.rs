@@ -39,6 +39,8 @@ impl Running<'_> {
     }
 }
 
+/// Luigi's hooks and states by address; his item hiding is Fox's (`ftLg_Init_OnItemInvisible`).
+#[doc(alias = "ftLg_Init_OnItemInvisible")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),

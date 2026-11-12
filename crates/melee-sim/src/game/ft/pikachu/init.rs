@@ -79,13 +79,15 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftPk_Init_OnItemInvisible`.
-    // Ports `ftPk_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_Init_OnItemInvisible")]
+    #[doc(alias = "ftPc_Init_OnItemInvisible")]
     pub fn pk_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 0);
     }
 
     /// Showing the held item again, `ftPk_Init_OnItemVisible`.
-    // Ports `ftPk_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPk_Init_OnItemVisible")]
+    #[doc(alias = "ftPc_Init_OnItemVisible")]
     pub fn pk_on_item_visible(&mut self, gobj: GObjId) {
         self.item_visible_hand(gobj, 0);
     }
