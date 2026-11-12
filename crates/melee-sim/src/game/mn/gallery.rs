@@ -84,6 +84,15 @@ impl Running<'_> {
             .expect("the movies' list's data")
     }
 
+    /// The data of the list whose user data is at `addr`.
+    fn gallery_data_mut(&mut self, addr: u32) -> &mut GalleryData {
+        self.game
+            .gallery
+            .data
+            .get_mut(&addr)
+            .expect("the movies' list's data")
+    }
+
     fn gallery(&self) -> GalleryData {
         self.game.gallery.data[&self.gallery_addr()]
     }
@@ -210,41 +219,47 @@ impl Running<'_> {
     }
 
     /// `fn_802590C4`, the list's process: 19 frames coming in, then choosing; leaving, 29
-    /// frames, then the list and its cursors gone; still while a movie plays.
+    /// frames, then the list and its cursors gone; still while a movie plays. It works on its
+    /// own GObj's user data, not the newest list's (`mnGallery_804D6C88`): B on the list and
+    /// A on Movies again within its exit leaves two lists, each stepping its own frame.
     #[doc(alias = "fn_802590C4")]
     pub fn gallery_list_proc(&mut self, gobj: GObjId) {
         let Some(Obj::JObj(j)) = self.game.world.gobj(gobj).obj else {
             panic!("the movies' list without its model");
         };
-        let d = self.gallery();
+        let addr = match self.game.world.gobj(gobj).user_data {
+            Some(UserData::GalleryList(a)) => a,
+            other => panic!("the movies' list holds {other:?}"),
+        };
+        let d = *self.gallery_data_mut(addr);
         match d.state {
             3 => return,
             0 => {
                 if d.frame < 0x13 {
-                    self.gallery_mut().frame += 1;
+                    self.gallery_data_mut(addr).frame += 1;
                 } else {
-                    self.gallery_mut().state = 1;
+                    self.gallery_data_mut(addr).state = 1;
                 }
             }
             2 => {
                 if d.frame < 0x1D {
-                    self.gallery_mut().frame += 1;
+                    self.gallery_data_mut(addr).frame += 1;
                 } else {
-                    self.gallery_mut().state = 4;
+                    self.gallery_data_mut(addr).state = 4;
                     // The list's own GObj goes when its process returns; its user data holds
                     // till then.
                     gobj::free(self, gobj);
                     for i in 0..2 {
-                        if let Some(c) = self.gallery().cursors[i] {
+                        if let Some(c) = self.gallery_data_mut(addr).cursors[i] {
                             gobj::free(self, c);
                         }
-                        self.gallery_mut().cursors[i] = None;
+                        self.gallery_data_mut(addr).cursors[i] = None;
                     }
                 }
             }
             _ => {}
         }
-        let frame = self.gallery().frame;
+        let frame = self.gallery_data_mut(addr).frame;
         jobj::req_anim_all(&mut self.game.objs, Some(j), frame as f32);
         self.gallery_anim_all(j);
     }
