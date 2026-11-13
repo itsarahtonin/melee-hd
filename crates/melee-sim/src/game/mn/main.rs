@@ -356,7 +356,9 @@ pub struct ListData {
 pub struct PanelData {
     pub cur_menu: u8,
     pub prev_menu: u8,
-    pub x2: u8,
+    /// `x2`, which `mn_80229DC0` never writes and nothing reads: what the heap block held,
+    /// from the heap's image (none where it doesn't know it).
+    pub x2: Option<u8>,
     pub state: u8,
 }
 
@@ -726,12 +728,13 @@ impl Running<'_> {
         jobj::req_anim_all(&mut self.game.objs, body, f);
         self.anim_all_j(body.expect("the panel"));
         let addr = crate::hsd::heap::mem_alloc(4);
+        let [x2] = super::leftover_bytes_known::<1>(self.data, addr + 2);
         self.game.menu.panels.insert(
             addr,
             PanelData {
                 cur_menu: cur,
                 prev_menu: cur,
-                x2: 0,
+                x2,
                 state: 0,
             },
         );

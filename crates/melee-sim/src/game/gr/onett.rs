@@ -175,7 +175,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Onett's start, `grOnett_801E37C8`: the enemy spawner, without enemies.
 #[doc(alias = "grOnett_801E37C8")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The car sign's model, `grOnett_801E56FC`: map 1's entry in its archive.

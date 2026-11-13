@@ -23,11 +23,35 @@ pub fn start(r: &Replay) -> ReplayStart {
             header[pos] = (header[pos] & 0x00FF_FFFF) | (0x13 << 24);
         }
     }
+    let info: Vec<u8> = header.iter().flat_map(|w| w.to_be_bytes()).collect();
+    let codes = playback_codes(&r.gecko_codes);
+    // The whole answer, as `prepareGameInfo` queues it.
+    let mut response = vec![1u8];
+    response.extend_from_slice(&r.random_seed.to_be_bytes());
+    response.extend_from_slice(&info);
+    for t in r.ucf_toggles {
+        response.extend_from_slice(&t.to_be_bytes());
+    }
+    for tag in r.nametags {
+        for h in tag {
+            response.extend_from_slice(&h.to_be_bytes());
+        }
+    }
+    response.push(r.is_pal);
+    // Whether Pokémon Stadium's transformations preload, and never resync.
+    response.push(u8::from(r.version_at_least(1, 3)));
+    response.push(r.is_frozen_ps);
+    response.push(0);
+    for name in r.display_names {
+        response.extend_from_slice(&name);
+    }
+    response.extend_from_slice(&(codes.len() as u32).to_be_bytes());
     ReplayStart {
-        info: header.iter().flat_map(|w| w.to_be_bytes()).collect(),
+        info,
         seed: r.random_seed,
         nametags: r.nametags,
-        codes: playback_codes(&r.gecko_codes),
+        codes,
+        response,
     }
 }
 

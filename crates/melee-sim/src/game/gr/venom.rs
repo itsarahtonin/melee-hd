@@ -288,7 +288,7 @@ pub fn on_load(r: &mut Running) {
 /// Venom's start, `grVenom_80203E80`: the enemy spawner, without enemies.
 #[doc(alias = "grVenom_80203E80")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// Creates one of the stage's objects and sets it up, `grVenom_80203EAC`.

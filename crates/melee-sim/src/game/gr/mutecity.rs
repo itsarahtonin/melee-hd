@@ -234,7 +234,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Mute City's start, `grMuteCity_801EFCE0`: the enemy spawner, without enemies.
 #[doc(alias = "grMuteCity_801EFCE0")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The hazard sign's model, `grMuteCity_801F28A8`: map 38's entry in its archive.

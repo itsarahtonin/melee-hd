@@ -183,21 +183,21 @@ impl super::state::Running<'_> {
             cat < 43,
             "a trophy's display category {cat}, past the archives' table"
         );
-        let a = &mut self.game.toys.collection.archives;
+        let a = &mut self.game.toys.display_archives;
         if a.is_empty() {
             a.resize(43, None);
         }
         let mut result = 0;
-        if self.game.toys.collection.archives[cat].is_none() {
+        if self.game.toys.display_archives[cat].is_none() {
             let l = self.toy_load(super::ty::collection::archive_file(cat));
-            self.game.toys.collection.archives[cat] = Some(l);
+            self.game.toys.display_archives[cat] = Some(l);
         } else {
             result = 1;
         }
         for i in [42, 41] {
-            if self.game.toys.collection.archives[i].is_none() {
+            if self.game.toys.display_archives[i].is_none() {
                 let l = self.toy_load(super::ty::collection::archive_file(i));
-                self.game.toys.collection.archives[i] = Some(l);
+                self.game.toys.display_archives[i] = Some(l);
             }
         }
         result

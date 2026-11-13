@@ -172,7 +172,7 @@ pub fn on_load(r: &mut Running) {
 #[doc(alias = "grShrineRoute_OnStart")]
 pub fn on_start(r: &mut Running) {
     let p = param(r.game);
-    zako::start(r.game, Some(p.at(0x28)));
+    zako::start(r.game, r.data, Some(p.at(0x28)));
     let n = r.data.u32(p.at(0x24)) as i32;
     let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };
     if val == 0 {

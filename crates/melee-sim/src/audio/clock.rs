@@ -1257,6 +1257,21 @@ impl Clock {
         }
     }
 
+    /// `HSD_VIWaitXFBFlush` inside a scene's loop (the movie player's close from the Data
+    /// menu's movies, `lbMthp_8001F800`): `VIWaitForRetrace` until every copied frame has
+    /// shown; with none waiting it reads no clock.
+    pub fn xfb_flush(&mut self, f: &mut dyn Frames) {
+        if self.xfb_pending == 0 {
+            return;
+        }
+        self.game_code(f);
+        while self.xfb_pending > 0 {
+            let next = self.next_at();
+            self.now = self.now.max(next);
+            self.service(f);
+        }
+    }
+
     /// `VIWaitForRetrace`: time passes, its interrupts taken, until the next retrace's handler
     /// has run.
     pub fn wait_for_retrace(&mut self, f: &mut dyn Frames) {

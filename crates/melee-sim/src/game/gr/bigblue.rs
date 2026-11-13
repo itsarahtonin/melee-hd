@@ -336,7 +336,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Big Blue's start, `grBigBlue_801E59CC`: the enemy spawner, without enemies.
 #[doc(alias = "grBigBlue_801E59CC")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {
@@ -670,8 +670,8 @@ pub fn init_platforms(r: &mut Running, gobj: GObjId) {
 pub fn post_event(game: &mut Game, index: usize, value: u32, extra: Option<JObjId>) {
     let g = map_ground(game, 0x20);
     let v = game.grounds[g.0].u.bigblue_manager();
-    if extra.is_some() {
-        v.event_extra = extra;
+    if let Some(j) = extra {
+        v.event_extra = super::vars::EventExtra::Joint(j);
     }
     v.event[index] = value;
 }
@@ -1560,8 +1560,8 @@ pub fn proc_flyer(r: &mut Running, gobj: GObjId) {
                         let mg = map_ground(r.game, 0x20);
                         let m = r.game.grounds[mg.0].u.bigblue_manager();
                         m.event[1] = 0;
-                        if j.is_some() {
-                            m.event_extra = j;
+                        if let Some(j) = j {
+                            m.event_extra = super::vars::EventExtra::Joint(j);
                         }
                         m.event[0] = 1;
                         r.game.grounds[g.0].u.bigblue_flyer().xCC = 0.0;

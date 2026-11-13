@@ -71,7 +71,8 @@ impl Comparer<'_> {
     }
 
     /// The rules' list's user data (`struct mn_802307F8_t`) at `t`, its block `addr`. Its
-    /// `x7` and `x8` aren't compared: nothing writes them (docs/engine.md).
+    /// `x7` and `x8`, which nothing writes, compare as the heap's image knew the block's
+    /// bytes, unknown ones left out (docs/engine.md).
     pub(crate) fn rules_list(&mut self, path: &str, addr: u32, t: u32) {
         let Some(ud) = self.ud_head(path, "rules' user data and release", addr, HSD_FREE, t) else {
             return;
@@ -80,8 +81,10 @@ impl Comparer<'_> {
             self.diff(path, "rules' user data", "none", format!("{addr:#x}"));
             return;
         };
-        let values: Vec<Option<u8>> = d.values[..5].to_vec();
-        let theirs: Vec<Option<u8>> = (0..5).map(|i| Some(self.u8(ud + 2 + i))).collect();
+        let values: Vec<Option<u8>> = d.values.to_vec();
+        let theirs: Vec<Option<u8>> = (0..7)
+            .map(|i| (i < 5 || d.values[i].is_some()).then(|| self.u8(ud + 2 + i as u32)))
+            .collect();
         self.check(
             path,
             "rules' kind, hovered, stock count, state",
@@ -121,8 +124,8 @@ impl Comparer<'_> {
         self.text_at(path, "rules' description", d.text, ud + 0x130);
     }
 
-    /// The extra rules' list's user data (`MenuRulesPlusData`) at `t`. Its `x7` isn't
-    /// compared: nothing writes it.
+    /// The extra rules' list's user data (`MenuRulesPlusData`) at `t`. Its `x7`, which nothing
+    /// writes, compares as the heap's image knew the block's byte, left out where unknown.
     pub(crate) fn rule_plus_list(&mut self, path: &str, addr: u32, t: u32) {
         let Some(ud) = self.ud_head(
             path,
@@ -137,14 +140,16 @@ impl Comparer<'_> {
             self.diff(path, "extra rules' user data", "none", format!("{addr:#x}"));
             return;
         };
-        let theirs: Vec<Option<u8>> = (0..5).map(|i| Some(self.u8(ud + 2 + i))).collect();
+        let theirs: Vec<Option<u8>> = (0..6)
+            .map(|i| (i < 5 || d.values[i].is_some()).then(|| self.u8(ud + 2 + i as u32)))
+            .collect();
         self.check(
             path,
             "extra rules' kind, hovered, state",
             (d.menu_kind, d.hovered, d.state),
             (self.u8(ud), self.u8(ud + 1), self.u8(ud + 8)),
         );
-        self.check(path, "extra rules' values", d.values[..5].to_vec(), theirs);
+        self.check(path, "extra rules' values", d.values.to_vec(), theirs);
         for (i, j) in d.tree.iter().enumerate() {
             self.jobj_at(
                 path,

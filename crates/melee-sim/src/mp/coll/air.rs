@@ -764,7 +764,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     let ecb_unlocked = reg(cd.ecb.bottom.y) > 0.0;
                     if self.snap_to_floor(cd, ecb_unlocked && squeeze & 1 == 0) {
                         self.floor_walls(cd, ecb_unlocked && squeeze & 1 == 0);
-                        cd.x34_flags.b5 = true;
+                        cd.x34_flags.b5 = Some(true);
                         touched_floor = true;
                     }
                 }

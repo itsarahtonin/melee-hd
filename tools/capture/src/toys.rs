@@ -235,23 +235,15 @@ impl Comparer<'_> {
         );
         self.toy_archive("_tyDisplay_804A2DD0.x14", holder.archive, h + 0x14);
         // The display's archives a stage's trophy loaded, each an `HSD_Archive`, which
-        // `tyDisplay_8031C8B8` forgets with the scene's heap. The collection's scene keeps its
-        // own 43 in the same list here but not in that table, so it isn't compared there; the
-        // next scene's forget leaves both empty.
-        if scene_kind(game.machine.scene_info) != Some(GS_TOY_COLLECTION) {
-            let d = sym("_tyDisplay_804A2DE8");
-            let ours: Vec<u32> = (0..43)
-                .map(|i| {
-                    c.archives
-                        .get(i)
-                        .copied()
-                        .flatten()
-                        .map_or(0, |l| l.archive)
-                })
-                .collect();
-            let theirs: Vec<u32> = (0..43).map(|i| self.u32(d + 4 * i)).collect();
-            self.check("_tyDisplay_804A2DE8", "archives", ours, theirs);
-        }
+        // `tyDisplay_8031C8B8` forgets with the scene's heap (`Toys::display_archives`; the
+        // collection's scene keeps its own in its background block, compared there).
+        let d = sym("_tyDisplay_804A2DE8");
+        let list = &game.toys.display_archives;
+        let ours: Vec<u32> = (0..43)
+            .map(|i| list.get(i).copied().flatten().map_or(0, |l| l.archive))
+            .collect();
+        let theirs: Vec<u32> = (0..43).map(|i| self.u32(d + 4 * i)).collect();
+        self.check("_tyDisplay_804A2DE8", "archives", ours, theirs);
         // What the debug views wrote into `TyDatai`.
         if game.gm.trophy_data {
             let datai = game.ft.data.files.archive(game.trophy_data_file());

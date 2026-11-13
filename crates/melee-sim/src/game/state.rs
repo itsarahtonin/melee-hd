@@ -592,6 +592,10 @@ impl Host<GameKinds> for Running<'_> {
                 self.game.menu.lists.remove(&addr);
             }
             UserData::MainMenuPanel(addr) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.menu.panels.remove(&addr);
             }
@@ -605,6 +609,10 @@ impl Host<GameKinds> for Running<'_> {
                 self.game.gallery.cursors.remove(&addr);
             }
             UserData::OptionMenu(addr) => {
+                let (game, archives) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::menu_block(game, archives, img, &data)
+                });
                 crate::hsd::heap::mem_free(addr);
                 self.game.options.menus.remove(&addr);
             }

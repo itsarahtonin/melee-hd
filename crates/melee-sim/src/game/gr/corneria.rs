@@ -660,7 +660,7 @@ pub const LOAD_FRAME: u32 = setup::SETUP_FRAME + 0x58;
 /// Corneria's start, `grCorneria_801DD508`: the enemy spawner, without enemies.
 #[doc(alias = "grCorneria_801DD508")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// Where a stage object's process runs (`HSD_GObj_RunProcs`' frame): the stack addresses below
@@ -1440,7 +1440,7 @@ fn proc_city(r: &mut Running, gobj: GObjId, width: f32, next: i32) {
     let y = mem(fp::fneg(reg(sink_depth(r.game))));
     jobj::set_srt(&mut r.game.objs.jobjs, j, |o| o.translate.y = y);
     let gid = ground_of(r.game, gobj);
-    let state = match r.game.grounds[gid.0].u {
+    let state = match r.game.grounds[gid.0].u.vars {
         super::GroundVars::CorneriaCity8(ref v) => v.xC5,
         super::GroundVars::CorneriaCity(ref v) => v.xC5,
         _ => panic!("grcorneria.c: a city part's variables"),
@@ -1468,7 +1468,7 @@ fn proc_city(r: &mut Running, gobj: GObjId, width: f32, next: i32) {
 }
 
 fn set_city_state(game: &mut Game, gid: super::super::handles::GroundId, s: u8) {
-    match &mut game.grounds[gid.0].u {
+    match &mut game.grounds[gid.0].u.vars {
         super::GroundVars::CorneriaCity8(v) => v.xC5 = s,
         super::GroundVars::CorneriaCity(v) => v.xC5 = s,
         _ => panic!("grcorneria.c: a city part's variables"),
@@ -2228,10 +2228,17 @@ pub fn window_render(r: &mut Running, gobj: GObjId, pass: i32) {
     let text = r.game.grounds[gid.0].u.smash_taunt().text;
     // Once the line closes its font the text is freed, but the window keeps pointing at it and
     // writes its `hidden` byte into the freed block, which the next text made there writes
-    // before anything reads it: a freed text takes no write here.
+    // before anything reads it: the byte goes into the heap's image, which a later object
+    // over the freed text heap takes (docs/engine.md, "Uninitialized values").
     let set_hidden = |r: &mut Running, h: u8| {
-        if let Some(t) = text.and_then(|t| r.game.sis.texts.get_mut(&t.0)) {
-            t.hidden = h;
+        let Some(t) = text else { return };
+        match r.game.sis.texts.get_mut(&t.0) {
+            Some(t) => t.hidden = h,
+            None if r.game.sis.arena_block != 0 => {
+                let at = r.game.sis.arena_block + t.0 + crate::hsd::sis::TEXT_HIDDEN;
+                crate::hsd::heap::with(|hp| hp.image.put(at, &[h]));
+            }
+            None => {}
         }
     };
     if r.game.db_pause_flag(1)
@@ -2517,7 +2524,7 @@ pub fn camera_floor(game: &Game) -> f64 {
     match map_gobj(game, 3) {
         Some(gobj) => {
             let gid = ground_of(game, gobj);
-            let super::GroundVars::Corneria(v) = &game.grounds[gid.0].u else {
+            let super::GroundVars::Corneria(v) = &game.grounds[gid.0].u.vars else {
                 panic!("grcorneria.c: the Great Fox's variables");
             };
             fp::fadds(5.0, fp::fmsubs(-35.0, reg(scale(game)), reg(v.xD0)))

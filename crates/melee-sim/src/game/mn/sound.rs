@@ -243,7 +243,8 @@ impl Running<'_> {
             unk2: Some(0),
             unk3: Some(self.sound_balance()),
             text: None,
-        };
+        }
+        .with_leftovers(self.data, addr);
         let g = &mut *self.game;
         g.options.menus.insert(addr, menu);
         g.world.init_user_data(gobj, 0, UserData::OptionMenu(addr));

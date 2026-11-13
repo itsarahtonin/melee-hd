@@ -174,7 +174,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Fourside's start, `grFourside_801F2DA4`: the enemy spawner, without enemies.
 #[doc(alias = "grFourside_801F2DA4")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

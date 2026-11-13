@@ -247,18 +247,9 @@ FIELD_DATA = {
 }
 
 # Fields no code reads or writes, by struct: left out like padding, so they hold whatever the
-# block held and nothing compares them. An item link's last five flag bits are such (the
-# decomp's `itCharItems.h`); a link block new from the heap mid-capture keeps the heap's bits.
-# So are an item's `x8`, `x21`, `x22` and `x23`: item creation leaves them, so an item in a
-# block the pool grows from reused heap holds the heap's old words there (a Fire Flower
-# flame on the items-shoot Battlefield match, tick 5940).
-UNUSED = {
-    # A stage object's flag byte past its pass (`x11_flags`' `b3` to `b7`): neither the decomp's
-    # code nor ssbm-rs's ports touch them, so an object in a block a freed one held keeps what
-    # the block held there (Battlefield's backgrounds over Multi-Man Melee's six minutes,
-    # `m6-multiman/mm-100-win`'s tick 21767).
-    "Ground_x11_flags": {"b3", "b4", "b5", "b6", "b7"},
-}
+# block held and nothing compares them. None now: such fields are kept as their blocks hold
+# them (`KEPT`, or a spliced type).
+UNUSED = {}
 
 # Fields no code writes, which a new object keeps as its block held them: `game::held::Kept`,
 # none where that's unknown (a block new from a heap melee-sim doesn't model), compared and laid
@@ -299,6 +290,9 @@ SPLICE = {
     ],
     # The stage objects' own cameras, by CObj.
     "StageInfo": ("x694", 0x694, 0x6A4, "StageCameras"),
+    # A stage object's flag byte past its pass (`x11_flags`' `b3` to `b7`), which no code
+    # touches: kept as the block held it where melee-sim knows that.
+    "Ground": ("x11_flags", 0x11, 0x12, "GroundX11Flags"),
     # A heart's flag byte, of which the heart uses only the top bit (an event's heart).
     "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
@@ -349,7 +343,8 @@ SPLICE = {
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
-    "use crate::game::gr::setup::StageCameras;",
+    "use crate::game::gr::setup::{GroundX11Flags, StageCameras};",
+    "use crate::game::gr::GroundUnion;",
     "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
@@ -373,8 +368,9 @@ EXTERNAL = {
     "Vec": "Vec3",
     "Vec3": "Vec3",
     "Quaternion": "Quat",
-    # A stage object's variables, a union whose member the stage and object pick: hand-written.
-    "GroundVars": "GroundVars",
+    # A stage object's variables, a union whose member the stage and object pick, with what
+    # the block held there: hand-written.
+    "GroundVars": "GroundUnion",
     # A union whose member the kind beside it picks, holding joint handles: hand-written.
     "ECBSource": "EcbSource",
     # An item's variables, a union whose member the item's kind picks: hand-written.
@@ -419,8 +415,8 @@ use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBone
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
-use crate::game::gr::GroundVars;
-use crate::game::gr::setup::StageCameras;
+use crate::game::gr::{GroundUnion, GroundVars};
+use crate::game::gr::setup::{GroundX11Flags, StageCameras};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;

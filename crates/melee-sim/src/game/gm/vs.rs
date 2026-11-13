@@ -1493,9 +1493,10 @@ impl Running<'_> {
     ///
     /// The original takes a player's first opponent without measuring it, keeping as its
     /// distance the last one it measured, or before any, what its caller left in `f26`
-    /// (`stale`, see docs/engine.md).
+    /// (`stale`, see docs/engine.md): none where that isn't probed, which stops by name
+    /// once it decides a player's opponent.
     #[doc(alias = "fn_8016DEEC")]
-    pub fn face_opponents(&mut self, stale: f64) {
+    pub fn face_opponents(&mut self, stale: Option<f64>) {
         let mut xs = [0.0f32; 6];
         for i in 0..6 {
             if self.game.player_pkind(i) != PKIND_NONE {
@@ -1503,13 +1504,16 @@ impl Running<'_> {
             }
         }
         let g = &mut *self.game;
-        let mut d = stale;
+        let mut d = stale.unwrap_or(0.0);
+        // Whether `d` is still the caller's `f26`, no distance measured yet.
+        let mut d_stale = true;
         for i in 0..6 {
             if g.player_pkind(i) == 3 || g.player_facing(i) != 0.0 {
                 continue;
             }
             let mut far: i32 = -1;
             let mut far_dist = 0.0;
+            let mut far_stale = false;
             for j in 0..6 {
                 if j == i || g.player_pkind(j) == PKIND_NONE {
                     continue;
@@ -1522,12 +1526,19 @@ impl Running<'_> {
                     if !(d >= 0.0) {
                         d = fp::fneg(d);
                     }
+                    d_stale = false;
+                    if far_stale && stale.is_none() {
+                        panic!(
+                            "fn_8016DEEC compares a distance with the f26 its scene's entry left, which isn't probed for this entry"
+                        );
+                    }
                     if far_dist >= d {
                         continue;
                     }
                 }
                 far = j;
                 far_dist = d;
+                far_stale = d_stale;
             }
             let dir = if far == -1 {
                 1.0
@@ -1688,15 +1699,17 @@ impl Running<'_> {
     /// fighters, `fn_8016E2BC`.
     ///
     /// `fn_8016DEEC` reads the `f26` the scene's entry leaves, which neither this nor
-    /// `fn_8016E730` touches; the debug VS mode's and replays' captures all hold 0.
+    /// `fn_8016E730` touches: the VS scene's entry's, in the debug VS mode's and replays'
+    /// captures alike, is 0, and Sudden Death's faces as 0 does; Training's isn't probed, and
+    /// stops by name where it would decide a facing (`f26`, none).
     #[doc(alias = "fn_8016E2BC")]
-    pub fn place_players(&mut self) {
+    pub fn place_players(&mut self, f26: Option<f64>) {
         self.player_80036da4();
         if self.game.vs.state.is_singleplayer == 1 {
             self.place_single_player();
             return;
         }
-        self.face_opponents(SCENE_F26);
+        self.face_opponents(f26);
         for i in 0..6 {
             if self.game.player_pkind(i) == PKIND_NONE {
                 continue;
@@ -1951,7 +1964,7 @@ impl Running<'_> {
     /// one, and the whole sequence by the sessions' matches from the menus.
     #[doc(alias = "gm_801A4BC8")]
     #[doc(alias = "fn_8016E730")]
-    pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives) {
+    pub fn start_vs(&mut self, d: &StartMeleeData, files: MatchArchives, f26: Option<f64>) {
         self.db_setup();
         if let Some(seed) = self.game.playback.as_ref().map(|p| p.start_seed) {
             self.playback_start(seed);
@@ -1995,7 +2008,7 @@ impl Running<'_> {
         super::super::gr::setup::setup(self, grkind);
         let tilt = self.game.stage_info.cam_info.cam_vertical_tilt;
         super::super::camera::set_default_fov(&mut self.game.camera, tilt);
-        self.place_players();
+        self.place_players(f26);
         super::super::gr::setup::on_load(self, grkind);
         self.enable_match_camera();
         super::super::camera::snap(self);
@@ -2043,7 +2056,9 @@ impl Running<'_> {
     pub fn sudden_death_on_enter(&mut self, d: &StartMeleeData, files: MatchArchives) {
         let mut d = d.clone();
         let d = &mut d;
-        self.start_vs(d, files);
+        // Its entry leaves what the VS scene's does: `tou-tie3`'s three-player Sudden Death
+        // faces its players as 0 does (tick 6423, clean to the session's end).
+        self.start_vs(d, files, Some(SCENE_F26));
         self.announce(
             1,
             -1,
@@ -2063,7 +2078,7 @@ impl Running<'_> {
         let mut d = d.clone();
         let d = &mut d;
         self.player_start_rules(d);
-        self.start_vs(d, files);
+        self.start_vs(d, files, Some(SCENE_F26));
         self.player_end_rules();
         let lives = if d.rules.x1_2 { 8 } else { 3 };
         self.announce(

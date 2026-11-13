@@ -128,7 +128,7 @@ pub fn on_load(_r: &mut Running) {}
 #[doc(alias = "grFigure2_OnStart")]
 #[doc(alias = "grFigure3_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(r: &Running, gobj: GObjId) -> i32 {

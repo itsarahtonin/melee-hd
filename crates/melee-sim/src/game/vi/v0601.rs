@@ -28,9 +28,26 @@ const ST_KIND_CORNERIA: i32 = 7;
 pub struct Vi0601 {
     /// `un_804D6FB0`: the scene (`visual0601Scene`).
     pub scene: Option<DataRef>,
-    /// `erase_colors_vi0601`: the stage's background color, its alpha a stack byte
-    /// `Camera_GetBackgroundColor` never writes (here 0), which nothing reads.
-    pub erase: [u8; 4],
+    /// `erase_colors_vi0601`: the stage's background color's red, green and blue. Its alpha
+    /// is a stack byte `Camera_GetBackgroundColor` never writes, which melee-sim doesn't
+    /// know (48 in `m6-oracle/cutscene`): presentation only, as the erase it feeds writes
+    /// color and depth, never alpha ([`Vi0601::erase_for`]).
+    pub erase: [u8; 3],
+}
+
+impl Vi0601 {
+    /// The erase color for an erase that writes alpha (`alpha`) or doesn't: the alpha is a
+    /// stack byte melee-sim doesn't know, so an erase that would put it on screen stops by
+    /// name; one that doesn't takes 0 for it (docs/engine.md, "Uninitialized values").
+    pub fn erase_for(&self, alpha: bool) -> [u8; 4] {
+        if alpha {
+            panic!(
+                "erase_colors_vi0601's alpha, a stack byte Camera_GetBackgroundColor never writes, would reach the screen: that isn't modeled"
+            );
+        }
+        let [r, g, b] = self.erase;
+        [r, g, b, 0]
+    }
 }
 
 impl Running<'_> {
@@ -39,7 +56,8 @@ impl Running<'_> {
     /// render links 0 and 3 (then 3 twice), and render links 0, 5, 7 and 11.
     #[doc(alias = "vi0601_GObj_OnRender")]
     pub fn vi0601_camera_render(&mut self, gobj: GObjId) {
-        let erase = self.game.vi.v0601.erase;
+        // The erase writes color and depth (`HSD_CObjEraseScreen(cobj, 1, 0, 1)`).
+        let erase = self.game.vi.v0601.erase_for(false);
         self.vi_run_camera_layers(gobj, erase);
     }
 
@@ -150,10 +168,31 @@ impl Running<'_> {
         self.vi_camera(scene, CAMERA_RENDER, 2, CAMERA_PROC);
         self.vi_stage(ST_KIND_CORNERIA, FRAMES, |_| {});
         let k = &self.game.camera.cam.background_color;
-        self.game.vi.v0601.erase = [k.r, k.g, k.b, k.a];
+        self.game.vi.v0601.erase = [k.r, k.g, k.b];
         self.vi0601_models(scene);
         self.vi_lights(scene);
         self.game.init_all_players();
         self.lb_audio_pause(false);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::Vi0601;
+
+    /// The erase color's unknown alpha reaches only an erase that doesn't write alpha.
+    #[test]
+    fn the_erase_alpha_stays_off_screen() {
+        let v = Vi0601 {
+            erase: [1, 2, 3],
+            ..Vi0601::default()
+        };
+        assert_eq!(v.erase_for(false), [1, 2, 3, 0]);
+    }
+
+    #[test]
+    #[should_panic(expected = "would reach the screen")]
+    fn an_erase_writing_alpha_stops() {
+        Vi0601::default().erase_for(true);
     }
 }

@@ -131,8 +131,8 @@ fn param(game: &Game) -> Param {
 /// (`x02`), the pop's model (`x04`), its place and speed (`x08` to `x14`), its size and the
 /// size it grows to (`x18`, `x1C`) and its object (`x20`, map 3; none for the two anchors).
 /// A bubble that moved up to the top leaves its pop's pointer behind (`x04_left`), dangling
-/// once the pop goes, which nothing reads before the place is added again: not compared while
-/// left, and a read of it counts as a stale read.
+/// once the pop goes, which nothing reads before the place is added again: compared as a
+/// dangling pointer while left, and a read of it counts as a stale read.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 #[allow(non_snake_case)]
 pub struct Bubble {
@@ -353,7 +353,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Brinstar's start, `grZebes_801D852C`: the enemy spawner, without enemies.
 #[doc(alias = "grZebes_801D852C")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

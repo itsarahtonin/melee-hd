@@ -1358,7 +1358,7 @@ fn face_opponents() {
             f.regs.fpr[26].ps0 = [0.0, 20.0, 38.8, 100.0, -1.0][f.below(5) as usize];
         },
         |r, a| {
-            r.face_opponents(a.cap.call.regs.fpr[26].ps0);
+            r.face_opponents(Some(a.cap.call.regs.fpr[26].ps0));
             vec![]
         },
     );
@@ -1985,7 +1985,7 @@ fn place_players() {
             }
         },
         |r, _| {
-            r.place_players();
+            r.place_players(Some(0.0));
             vec![]
         },
         |ctx, _| {

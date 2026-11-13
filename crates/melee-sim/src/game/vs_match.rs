@@ -58,6 +58,9 @@ pub struct Settings {
     /// (`Playback/Core/RestoreGameInfo.asm`): the list, and the backup of the instructions
     /// its codes replace.
     pub playback_heap: Option<playback::CodeListHeap>,
+    /// The game info response playback's first buffer holds until the first frame's read
+    /// ([`ReplayStart::response`]); empty outside playback.
+    pub playback_response: Vec<u8>,
     /// What the save data has unlocked, and whether the unlock-all codes run: the stage's
     /// music choice reads it (`gm_80164ABC`), and on some stages that decides whether it
     /// draws from the random seed (see engine.md). Slippi Dolphin runs the codes.
@@ -91,6 +94,11 @@ pub struct ReplayStart {
     /// The replay's code list as playback applies it: without the codes it leaves out, which
     /// leaves the codes that affect gameplay.
     pub codes: Vec<u8>,
+    /// The device's whole answer to the game info request (`prepareGameInfo`: its code, the
+    /// seed, the start data, the UCF toggles, the nametags, the PAL and Pokémon Stadium flags,
+    /// the player names and the code list's length), which playback reads into its first
+    /// buffer, where it stays until the first frame's read writes over it.
+    pub response: Vec<u8>,
 }
 
 /// The Ice Climbers' `CharacterKind`.
@@ -217,6 +225,7 @@ impl Settings {
             fighter_addresses: Vec::new(),
             heap: heap.then(crate::hsd::heap::Layout::vanilla_vs),
             playback_heap: None,
+            playback_response: Vec::new(),
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
@@ -260,6 +269,7 @@ impl Settings {
         s.playback = true;
         s.heap = Some(crate::hsd::heap::Layout::slippi_playback());
         s.playback_heap = Some(playback::CodeListHeap::of(&r.codes));
+        s.playback_response = r.response.clone();
         Ok(s)
     }
 
@@ -292,6 +302,7 @@ impl Settings {
             fighter_addresses: Vec::new(),
             heap: None,
             playback_heap: None,
+            playback_response: Vec::new(),
             unlocks: super::gm::Unlocks::slippi(),
             boot_audio: true,
             stadium_buffer: super::ft::data::MAIN_MEMORY,
@@ -381,6 +392,7 @@ impl Match {
             game.playback = Some(Playback {
                 start_seed: settings.seed,
                 code_list_heap: settings.playback_heap,
+                frame: playback::Frame::response(&settings.playback_response),
                 ..Playback::default()
             });
             game.pads.playback = true;

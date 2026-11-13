@@ -42,7 +42,8 @@ impl Comparer<'_> {
     }
 
     /// A sound, screen or language screen's `Menu` at `t`, its block `addr`. A byte the
-    /// screen never writes isn't compared (`OptionMenu`).
+    /// screen never writes compares as the heap's image knew the block's, left out where it
+    /// didn't (`OptionMenu`).
     pub(crate) fn option_menu(&mut self, path: &str, addr: u32, t: u32) {
         let Some(m) = self.game.options.menus.get(&addr).copied() else {
             self.diff(path, "Menu", "none", format!("{addr:#x}"));

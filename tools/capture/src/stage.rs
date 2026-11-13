@@ -189,7 +189,7 @@ impl Importer<'_> {
         let m = mem(&cap.call.mem1);
         let mut g = Ground::import(&m, a, self);
         let grkind = self.cap.u32(sym("stage_info") + 0x88) as i32;
-        g.u = GroundVars::import_as(vars_kind(grkind, g.map_id), &m, a + 0xC4, self);
+        g.u.vars = GroundVars::import_as(vars_kind(grkind, g.map_id), &m, a + 0xC4, self);
         self.game.grounds[id.0] = g;
         id
     }
@@ -876,7 +876,7 @@ impl Comparer<'_> {
         self.block = None;
         // A stage object's dynamics chain (Rainbow Cruise's flag): each link, where both sides
         // have one (the handles compare with the variables).
-        if let GroundVars::RCruiseFlag(v) = &self.game.grounds[o.0].u {
+        if let GroundVars::RCruiseFlag(v) = &self.game.grounds[o.0].u.vars {
             let mut ours = v.xC4.data;
             let mut theirs = self.u32(t + 0xC4);
             let mut k = 0;
@@ -1499,9 +1499,10 @@ impl Comparer<'_> {
         // match's until its stage's start sets them again, `grZakoGenerator_801CAE04` from the
         // stage's `OnStart` some 84 ticks in), the pointer names freed memory, ours the last
         // match's slots, which nothing reads until then: the slots are this scene's while the
-        // spawner's process (`fn_801CADBC`, made with them) lives. The enemy table's pointer
-        // (`x0`, into the stage's file) is the same: the file goes with the scene, and the
-        // next stage's start writes the pointer before anything reads it.
+        // spawner's process (`fn_801CADBC`, made with them) lives, and a dangling pointer
+        // compares by its address. The enemy table's pointer (`x0`, into the stage's file) is
+        // the same: the file goes with the scene, and the pointer compares as data in a file
+        // gone (by where it was), until the next stage's start writes it.
         let in_match = is_match_scene(scene_kind(game.machine.scene_info));
         let started = game
             .world
@@ -1509,20 +1510,29 @@ impl Comparer<'_> {
             .iter()
             .any(|(_, p)| p.on_invoke == CodeRef(0x801C_ADBC));
         let spawns = self.u32(z);
-        let live = in_match && started || zk.slots.is_none();
+        {
+            use melee_sim::game::mirror::Cx;
+            self.compare_data("zako spawns", zk.spawns, spawns);
+        }
         self.check(
             "zako",
-            "spawns, cursor and flags",
-            (live.then_some(zk.spawns), zk.cursor, zk.flags),
-            (
-                live.then(|| (spawns != 0).then(|| self.data.get(spawns)).flatten()),
-                self.u16(z + 8) as i16,
-                self.u8(z + 0xA),
-            ),
+            "cursor and flags",
+            (zk.cursor, zk.flags),
+            (self.u16(z + 8) as i16, self.u8(z + 0xA)),
         );
         let slots = self.u32(z + 4);
         match (&zk.slots, slots) {
-            _ if !(in_match && started) && zk.slots.is_some() => {}
+            // The freed slots' block by address, where the allocator model knows it.
+            _ if !(in_match && started) && zk.slots.is_some() => {
+                if zk.addr != 0 && zk.addr != slots {
+                    self.diff(
+                        "zako",
+                        "slots (freed)",
+                        format!("{:#x}", zk.addr),
+                        format!("{slots:#x}"),
+                    );
+                }
+            }
             (None, 0) => {}
             (Some(ours), t) if t != 0 => {
                 for (i, o) in ours.iter().enumerate() {
@@ -2334,6 +2344,16 @@ impl Comparer<'_> {
             let jp = (jo != 0).then(|| self.maps.jobjs.get(&jo).copied());
             if !e.x04_left {
                 self.check(&format!("grZe_8049F170[{i}]"), "pop", e.x04.map(Some), jp);
+            } else if e.x04.is_some() {
+                // The pointer a bubble that moved up left, dangling once its pop goes:
+                // compared as a dangling pointer, by the joint's address.
+                use melee_sim::game::mirror::Cx;
+                self.compare_handle(
+                    &format!("grZe_8049F170[{i}] pop (left)"),
+                    "JObjId",
+                    e.x04.map(|j| j.0),
+                    jo,
+                );
             }
             if i == 19 && game.stage_info.grkind == gr::GR_KIND_MUTECITY {
                 // Mute City's race order reaches this word, compared with its statics.
