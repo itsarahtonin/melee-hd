@@ -597,7 +597,8 @@ impl Running<'_> {
     }
 
     /// The rules' line (font 0's string 0x4A rewritten in place), `mnCharSel_8025BD30`:
-    /// Camera Mode's and Stamina Mode's own, else the time limit or stocks and the mode.
+    /// Camera Mode's and Stamina Mode's own, else the time limit or stocks and the mode (in
+    /// Japanese, which the debug menu's language sets, the stocks' count without its word).
     #[doc(alias = "mnCharSel_8025BD30")]
     pub(super) fn charsel_rules_string(&mut self) {
         let dst = self
@@ -614,11 +615,27 @@ impl Running<'_> {
             VS_STAMINA => return s(self, 0x50),
             _ => {}
         }
-        assert!(
-            self.game.game_data.saved_language() != super::super::super::gm::main_lib::LANG_JP,
-            "the Japanese screen's rules line isn't ported"
-        );
         let r = self.game.game_data.x1850.clone();
+        if self.game.game_data.saved_language() == super::super::super::gm::main_lib::LANG_JP {
+            // The count first, then the mode's word: stocks bare, a time with its unit, or no
+            // limit.
+            if r.mode == 1 {
+                self.charsel_digits(dst, u32::from(r.stock_count));
+            } else if r.time_limit != 0 {
+                self.charsel_digits(dst, u32::from(r.time_limit));
+                a(self, 0x53);
+            } else {
+                s(self, 0x51);
+            }
+            match r.mode {
+                0 => a(self, 0x4B),
+                1 => a(self, 0x4C),
+                2 => a(self, 0x4D),
+                3 => a(self, 0x4E),
+                _ => {}
+            }
+            return;
+        }
         match r.mode {
             1 => {
                 self.charsel_digits(dst, u32::from(r.stock_count));

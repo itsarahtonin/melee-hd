@@ -272,10 +272,6 @@ pub const STOPS: &[(&str, &str)] = &[
         "the box being played is one of the bracket's 64",
     ),
     (
-        "the character select's KO counts through a null pointer",
-        "only the Hanyu select, a debug mode (ledger/deferred.txt), leaves the pointer null, and the player raises no debug level",
-    ),
-    (
         "the debug menu's Global Data Edit past the card data",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
@@ -284,15 +280,7 @@ pub const STOPS: &[(&str, &str)] = &[
         "the debug menu's AllStar Enemy past its 28th choice (the Female Wire Frame on), whose intro reads past its place table: debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (
-        "the debug menu entry callback",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
         "unported(\"debug menu callback\"",
-        "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
-    ),
-    (
-        "gm_80164A0C (the Hanyu select's odd match types)",
         "debug code, reached only at a raised debug level (milestone 5's task 19, the developer setting), which the player doesn't raise",
     ),
     (

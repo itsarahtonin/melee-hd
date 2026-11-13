@@ -209,12 +209,20 @@ impl Running<'_> {
         }
         for g in items {
             let ip = super::it::item(self.game, g);
-            let (cd, kind) = (ip.x378_itemColl.clone(), ip.kind);
+            let (mut cd, kind) = (ip.x378_itemColl.clone(), ip.kind);
             if !cd.x35_flags.b0 {
                 continue;
             }
             let i = super::it::item_of(self.game, g);
-            self.game.it.last_pos_known(i.0, "mpLib_DrawEcbs");
+            if self.game.it.stale_last_pos.contains(&i.0) {
+                // A far Arwing's laser's last position is the stack words its spawn found,
+                // which melee-hd doesn't model (`it::Globals::stale_last_pos`). On a console
+                // this only places the debug display's third diamond and cross at garbage;
+                // the stand-in places them at the laser's tip (its current position). It's
+                // presentation in a debug view, so it stands in rather than stopping
+                // (docs/engine.md, the Arwing laser).
+                cd.last_pos = cd.cur_pos;
+            }
             if cd.x38 == generation {
                 self.map_ecbs(&cd);
             }

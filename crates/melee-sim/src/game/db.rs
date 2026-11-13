@@ -622,6 +622,16 @@ impl Running<'_> {
         }
     }
 
+    /// `fn_80225E6C`: each item `owner` owns takes its bubbles' setting.
+    #[doc(alias = "fn_80225E6C")]
+    fn db_owned_items_bubbles(&mut self, owner: GObjId) {
+        for it in self.game.link_gobjs(P_LINK_ITEM) {
+            if super::it::item(self.game, it).owner == Some(owner) {
+                super::it::item::debug_owner_bubbles(self.game, it, Some(owner));
+            }
+        }
+    }
+
     /// `fn_CheckAnimationInfo`: with R, D-pad up the fighters' next bubbles, right the
     /// port's fighter's and its items', left the next display; Y and down the readout; with
     /// Y, left a Super Mushroom (with A a Poison one) and right its end.
@@ -648,12 +658,7 @@ impl Running<'_> {
                 let b = &mut self.game.fighters[f.0].x21FC_flag[0];
                 let x = (*b & 3) + 1;
                 *b = if x > 3 { 1 } else { x };
-                // `fn_80225E6C`: the fighter's items take its setting.
-                for it in self.game.link_gobjs(P_LINK_ITEM) {
-                    if super::it::item(self.game, it).owner == Some(g) {
-                        super::it::item::debug_owner_bubbles(self.game, it, Some(g));
-                    }
-                }
+                self.db_owned_items_bubbles(g);
             }
             if self.game.db_pressed(port) & u32::from(BUTTON_LEFT) != 0 {
                 self.db_toggle_fighter_visuals();

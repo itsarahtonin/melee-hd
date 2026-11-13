@@ -138,7 +138,6 @@ pub fn leftover(from: &str) -> String {
 
 const KIND_26: &str = "nothing gives a fighter computer kind 26, in any mode or the debug menu: its kind is its player's (ftCo_800A101C from Fighter_Spawn and ft_80087BC0; Nana's 6), and a player's is written only by its reset (Player_InitOrResetPlayer: 4) and Player_SetPlayerAndEntityCpuType, from the hordes (gm_16A2: 23, 24, 27), Training's menu (0 to 5), the events' crowds (GmEvent.dat's evbonus x16: 1, 4, 9) and a match's start data, whose cpu_kind is 4 (VS, the tournament, the attract match, the challenger, gm_SetupPlayerDefaults), 0 (Training), 15 (the Home-Run Contest), 27 (a metal or giant 1P opponent), the debug menu's CpuType (CpTp_Stay to CpTp_Item, 0 to 17: if_2FFC), the 1P tables' (Classic's lbl_803D85F0, Adventure's lbl_803D7AC0, All-Star's: 0, 4, 8, 9, 16, 17, 18, 23, 25, 27, 29; Crazy Hand takes Master Hand's), GmEvent.dat's players' (0 to 4, 8 to 14, 16 to 21, 28) and GmKumite.dat's (4, 16, 23, 24, 25), each table read off the disc; the same in ssbm-rs's ports";
 const HOME_RUN: &str = "computer kind 15, the Home-Run Contest's (gmhomerun.c), stands still";
-const NANA_ALONE: &str = "Nana's decision without Popo: she sleeps whenever he does (ftCo_800BFD9C takes her out with him, ftCo_800D4F24) and wakes with him (Player_80032070), so ftCo_800A589C always finds him; another fighter takes kind 6 only from the debug menu's CpuType Set (ledger/deferred.txt)";
 const NESS_SPAN: &str = "ftCo_800BB220 counts at most 14 frames above level 3 (5 + 10·randf at levels 3 to 5, fewer above), so Ness above level 3 never spans 21; the threat of 3 (ftCo_800BA080's) comes only from that branch";
 const LEVELS: &str = "a VS computer player's level is 1 to 9 (mnCharSel: 0.8·x + 0.5 + 1 on the slider, 0 made 1), and Nana walks at her own fixed speed";
 const ISLAND_END: &str = "the VS decision hands its target search's leftover (the return address its frame's link slot holds) whenever it has a target, and a target in reach means the search saved one";
@@ -157,7 +156,6 @@ const FIGHTER_ADDRESS: &str = "a player's match with a computer player runs the 
 pub const UNREACHED: &[(&str, &str)] = &[
     ("ftCo_800B2AFC for computer kind 26", KIND_26),
     ("a register left by ftCo_800B2AFC", HOME_RUN),
-    ("ftCo_800AEFB8", NANA_ALONE),
     ("ftCo_800BB220 for Ness spanning 21 frames", NESS_SPAN),
     ("ftCo_800AA320 at a level past 9", LEVELS),
     ("ftCo_800A4768 with no island end", ISLAND_END),

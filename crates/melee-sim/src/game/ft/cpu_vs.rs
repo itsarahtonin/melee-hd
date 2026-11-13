@@ -35,6 +35,9 @@ const GR_KIND_ICEMT: i32 = 0x16;
 /// by kind, and `ftCo_800AE7AC`'s frame size: where the behavior pick's frame lies, whose
 /// addresses its floor checks can leave in r5.
 const VS_SP: u32 = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - 0x48;
+/// The stack pointer in `ftCo_800AEFB8`, under Nana's decision's frame (`ftCo_800B101C`,
+/// 0x50 bytes), with the same 0x48 bytes of its own.
+const NANA_ALONE_SP: u32 = CPU_FRAME_SP - CPU_FRAME - DECIDE_FRAME - 0x50 - 0x48;
 const BACK_ON_SCREEN_FRAME: u32 = 0x68;
 
 /// `Gm_PKind_Cpu`.
@@ -46,7 +49,20 @@ impl Running<'_> {
     /// switch, and every path ends in that call, so the r5 it leaves is that call's.
     #[doc(alias = "ftCo_800B24B8")]
     pub(super) fn cpu_decide_vs(&mut self, f: FighterId) -> Leftover {
-        if let Some(r5) = self.cpu_decide_start(f, VS_SP) {
+        self.cpu_decide_vs_at(f, VS_SP)
+    }
+
+    /// Nana's decision with no Popo (computer kind 6 as its Popo's gone, or on another
+    /// character from the debug menu's `CpTp_Nana`), `ftCo_800AEFB8`: the VS decision's code
+    /// line for line (`ftCo_800B24B8`'s twin), one frame deeper, under `ftCo_800B101C`.
+    #[doc(alias = "ftCo_800AEFB8")]
+    pub(super) fn nana_decide_alone(&mut self, f: FighterId) -> Leftover {
+        self.cpu_decide_vs_at(f, NANA_ALONE_SP)
+    }
+
+    /// The VS decision with its stack pointer at `sp`.
+    fn cpu_decide_vs_at(&mut self, f: FighterId, sp: u32) -> Leftover {
+        if let Some(r5) = self.cpu_decide_start(f, sp) {
             return r5;
         }
         // `ftCo_CpuInitNoTarget` with the fear flags set.
@@ -66,7 +82,7 @@ impl Running<'_> {
         if self.cpu_should_act(f) {
             if self.game.fighters[f.0].cpu.x4C.is_some() {
                 self.cpu_toward_item(f);
-                return self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1;
+                return self.cpu_choose_behavior_r5(f, true, Some(sp)).1;
             }
             let target = self
                 .cpu_best_human_enemy(f)
@@ -76,10 +92,10 @@ impl Running<'_> {
             // stack pointer), its y the word that frame's link register slot was left. The
             // common item search stores over the y only with an item to go for, which takes
             // `ftCo_800A866C` instead; no other call since writes either.
-            let unset = lr.map(|y| (f32::from_bits(VS_SP), f32::from_bits(y)));
+            let unset = lr.map(|y| (f32::from_bits(sp), f32::from_bits(y)));
             self.cpu_toward(f, target, unset);
         }
-        self.cpu_choose_behavior_r5(f, true, Some(VS_SP)).1
+        self.cpu_choose_behavior_r5(f, true, Some(sp)).1
     }
 
     /// The start the VS decision shares with most computer kinds' (`ftCo_800AECF0`,

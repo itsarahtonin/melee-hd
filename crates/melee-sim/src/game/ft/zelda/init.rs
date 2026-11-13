@@ -9,7 +9,7 @@ use crate::hsd::gobj::GObjId;
 impl Running<'_> {
     /// Her side taunt's swap at the debug ROM's level, `ftZd_Init_801395C8`: the second
     /// model's variant on if it was off, else off.
-    // Ports `ftZd_Init_801395C8`; aliased once a check reaches it.
+    #[doc(alias = "ftZd_Init_801395C8")]
     pub fn zelda_appeal_swap(&mut self, gobj: GObjId) {
         let v = if self.game.part_vis(gobj, 1) == -1 {
             0
