@@ -103,7 +103,7 @@ impl Running<'_> {
     }
 
     /// Showing the held item again, `ftPp_Init_OnItemVisible` (as Fox's).
-    // Ports `ftPp_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_Init_OnItemVisible")]
     pub fn popo_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }

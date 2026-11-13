@@ -83,6 +83,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_TAKE_DAMAGE => g.mr_on_take_damage(gobj),
         addr::ON_ITEM_INVISIBLE => g.fox_on_item_invisible(gobj),
+        // `ftMr_Init_OnItemVisible`: dead, nothing shows Mario's hidden item (ledger/dead.txt).
         addr::ON_ITEM_VISIBLE => g.fox_on_item_visible(gobj),
         addr::ON_KNOCKBACK_ENTER => g.mr_on_knockback_enter(gobj),
         addr::ON_KNOCKBACK_EXIT => g.mr_on_knockback_exit(gobj),
