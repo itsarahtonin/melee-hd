@@ -20,6 +20,7 @@ fn theirs(ctx: &ssbm_rt::Ctx, format: &[u8], args: &[Arg]) -> Vec<u8> {
         .iter()
         .map(|a| match *a {
             Arg::Int(i) => VarArg::Int(i as u32),
+            Arg::Wide(i) => VarArg::Wide(i as u64),
             Arg::Float(f) => VarArg::Float(f),
             Arg::Str(s) => {
                 let p = at;
@@ -78,6 +79,15 @@ fn doubles(r: &mut Rand) -> Vec<f64> {
     v
 }
 
+/// A `long long` to format: the edges, small numbers either side of 0 and random bits.
+fn wide_value(r: &mut Rand) -> i64 {
+    match r.below(4) {
+        0 => [0, 1, -1, i64::MIN, i64::MAX, i64::from(i32::MIN), 1 << 32][r.below(7) as usize],
+        1 => r.below(20_000) as i64 - 10_000,
+        _ => r.bits() as i64,
+    }
+}
+
 #[test]
 fn printf_matches() {
     let Some(ctx) = reference() else { return };
@@ -114,6 +124,17 @@ fn printf_matches() {
         &[Arg::Str(b"M Ball  "), Arg::Str(b"Random")],
     );
     check(&ctx, b"%d %s", &[Arg::Int(3), Arg::Str(b"")]);
+    // The one 64-bit number the executable prints, the OS's crash report's time base
+    // (OSError.c's `TB = 0x%016llx`).
+    for _ in 0..2000 {
+        let t = wide_value(&mut r);
+        check(&ctx, b"TB = 0x%016llx\n", &[Arg::Wide(t)]);
+        check(
+            &ctx,
+            b"\nLast interrupt (%d): SRR0 = 0x%08x  TB = 0x%016llx\n",
+            &[Arg::Int(4), Arg::Int(r.bits() as i32), Arg::Wide(t)],
+        );
+    }
     let ds = doubles(&mut r);
     // Random conversions with flags, widths and precisions.
     let flags: &[&[u8]] = &[
@@ -136,8 +157,18 @@ fn printf_matches() {
             f.push(b'.');
             f.extend_from_slice(r.below(12).to_string().as_bytes());
         }
-        if matches!(c, b'd' | b'i' | b'u' | b'x' | b'X' | b'o') && r.below(4) == 0 {
-            f.push(if r.below(2) == 0 { b'h' } else { b'l' });
+        // `ll` takes a `long long` (`longlong2str`).
+        let mut wide = false;
+        if matches!(c, b'd' | b'i' | b'u' | b'x' | b'X' | b'o') {
+            match r.below(6) {
+                0 => f.push(b'h'),
+                1 => f.push(b'l'),
+                2 => {
+                    f.extend_from_slice(b"ll");
+                    wide = true;
+                }
+                _ => {}
+            }
         }
         f.push(c);
         f.push(b'>');
@@ -147,6 +178,7 @@ fn printf_matches() {
             }
             b's' => Some(Arg::Str(b"abcdefghij")),
             b'%' => None,
+            _ if wide => Some(Arg::Wide(wide_value(&mut r))),
             _ => Some(Arg::Int(r.bits() as i32)),
         };
         let args: Vec<Arg> = arg.into_iter().collect();

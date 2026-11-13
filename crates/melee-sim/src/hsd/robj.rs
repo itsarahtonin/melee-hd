@@ -190,8 +190,9 @@ pub fn get_by_type(robjs: &RObjs, first: Option<RObjId>, ty: u32, subtype: u32) 
 }
 
 /// Animates each RObj of a list, which can switch it on and off, `HSD_RObjAnimAll` (and
-/// `HSD_RObjAnim`, inlined).
+/// `HSD_RObjAnim`, inlined, and its update, `RObjUpdateFunc`).
 #[doc(alias = "HSD_RObjAnimAll")]
+#[doc(alias = "RObjUpdateFunc")]
 pub fn anim_all(objs: &mut Objects, data: &Archives, first: Option<RObjId>) {
     let mut cur = first;
     while let Some(r) = cur {
@@ -740,7 +741,9 @@ pub fn load_desc(objs: &mut Objects, data: &Archives, desc: Option<DataRef>) -> 
 }
 
 /// `expLoadDesc` and `bcexpLoadDesc`: both descriptors are a function or bytecode, then an
-/// rvalue list.
+/// rvalue list. No file holds a C expression (`expLoadDesc`'s, `ledger/dead.txt`'s
+/// `dummy_func`), but leaf-check's synthetic references load one.
+#[doc(alias = "expLoadDesc")]
 #[doc(alias = "bcexpLoadDesc")]
 fn load_exp(objs: &mut Objects, data: &Archives, desc: Option<DataRef>, bytecode: bool) -> Exp {
     let Some(desc) = desc else {

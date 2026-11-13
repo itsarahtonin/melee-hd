@@ -17,20 +17,16 @@ pub const BUS_CLOCK: u32 = 162_000_000;
 
 /// `__GXDefaultTexRegionCallback`: the 8 regions in turn, the 4 CI regions in turn for color
 /// indexed textures.
-// Ports `__GXDefaultTexRegionCallback`; unaliased: the frames checks don't compare where a
-// texture sits in the cache (its mutation, every texture in region 0, fails none).
+#[doc(alias = "__GXDefaultTexRegionCallback")]
 pub(crate) fn default_tex_region_callback(g: &mut GxData, t_obj: &TexObj, _id: u32) -> TexRegionId {
     let fmt = t_obj.fmt;
+    let mutated = crate::mutation::on("__GXDefaultTexRegionCallback");
     if fmt != GX_TF_C4 && fmt != GX_TF_C8 && fmt != GX_TF_C14X2 {
-        let i = if crate::mutation::on("__GXDefaultTexRegionCallback") {
-            0
-        } else {
-            g.next_tex_rgn & 7
-        };
+        let i = if mutated { 0 } else { g.next_tex_rgn & 7 };
         g.next_tex_rgn = g.next_tex_rgn.wrapping_add(1);
         TexRegionId::Normal(i as usize)
     } else {
-        let i = g.next_tex_rgn_ci & 3;
+        let i = if mutated { 0 } else { g.next_tex_rgn_ci & 3 };
         g.next_tex_rgn_ci = g.next_tex_rgn_ci.wrapping_add(1);
         TexRegionId::Ci(i as usize)
     }

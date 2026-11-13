@@ -4,11 +4,12 @@
 
 use gekko_fp as fp;
 
-/// An argument `__pformatter` takes from the list: an `int`, a `double` (a float passed
-/// through `...` is promoted to one) or a string.
+/// An argument `__pformatter` takes from the list: an `int`, a `long long` (`%ll`'s), a
+/// `double` (a float passed through `...` is promoted to one) or a string.
 #[derive(Clone, Copy, Debug)]
 pub enum Arg<'a> {
     Int(i32),
+    Wide(i64),
     Float(f64),
     Str(&'a [u8]),
 }
@@ -77,6 +78,13 @@ impl<'a> Args<'a, '_> {
         match self.take() {
             Arg::Int(i) => i,
             a => panic!("an integer conversion of {a:?}"),
+        }
+    }
+
+    fn wide(&mut self) -> i64 {
+        match self.take() {
+            Arg::Wide(i) => i,
+            a => panic!("a long long conversion of {a:?}"),
         }
     }
 
@@ -256,7 +264,8 @@ fn parse_format(fmt: &[u8], mut s: usize, args: &mut Args) -> (Format, usize) {
     (f, s + 1)
 }
 
-/// `long2str` (and `longlong2str`, the same on 64 bits): the number's characters as the
+/// `long2str` (and `longlong2str`, the same on 64 bits, for `%ll`: only the OS's crash report
+/// prints one, its time base, which melee-hd replaces): the number's characters as the
 /// conversion asks, or none past the buffer's room.
 fn long2str(num: i64, wide: bool, f: &mut Format) -> Option<Vec<u8>> {
     let mut out: Vec<u8> = Vec::new();
@@ -669,6 +678,7 @@ fn float2str(num: f64, f: &mut Format) -> Option<Vec<u8>> {
 #[doc(alias = "__pformatter")]
 #[doc(alias = "parse_format")]
 #[doc(alias = "long2str")]
+#[doc(alias = "longlong2str")]
 #[doc(alias = "float2str")]
 #[doc(alias = "round_decimal")]
 #[doc(alias = "__num2dec")]
@@ -692,7 +702,11 @@ pub fn vsprintf(format: &[u8], args: &[Arg]) -> Vec<u8> {
         let body: Option<Vec<u8>> = match f.conversion {
             b'd' | b'i' | b'o' | b'u' | b'x' | b'X' => {
                 let wide = f.arg == ArgKind::LongLong;
-                let mut n = i64::from(args.int());
+                let mut n = if wide {
+                    args.wide()
+                } else {
+                    i64::from(args.int())
+                };
                 let signed = matches!(f.conversion, b'd' | b'i');
                 if f.arg == ArgKind::Short {
                     n = if signed {
@@ -708,7 +722,6 @@ pub fn vsprintf(format: &[u8], args: &[Arg]) -> Vec<u8> {
                         i64::from(n as u8)
                     };
                 }
-                assert!(!wide, "a long long argument isn't ported");
                 long2str(n, wide, &mut f)
             }
             b'f' | b'e' | b'E' | b'g' | b'G' => {

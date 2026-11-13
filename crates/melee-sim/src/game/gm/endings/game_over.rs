@@ -653,7 +653,8 @@ impl Running<'_> {
 
     /// `fn_801A0B60`, coming soon's process: its model's animation, held at frame 189 until
     /// A or Start on any port, and the scene's end with the animation's.
-    // Ports fn_801A0B60; aliased once a check reaches it.
+    // Ports fn_801A0B60, dead in the original (ledger/dead.txt): only coming soon's entry,
+    // which nothing reaches, installs it.
     pub fn coming_soon_proc(&mut self, gobj: GObjId) {
         let j = match self.game.world.gobj(gobj).obj {
             Some(Obj::JObj(j)) => j,

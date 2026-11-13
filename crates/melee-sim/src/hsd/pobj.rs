@@ -48,8 +48,8 @@ const GX_F32: u32 = 4;
 /// interpolates between the shape its blend falls in and the next; an additive one adds each
 /// shape after the first by its weight. The float steps follow the machine code (ssbm-rs
 /// transliterates `drawShapeAnim`): each component's difference, then a fused multiply-add.
-// Ports `get_shape_normal_xyz` and `get_shape_nbt_xyz` (in `get`); aliased once a check
-// reaches a morphing shape with normals.
+// Ports `get_shape_nbt_xyz` (in `get`), dead in the original (ledger/dead.txt): no shape
+// set on the disc has binormal-tangent normals.
 #[doc(alias = "drawShapeAnim")]
 #[doc(alias = "get_shape_vertex_xyz")]
 #[doc(alias = "get_shape_normal_xyz")]

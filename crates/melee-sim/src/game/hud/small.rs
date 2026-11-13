@@ -564,6 +564,11 @@ impl Running<'_> {
         self.game.world.setup_proc(o, CodeRef(SCORE_PROC), 17);
     }
 
+    /// A score's text render callback, `fn_802FF360`: empty in the original (a lone `blr`,
+    /// 4 bytes before `un_802FF364`), so the text draws as any other.
+    #[doc(alias = "fn_802FF360")]
+    pub fn score_text_render(&mut self) {}
+
     /// The scores' canvas on the HUD's GObj, `un_802FF498`.
     #[doc(alias = "un_802FF498")]
     pub fn init_scores(&mut self) {
@@ -603,3 +608,21 @@ pub type Scores = un_804A1F58_t;
 pub type Arrows = un_804A1F10_t;
 /// A score's text, for checks.
 pub type ScoreText = Option<TextId>;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `fn_802FF360` is the original's 4-byte function at 0x802FF360 (a lone `blr`; the next,
+    /// `un_802FF364`, which installs it as a score's text render callback, starts 4 bytes on),
+    /// so its port takes the call and changes nothing: `render_text` sends the score's
+    /// callback to [`Running::score_text_render`], which reads and writes nothing.
+    #[test]
+    fn the_scores_text_render_callback_does_nothing() {
+        const CREATE_SCORE: u32 = 0x802F_F364;
+        assert_eq!(SCORE_TEXT_RENDER, 0x802F_F360);
+        assert_eq!(SCORE_TEXT_RENDER + 4, CREATE_SCORE);
+        let empty: fn(&mut Running<'_>) = Running::score_text_render;
+        let _ = empty;
+    }
+}
