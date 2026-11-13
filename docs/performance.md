@@ -214,6 +214,33 @@ The heap's image is a small part (150 to 300 KB). A breakdown of the Adventure s
 
 In a replay's match neither shows much (one scene, a heap no image follows), which is why the matches stay inside the targets. A session from power-on is what the player runs once it boots into Melee, so a rollback there would snapshot all of it. The options are for the coordinator.
 
+**The pools trimmed (`perf/pool-trim`, 2026-11-13).** Sarah took both of the options ("yes i agree do a+b"): (a) the objects whose memory goes with a scene's heap are retired with it, as `HSD_CreateMainHeap` leaves them (the class objects, `HSD_ObjInit`'s pools, the stage objects' user data; the fighters' pools where `Fighter_800679B0` inits them again), and (b) a retired slot keeps only its address, its contents dropped, the contents of the others living apart from their slots ([the engine notes](engine.md#objects-and-identity)). Measured on the worker as above, the base (`f17b920b`, `pool-base`) against the branch (`pool-trim`), the builds alternating in the runner's exclusive reservations; each with `session-sync --time` added (the oracle's tool, for the restore and 8 ticks below). Every session compared clean, or played in sync, to where it was stopped.
+
+A session's snapshot, from power-on (`session --snapshot` for `menu-tour`, whose recording ends before its trace; `session-sync --rollback 0 --time` for the rest, which also restores the state into a second session and plays 8 ticks, the median of 21):
+
+| Session, tick | Snapshot, base / branch | Clone, base / branch | Restore, base / branch | Restore and 8 ticks, base / branch |
+| --- | --- | --- | --- | --- |
+| `menu-tour`, 5588 (5500 for the ticks) | 3.89 / 2.70 MB | 874 / 616 µs | 419 / 290 µs | 34.8 / 36.0 ms |
+| `rules-match`, 4000 | 3.36 / 2.06 MB | 744 / 482 µs | 359 / 223 µs | 35.3 / 35.4 ms |
+| `rules-match`, 8000 | 4.96 / 1.77 MB | 1,378 / 450 µs | 645 / 203 µs | 20.5 / 19.8 ms |
+| `2026-10-06_12-04-48`, 10000 | 9.61 / 2.47 MB | 3.49 / 0.62 ms | 1.72 / 0.27 ms | 40.8 / 40.7 ms |
+| `2026-10-06_12-04-48`, 20000 | 14.11 / 2.96 MB | 5.93 / 0.75 ms | 3.04 / 0.33 ms | 7.14 / 3.78 ms |
+| `2026-10-06_12-04-48`, 30000 | 29.89 / 4.74 MB | 14.52 / 1.09 ms | 7.73 / 0.55 ms | 50.8 / 44.2 ms |
+| `2026-10-06_12-04-48`, 40000 | 38.11 / 5.37 MB | 18.26 / 1.13 ms | 10.08 / 0.60 ms | 47.4 / 36.4 ms |
+
+On Windows (busy with other agents' checks) the Adventure session's snapshot peaks at 5.37 MB (tick 40,000 of 55,022), its clone 0.26 to 0.58 ms and its restore 0.06 to 0.19 ms at every 10,000 ticks: the size inside the target, the clone at it. What's left of a long session's snapshot is mostly the slots' own bookkeeping, 16 bytes for each address a pool's objects have had (an address, a place, an entry in the sorted list of addresses: the Adventure session's shapes have 32,594 slots at tick 50,000, 378 of them live), and the live scene's objects. A restore and 8 ticks is the ticks: a session's ticks outside a match cost 2 to 6 ms each on the worker (the menus' and the movies' display passes and loads), on both builds alike, which is a separate question from the snapshot (open against the 4 ms target, which was set for matches).
+
+A match's rollback (`melee-bench snapshot-match --every 2500`): snapshots 0.03 to 0.07 MB larger (each stored slot keeps its place, 16 bytes more than before: `fox-fox-fd` 1.77 to 2.26 MB against 1.72 to 2.19, `fox-marth-bf` 1.74 to 1.90 against 1.69 to 1.84, `fox-marth-ps` 1.84 to 2.24 against 1.79 to 2.16, `ganon-captain-fd` 1.81 to 1.93 against 1.75 to 1.87), the same allocations, clone within 5% either way (337 to 434 µs against 341 to 454), restore up to 8% slower (157 to 204 µs against 146 to 201), restore and 8 ticks 0.1 to 0.3 ms slower; restores still allocate nothing (Pokémon Stadium's one as before), and `ticks_and_restores_dont_allocate` passes.
+
+The simulation is 3 to 6% slower in a match. `melee-bench native`, one run a match per invocation, eight rounds with the builds alternating, median frames per second:
+
+| Match | Base | Branch | Change | Melee-sim in one codegen unit, base / branch (4 rounds) |
+| --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,281 | 2,181 | −4.4% | 2,355 / 2,219 (−5.8%) |
+| `fox-marth-ps` | 1,963 | 1,895 | −3.5% | 2,017 / 1,921 (−4.8%) |
+
+A pool's lookup goes through the slot's place (`Pool`'s `cell`) once the pool has retired a slot; a pool that never has, as a match's class objects' pools, indexes its contents directly (`Pool::direct`). Experiments, each built and timed against the base the same way: the lookup always through the place cost 5 to 8%; the place's path out of line, 5%; a build that indexed the contents directly with no check (unsound outside a match, but in sync there) was 2% slower than the base, so about 2 to 3 points are the lookup's check and the rest the build's layout (moving the pool's fields so the lookup reads one cache line made it 7% slower, not faster). The session's own speed doesn't move with the place's path (`session-sync --rollback 0` to tick 20,000: 172 to 176 s for both layouts). Not taken further here.
+
 ## Benchmark matches
 
 | Match | Stage | Fighters (costume) | Seed | Frames | Length | Ends |
