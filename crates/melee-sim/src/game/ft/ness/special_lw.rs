@@ -236,6 +236,8 @@ impl Running<'_> {
 
     /// The turnaround (`ftNs_SpecialLwTurn_Anim`, `ftNs_SpecialAirLwTurn_Anim`, the
     /// `getAttrStuff` inline): turned halfway through, the model spinning, then holding again.
+    // The turn's eight callbacks are dead: only each other's ground and air switches enter its
+    // states (ledger/dead.txt).
     fn ness_special_lw_turn_anim(&mut self, gobj: GObjId) {
         self.ness_special_lw_check_release(gobj);
         self.ness_special_lw_count_lag(gobj);

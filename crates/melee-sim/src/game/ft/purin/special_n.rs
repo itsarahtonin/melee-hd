@@ -1322,6 +1322,19 @@ impl Running<'_> {
     }
 }
 
+/// The neutral special's interrupts the original leaves empty (lone `blr`s), which `run` takes
+/// and does nothing for.
+const EMPTY: [u32; 8] = [
+    addr::SPECIAL_N_START_IASA,
+    addr::SPECIAL_N_TURN_IASA,
+    addr::SPECIAL_N_END_IASA,
+    addr::SPECIAL_AIR_N_START_IASA,
+    addr::SPECIAL_AIR_N_CHARGE_RELEASE_IASA,
+    addr::SPECIAL_AIR_N_START_TURN_IASA,
+    addr::SPECIAL_AIR_N_END_IASA,
+    addr::SPECIAL_N_HIT_IASA,
+];
+
 #[doc(alias = "ftPr_SpecialAirNChargeLoop_Anim")]
 #[doc(alias = "ftPr_SpecialAirNChargeLoop_IASA")]
 #[doc(alias = "ftPr_SpecialAirNChargeLoop_Phys")]
@@ -1335,6 +1348,7 @@ impl Running<'_> {
 #[doc(alias = "ftPr_SpecialNLoop_Phys")]
 #[doc(alias = "ftPr_SpecialNStart_IASA")]
 #[doc(alias = "ftPr_SpecialNTurn_IASA")]
+#[doc(alias = "ftPr_SpecialAirNStartTurn_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_S_8013D658 => g.purin_roll_restore(gobj),
@@ -1359,14 +1373,7 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         addr::SPECIAL_AIR_N_START_TURN_ANIM => g.purin_special_air_n_start_turn_anim(gobj),
         addr::SPECIAL_AIR_N_END_ANIM => g.purin_end_anim(gobj, true),
         addr::SPECIAL_N_HIT_ANIM => g.purin_special_n_hit_anim(gobj),
-        addr::SPECIAL_N_START_IASA
-        | addr::SPECIAL_N_TURN_IASA
-        | addr::SPECIAL_N_END_IASA
-        | addr::SPECIAL_AIR_N_START_IASA
-        | addr::SPECIAL_AIR_N_CHARGE_RELEASE_IASA
-        | addr::SPECIAL_AIR_N_START_TURN_IASA
-        | addr::SPECIAL_AIR_N_END_IASA
-        | addr::SPECIAL_N_HIT_IASA => {}
+        a if EMPTY.contains(&a) => {}
         addr::SPECIAL_N_LOOP_IASA | addr::SPECIAL_N_FULL_IASA => g.purin_charge_iasa(gobj, false),
         addr::SPECIAL_N_RELEASE_IASA => g.purin_special_n_release_iasa(gobj),
         addr::SPECIAL_AIR_N_CHARGE_LOOP_IASA | addr::SPECIAL_AIR_N_CHARGE_FULL_IASA => {
@@ -1405,4 +1412,23 @@ pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::ft::motion_tables::FT_PR_INIT_MOTION_STATE_TABLE;
+
+    /// The Rollout's air turn's interrupt (Jigglypuff's state 359, her table's 18th) is the
+    /// original's 4-byte function at 0x80140614 (a lone `blr`), so its port is to take the call
+    /// and change nothing: `run` claims the address with the empty interrupts' arm.
+    #[test]
+    fn the_air_turns_interrupt_does_nothing() {
+        assert_eq!(ms::SPECIAL_AIR_N_START_TURN, 341 + 18);
+        let s = &FT_PR_INIT_MOTION_STATE_TABLE[18];
+        assert_eq!(s.input_cb.map(|c| c.0), Some(0x8014_0614));
+        assert_eq!(addr::SPECIAL_AIR_N_START_TURN_IASA, 0x8014_0614);
+        assert!(EMPTY.contains(&addr::SPECIAL_AIR_N_START_TURN_IASA));
+        assert!(!EMPTY.contains(&addr::SPECIAL_AIR_N_START_TURN_ANIM));
+    }
 }

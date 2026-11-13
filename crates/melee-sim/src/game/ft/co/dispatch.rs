@@ -4,6 +4,13 @@
 use super::super::super::state::Running;
 use crate::hsd::gobj::GObjId;
 
+/// `ftCo_PassiveCeil_IASA`, the ceiling tech's interrupt (state 204's), empty in the original:
+/// a lone `blr` at 0x800C25AC, `ftCo_PassiveCeil_Phys` starting at the next word.
+pub const PASSIVE_CEIL_IASA: u32 = 0x800C_25AC;
+
+/// The callbacks the original leaves empty that `run` takes and does nothing for, by address.
+const EMPTY: &[u32] = &[PASSIVE_CEIL_IASA];
+
 /// Runs the common state callback at `cb`, if one is ported here.
 #[doc(alias = "ftCo_CaptureDamageHi_IASA")]
 #[doc(alias = "ftCo_CaptureDamageLw_IASA")]
@@ -11,6 +18,7 @@ use crate::hsd::gobj::GObjId;
 #[doc(alias = "ftCo_DamageSongWait_IASA")]
 #[doc(alias = "ftCo_DamageSongRv_IASA")]
 #[doc(alias = "ftCo_DownReflect_IASA")]
+#[doc(alias = "ftCo_PassiveCeil_IASA")]
 pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
     match cb {
         // The swings (`ftCo_SwordSwing_*` and the other items') and their hooks.
@@ -260,7 +268,7 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         0x800C_252C => {
             g.co_passive_ceil_anim(gobj);
         }
-        0x800C_25AC => {}
+        a if EMPTY.contains(&a) => {}
         0x800C_25B0 => {
             g.co_passive_ceil_phys(gobj);
         }
@@ -975,4 +983,23 @@ pub fn run(g: &mut Running<'_>, gobj: GObjId, cb: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::ft::motion_tables::FT_DATA_MOTION_STATE_LIST;
+
+    /// The ceiling tech's interrupt is the original's 4-byte function at 0x800C25AC (a lone
+    /// `blr`, the state's physics, `ftCo_PassiveCeil_Phys`, starting at 0x800C25B0), so its port
+    /// is to take the call and change nothing: `run` claims the address with an empty arm, and
+    /// state 204's table entry names it as its interrupt.
+    #[test]
+    fn the_ceiling_techs_interrupt_does_nothing() {
+        let s = &FT_DATA_MOTION_STATE_LIST[204];
+        assert_eq!(s.input_cb.map(|c| c.0), Some(PASSIVE_CEIL_IASA));
+        assert_eq!(s.phys_cb.map(|c| c.0), Some(PASSIVE_CEIL_IASA + 4));
+        assert!(EMPTY.contains(&PASSIVE_CEIL_IASA));
+        assert!(!EMPTY.contains(&(PASSIVE_CEIL_IASA + 4)));
+    }
 }

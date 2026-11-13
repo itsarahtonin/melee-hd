@@ -434,6 +434,8 @@ impl Running<'_> {
     /// Whether a hit leaves him carrying, `checkSomething`: too light to react to, or
     /// knockback below the third level (`ftCo_8008D8E8` of `ftCo_ScaleBy154`).
     #[doc(alias = "checkSomething")]
+    #[doc(alias = "ftCo_ScaleBy154")]
+    #[doc(alias = "ftCo_8008D8E8")]
     pub fn dk_heavy_hit_keeps(&self, gobj: GObjId) -> bool {
         let f = self.game.fighter_id(gobj);
         if self.hit_too_light(f) {
