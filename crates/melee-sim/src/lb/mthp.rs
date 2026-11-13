@@ -654,7 +654,9 @@ impl Audio {
             });
         }
         self.movie_alarm_cancel();
-        // `HSD_VIWaitXFBFlush`: the scene's loop has ended and its frames shown already.
+        // `HSD_VIWaitXFBFlush`: after a scene's loop its frames have shown already; from the
+        // Data menu's movies (B, mid-scene) the frame copied last shows first.
+        self.with_clock(data, |c, f| c.xfb_flush(f));
         self.movie.export_buffer(data);
         if self.movie.alloc != 0 {
             crate::hsd::heap::mem_free(self.movie.alloc);
