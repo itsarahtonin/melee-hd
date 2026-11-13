@@ -628,9 +628,9 @@ pub fn create(r: &mut Running, spawn: &SpawnItem) -> Option<GObjId> {
     // The variables the block's last item left are stale until the new kind writes them.
     r.game.items[id.0].xDD4_itemVar.mark_stale();
     r.game.it.stale_last_pos.remove(&id.0);
-    // So are its hitboxes' joints, until the script makes each box (`HitJObj`).
+    // Its hitboxes' joints keep the block's words until the script makes each box (`HitJObj`).
     for h in &mut r.game.items[id.0].x5D4_hitboxes {
-        h.hit.jobj.mark_unknown();
+        h.hit.jobj.mark_unwritten();
     }
     r.game
         .world
