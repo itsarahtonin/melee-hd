@@ -639,9 +639,11 @@ fn image_objects(game: &Game) -> Vec<(&'static str, u32, u32, u32, bool)> {
     for slot in 0..g.grounds.slots().len() as u32 {
         let a = g.grounds.addr(slot);
         if a != 0 {
-            let ty = g.grounds.slots()[slot as usize]
-                .u
-                .type_name()
+            // A retired slot (a scene before's) keeps no contents to name its kind by.
+            let ty = g
+                .grounds
+                .get(slot)
+                .and_then(|o| o.u.type_name())
                 .unwrap_or("Ground");
             v.push((ty, a, 0x204, slot, g.grounds.is_free(slot)));
         }
