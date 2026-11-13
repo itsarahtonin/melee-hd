@@ -87,7 +87,7 @@ pub fn init(r: &mut Running) {
         crate::hsd::heap::Kind::EffectQueued,
     ]);
     let g = &mut *r.game;
-    g.ef.effects = Default::default();
+    g.ef.effects.retire();
     g.ef.count = 0;
     for t in &mut g.ef.tables[..50] {
         *t = None;
@@ -104,7 +104,7 @@ pub fn init(r: &mut Running) {
     g.objs.jobj.sptcl = true;
     jobj::set_dptcl_callback(&mut g.objs, true);
     appsrt::init(&mut g.objs, 0, 0xA4);
-    g.ef.queued = Default::default();
+    g.ef.queued.retire();
     for p in &mut g.ef.params {
         p.gobj = None;
         p.alpha = 0xFF;

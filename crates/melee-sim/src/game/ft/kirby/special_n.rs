@@ -912,8 +912,7 @@ impl Running<'_> {
     }
 
     /// `ftKb_EatWalk_Anim` (`ftWalkCommon_800DFDDC`).
-    // Ports `ftKb_EatWalk_Anim`; aliased once a check reaches it (no replay at hand walks
-    // with a fighter held).
+    #[doc(alias = "ftKb_EatWalk_Anim")]
     pub fn kb_eat_walk_anim(&mut self, gobj: GObjId) {
         self.co_walk_anim(gobj);
     }
