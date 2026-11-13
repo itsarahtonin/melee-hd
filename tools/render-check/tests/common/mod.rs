@@ -102,6 +102,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("rec-") {
                     return ssbm_rs_local(&format!("lockstep/recordings/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6r2-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-reach-2/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6ad4-") {
                     return ssbm_rs_local(&format!("lockstep/m6-adv-likelike/{o}.inputs")).into();
                 }
@@ -1513,6 +1516,15 @@ pub const M6AD3_MK_MEET: Game = Game {
     name: "m6ad3-mk-meet",
     players: "Debug VS on Mushroom Kingdom's route, Fox and Mario and the item menu's shells (session m6-adventure-dbg-3/mk-meet)",
     replay: Replay::Session("m6ad3-mk-meet"),
+};
+
+/// Mr. Game & Watch charging his forward smash (`m6-reach-2/gw-charge`, debug level 3, Mr. Game &
+/// Watch and Mario): the torch, his own item, drawn in his color overlay as he flashes.
+pub const M6R2_GW_CHARGE: Game = Game {
+    stage: "Final Destination",
+    name: "m6r2-gw-charge",
+    players: "Debug VS on Final Destination, Mr. Game & Watch charging his smashes against Mario (session m6-reach-2/gw-charge)",
+    replay: Replay::Session("m6r2-gw-charge"),
 };
 
 /// Adventure's Like Like on the Underground Maze (`m6-adv-likelike/ll-edge`, debug level 3, Fox
