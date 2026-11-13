@@ -227,11 +227,9 @@ impl GroundVars {
             }
             GroundVars::RCruise(v) => {
                 l.put_u8(a, v.xC4);
-                // The wind's slot in the pool `WIND_POOL` names: its address there is the
-                // pool's, which melee-sim doesn't keep, so the word is unknown.
-                if v.x4.is_none() {
-                    l.put_u32(a + 4, 0);
-                }
+                // The wind's slot in the pool `WIND_POOL` names: its address in the wind
+                // sources' block where the allocator model gives it (unknown where none runs).
+                l.put_word(a + 4, cx.handle("WindSource", v.x4.map(u32::from)));
                 f(l, a + 8, v.x8);
                 w32(l, a + 0xC, &[v.xC, v.x10]);
                 fs(l, a + 0x14, &[v.x14, v.x18, v.x1C, v.x20, v.x24, v.x28]);
