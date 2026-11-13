@@ -1,14 +1,14 @@
 # What's left to port
 
-Every function the [port ledger](port-ledger.md) still counts as unaccounted, grouped by the mode that reaches it and by unit, with what reaches it and its size in the executable (bytes of code, from the decomp's asm listings). Generated on 2026-11-13 from `feat/m6-ledger-4` at `643a03c5` ([milestone 6](milestone-6.md), task 11's fourth round): 184 of 19,827 functions unaccounted, against 260 on `100381ae` where the round began, 297 after the third round, 513 after the second and 2,105 before the task (17,914 ported with a check, 941 replaced, 788 dead).
+Every function the [port ledger](port-ledger.md) still counts as unaccounted, grouped by the mode that reaches it and by unit, with what reaches it and its size in the executable (bytes of code, from the decomp's asm listings). Generated on 2026-11-13 from `feat/m6-ledger-4` at `41f1cfe3` ([milestone 6](milestone-6.md), task 11's fourth round): 184 of 19,827 functions unaccounted, against 260 on `100381ae` where the round began, 297 after the third round, 513 after the second and 2,105 before the task (17,914 ported with a check, 941 replaced, 788 dead).
 
 ## The short answer
 
 - **184 functions are left**, 37,264 bytes of code.
 - **8 need only a check's bookkeeping**: a session or replay diff that compares clean already reaches them. 3 are held for a session where they change something (Kirby's item visibility, Jigglypuff's hat freed as she leaves); 5 are presentation (melee-render's), whose run-time mutations fail no frame tried: an item's light overlay and its owner's color overlay, a horizontal billboard, the texture cache's region, and the matrix marks' clear, which clears marks nothing stores.
 - **71 need a recording**: melee-hd has the code (61 held by a `// Ports` comment, a doc, a dispatch arm or an audit's `UNCHECKED`; 10 named in a comment, perhaps inline), but no recorded session or replay reaches them: mostly VS states, fighter commands and item callbacks no recorded match enters.
-- **2 need a port or a proof**: 0 an audit names with the path that reaches them, 2 nothing in melee-hd names: two draw-only functions the routes round left for a frames check (`lb_8000CE40`, Kirby losing a hat whose parts went on a bone with no model of its own; `fn_802FF360`, the score popup's empty text callback).
-- **103 are debug only** (`ledger/deferred.txt`): code only a raised debug level or the debug menu reaches.
+- **14 need a port or a proof**: 0 an audit names with the path that reaches them, 14 nothing in melee-hd names: two draw-only functions the routes round left for a frames check (`lb_8000CE40`, Kirby losing a hat whose parts went on a bone with no model of its own; `fn_802FF360`, the score popup's empty text callback) and the Test stage's callbacks outside `ledger/deferred.txt`, which the debug-only round (`feat/m6-debug-only`) takes with the stage.
+- **91 are debug only** (`ledger/deferred.txt`): code only a raised debug level or the debug menu reaches.
 - **No mode is known to reach an unported function outside the debug menu.** Every mode's gate is open; the audits (`menus_audit`, `single_player_audit`, the fighter, items, CPU and stage audits) fail on anything their modes reach unported, and every session and replay diff below that compares clean reached nothing unported (the third round's 359 more sessions, each clean to its trace's end, reached none outside the debug menu's rows). The exceptions are the debug menu's: its Versus page's `CpTp_Nana` on a fighter other than Nana reaches Nana's decision without Popo (`ftCo_800AEFB8`, unported, `ledger/deferred.txt`), and the other debug-only rows. The "nothing known" rows of VS units aren't held by an audit, so no test proves a VS match can't reach them; no recorded one does.
 
 An unaccounted row is one of these, which the columns count:
@@ -27,7 +27,7 @@ The second round (2026-11-11) ran ssbm-rs's `CALLS` with every row then unaccoun
 
 The third round (2026-11-12, `feat/m6-ledger-3`) ran ssbm-rs's `CALLS` with every row still unaccounted (but the second round's reached ones) over the 359 sessions no round had swept, each bounded by its trace's end: the rest of verify-par.sh's milestone-6 list (`m6-stages-1p` cut at field 36,100, just before the field where the original halts; the replay round's `rr-*` sessions with their runner hooks; the guard, unlock, event, Adventure and routes sessions added since) and milestone 5's menu, card, data, trophy, special, results, tie, exit, unlock, Tournament, select, vanilla and debug sessions (the card pulls, slot B, stamp, boot-B, clock and no-card sessions left out: ssbm-rs's runner would need their options). No run hung. They reached 51 functions unaccounted on main `5e8ed352`; 28 melee-sim ports got their aliases with `ledger/checks.txt` lines naming the session and the field of its first call (the barrel cannon's rider states and launch from Event 26, Jigglypuff's full-charge Rollout states from `dp-rollout`, Ness's yo-yo damage and item visibility, Great Bay's sea test, the debug pause's Z, the results' back sound, the grab's high flinch switch, How to Play's frame, the title's exit from the attract loop, Tournament's handicap, Pikachu's ear models, Pichu's item pickup, Kirby's Yoshi-tongue release), the barrel's countdown and Ness's item visibility each with a mutation the session caught. The rest are inline, other agents' rows, held for a session where they change something, presentation, or debug only (`ledger/deferred.txt`'s Hanyu select, debug menu, item and shadow rows, which the debug sessions reach and which stay deferred).
 
-The fourth round (2026-11-13, `feat/m6-ledger-4`) settled the rows the three sweeps had found reached but left, and the rows that needed a port or a proof. Aliased with `ledger/checks.txt` lines: 56 melee-sim ports inline in another item (the command interpreter's own commands, the catch-up's skips, a color overlay's owner commands, the common attacks' kind switches and entries, the common and Ness's up special's empty IASAs, getters, the material classes' registrations, HSD's animation walks, the depth-sorted lists' display and clear, the scene machine's hooks, Peach's Castle's moat reading the previous position), each carried by the item that runs it, three of them broken on purpose to see their checks fail; 8 melee-render ports with a frames check and a run-time mutation each (the screen camera, the envelope matrices' slots, the particles' TEV cache, two kinds of billboard, the shared-vertex and flat fighters' rigid matrices, the magnifier bubble's background); and Event 51's three-stock note in the save, checked by review (Sarah, 2026-11-10). Dead: refraction's three texel readers (no code calls a read callback), the depth-sorted lists' sort (`zsort_sorting` is never set), the top- and bottom-half cameras (no render pass is ever 1 or 2) and the THP decoder's APP1 to APP15 skip (`tools/disc-scan/thp_markers.py`: no frame of the disc's 103 movies and pictures holds one). Replaced, with Sarah's reset and disc error decision: the disc error screen's check and frame callback and the sound stop of the reset and disc error paths. Debug only: the Test stage's other twelve callbacks. Seven rows the generator had as nothing known turned out ported and held (a skip of the catch-up, the ceiling tech's empty IASA, a 1P spike bonus, Kirby swallowing a Kirby, Classic's third opponent in the intro, a flat fighter's shared-vertex matrices) and wait for a recording.
+The fourth round (2026-11-13, `feat/m6-ledger-4`) settled the rows the three sweeps had found reached but left, and the rows that needed a port or a proof. Aliased with `ledger/checks.txt` lines: 56 melee-sim ports inline in another item (the command interpreter's own commands, the catch-up's skips, a color overlay's owner commands, the common attacks' kind switches and entries, the common and Ness's up special's empty IASAs, getters, the material classes' registrations, HSD's animation walks, the depth-sorted lists' display and clear, the scene machine's hooks, Peach's Castle's moat reading the previous position), each carried by the item that runs it, three of them broken on purpose to see their checks fail; 8 melee-render ports with a frames check and a run-time mutation each (the screen camera, the envelope matrices' slots, the particles' TEV cache, two kinds of billboard, the shared-vertex and flat fighters' rigid matrices, the magnifier bubble's background); and Event 51's three-stock note in the save, checked by review (Sarah, 2026-11-10). Dead: refraction's three texel readers (no code calls a read callback), the depth-sorted lists' sort (`zsort_sorting` is never set), the top- and bottom-half cameras (no render pass is ever 1 or 2) and the THP decoder's APP1 to APP15 skip (`tools/disc-scan/thp_markers.py`: no frame of the disc's 103 movies and pictures holds one). Replaced, with Sarah's reset and disc error decision: the disc error screen's check and frame callback and the sound stop of the reset and disc error paths. The Test stage's rows are the debug-only round's (`feat/m6-debug-only`), which debug VS reaches by stage number. Seven rows the generator had as nothing known turned out ported and held (a skip of the catch-up, the ceiling tech's empty IASA, a 1P spike bonus, Kirby swallowing a Kirby, Classic's third opponent in the intro, a flat fighter's shared-vertex matrices) and wait for a recording.
 
 ## Summary
 
@@ -38,8 +38,9 @@ The fourth round (2026-11-13, `feat/m6-ledger-4`) settled the rows the three swe
 | [Classic](#classic) | 1 | 36 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | [1P shared](#1p-shared) | 1 | 144 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | [1P endings](#1p-endings) | 1 | 268 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| [Debug only](#debug-only) | 103 | 23,392 | 0 | 0 | 0 | 0 | 0 | 0 | 103 |
-| **All** | **184** | **37,264** | **61** | **3** | **5** | **0** | **10** | **2** | **103** |
+| [Debug stages](#debug-stages) | 12 | 1,464 | 0 | 0 | 0 | 0 | 0 | 12 | 0 |
+| [Debug only](#debug-only) | 91 | 21,928 | 0 | 0 | 0 | 0 | 0 | 0 | 91 |
+| **All** | **184** | **37,264** | **61** | **3** | **5** | **0** | **10** | **14** | **91** |
 
 ## VS and the menus
 
@@ -173,6 +174,14 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | --- | ---: | ---: | --- |
 | `melee/gm/gm_19EF` | 1 | 268 | ported in `gm/endings/game_over.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_801A0B60` |
 
+## Debug stages
+
+### The Test stage (`grtest`)
+
+| Unit | Functions | Bytes | What reaches them |
+| --- | ---: | ---: | --- |
+| `melee/gr/grtest` | 12 | 1,464 | nothing known reaches it: `grTest_80206E30`, `grTest_UnkStage0_OnLoad`, `grTest_UnkStage0_OnStart`, `grTest_80207044`, `stageGObj0_OnInit`, `grTest_80207164`, `stageGObj2_OnInit`, `grTest_802071C4`, `stageGObj2_X8Callback`, `stageGObj1_OnInit`, `grTest_80207404`, `grTest_8020740C` |
+
 ## Debug only
 
 ### Debug code (`ledger/deferred.txt`)
@@ -184,7 +193,7 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | `melee/ft/kinds/ftZelda/ftzelda` | 1 | 92 | debug only (`ledger/deferred.txt`): `ftZd_Init_801395C8` |
 | `melee/gm/gm_1601` | 1 | 176 | debug only (`ledger/deferred.txt`): `gm_80164A0C` |
 | `melee/gm/gmhanyucss` | 2 | 284 | debug only (`ledger/deferred.txt`): `gm_801BED3C`, `gm_801BEDA8` |
-| `melee/gr/grtest` | 21 | 1,520 | debug only (`ledger/deferred.txt`): `grTest_80206E2C`, `grTest_80206E30`, `grTest_UnkStage0_OnLoad`, `grTest_UnkStage0_OnStart`, `grTest_8020703C`, `grTest_80207044`, `stageGObj0_OnInit`, `grTest_8020715C`, `grTest_80207164`, `grTest_80207168`, `stageGObj2_OnInit`, `grTest_802071BC`, `grTest_802071C4`, `grTest_802073AC`, `stageGObj2_X8Callback`, `stageGObj1_OnInit`, `grTest_802073FC`, `grTest_80207404`, `grTest_80207408`, `grTest_8020740C`, `grTest_80207414` |
+| `melee/gr/grtest` | 9 | 56 | debug only (`ledger/deferred.txt`): `grTest_80206E2C`, `grTest_8020703C`, `grTest_8020715C`, `grTest_80207168`, `grTest_802071BC`, `grTest_802073AC`, `grTest_802073FC`, `grTest_80207408`, `grTest_80207414` |
 | `melee/db/dbitem` | 2 | 200 | debug only (`ledger/deferred.txt`): `db_DisableItemSpawns`, `fn_80225E6C` |
 | `melee/db/dbcamera` | 1 | 304 | debug only (`ledger/deferred.txt`): `fn_80227EB0` |
 | `melee/it/kinds/itmetamon` | 1 | 4 | debug only (`ledger/deferred.txt`): `it_802D306C` |
