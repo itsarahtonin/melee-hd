@@ -2530,3 +2530,37 @@ fn the_switches_left_as_they_come_in() {
         }
     }
 }
+
+/// The reach round's bot sessions (`m6-reach`), from power-on at debug level 3: Ness's PSI
+/// Magnet absorbing Fox's laser in the air (`nessair`), Luigi's Cyclone lifted on the ground
+/// and a barrel cannon let go of when Luigi is hit (`lmisc`), and a Chansey egg skidding down
+/// Corneria's hull (`lu-corn`), each to its trace's end.
+#[test]
+fn the_reach_rounds_bot_sessions() {
+    for (name, ticks) in [("nessair", 1430), ("lmisc", 2167), ("lu-corn", 3741)] {
+        if let Some(out) = scripted_session("m6-reach", name, &["--all", "--heap"]) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference\n")),
+                "{name}: {out}"
+            );
+            assert!(out.contains("no stale reads"), "{name}: {out}");
+        }
+    }
+}
+
+/// Mute City's course event sets two lines' terrain in the stage file's line descriptors
+/// (`mpLib_80054D68`, tick 4873) and clears it (5365): the heap's image takes the edit, so its
+/// file bytes match memory after each (`m6-reach/mc-lines`).
+#[test]
+fn mute_citys_terrain_edit_reaches_the_heaps_image() {
+    let Some(out) = scripted_session("m6-reach", "mc-lines", &["--heap", "--image", "4880,5380"])
+    else {
+        return;
+    };
+    assert!(
+        out.contains("5552 ticks compared, no difference\n"),
+        "{out}"
+    );
+    assert_eq!(out.matches("(\"file\", \"same\")").count(), 2, "{out}");
+    assert!(!out.contains("(\"file\", \"different\")"), "{out}");
+}

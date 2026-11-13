@@ -473,7 +473,7 @@ pub fn picked_up(r: &mut Running, gobj: GObjId) {
 }
 
 /// Let go of, it drops rolling a little the holder's way, `it_3F14_Logic5_Dropped`.
-// Ports `it_3F14_Logic5_Dropped`; aliased once a check reaches it.
+#[doc(alias = "it_3F14_Logic5_Dropped")]
 pub fn dropped(r: &mut Running, gobj: GObjId) {
     let_go(r, gobj);
     hitbox::set_hit_ids(r.game, gobj);

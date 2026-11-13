@@ -294,7 +294,7 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftKb_Init_OnItemInvisible`, unless it's heavy.
-    // Ports `ftKb_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftKb_Init_OnItemInvisible")]
     pub fn kb_on_item_invisible(&mut self, gobj: GObjId) {
         let item = self.game.fighter(gobj).item_gobj.expect("no item held");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
@@ -304,7 +304,7 @@ impl Running<'_> {
 
     /// Showing the held item again, `ftKb_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 1)`).
-    // Ports `ftKb_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftKb_Init_OnItemVisible")]
     pub fn kb_on_item_visible(&mut self, gobj: GObjId) {
         let Some(item) = self.game.fighter(gobj).item_gobj else {
             return;
