@@ -144,7 +144,8 @@ fn functions() -> Vec<(u32, String)> {
 }
 
 /// Functions not run here: fighter creation's (the oracle checks them), the dress's removal
-/// (`ftZd_Init_801395C8`, not ported), and the fire's owner getter, whose GObj return the
+/// (`ftZd_Init_801395C8`, which no saved call reaches: the debug-level session
+/// `m6-debug/zelda-items` checks it), and the fire's owner getter, whose GObj return the
 /// check can't compare (the hold's callbacks read it).
 fn skipped(name: &str, _addr: u32) -> bool {
     matches!(
