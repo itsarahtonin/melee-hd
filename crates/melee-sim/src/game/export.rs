@@ -693,6 +693,14 @@ fn dynamics_links(game: &Game, data: &Archives, img: &mut Image) {
     for (k, link) in game.fighter_dynamics.iter() {
         link.lay(&mut l, block + 0x98 * k, &cx);
     }
+    // An axis the block held over the GPU's pixels goes back as them while ours holds the fill.
+    let runs: Vec<(u32, u32)> = game
+        .ft
+        .dynamics_pixels
+        .iter()
+        .map(|&k| (0x98 * u32::from(k) + 0x54, 0x98 * u32::from(k) + 0x58))
+        .collect();
+    l.keep_render_target(&runs, img.render_fill);
     l.put(img);
 }
 
@@ -880,6 +888,24 @@ pub fn ground(game: &Game, data: &Archives, img: &mut Image, g: super::handles::
         b.put(img);
     }
     if let Some(runs) = game.gr.render_leftovers.get(&g.0) {
+        // The flag byte's bits no code writes (`GroundX11Flags::rest`): over the GPU's pixels
+        // the object never held them, and the image keeps whole bytes, so the byte goes back
+        // as the pixels it was made over (`m6-multiman/mm-100-win`, tick 21767: a Battlefield
+        // background over a freed one's block, made over a copy's pixels, held its byte
+        // where the image had the freed one's pass and zeros).
+        let over = |o: u32| runs.iter().any(|&(a, b)| a <= o && o < b);
+        if over(0x11) {
+            l.forget(at + 0x11, 1);
+        }
+        // Likewise a member's bits kept as the block held them (`GroundVars::kept`: Mushroom
+        // Kingdom II's flags, `recordings/classic-clear` tick 8524, a log over a freed log's
+        // block made over the pixels).
+        for (i, _, _) in game.grounds[g.0].u.kept() {
+            let o = 0xC4 + i as u32;
+            if over(o) {
+                l.forget(at + o, 1);
+            }
+        }
         l.keep_render_target(runs, img.render_fill);
     }
     l.put(img);
@@ -1048,6 +1074,10 @@ impl LayCx for Addrs<'_> {
             // The items' tables in the executable: the handle is the address.
             "GroundId" => g.grounds.addr(h),
             "CameraBoxId" if g.camera.boxes.addr != 0 => g.camera.boxes.addr + 0x6C * h,
+            // A wind source (`lb_8000FCDC`'s second block, `WIND_POOL`) by its index.
+            "WindSource" if g.ft.winds_block != 0 => {
+                g.ft.winds_block + super::gr::vars::WIND_SIZE * h
+            }
             "ItemLogicRef" | "ItemStatesRef" => h,
             _ => 0,
         };

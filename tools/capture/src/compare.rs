@@ -959,10 +959,13 @@ impl<'a> Comparer<'a> {
             {
                 let mut link = self.game.fighter_dynamics[d.0].clone();
                 // A chain's last link's dominant axis (`desc.unk_54`) is never written and
-                // never read (docs/engine.md, uninitialized values): its block's leftover,
-                // kept from the heap's image, which doesn't follow every write that reaches
-                // the block (`single_player_intros`' tick 49618): left out.
-                if link.next.is_none() {
+                // never read (docs/engine.md, uninitialized values): its block's leftover, kept
+                // from the heap's image and compared, but where the block held the GPU's pixels
+                // and ours still holds the image's fill (`ft::Globals::dynamics_pixels`).
+                if link.next.is_none()
+                    && self.game.ft.dynamics_block != 0
+                    && self.game.ft.dynamics_pixels.contains(&(d.0 as u16))
+                {
                     link.desc.unk_54 = self.u32(theirs + 0x54) as i32;
                 }
                 link.compare(

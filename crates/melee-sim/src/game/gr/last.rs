@@ -308,8 +308,8 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
         }
         11 => camera::request_quake(r, camera::QUAKE_LOOP, None),
         15 if b27 => {
-            let current =
-                ground::fog_color(r.game).expect("Ground_801C2090 leaves its color unset");
+            let (cr, cg, _) =
+                ground::fog_rgb(r.game).expect("Ground_801C2090 leaves its color unset");
             let rng = &mut r.game.objs.rng;
             let c = loop {
                 let c = _GXColor {
@@ -320,7 +320,7 @@ pub fn advance(r: &mut Running, gobj: GObjId) {
                 };
                 // The original compares green twice and never blue.
                 let gray = c.r == 30 && c.g == 30 && c.b == 30;
-                let same = c.r == current.r && c.g == current.g && c.g == current.g;
+                let same = c.r == cr && c.g == cg && c.g == cg;
                 if !(gray || same) {
                     break c;
                 }
@@ -546,16 +546,16 @@ fn scene_of(phase: i32) -> i32 {
 /// Starts a fog color blend toward `c` over `frames`, `grLast_8021C40C`.
 #[doc(alias = "grLast_8021C40C")]
 pub fn blend_to(game: &mut Game, gobj: GObjId, c: _GXColor, frames: f32) {
-    let from = ground::fog_color(game).expect("Ground_801C2090 leaves its color unset");
+    let (fr, fg, fb) = ground::fog_rgb(game).expect("Ground_801C2090 leaves its color unset");
     let f = |x: u8| mem(fp::frsp(f64::from(x)));
     let g = ground_of(game, gobj);
     let v = game.grounds[g.0].u.map();
     v.xE4 = f(c.r);
     v.xE8 = f(c.g);
     v.xEC = f(c.b);
-    v.xF4 = f(from.r);
-    v.xF8 = f(from.g);
-    v.xFC = f(from.b);
+    v.xF4 = f(fr);
+    v.xF8 = f(fg);
+    v.xFC = f(fb);
     v.x104 = frames;
     v.b27 = false;
 }

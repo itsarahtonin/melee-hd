@@ -1327,8 +1327,8 @@ fn inishie1_block(m: &Mem, b: u32, cx: &mut dyn Cx) -> Inishie1Block {
 
 /// `grInishie2_GroundVars`, Mushroom Kingdom II's stage (map 2): its flags (`xC4`, bit 0x80
 /// the music sped up, 0x40 and 0x20 the two logs' waits running, 0x10 Birdo's, 0x08 Pidgit's;
-/// the others nothing writes or reads: they keep what the block held, laid out as it, and
-/// aren't compared) and
+/// the others nothing writes or reads: they keep what the block held, laid out and compared as
+/// it) and
 /// those waits (`xC6`, `xC8`, `xCA`, `xCC`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2Vars {
@@ -1341,7 +1341,7 @@ pub struct Inishie2Vars {
 
 /// `grInishie2_GroundVars` with `grInishie2_GroundVars2::xCC`, a falling log (maps 3 and 4):
 /// its flags (`xC4`, bit 0x80 its collision back; the others, never written or read, keep the
-/// block's bits, laid out as them and not compared), its wait (`xC6`), which log it is (`xC8`)
+/// block's bits, laid out and compared as them), its wait (`xC6`), which log it is (`xC8`)
 /// and the stage object that sent it (`xCC`, at +8).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2LogVars {
@@ -2463,13 +2463,9 @@ impl Mirror for GroundUnion {
         let (Some(left), Some(mask)) = (&self.left, self.vars.untouched()) else {
             return;
         };
-        // Past the member's last laid byte: bits inside it that its layout leaves are its
-        // padding or fields the port keeps elsewhere, compared with the member.
-        let end = (0..SIZE)
-            .rev()
-            .find(|&i| mask[i] != 0xFF)
-            .map_or(0, |i| i + 1);
-        let differ: Vec<usize> = (end..SIZE)
+        // Every bit the member's layout leaves (its bytes past its fields, its padding, a
+        // byte's bits no bitfield names) holds what the block held.
+        let differ: Vec<usize> = (0..SIZE)
             .filter(|&i| !unknown(i) && (theirs[i] ^ left[i]) & mask[i] != 0)
             .collect();
         if let Some(&first) = differ.first() {
@@ -2480,8 +2476,9 @@ impl Mirror for GroundUnion {
                     .collect::<Vec<_>>()
                     .join(", ")
             };
+            let kind = self.vars.type_name().unwrap_or("bytes");
             cx.mismatch(
-                &format!("{path}.left@{first:#x}"),
+                &format!("{path}.left@{first:#x} ({kind})"),
                 show(left),
                 show(&theirs),
             );
@@ -7575,12 +7572,12 @@ impl Mirror for GroundVars {
                     m.u32(at),
                 );
             }
-            // The flags' bits the code writes: the others, kept and laid out as the block held
-            // them, aren't compared (docs/engine.md, "Uninitialized values").
+            // The flags whole: the bits the code doesn't write are the block's (docs/engine.md,
+            // "Uninitialized values").
             GroundVars::Inishie2(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
-                let ours = (v.xC4 & 0xF8, [v.xC6, v.xC8, v.xCA, v.xCC]);
-                let theirs = (m.u8(at) & 0xF8, [2, 4, 6, 8].map(h));
+                let ours = (v.xC4, [v.xC6, v.xC8, v.xCA, v.xCC]);
+                let theirs = (m.u8(at), [2, 4, 6, 8].map(h));
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.inishie2"),
@@ -7591,8 +7588,8 @@ impl Mirror for GroundVars {
             }
             GroundVars::Inishie2Log(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
-                let ours = (v.xC4 & 0x80, [v.xC6, v.xC8]);
-                let theirs = (m.u8(at) & 0x80, [2, 4].map(h));
+                let ours = (v.xC4, [v.xC6, v.xC8]);
+                let theirs = (m.u8(at), [2, 4].map(h));
                 if ours != theirs {
                     cx.mismatch(
                         &format!("{path}.inishie2"),
@@ -9634,7 +9631,17 @@ mod tests {
         };
         let mut d = Diffs(Vec::new());
         u.compare(&m, 0x100, "u", &mut d);
-        assert_eq!(d.0, ["u.left@0x20"]);
+        assert_eq!(d.0, ["u.left@0x20 (Inishie2LogVars)"]);
+        // A byte inside the member its layout leaves (the padding after the flags) compares too.
+        let mut inside = theirs;
+        inside[1] = 0x11;
+        let mi = Mem {
+            bytes: &inside,
+            base: 0x100,
+        };
+        let mut d = Diffs(Vec::new());
+        u.compare(&mi, 0x100, "u", &mut d);
+        assert_eq!(d.0, ["u.left@0x1 (Inishie2LogVars)"]);
         u.unknown = vec![(0x20, 0x21)];
         let mut d = Diffs(Vec::new());
         u.compare(&m, 0x100, "u", &mut d);

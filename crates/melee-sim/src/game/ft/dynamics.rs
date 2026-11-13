@@ -561,10 +561,11 @@ impl Game {
             let m = &o.mtx.m;
             let d = &mut self.fighter_dynamics[l.0].desc;
             d.jobj = Some(j);
-            if o.stale_w {
-                // The link keeps the joint's rotation, w and all.
-                self.objs.stale_reads += 1;
-            }
+            // The link keeps the joint's rotation, w and all: a w that's a stack word stops.
+            assert!(
+                !o.stale_w,
+                "lb_8000FD48: a dynamics link took a joint's w, the stack word lb_8001044C left"
+            );
             let o = &self.objs.jobjs[j];
             let d = &mut self.fighter_dynamics[l.0].desc;
             d.rotate = o.rotate;

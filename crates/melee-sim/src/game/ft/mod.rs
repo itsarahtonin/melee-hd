@@ -113,6 +113,10 @@ pub struct Globals {
     /// The wind sources' block in the scene's heap (`lb_8000FCDC`'s second), 0 for none
     /// modeled.
     pub winds_block: u32,
+    /// The links whose dominant axis (`unk_54`, which nothing writes of a chain's last link)
+    /// the block held over the GPU's pixels when it was taken: the image's fill, which the
+    /// comparer leaves out and the block gives back as the pixels (docs/engine.md).
+    pub dynamics_pixels: Vec<u16>,
     /// The fighters' light and its first ambient light (`ftCo_09F4.c`'s `lobj0`, `lobj1`).
     pub lobj0: Option<crate::hsd::lobj::LObjId>,
     pub lobj1: Option<crate::hsd::lobj::LObjId>,

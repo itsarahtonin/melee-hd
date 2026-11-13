@@ -200,21 +200,23 @@ impl Globals {
 /// An item's ignore id (`Item::xAC4_ignoreItemID`): the items sharing one share their
 /// hitboxes' victims. It comes from the spawn's `x40`, which the grapple beam's spawn
 /// (`it_802B7C18`) never sets, leaving a stack word: that id is stale (None), the comparer
-/// leaves it out, and reading it counts a stale read.
+/// leaves it out, and reading it stops by name, as the stack words aren't modelled.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct IgnoreId(pub Option<u32>);
 
 impl IgnoreId {
-    /// The id, a stale read counted when it was never set.
-    pub fn read(self, stale_reads: &mut u32) -> Option<u32> {
-        if self.0.is_none() {
-            *stale_reads += 1;
-        }
+    /// The id; one never set (the grapple beam's stack word) stops.
+    #[track_caller]
+    pub fn read(self, _stale_reads: &mut u32) -> Option<u32> {
+        assert!(
+            self.0.is_some(),
+            "it_802B7C18: read the grapple beam's ignore id, the stack word its spawn found"
+        );
         self.0
     }
 
-    /// Whether the item has an id (a stale one counts, as the stack word it stands for was
-    /// nonzero where seen).
+    /// Whether the item has an id (a stale one stops, [`IgnoreId::read`]).
+    #[track_caller]
     pub fn is_set(self, stale_reads: &mut u32) -> bool {
         self.read(stale_reads) != Some(0)
     }

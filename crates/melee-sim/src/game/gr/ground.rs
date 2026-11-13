@@ -142,14 +142,34 @@ fn image_param(param: Option<DataRef>, off: u32, bytes: [u8; 4]) {
     }
 }
 
-/// The stage fog's color, `Ground_801C2090`, if there is a fog.
+/// The stage fog's color, `Ground_801C2090`, if there is a fog. Its alpha may be the stack
+/// byte Final Destination's blend left ([`set_fog_rgb`]): a caller that keeps the whole color
+/// stops there; [`fog_rgb`] is for the callers that read only its RGB.
 #[doc(alias = "Ground_801C2090")]
+#[track_caller]
 pub fn fog_color(game: &Game) -> Option<_GXColor> {
     let g = game.stage_info.x12C?;
     match game.world.gobjs[g.0].obj {
         Some(Obj::Fog(f)) => {
-            let [r, g, b, a] = game.objs.fogs[f].color;
+            let fog = &game.objs.fogs[f];
+            assert!(
+                !fog.stale_alpha,
+                "Ground_801C2090: the fog's alpha is the stack byte grLast_8021C500 left"
+            );
+            let [r, g, b, a] = fog.color;
             Some(_GXColor { r, g, b, a })
+        }
+        _ => None,
+    }
+}
+
+/// [`fog_color`]'s RGB, for the callers that read nothing else (`Ground_801C2090`).
+pub fn fog_rgb(game: &Game) -> Option<(u8, u8, u8)> {
+    let g = game.stage_info.x12C?;
+    match game.world.gobjs[g.0].obj {
+        Some(Obj::Fog(f)) => {
+            let [r, g, b, _] = game.objs.fogs[f].color;
+            Some((r, g, b))
         }
         _ => None,
     }
@@ -741,7 +761,7 @@ pub fn fog_gobj(game: &Game) -> Option<GObjId> {
 /// `Ground_ApplyStageBackgroundColor`.
 #[doc(alias = "Ground_ApplyStageBackgroundColor")]
 pub fn apply_background_color(game: &mut Game) {
-    let (r, g, b) = fog_color(game).map_or((0, 0, 0), |c| (c.r, c.g, c.b));
+    let (r, g, b) = fog_rgb(game).unwrap_or((0, 0, 0));
     super::super::camera::set_background_color(&mut game.camera.cam, r, g, b);
 }
 

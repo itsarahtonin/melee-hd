@@ -1704,9 +1704,10 @@ fn make_mtx(objs: &mut Objects, data: &Archives, j: JObjId) {
 #[doc(alias = "HSD_JObjSetupMatrixSub")]
 pub fn setup_matrix_sub(objs: &mut Objects, data: &Archives, j: JObjId) {
     let o = &objs.jobjs[j];
-    if o.stale_w && o.flags & USE_QUATERNION != 0 {
-        objs.stale_reads += 1;
-    }
+    assert!(
+        !(o.stale_w && o.flags & USE_QUATERNION != 0),
+        "HSD_JObjSetupMatrixSub: a quaternion joint's w is the stack word lb_8001044C left"
+    );
     make_mtx(objs, data, j);
     objs.jobjs[j].flags &= !MTX_DIRTY;
     if objs.jobjs[j].flags & USER_DEF_MTX != 0 {
