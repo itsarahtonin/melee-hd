@@ -692,6 +692,8 @@ impl Running<'_> {
 
     /// The trophy at the character's size following the fighter's hip
     /// (`gm_801A7070_SetupMain`, inline in the entry).
+    #[doc(alias = "Player_80036EA0")]
+    #[doc(alias = "ftLib_GetHipJObj")]
     fn toy_fall_main(&mut self) {
         let joint = self.game.endings.toy_fall.trophy;
         let (gobj, j) = self.toy_fall_model(joint);

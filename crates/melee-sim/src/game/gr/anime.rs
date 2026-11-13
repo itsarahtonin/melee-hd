@@ -146,6 +146,7 @@ pub enum AnimOp {
 
 /// Applies `op` to the animations of a joint's parts that `mask` selects, `grAnime_801C752C`.
 #[doc(alias = "grAnime_801C752C")]
+#[doc(alias = "grAnime_801C6F50")]
 pub fn apply(game: &mut Game, j: Option<JObjId>, recurse: bool, mask: u32, op: AnimOp) {
     let Some(j) = j else { return };
     let (rewind, end) = game.gr.anime_loop;

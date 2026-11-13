@@ -501,8 +501,10 @@ impl Ctx<'_> {
 
     /// `it_80278108`: the item's color overlay's stage, its tint the item's second color
     /// under `b4`, else its own color or the overlay's (its owner's with `b3` and flag
-    /// `x13`).
+    /// `x13`, `ftCo_800C0674`).
     #[doc(alias = "it_80278108")]
+    // Ports `ftCo_800C0674`; aliased once a frames check draws an item in its owner's color
+    // overlay (its mutation fails none of the 16 frames tried).
     fn item_color_overlay(
         &mut self,
         desc: &TevDesc,
@@ -515,6 +517,7 @@ impl Ctx<'_> {
         let mut overlay = &ip.x548_colorOverlay;
         if b3
             && ip.xDC8_word.flags.x13
+            && !crate::mutation::on("ftCo_800C0674")
             && let Some(o) = ip.owner
             && let Some(UserData::Fighter(f)) = game.world.gobj(o).user_data
         {

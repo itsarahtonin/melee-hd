@@ -112,6 +112,11 @@ pub fn bg_flash(s: &mut Script, data: &Archives) -> (u32, u32) {
 #[doc(alias = "Command_Execute")]
 #[doc(alias = "Command_00")]
 #[doc(alias = "Command_07")]
+#[doc(alias = "Command_01")]
+#[doc(alias = "Command_02")]
+#[doc(alias = "Command_03")]
+#[doc(alias = "Command_05")]
+#[doc(alias = "Command_08")]
 pub fn execute(s: &mut Script, data: &Archives, command: u32) -> bool {
     match command {
         // Reset.

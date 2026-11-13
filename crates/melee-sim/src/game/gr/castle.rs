@@ -1520,6 +1520,7 @@ pub fn render_stage(r: &mut Running, gobj: GObjId, pass: i32) {
 /// the stage's scale) splashes as it falls in, as big as its camera box's depth, and is held
 /// up a little while it falls fast.
 #[doc(alias = "grCastle_801D09B8")]
+#[doc(alias = "ftLib_GetPrevPos")]
 // NaN takes the original's branch, which the negated comparison spells out.
 #[allow(clippy::neg_cmp_op_on_partial_ord)]
 pub fn moat(r: &mut Running, _ground: GObjId, fighter: GObjId) -> Option<Vec3> {

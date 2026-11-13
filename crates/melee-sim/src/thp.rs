@@ -236,6 +236,8 @@ pub fn video_decode(x_size: u16, y_size: u16, data: &[u8]) -> Result<FileInfo, u
         } else if status == 0xE0 {
             read_app0(&mut info, data)?;
         } else if (0xE1..=0xEF).contains(&status) {
+            // `THPDec_803302EC`: dead, no frame on the disc holds an APP1 to APP15 segment
+            // (ledger/dead.txt, tools/disc-scan/thp_markers.py).
             let n = FileInfo::u16_at(data, info.file);
             info.file += u32::from(n);
         } else if status == 0xFE {

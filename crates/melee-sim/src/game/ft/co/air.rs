@@ -97,6 +97,7 @@ impl Running<'_> {
     /// An aerial, `ftCo_AttackAir_CheckItemThrowInput` (and its copy, `checkItemThrowInput`):
     /// A or the C-stick; a neutral or forward aerial with a swing item swings it.
     #[doc(alias = "ftCo_AttackAir_CheckItemThrowInput")]
+    #[doc(alias = "decideFighter@8008CE0C")]
     pub fn attack_air_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).input.pressed_buttons & PAD_A == 0 && !self.cstick_flick(gobj) {
             return false;

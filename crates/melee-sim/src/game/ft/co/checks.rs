@@ -87,6 +87,7 @@ impl Running<'_> {
     /// A side special on the ground, `ftCo_SpecialS_CheckInput`: B to the side this frame
     /// (`x688`), turning to the stick, keeping some of the ground speed.
     #[doc(alias = "ftCo_SpecialS_CheckInput")]
+    #[doc(alias = "doEnter@800965DC")]
     pub fn special_s_check(&mut self, gobj: GObjId) -> bool {
         let entry = self.kind_entry(gobj, &kinds::SPECIAL_S);
         if entry == 0 || self.game.fighter(gobj).x688 != 0 {

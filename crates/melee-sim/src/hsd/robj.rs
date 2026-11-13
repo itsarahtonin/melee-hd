@@ -545,6 +545,7 @@ pub fn update_all(objs: &mut Objects, data: &Archives, first: Option<RObjId>, j:
 
 /// Evaluates an expression and hands its value to the joint, the static `expEvaluate`.
 #[doc(alias = "expEvaluate")]
+#[doc(alias = "HSD_GetNbBits")]
 fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) {
     let Ref::Exp(mut exp) = objs.robjs[r].u else {
         panic!("expression RObj without an expression")

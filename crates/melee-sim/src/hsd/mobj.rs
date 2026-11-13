@@ -49,6 +49,9 @@ const A_PE_DSTALPHA: u8 = 13;
 
 /// Which class an MObj belongs to: `hsdMObj` or one the game derives from it, whose methods
 /// replace HAL's (fighters' `ftMObj`, stages' `gr_mobj`, items' `it_mobj`).
+#[doc(alias = "ftMaterial_800BF260")]
+#[doc(alias = "grMaterial_801C8E74")]
+#[doc(alias = "it_80277D08")]
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub enum MObjClass {
     #[default]
