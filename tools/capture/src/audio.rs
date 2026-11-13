@@ -1440,12 +1440,12 @@ impl<'a> Image<'a> {
         self.u32(r, at, v.to_bits());
     }
     /// A parameter block, but for the halfwords `skip` leaves out. The block's padding (its
-    /// last three halfwords) is always left out.
+    /// last three halfwords, which nothing writes) compares as zeros.
     fn pb(&mut self, r: R, at: u32, pb: &Pb, skip: &[usize]) {
         let w = pb.words();
         let mut k = 0;
-        while k < PB_WORDS - 3 {
-            let run = (k..PB_WORDS - 3).take_while(|i| !skip.contains(i)).count();
+        while k < PB_WORDS {
+            let run = (k..PB_WORDS).take_while(|i| !skip.contains(i)).count();
             if run == 0 {
                 k += 1;
                 continue;

@@ -791,11 +791,9 @@ impl Mirror for GroundX11Flags {
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        // The pass alone: the other bits are kept and laid out but not compared, as a write the
-        // heap's image doesn't follow has reached them in a freed object's block
-        // (docs/engine.md, "Uninitialized values").
+        // The whole byte; bits the block held over the GPU's pixels are none, theirs.
         let b = m.u8(at);
-        let ours = (self.b012, b & 0x1F);
+        let ours = (self.b012, self.rest.unwrap_or(b & 0x1F));
         if ours != (b >> 5, b & 0x1F) {
             cx.mismatch(
                 path,
