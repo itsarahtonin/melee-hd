@@ -1125,10 +1125,11 @@ pub fn leave_item(game: &mut Game, i: ItemId) {
     o.xACC_itemHurtbox.1 = hurt;
 }
 
-/// A fighter's block as it goes back, for the next fighter made in it: its counted arrays'
-/// entries become the bytes the block keeps, over what it held (docs/engine.md,
-/// "Uninitialized values").
-pub fn leave_fighter(game: &mut Game, f: FighterId) {
+/// A fighter's counted arrays' entries as the block holds them now become the bytes it keeps
+/// past their counts, over what it held: as the fighter goes back, for the next fighter made
+/// in it, and as a count drops (`ftCo_UnloadDynamicBones` zeroes `dynamics_num`, leaving the
+/// sets in the block; docs/engine.md, "Uninitialized values").
+pub fn keep_fighter_arrays(game: &mut Game, f: FighterId) {
     let (sets, tobjs) = with_addrs(game, |cx| {
         let o = &game.fighters[f.0];
         let n = o.dynamics_num.max(0) as usize;

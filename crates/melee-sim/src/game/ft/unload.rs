@@ -162,7 +162,7 @@ impl Running<'_> {
             super::super::export::fighter(g, data, img, f);
         });
         // And the slot keeps its counted arrays' bytes for the next fighter made there.
-        super::super::export::leave_fighter(self.game, f);
+        super::super::export::keep_fighter_arrays(self.game, f);
         let fp = &self.game.fighters[f.0];
         let (b1, b2, parts, list, second, attrs) = (
             fp.x59C,
