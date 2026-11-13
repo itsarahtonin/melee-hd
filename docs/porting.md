@@ -38,7 +38,7 @@ melee-hd's target is identical gameplay and identical presentation (what players
 ## State
 
 - Simulation state is plain data: structs, fixed arrays, `Vec`s that only grow, and `Copy` handles. No `Box<dyn …>`, closures, `Rc` or references inside state, so a snapshot is a clone and a restore is `clone_from` without allocating.
-- Objects the original allocates from an `HSD_ObjAlloc` pool live in a `hsd::pool::Pool`: freed slots are reused last in, first out, as the original reuses addresses, so identity comparisons behave the same. A handle is the slot index.
+- Objects the original allocates from an `HSD_ObjAlloc` pool or as HAL class objects live in a `hsd::pool::Pool`: a slot stands for the address the allocator model gives its object (the slot last at that address is reused), so identity comparisons behave the same and a handle kept past a free names the original's address ([the engine notes](engine.md#objects-and-identity)). A handle is the slot index.
 - Function pointers become `Copy` tokens (enums) that the game dispatches on (see `hsd::gobj::Kinds`).
 - Game data from the disc (`melee_data::archive::Archive`) is immutable and shared, not part of the state. A pointer into it is an offset. If the original writes into loaded data during play, that data moves into the state.
 - Nothing implicit from the host reaches a tick: not the frame rate, high refresh mode, tick timing, window size, GPU, clocks, disc timing, audio state or rendering results. The state depends only on its start, the controllers' inputs and explicit toggles; a cosmetic toggle may change only state the display pass reads ([architecture](architecture.md#simulation-and-presentation)). Platform events the game polls are explicit inputs.
