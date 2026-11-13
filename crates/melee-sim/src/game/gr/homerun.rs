@@ -228,7 +228,7 @@ pub fn on_load(_r: &mut Running) {}
 /// The match's start, `grHomeRun_8021C800`: the enemy spawner, with no table.
 #[doc(alias = "grHomeRun_8021C800")]
 pub fn on_start(r: &mut Running) {
-    super::zako::start(r.game, None);
+    super::zako::start(r.game, r.data, None);
 }
 
 /// The platform's setup (map 0), `grHomeRun_8021C914`: its animation, at the field's scale.
@@ -472,7 +472,7 @@ pub fn proc_field(r: &mut Running, gobj: GObjId) {
 /// A stretch's index along the field (`homerun2.xC4`).
 fn part_index(game: &mut Game, gobj: GObjId) -> u16 {
     let g = ground_of(game, gobj);
-    match &mut game.grounds[g.0].u {
+    match &mut game.grounds[g.0].u.vars {
         super::vars::GroundVars::HomeRunLabel(v) => v.index,
         u => u.homerun_part().index,
     }
@@ -581,7 +581,7 @@ pub fn place_part(r: &mut Running, index: i32, frame: u32) -> GObjId {
     let max = fp::fctiwz(reg(globals(r.game).max_dist));
     let label = max.wrapping_mul((index + 1) / ticks) as i16 as u16;
     let g = ground_of(r.game, gobj);
-    match &mut r.game.grounds[g.0].u {
+    match &mut r.game.grounds[g.0].u.vars {
         super::vars::GroundVars::HomeRunLabel(v) => {
             v.x = x;
             v.label = label;

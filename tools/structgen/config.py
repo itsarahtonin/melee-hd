@@ -258,11 +258,6 @@ UNUSED = {
     # ports touch them, so an item block new from the heap keeps what the heap held there (the
     # items-heavy-ps oracle match's first in tick 2703).
     "Item": {"x8", "x21", "x22", "x23"},
-    # A stage object's flag byte past its pass (`x11_flags`' `b3` to `b7`): neither the decomp's
-    # code nor ssbm-rs's ports touch them, so an object in a block a freed one held keeps what
-    # the block held there (Battlefield's backgrounds over Multi-Man Melee's six minutes,
-    # `m6-multiman/mm-100-win`'s tick 21767).
-    "Ground_x11_flags": {"b3", "b4", "b5", "b6", "b7"},
 }
 
 # Runs of fields replaced by one field of a hand-written type: struct name to (field name,
@@ -294,6 +289,9 @@ SPLICE = {
     ],
     # The stage objects' own cameras, by CObj.
     "StageInfo": ("x694", 0x694, 0x6A4, "StageCameras"),
+    # A stage object's flag byte past its pass (`x11_flags`' `b3` to `b7`), which no code
+    # touches: kept as the block held it where melee-sim knows that.
+    "Ground": ("x11_flags", 0x11, 0x12, "GroundX11Flags"),
     # A heart's flag byte, of which the heart uses only the top bit (an event's heart).
     "itHeart_ItemVars": ("xDD8", 4, 5, "TurnipFlag"),
     # Link's bomb's flag byte, of which the bomb uses the top three bits.
@@ -344,7 +342,8 @@ SPLICE = {
 
 # Lines the generated mirrors use besides the handles.
 EXTRA_USES = [
-    "use crate::game::gr::setup::StageCameras;",
+    "use crate::game::gr::setup::{GroundX11Flags, StageCameras};",
+    "use crate::game::gr::GroundUnion;",
     "use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};",
     "use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBones, ItemHurtboxes};",
     "use crate::game::ft::dynamics::BoneSlot;",
@@ -367,8 +366,9 @@ EXTERNAL = {
     "Vec": "Vec3",
     "Vec3": "Vec3",
     "Quaternion": "Quat",
-    # A stage object's variables, a union whose member the stage and object pick: hand-written.
-    "GroundVars": "GroundVars",
+    # A stage object's variables, a union whose member the stage and object pick, with what
+    # the block held there: hand-written.
+    "GroundVars": "GroundUnion",
     # A union whose member the kind beside it picks, holding joint handles: hand-written.
     "ECBSource": "EcbSource",
     # An item's variables, a union whose member the item's kind picks: hand-written.
@@ -413,8 +413,8 @@ use crate::game::ft::counted::{CostumeTObjList, DynamicBoneSets, ItemDynamicBone
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
-use crate::game::gr::GroundVars;
-use crate::game::gr::setup::StageCameras;
+use crate::game::gr::{GroundUnion, GroundVars};
+use crate::game::gr::setup::{GroundX11Flags, StageCameras};
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
 use crate::game::handles::*;

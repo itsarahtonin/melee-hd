@@ -212,7 +212,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Poké Floats' start, `grPura_80211DDC`: the enemy spawner, without enemies.
 #[doc(alias = "grPura_80211DDC")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

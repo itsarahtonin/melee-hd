@@ -107,7 +107,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Hyrule Temple's start, `grShrine_UnkStage0_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grShrine_UnkStage0_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

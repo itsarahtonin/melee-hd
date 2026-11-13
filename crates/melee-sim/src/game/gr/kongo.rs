@@ -257,7 +257,7 @@ pub fn on_load(_r: &mut Running) {}
 pub fn on_start(r: &mut Running) {
     let barrel = map_gobj(r.game, 5).expect("grkongo.c: the barrel");
     super::oldkongo::register_catch(r.game, barrel, DEVICE_BARREL, CodeRef(BARREL_CATCH));
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// An object that only animates (maps 3 and 4), `grKongo_801D5FA8` and `grKongo_801D6038`.

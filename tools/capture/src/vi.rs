@@ -96,13 +96,7 @@ impl Comparer<'_> {
         // engine.md, uninitialized values).
         let at = sym("erase_colors_vi0601");
         let theirs = [0, 1, 2].map(|k| self.u8(at + k));
-        let e = v.v0601.erase;
-        self.check(
-            "erase_colors_vi0601",
-            "erase color",
-            [e[0], e[1], e[2]],
-            theirs,
-        );
+        self.check("erase_colors_vi0601", "erase color", v.v0601.erase, theirs);
         self.cutscenes_bowser();
     }
 

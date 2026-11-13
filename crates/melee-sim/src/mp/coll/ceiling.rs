@@ -134,11 +134,11 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         let mut hit_ceiling = false;
         if self.check_left_walls_ceiling(cd) {
             self.collide_left_walls_ground(cd);
-            cd.x34_flags.b5 = true;
+            cd.x34_flags.b5 = Some(true);
         }
         if self.check_right_walls_ceiling(cd) {
             self.collide_right_walls_ground(cd);
-            cd.x34_flags.b5 = true;
+            cd.x34_flags.b5 = Some(true);
         }
         if self.follow_ceiling(cd) {
             self.ceiling_walls(cd);
@@ -150,10 +150,10 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     if self.stop_at_ceiling_edge(cd, ceiling_id) {
                         hit_ceiling = true;
                     } else {
-                        cd.x34_flags.b5 = true;
+                        cd.x34_flags.b5 = Some(true);
                     }
                 } else {
-                    cd.x34_flags.b5 = true;
+                    cd.x34_flags.b5 = Some(true);
                 }
             }
         }

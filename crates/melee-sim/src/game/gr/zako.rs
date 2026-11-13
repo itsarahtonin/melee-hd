@@ -7,7 +7,7 @@
 #![allow(clippy::neg_cmp_op_on_partial_ord)]
 
 use gekko_fp as fp;
-use melee_data::archive::DataRef;
+use melee_data::archive::{Archives as DataArchives, DataRef};
 
 use super::super::state::{Game, Running};
 use super::stage;
@@ -23,9 +23,10 @@ pub struct Slot {
     pub timer: i16,
     /// What it spawned, while that lives.
     pub item: Option<GObjId>,
-    /// The trophy a coin slot holds (`x8`): unknown until written. The slots' setup
-    /// (`grZakoGenerator_801CA67C`) leaves it as the heap block held it, and it's read only
-    /// for a trophy point's slot, which `grZakoGenerator_801CAEB0` writes first (engine.md).
+    /// The trophy a coin slot holds (`x8`). The slots' setup (`grZakoGenerator_801CA67C`)
+    /// leaves it as the heap block held it (the heap's image's word, none where it doesn't
+    /// know it), and it's read only for a trophy point's slot, which
+    /// `grZakoGenerator_801CAEB0` writes first (engine.md).
     pub x8: Option<i32>,
 }
 
@@ -53,17 +54,30 @@ impl Zako {
 /// The slots, set up as `grZakoGenerator_801CA67C` allocates them: 80 slots for points
 /// 0x20 on, and one free; scanning on from slot 0.
 #[doc(alias = "grZakoGenerator_801CA67C")]
-pub fn new_slots(game: &mut Game) -> Vec<Slot> {
+pub fn new_slots(game: &mut Game, data: &DataArchives) -> Vec<Slot> {
     // The slots' block (`grZakoGenerator_Data`), which the scene's heap keeps.
-    game.gr.zako.addr = crate::hsd::heap::mem_alloc(0x3CC);
+    let at = crate::hsd::heap::mem_alloc(0x3CC);
+    game.gr.zako.addr = at;
+    // Each slot's trophy word as the block held it, where the heap's image knows it.
+    let left = crate::game::leftovers::bytes_known(data, at, 0x3CC);
+    let x8 = |i: usize| {
+        let (b, k) = left.as_ref()?;
+        let r = 0xC * i + 8..0xC * i + 0xC;
+        k[r.clone()]
+            .iter()
+            .all(|&k| k)
+            .then(|| i32::from_be_bytes(b[r].try_into().expect("a word")))
+    };
     let mut slots: Vec<Slot> = (0..80)
         .map(|i| Slot {
             point: i + 0x20,
+            x8: x8(i as usize),
             ..Slot::default()
         })
         .collect();
     slots.push(Slot {
         point: -1,
+        x8: x8(80),
         ..Slot::default()
     });
     game.gr.zako.flags |= 0x80;
@@ -74,8 +88,8 @@ pub fn new_slots(game: &mut Game) -> Vec<Slot> {
 /// Starts the spawner with a stage's enemy table, `grZakoGenerator_801CAE04`: its GObj and
 /// process.
 #[doc(alias = "grZakoGenerator_801CAE04")]
-pub fn start(game: &mut Game, spawns: Option<DataRef>) -> GObjId {
-    let slots = new_slots(game);
+pub fn start(game: &mut Game, data: &DataArchives, spawns: Option<DataRef>) -> GObjId {
+    let slots = new_slots(game, data);
     let gobj = game.world.create(2, 4, 0);
     game.world
         .setup_proc(gobj, super::super::handles::CodeRef(0x801C_ADBC), 0);

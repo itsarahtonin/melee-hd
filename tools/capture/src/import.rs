@@ -820,7 +820,7 @@ impl Importer<'_> {
             })
             .collect();
         if archives.iter().any(Option::is_some) {
-            self.game.toys.collection.archives = archives;
+            self.game.toys.display_archives = archives;
         }
     }
 

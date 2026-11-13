@@ -134,7 +134,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Yoshi's Island's start, `grYorster_80202010`: the enemy spawner, without enemies.
 #[doc(alias = "grYorster_80202010")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

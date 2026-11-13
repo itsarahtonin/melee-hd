@@ -312,7 +312,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Pokémon Stadium's start, `grStadium_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grStadium_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The big screen's start hook, `fn_801D11E4`: a camera subject that frames the stage's

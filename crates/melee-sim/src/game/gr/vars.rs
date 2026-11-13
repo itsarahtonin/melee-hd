@@ -1327,7 +1327,8 @@ fn inishie1_block(m: &Mem, b: u32, cx: &mut dyn Cx) -> Inishie1Block {
 
 /// `grInishie2_GroundVars`, Mushroom Kingdom II's stage (map 2): its flags (`xC4`, bit 0x80
 /// the music sped up, 0x40 and 0x20 the two logs' waits running, 0x10 Birdo's, 0x08 Pidgit's;
-/// the others nothing writes or reads: they keep what the block held, and aren't compared) and
+/// the others nothing writes or reads: they keep what the block held, laid out as it, and
+/// aren't compared) and
 /// those waits (`xC6`, `xC8`, `xCA`, `xCC`).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2Vars {
@@ -1340,7 +1341,7 @@ pub struct Inishie2Vars {
 
 /// `grInishie2_GroundVars` with `grInishie2_GroundVars2::xCC`, a falling log (maps 3 and 4):
 /// its flags (`xC4`, bit 0x80 its collision back; the others, never written or read, keep the
-/// block's bytes and aren't compared), its wait (`xC6`), which log it is (`xC8`)
+/// block's bits, laid out as them and not compared), its wait (`xC6`), which log it is (`xC8`)
 /// and the stage object that sent it (`xCC`, at +8).
 #[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Inishie2LogVars {
@@ -1581,8 +1582,40 @@ pub struct BigBlueManagerVars {
     pub flags: u32,
     pub event: [u32; 3],
     pub jobjs: [Option<crate::hsd::jobj::JObjId>; 3],
-    pub event_extra: Option<crate::hsd::jobj::JObjId>,
+    pub event_extra: EventExtra,
     pub data: [BigBluePlatform; 3],
+}
+
+/// The Big Blue platforms' manager's `event_extra` (its user data's word 0x1C): written only
+/// with a joint (`grBigBlue_801E8978` given one, and a flying platform leaving past the right
+/// side) and read by nothing, so until its first event it holds its block's leftover word
+/// (event 43's session met a menu's bytes there, 0x2540AA0D), kept, laid out and compared as
+/// the word. Using it as a joint stops by name while it's the leftover ([`EventExtra::joint`]).
+#[derive(Clone, Copy, Debug, PartialEq, melee_derive::StateEq)]
+pub enum EventExtra {
+    /// The block's word, before any event named a joint.
+    Left(u32),
+    Joint(crate::hsd::jobj::JObjId),
+}
+
+impl Default for EventExtra {
+    fn default() -> Self {
+        EventExtra::Left(0)
+    }
+}
+
+impl EventExtra {
+    /// The word as a joint, as the original would read it: a leftover word other than null
+    /// names nothing melee-sim follows.
+    pub fn joint(&self) -> Option<crate::hsd::jobj::JObjId> {
+        match *self {
+            EventExtra::Joint(j) => Some(j),
+            EventExtra::Left(0) => None,
+            EventExtra::Left(w) => panic!(
+                "grBigBlue_ManagerVars::event_extra is the block's leftover word, {w:#010x}, which the original would use as a joint: that isn't modeled"
+            ),
+        }
+    }
 }
 
 /// One of Big Blue's big cars (`grBigBlue_CarLane`, 0x40 bytes): its status word (`x0`: the
@@ -2362,6 +2395,172 @@ pub struct BattleBgVars {
 impl Default for GroundVars {
     fn default() -> Self {
         GroundVars::Bytes([0; SIZE])
+    }
+}
+
+/// `Ground::u`: the member ([`GroundVars`]), and the union's bytes as the block held them when
+/// the object was made (`left`), which a typed member's code never writes past its fields:
+/// a session's heap image gives them, Slippi's playback codes zero the block, and they're none
+/// where melee-sim doesn't know them (a block a replay's match reuses, which no image follows).
+/// The comparer compares a typed member's own fields and, where `left` is known, every bit its
+/// layout leaves as the block held it ([`GroundVars::untouched`]).
+#[derive(melee_derive::CloneFrom, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GroundUnion {
+    pub vars: GroundVars,
+    pub left: Option<[u8; SIZE]>,
+    /// The runs of the union (offsets) the heap's image didn't know as the object was made: a
+    /// freed owner's bytes no layout covers, read as zero. The bits there the code never
+    /// writes aren't compared (`left`'s, and a member's kept bits, [`GroundVars::kept`]).
+    pub unknown: Vec<(u16, u16)>,
+}
+
+impl core::ops::Deref for GroundUnion {
+    type Target = GroundVars;
+    fn deref(&self) -> &GroundVars {
+        &self.vars
+    }
+}
+
+impl core::ops::DerefMut for GroundUnion {
+    fn deref_mut(&mut self) -> &mut GroundVars {
+        &mut self.vars
+    }
+}
+
+impl Mirror for GroundUnion {
+    const SIZE: u32 = SIZE as u32;
+
+    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
+        GroundUnion {
+            vars: GroundVars::import(m, at, cx),
+            left: Some(m.bytes(at)),
+            unknown: Vec::new(),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        let unknown = |i: usize| {
+            self.unknown
+                .iter()
+                .any(|&(a, b)| usize::from(a) <= i && i < usize::from(b))
+        };
+        // A member's bits kept from the block where the image didn't know them: ours as theirs.
+        let theirs = m.bytes::<SIZE>(at);
+        let kept: Vec<(usize, u8)> = self
+            .vars
+            .kept()
+            .into_iter()
+            .filter(|&(i, _, _)| unknown(i))
+            .map(|(i, mask, _)| (i, mask))
+            .collect();
+        if kept.is_empty() {
+            self.vars.compare(m, at, path, cx);
+        } else {
+            let mut vars = self.vars.clone();
+            vars.take_kept(&kept, &theirs);
+            vars.compare(m, at, path, cx);
+        }
+        let (Some(left), Some(mask)) = (&self.left, self.vars.untouched()) else {
+            return;
+        };
+        // Past the member's last laid byte: bits inside it that its layout leaves are its
+        // padding or fields the port keeps elsewhere, compared with the member.
+        let end = (0..SIZE)
+            .rev()
+            .find(|&i| mask[i] != 0xFF)
+            .map_or(0, |i| i + 1);
+        let differ: Vec<usize> = (end..SIZE)
+            .filter(|&i| !unknown(i) && (theirs[i] ^ left[i]) & mask[i] != 0)
+            .collect();
+        if let Some(&first) = differ.first() {
+            let show = |b: &[u8; SIZE]| {
+                differ
+                    .iter()
+                    .map(|&i| format!("+{i:#x}: {:02x}", b[i] & mask[i]))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            };
+            cx.mismatch(
+                &format!("{path}.left@{first:#x}"),
+                show(left),
+                show(&theirs),
+            );
+        }
+    }
+}
+
+impl GroundVars {
+    /// A member's bits kept as the block held them that its code never writes, compared as
+    /// fields of the member (by byte: offset, mask, our value): Mushroom Kingdom II's flags'
+    /// low bits, the F-Zero cars' first word's 30, Big Blue's manager's leftover `event_extra`.
+    pub fn kept(&self) -> Vec<(usize, u8, u8)> {
+        let word = |at: usize, mask: u32, w: u32| {
+            (0..4).map(move |k| {
+                let sh = 24 - 8 * k;
+                (at + k, (mask >> sh) as u8, (w >> sh) as u8)
+            })
+        };
+        match self {
+            GroundVars::Inishie2(v) => vec![(0, 0x07, v.xC4)],
+            GroundVars::Inishie2Log(v) => vec![(0, 0x7F, v.xC4)],
+            GroundVars::BigBlueRouteCars(v) => word(0, 0x3FFF_FFFF, v.xC4).collect(),
+            GroundVars::BigBlueManager(v) => match v.event_extra {
+                EventExtra::Left(w) => word(0x1C, u32::MAX, w).collect(),
+                EventExtra::Joint(_) => Vec::new(),
+            },
+            _ => Vec::new(),
+        }
+    }
+
+    /// [`GroundVars::kept`]'s bits at `kept` (offset, mask) taken from `theirs`, the union's
+    /// bytes: where the comparison leaves them out.
+    fn take_kept(&mut self, kept: &[(usize, u8)], theirs: &[u8; SIZE]) {
+        let byte = |v: u8, i: usize| {
+            kept.iter()
+                .filter(|&&(k, _)| k == i)
+                .fold(v, |v, &(_, mask)| v & !mask | theirs[i] & mask)
+        };
+        let word = |w: u32, at: usize| {
+            let b: [u8; 4] = core::array::from_fn(|k| byte((w >> (24 - 8 * k)) as u8, at + k));
+            u32::from_be_bytes(b)
+        };
+        match self {
+            GroundVars::Inishie2(v) => v.xC4 = byte(v.xC4, 0),
+            GroundVars::Inishie2Log(v) => v.xC4 = byte(v.xC4, 0),
+            GroundVars::BigBlueRouteCars(v) => v.xC4 = word(v.xC4, 0),
+            GroundVars::BigBlueManager(v) => {
+                if let EventExtra::Left(w) = v.event_extra {
+                    v.event_extra = EventExtra::Left(word(w, 0x1C));
+                }
+            }
+            _ => {}
+        }
+    }
+
+    /// The bits of each of the union's bytes that a typed member's layout ([`GroundVars::lay`])
+    /// leaves as the block held them: its bytes past its fields, its padding no field names,
+    /// and a byte's bits no bitfield names. None for the bytes melee-sim keeps as they are.
+    pub fn untouched(&self) -> Option<[u8; SIZE]> {
+        struct Anywhere;
+        impl crate::game::mirror::LayCx for Anywhere {
+            fn handle(&self, _: &'static str, _: Option<u32>) -> Option<u32> {
+                Some(0)
+            }
+            fn data(&self, _: Option<melee_data::archive::DataRef>) -> Option<u32> {
+                Some(0)
+            }
+        }
+        // Laid over all zeros and over all ones: a bit the layout leaves is the fill's in both.
+        let pass = |fill: u8| {
+            let mut l = crate::hsd::export::Lay::over(0, vec![fill; SIZE], vec![true; SIZE]);
+            self.lay(&mut l, 0, &Anywhere)
+                .then(|| core::array::from_fn::<_, SIZE, _>(|i| l.bits_at(i as u32)))
+        };
+        let (zeros, ones) = (pass(0)?, pass(0xFF)?);
+        Some(core::array::from_fn(|i| match (zeros[i], ones[i]) {
+            (Some((z, zm)), Some((o, om))) => !z & o & zm & om,
+            _ => 0,
+        }))
     }
 }
 
@@ -3949,7 +4148,10 @@ impl GroundVars {
                     flags: m.u32(at),
                     event: [m.u32(at + 4), m.u32(at + 8), m.u32(at + 0xC)],
                     jobjs: [j(cx, at + 0x10), j(cx, at + 0x14), j(cx, at + 0x18)],
-                    event_extra: j(cx, at + 0x1C),
+                    event_extra: match j(cx, at + 0x1C) {
+                        Some(j) => EventExtra::Joint(j),
+                        None => EventExtra::Left(m.u32(at + 0x1C)),
+                    },
                     data: [
                         bigblue_platform(m, at + 0x20, cx),
                         bigblue_platform(m, at + 0x74, cx),
@@ -5930,7 +6132,7 @@ impl GroundVars {
                 flags: b.u32(0),
                 event: [b.u32(4), b.u32(8), b.u32(0xC)],
                 jobjs: [None; 3],
-                event_extra: None,
+                event_extra: EventExtra::Left(b.u32(0x1C)),
                 data: [plat(0x20), plat(0x74), plat(0xC8)],
             });
         }
@@ -7373,8 +7575,8 @@ impl Mirror for GroundVars {
                     m.u32(at),
                 );
             }
-            // Only the flags' bits the code writes: the others hold what the block held
-            // (docs/engine.md, "Uninitialized values").
+            // The flags' bits the code writes: the others, kept and laid out as the block held
+            // them, aren't compared (docs/engine.md, "Uninitialized values").
             GroundVars::Inishie2(v) => {
                 let h = |a: u32| m.u16(at + a) as i16;
                 let ours = (v.xC4 & 0xF8, [v.xC6, v.xC8, v.xCA, v.xCC]);
@@ -7667,10 +7869,20 @@ impl Mirror for GroundVars {
                     );
                 }
                 // Written only with a joint and read by nothing (docs/engine.md, uninitialized
-                // values): before its first event it holds the block's leftover bytes.
-                if let Some(j) = v.event_extra {
-                    let p = format!("{path}.bigblue.manager.event_extra");
-                    cx.compare_handle(&p, "JObjId", Some(j.0), m.u32(at + 0x1C));
+                // values): before its first event it holds the block's leftover word.
+                let p = format!("{path}.bigblue.manager.event_extra");
+                match v.event_extra {
+                    EventExtra::Joint(j) => {
+                        cx.compare_handle(&p, "JObjId", Some(j.0), m.u32(at + 0x1C));
+                    }
+                    EventExtra::Left(w) if w != m.u32(at + 0x1C) => {
+                        cx.mismatch(
+                            &p,
+                            format!("{w:#x} (left)"),
+                            format!("{:#x}", m.u32(at + 0x1C)),
+                        );
+                    }
+                    EventExtra::Left(_) => {}
                 }
                 for (k, d) in v.data.iter().enumerate() {
                     let b = at + 0x20 + 0x54 * k as u32;
@@ -8081,11 +8293,12 @@ impl Mirror for GroundVars {
             }
             GroundVars::BigBlueRouteCars(v) => {
                 let path = format!("{path}.bigblueroute_car");
-                // The first word's other bits nothing writes or reads (a GObj pointer's word the
-                // code uses for two flags): they hold what the block held.
+                // The first word whole: its two flags, and the other bits nothing writes or
+                // reads (a GObj pointer's word the code uses for two flags) as the block held
+                // them.
                 let t3 = |a: u32| [m.u32(a), m.u32(a + 4), m.u32(a + 8)];
                 let ours = (
-                    v.xC4 >> 30,
+                    v.xC4,
                     [
                         v3_bits(&v.air_start),
                         v3_bits(&v.air_end),
@@ -8095,7 +8308,7 @@ impl Mirror for GroundVars {
                     [v.out, v.wait],
                 );
                 let theirs = (
-                    m.u32(at) >> 30,
+                    m.u32(at),
                     [t3(at + 0x14), t3(at + 0x20), t3(at + 0x2C), t3(at + 0x38)],
                     [m.u16(at + 0x44) as i16, m.u16(at + 0x46) as i16],
                 );
@@ -9364,4 +9577,79 @@ fn compare_castle(v: &GroundVars, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx)
         _ => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A typed member's layout leaves its bytes past its fields and the bits no field names
+    /// as the block held them, which the comparer checks against the block's leftovers.
+    #[test]
+    fn untouched_is_what_the_layout_leaves() {
+        assert_eq!(GroundVars::default().untouched(), None);
+        let v = GroundVars::Inishie2Log(Inishie2LogVars::default());
+        let mask = v.untouched().expect("a laid-out member");
+        // The flags' byte whole, a padding byte, the wait and the log's number, the object.
+        assert_eq!(mask[0], 0);
+        assert_eq!(mask[1], 0xFF);
+        assert_eq!(&mask[2..6], &[0; 4]);
+        assert_eq!(&mask[6..8], &[0xFF; 2]);
+        assert_eq!(&mask[8..0xC], &[0; 4]);
+        assert!(mask[0xC..].iter().all(|&m| m == 0xFF));
+        let bits = GroundVars::StadiumBits(StadiumBits::default())
+            .untouched()
+            .expect("a laid-out member");
+        assert_eq!(bits[0], 0x3F);
+    }
+
+    /// The bits a typed member leaves compare against the union's leftovers; a none leaves
+    /// them out.
+    #[test]
+    fn a_member_compares_the_bytes_past_it() {
+        struct Diffs(Vec<String>);
+        impl Cx for Diffs {
+            fn import_handle(&mut self, _: &'static str, a: u32) -> Option<u32> {
+                (a != 0).then_some(a)
+            }
+            fn import_data(&mut self, _: u32) -> Option<melee_data::archive::DataRef> {
+                None
+            }
+            fn compare_handle(&mut self, _: &str, _: &'static str, _: Option<u32>, _: u32) {}
+            fn compare_data(&mut self, _: &str, _: Option<melee_data::archive::DataRef>, _: u32) {}
+            fn mismatch(&mut self, path: &str, _: String, _: String) {
+                self.0.push(path.into());
+            }
+        }
+        let mut theirs = [0u8; SIZE];
+        theirs[0x20] = 0x5A;
+        let m = Mem {
+            bytes: &theirs,
+            base: 0x100,
+        };
+        let mut u = GroundUnion {
+            vars: GroundVars::Inishie2Log(Inishie2LogVars::default()),
+            left: Some([0; SIZE]),
+            unknown: Vec::new(),
+        };
+        let mut d = Diffs(Vec::new());
+        u.compare(&m, 0x100, "u", &mut d);
+        assert_eq!(d.0, ["u.left@0x20"]);
+        u.unknown = vec![(0x20, 0x21)];
+        let mut d = Diffs(Vec::new());
+        u.compare(&m, 0x100, "u", &mut d);
+        assert!(d.0.is_empty());
+        u.unknown.clear();
+        u.left = None;
+        let mut d = Diffs(Vec::new());
+        u.compare(&m, 0x100, "u", &mut d);
+        assert!(d.0.is_empty());
+    }
+
+    /// Big Blue's manager's leftover word used as a joint stops by name.
+    #[test]
+    #[should_panic(expected = "event_extra is the block's leftover word, 0x2540aa0d")]
+    fn a_leftover_event_joint_stops() {
+        let _ = EventExtra::Left(0x2540_AA0D).joint();
+    }
 }

@@ -297,7 +297,7 @@ impl Running<'_> {
     pub fn training_on_enter(&mut self) {
         let (start, files) = self.vs_scene_files(super::one_player::GM_TRAINING);
         self.game.gm.on_frame = Some(ON_FRAME);
-        self.start_vs(&start, files);
+        self.start_vs(&start, files, None);
         self.vs_ready(0);
         self.vs_go(0);
         self.show_damage_displays(i32::from(start.rules.x0_3));

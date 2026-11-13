@@ -5,7 +5,7 @@
 //!
 //! The fighter script's positional sound command (`ftAction_80072320`) makes them. The user
 //! data's first word (`x0`) is never written or read; a block from `HSD_ObjAlloc` keeps what
-//! it held, so it isn't modeled.
+//! it held ([`SoundObj::x0`]).
 
 use gekko_fp as fp;
 
@@ -48,6 +48,10 @@ const SFX_COUNT: i32 = 0x83D60;
 /// A sound object's user data (`lbAudioAx_UserData`, 0x48 bytes, from `lbl_80433710`).
 #[derive(Clone, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct SoundObj {
+    /// `x0`, which no sound code writes or reads: what the block held, the heap's image's for a
+    /// block new from the heap; none for a block the pool hands out again, whose first word
+    /// the pool's free list wrote, or where melee-sim doesn't know it.
+    pub x0: Option<u32>,
     pub gobj: Option<GObjId>,
     pub owner: Option<GObjId>,
     /// `xC`: the behavior, which picks `update`.
@@ -81,6 +85,7 @@ impl Mirror for SoundObj {
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
         let i = |o: u32| m.u32(at + o) as i32;
         SoundObj {
+            x0: Some(m.u32(at)),
             gobj: cx.import_handle("GObjId", m.u32(at + 4)).map(GObjId),
             owner: cx.import_handle("GObjId", m.u32(at + 8)).map(GObjId),
             behavior: i(0xC),
@@ -102,6 +107,15 @@ impl Mirror for SoundObj {
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        if let Some(x0) = self.x0
+            && x0 != m.u32(at)
+        {
+            cx.mismatch(
+                &format!("{path}.x0"),
+                format!("{x0:#x} (left)"),
+                format!("{:#x}", m.u32(at)),
+            );
+        }
         cx.compare_handle(
             &format!("{path}.gobj"),
             "GObjId",
@@ -238,7 +252,20 @@ impl Running<'_> {
             return None;
         }
         let g = self.game.world.create(CLASS, P_LINK, 0);
-        let s = SoundObjId(self.game.sound_objs.alloc(SoundObj::default()));
+        // The block as `HSD_ObjAlloc` hands it out: `x0` keeps what it held.
+        let s = SoundObjId(self.game.sound_objs.alloc_stale(SoundObj::default()));
+        // A block new from the heap holds what the heap's image knows; one the pool hands out
+        // again holds the free list's link `HSD_ObjFree` wrote over its first word, which the
+        // pool doesn't keep: unknown.
+        let grew = crate::game::leftovers::pool_grew();
+        let at = self.game.sound_objs.addr(s.0);
+        self.game.sound_objs[s.0].x0 = if grew {
+            crate::game::leftovers::bytes_known(self.data, at, 4)
+                .filter(|(_, k)| k.iter().all(|&k| k))
+                .map(|(b, _)| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+        } else {
+            None
+        };
         self.game
             .world
             .init_user_data(g, USER_DATA_KIND, UserData::Sound(s));
@@ -265,6 +292,7 @@ impl Running<'_> {
             .unwrap_or_else(|| panic!("sound object behavior {} past the table", p.behavior));
         let o = &mut self.game.sound_objs[s.0];
         *o = SoundObj {
+            x0: o.x0,
             gobj: Some(g),
             owner: Some(p.owner),
             behavior: p.behavior,

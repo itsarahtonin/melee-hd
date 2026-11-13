@@ -227,9 +227,11 @@ impl Mirror for Script {
             let p = format!("{path}.ret[{i}]");
             match *s {
                 Slot::Data(d) => cx.compare_data(&p, Some(d), theirs),
-                // A word at or above the depth is a block's leftover or a popped loop count:
-                // a push writes a slot before anything reads it (docs/engine.md,
-                // "Uninitialized values").
+                // A word at or above the depth (a block's leftover or a popped loop count) is
+                // kept as the word and laid out, but not compared: a push writes a slot before
+                // anything reads it, and a block's leftover can hold ssbm-rs's own stack byte
+                // where a console's is 0 (`recordings/classic-clear`, tick 10526: a freed intro
+                // demo fighter's `x61C`, docs/engine.md, "Uninitialized values").
                 Slot::Word(_) if i >= self.loop_count as usize => {}
                 Slot::Word(w) if w != theirs => {
                     cx.mismatch(&p, format!("{w:#x}"), format!("{theirs:#x}"))

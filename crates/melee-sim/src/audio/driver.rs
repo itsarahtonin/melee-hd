@@ -118,6 +118,12 @@ pub struct Driver {
     /// freed block, whose bytes stay until something writes over them
     /// ([`Audio::driver_stream_word`]).
     pub freed_banks: [Option<(ArchiveId, u32)>; 2],
+    /// The audio heap's writes into each freed bank's block since it was freed, as address
+    /// ranges (`freed_banks`' order): a block given out over it (its header and its owner's
+    /// bytes) and a free cell's header. A command read there stops by name.
+    pub freed_written: [Vec<(u32, u32)>; 2],
+    /// Where each freed bank's block ends (`freed_banks`' order).
+    pub freed_ends: [u32; 2],
     pub banks: i32,
     pub bank_table: u32,
     pub streams: i32,
@@ -148,6 +154,8 @@ impl Default for Driver {
             bank: None,
             bank_addr: 0,
             freed_banks: [None; 2],
+            freed_written: [Vec::new(), Vec::new()],
+            freed_ends: [0; 2],
             banks: 0,
             bank_table: 0,
             streams: 0,
@@ -391,17 +399,26 @@ impl Audio {
     /// reads that block (the language options change the bank while a sound plays): the
     /// newest bank to have held the address, the current one first. A freed bank's bytes
     /// stay until something written into the audio heap covers them: a newer bank, checked
-    /// first, or another block or a free cell's header, which this doesn't model (the
-    /// options sessions' stale reads land on neither).
+    /// first, or another block or a free cell's header (`Driver::freed_written`), where the
+    /// read stops by name (the options sessions' stale reads land on neither).
     fn driver_stream_word(&self, data: &Archives, bank: &Archive, at: u32) -> u32 {
         if (at as usize) + 4 <= bank.data().len() {
             return bank.u32(at);
         }
         let addr = self.driver.bank_addr.wrapping_add(at);
-        for &(old, base) in self.driver.freed_banks.iter().flatten() {
+        for (k, f) in self.driver.freed_banks.iter().enumerate() {
+            let Some((old, base)) = *f else { continue };
             let off = addr.wrapping_sub(base);
             let old = data.get(old);
             if (off as usize) + 4 <= old.data().len() {
+                if self.driver.freed_written[k]
+                    .iter()
+                    .any(|&(lo, hi)| lo < addr + 4 && addr < hi)
+                {
+                    panic!(
+                        "AXDriverInterp reads a voice's command at {addr:#x} from a freed sound bank's block the audio heap has written over since: what it holds isn't modeled"
+                    );
+                }
                 return old.u32(off);
             }
         }

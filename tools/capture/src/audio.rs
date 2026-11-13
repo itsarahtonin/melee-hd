@@ -2,10 +2,12 @@
 //! loaded effects and globals, and the AX library's voices, parameter blocks and stacks.
 //!
 //! The comparison renders melee-sim's state back into the bytes the original keeps and
-//! compares them with memory, region by region, so every modeled byte is checked. Not
-//! modeled, and not compared: the AX voices' parameter update buffers (Melee queues no
-//! updates) and ITD buffers (only the DSP reads them), the command lists, the profile, the
-//! aux effects and the sound loader's queues.
+//! compares them with memory, region by region, so every modeled byte is checked: the sound
+//! loader's queues among them (the synth's bank loads, `HSD_Synth_804C2A60`, the device
+//! command queue and its ARAM requests, game state the loads' timing reaches). Not modeled,
+//! and not compared, host-side state only the DSP reads: the AX voices' parameter update
+//! buffers (Melee queues no updates) and ITD buffers, the command lists, the profile and the
+//! aux effects.
 
 use std::collections::HashMap;
 

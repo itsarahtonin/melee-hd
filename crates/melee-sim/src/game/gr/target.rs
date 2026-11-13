@@ -334,7 +334,7 @@ pub fn on_load(_r: &mut Running) {}
 #[doc(alias = "grTemblem_UnkStage0_OnStart")]
 #[doc(alias = "grTganon_UnkStage0_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The targets, `Ground_801C4210`: an enemy item of `It_Kind_Mato` at each of the points 199

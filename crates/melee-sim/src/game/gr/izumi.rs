@@ -159,7 +159,7 @@ pub fn on_load(r: &mut Running) {
 /// Fountain of Dreams' start, `grIzumi_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grIzumi_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// Map 0's setup, `grIzumi_801CBDD4`: its animation.

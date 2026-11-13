@@ -156,7 +156,7 @@ pub fn on_load(_r: &mut Running) {}
 pub fn on_start(r: &mut Running) {
     let barrel = map_gobj(r.game, 1).expect("groldkongo.c: the barrel");
     register_catch(r.game, barrel, DEVICE_BARREL, CodeRef(BARREL_CATCH));
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// Registers a stage object as a device that catches fighters, `ftCo_800C0764`: the first of

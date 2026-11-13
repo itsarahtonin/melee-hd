@@ -99,7 +99,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Yoshi's Story's start, `grStory_UnkStage0_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grStory_UnkStage0_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The background's setup (map 1), `grStory_801E31C0`: its animation, and its first part's

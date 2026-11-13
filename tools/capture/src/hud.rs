@@ -120,6 +120,7 @@ pub(crate) trait Words {
             unk: packed >> 2,
             current_color: packed & 3,
             buf,
+            buf_addr: buf_at,
             prev: devtext_index(pool, self.w(a + 0x2C)),
             next: devtext_index(pool, self.w(a + 0x30)),
         }
@@ -435,7 +436,9 @@ impl Comparer<'_> {
         let pool = sym("devtext_pool");
         // A screen on the free list keeps the glyph buffer its creator gave it (a debug menu's,
         // in a heap a later scene makes anew), which `DevText_Create` replaces before anything
-        // reads it: its glyphs are left out.
+        // reads it: the pointer compares by its address where ours knows it, and the glyphs
+        // in the freed block are left out. A buffer's address ours doesn't know (another
+        // creator's) is left out.
         let mut free = Vec::new();
         let mut at = d.pool_head;
         while let Some(t) = at {
@@ -451,6 +454,9 @@ impl Comparer<'_> {
             if free.contains(&(i as u8)) {
                 theirs.buf.clear();
                 ours.buf.clear();
+            }
+            if ours.buf_addr == 0 {
+                theirs.buf_addr = 0;
             }
             self.check(
                 &format!("hud devtext[{i}]"),
@@ -759,7 +765,8 @@ impl Comparer<'_> {
                 );
                 self.compare_gobj(&format!("{path} gobj"), m.gobj, mem.w(a + 0x10));
                 // The first menu's process, running the menus' process. A submenu's `x14` is
-                // what its block held: nothing sets or reads it.
+                // what its block held, which nothing sets or reads: compared where melee-sim
+                // knows it.
                 if m.proc.is_some() {
                     let p = mem.w(a + 0x14);
                     let theirs = (p != 0).then(|| mem.w(p + 0x14));
@@ -769,6 +776,8 @@ impl Comparer<'_> {
                         Some(melee_sim::game::hud::debug_menu::MENU_PROC),
                         theirs,
                     );
+                } else if let Some(w) = m.x14 {
+                    self.check(&path, "x14 (the block's word)", w, mem.w(a + 0x14));
                 }
                 self.check(&path, "glyphs' block", m.buf, mem.w(text_at(m.text) + 0x28));
             }

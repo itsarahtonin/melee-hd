@@ -78,8 +78,9 @@ pub struct RulePlusData {
     pub menu_kind: u8,
     pub hovered: u8,
     /// `rule_values`: the time limit, friendly fire, pause, the score display and the sudden
-    /// death penalty, then `x7`, which nothing writes (`None`): hovering the random stage
-    /// switch copies it into the flow's value, which nothing then reads.
+    /// death penalty, then `x7`, which nothing writes: what the heap block held (from the
+    /// heap's image, `None` where it doesn't know it). Hovering the random stage switch copies
+    /// it into the flow's value, which nothing then reads.
     pub values: [Option<u8>; 6],
     /// `state` (`MenuState`).
     pub state: u8,
@@ -539,7 +540,7 @@ impl Running<'_> {
                 Some(r.pause),
                 Some(r.score_display),
                 Some(r.unk_xc),
-                None,
+                super::leftover_bytes_known::<1>(self.data, addr + 7)[0],
             ],
             state,
             tree: [None; 10],

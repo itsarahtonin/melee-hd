@@ -91,7 +91,7 @@ pub fn run_event(r: &mut Running, f: u32) -> bool {
 /// The stage's start, `grHeal_8021EFC0`: the enemy spawner with no table.
 #[doc(alias = "grHeal_8021EFC0")]
 fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The objects' processes and destroy callbacks that do nothing, the demo setup and the load.

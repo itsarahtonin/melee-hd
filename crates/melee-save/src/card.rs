@@ -570,6 +570,12 @@ pub struct Mounted<'a> {
 }
 
 impl Mounted<'_> {
+    /// The library's work area: its copy of the card's five system sectors, as `CARDMount`
+    /// read them and the library has changed them since.
+    pub fn work(&self) -> &[u8] {
+        &self.work
+    }
+
     fn dir_buf(&self, i: usize) -> &[u8] {
         &self.work[(1 + i) * SECTOR..(2 + i) * SECTOR]
     }

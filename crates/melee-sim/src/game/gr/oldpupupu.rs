@@ -184,7 +184,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Dream Land's start, `grOldPupupu_80210888`: the enemy spawner, without enemies.
 #[doc(alias = "grOldPupupu_80210888")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

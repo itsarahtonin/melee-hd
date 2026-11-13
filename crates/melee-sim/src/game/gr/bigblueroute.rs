@@ -233,7 +233,7 @@ pub fn on_load(r: &mut Running) {
 /// a trophy slot at a random trophy point.
 #[doc(alias = "grBigBlueRoute_8020B95C")]
 pub fn on_start(r: &mut Running) {
-    super::zako::start(r.game, None);
+    super::zako::start(r.game, r.data, None);
     if !r.game.is_1p_run() {
         return;
     }

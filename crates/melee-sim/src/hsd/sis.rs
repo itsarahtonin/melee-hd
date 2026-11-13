@@ -40,6 +40,9 @@ pub const CAMERA_RENDER: u32 = 0x8039_10D8;
 /// The size of the glyph tables the encoder searches (`ARRAY_SIZE(HSD_SisLib_FontAtlas)`).
 const GLYPHS: usize = 287;
 
+/// `HSD_Text::hidden`'s offset in its block.
+pub const TEXT_HIDDEN: u32 = 0x4D;
+
 /// A text: the offset of its `HSD_Text` in the arena.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, melee_derive::StateEq)]
 pub struct TextId(pub u32);
@@ -530,6 +533,12 @@ impl SisLib {
         if self.used_head.is_none() {
             self.used_head = Some(best);
         }
+        // The heap's image doesn't lay the arena out: what a new block's owner writes is
+        // unknown to it, over whatever it knew there (a freed text's byte, `TEXT_HIDDEN`).
+        if self.arena_block != 0 {
+            let at = self.arena_block + best + HEADER;
+            super::heap::with(|h| h.image.claim(at, at + size, super::image::HEAP_BLOCK));
+        }
         best + HEADER
     }
 
@@ -1005,7 +1014,19 @@ pub fn stack_cursor_records(stack: &[u8], used: u16) -> Vec<u32> {
 /// the encoded length; `out` is terminated.
 #[doc(alias = "HSD_SisLib_803A67EC")]
 pub fn encode(out: &mut [u8], s: &[u8]) -> usize {
-    let at = |i: usize| s.get(i).copied().unwrap_or(0);
+    // A string that ends in a Shift-JIS lead byte (or a byte the encoder passes as one) has
+    // the original read past its terminator, into whatever follows it: no string the game
+    // encodes does, and melee-sim stops there by name rather than read a stand-in.
+    let end = s.iter().position(|&b| b == 0).unwrap_or(s.len());
+    let at = |i: usize| {
+        if i > end {
+            panic!(
+                "HSD_SisLib_803A67EC reads past the terminator of {:?}, a string ending in a Shift-JIS lead byte: what follows it isn't modeled",
+                String::from_utf8_lossy(&s[..end])
+            );
+        }
+        s.get(i).copied().unwrap_or(0)
+    };
     let mut kerning = false;
     let mut o = 0;
     let mut i = 0;
@@ -1780,3 +1801,25 @@ pub const SJIS: [[u8; 2]; 288] = [
     [0x8D, 0x9E],
     [0x00, 0x00],
 ];
+
+#[cfg(test)]
+mod encode_tests {
+    use super::encode;
+
+    /// A whole string encodes to its terminator.
+    #[test]
+    fn a_whole_string_encodes() {
+        let mut out = [0xEEu8; 0x200];
+        let n = encode(&mut out, b"P1 99\0");
+        assert_eq!(out[n], 0);
+    }
+
+    /// A string ending in a Shift-JIS lead byte has the original read past its terminator:
+    /// melee-sim stops by name.
+    #[test]
+    #[should_panic(expected = "reads past the terminator")]
+    fn a_lead_byte_at_the_end_stops() {
+        let mut out = [0u8; 0x200];
+        encode(&mut out, b"A\x82\0");
+    }
+}
