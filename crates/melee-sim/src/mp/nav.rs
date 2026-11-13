@@ -352,6 +352,8 @@ impl<K: Kinds> Geometry<K> {
         self.check_line(line_id);
         let line = &mut self.lines[line_id as usize];
         line.lo_flags = ((u32::from(line.lo_flags) & !0xFF) | terrain) as u16;
+        // The surface flags are the descriptor's, in the stage's file.
+        self.image_lines(std::iter::once(line_id as usize));
     }
 
     /// The unit normal of the segment from (x0, y0) to (x1, y1): (y0 - y1, x1 - x0),
