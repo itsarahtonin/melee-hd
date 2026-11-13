@@ -757,7 +757,7 @@ pub fn init_scene(r: &mut Running) {
             1.0,
             gekko_fp::frsp(60.0),
         )));
-    g.world = crate::hsd::gobj::World::new();
+    g.world.renew();
     // `HSD_GObjInit`'s lists: the process links' heads and tails, the render links' heads and
     // tails, the process priorities' heads, the processes by link and priority, and the
     // functions' table.

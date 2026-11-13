@@ -2045,8 +2045,8 @@ pub fn init_globals(game: &mut Game, data: &Archives) {
         use crate::hsd::heap::Kind;
         crate::hsd::heap::init_pools(&[Kind::Item, Kind::ItemDynamicBones, Kind::ItemLink]);
     }
-    game.items = Default::default();
-    game.it.bone_tables = Default::default();
+    game.items.retire();
+    game.it.bone_tables.retire();
     let c = common_data(game);
     let w = |off: u32| c.i32(data, off);
     let n = &mut game.it.counts;

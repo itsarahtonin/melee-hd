@@ -394,18 +394,15 @@ pub fn anim(objs: &mut Objects, data: &Archives, m: Option<MObjId>) {
 /// `hsdAllocMemPiece`, as a TObj's do (see `tobj::alloc`).
 #[doc(alias = "HSD_MObjAlloc")]
 pub fn alloc(mobjs: &mut MObjs) -> MObjId {
+    let addr = super::heap::class_alloc(super::heap::Class::MObj);
     // The slot to be reused still holds its last material's compiled TEV: its storage is
     // kept for a later compile.
-    if let Some(slot) = mobjs.pool.free_head()
+    if let Some(slot) = mobjs.pool.reused_at(addr)
         && let Some(tev) = mobjs.pool[slot].tev.take()
     {
         mobjs.keep_tev(tev);
     }
-    let m = mobjs.pool.alloc(MObj::default());
-    mobjs
-        .pool
-        .set_addr(m, super::heap::class_alloc(super::heap::Class::MObj));
-    MObjId(m)
+    MObjId(mobjs.pool.alloc_at(addr, MObj::default()))
 }
 
 /// `sizeof(HSD_Material)` and `sizeof(HSD_PEDesc)`, the pieces an MObj's material and pixel

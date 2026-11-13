@@ -192,7 +192,7 @@ pub fn follow_joint_unless_paused(objs: &mut Objects, data: &Archives, g: Option
 pub fn init(objs: &mut Objects) {
     crate::hsd::heap::init_pools(&[crate::hsd::heap::Kind::Generator]);
     let gs = &mut objs.generators;
-    gs.pool = Pool::default();
+    gs.pool.retire();
     gs.head = None;
     gs.live = 0;
     gs.peak = 0;
