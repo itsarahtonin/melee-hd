@@ -19,6 +19,8 @@ Measured with `tools/bench` (`melee-bench`), release builds, other applications 
 
 AMD Ryzen 7 9800X3D (8 cores), 62 GB RAM, Windows 11 Pro, Rust 1.98.1.
 
+Some comparisons are taken on the Ubuntu worker instead, a smaller machine kept quiet for them: Intel Core i9-7900X (10 cores, 20 threads, 3.3 GHz, 4.5 GHz boost), 14 GB RAM, Ubuntu 26.04.1 LTS (Linux 7.0), Rust 1.98.1. Its numbers compare builds with each other, not with the Windows figures: a snapshot's clone takes it about 2.2 times as long (300 against 136 µs on the Fox ditto before the exactness round) and the simulation runs at about 45% of the Windows speed.
+
 ## Snapshots (2026-10-07)
 
 `melee-bench snapshot CALL...` imports a real mid-match state from ssbm-rs's saved calls and measures a rollback snapshot of it: the `Game` value plus everything it owns on the heap, a snapshot (`clone`) and a restore (`clone_from`), and their allocations. The state was what melee-sim modeled then (scheduler, HSD objects, fighters, stage, camera, collision), before items and effects were ported; the whole-match figures below include them.
@@ -163,6 +165,54 @@ On the whole match, against the final release build, an archive's pointer words 
 **Tried and left out.** A memo of `PSMTXConcat` (25-word keys): no measurable gain, as a concatenation's inputs rarely come again. Paired fused ops and multiplies in one pass of packed instructions (passing the upstream comparison): 5.9 against 8.1 ns per paired op in the microbenchmark, but no gain on the whole match (seven alternating runs each, twice). Keyframe numbers read from the archive's bytes in one slice: under 1%, within the noise. A `dist` build for `x86-64-v3`: no measurable gain. The fused multiply-add's path as a global instead of a thread-local alone: about 1%.
 
 **Where the time goes now.** A profile of the whole stretch after these steps (samply, about 6,300 samples on the simulation's thread, setup and disc reads about 13% of them): joint matrices 24% (`Mtx34::srt` 10%, still mostly animated joints the memo can't help, and `Mtx34::concat` 14%), the fighters' bone dynamics 20% (the playback codes' pass over dirty matrices 11% of it), the display pass 20%, animation interpretation 14% (the stock icons' joint animations alone 5%), collision about 5%.
+
+## The exactness round's cost (2026-11-13, the Ubuntu worker)
+
+On 2026-11-12 the exactness round ([what must be exact](porting.md#what-must-be-exact), [milestone 6](milestone-6.md)) kept and compared every leftover word, and `fix/exact-alloc` made the pools take slots by the allocator model's address ([the engine notes](engine.md#objects-and-identity)): a freed object's slot stays at its address, and a new object at another address takes a new slot. Three builds were measured on [the worker](#machine), release, with the benchmark harness's own commands: A, main just before the round (`f41e96ee`); M, the allocator change alone (`a3949e93`); B, the whole round (`100381ae`). Every timing ran in an exclusive reservation of the worker's runner after its quietness check (CPU and I/O idle), the builds alternating. Every run was in sync and every session compared clean to where it was stopped.
+
+**Rollback in a match: within the targets, about 15 to 40% larger.** `melee-bench snapshot-match --every 2500` on the five benchmark matches that play to their ends (A, then M, then B, on the same states):
+
+| Match | Snapshot, A / B | Allocations, A / B | Clone, A / B | Restore, A / B | Restore and 8 ticks, A / B |
+| --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 1.48 to 1.53 / 1.72 to 2.19 MB | 2,504 to 2,540 / 2,923 to 3,926 | 293 to 301 / 325 to 411 µs | 135 to 139 / 147 to 189 µs | 3.05 to 4.09 / 3.21 to 4.24 ms |
+| `fox-marth-bf` | 1.48 to 1.51 / 1.69 to 1.84 MB | 2,512 to 2,523 / 2,891 to 3,199 | 296 to 303 / 323 to 355 µs | 137 to 139 / 146 to 159 µs | 2.41 to 3.84 / 2.45 to 3.88 ms |
+| `fox-marth-fd` | 1.51 to 1.56 / 1.71 to 2.03 MB | 2,586 to 2,617 / 2,925 to 3,576 | 301 to 310 / 327 to 387 µs | 138 to 144 / 148 to 175 µs | 3.13 to 3.77 / 3.18 to 3.80 ms |
+| `fox-marth-ps` | 1.58 to 1.70 / 1.79 to 2.16 MB | 2,595 to 2,673 / 2,957 to 3,582 | 312 to 329 / 335 to 400 µs | 144 to 156 / 154 to 186 µs | 3.62 to 4.35 / 3.65 to 4.43 ms |
+| `ganon-captain-fd` | 1.54 to 1.56 / 1.75 to 1.87 MB | 2,480 to 2,486 / 2,886 to 3,145 | 297 to 300 / 333 to 360 µs | 140 to 142 / 157 to 167 µs | 3.37 to 3.66 / 3.52 to 3.79 ms |
+
+M's figures are B's within 0.02 MB and a few µs: the allocator change is the whole difference. On A a match's snapshot stays the same size from start to end; on B it grows as the match goes on (the Fox ditto 1.72 MB at tick 2,500, 2.19 MB at 15,000), as the class objects' pools gain a slot for each address their pieces haven't had before. Restores still make no allocation (Pokémon Stadium's one, the text system's maps, as before), the ticks after a restore allocate as before (1 a tick, 8 to 11 on Pokémon Stadium), and `ticks_and_restores_dont_allocate` passes on B. At the worker's 2.2 times the Windows clone time, B's match snapshots would clone in about 0.19 ms and restore in 0.09 ms there, inside the 0.5 ms targets; restore and 8 ticks moved by −0.01 to +0.17 ms, the ticks being most of it.
+
+**Speed: no cost in the simulation's work; release builds 2 to 6% slower by code layout.** `melee-bench native`, one run a match per invocation, five rounds with the builds alternating, median frames per second:
+
+| Match | A | M | B | B against A | Same, melee-sim in one codegen unit (A / M / B) |
+| --- | --- | --- | --- | --- | --- |
+| `fox-fox-fd` | 2,347 | 2,280 | 2,230 | −5.0% | 2,328 / 2,388 / 2,337 (+0.4%) |
+| `fox-marth-bf` | 2,317 | 2,234 | 2,192 | −5.4% | 2,266 / 2,341 / 2,306 (+1.8%) |
+| `fox-marth-fd` | 2,172 | 2,130 | 2,119 | −2.4% | 2,152 / 2,204 / 2,193 (+1.9%) |
+| `fox-marth-ps` | 2,003 | 1,957 | 1,918 | −4.2% | 1,980 / 2,025 / 2,004 (+1.2%) |
+| `ganon-captain-fd` | 2,222 | 2,156 | 2,144 | −3.5% | 2,171 / 2,205 / 2,228 (+2.6%) |
+
+An earlier round of A against B alone gave −5.0 to −6.1%. A sampled profile of A and B (gdb stopping the program every 10 ms, about 1,000 samples on the simulation's thread each; `perf` isn't open to users on the worker) shows the same shares everywhere within the samples' noise, and the pools' own work (`Pool::alloc_at`, `set_addr`, `take_free`) under 1% of B's samples. With the allocator model off (`MELEE_BENCH_HEAP=off`, every pool last in, first out) M was still 2.8 to 3.1% slower than A, so the cost isn't the slots' order. Built with melee-sim in one codegen unit (`--config 'profile.release.package.melee-sim.codegen-units=1'`), where how the compiler splits the crate doesn't move its inlining, B is 0.4 to 2.6% faster than A and M 1.6 to 3.3% faster: the release builds' gap is where the default sixteen codegen units fell, not work the round added. It may come back or go with the next change to melee-sim. The `dist` profile (one codegen unit, fat LTO) wasn't measured.
+
+**A session's snapshots: over the targets in a long session, on A already, twice that on B.** `melee-oracle session --snapshot` from power-on (sizes are the state with everything it owns; times on the worker):
+
+| Session, tick | Snapshot, A / M / B | Clone, A / B | Restore, A / B |
+| --- | --- | --- | --- |
+| `menu-tour`, 5588 | 2.69 / 3.86 / 3.89 MB | 657 / 904 µs | 302 / 446 µs |
+| `13-05-00`, 941 (the match's first tick) | 1.60 / 1.82 / 1.82 MB | 349 / 406 µs | 169 / 196 µs |
+| `13-05-00`, 2516 (the match's last) | 2.55 / 3.00 / 3.02 MB | 557 / 638 µs | 275 / 323 µs |
+| `rules-match`, 4000 | 2.75 / 3.36 / 3.36 MB | 613 / 701 µs | 296 / 352 µs |
+| `rules-match`, 8000 | 4.07 / 4.93 / 4.96 MB | 1,038 / 1,234 µs | 489 / 611 µs |
+| `2026-10-06_12-04-48` (Adventure), 10000 | 5.12 / — / 9.61 MB | 1.47 / 3.16 ms | 0.69 / 1.61 ms |
+| `2026-10-06_12-04-48`, 20000 | 6.83 / — / 14.11 MB | 2.44 / 5.54 ms | 1.11 / 2.88 ms |
+| `2026-10-06_12-04-48`, 30000 | 16.79 / — / 29.89 MB | 9.17 / 14.47 ms | 4.31 / 7.68 ms |
+
+The heap's image is a small part (150 to 300 KB). A breakdown of the Adventure session's state by part (a scratch diagnostic) shows two causes:
+
+- **The class objects of scenes gone (A and B).** Joints, display objects, materials, textures and shapes live in pools no scene change empties: when a scene makes its heap anew, the objects its heap held are never freed, so they stay live. At tick 30,000 the materials' pool holds 9,800 live objects, the textures' 10,103, the shapes' 11,869 and the joints' 11,377, the same counts on A and B, against 2,768 materials at tick 10,000. A's snapshot is 16.8 MB there (4.4 MB of materials, 3.6 MB of shapes, 2.8 MB of textures, 2.7 MB of joints).
+- **The slots the allocator change keeps (B).** A freed or retired slot stays at its address, so each pool holds as many slots as addresses its objects have had: at tick 30,000 the materials' pool has 17,739 slots for 9,800 live objects, the shapes' 22,865 for 11,869, the joints' 14,574 for 11,377; the items' pool 313 slots of 7,928 bytes (2.4 MB) for 2 live items, its slots grown from 5,272 bytes by the round's first part (the item variables kept over the union's bytes); the scheduler's processes 4,964 slots for 140 and its GObjs 1,594 for 91.
+
+In a replay's match neither shows much (one scene, a heap no image follows), which is why the matches stay inside the targets. A session from power-on is what the player runs once it boots into Melee, so a rollback there would snapshot all of it. The options are for the coordinator.
 
 ## Benchmark matches
 
