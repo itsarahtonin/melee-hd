@@ -360,10 +360,6 @@ pub const PATHS: &[Paths] = &[
         ],
         unreached: &[
             (
-                "fn_80184A94",
-                "the intro's third opponent's place process: fn_80185F5C makes it only for a third opponent, and Classic's intros of kinds 0 to 2 show at most two (its single, team, giant and boss matchups name at most two characters); the horde stages' three (kind 4) are the horde intro's sprites, not fighters (task 22's debug round)",
-            ),
-            (
                 "grFigureGet_80219898 with no coin",
                 "Snag the Trophies' coins (hold kind 12) fail only at the coins' limit, 60 (ItCo.dat's common word 0x20), and Classic's stage makes at most the stand's three: no other Classic code makes a coin, and the debug item menu's list skips it (task 22's debug round)",
             ),
