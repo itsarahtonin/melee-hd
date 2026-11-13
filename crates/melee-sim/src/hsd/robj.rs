@@ -126,10 +126,12 @@ pub struct Rvalue {
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct RObjs {
     pub pool: Pool<RObj, { pool_kind(Kind::RObj) }>,
-    /// Whether `expEvaluate`'s argument buffer (the static `arg_buf`, 100 floats from the
-    /// heap) has been allocated: the first expression evaluated allocates it, and nothing
-    /// frees it. The values it holds are only an evaluation's scratch.
-    pub arg_buf: bool,
+    /// `expEvaluate`'s argument buffer (the static `arg_buf`, 100 floats from the heap), once
+    /// allocated, by its address (0 without the allocator model): the first expression
+    /// evaluated allocates it, and nothing frees it. Each evaluation writes its arguments
+    /// from the start, and the heap's image takes them; the floats past them keep what the
+    /// block held (`m6-allstar/as-lose5`, tick 21219: an item over the scene's freed buffer).
+    pub arg_buf: Option<u32>,
 }
 
 /// The Rvalue pool (`rvalue_alloc_data`).
@@ -553,13 +555,16 @@ fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) 
             .sum();
         objs.robjs[r].u = Ref::Exp(exp);
     }
-    // The original's argument buffer holds 100, allocated the first time (`arg_buf`).
-    if !objs.robjs.arg_buf {
-        crate::hsd::heap::with(|h| {
-            h.mem_alloc(100 * 4);
-        });
-        objs.robjs.arg_buf = true;
-    }
+    // The original's argument buffer holds 100, allocated the first time (`arg_buf`): it
+    // writes only the arguments, so the block keeps what it held past them.
+    let buf = match objs.robjs.arg_buf {
+        Some(a) => a,
+        None => {
+            let a = crate::hsd::heap::with(|h| h.mem_alloc_unclaimed(100 * 4)).unwrap_or(0);
+            objs.robjs.arg_buf = Some(a);
+            a
+        }
+    };
     assert!(
         exp.nb_args <= 100,
         "Number of argment of expression exceeds the argument buffer"
@@ -604,6 +609,15 @@ fn evaluate(objs: &mut Objects, data: &Archives, r: RObjId, ty: u32, j: JObjId) 
             bit <<= 1;
         }
         cur = next;
+    }
+    if buf != 0 && n > 0 {
+        crate::hsd::export::with_image(|img| {
+            let mut bytes = [0u8; 400];
+            for (k, a) in args[..n].iter().enumerate() {
+                bytes[4 * k..4 * k + 4].copy_from_slice(&a.to_bits().to_be_bytes());
+            }
+            img.put(buf, &bytes[..4 * n]);
+        });
     }
     let mut value = if exp.is_bytecode {
         bytecode::eval(
