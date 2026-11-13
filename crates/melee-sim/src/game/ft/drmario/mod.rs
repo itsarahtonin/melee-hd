@@ -187,6 +187,7 @@ impl Running<'_> {
 }
 
 /// Runs one of Dr. Mario's callbacks a fighter holds (`void (*)(HSD_GObj*)`), if `addr` is one.
+#[doc(alias = "ftDr_Init_OnItemInvisible")]
 pub fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::ON_TAKE_DAMAGE => g.dr_on_take_damage(gobj),

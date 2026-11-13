@@ -199,6 +199,7 @@ impl Running<'_> {
     /// `gm_Scene_Omake15_OnFrame`: at the movie's end, or Start or A, the music stops, the
     /// attract loop's count starts over (`gmMainLib_8015DB0C`), and the scene ends for the
     /// title (with the forward sound on a button).
+    #[doc(alias = "gm_Scene_Omake15_OnFrame")]
     #[doc(alias = "gmMainLib_8015DB0C")]
     pub fn omake_on_frame(&mut self) {
         let Some((reset, pressed)) = self.movie_scene_end() else {

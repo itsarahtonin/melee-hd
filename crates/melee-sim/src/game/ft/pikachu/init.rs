@@ -95,6 +95,7 @@ impl Running<'_> {
 
     /// Dropping the item, `ftPk_Init_OnItemDrop`.
     #[doc(alias = "ftPk_Init_OnItemDrop")]
+    #[doc(alias = "ftPc_Init_OnItemDrop")]
     pub fn pk_on_item_drop(&mut self, gobj: GObjId, flag: bool) {
         self.item_drop_hand(gobj, flag, 0);
     }

@@ -15,7 +15,6 @@ gmMainLib_GetUnlockedCharactersBitmaskPtr	unchecked	a getter or setter of the ga
 fn_801642A0	unchecked	ported (a `// Ports` comment in melee-sim), aliased once a session reaches it
 gm_GetGameModeStateExitData	unchecked	a getter or setter of the game's data, which its callers' ports read or write inline
 gm_Mode_Vs_OnUnload	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
-gm_Scene_Omake15_OnFrame	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExit	unchecked	ported in the scene machine's dispatch (game/gm/machine.rs, title.rs, howto.rs, camera_mode.rs), held unaliased until a session reaches it
 onExitPrize	unreached	the debug mode's own exit from the prize screen (gmdebugmode.c, mode 6), made pending only at a debug level (task 19's); VS mode's is ported
 fn_801967E0	unchecked	ported in Tournament's bracket (game/gm/tournament), held unaliased until a session reaches it (milestone 5's task 13)
