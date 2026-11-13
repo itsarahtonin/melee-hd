@@ -35,6 +35,8 @@ pub fn run_pred(r: &mut Running, gobj: GObjId, addr: u32) -> Option<bool> {
     Some(match addr {
         MOTION8_ANIM => follow_fighter(r, gobj),
         MOTION8_COLL | MOTION10_COLL => false,
+        // State 9's callbacks are dead: the blaster never lives into a tick in it
+        // (ledger/dead.txt).
         MOTION9_ANIM | MOTION9_COLL => {
             crate::game::ef::destroy_all(r, gobj);
             release(r, gobj);
