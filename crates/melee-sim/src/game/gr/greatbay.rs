@@ -198,7 +198,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Great Bay's start, `grGreatBay_801F42D4`: the enemy spawner, without enemies.
 #[doc(alias = "grGreatBay_801F42D4")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

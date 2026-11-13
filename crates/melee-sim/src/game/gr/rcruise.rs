@@ -236,7 +236,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Rainbow Cruise's start, `grRCruise_801FF29C`: the enemy spawner, without enemies.
 #[doc(alias = "grRCruise_801FF29C")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {
@@ -1201,7 +1201,7 @@ pub fn wind(game: &Game) -> Vec3 {
     let Some(gobj) = map_gobj(game, 3) else {
         return Vec3::ZERO;
     };
-    match &game.grounds[ground_of(game, gobj).0].u {
+    match &game.grounds[ground_of(game, gobj).0].u.vars {
         super::GroundVars::Scroll(v) => v.x1C,
         other => panic!("Rainbow Cruise's course's variables are {other:?}"),
     }

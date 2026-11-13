@@ -72,13 +72,15 @@ impl Comparer<'_> {
         if ud != addr {
             return;
         }
-        // `x2` isn't compared: `mn_80229DC0` never writes it and nothing reads it, so it
-        // holds what the heap block held before (docs/oracle.md, the menu sessions).
+        // `x2`: `mn_80229DC0` never writes it and nothing reads it, so it holds what the heap
+        // block held before, compared where the heap's image knew it (docs/oracle.md, the
+        // menu sessions).
+        let x2 = d.x2.map(|_| self.u8(ud + 2));
         self.check(
             path,
-            "panel menus, state",
-            (d.cur_menu, d.prev_menu, d.state),
-            (self.u8(ud), self.u8(ud + 1), self.u8(ud + 3)),
+            "panel menus, x2, state",
+            (d.cur_menu, d.prev_menu, d.x2, d.state),
+            (self.u8(ud), self.u8(ud + 1), x2, self.u8(ud + 3)),
         );
     }
 

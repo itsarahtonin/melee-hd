@@ -133,7 +133,7 @@ fn param(game: &Game) -> DataRef {
 /// trophy point.
 #[doc(alias = "grPushOn_80218378")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
     let p = param(r.game);
     let n = r.data.u32(p.at(0x18)) as i32;
     let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };

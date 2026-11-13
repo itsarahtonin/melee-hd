@@ -4240,7 +4240,7 @@ fn river_spline(r: &mut Running) -> melee_data::archive::DataRef {
     r.game
         .grounds
         .iter()
-        .find_map(|(_, g)| match &g.u {
+        .find_map(|(_, g)| match &g.u.vars {
             GroundVars::KongoPath(v) => v.xC4,
             _ => None,
         })
@@ -7187,7 +7187,7 @@ fn inishie1_hatena() {
         let gobj = gobj_arg(maps, call);
         let g = melee_sim::game::gr::ground::ground_of(r.game, gobj);
         let v = vars(call);
-        r.game.grounds[g.0].u = melee_sim::game::gr::GroundVars::Inishie1Hatena(
+        r.game.grounds[g.0].u.vars = melee_sim::game::gr::GroundVars::Inishie1Hatena(
             melee_sim::game::gr::vars::Inishie1HatenaVars {
                 xC4: maps.jobjs.get(&peek_u32(call, v)).copied(),
                 xC8: peek_u32(call, v + 4) as i32,

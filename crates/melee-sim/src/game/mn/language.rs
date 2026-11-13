@@ -179,7 +179,8 @@ impl Running<'_> {
                 unk2: Some(0),
                 unk3: None,
                 text: None,
-            },
+            }
+            .with_leftovers(self.data, addr),
         );
         g.world.init_user_data(gobj, 0, UserData::OptionMenu(addr));
         let p = g.world.setup_proc(gobj, CodeRef(IN), 0);

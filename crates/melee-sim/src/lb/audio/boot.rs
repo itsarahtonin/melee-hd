@@ -214,6 +214,17 @@ impl Audio {
             let freed = &mut self.driver.freed_banks;
             freed.rotate_right(1);
             freed[0] = Some((id, old));
+            let written = &mut self.driver.freed_written;
+            written.rotate_right(1);
+            written[0].clear();
+            let size = self
+                .heap
+                .allocated
+                .iter()
+                .find(|c| c.at + 0x20 == old)
+                .map_or(0, |c| c.size);
+            self.driver.freed_ends.rotate_right(1);
+            self.driver.freed_ends[0] = old - 0x20 + size;
         }
         self.driver_free_bank();
         self.driver_load_bank(data, bank.archive, bank.len);

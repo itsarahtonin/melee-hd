@@ -76,6 +76,30 @@ pub struct CardDevice {
     /// `OSGetFontEncode` has read the video interface's register, and keeps the answer: the
     /// first mount whose ID passes its checksums reads it (`VerifyID`).
     pub font_encode_known: bool,
+    /// The CARD library's work area (`CARDMount`'s, `lbCardNew_AllocWorkArea`'s block), 0 for
+    /// none: where a mount reads the card's system sectors, which the heap's image takes.
+    pub work_area: u32,
+}
+
+/// What a list left in the CARD library's work area (`Run::work`), into the heap's image at
+/// the work area's block (docs/engine.md, a session's heap leftovers): a later scene's
+/// objects over the freed block read the card's system sectors there.
+fn lay_work_area(work_area: u32, run: &mut Run) {
+    if let Some(w) = run.work.take()
+        && work_area != 0
+    {
+        crate::hsd::heap::with(|h| h.image.put(work_area, &w));
+    }
+}
+
+/// The CARD library's work area for the lent device's mounts ([`CardDevice::work_area`]), if a
+/// device is lent.
+fn set_work_area(addr: u32) {
+    LENT.with(|l| {
+        if let Some(d) = l.borrow_mut().as_mut() {
+            d.work_area = addr;
+        }
+    });
 }
 
 /// Time base ticks a hardware register's read takes on ssbm-rs's console, and a read of the
@@ -680,7 +704,9 @@ pub(crate) fn finish_list_run(
         clock.script = times.iter().copied().collect();
         let slot = &mut dev.slots[chan];
         let console = slot.console.clone();
-        run.execute(slot.card.as_mut(), &console, &mut clock, tasks)
+        let r = run.execute(slot.card.as_mut(), &console, &mut clock, tasks);
+        lay_work_area(dev.work_area, &mut run);
+        r
     });
     (r, run)
 }
@@ -710,7 +736,9 @@ fn start_list_on(
             run.execute(card, &console, &mut clock, tasks)
         } else {
             let card = if card_in { slot.card.as_mut() } else { None };
-            run.execute(card, &console, &mut clock, tasks)
+            let r = run.execute(card, &console, &mut clock, tasks);
+            lay_work_area(dev.work_area, &mut run);
+            r
         }
     });
     let mut start = CardWork {
@@ -962,6 +990,7 @@ impl CardTasks {
     pub fn forget_memory(&mut self) {
         self.work_area = 0;
         self.lib_area = 0;
+        set_work_area(0);
     }
 
     /// `lbCardNew_Init` at boot: no list, every file's result none (`resetState`). The HSD
@@ -1150,7 +1179,9 @@ impl Running<'_> {
             let slot = &mut dev.slots[chan];
             let console = slot.console.clone();
             let card = if card_in { slot.card.as_mut() } else { None };
-            run.execute(card, &console, &mut clock, tasks)
+            let r = run.execute(card, &console, &mut clock, tasks);
+            lay_work_area(dev.work_area, &mut run);
+            r
         });
         // What the reads wrote, file by file, the bytes they changed.
         let mut after = memory.clone();
@@ -1428,9 +1459,12 @@ impl Running<'_> {
     pub fn card_alloc_work_area(&mut self) {
         let t = &mut self.game.card_tasks;
         if t.work_area == 0 {
-            t.work_area = crate::hsd::heap::mem_alloc(0xA000);
+            // The CARD library writes the work area only as a mount reads the card into it
+            // (`lay_work_area`): until then the heap's image keeps what the block held.
+            t.work_area = crate::hsd::heap::mem_alloc_unclaimed(0xA000);
             t.lib_area = crate::hsd::heap::mem_alloc(0x2000);
         }
+        set_work_area(t.work_area);
     }
 }
 

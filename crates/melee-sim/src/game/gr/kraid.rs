@@ -127,7 +127,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Brinstar Depths' start, `grKraid_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grKraid_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

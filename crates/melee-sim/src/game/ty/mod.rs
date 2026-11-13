@@ -147,6 +147,10 @@ pub struct Toys {
     pub lottery: lottery::Lottery,
     /// The collection's (`tydisplay.c`).
     pub collection: collection::Collection,
+    /// `_tyDisplay_804A2DE8`: the display's archives a stage's trophy loaded
+    /// (`tyDisplay_8031C454`), by category, each an `HSD_Archive`. The collection's scene keeps
+    /// its own in its background block (`Collection::archives`).
+    pub display_archives: Vec<Option<Loaded>>,
     /// The words the debug views wrote into `TyDatai`'s tables (the display table's places,
     /// the models' parameters), by offset in its data: they last as long as the file, which
     /// a new game mode loads afresh.
@@ -164,7 +168,7 @@ impl Toys {
         self.anim = AnimState::default();
         self.datai_edits.clear();
         // `tyDisplay_8031C8B8`: the display's archives forgotten.
-        self.collection.archives.fill(None);
+        self.display_archives.fill(None);
     }
 }
 

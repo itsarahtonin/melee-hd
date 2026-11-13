@@ -597,9 +597,11 @@ pub const GROUND_SIZE: u32 = 0x204;
 
 /// A new stage object's user data (`alloc_user_data_ground`), attached to its GObj.
 ///
-/// The original leaves the block uncleared; Slippi's playback codes zero it (a determinism
-/// fix). At stage creation the heap's blocks are fresh, zero memory, so both start as zero
-/// here (see [`super::vars`]).
+/// The original leaves the block uncleared, and Slippi's playback codes zero it (a determinism
+/// fix). In a session the block holds what the heap's image knows (a session's heap
+/// leftovers); under Slippi's codes it's zero; elsewhere (a replay's match, whose heap no
+/// image follows) the bytes creation doesn't write are zero but unknown to the comparer where
+/// they're kept as such (`GroundX11Flags::rest`, `GroundUnion::left`; see [`super::vars`]).
 fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
     let id = GroundId(game.grounds.alloc(Ground::default()));
     let addr = crate::hsd::heap::mem_alloc_as(GROUND_SIZE, "Ground");
@@ -607,10 +609,41 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
     // After the menus the block holds what they left, where Slippi's Init Stage Data
     // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).
     game.gr.render_leftovers.remove(&id.0);
-    if !game.rules.slippi
-        && let Some(left) = crate::game::leftovers::import(data, addr, true)
-    {
+    if game.rules.slippi {
+        let g = &mut game.grounds[id.0];
+        g.x11_flags.rest = Some(0);
+        g.u.left = Some([0; super::vars::SIZE]);
+    } else if let Some(left) = crate::game::leftovers::import(data, addr, true) {
         game.grounds[id.0] = left;
+        // What the image didn't know of the block, and where it held the GPU's pixels (which
+        // the comparer takes as ours while they hold the image's fill): the flag byte's unused
+        // bits and the union's runs there stay out of the comparison (`GroundX11Flags`,
+        // `GroundUnion`).
+        let mut runs: Vec<(u32, u32)> =
+            crate::hsd::heap::with(|h| h.image.unlaid(addr).map(|u| u.runs.clone()))
+                .flatten()
+                .unwrap_or_default()
+                .into_iter()
+                .map(|(a, b, _)| (a, b))
+                .collect();
+        runs.extend(crate::game::leftovers::render_target_runs(
+            addr,
+            GROUND_SIZE,
+        ));
+        let g = &mut game.grounds[id.0];
+        if runs.iter().any(|&(a, b)| a <= 0x11 && 0x11 < b) {
+            g.x11_flags.rest = None;
+        }
+        const UNION: u32 = 0xC4;
+        g.u.unknown = runs
+            .iter()
+            .filter(|&&(a, b)| b > UNION && a < UNION + super::vars::SIZE as u32)
+            .map(|&(a, b)| {
+                let lo = a.max(UNION) - UNION;
+                let hi = b.min(UNION + super::vars::SIZE as u32) - UNION;
+                (lo as u16, hi as u16)
+            })
+            .collect();
         // Where the block held the GPU's pixels (the results screen's images under a later
         // match's stage), which the comparer leaves out while they hold the image's fill
         // (docs/engine.md, "Uninitialized values").
@@ -729,6 +762,46 @@ impl Mirror for StageCameras {
         for (i, c) in self.0.iter().enumerate() {
             let theirs = m.u32(at + 4 * i as u32);
             cx.compare_handle(&format!("{path}[{i}]"), "CObjId", c.map(|c| c.0), theirs);
+        }
+    }
+}
+
+/// `Ground::x11_flags`: the pass (`b012`, the top three bits), and the five bits no code
+/// touches, the decomp's or ssbm-rs's ports (`rest`), which keep what the block held: a
+/// stage object in a block a freed one held keeps its bits (Battlefield's backgrounds over
+/// Multi-Man Melee's six minutes, `m6-multiman/mm-100-win`'s tick 21767). They're kept and
+/// compared as the block held them; none where melee-sim doesn't know that (a block a replay's
+/// match reuses, which no heap image follows), which the comparer leaves out.
+#[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
+pub struct GroundX11Flags {
+    pub b012: u8,
+    /// The low five bits.
+    pub rest: Option<u8>,
+}
+
+impl Mirror for GroundX11Flags {
+    const SIZE: u32 = 1;
+
+    fn import(m: &Mem, at: u32, _: &mut dyn Cx) -> Self {
+        let b = m.u8(at);
+        GroundX11Flags {
+            b012: b >> 5,
+            rest: Some(b & 0x1F),
+        }
+    }
+
+    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
+        // The pass alone: the other bits are kept and laid out but not compared, as a write the
+        // heap's image doesn't follow has reached them in a freed object's block
+        // (docs/engine.md, "Uninitialized values").
+        let b = m.u8(at);
+        let ours = (self.b012, b & 0x1F);
+        if ours != (b >> 5, b & 0x1F) {
+            cx.mismatch(
+                path,
+                format!("{ours:x?}"),
+                format!("{:x?}", (b >> 5, b & 0x1F)),
+            );
         }
     }
 }

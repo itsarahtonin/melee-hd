@@ -10,8 +10,8 @@ use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
-use crate::game::gr::GroundVars;
-use crate::game::gr::setup::StageCameras;
+use crate::game::gr::setup::{GroundX11Flags, StageCameras};
+use crate::game::gr::{GroundUnion, GroundVars};
 use crate::game::handles::*;
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
@@ -4222,19 +4222,6 @@ impl Default for Ground_x10_flags {
     }
 }
 
-/// `Ground_x11_flags`, 0x1 bytes.
-#[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
-pub struct Ground_x11_flags {
-    /// +0x0 (bits 0..+3)
-    pub b012: u8,
-}
-
-impl Default for Ground_x11_flags {
-    fn default() -> Self {
-        Ground_x11_flags { b012: 0 }
-    }
-}
-
 /// `Ground`, 0x204 bytes.
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Ground {
@@ -4249,7 +4236,7 @@ pub struct Ground {
     /// +0x10
     pub x10_flags: Ground_x10_flags,
     /// +0x11
-    pub x11_flags: Ground_x11_flags,
+    pub x11_flags: GroundX11Flags,
     /// +0x14
     pub map_id: i32,
     /// +0x18
@@ -4263,7 +4250,7 @@ pub struct Ground {
     /// +0xc0
     pub xC0: f32,
     /// +0xc4
-    pub u: GroundVars,
+    pub u: GroundUnion,
 }
 
 impl Default for Ground {

@@ -88,6 +88,10 @@ pub struct DevText {
     pub unk: u8,
     pub current_color: u8,
     pub buf: Vec<Glyph>,
+    /// The buffer's address (`x28`), where melee-sim knows it (a debug menu's glyph block, 0
+    /// for another creator's): a screen on the free list keeps it, dangling once the block
+    /// goes, until `DevText_Create` gives it another.
+    pub buf_addr: u32,
     pub prev: Option<u8>,
     pub next: Option<u8>,
 }
@@ -303,6 +307,7 @@ impl DevTexts {
         t.next = None;
         // `memzero(buf, h * w * 2)`, with the sizes as the caller passed them.
         t.buf = vec![Glyph::default(); (h * w).max(0) as usize];
+        t.buf_addr = 0;
         Some(text)
     }
 }

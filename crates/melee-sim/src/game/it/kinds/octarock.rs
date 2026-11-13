@@ -391,6 +391,14 @@ pub fn anim4(r: &mut Running, gobj: GObjId) -> bool {
     follow_bone(r, b, gobj);
     if timer(r, gobj) == 0 {
         let j = bone(r, gobj, 14);
+        // The stone's spin takes its way from a stack word this lookup leaves, the joint's
+        // address (a negative float, `octarockstone::spawn`): without the bone it would be
+        // another word.
+        if j.is_none() {
+            panic!(
+                "it_802E8ADC: the stone's spin reads a stack word the mouth bone's lookup leaves, and with no bone 14 it isn't the joint's address: that isn't modeled"
+            );
+        }
         let v = crate::lb::joint::world_position(&mut r.game.objs, r.data, j, None);
         let dir = fp::fctiwz(reg(item(r.game, gobj).facing_dir));
         let (speed, lo, hi) = (

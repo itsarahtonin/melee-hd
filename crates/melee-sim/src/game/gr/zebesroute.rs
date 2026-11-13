@@ -124,7 +124,7 @@ pub fn on_load(r: &mut Running) {
 /// random trophy point.
 #[doc(alias = "grZebesRoute_8020B1F4")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
     let p = param(r.game);
     let n = r.data.u32(p.at(4)) as i32;
     let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };

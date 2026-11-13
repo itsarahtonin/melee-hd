@@ -1144,8 +1144,7 @@ impl Running<'_> {
         let archive = |r: &Self, i: usize| {
             r.game
                 .toys
-                .collection
-                .archives
+                .display_archives
                 .get(i)
                 .copied()
                 .flatten()

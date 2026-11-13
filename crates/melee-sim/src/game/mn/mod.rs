@@ -34,3 +34,13 @@ pub mod sound_test;
 pub mod stage_switch;
 pub mod stagesel;
 pub mod vibration;
+
+/// The `N` bytes at `at` of a new menu block that its owner never writes: what the heap's
+/// image knows the block held there, each `None` where it doesn't (outside a session too).
+pub(crate) fn leftover_bytes_known<const N: usize>(
+    data: &melee_data::archive::Archives,
+    at: u32,
+) -> [Option<u8>; N] {
+    let left = super::leftovers::bytes_known(data, at, N as u32);
+    std::array::from_fn(|i| left.as_ref().and_then(|(b, k)| k[i].then_some(b[i])))
+}

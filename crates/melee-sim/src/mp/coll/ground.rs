@@ -290,7 +290,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     cd.env_flags &= !LEFT_WALL_MASK;
                 }
                 x_after_left = cd.cur_pos.x;
-                cd.x34_flags.b5 = true;
+                cd.x34_flags.b5 = Some(true);
             }
             if self.check_right_walls_ground(cd) {
                 hit_right = self.collide_right_walls_ground(cd);
@@ -300,7 +300,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     cd.env_flags &= !RIGHT_WALL_MASK;
                 }
                 x_after_right = cd.cur_pos.x;
-                cd.x34_flags.b5 = true;
+                cd.x34_flags.b5 = Some(true);
             }
             if self.check_left_walls_ground(cd) {
                 hit_left |= self.collide_left_walls_ground(cd);
@@ -308,7 +308,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     left_right |= 1;
                 }
                 x_after_left = cd.cur_pos.x;
-                cd.x34_flags.b5 = true;
+                cd.x34_flags.b5 = Some(true);
             }
             if self.check_right_walls_ground(cd) {
                 hit_right |= self.collide_right_walls_ground(cd);
@@ -316,7 +316,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                     left_right |= 2;
                 }
                 x_after_right = cd.cur_pos.x;
-                cd.x34_flags.b5 = true;
+                cd.x34_flags.b5 = Some(true);
             }
             if hit_left && hit_right {
                 cd.squeeze_horizontal(false, x_after_right, x_after_left);
@@ -341,7 +341,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                 if self.g.line_live(floor_id) && self.g.line_kind(floor_id) == FLOOR {
                     let fall = if flags & 1 != 0 {
                         if self.teeter_at_edge(cd, floor_id) {
-                            cd.x34_flags.b5 = true;
+                            cd.x34_flags.b5 = Some(true);
                             touching_floor = false;
                             hit_floor = true;
                             y_after_floor = cd.cur_pos.y;
@@ -351,7 +351,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                         }
                     } else if flags & 2 != 0 {
                         if self.stop_at_edge(cd, floor_id) {
-                            cd.x34_flags.b5 = true;
+                            cd.x34_flags.b5 = Some(true);
                             touching_floor = true;
                             hit_floor = true;
                             y_after_floor = cd.cur_pos.y;
@@ -369,7 +369,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
                             touching_floor = true;
                         }
                         cd.floor_skip = old_skip;
-                        cd.x34_flags.b5 = true;
+                        cd.x34_flags.b5 = Some(true);
                     }
                 }
             }
@@ -384,7 +384,7 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             if self.snap_to_floor(cd, false) {
                 self.floor_walls(cd, false);
             }
-            cd.x34_flags.b5 = false;
+            cd.x34_flags.b5 = Some(false);
             touching_floor = true;
         }
         if touching_floor {

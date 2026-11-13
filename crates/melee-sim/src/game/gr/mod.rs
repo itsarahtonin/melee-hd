@@ -59,7 +59,7 @@ pub mod zebes;
 pub mod zebesroute;
 
 pub use vars::{
-    BattleBgVars, Garden2Vars, GardenVars, GroundVars, KongoBarrelVars, KongoLogVars,
+    BattleBgVars, Garden2Vars, GardenVars, GroundUnion, GroundVars, KongoBarrelVars, KongoLogVars,
     KongoPathVars, KongoPlatformVars, KongoVars, Kraid2Vars, KraidVars, LastVars, MapVars,
     OldKongoBirdsVars, OldKongoVars, OldYoshiCloud, OldYoshiCloudVars, OldYoshiGuestVars,
     StadiumBits, StadiumDisplayVars, StadiumPieceVars, StadiumVars, VarsKind, YorsterBlock,

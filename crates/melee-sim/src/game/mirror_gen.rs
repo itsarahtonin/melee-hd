@@ -18,7 +18,8 @@ use crate::game::ft::cpu::{CpuCsP, CpuInputRef444, CpuInputRef448, CpuWritePos};
 use crate::game::ft::dynamics::BoneSlot;
 use crate::game::ft::second::{ActionTree, SecondTree};
 use crate::game::ft::vars::{FighterVars, MotionVars};
-use crate::game::gr::setup::StageCameras;
+use crate::game::gr::GroundUnion;
+use crate::game::gr::setup::{GroundX11Flags, StageCameras};
 use crate::game::held::Kept;
 use crate::game::hud::magnify::{MagnifyImage, TexBuffer};
 use crate::game::hud::stock::StockJObj;
@@ -9400,28 +9401,6 @@ impl Mirror for Ground_x10_flags {
     }
 }
 
-impl Mirror for Ground_x11_flags {
-    const SIZE: u32 = 0x1;
-
-    fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        let _ = (&m, at, &cx);
-        Ground_x11_flags {
-            b012: m.bits(at, 0, 3) as u8,
-        }
-    }
-
-    fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let _ = (&m, at, path, &cx);
-        if (self.b012 as u32) != m.bits(at, 0, 3) {
-            cx.mismatch(
-                &format!("{path}.b012"),
-                format!("{:?}", self.b012),
-                format!("{:?}", m.bits(at, 0, 3)),
-            );
-        }
-    }
-}
-
 impl Mirror for Ground {
     const SIZE: u32 = 0x204;
 
@@ -9433,14 +9412,14 @@ impl Mirror for Ground {
             x8_callback: code(m.u32(at + 0x8)),
             xC_callback: code(m.u32(at + 0xc)),
             x10_flags: Ground_x10_flags::import(m, at + 0x10, cx),
-            x11_flags: Ground_x11_flags::import(m, at + 0x11, cx),
+            x11_flags: GroundX11Flags::import(m, at + 0x11, cx),
             map_id: m.u32(at + 0x14) as i32,
             x18: cx.import_handle("GObjId", m.u32(at + 0x18)).map(GObjId),
             x1C_callback: code(m.u32(at + 0x1c)),
             x20: core::array::from_fn(|i0| m.u32(at + 0x20 + i0 as u32 * 0x4) as i32),
             color_overlay: ColorOverlay::import(m, at + 0x40, cx),
             xC0: f32::from_bits(m.u32(at + 0xc0)),
-            u: GroundVars::import(m, at + 0xc4, cx),
+            u: GroundUnion::import(m, at + 0xc4, cx),
         }
     }
 

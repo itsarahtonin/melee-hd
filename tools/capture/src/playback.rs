@@ -132,10 +132,9 @@ impl Importer<'_> {
 
 impl Comparer<'_> {
     /// Playback's state, the ruleset and UCF's pad buffer, as [`Importer::playback`] imports
-    /// them. The frame index and the response only compare while playback has made its
-    /// buffers, and the response only once a frame was counted and read: before it the buffer
-    /// holds the game info's response, which nothing reads and the first read writes over
-    /// whole (docs/engine.md, "Uninitialized values").
+    /// them. The frame index and the response compare while playback has made its buffers:
+    /// before the first frame's read the buffer holds the game info's response, which ours
+    /// models (`Frame::response`; docs/engine.md, "Uninitialized values").
     pub fn playback(&mut self) {
         let (patched, p) = playback(self.mem);
         let (rules, ucf) = rules(self.mem);
@@ -154,7 +153,7 @@ impl Comparer<'_> {
                 };
                 self.check("playback", "sound log", ours, t.sounds);
                 self.check("playback", "match scene", o.match_scene, t.match_scene);
-                if t.frame_index >= melee_sim::game::playback::FIRST_FRAME && o.frame != t.frame {
+                if o.frame != t.frame {
                     let at = (0..FRAME_LEN)
                         .find(|&i| o.frame.bytes[i] != t.frame.bytes[i])
                         .unwrap();

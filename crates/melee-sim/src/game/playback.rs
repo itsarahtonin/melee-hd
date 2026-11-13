@@ -165,6 +165,17 @@ impl Default for Frame {
     }
 }
 
+impl Frame {
+    /// The first buffer before the first frame's read: the game info response read into it
+    /// (`response`, the device's whole answer), as far as a frame's bytes go.
+    pub fn response(response: &[u8]) -> Frame {
+        let mut f = Frame::default();
+        let n = response.len().min(FRAME_LEN);
+        f.bytes[..n].copy_from_slice(&response[..n]);
+        f
+    }
+}
+
 /// Where a replay's match gets what the Slippi EXI device would answer.
 pub trait Source {
     /// The response to a request for frame `index`: the frame, or [`Frame::terminate`] past

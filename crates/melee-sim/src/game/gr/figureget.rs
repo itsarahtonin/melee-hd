@@ -124,7 +124,7 @@ pub fn on_load(_r: &mut Running) {}
 /// The stage's start, `grFigureGet_OnStart`: the enemy spawner, with no table.
 #[doc(alias = "grFigureGet_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {
