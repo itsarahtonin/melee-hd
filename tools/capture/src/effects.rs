@@ -1120,7 +1120,7 @@ impl Comparer<'_> {
             // textures' pointer then names where the file was.
             let tex_gone = ps.banks[b as usize].and_then(|k| {
                 (self.data.try_addr(k.tex).is_none())
-                    .then(|| self.past.and_then(|p| p.gone_addr(k.tex)))
+                    .then(|| self.gone.and_then(|p| p.gone_addr(k.tex)))
                     .flatten()
             });
             let theirs = (tex != 0).then(|| {
@@ -1135,7 +1135,7 @@ impl Comparer<'_> {
                 let table = self
                     .data
                     .try_addr(k.table)
-                    .or_else(|| self.past.and_then(|p| p.gone_addr(k.table)))
+                    .or_else(|| self.gone.and_then(|p| p.gone_addr(k.table)))
                     .unwrap_or_else(|| panic!("particle bank {b}'s table isn't loaded"));
                 let (t, addr) = match tex_gone {
                     Some(a) => (None, a + 4),
