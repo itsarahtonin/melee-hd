@@ -1,14 +1,14 @@
 # What's left to port
 
-Every function the [port ledger](port-ledger.md) still counts as unaccounted, grouped by the mode that reaches it and by unit, with what reaches it and its size in the executable (bytes of code, from the decomp's asm listings). Generated on 2026-11-12 from `feat/m6-ledger-3` at `67c98a59` ([milestone 6](milestone-6.md), task 11's third round): 297 of 19,827 functions unaccounted, against 325 on main `5e8ed352` when the round's aliases began (383 on `802506b1`, where the round started; the routes round's and the platform rows' merges took the rest), 513 after the second round and 2,105 before the task (17,812 ported with a check, 937 replaced, 781 dead).
+Every function the [port ledger](port-ledger.md) still counts as unaccounted, grouped by the mode that reaches it and by unit, with what reaches it and its size in the executable (bytes of code, from the decomp's asm listings). Generated on 2026-11-13 from `feat/m6-ledger-4` at `643a03c5` ([milestone 6](milestone-6.md), task 11's fourth round): 184 of 19,827 functions unaccounted, against 260 on `100381ae` where the round began, 297 after the third round, 513 after the second and 2,105 before the task (17,914 ported with a check, 941 replaced, 788 dead).
 
 ## The short answer
 
-- **297 functions are left**, 50,596 bytes of code.
-- **86 need only a check's bookkeeping**: a session or replay diff that compares clean already reaches them. 82 run inline in another port with no item of their own to carry the alias, are another agent's rows this round (the routes round's recordings left, Ness's down smash, which the Item Switch round's session reaches, and the replay round's targets), or are held for a session where they change something (Kirby's item visibility, Jigglypuff's hat freed as she leaves); 4 are presentation (melee-render's), which a frames check with a mutation checks: `it_80277F90` and `__GXDefaultTexRegionCallback`, whose mutations fail no frame of the standard set (`feat/m6-frames`), and `HSD_PObjClearMtxMark` (reached by `sel1p-target`) and `SetupSharedVtxModelMtx` (by the third round's `ck10-ev48`), which no frames check has tried yet.
-- **94 need a recording**: melee-hd has the code (81 held by a `// Ports` comment, a doc, a dispatch arm or an audit's `UNCHECKED`; 13 named in a comment, perhaps inline), but no recorded session or replay reaches them: mostly VS states, fighter commands and item callbacks no recorded match enters.
-- **26 need a port or a proof**: 3 an audit names with the path that reaches them (most say no mode's match does), 23 nothing in melee-hd names (states no code enters, the Test stage, HSD's depth-sorted lists, which Melee never fills).
-- **91 are debug only** (`ledger/deferred.txt`): code only a raised debug level or the debug menu reaches.
+- **184 functions are left**, 37,264 bytes of code.
+- **8 need only a check's bookkeeping**: a session or replay diff that compares clean already reaches them. 3 are held for a session where they change something (Kirby's item visibility, Jigglypuff's hat freed as she leaves); 5 are presentation (melee-render's), whose run-time mutations fail no frame tried: an item's light overlay and its owner's color overlay, a horizontal billboard, the texture cache's region, and the matrix marks' clear, which clears marks nothing stores.
+- **71 need a recording**: melee-hd has the code (61 held by a `// Ports` comment, a doc, a dispatch arm or an audit's `UNCHECKED`; 10 named in a comment, perhaps inline), but no recorded session or replay reaches them: mostly VS states, fighter commands and item callbacks no recorded match enters.
+- **2 need a port or a proof**: 0 an audit names with the path that reaches them, 2 nothing in melee-hd names: two draw-only functions the routes round left for a frames check (`lb_8000CE40`, Kirby losing a hat whose parts went on a bone with no model of its own; `fn_802FF360`, the score popup's empty text callback).
+- **103 are debug only** (`ledger/deferred.txt`): code only a raised debug level or the debug menu reaches.
 - **No mode is known to reach an unported function outside the debug menu.** Every mode's gate is open; the audits (`menus_audit`, `single_player_audit`, the fighter, items, CPU and stage audits) fail on anything their modes reach unported, and every session and replay diff below that compares clean reached nothing unported (the third round's 359 more sessions, each clean to its trace's end, reached none outside the debug menu's rows). The exceptions are the debug menu's: its Versus page's `CpTp_Nana` on a fighter other than Nana reaches Nana's decision without Popo (`ftCo_800AEFB8`, unported, `ledger/deferred.txt`), and the other debug-only rows. The "nothing known" rows of VS units aren't held by an audit, so no test proves a VS match can't reach them; no recorded one does.
 
 An unaccounted row is one of these, which the columns count:
@@ -27,18 +27,19 @@ The second round (2026-11-11) ran ssbm-rs's `CALLS` with every row then unaccoun
 
 The third round (2026-11-12, `feat/m6-ledger-3`) ran ssbm-rs's `CALLS` with every row still unaccounted (but the second round's reached ones) over the 359 sessions no round had swept, each bounded by its trace's end: the rest of verify-par.sh's milestone-6 list (`m6-stages-1p` cut at field 36,100, just before the field where the original halts; the replay round's `rr-*` sessions with their runner hooks; the guard, unlock, event, Adventure and routes sessions added since) and milestone 5's menu, card, data, trophy, special, results, tie, exit, unlock, Tournament, select, vanilla and debug sessions (the card pulls, slot B, stamp, boot-B, clock and no-card sessions left out: ssbm-rs's runner would need their options). No run hung. They reached 51 functions unaccounted on main `5e8ed352`; 28 melee-sim ports got their aliases with `ledger/checks.txt` lines naming the session and the field of its first call (the barrel cannon's rider states and launch from Event 26, Jigglypuff's full-charge Rollout states from `dp-rollout`, Ness's yo-yo damage and item visibility, Great Bay's sea test, the debug pause's Z, the results' back sound, the grab's high flinch switch, How to Play's frame, the title's exit from the attract loop, Tournament's handicap, Pikachu's ear models, Pichu's item pickup, Kirby's Yoshi-tongue release), the barrel's countdown and Ness's item visibility each with a mutation the session caught. The rest are inline, other agents' rows, held for a session where they change something, presentation, or debug only (`ledger/deferred.txt`'s Hanyu select, debug menu, item and shadow rows, which the debug sessions reach and which stay deferred).
 
+The fourth round (2026-11-13, `feat/m6-ledger-4`) settled the rows the three sweeps had found reached but left, and the rows that needed a port or a proof. Aliased with `ledger/checks.txt` lines: 56 melee-sim ports inline in another item (the command interpreter's own commands, the catch-up's skips, a color overlay's owner commands, the common attacks' kind switches and entries, the common and Ness's up special's empty IASAs, getters, the material classes' registrations, HSD's animation walks, the depth-sorted lists' display and clear, the scene machine's hooks, Peach's Castle's moat reading the previous position), each carried by the item that runs it, three of them broken on purpose to see their checks fail; 8 melee-render ports with a frames check and a run-time mutation each (the screen camera, the envelope matrices' slots, the particles' TEV cache, two kinds of billboard, the shared-vertex and flat fighters' rigid matrices, the magnifier bubble's background); and Event 51's three-stock note in the save, checked by review (Sarah, 2026-11-10). Dead: refraction's three texel readers (no code calls a read callback), the depth-sorted lists' sort (`zsort_sorting` is never set), the top- and bottom-half cameras (no render pass is ever 1 or 2) and the THP decoder's APP1 to APP15 skip (`tools/disc-scan/thp_markers.py`: no frame of the disc's 103 movies and pictures holds one). Replaced, with Sarah's reset and disc error decision: the disc error screen's check and frame callback and the sound stop of the reset and disc error paths. Debug only: the Test stage's other twelve callbacks. Seven rows the generator had as nothing known turned out ported and held (a skip of the catch-up, the ceiling tech's empty IASA, a 1P spike bonus, Kirby swallowing a Kirby, Classic's third opponent in the intro, a flat fighter's shared-vertex matrices) and wait for a recording.
+
 ## Summary
 
 | Mode | Functions | Bytes | Ported, no check yet | Reached by a clean check, alias held | Reached, presentation: wants a frames check | An audit says what reaches it | Named in melee-hd, no check yet | Nothing known reaches it | Debug only |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| [VS and the menus](#vs-and-the-menus) | 160 | 15,472 | 76 | 66 | 1 | 2 | 5 | 10 | 0 |
-| [Libraries](#libraries) | 30 | 11,276 | 3 | 15 | 3 | 0 | 5 | 4 | 0 |
-| [Classic](#classic) | 1 | 36 | 0 | 0 | 0 | 1 | 0 | 0 | 0 |
-| [1P shared](#1p-shared) | 2 | 152 | 1 | 1 | 0 | 0 | 0 | 0 | 0 |
+| [VS and the menus](#vs-and-the-menus) | 67 | 8,140 | 55 | 3 | 2 | 0 | 5 | 2 | 0 |
+| [Libraries](#libraries) | 11 | 5,284 | 3 | 0 | 3 | 0 | 5 | 0 | 0 |
+| [Classic](#classic) | 1 | 36 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
+| [1P shared](#1p-shared) | 1 | 144 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
 | [1P endings](#1p-endings) | 1 | 268 | 1 | 0 | 0 | 0 | 0 | 0 | 0 |
-| [Debug stages](#debug-stages) | 12 | 1,464 | 0 | 0 | 0 | 0 | 3 | 9 | 0 |
-| [Debug only](#debug-only) | 91 | 21,928 | 0 | 0 | 0 | 0 | 0 | 0 | 91 |
-| **All** | **297** | **50,596** | **81** | **82** | **4** | **3** | **13** | **23** | **91** |
+| [Debug only](#debug-only) | 103 | 23,392 | 0 | 0 | 0 | 0 | 0 | 0 | 103 |
+| **All** | **184** | **37,264** | **61** | **3** | **5** | **0** | **10** | **2** | **103** |
 
 ## VS and the menus
 
@@ -48,57 +49,37 @@ Reached from the open modes; nothing listed stops a match the checks run (above)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/lb/lbcommand` | 5 | 312 | reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `Command_01`, `Command_02`, `Command_05`; reached by items-pokeball1-fd, rec-mh-mash: ported inline, no item of its own to carry the alias: `Command_03`, `Command_08` |
-| `melee/lb/lb_00B0` | 2 | 180 | named in `melee-render/src/hsd/material.rs` (perhaps ported inline); no check reaches it yet: `lbGetFreeAlphaRegImpl`; another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `lb_8000CE40` |
-| `melee/lb/lb_0192` | 2 | 812 | reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `lb_80019230`, `lb_800192A8` |
-| `melee/lb/lb_0195` | 1 | 116 | nothing known reaches it: `lb_8001955C` |
-| `melee/lb/lbrefract` | 3 | 420 | nothing known reaches it: `fn_80021FF8`, `fn_8002206C`, `lbRefract_ReadTexCoordRGBA8` |
-| `melee/lb/lbaudio_ax` | 2 | 552 | ported in `melee-sim/src/lb/sound_obj.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800251EC`; the console's reset button and the disc error screen, which the player's platform never raises (milestone 5's task 14) (`menus.txt`): `lbAudioAx_80027DBC` |
+| `melee/lb/lb_00B0` | 2 | 180 | named in `melee-render/src/hsd/material.rs` (perhaps ported inline); no check reaches it yet: `lbGetFreeAlphaRegImpl`; nothing known reaches it: `lb_8000CE40` |
+| `melee/lb/lbaudio_ax` | 1 | 492 | ported in `melee-sim/src/lb/sound_obj.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800251EC` |
 
 ### The player library (`pl*`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/pl/player` | 2 | 292 | reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `Player_80036978`; reached by rec-classic-clear: ported inline, no item of its own to carry the alias: `Player_80036EA0` |
-| `melee/pl/plbonus` | 1 | 124 | nothing known reaches it: `pl_80038898` |
-| `melee/pl/plbonuslib` | 3 | 116 | named in `pl/trick.rs` (perhaps ported inline); no check reaches it yet: `pl_8003FE40`; reached by rt-train: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `pl_8004065C`; reached by rec-classic-clear: ported inline, no item of its own to carry the alias: `pl_800408DC` |
+| `melee/pl/plbonus` | 1 | 124 | ported in `pl/death.rs` (held by a `// Ports` comment: the spike's one less in a 1P stage's bonuses); no check reaches it yet: `pl_80038898` |
+| `melee/pl/plbonuslib` | 1 | 36 | named in `pl/trick.rs` (perhaps ported inline); no check reaches it yet: `pl_8003FE40` |
 
 ### Fighters: the shared libraries (`ftaction`, `ftlib`, `ftcommon`, `ftcoll`, `ftcolanim`, `ft_*`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/ft/ftaction` | 5 | 128 | nothing known reaches it: `ftAction_8007168C`, `ftAction_80072C5C`; reached by oracle-cpu-pichu-ys: ported inline, no item of its own to carry the alias: `ftAction_80071810`; reached by items-shoot-fd, oracle-cpu-ness-fd: ported inline, no item of its own to carry the alias: `ftAction_80071F0C`; reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `ftAction_80072E24` |
-| `melee/ft/ftparts` | 1 | 752 | nothing known reaches it: `ftPartsSetupSharedVtxMtx` |
-| `melee/ft/ftcommon` | 2 | 100 | ported in `ft/phys.rs` (held by a `// Ports` comment); no check reaches it yet: `ftCommon_ClampFallSpeed`; another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftCommon_8007F7B4` |
-| `melee/ft/ftlib` | 3 | 132 | reached by rec-classic-clear: ported inline, no item of its own to carry the alias: `ftLib_GetHipJObj`; reached by rec-2026-10-06_16-58-24, tou-bracket64: ported inline, no item of its own to carry the alias: `ftLib_GetPrevPos`; reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `ftLib_GetCameraSubjectBonePos` |
-| `melee/ft/ftmaterial` | 1 | 88 | reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `ftMaterial_800BF260` |
-| `melee/ft/ftcolanim` | 4 | 128 | reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `ftCo_800BFE74`, `ftCo_800BFEB4`; reached by items-pokeball5-bf, items-shoot-fd: ported inline, no item of its own to carry the alias: `ftCo_800BFE94`; reached by rec-2026-10-06_12-04-48: ported inline, no item of its own to carry the alias: `ftCo_800BFEF4` |
-| `melee/ft/ftdevice` | 1 | 32 | reached by rec-allstar-clear: ported inline, no item of its own to carry the alias: `ftCo_800C0674` |
-| `melee/ft/ftCo_800C7CA0` | 1 | 4 | reached by tou-bracket64, rec-allstar-clear: ported inline, no item of its own to carry the alias: `ftCo_DownReflect_IASA` |
+| `melee/ft/ftaction` | 2 | 32 | ported in `ft/commands.rs` (the catch-up's `skip_8007168c`, dispatched by index); no check reaches it yet: `ftAction_8007168C`; ported in `ft/commands.rs` (the catch-up's `skip_80072c5c`, dispatched by index); no check reaches it yet: `ftAction_80072C5C` |
+| `melee/ft/ftparts` | 1 | 752 | ported in `melee-render/src/hsd/draw.rs` (held by a `// Ports` comment: no frame checked draws a flat fighter's shared-vertex shape); no check reaches it yet: `ftPartsSetupSharedVtxMtx` |
+| `melee/ft/ftcommon` | 2 | 100 | ported in `ft/phys.rs` (held by a `// Ports` comment); no check reaches it yet: `ftCommon_ClampFallSpeed`, `ftCommon_8007F7B4` |
+| `melee/ft/ftdevice` | 1 | 32 | reached by rec-allstar-clear; presentation (`melee-render/src/hsd/material.rs`, an item in its owner's color overlay), held by a `// Ports` comment: its mutation fails none of the 16 frames tried: `ftCo_800C0674` |
 
 ### Fighters: the common states (`ftCo_*`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/ft/kinds/ftCommon/ftCo_AttackDash` | 2 | 176 | reached by items-pokeball1-fd, rec-classic-clear: ported inline, no item of its own to carry the alias: `decideFighter`, `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackHi3` | 1 | 96 | reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackLw3` | 2 | 200 | reached by items-pokeball1-fd, rec-classic-clear: ported inline, no item of its own to carry the alias: `decideFighter`, `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackS4` | 2 | 472 | reached by items-pokeball1-fd, rec-allstar-clear: ported inline, no item of its own to carry the alias: `decideFighter`, `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackHi4` | 1 | 96 | reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackLw4` | 1 | 96 | reached by items-pokeball2-bf, items-pokeball3-ps: ported inline, no item of its own to carry the alias: `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_AttackAir` | 1 | 92 | reached by items-pokeball1-fd, rec-classic-clear: ported inline, no item of its own to carry the alias: `decideFighter` |
 | `melee/ft/kinds/ftCommon/ftCo_Damage` | 3 | 400 | named in `ft/donkey/heavy.rs` (perhaps ported inline); no check reaches it yet: `ftCo_ScaleBy154`, `ftCo_8008D8E8`; named in `ft/resolve.rs` (perhaps ported inline); no check reaches it yet: `ftCo_8008EB58` |
-| `melee/ft/kinds/ftCommon/ftCo_SpecialS` | 1 | 128 | reached by items-pokeball1-fd, rec-classic-clear: ported inline, no item of its own to carry the alias: `doEnter` |
-| `melee/ft/kinds/ftCommon/ftCo_ThrownKirby` | 1 | 36 | nothing known reaches it: `ftCo_800BDA50` |
-| `melee/ft/kinds/ftCommon/ftCo_PassiveCeil` | 1 | 4 | nothing known reaches it: `ftCo_PassiveCeil_IASA` |
-| `melee/ft/kinds/ftCommon/ftCo_DamageSong` | 3 | 12 | reached by items-pokeball1-fd, rec-allstar-clear: ported inline, no item of its own to carry the alias: `ftCo_DamageSong_IASA`, `ftCo_DamageSongWait_IASA`, `ftCo_DamageSongRv_IASA` |
-| `melee/ft/kinds/ftCommon/ftCo_AirCatch` | 4 | 248 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftCo_800C3CC0`, `ftCo_AirCatchHit_Anim`, `ftCo_AirCatchHit_IASA`, `ftCo_AirCatchHit_Phys` |
-| `melee/ft/kinds/ftCommon/ftCo_CatchPull` | 1 | 80 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `fn_800DA004` |
-| `melee/ft/kinds/ftCommon/ftCo_CatchWait` | 1 | 80 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `fn_800DA440` |
-| `melee/ft/kinds/ftCommon/ftCo_CatchAttack` | 1 | 80 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `fn_800DA618` |
+| `melee/ft/kinds/ftCommon/ftCo_ThrownKirby` | 1 | 36 | ported in `ft/co/capture_kirby.rs` (held by a `// Ports` comment: Kirby swallowing a Kirby with a copy); no check reaches it yet: `ftCo_800BDA50` |
+| `melee/ft/kinds/ftCommon/ftCo_PassiveCeil` | 1 | 4 | ported in `ft/co/dispatch.rs` (an empty arm, dispatched by address); no check reaches it yet: `ftCo_PassiveCeil_IASA` |
+| `melee/ft/kinds/ftCommon/ftCo_CatchPull` | 1 | 80 | ported in `ft/co/grab.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DA004` |
+| `melee/ft/kinds/ftCommon/ftCo_CatchWait` | 1 | 80 | ported in `ft/co/grab.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DA440` |
+| `melee/ft/kinds/ftCommon/ftCo_CatchAttack` | 1 | 80 | ported in `ft/co/grab.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DA618` |
 | `melee/ft/kinds/ftCommon/ftCo_0DC2` | 2 | 132 | ported in `ft/co/grab.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DC384`, `fn_800DC404` |
-| `melee/ft/kinds/ftCommon/ftCo_Throw` | 2 | 248 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `fn_800DD5EC`; ported in `ft/co/throw.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DD684` |
-| `melee/ft/kinds/ftCommon/ftCo_Thrown` | 1 | 84 | reached by ev30: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftCo_800DE920` |
+| `melee/ft/kinds/ftCommon/ftCo_Throw` | 2 | 248 | ported in `ft/co/throw.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_800DD5EC`, `fn_800DD684` |
 
 ### Fighters: the characters' own states
 
@@ -107,21 +88,15 @@ Reached from the open modes; nothing listed stops a match the checks run (above)
 | `melee/ft/kinds/ftMario/ftmario` | 1 | 72 | ported in `ft/mario/init.rs` (dispatched by address); no check reaches it yet: `ftMr_Init_OnItemVisible` |
 | `melee/ft/kinds/ftCaptain/ftcaptain` | 2 | 144 | ported in `ft/captain/init.rs` (held by a `// Ports` comment); no check reaches it yet: `ftCa_Init_OnItemInvisible`; ported in `ft/captain/init.rs` (dispatched by address); no check reaches it yet: `ftCa_Init_OnItemVisible` |
 | `melee/ft/kinds/ftKirby/ftkirby` | 2 | 144 | reached by rr-mode07: ported (`ft/kirby/init.rs`), held: they change nothing there (no part animation on Kirby's item hand), so no session can fail on them yet: `ftKb_Init_OnItemInvisible`, `ftKb_Init_OnItemVisible` |
-| `melee/ft/kinds/ftKirby/ftkirbyspecialn` | 1 | 32 | reached by rec-2026-10-10_12-54-40: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftKb_EatWalk_Anim` |
 | `melee/ft/kinds/ftDonkey/ftdonkey` | 2 | 144 | ported in `ft/donkey/init.rs` (held by a `// Ports` comment); no check reaches it yet: `ftDk_Init_OnItemInvisible`, `ftDk_Init_OnItemVisible` |
-| `melee/ft/kinds/ftDonkey/ftdonkeyspecials` | 1 | 136 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `doGroundTransition` |
-| `melee/ft/kinds/ftNess/ftnessattacklw4` | 6 | 380 | reached by rec-2026-10-10_13-05-00: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftNs_AttackLw4Charge_IASA`, `ftNs_AttackLw4Charge_Phys`, `ftNs_AttackLw4Charge_Coll`, `ftNs_AttackLw4Release_Anim`, `ftNs_AttackLw4Release_IASA`, `ftNs_AttackLw4Release_Coll` |
-| `melee/ft/kinds/ftNess/ftnessspecialhi` | 5 | 20 | reached by oracle-cpu-ness-fd, oracle-cpu-yoshi-bf: ported inline, no item of its own to carry the alias: `ftNs_SpecialHiHold_IASA`, `ftNs_SpecialHiEnd_IASA`; reached by items-shoot-fd, oracle-cpu-ness-fd: ported inline, no item of its own to carry the alias: `ftNs_SpecialAirHiStart_IASA`, `ftNs_SpecialAirHiHold_IASA`, `ftNs_SpecialAirHiEnd_IASA` |
-| `melee/ft/kinds/ftNess/ftnessspeciallw` | 11 | 1,020 | ported in `ft/ness/special_lw.rs` (dispatched by address); no check reaches it yet: `ftNs_SpecialLwTurn_Anim`, `ftNs_SpecialAirLwTurn_Coll`, `ftNs_SpecialAirLwHit_IASA`, `ftNs_SpecialAirLwHit_Phys`, `ftNs_SpecialAirLwHit_Coll`; another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftNs_SpecialAirLwTurn_Anim`, `ftNs_SpecialLwTurn_IASA`, `ftNs_SpecialAirLwTurn_IASA`, `ftNs_SpecialLwTurn_Phys`, `ftNs_SpecialAirLwTurn_Phys`, `ftNs_SpecialLwTurn_Coll` |
+| `melee/ft/kinds/ftNess/ftnessspeciallw` | 11 | 1,020 | ported in `ft/ness/special_lw.rs` (dispatched by address); no check reaches it yet: `ftNs_SpecialLwTurn_Anim`, `ftNs_SpecialAirLwTurn_Anim`, `ftNs_SpecialLwTurn_IASA`, `ftNs_SpecialAirLwTurn_IASA`, `ftNs_SpecialLwTurn_Phys`, `ftNs_SpecialAirLwTurn_Phys`, `ftNs_SpecialLwTurn_Coll`, `ftNs_SpecialAirLwTurn_Coll`, `ftNs_SpecialAirLwHit_IASA`, `ftNs_SpecialAirLwHit_Phys`, `ftNs_SpecialAirLwHit_Coll` |
 | `melee/ft/kinds/ftPopo/ftpopo` | 1 | 72 | ported in `ft/popo/init.rs` (held by a `// Ports` comment); no check reaches it yet: `ftPp_Init_OnItemVisible` |
-| `melee/ft/kinds/ftPopo/ftpopospecialhi` | 5 | 480 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftPp_SpecialHi_801217EC`, `ftPp_SpecialHi_80121CE0`, `ftPp_SpecialHi_80121FD8`, `ftPp_SpecialHi_801222E8`; ported in `ft/popo/special_hi.rs` (held by a `// Ports` comment); no check reaches it yet: `ftPp_SpecialHi_80122038` |
-| `melee/ft/kinds/ftNana/ftnanaspecialhi` | 1 | 108 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftNn_Init_80123720` |
+| `melee/ft/kinds/ftPopo/ftpopospecialhi` | 5 | 480 | ported in `ft/popo/special_hi.rs` (held by a `// Ports` comment); no check reaches it yet: `ftPp_SpecialHi_801217EC`, `ftPp_SpecialHi_80121CE0`, `ftPp_SpecialHi_80121FD8`, `ftPp_SpecialHi_80122038`, `ftPp_SpecialHi_801222E8` |
+| `melee/ft/kinds/ftNana/ftnanaspecialhi` | 1 | 108 | ported in `ft/popo/nana_special_hi.rs` (held by a `// Ports` comment); no check reaches it yet: `ftNn_Init_80123720` |
 | `melee/ft/kinds/ftSamus/ftsamus` | 2 | 144 | ported in `ft/samus/init.rs` (held by a `// Ports` comment); no check reaches it yet: `ftSs_Init_OnItemInvisible`, `ftSs_Init_OnItemVisible` |
-| `melee/ft/kinds/ftYoshi/ftyoshispecialn` | 4 | 144 | ported in `ft/yoshi/special_n.rs` (dispatched by address); no check reaches it yet: `ftYs_SpecialAirN1_1_Phys`, `ftYs_SpecialAirN2_0_Phys`, `ftYs_SpecialAirN1_1_Coll`, `ftYs_SpecialAirN2_0_Coll` |
-| `melee/ft/kinds/ftKoopa/ftkoopa` | 2 | 144 | ported in `ft/koopa/init.rs` (held by a `// Ports` comment); no check reaches it yet: `ftKp_Init_OnItemInvisible`, `ftKp_Init_OnItemVisible` |
-| `melee/ft/kinds/ftZelda/ftzeldaspecialhi` | 2 | 64 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftZd_SpecialHiStart_0_Phys`; ported in `ft/seak/special_n.rs` (dispatched by address); no check reaches it yet: `ftZd_SpecialHi_Phys` |
+| `melee/ft/kinds/ftZelda/ftzeldaspecialhi` | 1 | 32 | ported in `ft/seak/special_n.rs` (dispatched by address); no check reaches it yet: `ftZd_SpecialHi_Phys` |
 | `melee/ft/kinds/ftPurin/ftpurin` | 1 | 92 | reached by rt-train: ported (`ft/unload.rs`), held for a Jigglypuff in a hat leaving, which its hold names: `ftPr_Init_8013C494` |
-| `melee/ft/kinds/ftPurin/ftpurinspecialn` | 1 | 4 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `ftPr_SpecialAirNStartTurn_IASA` |
+| `melee/ft/kinds/ftPurin/ftpurinspecialn` | 1 | 4 | ported in `ft/purin/special_n.rs` (dispatched by address); no check reaches it yet: `ftPr_SpecialAirNStartTurn_IASA` |
 | `melee/ft/kinds/ftDrMario/ftdrmario` | 1 | 72 | ported in `ft/drmario/mod.rs` (dispatched by address); no check reaches it yet: `ftDr_Init_OnItemInvisible` |
 | `melee/ft/kinds/ftPichu/ftpichu` | 1 | 84 | ported in `ft/pichu/mod.rs` (dispatched by address); no check reaches it yet: `ftPc_Init_OnItemDrop` |
 
@@ -129,40 +104,27 @@ Reached from the open modes; nothing listed stops a match the checks run (above)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/gm/gmmain_lib` | 4 | 112 | reached by rec-2026-10-06_16-58-24: ported inline, no item of its own to carry the alias: `gmMainLib_8015CEB4`; a getter or setter of the game's data, which its callers' ports read or write inline (`menus.txt`): `gmMainLib_8015CF84`; reached by rt-attract: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `gmMainLib_8015DB0C`; reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `gmMainLib_GetUnlockedCharactersBitmaskPtr` |
 | `melee/gm/gmtou_1` | 2 | 1,760 | ported in `gm/tournament/bracket.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_801967E0`, `fn_80197FD8` |
-| `melee/gm/gmvsmelee` | 1 | 4 | reached by rr-mode27 (`gm/machine.rs`): ported inline, no item of its own to carry the alias: `gm_Mode_Vs_OnUnload` |
-| `melee/gm/gmomake15` | 2 | 500 | reached by rt-attract: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `gm_Scene_Omake15_OnEnter`; reached by rt-attract: ported (`gm/howto.rs`), held with the Special Movie's enter and exit, the routes round's rows (its handoff): `gm_Scene_Omake15_OnFrame` |
-| `melee/gm/gmtitlemode` | 1 | 256 | reached by rec-2026-10-06_16-58-24, res-stock (`gm/menu.rs`): ported inline, no item of its own to carry the alias: `onExit` |
-| `melee/gm/gmdebugmode` | 1 | 36 | reached by dbg-kim-prize (`gm/challenger.rs`): ported inline, no item of its own to carry the alias: `onExitPrize` |
-| `melee/gm/gmopeningmode` | 1 | 32 | reached by rt-attract: another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `onExitOmake15` |
-
-### Stages: the shared stage code and VS stages' leftovers
-
-| Unit | Functions | Bytes | What reaches them |
-| --- | ---: | ---: | --- |
-| `melee/gr/granime` | 1 | 284 | reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `grAnime_801C6F50` |
-| `melee/gr/grmaterial` | 1 | 132 | reached by items-pokeball1-fd, rec-mh-mash: ported inline, no item of its own to carry the alias: `grMaterial_801C8E74` |
 
 ### Items: the item engine (`it_26B1`, `it_2725`, `itanimlist`, `item`, `itcoll`, `itmaterial`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/it/itmaterial` | 2 | 508 | reached by items-pokeball1-fd, sel1p-target: ported inline, no item of its own to carry the alias: `it_80277D08`; reached by items-pokeball1-fd, sel1p-target; presentation (`melee-render/src/hsd/material.rs`), which a frames check with a mutation checks, not a session: `it_80277F90` |
+| `melee/it/itmaterial` | 1 | 376 | reached by items-pokeball1-fd, sel1p-target; presentation (`melee-render/src/hsd/material.rs`, an item's light overlay): its mutation fails no frame of the standard set (`feat/m6-frames`): `it_80277F90` |
 
 ### Items: the kinds' callbacks
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
 | `melee/it/kinds/ittarucann` | 1 | 88 | ported in `it/kinds/tarucann.rs` (held by a `// Ports` comment); no check reaches it yet: `it_3F14_Logic5_Dropped` |
-| `melee/it/kinds/itfoxblaster` | 3 | 340 | ported in `it/kinds/foxblaster.rs` (dispatched by address); no check reaches it yet: `itFoxblaster_UnkMotion9_Anim`, `itFoxblaster_UnkMotion9_Coll`; another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `itFoxblaster_UnkMotion9_Phys` |
-| `melee/it/kinds/itlucky` | 17 | 868 | ported in `it/kinds/lucky.rs` (held by a `// Ports` comment); no check reaches it yet: `it_802D5710`, `itLucky_Logic44_Spawned`, `it_802D582C`, `it_802D5884`, `it_802D58BC`, `it_802D58C0`, `it_802D58EC`, `itLucky_UnkMotion3_Anim`, `itLucky_UnkMotion3_Phys`, `itLucky_UnkMotion3_Coll`, `itLucky_Logic44_PickedUp`, `itLucky_UnkMotion2_Anim`, `itLucky_UnkMotion2_Phys`, `itLucky_Logic44_EnteredAir`, `it_802D5A2C`, `it_802D5A64`, `it_802D5A68` |
+| `melee/it/kinds/itfoxblaster` | 3 | 340 | ported in `it/kinds/foxblaster.rs` (dispatched by address); no check reaches it yet: `itFoxblaster_UnkMotion9_Anim`, `itFoxblaster_UnkMotion9_Phys`, `itFoxblaster_UnkMotion9_Coll` |
+| `melee/it/kinds/itlucky` | 4 | 152 | ported in `it/kinds/lucky.rs` (held by a `// Ports` comment); no check reaches it yet: `itLucky_Logic44_EnteredAir`, `it_802D5A2C`, `it_802D5A64`, `it_802D5A68` |
 
 ### The HUD (`if*`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/if/if_2FF2` | 1 | 4 | another agent's row this round (the routes' recordings left, Ness's down smash for the Item Switch round, the replay round's targets): `fn_802FF360` |
+| `melee/if/if_2FF2` | 1 | 4 | nothing known reaches it: `fn_802FF360` |
 
 ## Libraries
 
@@ -173,26 +135,19 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
 | `MSL/printf` | 1 | 736 | named in `melee-sim/src/msl.rs` (perhaps ported inline); no check reaches it yet: `longlong2str` |
-| `dolphin/thp/THPDec` | 1 | 216 | nothing known reaches it: `THPDec_803302EC` |
-| `dolphin/gx/GXInit` | 1 | 124 | reached by sel1p-target; presentation (`melee-render/src/gx/init.rs`), which a frames check with a mutation checks, not a session: `__GXDefaultTexRegionCallback` |
+| `dolphin/gx/GXInit` | 1 | 124 | reached by sel1p-target; presentation (`melee-render/src/gx/init.rs`): its mutation fails no frame, since the checks don't compare where a texture sits in the cache (`feat/m6-frames`): `__GXDefaultTexRegionCallback` |
 | `dolphin/gx/GXPixel` | 1 | 456 | ported in `melee-render/src/gx/pixel.rs` (its doc names it); no check reaches it yet: `GXInitFogAdjTable` |
-| `dolphin/os/OSAlloc` | 1 | 16 | reached by sel1p-target: ported inline, no item of its own to carry the alias: `OSSetCurrentHeap` |
 
 ### HSD's library (`sysdolphin`)
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `sysdolphin/baselib/aobj` | 2 | 612 | reached by sel1p-target: ported inline, no item of its own to carry the alias: `callbackForeachFunc`, `DObjForeachAnim` |
-| `sysdolphin/baselib/cobj` | 3 | 1,916 | reached by sel1p-target: ported inline, no item of its own to carry the alias: `setupNormalCamera`; nothing known reaches it: `setupTopHalfCamera`, `setupBottomHalfCamera` |
-| `sysdolphin/baselib/pobj` | 5 | 3,188 | named in `melee-sim/src/hsd/pobj.rs` (perhaps ported inline); no check reaches it yet: `get_shape_nbt_xyz`; reached by sel1p-target; presentation (`melee-render/src/hsd/draw.rs`), which a frames check with a mutation checks, not a session: `HSD_PObjClearMtxMark`; reached by rec-allstar-clear: ported inline, no item of its own to carry the alias: `HSD_PObjGetMtxMark`; reached by ck10-ev48; presentation (`melee-render/src/hsd/draw.rs`), which a frames check with a mutation checks, not a session: `SetupSharedVtxModelMtx`; reached by sel1p-target: ported inline, no item of its own to carry the alias: `PObjSetupMtx` |
+| `sysdolphin/baselib/pobj` | 2 | 2,300 | named in `melee-sim/src/hsd/pobj.rs` (perhaps ported inline); no check reaches it yet: `get_shape_nbt_xyz`; reached by sel1p-target; presentation (`melee-render/src/hsd/draw.rs`): it clears matrix marks `HSD_PObjSetMtxMark` never stores, so no mutation of it can change a frame: `HSD_PObjClearMtxMark` |
 | `sysdolphin/baselib/jobj` | 1 | 68 | named in `melee-sim/src/hsd/jobj.rs` (perhaps ported inline); no check reaches it yet: `HSD_JObjAddDObj` |
-| `sysdolphin/baselib/displayfunc` | 6 | 2,660 | reached by rec-classic-clear: ported inline, no item of its own to carry the alias: `mkVBillBoardMtx`, `mkHBillBoardMtx`; reached by sel1p-target: ported inline, no item of its own to carry the alias: `mkBillBoardMtx`, `_HSD_ZListDisp`, `_HSD_ZListClear`; nothing known reaches it: `zlist_sort` |
-| `sysdolphin/baselib/initialize` | 1 | 12 | reached by sel1p-target: ported inline, no item of its own to carry the alias: `HSD_Init_803755A8` |
-| `sysdolphin/baselib/util` | 2 | 352 | reached by rec-allstar-clear: ported inline, no item of its own to carry the alias: `HSD_GetNbBits`; reached by sel1p-target: ported inline, no item of its own to carry the alias: `HSD_Index2PosNrmMtx` |
+| `sysdolphin/baselib/displayfunc` | 1 | 692 | reached by rec-classic-clear; presentation (`melee-render/src/hsd/draw.rs`, a horizontal billboard), held by a `// Ports` comment: its mutation fails none of the 27 frames tried: `mkHBillBoardMtx` |
 | `sysdolphin/baselib/robj` | 2 | 304 | named in `melee-sim/src/hsd/robj.rs` (perhaps ported inline); no check reaches it yet: `RObjUpdateFunc`; ported in `melee-sim/src/hsd/robj.rs` (its doc names it); no check reaches it yet: `expLoadDesc` |
 | `sysdolphin/baselib/texp` | 1 | 352 | ported in `melee-sim/src/hsd/texp/mod.rs` (its doc names it); no check reaches it yet: `AssignColorReg` |
 | `sysdolphin/baselib/psdisp` | 1 | 252 | named in `melee-render/src/hsd/psdisp.rs` (perhaps ported inline); no check reaches it yet: `getColorMatAmb` |
-| `sysdolphin/baselib/psdisptev` | 1 | 12 | reached by sel1p-target: ported inline, no item of its own to carry the alias: `psSetupTevInvalidState` |
 
 ## Classic
 
@@ -200,7 +155,7 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
-| `melee/gm/gm_1832` | 1 | 36 | the single-player modes', which only the 1P list's gated entries lead to (`menus.txt`): `fn_80184A94` |
+| `melee/gm/gm_1832` | 1 | 36 | ported in `gm/intro.rs` (held by a `// Ports` comment: Classic's intro with a third opponent); no check reaches it yet: `fn_80184A94` |
 
 ## 1P shared
 
@@ -209,7 +164,6 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
 | `melee/gm/gm_1601` | 1 | 144 | ported in `gm/tournament/bracket.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_801642A0` |
-| `melee/gm/gm_1A3F` | 1 | 8 | reached by rec-2026-10-06_16-58-24, res-stock: ported inline, no item of its own to carry the alias: `gm_GetGameModeStateExitData` |
 
 ## 1P endings
 
@@ -218,14 +172,6 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | Unit | Functions | Bytes | What reaches them |
 | --- | ---: | ---: | --- |
 | `melee/gm/gm_19EF` | 1 | 268 | ported in `gm/endings/game_over.rs` (held by a `// Ports` comment); no check reaches it yet: `fn_801A0B60` |
-
-## Debug stages
-
-### The Test stage (`grtest`)
-
-| Unit | Functions | Bytes | What reaches them |
-| --- | ---: | ---: | --- |
-| `melee/gr/grtest` | 12 | 1,464 | nothing known reaches it: `grTest_80206E30`, `grTest_UnkStage0_OnLoad`, `grTest_UnkStage0_OnStart`, `grTest_80207044`, `grTest_80207164`, `grTest_802071C4`, `stageGObj2_X8Callback`, `grTest_80207404`, `grTest_8020740C`; named in `gr/figure.rs` (perhaps ported inline); no check reaches it yet: `stageGObj0_OnInit`, `stageGObj2_OnInit`; named in `gr/greens.rs` (perhaps ported inline); no check reaches it yet: `stageGObj1_OnInit` |
 
 ## Debug only
 
@@ -238,7 +184,7 @@ Classified by reach in the second round: the `CALLS` sweep took in the SDK's and
 | `melee/ft/kinds/ftZelda/ftzelda` | 1 | 92 | debug only (`ledger/deferred.txt`): `ftZd_Init_801395C8` |
 | `melee/gm/gm_1601` | 1 | 176 | debug only (`ledger/deferred.txt`): `gm_80164A0C` |
 | `melee/gm/gmhanyucss` | 2 | 284 | debug only (`ledger/deferred.txt`): `gm_801BED3C`, `gm_801BEDA8` |
-| `melee/gr/grtest` | 9 | 56 | debug only (`ledger/deferred.txt`): `grTest_80206E2C`, `grTest_8020703C`, `grTest_8020715C`, `grTest_80207168`, `grTest_802071BC`, `grTest_802073AC`, `grTest_802073FC`, `grTest_80207408`, `grTest_80207414` |
+| `melee/gr/grtest` | 21 | 1,520 | debug only (`ledger/deferred.txt`): `grTest_80206E2C`, `grTest_80206E30`, `grTest_UnkStage0_OnLoad`, `grTest_UnkStage0_OnStart`, `grTest_8020703C`, `grTest_80207044`, `stageGObj0_OnInit`, `grTest_8020715C`, `grTest_80207164`, `grTest_80207168`, `stageGObj2_OnInit`, `grTest_802071BC`, `grTest_802071C4`, `grTest_802073AC`, `stageGObj2_X8Callback`, `stageGObj1_OnInit`, `grTest_802073FC`, `grTest_80207404`, `grTest_80207408`, `grTest_8020740C`, `grTest_80207414` |
 | `melee/db/dbitem` | 2 | 200 | debug only (`ledger/deferred.txt`): `db_DisableItemSpawns`, `fn_80225E6C` |
 | `melee/db/dbcamera` | 1 | 304 | debug only (`ledger/deferred.txt`): `fn_80227EB0` |
 | `melee/it/kinds/itmetamon` | 1 | 4 | debug only (`ledger/deferred.txt`): `it_802D306C` |
