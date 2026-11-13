@@ -388,6 +388,13 @@ pub enum Capture {
     /// ssbm-rs run without its renderer (`ref-GAME/`): its EFB copies leave memory as it
     /// was, so a copy made before the log starts isn't in the log's memory.
     Headless,
+    /// As [`Capture::Headless`], every BP register compared but those holding addresses or
+    /// triggers (`CHECK_ALL_BP`): with the texture cache's layout, where each texture loads
+    /// (`TX_SETIMAGE1` and `TX_SETIMAGE2`, which the default region callback
+    /// `__GXDefaultTexRegionCallback` picks in turn). Only for a session from power-on, whose
+    /// texture loads since `GXInit` are the original's: a replay's native side starts at its
+    /// match, so its round robin is at another turn.
+    HeadlessAllBp,
     /// ssbm-rs run with its renderer (`GX_RENDER=-`, `ref-GAME/rendered/`), whose copies
     /// write memory as the console's GPU does.
     Rendered,
@@ -411,7 +418,8 @@ pub fn compare(game: &Game, frame: u32, group: Group, expect: Expect) {
 /// [`compare`] against a log captured as `capture` says.
 pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture: Capture) {
     let mut dir = refs().join("player").join(format!("ref-{}", game.name));
-    if capture != Capture::Headless {
+    let headless = matches!(capture, Capture::Headless | Capture::HeadlessAllBp);
+    if !headless {
         dir = dir.join("rendered");
     }
     // The log's id, the frame it starts at and the log frames before the two compared.
@@ -429,7 +437,11 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
             p.display()
         );
     }
-    let id = format!("{}-f{frame:05}", game.name);
+    let id = if capture == Capture::HeadlessAllBp {
+        format!("{}-f{frame:05}-all-bp", game.name)
+    } else {
+        format!("{}-f{frame:05}", game.name)
+    };
     let native = start - game.replay.log_offset();
     let started = Instant::now();
     // The log's first frame is native frame N - 3 for a replay (asserted below), so a search of
@@ -440,17 +452,14 @@ pub fn compare_in(game: &Game, frame: u32, group: Group, expect: Expect, capture
     } else {
         "2"
     };
-    let out = command(game, &id)
+    let mut cmd = command(game, &id);
+    if capture == Capture::HeadlessAllBp {
+        cmd.env("CHECK_ALL_BP", "1");
+    }
+    let out = cmd
         .env("CHECK_SEARCH", search)
         // The rendered capture's copies wrote memory, so the native side's are written there too.
-        .env(
-            "CHECK_COPIES",
-            if capture == Capture::Headless {
-                ""
-            } else {
-                "memory"
-            },
-        )
+        .env("CHECK_COPIES", if headless { "" } else { "memory" })
         .env("CHECK_FROM", skip.to_string())
         .arg("compare")
         .arg(disc())

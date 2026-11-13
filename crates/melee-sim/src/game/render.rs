@@ -325,7 +325,8 @@ impl Running<'_> {
             .expect("HSD_SisLib_803A84BC: no current camera");
         crate::hsd::cobj::viewing_mtx_copy(&mut self.game.objs, self.data, c);
         match callback {
-            None | Some(super::hud::small::SCORE_TEXT_RENDER) => {}
+            None => {}
+            Some(super::hud::small::SCORE_TEXT_RENDER) => self.score_text_render(),
             Some(super::gm::results_scene::STATS_TEXT_RENDER) => self.results_stats_text_render(),
             Some(cb) => code::unported_call(&format!("the text render callback {cb:#010x}")),
         }

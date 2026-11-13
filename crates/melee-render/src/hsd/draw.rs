@@ -13,9 +13,9 @@ use melee_sim::hsd::pobj::{self, Binding, PObjId};
 use melee_sim::hsd::tobj::{self, ImageRef, TObjId};
 use melee_sim::mtx::Mtx34;
 
-use super::Hsd;
 use super::lobj::ChannelLights;
 use super::state::States;
+use super::{Hsd, MTX_ENVELOPE, MTX_RIGID, MtxMark};
 use crate::gx::enums::*;
 use crate::gx::{Color, Gx, TexObj, TlutObj};
 use crate::mem::{Dynamic, Space};
@@ -95,8 +95,7 @@ pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
 #[doc(alias = "HSD_JObjMakePositionMtx")]
 #[doc(alias = "mkBillBoardMtx")]
 #[doc(alias = "mkVBillBoardMtx")]
-// Ports `mkHBillBoardMtx`; aliased once a frames check draws a horizontal billboard (its
-// mutation fails none of the 27 frames tried).
+#[doc(alias = "mkHBillBoardMtx")]
 pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> Mtx34 {
     use melee_sim::vec::Vec3;
     let mut src = vmtx.concat(mtx);
@@ -670,7 +669,9 @@ impl Ctx<'_> {
             .then_some(self.hsd.ft_jobj_scale.mtx);
         match po.ty() {
             pobj::SKIN => match po.u {
-                Binding::Skin(Some(s)) => self.setup_shared_vtx_mtx(j, s, vmtx, pmtx, z.as_ref()),
+                Binding::Skin(Some(s)) => {
+                    self.setup_shared_vtx_mtx(j, s, vmtx, pmtx, rendermode, z.as_ref())
+                }
                 _ => self.setup_rigid_mtx(j, pmtx, rendermode, z.as_ref()),
             },
             pobj::SHAPEANIM => self.setup_rigid_mtx(j, pmtx, rendermode, z.as_ref()),
@@ -884,14 +885,17 @@ impl Ctx<'_> {
     #[doc(alias = "HSD_PObjGetMtxMark")]
     fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32, z: Option<&Mtx34>) {
         let mark = if z.is_some() && crate::mutation::on("HSD_PObjGetMtxMark") {
-            Some(j)
+            MtxMark {
+                obj: Some(j),
+                mark: MTX_RIGID,
+            }
         } else {
-            self.hsd.mtx_mark
+            self.hsd.mtx_mark[0]
         };
-        if mark == Some(j) {
+        if mark.obj == Some(j) && mark.mark == MTX_RIGID {
             return;
         }
-        self.set_mtx_mark(j);
+        self.set_mtx_mark(0, j);
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
         let (normal, proj) = self.setup_flags(j, rendermode);
@@ -906,22 +910,38 @@ impl Ctx<'_> {
         }
     }
 
-    /// `HSD_PObjSetMtxMark(0, jobj, HSD_MTX_RIGID)`: stores nothing, since the original's
+    /// `HSD_PObjSetMtxMark(idx, jobj, HSD_MTX_RIGID)`: stores nothing, since the original's
     /// test keeps slots 0 and 1 from being written.
     #[doc(alias = "HSD_PObjSetMtxMark")]
-    fn set_mtx_mark(&mut self, j: JObjId) {
+    fn set_mtx_mark(&mut self, idx: usize, j: JObjId) {
         if crate::mutation::on("HSD_PObjSetMtxMark") {
-            self.hsd.mtx_mark = Some(j);
+            self.hsd.mtx_mark[idx] = MtxMark {
+                obj: Some(j),
+                mark: MTX_RIGID,
+            };
         }
     }
 
-    /// `SetupSharedVtxModelMtx`. Both joints always set up (the matrix marks never match),
-    /// and their flags (`SETUP_JOINT0`, `SETUP_JOINT1`) share their values with
-    /// `SETUP_NORMAL` and `SETUP_REFLECTION`, so the setup always makes the normal matrices
-    /// and loads them as texture matrices, whatever `GetSetupFlags` adds. With the fighters'
-    /// depth scale `z`, `ftPartsSetupSharedVtxMtx`, whose marks never match either.
-    // Ports `ftPartsSetupSharedVtxMtx`; aliased once a check reaches it (no flat fighter's
-    // shape drawn in the Flat Zone frames is a shared-vertex one).
+    /// `HSD_PObjClearMtxMark(NULL, mark)`: both marks no joint's, with `mark`.
+    #[doc(alias = "HSD_PObjClearMtxMark")]
+    fn clear_mtx_mark(&mut self, mark: u32) {
+        let mark = if crate::mutation::on("HSD_PObjClearMtxMark") {
+            MTX_RIGID
+        } else {
+            mark
+        };
+        self.hsd.mtx_mark = [MtxMark { obj: None, mark }; 2];
+    }
+
+    /// `SetupSharedVtxModelMtx`: each joint whose mark doesn't match (neither the joint's
+    /// nor `HSD_MTX_RIGID`, which `HSD_PObjClearMtxMark` never leaves) adds its flag
+    /// (`SETUP_JOINT0`, `SETUP_JOINT1`), and none returns; those flags share their values
+    /// with `SETUP_NORMAL` and `SETUP_REFLECTION`, so with both, as always, the setup makes
+    /// the normal matrices and loads them as texture matrices too, whatever `GetSetupFlags`
+    /// adds. Both joints' position matrices load whatever the flags (the original's tests
+    /// are `flags | SETUP_JOINT0`). Only Dream Land's (`GrOp.dat`) shapes on the disc share
+    /// vertices (`melee-disc-scan pobjs`), no fighter's, so the fighters'
+    /// `ftPartsSetupSharedVtxMtx` (their depth scale `z`) is dead (`ledger/dead.txt`).
     #[doc(alias = "SetupSharedVtxModelMtx")]
     fn setup_shared_vtx_mtx(
         &mut self,
@@ -929,27 +949,46 @@ impl Ctx<'_> {
         s: JObjId,
         vmtx: &Mtx34,
         pmtx: &Mtx34,
+        rendermode: u32,
         z: Option<&Mtx34>,
     ) {
+        let [m0, m1] = self.hsd.mtx_mark;
+        let joint0 = m0.obj != Some(j) && m0.mark != MTX_RIGID;
+        let joint1 = m1.obj != Some(s) && m1.mark != MTX_RIGID;
+        if !joint0 && !joint1 {
+            return;
+        }
+        let (normal, proj) = self.setup_flags(j, rendermode);
+        // `SETUP_NORMAL` (= `SETUP_JOINT0`) and `SETUP_NORMAL_PROJECTION` (6, which
+        // `SETUP_JOINT1` = `SETUP_REFLECTION` meets).
+        let normal = normal || joint0;
+        let proj = proj || joint1;
         let lighting = self.objs().jobjs[j].flags & jobj::LIGHTING != 0;
-        self.set_mtx_mark(j);
         self.gx.set_current_mtx(GX_PNMTX0);
         self.gx.load_pos_mtx_imm(&mtx(pmtx), GX_PNMTX0);
-        let n0 = normal_mtx(pmtx, z);
-        if lighting {
-            self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
+        if normal {
+            let n0 = normal_mtx(pmtx, z);
+            if lighting {
+                self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
+            }
+            if proj {
+                self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
+            }
         }
-        self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
         let mut m = vmtx.concat(&self.jmtx(s));
         if crate::mutation::on("SetupSharedVtxModelMtx") {
             m.m[0][3] += 1.0;
         }
         self.gx.load_pos_mtx_imm(&mtx(&m), GX_PNMTX1);
-        let n1 = normal_mtx(&m, z);
-        if lighting {
-            self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
+        if normal {
+            let n1 = normal_mtx(&m, z);
+            if lighting {
+                self.gx.load_nrm_mtx_imm(&mtx(&n1), GX_PNMTX1);
+            }
+            if proj {
+                self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
+            }
         }
-        self.gx.load_tex_mtx_imm(&n1.m, GX_TEXMTX1, GX_MTX3X4);
     }
 
     /// `_HSD_mkEnvelopeModelNodeMtx`: for joint `j` under a skeleton, the matrix from its
@@ -995,6 +1034,7 @@ impl Ctx<'_> {
         z: Option<&Mtx34>,
     ) {
         let whole = if z.is_some() { 1.0 } else { 1.0 - FLT_EPSILON };
+        self.clear_mtx_mark(MTX_ENVELOPE);
         let (normal, proj) = self.setup_flags(j, rendermode);
         let objs = &self.game.objs;
         let jo = &objs.jobjs[j];
@@ -1052,8 +1092,6 @@ impl Ctx<'_> {
                 }
             }
         }
-        // `HSD_PObjClearMtxMark(NULL, HSD_MTX_ENVELOPE)`.
-        self.hsd.mtx_mark = None;
     }
 
     /// `setupArrayDesc`: the arrays of a vertex description, unless it was the last one set.
@@ -1213,8 +1251,7 @@ impl Ctx<'_> {
             _ => vmtx.unwrap_or_else(|| self.hsd.view_mtx()),
         };
         let pmtx = self.joint_position_mtx(j, &vmtx);
-        // `HSD_PObjClearMtxMark(NULL, 0)`.
-        self.hsd.mtx_mark = None;
+        self.clear_mtx_mark(0);
         let mut i = 0;
         while i < run.len() {
             let Draw::Shape { dobj: d, .. } = run[i] else {
