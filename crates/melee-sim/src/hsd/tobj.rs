@@ -254,7 +254,8 @@ pub fn alloc(tobjs: &mut TObjs) -> TObjId {
     let mut tluts = tobjs
         .pool
         .reused_at(addr)
-        .map(|slot| std::mem::take(&mut tobjs.pool[slot].tluttbl_tluts))
+        .and_then(|slot| tobjs.pool.get_mut(slot))
+        .map(|t| std::mem::take(&mut t.tluttbl_tluts))
         .unwrap_or_default();
     tluts.clear();
     let t = tobjs.pool.alloc_at(

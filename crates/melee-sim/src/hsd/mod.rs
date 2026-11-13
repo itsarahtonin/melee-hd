@@ -89,3 +89,29 @@ pub struct Objects {
     /// frame no part gave (`ftAnim_8006E9B4`, docs/engine.md).
     pub aobj_f1: Option<f32>,
 }
+
+impl Objects {
+    /// The objects that went with the scene's heap as `HSD_CreateMainHeap` makes it anew: the
+    /// classes' objects, forgotten with their library (`hsdForgetClassLibrary`), and those of
+    /// the pools HSD inits again with it (`HSD_ObjInit`: list nodes, animations and their
+    /// channels, expressions, shadows). Nothing frees them; their memory is the new heap's. A
+    /// slot keeps the address its object had, for the handles the scenes before kept
+    /// ([`pool::Pool::retire`]). The lights' pool its caller empties.
+    pub fn forget_heap(&mut self) {
+        self.jobjs.pool.retire();
+        self.dobjs.pool.retire();
+        self.mobjs.pool.retire();
+        self.tobjs.pool.retire();
+        self.pobjs.pool.retire();
+        self.cobjs.pool.retire();
+        self.wobjs.retire();
+        self.fogs.fogs.retire();
+        self.fogs.adjs.retire();
+        self.aobjs.pool.retire();
+        self.fobjs.retire();
+        self.robjs.pool.retire();
+        self.rvalues.pool.retire();
+        self.shadows.retire();
+        self.generators.nodes.retire();
+    }
+}

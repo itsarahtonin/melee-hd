@@ -423,7 +423,7 @@ impl Running<'_> {
             .menus
             .as_ref()
             .expect("the debug menus' pool");
-        &pool.slots()[m as usize]
+        &pool[m]
     }
 
     fn menu_mut(&mut self, m: u32) -> &mut DebugMenu {
@@ -434,7 +434,7 @@ impl Running<'_> {
             .menus
             .as_mut()
             .expect("the debug menus' pool");
-        &mut pool.slots_mut()[m as usize]
+        &mut pool[m]
     }
 
     /// A menu's debug text screen.
