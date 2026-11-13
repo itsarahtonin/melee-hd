@@ -187,6 +187,8 @@ pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
         }
     }
     bg_flash(game, img);
+    // The text heap's block, which the scene's heap takes back with the rest.
+    game.sis.lay(img, &|o| game.gobj_addr(o));
 }
 
 /// A stage's start hook (`Ground_801C10B8`'s 0xC bytes: the next hook, the object, the
