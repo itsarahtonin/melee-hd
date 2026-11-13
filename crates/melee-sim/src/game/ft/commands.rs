@@ -910,6 +910,7 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    #[doc(alias = "ftAction_80071810")]
     fn skip_80071810(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
@@ -924,6 +925,7 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    #[doc(alias = "ftAction_80071F0C")]
     fn skip_80071f0c(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
@@ -977,6 +979,7 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    #[doc(alias = "ftAction_80072E24")]
     fn skip_80072e24(&mut self, f: FighterId) {
         self.cmd_skip(f, 3);
     }
@@ -1146,6 +1149,10 @@ impl Running<'_> {
     /// Runs a fighter command from a color overlay's script (opcodes 21 to 23): `ft_800BFF34`'s
     /// effect, sound and vibration commands (`ftCo_803C6AD0`), or with `alt` `ft_800BFF70`'s,
     /// which step over them (`ftCo_803C6ADC`).
+    #[doc(alias = "ftCo_800BFE74")]
+    #[doc(alias = "ftCo_800BFEB4")]
+    #[doc(alias = "ftCo_800BFE94")]
+    #[doc(alias = "ftCo_800BFEF4")]
     pub(super) fn overlay_command(&mut self, gobj: GObjId, which: Overlay, i: u32, alt: bool) {
         let f = self.game.fighter_id(gobj);
         match (alt, i) {

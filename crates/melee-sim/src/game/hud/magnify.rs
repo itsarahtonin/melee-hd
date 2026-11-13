@@ -271,6 +271,7 @@ impl Running<'_> {
     /// player's bubble, marking the player off screen.
     #[doc(alias = "ftLib_IsOffscreen")]
     #[doc(alias = "ifMagnify_802FBBDC")]
+    #[doc(alias = "ftLib_GetCameraSubjectBonePos")]
     pub fn render_magnifier(&mut self, gobj: GObjId) {
         for p in &mut self.game.magnify.player {
             p.state.is_offscreen = false;

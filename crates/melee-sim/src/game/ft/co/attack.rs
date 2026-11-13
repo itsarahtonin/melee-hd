@@ -509,6 +509,9 @@ impl Running<'_> {
 
     /// An attack with nothing else to set up (`doEnter` of `ftCo_AttackHi3.c`,
     /// `ftCo_AttackHi4.c`, `ftCo_AttackLw4.c`).
+    #[doc(alias = "doEnter@8008BA38")]
+    #[doc(alias = "doEnter@8008CA38")]
+    #[doc(alias = "doEnter@8008CC5C")]
     fn enter_attack(&mut self, gobj: GObjId, msid: i32) {
         self.game.fighter_mut(gobj).allow_interrupt = false;
         self.change_motion_state(gobj, msid, 0, 0.0, 1.0, 0.0, None);
@@ -535,6 +538,8 @@ impl Running<'_> {
     }
 
     /// `decideFighter` of `ftCo_AttackLw3.c`: Game & Watch's own.
+    #[doc(alias = "decideFighter@8008BC34")]
+    #[doc(alias = "doEnter@8008BC70")]
     fn decide_attack_lw3(&mut self, gobj: GObjId) {
         if self.game.fighter(gobj).kind == KIND_GAME_WATCH {
             self.gw_attack_lw3_enter(gobj);
@@ -694,6 +699,7 @@ impl Running<'_> {
 
     /// `decideFighter` of `ftCo_AttackS4.c`: Ness, Peach and Game & Watch have their own;
     /// Pikachu's and Pichu's freeze their effects in hitlag.
+    #[doc(alias = "decideFighter@8008C348")]
     fn decide_attack_s4(&mut self, gobj: GObjId, dir: f32, angle: f64) {
         let fp = self.game.fighter_mut(gobj);
         fp.facing_dir = dir;
@@ -713,6 +719,7 @@ impl Running<'_> {
     }
 
     /// The forward smash angled as the stick is (`doEnter` of `ftCo_AttackS4.c`).
+    #[doc(alias = "doEnter@8008C3E0")]
     fn enter_attack_s4(&mut self, gobj: GObjId, angle: f64) {
         let c = self.common();
         let (b8, bc, c0, c4) = (c.f32(0xB8), c.f32(0xBC), c.f32(0xC0), c.f32(0xC4));
@@ -853,6 +860,8 @@ impl Running<'_> {
     /// A dash attack, `ftCo_AttackDash_CheckInput`: A, the held item first (Kirby has his
     /// own).
     #[doc(alias = "ftCo_AttackDash_CheckInput")]
+    #[doc(alias = "decideFighter@8008B498")]
+    #[doc(alias = "doEnter@8008B4D4")]
     pub fn attack_dash_check(&mut self, gobj: GObjId) -> bool {
         if self.game.fighter(gobj).input.pressed_buttons & PAD_A == 0 {
             return false;

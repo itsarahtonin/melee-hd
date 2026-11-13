@@ -34,7 +34,9 @@ fn projection(v: &CameraView) -> Option<(u32, Mtx44)> {
 }
 
 impl Ctx<'_> {
-    /// `HSD_CObjSetCurrent`'s GX side: viewport, scissor and projection for the render pass.
+    /// `HSD_CObjSetCurrent`'s GX side: viewport, scissor and projection for the render pass
+    /// (the screen's, `setupNormalCamera`, scaled to the frame buffer).
+    #[doc(alias = "setupNormalCamera")]
     pub fn camera_begin(&mut self, v: &CameraView) {
         self.hsd.camera = Some(*v);
         self.hsd.inv_view = None;
@@ -52,8 +54,11 @@ impl Ctx<'_> {
         } else {
             let x_scale = f32::from(FB_WIDTH) / 640.0;
             let y_scale = f32::from(EFB_HEIGHT) / 480.0;
-            let (left, right) = (xmin * x_scale, xmax * x_scale);
+            let (mut left, right) = (xmin * x_scale, xmax * x_scale);
             let (top, bottom) = (ymin * y_scale, ymax * y_scale);
+            if crate::mutation::on("setupNormalCamera") {
+                left += 1.0;
+            }
             self.gx
                 .set_viewport(left, top, right - left, bottom - top, 0.0, 1.0);
             let (left, right) = (f32::from(sl) * x_scale, f32::from(sr) * x_scale);

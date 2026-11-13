@@ -482,6 +482,8 @@ pub mod type_mask {
 /// `HSD_ForeachAnim` on a joint (`JObjForeachAnim`).
 #[doc(alias = "HSD_ForeachAnim")]
 #[doc(alias = "JObjForeachAnim")]
+#[doc(alias = "callbackForeachFunc")]
+#[doc(alias = "DObjForeachAnim")]
 pub fn foreach_anim(
     objs: &mut Objects,
     j: JObjId,

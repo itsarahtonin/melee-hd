@@ -90,8 +90,13 @@ pub fn position_mtx(objs: &Objects, j: JObjId, vmtx: &Mtx34) -> Mtx34 {
 }
 
 /// [`position_mtx`] for a joint with `flags`, world matrix `mtx` and rotation about z
-/// `rotate_z` (blended ones, `crate::blend`).
+/// `rotate_z` (blended ones, `crate::blend`), a billboard turned as `mkBillBoardMtx`,
+/// `mkVBillBoardMtx`, `mkHBillBoardMtx` or `mkRBillBoardMtx` turns it.
 #[doc(alias = "HSD_JObjMakePositionMtx")]
+#[doc(alias = "mkBillBoardMtx")]
+#[doc(alias = "mkVBillBoardMtx")]
+// Ports `mkHBillBoardMtx`; aliased once a frames check draws a horizontal billboard (its
+// mutation fails none of the 27 frames tried).
 pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> Mtx34 {
     use melee_sim::vec::Vec3;
     let mut src = vmtx.concat(mtx);
@@ -129,6 +134,9 @@ pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> 
             set_col(&mut dst, 1, Vec3::new(sy * ay.x, sy * ay.y, sy * ay.z));
             set_col(&mut dst, 2, Vec3::new(sz * az.x, sz * az.y, sz * az.z));
             set_col(&mut dst, 3, pos);
+            if crate::mutation::on("mkBillBoardMtx") {
+                dst.m[0][3] += 1.0;
+            }
         }
         JOBJ_VBILLBOARD => {
             let pos = col(&src, 3);
@@ -147,6 +155,9 @@ pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> 
             set_col(&mut dst, 1, ay);
             set_col(&mut dst, 2, Vec3::new(sz * az.x, sz * az.y, sz * az.z));
             set_col(&mut dst, 3, pos);
+            if crate::mutation::on("mkVBillBoardMtx") {
+                dst.m[0][3] += 1.0;
+            }
         }
         JOBJ_HBILLBOARD => {
             let pos = col(&src, 3);
@@ -167,6 +178,9 @@ pub fn position_mtx_of(flags: u32, mtx: &Mtx34, rotate_z: f32, vmtx: &Mtx34) -> 
             set_col(&mut dst, 1, Vec3::new(sy * ay.x, sy * ay.y, sy * ay.z));
             set_col(&mut dst, 2, Vec3::new(sz * az.x, sz * az.y, sz * az.z));
             set_col(&mut dst, 3, pos);
+            if crate::mutation::on("mkHBillBoardMtx") {
+                dst.m[0][3] += 1.0;
+            }
         }
         JOBJ_RBILLBOARD => {
             let scl = Mtx34::scale(col_mag(&src, 0), col_mag(&src, 1), col_mag(&src, 2));
@@ -863,11 +877,18 @@ impl Ctx<'_> {
     }
 
     /// `SetupRigidModelMtx` (its matrix mark never matches: `HSD_PObjSetMtxMark` stores
-    /// nothing), or with the fighters' depth scale `z`, `ftPartsSetupRigidMtx`.
+    /// nothing), or with the fighters' depth scale `z`, `ftPartsSetupRigidMtx`, which reads
+    /// the mark through `HSD_PObjGetMtxMark`.
     #[doc(alias = "ftPartsSetupRigidMtx")]
     #[doc(alias = "SetupRigidModelMtx")]
+    #[doc(alias = "HSD_PObjGetMtxMark")]
     fn setup_rigid_mtx(&mut self, j: JObjId, pmtx: &Mtx34, rendermode: u32, z: Option<&Mtx34>) {
-        if self.hsd.mtx_mark == Some(j) {
+        let mark = if z.is_some() && crate::mutation::on("HSD_PObjGetMtxMark") {
+            Some(j)
+        } else {
+            self.hsd.mtx_mark
+        };
+        if mark == Some(j) {
             return;
         }
         self.set_mtx_mark(j);
@@ -901,6 +922,7 @@ impl Ctx<'_> {
     /// depth scale `z`, `ftPartsSetupSharedVtxMtx`, whose marks never match either.
     // Ports `ftPartsSetupSharedVtxMtx`; aliased once a check reaches it (no flat fighter's
     // shape drawn in the Flat Zone frames is a shared-vertex one).
+    #[doc(alias = "SetupSharedVtxModelMtx")]
     fn setup_shared_vtx_mtx(
         &mut self,
         j: JObjId,
@@ -918,7 +940,10 @@ impl Ctx<'_> {
             self.gx.load_nrm_mtx_imm(&mtx(&n0), GX_PNMTX0);
         }
         self.gx.load_tex_mtx_imm(&n0.m, GX_TEXMTX0, GX_MTX3X4);
-        let m = vmtx.concat(&self.jmtx(s));
+        let mut m = vmtx.concat(&self.jmtx(s));
+        if crate::mutation::on("SetupSharedVtxModelMtx") {
+            m.m[0][3] += 1.0;
+        }
         self.gx.load_pos_mtx_imm(&mtx(&m), GX_PNMTX1);
         let n1 = normal_mtx(&m, z);
         if lighting {
@@ -960,6 +985,7 @@ impl Ctx<'_> {
     /// `FLT_EPSILON`).
     #[doc(alias = "ftPartsSetupEnvelopeMtx")]
     #[doc(alias = "SetupEnvelopeModelMtx")]
+    #[doc(alias = "HSD_Index2PosNrmMtx")]
     fn setup_envelope_mtx(
         &mut self,
         j: JObjId,
@@ -1008,7 +1034,12 @@ impl Ctx<'_> {
             loads.push((i as u32, vmtx.concat(&m)));
         }
         for (i, tmp) in loads {
-            let id = i * 3;
+            // `HSD_Index2PosNrmMtx`.
+            let id = if crate::mutation::on("HSD_Index2PosNrmMtx") {
+                (i + 1) % 10 * 3
+            } else {
+                i * 3
+            };
             self.gx.load_pos_mtx_imm(&mtx(&tmp), id);
             if normal {
                 let n = normal_mtx(&tmp, z);

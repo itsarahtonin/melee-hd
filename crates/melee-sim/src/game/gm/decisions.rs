@@ -580,6 +580,7 @@ impl Running<'_> {
     #[doc(alias = "pl_80040894")]
     #[doc(alias = "fn_801701C0")]
     #[doc(alias = "fn_80171B64")]
+    #[doc(alias = "pl_800408DC")]
     pub fn standing_decision(&self, r: &MatchEnd, a: i32, kind: i32) -> i32 {
         if self.game.gm.bonuses_off != 0 {
             return 0;

@@ -634,6 +634,8 @@ impl Running<'_> {
 
     /// `onExit` (`gmtitlemode.c`): Start goes to the main menu (or a challenger first), else
     /// the attract loop's match. A debug level's other exits aren't retail's.
+    #[doc(alias = "gm_GetGameModeStateExitData")]
+    #[doc(alias = "onExit@801B089C")]
     pub fn title_mode_on_exit(&mut self) {
         let b = self.game.title.exit_buttons;
         let debug = self.game.gm.db_level >= DB_DEBUG_ROM;

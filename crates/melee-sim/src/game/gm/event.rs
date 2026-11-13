@@ -125,6 +125,13 @@ pub fn event_place(name: u8) -> u8 {
         .map_or(EVENTS, |i| i as u8)
 }
 
+/// The save's note that the list's last event (51) ended with all three stocks left,
+/// `gmMainLib_8015CF84` (`stb 1` at the save's 0x1B3C).
+#[doc(alias = "gmMainLib_8015CF84")]
+pub fn note_final_event_all_stocks(save: &mut crate::game::structs::GmSaveData) {
+    save.x1B3C = 1;
+}
+
 /// `onEnterVs`'s players' setups from the table (`gm_801BAB40_src`, 0x1C bytes): the
 /// character, slot type, stocks, costume, spawn point, sub-colour, team, `xB`, flags
 /// (metal, invisible and four others), computer kind and level, damage, hit points and the
@@ -863,6 +870,7 @@ impl Running<'_> {
     #[doc(alias = "gm_801732D8")]
     #[doc(alias = "gm_8017335C")]
     #[doc(alias = "gm_80173D3C")]
+    #[doc(alias = "gmMainLib_8015CEB4")]
     pub fn event_exit_vs(&mut self) {
         let level = self.event();
         self.reset_opponents();
@@ -951,7 +959,7 @@ impl Running<'_> {
             0x21
         };
         if level == event_place(0x32) && me.player_standings[0].stocks == 3 {
-            self.game.game_data.thing.save_data.x1B3C = 1;
+            note_final_event_all_stocks(&mut self.game.game_data.thing.save_data);
         }
         if cleared {
             let all = (0..i32::from(EVENTS)).all(|i| self.event_cleared(i));
@@ -1970,4 +1978,40 @@ pub fn run_proc(r: &mut Running, gobj: GObjId, addr: u32) -> bool {
         _ => return false,
     }
     true
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::mirror::{Export, MemMut};
+    use crate::game::structs::GmSaveData;
+
+    /// The save's bytes as the card's image holds them.
+    fn bytes(s: &GmSaveData) -> Vec<u8> {
+        let mut b = vec![0u8; 0x1790];
+        s.export(
+            &mut MemMut {
+                bytes: &mut b,
+                base: 0,
+            },
+            0,
+        );
+        b
+    }
+
+    /// `gmMainLib_8015CF84` stores 1 in the byte at the card data's 0x1B3C (`stb r0, 0x1b3c(r3)`,
+    /// the save data's 0x2D4) and writes nothing else.
+    #[test]
+    fn the_final_events_note_writes_its_one_byte() {
+        for before in [0u8, 1, 0xFF] {
+            let mut s = GmSaveData {
+                x1B3C: before,
+                ..GmSaveData::default()
+            };
+            let mut want = bytes(&s);
+            want[0x2D4] = 1;
+            note_final_event_all_stocks(&mut s);
+            assert_eq!(bytes(&s), want);
+        }
+    }
 }

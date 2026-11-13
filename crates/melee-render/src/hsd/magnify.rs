@@ -47,7 +47,8 @@ impl Ctx<'_> {
     /// stage's nine colors (`GroundParam::xB8` through `xD8`, a three by three grid around the
     /// camera limits), picked by which half of the limits the fighter's camera bone is in or
     /// which side it's past (`ifMagnify_GetCornerColors`), blended by how far into that half
-    /// it is.
+    /// it is. The bone's place is the player's (`Player_80036978`).
+    #[doc(alias = "Player_80036978")]
     pub fn magnifier_erase_color(&self, slot: u8) -> Option<Color> {
         let game = self.game;
         let param = game.gr.param.as_ref()?;
@@ -56,7 +57,11 @@ impl Ctx<'_> {
         let Some(UserData::Fighter(f)) = game.world.gobj(fg).user_data else {
             return None;
         };
-        let pos = game.camera.boxes[game.fighters[f.0].x890_cameraBox?].bone_pos;
+        let mut pos = game.camera.boxes[game.fighters[f.0].x890_cameraBox?].bone_pos;
+        if crate::mutation::on("Player_80036978") {
+            pos.x = -pos.x;
+            pos.y = -pos.y;
+        }
         let [l, r, t, b] = stage::cam_bounds_of(&game.stage_info);
         let (x, y) = (pos.x, pos.y);
         let (lr, tb) = (fp::fadds(reg(l), reg(r)), fp::fadds(reg(t), reg(b)));

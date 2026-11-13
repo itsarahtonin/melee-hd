@@ -124,6 +124,7 @@ impl LbHeaps {
     #[doc(alias = "OSDestroyHeap")]
     #[doc(alias = "OSCreateHeap")]
     #[doc(alias = "lbHeap_80015900")]
+    #[doc(alias = "OSSetCurrentHeap")]
     pub fn make_scene_heaps(&mut self, mem: &mut LbMemory) -> Layout {
         for i in SEQ..COUNT {
             if self.heaps[i].transient == 1 {

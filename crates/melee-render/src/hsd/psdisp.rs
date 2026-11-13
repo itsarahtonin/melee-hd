@@ -587,12 +587,14 @@ impl<'a> Ctx<'a> {
     /// `psDispParticles`'s setup before the first particle it draws: the statics reset,
     /// fog off, channel and TEV colors white, the view's matrices, culling, the texture
     /// coordinate array and the six vertex formats.
+    #[doc(alias = "psSetupTevInvalidState")]
     fn ps_setup(&mut self, d: &mut Disp) {
         d.ready = true;
         d.point_size = -1;
         d.image = None;
         d.line_width = -1;
         d.chan_ctrl = u32::MAX;
+        // `psSetupTevInvalidState`.
         d.tev = u32::MAX;
         d.mirror = u32::MAX;
         d.prev_kind &= !DISP_FOG;
@@ -687,6 +689,9 @@ impl<'a> Ctx<'a> {
         if d.a_cmp != (mode, a0, a1) {
             d.a_cmp = (mode, a0, a1);
             gx.set_alpha_compare((mode >> 3) & 7, a0, (mode >> 6) & 3, mode & 7, a1);
+        }
+        if crate::mutation::on("psSetupTevInvalidState") && d.tev == u32::MAX {
+            d.tev = kind & 0x8010_0480;
         }
         setup_tev(gx, &mut d.tev, kind);
         self.ps_channels(d, p, kind);

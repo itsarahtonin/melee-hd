@@ -450,6 +450,7 @@ impl Unlocks {
     /// never locked. The unlock-all code doesn't change it.
     #[doc(alias = "gm_IsCKindUnlocked")]
     #[doc(alias = "gm_SelKindToUnlockIndex")]
+    #[doc(alias = "gmMainLib_GetUnlockedCharactersBitmaskPtr")]
     pub fn ckind_unlocked(&self, ckind: u8) -> bool {
         match UNLOCK_INDEX.iter().find(|&&(k, _)| k == ckind) {
             Some(&(_, i)) => self.characters & (1 << i) != 0,

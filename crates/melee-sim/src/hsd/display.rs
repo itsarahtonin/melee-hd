@@ -469,6 +469,8 @@ pub fn rendering(objs: &mut Objects, g: Option<super::gobj::GObjId>) {
 /// `HSD_CObjEndCurrent`: draws the depth-sorted lists, which Melee never fills.
 #[doc(alias = "_HSD_ZListSort")]
 #[doc(alias = "HSD_CObjEndCurrent")]
+#[doc(alias = "_HSD_ZListDisp")]
+#[doc(alias = "_HSD_ZListClear")]
 pub fn camera_end(objs: &mut Objects) {
     objs.display.draws.push(Draw::EndCamera);
 }
@@ -842,6 +844,7 @@ fn setup_channel_mode(objs: &mut Objects, m: MObjId) {
 /// second joint and an enveloped shape's joints have their matrices brought up to date
 /// (`SetupSharedVtxModelMtx`, `SetupEnvelopeModelMtx`).
 #[doc(alias = "HSD_PObjDisp")]
+#[doc(alias = "PObjSetupMtx")]
 #[allow(clippy::too_many_arguments)]
 pub fn pobj_disp(
     objs: &mut Objects,

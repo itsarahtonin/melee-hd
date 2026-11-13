@@ -21,6 +21,7 @@ impl Running<'_> {
     /// Runs the render callbacks of the max render link's GObjs (the cameras) in link order,
     /// for pass 0, `HSD_GObj_80390FC0`.
     #[doc(alias = "HSD_GObj_80390FC0")]
+    #[doc(alias = "HSD_Init_803755A8")]
     pub fn render_frame(&mut self) {
         let mut cur = self.game.world.gx_head[GX_LINKS];
         while let Some(g) = cur {

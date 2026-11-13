@@ -876,6 +876,11 @@ fn set_mv_vec(fp: &mut crate::game::structs::Fighter, off: usize, v: Vec3) {
 #[doc(alias = "ftNs_SpecialAirHiEnd_Phys")]
 #[doc(alias = "ftNs_SpecialAirHiHold_Phys")]
 #[doc(alias = "ftNs_SpecialAirHiStart_Phys")]
+#[doc(alias = "ftNs_SpecialHiHold_IASA")]
+#[doc(alias = "ftNs_SpecialHiEnd_IASA")]
+#[doc(alias = "ftNs_SpecialAirHiStart_IASA")]
+#[doc(alias = "ftNs_SpecialAirHiHold_IASA")]
+#[doc(alias = "ftNs_SpecialAirHiEnd_IASA")]
 pub(super) fn run(g: &mut Running, gobj: GObjId, a: u32) -> bool {
     match a {
         addr::SPECIAL_HI_START_ENTER => g.ness_special_hi_start_enter(gobj),
