@@ -88,7 +88,8 @@ pub struct Globals {
     /// The items, by slot, whose collision's last position (`x378_itemColl.last_pos`) is
     /// still the stack words their spawn found, which the comparer and the heap's image leave
     /// out: a far Arwing's laser outside Slippi's playback (`kinds::arwinglaser::spawn_aimed`).
-    /// A read of the words (a stomp's, the debug display's) stops ([`Globals::last_pos_known`]).
+    /// A stomp's read of the words stops ([`Globals::last_pos_known`]); the debug display's
+    /// ECBs stand the laser's tip in for them (`game::mp_draw`).
     #[clone_from(if_changed)]
     pub stale_last_pos: std::collections::BTreeSet<u32>,
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).

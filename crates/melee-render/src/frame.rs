@@ -460,6 +460,10 @@ impl Ctx<'_> {
                 self.shadow_copy(*s);
                 1
             }
+            Draw::ShadowVolume(s) => {
+                self.shadow_volume(*s);
+                1
+            }
             Draw::Particles { .. } => self.particles(draws, i),
             Draw::MagnifierCopy(i) => {
                 self.magnifier_copy(*i);
@@ -518,12 +522,6 @@ impl Ctx<'_> {
             }
             Draw::Debug(d) => {
                 self.debug_draw(d);
-                1
-            }
-            other => {
-                let name = format!("{other:?}");
-                let name = name.split(['(', ' ', '{']).next().unwrap_or("?").to_owned();
-                self.hsd.note(format!("draw {name}"));
                 1
             }
         }
