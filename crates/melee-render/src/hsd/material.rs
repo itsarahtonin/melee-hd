@@ -561,7 +561,22 @@ impl Ctx<'_> {
                 return self.mobj_setup(m, 0, None);
             }
         };
-        let flag = |i: u32| ip.xDCF_flag[0] >> (7 - i) & 1 != 0;
+        // The flags the item's render callback set for this tree, as melee-sim named them.
+        // The mutation reads the flags the frame's end left, as melee-render once did.
+        let named = self
+            .hsd
+            .item_flags
+            .filter(|_| !crate::mutation::on("fn_80277D8C"));
+        let flags = match named {
+            Some(f) => f,
+            None if self.hsd.item_flags.is_some() => ip.xDCF_flag[0],
+            None => {
+                self.hsd
+                    .note_once("an item material before its draw flags were named");
+                ip.xDCF_flag[0]
+            }
+        };
+        let flag = |i: u32| flags >> (7 - i) & 1 != 0;
         let (b3, b4, b5) = (flag(3), flag(4), flag(5));
         let (desc, mut rendermode) = self.mobj_setup_tev_part(m);
 

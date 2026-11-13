@@ -255,6 +255,11 @@ pub enum Draw {
     /// draws (`ftDrawCommon_80080E18`: an outline, the fighter, then its silhouette, in one
     /// pass), so the frame's end holds only the last tree's.
     FighterFlags(FighterFlags),
+    /// The draw flags (`xDCF`) of the item whose materials set up next, as an item's material
+    /// sets up (`fn_80277D8C`): its render callback sets them before each tree it draws
+    /// (`it_8026EECC`: an item with outline models draws its outline, itself and its
+    /// silhouette in one pass), so the frame's end holds only the last tree's.
+    ItemFlags(u8),
     /// The erase color for later erases (`HSD_SetEraseColor`).
     EraseColor([u8; 4]),
     /// The trophy gallery's close-up axes (`_Toy_80312050`): three lines of 6.5 units
@@ -363,6 +368,10 @@ pub struct Display {
     pub toon_named: Option<Option<tobj::ImageRef>>,
     /// The fighter draw flags last named this frame ([`Draw::FighterFlags`]).
     pub fighter_flags_named: Option<FighterFlags>,
+    /// The item draw flags last named this frame ([`Draw::ItemFlags`]).
+    pub item_flags_named: Option<u8>,
+    /// The draw flags (`xDCF`) of the item whose trees draw, for its materials.
+    pub item_flags: Option<u8>,
     /// The render pass (`current_render_pass`): offscreen, into a texture, or the screen.
     pub offscreen: bool,
     /// The fighter whose trees draw, for its materials.
@@ -423,6 +432,7 @@ pub fn start_frame(objs: &mut Objects) {
     objs.display.hilight_named = None;
     objs.display.toon_named = None;
     objs.display.fighter_flags_named = None;
+    objs.display.item_flags_named = None;
 }
 
 /// Names the toon texture's image a toon material is about to take ([`Draw::Toon`]), when it
@@ -689,6 +699,13 @@ fn material_setup(objs: &mut Objects, data: &Archives, m: MObjId) {
         // only in the TEV stages and blending they add for their color overlays, which are
         // GX's.
         MObjClass::Hsd | MObjClass::Ground | MObjClass::Item => {
+            if objs.mobjs[m].class == MObjClass::Item
+                && let Some(f) = objs.display.item_flags
+                && objs.display.item_flags_named != Some(f)
+            {
+                objs.display.item_flags_named = Some(f);
+                objs.display.draws.push(Draw::ItemFlags(f));
+            }
             mobj::setup(objs, m);
             super::export::tlut_names(objs, data);
             texture_matrices(objs, data, m);
