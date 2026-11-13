@@ -128,8 +128,9 @@ pub struct RulesData {
     pub hovered: u8,
     /// `x2` to `x8` (`indexed.values`): the mode, the time limit, the handicap, the damage
     /// ratio and the stage selection, then two bytes nothing writes, which hold what the
-    /// heap block held (`None`): hovering the item switch or the extra rules copies them into
-    /// the flow's value, which nothing then reads (docs/engine.md, uninitialized values).
+    /// heap block held (from the heap's image, `None` where it doesn't know them): hovering
+    /// the item switch or the extra rules copies them into the flow's value, which nothing
+    /// then reads (docs/engine.md, uninitialized values).
     pub values: [Option<u8>; 7],
     /// `x9`: the stock count.
     pub stock_count: u8,
@@ -816,6 +817,8 @@ impl Running<'_> {
         self.game
             .world
             .init_user_data(gobj, 0, UserData::RulesList(addr));
+        // `x7` and `x8`, which nothing writes: what the heap's image knows the block held.
+        let left = super::leftover_bytes_known::<2>(self.data, addr + 7);
         let f = self.game.menu.flow;
         let r = &self.game.game_data.x1850;
         let mut handicap = r.handicap;
@@ -835,8 +838,8 @@ impl Running<'_> {
                 Some(handicap),
                 Some(r.damage_ratio),
                 Some(r.stage_sel),
-                None,
-                None,
+                left[0],
+                left[1],
             ],
             stock_count: r.stock_count,
             state,

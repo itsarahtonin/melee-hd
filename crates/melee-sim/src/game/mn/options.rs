@@ -35,7 +35,8 @@ pub struct Options {
 
 /// `struct Menu` (8 bytes of the heap): the screens' cursor, three bytes each screen uses
 /// its own way, and the description's text. A byte a screen never writes holds what the
-/// heap block held, unknown here (None) and read by none of them.
+/// heap block held, read by none of them: the heap's image's byte, none where it doesn't
+/// know it ([`OptionMenu::with_leftovers`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct OptionMenu {
     pub cursor: u8,
@@ -43,6 +44,23 @@ pub struct OptionMenu {
     pub unk2: Option<u8>,
     pub unk3: Option<u8>,
     pub text: Option<TextId>,
+}
+
+impl OptionMenu {
+    /// The menu made in the block at `addr`, its bytes the screen doesn't write taken from
+    /// what the heap's image knows the block held.
+    pub fn with_leftovers(mut self, data: &melee_data::archive::Archives, addr: u32) -> Self {
+        let left = super::leftover_bytes_known::<3>(data, addr + 1);
+        for (v, l) in [&mut self.unk1, &mut self.unk2, &mut self.unk3]
+            .into_iter()
+            .zip(left)
+        {
+            if v.is_none() {
+                *v = l;
+            }
+        }
+        self
+    }
 }
 
 /// `MenuKind`s of the Options screens and the Options list.

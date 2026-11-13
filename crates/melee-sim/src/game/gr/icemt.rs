@@ -441,7 +441,7 @@ pub fn on_load(r: &mut Running) {
     }
     if super::stage::stkind(r.game) == ADVENTURE {
         let prm = param(r.game);
-        zako::start(r.game, Some(prm.0.at(p::SPAWNS)));
+        zako::start(r.game, r.data, Some(prm.0.at(p::SPAWNS)));
         let n = i32::from(prm.h(r.data, p::TROPHY_ODDS));
         let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };
         if val == 0 {
@@ -452,7 +452,7 @@ pub fn on_load(r: &mut Running) {
         }
         zako::scan_anywhere(r);
     } else {
-        zako::start(r.game, None);
+        zako::start(r.game, r.data, None);
     }
     super::grlib::generator_at(r.game, r.data, 0x7530, 0x1E, Vec3::ZERO);
 }
@@ -1496,7 +1496,7 @@ pub fn wind(game: &Game) -> Vec3 {
     let Some(gobj) = map_gobj(game, map) else {
         return Vec3::ZERO;
     };
-    let cur = match &game.grounds[ground_of(game, gobj).0].u {
+    let cur = match &game.grounds[ground_of(game, gobj).0].u.vars {
         super::GroundVars::IceMtScroll(v) => v.cur,
         super::GroundVars::IceMtClimb(v) => v.cur,
         super::GroundVars::Bytes(b) => {

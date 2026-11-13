@@ -802,7 +802,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Final Destination's start, `grLast_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grLast_OnStart")]
 pub fn on_start(r: &mut Running) {
-    super::zako::start(r.game, None);
+    super::zako::start(r.game, r.data, None);
 }
 
 /// The stage's objects' setup functions and processes, by map id (`grLast_StageCallbacks`).

@@ -354,6 +354,29 @@ pub fn menu_block(game: &Game, data: &Archives, img: &mut Image, ud: &UserData) 
             }
             l
         }),
+        // The main menu's panel: its byte `x2`, which nothing writes, as the block held it.
+        UserData::MainMenuPanel(a) => game.menu.panels.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 4);
+            l.bytes(0, &[d.cur_menu, d.prev_menu]);
+            if let Some(x2) = d.x2 {
+                l.u8(2, x2);
+            }
+            l.u8(3, d.state);
+            l
+        }),
+        // An Options screen's `Menu`: a byte the screen never writes as the block held it.
+        UserData::OptionMenu(a) => game.options.menus.get(&a).map(|d| {
+            let mut l = Lay::leftover(img, data, a, 8);
+            l.u8(0, d.cursor);
+            for (k, v) in [d.unk1, d.unk2, d.unk3].into_iter().enumerate() {
+                if let Some(v) = v {
+                    l.u8(1 + k as u32, v);
+                }
+            }
+            let t = d.text.map_or(TextWord::Left(Some(0)), TextWord::Made);
+            text(&mut l, a + 4, t);
+            l
+        }),
         UserData::SssName(a) => sel.names.get(&a).map(|d| {
             let mut l = Lay::new(a, 8);
             l.u16(0, d.stage);
@@ -536,8 +559,10 @@ pub fn debug_menu(game: &Game, data: &Archives, img: &mut Image, slot: u32, text
     l.u32(8, o.table);
     l.u32(0xC, o.cb);
     l.u32(0x10, o.gobj.map_or(0, |g| game.world.gobjs.addr(g.0)));
-    if let Some(p) = o.proc {
-        l.u32(0x14, game.world.procs.addr(p.0));
+    match (o.proc, o.x14) {
+        (Some(p), _) => l.u32(0x14, game.world.procs.addr(p.0)),
+        (None, Some(w)) => l.u32(0x14, w),
+        (None, None) => {}
     }
     l.u32(0x18, menu(o.prev));
     l.u32(0x1C, menu(o.next));
@@ -821,8 +846,11 @@ pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::Grou
         0x10,
         msb_bits(&[f.b0, f.b1, f.b2, f.b3, f.b4, f.b5, f.b6, f.b7]),
     );
-    // The pass alone: the byte's other bits are unused (`tools/structgen`), unknown.
-    l.put_bits(at + 0x11, 0, 3, u32::from(o.x11_flags.b012 & 7));
+    // The pass, and the five bits no code touches as the block held them where known.
+    match o.x11_flags.rest {
+        Some(rest) => l.u8(0x11, (o.x11_flags.b012 & 7) << 5 | rest & 0x1F),
+        None => l.put_bits(at + 0x11, 0, 3, u32::from(o.x11_flags.b012 & 7)),
+    }
     l.u32(0x14, o.map_id as u32);
     l.u32(0x18, ga(o.x18));
     l.u32(0x1C, code(o.x1C_callback));
@@ -831,7 +859,7 @@ pub fn lay_ground(game: &Game, img: &Image, l: &mut Lay, g: super::handles::Grou
     }
     color_overlay(img, l, 0x40, &o.color_overlay);
     l.f32(0xC0, o.xC0);
-    match &o.u {
+    match &o.u.vars {
         super::gr::GroundVars::Bytes(b) => l.bytes(0xC4, b),
         v => {
             let cx = Addrs { game, img };
@@ -1145,6 +1173,9 @@ pub fn sound_obj(
         Some(d) => Lay::leftover(img, d, at, 0x48),
         None => Lay::new(at, 0x48),
     };
+    if let Some(x0) = o.x0 {
+        l.u32(0, x0);
+    }
     {
         let cx = Addrs { game, img };
         l.put_word(at + 4, cx.handle("GObjId", o.gobj.map(|g| g.0)));

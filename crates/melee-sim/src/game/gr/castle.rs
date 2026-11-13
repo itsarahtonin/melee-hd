@@ -285,7 +285,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Princess Peach's Castle's start, `grCastle_801CD4A4`: the enemy spawner, without enemies.
 #[doc(alias = "grCastle_801CD4A4")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The scenery's setup (map 4), `grCastle_801CD5BC`: its animation, drawn behind.

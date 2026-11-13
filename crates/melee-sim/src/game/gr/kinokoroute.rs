@@ -157,7 +157,7 @@ pub fn on_start(r: &mut Running) {
         .gr
         .kinokoroute_yakumono
         .expect("grkinokoroute.c: yakumono_param");
-    zako::start(r.game, Some(p.at(4)));
+    zako::start(r.game, r.data, Some(p.at(4)));
     let n = r.data.u32(p) as i32;
     let val = if n != 0 { r.game.objs.rng.below(n) } else { 0 };
     if val == 0 {

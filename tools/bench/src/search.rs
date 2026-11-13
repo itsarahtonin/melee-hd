@@ -169,6 +169,7 @@ fn play(
         seed: m.seed,
         nametags: base.nametags,
         codes: base.codes,
+        response: base.response,
     };
     let mut settings = Settings::from_replay(&start).expect("the oracle codes' rules");
     if record.is_some() {

@@ -143,6 +143,7 @@ fn card_device(setup: &Setup) -> CardDevice {
         time_offset: setup.power_on,
         // Nothing before the first mount asks for the font encoding.
         font_encode_known: false,
+        work_area: 0,
     }
 }
 

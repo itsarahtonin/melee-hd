@@ -454,14 +454,14 @@ impl GroundVars {
                 jobj(l, cx, a, v.xC4);
                 w32(l, a + 4, &[v.xC8, v.xCC]);
             }
-            // The flags' bits the stage writes (0x80 to 0x08) and the log's (0x80); the rest
-            // keep what the block held.
+            // The flags' bits the stage writes (0x80 to 0x08) and the log's (0x80), with the
+            // rest as the block held them.
             GroundVars::Inishie2(v) => {
-                l.put_bits(a, 0, 5, u32::from(v.xC4 >> 3));
+                l.put_u8(a, v.xC4);
                 h16(l, a + 2, &[v.xC6, v.xC8, v.xCA, v.xCC]);
             }
             GroundVars::Inishie2Log(v) => {
-                l.put_bits(a, 0, 1, u32::from(v.xC4 >> 7));
+                l.put_u8(a, v.xC4);
                 h16(l, a + 2, &[v.xC6, v.xC8]);
                 gobj(l, cx, a + 8, v.xCC);
             }
@@ -579,7 +579,10 @@ impl GroundVars {
                 for (k, &j) in v.jobjs.iter().enumerate() {
                     jobj(l, cx, a + 0x10 + 4 * k as u32, j);
                 }
-                jobj(l, cx, a + 0x1C, v.event_extra);
+                match v.event_extra {
+                    EventExtra::Joint(j) => jobj(l, cx, a + 0x1C, Some(j)),
+                    EventExtra::Left(w) => l.put_u32(a + 0x1C, w),
+                }
                 for (k, d) in v.data.iter().enumerate() {
                     let b = a + 0x20 + 0x54 * k as u32;
                     l.put_bytes(b, &[d.index, d.x1, d.x2 as u8, d.x3]);

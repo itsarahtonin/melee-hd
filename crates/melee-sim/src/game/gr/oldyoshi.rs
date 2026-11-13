@@ -130,7 +130,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Yoshi's Island N64's start, `grOldYoshi_8020E828`: the enemy spawner, without enemies.
 #[doc(alias = "grOldYoshi_8020E828")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 fn map_id(game: &Game, gobj: GObjId) -> i32 {

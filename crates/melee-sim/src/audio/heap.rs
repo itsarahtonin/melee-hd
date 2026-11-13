@@ -25,6 +25,8 @@ pub struct Heap {
 
 /// A cell's header.
 pub const HEADER: u32 = 0x20;
+/// What the heap writes of a cell's header: its links and its size.
+const LINKS: u32 = 0xC;
 
 impl Heap {
     /// `OSAllocFromHeap`: `size` bytes, or `None` when no free cell holds them.
@@ -86,12 +88,45 @@ impl super::Audio {
     /// `HSD_AudioMalloc`: `size` bytes of the audio heap; the original asserts there was room.
     #[doc(alias = "HSD_AudioMalloc")]
     pub fn audio_malloc(&mut self, size: u32) -> u32 {
-        self.heap.alloc(size).expect("audio heap overflow.")
+        let p = self.heap.alloc(size).expect("audio heap overflow.");
+        // Its header's links and size and its owner's bytes, and the header of a free cell
+        // split off after it.
+        let cell = p - HEADER;
+        let end = cell + ((size + HEADER + 31) & !31);
+        self.note_audio_write(cell, end + LINKS);
+        p
     }
 
     /// `HSD_AudioFree`: a block back to the audio heap.
     #[doc(alias = "HSD_AudioFree")]
     pub fn audio_free(&mut self, ptr: u32) {
         self.heap.free(ptr);
+        // The free cell's header, and its neighbours' links.
+        let at = ptr - HEADER;
+        self.note_audio_write(at, at + LINKS);
+        let neighbours: Vec<u32> = self
+            .heap
+            .free
+            .iter()
+            .filter(|c| c.at + c.size == at || c.at > at)
+            .take(2)
+            .map(|c| c.at)
+            .collect();
+        for c in neighbours {
+            self.note_audio_write(c, c + LINKS);
+        }
+    }
+
+    /// The audio heap wrote `[lo, hi)`: a freed sound bank's block it covers no longer holds
+    /// the bank's bytes there (`Driver::freed_written`).
+    fn note_audio_write(&mut self, lo: u32, hi: u32) {
+        let d = &mut self.driver;
+        for (k, f) in d.freed_banks.iter().enumerate() {
+            let Some((_, base)) = *f else { continue };
+            let (lo, hi) = (lo.max(base), hi.min(d.freed_ends[k]));
+            if lo < hi && !d.freed_written[k].contains(&(lo, hi)) {
+                d.freed_written[k].push((lo, hi));
+            }
+        }
     }
 }

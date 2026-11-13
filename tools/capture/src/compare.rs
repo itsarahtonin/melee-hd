@@ -1000,7 +1000,8 @@ impl<'a> Comparer<'a> {
                 let mut link = self.game.fighter_dynamics[d.0].clone();
                 // A chain's last link's dominant axis (`desc.unk_54`) is never written and
                 // never read (docs/engine.md, uninitialized values): its block's leftover,
-                // which can be the CARD library's work area the heap's image doesn't lay out.
+                // kept from the heap's image, which doesn't follow every write that reaches
+                // the block (`single_player_intros`' tick 49618): left out.
                 if link.next.is_none() {
                     link.desc.unk_54 = self.u32(theirs + 0x54) as i32;
                 }

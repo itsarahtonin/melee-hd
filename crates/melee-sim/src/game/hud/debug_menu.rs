@@ -323,6 +323,10 @@ pub struct DebugMenu {
     pub gobj: Option<GObjId>,
     /// `x14`: that process, the first menu's only.
     pub proc: Option<ProcId>,
+    /// `x14` of a submenu, which nothing sets or reads: the word its block held (its slot's
+    /// last menu's, or the heap's image's for a block new from the heap), none where
+    /// melee-sim doesn't know it.
+    pub x14: Option<u32>,
     /// `prev`: the submenu open over it; `next`: the menu it was opened over.
     pub prev: Option<u32>,
     pub next: Option<u32>,
@@ -905,6 +909,7 @@ impl Running<'_> {
             .create(depth + 0x78, x, y, width, count);
         self.menu_mut(m).text = text;
         let Some(text) = text else { return };
+        self.game.hud.devtext.pool[usize::from(text)].buf_addr = buf;
         self.game.hud.devtext.show(text);
         let first = rows.iter().position(|e| e.kind != 0).unwrap_or(0);
         let d = self.menu_mut(m);
@@ -989,7 +994,30 @@ impl Running<'_> {
             .menus
             .as_mut()
             .expect("the debug menus' pool");
-        let m = pool.alloc(DebugMenu::default());
+        // The slot as `HSD_ObjAlloc` hands it out: `x14` keeps what the block held.
+        let m = pool.alloc_stale(DebugMenu::default());
+        let x14 = if crate::game::leftovers::pool_grew() {
+            crate::game::leftovers::bytes_known(self.data, pool.addr(m) + 0x14, 4)
+                .filter(|(_, k)| k.iter().all(|&k| k))
+                .map(|(b, _)| u32::from_be_bytes([b[0], b[1], b[2], b[3]]))
+        } else {
+            let old = &pool[m];
+            match old.proc {
+                Some(p) => Some(self.game.world.procs.addr(p.0)).filter(|&a| a != 0),
+                None => old.x14,
+            }
+        };
+        let pool = self
+            .game
+            .hud
+            .devtext
+            .menus
+            .as_mut()
+            .expect("the debug menus' pool");
+        pool[m] = DebugMenu {
+            x14,
+            ..DebugMenu::default()
+        };
         let cursor = self.menu(parent).cursor;
         let text = self.menu_text(parent);
         let (tx, ty) = (i32::from(text.x), i32::from(text.y));

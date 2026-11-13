@@ -151,6 +151,9 @@ pub struct Run {
     /// The HSD layer's transfers the card answers before it's pulled out of the slot
     /// ([`Layer::budget`]), none for a card left in.
     pub pull_after: Option<usize>,
+    /// The CARD library's work area as the list left it (its copy of the card's five system
+    /// sectors), when the list mounted the card.
+    pub work: Option<Vec<u8>>,
 }
 
 /// Whether a log entry of the HSD layer's ([`Run::steps`]) is a transfer: a sector read or
@@ -180,6 +183,7 @@ impl Run {
             layer: Layer::new(0),
             puts: Vec::new(),
             pull_after: None,
+            work: None,
         }
     }
 
@@ -340,6 +344,9 @@ impl Run {
             };
             saved = result;
             self.results.push((task.clone(), result));
+        }
+        if let Some(m) = &mounted {
+            self.work = Some(m.work().to_vec());
         }
         result
     }

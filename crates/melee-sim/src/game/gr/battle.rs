@@ -110,7 +110,7 @@ pub fn on_load(_r: &mut Running) {}
 /// Battlefield's start, `grBattle_OnStart`: the enemy spawner, without enemies.
 #[doc(alias = "grBattle_OnStart")]
 pub fn on_start(r: &mut Running) {
-    zako::start(r.game, None);
+    zako::start(r.game, r.data, None);
 }
 
 /// The main object's setup, `grBattle_GObj0_Callback0`: its animation, and in a demo fight

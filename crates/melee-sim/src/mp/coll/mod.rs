@@ -90,17 +90,29 @@ pub enum EcbShape {
 }
 
 /// `CollData::x34_flags`. Its `b5` (a substep met something that ends the move) is read only by
-/// `mpColl_80043754`'s substep loop, which clears it first, so the bit it holds between moves
-/// never reaches gameplay; a collision's setup (`mpColl_80041EE4`) leaves it as the block held
-/// it (a link of Sheik's chain new from the heap held it set on Corneria), and the comparer
-/// leaves it out (docs/engine.md).
+/// `mpColl_80043754`'s substep loop, which clears it first; a collision's setup
+/// (`mpColl_80041EE4`) leaves it as the block held it (a link of Sheik's chain new from the heap
+/// held it set on Corneria). It's kept and compared as the block held it where melee-sim knows
+/// that (a session's heap image, or a move's), and is none where it doesn't (a block a replay's
+/// match reuses, whose bytes no image follows): the comparer leaves a none out, and reading one
+/// stops by name ([`X34Flags::b5`]).
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct X34Flags {
     pub b0: bool,
     pub b1234: u8,
-    pub b5: bool,
+    pub b5: Option<bool>,
     pub b6: bool,
     pub b7: bool,
+}
+
+impl X34Flags {
+    /// `b5` as code reads it: a leftover melee-sim doesn't know stops by name, as the original
+    /// would read what the block held.
+    pub fn b5(&self) -> bool {
+        self.b5.unwrap_or_else(|| {
+            panic!("mpColl_80043754 reads a collision's x34 b5 that the block held, which isn't modeled outside a session's heap image")
+        })
+    }
 }
 
 impl Mirror for X34Flags {
@@ -111,7 +123,7 @@ impl Mirror for X34Flags {
         X34Flags {
             b0: b & 0x80 != 0,
             b1234: b >> 3 & 0xF,
-            b5: b & 4 != 0,
+            b5: Some(b & 4 != 0),
             b6: b & 2 != 0,
             b7: b & 1 != 0,
         }
@@ -124,20 +136,30 @@ impl Mirror for X34Flags {
         if ours != theirs {
             cx.mismatch(path, format!("{ours:?}"), format!("{theirs:?}"));
         }
+        if let Some(b5) = self.b5
+            && b5 != (b & 4 != 0)
+        {
+            cx.mismatch(
+                &format!("{path}.b5"),
+                format!("{b5}"),
+                format!("{}", b & 4 != 0),
+            );
+        }
     }
 }
 
 /// `CollData::x35_flags`, of whose byte code writes and reads only the top bit (`b0`:
 /// `mpColl_80041EE4` sets it, `mpLib`'s floor checks read it). The other seven bits keep what
-/// the block held, which no code reads, so the comparer checks the top bit alone: a link of
-/// Sheik's chain new from the heap held 0x7F there on Corneria (docs/engine.md). They're kept
-/// (`rest`, as the leftovers gave them) for the heap's image: a collision copied whole (Pikachu's
-/// thunder jolt's, `it_802B3F88`) brings its source's, and the block holds them as it goes.
+/// the block held, which no code reads: a link of Sheik's chain new from the heap held 0x7F
+/// there on Corneria (docs/engine.md). They're kept (`rest`, as the leftovers gave them) and
+/// compared, and a collision copied whole (Pikachu's thunder jolt's, `it_802B3F88`) brings its
+/// source's; none where melee-sim doesn't know them (a block a replay's match reuses, which no
+/// heap image follows), which the comparer leaves out.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct X35Flags {
     pub b0: bool,
     /// The low seven bits.
-    pub rest: u8,
+    pub rest: Option<u8>,
 }
 
 impl Mirror for X35Flags {
@@ -147,14 +169,16 @@ impl Mirror for X35Flags {
         let b = m.bytes::<1>(at)[0];
         X35Flags {
             b0: b & 0x80 != 0,
-            rest: b & 0x7F,
+            rest: Some(b & 0x7F),
         }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        let theirs = m.bytes::<1>(at)[0] & 0x80 != 0;
-        if self.b0 != theirs {
-            cx.mismatch(path, format!("{}", self.b0), format!("{theirs}"));
+        let b = m.bytes::<1>(at)[0];
+        let ours = (self.b0, self.rest.unwrap_or(b & 0x7F));
+        let theirs = (b & 0x80 != 0, b & 0x7F);
+        if ours != theirs {
+            cx.mismatch(path, format!("{ours:?}"), format!("{theirs:?}"));
         }
     }
 }
@@ -282,11 +306,13 @@ impl Mirror for EcbSource {
 impl crate::game::mirror::LayOut for X34Flags {
     /// The whole byte: `b5` as the last move left it (each move's substeps clear it first),
     /// which a collision that hasn't moved since its setup holds as the block did, as melee-sim
-    /// imported it.
+    /// imported it (unknown where melee-sim doesn't know it).
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
         l.put_bits(at, 0, 1, u32::from(self.b0));
         l.put_bits(at, 1, 4, u32::from(self.b1234));
-        l.put_bits(at, 5, 1, u32::from(self.b5));
+        if let Some(b5) = self.b5 {
+            l.put_bits(at, 5, 1, u32::from(b5));
+        }
         l.put_bits(at, 6, 1, u32::from(self.b6));
         l.put_bits(at, 7, 1, u32::from(self.b7));
     }
@@ -298,7 +324,9 @@ impl crate::game::mirror::LayOut for X35Flags {
     /// `X34Flags`' `b5`).
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, _: &dyn crate::game::mirror::LayCx) {
         l.put_bits(at, 0, 1, u32::from(self.b0));
-        l.put_bits(at, 1, 7, u32::from(self.rest));
+        if let Some(rest) = self.rest {
+            l.put_bits(at, 1, 7, u32::from(rest));
+        }
     }
 }
 
@@ -504,14 +532,14 @@ fn coll_bits(cd: &CollData) -> Vec<u32> {
     let flags = |e: &X34Flags| {
         u32::from(e.b0) << 7
             | u32::from(e.b1234) << 3
-            | u32::from(e.b5) << 2
+            | u32::from(e.b5.unwrap_or(false)) << 2
             | u32::from(e.b6) << 1
             | u32::from(e.b7)
     };
     v.extend([
         cd.x0_gobj.map_or(u32::MAX, |g| g.0),
         flags(&cd.x34_flags),
-        u32::from(cd.x35_flags.b0) << 7,
+        u32::from(cd.x35_flags.b0) << 7 | u32::from(cd.x35_flags.rest.unwrap_or(0)),
         cd.facing_dir as u32,
         cd.x38 as u32,
         cd.floor_skip as u32,
@@ -924,7 +952,7 @@ impl CollData {
         self.ecb.left.x = mem(fp::fneg(half));
         self.desired_ecb.right.x = self.ecb.right.x;
         self.desired_ecb.left.x = self.ecb.left.x;
-        self.x34_flags.b5 = false;
+        self.x34_flags.b5 = Some(false);
     }
 
     /// Shortens the ECB to fit between a ceiling and a floor whose corrections put the object
@@ -964,7 +992,7 @@ impl CollData {
         d.bottom.y = e.bottom.y;
         d.left.y = e.left.y;
         d.right.y = e.right.y;
-        self.x34_flags.b5 = false;
+        self.x34_flags.b5 = Some(false);
     }
 
     /// The floor's friction, 1 off the ground, `mpColl_8004CA6C`.
@@ -1364,13 +1392,18 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
             1
         };
         cd.cur_pos = cd.last_pos;
-        cd.x34_flags.b5 = false;
+        cd.x34_flags.b5 = Some(false);
         // A move so long that the count overflows (over 1e10 units, or infinite) runs no
         // substep, and the original returns whatever its caller left in a register; the game
-        // never moves that far.
+        // never moves that far, and melee-sim stops there by name.
+        if steps <= 0 {
+            panic!(
+                "mpColl_80043754: a move of {x} units overflows its substep count and returns a register its caller left, which isn't modeled"
+            );
+        }
         let mut ret = false;
         let mut step = 0;
-        while step < steps && !cd.x34_flags.b5 {
+        while step < steps && !cd.x34_flags.b5() {
             let left = fp::frsp(f64::from(steps - step));
             cd.interpolate_ecb(mem(fp::fdivs(1.0, left)));
             cd.prev_pos = cd.cur_pos;
@@ -1417,5 +1450,17 @@ impl<K: Kinds, H: CollHooks<K>> Coll<'_, K, H> {
         let result = self.step(cd, pass, flags);
         self.end(cd, result, arg2);
         result
+    }
+}
+
+#[cfg(test)]
+mod flag_tests {
+    use super::X34Flags;
+
+    /// A `b5` melee-sim doesn't know stops by name when read.
+    #[test]
+    #[should_panic(expected = "x34 b5 that the block held")]
+    fn an_unknown_b5_read_stops() {
+        let _ = X34Flags::default().b5();
     }
 }
