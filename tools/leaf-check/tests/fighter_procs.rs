@@ -89,27 +89,16 @@ fn our_words(maps: &Maps, f: u32, args: &[Val]) -> Vec<u32> {
     out
 }
 
-/// Zeroes the fighters' entries past what they use: their dynamic bone sets past
-/// `dynamics_num`, costume textures past `n_costume_tobjs`, and computer-state pointers that
-/// can't be pointers; and the items' dynamic bones past their count. The debug VS mode's fighter
-/// blocks come back uncleared, so a match's fighters hold an earlier scene's bytes there,
-/// where melee-sim's (like a fresh heap's, and Slippi's) hold zeros; nothing here reads them
-/// (`docs/engine.md`).
+/// Zeroes the computer-state pointers of a fighter no computer plays that can't be pointers,
+/// which the importer can't take as handles. The entries past what the fighters and items use
+/// (dynamic bone sets past `dynamics_num`, costume textures past `n_costume_tobjs`, an item's
+/// dynamic bones past its count) are kept as memory holds them and compared, as melee-sim keeps
+/// them (`game::held::Left`, `docs/engine.md`).
 fn zero_unused(call: &mut Call) {
     let heads = peek_u32(call, sym("HSD_GObjPLinkHead"));
     let mut g = peek_u32(call, heads + 4 * 8);
     while g != 0 {
         let fp = fighter_of(call, g);
-        let used = peek_u32(call, fp + 0x3E0);
-        for k in used.min(10)..10 {
-            for w in 0..6 {
-                poke_u32(call, fp + 0x2F0 + 0x18 * k + 4 * w, 0);
-            }
-        }
-        let tobjs = peek_u32(call, fp + 0x5CC);
-        for k in tobjs.min(5)..5 {
-            poke_u32(call, fp + 0x5D4 + 4 * k, 0);
-        }
         // The computer state's fighter and item pointers of a fighter no computer plays,
         // which can hold any bytes: those that can't be pointers at all.
         for off in [0x44, 0x4C, 0x50, 0xF0, 0xF4] {
@@ -117,18 +106,6 @@ fn zero_unused(call: &mut Call) {
             let v = peek_u32(call, at);
             if v & 3 != 0 || !(0x8000_0000..0x8180_0000).contains(&v) {
                 poke_u32(call, at, 0);
-            }
-        }
-        g = peek_u32(call, g + 8);
-    }
-    // The items' dynamic bones past `x374_dynamicBonesNum`, likewise.
-    let mut g = peek_u32(call, heads + 4 * 9);
-    while g != 0 {
-        let ip = peek_u32(call, g + 0x2C);
-        let used = peek_u32(call, ip + 0x374);
-        for k in used.min(24)..24 {
-            for w in 0..7 {
-                poke_u32(call, ip + 0xD4 + 0x1C * k + 4 * w, 0);
             }
         }
         g = peek_u32(call, g + 8);

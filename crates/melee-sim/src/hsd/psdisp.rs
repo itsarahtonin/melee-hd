@@ -155,7 +155,14 @@ pub fn sort(
                 "particleSort's cached particle from before the particle system was emptied",
             );
         }
-        return (head, objs.psdisp.non_edge[link]);
+        // A particle freed since the sort is freed memory to the original (one made since in
+        // its slot is at its address, as ours is).
+        let cached = objs.psdisp.non_edge[link];
+        assert!(
+            cached.is_none_or(|p| !objs.particles.pool.is_free(p.0)),
+            "particleSort: the link's cached particle was freed since this frame's sort"
+        );
+        return (head, cached);
     }
     objs.psdisp.sorted[link] = frame;
     objs.psdisp.stale[link] = false;

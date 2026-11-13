@@ -110,9 +110,16 @@ impl Game {
         self.ft.dynamics_block = links;
         self.ft.winds_block = winds;
         self.fighter_dynamics = Pool::default();
+        self.ft.dynamics_pixels.clear();
         for k in 0..LINKS {
             let left =
                 crate::game::leftovers::import::<DynamicsData>(data, links + 0x98 * k, links != 0);
+            if links != 0
+                && !crate::game::leftovers::render_target_runs(links + 0x98 * k + 0x54, 4)
+                    .is_empty()
+            {
+                self.ft.dynamics_pixels.push(k as u16);
+            }
             let id = self.fighter_dynamics.alloc(left.unwrap_or_default());
             assert_eq!(id, k, "a fresh pool's slots in order");
         }
