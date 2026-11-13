@@ -311,6 +311,8 @@ impl Running<'_> {
             self.game.free_dynamics_chain(&mut desc);
             self.game.fighters[f.0].dynamic_bone_sets[i].dyn_desc = desc;
         }
+        // The sets stay in the block past the count (docs/engine.md).
+        crate::game::export::keep_fighter_arrays(self.game, f);
         self.game.fighters[f.0].dynamics_num = 0;
     }
 
