@@ -836,11 +836,14 @@ impl Running<'_> {
 
     /// The KO counts the screen's data points to (`CSSData::x4`): VS mode's. A null pointer
     /// (the Hanyu select's, which nothing sets) is read and written in the VS match types, a
-    /// crash on a console ([Melee's bugs]): the port stops there.
+    /// crash on a console ([Melee's bugs]): the simulation stops there by name (design call
+    /// 7). The Hanyu select always opens in VS Melee's match type, whose doors' KO stars read
+    /// the counts as the screen opens (`mnCharSel_8025D1C4` from the rules' line), so it
+    /// crashes on every entry.
     pub(crate) fn css_ko_counts(&mut self) -> &mut [u8; 6] {
         if self.css().ko_counts_null {
-            crate::game::code::unported_call(
-                "the character select's KO counts through a null pointer (a crash on a console)",
+            panic!(
+                "Melee crashes: the Hanyu character select reads its KO counts through a null pointer (mnCharSel_8025D1C4)"
             );
         }
         &mut self.game.vs_melee.ko_counts

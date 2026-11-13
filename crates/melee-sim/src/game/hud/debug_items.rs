@@ -417,16 +417,7 @@ impl Running<'_> {
             0x8030_10C0 => self.debug_allstar_from_round(arg),
             0x8030_1028 => self.debug_adventure_from_stage(arg),
             0x8030_1074 => self.debug_classic_from_stage(arg),
-            // The single-player modes' and their game overs' entries (milestone 6's), acting
-            // only on A, not ported yet.
-            0x8030_1D7C => {
-                if arg == CB_SELECT {
-                    super::super::code::unported_call(&format!(
-                        "the debug menu entry callback {cb:#010x}"
-                    ));
-                }
-                0
-            }
+            0x8030_1D7C => self.debug_event_stage(arg),
             // `un_80301280` (RegularEnding Real) and `un_803012D4` (RegularEnding Test): on
             // A, the ending test's submenu (its character, costume and mode), its own
             // callback `fn_803011EC` or `fn_8030110C`, after a forward sound of their own.
@@ -616,6 +607,19 @@ impl Running<'_> {
         if arg == CB_SELECT {
             self.sfx_forward();
             self.debug_to_mode(mode);
+        }
+        0
+    }
+
+    /// `un_80301D7C`, the Sakoda test's Event Stage: on A, the event the entry's value names
+    /// (from 1, so the event less one, `gm_801BEB74`), then Event mode.
+    #[doc(alias = "un_80301D7C")]
+    fn debug_event_stage(&mut self, arg: i32) -> i32 {
+        if arg == CB_SELECT {
+            self.sfx_forward();
+            let n = self.game.hud.debug.setting(0x188).wrapping_sub(1) as u8;
+            self.set_event(n);
+            self.debug_to_mode(crate::game::gm::GM_EVENT);
         }
         0
     }

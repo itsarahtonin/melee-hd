@@ -399,6 +399,10 @@ pub fn finish_tick(r: &mut Running, from: Resume) -> bool {
     if sc.unk_10.unk_38_0 && g.pacing.due(0) && sc.unk_8 != u32::MAX - 1 {
         sc.unk_8 = sc.unk_8.wrapping_add(1);
     }
+    if g.gm.db_level >= super::DB_DEBUG_ROM {
+        check_active_threads();
+    }
+    let sc = &mut g.scene;
     if sc.unk_C != 0 {
         return true;
     }
@@ -493,6 +497,21 @@ fn step_tick_polls(
             .is_none_or(|c| c.ticks_left == 0);
     (Tick { pads, ended }, r.game.scene.unk_C != 2 && round_over)
 }
+
+/// The scene loop's thread check at the debug ROM's level, `OSCheckActiveThreads`, after
+/// each tick's procs: it walks the OS's active threads and their queues, checking each link,
+/// stack end, priority and state, and stops the console (`OSPanic`) on a broken one; its count
+/// is dropped. melee-hd has no OS threads to check (`ledger/replaced.txt`, `__OSThreadInit`:
+/// the simulation runs on one thread), and the check writes nothing but its own stack and
+/// reads no hardware register or the time base, so the timeline doesn't move: it does
+/// nothing here. In the original only the main thread is ever active at the check (Melee
+/// makes another only in its crash handler, `hsd_80397DA4`), running, with no mutex: its
+/// mutex queue's check (`__OSCheckMutexes`) finds it empty, as nothing in the executable
+/// locks a mutex (`OSLockMutex` isn't linked).
+#[doc(alias = "OSCheckActiveThreads")]
+#[doc(alias = "CheckThreadQueue")]
+#[doc(alias = "__OSCheckMutexes")]
+fn check_active_threads() {}
 
 /// `fn_802289F8`: a file write to the USB host for a name starting `USB:`
 /// (`hsd_80393A5C`), else -1. The host is never there: `hsd_804D78A0`, its flag, is set only

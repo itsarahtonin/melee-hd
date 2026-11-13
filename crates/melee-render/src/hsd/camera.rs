@@ -423,6 +423,58 @@ impl Ctx<'_> {
         self.gx.invalidate_tex_all();
     }
 
+    /// `lbShadow_8000F214`, the stage display's shadow volumes (`Camera_80030B0C`, the
+    /// develop tools' second stage-display step): over a shadow's render, before its copy, a
+    /// black quad of its camera's view grown a fifth and set past its near plane, culled
+    /// back, its scissor the whole texture. In a shadow's texture black is full shadow, so the
+    /// volume's edges show where the shadow's view ends.
+    #[doc(alias = "lbShadow_8000F214")]
+    pub fn shadow_volume(&mut self, s: ShadowId) {
+        let sh = &self.game.objs.shadows[s.0];
+        let img = sh.image;
+        let camera = sh.camera.expect("a shadow without a camera");
+        let co = match (self.blend, self.hsd.camera) {
+            (Some(_), Some(v)) => v.clone_view(),
+            _ => self.game.objs.cobjs[camera].clone_view(),
+        };
+        // `lbShadow_803BA0FC`: black, no lighting.
+        let chan = Chan {
+            chan: GX_COLOR0A0,
+            flags: 0,
+            amb_color: Color::new(0, 0, 0, 0),
+            mat_color: if crate::mutation::on("lbShadow_8000F214") {
+                Color::new(0x80, 0x80, 0x80, 0xFF)
+            } else {
+                Color::new(0, 0, 0, 0xFF)
+            },
+            enable: GX_FALSE,
+            amb_src: GX_SRC_REG,
+            mat_src: GX_SRC_REG,
+            light_mask: GX_LIGHT_NULL,
+            diff_fn: GX_DF_CLAMP,
+            attn_fn: GX_AF_NONE,
+        };
+        self.hsd.tev.setup_channel_all(self.gx, &[chan]);
+        self.gx
+            .set_scissor(0, 0, u32::from(img.width), u32::from(img.height));
+        self.gx.load_pos_mtx_imm(&Mtx34::IDENTITY.m, GX_PNMTX0);
+        self.gx.set_current_mtx(GX_PNMTX0);
+        self.clear_vtx_desc();
+        self.gx.set_vtx_desc(GX_VA_POS, GX_DIRECT);
+        self.gx
+            .set_vtx_attr_fmt(GX_VTXFMT0, GX_VA_POS, GX_POS_XYZ, GX_F32, 0);
+        self.hsd.state.set_cull_mode(self.gx, GX_CULL_BACK);
+        // 1.2f and -1.1f as the original's constants hold them.
+        let s12 = f32::from_bits(0x3F99_999A);
+        let (y0, y1, x0, x1) = (co.0 * s12, co.1 * s12, co.2 * s12, co.3 * s12);
+        let z = co.4 * -f32::from_bits(0x3F8C_CCCD);
+        self.gx.begin(GX_QUADS, GX_VTXFMT0, 4);
+        for (x, y) in [(x0, y0), (x1, y0), (x1, y1), (x0, y1)] {
+            self.gx.position3f32(x, y, z);
+        }
+        self.gx.end();
+    }
+
     /// The erase's depth image, unused: the screen erases color only.
     #[allow(dead_code)]
     fn depth_tex(&self) -> TexObj {

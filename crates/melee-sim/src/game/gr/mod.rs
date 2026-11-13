@@ -51,6 +51,7 @@ pub mod stadium;
 pub mod stage;
 pub mod story;
 pub mod target;
+pub mod teststage;
 pub mod vars;
 pub mod venom;
 pub mod yorster;
@@ -134,6 +135,9 @@ pub const GR_KIND_SHRINEROUTE: i32 = 32;
 pub const GR_KIND_BIGBLUEROUTE: i32 = 34;
 /// `Gr_Kind_ZebesRoute`, Brinstar's escape.
 pub const GR_KIND_ZEBESROUTE: i32 = 33;
+/// `Gr_Kind_Test`, the Test stage, and the ground kind 0x23 `stage_datas` gives it too.
+pub const GR_KIND_TEST: i32 = 1;
+pub const GR_KIND_TEST2: i32 = 0x23;
 /// `Gr_Kind_TMario`, the first of the 26 target stages (Target Test's, `gr::target`).
 pub const GR_KIND_TMARIO: i32 = 40;
 /// `Gr_Kind_Figure1` to `Gr_Kind_Figure3`, the events' trophy stages.
@@ -270,6 +274,8 @@ pub struct Globals {
     pub kraid_yakumono: Option<DataRef>,
     /// Which animation Kraid's copy last took from the debugging button (`grKr_804D6A0C`).
     pub kraid_anim: i32,
+    /// The Test stage's turn of its map 2's joint 11, in radians (`grTe_804D6A48`).
+    pub test_turn: f32,
     /// Flat Zone's `yakumono_param` (`grFlatzone_YakumonoParam`).
     pub flatzone_yakumono: Option<DataRef>,
     /// Fourside's `yakumono_param` (`grFourside_YakumonoParam`).

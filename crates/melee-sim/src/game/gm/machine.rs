@@ -1358,7 +1358,6 @@ impl Running<'_> {
     #[doc(alias = "onExitMovie")]
     #[doc(alias = "gm_801BF718")]
     #[doc(alias = "gm_Mode_Opening_OnLoad")]
-    #[doc(alias = "onExitPrize@801B0B24")]
     fn mode_hook(&mut self, h: Hook, state: Option<(u8, u8)>) {
         // A Special Melee mode's handler for one of VS mode's states, by its mode.
         let special = state.map(|s| s.0).filter(|&m| m != GM_VS);
@@ -1501,8 +1500,7 @@ impl Running<'_> {
             Hook::HanyuSssEnter => self.hanyu_sss_enter(),
             Hook::DebugEnterPrize => self.debug_mode_enter_prize(),
             Hook::DebugEnterApproach => self.debug_mode_enter_approach(),
-            // `onExitPrize`: the Mode Team Test page.
-            Hook::DebugExitPrize => self.set_next_game_mode_state_id(2),
+            Hook::DebugExitPrize => self.debug_mode_exit_prize(),
             Hook::DebugBackToMenu => self.debug_mode_back_to_menu(),
             Hook::DebugEnterVs => self.debug_mode_enter_vs(),
             Hook::DebugEnterResults0 => self.debug_mode_enter_results0(),

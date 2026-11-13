@@ -583,7 +583,7 @@ impl Running<'_> {
         c.xF9_b2 = true;
         c.xF9_b4 = true;
         let Some(popo) = self.cpu_partner(f) else {
-            unported_call("ftCo_800AEFB8");
+            return self.nana_decide_alone(f);
         };
         self.nana_record_input(popo, f);
         let r5;
