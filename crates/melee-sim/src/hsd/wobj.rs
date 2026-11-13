@@ -118,9 +118,8 @@ pub fn update(objs: &mut Objects, data: &Archives, w: WObjId, ty: u8, value: Val
 /// A new WObj, `HSD_WObjAlloc`.
 #[doc(alias = "HSD_WObjAlloc")]
 pub fn alloc(wobjs: &mut WObjs) -> WObjId {
-    let w = wobjs.alloc(WObj::default());
-    wobjs.set_addr(w, super::heap::class_alloc(super::heap::Class::WObj));
-    WObjId(w)
+    let addr = super::heap::class_alloc(super::heap::Class::WObj);
+    WObjId(wobjs.alloc_at(addr, WObj::default()))
 }
 
 /// Sets a WObj up from a descriptor, its position and RObjs, `HSD_WObjInit` (`WObjLoad`

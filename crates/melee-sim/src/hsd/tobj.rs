@@ -245,24 +245,25 @@ impl TObjs {
 /// A new, zeroed TObj, `HSD_TObjAlloc`.
 ///
 /// The original allocates HAL class objects from `hsdAllocMemPiece`, whose free lists are
-/// shared by every object of a size class, so its addresses don't follow a TObj pool. Only live
-/// TObjs' identities are compared (the shadow list, [`assign_resources`]), which a pool keeps.
+/// shared by every object of a size class, so the pool takes the slot by the address
+/// ([`super::pool::Pool::alloc_at`]).
 #[doc(alias = "HSD_TObjAlloc")]
 pub fn alloc(tobjs: &mut TObjs) -> TObjId {
+    let addr = super::heap::class_alloc(super::heap::Class::TObj);
     // The palette copies' list keeps the storage the slot's last TObj had, emptied.
     let mut tluts = tobjs
         .pool
-        .free_head()
+        .reused_at(addr)
         .map(|slot| std::mem::take(&mut tobjs.pool[slot].tluttbl_tluts))
         .unwrap_or_default();
     tluts.clear();
-    let t = tobjs.pool.alloc(TObj {
-        tluttbl_tluts: tluts,
-        ..TObj::default()
-    });
-    tobjs
-        .pool
-        .set_addr(t, super::heap::class_alloc(super::heap::Class::TObj));
+    let t = tobjs.pool.alloc_at(
+        addr,
+        TObj {
+            tluttbl_tluts: tluts,
+            ..TObj::default()
+        },
+    );
     TObjId(t)
 }
 

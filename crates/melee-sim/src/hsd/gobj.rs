@@ -206,6 +206,20 @@ pub trait Host<K: Kinds> {
 }
 
 impl<K: Kinds> World<K> {
+    /// The scheduler as `HSD_GObjInit` leaves it for a new scene: empty, its pools made anew
+    /// ([`Pool::retire`]), so a GObj handle a scene before kept still names its address.
+    pub fn renew(&mut self) {
+        let mut gobjs = std::mem::take(&mut self.gobjs);
+        let mut procs = std::mem::take(&mut self.procs);
+        gobjs.retire();
+        procs.retire();
+        *self = World {
+            gobjs,
+            procs,
+            ..World::new()
+        };
+    }
+
     /// An empty scheduler, as `HSD_GObjInit` leaves it.
     #[doc(alias = "HSD_GObj_80391260")]
     #[doc(alias = "HSD_GObjInit")]

@@ -88,6 +88,7 @@ pub struct Globals {
     /// The items, by slot, whose collision's last position (`x378_itemColl.last_pos`) is
     /// still the stack words their spawn found, which the comparer and the heap's image leave
     /// out: a far Arwing's laser outside Slippi's playback (`kinds::arwinglaser::spawn_aimed`).
+    /// A read of the words (a stomp's, the debug display's) stops ([`Globals::last_pos_known`]).
     #[clone_from(if_changed)]
     pub stale_last_pos: std::collections::BTreeSet<u32>,
     /// The items' joint tables (`item_dynamic_bones_alloc_data`).
@@ -164,6 +165,18 @@ pub struct Globals {
 }
 
 impl Globals {
+    /// Stops where `who` reads item `slot`'s collision's last position, or the ECB's motion it
+    /// gave, while it's the stack words a far Arwing's laser's spawn found
+    /// ([`Globals::stale_last_pos`]): their values aren't modelled outside Slippi's playback,
+    /// and nothing read them so far (docs/engine.md).
+    #[track_caller]
+    pub fn last_pos_known(&self, slot: u32, who: &str) {
+        assert!(
+            !self.stale_last_pos.contains(&slot),
+            "{who}: read a far Arwing's laser's last position, the stack words its spawn found"
+        );
+    }
+
     /// The file whose archive is `archive` read from the disc again (not a preload cache's
     /// file an earlier scene took, whose bytes keep what code wrote): the lengths Link's and
     /// Young Link's hookshots' and Samus's grapple beam's spawns wrote over their attributes

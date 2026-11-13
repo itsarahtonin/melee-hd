@@ -75,9 +75,8 @@ impl std::ops::IndexMut<FogId> for Fogs {
 /// A fog loaded from an `HSD_FogDesc`, with its range adjustment, `HSD_FogLoadDesc`.
 #[doc(alias = "HSD_FogLoadDesc")]
 pub fn load_desc(fogs: &mut Fogs, data: &Archives, desc: DataRef) -> FogId {
-    let f = FogId(fogs.fogs.alloc(Fog::default()));
     let addr = super::heap::class_alloc(super::heap::Class::Fog);
-    fogs.fogs.set_addr(f.0, addr);
+    let f = FogId(fogs.fogs.alloc_at(addr, Fog::default()));
     init(fogs, data, Some(f), desc);
     if let Some(adj) = data.ptr(desc.at(4)) {
         fogs[f].fog_adj = Some(adj_load_desc(fogs, data, adj));
@@ -88,9 +87,8 @@ pub fn load_desc(fogs: &mut Fogs, data: &Archives, desc: DataRef) -> FogId {
 /// [`load_desc`] of a descriptor in the executable's data rather than a file's (its type,
 /// distances and color; no range adjustment).
 pub fn load_values(fogs: &mut Fogs, ty: u32, start: f32, end: f32, color: [u8; 4]) -> FogId {
-    let f = FogId(fogs.fogs.alloc(Fog::default()));
     let addr = super::heap::class_alloc(super::heap::Class::Fog);
-    fogs.fogs.set_addr(f.0, addr);
+    let f = FogId(fogs.fogs.alloc_at(addr, Fog::default()));
     let o = &mut fogs[f];
     o.ty = ty;
     o.start = start;
