@@ -379,7 +379,7 @@ pub fn egg_landed(r: &mut Running, gobj: GObjId) {
 /// runs out.
 #[doc(alias = "it_802D5884")]
 #[doc(alias = "itLucky_UnkMotion3_Anim")]
-// Ports `it_802D5A2C`; aliased once a check reaches it.
+#[doc(alias = "it_802D5A2C")]
 pub fn egg_anim(r: &mut Running, gobj: GObjId) -> bool {
     let ip = item_mut(r.game, gobj);
     ip.xD44_lifeTimer = mem(fp::fsubs(reg(ip.xD44_lifeTimer), 1.0));
@@ -389,7 +389,7 @@ pub fn egg_anim(r: &mut Running, gobj: GObjId) -> bool {
 /// The egg's `it_802D58BC`, `itLucky_UnkMotion2_Phys` and `it_802D5A64`: nothing.
 #[doc(alias = "it_802D58BC")]
 #[doc(alias = "itLucky_UnkMotion2_Phys")]
-// Ports `it_802D5A64`; aliased once a check reaches it.
+#[doc(alias = "it_802D5A64")]
 pub fn egg_idle(_: &mut Running, _: GObjId) {}
 
 /// The egg's `it_802D58C0`: falls off the floor.
@@ -425,14 +425,15 @@ pub fn egg_dropped(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 3, change::ANIM_UPDATE);
 }
 
-/// The egg's `itLucky_Logic44_EnteredAir` (thrown).
-// Ports `itLucky_Logic44_EnteredAir`; aliased once a check reaches it.
+/// The egg's `itLucky_Logic44_EnteredAir`: landed on a floor steep enough to slide down
+/// (`it_8026DD5C`), it skids.
+#[doc(alias = "itLucky_Logic44_EnteredAir")]
 pub fn egg_entered_air(r: &mut Running, gobj: GObjId) {
     change_state(r, gobj, 4, change::ANIM_UPDATE);
 }
 
-/// The egg's `it_802D5A68` (thrown): lands, or skids and falls off.
-// Ports `it_802D5A68`; aliased once a check reaches it.
+/// The egg's `it_802D5A68` (skidding): lands, or skids and falls off.
+#[doc(alias = "it_802D5A68")]
 pub fn egg_coll4(r: &mut Running, gobj: GObjId) -> bool {
     ground_skid(r, gobj, egg_landed, egg_fell);
     false

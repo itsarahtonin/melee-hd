@@ -25,7 +25,7 @@ impl Running<'_> {
 
     /// Hiding the held item, `ftCa_Init_OnItemInvisible` and `ftGn_Init_OnItemInvisible` (as
     /// Fox's).
-    // Ports `ftCa_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftCa_Init_OnItemInvisible")]
     #[doc(alias = "ftGn_Init_OnItemInvisible")]
     pub fn ca_on_item_invisible(&mut self, gobj: GObjId) {
         self.fox_on_item_invisible(gobj);
@@ -33,8 +33,8 @@ impl Running<'_> {
 
     /// Showing the held item again, `ftCa_Init_OnItemVisible` and `ftGn_Init_OnItemVisible`
     /// (as Fox's).
-    // Ports `ftCa_Init_OnItemVisible`; aliased once a check reaches it. `ftGn_Init_OnItemVisible`
-    // is dead: nothing shows Ganondorf's hidden item (ledger/dead.txt).
+    #[doc(alias = "ftCa_Init_OnItemVisible")]
+    // `ftGn_Init_OnItemVisible` is dead: nothing shows Ganondorf's hidden item (ledger/dead.txt).
     pub fn ca_on_item_visible(&mut self, gobj: GObjId) {
         self.fox_on_item_visible(gobj);
     }

@@ -332,7 +332,7 @@ impl Running<'_> {
     }
 
     /// Caps the rising speed at `max`, `ftCommon_ClampFallSpeed`.
-    // Ports `ftCommon_ClampFallSpeed`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_ClampFallSpeed")]
     pub fn clamp_fall_speed(fp: &mut Fighter, max: f64) {
         if reg(fp.self_vel.y) > max {
             fp.self_vel.y = mem(max);

@@ -123,13 +123,13 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftDk_Init_OnItemInvisible`.
-    // Ports `ftDk_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftDk_Init_OnItemInvisible")]
     pub fn dk_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 1);
     }
 
     /// Showing the held item again, `ftDk_Init_OnItemVisible`.
-    // Ports `ftDk_Init_OnItemVisible`; aliased once a check reaches it.
+    // `ftDk_Init_OnItemVisible`: dead, nothing shows Donkey Kong's hidden item (ledger/dead.txt).
     pub fn dk_on_item_visible(&mut self, gobj: GObjId) {
         self.item_visible_hand(gobj, 1);
     }

@@ -423,8 +423,6 @@ pub const UNREACHED: &[(&str, &str)] = &[
 /// comment, or inline in a port): it doesn't stop a match.
 pub const UNCHECKED: &[&str] = &[
     "melee/it/itmaterial",
-    "melee/it/kinds/itlucky",
-    "melee/it/kinds/ittarucann",
 ];
 
 /// What an items-on match reaches that isn't ported, task by task.

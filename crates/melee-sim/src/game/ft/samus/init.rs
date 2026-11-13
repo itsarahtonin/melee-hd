@@ -125,7 +125,7 @@ impl Running<'_> {
 
     /// Hiding the held item, `ftSs_Init_OnItemInvisible` (`Fighter_OnItemInvisible(gobj,
     /// 0)`).
-    // Ports `ftSs_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftSs_Init_OnItemInvisible")]
     pub fn samus_on_item_invisible(&mut self, gobj: GObjId) {
         let item = self.game.fighter(gobj).item_gobj.expect("hiding no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
@@ -135,7 +135,7 @@ impl Running<'_> {
 
     /// Showing the held item again, `ftSs_Init_OnItemVisible` (`Fighter_OnItemVisible(gobj,
     /// 0)`).
-    // Ports `ftSs_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftSs_Init_OnItemVisible")]
     pub fn samus_on_item_visible(&mut self, gobj: GObjId) {
         let item = self.game.fighter(gobj).item_gobj.expect("showing no item");
         if !super::super::super::it::lib26b1::is_heavy(self.game, self.data, item) {
