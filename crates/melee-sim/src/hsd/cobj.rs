@@ -123,9 +123,8 @@ impl IndexMut<CObjId> for CObjs {
 #[doc(alias = "HSD_CObjAlloc")]
 #[doc(alias = "CObjInit")]
 pub fn alloc(objs: &mut Objects) -> CObjId {
-    let c = CObjId(objs.cobjs.pool.alloc(CObj::default()));
     let addr = super::heap::class_alloc(super::heap::Class::CObj);
-    objs.cobjs.pool.set_addr(c.0, addr);
+    let c = CObjId(objs.cobjs.pool.alloc_at(addr, CObj::default()));
     set_mtx_dirty(&mut objs.cobjs, c);
     objs.cobjs[c].eyepos = Some(wobj::alloc(&mut objs.wobjs));
     objs.cobjs[c].interest = Some(wobj::alloc(&mut objs.wobjs));

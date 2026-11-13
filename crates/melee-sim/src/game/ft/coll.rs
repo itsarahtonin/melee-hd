@@ -629,6 +629,7 @@ impl Running<'_> {
             if crate::game::it::lib26b1::is_stomp(self.game, item) {
                 let feet = self.game.fighter(gobj).dmg.x1930.clone();
                 let i = crate::game::it::item_of(self.game, item);
+                self.game.it.last_pos_known(i.0, "ft_80081A00");
                 if crate::lb::stomp::stepped_on(&feet, &self.game.items[i.0].xB54) {
                     let (fx, slot) = {
                         let fp = self.game.fighter(gobj);

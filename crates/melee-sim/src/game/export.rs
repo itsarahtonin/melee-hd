@@ -170,11 +170,16 @@ fn proc(game: &Game, data: &Archives, img: &mut Image, p: ProcId) {
 pub fn scene_end(game: &Game, data: &Archives, img: &mut Image) {
     live_objects(&game.objs, data, img);
     crate::hsd::export::id_table(&game.objs, img);
-    for (slot, _) in game.world.gobjs.slots().iter().enumerate() {
-        gobj(game, img, GObjId(slot as u32));
+    // A slot a scene before left (`Pool::retire`) that this one didn't take is that scene's.
+    for slot in 0..game.world.gobjs.slots().len() as u32 {
+        if !game.world.gobjs.is_retired(slot) {
+            gobj(game, img, GObjId(slot));
+        }
     }
-    for (slot, _) in game.world.procs.slots().iter().enumerate() {
-        proc(game, data, img, ProcId(slot as u32));
+    for slot in 0..game.world.procs.slots().len() as u32 {
+        if !game.world.procs.is_retired(slot) {
+            proc(game, data, img, ProcId(slot));
+        }
     }
     for (_, o) in game.world.gobjs.iter() {
         if let Some(ud) = &o.user_data {

@@ -369,8 +369,8 @@ pub fn load_desc(pobjs: &mut PObjs, data: &Archives, desc: Option<DataRef>) -> O
         u: Binding::Skin(None),
         class,
     };
-    let p = PObjId(pobjs.pool.alloc(blank()));
-    pobjs.pool.set_addr(p.0, super::heap::class_alloc(class));
+    let addr = super::heap::class_alloc(class);
+    let p = PObjId(pobjs.pool.alloc_at(addr, blank()));
     let next = load_desc(pobjs, data, data.ptr(desc.at(4)));
     let flags = data.u16(desc.at(0xC));
     let at = desc.at(0x14);

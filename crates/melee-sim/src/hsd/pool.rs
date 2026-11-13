@@ -1,14 +1,24 @@
 //! Object pools, HAL's `HSD_ObjAlloc` (`sysdolphin/baselib/objalloc.c`).
 //!
 //! The original grows a pool one object at a time and keeps freed objects on a last-in,
-//! first-out list. A slot index here plays the part of an object's address: the same
-//! allocations and frees hand out the same slots in the same order, so code that compares or
-//! keys by identity behaves as the original's pointer comparisons did.
+//! first-out list. A slot index here plays the part of an object's address, so code that
+//! compares or keys by identity behaves as the original's pointer comparisons did.
 //!
 //! A pool that stands for one of the original's `HSD_ObjAllocData` names it (`K`, one more
 //! than its [`heap::Kind`]'s index): its allocations and frees go to the allocator model too
 //! ([`heap::with`]), and each slot keeps the address the model gave its object. Other pools
-//! (`K` 0) leave addresses to their owners, which set them ([`Pool::set_addr`]).
+//! (`K` 0) leave addresses to their owners ([`Pool::alloc_at`], [`Pool::set_addr`]).
+//!
+//! Where the model gives an address, the slot follows it: an object takes the slot last at its
+//! address while that slot is free, else a new one, so a slot keeps one address and a handle
+//! kept past its object's free (a dangling pointer) names the address the original's pointer
+//! holds. Within a scene an `HSD_ObjAlloc` pool's last in, first out hands out the same slots
+//! either way, but a scene that makes its heap anew starts its pools empty where melee-sim's keep
+//! the scenes before's slots; and HAL's class objects (joints, display objects, materials,
+//! textures, shapes, lights, cameras, world objects, fog) take pieces of their size from the
+//! memory pieces' free lists, which other classes of that size share, so the original reuses
+//! their addresses in another order than a pool's own. Where the model gives none (it's off, or
+//! a captured state's slot whose address isn't known) a pool is last in, first out.
 
 use super::heap;
 
@@ -35,8 +45,19 @@ pub struct Pool<T, const K: u8 = 0> {
     /// Each slot's object's address in the original, when the allocator model knows it
     /// (else 0).
     addrs: Vec<u32>,
+    /// Each slot's place on the free list, [`NOT_FREE`] when it isn't on it.
+    free_at: Vec<u32>,
+    /// The slots by their addresses, sorted, the last slot given each: where
+    /// [`Pool::alloc_at`] reuses a slot.
+    by_addr: Vec<(u32, u32)>,
     limit: NumLimit,
 }
+
+/// [`Pool`]'s `free_at` for a slot off the free list.
+const NOT_FREE: u32 = u32::MAX;
+/// [`Pool`]'s `free_at` for a slot of a pool made anew ([`Pool::retire`]): free, but taken
+/// again only by an object at its address.
+const RETIRED: u32 = u32::MAX - 1;
 
 /// `HSD_ObjAllocData`'s number limit: `num_limit`, which allocations stop at while
 /// `num_limit_flag` is set. Only the develop level's limiter sets one
@@ -81,6 +102,8 @@ impl<T, const K: u8> Default for Pool<T, K> {
             peak: 0,
             ever_freed: Vec::new(),
             addrs: Vec::new(),
+            free_at: Vec::new(),
+            by_addr: Vec::new(),
             limit: NumLimit::default(),
         }
     }
@@ -92,22 +115,129 @@ pub const fn kind(kind: heap::Kind) -> u8 {
 }
 
 impl<T, const K: u8> Pool<T, K> {
-    /// A slot for `value`, `HSD_ObjAlloc`: the most recently freed, else the heap's next block
-    /// (a fresh slot, else a new one). Only [`Pool::try_alloc`]'s callers may meet a limit.
+    /// A slot for `value`, `HSD_ObjAlloc`: the slot at the address the allocator model gives
+    /// (the most recently freed, else the heap's next block), else a new one. Only
+    /// [`Pool::try_alloc`]'s callers may meet a limit.
     pub fn alloc(&mut self, value: T) -> u32 {
         self.check_limit();
-        let slot = if let Some(slot) = self.free.pop().or_else(|| self.fresh.pop()) {
-            self.slots[slot as usize] = value;
-            slot
-        } else {
-            self.slots.push(value);
-            self.ever_freed.push(false);
-            self.addrs.push(0);
-            (self.slots.len() - 1) as u32
+        let addr = Self::model_alloc();
+        let slot = match self.take(addr) {
+            Some(slot) => {
+                self.slots[slot as usize] = value;
+                slot
+            }
+            None => self.push(value),
         };
+        self.count_alloc(slot, addr);
+        slot
+    }
+
+    /// A new slot for `value`, on no list.
+    fn push(&mut self, value: T) -> u32 {
+        self.slots.push(value);
+        self.ever_freed.push(false);
+        self.addrs.push(0);
+        self.free_at.push(NOT_FREE);
+        (self.slots.len() - 1) as u32
+    }
+
+    /// The address the allocator model gives the pool's next object, 0 where it gives none (a
+    /// pool it doesn't follow, or the model is off).
+    fn model_alloc() -> u32 {
+        if K == 0 {
+            return 0;
+        }
+        heap::with(|h| h.obj_alloc(heap::Kind::ALL[K as usize - 1])).unwrap_or(0)
+    }
+
+    /// Counts a new object in `slot`, at `addr`.
+    fn count_alloc(&mut self, slot: u32, addr: u32) {
         self.used += 1;
         self.peak = self.peak.max(self.used);
-        self.track_alloc(slot);
+        Self::note(slot);
+        self.set_addr(slot, addr);
+    }
+
+    /// The slot an object at `addr` reuses, taken off its list ([`Pool::reused_at`]).
+    fn take(&mut self, addr: u32) -> Option<u32> {
+        let slot = self.reused_at(addr)?;
+        if self.free_at[slot as usize] != NOT_FREE {
+            self.take_free(slot);
+        } else {
+            let at = self.fresh.iter().rposition(|&s| s == slot).unwrap();
+            self.fresh.remove(at);
+        }
+        Some(slot)
+    }
+
+    /// Takes `slot` off the free list, keeping the others' order (the list's last is the
+    /// original's `freehead`, which a freed block links to).
+    fn take_free(&mut self, slot: u32) {
+        let at = std::mem::replace(&mut self.free_at[slot as usize], NOT_FREE);
+        if at == RETIRED {
+            return;
+        }
+        self.free.remove(at as usize);
+        for &s in &self.free[at as usize..] {
+            self.free_at[s as usize] -= 1;
+        }
+    }
+
+    /// The slot an object at `addr` reuses, none where it takes a new one: the slot last at the
+    /// address while it's free; else, where the address is 0 or the next slot last in, first out
+    /// has no address (a captured state's), that slot: the free list's last, else the next
+    /// fresh one.
+    pub fn reused_at(&self, addr: u32) -> Option<u32> {
+        if addr != 0
+            && let Ok(i) = self.by_addr.binary_search_by_key(&addr, |e| e.0)
+        {
+            let slot = self.by_addr[i].1;
+            if self.is_free(slot) {
+                return Some(slot);
+            }
+        }
+        let next = self.free.last().or(self.fresh.last()).copied()?;
+        (addr == 0 || self.addrs[next as usize] == 0).then_some(next)
+    }
+
+    /// The pool made anew (`HSD_ObjAllocInit`), as a scene does with its heap: the counts and
+    /// the limit start again and nothing is on the free list, but the slots stay, each at its
+    /// address and with its last contents, for the handles the scenes before kept (the
+    /// original's pointers into their heap), and an object at a slot's address takes it again.
+    /// A pool with no address the model gave is simply emptied.
+    pub fn retire(&mut self) {
+        if self.by_addr.is_empty() {
+            *self = Pool::default();
+            return;
+        }
+        for (slot, at) in self.free_at.iter_mut().enumerate() {
+            *at = if self.addrs[slot] != 0 {
+                RETIRED
+            } else {
+                NOT_FREE
+            };
+        }
+        self.free.clear();
+        self.fresh.clear();
+        self.ever_freed.fill(true);
+        self.used = 0;
+        self.peak = 0;
+        self.limit = NumLimit::default();
+    }
+
+    /// A slot for a class object the allocator model put at `addr` (`_hsdClassAlloc`), as
+    /// [`Pool::alloc`] takes one.
+    pub fn alloc_at(&mut self, addr: u32, value: T) -> u32 {
+        const { assert!(K == 0, "a pool the allocator model follows asks it itself") };
+        self.check_limit();
+        let slot = match self.take(addr) {
+            Some(slot) => {
+                self.slots[slot as usize] = value;
+                slot
+            }
+            None => self.push(value),
+        };
+        self.count_alloc(slot, addr);
         slot
     }
 
@@ -118,19 +248,18 @@ impl<T, const K: u8> Pool<T, K> {
         }
     }
 
-    /// A slot as `HSD_ObjAlloc` hands it out uncleared: the most recently freed keeps its last
-    /// contents and a fresh slot the heap's, else a new one holds `fresh`.
+    /// A slot as `HSD_ObjAlloc` hands it out uncleared: a reused slot keeps its last contents
+    /// (the object last at its address) and a fresh slot the heap's, else a new one holds
+    /// `fresh`.
     pub fn alloc_stale(&mut self, fresh: T) -> u32 {
         self.check_limit();
-        match self.free.pop().or_else(|| self.fresh.pop()) {
-            Some(slot) => {
-                self.used += 1;
-                self.peak = self.peak.max(self.used);
-                self.track_alloc(slot);
-                slot
-            }
-            None => self.alloc(fresh),
-        }
+        let addr = Self::model_alloc();
+        let slot = match self.take(addr) {
+            Some(slot) => slot,
+            None => self.push(fresh),
+        };
+        self.count_alloc(slot, addr);
+        slot
     }
 
     /// [`Pool::alloc`], or none at the number limit, as `HSD_ObjAlloc` returns null there.
@@ -182,14 +311,6 @@ impl<T, const K: u8> Pool<T, K> {
         }
     }
 
-    fn track_alloc(&mut self, slot: u32) {
-        Self::note(slot);
-        if K != 0 {
-            self.addrs[slot as usize] =
-                heap::with(|h| h.obj_alloc(heap::Kind::ALL[K as usize - 1])).unwrap_or(0);
-        }
-    }
-
     /// The address the original gives the slot's object, 0 where the model doesn't know it.
     pub fn addr(&self, slot: u32) -> u32 {
         self.addrs.get(slot as usize).copied().unwrap_or(0)
@@ -197,7 +318,22 @@ impl<T, const K: u8> Pool<T, K> {
 
     /// Records the address of the slot's object, for pools the model doesn't follow itself.
     pub fn set_addr(&mut self, slot: u32, addr: u32) {
-        self.addrs[slot as usize] = addr;
+        let old = std::mem::replace(&mut self.addrs[slot as usize], addr);
+        if old == addr {
+            return;
+        }
+        if old != 0
+            && let Ok(i) = self.by_addr.binary_search_by_key(&old, |e| e.0)
+            && self.by_addr[i].1 == slot
+        {
+            self.by_addr.remove(i);
+        }
+        if addr != 0 {
+            match self.by_addr.binary_search_by_key(&addr, |e| e.0) {
+                Ok(i) => self.by_addr[i].1 = slot,
+                Err(i) => self.by_addr.insert(i, (addr, slot)),
+            }
+        }
     }
 
     /// The free list's head (`HSD_ObjAllocData::freehead`), the slot the next allocation
@@ -217,6 +353,7 @@ impl<T, const K: u8> Pool<T, K> {
             let addr = self.addrs[slot as usize];
             heap::with(|h| h.obj_free(heap::Kind::ALL[K as usize - 1], addr));
         }
+        self.free_at[slot as usize] = self.free.len() as u32;
         self.free.push(slot);
         self.ever_freed[slot as usize] = true;
         self.used -= 1;
@@ -234,7 +371,16 @@ impl<T, const K: u8> Pool<T, K> {
     /// Whether `slot` holds no live object: on the free list (a freed object a handle can
     /// outlive) or fresh.
     pub fn is_free(&self, slot: u32) -> bool {
-        self.free.contains(&slot) || self.fresh.contains(&slot)
+        self.free_at
+            .get(slot as usize)
+            .is_some_and(|&a| a != NOT_FREE)
+            || self.fresh.contains(&slot)
+    }
+
+    /// Whether `slot` is a scene before's that no object has taken since the pool was made anew
+    /// ([`Pool::retire`]).
+    pub fn is_retired(&self, slot: u32) -> bool {
+        self.free_at.get(slot as usize) == Some(&RETIRED)
     }
 
     /// Whether `slot` has been freed since it was made, reused or not.
@@ -282,6 +428,8 @@ impl<T, const K: u8> Pool<T, K> {
         self.fresh.clone_from(&other.fresh);
         self.ever_freed.clone_from(&other.ever_freed);
         self.addrs.clone_from(&other.addrs);
+        self.free_at.clone_from(&other.free_at);
+        self.by_addr.clone_from(&other.by_addr);
         self.used = other.used;
         self.peak = other.peak;
         self.limit = other.limit;
@@ -348,6 +496,62 @@ mod tests {
         assert_eq!(p[f1], 6);
         assert_eq!(p.alloc(7), 4);
         assert_eq!(p.used(), 5);
+    }
+
+    #[test]
+    fn a_slot_follows_its_address() {
+        let mut p: Pool<u32> = Pool::default();
+        let a = p.alloc_at(0x8000_1000, 1);
+        let b = p.alloc_at(0x8000_2000, 2);
+        p.free(a);
+        p.free(b);
+        // The pieces hand out 0x1000 again, then one neither slot had: `a`, then a new slot,
+        // though `b` was freed last.
+        assert_eq!(p.reused_at(0x8000_1000), Some(a));
+        assert_eq!(p.alloc_at(0x8000_1000, 3), a);
+        let c = p.alloc_at(0x8000_3000, 4);
+        assert!(c != a && c != b);
+        assert_eq!(
+            (p.addr(a), p.addr(b), p.addr(c)),
+            (0x8000_1000, 0x8000_2000, 0x8000_3000)
+        );
+        // `b` stays free at its address, where a dangling handle to it still points.
+        assert!(p.is_free(b) && p.free_slots() == [b]);
+        assert_eq!(p.alloc_at(0x8000_2000, 5), b);
+        assert_eq!(p.used(), 3);
+        // Without an address, last in, first out.
+        p.free(c);
+        p.free(a);
+        assert_eq!(p.alloc_at(0, 6), a);
+        assert_eq!(p.addr(a), 0);
+        assert_eq!(p.reused_at(0x8000_1000), None);
+        let mut q: Pool<u32> = Pool::default();
+        q.restore_from(&p);
+        assert_eq!(q.alloc_at(0x8000_3000, 7), c);
+    }
+
+    #[test]
+    fn a_pool_made_anew_keeps_its_slots_at_their_addresses() {
+        let mut p: Pool<u32> = Pool::default();
+        let a = p.alloc_at(0x8000_1000, 1);
+        let b = p.alloc_at(0x8000_2000, 2);
+        p.free(a);
+        p.retire();
+        // A handle to either still names its address; neither is on the free list.
+        assert!(p.is_retired(a) && p.is_retired(b) && p.is_free(b));
+        assert_eq!((p.used(), p.free_head()), (0, None));
+        assert_eq!(p.iter().count(), 0);
+        let c = p.alloc_at(0x8000_3000, 3);
+        assert!(c != a && c != b);
+        assert_eq!(p.alloc_at(0x8000_2000, 4), b);
+        assert!(!p.is_retired(b) && p.is_retired(a));
+        assert_eq!(p.alloc_at(0, 5), 3);
+        assert_eq!(p.used(), 3);
+        // A pool the model never gave an address is simply emptied.
+        let mut q: Pool<u32> = Pool::default();
+        q.alloc(1);
+        q.retire();
+        assert_eq!((q.slots().len(), q.alloc(2)), (0, 0));
     }
 
     #[test]
