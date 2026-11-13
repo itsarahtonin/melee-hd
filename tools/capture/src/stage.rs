@@ -1615,7 +1615,7 @@ impl Comparer<'_> {
                 // A key in a file the original's scene freed while the table still holds it,
                 // where ours holds the same key.
                 let gone = || {
-                    self.past
+                    self.gone
                         .and_then(|p| p.gone_ref(key))
                         .filter(|&k| self.game.objs.ids.get(k).is_some())
                 };

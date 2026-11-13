@@ -6,7 +6,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
-use melee_capture::compare::PastAddrs;
+use melee_capture::compare::GoneArchives;
 use melee_capture::import::{Maps, sym};
 use melee_data::disc::Disc;
 use melee_sim::game::code::{Val, stubs};
@@ -1132,7 +1132,7 @@ impl Run<'_> {
                     &s.game,
                     &s.data,
                     Maps::default(),
-                    &PastAddrs::default(),
+                    &GoneArchives::default(),
                 );
                 println!(
                     "trace tick {n} imported and compared back: {} differences",
@@ -1154,8 +1154,7 @@ impl Run<'_> {
         // Power-on leaves the image at tick 0, the first step's.
         let mut held = self.from.is_none();
         let mut compared = 0;
-        let mut past = PastAddrs::default();
-        past.note(&s.game);
+        let mut gone = GoneArchives::default();
         let mut stale = StaleReads {
             counts: (s.game.objs.stale_reads, s.game.coll.stale_reads),
             ..Default::default()
@@ -1221,13 +1220,12 @@ impl Run<'_> {
             let before = files.loaded().to_vec();
             let mut data = files.refresh(&mut image, &mut s.data, false);
             newest_place_first(&mut data, &s.game);
-            past.note_archives(&before, &data.loaded);
+            gone.note_archives(&before, &data.loaded);
             if let Some(d) = files.rescan.disagreements.first() {
                 break Some(Stop::Seam(format!(
                     "the archives' incremental scan differs from a full scan: {d}"
                 )));
             }
-            past.note(&s.game);
             // A comparer that meets memory it can't follow stops the run at that tick.
             let compared_tick = catch_unwind(AssertUnwindSafe(|| {
                 compare(
@@ -1236,7 +1234,7 @@ impl Run<'_> {
                     &s.game,
                     &s.data,
                     dangling.clone(),
-                    &past,
+                    &gone,
                 )
             }));
             let (mut diffs, reads) = match compared_tick {

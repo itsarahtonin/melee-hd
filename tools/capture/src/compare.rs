@@ -25,21 +25,15 @@ use crate::import::{FIGHTER_ATTRS_SIZE, Maps, VS_CONTROLLER, sym, try_box_index}
 pub const UNLAID: &str = "unlaid: ";
 use crate::{DataMap, FT_ANIM_FILES, FT_KINDS, MEM1};
 
-/// The addresses the allocator model has given each pool slot's objects, noted after every
-/// tick: a handle kept past its object's free (a dangling pointer) names the address of the
-/// object it was set to, which the slot no longer holds once it's reused. Joints, display
-/// objects, materials and textures come from the class allocator, whose blocks are reused in
-/// another order than the pools' slots, so a slot's objects can sit at several addresses.
+/// The archives an earlier scan found that the latest doesn't (their scene's heap went with
+/// them, and their bytes since changed), where they were last: what the original's pointers
+/// into them still name.
 #[derive(Clone, Default)]
-pub struct PastAddrs {
-    addrs: HashMap<(&'static str, u32), Vec<u32>>,
-    /// Archives an earlier scan found that the latest doesn't (their scene's heap went with
-    /// them, and their bytes since changed), where they were last: what the original's
-    /// pointers into them still name.
+pub struct GoneArchives {
     gone: Vec<crate::Loaded>,
 }
 
-impl PastAddrs {
+impl GoneArchives {
     /// Notes the archives the latest scan no longer finds, at their last place.
     pub fn note_archives(&mut self, before: &[crate::Loaded], now: &[crate::Loaded]) {
         let here = |l: &crate::Loaded| now.iter().any(|n| n.id == l.id && n.data == l.data);
@@ -81,45 +75,6 @@ impl PastAddrs {
             .iter()
             .any(|g| g.id == d.archive && g.data + d.offset == addr && d.offset < g.data_len)
     }
-
-    /// Notes each slot's address, where it's new.
-    pub fn note(&mut self, game: &Game) {
-        fn pool<T, const K: u8>(
-            addrs: &mut HashMap<(&'static str, u32), Vec<u32>>,
-            kind: &'static str,
-            p: &Pool<T, K>,
-        ) {
-            for slot in 0..p.slots().len() as u32 {
-                let a = p.addr(slot);
-                if a == 0 {
-                    continue;
-                }
-                let v = addrs.entry((kind, slot)).or_default();
-                if v.last() != Some(&a) {
-                    v.push(a);
-                }
-            }
-        }
-        let a = &mut self.addrs;
-        let o = &game.objs;
-        pool(a, "JObjId", &o.jobjs.pool);
-        pool(a, "DObjId", &o.dobjs.pool);
-        pool(a, "MObjId", &o.mobjs.pool);
-        pool(a, "TObjId", &o.tobjs.pool);
-        pool(a, "GeneratorId", &o.generators.pool);
-        pool(a, "GObjId", &game.world.gobjs);
-        pool(a, "FighterId", &game.fighters);
-        pool(a, "ItemId", &game.items);
-        pool(a, "EffectId", &game.ef.effects);
-        pool(a, "QueuedId", &game.ef.queued);
-    }
-
-    /// Whether slot `o` of `kind`'s pool has held an object at `addr`.
-    fn had(&self, kind: &'static str, o: u32, addr: u32) -> bool {
-        self.addrs
-            .get(&(kind, o))
-            .is_some_and(|v| v.contains(&addr))
-    }
 }
 
 /// The pool a handle kind names objects of, for the kinds whose slots carry the allocator
@@ -159,8 +114,8 @@ pub struct Comparer<'a> {
     /// The archives, where the caller has them: fighters' animation buffers then compare
     /// byte for byte where we know what they hold.
     pub archives: Option<&'a Archives>,
-    /// The addresses pool slots' earlier objects had, where the caller has followed them.
-    pub past: Option<&'a PastAddrs>,
+    /// Where archives the original's scenes let go of were, where the caller has followed them.
+    pub gone: Option<&'a GoneArchives>,
     /// The block being compared, for its heap leftovers ([`crate::leftovers`]): its kind,
     /// the original's address, and its path's length.
     pub(crate) block: Option<(&'static str, u32, usize)>,
@@ -230,7 +185,7 @@ impl<'a> Comparer<'a> {
             diffs: Vec::new(),
             stale_reads: Vec::new(),
             archives: None,
-            past: None,
+            gone: None,
             block: None,
         }
     }
@@ -304,7 +259,7 @@ impl<'a> Comparer<'a> {
         }
         let o = ours?;
         let gone = !self.data.loaded.iter().any(|l| l.id == o.archive);
-        let at = self.past.and_then(|p| p.gone_addr(o));
+        let at = self.gone.and_then(|p| p.gone_addr(o));
         (gone && at == Some(theirs)).then_some(o)
     }
 
@@ -744,7 +699,7 @@ impl<'a> Comparer<'a> {
                 let t = self.archives?.ptr(c.at(offset))?;
                 self.data
                     .try_addr(t)
-                    .or_else(|| self.past.and_then(|p| p.gone_addr(t)))
+                    .or_else(|| self.gone.and_then(|p| p.gone_addr(t)))
             };
             let ours = match game.ft.load_common {
                 _ if at == 0 => 0,
@@ -1955,26 +1910,19 @@ impl Cx for Comparer<'_> {
         // pairing ended with the free, since the original's heap may have handed the block to
         // a new object by now. So it pairs nothing, and compares by the address the allocator
         // model gave the object, whatever lives there since (docs/oracle.md, "Dangling
-        // pointers"). Our slot may have been reused since, even freed again, at another
-        // address: the field then names the slot's earlier object, whose address the original
-        // holds.
-        let slot = ours.and_then(|o| self.slot_of(kind, o).map(|s| (o, s)));
-        let freed = slot.and_then(|(_, (_, free, addr))| free.then_some(addr));
-        if let Some((o, (pool, free, addr))) = slot
+        // pointers"). A slot keeps its address for good (`Pool::alloc_at`, `Pool::retire`), so
+        // the address is the one the original's pointer holds.
+        let slot = ours.and_then(|o| self.slot_of(kind, o));
+        let freed = slot.and_then(|(_, free, addr)| free.then_some(addr));
+        if let Some((_, true, addr)) = slot
             && addr != 0
         {
-            let earlier = theirs != addr && self.past.is_some_and(|p| p.had(pool, o, theirs));
-            if earlier {
-                return;
+            if addr != theirs {
+                self.diffs.push(format!(
+                    "{path}: {kind} ours dangling (freed at {addr:#x}), theirs {theirs:#x}"
+                ));
             }
-            if free {
-                if addr != theirs {
-                    self.diffs.push(format!(
-                        "{path}: {kind} ours dangling (freed at {addr:#x}), theirs {theirs:#x}"
-                    ));
-                }
-                return;
-            }
+            return;
         }
         let known = match kind {
             "JObjId" => self.maps.jobjs.get(&theirs).map(|j| j.0),
@@ -2046,7 +1994,7 @@ impl Cx for Comparer<'_> {
         // there: a pointer the original kept to it (the stage select's icons' joints, its
         // `mnStageSel_803F06D0`) is the same word as the pointer to the new object, so it
         // compares by the address.
-        if let (Some(o), Some(k), Some((_, (_, false, addr)))) = (ours, known, slot)
+        if let (Some(o), Some(k), Some((_, false, addr))) = (ours, known, slot)
             && k != o
             && addr == theirs
             && self.scene_gone(kind, o)
@@ -2077,13 +2025,13 @@ impl Cx for Comparer<'_> {
         if let Some(o) = ours
             && !self.data.loaded.iter().any(|l| l.id == o.archive)
             && let Some(a) = self
-                .past
+                .gone
                 .and_then(|p| p.gone_addr(o))
                 .or_else(|| self.game.objs.heap.image.data_addr(o))
         {
             // Two copies of the file gone together (a match's and the next select's): the
             // pointer names the same data in either.
-            let other_copy = self.past.is_some_and(|p| p.in_gone_copy(o, theirs));
+            let other_copy = self.gone.is_some_and(|p| p.in_gone_copy(o, theirs));
             if a != theirs && !other_copy {
                 self.diffs.push(format!(
                     "{path}: data ours {o:?} (at {a:#x}, its archive gone), theirs {theirs:#x}"
@@ -2103,7 +2051,7 @@ impl Cx for Comparer<'_> {
         };
         // A pointer the original keeps into a copy of the file gone since, where ours names
         // the same data, compares by that copy's place (the same rule as a file gone whole).
-        let gone_copy = ours.is_some_and(|o| self.past.is_some_and(|p| p.in_gone_copy(o, theirs)));
+        let gone_copy = ours.is_some_and(|o| self.gone.is_some_and(|p| p.in_gone_copy(o, theirs)));
         if ours != t && !same_bytes && !gone_copy && !(ours.is_none() && theirs != 0 && t.is_none())
         {
             self.diffs

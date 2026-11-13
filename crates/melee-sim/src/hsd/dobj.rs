@@ -169,11 +169,8 @@ pub fn anim_all(objs: &mut Objects, data: &Archives, d: Option<DObjId>) {
 /// `HSD_DObjAlloc`.
 #[doc(alias = "HSD_DObjAlloc")]
 pub fn alloc(dobjs: &mut DObjs) -> DObjId {
-    let d = dobjs.pool.alloc(DObj::default());
-    dobjs
-        .pool
-        .set_addr(d, super::heap::class_alloc(super::heap::Class::DObj));
-    DObjId(d)
+    let addr = super::heap::class_alloc(super::heap::Class::DObj);
+    DObjId(dobjs.pool.alloc_at(addr, DObj::default()))
 }
 
 /// Builds a DObj list, its materials and its shapes from their descriptors, each DObj before

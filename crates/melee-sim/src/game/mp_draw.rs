@@ -213,6 +213,8 @@ impl Running<'_> {
             if !cd.x35_flags.b0 {
                 continue;
             }
+            let i = super::it::item_of(self.game, g);
+            self.game.it.last_pos_known(i.0, "mpLib_DrawEcbs");
             if cd.x38 == generation {
                 self.map_ecbs(&cd);
             }

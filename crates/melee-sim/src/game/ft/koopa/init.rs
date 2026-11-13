@@ -57,13 +57,13 @@ impl Running<'_> {
     }
 
     /// Hiding the held item, `ftKp_Init_OnItemInvisible` (as Fox's).
-    // Ports `ftKp_Init_OnItemInvisible`; aliased once a check reaches it.
+    #[doc(alias = "ftKp_Init_OnItemInvisible")]
     pub fn kp_on_item_invisible(&mut self, gobj: GObjId) {
         self.item_invisible_hand(gobj, 1);
     }
 
     /// Showing the held item again, `ftKp_Init_OnItemVisible` (as Fox's).
-    // Ports `ftKp_Init_OnItemVisible`; aliased once a check reaches it.
+    #[doc(alias = "ftKp_Init_OnItemVisible")]
     pub fn kp_on_item_visible(&mut self, gobj: GObjId) {
         self.item_visible_hand(gobj, 1);
     }

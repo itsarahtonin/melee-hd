@@ -703,6 +703,10 @@ impl Host<GameKinds> for Running<'_> {
             }
             // `HSD_Free`.
             UserData::StadiumScreen(which) => {
+                let (game, data) = (&*self.game, self.data);
+                crate::hsd::export::with_image(|img| {
+                    super::export::stadium_screen(game, data, img, which)
+                });
                 let s = self.game.gr.stadium.screens[usize::from(which)].as_ref();
                 crate::hsd::heap::mem_free(s.map_or(0, |s| s.addr));
             }

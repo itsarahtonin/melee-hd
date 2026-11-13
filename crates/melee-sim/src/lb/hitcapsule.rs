@@ -166,42 +166,55 @@ impl Mirror for HitOwner {
 
 /// `HitCapsule::jobj`, the joint a hitbox follows. An item's block comes uncleared
 /// (`Pool::alloc_stale`) and item creation leaves its hitboxes' joints alone, so a new item's
-/// hitbox holds the joint word of the block's last item, a pointer to a freed joint whose block
-/// the original may have handed to another object since, until the item's script makes the box
-/// (`it_802790C0`). Nothing reads it before then: the joint is read only while the box is on,
-/// and only the script turns a new item's box on, writing the joint as it does
-/// (docs/engine.md). So the word is unknown (`None`) from the item's creation until written,
-/// the comparer leaves it out while unknown, and reading it then stops. Fighters' hitboxes and
-/// imported ones are always known.
+/// hitbox holds the joint word of the block's last item (a pointer to a freed joint, which
+/// compares by its address however the pieces were reused since) or, in a block new from the
+/// heap, the heap image's word, until the item's script makes the box (`it_802790C0`). The
+/// word is kept and compared as the original's; nothing reads it before the script writes it
+/// (the joint is read only while the box is on, and only the script turns a new item's box on,
+/// docs/engine.md), and a read before then stops, naming the reader. Fighters' hitboxes and
+/// imported ones are always written.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, melee_derive::StateEq)]
-pub struct HitJObj(Option<Option<JObjId>>);
+pub struct HitJObj {
+    jobj: Option<JObjId>,
+    /// Whether the item has written the joint since it was made.
+    written: bool,
+}
 
 impl Default for HitJObj {
     fn default() -> Self {
-        HitJObj(Some(None))
+        HitJObj {
+            jobj: None,
+            written: true,
+        }
     }
 }
 
 impl HitJObj {
     /// The joint; `who` names the reader, for the stop when the item never wrote it.
     pub fn get(self, who: &str) -> Option<JObjId> {
-        self.0
-            .unwrap_or_else(|| panic!("{who}: a hitbox's joint read before its item wrote it"))
+        assert!(
+            self.written,
+            "{who}: a hitbox's joint read before its item wrote it"
+        );
+        self.jobj
     }
 
     /// Writes the joint.
     pub fn set(&mut self, j: Option<JObjId>) {
-        self.0 = Some(j);
+        *self = HitJObj {
+            jobj: j,
+            written: true,
+        };
     }
 
-    /// Marks the joint unknown, as a new item finds it.
-    pub fn mark_unknown(&mut self) {
-        self.0 = None;
+    /// Marks the joint unwritten, as a new item finds it, keeping the word its block held.
+    pub fn mark_unwritten(&mut self) {
+        self.written = false;
     }
 
-    /// The joint as the comparer sees it: `None` while unknown.
-    pub fn peek(self) -> Option<Option<JObjId>> {
-        self.0
+    /// The word as the comparer sees it, written or not.
+    pub fn peek(self) -> Option<JObjId> {
+        self.jobj
     }
 }
 
@@ -209,13 +222,14 @@ impl Mirror for HitJObj {
     const SIZE: u32 = 4;
 
     fn import(m: &Mem, at: u32, cx: &mut dyn Cx) -> Self {
-        HitJObj(Some(cx.import_handle("JObjId", m.u32(at)).map(JObjId)))
+        HitJObj {
+            jobj: cx.import_handle("JObjId", m.u32(at)).map(JObjId),
+            written: true,
+        }
     }
 
     fn compare(&self, m: &Mem, at: u32, path: &str, cx: &mut dyn Cx) {
-        if let Some(j) = self.0 {
-            cx.compare_handle(path, "JObjId", j.map(|h| h.0), m.u32(at));
-        }
+        cx.compare_handle(path, "JObjId", self.jobj.map(|h| h.0), m.u32(at));
     }
 }
 
@@ -614,10 +628,7 @@ impl crate::game::mirror::LayOut for HitOwner {
 }
 
 impl crate::game::mirror::LayOut for HitJObj {
-    /// Unknown until the item writes it.
     fn lay(&self, l: &mut crate::hsd::export::Lay, at: u32, cx: &dyn crate::game::mirror::LayCx) {
-        if let Some(j) = self.0 {
-            l.put_word(at, cx.handle("JObjId", j.map(|h| h.0)));
-        }
+        l.put_word(at, cx.handle("JObjId", self.jobj.map(|h| h.0)));
     }
 }
