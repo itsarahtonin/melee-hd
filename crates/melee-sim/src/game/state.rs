@@ -523,6 +523,13 @@ pub struct Game {
     pub recorder: Option<Box<super::record::Recorder>>,
 }
 
+impl Game {
+    /// A GObj's address, where the allocator model gives one.
+    pub fn gobj_addr(&self, g: GObjId) -> Option<u32> {
+        Some(self.world.gobjs.addr(g.0)).filter(|&a| a != 0)
+    }
+}
+
 /// The game as the scheduler's host for one call: the state and the game data it reads.
 pub struct Running<'a> {
     pub game: &'a mut Game,
@@ -574,7 +581,12 @@ impl Host<GameKinds> for Running<'_> {
             UserData::ItemLink(l) => super::it::link::free(self.game, self.data, l),
             UserData::Effect(e) => super::ef::remove_user_data(self.game, e),
             UserData::Sound(s) => crate::lb::sound_obj::free(self.game, s),
-            UserData::Text(t) => self.game.sis.free_text(t),
+            UserData::Text(t) => {
+                self.game.sis.free_text(t);
+                // The freed text's `entity` still names its GObj.
+                let a = self.game.gobj_addr(gobj);
+                self.game.sis.set_freed_entity(t, a);
+            }
             UserData::SisCamera(g) => self.game.sis.forget_camera(g),
             // `mn_8022EB04`: the heap byte goes back.
             UserData::NameTagSlot(slot) => {

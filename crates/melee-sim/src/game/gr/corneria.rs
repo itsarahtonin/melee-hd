@@ -2234,11 +2234,7 @@ pub fn window_render(r: &mut Running, gobj: GObjId, pass: i32) {
         let Some(t) = text else { return };
         match r.game.sis.texts.get_mut(&t.0) {
             Some(t) => t.hidden = h,
-            None if r.game.sis.arena_block != 0 => {
-                let at = r.game.sis.arena_block + t.0 + crate::hsd::sis::TEXT_HIDDEN;
-                crate::hsd::heap::with(|hp| hp.image.put(at, &[h]));
-            }
-            None => {}
+            None => r.game.sis.poke(t.0 + crate::hsd::sis::TEXT_HIDDEN, h),
         }
     };
     if r.game.db_pause_flag(1)
