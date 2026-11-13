@@ -76,6 +76,7 @@ impl Running<'_> {
         }
         self.fighter_init_pools();
         crate::hsd::heap::init_pool(crate::hsd::heap::Kind::FighterX59C, 0x8000, 0x20);
+        self.game.fighter_anim_bufs.retire();
     }
 
     /// The fighters' setup for the results screen's posing fighters, `ftDemo_ObjAllocInit`:
@@ -84,6 +85,7 @@ impl Running<'_> {
     pub fn fighter_demo_init(&mut self) {
         self.fighter_init_pools();
         crate::hsd::heap::init_pool(crate::hsd::heap::Kind::FighterX59C, 0xB000, 0x20);
+        self.game.fighter_anim_bufs.retire();
     }
 
     /// `Fighter_800679B0`.
@@ -100,6 +102,12 @@ impl Running<'_> {
                 Kind::FighterX2040,
             ]);
         }
+        // The pools made anew: the fighters of the matches before went with their heaps.
+        let g = &mut *self.game;
+        g.fighters.retire();
+        g.fighter_attrs.retire();
+        g.fighter_parts.retire();
+        g.fighter_dobj_lists.retire();
         self.game.reset_fighter_data();
         // `Fighter_LoadCommonData`'s `lbArchive_LoadSymbols`: from the disc.
         self.disc_load("PlCo.dat", super::data::MAIN_MEMORY);

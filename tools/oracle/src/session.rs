@@ -950,10 +950,49 @@ pub fn session(args: &[&str]) -> ExitCode {
     run.play(setup)
 }
 
+/// The class objects melee-sim holds live against the allocator model's classes' counts, which
+/// `--heap` compares with memory: each pool's objects, whatever class the game changed them to,
+/// are the original's that exist. A pool keeping objects whose memory went with a scene's heap
+/// (docs/engine.md, objects and identity) differs here.
+fn class_counts(game: &Game) -> Vec<String> {
+    use melee_sim::hsd::heap::Class;
+    let h = &game.objs.heap;
+    if !h.active {
+        return Vec::new();
+    }
+    let model = |root: Class| {
+        Class::ALL
+            .iter()
+            .filter(|c| c.root() == root)
+            .fold(0u32, |n, &c| n.wrapping_add(h.classes[c as usize].nb_exist))
+    };
+    let o = &game.objs;
+    [
+        (Class::JObj, o.jobjs.pool.used()),
+        (Class::DObj, o.dobjs.pool.used()),
+        (Class::MObj, o.mobjs.pool.used()),
+        (Class::TObj, o.tobjs.pool.used()),
+        (Class::PObj, o.pobjs.pool.used()),
+        (Class::CObj, o.cobjs.pool.used()),
+        (Class::LObj, o.lobjs.pool.used()),
+        (Class::WObj, o.wobjs.used()),
+        (Class::Fog, o.fogs.fogs.used()),
+    ]
+    .into_iter()
+    .filter(|&(c, n)| model(c) != n)
+    .map(|(c, n)| {
+        format!(
+            "class objects: {n} {c:?}s live in melee-hd's pool, {} in the allocator model's classes",
+            model(c)
+        )
+    })
+    .collect()
+}
+
 /// A rollback snapshot of the session's state measured as `melee-bench snapshot-match` measures
 /// a match's (docs/performance.md): the state's size with what it owns, the median of 200
 /// clones and of 200 restores (`clone_from`), and the heap image's part of each.
-fn snapshot_report(t: u32, game: &melee_sim::game::state::Game) {
+pub(crate) fn snapshot_report(t: u32, game: &melee_sim::game::state::Game) {
     use std::time::Instant;
     let median_us = |f: &mut dyn FnMut()| {
         let mut v: Vec<f64> = (0..200)
@@ -1246,6 +1285,9 @@ impl Run<'_> {
                     )));
                 }
             };
+            if crate::diff::COMPARE_HEAP.with(|c| c.get()) {
+                diffs.extend(class_counts(&s.game));
+            }
             if self.image_ticks.contains(&t) {
                 image_check(t, &s.game, &s.data, &image.mem1);
             }

@@ -250,14 +250,14 @@ impl Clone for MObjs {
     }
 
     fn clone_from(&mut self, source: &Self) {
-        let theirs = source.pool.slots();
-        for i in 0..self.pool.slots().len() {
+        let theirs = source.pool.stored();
+        for i in 0..self.pool.stored().len() {
             let compiled = theirs.get(i).is_some_and(|m| m.tev.is_some());
-            if !compiled && let Some(tev) = self.pool.slots_mut()[i].tev.take() {
+            if !compiled && let Some(tev) = self.pool.stored_mut()[i].tev.take() {
                 self.keep_tev(tev);
             }
         }
-        for (ours, theirs) in self.pool.slots_mut().iter_mut().zip(theirs) {
+        for (ours, theirs) in self.pool.stored_mut().iter_mut().zip(theirs) {
             if ours.tev.is_none() && theirs.tev.is_some() {
                 ours.tev = self.spare_tev.pop();
             }
@@ -398,10 +398,10 @@ pub fn anim(objs: &mut Objects, data: &Archives, m: Option<MObjId>) {
 #[doc(alias = "HSD_MObjAlloc")]
 pub fn alloc(mobjs: &mut MObjs) -> MObjId {
     let addr = super::heap::class_alloc(super::heap::Class::MObj);
-    // The slot to be reused still holds its last material's compiled TEV: its storage is
-    // kept for a later compile.
+    // The slot to be reused still holds its last material's compiled TEV, unless a scene before
+    // left it: its storage is kept for a later compile.
     if let Some(slot) = mobjs.pool.reused_at(addr)
-        && let Some(tev) = mobjs.pool[slot].tev.take()
+        && let Some(tev) = mobjs.pool.get_mut(slot).and_then(|m| m.tev.take())
     {
         mobjs.keep_tev(tev);
     }
