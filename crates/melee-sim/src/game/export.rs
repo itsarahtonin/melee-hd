@@ -1070,6 +1070,13 @@ pub fn item(game: &Game, data: &Archives, img: &mut Image, i: ItemId) {
     let n = usize::from(o.xAC8_hurtboxNum);
     o.xACC_itemHurtbox.lay_counted(&mut l, at + 0xACC, &cx, n);
     if let Some(runs) = game.it.render_leftovers.get(&i.0) {
+        // The flag byte `xDD0`'s `b2`, which no item code writes: over the GPU's pixels the
+        // item never held it, and the image keeps whole bytes, so the byte goes back as the
+        // pixels it was made over (`2026-10-06_12-04-48`, tick 25368: a fighter over a freed
+        // item's block held `b2` set where the image had the item's byte).
+        if runs.iter().any(|&(a, b)| a <= 0xDD0 && 0xDD0 < b) {
+            l.forget(at + 0xDD0, 1);
+        }
         l.keep_render_target(runs, img.render_fill);
     }
     // A collision's last position its spawn's stack words gave (`it::Globals::stale_last_pos`).

@@ -160,7 +160,7 @@ impl Running<'_> {
         o.mobjs.shadows = None;
         o.ids = Default::default();
         // `_HSD_RObjForgetMemory`: the expressions' argument buffer, from the old heap.
-        o.robjs.arg_buf = false;
+        o.robjs.arg_buf = None;
     }
 
     /// The objects of the scene's heap as the game lays them out, into the heap's image as the
