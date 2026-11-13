@@ -812,11 +812,8 @@ pub fn load(objs: &mut Objects, data: &Archives, l: LObjId, desc: DataRef) {
 
 /// A new, empty light (`HSD_LObjLoadDesc`'s allocation).
 pub fn alloc(lobjs: &mut LObjs) -> LObjId {
-    let l = lobjs.pool.alloc(LObj::default());
-    lobjs
-        .pool
-        .set_addr(l, super::heap::class_alloc(super::heap::Class::LObj));
-    LObjId(l)
+    let addr = super::heap::class_alloc(super::heap::Class::LObj);
+    LObjId(lobjs.pool.alloc_at(addr, LObj::default()))
 }
 
 /// [`load`], with the descriptor's flags as the game has edited them in the loaded data.

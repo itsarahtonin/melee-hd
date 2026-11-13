@@ -1462,11 +1462,14 @@ pub fn alloc(objs: &mut Objects) -> JObjId {
         JObjClass::Hsd => heap::Class::JObj,
         JObjClass::FighterIntp => heap::Class::FtIntpJObj,
     };
-    let j = objs.jobjs.pool.alloc(JObj {
-        class,
-        ..JObj::default()
-    });
-    objs.jobjs.pool.set_addr(j, heap::class_alloc(class));
+    let addr = heap::class_alloc(class);
+    let j = objs.jobjs.pool.alloc_at(
+        addr,
+        JObj {
+            class,
+            ..JObj::default()
+        },
+    );
     JObjId(j)
 }
 
