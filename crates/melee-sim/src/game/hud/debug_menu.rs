@@ -1353,6 +1353,13 @@ impl Running<'_> {
         };
     }
 
+    /// The debug mode's special message state's exit, `onExitPrize` (0x801B0B24): back to
+    /// the debug menu's state 2, the Mode Team Test page.
+    #[doc(alias = "onExitPrize@801B0B24")]
+    pub fn debug_mode_exit_prize(&mut self) {
+        self.set_next_game_mode_state_id(2);
+    }
+
     /// `onEnterApproach`: the challenger approach screen for the character the Kim test's
     /// Approach entry names (12 and past the list Dr. Mario, as the table's default).
     #[doc(alias = "onEnterApproach")]
@@ -1368,25 +1375,27 @@ impl Running<'_> {
     }
 
     /// `gm_801BED3C`, the Hanyu character select's entry: VS mode's data, every character
-    /// unlocked (`gm_80164F18`), and on an odd match type Ice Climbers' locked again
-    /// (`gm_80164A0C(7)`).
-    // Ports `gm_801BED3C`; aliased once a check reaches it (the select it opens crashes in
-    // its entry, before any traced tick).
+    /// unlocked (`gm_80164F18`), and on an odd match type a character locked again
+    /// (`gm_80164A0C(7)`, `ledger/dead.txt`: the match type is always 0 here, VS Melee's, the
+    /// select's `.bss` start, which only its exit would change, and the select crashes on
+    /// every entry before its exit can run, [`Running::css_ko_counts`]).
+    #[doc(alias = "gm_801BED3C")]
     pub fn hanyu_css_enter(&mut self) {
         let vs = self
             .vs_table(crate::game::gm::vs_melee::VS_MODE_MELEE)
             .clone();
         self.game.debug_mode.hanyu_css.vs.clone_from(&vs);
         self.game.game_data.thing.save_data.unlocked_characters |= (1 << 11) - 1;
-        if self.game.debug_mode.hanyu_css.match_type & 1 != 0 {
-            crate::game::code::unported_call("gm_80164A0C (the Hanyu select's odd match types)");
-        }
+        assert!(
+            self.game.debug_mode.hanyu_css.match_type & 1 == 0,
+            "the Hanyu select entered in an odd match type, which its crash on every entry rules out"
+        );
         self.game.sync_unlocks();
     }
 
     /// `gm_801BEDA8`, its exit: the next match type (the one before when the screen went
-    /// back), and its data back into VS mode's.
-    // Ports `gm_801BEDA8`, which no console reaches: the select crashes as it opens.
+    /// back), and its data back into VS mode's. Dead (`ledger/dead.txt`): the select crashes
+    /// as it opens, every time, so its state never ends.
     pub fn hanyu_css_exit(&mut self) {
         let c = &mut self.game.debug_mode.hanyu_css;
         c.match_type = if c.pending_scene_change == 2 {

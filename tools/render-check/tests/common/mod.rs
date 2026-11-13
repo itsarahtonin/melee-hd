@@ -81,6 +81,9 @@ impl Replay {
                 if let Some(o) = name.strip_prefix("results-") {
                     return ssbm_rs_local(&format!("lockstep/results-sessions/{o}.inputs")).into();
                 }
+                if let Some(o) = name.strip_prefix("m6db-") {
+                    return ssbm_rs_local(&format!("lockstep/m6-debug/{o}.inputs")).into();
+                }
                 if let Some(o) = name.strip_prefix("m6p-") {
                     return ssbm_rs_local(&format!("lockstep/m6-1p-setups/{o}.inputs")).into();
                 }
@@ -1491,6 +1494,16 @@ pub const M6AD2_MK_SHELLS: Game = Game {
     name: "m6ad2-mk-shells",
     players: "Go to Kinoko, Fox and the item menu's shells (session m6-adventure-dbg-2/mk-shells)",
     replay: Replay::Session("m6ad2-mk-shells"),
+};
+
+/// Event 32 at debug level 3 with the develop tools' stage displays stepped
+/// (`m6-debug/ev32-ecbs`): the fighters' shadows' cameras' volumes (`lbShadow_8000F214`, the
+/// second step) and the collision view (the fourth) with the far Arwings' lasers.
+pub const M6DB_EV32_ECBS: Game = Game {
+    stage: "Corneria",
+    name: "m6db-ev32-ecbs",
+    players: "Event 32 at debug level 3, the stage displays' shadow volumes and collisions (session m6-debug/ev32-ecbs)",
+    replay: Replay::Session("m6db-ev32-ecbs"),
 };
 
 /// Adventure's shells met on Mushroom Kingdom's route (`m6-adventure-dbg-3/mk-meet`, debug

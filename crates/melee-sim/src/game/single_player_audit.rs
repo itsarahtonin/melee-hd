@@ -688,10 +688,6 @@ const MULTI_MAN_UNREACHED: &[(&str, &str)] = &[
         "its second pass takes every island its first did (it skips only ftCo_800A2718's test), so its running sum over the first's total reaches 1 by its last island, above every draw (HSD_Randf is under 1 - 2^-16): an island is always picked",
     ),
     (
-        "ftCo_800AEFB8",
-        "Nana's decision without Popo: the hordes are Wire Frames, and the player is human",
-    ),
-    (
         "ftCo_800AC434 at level 10",
         "the barrel cannon's coin flip divides by zero only at level 10: the tables' levels are 1 to 9",
     ),
@@ -769,7 +765,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
         "pl_8004049C (an enemy of kind",
         "Training's enemies are Birdo and her eggs, whose KO bonus is none, ported: no container's monster comes out in Training (its menu offers none) and it never makes the 1P coin (see the note on the 1P coin in Training below)",
     ),
-    ("it_802D306C", TRAINING_NO_DITTO),
 ];
 
 // Why Training never makes the 1P coin (milestone 6's task 13): its one maker there is a
@@ -793,15 +788,6 @@ const TRAINING_UNREACHED: &[(&str, &str)] = &[
 // Training never makes the 1P coin: its one maker there, a beaten enemy's roll (it_8027CC88),
 // needs Birdo's sixth touch bouncing away, and melee-oracle's birdo-sweep finds at most one over
 // every launch angle, facing and place she's hit at (five short)
-
-/// Why Training never lets Ditto out (milestone 6's task 13): its item menu offers item kinds
-/// 5 to 0x22, no Pokémon; a Poké Ball's release (`it_8027AB64`) takes the event's Pokémon only
-/// when the rules name one (`x28`, an event's), and in Training (`gm_8018841C`) draws from
-/// Training's list (`common_pokemon`, `it_8027A780`) before the debug menu's choice is asked;
-/// that draw takes the first entry whose running total passes the roll strictly, so Ditto's
-/// weight of 0 in the ball's table (`ItCo.usd`) never comes out (docs/melee-bugs.md,
-/// "Training's Pokémon list names Ditto, whom its draw can't pick").
-const TRAINING_NO_DITTO: &str = "Ditto, whom Training's balls never let out: they draw from Training's list (it_8027AB64 under gm_8018841C, it_8027A780), where Ditto's weight of 0 (ItCo.usd) never passes the roll, and the item menu offers no Pokémon";
 
 /// What the single-player modes reach that isn't ported, each with the modes that reach it.
 pub const MISSING: &[Gap] = &[
@@ -843,14 +829,6 @@ pub const MISSING: &[Gap] = &[
         modes: &[DB],
     },
     // The modes' own code.
-    Gap {
-        what: "Ditto",
-        covers: &["melee/it/kinds/itmetamon"],
-        // Not Event Match: Event 3 forces its Pokémon (0xB1), Event 15's list holds no Ditto
-        // (0xB4), and every other event's balls draw from the weighted table, where Ditto
-        // weighs 0 (ItCo.usd); only the debug menu's Pokémon setting picks him.
-        modes: &[DB],
-    },
     Gap {
         what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
         covers: &["grFigureGet_80219898 with no coin", "melee/gm/gm_1832"],
@@ -957,11 +935,6 @@ pub const MISSING: &[Gap] = &[
     Gap {
         what: "All-Star's intro with a character past its place table (the debug menu's AllStar Enemy past its 28th choice)",
         covers: &["All-Star's intro's place of character"],
-        modes: &[DB],
-    },
-    Gap {
-        what: "the debug mode's milestone 6 states and the debug cutscene",
-        covers: &["un_80301D7C"],
         modes: &[DB],
     },
 ];

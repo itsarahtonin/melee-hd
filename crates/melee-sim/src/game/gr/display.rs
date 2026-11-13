@@ -124,6 +124,9 @@ impl Running<'_> {
             Some(f) if super::figure::CHECK_SHADOW_RENDER.contains(&f.0) => {
                 super::figure::check_shadow_render()
             }
+            Some(f) if f.0 == super::teststage::CHECK_SHADOW_RENDER => {
+                super::teststage::check_shadow_render()
+            }
             Some(f) if f.0 == super::heal::CHECK_SHADOW_RENDER => {
                 super::heal::check_shadow_render()
             }

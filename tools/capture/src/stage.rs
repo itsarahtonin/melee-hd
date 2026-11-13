@@ -386,6 +386,7 @@ impl Importer<'_> {
         let yaku = cap.u32(GRKRAID_YAKUMONO);
         self.game.gr.kraid_yakumono = self.data_or_unhandled(yaku);
         self.game.gr.kraid_anim = cap.u32(GRKRAID_ANIM) as i32;
+        self.game.gr.test_turn = f32::from_bits(cap.u32(sym("grTe_804D6A48")));
         let yaku = cap.u32(GRFOURSIDE_YAKUMONO);
         self.game.gr.fourside_yakumono = self.data_or_unhandled(yaku);
         let yaku = cap.u32(GRGREATBAY_YAKUMONO);
@@ -1373,6 +1374,12 @@ impl Comparer<'_> {
             "kraid anim",
             game.gr.kraid_anim,
             self.u32(GRKRAID_ANIM) as i32,
+        );
+        self.check(
+            "grTe_804D6A48",
+            "test stage turn",
+            game.gr.test_turn.to_bits(),
+            self.u32(sym("grTe_804D6A48")),
         );
         self.check(
             "isDemoFight",

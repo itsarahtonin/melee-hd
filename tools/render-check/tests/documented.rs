@@ -53,6 +53,7 @@ use common::M6AD_ADV_GIGA_VH;
 use common::M6AD2_MK_SHELLS;
 use common::M6AD3_MK_MEET;
 use common::M6AD4_LL_EDGE;
+use common::M6DB_EV32_ECBS;
 use common::M6PB_IM_POLAR;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
@@ -562,6 +563,33 @@ rendered_frames!(M6AD2_MK_SHELLS;
     m6ad2_mk_shells_3262 3262,
     m6ad2_mk_shells_5052 5052,
 );
+// Event 32 at debug level 3 with the develop tools' stage displays (`m6-debug/ev32-ecbs`),
+// captured with ssbm-rs's renderer running: the fighters' shadows with their cameras' volumes
+// drawn into them (`lbShadow_8000F214`, the displays' second step, 2100), the blast zones,
+// camera boxes and special points (the third, 2300), and the collision view (the fourth,
+// 3450). A far Arwing's laser's third ECB diamond is drawn at its tip where the original
+// draws it at its stack's words (docs/engine.md), so a frame showing one differs there by design.
+// At 2100 every draw is the same but those that sample the shadows' copies, which the
+// comparison hashes from memory the copies never write (`why::SHADOW_COPY`).
+rendered_frames!(M6DB_EV32_ECBS;
+    m6db_ev32_ecbs_2300 2300,
+    m6db_ev32_ecbs_3450 3450,
+);
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6db_ev32_ecbs_2100() {
+    compare_in(
+        &M6DB_EV32_ECBS,
+        2100,
+        Group::Standard,
+        Expect::SameImages {
+            same: [1806, 1806],
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
 // Adventure's shells met on Mushroom Kingdom's route (`m6-adventure-dbg-3/mk-meet`, task 24's
 // third round), captured with ssbm-rs's renderer running: a green shell off Mario's powershield
 // (3240), a red one (4321), shells clanking in the pit (6910) and a green shell off Fox's

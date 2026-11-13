@@ -64,8 +64,8 @@ pub fn spawned(r: &mut Running, gobj: GObjId) {
     r.game.it.last_metamon = Some(gobj);
 }
 
-/// `it_802D306C`: nothing (its landing in its first two states).
-// Ports `it_802D306C`; debug only (ledger/deferred.txt): only the debug menu brings Ditto out.
+/// `it_802D306C`: nothing (its landing in its first two states, empty in the original).
+#[doc(alias = "it_802D306C")]
 pub fn landed_nothing(_r: &mut Running, _gobj: GObjId) {}
 
 /// Lands out of the ball, `it_802D3090`: stopped, into its animation (`it_802D30C4`).
@@ -134,4 +134,33 @@ pub fn phys2(r: &mut Running, gobj: GObjId) {
 #[doc(alias = "itMetamon_UnkMotion2_Coll")]
 pub fn coll2(r: &mut Running, gobj: GObjId) -> bool {
     pokemon::land(r, gobj, landed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// `it_802D306C` is the original's 4-byte function at 0x802D306C (a lone `blr`; the
+    /// next one, `itMetamon_Logic19_EvtUnk`, starts at 0x802D3070), so its port takes the
+    /// call and changes nothing: `run_event` claims the address, and the landing does
+    /// nothing to a game's state.
+    #[test]
+    fn dittos_first_landing_does_nothing() {
+        assert_eq!(LANDED_NOTHING, 0x802D_306C);
+        assert_eq!(LANDED_NOTHING + 4, EVT_UNK);
+        let mut game = crate::game::state::Game::default();
+        let data = melee_data::archive::Archives::default();
+        let mut before = crate::game::state::Game::default();
+        before.clone_from(&game);
+        let mut r = Running {
+            game: &mut game,
+            data: &data,
+        };
+        assert!(run_event(&mut r, GObjId(0), LANDED_NOTHING));
+        use crate::state_eq::StateEq;
+        assert!(
+            game.state_diff(&before).is_none(),
+            "Ditto's first landing changed the state"
+        );
+    }
 }

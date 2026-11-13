@@ -1499,8 +1499,7 @@ impl Running<'_> {
             Hook::HanyuSssEnter => self.hanyu_sss_enter(),
             Hook::DebugEnterPrize => self.debug_mode_enter_prize(),
             Hook::DebugEnterApproach => self.debug_mode_enter_approach(),
-            // `onExitPrize`: the Mode Team Test page.
-            Hook::DebugExitPrize => self.set_next_game_mode_state_id(2),
+            Hook::DebugExitPrize => self.debug_mode_exit_prize(),
             Hook::DebugBackToMenu => self.debug_mode_back_to_menu(),
             Hook::DebugEnterVs => self.debug_mode_enter_vs(),
             Hook::DebugEnterResults0 => self.debug_mode_enter_results0(),

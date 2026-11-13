@@ -2530,3 +2530,43 @@ fn the_switches_left_as_they_come_in() {
         }
     }
 }
+
+/// The debug-only code (`ledger/deferred.txt`'s rows, 2026-11-13), at debug level 3 from
+/// power-on with the heap, each run's card after it the original's: Zelda's taunt and a held
+/// item's bubbles (`m6-debug/zelda-items`), Nana's decision with no Popo on a computer Fox
+/// (`nana-alone`), the Test stage (`test-stage`), the Sakoda test's Event Stage
+/// (`event-stage`) and the stage displays' shadow volumes and collision view on Corneria
+/// (`ev32-ecbs`, with the far Arwings' lasers in view). And the Hanyu character select, past
+/// its trace's end: the run stops by name where the original faults.
+#[test]
+fn the_debug_only_code() {
+    for (name, ticks) in [
+        ("zelda-items", 7049),
+        ("nana-alone", 18189),
+        ("test-stage", 14479),
+        ("event-stage", 6406),
+        ("ev32-ecbs", 6313),
+    ] {
+        let after = ssbm_rs_local(&format!("lockstep/m6-debug/{name}-run.card"));
+        let args = ["--all", "--heap", "--card-after", &after];
+        if let Some(out) = scripted_session("m6-debug", name, &args) {
+            assert!(
+                out.contains(&format!("{ticks} ticks compared, no difference\n"))
+                    && out.contains("no stale reads")
+                    && out.contains("the card after the session: the original's"),
+                "{name}: {out}"
+            );
+        }
+    }
+    if let Some(out) = scripted_session(
+        "debug-sessions",
+        "hanyu-css",
+        &["--all", "--heap", "--past", "300"],
+    ) {
+        assert!(
+            out.contains("962 ticks compared, no difference")
+                && out.contains("stopped in tick 962: Melee crashes: the Hanyu character select reads its KO counts through a null pointer"),
+            "{out}"
+        );
+    }
+}

@@ -1901,6 +1901,53 @@ pub const HEAL: StageData = StageData {
     joints: &[],
 };
 
+/// `grTe_StageCallbacks`. Map 0 is an animated model, map 1 a model scaled up, map 2 a
+/// collision with its model (and the stage's lights and fog).
+pub const TEST_CALLBACKS: [StageCallbacks; 3] = [
+    cb(0x8020_7130, 0x8020_715C, 0x8020_7164, 0x8020_7168, 0),
+    cb(0x8020_73D0, 0x8020_73FC, 0x8020_7404, 0x8020_7408, 0),
+    cb(
+        0x8020_716C,
+        0x8020_71BC,
+        0x8020_71C4,
+        0x8020_73AC,
+        StageCallbacks::LIGHTS | StageCallbacks::FOG,
+    ),
+];
+
+/// `grTe_803E56B8`, the Test stage's joints.
+pub const TEST_JOINTS: [GrJoint; 13] = [
+    GrJoint { x: 0, y: 2, z: 1 },
+    GrJoint { x: 1, y: 2, z: 2 },
+    GrJoint { x: 2, y: 2, z: 3 },
+    GrJoint { x: 3, y: 2, z: 4 },
+    GrJoint { x: 4, y: 2, z: 5 },
+    GrJoint { x: 5, y: 2, z: 6 },
+    GrJoint { x: 6, y: 2, z: 7 },
+    GrJoint { x: 7, y: 2, z: 8 },
+    GrJoint { x: 8, y: 2, z: 9 },
+    GrJoint { x: 9, y: 2, z: 10 },
+    GrJoint { x: 10, y: 2, z: 11 },
+    GrJoint { x: 12, y: 2, z: 16 },
+    GrJoint { x: 13, y: 2, z: 17 },
+];
+
+/// `grTe_StageData`, the Test stage, ground kinds 1 and 0x23.
+pub const TEST: StageData = StageData {
+    grkind: super::GR_KIND_TEST,
+    callbacks: &TEST_CALLBACKS,
+    file: Some("/GrTe.dat"),
+    on_init: super::teststage::ON_INIT,
+    on_demo_init: super::teststage::ON_DEMO_INIT,
+    on_load: super::teststage::ON_LOAD,
+    on_start: super::teststage::ON_START,
+    callback4: super::teststage::CALLBACK4,
+    on_touch_line: super::teststage::ON_TOUCH_LINE,
+    on_check_shadow_render: super::teststage::CHECK_SHADOW_RENDER,
+    flags2: 1,
+    joints: &TEST_JOINTS,
+};
+
 /// `grEF1_StageCallbacks`. Map 0 is an animated model, map 1 the collision (with the stage's
 /// lights and fog), map 2 a model with its own collision.
 pub const FIGURE1_CALLBACKS: [StageCallbacks; 3] = [
@@ -2078,6 +2125,7 @@ pub fn stage_data(grkind: i32) -> &'static StageData {
         GR_KIND_FIGURE3 => &FIGURE3,
         GR_KIND_HOMERUN => &HOMERUN,
         super::GR_KIND_HEAL => &HEAL,
+        super::GR_KIND_TEST | super::GR_KIND_TEST2 => &TEST,
         0 => &DUMMY,
         _ => unimplemented!("stage kind {grkind} isn't ported"),
     }

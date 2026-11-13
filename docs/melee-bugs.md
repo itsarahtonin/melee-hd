@@ -1887,7 +1887,7 @@ The developers' menus and tools, reached only above retail's debug level (milest
 - **Where:** `gm_801BED3C` (the Hanyu select's entry, `gmhanyucss.c`), then `mnCharSel_8025D1C4` (a door's KO stars) and the name tags' resets in `mncharsel.c`; `crates/melee-sim/src/game/mn/charsel/mod.rs` (`css_ko_counts`).
 - **Defect:** the mode's `CSSData` (`gm_8049BEE8`) never gets its KO counts' pointer (`x4`, which VS mode's entry points at its counts), and its first match type is VS Melee's, whose doors show KO stars read through it.
 - **Effect:** the select crashes as it opens its doors (ssbm-rs: an unmapped read of address 0 in `mnCharSel_8025D1C4`, `debug-sessions/hanyu-css`), so the debug menu's Hanyu test's Select Char can't be used on a console.
-- **melee-hd:** stops (`css_ko_counts`, an unported call where the original reads or writes through the null pointer).
+- **melee-hd:** stops by name where the original faults (`css_ko_counts`: "Melee crashes: the Hanyu character select reads its KO counts through a null pointer", design call 7). The select opens in VS Melee's match type every time (its block's `.bss` 0, which only its exit would change), so it faults on every entry, and its exit and the odd match types' relock (`gm_801BEDA8`, `gm_80164A0C`) never run (`ledger/dead.txt`). `debug-sessions/hanyu-css` with `--past 300` reaches the stop in tick 962, the tick the trace can't hold; the entry before it is checked by leaf-check's `hanyu`.
 - **Fix:** point `x4` at VS mode's KO counts in the entry.
 - **Fix impact:** none on gameplay; the debug select would open.
 - **Source:** `gmhanyucss.c`, `mncharsel.s` (`mnCharSel_8025D1C4+0x68`, `lbzx r29, r4, r3` with `r4` the null pointer).
