@@ -192,7 +192,7 @@ impl Running<'_> {
     #[doc(alias = "ftCo_ThrowB_Coll")]
     #[doc(alias = "ftCo_ThrowHi_Coll")]
     #[doc(alias = "ftCo_ThrowLw_Coll")]
-    // Ports `fn_800DD684`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DD684")]
     pub fn co_throw_coll(&mut self, gobj: GObjId) {
         let fp = self.game.fighter(gobj);
         if fp.ground_or_air == GA_AIR {

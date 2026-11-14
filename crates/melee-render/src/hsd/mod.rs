@@ -82,6 +82,9 @@ pub struct Hsd {
     /// The draw flags of the fighter whose materials set up, as the last
     /// `Draw::FighterFlags` named them.
     pub fighter_flags: Option<melee_sim::hsd::display::FighterFlags>,
+    /// The draw flags (`xDCF`) of the item whose materials set up, as the last
+    /// `Draw::ItemFlags` named them.
+    pub item_flags: Option<u8>,
     /// The current camera and the matrices it gives.
     pub camera: Option<CameraView>,
     pub inv_view: Option<Mtx34>,

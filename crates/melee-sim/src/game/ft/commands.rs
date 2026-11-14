@@ -975,6 +975,7 @@ impl Running<'_> {
         self.cmd_skip(f, 1);
     }
 
+    #[doc(alias = "ftAction_80072C5C")]
     fn skip_80072c5c(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }

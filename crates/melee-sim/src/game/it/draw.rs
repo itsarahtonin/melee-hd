@@ -48,7 +48,9 @@ impl Running<'_> {
         };
         let mut hooks = code::ParticleHooks;
         let trsp = display::pass_trsp(pass);
+        self.game.objs.display.item_flags = Some(item(self.game, gobj).xDCF_flag[0]);
         display::jobj_disp_all(&mut self.game.objs, self.data, &mut hooks, j, vmtx, trsp, 0);
+        self.game.objs.display.item_flags = None;
     }
 
     /// Hides (`it_8026EC54`, `it_80272A3C` on each) or shows (`it_8026EBC8`, `it_80272A18`)
