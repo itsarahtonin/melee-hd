@@ -127,6 +127,17 @@ impl Running<'_> {
         kb == 0.0 || (fp.allow_sdi && fp.x221A_b3 && kb < fp::fadds(reg(fp.dmg.x18A8), x140))
     }
 
+    /// A holder hit in the same frame as the victim it holds fast, the victim resolved first
+    /// (`x1828` 3, set by [`Self::held_hit`]), `ftCo_8008EB58`: too light to react, it takes
+    /// no reaction and keeps holding.
+    #[doc(alias = "ftCo_8008EB58")]
+    pub(crate) fn holder_light_hit(&mut self, gobj: GObjId) {
+        let f = self.game.fighter_id(gobj);
+        if self.hit_too_light(f) {
+            self.damage_no_reaction(gobj);
+        }
+    }
+
     /// A hit drops what the fighter holds, `Fighter_8006CDA4`: a light item (and a second one)
     /// by chance against the hit's damage (`ftCommonData` x418), or a used-up shooter one time
     /// in x41C; a worn Bunny Hood (`x197C`) by the same chance, taken off.

@@ -111,10 +111,7 @@ pub fn proc_coll_resolve(g: &mut Running, gobj: GObjId) {
                 }
                 3 => {
                     g.damage_hooks(gobj);
-                    // `ftCo_8008EB58`.
-                    if g.hit_too_light(f) {
-                        g.damage_no_reaction(gobj);
-                    }
+                    g.holder_light_hit(gobj);
                 }
                 _ => {}
             }
