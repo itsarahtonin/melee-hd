@@ -228,7 +228,7 @@ impl Running<'_> {
     }
 
     /// Thrown again off a ledge from the same frame, `ftNn_Init_80123720`.
-    // Ports `ftNn_Init_80123720`; aliased once a check reaches it.
+    #[doc(alias = "ftNn_Init_80123720")]
     fn nana_thrown_off_ledge(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.go_airborne_jumped(f);
