@@ -179,8 +179,8 @@ impl Running<'_> {
         }
     }
 
-    /// The knockback's launch angle, `ftCo_Damage_CalcAngle`: the hit's own (a spike's
-    /// counting toward an early way out, `ftColl_8007AC68`), or for the Sakurai angle
+    /// The knockback's launch angle, `ftCo_Damage_CalcAngle`: the hit's own (a meteor smash's
+    /// opening the meteor cancel's window, `ftColl_8007AC68`), or for the Sakurai angle
     /// (361), `ftCommonData` x144 in the air and on the ground a slope from 0 by `kb`.
     #[doc(alias = "ftCo_Damage_CalcAngle")]
     pub(crate) fn damage_angle(&mut self, f: FighterId, kb: f64) -> f64 {

@@ -583,7 +583,7 @@ impl Running<'_> {
 
     /// Landing before an aerial throw's freeze, `fn_800DD5EC`: its animation run on to the
     /// script's freeze, then as [`Self::throw_land_frozen`].
-    // Ports `fn_800DD5EC`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DD5EC")]
     pub fn throw_land(&mut self, gobj: GObjId) {
         while self.game.fighter(gobj).cmd_vars[0] == 0 {
             self.anim_update(gobj);
