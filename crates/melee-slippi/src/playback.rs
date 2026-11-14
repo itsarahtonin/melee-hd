@@ -52,6 +52,7 @@ pub fn start(r: &Replay) -> ReplayStart {
         nametags: r.nametags,
         codes,
         response,
+        unlocks: r.unlocks,
     }
 }
 

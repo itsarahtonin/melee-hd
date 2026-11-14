@@ -86,6 +86,8 @@ pub struct Replay {
     pub game_ended: bool,
     /// Ports whose character was Sheik on the first frame.
     pub sheik_start: [bool; 4],
+    /// The unlocks a melee-hd recording of a Vanilla match carries in its metadata.
+    pub unlocks: Option<melee_sim::game::gm::Unlocks>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -233,6 +235,7 @@ impl Replay {
             }
         }
         replay.events = events;
+        replay.unlocks = crate::metadata::unlocks(file);
         Ok(replay)
     }
 

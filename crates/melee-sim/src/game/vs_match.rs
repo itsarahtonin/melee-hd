@@ -99,6 +99,10 @@ pub struct ReplayStart {
     /// the player names and the code list's length), which playback reads into its first
     /// buffer, where it stays until the first frame's read writes over it.
     pub response: Vec<u8>,
+    /// The unlocks a melee-hd recording of a Vanilla match carries in its metadata, which
+    /// melee-hd plays it with (`record::Setup::unlocks`); none for every other replay, which
+    /// plays with Slippi's.
+    pub unlocks: Option<super::gm::Unlocks>,
 }
 
 /// The Ice Climbers' `CharacterKind`.
@@ -236,7 +240,7 @@ impl Settings {
     /// A replay's match as Slippi's playback codes set it up (`fn_8016E730+0x18`): the
     /// replay's `StartMeleeData` with its callbacks cleared (the codes zero 0x40 to 0x5C) and
     /// the empty nametags of its human players dropped, its seed, and the rules its code list
-    /// makes. The replay's UCF toggles, PAL and Pokémon Stadium flags and player names go to
+    /// makes; Slippi's unlocks, or the ones a melee-hd recording of a Vanilla match carries. The replay's UCF toggles, PAL and Pokémon Stadium flags and player names go to
     /// places only codes these rules don't include read, and the HUD.
     pub fn from_replay(r: &ReplayStart) -> Result<Settings, CodeError> {
         let mut info = r.info.clone();
@@ -270,6 +274,9 @@ impl Settings {
         s.heap = Some(crate::hsd::heap::Layout::slippi_playback());
         s.playback_heap = Some(playback::CodeListHeap::of(&r.codes));
         s.playback_response = r.response.clone();
+        if let Some(u) = r.unlocks {
+            s.unlocks = u;
+        }
         Ok(s)
     }
 

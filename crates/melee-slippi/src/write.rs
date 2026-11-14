@@ -7,6 +7,7 @@ use std::time::{SystemTime, UNIX_EPOCH};
 
 use melee_sim::game::record::{Recorder, Setup};
 
+use crate::metadata::key;
 use crate::replay::{Replay, event};
 
 /// What the metadata element holds.
@@ -21,6 +22,8 @@ pub struct Metadata {
     pub characters: [Vec<(u8, u32)>; 4],
     /// What played the match (`playedOn`).
     pub played_on: String,
+    /// The unlocks a Vanilla match read (melee-hd's own key, `unlocks`).
+    pub unlocks: Option<melee_sim::game::gm::Unlocks>,
 }
 
 impl Metadata {
@@ -33,6 +36,7 @@ impl Metadata {
                 .unwrap_or(melee_sim::game::record::FIRST_FRAME - 1),
             characters: core::array::from_fn(|p| r.characters(p).to_vec()),
             played_on: "melee-hd".into(),
+            unlocks: r.unlocks().copied(),
         }
     }
 }
@@ -74,6 +78,9 @@ pub fn slp(raw: &[u8], meta: &Metadata) -> Vec<u8> {
     o.push(b'}');
     key(&mut o, "playedOn");
     string(&mut o, &meta.played_on);
+    if let Some(u) = &meta.unlocks {
+        crate::metadata::write_unlocks(&mut o, u);
+    }
     o.extend_from_slice(b"}}");
     o
 }
@@ -81,13 +88,6 @@ pub fn slp(raw: &[u8], meta: &Metadata) -> Vec<u8> {
 /// A recorder's `.slp` file, its match started at `start_at`.
 pub fn recording(r: &Recorder, start_at: SystemTime) -> Vec<u8> {
     slp(r.raw(), &Metadata::of(r, start_at))
-}
-
-/// An object key: its length as a `uint8` and its bytes.
-fn key(o: &mut Vec<u8>, k: &str) {
-    o.push(b'U');
-    o.push(k.len() as u8);
-    o.extend_from_slice(k.as_bytes());
 }
 
 fn string(o: &mut Vec<u8>, s: &str) {
@@ -133,7 +133,8 @@ pub fn file_name([y, mo, d, h, mi, s]: [u32; 6]) -> String {
 }
 
 /// What a recording of a replay's match reads from outside it, from the replay: the code list
-/// it ran, its players' nametags, the PAL and frozen Pokémon Stadium toggles and the language.
+/// it ran, its players' nametags, the PAL and frozen Pokémon Stadium toggles and the language,
+/// and whether it carries a Vanilla match's unlocks.
 pub fn setup(r: &Replay) -> Setup {
     let language = r
         .events
@@ -147,6 +148,7 @@ pub fn setup(r: &Replay) -> Setup {
         pal: r.is_pal != 0,
         frozen_ps: r.is_frozen_ps != 0,
         language,
+        unlocks: r.unlocks.is_some(),
     }
 }
 
@@ -176,11 +178,54 @@ mod tests {
             last_frame: 100,
             characters: [vec![(1, 224)], vec![], vec![(18, 3), (19, 221)], vec![]],
             played_on: "melee-hd".into(),
+            unlocks: None,
         };
         let file = slp(&raw, &meta);
         assert_eq!(crate::replay::raw_events(&file).unwrap(), raw);
         let tail = &file[15 + raw.len()..];
         assert!(tail.starts_with(b"U\x08metadata{U\x07startAtSU\x141970-01-01T00:00:00Z"));
         assert!(tail.ends_with(b"U\x08playedOnSU\x08melee-hd}}"));
+        assert_eq!(crate::metadata::unlocks(&file), None);
+    }
+
+    /// The Slippi ruleset's list as Slippi's playback takes it from a recording: the 16 unlock
+    /// and message writes left out (playback runs its own), and the 27 codes left make 3.19's
+    /// online rules.
+    #[test]
+    fn the_ruleset_list_plays_back_as_3_19() {
+        use melee_sim::game::slippi::parse_codes;
+        use melee_sim::game::state::Rules;
+        let list = Setup::slippi().codes;
+        let applied = parse_codes(&crate::playback::playback_codes(&list));
+        assert_eq!(parse_codes(&list).len(), 43);
+        assert_eq!(applied.len(), 27);
+        assert_eq!(Rules::from_codes(&applied), Ok(Rules::slippi_online()));
+    }
+
+    /// A Vanilla match's unlocks go into the metadata and read back whole; Slippi's own
+    /// parsers skip the key, which the file's UBJSON keeps well formed.
+    #[test]
+    fn unlocks_read_back() {
+        use melee_sim::game::gm::Unlocks;
+        let raw = [event::PAYLOAD_SIZES, 4, event::GAME_END, 0, 6];
+        let u = Unlocks {
+            characters: 0x0405,
+            stages: 0x7FF,
+            language: 0,
+            records: 0x0200_0001,
+            trophy_11a: 2,
+            trophies_all_code: true,
+            ..Unlocks::default()
+        };
+        let meta = Metadata {
+            start_at: UNIX_EPOCH,
+            last_frame: 100,
+            characters: [vec![(1, 224)], vec![], vec![], vec![]],
+            played_on: "melee-hd".into(),
+            unlocks: Some(u),
+        };
+        let file = slp(&raw, &meta);
+        assert_eq!(crate::metadata::unlocks(&file), Some(u));
+        assert!(file.ends_with(b"U\x0ftrophiesAllCodeT}}}"));
     }
 }

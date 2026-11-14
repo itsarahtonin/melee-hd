@@ -170,6 +170,7 @@ fn play(
         nametags: base.nametags,
         codes: base.codes,
         response: base.response,
+        unlocks: base.unlocks,
     };
     let mut settings = Settings::from_replay(&start).expect("the oracle codes' rules");
     if record.is_some() {
