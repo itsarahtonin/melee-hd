@@ -88,9 +88,11 @@ mod power_tests;
 #[cfg(test)]
 mod predict_tests;
 mod present;
+mod quick;
 #[cfg(test)]
 mod record_tests;
 mod recording;
+mod recordings;
 #[cfg(test)]
 mod roster_tests;
 mod saves;
@@ -200,8 +202,9 @@ struct Args {
     msaa: u32,
     /// The console from power-on with the settings panel (no match on the command line).
     front: bool,
-    /// Draws the settings panel to this PNG and quits.
+    /// Draws the settings panel to this PNG and quits, on this tab (`--settings-tab`).
     settings_shot: Option<String>,
+    settings_tab: front::Tab,
     /// Borderless fullscreen on the window's monitor.
     fullscreen: bool,
     /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
@@ -259,7 +262,7 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
@@ -320,6 +323,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         msaa: 1,
         front: false,
         settings_shot: None,
+        settings_tab: front::Tab::Settings,
         fullscreen: false,
         disc_speed: DiscSpeed::Drive,
         given: front::Given::default(),
@@ -445,6 +449,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.resize_at.push((tick, size(s)?));
             }
             "--settings-shot" => a.settings_shot = Some(value()?),
+            "--settings-tab" => a.settings_tab = front::Tab::parse(&value()?)?,
             "--fullscreen" => {
                 a.fullscreen = true;
                 a.given.fullscreen = true;
@@ -1169,6 +1174,25 @@ struct Row {
 /// How long a row waits for its frame's GPU time before it's written without it.
 const ROW_WAIT: Duration = Duration::from_millis(500);
 
+/// Melee set aside while a replay from the Recordings tab plays: the console's session and
+/// what draws it (its frame builder and renderer, whose state carries from frame to frame),
+/// untouched until the replay ends, as the settings panel leaves Melee paused. Nothing of the
+/// replay reaches it: a session is its own state, and between ticks the simulation keeps
+/// nothing outside it but caches (`power_tests`' `a_replay_leaves_melee_as_it_was`).
+struct Aside {
+    session: Session,
+    frames: Frames,
+    renderer: Option<Gpu>,
+    scale: u32,
+    efb_width: u32,
+    msaa: u32,
+    console_view: Option<ConsoleView>,
+    last_image: Option<melee_gpu::Frame>,
+    hold: jit::Hold<melee_sim::game::vs_match::Frame>,
+    ticks: u64,
+    motors: [bool; 4],
+}
+
 /// The settings panel, when the player boots the console: its settings, and its egui state
 /// once the window exists.
 struct Front {
@@ -1179,8 +1203,13 @@ struct Front {
 struct App {
     /// The console (or a command line's match) playing; none while it powers on.
     session: Option<Session>,
-    /// The power-on running in the background, which makes the next session.
+    /// The power-on running in the background, which makes the next session (a replay's
+    /// match while `replay` is set).
     booting: Option<std::thread::JoinHandle<Result<Session, String>>>,
+    /// The replay from the Recordings tab playing or loading, by its file's name.
+    replay: Option<String>,
+    /// Melee, set aside while that replay plays.
+    aside: Option<Box<Aside>>,
     /// The settings panel, when the player boots the console.
     front: Option<Front>,
     /// The command line, with the settings applied.
@@ -1451,7 +1480,9 @@ impl App {
         {
             Ok(f) => f,
             Err(p) => {
-                let what = if self.front.is_some() {
+                let what = if self.replay.is_some() {
+                    "The replay"
+                } else if self.front.is_some() {
                     "Melee"
                 } else {
                     "the match"
@@ -2142,6 +2173,7 @@ impl App {
         let Some(f) = &mut self.front else { return };
         f.panel.open = true;
         f.panel.look_at_save();
+        f.panel.recordings.refresh();
         // Every key goes up: none stays held into the game when it resumes.
         self.inputs.keyboard = Default::default();
         if let Some(s) = &self.shown {
@@ -2220,6 +2252,8 @@ impl App {
             return;
         };
         let Some(w) = &mut f.window else { return };
+        f.panel.busy = self.booting.is_some();
+        f.panel.playing = self.replay.clone();
         let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
         if f.panel.settings.fullscreen != shown.fullscreen() {
             shown.set_fullscreen(f.panel.settings.fullscreen);
@@ -2271,15 +2305,185 @@ impl App {
                     self.restart(None);
                 }
             }
+            Action::Play => {
+                let chosen = (self.front.as_ref())
+                    .and_then(|f| f.panel.recordings.chosen())
+                    .map(std::path::Path::to_path_buf);
+                if let Some(path) = chosen {
+                    self.play_replay(path);
+                }
+            }
+            Action::BackToMelee => self.end_replay(None),
+            Action::ChooseFolder => {
+                if let Some(f) = &mut self.front
+                    && let Some(dir) =
+                        dialogs::recordings_folder(&f.panel.settings.recordings_folder())
+                {
+                    f.panel.settings.recordings = dir.display().to_string();
+                    f.panel.settings.keep();
+                }
+            }
+            Action::ReplaysFolder => {
+                if let Some(f) = &mut self.front {
+                    f.panel.settings.recordings.clear();
+                    f.panel.settings.keep();
+                }
+            }
         }
         if let Some(s) = &self.shown {
             s.window.request_redraw();
         }
     }
 
-    /// Powers off and on again, the panel closed.
+    /// Plays a replay from the Recordings tab: Melee is set aside as the panel left it (a
+    /// replay playing already makes way), and the replay's match loads in the background, then
+    /// plays from its start with the panel closed. Its end, or Back to Melee, brings Melee back
+    /// ([`App::end_replay`]).
+    fn play_replay(&mut self, path: std::path::PathBuf) {
+        if self.booting.is_some() {
+            return;
+        }
+        if self.replay.is_some() {
+            self.drop_session();
+        } else {
+            self.set_aside();
+        }
+        let name = path.file_name().map_or_else(
+            || path.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        eprintln!("playing the replay {}", path.display());
+        let mut args = self.args.clone();
+        args.replay = Some(path.display().to_string());
+        args.power_on = false;
+        args.inputs = None;
+        // Melee's output device plays the replay's sound (`sound::hand_over`).
+        args.mute = true;
+        self.replay = Some(name);
+        if let Some(f) = &mut self.front {
+            f.panel.halted = false;
+            f.panel.message = None;
+        }
+        self.booting = Some(
+            std::thread::Builder::new()
+                .stack_size(GAME_STACK)
+                .spawn(move || {
+                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Session::start(&args)))
+                        .unwrap_or_else(|p| Err(panic_text(&p)))
+                })
+                .expect("the replay's thread"),
+        );
+    }
+
+    /// The replay's match, loaded: it plays from its start, the panel closed.
+    fn replay_loaded(&mut self, mut session: Session) {
+        if let Some(a) = &mut self.aside {
+            sound::hand_over(a.session.sound.as_mut(), session.sound.as_mut());
+        }
+        self.powered_on(session);
+        self.close_panel();
+    }
+
+    /// Sets Melee aside, paused as the panel leaves it, with what draws it.
+    fn set_aside(&mut self) {
+        let Some(session) = self.session.take() else {
+            return;
+        };
+        self.paced.clear();
+        self.pending = None;
+        self.aside = Some(Box::new(Aside {
+            session,
+            frames: std::mem::replace(&mut self.frames, Frames::new()),
+            renderer: self.renderer.take(),
+            scale: self.scale,
+            efb_width: self.efb_width,
+            msaa: self.msaa,
+            console_view: self.console_view.take(),
+            last_image: self.last_image.take(),
+            hold: std::mem::take(&mut self.hold),
+            ticks: self.ticks,
+            motors: self.motors,
+        }));
+        self.motors = [false; 4];
+        self.inputs.rumble(self.motors);
+    }
+
+    /// Ends the session playing (a replay's) and lets its renderer go.
+    fn drop_session(&mut self) {
+        self.paced.clear();
+        self.pending = None;
+        self.hold = jit::Hold::default();
+        if let (Some(s), Some(a)) = (&mut self.session, &mut self.aside) {
+            sound::hand_over(s.sound.as_mut(), a.session.sound.as_mut());
+        }
+        self.session = None;
+        self.drop_renderer();
+        self.console_view = None;
+        self.last_image = None;
+    }
+
+    /// Lets Melee set aside go, its recordings saved as a session's end saves them.
+    fn drop_aside(&mut self) {
+        if let Some(a) = self.aside.take() {
+            let Aside {
+                session, renderer, ..
+            } = *a;
+            drop(session);
+            if let Some(g) = renderer {
+                self.specialized = pipelines::save(&g.into_renderer());
+            }
+        }
+    }
+
+    /// The replay ended (or stopped, `why`, or Back to Melee was pressed): Melee comes back
+    /// where it was, paused, with the panel open on the Recordings tab over its last frame.
+    /// Settings changed meanwhile reach it as the panel closes. Without Melee set aside (it had
+    /// stopped), Melee starts again from power-on.
+    fn end_replay(&mut self, why: Option<String>) {
+        if self.replay.take().is_none() {
+            return;
+        }
+        if let Some(w) = &why {
+            eprintln!("{w}");
+        }
+        // A replay still loading is let go: its thread drops the match it makes.
+        self.booting = None;
+        self.stopped = None;
+        self.drop_session();
+        let Some(a) = self.aside.take() else {
+            self.power_on();
+            if let Some(f) = &mut self.front {
+                f.panel.open = false;
+            }
+            return;
+        };
+        let a = *a;
+        self.session = Some(a.session);
+        self.frames = a.frames;
+        self.renderer = a.renderer;
+        // The renderer as it was: the panel's closing makes it the settings' again.
+        (self.scale, self.efb_width, self.msaa) = (a.scale, a.efb_width, a.msaa);
+        self.console_view = a.console_view;
+        self.last_image = a.last_image;
+        self.hold = a.hold;
+        self.ticks = a.ticks;
+        self.motors = a.motors;
+        self.inputs.rumble(self.motors);
+        let aspect = self.aspect;
+        self.set_aspect(aspect);
+        if let Some(f) = &mut self.front {
+            f.panel.tab = front::Tab::Recordings;
+            f.panel.message = why;
+        }
+        self.open_panel();
+    }
+
+    /// Powers off and on again, the panel closed (a replay playing ends, and Melee set aside
+    /// with it).
     fn restart(&mut self, _said: Option<String>) {
         self.power_off();
+        self.replay = None;
+        self.drop_aside();
         if let Some(f) = &mut self.front {
             f.panel.halted = false;
             f.panel.message = None;
@@ -2465,7 +2669,11 @@ impl ApplicationHandler for App {
             let r = (self.booting.take().expect("the power-on").join())
                 .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))));
             match r {
+                Ok(s) if self.replay.is_some() => self.replay_loaded(s),
                 Ok(s) => self.powered_on(s),
+                Err(e) if self.replay.is_some() => {
+                    self.end_replay(Some(format!("The replay couldn't start: {e}")));
+                }
                 Err(e) if self.front.is_some() => {
                     eprintln!("{e}");
                     self.halted(e);
@@ -2506,18 +2714,23 @@ impl ApplicationHandler for App {
                 event_loop.set_control_flow(ControlFlow::Poll);
                 return;
             }
-            if self.front.is_none() {
+            if self.replay.is_some() {
+                // Melee comes back, the panel over it.
+                let why = self.stopped.take();
+                self.end_replay(why);
+            } else if self.front.is_none() {
                 eprintln!("the match ended");
                 self.quit = true;
                 event_loop.exit();
                 return;
+            } else {
+                let why = self
+                    .stopped
+                    .take()
+                    .unwrap_or_else(|| "Melee stopped.".to_owned());
+                self.power_off();
+                self.halted(why);
             }
-            let why = self
-                .stopped
-                .take()
-                .unwrap_or_else(|| "Melee stopped.".to_owned());
-            self.power_off();
-            self.halted(why);
         }
         if self.booting.is_some() {
             // The window stays black while the console powers on.
@@ -2944,6 +3157,7 @@ fn run(args: Args) -> ExitCode {
         let gpu = present::Gpu::new();
         let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
         panel.open = true;
+        panel.tab = args.settings_tab;
         return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -3002,6 +3216,8 @@ fn run(args: Args) -> ExitCode {
     let mut app = App {
         session,
         booting: None,
+        replay: None,
+        aside: None,
         front,
         last_image: None,
         note_painter: None,
@@ -3091,6 +3307,7 @@ fn run(args: Args) -> ExitCode {
     }
     app.session = None;
     app.drop_renderer();
+    app.drop_aside();
     // The rows still waiting for their frames' GPU times.
     app.collect_done();
     for r in std::mem::take(&mut app.rows) {

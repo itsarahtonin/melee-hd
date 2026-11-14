@@ -21,6 +21,14 @@ pub fn confirm(question: &str, yes: &str) -> bool {
     matches!(r, MessageDialogResult::Ok) || matches!(&r, MessageDialogResult::Custom(s) if s == yes)
 }
 
+/// "Change folder…" in the Recordings tab: a folder picked, starting from `from`.
+pub fn recordings_folder(from: &Path) -> Option<std::path::PathBuf> {
+    FileDialog::new()
+        .set_title("The folder of replays to list")
+        .set_directory(from)
+        .pick_folder()
+}
+
 /// A file's name, for what the dialogs say.
 fn name(path: &Path) -> String {
     path.file_name().map_or_else(

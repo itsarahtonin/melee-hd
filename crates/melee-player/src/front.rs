@@ -8,6 +8,10 @@
 //! The settings are kept in the settings folder's `settings.txt` (`key = value` lines; an
 //! older `last-match.txt`, the launcher's, is read when there's none yet), except those the
 //! command line gives.
+//!
+//! The panel has three tabs (Sarah, 2026-11-14): Settings, the panel as it was; Quick match,
+//! laid out until the Slippi ruleset can start its matches ([`crate::quick`]); and Recordings,
+//! the replays in a folder, any of them played from start to finish ([`crate::recordings`]).
 
 use crate::jit::Timing;
 use crate::pacing::Mode;
@@ -72,6 +76,8 @@ pub struct Settings {
     /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
     /// ([`DEBUG_LEVELS`]), 0 for retail's.
     pub debug_level: i32,
+    /// The folder the Recordings tab lists (empty: the replays folder).
+    pub recordings: String,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -123,6 +129,7 @@ impl Default for Settings {
             replays: String::new(),
             record_sessions: true,
             debug_level: 0,
+            recordings: String::new(),
         }
     }
 }
@@ -161,7 +168,7 @@ impl Settings {
                 4 => "develop",
                 _ => "off",
             },
-        )
+        ) + &format!("recordings = {}\n", self.recordings)
     }
 
     /// Takes back what [`Settings::save`] kept, except what the command line gave; a line
@@ -242,6 +249,7 @@ impl Settings {
                     "develop" => self.debug_level = 4,
                     _ => {}
                 },
+                "recordings" => self.recordings = v.to_owned(),
                 _ => {}
             }
         }
@@ -259,6 +267,16 @@ impl Settings {
     pub fn keep(&self) {
         crate::settings::write(FILE, &self.save());
     }
+
+    /// The folder the Recordings tab lists: the one picked, else the replays folder, where the
+    /// player saves its matches.
+    pub fn recordings_folder(&self) -> std::path::PathBuf {
+        match (self.recordings.as_str(), self.replays.as_str()) {
+            ("", "") => crate::recording::default_dir(),
+            ("", r) => r.into(),
+            (f, _) => f.into(),
+        }
+    }
 }
 
 /// What the panel asks the player to do.
@@ -271,10 +289,55 @@ pub enum Action {
     Import,
     Export,
     UnlockAll,
+    /// Plays the replay the Recordings tab chose.
+    Play,
+    /// Ends the replay playing and goes back to Melee.
+    BackToMelee,
+    /// Picks the folder the Recordings tab lists, or goes back to the replays folder.
+    ChooseFolder,
+    ReplaysFolder,
+}
+
+/// The panel's tabs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Tab {
+    #[default]
+    Settings,
+    QuickMatch,
+    Recordings,
+}
+
+impl Tab {
+    /// The tabs in order, with their names.
+    pub const ALL: [(Tab, &'static str); 3] = [
+        (Tab::Settings, "Settings"),
+        (Tab::QuickMatch, "Quick match"),
+        (Tab::Recordings, "Recordings"),
+    ];
+
+    /// A tab by the name `--settings-tab` takes.
+    pub fn parse(v: &str) -> Result<Tab, String> {
+        match v {
+            "settings" => Ok(Tab::Settings),
+            "quick-match" => Ok(Tab::QuickMatch),
+            "recordings" => Ok(Tab::Recordings),
+            _ => Err(format!(
+                "unknown tab {v} (settings, quick-match or recordings)"
+            )),
+        }
+    }
 }
 
 /// The panel: the settings and what it shows of the save and the disc.
 pub struct Panel {
+    /// The tab showing.
+    pub tab: Tab,
+    pub quick: crate::quick::QuickMatch,
+    pub recordings: crate::recordings::Recordings,
+    /// The replay from the Recordings tab playing, by its file's name.
+    pub playing: Option<String>,
+    /// Melee or a replay is loading: nothing more starts meanwhile.
+    pub busy: bool,
     pub settings: Settings,
     /// Whether it shows (the console paused behind it).
     pub open: bool,
@@ -292,6 +355,11 @@ pub struct Panel {
 impl Panel {
     pub fn new(settings: Settings, disc: String) -> Panel {
         let mut p = Panel {
+            tab: Tab::Settings,
+            quick: Default::default(),
+            recordings: Default::default(),
+            playing: None,
+            busy: false,
             settings,
             open: false,
             message: None,
@@ -330,13 +398,36 @@ impl Panel {
         let mut action = None;
         ui.vertical_centered(|ui| {
             ui.add_space(24.0);
-            ui.heading("Settings");
-            ui.add_space(12.0);
             ui.horizontal(|ui| {
-                ui.add_space(((ui.available_width() - 440.0) / 2.0).max(0.0));
+                ui.add_space(((ui.available_width() - 380.0) / 2.0).max(0.0));
+                for (tab, name) in Tab::ALL {
+                    ui.selectable_value(&mut self.tab, tab, egui::RichText::new(name).heading());
+                    ui.add_space(8.0);
+                }
+            });
+            ui.add_space(12.0);
+            let width = match self.tab {
+                Tab::Settings => 440.0,
+                Tab::QuickMatch | Tab::Recordings => 640.0,
+            };
+            ui.horizontal(|ui| {
+                ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
                 ui.vertical(|ui| {
-                    ui.set_max_width(440.0);
-                    action = self.show_sections(ui);
+                    ui.set_max_width(width);
+                    action = match self.tab {
+                        Tab::Settings => self.show_sections(ui),
+                        Tab::QuickMatch => {
+                            self.quick.show(ui);
+                            None
+                        }
+                        Tab::Recordings => self.recordings.show(
+                            ui,
+                            &self.settings.recordings_folder(),
+                            !self.settings.recordings.is_empty(),
+                            self.playing.as_deref(),
+                            self.busy,
+                        ),
+                    };
                 });
             });
             ui.add_space(16.0);
@@ -595,7 +686,7 @@ fn help(ui: &mut egui::Ui, text: &str) {
 
 /// A file's time as the panel says it: the local date and time to the minute (UTC off
 /// Windows).
-fn written_at(t: std::time::SystemTime) -> String {
+pub fn written_at(t: std::time::SystemTime) -> String {
     let secs = t
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -684,6 +775,7 @@ mod tests {
             replays: "D:/Slippi/melee-hd".to_owned(),
             record_sessions: false,
             debug_level: 4,
+            recordings: "D:/Slippi".to_owned(),
         }
     }
 
