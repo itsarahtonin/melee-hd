@@ -1,272 +1,169 @@
 # The Slippi ruleset
 
-A survey of what the Slippi ruleset needs for live play and a plan for splitting it into small agent tasks, each checkable on its own. Surveyed on 2026-11-14 from `main` at `f7115325`, the day milestone 6's last rows landed and before its full verify; the counts are that day's. Sarah numbers the milestone.
+A survey of what the Slippi ruleset needs for live play and a plan for splitting it into a handful of agent tasks, each checkable on its own. Surveyed on 2026-11-14 from `main` at `f7115325`, the day milestone 6's last rows landed and before its full verify; the counts and measurements are that day's. Sarah numbers the milestone.
 
-What's settled (Sarah's words):
+What the ruleset is (Sarah, 2026-11-14, agreeing to this scope: "yes that sounds about right to me"):
 
-- 2026-10-29: "ultimately i intend to implement the slippi ruleset and default to it (may even allow for some optimizations since we don't have to model as many memory addresses and stuff due to this kind of thing)". A Slippi ruleset with Slippi's boot and menu codes ported becomes the player's default, so its replays play back exactly in Slippi Dolphin; Vanilla stays exact as an option. Until then the vanilla menus' heap leftovers stay modelled exactly ([milestone 5](milestone-5.md#design-calls)), and dropping that modelling is Sarah's call, not this plan's.
-- 2026-10-23: under the Slippi ruleset the VS unlocks are always Slippi's, so `.slp` replays play exactly in Slippi Dolphin; Vanilla uses the save's and writes them into the `.slp` metadata.
-- 2026-11-07, "Yes, follow Dolphin": under the Slippi ruleset and in `.slp` playback, a game read of the GPU's pixels sees the bytes from before the copy, as Slippi Dolphin with "Store EFB Copies to Texture Only" does; vanilla keeps the console's rule (`Game::copies_reach_memory`, [the engine notes](engine.md#uninitialized-values)).
-- 2026-10-16: no more players' own Gecko codes ("we can let the buck stop here"). The rulesets are Vanilla, Slippi and the UCF versions.
-- 2026-11-13: after milestone 6 comes the Slippi ruleset, then a code-wide refactor with its own goals discussion; the player's polish needs its own larger discussion and isn't in this plan.
-- Netplay belongs to a follow-on repository on `melee-sim` (2026-10-14). Neither repository contacts Slippi's servers or online services. Everything below about Slippi's codes comes from public source read offline: Slippi Dolphin's netplay `Sys/GameSettings/GALE01r2.ini` and `Sys/Slippi/InjectionLists` as installed on this machine, the replays' own code lists, ssbm-rs's copy of the playback set, and one file of [slippi-ssbm-asm](https://github.com/project-slippi/slippi-ssbm-asm) (`Online/Slippi Online Scene/boot.asm`) read on GitHub.
+1. **Slippi's gameplay rules in live play**: the 27 codes melee-hd already runs for `.slp` playback (`game::slippi`, `Game::rules`), on in a live match under a Ruleset setting. Vanilla stays the exact option.
+2. **No memory card**, as in Slippi Dolphin.
+3. **Slippi's unlocks** (milestone 5's call of 2026-10-23).
+4. **Not** Slippi's menus, its online entries, m-ex, the netplay code set or Slippi Dolphin's other codes ("i mostly meant the no-memcard thing and the rules that decouple the bubble rendering from the sim code and fixes the CPU DI issue etc").
+
+Also settled: `.slp` files recorded under the ruleset play back exactly in Slippi Dolphin ("to be clear yes .slp files recorded from our slippi ruleset should indeed play back exactly in slippi dolphin"); "also taking perf/code structure wins wherever we can get it; the decoupling and di fix et al should allow us to not have to do some messiness we otherwise have to do with the original ruleset"; under the ruleset and in playback a read of the GPU's pixels sees the bytes from before the copy (2026-11-07); Vanilla's heap leftovers stay modelled exactly (2026-10-29, 2026-11-12); no more players' own codes (2026-10-16); after this comes the refactor round, then the player's polish, each with its own discussion first (2026-11-13). Nothing here contacts Slippi's servers or online services.
 
 The milestone is done when:
 
-- Under the Slippi ruleset melee-hd boots as Slippi Dolphin's netplay setup boots a session nobody takes online: the code set Slippi 3.19.1 forces and recommends ([Scope](#scope)), no memory card, the memory card check, the main menu with Slippi's online entries as an offline Slippi Dolphin shows them, VS mode under Slippi's default rules, the character and stage selects with Slippi's changes, matches with Slippi's gameplay codes, the results and the way back.
-- Every Slippi-ruleset session the oracle has compares clean tick by tick from power-on with ssbm-rs's trace of the same session run with the same code set, no stale read, `--heap` included.
-- A Slippi-ruleset match's `.slp` holds what Slippi Dolphin 3.19.1 writes for that match, and plays back exactly in melee-hd's and ssbm-rs's playback of Slippi's codes (`melee-oracle record`).
-- Each of the set's 288 codes is ported with a check, or shown not to run offline with a tripwire where it would, in a ledger of the codes held by a test as the port ledger is.
-- The player offers the ruleset in its settings panel with the default Sarah picks ([design calls](#design-calls)); Vanilla stays exact and its sessions compare as before.
+- The settings panel offers Vanilla and Slippi, with the default Sarah picks ([design calls](#design-calls)); Vanilla's sessions compare as before.
+- Under the Slippi ruleset melee-hd boots with no memory card and Slippi's unlocks, and its menus compare clean tick by tick from power-on with ssbm-rs's trace of the same session run the same way, to each match's start.
+- Every VS match under the ruleset runs Slippi 3.19's 27 gameplay codes in Slippi Dolphin's floating point, and **its `.slp` plays back exactly in Slippi Dolphin**: tick by tick the live match equals melee-hd's playback of its own `.slp`, whole state but a named list of playback's own bookkeeping; ssbm-rs's playback of the `.slp` (Slippi's real playback codes, `--fp slippi`) compares clean with melee-hd's and its replay check is clean; and Sarah's spot check in her Slippi Dolphin agrees.
+- What the ruleset makes unnecessary is skipped in its matches where that wins speed or simplicity, each skip held by a tripwire or a test, and Vanilla unchanged ([What the ruleset makes moot](#what-the-ruleset-makes-moot)).
 
 ## Status (2026-11-14, `main` at `f7115325`): planned
 
 Nothing started. The design calls below wait for Sarah.
 
-## Scope
+## What melee-hd has today
 
-### What "the Slippi ruleset" is today
+- **The gameplay codes, for playback only.** A replay's code list makes its rules (`Rules::from_codes`); `game::slippi`, `game::ucf` and `game::player_codes` port every gameplay code where it injects, in three versions of Slippi's set (3.19, 3.16, 3.14, `CodeSet`). `Rules::slippi_online()` (3.19 with UCF 0.84) exists and nothing calls it. Every session from power-on, and every match the player starts from the menus, runs Vanilla (`Game::rules` default).
+- **The 27 codes are the whole of Slippi's gameplay.** Slippi Dolphin 3.19.1's netplay build runs 288 codes (7,256 lines), and each of Sarah's 156 replays from it records exactly those 288. Slippi's playback leaves 261 of them out of a replay's list (its denylist: every injection not tagged `[affects-gameplay]`) and applies 27, exactly the 27 tagged in the netplay injection list. melee-hd ports all 27: UCF 0.84's eight, neutral spawns, the freeze glitch fix, `Init Stage Data`, `Init Player Data`, off-screen damage from the stage's limits, the three dead-up-fall fixes, Final Destination's background, Pokémon Stadium's four 3.19 hacks, Whispy's direction, NanaDeterminism, Stadium's monitor and wobbling prevention's three. (Counted by the survey's `codes.py` and `slp_codes.py` over Slippi Dolphin's installed `Sys/GameSettings/GALE01r2.ini` and `Sys/Slippi/InjectionLists/list_netplay.json`, read offline, and Sarah's replays' split messages of kind `0x3D`, matched by type and address.)
+- **Slippi's unlocks** are the playback set's general codes: Unlock All Characters and Stages (14 `04` writes into the unlock getters), Disable Special Messages and Disable Trophy Messages. `Unlocks::slippi` models their effect in a match (the stage music's draw on Final Destination, Battlefield, Yoshi's Story and Pokémon Stadium reads them; the Pokémon record test makes Celebi impossible); the menus' getters don't take them yet.
+- **No card** already runs: the memory card scene with nothing in slot A is ported and compared (`card-sessions`' "no card"); Slippi Dolphin's setup has `SlotA = 255` (no device). On a console, and in melee-hd today, the scene then asks "No memory card in Slot A. Continue without saving?"; Slippi Dolphin skips the question with its Skip Memcard Prompt code (one `C2` at `gm_Scene_MemCard_OnFrame`), which this scope doesn't include ([design call 5](#design-calls)).
+- **The recorder** writes 3.19.1's events from the state (`game::record`), with an empty code list and UCF toggles 0 for Vanilla (`record::Setup::vanilla`). Milestone 5's decision that Vanilla writes the save's unlocks into the metadata isn't built.
+- **The float mode.** Slippi Dolphin's JIT computes some float operations differently from the Gekko (`gekko_fp::FpMode::Slippi`: fused ops rounded through double, `fnmadd` signs, store rounding, NaN sign, subnormals, `fctiw`), and every Slippi replay the oracle checks plays in that mode. The player never sets a mode, so it runs everything in `FpMode::Hardware`, its `--replay` of Slippi replays included.
 
-melee-hd runs Slippi's codes in one place: a replay's match. `Rules::from_codes` reads a replay's code list ([the oracle](oracle.md), "Replay playback and the Slippi ruleset"), `game::playback` ports what Slippi's playback set does to the match, and `game::slippi`, `game::ucf` and `game::player_codes` port the gameplay codes where they inject. `Rules::slippi_online()` (the 3.19 set with UCF 0.84) exists but nothing calls it. Every session from power-on, and every match the player starts from Melee's menus, runs Vanilla (`Game::rules` default), and the recorder writes an empty code list for it (`record::Setup::vanilla`).
+## Exact playback in Slippi Dolphin
 
-So for live play the ruleset is everything Slippi Dolphin runs from power-on that playback doesn't: the boot and menu codes, and the system codes under them.
+### What a replay's playback rebuilds, and what it doesn't
 
-### The code set Slippi Dolphin runs
+Slippi Dolphin plays a `.slp` by booting its playback code set into its own playback scene, then into the debug VS mode's match (scene 14.1) built from the replay's game start: the start data, the seed, nametags, the language, UCF's pad buffer words (carried in the code list) and the code list, whose gameplay codes it applies. Each frame it injects the recorded inputs into the fighters (`Fighter_procInput`, after the game read its own controllers), restores the recorded seed, and ends the match with the replay. It rebuilds nothing else. So a live match plays back exactly only if nothing else reached its gameplay:
 
-Slippi Dolphin's netplay build (the one Slippi's launcher installs for play; its files on this machine are dated 2026-08-07) enables, in `Sys/GameSettings/GALE01r2.ini`:
+| What a live match could read that playback can't rebuild | Under Vanilla from the menus | Under the Slippi ruleset |
+| --- | --- | --- |
+| Heap addresses (a computer player's DI: Nana's no-knockback DI reads her `Fighter*` in r30 and a caller's r5) | reached: `ics-peach-ps`, recorded in a layout other than playback's, leaves its recording at frame 10,137 when played back ([the oracle](oracle.md), "Recordings") | cleared by NanaDeterminism (3.19 clears both registers) |
+| The menus' heap bytes in the match's new blocks (Brinstar's bubbles' timer, Fountain of Dreams' star, Nana's input ring, a collision joint's stamp, Rainbow Cruise's parts, the enemy spawner's words, item links, a dropped fan's word) | reached; modelled from the heap's image | `Fighter` and `Ground` zeroed by `Init Player Data` and `Init Stage Data`; **the rest still reached** (the collision stamp, items', links' and effects' words, and every in-match reuse whose placement depends on the heap's layout) |
+| The display pass's phase (a doubled round every 1,001 ticks, where the pass runs once for two ticks) | off-screen damage, Stadium's monitor, Whispy's side, Final Destination's background draws, homing, Onett's cars | fixed by the codes but for **homing and nearest-opponent items through a KO'd fighter's render-placed joint** and **Onett's cars' view edges**, which Slippi doesn't patch ([Melee's bugs](melee-bugs.md#homing-and-nearest-opponent-targeting-through-render-placed-joints)) |
+| Disc timing (Pokémon Stadium's transformations load asynchronously) | reached | 3.19 loads them synchronously; nothing else in a match is known to wait on the disc (task 4 confirms) |
+| The float mode | the console's | must be Slippi Dolphin's JIT's |
+| The unlocks (the music's draw) | the save's | Slippi's, as playback's own codes are |
 
-| Section | How it's enabled | Codes | Lines |
-| --- | --- | --- | --- |
-| Required: General Codes | always | 61 | 670 |
-| Required: Slippi Recording | always | 18 | 602 |
-| Required: Slippi Online | always (offline sessions too) | 196 | 5,816 |
-| Recommended: Normal Lag Reduction | on unless the player turns it off | 2 | 2 |
-| Recommended: Apply Delay to all In-Game Scenes | on unless turned off | 3 | 153 |
-| Recommended: Lagless FoD | on unless turned off | 8 | 13 |
-| **Forced and recommended** | | **288** | **7,256** |
-| Optional: Freeze Final Destination Background, Widescreen 16:9, Disable Screen Shake, Center Align 2P HUD, Flash Red on Failed L-Cancel, Show Friendly Player Indicators | off unless turned on | 21 | |
+So the gameplay codes alone don't make a live match's `.slp` exact: the heap's contents and layout still reach a match through the leftovers no code clears, and through which freed block a new object lands on, which depends on where the heap starts and what the match's files took from it.
 
-Counted on 2026-11-14 by `codes.py` in the survey's scratch folder, which parses the `.ini` (each `04` code one line, each `C2` its header and body), finds each injection's function and unit in `docs/port-ledger.csv` by address, and marks whether the playback set (ssbm-rs's `crates/slippi/data/playback.ini`) has it and whether melee-sim's Slippi modules name its address. Every code is an `04` write or a `C2` injection. The user's own `User/GameSettings/GALE01.ini` defines a "Boot to CSS" code (`041BFA20 38600002`) but doesn't enable it.
+### Each match from playback's heap
 
-**Which version.** Each of Sarah's 156 replays from Slippi 3.19.1 (May to October 2026) records exactly these 288 codes as its code list, and none of the optional ones (`slp_codes.py`: the replay's split messages of kind `0x3D`, matched by type and address). So the installed build is the one that recorded 3.19.1's replays, and the ruleset this plan ports is **Slippi 3.19.1's netplay set**. Her 47 replays from 3.19.0 record 284 codes, the same as ssbm-rs's `local/gecko/3.19.0.bin` (57,544 bytes, referenced by nothing): all in 3.19.1's, which adds the results screen's three online panel codes and moves `Online/Static/StaticData`. The existing playback rules (`game::slippi::CodeSet`) know 3.19's gameplay codes, which 3.19.0 and 3.19.1 share; the recorder writes 3.19.1's events ([the player](player.md#recording)).
+The way to meet the requirement by construction is to start every Slippi-ruleset VS match in the state Slippi's playback gives it, which melee-hd already builds for every replay and checks against ssbm-rs's playback traces.
 
-**What else Slippi Dolphin's setup decides.** The `.ini`'s `[Core]` sets `FastDiscSpeed = True`, `PollingMethod = OnSIRead`, `CPUThread = True` and `GPUDeterminismMode = fake-completion`. The user's `Dolphin.ini` has `SlotA = 255` (no device: Slippi Dolphin runs with no memory card) and the SRAM's language 0 (English); `GFX.ini` has `EFBToTextureEnable = True`, the setting the 2026-11-07 decision follows. `SlippiOnlineDelay = 2` and `SlippiJukeboxEnabled = False` are the user's Slippi settings, read by the codes over EXI.
+**Playback's heap**, precisely (`hsd::heap::Layout::slippi_playback`, [the engine notes](engine.md#the-allocators)): Slippi's bootloader raises the console's four OS heaps to six and takes `0xC0` bytes and the playback set's code list (`0x2E00`) from the arena before the boot's heaps; the scene's main heap is the OS's third, `0x80BD8B20` to `0x817F8AC0`, the debug VS mode letting the preload cache's `AllM` heap go (`lbDvdPreload_2`); the recording codes lengthen `Fighter` to `0x2600` bytes; the match's stage and fighters' files are read into the scene's heap, not taken from the selects' preloads (`from_menus` false); the playback codes allocate the replay's code list and the backup of what its codes replace (`playback::CodeListHeap`, sized from the list) and the recording codes their buffers in the scene's heap; and the memory is fresh (`Heap::fresh`: zero as the boot left it, but for the playback scene's one tick). `Settings::from_replay` and `Match::start_from` make exactly this, with the playback and recording GObjs and the scene loop's counts that the playback scene leaves.
 
-### What playback already covers
+**Reaching it from the menus.** At the VS match scene's entry (`fn_8016E730`, where the match takes its `StartMeleeData`) the ruleset takes the game start the recorder writes from it (the start data with its callbacks cleared, the seed, nametags, the language, the code list with UCF's words as they stand) and builds the match from that as `Settings::from_replay` does, in Slippi's float mode; the match runs with the controllers' live polls where playback would inject a replay's frames, and ends by the VS mode's own exit, not the replay's. The menus' session is set aside across the match scene (its allocator model, heap image and carried pools; the match scene's own heap would have been made anew and freed whole anyway) and takes back what the match leaves for the scenes after it: the match's results in `gm`'s static data, the scene's exit data, the audio and the timeline. [Design call 3](#design-calls) weighs this against one continuous model.
 
-Of the 288 codes, Slippi's playback leaves 261 out of a replay's list (they're in its denylist, which marks every injection Slippi doesn't tag `[affects-gameplay]`) and applies 27: the [affects-gameplay] ones, exactly the 27 the netplay injection list tags (`list_netplay.json`). melee-hd ports all 27 (UCF 0.84's eight, neutral spawns, the freeze glitch fix, `Init Stage Data`, `Init Player Data`, off-screen damage, the three dead-up-fall fixes, Final Destination's background, Pokémon Stadium's four 3.19 hacks, Whispy's direction, Nana's DI, Stadium's monitor, wobbling's three), so a match's gameplay under the Slippi ruleset is ported already. Sarah's four offline replays from Slippi Dolphin's own menus (VS mode, scene 2.2 or Sudden Death 2.3: `Game_20260524T173350`, `T174154`, `T174859`, `T175101`) are the nearest thing to a live Slippi-ruleset match there is, and the two traced (`T174154`, `T175101`) compare clean through playback today ([the oracle](oracle.md)).
+**What it buys.** Every leftover a Slippi-ruleset match reads is playback's, so its `.slp` plays back as it played, with no tripwire needed for the heap; the match needs no heap image, and the vanilla layouts (`vanilla_vs`, `from_menus`) never apply to it. The check is direct: the live match and melee-hd's playback of the `.slp` it wrote run the same code from the same state, so they must agree tick by tick on the whole state, but for a named list (`Game::playback`'s replay-frame bookkeeping, the pad library's playback flag and queue, the recorder). `record_tests.rs` already plays a recording back and compares events; this extends it to the whole state every tick.
 
-### The other 261 codes, by what they change
+**What's left outside the construction.** Two display-phase paths Slippi doesn't patch: a homing missile or nearest-opponent item targeting through a fighter in its KO toward the screen, and Onett's cars reading the camera's view edges. Each reads state the display pass placed, and Slippi Dolphin's playback doubles its rounds at its own phase, so a match where such a read falls on a doubled round can play back differently in Slippi Dolphin, as Slippi's own replays and online peers can. melee-hd can't make that exact, since Slippi Dolphin's phase isn't known; it can see it: at each such read, compute the outcome from both placements (the pass's and the logic's) and, where they differ, mark the match ([design call 9](#design-calls)).
 
-Grouped by `classify.py` (by the code's source path and the function it hooks):
+### Checking it against ssbm-rs
 
-| Group | Codes | Lines | What it changes | Reaches |
+ssbm-rs can't run Slippi Dolphin's netplay set, and doesn't need to here:
+
+- **The matches.** ssbm-rs's playback (`ssbm-run --replay FILE.slp --fp slippi`) runs Slippi's real bootloader, playback set and the replay's gameplay codes, which is everything that touches a Slippi-ruleset match. Each `.slp` the ruleset writes is traced that way, `melee-oracle diff` compares melee-hd's playback with the trace, and ssbm-rs's own replay check compares its re-recording with the `.slp`. With the live-equals-playback test above, that chains the live match to Slippi's playback codes. No ssbm-rs change.
+- **The menus.** A session under the ruleset is Vanilla's menus with no card, the unlock and message writes, and Slippi's float mode. ssbm-rs runs no card already (no `--card`) and `--fp slippi`; it needs a run option to apply the playback set's general codes (16 `04` lines, small enough for the code handler's list) in a recorded and played-back session, and a flag in the session format for the ruleset (task 1). The sessions then compare from power-on to each match's start.
+- **After a match** the session runs Vanilla's results and menus from the state the handoff gives back. No console or ssbm-rs run passes through that handoff, so there's no reference past it: those scenes are held by the same code's checks elsewhere, by sessions under the ruleset running with no stop, and by the results showing the match's own outcome.
+
+**What needs recording.** About 6 menu sessions (12 minutes, about 1.3 GB at 1.8 MB a second) and about 20 matches recorded through the player under the ruleset and traced as replays (60 minutes, about 8 GB at 2.3 MB a second): every tournament stage, Ice Climbers and computer players, items with homing missiles and red shells, Onett, Sudden Death, the Special Melee modes that save a `.slp`, a pause. About 10 GB in all, against 138 GB free on 2026-11-14.
+
+## What the ruleset makes moot
+
+What Vanilla needs modelled in a match and a Slippi-ruleset match doesn't, with the win and how the Slippi path skips it safely. Vanilla keeps every one.
+
+| Vanilla's modelling | Why Vanilla needs it | Under the ruleset | Win | Skipped safely by |
 | --- | --- | --- | --- | --- |
-| Gameplay (the 27 above) | 27 | 658 | the match's rules | gameplay; ported |
-| Boot and main menu | 11 | 991 | `Online/Slippi Online Scene/boot.asm` (`bootOnLeave`): the boot goes from the memory card check to the main menu, skipping the opening movie and the title, and installs a one-shot over the menu's entry that opens the Online Play submenu (8) with the cursor on its first unlocked entry, after asking the app's state over EXI; it also preloads Pokémon Stadium's four transformation names for later EXI loads. `main.asm` (the scene table: Slippi's online scene), `TitleMenu`'s six (the online submenu, its locked entries, a hidden 1P entry), Skip Memcard Prompt (`gm_Scene_MemCard_OnFrame`), Debug Menu and Exiting Debug Menu Returns to CSS (`mn_8022D594`, `fn_801B09F8`) | the scene sequence, heap, presentation |
-| Unlocks, default rules, messages | 21 | 21 | Unlock All Characters and Stages (14 `04` writes, the getters `Unlocks::slippi` already models), Stock Mode, 4 Stocks, 8 Minutes, No Items, Singles Stages (the VS rules' defaults in data), Disable Special Messages, Disable Trophy Messages | menus' state, the save's reads; the music choice's draw ([below](#the-save-and-unlocks)) |
-| Character select, offline features | 17 | 210 | Faster CSS Load, UCF's text, D-pad down for a random stage, hands starting on HMN (2), no Fountain of Dreams in doubles, winners' names in gold (2), closing a door keeps the nametag (2), unplugging closes the door, random CSS music (3), KO stars kept from the VS mode, costume bound checks (2) | menus' state, timing, heap, presentation |
-| Character select online, name entry | 39 | 1,263 | `Online/Menus/CSS` (15), its teams (7) and the 8-character name entry (21) | the online scene only |
-| Stage select | 9 | 196 | L+R+A back to the character select during the stage's load; `Online/Menus/SSS` (8: Start disabled, leaving on a pick, the frozen Stadium toggle's six) | the stage select; the online scene for the toggle |
-| VS splash and results (online) | 12 | 239 | the online VS screen (8), the results' panels (3), a rumble hack | the online scene, the results |
-| Match HUD, pause and end | 19 | 424 | the in-game HUD's init and number parser, the LRAS message, the online pause rules, Salty Runback (`gmVsMelee_ExitVs`), the camera unrestricted and panned while paused (6), C-stick in single player, hidden nametag while invisible | the match's presentation and its end; the pause camera is simulation state |
-| Rollback and netplay engine | 26 | 1,294 | `Online/Core`'s engine loop for rollback, input sending and refetching, rumble, the pad alarm, `Online/Static`'s 15 helper functions, placed at fixed low-memory addresses past `__flush_cache` for the other codes to call, the fast-forward dynamics fix | netplay; inert offline if their guards hold |
-| Audio and music | 11 | 191 | `Online/Core/Music` (3, Dolphin's jukebox), music file alarms (2), the sound log (4: a live game's version of playback's), random stage music (`Ground_801C24F8`), crowd chants off | what players hear; the stage music's draw |
-| Recording | 12 | 540 | the codes that send the replay over EXI | the `.slp` only; `game::record` reads what they read |
-| Heap, files, text, video, polling | 75 | 1,193 | the m-ex code set (53 codes, 874 lines: 14 in `lbheap`, 10 in `gm_1A3F`'s scene loop and preload, 7 in the scene table and scene code (`gmscene`, `gmscdata`, `gm_1A36`), 7 in `tobj`, 6 in the crash screen and debug console (`dberror`, `debugconsole_main`), 5 in HSD's data, 2 in `lbdvd`, 1 in `initialize`, 1 in `lbcardgame`), `AllocSceneBuffer`, a larger text heap, the menus' text from Dolphin over EXI, files loaded over EXI (2), no disc-error or video assert stops, Polling Drift Fix + VB (6: the scene loop's polling and the XFB copy), Normal Lag Reduction (2), the in-game delay (2), compatibility hooks (3), the follower test and frame index | the heap's layout (every scene), the scene loop's timing and its controller reads, the text heap |
-| Stage presentation | 9 | 36 | Lagless FoD (8: Fountain of Dreams' reflection and its costs), Pokémon Stadium's screen text | what players see, heap |
-| **All** | **288** | **7,256** | | |
+| The allocator model's addresses (`Settings::heap`, on in the player whenever an Ice Climber or a computer player plays) and the pools' per-address slots | a computer player's DI reads its `Fighter*` (r30) | NanaDeterminism clears it | measured below: speed 0 to +4%, snapshots 16 to 31% smaller and no longer growing through the match | the existing stop by name with the model off (`ics-peach-ps` stops at frame 10,137: "DI with no knockback reads what ftCo_800B2790 (the fighter's address, unmodeled) left isn't ported"), and a run of the replay corpus under 3.19's rules with the model off ([design call 8](#design-calls)) |
+| r5 through the computer player's frame (`cpu_ai::Leftover`, `Geometry::check_floor_r5`, `Running::excluded_floor_r5`) | Nana's DI takes her stick's X from it | 3.19's NanaDeterminism clears r5 too | the bookkeeping isn't consulted | an assertion that the Slippi path never reads it; 3.16 replays keep it (their code clears r30 only) |
+| The heap's image in a match (`game::leftovers`: Brinstar's timer, Fountain of Dreams' star, Nana's ring, the collision stamp, Rainbow Cruise, the spawner, links, the fan) and the layouts `vanilla_vs` and `from_menus` | the menus' bytes reach the match | the match starts from playback's fresh heap | no image reads at creation and no image in the match's snapshot (138 to 227 KB of a session's, about 3 µs of its clone, [performance](performance.md)); no layout campaign for new match objects | `Heap::fresh`, already there: an image read in a fresh heap is an error |
+| Off-screen damage from the display pass's marks (`ft::draw`'s `update_screen_visibility`, the magnifier) | `Fighter_procAnim` counts the pass's mark | BrawlOffscreenDamage tests the stage's limits in logic | damage no longer follows doubled rounds; the marks still draw the bubbles and feed the results' bonus counts | the code's branch already; a test that the Slippi path's damage is the same with the pass's marks scrambled |
+| Pokémon Stadium's monitor against the pass's camera | the close-up reads the CObj the pass writes | fixed bounds (`zoom_keeps_player`) | Stadium's draws no longer follow the pass | the same kind of test |
+| Whispy's and items' side from KO'd fighters' camera bones | dead fighters counted | WhispyBlowDirFix | as above | the same kind of test |
+| Final Destination's background draws | they take the match's seed | 3.19 keeps them off it | as above | ported |
+| The disc's pace in a match (Stadium's asynchronous loads) | reaches the seed | 3.19 loads synchronously | the player's pace reaches only the music | task 4 confirms nothing else in a match waits on the disc |
+| The save in a match (unlocks, the Pokémon records) | the save's unlocks decide the music's draw | Slippi's, fixed | no save in the match's settings | `Unlocks::slippi` |
 
-So what Slippi forces for every game is all 288 (the three Recommended ones are on unless a player turns them off in Slippi Dolphin's game properties), and its options are the six Optional codes plus the frozen Stadium toggle the online stage select offers. Of the 261, the online scene's codes (about 95: the online select, name entry, VS screen, results panels, the rollback engine and the static helpers) only run once a player enters Slippi Online, which needs Slippi's servers; the rest run in every offline session.
+The display pass still runs as simulation under the ruleset, and a rollback still re-runs its state changes: homing, nearest-opponent items and Onett's cars read what it places, the hats' dynamics swing from it, and the magnifier's edges feed the results. Skipping it in a rollback's replayed ticks would be a later question (the netplay follow-on's), and safe only where none of those readers runs.
 
-### What's out
+**Measured (2026-11-14, this machine, other work possibly running; `melee-bench` built from `f7115325`, two alternations of five runs each, `MELEE_BENCH_HEAP=off` for the model off).** These are Vanilla benchmark replays, so they show the model's cost, not a Slippi match's:
 
-- Netplay and everything the online scene reaches past its locked entries (the follow-on's), Slippi's servers and its online services.
-- The console code set (Slippi Nintendont's, `list_console_*.json`: tournament and friendlies mods, PAL, stealth UCF): a different ruleset family that no local replay records.
-- The single-player modes' own rules under the ruleset beyond what the codes do to them ([design call 7](#design-calls)).
-
-## Inherited
-
-- **The Vanilla unlocks in the `.slp` metadata** (milestone 5's decision of 2026-10-23): not built. Neither `game::record`, `melee-slippi`'s writer nor the player's recording writes them.
-- **The "Save replays" note** ("Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.") stays true of Vanilla; under the Slippi ruleset it no longer applies ([the player](#the-player)).
-- **The EFB rule**: done (`Game::copies_reach_memory` reads `rules.slippi`).
-- **Three unaccounted functions** in the ledger at `f7115325` (`ftCo_8008EB58`, `fn_800DC384`, `fn_800DC404`), which milestone 6's verify settles; none is this milestone's.
-- **The refactor round's first question** (2026-11-13: whether the class pools' per-address slots are needed): the Slippi ruleset's heap layout (task 5) adds a third layout to the allocator model, so the answer changes its cost; the two are independent otherwise.
-
-## What the oracle can use
-
-A session is still the oracle ([the oracle](oracle.md#sessions)): every controller read from power-on, the card (none, here) and the console's setup. A Slippi-ruleset session adds one input: the code set, applied as Slippi Dolphin applies it, which ssbm-rs runs as machine code in its interpreter as it runs the playback set's. ssbm-rs needs no port of the codes, only the means to run them.
-
-### What ssbm-rs does with Slippi's codes
-
-- **Playback.** `ssbm-slippi` installs Slippi's bootloader and a Slippi EXI device; the bootloader asks the device for the playback set (93 codes) and the device answers playback's commands from the replay. A replay run is a debug VS match from Slippi's playback scene.
-- **The benchmark's boot (`BENCH_CODES`).** `tools/run/src/bench.rs` applies an `.ini`'s enabled codes as Dolphin's code handler would, into a list at `0x80001800`, and has the bootloader load the recording codes and the `Common` codes they need from the device (the scene buffer, followers, the frame index, the compatibility hooks, and `Init Stage Data` and `Init Player Data`); the bench's codes boot straight into a match (scene 14.1). That is how its recordings "boot straight into a match with Slippi's codes loaded": the gameplay and recording codes, never the menus'.
-- **Not modelled.** No run applies the netplay set. The device answers playback, recording and the bootloader's GCT (`0x75`, `0x76`, `0x88`, `0x89`, `0x8A`, `0xD0`, `0xD3`, `0xD4`), logs `0x77`, `0xD1` and `0xD2` as unsupported, and takes anything else for replay data. The session format (`SSBMINP`) carries no code set, so a session recorded with codes would play back without them.
-
-**The probe (2026-11-14).** `BENCH_CODES` with the netplay `.ini` (its six enabled names, 7,256 lines), `MODES=1`, `--fields 900` and a copy of `2026-10-06_17-13-21`'s card, with `target/alt/release/ssbm-run-rf.exe`: the run stops before its first field (`unmapped write of 4 bytes at 0x00000004`, `pc __start+0xc`), because 7,256 lines from `0x80001800` run over the bootloader's list at `0x80002000` and the SDK's `memset` at `0x80003100`. Slippi Dolphin doesn't put this set there: its bootloader (`Sys/bootloader.gct`) asks the EXI device for the set's length and image and loads it into the arena, as ssbm-rs's playback does with the playback set. So the route is ssbm-rs's own: hand the bootloader the netplay set. The probe's files are in `$SSBM_RS_LOCAL/lockstep/slippi-survey` (the `.ini`, the card copy, `probe-boot.log`); no trace was made.
-
-**What ssbm-rs needs** (requests for its coordinator; task 1):
-
-1. A run option that hands the bootloader the netplay set (an `.ini` and the names to enable, Slippi Dolphin's way), with the recording codes from it rather than the bench's.
-2. The Slippi EXI device's offline answers to the set's commands, as Slippi Dolphin's device gives them with nobody logged in or with no online session (the app state `FetchSlippiAppState` asks for, the online status, the delay the in-game delay reads, the premade text `LoadPremadeTextDataFromDolphin` asks for, the file length and load `EXIFileLoad` and the Stadium preload ask for, the follower test, should-record), taken from Slippi Dolphin's public `EXI_DeviceSlippi` source, and the recorded stream saved as a `.slp` as the bench does.
-3. The code set in the session format (a flag naming a set, or `SSBMINP` version 3 with the set's hash), so `--inputs` plays a Slippi-ruleset session back with its codes and melee-oracle knows the session's ruleset.
-4. No card in slot A, which a run without `--card` already is (the format's flag 2 clear).
-
-### What the local data has
-
-- **Slippi replays.** Sarah's 203 in `$SLIPPI_REPLAYS` (`slp_scenes.py`: 47 of 3.19.0 and 152 of 3.19.1 from the online scene 8.2, 4 offline from VS mode, all with the frozen Stadium flag clear), and ssbm-rs's dataset, 4,878 of 3.14 to 3.17 (10 offline). Every one plays through playback; none records a menu.
-- **Sessions.** None under any Slippi code set: every session in `$SSBM_RS_LOCAL/lockstep` is vanilla from power-on.
-- **Disk.** `$SSBM_RS_LOCAL/traces` holds 322 GB; the drive had 138 GB free on 2026-11-14, and the project keeps 20 GB free.
-
-### What needs recording
-
-At milestone 6's measured 1.8 MB a second of play for menus and 2.3 for matches, recorded and traced one at a time in ssbm-rs (about a second of one core per second of play):
-
-| Task (below) | Sessions | Minutes of play | Traces |
+| Match | Model on, median frames/s | Model off | Change |
 | --- | --- | --- | --- |
-| 2 (first stops) | 4 | 6 | 0.7 GB |
-| 3 (boot, main menu, the online submenu, VS menus, rules defaults, the debug menu entry) | 8 | 15 | 1.7 GB |
-| 5, 6 (heaps, polling, every scene once more under the m-ex layout) | 6 | 15 | 1.8 GB |
-| 7 (the character and stage selects' features) | 8 | 20 | 2.3 GB |
-| 8 (matches: each tournament stage, the Ice Climbers, CPUs, items, pause camera, Salty Runback, L+R+A, sudden death) | 12 | 45 | 6.2 GB |
-| 9 (music and sounds) | 3 | 10 | 1.3 GB |
-| 11, 12 (the recorder's sessions and the player's own) | 4 | 15 | 2 GB |
-| **All** | about 45 | about 2 hours | about 16 GB |
+| `fox-fox-fd` | 4,252, 4,232 | 4,328, 4,356 | +2 to +3% |
+| `fox-marth-ps` | 3,660, 3,633 | 3,663, 3,772 | 0 to +4% |
 
-That fits the disk as it stands, about 2 CPU-hours spread over the tasks. Each session's `.slp` from ssbm-rs's recording codes is also the recorder's oracle (task 11), byte for byte.
+| `fox-fox-fd` (`snapshot-match --every 5000`) | Model on | Model off |
+| --- | --- | --- |
+| Snapshot at ticks 5,000, 10,000, 15,000 | 1.81, 2.00, 2.26 MB (3,001 to 3,927 allocations) | 1.52, 1.57, 1.57 MB (2,512 to 2,540) |
+| Clone | 181 to 235 µs | 145 to 153 µs |
+| Restore | 51 to 60 µs | 41 to 43 µs |
 
-## What changes in melee-hd
-
-### The boot and the menus
-
-Under the ruleset the console boots with no card: the memory card scene finds none and Skip Memcard Prompt takes it past the prompt (melee-sim already runs the no-card case: `card-sessions`' "no card"); `bootOnLeave` goes to the main menu instead of the opening movie; the menu's first entry is the Online Play submenu with its cursor on the first unlocked entry. What the online entries do offline is the EXI answer melee-hd gives (design call 4). VS mode's rules start from Slippi's defaults (stocks, 4 stocks, 8 minutes, items off, the singles stage list), the character select runs Slippi's offline features, the stage select its L+R+A, the match HUD and pause its codes, the results lead back to the select (or straight to the next match with Salty Runback). The single-player modes run under the same codes (C-stick in single player, the unlocks, the special messages off).
-
-melee-sim applies none of this by patching: as with the gameplay codes, each code is ported where it injects, behind `Game::rules` (a ruleset field for the menu codes, next to `slippi`), and the EXI device's answers become explicit inputs, as playback's are.
-
-### Vanilla's leftovers that no longer reach a Slippi-ruleset match
-
-[The engine notes](engine.md#uninitialized-values) list four leftovers that reach play or the picture on a console, all modelled from the heap's image in a session. Under the Slippi ruleset:
-
-- **Brinstar's bubbles' timer** and **Fountain of Dreams' star** live in the stage objects' user data, which `Init Stage Data` (`801C154C`) zeroes: the timer starts from 0 and draws on the match's second tick, the star's bit is clear.
-- **Nana's first five input ring entries** live in the `Fighter`, which `Init Player Data` (`80068EEC`) zeroes whole.
-- **Nana's and every computer player's DI** reads its `Fighter*` and a caller's r5; NanaDeterminism (`800AC5B8`) clears both registers in 3.19, so no address reaches gameplay through them.
-- **A collision joint's stamp** (`CollJoint::xC`) is not zeroed by any Slippi code: it still comes from the heap, under the m-ex layout's history rather than vanilla's.
-- **A dropped fan's `xD4C`** and the other item, effect and link words the image supplies are not zeroed either; under the ruleset the fan reads the bytes from before a copy, as decided on 2026-11-07.
-
-melee-sim already skips the image for a `Fighter` and a `Ground` under the Slippi ruleset (`game::leftovers`). What's left reaching a match is the collision stamp and the items' and effects' words, all rare, and all exposed in Slippi Dolphin's own play the same way (a live match's history against playback's fresh heap). How much of the image a Slippi-ruleset match still needs, and whether its matches may start from playback's fresh heap instead, is design call 3; vanilla's modelling stays as it is either way.
-
-### The `.slp` writer
-
-What Slippi Dolphin 3.19.1 writes for an offline match, read from Sarah's offline replays, against what `game::record` writes for Vanilla today:
-
-| Field | Slippi Dolphin, offline | melee-hd's Vanilla today | Under the ruleset |
-| --- | --- | --- | --- |
-| Code list | the 288 codes, 7,256 lines, as split messages | empty | the same 288, byte for byte (Slippi's GPL-3.0 code text as data, with attribution in `THIRD_PARTY.md`) |
-| UCF toggles | 1 (3.19's codes write 1) | 0 | 1 |
-| Scene | 2.2 (2.3 in Sudden Death) | 2.2 | the same |
-| Frozen Stadium, PAL | 0, 0 offline | 0, 0 | the same |
-| Names, connect codes, UIDs, match ID | zero offline | zero | zero |
-| `metadata.playedOn` | `dolphin` | `melee-hd` | design call 5 |
-| The frame events | 3.19.1's | 3.19.1's, from the state | the same; the frame start's and item processes' GObjs then exist, as the codes make them |
-
-The recorder already reads what the recording codes read; under the ruleset the recording codes run in the game, so the GObjs the recorder stands in for exist and its stand-ins go. The writer's oracle is ssbm-rs's recording of the same session (task 1's device saves it) and `melee-oracle record`.
-
-### The save and unlocks
-
-Slippi Dolphin's netplay setup has no card, so under it Melee never loads or writes a save: the unlocks are the codes' (`Unlocks::slippi`, which the music choice's draw on Final Destination, Battlefield, Yoshi's Story and Pokémon Stadium reads), the rules start from the codes' defaults, the special and trophy messages are off, and records, nametags and Camera Mode snapshots last only as long as the session. Under the ruleset melee-hd can follow that (no card, the native save untouched) or put the native save in slot A as Vanilla does (design call 6).
-
-### The player
-
-- **Settings panel.** A Ruleset choice (Slippi or Vanilla) under a new Game section, applied at Melee's next start as the debug level is ("Restart Melee…"), never to a replay or a recorded session, which carry their own. Its default is design call 2.
-- **Save replays.** Under the ruleset the note doesn't apply; under Vanilla it stays.
-- **The developer setting** stays a Vanilla tool: Slippi's Debug Menu code is the ruleset's own way in (task 3 reads where it leads).
-- **Rollback snapshots.** A Vanilla session's snapshot holds the heap's image (1.9 to 2.5 MB at the measured ticks, against 1.23 MB for a replay's match without one, [performance](performance.md)). A Slippi-ruleset match keeps the image unless design call 3 lets it start from playback's fresh heap, in which case its snapshot is a replay's. The allocator model, which the player turns on only where an address reaches gameplay (an Ice Climber or a computer player, `Settings::vs_with`), has no such reader under the ruleset (NanaDeterminism), so the player's Slippi-ruleset matches can run without it, with a tripwire where an address would be read.
-
-### What this leaves ready for the netplay follow-on
-
-The online scene's codes are the follow-on's: the ledger of codes names each (the online select, name entry, VS screen, results panels, the rollback engine, the static helpers) with the guard that keeps it from running offline. The gameplay codes, the recorder writing Slippi Dolphin's `.slp`, the EXI answers as explicit inputs and the code set in the session format are the pieces a matchmaker and a wire protocol build on. Nothing here talks to a network.
+So the snapshot win is the per-address slots the model keeps (the exactness round's growth, [performance](performance.md)), and the speed win is small and within this machine's noise. **Code structure**: under the ruleset a match no longer touches the CPU's register bookkeeping, the heap's image or the menus' layouts, so those become Vanilla-only paths behind one ruleset test; the refactor round can isolate them, and its first question (whether the pools need per-address slots) gets a Slippi-ruleset answer for free: they don't.
 
 ## Melee's bugs and Slippi's fixes
 
-From [Melee's bugs](melee-bugs.md), the entries the Slippi ruleset already fixes or would:
+From [Melee's bugs](melee-bugs.md), the entries the ruleset fixes:
 
-| Entry | Slippi's code | Status |
-| --- | --- | --- |
-| [The Ice Climbers' freeze glitch](melee-bugs.md#the-ice-climbers-freeze-glitch) | FreezeGlitchFix (`801239A8`) | in the ruleset, ported |
-| [A computer player's DI with no knockback reads two registers it never set](melee-bugs.md#a-computer-players-di-with-no-knockback-reads-two-registers-it-never-set) | NanaDeterminism (`800AC5B8`; 3.19 clears both) | in the ruleset, ported |
-| [Nana's input ring starts with the heap's C-sticks](melee-bugs.md#nanas-input-ring-starts-with-the-heaps-c-sticks) | Init Player Data (`80068EEC`) | in the ruleset, ported |
-| [Brinstar's bubbles' timer starts from the heap](melee-bugs.md#brinstars-bubbles-timer-starts-from-the-heap) | Init Stage Data (`801C154C`) | in the ruleset, ported |
-| [Fountain of Dreams' star keeps its alpha flag as the heap held it](melee-bugs.md#fountain-of-dreams-star-keeps-its-alpha-flag-as-the-heap-held-it) | Init Stage Data | in the ruleset, ported |
-| [Rainbow Cruise's planks, blocks and vanishing parts keep fields as the heap held them](melee-bugs.md#rainbow-cruises-planks-blocks-and-vanishing-parts-keep-fields-as-the-heap-held-them) | Init Stage Data (the `Ground` part) | in the ruleset for the `Ground`'s bytes |
-| [Final Destination's background compares green twice](melee-bugs.md#final-destinations-background-compares-green-twice) | DesyncProofBGTransformations (`8021AAE4`: the seed kept) | in the ruleset; the extra draws no longer reach the seed |
-| [Off-screen damage counts render-pass marks](melee-bugs.md#off-screen-damage-counts-render-pass-marks) | BrawlOffscreenDamage (`8006A880`) | in the ruleset, ported |
-| [Pokémon Stadium's monitor tests a render-pass camera](melee-bugs.md#pokémon-stadiums-monitor-tests-a-render-pass-camera) | PSCameraIndependentMonitor (`801D24FC`) | in the ruleset, ported |
-| [Opponents' direction counts fighters KO'd toward the screen](melee-bugs.md#opponents-direction-counts-fighters-kod-toward-the-screen) | WhispyBlowDirFix (`8008653C`) | in the ruleset, ported |
-| [Pokémon Stadium's return zeroes a file's header](melee-bugs.md#pokémon-stadiums-return-zeroes-a-files-header) | CustomZeroBuffer (`801C65C8`, in the same `grAnime_801C65B0` call) | in the ruleset; whether it changes this defect is task 5's to read |
-| [A far Arwing's laser takes its spawn position from the stack the sound left](melee-bugs.md#a-far-arwings-laser-takes-its-spawn-position-from-the-stack-the-sound-left) | the live sound log's PreventDuplicateSounds (`8038D0B0`, as playback's) | the ruleset would make live play leave playback's words there (task 9) |
-| [A dropped fan lands or vanishes by a word it never sets](melee-bugs.md#a-dropped-fan-lands-or-vanishes-by-a-word-it-never-sets) | none; Slippi Dolphin's EFB setting | decided 2026-11-07; the word's history stays the heap's |
-| [A collision joint's stamp starts as the heap held it](melee-bugs.md#a-collision-joints-stamp-starts-as-the-heap-held-it) | none | not fixed by Slippi |
-| [Homing and nearest-opponent targeting through render-placed joints](melee-bugs.md#homing-and-nearest-opponent-targeting-through-render-placed-joints) | none ("Slippi doesn't patch it") | not fixed by Slippi |
+| Entry | Slippi's code |
+| --- | --- |
+| [The Ice Climbers' freeze glitch](melee-bugs.md#the-ice-climbers-freeze-glitch) | FreezeGlitchFix (`801239A8`) |
+| [A computer player's DI with no knockback reads two registers it never set](melee-bugs.md#a-computer-players-di-with-no-knockback-reads-two-registers-it-never-set) | NanaDeterminism (`800AC5B8`, both registers in 3.19) |
+| [Nana's input ring starts with the heap's C-sticks](melee-bugs.md#nanas-input-ring-starts-with-the-heaps-c-sticks) | Init Player Data (`80068EEC`) |
+| [Brinstar's bubbles' timer starts from the heap](melee-bugs.md#brinstars-bubbles-timer-starts-from-the-heap) | Init Stage Data (`801C154C`) |
+| [Fountain of Dreams' star keeps its alpha flag as the heap held it](melee-bugs.md#fountain-of-dreams-star-keeps-its-alpha-flag-as-the-heap-held-it) | Init Stage Data |
+| [Rainbow Cruise's planks, blocks and vanishing parts keep fields as the heap held them](melee-bugs.md#rainbow-cruises-planks-blocks-and-vanishing-parts-keep-fields-as-the-heap-held-them) | Init Stage Data, for the `Ground`'s bytes; the fresh heap for the rest |
+| [A collision joint's stamp starts as the heap held it](melee-bugs.md#a-collision-joints-stamp-starts-as-the-heap-held-it) | no code; the fresh heap |
+| [A dropped fan lands or vanishes by a word it never sets](melee-bugs.md#a-dropped-fan-lands-or-vanishes-by-a-word-it-never-sets) | no code; the fresh heap and the EFB rule of 2026-11-07 |
+| [Final Destination's background compares green twice](melee-bugs.md#final-destinations-background-compares-green-twice) | DesyncProofBGTransformations (`8021AAE4`) |
+| [Off-screen damage counts render-pass marks](melee-bugs.md#off-screen-damage-counts-render-pass-marks) | BrawlOffscreenDamage (`8006A880`) |
+| [Pokémon Stadium's monitor tests a render-pass camera](melee-bugs.md#pokémon-stadiums-monitor-tests-a-render-pass-camera) | PSCameraIndependentMonitor (`801D24FC`) |
+| [Opponents' direction counts fighters KO'd toward the screen](melee-bugs.md#opponents-direction-counts-fighters-kod-toward-the-screen) | WhispyBlowDirFix (`8008653C`) |
 
-Every entry's "Fix impact" that says "breaks replay and Slippi compatibility" stays unfixed under both rulesets. Tasks that port a code fixing a defect add the code to that entry's "melee-hd" line.
-
-## What's left to port
-
-Codes, not functions: the port ledger's 19,827 functions don't change, since each code runs inside a function already ported. The ruleset's own ledger (task 2) lists the 288 codes. By group, from the table above: 27 ported; 21 save-facing `04` writes that melee-sim models in part already (`Unlocks::slippi`); 12 recording codes the recorder reads after; and 228 to port or show inert: about 95 online-scene codes (expected inert offline, to show), 75 heap, file, text, video and polling codes (1,193 lines; the m-ex set's 53 the biggest), and about 60 offline menu, HUD, pause, stage and audio codes. Lines are a rough size: the online scene's 3,000 or so lines need reading, not porting; the offline menus', HUD's, stage's and audio's come to about 1,800.
+Not fixed by Slippi: [homing and nearest-opponent targeting through render-placed joints](melee-bugs.md#homing-and-nearest-opponent-targeting-through-render-placed-joints) and Onett's cars (design call 9). Each task that changes how one of these behaves under the ruleset updates the entry's "melee-hd" line.
 
 ## Proposed tasks
 
-Twelve tasks in three waves. Sizes: S under 20 codes or tooling, M 20 to 60 codes or a subsystem, L more. Every porting task follows [the porting guide](porting.md): each code is ported where it injects behind the ruleset's toggle, with its source path in a doc alias (`#[doc(alias = "slippi:Online/Core/...")]`) the codes' ledger reads, the sessions it names compare clean from power-on with `--all --heap`, `session-sync --rollback 7` passes on the matches it reaches, each new check is mutation-tested, a frame of each new screen compares with ssbm-rs's renderer, and a defect found goes in [Melee's bugs](melee-bugs.md). Sessions go in ssbm-rs's `local/lockstep/slippi-*` folders, traced into `local/traces/slippi-*`.
+Six tasks. Sizes: S a few days' agent work or tooling, M a subsystem, L more. Each follows [the porting guide](porting.md): the sessions it names compare clean with `--all --heap`, `session-sync --rollback 7` passes on the matches it reaches, each new check is mutation-tested, and a defect found goes in [Melee's bugs](melee-bugs.md). Sessions go in ssbm-rs's `local/lockstep/slippi-*` folders, traced into `local/traces/slippi-*`.
 
-**Wave 1** (four at once)
+1. **ssbm-rs: a session under the ruleset** (a request through ssbm-rs's coordinator). A run option applying the playback set's general codes (the 16 unlock and message writes, and Skip Memcard Prompt if design call 5 takes it) from power-on in a recorded or played-back session, with `--fp slippi` and no card, and the ruleset as a flag in the session format, so `--inputs` plays such a session back as it ran. Oracle: the codes' effect on the getters in a trace; a session recorded and played back the same. Size: S. Depends on nothing.
+2. **The ruleset in the session and the menus.** `Settings`' ruleset, set from power-on: no card, Slippi's unlocks in the menus' getters with the special and trophy messages off, Slippi's float mode, `Rules::slippi_online()` for the matches; the session format's flag read and written (`session_rec`, melee-oracle). Oracle: task 1's sessions from power-on through the character and stage selects to each match's start. Size: S. Depends on task 1 for its sessions, not to start. Owns the ruleset field and the menus' unlock getters.
+3. **The recorder's Slippi game start.** The code list as melee-hd runs it (design call 4) with UCF's words as they stand, UCF toggles 1, the scene, `playedOn` (design call 4), and Vanilla's unlocks in the metadata (milestone 5's open decision). Oracle: Sarah's four offline replays' game starts byte for byte where the same fields apply, `Rules::from_codes` reading the list as 3.19, `melee-oracle record`, slippi-js and ssbm-rs's parser. Size: S. Depends on nothing. Owns `game::record`, `melee-slippi`'s writer.
+4. **Each match from playback's heap.** The handoff at the VS match scene (design call 3): the match built from its game start in playback's state and float mode, live polls in, the VS mode's exit and results back; which VS-scene matches playback can't rebuild from their game start (the Special Melee modes' own callbacks, Tournament's, Camera Mode's), which then save no `.slp` (design call 6); the disc's reach into a match confirmed; the display-phase tripwire (design call 9). Oracle: the live match equal to melee-hd's playback of its `.slp` tick by tick (the whole state but the named list), ssbm-rs's playback of each `.slp` with `--fp slippi` compared by `melee-oracle diff` and its replay check clean, about 20 matches recorded through the player; sessions running through several matches with no stop. Size: M to L. Depends on tasks 2 and 3. Owns `vs_match`'s start, `game::playback`'s live variant.
+5. **What the ruleset makes moot.** Under the ruleset: the allocator model off in the player's Slippi matches, after a run of the replay corpus under 3.19's rules with the model off finds no stop (design call 8); the r5 bookkeeping not consulted, with its assertion; the tests that the Slippi path's off-screen damage, Stadium monitor and Whispy side don't read the pass; the measurements above repeated on the worker against a Slippi match. Oracle: the corpus run, the tests, `snapshot-match` and `native`. Size: S. Depends on task 4 for the match path; the corpus run and the tests can start at once. Touches `ft::cpu`'s bookkeeping, `Settings::vs_with`.
+6. **The player.** The Ruleset setting under a Game section of the panel, its default (design call 2), applied at Melee's next start, never to a replay or a recorded session; the Save section saying the save is Vanilla's while Slippi runs with no card; Save replays' note for Vanilla only; the developer setting Vanilla-only (playback can't rebuild a raised debug level); `--replay` of a Slippi replay in Slippi's float mode; Skip Memcard Prompt if design call 5 takes it. Oracle: the player's own sessions under the ruleset compared from power-on; `record_tests` under the ruleset; Sarah's spot check of a few `.slp` files in her Slippi Dolphin. Size: S. Depends on tasks 2 and 4.
 
-1. **ssbm-rs runs the netplay set** (ssbm-rs's coordinator, through melee-hd's): the bootloader option, the offline device's answers and the session format's code set ([What ssbm-rs needs](#what-the-oracle-can-use)). Oracle: Slippi Dolphin's public device source for the answers; the run reaching the main menu, VS mode and a match with the set's codes; the `.slp` its recording codes write playing back through ssbm-rs's playback and comparing with the run (`ssbm-slippi`'s compare). Size: M. Depends on nothing. Touches ssbm-rs's `ssbm-slippi` and `tools/run` only.
-2. **The codes' ledger and the session harness.** `ledger/slippi-codes.txt` (each of the 288: ported with its alias, recorded-only, or inert offline with the guard and a tripwire), a test that fails while one is unaccounted, as the port ledger's; melee-oracle reading the session's code set and running melee-sim under it; each group's first stops listed once task 1 lands. Oracle: its own test, then task 1's first sessions. Size: S (tooling). Depends on task 1 for the sessions, not to start. Touches `tools/ledger`, `tools/oracle`'s session, `game::session`.
-3. **The recorder's Slippi `.slp`.** The 3.19.1 code list as data (with attribution), UCF toggles, the recording codes' GObjs once the ruleset makes them, `playedOn` per design call 5, and Vanilla's unlocks in the metadata (milestone 5's open decision). Oracle: Sarah's four offline replays' game starts and code lists byte for byte now, ssbm-rs's recordings once task 1 lands, `melee-oracle record` and slippi-js. Size: S. Depends on nothing. Owns `game::record`, `melee-slippi`'s writer.
-4. **The online scene, shown inert offline.** For each of the about 95 online-scene codes, the guard that keeps it from running when the app state is offline (the locked entries, the scene the online submenu needs), its tripwire, and the list for the netplay follow-on. Oracle: the codes' instructions (read from the set, cross-checked with slippi-ssbm-asm's sources) and, once task 1 lands, a session pressing every online entry. Size: M (reading). Depends on nothing to start. Touches the codes' ledger.
+Tasks 1, 2 and 3 can start at once, and task 5's corpus run and tests beside them: four agents. Task 4 follows tasks 2 and 3; task 6 follows task 4.
 
-**Wave 2** (once tasks 1 and 2 land)
+## Not in this plan
 
-5. **The heaps under the ruleset.** The m-ex set (53), `AllocSceneBuffer`, the text heap, the menus' text over EXI, files over EXI, the disc-error and video-assert codes: the allocator model's third layout (`Layout::slippi_netplay`), the heap's image under it, the preload cache's changes. Oracle: every task 3 and 7 session with `--heap`; the allocator model against memory each tick (`vs-heap`'s check). Size: L. Depends on 2. Owns `hsd::heap`'s layouts, `lb::heap`, `lb::dvd`, `game::leftovers` (coordinate with the refactor round's question).
-6. **Polling, the video and the delay.** Polling Drift Fix + VB (6), Normal Lag Reduction (2), the in-game delay (2 and its EXI answer): when the scene loop takes its controller reads, and what the session records under them; the player's pacing against it. Oracle: sessions compared read by read and tick by tick; the player's `power_tests`. Size: M. Depends on 2. Touches the scene loop (`gm::scene`), `session_rec`, the player's pacing (coordinate with latency work).
-7. **The boot, main menu and VS menus.** No card and Skip Memcard Prompt, `boot.asm`'s jump and one-shot, `main.asm`'s scene table, the six title-menu codes with the offline EXI answers, the debug menu codes, the unlocks and the rules' defaults, the special and trophy messages off. Oracle: task 2's sessions from power-on through the main menu, the online submenu, VS mode's rules and the debug menu entry. Size: M. Depends on 2 (and 5 for `--heap`). Owns the ruleset's field in `Game::rules`, `gm::boot_mode`, `mn::main`.
-
-**Wave 3**
-
-8. **The character and stage selects.** The 17 offline features, the stage select's L+R+A and Start, and the `Online/Static` helpers they call. Oracle: sessions through every feature (random stage, doubles without Fountain of Dreams, nametags kept, a door closed by unplugging, the gold names after a win). Size: M. Depends on 7. Owns `mn::charsel`'s and `mn::stagesel`'s ruleset branches.
-9. **Matches, pause and results.** The HUD's init and parser, the pause camera's six, Salty Runback, L+R+A, C-stick in single player, the hidden nametag, Lagless FoD, Stadium's screen text, the in-match sound log live. Oracle: match sessions on every tournament stage, Ice Climbers and CPUs, items, sudden death, a pause with the camera moved, a runback; frames of Fountain of Dreams under Lagless FoD. Size: M. Depends on 7 (and 5, 6). Touches `gm::vs`'s exit, the camera's pause, the HUD.
-10. **Music.** The jukebox hooks with the jukebox off, the music file alarms, random stage and CSS music, crowd chants off. Oracle: sessions with the mix compared (`melee-audio-check`). Size: S. Depends on 2. Touches `lb::audio`.
-11. **The player.** The Ruleset setting and default, the save per design call 6, the note per ruleset, the online entries' note if any (design call 4), the allocator model off in Slippi-ruleset matches with its tripwire, the cosmetic options per design call 8. Oracle: the player's own sessions recorded under the ruleset and compared; `record_tests` under the ruleset; the cosmetic test for each option. Size: M. Depends on 3, 7 (8 and 9 to finish).
-12. **The leftovers under the ruleset.** Which image reads a Slippi-ruleset session still makes (the collision stamp, items, effects, links), measured on wave 2 and 3's sessions with `--leftovers-survey`; and, if design call 3 takes it, the match's start from playback's fresh heap with the tripwire that names a read it would change. Oracle: the sessions and their `.slp` playbacks. Size: S. Depends on 5.
-
-Tasks 1, 3 and 4 can start at once, and task 2 beside them (its ledger needs nothing; its sessions wait for task 1): four agents, with ssbm-rs's work in its own repository. Wave 2's three follow as tasks 1 and 2 land; wave 3 as task 7 does.
-
-### Not in this sequence
-
-- **Netplay** (the follow-on repository): the online scene's codes, matchmaking, the wire protocol.
-- **The refactor round** (its goals discussion first) and **the player's polish** (milestone 7, its own discussion).
-- **Slippi's optional codes beyond design call 8**, the console code set, and players' own codes (2026-10-16).
-- **Relaxing Vanilla's leftover modelling**: Sarah's call once this milestone is done (design call 9).
+- **Slippi Dolphin's menus, online entries, m-ex and the rest of its netplay set** (Sarah, 2026-11-14). For the record: the set is 288 codes, of which the 261 playback drops are the boot's jump past the title to Slippi's Online Play submenu, about 95 codes of the online scene (its character select and name entry, VS screen, results panels, rollback engine), 75 heap, file, text, video and polling codes (the m-ex set's 53 reshape every scene's heaps), and about 60 offline menu, HUD, pause, stage and audio codes. Wanting any of it later would mean ssbm-rs running the set through Slippi's bootloader with an EXI device giving Slippi Dolphin's offline answers (a probe on 2026-11-14 found its benchmark boot can't hold the set: the 7,256 lines overrun low memory before the first field), a new heap layout in melee-hd, and a ledger of the codes. Its files stay in ssbm-rs's `local/lockstep/slippi-survey/`.
+- **Netplay** (the follow-on repository). This plan leaves it the gameplay codes on in live play, matches that start from a state a peer can rebuild from the game start alone, the recorder writing what Slippi's playback reads, and the display-phase reads named.
+- **Relaxing Vanilla's leftover modelling**: Sarah's call, after this; the measurements above are its starting point.
+- **The refactor round and the player's polish**, each after its own discussion.
 
 ## Design calls
 
 | # | Call | Recommendation | Who |
 | --- | --- | --- | --- |
-| 1 | Which Slippi version's rules, and how to follow new ones | Slippi 3.19.1's netplay set as installed and as Sarah's 156 replays from it record (288 codes), pinned by a hash of its code list. A new Slippi version becomes a new set when Sarah updates and her replays show it: its gameplay codes join `game::slippi::CodeSet` for playback (as 3.14, 3.16 and 3.19 did), and the live ruleset moves to it only when Sarah says so, since that changes what players play and what melee-hd writes. | Sarah: compatibility |
-| 2 | The default ruleset | Slippi, once this milestone's done-when holds, as Sarah said on 2026-10-29; Vanilla until then, and always offered. A player's choice is kept in `settings.txt`; switching restarts Melee from power-on. | Sarah: the player's default |
-| 3 | What a Slippi-ruleset match is exact to | Slippi Dolphin's live run of the same session: the menus' heap reaches the match where no Slippi code clears it (the collision stamp, items' and effects' words), modelled from the image under the m-ex layout, as Vanilla's are. A match then plays as Slippi Dolphin's would, and its replay is as exact in Slippi Dolphin as Slippi Dolphin's own offline replays (Sarah's four are). The alternative, starting every Slippi-ruleset match from the fresh heap Slippi's playback gives it, makes every replay exact by construction and drops the image from those matches (the optimization of 2026-10-29), but differs from Slippi Dolphin's live play in those rare reads and breaks the session's comparison past each match. Task 12 measures how rare before this is final. | Sarah: exactness and the optimization |
-| 4 | What the online entries do offline | Answer the codes' EXI questions as Slippi Dolphin does with nobody logged in, so the game itself shows Slippi's online entries locked; no melee-hd note, and no gate, since no game code needs one. Never contact Slippi's servers. | Sarah: what players see |
-| 5 | What a live Slippi-ruleset `.slp` records | What Slippi Dolphin 3.19.1 writes offline, byte for byte: the 288 codes, UCF toggles 1, scene 2.2, online fields zero, with `playedOn: melee-hd` kept so tools can tell (Slippi's playback doesn't read it). | Sarah: `.slp` compatibility |
-| 6 | The save under the ruleset | No memory card, as Slippi Dolphin's netplay setup has none: the native save stays Vanilla's, untouched by Slippi-ruleset play, and the ruleset's records, nametags and snapshots last a session. The alternative, the native save in slot A under both rulesets, keeps records and nametags but makes the ruleset's boot, heap and menus differ from Slippi Dolphin's (the card's load, Skip Memcard Prompt's other branch). The settings panel's Save section names which ruleset it serves. | Sarah: the save, and what players keep |
-| 7 | The single-player modes under the ruleset | As Slippi Dolphin runs them: Slippi's codes stay on (they're the boot's, not the mode's), with the unlocks and special messages they bring; no `.slp` for them (milestone 6's call 8 stands). This revises milestone 6's call 5 ("always vanilla Melee") for the Slippi ruleset only; under Vanilla it stands. | Sarah: gameplay, and it revises an earlier call |
-| 8 | Which Slippi options the player exposes | None of the six Optional codes at first: widescreen is melee-hd's own aspect setting with Slippi's fighters drawn (`Cosmetic::draw_offscreen_fighters`), and Recommended's lag reduction and delay are replaced by the player's own present mode and Added delay ("Latency: minimize first"). The three Recommended codes stay in the set, as players run them. Each Optional code that's added later is a cosmetic toggle held by `cosmetic_tests.rs` and written into the `.slp`'s list as Slippi Dolphin writes it. | Sarah: what the player offers |
-| 9 | Whether Vanilla's leftover modelling may relax later | Not in this milestone: Vanilla stays exact (Sarah, 2026-10-29). Once the Slippi ruleset is the default, the refactor round can ask whether Vanilla's heap image is worth its cost, with this milestone's measurements of what a Slippi-ruleset session still reads. | Sarah: exactness |
-| 10 | The codes' ledger | One line per code (its source path, injection, status: ported with an alias, recorded-only or inert with its guard), held by a test as the port ledger is. | Decided here |
-| 11 | ssbm-rs's share | Task 1 is ssbm-rs's, asked through its coordinator: melee-hd doesn't change ssbm-rs, and the session format change is ssbm-rs's (`SSBMINP`). | Decided here |
+| 1 | Which Slippi version's rules | 3.19's gameplay codes, written with Slippi 3.19.1's bytes (the version of Sarah's 156 replays from her current Slippi Dolphin). A newer Slippi joins playback when her replays show it; the live ruleset moves to it only when she says so. | Sarah: compatibility |
+| 2 | The default ruleset | Slippi once this milestone's done-when holds, Vanilla until then, both always offered; switching restarts Melee from power-on. | Sarah: the player's default |
+| 3 | How a match reaches playback's heap | Build each Slippi-ruleset match as a replay's playback is built, from the game start it records, with the menus' session set aside across the match scene and handed back the results: it reuses the path already exact against ssbm-rs's playback, and the live match can be checked against its own playback tick by tick. The alternative is one continuous model, booting the ruleset with Slippi playback's memory map (six heaps, the bootloader's room, the long `Fighter`) and making each match scene let the `AllM` heap go, load its own files and zero its heap; it keeps the session whole but changes the menus' layout, which ssbm-rs's vanilla menus then can't check. | Sarah: how the requirement is met |
+| 4 | What a live `.slp` records | The code list melee-hd runs: the 27 gameplay codes and the 16 unlock and message writes, with 3.19.1's bytes, so Slippi's playback applies the same gameplay codes it would to Slippi Dolphin's own replay; UCF toggles 1; scene 2.2; online fields zero; `playedOn: melee-hd`, which playback doesn't read and which lets tools tell. The alternative, Slippi Dolphin's whole 288-code list, would claim menu and online codes melee-hd doesn't run. | Sarah: `.slp` compatibility |
+| 5 | The no-card question at boot | Port Slippi's Skip Memcard Prompt (one code), so the ruleset boots past the question as Slippi Dolphin does; ssbm-rs applies it with the unlock writes. The alternative shows Melee's "Continue without saving?" at every start. | Sarah: what players see |
+| 6 | Matches playback can't rebuild | A VS-scene match whose setup isn't wholly in its game start (the Special Melee modes' own callbacks, Tournament's and Camera Mode's, by task 4's audit) runs under Slippi's rules as the console runs it and saves no `.slp`, as Bonus matches and the single-player modes save none; the panel's note names them. | Sarah: what the player offers and records |
+| 7 | The single-player modes under the ruleset | Milestone 6's call 5 stands: they play Vanilla's rules, with the session's no card and Slippi's unlocks, and save no `.slp`. | Sarah: gameplay |
+| 8 | The allocator model in the player's Slippi matches | Off, the stop by name as its tripwire, once the replay corpus under 3.19's rules runs with it off and nothing stops: about 3% faster and snapshots 16 to 31% smaller on the benchmark measured. The oracle keeps it on and compares addresses as today. | Sarah: performance against a stop |
+| 9 | Display-phase reads Slippi doesn't fix (homing and nearest-opponent items through a KO'd fighter, Onett's cars) | Keep them as the original's and Slippi's, compute each such read both ways, and when the outcomes differ note it in the player's log and the `.slp`'s metadata ("may not play back exactly"), never stopping the match. A ruleset fix would change gameplay from Slippi's and break its replays. | Sarah: what "exact" promises |
+| 10 | Float mode under the ruleset | Slippi Dolphin's JIT mode for the whole session (menus included), so the matches and their handoff need no switch and ssbm-rs's sessions run `--fp slippi` throughout; Vanilla keeps the console's. | Sarah: exactness |
+| 11 | The codes' ledger | Not needed in this scope: the 27 codes and 16 writes are listed in [the oracle](oracle.md)'s ruleset table and checked there; task 3's test checks that the list written is what `Rules::from_codes` reads. | Decided here |
 
 ## Before the tasks start
 
-- **Sarah's design calls**: 1 to 9 above.
-- **Task 1's request** to ssbm-rs's coordinator, with this page's [What ssbm-rs needs](#what-the-oracle-can-use).
-- **The trace campaign**: about 45 sessions, 2 hours of play, 16 GB, in batches as each task needs them; it fits the disk as it stands (138 GB free on 2026-11-14).
-- **The probe's files** in ssbm-rs's `local/lockstep/slippi-survey/` (the netplay `.ini` copied from Slippi Dolphin's install, a card copy, the probe's log); `local/traces/slippi-survey/` is empty. Task 1 can keep or replace them.
+- **Sarah's design calls**: 1 to 10 above.
+- **Task 1's request** to ssbm-rs's coordinator.
+- **Sarah's spot check**, once task 4 records its first matches: a few of melee-hd's `.slp` files played in her Slippi Dolphin.
+- **The trace campaign**: about 26 sessions and matches, about 10 GB, fits the disk as it stands.
+- **The first survey's files** in ssbm-rs's `local/lockstep/slippi-survey/` (Slippi Dolphin's netplay `.ini`, a card copy, the boot probe's log) are background only; `local/traces/slippi-survey/` is empty.
