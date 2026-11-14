@@ -8,6 +8,10 @@
 //! The settings are kept in the settings folder's `settings.txt` (`key = value` lines; an
 //! older `last-match.txt`, the launcher's, is read when there's none yet), except those the
 //! command line gives.
+//!
+//! The panel has three tabs (Sarah, 2026-11-14): Settings, the panel as it was; Quick match,
+//! laid out until the Slippi ruleset can start its matches ([`crate::quick`]); and Recordings,
+//! the replays in a folder, any of them played from start to finish ([`crate::recordings`]).
 
 use crate::jit::Timing;
 use crate::pacing::Mode;
@@ -58,6 +62,8 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
+    /// Interpolate, which the file keeps as on.
     pub high_refresh: Mode,
     pub present: Present,
     /// Ticks each controller read is held back.
@@ -65,7 +71,7 @@ pub struct Settings {
     pub tick_timing: Timing,
     /// The just-in-time tick's margin, in milliseconds.
     pub jit_margin: f32,
-    /// Saves each VS match as a Slippi replay, to `replays` (empty: beside the program).
+    /// Saves each VS match as a Slippi replay, to `replays` (empty: the settings folder's).
     pub record: bool,
     pub replays: String,
     /// Records each session from power-on (`session_rec`).
@@ -78,6 +84,8 @@ pub struct Settings {
     pub volume: u32,
     pub audio_device: String,
     pub audio_exclusive: bool,
+    /// The folder the Recordings tab lists (empty: the replays folder).
+    pub recordings: String,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -132,10 +140,11 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
-            high_refresh: Mode::Off,
+            // Both on by default since 2026-11-14 (Sarah).
+            high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
             added_delay: 0,
-            tick_timing: Timing::Timer,
+            tick_timing: Timing::Auto,
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
             record: true,
             replays: String::new(),
@@ -144,6 +153,7 @@ impl Default for Settings {
             volume: 100,
             audio_device: String::new(),
             audio_exclusive: false,
+            recordings: String::new(),
         }
     }
 }
@@ -170,7 +180,7 @@ impl Settings {
             "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\naudio-device = {}\naudio-exclusive = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
-            self.high_refresh.key(),
+            self.high_refresh.setting(),
             self.added_delay,
             self.tick_timing.key(),
             self.jit_margin,
@@ -185,7 +195,7 @@ impl Settings {
             self.volume,
             self.audio_device,
             on(self.audio_exclusive),
-        )
+        ) + &format!("recordings = {}\n", self.recordings)
     }
 
     /// How the sound's output device is opened.
@@ -233,7 +243,7 @@ impl Settings {
                     _ => {}
                 },
                 "high-refresh" if !given.high_refresh => {
-                    if let Ok(m) = Mode::parse(v) {
+                    if let Some(m) = Mode::from_setting(v) {
                         self.high_refresh = m;
                     }
                 }
@@ -285,6 +295,7 @@ impl Settings {
                         self.audio_exclusive = b;
                     }
                 }
+                "recordings" => self.recordings = v.to_owned(),
                 _ => {}
             }
         }
@@ -302,6 +313,16 @@ impl Settings {
     pub fn keep(&self) {
         crate::settings::write(FILE, &self.save());
     }
+
+    /// The folder the Recordings tab lists: the one picked, else the replays folder, where the
+    /// player saves its matches.
+    pub fn recordings_folder(&self) -> std::path::PathBuf {
+        match (self.recordings.as_str(), self.replays.as_str()) {
+            ("", "") => crate::recording::default_dir(),
+            ("", r) => r.into(),
+            (f, _) => f.into(),
+        }
+    }
 }
 
 /// What the panel asks the player to do.
@@ -315,10 +336,55 @@ pub enum Action {
     Export,
     UnlockAll,
     ReportBug,
+    /// Plays the replay the Recordings tab chose.
+    Play,
+    /// Ends the replay playing and goes back to Melee.
+    BackToMelee,
+    /// Picks the folder the Recordings tab lists, or goes back to the replays folder.
+    ChooseFolder,
+    ReplaysFolder,
+}
+
+/// The panel's tabs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Tab {
+    #[default]
+    Settings,
+    QuickMatch,
+    Recordings,
+}
+
+impl Tab {
+    /// The tabs in order, with their names.
+    pub const ALL: [(Tab, &'static str); 3] = [
+        (Tab::Settings, "Settings"),
+        (Tab::QuickMatch, "Quick match"),
+        (Tab::Recordings, "Recordings"),
+    ];
+
+    /// A tab by the name `--settings-tab` takes.
+    pub fn parse(v: &str) -> Result<Tab, String> {
+        match v {
+            "settings" => Ok(Tab::Settings),
+            "quick-match" => Ok(Tab::QuickMatch),
+            "recordings" => Ok(Tab::Recordings),
+            _ => Err(format!(
+                "unknown tab {v} (settings, quick-match or recordings)"
+            )),
+        }
+    }
 }
 
 /// The panel: the settings and what it shows of the save and the disc.
 pub struct Panel {
+    /// The tab showing.
+    pub tab: Tab,
+    pub quick: crate::quick::QuickMatch,
+    pub recordings: crate::recordings::Recordings,
+    /// The replay from the Recordings tab playing, by its file's name.
+    pub playing: Option<String>,
+    /// Melee or a replay is loading: nothing more starts meanwhile.
+    pub busy: bool,
     pub settings: Settings,
     /// Whether it shows (the console paused behind it).
     pub open: bool,
@@ -340,6 +406,11 @@ pub struct Panel {
 impl Panel {
     pub fn new(settings: Settings, disc: String) -> Panel {
         let mut p = Panel {
+            tab: Tab::Settings,
+            quick: Default::default(),
+            recordings: Default::default(),
+            playing: None,
+            busy: false,
             settings,
             open: false,
             message: None,
@@ -385,17 +456,42 @@ impl Panel {
         let mut action = None;
         ui.vertical_centered(|ui| {
             ui.add_space(24.0);
-            ui.heading("Settings");
-            ui.add_space(12.0);
             ui.horizontal(|ui| {
-                ui.add_space(((ui.available_width() - 440.0) / 2.0).max(0.0));
+                ui.add_space(((ui.available_width() - 380.0) / 2.0).max(0.0));
+                for (tab, name) in Tab::ALL {
+                    ui.selectable_value(&mut self.tab, tab, egui::RichText::new(name).heading());
+                    ui.add_space(8.0);
+                }
+            });
+            ui.add_space(12.0);
+            let width = match self.tab {
+                Tab::Settings => 440.0,
+                Tab::QuickMatch | Tab::Recordings => 640.0,
+            };
+            ui.horizontal(|ui| {
+                ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
                 ui.vertical(|ui| {
-                    ui.set_max_width(440.0);
+                    ui.set_max_width(width);
+                    // A stop shows whichever tab is open.
                     if let Some(a) = self.show_stop(ui) {
                         action = Some(a);
                     }
-                    if let Some(a) = self.show_sections(ui) {
-                        action = Some(a);
+                    let tab = match self.tab {
+                        Tab::Settings => self.show_sections(ui),
+                        Tab::QuickMatch => {
+                            self.quick.show(ui);
+                            None
+                        }
+                        Tab::Recordings => self.recordings.show(
+                            ui,
+                            &self.settings.recordings_folder(),
+                            !self.settings.recordings.is_empty(),
+                            self.playing.as_deref(),
+                            self.busy,
+                        ),
+                    };
+                    if tab.is_some() {
+                        action = tab;
                     }
                 });
             });
@@ -462,6 +558,7 @@ impl Panel {
                     action = Some(Action::ReportBug);
                 }
             });
+        ui.add_space(8.0);
         action
     }
 
@@ -553,20 +650,15 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.fullscreen, "Fullscreen");
                 ui.end_row();
-                ui.label("High refresh");
-                let mode = &mut s.high_refresh;
-                egui::ComboBox::from_id_salt("high-refresh")
-                    .selected_text(mode.name())
-                    .width(220.0)
-                    .show_ui(ui, |ui| {
-                        for (m, name) in Mode::CHOICES {
-                            ui.selectable_value(mode, m, name);
-                        }
-                    });
+                ui.label("");
+                let mut on = s.high_refresh.paced();
+                if ui.checkbox(&mut on, "High refresh").changed() {
+                    s.high_refresh = if on { Mode::Extrapolate } else { Mode::Off };
+                }
                 ui.end_row();
                 help(
                     ui,
-                    "Draws frames between the game's 60 a second for faster displays. Extrapolate adds no latency.",
+                    "Draws frames between the game's 60 a second at your display's own rate by predicting the next one. Adds no latency.",
                 );
             });
         section(ui, "Latency");
@@ -664,7 +756,7 @@ impl Panel {
                 ui.add_enabled(
                     s.record,
                     egui::TextEdit::singleline(&mut s.replays)
-                        .hint_text("replays beside the program")
+                        .hint_text("replays in the settings folder")
                         .desired_width(220.0),
                 );
                 ui.end_row();
@@ -738,7 +830,7 @@ fn help(ui: &mut egui::Ui, text: &str) {
 
 /// A file's time as the panel says it: the local date and time to the minute (UTC off
 /// Windows).
-fn written_at(t: std::time::SystemTime) -> String {
+pub fn written_at(t: std::time::SystemTime) -> String {
     let secs = t
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -818,7 +910,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
-            high_refresh: Mode::Interpolate,
+            high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
             tick_timing: Timing::Vrr,
@@ -830,13 +922,14 @@ mod tests {
             volume: 35,
             audio_device: "Speakers (USB Audio)".to_owned(),
             audio_exclusive: true,
+            recordings: "D:/Slippi".to_owned(),
         }
     }
 
     #[test]
     fn the_settings_come_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            for (mode, _) in Mode::CHOICES {
+            for mode in [Mode::Off, Mode::Extrapolate] {
                 let was = Settings {
                     aspect,
                     high_refresh: mode,
@@ -864,6 +957,27 @@ mod tests {
         s.restore(&picked().save(), &given);
         assert_eq!((s.scale, s.aspect), (2, Aspect::STRETCHED));
         assert!(s.msaa && !s.record_sessions);
+    }
+
+    /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads
+    /// as on, and the file keeps on or off.
+    #[test]
+    fn high_refresh_and_timing_defaults() {
+        let s = Settings::default();
+        assert_eq!(
+            (s.high_refresh, s.tick_timing),
+            (Mode::Extrapolate, Timing::Auto)
+        );
+        let mut s = Settings::default();
+        s.restore("high-refresh = interpolate\n", &Given::default());
+        assert_eq!(s.high_refresh, Mode::Extrapolate);
+        s.restore("high-refresh = off\n", &Given::default());
+        assert_eq!(s.high_refresh, Mode::Off);
+        let given = Settings {
+            high_refresh: Mode::Interpolate,
+            ..Settings::default()
+        };
+        assert!(given.save().contains("high-refresh = on\n"));
     }
 
     #[test]

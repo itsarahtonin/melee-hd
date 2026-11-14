@@ -1,4 +1,4 @@
-//! F12's bug capture: a folder beside the executable (`captures/<time>`) with the frame as
+//! F12's bug capture: a folder in the settings folder (`captures/<time>`) with the frame as
 //! shown (`shown.png`), the same draws drawn again by a new frame builder and renderer, with
 //! the same blend (`fresh.png`) and with none (`fresh-unblended.png`), and what drew them
 //! (`info.txt`, which names the build first). A glitch the fresh frame doesn't have lives in what the player keeps between
@@ -202,13 +202,13 @@ fresh:
     Ok(())
 }
 
-/// `captures` beside the executable (the working folder if its path is unknown).
+/// `captures` in the settings folder (before 2026-11-14, beside the executable, where older
+/// captures stay).
 pub fn base() -> PathBuf {
-    let exe = std::env::current_exe().unwrap_or_default();
-    exe.parent().unwrap_or(Path::new(".")).join("captures")
+    crate::settings::folder().join("captures")
 }
 
-/// `captures/<milliseconds since 1970><suffix>` beside the executable.
+/// `captures/<milliseconds since 1970><suffix>` in the settings folder.
 pub fn folder(suffix: &str) -> PathBuf {
     let base = base();
     let now = std::time::SystemTime::now()

@@ -108,9 +108,18 @@ fn write(r: &Report, folder: &Path, path: &Path) -> Result<u64, String> {
     if !others.is_empty() {
         notes.push(format!("earlier sessions: {}", others.join(", ")));
     }
-    // The log: this run's when there's no console, else an earlier run's.
-    let log = folder.join("melee-hd.log");
-    match std::fs::read(&log) {
+    // The log: this run's when there's no console, else an earlier run's (in `logs`, or
+    // before 2026-11-14 in the settings folder itself).
+    let log = [
+        folder.join("logs").join("melee-hd.log"),
+        folder.join("melee-hd.log"),
+    ]
+    .into_iter()
+    .find(|p| p.exists());
+    match log
+        .map(std::fs::read)
+        .unwrap_or_else(|| Err(std::io::ErrorKind::NotFound.into()))
+    {
         Ok(bytes) => {
             zip.add(
                 "melee-hd.log",

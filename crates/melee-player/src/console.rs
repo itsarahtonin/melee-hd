@@ -2,7 +2,7 @@
 //! a console of its own, so a double-click opens no console window. Started from a terminal,
 //! it attaches to the terminal's console and prints there as a console program does; with its
 //! output piped or redirected (a test reading it), it writes there. Started with neither (a
-//! double-click), its output goes to `melee-hd.log` in the settings folder and fatal errors
+//! double-click), its output goes to `logs/melee-hd.log` in the settings folder and fatal errors
 //! show in a message box.
 
 use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
@@ -89,7 +89,7 @@ mod windows {
         }
         super::QUIET.store(true, super::Relaxed);
         fill(&ids, || {
-            let folder = crate::settings::folder();
+            let folder = crate::settings::folder().join("logs");
             std::fs::create_dir_all(&folder)?;
             std::fs::File::create(folder.join("melee-hd.log"))
         });
