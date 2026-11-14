@@ -19,6 +19,8 @@ melee-sim.workspace = true
 melee-ax = { path = "../melee-ax" }
 
 [target.'cfg(windows)'.dependencies]
+# `windows::core::implement`'s expansion names windows-core itself.
+windows-core = "0.62"
 windows = { version = "0.62", features = [
     "Win32_Foundation",
     "Win32_Media_Audio",

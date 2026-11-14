@@ -1,4 +1,4 @@
-//! The default device through WASAPI directly (Windows), for the smallest buffers it allows,
+//! The output device through WASAPI directly (Windows), for the smallest buffers it allows,
 //! which cpal can't ask for. Shared, the stream asks the audio engine for its smallest period
 //! (`IAudioClient3::InitializeSharedAudioStream`, available since Windows 10 where the driver
 //! supports it, often 2 to 3 ms), else the engine's current period if another program holds it,
@@ -6,18 +6,25 @@
 //! device itself at its smallest period, in a format the device plays natively, and no other
 //! program's sound plays until it lets go. A thread of its own, raised to the multimedia
 //! scheduler's "Pro Audio" class, fills the device's buffer at each period's event.
+//!
+//! The thread keeps the device: the system tells it of every device added, removed or changed
+//! and of a new default (`IMMNotificationClient`), and when the device it plays on is no longer
+//! the one it should (the one the options name while it's there, else the default), or fails
+//! (`AUDCLNT_E_DEVICE_INVALIDATED` once it's unplugged, or its events stop), it opens the right
+//! one and plays on.
 
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::{Arc, mpsc};
-use std::thread::JoinHandle;
 use std::time::Duration;
 
-use windows::Win32::Foundation::{CloseHandle, HANDLE, WAIT_OBJECT_0};
+use cpal::traits::{DeviceTrait, HostTrait};
+use windows::Win32::Foundation::{CloseHandle, HANDLE, PROPERTYKEY, WAIT_OBJECT_0};
 use windows::Win32::Media::Audio::{
     AUDCLNT_BUFFERFLAGS_SILENT, AUDCLNT_E_BUFFER_SIZE_NOT_ALIGNED, AUDCLNT_SHAREMODE_EXCLUSIVE,
-    AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, IAudioClient, IAudioClient3,
-    IAudioClock, IAudioRenderClient, IMMDevice, IMMDeviceEnumerator, MMDeviceEnumerator,
-    WAVE_FORMAT_PCM, WAVEFORMATEX, WAVEFORMATEXTENSIBLE, WAVEFORMATEXTENSIBLE_0, eConsole, eRender,
+    AUDCLNT_SHAREMODE_SHARED, AUDCLNT_STREAMFLAGS_EVENTCALLBACK, DEVICE_STATE, EDataFlow, ERole,
+    IAudioClient, IAudioClient3, IAudioClock, IAudioRenderClient, IMMDevice, IMMDeviceEnumerator,
+    IMMNotificationClient, IMMNotificationClient_Impl, MMDeviceEnumerator, WAVE_FORMAT_PCM,
+    WAVEFORMATEX, WAVEFORMATEXTENSIBLE, WAVEFORMATEXTENSIBLE_0, eConsole, eRender,
 };
 use windows::Win32::Media::KernelStreaming::{KSDATAFORMAT_SUBTYPE_PCM, WAVE_FORMAT_EXTENSIBLE};
 use windows::Win32::Media::Multimedia::{KSDATAFORMAT_SUBTYPE_IEEE_FLOAT, WAVE_FORMAT_IEEE_FLOAT};
@@ -30,81 +37,176 @@ use windows::Win32::System::Threading::{
     AvRevertMmThreadCharacteristics, AvSetMmThreadCharacteristicsW, CreateEventW,
     WaitForSingleObject,
 };
-use windows::core::{Interface, w};
+use windows::core::{HSTRING, Interface, PCWSTR, implement, w};
 
-use super::{Resampler, Ring, put_frame};
+use super::{Control, Info, OutputOptions, Player, Resampler, Ring, put_frame};
 
-/// What the stream opened, for the log.
-pub struct Info {
-    pub rate: u32,
-    /// The period the device's events come at, in device samples.
-    pub period: u32,
-    pub describe: String,
+/// Starts the output's thread on the device `control`'s options name (else the default).
+pub(super) fn spawn(ring: &Arc<Ring>, control: &Arc<Control>) -> Result<(Player, Info), String> {
+    let (ring, ctl) = (ring.clone(), control.clone());
+    Player::spawn(control, move |tx| {
+        // SAFETY: COM is initialized once on this thread and closed at its end; every interface
+        // below is used on this thread only, but the notification client, which only sets
+        // flags.
+        unsafe {
+            let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
+            keep(&ring, &ctl, tx);
+            CoUninitialize();
+        }
+    })
 }
 
-/// The stream's thread; dropping it stops the stream and lets the device go.
-pub struct Stream {
-    stop: Arc<AtomicBool>,
-    thread: Option<JoinHandle<()>>,
+/// Tells the output's thread of every change to the system's devices.
+#[implement(IMMNotificationClient)]
+struct Notify(Arc<Control>);
+
+impl IMMNotificationClient_Impl for Notify_Impl {
+    fn OnDeviceStateChanged(&self, _: &PCWSTR, _: DEVICE_STATE) -> windows::core::Result<()> {
+        self.0.recheck.store(true, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn OnDeviceAdded(&self, _: &PCWSTR) -> windows::core::Result<()> {
+        self.0.recheck.store(true, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn OnDeviceRemoved(&self, _: &PCWSTR) -> windows::core::Result<()> {
+        self.0.recheck.store(true, Ordering::Relaxed);
+        Ok(())
+    }
+
+    fn OnDefaultDeviceChanged(
+        &self,
+        flow: EDataFlow,
+        role: ERole,
+        _: &PCWSTR,
+    ) -> windows::core::Result<()> {
+        if flow == eRender && role == eConsole {
+            self.0.recheck.store(true, Ordering::Relaxed);
+        }
+        Ok(())
+    }
+
+    fn OnPropertyValueChanged(&self, _: &PCWSTR, _: &PROPERTYKEY) -> windows::core::Result<()> {
+        Ok(())
+    }
 }
 
-impl Stream {
-    /// Opens the default device (exclusive if asked and it allows it) and starts playing the
-    /// ring.
-    pub fn open(ring: &Arc<Ring>, exclusive: bool) -> Result<(Stream, Info), String> {
-        let (tx, rx) = mpsc::channel();
-        let stop = Arc::new(AtomicBool::new(false));
-        let (ring, halt) = (ring.clone(), stop.clone());
-        let thread = std::thread::Builder::new()
-            .name("audio-out".into())
-            .spawn(move || {
-                // SAFETY: COM is initialized once on this thread and closed at its end; every
-                // interface below is used on this thread only.
-                unsafe {
-                    let _ = CoInitializeEx(None, COINIT_MULTITHREADED);
-                    match Device::open(exclusive) {
-                        Ok(mut d) => {
-                            let _ = tx.send(Ok(d.info()));
-                            if let Err(e) = d.play(ring, &halt) {
-                                eprintln!("sound: {e}");
-                            }
-                        }
-                        Err(e) => {
-                            let _ = tx.send(Err(e));
-                        }
-                    }
-                    CoUninitialize();
+/// The output's thread: opens the device it should play on and plays the ring on it until
+/// asked to stop, opening another whenever that device fails or stops being the one. The first
+/// device opened, or why none could be, goes to `first`.
+///
+/// # Safety
+/// COM is initialized on this thread.
+unsafe fn keep(
+    ring: &Arc<Ring>,
+    control: &Arc<Control>,
+    first: mpsc::Sender<Result<Info, String>>,
+) {
+    // SAFETY: plain COM calls on this thread's objects.
+    unsafe {
+        let enumerator: IMMDeviceEnumerator =
+            match CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL) {
+                Ok(e) => e,
+                Err(e) => {
+                    let _ = first.send(Err(format!("the device enumerator: {e}")));
+                    return;
                 }
-            })
-            .map_err(|e| format!("the audio thread: {e}"))?;
-        let mut stream = Stream {
-            stop,
-            thread: Some(thread),
-        };
-        match rx.recv() {
-            Ok(Ok(info)) => Ok((stream, info)),
-            Ok(Err(e)) => {
-                stream.close();
-                Err(e)
+            };
+        let notify: IMMNotificationClient = Notify(control.clone()).into();
+        let listening = enumerator
+            .RegisterEndpointNotificationCallback(&notify)
+            .is_ok();
+        let mut first = Some(first);
+        let mut said = false;
+        while !control.stopping() {
+            control.recheck.store(false, Ordering::Relaxed);
+            let options = control.options();
+            if first.is_none() {
+                ring.restart();
             }
-            Err(_) => {
-                stream.close();
-                Err("the audio thread stopped".into())
+            match Device::open(&enumerator, &options) {
+                Ok(mut d) => {
+                    said = false;
+                    control.opened.fetch_add(1, Ordering::Relaxed);
+                    let info = d.info();
+                    match first.take() {
+                        Some(tx) => {
+                            let _ = tx.send(Ok(info));
+                        }
+                        None => eprintln!("sound: now {} Hz, {}", info.rate, info.describe),
+                    }
+                    if let Err(e) = d.play(ring, control, &enumerator) {
+                        eprintln!("sound: {e}; opening the output again");
+                    }
+                }
+                Err(e) => {
+                    if let Some(tx) = first.take() {
+                        let _ = tx.send(Err(e));
+                        break;
+                    }
+                    if !said {
+                        eprintln!("sound: no output ({e}); trying again as the devices change");
+                        said = true;
+                    }
+                    control.idle(Duration::from_secs(1));
+                }
             }
         }
-    }
-
-    fn close(&mut self) {
-        self.stop.store(true, Ordering::Relaxed);
-        if let Some(t) = self.thread.take() {
-            let _ = t.join();
+        if listening {
+            let _ = enumerator.UnregisterEndpointNotificationCallback(&notify);
         }
     }
 }
 
-impl Drop for Stream {
-    fn drop(&mut self) {
-        self.close();
+/// An endpoint's ID.
+///
+/// # Safety
+/// COM is initialized on this thread.
+unsafe fn id_of(device: &IMMDevice) -> Result<String, String> {
+    // SAFETY: the ID is a string COM allocated, read and freed once.
+    unsafe {
+        let p = device.GetId().map_err(err("the device's ID"))?;
+        let id = p.to_string().map_err(|e| format!("the device's ID: {e}"));
+        CoTaskMemFree(Some(p.0 as *const _));
+        id
+    }
+}
+
+/// The device `options` name while it's there (found by name among the active outputs, as
+/// cpal lists them: WASAPI's endpoints and their friendly names), else the default, with its
+/// ID and name.
+///
+/// # Safety
+/// COM is initialized on this thread.
+unsafe fn endpoint(
+    enumerator: &IMMDeviceEnumerator,
+    options: &OutputOptions,
+) -> Result<(IMMDevice, String, String), String> {
+    // SAFETY: plain COM calls.
+    unsafe {
+        let named = |want: &str| -> Option<(IMMDevice, String)> {
+            let mut all = cpal::default_host().output_devices().ok()?;
+            let id = all.find(|d| d.to_string() == want)?.id().ok()?;
+            let device = enumerator.GetDevice(&HSTRING::from(id.id())).ok()?;
+            Some((device, id.id().to_owned()))
+        };
+        if let Some(want) = &options.device
+            && let Some((device, id)) = named(want)
+        {
+            return Ok((device, id, want.clone()));
+        }
+        let device = enumerator
+            .GetDefaultAudioEndpoint(eRender, eConsole)
+            .map_err(err("no default audio output device"))?;
+        let id = id_of(&device)?;
+        let name = cpal::default_host()
+            .output_devices()
+            .ok()
+            .and_then(|mut all| all.find(|d| d.id().is_ok_and(|i| i.id() == id)))
+            .map_or_else(|| "the default device".to_owned(), |d| d.to_string());
+        Ok((device, id, name))
     }
 }
 
@@ -262,27 +364,40 @@ struct Device {
     queue: u32,
     stream_latency: Duration,
     how: String,
+    /// The endpoint's ID and name, and the options it was opened by.
+    id: String,
+    name: String,
+    options: OutputOptions,
 }
 
 impl Device {
+    /// The device `options` name (else the default), opened by them.
+    ///
     /// # Safety
     /// COM is initialized on this thread.
-    unsafe fn open(exclusive: bool) -> Result<Device, String> {
+    unsafe fn open(
+        enumerator: &IMMDeviceEnumerator,
+        options: &OutputOptions,
+    ) -> Result<Device, String> {
         // SAFETY: plain COM calls on interfaces this thread made.
         unsafe {
-            let enumerator: IMMDeviceEnumerator =
-                CoCreateInstance(&MMDeviceEnumerator, None, CLSCTX_ALL)
-                    .map_err(err("the device enumerator"))?;
-            let device = enumerator
-                .GetDefaultAudioEndpoint(eRender, eConsole)
-                .map_err(err("no default audio output device"))?;
-            if exclusive {
-                match Device::open_exclusive(&device) {
-                    Ok(d) => return Ok(d),
-                    Err(e) => eprintln!("sound: exclusive mode: {e}; sharing the device"),
-                }
-            }
-            Device::open_shared(&device)
+            let (device, id, name) = endpoint(enumerator, options)?;
+            let opened = match options.exclusive {
+                true => match Device::open_exclusive(&device) {
+                    Ok(d) => Ok(d),
+                    Err(e) => {
+                        eprintln!("sound: exclusive mode: {e}; sharing the device");
+                        Device::open_shared(&device)
+                    }
+                },
+                false => Device::open_shared(&device),
+            };
+            opened.map(|mut d| {
+                d.id = id;
+                d.name = name;
+                d.options = options.clone();
+                d
+            })
         }
     }
 
@@ -464,6 +579,9 @@ impl Device {
                 queue: buffer.min(2 * period.max(1)),
                 stream_latency: Duration::from_nanos(hns.max(0) as u64 * 100),
                 how,
+                id: String::new(),
+                name: String::new(),
+                options: OutputOptions::default(),
             })
         }
     }
@@ -473,9 +591,9 @@ impl Device {
         let ms = |n: u32| f64::from(n) * 1000.0 / f64::from(rate);
         Info {
             rate,
-            period: self.period,
+            buffer: Some(self.period),
             describe: format!(
-                "{}, {}-sample period ({:.2} ms), {} kept queued of a {}-sample buffer, {} Hz {} x{}",
+                "{}, {}-sample period ({:.2} ms), {} kept queued of a {}-sample buffer, {} Hz {} x{}, on {}",
                 self.how,
                 self.period,
                 ms(self.period),
@@ -487,19 +605,37 @@ impl Device {
                 self.buffer,
                 rate,
                 self.format.sample.name(),
-                self.format.channels
+                self.format.channels,
+                self.name
             ),
         }
     }
 
-    /// Plays the ring until `stop`.
-    unsafe fn play(&mut self, ring: Arc<Ring>, stop: &AtomicBool) -> Result<(), String> {
+    /// Whether this is still the device to play on, by the options as they stand.
+    ///
+    /// # Safety
+    /// COM is initialized on this thread.
+    unsafe fn wanted(&self, control: &Control, enumerator: &IMMDeviceEnumerator) -> bool {
+        let options = control.options();
+        // SAFETY: plain COM calls.
+        let id = unsafe { endpoint(enumerator, &options) }.map(|e| e.1);
+        options.exclusive == self.options.exclusive && id.as_deref() == Ok(self.id.as_str())
+    }
+
+    /// Plays the ring until asked to stop or the device stops being the one to play on (`Ok`),
+    /// or until it fails (`Err`).
+    unsafe fn play(
+        &mut self,
+        ring: &Arc<Ring>,
+        control: &Control,
+        enumerator: &IMMDeviceEnumerator,
+    ) -> Result<(), String> {
         // SAFETY: plain COM and kernel calls on this thread's objects; each buffer WASAPI hands
         // out is written within the frames asked for, in its format, before it's released.
         unsafe {
             let mut task = 0;
             let mmcss = AvSetMmThreadCharacteristicsW(w!("Pro Audio"), &mut task).ok();
-            let mut resampler = Resampler::new(ring, self.format.rate);
+            let mut resampler = Resampler::new(ring.clone(), self.format.rate);
             let freq = self.clock.GetFrequency().map_err(err("the clock's rate"))?;
             let mut qpc = 0;
             let _ = QueryPerformanceFrequency(&mut qpc);
@@ -519,10 +655,28 @@ impl Device {
             let mut written = u64::from(first);
             self.client.Start().map_err(err("starting the stream"))?;
             let result = loop {
-                if stop.load(Ordering::Relaxed) {
+                if control.stopping() {
                     break Ok(());
                 }
+                #[cfg(test)]
+                if control.failed() {
+                    break Err("the device went away (a test's)".to_owned());
+                }
+                if control.recheck.swap(false, Ordering::Relaxed)
+                    && !self.wanted(control, enumerator)
+                {
+                    eprintln!("sound: the output device changed");
+                    break Ok(());
+                }
+                if control.lost.swap(false, Ordering::Relaxed) {
+                    break Err("the device stopped".to_owned());
+                }
                 if WaitForSingleObject(self.event, 200) != WAIT_OBJECT_0 {
+                    // No period for 200 ms: the device may be gone, which only its calls say
+                    // (AUDCLNT_E_DEVICE_INVALIDATED); it sends no more events.
+                    if let Err(e) = self.client.GetCurrentPadding() {
+                        break Err(format!("the device's queue: {e}"));
+                    }
                     continue;
                 }
                 let frames = if self.exclusive {

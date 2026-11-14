@@ -241,9 +241,15 @@ pub fn shot(gpu: &Gpu, panel: &mut Panel, size: (u32, u32), path: &Path) -> std:
         ..Default::default()
     };
     // egui lays a new panel out over a couple of frames; the textures each frame adds are kept.
-    for _ in 0..2 {
+    // The Recordings tab's rows are read meanwhile, for up to a few seconds.
+    let until = Instant::now() + Duration::from_secs(5);
+    for i in 0.. {
         let (_, out) = painter.run(panel, input());
         painter.paint(gpu, out, &view, w, h);
+        if i >= 1 && (!panel.recordings.reading() || Instant::now() > until) {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(20));
     }
     let (_, out) = painter.run(panel, input());
     painter.paint(gpu, out, &view, w, h);

@@ -24,10 +24,23 @@
 //! audio engine's smallest period (`IAudioClient3`, often 2 to 3 ms where the driver allows it,
 //! else the standard 10 ms), or with [`OutputOptions::exclusive`] the device itself in exclusive
 //! mode; elsewhere, and if that fails, it goes through cpal with buffers of about 5 ms.
+//!
+//! **Decision: the output follows the device (2026-11-14).** The device used to be picked once
+//! at the start, and when it went away (headphones unplugged) the output's thread ended or
+//! waited on it forever: the game went silent until it restarted, and a new default device
+//! (headphones plugged in) was never taken up. Now the output's thread keeps the device:
+//! when the device fails, goes away, or the system's default changes while the output follows
+//! it, the thread opens the device it should play on again (the one the options name while it's
+//! there, else the system's default) and plays the ring on from its newest samples. Nothing
+//! waits on it: the game's pushes go into the ring as before, and while no device plays they
+//! fill it and are dropped. The options and the volume can change while it plays
+//! ([`Output::configure`], [`Output::set_volume`]). None of it reaches the mix, let alone a
+//! tick.
 
-use std::sync::Arc;
-use std::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
-use std::time::Duration;
+use std::sync::atomic::{AtomicBool, AtomicU32, AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex, mpsc};
+use std::thread::JoinHandle;
+use std::time::{Duration, Instant};
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{FromSample, SizedSample};
@@ -55,12 +68,29 @@ const TOO_LONG: usize = 2 * TICK;
 const MAX_NUDGE: f64 = 0.005;
 
 /// How to open the output.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct OutputOptions {
     /// Windows: take the device in WASAPI's exclusive mode, the lowest latency the device has,
     /// at the cost of every other program's sound while the match plays. Elsewhere, and if the
     /// device refuses, the output is shared.
     pub exclusive: bool,
+    /// The device to play on, by the name [`devices`] gives it, while it's there; none (or
+    /// while it isn't there), the system's default, followed as it changes.
+    pub device: Option<String>,
+}
+
+/// The output devices' names, as [`OutputOptions::device`] takes them.
+pub fn devices() -> Vec<String> {
+    // On a thread of its own: the backend sets COM up for itself, which a window's thread may
+    // have set up differently.
+    std::thread::spawn(|| {
+        cpal::default_host()
+            .output_devices()
+            .map(|d| d.map(|d| d.to_string()).collect())
+            .unwrap_or_default()
+    })
+    .join()
+    .unwrap_or_default()
 }
 
 /// What the output measures as it plays, for the latency log.
@@ -122,6 +152,9 @@ struct Ring {
     /// Where the last long tick's samples end: the samples before it play whole, never dropped
     /// as a stall's backlog.
     keep: AtomicUsize,
+    /// What each sample is multiplied by as it's played (the volume), as `f32` bits: 1 plays
+    /// the mix as it is.
+    gain: AtomicU32,
     meters: Meters,
 }
 
@@ -132,8 +165,23 @@ impl Ring {
             head: AtomicUsize::new(0),
             tail: AtomicUsize::new(0),
             keep: AtomicUsize::new(0),
+            gain: AtomicU32::new(1.0f32.to_bits()),
             meters: Meters::default(),
         }
+    }
+
+    fn gain(&self) -> f32 {
+        f32::from_bits(self.gain.load(Ordering::Relaxed))
+    }
+
+    /// A new device's start: what was queued for the last one is dropped (while no device
+    /// played, that's the first seconds after it went, the ring full), so the new one plays the
+    /// next tick's samples, and no dry spell carries over. The consumer's to call, between
+    /// devices.
+    fn restart(&self) {
+        let w = self.head.load(Ordering::Acquire);
+        self.tail.store(w, Ordering::Release);
+        self.meters.silent.store(0, Ordering::Relaxed);
     }
 
     /// Appends what fits; the rest is dropped. A long tick's samples (`whole`) are kept from
@@ -286,6 +334,7 @@ impl Resampler {
         // How much more than this callback takes the ring holds: the next callback runs dry
         // unless that's at least what it takes, or a tick's samples come first.
         let slack = (w - r).saturating_sub(need);
+        let gain = ring.gain();
         for _ in 0..frames {
             self.primed &= w - r >= 2;
             let s = if self.primed {
@@ -296,7 +345,10 @@ impl Resampler {
                     self.frac -= 1.0;
                     r += 1;
                 }
-                [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+                [
+                    (a[0] + (b[0] - a[0]) * t) * gain,
+                    (a[1] + (b[1] - a[1]) * t) * gain,
+                ]
             } else {
                 [0.0; 2]
             };
@@ -345,19 +397,127 @@ impl Resampler {
     }
 }
 
-/// What plays the samples.
-enum Backend {
-    Cpal(#[allow(dead_code)] cpal::Stream),
-    #[cfg(windows)]
-    Wasapi(#[allow(dead_code)] wasapi::Stream),
+/// What the output's thread and the player share: the options to play by and the requests to
+/// look at the devices again or to stop.
+struct Control {
+    options: Mutex<OutputOptions>,
+    /// The options changed or the system's devices did: the thread looks at whether the
+    /// device it plays on is still the one it should.
+    recheck: AtomicBool,
+    /// The device failed, as a backend reported it from another thread (cpal's error callback).
+    lost: AtomicBool,
+    stop: AtomicBool,
+    /// Devices opened, the first included.
+    opened: AtomicU32,
+    /// A test's stand-in for a device that goes away.
+    #[cfg(test)]
+    fail: AtomicBool,
+}
+
+impl Control {
+    fn new(options: OutputOptions) -> Control {
+        Control {
+            options: Mutex::new(options),
+            recheck: AtomicBool::new(false),
+            lost: AtomicBool::new(false),
+            stop: AtomicBool::new(false),
+            opened: AtomicU32::new(0),
+            #[cfg(test)]
+            fail: AtomicBool::new(false),
+        }
+    }
+
+    fn options(&self) -> OutputOptions {
+        self.options
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .clone()
+    }
+
+    fn stopping(&self) -> bool {
+        self.stop.load(Ordering::Relaxed)
+    }
+
+    /// Waits up to `most`, or until asked to look at the devices again or to stop.
+    fn idle(&self, most: Duration) {
+        let until = Instant::now() + most;
+        while Instant::now() < until && !self.stopping() && !self.recheck.load(Ordering::Relaxed) {
+            std::thread::sleep(Duration::from_millis(20));
+        }
+    }
+
+    /// A test's device going away: the backend takes it as the device failing.
+    #[cfg(test)]
+    fn failed(&self) -> bool {
+        self.fail.swap(false, Ordering::Relaxed)
+    }
+}
+
+/// What a device was opened as, for the log.
+struct Info {
+    rate: u32,
+    /// Its callback's size in device samples, where fixed.
+    buffer: Option<u32>,
+    describe: String,
+}
+
+/// The output's thread, which keeps a device playing the ring; dropping it stops the thread
+/// and lets the device go.
+struct Player {
+    control: Arc<Control>,
+    thread: Option<JoinHandle<()>>,
+}
+
+impl Player {
+    /// Starts `run` on the output's thread and waits for its first device: `run` sends what it
+    /// opened, or why it couldn't, once.
+    fn spawn(
+        control: &Arc<Control>,
+        run: impl FnOnce(mpsc::Sender<Result<Info, String>>) + Send + 'static,
+    ) -> Result<(Player, Info), String> {
+        let (tx, rx) = mpsc::channel();
+        let thread = std::thread::Builder::new()
+            .name("audio-out".into())
+            .spawn(move || run(tx))
+            .map_err(|e| format!("the audio thread: {e}"))?;
+        let mut player = Player {
+            control: control.clone(),
+            thread: Some(thread),
+        };
+        match rx.recv() {
+            Ok(Ok(info)) => Ok((player, info)),
+            Ok(Err(e)) => {
+                player.close();
+                Err(e)
+            }
+            Err(_) => {
+                player.close();
+                Err("the audio thread stopped".into())
+            }
+        }
+    }
+
+    fn close(&mut self) {
+        self.control.stop.store(true, Ordering::Relaxed);
+        if let Some(t) = self.thread.take() {
+            let _ = t.join();
+        }
+    }
+}
+
+impl Drop for Player {
+    fn drop(&mut self) {
+        self.close();
+    }
 }
 
 /// The audio output: push each tick's samples.
 pub struct Output {
     ring: Arc<Ring>,
-    _backend: Backend,
-    /// The device's rate, its callback's size in samples where fixed, and what plays them,
-    /// for the log.
+    control: Arc<Control>,
+    _player: Player,
+    /// The first device's rate, its callback's size in samples where fixed, and what plays
+    /// them, for the log (the thread logs each device it opens after it).
     pub rate: u32,
     pub buffer: Option<u32>,
     pub describe: String,
@@ -369,39 +529,35 @@ impl Output {
         Output::open_with(OutputOptions::default())
     }
 
-    /// Opens the default output device.
+    /// Opens the output device the options name (else the default), and keeps one playing
+    /// until it's dropped.
     pub fn open_with(options: OutputOptions) -> Result<Output, String> {
         let ring = Arc::new(Ring::new());
+        let exclusive = options.exclusive;
+        let output = |control: Arc<Control>, player: Player, info: Info| Output {
+            ring: ring.clone(),
+            control,
+            _player: player,
+            rate: info.rate,
+            buffer: info.buffer,
+            describe: info.describe,
+        };
         #[cfg(windows)]
-        match wasapi::Stream::open(&ring, options.exclusive) {
-            Ok((stream, info)) => {
-                return Ok(Output {
-                    ring,
-                    _backend: Backend::Wasapi(stream),
-                    rate: info.rate,
-                    buffer: Some(info.period),
-                    describe: info.describe,
-                });
+        {
+            let control = Arc::new(Control::new(options.clone()));
+            match wasapi::spawn(&ring, &control) {
+                Ok((player, info)) => return Ok(output(control, player, info)),
+                Err(e) => eprintln!("sound: WASAPI: {e}; trying cpal"),
             }
-            Err(e) => eprintln!("sound: WASAPI: {e}; trying cpal"),
         }
         #[cfg(not(windows))]
-        if options.exclusive {
+        if exclusive {
             eprintln!("sound: exclusive mode is Windows only; sharing the device");
         }
-        let (stream, rate, buffer) = open_cpal(&ring)?;
-        Ok(Output {
-            ring,
-            _backend: Backend::Cpal(stream),
-            rate,
-            buffer,
-            describe: format!(
-                "cpal, shared, {}",
-                buffer.map_or("the device's buffer".into(), |n| format!(
-                    "{n}-sample buffers"
-                ))
-            ),
-        })
+        let _ = exclusive;
+        let control = Arc::new(Control::new(options));
+        let (player, info) = spawn_cpal(&ring, &control)?;
+        Ok(output(control, player, info))
     }
 
     /// Queues 32 kHz stereo samples; never waits (what doesn't fit is dropped).
@@ -419,6 +575,33 @@ impl Output {
     /// What the output has measured.
     pub fn stats(&self) -> OutputStats {
         self.ring.stats()
+    }
+
+    /// Plays every sample from now on multiplied by `gain`, 0 to 1 (1 plays the mix as it is,
+    /// 0 is silence).
+    pub fn set_volume(&self, gain: f32) {
+        self.ring
+            .gain
+            .store(gain.clamp(0.0, 1.0).to_bits(), Ordering::Relaxed);
+    }
+
+    /// Plays by `options` from now on: the device is opened again if they change which device
+    /// it should be or how it's opened.
+    pub fn configure(&self, options: &OutputOptions) {
+        let mut o = self
+            .control
+            .options
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
+        if *o != *options {
+            *o = options.clone();
+            self.control.recheck.store(true, Ordering::Relaxed);
+        }
+    }
+
+    /// How many devices the output has opened, the first included.
+    pub fn opened(&self) -> u32 {
+        self.control.opened.load(Ordering::Relaxed)
     }
 }
 
@@ -478,11 +661,111 @@ impl Simulated {
     }
 }
 
-/// The default device through cpal, shared, with buffers of about 5 ms where it allows that.
-fn open_cpal(ring: &Arc<Ring>) -> Result<(cpal::Stream, u32, Option<u32>), String> {
-    let device = cpal::default_host()
+/// The output's thread through cpal: it keeps the device the options name (else the default)
+/// playing, opening one again when its stream fails, the options change, or, following the
+/// default, the system's default changes (cpal tells of none, so it looks every second).
+fn spawn_cpal(ring: &Arc<Ring>, control: &Arc<Control>) -> Result<(Player, Info), String> {
+    let (ring, ctl) = (ring.clone(), control.clone());
+    Player::spawn(control, move |tx| {
+        let host = cpal::default_host();
+        let mut first = Some(tx);
+        let mut said = false;
+        while !ctl.stopping() {
+            ctl.recheck.store(false, Ordering::Relaxed);
+            ctl.lost.store(false, Ordering::Relaxed);
+            let options = ctl.options();
+            if first.is_none() {
+                ring.restart();
+            }
+            let opened = cpal_device(&host, &options)
+                .and_then(|(device, name)| open_cpal(&device, &ring, &ctl).map(|o| (o, name)));
+            match opened {
+                Ok(((stream, rate, buffer), name)) => {
+                    said = false;
+                    ctl.opened.fetch_add(1, Ordering::Relaxed);
+                    let info = Info {
+                        rate,
+                        buffer,
+                        describe: format!(
+                            "cpal, shared, {}, on {name}",
+                            buffer.map_or("the device's buffer".into(), |n| format!(
+                                "{n}-sample buffers"
+                            ))
+                        ),
+                    };
+                    match first.take() {
+                        Some(tx) => {
+                            let _ = tx.send(Ok(info));
+                        }
+                        None => eprintln!("sound: now {} Hz, {}", info.rate, info.describe),
+                    }
+                    let mut looked = Instant::now();
+                    loop {
+                        std::thread::sleep(Duration::from_millis(20));
+                        if ctl.stopping() {
+                            break;
+                        }
+                        #[cfg(test)]
+                        if ctl.failed() {
+                            ctl.lost.store(true, Ordering::Relaxed);
+                        }
+                        if ctl.lost.load(Ordering::Relaxed) {
+                            eprintln!("sound: the device stopped; opening the output again");
+                            break;
+                        }
+                        let follows = ctl.options().device.is_none();
+                        let look = ctl.recheck.swap(false, Ordering::Relaxed)
+                            || follows && looked.elapsed() >= Duration::from_secs(1);
+                        if look {
+                            looked = Instant::now();
+                            let wanted = cpal_device(&host, &ctl.options()).map(|d| d.1);
+                            if wanted.as_deref() != Ok(name.as_str()) {
+                                break;
+                            }
+                        }
+                    }
+                    drop(stream);
+                }
+                Err(e) => {
+                    if let Some(tx) = first.take() {
+                        let _ = tx.send(Err(e));
+                        return;
+                    }
+                    if !said {
+                        eprintln!("sound: no output ({e}); trying again as the devices change");
+                        said = true;
+                    }
+                    ctl.idle(Duration::from_secs(1));
+                }
+            }
+        }
+    })
+}
+
+/// The device `options` name while it's there, else the default, and its name.
+fn cpal_device(
+    host: &cpal::Host,
+    options: &OutputOptions,
+) -> Result<(cpal::Device, String), String> {
+    if let Some(want) = &options.device
+        && let Ok(mut all) = host.output_devices()
+        && let Some(d) = all.find(|d| d.to_string() == *want)
+    {
+        return Ok((d, want.clone()));
+    }
+    let d = host
         .default_output_device()
         .ok_or("no audio output device")?;
+    let name = d.to_string();
+    Ok((d, name))
+}
+
+/// A device through cpal, shared, with buffers of about 5 ms where it allows that.
+fn open_cpal(
+    device: &cpal::Device,
+    ring: &Arc<Ring>,
+    control: &Arc<Control>,
+) -> Result<(cpal::Stream, u32, Option<u32>), String> {
     let supported = device
         .default_output_config()
         .map_err(|e| format!("the audio device's configuration: {e}"))?;
@@ -497,11 +780,11 @@ fn open_cpal(ring: &Arc<Ring>) -> Result<(cpal::Stream, u32, Option<u32>), Strin
     }
     let format = supported.sample_format();
     let build = |config: &cpal::StreamConfig| match format {
-        cpal::SampleFormat::I16 => stream::<i16>(&device, config, ring),
-        cpal::SampleFormat::U16 => stream::<u16>(&device, config, ring),
-        cpal::SampleFormat::I32 => stream::<i32>(&device, config, ring),
-        cpal::SampleFormat::F64 => stream::<f64>(&device, config, ring),
-        _ => stream::<f32>(&device, config, ring),
+        cpal::SampleFormat::I16 => stream::<i16>(device, config, ring, control),
+        cpal::SampleFormat::U16 => stream::<u16>(device, config, ring, control),
+        cpal::SampleFormat::I32 => stream::<i32>(device, config, ring, control),
+        cpal::SampleFormat::F64 => stream::<f64>(device, config, ring, control),
+        _ => stream::<f32>(device, config, ring, control),
     };
     let (stream, buffer) = match build(&config) {
         Ok(s) => (s, buffer),
@@ -520,9 +803,11 @@ fn stream<T: SizedSample + FromSample<f32>>(
     device: &cpal::Device,
     config: &cpal::StreamConfig,
     ring: &Arc<Ring>,
+    control: &Arc<Control>,
 ) -> Result<cpal::Stream, String> {
     let channels = usize::from(config.channels);
     let mut r = Resampler::new(ring.clone(), config.sample_rate);
+    let control = control.clone();
     device
         .build_output_stream(
             *config,
@@ -537,7 +822,15 @@ fn stream<T: SizedSample + FromSample<f32>>(
                     }
                 });
             },
-            |e| eprintln!("audio output: {e}"),
+            move |e: cpal::Error| {
+                eprintln!("audio output: {e}");
+                // A gap (an xrun), the stream rerouted or real-time scheduling refused: it plays
+                // on. Anything else ends the stream.
+                use cpal::ErrorKind::{DeviceChanged, RealtimeDenied, Xrun};
+                if !matches!(e.kind(), Xrun | DeviceChanged | RealtimeDenied) {
+                    control.lost.store(true, Ordering::Relaxed);
+                }
+            },
             None,
         )
         .map_err(|e| format!("opening the audio stream: {e}"))
@@ -807,6 +1100,114 @@ mod tests {
         assert_eq!(r.margin, MARGIN);
         ring.push(&tone(TICK, pushed), false);
         assert_eq!(ring.stats().dry, Duration::ZERO, "playing again");
+    }
+
+    /// The volume scales what's played, and at 1 plays the mix as it is.
+    #[test]
+    fn the_volume_scales_the_samples() {
+        let play = |gain: f32| {
+            let ring = Arc::new(Ring::new());
+            ring.gain.store(gain.to_bits(), Ordering::Relaxed);
+            // At the mixer's own rate every output is a source sample; enough to start
+            // playing at once, too little to drop as a backlog.
+            let mut r = Resampler::new(ring.clone(), RATE);
+            ring.push(&tone(1200, 0), false);
+            let mut out = Vec::new();
+            r.fill(TICK, |s| out.push(s));
+            out
+        };
+        let (full, quarter) = (play(1.0), play(0.25));
+        let src = tone(1200, 0);
+        assert!(full.iter().any(|s| *s != [0.0; 2]), "played");
+        for (i, (f, q)) in full.iter().zip(&quarter).enumerate() {
+            let s = src[i];
+            assert_eq!(
+                *f,
+                [f32::from(s[0]) / 32768.0, f32::from(s[1]) / 32768.0],
+                "sample {i} at full volume"
+            );
+            assert_eq!(*q, [f[0] * 0.25, f[1] * 0.25], "sample {i} at a quarter");
+        }
+    }
+
+    /// A new device after the last went away: the ring filled while nothing played, and the
+    /// new device plays the ticks pushed from then on, not the seconds queued, with no gap
+    /// counted and nothing dropped as a backlog.
+    #[test]
+    fn a_new_device_plays_from_the_newest_samples() {
+        let ring = Arc::new(Ring::new());
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        let mut pushed = 0;
+        ticks(&ring, &mut r, &mut pushed, 60);
+        // The device goes: ten seconds of ticks with nothing taking them.
+        for _ in 0..600 {
+            ring.push(&tone(TICK, pushed), false);
+            pushed += TICK;
+        }
+        assert!(
+            ring.meters.overflowed.load(Ordering::Relaxed) > 0,
+            "the ring filled"
+        );
+        ring.restart();
+        let mut r = Resampler::new(ring.clone(), 48_000);
+        ticks(&ring, &mut r, &mut pushed, 120);
+        let s = ring.stats();
+        assert_eq!((s.underruns, s.skips), (0, 0));
+        assert_eq!(s.dry, Duration::ZERO);
+        let queued = ring.head.load(Ordering::Relaxed) - ring.tail.load(Ordering::Relaxed);
+        assert!(
+            queued < 2 * TICK,
+            "{queued} samples queued after the new device's start"
+        );
+    }
+
+    /// Pushes silence as the game loop does for `ms` milliseconds.
+    fn play_silence(out: &Output, ms: u64) {
+        let silence = vec![[0i16; 2]; TICK];
+        let start = Instant::now();
+        for tick in 0..ms * 60 / 1000 {
+            let due = start + Duration::from_secs_f64(tick as f64 / 60.0);
+            if let Some(wait) = due.checked_duration_since(Instant::now()) {
+                std::thread::sleep(wait);
+            }
+            out.push(&silence);
+        }
+    }
+
+    /// The device going away while it plays (a test's stand-in for headphones unplugged, which
+    /// the backend sees as the device failing): the output opens a device again and plays on.
+    /// Options that pick the same device open nothing new. Ignored: it needs an audio device;
+    /// it plays silence.
+    #[test]
+    #[ignore = "needs an audio output device"]
+    fn opens_a_device_again_when_it_goes() {
+        let out = Output::open().expect("an audio device");
+        eprintln!("{} Hz: {}", out.rate, out.describe);
+        play_silence(&out, 500);
+        assert_eq!(out.opened(), 1);
+        out.control.fail.store(true, Ordering::Relaxed);
+        play_silence(&out, 1000);
+        assert_eq!(out.opened(), 2, "a device opened again");
+        let taken = out.ring.tail.load(Ordering::Relaxed);
+        play_silence(&out, 500);
+        let played = out.ring.tail.load(Ordering::Relaxed) - taken;
+        assert!(
+            played > RATE as usize * 4 / 10,
+            "{played} samples played in the half second after"
+        );
+        // The default device by its name, and a device that isn't there, are the device
+        // playing.
+        let default = cpal::default_host()
+            .default_output_device()
+            .map(|d| d.to_string());
+        for device in [default, Some("no such device".to_owned())] {
+            out.configure(&OutputOptions {
+                device,
+                ..OutputOptions::default()
+            });
+            play_silence(&out, 300);
+            assert_eq!(out.opened(), 2, "opened again for the same device");
+        }
     }
 
     /// Ticks up to 6 ms late: the ring settles deeper, as deep as their lateness needs.

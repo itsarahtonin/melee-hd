@@ -5,18 +5,40 @@
 //! waits that long before its next tick (`jit::Scheduler::took`).
 
 use std::sync::Mutex;
+use std::sync::atomic::{AtomicU32, Ordering};
 
 use melee_audio::{Mixer, Output, OutputOptions, OutputStats};
 use melee_data::archive::Archives;
 use melee_sim::game::session::{Session, Setup};
 use melee_sim::game::vs_match::{DiscFile, Match, Settings};
 
-/// How the output device is opened (`--audio-exclusive`).
-static OPTIONS: Mutex<OutputOptions> = Mutex::new(OutputOptions { exclusive: false });
+/// How the output device is opened (`--audio-exclusive`, the settings panel's Audio).
+static OPTIONS: Mutex<OutputOptions> = Mutex::new(OutputOptions {
+    exclusive: false,
+    device: None,
+});
+/// The volume, in percent.
+static VOLUME: AtomicU32 = AtomicU32::new(100);
 
 /// Opens the matches' output devices this way from now on.
 pub fn set_output(options: OutputOptions) {
-    *OPTIONS.lock().unwrap() = options;
+    *OPTIONS.lock().unwrap_or_else(|e| e.into_inner()) = options;
+}
+
+/// Plays the matches' sound at `percent` of its volume from now on.
+pub fn set_volume(percent: u32) {
+    VOLUME.store(percent.min(100), Ordering::Relaxed);
+}
+
+/// What the samples are multiplied by at `percent`: the square, which a listener hears as
+/// about even steps (50% is a quarter, 12 dB down); 100% plays the mix as it is.
+pub fn gain(percent: u32) -> f32 {
+    let v = percent.min(100) as f32 / 100.0;
+    v * v
+}
+
+fn options() -> OutputOptions {
+    OPTIONS.lock().unwrap_or_else(|e| e.into_inner()).clone()
 }
 
 /// Mixes each tick's audio frames and plays them.
@@ -48,6 +70,26 @@ impl Sound {
     pub fn stats(&self) -> Option<OutputStats> {
         self.output.as_ref().map(Output::stats)
     }
+
+    /// Plays by the output's options and volume as they stand now (the device is opened again
+    /// if they name another or open it another way). Only how the sound is heard changes: the
+    /// mix, let alone the game, never sees it.
+    pub fn configure(&self) {
+        if let Some(out) = &self.output {
+            out.configure(&options());
+            out.set_volume(gain(VOLUME.load(Ordering::Relaxed)));
+        }
+    }
+}
+
+/// Hands `from`'s output device to `to` (a replay played from the panel takes Melee's, and
+/// gives it back), so the player never holds two: an exclusive one can't be opened twice.
+pub fn hand_over(from: Option<&mut Sound>, to: Option<&mut Sound>) {
+    if let (Some(from), Some(to)) = (from, to)
+        && from.output.is_some()
+    {
+        to.output = from.output.take();
+    }
 }
 
 /// The output device when `play`, else none.
@@ -55,9 +97,10 @@ fn output(play: bool) -> Option<Output> {
     if !play {
         return None;
     }
-    match Output::open_with(*OPTIONS.lock().unwrap()) {
+    match Output::open_with(options()) {
         Ok(o) => {
             eprintln!("sound: {} Hz, {}", o.rate, o.describe);
+            o.set_volume(gain(VOLUME.load(Ordering::Relaxed)));
             Some(o)
         }
         Err(e) => {
@@ -68,7 +111,7 @@ fn output(play: bool) -> Option<Output> {
 }
 
 /// The console at power-on, its sound mixed from the boot's audio setup on and played on the
-/// default device when `play`: the boot is the caller's, the sound's first mix after it.
+/// output device when `play`: the boot is the caller's, the sound's first mix after it.
 pub fn power_on(setup: Setup, play: bool) -> Result<(Session, Option<Sound>), String> {
     let mut s = Session::new(setup);
     let mut mixer = Mixer::new();
@@ -81,7 +124,7 @@ pub fn power_on(setup: Setup, play: bool) -> Result<(Session, Option<Sound>), St
     Ok((s, Some(sound)))
 }
 
-/// Starts the match, with its sound played on the default device when `play`.
+/// Starts the match, with its sound played on the output device when `play`.
 pub fn start(
     settings: &Settings,
     play: bool,
