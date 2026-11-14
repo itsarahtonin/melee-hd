@@ -1586,9 +1586,8 @@ impl Running<'_> {
     /// frame left in r5, and the fighter's own address in r30, unless Slippi's NanaDeterminism
     /// code cleared them (r30 in both versions, r5 in 3.19's).
     fn di_leftover_stick(&self, f: FighterId, r5: Leftover) -> (u8, u8) {
-        let rules = &self.game.rules;
-        let (r5, r30) = if rules.slippi {
-            let r5 = if rules.codes == super::super::slippi::CodeSet::V3_19 {
+        let (r5, r30) = if self.game.rules.slippi {
+            let r5 = if self.nana_determinism_clears_r5() {
                 Leftover::Word(0)
             } else {
                 r5

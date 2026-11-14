@@ -96,6 +96,13 @@ pub(super) enum Leftover {
 }
 
 impl Running<'_> {
+    /// Whether the rules run Slippi 3.19's NanaDeterminism (`800AC5B8`), which clears r5 as
+    /// well as r30 before the DI with no knockback reads them; 3.16's clears r30 alone.
+    pub(super) fn nana_determinism_clears_r5(&self) -> bool {
+        let rules = &self.game.rules;
+        rules.slippi && rules.codes == super::super::slippi::CodeSet::V3_19
+    }
+
     /// The other fighter of the same player (Nana's Popo, Popo's Nana), `ftCo_800A589C`: the
     /// first in the fighters' list, or none if that one is asleep or there is none.
     #[doc(alias = "ftCo_800A589C")]
@@ -124,11 +131,21 @@ impl Running<'_> {
     /// A computer-controlled fighter's frame, `ftCo_800B3900`: it reads the stage, decides by
     /// its kind, writes a new script when the last one is done, runs its script, and Nana
     /// replays Popo's inputs while she follows him; its frame count goes up.
+    ///
+    /// Under Slippi 3.19's NanaDeterminism the DI clears r5 before it reads it
+    /// ([`Running::nana_determinism_clears_r5`]), so the r5 the decision leaves is never
+    /// consulted: it goes on as a word nothing may read, and anything that reads it stops by
+    /// name (the Slippi ruleset's tripwire, docs/slippi-ruleset.md).
     #[doc(alias = "ftCo_800B3900")]
     pub fn cpu_frame(&mut self, gobj: GObjId) {
         let f = self.game.fighter_id(gobj);
         self.cpu_read_stage(f);
         let r5 = self.cpu_decide(f);
+        let r5 = if self.nana_determinism_clears_r5() {
+            Leftover::Unknown("ftCo_800B3900 under 3.19's NanaDeterminism")
+        } else {
+            r5
+        };
         self.cpu_behave(f, r5);
         self.cpu_run_script(f);
         self.nana_follow_inputs(f);
