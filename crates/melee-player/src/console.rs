@@ -16,6 +16,11 @@ pub fn attach() {
     windows::attach();
 }
 
+/// Whether this run's output goes to `melee-hd.log` (no console and nothing redirected).
+pub fn logged() -> bool {
+    QUIET.load(Relaxed)
+}
+
 /// Reports an error that stops the player: printed, and in a message box when no one would
 /// see it printed.
 pub fn fatal(text: &str) {

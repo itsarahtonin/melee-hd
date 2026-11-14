@@ -91,6 +91,7 @@ mod present;
 #[cfg(test)]
 mod record_tests;
 mod recording;
+mod report;
 #[cfg(test)]
 mod roster_tests;
 mod saves;
@@ -397,7 +398,10 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.added_delay = value()?.parse().map_err(|_| "--added-delay FRAMES")?;
                 a.given.added_delay = true;
             }
-            "--audio-exclusive" => a.audio_exclusive = true,
+            "--audio-exclusive" => {
+                a.audio_exclusive = true;
+                a.given.audio_exclusive = true;
+            }
             "--mute" => a.mute = true,
             "--latency-overlay" => a.latency_overlay = true,
             "--high-refresh" => {
@@ -714,8 +718,9 @@ struct Platform {
     disc: Disc,
     /// The reads played back (`--inputs`), and the next; none: the controllers.
     feed: Option<(Vec<melee_sim::input::controller::PadData>, usize)>,
-    /// The session's recording.
+    /// The session's recording, and where it goes.
     rec: Option<session_rec::Writer>,
+    rec_path: Option<std::path::PathBuf>,
     /// The saves folder, kept as the card changes.
     kept: Option<saves::Kept>,
     /// Where the card goes as the session ends (`--card-after`).
@@ -821,6 +826,7 @@ impl Session {
                 )
             }
         };
+        let rec_path = rec;
         let rec = match rec {
             Some(p) => match session_rec::Writer::create(p, &setup) {
                 Ok(w) => {
@@ -842,6 +848,10 @@ impl Session {
         let mut platform = Box::new(Platform {
             disc,
             feed,
+            rec_path: rec
+                .is_some()
+                .then(|| rec_path.map(std::path::Path::to_path_buf))
+                .flatten(),
             rec,
             kept,
             card_after: args.card_after.as_ref().map(std::path::PathBuf::from),
@@ -1176,11 +1186,15 @@ struct Front {
     window: Option<ui::Window>,
 }
 
+/// A power-on's session, or why there's none: what to say, and the stop when the boot stopped.
+type Booted = Result<Session, (String, Option<report::Stop>)>;
+
 struct App {
     /// The console (or a command line's match) playing; none while it powers on.
     session: Option<Session>,
-    /// The power-on running in the background, which makes the next session.
-    booting: Option<std::thread::JoinHandle<Result<Session, String>>>,
+    /// The power-on running in the background, which makes the next session, or says why it
+    /// couldn't (with the stop, when the boot stopped).
+    booting: Option<std::thread::JoinHandle<Booted>>,
     /// The settings panel, when the player boots the console.
     front: Option<Front>,
     /// The command line, with the settings applied.
@@ -1235,7 +1249,12 @@ struct App {
     /// Alt is held (Alt+Enter toggles fullscreen).
     alt: bool,
     /// Why the match stopped, for the panel to show.
-    stopped: Option<String>,
+    stopped: Option<report::Stop>,
+    /// The last stop this run, the session's recording (playing or last played) and when the
+    /// run started, for Report a bug.
+    last_stop: Option<report::Stop>,
+    session_rec: Option<std::path::PathBuf>,
+    started: std::time::SystemTime,
     /// The latency log, with `--latency-log`.
     latency: Option<latency::Log>,
     /// The input latency added back on purpose.
@@ -1456,10 +1475,11 @@ impl App {
                 } else {
                     "the match"
                 };
-                let text = format!("{what} stopped: {}", panic_text(&p));
-                eprintln!("{text}");
+                let why = panic_text(&p);
+                eprintln!("{what} stopped: {why}");
                 session.ended = true;
-                self.stopped = Some(text);
+                let at = report::take_last().and_then(|l| l.at);
+                self.stopped = Some(report::Stop { why, at });
                 return false;
             }
         };
@@ -2097,12 +2117,30 @@ impl App {
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
         }
         eprintln!("power on");
+        // The session's recording is known once the power-on made it.
+        self.session_rec = None;
         self.booting = Some(
             std::thread::Builder::new()
                 .stack_size(GAME_STACK)
                 .spawn(move || {
-                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Session::open(&args)))
-                        .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))))
+                    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        Session::open(&args)
+                    }));
+                    // A boot that stopped panicked on this thread; a disc that can't be read
+                    // didn't.
+                    let stop = report::take_last();
+                    match r {
+                        Ok(Ok(s)) => Ok(s),
+                        Ok(Err(e)) => Err((e, stop)),
+                        Err(p) => {
+                            let why = panic_text(&p);
+                            let at = stop.and_then(|s| s.at);
+                            Err((
+                                format!("Melee stopped: {why}"),
+                                Some(report::Stop { why, at }),
+                            ))
+                        }
+                    }
                 })
                 .expect("the power-on's thread"),
         );
@@ -2110,6 +2148,7 @@ impl App {
 
     /// Takes up the console the power-on made.
     fn powered_on(&mut self, session: Session) {
+        self.session_rec = session.console.as_ref().and_then(|p| p.rec_path.clone());
         self.frames = Frames::new();
         self.frames.space.load_dol(&session.dol);
         self.session = Some(session);
@@ -2142,6 +2181,7 @@ impl App {
         let Some(f) = &mut self.front else { return };
         f.panel.open = true;
         f.panel.look_at_save();
+        f.panel.look_at_devices();
         // Every key goes up: none stays held into the game when it resumes.
         self.inputs.keyboard = Default::default();
         if let Some(s) = &self.shown {
@@ -2203,15 +2243,63 @@ impl App {
         if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
             p.replays = replays;
         }
+        // The sound's device and volume, taken at once (the device opened again if need be).
+        sound::set_output(s.output());
+        sound::set_volume(s.volume);
+        if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
+            snd.configure();
+        }
     }
 
-    /// Melee stopped: the panel shows why, and it can be restarted.
-    fn halted(&mut self, why: String) {
+    /// Melee stopped, or couldn't start: the panel shows why, and it can be restarted. A stop
+    /// (the simulation stopping by name) shows as one, with Report a bug.
+    fn halted(&mut self, why: String, stop: Option<report::Stop>) {
         if let Some(f) = &mut self.front {
-            f.panel.message = Some(why);
+            match &stop {
+                Some(s) => {
+                    f.panel.stop = Some(s.why.clone());
+                    f.panel.message = None;
+                }
+                None => f.panel.message = Some(why),
+            }
             f.panel.halted = true;
         }
+        if stop.is_some() {
+            self.last_stop = stop;
+        }
         self.open_panel();
+    }
+
+    /// Report a bug: the zip saved in the settings folder and shown; what the panel says.
+    fn report_bug(&mut self) -> String {
+        // The session's recording as it stands, written out first.
+        if let Some(rec) = (self.session.as_mut())
+            .and_then(|s| s.console.as_mut())
+            .and_then(|p| p.rec.as_mut())
+        {
+            rec.flush();
+        }
+        let r = report::Report {
+            stop: self.last_stop.as_ref(),
+            session: self.session_rec.as_deref(),
+            started: self.started,
+            now: recording::local_now(),
+        };
+        match report::gather(&r) {
+            Ok((path, size)) => {
+                eprintln!("saved the bug report {}", path.display());
+                report::reveal(&path);
+                let name = path.file_name().map_or_else(
+                    || path.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                format!(
+                    "Saved {name} ({}) in the settings folder. Nothing was sent.",
+                    report::size_text(size)
+                )
+            }
+            Err(e) => format!("The bug report couldn't be saved: {e}."),
+        }
     }
 
     /// Draws the panel over the last frame, doing what it was asked.
@@ -2271,6 +2359,12 @@ impl App {
                     self.restart(None);
                 }
             }
+            Action::ReportBug => {
+                let said = self.report_bug();
+                if let Some(f) = &mut self.front {
+                    f.panel.message = Some(said);
+                }
+            }
         }
         if let Some(s) = &self.shown {
             s.window.request_redraw();
@@ -2283,6 +2377,7 @@ impl App {
         if let Some(f) = &mut self.front {
             f.panel.halted = false;
             f.panel.message = None;
+            f.panel.stop = None;
             f.panel.look_at_save();
             f.panel.open = false;
             let s = f.panel.settings.clone();
@@ -2463,14 +2558,14 @@ impl ApplicationHandler for App {
             .is_some_and(std::thread::JoinHandle::is_finished)
         {
             let r = (self.booting.take().expect("the power-on").join())
-                .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))));
+                .unwrap_or_else(|p| Err((format!("Melee stopped: {}", panic_text(&p)), None)));
             match r {
                 Ok(s) => self.powered_on(s),
-                Err(e) if self.front.is_some() => {
+                Err((e, stop)) if self.front.is_some() => {
                     eprintln!("{e}");
-                    self.halted(e);
+                    self.halted(e, stop);
                 }
-                Err(e) => {
+                Err((e, _)) => {
                     console::fatal(&e);
                     self.quit = true;
                     event_loop.exit();
@@ -2512,12 +2607,9 @@ impl ApplicationHandler for App {
                 event_loop.exit();
                 return;
             }
-            let why = self
-                .stopped
-                .take()
-                .unwrap_or_else(|| "Melee stopped.".to_owned());
+            let stop = self.stopped.take();
             self.power_off();
-            self.halted(why);
+            self.halted("Melee stopped.".to_owned(), stop);
         }
         if self.booting.is_some() {
             // The window stays black while the console powers on.
@@ -2918,6 +3010,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.record_sessions {
         s.record_sessions = args.session_record;
     }
+    if g.audio_exclusive {
+        s.audio_exclusive = args.audio_exclusive;
+    }
     s
 }
 
@@ -2936,6 +3031,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
     a.session_record = s.record_sessions;
     a.debug_level = s.debug_level;
+    a.audio_exclusive = s.audio_exclusive;
     a
 }
 
@@ -2954,6 +3050,7 @@ fn run(args: Args) -> ExitCode {
     }
     sound::set_output(melee_audio::OutputOptions {
         exclusive: args.audio_exclusive,
+        device: None,
     });
     present::set_present(args.present);
     present::set_scanned(args.flicker_scan);
@@ -2973,6 +3070,10 @@ fn run(args: Args) -> ExitCode {
         Some(f) => with_settings(args, &f.panel.settings),
         None => args,
     };
+    if let Some(f) = &front {
+        sound::set_output(f.panel.settings.output());
+        sound::set_volume(f.panel.settings.volume);
+    }
     let session = if args.front {
         None
     } else {
@@ -3042,6 +3143,9 @@ fn run(args: Args) -> ExitCode {
         window_size: args.size,
         alt: false,
         stopped: None,
+        last_stop: None,
+        session_rec: None,
+        started: std::time::SystemTime::now(),
         latency: None,
         delay: melee_input::Delay::new(args.added_delay),
         live: latency::Live::default(),
@@ -3133,6 +3237,8 @@ fn run(args: Args) -> ExitCode {
 
 fn main() -> ExitCode {
     console::attach();
+    // Each panic's place, kept for the bug report.
+    report::install_hook();
     // Which build this is, and the folders it keeps (a dev build's are its own).
     eprintln!(
         "{}; settings in {}, caches in {}",

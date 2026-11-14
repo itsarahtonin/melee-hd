@@ -202,11 +202,15 @@ fresh:
     Ok(())
 }
 
-/// `captures/<milliseconds since 1970><suffix>` beside the executable (the working folder if
-/// its path is unknown).
-pub fn folder(suffix: &str) -> PathBuf {
+/// `captures` beside the executable (the working folder if its path is unknown).
+pub fn base() -> PathBuf {
     let exe = std::env::current_exe().unwrap_or_default();
-    let base = exe.parent().unwrap_or(Path::new(".")).join("captures");
+    exe.parent().unwrap_or(Path::new(".")).join("captures")
+}
+
+/// `captures/<milliseconds since 1970><suffix>` beside the executable.
+pub fn folder(suffix: &str) -> PathBuf {
+    let base = base();
     let now = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_millis());

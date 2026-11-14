@@ -44,6 +44,7 @@ pub struct Given {
     pub replays: bool,
     pub record_sessions: bool,
     pub debug_level: bool,
+    pub audio_exclusive: bool,
 }
 
 /// The player's settings.
@@ -72,6 +73,11 @@ pub struct Settings {
     /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
     /// ([`DEBUG_LEVELS`]), 0 for retail's.
     pub debug_level: i32,
+    /// The sound's volume in percent, the output device by name (empty: the system's default,
+    /// followed as it changes) and whether it's taken exclusively (Windows).
+    pub volume: u32,
+    pub audio_device: String,
+    pub audio_exclusive: bool,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -98,6 +104,18 @@ pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to
 /// The "Save replays" setting's help line (Sarah, 2026-10-29).
 pub const REPLAYS_HELP: &str =
     "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
+/// The Audio section's help lines (proposed 2026-11-14, awaiting Sarah's word).
+pub const AUDIO_DEVICE_HELP: &str =
+    "The default follows the system's. An unplugged device falls back to it until it's back.";
+pub const EXCLUSIVE_HELP: &str =
+    "The lowest latency, but no other program's sound plays while melee-hd runs.";
+/// What the panel says when Melee stops (proposed 2026-11-14, awaiting Sarah's word): where
+/// the simulation stops by name, at a place the original would crash or melee-hd can't follow.
+pub const STOP_TITLE: &str = "Melee stopped";
+pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or a place where the original game would crash. It isn't anything you did. Report a bug saves what's needed to see it happen again; Restart Melee\u{2026} starts over from power-on.";
+/// Report a bug's button and help line (proposed 2026-11-14, awaiting Sarah's word).
+pub const REPORT_BUTTON: &str = "Report a bug";
+pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
 /// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
 fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
@@ -123,6 +141,9 @@ impl Default for Settings {
             replays: String::new(),
             record_sessions: true,
             debug_level: 0,
+            volume: 100,
+            audio_device: String::new(),
+            audio_exclusive: false,
         }
     }
 }
@@ -146,7 +167,7 @@ impl Settings {
         };
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
-            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\n",
+            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\naudio-device = {}\naudio-exclusive = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
             self.high_refresh.key(),
@@ -161,7 +182,18 @@ impl Settings {
                 4 => "develop",
                 _ => "off",
             },
+            self.volume,
+            self.audio_device,
+            on(self.audio_exclusive),
         )
+    }
+
+    /// How the sound's output device is opened.
+    pub fn output(&self) -> melee_audio::OutputOptions {
+        melee_audio::OutputOptions {
+            exclusive: self.audio_exclusive,
+            device: Some(self.audio_device.clone()).filter(|d| !d.is_empty()),
+        }
     }
 
     /// Takes back what [`Settings::save`] kept, except what the command line gave; a line
@@ -242,6 +274,17 @@ impl Settings {
                     "develop" => self.debug_level = 4,
                     _ => {}
                 },
+                "volume" => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
+                        self.volume = n;
+                    }
+                }
+                "audio-device" => self.audio_device = v.to_owned(),
+                "audio-exclusive" if !given.audio_exclusive => {
+                    if let Some(b) = on(v) {
+                        self.audio_exclusive = b;
+                    }
+                }
                 _ => {}
             }
         }
@@ -271,6 +314,7 @@ pub enum Action {
     Import,
     Export,
     UnlockAll,
+    ReportBug,
 }
 
 /// The panel: the settings and what it shows of the save and the disc.
@@ -278,10 +322,14 @@ pub struct Panel {
     pub settings: Settings,
     /// Whether it shows (the console paused behind it).
     pub open: bool,
-    /// Why Melee stopped, or what the last action did.
+    /// Why Melee couldn't start, or what the last action did.
     pub message: Option<String>,
     /// Melee stopped: it can't be resumed, only restarted.
     pub halted: bool,
+    /// What stopped Melee, when the simulation stopped by name ([`STOP_TEXT`]).
+    pub stop: Option<String>,
+    /// The output devices, as the panel last looked.
+    pub devices: Vec<String>,
     /// The save's line, and whether everything is unlocked in it (none: no save).
     pub save_line: String,
     pub unlocked: Option<bool>,
@@ -296,6 +344,8 @@ impl Panel {
             open: false,
             message: None,
             halted: false,
+            stop: None,
+            devices: Vec::new(),
             save_line: String::new(),
             unlocked: None,
             disc,
@@ -319,6 +369,11 @@ impl Panel {
         };
     }
 
+    /// Looks at the output devices there are now, for the Audio section.
+    pub fn look_at_devices(&mut self) {
+        self.devices = melee_audio::output::devices();
+    }
+
     /// Lays the panel out; what was pressed, if anything.
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<Action> {
         let mut action = None;
@@ -336,7 +391,12 @@ impl Panel {
                 ui.add_space(((ui.available_width() - 440.0) / 2.0).max(0.0));
                 ui.vertical(|ui| {
                     ui.set_max_width(440.0);
-                    action = self.show_sections(ui);
+                    if let Some(a) = self.show_stop(ui) {
+                        action = Some(a);
+                    }
+                    if let Some(a) = self.show_sections(ui) {
+                        action = Some(a);
+                    }
                 });
             });
             ui.add_space(16.0);
@@ -364,13 +424,83 @@ impl Panel {
             });
             if let Some(m) = &self.message {
                 ui.add_space(8.0);
-                ui.colored_label(ui.visuals().error_fg_color, m);
+                ui.scope(|ui| {
+                    ui.set_max_width(440.0);
+                    ui.colored_label(ui.visuals().error_fg_color, m);
+                });
+            }
+            // Once Melee stopped, its message offers it.
+            if self.stop.is_none()
+                && let Some(a) = show_report(ui)
+            {
+                action = Some(a);
             }
             ui.add_space(16.0);
             ui.weak("Esc: settings. F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
             ui.add_space(16.0);
         });
         action
+    }
+
+    /// When Melee stopped: what happened in plain words, what stopped it, and Report a bug.
+    fn show_stop(&mut self, ui: &mut egui::Ui) -> Option<Action> {
+        let why = self.stop.as_ref()?;
+        let mut action = None;
+        ui.add_space(4.0);
+        egui::Frame::group(ui.style())
+            .stroke(egui::Stroke::new(1.0, ui.visuals().warn_fg_color))
+            .inner_margin(12.0)
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.strong(egui::RichText::new(STOP_TITLE).color(ui.visuals().warn_fg_color));
+                ui.add_space(4.0);
+                ui.label(STOP_TEXT);
+                ui.add_space(4.0);
+                ui.add(egui::Label::new(egui::RichText::new(why).weak().small()).selectable(true));
+                ui.add_space(8.0);
+                if ui.button(REPORT_BUTTON).clicked() {
+                    action = Some(Action::ReportBug);
+                }
+            });
+        action
+    }
+
+    /// The sound: its volume, its output device and whether it takes the device for itself.
+    fn show_audio(&mut self, ui: &mut egui::Ui) {
+        let s = &mut self.settings;
+        section(ui, "Audio");
+        egui::Grid::new("audio")
+            .num_columns(2)
+            .spacing([16.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Volume");
+                ui.add(egui::Slider::new(&mut s.volume, 0..=100).suffix("%"));
+                ui.end_row();
+                ui.label("Output device");
+                let device = &mut s.audio_device;
+                let name = |d: &str| match d {
+                    "" => "System default".to_owned(),
+                    d if self.devices.iter().any(|x| x == d) => d.to_owned(),
+                    d => format!("{d} (not connected)"),
+                };
+                egui::ComboBox::from_id_salt("audio-device")
+                    .selected_text(name(device))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(device, String::new(), name(""));
+                        for d in &self.devices {
+                            ui.selectable_value(device, d.clone(), d);
+                        }
+                    });
+                ui.end_row();
+                help(ui, AUDIO_DEVICE_HELP);
+                if cfg!(windows) {
+                    ui.label("");
+                    ui.checkbox(&mut s.audio_exclusive, "Exclusive mode");
+                    ui.end_row();
+                    help(ui, EXCLUSIVE_HELP);
+                }
+            });
     }
 
     fn show_sections(&mut self, ui: &mut egui::Ui) -> Option<Action> {
@@ -488,6 +618,7 @@ impl Panel {
                 );
                 ui.end_row();
             });
+        self.show_audio(ui);
         section(ui, "Save");
         ui.label(&self.save_line);
         ui.horizontal_wrapped(|ui| {
@@ -577,6 +708,18 @@ impl Panel {
         }
         action
     }
+}
+
+/// Report a bug, which the panel offers whenever it shows, under its buttons.
+fn show_report(ui: &mut egui::Ui) -> Option<Action> {
+    ui.add_space(12.0);
+    let pressed = ui.button(REPORT_BUTTON).clicked();
+    ui.add_space(4.0);
+    ui.scope(|ui| {
+        ui.set_max_width(440.0);
+        ui.weak(REPORT_HELP);
+    });
+    pressed.then_some(Action::ReportBug)
 }
 
 /// A section's heading.
@@ -684,6 +827,9 @@ mod tests {
             replays: "D:/Slippi/melee-hd".to_owned(),
             record_sessions: false,
             debug_level: 4,
+            volume: 35,
+            audio_device: "Speakers (USB Audio)".to_owned(),
+            audio_exclusive: true,
         }
     }
 
@@ -724,7 +870,7 @@ mod tests {
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());
@@ -760,6 +906,28 @@ mod tests {
         let mut s = Settings::default();
         s.restore("debug-level = 2\n", &Given::default());
         assert_eq!(s.debug_level, 0);
+    }
+
+    /// The audio settings come back, and the command line's exclusive mode wins; no device is
+    /// the system's default.
+    #[test]
+    fn the_audio_settings_are_kept() {
+        let mut s = Settings::default();
+        assert_eq!(
+            (s.volume, s.output()),
+            (100, melee_audio::OutputOptions::default())
+        );
+        s.restore(&picked().save(), &Given::default());
+        assert_eq!((s.volume, s.audio_exclusive), (35, true));
+        assert_eq!(s.output().device.as_deref(), Some("Speakers (USB Audio)"));
+        let mut s = Settings::default();
+        let given = Given {
+            audio_exclusive: true,
+            ..Given::default()
+        };
+        s.restore("audio-exclusive = on\naudio-device = \n", &given);
+        assert!(!s.audio_exclusive);
+        assert_eq!(s.output().device, None);
     }
 
     #[test]
