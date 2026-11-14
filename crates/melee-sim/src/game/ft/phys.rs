@@ -543,7 +543,7 @@ impl Running<'_> {
 impl Running<'_> {
     /// `ftCommon_8007F7B4`: the ground speed and horizontal velocity turned away from the way
     /// the fighter faces.
-    // Ports `ftCommon_8007F7B4`; aliased once a check reaches it.
+    #[doc(alias = "ftCommon_8007F7B4")]
     pub fn speed_away_from_facing(&mut self, gobj: GObjId) {
         let fp = self.game.fighter_mut(gobj);
         let back = fp::fneg(reg(fp.facing_dir));
