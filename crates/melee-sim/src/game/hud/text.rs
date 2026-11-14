@@ -71,52 +71,52 @@ impl Running<'_> {
         if let Some((o, class)) = gobj {
             g.world.init_user_data(o, class as u8, UserData::Text(t));
         }
-        g.sis.texts.insert(
-            t.0,
-            Text {
-                pos,
-                box_size: [box_w, box_h],
-                x14: [0.0; 4],
-                font_size: [1.0, 1.0],
-                bg_color: [0, 0, 0, 0],
-                text_color: [0xFF; 4],
-                x34: [1.0, 1.0],
-                x3c: [0.0, 0.0],
-                x44: 0,
-                x46: 0,
-                default_fitting: 0,
-                default_kerning: 0,
-                default_alignment: 0,
-                x4b: None,
-                x4c: 0,
-                hidden: 0,
-                x4e: 0,
-                font: font as u8,
-                next: None,
-                entity: gobj.map(|(o, _)| o),
-                render_callback: None,
-                sis_buffer: None,
-                x60: None,
-                alloc_data: None,
-                state_stack: None,
-                state_stack_used: 0,
-                state_stack_capacity: 0,
-                current_width: None,
-                current_height: None,
-                x78: None,
-                x80: None,
-                x88: None,
-                active_color: None,
-                x90: None,
-                x92: None,
-                x94: None,
-                x98: None,
-                fitting: None,
-                kerning: None,
-                alignment: None,
-                x9f: None,
-            },
-        );
+        let mut text = Text {
+            pos,
+            box_size: [box_w, box_h],
+            x14: [0.0; 4],
+            font_size: [1.0, 1.0],
+            bg_color: [0, 0, 0, 0],
+            text_color: [0xFF; 4],
+            x34: [1.0, 1.0],
+            x3c: [0.0, 0.0],
+            x44: 0,
+            x46: 0,
+            default_fitting: 0,
+            default_kerning: 0,
+            default_alignment: 0,
+            x4b: None,
+            x4c: 0,
+            hidden: 0,
+            x4e: 0,
+            font: font as u8,
+            next: None,
+            entity: gobj.map(|(o, _)| o),
+            render_callback: None,
+            sis_buffer: None,
+            x60: None,
+            alloc_data: None,
+            state_stack: None,
+            state_stack_used: 0,
+            state_stack_capacity: 0,
+            current_width: None,
+            current_height: None,
+            x78: None,
+            x80: None,
+            x88: None,
+            active_color: None,
+            x90: None,
+            x92: None,
+            x94: None,
+            x98: None,
+            fitting: None,
+            kerning: None,
+            alignment: None,
+            x9f: None,
+        };
+        // What the block held where the creation doesn't write.
+        g.sis.text_leftovers(t.0, &mut text);
+        g.sis.texts.insert(t.0, text);
         t
     }
 
@@ -179,8 +179,9 @@ impl Running<'_> {
         match self.game.sis.text(c).entity {
             Some(g) => {
                 gobj::free(self, g);
-                if let Some(t) = self.game.sis.texts.get_mut(&c.0) {
-                    t.entity = None;
+                match self.game.sis.texts.get_mut(&c.0) {
+                    Some(t) => t.entity = None,
+                    None => self.game.sis.set_freed_entity(c, Some(0)),
                 }
             }
             None => self.game.sis.free_text(c),
@@ -217,16 +218,7 @@ impl Running<'_> {
         }
         let s = &mut self.game.sis;
         s.first_canvas = None;
-        s.used_head = None;
-        s.free_head = Some(0);
-        s.blocks.clear();
-        s.blocks.insert(
-            0,
-            sis::Block {
-                next: None,
-                size: s.size - sis::HEADER,
-            },
-        );
+        s.reset_blocks();
         s.texts.clear();
         s.canvases.clear();
         s.buffers.clear();
@@ -400,6 +392,9 @@ impl Running<'_> {
                 }
             }
         }
+        // The arena's bytes stay in its block.
+        let g = &*self.game;
+        crate::hsd::export::with_image(|img| g.sis.lay(img, &|o| g.gobj_addr(o)));
         let b = std::mem::take(&mut self.game.sis.arena_block);
         if b != 0 {
             crate::hsd::heap::mem_free(b);
@@ -424,7 +419,7 @@ impl Running<'_> {
                 count: 0,
             },
         );
-        s.arena[buf as usize] = 0;
+        s.poke(buf, 0);
         s.reset_text(self.data, t, 0);
         let s = &mut self.game.sis;
         s.text_mut(t).sis_buffer = Some(SisPtr::Arena(buf));

@@ -200,6 +200,7 @@ impl Importer<'_> {
         };
         s.size = size;
         s.arena = (0..size).map(|i| mem.b(base + i)).collect();
+        s.known = vec![u64::MAX; size.div_ceil(64) as usize];
         s.free_head = off(base, size, mem.w(sym("free_head")));
         s.used_head = off(base, size, mem.w(sym("used_head")));
         for head in [sym("free_head"), sym("used_head")] {

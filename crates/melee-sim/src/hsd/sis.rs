@@ -104,8 +104,9 @@ pub struct Canvas {
     pub gx_priority: u8,
 }
 
-/// `HSD_Text`. The fields `HSD_SisLib_803A5ACC` leaves as the heap held them are `None` until
-/// something writes them (`HSD_SisLib_803A6368` writes all but `x88` and `x9F`).
+/// `HSD_Text`. The fields `HSD_SisLib_803A5ACC` leaves hold what its block held
+/// ([`SisLib::text_leftovers`]), `None` where the heap's image doesn't know it
+/// (`HSD_SisLib_803A6368` writes all but `x88` and `x9F`).
 #[derive(melee_derive::CloneFrom, Debug, PartialEq, melee_derive::StateEq)]
 pub struct Text {
     pub pos: Vec3,
@@ -151,13 +152,41 @@ pub struct Text {
     pub x9f: Option<u8>,
 }
 
+/// Where melee-sim knows them, a GObj's address and a place in loaded data's, for the words a
+/// text or canvas writes into its block.
+pub struct Addrs<'a> {
+    pub gobj: &'a dyn Fn(crate::hsd::gobj::GObjId) -> Option<u32>,
+    pub data: &'a dyn Fn(DataRef) -> Option<u32>,
+}
+
+impl Addrs<'_> {
+    /// A freed object's: no GObj's address (its release clears the word, or the caller writes
+    /// it), data's from the heap's image.
+    fn freed(f: impl FnOnce(&Addrs)) {
+        let data = |d: DataRef| {
+            let mut a = None;
+            super::export::with_image(|img| a = img.data_addr(d));
+            a
+        };
+        f(&Addrs {
+            gobj: &|_| None,
+            data: &data,
+        });
+    }
+}
+
 /// The text system's state.
 #[derive(melee_derive::CloneFrom, Debug, Default, melee_derive::StateEq)]
 pub struct SisLib {
     /// The arena's size (`HSD_SisLib_804D7968`); no arena before the first scene's setup.
     pub size: u32,
-    /// The arena's bytes, as the strings and state stacks in it hold them.
+    /// The arena's bytes, as the strings and state stacks in it hold them, the blocks'
+    /// headers as written, and each freed object's bytes as it held them.
     pub arena: Vec<u8>,
+    /// Which of [`SisLib::arena`]'s bytes are known, a bit each (64 to a word): the block's
+    /// bytes as the heap's image knew them when the scene took it, and everything written since
+    /// but the words melee-sim can't name (a text's GObj, a place in data no file holds).
+    pub known: Vec<u64>,
     /// `free_head` and `used_head`: block header offsets.
     pub free_head: Option<u32>,
     pub used_head: Option<u32>,
@@ -235,6 +264,303 @@ impl SisLib {
 
     fn set_byte(&mut self, at: u32, v: u8) {
         self.arena[at as usize] = v;
+        self.mark(at, 1, true);
+    }
+
+    /// Marks `len` bytes from `at` known or unknown.
+    fn mark(&mut self, at: u32, len: u32, known: bool) {
+        for a in at..at + len {
+            let (w, b) = ((a / 64) as usize, a % 64);
+            if known {
+                self.known[w] |= 1 << b;
+            } else {
+                self.known[w] &= !(1 << b);
+            }
+        }
+    }
+
+    /// Whether the arena's byte at `at` is known.
+    pub fn is_known(&self, at: u32) -> bool {
+        self.known[(at / 64) as usize] >> (at % 64) & 1 != 0
+    }
+
+    /// The arena's `N` bytes at `at`, where every one is known.
+    fn known_bytes<const N: usize>(&self, at: u32) -> Option<[u8; N]> {
+        (at..at + N as u32)
+            .all(|a| self.is_known(a))
+            .then(|| core::array::from_fn(|i| self.arena[at as usize + i]))
+    }
+
+    /// A byte written into the arena from outside its objects (a freed text's `hidden`, which
+    /// the Star Fox talk window writes).
+    pub fn poke(&mut self, at: u32, v: u8) {
+        self.set_byte(at, v);
+    }
+
+    /// A word written into the arena: known, or unknown (a pointer melee-sim can't name).
+    fn put_word(&mut self, at: u32, w: Option<u32>) {
+        match w {
+            Some(w) => {
+                self.arena[at as usize..at as usize + 4].copy_from_slice(&w.to_be_bytes());
+                self.mark(at, 4, true);
+            }
+            None => self.mark(at, 4, false),
+        }
+    }
+
+    /// An arena offset as the address the original holds (null for none): unknown where no
+    /// allocator model gives the arena's block.
+    fn addr_of(&self, off: Option<u32>) -> Option<u32> {
+        match off {
+            None => Some(0),
+            Some(o) => (self.arena_block != 0).then(|| self.arena_block + o),
+        }
+    }
+
+    /// A block's header, kept and written into the arena where the original writes it.
+    fn set_block(&mut self, o: u32, b: Block) {
+        self.blocks.insert(o, b);
+        let next = self.addr_of(b.next);
+        let data = self.addr_of(Some(o + HEADER));
+        self.put_word(o, next);
+        self.put_word(o + 4, data);
+        self.put_word(o + 8, Some(b.size));
+    }
+
+    fn set_next(&mut self, o: u32, next: Option<u32>) {
+        let b = Block {
+            next,
+            ..self.block(o)
+        };
+        self.set_block(o, b);
+    }
+
+    /// A string pointer's word.
+    fn ptr_word(&self, p: Option<SisPtr>, addrs: &Addrs) -> Option<u32> {
+        match p {
+            None => Some(0),
+            Some(SisPtr::Arena(a)) => self.addr_of(Some(a)),
+            Some(SisPtr::Static(a)) => Some(a),
+            Some(SisPtr::Data(d)) => (addrs.data)(d),
+        }
+    }
+
+    /// A byte that may be unknown.
+    fn put_byte(&mut self, at: u32, v: Option<u8>) {
+        match v {
+            Some(v) => self.set_byte(at, v),
+            None => self.mark(at, 1, false),
+        }
+    }
+
+    /// A text's bytes, as its block keeps them, its GObj's address from `gobj` (unknown where
+    /// that gives none).
+    fn write_text(&mut self, at: u32, t: &Text, addrs: &Addrs) {
+        let f = |v: f32| Some(v.to_bits());
+        let f2 = |v: Option<[f32; 2]>| [v.map(|v| v[0].to_bits()), v.map(|v| v[1].to_bits())];
+        let [x78a, x78b] = f2(t.x78);
+        let [x80a, x80b] = f2(t.x80);
+        let half = |a: u16, b: u16| Some(u32::from(a) << 16 | u32::from(b));
+        let words: [(u32, Option<u32>); 31] = [
+            (0, f(t.pos.x)),
+            (4, f(t.pos.y)),
+            (8, f(t.pos.z)),
+            (0xC, f(t.box_size[0])),
+            (0x10, f(t.box_size[1])),
+            (0x14, f(t.x14[0])),
+            (0x18, f(t.x14[1])),
+            (0x1C, f(t.x14[2])),
+            (0x20, f(t.x14[3])),
+            (0x24, f(t.font_size[0])),
+            (0x28, f(t.font_size[1])),
+            (0x2C, Some(u32::from_be_bytes(t.bg_color))),
+            (0x30, Some(u32::from_be_bytes(t.text_color))),
+            (0x34, f(t.x34[0])),
+            (0x38, f(t.x34[1])),
+            (0x3C, f(t.x3c[0])),
+            (0x40, f(t.x3c[1])),
+            (0x44, half(t.x44, t.x46)),
+            (0x50, self.addr_of(t.next.map(|n| n.0))),
+            (0x54, t.entity.map_or(Some(0), addrs.gobj)),
+            (0x58, Some(t.render_callback.unwrap_or(0))),
+            (0x5C, self.ptr_word(t.sis_buffer, addrs)),
+            (0x60, t.x60.and_then(|p| self.ptr_word(p, addrs))),
+            (0x64, self.addr_of(t.alloc_data)),
+            (0x68, self.addr_of(t.state_stack)),
+            (0x6C, half(t.state_stack_used, t.state_stack_capacity)),
+            (0x70, t.current_width.map(f32::to_bits)),
+            (0x74, t.current_height.map(f32::to_bits)),
+            (0x78, x78a),
+            (0x7C, x78b),
+            (0x80, x80a),
+        ];
+        for (o, w) in words {
+            self.put_word(at + o, w);
+        }
+        for (o, w) in [
+            (0x84, x80b),
+            (0x88, t.x88.map(f32::to_bits)),
+            (0x8C, t.active_color.map(u32::from_be_bytes)),
+            (0x94, t.x94),
+            (0x98, t.x98),
+        ] {
+            self.put_word(at + o, w);
+        }
+        for (o, v) in [
+            (0x48, Some(t.default_fitting)),
+            (0x49, Some(t.default_kerning)),
+            (0x4A, Some(t.default_alignment)),
+            (0x4B, t.x4b),
+            (0x4C, Some(t.x4c)),
+            (0x4D, Some(t.hidden)),
+            (0x4E, Some(t.x4e)),
+            (0x4F, Some(t.font)),
+            (0x90, t.x90.map(|v| (v >> 8) as u8)),
+            (0x91, t.x90.map(|v| v as u8)),
+            (0x92, t.x92.map(|v| (v >> 8) as u8)),
+            (0x93, t.x92.map(|v| v as u8)),
+            (0x9C, t.fitting),
+            (0x9D, t.kerning),
+            (0x9E, t.alignment),
+            (0x9F, t.x9f),
+        ] {
+            self.put_byte(at + o, v);
+        }
+    }
+
+    /// A canvas's bytes, its camera's GObj's address from `gobj`.
+    fn write_canvas(&mut self, at: u32, c: &Canvas, addrs: &Addrs) {
+        let next = self.addr_of(c.next.map(|n| n.0));
+        self.put_word(at, next);
+        self.put_word(at + 4, c.gobj.map_or(Some(0), addrs.gobj));
+        self.put_word(
+            at + 8,
+            Some(u32::from(c.classifier) << 16 | u32::from(c.font)),
+        );
+        self.put_word(
+            at + 0xC,
+            Some(u32::from_be_bytes([
+                c.p_link,
+                c.p_priority,
+                c.gx_link,
+                c.gx_priority,
+            ])),
+        );
+    }
+
+    /// A freed string buffer's bytes.
+    fn write_buffer(&mut self, at: u32, b: &Buffer) {
+        let (end, data) = (self.addr_of(Some(b.end)), self.addr_of(b.data));
+        self.put_word(at, end);
+        self.put_word(at + 4, data);
+        self.put_word(at + 8, Some(b.size));
+        self.put_word(at + 0xC, Some(b.count));
+    }
+
+    /// The fields `HSD_SisLib_803A5ACC` leaves of a new text at `at`, as its block holds them
+    /// where known (none elsewhere).
+    pub fn text_leftovers(&self, at: u32, t: &mut Text) {
+        let b = |o: u32| self.known_bytes::<1>(at + o).map(|b| b[0]);
+        let h = |o: u32| self.known_bytes::<2>(at + o).map(u16::from_be_bytes);
+        let w = |o: u32| self.known_bytes::<4>(at + o).map(u32::from_be_bytes);
+        let f = |o: u32| w(o).map(f32::from_bits);
+        let f2 = |o: u32| Some([f(o)?, f(o + 4)?]);
+        t.x4b = b(0x4B);
+        // A string pointer's word: null, into the arena, a static buffer or a font's strings
+        // loaded now (unknown elsewhere: a freed file's place names no data; a layout reading
+        // it stops by name).
+        t.x60 = w(0x60).and_then(|p| match p {
+            0 => Some(None),
+            p if self.arena_block != 0 && p.wrapping_sub(self.arena_block) < self.size => {
+                Some(Some(SisPtr::Arena(p - self.arena_block)))
+            }
+            p if STATIC_STRINGS.iter().any(|&(a, n)| p.wrapping_sub(a) < n) => {
+                Some(Some(SisPtr::Static(p)))
+            }
+            p => {
+                let mut d = None;
+                super::export::with_image(|img| d = img.data_at(p));
+                d.filter(|d| self.font_archives.contains(&Some(d.archive)))
+                    .map(|d| Some(SisPtr::Data(d)))
+            }
+        });
+        t.current_width = f(0x70);
+        t.current_height = f(0x74);
+        t.x78 = f2(0x78);
+        t.x80 = f2(0x80);
+        t.x88 = f(0x88);
+        t.active_color = w(0x8C).map(u32::to_be_bytes);
+        t.x90 = h(0x90);
+        t.x92 = h(0x92);
+        t.x94 = w(0x94);
+        t.x98 = w(0x98);
+        t.fitting = b(0x9C);
+        t.kerning = b(0x9D);
+        t.alignment = b(0x9E);
+        t.x9f = b(0x9F);
+    }
+
+    /// The scene's heap gives the arena its block (`HSD_SisLib_803A6048`'s `HSD_MemAlloc`):
+    /// its bytes what the heap's image knows there, under the free block's header.
+    pub fn take_block(&mut self, data: &melee_data::archive::Archives, block: u32) {
+        self.arena_block = block;
+        if let Some((bytes, known)) = crate::game::leftovers::bytes_known(data, block, self.size) {
+            self.arena.copy_from_slice(&bytes);
+            for (i, k) in known.into_iter().enumerate() {
+                if k {
+                    self.mark(i as u32, 1, true);
+                }
+            }
+        }
+        let b = self.block(0);
+        self.set_block(0, b);
+    }
+
+    /// The arena's bytes laid into the heap's image as its block goes back with the scene's
+    /// heap or by `HSD_SisLib_803A5FBC`: what the heap holds there, which a later object takes
+    /// as leftovers, the live texts, canvases and strings' buffers as they stand (their GObjs'
+    /// addresses from `gobj`).
+    pub fn lay(
+        &self,
+        img: &mut super::image::Image,
+        gobj: &dyn Fn(crate::hsd::gobj::GObjId) -> Option<u32>,
+    ) {
+        if self.arena_block == 0 {
+            return;
+        }
+        let mut s = SisLib {
+            arena: self.arena.clone(),
+            known: self.known.clone(),
+            arena_block: self.arena_block,
+            size: self.size,
+            ..SisLib::default()
+        };
+        let places = &*img;
+        let data = |d: DataRef| places.data_addr(d);
+        let addrs = Addrs { gobj, data: &data };
+        for (&at, t) in &self.texts {
+            for c in self.cursor_records(TextId(at)) {
+                s.mark(c, 4, false);
+            }
+            s.write_text(at, t, &addrs);
+        }
+        for (&at, c) in &self.canvases {
+            s.write_canvas(at, c, &addrs);
+        }
+        for (&at, b) in &self.buffers {
+            s.write_buffer(at, b);
+        }
+        let known = (0..self.size).map(|a| s.is_known(a)).collect();
+        super::export::Lay::over(self.arena_block, s.arena, known).put(img);
+    }
+
+    /// A freed text's `entity` word, which its GObj's release wrote and the text library's
+    /// caller then clears (`HSD_SisLib_803A5D30`, `HSD_SisLib_803A5CC4`), or the GObj's address
+    /// where its release freed the text alone.
+    pub fn set_freed_entity(&mut self, t: TextId, word: Option<u32>) {
+        if self.arena_block != 0 && !self.texts.contains_key(&t.0) {
+            self.put_word(t.0 + 0x54, word);
+        }
     }
 
     /// Sets the arena up, `HSD_SisLib_803A6048`: one free block, no texts, canvases or
@@ -244,10 +570,12 @@ impl SisLib {
     pub fn init(&mut self, size: u32) {
         self.size = size;
         self.arena = vec![0; size as usize];
+        self.known = vec![0; size.div_ceil(64) as usize];
+        self.arena_block = 0;
         self.used_head = None;
         self.free_head = Some(0);
         self.blocks.clear();
-        self.blocks.insert(
+        self.set_block(
             0,
             Block {
                 next: None,
@@ -262,9 +590,17 @@ impl SisLib {
         self.font_archives = [None; FONTS];
         self.font_tables = [None; FONTS];
         self.font_blocks = [None; FONTS];
-        self.arena_block = 0;
         self.saved_cursors.clear();
         self.table_overrides.clear();
+    }
+
+    /// The whole arena one free block again, its header written (`HSD_SisLib_803A5E70`'s end).
+    pub fn reset_blocks(&mut self) {
+        self.used_head = None;
+        self.free_head = Some(0);
+        self.blocks.clear();
+        let size = self.size - HEADER;
+        self.set_block(0, Block { next: None, size });
     }
 
     /// The byte of a static string buffer at `a`.
@@ -461,10 +797,6 @@ impl SisLib {
         self.blocks[&b]
     }
 
-    fn block_mut(&mut self, b: u32) -> &mut Block {
-        self.blocks.get_mut(&b).expect("a block header")
-    }
-
     /// The smallest free block that fits (the first exact fit), split if it is the free
     /// list's head, moved to the end of the used list; returns its data's offset,
     /// `HSD_SisLib_Alloc`.
@@ -509,7 +841,7 @@ impl SisLib {
                 "the original's assertion failed: Memory Empty"
             );
             let at = head + HEADER + size;
-            self.blocks.insert(
+            self.set_block(
                 at,
                 Block {
                     next: old.next,
@@ -517,27 +849,25 @@ impl SisLib {
                 },
             );
             self.free_head = Some(at);
-            self.block_mut(best).size = size;
+            let b = Block {
+                size,
+                ..self.block(best)
+            };
+            self.set_block(best, b);
         } else {
             let mut f = head;
             while self.block(f).next != Some(best) {
                 f = self.block(f).next.expect("the block on the free list");
             }
             let next = self.block(best).next;
-            self.block_mut(f).next = next;
+            self.set_next(f, next);
         }
-        self.block_mut(best).next = None;
+        self.set_next(best, None);
         if let Some(t) = tail {
-            self.block_mut(t).next = Some(best);
+            self.set_next(t, Some(best));
         }
         if self.used_head.is_none() {
             self.used_head = Some(best);
-        }
-        // The heap's image doesn't lay the arena out: what a new block's owner writes is
-        // unknown to it, over whatever it knew there (a freed text's byte, `TEXT_HIDDEN`).
-        if self.arena_block != 0 {
-            let at = self.arena_block + best + HEADER;
-            super::heap::with(|h| h.image.claim(at, at + size, super::image::HEAP_BLOCK));
         }
         best + HEADER
     }
@@ -556,23 +886,33 @@ impl SisLib {
             cur = self.block(c).next;
         }
         let Some(c) = cur else { return };
-        self.texts.remove(&data);
-        self.canvases.remove(&data);
-        self.buffers.remove(&data);
+        // The object's bytes stay in its block.
+        if let Some(t) = self.texts.remove(&data) {
+            Addrs::freed(|a| self.write_text(data, &t, a));
+        }
+        if let Some(cv) = self.canvases.remove(&data) {
+            Addrs::freed(|a| self.write_canvas(data, &cv, a));
+        }
+        if let Some(b) = self.buffers.remove(&data) {
+            self.write_buffer(data, &b);
+        }
         let cb = self.block(c);
         let next_used = cb.next;
         let head = self.free_head;
         if head == Some(c + HEADER + cb.size) {
             let h = self.block(head.unwrap());
             match prev {
-                Some(p) => self.block_mut(p).next = next_used,
+                Some(p) => self.set_next(p, next_used),
                 None => self.used_head = next_used,
             }
             self.free_head = Some(c);
-            *self.block_mut(c) = Block {
-                next: h.next,
-                size: h.size + cb.size + HEADER,
-            };
+            self.set_block(
+                c,
+                Block {
+                    next: h.next,
+                    size: h.size + cb.size + HEADER,
+                },
+            );
             return;
         }
         let mut tail = None;
@@ -582,13 +922,13 @@ impl SisLib {
             f = self.block(x).next;
         }
         if let Some(t) = tail {
-            self.block_mut(t).next = Some(c);
+            self.set_next(t, Some(c));
         }
         match prev {
-            Some(p) => self.block_mut(p).next = next_used,
+            Some(p) => self.set_next(p, next_used),
             None => self.used_head = next_used,
         }
-        self.block_mut(c).next = None;
+        self.set_next(c, None);
     }
 
     pub fn text(&self, t: TextId) -> &Text {
@@ -620,6 +960,7 @@ impl SisLib {
                     Some(l) => self.text_mut(l).next = next,
                     None => self.first_text = next,
                 }
+                self.forget_cursors(c);
                 let tx = self.text(c).clone();
                 if let Some(a) = tx.alloc_data {
                     if let Some(d) = self.buffers[&a].data {
@@ -642,6 +983,7 @@ impl SisLib {
     /// rest of its state reset, with a fresh, cleared state stack, `HSD_SisLib_803A6368`.
     #[doc(alias = "HSD_SisLib_803A6368")]
     pub fn reset_text(&mut self, data: &Archives, t: TextId, index: i32) {
+        self.forget_cursors(t);
         let font = usize::from(self.text(t).font);
         if self.font_tables[font].is_some() {
             let e = self.table_entry(data, font, index);
@@ -966,6 +1308,14 @@ impl SisLib {
             .into_iter()
             .map(|o| st + o)
             .collect()
+    }
+
+    /// A text's state stack's saved cursors, which hold tokens rather than the original's
+    /// pointers ([`SisLib::saved_cursors`]): unknown bytes once the stack goes.
+    fn forget_cursors(&mut self, t: TextId) {
+        for at in self.cursor_records(t) {
+            self.mark(at, 4, false);
+        }
     }
 
     /// The arena's bytes from `at`, for checks.
@@ -1821,5 +2171,171 @@ mod encode_tests {
     fn a_lead_byte_at_the_end_stops() {
         let mut out = [0u8; 0x200];
         encode(&mut out, b"A\x82\0");
+    }
+}
+
+#[cfg(test)]
+mod arena_tests {
+    use super::*;
+
+    const BLOCK: u32 = 0x8100_0000;
+
+    /// An arena whose block's bytes the heap's image knew (zeros) when the scene took it.
+    fn arena() -> SisLib {
+        let mut s = SisLib::default();
+        s.init(0x400);
+        s.arena_block = BLOCK;
+        s.mark(0, 0x400, true);
+        let b = s.block(0);
+        s.set_block(0, b);
+        s
+    }
+
+    /// A text as `HSD_SisLib_803A5ACC` makes it, its leftover fields unknown.
+    fn made() -> Text {
+        Text {
+            pos: Vec3::new(1.0, 2.0, 0.0),
+            box_size: [100.0, 20.0],
+            x14: [0.0; 4],
+            font_size: [1.0, 1.0],
+            bg_color: [0; 4],
+            text_color: [0xFF; 4],
+            x34: [1.0, 1.0],
+            x3c: [0.0, 0.0],
+            x44: 0,
+            x46: 0,
+            default_fitting: 0,
+            default_kerning: 0,
+            default_alignment: 0,
+            x4b: None,
+            x4c: 0,
+            hidden: 0,
+            x4e: 0,
+            font: 0,
+            next: None,
+            entity: None,
+            render_callback: None,
+            sis_buffer: None,
+            x60: None,
+            alloc_data: None,
+            state_stack: None,
+            state_stack_used: 0,
+            state_stack_capacity: 0,
+            current_width: None,
+            current_height: None,
+            x78: None,
+            x80: None,
+            x88: None,
+            active_color: None,
+            x90: None,
+            x92: None,
+            x94: None,
+            x98: None,
+            fitting: None,
+            kerning: None,
+            alignment: None,
+            x9f: None,
+        }
+    }
+
+    /// A text the display pass laid out: what its block keeps once it's freed.
+    fn laid_out() -> Text {
+        Text {
+            x4b: Some(0),
+            x60: Some(Some(SisPtr::Arena(0x123))),
+            current_width: Some(3.5),
+            current_height: Some(0.0),
+            x78: Some([0.0, 0.0]),
+            x80: Some([0.56, 0.6]),
+            x88: Some(0.75),
+            active_color: Some([1, 2, 3, 4]),
+            x90: Some(5),
+            x92: Some(6),
+            x94: Some(0),
+            x98: Some(8),
+            fitting: Some(1),
+            kerning: Some(1),
+            alignment: Some(2),
+            x9f: Some(9),
+            ..made()
+        }
+    }
+
+    /// A new text over a freed one's block takes its fields `HSD_SisLib_803A5ACC` doesn't
+    /// write from the freed text's bytes, `x88` and `x9F` among them.
+    #[test]
+    fn a_new_text_takes_a_freed_ones_fields() {
+        let mut s = arena();
+        let t = s.alloc(TEXT_SIZE as i32);
+        s.texts.insert(t, laid_out());
+        s.free(t);
+        assert_eq!(s.alloc(TEXT_SIZE as i32), t);
+        let mut n = made();
+        s.text_leftovers(t, &mut n);
+        let old = laid_out();
+        assert_eq!(
+            (n.x60, n.x88, n.x9f, n.x80, n.current_width, n.active_color),
+            (
+                old.x60,
+                old.x88,
+                old.x9f,
+                old.x80,
+                old.current_width,
+                old.active_color
+            )
+        );
+        assert_eq!(
+            (n.x90, n.x92, n.x98, n.alignment),
+            (Some(5), Some(6), Some(8), Some(2))
+        );
+    }
+
+    /// A freed text's GObj word is unknown until its caller names it.
+    #[test]
+    fn a_freed_texts_gobj_word() {
+        let mut s = arena();
+        let t = s.alloc(TEXT_SIZE as i32);
+        s.texts.insert(
+            t,
+            Text {
+                entity: Some(crate::hsd::gobj::GObjId(3)),
+                ..made()
+            },
+        );
+        s.free(t);
+        assert!(!s.is_known(t + 0x54));
+        s.set_freed_entity(TextId(t), Some(0x80C0_1234));
+        assert_eq!(
+            s.known_bytes::<4>(t + 0x54),
+            Some(0x80C0_1234u32.to_be_bytes())
+        );
+    }
+
+    /// The arena laid out as its block goes back holds its live texts as they stand.
+    #[test]
+    fn the_arena_lays_out_its_live_texts() {
+        let mut s = arena();
+        let t = s.alloc(TEXT_SIZE as i32);
+        s.texts.insert(
+            t,
+            Text {
+                entity: Some(crate::hsd::gobj::GObjId(3)),
+                ..laid_out()
+            },
+        );
+        let mut img = super::super::image::Image::power_on();
+        s.lay(&mut img, &|_| Some(0x80C0_1234));
+        let data = Archives::default();
+        let word = |at: u32| {
+            let (b, k) = img.bytes(&data, BLOCK + at, 4);
+            k.iter()
+                .all(|&k| k)
+                .then(|| u32::from_be_bytes(b.try_into().unwrap()))
+        };
+        assert_eq!(word(t + 0x88), Some(0.75f32.to_bits()));
+        assert_eq!(word(t + 0x54), Some(0x80C0_1234));
+        assert_eq!(word(t + 0x60), Some(BLOCK + 0x123));
+        // The block's header: no next block, its data, its size.
+        assert_eq!(word(t - HEADER + 4), Some(BLOCK + t));
     }
 }
