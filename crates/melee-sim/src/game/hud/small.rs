@@ -622,7 +622,6 @@ mod tests {
         const CREATE_SCORE: u32 = 0x802F_F364;
         assert_eq!(SCORE_TEXT_RENDER, 0x802F_F360);
         assert_eq!(SCORE_TEXT_RENDER + 4, CREATE_SCORE);
-        let empty: fn(&mut Running<'_>) = Running::score_text_render;
-        let _ = empty;
+        let _ = Running::score_text_render;
     }
 }

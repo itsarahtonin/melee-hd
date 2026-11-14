@@ -826,8 +826,8 @@ pub const MISSING: &[Gap] = &[
     },
     // The modes' own code.
     Gap {
-        what: "Classic's mode: Snag the Trophies without a coin, the units' held functions",
-        covers: &["grFigureGet_80219898 with no coin", "melee/gm/gm_1832"],
+        what: "Classic's mode: Snag the Trophies without a coin",
+        covers: &["grFigureGet_80219898 with no coin"],
         // Not Classic (task 22's debug round): its PATHS entry's unreached says why.
         modes: &[DB],
     },
@@ -914,19 +914,9 @@ pub const MISSING: &[Gap] = &[
         // and 6 (gm/intro.rs, gm/intro_horde.rs) and the trophy fall's 7.
         modes: &[DB],
     },
-    // The ends of a run.
-    Gap {
-        what: "the game overs' coming soon and the game over mode's Adventure load",
-        covers: &["melee/gm/gm_19EF"],
-        // Not Classic or Adventure (the intros' eighth round): gm_19EF's unported functions
-        // are the coming soon scene's (GS_COMING_SOON), which only the modes' coming soon
-        // states enter, Classic's 104 and Adventure's 0x68 (and All-Star's 0x68, and the debug
-        // mode's state 8), and those two are entered only after a last state whose exit always
-        // names the next mode (gmClassic_801B3F18 and gm_801B4408 in ledger/dead.txt say how).
-        // Not All-Star (task 23's third round): its 0x68 likewise (gm_801B607C in
-        // ledger/dead.txt).
-        modes: &[DB],
-    },
+    // The ends of a run: gm_19EF's last unaccounted function, coming soon's process, is dead
+    // (ledger/dead.txt, fn_801A0B60), as its scene is.
+
     // The developer setting's debug routes.
     Gap {
         what: "All-Star's intro with a character past its place table (the debug menu's AllStar Enemy past its 28th choice)",
