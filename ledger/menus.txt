@@ -5,5 +5,3 @@
 # One per line: NAME (or a unit)<TAB>gated|unreached|unchecked<TAB>why. gated: behind the
 # menus' gates (menus_audit::GATES); unreached: no path from power-on reaches it, and why;
 # unchecked: ported, its alias waiting for a check. Debug code is ledger/deferred.txt's.
-melee/gm/gm_1832	gated	the single-player modes', which only the 1P list's gated entries lead to
-melee/gm/gm_19EF	gated	the single-player modes', which only the 1P list's gated entries lead to
