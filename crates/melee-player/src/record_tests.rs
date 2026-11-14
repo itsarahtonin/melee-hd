@@ -5,9 +5,11 @@
 //! again, frame for frame. Skips without `SSBM_DISC`.
 
 use melee_data::disc::Disc;
+use melee_sim::game::gm::Unlocks;
 use melee_sim::game::gm::vs_mode::GamePrefs;
 use melee_sim::game::record::{self, Setup};
 use melee_sim::game::roster;
+use melee_sim::game::state::Rules;
 use melee_sim::game::vs_match::{Player, Settings};
 use melee_sim::input::pad::PadStatus;
 use melee_sim::state_eq::StateEq;
@@ -119,106 +121,151 @@ fn play(session: &mut Session, limit: u32, pads: impl Fn(u32) -> [PadStatus; 4])
     melee_slippi::write::recording(r, std::time::UNIX_EPOCH)
 }
 
+/// Saves `s`'s match's recording through the session's own saving, as the player's are, and
+/// plays it back as the player plays a replay, recording it again: the two recordings, and the
+/// settings it played back with. `out` names a variable that keeps a copy of the first, for
+/// Slippi's tools to read.
+fn record_and_play_back(disc: &Disc, s: &Settings, out: &str) -> (Replay, Replay, Settings) {
+    // Without a pause: playback doesn't pause, so the frame starts' scene frame counts, which
+    // count paused frames, would differ after one. The session saves its recording to a folder
+    // of its own when it ends, as the player's do.
+    let dir =
+        std::env::temp_dir().join(format!("melee-hd-record-test-{out}-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    let mut session = start(disc, s, None);
+    session.recording = Some(crate::recording::Recording::new(dir.to_str()));
+    let made = play(&mut session, 6000, |t| pads(t, false));
+    drop(session);
+    let saved: Vec<_> = std::fs::read_dir(&dir)
+        .expect("the replays folder")
+        .map(|e| e.expect("an entry").path())
+        .collect();
+    assert_eq!(saved.len(), 1, "{saved:?}");
+    let name = saved[0].file_name().unwrap().to_string_lossy().into_owned();
+    assert!(
+        name.starts_with("Game_") && name.ends_with(".slp"),
+        "{name}"
+    );
+    let first = std::fs::read(&saved[0]).expect("the saved replay");
+    std::fs::remove_dir_all(&dir).expect("the folder goes");
+    if let Some(out) = std::env::var_os(out) {
+        std::fs::write(out, &first).expect("the copy written");
+    }
+    assert_eq!(
+        melee_slippi::replay::raw_events(&first).unwrap(),
+        melee_slippi::replay::raw_events(&made).unwrap()
+    );
+    let original = Replay::parse(&first).expect("the recording parses");
+    assert_eq!(original.version, record::VERSION);
+    assert!(original.game_ended);
+    // Played back as the player plays a replay: at a drive's pace, and without the allocator
+    // model, which the match of the player's own ran without (it gives the motion state's
+    // first word, which holds a GObj in some states, its address).
+    let mut again = Settings::from_replay(&melee_slippi::start(&original)).expect("its settings");
+    again.disc = s.disc;
+    again.heap = None;
+    again.record = Some(melee_slippi::write::setup(&original));
+    let second = play(
+        &mut start(disc, &again, Some(original.clone())),
+        6000,
+        |_| [PadStatus::default(); 4],
+    );
+    let ours = Replay::parse(&second).expect("the second recording parses");
+    // The game start differs only in the scene: the VS mode's match, against playback's.
+    let start_of = |r: &Replay| {
+        r.events
+            .iter()
+            .find(|e| e.command == event::GAME_START)
+            .expect("a game start")
+            .payload
+            .clone()
+    };
+    let (a, b) = (start_of(&original), start_of(&ours));
+    let differ: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
+    assert_eq!(differ, [0x1A2, 0x1A3], "the game starts differ");
+    assert_eq!((a[0x1A2], a[0x1A3]), (2, 2));
+    assert_eq!((b[0x1A2], b[0x1A3]), (1, 14));
+    // Every other event, in order, but the pre-frame updates' physical buttons and triggers:
+    // playback injects the processed inputs, and the controllers it polls are at rest (as
+    // `ssbm_slippi::compare` leaves them out).
+    let frames = |r: &Replay| {
+        r.events
+            .iter()
+            .filter(|e| e.command != event::GAME_START)
+            .map(|e| {
+                let mut e = e.clone();
+                if e.command == event::PRE_FRAME {
+                    e.payload[0x30..0x3A].fill(0);
+                }
+                e
+            })
+            .collect::<Vec<_>>()
+    };
+    let (a, b) = (frames(&original), frames(&ours));
+    if let Some(i) = (0..a.len().min(b.len())).find(|&i| a[i] != b[i]) {
+        let (x, y) = (&a[i].payload, &b[i].payload);
+        let at = (0..x.len().min(y.len())).find(|&j| x[j] != y[j]);
+        panic!(
+            "event {i} (command {:#04X}, frame {}) differs at payload offset {at:#x?}: {:02X?} against {:02X?}",
+            a[i].command,
+            i32::from_be_bytes(x[0..4].try_into().unwrap()),
+            at.map(|j| &x[j..(j + 4).min(x.len())]),
+            at.map(|j| &y[j..(j + 4).min(y.len())])
+        );
+    }
+    assert_eq!(a.len(), b.len(), "the recordings have different lengths");
+    let frames_seen = original.frames.len();
+    assert!(frames_seen > 2000, "{frames_seen} frames");
+    (original, ours, again)
+}
+
+/// A Vanilla match's recording plays back, with the unlocks it read, which its metadata
+/// carries: a save with nothing unlocked, not Slippi's everything (`RECORD_TEST_OUT=FILE` keeps
+/// a copy).
 #[test]
 fn a_recording_plays_back() {
     crate::on_game_stack(|| {
         let Some(disc) = disc() else { return };
         melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        let unlocks = Unlocks {
+            language: melee_sim::game::gm::LANG_US,
+            ..Unlocks::default()
+        };
         let s = Settings {
             record: Some(Setup::vanilla()),
+            unlocks,
             ..settings()
         };
-        // Without a pause: playback doesn't pause, so the frame starts' scene frame counts, which
-        // count paused frames, would differ after one. The session saves its recording to a folder
-        // of its own when it ends, as the player's do.
-        let dir = std::env::temp_dir().join(format!("melee-hd-record-test-{}", std::process::id()));
-        let _ = std::fs::remove_dir_all(&dir);
-        let mut session = start(&disc, &s, None);
-        session.recording = Some(crate::recording::Recording::new(dir.to_str()));
-        let made = play(&mut session, 6000, |t| pads(t, false));
-        drop(session);
-        let saved: Vec<_> = std::fs::read_dir(&dir)
-            .expect("the replays folder")
-            .map(|e| e.expect("an entry").path())
-            .collect();
-        assert_eq!(saved.len(), 1, "{saved:?}");
-        let name = saved[0].file_name().unwrap().to_string_lossy().into_owned();
-        assert!(
-            name.starts_with("Game_") && name.ends_with(".slp"),
-            "{name}"
-        );
-        let first = std::fs::read(&saved[0]).expect("the saved replay");
-        std::fs::remove_dir_all(&dir).expect("the folder goes");
-        // `RECORD_TEST_OUT=FILE` keeps a copy, for Slippi's tools to read.
-        if let Some(out) = std::env::var_os("RECORD_TEST_OUT") {
-            std::fs::write(out, &first).expect("RECORD_TEST_OUT written");
-        }
-        assert_eq!(
-            melee_slippi::replay::raw_events(&first).unwrap(),
-            melee_slippi::replay::raw_events(&made).unwrap()
-        );
-        let original = Replay::parse(&first).expect("the recording parses");
-        assert_eq!(original.version, record::VERSION);
-        assert!(original.game_ended);
-        // Played back as the player plays a replay: at a drive's pace, and without the allocator
-        // model, which the match of the player's own ran without (it gives the motion state's
-        // first word, which holds a GObj in some states, its address).
-        let mut again =
-            Settings::from_replay(&melee_slippi::start(&original)).expect("its settings");
-        again.disc = s.disc;
-        again.heap = None;
-        again.record = Some(melee_slippi::write::setup(&original));
-        let second = play(
-            &mut start(&disc, &again, Some(original.clone())),
-            6000,
-            |_| [PadStatus::default(); 4],
-        );
-        let ours = Replay::parse(&second).expect("the second recording parses");
-        // The game start differs only in the scene: the VS mode's match, against playback's.
-        let start_of = |r: &Replay| {
-            r.events
-                .iter()
-                .find(|e| e.command == event::GAME_START)
-                .expect("a game start")
-                .payload
-                .clone()
+        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_OUT");
+        assert_eq!(original.unlocks, Some(unlocks));
+        assert_eq!(again.unlocks, unlocks);
+        assert_eq!(ours.unlocks, Some(unlocks));
+        assert!(original.gecko_codes.is_empty());
+    });
+}
+
+/// A match under the Slippi ruleset records Slippi 3.19.1's code list as melee-hd runs it, which
+/// playback reads as the rules the match ran, and its recording plays back in Slippi's float
+/// mode, recording the same again; its metadata has no unlocks, which playback's codes give
+/// (`RECORD_TEST_SLIPPI_OUT=FILE` keeps a copy).
+#[test]
+fn a_slippi_recording_plays_back() {
+    crate::on_game_stack(|| {
+        let Some(disc) = disc() else { return };
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Slippi);
+        let s = Settings {
+            record: Some(Setup::slippi()),
+            rules: Rules::slippi_online(),
+            ..settings()
         };
-        let (a, b) = (start_of(&original), start_of(&ours));
-        let differ: Vec<usize> = (0..a.len()).filter(|&i| a[i] != b[i]).collect();
-        assert_eq!(differ, [0x1A2, 0x1A3], "the game starts differ");
-        assert_eq!((a[0x1A2], a[0x1A3]), (2, 2));
-        assert_eq!((b[0x1A2], b[0x1A3]), (1, 14));
-        // Every other event, in order, but the pre-frame updates' physical buttons and triggers:
-        // playback injects the processed inputs, and the controllers it polls are at rest (as
-        // `ssbm_slippi::compare` leaves them out).
-        let frames = |r: &Replay| {
-            r.events
-                .iter()
-                .filter(|e| e.command != event::GAME_START)
-                .map(|e| {
-                    let mut e = e.clone();
-                    if e.command == event::PRE_FRAME {
-                        e.payload[0x30..0x3A].fill(0);
-                    }
-                    e
-                })
-                .collect::<Vec<_>>()
-        };
-        let (a, b) = (frames(&original), frames(&ours));
-        if let Some(i) = (0..a.len().min(b.len())).find(|&i| a[i] != b[i]) {
-            let (x, y) = (&a[i].payload, &b[i].payload);
-            let at = (0..x.len().min(y.len())).find(|&j| x[j] != y[j]);
-            panic!(
-                "event {i} (command {:#04X}, frame {}) differs at payload offset {at:#x?}: {:02X?} against {:02X?}",
-                a[i].command,
-                i32::from_be_bytes(x[0..4].try_into().unwrap()),
-                at.map(|j| &x[j..(j + 4).min(x.len())]),
-                at.map(|j| &y[j..(j + 4).min(y.len())])
-            );
-        }
-        assert_eq!(a.len(), b.len(), "the recordings have different lengths");
-        let frames_seen = original.frames.len();
-        assert!(frames_seen > 2000, "{frames_seen} frames");
+        let (original, ours, again) = record_and_play_back(&disc, &s, "RECORD_TEST_SLIPPI_OUT");
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
+        assert_eq!(original.gecko_codes, record::ruleset_codes());
+        assert_eq!(ours.gecko_codes, original.gecko_codes);
+        assert_eq!(again.rules, Rules::slippi_online());
+        assert_eq!(original.unlocks, None);
+        assert_eq!(again.unlocks, Unlocks::slippi());
+        assert_eq!(original.ucf_toggles, [1; 8]);
     });
 }
 

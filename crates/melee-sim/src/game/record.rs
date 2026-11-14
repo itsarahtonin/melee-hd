@@ -29,10 +29,19 @@
 //!   ([`game_end`]). It is the stream's last event: Slippi Dolphin closes the file there, so
 //!   the rest of that tick isn't recorded.
 //!
+//! The code list is the one the match runs, as Slippi's codes send it from the code handler's
+//! list in memory: a replay's own, or under the Slippi ruleset Slippi 3.19.1's as melee-hd runs
+//! it ([`ruleset_codes`]), with UCF's pad buffer as the game holds it at the game start. A
+//! match the menus started takes its scene, its players' name tags and the saved language
+//! from the game, where the codes read them; a match started some other way (a replay's, the
+//! command line's, a test's) takes them from its [`Setup`].
+//!
 //! Where melee-hd writes what the codes don't: the UCF toggles say whether the match's rules
-//! run UCF (3.19's codes write 1 whatever runs), and a word the codes copy from memory that
-//! holds a GObj (the motion state's first variable) is its address in the allocator model, 0
-//! where the model is off (a match of the player's own without an Ice Climber).
+//! run UCF (3.19's codes write 1 whatever runs), a word the codes copy from memory that holds
+//! a GObj (the motion state's first variable) is its address in the allocator model, 0 where
+//! the model is off (a match of the player's own without an Ice Climber), and two UCF codes'
+//! scratch doubles in the code list are their boot value (below, [`ruleset_codes`]). Under
+//! Vanilla the metadata also carries the unlocks the match read ([`Setup::unlocks`]).
 //!
 //! Not recorded: the 3.18 stage events (Fountain of Dreams' platforms, Whispy's wind, Pokémon
 //! Stadium's transformations), which hook stage code; their sizes are declared, as the codes
@@ -108,27 +117,102 @@ const SCENE_PLAYBACK: [u8; 2] = [1, 14];
 #[derive(Clone, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
 pub struct Setup {
     /// The Gecko code list the match ran with, as Slippi records it: the list past its
-    /// `d0c0de` header, without the terminator. melee-hd's Vanilla ruleset runs none.
+    /// `d0c0de` header, without the terminator. melee-hd's Vanilla ruleset runs none. Where it
+    /// has UCF's pad buffer, the recording writes the buffer as the game holds it at the game
+    /// start.
     pub codes: Vec<u8>,
     /// Each port's nametag text, eight Shift JIS characters, as the memory card holds it
-    /// (`Nametag_LoadSlotText`): written for a human player with a nametag.
+    /// (`GetNameText`): written for a human player with a nametag, in a match not started from
+    /// the menus (a match the menus started reads the game's own name tags).
     pub nametags: [[u16; 8]; 4],
     /// Slippi's PAL toggle.
     pub pal: bool,
     /// Whether the frozen Pokémon Stadium code ran.
     pub frozen_ps: bool,
-    /// The game's language (`Language_GetLanguage`): 1, English, as an NTSC disc starts.
+    /// The saved language (`lbLang_GetSavedLanguage`), in a match not started from the menus
+    /// (one the menus started reads the game's): 1, English, as an NTSC disc starts.
     pub language: u8,
+    /// Whether the metadata carries the unlocks the match read (`gm::Unlocks`, as the game
+    /// held them at the game start): a Vanilla match's, whose save decides them, where Slippi's
+    /// playback runs its own unlock codes (milestone 5's call of 2026-10-23).
+    pub unlocks: bool,
 }
 
 impl Setup {
-    /// A match of melee-hd's Vanilla ruleset: no codes and no nametags, in English.
+    /// A match of melee-hd's Vanilla ruleset: no codes, no nametags and English unless the
+    /// menus started it, and the unlocks in the metadata.
     pub fn vanilla() -> Setup {
         Setup {
+            language: 1,
+            unlocks: true,
+            ..Setup::default()
+        }
+    }
+
+    /// A match of melee-hd's Slippi ruleset: Slippi 3.19.1's code list as melee-hd runs it
+    /// ([`ruleset_codes`]), whose unlock codes stand for the save's.
+    pub fn slippi() -> Setup {
+        Setup {
+            codes: ruleset_codes(),
             language: 1,
             ..Setup::default()
         }
     }
+}
+
+/// Slippi 3.19.1's code list as melee-hd runs it under the Slippi ruleset (design call 4 of
+/// `docs/slippi-ruleset.md`): the 16 unlock and message writes of Slippi Dolphin's General
+/// Codes, which Slippi's playback runs itself and leaves out of a replay's list, and the 27
+/// codes it tags as affecting gameplay, which it applies from the list (`Rules::from_codes`
+/// reads them as 3.19's with UCF 0.84), in Slippi Dolphin's order and with the bytes every
+/// 3.19.1 replay records, each `C2` code's branch back included. Not Slippi Dolphin's other
+/// 245 codes, which melee-hd doesn't run.
+///
+/// The data UCF keeps in its codes' words is the boot's: the pad buffer, which the recording
+/// replaces with the game's at the game start, and the scratch doubles of the down-smash out
+/// of crouch fix (`0x800D65EC`) and the shield drop (`0x800998A4`). Each of those two stores
+/// its conversion's double (`stfd`) before it reads the word back, so no run reads what the
+/// list holds there; Slippi Dolphin's list has the last conversion's, melee-hd's the boot's.
+pub fn ruleset_codes() -> Vec<u8> {
+    let mut out = Vec::with_capacity(5392);
+    for line in RULESET_CODES.lines().filter(|l| !l.starts_with('#')) {
+        for word in line.split_whitespace().take(2) {
+            let w = u32::from_str_radix(word, 16).expect("a code word");
+            out.extend_from_slice(&w.to_be_bytes());
+        }
+    }
+    out
+}
+
+const RULESET_CODES: &str = include_str!("slippi-ruleset-3.19.1.txt");
+
+/// UCF's pad buffer code's injection (`game::slippi::UCF_PAD_BUFFER`) and where its data
+/// starts in it: the twelve words after the body's first.
+const PAD_BUFFER_DATA: core::ops::Range<usize> = 8 + 4..8 + 4 + 48;
+
+/// `codes` with UCF's pad buffer, if the list has it, holding `pads`: the list as the code
+/// handler's memory holds it.
+fn codes_as_they_stand(codes: &[u8], pads: &super::ucf::Pads) -> Vec<u8> {
+    let mut out = codes.to_vec();
+    let word = |at: usize| u32::from_be_bytes(codes[at..at + 4].try_into().unwrap());
+    let mut at = 0;
+    while at + 8 <= codes.len() {
+        let kind = codes[at] & 0xFE;
+        let addr = (word(at) & 0x01FF_FFFF) | 0x8000_0000;
+        let len = match kind {
+            0xC0 | 0xC2 => 8 + 8 * word(at + 4) as usize,
+            0x08 => 16,
+            0x06 => 8 + ((word(at + 4) as usize + 7) & !7),
+            0xF0 | 0xFE => break,
+            _ => 8,
+        };
+        if kind == 0xC2 && addr == super::slippi::UCF_PAD_BUFFER && at + len <= codes.len() {
+            out[at + PAD_BUFFER_DATA.start..at + PAD_BUFFER_DATA.end]
+                .copy_from_slice(&pads.to_bytes());
+        }
+        at += len;
+    }
+    out
 }
 
 /// The recording: the event stream sent so far, and what the codes keep between events.
@@ -155,6 +239,8 @@ pub struct Recorder {
     last_frame: Option<i32>,
     /// Each port's leader's post-frame updates by internal character, for the metadata.
     characters: [Vec<(u8, u32)>; 4],
+    /// The unlocks the match read, for the metadata, where the setup asks for them.
+    unlocks: Option<super::gm::Unlocks>,
 }
 
 impl Recorder {
@@ -188,10 +274,20 @@ impl Recorder {
         self.game_end_sent
     }
 
+    /// The unlocks the match read, for the metadata: a Vanilla match's ([`Setup::unlocks`]).
+    pub fn unlocks(&self) -> Option<&super::gm::Unlocks> {
+        self.unlocks.as_ref()
+    }
+
     fn game_start(&mut self, g: &Game, d: &StartMeleeData) {
         use command::*;
-        let s = &self.setup;
         self.frame = FIRST_FRAME - 1;
+        self.unlocks = self.setup.unlocks.then_some(g.gm.unlocks);
+        let s = &self.setup;
+        // A match the menus started: the scenes' loop runs it, and the game's save data is the
+        // session's.
+        let from_menus = g.machine.phase != super::gm::machine::Phase::Boot;
+        let codes = codes_as_they_stand(&s.codes, &g.ucf);
         let mut w = W::default();
         // The payload sizes: the size byte counts itself and three bytes for each command.
         let sizes: [(u8, usize); 12] = [
@@ -202,7 +298,7 @@ impl Recorder {
             (FRAME_START, FRAME_START_LEN),
             (ITEM, ITEM_LEN),
             (FRAME_BOOKEND, FRAME_BOOKEND_LEN),
-            (GECKO_LIST, s.codes.len()),
+            (GECKO_LIST, codes.len()),
             (SPLIT_MESSAGE, SPLIT_MESSAGE_LEN),
             (FOD_PLATFORMS, FOD_PLATFORMS_LEN),
             (WHISPY, WHISPY_LEN),
@@ -242,35 +338,48 @@ impl Recorder {
         for _ in 0..8 {
             w.u32(ucf);
         }
-        for (port, tag) in s.nametags.iter().enumerate() {
+        for port in 0..4 {
             let p = 0x60 + 0x24 * port;
             let has = info[p + 1] == PKIND_HUMAN && info[p + 10] != NO_NAMETAG;
-            for &c in tag {
-                w.u16(if has { c } else { 0 });
+            let tag = match (has, from_menus) {
+                (false, _) => [0; 8],
+                (true, true) => name_tag_text(g, info[p + 10]),
+                (true, false) => s.nametags[port],
+            };
+            for c in tag {
+                w.u16(c);
             }
         }
         w.u8(u8::from(s.pal));
         w.u8(u8::from(s.frozen_ps));
-        w.bytes(if g.playback.is_some() {
-            &SCENE_PLAYBACK
+        // The scene controller's current minor and major (`gm_80479D30`).
+        let r = &g.machine.routing;
+        w.bytes(&if g.playback.is_some() {
+            SCENE_PLAYBACK
+        } else if from_menus {
+            [r.curr_state_id, r.curr_mode]
         } else {
-            &SCENE_VS
+            SCENE_VS
         });
         // Display names, connect codes and Slippi UIDs: online only.
         w.zeros(4 * (31 + 10 + 29));
-        w.u8(s.language);
+        w.u8(if from_menus {
+            g.game_data.saved_language()
+        } else {
+            s.language
+        });
         // The match ID, game number and tiebreak number: online only.
         w.zeros(51 + 4 + 4);
         debug_assert_eq!(w.0.len() - start, 1 + GAME_START_LEN);
         // The code list in split messages, through one buffer the codes reuse: past a short
         // last block it keeps the block before's bytes.
         let mut block = [0u8; SPLIT_DATA_LEN];
-        let total = s.codes.len() as u16 as usize;
+        let total = codes.len() as u16 as usize;
         let mut at = 0;
         loop {
             let left = total - at;
             let n = left.min(SPLIT_DATA_LEN);
-            block[..n].copy_from_slice(&s.codes[at..at + n]);
+            block[..n].copy_from_slice(&codes[at..at + n]);
             w.u8(SPLIT_MESSAGE);
             w.bytes(&block);
             w.u16(n as u16);
@@ -607,6 +716,35 @@ impl Recorder {
     }
 }
 
+/// The 16 bytes the codes copy from name tag `slot`'s name (`GetNameText`), as halfwords: the
+/// name's eight bytes, the four after them in its `NameTagData` (its terminator, rumble and
+/// two more) and the next name tag's first four (its KO counts' first two). A slot with no
+/// name gives a null name, which Slippi Dolphin reads as zeros.
+#[doc(alias = "GetNameText")]
+fn name_tag_text(g: &Game, slot: u8) -> [u16; 8] {
+    use super::gm::main_lib::NAMETAG_BANK_SIZE;
+    let banks = &g.game_data.thing.nametag_banks;
+    let tag = |s: usize| {
+        banks
+            .get(s / NAMETAG_BANK_SIZE)
+            .map(|b| &b.inner[s % NAMETAG_BANK_SIZE])
+    };
+    let s = usize::from(slot);
+    let Some(t) = tag(s).filter(|t| t.namedata[0] != 0) else {
+        return [0; 8];
+    };
+    let mut b = [0u8; 16];
+    for (o, &c) in b.iter_mut().zip(&t.namedata) {
+        *o = c as u8;
+    }
+    b[8..12].copy_from_slice(&[t.x1A0 as u8, t.rumble_enabled, t.x1A2 as u8, t.padding_x1A2]);
+    if let Some(next) = tag(s + 1) {
+        b[12..14].copy_from_slice(&next.vs_kos[0].to_be_bytes());
+        b[14..16].copy_from_slice(&next.vs_kos[1].to_be_bytes());
+    }
+    core::array::from_fn(|i| u16::from_be_bytes([b[2 * i], b[2 * i + 1]]))
+}
+
 /// `FN_GetIsFollower`: a sub-fighter whose character has no transformation (Nana).
 fn is_follower(g: &Game, gobj: GObjId) -> bool {
     let fp = g.fighter(gobj);
@@ -931,5 +1069,230 @@ mod tests {
         let d = StartMeleeData::import(&m, 0, &mut NoPointers);
         assert_eq!(export_start(&d), bytes);
         d.compare(&m, 0, "start", &mut NoPointers);
+    }
+
+    /// The unlock and message writes: `04` lines at these sites.
+    const WRITES: [u32; 16] = [
+        0x8015_EE98,
+        0x8015_EDDC,
+        0x8016_4B14,
+        0x8016_48F4,
+        0x8015_EE4C,
+        0x8015_EE14,
+        0x8015_D968,
+        0x8015_D9D8,
+        0x8017_229C,
+        0x8017_37B0,
+        0x8016_4658,
+        0x8016_44E8,
+        0x8030_490C,
+        0x8030_44F0,
+        0x8015_D94C,
+        0x8015_D984,
+    ];
+
+    /// The ruleset's list is 43 codes: the 16 writes, and 27 codes that make Slippi's online
+    /// rules, 3.19's with UCF 0.84. `game_start` puts UCF's pad buffer where the code keeps it.
+    #[test]
+    fn the_ruleset_list_is_the_writes_and_3_19s_rules() {
+        let list = ruleset_codes();
+        assert_eq!(list.len(), 5392);
+        let codes = crate::game::slippi::parse_codes(&list);
+        assert_eq!(codes.len(), 43);
+        let (writes, rules): (Vec<_>, Vec<_>) = codes
+            .into_iter()
+            .partition(|c| c.kind == 0x04 && WRITES.contains(&c.addr));
+        assert_eq!(writes.len(), 16);
+        assert_eq!(rules.len(), 27);
+        assert_eq!(
+            crate::game::state::Rules::from_codes(&rules),
+            Ok(crate::game::state::Rules::slippi_online())
+        );
+        let mut pads = super::super::ucf::Pads::default();
+        pads.0[2].history[1] = [-96, 17];
+        pads.0[3].index = 3;
+        pads.0[3].flicked = 2;
+        let stood = codes_as_they_stand(&list, &pads);
+        let read = super::super::ucf::Pads::from_codes(&crate::game::slippi::parse_codes(&stood));
+        assert_eq!(read, Some(pads));
+        let differ = (0..list.len()).filter(|&i| list[i] != stood[i]).count();
+        assert_eq!(differ, 4, "only the pads' bytes change");
+    }
+
+    /// A human player's name tag as the codes copy it from the game's save data, in a match the
+    /// menus started: 16 bytes from the name on.
+    #[test]
+    fn a_name_tag_reads_from_the_game() {
+        let mut g = Game::default();
+        let t = g.game_data.name_tag(20);
+        t.namedata = [0x82, 0x60, 0x82, 0x61, 0, 0, 0, 0].map(|b| b as i8);
+        t.rumble_enabled = 1;
+        g.game_data.name_tag(21).vs_kos[0] = 0x0102;
+        assert_eq!(
+            name_tag_text(&g, 20),
+            [0x8260, 0x8261, 0, 0, 0x0001, 0, 0x0102, 0]
+        );
+        assert_eq!(name_tag_text(&g, 21), [0; 8], "a slot with no name");
+    }
+
+    /// One `.slp` file's raw events: the payload sizes' event, the game start's payload and
+    /// the code list.
+    fn raw_parts(file: &[u8]) -> (Vec<u8>, Vec<u8>, Vec<u8>) {
+        let at = file
+            .windows(10)
+            .position(|w| w == b"U\x03raw[$U#l")
+            .expect("a raw element");
+        let len = u32::from_be_bytes(file[at + 10..at + 14].try_into().unwrap()) as usize;
+        let raw = &file[at + 14..at + 14 + len];
+        let n = usize::from(raw[1]);
+        let mut sizes = [0usize; 256];
+        for e in raw[2..1 + n].chunks(3) {
+            sizes[usize::from(e[0])] = usize::from(u16::from_be_bytes([e[1], e[2]]));
+        }
+        let (mut start, mut codes) = (Vec::new(), Vec::new());
+        let mut i = 1 + n;
+        while i < raw.len() && raw[i] != command::PRE_FRAME {
+            let c = raw[i];
+            let p = &raw[i + 1..i + 1 + sizes[usize::from(c)]];
+            match c {
+                command::GAME_START => start = p.to_vec(),
+                command::SPLIT_MESSAGE if p[514] == command::GECKO_LIST => {
+                    let k = usize::from(u16::from_be_bytes([p[512], p[513]]));
+                    codes.extend_from_slice(&p[..k]);
+                }
+                _ => {}
+            }
+            i += 1 + sizes[usize::from(c)];
+        }
+        (raw[..1 + n].to_vec(), start, codes)
+    }
+
+    /// Each code of a list, with its bytes.
+    fn split_codes(list: &[u8]) -> Vec<(u8, u32, &[u8])> {
+        let word = |at: usize| u32::from_be_bytes(list[at..at + 4].try_into().unwrap());
+        let mut out = Vec::new();
+        let mut at = 0;
+        while at + 8 <= list.len() {
+            let kind = list[at] & 0xFE;
+            let len = match kind {
+                0xC2 => 8 + 8 * word(at + 4) as usize,
+                0x04 => 8,
+                _ => panic!("a code of kind {kind:02X} in Slippi's list"),
+            };
+            out.push((
+                kind,
+                (word(at) & 0x01FF_FFFF) | 0x8000_0000,
+                &list[at..at + len],
+            ));
+            at += len;
+        }
+        out
+    }
+
+    /// Sarah's four offline replays from Slippi Dolphin 3.19.1 (the VS mode's matches, one
+    /// of them its Sudden Death), against the game start melee-hd's recorder writes for the
+    /// same match under the Slippi ruleset, started from the menus, with the state those
+    /// replays recorded (the start data, the seed, UCF's pad buffer, the scene): the game
+    /// start is the same byte for byte, the payload sizes but for the code list's, and the
+    /// code list is theirs without the 245 codes melee-hd doesn't run, but for the two UCF
+    /// codes' scratch doubles (boot zeros in ours; one replay's down-smash fix holds its last
+    /// conversion). Skips without `SLIPPI_REPLAYS`.
+    #[test]
+    fn offline_replays_game_starts() {
+        let Some(dir) = std::env::var_os("SLIPPI_REPLAYS") else {
+            eprintln!("skipped: SLIPPI_REPLAYS isn't set");
+            return;
+        };
+        let names = [
+            "Game_20260524T173350",
+            "Game_20260524T174154",
+            "Game_20260524T174859",
+            "Game_20260524T175101",
+        ];
+        let ours_list = ruleset_codes();
+        let mut scratch_differs = Vec::new();
+        for name in names {
+            let path = std::path::Path::new(&dir)
+                .join("2026-05")
+                .join(format!("{name}.slp"));
+            let Ok(file) = std::fs::read(&path) else {
+                eprintln!("skipped: {} isn't there", path.display());
+                return;
+            };
+            let (sizes, start, list) = raw_parts(&file);
+            let info = &start[4..4 + 0x138];
+            let seed = u32::from_be_bytes(start[0x13C..0x140].try_into().unwrap());
+            let (minor, major) = (start[0x1A2], start[0x1A3]);
+            let mut g = Game {
+                rules: crate::game::state::Rules::slippi_online(),
+                ucf: super::super::ucf::Pads::from_codes(&crate::game::slippi::parse_codes(&list))
+                    .expect("UCF's pad buffer"),
+                ..Game::default()
+            };
+            g.objs.rng.seed = seed;
+            g.game_data.set_saved_language(1);
+            g.machine.routing.curr_mode = major;
+            g.machine.routing.curr_state_id = minor;
+            g.machine.phase = super::super::gm::machine::Phase::Scene {
+                mode: major,
+                scene_mode: minor,
+                state: 0,
+                overridden: false,
+            };
+            let d = StartMeleeData::import(
+                &Mem {
+                    bytes: info,
+                    base: 0,
+                },
+                0,
+                &mut NoPointers,
+            );
+            let mut r = Recorder::new(Setup::slippi());
+            r.game_start(&g, &d);
+            let mut file_ours = b"{U\x03raw[$U#l".to_vec();
+            file_ours.extend_from_slice(&(r.raw().len() as u32).to_be_bytes());
+            file_ours.extend_from_slice(r.raw());
+            let (our_sizes, our_start, our_list) = raw_parts(&file_ours);
+            assert_eq!(our_start, start, "{name}'s game start");
+            let entries = |s: &[u8]| s[2..].chunks(3).map(<[u8]>::to_vec).collect::<Vec<_>>();
+            let (a, b) = (entries(&our_sizes), entries(&sizes));
+            assert_eq!(a.len(), b.len());
+            for (x, y) in a.iter().zip(&b) {
+                if x[0] == command::GECKO_LIST {
+                    assert_eq!(u16::from_be_bytes([x[1], x[2]]), 5392);
+                } else {
+                    assert_eq!(x, y, "{name}'s payload sizes");
+                }
+            }
+            // Theirs, without the codes melee-hd doesn't run.
+            let ours = split_codes(&our_list);
+            let theirs: Vec<_> = split_codes(&list)
+                .into_iter()
+                .filter(|&(k, a, _)| ours.iter().any(|&(k2, a2, _)| (k, a) == (k2, a2)))
+                .collect();
+            assert_eq!(ours.len(), 43);
+            assert_eq!(theirs.len(), 43);
+            for (&(_, a, x), &(_, _, y)) in ours.iter().zip(&theirs) {
+                if x == y {
+                    continue;
+                }
+                // The scratch double: the code's body words 4 and 5.
+                assert!(
+                    a == 0x800D_65EC || a == 0x8009_98A4,
+                    "{name}: the code at {a:#010x} differs"
+                );
+                let scratch = 8 + 16..8 + 24;
+                assert_eq!(x[..scratch.start], y[..scratch.start]);
+                assert_eq!(x[scratch.end..], y[scratch.end..]);
+                assert_eq!(x[scratch], [0; 8]);
+                scratch_differs.push((name, a));
+            }
+            assert_eq!(our_list.len(), ours_list.len());
+        }
+        assert_eq!(
+            scratch_differs,
+            [("Game_20260524T175101", 0x800D_65EC)],
+            "the replays' scratch doubles"
+        );
     }
 }
