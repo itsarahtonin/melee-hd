@@ -161,6 +161,9 @@ impl Running<'_> {
         o.ids = Default::default();
         // `_HSD_RObjForgetMemory`: the expressions' argument buffer, from the old heap.
         o.robjs.arg_buf = None;
+        o.forget_heap();
+        // The stage objects' user data went with the heap too (`Ground_801C0378`'s blocks).
+        self.game.grounds.retire();
     }
 
     /// The objects of the scene's heap as the game lays them out, into the heap's image as the
