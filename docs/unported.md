@@ -13,4 +13,3 @@ Every function the [port ledger](port-ledger.md) still counts as unaccounted. Wr
 | Function | Unit | What reaches it | Tried |
 | --- | --- | --- | --- |
 | `ftCo_8008EB58` | `ftCommon/ftCo_Damage` | A grabber hit lightly while its victim, in its own hitlag, takes a second, weaker hit: a third fighter's multi-hit attack on a grab pair | Not reached |
-| `fn_800DC384`, `fn_800DC404` | `ftCommon/ftCo_0DC2` | A grabbed victim in the high flinch (lifted past the hold's height) touching down: a grabber on a slope, or a pummel that lifts and lowers | Not reached |
