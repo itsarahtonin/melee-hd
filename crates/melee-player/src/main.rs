@@ -11,7 +11,7 @@
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
-//! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
+//! frames:  [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! debug:   [--flicker-scan]
 //! perf:    [--perf-report FILE] [--refresh HZ] [--seed N]
 //! ```
@@ -39,9 +39,9 @@
 //!
 //! The loop keeps latency as short as it can: each tick reads the controllers just before it
 //! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
-//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks run on a fixed 60 Hz timer,
-//! or, experimentally, just in time for the refresh that shows their frame ([`jit`],
-//! `--tick-timing`), waited for precisely ([`timing`]). `--added-delay N` adds input
+//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks run just in time for the
+//! refresh that shows their frame, the settings' default ([`jit`], `--tick-timing`), waited for
+//! precisely ([`timing`]), or on a fixed 60 Hz timer, the command line's default. `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame, with each frame's GPU time by stage.
 //!
@@ -50,10 +50,11 @@
 //! benchmark. `--refresh HZ` draws Interpolate's and Extrapolate's frames at that
 //! rate instead of the display's.
 //!
-//! `--high-refresh interpolate` draws frames at the display's rate between the last two ticks,
-//! each placed by when it reaches the screen ([`pacing`]); `extrapolate` draws them between the
-//! latest tick and a prediction of the next (`melee_render::predict`); off, the default, draws
-//! a frame a tick.
+//! `--high-refresh on` (or `extrapolate`) draws frames at the display's rate between the latest
+//! tick and a prediction of the next (`melee_render::predict`), each placed by when it reaches
+//! the screen ([`pacing`]): the settings panel's High refresh, on by default. `interpolate`, for
+//! developers, draws them between the last two ticks; off, the command line's default, draws a
+//! frame a tick.
 //!
 //! The release build on Windows opens no console window; started from a terminal it prints to
 //! the terminal, and double-clicked it logs to the settings folder ([`console`]).
@@ -221,7 +222,7 @@ struct Args {
     unfinished_stages: bool,
     /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
     record: bool,
-    /// Where the replays go: the replays folder beside the executable unless given.
+    /// Where the replays go: the settings folder's replays folder unless given.
     replays: Option<String>,
     /// The item frequency and switch a command line's match starts with: items off.
     items: GamePrefs,
@@ -263,10 +264,10 @@ fn usage() -> String {
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
-         frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
+         frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
-         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
+         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays in the settings folder\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
@@ -720,8 +721,8 @@ struct Platform {
     kept: Option<saves::Kept>,
     /// Where the card goes as the session ends (`--card-after`).
     card_after: Option<std::path::PathBuf>,
-    /// Each VS match saved as a Slippi replay: to this folder (none: the replays folder beside
-    /// the program), when on.
+    /// Each VS match saved as a Slippi replay: to this folder (none: the settings folder's
+    /// replays folder), when on.
     replays: Option<Option<String>>,
     /// The replay of the match playing, once it started, and whether it's kept (the title's
     /// attract match isn't).

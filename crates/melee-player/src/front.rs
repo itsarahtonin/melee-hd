@@ -57,6 +57,8 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
+    /// Interpolate, which the file keeps as on.
     pub high_refresh: Mode,
     pub present: Present,
     /// Ticks each controller read is held back.
@@ -64,7 +66,7 @@ pub struct Settings {
     pub tick_timing: Timing,
     /// The just-in-time tick's margin, in milliseconds.
     pub jit_margin: f32,
-    /// Saves each VS match as a Slippi replay, to `replays` (empty: beside the program).
+    /// Saves each VS match as a Slippi replay, to `replays` (empty: the settings folder's).
     pub record: bool,
     pub replays: String,
     /// Records each session from power-on (`session_rec`).
@@ -114,10 +116,11 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
-            high_refresh: Mode::Off,
+            // Both on by default since 2026-11-14 (Sarah).
+            high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
             added_delay: 0,
-            tick_timing: Timing::Timer,
+            tick_timing: Timing::Auto,
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
             record: true,
             replays: String::new(),
@@ -149,7 +152,7 @@ impl Settings {
             "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
-            self.high_refresh.key(),
+            self.high_refresh.setting(),
             self.added_delay,
             self.tick_timing.key(),
             self.jit_margin,
@@ -201,7 +204,7 @@ impl Settings {
                     _ => {}
                 },
                 "high-refresh" if !given.high_refresh => {
-                    if let Ok(m) = Mode::parse(v) {
+                    if let Some(m) = Mode::from_setting(v) {
                         self.high_refresh = m;
                     }
                 }
@@ -423,20 +426,15 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.fullscreen, "Fullscreen");
                 ui.end_row();
-                ui.label("High refresh");
-                let mode = &mut s.high_refresh;
-                egui::ComboBox::from_id_salt("high-refresh")
-                    .selected_text(mode.name())
-                    .width(220.0)
-                    .show_ui(ui, |ui| {
-                        for (m, name) in Mode::CHOICES {
-                            ui.selectable_value(mode, m, name);
-                        }
-                    });
+                ui.label("");
+                let mut on = s.high_refresh.paced();
+                if ui.checkbox(&mut on, "High refresh").changed() {
+                    s.high_refresh = if on { Mode::Extrapolate } else { Mode::Off };
+                }
                 ui.end_row();
                 help(
                     ui,
-                    "Draws frames between the game's 60 a second for faster displays. Extrapolate adds no latency.",
+                    "Draws frames between the game's 60 a second at your display's own rate by predicting the next one. Adds no latency.",
                 );
             });
         section(ui, "Latency");
@@ -675,7 +673,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
-            high_refresh: Mode::Interpolate,
+            high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
             tick_timing: Timing::Vrr,
@@ -690,7 +688,7 @@ mod tests {
     #[test]
     fn the_settings_come_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            for (mode, _) in Mode::CHOICES {
+            for mode in [Mode::Off, Mode::Extrapolate] {
                 let was = Settings {
                     aspect,
                     high_refresh: mode,
@@ -718,6 +716,27 @@ mod tests {
         s.restore(&picked().save(), &given);
         assert_eq!((s.scale, s.aspect), (2, Aspect::STRETCHED));
         assert!(s.msaa && !s.record_sessions);
+    }
+
+    /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads
+    /// as on, and the file keeps on or off.
+    #[test]
+    fn high_refresh_and_timing_defaults() {
+        let s = Settings::default();
+        assert_eq!(
+            (s.high_refresh, s.tick_timing),
+            (Mode::Extrapolate, Timing::Auto)
+        );
+        let mut s = Settings::default();
+        s.restore("high-refresh = interpolate\n", &Given::default());
+        assert_eq!(s.high_refresh, Mode::Extrapolate);
+        s.restore("high-refresh = off\n", &Given::default());
+        assert_eq!(s.high_refresh, Mode::Off);
+        let given = Settings {
+            high_refresh: Mode::Interpolate,
+            ..Settings::default()
+        };
+        assert!(given.save().contains("high-refresh = on\n"));
     }
 
     #[test]
