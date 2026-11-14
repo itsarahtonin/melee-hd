@@ -391,7 +391,7 @@ impl Running<'_> {
         )
     }
 
-    /// A hitbox's angle, `ftColl_8007AC9C`: a spike's angle (`ftColl_8007AC68`) counts once
+    /// A hitbox's angle, `ftColl_8007AC9C`: a meteor smash's angle (`ftColl_8007AC68`) counts once
     /// in the player's statistics (`pl_80037ECC`).
     #[doc(alias = "ftColl_8007AC9C")]
     #[doc(alias = "ftColl_8007AC68")]
@@ -890,6 +890,9 @@ impl Running<'_> {
         self.cmd_skip(f, 5);
     }
 
+    /// Command 12 stepped over in a state entered partway (Link's down air restarted at frame
+    /// 60 by its hit, past the command's frame 16).
+    #[doc(alias = "ftAction_8007168C")]
     fn skip_8007168c(&mut self, f: FighterId) {
         self.cmd_skip(f, 1);
     }
