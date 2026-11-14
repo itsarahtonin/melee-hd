@@ -812,8 +812,7 @@ impl Running<'_> {
     #[doc(alias = "fn_80184138")]
     #[doc(alias = "fn_80184A4C")]
     #[doc(alias = "fn_80184A70")]
-    // Ports fn_80184A94 (the third place); aliased once a check reaches it (no Classic intro
-    // in classic-clear shows three opponents).
+    #[doc(alias = "fn_80184A94")]
     pub fn intro_easy_enemy_proc(&mut self, gobj: GObjId, i: usize) {
         let s = self.game.intros.easy;
         let root = self.root_jobj(gobj);

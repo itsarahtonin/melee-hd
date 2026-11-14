@@ -136,6 +136,34 @@ frames!(MENU_TOUR;
     menu_2450 2450,
     menu_3700 3700,
 );
+// The title (300) and the main menu (450) again with every BP register compared but those
+// holding addresses or triggers, the texture cache's layout among them: each texture's region
+// (`__GXDefaultTexRegionCallback`'s round robin, eight regions in turn and four for color
+// indexed formats) is the original's in a session from power-on, every texture load since
+// `GXInit` made as the original makes it.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn title_300_all_bp() {
+    compare_in(
+        &IDLE_TITLE,
+        300,
+        Group::Standard,
+        Expect::Identical,
+        Capture::HeadlessAllBp,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn menu_450_all_bp() {
+    compare_in(
+        &MENU_TOUR,
+        450,
+        Group::Standard,
+        Expect::Identical,
+        Capture::HeadlessAllBp,
+    );
+}
 // The Data menu's movies (`gallery`): the Special Movie playing in the menu (1100, 1400) and
 // How to Play (1960, 2400).
 frames!(GALLERY;
@@ -316,6 +344,23 @@ fn rec_classic_clear_16950() {
 #[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
 fn rec_classic_clear_19150() {
     classic_shadowed(19150, [4020, 4020]);
+}
+
+// Classic's team stage on Battlefield (`recordings/classic-clear` 2861, as Go! shows, and
+// 3025), whose frames draw the one horizontal billboard the sessions reach (`mkHBillBoardMtx`,
+// called at fields 3452 to 3457 and 3616 to 3621 in ssbm-rs), against captures made with
+// ssbm-rs's renderer running: identical images, every draw the same but those that sample the
+// fighters' shadows' copies.
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_2861() {
+    classic_shadowed(2861, [2253, 2221]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn rec_classic_clear_3025() {
+    classic_shadowed(3025, [2237, 2209]);
 }
 
 // Classic's trophy fall before the credits: the character's trophy alone on its stand

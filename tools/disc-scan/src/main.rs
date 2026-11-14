@@ -18,7 +18,13 @@
 //! the joints' and camera positions' reference objects by type and lists any expression;
 //! `stage-colanims` walks the stages' color animation scripts for owner's commands. `words
 //! FILE OFFSET COUNT` prints a file's words, pointers marked. `stage-items` lists each stage
-//! file's item articles.
+//! file's item articles. `pobjs` counts every shape descriptor on the disc by type and lists
+//! the shared-vertex ones (a skin with a joint) and the shape animations with their normals'
+//! attribute; `particle-kinds [MASK]` lists every particle command list whose kind has a bit
+//! of MASK (the lit particles' `DispLighting`, 0x80000000, by default); `fogs` counts every
+//! fog descriptor the game loads and lists those with a range adjustment. `part-dobjs`
+//! finds every joint with display objects that the fighters' second models and Kirby's
+//! copy costumes hang on a part whose own model has none.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::process::ExitCode;
@@ -703,6 +709,407 @@ fn robjs(disc: &Disc, files: &[String]) {
     println!("{bad} chains end in something not shaped like a reference");
 }
 
+/// Whether `at` holds a vertex description list (`HSD_VtxDescList`, 0x18 bytes an entry):
+/// attributes up to `GX_VA_NBT` (25) with their types, ended by `GX_VA_NULL` (0xFF).
+fn vtx_desc_list(a: &Archive, at: u32) -> bool {
+    let len = a.data().len() as u32;
+    for i in 0..32 {
+        let e = at + 0x18 * i;
+        if e + 0x18 > len {
+            return false;
+        }
+        let attr = a.u32(e);
+        if attr == 0xFF {
+            return i > 0;
+        }
+        if attr > 25 || a.u32(e + 4) > 3 || a.is_pointer(e) || a.is_pointer(e + 4) {
+            return false;
+        }
+    }
+    false
+}
+
+/// Every shape descriptor (`HSD_PObjDesc`) on the disc: each object something points at or a
+/// symbol names, shaped like one (a vertex description list at +8, a display list at +0x10,
+/// +0, +4 and +0x14 null or pointers), by type (`pobj_type`: skin, shape animation,
+/// envelope). Lists the skins with a joint (`u.joint`, which `HSD_PObjDisp` sets up through
+/// `SetupSharedVtxModelMtx`, or for a fighter flattened, `ftPartsSetupSharedVtxMtx`) and the
+/// shape animations with their shape set's normals' attribute (`normal_desc`, +0x14 of the
+/// `HSD_ShapeSetDesc`): `drawShapeAnim` reads `GX_VA_NBT` normals (25) through
+/// `get_shape_nbt_xyz`.
+fn pobjs(disc: &Disc, files: &[String]) {
+    let mut counts = [0u32; 4];
+    let (mut archives, mut shape_sets) = (0u32, 0u32);
+    for path in files {
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        archives += 1;
+        let len = a.data().len() as u32;
+        let null_or_ptr = |o: u32| a.u32(o) == 0 || a.is_pointer(o);
+        for s in object_starts(&a) {
+            if s % 4 != 0 || s + 0x18 > len {
+                continue;
+            }
+            let shaped = null_or_ptr(s)
+                && null_or_ptr(s + 4)
+                && a.is_pointer(s + 8)
+                && !a.is_pointer(s + 0xC)
+                && a.is_pointer(s + 0x10)
+                && null_or_ptr(s + 0x14)
+                && vtx_desc_list(&a, a.u32(s + 8));
+            if !shaped {
+                continue;
+            }
+            let flags = a.u16(s + 0xC);
+            let ty = usize::from((flags >> 12) & 3);
+            counts[ty] += 1;
+            match (ty, a.ptr(s + 0x14)) {
+                (0, Some(j)) => {
+                    println!("{path} {s:#x}: a skin with a joint ({j:#x}), flags {flags:#06x}")
+                }
+                (1, Some(set)) => {
+                    shape_sets += 1;
+                    let attr = a.ptr(set + 0x14).map(|n| a.u32(n));
+                    let normals = match attr {
+                        None => "none".to_string(),
+                        Some(25) => "GX_VA_NBT".to_string(),
+                        Some(x) => format!("attribute {x}"),
+                    };
+                    println!(
+                        "{path} {s:#x}: a shape animation, set {set:#x}, {} shapes, normals {normals}",
+                        a.u16(set + 2)
+                    );
+                }
+                _ => {}
+            }
+        }
+    }
+    println!(
+        "{archives} archives: {} skins, {} shape animations ({shape_sets} with a shape set), {} envelopes, {} of type 3",
+        counts[0], counts[1], counts[2], counts[3]
+    );
+}
+
+/// Every particle command list on the disc whose kind (`HSD_PSCmdList`'s word at +8) has a bit
+/// of `mask`. The particle system's banks come only from `psInitDataBank` and
+/// `psInitDataBankLoad`, whose callers pass an effect file's data table's first two words
+/// (`efAsync_LoadSync`: each `Ef*.dat`'s `eff*DataTable`) or a stage's (`Ground_801C0800`,
+/// `grDatFiles_801C6038`: `map_ptcl` and `map_texg`). A bank of version 0x40 to 0x43 lists its
+/// command lists from +0xC (their count at +8), one of version 0 from +8 (at +4), each an
+/// offset from the bank. A particle's or generator's kind is always a list's
+/// (`psGenerateParticle0` takes its list's or its generator's, a generator its list's in
+/// `hsd_8039D4DC`), its high bits never changed after.
+fn particle_kinds(disc: &Disc, files: &[String], mask: u32) {
+    let (mut banks, mut lists, mut found) = (0u32, 0u32, 0u32);
+    for path in files {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        let mut cmd_banks = Vec::new();
+        for (sym, o) in a.publics() {
+            if sym == "map_ptcl" {
+                cmd_banks.push((sym.to_string(), o));
+            } else if name.starts_with("Ef")
+                && sym.ends_with("DataTable")
+                && let Some(b) = a.ptr(o)
+            {
+                cmd_banks.push((sym.to_string(), b));
+            }
+        }
+        for (sym, b) in cmd_banks {
+            banks += 1;
+            let (table, n) = match a.u16(b) {
+                0 => (b + 8, a.u32(b + 4)),
+                0x40..=0x43 => (b + 0xC, a.u32(b + 8)),
+                v => {
+                    println!("{name} {sym}: a bank of version {v:#x}");
+                    continue;
+                }
+            };
+            for i in 0..n {
+                let off = a.u32(table + 4 * i);
+                if off == 0 {
+                    continue;
+                }
+                lists += 1;
+                let kind = a.u32(b + off + 8);
+                if kind & mask != 0 {
+                    found += 1;
+                    println!("{name} {sym} list {i}: kind {kind:#010x}");
+                }
+            }
+        }
+    }
+    println!("{banks} banks, {lists} command lists, {found} with a bit of {mask:#010x}");
+}
+
+/// Every fog descriptor (`HSD_FogDesc`: a GX fog type, a range adjustment's descriptor or null,
+/// start and end distances, a color) the game loads, with its range adjustment's pointer.
+/// `HSD_FogLoadDesc`'s 26 callers take a descriptor from a scene's data (`*_scene_data`'s fog
+/// list at +0xC, its first entry's descriptor: the intros, Tournament, the staff roll, the
+/// cutscenes, the game over), a symbol of its own (`ScTitle_fog`, `ScMenMain_fog`,
+/// `ScMenDisplay_fog`), the character and stage selects' tables (`MnSelectChrDataTable` and
+/// `MnSelectStageDataTable`, +0xC), a stage's (`map_head`'s entries, 0x34 bytes, +0x1C) or the
+/// trophies' copy of `_Toy_803B8844`, in the executable, whose pointer is null. A fog has a
+/// range adjustment only from that pointer, and `HSD_FogSet` builds its table
+/// (`GXInitFogAdjTable`) only for a fog with one.
+fn fogs(disc: &Disc, files: &[String]) {
+    let (mut found, mut with_adj) = (0u32, 0u32);
+    for path in files {
+        let name = path.rsplit('/').next().unwrap_or(path);
+        let Ok(bytes) = disc.read_file(path) else {
+            continue;
+        };
+        let Ok(a) = Archive::parse(&bytes) else {
+            continue;
+        };
+        let mut descs: Vec<(String, u32)> = Vec::new();
+        for (sym, o) in a.publics() {
+            if sym.ends_with("_fog") {
+                descs.push((sym.to_string(), o));
+            } else if sym.ends_with("_scene_data") {
+                if let Some(d) = a.ptr(o + 0xC).and_then(|f| a.ptr(f)) {
+                    descs.push((format!("{sym}'s fog"), d));
+                }
+            } else if sym == "MnSelectChrDataTable" || sym == "MnSelectStageDataTable" {
+                if let Some(d) = a.ptr(o + 0xC) {
+                    descs.push((format!("{sym}'s fog"), d));
+                }
+            } else if sym == "map_head"
+                && let Some(arr) = a.ptr(o + 8)
+            {
+                for i in 0..a.u32(o + 0xC) {
+                    if let Some(d) = a.ptr(arr + i * 0x34 + 0x1C) {
+                        descs.push((format!("map_head[{i}]'s fog"), d));
+                    }
+                }
+            }
+        }
+        for (what, d) in descs {
+            found += 1;
+            if a.u32(d + 4) != 0 {
+                with_adj += 1;
+                println!(
+                    "{name} {what} at {d:#x}: type {}, a range adjustment at {:#x}",
+                    a.u32(d),
+                    a.u32(d + 4)
+                );
+            }
+        }
+    }
+    println!("{found} fog descriptors the game loads, {with_adj} with a range adjustment");
+}
+
+/// A joint tree's descriptors (`HSD_Joint`: flags +4, child +8, next +0xC, its display
+/// objects' descriptor +0x10) in the order a walk takes them, each with whether it has display
+/// objects. `instances` stops at an instance joint's children (`JOBJ_INSTANCE`, as
+/// `ftParts_SetupParts` walks the loaded model); the fighters' walks of descriptors
+/// (`ftAnim_GetNextJointInTree`) don't.
+fn joint_walk(a: &Archive, root: u32, instances: bool) -> Vec<(u32, bool)> {
+    let mut out = Vec::new();
+    let mut stack = Vec::new();
+    let mut cur = Some(root);
+    while let Some(j) = cur {
+        out.push((j, a.ptr(j + 0x10).is_some()));
+        let child = a
+            .ptr(j + 8)
+            .filter(|_| !(instances && a.u32(j + 4) & 0x1000 != 0));
+        cur = if let Some(c) = child {
+            stack.push(j);
+            Some(c)
+        } else if let Some(n) = a.ptr(j + 0xC) {
+            Some(n)
+        } else {
+            let mut n = None;
+            while let Some(p) = stack.pop() {
+                if let Some(x) = a.ptr(p + 0xC) {
+                    n = Some(x);
+                    break;
+                }
+            }
+            n
+        };
+    }
+    out
+}
+
+/// A costume file's model: its `*_Share_joint` public.
+fn costume_model(a: &Archive) -> Option<u32> {
+    a.publics()
+        .find(|(n, _)| n.ends_with("_Share_joint") && !n.contains("matanim"))
+        .map(|(_, o)| o)
+}
+
+/// Where a part tree's joints with display objects land on parts whose own model joint has
+/// none: `HSD_JObjAddDObj` (and on a copy costume's removal `lb_8000CE40`) runs only there.
+/// `ft_800C85B8`, from every `Fighter_Create`, hangs `ft_data->x5C`'s joints on the parts in
+/// order, the optional parts (`Fighter_804D6540`) skipped by both walks alike, so the second
+/// model's k-th joint lands on the k-th joint of the costume's model as `ftParts_SetupParts`
+/// walks it. Kirby's copy costumes (`ftKb_SpecialN_800EF0E4`, only for the copies in
+/// `ftKb_Init_803CB3E8`: Donkey Kong's, Jigglypuff's, Mewtwo's, Falco's and Mr. Game &
+/// Watch's) hang theirs on the parts with a joint (`flags_b1`) in order, the optional parts the
+/// copy's mask (`hat_dynamics[1]`, +0x10 of its `ftDataKirbyCopy*`) attaches among them, and
+/// its low model (`ftKb_SpecialN_800EF438`, +0x14) after the costume's.
+fn part_dobjs(disc: &Disc, files: &[String]) {
+    let open = |name: &str| {
+        let path = files.iter().find(|p| p.rsplit('/').next() == Some(name))?;
+        let bytes = disc.read_file(path).ok()?;
+        Archive::parse(&bytes).ok()
+    };
+    let mut found = 0u32;
+    let mut pairs = 0u32;
+    let names: Vec<String> = files
+        .iter()
+        .map(|p| p.rsplit('/').next().unwrap_or(p).to_string())
+        .collect();
+    for data_name in names
+        .iter()
+        .filter(|n| n.len() == 8 && n.starts_with("Pl") && n.ends_with(".dat"))
+    {
+        let Some(a) = open(data_name) else { continue };
+        let Some((sym, ft)) = a
+            .publics()
+            .find(|(n, _)| n.starts_with("ftData"))
+            .map(|(n, o)| (n.to_string(), o))
+        else {
+            continue;
+        };
+        let Some(second) = a.ptr(ft + 0x5C) else {
+            println!("{data_name} {sym}: no second model");
+            continue;
+        };
+        let second = joint_walk(&a, second, false);
+        let code = &data_name[2..4];
+        for cname in names.iter().filter(|n| {
+            n.len() == 10
+                && n.starts_with(&format!("Pl{code}"))
+                && n.ends_with(".dat")
+                && !n.contains("Cp")
+        }) {
+            let Some(c) = open(cname) else { continue };
+            let Some(root) = costume_model(&c) else {
+                continue;
+            };
+            let main = joint_walk(&c, root, true);
+            pairs += 1;
+            if main.len() != second.len() {
+                println!(
+                    "{data_name} second model {} joints, {cname} {} joints",
+                    second.len(),
+                    main.len()
+                );
+            }
+            for (k, &(j, has)) in second.iter().enumerate() {
+                if has && !main.get(k).is_some_and(|m| m.1) {
+                    found += 1;
+                    println!(
+                        "{data_name} second model joint {k} ({j:#x}) has display objects, {cname}'s joint {k} none"
+                    );
+                }
+            }
+        }
+    }
+    // Kirby's copy costumes.
+    let co = open("PlCo.dat").expect("PlCo.dat");
+    let common = co.public("ftLoadCommonData").expect("ftLoadCommonData");
+    let table = co.ptr(common + 0x14).expect("Fighter_804D6540");
+    let kirby = co.ptr(table + 4 * 4);
+    let optional: Vec<u32> = kirby
+        .map(|e| {
+            let n = co.u32(e + 4);
+            let list = co.ptr(e);
+            (0..n)
+                .map(|i| u32::from(co.data()[(list.unwrap() + 4 * i) as usize]))
+                .collect()
+        })
+        .unwrap_or_default();
+    println!("Kirby's optional parts (Fighter_804D6540): {optional:?}");
+    for (k, copy_file, copy_sym) in [
+        ("Dk", "PlKbCpDk.dat", "ftDataKirbyCopyDonkey"),
+        ("Pr", "PlKbCpPr.dat", "ftDataKirbyCopyPurin"),
+        ("Mt", "PlKbCpMt.dat", "ftDataKirbyCopyMewtwo"),
+        ("Fc", "PlKbCpFc.dat", "ftDataKirbyCopyFalco"),
+        ("Gw", "PlKbCpGw.dat", "ftDataKirbyCopyGamewatch"),
+    ] {
+        let cp = open(copy_file).expect("a copy's file");
+        let d = cp.public(copy_sym).expect("a copy's data");
+        let mask = cp.u32(d + 0x10);
+        let low = cp.ptr(d + 0x14).map(|r| joint_walk(&cp, r, false));
+        for (ci, c) in ["Nr", "Ye", "Bu", "Re", "Gr", "Wh"].iter().enumerate() {
+            let (hc, sfx) = if k == "Gw" || ci == 0 {
+                ("Nr", "")
+            } else {
+                (*c, *c)
+            };
+            let Some(h) = open(&format!("PlKb{hc}Cp{k}.dat")) else {
+                continue;
+            };
+            let Some(hroot) = h.public(&format!("PlyKirby{k}{sfx}_Share_joint")) else {
+                continue;
+            };
+            let hat = joint_walk(&h, hroot, false);
+            let main_name = format!("PlKb{c}.dat");
+            let Some(m) = open(&main_name) else { continue };
+            let Some(root) = costume_model(&m) else {
+                continue;
+            };
+            let main = joint_walk(&m, root, true);
+            pairs += 1;
+            // The parts with a joint, in part order: the model's joints at the parts no
+            // optional part holds, and each optional part the mask attaches, a copy of a
+            // joint with no display objects (`ftParts_80075650`).
+            let mut parts: Vec<bool> = Vec::new();
+            let mut mi = main.iter();
+            let total = main.len() + optional.len();
+            for idx in 0..total as u32 {
+                if let Some(o) = optional.iter().position(|&p| p == idx) {
+                    if mask & (1 << o) != 0 {
+                        parts.push(false);
+                    }
+                } else if let Some(&(_, has)) = mi.next() {
+                    parts.push(has);
+                }
+            }
+            if mask != 0 {
+                println!("{k} {c}: the copy attaches optional parts (mask {mask:#x})");
+            }
+            let mut after = parts.clone();
+            for (i, &(j, has)) in hat.iter().enumerate() {
+                if has && !parts.get(i).copied().unwrap_or(false) {
+                    found += 1;
+                    println!(
+                        "{k} {c}: the costume's joint {i} ({j:#x}) has display objects, {main_name}'s part {i} none"
+                    );
+                }
+                if has && i < after.len() {
+                    after[i] = true;
+                }
+            }
+            if let Some(low) = &low {
+                for (i, &(j, has)) in low.iter().enumerate() {
+                    if has && !after.get(i).copied().unwrap_or(false) {
+                        found += 1;
+                        println!(
+                            "{k} {c}: the low model's joint {i} ({j:#x}) has display objects, {main_name}'s part {i} none"
+                        );
+                    }
+                }
+            }
+        }
+    }
+    println!(
+        "{pairs} pairs of a part tree and a model compared, {found} joints with display objects on a part with none"
+    );
+}
+
 fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let Some(cmd) = args.first() else {
@@ -768,6 +1175,15 @@ fn main() -> ExitCode {
         "item-colanims" => colanims(&disc, &files, "ItCo", "itPublicData", Some(0x14)),
         "robjs" => robjs(&disc, &files),
         "stage-colanims" => stage_colanims(&disc, &files),
+        "pobjs" => pobjs(&disc, &files),
+        "fogs" => fogs(&disc, &files),
+        "part-dobjs" => part_dobjs(&disc, &files),
+        "particle-kinds" => {
+            let mask = args.get(1).map_or(0x8000_0000, |m| {
+                u32::from_str_radix(m.trim_start_matches("0x"), 16).expect("a mask")
+            });
+            particle_kinds(&disc, &files, mask);
+        }
         "colanims" => {
             // `colanims FILE ROOT [FIELD]`: any color animation table, the word at FIELD of
             // ROOT or, without one, ROOT itself.

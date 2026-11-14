@@ -1364,8 +1364,9 @@ pub fn get_dobj(jobjs: &JObjs, j: Option<JObjId>) -> Option<DObjId> {
     jobjs[j?].dobj()
 }
 
-/// Puts a display object first in the joint's list (`HSD_JObjAddDObj`, unchecked until its
-/// callers are ported).
+/// Puts a display object first in the joint's list (`HSD_JObjAddDObj`). Dead in the original
+/// (ledger/dead.txt): its callers hang a part tree's display objects only on parts with their
+/// own, and take this branch for a part with none, which no model on the disc gives.
 pub fn add_dobj(objs: &mut Objects, j: Option<JObjId>, d: Option<DObjId>) {
     let (Some(j), Some(d)) = (j, d) else { return };
     let o = &objs.jobjs[j];

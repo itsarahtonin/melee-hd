@@ -34,6 +34,19 @@ use melee_sim::hsd::gobj::GObjId;
 use melee_sim::hsd::tobj::{self, TObjId};
 use melee_sim::mtx::Mtx34;
 
+/// A shape setup's matrix mark (`pobj.c`'s `mtx_mark`): the joint whose matrices it loaded
+/// and how (`HSD_MTX_RIGID`, `HSD_MTX_ENVELOPE`, or 0 for none).
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub struct MtxMark {
+    pub obj: Option<melee_sim::hsd::jobj::JObjId>,
+    pub mark: u32,
+}
+
+/// `HSD_MTX_RIGID`.
+pub const MTX_RIGID: u32 = 1;
+/// `HSD_MTX_ENVELOPE`.
+pub const MTX_ENVELOPE: u32 = 2;
+
 /// HAL's display statics the renderer keeps from draw to draw, as the original keeps them
 /// from frame to frame.
 #[derive(Default)]
@@ -48,10 +61,10 @@ pub struct Hsd {
     /// `prev_vtxdesclist_array`, `setupVtxDesc`'s `prev_vtxdesc`).
     pub prev_array: Option<DataRef>,
     pub prev_vtxdesc: Option<DataRef>,
-    /// The rigid setups' matrix mark (`mtx_mark[0]`), which `HSD_PObjSetMtxMark` never
-    /// stores for the slots HAL passes, so it stays as `HSD_PObjClearMtxMark` left it, no
-    /// joint's.
-    pub mtx_mark: Option<melee_sim::hsd::jobj::JObjId>,
+    /// The shapes' matrix marks (`mtx_mark[2]`), which `HSD_PObjSetMtxMark` never stores
+    /// for the slots HAL passes, so they stay as `HSD_PObjClearMtxMark` left them: no
+    /// joint's, with the mark it was given.
+    pub mtx_mark: [MtxMark; 2],
     /// The texture chain of the material being drawn (`tobj_head`), and the resources its
     /// setup gave its textures.
     pub tobj_chain: Vec<TObjId>,

@@ -292,7 +292,9 @@ impl Running<'_> {
         self.mark_record_landed(AttackRecord::Fighter(gobj));
     }
 
-    /// The attacker's statistics for a hit with attack `ev` (`pl_80038144`'s body).
+    /// The attacker's statistics for a hit with attack `ev` (`pl_80038144`'s body), with
+    /// `pl_8003FE40`'s bonus for Luigi's taunt (attack 99, `ft_800895E0`'s rewrite of 0x71).
+    #[doc(alias = "pl_8003FE40")]
     #[allow(clippy::too_many_arguments)]
     fn count_hit_stats(
         &mut self,

@@ -376,7 +376,7 @@ impl Running<'_> {
 
     /// `fn_800251EC`: the pan from the owner's place across the view, between the centre
     /// and the side's pan; true (the end) for an owner that isn't a fighter or an item.
-    // Ports `fn_800251EC`; aliased once a check reaches it.
+    /// Dead in the original (ledger/dead.txt): no sound is made with behavior 0 or 3.
     fn sound_pan_on_screen(&mut self, g: GObjId) -> bool {
         let ([left, center, right], _) = crate::game::camera::ground_span(self.game, self.data);
         let s = sound_of(self.game, g);
@@ -460,7 +460,7 @@ impl Running<'_> {
 }
 
 /// A frame of the behaviors that work on the object alone, all but `fn_800251EC` and
-/// `fn_800259A0` (dead: no sound is made with behavior 3, ledger/dead.txt), which read the
+/// `fn_800259A0` (dead: no sound is made with behavior 0 or 3, ledger/dead.txt), which read the
 /// owner's place against the camera: the pan swept by the
 /// frames (`fn_800253D8`, `fn_800256BC`; once, `fn_800259EC`, `fn_80025A98`; straight,
 /// `fn_80025B44`; mirrored, `fn_80025CBC`) or the volume faded (`fn_80025E38`). Whether
