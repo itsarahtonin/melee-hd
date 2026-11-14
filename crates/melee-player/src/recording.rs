@@ -3,7 +3,7 @@
 //! recording goes to the replays folder as `Game_YYYYMMDDTHHMMSS.slp`, named by the local time
 //! the match started, as Slippi Dolphin names its replays.
 
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::time::SystemTime;
 
 use melee_sim::game::record::Recorder;
@@ -16,8 +16,7 @@ pub struct Recording {
 }
 
 impl Recording {
-    /// A recording of a match starting now, for `dir`, or the replays folder beside the
-    /// executable.
+    /// A recording of a match starting now, for `dir`, or the settings folder's replays folder.
     pub fn new(dir: Option<&str>) -> Recording {
         Recording {
             dir: dir
@@ -50,10 +49,10 @@ impl Recording {
     }
 }
 
-/// `replays` beside the executable (the working folder if its path is unknown).
+/// The settings folder's `replays` (before 2026-11-14, `replays` beside the executable, which
+/// stays as it was: written nowhere, nothing moved).
 pub fn default_dir() -> PathBuf {
-    let exe = std::env::current_exe().unwrap_or_default();
-    exe.parent().unwrap_or(Path::new(".")).join("replays")
+    crate::settings::folder().join("replays")
 }
 
 /// The local date and time of day, as Slippi names replays by: on Windows the system's local

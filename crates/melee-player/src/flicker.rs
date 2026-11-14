@@ -6,8 +6,8 @@
 //! too slow for. Each presented image is copied into a small ring on the GPU and reduced there
 //! to a 64 by 64 grid of luminance, read back a few frames later without waiting for the GPU.
 //! A frame that pops out from both neighbours while they match each other, and is much flatter
-//! than both ([`Judged::hit`]), is a hit: logged, and saved to `captures/<ms>-flicker` beside
-//! the executable (the three grids, the three presented images, `flicker.txt`, and in `after/`
+//! than both ([`Judged::hit`]), is a hit: logged, and saved to `captures/<ms>-flicker` in the
+//! settings folder (the three grids, the three presented images, `flicker.txt`, and in `after/`
 //! the F12 capture of the next frame drawn), at most one every [`COOLDOWN`] and [`MAX_CAPTURES`]
 //! a run.
 //!

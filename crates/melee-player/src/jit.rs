@@ -51,29 +51,27 @@ pub enum Timing {
     /// Just in time, aligned to the refreshes when the display's rate is a multiple of the
     /// ticks' (60, 120, 240 Hz: even at that rate whether or not the display waits for frames),
     /// else at the ticks' cadence (a faster display that isn't a multiple is taken to be
-    /// variable-refresh). Experimental.
+    /// variable-refresh). The settings' default since 2026-11-14 (Sarah: "that's not
+    /// experimental anymore, and it can be the default now").
+    #[default]
     Auto,
     /// Just in time, aligned to the refreshes: a fixed-refresh display.
     Refresh,
     /// Just in time at the ticks' cadence, frames presented as soon as they're ready: a
     /// variable-refresh display (G-SYNC, FreeSync), which shows a frame when it comes.
     Vrr,
-    /// The fixed 60 Hz timer: the event loop's wake-up, nothing aligned. The default while the
-    /// just-in-time ones are experimental.
-    #[default]
+    /// The fixed 60 Hz timer: the event loop's wake-up, nothing aligned. The command line's
+    /// default, for developers' runs and measures.
     Timer,
 }
 
 impl Timing {
     /// The settings panel's choices, with their names.
     pub const CHOICES: [(Timing, &str); 4] = [
+        (Timing::Auto, "Just in time, auto (recommended)"),
+        (Timing::Refresh, "Just in time, fixed refresh"),
+        (Timing::Vrr, "Just in time, variable refresh"),
         (Timing::Timer, "Fixed timer"),
-        (Timing::Auto, "Just in time, auto (experimental)"),
-        (
-            Timing::Refresh,
-            "Just in time, fixed refresh (experimental)",
-        ),
-        (Timing::Vrr, "Just in time, variable refresh (experimental)"),
     ];
 
     pub fn parse(v: &str) -> Result<Timing, String> {
@@ -770,7 +768,7 @@ mod tests {
         }
         assert_eq!(Timing::parse("off"), Ok(Timing::Timer));
         assert!(Timing::parse("sometimes").is_err());
-        assert_eq!(Timing::default(), Timing::Timer);
+        assert_eq!(Timing::default(), Timing::Auto);
     }
 
     #[test]

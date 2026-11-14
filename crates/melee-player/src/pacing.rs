@@ -28,35 +28,49 @@ use std::time::{Duration, Instant};
 use crate::jit::Grid;
 
 /// How frames are drawn for displays faster than the game's ticks (`--high-refresh`).
+///
+/// The settings panel's High refresh is a plain toggle (Sarah, 2026-11-14), on by default: on is
+/// [`Mode::Extrapolate`], which works at any refresh rate, variable refresh included, and at 60 Hz
+/// draws a frame a tick. Interpolate is no longer offered there: Extrapolate with an added delay
+/// is exact, and an added delay of 1 shows what Interpolate showed. It stays for developers
+/// (`--high-refresh interpolate`).
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
 pub enum Mode {
     /// One frame a tick, as the tick renders it.
-    #[default]
     Off,
     /// Frames at the display's rate between the last two ticks: up to a tick of added latency.
     Interpolate,
     /// Frames at the display's rate between the latest tick and the next, predicted: no added
-    /// latency, a tick of correction when an input changes.
+    /// latency, a tick of correction when an input changes. The settings' default.
+    #[default]
     Extrapolate,
 }
 
 impl Mode {
-    /// The settings panel's choices, with their names.
-    pub const CHOICES: [(Mode, &str); 3] = [
-        (Mode::Off, "Off (a frame a tick)"),
-        (Mode::Interpolate, "Interpolate (up to a tick later)"),
-        (Mode::Extrapolate, "Extrapolate (predicts a tick)"),
-    ];
-
+    /// The command line's `--high-refresh`: `on` is Extrapolate.
     pub fn parse(v: &str) -> Result<Mode, String> {
         match v {
             "off" => Ok(Mode::Off),
             "interpolate" => Ok(Mode::Interpolate),
-            "extrapolate" => Ok(Mode::Extrapolate),
+            "extrapolate" | "on" => Ok(Mode::Extrapolate),
             _ => Err(format!(
-                "--high-refresh off|interpolate|extrapolate, not {v}"
+                "--high-refresh on|off (or interpolate, extrapolate), not {v}"
             )),
         }
+    }
+
+    /// The settings file's `high-refresh`: on or off, with the older files' modes read as on.
+    pub fn from_setting(v: &str) -> Option<Mode> {
+        match v {
+            "off" => Some(Mode::Off),
+            "on" | "extrapolate" | "interpolate" => Some(Mode::Extrapolate),
+            _ => None,
+        }
+    }
+
+    /// What the settings file keeps: on or off.
+    pub fn setting(self) -> &'static str {
+        if self.paced() { "on" } else { "off" }
     }
 
     /// The name the command line and the settings file use.
@@ -71,14 +85,6 @@ impl Mode {
     /// Whether frames are drawn at the display's rate, between two states.
     pub fn paced(self) -> bool {
         self != Mode::Off
-    }
-
-    /// The name the settings panel shows.
-    pub fn name(self) -> &'static str {
-        Mode::CHOICES
-            .iter()
-            .find(|(m, _)| *m == self)
-            .map_or("?", |(_, n)| n)
     }
 }
 
@@ -264,11 +270,29 @@ mod tests {
         assert_eq!(Mode::parse("off"), Ok(Mode::Off));
         assert_eq!(Mode::parse("interpolate"), Ok(Mode::Interpolate));
         assert_eq!(Mode::parse("extrapolate"), Ok(Mode::Extrapolate));
+        assert_eq!(Mode::parse("on"), Ok(Mode::Extrapolate));
         assert!(Mode::parse("predict").is_err());
-        for (m, _) in Mode::CHOICES {
+        for m in [Mode::Off, Mode::Interpolate, Mode::Extrapolate] {
             assert_eq!(Mode::parse(m.key()), Ok(m));
         }
-        assert_eq!(Mode::default(), Mode::Off);
+        assert_eq!(Mode::default(), Mode::Extrapolate);
+    }
+
+    /// The settings file keeps on or off, and reads an older file's Interpolate as on.
+    #[test]
+    fn the_setting_is_on_or_off() {
+        assert_eq!(Mode::Off.setting(), "off");
+        assert_eq!(Mode::Extrapolate.setting(), "on");
+        assert_eq!(Mode::Interpolate.setting(), "on");
+        for (v, m) in [
+            ("on", Mode::Extrapolate),
+            ("off", Mode::Off),
+            ("extrapolate", Mode::Extrapolate),
+            ("interpolate", Mode::Extrapolate),
+        ] {
+            assert_eq!(Mode::from_setting(v), Some(m), "{v}");
+        }
+        assert_eq!(Mode::from_setting("sometimes"), None);
     }
 
     #[test]
@@ -285,11 +309,17 @@ mod tests {
     /// after they start, with the swap chain's wait ending at each refresh when `fifo`: each
     /// frame's (display time, t, tick due).
     fn run(hz: f64, took: f64, fifo: bool) -> Vec<(f64, f32, f64)> {
+        run_at(hz, took, fifo, 0.0)
+    }
+
+    /// [`run`] with the display's refreshes `phase` ms after the first tick's due time.
+    fn run_at(hz: f64, took: f64, fifo: bool, phase: f64) -> Vec<(f64, f32, f64)> {
         let t0 = Instant::now();
+        let start = t0 + ms(phase);
         let refresh = Duration::from_secs_f64(1.0 / hz);
-        let mut p = Pacer::new(TICK, refresh, fifo, t0);
+        let mut p = Pacer::new(TICK, refresh, fifo, start);
         let mut out = Vec::new();
-        let mut now = t0;
+        let mut now = start;
         while now < t0 + Duration::from_secs(2) {
             // The ticks run when due; the latest due by now is the one drawn.
             let n = (now - t0).as_nanos() / TICK.as_nanos();
@@ -298,8 +328,8 @@ mod tests {
             let presented = now + ms(took);
             // FIFO: shown at the first refresh after it's presented; the next image comes then.
             let shown = if fifo {
-                let k = ((presented - t0).as_secs_f64() / refresh.as_secs_f64()).ceil();
-                t0 + refresh.mul_f64(k)
+                let k = ((presented - start).as_secs_f64() / refresh.as_secs_f64()).ceil();
+                start + refresh.mul_f64(k)
             } else {
                 presented
             };
@@ -342,6 +372,48 @@ mod tests {
                 );
             }
             assert!(settled.iter().all(|f| (0.0..=1.0).contains(&f.1)));
+        }
+    }
+
+    /// High refresh is on by default, so a 60 Hz display draws Extrapolate's frames too: one a
+    /// tick, each showing the tick after the frame before's, and motion as even as Off's (each
+    /// frame's game time moves on by its display time), whatever the refreshes' phase against
+    /// the ticks. A 59.94 Hz display, a little slower than the ticks, passes over a tick when
+    /// its phase crosses a tick's due time (the first refresh at 16 ms lands there after about
+    /// 40 frames), never showing one twice, and the motion stays even across it.
+    #[test]
+    fn sixty_hertz_draws_a_frame_a_tick() {
+        let tick = TICK.as_secs_f64();
+        for fifo in [false, true] {
+            for phase in [0.5, 4.0, 8.3, 12.0, 16.0] {
+                let frames = run_at(60.0, 5.0, fifo, phase);
+                let settled = &frames[frames.len() / 4..];
+                for w in settled.windows(2) {
+                    let ticks = (w[1].2 - w[0].2) / tick;
+                    assert!(
+                        (ticks - 1.0).abs() < 1e-6,
+                        "fifo {fifo}, phase {phase}: {ticks} ticks between frames"
+                    );
+                    let shown = w[1].0 - w[0].0;
+                    let moved = game_time(&w[1]) - game_time(&w[0]);
+                    assert!((moved - shown).abs() < 0.0005, "fifo {fifo}, phase {phase}");
+                }
+            }
+            let frames = run_at(59.94, 5.0, fifo, 16.0);
+            let settled = &frames[frames.len() / 4..];
+            let mut passed_over = 0;
+            for w in settled.windows(2) {
+                let ticks = ((w[1].2 - w[0].2) / tick).round();
+                assert!(
+                    ticks == 1.0 || ticks == 2.0,
+                    "59.94 Hz, fifo {fifo}: {ticks}"
+                );
+                passed_over += usize::from(ticks == 2.0);
+                let shown = w[1].0 - w[0].0;
+                let moved = game_time(&w[1]) - game_time(&w[0]);
+                assert!((moved - shown).abs() < 0.0005, "59.94 Hz, fifo {fifo}");
+            }
+            assert_eq!(passed_over, 1, "59.94 Hz, fifo {fifo}");
         }
     }
 
