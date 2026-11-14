@@ -1626,7 +1626,7 @@ impl Running<'_> {
         };
         self.game.sis.init(text);
         let block = crate::hsd::heap::with(|h| h.mem_alloc(text)).unwrap_or(0);
-        self.game.sis.arena_block = block;
+        self.game.sis.take_block(self.data, block);
         let d = self.dvd_mut();
         if d.heaps.status(crate::lb::heap::SEQ) == crate::lb::heap::CREATED {
             d.cache.scene.is_heap_persistent[0] = true;
