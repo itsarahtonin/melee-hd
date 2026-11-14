@@ -579,6 +579,7 @@ fn play(
             77..=78 => {
                 fns::HSD_MObjCompileTev(ctx, handle(ctx, tm));
                 mobj::compile_tev(&mut s.objs, om);
+                cmp_tev(s, tm, om, &format!("{what} step {n} (compile tev)"));
                 "compile tev"
             }
             79..=81 => {
@@ -918,6 +919,51 @@ fn play(
         s.objs.tobjs.pool.used() + s.objs.mobjs.pool.used() + s.objs.aobjs.pool.used(),
         0
     );
+}
+
+/// The compiled TEV (`HSD_MObj::tevdesc`, a list of `HSD_TExpTevDesc`) against ours, stage by
+/// stage: the stage's color channel, its color and alpha operations, inputs, outputs and konst
+/// selections, as `TExpAssignReg` and its `Assign*` pieces left the inputs.
+fn cmp_tev(s: &Sides, tm: u32, om: Option<MObjId>, what: &str) {
+    let ctx = s.ctx;
+    let stages = om
+        .and_then(|m| s.objs.mobjs[m].tev.as_ref())
+        .map_or(&[][..], |d| &d.stages[..]);
+    let mut t = ctx.read_u32(tm + 0x18);
+    let mut k = 0;
+    while t != 0 {
+        let stage = stages
+            .get(k)
+            .unwrap_or_else(|| panic!("{what}: theirs has TEV stage {k}, ours not"));
+        let d = &stage.desc;
+        let c = &d.conf;
+        for (off, ours, name) in [
+            (0x14, d.color, "color"),
+            (0x18, c.clr_op, "clr_op"),
+            (0x1C, c.clr_a, "clr_a"),
+            (0x20, c.clr_b, "clr_b"),
+            (0x24, c.clr_c, "clr_c"),
+            (0x28, c.clr_d, "clr_d"),
+            (0x38, c.clr_out_reg, "clr_out_reg"),
+            (0x3C, c.alpha_op, "alpha_op"),
+            (0x40, c.alpha_a, "alpha_a"),
+            (0x44, c.alpha_b, "alpha_b"),
+            (0x48, c.alpha_c, "alpha_c"),
+            (0x4C, c.alpha_d, "alpha_d"),
+            (0x5C, c.alpha_out_reg, "alpha_out_reg"),
+            (0x6C, c.kcsel, "kcsel"),
+            (0x70, c.kasel, "kasel"),
+        ] {
+            assert_eq!(
+                ctx.read_u32(t + off),
+                ours,
+                "{what}: TEV stage {k}'s {name}"
+            );
+        }
+        t = ctx.read_u32(t);
+        k += 1;
+    }
+    assert_eq!(k, stages.len(), "{what}: TEV stages");
 }
 
 /// A shadow texture as shadow.c's `makeShadowTObj` makes it, on both sides, with the static

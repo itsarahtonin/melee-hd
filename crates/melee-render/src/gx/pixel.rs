@@ -103,7 +103,8 @@ impl Gx {
         self.data.bp_sent = 0;
     }
 
-    /// `GXInitFogAdjTable`.
+    /// `GXInitFogAdjTable`. Dead in the original (ledger/dead.txt): no fog the game loads has
+    /// a range adjustment.
     pub fn init_fog_adj_table(&self, table: &mut FogAdjTable, width: u16, projmtx: &[[f32; 4]; 4]) {
         let p = |r: usize, c: usize| reg(projmtx[r][c]);
         let (near_z, side_x) = if p(3, 3) == 0.0 {
