@@ -50,6 +50,16 @@ impl Sound {
     }
 }
 
+/// Hands `from`'s output device to `to` (a replay played from the panel takes Melee's, and
+/// gives it back), so the player never holds two: an exclusive one can't be opened twice.
+pub fn hand_over(from: Option<&mut Sound>, to: Option<&mut Sound>) {
+    if let (Some(from), Some(to)) = (from, to)
+        && from.output.is_some()
+    {
+        to.output = from.output.take();
+    }
+}
+
 /// The output device when `play`, else none.
 fn output(play: bool) -> Option<Output> {
     if !play {
