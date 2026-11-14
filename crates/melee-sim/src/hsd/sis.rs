@@ -466,8 +466,9 @@ impl SisLib {
         let f = |o: u32| w(o).map(f32::from_bits);
         let f2 = |o: u32| Some([f(o)?, f(o + 4)?]);
         t.x4b = b(0x4B);
-        // A string pointer's word: null, into the arena, a static buffer or a loaded file
-        // (unknown where the file has been placed elsewhere since, the word naming an old copy).
+        // A string pointer's word: null, into the arena, a static buffer or a font's strings
+        // loaded now (unknown elsewhere: a freed file's place names no data; a layout reading
+        // it stops by name).
         t.x60 = w(0x60).and_then(|p| match p {
             0 => Some(None),
             p if self.arena_block != 0 && p.wrapping_sub(self.arena_block) < self.size => {
@@ -479,7 +480,8 @@ impl SisLib {
             p => {
                 let mut d = None;
                 super::export::with_image(|img| d = img.data_at(p));
-                d.map(|d| Some(SisPtr::Data(d)))
+                d.filter(|d| self.font_archives.contains(&Some(d.archive)))
+                    .map(|d| Some(SisPtr::Data(d)))
             }
         });
         t.current_width = f(0x70);
