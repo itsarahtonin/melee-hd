@@ -22,6 +22,10 @@ pub const FILE: &str = "settings.txt";
 /// The launcher's file, read once for a settings file that isn't there yet.
 const OLD_FILE: &str = "last-match.txt";
 
+/// The settings file's version: none before 2026-11-14's new defaults (just-in-time ticks,
+/// high refresh on), which a file without one moves to once ([`Settings::restore`]).
+pub const SETTINGS_VERSION: u32 = 2;
+
 /// The widest timing margin, in milliseconds.
 pub const MAX_MARGIN_MS: f32 = 8.0;
 
@@ -195,7 +199,10 @@ impl Settings {
             self.volume,
             self.audio_device,
             on(self.audio_exclusive),
-        ) + &format!("recordings = {}\n", self.recordings)
+        ) + &format!(
+            "recordings = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            self.recordings
+        )
     }
 
     /// How the sound's output device is opened.
@@ -209,6 +216,8 @@ impl Settings {
     /// Takes back what [`Settings::save`] kept, except what the command line gave; a line
     /// missing or unreadable leaves its setting as it is.
     pub fn restore(&mut self, text: &str, given: &Given) {
+        let mut versioned = false;
+        let (mut old_timer, mut old_off) = (false, false);
         let on = |v: &str| match v {
             "on" => Some(true),
             "off" => Some(false),
@@ -246,6 +255,7 @@ impl Settings {
                     if let Some(m) = Mode::from_setting(v) {
                         self.high_refresh = m;
                     }
+                    old_off = v == "off";
                 }
                 "present" if !given.present => {
                     if let Ok(p) = Present::parse(v) {
@@ -261,7 +271,9 @@ impl Settings {
                     if let Ok(t) = Timing::parse(v) {
                         self.tick_timing = t;
                     }
+                    old_timer = v == "timer";
                 }
+                "settings-version" => versioned = true,
                 "jit-margin" if !given.jit_margin => {
                     if let Some(m) = parse_margin(v) {
                         self.jit_margin = m;
@@ -297,6 +309,17 @@ impl Settings {
                 }
                 "recordings" => self.recordings = v.to_owned(),
                 _ => {}
+            }
+        }
+        // Settings kept before 2026-11-14 (no version) hold the old defaults in every key, as
+        // every save writes them all: the fixed timer and high refresh off move to the new
+        // defaults once. The version written from now on keeps a player's later choice.
+        if !versioned {
+            if old_timer {
+                self.tick_timing = Timing::Auto;
+            }
+            if old_off {
+                self.high_refresh = Mode::Extrapolate;
             }
         }
     }
@@ -390,6 +413,9 @@ pub struct Panel {
     pub open: bool,
     /// Why Melee couldn't start, or what the last action did.
     pub message: Option<String>,
+    /// The message is news of something done (a report or an export saved), shown in the
+    /// normal color rather than as a problem.
+    pub message_ok: bool,
     /// Melee stopped: it can't be resumed, only restarted.
     pub halted: bool,
     /// What stopped Melee, when the simulation stopped by name ([`STOP_TEXT`]).
@@ -414,6 +440,7 @@ impl Panel {
             settings,
             open: false,
             message: None,
+            message_ok: false,
             halted: false,
             stop: None,
             devices: Vec::new(),
@@ -522,7 +549,11 @@ impl Panel {
                 ui.add_space(8.0);
                 ui.scope(|ui| {
                     ui.set_max_width(440.0);
-                    ui.colored_label(ui.visuals().error_fg_color, m);
+                    if self.message_ok {
+                        ui.label(m);
+                    } else {
+                        ui.colored_label(ui.visuals().error_fg_color, m);
+                    }
                 });
             }
             // Once Melee stopped, its message offers it.
@@ -971,13 +1002,65 @@ mod tests {
         let mut s = Settings::default();
         s.restore("high-refresh = interpolate\n", &Given::default());
         assert_eq!(s.high_refresh, Mode::Extrapolate);
-        s.restore("high-refresh = off\n", &Given::default());
+        s.restore(
+            "high-refresh = off\nsettings-version = 2\n",
+            &Given::default(),
+        );
         assert_eq!(s.high_refresh, Mode::Off);
         let given = Settings {
             high_refresh: Mode::Interpolate,
             ..Settings::default()
         };
         assert!(given.save().contains("high-refresh = on\n"));
+    }
+
+    /// A settings file from before the new defaults (no version) that holds the old ones moves
+    /// to the new once, keeping anything else it chose; one with the version keeps the old
+    /// defaults as the player's choice, and the move writes the version.
+    #[test]
+    fn old_settings_move_to_the_new_defaults_once() {
+        let restored = |text: &str, given: &Given| {
+            let mut s = Settings::default();
+            s.restore(text, given);
+            (s.tick_timing, s.high_refresh)
+        };
+        let old = "tick-timing = timer\nhigh-refresh = off\nvolume = 50\n";
+        assert_eq!(
+            restored(old, &Given::default()),
+            (Timing::Auto, Mode::Extrapolate)
+        );
+        // The old code's other values are kept (`interpolate` reads as on).
+        assert_eq!(
+            restored(
+                "tick-timing = vrr\nhigh-refresh = interpolate\n",
+                &Given::default()
+            ),
+            (Timing::Vrr, Mode::Extrapolate)
+        );
+        // Turned off after the move: kept.
+        let mut s = Settings::default();
+        s.restore(old, &Given::default());
+        s.tick_timing = Timing::Timer;
+        s.high_refresh = Mode::Off;
+        let saved = s.save();
+        assert!(saved.contains("settings-version = 2\n"));
+        assert_eq!(
+            restored(&saved, &Given::default()),
+            (Timing::Timer, Mode::Off)
+        );
+        // The command line still wins over both.
+        let given = Given {
+            tick_timing: true,
+            high_refresh: true,
+            ..Given::default()
+        };
+        let mut s = Settings {
+            tick_timing: Timing::Timer,
+            high_refresh: Mode::Off,
+            ..Settings::default()
+        };
+        s.restore(old, &given);
+        assert_eq!((s.tick_timing, s.high_refresh), (Timing::Timer, Mode::Off));
     }
 
     #[test]

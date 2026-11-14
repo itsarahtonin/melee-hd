@@ -2297,6 +2297,7 @@ impl App {
                 }
                 None => f.panel.message = Some(why),
             }
+            f.panel.message_ok = false;
             f.panel.halted = true;
         }
         if stop.is_some() {
@@ -2305,8 +2306,9 @@ impl App {
         self.open_panel();
     }
 
-    /// Report a bug: the zip saved in the settings folder and shown; what the panel says.
-    fn report_bug(&mut self) -> String {
+    /// Report a bug: the zip saved in the settings folder and shown; what the panel says, and
+    /// whether it went well.
+    fn report_bug(&mut self) -> (String, bool) {
         // The session's recording as it stands (Melee's, set aside while a replay plays),
         // written out first.
         let aside = self.aside.as_mut().map(|a| &mut a.session);
@@ -2329,12 +2331,13 @@ impl App {
                     || path.display().to_string(),
                     |n| n.to_string_lossy().into_owned(),
                 );
-                format!(
+                let said = format!(
                     "Saved {name} ({}) in the settings folder. Nothing was sent.",
                     report::size_text(size)
-                )
+                );
+                (said, true)
             }
-            Err(e) => format!("The bug report couldn't be saved: {e}."),
+            Err(e) => (format!("The bug report couldn't be saved: {e}."), false),
         }
     }
 
@@ -2389,7 +2392,9 @@ impl App {
             }
             Action::Export => {
                 if let Some(f) = &mut self.front {
+                    // Only its success says anything here (a failure is a message box).
                     f.panel.message = dialogs::export();
+                    f.panel.message_ok = true;
                 }
             }
             Action::UnlockAll => {
@@ -2398,9 +2403,10 @@ impl App {
                 }
             }
             Action::ReportBug => {
-                let said = self.report_bug();
+                let (said, ok) = self.report_bug();
                 if let Some(f) = &mut self.front {
                     f.panel.message = Some(said);
+                    f.panel.message_ok = ok;
                 }
             }
             Action::Play => {
@@ -2576,6 +2582,7 @@ impl App {
         if let Some(f) = &mut self.front {
             f.panel.tab = front::Tab::Recordings;
             f.panel.message = why;
+            f.panel.message_ok = false;
         }
         self.open_panel();
     }
