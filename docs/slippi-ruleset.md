@@ -20,7 +20,7 @@ The milestone is done when:
 
 ## Status (2026-11-14, `main` at `f7115325`): planned
 
-Nothing started. The design calls below wait for Sarah.
+Nothing started. Sarah answered the design calls on 2026-11-14 (see Decisions).
 
 ## What melee-hd has today
 
@@ -159,6 +159,17 @@ Tasks 1, 2 and 3 can start at once, and task 5's corpus run and tests beside the
 | 9 | Display-phase reads Slippi doesn't fix (homing and nearest-opponent items through a KO'd fighter, Onett's cars) | Keep them as the original's and Slippi's, compute each such read both ways, and when the outcomes differ note it in the player's log and the `.slp`'s metadata ("may not play back exactly"), never stopping the match. A ruleset fix would change gameplay from Slippi's and break its replays. | Sarah: what "exact" promises |
 | 10 | Float mode under the ruleset | Slippi Dolphin's JIT mode for the whole session (menus included), so the matches and their handoff need no switch and ssbm-rs's sessions run `--fp slippi` throughout; Vanilla keeps the console's. | Sarah: exactness |
 | 11 | The codes' ledger | Not needed in this scope: the 27 codes and 16 writes are listed in [the oracle](oracle.md)'s ruleset table and checked there; task 3's test checks that the list written is what `Rules::from_codes` reads. | Decided here |
+
+## Decisions (Sarah, 2026-11-14)
+
+- **Scope:** Slippi's gameplay codes in live play, no memory card, Slippi's unlocks; not Slippi Dolphin's boot, Online Play menus, m-ex or netplay code set ("i mostly meant the no-memcard thing and the rules that decouple the bubble rendering from the sim code and fixes the CPU DI issue etc"). Take performance and code-structure wins wherever the ruleset allows ("taking perf/code structure wins wherever we can get it").
+- **Exact playback is required:** "to be clear yes .slp files recorded from our slippi ruleset should indeed play back exactly in slippi dolphin".
+- **Call 1, version:** 3.19, as recommended. Her newest replays (October 2026) are 3.19.1, and her Slippi Dolphin install (August 2026) is newer than the last public release (3.6.4, June), so 3.19.1 is both what the oracle tested against and current: "if 3.19 is both of those things then yes it is the obvious choice".
+- **Calls 2, 5, 8, 10:** as recommended. Call 5: "yes absolutely".
+- **Calls 3 and 4:** as recommended, left to the coordinator ("you decide"; "whatever makes the most sense").
+- **Call 6:** as recommended, tabled, not conceded: "i feel like we are in a position to at least somehow close that gap and i don't wanna concede those areas as unrecordable. maybe in a follow on repo or by making our own format or something".
+- **Call 7, revised:** the single-player modes run under the Slippi ruleset too: Slippi's gameplay codes plus its Required "C-Stick in Single Player" code (`0416B480 60000000`, so the C-stick does smash attacks as in VS). They save no `.slp` while playback can't rebuild them (call 6's gap). Sarah: "if these could be improved by applying the ruleset ... they should. also ... the whole 'c-stick controls the camera in single player modes' thing ... is obnoxious".
+- **Call 9:** as recommended.
 
 ## Before the tasks start
 
