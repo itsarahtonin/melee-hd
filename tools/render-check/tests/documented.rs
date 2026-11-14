@@ -55,6 +55,7 @@ use common::M6AD3_MK_MEET;
 use common::M6AD4_LL_EDGE;
 use common::M6DB_EV32_ECBS;
 use common::M6PB_IM_POLAR;
+use common::M6R2_GW_CHARGE;
 use common::{M6CD_CL_EASY_BULLET, M6CD_CL_VH_CH};
 
 // The depth copies' frames (docs/player.md, "Depth copies in frames").
@@ -664,6 +665,42 @@ rendered_frames!(M6AC_MK_SLOPE9;
 // Adventure's Polar Bear flung toward the screen (`m6-adv-polarbear/im-polar`, task 24's fourth
 // round), captured with ssbm-rs's renderer running: the bear on its way toward the camera (3756,
 // 3771 and 3786).
+// Mr. Game & Watch charging his forward smash (`m6-reach-2/gw-charge`), captured with ssbm-rs's
+// renderer running: the torch, his own item, drawn as its outline, itself and its silhouette
+// (`it_8026EECC`'s flags, `Draw::ItemFlags`) and in his color overlay as the charge flashes
+// (`ftCo_800C0674`). Identical images, every draw the same but the two that sample the fighters'
+// shadows' copies.
+fn m6r2(frame: u32, same: [usize; 2]) {
+    compare_in(
+        &M6R2_GW_CHARGE,
+        frame,
+        Group::Standard,
+        Expect::SameImages {
+            same,
+            why: why::SHADOW_COPY,
+        },
+        Capture::Rendered,
+    );
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6r2_gw_charge_1615() {
+    m6r2(1615, [987, 984]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6r2_gw_charge_1640() {
+    m6r2(1640, [995, 997]);
+}
+
+#[test]
+#[ignore = "needs ssbm-rs's references and the disc; run with --ignored"]
+fn m6r2_gw_charge_1670() {
+    m6r2(1670, [991, 984]);
+}
+
 rendered_frames!(M6PB_IM_POLAR;
     m6pb_im_polar_3756 3756,
     m6pb_im_polar_3771 3771,

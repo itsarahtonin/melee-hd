@@ -484,18 +484,16 @@ impl Ctx<'_> {
     }
 
     /// `it_80277F90`: the item's light overlay's stage, if its own overlay lights; the
-    /// register it took.
-    // Ports `it_80277F90`; aliased once a frames check draws an item's light overlay (no
-    // documented frame does: its mutation fails none).
+    /// register it took. No item's overlay ever lights: the items' color animations
+    /// (`ItCo.dat`'s seven) hold no light command (13), which alone sets `x7C_flag2`.
+    #[doc(alias = "it_80277F90")]
     fn item_light_overlay(&mut self, desc: &TevDesc, ip: &Item) -> Option<u8> {
         let own = &ip.x548_colorOverlay;
-        if !own.x7C_flag2 || !own.x7C_light_enable {
+        // The mutation adds the stage for an overlay that doesn't light.
+        if (!own.x7C_flag2 || !own.x7C_light_enable) && !crate::mutation::on("it_80277F90") {
             return None;
         }
-        let mut light = own.x50_light_color.clone();
-        if crate::mutation::on("it_80277F90") {
-            light.r ^= 0x10;
-        }
+        let light = own.x50_light_color.clone();
         Some(self.light_overlay_stage(desc, &light, GX_ENABLE))
     }
 
@@ -503,8 +501,7 @@ impl Ctx<'_> {
     /// under `b4`, else its own color or the overlay's (its owner's with `b3` and flag
     /// `x13`, `ftCo_800C0674`).
     #[doc(alias = "it_80278108")]
-    // Ports `ftCo_800C0674`; aliased once a frames check draws an item in its owner's color
-    // overlay (its mutation fails none of the 16 frames tried).
+    #[doc(alias = "ftCo_800C0674")]
     fn item_color_overlay(
         &mut self,
         desc: &TevDesc,
@@ -561,7 +558,22 @@ impl Ctx<'_> {
                 return self.mobj_setup(m, 0, None);
             }
         };
-        let flag = |i: u32| ip.xDCF_flag[0] >> (7 - i) & 1 != 0;
+        // The flags the item's render callback set for this tree, as melee-sim named them.
+        // The mutation reads the flags the frame's end left, as melee-render once did.
+        let named = self
+            .hsd
+            .item_flags
+            .filter(|_| !crate::mutation::on("fn_80277D8C"));
+        let flags = match named {
+            Some(f) => f,
+            None if self.hsd.item_flags.is_some() => ip.xDCF_flag[0],
+            None => {
+                self.hsd
+                    .note_once("an item material before its draw flags were named");
+                ip.xDCF_flag[0]
+            }
+        };
+        let flag = |i: u32| flags >> (7 - i) & 1 != 0;
         let (b3, b4, b5) = (flag(3), flag(4), flag(5));
         let (desc, mut rendermode) = self.mobj_setup_tev_part(m);
 

@@ -304,6 +304,10 @@ impl Ctx<'_> {
                 self.hsd.fighter_flags = Some(*flags);
                 1
             }
+            Draw::ItemFlags(flags) => {
+                self.hsd.item_flags = Some(*flags);
+                1
+            }
             Draw::Fog(f) => {
                 self.fog_set(*f);
                 1

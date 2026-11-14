@@ -197,9 +197,9 @@ impl Running<'_> {
 
     /// Off the ground while holding, `fn_800DA004` (`fn_800DA440`, `fn_800DA618`): both let
     /// go and fall.
-    // Ports `fn_800DA004`; aliased once a check reaches it.
-    // Ports `fn_800DA440`; aliased once a check reaches it.
-    // Ports `fn_800DA618`; aliased once a check reaches it.
+    #[doc(alias = "fn_800DA004")]
+    #[doc(alias = "fn_800DA440")]
+    #[doc(alias = "fn_800DA618")]
     fn catch_fall_apart(&mut self, gobj: GObjId) {
         let victim = self.game.fighter(gobj).victim_gobj.expect("holding no one");
         self.grab_release(gobj, victim);
