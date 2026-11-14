@@ -678,12 +678,12 @@ impl Running<'_> {
         self.change_motion_state(gobj, ms, SWITCH_FLAGS, frame, 1.0, 0.0, None);
     }
 
-    // Ports `ftPp_SpecialHi_801217EC`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_801217EC")]
     fn popo_to_air_start_0_from(&mut self, gobj: GObjId) {
         self.popo_to_air(gobj, MS_AIR_START_0);
     }
 
-    // Ports `ftPp_SpecialHi_80121CE0`; aliased once a check reaches it.
+    #[doc(alias = "ftPp_SpecialHi_80121CE0")]
     fn popo_to_air_throw_0_from(&mut self, gobj: GObjId) {
         self.popo_to_air(gobj, MS_AIR_THROW_0);
     }
