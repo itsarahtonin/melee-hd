@@ -19,18 +19,34 @@
 //! memory pieces' free lists, which other classes of that size share, so the original reuses
 //! their addresses in another order than a pool's own. Where the model gives none (it's off, or
 //! a captured state's slot whose address isn't known) a pool is last in, first out.
+//!
+//! A slot's contents live apart from it (`store`), so a slot whose object went with its scene's
+//! heap ([`Pool::retire`]) keeps only its address: a session's pools hold a slot for every
+//! address their objects have had, and the objects of the scenes gone cost nothing. Following
+//! such a handle stops by name, as nothing in the original's memory is that object any more.
 
 use super::heap;
+use crate::state_eq::{Diff, StateEq, StateHasher};
 
 /// The first of the handles past every pool that stand for words the original's block held
 /// and nothing has written since (unknown until written, from a captured state's stale
 /// bytes): following one stops, as the original would fault on the word.
 pub const UNKNOWN: u32 = 0xF000_0000;
 
-/// A pool's slots. A slot stays in place when freed; `T` holds its last contents until reused.
-#[derive(melee_derive::CloneFrom, Debug, melee_derive::StateEq)]
+/// A pool's slots. A slot stays in place when freed and holds its last contents until reused;
+/// a retired slot ([`Pool::retire`]) holds only its address.
+#[derive(melee_derive::CloneFrom, Debug)]
 pub struct Pool<T, const K: u8 = 0> {
-    slots: Vec<T>,
+    /// Each slot's place in `store`, [`GONE`] for a retired slot, which has none: it's free,
+    /// taken again only by an object at its address, and freed since it was made.
+    cell: Vec<u32>,
+    /// Each slot's object's address in the original, when the allocator model knows it (else
+    /// 0).
+    addrs: Vec<u32>,
+    /// The contents of the slots that have any (all but the retired), in no order.
+    store: Vec<T>,
+    /// What each of `store`'s places keeps of its slot's lists.
+    cells: Vec<Cell>,
     free: Vec<u32>,
     /// Slots standing for the blocks the original's pool takes from the heap once its free
     /// list runs out (`HSD_ObjAllocAddFree`), holding what the heap holds there, the next one
@@ -39,24 +55,31 @@ pub struct Pool<T, const K: u8 = 0> {
     fresh: Vec<u32>,
     used: u32,
     peak: u32,
-    /// Whether each slot has been freed (and maybe reused) since it was made: for checks,
-    /// where a handle's pairing with an address no longer holds.
-    ever_freed: Vec<bool>,
-    /// Each slot's object's address in the original, when the allocator model knows it
-    /// (else 0).
-    addrs: Vec<u32>,
-    /// Each slot's place on the free list, [`NOT_FREE`] when it isn't on it.
-    free_at: Vec<u32>,
     /// The slots by their addresses, sorted, the last slot given each: where
     /// [`Pool::alloc_at`] reuses a slot.
     by_addr: Vec<(u32, u32)>,
     limit: NumLimit,
+    /// Whether each slot's contents are at its own place in `store` (`cell` is the identity):
+    /// so until the pool first retires a slot, as a replay's match's pools never do, a handle
+    /// indexes `store` directly.
+    direct: bool,
 }
 
-/// [`Pool`]'s `free_at` for a slot off the free list.
+/// A slot with contents: which slot, its place on the free list ([`NOT_FREE`] when it isn't on
+/// it), and whether it has been freed (and maybe reused) since it was made, for checks where a
+/// handle's pairing with an address no longer holds.
+#[derive(Clone, Copy, Debug)]
+struct Cell {
+    slot: u32,
+    free_at: u32,
+    ever_freed: bool,
+}
+
+/// [`Cell`]'s `free_at` for a slot off the free list.
 const NOT_FREE: u32 = u32::MAX;
-/// [`Pool`]'s `free_at` for a slot of a pool made anew ([`Pool::retire`]): free, but taken
-/// again only by an object at its address.
+/// [`Slot`]'s `cell` for a retired slot, with no contents.
+const GONE: u32 = u32::MAX;
+/// A retired slot's place on the free list as the sync test and the golden hashes take it.
 const RETIRED: u32 = u32::MAX - 1;
 
 /// `HSD_ObjAllocData`'s number limit: `num_limit`, which allocations stop at while
@@ -95,16 +118,17 @@ impl crate::state_eq::StateEq for NumLimit {
 impl<T, const K: u8> Default for Pool<T, K> {
     fn default() -> Self {
         Pool {
-            slots: Vec::new(),
+            cell: Vec::new(),
+            addrs: Vec::new(),
+            store: Vec::new(),
+            cells: Vec::new(),
             free: Vec::new(),
             fresh: Vec::new(),
             used: 0,
             peak: 0,
-            ever_freed: Vec::new(),
-            addrs: Vec::new(),
-            free_at: Vec::new(),
             by_addr: Vec::new(),
             limit: NumLimit::default(),
+            direct: true,
         }
     }
 }
@@ -123,7 +147,7 @@ impl<T, const K: u8> Pool<T, K> {
         let addr = Self::model_alloc();
         let slot = match self.take(addr) {
             Some(slot) => {
-                self.slots[slot as usize] = value;
+                self.put(slot, value);
                 slot
             }
             None => self.push(value),
@@ -134,11 +158,32 @@ impl<T, const K: u8> Pool<T, K> {
 
     /// A new slot for `value`, on no list.
     fn push(&mut self, value: T) -> u32 {
-        self.slots.push(value);
-        self.ever_freed.push(false);
+        let slot = self.cell.len() as u32;
+        self.cell.push(self.store.len() as u32);
         self.addrs.push(0);
-        self.free_at.push(NOT_FREE);
-        (self.slots.len() - 1) as u32
+        self.cells.push(Cell {
+            slot,
+            free_at: NOT_FREE,
+            ever_freed: false,
+        });
+        self.store.push(value);
+        slot
+    }
+
+    /// `value` into `slot`'s contents, which a retired slot takes anew.
+    fn put(&mut self, slot: u32, value: T) {
+        match self.cell[slot as usize] {
+            GONE => {
+                self.cell[slot as usize] = self.store.len() as u32;
+                self.cells.push(Cell {
+                    slot,
+                    free_at: NOT_FREE,
+                    ever_freed: true,
+                });
+                self.store.push(value);
+            }
+            c => self.store[c as usize] = value,
+        }
     }
 
     /// The address the allocator model gives the pool's next object, 0 where it gives none (a
@@ -158,10 +203,19 @@ impl<T, const K: u8> Pool<T, K> {
         self.set_addr(slot, addr);
     }
 
+    /// `slot`'s place on the free list: [`NOT_FREE`] when it isn't on it, [`RETIRED`] for a
+    /// retired slot.
+    fn free_at(&self, slot: u32) -> u32 {
+        match self.cell[slot as usize] {
+            GONE => RETIRED,
+            c => self.cells[c as usize].free_at,
+        }
+    }
+
     /// The slot an object at `addr` reuses, taken off its list ([`Pool::reused_at`]).
     fn take(&mut self, addr: u32) -> Option<u32> {
         let slot = self.reused_at(addr)?;
-        if self.free_at[slot as usize] != NOT_FREE {
+        if self.free_at(slot) != NOT_FREE {
             self.take_free(slot);
         } else {
             let at = self.fresh.iter().rposition(|&s| s == slot).unwrap();
@@ -171,16 +225,23 @@ impl<T, const K: u8> Pool<T, K> {
     }
 
     /// Takes `slot` off the free list, keeping the others' order (the list's last is the
-    /// original's `freehead`, which a freed block links to).
+    /// original's `freehead`, which a freed block links to). A retired slot is on no list.
     fn take_free(&mut self, slot: u32) {
-        let at = std::mem::replace(&mut self.free_at[slot as usize], NOT_FREE);
-        if at == RETIRED {
+        let c = self.cell[slot as usize];
+        if c == GONE {
             return;
         }
+        let at = std::mem::replace(&mut self.cells[c as usize].free_at, NOT_FREE);
         self.free.remove(at as usize);
         for &s in &self.free[at as usize..] {
-            self.free_at[s as usize] -= 1;
+            let c = self.cell[s as usize];
+            self.cells[c as usize].free_at -= 1;
         }
+    }
+
+    /// Where `addr` is in `by_addr`, or where it would go.
+    fn find_addr(&self, addr: u32) -> Result<usize, usize> {
+        self.by_addr.binary_search_by_key(&addr, |e| e.0)
     }
 
     /// The slot an object at `addr` reuses, none where it takes a new one: the slot last at the
@@ -189,7 +250,7 @@ impl<T, const K: u8> Pool<T, K> {
     /// fresh one.
     pub fn reused_at(&self, addr: u32) -> Option<u32> {
         if addr != 0
-            && let Ok(i) = self.by_addr.binary_search_by_key(&addr, |e| e.0)
+            && let Ok(i) = self.find_addr(addr)
         {
             let slot = self.by_addr[i].1;
             if self.is_free(slot) {
@@ -200,29 +261,44 @@ impl<T, const K: u8> Pool<T, K> {
         (addr == 0 || self.addrs[next as usize] == 0).then_some(next)
     }
 
-    /// The pool made anew (`HSD_ObjAllocInit`), as a scene does with its heap: the counts and
-    /// the limit start again and nothing is on the free list, but the slots stay, each at its
-    /// address and with its last contents, for the handles the scenes before kept (the
-    /// original's pointers into their heap), and an object at a slot's address takes it again.
-    /// A pool with no address the model gave is simply emptied.
+    /// The pool made anew (`HSD_ObjAllocInit`), or its objects gone with the scene's heap
+    /// that held them (`HSD_CreateMainHeap`): the counts and the limit start again and nothing
+    /// is on the free list, but the slots stay, each at its address, for the handles the
+    /// scenes before kept (the original's pointers into their heap), and an object at a slot's
+    /// address takes it again. Their contents go: nothing in memory is those objects any more,
+    /// and a block the heap gives again holds what the image says (a session's leftovers).
+    /// A slot with no address keeps its contents, live; a pool with no address the model gave
+    /// is simply emptied.
     pub fn retire(&mut self) {
         if self.by_addr.is_empty() {
             *self = Pool::default();
             return;
         }
-        for (slot, at) in self.free_at.iter_mut().enumerate() {
-            *at = if self.addrs[slot] != 0 {
-                RETIRED
-            } else {
-                NOT_FREE
-            };
-        }
         self.free.clear();
         self.fresh.clear();
-        self.ever_freed.fill(true);
         self.used = 0;
         self.peak = 0;
         self.limit = NumLimit::default();
+        // The retired slots' contents go; the others' keep their order.
+        let mut kept = 0;
+        for c in 0..self.cells.len() {
+            let slot = self.cells[c].slot;
+            if self.addrs[slot as usize] != 0 {
+                self.cell[slot as usize] = GONE;
+            } else {
+                self.cell[slot as usize] = kept as u32;
+                self.store.swap(kept, c);
+                self.cells[kept] = Cell {
+                    slot,
+                    free_at: NOT_FREE,
+                    ever_freed: true,
+                };
+                kept += 1;
+            }
+        }
+        self.direct &= kept == self.store.len();
+        self.store.truncate(kept);
+        self.cells.truncate(kept);
     }
 
     /// A slot for a class object the allocator model put at `addr` (`_hsdClassAlloc`), as
@@ -232,7 +308,7 @@ impl<T, const K: u8> Pool<T, K> {
         self.check_limit();
         let slot = match self.take(addr) {
             Some(slot) => {
-                self.slots[slot as usize] = value;
+                self.put(slot, value);
                 slot
             }
             None => self.push(value),
@@ -249,13 +325,19 @@ impl<T, const K: u8> Pool<T, K> {
     }
 
     /// A slot as `HSD_ObjAlloc` hands it out uncleared: a reused slot keeps its last contents
-    /// (the object last at its address) and a fresh slot the heap's, else a new one holds
-    /// `fresh`.
+    /// (the object last at its address) and a fresh slot the heap's, else a new one, or a
+    /// retired one (a scene before's), holds `fresh`, which the caller fills from the heap's
+    /// image where it knows the block.
     pub fn alloc_stale(&mut self, fresh: T) -> u32 {
         self.check_limit();
         let addr = Self::model_alloc();
         let slot = match self.take(addr) {
-            Some(slot) => slot,
+            Some(slot) => {
+                if self.cell[slot as usize] == GONE {
+                    self.put(slot, fresh);
+                }
+                slot
+            }
             None => self.push(fresh),
         };
         self.count_alloc(slot, addr);
@@ -318,18 +400,19 @@ impl<T, const K: u8> Pool<T, K> {
 
     /// Records the address of the slot's object, for pools the model doesn't follow itself.
     pub fn set_addr(&mut self, slot: u32, addr: u32) {
-        let old = std::mem::replace(&mut self.addrs[slot as usize], addr);
+        let old = self.addrs[slot as usize];
         if old == addr {
             return;
         }
         if old != 0
-            && let Ok(i) = self.by_addr.binary_search_by_key(&old, |e| e.0)
+            && let Ok(i) = self.find_addr(old)
             && self.by_addr[i].1 == slot
         {
             self.by_addr.remove(i);
         }
+        self.addrs[slot as usize] = addr;
         if addr != 0 {
-            match self.by_addr.binary_search_by_key(&addr, |e| e.0) {
+            match self.find_addr(addr) {
                 Ok(i) => self.by_addr[i].1 = slot,
                 Err(i) => self.by_addr.insert(i, (addr, slot)),
             }
@@ -349,13 +432,14 @@ impl<T, const K: u8> Pool<T, K> {
 
     /// Returns `slot` to the pool, `HSD_ObjFree`.
     pub fn free(&mut self, slot: u32) {
+        let (addr, cell) = (self.addrs[slot as usize], self.cell[slot as usize]);
         if K != 0 {
-            let addr = self.addrs[slot as usize];
             heap::with(|h| h.obj_free(heap::Kind::ALL[K as usize - 1], addr));
         }
-        self.free_at[slot as usize] = self.free.len() as u32;
+        let c = &mut self.cells[cell as usize];
+        c.free_at = self.free.len() as u32;
+        c.ever_freed = true;
         self.free.push(slot);
-        self.ever_freed[slot as usize] = true;
         self.used -= 1;
     }
 
@@ -364,28 +448,29 @@ impl<T, const K: u8> Pool<T, K> {
     /// list runs out. The last one returned is taken first.
     pub fn free_fresh(&mut self, slot: u32) {
         self.fresh.push(slot);
-        self.ever_freed[slot as usize] = true;
+        let c = self.cell[slot as usize];
+        self.cells[c as usize].ever_freed = true;
         self.used -= 1;
     }
 
     /// Whether `slot` holds no live object: on the free list (a freed object a handle can
-    /// outlive) or fresh.
+    /// outlive), retired, or fresh.
     pub fn is_free(&self, slot: u32) -> bool {
-        self.free_at
-            .get(slot as usize)
-            .is_some_and(|&a| a != NOT_FREE)
-            || self.fresh.contains(&slot)
+        (slot as usize) < self.cell.len()
+            && (self.free_at(slot) != NOT_FREE || self.fresh.contains(&slot))
     }
 
     /// Whether `slot` is a scene before's that no object has taken since the pool was made anew
     /// ([`Pool::retire`]).
     pub fn is_retired(&self, slot: u32) -> bool {
-        self.free_at.get(slot as usize) == Some(&RETIRED)
+        self.cell.get(slot as usize) == Some(&GONE)
     }
 
     /// Whether `slot` has been freed since it was made, reused or not.
     pub fn was_freed(&self, slot: u32) -> bool {
-        self.ever_freed.get(slot as usize).copied().unwrap_or(false)
+        self.cell
+            .get(slot as usize)
+            .is_some_and(|&c| c == GONE || self.cells[c as usize].ever_freed)
     }
 
     pub fn used(&self) -> u32 {
@@ -397,24 +482,59 @@ impl<T, const K: u8> Pool<T, K> {
         self.peak
     }
 
-    /// Every slot, freed ones with their last contents: for owners that keep the storage
-    /// those hold.
-    pub fn slots(&self) -> &[T] {
-        &self.slots
+    /// How many slots the pool has, retired ones included: one past the last handle.
+    pub fn len(&self) -> u32 {
+        self.cell.len() as u32
     }
 
-    pub fn slots_mut(&mut self) -> &mut [T] {
-        &mut self.slots
+    /// Whether the pool has no slot.
+    pub fn is_empty(&self) -> bool {
+        self.cell.is_empty()
+    }
+
+    /// Every slot by its handle, freed ones with their last contents (following a retired
+    /// one stops, as [`Pool`]'s indexing does).
+    pub fn slots(&self) -> Slots<'_, T, K> {
+        Slots(self)
+    }
+
+    /// Every slot's contents, freed ones' last contents included, in no order: for owners
+    /// that keep the storage those hold.
+    pub fn stored(&self) -> &[T] {
+        &self.store
+    }
+
+    pub fn stored_mut(&mut self) -> &mut [T] {
+        &mut self.store
+    }
+
+    /// `slot`'s contents, none for a retired slot or past the pool's end.
+    pub fn get(&self, slot: u32) -> Option<&T> {
+        let c = *self.cell.get(slot as usize)?;
+        self.store.get(c as usize)
+    }
+
+    pub fn get_mut(&mut self, slot: u32) -> Option<&mut T> {
+        let c = *self.cell.get(slot as usize)?;
+        self.store.get_mut(c as usize)
+    }
+
+    /// Two slots' contents at once, none where they're the same slot or either has none.
+    pub fn get_disjoint_mut(&mut self, [a, b]: [u32; 2]) -> Option<[&mut T; 2]> {
+        let ca = *self.cell.get(a as usize)?;
+        let cb = *self.cell.get(b as usize)?;
+        if ca == GONE || cb == GONE {
+            return None;
+        }
+        self.store.get_disjoint_mut([ca as usize, cb as usize]).ok()
     }
 
     /// The live slots and their objects, in slot order, for readers outside the simulation
     /// (the presentation).
     pub fn iter(&self) -> impl Iterator<Item = (u32, &T)> + '_ {
-        self.slots
-            .iter()
-            .enumerate()
-            .filter(|&(i, _)| !self.is_free(i as u32))
-            .map(|(i, t)| (i as u32, t))
+        (0..self.len())
+            .filter(|&i| !self.is_free(i))
+            .map(|i| (i, &self[i]))
     }
 
     /// Copies `other` into `self`, reusing `self`'s storage: a rollback restore that doesn't
@@ -423,13 +543,14 @@ impl<T, const K: u8> Pool<T, K> {
     where
         T: Clone,
     {
-        self.slots.clone_from(&other.slots);
+        self.cell.clone_from(&other.cell);
+        self.addrs.clone_from(&other.addrs);
+        self.store.clone_from(&other.store);
+        self.cells.clone_from(&other.cells);
         self.free.clone_from(&other.free);
         self.fresh.clone_from(&other.fresh);
-        self.ever_freed.clone_from(&other.ever_freed);
-        self.addrs.clone_from(&other.addrs);
-        self.free_at.clone_from(&other.free_at);
         self.by_addr.clone_from(&other.by_addr);
+        self.direct = other.direct;
         self.used = other.used;
         self.peak = other.peak;
         self.limit = other.limit;
@@ -438,37 +559,203 @@ impl<T, const K: u8> Pool<T, K> {
 
 impl<T, const K: u8> std::ops::Index<u32> for Pool<T, K> {
     type Output = T;
+    #[inline]
     fn index(&self, slot: u32) -> &T {
-        match self.slots.get(slot as usize) {
+        // A retired slot's place ([`GONE`]) is past any store's end.
+        let c = if self.direct {
+            Some(slot)
+        } else {
+            self.cell.get(slot as usize).copied()
+        };
+        match c.and_then(|c| self.store.get(c as usize)) {
             Some(t) => t,
-            None => past_end(slot, self.slots.len()),
+            None => self.missing(slot),
         }
     }
 }
 
 impl<T, const K: u8> std::ops::IndexMut<u32> for Pool<T, K> {
+    #[inline]
     fn index_mut(&mut self, slot: u32) -> &mut T {
-        let len = self.slots.len();
-        match self.slots.get_mut(slot as usize) {
-            Some(t) => t,
-            None => past_end(slot, len),
+        let c = if self.direct {
+            Some(slot)
+        } else {
+            self.cell.get(slot as usize).copied()
+        };
+        match c {
+            Some(c) if (c as usize) < self.store.len() => &mut self.store[c as usize],
+            _ => self.missing(slot),
         }
     }
 }
 
-/// A slot past a pool's end: a stale read when it's an unknown handle ([`UNKNOWN`]).
-#[cold]
-#[track_caller]
-fn past_end(slot: u32, len: usize) -> ! {
-    if slot >= UNKNOWN {
-        panic!("stale read: followed a word unknown until written (handle {slot:#x})");
+/// A pool's slots by handle ([`Pool::slots`]).
+pub struct Slots<'a, T, const K: u8>(&'a Pool<T, K>);
+
+impl<T, const K: u8> Slots<'_, T, K> {
+    /// How many slots the pool has, retired ones included.
+    pub fn len(&self) -> usize {
+        self.0.cell.len()
     }
-    panic!("index out of bounds: the len is {len} but the index is {slot}")
+
+    pub fn is_empty(&self) -> bool {
+        self.0.cell.is_empty()
+    }
+}
+
+impl<T, const K: u8> std::ops::Index<usize> for Slots<'_, T, K> {
+    type Output = T;
+    #[track_caller]
+    fn index(&self, slot: usize) -> &T {
+        &self.0[slot as u32]
+    }
+}
+
+impl<T, const K: u8> Pool<T, K> {
+    /// A handle with no contents to follow: a stale read when it's an unknown handle
+    /// ([`UNKNOWN`]), a stop by name when its object went with its scene's heap.
+    #[cold]
+    #[inline(never)]
+    fn missing(&self, slot: u32) -> ! {
+        let len = self.cell.len();
+        if slot >= UNKNOWN {
+            panic!("stale read: followed a word unknown until written (handle {slot:#x})");
+        }
+        if (slot as usize) < len {
+            panic!(
+                "followed a handle to {} {slot} at {:#010x}, whose object went with its scene's \
+                 heap",
+                std::any::type_name::<T>(),
+                self.addrs[slot as usize]
+            );
+        }
+        panic!("index out of bounds: the len is {len} but the index is {slot}")
+    }
+
+    /// Whether `slot` has been freed since it was made, as the comparison takes it.
+    fn ever_freed_at(&self, slot: u32) -> bool {
+        self.was_freed(slot)
+    }
+
+    /// `by_addr`'s `i`th entry as the comparison takes it: the address and its slot.
+    fn by_addr_at(&self, i: u32) -> (u32, u32) {
+        self.by_addr[i as usize]
+    }
+}
+
+/// Compares two sequences of `len` values each, given by index, as a vector's comparison does.
+fn seq_diff<V: StateEq>(
+    lens: (u32, u32),
+    a: impl Fn(u32) -> V,
+    b: impl Fn(u32) -> V,
+) -> Option<Diff> {
+    for i in 0..lens.0.min(lens.1) {
+        if let Some(d) = a(i).state_diff(&b(i)) {
+            return Some(d.index(i));
+        }
+    }
+    (lens.0 != lens.1).then(|| Diff::new(format!("length {} != {}", lens.0, lens.1)))
+}
+
+/// Hashes a sequence of `len` values given by index, as a vector's hash does.
+fn seq_hash<V: StateEq>(len: u32, h: &mut StateHasher, v: impl Fn(u32) -> V) {
+    h.word(u64::from(len));
+    for i in 0..len {
+        v(i).state_hash(h);
+    }
+}
+
+/// The sync test's comparison and the golden hashes' (`crate::state_eq`) of a pool as it was
+/// laid out when each slot kept its contents and lists beside it: the slots in order, each its
+/// contents (a retired slot a marker), the lists and counts, then each slot's freed mark,
+/// address and place on the free list, and the slots by address. Where the contents sit in
+/// `store` isn't state.
+impl<T: StateEq, const K: u8> StateEq for Pool<T, K> {
+    fn state_diff(&self, other: &Self) -> Option<Diff> {
+        let lens = (self.len(), other.len());
+        let by_addr = (self.by_addr.len() as u32, other.by_addr.len() as u32);
+        self.slots_diff(other)
+            .map(|d| d.field("slots"))
+            .or_else(|| self.free.state_diff(&other.free).map(|d| d.field("free")))
+            .or_else(|| {
+                self.fresh
+                    .state_diff(&other.fresh)
+                    .map(|d| d.field("fresh"))
+            })
+            .or_else(|| self.used.state_diff(&other.used).map(|d| d.field("used")))
+            .or_else(|| self.peak.state_diff(&other.peak).map(|d| d.field("peak")))
+            .or_else(|| {
+                seq_diff(lens, |i| self.ever_freed_at(i), |i| other.ever_freed_at(i))
+                    .map(|d| d.field("ever_freed"))
+            })
+            .or_else(|| {
+                seq_diff(lens, |i| self.addr(i), |i| other.addr(i)).map(|d| d.field("addrs"))
+            })
+            .or_else(|| {
+                seq_diff(lens, |i| self.free_at(i), |i| other.free_at(i))
+                    .map(|d| d.field("free_at"))
+            })
+            .or_else(|| {
+                seq_diff(by_addr, |i| self.by_addr_at(i), |i| other.by_addr_at(i))
+                    .map(|d| d.field("by_addr"))
+            })
+            .or_else(|| {
+                self.limit
+                    .state_diff(&other.limit)
+                    .map(|d| d.field("limit"))
+            })
+    }
+
+    fn state_hash(&self, h: &mut StateHasher) {
+        h.word(u64::from(self.len()));
+        for i in 0..self.len() {
+            match self.get(i) {
+                Some(t) => t.state_hash(h),
+                None => h.word(u64::from(GONE)),
+            }
+        }
+        self.free.state_hash(h);
+        self.fresh.state_hash(h);
+        self.used.state_hash(h);
+        self.peak.state_hash(h);
+        seq_hash(self.len(), h, |i| self.ever_freed_at(i));
+        seq_hash(self.len(), h, |i| self.addr(i));
+        seq_hash(self.len(), h, |i| self.free_at(i));
+        seq_hash(self.by_addr.len() as u32, h, |i| self.by_addr_at(i));
+        self.limit.state_hash(h);
+    }
+}
+
+impl<T: StateEq, const K: u8> Pool<T, K> {
+    /// The first slot whose contents differ, as a sequence's comparison names it.
+    fn slots_diff(&self, other: &Self) -> Option<Diff> {
+        for i in 0..self.len().min(other.len()) {
+            let d = match (self.get(i), other.get(i)) {
+                (Some(a), Some(b)) => a.state_diff(b),
+                (None, None) => None,
+                (a, b) => Some(Diff::new(format!(
+                    "{} != {}",
+                    Self::held(a.is_some()),
+                    Self::held(b.is_some())
+                ))),
+            };
+            if let Some(d) = d {
+                return Some(d.index(i));
+            }
+        }
+        (self.len() != other.len())
+            .then(|| Diff::new(format!("length {} != {}", self.len(), other.len())))
+    }
+
+    fn held(some: bool) -> &'static str {
+        if some { "contents" } else { "retired, none" }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::Pool;
+    use crate::state_eq::StateEq;
 
     #[test]
     fn fresh_slots_come_after_the_free_list_and_off_it() {
@@ -551,7 +838,75 @@ mod tests {
         let mut q: Pool<u32> = Pool::default();
         q.alloc(1);
         q.retire();
-        assert_eq!((q.slots().len(), q.alloc(2)), (0, 0));
+        assert_eq!((q.len(), q.alloc(2)), (0, 0));
+    }
+
+    #[test]
+    fn a_retired_slot_keeps_only_its_address() {
+        let mut p: Pool<Vec<u32>> = Pool::default();
+        let a = p.alloc_at(0x8000_1000, vec![1]);
+        let b = p.alloc_at(0x8000_2000, vec![2]);
+        let c = p.alloc_at(0, vec![3]);
+        p.free(b);
+        p.retire();
+        // `a` and `b` hold nothing but their addresses; `c`, which no address names, keeps
+        // its contents.
+        assert_eq!((p.len(), p.stored().len()), (3, 1));
+        assert_eq!((p.get(a), p.get(b), &p[c]), (None, None, &vec![3]));
+        assert_eq!((p.addr(a), p.addr(b)), (0x8000_1000, 0x8000_2000));
+        // An object at `b`'s address takes it again, with its own contents; a stale one with
+        // what it's given, as a new slot would.
+        assert_eq!(p.alloc_at(0x8000_2000, vec![4]), b);
+        assert_eq!(p[b], vec![4]);
+        let d = p.alloc_at(0x8000_3000, vec![5]);
+        p.free(d);
+        assert_eq!(p.alloc_at(0x8000_3000, vec![6]), d);
+        p.retire();
+        assert_eq!((p.stored().len(), p.get(b), p.get(d)), (1, None, None));
+        // A copy keeps every slot's address and compares and hashes alike.
+        let mut q: Pool<Vec<u32>> = Pool::default();
+        q.clone_from(&p);
+        assert!(q.state_diff(&p).is_none());
+        let hash = |p: &Pool<Vec<u32>>| {
+            let mut h = crate::state_eq::StateHasher::new();
+            p.state_hash(&mut h);
+            h.finish()
+        };
+        assert_eq!(hash(&q), hash(&p));
+        assert_eq!(q.alloc_at(0x8000_1000, vec![7]), a);
+        assert!(q.state_diff(&p).is_some() && hash(&q) != hash(&p));
+    }
+
+    #[test]
+    #[should_panic(expected = "went with its scene's heap")]
+    fn following_a_retired_handle_stops() {
+        let mut p: Pool<u32> = Pool::default();
+        let a = p.alloc_at(0x8000_1000, 1);
+        p.retire();
+        let _ = p[a];
+    }
+
+    #[test]
+    fn a_pool_hashes_as_its_slots_in_order() {
+        // As the pool's derived comparison laid it out: the slots as a sequence, then the
+        // lists and counts (the golden hashes written before stay valid).
+        let mut p: Pool<u32> = Pool::default();
+        let a = p.alloc_at(0x8000_1000, 7);
+        p.alloc_at(0x8000_2000, 8);
+        p.free(a);
+        let mut h = crate::state_eq::StateHasher::new();
+        p.state_hash(&mut h);
+        let mut want = crate::state_eq::StateHasher::new();
+        vec![7u32, 8].state_hash(&mut want);
+        vec![a].state_hash(&mut want);
+        Vec::<u32>::new().state_hash(&mut want);
+        1u32.state_hash(&mut want);
+        2u32.state_hash(&mut want);
+        vec![true, false].state_hash(&mut want);
+        vec![0x8000_1000u32, 0x8000_2000].state_hash(&mut want);
+        vec![0u32, super::NOT_FREE].state_hash(&mut want);
+        vec![(0x8000_1000u32, 0u32), (0x8000_2000, 1)].state_hash(&mut want);
+        assert_eq!(h.finish(), want.finish());
     }
 
     #[test]

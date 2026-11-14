@@ -167,8 +167,7 @@ impl Running<'_> {
         let [sp, dp] = self
             .game
             .fighters
-            .slots_mut()
-            .get_disjoint_mut([s.0 as usize, d.0 as usize])
+            .get_disjoint_mut([s.0, d.0])
             .expect("two fighters");
         if x488 {
             dp.x488.clone_from(&sp.x488);

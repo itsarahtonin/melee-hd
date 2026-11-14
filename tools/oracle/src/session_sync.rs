@@ -1,5 +1,5 @@
 //! `melee-oracle session-sync INPUTS [--card FILE] [--card-pull F[,G]] [--rollback N]
-//! [--ticks N] [--perturb TICK]`: a recorded session played from power-on, every match it
+//! [--ticks N] [--perturb TICK] [--time TICK,...]`: a recorded session played from power-on, every match it
 //! reaches rolled back and played again after each tick, as `sync-test` does a replay's
 //! (docs/oracle.md, "Sync test").
 //!
@@ -45,6 +45,46 @@ fn in_match(game: &Game) -> bool {
     game.fighters.used() > 0
 }
 
+/// A rollback from before tick `tick` timed: the straight run's state restored into `work`'s
+/// and 8 ticks played, 2 runs to warm up, then the median, least and most of 21.
+fn time_restore(
+    tick: u64,
+    s: &Session,
+    console: &Console,
+    work: &mut Session,
+    work_console: &mut Console,
+) {
+    crate::session::snapshot_report(tick as u32, &s.game);
+    work.data = s.data.clone();
+    work.joiner_files = s.joiner_files.clone();
+    let mut run = || {
+        let t = Instant::now();
+        work.game.clone_from(&s.game);
+        work.card.clone_from(&s.card);
+        work_console.next = console.next;
+        for _ in 0..8 {
+            step(work, work_console);
+        }
+        t.elapsed().as_secs_f64() * 1e3
+    };
+    let ran = catch_unwind(AssertUnwindSafe(|| {
+        run();
+        run();
+        let mut v: Vec<f64> = (0..21).map(|_| run()).collect();
+        v.sort_by(f64::total_cmp);
+        (v[10], v[0], v[20])
+    }));
+    match ran {
+        Ok((med, lo, hi)) => println!(
+            "restore and 8 ticks before tick {tick}: {med:.3} ms (median of 21; {lo:.3} to {hi:.3})"
+        ),
+        Err(p) => println!(
+            "restore and 8 ticks before tick {tick}: stopped: {}",
+            panic_text(&p)
+        ),
+    }
+}
+
 /// What a rollback restores: the state before a tick.
 struct Saved {
     game: Game,
@@ -56,6 +96,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     let mut rollback = 1usize;
     let mut limit = u64::MAX;
     let mut perturb = None;
+    let mut time_ticks: Vec<u64> = Vec::new();
     let mut probe = false;
     let mut shortcut = false;
     let mut shortcut_failed = false;
@@ -73,8 +114,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
                 rollback = it
                     .next()
                     .and_then(|n| n.parse().ok())
-                    .filter(|&n| n >= 1)
-                    .expect("--rollback N, at least 1")
+                    .expect("--rollback N")
             }
             "--ticks" => limit = it.next().and_then(|t| t.parse().ok()).expect("--ticks N"),
             // The rollback that replays up to tick TICK first flips the lowest bit of the
@@ -86,6 +126,17 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
                         .expect("--perturb TICK"),
                 )
             }
+            // Before each tick TICK, the state's snapshot measured as `session --snapshot`
+            // measures it, and a rollback timed: the state restored into the second session's
+            // (`clone_from`) and 8 ticks played, as `melee-bench snapshot-match` times a
+            // match's (docs/performance.md), the median of 21 runs. With `--rollback 0`, only
+            // that.
+            "--time" => time_ticks.extend(
+                it.next()
+                    .expect("--time TICK,...")
+                    .split(',')
+                    .map(|t| t.parse::<u64>().expect("--time TICK,...")),
+            ),
             // Each tick's select screens' state printed: the hands, doors and coins, the
             // stage cursor's entry, for writing a session's script.
             "--probe" => probe = true,
@@ -119,7 +170,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     }
     let [inputs_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--hooks LINE] [--rollback N] [--ticks N] [--perturb TICK]"
+            "usage: melee-oracle session-sync INPUTS [--card FILE] [--card-out FILE] [--card-pull F[,G]] [--card-b FILE] [--card-b-out FILE] [--card-b-pull F[,G]] [--hooks LINE] [--rollback N] [--ticks N] [--perturb TICK] [--time TICK,...]"
         );
         return ExitCode::from(2);
     };
@@ -219,6 +270,9 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             // This tick changes scenes: no rollback reaches back across it.
             in_scene = 0;
         }
+        if time_ticks.contains(&tick) {
+            time_restore(tick, &s, &console, &mut work, &mut work_console);
+        }
         let slot = (tick % len as u64) as usize;
         ring[slot].game.clone_from(&s.game);
         ring[slot].card.clone_from(&s.card);
@@ -271,7 +325,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             m.1 = tick - 1;
         }
         // A rollback restores a state from within the scene, the scene's first tick's after.
-        if now_match && in_scene > rollback as u64 {
+        if rollback > 0 && now_match && in_scene > rollback as u64 {
             // The files read for opponents joining mid-match come along too.
             if in_scene == rollback as u64 + 1
                 || work.joiner_files.files.len() != s.joiner_files.files.len()

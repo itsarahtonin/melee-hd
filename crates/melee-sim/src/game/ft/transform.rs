@@ -38,12 +38,11 @@ impl Running<'_> {
         self.init_reset(dst_id);
         self.stop_dead(dst_gobj);
         let percent = self.game.fighters[src_id.0].dmg.x1830_percent;
-        let pair = [src_id.0 as usize, dst_id.0 as usize];
+        let pair = [src_id.0, dst_id.0];
         {
             let [src, dst] = self
                 .game
                 .fighters
-                .slots_mut()
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
             dst.cur_pos = src.cur_pos;
@@ -62,7 +61,6 @@ impl Running<'_> {
             let [src, dst] = self
                 .game
                 .fighters
-                .slots_mut()
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
             dst.dmg.x18F0 = src.dmg.x18F0;
@@ -169,7 +167,6 @@ impl Running<'_> {
             let [src, dst] = self
                 .game
                 .fighters
-                .slots_mut()
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
             dst.x2220_b5 = src.x2220_b5;
@@ -230,7 +227,6 @@ impl Running<'_> {
             let [src, dst] = self
                 .game
                 .fighters
-                .slots_mut()
                 .get_disjoint_mut(pair)
                 .expect("the transformation's two fighters");
             dst.coll_data.copy_from(&src.coll_data, 2);

@@ -310,7 +310,7 @@ pub fn save_drawn(lobjs: &LObjs) {
         assert!(!s.taken, "the lights saved twice");
         s.taken = true;
         s.lights.clear();
-        s.lights.extend(lobjs.pool.slots().iter().map(|o| Drawn {
+        s.lights.extend(lobjs.pool.stored().iter().map(|o| Drawn {
             flags: o.flags,
             hw_color: o.hw_color,
             shininess: o.shininess,
@@ -337,7 +337,7 @@ pub fn restore_drawn(lobjs: &mut LObjs) {
     SAVED.with_borrow_mut(|s| {
         assert!(s.taken, "the lights restored unsaved");
         s.taken = false;
-        for (o, d) in lobjs.pool.slots_mut().iter_mut().zip(&s.lights) {
+        for (o, d) in lobjs.pool.stored_mut().iter_mut().zip(&s.lights) {
             o.flags = d.flags;
             o.hw_color = d.hw_color;
             o.shininess = d.shininess;
