@@ -370,7 +370,7 @@ impl Recorder {
     pub fn playback_note(&self) -> Option<String> {
         self.display_phase.map(|(n, first)| {
             format!(
-                "may not play back exactly: {n} read{} through a fighter the display pass placed could go either way, the first in game tick {first}",
+                "may not play back exactly: a homing item's target could differ in playback ({n} time{}, first at tick {first})",
                 if n == 1 { "" } else { "s" }
             )
         })
@@ -1146,6 +1146,26 @@ mod tests {
         fn mismatch(&mut self, path: &str, ours: String, theirs: String) {
             panic!("{path}: {ours} vs {theirs}");
         }
+    }
+
+    #[test]
+    fn the_playback_note_counts_times() {
+        let mut r = Recorder::new(Setup::slippi());
+        assert_eq!(r.playback_note(), None);
+        r.display_phase = Some((1, 640));
+        assert_eq!(
+            r.playback_note().as_deref(),
+            Some(
+                "may not play back exactly: a homing item's target could differ in playback (1 time, first at tick 640)"
+            )
+        );
+        r.display_phase = Some((3, 12));
+        assert_eq!(
+            r.playback_note().as_deref(),
+            Some(
+                "may not play back exactly: a homing item's target could differ in playback (3 times, first at tick 12)"
+            )
+        );
     }
 
     #[test]
