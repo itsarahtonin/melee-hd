@@ -63,7 +63,7 @@ The way to meet the requirement by construction is to start every Slippi-ruleset
 
 **What it buys.** Every leftover a Slippi-ruleset match reads is playback's, so its `.slp` plays back as it played, with no tripwire needed for the heap; the match needs no heap image, and the vanilla layouts (`vanilla_vs`, `from_menus`) never apply to it. The check is direct: the live match and melee-hd's playback of the `.slp` it wrote run the same code from the same state, so they must agree tick by tick on the whole state, but for a named list (`Game::playback`'s replay-frame bookkeeping, the pad library's playback flag and queue, the recorder). `record_tests.rs` already plays a recording back and compares events; this extends it to the whole state every tick.
 
-**What's left outside the construction.** Two display-phase paths Slippi doesn't patch: a homing missile or nearest-opponent item targeting through a fighter in its KO toward the screen, and Onett's cars reading the camera's view edges. Each reads state the display pass placed, and Slippi Dolphin's playback doubles its rounds at its own phase, so a match where such a read falls on a doubled round can play back differently in Slippi Dolphin, as Slippi's own replays and online peers can. melee-hd can't make that exact, since Slippi Dolphin's phase isn't known; it can see it: at each such read, compute the outcome from both placements (the pass's and the logic's) and, where they differ, mark the match ([design call 9](#design-calls)).
+**What's left outside the construction.** Two display-phase paths Slippi doesn't patch: a homing missile or nearest-opponent item targeting through a fighter in its KO toward the screen, and Onett's cars reading the camera's view edges. Each reads state the display pass placed, and Slippi Dolphin's playback doubles its rounds at its own phase, so a match where such a read falls on a doubled round can play back differently in Slippi Dolphin, as Slippi's own replays and online peers can. melee-hd can't make that exact, since Slippi Dolphin's phase isn't known; it can see it: at each such read, compute the outcome from both placements (the pass's and the logic's) and, where they differ, mark the match ([design call 9](#design-calls)). These and Slippi's other defects melee-hd reproduces are in [Slippi's own defects](slippi-bugs.md).
 
 ### Checking it against ssbm-rs
 
@@ -142,7 +142,7 @@ From [Melee's bugs](melee-bugs.md), the entries the ruleset fixes:
 | [Pokémon Stadium's monitor tests a render-pass camera](melee-bugs.md#pokémon-stadiums-monitor-tests-a-render-pass-camera) | PSCameraIndependentMonitor (`801D24FC`) |
 | [Opponents' direction counts fighters KO'd toward the screen](melee-bugs.md#opponents-direction-counts-fighters-kod-toward-the-screen) | WhispyBlowDirFix (`8008653C`) |
 
-Not fixed by Slippi: [homing and nearest-opponent targeting through render-placed joints](melee-bugs.md#homing-and-nearest-opponent-targeting-through-render-placed-joints) and Onett's cars (design call 9). Each task that changes how one of these behaves under the ruleset updates the entry's "melee-hd" line.
+Not fixed by Slippi: [homing and nearest-opponent targeting through render-placed joints](melee-bugs.md#homing-and-nearest-opponent-targeting-through-render-placed-joints) and Onett's cars (design call 9); [Slippi's own defects](slippi-bugs.md#melee-bugs-slippi-doesnt-patch) lists them with the other Melee bugs Slippi leaves. Each task that changes how one of these behaves under the ruleset updates the entry's "melee-hd" line.
 
 ## Proposed tasks
 
