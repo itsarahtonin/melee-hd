@@ -255,6 +255,7 @@ The critical paths are 2, 16, 17, then 24, 26 and 27; and 3, 12, then 22. Waves 
 
 - **The Slippi ruleset** (Sarah, 2026-10-29: planned as the future default, its milestone to be decided when planning this one): [design call 6](#design-calls). It comes next (Sarah, 2026-11-13), planned in [the Slippi ruleset](slippi-ruleset.md).
 - **The player's polish** (milestone 7).
+- **The refactor and the fast renderer** (Sarah, 2026-11-14): after the Slippi ruleset's first tasks, planned in [the refactor](refactor.md).
 - **The ledger's bookkeeping outside every milestone** ([above](#outside-every-milestone)) but for task 11's optional sweep.
 
 ## Design calls

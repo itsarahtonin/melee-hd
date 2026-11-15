@@ -8,6 +8,10 @@
 //! The settings are kept in the settings folder's `settings.txt` (`key = value` lines; an
 //! older `last-match.txt`, the launcher's, is read when there's none yet), except those the
 //! command line gives.
+//!
+//! The panel has three tabs (Sarah, 2026-11-14): Settings, the panel as it was; Quick match,
+//! laid out until the Slippi ruleset can start its matches ([`crate::quick`]); and Recordings,
+//! the replays in a folder, any of them played from start to finish ([`crate::recordings`]).
 
 use crate::jit::Timing;
 use crate::pacing::Mode;
@@ -17,6 +21,10 @@ use crate::present::{Aspect, Present};
 pub const FILE: &str = "settings.txt";
 /// The launcher's file, read once for a settings file that isn't there yet.
 const OLD_FILE: &str = "last-match.txt";
+
+/// The settings file's version: none before 2026-11-14's new defaults (just-in-time ticks,
+/// high refresh on), which a file without one moves to once ([`Settings::restore`]).
+pub const SETTINGS_VERSION: u32 = 2;
 
 /// The widest timing margin, in milliseconds.
 pub const MAX_MARGIN_MS: f32 = 8.0;
@@ -44,6 +52,7 @@ pub struct Given {
     pub replays: bool,
     pub record_sessions: bool,
     pub debug_level: bool,
+    pub audio_exclusive: bool,
 }
 
 /// The player's settings.
@@ -57,6 +66,8 @@ pub struct Settings {
     pub scale: u32,
     /// Four samples a pixel.
     pub msaa: bool,
+    /// High refresh: on is Extrapolate (the panel's toggle); the command line can give
+    /// Interpolate, which the file keeps as on.
     pub high_refresh: Mode,
     pub present: Present,
     /// Ticks each controller read is held back.
@@ -64,7 +75,7 @@ pub struct Settings {
     pub tick_timing: Timing,
     /// The just-in-time tick's margin, in milliseconds.
     pub jit_margin: f32,
-    /// Saves each VS match as a Slippi replay, to `replays` (empty: beside the program).
+    /// Saves each VS match as a Slippi replay, to `replays` (empty: the settings folder's).
     pub record: bool,
     pub replays: String,
     /// Records each session from power-on (`session_rec`).
@@ -72,6 +83,13 @@ pub struct Settings {
     /// The developer setting: the debug level Melee's next power-on raises `DbLevel` to
     /// ([`DEBUG_LEVELS`]), 0 for retail's.
     pub debug_level: i32,
+    /// The sound's volume in percent, the output device by name (empty: the system's default,
+    /// followed as it changes) and whether it's taken exclusively (Windows).
+    pub volume: u32,
+    pub audio_device: String,
+    pub audio_exclusive: bool,
+    /// The folder the Recordings tab lists (empty: the replays folder).
+    pub recordings: String,
 }
 
 /// The developer setting's levels (Sarah, 2026-10-29: Off, Debug ROM and Develop): each
@@ -98,6 +116,18 @@ pub const DEBUG_WARNING: &str = "The debug menu switches your save's language to
 /// The "Save replays" setting's help line (Sarah, 2026-10-29).
 pub const REPLAYS_HELP: &str =
     "Replays of matches started from Melee's menus may not play back exactly in Slippi Dolphin.";
+/// The Audio section's help lines (proposed 2026-11-14, awaiting Sarah's word).
+pub const AUDIO_DEVICE_HELP: &str =
+    "The default follows the system's. An unplugged device falls back to it until it's back.";
+pub const EXCLUSIVE_HELP: &str =
+    "The lowest latency, but no other program's sound plays while melee-hd runs.";
+/// What the panel says when Melee stops (proposed 2026-11-14, awaiting Sarah's word): where
+/// the simulation stops by name, at a place the original would crash or melee-hd can't follow.
+pub const STOP_TITLE: &str = "Melee stopped";
+pub const STOP_TEXT: &str = "Melee reached something melee-hd can't play yet, or a place where the original game would crash. It isn't anything you did. Report a bug saves what's needed to see it happen again; Restart Melee\u{2026} starts over from power-on.";
+/// Report a bug's button and help line (proposed 2026-11-14, awaiting Sarah's word).
+pub const REPORT_BUTTON: &str = "Report a bug";
+pub const REPORT_HELP: &str = "Saves a zip in the settings folder with this session's recording, the log, your latest captures and your settings, and opens the folder. Nothing is sent anywhere: attach the zip to your report yourself.";
 
 /// A debug level's line of [`DEBUG_LEVELS`] (Off's for one not offered).
 fn debug_level(level: i32) -> (i32, &'static str, &'static str) {
@@ -114,15 +144,20 @@ impl Default for Settings {
             fullscreen: false,
             scale: 0,
             msaa: false,
-            high_refresh: Mode::Off,
+            // Both on by default since 2026-11-14 (Sarah).
+            high_refresh: Mode::Extrapolate,
             present: Present::Mailbox,
             added_delay: 0,
-            tick_timing: Timing::Timer,
+            tick_timing: Timing::Auto,
             jit_margin: (crate::jit::DEFAULT_MARGIN.as_secs_f64() * 1000.0) as f32,
             record: true,
             replays: String::new(),
             record_sessions: true,
             debug_level: 0,
+            volume: 100,
+            audio_device: String::new(),
+            audio_exclusive: false,
+            recordings: String::new(),
         }
     }
 }
@@ -146,10 +181,10 @@ impl Settings {
         };
         let on = |b: bool| if b { "on" } else { "off" };
         format!(
-            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\n",
+            "aspect = {aspect}\nfullscreen = {}\nscale = {scale}\nmsaa = {}\nhigh-refresh = {}\npresent = {present}\nadded-delay = {}\ntick-timing = {}\njit-margin = {}\nrecord = {}\nreplays = {}\nrecord-sessions = {}\ndebug-level = {}\nvolume = {}\naudio-device = {}\naudio-exclusive = {}\n",
             self.fullscreen,
             if self.msaa { "4" } else { "off" },
-            self.high_refresh.key(),
+            self.high_refresh.setting(),
             self.added_delay,
             self.tick_timing.key(),
             self.jit_margin,
@@ -161,12 +196,28 @@ impl Settings {
                 4 => "develop",
                 _ => "off",
             },
+            self.volume,
+            self.audio_device,
+            on(self.audio_exclusive),
+        ) + &format!(
+            "recordings = {}\nsettings-version = {SETTINGS_VERSION}\n",
+            self.recordings
         )
+    }
+
+    /// How the sound's output device is opened.
+    pub fn output(&self) -> melee_audio::OutputOptions {
+        melee_audio::OutputOptions {
+            exclusive: self.audio_exclusive,
+            device: Some(self.audio_device.clone()).filter(|d| !d.is_empty()),
+        }
     }
 
     /// Takes back what [`Settings::save`] kept, except what the command line gave; a line
     /// missing or unreadable leaves its setting as it is.
     pub fn restore(&mut self, text: &str, given: &Given) {
+        let mut versioned = false;
+        let (mut old_timer, mut old_off) = (false, false);
         let on = |v: &str| match v {
             "on" => Some(true),
             "off" => Some(false),
@@ -201,9 +252,10 @@ impl Settings {
                     _ => {}
                 },
                 "high-refresh" if !given.high_refresh => {
-                    if let Ok(m) = Mode::parse(v) {
+                    if let Some(m) = Mode::from_setting(v) {
                         self.high_refresh = m;
                     }
+                    old_off = v == "off";
                 }
                 "present" if !given.present => {
                     if let Ok(p) = Present::parse(v) {
@@ -219,7 +271,9 @@ impl Settings {
                     if let Ok(t) = Timing::parse(v) {
                         self.tick_timing = t;
                     }
+                    old_timer = v == "timer";
                 }
+                "settings-version" => versioned = true,
                 "jit-margin" if !given.jit_margin => {
                     if let Some(m) = parse_margin(v) {
                         self.jit_margin = m;
@@ -242,7 +296,30 @@ impl Settings {
                     "develop" => self.debug_level = 4,
                     _ => {}
                 },
+                "volume" => {
+                    if let Some(n) = v.parse().ok().filter(|n| *n <= 100) {
+                        self.volume = n;
+                    }
+                }
+                "audio-device" => self.audio_device = v.to_owned(),
+                "audio-exclusive" if !given.audio_exclusive => {
+                    if let Some(b) = on(v) {
+                        self.audio_exclusive = b;
+                    }
+                }
+                "recordings" => self.recordings = v.to_owned(),
                 _ => {}
+            }
+        }
+        // Settings kept before 2026-11-14 (no version) hold the old defaults in every key, as
+        // every save writes them all: the fixed timer and high refresh off move to the new
+        // defaults once. The version written from now on keeps a player's later choice.
+        if !versioned {
+            if old_timer {
+                self.tick_timing = Timing::Auto;
+            }
+            if old_off {
+                self.high_refresh = Mode::Extrapolate;
             }
         }
     }
@@ -259,6 +336,16 @@ impl Settings {
     pub fn keep(&self) {
         crate::settings::write(FILE, &self.save());
     }
+
+    /// The folder the Recordings tab lists: the one picked, else the replays folder, where the
+    /// player saves its matches.
+    pub fn recordings_folder(&self) -> std::path::PathBuf {
+        match (self.recordings.as_str(), self.replays.as_str()) {
+            ("", "") => crate::recording::default_dir(),
+            ("", r) => r.into(),
+            (f, _) => f.into(),
+        }
+    }
 }
 
 /// What the panel asks the player to do.
@@ -271,17 +358,70 @@ pub enum Action {
     Import,
     Export,
     UnlockAll,
+    ReportBug,
+    /// Plays the replay the Recordings tab chose.
+    Play,
+    /// Ends the replay playing and goes back to Melee.
+    BackToMelee,
+    /// Picks the folder the Recordings tab lists, or goes back to the replays folder.
+    ChooseFolder,
+    ReplaysFolder,
+}
+
+/// The panel's tabs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Default)]
+pub enum Tab {
+    #[default]
+    Settings,
+    QuickMatch,
+    Recordings,
+}
+
+impl Tab {
+    /// The tabs in order, with their names.
+    pub const ALL: [(Tab, &'static str); 3] = [
+        (Tab::Settings, "Settings"),
+        (Tab::QuickMatch, "Quick match"),
+        (Tab::Recordings, "Recordings"),
+    ];
+
+    /// A tab by the name `--settings-tab` takes.
+    pub fn parse(v: &str) -> Result<Tab, String> {
+        match v {
+            "settings" => Ok(Tab::Settings),
+            "quick-match" => Ok(Tab::QuickMatch),
+            "recordings" => Ok(Tab::Recordings),
+            _ => Err(format!(
+                "unknown tab {v} (settings, quick-match or recordings)"
+            )),
+        }
+    }
 }
 
 /// The panel: the settings and what it shows of the save and the disc.
 pub struct Panel {
+    /// The tab showing.
+    pub tab: Tab,
+    pub quick: crate::quick::QuickMatch,
+    pub recordings: crate::recordings::Recordings,
+    /// The replay from the Recordings tab playing, by its file's name.
+    pub playing: Option<String>,
+    /// Melee or a replay is loading: nothing more starts meanwhile.
+    pub busy: bool,
     pub settings: Settings,
     /// Whether it shows (the console paused behind it).
     pub open: bool,
-    /// Why Melee stopped, or what the last action did.
+    /// Why Melee couldn't start, or what the last action did.
     pub message: Option<String>,
+    /// The message is news of something done (a report or an export saved), shown in the
+    /// normal color rather than as a problem.
+    pub message_ok: bool,
     /// Melee stopped: it can't be resumed, only restarted.
     pub halted: bool,
+    /// What stopped Melee, when the simulation stopped by name ([`STOP_TEXT`]).
+    pub stop: Option<String>,
+    /// The output devices, as the panel last looked.
+    pub devices: Vec<String>,
     /// The save's line, and whether everything is unlocked in it (none: no save).
     pub save_line: String,
     pub unlocked: Option<bool>,
@@ -292,10 +432,18 @@ pub struct Panel {
 impl Panel {
     pub fn new(settings: Settings, disc: String) -> Panel {
         let mut p = Panel {
+            tab: Tab::Settings,
+            quick: Default::default(),
+            recordings: Default::default(),
+            playing: None,
+            busy: false,
             settings,
             open: false,
             message: None,
+            message_ok: false,
             halted: false,
+            stop: None,
+            devices: Vec::new(),
             save_line: String::new(),
             unlocked: None,
             disc,
@@ -319,6 +467,11 @@ impl Panel {
         };
     }
 
+    /// Looks at the output devices there are now, for the Audio section.
+    pub fn look_at_devices(&mut self) {
+        self.devices = melee_audio::output::devices();
+    }
+
     /// Lays the panel out; what was pressed, if anything.
     pub fn show(&mut self, ui: &mut egui::Ui) -> Option<Action> {
         let mut action = None;
@@ -330,13 +483,43 @@ impl Panel {
         let mut action = None;
         ui.vertical_centered(|ui| {
             ui.add_space(24.0);
-            ui.heading("Settings");
-            ui.add_space(12.0);
             ui.horizontal(|ui| {
-                ui.add_space(((ui.available_width() - 440.0) / 2.0).max(0.0));
+                ui.add_space(((ui.available_width() - 380.0) / 2.0).max(0.0));
+                for (tab, name) in Tab::ALL {
+                    ui.selectable_value(&mut self.tab, tab, egui::RichText::new(name).heading());
+                    ui.add_space(8.0);
+                }
+            });
+            ui.add_space(12.0);
+            let width = match self.tab {
+                Tab::Settings => 440.0,
+                Tab::QuickMatch | Tab::Recordings => 640.0,
+            };
+            ui.horizontal(|ui| {
+                ui.add_space(((ui.available_width() - width) / 2.0).max(0.0));
                 ui.vertical(|ui| {
-                    ui.set_max_width(440.0);
-                    action = self.show_sections(ui);
+                    ui.set_max_width(width);
+                    // A stop shows whichever tab is open.
+                    if let Some(a) = self.show_stop(ui) {
+                        action = Some(a);
+                    }
+                    let tab = match self.tab {
+                        Tab::Settings => self.show_sections(ui),
+                        Tab::QuickMatch => {
+                            self.quick.show(ui);
+                            None
+                        }
+                        Tab::Recordings => self.recordings.show(
+                            ui,
+                            &self.settings.recordings_folder(),
+                            !self.settings.recordings.is_empty(),
+                            self.playing.as_deref(),
+                            self.busy,
+                        ),
+                    };
+                    if tab.is_some() {
+                        action = tab;
+                    }
                 });
             });
             ui.add_space(16.0);
@@ -364,13 +547,88 @@ impl Panel {
             });
             if let Some(m) = &self.message {
                 ui.add_space(8.0);
-                ui.colored_label(ui.visuals().error_fg_color, m);
+                ui.scope(|ui| {
+                    ui.set_max_width(440.0);
+                    if self.message_ok {
+                        ui.label(m);
+                    } else {
+                        ui.colored_label(ui.visuals().error_fg_color, m);
+                    }
+                });
+            }
+            // Once Melee stopped, its message offers it.
+            if self.stop.is_none()
+                && let Some(a) = show_report(ui)
+            {
+                action = Some(a);
             }
             ui.add_space(16.0);
             ui.weak("Esc: settings. F11 or Alt+Enter: fullscreen. F3: latency overlay. F12: bug capture.");
             ui.add_space(16.0);
         });
         action
+    }
+
+    /// When Melee stopped: what happened in plain words, what stopped it, and Report a bug.
+    fn show_stop(&mut self, ui: &mut egui::Ui) -> Option<Action> {
+        let why = self.stop.as_ref()?;
+        let mut action = None;
+        ui.add_space(4.0);
+        egui::Frame::group(ui.style())
+            .stroke(egui::Stroke::new(1.0, ui.visuals().warn_fg_color))
+            .inner_margin(12.0)
+            .show(ui, |ui| {
+                ui.set_width(ui.available_width());
+                ui.strong(egui::RichText::new(STOP_TITLE).color(ui.visuals().warn_fg_color));
+                ui.add_space(4.0);
+                ui.label(STOP_TEXT);
+                ui.add_space(4.0);
+                ui.add(egui::Label::new(egui::RichText::new(why).weak().small()).selectable(true));
+                ui.add_space(8.0);
+                if ui.button(REPORT_BUTTON).clicked() {
+                    action = Some(Action::ReportBug);
+                }
+            });
+        ui.add_space(8.0);
+        action
+    }
+
+    /// The sound: its volume, its output device and whether it takes the device for itself.
+    fn show_audio(&mut self, ui: &mut egui::Ui) {
+        let s = &mut self.settings;
+        section(ui, "Audio");
+        egui::Grid::new("audio")
+            .num_columns(2)
+            .spacing([16.0, 8.0])
+            .show(ui, |ui| {
+                ui.label("Volume");
+                ui.add(egui::Slider::new(&mut s.volume, 0..=100).suffix("%"));
+                ui.end_row();
+                ui.label("Output device");
+                let device = &mut s.audio_device;
+                let name = |d: &str| match d {
+                    "" => "System default".to_owned(),
+                    d if self.devices.iter().any(|x| x == d) => d.to_owned(),
+                    d => format!("{d} (not connected)"),
+                };
+                egui::ComboBox::from_id_salt("audio-device")
+                    .selected_text(name(device))
+                    .width(220.0)
+                    .show_ui(ui, |ui| {
+                        ui.selectable_value(device, String::new(), name(""));
+                        for d in &self.devices {
+                            ui.selectable_value(device, d.clone(), d);
+                        }
+                    });
+                ui.end_row();
+                help(ui, AUDIO_DEVICE_HELP);
+                if cfg!(windows) {
+                    ui.label("");
+                    ui.checkbox(&mut s.audio_exclusive, "Exclusive mode");
+                    ui.end_row();
+                    help(ui, EXCLUSIVE_HELP);
+                }
+            });
     }
 
     fn show_sections(&mut self, ui: &mut egui::Ui) -> Option<Action> {
@@ -423,20 +681,15 @@ impl Panel {
                 ui.label("");
                 ui.checkbox(&mut s.fullscreen, "Fullscreen");
                 ui.end_row();
-                ui.label("High refresh");
-                let mode = &mut s.high_refresh;
-                egui::ComboBox::from_id_salt("high-refresh")
-                    .selected_text(mode.name())
-                    .width(220.0)
-                    .show_ui(ui, |ui| {
-                        for (m, name) in Mode::CHOICES {
-                            ui.selectable_value(mode, m, name);
-                        }
-                    });
+                ui.label("");
+                let mut on = s.high_refresh.paced();
+                if ui.checkbox(&mut on, "High refresh").changed() {
+                    s.high_refresh = if on { Mode::Extrapolate } else { Mode::Off };
+                }
                 ui.end_row();
                 help(
                     ui,
-                    "Draws frames between the game's 60 a second for faster displays. Extrapolate adds no latency.",
+                    "Draws frames between the game's 60 a second at your display's own rate by predicting the next one. Adds no latency.",
                 );
             });
         section(ui, "Latency");
@@ -488,6 +741,7 @@ impl Panel {
                 );
                 ui.end_row();
             });
+        self.show_audio(ui);
         section(ui, "Save");
         ui.label(&self.save_line);
         ui.horizontal_wrapped(|ui| {
@@ -533,7 +787,7 @@ impl Panel {
                 ui.add_enabled(
                     s.record,
                     egui::TextEdit::singleline(&mut s.replays)
-                        .hint_text("replays beside the program")
+                        .hint_text("replays in the settings folder")
                         .desired_width(220.0),
                 );
                 ui.end_row();
@@ -579,6 +833,18 @@ impl Panel {
     }
 }
 
+/// Report a bug, which the panel offers whenever it shows, under its buttons.
+fn show_report(ui: &mut egui::Ui) -> Option<Action> {
+    ui.add_space(12.0);
+    let pressed = ui.button(REPORT_BUTTON).clicked();
+    ui.add_space(4.0);
+    ui.scope(|ui| {
+        ui.set_max_width(440.0);
+        ui.weak(REPORT_HELP);
+    });
+    pressed.then_some(Action::ReportBug)
+}
+
 /// A section's heading.
 fn section(ui: &mut egui::Ui, title: &str) {
     ui.add_space(12.0);
@@ -595,7 +861,7 @@ fn help(ui: &mut egui::Ui, text: &str) {
 
 /// A file's time as the panel says it: the local date and time to the minute (UTC off
 /// Windows).
-fn written_at(t: std::time::SystemTime) -> String {
+pub fn written_at(t: std::time::SystemTime) -> String {
     let secs = t
         .duration_since(std::time::UNIX_EPOCH)
         .map_or(0, |d| d.as_secs());
@@ -675,7 +941,7 @@ mod tests {
             fullscreen: true,
             scale: 3,
             msaa: true,
-            high_refresh: Mode::Interpolate,
+            high_refresh: Mode::Off,
             present: Present::Immediate,
             added_delay: 2,
             tick_timing: Timing::Vrr,
@@ -684,13 +950,17 @@ mod tests {
             replays: "D:/Slippi/melee-hd".to_owned(),
             record_sessions: false,
             debug_level: 4,
+            volume: 35,
+            audio_device: "Speakers (USB Audio)".to_owned(),
+            audio_exclusive: true,
+            recordings: "D:/Slippi".to_owned(),
         }
     }
 
     #[test]
     fn the_settings_come_back() {
         for aspect in Aspect::CHOICES.map(|(a, _)| a) {
-            for (mode, _) in Mode::CHOICES {
+            for mode in [Mode::Off, Mode::Extrapolate] {
                 let was = Settings {
                     aspect,
                     high_refresh: mode,
@@ -720,11 +990,84 @@ mod tests {
         assert!(s.msaa && !s.record_sessions);
     }
 
+    /// High refresh and just-in-time ticks are on by default; an older file's Interpolate reads
+    /// as on, and the file keeps on or off.
+    #[test]
+    fn high_refresh_and_timing_defaults() {
+        let s = Settings::default();
+        assert_eq!(
+            (s.high_refresh, s.tick_timing),
+            (Mode::Extrapolate, Timing::Auto)
+        );
+        let mut s = Settings::default();
+        s.restore("high-refresh = interpolate\n", &Given::default());
+        assert_eq!(s.high_refresh, Mode::Extrapolate);
+        s.restore(
+            "high-refresh = off\nsettings-version = 2\n",
+            &Given::default(),
+        );
+        assert_eq!(s.high_refresh, Mode::Off);
+        let given = Settings {
+            high_refresh: Mode::Interpolate,
+            ..Settings::default()
+        };
+        assert!(given.save().contains("high-refresh = on\n"));
+    }
+
+    /// A settings file from before the new defaults (no version) that holds the old ones moves
+    /// to the new once, keeping anything else it chose; one with the version keeps the old
+    /// defaults as the player's choice, and the move writes the version.
+    #[test]
+    fn old_settings_move_to_the_new_defaults_once() {
+        let restored = |text: &str, given: &Given| {
+            let mut s = Settings::default();
+            s.restore(text, given);
+            (s.tick_timing, s.high_refresh)
+        };
+        let old = "tick-timing = timer\nhigh-refresh = off\nvolume = 50\n";
+        assert_eq!(
+            restored(old, &Given::default()),
+            (Timing::Auto, Mode::Extrapolate)
+        );
+        // The old code's other values are kept (`interpolate` reads as on).
+        assert_eq!(
+            restored(
+                "tick-timing = vrr\nhigh-refresh = interpolate\n",
+                &Given::default()
+            ),
+            (Timing::Vrr, Mode::Extrapolate)
+        );
+        // Turned off after the move: kept.
+        let mut s = Settings::default();
+        s.restore(old, &Given::default());
+        s.tick_timing = Timing::Timer;
+        s.high_refresh = Mode::Off;
+        let saved = s.save();
+        assert!(saved.contains("settings-version = 2\n"));
+        assert_eq!(
+            restored(&saved, &Given::default()),
+            (Timing::Timer, Mode::Off)
+        );
+        // The command line still wins over both.
+        let given = Given {
+            tick_timing: true,
+            high_refresh: true,
+            ..Given::default()
+        };
+        let mut s = Settings {
+            tick_timing: Timing::Timer,
+            high_refresh: Mode::Off,
+            ..Settings::default()
+        };
+        s.restore(old, &given);
+        assert_eq!((s.tick_timing, s.high_refresh), (Timing::Timer, Mode::Off));
+    }
+
     #[test]
     fn an_unreadable_file_changes_nothing() {
         let mut s = Settings::default();
         s.restore(
-            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\n\u{0}garbage\n",
+            "aspect = 1:2\nfullscreen = maybe\nscale = 9\nmsaa = 2\nadded-delay = -1\nhigh-refresh = sometimes\ntick-timing = soon\njit-margin = 99\nrecord = perhaps\nvolume = 101\naudio-exclusive = sometimes\n\u{0}garbage\n",
             &Given::default(),
         );
         assert_eq!(s, Settings::default());
@@ -760,6 +1103,28 @@ mod tests {
         let mut s = Settings::default();
         s.restore("debug-level = 2\n", &Given::default());
         assert_eq!(s.debug_level, 0);
+    }
+
+    /// The audio settings come back, and the command line's exclusive mode wins; no device is
+    /// the system's default.
+    #[test]
+    fn the_audio_settings_are_kept() {
+        let mut s = Settings::default();
+        assert_eq!(
+            (s.volume, s.output()),
+            (100, melee_audio::OutputOptions::default())
+        );
+        s.restore(&picked().save(), &Given::default());
+        assert_eq!((s.volume, s.audio_exclusive), (35, true));
+        assert_eq!(s.output().device.as_deref(), Some("Speakers (USB Audio)"));
+        let mut s = Settings::default();
+        let given = Given {
+            audio_exclusive: true,
+            ..Given::default()
+        };
+        s.restore("audio-exclusive = on\naudio-device = \n", &given);
+        assert!(!s.audio_exclusive);
+        assert_eq!(s.output().device, None);
     }
 
     #[test]

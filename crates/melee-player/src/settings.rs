@@ -1,5 +1,9 @@
 //! The player's settings folder: the disc it plays, asked for once with a file picker and
-//! remembered, the settings (`front`), the saves and the session recordings, and the log when there's no console (`console`).
+//! remembered, the settings (`front`), and what the player writes: the saves (`saves/`), the
+//! session recordings (`sessions/`), the replays (`replays/`, [`crate::recording`]), F12's
+//! captures (`captures/`, [`crate::capture`]) and the log when there's no console
+//! (`logs/melee-hd.log`, [`crate::console`]). Nothing is written beside the executable, which
+//! may be somewhere read-only.
 //! It's `%APPDATA%\melee-hd` on Windows and `$XDG_CONFIG_HOME/melee-hd` or `~/.config/melee-hd`
 //! elsewhere (`melee-hd-dev` for a dev build, [`crate::channel`]), or the folder
 //! `MELEE_HD_SETTINGS` names.

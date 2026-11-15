@@ -6,6 +6,7 @@
 //! parsing against ssbm-rs's `ssbm_slippi`.
 
 mod denylist;
+pub mod metadata;
 pub mod playback;
 pub mod replay;
 pub mod write;

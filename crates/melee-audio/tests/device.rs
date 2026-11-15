@@ -15,7 +15,11 @@ use melee_audio::{Output, OutputOptions};
 #[ignore = "needs an audio output device"]
 fn plays_ticks_without_running_dry() {
     let exclusive = std::env::var_os("MELEE_AUDIO_EXCLUSIVE").is_some();
-    let out = Output::open_with(OutputOptions { exclusive }).expect("an audio device");
+    let out = Output::open_with(OutputOptions {
+        exclusive,
+        ..OutputOptions::default()
+    })
+    .expect("an audio device");
     eprintln!("{} Hz: {}", out.rate, out.describe);
     let per_tick = 32_000.0 / 59.94;
     let silence = vec![[0i16; 2]; 600];

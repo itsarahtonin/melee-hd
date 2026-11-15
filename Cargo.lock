@@ -1531,6 +1531,7 @@ dependencies = [
  "melee-data",
  "melee-sim",
  "windows",
+ "windows-core",
 ]
 
 [[package]]
@@ -1655,10 +1656,12 @@ dependencies = [
 name = "melee-player"
 version = "0.1.0"
 dependencies = [
+ "crc32fast",
  "egui",
  "egui-wgpu",
  "egui-winit",
  "embed-manifest",
+ "flate2",
  "melee-audio",
  "melee-data",
  "melee-gpu",

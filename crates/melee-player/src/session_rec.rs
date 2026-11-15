@@ -154,6 +154,15 @@ impl Writer {
     }
 }
 
+impl Writer {
+    /// Writes out what's buffered, so the file holds every read so far.
+    pub fn flush(&mut self) {
+        if let Some(out) = &mut self.out {
+            let _ = out.flush();
+        }
+    }
+}
+
 impl Drop for Writer {
     fn drop(&mut self) {
         if let Some(out) = &mut self.out {

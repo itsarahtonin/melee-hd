@@ -1,10 +1,10 @@
 # melee-hd
 
-melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 revision 2), with a game simulation checked bit for bit, tick by tick, against ssbm-rs and real Slippi replays.
+melee-hd is a native Rust rewrite of Super Smash Bros. Melee NTSC 1.02 (GALE01 revision 2), with a game simulation checked bit for bit, tick by tick, against ssbm-rs, real Slippi replays and recorded play sessions.
 
 It's a personal project, and the next stage of [ssbm-rs](https://github.com/itsarahtonin/ssbm-rs). ssbm-rs is a faithful port: it keeps the GameCube's memory layout and checks its Rust functions call by call against the original machine code. melee-hd starts over from the [Melee decompilation](https://github.com/doldecomp/melee) and ssbm-rs, rewrites the game into plain Rust data structures, and uses ssbm-rs (at its [`melee-hd-base`](https://github.com/itsarahtonin/ssbm-rs/releases/tag/melee-hd-base) tag) as the reference it is checked against. No ssbm-rs code runs in the player.
 
-melee-hd is early: VS matches with the whole cast on all 29 VS stages, items and computer players included, on Windows, from your own disc.
+melee-hd plays the whole game on Windows, from your own disc: it boots straight into Melee as a console does, with your memory card's save, and every menu and mode works, VS with the whole cast on all 29 stages, items and computer players included, and the single-player modes (Classic, Adventure, All-Star, Event Match, Target Test, the Home-Run Contest, Multi-Man Melee and Training). Esc opens melee-hd's own settings over the game.
 
 ## How it differs
 
@@ -12,10 +12,10 @@ Several native Melee ports exist, each taking its own approach, and you may well
 
 What it's built around:
 
-- **Checked against a reference.** After every engine tick of whole matches, the simulation's state is compared with ssbm-rs's, floats by bit pattern. A difference is a bug, or a known divergence listed and explained per replay.
+- **Checked against a reference.** After every engine tick of whole matches and whole play sessions from power-on, the simulation's state is compared with ssbm-rs's, floats by bit pattern. A difference is a bug, or a known divergence listed and explained.
 - **Plain-data state.** The original C is rewritten rather than compiled, into state made of arenas and index handles with no references, closures or trait objects. A rollback snapshot is a `clone`, and a restore and the ticks replayed after it allocate nothing.
 - **A separate simulation crate.** `melee-sim` steps the game from its state and the controllers alone, with no rendering, audio output, clocks or disc timing inside a tick. The player and the checking tools are frontends to it.
-- **A low-latency player.** It reads the controllers just before each tick and presents the frame at once.
+- **A low-latency player.** It reads the controllers just before each tick, starts each tick just in time for the refresh that shows it, and draws frames at your display's own rate, whatever it is, by predicting the next tick, which adds no latency.
 
 The trade-off is that it's a slow work in progress, all the slower for being helmed by a solo developer working within hobbyist LLM usage limits.
 
@@ -25,14 +25,14 @@ Like ssbm-rs, it contains no game data: the game's models, textures, sounds and 
 
 | | |
 | --- | --- |
-| Characters | Fox, Falco, Marth and Roy, Sheik and Zelda, Captain Falcon, Ganondorf, Ness, Jigglypuff, Samus, Luigi, Mario, Dr. Mario, Peach, Link and Young Link, Pikachu and Pichu, Yoshi, Donkey Kong, Bowser, the Ice Climbers, Mewtwo, Mr. Game & Watch, Kirby (with every copy ability), each checked over whole matches |
-| Stages | Final Destination, Battlefield, Pokémon Stadium (transformations included), Yoshi's Story, Dream Land, Fountain of Dreams, Yoshi's Island N64, Big Blue, Brinstar, Brinstar Depths, Fourside, Great Bay, Green Greens, Kongo Jungle N64 (its barrel included), Hyrule Temple, Yoshi's Island, Jungle Japes, Kongo Jungle, Mute City, Onett, Poké Floats, Princess Peach's Castle, Rainbow Cruise, Flat Zone, Mushroom Kingdom, Mushroom Kingdom II with Birdo, Icicle Mountain, Corneria, Venom (all 29 VS stages, each offered with every character, with computer players and with every item kind: the player offers only what nothing a match can reach stops, [the audit](docs/player.md#stages-the-player-offers)) |
-| Whole matches compared | 97 matches, 1,273,534 ticks, every checked field equal after every tick, the original allocator's heap included: thirty-three CPU-played benchmark matches (Fox ditto; Fox against Marth on three stages; Ganondorf against Captain Falcon; three each for Ness and Samus; twenty-two for Kirby's copies) and sixty-four real Slippi replays (Slippi 3.19's, and ranked 3.14, 3.16 and 3.17 replays) |
-| Player | A VS match in a window, with a launcher for picking characters, stage, stocks, time, items (an item kind offered only once nothing it reaches is unported: [the items it offers](docs/player.md#items-the-player-offers)) and the Special Melee modes' rules (Stamina, Super Sudden Death, Giant, Tiny, Invisible, Slo-Mo, Lightning, Fixed-Camera and Single-Button: [the modes it offers](docs/player.md#special-melee-the-player-offers)), each match saved as a Slippi replay (`.slp`) that melee-hd plays back to the same match. Frames are identical to ssbm-rs's on every checked frame except Slippi's replay name plates, which melee-hd's VS doesn't draw; the audio mix is sample-exact with ssbm-rs's on the matches checked |
-| Functions | 14,583 of the 19,827 in ssbm-rs's symbol table ported and checked, 438 replaced by native subsystems, 253 dead ([port ledger](docs/port-ledger.md)) |
+| The game | From power-on: the memory card scene, the opening movie, the title and every menu; VS (Melee, Special Melee's modes, Tournament, Camera Mode and the rest); the single-player modes, Classic, Adventure and All-Star with their intros, bosses, bonus stages, endings and staff roll, Event Match's 51 events, Target Test, the Home-Run Contest, Multi-Man Melee's six modes and Training; the trophies, records and unlocks, saved to your memory card as Melee saves them |
+| Characters | The whole cast, Kirby with every copy ability, each checked over whole matches |
+| Stages | All 29 VS stages and the single-player modes' stages |
+| Checked | Every function in ssbm-rs's symbol table accounted for: 17,995 ported and checked, 1,007 replaced by native subsystems and 825 proven dead, of 19,827 ([port ledger](docs/port-ledger.md)). Whole matches from CPU-played benchmark replays and real Slippi replays, and hundreds of recorded sessions from power-on through the menus and modes, compare clean with ssbm-rs every tick ([the oracle](docs/oracle.md)) |
+| Player | Melee in a window or fullscreen at any resolution and aspect ratio, widescreen included; frames identical to ssbm-rs's on every checked frame (but for Slippi's replay name plates, which melee-hd doesn't draw), and the audio mix sample-exact with ssbm-rs's on the matches checked. Your save is Melee's own file, which Dolphin uses too, to import and export. Each VS match is saved as a Slippi replay (`.slp`), and each session can be recorded to report a bug ([the player](docs/player.md)) |
 | Speed | The simulation runs a match about 13 to 15 times as fast as headless Dolphin on one core; a snapshot is about 1.45 MB, cloned in about 0.14 ms and restored in about 0.04 ms ([performance](docs/performance.md)) |
 
-Not yet: the single-player modes (Classic, Adventure, All-Star, Events, Training, Stadium), testing on macOS and Linux, and release builds. [The oracle](docs/oracle.md) lists each comparison, and [the player](docs/player.md) its open issues.
+Not yet: the Slippi ruleset (Slippi's gameplay codes in live play, [in progress](docs/slippi-ruleset.md)), testing on macOS and Linux, and release builds. [The player](docs/player.md) lists its open issues.
 
 ## Build and play
 
@@ -45,9 +45,11 @@ You need:
 cargo run --locked -p dist                  # builds dist/melee-hd.exe; add -- --shortcut for a desktop shortcut
 ```
 
-Double-click `dist/melee-hd.exe` (or the shortcut) to play. The first time, it asks for your disc image and remembers it; after that it opens straight on its launcher, with the match you last started from it. Escape returns to the launcher from a match, and quits from the launcher. Each match is saved as a Slippi replay in `replays` beside the program (the launcher's Save replays and Replays folder change that). On Windows it opens no console window; its log is `%APPDATA%\melee-hd\melee-hd.log`. [The player](docs/player.md#playing-it) has the details.
+Double-click `dist/melee-hd.exe` (or the shortcut) to play. The first time, it asks for your disc image and remembers it. Then it boots straight into Melee, as a console with a memory card in slot A, and matches start from the game's own menus. Escape opens the settings over the game, paused: the display (resolution, antialiasing, aspect ratio, fullscreen, high refresh), the latency (present mode, added delay, tick timing), your save (import, export, unlock everything), recording, a developer's debug level and the disc. Escape again goes back to the game.
 
-From a terminal, `cargo build --locked --release -p melee-player` builds `target/release/melee-hd` (`melee-hd.exe` on Windows), which prints to the terminal. `--disc path/to/melee.iso` or `SSBM_DISC` names the disc for that run instead of the remembered one. A match can also be named directly:
+melee-hd keeps everything it writes in its settings folder, `%APPDATA%\melee-hd` on Windows: the settings, your save (`saves`), each VS match's replay (`replays`, unless the settings name another folder), the session recordings (`sessions`), F12's bug captures (`captures`) and the log (`logs`); its shader caches go to `%LOCALAPPDATA%\melee-hd`. Nothing is written beside the program, so it runs from anywhere, a read-only folder included. Replays and captures older versions saved beside the program stay there, untouched. On Windows it opens no console window. [The player](docs/player.md#playing-it) has the details.
+
+From a terminal, `cargo build --locked --release -p melee-player` builds `target/release/melee-hd` (`melee-hd.exe` on Windows), which prints to the terminal. `--disc path/to/melee.iso` or `SSBM_DISC` names the disc for that run instead of the remembered one. For developers, a VS match or a replay can also be started directly, without the menus:
 
 ```sh
 melee-hd --p1 fox --p2 marth --stage bf --stocks 4 --minutes 8
@@ -55,32 +57,32 @@ melee-hd --replay game.slp                 # play back a Slippi replay's match
 melee-hd --widescreen --scale 3 --msaa 4   # or --aspect 21:9; F11 or Alt+Enter for fullscreen
 ```
 
-`melee-hd --help` lists the options and the character and stage names. By default the internal resolution follows the window's height.
+`melee-hd --help` lists the options and the character and stage names.
 
 **Controllers.** GameCube controllers on a Wii U adapter (Nintendo's, or a Mayflash in Wii U mode) take their adapter ports; on Windows the adapter needs the WinUSB driver, which [Zadig](https://zadig.akeo.ie) installs. Standard gamepads and then the keyboard take the first free ports. Keyboard: arrows for the stick, IJKL for the C-stick, X, Z, C and S for A, B, X and Y, D for Z, Q and W for L and R, Enter for Start, left Shift to halve the stick. `--no-adapter` leaves the adapter alone.
 
 ## How it's checked
 
-Four levels, from the whole game down ([the oracle](docs/oracle.md)):
+Five levels, from the whole game down ([the oracle](docs/oracle.md)):
 
-- **Full state.** `melee-oracle diff` plays a replay in melee-hd and compares the whole game state with ssbm-rs's state trace of the same replay after every engine tick, stopping at the first difference or at the first function not yet ported.
+- **Sessions.** `melee-oracle session` boots melee-hd from power-on with a play session's recorded controller reads and compares the whole game state with ssbm-rs's trace of the same session after every engine tick: the boot, the menus, the modes and the memory card, stopping at the first difference.
+- **Full state.** `melee-oracle diff` plays a replay in melee-hd and compares the whole game state with ssbm-rs's state trace of the same replay after every engine tick.
 - **Replay events.** `melee-oracle record` plays a Slippi replay with melee-hd's recorder on and checks its recording against the replay, event by event (`melee-oracle compare` checks any two).
 - **Captured states.** Game code runs from real mid-match states captured in ssbm-rs, on both sides, and the whole state is compared.
 - **Leaf functions.** `leaf-check` calls each port and ssbm-rs's on special, random and in-range inputs in both float modes.
 
 Presentation is checked the same way: `melee-render-check` compares frames with ssbm-rs's draw by draw, and `melee-audio-check` compares the mix sample by sample. Each check is mutation-tested as it is written: a port broken on purpose must fail it.
 
-The disc-backed checks need `SSBM_DISC`. Many also need traces and captures made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip. The six benchmark matches' replays, inputs the CPU AI played in ssbm-rs, are in the repository (`data/bench`), so with ssbm-rs and your own disc you can make their traces and run the benchmark diffs yourself.
+The disc-backed checks need `SSBM_DISC`. Many also need traces, captures and recorded sessions made with ssbm-rs, which contain game memory and stay out of the repository; without them those checks skip. The six benchmark matches' replays, inputs the CPU AI played in ssbm-rs, are in the repository (`data/bench`), so with ssbm-rs and your own disc you can make their traces and run the benchmark diffs yourself.
 
 ## Roadmap
 
-The core game comes first: a complete and exact simulation with a player around it, solid enough to build on.
+The core game came first: a complete and exact simulation with a player around it, solid enough to build on. The whole cast, the stages, items, the boot, the menus and the single-player modes are in. Next:
 
-1. **The rest of the cast and stages,** each checked over whole matches the way the current ones are.
-2. **The whole game:** items, the boot, menus, settings and the single-player modes, with the Vanilla and Slippi rulesets.
-3. **The player on Windows, macOS and Linux,** with release builds. Minimum latency is the default; an added delay for those who want the feel of playing on a CRT will be an option, never the default.
-4. **Speed targets:** at least 20 times Dolphin's speed per core, and a rollback (restore and 8 ticks) under 4 ms on the worst match ([performance](docs/performance.md)).
-5. **Rollback-ready, proven.** A sync test restores an earlier state and replays the ticks since, every tick, and fails on any difference from the straight run, so the simulation stays correct for rollback, and its cost measured, without netplay code here. It exists (`melee-oracle sync-test`, [the oracle](docs/oracle.md#sync-test)), and every checked match passes it with 7-tick rollbacks; it has to keep passing as the rest of the game arrives.
+1. **The Slippi ruleset:** Slippi's gameplay codes in live play, without a memory card and with Slippi's unlocks, as an option beside Vanilla, its replays playing back exactly in Slippi Dolphin ([the plan](docs/slippi-ruleset.md)).
+2. **Speed and structure:** a round of performance and code-structure work at the same exactness, toward at least 20 times Dolphin's speed per core and a rollback (restore and 8 ticks) under 4 ms on the worst match ([performance](docs/performance.md)).
+3. **The player on Windows, macOS and Linux,** with release builds. Minimum latency is the default; an added delay for those who want the feel of playing on a CRT is an option, never the default.
+4. **Rollback-ready, proven.** A sync test restores an earlier state and replays the ticks since, every tick, and fails on any difference from the straight run, so the simulation stays correct for rollback, and its cost measured, without netplay code here. It exists (`melee-oracle sync-test`, [the oracle](docs/oracle.md#sync-test)), and every checked match passes it with 7-tick rollbacks; it has to keep passing as the game changes.
 
 melee-hd aims to be the base other projects build on: `melee-sim` as a documented library to depend on rather than fork, so they get its accuracy fixes for free. Netplay, training tools, mods and other features belong in a planned follow-on repository built on it, and what that repository needs decides the library's extension points ([the architecture](docs/architecture.md#netplay-and-other-features)). melee-hd won't connect to Slippi's matchmaking servers.
 

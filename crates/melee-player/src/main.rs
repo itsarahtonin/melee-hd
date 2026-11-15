@@ -11,7 +11,7 @@
 //! latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate]
 //!          [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr]
 //!          [--jit-margin MS]
-//! frames:  [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
+//! frames:  [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]
 //! debug:   [--flicker-scan]
 //! perf:    [--perf-report FILE] [--refresh HZ] [--seed N]
 //! ```
@@ -39,9 +39,9 @@
 //!
 //! The loop keeps latency as short as it can: each tick reads the controllers just before it
 //! runs, and the frame it renders is drawn and presented at once, on a swap chain one frame deep
-//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks run on a fixed 60 Hz timer,
-//! or, experimentally, just in time for the refresh that shows their frame ([`jit`],
-//! `--tick-timing`), waited for precisely ([`timing`]). `--added-delay N` adds input
+//! (mailbox by default, `--present` picks; [`present::Present`]). Ticks run just in time for the
+//! refresh that shows their frame, the settings' default ([`jit`], `--tick-timing`), waited for
+//! precisely ([`timing`]), or on a fixed 60 Hz timer, the command line's default. `--added-delay N` adds input
 //! latency back on purpose, `--latency-log FILE` measures it all ([`latency`]), and F3 shows
 //! the measures over the frame, with each frame's GPU time by stage.
 //!
@@ -50,10 +50,11 @@
 //! benchmark. `--refresh HZ` draws Interpolate's and Extrapolate's frames at that
 //! rate instead of the display's.
 //!
-//! `--high-refresh interpolate` draws frames at the display's rate between the last two ticks,
-//! each placed by when it reaches the screen ([`pacing`]); `extrapolate` draws them between the
-//! latest tick and a prediction of the next (`melee_render::predict`); off, the default, draws
-//! a frame a tick.
+//! `--high-refresh on` (or `extrapolate`) draws frames at the display's rate between the latest
+//! tick and a prediction of the next (`melee_render::predict`), each placed by when it reaches
+//! the screen ([`pacing`]): the settings panel's High refresh, on by default. `interpolate`, for
+//! developers, draws them between the last two ticks; off, the command line's default, draws a
+//! frame a tick.
 //!
 //! The release build on Windows opens no console window; started from a terminal it prints to
 //! the terminal, and double-clicked it logs to the settings folder ([`console`]).
@@ -88,9 +89,12 @@ mod power_tests;
 #[cfg(test)]
 mod predict_tests;
 mod present;
+mod quick;
 #[cfg(test)]
 mod record_tests;
 mod recording;
+mod recordings;
+mod report;
 #[cfg(test)]
 mod roster_tests;
 mod saves;
@@ -200,8 +204,9 @@ struct Args {
     msaa: u32,
     /// The console from power-on with the settings panel (no match on the command line).
     front: bool,
-    /// Draws the settings panel to this PNG and quits.
+    /// Draws the settings panel to this PNG and quits, on this tab (`--settings-tab`).
     settings_shot: Option<String>,
+    settings_tab: front::Tab,
     /// Borderless fullscreen on the window's monitor.
     fullscreen: bool,
     /// How fast the disc reads: a drive's pace unless `--disc-speed fast`.
@@ -221,7 +226,7 @@ struct Args {
     unfinished_stages: bool,
     /// Saves each match of the player's own as a Slippi replay (`--no-record` turns it off).
     record: bool,
-    /// Where the replays go: the replays folder beside the executable unless given.
+    /// Where the replays go: the settings folder's replays folder unless given.
     replays: Option<String>,
     /// The item frequency and switch a command line's match starts with: items off.
     items: GamePrefs,
@@ -259,14 +264,14 @@ struct Args {
 fn usage() -> String {
     let names = |keys: Vec<&str>| keys.join("|");
     format!(
-        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png]\n\
+        "usage: melee-hd [--p1 NAME] [--p2 NAME] [--p3 NAME] [--p4 NAME] [--stage NAME] [--stocks N] [--minutes N] [--disc ISO] [--replay FILE] [--widescreen | --aspect W:H] [--scale N] [--msaa 4] [--one-thread] [--no-adapter] [--mute] [--size WxH] [--fullscreen] [--disc-speed drive|fast] [--bench TICKS [--resize-at TICK:WxH]] [--settings-shot FILE.png [--settings-tab settings|quick-match|recordings]]\n\
          characters: {}\n\
          stages: {}\n\
          latency: [--latency-log FILE.csv] [--latency-overlay] [--present mailbox|fifo|immediate] [--added-delay FRAMES] [--audio-exclusive] [--tick-timing timer|auto|refresh|vrr] [--jit-margin MS]\n\
-         frames: [--high-refresh off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
+         frames: [--high-refresh on|off|interpolate|extrapolate] [--frames-per-tick N (with --bench)]\n\
          debug: [--flicker-scan] captures a presented frame that drops out for one frame\n\
          perf: [--perf-report FILE] [--refresh HZ] [--seed N]\n\
-         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays beside the program\n\
+         replays: [--no-record] [--replays DIR] each match is saved to DIR, else to replays in the settings folder\n\
          special melee: [--special MODE] plays by a mode's rules: {}\n\
          developers: [--unfinished-stages] plays a stage or character not offered yet, which can stop mid-match; [--debug-level off|debug-rom|develop] the developer setting's debug level from power-on\n\
          console: [--power-on] boots Melee from power-on into its menus; [--inputs FILE.inputs] plays a recorded session from power-on (with --bench, headless); [--record-session FILE] [--no-session-record] [--saves DIR] [--holds SCRIPT] (scripted controllers by tick, MONKEY_HOLD's form) [--card-after FILE] (the card as the session leaves it)\n\
@@ -320,6 +325,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
         msaa: 1,
         front: false,
         settings_shot: None,
+        settings_tab: front::Tab::Settings,
         fullscreen: false,
         disc_speed: DiscSpeed::Drive,
         given: front::Given::default(),
@@ -397,7 +403,10 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.added_delay = value()?.parse().map_err(|_| "--added-delay FRAMES")?;
                 a.given.added_delay = true;
             }
-            "--audio-exclusive" => a.audio_exclusive = true,
+            "--audio-exclusive" => {
+                a.audio_exclusive = true;
+                a.given.audio_exclusive = true;
+            }
             "--mute" => a.mute = true,
             "--latency-overlay" => a.latency_overlay = true,
             "--high-refresh" => {
@@ -445,6 +454,7 @@ fn parse_args_from(args: Vec<String>) -> Result<Args, String> {
                 a.resize_at.push((tick, size(s)?));
             }
             "--settings-shot" => a.settings_shot = Some(value()?),
+            "--settings-tab" => a.settings_tab = front::Tab::parse(&value()?)?,
             "--fullscreen" => {
                 a.fullscreen = true;
                 a.given.fullscreen = true;
@@ -714,14 +724,15 @@ struct Platform {
     disc: Disc,
     /// The reads played back (`--inputs`), and the next; none: the controllers.
     feed: Option<(Vec<melee_sim::input::controller::PadData>, usize)>,
-    /// The session's recording.
+    /// The session's recording, and where it goes.
     rec: Option<session_rec::Writer>,
+    rec_path: Option<std::path::PathBuf>,
     /// The saves folder, kept as the card changes.
     kept: Option<saves::Kept>,
     /// Where the card goes as the session ends (`--card-after`).
     card_after: Option<std::path::PathBuf>,
-    /// Each VS match saved as a Slippi replay: to this folder (none: the replays folder beside
-    /// the program), when on.
+    /// Each VS match saved as a Slippi replay: to this folder (none: the settings folder's
+    /// replays folder), when on.
     replays: Option<Option<String>>,
     /// The replay of the match playing, once it started, and whether it's kept (the title's
     /// attract match isn't).
@@ -821,6 +832,7 @@ impl Session {
                 )
             }
         };
+        let rec_path = rec;
         let rec = match rec {
             Some(p) => match session_rec::Writer::create(p, &setup) {
                 Ok(w) => {
@@ -842,6 +854,10 @@ impl Session {
         let mut platform = Box::new(Platform {
             disc,
             feed,
+            rec_path: rec
+                .is_some()
+                .then(|| rec_path.map(std::path::Path::to_path_buf))
+                .flatten(),
             rec,
             kept,
             card_after: args.card_after.as_ref().map(std::path::PathBuf::from),
@@ -1169,6 +1185,25 @@ struct Row {
 /// How long a row waits for its frame's GPU time before it's written without it.
 const ROW_WAIT: Duration = Duration::from_millis(500);
 
+/// Melee set aside while a replay from the Recordings tab plays: the console's session and
+/// what draws it (its frame builder and renderer, whose state carries from frame to frame),
+/// untouched until the replay ends, as the settings panel leaves Melee paused. Nothing of the
+/// replay reaches it: a session is its own state, and between ticks the simulation keeps
+/// nothing outside it but caches (`power_tests`' `a_replay_leaves_melee_as_it_was`).
+struct Aside {
+    session: Session,
+    frames: Frames,
+    renderer: Option<Gpu>,
+    scale: u32,
+    efb_width: u32,
+    msaa: u32,
+    console_view: Option<ConsoleView>,
+    last_image: Option<melee_gpu::Frame>,
+    hold: jit::Hold<melee_sim::game::vs_match::Frame>,
+    ticks: u64,
+    motors: [bool; 4],
+}
+
 /// The settings panel, when the player boots the console: its settings, and its egui state
 /// once the window exists.
 struct Front {
@@ -1176,11 +1211,19 @@ struct Front {
     window: Option<ui::Window>,
 }
 
+/// A power-on's session, or why there's none: what to say, and the stop when the boot stopped.
+type Booted = Result<Session, (String, Option<report::Stop>)>;
+
 struct App {
     /// The console (or a command line's match) playing; none while it powers on.
     session: Option<Session>,
-    /// The power-on running in the background, which makes the next session.
-    booting: Option<std::thread::JoinHandle<Result<Session, String>>>,
+    /// The power-on running in the background, which makes the next session (a replay's
+    /// match while `replay` is set), or says why it couldn't (with the stop, when it stopped).
+    booting: Option<std::thread::JoinHandle<Booted>>,
+    /// The replay from the Recordings tab playing or loading, by its file's name.
+    replay: Option<String>,
+    /// Melee, set aside while that replay plays.
+    aside: Option<Box<Aside>>,
     /// The settings panel, when the player boots the console.
     front: Option<Front>,
     /// The command line, with the settings applied.
@@ -1235,7 +1278,12 @@ struct App {
     /// Alt is held (Alt+Enter toggles fullscreen).
     alt: bool,
     /// Why the match stopped, for the panel to show.
-    stopped: Option<String>,
+    stopped: Option<report::Stop>,
+    /// The last stop this run, the session's recording (playing or last played) and when the
+    /// run started, for Report a bug.
+    last_stop: Option<report::Stop>,
+    session_rec: Option<std::path::PathBuf>,
+    started: std::time::SystemTime,
     /// The latency log, with `--latency-log`.
     latency: Option<latency::Log>,
     /// The input latency added back on purpose.
@@ -1451,15 +1499,18 @@ impl App {
         {
             Ok(f) => f,
             Err(p) => {
-                let what = if self.front.is_some() {
+                let what = if self.replay.is_some() {
+                    "The replay"
+                } else if self.front.is_some() {
                     "Melee"
                 } else {
                     "the match"
                 };
-                let text = format!("{what} stopped: {}", panic_text(&p));
-                eprintln!("{text}");
+                let why = panic_text(&p);
+                eprintln!("{what} stopped: {why}");
                 session.ended = true;
-                self.stopped = Some(text);
+                let at = report::take_last().and_then(|l| l.at);
+                self.stopped = Some(report::Stop { why, at });
                 return false;
             }
         };
@@ -2097,12 +2148,30 @@ impl App {
             args.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
         }
         eprintln!("power on");
+        // The session's recording is known once the power-on made it.
+        self.session_rec = None;
         self.booting = Some(
             std::thread::Builder::new()
                 .stack_size(GAME_STACK)
                 .spawn(move || {
-                    std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| Session::open(&args)))
-                        .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))))
+                    let r = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        Session::open(&args)
+                    }));
+                    // A boot that stopped panicked on this thread; a disc that can't be read
+                    // didn't.
+                    let stop = report::take_last();
+                    match r {
+                        Ok(Ok(s)) => Ok(s),
+                        Ok(Err(e)) => Err((e, stop)),
+                        Err(p) => {
+                            let why = panic_text(&p);
+                            let at = stop.and_then(|s| s.at);
+                            Err((
+                                format!("Melee stopped: {why}"),
+                                Some(report::Stop { why, at }),
+                            ))
+                        }
+                    }
                 })
                 .expect("the power-on's thread"),
         );
@@ -2110,6 +2179,10 @@ impl App {
 
     /// Takes up the console the power-on made.
     fn powered_on(&mut self, session: Session) {
+        // A replay's match isn't recorded: the recording stays Melee's, set aside.
+        if let Some(p) = &session.console {
+            self.session_rec = p.rec_path.clone();
+        }
         self.frames = Frames::new();
         self.frames.space.load_dol(&session.dol);
         self.session = Some(session);
@@ -2142,6 +2215,8 @@ impl App {
         let Some(f) = &mut self.front else { return };
         f.panel.open = true;
         f.panel.look_at_save();
+        f.panel.look_at_devices();
+        f.panel.recordings.refresh();
         // Every key goes up: none stays held into the game when it resumes.
         self.inputs.keyboard = Default::default();
         if let Some(s) = &self.shown {
@@ -2203,15 +2278,67 @@ impl App {
         if let Some(p) = self.session.as_mut().and_then(|s| s.console.as_mut()) {
             p.replays = replays;
         }
+        // The sound's device and volume, taken at once (the device opened again if need be).
+        sound::set_output(s.output());
+        sound::set_volume(s.volume);
+        if let Some(snd) = self.session.as_ref().and_then(|s| s.sound.as_ref()) {
+            snd.configure();
+        }
     }
 
-    /// Melee stopped: the panel shows why, and it can be restarted.
-    fn halted(&mut self, why: String) {
+    /// Melee stopped, or couldn't start: the panel shows why, and it can be restarted. A stop
+    /// (the simulation stopping by name) shows as one, with Report a bug.
+    fn halted(&mut self, why: String, stop: Option<report::Stop>) {
         if let Some(f) = &mut self.front {
-            f.panel.message = Some(why);
+            match &stop {
+                Some(s) => {
+                    f.panel.stop = Some(s.why.clone());
+                    f.panel.message = None;
+                }
+                None => f.panel.message = Some(why),
+            }
+            f.panel.message_ok = false;
             f.panel.halted = true;
         }
+        if stop.is_some() {
+            self.last_stop = stop;
+        }
         self.open_panel();
+    }
+
+    /// Report a bug: the zip saved in the settings folder and shown; what the panel says, and
+    /// whether it went well.
+    fn report_bug(&mut self) -> (String, bool) {
+        // The session's recording as it stands (Melee's, set aside while a replay plays),
+        // written out first.
+        let aside = self.aside.as_mut().map(|a| &mut a.session);
+        for s in self.session.iter_mut().chain(aside) {
+            if let Some(rec) = s.console.as_mut().and_then(|p| p.rec.as_mut()) {
+                rec.flush();
+            }
+        }
+        let r = report::Report {
+            stop: self.last_stop.as_ref(),
+            session: self.session_rec.as_deref(),
+            started: self.started,
+            now: recording::local_now(),
+        };
+        match report::gather(&r) {
+            Ok((path, size)) => {
+                eprintln!("saved the bug report {}", path.display());
+                report::reveal(&path);
+                let name = path.file_name().map_or_else(
+                    || path.display().to_string(),
+                    |n| n.to_string_lossy().into_owned(),
+                );
+                let said = format!(
+                    "Saved {name} ({}) in the settings folder. Nothing was sent.",
+                    report::size_text(size)
+                );
+                (said, true)
+            }
+            Err(e) => (format!("The bug report couldn't be saved: {e}."), false),
+        }
     }
 
     /// Draws the panel over the last frame, doing what it was asked.
@@ -2220,6 +2347,8 @@ impl App {
             return;
         };
         let Some(w) = &mut f.window else { return };
+        f.panel.busy = self.booting.is_some();
+        f.panel.playing = self.replay.clone();
         let action = w.redraw(&self.gpu, shown, &mut f.panel, self.last_image.as_ref());
         if f.panel.settings.fullscreen != shown.fullscreen() {
             shown.set_fullscreen(f.panel.settings.fullscreen);
@@ -2263,12 +2392,45 @@ impl App {
             }
             Action::Export => {
                 if let Some(f) = &mut self.front {
+                    // Only its success says anything here (a failure is a message box).
                     f.panel.message = dialogs::export();
+                    f.panel.message_ok = true;
                 }
             }
             Action::UnlockAll => {
                 if dialogs::unlock_all() {
                     self.restart(None);
+                }
+            }
+            Action::ReportBug => {
+                let (said, ok) = self.report_bug();
+                if let Some(f) = &mut self.front {
+                    f.panel.message = Some(said);
+                    f.panel.message_ok = ok;
+                }
+            }
+            Action::Play => {
+                let chosen = (self.front.as_ref())
+                    .and_then(|f| f.panel.recordings.chosen())
+                    .map(std::path::Path::to_path_buf);
+                if let Some(path) = chosen {
+                    self.play_replay(path);
+                }
+            }
+            Action::BackToMelee => self.end_replay(None),
+            Action::ChooseFolder => {
+                if let Some(f) = &mut self.front
+                    && let Some(dir) =
+                        dialogs::recordings_folder(&f.panel.settings.recordings_folder())
+                {
+                    f.panel.settings.recordings = dir.display().to_string();
+                    f.panel.settings.keep();
+                }
+            }
+            Action::ReplaysFolder => {
+                if let Some(f) = &mut self.front {
+                    f.panel.settings.recordings.clear();
+                    f.panel.settings.keep();
                 }
             }
         }
@@ -2277,12 +2439,164 @@ impl App {
         }
     }
 
-    /// Powers off and on again, the panel closed.
-    fn restart(&mut self, _said: Option<String>) {
-        self.power_off();
+    /// Plays a replay from the Recordings tab: Melee is set aside as the panel left it (a
+    /// replay playing already makes way), and the replay's match loads in the background, then
+    /// plays from its start with the panel closed. Its end, or Back to Melee, brings Melee back
+    /// ([`App::end_replay`]).
+    fn play_replay(&mut self, path: std::path::PathBuf) {
+        if self.booting.is_some() {
+            return;
+        }
+        if self.replay.is_some() {
+            self.drop_session();
+        } else {
+            self.set_aside();
+        }
+        let name = path.file_name().map_or_else(
+            || path.display().to_string(),
+            |n| n.to_string_lossy().into_owned(),
+        );
+        eprintln!("playing the replay {}", path.display());
+        let mut args = self.args.clone();
+        args.replay = Some(path.display().to_string());
+        args.power_on = false;
+        args.inputs = None;
+        // Melee's output device plays the replay's sound (`sound::hand_over`).
+        args.mute = true;
+        self.replay = Some(name);
         if let Some(f) = &mut self.front {
             f.panel.halted = false;
             f.panel.message = None;
+        }
+        self.booting = Some(
+            std::thread::Builder::new()
+                .stack_size(GAME_STACK)
+                .spawn(move || {
+                    match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        Session::start(&args)
+                    })) {
+                        Ok(r) => r.map_err(|e| (e, None)),
+                        Err(p) => Err((panic_text(&p), report::take_last())),
+                    }
+                })
+                .expect("the replay's thread"),
+        );
+    }
+
+    /// The replay's match, loaded: it plays from its start, the panel closed.
+    fn replay_loaded(&mut self, mut session: Session) {
+        if let Some(a) = &mut self.aside {
+            sound::hand_over(a.session.sound.as_mut(), session.sound.as_mut());
+        }
+        self.powered_on(session);
+        self.close_panel();
+    }
+
+    /// Sets Melee aside, paused as the panel leaves it, with what draws it.
+    fn set_aside(&mut self) {
+        let Some(session) = self.session.take() else {
+            return;
+        };
+        self.paced.clear();
+        self.pending = None;
+        self.aside = Some(Box::new(Aside {
+            session,
+            frames: std::mem::replace(&mut self.frames, Frames::new()),
+            renderer: self.renderer.take(),
+            scale: self.scale,
+            efb_width: self.efb_width,
+            msaa: self.msaa,
+            console_view: self.console_view.take(),
+            last_image: self.last_image.take(),
+            hold: std::mem::take(&mut self.hold),
+            ticks: self.ticks,
+            motors: self.motors,
+        }));
+        self.motors = [false; 4];
+        self.inputs.rumble(self.motors);
+    }
+
+    /// Ends the session playing (a replay's) and lets its renderer go.
+    fn drop_session(&mut self) {
+        self.paced.clear();
+        self.pending = None;
+        self.hold = jit::Hold::default();
+        if let (Some(s), Some(a)) = (&mut self.session, &mut self.aside) {
+            sound::hand_over(s.sound.as_mut(), a.session.sound.as_mut());
+        }
+        self.session = None;
+        self.drop_renderer();
+        self.console_view = None;
+        self.last_image = None;
+    }
+
+    /// Lets Melee set aside go, its recordings saved as a session's end saves them.
+    fn drop_aside(&mut self) {
+        if let Some(a) = self.aside.take() {
+            let Aside {
+                session, renderer, ..
+            } = *a;
+            drop(session);
+            if let Some(g) = renderer {
+                self.specialized = pipelines::save(&g.into_renderer());
+            }
+        }
+    }
+
+    /// The replay ended (or stopped, `why`, or Back to Melee was pressed): Melee comes back
+    /// where it was, paused, with the panel open on the Recordings tab over its last frame.
+    /// Settings changed meanwhile reach it as the panel closes. Without Melee set aside (it had
+    /// stopped), Melee starts again from power-on.
+    fn end_replay(&mut self, why: Option<String>) {
+        if self.replay.take().is_none() {
+            return;
+        }
+        if let Some(w) = &why {
+            eprintln!("{w}");
+        }
+        // A replay still loading is let go: its thread drops the match it makes.
+        self.booting = None;
+        self.stopped = None;
+        self.drop_session();
+        let Some(a) = self.aside.take() else {
+            self.power_on();
+            if let Some(f) = &mut self.front {
+                f.panel.open = false;
+            }
+            return;
+        };
+        let a = *a;
+        self.session = Some(a.session);
+        self.frames = a.frames;
+        self.renderer = a.renderer;
+        // The renderer as it was: the panel's closing makes it the settings' again.
+        (self.scale, self.efb_width, self.msaa) = (a.scale, a.efb_width, a.msaa);
+        self.console_view = a.console_view;
+        self.last_image = a.last_image;
+        self.hold = a.hold;
+        self.ticks = a.ticks;
+        self.motors = a.motors;
+        self.inputs.rumble(self.motors);
+        let aspect = self.aspect;
+        self.set_aspect(aspect);
+        if let Some(f) = &mut self.front {
+            f.panel.tab = front::Tab::Recordings;
+            f.panel.message = why;
+            f.panel.message_ok = false;
+        }
+        self.open_panel();
+    }
+
+    /// Powers off and on again, the panel closed (a replay playing ends, and Melee set aside
+    /// with it).
+    fn restart(&mut self, _said: Option<String>) {
+        self.power_off();
+        self.replay = None;
+        self.drop_aside();
+        if let Some(f) = &mut self.front {
+            f.panel.halted = false;
+            f.panel.message = None;
+            f.panel.stop = None;
             f.panel.look_at_save();
             f.panel.open = false;
             let s = f.panel.settings.clone();
@@ -2463,14 +2777,21 @@ impl ApplicationHandler for App {
             .is_some_and(std::thread::JoinHandle::is_finished)
         {
             let r = (self.booting.take().expect("the power-on").join())
-                .unwrap_or_else(|p| Err(format!("Melee stopped: {}", panic_text(&p))));
+                .unwrap_or_else(|p| Err((format!("Melee stopped: {}", panic_text(&p)), None)));
             match r {
+                Ok(s) if self.replay.is_some() => self.replay_loaded(s),
                 Ok(s) => self.powered_on(s),
-                Err(e) if self.front.is_some() => {
-                    eprintln!("{e}");
-                    self.halted(e);
+                Err((e, stop)) if self.replay.is_some() => {
+                    if stop.is_some() {
+                        self.last_stop = stop;
+                    }
+                    self.end_replay(Some(format!("The replay couldn't start: {e}")));
                 }
-                Err(e) => {
+                Err((e, stop)) if self.front.is_some() => {
+                    eprintln!("{e}");
+                    self.halted(e, stop);
+                }
+                Err((e, _)) => {
                     console::fatal(&e);
                     self.quit = true;
                     event_loop.exit();
@@ -2506,18 +2827,25 @@ impl ApplicationHandler for App {
                 event_loop.set_control_flow(ControlFlow::Poll);
                 return;
             }
-            if self.front.is_none() {
+            if self.replay.is_some() {
+                // Melee comes back, the panel over it, saying why the replay stopped; the
+                // stop is kept for a bug report.
+                let stop = self.stopped.take();
+                let why = stop.as_ref().map(|s| format!("Melee stopped: {}", s.why));
+                if stop.is_some() {
+                    self.last_stop = stop;
+                }
+                self.end_replay(why);
+            } else if self.front.is_none() {
                 eprintln!("the match ended");
                 self.quit = true;
                 event_loop.exit();
                 return;
+            } else {
+                let stop = self.stopped.take();
+                self.power_off();
+                self.halted("Melee stopped.".to_owned(), stop);
             }
-            let why = self
-                .stopped
-                .take()
-                .unwrap_or_else(|| "Melee stopped.".to_owned());
-            self.power_off();
-            self.halted(why);
         }
         if self.booting.is_some() {
             // The window stays black while the console powers on.
@@ -2918,6 +3246,9 @@ fn settings_of(args: &Args) -> front::Settings {
     if g.record_sessions {
         s.record_sessions = args.session_record;
     }
+    if g.audio_exclusive {
+        s.audio_exclusive = args.audio_exclusive;
+    }
     s
 }
 
@@ -2936,6 +3267,7 @@ fn with_settings(mut a: Args, s: &front::Settings) -> Args {
     a.replays = Some(s.replays.clone()).filter(|d| !d.is_empty());
     a.session_record = s.record_sessions;
     a.debug_level = s.debug_level;
+    a.audio_exclusive = s.audio_exclusive;
     a
 }
 
@@ -2944,6 +3276,7 @@ fn run(args: Args) -> ExitCode {
         let gpu = present::Gpu::new();
         let mut panel = front::Panel::new(settings_of(&args), args.disc.clone());
         panel.open = true;
+        panel.tab = args.settings_tab;
         return match ui::shot(&gpu, &mut panel, args.size, std::path::Path::new(path)) {
             Ok(()) => ExitCode::SUCCESS,
             Err(e) => {
@@ -2954,6 +3287,7 @@ fn run(args: Args) -> ExitCode {
     }
     sound::set_output(melee_audio::OutputOptions {
         exclusive: args.audio_exclusive,
+        device: None,
     });
     present::set_present(args.present);
     present::set_scanned(args.flicker_scan);
@@ -2973,6 +3307,10 @@ fn run(args: Args) -> ExitCode {
         Some(f) => with_settings(args, &f.panel.settings),
         None => args,
     };
+    if let Some(f) = &front {
+        sound::set_output(f.panel.settings.output());
+        sound::set_volume(f.panel.settings.volume);
+    }
     let session = if args.front {
         None
     } else {
@@ -3002,6 +3340,8 @@ fn run(args: Args) -> ExitCode {
     let mut app = App {
         session,
         booting: None,
+        replay: None,
+        aside: None,
         front,
         last_image: None,
         note_painter: None,
@@ -3042,6 +3382,9 @@ fn run(args: Args) -> ExitCode {
         window_size: args.size,
         alt: false,
         stopped: None,
+        last_stop: None,
+        session_rec: None,
+        started: std::time::SystemTime::now(),
         latency: None,
         delay: melee_input::Delay::new(args.added_delay),
         live: latency::Live::default(),
@@ -3091,6 +3434,7 @@ fn run(args: Args) -> ExitCode {
     }
     app.session = None;
     app.drop_renderer();
+    app.drop_aside();
     // The rows still waiting for their frames' GPU times.
     app.collect_done();
     for r in std::mem::take(&mut app.rows) {
@@ -3133,6 +3477,8 @@ fn run(args: Args) -> ExitCode {
 
 fn main() -> ExitCode {
     console::attach();
+    // Each panic's place, kept for the bug report.
+    report::install_hook();
     // Which build this is, and the folders it keeps (a dev build's are its own).
     eprintln!(
         "{}; settings in {}, caches in {}",
