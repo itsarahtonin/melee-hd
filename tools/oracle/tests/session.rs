@@ -1552,7 +1552,7 @@ fn the_approach_match_rolls_back() {
         "{out}"
     );
     assert!(
-        out.contains("6357 ticks checked in 6 matches, rolled back 7 each, no difference"),
+        out.contains("3014 ticks checked in 3 matches, rolled back 7 each, no difference"),
         "{out}"
     );
 }

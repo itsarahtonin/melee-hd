@@ -581,6 +581,23 @@ impl Game {
     pub fn gobj_addr(&self, g: GObjId) -> Option<u32> {
         Some(self.world.gobjs.addr(g.0)).filter(|&a| a != 0)
     }
+
+    /// How many fighters the running scene has: its GObjs that hold one, a match's or a demo
+    /// fighter's (results screens, intros, cutscenes). The fighter pool's count isn't that: a
+    /// scene's end makes the scheduler anew without unloading its fighters (a 1P match's), so
+    /// the pool counts them until it's made anew itself (`Fighter_800679B0`).
+    pub fn scene_fighters(&self) -> usize {
+        let mut n = 0;
+        for p in 0..crate::hsd::gobj::P_LINKS as u8 {
+            let mut cur = self.world.first_in(p);
+            while let Some(g) = cur {
+                let o = self.world.gobj(g);
+                n += usize::from(matches!(o.user_data, Some(UserData::Fighter(_))));
+                cur = o.next;
+            }
+        }
+        n
+    }
 }
 
 /// The game as the scheduler's host for one call: the state and the game data it reads.
@@ -827,5 +844,34 @@ impl Host<GameKinds> for Running<'_> {
             }
             Obj::LObj(l) => crate::hsd::lobj::remove_all(&mut self.game.objs, Some(l)),
         }
+    }
+}
+
+#[cfg(test)]
+mod scene_fighters_tests {
+    use super::*;
+
+    /// A fighter counts while its GObj is in the scene, not while the pool still counts it
+    /// after the scene ended (`session-sync`'s matches, docs/oracle.md).
+    #[test]
+    fn a_scene_counts_its_fighter_gobjs_not_the_pools_leftovers() {
+        let mut g = Game::default();
+        let f = FighterId(g.fighters.alloc(Fighter::default()));
+        assert_eq!(g.scene_fighters(), 0, "a fighter with no GObj");
+        let item = g.world.create(6, 6, 0);
+        g.world.init_user_data(item, 6, UserData::Item(ItemId(0)));
+        g.world.create(4, 8, 0);
+        assert_eq!(
+            g.scene_fighters(),
+            0,
+            "other GObjs, a fighter's link included"
+        );
+        let o = g.world.create(4, 8, 0);
+        g.world.init_user_data(o, 4, UserData::Fighter(f));
+        assert_eq!(g.scene_fighters(), 1);
+        // The next scene's `HSD_GObjInit`: the fighter isn't unloaded, so the pool keeps it.
+        g.world.renew();
+        assert_eq!(g.fighters.used(), 1);
+        assert_eq!(g.scene_fighters(), 0, "the scene before's fighter");
     }
 }
