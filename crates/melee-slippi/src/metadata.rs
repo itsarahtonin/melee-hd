@@ -4,35 +4,29 @@
 //! Vanilla match read (`unlocks`, milestone 5's call of 2026-10-23), which melee-hd plays its
 //! recording with and Slippi's tools leave alone, as they do any key they don't know.
 
-use melee_sim::game::gm::Unlocks;
+use melee_sim::game::gm::{Unlocks, code};
 
 /// The metadata key.
 pub const UNLOCKS: &str = "unlocks";
 
-/// The `unlocks` object's fields: the save's masks, language, records and trophy, as numbers,
-/// and the unlock codes' sites, as booleans (all false under Vanilla).
+/// The `unlocks` object's fields: the save's masks, language and records, the trophy and the
+/// unlock codes' sites (`Unlocks::codes`, 0 under Vanilla), as numbers.
 const CHARACTERS: &str = "characters";
 const STAGES: &str = "stages";
 const LANGUAGE: &str = "language";
 const RECORDS: &str = "records";
 const TROPHY_11A: &str = "trophy11A";
-const CODES: [&str; 5] = [
-    "allCharactersCode",
-    "allStagesCode",
-    "recordsIndexCode",
-    "recordsAllCode",
-    "trophiesAllCode",
-];
+const CODES: &str = "codes";
 
-fn code_flags(u: &mut Unlocks) -> [&mut bool; 5] {
-    [
-        &mut u.all_characters_code,
-        &mut u.all_stages_code,
-        &mut u.records_index_code,
-        &mut u.records_all_code,
-        &mut u.trophies_all_code,
-    ]
-}
+/// The five booleans recordings carried before `codes` (2026-11-14, from `f8492689` to the
+/// ruleset's sessions), read into the bits they stood for.
+const OLD_CODES: [(&str, u16); 5] = [
+    ("allCharactersCode", code::ALL_CHARACTERS),
+    ("allStagesCode", code::ALL_STAGES),
+    ("recordsIndexCode", code::SPECIAL_MESSAGES_OFF),
+    ("recordsAllCode", code::RECORDS_ALL),
+    ("trophiesAllCode", code::TROPHIES_ALL),
+];
 
 /// Writes `"unlocks": {...}`, a key and its object, into a UBJSON object.
 pub fn write_unlocks(o: &mut Vec<u8>, u: &Unlocks) {
@@ -44,16 +38,12 @@ pub fn write_unlocks(o: &mut Vec<u8>, u: &Unlocks) {
         (LANGUAGE, i64::from(u.language)),
         (RECORDS, i64::from(u.records)),
         (TROPHY_11A, i64::from(u.trophy_11a)),
+        (CODES, i64::from(u.codes)),
     ];
     for (k, v) in numbers {
         key(o, k);
         o.push(b'l');
         o.extend_from_slice(&(v as u32).to_be_bytes());
-    }
-    let mut u = *u;
-    for (k, f) in CODES.iter().zip(code_flags(&mut u)) {
-        key(o, k);
-        o.push(if *f { b'T' } else { b'F' });
     }
     o.push(b'}');
 }
@@ -81,18 +71,21 @@ pub fn unlocks(file: &[u8]) -> Option<Unlocks> {
         Value::Int(v) => Some(*v),
         _ => None,
     };
-    let mut out = Unlocks {
+    let codes = match int(CODES) {
+        Some(c) => u16::try_from(c).ok()?,
+        None => OLD_CODES
+            .iter()
+            .filter(|(k, _)| matches!(field(u, k), Some(Value::Bool(true))))
+            .fold(0, |c, (_, bit)| c | bit),
+    };
+    Some(Unlocks {
         characters: u16::try_from(int(CHARACTERS)?).ok()?,
         stages: u16::try_from(int(STAGES)?).ok()?,
         language: u8::try_from(int(LANGUAGE)?).ok()?,
         records: int(RECORDS)? as u32,
         trophy_11a: u8::try_from(int(TROPHY_11A)?).ok()?,
-        ..Unlocks::default()
-    };
-    for (k, f) in CODES.iter().zip(code_flags(&mut out)) {
-        *f = matches!(field(u, k)?, Value::Bool(true));
-    }
-    Some(out)
+        codes,
+    })
 }
 
 fn field<'a>(o: &'a [(String, Value)], k: &str) -> Option<&'a Value> {
@@ -220,5 +213,33 @@ impl Ubjson<'_> {
             }
             _ => return None,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A recording made before `codes` (its five booleans) reads into the same bits.
+    #[test]
+    fn old_code_flags_read_as_bits() {
+        let mut o = vec![b'{'];
+        key(&mut o, "metadata");
+        o.push(b'{');
+        key(&mut o, UNLOCKS);
+        o.push(b'{');
+        for k in [CHARACTERS, STAGES, LANGUAGE, RECORDS, TROPHY_11A] {
+            key(&mut o, k);
+            o.push(b'l');
+            o.extend_from_slice(&1u32.to_be_bytes());
+        }
+        for (k, _) in OLD_CODES {
+            key(&mut o, k);
+            o.push(if k.starts_with("all") { b'T' } else { b'F' });
+        }
+        o.extend_from_slice(b"}}}");
+        let u = unlocks(&o).expect("the old unlocks");
+        assert_eq!(u.codes, code::ALL_CHARACTERS | code::ALL_STAGES);
+        assert_eq!((u.characters, u.trophy_11a), (1, 1));
     }
 }

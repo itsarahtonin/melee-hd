@@ -214,8 +214,7 @@ mod tests {
             language: 0,
             records: 0x0200_0001,
             trophy_11a: 2,
-            trophies_all_code: true,
-            ..Unlocks::default()
+            codes: melee_sim::game::gm::code::TROPHIES_ALL,
         };
         let meta = Metadata {
             start_at: UNIX_EPOCH,
@@ -226,6 +225,6 @@ mod tests {
         };
         let file = slp(&raw, &meta);
         assert_eq!(crate::metadata::unlocks(&file), Some(u));
-        assert!(file.ends_with(b"U\x0ftrophiesAllCodeT}}}"));
+        assert!(file.ends_with(b"U\x05codesl\x00\x00\x10\x00}}}"));
     }
 }
