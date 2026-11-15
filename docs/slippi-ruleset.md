@@ -144,7 +144,7 @@ Tasks 1, 2 and 3 can start at once, and task 5's corpus run and tests beside the
 - **Slippi Dolphin's menus, online entries, m-ex and the rest of its netplay set** (Sarah, 2026-11-14). For the record: the set is 288 codes, of which the 261 playback drops are the boot's jump past the title to Slippi's Online Play submenu, about 95 codes of the online scene (its character select and name entry, VS screen, results panels, rollback engine), 75 heap, file, text, video and polling codes (the m-ex set's 53 reshape every scene's heaps), and about 60 offline menu, HUD, pause, stage and audio codes. Wanting any of it later would mean ssbm-rs running the set through Slippi's bootloader with an EXI device giving Slippi Dolphin's offline answers (a probe on 2026-11-14 found its benchmark boot can't hold the set: the 7,256 lines overrun low memory before the first field), a new heap layout in melee-hd, and a ledger of the codes. Its files stay in ssbm-rs's `local/lockstep/slippi-survey/`.
 - **Netplay** (the follow-on repository). This plan leaves it the gameplay codes on in live play, matches that start from a state a peer can rebuild from the game start alone, the recorder writing what Slippi's playback reads, and the display-phase reads named.
 - **Relaxing Vanilla's leftover modelling**: Sarah's call, after this; the measurements above are its starting point.
-- **The refactor round and the player's polish**, each after its own discussion.
+- **The refactor round**, its goals agreed on 2026-11-14 in [the refactor](refactor.md), and the fast renderer beside it.
 
 ## Design calls
 
