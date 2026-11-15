@@ -64,7 +64,10 @@ struct Bench {
 
 impl Bench {
     fn open(disc: Disc, name: &str) -> Bench {
-        let path = melee_local_data::bench_replay(name);
+        Bench::open_path(disc, &melee_local_data::bench_replay(name))
+    }
+
+    fn open_path(disc: Disc, path: &std::path::Path) -> Bench {
         let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         Bench {
             replay: Replay::parse(&bytes).expect("a replay"),
@@ -75,9 +78,17 @@ impl Bench {
 
     /// The replay's match under `rules`, with the allocator model on or off.
     fn start(&mut self, rules: &Rules, heap: bool) -> Match {
+        self.start_with(rules, heap, false)
+    }
+
+    /// [`Bench::start`], recording the match as a Slippi replay when `record`.
+    fn start_with(&mut self, rules: &Rules, heap: bool, record: bool) -> Match {
         let mut settings =
             Settings::from_replay(&melee_slippi::start(&self.replay)).expect("its settings");
         settings.rules = rules.clone();
+        if record {
+            settings.record = Some(melee_slippi::write::setup(&self.replay));
+        }
         if !heap {
             settings.heap = None;
             settings.playback_heap = None;
@@ -431,4 +442,151 @@ fn slippi_cpu_di_reads_neither_register() {
             frame + 1
         );
     });
+}
+
+/// The Super Scope's affordable level without the allocator model, under the Slippi ruleset
+/// (`sscope::ADDRESS_STAND_IN`): with less ammunition than a level 1 shot, a charge past level
+/// 0 takes the scope's GObj address for a level, which a hit while charging spends (over two
+/// billion shots) and a charged shot fires (a click). Every heap address takes the same
+/// branches, so a fixed address in the heap's range stands in for the model's.
+///
+/// The `sscope` oracle set's two matches (ssbm-rs's `local/bench/oracle-m4-sscope`, skipped
+/// without `SSBM_RS_LOCAL`) play under 3.19's rules with the model and without it, recording
+/// both. The model changes which pool slot each object takes, so the two states don't compare
+/// slot by slot; what is compared is what the oracle's replay check compares and what players
+/// see and hear: every tick's output events (sounds, rumble) and every event of the two
+/// recordings (each frame's seed, each fighter's pre- and post-frame updates, each item's), all
+/// equal but the post-frame state word (`mv.co.common.x0`, Slippi's "hitstun" word) where it
+/// holds the address, the model's against the stand-in. And every tick each Super Scope's
+/// ammunition (`xD4C`) is equal, or both runs' hold the refill and differ by the address alone.
+/// Each match must reach its half of the glitch: the refill in `sscope-fd`, the click in
+/// `sscope-click-fd`.
+#[test]
+fn slippi_super_scope_stand_in_matches_the_model() {
+    use melee_sim::game::it::kinds::{S_SCOPE, sscope::ADDRESS_STAND_IN};
+    use melee_sim::state_eq::StateEq;
+    use melee_slippi::replay::event::POST_FRAME;
+    let Some(disc) = disc() else { return };
+    let dir = melee_local_data::ssbm_rs_local("bench/oracle-m4-sscope");
+    let stand_in = ADDRESS_STAND_IN.to_be_bytes();
+    let mut disc = Some(disc);
+    for (name, wants_refill) in [("sscope-fd", true), ("sscope-click-fd", false)] {
+        let path = std::path::Path::new(&dir).join(format!("{name}.slp"));
+        if !path.exists() {
+            eprintln!("{}: not here, skipping", path.display());
+            return;
+        }
+        let mut bench = Bench::open_path(disc.take().unwrap(), &path);
+        let (refills, clicks, addrs, recordings) = on_sim_thread(FpMode::Slippi, || {
+            let rules = Rules::slippi_online();
+            let mut on = bench.start_with(&rules, true, true);
+            let mut off = bench.start_with(&rules, false, true);
+            let replay = &bench.replay;
+            let (mut a, mut b) = (Device(replay), Device(replay));
+            let (mut refills, mut clicks) = (0u32, 0u32);
+            let mut addrs: Vec<i32> = Vec::new();
+            for t in 0u32.. {
+                let step = |m: &mut Match, d: &mut Device| {
+                    let (mut f, render) = m.step_replay_tick(d);
+                    if render {
+                        f.draws = m.render();
+                    }
+                    let events = std::mem::take(&mut f.events);
+                    let ended = f.ended || m.game.recorder.as_ref().is_some_and(|r| r.ended());
+                    m.recycle(f);
+                    (events, ended)
+                };
+                let (ea, end_a) = step(&mut on, &mut a);
+                let (eb, end_b) = step(&mut off, &mut b);
+                if let Some(d) = ea.state_diff(&eb) {
+                    panic!("{name}: tick {t}'s events differ without the allocator model: {d}");
+                }
+                for (i, it) in on.game.items.iter() {
+                    if it.kind != S_SCOPE {
+                        continue;
+                    }
+                    let addr = it.entity.map_or(0, |g| on.game.world.gobjs.addr(g.0)) as i32;
+                    if !addrs.contains(&addr) {
+                        addrs.push(addr);
+                    }
+                    let (want, got) = (it.xD4C, off.game.items[i].xD4C);
+                    if want != got {
+                        assert!(
+                            want > 1_000_000_000
+                                && got
+                                    == want
+                                        .wrapping_add(addr)
+                                        .wrapping_sub(ADDRESS_STAND_IN as i32),
+                            "{name}: tick {t}: the scope's ammunition is {got} without the model, {want} with it"
+                        );
+                        refills += 1;
+                    }
+                }
+                for (i, f) in on.game.fighters.iter() {
+                    let (want, got) = (f.mv_i32(0), off.game.fighters[i].mv_i32(0));
+                    if want != got && addrs.contains(&want) && got == ADDRESS_STAND_IN as i32 {
+                        clicks += 1;
+                    }
+                }
+                if end_a || end_b {
+                    assert_eq!(end_a, end_b, "{name}: tick {t}: one run ended");
+                    break;
+                }
+            }
+            let at = std::time::SystemTime::UNIX_EPOCH;
+            let recording = |m: &Match| {
+                let file = melee_slippi::write::recording(m.game.recorder.as_ref().unwrap(), at);
+                melee_slippi::Replay::parse(&file)
+                    .expect("the recording parses")
+                    .events
+            };
+            (refills, clicks, addrs, (recording(&on), recording(&off)))
+        });
+        let (with, without) = recordings;
+        assert_eq!(
+            with.len(),
+            without.len(),
+            "{name}: the recordings' event counts differ"
+        );
+        let mut words = 0;
+        for (n, (x, y)) in with.iter().zip(&without).enumerate() {
+            if x == y {
+                continue;
+            }
+            let at = x.payload.iter().zip(&y.payload).position(|(p, q)| p != q);
+            let held = x.command == POST_FRAME
+                && x.payload.len() == y.payload.len()
+                && at.is_some_and(|at| {
+                    (0..4).any(|k| {
+                        let w = at.saturating_sub(k);
+                        w + 4 <= x.payload.len()
+                            && y.payload[w..w + 4] == stand_in
+                            && addrs.iter().any(|a| x.payload[w..w + 4] == a.to_be_bytes())
+                            && x.payload[..w] == y.payload[..w]
+                            && x.payload[w + 4..] == y.payload[w + 4..]
+                    })
+                });
+            assert!(
+                held,
+                "{name}: the recordings' event {n} (command {:#04x}) differs without the model beyond the state word",
+                x.command
+            );
+            words += 1;
+        }
+        eprintln!(
+            "{name}: {refills} ticks of the refill's ammunition, {clicks} of the state word holding the address ({words} post-frame updates), the rest equal"
+        );
+        if wants_refill {
+            assert!(
+                refills > 0,
+                "{name}: no hit while charging spent the address"
+            );
+        } else {
+            assert!(
+                clicks > 0 && words > 0,
+                "{name}: no charged shot took the address for a level"
+            );
+        }
+        disc = Some(bench.disc);
+    }
 }
