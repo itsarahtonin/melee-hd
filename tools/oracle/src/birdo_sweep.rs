@@ -179,6 +179,7 @@ pub fn birdo_sweep(args: &[&str]) -> ExitCode {
         card_b: None,
         card_b_pull: None,
         develop: rec.developer(),
+        ruleset: rec.ruleset,
     };
     let disc = Disc::open(std::env::var("SSBM_DISC").expect("SSBM_DISC")).expect("the disc");
     let mut reads = rec.reads.clone();

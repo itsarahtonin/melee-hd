@@ -785,7 +785,7 @@ impl Game {
     pub fn message_waits(&self, n: u32) -> bool {
         let s = &self.game_data.thing.save_data;
         let bit = |w: &[u32; 3]| w[(n / 32) as usize] & (1 << (n % 32)) != 0;
-        bit(&s.x1B4C) && bit(&s.x1B40)
+        self.message_noted(n) && bit(&s.x1B40)
     }
 
     /// `gm_80172174`: the trophies' notices and their times cleared (`gmMainLib_8015CCE4`).

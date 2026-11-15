@@ -215,6 +215,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
             card_b,
             card_b_pull,
             develop: rec.developer(),
+            ruleset: rec.ruleset,
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");

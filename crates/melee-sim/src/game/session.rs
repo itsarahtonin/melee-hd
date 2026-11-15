@@ -13,7 +13,7 @@
 use melee_data::archive::{Archive, Archives};
 
 use super::gm::scene;
-use super::state::{Game, Running};
+use super::state::{Game, Ruleset, Running};
 use super::vs_match::{DiscFile, Frame};
 use crate::audio::boot::{BootTimes, console_boot_delay};
 use crate::audio::clock::{DiscSpeed, TB_HZ};
@@ -59,6 +59,10 @@ pub struct Setup {
     /// The developer setting that raises the debug level (milestone 5's task 19), none on a
     /// retail disc's console, the default. A session's own input, never a replay's.
     pub develop: Option<Develop>,
+    /// The ruleset the session runs from power-on (`SSBMINP1`'s flag
+    /// [`super::inputs::SLIPPI_RULESET`], ssbm-rs's `--ruleset`): Vanilla, or Slippi's, which
+    /// runs with no memory card and no developer setting ([`Session::new`] refuses them).
+    pub ruleset: Ruleset,
 }
 
 /// The debug level a developer setting raises `DbLevel` to, as ssbm-rs's runner does
@@ -98,6 +102,7 @@ impl Default for Setup {
             card_b: None,
             card_b_pull: None,
             develop: None,
+            ruleset: Ruleset::Vanilla,
         }
     }
 }
@@ -432,7 +437,26 @@ impl Session {
     /// The console at power-on: nothing of the game has run, and memory holds what the
     /// executable's data holds.
     pub fn new(setup: Setup) -> Session {
-        let mut game = Game::default();
+        if setup.ruleset == Ruleset::Slippi {
+            assert!(
+                setup.card.is_none() && setup.card_b.is_none(),
+                "the Slippi ruleset runs with no memory card"
+            );
+            assert!(
+                setup.develop.is_none(),
+                "the developer setting is Vanilla's only"
+            );
+        }
+        // The ruleset's codes, from power-on: its gameplay rules in every match, its general
+        // codes in the unlock getters, Skip Memcard Prompt (`gm::memcard`).
+        let mut game = Game {
+            ruleset: setup.ruleset,
+            rules: setup.ruleset.rules(),
+            ..Game::default()
+        };
+        if setup.ruleset == Ruleset::Slippi {
+            game.gm.unlocks.codes = super::gm::code::ALL;
+        }
         game.gm.db_level = DB_NO_DEBUG_ROM;
         // What the executable's data holds that the comparison reads: the stage selected
         // (`selected_stage`, Fountain of Dreams) and the camera's default field of view
@@ -457,6 +481,11 @@ impl Session {
     /// Takes up a session from a state: one imported from a trace tick's end, say. Its
     /// timeline takes the setup's clock at power-on.
     pub fn resume(mut game: Game, data: Archives, setup: Setup) -> Session {
+        gekko_fp::set_fp_mode(setup.ruleset.fp_mode());
+        // The ruleset's gameplay rules, which no import reads (its general codes and UCF's
+        // buffer come from the state's memory).
+        game.ruleset = setup.ruleset;
+        game.rules = setup.ruleset.rules();
         game.audio.power_on = setup.power_on;
         game.audio.mono = setup.sram_flags & SRAM_STEREO == 0;
         if let Some(c) = game.audio.clock.as_mut() {
@@ -625,6 +654,8 @@ impl Session {
     /// `CARDInit` and `OSInitAlarm` set up the console's own libraries, which the platform
     /// replaces: what they would read is the session's inputs.
     pub fn boot(&mut self, console: &mut dyn Console) {
+        // The ruleset's floating point for the whole session (the thread's mode).
+        gekko_fp::set_fp_mode(self.setup.ruleset.fp_mode());
         let g = &mut self.game;
         g.gm.launch_buttons = launch_buttons(console);
         g.gm.db_level = db_level(g.gm.db_level, console);

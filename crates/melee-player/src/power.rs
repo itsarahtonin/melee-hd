@@ -148,6 +148,8 @@ pub fn setup(card: Vec<u8>, power_on: u64, debug_level: i32) -> Setup {
             level: debug_level,
             ini: false,
         }),
+        // The player's Ruleset setting is the Slippi ruleset's task 6.
+        ruleset: melee_sim::game::state::Ruleset::Vanilla,
     }
 }
 

@@ -242,16 +242,26 @@ pub fn is_1p_mode(game: &Game) -> bool {
     )
 }
 
+/// [`is_1p_mode`] as the C-stick's readers call it (`gm_IsCurrently1PMode_inline`'s calls in
+/// `Fighter_procInput`, `8006AE04` and `8006AE9C`, and `Camera_8002B0E0`'s, `8002B0F8`):
+/// never under the Slippi ruleset's C-stick rule
+/// ([`Rules::c_stick_1p`](super::state::Rules::c_stick_1p)), so the C-stick works as in VS.
+/// The function's other callers keep [`is_1p_mode`].
+pub fn is_1p_mode_for_c_stick(game: &Game) -> bool {
+    !game.rules.c_stick_1p && is_1p_mode(game)
+}
+
 /// Whether the game is in training mode, `gm_8018841C`.
 #[doc(alias = "gm_8018841C")]
 pub fn is_training(game: &Game) -> bool {
     game.game_mode == 0x1C
 }
 
-/// What the memory card's save data has unlocked and recorded, and the codes that report
-/// everything unlocked whatever it says (Slippi Dolphin's unlock-all codes, which patch
-/// `gm_80164ABC`'s and `gm_80164600`'s answers to 1) or cut the records' test short: an input
-/// to a match, which reads it and writes only a rare Pokémon's record (see engine.md).
+/// What the memory card's save data has unlocked and recorded, and which of Slippi Dolphin's
+/// general codes run ([`UNLOCK_CODES`]: the unlock-all codes, which patch the unlock getters
+/// to answer everything unlocked whatever the save says, and the special and trophy messages
+/// off, which cut the records' tests short): an input to a match, which reads it and writes
+/// only a rare Pokémon's record (see engine.md), and in a session the menus' getters' patches.
 #[derive(Clone, Copy, Debug, Default, PartialEq, melee_derive::StateEq)]
 pub struct Unlocks {
     /// The unlockable characters, a bit each by unlock index (`save_data.unlocked_characters`,
@@ -259,10 +269,6 @@ pub struct Unlocks {
     pub characters: u16,
     /// The unlockable stages (`save_data.x186A`).
     pub stages: u16,
-    /// `gm_80164ABC` patched to answer 1 (`li r3, 1` at `0x80164B14`).
-    pub all_characters_code: bool,
-    /// `gm_80164600` patched likewise (at `0x80164658`).
-    pub all_stages_code: bool,
     /// The game preferences' saved language (`GamePrefs::saved_language`, at the card data's
     /// `0x1CC6`): [`LANG_JP`] or [`LANG_US`], which picks the strings some screens show.
     pub language: u8,
@@ -270,17 +276,74 @@ pub struct Unlocks {
     /// `0x1B4C`): the Pokémon trophies Celebi waits for (0 to 0x1B), Mew's (0x19) and
     /// Celebi's own (0x1A).
     pub records: u32,
-    /// The records' test cut short (`blr` at `0x8015D94C`, Slippi's Disable Special Messages):
-    /// `gmMainLib_8015D94C` answers with the index it was asked about.
-    pub records_index_code: bool,
-    /// The records' test patched to answer 1 (`li r3, 1` at `0x8015D968`, an unlock-all code).
-    pub records_all_code: bool,
     /// How many of trophy 0x11A the card holds (`save_data.trophy_flags[0x11A]`'s low byte, at
     /// the card data's `0x1F08`), which Big Blue's alternate song waits for.
     pub trophy_11a: u8,
-    /// The trophy count patched to answer 99 (`li r3, 0x63` at `0x8030490C`, an unlock-all
-    /// code).
-    pub trophies_all_code: bool,
+    /// Which of [`UNLOCK_CODES`] run, a bit each by its index there ([`code`]).
+    pub codes: u16,
+}
+
+/// Slippi Dolphin's general codes as its playback set has them (`Required: General Codes`,
+/// 3.19.1's bytes): Unlock All Characters and Stages' 14 writes, Disable Special Messages and
+/// Disable Trophy Messages, each an address and the word it writes. Slippi's playback runs
+/// them, and the Slippi ruleset from power-on ([`super::state::Ruleset`]).
+pub const UNLOCK_CODES: [(u32, u32); 16] = [
+    (0x8015_EE98, LI_R3_1),
+    (0x8015_EDDC, LI_R3_1),
+    (0x8016_4B14, LI_R3_1),
+    (0x8016_48F4, LI_R3_1),
+    (0x8015_EE4C, LI_R3_1),
+    (0x8015_EE14, LI_R3_1),
+    (0x8015_D968, LI_R3_1),
+    (0x8015_D9D8, LI_R3_1),
+    (0x8017_229C, LI_R3_0),
+    (0x8017_37B0, LI_R3_0),
+    (0x8016_4658, LI_R3_1),
+    (0x8016_44E8, LI_R3_1),
+    (0x8030_490C, LI_R3_0X63),
+    (0x8030_44F0, LI_R3_1),
+    (0x8015_D94C, BLR),
+    (0x8015_D984, BLR),
+];
+
+/// Each of [`UNLOCK_CODES`]' bits in [`Unlocks::codes`], by what it patches.
+pub mod code {
+    /// `gmMainLib_8015EE90` (the sound test unlocked) answers 1.
+    pub const SOUND_TEST: u16 = 1 << 0;
+    /// `gmMainLib_8015EDD4` (All-Star unlocked) answers 1.
+    pub const ALL_STAR: u16 = 1 << 1;
+    /// `gm_80164ABC` (every character unlocked) answers 1.
+    pub const ALL_CHARACTERS: u16 = 1 << 2;
+    /// `gm_IsCKindUnlocked` answers 1 for every character.
+    pub const CHARACTER: u16 = 1 << 3;
+    /// `gmMainLib_8015EE44` (the random stage switch unlocked) answers 1.
+    pub const RANDOM_STAGE_SWITCH: u16 = 1 << 4;
+    /// `gmMainLib_8015EE0C` (the score display unlocked) answers 1.
+    pub const SCORE_DISPLAY: u16 = 1 << 5;
+    /// `gmMainLib_8015D94C` (a special message noted) answers 1, past the test.
+    pub const RECORDS_ALL: u16 = 1 << 6;
+    /// `gmMainLib_8015D984` (a record trophy given) answers 1 when it had it.
+    pub const RECORD_TROPHY_HELD: u16 = 1 << 7;
+    /// `gm_801721EC` (a notice waits) answers 0.
+    pub const NO_NOTICE: u16 = 1 << 8;
+    /// `gm_80173754` (the challenger approach's scene first) answers 0 once it has set it up.
+    pub const NO_APPROACH: u16 = 1 << 9;
+    /// `gm_80164600` (every stage unlocked) answers 1.
+    pub const ALL_STAGES: u16 = 1 << 10;
+    /// `gm_80164430` (a stage unlocked) answers 1 for every stage.
+    pub const STAGE: u16 = 1 << 11;
+    /// `Toy_803048C0` (a trophy's count) answers 99.
+    pub const TROPHIES_ALL: u16 = 1 << 12;
+    /// `un_80304470` (every trophy held) answers 1.
+    pub const EVERY_TROPHY: u16 = 1 << 13;
+    /// Disable Special Messages: `gmMainLib_8015D94C` returns at once, answering the index it
+    /// was asked about.
+    pub const SPECIAL_MESSAGES_OFF: u16 = 1 << 14;
+    /// Disable Trophy Messages: `gmMainLib_8015D984` returns at once, answering the index it
+    /// was asked about, giving nothing.
+    pub const TROPHY_MESSAGES_OFF: u16 = 1 << 15;
+    /// All sixteen.
+    pub const ALL: u16 = u16::MAX;
 }
 
 /// `LANG_JP` and `LANG_US`.
@@ -290,6 +353,7 @@ pub const LANG_US: u8 = 1;
 /// `gmMainLib_804D3EE0`, the memory card's data, and `li r3, 1`.
 const CARD_DATA: u32 = 0x804D_3EE0;
 const LI_R3_1: u32 = 0x3860_0001;
+const LI_R3_0: u32 = 0x3860_0000;
 const LI_R3_0X63: u32 = 0x3860_0063;
 /// `blr`.
 const BLR: u32 = 0x4E80_0020;
@@ -343,14 +407,10 @@ impl Unlocks {
         Unlocks {
             characters: 0xFFFF,
             stages: 0xFFFF,
-            all_characters_code: true,
-            all_stages_code: true,
             language: LANG_US,
             records: 0,
-            records_index_code: true,
-            records_all_code: true,
             trophy_11a: 0,
-            trophies_all_code: true,
+            codes: code::ALL,
         }
     }
 
@@ -362,15 +422,20 @@ impl Unlocks {
         Unlocks {
             characters: (masks >> 16) as u16,
             stages: masks as u16,
-            all_characters_code: word(0x8016_4B14) == LI_R3_1,
-            all_stages_code: word(0x8016_4658) == LI_R3_1,
             language: (word(card + 0x1CC4) >> 8) as u8,
             records: word(card + 0x1B4C),
-            records_index_code: word(0x8015_D94C) == BLR,
-            records_all_code: word(0x8015_D968) == LI_R3_1,
             trophy_11a: (word(card + 0x1F08) >> 16) as u8,
-            trophies_all_code: word(0x8030_490C) == LI_R3_0X63,
+            codes: UNLOCK_CODES
+                .iter()
+                .enumerate()
+                .filter(|&(_, &(at, w))| word(at) == w)
+                .fold(0, |m, (i, _)| m | 1 << i),
         }
+    }
+
+    /// Whether code `c` ([`code`]) runs.
+    pub fn code(&self, c: u16) -> bool {
+        self.codes & c != 0
     }
 
     /// Whether record `i` is set, `gmMainLib_8015D94C`: its bit, or `i` itself with the test
@@ -382,9 +447,9 @@ impl Unlocks {
             i < 32,
             "record {i:#x}: only the first word of the records is kept"
         );
-        if self.records_index_code {
+        if self.code(code::SPECIAL_MESSAGES_OFF) {
             i
-        } else if self.records_all_code {
+        } else if self.code(code::RECORDS_ALL) {
             1
         } else {
             self.records & 1 << i
@@ -432,7 +497,7 @@ impl Unlocks {
             trophy == 0x11A,
             "trophy {trophy:#x}: only trophy 0x11A is kept"
         );
-        if self.trophies_all_code {
+        if self.code(code::TROPHIES_ALL) {
             0x63
         } else {
             u32::from(self.trophy_11a)
@@ -442,16 +507,23 @@ impl Unlocks {
     /// Whether every unlockable character is unlocked, `gm_80164ABC`.
     #[doc(alias = "gm_80164ABC")]
     pub fn all_characters(&self) -> bool {
-        self.all_characters_code || (0..UNLOCKABLE).all(|i| self.characters & (1 << i) != 0)
+        self.code(code::ALL_CHARACTERS) || (0..UNLOCKABLE).all(|i| self.characters & (1 << i) != 0)
     }
 
     /// Whether a character is unlocked, `gm_IsCKindUnlocked`: its bit in the save data's mask
     /// (by its unlock index, `gm_SelKindToUnlockIndex`), or always for a character that is
-    /// never locked. The unlock-all code doesn't change it.
+    /// never locked; always with the unlock-all code at its locked answer
+    /// ([`code::CHARACTER`]).
     #[doc(alias = "gm_IsCKindUnlocked")]
     #[doc(alias = "gm_SelKindToUnlockIndex")]
     #[doc(alias = "gmMainLib_GetUnlockedCharactersBitmaskPtr")]
     pub fn ckind_unlocked(&self, ckind: u8) -> bool {
+        self.code(code::CHARACTER) || self.ckind_unlocked_inline(ckind)
+    }
+
+    /// [`Unlocks::ckind_unlocked`] as `gm_1601.c`'s inline copies test it (`fn_80164B48`'s):
+    /// the save's bit alone, which the unlock-all code doesn't patch.
+    pub fn ckind_unlocked_inline(&self, ckind: u8) -> bool {
         match UNLOCK_INDEX.iter().find(|&&(k, _)| k == ckind) {
             Some(&(_, i)) => self.characters & (1 << i) != 0,
             None => true,
@@ -461,7 +533,7 @@ impl Unlocks {
     /// Whether every unlockable stage is unlocked, `gm_80164600`.
     #[doc(alias = "gm_80164600")]
     pub fn all_stages(&self) -> bool {
-        self.all_stages_code || (0..UNLOCKABLE).all(|i| self.stages & (1 << i) != 0)
+        self.code(code::ALL_STAGES) || (0..UNLOCKABLE).all(|i| self.stages & (1 << i) != 0)
     }
 
     /// Whether the saved language is Japanese, `lbLang_IsSavedLanguageJP`.

@@ -324,11 +324,15 @@ impl Running<'_> {
     }
 
     /// Whether the table in play holds every trophy (`un_80304470`): its classes' trophies,
-    /// Mew's and the Pikmin's aside.
+    /// Mew's and the Pikmin's aside (`Toy_803048C0` each); always with the unlock-all code at
+    /// its answer ([`super::code::EVERY_TROPHY`]), its counts read only.
     pub fn holds_every_trophy(&self) -> bool {
+        if self.game.unlock_code(super::code::EVERY_TROPHY) {
+            return true;
+        }
         let total: i32 = (0..8).map(class_size).sum();
         let held = (0..TROPHY_COUNT)
-            .filter(|&i| i != 0xE6 && i != 0xC9 && self.toy_flags()[i] & 0xFF != 0)
+            .filter(|&i| i != 0xE6 && i != 0xC9 && self.trophy_count(i) != 0)
             .count() as i32;
         total <= held
     }
@@ -387,9 +391,16 @@ impl Running<'_> {
     }
 
     /// `gm_80164430`: whether the save has a stage kind's stage unlocked (always for a stage
-    /// that isn't locked).
+    /// that isn't locked, and for every stage with the unlock-all code at its locked answer,
+    /// [`super::code::STAGE`]).
     #[doc(alias = "gm_80164430")]
     pub fn stage_unlocked(&self, stkind: u16) -> bool {
+        self.game.unlock_code(super::code::STAGE) || self.stage_unlocked_inline(stkind)
+    }
+
+    /// [`Self::stage_unlocked`] as `gm_1601.c`'s inline copies test it (`gm_80167FC4`'s,
+    /// `gm_801641E4`'s): the save's bit alone, which the unlock-all code doesn't patch.
+    pub fn stage_unlocked_inline(&self, stkind: u16) -> bool {
         match stage_unlock(stkind) {
             None => true,
             Some(u) => self.game.game_data.thing.save_data.x186A & (1 << u[0]) != 0,
@@ -417,7 +428,7 @@ impl Running<'_> {
     // Ports `gmMainLib_8015D8FC`; aliased once a check reaches it.
     fn note_special_message(&mut self, msg: u32) {
         let (word, bit) = ((msg / 32) as usize, 1u32 << (msg % 32));
-        if self.game.game_data.thing.save_data.x1B4C[word] & bit != 0 {
+        if self.game.message_noted(msg) {
             return;
         }
         // `lbTime_GetTimeInSeconds` reads the time base.

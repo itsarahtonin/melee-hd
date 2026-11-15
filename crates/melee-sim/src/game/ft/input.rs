@@ -138,7 +138,8 @@ impl Running<'_> {
             reg(c.f32(0x18)),
         );
         let cpu = self.is_cpu_controlled(&self.game.fighters[f.0]);
-        let one_player = super::super::gm::is_1p_mode(self.game);
+        // Both of its tests of the mode (`8006AE04`, `8006AE9C`) give the same answer.
+        let one_player = super::super::gm::is_1p_mode_for_c_stick(self.game);
         let db_level = self.game.gm.db_level;
         let single_button = self.game.vs.start.single_button;
         let no_z = self.game.db_pause_flag(0);

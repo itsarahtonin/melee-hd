@@ -230,7 +230,7 @@ impl Running<'_> {
         tx.font_size = [0.028, 0.029];
         self.game.sis.reset_text(self.data, t1, 0x13B);
         let trophy = self.toy_list_trophy(row.idx);
-        let n = (self.toy_flags()[trophy as usize] & 0xFF) as u32;
+        let n = self.trophy_count(trophy as usize) as u32;
         self.toy_list_digits(0x12E + row.number as u32, n);
         let tx = self.game.sis.text_mut(t2);
         tx.default_alignment = 2;

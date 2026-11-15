@@ -158,6 +158,52 @@ pub struct Rules {
     /// The codes players add to their own setups that the match runs
     /// (`game::player_codes`).
     pub player: super::player_codes::PlayerCodes,
+    /// The C-stick in the single-player modes works as in VS, smash attacks and no camera
+    /// zoom: the Slippi ruleset's own rule (Sarah, 2026-11-14), narrower than Slippi's
+    /// C-Stick in Single Player (`0416B480 60000000`, which makes every caller of the
+    /// out-of-line `gm_IsCurrently1PMode_inline` answer 0, the quake, the item table's
+    /// weight and the bonuses' progress too). Three calls of it answer 0, as the Gecko code
+    /// `0406AE04 38600000`, `0406AE9C 38600000`, `0402B0F8 38600000` (`li r3, 0` for each)
+    /// makes them: `Fighter_procInput`'s two (a computer player's C-stick and a human's) and
+    /// `Camera_8002B0E0`'s (the zoom). Not one of the 27 gameplay codes a `.slp` carries; it
+    /// does nothing outside the single-player modes.
+    pub c_stick_1p: bool,
+}
+
+/// Which ruleset a session runs from power-on (`docs/slippi-ruleset.md`): Vanilla, NTSC 1.02
+/// as the console runs it, or Slippi's, which runs Slippi Dolphin's playback set's general
+/// codes (the unlocks and the special and trophy messages off,
+/// [`super::gm::UNLOCK_CODES`]), Skip Memcard Prompt, the 27 gameplay codes and the C-stick's
+/// smash attacks in the single-player modes ([`Rules::c_stick_1p`]) from power-on, in Slippi Dolphin's floating point, with no memory card.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, melee_derive::StateEq)]
+pub enum Ruleset {
+    #[default]
+    Vanilla,
+    Slippi,
+}
+
+impl Ruleset {
+    /// The floating point the session runs in: Slippi Dolphin's JIT's under the Slippi
+    /// ruleset (menus included, design call 10), the console's under Vanilla.
+    pub fn fp_mode(self) -> gekko_fp::FpMode {
+        match self {
+            Ruleset::Vanilla => gekko_fp::FpMode::Hardware,
+            Ruleset::Slippi => gekko_fp::FpMode::Slippi,
+        }
+    }
+
+    /// The gameplay rules every match of the session runs, in every scene, as Slippi Dolphin
+    /// runs its codes: none under Vanilla; under Slippi, 3.19's gameplay codes with UCF 0.84,
+    /// and the C-stick's smash attacks in the single-player modes.
+    pub fn rules(self) -> Rules {
+        match self {
+            Ruleset::Vanilla => Rules::default(),
+            Ruleset::Slippi => Rules {
+                c_stick_1p: true,
+                ..Rules::slippi_online()
+            },
+        }
+    }
 }
 
 /// Cosmetic toggles (`docs/architecture.md`, simulation and presentation), as Slippi's
@@ -347,6 +393,9 @@ pub struct Game {
     /// The scenes' button maps (`controller_map`; its fifth entry merges every port).
     pub controller_map: ControllerMap,
     pub rules: Rules,
+    /// The ruleset the session runs, set at power-on: Slippi's skips the memory card's
+    /// question ([`super::gm::memcard`]); its other codes are `rules` and `gm.unlocks.codes`.
+    pub ruleset: Ruleset,
     pub cosmetic: Cosmetic,
     /// Fighters' parts tables (`Fighter::parts`), one entry per bone of the character.
     pub fighter_parts: Pool<Vec<FighterBone>, { pool_kind(Kind::FighterParts) }>,

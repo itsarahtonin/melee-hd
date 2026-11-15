@@ -1078,7 +1078,7 @@ pub fn clear_translation(c: &mut Camera) {
 /// `Camera_8002B0E0`.
 #[doc(alias = "Camera_8002B0E0")]
 pub fn update_zoom(game: &mut Game) {
-    if !(super::gm::is_1p_mode(game) && reg(game.camera.cam.x2C0) > 0.0) {
+    if !(super::gm::is_1p_mode_for_c_stick(game) && reg(game.camera.cam.x2C0) > 0.0) {
         return;
     }
     // HSD_PadGetNmlSubStickY(Player_GetPadPort(0)), the port as a u8.

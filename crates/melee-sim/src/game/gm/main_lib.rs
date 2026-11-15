@@ -266,10 +266,7 @@ impl Running<'_> {
             self.game.game_data.set_score(0x32);
             self.game.game_data.increment_power_count();
             // The stage trophy's stage, if the gift was it.
-            if !at_boot
-                && self.game.game_data.thing.save_data.trophy_flags[0xA5] & 0xFF > 0
-                && !self.stage_unlocked(0x14)
-            {
+            if !at_boot && self.trophy_count(0xA5) > 0 && !self.stage_unlocked(0x14) {
                 self.unlock_stage(0x14);
             }
         } else {
@@ -378,9 +375,12 @@ impl Game {
 
     /// `Toy_803048C0`: how many of trophy `id` the table in play holds (the low byte of its
     /// flags): the save's, or in the single-player modes and the lottery the trophy screens'
-    /// own (`Toy_804A284C`).
+    /// own (`Toy_804A284C`); 99 with the unlock-all code ([`super::code::TROPHIES_ALL`]).
     #[doc(alias = "Toy_803048C0")]
     pub fn trophy_count(&self, id: usize) -> i32 {
+        if self.unlock_code(super::code::TROPHIES_ALL) {
+            return 0x63;
+        }
         let flags = if super::is_1p_mode(self) || self.game_mode == crate::game::ty::GM_TOY_LOTTERY
         {
             &self.toys.table.flags

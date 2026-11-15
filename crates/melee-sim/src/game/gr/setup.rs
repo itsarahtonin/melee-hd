@@ -597,19 +597,21 @@ pub const GROUND_SIZE: u32 = 0x204;
 
 /// A new stage object's user data (`alloc_user_data_ground`), attached to its GObj.
 ///
-/// The original leaves the block uncleared, and Slippi's playback codes zero it (a determinism
-/// fix). In a session the block holds what the heap's image knows (a session's heap
-/// leftovers); under Slippi's codes it's zero; elsewhere (a replay's match, whose heap no
+/// The original leaves the block uncleared, and Slippi's Init Stage Data (`801C154C`) zeroes
+/// it in `Ground_GetStageGObj` only (`init_stage_data`; `Ground_801C1A20`'s blocks keep what
+/// the heap held, which only a session's heap shows: a replay's starts fresh). In a session
+/// the block holds what the heap's image knows (a session's heap leftovers); zeroed, it's
+/// zero; elsewhere (a replay's match, whose heap no
 /// image follows) the bytes creation doesn't write are zero but unknown to the comparer where
 /// they're kept as such (`GroundX11Flags::rest`, `GroundUnion::left`; see [`super::vars`]).
-fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
+fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId, init_stage_data: bool) -> GroundId {
     let id = GroundId(game.grounds.alloc(Ground::default()));
     let addr = crate::hsd::heap::mem_alloc_as(GROUND_SIZE, "Ground");
     game.grounds.set_addr(id.0, addr);
     // After the menus the block holds what they left, where Slippi's Init Stage Data
     // (`801C154C`) doesn't zero it (docs/engine.md, a session's heap leftovers).
     game.gr.render_leftovers.remove(&id.0);
-    if game.rules.slippi {
+    if init_stage_data && game.rules.slippi {
         let g = &mut game.grounds[id.0];
         g.x11_flags.rest = Some(0);
         g.u.left = Some([0; super::vars::SIZE]);
@@ -667,7 +669,7 @@ fn new_ground(game: &mut Game, data: &Archives, gobj: GObjId) -> GroundId {
 pub fn stage_gobj(r: &mut Running, map_id: i32, frame: u32) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
-    let g = new_ground(game, data, gobj);
+    let g = new_ground(game, data, gobj, true);
     {
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;
@@ -835,7 +837,7 @@ pub fn stage_gobj_from_joint(
 ) -> Option<GObjId> {
     let (game, data) = (&mut *r.game, r.data);
     let gobj = game.world.create(3, 5, 0);
-    let g = new_ground(game, data, gobj);
+    let g = new_ground(game, data, gobj, false);
     {
         let gp = &mut game.grounds[g.0];
         gp.map_id = map_id;

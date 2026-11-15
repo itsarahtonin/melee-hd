@@ -401,6 +401,10 @@ enum Mutation {
     /// byte: a session that compares as with the zero fill shows the pixels reach nothing
     /// compared.
     RenderFill(u8),
+    /// The Slippi ruleset's C-stick rule turned off (`Rules::c_stick_1p`): the C-stick in the
+    /// single-player modes zooms the camera and does no smash attacks, as Vanilla's. The rules
+    /// themselves then differ from the trace's (`--ignore c_stick_1p` passes that over).
+    CStick1P,
 }
 
 /// What the boot's ported part left, against memory at trace tick 0: words only the boot
@@ -791,6 +795,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                     Some("seed") => Mutation::Seed,
                     Some("power-on") => Mutation::PowerOn,
                     Some("no-image") => Mutation::NoImage,
+                    Some("c-stick-1p") => Mutation::CStick1P,
                     Some(m) if m.starts_with("render-target=") => Mutation::RenderFill(
                         u8::from_str_radix(&m[14..], 16)
                             .expect("--mutate render-target=XX, in hex"),
@@ -799,7 +804,7 @@ pub fn session(args: &[&str]) -> ExitCode {
                         Mutation::Read(m[5..].parse().expect("--mutate read=N"))
                     }
                     _ => panic!(
-                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N"
+                        "--mutate scene-ticks|seed|power-on|no-image|render-target=XX|read=N|c-stick-1p"
                     ),
                 })
             }
@@ -860,6 +865,7 @@ pub fn session(args: &[&str]) -> ExitCode {
             card_b,
             card_b_pull,
             develop: rec.developer(),
+            ruleset: rec.ruleset,
         },
         Err(e) => {
             eprintln!("{inputs_path}: {e}");
@@ -895,6 +901,13 @@ pub fn session(args: &[&str]) -> ExitCode {
             d.level,
             if d.ini { ", /develop.ini found" } else { "" }
         );
+    }
+    if setup.ruleset == melee_sim::game::state::Ruleset::Slippi {
+        if setup.card.is_some() || setup.card_b.is_some() || setup.develop.is_some() {
+            eprintln!("the Slippi ruleset runs with no memory card and no debug level");
+            return ExitCode::from(2);
+        }
+        println!("the Slippi ruleset, in Slippi's floating point");
     }
     if let Some(h) = hooks {
         println!("ssbm-rs's runner hooks, mirrored: {}", h.describe());
@@ -1166,7 +1179,11 @@ impl Run<'_> {
                     imported.game.world.gobjs.used(),
                     imported.unhandled
                 );
-                let s = Session::resume(imported.game, imported.data, setup);
+                let mut game = imported.game;
+                // UCF's pad buffer, in its code's words, under the Slippi ruleset.
+                game.ucf =
+                    melee_sim::game::ucf::Pads::from_memory(&|a| image.u32(a)).unwrap_or_default();
+                let s = Session::resume(game, imported.data, setup);
                 let (back, _) = compare(
                     &image.mem1,
                     &imported.map,
@@ -1190,6 +1207,7 @@ impl Run<'_> {
         match self.mutation {
             Some(Mutation::SceneTicks) => s.game.scene.unk_0 = s.game.scene.unk_0.wrapping_add(1),
             Some(Mutation::Seed) => s.game.objs.rng.seed = s.game.objs.rng.seed.wrapping_add(1),
+            Some(Mutation::CStick1P) => s.game.rules.c_stick_1p = false,
             _ => {}
         }
         // Power-on leaves the image at tick 0, the first step's.

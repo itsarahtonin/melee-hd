@@ -814,6 +814,7 @@ impl Session {
                     card_b: None,
                     card_b_pull: None,
                     develop: r.developer(),
+                    ruleset: r.ruleset,
                 };
                 (setup, None, Some((r.reads, 0)))
             }

@@ -137,7 +137,7 @@ impl Running<'_> {
             .world
             .create(GOBJ_CLASS_FIGHTER, P_LINK_FIGHTER, 0);
         self.game.world.setup_gx_link(gobj, CodeRef(RENDER), 5, 0);
-        let f = self.alloc_fighter_block();
+        let f = self.alloc_fighter_block(true);
         self.game
             .world
             .init_user_data(gobj, USER_DATA_FIGHTER, UserData::Fighter(f));
@@ -150,12 +150,16 @@ impl Running<'_> {
 
     /// A fighter's block and its attributes' (`HSD_ObjAlloc` on `fighter_alloc_data` and
     /// `fighter_dat_attrs_alloc_data`): after the menus the block holds what they left.
-    pub(super) fn alloc_fighter_block(&mut self) -> FighterId {
+    /// `fighter_create` is `Fighter_Create`'s allocation, where Slippi's Init Player Data
+    /// hooks in; the demo fighters' (`ftDemo`'s, `800BE828`) isn't, so it keeps the heap's
+    /// bytes under the Slippi ruleset too.
+    pub(super) fn alloc_fighter_block(&mut self, fighter_create: bool) -> FighterId {
         // `HSD_ObjAlloc` hands the block back uncleared: one a fighter freed this scene holds
         // what it left (the slot's), a fresh heap's is zero (see `docs/engine.md`).
         let f = FighterId(self.game.fighters.alloc_stale(Fighter::default()));
         let fresh = crate::game::leftovers::pool_grew();
-        if self.game.rules.slippi {
+        let zeroed = fighter_create && self.game.rules.slippi;
+        if zeroed {
             // Slippi's Init Player Data (`80068EEC`) zeroes the whole block.
             let fp = &mut self.game.fighters[f.0];
             *fp = Fighter::default();
@@ -170,9 +174,7 @@ impl Running<'_> {
         };
         // After the menus the block holds what they left, where Slippi's Init Player Data
         // (`80068EEC`) doesn't zero it (docs/engine.md, a session's heap leftovers).
-        if !self.game.rules.slippi
-            && let Some(left) = crate::game::leftovers::import(self.data, address, fresh)
-        {
+        if !zeroed && let Some(left) = crate::game::leftovers::import(self.data, address, fresh) {
             self.game.fighters[f.0] = left;
             // Where the block held the GPU's pixels, which the comparer leaves out while they
             // hold the image's fill (docs/engine.md, "Uninitialized values").
@@ -198,7 +200,7 @@ impl Running<'_> {
         if fresh {
             self.game.ft.hit_record_pad.remove(&f.0);
         }
-        if !self.game.rules.slippi && address != 0 && crate::hsd::heap::image_on() {
+        if !zeroed && address != 0 && crate::hsd::heap::image_on() {
             crate::hsd::heap::with(|h| h.image.unclaim(address + 0x18E9, address + 0x18EC));
         }
         let attrs = AttrsId(self.game.fighter_attrs.alloc(vec![0; FIGHTER_ATTRS_SIZE]));

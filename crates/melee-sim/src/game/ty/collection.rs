@@ -357,7 +357,7 @@ impl Running<'_> {
             }
         } else {
             for i in 0..super::TROPHY_COUNT as i32 {
-                if self.toy_flags()[i as usize] & 0xFF != 0 {
+                if self.trophy_count(i as usize) != 0 {
                     put(self, &mut start, i);
                 }
             }

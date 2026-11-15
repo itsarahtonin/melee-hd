@@ -432,7 +432,7 @@ const CURSOR: usize = 3;
 /// Whether a list's selection is shown (the locked and hidden ones aren't), as the save's
 /// unlocks `x186c` say.
 fn shown(r: &Running, kind: u8, sel: i32) -> bool {
-    shown_with(r.game.game_data.thing.save_data.x186C, kind, sel)
+    shown_with(r.game.features(), kind, sel)
 }
 
 /// `mn_80229938`: whether a list's selection is shown by the save's unlock flags (`x186C`).
@@ -451,7 +451,7 @@ pub fn shown_with(x186c: u8, kind: u8, sel: i32) -> bool {
 
 /// How many selections before `sel` are shown.
 fn shown_before(r: &Running, kind: u8, sel: i32) -> i32 {
-    shown_before_with(r.game.game_data.thing.save_data.x186C, kind, sel)
+    shown_before_with(r.game.features(), kind, sel)
 }
 
 /// `mn_80229A04`: how many selections before `sel` are shown by the save's unlock flags.
@@ -923,7 +923,7 @@ impl Running<'_> {
         if pics.is_empty() {
             return None;
         }
-        let x186c = self.game.game_data.thing.save_data.x186C;
+        let x186c = self.game.features();
         Some(if kind == MAIN && sel == 4 && x186c & 8 == 0 {
             LOCKED_DATA
         } else if kind == ONE_P && sel == 0 && x186c & 4 == 0 {

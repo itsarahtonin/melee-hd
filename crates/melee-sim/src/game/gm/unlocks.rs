@@ -7,7 +7,8 @@
 //! Each reads the save. A trophy or message new to the save takes the clock's time
 //! (`lbTime_GetTimeInSeconds`, a time base read), so the decisions reach the timeline too.
 
-use super::super::state::Running;
+use super::super::state::{Game, Running};
+use super::code;
 use super::machine::GM_CHALLENGER_APPROACH;
 
 /// A selectable character's kind, `gm_SelKindToCKind` (`selkind_to_ckind_map`).
@@ -70,11 +71,49 @@ pub(crate) fn bit(words: &[u32], after: &[u8], n: u32) -> bool {
     word & (1 << (n % 32)) != 0
 }
 
+impl Game {
+    /// Whether one of Slippi's general codes runs ([`super::code`]): never in a Vanilla
+    /// session; from power-on in a Slippi-ruleset one.
+    pub fn unlock_code(&self, c: u16) -> bool {
+        self.gm.unlocks.code(c)
+    }
+
+    /// The save's unlocked features (`x186C`: 1 the score display, 2 the random stage
+    /// switch, 4 All-Star, 8 the sound test) as their getters answer them
+    /// (`gmMainLib_8015EE0C`, `gmMainLib_8015EE44`, `gmMainLib_8015EDD4`,
+    /// `gmMainLib_8015EE90`): each set where the unlock-all code makes its getter answer 1.
+    /// Every reader outside `gmmain_lib.c` goes through the getters, which only test.
+    pub fn features(&self) -> u8 {
+        [
+            (1, code::SCORE_DISPLAY),
+            (2, code::RANDOM_STAGE_SWITCH),
+            (4, code::ALL_STAR),
+            (8, code::SOUND_TEST),
+        ]
+        .into_iter()
+        .filter(|&(_, c)| self.unlock_code(c))
+        .fold(self.game_data.thing.save_data.x186C, |f, (b, _)| f | b)
+    }
+
+    /// `gmMainLib_8015D94C`: whether the save has announced special message `n`; with
+    /// Disable Special Messages the function returns at once with `n`, so every message but
+    /// the first counts as announced, and with the unlock-all code past its test, every one.
+    pub fn message_noted(&self, n: u32) -> bool {
+        if self.unlock_code(code::SPECIAL_MESSAGES_OFF) {
+            n != 0
+        } else {
+            self.unlock_code(code::RECORDS_ALL)
+                || bit(&self.game_data.thing.save_data.x1B4C, &[], n)
+        }
+    }
+}
+
 impl Running<'_> {
-    /// `gmMainLib_8015D94C`: whether the save has announced special message `n`.
+    /// `gmMainLib_8015D94C`: whether the save has announced special message `n`
+    /// ([`Game::message_noted`]).
     #[doc(alias = "gmMainLib_8015D94C")]
     pub(super) fn message_noted(&self, n: u32) -> bool {
-        bit(&self.game.game_data.thing.save_data.x1B4C, &[], n)
+        self.game.message_noted(n)
     }
 
     /// The real-time clock's seconds as `lbTime_GetTimeInSeconds` reads them now.
@@ -128,7 +167,21 @@ impl Running<'_> {
     #[doc(alias = "gmMainLib_8015DA90")]
     pub(crate) fn give_record_trophy(&mut self, n: i32) -> bool {
         let n = n as u32;
+        if self.game.unlock_code(code::TROPHY_MESSAGES_OFF) {
+            // Disable Trophy Messages: `gmMainLib_8015D984` returns at once with `n`, given
+            // nothing, and a trophy but the first has its notice taken back.
+            if n == 0 {
+                return false;
+            }
+            self.game.game_data.thing.save_data.x1B58[(n / 32) as usize] &= !(1 << (n % 32));
+            return true;
+        }
         if bit(&self.game.game_data.thing.save_data.x1B58, &[], n) {
+            if self.game.unlock_code(code::RECORD_TROPHY_HELD) {
+                // The unlock-all code's answer for a trophy held: 1, its notice taken back.
+                self.game.game_data.thing.save_data.x1B58[(n / 32) as usize] &= !(1 << (n % 32));
+                return true;
+            }
             return false;
         }
         let now = self.clock_seconds();
@@ -149,6 +202,9 @@ impl Running<'_> {
         let n = n as u32;
         let (w, b) = ((n / 32) as usize, 1u32 << (n % 32));
         self.game.game_data.thing.save_data.x1B58[w] &= !b;
+        if self.game.unlock_code(code::TROPHY_MESSAGES_OFF) {
+            return;
+        }
         let now = self.clock_seconds();
         let g = &mut self.game.game_data;
         g.unk_44.times[n as usize] = now;
@@ -156,10 +212,9 @@ impl Running<'_> {
         g.thing.save_data.x1B58[w] |= b;
     }
 
-    /// `Toy_803048C0` over a list: whether the save holds every one.
+    /// `Toy_803048C0` over a list: whether the table in play holds every one.
     fn holds_all(&self, list: impl Iterator<Item = usize>) -> bool {
-        let f = &self.game.game_data.thing.save_data.trophy_flags;
-        list.into_iter().all(|i| f[i] & 0xFF != 0)
+        list.into_iter().all(|i| self.trophy_count(i) != 0)
     }
 
     /// `gm_80173EEC`: the trophies the save's records and unlocks have earned: each
@@ -192,18 +247,18 @@ impl Running<'_> {
             }
         }
         let u = self.game.gm.unlocks;
-        // Dr. Mario, Ganondorf, Young Link, Falco, Pichu, Roy.
+        // Dr. Mario, Ganondorf, Young Link, Falco, Pichu, Roy (`fn_80164B48`, which tests the
+        // save's bits inline).
         if [0x16, 0x19, 0x15, 0x14, 0x18, 0x17]
             .iter()
-            .all(|&c| u.ckind_unlocked(c))
+            .all(|&c| u.ckind_unlocked_inline(c))
         {
             self.give_record_trophy(0xA0);
         }
         if u.all_characters() {
             self.give_record_trophy(0x9F);
         }
-        let s = &self.game.game_data.thing.save_data;
-        if s.x186C & 8 != 0 {
+        if self.game.features() & 8 != 0 {
             self.give_record_trophy(0xDC);
         }
         if self.game.game_data.thing.save_data.unk_30.x14 >= 10000 {
@@ -260,7 +315,7 @@ impl Running<'_> {
         let total = self.toy_total();
         let every = self.holds_every_trophy();
         let held_all = (0..super::trophies::TROPHY_COUNT)
-            .filter(|&i| self.toy_flags()[i] & 0xFF != 0)
+            .filter(|&i| self.trophy_count(i) != 0)
             .count() as i32;
         let s = &mut self.game.game_data.thing.save_data;
         match n {
@@ -312,7 +367,7 @@ impl Running<'_> {
                 count += 1;
             }
         }
-        let flags = |r: &Self, t: usize| r.game.game_data.thing.save_data.trophy_flags[t] & 0xFF;
+        let flags = |r: &Self, t: usize| r.trophy_count(t);
         if flags(self, 0xE6) > 0 && !self.message_noted(0x3F) {
             self.note_message(0x3F);
         }
@@ -362,11 +417,15 @@ impl Running<'_> {
         self.game.sync_unlocks();
     }
 
-    /// `gm_801721EC`: whether a special message or a trophy waits for its notice.
+    /// `gm_801721EC`: whether a special message or a trophy waits for its notice; never with
+    /// the unlock-all code at its answer ([`code::NO_NOTICE`]), its tests read only.
     pub(super) fn notice_waits(&self) -> bool {
+        if self.game.unlock_code(code::NO_NOTICE) {
+            return false;
+        }
         let g = &self.game.game_data;
         let s = &g.thing.save_data;
-        let message = (0..0x42).any(|i| bit(&s.x1B4C, &[], i) && bit(&s.x1B40, &[], i));
+        let message = (0..0x42).any(|i| self.game.message_noted(i) && bit(&s.x1B40, &[], i));
         let trophy =
             (0..super::trophies::TROPHY_COUNT as u32).any(|j| bit(&g.unk_44.flags, &[], j));
         message || trophy
@@ -404,7 +463,8 @@ impl Running<'_> {
             };
             self.set_pending_game_mode(GM_CHALLENGER_APPROACH);
             self.set_new_game_mode_pending();
-            return true;
+            // The unlock-all code's answer is 0 with the scene set up all the same.
+            return !self.game.unlock_code(code::NO_APPROACH);
         }
         false
     }
@@ -470,4 +530,54 @@ pub struct ChallengerData {
     pub curr_mode: u8,
     pub prev_mode: u8,
     pub x8: u16,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::{UNLOCK_CODES, Unlocks, code};
+    use crate::game::state::{Game, Ruleset};
+
+    /// The general codes as the original's memory holds them: each of the 16 writes found at
+    /// its address sets its bit, so a Slippi-ruleset trace's boot memory reads as all of them
+    /// and a vanilla one as none.
+    #[test]
+    fn the_general_codes_read_from_memory() {
+        let read = |patched: &[usize]| {
+            Unlocks::from_memory(&|a| {
+                UNLOCK_CODES
+                    .iter()
+                    .enumerate()
+                    .find(|&(i, &(at, _))| at == a && patched.contains(&i))
+                    .map_or(0x6000_0000, |(_, &(_, w))| w)
+            })
+            .codes
+        };
+        assert_eq!(read(&[]), 0);
+        assert_eq!(read(&(0..16).collect::<Vec<_>>()), code::ALL);
+        assert_eq!(read(&[3]), code::CHARACTER);
+        assert_eq!(read(&[14]), code::SPECIAL_MESSAGES_OFF);
+    }
+
+    /// What the getters answer on a fresh save (nothing unlocked, nothing noted) under each
+    /// ruleset: everything unlocked under Slippi's, the special messages counted as noted
+    /// but the first, the inline copies of the getters left to the save.
+    #[test]
+    fn the_getters_follow_the_codes() {
+        for ruleset in [Ruleset::Vanilla, Ruleset::Slippi] {
+            let mut g = Game::default();
+            if ruleset == Ruleset::Slippi {
+                g.gm.unlocks.codes = code::ALL;
+            }
+            let slippi = ruleset == Ruleset::Slippi;
+            assert_eq!(g.features(), if slippi { 0xF } else { 0 });
+            assert_eq!(g.message_noted(0x1A), slippi);
+            assert!(!g.message_noted(0));
+            // Luigi.
+            assert_eq!(g.gm.unlocks.ckind_unlocked(7), slippi);
+            assert!(!g.gm.unlocks.ckind_unlocked_inline(7));
+            assert_eq!(g.gm.unlocks.all_characters(), slippi);
+            assert_eq!(g.gm.unlocks.all_stages(), slippi);
+            assert_eq!(g.trophy_count(5), if slippi { 0x63 } else { 0 });
+        }
+    }
 }

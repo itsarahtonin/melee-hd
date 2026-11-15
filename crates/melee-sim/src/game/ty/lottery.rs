@@ -225,7 +225,7 @@ impl Running<'_> {
     fn lot_held(&self) -> i32 {
         (0..TROPHY_COUNT as i32)
             .filter(|&i| {
-                self.toy_winnable(i) && self.toy_flags()[i as usize] & 0xFF != 0 && {
+                self.toy_winnable(i) && self.trophy_count(i as usize) != 0 && {
                     let c = self.toy_param_int(i, 6);
                     c != 8 && c as u32 > 1
                 }

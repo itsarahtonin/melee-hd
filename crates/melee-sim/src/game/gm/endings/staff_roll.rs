@@ -484,7 +484,7 @@ impl Running<'_> {
         let u = &self.game.gm.unlocks;
         let held = |id: usize| self.game.trophy_count(id) != 0;
         match check {
-            Feature => self.game.game_data.thing.save_data.x186C & 4 != 0,
+            Feature => self.game.features() & 4 != 0,
             Character(k) => u.ckind_unlocked(k),
             MarsOrEmblem => u.ckind_unlocked(9) || u.ckind_unlocked(0x17),
             Trophy(id) => held(usize::from(id)),

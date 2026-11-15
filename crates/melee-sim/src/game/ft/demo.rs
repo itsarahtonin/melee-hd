@@ -338,7 +338,7 @@ impl Running<'_> {
         self.game
             .world
             .setup_gx_link(gobj, CodeRef(super::create::RENDER), 5, 0);
-        let f = self.alloc_fighter_block();
+        let f = self.alloc_fighter_block(false);
         self.game
             .world
             .init_user_data(gobj, 4, UserData::Fighter(f));
