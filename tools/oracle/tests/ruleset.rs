@@ -120,10 +120,9 @@ fn oracle(args: &[&str]) -> String {
 /// character select to past its last read with no stop.
 #[test]
 fn the_live_match_sessions_run_on() {
-    for (name, start, end, matches) in [
-        ("matches-a", 1014, 24194, 5),
-        ("matches-b", 1230, 18933, 5),
-    ] {
+    for (name, start, end, matches) in
+        [("matches-a", 1014, 24194, 5), ("matches-b", 1230, 18933, 5)]
+    {
         let trace = ssbm_rs_local(&format!("traces/m6s-match/{name}.trc"));
         let inputs = ssbm_rs_local(&format!("lockstep/m6s-match/{name}.inputs"));
         if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
