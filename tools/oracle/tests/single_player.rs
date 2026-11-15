@@ -926,6 +926,44 @@ fn adventures_giga_bowser_path_runs_clean_to_its_card_after() {
     );
 }
 
+/// `session-sync --rollback 7 --shortcut` on the Giga Bowser path checks each scene with
+/// fighters and no other: both matches, the toy's cutscene from its demo fighter's first tick
+/// (3504, the scene's 100th), the transformation's and the trophy fall's first cut; not the
+/// fighterless scenes after a match, which the fighter pool's count once took for matches (it
+/// keeps a 1P match's fighters until the next scene with fighters makes the pool anew).
+#[test]
+fn adventures_giga_bowser_path_rolls_back_each_scene_with_fighters() {
+    let inputs = ssbm_rs_local("lockstep/m6-adventure-dbg/adv-giga-vh.inputs");
+    if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&inputs).exists() {
+        eprintln!("no recording ({inputs}) or SSBM_DISC: skipping");
+        return;
+    }
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(["session-sync", &inputs, "--rollback", "7", "--shortcut"])
+        .output()
+        .expect("melee-oracle runs");
+    let out = String::from_utf8_lossy(&out.stdout);
+    let scenes: Vec<&str> = out
+        .lines()
+        .filter(|l| l.starts_with("a match's scene from tick"))
+        .collect();
+    assert_eq!(
+        scenes,
+        [
+            "a match's scene from tick 2235 to 3404",
+            "a match's scene from tick 3504 to 3804",
+            "a match's scene from tick 3805 to 4314",
+            "a match's scene from tick 4315 to 5515",
+            "a match's scene from tick 5766 to 6063",
+        ],
+        "{out}"
+    );
+    assert!(
+        out.contains("3452 ticks checked in 5 matches, rolled back 7 each, no difference"),
+        "{out}"
+    );
+}
+
 /// Adventure's shells on Mushroom Kingdom's route (`m6-adventure-dbg-2/mk-shells`, task 24's
 /// next round; docs/oracle.md, "Sessions"): Go to Kinoko at debug level 3, then a bot's reads
 /// for Fox: the item menu's Paratroopa's red Koopa smashed out of its red shell

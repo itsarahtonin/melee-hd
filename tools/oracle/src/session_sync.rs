@@ -40,9 +40,11 @@ fn step(s: &mut Session, console: &mut Console) -> Frame {
     f
 }
 
-/// Whether the session's scene is a match's: one with fighters.
+/// Whether the session's scene is a match's: one with fighters, its GObjs holding them. Not the
+/// fighter pool's count, which keeps a 1P match's fighters past its scene's end until the next
+/// scene with fighters makes the pool anew, so it counted the fighterless scenes between.
 fn in_match(game: &Game) -> bool {
-    game.fighters.used() > 0
+    game.scene_fighters() > 0
 }
 
 /// A rollback from before tick `tick` timed: the straight run's state restored into `work`'s
@@ -258,6 +260,8 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
     // The ticks played since the running scene began, and whether it's a match's.
     let mut in_scene = 0u64;
     let mut was_match = false;
+    // Whether the rollbacks' session has taken the running scene's archives yet.
+    let mut work_taken = false;
     let mut match_ticks: Vec<(u64, u64)> = Vec::new();
     let failure = loop {
         if tick >= limit {
@@ -270,6 +274,7 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         if s.game.scene.unk_C != 0 {
             // This tick changes scenes: no rollback reaches back across it.
             in_scene = 0;
+            work_taken = false;
         }
         if time_ticks.contains(&tick) {
             time_restore(tick, &s, &console, &mut work, &mut work_console);
@@ -327,10 +332,11 @@ pub fn session_sync(args: &[&str]) -> ExitCode {
         }
         // A rollback restores a state from within the scene, the scene's first tick's after.
         if rollback > 0 && now_match && in_scene > rollback as u64 {
-            // The files read for opponents joining mid-match come along too.
-            if in_scene == rollback as u64 + 1
-                || work.joiner_files.files.len() != s.joiner_files.files.len()
-            {
+            // At the scene's first rollback, which comes later than its tick `rollback + 1`
+            // where its fighters come later (a cutscene's demo fighter); the files read for
+            // opponents joining mid-match come along too.
+            if !work_taken || work.joiner_files.files.len() != s.joiner_files.files.len() {
+                work_taken = true;
                 work.data = s.data.clone();
                 work.joiner_files = s.joiner_files.clone();
                 // A live match's menus' session, set aside across its scene (`game::live`).
