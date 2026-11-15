@@ -18,9 +18,9 @@ The milestone is done when:
 - Every VS match under the ruleset runs Slippi 3.19's 27 gameplay codes in Slippi Dolphin's floating point, and **its `.slp` plays back exactly in Slippi Dolphin**: tick by tick the live match equals melee-hd's playback of its own `.slp`, whole state but a named list of playback's own bookkeeping; ssbm-rs's playback of the `.slp` (Slippi's real playback codes, `--fp slippi`) compares clean with melee-hd's and its replay check is clean; and Sarah's spot check in her Slippi Dolphin agrees.
 - What the ruleset makes unnecessary is skipped in its matches where that wins speed or simplicity, each skip held by a tripwire or a test, and Vanilla unchanged ([What the ruleset makes moot](#what-the-ruleset-makes-moot)).
 
-## Status (2026-11-14, `main` at `f7115325`): planned
+## Status (2026-11-14): tasks 1, 2, 3 and 5 started
 
-Nothing started. Sarah answered the design calls on 2026-11-14 (see Decisions).
+Sarah answered the design calls on 2026-11-14 (see Decisions). Task 5's first part is done (`feat/m6s-moot`): the corpus run under 3.19's rules with the allocator model off found no stop but the Super Scope's ([the oracle](oracle.md), "The Slippi ruleset's corpus run"); under 3.19's rules the computer player's frame hands the DI an r5 that stops by name if read; melee-bench's `ruleset_tests` hold off-screen damage, Stadium's monitor and the opponents' side to `Rules`; and the measurements below are repeated on the worker. Task 5's second part (the model off in the player's Slippi matches, `Settings::vs_with`) waits for task 4.
 
 ## What melee-hd has today
 
@@ -76,12 +76,12 @@ What Vanilla needs modelled in a match and a Slippi-ruleset match doesn't, with 
 
 | Vanilla's modelling | Why Vanilla needs it | Under the ruleset | Win | Skipped safely by |
 | --- | --- | --- | --- | --- |
-| The allocator model's addresses (`Settings::heap`, on in the player whenever an Ice Climber or a computer player plays) and the pools' per-address slots | a computer player's DI reads its `Fighter*` (r30) | NanaDeterminism clears it | measured below: speed 0 to +4%, snapshots 16 to 31% smaller and no longer growing through the match | the existing stop by name with the model off (`ics-peach-ps` stops at frame 10,137: "DI with no knockback reads what ftCo_800B2790 (the fighter's address, unmodeled) left isn't ported"), and a run of the replay corpus under 3.19's rules with the model off ([design call 8](#design-calls)) |
-| r5 through the computer player's frame (`cpu_ai::Leftover`, `Geometry::check_floor_r5`, `Running::excluded_floor_r5`) | Nana's DI takes her stick's X from it | 3.19's NanaDeterminism clears r5 too | the bookkeeping isn't consulted | an assertion that the Slippi path never reads it; 3.16 replays keep it (their code clears r30 only) |
+| The allocator model's addresses (`Settings::heap`, on in the player whenever an Ice Climber or a computer player plays) and the pools' per-address slots | a computer player's DI reads its `Fighter*` (r30) | NanaDeterminism clears it | measured below: speed 0 to +4%, snapshots 16 to 31% smaller and no longer growing through the match | the existing stop by name with the model off (`ics-peach-ps` stops at frame 10,137: "DI with no knockback reads what ftCo_800B2790 (the fighter's address, unmodeled) left isn't ported"), and a run of the replay corpus under 3.19's rules with the model off ([design call 8](#design-calls)): done, 5,462 replays, no stop from the model but the Super Scope's one-shot charge (its GObj's address, which no code fixes), so a match whose items can spawn a Super Scope keeps the model |
+| r5 through the computer player's frame (`cpu_ai::Leftover`, `Geometry::check_floor_r5`, `Running::excluded_floor_r5`) | Nana's DI takes her stick's X from it | 3.19's NanaDeterminism clears r5 too | the bookkeeping isn't consulted | done: under 3.19's rules the frame hands the DI a word that stops by name if read (`cpu_frame`), and melee-bench's `slippi_cpu_di_reads_neither_register` runs a DI with no knockback with the model off; 3.16 replays keep it (their code clears r30 only). The bookkeeping still runs; skipping it is the refactor round's |
 | The heap's image in a match (`game::leftovers`: Brinstar's timer, Fountain of Dreams' star, Nana's ring, the collision stamp, Rainbow Cruise, the spawner, links, the fan) and the layouts `vanilla_vs` and `from_menus` | the menus' bytes reach the match | the match starts from playback's fresh heap | no image reads at creation and no image in the match's snapshot (138 to 227 KB of a session's, about 3 µs of its clone, [performance](performance.md)); no layout campaign for new match objects | `Heap::fresh`, already there: an image read in a fresh heap is an error |
-| Off-screen damage from the display pass's marks (`ft::draw`'s `update_screen_visibility`, the magnifier) | `Fighter_procAnim` counts the pass's mark | BrawlOffscreenDamage tests the stage's limits in logic | damage no longer follows doubled rounds; the marks still draw the bubbles and feed the results' bonus counts | the code's branch already; a test that the Slippi path's damage is the same with the pass's marks scrambled |
-| Pokémon Stadium's monitor against the pass's camera | the close-up reads the CObj the pass writes | fixed bounds (`zoom_keeps_player`) | Stadium's draws no longer follow the pass | the same kind of test |
-| Whispy's and items' side from KO'd fighters' camera bones | dead fighters counted | WhispyBlowDirFix | as above | the same kind of test |
+| Off-screen damage from the display pass's marks (`ft::draw`'s `update_screen_visibility`, the magnifier) | `Fighter_procAnim` counts the pass's mark | BrawlOffscreenDamage tests the stage's limits in logic | damage no longer follows doubled rounds; the marks still draw the bubbles and feed the results' bonus counts | the code's branch already; done: melee-bench's `slippi_off_screen_damage_ignores_the_display_pass` (gameplay the same with the marks scrambled after every pass under 3.19's rules, not under Vanilla's) |
+| Pokémon Stadium's monitor against the pass's camera | the close-up reads the CObj the pass writes | fixed bounds (`zoom_keeps_player`) | Stadium's draws no longer follow the pass | done: `slippi_stadium_monitor_ignores_the_display_pass` (the game camera scrambled) |
+| Whispy's and items' side from KO'd fighters' camera bones | dead fighters counted | WhispyBlowDirFix | as above | done: `slippi_opponents_side_ignores_the_display_pass` (a fighter KO'd toward the screen moved across the stage) |
 | Final Destination's background draws | they take the match's seed | 3.19 keeps them off it | as above | ported |
 | The disc's pace in a match (Stadium's asynchronous loads) | reaches the seed | 3.19 loads synchronously | the player's pace reaches only the music | task 4 confirms nothing else in a match waits on the disc |
 | The save in a match (unlocks, the Pokémon records) | the save's unlocks decide the music's draw | Slippi's, fixed | no save in the match's settings | `Unlocks::slippi` |
@@ -100,6 +100,21 @@ The display pass still runs as simulation under the ruleset, and a rollback stil
 | Snapshot at ticks 5,000, 10,000, 15,000 | 1.81, 2.00, 2.26 MB (3,001 to 3,927 allocations) | 1.52, 1.57, 1.57 MB (2,512 to 2,540) |
 | Clone | 181 to 235 µs | 145 to 153 µs |
 | Restore | 51 to 60 µs | 41 to 43 µs |
+
+**Repeated on the worker (2026-11-14, task 5's first part, `melee-bench` from `feat/m6s-moot`; Ubuntu, i9-7900X, an exclusive runner window with its quietness check passed; two alternations of five runs each).** The plan's two benchmark matches, and a Slippi 3.19 replay of Sarah's (`Game_20260129T130802`, Fox against Sheik on Dream Land, `MELEE_BENCH_FP=slippi`) as a Slippi match's stand-in until task 4 records one:
+
+| Match | Model on, median frames/s | Model off | Change |
+| --- | --- | --- | --- |
+| `fox-fox-fd` | 2,187, 2,161 | 2,166, 2,143 | -1% |
+| `fox-marth-ps` | 1,837, 1,845 | 1,862, 1,866 | +1% |
+| `Game_20260129T130802` (Slippi) | 2,198, 2,204 | 2,290, 2,235 | +1 to +4% |
+
+| `snapshot-match --every 5000` | Model on | Model off |
+| --- | --- | --- |
+| `fox-fox-fd`, ticks 5,000, 10,000, 15,000 | 1.81, 2.00, 2.26 MB (3,001 to 3,927 allocations); clone 343 to 419 µs, restore 162 to 203 µs | 1.52, 1.57, 1.57 MB (2,512 to 2,540); clone 298 to 304 µs, restore 140 to 143 µs |
+| `Game_20260129T130802`, ticks 5,000 and 10,000 | 2.12, 2.22 MB (3,801, 3,957); clone 404 to 418 µs, restore 183 to 190 µs | 1.75, 1.78 MB (3,143); clone 355 to 357 µs, restore 159 to 162 µs |
+
+Every run stayed in sync with its replay. The worker is about half this machine's speed per core, and the picture is the same: the speed change is within noise, and the snapshot win (16 to 31% smaller, 12 to 28% faster to clone, and no longer growing through the match) is the model's per-address slots.
 
 So the snapshot win is the per-address slots the model keeps (the exactness round's growth, [performance](performance.md)), and the speed win is small and within this machine's noise. **Code structure**: under the ruleset a match no longer touches the CPU's register bookkeeping, the heap's image or the menus' layouts, so those become Vanilla-only paths behind one ruleset test; the refactor round can isolate them, and its first question (whether the pools need per-address slots) gets a Slippi-ruleset answer for free: they don't.
 

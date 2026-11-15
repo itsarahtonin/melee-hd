@@ -269,6 +269,7 @@ fn play(o: &Options, files: &mut Files, path: &Path) -> Outcome {
             let why = panic_text(&p);
             return Outcome {
                 result: format!("stop starting the match: {why}"),
+                same_rules,
                 ..fail(own_name, why)
             };
         }
