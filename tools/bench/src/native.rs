@@ -4,7 +4,8 @@
 //! `melee-bench native [--dir DIR] [--runs N] [MATCH...]` plays each match (`DIR/MATCH.slp`,
 //! by default the repository's `data/bench`) natively and headless on one core: from the replay's start through `vs_match`'s replay path
 //! (Slippi's playback codes, `Match::step_replay`), with the display pass, in the console's
-//! floating point (`FpMode::Hardware`, as the matches were made). The match's files are read
+//! floating point (`FpMode::Hardware`, as the matches were made; `MELEE_BENCH_FP=slippi` plays
+//! a Slippi replay in Slippi Dolphin's). The match's files are read
 //! from the disc `SSBM_DISC` before the clock starts; the allocator model (`hsd::heap`) gives
 //! the fighters their addresses, as Slippi's playback lays the heap out (`MELEE_BENCH_HEAP=off`
 //! leaves the model off, to time what it costs). Each run is timed
@@ -106,7 +107,7 @@ impl Bench {
 }
 
 /// The frame a match's playback last counted.
-fn frame(m: &Match) -> i32 {
+pub(crate) fn frame(m: &Match) -> i32 {
     m.game
         .playback
         .as_ref()
@@ -115,7 +116,7 @@ fn frame(m: &Match) -> i32 {
 
 /// The fighters at the end of the frame, as `dolphin.rs` samples Dolphin's: leaders in 0 to 3,
 /// followers in 4 to 7.
-fn fighters(g: &Game) -> [Option<Fighter>; 8] {
+pub(crate) fn fighters(g: &Game) -> [Option<Fighter>; 8] {
     let mut out = [None; 8];
     for (i, f) in out.iter_mut().enumerate() {
         let slot = (i % 4) as i32;
@@ -264,12 +265,22 @@ fn files() -> Files {
     }
 }
 
-/// The simulation's thread: a deep stack, the console's floating point, raised priority.
+/// The float mode the matches play in: the console's, or Slippi Dolphin's with
+/// `MELEE_BENCH_FP=slippi` (a Slippi replay's).
+fn bench_fp() -> FpMode {
+    if std::env::var("MELEE_BENCH_FP").is_ok_and(|v| v == "slippi") {
+        FpMode::Slippi
+    } else {
+        FpMode::Hardware
+    }
+}
+
+/// The simulation's thread: a deep stack, the float mode ([`bench_fp`]), raised priority.
 fn on_sim_thread<T: Send + 'static>(f: impl FnOnce() -> T + Send + 'static) -> T {
     std::thread::Builder::new()
         .stack_size(STACK)
         .spawn(move || {
-            set_fp_mode(FpMode::Hardware);
+            set_fp_mode(bench_fp());
             // `GEKKO_PORTABLE_FMA=1`: the portable fused multiply-add, to time against.
             gekko_fp::set_portable_fma(std::env::var_os("GEKKO_PORTABLE_FMA").is_some());
             #[cfg(windows)]
@@ -296,7 +307,7 @@ fn version() -> String {
         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_owned())
         .filter(|s| !s.is_empty())
         .unwrap_or_else(|| "unknown commit".into());
-    format!("melee-hd {rev} (optimized, one core, FpMode::Hardware)")
+    format!("melee-hd {rev} (optimized, one core, {:?})", bench_fp())
 }
 
 pub fn main(args: &[String]) {

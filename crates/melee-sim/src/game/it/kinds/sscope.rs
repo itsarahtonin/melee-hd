@@ -109,6 +109,12 @@ pub fn charge_level(r: &Running, gobj: GObjId, charge: i32) -> i32 {
 #[doc(alias = "it_80291D38")]
 pub fn cost(r: &Running, gobj: GObjId, level: i32) -> i32 {
     if !(0..=9).contains(&level) {
+        // Nothing in the game calls it so: the address it returns would be read as a cost
+        // only here, which the stand-in doesn't cover.
+        assert!(
+            r.game.world.gobjs.addr(gobj.0) != 0,
+            "it_80291D38 read a Super Scope's GObj address as a cost in a match without the allocator model"
+        );
         return gobj_address(r, gobj);
     }
     fp::fctiwz(f64::from(
@@ -117,16 +123,32 @@ pub fn cost(r: &Running, gobj: GObjId, level: i32) -> i32 {
 }
 
 /// The scope's GObj address, which `it_80291DAC` and `it_80291D38` return where they set no
-/// level: the allocator model's ([`crate::hsd::heap`]). A match that can spawn a Super Scope
-/// runs with the model (`vs_match::Settings`), so the address is the original's.
+/// level: the allocator model's ([`crate::hsd::heap`]). A Vanilla match that can spawn a Super
+/// Scope runs with the model (`vs_match::Settings`), so the address is the original's.
+///
+/// Without the model, under the Slippi ruleset, it's [`ADDRESS_STAND_IN`]: every address the
+/// heap can give is a negative word that takes the same branches (no level case matches it, a
+/// charged shot of it clicks, and spending it leaves over two billion shots), so only the
+/// ammunition word and the fighter's state word that hold it differ, by the address, and
+/// nothing else reads them as numbers ([`spend`] checks the one that could matter). A `.slp`
+/// records the state word (post-frame "hitstun"), which already differs between two machines'
+/// layouts and which playback never reads. Vanilla stops by name instead.
 fn gobj_address(r: &Running, gobj: GObjId) -> i32 {
     let addr = r.game.world.gobjs.addr(gobj.0);
+    if addr != 0 {
+        return addr as i32;
+    }
     assert!(
-        addr != 0,
-        "a Super Scope's GObj address reached gameplay in a match without the allocator model"
+        r.game.rules.slippi,
+        "a Super Scope's GObj address reached gameplay in a Vanilla match without the allocator model"
     );
-    addr as i32
+    ADDRESS_STAND_IN as i32
 }
+
+/// The Super Scope's GObj address under the Slippi ruleset without the allocator model
+/// ([`gobj_address`]): an address in the scene heap's range (Slippi playback's main heap is
+/// `0x80BD8B20` to `0x817F8AC0`, a console's VS match's lies within the same bounds).
+pub const ADDRESS_STAND_IN: u32 = 0x8100_0000;
 
 /// The level a shot of `charge` ticks fires with what's left, `it_80291DAC`: none (-1) when
 /// empty; the charge's level when it can afford it; else, going down from that level, the
@@ -168,11 +190,24 @@ pub fn spend(r: &mut Running, gobj: GObjId, level: i32) {
     } else {
         level
     };
+    let stand_in = !(0..=9).contains(&level) && r.game.world.gobjs.addr(gobj.0) == 0;
+    if stand_in {
+        // A level outside the cases is only `affordable`'s address (its callers never spend
+        // none); without the model, the stand-in, which must leave the glitch's refill.
+        assert!(
+            level == ADDRESS_STAND_IN as i32,
+            "it_80291F14 spent a level outside its cases that isn't the Super Scope's address stand-in"
+        );
+    }
     let ip = item_mut(r.game, gobj);
     ip.xD4C = ip.xD4C.wrapping_sub(c);
     if ip.xD4C < 0 {
         ip.xD4C = 0;
     }
+    assert!(
+        !stand_in || ip.xD4C > 0,
+        "the Super Scope's address stand-in left it no ammunition"
+    );
 }
 
 /// Spends and fires a shot of `level` from `pos`, facing `facing`, `it_80291FA8`.

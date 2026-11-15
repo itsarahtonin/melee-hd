@@ -1,5 +1,5 @@
 //! `melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive]
-//! [--ticks N] [--known FILE] [--free-seed]`: plays a replay with melee-hd's recorder on
+//! [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all]`: plays a replay with melee-hd's recorder on
 //! (`melee_sim::game::record`), writes the recording as a `.slp` file, and compares it with the
 //! replay: the frames' events through ssbm-rs's comparison (`ssbm_slippi::compare`, as
 //! `compare` does), and the game start and the code list field by field (docs/oracle.md,
@@ -7,7 +7,9 @@
 //! replay, as ssbm-rs keeps them (`local/replays/known/`, one `frame ...` line each): the
 //! recording must diverge from the replay in exactly those. `--free-seed` restores no frame's
 //! seed, so the random seed runs free as in the recording run: the recording's seeds then check
-//! that melee-hd draws as that run did (what `melee-bench seed-search` relies on).
+//! that melee-hd draws as that run did (what `melee-bench seed-search` relies on). `--heap off`
+//! plays without the allocator model (`Settings::heap`), as a match of the player's without
+//! computer players runs; `--all` lists every divergence, not the first 40.
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::process::ExitCode;
@@ -30,6 +32,8 @@ pub fn record(args: &[&str]) -> ExitCode {
     let mut disc_speed = DiscSpeed::Fast;
     let mut known = None;
     let mut free_seed = false;
+    let mut heap = true;
+    let mut all = false;
     let mut pos = Vec::new();
     let mut it = args.iter();
     while let Some(&a) = it.next() {
@@ -50,12 +54,14 @@ pub fn record(args: &[&str]) -> ExitCode {
             }
             "--known" => known = Some(*it.next().expect("--known FILE")),
             "--free-seed" => free_seed = true,
+            "--heap" => heap = it.next().copied() != Some("off"),
+            "--all" => all = true,
             _ => pos.push(a),
         }
     }
     let [replay_path, out_path] = pos[..] else {
         eprintln!(
-            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed]"
+            "usage: melee-oracle record REPLAY.slp OUT.slp [--fp hardware|slippi] [--disc-speed fast|drive] [--ticks N] [--known FILE] [--free-seed] [--heap off] [--all]"
         );
         return ExitCode::from(2);
     };
@@ -78,6 +84,10 @@ pub fn record(args: &[&str]) -> ExitCode {
         }
     };
     settings.disc = disc_speed;
+    if !heap {
+        settings.heap = None;
+        settings.playback_heap = None;
+    }
     settings.record = Some(melee_slippi::write::setup(&replay));
     let mut load = |name: &str| DiscFile {
         entrynum: disc
@@ -148,7 +158,7 @@ pub fn record(args: &[&str]) -> ExitCode {
     }
     let ours = Replay::parse(&file).expect("the recording parses");
     let mut ok = stopped.is_none();
-    ok &= compare_frames(&bytes, &file, known);
+    ok &= compare_frames(&bytes, &file, known, all);
     ok &= compare_start(&replay, &ours);
     if replay.events == ours.events {
         println!("every event equals the replay's, byte for byte");
@@ -183,7 +193,7 @@ impl melee_sim::game::playback::Source for FreeSeed<'_> {
 
 /// The frames' events through ssbm-rs's comparison: whether nothing diverges or is missing,
 /// or with `known`, whether the divergences are exactly the known ones.
-fn compare_frames(original: &[u8], file: &[u8], known: Option<&str>) -> bool {
+fn compare_frames(original: &[u8], file: &[u8], known: Option<&str>, all: bool) -> bool {
     let original = ssbm_slippi::replay::Replay::parse(original).expect("the replay parses");
     let ours = melee_slippi::replay::raw_events(file).expect("a raw element");
     let report = compare::compare(&original.events, ours);
@@ -200,11 +210,12 @@ fn compare_frames(original: &[u8], file: &[u8], known: Option<&str>) -> bool {
         .iter()
         .filter(|l| known.as_ref().is_none_or(|k| !k.contains(l)))
         .collect();
-    for d in unexpected.iter().take(40) {
+    let shown = if all { usize::MAX } else { 40 };
+    for d in unexpected.iter().take(shown) {
         println!("{d}");
     }
-    if unexpected.len() > 40 {
-        println!("... {} more", unexpected.len() - 40);
+    if unexpected.len() > shown {
+        println!("... {} more", unexpected.len() - shown);
     }
     for (what, frame, port) in &report.first_missing {
         println!("missing: {what} at frame {frame}, port {}", port + 1);
