@@ -81,6 +81,7 @@ fn run(args: Vec<String>) -> ExitCode {
     match args.iter().map(String::as_str).collect::<Vec<_>>()[..] {
         ["compare", original, ours] => compare_files(original, ours),
         ["trace-check", trace, replay] => trace_check(trace, replay),
+        ["live-check", trace, replay] => live_check(trace, replay),
         ["mirror-check", trace] => mirror_check(trace),
         ["diff", ref rest @ ..] => diff::diff(rest),
         ["sync-test", ref rest @ ..] => sync::sync_test(rest),
@@ -109,6 +110,7 @@ fn run(args: Vec<String>) -> ExitCode {
         _ => {
             eprintln!("usage: melee-oracle compare ORIGINAL.slp OURS.slp");
             eprintln!("       melee-oracle trace-check TRACE REPLAY.slp");
+            eprintln!("       melee-oracle live-check SESSION_TRACE LIVE_MATCH.slp");
             eprintln!("       melee-oracle mirror-check TRACE");
             eprintln!(
                 "       melee-oracle diff TRACE REPLAY.slp [--from TICK [--against TICK]] [--ticks N] [--boot-diff]"
@@ -311,6 +313,181 @@ fn trace_check(trace_path: &str, replay_path: &str) -> ExitCode {
         return ExitCode::FAILURE;
     }
     ExitCode::SUCCESS
+}
+
+/// `Fighter`'s fifth state flag byte, which the post-frame update records at its offset 0x29:
+/// 0x80 is the off-screen mark the display pass sets (`x221F_b0`), 0x08 a Nana (`x221F_b4`).
+const FP_FLAGS_221F: usize = 0x221F;
+
+/// Item fields the live check reads (`Item` in the decomp's it/types.h).
+const IT_KIND: usize = 0x10;
+const IT_POS_X: usize = 0x4C;
+const IT_POS_Y: usize = 0x50;
+
+/// A live match's recording (the Slippi ruleset's, `session --slp`) against ssbm-rs's trace of
+/// the session that played it, the original code from power-on: each frame's post-frame
+/// updates' positions, percents and off-screen marks against its fighters' in the tick it was
+/// recorded in. The mark is the display pass's, so this checks what a recording takes from the
+/// drawing, paused ticks' included. Each frame is placed on the trace by its fighters: among
+/// the ticks whose fighters stand where the frame's do (with their percents), the one its scene
+/// frame count puts it at from the frame before (the count goes on through a pause), or the
+/// nearest to it (the trace and the frames part by a tick at the display's doubled rounds).
+fn live_check(trace_path: &str, replay_path: &str) -> ExitCode {
+    // (port, Nana, x, y, percent bits, off-screen) for each fighter.
+    type Fighter = (u8, bool, u32, u32, u32, bool);
+    let ticks: Vec<Vec<Fighter>> = trace::read(trace_path)
+        .iter()
+        .map(|t| {
+            let mut v: Vec<Fighter> = t
+                .of(Kind::Fighter)
+                .map(|f| {
+                    let flags = f.u8(FP_FLAGS_221F);
+                    (
+                        f.u8(FP_PLAYER_IDX),
+                        flags & 0x08 != 0,
+                        f.u32(FP_POS_X),
+                        f.u32(FP_POS_Y),
+                        f.u32(FP_PERCENT),
+                        flags & 0x80 != 0,
+                    )
+                })
+                .collect();
+            v.sort();
+            v
+        })
+        .collect();
+    // Each tick's items: kind and position bits.
+    type Item = (u32, u32, u32);
+    let items: Vec<Vec<Item>> = trace::read(trace_path)
+        .iter()
+        .map(|t| {
+            let mut v: Vec<Item> = t
+                .of(Kind::Item)
+                .map(|i| (i.u32(IT_KIND), i.u32(IT_POS_X), i.u32(IT_POS_Y)))
+                .collect();
+            v.sort();
+            v
+        })
+        .collect();
+    let bytes = read(replay_path);
+    let replay = replay::Replay::parse(&bytes).unwrap_or_else(|e| panic!("{replay_path}: {e}"));
+    // Each frame's scene frame count and post-frame updates, in order.
+    let mut frames: Vec<(i32, u32, Vec<Fighter>, Vec<Item>)> = Vec::new();
+    for e in &replay.events {
+        let p = &e.payload;
+        let be = |at: usize| u32::from_be_bytes(p[at..at + 4].try_into().unwrap());
+        match e.command {
+            replay::event::FRAME_START => {
+                frames.push((be(0) as i32, be(8), Vec::new(), Vec::new()))
+            }
+            replay::event::ITEM => {
+                let f = frames
+                    .last_mut()
+                    .expect("an item update before a frame start");
+                let kind = u32::from(u16::from_be_bytes([p[4], p[5]]));
+                f.3.push((kind, be(0x13), be(0x17)));
+            }
+            replay::event::POST_FRAME => {
+                let f = frames
+                    .last_mut()
+                    .expect("a post-frame update before a frame start");
+                assert_eq!(f.0, be(0) as i32, "a post-frame update outside its frame");
+                f.2.push((
+                    p[4],
+                    p[5] != 0,
+                    be(0x9),
+                    be(0xD),
+                    be(0x15),
+                    p[0x29] & 0x80 != 0,
+                ));
+            }
+            _ => {}
+        }
+    }
+    frames.retain(|f| !f.2.is_empty());
+    for f in &mut frames {
+        f.2.sort();
+        f.3.sort();
+    }
+    let placed = |f: &[Fighter], t: &[Fighter]| {
+        f.len() == t.len()
+            && f.iter()
+                .zip(t)
+                .all(|(a, b)| (a.0, a.1, a.2, a.3, a.4) == (b.0, b.1, b.2, b.3, b.4))
+    };
+    let (mut checked, mut updates, mut marked, mut unplaced, mut shifted) = (0, 0, 0, 0, 0);
+    let mut differ = Vec::new();
+    let mut at: Option<(usize, u32)> = None;
+    let mut first = None;
+    let mut parted = None;
+    for (frame, count, fighters, its) in &frames {
+        let candidates: Vec<usize> = (0..ticks.len())
+            .filter(|&t| placed(fighters, &ticks[t]))
+            .collect();
+        let expected = at.map(|(t, c)| t as i64 + i64::from(count.wrapping_sub(c) as i32));
+        let tick = match expected {
+            Some(e) => candidates
+                .iter()
+                .copied()
+                .min_by_key(|&t| (t as i64 - e).abs()),
+            // The first frame: its fighters at their spawns stand still for a while, so the
+            // frame is placed from the first frame whose fighters move instead.
+            None => None,
+        };
+        let Some(tick) = tick else {
+            if expected.is_some() {
+                unplaced += 1;
+                continue;
+            }
+            // Place the first frame later, from one whose fighters stand in one tick only.
+            if candidates.len() == 1 {
+                at = Some((candidates[0], *count));
+                first = Some((*frame, candidates[0]));
+            }
+            continue;
+        };
+        // Past where the two runs' items part (a draw of the random sequence another way,
+        // as the inputs fall on other frames after the handoff's load), the camera frames
+        // other things: the check stops there.
+        if items[tick] != *its {
+            parted = Some((*frame, tick));
+            break;
+        }
+        if expected != Some(tick as i64) {
+            shifted += 1;
+        }
+        at = Some((tick, *count));
+        checked += 1;
+        updates += fighters.len();
+        marked += fighters.iter().filter(|f| f.5).count();
+        if ticks[tick] != *fighters {
+            differ.push((*frame, tick));
+        }
+    }
+    let Some((first_frame, first_tick)) = first else {
+        eprintln!("{replay_path}: no frame's fighters stand in one tick of the trace");
+        return ExitCode::FAILURE;
+    };
+    let end = match parted {
+        Some((f, t)) => format!("to frame {f} (tick {t}), where the items part"),
+        None => "to the recording's end".to_owned(),
+    };
+    println!(
+        "frame {first_frame} is tick {first_tick}; {checked} frames checked {end} ({updates} post-frame updates, {marked} marked off screen), {} differ, {unplaced} past the trace or unplaced, {shifted} a tick from their scene frame count",
+        differ.len()
+    );
+    for (frame, tick) in differ.iter().take(10) {
+        let f = &frames.iter().find(|f| f.0 == *frame).unwrap().2;
+        println!(
+            "frame {frame} (tick {tick}): recorded {f:08X?}, trace {:08X?}",
+            ticks[*tick]
+        );
+    }
+    if differ.is_empty() {
+        ExitCode::SUCCESS
+    } else {
+        ExitCode::FAILURE
+    }
 }
 
 /// Imports every fighter in a trace into melee-sim's mirror of `Fighter` and compares it back
