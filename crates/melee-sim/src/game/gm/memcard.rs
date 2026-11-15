@@ -6,7 +6,7 @@ use gekko_fp as fp;
 use melee_data::archive::DataRef;
 
 use super::super::handles::CodeRef;
-use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Running};
+use super::super::state::{OBJ_CAMERA, OBJ_JOBJ, Obj, Ruleset, Running};
 use crate::hsd::gobj::GObjId;
 use crate::hsd::jobj::{self, JObjId};
 use crate::hsd::sis::TextId;
@@ -200,7 +200,18 @@ impl Running<'_> {
                 let r = self.card_game_load();
                 self.after_card_load(r);
                 let m = &mut self.game.memcard;
-                if r == result::READY || r == result::DAMAGED {
+                if self.game.ruleset == Ruleset::Slippi
+                    && (r == result::DEVICE_ERROR || r == result::INVALID)
+                {
+                    // Slippi's Skip Memcard Prompt (`C21AF6F4`, at the `cmpwi r29, 0` after the
+                    // load): no card, or none it can read, goes on without saving at once, as
+                    // the question's "continue" answers (`801B01AC`).
+                    m.answer = 0;
+                    m.decision = 20;
+                    self.game
+                        .card_game
+                        .set_card_status(crate::lb::cardgame::STATUS_NO_CARD);
+                } else if r == result::READY || r == result::DAMAGED {
                     m.answer = 1;
                     m.decision = 20;
                 } else {

@@ -527,6 +527,7 @@ impl Rules {
             freeze_glitch_fix: true,
             codes: CodeSet::V3_19,
             player: Default::default(),
+            c_stick_1p: false,
         }
     }
 
@@ -686,9 +687,31 @@ impl Rules {
             codes.push(code);
         }
         codes.extend(super::player_codes::in_memory(read));
-        Rules::from_codes(&codes)
+        let mut rules = Rules::from_codes(&codes)?;
+        // The Slippi ruleset's C-stick rule: `li r3, 0` at its three calls.
+        let patched = C_STICK_1P_SITES
+            .iter()
+            .filter(|&&a| read(a) == LI_R3_0)
+            .count();
+        rules.c_stick_1p = match patched {
+            0 => false,
+            3 => true,
+            _ => {
+                return Err(CodeError::Partial {
+                    rule: "the C-stick in the single-player modes",
+                });
+            }
+        };
+        Ok(rules)
     }
 }
+
+/// The calls of `gm_IsCurrently1PMode_inline` the Slippi ruleset's C-stick rule answers 0
+/// ([`Rules::c_stick_1p`]): `Fighter_procInput`'s two and `Camera_8002B0E0`'s, each made
+/// `li r3, 0` (the Gecko code `0406AE04 38600000`, `0406AE9C 38600000`, `0402B0F8 38600000`).
+pub const C_STICK_1P_SITES: [u32; 3] = [0x8006_AE04, 0x8006_AE9C, 0x8002_B0F8];
+/// `li r3, 0`.
+const LI_R3_0: u32 = 0x3860_0000;
 
 impl super::ucf::Pads {
     /// The pad buffer's data in a running game's memory, if UCF's code is applied.

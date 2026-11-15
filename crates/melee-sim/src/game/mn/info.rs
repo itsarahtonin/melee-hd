@@ -133,8 +133,7 @@ impl Running<'_> {
     #[doc(alias = "mnInfo_80251A08")]
     #[doc(alias = "gmMainLib_8015D94C")]
     fn info_shown(&self, n: u32) -> bool {
-        let noted =
-            || self.game.game_data.thing.save_data.x1B4C[(n / 32) as usize] & (1 << (n % 32)) != 0;
+        let noted = || self.game.message_noted(n);
         match n {
             0x3E => false,
             0x34 => !super::super::gm::language_setting_is_us() && noted(),

@@ -187,7 +187,10 @@ impl Running<'_> {
             }
         }
         for i in 0..11 {
-            if self.game.game_data.thing.save_data.unlocked_characters & (1 << i) == 0 {
+            // `gm_IsCKindUnlocked` of the index's character, on the save as it stands.
+            if !self.game.unlock_code(super::code::CHARACTER)
+                && self.game.game_data.thing.save_data.unlocked_characters & (1 << i) == 0
+            {
                 let m = u32::from(character_message(i));
                 clear_bit(&mut self.game.game_data.thing.save_data.x1B4C, m);
             }
@@ -234,7 +237,8 @@ impl Running<'_> {
         s.unk_28 = Default::default();
         self.game.sync_unlocks();
         let open = (0..29u8).any(|i| {
-            self.stage_unlocked(super::opening::stage_select_kind(i)) && self.stage_enabled(i)
+            self.stage_unlocked_inline(super::opening::stage_select_kind(i))
+                && self.stage_enabled(i)
         });
         if !open {
             self.set_stage_enabled(0, true);

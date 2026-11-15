@@ -57,6 +57,7 @@ fn a_played_session_records_its_reads_again() {
                 card_b: None,
                 card_b_pull: None,
                 develop: rec.developer(),
+                ruleset: rec.ruleset,
             });
             let d = melee_data::disc::Disc::open(&disc).unwrap();
             let mut console = crate::power::Live::new(
@@ -87,5 +88,50 @@ fn a_played_session_records_its_reads_again() {
         );
         let _ = std::fs::remove_file(&out);
         let _ = std::fs::remove_file(out.with_extension("card"));
+    });
+}
+
+/// A session under the Slippi ruleset from power-on, with no card: Slippi's float mode and
+/// its general codes from the boot, and Skip Memcard Prompt taking the memory card scene past
+/// the question Vanilla's no-card session asks (decision 1, the probe's prompt) at once
+/// (decision 20, on without saving); then the opening's scenes run on with no stop. Skips
+/// without `SSBM_DISC`.
+#[test]
+fn the_slippi_ruleset_boots_past_the_card() {
+    use melee_sim::game::state::Ruleset;
+    crate::on_game_stack(|| {
+        let Ok(disc) = std::env::var("SSBM_DISC") else {
+            eprintln!("skipped: no disc");
+            return;
+        };
+        let d = melee_data::disc::Disc::open(&disc).unwrap();
+        let none = [melee_sim::input::pad::PadStatus::default(); 4];
+        let run = |ruleset: Ruleset, ticks: usize| {
+            let mut s = melee_sim::game::session::Session::new(Setup {
+                card: None,
+                ruleset,
+                ..Setup::default()
+            });
+            let mut console = crate::power::Live::new(&d, crate::power::Source::Now(none));
+            s.boot(&mut console);
+            let mode = melee_sim::gekko_fp::fp_mode();
+            let mut decisions = Vec::new();
+            for _ in 0..ticks {
+                let _ = crate::power::step(&mut s, &mut console);
+                decisions.push(s.game.memcard.decision);
+            }
+            (s, mode, decisions)
+        };
+        let (vanilla, mode, decisions) = run(Ruleset::Vanilla, 3);
+        assert_eq!(mode, melee_sim::gekko_fp::FpMode::Hardware);
+        assert_eq!(vanilla.game.gm.unlocks.codes, 0);
+        assert_eq!(decisions[0], 1, "Vanilla asks about the missing card");
+        let (slippi, mode, decisions) = run(Ruleset::Slippi, 600);
+        assert_eq!(mode, melee_sim::gekko_fp::FpMode::Slippi);
+        assert_eq!(slippi.game.gm.unlocks.codes, melee_sim::game::gm::code::ALL);
+        assert!(slippi.game.rules.slippi && slippi.game.rules.c_stick_1p);
+        assert_eq!(decisions[0], 20, "Skip Memcard Prompt goes on at once");
+        assert_eq!(slippi.game.memcard.answer, 0, "without saving");
+        melee_sim::gekko_fp::set_fp_mode(melee_sim::gekko_fp::FpMode::Hardware);
     });
 }

@@ -4,7 +4,8 @@
 //! ssbm-rs (`--inputs FILE`) and in the oracle.
 //!
 //! The file is `SSBMINP1`, the version (2), the disc rate in bytes a second (0 for Slippi's
-//! fast disc speed), flags (1 sound mixed, 2 a card beside it), the clock at power-on (time
+//! fast disc speed), flags (1 sound mixed, 2 a card beside it, 4 the Slippi ruleset, 8 and
+//! 0x70 the debug level), the clock at power-on (time
 //! base ticks from 2000-01-01), the DTV status, the SRAM's language and flags; then a byte per
 //! read: 0 for the controllers of the read before, else 1 and the four controllers, 11 bytes
 //! each. Written as the session runs, flushed every couple of seconds.
@@ -15,8 +16,9 @@ use std::path::{Path, PathBuf};
 
 use melee_sim::audio::clock::{DRIVE_RATE, DiscSpeed};
 use melee_sim::audio::dsp::DspModel;
-use melee_sim::game::inputs::{CARD, MAGIC, SOUND};
+use melee_sim::game::inputs::{CARD, MAGIC, SLIPPI_RULESET, SOUND};
 use melee_sim::game::session::Setup;
+use melee_sim::game::state::Ruleset;
 use melee_sim::input::controller::PadData;
 use melee_sim::input::pad::{ERR_NONE, PadStatus};
 
@@ -82,7 +84,11 @@ pub fn header(setup: &Setup, card: bool) -> Vec<u8> {
         (((d.level + 1) as u8) << DEVELOP_SHIFT & DEVELOP_MASK)
             | if d.ini { 0 } else { LEVEL_ALONE }
     });
-    h.push(sound | if card { CARD } else { 0 } | develop);
+    let ruleset = match setup.ruleset {
+        Ruleset::Vanilla => 0,
+        Ruleset::Slippi => SLIPPI_RULESET,
+    };
+    h.push(sound | if card { CARD } else { 0 } | ruleset | develop);
     h.extend_from_slice(&setup.power_on.to_le_bytes());
     // The SRAM's language: Melee never reads it (its language is the save's).
     h.extend_from_slice(&[u8::from(setup.dtv), 0, setup.sram_flags]);
@@ -219,6 +225,7 @@ mod tests {
             card_b: None,
             card_b_pull: None,
             develop: None,
+            ruleset: Ruleset::Vanilla,
         };
         let mut bytes = header(&setup, true);
         let mut w = Writer::memory();
@@ -264,5 +271,20 @@ mod tests {
             })
         );
         assert_eq!(crate::power::setup(Vec::new(), 0, 0).develop, None);
+    }
+
+    /// A session under the Slippi ruleset is marked 0x04 (ssbm-rs's `--ruleset slippi`),
+    /// with no card, and reads back as the ruleset's.
+    #[test]
+    fn the_slippi_ruleset_is_marked() {
+        let mut setup = crate::power::setup(Vec::new(), 0, 0);
+        setup.card = None;
+        setup.ruleset = Ruleset::Slippi;
+        let bytes = header(&setup, false);
+        assert_eq!(bytes[20], 0x05);
+        let rec = Recording::parse(&bytes, Path::new("s.inputs")).unwrap();
+        assert_eq!(rec.ruleset, Ruleset::Slippi);
+        setup.ruleset = Ruleset::Vanilla;
+        assert_eq!(header(&setup, false)[20], 0x01);
     }
 }

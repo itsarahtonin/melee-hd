@@ -121,6 +121,7 @@ fn drive_session(
         card_b: None,
         card_b_pull: None,
         develop: rec.developer(),
+        ruleset: rec.ruleset,
     };
     let mut console = SessionConsole {
         reads: &rec.reads,

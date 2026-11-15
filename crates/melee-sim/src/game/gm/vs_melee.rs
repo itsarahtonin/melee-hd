@@ -385,7 +385,7 @@ impl Running<'_> {
                 for i in 0..ST_KIND_OLD_YOSHI {
                     let idx = (at + i + 1) % ST_KIND_OLD_YOSHI;
                     let stkind = super::super::mn::stagesel::STAGES[idx as usize].stkind;
-                    if self.stage_unlocked(u16::from(stkind)) {
+                    if self.stage_unlocked_inline(u16::from(stkind)) {
                         let sss = &mut self.game.vs_melee.sss;
                         sss.force_stage_id = stkind as i8;
                         sss.vs.ordered_stage_index = idx as i8;

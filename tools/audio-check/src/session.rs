@@ -107,6 +107,7 @@ pub fn run(args: &[String]) -> Result<bool, String> {
         card_b: None,
         card_b_pull: None,
         develop: rec.developer(),
+        ruleset: rec.ruleset,
     };
     let disc_path = std::env::var("SSBM_DISC").map_err(|_| "SSBM_DISC names the disc")?;
     let disc = Disc::open(&disc_path).map_err(|e| format!("{disc_path}: {e}"))?;

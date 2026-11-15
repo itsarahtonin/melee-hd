@@ -236,7 +236,7 @@ impl Running<'_> {
         if !self.stage_unlocked(stkind) {
             return false;
         }
-        if self.game.game_data.thing.save_data.x186C & 2 == 0 {
+        if self.game.features() & 2 == 0 {
             return true;
         }
         let mask = self.game.game_data.thing.save_data.x1CB0.stage_mask;

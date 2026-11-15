@@ -2106,3 +2106,92 @@ fn vs_speed_scale(g: &Game) -> f32 {
         _ => 1.0,
     }
 }
+
+#[cfg(test)]
+mod c_stick_rule_tests {
+    use super::super::super::camera::{self, Bounds, Which};
+    use super::super::super::state::Game;
+    use super::super::{GM_CLASSIC, GM_VS, is_1p_mode_for_c_stick};
+    use super::vs_speed_scale;
+
+    /// Classic (or `mode`) with three players, the camera's zoom allowed, the first player's
+    /// C-stick held up and a quake pending, under the Slippi ruleset's C-stick rule or not.
+    /// Boxed: a game is too big for a test thread's stack several times over.
+    fn game(mode: u8, c_stick: bool) -> Box<Game> {
+        let mut g = Box::<Game>::default();
+        g.game_mode = mode;
+        g.rules.c_stick_1p = c_stick;
+        for p in &mut g.players[3..] {
+            p.pkind = crate::game::pl::player::PKIND_NONE;
+        }
+        let c = &mut g.camera.cam;
+        c.x2C0 = 1.0;
+        c.x2BC = 1.0;
+        c.quake_offset.x = 1.5;
+        c.quake_offset.y = -2.0;
+        c.quake_scale = 1.0;
+        c.transform.fov = 38.0;
+        g.pads.copy[0].nml_sub_stick_y = 1.0;
+        g
+    }
+
+    fn zoom(mut g: Box<Game>) -> f32 {
+        camera::update_zoom(&mut g);
+        g.camera.cam.x2BC
+    }
+
+    fn quake(mut g: Box<Game>) -> [f32; 2] {
+        let b = Bounds {
+            z_pos: 100.0,
+            ..Default::default()
+        };
+        camera::apply_quake(&mut g, &b, Which::Main);
+        let t = g.camera.cam.translation;
+        [t.x, t.y]
+    }
+
+    /// The ruleset's C-stick rule makes `gm_IsCurrently1PMode_inline` answer 0 for the
+    /// C-stick's three readers only: `Fighter_procInput`'s tests and the camera's zoom, which
+    /// then stays as in VS; the quake (`Camera_ApplyQuake`), the item table's weight
+    /// (`fn_8016E730`) and the bonuses' single-player progress (`fn_80171A88`) keep the
+    /// single-player modes' answers.
+    #[test]
+    fn the_c_stick_rule_reaches_only_the_c_stick() {
+        assert!(is_1p_mode_for_c_stick(&game(GM_CLASSIC, false)));
+        assert!(!is_1p_mode_for_c_stick(&game(GM_CLASSIC, true)));
+
+        assert_ne!(
+            zoom(game(GM_CLASSIC, false)),
+            1.0,
+            "Vanilla's C-stick zooms in Classic"
+        );
+        assert_eq!(
+            zoom(game(GM_CLASSIC, true)),
+            1.0,
+            "the rule's C-stick doesn't"
+        );
+
+        let classic = quake(game(GM_CLASSIC, false));
+        assert_eq!(classic, quake(game(GM_CLASSIC, true)));
+        assert_ne!(
+            classic,
+            quake(game(GM_VS, false)),
+            "the quake tells the modes apart"
+        );
+
+        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, false)), 1.0);
+        assert_eq!(vs_speed_scale(&game(GM_CLASSIC, true)), 1.0);
+        assert_eq!(
+            vs_speed_scale(&game(GM_VS, true)),
+            1.1,
+            "three players weigh the table outside 1P"
+        );
+
+        // Target Test: a single-player mode with no run, so 1 (Classic's run starts at 0).
+        let target = super::super::one_player::GM_TARGET_TEST;
+        let progress = game(target, true).single_player_progress();
+        assert_eq!(game(target, false).single_player_progress(), progress);
+        assert_eq!(progress, 1);
+        assert_eq!(game(GM_VS, true).single_player_progress(), 0);
+    }
+}
