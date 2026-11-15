@@ -2181,7 +2181,7 @@ The game ticks on the pad alarm's 60.00 Hz while video runs at 59.94 Hz, so abou
 - **Where:** `it_802B64FC` (Samus's homing missile) with `ftLib_FindNearestOpponentInDir`, and items using `ftLib_FindNearestOpponent`; `crates/melee-sim/src/game/it/kinds/samusmissile.rs`, `crates/melee-sim/src/game/it/owner.rs`.
 - **Defect:** the missile turns toward the nearest opponent ahead through each fighter's camera bone, skipping only sleeping fighters, not dead ones; a fighter KO'd toward the screen has its root joint placed by the render callback from the camera, and `Fighter_procMap` puts it back at the position each tick at a later priority.
 - **Effect:** a homing missile in flight while an opponent falls toward the screen can turn the other way on a doubled round's tick and fly on differently; with items on, the red shell, Like Like, Octorok, ReDead, Scizor and others are exposed the same way. Slippi doesn't patch it, so Slippi's peers can desync there.
-- **melee-hd:** modeled (the joint placed in the display pass and read through the joints).
+- **melee-hd:** modeled (the joint placed in the display pass and read through the joints). Under Slippi's rules each such read is also computed with the other placement and a different outcome noted in the recording's metadata (`playbackNote`) and the player's log, the match playing on as the original's (design call 9 of [the Slippi ruleset](slippi-ruleset.md), `live::DisplayPhase`).
 - **Fix:** target from logic positions, and skip dead fighters.
 - **Fix impact:** changes homing in those rare cases; breaks replay and Slippi compatibility there.
 - **Source:** [engine notes, state the render pass writes](engine.md#state-the-render-pass-writes) (line 145).

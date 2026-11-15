@@ -36,7 +36,8 @@ fn session(name: &str, args: &[&str]) -> Option<String> {
     Some(text)
 }
 
-/// Each session runs under the ruleset from its flag and compares clean to its trace's end:
+/// Each session runs under the ruleset from its flag and compares clean to its trace's end
+/// (`vs-menus`, whose match is a live one, to the match's start: below):
 /// the memory card scene skipped, the menus' getters on Slippi's general codes, and the
 /// matches on its gameplay codes (Init Stage Data and Init Player Data zeroing only the
 /// blocks their hooks see: `Ground_GetStageGObj`'s and `Fighter_Create`'s, not
@@ -99,4 +100,91 @@ fn vs_menus_hands_off_its_match() {
         "{out}"
     );
     assert!(out.contains("with no stop: 1 live matches"), "{out}");
+}
+
+/// The output of `melee-oracle ARGS`.
+fn oracle(args: &[&str]) -> String {
+    let out = Command::new(env!("CARGO_BIN_EXE_melee-oracle"))
+        .args(args)
+        .output()
+        .expect("melee-oracle runs");
+    let text = String::from_utf8_lossy(&out.stdout).into_owned();
+    eprintln!("{text}");
+    text
+}
+
+/// Task 4's sessions (docs/oracle.md, "The Slippi ruleset's live matches"), recorded with
+/// ssbm-rs's ruleset runner into `$SSBM_RS_LOCAL/lockstep/m6s-match`, their menus traced to
+/// past the first match's start into `traces/m6s-match`: each compares clean to its first live
+/// match, then runs on through every match, handback, Sudden Death, results screen and
+/// character select to past its last read with no stop.
+#[test]
+fn the_live_match_sessions_run_on() {
+    for (name, start, end, matches) in [
+        ("matches-a", 1014, 24194, 5),
+        ("matches-b", 1230, 18933, 5),
+    ] {
+        let trace = ssbm_rs_local(&format!("traces/m6s-match/{name}.trc"));
+        let inputs = ssbm_rs_local(&format!("lockstep/m6s-match/{name}.inputs"));
+        if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            return;
+        }
+        let dir = std::env::temp_dir().join(format!("melee-hd-live-{name}-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("a scratch folder");
+        let out = oracle(&[
+            "session",
+            &trace,
+            &inputs,
+            "--all",
+            "--heap",
+            "--slp",
+            dir.to_str().unwrap(),
+        ]);
+        let _ = std::fs::remove_dir_all(&dir);
+        assert!(
+            out.contains(&format!(
+                "{start} ticks compared, no difference, to the live match that starts in tick {start}"
+            )),
+            "{name}: {out}"
+        );
+        assert!(
+            out.contains(&format!(
+                "ran on to tick {end} past the recording's reads with no stop: {matches} live matches, {matches} recordings written"
+            )),
+            "{name}: {out}"
+        );
+    }
+}
+
+/// Each live match's recording, as ssbm-rs plays it with Slippi's playback codes and float mode
+/// (`traces/m6s-match/NAME.trc`, its recording in `lockstep/m6s-match/traced`), compares clean
+/// with melee-hd's playback, the allocator model included.
+#[test]
+fn the_live_matches_play_back_as_ssbm_rs_does() {
+    for (name, ticks) in [
+        ("matches-a-1", 942),
+        ("matches-a-2", 2734),
+        ("matches-a-3", 1032),
+        ("matches-a-4", 1832),
+        ("matches-a-5", 7428),
+        ("matches-b-1", 1532),
+        ("matches-b-2", 2734),
+        ("matches-b-3", 1531),
+        ("matches-b-4", 1533),
+        ("matches-b-5", 1541),
+    ] {
+        let trace = ssbm_rs_local(&format!("traces/m6s-match/{name}.trc"));
+        let slp = ssbm_rs_local(&format!("lockstep/m6s-match/traced/{name}.slp"));
+        if std::env::var("SSBM_DISC").is_err() || !std::path::Path::new(&trace).exists() {
+            eprintln!("no trace ({trace}) or SSBM_DISC: skipping");
+            return;
+        }
+        let out = oracle(&["diff", &trace, &slp, "--fp", "slippi", "--heap"]);
+        assert!(
+            out.contains(&format!("{ticks} ticks compared, no difference")),
+            "{name}: {out}"
+        );
+        assert!(out.contains("no stale reads"), "{name}: {out}");
+    }
 }
