@@ -68,7 +68,7 @@ impl Bench {
     }
 
     fn open_path(disc: Disc, path: &std::path::Path) -> Bench {
-        let bytes = std::fs::read(&path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
+        let bytes = std::fs::read(path).unwrap_or_else(|e| panic!("{}: {e}", path.display()));
         Bench {
             replay: Replay::parse(&bytes).expect("a replay"),
             disc,
